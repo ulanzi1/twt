@@ -1,0 +1,335 @@
+# Code-Escrow Auto-Mirror Pipeline
+#
+# Authority: Story 0.3 (epics.md) AC-1 + AR-67 + PRD §9.1.1 + architecture §5.4.
+# Discharges: AR-67 ("code escrow — repo mirrored to ≥1 trustee-controlled location;
+#   auto-updated on every release-branch push") + PRD §9.1.1 (bus-factor mitigation +
+#   30-day takeover property) + architecture §5.4 ("Source-code host: GitHub primary;
+#   escrow mirror to trustee-controlled location per Step 2 §9.1.1").
+#
+# Property commitments this workflow enforces (cross-link to
+# docs/escrow/code-escrow/README.md §"Property / control / policy three-way discipline"):
+#   - Mirror auto-updated on every push to a release-branch.
+#   - 10-minute SLA: wall-clock from push event timestamp to mirror appearance.
+#     Measured against GITHUB_EVENT_PATH head_commit.timestamp (not job start),
+#     so runner queue and checkout time are INCLUDED in the SLA. Job timeout
+#     (`timeout-minutes: 8`) is an in-job upper bound that catches push-side hangs;
+#     the actual SLA enforcement requires monitoring of the ledger artifact's
+#     `wall_clock_duration_seconds` field (Open Question #4 in Story 0.3 file).
+#   - Full git history via `git push --mirror` (refs + tags + LFS POINTER FILES).
+#     LFS OBJECT PAYLOADS are NOT mirrored — `git push --mirror` does not call
+#     `git lfs push`. Restoration that depends on LFS-tracked binaries must use
+#     out-of-band LFS recovery. See README.md §"Surface separation" LFS exclusion.
+#   - Surface separation per §2.10a: workflow pushes SOURCE ONLY — no secret values,
+#     no container images, no audit-mirror data; the mirror destination is NOT in the
+#     prod-deploy WIF binding so a malicious mirror push cannot trigger prod deploys.
+#
+# Integration contract (secrets that must be wired at Story 0.3 Task 8):
+#   - MIRROR_PUSH_CREDENTIAL: SSH private key (deploy-key model) OR OAuth token
+#     (token model). Value is set per the code-escrow-mirror-destination ADR (Story
+#     0.3 Task 7); see docs/escrow/code-escrow/README.md §"Open ADR slots".
+#   - MIRROR_DESTINATION_URL: the SSH or HTTPS URL of the trustee-controlled mirror
+#     destination. Value set per the same ADR.
+#
+# Until Tasks 7 + 8 close, this workflow's mirror-push step will fail by design
+# (auth failure) — the failure IS the gap to log per Story 0.3 AC-1 deferral language.
+#
+# Release-branch set (Story 0.3 Task 3 placeholder; amendment trigger: Story 1.1
+# turborepo-monorepo-bootstrap canonical branching model):
+#   on: push: branches: [main]
+# When Story 1.1 commits the canonical model, expand this list under a
+# .decision-log.md [CONTINUITY] entry. Typical post-1.1 set: [main, "release/*"].
+#
+# Concurrency residual risk (Story 0.3 code-review 2026-05-29 — patched):
+#   `cancel-in-progress: true` is preserved. For fast-forward pushes the newer push
+#   contains a superset of older commits (mirror is idempotent). For force-pushes
+#   at primary, cancellation can drop refs/tags that lived only in the older
+#   history before they reach the mirror. Force-push at primary already destroys
+#   mirror history per AR-67 force-push semantics; concurrency cancellation
+#   AMPLIFIES the destruction but introduces no new failure mode.
+#   See docs/escrow/code-escrow/README.md §"Force-push semantics".
+#
+# SSH host-key TOFU residual risk (Story 0.3 code-review 2026-05-29 — patched):
+#   `StrictHostKeyChecking=accept-new` is used in the SSH credential branch. This
+#   is trust-on-first-use on every ephemeral runner — between Task 8 secret wiring
+#   and Task 7 ADR host-key pinning, a network MITM on the runner-to-mirror path
+#   could substitute its host key. Accepted as the pre-ADR interim posture per
+#   docs/escrow/code-escrow/mirror-procedure.md §1 Prerequisites "Trust-on-first-use
+#   disclosure" and Story 0.3 Open Question #9. Task 7 ADR commits host-key pinning
+#   that closes this window.
+#
+# Related documents:
+#   - docs/escrow/code-escrow/README.md (framework)
+#   - docs/escrow/code-escrow/mirror-procedure.md (operational runbook)
+#   - docs/escrow/code-escrow/code-escrow-ledger.md (event record)
+#   - docs/escrow/credential-inventory.md (the row for this workflow's
+#     MIRROR_PUSH_CREDENTIAL secret is added at Story 0.3 Task 8)
+
+name: code-escrow-mirror
+
+on:
+  push:
+    branches:
+      # TODO(story-1.1): expand branches list per turborepo-monorepo-bootstrap
+      # canonical branching model. Story 0.3 Task 3 placeholder.
+      # See docs/escrow/code-escrow/README.md §"Release-branch set".
+      - main
+
+  # Manual re-fire for reconciliation after a failure or for rehearsal.
+  # See mirror-procedure.md §3 rollback paths.
+  workflow_dispatch:
+
+# Single-purpose, single-job workflow. No matrix; no fan-out.
+# Concurrency: cancel an older still-running mirror push if a newer push arrives —
+# see "Concurrency residual risk" in the header comment.
+concurrency:
+  group: code-escrow-mirror
+  cancel-in-progress: true
+
+# Default permissions: read-only contents. The workflow does not need to write
+# anything to the primary GitHub repo. Per architecture §5.4 WIF claim
+# restrictions: this workflow does not interact with GCP; no WIF token minted.
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: Mirror release branch push to trustee-controlled location
+    runs-on: ubuntu-latest
+
+    # In-job upper bound. Catches push-side hangs. NOT the SLA enforcement
+    # mechanism — see header comment's "10-minute SLA" property note. The
+    # actual SLA is measured event-timestamp-to-push-complete via the
+    # ledger artifact's `wall_clock_duration_seconds` field.
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout full git history
+        uses: actions/checkout@v4
+        with:
+          # `git push --mirror` requires the full history (refs + tags). A shallow
+          # clone is insufficient.
+          fetch-depth: 0
+          # Do not leak the GITHUB_TOKEN into the checked-out tree; this workflow
+          # uses MIRROR_PUSH_CREDENTIAL (the trustee-controlled credential) for
+          # the push, not the primary repo's token.
+          persist-credentials: false
+
+      - name: Capture push event timestamp for SLA measurement
+        id: event_ts
+        run: |
+          set -euo pipefail
+          # The push event payload's head_commit.timestamp is the canonical event
+          # time used for the AC-1 wall-clock SLA. Falls back to "now" (job step
+          # start) only if extraction fails; a notice is emitted in that case
+          # because the SLA measurement loses runner-queue + checkout time.
+          EVENT_EPOCH=""
+          if [[ "${GITHUB_EVENT_NAME:-}" == "push" ]] \
+             && [[ -n "${GITHUB_EVENT_PATH:-}" ]] \
+             && [[ -s "${GITHUB_EVENT_PATH}" ]]; then
+            EVENT_TS="$(jq -r '.head_commit.timestamp // empty' "${GITHUB_EVENT_PATH}" 2>/dev/null || true)"
+            if [[ -n "${EVENT_TS}" ]]; then
+              # GNU date (Linux runners) handles ISO 8601 directly.
+              EVENT_EPOCH="$(date -u -d "${EVENT_TS}" +%s 2>/dev/null || true)"
+            fi
+          fi
+          if [[ -z "${EVENT_EPOCH}" ]]; then
+            EVENT_EPOCH="$(date -u +%s)"
+            echo "::notice::Could not extract push event timestamp; SLA measurement starts at job step time and excludes runner queue. workflow_dispatch invocations always take this path."
+          fi
+          echo "event_epoch=${EVENT_EPOCH}" >> "${GITHUB_OUTPUT}"
+
+      - name: Configure mirror remote and push
+        id: mirror_push
+        # [deferred ADR — placeholder procedure]
+        # Until the code-escrow-mirror-destination ADR ratifies the destination +
+        # credential model (Story 0.3 Task 7), the secret VALUES are unwired. This
+        # step's exact form (SSH vs HTTPS-with-token) is ADR-recorded. The
+        # placeholder below handles both common shapes; the ADR's Task-7 PR
+        # tightens this step (including host-key pinning per the TOFU note above).
+        env:
+          MIRROR_PUSH_CREDENTIAL: ${{ secrets.MIRROR_PUSH_CREDENTIAL }}
+          MIRROR_DESTINATION_URL: ${{ secrets.MIRROR_DESTINATION_URL }}
+          EVENT_EPOCH: ${{ steps.event_ts.outputs.event_epoch }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${MIRROR_DESTINATION_URL:-}" ]]; then
+            echo "::error::MIRROR_DESTINATION_URL is unset — Story 0.3 Task 8 (secret wiring) has not closed."
+            echo "::error::Per docs/escrow/code-escrow/mirror-procedure.md §1 Prerequisites, the procedure aborts."
+            exit 1
+          fi
+
+          if [[ -z "${MIRROR_PUSH_CREDENTIAL:-}" ]]; then
+            echo "::error::MIRROR_PUSH_CREDENTIAL is unset — Story 0.3 Task 8 (secret wiring) has not closed."
+            echo "::error::Per docs/escrow/code-escrow/mirror-procedure.md §1 Prerequisites, the procedure aborts."
+            exit 1
+          fi
+
+          # Strip CR (Windows paste injects \r) and any leading blank line so the
+          # SSH-prefix substring test below is robust to paste-source quirks.
+          CRED_CLEANED="$(printf '%s' "${MIRROR_PUSH_CREDENTIAL}" | tr -d '\r' | sed -e '1{/^$/d;}')"
+
+          # Detect credential shape via substring match (robust to leading
+          # whitespace / blank lines that the prefix-glob `-----BEGIN*` missed).
+          if [[ "${CRED_CLEANED}" == *"-----BEGIN"* ]]; then
+            # Deploy-key model: write the key to a runner-only path; configure
+            # GIT_SSH_COMMAND to use it; do not persist beyond the job.
+            mkdir -p "${HOME}/.ssh"
+            chmod 700 "${HOME}/.ssh"
+            printf '%s\n' "${CRED_CLEANED}" > "${HOME}/.ssh/mirror_id"
+            chmod 600 "${HOME}/.ssh/mirror_id"
+            # `accept-new` is TOFU per the header-comment disclosure. Task 7 ADR's
+            # hardening step pins the host-key fingerprint.
+            export GIT_SSH_COMMAND="ssh -i ${HOME}/.ssh/mirror_id -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
+            REMOTE_URL="${MIRROR_DESTINATION_URL}"
+          else
+            # Token model: verify scheme is https:// (token-model URLs are https-
+            # only by construction). Abort with explicit error otherwise.
+            case "${MIRROR_DESTINATION_URL}" in
+              https://*) ;;
+              *)
+                SCHEME="${MIRROR_DESTINATION_URL%%:*}"
+                echo "::error::Token-model credential requires https:// destination URL; got scheme '${SCHEME}'."
+                echo "::error::Use the deploy-key model for non-https schemes. Procedure aborts."
+                exit 1
+                ;;
+            esac
+            # URL-encode the token to handle special chars (@, /, :, +, =, ...).
+            # `jq -srR '@uri'` reads stdin raw, joins as a single string, percent-
+            # encodes per RFC 3986. Output is safe to embed between `oauth2:` and `@`.
+            TOKEN_ENCODED="$(printf '%s' "${CRED_CLEANED}" | jq -srR '@uri')"
+            REMOTE_URL="${MIRROR_DESTINATION_URL/https:\/\//https:\/\/oauth2:${TOKEN_ENCODED}@}"
+          fi
+
+          git remote add mirror "${REMOTE_URL}"
+
+          # Capture previous mirror HEAD via authenticated ls-remote BEFORE push.
+          # This is the actual previous-mirror-HEAD per the schema in
+          # docs/escrow/code-escrow/mirror-procedure.md §2.4. Empty string on
+          # first push (mirror has no HEAD) or on transient ls-remote failure;
+          # `{ … || true; }` prevents pipefail propagation.
+          PREV_MIRROR_HEAD="$( { git ls-remote mirror HEAD 2>/dev/null || true; } | awk 'NR==1 {print $1}' )"
+
+          # The push. `--mirror` propagates ALL refs (branches + tags + notes);
+          # force-push semantics at the mirror (the mirror is a faithful copy).
+          # See mirror-procedure.md §2.3 for the force-push trade-off discussion.
+          # Note: LFS object payloads are NOT pushed by --mirror — see README.md
+          # §"Surface separation" LFS exclusion.
+          git push --mirror mirror
+
+          # After a successful push, local HEAD equals the new mirror HEAD.
+          NEW_MIRROR_HEAD="$(git rev-parse HEAD)"
+
+          # Wall-clock SLA: seconds from push-event timestamp to push-complete.
+          NOW_EPOCH="$(date -u +%s)"
+          WALL_CLOCK_SECONDS="$((NOW_EPOCH - EVENT_EPOCH))"
+
+          # Redact the destination URL to scheme + host ONLY for the artifact.
+          # The path may carry trustee identity (e.g., trustee-foundation account
+          # name); userinfo may carry a credential. Strip both. Handles both
+          # https://[user@]host[:port]/path and git@host:path SSH-style URLs.
+          MIRROR_HOST_ONLY="$(
+            printf '%s' "${MIRROR_DESTINATION_URL}" \
+              | sed -E \
+                  -e 's#^(https?://)([^@/]*@)?([^/:]+).*#\1\3#' \
+                  -e 's#^(git@)([^:]+):.*#\1\2#'
+          )"
+
+          mkdir -p mirror-push-record
+          # YAML block scalar `|` strips the common leading indent before bash sees
+          # this. The heredoc closing `JSON` ends up at column 0 in the rendered
+          # script. Body indentation is preserved as-is in the JSON file (valid
+          # since JSON parsers tolerate leading whitespace).
+          cat > "mirror-push-record/mirror-push-record-${GITHUB_RUN_ID}.json" <<JSON
+          {
+            "workflow_run_id": "${GITHUB_RUN_ID}",
+            "triggering_ref": "${GITHUB_REF}",
+            "triggering_sha": "${GITHUB_SHA}",
+            "pushed_sha_range_from": "${PREV_MIRROR_HEAD}",
+            "pushed_sha_range_to": "${NEW_MIRROR_HEAD}",
+            "mirror_destination_url": "${MIRROR_HOST_ONLY}",
+            "outcome": "success",
+            "event_epoch_seconds": "${EVENT_EPOCH}",
+            "wall_clock_duration_seconds": "${WALL_CLOCK_SECONDS}"
+          }
+          JSON
+
+      # Failure-handler steps run BEFORE the upload step so the synthetic record
+      # is included in the uploaded artifact. The original ordering (upload
+      # before handlers) silently dropped failure records — Story 0.3 code-review
+      # 2026-05-29 patch.
+
+      - name: Record failure mode if mirror push step failed
+        if: failure() && steps.mirror_push.conclusion == 'failure'
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+          EVENT_EPOCH: ${{ steps.event_ts.outputs.event_epoch }}
+        run: |
+          set -euo pipefail
+          mkdir -p mirror-push-record
+          # If the main step wrote no record (failed before reaching the heredoc),
+          # write a synthetic failure-during-push record so reconciliation has
+          # actionable signal.
+          if [[ ! -s "mirror-push-record/mirror-push-record-${GITHUB_RUN_ID}.json" ]]; then
+            NOW_EPOCH="$(date -u +%s)"
+            WALL_CLOCK_SECONDS="$((NOW_EPOCH - ${EVENT_EPOCH:-NOW_EPOCH}))"
+            cat > "mirror-push-record/mirror-push-record-${GITHUB_RUN_ID}.json" <<JSON
+          {
+            "workflow_run_id": "${GITHUB_RUN_ID}",
+            "triggering_ref": "${GITHUB_REF}",
+            "triggering_sha": "${GITHUB_SHA}",
+            "pushed_sha_range_from": "unknown",
+            "pushed_sha_range_to": "unknown",
+            "mirror_destination_url": "unknown",
+            "outcome": "failure-during-push",
+            "event_epoch_seconds": "${EVENT_EPOCH:-0}",
+            "wall_clock_duration_seconds": "${WALL_CLOCK_SECONDS}"
+          }
+          JSON
+          fi
+
+      - name: Record failure mode if a pre-push step failed
+        # Triggers when failure() AND mirror_push did NOT specifically fail
+        # (i.e., mirror_push was skipped because checkout or event_ts failed).
+        # `steps.mirror_push.conclusion` is 'skipped' (or empty) in that case;
+        # the `!= 'failure'` check selects this branch.
+        if: failure() && steps.mirror_push.conclusion != 'failure'
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+          EVENT_EPOCH: ${{ steps.event_ts.outputs.event_epoch }}
+        run: |
+          set -euo pipefail
+          mkdir -p mirror-push-record
+          NOW_EPOCH="$(date -u +%s)"
+          WALL_CLOCK_SECONDS="$((NOW_EPOCH - ${EVENT_EPOCH:-NOW_EPOCH}))"
+          cat > "mirror-push-record/mirror-push-record-${GITHUB_RUN_ID}.json" <<JSON
+          {
+            "workflow_run_id": "${GITHUB_RUN_ID}",
+            "triggering_ref": "${GITHUB_REF}",
+            "triggering_sha": "${GITHUB_SHA}",
+            "pushed_sha_range_from": "unknown",
+            "pushed_sha_range_to": "unknown",
+            "mirror_destination_url": "unknown",
+            "outcome": "failure-pre-push",
+            "event_epoch_seconds": "${EVENT_EPOCH:-0}",
+            "wall_clock_duration_seconds": "${WALL_CLOCK_SECONDS}"
+          }
+          JSON
+
+      - name: Upload ledger artifact
+        if: always()
+        # Always upload — success records the SHA range; failure records (written
+        # by the failure-handler steps above) the failure mode. Failure-handlers
+        # run BEFORE this step so their records are included.
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirror-push-record-${{ github.run_id }}
+          path: mirror-push-record/
+          # 90 days is GitHub's default retention at v0.3 commit; the ledger row
+          # in docs/escrow/code-escrow/code-escrow-ledger.md is durable beyond
+          # this retention. Reconciliation cadence in operations policy MUST
+          # complete before artifacts expire.
+          retention-days: 90
+          if-no-files-found: warn

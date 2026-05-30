@@ -1,0 +1,96 @@
+# Operational Runbooks
+
+This directory holds the operational runbooks that document how to perform every Solo-Builder-resident operational task. Their purpose is bus-factor mitigation: a non-Solo-Builder engineer must be able to perform any operation here using only the runbook + the knowledge-transfer pack (Story 0.5), without consulting Solo Builder.
+
+Authority: architecture.md §5.15 commits this directory's existence and cadence. PRD §9.1.1 commits the bus-factor mitigation rationale. Story 0.1 (epics.md) commits the seven Phase-0 runbook topics and the trustee sign-off / self-sufficiency-execution gates.
+
+## Runbook structure
+
+Every runbook in this directory MUST contain the following five sections, in this order. Copy from `_template.md` rather than re-deriving the structure.
+
+1. **Prerequisites** — preconditions (environment, credentials, access, prior operations) that must hold before the procedure begins. Cite architecture sections for non-obvious prerequisites.
+2. **Step-by-step procedure** — numbered, executable steps. Each step is concrete enough that an engineer with the prerequisites can execute it without judgment calls; where judgment is required, the step names the decision and the reference (ADR, architecture section, trustee escalation).
+3. **Rollback procedure** — what to do if the operation fails partway or produces a wrong outcome. Forward-only where the architecture commits forward-only (e.g., schema migrations per §1.8). For non-schema operations, rollback is the inverse operation; cite the architecture section that grounds the rollback.
+4. **Verification checks** — observable post-conditions that prove the operation succeeded. Each check is a command, query, dashboard URL, or log query that returns a deterministic pass/fail signal.
+5. **Contact escalation list** — who to page when the operation fails or produces an unexpected outcome. Roles, not individuals where possible (e.g., "Audit-mirror integrity-check on-call", "Trustee Panel chair on rota"). Specific contacts live in operations policy, not in the runbook, so the runbook stays stable when personnel change.
+
+## Property / control / policy discipline
+
+The runbooks follow the architecture-vs-ADR-vs-operations-policy boundary committed in this project:
+
+- **Architecture commitments** are cited as properties (e.g., "Deploy requires staging→prod manual approval per architecture §5.4"). These are stable and runbooks rely on them.
+- **Cloud control mechanisms** are deferred to ADRs where architecture defers them. A runbook never invents a control choice; it cites the ADR. If the ADR is missing, the runbook marks the relevant step `[deferred ADR — placeholder procedure]` so the gap is visible.
+- **Cadence and policy details** (specific rotation dates, specific worker counts, specific thresholds) are deferred to operations policy. Runbooks describe *how* to perform an operation; *when* belongs in operations policy.
+
+This three-way discipline keeps runbooks stable: architecture decisions change rarely, ADRs change occasionally, operations policy changes often — the runbook absorbs that change rate through cross-reference, not through direct contents.
+
+## Sign-off lifecycle
+
+A runbook is only authoritative after the operational-readiness ledger records ≥2-trustee sign-off on a specific runbook version (git SHA). The flow:
+
+1. Author or edit the runbook in a branch.
+2. Submit for trustee review (Story 0.1 AC-2 / AC-3).
+3. On approval, merge to main; record sign-off in `operational-readiness-ledger.md` with file path, git SHA at sign-off, trustee identities, dates, and reviewer attestation note.
+4. Material edits after sign-off trigger re-sign:
+   - **Minor edits** (clarifications, link updates, prerequisite-cite refinements): ≥1 trustee re-attestation noted in the ledger.
+   - **Material edits** (rollback procedure changes, contact escalation changes, verification check changes): ≥2 trustees re-attest.
+   - **Mixed edits** (a single commit touching both minor and material categories): the **higher threshold governs** — ≥2 trustees. This interim rule applies pending Trustee Panel ratification (Story 0.1 Open Question #5); revise this README once the Trustee Panel decides.
+5. Self-sufficiency execution validation (Story 0.1 AC-4) is logged in the ledger with executor identity, runbook SHA, date, and gap outcome. Gaps trigger AC-3 re-sign.
+
+## Relationship to ADRs
+
+ADRs cover **decisions** (what we chose and why); runbooks cover **operations** (how to do the thing we chose). They are complementary surfaces with the same trustee-accessible storage commitment.
+
+When a runbook references a decision that lives in an ADR, it cites the ADR by ID. When an operation requires a decision not yet recorded in an ADR, the runbook step is tagged `[deferred ADR — placeholder procedure]` and the ADR backlog (per AR-69) tracks closure.
+
+## Phase-0 runbooks (Story 0.1 scope)
+
+The following seven runbooks discharge PRD §9.1.1 and Story 0.1:
+
+| Runbook | File | Primary architecture references |
+|---|---|---|
+| Deploy | `deploy.md` | §5.3 Dokploy substrate · §5.4 CI/CD · §5.5 environment topology |
+| Rollback | `rollback.md` | §1.8 forward-only migrations · §5.4 signed-image promotion |
+| Secret rotation | `secret-rotation.md` | §5.9 Secret Manager · §2.7 PII tier KEK · §5.4 WIF |
+| Audit-log integrity verification | `audit-log-integrity-verification.md` | §1.5 hash chain + Object Lock · §2.10a IAM Isolation Commitment |
+| Reconciliation manual-intervention | `reconciliation-manual-intervention.md` | §3.6 bank statement intake · Epic 9 matcher |
+| RBAC seed reset | `rbac-seed-reset.md` | §2.6 RBAC permission-keys + scope-dimensions · FR-46 (12 seeded roles) |
+| Multi-Pariwar provisioning | `multi-pariwar-provisioning.md` | §5.14 per-Pariwar isolation · §1.2 RLS · §2.5 URL path scope · FR-60/61/62 |
+
+## Related runbooks expected from other stories
+
+Architecture §5.15 names additional runbooks at v1 that are **not in Story 0.1 scope**. They are listed here so readers know where to expect them and so Story 0.1 does not silently expand to cover all of §5.15.
+
+Some §5.15 runbooks have no current owning story — Story 0.1 names a *candidate* (the closest story by topic), tagged "**ownership confirmation pending OQ#1**". The candidate story may not commit a runbook deliverable today; PM confirmation is required before this table treats the candidate as the owner.
+
+| Runbook (§5.15) | Candidate owner | Notes |
+|---|---|---|
+| DR runbook (cross-region escalation) | Architecture §5.7 + Story 0.4 (degradation policy) | Cross-region replica trigger procedure; quarterly drill cadence |
+| Cycle-freeze operational procedure | Epic 7 — candidate Story 7.3 (Pool Spawn Saga); ownership confirmation pending OQ#1 | Story 7.3 implements the atomic cycle-freeze primitive but does not currently commit a runbook deliverable. PM confirmation required before treating 7.3 as the runbook owner |
+| Reconciliation triage procedure | Epic 9 Stories 9.1, 9.4, 9.7, 9.8 | Distinct from Story 0.1's manual-intervention runbook; this is operator triage flow |
+| Helpline operator escalation procedure | Epic 10 — candidate Story 10.3 (call-to-ticket surface); ownership confirmation pending OQ#1 | Story 10.3 implements the helpline surface but does not currently commit a runbook deliverable. PM confirmation required before treating 10.3 as the runbook owner |
+| Partner-coordination escalation procedure | Architecture §3.10 + Module Marketplace (candidate Epic 12 Story 12.5); ownership confirmation pending OQ#1 | Provider deprecation + partner-handoff coordination |
+| Audit-mirror integrity-check failure response | Architecture §1.5 + §5.15 | Distinct from Story 0.1's verification runbook; this is the failure-response side |
+| Provider deprecation response procedure | Architecture §3.10 | Cadence-driven; quarterly review |
+| Backup-engineer activation procedure | Story 0.6 (Backup Engineer Contracted with Trustee Authorization) | Authored 2026-05-30 at `docs/backup-engineer/activation-procedure.md` (NOT in this directory — the activation procedure lives in the backup-engineer framework alongside the contract-template + scope-of-work + access-grant-procedure + onboarding-checklist + engineer-roster + ledger per `docs/backup-engineer/README.md` §1 "Why `docs/backup-engineer/` is a new top-level surface"). Uses the same five-section runbook template; covers five activation modes (daily-ops / surge / bus-factor / activation-scenario / comprehension-administration); sign-off via `docs/backup-engineer/backup-engineer-ledger.md` §2 Trustee A-13 authorization log + §6 Activation event log. The Story 0.6 AC-2 activation-scenario test discharges Story 0.1 AC-4 path 1 |
+| Table-top exercise — 7-day Solo-Builder-unavailable scenario | Story 0.4 (Per-Surface Degradation Policy Authored) | Authored 2026-05-29 at `docs/degradation-policy/table-top-exercise.md` (NOT in this directory — the table-top exercise lives in the degradation-policy framework alongside the per-surface inventory + comms templates per Story 0.4 README §1 "Why `docs/degradation-policy/` is a new top-level surface"). Uses the same five-section runbook template; sign-off via `docs/degradation-policy/degradation-policy-ledger.md` Trustee sign-off log + Table-top exercise log |
+| On-call playbook — meta-playbook above the seven Phase-0 runbooks | Story 0.5 (Knowledge-Transfer Documentation Pack Compiled) | Authored 2026-05-30 at `docs/knowledge-transfer/on-call-playbook.md` (NOT in this directory — the on-call playbook lives in the KT pack framework alongside the ADR-index + Niyamavali → FR mapping + deployment topology + dependency inventory + comprehension questionnaire per `docs/knowledge-transfer/README.md` §1 "Why `docs/knowledge-transfer/` is a top-level surface"). Uses the same five-section runbook template; routes incidents to the seven Phase-0 runbooks + ADR slots + escalation paths; sign-off via `docs/knowledge-transfer/kt-pack-ledger.md` Trustee sign-off log |
+| Fallback-handler ledger (per-loop-node funded on-rota staff fallback) | Story 0.7 (P0-1 Fallback-Handler Ledger Published with SLA + Rota) | Author-committed 2026-05-30 at `docs/fallback-handler-ledger/` — admin-accessible operations runbook per Story 0.7 AC-1 (NOT in this directory — the fallback-handler ledger lives in its own framework alongside the ledger + per-loop-node entries × 8 + rota + operations-lead-commitment + backfill-log per `docs/fallback-handler-ledger/README.md` §1 "Why a top-level surface"). Per-loop-node entries at `loop-nodes/` × 8 (claim-filing, peer-mesh, ground-inspection, reconciliation, helpdesk, denial-appeal, kyc-fallback, upi-failure-coach); rota at `rota.md`. Operations Lead hire OR substitute-handler-bench formal ratification pending Story 0.7 Task 8; per-loop-node named role + funding pending Task 9; ≥2-trustee ledger sign-off pending Task 10; synthetic SLA test pending Task 11 |
+
+When any of the above are authored, they land in this directory using the same five-section template and the same sign-off lifecycle. Until PM confirms ownership for the candidate-tagged rows, those §5.15 inventory items are tracked as **unassigned** for sign-off purposes — they do not silently inherit ownership from the candidate.
+
+## Review cadence
+
+Per architecture §5.15, the runbook inventory is reviewed at the same cadence as the threat-actor inventory (§2.1) and the data-class retention matrix (§2.12). The review confirms:
+
+- Every runbook still cites currently-valid architecture sections (no broken references).
+- Every runbook reflects current operational reality (no drift from the substrate or surfaces it describes).
+- Sign-offs in the ledger are not stale relative to runbook git SHAs.
+
+Specific cadence (monthly, quarterly, etc.) belongs in operations policy, not in this README.
+
+## File index
+
+- `_template.md` — five-section starter; copy this when authoring a new runbook.
+- `operational-readiness-ledger.md` — trustee sign-off and execution-validation record. **Sole source of truth for runbook authority.**
+- `deploy.md` · `rollback.md` · `secret-rotation.md` · `audit-log-integrity-verification.md` · `reconciliation-manual-intervention.md` · `rbac-seed-reset.md` · `multi-pariwar-provisioning.md` — the Phase-0 seven.

@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TWT — Visual Design Directions Reference (v4 — Donation ID + HRMS + School + Latin numerals)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi&family=Noto+Sans+Devanagari:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       TWT Visual Design Directions Reference — v4
+       Changes from v3:
+       • "#" column renamed to "Donation ID" (the permanent sequential
+         contribution reference — internal name, also surfaced publicly)
+       • HRMS column added back to Sahyog List (Bihar = HRMS, other
+         states' Pariwars = eHRMS — per-Pariwar configurable label)
+       • School column added to Yogdaan Bahi (Late Teacher's school,
+         gives the member context about who they supported)
+       • Hindi numerals in Panchayat Noticeboard fixed to Latin
+         (operational/celebration framing both use Latin; Hindi numerals
+         reserved for memorial Devanagari prose only)
+       ============================================================ */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: 'Inter', 'Noto Sans Devanagari', -apple-system, sans-serif;
+      color: #1d1a16;
+      background: #f5f1e6;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .ref-doc-header {
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      padding: 24px 32px;
+    }
+    .ref-doc-header h1 {
+      font-family: 'Tiro Devanagari Hindi', serif;
+      font-size: 26px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .ref-doc-header .subtitle {
+      color: #555;
+      font-size: 14px;
+      max-width: 880px;
+    }
+    .ref-doc-header .amendment-note {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: #fdf6e9;
+      border-left: 3px solid #c1431f;
+      font-size: 13px;
+      color: #555;
+      max-width: 880px;
+    }
+
+    .pattern-section {
+      max-width: 1500px;
+      margin: 48px auto;
+      padding: 0 32px;
+    }
+    .pattern-section .pattern-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #fff;
+      background: #1d1a16;
+      margin-bottom: 12px;
+    }
+    .pattern-section .pattern-badge.primary { background: #c1431f; }
+    .pattern-section h2 {
+      font-family: 'Tiro Devanagari Hindi', serif;
+      font-size: 24px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .pattern-section .ref-note {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 8px;
+      max-width: 900px;
+    }
+    .pattern-section .variation-axis {
+      color: #777;
+      font-size: 13px;
+      font-style: italic;
+      margin-bottom: 24px;
+      max-width: 900px;
+    }
+    .variations-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .variations-grid.two-col {
+      grid-template-columns: repeat(auto-fit, minmax(620px, 1fr));
+    }
+    .variation-card {
+      border: 1px solid #ddd;
+      background: #fff;
+    }
+    .variation-card-header {
+      padding: 12px 16px;
+      background: #fafafa;
+      border-bottom: 1px solid #ddd;
+      font-size: 13px;
+      color: #555;
+    }
+    .variation-card-header strong {
+      color: #1d1a16;
+      font-weight: 500;
+    }
+    .variation-card-content {
+      padding: 0;
+      min-height: 420px;
+      max-height: 760px;
+      overflow: auto;
+    }
+
+    /* Visual tokens (directional) */
+    .var-warm-terracotta {
+      --surface-base: #faf6ec;
+      --surface-accent: #c1431f;
+      --status-mismatch: #a35d2a;
+    }
+    .twt-surface {
+      --ink-primary: #1d1a16;
+      --ink-secondary: #555;
+      --rule-hairline: #e8e4d8;
+      --rule-heavy: #d6cfb8;
+      --status-confirmed: #5a8a5a;
+      background: var(--surface-base);
+      color: var(--ink-primary);
+      font-size: 14px;
+      line-height: 1.45;
+      font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
+    }
+
+    /* ============================================================
+       Pattern 1: SAHYOG LIST
+       ============================================================ */
+    .sahyog-list { padding: 0; min-width: 1080px; }
+    .sahyog-list-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--rule-heavy);
+    }
+    .sahyog-list-title {
+      font-family: 'Tiro Devanagari Hindi', serif;
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .sahyog-list-subtitle {
+      font-size: 12px;
+      color: var(--ink-secondary);
+    }
+    .sahyog-list-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0;
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .stat-card {
+      padding: 12px 16px;
+      border-right: 1px solid var(--rule-hairline);
+    }
+    .stat-card:last-child { border-right: 0; }
+    .stat-card .stat-label {
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+      margin-bottom: 4px;
+    }
+    .stat-card .stat-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 18px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .sahyog-list-controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .search-input {
+      padding: 8px 12px;
+      border: 1px solid var(--rule-heavy);
+      background: var(--surface-base);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--ink-primary);
+    }
+    .search-input::placeholder { color: #999; }
+    .filter-button, .sort-button {
+      padding: 8px 14px;
+      border: 1px solid var(--rule-heavy);
+      background: var(--surface-base);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .sahyog-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .sahyog-table thead th {
+      padding: 10px 12px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+      text-align: left;
+      border-bottom: 1.5px solid var(--rule-heavy);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .sahyog-table tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--rule-hairline);
+      vertical-align: middle;
+    }
+    .sahyog-table tbody tr:nth-child(5n) td {
+      border-bottom-color: var(--rule-heavy);
+      border-bottom-width: 1.5px;
+    }
+    .sahyog-table tbody td.donation-id {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--ink-secondary);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .sahyog-table tbody td.member-id {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--surface-accent);
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: var(--rule-heavy);
+      white-space: nowrap;
+    }
+    .sahyog-table tbody td.hrms {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--ink-secondary);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .sahyog-table tbody td.donor-name {
+      font-weight: 500;
+    }
+    .sahyog-table tbody td.school {
+      color: var(--ink-secondary);
+      font-size: 12px;
+      max-width: 240px;
+    }
+    .sahyog-table tbody td.district { font-size: 12px; }
+    .sahyog-table tbody td.block {
+      color: var(--ink-secondary);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .sahyog-table tbody td.pool {
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      color: var(--surface-accent);
+      text-align: center;
+    }
+    .sahyog-table tbody td.late-teacher {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: var(--rule-heavy);
+      font-size: 13px;
+    }
+    .sahyog-table tbody td.date {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--ink-secondary);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .sahyog-list-footer {
+      padding: 12px 20px;
+      border-top: 1.5px solid var(--rule-heavy);
+      font-size: 12px;
+      color: var(--ink-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+    .density-tight .sahyog-table tbody td { padding: 6px 10px; font-size: 12px; }
+    .density-tight .sahyog-table tbody td.school { font-size: 11px; }
+
+    /* Mobile preview wrapper */
+    .mobile-frame {
+      max-width: 360px;
+      margin: 0 auto;
+      border: 1px solid #ddd;
+      background: var(--surface-base);
+      min-height: 600px;
+    }
+    .mobile-frame-header {
+      padding: 8px 12px;
+      background: #1d1a16;
+      color: #ccc;
+      font-size: 11px;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+    .mobile-sahyog-list-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--rule-heavy);
+    }
+    .mobile-sahyog-list-title {
+      font-family: 'Tiro Devanagari Hindi', serif;
+      font-size: 17px;
+      font-weight: 500;
+    }
+    .mobile-sahyog-list-subtitle {
+      font-size: 11px;
+      color: var(--ink-secondary);
+      margin-top: 2px;
+    }
+    .mobile-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .mobile-stat-card {
+      padding: 10px 14px;
+      border-right: 1px solid var(--rule-hairline);
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .mobile-stat-card:nth-child(2n) { border-right: 0; }
+    .mobile-stat-card:nth-child(n+3) { border-bottom: 0; }
+    .mobile-stat-card .stat-label {
+      font-size: 10px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+      margin-bottom: 4px;
+    }
+    .mobile-stat-card .stat-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .mobile-search {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .mobile-search input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--rule-heavy);
+      background: var(--surface-base);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+    }
+    .mobile-filter-row {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--rule-hairline);
+      display: flex;
+      gap: 8px;
+    }
+    .mobile-chip {
+      padding: 4px 10px;
+      border: 1px solid var(--rule-heavy);
+      font-size: 11px;
+      color: var(--ink-secondary);
+    }
+    .mobile-row {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .mobile-row:nth-child(5n) {
+      border-bottom-color: var(--rule-heavy);
+      border-bottom-width: 1.5px;
+    }
+    .mobile-row-primary {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .mobile-row-donor {
+      font-weight: 500;
+      font-size: 13px;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mobile-row-amount {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .mobile-row-arrow {
+      color: var(--ink-secondary);
+      margin: 0 4px;
+    }
+    .mobile-row-recipient {
+      font-size: 13px;
+      color: var(--ink-primary);
+    }
+    .mobile-row-meta {
+      font-size: 11px;
+      color: var(--ink-secondary);
+      margin-top: 4px;
+      font-family: 'Inter', sans-serif;
+    }
+    .mobile-row-meta .meta-mono {
+      font-family: 'IBM Plex Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ============================================================
+       Pattern 2: Yogdaan Bahi — richer view with School column
+       ============================================================ */
+    .yogdaan-bahi { padding-bottom: 0; min-width: 760px; }
+    .yogdaan-bahi-header {
+      border-top: 2px solid var(--ink-primary);
+      border-bottom: 1px solid var(--ink-primary);
+    }
+    .yogdaan-bahi-header .title {
+      padding: 16px 20px 4px;
+      font-family: 'Tiro Devanagari Hindi', serif;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    .yogdaan-bahi-header .member-line {
+      padding: 0 20px 6px;
+      font-size: 13px;
+      color: var(--ink-primary);
+    }
+    .yogdaan-bahi-header .member-line strong {
+      font-weight: 500;
+    }
+    .yogdaan-bahi-header .subtitle {
+      padding: 0 20px 12px;
+      font-size: 12px;
+      color: var(--ink-secondary);
+    }
+    .yogdaan-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .yogdaan-table thead th {
+      padding: 10px 12px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+      text-align: left;
+      border-top: 1px solid var(--rule-hairline);
+      border-bottom: 1.5px solid var(--rule-heavy);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .yogdaan-table thead th.numeric { text-align: right; }
+    .yogdaan-table thead th.center { text-align: center; }
+    .yogdaan-table tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--rule-hairline);
+      vertical-align: middle;
+    }
+    .yogdaan-table tbody tr:nth-child(5n) td {
+      border-bottom-color: var(--rule-heavy);
+      border-bottom-width: 1.5px;
+    }
+    .yogdaan-table .col-donation-id {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--ink-secondary);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .yogdaan-table .col-date {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .yogdaan-table .col-recipient {
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: var(--rule-heavy);
+    }
+    .yogdaan-table .col-school {
+      color: var(--ink-secondary);
+      font-size: 12px;
+      max-width: 220px;
+    }
+    .yogdaan-table .col-district {
+      color: var(--ink-secondary);
+      font-size: 12px;
+    }
+    .yogdaan-table .col-pool {
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      color: var(--surface-accent);
+      text-align: center;
+    }
+    .yogdaan-table .col-amount {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .yogdaan-bahi-footer {
+      display: grid;
+      grid-template-columns: 1fr 96px;
+      align-items: center;
+      padding: 12px 20px;
+      border-top: 2px solid var(--ink-primary);
+      border-bottom: 1px solid var(--ink-primary);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .yogdaan-bahi-footer .col-total {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 15px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ============================================================
+       Pattern 3: Shradhanjali (single-line Latin date)
+       ============================================================ */
+    .shradhanjali {
+      max-width: 360px;
+      margin: 0 auto;
+      padding: 0 20px 32px;
+    }
+    .shradhanjali-top-rule {
+      border-top: 4px solid var(--ink-primary);
+      margin-bottom: 32px;
+    }
+    .funeral-frame {
+      width: 180px;
+      height: 180px;
+      margin: 0 auto;
+      border: 2px solid var(--ink-primary);
+      padding: 6px;
+    }
+    .funeral-frame-inner {
+      width: 100%;
+      height: 100%;
+      background: #d4ccb8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+    .shradhanjali-name {
+      margin-top: 24px;
+      text-align: center;
+      font-family: 'Tiro Devanagari Hindi', serif;
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+    .shradhanjali-dates {
+      text-align: center;
+      margin-top: 10px;
+      color: var(--ink-secondary);
+      font-size: 13px;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .shradhanjali-parichay {
+      margin-top: 32px;
+      font-size: 14px;
+      line-height: 1.6;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+    .shradhanjali-parichay p { margin-bottom: 6px; }
+    .shradhanjali-kinship {
+      margin-top: 24px;
+      border-top: 1px solid var(--rule-hairline);
+      border-bottom: 1px solid var(--rule-hairline);
+      padding: 16px 0;
+    }
+    .kinship-row {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 12px;
+      font-size: 13px;
+      margin-bottom: 6px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+    .kinship-label { color: var(--ink-secondary); }
+    .shraddhanjali-line {
+      margin-top: 40px;
+      text-align: center;
+      font-style: italic;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+    .contribution-summary {
+      margin-top: 32px;
+      padding: 16px;
+      text-align: center;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      font-size: 13px;
+      border-top: 1px solid var(--rule-hairline);
+      border-bottom: 1px solid var(--rule-hairline);
+      line-height: 1.6;
+    }
+    .contribution-summary .count {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 18px;
+      font-weight: 500;
+      display: block;
+      margin-bottom: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .contributor-action {
+      margin-top: 24px;
+      text-align: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--rule-hairline);
+    }
+    .contributor-action a {
+      color: var(--surface-accent);
+      font-size: 14px;
+      text-decoration: none;
+      font-weight: 500;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+
+    /* ============================================================
+       Pattern 4: Panchayat Noticeboard (Latin numerals throughout)
+       ============================================================ */
+    .panchayat { padding-bottom: 16px; }
+    .panchayat-top-strip {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--rule-hairline);
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    .pariwar-seal {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--ink-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .pariwar-title {
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+    .panchayat-stat-strip {
+      padding: 12px 20px;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      border-bottom: 1px solid var(--rule-hairline);
+      font-family: 'IBM Plex Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .panchayat-section-header {
+      padding: 16px 20px 8px;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+    .pinned-notice {
+      display: grid;
+      grid-template-columns: 4px 1fr;
+      min-height: 72px;
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .pinned-stub { background: var(--surface-accent); }
+    .pinned-stub-green { background: var(--status-confirmed); }
+    .pinned-stub-black { background: var(--ink-primary); }
+    .pinned-content { padding: 14px 20px; }
+    .pinned-title {
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: 500;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+    .pinned-meta {
+      font-size: 12px;
+      color: var(--ink-secondary);
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .closing-row {
+      display: grid;
+      grid-template-columns: 1fr 96px;
+      align-items: center;
+      padding: 14px 20px;
+      min-height: 56px;
+      border-bottom: 1px solid var(--rule-hairline);
+    }
+    .closing-pool { font-size: 14px; }
+    .closing-pool-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      color: var(--surface-accent);
+    }
+    .closing-pool-meta {
+      font-size: 12px;
+      color: var(--ink-secondary);
+      margin-top: 2px;
+    }
+    .closing-count {
+      text-align: right;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .panchayat-footer {
+      padding: 14px 20px;
+      font-size: 12px;
+      color: var(--ink-secondary);
+      text-align: center;
+    }
+
+    /* Footer */
+    .ref-doc-footer {
+      max-width: 1500px;
+      margin: 64px auto 48px;
+      padding: 32px 32px 0;
+      border-top: 1px solid #ddd;
+      color: #555;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .ref-doc-footer h3 {
+      color: #1d1a16;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      margin-top: 24px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .ref-doc-footer h3:first-child { margin-top: 0; }
+    .ref-doc-footer p { margin-bottom: 12px; max-width: 900px; }
+    .ref-doc-footer ul { padding-left: 20px; margin-bottom: 12px; max-width: 900px; }
+    .ref-doc-footer li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+
+<header class="ref-doc-header">
+  <h1>TWT — Visual Design Directions Reference (v4)</h1>
+  <p class="subtitle">
+    Sahyog List as the <strong>primary public trust surface</strong> (the canonical source-of-truth
+    chain is claim → pool → reconciliation → ledger; the Sahyog List is the surface that publishes
+    the ledger). Public column inventory: <strong>Donation ID · Member ID · HRMS · Donor Name ·
+    School · District · Block · Pool · Late Teacher · Date</strong>. Mahabharata pool naming dropped
+    (letter code only). Memorial dates Latin; memorial copy Hindi. Noticeboard numerals Latin
+    throughout. Mobile (360px) Bihar Android profile included.
+  </p>
+  <div class="amendment-note">
+    <strong>v4 amendments:</strong> "#" renamed to <strong>Donation ID</strong> (the permanent
+    sequential contribution reference); <strong>HRMS column added back</strong> to Sahyog List —
+    Bihar uses HRMS, other states' Pariwars may use eHRMS (per-Pariwar configurable column label);
+    <strong>School column added to Yogdaan Bahi</strong> (Late Teacher's school — context about who
+    the member supported); Hindi numerals in Panchayat Noticeboard pinned notices fixed to Latin
+    (operational and celebration framing both use Latin numerals; Hindi numerals reserved for
+    memorial Devanagari prose only).
+  </div>
+</header>
+
+<!-- ====================================================
+     Pattern 1: SAHYOG LIST — primary public trust surface
+     ==================================================== -->
+<section class="pattern-section">
+  <span class="pattern-badge primary">PRIMARY · Public Trust Surface</span>
+  <h2>1. Sahyog List — Searchable Public Contribution Record</h2>
+  <p class="ref-note">
+    Reference: TSCT's Ongoing Sahyog List (the model that built community trust at 4L+ members).
+    All fields publicly searchable; Member ID is the public lookup (clickable). HRMS is the
+    government Human Resource Management System identifier — visible for cross-reference and
+    verification, but not styled as the primary action. The canonical source-of-truth chain is
+    <strong>claim → pool → reconciliation → ledger</strong>; the Sahyog List is the surface that
+    publishes the ledger in searchable form. <strong>Success question:</strong> can a member
+    identify a specific contribution in under 10 seconds — on the mobile target device?
+  </p>
+  <p class="variation-axis">
+    Variations: default-density (desktop) · tight-density (Real Data Test prep with duplicates,
+    long school names, same-day claims) · mobile 360px profile.
+  </p>
+
+  <div class="variations-grid two-col">
+
+    <!-- Variation A: Default density desktop -->
+    <div class="variation-card">
+      <div class="variation-card-header">
+        <strong>Variation A:</strong> Default density · desktop · warm cream + terracotta · 10 columns
+      </div>
+      <div class="variation-card-content twt-surface var-warm-terracotta">
+        <div class="sahyog-list">
+          <div class="sahyog-list-header">
+            <div class="sahyog-list-title">Sahyog List · Ongoing Contributions</div>
+            <div class="sahyog-list-subtitle">All recorded contributions — publicly searchable by Donation ID, Member ID, HRMS, Donor Name, or Late Teacher</div>
+          </div>
+          <div class="sahyog-list-stats">
+            <div class="stat-card">
+              <div class="stat-label">Total Sahyog (since launch)</div>
+              <div class="stat-value">3,21,561</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Active Sahyog Drives</div>
+              <div class="stat-value">22</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Members Contributing</div>
+              <div class="stat-value">52,340</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">This Month</div>
+              <div class="stat-value">14,892</div>
+            </div>
+          </div>
+          <div class="sahyog-list-controls">
+            <input type="text" class="search-input" placeholder="Search by Donation ID, Member ID, HRMS, donor name, or late teacher…">
+            <button class="filter-button">Filter</button>
+            <button class="sort-button">Sort</button>
+          </div>
+          <table class="sahyog-table">
+            <thead>
+              <tr>
+                <th>Donation ID</th>
+                <th>Member ID</th>
+                <th>HRMS</th>
+                <th>Donor Name</th>
+                <th>School</th>
+                <th>District</th>
+                <th>Block</th>
+                <th>Pool</th>
+                <th>Late Teacher</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="donation-id">321561</td><td class="member-id">214803</td><td class="hrms">9874110</td><td class="donor-name">Sushil Kumar Sharma</td><td class="school">UMS Khairabad Block Patna Sadar</td><td class="district">Patna</td><td class="block">PATNA SADAR</td><td class="pool">F</td><td class="late-teacher">Vikram Lal</td><td class="date">28-Apr-2026</td></tr>
+              <tr><td class="donation-id">321560</td><td class="member-id">488920</td><td class="hrms">1046686</td><td class="donor-name">Reena Devi</td><td class="school">Primary School Vikrampur</td><td class="district">Samastipur</td><td class="block">DALSINGHSARAI</td><td class="pool">B</td><td class="late-teacher">Ram Prasad Yadav</td><td class="date">28-Apr-2026</td></tr>
+              <tr><td class="donation-id">321559</td><td class="member-id">762141</td><td class="hrms">1079788</td><td class="donor-name">Amit Kumar Sharma</td><td class="school">Madhya Vidyalaya Bakhtiyarpur</td><td class="district">Patna</td><td class="block">BAKHTIYARPUR</td><td class="pool">B</td><td class="late-teacher">Ram Prasad Yadav</td><td class="date">28-Apr-2026</td></tr>
+              <tr><td class="donation-id">321558</td><td class="member-id">335789</td><td class="hrms">0632601</td><td class="donor-name">Anita Kumari</td><td class="school">UMS Sasaram</td><td class="district">Rohtas</td><td class="block">SASARAM</td><td class="pool">F</td><td class="late-teacher">Vikram Lal</td><td class="date">28-Apr-2026</td></tr>
+              <tr><td class="donation-id">321557</td><td class="member-id">891234</td><td class="hrms">2148031</td><td class="donor-name">Vikash Kumar</td><td class="school">Primary School Naya Tola</td><td class="district">Vaishali</td><td class="block">PUREDALAI</td><td class="pool">D</td><td class="late-teacher">Wajahat Ali Khan</td><td class="date">27-Apr-2026</td></tr>
+              <tr><td class="donation-id">321556</td><td class="member-id">112309</td><td class="hrms">4889201</td><td class="donor-name">Sushil Kumar</td><td class="school">MV Goraul</td><td class="district">Vaishali</td><td class="block">GORAUL</td><td class="pool">F</td><td class="late-teacher">Vikram Lal</td><td class="date">27-Apr-2026</td></tr>
+              <tr><td class="donation-id">321555</td><td class="member-id">442198</td><td class="hrms">7621410</td><td class="donor-name">Mukesh Pandit</td><td class="school">High School Patliputra</td><td class="district">Patna</td><td class="block">PATLIPUTRA</td><td class="pool">J</td><td class="late-teacher">Alok Awasthi</td><td class="date">27-Apr-2026</td></tr>
+              <tr><td class="donation-id">321554</td><td class="member-id">307612</td><td class="hrms">3357890</td><td class="donor-name">Geeta Devi</td><td class="school">PS Chhaprauli</td><td class="district">Bhojpur</td><td class="block">ARRAH</td><td class="pool">H</td><td class="late-teacher">Dharmendra Kumar</td><td class="date">27-Apr-2026</td></tr>
+              <tr><td class="donation-id">321553</td><td class="member-id">654321</td><td class="hrms">8912340</td><td class="donor-name">Ravi Shankar</td><td class="school">Composite UPS Bidupur</td><td class="district">Vaishali</td><td class="block">BIDUPUR</td><td class="pool">B</td><td class="late-teacher">Ram Prasad Yadav</td><td class="date">27-Apr-2026</td></tr>
+              <tr><td class="donation-id">321552</td><td class="member-id">789012</td><td class="hrms">1123091</td><td class="donor-name">Suman Sharma</td><td class="school">MV Mohaddinagar</td><td class="district">Samastipur</td><td class="block">MOHADDINAGAR</td><td class="pool">F</td><td class="late-teacher">Vikram Lal</td><td class="date">26-Apr-2026</td></tr>
+            </tbody>
+          </table>
+          <div class="sahyog-list-footer">
+            <div>Showing 1-10 of 3,21,561 records</div>
+            <div>Updated 24-May-2026 11:08</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variation B: Tight density Real Data Test (duplicates + long names) -->
+    <div class="variation-card">
+      <div class="variation-card-header">
+        <strong>Variation B:</strong> Real Data Test · tight density · duplicate names + long school names + same-day claims
+      </div>
+      <div class="variation-card-content twt-surface var-warm-terracotta density-tight">
+        <div class="sahyog-list">
+          <div class="sahyog-list-header">
+            <div class="sahyog-list-title">Sahyog List · Ongoing Contributions</div>
+            <div class="sahyog-list-subtitle">Disambiguation test — find Sushil Kumar Sharma of Goraul (Member 214804, HRMS 9874111)</div>
+          </div>
+          <div class="sahyog-list-stats">
+            <div class="stat-card"><div class="stat-label">Total Sahyog</div><div class="stat-value">3,21,561</div></div>
+            <div class="stat-card"><div class="stat-label">Active Drives</div><div class="stat-value">22</div></div>
+            <div class="stat-card"><div class="stat-label">Members</div><div class="stat-value">52,340</div></div>
+            <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value">14,892</div></div>
+          </div>
+          <div class="sahyog-list-controls">
+            <input type="text" class="search-input" placeholder="Search by Donation ID, Member ID, HRMS, donor, or late teacher…">
+            <button class="filter-button">Filter</button>
+            <button class="sort-button">Sort</button>
+          </div>
+          <table class="sahyog-table">
+            <thead>
+              <tr>
+                <th>Donation ID</th>
+                <th>Member ID</th>
+                <th>HRMS</th>
+                <th>Donor</th>
+                <th>School</th>
+                <th>District</th>
+                <th>Block</th>
+                <th>Pool</th>
+                <th>Late Teacher</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="donation-id">321561</td><td class="member-id">214803</td><td class="hrms">9874110</td><td class="donor-name">Sushil Kumar Sharma</td><td class="school">Upgraded Middle School Khairabad Block Patna Sadar</td><td class="district">Patna</td><td class="block">PATNA SADAR</td><td class="pool">F</td><td class="late-teacher">Vikram Lal Sharma</td><td class="date">28-Apr-26</td></tr>
+              <tr><td class="donation-id">321560</td><td class="member-id">214804</td><td class="hrms">9874111</td><td class="donor-name">Sushil Kumar Sharma</td><td class="school">Upgraded Middle School Goraul Block Vaishali District</td><td class="district">Vaishali</td><td class="block">GORAUL</td><td class="pool">F</td><td class="late-teacher">Vikram Lal Yadav</td><td class="date">28-Apr-26</td></tr>
+              <tr><td class="donation-id">321559</td><td class="member-id">112309</td><td class="hrms">4889201</td><td class="donor-name">Sushil Kumar</td><td class="school">Primary School Aruwa</td><td class="district">Vaishali</td><td class="block">PUREDALAI</td><td class="pool">F</td><td class="late-teacher">Vikram Lal Sharma</td><td class="date">28-Apr-26</td></tr>
+              <tr><td class="donation-id">321558</td><td class="member-id">488920</td><td class="hrms">1046686</td><td class="donor-name">Reena Devi</td><td class="school">PS Vikrampur Dalsinghsarai</td><td class="district">Samastipur</td><td class="block">DALSINGHSARAI</td><td class="pool">B</td><td class="late-teacher">Ram Prasad Yadav</td><td class="date">28-Apr-26</td></tr>
+              <tr><td class="donation-id">321557</td><td class="member-id">488921</td><td class="hrms">1046687</td><td class="donor-name">Reena Devi</td><td class="school">Composite School Sahebganj Block</td><td class="district">Muzaffarpur</td><td class="block">SAHEBGANJ</td><td class="pool">D</td><td class="late-teacher">Wajahat Ali Khan</td><td class="date">28-Apr-26</td></tr>
+              <tr><td class="donation-id">321556</td><td class="member-id">762141</td><td class="hrms">1079788</td><td class="donor-name">Amit Kumar Sharma</td><td class="school">MV Bakhtiyarpur Block Patna</td><td class="district">Patna</td><td class="block">BAKHTIYARPUR</td><td class="pool">B</td><td class="late-teacher">Ram Prasad Yadav</td><td class="date">27-Apr-26</td></tr>
+              <tr><td class="donation-id">321555</td><td class="member-id">762142</td><td class="hrms">1079789</td><td class="donor-name">Amit Kumar Sharma</td><td class="school">Primary School Naya Tola Block Vaishali</td><td class="district">Vaishali</td><td class="block">PUREDALAI</td><td class="pool">B</td><td class="late-teacher">Ram Prasad Yadav</td><td class="date">27-Apr-26</td></tr>
+              <tr><td class="donation-id">321554</td><td class="member-id">335789</td><td class="hrms">0632601</td><td class="donor-name">Anita Kumari</td><td class="school">Upgraded Middle School Sasaram Rohtas District</td><td class="district">Rohtas</td><td class="block">SASARAM</td><td class="pool">F</td><td class="late-teacher">Vikram Lal Sharma</td><td class="date">27-Apr-26</td></tr>
+              <tr><td class="donation-id">321553</td><td class="member-id">335790</td><td class="hrms">0632602</td><td class="donor-name">Anita Kumari</td><td class="school">Composite Upper Primary School Bikram Block</td><td class="district">Patna</td><td class="block">BIKRAM</td><td class="pool">H</td><td class="late-teacher">Dharmendra Kumar Singh</td><td class="date">27-Apr-26</td></tr>
+              <tr><td class="donation-id">321552</td><td class="member-id">891234</td><td class="hrms">2148031</td><td class="donor-name">Vikash Kumar</td><td class="school">Primary School Naya Tola Vaishali</td><td class="district">Vaishali</td><td class="block">PUREDALAI</td><td class="pool">D</td><td class="late-teacher">Wajahat Ali Khan</td><td class="date">27-Apr-26</td></tr>
+              <tr><td class="donation-id">321551</td><td class="member-id">891235</td><td class="hrms">2148032</td><td class="donor-name">Vikash Kumar</td><td class="school">MV Bidupur Block Vaishali District</td><td class="district">Vaishali</td><td class="block">BIDUPUR</td><td class="pool">F</td><td class="late-teacher">Vikram Lal Yadav</td><td class="date">27-Apr-26</td></tr>
+              <tr><td class="donation-id">321550</td><td class="member-id">442198</td><td class="hrms">7621410</td><td class="donor-name">Mukesh Pandit</td><td class="school">Upgraded High School Patliputra Patna</td><td class="district">Patna</td><td class="block">PATLIPUTRA</td><td class="pool">B</td><td class="late-teacher">Ram Prasad Yadav</td><td class="date">27-Apr-26</td></tr>
+            </tbody>
+          </table>
+          <div class="sahyog-list-footer">
+            <div>Showing 1-12 of 3,21,561 records</div>
+            <div>Updated 24-May-2026 11:08</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile preview -->
+  <div style="margin-top: 32px;">
+    <h3 style="font-family: 'Tiro Devanagari Hindi', serif; font-size: 18px; font-weight: 500; margin-bottom: 8px;">Mobile preview — 360px Bihar Android profile</h3>
+    <p class="ref-note">
+      The surface that members actually use. Real Data Test must pass HERE, not just on desktop.
+      Adapted row layout: donor → recipient on primary line; school + district + block + pool on
+      secondary line; Donation ID + Member ID + HRMS + date on the identity/metadata line.
+      <strong>Approval question:</strong> can a member locate a specific contribution in under
+      10 seconds on a 360px viewport with throttled bandwidth + slow CPU?
+    </p>
+    <div class="mobile-frame twt-surface var-warm-terracotta">
+      <div class="mobile-frame-header">360 × 800 · slow Android · 3G throttled</div>
+      <div class="mobile-sahyog-list-header">
+        <div class="mobile-sahyog-list-title">Sahyog List</div>
+        <div class="mobile-sahyog-list-subtitle">Publicly searchable contributions</div>
+      </div>
+      <div class="mobile-stats">
+        <div class="mobile-stat-card"><div class="stat-label">Total Sahyog</div><div class="stat-value">3,21,561</div></div>
+        <div class="mobile-stat-card"><div class="stat-label">This Month</div><div class="stat-value">14,892</div></div>
+        <div class="mobile-stat-card"><div class="stat-label">Members</div><div class="stat-value">52,340</div></div>
+        <div class="mobile-stat-card"><div class="stat-label">Active Drives</div><div class="stat-value">22</div></div>
+      </div>
+      <div class="mobile-search">
+        <input type="text" placeholder="Search Donation ID, Member ID, HRMS, name…">
+      </div>
+      <div class="mobile-filter-row">
+        <div class="mobile-chip">Filter</div>
+        <div class="mobile-chip">Sort: Date ↓</div>
+        <div class="mobile-chip">All districts</div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-row-primary">
+          <div class="mobile-row-donor">Sushil Kumar Sharma</div>
+          <div class="mobile-row-amount">₹ 310</div>
+        </div>
+        <div class="mobile-row-recipient"><span class="mobile-row-arrow">→</span> Vikram Lal Sharma</div>
+        <div class="mobile-row-meta">UMS Khairabad · Patna · PATNA SADAR · Pool <span style="color: var(--surface-accent);">F</span></div>
+        <div class="mobile-row-meta"><span class="meta-mono">Don. 321561 · Member 214803 · HRMS 9874110 · 28-Apr-2026</span></div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-row-primary">
+          <div class="mobile-row-donor">Sushil Kumar Sharma</div>
+          <div class="mobile-row-amount">₹ 310</div>
+        </div>
+        <div class="mobile-row-recipient"><span class="mobile-row-arrow">→</span> Vikram Lal Yadav</div>
+        <div class="mobile-row-meta">UMS Goraul · Vaishali · GORAUL · Pool <span style="color: var(--surface-accent);">F</span></div>
+        <div class="mobile-row-meta"><span class="meta-mono">Don. 321560 · Member 214804 · HRMS 9874111 · 28-Apr-2026</span></div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-row-primary">
+          <div class="mobile-row-donor">Sushil Kumar</div>
+          <div class="mobile-row-amount">₹ 310</div>
+        </div>
+        <div class="mobile-row-recipient"><span class="mobile-row-arrow">→</span> Vikram Lal Sharma</div>
+        <div class="mobile-row-meta">Primary School Aruwa · Vaishali · PUREDALAI · Pool <span style="color: var(--surface-accent);">F</span></div>
+        <div class="mobile-row-meta"><span class="meta-mono">Don. 321559 · Member 112309 · HRMS 4889201 · 28-Apr-2026</span></div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-row-primary">
+          <div class="mobile-row-donor">Reena Devi</div>
+          <div class="mobile-row-amount">₹ 310</div>
+        </div>
+        <div class="mobile-row-recipient"><span class="mobile-row-arrow">→</span> Ram Prasad Yadav</div>
+        <div class="mobile-row-meta">PS Vikrampur · Samastipur · DALSINGHSARAI · Pool <span style="color: var(--surface-accent);">B</span></div>
+        <div class="mobile-row-meta"><span class="meta-mono">Don. 321558 · Member 488920 · HRMS 1046686 · 28-Apr-2026</span></div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-row-primary">
+          <div class="mobile-row-donor">Reena Devi</div>
+          <div class="mobile-row-amount">₹ 310</div>
+        </div>
+        <div class="mobile-row-recipient"><span class="mobile-row-arrow">→</span> Wajahat Ali Khan</div>
+        <div class="mobile-row-meta">Composite School Sahebganj · Muzaffarpur · SAHEBGANJ · Pool <span style="color: var(--surface-accent);">D</span></div>
+        <div class="mobile-row-meta"><span class="meta-mono">Don. 321557 · Member 488921 · HRMS 1046687 · 28-Apr-2026</span></div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-row-primary">
+          <div class="mobile-row-donor">Amit Kumar Sharma</div>
+          <div class="mobile-row-amount">₹ 310</div>
+        </div>
+        <div class="mobile-row-recipient"><span class="mobile-row-arrow">→</span> Ram Prasad Yadav</div>
+        <div class="mobile-row-meta">MV Bakhtiyarpur · Patna · BAKHTIYARPUR · Pool <span style="color: var(--surface-accent);">B</span></div>
+        <div class="mobile-row-meta"><span class="meta-mono">Don. 321556 · Member 762141 · HRMS 1079788 · 27-Apr-2026</span></div>
+      </div>
+      <div class="mobile-row">
+        <div class="mobile-row-primary">
+          <div class="mobile-row-donor">Amit Kumar Sharma</div>
+          <div class="mobile-row-amount">₹ 310</div>
+        </div>
+        <div class="mobile-row-recipient"><span class="mobile-row-arrow">→</span> Ram Prasad Yadav</div>
+        <div class="mobile-row-meta">PS Naya Tola · Vaishali · PUREDALAI · Pool <span style="color: var(--surface-accent);">B</span></div>
+        <div class="mobile-row-meta"><span class="meta-mono">Don. 321555 · Member 762142 · HRMS 1079789 · 27-Apr-2026</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="amendment-note" style="margin-top: 16px; max-width: 100%;">
+    <strong>Real Data Test scenario observations:</strong> Two "Sushil Kumar Sharma" rows (different
+    Member IDs 214803 vs 214804, HRMS 9874110 vs 9874111) disambiguated by school + district + late
+    teacher + HRMS. A third "Sushil Kumar" (Member 112309, HRMS 4889201) disambiguated by missing
+    surname. Two "Vikram Lal" variants (Sharma vs Yadav) require careful read of the Late Teacher
+    column. The HRMS column provides government-cross-reference for verification when names collide;
+    Member ID provides the canonical TWT-internal lookup. Mobile preview shows the same data
+    survives the 360px constraint via the donor → recipient primary line + multi-line metadata
+    pattern. Disambiguation holds on both desktop and mobile; the 10-second approval is plausible.
+  </div>
+</section>
+
+<!-- ====================================================
+     Pattern 2: Yogdaan Bahi — restructured + School column
+     ==================================================== -->
+<section class="pattern-section">
+  <span class="pattern-badge">SECONDARY · Personal History</span>
+  <h2>2. Yogdaan Bahi — Personal Contribution History</h2>
+  <p class="ref-note">
+    A member's personal-filtered view of the Sahyog List. Each row shows Donation ID, Date, Late
+    Teacher (clickable), <strong>School</strong> (the late teacher's school — context about who the
+    member supported), District, Pool, Amount. The member's own identity is in the page header (no
+    per-row repetition). Operational register: Gregorian dates + Latin numerals throughout.
+  </p>
+
+  <div class="variations-grid">
+    <div class="variation-card">
+      <div class="variation-card-header">
+        <strong>Sushil Kumar Sharma's Yogdaan Bahi</strong> · 6 cycles · warm cream + terracotta
+      </div>
+      <div class="variation-card-content twt-surface var-warm-terracotta">
+        <div class="yogdaan-bahi">
+          <div class="yogdaan-bahi-header">
+            <div class="title">Yogdaan Bahi</div>
+            <div class="member-line"><strong>Sushil Kumar Sharma</strong> · Member ID 214803 · HRMS 9874110</div>
+            <div class="subtitle">UMS Khairabad · Patna · PATNA SADAR · Your contribution history</div>
+          </div>
+          <table class="yogdaan-table">
+            <thead>
+              <tr>
+                <th>Donation ID</th>
+                <th>Date</th>
+                <th>Late Teacher</th>
+                <th>School</th>
+                <th>District</th>
+                <th class="center">Pool</th>
+                <th class="numeric">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-donation-id">321561</td>
+                <td class="col-date">17-Apr-2026</td>
+                <td class="col-recipient">Vikram Lal Sharma</td>
+                <td class="col-school">UMS Goraul</td>
+                <td class="col-district">Vaishali</td>
+                <td class="col-pool">F</td>
+                <td class="col-amount">₹ 310</td>
+              </tr>
+              <tr>
+                <td class="col-donation-id">298142</td>
+                <td class="col-date">15-Mar-2026</td>
+                <td class="col-recipient">Wajahat Ali Khan</td>
+                <td class="col-school">Composite UPS Sahebganj</td>
+                <td class="col-district">Muzaffarpur</td>
+                <td class="col-pool">D</td>
+                <td class="col-amount">₹ 310</td>
+              </tr>
+              <tr>
+                <td class="col-donation-id">274891</td>
+                <td class="col-date">12-Feb-2026</td>
+                <td class="col-recipient">Alok Awasthi</td>
+                <td class="col-school">High School Patliputra</td>
+                <td class="col-district">Patna</td>
+                <td class="col-pool">J</td>
+                <td class="col-amount">₹ 310</td>
+              </tr>
+              <tr>
+                <td class="col-donation-id">251307</td>
+                <td class="col-date">14-Jan-2026</td>
+                <td class="col-recipient">Dharmendra Kumar</td>
+                <td class="col-school">MV Dadri Chowk</td>
+                <td class="col-district">Bhojpur</td>
+                <td class="col-pool">H</td>
+                <td class="col-amount">₹ 310</td>
+              </tr>
+              <tr>
+                <td class="col-donation-id">227458</td>
+                <td class="col-date">15-Dec-2025</td>
+                <td class="col-recipient">Ram Prasad Yadav</td>
+                <td class="col-school">MV Bakhtiyarpur</td>
+                <td class="col-district">Samastipur</td>
+                <td class="col-pool">B</td>
+                <td class="col-amount">₹ 310</td>
+              </tr>
+              <tr>
+                <td class="col-donation-id">204192</td>
+                <td class="col-date">14-Nov-2025</td>
+                <td class="col-recipient">Suresh Mishra</td>
+                <td class="col-school">UMS Patliputra</td>
+                <td class="col-district">Patna</td>
+                <td class="col-pool">A</td>
+                <td class="col-amount">₹ 310</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="yogdaan-bahi-footer">
+            <div>Total contributions · 6 cycles</div>
+            <div class="col-total">₹ 1,860</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="amendment-note" style="margin-top: 16px;">
+    <strong>What changed in v4:</strong> School column added to give Sushil context about the place
+    he supported — "Composite UPS Sahebganj, Muzaffarpur" tells him more than "Muzaffarpur" alone.
+    The school is the Late Teacher's school (where the deceased served), not Sushil's school
+    (which is in the page header). A member can click any Sahyog # to navigate to the full Sahyog
+    List entry, or click the Late Teacher to view that pool's Shradhanjali Sahyog Vivran.
+  </div>
+</section>
+
+<!-- ====================================================
+     Pattern 3: Shradhanjali (single-line Latin dates)
+     ==================================================== -->
+<section class="pattern-section">
+  <span class="pattern-badge">CEREMONIAL · Memorial Surface</span>
+  <h2>3. Shradhanjali Sahyog Vivran — Per-Claim Memorial Page</h2>
+  <p class="ref-note">
+    Memorial surface for a closed pool. Memorial copy (parichay, kinship lattice, shraddhanjali line)
+    remains in Hindi/Devanagari — the ceremonial register. Dates simplified to a single Latin line
+    ("Born: 1962 · Passed: 2026") to avoid dual-system clutter. Hindi numerals reserved for memorial
+    Devanagari *prose* only (e.g., "३४ वर्षों की सेवा"), not for standalone counts, amounts, or dates.
+  </p>
+
+  <div class="variations-grid">
+    <div class="variation-card">
+      <div class="variation-card-header">
+        <strong>Memorial page</strong> · warm cream + terracotta · Hindi in memorial prose only · Latin dates + counts + amounts
+      </div>
+      <div class="variation-card-content twt-surface var-warm-terracotta">
+        <div class="shradhanjali-top-rule"></div>
+        <div class="shradhanjali">
+          <div class="funeral-frame">
+            <div class="funeral-frame-inner">PORTRAIT</div>
+          </div>
+          <div class="shradhanjali-name">स्व. राम प्रसाद यादव</div>
+          <div class="shradhanjali-dates">Born: 1962 · Passed: 2026</div>
+          <div class="shradhanjali-parichay">
+            <p>सहायक शिक्षक, मध्य विद्यालय बख्तियारपुर, समस्तीपुर।</p>
+            <p>३४ वर्षों की सेवा। श्रद्धेय शिक्षक, विश्वसनीय साथी।</p>
+          </div>
+          <div class="shradhanjali-kinship">
+            <div class="kinship-row"><div class="kinship-label">पत्नी</div><div>सुनीता देवी</div></div>
+            <div class="kinship-row"><div class="kinship-label">पुत्र</div><div>अमित, राहुल</div></div>
+            <div class="kinship-row"><div class="kinship-label">पुत्री</div><div>प्रिया</div></div>
+          </div>
+          <div class="shraddhanjali-line">श्रद्धांजलि · स्मरण में</div>
+          <div class="contribution-summary">
+            <span class="count">14,800 सहयोगियों</span>
+            ने स्व. राम प्रसाद यादव के परिवार के साथ खड़े होकर<br>
+            <strong>₹ 45,88,000</strong> का योगदान दिया।
+          </div>
+          <div class="contributor-action">
+            <a href="#">पूरी सूची देखें · View full list →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================
+     Pattern 4: Panchayat Noticeboard — Latin numerals throughout
+     ==================================================== -->
+<section class="pattern-section">
+  <span class="pattern-badge">HOME · Operational + Ceremonial Hybrid</span>
+  <h2>4. Panchayat Noticeboard — Home Screen</h2>
+  <p class="ref-note">
+    Home screen mixing operational stats with ceremonial pinned notices. <strong>All numerals in
+    Latin</strong> per v4 amendment — Devanagari text is preserved in titles and copy, but numerals
+    (counts, amounts, dates) render in Latin. Hindi numerals are reserved exclusively for memorial
+    Devanagari prose on the Shradhanjali surface. Pool labels are letter codes only.
+  </p>
+
+  <div class="variations-grid">
+    <div class="variation-card">
+      <div class="variation-card-header">
+        <strong>Panchayat Noticeboard</strong> · warm cream + terracotta · Devanagari titles + Latin numerals
+      </div>
+      <div class="variation-card-content twt-surface var-warm-terracotta">
+        <div class="panchayat">
+          <div class="panchayat-top-strip">
+            <div class="pariwar-seal">TWT</div>
+            <div class="pariwar-title">परिवार की नब्ज़</div>
+          </div>
+          <div class="panchayat-stat-strip">
+            52,340 members · 8 districts · 22 active drives · 3 closings this month
+          </div>
+          <div class="panchayat-section-header">सूचना पट्ट · Notice Board</div>
+          <div class="pinned-notice">
+            <div class="pinned-stub"></div>
+            <div class="pinned-content">
+              <div class="pinned-title">समस्तीपुर पूल पूर्ण — पासवान-जी के परिवार को ₹ 45,88,000 दिए गए</div>
+              <div class="pinned-meta">14,800 सहयोगियों ने हाथ बढ़ाया · Closed 25-Apr-2026</div>
+            </div>
+          </div>
+          <div class="pinned-notice">
+            <div class="pinned-stub pinned-stub-green"></div>
+            <div class="pinned-content">
+              <div class="pinned-title">नया मील का पत्थर: 50,000 सदस्य पूरे हुए</div>
+              <div class="pinned-meta">Patna headquarters · 22-Apr-2026</div>
+            </div>
+          </div>
+          <div class="pinned-notice">
+            <div class="pinned-stub pinned-stub-black"></div>
+            <div class="pinned-content">
+              <div class="pinned-title">Next monthly meeting: Sunday 14 Jun 2026, 11:00 AM</div>
+              <div class="pinned-meta">Samastipur district office</div>
+            </div>
+          </div>
+          <div class="panchayat-section-header">हाल की आहुति · Recent Closings</div>
+          <div class="closing-row">
+            <div class="closing-pool">
+              <div class="closing-pool-name">Pool F</div>
+              <div class="closing-pool-meta">Vikram Lal Sharma's family · Vaishali</div>
+            </div>
+            <div class="closing-count">14,800 donors</div>
+          </div>
+          <div class="closing-row">
+            <div class="closing-pool">
+              <div class="closing-pool-name">Pool J</div>
+              <div class="closing-pool-meta">Alok Awasthi's family · Patna</div>
+            </div>
+            <div class="closing-count">13,940 donors</div>
+          </div>
+          <div class="closing-row">
+            <div class="closing-pool">
+              <div class="closing-pool-name">Pool D</div>
+              <div class="closing-pool-meta">Wajahat Ali Khan's family · Muzaffarpur</div>
+            </div>
+            <div class="closing-count">15,120 donors</div>
+          </div>
+          <div class="closing-row">
+            <div class="closing-pool">
+              <div class="closing-pool-name">Pool H</div>
+              <div class="closing-pool-meta">Dharmendra Kumar's family · Bhojpur</div>
+            </div>
+            <div class="closing-count">14,680 donors</div>
+          </div>
+          <div class="panchayat-footer">
+            Next monthly meeting: Sunday 14 Jun 2026 · 11:00 AM
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer notes -->
+<footer class="ref-doc-footer">
+  <h3>v4 changes summary</h3>
+  <ul>
+    <li><strong>Donation ID</strong> replaces "#" as the column header (the permanent sequential contribution reference — used internally and surfaced publicly).</li>
+    <li><strong>HRMS column added back</strong> to the Sahyog List. Bihar's teachers use HRMS (Human Resource Management System); other states' Pariwars may use eHRMS. The column label is per-Pariwar configurable. HRMS provides government-cross-reference for verification when donor names collide; Member ID remains the canonical TWT-internal lookup.</li>
+    <li><strong>School column added to Yogdaan Bahi</strong> — the Late Teacher's school (where the deceased served). Gives the member context about who they supported. Member's own school remains in the page header.</li>
+    <li><strong>Hindi numerals in Panchayat Noticeboard fixed to Latin.</strong> Operational stats AND celebration framing both use Latin numerals. Hindi numerals are reserved exclusively for memorial Devanagari prose on the Shradhanjali surface (e.g., "३४ वर्षों की सेवा" embedded in narrative copy). Standalone counts, amounts, and dates always render in Latin.</li>
+  </ul>
+
+  <h3>Numeral handling — tightened rule (v4)</h3>
+  <ul>
+    <li><strong>Operational surfaces:</strong> Latin numerals (dates, counts, amounts, identifiers — all Sahyog List columns, Yogdaan Bahi columns, search inputs, footers, stat strips).</li>
+    <li><strong>Noticeboard surfaces:</strong> Latin numerals — even for celebration framing (₹ 45,88,000 / 14,800 / 50,000 all in Latin). Devanagari text in titles and meta lines is preserved.</li>
+    <li><strong>Memorial Devanagari prose only:</strong> Hindi numerals permitted when embedded in narrative Hindi copy on the Shradhanjali surface (e.g., "३४ वर्षों की सेवा"). Memorial dates render in Latin ("Born: 1962 · Passed: 2026"); memorial counts and amounts also Latin ("14,800 सहयोगियों", "₹ 45,88,000").</li>
+  </ul>
+
+  <h3>Public column inventory — Sahyog List</h3>
+  <p>
+    Donation ID · Member ID · HRMS · Donor Name · School · District · Block · Pool · Late Teacher
+    · Date. Of these, Member ID and Late Teacher are styled as clickable (canonical lookup +
+    cross-reference to memorial page). Donation ID and HRMS are visible identifiers but not styled
+    as primary actions. Pool renders as letter code only.
+  </p>
+
+  <h3>Real Data Test — must include mobile per amendment</h3>
+  <p>
+    Before locking visuals: render Sahyog List + Yogdaan Bahi with 300+ real records that exercise
+    the disambiguation surface (duplicate surnames, duplicate full names, long school names, same-day
+    claims across districts, multiple Late Teacher entries with the same surname, HRMS-near-collisions).
+    The test runs on <strong>both desktop AND mobile (360px-wide viewport representative of Bihar
+    mid-range Android) under throttled bandwidth and slow-CPU conditions</strong>. Approval question:
+    can a user locate a specific contribution in under 10 seconds on the mobile target device?
+    Desktop validation alone is misleading — the surface lives on Sushil's bus commute phone, not on
+    a designer's laptop.
+  </p>
+
+  <h3>Per-Pariwar column label configurability</h3>
+  <p>
+    The HRMS column is one example of a per-Pariwar configurable surface label. TWT-Bihar renders
+    "HRMS"; a state Pariwar where the local government uses eHRMS renders "eHRMS"; a Rail Parivar
+    might render "PF Number" or "Railway ID"; a Bank Parivar might render "Employee Code". The
+    column semantic is "government-issued service identifier for cross-reference"; the label adapts
+    to the Pariwar's host system.
+  </p>
+
+  <h3>What this reference does not show</h3>
+  <ul>
+    <li>Status-mismatch warm-umber tone (specified separately in §8)</li>
+    <li>Reduced-motion / low-bandwidth behavior (not visible in static reference)</li>
+    <li>Larger-touch-mode (44pt → 56pt+ accessibility opt-in not shown)</li>
+    <li>Tier-2 surfaces (Helpline Operator console, Trustee tooling, admin UI primitives — deferred to §10)</li>
+    <li>Full-scale 300+ row rendering (Variation B shows 12 rows; full-scale validation happens at prototype Real Data Test gate)</li>
+    <li>Devanagari typography validation on target devices (browser default Devanagari shaping here; production validation per FM-2 on Snapdragon 4-series Android)</li>
+  </ul>
+
+  <h3>Next steps</h3>
+  <ul>
+    <li>Reference reviewed by Trustee Panel at early-prototype review (gate per §8)</li>
+    <li>Cultural validation of accent values during P0-2 field work in Vaishali district</li>
+    <li><strong>Real Data Test at full scale (300+ records) on both desktop AND mobile (360px)</strong> before final palette + spacing values commit</li>
+    <li>Final values committed at end of prototype, incorporated into Visual Reference Pack (committed in §8)</li>
+    <li>Tier-2 surface enumeration in §10</li>
+    <li>Cross-section cleanup of Mahabharata pool naming references in §5/§6/§7 (those sections were drafted before the naming was dropped; references should be read as "letter-coded pool names")</li>
+  </ul>
+</footer>
+
+</body>
+</html>

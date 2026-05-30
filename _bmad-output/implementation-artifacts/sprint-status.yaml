@@ -1,0 +1,327 @@
+# generated: 2026-05-29
+# last_updated: 2026-05-30 (story 0-9 flipped backlog → ready-for-dev on 2026-05-30 via bmad-create-story: comprehensive Story 0.9 file authored at _bmad-output/implementation-artifacts/0-9-p0-2b-bereaved-spouse-conversation-completed.md mirroring Story 0.8's framework-as-research-surface pattern but escalating discipline for bereavement-context: N=1 single conversation vs N=5; ≥60-min vs ≥45-min; Trustee Panel approval BEFORE recruitment as Task 7 precondition; re-consent-for-quotation discipline forbidding verbatim without per-quote re-confirmation; cold-recruitment forbidden — trustee-mediated paths only (TSCT trustee referral + Trustee Panel personal-network + BSWLB + Bihar grief-support NGO); researcher-does-not-initiate-grief discipline; Pattern 4 sample-copy evaluation as the AC's load-bearing surface (distinct from Story 0.8's mental-model-validation surface) capturing per-sample verdict for 8 UX-spec §12 sample-copy rows at lines 2349-2360 + 7 cross-cutting grief-grammar elements opt-in mid/late-interview per ethics-protocol §3.7; 30-day raw-recording retention vs Story 0.8's 90-day; no-compensation default; ≥5-second silence wait + 5-10-min warm-up + witnessing-not-comforting register; 13 framework artifacts to author + 1 sub-directory at _bmad-output/research/p0-2b-bereaved-spouse-protocol/ (README + ethics-protocol with §2-bis re-consent + §2-tris trustee-approval-pre-recruitment + §3.0 bereavement-context recruitment + §3.7 opt-in Pattern-4 + ethics-protocol §3.6 spouse-led-grief; interview-protocol with §0 pre-recruitment trustee-approval checklist + §4 Pattern 4 sample-copy opt-in offer; Hindi+English consent templates with re-consent-for-quotation checkbox + trustee-approval transparency line; question-bank with 5 AC-named dimensions + §6 Pattern 4 opt-in prompts + §7 grief-grammar opt-in prompts; pattern-4-evaluation-worksheet pre-staged with 8 sample-copy rows verbatim from UX spec lines 2349-2360 + 7 cross-cutting grief-grammar rows; assumption-inventory ≥30 PRD/UX grief-grammar + claim-filing + memorial assumptions; per-interview-note-schema with re-consent-for-quotation tracking; synthesis-schema 12 sections including §4 Pattern 4 evaluation load-bearing surface + Epic 6 / Epic 9 / Epic 11b implications per-Story; divergence-log with new `pattern4-copy-revision-required` severity value + permitted-pre-staging objective criterion; trustee-review-log with pre-conversation approval row slot pre-staged; recruitment-log with 1 pending-recruitment row + quotation-re-consent-engagement column) + scaffolded AC-named synthesis file at _bmad-output/research/p0-2b-bereaved-spouse.md per epics line 852; Tasks 7-11 remain _AWAITING EXTERNAL ACTION_ — Trustee Panel pre-conversation approval + Solo Builder recruits 1 bereaved spouse via trustee-mediated path + conducts ≥60-min Hindi conversation at spouse's chosen setting with re-consent-for-quotation discipline + authors substantive synthesis with Pattern 4 evaluation + ≥1 trustee review + divergence reconciliation + Pattern 4 revisions integrated into UX spec §12 before Epic 6 (claim filing) + Epic 9 (NomineeConsole Sunita's surface) + Epic 11b (memorial) design freezes per UX-DR5 + UX §Phase-0 P0-2 + AR-49 P0-2 Launch Gate Risks row at architecture line 4782 + epics line 2263 Epic 6 explicit dependency + epics line 3088 Story 9.1 explicit dependency + epics line 3750/3850/3862 Epic 11b explicit dependencies; Story 0.9 contributes the second of four P0-2 legs — full P0-2 discharge requires 0.8 + 0.10 + 0.11 co-leg closures; critical hypotheses tagged: A-grief-fursat-cadence + A-grief-witness-not-bailiff + A-grief-no-countdowns + A-grief-no-penalties + A-grief-held-not-processed + A-doc-staff-helps + A-staff-named-shepherd + A-family-relative-as-proxy + A-family-eldest-male-spokesperson + A-emotion-pace-no-multitasking + A-memorial-consent-opt-in + A-memorial-portrait-cultural-treatment + A-pattern4-no-blame-register + A-pattern4-helpline-third-tier + A-tsct-precedent-credible)
+# (story 0-8 flipped ready-for-dev → in-progress → review on 2026-05-30 via bmad-create-story → bmad-dev-story; Tasks 1-6 author-committed: 12 NEW framework files at _bmad-output/research/p0-2a-teacher-interviews-protocol/ + Decision 2026-05-30-008 + Story 0.8 deferred-work.md section; Tasks 7-11 remain _AWAITING EXTERNAL ACTION_)
+# (story 0-8 flipped backlog → ready-for-dev on 2026-05-30 via bmad-create-story)
+# (story 0-7 flipped review → done via bmad-code-review: 1 decision deferred (D-01: backfill Row 16 placeholder mismatch → Task 9 executor discretion) + 24 patches applied — rota.md: loop_node_id column added to all 8 row tables + timezone requirement strengthened; README.md: code-escrow sub-surface clarification + invariant 11 carve-out generalized to peer-mesh+kyc-fallback + 90-day expiry changed to manual review with chair ownership + annual renewal quorum-unavailable fallback added + ADR slot arithmetic note; ledger.md: row-count corrected 11→9 unique + factual-vs-supersession boundary + status transition rules + SLA test log handler-identity + comms-channel-template columns added; operations-lead-commitment.md: scoped write-access grant for routine maintenance + substitute bench representative designation requirement; backfill-log.md: blanket discharge authority for 7 indirect-coverage rows + Row 23 two-phase clarification + line-drift detection note; 7 loop-node §11: 30-min unreachability threshold added to tier-1→tier-2 escalation; denial-appeal: general CoI clause + backup-engineer authority caveat; peer-mesh: UX spec cite strengthened; reconciliation §9: Yogdaan Bahi co-coverage caveat; helpdesk §2/§4: auto-attendant moved to automation surface; claim-filing/helpdesk/upi-failure-coach §8: helpline-inbound relabeled member-facing + staff-paging ADR slot added; denial-appeal/kyc-fallback §12: comms-template paths fully-qualified; Tasks 8-11 remain _AWAITING EXTERNAL ACTION_)
+# (story 0-7 flipped ready-for-dev → in-progress → review via bmad-dev-story: Tasks 1-7 author-committed with 13 NEW framework files at docs/fallback-handler-ledger/ + 23-row P0-1-pending citation-slot backfill + Decision 2026-05-30-007 + 13 narrow cross-reference edits + adr-index Section I 30 new rows (73→103); Tasks 8-11 remain _AWAITING EXTERNAL ACTION_)
+# (story 0-6 flipped done via bmad-code-review: 4 decisions resolved + 18 patches applied — rationale notes added to contract-template §6/§9/§11; billing precedence clause added to scope-of-work §4; incapacitation declaration procedure added to scope-of-work §3; retry cap added to scope-of-work §4; all-modes-continue made explicit in access-grant-procedure §3.2; [deferred ADR] tag added to access-grant-procedure §2.7; circular escalation fixed in access-grant-procedure §1; §3.3 cross-ref added to §3.1; immediate-termination in-flight assessment added to access-grant-procedure §3.1 + contract-template §10; activation-procedure §3.2 dead cross-ref fixed; deactivation condition clarified in activation-procedure §2.3 step 9; Solo Builder safety-escalation path added to activation-procedure §2.4; adr-index rows-by-section narrative updated 65→73+8; 90-day expiry consequence added to README §5; quarterly retainer routing fixed in README §6; bus-factor handoff protocol added to onboarding-checklist §2(d); auto-renew default-is-renewal clarified in contract-template §5; Tasks 8-12 remain _AWAITING EXTERNAL ACTION_)
+# (story 0-7 flipped backlog → ready-for-dev → in-progress → review on 2026-05-30 via bmad-create-story → bmad-dev-story; Tasks 1-7 author-committed: 13 NEW framework files at docs/fallback-handler-ledger/ (README + ledger + loop-nodes/ × 8 + rota + operations-lead-commitment + backfill-log) + 23-row P0-1-pending citation-slot backfill + 13 narrow cross-reference edits across Stories 0.1/0.4/0.5/0.6 + deferred-work.md + Decision 2026-05-30-007 appended + adr-index Section I with 30 new rows (73→103); Tasks 8-11 remain _AWAITING EXTERNAL ACTION_ — Trustee Panel Operations Lead hire OR substitute-handler-bench formal ratification + per-loop-node named role + funding + rota + ≥2-trustee ledger sign-off + synthetic SLA test. Story 0.7 closure discharges UX-DR4 + AR-49 P0-1 Launch Gate Risks row at architecture line 4781; Story 0.7 is the parallel loop-node-operational-responsiveness portfolio per docs/fallback-handler-ledger/README.md §10 — distinct from the bus-factor-of-one mitigation portfolio (Stories 0.1-0.6) — closure does NOT contribute to the 30-day-takeover joint discharge)
+# (story 0-2 flipped backlog → ready-for-dev on 2026-05-29 via bmad-create-story)
+# (story 0-3 flipped backlog → ready-for-dev → in-progress on 2026-05-29 via bmad-create-story → bmad-dev-story)
+# (story 0-3 remained in-progress after bmad-code-review on 2026-05-29: 26 review patches applied; Tasks 7-11 still _AWAITING EXTERNAL ACTION_)
+# (story 0-4 flipped backlog → ready-for-dev → in-progress → review on 2026-05-29 via bmad-create-story → bmad-dev-story; Tasks 1-6 author-committed; Tasks 7-9 await trustee sign-off + first table-top + Story 0.13 counsel returns)
+# (story 0-4 flipped review → done on 2026-05-30 via bmad-code-review: 6 decisions resolved + 10 patches applied; Tasks 7-9 remain _AWAITING EXTERNAL ACTION_ — tracked in story file; author work complete)
+# (story 0-5 flipped backlog → ready-for-dev → in-progress → review on 2026-05-30 via bmad-create-story → bmad-dev-story; Tasks 1-7 author-committed; Tasks 8-10 await trustee sign-off + Story 0.6 comprehension administration + 80% threshold close)
+# (story 0-5 flipped review → done on 2026-05-30 via bmad-code-review: 2 decisions resolved + 13 patches applied — row count fix 20→34; cloudflare-pivot ADR slot added; adr-directory-scaffold row clarified; R5(E) anchor fix; on-call status header + changelog fixes; answer-key Q-E.6 cite fix; README §6 owners added; domain glossary added; sign-off tie-breaking + quorum-exception added; deferred-with-ADR transition trigger added; Tasks 8-10 remain _AWAITING EXTERNAL ACTION_ — tracked in story file; author work complete)
+# (story 0-6 flipped backlog → ready-for-dev → in-progress → review on 2026-05-30 via bmad-create-story → bmad-dev-story; Tasks 1-7 author-committed: 8 NEW framework files at docs/backup-engineer/ + 13 narrow cross-reference edits across Stories 0.1/0.2/0.3/0.4/0.5 + Decision 2026-05-30-006 appended + adr-index Section H with 8 new rows (65→73); Tasks 8-12 remain _AWAITING EXTERNAL ACTION_ — trustee A-13 authorization + Story 0.13 counsel return + named engineer + signed contract + IAM grant + onboarding + activation-scenario test; Story 0.6 closure unblocks Story 0.1 AC-4 path 1 + Story 0.2 audit-mirror structural fix + Story 0.3 restoration-drill executor + Story 0.4 table-top facilitator + Story 0.5 AC-3 comprehension administration)
+# project: TWT
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-05-29
+last_updated: 2026-05-31
+project: TWT
+# Note: last_updated reflects the most recent sprint-status mutation; Story 0.9 flipped ready-for-dev → in-progress → review on 2026-05-31 via bmad-dev-story: Tasks 1-6 author-committed (13 NEW framework files at _bmad-output/research/p0-2b-bereaved-spouse-protocol/ — README 13 sections + ethics-protocol 8 sections + §2-bis + §2-tris + §3.0 + §3.7 P0-2b-distinct escalations + interview-protocol 7 sections including §0 pre-recruitment trustee-approval checklist + §4 mid-interview Pattern 4 opt-in offer + Hindi+English consent templates with re-consent-for-quotation checkbox + trustee-approval transparency line + question-bank 8 sections with 5 AC dims × 6 prompts + §6 Pattern 4 opt-in + §7 grief-grammar opt-in + 8 closing prompts + pattern-4-evaluation-worksheet load-bearing AC capture instrument with 8 sample-copy rows verbatim from UX spec lines 2353-2360 + 7 cross-cutting grief-grammar rows pre-staged + assumption-inventory 46 rows across 8 categorizations with 18 critical-hypothesis-tagged + per-interview-note-schema with quotation_log re-consent tracking + synthesis-schema 12 sections including §4 Pattern 4 evaluation load-bearing surface + divergence-log with `pattern4-copy-revision-required` severity value + permitted-pre-staging objective criterion + trustee-review-log with pre-conversation approval row slot pre-staged + recruitment-log with 1 pending-recruitment row + interview-notes/ subdir README placeholder) + scaffolded AC-named synthesis file at _bmad-output/research/p0-2b-bereaved-spouse.md per epics line 852 + Decision 2026-05-31-009 appended to .decision-log.md + Story 0.9 author-commit section appended to deferred-work.md (16 items); Tasks 7-11 remain _AWAITING EXTERNAL ACTION_ (Trustee Panel pre-conversation approval P0-2b-distinct precondition per ethics-protocol §2-tris + Solo Builder recruits 1 bereaved spouse via trustee-mediated path + conducts ≥60-min Hindi conversation at spouse's chosen setting with re-consent-for-quotation discipline + opt-in Pattern 4 mid-interview + authors substantive synthesis with Pattern 4 evaluation §4 population + ≥1 trustee review + divergence reconciliation + Pattern 4 revisions integrated into UX spec §12 before Epic 6 + Epic 9 + Epic 11b design freezes per UX-DR5 + UX §Phase-0 P0-2 + AR-49 P0-2 Launch Gate Risks row + epics line 2263 Epic 6 + line 3088 Story 9.1 + lines 3750/3850/3862 Epic 11b explicit dependencies); Story 0.9 contributes second of four P0-2 legs — full P0-2 discharge requires 0.8 + 0.10 + 0.11 co-leg closures. Prior mutation 2026-05-30: Story 0.9 flipped backlog → ready-for-dev via bmad-create-story.
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # ==========================================================================
+  # Epic 0: Pre-launch Operational Continuity & Phase-0 Launch Gates
+  # ==========================================================================
+  epic-0: in-progress
+  0-1-operational-runbooks-authored-trustee-signed: in-progress
+  0-2-credential-escrow-established-with-trustee-quorum-open: in-progress
+  0-3-code-escrow-auto-mirror-pipeline-live: in-progress
+  0-4-per-surface-degradation-policy-authored: done
+  0-5-knowledge-transfer-documentation-pack-compiled: done
+  0-6-backup-engineer-contracted-with-trustee-authorization: done
+  0-7-p0-1-fallback-handler-ledger-published-with-sla-rota: done
+  0-8-p0-2a-teacher-empathy-interviews-completed: done
+  0-9-p0-2b-bereaved-spouse-conversation-completed: review
+  0-10-p0-2c-vi-low-vision-member-accessibility-validation: backlog
+  0-11-p0-2d-operator-shadowing-completed: backlog
+  0-12-p0-3-spec-to-cadence-reality-check-reconciled: backlog
+  0-13-p0-4-legal-counsel-concurrent-review-engagement-signed: backlog
+  0-14-p0-5-native-stack-validation-prototype-ratify-decision-logged: backlog
+  0-15-architectural-launch-gate-inventory-scheduled-with-owners: backlog
+  epic-0-retrospective: optional
+
+  # ==========================================================================
+  # Epic 1: Platform Foundation, Multi-Tenancy, RBAC & Audit
+  # ==========================================================================
+  epic-1: backlog
+  1-1-turborepo-monorepo-bootstrap: backlog
+  1-2-cloud-sql-postgres-drizzle-migration-tooling: backlog
+  1-3-packages-events-event-log-primitive: backlog
+  1-4-packages-contracts-zod-openapi-contract-scaffolding: backlog
+  1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers: backlog
+  1-6-pariwar-id-first-class-rls-adversarial-test: backlog
+  1-7-pariwar-passport-data-model-branding-bundle: backlog
+  1-8-rbac-permission-keys-scope-dimensions-12-seeded-roles: backlog
+  1-9-admin-authentication-email-password-webauthn-passkey-step-up-otp: backlog
+  1-10-tamper-evident-audit-log-hash-chain-6h-off-site-mirror: backlog
+  1-11a-audit-log-integrity-verification-primitive: backlog
+  1-11b-trustee-facing-audit-log-integrity-verification-ui: backlog
+  1-12-pg-boss-job-queue-idempotency-keyed-store: backlog
+  1-13-cloudflare-bot-management-turnstile-edge-protection: backlog
+  1-14-rate-limiting-login-wall-forced-pagination-honeypot-noindex: backlog
+  1-15-dokploy-auto-deploy-pipeline-multi-pariwar-provisioning: backlog
+  1-16a-friction-budget-pr-ci-gate: backlog
+  1-16b-pii-scrape-ci-gate: backlog
+  1-16c-schema-diff-ci-gate: backlog
+  1-16d-benefit-mechanism-tag-ci-gate: backlog
+  1-17-design-system-foundation-tokens-typography-vocabulary-numeral-hardening: backlog
+  epic-1-retrospective: optional
+
+  # ==========================================================================
+  # Epic 2: Niyamavali Publishing & Public Trust Identity
+  # ==========================================================================
+  epic-2: backlog
+  2-1-i18n-centralized-utility-bilingual-surface-contract: backlog
+  2-2-tone-guide-vocabulary-enforcement-process: backlog
+  2-3-niyamavali-rule-registry-data-model-amendment-with-diff-storage: backlog
+  2-4-niyamavali-amendment-workflow-admin-ui-audit-logged-publish: backlog
+  2-5-public-astro-ssr-shell-foundation-niyamavali-public-render-with-version-diff: backlog
+  2-6-tc-version-pinning-mechanism-public-render: backlog
+  2-7-consent-registry-granular-revocable: backlog
+  epic-2-retrospective: optional
+
+  # ==========================================================================
+  # Epic 3: Member Identity & Lifecycle
+  # ==========================================================================
+  epic-3: backlog
+  3-1-member-lifecycle-state-machine-event-stream: backlog
+  3-2-member-mobile-otp-authentication: backlog
+  3-3a-digilocker-provider-interface-abstraction: backlog
+  3-3b-digilocker-kyc-flow-in-signup-manual-fallback: backlog
+  3-4-nominee-declaration-with-75-25-split: backlog
+  3-5-medical-disclosure-with-ima-list-concealment-denial-ack: backlog
+  3-6-signup-110-vyawastha-shulk-via-upi-intent-reference-code-lock-in-entry: backlog
+  3-7-lock-in-clock-widget-on-home-screen: backlog
+  3-8-annual-renewal-with-3-month-grace-vyawastha-shulk-status-payload-reminder-cadence: backlog
+  3-9-life-events-panel: backlog
+  3-10-voluntary-withdrawal-flow-with-110-forfeit-12-month-rejoin-lock: backlog
+  3-11-data-export-zip-dpdpa-member-right: backlog
+  3-12-rtbf-soft-delete-anonymization: backlog
+  epic-3-retrospective: optional
+
+  # ==========================================================================
+  # Epic 4: Niyamavali Rules Engine & Member Validity Service
+  # ==========================================================================
+  epic-4: backlog
+  4-1-rule-evaluation-engine-primitive: backlog
+  4-2-r7-contribution-discipline-rules: backlog
+  4-3-r8-90-percent-rule: backlog
+  4-4-r5-r9-special-death-rules-r14-concealment-flagged-evaluation: backlog
+  4-5-fr-12-retirement-coverage-extension-computation: backlog
+  4-6-fr-12a-member-validity-service: backlog
+  4-7-member-status-panel-admin-member-facing-variants-compound-read-model: backlog
+  4-8-per-cohort-cache-invalidation-with-conservative-recompute-fallback: backlog
+  epic-4-retrospective: optional
+
+  # ==========================================================================
+  # Epic 5: Three-Tier Communication Channels
+  # ==========================================================================
+  epic-5: backlog
+  5-1-structured-alert-payload-schema-channel-provider-abstraction-central-dispatcher: backlog
+  5-2-in-app-push-channel-fcm-apns-primary-7-categories: backlog
+  5-3-whatsapp-business-api-integration-behind-provider-abstraction-per-pariwar-config: backlog
+  5-4-member-wa-opt-in-via-inbound-webhook-matching-webhook-ingress-primitive: backlog
+  5-5-telegram-mirror-fire-and-forget: backlog
+  5-6-sms-transactional-fallback-3-retry-exp-backoff: backlog
+  5-7-in-app-engagement-cost-optimization-with-time-critical-override: backlog
+  5-8-pariwar-degraded-mode-cycle-open-sms-bridge: backlog
+  5-9-step-up-otp-channel-delivery-audit-per-send-per-consume: backlog
+  epic-5-retrospective: optional
+
+  # ==========================================================================
+  # Epic 6: Claim Filing, Peer Verification, Ground Inspection & Internal Appeal
+  # ==========================================================================
+  epic-6: backlog
+  6-1-claim-case-object-data-model-claim-state-machine: backlog
+  6-2-member-app-claim-filing-flow-ravi-mode: backlog
+  6-3-helpline-mediated-claim-filing-flow-member-lookup-read-back: backlog
+  6-4-intake-convergence-point-icp-dedup-key-cross-channel-visibility-override-semantics: backlog
+  6-5-death-certificate-ocr-parity-check-document-path-chooser: backlog
+  6-6-peer-mesh-deterministic-5-nearest-selection-ping: backlog
+  6-7-ground-inspection-scheduling-notes-photos: backlog
+  6-8-claim-time-nominee-bank-detail-collection-dual-account: backlog
+  6-9-claim-time-dpdpa-consent: backlog
+  6-10-verifier-console-signals-panel-cross-pariwar-scope-handling: backlog
+  6-11-verification-decision-strip-reason-code-dropdown-audit-trail-entry: backlog
+  6-12-human-shepherd-assignment-member-facing-visibility: backlog
+  6-13-state-trustee-cycle-freeze-approval-bulk-approval-surface: backlog
+  6-14-r9-special-case-voting-walkthrough: backlog
+  6-15-concealment-flagged-claim-path: backlog
+  6-16-3-stage-claim-denial-appeal-flow-reversed-denial-sahyog-vivran-publish-hook: backlog
+  epic-6-retrospective: optional
+
+  # ==========================================================================
+  # Epic 7: Pool Engine & Cycle Spawn
+  # ==========================================================================
+  epic-7: backlog
+  7-1-pool-object-data-model-pool-state-machine-snapshot-storage-support-category-discriminator: backlog
+  7-2-pool-naming-service-culture-rooted-curated-list-dual-identifier: backlog
+  7-3-pool-spawn-saga-parent-n-child-jobs-atomic-cycle-freeze-invariant: backlog
+  7-4-deterministic-member-to-pool-assignment-property-based-replay-test-suite: backlog
+  7-5-fixed-amount-snapshot-at-spawn-12-month-notice-workflow-emergency-adjustment-override: backlog
+  7-6-pool-bound-payment-enforcement: backlog
+  7-7-idempotent-payment-reference-amount-lock-at-upi-intent: backlog
+  7-8-under-funded-cycle-close-of-cycle-template-driven-framing: backlog
+  7-9-pool-engine-pre-launch-measured-validation-gate: backlog
+  7-10-pool-engine-onboarding-tutorial: backlog
+  epic-7-retrospective: optional
+
+  # ==========================================================================
+  # Epic 8: Sushil's Contribution Loop
+  # ==========================================================================
+  epic-8: backlog
+  8-1-alert-state-machine-cycle-open-trigger: backlog
+  8-2-active-contribution-card-my-pool-card-progress-meter-15-day-tone-gradient: backlog
+  8-3-real-time-live-contributor-list-pending-contributors-list: backlog
+  8-4-upi-intent-flow-upi-intent-button-utr-self-attestation-yellow-pill: backlog
+  8-5-upi-failure-coach: backlog
+  8-6-yogdaan-bahi-contribution-timeline-list-virtualization: backlog
+  8-7-contribution-note-pdf-never-receipt-legal-reviewed-watermark-niyamavali-version: backlog
+  8-8-contribution-loop-notification-triggers: backlog
+  8-9-calendar-aware-close-of-cycle-timing: backlog
+  8-10-out-of-band-contribution-policy: backlog
+  8-11-call-helpline-cta-cross-cutting-affordance: backlog
+  8-12-90-second-twt-portion-loop-measurement-instrumentation: backlog
+  epic-8-retrospective: optional
+
+  # ==========================================================================
+  # Epic 9: Reconciliation Engine
+  # ==========================================================================
+  epic-9: backlog
+  9-1-nominee-console-sunitas-surface-fursat-cadence-staff-takeover-by-day-n: backlog
+  9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema: backlog
+  9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: backlog
+  9-4-utr-matching-engine-matcher-mechanism: backlog
+  9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: backlog
+  9-6-status-pill-5-state-design-system-component: backlog
+  9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: backlog
+  9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: backlog
+  9-9-dual-nominee-bank-accounts-rbi-upi-limit-workaround: backlog
+  9-10-4-hour-retry-reminders: backlog
+  9-11-over-payment-facilitated-recovery: backlog
+  9-12-pool-progress-card-public-member-surface: backlog
+  epic-9-retrospective: optional
+
+  # ==========================================================================
+  # Epic 10: Admin Operations Console
+  # ==========================================================================
+  epic-10: backlog
+  10-1-helpdesk-subsystem-data-model-routing-policy-registry: backlog
+  10-2-member-facing-helpdesk-ticket-filing: backlog
+  10-3-helpline-call-to-ticket-operator-surface: backlog
+  10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: backlog
+  10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: backlog
+  10-6-bulk-operations-framework: backlog
+  10-7-reports-exports-library-async-generation-scope-respecting: backlog
+  10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: backlog
+  10-9-banner-popup-manager-valid-from-until-dismiss: backlog
+  10-10-member-moderation-suspend-terminate-restore-reason-codes: backlog
+  10-11-trustee-lite-list-signals: backlog
+  10-12-per-pariwar-custom-fields-jsonb: backlog
+  10-13-fixed-amount-setter-admin-ui: backlog
+  10-14-permission-delegation: backlog
+  10-15-survey-poll: backlog
+  epic-10-retrospective: optional
+
+  # ==========================================================================
+  # Epic 11a: Public Trust Identity Shell
+  # ==========================================================================
+  epic-11a: backlog
+  11a-1-4-tier-visibility-matrix-codified-per-surface-public-vs-private-replacement: backlog
+  11a-2-public-astro-ssr-shell-extension-for-member-directory-tiered-visibility-renderers: backlog
+  11a-3-member-directory-pii-shielded-tiered-render-scope-anti-enumeration-safeguards: backlog
+  11a-4-phone-email-obfuscation-defense-in-depth-public-surfaces-only: backlog
+  11a-5-noticeboard-strip-foundational-layout-component: backlog
+  11a-6-pinned-notice-component: backlog
+  epic-11a-retrospective: optional
+
+  # ==========================================================================
+  # Epic 11b: Memorial + Sahyog Drive
+  # ==========================================================================
+  epic-11b: backlog
+  11b-1-sahyog-drive-active-archive: backlog
+  11b-2-contribution-list-components-table-mobile-row: backlog
+  11b-3-sahyog-vivran-per-claim-story-surface: backlog
+  11b-4-memorial-authorship-surface-family-writes-the-story: backlog
+  11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: backlog
+  11b-6-in-memoriam-roll-consent-governed-revocable-invariant: backlog
+  11b-7-stat-card-strip-component: backlog
+  11b-8-real-data-test-gate-accessibility-audit-gate: backlog
+  epic-11b-retrospective: optional
+
+  # ==========================================================================
+  # Epic 12: Module Marketplace
+  # ==========================================================================
+  epic-12: backlog
+  12-1-module-manifest-schema-module-lifecycle-state-machine: backlog
+  12-2-admin-module-targeting-wizard: backlog
+  12-3-member-module-shelf-eligibility-filter-scope-filter: backlog
+  12-4-grief-context-module-shelf-suppression: backlog
+  12-5-module-lead-handoff-transport-partners-as-downstream-consumers-invariant: backlog
+  12-6-time-bombed-module-lifecycle-auto-archive: backlog
+  epic-12-retrospective: optional
+
+  # ==========================================================================
+  # Epic 13: Growth — Field-Worker Attribution & Member Invite Loop
+  # ==========================================================================
+  epic-13: backlog
+  13-1-field-worker-identity-lifecycle-state-machine: backlog
+  13-2-6-digit-attribution-code-generation-per-pariwar: backlog
+  13-3-field-worker-mobile-first-dispatch-app-field-worker-dispatch-scheduler: backlog
+  13-4-attribution-analytics-dashboard: backlog
+  13-5-commission-payment-trigger-qualified-acquisition-gated-tds-194h-deduction: backlog
+  13-6-field-worker-anti-fraud-throttling-assistive-not-auto-punitive-invariant: backlog
+  13-7-invite-share-sheet-with-v1-caps-fr-87-v1-m-promotion: backlog
+  13-8-invitee-onboarding-shell-adopter-chain-attribution: backlog
+  epic-13-retrospective: optional
+
+  # ==========================================================================
+  # Epic 14: Disaster Handling, DPO Readiness & Future-Benefit Hooks
+  # ==========================================================================
+  epic-14: backlog
+  14-1-disaster-window-trustee-declaration-alert-engine-throttling-config: backlog
+  14-2-disaster-mode-member-comms-framing: backlog
+  14-3-dpo-breach-reporting-operational-readiness: backlog
+  14-4-fr-100-schema-diff-verification-continuous-ci-gate-final-closure: backlog
+  14-5-fr-100-benefit-mechanism-tag-verification-continuous-ci-gate-final-closure: backlog
+  14-6-fr-100-vyawastha-shulk-receipt-back-prove-query: backlog
+  14-7-ar-69-adr-backlog-ratification-five-capability-bars: backlog
+  epic-14-retrospective: optional

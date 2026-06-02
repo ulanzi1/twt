@@ -25,6 +25,8 @@
 
 Within 24-48 hours before the scheduled conversation:
 
+- [ ] **Hindi-comprehension pre-confirmation (D-07):** Researcher confirms with the trustee intermediary that the spouse can understand spoken Hindi at a conversational level before the scheduled date. If any concern arises, researcher confirms Hindi comprehension directly at the start of the conversation (before consent form review). If the spouse cannot understand Hindi, the conversation does not proceed per ethics-protocol §3.2.
+
 - [ ] **Consent form printed in Hindi** (informed-consent-template-hindi.md) + English mirror printed (informed-consent-template-english.md) as a backup. Two copies: one for spouse to retain, one for the protocol directory under pseudonymized identity.
 - [ ] **Recording device prepared if spouse agreed to audio recording** per ethics-protocol §2 c. If spouse opted for notes-only (researcher's default preference), no recording device is brought.
 - [ ] **Question-bank readied as prompt list** (NOT a script). Researcher reviews the prompts mentally; no printed copy is carried into the conversation (to avoid clipboard ostentation per ethics-protocol §3.4).
@@ -72,12 +74,13 @@ Researcher does NOT:
 ### §2.4 Consent form review + signature
 
 Researcher walks through the Hindi informed-consent-template-hindi.md with the spouse:
-- Reads each section (a)-(h) aloud at the spouse's pace.
+- Reads each section (क)-(ज) + §2-bis aloud at the spouse's pace per the canonical ordering.
 - Explicitly highlights the **§2-bis re-consent-for-quotation checkbox** — explains that no verbatim quotes will appear in any document unless the spouse explicitly re-confirms at the specific quote post-conversation.
 - Explicitly highlights the **§2-tris trustee-approval transparency line** — names the approving trustees + provides their contact for any complaint.
 - Allows spouse to ask questions; researcher answers without pressure.
 - Spouse signs the Hindi consent form. Researcher signs as witness. Spouse retains one copy; one copy is filed in the protocol directory under pseudonymized identity.
-- If spouse declines to sign but is willing to participate, researcher honors the decline by NOT recording verbatim + by destroying notes immediately after the conversation; the conversation is treated as non-research per ethics-protocol §5. (This is an edge case; typically spouses willing to participate are willing to sign after the consent form is explained.)
+- **Verbal-only consent (D-03 — edge case):** If spouse declines to sign but confirms willingness verbally, researcher **explicitly confirms verbal consent aloud before any note-taking begins** ("Kya aap is baatcheet mein voluntarily participate karna chahte hain?") and notes "Verbal consent given — participant declined to sign" in the per-interview note. The conversation is treated as informational only — no verbatim notes; notes destroyed immediately after; NOT cited as research in synthesis. This is an edge case; typically spouses willing to participate are willing to sign after the consent form is explained.
+- **Illiterate-participant alternative (P-14):** If spouse is unable to sign, thumbprint in lieu of signature is acceptable per ethics-protocol §2. Researcher reconfirms verbal consent before taking the thumbprint.
 
 ### §2.5 Recording-or-notes choice confirmed
 
@@ -120,6 +123,8 @@ Researcher does NOT initiate grief topics. The spouse leads ALL bereavement-spec
 ### §3.5 No TWT-specific framing
 
 Researcher does NOT introduce TWT-specific terminology ("fursat", "human shepherd", "dignified-vs-transactional", "Ravi-mode", "Sunita-mode", "Yogdaan Bahi", "Pool Karna", etc.) until the spouse has independently generated the concept. The spouse defines their own categories in their own words.
+
+**Anti-leading carve-out for §4 opt-in surfaces (P-05):** The no-TWT-framing rule applies to §3 dimension exploration only. §4 (mid-interview Pattern 4 sample-copy opt-in) and §4.5 (cross-cutting grief-grammar opt-in) are evaluation instruments that necessarily introduce TWT-specific content once the spouse opts in. The researcher presents TWT's sample copy and design decisions as evaluation stimuli — this is the evaluation methodology, not a violation of the anti-leading rule.
 
 ### §3.6 Re-consent-for-quotation discipline (per ethics-protocol §2-bis)
 
@@ -169,6 +174,15 @@ If spouse opts in:
 ### §4.4 Spouse-initiated correction is NOT permitted
 
 The researcher captures the spouse's verdict + paraphrased observation; the researcher does NOT defend the sample copy or argue for it. The spouse is the authority.
+
+### §4.4a Distress mid-Pattern 4 (P-19)
+
+If the spouse shows signs of distress during the Pattern 4 sample-copy review (e.g., a sample triggers grief associations unexpectedly), researcher follows ethics-protocol §7 escalation path:
+1. **Immediately pause** the sample-copy review.
+2. Offer: "Hum yahaan ruk sakte hain. Kya aap theek hain? Hum aage jaayein ya yahaan ruk jaayein?"
+3. Honor spouse's response — if spouse opts to continue, researcher returns to the next sample only if the spouse initiates it; if spouse opts to end Pattern 4 review, remaining samples are marked `not-evaluated-due-to-spouse-non-engagement`.
+4. If spouse opts to end the entire conversation, §5 withdrawal-during-conversation logic applies.
+5. Researcher does NOT attempt to reassure the spouse that a specific sample copy is "fine" or "not serious" — researcher's role is to honor the pause, not to minimize the distress.
 
 ### §4.5 Cross-cutting grief-grammar prompts (§7 of question-bank, typically late-interview)
 
@@ -249,6 +263,7 @@ Within 24 hours of conversation:
 - Raw recording transferred to researcher's secure storage (encrypted at rest).
 - Retention timer started (30 days post-synthesis-author-commit per ethics-protocol §6).
 - Recording file path + retention end date logged in recruitment-log `recording_storage_log` column (added at recording-transfer time).
+- **Device failure note (P-18):** If recording device failed mid-interview, log the failure timestamp in the `recording_storage_log` column: "Recording file covers [start] to [failure-timestamp]; notes-only for remainder." Only the pre-failure content is stored; the notes-only remainder is part of the per-interview note.
 
 ### §6.3 Per-interview note pseudonymization verified
 

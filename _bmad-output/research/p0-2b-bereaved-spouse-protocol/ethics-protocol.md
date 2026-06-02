@@ -55,7 +55,7 @@ The choice is the spouse's. Researcher does not pressure either way. Verbal reco
 ### (e) Data retention
 
 - Raw recording (if audio chosen): **retained for 30 days post-synthesis-author-commit, then destroyed**; OR destroyed immediately on participant request per §5. **Bereavement-context shortened default** distinct from Story 0.8's 90-day retention.
-- Per-interview note (pseudonymized): retained in protocol directory under pseudonymized identity for **6 months** for cross-reference + further synthesis revision. **Bereavement-context shortened default** distinct from Story 0.8's 12-month retention.
+- Per-interview note (pseudonymized): retained in protocol directory under pseudonymized identity for **6 months** for cross-reference + further synthesis revision, then **archived (not destroyed) in `interview-notes/archived/`** with an `[archived-YYYY-MM-DD]` marker per §6. **Bereavement-context shortened default** distinct from Story 0.8's 12-month retention.
 - Recruitment-log (with substantive name-to-pseudonym mapping in out-of-band storage): retained per operations policy; substantive identity data is access-controlled to Solo Builder + Trustee Panel chair per need-to-know basis.
 - Synthesis file (`_bmad-output/research/p0-2b-bereaved-spouse.md`): retained indefinitely as the research artifact.
 
@@ -81,6 +81,12 @@ The participant has NO obligation to TWT post-conversation. Specifically:
 
 **Verbal consent reaffirmation:** before any recording begins, researcher asks (in Hindi): "Kya aap is baatcheet ko start karne ke liye taiyar hain? Kya aap chahte hain ki main audio record karoon ya sirf notes likhoon? Aap kabhi bhi ruk sakte hain, savaal pooch sakte hain, ya jaa sakte hain. Aap ko kuch kehna hai jo aap nahin chahte ki main note karoon, to mujhe bata dijiye."
 
+**Illiterate-participant alternative (P-14):** If the participant is unable to sign the consent form (illiterate or physically unable to write), a thumbprint in lieu of signature is acceptable. Researcher writes "Consented by thumbprint" next to the mark and verbally reconfirms consent aloud with the participant before the thumbprint is taken. This is recorded in the per-interview note metadata.
+
+**Verbal-only consent alternative (D-03 — edge case):** If the participant declines to sign but confirms willingness verbally, researcher **explicitly confirms consent aloud before any note-taking begins** and records "Verbal consent given — participant declined to sign" in the per-interview note. The conversation is treated as informational only: no verbatim notes are taken; notes are destroyed immediately after; the conversation is NOT cited as research in the synthesis. This path is rare; typically participants willing to engage are willing to sign after the consent form is explained.
+
+**Principal-only consent (D-04):** Only the bereaved spouse (the research participant, `Bereaved-Spouse-1`) may provide consent. Guardian proxy signing on the spouse's behalf is NOT permitted. No family member, community elder, or trustee intermediary may sign the consent form in place of the participant.
+
 ---
 
 ## §2-bis Re-consent for direct quotation
@@ -97,6 +103,7 @@ No verbatim quotation is included in any artifact (per-interview note, synthesis
 6. **Only re-confirmed quotes appear in synthesis or framework artifacts.** Re-confirmed quotes carry a `[quote-re-confirmed YYYY-MM-DD]` marker. Any synthesis or framework artifact containing a quote without the marker is a framework defect requiring immediate correction.
 7. **Re-consent decline is honored without question.** If the spouse declines re-consent for a specific quote, the synthesis uses the paraphrase only; the spouse's authority over their own grief narrative is irreducible.
 8. **Re-consent opt-in is opt-in by default per informed-consent §2-bis checkbox.** If the spouse does not opt in to the re-consent-for-quotation contact, the researcher does NOT contact the spouse post-conversation for quote re-consent and no verbatim quotes are included in any artifact (paraphrase-only synthesis).
+9. **30-day fallback timeout:** If the researcher routes a re-consent request and receives no response from the spouse within 30 days, the request is treated as declined — the synthesis uses paraphrase only for that quote. The 30-day clock starts at the date the re-consent request is sent via the trustee intermediary channel.
 
 **Granular quotation-withdrawal post-synthesis:** the spouse may consent to the synthesis broadly while withdrawing a specific quote at any later date via the trustee-mediated channel. The quote is removed + paraphrased in supersession per §5 withdrawal logic.
 
@@ -110,10 +117,10 @@ Bereavement-context vulnerability requires Trustee Panel formal approval BEFORE 
 
 1. **Solo Builder presents the framework to Trustee Panel:** the framework (this directory) + ethics-protocol (this file) + interview-protocol + pattern-4-evaluation-worksheet + recruitment-path candidates (specific TSCT trustee contacts, Trustee Panel personal-network contacts, BSWLB contact channels, Bihar grief-support NGO contact channels — at the level of recruitment-path identification, NOT specific candidate names).
 2. **Trustee Panel reviews:** Trustee Panel reviews the framework + the proposed recruitment paths + the bereavement-context discipline (§3.0); Trustee Panel may request revisions to ethics-protocol / interview-protocol / Pattern 4 worksheet before approval.
-3. **Trustee Panel votes approval:** verdict ∈ {`approved-for-recruitment`, `revision-list-pending-approval`}; approval requires named trustees (≥1 trustee; ≥2 strongly preferred for sensitivity).
+3. **Trustee Panel votes approval:** verdict ∈ {`approved-for-recruitment`, `revision-list-pending-approval`}; approval requires named trustees (≥1 trustee; ≥2 strongly preferred for sensitivity). **Broad approval scope (D-06):** The approval covers all four enumerated recruitment paths (TSCT trustee referral, Trustee Panel personal-network referral, BSWLB referral, Bihar grief-support NGO referral) generically — a single `approved-for-recruitment` verdict authorizes use of any of these paths without requiring a separate approval per path, unless the Trustee Panel explicitly restricts scope in the `sign-off_note`.
 4. **Approval recorded as the first row in trustee-review-log.md:** `review_id` = `pre-conversation-001`; `review_date` = approval date; `reviewing_trustee` = named approving trustees; `review_scope` = `approval-for-recruitment-pre-conversation`; `review_verdict` = `approved-for-recruitment` (or `revision-list-pending-approval` if revisions required); `sign-off_note` = explicit "Recruitment may begin" attestation.
 5. **Solo Builder begins recruitment ONLY after the approval row exists.** Any recruitment activity before the approval row exists is a framework defect.
-6. **If revisions required:** Solo Builder revises the framework per the revision_list; re-presents; Trustee Panel re-reviews; approval lifecycle iterates until `approved-for-recruitment` verdict.
+6. **If revisions required:** Solo Builder revises the framework per the revision_list; re-presents; Trustee Panel re-reviews; approval lifecycle iterates until `approved-for-recruitment` verdict. The revision list must be counter-signed by the requesting trustee(s) on the trustee-review-log row before the `revision-list-pending-approval` row is considered closed (P-10).
 7. **Trustee Panel approval is recorded in `.decision-log.md` as a follow-up Decision 2026-05-30-009-trustee-approval entry per the Story 0.8 trustee-review-N supersession schema.**
 
 The pre-conversation approval is a *separate* gate from the post-synthesis trustee review (Task 10). The same trustee(s) may grant both, but the two reviews are recorded as distinct trustee-review-log rows with different `review_scope` values.
@@ -137,6 +144,8 @@ The bereaved spouse is in a vulnerable population. Recruitment via cold outreach
 
 If no trustee-mediated path identifies a willing candidate within the launch window, the framework's escalation path is to Trustee Panel: Trustee Panel may approve expanded recruitment paths (e.g., a Bihar academic researcher with bereavement-context research experience as an intermediary) via a follow-up trustee-review-log row + Decision-log supersession entry.
 
+**90-day recruitment window (D-05):** If no trustee-mediated path identifies a willing candidate within **90 days of the first `approved-for-recruitment` trustee-review-log row**, a formal escalation meeting with the Trustee Panel is required. The escalation meeting reviews whether the recruitment paths should be expanded, whether the framework should be revised to increase accessibility to bereaved-spouse candidates, or whether the recruitment window should be formally extended. The 90-day clock starts at the date of the first `approved-for-recruitment` row.
+
 ### §3.1 Duration ≥60 minutes
 
 The conversation is ≥60 minutes (distinct from Story 0.8's ≥45 minutes — bereavement-context warm-up + spouse-led pacing requires more time). Shorter duration is permitted only if:
@@ -145,7 +154,11 @@ The conversation is ≥60 minutes (distinct from Story 0.8's ≥45 minutes — b
 
 Researcher does NOT artificially extend a conversation past natural close to reach 60 minutes; if the conversation reaches natural close at 52 minutes with rich dimension coverage, that is logged + the session is closed.
 
+**Natural-close 3-dimension rule (D-01):** If the conversation reaches natural close with fewer than 3 of the 5 AC-named dimensions having substantive observations, the same substitute-or-reschedule logic applies as for externally-interrupted sessions — the session may be rescheduled with the same participant OR a substitute spouse recruited per §5 withdrawal logic + §2-tris trustee-approval refresh, at the researcher's judgment in consultation with the trustee intermediary. If the spouse declines to reschedule and fewer than 3 dimensions are covered at natural close, the participant is treated equivalently to a mid-session withdrawal for the purposes of 1-participant-minimum accounting.
+
 ### §3.2 Hindi language
+
+**Hindi-comprehension pre-check (D-07):** Before presenting the consent form, researcher confirms that the participant can understand spoken Hindi at a conversational level. If the participant indicates they cannot understand Hindi, the conversation does not proceed — participation is restricted to Hindi-comprehensible spouses per the field-work design (UX §Phase-0 P0-2 Hindi-conduct commitment). Researcher records `hindi_comprehension = confirmed` or `hindi_comprehension = not-confirmed-conversation-did-not-proceed` in the per-interview note metadata.
 
 Researcher speaks Hindi throughout. If participant prefers English / Bhojpuri / local dialect, that preference is honored:
 - **English preference:** researcher accommodates; informed-consent-template-english.md is used; per-interview note language_used column records "English at participant preference".
@@ -195,6 +208,7 @@ The researcher is Solo Builder — a software developer building a welfare trust
 - If recording is chosen: explicit reconfirmation at start of session + right to pause recording reaffirmed mid-session. If participant pauses recording, the pause-content is NOT retroactively recorded from memory. The pause is honored.
 - If notes only: researcher writes notes during conversation but maintains eye contact + active listening; notes do not consume more than ~20% of session time.
 - **Re-consent-for-quotation discipline (§2-bis) applies regardless of recording-or-notes choice** — no verbatim quotes in any artifact without per-quote re-confirmation. The recording (if any) is a researcher-internal aid for synthesis fidelity; it does NOT bypass the re-consent-for-quotation rule.
+- **Device failure mid-interview (P-18):** If the recording device fails mid-interview, researcher immediately notifies the participant, switches to notes-only mode for the remainder of the session, and records the device-failure timestamp in the per-interview note. Content captured before the failure remains subject to the re-consent-for-quotation discipline. Content captured after the failure is notes-only. Researcher does NOT ask the participant to repeat prior statements.
 - Per-interview note authored within 24 hours per §5 of interview-protocol.md.
 
 ### §3.6 Question-bank usage + spouse-led grief discipline
@@ -271,6 +285,7 @@ The spouse may withdraw at any time. Withdrawal lifecycle variants:
 ### Before synthesis (after conversation but before Task 9 synthesis-author-commit)
 - Recruitment-log row marked `withdrawn-before-synthesis`.
 - Per-interview note marked `withdrawn` + content destroyed; raw recording destroyed if applicable.
+- **Signed consent form retained (P-17):** The signed consent form (substantive name + date of consent + pseudonym mapping) is retained in out-of-band storage per §4 even when interview content is destroyed. The signed form is the audit-trail evidence that consent was given; it must not be destroyed as part of interview-content destruction.
 - Substitute spouse recruited per the same path; 1-participant minimum maintained.
 
 ### After synthesis (post-Task 9)

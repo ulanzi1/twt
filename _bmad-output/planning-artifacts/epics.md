@@ -900,6 +900,8 @@ So that the 3-4× mismatch surfaced in PRD is resolved through cut scope OR move
 **When** Step 4 final validation runs
 **Then** the reconciled scope is what Step 4 validates against (not the original Epic List)
 
+**Dev Notes (added 2026-06-01 per Story 0.12 author-commit):** Framework authored at `docs/spec-to-cadence-reconciliation/` per Decision 2026-06-01-012 (README + estimation-methodology + estimation-worksheet + per-loop-node-estimates × 8 + per-tier-surface-estimates × 3 + reconciliation-decision-framework + backfill-log). Tasks 7–11 are `_AWAITING EXTERNAL ACTION_` (Solo Builder substantive estimate authoring + Trustee Panel ≥2-trustee ratification + Epic List + sprint plan updates + Step 4 validation). AR-49 P0-3 row (architecture line 4779) + UX §Phase-0 P0-3 discharge pending Task 9 + Task 11 closure.
+
 ### Story 0.13: P0-4 Legal Counsel Concurrent-Review Engagement Signed `[LEGAL]`
 
 As a Trustee Panel,
@@ -917,6 +919,8 @@ So that legal-compliance risk doesn't surface late in implementation.
 **Given** counsel returns reviews on the artifacts listed in scope
 **When** Epic 2/3/6 stories that touch those artifacts begin
 **Then** the legal-review feedback is incorporated; remaining feedback is tracked as ongoing dependencies, not blockers on demoable closure
+
+**Dev Notes (added 2026-06-02 per Story 0.13 author-commit):** Framework authored at `docs/legal-counsel-engagement/` per Decision 2026-06-02-013 (README + engagement-letter-template + review-scope-charter with 32-row cross-Story deferred-scope inventory + 13-row regulatory surface review + 6-row pre-launch checkpoint coverage + review-artifact-roster with 19 priority-ordered placeholder rows + per-artifact-return-roster + counsel-roster with shortlist criteria + engagement-ledger with 11 §-log sections). Tasks 7–11 are `_AWAITING EXTERNAL ACTION_` (Trustee Panel scope ratification + Solo Builder + Trustee Panel counsel shortlist + selection + named-counsel engagement-letter signature + NDA + COI disclosure + first-artifact submission within 2 weeks of signing + counsel returns within per-artifact 5-10 biz days SLA + Epic 2/3/6 integration + upstream Story cross-reference resolution per Story 0.4 comms-templates × 5 + Story 0.6 contract-template §6/§9/§10/§11 + Story 0.5 ADR slots × 5 + Story 0.2 DPO envelope + Story 0.5 third-party-dependency-inventory Section E × 7 + Story 0.7 denial-appeal node + Story 0.12 contract-help-path budget). UX §Phase-0 P0-4 + epics line 564 + 687 P0-4 launch-gate property + architecture §Launch Gate Risks subsidiary legal-counsel-naming rows at architecture lines 4785-4788 discharge pending Task 11 closure across AC-1 first-submission scope. **Architecture P0-N numbering divergence note:** Architecture line 4783 names "P0-4 Empty/Skeleton/Error Inventory" (UX deliverable) while epics + UX P0-4 = legal counsel onboarding; Story 0.13 discharges UX/epics P0-4, NOT architecture line 4783; flagged for Story 0.15 launch-gate inventory reconciliation. Story 0.13 constitutes the FIFTH Phase-0 portfolio distinct from bus-factor-of-one mitigation (Stories 0.1-0.6) + loop-node operational-responsiveness (Story 0.7) + empathy field-work (Stories 0.8-0.11) + spec-to-cadence-funding-reconciliation (Story 0.12).
 
 ### Story 0.14: P0-5 Native-Stack Validation Prototype + Ratify Decision Logged `[VALIDATION]`
 

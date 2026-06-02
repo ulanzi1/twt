@@ -95,6 +95,8 @@ Per architecture Cross-Cutting #2 + #9 + Story 1.10 substrate:
 4. **Substitute-handler-bench fallback** — per README §5
 5. **Story 0.4 degradation-policy framework activation** — if systemic, escalates to the surface-inventory.md "R9 voting workflow" or "Audit-of-Anita UI" rows per `docs/degradation-policy/degradation-policy-ledger.md`
 
+**Story 0.13 note:** The FR-43A internal claim-denial appeal flow procedural-fairness review per `docs/legal-counsel-engagement/review-scope-charter.md` §1(c) covers this loop node's appeal-decision chain semantics (three-stage taxonomy + reviewer-≠-original-decision-maker discipline + appeal-SLA + structured denial_reason audit-line + State-Trustee escalation conflict-of-interest). Counsel return on FR-43A procedural-fairness review pending Story 0.13 Task 11 (artifact `fr-43a-denial-appeal-flow-v1` priority-2 row in `docs/legal-counsel-engagement/review-artifact-roster.md` + cross-coupled artifact `fallback-handler-denial-appeal-procedural-fairness-v1` priority-7 row); substantive integration into this loop-node §3 + §11 + integration into Story 6.16 + Story 6.13 + Story 6.14 + Story 1.11b audit-of-Anita UI pending. Story 0.13 framework author-committed 2026-06-02 at `docs/legal-counsel-engagement/` per Decision 2026-06-02-013.
+
 ## §12 Cross-references
 
 - **Owning Story:** [Story 0.7](../../../_bmad-output/implementation-artifacts/0-7-p0-1-fallback-handler-ledger-published-with-sla-rota.md)

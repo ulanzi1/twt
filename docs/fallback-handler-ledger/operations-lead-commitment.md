@@ -86,6 +86,8 @@ If the Operations Lead hire is deferred — Trustee Panel decides funding cannot
 
 **Salary range ADR slot** — reserved in `docs/knowledge-transfer/adr-index.md` Section I; populated when Story 0.12 reconciliation closes + the Trustee Panel authors the substantive ADR.
 
+**Story 0.12 P0-3 spec-to-cadence reconciliation framework author-committed 2026-06-01** at `docs/spec-to-cadence-reconciliation/` per Decision 2026-06-01-012. The salary range + funding source citation slot is committed in `docs/spec-to-cadence-reconciliation/backfill-log.md` BFL-014 (worked example) + BFL-016 (decision-path property). Substantive reconciliation outcome is `pending` per Story 0.12 Tasks 7–11 (`_AWAITING EXTERNAL ACTION_`). When Tasks 9–10 close, this §5 Funding posture section is updated with the resolved outcome (Operations Lead hire authorized with salary range per `[OPS]` entry OR substitute-bench formally ratified per Decision YYYY-MM-DD-012 supersession).
+
 ## §6 Closure trigger
 
 This commitment document closes — meaning Task 8 closes — when one of the following events occurs, recorded as a `.decision-log.md` `[OPS]` entry:

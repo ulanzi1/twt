@@ -27,6 +27,9 @@ Each divergence row carries the following columns:
 | `reconciliation_owner` | text | Who closes the reconciliation | E.g., `Solo Builder`, `BigDev`, `Trustee Panel`, `UX authority + Solo Builder`, `Legal Counsel + Trustee Panel` |
 | `reconciliation_date` | YYYY-MM-DD | When the reconciliation action closes | Populated at Task 11 closure |
 | `cross-link_to_owning_change` | path or URL | The `.decision-log.md` entry, spec patch, or supersession entry that closes the divergence | E.g., `.decision-log.md Decision 2026-06-20-009-reconciliation-001` / `_bmad-output/planning-artifacts/ux-design-specification.md commit hash abcd1234` / `_bmad-output/implementation-artifacts/deferred-work.md row N` |
+| `epic_6_reconciliation_status` | enum or blank | Per-epic reconciliation gate for Epic 6 (Claim Filing) — P-22 per-epic column | `not-affected` / `pending-resolution` / `reconciled` / `explicitly-deferred-with-rationale`; blank if `affected_epic_stories` does not include Epic 6 |
+| `epic_9_reconciliation_status` | enum or blank | Per-epic reconciliation gate for Epic 9 (Reconciliation Engine / NomineeConsole) — P-22 per-epic column | same enum as epic_6; blank if not affected |
+| `epic_11b_reconciliation_status` | enum or blank | Per-epic reconciliation gate for Epic 11b (Memorial + Sahyog Drive) — P-22 per-epic column | same enum as epic_6; blank if not affected |
 
 ---
 
@@ -51,14 +54,16 @@ The pre-staging is structural permission to commit row IDs that will receive sub
 
 - **Synthesis row that contradicts PRD/UX assumption but the divergence is silently absorbed into the synthesis without log entry.** Every refuted-or-nuanced assumption per assumption-inventory MUST produce a divergence-log row.
 - **Pattern 4 sample-copy verdict requiring revision (`requires-revision-with-proposed-copy` OR `requires-deeper-redesign`) without divergence-log row.** Every such verdict MUST produce a divergence-log row with severity `pattern4-copy-revision-required`.
-- **Divergence row appended at any stage other than Task 9** — Task 11 reconciliation only updates existing rows; new divergence rows after Task 11 require a synthesis revision cycle per ethics-protocol §5 + synthesis Pack-revision log.
+- **Divergence row appended at any stage other than Task 9** — Task 11 reconciliation only updates existing rows; new divergence rows after Task 11 require a synthesis revision cycle per ethics-protocol §5 + synthesis Pack-revision log. **Post-Task-11 path (P-06):** If new divergence is discovered post-Task 11 (e.g., upstream PRD/UX change invalidates a reconciled assumption, or spouse withdraws a quote that anchored a divergence), a supersession row is appended (not a new independent divergence row) per the supersession schema below; a synthesis revision cycle is initiated; the trustee-review-log records the re-review event.
 - **Reconciliation row with `reconciliation_status = pending-resolution` past the affected Epic's design-freeze date** — gates the design freeze per AC-2; must be terminal (`reconciled-via-spec-update`, `reconciled-via-design-adjustment`, or `explicitly-deferred-with-rationale`).
 
-**Exception (permitted pre-staging):** See above — pre-staged rows with `divergence_observation = "_AWAITING_CONVERSATION_CONDUCT_"` are permitted at Task 5 author-commit; these are NOT forbidden states.
+**Carve-out (permitted pre-staging — P-06):** Pre-staged rows with `divergence_observation = "_AWAITING_CONVERSATION_CONDUCT_"` committed at Task 5 author-commit are NOT forbidden states — they are structural permission to commit row IDs that will receive substantive content at Task 9. See "Permitted pre-staging at author-commit" section above.
 
 ---
 
 ## Supersession schema
+
+**Pseudonym note (P-07):** If the original `Bereaved-Spouse-1` withdrew after synthesis and a substitute participant was recruited whose data coexists with the original (see recruitment-log.md substitute-spouse logic), divergence rows citing the original participant's observations are tagged `[Bereaved-Spouse-1 — withdrawn YYYY-MM-DD]`; the substitute participant's divergence rows use pseudonym `Bereaved-Spouse-1A`. This distinction is captured in the `divergence_observation` field with the appropriate pseudonym tag.
 
 If a divergence row is re-evaluated (e.g., spouse withdraws a quote that supported the divergence per ethics-protocol §2-bis granular-withdrawal; or assumption-inventory row is amended in a future research refresh; or Pattern 4 sample-copy is updated upstream invalidating the spouse's verdict context):
 

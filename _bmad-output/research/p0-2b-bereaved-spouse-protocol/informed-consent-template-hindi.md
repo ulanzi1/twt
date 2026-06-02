@@ -16,7 +16,7 @@
 
 ## (ख) क्या data इकट्ठा किया जाएगा — What data is collected
 
-- **बातचीत का content** (paraphrased — आप के exact शब्द नहीं रिकॉर्ड किए जाएँगे जब तक आप specific quote के लिए अलग से सहमति न दें — देखिए §च नीचे)
+- **बातचीत का content** (paraphrased — आप के exact शब्द नहीं रिकॉर्ड किए जाएँगे जब तक आप specific quote के लिए अलग से सहमति न दें — देखिए §2-bis नीचे)
 - **District-level demographic context** (आयु band, gender, मृतक से relation, claim event के बाद कितने साल बीते, household composition — non-identifying granularity)
 - **NOT इकट्ठा किया जाएगा:** गाँव का नाम, block का नाम (अगर identifying हो), मृतक का school name, specifically-named family members, specific identifying incidents आप के स्वेच्छा से बताए हुए के अलावा
 
@@ -37,37 +37,20 @@
 - सभी documents में आप को `Bereaved-Spouse-1` के नाम से reference किया जाएगा.
 - District-level granularity preserve होगी (Bihar district <slug>); गाँव-level NOT.
 - आप के substantive नाम + contact data **out-of-band securely** रखे जाएँगे — किसी framework document में inline नहीं होंगे.
-- आप के exact words किसी document में नहीं आएँगे — paraphrase के अलावा — जब तक आप §च के तहत specific quote के लिए अलग से re-consent न दें.
+- आप के exact words किसी document में नहीं आएँगे — paraphrase के अलावा — जब तक आप §2-bis के तहत specific quote के लिए अलग से re-consent न दें.
 
 ---
 
-## (च) **Re-consent for quotation — विशिष्ट उद्धरण के लिए पुनः सहमति** (P0-2b-distinct)
-
-**यह P0-2b-विशिष्ट discipline है.** आप के exact शब्द (verbatim quotation) किसी भी document में नहीं आएँगे जब तक आप उस specific quote के लिए अलग से re-confirm न करें.
-
-Workflow:
-1. यदि researcher को synthesis लिखते हुए लगे कि आप के कुछ specific शब्द ज़रूरी हैं, तो researcher आप को — **trustee के through, direct नहीं** — re-consent request भेजेगा.
-2. Request में: proposed quote (Hindi में) + synthesis context (कहाँ appear होगा) + checkbox.
-3. आप ☐ "ये शब्द publish किए जा सकते हैं" OR ☐ "ये शब्द नहीं publish किए जा सकते — paraphrase use किया जाए"
-4. आप किसी भी quote के लिए मना कर सकते हैं — बिना कोई reason बताए.
-5. आप synthesis publish होने के बाद भी किसी specific quote को withdraw कर सकते हैं — बस trustee को बता दीजिए.
-
-**Re-consent-for-quotation opt-in checkbox:**
-☐ **हाँ, मैं re-consent-for-quotation के लिए trustee के through contact किए जाने की अनुमति देता/देती हूँ** (researcher synthesis लिखते हुए मुझ से कुछ specific quotes के लिए re-confirmation माँग सकता है)
-☐ **नहीं, मैं re-consent-for-quotation के लिए contact नहीं किया जाना चाहता/चाहती** (कोई verbatim quotes किसी document में नहीं आएँगे — सिर्फ़ paraphrase)
-
----
-
-## (छ) Data retention — कितने समय तक data रखा जाएगा
+## (ङ) Data retention — कितने समय तक data रखा जाएगा
 
 - **Raw recording** (अगर audio choose किया तो): synthesis पूरा होने के 30 दिन बाद destroy की जाएगी, या आप के request पर तुरंत.
-- **Per-interview note** (pseudonymized — आप का नाम नहीं, सिर्फ़ Bereaved-Spouse-1): 6 महीने तक protocol directory में रखा जाएगा cross-reference के लिए.
+- **Per-interview note** (pseudonymized — आप का नाम नहीं, सिर्फ़ Bereaved-Spouse-1): 6 महीने तक protocol directory में रखा जाएगा cross-reference के लिए, फिर **archived (not destroyed) `interview-notes/archived/` में रखा जाएगा** `[archived-YYYY-MM-DD]` marker के साथ; भविष्य में कोई synthesis revision इस archived note को cite करेगी.
 - **Recruitment-log** (substantive नाम + contact — out-of-band secure storage में): operations policy के अनुसार रखा जाएगा; सिर्फ़ Solo Builder + Trustee Panel chair को access.
 - **Synthesis file** (paraphrased + re-confirmed quotes only): research artifact के तौर पर indefinitely रखा जाएगा.
 
 ---
 
-## (ज) Withdrawal right — withdraw करने का अधिकार
+## (च) Withdrawal right — withdraw करने का अधिकार
 
 आप किसी भी समय withdraw कर सकते हैं — बातचीत से पहले, दौरान, या बाद में.
 
@@ -81,7 +64,7 @@ Workflow:
 
 ---
 
-## (झ) Compensation — मुआवज़ा
+## (छ) Compensation — मुआवज़ा
 
 - **Bereavement-context default:** कोई compensation नहीं. यह बातचीत व्यापारिक नहीं है; आप की स्वैच्छिक भागीदारी का सम्मान है.
 - अगर आप ने non-home location पर travel किया है OR paid leave लिया है, तो researcher modest travel-reimbursement offer कर सकता है (₹100-300 range).
@@ -90,14 +73,32 @@ Workflow:
 
 ---
 
-## (ट) TWT पर कोई obligation नहीं — No obligation to TWT
+## (ज) TWT पर कोई obligation नहीं — No obligation to TWT
 
 बातचीत के बाद आप पर TWT का कोई obligation नहीं है:
 - आप से TWT के सदस्य बनने को नहीं कहा जाएगा.
 - आप से colleagues को TWT refer करने को नहीं कहा जाएगा.
 - आप से किसी TWT surface use करने को नहीं कहा जाएगा.
 - आप किसी TWT mailing list या contact registry में नहीं डाले जाएँगे.
-- आप से ongoing access या follow-up नहीं माँगा जाएगा — pre-agreed re-consent-for-quotation contact (§च) के अलावा.
+- आप से ongoing access या follow-up नहीं माँगा जाएगा — pre-agreed re-consent-for-quotation contact (§2-bis) के अलावा.
+
+---
+
+## §2-bis **Re-consent for quotation — विशिष्ट उद्धरण के लिए पुनः सहमति** (P0-2b-distinct)
+
+**यह P0-2b-विशिष्ट discipline है.** आप के exact शब्द (verbatim quotation) किसी भी document में नहीं आएँगे जब तक आप उस specific quote के लिए अलग से re-confirm न करें.
+
+Workflow:
+1. यदि researcher को synthesis लिखते हुए लगे कि आप के कुछ specific शब्द ज़रूरी हैं, तो researcher आप को — **trustee के through, direct नहीं** — re-consent request भेजेगा.
+2. Request में: proposed quote (Hindi में) + synthesis context (कहाँ appear होगा) + checkbox.
+3. आप ☐ "ये शब्द publish किए जा सकते हैं" OR ☐ "ये शब्द नहीं publish किए जा सकते — paraphrase use किया जाए"
+4. आप किसी भी quote के लिए मना कर सकते हैं — बिना कोई reason बताए.
+5. आप synthesis publish होने के बाद भी किसी specific quote को withdraw कर सकते हैं — बस trustee को बता दीजिए.
+6. **यदि researcher को 30 दिनों के भीतर आप का response नहीं मिलता**, तो वह request declined मानी जाएगी — कोई verbatim quote use नहीं होगा; केवल paraphrase.
+
+**Re-consent-for-quotation opt-in checkbox:**
+☐ **हाँ, मैं re-consent-for-quotation के लिए trustee के through contact किए जाने की अनुमति देता/देती हूँ** (researcher synthesis लिखते हुए मुझ से कुछ specific quotes के लिए re-confirmation माँग सकता है)
+☐ **नहीं, मैं re-consent-for-quotation के लिए contact नहीं किया जाना चाहता/चाहती** (कोई verbatim quotes किसी document में नहीं आएँगे — सिर्फ़ paraphrase)
 
 ---
 
@@ -109,6 +110,12 @@ Name signed: _______________________ (substantive नाम — out-of-band stor
 Signature: _______________________
 Date: ___________________
 Setting: ___________________
+
+**अगर participant sign नहीं कर सकते** (निरक्षर हैं या physically unable हैं): signature के बजाय अंगूठे का निशान (thumbprint) मान्य है. Researcher "अंगूठे के निशान से सहमति दी" लिखेगा. अंगूठे का निशान लेने से पहले participant के साथ verbal reconfirmation aloud में ज़रूरी है.
+
+**Verbal-only consent का विकल्प (edge case):** अगर participant sign करने से मना करते हैं लेकिन verbally तैयारी confirm करते हैं, तो researcher **किसी भी note लेने से पहले participant के साथ consent aloud confirm करेगा**, per-interview note में "Verbal consent given — participant declined to sign" नोट करेगा, और बातचीत को informational ही मानेगा (कोई verbatim notes नहीं; notes बातचीत के तुरंत बाद destroy होंगे; synthesis में research के तौर पर cite नहीं होगा). यह edge case है; आमतौर पर participate करने वाले sign भी करते हैं.
+
+**Consent सिर्फ़ principal की:** सिर्फ़ participant (Bereaved-Spouse-1) ही consent दे सकते हैं. कोई family member या trustee intermediary participant की तरफ़ से sign नहीं कर सकता. Guardian proxy signing की अनुमति नहीं है.
 
 **Researcher (शोधकर्ता):**
 Name: BigDev (Solo Builder, TWT)

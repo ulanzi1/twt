@@ -74,7 +74,7 @@
 > - A-pace-grief-month: pending-interview → [validated / refuted / nuanced / not-evaluated-due-to-spouse-non-engagement]
 > - A-pace-no-rush: pending-interview → [validated / refuted / nuanced / not-evaluated] **⚠️ CRITICAL HYPOTHESIS — gates Epic 6 + Epic 9 + Epic 11b design freezes**
 > - A-pace-broken-flow: pending-interview → [...] **⚠️ CRITICAL HYPOTHESIS**
-> - A-pace-no-multitasking: pending-interview → [...] **⚠️ CRITICAL HYPOTHESIS**
+> - A-emotion-pace-no-multitasking: pending-interview → [...] **⚠️ CRITICAL HYPOTHESIS**
 > - A-pace-fursat-language: pending-interview → [validated / refuted / nuanced / not-evaluated]
 
 ### §3.2 Dimension 2: Document-gathering experience
@@ -108,7 +108,7 @@
 > - A-dignity-amount-not-published: pending-interview → [...]
 > - A-dignity-no-marketing: pending-interview → [...]
 > - A-dignity-witness-cadence: pending-interview → [...] **⚠️ CRITICAL HYPOTHESIS**
-> - A-dignity-pattern4-no-blame: pending-interview → [...] **⚠️ CRITICAL HYPOTHESIS**
+> - A-pattern4-no-blame-register: pending-interview → [...] **⚠️ CRITICAL HYPOTHESIS**
 >
 > Note: Pattern 4 dignified-validation grammar evaluation lives in §4 (the AC's load-bearing surface); §3.4 captures the broader dignity-vs-transactional dimension synthesis from spouse's lived experience.
 
@@ -191,14 +191,14 @@ Verdict ∈ {`lands-as-intended`, `requires-revision-with-proposed-copy`, `requi
 > - Cross-link to `divergence-log.md`
 > - High-level summary: total assumptions per assumption-inventory; validated count; refuted count (each with divergence-log row); nuanced count (each with divergence-log row); not-evaluated count
 >
-> **Critical hypothesis outcomes** (15-18 critical-tagged assumptions per assumption-inventory.md critical hypothesis summary; per Story 0.8 review-patch learning, critical hypothesis checklist must be complete):
+> **Critical hypothesis outcomes** (18 canonical critical-tagged assumptions per assumption-inventory.md; the canonical count is authoritative — synthesis §5 must enumerate all 18):
 > - A-pace-no-rush: pending-interview → [...]
 > - A-pace-broken-flow: pending-interview → [...]
-> - A-pace-no-multitasking: pending-interview → [...]
+> - A-emotion-pace-no-multitasking: pending-interview → [...]
 > - A-doc-staff-helps: pending-interview → [...]
 > - A-staff-named-shepherd: pending-interview → [...]
 > - A-dignity-witness-cadence: pending-interview → [...]
-> - A-dignity-pattern4-no-blame: pending-interview → [...]
+> - A-pattern4-no-blame-register: pending-interview → [...]
 > - A-family-relative-as-proxy: pending-interview → [...]
 > - A-family-eldest-male-spokesperson: pending-interview → [...]
 > - A-pattern4-bank-statement-format-lands: pending-interview → [...]
@@ -265,6 +265,12 @@ Verdict ∈ {`lands-as-intended`, `requires-revision-with-proposed-copy`, `requi
 > - Grief-grammar cross-cutting (cross-link to §4.2)
 > - TSCT-precedent credibility (cross-link to A-tsct-precedent-credible)
 > - Spouse-initiated cultural-grammar findings outside the 5 AC-named dimensions (dimension-6)
+
+### §9.X Surprises
+
+`_AWAITING_CONVERSATION_CONDUCT_`
+
+> At synthesis-commit, record spouse observations that were **not anticipated by any assumption-inventory row** — findings that surprised the researcher or contradicted the framework's prior assumptions in a way not captured by any existing assumption ID. Each surprise should: (a) be paraphrased (no verbatim without re-consent); (b) note whether it requires a new assumption-inventory row for future research cycles; (c) cross-link to any divergence-log row it triggered. If no surprises, write "No surprises noted — all observations mapped to existing assumption-inventory rows or explicitly deferred." Do NOT leave this section blank.
 
 ---
 

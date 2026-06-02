@@ -60,8 +60,9 @@
 ## §2 Recruitment summary
 
 At synthesis-commit (Task 9), populate:
-- 1 pseudonymized participant (`Bereaved-Spouse-1`; substitute per ethics-protocol §5 if applicable, with pseudonym reassignment noted)
+- 1 pseudonymized participant (`Bereaved-Spouse-1`; if original spouse withdrew after synthesis AND substitute data coexists, substitute pseudonym is `Bereaved-Spouse-1A` per P-07 pseudonym-supersession note — both pseudonyms may appear in synthesis with withdrawal/substitution markers)
 - Recruitment path used (drawn from `recruitment-log.md` after Task 7) — one of: TSCT trustee referral / Trustee Panel personal-network referral / BSWLB referral / Bihar grief-support NGO referral
+- **Conversation completion status:** note whether the session ran to natural close with ≥3 of the 5 AC-named dimensions covered (sufficient for full synthesis) OR whether the session closed with <3 dimensions (partial coverage per D-01 natural-close 3-dimension rule — noted as an honest coverage gap, not a framework failure)
 - **Bereavement-context sampling acknowledgment:** single conversation is a deep narrow signal, NOT a statistical claim. The synthesis represents one bereaved-spouse's lived experience; cross-population generalization requires future research surfaces.
 - Withdrawal status summary (active / withdrawn-before-synthesis / withdrawn-after-synthesis / granular-quote-withdrawal-active)
 - Substantive identity confirmation: "stored out-of-band per ethics-protocol §4 (NOT in this file)"
@@ -226,20 +227,20 @@ If Pattern 4 sample-copy evaluation OR cross-cutting grief-grammar evaluation st
 ## §5 Divergence summary
 
 Cross-link to `divergence-log.md`. High-level summary of:
-- Total assumptions: 36 (5 dims × 5 + 8 Pattern 4 sample copy + 7 grief-grammar cross-cutting + 5 memorial + 1 TSCT-precedent meta + 5 in dim-1 with 1 critical extra; actual count per assumption-inventory.md)
+- Total assumptions: 46 (5 dims × 5 = 25 + 9 Pattern 4 sample copy [including A-pattern4-helpline-third-tier] + 7 grief-grammar cross-cutting + 5 memorial + 1 TSCT-precedent meta; per assumption-inventory.md canonical count — P-09 fix)
 - Validated: N
 - Refuted: N (each refuted assumption has divergence-log row)
 - Nuanced: N (each nuanced assumption has divergence-log row)
 - Not-evaluated-due-to-spouse-non-engagement: N
 
-Critical hypothesis outcomes (15 critical-tagged assumptions per assumption-inventory.md):
+Critical hypothesis outcomes (**18 critical-tagged assumptions** per assumption-inventory.md — P-01 canonical count):
 - A-pace-no-rush: [validated | refuted | nuanced | not-evaluated]
 - A-pace-broken-flow: [...]
-- A-pace-no-multitasking: [...]
+- A-emotion-pace-no-multitasking: [...]
 - A-doc-staff-helps: [...]
 - A-staff-named-shepherd: [...]
 - A-dignity-witness-cadence: [...]
-- A-dignity-pattern4-no-blame: [...]
+- A-pattern4-no-blame-register: [...]
 - A-family-relative-as-proxy: [...]
 - A-family-eldest-male-spokesperson: [...]
 - A-pattern4-bank-statement-format-lands: [...]
@@ -252,7 +253,7 @@ Critical hypothesis outcomes (15 critical-tagged assumptions per assumption-inve
 - A-memorial-portrait-cultural-treatment: [...]
 - A-tsct-precedent-credible: [...]
 
-(15-18 critical-tagged depending on how cross-cutting assumptions are counted; per Story 0.8 review-patch learning, the critical hypothesis checklist must be complete + every critical-tagged assumption appears in §5 outcomes.)
+(Canonical count is **18 critical-tagged assumptions** per assumption-inventory.md. Every critical-tagged assumption must appear in §5 outcomes — per Story 0.8 review-patch learning.)
 
 ---
 
@@ -303,6 +304,15 @@ Cultural-grammar findings that span dimensions:
 - TSCT-precedent credibility (cross-link to A-tsct-precedent-credible assumption)
 - Any spouse-initiated cultural-grammar findings outside the 5 AC-named dimensions (dimension-6 cultural-grammar cross-cutting)
 
+### §9.X Surprises (P-24)
+
+Findings that were NOT anticipated by the assumption-inventory and that materially alter the research picture. A "Surprise" is a finding that:
+- Emerges from the spouse's lived experience without any corresponding assumption-inventory row.
+- Contradicts or complicates a synthesis finding in a way that the divergence-log alone does not capture.
+- Reveals a dimension or dynamic not covered by the 5 AC-named dimensions or dimension-6 cross-cutting.
+
+For each Surprise: record the finding as a paraphrased observation (per re-consent-for-quotation discipline); cross-link to the per-interview note citation; assess whether it warrants a new assumption-inventory row (for future research surfaces); and note any Epic story it affects. Surprises with Epic-affecting implications route to the divergence-log as `extension` severity rows.
+
 ---
 
 ## §10 Trustee approval and review log
@@ -341,7 +351,7 @@ When Task 6 scaffolds the AC-named synthesis file `_bmad-output/research/p0-2b-b
 3. Every assumption-validation-status row in §3.N references the assumption-inventory.md row with `pending-interview` status.
 4. Every Pattern 4 sample-copy verdict row in §4.1 + every grief-grammar element row in §4.2 references the pattern-4-evaluation-worksheet.md row with `pending-interview-conduct` status.
 5. §4.3 Pattern 4 evaluation engagement status row pre-staged with `pending-interview-conduct`.
-6. §5 Divergence summary critical hypothesis checklist pre-stages 15-18 critical-tagged assumption IDs with `pending-interview` status (per Story 0.8 review-patch learning — critical hypothesis checklist must be complete).
+6. §5 Divergence summary critical hypothesis checklist pre-stages **18 canonical** critical-tagged assumption IDs with `pending-interview` status (per Story 0.8 review-patch learning — critical hypothesis checklist must be complete; canonical count is 18 per P-01).
 7. §6 + §7 + §8 Implications for Epic 6 / Epic 9 / Epic 11b sections pre-staged with per-Story enumeration + `_AWAITING_CONVERSATION_CONDUCT_` placeholder for substantive implications.
 8. §10 trustee-review-log cross-link pre-staged with the pre-conversation-approval row reference.
 9. §12 sign-off attestation pre-staged with `pending` status.

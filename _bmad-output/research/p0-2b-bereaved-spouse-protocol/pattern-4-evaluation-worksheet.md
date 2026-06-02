@@ -8,6 +8,10 @@
 
 ---
 
+> **Trustee review note (P-03):** Samples 2 (Document upload network failure), 4 (UPI Intent cancelled), 5 (Bank statement format unrecognized), 7 (Member already enrolled), and 8 (Eligibility check failed) do **not** include an inline helpline fallback in the current member-facing copy — Pattern 4's required third element (helpline fallback) is ⚠️ implicit or not applicable for these rows. Trustees reviewing spouse verdicts for these samples should flag any verdict of `requires-revision-with-proposed-copy` or `requires-deeper-redesign` that specifically names the missing helpline as a deficiency, as this would constitute a gap in the baseline copy design rather than a spouse-perception issue only.
+
+---
+
 ## §1 Authority cite
 
 UX spec §12 Pattern 4 Dignified Validation (UX spec lines 2334-2360):
@@ -27,7 +31,8 @@ The AC commits this Story (0.9) as the validation surface for the sample copy ta
 For each row, populate at Task 9:
 - `spouse_verdict` ∈ {`lands-as-intended`, `requires-revision-with-proposed-copy`, `requires-deeper-redesign`, `not-evaluated-due-to-spouse-non-engagement`}
 - `spouse_observation_paraphrased` (per re-consent-for-quotation discipline; verbatim only if re-confirmed per ethics-protocol §2-bis with `[quote-re-confirmed YYYY-MM-DD]` marker)
-- `proposed_revision` (if verdict ∈ {`requires-revision-with-proposed-copy`, `requires-deeper-redesign`}; proposed Hindi+English copy per Pattern 4 bilingual-parity discipline)
+- `mid_interview_revision_proposed` (P-20 sub-field): if spouse proposes revised copy spontaneously during the mid-interview review (not post-interview), capture the proposed Hindi+English wording here; this is the spouse's in-the-moment alternative phrasing before researcher synthesis. Distinct from `proposed_revision` which is the researcher-finalized form at synthesis time.
+- `proposed_revision` (if verdict ∈ {`requires-revision-with-proposed-copy`, `requires-deeper-redesign`}; researcher-finalized proposed Hindi+English copy per Pattern 4 bilingual-parity discipline; may incorporate `mid_interview_revision_proposed` wording as a basis)
 - `divergence_log_row_id` (cross-link to divergence-log row if the verdict triggers a divergence; populated at Task 9 + Task 11)
 
 ### §2.1 Sample 1: HRMS not found
@@ -340,7 +345,7 @@ Any verdict ∈ {`requires-revision-with-proposed-copy`, `requires-deeper-redesi
 
 ## §6 Sample-copy non-engagement protocol
 
-If spouse declines Pattern 4 sample-copy review mid-interview (per ethics-protocol §3.7 + interview-protocol §4.2):
+If spouse declines Pattern 4 sample-copy review mid-interview (per ethics-protocol §3.7 + interview-protocol §4.2) — including distress triggered by grief associations with sample content per interview-protocol §4.4a:
 
 - All 8 sample-copy rows are marked `not-evaluated-due-to-spouse-non-engagement`.
 - Researcher does NOT ask for explanation.

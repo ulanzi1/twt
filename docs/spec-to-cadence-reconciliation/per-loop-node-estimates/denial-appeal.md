@@ -1,0 +1,88 @@
+# Per-Loop-Node Estimate: Denial Appeal
+
+**Loop node ID:** `denial-appeal` (canonical slug per `docs/fallback-handler-ledger/ledger.md §3`)
+
+**Status:** Author-committed 2026-06-01. §5 Engineer-month estimate carries `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` placeholders. Substantive estimate lands at Task 7.
+
+---
+
+## §1 Loop node identity
+
+| Field | Value |
+|---|---|
+| Canonical slug | `denial-appeal` |
+| Loop node description | Three-stage internal appeal process when a claim is denied; Sahyog Vivran publish hook on reversed denial; cross-cut with R9 special-case voting for contested outcomes |
+| Owning Epic(s) | Epic 6 (Story 6.16 3-stage denial-appeal flow + reversed-denial Sahyog Vivran publish hook); Epic 4 (Rules Engine for R9 special-case evaluation) |
+| Implementing Stories | 6.16 3-stage claim denial-appeal flow + reversed-denial Sahyog Vivran publish hook |
+| Worksheet row | `estimation-worksheet.md §3` row `loop-node-denial-appeal` |
+
+## §2 Implementation surface inventory
+
+**UI screens (estimate):**
+- Appeal stage 1 (member-initiated): appeal form + grounds submission (~2 screens)
+- Appeal stage 2 (committee review): trustee + staff review surface (~2 screens)
+- Appeal stage 3 (final determination): final outcome screen + Sahyog Vivran publish trigger (~2 screens)
+- Appeal status tracker (member app) (~1 screen)
+
+**API endpoints (estimate):**
+- POST /claims/:id/appeals (initiate stage 1)
+- PATCH /claims/:id/appeals/:id/stage-2 (advance to committee)
+- PATCH /claims/:id/appeals/:id/final-determination
+- GET /claims/:id/appeals/:id/status
+- POST /claims/:id/appeals/:id/sahyog-vivran (publish hook on reversal)
+(~10-12 endpoints)
+
+**Data-model migrations (estimate):**
+- appeal_case table + appeal_stage_event table + sahyog_vivran_publish_log table (~3 migrations)
+
+**Background-job handlers (estimate):**
+- appeal-stage-deadline-reminder + sahyog-vivran-publish-trigger (~2 handlers)
+
+**Surface count summary:** ~7 UI screens + ~12 API endpoints + ~3 migrations + ~2 background-job handlers = **~24 surfaces** (subject to Task 7 refinement)
+
+## §3 Complexity profile
+
+| Dominant profile | Multiplier | Rationale |
+|---|---|---|
+| `multi-party-state-machine` | +50% | Three-stage appeal with multiple actors (member, committee, system); outcome branching (reversal vs uphold); Sahyog Vivran publish hook on reversal |
+| `safety-critical-with-property-test-coverage` | +100% | Denial-appeal is legally consequential; incorrect denial-reversal or failure to publish Sahyog Vivran on reversal is a trust-governance failure; property-test coverage required per architecture §Implementation Handoff |
+| `multi-tenant-RLS-isolation` | +30% | Appeal data scoped per Pariwar |
+
+**Aggregate complexity multiplier:** +50% + 100% + 30% = **+180%** above baseline.
+
+## §4 Cross-cutting CI participation
+
+- **FR-74 PII scrape gate** — appeal data includes claim-sensitive PII + committee deliberation (limited disclosure); PII discipline at schema design
+- **FR-100 schema-diff + benefit_mechanism tag** — appeal outcome events emit benefit_mechanism-tagged audit lines (denial reversed → benefit authorized is a critical audit event)
+- **UX-DR3 friction-budget gate** — member-facing appeal initiation (Tier-1) gates friction-budget
+- **Story 1.10 audit-line emission gate** — every appeal stage transition + final determination emits tamper-evident audit-log entries (highest audit-priority surface in Epic 6)
+
+**Estimated cross-cutting overhead:** 40-50% (safety-critical density + legal-audit requirement drives higher-than-baseline overhead)
+
+## §5 Engineer-month estimate
+
+_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7._
+
+| Field | Value |
+|---|---|
+| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
+| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
+| `confidence_band` | `pending-Task-7` (expected: `medium` — three-stage appeal pattern has prior art; property-test coverage requirement adds implementation ceiling) |
+| `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
+
+## §6 Assumption dependencies
+
+- **A-substrate-readiness:** Epic 6 claim state machine + Epic 4 Rules Engine (for R9 special-case integration) must precede Story 6.16.
+- **A-legal-counsel-return-latency:** Story 6.16 (denial-appeal procedural fairness) is specifically named in Story 0.13 legal counsel scope; legal review latency 5-10 biz-days per artifact.
+- **A-trustee-ratification-latency:** Appeal committee review surface requires Trustee Panel involvement; session scheduling latency in estimate.
+
+## §7 Funding-tradeoff cross-reference
+
+No direct Story 0.12 "reconciliation territory" cross-reference in the upstream `docs/fallback-handler-ledger/loop-nodes/denial-appeal.md §5` at author-commit grep. The denial-appeal loop node's fallback-handler funding posture is captured in `docs/fallback-handler-ledger/ledger.md §3` general `funding_status = unfunded`; substantive posture determination is Story 0.12 Task 9 territory.
+
+## §8 Cross-references
+
+- [Source: `estimation-worksheet.md §3`] — worksheet row `loop-node-denial-appeal`
+- [Source: `docs/fallback-handler-ledger/loop-nodes/denial-appeal.md`] — fallback-handler operational entry
+- [Source: `_bmad-output/planning-artifacts/epics.md` Story 6.16] — implementing story authority
+- [Source: `estimation-methodology.md §4`] — estimation input discipline

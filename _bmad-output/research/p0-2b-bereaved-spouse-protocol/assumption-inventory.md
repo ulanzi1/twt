@@ -10,6 +10,7 @@
 - At author-commit, every row carries `validation_status = pending-interview`.
 - **Critical hypotheses tagged** (gate Epic 6 + Epic 9 + Epic 11b design freezes) are marked with **⚠️ CRITICAL** in the inventory.
 - Synthesis Task 9 populates `validation_status` per assumption + appends divergence-log rows for `refuted` / `nuanced` outcomes.
+- **Coverage-gap acknowledgment:** If the spouse declines Pattern 4 evaluation mid-interview (per ethics-protocol §3.7 opt-in), the per-sample-copy assumptions in "Pattern 4 sample copy assumptions" and the cross-cutting assumptions in "Grief-grammar cross-cutting assumptions" remain `not-evaluated-due-to-spouse-non-engagement`. This is an honest research gap, not a framework defect. The divergence-log records the gap per pattern-4-evaluation-worksheet.md §6-§7 non-engagement protocol, and affected Epic design freezes proceed under explicit gap-acknowledgment.
 
 ---
 
@@ -20,7 +21,7 @@
 | `A-pace-grief-month` | PRD line 63 ("Files a claim ~1 month after death (grief eases the rush)") | Bereaved families file claims approximately 1 month after death; the grief pace eases the rush within that window. | pending-interview | Epic 6 Stories 6.2 + 6.3 (claim filing flow timing assumptions) |
 | `A-pace-no-rush` ⚠️ CRITICAL | UX spec line 295 Stance #4 ("Grief is held, not processed") | Every claim-process interaction takes 3-5× longer than baseline post-grief; flows must accommodate this without anxiety triggers. | pending-interview | Epic 6 + Epic 9 (all claim + reconciliation surfaces) |
 | `A-pace-broken-flow` ⚠️ CRITICAL | UX spec line 295 + UX-DR50 (`<SaveAndResumeAffordance>` line 441) | Grief flows are interrupted by emotional waves; multi-step forms must save state always; resume must be friction-free. | pending-interview | Story 9.1 NomineeConsole; Story 6.2 ClaimProxyFlowShell; Story 11b.4 Memorial Authorship |
-| `A-pace-no-multitasking` ⚠️ CRITICAL | UX spec line 315 ("System is holding me. Not 'processing my case'") | Bereaved spouse cannot multitask; single-decision-per-screen + clear focus is required; complex compound forms are overwhelming. | pending-interview | Epic 6 + Epic 9 + Epic 11b (all multi-step grief-context surfaces) |
+| `A-emotion-pace-no-multitasking` ⚠️ CRITICAL | UX spec line 315 ("System is holding me. Not 'processing my case'") | Bereaved spouse cannot multitask; single-decision-per-screen + clear focus is required; complex compound forms are overwhelming. | pending-interview | Epic 6 + Epic 9 + Epic 11b (all multi-step grief-context surfaces) |
 | `A-pace-fursat-language` | UX spec line 67 ("'fursat' tone, never 'complete your task'") + UX spec line 283 (Reena renewal example "Aaram se, jab fursat ho") | The Hindi term "fursat" (when you have leisure) lands as warm + dignified rather than dismissive or cold. | pending-interview | Story 9.1 NomineeConsole copy; Stories 3.X member-renewal copy under grief; all grief-context Pattern 4 copy |
 
 ---
@@ -57,7 +58,7 @@
 | `A-dignity-amount-not-published` | Inferred + UX spec §0 Stance #1 DPDPA consent | Public amount publication (e.g., "₹49 lakh raised") feels exposing for the family; consent-gated publication per Story 6.9 is the correct posture. | pending-interview | Story 11b.3 Sahyog Vivran per-claim story (amount visibility); Story 6.9 Claim-time DPDPA consent; Story 11b.6 In Memoriam |
 | `A-dignity-no-marketing` | UX spec §0 Stance #4 + Module Shelf grief-context suppression (UX spec line 77 + 204 + 295) | Marketing-grade copy or partner-marketing modules during grief-context surfaces is offensive; structural suppression per Module Shelf state-machine rule is correct. | pending-interview | Module Shelf grief-context suppression (state-machine-enforced); Stories 12.X module marketplace surfaces; cross-cutting Pattern 4 copy register |
 | `A-dignity-witness-cadence` ⚠️ CRITICAL | UX spec line 67 + 315 (witness-not-bailiff) | Witness-not-bailiff register feels dignified; administrative-enforcer register feels cold or invasive. | pending-interview | Story 9.1 NomineeConsole (load-bearing "fursat cadence operational-posture invariant" per epics line 3094); all grief-context surfaces |
-| `A-dignity-pattern4-no-blame` ⚠️ CRITICAL | UX spec line 2342 Pattern 4 member-facing surface guideline | Avoiding blame-first phrasing ("Error:", "Invalid", "Failed", "Forbidden") + alarming red iconography lands as dignified; spouse feels the system is helping rather than punishing. | pending-interview | All member-facing error/validation surfaces; Pattern 4 sample copy rows in pattern-4-evaluation-worksheet.md |
+| `A-pattern4-no-blame-register` ⚠️ CRITICAL | UX spec line 2342 Pattern 4 member-facing surface guideline | Avoiding blame-first phrasing ("Error:", "Invalid", "Failed", "Forbidden") + alarming red iconography lands as dignified; spouse feels the system is helping rather than punishing. | pending-interview | All member-facing error/validation surfaces; Pattern 4 sample copy rows in pattern-4-evaluation-worksheet.md |
 
 ---
 
@@ -85,6 +86,7 @@
 | `A-pattern4-otp-not-received-lands` | UX spec line 2358 | The "OTP did not arrive. Try resending shortly, or call helpline for assistance — we can verify identity by other means" copy lands as dignified. | pending-interview | Story 3.2 Member Mobile OTP Authentication; Story 6.2 ClaimProxyFlowShell Ravi-mode handover-trust-OTP |
 | `A-pattern4-member-already-enrolled-lands` | UX spec line 2359 | The "Great news — this member is already with TWT! Your invite quota stays available for other colleagues" copy lands as dignified. (Note: invite flow is not directly relevant to bereaved-spouse claim experience.) | pending-interview | Story 13.7 Invite Share Sheet |
 | `A-pattern4-eligibility-failed-lands` | UX spec line 2360 | The "Your membership is still in the lock-in period until [date]. Once lock-in completes, your pool participation begins automatically" copy lands as dignified — particularly the "begins automatically" reassurance. | pending-interview | Story 3.7 Lock-in clock widget; Stories 3.X eligibility surfaces |
+| `A-pattern4-helpline-third-tier` | UX spec line 449 UX-DR55 Pattern 4 grammar element (3) helpline-fallback + cross-cutting assumption A-staff-helpline-credible | The helpline fallback (Pattern 4's required third element: what's wrong + what to do next + **helpline fallback**) lands as credible and usable in grief context — bereaved spouses and Ravi-mode users will actually call the helpline when they encounter it in an error message, rather than giving up or seeking informal help. | pending-interview | All member-facing error/validation surfaces carrying inline helpline fallback copy; Stories 5.X (helpline architecture); Story 8.11 Call Helpline CTA; cross-cutting Pattern 4 samples 1, 3, 6 (inline helpline present) |
 
 ---
 
@@ -122,17 +124,17 @@
 
 ---
 
-## Critical hypothesis summary (15 critical-tagged assumptions)
+## Critical hypothesis summary (18 critical-tagged assumptions)
 
-These 15 assumptions, if refuted or nuanced, gate Epic 6 + Epic 9 + Epic 11b design freezes per AC-2:
+These 18 assumptions, if refuted or nuanced, gate Epic 6 + Epic 9 + Epic 11b design freezes per AC-2:
 
 1. `A-pace-no-rush` — Epic 6 + Epic 9 + Epic 11b all-surfaces grief-paced flow assumption
 2. `A-pace-broken-flow` — Story 9.1 + Story 6.2 + Story 11b.4 save-and-resume assumption
-3. `A-pace-no-multitasking` — Epic 6 + Epic 9 + Epic 11b single-decision-per-screen assumption
+3. `A-emotion-pace-no-multitasking` — Epic 6 + Epic 9 + Epic 11b single-decision-per-screen assumption
 4. `A-doc-staff-helps` — Story 9.3 + Story 6.5 + Story 6.7 staff-fallback dignity assumption
 5. `A-staff-named-shepherd` — Story 6.12 + Story 6.10 + Story 9.1 named-shepherd dignity assumption
 6. `A-dignity-witness-cadence` — Story 9.1 load-bearing "fursat cadence operational-posture invariant" (epics line 3094)
-7. `A-dignity-pattern4-no-blame` — all member-facing error/validation surfaces; Pattern 4 sample copy rows
+7. `A-pattern4-no-blame-register` — all member-facing error/validation surfaces; Pattern 4 sample copy rows
 8. `A-family-relative-as-proxy` — Story 6.2 Ravi-mode; UX-DR31 + 32 + 33 primitives
 9. `A-family-eldest-male-spokesperson` — Story 6.2 + 6.3 + 9.1 family-spokesperson modeling
 10. `A-pattern4-bank-statement-format-lands` — Story 9.3 + Story 9.1 staff-takeover-by-day-N
@@ -145,7 +147,7 @@ These 15 assumptions, if refuted or nuanced, gate Epic 6 + Epic 9 + Epic 11b des
 17. `A-memorial-portrait-cultural-treatment` — Story 11b.5 PortraitFrame culturally-appropriate
 18. `A-tsct-precedent-credible` — cross-cutting trust posture
 
-(The above totals 18 critical-tagged assumptions; the inventory's structural commitment is "≥15 critical-tagged" per the AC-1 framework-leg.)
+(The canonical count is 18 critical-tagged assumptions. This is the authoritative count for synthesis §5 + synthesis-schema §5 + divergence summary cross-references.)
 
 ---
 

@@ -9,6 +9,7 @@
 - **Researcher does NOT initiate grief topics** — spouse leads ALL bereavement-specific content depth.
 - Silence ≥5 seconds after spouse response is honored.
 - Anti-leading discipline per dimension.
+- **Anti-leading carve-out for §6-§7 (P-05):** The anti-leading and no-TWT-framing rules apply to §1-§5 generative dimensions only. §6 (Pattern 4 sample-copy evaluation) and §7 (cross-cutting grief-grammar prompts) are **opt-in evaluation instruments** that necessarily present TWT's actual design choices as evaluation stimuli. Once the spouse opts in to §6 or §7 per the explicit opt-in offer, the researcher presents the TWT-specific content (sample copy and grief-grammar design decisions) for the spouse to evaluate. This is the evaluation methodology, not anti-leading violation.
 
 **Format:** Prompts in Hindi (with English glossary). Researcher uses Hindi versions in conversation; English glossary is for researcher reference only.
 

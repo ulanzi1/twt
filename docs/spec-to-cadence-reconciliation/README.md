@@ -140,7 +140,7 @@ _(ADR-NNNN-operations-lead-salary-range slot is in Section I of adr-index.md, cr
 | Spec-to-cadence reconciliation (P0-3) | Story 0.12 | Author-committed (Tasks 7-11 pending) | `docs/spec-to-cadence-reconciliation/` |
 | Legal counsel concurrent review (P0-4) | Story 0.13 | Backlog | — |
 | Native-stack ratify decision (P0-5) | Story 0.14 | Backlog | — |
-| Architectural launch-gate inventory | Story 0.15 | Backlog | — |
+| Architectural launch-gate inventory | Story 0.15 | Author-committed 2026-06-03 (Tasks 8-11 pending) | `docs/launch-gate-inventory/` (Row 2 of `inventory-roster.md` = `p0-3-spec-to-cadence-reality-check` at `current_status = closed` per closure-status-aggregation discipline — Decision 2026-06-01-012 + Decision 2026-06-01-012-amend-1 supersession entries cited as closure-evidence; substantive Story 0.12 Tasks 7-11 outcomes pending external action; per `docs/launch-gate-inventory/escalation-protocol.md` §1 trigger 4, Row 2 supersedes back to `open` if Trustee Panel substantively rejects the reconciliation outcome at a later monthly review) |
 
 ## §9 Disjoint anchor
 

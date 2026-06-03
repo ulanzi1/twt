@@ -49,6 +49,8 @@ This framework applies the four-way split established by Stories 0.4 + 0.5 + 0.6
 
 The gap-analysis layer does NOT prescribe sprint planning or override architecture — it observes incompleteness/risk and proposes conditional escalation paths per [[feedback_gap_analysis_observational]].
 
+**Story 0.14 note (added 2026-06-02 per Decision 2026-06-02-014 cross-coupling):** Native-stack validation prototype device-procurement budget cross-coupling per Decision 2026-06-01-012 body item 9 + Decision 2026-06-02-014 body item 7. The substantive `cost_estimate_inr` authoring at `docs/native-stack-validation/device-procurement-roster.md` Rows 1-3 lands at Story 0.14 Task 7 budget-ratification event; the resolution is cross-referenced from `docs/spec-to-cadence-reconciliation/backfill-log.md` (new row tracking Story 0.12 ↔ Story 0.14 device-procurement budget cross-coupling at `citation-slot-committed` status pending Task 7 substantive authoring). Story 0.14 framework author-committed 2026-06-02 at `docs/native-stack-validation/` per Decision 2026-06-02-014.
+
 ## §4 Structural invariants
 
 The following invariants are non-negotiable properties of the estimation + reconciliation framework. Deviations trigger an Open Question entry.

@@ -350,6 +350,23 @@
 
 ---
 
+### BFL-020
+
+| Field | Value |
+|---|---|
+| `bfl_id` | BFL-020 |
+| `source_file` | `docs/native-stack-validation/device-procurement-roster.md` |
+| `source_line` | (Rows 1-3 `cost_estimate_inr` column) |
+| `source_column_or_section` | Row 1 + Row 2 + Row 3 `cost_estimate_inr` placeholders |
+| `pre-existing_xref_text` | `<TO-BE-AUTHORED-AT-TASK-7>` cross-coupled with Story 0.12 contract-help-path budget per `docs/spec-to-cadence-reconciliation/README.md` line 19 + line 152 |
+| `worksheet_row_id_or_decision_path` | `estimation-worksheet.md` §7 Epic-aggregation row for Epic 0 + `reconciliation-decision-framework.md` §3(c) contract-help path Story 0.14 note |
+| `backfill_status` | `citation-slot-committed` |
+| `backfill_date` | _(pending Story 0.14 Task 7)_ |
+| `supersession-schema-marker` | _(pending Story 0.14 Task 7 substantive cost-estimate authoring + Task 8 procurement event)_ |
+| `notes` | Three test device procurement cost authoring depends on Story 0.14 Task 7 Trustee Panel budget ratification cross-coupled with Story 0.12 contract-help-path; substantive cost lands at Story 0.14 Task 7 + procurement event at Story 0.14 Task 8; Apple Developer Program annual fee for iPhone TestFlight enrollment is a cross-coupled recurring cost requiring Task 7 budget envelope coverage |
+
+---
+
 ## Task 9 backfill procedure
 
 At Task 9 closure (Trustee Panel ≥2-trustee ratification of the reconciliation decision):

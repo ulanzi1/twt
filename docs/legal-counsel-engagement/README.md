@@ -95,7 +95,7 @@ Per [[feedback_architecture_vs_adr_boundary]], the framework commits the propert
 | Fallback-handler ledger | Story 0.7 | Per-loop-node fallback-handler ledger + SLA + rota + Operations Lead | `docs/fallback-handler-ledger/` |
 | Spec-to-cadence reconciliation | Story 0.12 | Engineer-month estimate vs SM-1 6-9 month reconciliation + cut-scope/move-SM-1/contract-help framework | `docs/spec-to-cadence-reconciliation/` |
 | **Legal-counsel-engagement** | **Story 0.13** | **Concurrent-review engagement covering 5 AC-named scope items + ~32-row cross-Story deferred-scope inventory + regulatory surface + ADR slot review** | **`docs/legal-counsel-engagement/` (this directory)** |
-| Native-stack ratify | Story 0.14 | ~2-week prototype + P1-P6 pass criteria + ratify decision | (Story 0.14 framework path; pending) |
+| Native-stack ratify | Story 0.14 | ~2-week prototype + P1-P6 pass criteria + ratify decision | `docs/native-stack-validation/` (framework author-committed 2026-06-02 per Decision 2026-06-02-014; Tasks 7-11 awaiting external action) |
 | Architectural launch-gate inventory | Story 0.15 | All architecture §Launch Gate Risks entries scheduled with named owner + closure criteria + target date | (Story 0.15 framework path; pending) |
 
 ## §9 Disjoint anchor — Story 0.13 is the FIFTH Phase-0 portfolio

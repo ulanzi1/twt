@@ -58,13 +58,15 @@
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+
+**Derivation:** Story 8.5 (UPI failure coach UI + UTR self-attestation recovery path, medium, 2 pts) + per-bank failure-code taxonomy integration (~2 pts medium for failure-code mapping + fallback NEFT escalation) = 4 story-points × 4 hr/pt = 16 hr raw. External-integration + RLS (+80% per §3): 16 × 1.80 = 29 hr. CI/ADR overhead: 28% (coaching surfaces emit FR-100 + Story 1.10 audit-log on UTR-attestation + out-of-band escalation events; UX-DR3 friction-budget gate applies to coaching steps) → 29 × 1.28 = 37 hr ÷ 346 hr/month = 0.11 months midpoint. Adjusted to 0.07 months (failure coach is downstream of Epic 8 UPI intent substrate — once the primary flow is built, coaching layer adds bounded incremental work; per-bank failure-code taxonomy is AI-tractable via payment-gateway documentation). Medium-band: floor = 0.07÷1.5 = 0.05, ceiling = 0.07×1.5 = 0.11. Ratio: 0.11÷0.05 = 2.2 (≈2.25; minor rounding accepted per methodology §3 logged-discrepancy clause).
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` — UPI failure handling patterns are well-documented; coaching UX is bounded) |
+| `engineer_month_floor` | `0.05` |
+| `engineer_month_ceiling` | `0.11` |
+| `confidence_band` | `medium` — UPI failure handling well-documented; coaching UX bounded; per-bank failure-code taxonomy adds limited uncertainty. Medium-band ratio: 0.11 ÷ 0.05 = 2.2 (≈2.25; minor rounding logged per methodology §3) |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

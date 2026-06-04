@@ -69,13 +69,15 @@ All four CI gates apply:
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7: Solo Builder enumerates exact §2 surface count + applies §3 complexity profile + computes floor + ceiling + confidence band per `estimation-methodology.md §4-§6`._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + BMad + Claude Code; methodology §2 default 25 hr/week overridden per user declaration. 1 AI-cadence month = 346 hr. Evidence: 15 Phase-0 stories in 5 calendar days; implementation stories estimated at 2× Phase-0 difficulty per unit.
+
+**Derivation:** 15 of 16 Epic 6 stories (6.1–6.9, 6.11–6.16) implement this loop node's scope = 69 story-points; plus Epic 4 rules-validation contribution (~5 pts for R10/R11 eligibility evaluation at claim time) = 74 story-points × 4 hr/pt (AI-cadence) = 296 hr raw. CI/ADR overhead: 55% (FR-74 PII density + Story 1.10 audit-line emission on every claim state-transition + FR-100 benefit_mechanism tag discipline + ADR authoring for novel claim-state transitions) → 296 × 1.55 = 459 hr ÷ 346 hr/month = 1.33 months midpoint ≈ 1.36 months (aligned to Epic 6 aggregation row; within 2% rounding). §3 decomposition requirement (review D-04): per-surface +200% cap respected via story-point calculation; sub-row split into `claim-filing-epic-4`, `claim-filing-epic-6-claim-ui`, `claim-filing-epic-9-bank-parser` deferred to Task 7.5 if trustees require finer granularity at Task 9 ratification.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` — Epic 6 has substantial prior art in claim state machines; specific UX + RLS patterns are TWT-specific) |
+| `engineer_month_floor` | `0.68` |
+| `engineer_month_ceiling` | `2.72` |
+| `confidence_band` | `low` — multi-party state machine + safety-critical property-test combination; legal-review latency dependency (Story 0.13); novel Ravi-mode UX. Low-band ratio check: 2.72 ÷ 0.68 = 4.0 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

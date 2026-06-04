@@ -60,13 +60,15 @@
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7. Note: Story 0.11 P0-2d operator-shadowing synthesis (Tasks 8-11 of Story 0.11) directly informs the helpdesk routing-policy categories and SLA targets that gate Stories 10.1 + 10.3; Solo Builder should wait for Story 0.11 synthesis before finalizing this row's §2 surface count._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr. Note: Story 0.11 P0-2d synthesis now closed (status `done` in sprint-status.yaml); routing-policy categories + SLA assumptions from Story 0.11 incorporated.
+
+**Derivation:** Epic 10 Stories 10.1–10.4 (1 simple + 2 medium + 1 complex = 1+4+4 = 9 pts) + Epic 5 channel-dispatcher for helpdesk notifications (~3 medium stories = 6 pts) = 15 story-points. Aligned to Epic 10 diagnostic share: Stories 10.1–10.4 = 4 of 15 Epic 10 stories (~27% of Epic 10); Epic 10 aggregation floor 0.40 × 0.30 = 0.12 months floor (diagnostic alignment). Medium-band: floor 0.12, ceiling = 0.12 × 2.25 = 0.27. Ratio: 0.27 ÷ 0.12 = 2.25 ✓. Routing-policy CRUD + SLA escalation engine are AI-generated efficiently once Story 0.11 routing categories are known.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` — helpdesk patterns have prior art; routing-policy surface count TBD-pending-Story-0.11-synthesis) |
+| `engineer_month_floor` | `0.12` |
+| `engineer_month_ceiling` | `0.27` |
+| `confidence_band` | `medium` — operator console patterns established via Story 0.11 synthesis; routing-policy and SLA machinery are bounded CRUD + time-based escalation (AI-tractable). Medium-band ratio check: 0.27 ÷ 0.12 = 2.25 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

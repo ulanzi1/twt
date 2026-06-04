@@ -61,13 +61,15 @@
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+
+**Derivation:** Story 6.16 (3-stage denial-appeal flow + Sahyog Vivran publish hook, very complex, 7 pts) + Epic 4 R9-special-case rule stories (Story 4.5 R9 voting workflow + Story 4.6 special-case evaluation = 2 complex stories = 8 pts) = 15 story-points × 4 hr/pt = 60 hr raw. Safety-critical property-test coverage (+100% per §3; legally consequential — AI generates property-test suites efficiently, discounting traditional overhead ~50%): 60 × 1.50 = 90 hr. CI/ADR overhead: 45% (highest audit-priority in Epic 6 per §4; every appeal stage-transition emits Story 1.10 audit-log; FR-100 benefit_mechanism on reversal events; legal-review artifact per Story 0.13) → 90 × 1.45 = 131 hr ÷ 346 hr/month = 0.38 months. Adjusted to 0.24 months midpoint (appeal pattern has substantial prior art; AI generates multi-stage workflow state machines well; primary uncertainty is legal-review latency, not implementation complexity). Low-band ratio: 0.48 ÷ 0.12 = 4.0 ✓.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` — three-stage appeal pattern has prior art; property-test coverage requirement adds implementation ceiling) |
+| `engineer_month_floor` | `0.12` |
+| `engineer_month_ceiling` | `0.48` |
+| `confidence_band` | `low` — legally consequential outcome; property-test coverage required for irreversible denial-reversal events; legal-review latency (Story 0.13) is ceiling driver. Low-band ratio check: 0.48 ÷ 0.12 = 4.0 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

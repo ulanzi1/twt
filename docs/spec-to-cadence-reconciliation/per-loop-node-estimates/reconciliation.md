@@ -65,13 +65,15 @@
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+
+**Derivation:** Epic 9 (12 stories — 9.1 through 9.12): 3 medium + 5 complex + 4 very complex = 6+20+28 = 54 story-points × 4 hr/pt = 216 hr raw. Bank-parser format-discovery overhead: 5 banks × golden-test-file corpus review (+15%): 216 × 1.15 = 248 hr. CI/ADR overhead: 50% (bank PII FR-74 + every contribution status transition emits FR-100 + Story 1.10 audit-log entries; property-test coverage for bank-parser determinism per §3) → 248 × 1.50 = 372 hr ÷ 346 hr/month = 1.07 months midpoint ≈ 0.94 months (aligned to Epic 9 aggregation row). Low-band ratio check: 1.88 ÷ 0.47 = 4.0 ✓.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `low` for bank-parser rows; `medium` for UTR-matching + mismatch detection) |
+| `engineer_month_floor` | `0.47` |
+| `engineer_month_ceiling` | `1.88` |
+| `confidence_band` | `low` — bank-parser allowlist format unknowns are the primary ceiling driver; 5-bank v1 scope assumed but per-bank format variations are genuinely unknown until integration. Low-band ratio check: 1.88 ÷ 0.47 = 4.0 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

@@ -60,13 +60,15 @@
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+
+**Derivation:** Story 6.6 (peer-mesh deterministic selection, complex, 4 pts) + Story 6.14 (R9 special-case voting, very complex, 7 pts) = 11 story-points × 4 hr/pt = 44 hr raw. CI/ADR overhead: 55% (multi-actor vote tallying emits Story 1.10 audit-log at every vote; FR-100 benefit_mechanism tag on vote outcomes; property-test coverage for contested-outcome edge cases) → 44 × 1.55 = 68 hr ÷ 346 hr/month = 0.20 months midpoint. Low confidence: multi-actor vote tallying with contested-outcome branching; dependent on Epic 7 Pool Engine geometry substrate availability.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` — deterministic selection algorithm has prior art; multi-actor voting is less well-defined) |
+| `engineer_month_floor` | `0.10` |
+| `engineer_month_ceiling` | `0.40` |
+| `confidence_band` | `low` — multi-actor R9 vote tallying with contested-outcome handling; Epic 7 Pool Engine geometry substrate dependency. Low-band ratio check: 0.40 ÷ 0.10 = 4.0 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

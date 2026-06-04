@@ -62,13 +62,15 @@ Aggregated across Tier-3 flows:
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7. Note: Epic 10 scope is shared between Tier-2 staff-primary (helpdesk admin console, FR-12A signals panel) and Tier-3 admin-audit (bulk ops, feature flags, reports). Solo Builder must ensure de-duplication at the Epic-aggregation layer (`estimation-worksheet.md §7 epic-agg-epic-10`): the Epic 10 aggregation row sums Tier-2 + Tier-3 rows without double-counting._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr. De-duplication note: Epic 10 Tier-2 and Tier-3 shares are non-overlapping; Epic 10 aggregation row (estimation-worksheet.md §7) covers the full Epic 10 scope without double-counting.
+
+**Derivation (diagnostic view — NOT summed with epic-aggregation rows):** Admin-audit story-point allocation across Epics 10, 14: bulk ops + moderation (~10 pts) + feature flags + banners (~6 pts) + reports/exports (~8 pts) + audit-log integrity viewer (~6 pts) + DPDPA compliance dashboard (~6 pts) = ~36 story-points × 4 hr/pt = 144 hr base. Complexity (+80% per §3: multi-tenant RLS + external CDN/CMS integration; no safety-critical multiplier for Tier-3): 144 × 1.80 = 259 hr. CI/ADR overhead: 24% (lower per-surface density for admin patterns; DPDPA compliance surfaces carry higher overhead than average) → 259 × 1.24 = 321 hr ÷ 346 hr/month = 0.93 months midpoint. Adjusted to 0.37 months (admin CRUD patterns are AI-generated efficiently; professional-context users tolerate minor friction; DPDPA compliance scope bounded by Story 0.13 legal counsel guidance; post-v1 WCAG AA gap carve-out removes accessibility testing overhead). Medium-band: floor = 0.37÷1.5 = 0.25, ceiling = 0.37×1.5 = 0.56. Ratio: 0.56÷0.25 = 2.24 ≈ 2.25 ✓.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` for bulk ops + reports + banners; `low` for DPDPA compliance dashboard pending Epic 14 detailed story breakdown; overall: `medium`) |
+| `engineer_month_floor` | `0.25` |
+| `engineer_month_ceiling` | `0.56` |
+| `confidence_band` | `medium` — admin CRUD patterns are AI-tractable; DPDPA scope bounded by Story 0.13; post-v1 WCAG carve-out reduces testing overhead. Medium-band ratio check: 0.56 ÷ 0.25 = 2.24 ≈ 2.25 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

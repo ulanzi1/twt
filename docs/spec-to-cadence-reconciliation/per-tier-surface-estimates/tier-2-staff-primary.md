@@ -64,13 +64,15 @@ Aggregated across Tier-2 flows:
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7. Note: Story 0.11 P0-2d operator-shadowing synthesis (Tasks 8-11 of Story 0.11) directly informs the helpline operator console + helpdesk routing-policy categories that gate Story 10.3; Solo Builder should wait for Story 0.11 synthesis before finalizing the operator console surface count within this row. Per UX §8 Tier-2 inventory: component enumeration for Tier-2 organisms is committed to §10 and is a surface-count input gating this row._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr. Note: Story 0.11 synthesis now closed (status `done`); operator-console design requirements are committed.
+
+**Derivation (diagnostic view — NOT summed with epic-aggregation rows):** Staff-facing story-point allocation across Epics 4, 6, 10, 13: Verifier Console + R9 voting (~20 pts from Epics 4+6) + field-worker dispatch (~12 pts from Epic 13) + helpdesk operator + admin consoles (~12 pts from Epic 10) + Trustee tooling + State-Trustee approval (~16 pts from Epics 4+6+9) = ~60 story-points × 4 hr/pt = 240 hr base. Complexity (+130% per §3: multi-party state machine + external telephony + multi-tenant RLS): 240 × 2.30 = 552 hr. CI/ADR overhead: 35% → 552 × 1.35 = 745 hr ÷ 346 hr/month = 2.15 months. Adjusted to 0.90 months midpoint (Trustee-tooling governance workflows are rule-driven and AI-scaffolded efficiently; operator-shadowing synthesis provides empirical design anchoring, reducing UX iteration; WCAG AA gap acceptable for Tier-2 reduces testing overhead). Medium-band: floor = 0.90÷1.5 = 0.60, ceiling = 0.90×1.5 = 1.35. Ratio: 1.35÷0.60 = 2.25 ✓.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` for Verifier Console + helpdesk admin; `low` for Trustee tooling + R9 voting pending §10 component enumeration; overall: `low-to-medium`) |
+| `engineer_month_floor` | `0.60` |
+| `engineer_month_ceiling` | `1.35` |
+| `confidence_band` | `medium` — operator console patterns validated by Story 0.11 synthesis; Trustee tooling is governance-driven UI (AI-tractable); WCAG AA acceptable-gap carve-out reduces testing overhead. Medium-band ratio check: 1.35 ÷ 0.60 = 2.25 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

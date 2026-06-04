@@ -59,13 +59,15 @@
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+
+**Derivation:** Story 6.7 (ground-inspection scheduling + outcome recording, complex, 4 pts) + Story 13.3 (field-worker mobile dispatch app, medium, 2 pts) = 6 story-points × 4 hr/pt = 24 hr base. Mobile-first offline-first requirement premium (+50% on field-worker app surfaces; rural connectivity constraints per §6): 24 × 1.50 = 36 hr raw. CI/ADR overhead: 28% (field-worker surfaces are Tier-2; lower PII density; inspection photo metadata stripping adds bounded overhead) → 36 × 1.28 = 46 hr ÷ 346 hr/month = 0.13 months midpoint ≈ 0.12. Medium-band ratio check: 0.18 ÷ 0.08 = 2.25 ✓.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` — mobile dispatch app has prior art; offline-first requirements add uncertainty) |
+| `engineer_month_floor` | `0.08` |
+| `engineer_month_ceiling` | `0.18` |
+| `confidence_band` | `medium` — mobile dispatch patterns have prior art; offline-first photo upload adds bounded uncertainty; object storage integration (Cloudflare R2) is well-documented. Medium-band ratio check: 0.18 ÷ 0.08 = 2.25 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

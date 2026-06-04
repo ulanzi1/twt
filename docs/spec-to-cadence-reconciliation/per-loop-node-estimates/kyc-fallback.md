@@ -57,13 +57,15 @@
 
 ## §5 Engineer-month estimate
 
-_**`<TO-BE-AUTHORED-BY-SOLO-BUILDER>`** — Task 7._
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+
+**Derivation:** Story 3.3b (DigiLocker OAuth + document-pull KYC flow, complex, 4 pts) + Story 3.4 (manual-fallback admin review flow, medium, 2 pts) = 6 story-points × 4 hr/pt = 24 hr raw. External-integration + RLS (+80% per §3): 24 × 1.80 = 43 hr. CI/ADR overhead: 40% (highest PII sensitivity — Aadhaar; FR-74 gate is most critical for this node; KYC events emit Story 1.10 audit-log) → 43 × 1.40 = 60 hr ÷ 346 hr/month = 0.17 months midpoint. Adjusted to 0.12 months (DigiLocker API is well-documented in Indian fintech; AI-assisted API exploration reduces integration-discovery from methodology §5 default 1-2 weeks to ~3-5 days; Aadhaar format handling bounded by UIDAI spec). Medium-band: floor = 0.12÷1.5 = 0.08, ceiling = 0.12×1.5 = 0.18. Ratio: 0.18÷0.08 = 2.25 ✓.
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `engineer_month_ceiling` | `<TO-BE-AUTHORED-BY-SOLO-BUILDER>` |
-| `confidence_band` | `pending-Task-7` (expected: `medium` — DigiLocker integration has prior art in Indian fintech; specific Aadhaar format handling is nuanced) |
+| `engineer_month_floor` | `0.08` |
+| `engineer_month_ceiling` | `0.18` |
+| `confidence_band` | `medium` — DigiLocker prior art in Indian fintech; Aadhaar format handling bounded by UIDAI spec. Native-stack choice (Story 0.14) may shift surface count ±15% (Expo vs Flutter WebView handling). Medium-band ratio check: 0.18 ÷ 0.08 = 2.25 ✓ |
 | `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
 
 ## §6 Assumption dependencies

@@ -1,6 +1,6 @@
 # Story 0.11: P0-2d Operator Shadowing Completed
 
-Status: review — Group A patches applied 2026-06-01; Group B patches applied 2026-06-01; Group C patches applied 2026-06-01; Group D patches applied 2026-06-01; Group E patches applied 2026-06-01
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

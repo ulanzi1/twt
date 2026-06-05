@@ -14,6 +14,9 @@
     "test:web": "true"
   },
   "dependencies": {
+    "@expo-google-fonts/ibm-plex-sans-devanagari": "^0.4.1",
+    "@expo-google-fonts/noto-sans-devanagari": "^0.4.1",
+    "@expo-google-fonts/tiro-devanagari-hindi": "^0.4.0",
     "@tamagui/config": "^2.1.0",
     "@tamagui/lucide-icons-2": "^2.1.0",
     "@tamagui/toast": "^2.1.0",
@@ -44,6 +47,7 @@
     "@expo/metro-runtime": "~55.0.6",
     "@playwright/test": "^1.49.1",
     "@tamagui/babel-plugin": "^2.1.0",
+    "@types/node": "^25.9.1",
     "@types/react": "~19.1.10",
     "serve": "^14.2.5",
     "typescript": "~5.9.2"

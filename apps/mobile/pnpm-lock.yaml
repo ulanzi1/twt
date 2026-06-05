@@ -8,6 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@expo-google-fonts/ibm-plex-sans-devanagari':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@expo-google-fonts/noto-sans-devanagari':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@expo-google-fonts/tiro-devanagari-hindi':
+        specifier: ^0.4.0
+        version: 0.4.0
       '@tamagui/config':
         specifier: ^2.1.0
         version: 2.1.0(react-dom@19.2.7(react@19.2.7))(react-native-reanimated@4.2.3(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.2.7))(react@19.2.7))(react@19.2.7)
@@ -93,6 +102,9 @@ importers:
       '@tamagui/babel-plugin':
         specifier: ^2.1.0
         version: 2.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
       '@types/react':
         specifier: ~19.1.10
         version: 19.1.17
@@ -812,8 +824,17 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@expo-google-fonts/ibm-plex-sans-devanagari@0.4.1':
+    resolution: {integrity: sha512-dLqf5alqwrvVzMPRB3vraIIx/yxq3VTJ0ybFWnkOHKV5vHPFiHZSxsLzQGcUb55f1QZ0tHBST/aYIcFdQg5xzQ==}
+
   '@expo-google-fonts/material-symbols@0.4.38':
     resolution: {integrity: sha512-IJkBtN1o8u9BW5fvSii1MyHPQ7Q0HxbWcVBvOrOzgMLpVtZw7R2w94wBTVR7kZwv3w1JNTESMmLA5Sqn1+Z36A==}
+
+  '@expo-google-fonts/noto-sans-devanagari@0.4.1':
+    resolution: {integrity: sha512-26boYPNKGP1r4R5MxsMAY/zCQOwiXLOJzX8sh1a2oEWyQurQsyniaCv4992c+9jjwshEEt2NNVv5GcnyzaL7QQ==}
+
+  '@expo-google-fonts/tiro-devanagari-hindi@0.4.0':
+    resolution: {integrity: sha512-hr5ILVrmjkREPFfxm3zHx1SOzKvQhbdreoKfr08SNKgTlwTVMxLUVBygObY0cZDgB06wvcYuBT+ybaoIUUq5Kw==}
 
   '@expo/cli@55.0.32':
     resolution: {integrity: sha512-fq+/yUYBVw5ZudT4igNyJ3WaF17R39iS7EZlrkfHkLI7Y1kmUlivabwKviLoAfepJOKjKODKpViti9EPfmG3SQ==}
@@ -5171,7 +5192,13 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
+  '@expo-google-fonts/ibm-plex-sans-devanagari@0.4.1': {}
+
   '@expo-google-fonts/material-symbols@0.4.38': {}
+
+  '@expo-google-fonts/noto-sans-devanagari@0.4.1': {}
+
+  '@expo-google-fonts/tiro-devanagari-hindi@0.4.0': {}
 
   '@expo/cli@55.0.32(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-constants@55.0.16)(expo-font@55.0.8)(expo-router@55.0.16)(expo@55.0.26)(react-dom@19.2.7(react@19.2.7))(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.2.7))(react@19.2.7)(typescript@5.9.3)':
     dependencies:

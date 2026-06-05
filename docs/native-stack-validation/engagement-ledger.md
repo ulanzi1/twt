@@ -210,6 +210,115 @@ daily_log:
       - Redmi 10: chipset Helio G88; verify exact RAM SKU (4GB most common)
       - Redmi Note 8: chipset SD665; verify exact RAM SKU + Android 11 upgrade applied
       - iPhone 12: verify current iOS version; defer Apple Dev Program until ~Day 10
+
+  - date: 2026-06-05
+    calendar_day: 2
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 2 wiring: CNG eas.json + Devanagari font loading + Tamagui font-role
+      registration. Three Devanagari font packages installed via pnpm:
+      @expo-google-fonts/tiro-devanagari-hindi (display);
+      @expo-google-fonts/noto-sans-devanagari (body, 400+500);
+      @expo-google-fonts/ibm-plex-sans-devanagari (tabular, 400+500 —
+      FM-2 substitute for IBM Plex Mono Devanagari per UX spec line 714).
+      @types/node added as dev-dep (scaffold's tsconfig.base.json references it).
+      eas.json created with development/preview/production profiles per
+      architecture §4.5 + §4.12 CNG discipline. app.json updated:
+      name "expo-router-example" → "TWT P0-5 Prototype"; slug → twt-p0-5-prototype;
+      version 1.0.0 → 0.1.0 (prototype); scheme "myapp" → "twtp05";
+      iOS supportsTablet false; iOS bundleIdentifier +
+      Android package = "org.teacherswelfaretrust.p0prototype".
+      app/_layout.tsx useFonts dictionary extended from {Inter, InterBold}
+      to additionally load {TiroDevanagariHindi_400Regular,
+      NotoSansDevanagari_400Regular + 500Medium, IBMPlexSansDevanagari_400Regular
+      + 500Medium}; variable renamed interLoaded/interError → fontsLoaded/fontError.
+      tamagui.config.ts rewritten: defaultConfig.fonts.heading/body extended with
+      Devanagari createFont objects; new "tabular" font role added for
+      $tabular references in pattern components.
+    per_pattern_completion_status:
+      yogdaan_bahi: not-started
+      shradhanjali_sahyog_vivran: not-started
+      panchayat_noticeboard: not-started
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 2 of 14
+    FM-2_mitigation_events:
+      - mitigation_id: fm2-ibm-plex-mono-devanagari-unavailable-2026-06-05
+        category: font-substitution
+        description: |
+          UX spec line 714 specifies "IBM Plex Mono Devanagari" as the default
+          face for the tabular-numerics role. Investigation confirms IBM Plex
+          publishes no Mono variant in the Devanagari script family (only
+          IBM Plex Sans Devanagari + IBM Plex Sans Devanagari Condensed exist).
+          The FM-2 condition "if monospace Devanagari proves unavailable at
+          quality" — explicit fallback in UX spec line 714 — materializes
+          immediately at Day 2 because no monospace Devanagari font exists.
+        fallback_applied: |
+          IBM Plex Sans Devanagari (400 Regular + 500 Medium) loaded as the
+          tabular-numerics face. The tnum OpenType feature applied per-component
+          via fontFeatureSettings on Text style at component implementation time
+          (Days 3-7 pattern work). Per UX spec line 714 this fallback is
+          explicitly authorized — not a deeper FM-2 escalation.
+        outcome: fallback-applied-no-escalation
+        cross_reference: "UX spec line 714 + line 1114 + line 1129 FM-2 face-substitution policy"
+
+      - mitigation_id: fm2-tiro-display-weight-500-unavailable-2026-06-05
+        category: font-weight-substitution
+        description: |
+          UX spec line 1108 specifies "weight 500" for display-large (Shradhanjali
+          memorial name; Contribution Note heading) using Tiro Devanagari Hindi.
+          Google Fonts publishes only Tiro Devanagari Hindi 400 (Regular + Italic);
+          no 500-weight variant exists.
+        fallback_applied: |
+          Tiro Devanagari Hindi 400 Regular used at display-large; visual weight
+          gap from spec target (500) noted in P1 rendering measurement at Task 10
+          with caveat "tiro-weight-500-substituted-with-400". Trustee acknowledgment
+          deferred to Task 11 FM-2 escalation trace. Per UX spec line 712 substitute
+          candidates Yatra One (display weight only) or Mukta Mahee remain in
+          reserve if 400-weight Tiro proves visually insufficient at P1 review.
+        outcome: fallback-applied-with-caveat-recorded
+        cross_reference: "UX spec line 712 substitute-candidates + line 1108"
+
+      - mitigation_id: fm2-scaffold-type-noise-2026-06-05
+        category: scaffold-type-noise
+        description: |
+          `pnpm exec tsc --noEmit` surfaces 14 pre-existing type errors from
+          the create-tamagui v2.1.0 scaffold: Tamagui v2 component exports
+          (Button, XStack, YStack, H2, H4, Paragraph) reported as not-exported-
+          members; @react-navigation/native module resolution; @playwright/test
+          named-import shape. None of these originate from Day 2 edits; all are
+          scaffold defects (template lags Tamagui v2 API shape).
+        fallback_applied: |
+          Not blocking — metro bundles regardless of tsc errors. Pattern
+          implementations (Days 3-7) will surface which scaffold imports
+          actually break at runtime; fix narrowly per component if a real
+          import fails. Tamagui v2 component imports in pattern files will
+          likely need adjustment (e.g., `import { YStack } from 'tamagui'` may
+          need to be `import { YStack } from '@tamagui/core'` or similar) —
+          handle reactively.
+        outcome: deferred-to-pattern-implementation-encounter
+        cross_reference: "Tamagui v2 release notes + Day 3+ pattern implementations"
+    artefacts_landed:
+      - apps/mobile/eas.json  # CNG development/preview/production profiles
+      - apps/mobile/app.json  # TWT namespace + bundleIdentifier + package
+      - apps/mobile/app/_layout.tsx  # three Devanagari font loads + Inter retained
+      - apps/mobile/tamagui.config.ts  # heading/body/tabular Devanagari fonts registered
+      - apps/mobile/package.json  # three @expo-google-fonts packages + @types/node
+      - apps/mobile/pnpm-lock.yaml  # updated
+    next_day_intent: |
+      Day 3: per-device cold-boot + factory-reset + Android-11-upgrade
+      verification on Redmi Note 8 + OS version verification on Redmi 10 +
+      iPhone 12; populate `received_and_verified_date` fields in §4
+      device-procurement log. Begin Yogdaan Bahi pattern implementation
+      per UX spec §8 Passbook row pattern (56pt fixed height + hairline
+      rule + column structure date 100pt / sahyog flex / pool 64pt /
+      amount 96pt + 5th-row heavier rule + sticky footer running tally +
+      ≥50 row entries scrollable test data).
+    notes: |
+      Day 2 ends with all three font files loaded + Tamagui font-role API
+      surface ready for pattern work. Two FM-2 events recorded (IBM Plex
+      Mono Devanagari unavailable; Tiro weight 500 unavailable) — both
+      pre-authorized fallbacks per UX spec line 714 + line 712 substitute-
+      candidates discipline.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

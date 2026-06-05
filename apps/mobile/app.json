@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "expo-router-example",
-    "slug": "expo-router-example",
-    "version": "1.0.0",
+    "name": "TWT P0-5 Prototype",
+    "slug": "twt-p0-5-prototype",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "twtp05",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
@@ -14,9 +14,11 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "org.teacherswelfaretrust.p0prototype"
     },
     "android": {
+      "package": "org.teacherswelfaretrust.p0prototype",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"

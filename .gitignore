@@ -34,3 +34,8 @@ out/
 # Misc
 .cache/
 .tmp/
+
+# BMAD code-review session artifacts (transient diffs the review tooling drops
+# at session-time; the substantive patches land in commits, not these files)
+_bmad-output/*-review-diff.txt
+_bmad-output/**/*-review-diff.txt

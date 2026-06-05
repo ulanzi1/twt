@@ -3,6 +3,7 @@ import { Text, View, XStack, YStack } from 'tamagui'
 import { StatLine } from './StatLine'
 import { PinnedItem } from './PinnedItem'
 import { RecentClosingRow } from './RecentClosingRow'
+import { P3DiagnosticPanel } from './P3DiagnosticPanel'
 import {
   SAMPLE_NEXT_MEETING,
   SAMPLE_PINNED,
@@ -108,6 +109,10 @@ export function PanchayatNoticeboard() {
             </Text>
           </XStack>
         </YStack>
+
+        {/* P3 diagnostic panel — Task 10 measurement evidence surface.
+            Prototype-only; production removes this. */}
+        <P3DiagnosticPanel />
       </ScrollView>
     </YStack>
   )

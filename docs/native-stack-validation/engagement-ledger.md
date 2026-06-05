@@ -842,6 +842,117 @@ daily_log:
       function will be reused by Epic 8 contribution-loop substrate work
       (PRD FR-27). Only the payeeVpa + payeeName + transactionRef sources
       will swap from prototype constants → server-config in production.
+
+  - date: 2026-06-05
+    calendar_day: 8
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 8 expo-notifications scaffolding for P3 measurement surface
+      stub. Installed expo-notifications 56.0.15 + expo-device 56.0.4.
+      Created lib/push-notifications.ts with permission flow + push-token
+      retrieval (Expo → device-token fallback) + scheduleTestNotification
+      + scheduleTestBatch helpers for local-notification path validation.
+      Added P3DiagnosticPanel on Panchayat tab footer with 4 trigger
+      buttons (Request permission / Get token / Schedule 1 / Schedule
+      batch 5) + live log surface for Task 10 measurement evidence.
+      Configured expo-notifications plugin in app.json (icon + color +
+      defaultChannel).
+    per_pattern_completion_status:
+      yogdaan_bahi: complete + P4-instrumented
+      shradhanjali_sahyog_vivran: complete + P2-instrumented
+      panchayat_noticeboard: complete + P3-instrumented  # diagnostic panel in footer
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 8 of 14; integration phase 3 of 4 done
+    FM-2_mitigation_events:
+      - mitigation_id: fm2-expo-notifications-broken-permission-typing-2026-06-05
+        category: dependency-type-defect-narrow-fix
+        description: |
+          expo-notifications 56.0.15 ships a broken d.ts: its
+          NotificationPermissionsStatus interface extends PermissionResponse
+          imported from 'expo' (`import type { PermissionResponse } from 'expo'`)
+          but the 'expo' package does NOT re-export PermissionResponse.
+          Result: TypeScript can't see the status/granted/canAskAgain
+          fields on the runtime object even though they're present.
+        fallback_applied: |
+          Defined local CanonicalPermissionResult type matching the runtime
+          shape (status + granted + canAskAgain) and cast getPermissionsAsync
+          / requestPermissionsAsync results to it. Runtime behavior
+          unchanged; TypeScript now satisfied.
+        outcome: fixed-narrowly
+        cross_reference: "lib/push-notifications.ts CanonicalPermissionResult cast"
+    artefacts_landed:
+      - apps/mobile/lib/push-notifications.ts  # permission + token + scheduling helpers
+      - apps/mobile/components/panchayat/P3DiagnosticPanel.tsx  # 4-button diagnostic
+      - apps/mobile/components/panchayat/PanchayatNoticeboard.tsx  # P3 panel wired into footer
+      - apps/mobile/app.json  # expo-notifications plugin added
+      - apps/mobile/package.json  # expo-notifications + expo-device added
+      - apps/mobile/pnpm-lock.yaml  # updated
+    implementation_details:
+      packages:
+        - expo-notifications 56.0.15
+        - expo-device 56.0.4
+      notification_handler:
+        config: "setNotificationHandler with shouldShowBanner + shouldShowList = true (foreground notifications visible for P3 observability)"
+        rationale: "Default behavior suppresses foreground notifications which makes P3 measurement harder to observe — show always for prototype"
+      permission_flow:
+        device_check: "Device.isDevice — refuses on simulator/emulator with unsupported reason"
+        existing_check: "getPermissionsAsync first; skip prompt if already granted"
+        prompt_check: "requestPermissionsAsync if not yet determined"
+        result_types: granted | denied (with canRetry) | undetermined | unsupported
+      token_retrieval:
+        primary_path: "Notifications.getExpoPushTokenAsync() — returns Expo push token (works when EAS projectId configured)"
+        fallback_path: "Notifications.getDevicePushTokenAsync() — returns raw FCM (Android) / APNs (iOS) token"
+        result_types: expo | device | unavailable
+      scheduling:
+        single: "scheduleTestNotification(delaySeconds=5) → schedule 1 local notification firing in 5s; returns notification id"
+        batch: "scheduleTestBatch(count, gapSeconds=1) → schedule N notifications 1s apart for delivery-rate measurement at Task 10"
+        triggers: SchedulableTriggerInputTypes.TIME_INTERVAL
+      diagnostic_panel:
+        location: "Panchayat tab footer (below अगली मासिक बैठक footer)"
+        elements:
+          - 4 trigger buttons (Request permission / Get token / Schedule 1 / Schedule batch 5)
+          - permission status text
+          - token text (truncated to 2 lines)
+          - scheduled count
+          - rolling 10-line event log with HH:MM:SS timestamps
+        accessibility: "each button has accessibilityRole=button + accessibilityLabel; prototype-only — production removes this panel"
+      app_json_plugin:
+        config:
+          icon: ./assets/images/icon.png
+          color: "#202020"
+          defaultChannel: default
+        ios_apns_caveat: "iOS APNs delivery requires Apple Developer Program enrollment + APNs key — deferred to Day 10"
+        android_fcm_caveat: "Android FCM delivery requires Firebase project + google-services.json placed at apps/mobile/google-services.json — deferred to first remote-delivery test"
+    p3_measurement_surface_readiness: |
+      Day 8 partial P3 surface:
+      - Local-notification path: ✅ ready end-to-end. Operator can trigger
+        schedule-1 or schedule-batch-5 from Panchayat footer; notifications
+        fire in 5s / 1-5s respectively; verify foreground + background
+        delivery via the panel log.
+      - Remote-FCM-Android path: ⏳ pending Firebase project + google-services.json.
+        Test path: backend uses expo-server-sdk + ExpoPushToken (visible in panel)
+        OR direct FCM dispatch using device token.
+      - Remote-APNs-iOS path: ⏳ pending Apple Developer Program enrollment (Day 10)
+        + APNs key + p8 certificate upload to Expo console or backend.
+      P3 measurement cells at Task 10:
+      - Local-notification subset: 3 cells armed (redmi10/redminote8/iphone12.local-notif.p3)
+      - Remote-FCM-Android subset: 2 cells deferred until Firebase setup (redmi10/redminote8)
+      - Remote-APNs-iOS subset: 1 cell deferred until Apple Dev Program (iphone12)
+      Per UX spec line 824 ≥95% delivery + ≤5s p95: local subset measurable
+      now; remote subset deferred to post-Firebase/post-Apple-Dev.
+    next_day_intent: |
+      Day 9: RN Accessibility props + Tamagui/Radix accessibility wiring
+      across the three patterns. Add accessibilityLabel + accessibilityRole +
+      accessibilityHint to interactive elements (Yogdaan rows, Shradhanjali
+      "योगदान दें" link already wired Day 7, Panchayat pinned items, memorial
+      portrait). P1 visual-inspection level only per UX spec; deep audit is
+      Story 0.10 P0-2c VI/low-vision territory.
+    notes: |
+      P3 partial validation via local-notification path is meaningful for
+      the substrate decision: it validates that expo-notifications native
+      modules compile + register + fire under CNG workflow. The cross-platform
+      FCM/APNs delivery surface for the full ≥95% measurement remains
+      deferred to Days 10+ external dependencies.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

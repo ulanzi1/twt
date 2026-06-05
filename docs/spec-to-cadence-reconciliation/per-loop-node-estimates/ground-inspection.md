@@ -59,9 +59,9 @@
 
 ## §5 Engineer-month estimate
 
-**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted per `estimation-methodology.md §2 row 2` (D-03-resolved Tasks 7+8 review; ratification pending Task 9 ≥2-trustee co-sign per Decision 2026-06-04-016). 1 AI-cadence month = 346 hr per methodology §2.
 
-**Derivation:** Story 6.7 (ground-inspection scheduling + outcome recording, complex, 4 pts) + Story 13.3 (field-worker mobile dispatch app, medium, 2 pts) = 6 story-points × 4 hr/pt = 24 hr base. Mobile-first offline-first requirement premium (+50% on field-worker app surfaces; rural connectivity constraints per §6): 24 × 1.50 = 36 hr raw. CI/ADR overhead: 28% (field-worker surfaces are Tier-2; lower PII density; inspection photo metadata stripping adds bounded overhead) → 36 × 1.28 = 46 hr ÷ 346 hr/month = 0.13 months midpoint ≈ 0.12. Medium-band ratio check: 0.18 ÷ 0.08 = 2.25 ✓.
+**Derivation:** Story 6.7 (ground-inspection scheduling + outcome recording, complex, 4 pts) + Story 13.3 (field-worker mobile dispatch app, medium, 2 pts) = 6 story-points × 4 hr/pt = 24 hr base. Mobile-first offline-first requirement premium (+50% on field-worker app surfaces; rural connectivity constraints per §6): 24 × 1.50 = 36 hr raw. CI/ADR overhead: 28% (field-worker surfaces are Tier-2; lower PII density; inspection photo metadata stripping adds bounded overhead per methodology §4(f)) → 36 × 1.28 = 46 hr ÷ 346 hr/month = 0.13 months computed midpoint. **Assumption-catalogue adjustment (per P-03):** computed midpoint 0.13 → operational midpoint 0.12 on the grounds that the offline-first photo upload pattern reuses Epic 1 background-job substrate (pg-boss retry envelope), reducing the offline-first premium effective overhead by ~10% (the rural-connectivity multiplier double-counts what is already in the background-job baseline). Medium-band asymmetric formula per methodology §3 (factor = 0.5; 1 + factor = 1.5): floor = 0.12 / 1.5 = 0.08; ceiling = 0.12 × 1.5 = 0.18. Medium-band ratio 0.18 ÷ 0.08 = 2.25 ✓ — formula consequence per P-13 tautological-band disclaimer.
 
 | Field | Value |
 |---|---|

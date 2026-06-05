@@ -36,6 +36,61 @@
 
 ---
 
+## Story 0.7 Task 9 ratification batch disposition (2026-06-05)
+
+Per `.decision-log.md` Decision 2026-06-05-023 (Story 0.7 Tasks 8-11 ratification), the 23 backfill rows below transition to substantive-or-deferred status per the Q7.4 / QA.2 per-loop-node disposition table. The disposition is computed by mapping each row's `ledger_row_discharging_placeholder` to the loop-node disposition in `ledger.md §3`:
+
+**Substantive backfill applied (BENCH-coupled + closed cross-Story rows):**
+
+- **BENCH-coupled rows** carry the substantive placeholder replacement = `Trustee-on-rota (Dhiraj Rahul primary, Kalpana Bharti secondary) per substitute-handler-bench formal ratification 2026-06-05 → 2026-09-03; see ledger.md §3 [loop-node] row + §4 Operations Lead authorization log entry 2026-06-05`. Affected rows: Row 3 (My Pool card → upi-failure-coach BENCH); Row 4 (Yogdaan Bahi → upi-failure-coach + reconciliation BENCH); Row 6 (Ravi-mode claim filing → claim-filing BENCH); Row 7 (Sunita-mode nominee console → reconciliation BENCH); Row 9 (Helpline Operator console → claim-filing + helpdesk BENCH); Row 18 (Reconciliation review queue → reconciliation BENCH).
+- **Rows 1 + 2** (schema notes + allowed-values legend) were handled at Story 0.7 Task 7 cross-reference edit per their per-row notes; Decision 023 does NOT modify these.
+- **Cross-Story rows 19-23** close per Decision 023 bulk disposition: Row 19 (README.md structural invariant 2) substantively closes per substitute-bench ratification recording in §4; Row 20 (degradation-policy-ledger Procedure-revision log) closes per Decision 020 cross-Story Story 0.4 ratification + this Decision; Rows 21-22 (table-top-exercise helpdesk references) close substantively as helpdesk is BENCH-dispositioned; Row 23 (deferred-work.md fallback_handler_phone resolution) substantively backfilled by trustee-on-rota direct-line contact per Q7.3.
+
+**Deferred — substantive backfill awaits downstream trigger:**
+
+- **BACKUP-coupled rows (3)**: backfill deferred until Story 0.6 Task 10 closure (named backup engineer landed) + Story 0.13 counsel return for denial-appeal-relevant rows. Affected rows: Row 12 (Field-worker dispatch app → ground-inspection BACKUP); Row 15 (R9 voting workflow → denial-appeal BACKUP); Row 16 (Audit-of-Anita UI → denial-appeal BACKUP). Status: `superseded-pending-Story-0.6-Task-10`.
+- **BACKLOG-coupled rows (0 direct)**: no surface-inventory row directly maps to peer-mesh per `ledger.md §3 Row 2 surface_inventory_xref = None`; no per-row deferral required at this batch.
+
+**Indirect-coverage rows (5)** per `ledger.md §3` final paragraph (Renewal-grace surface, Anita's verifier console, Trustee-Lite signals panel, Staff console, Niyamavali amendment workflow, Fixed-amount setter, Feature-flag toggle console) carry their substantive role names directly in `surface-inventory.md`'s existing parenthetical text — at Task 9 Decision 023, these rows close per substitute-bench Trustee-on-rota covering trustee-class + admin-class surfaces during the 90-day window. Affected rows: Row 5 (Renewal-grace surface); Row 8 (Anita's verifier console); Row 10 (Trustee-Lite signals panel); Row 11 (Staff console); Row 13 (Niyamavali amendment workflow); Row 14 (Fixed-amount setter); Row 17 (Feature-flag toggle console). Status: `substantive-backfill-applied-via-trustee-on-rota-coverage`.
+
+**Re-evaluation triggers per row:**
+
+- BACKUP-coupled rows: re-evaluate at Story 0.6 Task 10 closure; substantive backfill applied = named backup engineer per Decision 022; supersession entry on Decision 023 records the per-row backfill.
+- BENCH-coupled rows: re-evaluate at Day-75 review (2026-08-19) per Q7.3 renewal trigger; if substitute-bench renewed, no row-level change; if path switches to Operations Lead hire, supersession backfill = Operations Lead identity per new Decision.
+- Indirect-coverage rows: re-evaluate at 30-day-takeover joint-discharge per Decision 032; substantive backfill at that point = whichever role mature operational evidence supports.
+
+**Row-by-row status flips (per-row `backfill_status` field updates at this Decision):**
+
+| Row | Loop-node disposition | New status | Marker |
+|---|---|---|---|
+| 1 | Schema notes (N/A) | unchanged | (Task 7 territory) |
+| 2 | Allowed-values legend (N/A) | unchanged | (Task 7 territory) |
+| 3 | upi-failure-coach BENCH | `substantive-backfill-applied` | Decision 023 + ledger §3 Row 8 |
+| 4 | upi-failure-coach + reconciliation BENCH | `substantive-backfill-applied` | Decision 023 + ledger §3 Rows 4 + 8 |
+| 5 | Indirect coverage | `substantive-backfill-applied-via-trustee-on-rota-coverage` | Decision 023 + ledger §3 final paragraph |
+| 6 | claim-filing BENCH | `substantive-backfill-applied` | Decision 023 + ledger §3 Row 1 |
+| 7 | reconciliation BENCH | `substantive-backfill-applied` | Decision 023 + ledger §3 Row 4 |
+| 8 | Indirect coverage | `substantive-backfill-applied-via-trustee-on-rota-coverage` | Decision 023 + ledger §3 final paragraph |
+| 9 | claim-filing + helpdesk BENCH | `substantive-backfill-applied` | Decision 023 + ledger §3 Rows 1 + 5 |
+| 10 | Indirect coverage | `substantive-backfill-applied-via-trustee-on-rota-coverage` | Decision 023 + ledger §3 final paragraph |
+| 11 | Indirect coverage | `substantive-backfill-applied-via-trustee-on-rota-coverage` | Decision 023 + ledger §3 final paragraph |
+| 12 | ground-inspection BACKUP | `superseded-pending-Story-0.6-Task-10` | Decision 023 + ledger §3 Row 3 |
+| 13 | Indirect coverage | `substantive-backfill-applied-via-trustee-on-rota-coverage` | Decision 023 + ledger §3 final paragraph |
+| 14 | Indirect coverage | `substantive-backfill-applied-via-trustee-on-rota-coverage` | Decision 023 + ledger §3 final paragraph |
+| 15 | denial-appeal BACKUP | `superseded-pending-Story-0.6-Task-10` | Decision 023 + ledger §3 Row 6 |
+| 16 | denial-appeal BACKUP | `superseded-pending-Story-0.6-Task-10` | Decision 023 + ledger §3 Row 6 |
+| 17 | Indirect coverage | `substantive-backfill-applied-via-trustee-on-rota-coverage` | Decision 023 + ledger §3 final paragraph |
+| 18 | reconciliation BENCH | `substantive-backfill-applied` | Decision 023 + ledger §3 Row 4 |
+| 19 | Cross-Story README invariant | `substantive-backfill-applied` | Decision 023 + ledger §4 substitute-bench ratification |
+| 20 | Cross-Story degradation-policy-ledger | `substantive-backfill-applied` | Decision 023 + Decision 020 Story 0.4 ratification |
+| 21 | Cross-Story table-top-exercise (helpdesk) | `substantive-backfill-applied` | Decision 023 + helpdesk BENCH disposition |
+| 22 | Cross-Story table-top-exercise (helpdesk gap-recording) | `substantive-backfill-applied` | Decision 023 + helpdesk BENCH disposition |
+| 23 | Cross-Story deferred-work fallback_handler_phone | `substantive-backfill-applied` | Decision 023 + Trustee-on-rota direct-line |
+
+The per-row tables below (Rows 1-23 enumerated) preserve the author-commit `citation-slot-committed` state as historical record. The substantive-backfill outcome per Decision 023 is recorded in this batch-disposition section above; per-row table updates are reserved for the Story 0.6 Task 10 + post-launch trigger events when individual rows transition independently.
+
+---
+
 ## Backfill rows (23 rows at author-commit)
 
 ### Row 1: surface-inventory.md line 18 — schema notes

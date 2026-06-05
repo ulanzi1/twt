@@ -60,9 +60,9 @@
 
 ## §5 Engineer-month estimate
 
-**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted per `estimation-methodology.md §2 row 2` (D-03-resolved Tasks 7+8 review; ratification pending Task 9 ≥2-trustee co-sign per Decision 2026-06-04-016). 1 AI-cadence month = 346 hr per methodology §2.
 
-**Derivation:** Story 6.6 (peer-mesh deterministic selection, complex, 4 pts) + Story 6.14 (R9 special-case voting, very complex, 7 pts) = 11 story-points × 4 hr/pt = 44 hr raw. CI/ADR overhead: 55% (multi-actor vote tallying emits Story 1.10 audit-log at every vote; FR-100 benefit_mechanism tag on vote outcomes; property-test coverage for contested-outcome edge cases) → 44 × 1.55 = 68 hr ÷ 346 hr/month = 0.20 months midpoint. Low confidence: multi-actor vote tallying with contested-outcome branching; dependent on Epic 7 Pool Engine geometry substrate availability.
+**Derivation:** Story 6.6 (peer-mesh deterministic selection, complex, 4 pts) + Story 6.14 (R9 special-case voting, very complex, 7 pts) = 11 story-points × 4 hr/pt = 44 hr raw. CI/ADR overhead: 55% (multi-actor vote tallying emits Story 1.10 audit-log at every vote; FR-100 benefit_mechanism tag on vote outcomes; property-test coverage for contested-outcome edge cases) → 44 × 1.55 = 68 hr ÷ 346 hr/month = 0.20 months midpoint. Low confidence: multi-actor vote tallying with contested-outcome branching; dependent on Epic 7 Pool Engine geometry substrate availability. Low-band asymmetric formula per methodology §3 (factor = 1.0): floor = midpoint / 2 = 0.10; ceiling = midpoint × 2 = 0.40. Ratio 4.0 ✓ — note per P-13 tautological-band disclaimer: the 4.0 ratio is a formula consequence of factor=1.0, not an independent integrity check; band assignment is justified by substrate-unbuilt criteria above.
 
 | Field | Value |
 |---|---|

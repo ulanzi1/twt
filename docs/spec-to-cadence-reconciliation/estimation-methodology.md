@@ -19,7 +19,9 @@ The canonical estimation unit is the **single-engineer-month at Solo Builder cad
 
 **Why month?** It matches the SM-1 ship-target granularity (6-9 months) directly. Week-granularity introduces false precision at Phase-0 when most surfaces are unbuilt. Quarter-granularity loses the resolution needed to distinguish a 6-month estimate from a 9-month estimate.
 
-**Solo cadence definition:** Solo Builder (BigDev) working on TWT as primary engineering obligation, at ~25 hours/week of focused engineering (net of context-switching, code-review, trustee-coordination, and operations duties). See §5 Assumption catalogue for the productivity assumption sources.
+**Solo cadence definition (row 1 — default):** Solo Builder (BigDev) working on TWT as primary engineering obligation, at ~25 hours/week of focused engineering (net of context-switching, code-review, trustee-coordination, and operations duties). See §5 Assumption catalogue for the productivity assumption sources.
+
+**AI-assisted cadence definition (row 2 — operational override per D-03-resolved 2026-06-04):** Solo Builder + AI pair-programming substrate (BMad + Claude Code) at 80 hours/week NET focused engineering (equivalent to 16 hr × 5 d or 11.4 hr × 7 d sustained). Per-month basis: **1 AI-cadence month = 346 hr** (80 hr/week × 52/12 = 346.67, floored to 346 for arithmetic stability — floors against the ceiling, increasing safety margin per `reconciliation-decision-framework.md §1` more-protective-governs). Supporting evidence catalogue: throughput measurement on Phase-0 framework authoring — 15 Phase-0 stories author-committed in 5 calendar days (per `per-loop-node-estimates/claim-filing.md §5`); the 2× difficulty premium for implementation-vs-Phase-0 work baked into the 80 hr/week figure is itself an unsourced assumption — flagged as Month-3 re-attestation re-evaluation target (the actual implementation-vs-framework ratio may be 3-5×; if so, this row's basis is itself overoptimistic). **Override-trigger row added to §5 below.** Authorship of this cadence override requires ratification per `reconciliation-decision-framework.md §4`: Solo Builder + ≥2-trustee co-sign at Task 9 trustee panel session; see `.decision-log.md` Decision 2026-06-04-016 supersession entry.
 
 **Estimation scope per row:** one row in `estimation-worksheet.md` covers the implementation effort for a single Phase-1 loop node OR a single Tier-N aggregation. "Implementation effort" means: design-to-merge, including tests, CI gate participation, documentation, and ADR overhead. It does NOT include Solo Builder's operations / governance / coordination overhead outside the specific implementation task.
 
@@ -29,11 +31,13 @@ Every estimate row carries **three numbers**: `engineer_month_floor`, `engineer_
 
 **Confidence band tiers (Cone-of-Uncertainty at Phase-0):**
 
-| Band | Meaning | Range | Phase-0 applicability |
+| Band | Meaning | Range | Phase-0 applicability (default at solo cadence) |
 |---|---|---|---|
 | `high` | Tightly scoped; substrate well-understood | ±20% of midpoint | Rare at Phase-0 — reserve for tightly-scoped CI gates with prior implementations (e.g., FR-74 PII scrape gate if prior CI framework is established). |
 | `medium` | Substrate-adjacent; prior art exists elsewhere | ±50% of midpoint | Most common. Appropriate for Epic 1 (Turborepo + Cloud SQL + Drizzle), Epic 2 (Niyamavali publishing), Epic 3 (member onboarding + DigiLocker), Epic 5 (channel dispatcher) — established patterns, specific implementation unknown. |
-| `low` | Substrate unbuilt; significant unknowns remain | ±100% of midpoint | Expected for unbuilt-substrate Epics: Epic 4 (Rules Engine — novel domain logic), Epic 6 (Verifier Console — complex multi-party state machine), Epic 7 (Pool Engine atomicity — novel financial substrate), Epic 9 (bank-parser allowlist — external-integration + format unknowns), Epic 11b (memorial + Sahyog Drive — novel cultural domain). |
+| `low` | Substrate unbuilt; significant unknowns remain | ±100% of midpoint | Expected for unbuilt-substrate Epics: Epic 4 (Rules Engine — novel domain logic at solo cadence; `medium` at AI-cadence per §3-amendment 2026-06-04 below — see worked-example block), Epic 6 (Verifier Console — complex multi-party state machine), Epic 7 (Pool Engine atomicity — novel financial substrate), Epic 9 (bank-parser allowlist — external-integration + format unknowns), Epic 11b (memorial + Sahyog Drive — novel cultural domain). |
+
+**§3-amendment (added 2026-06-04 per D-01-resolved Tasks 7+8 review): AI-cadence band reassignment sub-rule.** When the §2 row 2 AI-cadence is the operative cadence basis, a row's default solo-cadence band may be reassigned upward (e.g., `low → medium`) IF all three criteria hold: (a) **specification completeness** — the implementing Epic's functional requirements are fully enumerated in PRD or epics (no remaining "TBD" specification gaps); (b) **AI prior-art availability** — the substrate has extensive AI-tractable prior art (open-source reference implementations, well-documented patterns); (c) **substrate-adjacency** — the substrate is adjacent to a band-supported pattern even if novel to TWT. Worked example — **Epic 4 Rules Engine**: at solo cadence = `low` (novel domain logic, DSL design unbuilt); at AI-cadence = `medium` (PRD §4.2 FR-7 through FR-12A fully specifies eligibility rules — criterion a; AI has extensive prior art on rule evaluation engines including expression-tree evaluators, decision tables, RETE-pattern matchers — criterion b; DSL prototyping with AI is a 1-2 day exercise leveraging adjacency to JSON-schema validators and config DSLs — criterion c). Reassignment requires explicit `per-epic-aggregation-estimates/<epic-id>.md §6` rationale documenting how all three criteria are met; assignment-only-via-prose is rejected at peer review. See `per-epic-aggregation-estimates/epic-4.md §6` for the canonical worked rationale; `per-epic-aggregation-estimates/epic-12.md §6` for a separate (D-02-resolved) rationale documenting how AI-cadence offsets ±30% surface-count uncertainty when a TBD platform decision is pending.
 
 **How floor + ceiling relate to confidence band — geometric Cone-of-Uncertainty:**
 
@@ -46,6 +50,10 @@ Where: high → 0.20; medium → 0.50; low → 1.00
 ```
 
 The band is **geometric (multiplicative)**, not arithmetic (additive) — Cone-of-Uncertainty discipline at Phase-0 is best modeled multiplicatively because estimate uncertainty compounds with surface count + complexity. Worked example for `low` band (factor = 1.00), midpoint = 4 months: `floor = 4 / 2 = 2 months`; `ceiling = 4 × 2 = 8 months` — a true ±100% band that never collapses to a 0-floor.
+
+**Tautological-band disclaimer (added 2026-06-04 per Tasks 7+8 review P-13):** The band ratios (`ceiling / floor`) of **2.25 for medium** and **4.0 for low** are mechanical consequences of the asymmetric geometric formula above: `medium` factor = 0.5 → `ceiling/floor = 1.5 / (1/1.5) = 1.5 × 1.5 = 2.25`; `low` factor = 1.0 → `ceiling/floor = 2 × 2 = 4.0`; `high` factor = 0.2 → `ceiling/floor = 1.2 / (1/1.2) ≈ 1.44`. A row whose computed ratio matches the assigned-band ratio is NOT independently validated — it has only confirmed that the formula was applied. The ratio test is therefore **not an independent integrity check**; band assignment must be justified by the §3 criteria (substrate maturity + prior art + surface unknowns + Phase-0 applicability — and §3-amendment AI-cadence criteria when applicable), not by ratio match. Entry-file derivations that write "ratio: X ÷ Y = 2.25 ✓" are confirming arithmetic consistency only, not validating band assignment.
+
+**Confidence-band formula citation discipline (added 2026-06-04 per Tasks 7+8 review P-07):** Entry-file §5 derivations must cite the asymmetric form by name and notation: `floor = midpoint / (1 + factor)`, `ceiling = midpoint × (1 + factor)`. For medium-band (factor = 0.5), the form `÷ 1.5 / × 1.5` is *numerically equivalent* to `÷ (1 + 0.5) / × (1 + 0.5)` and may be written either way, but each entry file must note "(medium-band: 1 + 0.5 = 1.5; symmetric form coincides with asymmetric)" so future re-attestation editors do not mistake the rows for using the superseded symmetric methodology (per Decision 2026-06-01-012-amend-1 item 6 supersession).
 
 **Consistency-check enforcement (not optional):** the §3 formula is the *consistency check*, applied *after* the floor + ceiling are estimated bottoms-up from §4 inputs. If the ratio `ceiling / floor` implies a confidence band that differs from the assigned band (e.g., a row with floor=2, ceiling=8 implies `low` but the row asserts `medium`), the row is rejected at Task 7 peer review unless Solo Builder either (a) reassigns the band to match the ratio, or (b) supplies explicit assumption-catalogue rationale in the entry's §6 documenting why the ratio is wider/narrower than the band tier suggests. A "logged-and-accepted discrepancy" without rationale is not a valid resolution.
 
@@ -87,6 +95,34 @@ Every implementation surface in TWT participates in four cross-cutting CI gates:
 
 **Aggregate cross-cutting overhead:** 20-45% of surface effort (baseline cross-cutting burden on top of complexity-multiplied surface estimate). This is NOT a per-surface multiplier in (b) — it is a separate term added after the (b) multiplied surface estimate.
 
+### (f) CI/ADR overhead aggregation rule (added 2026-06-04 per Tasks 7+8 review P-17)
+
+The `estimation-worksheet.md §7` Epic-aggregation rows apply a discrete overhead ladder (`1.30 / 1.32 / 1.34 / 1.37 / 1.40 / 1.42 / 1.45 / 1.50 / 1.55` — i.e., 30 % to 55 % multiplier). The mapping from per-gate percentages in (c) + per-Epic factors in (d)+(e) to the row's overhead figure follows this rule:
+
+```
+row_overhead_multiplier = 1.0
+                          + baseline_audit_line_overhead     # Story-1.10 audit-line emission is universal across all data-touching surfaces; baseline 20% per Epic
+                          + sum(applicable_per_gate_overheads)   # FR-74 (PII density), FR-100 (benefit_mechanism), UX-DR3 (friction-budget) at per-Epic incident rate
+                          + per_epic_adr_overhead             # documentation + ADR overhead per (d); 10-20% baseline
+                          + per_epic_integration_overhead     # cross-Epic handoff per (e); 0-15% per Epic depending on coupling count
+
+# bounded:
+#   floor 1.30 (the lowest-overhead Epic: Epic 2 Niyamavali publishing — no benefit_mechanism, low PII density)
+#   ceiling 1.55 (the highest-overhead Epic: Epic 6 / Epic 7 — multi-party state machine + safety-critical property-test + bank PII + benefit_mechanism on every state transition)
+```
+
+Back-cite per `estimation-worksheet.md §7`:
+- `Epic 2` at 1.30 — content management + versioning; FR-74 + Story-1.10 only at low rate; no FR-100.
+- `Epic 11a` at 1.30 — public identity shell; read-heavy; FR-74 PII shielding moderate; no FR-100.
+- `Epic 1` at 1.42 — platform substrate; audit-log emission infrastructure itself; FR-74 + FR-100 + Story-1.10 + UX-DR3 (Tier-1 surfaces emerge here).
+- `Epic 3 / 5 / 8` at 1.37 — standard member/contribution patterns; baseline + 2 gates active.
+- `Epic 4` at 1.40 — Rules Engine novel; baseline + FR-100 + UX-DR3 + extra ADR overhead (Rules-DSL choice).
+- `Epic 9` at 1.50 — bank-parser allowlist; baseline + bank PII density (FR-74 +15%) + FR-100 + every contribution-status transition emits Story-1.10.
+- `Epic 6 / Epic 7` at 1.55 — multi-party state machine + safety-critical-with-property-test + every claim-state-transition emits Story-1.10 + FR-100 benefit_mechanism on each transition.
+- `Epic 11b / 12 / 13 / 14` at 1.32–1.34 — bounded scopes; mostly UI + low-FR-100; standard baseline.
+
+Material drift from this rule at a future re-attestation requires either (i) re-derivation per the formula above, or (ii) a per-Epic entry file at `per-epic-aggregation-estimates/epic-N.md §6` documenting the deviation. The ladder is informative, not prescriptive — drift within ±0.03 is within rounding tolerance.
+
 ### (d) Documentation + ADR overhead
 
 Per architecture §Implementation Handoff PR-2 ADR-transcription discipline: each implementation story that introduces a net-new architectural decision (not pre-committed in architecture.md) requires an ADR authored in `docs/adr/`. ADR authoring overhead:
@@ -105,7 +141,7 @@ Every per-loop-node + per-Tier-N estimate entry carries an explicit §6 Assumpti
 
 | Assumption | Default value | Override trigger |
 |---|---|---|
-| **Focused engineering hours/week** | 25 hours/week NET — already deducted for context-switching, code-review, trustee-coordination, and operations duties (per §2 definition). Do not apply an additional context-switching deduction; 25 is the post-deduction figure. | If Story 0.12 reconciliation contract-help path activates, the contracted engineer's hours/week is a separate assumption per contractor scope-of-work; if trust hires Operations Lead (Story 0.7 Task 8 path a), the governance-overhead component shrinks and net focused hours may increase above 25 (re-baseline trigger). |
+| **Focused engineering hours/week** | 25 hours/week NET (solo cadence — §2 row 1) — already deducted for context-switching, code-review, trustee-coordination, and operations duties (per §2 definition). Do not apply an additional context-switching deduction; 25 is the post-deduction figure. **Operational default at 2026-06-04: 80 hours/week NET AI-assisted cadence per §2 row 2** (D-03-resolved Tasks 7+8 review); see override-trigger column. | (1) Story 0.12 reconciliation contract-help path activation → contracted engineer's hours/week is a separate assumption per contractor scope-of-work. (2) Operations Lead hire per Story 0.7 Task 8 path a → governance-overhead component shrinks; net focused hours may increase above 25 (re-baseline trigger). (3) **AI-assisted cadence amendment 2026-06-04 per D-03-resolved (Tasks 7+8 review)** → 80 hr/week NET sustained becomes the default basis when AI pair-programming substrate (BMad + Claude Code) is the active development environment; supporting evidence catalogue cites Phase-0 framework-authoring throughput (15 stories in 5 calendar days; see `per-loop-node-estimates/claim-filing.md §5`); ratification requires Solo Builder + ≥2-trustee co-sign per `reconciliation-decision-framework.md §4` at Task 9 trustee panel session (slot pending; see `.decision-log.md` Decision 2026-06-04-016). The 2× implementation-vs-Phase-0 difficulty premium is itself an unsourced assumption flagged as Month-3 re-attestation re-evaluation target. |
 | **Legal-counsel-return latency** | 5-10 business days per artifact requiring legal review (Story 0.13 concurrent review; denial-appeal legal compliance; consent flows) | Story 0.13 closure may establish a faster turnaround SLA if counsel is on retainer |
 | **Trustee-ratification latency** | Variable; Trustee Panel meeting cadence estimated 1-2 meetings/month; ratification typically 3-5 business days from Solo Builder submission to ≥2-trustee sign-off | If Trustee Panel establishes an async-ratification protocol, latency reduces |
 | **Architecture-decision freeze status** | Frozen as of architecture acceptance per architecture §Decision Freeze; net-new ADRs at implementation-time per architecture §Implementation Handoff; zero architecture-renegotiation overhead assumed | If architecture §Decision Freeze is lifted (e.g., a major new cross-cutting concern surfaces), re-baseline trigger fires |

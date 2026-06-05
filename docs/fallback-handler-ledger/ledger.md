@@ -70,7 +70,7 @@ Each row in §3 below carries the following columns, per AC-1 of Story 0.7:
 
 ## §3 Loop-node ledger rows
 
-Per-loop-node rows. At author-commit, every row carries `status = pending-trustee-ratification`; `fallback_handler_role = <TO-BE-NAMED-BY-TRUSTEE-PANEL>`; `funding_status = unfunded`; `contact_rota_cite = pending-rota-population`. The schema is fully committed; substantive identity values land at Task 9 closure.
+Per-loop-node rows. At Task 9 ≥2-trustee ratification per `.decision-log.md` Decision 2026-06-05-023 (substituting Decision 2026-05-30-007 `pending-trustee-ratification` framework state), each row carries a substantive disposition reflecting the 90-day substitute-handler-bench window (2026-06-05 to 2026-09-03) per Q7.1 + Q7.3 selection. Per Q7.4 / QA.2 per-loop-node disposition table: **4 BENCH rows** (claim-filing + reconciliation + helpdesk + upi-failure-coach) carry `fallback_handler_role = Trustee-on-rota (Dhiraj Rahul primary, Kalpana Bharti secondary)`, `funding_status = volunteer-rota-bridge`, `status = trustee-signed-off-bench-disposition`. **3 BACKUP rows** (ground-inspection + denial-appeal + kyc-fallback) carry `fallback_handler_role = <TO-BE-NAMED-POST-STORY-0.6-TASK-10>`, `funding_status = pending-backup-engineer-contracting`, `status = trustee-deferred-pending-backup-engineer`. **1 BACKLOG row** (peer-mesh) carries `fallback_handler_role = <TO-BE-NAMED-POST-LAUNCH-EVIDENCE>`, `funding_status = pending-operational-evidence`, `status = trustee-deferred-pending-backlog`. Substantive role names + funding postures evolve as Story 0.6 Task 10 closes (BACKUP-tier reassessment) and as post-launch operational evidence materializes (BACKLOG-tier reassessment).
 
 ### Row 1: claim-filing
 
@@ -82,13 +82,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | Member app (Ravi-mode) OR Helpline Operator (helpline-mediated) |
 | `fallback_actor` | Helpline Operator + claim-shepherd staff |
 | `escalation_trigger` | `automation-failure-detected` (claim-creation API failure; document-upload pipeline failure; provider integration failure per architecture §3.4 + Cross-Cutting #9; helpline-mediated path is invoked when member app path fails OR when Ravi-class member archetype cannot complete the app path per UX Helpline Operator console authority) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended candidates per Story 0.4 surface-inventory.md line 49: Helpline Operator + claim-shepherd staff per UX P0-1) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `retainer-funded` for Helpline Operator pool + `salary-funded` for dedicated claim-shepherd staff role; per-loop-node negotiation at Trustee Panel) |
-| `response_time_sla` | `≤30 min ack / ≤4 hr first action` (recommended-default; rationale: claim filing is highest-stakes/dignity coupling per PRD §9.1.1; the tight ack window is justified by the bereavement-context member-facing-immediacy + Helpline Operator console design assumption that members reach a real human within minutes; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#claim-filing` (Task 10) |
+| `fallback_handler_role` | `Trustee-on-rota (Dhiraj Rahul primary, Kalpana Bharti secondary)` per Q7.3 substitute-bench composition; Helpline Operator + claim-shepherd staff candidates deferred until post-bench-window per per-Story-evidence + substantive Operations Lead OR backup-engineer landing |
+| `funding_status` | `volunteer-rota-bridge` (90-day substitute-bench window 2026-06-05 → 2026-09-03; trustees absorb without retainer/salary line item per Trust capital-preservation rationale per Q7.3) |
+| `response_time_sla` | `≤30 min ack / ≤4 hr first action` (recommended-default; rationale: claim filing is highest-stakes/dignity coupling per PRD §9.1.1; the tight ack window is justified by the bereavement-context member-facing-immediacy + Helpline Operator console design assumption that members reach a real human within minutes; per-loop-node entry §6 carries the substantive rationale; **trustee-on-rota meets these SLA targets via direct-line escalation to Dhiraj per Q7.3 rota selection**) |
+| `contact_rota_cite` | `rota.md#claim-filing` populated per Q7.3 trustee-on-rota composition (Task 10 substantive backfill) |
 | `comms_channel` | `helpline-inbound` + `push` (`comms-templates/push-channel.md`) + `public-page-banner` (`comms-templates/public-page-banner.md`, for cases where the claim landing flows through twt.org public surface) |
 | `surface_inventory_xref` | "Ravi-mode claim filing" row (`surface-inventory.md` line 49) + "Helpline Operator console" row (`surface-inventory.md` line 57); two rows discharged |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-signed-off-bench-disposition` per Decision 2026-06-05-023 + Q7.4/QA.2 BENCH assignment; **also selected as Task 11 synthetic SLA test target per Q7.5** |
 
 ### Row 2: peer-mesh
 
@@ -100,13 +100,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | Automated peer-mesh evaluator (Story 6.6 deterministic-5-nearest-selection algorithm) |
 | `fallback_actor` | Peer-mesh coordinator (staff role) |
 | `escalation_trigger` | `automation-precondition-failure` (5-nearest peers cannot be selected — insufficient Pariwar density OR all candidate peers unreachable / unresponsive within the 24-hr peer-mesh window) + `external-dependency-outage` (peer outreach surface — WA push / push — unavailable) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended: peer-mesh coordinator role) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `volunteer-rota-bridge` initially, transitioning to `retainer-funded` as Pariwar density grows) |
-| `response_time_sla` | `≤2 hr ack / ≤24 hr first action` (recommended-default; rationale: peer-mesh window is the substantive constraint — the 24-hr first-action matches the peer-outreach window; ack window allows for peer-mesh coordinator to be paged during business hours; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#peer-mesh` (Task 10) |
+| `fallback_handler_role` | `<TO-BE-NAMED-POST-LAUNCH-EVIDENCE>` per Q7.4/QA.2 BACKLOG disposition; substantive ratification deferred until post-launch operational evidence justifies; recommended candidate (peer-mesh coordinator) recorded for re-evaluation trigger |
+| `funding_status` | `pending-operational-evidence` per Q7.4/QA.2 BACKLOG disposition; per-Pariwar density volume drives the eventual `volunteer-rota-bridge → retainer-funded` transition |
+| `response_time_sla` | `≤2 hr ack / ≤24 hr first action` (recommended-default; rationale: peer-mesh window is the substantive constraint — the 24-hr first-action matches the peer-outreach window; ack window allows for peer-mesh coordinator to be paged during business hours; per-loop-node entry §6 carries the substantive rationale) — **SLA targets ratified-in-principle but NOT operative under BACKLOG disposition; activation depends on post-launch evidence** |
+| `contact_rota_cite` | `pending-rota-population` (BACKLOG disposition; rota population deferred until post-launch evidence triggers re-evaluation) |
 | `comms_channel` | `WA` (`comms-templates/whatsapp-channel.md`) + `push` (`comms-templates/push-channel.md`) |
 | `surface_inventory_xref` | None in `surface-inventory.md` at author-commit (peer-mesh-specific surface not yet enumerated); surface-inventory amendment is Story 6.6 territory at closure |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-deferred-pending-backlog` per Decision 2026-06-05-023 + Q7.4/QA.2 BACKLOG assignment |
 
 ### Row 3: ground-inspection
 
@@ -118,13 +118,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | Field-worker (Vikram-class) dispatched via field-worker dispatch app |
 | `fallback_actor` | Field-worker dispatch supervisor + District Admin role |
 | `escalation_trigger` | `automation-precondition-failure` (field-worker unreachable; field-worker dispatch app sync failure) + `automation-failure-detected` (inspection-scheduling failure; Vikram-class member archetype WA reach failure per UX surface-priority Tier 2) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended: Field-worker dispatch supervisor + District Admin per Story 0.4 surface-inventory.md line 60) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `retainer-funded` for dispatch supervisor + `salary-funded` for District Admin; per PRD §9.3 cash-flow constraint, funding requires Trustee Panel + Story 0.12 reconciliation linkage) |
-| `response_time_sla` | `≤4 hr ack / ≤48 hr first action` (recommended-default; rationale: ground inspection is field-time-constrained — dispatch supervisor can re-route within hours but the 48-hr first-action accounts for travel + inspection-window negotiation with the member's family per UX Vikram-class workflow; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#ground-inspection` (Task 10) |
+| `fallback_handler_role` | `<TO-BE-NAMED-POST-STORY-0.6-TASK-10>` per Q7.4/QA.2 BACKUP disposition; recommended candidates (Field-worker dispatch supervisor + District Admin per Story 0.4 surface-inventory.md line 60) deferred to backup-engineer-contracting + Operations-Lead-eventual-hire |
+| `funding_status` | `pending-backup-engineer-contracting` per Q7.4/QA.2 BACKUP disposition; recommended posture (retainer-funded for dispatch supervisor + salary-funded for District Admin) deferred to Story 0.6 Task 10 closure |
+| `response_time_sla` | `≤4 hr ack / ≤48 hr first action` (recommended-default; rationale: ground inspection is field-time-constrained — dispatch supervisor can re-route within hours but the 48-hr first-action accounts for travel + inspection-window negotiation with the member's family per UX Vikram-class workflow; per-loop-node entry §6 carries the substantive rationale) — **SLA targets ratified-in-principle but NOT operative under BACKUP disposition; activation post-Story 0.6 Task 10** |
+| `contact_rota_cite` | `pending-rota-population` (BACKUP disposition; rota population at Story 0.6 Task 10 named-engineer landing) |
 | `comms_channel` | `WA` (`comms-templates/whatsapp-channel.md`, Vikram-class WA reach per UX surface-priority) + `push` (`comms-templates/push-channel.md`) |
 | `surface_inventory_xref` | "Field-worker dispatch app" row (`surface-inventory.md` line 60); one row discharged |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-deferred-pending-backup-engineer` per Decision 2026-06-05-023 + Q7.4/QA.2 BACKUP assignment |
 
 ### Row 4: reconciliation
 
@@ -136,13 +136,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | Matcher cron per architecture §3.6 (automated) + Sunita-class nominee (member-archetype primary actor for nominee-engagement path) |
 | `fallback_actor` | Reconciliation triage on-call (matcher exception path) + Sunita-class nominee staff-takeover (Anita-class staff per UX §1 nominee non-engagement rule) |
 | `escalation_trigger` | `automation-failure-detected` (matcher cron exception — contribution-flow row that cannot be matched to a claim-payout) + `automation-timeout-exceeded` (nominee non-engagement triggers staff-takeover by day N per UX §1; the day-N threshold is per UX nominee-non-engagement rule) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended: Reconciliation triage on-call per Story 0.4 surface-inventory.md line 66 + Nominee shepherd / claim-shepherd staff per surface-inventory.md line 50) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `salary-funded` for reconciliation triage on-call role + `retainer-funded` for nominee shepherd / claim-shepherd staff) |
-| `response_time_sla` | `≤1 hr ack / ≤8 hr first action` (recommended-default; rationale: reconciliation exceptions accumulate quickly in production; the 1-hr ack matches matcher-cron-frequency constraints; the 8-hr first action allows for triage analysis; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#reconciliation` (Task 10) |
+| `fallback_handler_role` | `Trustee-on-rota (Dhiraj Rahul primary, Kalpana Bharti secondary)` per Q7.3 substitute-bench composition; Reconciliation triage on-call + Nominee shepherd / claim-shepherd staff candidates deferred until post-bench-window |
+| `funding_status` | `volunteer-rota-bridge` (90-day substitute-bench window 2026-06-05 → 2026-09-03; trustees absorb without retainer/salary line item per Trust capital-preservation rationale per Q7.3) |
+| `response_time_sla` | `≤1 hr ack / ≤8 hr first action` (recommended-default; rationale: reconciliation exceptions accumulate quickly in production; the 1-hr ack matches matcher-cron-frequency constraints; the 8-hr first action allows for triage analysis; per-loop-node entry §6 carries the substantive rationale; **trustee-on-rota meets these SLA targets via direct-line escalation to Dhiraj per Q7.3 rota selection**) |
+| `contact_rota_cite` | `rota.md#reconciliation` populated per Q7.3 trustee-on-rota composition (Task 10 substantive backfill) |
 | `comms_channel` | `push` (`comms-templates/push-channel.md`, in-console operator banner per surface-inventory.md line 66) + `email` (`comms-templates/email-channel.md`) |
 | `surface_inventory_xref` | "Reconciliation review queue" row (`surface-inventory.md` line 66) + "Sunita-mode nominee console" row (`surface-inventory.md` line 50) + "Yogdaan Bahi" row (`surface-inventory.md` line 47); three rows discharged |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-signed-off-bench-disposition` per Decision 2026-06-05-023 + Q7.4/QA.2 BENCH assignment |
 
 ### Row 5: helpdesk
 
@@ -154,13 +154,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | Helpdesk operator per Story 10.3 (helpline-mediated path) |
 | `fallback_actor` | Helpline shift supervisor + helpdesk on-call (escalation role for operator-unavailable or operator-overloaded conditions) |
 | `escalation_trigger` | `automation-failure-detected` (inbound call routing failure per Story 10.2; carrier-level outage) + `automation-timeout-exceeded` (ticket SLA breach per Story 10.4) + `user-initiated-escalation` (member explicitly escalates to supervisor) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended: Helpline shift supervisor per Story 0.4 surface-inventory.md line 57 + carrier-level auto-attendant per architecture §3.5 inbound fallback) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `salary-funded` for shift supervisor + `retainer-funded` for helpdesk on-call rota; per-helpdesk-shift coverage requires per-loop-node negotiation) |
-| `response_time_sla` | `≤15 min ack / ≤2 hr first action` (recommended-default; rationale: inbound-helpline is the most member-facing-immediate of the loop nodes; the tight ack window is justified by carrier-level inbound timeouts; the 2-hr first-action matches Story 10.4 ticket SLA assumptions; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#helpdesk` (Task 10) |
+| `fallback_handler_role` | `Trustee-on-rota (Dhiraj Rahul primary, Kalpana Bharti secondary)` per Q7.3 substitute-bench composition; tickets land naturally to trustees during 90-day window per Q7.4/QA.2 BENCH disposition rationale; Helpline shift supervisor + carrier-level auto-attendant candidates deferred until post-bench-window |
+| `funding_status` | `volunteer-rota-bridge` (90-day substitute-bench window 2026-06-05 → 2026-09-03; trustees absorb without retainer/salary line item per Trust capital-preservation rationale per Q7.3) |
+| `response_time_sla` | `≤15 min ack / ≤2 hr first action` (recommended-default; rationale: inbound-helpline is the most member-facing-immediate of the loop nodes; the tight ack window is justified by carrier-level inbound timeouts; the 2-hr first-action matches Story 10.4 ticket SLA assumptions; per-loop-node entry §6 carries the substantive rationale; **trustee-on-rota meets these SLA targets via direct-line escalation to Dhiraj per Q7.3 rota selection — pre-launch helpdesk volume expected near-zero**) |
+| `contact_rota_cite` | `rota.md#helpdesk` populated per Q7.3 trustee-on-rota composition (Task 10 substantive backfill) |
 | `comms_channel` | `helpline-inbound` (per architecture §3.5) + `push` (`comms-templates/push-channel.md`, in-console operator banner) |
 | `surface_inventory_xref` | "Helpline Operator console" row (`surface-inventory.md` line 57); one row discharged |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-signed-off-bench-disposition` per Decision 2026-06-05-023 + Q7.4/QA.2 BENCH assignment |
 
 ### Row 6: denial-appeal
 
@@ -172,13 +172,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | Appeal-stage reviewer per FR-43A (a reviewer distinct from the original decision-maker) |
 | `fallback_actor` | State Trustee (escalation role per Story 6.13 State Trustee escalation) + appeal-shepherd (member-facing escalation support) |
 | `escalation_trigger` | `automation-timeout-exceeded` (appeal SLA breach) + `automation-precondition-failure` (Stage-1-reviewer-equals-original-decision-maker conflict — automated assignment cannot find a distinct reviewer due to small reviewer pool) + `user-initiated-escalation` (member or appeal-shepherd escalates) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended: State Trustee per Story 0.4 surface-inventory.md line 63 + appeal-shepherd role) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `retainer-funded` for State Trustee role + `salary-funded` for appeal-shepherd if appeal volume sustains the role) |
-| `response_time_sla` | `≤24 hr ack / ≤72 hr first action` (recommended-default; rationale: denial-appeal is high-stakes but not member-facing-immediate — the appeal process inherently runs days-to-weeks; the 24-hr ack ensures the member sees motion within a business day; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#denial-appeal` (Task 10) |
+| `fallback_handler_role` | `<TO-BE-NAMED-POST-STORY-0.6-TASK-10>` per Q7.4/QA.2 BACKUP disposition; requires Niyamavali knowledge + counsel-touching per Story 0.13 cross-coupling; recommended candidates (State Trustee + appeal-shepherd role) deferred to backup-engineer + Story 0.13 counsel return |
+| `funding_status` | `pending-backup-engineer-contracting` per Q7.4/QA.2 BACKUP disposition; recommended posture (retainer-funded for State Trustee + salary-funded for appeal-shepherd) deferred to Story 0.6 Task 10 + Story 0.13 counsel return |
+| `response_time_sla` | `≤24 hr ack / ≤72 hr first action` (recommended-default; rationale: denial-appeal is high-stakes but not member-facing-immediate — the appeal process inherently runs days-to-weeks; the 24-hr ack ensures the member sees motion within a business day; per-loop-node entry §6 carries the substantive rationale) — **SLA targets ratified-in-principle but NOT operative under BACKUP disposition; activation post-Story 0.6 Task 10 + Story 0.13 counsel return** |
+| `contact_rota_cite` | `pending-rota-population` (BACKUP disposition; rota population at Story 0.6 Task 10 named-engineer landing + Story 0.13 counsel return) |
 | `comms_channel` | `push` (`comms-templates/push-channel.md`) + `WA` (`comms-templates/whatsapp-channel.md`) + `email` (`comms-templates/email-channel.md`) |
 | `surface_inventory_xref` | "R9 voting workflow" row (`surface-inventory.md` line 63) + "Audit-of-Anita UI" row (`surface-inventory.md` line 64); two rows discharged |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-deferred-pending-backup-engineer` per Decision 2026-06-05-023 + Q7.4/QA.2 BACKUP assignment |
 
 ### Row 7: kyc-fallback
 
@@ -190,13 +190,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | DigiLocker per Story 3.3a provider-interface-abstraction (external dependency) |
 | `fallback_actor` | Manual KYC reviewer (staff role) |
 | `escalation_trigger` | `external-dependency-outage` (DigiLocker downtime — provider unavailable; provider-approval-gating-failure per A-4) + `automation-failure-detected` (signature-verification failure; document-quality rejection) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended: manual KYC reviewer role under Operations Lead) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `retainer-funded` initially, transitioning to `salary-funded` as KYC fallback volume sustains) |
-| `response_time_sla` | `≤2 hr ack / ≤24 hr first action` (recommended-default; rationale: KYC fallback is onboarding-window-constrained — members in the joining flow expect KYC completion within a day to proceed; the 2-hr ack ensures Operations Lead is paged within business hours; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#kyc-fallback` (Task 10) |
+| `fallback_handler_role` | `<TO-BE-NAMED-POST-STORY-0.6-TASK-10>` per Q7.4/QA.2 BACKUP disposition; recommended candidate (manual KYC reviewer role under Operations Lead or backup engineer) deferred to backup-engineer-contracting; volume tied to DigiLocker failure rate per Q7.4 rationale |
+| `funding_status` | `pending-backup-engineer-contracting` per Q7.4/QA.2 BACKUP disposition; recommended posture (retainer-funded initially → salary-funded as volume sustains) deferred to Story 0.6 Task 10 closure |
+| `response_time_sla` | `≤2 hr ack / ≤24 hr first action` (recommended-default; rationale: KYC fallback is onboarding-window-constrained — members in the joining flow expect KYC completion within a day to proceed; the 2-hr ack ensures Operations Lead is paged within business hours; per-loop-node entry §6 carries the substantive rationale) — **SLA targets ratified-in-principle but NOT operative under BACKUP disposition; activation post-Story 0.6 Task 10** |
+| `contact_rota_cite` | `pending-rota-population` (BACKUP disposition; rota population at Story 0.6 Task 10 named-engineer landing) |
 | `comms_channel` | `push` (`comms-templates/push-channel.md`) + `WA` (`comms-templates/whatsapp-channel.md`) |
 | `surface_inventory_xref` | None in `surface-inventory.md` at author-commit (KYC-specific surface not yet enumerated); surface-inventory amendment is Story 3.3b territory at closure |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-deferred-pending-backup-engineer` per Decision 2026-06-05-023 + Q7.4/QA.2 BACKUP assignment |
 
 ### Row 8: upi-failure-coach
 
@@ -208,13 +208,13 @@ Per-loop-node rows. At author-commit, every row carries `status = pending-truste
 | `primary_actor` | Automated coach per Story 8.5 (in-app coach guidance + self-attestation fallback) + the contribution-loop substrate per architecture §3.4 |
 | `fallback_actor` | Contribution-loop staff support + helpline operator (escalation role for members stuck despite automated coach) |
 | `escalation_trigger` | `external-dependency-outage` (UPI Intent failure — payment gateway unavailable) + `automation-failure-detected` (self-attestation failure; yellow-pill-stuck condition) + `user-initiated-escalation` (member explicitly requests human help via in-app helpline link) |
-| `fallback_handler_role` | `<TO-BE-NAMED-BY-TRUSTEE-PANEL>` (Task 9 — recommended: Contribution-loop staff support role under Operations Lead + Helpline Operator pool) |
-| `funding_status` | `unfunded` (Task 9 — recommended posture: `retainer-funded` for contribution-loop staff + `salary-funded` if contribution-failure volume sustains; per-Pariwar density-dependent) |
-| `response_time_sla` | `≤1 hr ack / ≤8 hr first action` (recommended-default; rationale: UPI failure during contribution risks member dropping out of the contribution-cycle attempt; the 1-hr ack window matches the typical member retry-attempt cadence; per-loop-node entry §6 carries the substantive rationale) |
-| `contact_rota_cite` | `pending-rota-population` → `rota.md#upi-failure-coach` (Task 10) |
+| `fallback_handler_role` | `Trustee-on-rota (Dhiraj Rahul primary, Kalpana Bharti secondary)` per Q7.3 substitute-bench composition; lightweight member coaching per Q7.4/QA.2 BENCH disposition rationale (trustee-on-rota acceptable); Contribution-loop staff support + Helpline Operator pool candidates deferred until post-bench-window |
+| `funding_status` | `volunteer-rota-bridge` (90-day substitute-bench window 2026-06-05 → 2026-09-03; trustees absorb without retainer/salary line item per Trust capital-preservation rationale per Q7.3) |
+| `response_time_sla` | `≤1 hr ack / ≤8 hr first action` (recommended-default; rationale: UPI failure during contribution risks member dropping out of the contribution-cycle attempt; the 1-hr ack window matches the typical member retry-attempt cadence; per-loop-node entry §6 carries the substantive rationale; **trustee-on-rota meets these SLA targets via direct-line escalation to Dhiraj per Q7.3 rota selection — pre-launch UPI failure volume expected low**) |
+| `contact_rota_cite` | `rota.md#upi-failure-coach` populated per Q7.3 trustee-on-rota composition (Task 10 substantive backfill) |
 | `comms_channel` | `push` (`comms-templates/push-channel.md`) + `helpline-inbound` |
 | `surface_inventory_xref` | "My Pool card" row (`surface-inventory.md` line 46) + "Yogdaan Bahi" row (`surface-inventory.md` line 47); two rows discharged |
-| `status` | `pending-trustee-ratification` |
+| `status` | `trustee-signed-off-bench-disposition` per Decision 2026-06-05-023 + Q7.4/QA.2 BENCH assignment |
 
 **Total surface-inventory rows discharged by these 8 ledger rows:** 9 unique rows (11 row-claims across 8 loop nodes — claim-filing 2 + peer-mesh 0 + ground-inspection 1 + reconciliation 3 + helpdesk 1 + denial-appeal 2 + kyc-fallback 0 + upi-failure-coach 2 = 11 row-claims — minus 2 co-covered rows: line 47 / Yogdaan Bahi is claimed by both reconciliation and upi-failure-coach; line 57 / Helpline Operator console is claimed by both claim-filing and helpdesk — yielding 9 unique surface-inventory rows discharged). Note: this count covers the unique surface-inventory rows discharged by P0-1 ledger rows. Per `backfill-log.md`, the substantive textual P0-1-pending → named-role replacement at Task 9 closure will be applied to the surface-inventory rows currently carrying `P0-1-pending` (18 rows in surface-inventory.md); the 11-rows-discharged count above counts only those rows where a P0-1 ledger row's `surface_inventory_xref` directly cites the surface-inventory row name. The remaining 7 surface-inventory `P0-1-pending` rows (Renewal-grace surface, Anita's verifier console, Trustee-Lite signals panel, Staff console, Niyamavali amendment workflow, Fixed-amount setter, Feature-flag toggle console) are covered indirectly — by Trustee Panel chair, Operations Lead, State Trustee, or Story 0.2 quorum-open path roles that this ledger does NOT carry per-loop-node entries for (those rows belong to trustee-class or admin-class surfaces, not loop nodes; per per-loop-node enumeration in §3 above, only the eight loop nodes are committed). The 7 indirect-coverage surface-inventory rows carry their substantive role names directly in surface-inventory.md's existing parenthetical text — Task 9 backfill substitutes the named role per backfill-log.md row-level mapping.
 
@@ -224,7 +224,7 @@ Per-event rows recording Trustee Panel authorization decisions (Operations Lead 
 
 | Event date | Authorization type | Trustee Panel ratifying members | Decision | Reference |
 |---|---|---|---|---|
-| _(pending Task 8)_ | _(`operations-lead-hire` \| `substitute-handler-bench-formal-ratification` \| `substitute-handler-bench-renewal`)_ | _(pending)_ | _(pending)_ | _(pending `.decision-log.md` `[OPS]` entry id)_ |
+| 2026-06-05 | `substitute-handler-bench-formal-ratification` | Dhiraj Rahul + Kalpana Bharti | Path (b) substitute-handler-bench fallback ratified per Q7.1 (vs Operations Lead hire path (a)); 90-day window 2026-06-05 → 2026-09-03; bench composition = Trustees Dhiraj Rahul + Kalpana Bharti; named trustee-on-rota = Dhiraj Rahul; Story 0.6 backup engineer NOT in bench (gated on Story 0.6 Task 10 closure); automatic Day-75 review (2026-08-19) per Q7.3 renewal trigger; UX-DR4 explicit-deferral rationale = capital-preservation during pre-launch validation per Q7.3 | `.decision-log.md` Decision 2026-06-05-023 (supersession of Decision 2026-05-30-007 Open Follow-up #1) |
 
 **Schema notes:**
 
@@ -240,7 +240,7 @@ Per-event rows recording Trustee Panel authorization decisions (Operations Lead 
 
 | Event date | Ratification mode | Trustees ratifying | Loop nodes ratified | Decision-log entry id |
 |---|---|---|---|---|
-| _(pending Task 10)_ | _(`pack-as-a-unit` \| `per-loop-node` \| `emergency-single-trustee`)_ | _(pending)_ | _(pending — `all-eight` for pack-as-a-unit; explicit list for per-loop-node)_ | _(pending `.decision-log.md` `[OPS]` entry id)_ |
+| 2026-06-05 | `per-loop-node` (mixed dispositions per Q7.4/QA.2 table) | Dhiraj Rahul + Kalpana Bharti | 4 BENCH ratified-now: claim-filing + reconciliation + helpdesk + upi-failure-coach; 3 BACKUP deferred-pending-Story-0.6-Task-10: ground-inspection + denial-appeal + kyc-fallback; 1 BACKLOG deferred-pending-post-launch-evidence: peer-mesh | `.decision-log.md` Decision 2026-06-05-023 |
 
 **Schema notes:**
 

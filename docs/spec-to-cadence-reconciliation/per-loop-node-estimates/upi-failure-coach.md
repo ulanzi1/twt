@@ -58,16 +58,16 @@
 
 ## §5 Engineer-month estimate
 
-**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr.
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted per `estimation-methodology.md §2 row 2` (D-03-resolved Tasks 7+8 review; ratification pending Task 9 ≥2-trustee co-sign per Decision 2026-06-04-016). 1 AI-cadence month = 346 hr per methodology §2.
 
-**Derivation:** Story 8.5 (UPI failure coach UI + UTR self-attestation recovery path, medium, 2 pts) + per-bank failure-code taxonomy integration (~2 pts medium for failure-code mapping + fallback NEFT escalation) = 4 story-points × 4 hr/pt = 16 hr raw. External-integration + RLS (+80% per §3): 16 × 1.80 = 29 hr. CI/ADR overhead: 28% (coaching surfaces emit FR-100 + Story 1.10 audit-log on UTR-attestation + out-of-band escalation events; UX-DR3 friction-budget gate applies to coaching steps) → 29 × 1.28 = 37 hr ÷ 346 hr/month = 0.11 months midpoint. Adjusted to 0.07 months (failure coach is downstream of Epic 8 UPI intent substrate — once the primary flow is built, coaching layer adds bounded incremental work; per-bank failure-code taxonomy is AI-tractable via payment-gateway documentation). Medium-band: floor = 0.07÷1.5 = 0.05, ceiling = 0.07×1.5 = 0.11. Ratio: 0.11÷0.05 = 2.2 (≈2.25; minor rounding accepted per methodology §3 logged-discrepancy clause).
+**Derivation:** Story 8.5 (UPI failure coach UI + UTR self-attestation recovery path, medium, 2 pts) + per-bank failure-code taxonomy integration (~2 pts medium for failure-code mapping + fallback NEFT escalation) = 4 story-points × 4 hr/pt = 16 hr raw. External-integration + RLS (+80% per §3): 16 × 1.80 = 29 hr. CI/ADR overhead: 28% (coaching surfaces emit FR-100 + Story 1.10 audit-log on UTR-attestation + out-of-band escalation events; UX-DR3 friction-budget gate applies to coaching steps) → 29 × 1.28 = 37 hr ÷ 346 hr/month = 0.11 months computed midpoint. **Assumption-catalogue adjustment (per Tasks 7+8 review P-03):** computed midpoint 0.11 adjusted downward to operational midpoint 0.075 on the grounds that (i) the failure coach is downstream of Epic 8 UPI intent substrate — once the primary intent flow is built, the coaching layer reuses ~60% of the UI components (header, button styles, error display) and ~40% of the data model (UTR field validation, member-pool binding); (ii) per-bank failure-code taxonomy is well-documented in payment-gateway API references and AI-tractable via structured-extraction prompts; (iii) §6 documents the reduction as a per-input rationale rather than as round-number-without-justification. Medium-band asymmetric formula per methodology §3 (factor = 0.5; 1 + factor = 1.5): floor = 0.075 / 1.5 = 0.050, ceiling = 0.075 × 1.5 = 0.1125. Displayed at 2dp: floor `0.05`, ceiling `0.11`; displayed ratio 0.11 ÷ 0.05 = 2.20, computed ratio 0.1125 ÷ 0.050 = 2.25 ✓ (per Tasks 7+8 review P-15: the displayed-vs-computed gap is a 2dp formatting artifact, not a logged-discrepancy band-violation — substantive §6 rationale below replaces the prior "rounding" cop-out).
 
 | Field | Value |
 |---|---|
-| `engineer_month_floor` | `0.05` |
-| `engineer_month_ceiling` | `0.11` |
-| `confidence_band` | `medium` — UPI failure handling well-documented; coaching UX bounded; per-bank failure-code taxonomy adds limited uncertainty. Medium-band ratio: 0.11 ÷ 0.05 = 2.2 (≈2.25; minor rounding logged per methodology §3) |
-| `methodology_cite` | `estimation-methodology.md §4(a)-(e)` |
+| `engineer_month_floor` | `0.05` (displayed; computed 0.050 from midpoint 0.075) |
+| `engineer_month_ceiling` | `0.11` (displayed; computed 0.1125 from midpoint 0.075) |
+| `confidence_band` | `medium` — UPI failure handling well-documented; coaching UX bounded; per-bank failure-code taxonomy adds limited uncertainty. Asymmetric-formula computed ratio = 2.25 ✓ exactly; displayed ratio 2.20 is a 2dp formatting artifact (per P-15 fix). |
+| `methodology_cite` | `estimation-methodology.md §3` (asymmetric geometric form: floor = midpoint/(1+factor); ceiling = midpoint×(1+factor)) + `§4(a)-(e)` (inputs) |
 
 ## §6 Assumption dependencies
 

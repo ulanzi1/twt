@@ -140,12 +140,13 @@ jobs:
 
       - name: Configure mirror remote and push
         id: mirror_push
-        # [deferred ADR — placeholder procedure]
-        # Until the code-escrow-mirror-destination ADR ratifies the destination +
-        # credential model (Story 0.3 Task 7), the secret VALUES are unwired. This
-        # step's exact form (SSH vs HTTPS-with-token) is ADR-recorded. The
-        # placeholder below handles both common shapes; the ADR's Task-7 PR
-        # tightens this step (including host-key pinning per the TOFU note above).
+        # Per ADR-0002 code-escrow-mirror-destination (ratified 2026-06-05):
+        # destination = GitLab.com under trustee-owned foundation account;
+        # credential model = SSH ED25519 deploy key (push-only scope); host-key
+        # pinning = KNOWN_HOSTS secret with GitLab.com SSH host fingerprint +
+        # StrictHostKeyChecking=yes (closes Story 0.3 OQ #9 TOFU exposure).
+        # MIRROR_PUSH_CREDENTIAL secret = SSH private key.
+        # MIRROR_DESTINATION_URL secret = git@gitlab.com:<trust-foundation>/<repo>.git
         env:
           MIRROR_PUSH_CREDENTIAL: ${{ secrets.MIRROR_PUSH_CREDENTIAL }}
           MIRROR_DESTINATION_URL: ${{ secrets.MIRROR_DESTINATION_URL }}

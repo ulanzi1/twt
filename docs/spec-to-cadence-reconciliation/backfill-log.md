@@ -1,6 +1,6 @@
 # Backfill Log — Spec-to-Cadence Reconciliation
 
-**Status:** Author-committed 2026-06-01. All 19 rows carry `backfill_status = citation-slot-committed`. Substantive backfill (replacing "Story 0.12 reconciliation territory" placeholders with resolved outcome text) happens at Task 9 closure.
+**Status:** Author-committed 2026-06-01; **bulk superseded 2026-06-05 per Decision 2026-06-05-028 body item 11.** All 19 rows transition from `citation-slot-committed` → `superseded-by-Decision-2026-06-04-016-as-ratified-at-2026-06-05-028`. Per Story 0.12 Task 9 ≥2-trustee ratification of the no-trigger composite outcome (Decision 016 bundled items: no cut-scope / no move-SM-1 / no contract-help allocation; Epic 4 + Epic 12 medium-band reassignments + 25→80 hr/week cadence override all ratified), no substantive scope-edit lands; cross-reference resolution = "no trigger, no allocation." Upstream framework artifacts retain their "Story 0.12 reconciliation territory" reference text in place as historical record of the citation-slot commitment — the trustees expressly do not require Solo Builder to walk the 19 source-file/source-line cross-references to substitute the placeholder text, because the no-trigger outcome means the substantive resolution = the absence of reallocation. The bulk supersession status is the substantive backfill per Decision 028.
 
 **Row count:** 19 rows committed at author-commit time (within the ~20-22-row estimate in Decision 2026-06-01-012 body item 4). The author-commit grep of `docs/fallback-handler-ledger/` for `"Story 0.12"` yielded 18 unique source_file:source_line matches; BFL-015 is a second citation-slot entry for `loop-nodes/claim-filing.md:58` covering the claim-shepherd salary decision specifically (pre-assigned separately in `estimation-worksheet.md §3` as a distinct reconciliation territory item from the overall claim-filing funding posture in BFL-007).
 
@@ -22,6 +22,26 @@
 | `backfill_date` | Date substantive backfill was applied (blank until Task 9) |
 | `supersession-schema-marker` | Decision ID + date if superseded (blank until Task 9) |
 | `notes` | Context for the backfill scope |
+
+---
+
+## Story 0.12 Task 9 ratification batch supersession (2026-06-05)
+
+Per `.decision-log.md` Decision 2026-06-05-028 body item 11 — `≥2-trustee composite ratification of Decision 2026-06-04-016 bundled items` — all 19 BFL rows below transition to `superseded-by-Decision-2026-06-04-016-as-ratified-at-2026-06-05-028` at supersession_date = 2026-06-05.
+
+**Per-row status flip (applies uniformly to BFL-001 through BFL-019):**
+
+- **Prior status:** `citation-slot-committed` (per author-commit 2026-06-01)
+- **New status:** `superseded-by-Decision-2026-06-04-016-as-ratified-at-2026-06-05-028`
+- **Supersession date:** 2026-06-05
+- **Supersession-schema marker:** `.decision-log.md` Decision 2026-06-05-028 + Decision 2026-06-04-016 (composite)
+- **Substantive outcome:** No reallocation. Per the no-trigger outcome (`ceiling_ratio = 1.497 < 1.5` strict-`>` threshold), no Stories deferred to v2, no SM-1 move, no contract-help allocation. The cross-references parked in upstream framework artifacts (Story 0.6 backup engineer A-13 sizing × 3 rows; Story 0.7 Operations Lead salary funding-source × 4 rows; Story 0.7 per-loop-node fallback-handler funding posture × 8 rows; Story 0.7 substitute-handler-bench rota mechanics × 1 row; Story 0.7 claim-shepherd salary × 1 row; Story 0.7 per-helpdesk-shift staffing × 1 row; Story 0.7 peer-mesh coordinator transition × 1 row; Story 0.7 ground-inspection field-worker-comp gate × 1 row) retain their text in place; no walked-substitution required. The substantive Story 0.6 A-13 retainer ratification + the substantive Story 0.7 substitute-handler-bench formal ratification are governed by Decisions 022 + 023 respectively, independent of this Story 0.12 backfill-log.
+
+**Per-row notes (rows are NOT individually re-edited at this batch supersession):**
+
+The per-row tables for BFL-001 through BFL-019 below preserve the author-commit `citation-slot-committed` snapshot as historical record. Per Decision 028 body item 11, the substantive backfill discipline does NOT require per-row table updates at this Task 9 ratification event because the no-trigger outcome means there is no substantive text to substitute. If a future Month-3 re-attestation supersession changes the no-trigger outcome (per Decision 016 item 8 + Decision 028 body item 11 + Decision 035 Open Follow-up for Month-3 re-attestation), individual BFL rows will be re-opened per supersession entry on this Decision.
+
+**Cross-reference to Story 0.7 backfill-log:** Note that the Story 0.7 (`docs/fallback-handler-ledger/backfill-log.md`) 23-row P0-1-pending backfill operates on its own schema + lifecycle and is independent of this Story 0.12 backfill-log. Story 0.7 backfill-log batch disposition per Decision 023 is recorded in that file separately.
 
 ---
 

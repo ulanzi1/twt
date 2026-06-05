@@ -4,6 +4,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 0-12-p0-3-spec-to-cadence-reality-check-reconciled (Tasks 7+8 commit aa6238d, 2026-06-04)
+
+- **W-01: Commit message "26 rows" / "12 files" self-reporting drift** [commit `aa6238d` message; `_bmad-output/implementation-artifacts/sprint-status.yaml:35`] — Commit body claims "all 26 estimation-worksheet rows populated"; 26 includes `epic-agg-epic-0` which is `excluded_from_total = true`, so substantive count is 25. Sprint-status `last_updated` line claims "12 files committed"; actual diff touches 13 files (sprint-status.yaml itself was modified, omitted self-referentially). Both are minor self-reporting drift on prose that is already on the record; not actionable as a code patch. Defer to next-commit-message convention or address in a supersession entry if the prose ever becomes load-bearing for an audit.
+- **W-02: Threshold-proximity carve-out (§1.bis) — defer to Month-3 re-attestation** [`docs/spec-to-cadence-reconciliation/reconciliation-decision-framework.md §1`; `estimation-worksheet.md §9`] — `ceiling_ratio = 1.497` clears the strict-`>` 1.5 trigger by 0.003 (0.2%); band-internal uncertainty (medium ±50%, low ±100%) is two orders of magnitude larger than the margin. BigDev opted for strict-`>` reading without adding a §1.bis "soft-trigger" carve-out at this commit. Rationale: Month-3 re-attestation (estimation-worksheet.md §9) will re-baseline the three low-confidence epics (E6/E7/E9) against actual build velocity and surface any true threshold breach with empirical evidence, rather than introducing a speculative band-internal safety rule now. Reopen as a patch if Month-3 re-attestation shows ceiling_ratio drifting toward 1.5 from above-or-below.
+
+---
+
 ## Deferred from: code review of 0-15-architectural-launch-gate-inventory-scheduled-with-owners (2026-06-03)
 
 - **W-01: Single-trustee fallback 30-day expiry not tracked** [`docs/launch-gate-inventory/monthly-review-cadence-protocol.md §3`] — The emergency single-trustee fallback (30-day window, second-trustee ratification required) has no tracking mechanism. If second trustee never ratifies within 30 days, the closure is voided per the protocol, but there is no automated or semi-automated reminder. Inherited pattern from Stories 0.7 + 0.9; structural gap across all framework portfolios. Defer to a future operational-tooling ADR or Story 1.16a CI gate work.

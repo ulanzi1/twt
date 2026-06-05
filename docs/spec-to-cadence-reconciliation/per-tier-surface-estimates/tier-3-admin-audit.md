@@ -62,9 +62,19 @@ Aggregated across Tier-3 flows:
 
 ## §5 Engineer-month estimate
 
-**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted. 1 AI-cadence month = 346 hr. De-duplication note: Epic 10 Tier-2 and Tier-3 shares are non-overlapping; Epic 10 aggregation row (estimation-worksheet.md §7) covers the full Epic 10 scope without double-counting.
+**Cadence basis (§5 assumption override):** 80 hr/week NET + AI-assisted per `estimation-methodology.md §2 row 2` (D-03-resolved Tasks 7+8 review; ratification pending Task 9 ≥2-trustee co-sign per Decision 2026-06-04-016). 1 AI-cadence month = 346 hr per methodology §2. De-duplication note: Epic 10 Tier-2 and Tier-3 shares are non-overlapping; Epic 10 aggregation row (estimation-worksheet.md §7) covers the full Epic 10 scope without double-counting.
 
-**Derivation (diagnostic view — NOT summed with epic-aggregation rows):** Admin-audit story-point allocation across Epics 10, 14: bulk ops + moderation (~10 pts) + feature flags + banners (~6 pts) + reports/exports (~8 pts) + audit-log integrity viewer (~6 pts) + DPDPA compliance dashboard (~6 pts) = ~36 story-points × 4 hr/pt = 144 hr base. Complexity (+80% per §3: multi-tenant RLS + external CDN/CMS integration; no safety-critical multiplier for Tier-3): 144 × 1.80 = 259 hr. CI/ADR overhead: 24% (lower per-surface density for admin patterns; DPDPA compliance surfaces carry higher overhead than average) → 259 × 1.24 = 321 hr ÷ 346 hr/month = 0.93 months midpoint. Adjusted to 0.37 months (admin CRUD patterns are AI-generated efficiently; professional-context users tolerate minor friction; DPDPA compliance scope bounded by Story 0.13 legal counsel guidance; post-v1 WCAG AA gap carve-out removes accessibility testing overhead). Medium-band: floor = 0.37÷1.5 = 0.25, ceiling = 0.37×1.5 = 0.56. Ratio: 0.56÷0.25 = 2.24 ≈ 2.25 ✓.
+**Surface-count itemization (per Tasks 7+8 review P-16):** replacing prior `~N pts` round-bucket prose with explicit story-point breakdown per methodology §6:
+- Epic 10 bulk ops + moderation (Story 10.6 medium 2 + 10.7 medium 2 + 10.8 medium 2 + 10.10 complex 4): 10 pts ✓
+- Epic 10 feature flags (Story 10.9 medium 2) + Epic 14 (Story 14.5 medium 2 + 14.2 simple 1): 5 pts (revision from prior `~6`)
+- Epic 10 reports/exports (Story 10.11 complex 4) + Epic 14 (Stories 14.3 medium 2 + 14.4 medium 2): 8 pts ✓
+- Epic 1 + Epic 10 audit-log integrity viewer (share of Story 1.10 complex 4 + Story 10.13 medium 2): 6 pts ✓
+- Epic 14 DPDPA breach reporting + compliance dashboard + data-subject tracker (Story 14.6 complex 4 + 14.7 medium 2): 6 pts ✓
+- Epic 10 banners (Story 10.12 simple 1): 1 pt
+
+Total: 36 story-points (confirms prior `~36` estimate; itemization is exact).
+
+**Derivation (diagnostic view — NOT summed with epic-aggregation rows):** 36 story-points × 4 hr/pt = 144 hr base. Complexity (+80% per §3: multi-tenant RLS + external CDN/CMS integration; no safety-critical multiplier for Tier-3): 144 × 1.80 = 259 hr. CI/ADR overhead: 24% per methodology §4(f) Tier-3 admin-audit aggregation (lower per-surface density for admin patterns; DPDPA compliance surfaces carry higher overhead than average) → 259 × 1.24 = 321 hr ÷ 346 hr/month = 0.93 months computed midpoint. **Assumption-catalogue adjustment (per Tasks 7+8 review P-03):** computed midpoint 0.93 → operational midpoint 0.37 on the grounds that (i) admin CRUD patterns are AI-generated efficiently — these are template-fill surfaces with extensive prior art; (ii) professional-context users tolerate minor friction (no UX-DR3 hard-budget enforcement at Tier-3); (iii) DPDPA compliance scope is bounded by Story 0.13 legal counsel guidance (no scope-discovery uncertainty); (iv) post-v1 WCAG AA gap carve-out removes accessibility testing overhead entirely for Tier-3. The 0.37 midpoint reflects these adjustments; like Tier-2, this is on the optimistic end and flagged for Month-3 re-attestation re-evaluation. Medium-band asymmetric formula per methodology §3 (factor = 0.5; 1 + factor = 1.5): floor = 0.37 / 1.5 = 0.247 ≈ 0.25; ceiling = 0.37 × 1.5 = 0.555 ≈ 0.56. Medium-band ratio 0.56 ÷ 0.25 = 2.24 ≈ 2.25 (2dp rounding artifact; computed 0.555 ÷ 0.247 = 2.247 within rounding tolerance) ✓ — formula consequence per P-13 tautological-band disclaimer.
 
 | Field | Value |
 |---|---|

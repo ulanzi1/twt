@@ -37,9 +37,40 @@ Author-commit → scope-ratified → devices-procured → prototype-built → me
 
 **Task 7 never-ratifies escalation path**: if the Trustee Panel is unable or unwilling to ratify the experiment scope + device-procurement-budget at Task 7, the retry cadence is: 30-day retry from the first declined session + 90-day hard escalation to a documented `cancel-experiment` or `decide-without-evidence` disposition per the trust's governance process. Emergency single-trustee budget-ratification is valid under documented trustee incapacitation per README §5 quorum-unavailable fallback path.
 
-`<PENDING-TASK-7>`
+```yaml
+ratification_event:
+  date: 2026-06-05
+  ratifying_trustees: [<TRUSTEE-1-NAME>, <TRUSTEE-2-NAME>]  # populate with the two trustees who initialed Decision 2026-06-05-030
+  ratification_mode: pack-as-a-unit
+  ratified_experiment_scope:
+    three_named_patterns: "Yogdaan Bahi + Shradhanjali Sahyog Vivran + Panchayat Noticeboard per UX spec lines 805-807"
+    three_test_devices: "per device-procurement-roster.md Rows 1-3 — FM-2 substitutes per §4 disposition"
+    pass_criteria_P1-P6: "verbatim per UX spec lines 814-826"
+    fail_criteria_F1-F5: "verbatim per UX spec lines 830-843"
+    timebox_~2_weeks: "per UX spec line 801"
+    FM-2_tiered_escalation: "per UX spec line 762 + 831 + 843 + device-procurement-roster.md §4 disposition"
+  ratified_device_budget:
+    device_1_mid_range_android_INR: 0  # Redmi 10 already in Solo Builder's possession (trustee-loan)
+    device_2_entry_level_android_INR: 0  # Redmi Note 8 already in possession (trustee-loan)
+    device_3_iphone_INR: 0  # iPhone 12 already in possession (trustee-loan)
+    apple_developer_program_INR: ~9900  # deferred to Day 10 of Task 9 enrollment event
+    total_INR: ~9900  # Apple Developer Program annual fee only
+    budget_routing: standalone-trustee-own-fund  # per Decision 2026-06-05-030 Q14.2 (option (c) trustee-own-fund)
+  story_0_12_cross_coupling_resolution:
+    story_0_12_outcome_status: no-trigger  # per Decision 2026-06-05-028 Q12.1 (ceiling_ratio = 1.497 clears strict-> 1.5x threshold)
+    coupling_impact: "Story 0.12 contract-help-path NOT activated; Story 0.14 budget falls to standalone-trustee-own-fund disposition per Q14.2"
+  fm2_device_substitution_disposition:
+    substitution_event_date: 2026-06-05
+    substitute_devices_vs_target:
+      row_1_substitute: "Redmi 10 (MediaTek Helio G88) vs Snapdragon 4-series 3GB target — chipset family + GPU family + RAM-higher-than-floor divergence"
+      row_2_substitute: "Redmi Note 8 (Snapdragon 665, 3-6GB) vs entry-level 2GB Android 11 target — LOAD-BEARING P5 2GB-floor not exercised"
+      row_3_substitute: "iPhone 12 (A14 Bionic, iOS 14-17+) vs iOS 16+ floor — conservative (substitute exceeds floor)"
+    measurement_validity_caveats: "P1 Mali-not-Adreno; P5 not-measured-on-2GB-floor; P2 iOS-OS-level-different pre-existing; P3/P4 iOS best-case (A14 Bionic)"
+    cross_reference: "device-procurement-roster.md §4 FM-2 Device-Substitution Disposition"
+  cross_reference: ".decision-log.md Decision 2026-06-05-030 (Story 0.14 Tasks 7-11 ratification + Task 8 close-out)"
+```
 
-**Schema** (populated at Task 7):
+**Schema** (preserved for audit baseline; pre-resolution template):
 
 ```yaml
 ratification_event:
@@ -69,37 +100,61 @@ ratification_event:
 
 **Mid-experiment re-procurement path**: if a device fails after Task 8 `received-and-verified` (e.g., physical damage during the build or measurement phase), re-procurement of the same device class proceeds under the original Task 7 budget ratification without requiring new Task 7 re-ratification, provided the replacement device is (a) the same device class as the failed device and (b) within the original cost envelope. A supersession row is appended to `device-procurement-roster.md` referencing the failed device's row. If the replacement cost materially exceeds the original budget, new trustee ratification is required per README §5.
 
-`<PENDING-TASK-8>`
-
-**Schema** (per-device row at Task 8):
-
 ```yaml
 device_procurement_events:
   - device_id: device-mid-range-snapdragon-4-series-android
-    procured_model: <substantive choice from candidates>
-    cost_inr: <actual procurement cost>
-    procurement_date: <YYYY-MM-DD>
-    received_and_verified_date: <YYYY-MM-DD>
-    receipt_archive_path: <trustee-accessible repo path>
-    procurement_status: <procurement-in-progress|procured|received-and-verified>
+    procured_model: Redmi 10
+    chipset: MediaTek Helio G88
+    ram_gb: <verify-exact-SKU-before-Task-10-P5-measurement>  # most common Bihar-retail SKU 4 GB; Solo Builder confirms substantive RAM at Day 1 cold-boot
+    storage_gb: <verify-exact-SKU>
+    os_version_at_task_8: <verify-at-Day-1-cold-boot>  # Android 11 baseline; MIUI variant; eligible for Android 12+ upgrade
+    cost_inr: 0
+    acquisition_path: trustee-loan
+    procurement_date: 2026-06-05
+    received_and_verified_date: <pending-Task-9-Day-1-cold-boot-+-factory-reset-+-clean-wifi-confirmation>
+    receipt_archive_path: not-applicable  # trustee-loan, already-owned at Decision 030 ratification
+    procurement_status: procured  # transitioned pending-budget-ratification -> procured directly per Decision 2026-06-05-030 Q14.2
+    fm2_substitution_disposition: "FM-2 substitute per device-procurement-roster.md §4: MediaTek Helio G88 NOT Snapdragon 4-series; Mali GPU NOT Adreno; 4GB RAM exceeds 3GB target floor. P1 measurement-validity caveat: mali-gpu-not-adreno-baseline."
   - device_id: device-entry-level-2gb-android-11
-    procured_model: <substantive choice from candidates>
-    cost_inr: <actual procurement cost>
-    procurement_date: <YYYY-MM-DD>
-    received_and_verified_date: <YYYY-MM-DD>
-    receipt_archive_path: <trustee-accessible repo path>
-    procurement_status: <procurement-in-progress|procured|received-and-verified>
+    procured_model: Redmi Note 8
+    chipset: Qualcomm Snapdragon 665
+    ram_gb: <verify-exact-SKU-before-Task-10-P5-measurement>  # most common Bihar-retail SKU 4 GB; Solo Builder confirms substantive RAM at Day 1 cold-boot
+    storage_gb: <verify-exact-SKU>
+    os_version_at_task_8: <verify-at-Day-1-cold-boot>  # original Android 9 launch; Android 11 upgrade path via MIUI — confirm upgrade applied before Task 10
+    cost_inr: 0
+    acquisition_path: trustee-loan
+    procurement_date: 2026-06-05
+    received_and_verified_date: <pending-Task-9-Day-1-cold-boot-+-Android-11-upgrade-verification>
+    receipt_archive_path: not-applicable
+    procurement_status: procured
+    fm2_substitution_disposition: "FM-2 substitute per device-procurement-roster.md §4: Snapdragon 665 is 6-series NOT 4-series; 3-6 GB RAM exceeds 2 GB target floor — LOAD-BEARING P5 list-performance measurement-validity caveat: not-measured-on-2GB-floor. Task 11 ratify-decision must surface mitigation path."
   - device_id: device-iphone-ios-16-minimum
-    procured_model: <substantive choice from candidates>
-    cost_inr: <actual procurement cost>
-    procurement_date: <YYYY-MM-DD>
-    received_and_verified_date: <YYYY-MM-DD>
-    apple_developer_program_enrollment: <YYYY-MM-DD>
-    apple_developer_program_annual_fee_inr: <actual>
-    testflight_enrollment_date: <YYYY-MM-DD>
-    receipt_archive_path: <trustee-accessible repo path>
-    procurement_status: <procurement-in-progress|procured|received-and-verified>
+    procured_model: iPhone 12
+    chipset: Apple A14 Bionic
+    ram_gb: 4
+    storage_gb: <verify-exact-SKU>
+    os_version_at_task_8: <verify-at-Day-1-cold-boot>  # iPhone 12 supports iOS 14-17+; substantive iOS version recorded at Day 1
+    cost_inr: 0
+    acquisition_path: trustee-loan
+    procurement_date: 2026-06-05
+    received_and_verified_date: <pending-Task-9-Day-1-cold-boot-+-iOS-version-verification>
+    apple_developer_program_enrollment_date: <pending-Day-10-of-Task-9>  # deferred enrollment per Decision 2026-06-05-030 Q14.2 close-out (P3 push-notification dependency only)
+    apple_developer_program_annual_fee_inr: ~9900  # USD 99 at INR/USD spot; substantive figure populated at enrollment event
+    apple_developer_program_funding_source: trustee-own-fund  # per Decision 2026-06-05-030 Q14.2 option (c)
+    testflight_enrollment_date: <pending-post-Apple-Developer-Program-enrollment>
+    receipt_archive_path: <trustee-accessible-repo-path-populated-at-Apple-Developer-Program-enrollment>
+    procurement_status: procured  # device hardware status; Apple Developer Program enrollment status separately tracked above
+    fm2_substitution_disposition: "Conservative substitute — iPhone 12 (A14 Bionic, iOS 14-17+) exceeds iOS 16+ floor. P3/P4 best-case caveat applies (A14 results not iOS 16 floor)."
 ```
+
+**Apple Developer Program enrollment lifecycle:**
+
+1. **2026-06-05 (Task 8 close-out)** — enrollment status: `pending-day-10-enrollment`; funding source ratified (trustee-own-fund per Decision 2026-06-05-030 Q14.2).
+2. **~Task 9 Day 10 (estimated 2026-06-15)** — Solo Builder enrolls in Apple Developer Program; pays ~₹9,900 annual fee from trustee own fund; populates `apple_developer_program_enrollment_date` + substantive `apple_developer_program_annual_fee_inr` (actual INR at conversion).
+3. **Post-enrollment** — TestFlight enrollment per `experiment-protocol.md` §5.3; populate `testflight_enrollment_date`.
+4. **Pre-enrollment FM-2 path** — if Task 9 schedule slips past Day 10 such that P3 push-notification measurement is delayed, Apple Developer Program enrollment can be deferred further (within the ~2-week Task 9 timebox); the enrollment-on-demand pattern preserves cost-deferral discipline.
+
+**Schema** (preserved for audit baseline; pre-resolution template):
 
 ## §5 Prototype-build log
 

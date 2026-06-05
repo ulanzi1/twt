@@ -158,9 +158,61 @@ device_procurement_events:
 
 ## §5 Prototype-build log
 
-`<PENDING-TASK-9>`
+```yaml
+daily_log:
+  - date: 2026-06-05
+    calendar_day: 1
+    branch: story-0.14-p0-5-prototype  # scratchpad per UX spec §6 + story 0.14 line 150 discipline (NOT Epic 1 Story 1.1 turborepo bootstrap)
+    work_summary: |
+      Day 1 scaffold + Task 8 artefact close-out + FM-2 device-substitution
+      disposition recorded. apps/mobile/ scaffolded via
+      `pnpm dlx create-tamagui@latest apps/mobile --template expo-router`
+      (per architecture §Initialization Commands line 553). Package manager
+      switched from bun (template default) to pnpm 10.30.3 per architecture
+      preference: removed bun.lock, removed node_modules, ran pnpm install
+      (1m 50s; 918 packages). Edited package.json: removed
+      "packageManager: bun@1.3.9" → "packageManager: pnpm@10.30.3";
+      updated "start" script from "bunx expo start -c" → "expo start -c";
+      updated "upgrade:tamagui" from bunx to pnpm dlx.
+    per_pattern_completion_status:
+      yogdaan_bahi: not-started
+      shradhanjali_sahyog_vivran: not-started
+      panchayat_noticeboard: not-started
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 1 of 14; well within timebox
+    FM-2_mitigation_events:
+      - mitigation_id: fm2-device-substitution-2026-06-05
+        category: device-substitution
+        description: |
+          Per Decision 2026-06-05-030 Q14.2 trustee-own-fund disposition,
+          three substitute devices accepted vs UX spec §6 target classes:
+          Row 1 = Redmi 10 (MediaTek Helio G88 vs Snapdragon 4-series target);
+          Row 2 = Redmi Note 8 (Snapdragon 665 / 3-6GB RAM vs 2GB target);
+          Row 3 = iPhone 12 (A14 Bionic vs iOS 16+ floor).
+        outcome: accepted-with-caveats
+        cross_reference: docs/native-stack-validation/device-procurement-roster.md §4 FM-2 Device-Substitution Disposition
+    artefacts_landed:
+      - apps/mobile/  # full Tamagui + Expo Router scaffold; pnpm-lock.yaml generated
+      - apps/mobile/package.json  # bun → pnpm switch
+      - docs/native-stack-validation/device-procurement-roster.md  # Task 8 close-out + §4 FM-2 disposition (committed to main as 1c15d40)
+      - docs/native-stack-validation/engagement-ledger.md  # §3 + §4 substantive ratification + procurement events (committed to main as 1c15d40)
+      - _bmad-output/implementation-artifacts/deferred-work.md  # Story 0.14 W-01/W-02/W-03 entries (committed to main as 1c15d40)
+    next_day_intent: |
+      Day 2: CNG (Continuous Native Generation) workflow configuration per
+      architecture §4.5 + §4.12 (apps/mobile/eas.json); Devanagari font
+      loading (Tiro Devanagari Hindi + Noto Sans Devanagari + IBM Plex Mono
+      Devanagari) per UX spec lines 712-714; per-device cold-boot +
+      factory-reset + Android 11 upgrade verification on Redmi Note 8 +
+      OS version verification on Redmi 10 + iPhone 12; populate
+      `received_and_verified_date` fields in §4 device-procurement log.
+    notes: |
+      Three devices to verify at Task 9 Day 2 cold-boot:
+      - Redmi 10: chipset Helio G88; verify exact RAM SKU (4GB most common)
+      - Redmi Note 8: chipset SD665; verify exact RAM SKU + Android 11 upgrade applied
+      - iPhone 12: verify current iOS version; defer Apple Dev Program until ~Day 10
+```
 
-**Schema** (per-day log entry at Task 9 during ~2-week build):
+**Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):
 
 ```yaml
 daily_log:

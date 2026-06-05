@@ -319,6 +319,129 @@ daily_log:
       Mono Devanagari unavailable; Tiro weight 500 unavailable) — both
       pre-authorized fallbacks per UX spec line 714 + line 712 substitute-
       candidates discipline.
+
+  - date: 2026-06-05
+    calendar_day: 3
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 3 Yogdaan Bahi pattern implementation per UX spec §8 + lines 805 +
+      1156 (passbook row pattern). Tab navigation restructured from scaffold
+      defaults ("Tab One" / "Tab Two") to three pattern tabs (Yogdaan Bahi /
+      Shradhanjali / Panchayat) with Book / FileText / Megaphone icons from
+      @tamagui/lucide-icons-2; Hindi titles for Shradhanjali + Panchayat
+      placeholder screens. Yogdaan Bahi tab fully implemented; Shradhanjali +
+      Panchayat tabs as stub screens with Day-4+ markers.
+    per_pattern_completion_status:
+      yogdaan_bahi: complete
+      shradhanjali_sahyog_vivran: not-started  # stub-screen-only placeholder
+      panchayat_noticeboard: not-started  # stub-screen-only placeholder
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 3 of 14 — one of three patterns delivered
+    FM-2_mitigation_events:
+      - mitigation_id: fm2-flatlist-react19-typing-2026-06-05
+        category: scaffold-type-noise-narrow-fix
+        description: |
+          Two NEW typing errors introduced by Day 3 code (not scaffold-inherited):
+          (a) ListRenderItem not exported from 'react-native' in RN 0.83 typings
+              that ship with create-tamagui scaffold;
+          (b) FlatList ListHeaderComponent prop typing wrinkle under React 19 +
+              new arch (Property 'ListHeaderComponent' does not exist).
+          Both are TS-only — runtime behavior is the documented FlatList behavior.
+        fallback_applied: |
+          (a) Removed `import { ListRenderItem }`; inlined the renderItem arrow
+              function's parameter type as `{ item: YogdaanRow; index: number }`.
+          (b) Cast `FlatList as any` at the JSX call site with comment noting
+              the React-19 + new-arch + scaffold-typings interaction; runtime
+              FlatList behavior unchanged.
+        outcome: fixed-narrowly
+        cross_reference: "components/yogdaan-bahi/YogdaanBahi.tsx renderItem + FlatListAny cast"
+    artefacts_landed:
+      - apps/mobile/components/yogdaan-bahi/sample-data.ts  # 60 rows test data
+      - apps/mobile/components/yogdaan-bahi/YogdaanBahiRow.tsx  # passbook row
+      - apps/mobile/components/yogdaan-bahi/YogdaanBahi.tsx  # FlatList + sticky footer
+      - apps/mobile/app/(tabs)/index.tsx  # repurposed: now renders YogdaanBahi
+      - apps/mobile/app/(tabs)/shradhanjali.tsx  # renamed from two.tsx; Day-4+ placeholder
+      - apps/mobile/app/(tabs)/panchayat.tsx  # NEW; Day-4+ placeholder
+      - apps/mobile/app/(tabs)/_layout.tsx  # 3 tabs with Book / FileText / Megaphone icons
+    implementation_details:
+      sample_data:
+        rows: 60
+        date_range: 2026-04-07_to_2026-06-05  # 60 days backward from base
+        sahyog_pool: 40 Hindi names (20 common + 15 conjunct/ligature stress-test + 5 female-teacher)
+        conjunct_stress_tests:
+          - "अंजली श्रीवास्तव (anusvara + conjunct श्र)"
+          - "कृष्ण मोहन (conjunct क्ष)"
+          - "विद्यानंद (conjunct द्या + nasalization)"
+          - "त्रिवेणी प्रसाद (conjunct त्रि)"
+          - "ज्ञानेश्वर पंडित (conjunct ज्ञ — challenging)"
+          - "हृदय नारायण (conjunct हृ — challenging)"
+          - "द्विवेदी प्रसाद (conjunct द्वि)"
+          - "श्रद्धा सिंह (conjunct द्ध)"
+          - "दुष्यंत झा (conjunct ष्य)"
+          - "विश्वनाथ पासवान (conjunct श्व)"
+          - "अक्षय भारती (conjunct क्ष)"
+          - "महेन्द्र प्रसाद (half-form न + conjunct न्द्र)"
+        pool_codes: "C-12 / C-13 / C-14 / C-15 / C-16"
+        amount_range: "₹100 – ₹2050 in ₹50 increments (i*137 mod 39 distribution)"
+        total_inr: 49500  # SAMPLE_YOGDAAN_TOTAL_INR exported for sticky footer
+      row_layout:
+        height_pt: 56
+        column_structure:
+          date: 100pt left
+          sahyog: flex
+          pool: 64pt right
+          amount: 96pt right
+        rule_discipline:
+          standard: StyleSheet.hairlineWidth
+          every_fifth: 1pt
+        font_role_assignments:
+          date: $tabular + tabular-nums (IBM Plex Sans Devanagari + tnum)
+          sahyog: $body (Noto Sans Devanagari) — P1-measurement-load-bearing
+          pool: $tabular + tabular-nums
+          amount: $tabular + tabular-nums + weight 500
+      virtualization:
+        list_impl: FlatList
+        windowSize: 10
+        maxToRenderPerBatch: 10
+        initialNumToRender: 15
+        removeClippedSubviews: true
+        getItemLayout: ROW_HEIGHT-based (56pt) for stable scroll measurement
+        flashlist_threshold_TBD: established by Shradhanjali contributor scroll Day 4+
+      sticky_footer:
+        height_pt: 64
+        content:
+          left: "कुल योगदान + N entries"
+          right: "₹49,500 ($tabular + tabular-nums + weight 500)"
+      column_headers:
+        height_pt: 40
+        titles_devanagari: "दिनांक / सहयोग / पूल / राशि"
+        rule_discipline: 1pt bottom rule; sticky at top of scroll via FlatList ListHeaderComponent + stickyHeaderIndices=[0]
+    p1_measurement_surface_readiness: |
+      Day 3 delivers all P1 measurement surface for Yogdaan Bahi pattern:
+      - 60 Devanagari names rendered in $body role (Noto Sans Devanagari 400)
+        including 12 conjunct/ligature stress-tests
+      - Tabular-numerics columns rendered in $tabular role (IBM Plex Sans
+        Devanagari 400) with fontVariant: ['tabular-nums']
+      - Latin-numerals discipline preserved (no Hindi numerals in
+        Yogdaan Bahi per UX spec line 1127)
+      - Column header Hindi labels ("दिनांक / सहयोग / पूल / राशि") render
+        in $body 400 — additional small-size Devanagari surface for P1
+        rendering review.
+      Task 10 P1 measurement on this surface: 3 devices × 1 pattern = 3 cells
+      (cells "redmi10.yogdaan.p1", "redminote8.yogdaan.p1", "iphone12.yogdaan.p1").
+    next_day_intent: |
+      Day 4: per-device cold-boot verification still pending (carried from
+      Day 2 intent; physical-world step). Then begin Shradhanjali Sahyog
+      Vivran pattern per UX spec §8 + lines 806 + 1157 (memorial column
+      pattern: max-width 360pt mobile + 480pt desktop; bordered portrait;
+      parichay; kinship lattice; contributor scroll at 200+ entries to
+      exercise list virtualization — this is where FlashList threshold
+      gets established; दो शब्द स्मृति में input field).
+    notes: |
+      Tamagui v2 scaffold-noise type errors on Tamagui component imports
+      (Text, XStack, YStack) persist across all files — these are NOT
+      blocking and persist as scaffold-known-issue per Day 2 record. Day 3
+      runtime behavior expected to function correctly via metro bundling.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

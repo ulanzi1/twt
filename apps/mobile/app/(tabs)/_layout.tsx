@@ -1,6 +1,6 @@
-import { Link, Tabs } from 'expo-router'
-import { Button, useTheme } from 'tamagui'
-import { Atom, AudioWaveform } from '@tamagui/lucide-icons-2'
+import { Tabs } from 'expo-router'
+import { useTheme } from 'tamagui'
+import { Book, FileText, Megaphone } from '@tamagui/lucide-icons-2'
 
 export default function TabLayout() {
   const theme = useTheme()
@@ -23,22 +23,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <Atom color={color as any} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Button mr="$4" size="$2.5">
-                Hello!
-              </Button>
-            </Link>
-          ),
+          title: 'Yogdaan Bahi',
+          tabBarIcon: ({ color }) => <Book color={color as any} />,
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="shradhanjali"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <AudioWaveform color={color as any} />,
+          title: 'Shradhanjali',
+          tabBarIcon: ({ color }) => <FileText color={color as any} />,
+        }}
+      />
+      <Tabs.Screen
+        name="panchayat"
+        options={{
+          title: 'Panchayat',
+          tabBarIcon: ({ color }) => <Megaphone color={color as any} />,
         }}
       />
     </Tabs>

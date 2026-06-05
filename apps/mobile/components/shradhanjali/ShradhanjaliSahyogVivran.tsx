@@ -1,5 +1,5 @@
-import { useCallback } from 'react'
-import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native'
+import { useCallback, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
 import { Text, View, XStack, YStack } from 'tamagui'
 import { MemorialPortrait } from './MemorialPortrait'
@@ -12,6 +12,11 @@ import {
   formatBirthDeath,
   type Contributor,
 } from './sample-data'
+import {
+  generateTransactionRef,
+  launchUpiIntent,
+  type UpiLaunchOutcome,
+} from '../../lib/upi-intent'
 
 // Shradhanjali Sahyog Vivran (per-claim memorial page) per UX spec §8 +
 // lines 464-481 + 806 + 1157.
@@ -46,6 +51,21 @@ export function ShradhanjaliSahyogVivran() {
   // Restrained reading-width discipline: cap content at 360pt mobile
   // (UX spec line 469); center on wider screens.
   const contentWidth = Math.min(screenWidth, MAX_WIDTH_MOBILE)
+
+  const [upiOutcome, setUpiOutcome] = useState<UpiLaunchOutcome | null>(null)
+
+  const handleSahyogTap = useCallback(async () => {
+    // Prototype UPI Intent for P2 measurement per architecture line 90 +
+    // UX-DR P2. Sample VPA / payee name — production reads from server.
+    const outcome = await launchUpiIntent({
+      payeeVpa: 'twt-test@upi',
+      payeeName: 'Teachers Welfare Trust',
+      transactionRef: generateTransactionRef('TWT'),
+      amountInr: 251,
+      note: `Sahyog · ${SAMPLE_MEMORIAL.name}`,
+    })
+    setUpiOutcome(outcome)
+  }, [])
 
   const renderItem = useCallback(
     ({ item }: { item: Contributor }) => <ContributorRow contributor={item} />,
@@ -173,7 +193,8 @@ export function ShradhanjaliSahyogVivran() {
         </YStack>
 
         {/* योगदान दें action as quiet text link per UX spec line 479 — NOT
-            a primary-blue button. Placed in ledger footer rule. */}
+            a primary-blue button. Placed in ledger footer rule. Wired to
+            UPI Intent for P2 measurement per architecture line 90. */}
         <YStack
           width={contentWidth}
           alignSelf="center"
@@ -187,15 +208,54 @@ export function ShradhanjaliSahyogVivran() {
             width="100%"
           />
           <XStack justifyContent="center">
-            <Text
-              fontFamily="$body"
-              fontSize="$3"
-              color="$colorPress"
-              textDecorationLine="underline"
+            <Pressable
+              onPress={handleSahyogTap}
+              accessibilityRole="link"
+              accessibilityLabel="योगदान दें — UPI के माध्यम से सहयोग करें"
             >
-              योगदान दें
-            </Text>
+              <Text
+                fontFamily="$body"
+                fontSize="$3"
+                color="$colorPress"
+                textDecorationLine="underline"
+              >
+                योगदान दें
+              </Text>
+            </Pressable>
           </XStack>
+
+          {/* P2 measurement diagnostic — shows UPI launch outcome for
+              measurement evidence capture at Task 10. Hidden until first tap. */}
+          {upiOutcome && (
+            <YStack
+              paddingHorizontal={12}
+              paddingVertical={8}
+              backgroundColor="$backgroundHover"
+              gap={4}
+            >
+              <Text fontFamily="$body" fontSize="$1" color="$colorPress">
+                P2 UPI Intent outcome ({upiOutcome.kind})
+              </Text>
+              <Text fontFamily="$tabular" fontSize="$1" color="$colorPress" style={styles.tabularNums}>
+                {upiOutcome.url}
+              </Text>
+              {upiOutcome.kind === 'launched' && (
+                <Text fontFamily="$body" fontSize="$1" color="$colorPress">
+                  Platform: {upiOutcome.platform}
+                </Text>
+              )}
+              {upiOutcome.kind === 'unsupported' && (
+                <Text fontFamily="$body" fontSize="$1" color="$colorPress">
+                  {upiOutcome.reason}
+                </Text>
+              )}
+              {upiOutcome.kind === 'error' && (
+                <Text fontFamily="$body" fontSize="$1" color="$colorPress">
+                  Error: {upiOutcome.error}
+                </Text>
+              )}
+            </YStack>
+          )}
         </YStack>
       </ScrollView>
     </YStack>

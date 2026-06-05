@@ -738,6 +738,110 @@ daily_log:
       preserves UI shape during the first 300ms before query resolves. When
       cache is present from prior session, query resolves synchronously from
       cache without the 300ms penalty.
+
+  - date: 2026-06-05
+    calendar_day: 7
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 7 UPI Intent deep-link (P2 measurement surface) implementation per
+      architecture line 90 + PRD FR-27 + UX-DR P2 commitment. Created
+      lib/upi-intent.ts with NPCI-spec URL builder + Linking.openURL launcher
+      + idempotency-safe transactionRef generator. Wired the Shradhanjali
+      "योगदान दें" footer link (UX spec line 479 quiet text link discipline)
+      to launch UPI Intent with sample memorial params + transactionRef per
+      architecture line 90 `tr=` idempotency contract. Added a P2 diagnostic
+      indicator that shows launch outcome (launched/unsupported/error +
+      platform + URL) for measurement evidence capture at Task 10.
+    per_pattern_completion_status:
+      yogdaan_bahi: complete + P4-instrumented
+      shradhanjali_sahyog_vivran: complete + P2-instrumented  # योगदान दें → UPI Intent
+      panchayat_noticeboard: complete
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 7 of 14; integration phase 2 of 4 done
+    FM-2_mitigation_events: []
+    artefacts_landed:
+      - apps/mobile/lib/upi-intent.ts  # NPCI URL builder + launcher + tr generator
+      - apps/mobile/components/shradhanjali/ShradhanjaliSahyogVivran.tsx  # Pressable योगदान दें + diagnostic
+    implementation_details:
+      upi_url_format:
+        scheme: upi://pay?
+        params:
+          pa: payee VPA — sample "twt-test@upi" (production from server config)
+          pn: payee name — "Teachers Welfare Trust"
+          tr: transaction reference per architecture line 90 idempotency contract
+          am: amount in INR (.toFixed(2))
+          cu: INR
+          tn: transaction note (max 50 chars per NPCI guidance)
+      tr_generator:
+        prefix: TWT
+        ts_encoding: base36 uppercase Date.now()
+        rand_suffix: base36 uppercase 16-bit padded to 3 chars
+        example: "TWT-MQRX0YZ-A0B"
+        production_note: "prototype uses local timestamp+random; production will use server-issued reference per architecture line 90"
+      launcher:
+        api: Linking.canOpenURL + Linking.openURL
+        platform_detection: Platform.OS branched (android | ios | other)
+        outcome_shape:
+          launched: { kind: "launched", url, platform }
+          unsupported: { kind: "unsupported", url, reason }
+          error: { kind: "error", url, error }
+      yogdaan_link_pressable:
+        accessibility:
+          role: link
+          label: "योगदान दें — UPI के माध्यम से सहयोग करें"
+        visual_styling_unchanged: "still $body fontSize $3 colorPress textDecorationLine underline per UX spec line 479 quiet text-link discipline"
+      sample_upi_params:
+        payeeVpa: "twt-test@upi"
+        payeeName: "Teachers Welfare Trust"
+        amountInr: 251
+        note: "Sahyog · रामेश्वर प्रसाद सिंह"
+        transactionRef: "generated on each tap per idempotency discipline"
+      diagnostic_indicator:
+        visibility: "hidden until first tap; persistent across re-renders within session"
+        fields: "kind / url / platform (if launched) / reason (if unsupported) / error (if error)"
+        purpose: "Task 10 P2 measurement evidence capture — operator can screenshot the outcome row + verify UPI app chooser launched"
+    p2_measurement_surface_readiness: |
+      Day 7 delivers the P2 UPI Intent measurement surface:
+      - lib/upi-intent.ts production-shape URL builder + launcher
+      - Shradhanjali "योगदान दें" link wired to UPI Intent
+      - Diagnostic indicator captures outcome for evidence
+      P2 measurement cells per UX spec line 818:
+        - Android (Redmi 10): LOAD-BEARING — test PhonePe + GPay + BHIM chooser scenarios
+        - Android (Redmi Note 8): LOAD-BEARING — same scenarios on entry-level
+        - iOS (iPhone 12): TAGGED `not-applicable-iOS-OS-level-different` per UX spec line 818
+      Plus FM-2 device-substitution P1 Mali-GPU caveat per Story 0.14 §4 still applies
+      to the Pressable rendering on Redmi 10 (visual quality of underlined Devanagari
+      text in $body via Noto Sans Devanagari).
+    deferred_caveats:
+      android_11_queries_clause: |
+        Android 11+ (API 30+) requires the app's AndroidManifest.xml to
+        declare `<queries>` elements for intent URL schemes it queries via
+        Linking.canOpenURL. Without the queries clause, canOpenURL returns
+        false even when a UPI app is installed.
+        Mitigation path if Task 10 P2 measurement reports
+        kind="unsupported" on Android 11+:
+        (a) add `expo-build-properties` plugin's `android.queries` field
+            (or custom config plugin) with `<intent>` declaring `upi`
+            scheme + VIEW action;
+        (b) re-run CNG prebuild + rebuild dev client;
+        (c) re-run P2 measurement.
+        Redmi Note 8 may be on Android 11+ (depends on user's MIUI upgrade
+        path); Redmi 10 typically ships Android 11 baseline.
+        For Day 7 commit: canOpenURL check left in place as a soft probe.
+        If Task 10 surfaces canOpenURL=false on Android 11+ but openURL
+        still launches the chooser, the queries clause is the documented
+        production-readiness fix.
+      ios_universal_links_unconfigured: "iOS Universal Links for UPI apps not configured — iOS P2 cell explicitly tagged not-applicable per UX spec line 818 + measurement-template schema"
+    next_day_intent: |
+      Day 8: FCM (Android) push notifications setup — install expo-notifications
+      + google-services.json placeholder + test-notification batch capability
+      for P3 measurement preparation. APNs (iOS) setup deferred to Day 10 post
+      Apple Developer Program enrollment.
+    notes: |
+      The UPI Intent helper is production-shape: same buildUpiIntentUrl
+      function will be reused by Epic 8 contribution-loop substrate work
+      (PRD FR-27). Only the payeeVpa + payeeName + transactionRef sources
+      will swap from prototype constants → server-config in production.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

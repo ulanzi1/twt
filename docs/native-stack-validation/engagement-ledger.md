@@ -40,7 +40,7 @@ Author-commit → scope-ratified → devices-procured → prototype-built → me
 ```yaml
 ratification_event:
   date: 2026-06-05
-  ratifying_trustees: [<TRUSTEE-1-NAME>, <TRUSTEE-2-NAME>]  # populate with the two trustees who initialed Decision 2026-06-05-030
+  ratifying_trustees: [Dhiraj Rahul, Kalpana Bharti]  # both trustees signed phase-0-trustee-questionnaire.md 2026-06-05 covering Q14.1-Q14.4
   ratification_mode: pack-as-a-unit
   ratified_experiment_scope:
     three_named_patterns: "Yogdaan Bahi + Shradhanjali Sahyog Vivran + Panchayat Noticeboard per UX spec lines 805-807"

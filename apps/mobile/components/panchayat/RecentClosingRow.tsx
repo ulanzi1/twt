@@ -22,6 +22,9 @@ export function RecentClosingRow({ closing }: Props) {
       borderBottomWidth={StyleSheet.hairlineWidth}
       borderBottomColor="$borderColor"
       backgroundColor="$background"
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`${closing.memorialName}, ${closing.district}, ${formatCount(closing.contributorCount)} contributors`}
     >
       <Text flex={1} fontFamily="$body" fontSize="$3" color="$color">
         {closing.memorialName}

@@ -63,6 +63,7 @@ export function PanchayatNoticeboard() {
             textAlign="center"
             // Visual balance: seal width on right side as spacer
             paddingRight={32}
+            accessibilityRole="header"
           >
             परिवार की नब्ज़
           </Text>
@@ -126,6 +127,7 @@ function SectionHeader({ title }: { title: string }) {
         fontSize="$2"
         color="$colorPress"
         letterSpacing={2}
+        accessibilityRole="header"
       >
         {title}
       </Text>

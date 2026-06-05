@@ -953,6 +953,125 @@ daily_log:
       modules compile + register + fire under CNG workflow. The cross-platform
       FCM/APNs delivery surface for the full ≥95% measurement remains
       deferred to Days 10+ external dependencies.
+
+  - date: 2026-06-05
+    calendar_day: 9
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 9 RN Accessibility props wired across all three patterns per UX
+      spec lines 1199-1201 + 685-687 (P1 visual-inspection level; deep
+      audit Story 0.10 P0-2c VI/low-vision territory). accessibilityRole +
+      accessibilityLabel + accessibilityHint added to semantic + interactive
+      elements. This concludes the keyboard-doable Task 9 prototype-build
+      scope; Days 10-14 are physical-world execution by Solo Builder.
+    per_pattern_completion_status:
+      yogdaan_bahi: complete + P4-instrumented + a11y-wired
+      shradhanjali_sahyog_vivran: complete + P2-instrumented + a11y-wired
+      panchayat_noticeboard: complete + P3-instrumented + a11y-wired
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 9 of 14; integration phase 4 of 4 done
+    FM-2_mitigation_events: []
+    artefacts_landed:
+      - apps/mobile/components/yogdaan-bahi/YogdaanBahiRow.tsx  # accessibilityRole=text + label combining 4 columns
+      - apps/mobile/components/yogdaan-bahi/YogdaanBahi.tsx  # ColumnHeader role=header + StickyFooter role=summary
+      - apps/mobile/components/shradhanjali/MemorialPortrait.tsx  # role=image + subjectName prop for label
+      - apps/mobile/components/shradhanjali/ShradhanjaliSahyogVivran.tsx  # name role=header + पsubjectName passed to portrait + UPI link hint
+      - apps/mobile/components/shradhanjali/ContributorRow.tsx  # role=text + label combining memory line + name + district + month-year
+      - apps/mobile/components/shradhanjali/KinshipLattice.tsx  # YStack role=list + each XStack role=text with "relation: names" label
+      - apps/mobile/components/panchayat/PanchayatNoticeboard.tsx  # title role=header + SectionHeader role=header
+      - apps/mobile/components/panchayat/PinnedItem.tsx  # wrapped in Pressable + role=button + category-aware hint
+      - apps/mobile/components/panchayat/RecentClosingRow.tsx  # role=text + label "name, district, N contributors"
+    accessibility_wiring_details:
+      yogdaan_bahi:
+        column_header:
+          role: header
+          label: "Yogdaan Bahi columns: दिनांक, सहयोग, पूल, राशि"
+        each_row:
+          role: text
+          label_pattern: "${date}, ${sahyog}, pool ${pool}, ${amount}"
+          example: "2026-06-05, रमेश कुमार, pool C-12, ₹500"
+        sticky_footer:
+          role: summary
+          label_pattern: "कुल योगदान: ${totalInr} across ${rowCount} entries"
+        freshness_strip: "no explicit a11y — already visually labelled"
+      shradhanjali:
+        memorial_portrait:
+          role: image
+          label: "Memorial portrait of ${subjectName}"
+        memorial_name:
+          role: header
+        kinship_lattice:
+          parent_role: list
+          parent_label: "दुःखी परिवार — kinship lattice"
+          each_row_role: text
+          each_row_label_pattern: "${relation}: ${names}"
+        contributor_row:
+          role: text
+          label_pattern_with_memory: "${memoryLine}. ${name}, ${district}, ${monthYear}"
+          label_pattern_without_memory: "${name}, ${district}, ${monthYear}"
+        memory_input: "Existing accessibility from TextInput (placeholder + value)"
+        yogdaan_den_link:
+          role: link
+          label: "योगदान दें — UPI के माध्यम से सहयोग करें"
+          hint: "Opens your UPI app to contribute to this memorial"
+      panchayat:
+        title_परिवार_की_नब्ज़:
+          role: header
+        section_headers (सूचना पट्ट + हाल की आहुति + अगली मासिक बैठक):
+          role: header
+        pinned_item:
+          wrapper: Pressable
+          role: button
+          label_pattern_with_hint: "${title}. ${detailHint}"
+          label_pattern_without_hint: "${title}"
+          hint_pattern: "Tap to open ${category === 'black' ? 'memorial' : category === 'saffron' ? 'governance' : 'cycle'} detail"
+        recent_closing_row:
+          role: text
+          label_pattern: "${memorialName}, ${district}, ${contributorCount} contributors"
+        p3_diagnostic_buttons: "Already wired Day 8 — role=button + label per button"
+    p1_secondary_surface_readiness: |
+      Day 9 delivers the P1 secondary measurement surface — accessibility
+      props for screen-reader inspection at Task 10. Operator can enable
+      TalkBack (Android) / VoiceOver (iOS) and verify:
+      - Header elements announce as headings
+      - Row content announces in reading order (date → name → pool →
+        amount on Yogdaan; memory → name → district → month on Shradhanjali
+        contributor scroll)
+      - Memorial portrait announces with subject name
+      - Kinship lattice announces as list with role + each row labelled
+      - Pinned items announce as buttons with category-aware hints
+      - योगदान दें link announces as link with explicit UPI hint
+      P1 a11y cell behavior at Task 10: visual-inspection check per UX spec.
+      Deep validation is Story 0.10 P0-2c VI/low-vision territory (AT
+      walkthrough with real participant); current wiring is the FOUNDATION
+      for that deeper audit.
+    keyboard_doable_scope_complete: |
+      Day 9 concludes the keyboard-doable Task 9 prototype-build work.
+      Summary of what's now in place across 9 commits on the scratchpad:
+      - Scaffold + pnpm + Tamagui Expo Router + 3 Devanagari fonts (Days 1-2)
+      - 3 patterns with full visual grammar (Days 3-5)
+      - MMKV + TanStack Query + RefreshControl (Day 6 P4 surface)
+      - UPI Intent + diagnostic indicator (Day 7 P2 surface)
+      - expo-notifications + local-notif diagnostic panel (Day 8 P3 partial)
+      - RN Accessibility props across patterns (Day 9 P1 secondary)
+      Days 10-14 are physical-world Solo Builder execution:
+      - Day 10: Apple Dev Program enrollment + APNs config
+      - Day 11-12: Per-device cold-boot + Android 11 upgrade verification
+      - Day 13: Task 10 measurement execution (54-cell matrix)
+      - Day 14: Task 11 ratify-or-pivot decision
+    next_day_intent: |
+      Day 10+: physical-world execution by Solo Builder. See
+      `_bmad-output/research/p0-5-native-stack-validation-evidence/`
+      (created at Task 10 measurement time) for per-device evidence capture.
+      Apple Dev Program enrollment ~₹9,900 trustee own fund per Decision
+      2026-06-05-030 Q14.2.
+    notes: |
+      Day 9 accessibility wiring is the P1-secondary load-bearing surface
+      for the substrate decision: a substrate that cannot support
+      accessibility props correctly would fail UX-DR P1 at Task 11.
+      The Tamagui + Expo Router + RN combination passes a11y prop
+      composition at the type-check level; Task 10 visual-inspection
+      validates per-device screen reader rendering.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

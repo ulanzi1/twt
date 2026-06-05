@@ -13,9 +13,16 @@ type Props = {
 
 export function KinshipLattice({ kinship }: Props) {
   return (
-    <YStack gap="$1">
+    <YStack gap="$1" accessibilityRole="list" accessibilityLabel="दुःखी परिवार — kinship lattice">
       {kinship.map(({ relation, names }, i) => (
-        <XStack key={`${relation}-${i}`} gap="$3" alignItems="baseline">
+        <XStack
+          key={`${relation}-${i}`}
+          gap="$3"
+          alignItems="baseline"
+          accessible
+          accessibilityRole="text"
+          accessibilityLabel={`${relation}: ${names}`}
+        >
           <Text
             width={64}
             fontFamily="$body"

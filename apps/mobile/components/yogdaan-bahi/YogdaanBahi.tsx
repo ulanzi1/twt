@@ -32,6 +32,9 @@ function ColumnHeader() {
       borderBottomWidth={1}
       borderBottomColor="$borderColor"
       backgroundColor="$background"
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel="Yogdaan Bahi columns: दिनांक, सहयोग, पूल, राशि"
     >
       <Text
         width={100}
@@ -85,6 +88,9 @@ function StickyFooter({ totalInr, rowCount }: { totalInr: number; rowCount: numb
       borderTopWidth={1.5}
       borderTopColor="$borderColor"
       backgroundColor="$background"
+      accessible
+      accessibilityRole="summary"
+      accessibilityLabel={`कुल योगदान: ${formatInr(totalInr)} across ${rowCount} entries`}
     >
       <YStack flex={1}>
         <Text fontFamily="$body" fontSize="$2" color="$colorPress">

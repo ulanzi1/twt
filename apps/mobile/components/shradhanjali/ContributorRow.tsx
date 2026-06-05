@@ -17,6 +17,10 @@ type Props = {
 
 function ContributorRowComponent({ contributor }: Props) {
   const hasMemory = contributor.memoryLine !== null
+  // Combined a11y label: optional memory line + name + district + month-year
+  const a11yLabel = hasMemory
+    ? `${contributor.memoryLine}. ${contributor.name}, ${contributor.district}, ${contributor.monthYear}`
+    : `${contributor.name}, ${contributor.district}, ${contributor.monthYear}`
 
   return (
     <YStack
@@ -25,6 +29,9 @@ function ContributorRowComponent({ contributor }: Props) {
       borderBottomWidth={StyleSheet.hairlineWidth}
       borderBottomColor="$borderColor"
       backgroundColor="$background"
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={a11yLabel}
     >
       {hasMemory && (
         <Text

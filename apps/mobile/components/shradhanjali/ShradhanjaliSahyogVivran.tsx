@@ -92,16 +92,18 @@ export function ShradhanjaliSahyogVivran() {
         >
           {/* Portrait — centered square with nested black/white borders */}
           <YStack alignItems="center">
-            <MemorialPortrait size={160} />
+            <MemorialPortrait size={160} subjectName={SAMPLE_MEMORIAL.name} />
           </YStack>
 
-          {/* Name in serif Devanagari display weight per UX spec line 472 */}
+          {/* Name in serif Devanagari display weight per UX spec line 472.
+              accessibilityRole=header so screen readers announce as a heading. */}
           <Text
             fontFamily="$heading"
             fontSize="$10"
             color="$color"
             textAlign="center"
             lineHeight="$10"
+            accessibilityRole="header"
           >
             {SAMPLE_MEMORIAL.name}
           </Text>
@@ -212,6 +214,7 @@ export function ShradhanjaliSahyogVivran() {
               onPress={handleSahyogTap}
               accessibilityRole="link"
               accessibilityLabel="योगदान दें — UPI के माध्यम से सहयोग करें"
+              accessibilityHint="Opens your UPI app to contribute to this memorial"
             >
               <Text
                 fontFamily="$body"

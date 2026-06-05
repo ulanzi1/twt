@@ -22,6 +22,11 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
   // 0-indexed math: rowIndex % 5 === 4 (5th, 10th, 15th, ...)
   const isFifthRow = (rowIndex + 1) % 5 === 0
 
+  // Accessibility label combines all four columns in a screen-reader-
+  // friendly sentence per UX spec lines 1199-1201 (RN Accessibility props
+  // for P1 visual-inspection level; deep audit Story 0.10 territory).
+  const a11yLabel = `${row.date}, ${row.sahyog}, pool ${row.pool}, ${formatInr(row.amountInr)}`
+
   return (
     <XStack
       height={56}
@@ -30,6 +35,9 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
       borderBottomWidth={isFifthRow ? 1 : StyleSheet.hairlineWidth}
       borderBottomColor="$borderColor"
       backgroundColor="$background"
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={a11yLabel}
     >
       {/* Date column — 100pt, Latin numerals, tabular font */}
       <Text

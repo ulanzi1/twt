@@ -14,12 +14,17 @@ import { View } from 'tamagui'
 type Props = {
   /** Portrait edge length in dp; default 160 per UX spec restrained reading-width discipline */
   size?: number
+  /** Memorial subject name for accessibility label */
+  subjectName?: string
 }
 
 const OUTER_BORDER_WIDTH = 6
 const WHITE_INSET_WIDTH = 4
 
-export function MemorialPortrait({ size = 160 }: Props) {
+export function MemorialPortrait({ size = 160, subjectName }: Props) {
+  const a11yLabel = subjectName
+    ? `Memorial portrait of ${subjectName}`
+    : 'Memorial portrait placeholder'
   return (
     <View
       width={size}
@@ -28,6 +33,9 @@ export function MemorialPortrait({ size = 160 }: Props) {
       alignItems="center"
       justifyContent="center"
       padding={WHITE_INSET_WIDTH}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={a11yLabel}
     >
       <View
         flex={1}

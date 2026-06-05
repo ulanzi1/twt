@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react'
-import { FlatList, StyleSheet } from 'react-native'
+import { FlatList, RefreshControl, StyleSheet } from 'react-native'
 import { Text, XStack, YStack } from 'tamagui'
 import { YogdaanBahiRow } from './YogdaanBahiRow'
+import { useYogdaanQuery } from './useYogdaanQuery'
 import {
   SAMPLE_YOGDAAN_ROWS,
   SAMPLE_YOGDAAN_TOTAL_INR,
@@ -107,7 +108,43 @@ function StickyFooter({ totalInr, rowCount }: { totalInr: number; rowCount: numb
   )
 }
 
+function FreshnessStrip({ fetchedAt, isFetching }: { fetchedAt: number | undefined; isFetching: boolean }) {
+  const label = fetchedAt
+    ? `Cached at ${new Date(fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+    : 'Loading…'
+  return (
+    <XStack
+      paddingHorizontal={12}
+      paddingVertical={6}
+      backgroundColor="$backgroundHover"
+      alignItems="center"
+      gap="$2"
+    >
+      <Text fontFamily="$body" fontSize="$1" color="$colorPress">
+        P4 cache:
+      </Text>
+      <Text fontFamily="$tabular" fontSize="$1" color="$colorPress" style={{ fontVariant: ['tabular-nums'] }}>
+        {label}
+      </Text>
+      {isFetching && (
+        <Text fontFamily="$body" fontSize="$1" color="$colorPress">
+          · refreshing
+        </Text>
+      )}
+    </XStack>
+  )
+}
+
 export function YogdaanBahi() {
+  const { data, isFetching, refetch } = useYogdaanQuery()
+
+  // Cache + sample-data fallback: if the query is still on its first fetch
+  // (cold-start no-cache), render the sample data immediately so the UI
+  // exercises the same shape. Once the query resolves, swap in the queried
+  // data (identical for the prototype — same SAMPLE_YOGDAAN_ROWS).
+  const rows = data?.rows ?? SAMPLE_YOGDAAN_ROWS
+  const totalInr = data?.totalInr ?? SAMPLE_YOGDAAN_TOTAL_INR
+
   const renderItem = useCallback(
     ({ item, index }: { item: YogdaanRow; index: number }) => (
       <YogdaanBahiRow row={item} rowIndex={index} />
@@ -135,8 +172,9 @@ export function YogdaanBahi() {
 
   return (
     <YStack flex={1} backgroundColor="$background">
+      <FreshnessStrip fetchedAt={data?.fetchedAt} isFetching={isFetching} />
       <FlatListAny
-        data={SAMPLE_YOGDAAN_ROWS}
+        data={rows}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         getItemLayout={getItemLayout}
@@ -147,8 +185,12 @@ export function YogdaanBahi() {
         maxToRenderPerBatch={10}
         initialNumToRender={15}
         removeClippedSubviews
+        // Pull-to-refresh wired to refetch — P4 measurement validates this gesture
+        refreshControl={
+          <RefreshControl refreshing={isFetching} onRefresh={() => { void refetch() }} />
+        }
       />
-      <StickyFooter totalInr={SAMPLE_YOGDAAN_TOTAL_INR} rowCount={SAMPLE_YOGDAAN_ROWS.length} />
+      <StickyFooter totalInr={totalInr} rowCount={rows.length} />
     </YStack>
   )
 }

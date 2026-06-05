@@ -636,6 +636,108 @@ daily_log:
       milestone — three patterns in Days 3-5. Buffer banked for Days 6-12
       integration work (UPI/FCM/APNs/MMKV/accessibility) + Day 13-14
       measurement execution.
+
+  - date: 2026-06-05
+    calendar_day: 6
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 6 P4 offline-cache surface implementation. Installed react-native-
+      mmkv 4.3.1 + @tanstack/react-query 5.101.0 + @tanstack/query-sync-
+      storage-persister 5.101.0 + @tanstack/react-query-persist-client
+      5.101.0. Wired MMKV → SyncStorage adapter → PersistQueryClientProvider
+      at the app root (components/Provider.tsx). Added a useYogdaanQuery hook
+      that simulates a remote fetch (300ms latency) and returns rows + total
+      + `fetchedAt` timestamp; Yogdaan Bahi screen now displays a P4 cache
+      freshness strip ("P4 cache: Cached at HH:MM:SS · refreshing") at the
+      top + RefreshControl pull-to-refresh wired to query refetch.
+    per_pattern_completion_status:
+      yogdaan_bahi: complete + P4-instrumented  # FreshnessStrip + pull-to-refresh
+      shradhanjali_sahyog_vivran: complete
+      panchayat_noticeboard: complete
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 6 of 14; integration phase 1 of 4 done
+    FM-2_mitigation_events:
+      - mitigation_id: fm2-mmkv-v4-api-discovery-2026-06-05
+        category: dependency-version-api-shift
+        description: |
+          react-native-mmkv v4 (4.3.1) changed API from v3:
+            v3: `import { MMKV } from 'react-native-mmkv'; new MMKV({...})`
+            v4: `import { createMMKV } from 'react-native-mmkv'; createMMKV({...})`
+                — `MMKV` becomes type-only export; old constructor pattern removed
+            v3: `mmkv.delete(key)` for removal
+            v4: `mmkv.remove(key)` (returns boolean)
+        fallback_applied: |
+          Refactored lib/mmkv.ts to use createMMKV factory + mmkv.remove(key)
+          per v4 API. SyncStorage adapter shape unchanged (TanStack Query's
+          SyncStorage contract is stable across MMKV versions).
+        outcome: fixed-narrowly
+        cross_reference: "lib/mmkv.ts createMMKV import + mmkvStorage.removeItem"
+    artefacts_landed:
+      - apps/mobile/lib/mmkv.ts  # MMKV instance + SyncStorage adapter
+      - apps/mobile/lib/query-client.ts  # QueryClient + createSyncStoragePersister
+      - apps/mobile/components/Provider.tsx  # PersistQueryClientProvider wrap
+      - apps/mobile/components/yogdaan-bahi/useYogdaanQuery.ts  # NEW useQuery hook
+      - apps/mobile/components/yogdaan-bahi/YogdaanBahi.tsx  # FreshnessStrip + RefreshControl
+      - apps/mobile/package.json  # 4 packages added
+      - apps/mobile/pnpm-lock.yaml  # updated
+    implementation_details:
+      mmkv:
+        version: react-native-mmkv@4.3.1
+        instance_id: twt-p0-5
+        namespace_rationale: "Future Epic 1 Story 1.1 substrate work re-scaffolds from clean namespace per Story 0.14 line 150 scratchpad-discipline"
+        api_used: "createMMKV factory; getString/set/remove methods"
+        sync_storage_adapter:
+          getItem: "mmkv.getString(key) ?? null"
+          setItem: "mmkv.set(key, value)"
+          removeItem: "mmkv.remove(key) — discard boolean return"
+      query_client:
+        defaults:
+          staleTime: 1h
+          gcTime: 7d
+          retry: 1
+          refetchOnWindowFocus: false
+          refetchOnReconnect: false
+        rationale: "Conservative staleTime + generous gcTime support cold-restart-while-offline measurement; no retry storm on offline"
+        persister:
+          impl: createSyncStoragePersister
+          key: "twt-p0-5-cache"
+          throttleTime: 1000ms
+          maxAge: 7d
+      yogdaan_query:
+        hook: useYogdaanQuery
+        queryKey: "['yogdaan-bahi', 'summary']"
+        fetcher: "simulated 300ms async returning rows + total + fetchedAt"
+        ui_surface:
+          freshness_strip: "top-of-screen XStack with $body 'P4 cache:' label + $tabular timestamp + optional 'refreshing' indicator"
+          refresh_control: "wired to refetch; visible during isFetching"
+        cache_validation_flow_at_task_10: |
+          1. Open app online → query fires → fetchedAt = NOW → data renders
+          2. Toggle airplane mode + cold-restart app
+          3. Open app offline → cached query returns → fetchedAt = previous timestamp
+             → cached data renders without network
+          4. Toggle online + pull-to-refresh → query refires → new fetchedAt
+    p4_measurement_surface_readiness: |
+      Day 6 delivers the P4 offline-cache measurement surface:
+      - MMKV instance + SyncStorage adapter operational
+      - QueryClient + createSyncStoragePersister wired
+      - Yogdaan Bahi useQuery hook + FreshnessStrip + RefreshControl
+      - 7-day maxAge cache window
+      P4 measurement cells armed: redmi10/redminote8/iphone12.yogdaan.p4
+      (P4 for Shradhanjali + Panchayat tabs marked N/A — they don't yet
+      use useQuery; can be added in subsequent days if measurement validity
+      requires per-pattern P4 cells).
+    deferred_to_subsequent_days:
+      day_7_intent: "Begin UPI Intent deep-link (P2): construct upi://pay? URL + RN Linking handler + return-handoff session preservation per architecture line 90"
+      day_8_intent: "FCM Android setup (google-services.json placeholder + expo-notifications integration); APNs iOS install but enrollment deferred to Day 10"
+      day_9_intent: "RN Accessibility props review across three patterns (accessibilityLabel + accessibilityRole + accessibilityHint) per UX spec lines 1199-1201; Tamagui/Radix accessibility wiring per UX spec lines 685-687"
+      day_10_intent: "Apple Developer Program enrollment (~₹9,900 from trustee own fund); complete APNs iOS configuration; TestFlight setup"
+      day_11_12_intent: "Per-device cold-boot verification (Redmi Note 8 Android 11 upgrade + Redmi 10 + iPhone 12 iOS version); receive-and-verified date field population in §4"
+    notes: |
+      Yogdaan Bahi sample-data import retained as fallback during query-loading-
+      from-cold-cache state (data?.rows ?? SAMPLE_YOGDAAN_ROWS pattern). This
+      preserves UI shape during the first 300ms before query resolves. When
+      cache is present from prior session, query resolves synchronously from
+      cache without the 300ms penalty.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

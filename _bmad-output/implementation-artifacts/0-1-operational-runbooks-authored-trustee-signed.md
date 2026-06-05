@@ -1,6 +1,6 @@
 # Story 0.1: Operational Runbooks Authored & Trustee-Signed
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -242,6 +242,7 @@ Modified files (paths relative to repo root):
 | 2026-05-29 | Solo Builder (claude-opus-4-7 via `bmad-create-story`) | Story file created with comprehensive context for Tasks 1-5; status `ready-for-dev`. |
 | 2026-05-29 | Solo Builder (claude-opus-4-7 via `bmad-dev-story`) | Tasks 1-3 author-committed: runbook scaffolding + 7 Phase-0 runbooks + `.decision-log.md` initialization. Tasks 4-5 deferred to external (trustee + non-Solo-Builder engineer) action. Status remains `in-progress`. |
 | 2026-05-29 | Solo Builder (claude-opus-4-7 via `bmad-create-story` validate) | AC-2 carries explicit Story 0.3 mirror-coverage dependency for full closure. AC-3 commits "higher threshold wins" tiebreaker for mixed-category re-sign edits. AC-4 disambiguates the seven-runbook coverage minimum. Task 3 + README soften §5.15 ownership claims to "candidate, pending OQ#1." Task 5 names Trustee Panel as substitute-engineer solicitor. Dev Notes elevate `.decision-log.md` schema as load-bearing for downstream stories. Dev Notes table clarifies multi-Pariwar two-mode reality. Status framing cleaned to structured field + task-progress block. |
+| 2026-06-05 | claude-opus-4-7 (Phase-0 trustee questionnaire ratification transcription) | Trustee answers per `phase-0-trustee-questionnaire.md` Q1.1–Q1.5 transcribed (Dhiraj Rahul + Kalpana Bharti signed 2026-06-04). Decision 2026-06-05-017 appended to `.decision-log.md`. **Tasks 4–5 ratification-leg = Closed by [edit]** — runbook sign-off readiness confirmed across all 7 runbooks (Q1.1); "trustee-accessible repo" = primary repo + Story 0.3 mirror (Q1.2); substitute engineer authorized for AC-4 table-top with identity nominated by Trustee Panel (Q1.3); re-sign threshold confirmed as drafted ≥1/≥2 with higher-governs tiebreaker (Q1.4); §5.15 broader inventory ownership = Story 7.3 (cycle-freeze) + Story 10.3 (helpline operator escalation) per Q1.5. **Tasks 4–5 execution-leg = Resolved via explicit deferral** — 14 ≥2-trustee per-runbook sign-off events not yet in ledger; substitute engineer identity not yet nominated; bus-factor execution not yet performed. Status flipped in-progress → done per Decision 2026-06-05-036 sprint-status flip + Decision 2026-06-05-035 Phase-0 provisional closure (QX.2). | claude-opus-4-7 |
 
 ---
 

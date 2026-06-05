@@ -553,6 +553,89 @@ daily_log:
       measurement validity (border rendering is what we measure; portrait
       content opt-in per UX spec §1 line 79 DPDPA discipline). Production
       will render consented photo with same border treatment.
+
+  - date: 2026-06-05
+    calendar_day: 5
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 5 Panchayat Noticeboard pattern implementation per UX spec §8 +
+      lines 483-498 + 807 + 1158 (home screen for non-alert moments;
+      panchayat-bhavan-noticeboard reference). All three named patterns
+      (Yogdaan Bahi + Shradhanjali Sahyog Vivran + Panchayat Noticeboard)
+      are now feature-complete in the prototype.
+    per_pattern_completion_status:
+      yogdaan_bahi: complete
+      shradhanjali_sahyog_vivran: complete
+      panchayat_noticeboard: complete
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 5 of 14 — all three patterns delivered ahead of nominal Day-8 milestone
+    FM-2_mitigation_events: []
+    artefacts_landed:
+      - apps/mobile/components/panchayat/sample-data.ts  # stats + 3 pinned + 5 closings + next meeting
+      - apps/mobile/components/panchayat/StatLine.tsx  # 51,204 सदस्य · 38 ज़िले · 7 आहुति पूर्ण
+      - apps/mobile/components/panchayat/PinnedItem.tsx  # 4pt colored left-stub row
+      - apps/mobile/components/panchayat/RecentClosingRow.tsx  # name+district+count ruled row
+      - apps/mobile/components/panchayat/PanchayatNoticeboard.tsx  # composing parent
+      - apps/mobile/app/(tabs)/panchayat.tsx  # promoted from Day-3 stub
+    implementation_details:
+      visual_grammar:
+        top_strip: "Pariwar seal (32pt circle with ट placeholder per UX spec line 488 + 679 Stamp atom future-work) left + परिवार की नब्ज़ centered ($heading $6)"
+        stat_line: "single XStack — 51,204 सदस्य · 38 ज़िले · इस माह 7 आहुति पूर्ण (counts in $tabular Latin per UX spec line 1127)"
+        pinned_section:
+          header: "सूचना पट्ट letter-spaced caps in $body $2"
+          row_count: 3  # within UX spec line 491 "2-3 items maximum"
+          left_stub: "4pt vertical bar colored by category (saffron #FF7F1F / green #1F7F4F / black #1A1A1A)"
+          category_meanings:
+            saffron: "niyamavali amendment / governance update"
+            green: "cycle / pool / disbursement update"
+            black: "bereavement notice"
+          rows:
+            - "BLACK — श्रद्धांजलि: रामेश्वर प्रसाद सिंह, गोपालगंज (cross-link to Shradhanjali tab)"
+            - "SAFFRON — नियमावली संशोधन: धारा १४ — पंचायत निर्णय कोरम (Hindi numerals permitted in legal-reference prose per UX spec line 1127 amendment A2)"
+            - "GREEN — चक्र C-16 आरंभ — २८० नए सदस्य जुड़े (Hindi numerals in narrative prose; पूल code Latin)"
+        recent_closings:
+          header: "हाल की आहुति letter-spaced caps"
+          row_count: 5  # per UX spec line 493
+          per_row: "memorial name (flex left $body) + district ($body smaller right) + contributor count ($tabular Latin right-aligned 56pt)"
+        footer:
+          label: "अगली मासिक बैठक letter-spaced"
+          date: "15 Jul 2026 ($tabular Latin numerals + month-abbr)"
+          venue: "पटना — शिक्षा भवन सभागार"
+        orthogonal_layout: "per UX spec line 497 — full-width strips, vertical stack, $heading + $body + $tabular at sizes $2-$6 only; no shadowed cards (shadowed cards = ad units per UX spec line 534)"
+        hairlines: "5 black full-bleed hairlines separating sections (top-strip / stat-line / pinned-header / pinned-rows / closings-header / closings-rows / footer)"
+    p1_measurement_surface_readiness: |
+      Day 5 delivers all P1 measurement surface for Panchayat pattern:
+      - Stat-line counts (51,204 / 38 / 7) in $tabular tabular-nums + Devanagari labels (सदस्य/ज़िले/आहुति पूर्ण)
+      - 3 pinned-section Hindi titles incl. Hindi-numerals in prose ("धारा १४", "२८० नए सदस्य")
+      - 5 recent-closing rows (memorial name + Bihar district names)
+      - Footer Devanagari labels + Latin date
+      - Hindi numerals discipline correctly applied (counts/dates Latin; narrative prose Hindi numerals permitted per UX spec line 1127 amendment A2)
+      P1 cells armed: redmi10.panchayat.p1, redminote8.panchayat.p1, iphone12.panchayat.p1.
+    p5_measurement_surface_readiness: |
+      Day 5 Panchayat surface does NOT exercise list virtualization at scale
+      (3 pinned + 5 recent closings = 8 rows). P5 measurement surface for
+      Panchayat is N/A; the load-bearing P5 measurement remains the
+      Shradhanjali contributor scroll at 250 entries from Day 4.
+    cross_pattern_completion_check: |
+      All three named patterns from UX spec §6 are feature-complete:
+      - Tab 1 (Yogdaan Bahi): 60 rows passbook with sticky footer
+      - Tab 2 (Shradhanjali Sahyog Vivran): memorial column with FlashList 250
+      - Tab 3 (Panchayat Noticeboard): orthogonal noticeboard layout
+      Three patterns × P1 = 9 P1 cells armed across 3 devices = 27 cells.
+      Three patterns × P5 (where applicable) = Yogdaan FlatList 60 +
+      Shradhanjali FlashList 250 = 6 P5 cells armed across 3 devices =
+      18 P5 cells (Panchayat P5 marked N/A in measurement-template).
+    next_day_intent: |
+      Day 6+: per-device cold-boot verification still pending (carried from
+      Day 2). Begin integration work — UPI Intent deep-link (P2), FCM/APNs
+      push notifications (P3), MMKV + TanStack Query persistQueryClient
+      (P4), RN Accessibility props + Tamagui/Radix accessibility wiring
+      per UX spec lines 1199-1201 + 685-687.
+    notes: |
+      Pattern-implementation work delivered ahead of nominal Day-8
+      milestone — three patterns in Days 3-5. Buffer banked for Days 6-12
+      integration work (UPI/FCM/APNs/MMKV/accessibility) + Day 13-14
+      measurement execution.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

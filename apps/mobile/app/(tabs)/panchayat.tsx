@@ -1,19 +1,8 @@
-import { Text, YStack } from 'tamagui'
+import { PanchayatNoticeboard } from 'components/panchayat/PanchayatNoticeboard'
 
-// Tab 3 — Panchayat Noticeboard placeholder.
-// Implementation deferred to Day 4+ per Task 9 prototype-build plan.
+// Tab 3 — Panchayat Noticeboard per UX spec §8 + lines 483-498 + 807 + 1158.
+// P0-5 measurement targets: P1 Devanagari rendering (small/mid-size Devanagari
+// across stat line + pinned items + recent closings + footer).
 export default function PanchayatTab() {
-  return (
-    <YStack flex={1} alignItems="center" justifyContent="center" backgroundColor="$background" padding="$8">
-      <Text fontFamily="$heading" fontSize="$8" color="$color">
-        पंचायत सूचना पट्ट
-      </Text>
-      <Text fontFamily="$body" fontSize="$3" color="$colorPress" marginTop="$4">
-        Noticeboard strip pattern · pending Day 4+
-      </Text>
-      <Text fontFamily="$body" fontSize="$2" color="$colorPress" marginTop="$2">
-        UX spec §8 + lines 807 + 1158
-      </Text>
-    </YStack>
-  )
+  return <PanchayatNoticeboard />
 }

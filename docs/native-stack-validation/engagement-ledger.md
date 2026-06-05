@@ -442,6 +442,117 @@ daily_log:
       (Text, XStack, YStack) persist across all files — these are NOT
       blocking and persist as scaffold-known-issue per Day 2 record. Day 3
       runtime behavior expected to function correctly via metro bundling.
+
+  - date: 2026-06-05
+    calendar_day: 4
+    branch: story-0.14-p0-5-prototype
+    work_summary: |
+      Day 4 Shradhanjali Sahyog Vivran pattern implementation per UX spec §8 +
+      lines 464-481 + 806 + 1157 (memorial column with bordered portrait +
+      parichay + kinship lattice + memory input + FlashList contributor scroll
+      at 250 entries). FlashList @shopify/flash-list 2.3.1 installed; this is
+      the first use of FlashList in the prototype + establishes the
+      virtualization threshold per architecture line 2913. Shradhanjali tab
+      promoted from Day-3 stub-placeholder to full implementation.
+    per_pattern_completion_status:
+      yogdaan_bahi: complete
+      shradhanjali_sahyog_vivran: complete
+      panchayat_noticeboard: not-started  # stub-screen-only placeholder
+    blocking_dependency_events: []
+    F4_velocity_check: on-track  # Day 4 of 14 — two of three patterns delivered
+    FM-2_mitigation_events:
+      - mitigation_id: fm2-flashlist-react19-typing-2026-06-05
+        category: scaffold-type-noise-narrow-fix
+        description: |
+          @shopify/flash-list 2.3.1 prop-typing stricter under React 19 +
+          new arch; FlashList JSX props rejected as not-assignable to
+          FlashListProps<Contributor>. Same scaffold-typing wrinkle pattern
+          as Day 3's FlatList ListHeaderComponent error.
+        fallback_applied: |
+          Cast `FlashList as any` at JSX call site via IIFE wrapper to keep
+          the scope narrow. Runtime behavior unchanged.
+        outcome: fixed-narrowly
+        cross_reference: "components/shradhanjali/ShradhanjaliSahyogVivran.tsx FlashListAny IIFE wrapper"
+    artefacts_landed:
+      - apps/mobile/components/shradhanjali/sample-data.ts  # memorial + 250 contributors
+      - apps/mobile/components/shradhanjali/MemorialPortrait.tsx  # nested-borders portrait
+      - apps/mobile/components/shradhanjali/KinshipLattice.tsx  # 2-column key-value list
+      - apps/mobile/components/shradhanjali/MemoryInput.tsx  # दो शब्द input + counter
+      - apps/mobile/components/shradhanjali/ContributorRow.tsx  # memorial-grammar scroll row
+      - apps/mobile/components/shradhanjali/ShradhanjaliSahyogVivran.tsx  # composing parent
+      - apps/mobile/app/(tabs)/shradhanjali.tsx  # promoted from Day-3 stub
+      - apps/mobile/package.json  # @shopify/flash-list 2.3.1 added
+      - apps/mobile/pnpm-lock.yaml  # updated
+    implementation_details:
+      sample_data:
+        memorial_subject: "रामेश्वर प्रसाद सिंह (1962-2026, गोपालगंज, राजकीय उच्च विद्यालय छपरा, 34 years teacher)"
+        contributors: 250  # exercises FlashList virtualization per architecture line 2669
+        contributor_name_pool: 80 unique names (cycled across 250 rows)
+        districts: 38 (Bihar districts in Hindi)
+        memory_lines_pool: 15 Hindi स्मृति lines (~1 in 3 contributors leave one)
+        hindi_numerals_discipline: "Parichay prose '३४ वर्षों की सेवा' (Hindi numerals per UX spec line 1127 amendment A2); contributor month-year dates Latin ('Apr 2026' / 'May 2026' / 'Jun 2026')"
+      visual_grammar:
+        max_width_mobile_pt: 360
+        full_bleed_black_rule: 4pt at top
+        portrait:
+          size_pt: 160 (square, centered)
+          rendering: "nested borders (outer 4pt black + inset 4pt white + 6pt white padding + gray placeholder interior) — NOT box-shadow per UX spec line 471"
+          P1_validity: "tests subpixel nested-border crispness on Mali GPU (Redmi 10) vs Adreno baseline"
+        name_typography: "$heading (Tiro Devanagari Hindi 400 — weight-500 unavailable per Day 2 FM-2 caveat) at fontSize $10"
+        dates: "$tabular + tabular-nums (Latin year–year en-dash separator)"
+        parichay: "$body (Noto Sans Devanagari 400) lineHeight 26 left-aligned"
+        kinship_lattice: "2-column XStack rows (relation 64pt right-aligned label / names flex left-aligned)"
+        bhavpurna_line: "$heading centered letterSpacing 2 marginTop $2"
+        memory_input: "60-char cap + live counter + Noto Sans Devanagari placeholder + hairline underline"
+      contributor_scroll:
+        list_impl: "@shopify/flash-list FlashList"
+        estimatedItemSize_pt: 56
+        entries: 250
+        gesture_strategy: "ScrollView parent owns gesture; FlashList scrollEnabled=false; outer ScrollView paginates"
+        per_row_layout: "memory-line (if present; italic-letter-spaced) + name (flex) + district (right) + month-year ($tabular)"
+        hairline_rule_between_rows: StyleSheet.hairlineWidth
+        no_avatars_no_minute_precision: "per UX spec line 478"
+      footer_link:
+        text: "योगदान दें"
+        styling: "$body fontSize $3 colorPress underline — NOT primary-blue button per UX spec line 479"
+        placement: "in ledger footer rule (centered, after hairline)"
+    p1_measurement_surface_readiness: |
+      Day 4 delivers all P1 measurement surface for Shradhanjali pattern:
+      - Display name in Tiro Devanagari Hindi at fontSize $10 (largest test of
+        display-weight rendering across devices)
+      - Parichay prose in Noto Sans Devanagari with Hindi numerals
+        ('३४ वर्षों की सेवा') — tests memorial-prose Hindi-numeral rendering
+      - Kinship lattice with relation labels (पत्नी / पुत्र / पुत्री / भाई) + 
+        family names — tests body-weight Devanagari at small/mid sizes
+      - Bhavpurna shraddhanjali line (Tiro letter-spaced) — tests
+        letterSpacing under Devanagari serif rendering
+      - Memory input placeholder (Noto Sans Devanagari fallback via direct
+        fontFamily — bypasses Tamagui due to TextInput RN limitation)
+      - 250 contributor names + districts (heavy Devanagari volume)
+      - 83 contributor memory lines (Hindi स्मृति prose)
+      P1 measurement cells armed: redmi10.shradhanjali.p1,
+      redminote8.shradhanjali.p1, iphone12.shradhanjali.p1.
+    p5_measurement_surface_readiness: |
+      Day 4 delivers the LOAD-BEARING P5 list-performance measurement surface
+      for FlashList over 250 contributor entries.
+      Caveat per Story 0.14 §4 FM-2 disposition: substitute entry-level Android
+      (Redmi Note 8, 3-6 GB RAM) does NOT exercise the 2 GB RAM floor;
+      P5 verdict on this device tagged `not-measured-on-2GB-floor` per
+      deferred-work.md Story 0.14 W-01 entry.
+      P5 measurement cells armed: redmi10.shradhanjali.p5,
+      redminote8.shradhanjali.p5, iphone12.shradhanjali.p5.
+    next_day_intent: |
+      Day 5: per-device cold-boot verification still pending (carried from
+      Day 2). Then begin Panchayat Noticeboard pattern per UX spec §8 +
+      lines 483-498 + 807 + 1158 (noticeboard strip pattern with Pariwar
+      seal, single quiet stat-line, pinned section with colored left-stubs
+      by category, hाल की आहुति recent closings, footer with next monthly
+      meeting date).
+    notes: |
+      Memorial portrait rendered as gray placeholder for prototype P1
+      measurement validity (border rendering is what we measure; portrait
+      content opt-in per UX spec §1 line 79 DPDPA discipline). Production
+      will render consented photo with same border treatment.
 ```
 
 **Schema** (preserved for audit baseline; per-day log entry at Task 9 during ~2-week build):

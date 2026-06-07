@@ -34,17 +34,17 @@ export function PinnedItem({ item }: Props) {
       accessibilityHint={`Tap to open ${item.category === 'black' ? 'memorial' : item.category === 'saffron' ? 'governance' : 'cycle'} detail`}
     >
       <XStack
-        paddingVertical={10}
-        paddingRight={16}
+        py={10}
+        pr={16}
         borderBottomWidth={StyleSheet.hairlineWidth}
         borderBottomColor="$borderColor"
-        backgroundColor="$background"
+        bg="$background"
       >
         <View
           width={STUB_WIDTH}
-          backgroundColor={STUB_COLOR[item.category]}
+          style={{ backgroundColor: STUB_COLOR[item.category] }}
         />
-        <YStack flex={1} paddingLeft={12} gap={2}>
+        <YStack flex={1} pl={12} gap={2}>
           <Text fontFamily="$body" fontSize="$4" color="$color" numberOfLines={2}>
             {item.title}
           </Text>

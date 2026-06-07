@@ -74,8 +74,11 @@ function generateRows(): YogdaanRow[] {
     date.setUTCDate(baseDate.getUTCDate() - i)
     const dateStr = date.toISOString().slice(0, 10)  // YYYY-MM-DD
 
-    const name = sahyogNames[i % sahyogNames.length]
-    const pool = poolCodes[Math.floor(i / 12) % poolCodes.length]
+    // Non-null asserted: modulo-indexed access on non-empty arrays — `i %
+    // arr.length` always yields a valid index. noUncheckedIndexedAccess
+    // surfacing per Story 1.1 AC-3 strict-mode triage.
+    const name = sahyogNames[i % sahyogNames.length]!
+    const pool = poolCodes[Math.floor(i / 12) % poolCodes.length]!
 
     // Amounts: realistic Bihar-teacher contribution range
     // (₹100–₹2000), in ₹50 increments

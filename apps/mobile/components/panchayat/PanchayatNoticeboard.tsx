@@ -33,13 +33,13 @@ import {
 
 export function PanchayatNoticeboard() {
   return (
-    <YStack flex={1} backgroundColor="$background">
+    <YStack flex={1} bg="$background">
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Top strip per UX spec line 488 — Pariwar seal left, title center */}
         <XStack
-          paddingHorizontal={16}
-          paddingVertical={16}
-          alignItems="center"
+          px={16}
+          py={16}
+          items="center"
         >
           {/* Pariwar seal stub — production uses Stamp atom per UX spec line 679 */}
           <View
@@ -47,9 +47,9 @@ export function PanchayatNoticeboard() {
             height={32}
             borderWidth={1.5}
             borderColor="$color"
-            borderRadius={16}
-            alignItems="center"
-            justifyContent="center"
+            rounded={16}
+            items="center"
+            justify="center"
           >
             <Text fontFamily="$heading" fontSize="$2" color="$color">
               ट
@@ -60,9 +60,9 @@ export function PanchayatNoticeboard() {
             fontFamily="$heading"
             fontSize="$6"
             color="$color"
-            textAlign="center"
+            text="center"
             // Visual balance: seal width on right side as spacer
-            paddingRight={32}
+            pr={32}
             accessibilityRole="header"
           >
             परिवार की नब्ज़
@@ -91,11 +91,11 @@ export function PanchayatNoticeboard() {
         <Hairline />
 
         {/* Footer: next monthly Pariwar meeting per UX spec line 495 */}
-        <YStack paddingHorizontal={16} paddingVertical={16} gap={4}>
+        <YStack px={16} py={16} gap={4}>
           <Text fontFamily="$body" fontSize="$2" color="$colorPress" letterSpacing={1}>
             अगली मासिक बैठक
           </Text>
-          <XStack alignItems="baseline" gap="$2">
+          <XStack items="baseline" gap="$2">
             <Text
               fontFamily="$tabular"
               fontSize="$5"
@@ -121,7 +121,7 @@ export function PanchayatNoticeboard() {
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <XStack paddingHorizontal={16} paddingTop={16} paddingBottom={8}>
+    <XStack px={16} pt={16} pb={8}>
       <Text
         fontFamily="$body"
         fontSize="$2"
@@ -139,7 +139,7 @@ function Hairline() {
   return (
     <View
       height={StyleSheet.hairlineWidth}
-      backgroundColor="#000000"
+      bg="#000000"
       width="100%"
     />
   )

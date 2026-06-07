@@ -70,12 +70,12 @@ export function P3DiagnosticPanel() {
 
   return (
     <YStack
-      paddingHorizontal={16}
-      paddingVertical={16}
+      px={16}
+      py={16}
       gap="$2"
       borderTopWidth={StyleSheet.hairlineWidth}
       borderTopColor="$borderColor"
-      backgroundColor="$backgroundHover"
+      bg="$backgroundHover"
     >
       <Text fontFamily="$body" fontSize="$2" color="$colorPress" letterSpacing={2}>
         P3 push diagnostic
@@ -112,10 +112,10 @@ export function P3DiagnosticPanel() {
 
       {state.log.length > 0 && (
         <YStack
-          backgroundColor="$background"
-          padding={8}
+          bg="$background"
+          p={8}
           gap={2}
-          marginTop="$1"
+          mt="$1"
         >
           {state.log.map((line, i) => (
             <Text
@@ -142,11 +142,11 @@ function DiagButton({ label, onPress }: { label: string; onPress: () => void }) 
       accessibilityLabel={label}
     >
       <View
-        paddingHorizontal={10}
-        paddingVertical={6}
+        px={10}
+        py={6}
         borderWidth={1}
         borderColor="$borderColor"
-        backgroundColor="$background"
+        bg="$background"
       >
         <Text fontFamily="$body" fontSize="$2" color="$color">
           {label}

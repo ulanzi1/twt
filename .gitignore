@@ -25,6 +25,15 @@ node_modules/
 dist/
 build/
 out/
+.next/
+.expo/
+*.tsbuildinfo
+
+# Turbo
+.turbo/
+
+# Test output
+coverage/
 
 # Environment
 .env

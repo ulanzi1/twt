@@ -104,11 +104,14 @@ function generateContributors(): Contributor[] {
   // Month-year format: Latin per UX spec line 478 + line 1127 amendment A2
   const monthYears = ['Apr 2026', 'May 2026', 'Jun 2026']
   for (let i = 0; i < 250; i++) {
-    const name = contributorNames[i % contributorNames.length]
-    const district = districts[i % districts.length]
-    const monthYear = monthYears[Math.floor(i / 85) % monthYears.length]
+    // Non-null asserted: modulo-indexed access on non-empty arrays — `i %
+    // arr.length` always yields a valid index. noUncheckedIndexedAccess
+    // surfacing per Story 1.1 AC-3 strict-mode triage.
+    const name = contributorNames[i % contributorNames.length]!
+    const district = districts[i % districts.length]!
+    const monthYear = monthYears[Math.floor(i / 85) % monthYears.length]!
     // About 1 in 3 contributors leave a memory line
-    const memoryLine = i % 3 === 0 ? memoryLines[i % memoryLines.length] : null
+    const memoryLine = i % 3 === 0 ? memoryLines[i % memoryLines.length]! : null
     contributors.push({
       id: `contrib-${i.toString().padStart(3, '0')}`,
       name,
@@ -126,7 +129,9 @@ export const SAMPLE_CONTRIBUTORS: Contributor[] = generateContributors()
 // pages for standalone counts/dates/amounts)
 export function formatBirthDeath(birth: string, death: string): string {
   const formatDate = (iso: string): string => {
-    const [year] = iso.split('-')
+    // Non-null asserted: ISO date strings always split on '-' with at least
+    // one segment. noUncheckedIndexedAccess surfacing per Story 1.1 AC-3.
+    const [year] = iso.split('-') as [string, ...string[]]
     return year  // year-only display per memorial discipline
   }
   return `${formatDate(birth)} – ${formatDate(death)}`

@@ -1,5 +1,5 @@
 {
-  "name": "mobile",
+  "name": "@twt/mobile",
   "version": "2.1.0-1780546777640",
   "private": true,
   "main": "expo-router/entry",
@@ -10,6 +10,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
+    "build": "echo 'mobile ships via EAS Build (eas.json profiles); PR-1 build target intentionally a no-op'",
+    "dev": "expo start -c",
+    "typecheck": "tsc --noEmit",
     "test": "true",
     "test:web": "true"
   },
@@ -17,6 +20,7 @@
     "@expo-google-fonts/ibm-plex-sans-devanagari": "^0.4.1",
     "@expo-google-fonts/noto-sans-devanagari": "^0.4.1",
     "@expo-google-fonts/tiro-devanagari-hindi": "^0.4.0",
+    "@react-navigation/native": "^7.0.0",
     "@shopify/flash-list": "^2.3.1",
     "@tamagui/config": "^2.1.0",
     "@tamagui/lucide-icons-2": "^2.1.0",
@@ -58,6 +62,5 @@
     "@types/react": "~19.1.10",
     "serve": "^14.2.5",
     "typescript": "~5.9.2"
-  },
-  "packageManager": "pnpm@10.30.3"
+  }
 }

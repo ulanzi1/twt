@@ -30,11 +30,11 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
   return (
     <XStack
       height={56}
-      alignItems="center"
-      paddingHorizontal={12}
+      items="center"
+      px={12}
       borderBottomWidth={isFifthRow ? 1 : StyleSheet.hairlineWidth}
       borderBottomColor="$borderColor"
-      backgroundColor="$background"
+      bg="$background"
       accessible
       accessibilityRole="text"
       accessibilityLabel={a11yLabel}
@@ -57,7 +57,7 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
         fontSize="$4"
         color="$color"
         numberOfLines={1}
-        paddingHorizontal={8}
+        px={8}
       >
         {row.sahyog}
       </Text>
@@ -68,7 +68,7 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
         fontFamily="$tabular"
         fontSize="$3"
         color="$colorPress"
-        textAlign="right"
+        text="right"
         style={styles.tabularNums}
       >
         {row.pool}
@@ -81,7 +81,7 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
         fontSize="$4"
         fontWeight="500"
         color="$color"
-        textAlign="right"
+        text="right"
         style={styles.tabularNums}
       >
         {formatInr(row.amountInr)}

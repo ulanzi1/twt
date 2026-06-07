@@ -75,9 +75,9 @@ export function ShradhanjaliSahyogVivran() {
   const keyExtractor = useCallback((item: Contributor) => item.id, [])
 
   return (
-    <YStack flex={1} backgroundColor="$background">
+    <YStack flex={1} bg="$background">
       {/* Full-bleed black rule at top per UX spec line 470 */}
-      <View height={4} backgroundColor="#000000" width="100%" />
+      <View height={4} bg="#000000" width="100%" />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -85,13 +85,13 @@ export function ShradhanjaliSahyogVivran() {
       >
         <YStack
           width={contentWidth}
-          alignSelf="center"
-          paddingHorizontal={16}
-          paddingTop={24}
+          self="center"
+          px={16}
+          pt={24}
           gap="$5"
         >
           {/* Portrait — centered square with nested black/white borders */}
-          <YStack alignItems="center">
+          <YStack items="center">
             <MemorialPortrait size={160} subjectName={SAMPLE_MEMORIAL.name} />
           </YStack>
 
@@ -101,7 +101,7 @@ export function ShradhanjaliSahyogVivran() {
             fontFamily="$heading"
             fontSize="$10"
             color="$color"
-            textAlign="center"
+            text="center"
             lineHeight="$10"
             accessibilityRole="header"
           >
@@ -113,8 +113,8 @@ export function ShradhanjaliSahyogVivran() {
             fontFamily="$tabular"
             fontSize="$3"
             color="$colorPress"
-            textAlign="center"
-            marginTop={-12}
+            text="center"
+            mt={-12}
             style={styles.tabularNums}
           >
             {formatBirthDeath(SAMPLE_MEMORIAL.birthDate, SAMPLE_MEMORIAL.deathDate)}
@@ -127,7 +127,7 @@ export function ShradhanjaliSahyogVivran() {
             fontSize="$4"
             color="$color"
             lineHeight={26}
-            textAlign="left"
+            text="left"
           >
             {SAMPLE_MEMORIAL.parichay}
           </Text>
@@ -140,9 +140,9 @@ export function ShradhanjaliSahyogVivran() {
             fontFamily="$heading"
             fontSize="$5"
             color="$color"
-            textAlign="center"
+            text="center"
             letterSpacing={2}
-            marginTop="$2"
+            mt="$2"
           >
             {SAMPLE_MEMORIAL.bhavpurnaLine}
           </Text>
@@ -153,9 +153,9 @@ export function ShradhanjaliSahyogVivran() {
           {/* Hairline before contributor scroll */}
           <View
             height={StyleSheet.hairlineWidth}
-            backgroundColor="#000000"
+            bg="#000000"
             width="100%"
-            marginTop="$4"
+            mt="$4"
           />
 
           {/* स्मरण में header */}
@@ -163,9 +163,9 @@ export function ShradhanjaliSahyogVivran() {
             fontFamily="$body"
             fontSize="$3"
             color="$colorPress"
-            textAlign="center"
+            text="center"
             letterSpacing={1}
-            marginTop={-8}
+            mt={-8}
           >
             स्मरण में
           </Text>
@@ -177,7 +177,7 @@ export function ShradhanjaliSahyogVivran() {
             FlashList v2 prop-typing wrinkle under React 19 + new arch — cast as
             any (same pattern as FlatList in Yogdaan Bahi Day 3). Runtime behavior
             unchanged. */}
-        <YStack width={contentWidth} alignSelf="center" minHeight={400}>
+        <YStack width={contentWidth} self="center" minH={400}>
           {(() => {
             const FlashListAny = FlashList as any
             return (
@@ -199,17 +199,17 @@ export function ShradhanjaliSahyogVivran() {
             UPI Intent for P2 measurement per architecture line 90. */}
         <YStack
           width={contentWidth}
-          alignSelf="center"
-          paddingHorizontal={16}
-          paddingVertical={24}
+          self="center"
+          px={16}
+          py={24}
           gap="$3"
         >
           <View
             height={StyleSheet.hairlineWidth}
-            backgroundColor="$borderColor"
+            bg="$borderColor"
             width="100%"
           />
-          <XStack justifyContent="center">
+          <XStack justify="center">
             <Pressable
               onPress={handleSahyogTap}
               accessibilityRole="link"
@@ -231,9 +231,9 @@ export function ShradhanjaliSahyogVivran() {
               measurement evidence capture at Task 10. Hidden until first tap. */}
           {upiOutcome && (
             <YStack
-              paddingHorizontal={12}
-              paddingVertical={8}
-              backgroundColor="$backgroundHover"
+              px={12}
+              py={8}
+              bg="$backgroundHover"
               gap={4}
             >
               <Text fontFamily="$body" fontSize="$1" color="$colorPress">

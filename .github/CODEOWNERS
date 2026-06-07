@@ -1,0 +1,13 @@
+# CODEOWNERS — TWT monorepo
+#
+# Per architecture §Generated artifacts excluded from PR review diff
+# (architecture lines 4001-4005), generated paths are owned by a dedicated
+# bot identity so the diff stays focused on hand-authored sources.
+# The bot identity is TBD at PR-1; substituted with the Solo Builder handle
+# and TODO-marked for a downstream Story that introduces the bot identity.
+
+* @ulanzi1
+
+# TODO swap to bot identity once provisioned:
+packages/api-client/dist/* @ulanzi1
+openapi/v1.yaml @ulanzi1

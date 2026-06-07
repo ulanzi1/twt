@@ -18,7 +18,7 @@ export function KinshipLattice({ kinship }: Props) {
         <XStack
           key={`${relation}-${i}`}
           gap="$3"
-          alignItems="baseline"
+          items="baseline"
           accessible
           accessibilityRole="text"
           accessibilityLabel={`${relation}: ${names}`}
@@ -28,7 +28,7 @@ export function KinshipLattice({ kinship }: Props) {
             fontFamily="$body"
             fontSize="$3"
             color="$colorPress"
-            textAlign="right"
+            text="right"
           >
             {relation}
           </Text>

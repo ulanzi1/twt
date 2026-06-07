@@ -19,7 +19,7 @@ export function MemoryInput() {
       <YStack
         borderBottomWidth={1}
         borderBottomColor="$borderColor"
-        paddingBottom={6}
+        pb={6}
       >
         <TextInput
           value={text}
@@ -40,7 +40,7 @@ export function MemoryInput() {
           }}
         />
       </YStack>
-      <Text fontFamily="$tabular" fontSize="$1" color="$colorPress" textAlign="right">
+      <Text fontFamily="$tabular" fontSize="$1" color="$colorPress" text="right">
         {text.length} / {MAX_CHARS}
       </Text>
     </YStack>

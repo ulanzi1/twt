@@ -15,13 +15,13 @@ type Props = {
 export function RecentClosingRow({ closing }: Props) {
   return (
     <XStack
-      paddingHorizontal={16}
-      paddingVertical={10}
-      alignItems="baseline"
+      px={16}
+      py={10}
+      items="baseline"
       gap="$2"
       borderBottomWidth={StyleSheet.hairlineWidth}
       borderBottomColor="$borderColor"
-      backgroundColor="$background"
+      bg="$background"
       accessible
       accessibilityRole="text"
       accessibilityLabel={`${closing.memorialName}, ${closing.district}, ${formatCount(closing.contributorCount)} contributors`}
@@ -38,7 +38,7 @@ export function RecentClosingRow({ closing }: Props) {
         color="$colorPress"
         style={styles.tabularNums}
         width={56}
-        textAlign="right"
+        text="right"
       >
         {formatCount(closing.contributorCount)}
       </Text>

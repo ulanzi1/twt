@@ -1,0 +1,9 @@
+# Generated artifacts excluded from PR review diff per architecture §Generated
+# artifacts deterministic + synchronized (architecture lines 4001-4005). These
+# paths do not exist at PR-1; the linguist-generated marking reserves the
+# convention so the diff stays focused on hand-authored sources.
+packages/api-client/dist/* linguist-generated=true
+openapi/v1.yaml linguist-generated=true
+
+# Lockfile collapsed in diff view (still tracked + reviewed via commands).
+pnpm-lock.yaml linguist-generated=true

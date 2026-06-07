@@ -27,11 +27,11 @@ function ColumnHeader() {
   return (
     <XStack
       height={COLUMN_HEADER_HEIGHT}
-      alignItems="center"
-      paddingHorizontal={12}
+      items="center"
+      px={12}
       borderBottomWidth={1}
       borderBottomColor="$borderColor"
-      backgroundColor="$background"
+      bg="$background"
       accessible
       accessibilityRole="header"
       accessibilityLabel="Yogdaan Bahi columns: दिनांक, सहयोग, पूल, राशि"
@@ -51,7 +51,7 @@ function ColumnHeader() {
         fontSize="$2"
         fontWeight="500"
         color="$colorPress"
-        paddingHorizontal={8}
+        px={8}
       >
         सहयोग
       </Text>
@@ -61,7 +61,7 @@ function ColumnHeader() {
         fontSize="$2"
         fontWeight="500"
         color="$colorPress"
-        textAlign="right"
+        text="right"
       >
         पूल
       </Text>
@@ -71,7 +71,7 @@ function ColumnHeader() {
         fontSize="$2"
         fontWeight="500"
         color="$colorPress"
-        textAlign="right"
+        text="right"
       >
         राशि
       </Text>
@@ -83,11 +83,11 @@ function StickyFooter({ totalInr, rowCount }: { totalInr: number; rowCount: numb
   return (
     <XStack
       height={FOOTER_HEIGHT}
-      alignItems="center"
-      paddingHorizontal={12}
+      items="center"
+      px={12}
       borderTopWidth={1.5}
       borderTopColor="$borderColor"
-      backgroundColor="$background"
+      bg="$background"
       accessible
       accessibilityRole="summary"
       accessibilityLabel={`कुल योगदान: ${formatInr(totalInr)} across ${rowCount} entries`}
@@ -105,7 +105,7 @@ function StickyFooter({ totalInr, rowCount }: { totalInr: number; rowCount: numb
         fontSize="$6"
         fontWeight="500"
         color="$color"
-        textAlign="right"
+        text="right"
         style={styles.tabularNums}
       >
         {formatInr(totalInr)}
@@ -120,10 +120,10 @@ function FreshnessStrip({ fetchedAt, isFetching }: { fetchedAt: number | undefin
     : 'Loading…'
   return (
     <XStack
-      paddingHorizontal={12}
-      paddingVertical={6}
-      backgroundColor="$backgroundHover"
-      alignItems="center"
+      px={12}
+      py={6}
+      bg="$backgroundHover"
+      items="center"
       gap="$2"
     >
       <Text fontFamily="$body" fontSize="$1" color="$colorPress">
@@ -177,7 +177,7 @@ export function YogdaanBahi() {
   const FlatListAny = FlatList as any
 
   return (
-    <YStack flex={1} backgroundColor="$background">
+    <YStack flex={1} bg="$background">
       <FreshnessStrip fetchedAt={data?.fetchedAt} isFetching={isFetching} />
       <FlatListAny
         data={rows}

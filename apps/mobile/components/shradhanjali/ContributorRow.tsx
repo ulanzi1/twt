@@ -24,11 +24,11 @@ function ContributorRowComponent({ contributor }: Props) {
 
   return (
     <YStack
-      paddingHorizontal={12}
-      paddingVertical={hasMemory ? 8 : 10}
+      px={12}
+      py={hasMemory ? 8 : 10}
       borderBottomWidth={StyleSheet.hairlineWidth}
       borderBottomColor="$borderColor"
-      backgroundColor="$background"
+      bg="$background"
       accessible
       accessibilityRole="text"
       accessibilityLabel={a11yLabel}
@@ -38,14 +38,14 @@ function ContributorRowComponent({ contributor }: Props) {
           fontFamily="$body"
           fontSize="$3"
           color="$color"
-          marginBottom={4}
+          mb={4}
           // Light letter-spacing to suggest reflection cadence per memorial register
           letterSpacing={0.2}
         >
           {contributor.memoryLine}
         </Text>
       )}
-      <XStack alignItems="baseline" gap="$2">
+      <XStack items="baseline" gap="$2">
         <Text flex={1} fontFamily="$body" fontSize="$3" color="$color">
           {contributor.name}
         </Text>

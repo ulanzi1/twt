@@ -29,10 +29,10 @@ export function MemorialPortrait({ size = 160, subjectName }: Props) {
     <View
       width={size}
       height={size}
-      backgroundColor="#000000"
-      alignItems="center"
-      justifyContent="center"
-      padding={WHITE_INSET_WIDTH}
+      bg="#000000"
+      items="center"
+      justify="center"
+      p={WHITE_INSET_WIDTH}
       accessible
       accessibilityRole="image"
       accessibilityLabel={a11yLabel}
@@ -40,17 +40,17 @@ export function MemorialPortrait({ size = 160, subjectName }: Props) {
       <View
         flex={1}
         width="100%"
-        backgroundColor="#FFFFFF"
-        alignItems="center"
-        justifyContent="center"
-        padding={OUTER_BORDER_WIDTH}
+        bg="#FFFFFF"
+        items="center"
+        justify="center"
+        p={OUTER_BORDER_WIDTH}
       >
         {/* Portrait area — gray placeholder for prototype.
             Production will render opt-in DPDPA-consented photo. */}
         <View
           flex={1}
           width="100%"
-          backgroundColor="#D8D6D3"
+          bg="#D8D6D3"
         />
       </View>
     </View>

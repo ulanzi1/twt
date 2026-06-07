@@ -15,9 +15,9 @@ type Props = {
 export function StatLine({ stats }: Props) {
   return (
     <XStack
-      paddingHorizontal={16}
-      paddingVertical={12}
-      alignItems="center"
+      px={16}
+      py={12}
+      items="center"
       gap="$2"
     >
       <Stat count={stats.totalMembers} label="सदस्य" />
@@ -45,7 +45,7 @@ export function StatLine({ stats }: Props) {
 
 function Stat({ count, label }: { count: number; label: string }) {
   return (
-    <XStack alignItems="baseline" gap="$1">
+    <XStack items="baseline" gap="$1">
       <Text
         fontFamily="$tabular"
         fontSize="$3"

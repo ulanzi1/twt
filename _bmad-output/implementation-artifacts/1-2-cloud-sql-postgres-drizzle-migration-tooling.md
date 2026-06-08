@@ -1,6 +1,6 @@
 # Story 1.2: Cloud SQL Postgres + Drizzle Migration Tooling
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

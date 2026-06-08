@@ -213,6 +213,9 @@ importers:
       '@tamagui/babel-plugin':
         specifier: ^2.1.0
         version: 2.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@twt/eslint-config-twt':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-twt
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.2

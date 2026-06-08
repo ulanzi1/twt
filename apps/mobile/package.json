@@ -12,6 +12,7 @@
     "build:web": "expo export --platform web",
     "build": "echo 'mobile ships via EAS Build (eas.json profiles); PR-1 build target intentionally a no-op'",
     "dev": "expo start -c",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "true",
     "test:web": "true"
@@ -58,6 +59,7 @@
     "@expo/metro-runtime": "~55.0.6",
     "@playwright/test": "^1.49.1",
     "@tamagui/babel-plugin": "^2.1.0",
+    "@twt/eslint-config-twt": "workspace:*",
     "@types/node": "^25.9.1",
     "@types/react": "~19.1.10",
     "serve": "^14.2.5",

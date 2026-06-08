@@ -1,6 +1,6 @@
 # Story 1.1: Turborepo Monorepo Bootstrap `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -501,3 +501,42 @@ _(populated during dev-story execution)_
 **`_bmad-output/implementation-artifacts/` (modified)**
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `1-1-turborepo-monorepo-bootstrap` status flipped `ready-for-dev` → `in-progress` → `review` (final flip at Task 7.4)
 - `_bmad-output/implementation-artifacts/1-1-turborepo-monorepo-bootstrap.md` — Status flipped + Dev Agent Record populated (Completion Notes List + File List)
+
+### Review Findings
+
+**Group A — Infra + Config (2026-06-08)**
+Code review via bmad-code-review: 3 layers (Blind Hunter + Edge Case Hunter + Acceptance Auditor). 0 decision-needed, 6 patch, 11 deferred, 7 dismissed.
+
+**Patch findings (Group A):**
+- [x] [Review][Dismiss] Duplicate "Friction-budget declaration" in PR template — false positive introduced by reviewer prompt error; actual file has 6 correct unique items [`.github/pull_request_template.md`]
+- [x] [Review][Patch] `no-restricted-imports` pattern only catches `../../` depth — fixed: replaced with `regex: '^(?:\\.\\./)+(?:packages|apps)/'` to catch imports at any depth [`packages/eslint-config-twt/index.js`]
+- [x] [Review][Patch] `apps/mobile` has no `lint` script — fixed: added `"lint": "eslint ."` to scripts [`apps/mobile/package.json`]
+- [x] [Review][Patch] No `.prettierignore` — fixed: created `.prettierignore` excluding dist/, build outputs, generated files, and BMAD docs [`.prettierignore`]
+- [x] [Review][Patch] Direct pushes to `release/*` branches don't trigger CI — fixed: added `'release/*'` to `on.push.branches` [`.github/workflows/ci.yml`]
+- [x] [Review][Patch] `test` CI job `needs: install` only — fixed: changed to `needs: [install, build]` per spec Task 6.1 [`.github/workflows/ci.yml`]
+
+**Deferred findings (Group A):**
+- [x] [Review][Defer] CI jobs each re-run `pnpm install` independently — no `node_modules` sharing between jobs; pnpm store IS cached via `setup-node cache: pnpm` so installs are fast; acceptable pattern for pnpm monorepos — deferred, pre-existing
+- [x] [Review][Defer] `PARIWAR_PROFILE` not documented in `.env.example` — env-var inventory is downstream-story work per Completion Notes — deferred, pre-existing
+- [x] [Review][Defer] `pnpm-lock.yaml` hidden from GitHub PR diff — deliberate tradeoff per `.gitattributes` comment; no compensating `pnpm audit` CI step — deferred, pre-existing
+- [x] [Review][Defer] `packages/api-client/dist/*` and `openapi/v1.yaml` in `.gitattributes`/CODEOWNERS never fire — `dist/` is gitignored; rules activate when Story 1.4 un-gitignores the generated client — deferred, pre-existing
+- [x] [Review][Defer] `"moduleResolution": "Bundler"` may not suit bare Node.js API workspaces — workspace-level tsconfig can override; revisit when `apps/api` gets a real entrypoint — deferred, pre-existing
+- [x] [Review][Defer] `eslint.config.js` ignores `infra/**` — only markdown READMEs at PR-1; revisit when IaC TypeScript lands — deferred, pre-existing
+- [x] [Review][Defer] `turbo test` task depends only on `^build` (upstream deps), not local `build` — acceptable at PR-1 since smoke tests import source directly; revisit when any workspace tests compiled output — deferred, pre-existing
+- [x] [Review][Defer] `.env*` as Turbo build cache inputs could contribute to cache key pollution if remote cache is enabled — moot at PR-1 with local-only cache — deferred, pre-existing
+- [x] [Review][Defer] `eslint-config-twt` runtime deps (`@eslint/js`, `typescript-eslint`, etc.) in `devDependencies` not `dependencies` — works via hoisted linker in monorepo; fragile if package is extracted — deferred, pre-existing
+- [x] [Review][Defer] `turbo.json` declares `.expo/**` as `build` output but mobile build is a no-op echo — not an issue at PR-1; revisit when mobile build script becomes substantive — deferred, pre-existing
+- [x] [Review][Defer] `packages/api-client/dist/*` CODEOWNERS/gitattributes rules dead until dist/ un-gitignored — Story 1.4 territory — deferred, pre-existing
+
+**Group B — Workspaces + Mobile port (2026-06-08)**
+Code review via bmad-code-review: 3 layers (Blind Hunter + Edge Case Hunter + Acceptance Auditor). 0 decision-needed, 1 patch, 5 deferred, 5 dismissed.
+
+**Patch findings (Group B):**
+- [x] [Review][Patch] README "five canonical commands" count error — CI has 4 Turbo jobs (lint/typecheck/test/build); fixed two occurrences: step-4 header + line-93 CI description [`README.md`]
+
+**Deferred findings (Group B):**
+- [x] [Review][Defer] Missing `.dockerignore` on all 4 app Dockerfiles — `COPY . .` in build stage will copy host `node_modules/`, `.git/`, `_bmad-output/` on first Docker build; introduce `.dockerignore` before any Docker build is run — deferred, pre-existing
+- [x] [Review][Defer] `apps/mobile/app.json` prototype identifiers (`slug: twt-p0-5-prototype`, `bundleIdentifier/package: org.teacherswelfaretrust.p0prototype`) — ported byte-for-byte per story; update to production values before EAS Build / store submission — deferred, pre-existing
+- [x] [Review][Defer] Dockerfile runtime stages lack node_modules — `COPY --from=build dist + package.json` but no install step; current `export {}` survives; real runtime code will fail — deferred, PR-1 placeholder scope
+- [x] [Review][Defer] `@types/node` version skew — app workspaces pin `^22.15.3`, mobile pins `^25.9.1`; standardize in a future hygiene pass — deferred, pre-existing
+- [x] [Review][Defer] `format:check` not CI-gated — root `pnpm format:check` script exists but no Turbo task and no CI job; Prettier violations can land undetected; add as 5th CI gate before first external contributor — deferred, pre-existing

@@ -416,3 +416,41 @@ Per [[feedback_closure_language_precision]]:
 - **W-02: P1 Devanagari rendering measurements on MediaTek/Mali GPU substitute do not generalize to Snapdragon/Adreno Bihar-retail baseline** [`docs/native-stack-validation/device-procurement-roster.md §4` FM-2 disposition Row 1] — Per Decision 2026-06-05-030 Q14.2 trustee-own-fund disposition, the substitute device for Row 1 (mid-range Android target) is **Redmi 10** (MediaTek Helio G88; Mali GPU). UX spec line 810 specifies a Snapdragon 4-series target because that chipset family is the common Bihar-retail baseline; Mali GPU has different text-shaping and rendering characteristics vs Adreno. P1 measurements on this device represent the Mali rendering surface only; results do not necessarily generalize to the Adreno baseline. **Mitigation path proposed**: Task 11 ratify-decision FM-2 escalation trace surfaces this caveat + recommends post-launch supplementary measurement on a Snapdragon 4-series device at first opportunity (e.g., concurrent with P5 2GB-floor follow-on procurement). Trustee acknowledgment threshold ≥1 per UX spec line 845 + Decision 030 Q14.4. Reopen as Phase-1 pre-launch action item if Task 11 flags as load-bearing.
 
 - **W-03: Apple Developer Program enrollment-on-demand pattern preserves cost-deferral but introduces P3-measurement-blocking risk if Task 9 schedule slips past Day 10 enrollment trigger** [`docs/native-stack-validation/device-procurement-roster.md §4` Row 3 notes; `docs/native-stack-validation/engagement-ledger.md §4` Apple Developer Program enrollment lifecycle] — Per Decision 2026-06-05-030 Q14.2 close-out, Apple Developer Program enrollment is deferred to ~Day 10 of Task 9 prototype build (P3 push-notification dependency). If Task 9 schedule slips such that P3 measurement is delayed substantively, enrollment can be deferred further within the ~2-week Task 9 timebox — but if it slips beyond the timebox, Task 9 itself is in F4 velocity-fail territory per UX spec line 839 (timebox >3× target). Operational discipline: monitor Task 9 progress at Day 7 + Day 10 checkpoints; if Day 10 P3 readiness lags >2 days, surface as Task 11 FM-2 escalation event. Reopen if F4 velocity-fail triggers.
+
+## Deferred from: code review of 1-1-turborepo-monorepo-bootstrap.md, Group A (2026-06-08)
+
+- **D-01: CI jobs each re-run `pnpm install` independently** — No `node_modules` sharing between GitHub Actions jobs. The pnpm store is cached via `setup-node cache: pnpm` making installs fast in practice. Acceptable pattern for pnpm monorepos. Revisit if CI install time becomes load-bearing.
+
+- **D-02: `PARIWAR_PROFILE` not documented in `.env.example`** — Env-var inventory is explicitly downstream-story work per Completion Notes (p). The `.env.example` is intentionally a "root index" at PR-1.
+
+- **D-03: `pnpm-lock.yaml` hidden from GitHub PR diff** — Deliberate tradeoff per `.gitattributes` comment ("still tracked + reviewed via commands"). No compensating `pnpm audit` CI step. Lockfile supply-chain review relies on human discipline at code review time.
+
+- **D-04: `dist/*` rules in `.gitattributes` / CODEOWNERS never fire — `dist/` gitignored** — `packages/api-client/dist/*` and `openapi/v1.yaml` are referenced in both files but `dist/` is gitignored. The rules activate only when Story 1.4 generates and commits the OpenAPI client. Story 1.4 must add a `.gitignore` negation (`!packages/api-client/dist/`) at that time.
+
+- **D-05: `"moduleResolution": "Bundler"` may not suit bare Node.js workspaces** — `Bundler` resolution in `tsconfig.base.json` is correct for bundled workspaces (mobile, public). For Node.js servers (`apps/api`, `apps/admin`), `Node16`/`NodeNext` is more accurate. Workspace-level `tsconfig.json` can override. Revisit when `apps/api` gets a real entrypoint in Story 1.X.
+
+- **D-06: `eslint.config.js` ignores `infra/**`** — Only markdown READMEs in `infra/` at PR-1. When TypeScript IaC (CDK, Pulumi) lands under `infra/`, remove the ignore entry or add a targeted sub-config.
+
+- **D-07: `turbo test` task depends on `^build` only, not local `build`** — Acceptable at PR-1 because all smoke tests import from `src/` directly, not from `dist/`. When any workspace adds tests that exercise compiled output, the `test` task should add `"dependsOn": ["build", "^build"]` at that workspace level.
+
+- **D-08: `.env*` as Turbo build cache inputs** — If remote Turbo cache is ever enabled, env files become part of the cache fingerprint. Moot until remote cache is configured (explicitly deferred in Completion Notes (h)).
+
+- **D-09: `eslint-config-twt` runtime deps in `devDependencies`** — `@eslint/js`, `typescript-eslint`, `globals`, `eslint-config-prettier` are all in `devDependencies`, not `dependencies`. Works in the hoisted monorepo. Breaks if the package is ever extracted. When `eslint-config-twt` is published or extracted, move these to `dependencies`.
+
+- **D-10: `.expo/**` as Turbo `build` output despite mobile build being a no-op** — Low risk at PR-1 (empty output, local cache only). When `apps/mobile` gets a substantive build script, verify Turbo cache behavior for `.expo/` artifacts.
+
+- **D-11: `CODEOWNERS` and `.gitattributes` `dist/*` rules dead letter** — Same as D-04 (same root cause). Consolidated here for completeness.
+
+---
+
+## Deferred from: code review of 1-1-turborepo-monorepo-bootstrap.md, Group B (2026-06-08)
+
+- **D-12: Missing `.dockerignore` on all 4 app Dockerfiles** — `apps/{api,admin,public,jobs}/Dockerfile` each use `COPY . .` in their build stage with no `.dockerignore`. Without it, host `node_modules/`, `.git/`, and `_bmad-output/` enter the Docker build context, can corrupt the installed node_modules from the `deps` stage (host platform-specific binaries overwrite Alpine ones), and produce oversized images. CI does not build Docker images at PR-1, so no immediate breakage. Create a root `.dockerignore` (at minimum: `node_modules/`, `.git/`, `_bmad-output/`, `_bmad/`, `*.tsbuildinfo`, `.turbo/`) before any Docker build is introduced.
+
+- **D-13: `apps/mobile/app.json` prototype identifiers** — `name: "TWT P0-5 Prototype"`, `slug: "twt-p0-5-prototype"`, `scheme: "twtp05"`, iOS/Android `bundleIdentifier`/`package: org.teacherswelfaretrust.p0prototype`. Ported byte-for-byte from Story 0.14 prototype per Decision 2026-06-05-030. Must be updated to production values (`org.teacherswelfaretrust.twt` or equivalent) before the first EAS Build profile run or App Store / Play Store submission. Tag for the story that formalizes the mobile app config and EAS credentials.
+
+- **D-14: Dockerfile runtime stages lack node_modules** — The `runtime` stage in each app Dockerfile copies only `dist/` + `package.json` with no `pnpm install` step. Current placeholder `export {}` compiles to a no-op and doesn't crash. When real runtime code is added, the runtime image will crash with "Cannot find module" for any production dependency. Each Dockerfile's runtime stage will need either `pnpm install --prod` or a selective `COPY --from=deps` of the installed modules before going live.
+
+- **D-15: `@types/node` version skew across workspaces** — `apps/{api,admin,public,jobs}` and all `packages/*` use `@types/node: ^22.15.3`; `apps/mobile` uses `^25.9.1`. Both are functional with Node.js 20 runtime (types are compatible). However the skew can cause IDE type-narrowing differences between workspaces and will diverge further over time. Standardize to a single version (e.g., `^22.x` or `^20.x` matching the Node.js runtime floor) in a dependency-hygiene pass.
+
+- **D-16: `format:check` not CI-gated** — `pnpm format:check` exists as a root `package.json` script but is not a Turbo task and is not run in `.github/workflows/ci.yml`. Prettier violations can land undetected until a developer runs `pnpm format:check` locally. Consider adding a `format` CI job (`pnpm format:check`) as the 5th canonical CI gate, particularly before the first external contributor joins the repo. Would also let README claim "five canonical commands" accurately.

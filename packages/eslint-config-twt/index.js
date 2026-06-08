@@ -44,7 +44,9 @@ export default [
         {
           patterns: [
             {
-              group: ['../../packages/*', '../../apps/*'],
+              // Regex catches relative imports at any depth that cross into a sibling workspace.
+              // e.g., ../../packages/events, ../../../apps/mobile — any number of ../ levels.
+              regex: '^(?:\\.\\./)+(?:packages|apps)/',
               message:
                 'Cross-workspace imports must use the package name (e.g., @twt/events), not relative paths. Per architecture §Cross-workspace imports use the package name (architecture lines 3779-3781).',
             },

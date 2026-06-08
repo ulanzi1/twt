@@ -27,6 +27,35 @@ pnpm turbo run build
 pnpm turbo run dev --filter=@twt/mobile
 ```
 
+## Database + migrations
+
+Cloud SQL Postgres 16 in GCP `asia-south1` is the system's transactional
+datastore (per architecture §1.1 + ADR-0003). Drizzle ORM + drizzle-kit are
+the schema authoring + migration toolchain; `packages/domain/` is the
+architecture-canonical home.
+
+```sh
+# Local dev: Docker Postgres 16 (recommended for substrate work)
+docker run --name twt-pg -e POSTGRES_USER=twt_dev_app -e POSTGRES_PASSWORD=devpass \
+  -e POSTGRES_DB=twt_dev -p 5432:5432 -d postgres:16
+
+# Or Cloud SQL Auth Proxy (matches production wire path)
+cloud-sql-proxy --port=5432 twt-dev:asia-south1:twt-dev-postgres &
+
+# Then in packages/domain/.env: DATABASE_URL=postgresql://...
+pnpm db:migrate   # apply pending migrations idempotently
+pnpm db:check     # per-PR drift detection (no DB connection)
+pnpm db:generate  # author a new migration from schema diff
+pnpm db:studio    # local table explorer (dev only)
+```
+
+See `packages/domain/README.md` for the snake_case-DB / camelCase-TS naming
+discipline, drizzle-kit forward-only migration policy, per-migration
+atomicity rule, online-migration three-step rollout, per-workspace pool
+isolation, Secret Manager connection resolution, root db:* / Turbo
+db:check wiring rationale, and the Story 1.16c schema-diff CI gate
+boundary.
+
 ## Workspace layout
 
 Architecture-authoritative per `architecture.md` §Workspace Layout + §Complete project directory structure (lines 382-417 + 4137-4439).

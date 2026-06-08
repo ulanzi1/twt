@@ -14,12 +14,12 @@ This index is **authoritative** for ADR status across the whole project; the `do
 | `ratified` | Ratified by ≥2 trustees; logged in `.decision-log.md`; operationally binding. |
 | `superseded` | A later ADR has overridden this one. The row is preserved as the architectural-evolution record; the superseding ADR is cross-linked. |
 
-Status summary as of Story 0.5 Task 2 author-commit (2026-05-30); Section I appended 2026-05-30 per Story 0.7 Decision 2026-05-30-007; Section J appended 2026-06-01 per Story 0.12 Decision 2026-06-01-012; Section J extended 2026-06-01 with `ADR-NNNN-SM-1-amendment` slot per Decision 2026-06-01-012-amend-1 (D-07 code-review supersession); Section K appended 2026-06-02 per Story 0.13 Decision 2026-06-02-013; Section L appended 2026-06-03 per Story 0.15 Decision 2026-06-03-015 (+6 slots):
+Status summary as of Story 0.5 Task 2 author-commit (2026-05-30); Section I appended 2026-05-30 per Story 0.7 Decision 2026-05-30-007; Section J appended 2026-06-01 per Story 0.12 Decision 2026-06-01-012; Section J extended 2026-06-01 with `ADR-NNNN-SM-1-amendment` slot per Decision 2026-06-01-012-amend-1 (D-07 code-review supersession); Section K appended 2026-06-02 per Story 0.13 Decision 2026-06-02-013; Section L appended 2026-06-03 per Story 0.15 Decision 2026-06-03-015 (+6 slots); `ADR-0003-datastore-engine` slot closed 2026-06-08 per Story 1.2 Decision 2026-06-08-038 (Section A row at line 54 flipped `slot-reserved-pre-write` → `drafted`):
 
 | Status | Row count |
 |---|---|
-| `slot-reserved-pre-write` | 125 |
-| `drafted` | 0 |
+| `slot-reserved-pre-write` | 124 |
+| `drafted` | 1 |
 | `under-trustee-review` | 0 |
 | `ratified` | 0 |
 | `superseded` | 0 |
@@ -51,7 +51,7 @@ Source: architecture.md §Deferred Decisions (lines 143-239). Each row correspon
 | ADR-NNNN-backend-language-runtime | Backend language / runtime / framework / API style / auth model selection | architecture.md §Deferred Decisions L149 | Solo Builder + Trustee Panel | Story 1.1 Turborepo monorepo bootstrap closure | `slot-reserved-pre-write` | architecture.md §Deferred Decisions |
 | ADR-NNNN-native-mobile-stack-ratify | Native mobile stack (RN + Tamagui) ratify decision | architecture.md §Deferred Decisions L150-152; PRD UX §6 P0-5 | Solo Builder + Trustee Panel | Story 0.14 P0-5 native-stack validation closure | `slot-reserved-pre-write` | architecture.md L150-152; epics.md Story 0.14 |
 | ADR-NNNN-web-stack-composition | Web stack composition (Tailwind + Radix base; per-surface specialization) | architecture.md §Deferred Decisions L153-156 | Solo Builder | Story 1.1 closure + per-app workspace stand-up | `slot-reserved-pre-write` | architecture.md L153-156 |
-| ADR-NNNN-datastore-engine | Datastore engine selection (Postgres committed at §1.1; engine-specific commitments in ADR) | architecture.md §Deferred Decisions L157-159; §1.1 | Solo Builder | Story 1.2 Cloud SQL Postgres + drizzle migration tooling closure | `slot-reserved-pre-write` | architecture.md §1.1 L691-714 |
+| ADR-0003-datastore-engine | Datastore engine selection (Postgres 16 + Cloud SQL + Drizzle ORM + drizzle-kit migrations) | architecture.md §Deferred Decisions L157-159; §1.1 | Solo Builder | Story 1.2 Cloud SQL Postgres + drizzle migration tooling closure | `drafted` | architecture.md §1.1 L691-714; `docs/adr/ADR-0003-datastore-engine.md`; Decision 2026-06-08-038 |
 | ADR-NNNN-cloud-hosting-region | Cloud hosting region / provider final binding (GCP `asia-south1` committed; provider freeze in ADR) | architecture.md §Deferred Decisions L160-161; §5.1 | Solo Builder + Trustee Panel | Story 1.1 + Story 1.15 (Dokploy auto-deploy pipeline) closure | `slot-reserved-pre-write` | architecture.md §5.1 L2920-2939 |
 | ADR-NNNN-deployment-substrate-k8s-migration | Deployment substrate K8s migration trigger + path | architecture.md §Deferred Decisions L162-163; §5.3 | Solo Builder + Trustee Panel | 2nd Pariwar provisioning OR sustained ≥70% peak-cycle infra utilization | `slot-reserved-pre-write` | architecture.md §5.3 L2995-3043 |
 | ADR-NNNN-dokploy-failure-fallback | Dokploy failure fallback for live-cycle continuity | architecture.md §Deferred Decisions L164-165; §5.3 | Solo Builder | Pre-Phase-1-soft-launch + operations-policy authoring | `slot-reserved-pre-write` | architecture.md §5.3; degradation-policy framework |

@@ -1,6 +1,6 @@
 # Story 0.12: P0-3 Spec-to-Cadence Reality Check Reconciled
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -527,3 +527,4 @@ claude-sonnet-4-6 (2026-06-01)
 | Date | Change | Author |
 |---|---|---|
 | 2026-06-01 | Tasks 1–6 author-committed: spec-to-cadence-reconciliation framework authored at `docs/spec-to-cadence-reconciliation/` per Decision 2026-06-01-012; 16 new files + 10 cross-reference edits; Tasks 7–11 tagged `_AWAITING EXTERNAL ACTION_`; story status → review | claude-sonnet-4-6 |
+| 2026-06-05 | Trustee questionnaire ratification transcribed per `phase-0-trustee-questionnaire.md` Q12.1–Q12.7 (both Dhiraj Rahul + Kalpana Bharti signed 2026-06-04). Decision 2026-06-04-016 sign-off + Decision 2026-06-05-028 ≥2-trustee composite acknowledgement appended to `.decision-log.md`. **Task 9 ratification-leg = Closed by [edit]** — no-trigger finding stands at `ceiling_ratio = 1.497 < 1.5`; cadence override 25→80 hr/week co-signed; Epic 4 + Epic 12 medium-band reassignment ratified; Task 8 deadline 2026-07-01 confirmed; W-02 threshold-proximity carve-out deferred to Month-3 re-attestation. **Tasks 10–11 execution-leg = Resolved via explicit deferral** — Solo Builder Epic List + sprint plan updates (Task 10) + Step 4 final implementation-readiness validation (Task 11) pending. Status flipped review → done per Decision 2026-06-05-028 + Decision 2026-06-05-035 (Phase-0 provisional closure per QX.2); AR-49 P0-3 row 2 of Story 0.15 inventory-roster closes concurrently per Q12.7. | claude-opus-4-7 |

@@ -1,0 +1,26 @@
+# Build outputs
+dist/
+build/
+out/
+coverage/
+
+# Turbo + TypeScript
+.turbo/
+*.tsbuildinfo
+
+# Framework outputs
+.next/
+.expo/
+
+# Generated artifacts
+openapi/v1.yaml
+packages/api-client/dist/
+
+# Third-party / lock files
+pnpm-lock.yaml
+
+# BMAD docs (not source code)
+_bmad/
+_bmad-output/
+design-artifacts/
+docs/

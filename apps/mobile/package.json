@@ -12,6 +12,7 @@
     "build:web": "expo export --platform web",
     "build": "echo 'mobile ships via EAS Build (eas.json profiles); PR-1 build target intentionally a no-op'",
     "dev": "expo start -c",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "true",
     "test:web": "true"

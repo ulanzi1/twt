@@ -17,7 +17,7 @@ corepack prepare pnpm@10.30.3 --activate
 # 3. Install all workspaces
 pnpm install --frozen-lockfile
 
-# 4. The five canonical commands (mirrored by CI on every PR)
+# 4. The four canonical commands (mirrored by CI on every PR)
 pnpm turbo run lint
 pnpm turbo run typecheck
 pnpm turbo run test
@@ -90,7 +90,7 @@ Migration debt for downstream **Story 1.17 (Design System Foundation)** is docum
 
 ## CI
 
-`.github/workflows/ci.yml` runs `install → lint → typecheck → test → build` on every PR to `main` + `release/*`. The same five commands run locally via `pnpm turbo run <task>`.
+`.github/workflows/ci.yml` runs `install → lint → typecheck → test → build` on every PR to `main` + `release/*`. The same four commands run locally via `pnpm turbo run <task>`.
 
 ## Where to file issues
 

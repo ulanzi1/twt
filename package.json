@@ -13,7 +13,11 @@
     "test": "turbo run test",
     "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "db:generate": "pnpm --filter @twt/domain db:generate",
+    "db:migrate": "pnpm --filter @twt/domain db:migrate",
+    "db:check": "pnpm --filter @twt/domain db:check",
+    "db:studio": "pnpm --filter @twt/domain db:studio"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

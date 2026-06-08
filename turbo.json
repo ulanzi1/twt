@@ -21,6 +21,11 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "db:check": {
+      "dependsOn": [],
+      "inputs": ["src/schema/**/*.ts", "migrations/**/*", "drizzle.config.ts"],
+      "outputs": []
     }
   }
 }

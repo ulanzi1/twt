@@ -5,9 +5,7 @@
   "dialect": "postgresql",
   "tables": {},
   "enums": {},
-  "schemas": {
-    "drizzle": "drizzle"
-  },
+  "schemas": {},
   "sequences": {},
   "roles": {},
   "policies": {},

@@ -70,12 +70,12 @@ Architecture-authoritative per `architecture.md` §Workspace Layout + §Complete
 | `apps/jobs/` | Background workers (pg-boss — Epic 1+) | PR-1 placeholder |
 | `packages/tokens/` | Design tokens (Story 1.17) | PR-1 placeholder |
 | `packages/i18n/` | Centralized i18n utility (Story 2.1) | PR-1 placeholder |
-| `packages/domain/` | Drizzle schema + repositories (Stories 1.2+) | PR-1 placeholder |
+| `packages/domain/` | Drizzle schema + repositories (Stories 1.2+) | **Active at Story 1.2 + Story 1.3** — Cloud SQL + Drizzle scaffolding + `events_log` table |
 | `packages/contracts/` | Zod schemas + OpenAPI (Story 1.4) | PR-1 placeholder |
 | `packages/api-client/` | Generated typed API client (Story 1.4) | PR-1 placeholder |
 | `packages/platform-adapters/` | FM-1 adapter passthrough (Story 1.X) | PR-1 placeholder |
 | `packages/bank-parsers/` | Bank statement parsers (Story 7.X) | PR-1 placeholder |
-| `packages/events/` | Domain event contracts (Story 1.3) | PR-1 placeholder |
+| `packages/events/` | Event log primitive + StateMachine framework + canonical-JSON (Story 1.3) | **Active at Story 1.3** — `appendEvent` / `loadEvents` / `replayState` + `StateMachine<S, E>` + `canonicalJsonStringify` (see `packages/events/README.md` + [ADR-0004](docs/adr/ADR-0004-canonical-json.md)) |
 | `packages/ui/` | Shared UI primitives (Story 1.17) | PR-1 placeholder |
 | `packages/eslint-config-twt/` | Shared ESLint flat config + canonical rule inventory | **Active at PR-1** |
 | `infra/{cloudflare,gcp,dokploy}/` | IaC manifests | PR-1 placeholder; Stories 1.13/1.14/1.15 |

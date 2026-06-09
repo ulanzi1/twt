@@ -1,0 +1,32 @@
+# Sample tfvars for Story 1.2 dev provisioning.
+#
+# Usage:
+#   1. cp terraform.tfvars.example terraform.tfvars
+#   2. Edit terraform.tfvars with your project_id (do NOT commit the populated file).
+#   3. gcloud auth application-default login
+#   4. terraform init
+#   5. terraform plan -out=tfplan
+#   6. terraform apply tfplan
+#
+# terraform.tfvars is .gitignored (see infra/gcp/.gitignore). Per architecture
+# §5.9 line 3320-3327, secret VALUES never enter the repo; project_id is not a
+# secret but treat any populated tfvars as environment-coupled state.
+
+project_id  = "twt-dev"
+region      = "asia-south1"
+environment = "dev"
+
+# network_self_link omitted — module falls back to projects/${project_id}/global/networks/default.
+# For staging + prod (Story 1.15), pass an explicit custom VPC:
+# network_self_link = "projects/twt-staging/global/networks/twt-staging-vpc"
+
+# Optional overrides (defaults shown):
+# instance_name                  = "twt-dev-postgres"
+# tier                           = "db-custom-2-7680"
+# availability_type              = "ZONAL"
+# disk_size_gb                   = 20
+# backup_start_time              = "20:30"
+# transaction_log_retention_days = 7
+# retained_backups_count         = 30
+# deletion_protection            = true
+# enable_pgaudit                 = true

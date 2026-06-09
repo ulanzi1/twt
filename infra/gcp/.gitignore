@@ -1,0 +1,13 @@
+# Terraform state + populated tfvars MUST stay out of git.
+# Remote state backend is configured per environment (Story 1.15).
+
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+# .terraform.lock.hcl is intentionally NOT ignored — commit it for reproducible provider versions.
+crash.log
+crash.*.log
+tfplan
+*.tfplan

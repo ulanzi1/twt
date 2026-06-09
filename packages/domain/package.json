@@ -9,12 +9,25 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "dev": "tsc --watch --preserveWatchOutput"
+    "dev": "tsc --watch --preserveWatchOutput",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:check": "drizzle-kit check",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@google-cloud/secret-manager": "^6.1.0",
+    "drizzle-orm": "^0.45.0",
+    "pg": "^8.13.0"
   },
   "devDependencies": {
     "@twt/eslint-config-twt": "workspace:*",
+    "@types/node": "^22.15.3",
+    "@types/pg": "^8.11.0",
+    "dotenv": "^16.4.0",
+    "drizzle-kit": "^0.31.0",
+    "tsx": "^4.19.0",
     "typescript": "~5.9.2",
-    "vitest": "^2.1.8",
-    "@types/node": "^22.15.3"
+    "vitest": "^2.1.8"
   }
 }

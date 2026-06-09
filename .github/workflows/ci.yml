@@ -95,3 +95,23 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build
+
+  db-check:
+    name: db-check
+    runs-on: ubuntu-latest
+    needs: install
+    # Pure static analysis over packages/domain/src/schema/*.ts +
+    # packages/domain/migrations/meta/*.json. No DB connection required.
+    # Story 1.2 commits the integrity primitive; Story 1.16c commits the
+    # substantive v1-baseline forbidden-pattern asserts.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run db:check

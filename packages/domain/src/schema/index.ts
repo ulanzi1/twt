@@ -1,0 +1,15 @@
+// Schema barrel — re-exports per-domain Drizzle table definitions.
+//
+// At Story 1.2 closure this barrel only re-exports the empty _baseline schema.
+// Substantive table definitions land downstream:
+//   - Story 1.3 packages/events event-log primitive
+//   - Story 1.5 envelope encryption column transformers
+//   - Story 1.6 RLS pgPolicy + pariwar_id
+//   - Story 1.7 Pariwar-Passport
+//   - Story 1.10 audit log hot tier
+//   - Story 1.12 pg-boss schema isolation
+//   - Story 3.1+ members + lifecycle
+//   - Story 4.x rules
+//   - Story 7.x pools
+//   - Story 9.x reconciliation
+export * from './_baseline.js';

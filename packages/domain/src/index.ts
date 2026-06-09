@@ -1,4 +1,9 @@
-// PR-1 placeholder — substantive content lands in downstream Epic 1 / 2+ stories.
-// See Story 1.1 Dev Notes "Architecture day-1 patterns to wire at PR-1 vs defer
-// to PR-2-and-beyond" for the per-workspace landing-Story mapping.
-export {};
+// @twt/domain — Drizzle schema + RLS policies + tenant rules + validators +
+// shared domain types. Story 1.2 substrate.
+//
+// Architecture canonical location per §Workspace Layout line 406 + §Complete
+// project directory structure line 4341-4356. See README.md for layout.
+
+export { createDb, type CreateDbOptions, type CreatedDb, type Db, type DbSchema } from './db.js';
+export { resolveConnectionString } from './secrets.js';
+export * as schema from './schema/index.js';

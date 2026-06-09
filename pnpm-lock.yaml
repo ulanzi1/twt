@@ -345,6 +345,16 @@ importers:
         version: 8.60.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
 
   packages/events:
+    dependencies:
+      '@twt/domain':
+        specifier: workspace:*
+        version: link:../domain
+      drizzle-orm:
+        specifier: ^0.45.0
+        version: 0.45.2(@types/pg@8.20.0)(pg@8.21.0)
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
     devDependencies:
       '@twt/eslint-config-twt':
         specifier: workspace:*
@@ -352,6 +362,12 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.20
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.13.0
+        version: 8.21.0
       typescript:
         specifier: ~5.9.2
         version: 5.9.3

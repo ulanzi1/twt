@@ -114,6 +114,39 @@ pnpm db:check
 #    are a single logical unit.
 ```
 
+### Hand-supplemented migration pattern (triggers, RLS, etc.)
+
+drizzle-kit emits DDL for tables / columns / indexes / constraints, but does
+NOT emit DDL for **triggers, RLS policies, partitions, or custom functions**.
+These features land via **hand-supplemented migrations**: drizzle-kit emits
+the table; the engineer appends the trigger / policy / function in the same
+`.sql` file, preserving the `--> statement-breakpoint` separator. The
+migration file gets a header comment marking it `⚠ DO NOT REGENERATE`.
+
+This is the **standard Drizzle ecosystem pattern** — `drizzle-kit check`
+validates schema-vs-snapshot at the table-shape level only, not trigger
+contents, so trigger correctness is verified by integration tests at the
+owning package (e.g., `packages/events/tests/append-only.test.ts` for the
+Story 1.3 trigger).
+
+Per architecture §1.8 line 1003-1005 (per-migration atomicity), the table
+creation and the hand-supplemented DDL land in the **same transaction**: a
+failed trigger creation rolls back the table creation; idempotency invariant
+preserved.
+
+### Migration 0001 — `events_log` table + append-only triggers (Story 1.3)
+
+Migration 0001 lands the `events_log` table per Story 1.3 + AR-8. The
+hand-supplemented suffix installs `events_log_no_update`,
+`events_log_no_delete`, and `events_log_no_truncate` triggers — each fires
+`RAISE EXCEPTION 'events_log is append-only — corrections emit a new event
+(AR-8)'`. The triggers are the structural defense; the application API in
+`@twt/events` provides no UPDATE / DELETE paths.
+
+See `packages/events/README.md` and
+[`docs/adr/ADR-0004-canonical-json.md`](../../docs/adr/ADR-0004-canonical-json.md)
+for the API + canonical-JSON consumer surface.
+
 ---
 
 ## 4. Per-migration atomicity

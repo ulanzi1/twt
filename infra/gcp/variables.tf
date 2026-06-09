@@ -71,9 +71,14 @@ variable "backup_start_time" {
 }
 
 variable "transaction_log_retention_days" {
-  description = "PITR transaction-log retention window. Cloud SQL default = 7; max = 7 in this tier; PITR window = retention × 24h per architecture §5.7 line 3194 commitment 'up to 35 days'."
+  description = "PITR transaction-log retention in days. Cloud SQL platform max is 35 days; the dev tier (db-custom-2-7680) defaults to 7 days. Staging/prod (Story 1.15) can raise this up to 35. Architecture §5.7 line 3194 commits 'up to 35 days' as the platform ceiling."
   type        = number
   default     = 7
+
+  validation {
+    condition     = var.transaction_log_retention_days >= 1 && var.transaction_log_retention_days <= 35
+    error_message = "transaction_log_retention_days must be between 1 and 35 (Cloud SQL platform ceiling)."
+  }
 }
 
 variable "retained_backups_count" {
@@ -119,7 +124,35 @@ variable "network_self_link" {
 }
 
 variable "labels" {
-  description = "Additional resource labels merged onto the module's default label set."
+  description = "DEPRECATED in favour of `extra_labels`. Retained as a parameter slot for backwards compatibility with any caller still passing it; the framework labels (`managed_by`, `component`, `environment`) now always win."
   type        = map(string)
   default     = {}
+}
+
+variable "extra_labels" {
+  description = "Caller-supplied resource labels merged BENEATH the module's framework labels. Framework labels (`managed_by = terraform`, `component = cloud-sql`, `environment = var.environment`) override any conflicting key in this map."
+  type        = map(string)
+  default     = {}
+}
+
+variable "maintenance_window_day" {
+  description = "Maintenance window day of week (1 = Monday … 7 = Sunday). Default 7 (Sunday)."
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.maintenance_window_day >= 1 && var.maintenance_window_day <= 7
+    error_message = "maintenance_window_day must be between 1 (Monday) and 7 (Sunday)."
+  }
+}
+
+variable "maintenance_window_hour" {
+  description = "Maintenance window start hour in UTC (0–23). Default 21 = Sunday-UTC 21:00 = Monday 02:30 IST (the IST day rolls over when adding +5h30), off-peak for IN business hours."
+  type        = number
+  default     = 21
+
+  validation {
+    condition     = var.maintenance_window_hour >= 0 && var.maintenance_window_hour <= 23
+    error_message = "maintenance_window_hour must be between 0 and 23 (UTC)."
+  }
 }

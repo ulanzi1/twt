@@ -80,8 +80,8 @@ resource "google_sql_database_instance" "main" {
     }
 
     maintenance_window {
-      day          = 7
-      hour         = 21
+      day          = var.maintenance_window_day
+      hour         = var.maintenance_window_hour
       update_track = "stable"
     }
   }

@@ -4,6 +4,44 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 1-2-cloud-sql-postgres-drizzle-migration-tooling (Groups A+B+C, 2026-06-08)
+
+- **W1: BYPASSRLS not asserted in Terraform** [`infra/gcp/cloud-sql-dev.tf:291-295`] — Cloud SQL creates users as non-superuser, no-BYPASSRLS by default; declarative enforcement deferred to Story 1.6 RLS wiring.
+- **W2: `import 'dotenv/config'` runs in CI** [`packages/domain/drizzle.config.ts:2`] — No functional impact; dotenv is a no-op in CI without a `.env` file.
+- **W3: Non-UTF-8 Secret Manager payload** [`packages/domain/src/secrets.ts:66-68`] — Theoretical; GCP always returns UTF-8 for string secrets.
+- **W4: Raw `SecretManagerServiceClient` constructor error surfacing** [`packages/domain/src/secrets.ts:64`] — Raw GCP SDK error acceptable; actionable message deferred to ops hardening.
+- **W5: `instance_name` rename triggers `random_password` rotation** [`infra/gcp/cloud-sql-dev.tf:23-26`] — Documented Terraform `keepers` behaviour; not a defect.
+- **W6: `private_ip_address` potentially empty on first plan** [`infra/gcp/cloud-sql-dev.tf:310-320`] — Terraform `depends_on` enforces ordering; no action needed.
+- **W7: PSA `/16` range allocation no `prefix_length` variable** [`infra/gcp/network.tf:27-32`] — Acceptable for dev; staging/prod VPC planning is Story 1.15.
+- **W8: `google_service_networking_connection` destroy requires `deletePeeringRoutes=true`** [`infra/gcp/network.tf:35-38`] — Multi-env teardown is Story 1.15 territory.
+- **W9: No IAM `secretAccessor` binding on Secret Manager secret** [`infra/gcp/cloud-sql-dev.tf`] — WIF + IAM grants are Story 1.15; runtime will fail without this on live provisioning.
+- **W10: No guard preventing REGIONAL at dev (2× cost)** [`infra/gcp/variables.tf:507-516`] — Explicit user override; `terraform.tfvars.example` defaults ZONAL.
+- **W11: `db:check` does not catch un-generated schema drift** [`.github/workflows/ci.yml:99-117`] — Known drizzle-kit `check` limitation; substantive schema-diff CI is Story 1.16c.
+- **W12: `DEFAULT_SECRET_NAME` hardcoded to `twt-dev-cloud-sql-conn-string`** [`packages/domain/src/secrets.ts:16`] — Story 1.15 callers will pass explicit `secretName` per environment.
+- **W13: `db:generate`/`db:migrate`/`db:studio` absent from `turbo.json`** [`turbo.json`] — Spec-compliant; `db:migrate` excluded per architecture §1.8; others are acceptable passthrough.
+
+---
+
+## Deferred from: code review of 1-2-cloud-sql-postgres-drizzle-migration-tooling (Groups D+E, 2026-06-08)
+
+- **W14: README §4 CONCURRENTLY "non-transactional headers" mechanism unspecified** [`packages/domain/README.md:124`] — The README says CONCURRENTLY migrations need "non-transactional headers" without defining the mechanism. Proposed per-file `disableTransactionWrapping` annotation is not valid drizzle-kit API. Correct mechanism requires research (drizzle-kit config-level `disableTransactionWrapping` or manual apply path) before documenting. Reopen when a CONCURRENTLY migration is authored.
+- **W15: `pgSchema` object exported through schema barrel alongside table schemas** [`packages/domain/src/schema/index.ts`] — `drizzleMetadataSchema` (a `pgSchema` object) re-exported via `export *`; appears in the typed schema map passed to `drizzle()`. Not a runtime error today but downstream stories must not treat it as a queryable relation. Add a JSDoc guard at next schema authoring story.
+- **W16: `pg_partman` availability on Cloud SQL Postgres 16 not verified** [`docs/adr/ADR-0003-datastore-engine.md`] — ADR-0003 and the decision-log cite `pg_partman` as required for Story 1.10 table partitioning; no verification that Cloud SQL Postgres 16 in `asia-south1` supports the extension. Verify before Story 1.10 dev-time and record result in Story 1.10 author-commit.
+
+---
+
+## Deferred from: code review of 1-2-cloud-sql-postgres-drizzle-migration-tooling (third pass, 2026-06-09)
+
+- **W17: `.terraform.lock.hcl` un-ignored but not committed in this diff** [`infra/gcp/.gitignore:9`] — Gated on `terraform init` execution which is part of the live-provisioning leg (Story 1.2 D1-1.2). The `.gitignore` change correctly unblocks future commit; the lock file itself lands when BigDev runs `terraform init` against the live `twt-dev` project.
+- **W18: Stacked `# last_updated:` lines at top of `sprint-status.yaml`** [`sprint-status.yaml:2-3`] — Multi-line schema choice; not load-bearing for any tooling. Convention drift; if a future automation needs "the current last_updated" it will need to read the topmost line by convention.
+- **W19: Two of three review layers (Blind Hunter, Acceptance Auditor) failed on the 06-08f Groups D+E pass per sprint-status note** [`sprint-status.yaml:2`] — Process note rather than code defect. Mitigated by the third-pass review (2026-06-09) which closes the audit gap with all three layers returning findings.
+- **W20: `.env.example` `CHANGE_ME` password placeholder not flagged in new SSL-mode comment** [`packages/domain/.env.example:8-13`] — Minor doc nit; the `CHANGE_ME` literal is a long-standing placeholder convention. A developer who reads the surrounding SSL comment carefully should also notice the password literal.
+- **W21: Concurrent `db:migrate` invocations have no advisory lock** [`packages/domain/scripts/migrate.ts:26-35`] — Multi-env operational concern; first becomes load-bearing at Story 1.15 (staging + prod). Fix: wrap migrate with `pg_advisory_lock(<constant>)` / `pg_advisory_unlock` or use drizzle-kit's built-in lock if/when available.
+- **W22: `random_password` flipped to `special = true` would produce malformed DSN (special chars not URL-encoded in `format()` block)** [`infra/gcp/cloud-sql-dev.tf:23-25, 117-123`] — Hypothetical future hardening; current `special = false` posture is safe. Fix when special chars are needed: use `urlencode()` in the `format()` call or add a `precondition` forbidding `special = true`.
+- **W23: `coalesce` chains in `locals.tf` may error on explicit empty-string input on older Terraform CLI versions** [`infra/gcp/locals.tf:8-12`] — Terraform 1.5+ skips empty strings in `coalesce`; older versions error. Provider lock pins Google provider, not Terraform CLI. Fix when an operator hits the edge: migrate to `var.x != null && var.x != "" ? var.x : default` ternary form, or add explicit input validation.
+
+---
+
 ## Deferred from: code review of 0-12-p0-3-spec-to-cadence-reality-check-reconciled (Tasks 7+8 commit aa6238d, 2026-06-04)
 
 - **W-01: Commit message "26 rows" / "12 files" self-reporting drift** [commit `aa6238d` message; `_bmad-output/implementation-artifacts/sprint-status.yaml:35`] — Commit body claims "all 26 estimation-worksheet rows populated"; 26 includes `epic-agg-epic-0` which is `excluded_from_total = true`, so substantive count is 25. Sprint-status `last_updated` line claims "12 files committed"; actual diff touches 13 files (sprint-status.yaml itself was modified, omitted self-referentially). Both are minor self-reporting drift on prose that is already on the record; not actionable as a code patch. Defer to next-commit-message convention or address in a supersession entry if the prose ever becomes load-bearing for an audit.

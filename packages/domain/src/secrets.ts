@@ -23,9 +23,14 @@ const DEFAULT_SECRET_NAME = 'twt-dev-cloud-sql-conn-string';
 export async function resolveConnectionString(
   secretName: string = DEFAULT_SECRET_NAME,
 ): Promise<string> {
+  // Lowercase NODE_ENV — some hosting platforms set `Production` or `PRODUCTION`.
+  // Trim GOOGLE_APPLICATION_CREDENTIALS — whitespace-only strings (`" "`) are
+  // truthy under `!!` but point ADC at an invalid path.
+  const nodeEnv = process.env['NODE_ENV']?.toLowerCase();
+  const gacPath = process.env['GOOGLE_APPLICATION_CREDENTIALS']?.trim() ?? '';
   const useSecretManager =
-    process.env['NODE_ENV'] === 'production' ||
-    process.env['GOOGLE_APPLICATION_CREDENTIALS'] !== undefined ||
+    nodeEnv === 'production' ||
+    gacPath !== '' ||
     process.env['DRIZZLE_FORCE_SECRET_MANAGER'] === '1';
 
   if (useSecretManager) {
@@ -63,7 +68,10 @@ export async function fetchConnectionString(secretName: string): Promise<string>
 
   const client = new SecretManagerServiceClient();
   const name = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-  const [version] = await client.accessSecretVersion({ name });
+  // 10s ceiling — protects `db:migrate` and process startup from indefinite hangs
+  // on Secret Manager API stalls (auth-token refresh storms, network partitions).
+  // Mirrors the pg.Pool connectionTimeoutMillis ceiling so failure modes are uniform.
+  const [version] = await client.accessSecretVersion({ name }, { timeout: 10_000 });
 
   const payload = version.payload?.data;
   if (!payload) {

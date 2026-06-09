@@ -13,7 +13,11 @@ vi.mock('pg', () => ({
   default: {
     Pool: vi.fn().mockImplementation((cfg: unknown) => {
       poolCtorSpy(cfg);
-      return { __isMockPool: true, end: vi.fn().mockResolvedValue(undefined) };
+      return {
+        __isMockPool: true,
+        end: vi.fn().mockResolvedValue(undefined),
+        on: vi.fn(),
+      };
     }),
   },
 }));

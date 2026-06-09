@@ -14,15 +14,15 @@ This index is **authoritative** for ADR status across the whole project; the `do
 | `ratified` | Ratified by ≥2 trustees; logged in `.decision-log.md`; operationally binding. |
 | `superseded` | A later ADR has overridden this one. The row is preserved as the architectural-evolution record; the superseding ADR is cross-linked. |
 
-Status summary as of Story 0.5 Task 2 author-commit (2026-05-30); Section I appended 2026-05-30 per Story 0.7 Decision 2026-05-30-007; Section J appended 2026-06-01 per Story 0.12 Decision 2026-06-01-012; Section J extended 2026-06-01 with `ADR-NNNN-SM-1-amendment` slot per Decision 2026-06-01-012-amend-1 (D-07 code-review supersession); Section K appended 2026-06-02 per Story 0.13 Decision 2026-06-02-013; Section L appended 2026-06-03 per Story 0.15 Decision 2026-06-03-015 (+6 slots); `ADR-0003-datastore-engine` slot closed 2026-06-08 per Story 1.2 Decision 2026-06-08-038 (Section A row at line 54 flipped `slot-reserved-pre-write` → `drafted`):
+Status summary as of Story 0.5 Task 2 author-commit (2026-05-30); Section I appended 2026-05-30 per Story 0.7 Decision 2026-05-30-007; Section J appended 2026-06-01 per Story 0.12 Decision 2026-06-01-012; Section J extended 2026-06-01 with `ADR-NNNN-SM-1-amendment` slot per Decision 2026-06-01-012-amend-1 (D-07 code-review supersession); Section K appended 2026-06-02 per Story 0.13 Decision 2026-06-02-013; Section L appended 2026-06-03 per Story 0.15 Decision 2026-06-03-015 (+6 slots); `ADR-0003-datastore-engine` slot closed 2026-06-08 per Story 1.2 Decision 2026-06-08-038 (Section A row at line 54 flipped `slot-reserved-pre-write` → `drafted`); `ADR-NNNN-adr-directory-scaffold` Section E row flipped `slot-reserved-pre-write` → `superseded` 2026-06-08 per Story 1.2 code-review (trigger fired: ADR-0003 is the first substantive ADR in `docs/adr/`):
 
 | Status | Row count |
 |---|---|
-| `slot-reserved-pre-write` | 124 |
+| `slot-reserved-pre-write` | 123 |
 | `drafted` | 1 |
 | `under-trustee-review` | 0 |
 | `ratified` | 0 |
-| `superseded` | 0 |
+| `superseded` | 1 |
 | **Total** | **125** |
 
 _Section H added 2026-05-30 per Story 0.6 Decision 2026-05-30-006 — 8 backup-engineer-framework deferred-ADR slots._
@@ -132,7 +132,7 @@ Source: `.decision-log.md` Decision 2026-05-29-003 Open Follow-ups + `docs/escro
 | ADR-NNNN-restoration-drill-cadence | Restoration-drill cadence (quarterly fallback committed by README; operations-policy supersedes) | Decision 2026-05-29-003 Open Follow-up #4 + `docs/escrow/code-escrow/README.md` §Review cadence | Solo Builder + Trustee Panel | Operations-policy authoring window | `slot-reserved-pre-write` | `docs/escrow/code-escrow/README.md` |
 | ADR-NNNN-bus-factor-switch-facilitator | Bus-factor switch-to-mirror facilitator path (backup engineer per Story 0.6 preferred; substitute path) | Decision 2026-05-29-003 Open Follow-up #5 + `docs/escrow/code-escrow/restoration-procedure.md` §1 Prerequisites | Solo Builder + Trustee Panel | Story 0.6 closure | `slot-reserved-pre-write` | `docs/escrow/code-escrow/restoration-procedure.md` |
 | ADR-NNNN-mirror-workflow-secret-rotation | Mirror-workflow secret-rotation procedure (rotation cadence + workflow re-wire procedure) | Decision 2026-05-29-003 Open Follow-up #7 + `docs/runbooks/secret-rotation.md` cross-link | Solo Builder + Trustee Panel | Operations-policy authoring + first credential-rotation event | `slot-reserved-pre-write` | `docs/runbooks/secret-rotation.md` + `docs/escrow/code-escrow/mirror-procedure.md` |
-| ADR-NNNN-adr-directory-scaffold | `docs/adr/` scaffold authority | Decision 2026-05-29-003 Open Follow-up #6 (closure leg; **discharged 2026-05-30 by Story 0.5 Task 1** — scaffold done; no separate ADR file needed; decision implicit in Story 0.5 author-commit) | Solo Builder | First substantive ADR authored in `docs/adr/` → row supersedes to `superseded` | `slot-reserved-pre-write` (scaffold complete; this slot tracks the ADR directory's lifecycle, not the scaffold action; supersedes to `superseded` when first substantive ADR lands per `docs/adr/README.md`) | `docs/adr/README.md` + `.decision-log.md` Decision 2026-05-30-005 |
+| ADR-NNNN-adr-directory-scaffold | `docs/adr/` scaffold authority | Decision 2026-05-29-003 Open Follow-up #6 (closure leg; **discharged 2026-05-30 by Story 0.5 Task 1** — scaffold done; no separate ADR file needed; decision implicit in Story 0.5 author-commit) | Solo Builder | ~~First substantive ADR authored in `docs/adr/` → row supersedes to `superseded`~~ **Trigger fired 2026-06-08: ADR-0003-datastore-engine is the first substantive ADR.** | `superseded` 2026-06-08 by [ADR-0003-datastore-engine](../adr/ADR-0003-datastore-engine.md) — first substantive ADR landed; this scaffold-authority slot's stated flip condition is met | `docs/adr/README.md` + `.decision-log.md` Decision 2026-05-30-005 + Decision 2026-06-08-038 |
 
 ## Section F — Degradation-policy framework ADR slots (Decision 004 Open Follow-ups)
 

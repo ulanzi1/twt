@@ -5,5 +5,5 @@
 // project directory structure line 4341-4356. See README.md for layout.
 
 export { createDb, type CreateDbOptions, type CreatedDb, type Db, type DbSchema } from './db.js';
-export { resolveConnectionString, fetchConnectionString } from './secrets.js';
+export { resolveConnectionString } from './secrets.js';
 export * as schema from './schema/index.js';

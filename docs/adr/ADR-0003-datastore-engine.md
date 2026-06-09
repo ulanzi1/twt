@@ -62,9 +62,12 @@ Decision deadline: Story 1.2 closure (this ADR's drafting trigger).
 ## Decision
 
 **Engine: Postgres 16, managed via Cloud SQL in GCP `asia-south1`, regional
-HA at staging + prod (ZONAL at dev), automated daily backups + PITR up to 35
-days (Cloud SQL default), private IP only via Private Services Access (no
-public IPv4), `cloudsql.enable_pgaudit` on for defense-in-depth.**
+HA at staging + prod (ZONAL at dev), automated daily backups + PITR
+(`transaction_log_retention_days` defaults to 7 at dev; the variable accepts
+1–35 to honour Cloud SQL's 35-day platform ceiling per architecture §5.7 line
+3194 — staging+prod raise this in Story 1.15), private IP only via Private
+Services Access (no public IPv4), `cloudsql.enable_pgaudit` on for
+defense-in-depth.**
 
 **ORM: Drizzle ORM 0.45+ with drizzle-kit 0.31+ as the migration toolchain.
 Forward-only migrations under `packages/domain/migrations/`. `pnpm db:migrate`
@@ -183,8 +186,9 @@ Load-bearing details:
   `IF NOT EXISTS`, manually patched. (b) Drizzle's API surface is younger
   than Prisma's; major-version bumps may require schema-side adjustments
   (the lockfile + the migration history isolate runtime impact). (c) Cloud
-  SQL regional failover requires an explicit failover event; PITR up to 35
-  days is the recovery floor.
+  SQL regional failover requires an explicit failover event; PITR defaults to
+  7 days at dev and can be raised up to the 35-day platform ceiling via
+  `transaction_log_retention_days` (Story 1.15 staging + prod).
 - **Migration / pivot path** — Reversibility:
   - **Within ORM** — Drizzle major-version bumps: pin to a known-good minor;
     test the new minor in a feature branch; if migration history requires

@@ -192,8 +192,12 @@ echo "DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5432/twt_dev?sslmo
   > packages/domain/.env
 
 # Option (b) Cloud SQL Auth Proxy (matches production wire path):
+# Get the instance connection name: cd infra/gcp && terraform output instance_connection_name
 cloud-sql-proxy --port=5432 twt-dev:asia-south1:twt-dev-postgres &
 # Same DATABASE_URL as above (point at 127.0.0.1:5432).
+# Note: createDb default ssl: { rejectUnauthorized: false } is intentional for Auth Proxy
+# (loopback socket; mutual-TLS handled by proxy). Direct private-IP callers MUST override:
+# createDb(url, { ssl: true })
 ```
 
 ---

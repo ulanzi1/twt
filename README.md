@@ -40,6 +40,7 @@ docker run --name twt-pg -e POSTGRES_USER=twt_dev_app -e POSTGRES_PASSWORD=devpa
   -e POSTGRES_DB=twt_dev -p 5432:5432 -d postgres:16
 
 # Or Cloud SQL Auth Proxy (matches production wire path)
+# Get the instance connection name: cd infra/gcp && terraform output instance_connection_name
 cloud-sql-proxy --port=5432 twt-dev:asia-south1:twt-dev-postgres &
 
 # Then in packages/domain/.env: DATABASE_URL=postgresql://...

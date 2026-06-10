@@ -1,6 +1,6 @@
 # Story 1.5: Cloud KMS HSM + Google Tink Envelope Encryption (PII Tiers)
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -432,6 +432,20 @@ Group E review (2026-06-10) — CI / turbo / package.json / openapi / pnpm-lock.
 - [x] [Review][Defer] TEW1 — `openapi/v1.yaml` `pattern: \S` (no anchors/quantifier) admits error code values with embedded whitespace like `"NOT FOUND"`; `^\S+$` would enforce no whitespace anywhere; defer to next OpenAPI refinement pass [`openapi/v1.yaml:50`]
 - [x] [Review][Defer] TEW2 — Dual `google-gax` versions in lockfile (`4.6.1` for `@google-cloud/kms@4.5.0` + `5.0.7` for `@google-cloud/secret-manager@6.1.3`) — expected peer divergence; pnpm handles correctly; watch at Story 1.15 live provisioning when both are exercised in the same request path [`pnpm-lock.yaml`]
 - [x] [Review][Defer] TEW3 — `@types/request@2.48.13` added as runtime transitive dep (via `retry-request@7.0.2` → `@types/request` in google-gax@4.x dep tree); harmless (type declarations only, ~12 KB); known google-gax@4.x quirk; resolves on `@google-cloud/kms@5.x` upgrade at Story 1.15+ [`pnpm-lock.yaml`]
+
+Groups B–E follow-up review (2026-06-10b) — independent re-run of Blind Hunter + Edge Case Hunter + Acceptance Auditor over the same Group B–E diff to confirm the `7823fe4` triage. Result: the prior Group A–E triage above is thorough — the follow-up reproduced nearly all of it (already resolved/deferred). It surfaced ONE gap the prior Group E pass missed, plus minor residuals.
+
+**Decision-needed:**
+- [x] [Review][Decision→Patch] RD1 (resolved, Option 2 applied) — `crypto:check` did not satisfy AC-2's explicit requirement that the task assert compilation via `tsc --noEmit`. AC-2 (line 79) mandates the task run tests "+ a structural assertion that the encryption substrate compiles via `tsc --noEmit`"; the shipped script is `vitest run tests/encryption` only, and `turbo.json crypto:check` has `dependsOn: []` — no compile leg. The separate workspace `typecheck` turbo task covers compilation in the main gate, but `crypto:check` itself (and the CI `crypto-check` job + the runbook §1 "Verify `pnpm crypto:check` exits 0 — the substrate compiles" prerequisite) does not. Options: (a) prepend `tsc --noEmit &&` to the `crypto:check` script; (b) add `"dependsOn": ["typecheck"]` to the turbo `crypto:check` task; (c) document the deviation and rely on the separate `typecheck` gate. [`packages/domain/package.json:17` + `turbo.json` crypto:check]
+
+**Patches:**
+- [x] [Review][Patch] RP1 (applied) — Empty-string `app_service_account_email` slips past the TC2 null-guard. TC2 fixed the `null` case (`for_each ... != null ? ... : toset([])`), but an empty string `""` is not `null`, so `for_each` yields `toset([""])` → `member = "serviceAccount:"`, an invalid IAM binding that fails only at `terraform apply`. Add `&& var.app_service_account_email != ""` to both `for_each` guards (and/or a `validation` block on the variable). [`infra/gcp/cloud-kms-dev.tf:74,81`]
+
+**Deferred:**
+- [x] [Review][Defer] RW1 — `google_kms_crypto_key.pii_tier_1_kek` sets `rotation_period` without `next_rotation_time`; the GCP provider may require `next_rotation_time` when `rotation_period` is set (registry docs inconclusive on enforcement). Not exercised today — live `terraform apply` is deferred (D1-1.5). Verify against a real `terraform plan` at Story 1.15; if required, set a fixed RFC3339 `next_rotation_time` or use a `time_rotating` resource. [`infra/gcp/cloud-kms-dev.tf:37`] — deferred, live apply not yet exercised
+- [x] [Review][Defer] RW2 — Negative-path test gaps beyond the TB-series: envelope empty/oversized plaintext through `encryptTier1`, a bit-flipped-`ciphertext`-with-correct-AAD `decryptTier1` failure (distinct from the AAD-mismatch path TB9 covers), and `encryptedDek` byte-length validation in `parseEnvelope` (TB4/TB5 cover `iv`/`authTag` only). — deferred, additive hardening; existing coverage is strong [`packages/domain/tests/encryption/envelope.test.ts`]
+- [x] [Review][Defer] RW3 — `kms_destroy_scheduled_duration_seconds` is documented as a "30-day Cloud KMS platform max / hard cap" in the variable, README, runbook, and ADR; the actual Cloud KMS maximum is commonly cited as higher (up to ~120 days). 30 days is a valid conservative value so functionally fine, but the "platform max" claim is unverified. Verify the true maximum and correct the comment/band if wrong. [`infra/gcp/variables.tf`] — deferred, doc-accuracy nit, non-blocking
+- [x] [Review][Defer] RW4 — `KMS_TEST_MODE=fake` env on the `crypto-check` CI job is inert: no provider-selection code reads `KMS_TEST_MODE`; the tests construct `createFakeKmsProvider` directly, so the env var gates nothing today. Wire it to actual provider selection at Story 1.15 (live toggle), or drop it to avoid implying coverage. [`.github/workflows/ci.yml` crypto-check job] — deferred, forward-looking config
 
 ## Dev Notes
 

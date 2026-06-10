@@ -45,7 +45,7 @@
       "outputs": []
     },
     "crypto:check": {
-      "dependsOn": [],
+      "dependsOn": ["typecheck"],
       "inputs": [
         "src/encryption/**/*.ts",
         "tests/encryption/**/*.ts",

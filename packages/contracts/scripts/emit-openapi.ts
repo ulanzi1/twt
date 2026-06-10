@@ -20,15 +20,27 @@ import {
 import { z } from 'zod';
 import * as yaml from 'yaml';
 
+// Must run before schema modules are imported so .openapi() is available on
+// all Zod schema instances. Dynamic imports below enforce this ordering
+// explicitly — static imports are hoisted above all statements in ESM and
+// would execute before this line.
 extendZodWithOpenApi(z);
 
-import { HealthResponse } from '../src/_common/health.js';
-import { ErrorResponse } from '../src/_common/errors.js';
+// Dynamic imports so extendZodWithOpenApi runs before schema construction.
+const { HealthResponse } = await import('../src/_common/health.js');
+const { ErrorResponse } = await import('../src/_common/errors.js');
+
+// Annotate schemas with their OpenAPI component name, then register for $ref
+// resolution. Using registry.register() (not registerComponent) is the correct
+// pattern for Zod schemas in @asteasolutions/zod-to-openapi — registerComponent
+// is for raw OpenAPI objects (securitySchemes, responses, etc.).
+const HealthResponseSchema = HealthResponse.openapi('HealthResponse');
+const ErrorResponseSchema = ErrorResponse.openapi('ErrorResponse');
 
 const registry = new OpenAPIRegistry();
 
-registry.register('HealthResponse', HealthResponse);
-registry.register('ErrorResponse', ErrorResponse);
+registry.register('HealthResponse', HealthResponseSchema);
+registry.register('ErrorResponse', ErrorResponseSchema);
 
 registry.registerPath({
   method: 'get',
@@ -41,11 +53,11 @@ registry.registerPath({
   responses: {
     200: {
       description: 'Service is reachable',
-      content: { 'application/json': { schema: HealthResponse } },
+      content: { 'application/json': { schema: HealthResponseSchema } },
     },
     503: {
       description: 'Service is degraded',
-      content: { 'application/json': { schema: ErrorResponse } },
+      content: { 'application/json': { schema: ErrorResponseSchema } },
     },
   },
 });
@@ -65,10 +77,11 @@ const doc = generator.generateDocument({
 });
 
 const yamlOutput = yaml.stringify(doc, {
-  // Deterministic emission: yaml package preserves insertion order; the
-  // generator's order is fixed by registration sequence. lineWidth: 0 disables
+  // Explicit sortMapEntries: false preserves insertion order (the generator's
+  // order is fixed by registration sequence). lineWidth: 0 disables
   // line-wrapping so re-runs in different terminal widths produce byte-identical
   // output.
+  sortMapEntries: false,
   lineWidth: 0,
 });
 

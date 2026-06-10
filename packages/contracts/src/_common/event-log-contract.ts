@@ -19,7 +19,7 @@ export const EventLogContract = z
     streamId: UuidString,
     eventType: z.string().min(1),
     payload: z.unknown(),
-    eventVersion: z.number().int().nonnegative(),
+    eventVersion: z.number().int().min(1),
     occurredAt: Iso8601Datetime,
     actorId: UuidString.nullable(),
     pariwarId: UuidString,

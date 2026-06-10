@@ -14,13 +14,13 @@
 import { z } from 'zod';
 
 /** Opaque pagination cursor (URL-safe; not inspected at the contracts layer). */
-export const Cursor = z.string().min(1);
+export const Cursor = z.string().min(1).regex(/\S/, 'cursor must not be blank');
 export type Cursor = z.output<typeof Cursor>;
 
 /** Default public-surface pagination query (FR-91 max 50). */
 export const PaginationQuery = z
   .object({
-    cursor: z.string().min(1).optional(),
+    cursor: Cursor.optional(),
     limit: z.number().int().positive().max(50).optional(),
   })
   .strict();
@@ -29,12 +29,17 @@ export type PaginationQuery = z.output<typeof PaginationQuery>;
 /**
  * Generic paginated-response wrapper. Use at downstream Stories' list contracts:
  *   const MembersPage = paginatedResponse(Member);
+ *
+ * In OpenAPI contexts, callers MUST annotate the result before registering:
+ *   registry.registerComponent('schemas', 'MembersPage', MembersPage.openapi('MembersPage'));
+ * Failure to annotate causes the generator to inline the full schema at every
+ * reference site rather than emitting a $ref.
  */
 export function paginatedResponse<T extends z.ZodTypeAny>(item: T) {
   return z
     .object({
       items: z.array(item),
-      nextCursor: z.string().min(1).nullable(),
+      nextCursor: Cursor.nullable(),
       hasMore: z.boolean(),
     })
     .strict();

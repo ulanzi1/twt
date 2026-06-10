@@ -43,8 +43,10 @@ describe('cross-surface validation parity (Story 1.4 scaffold; per architecture 
     { input: { limit: 25 }, expected: 'accept' },
     { input: { cursor: 'abc', limit: 50 }, expected: 'accept' },
     { input: { limit: 100 }, expected: 'reject' }, // FR-91 cap
+    { input: { limit: 0 }, expected: 'reject' }, // positive() requires >0
     { input: { limit: -1 }, expected: 'reject' },
     { input: { limit: 'twenty' }, expected: 'reject' },
+    { input: { cursor: 'abc', limit: 10, extra: true }, expected: 'reject' }, // .strict() rejects unknown keys
   ];
 
   const zodRuntime: FixtureRuntime = {

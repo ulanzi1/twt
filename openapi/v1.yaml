@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info:
+  title: TWT API v1
+  version: 0.0.0-substrate
+  description: TWT API contract surface — generated from Zod schemas in packages/contracts/. Story 1.4 substrate; substantive routes land at apps/api/ Stories 1.9+.
+servers:
+  - url: https://twt.local/api/v1
+    description: placeholder
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: &a1
+            - ok
+            - degraded
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - timestamp
+      additionalProperties: false
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              minLength: 1
+            message:
+              type: string
+            details: {}
+            request_id:
+              type: string
+              format: uuid
+          required:
+            - code
+            - message
+            - request_id
+          additionalProperties: false
+      required:
+        - error
+      additionalProperties: false
+  parameters: {}
+paths:
+  /api/v1/_meta/health:
+    get:
+      summary: Service health probe
+      description: Substrate-proof endpoint authored at Story 1.4. Production /_meta/health lives at apps/api/ per Story 1.9+.
+      tags:
+        - _meta
+      responses:
+        "200":
+          description: Service is reachable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: *a1
+                  timestamp:
+                    type: string
+                    format: date-time
+                required:
+                  - status
+                  - timestamp
+                additionalProperties: false
+        "503":
+          description: Service is degraded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        minLength: 1
+                      message:
+                        type: string
+                      details: {}
+                      request_id:
+                        type: string
+                        format: uuid
+                    required:
+                      - code
+                      - message
+                      - request_id
+                    additionalProperties: false
+                required:
+                  - error
+                additionalProperties: false
+webhooks: {}

@@ -115,3 +115,27 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run db:check
+
+  contracts-check:
+    name: contracts-check (OpenAPI generator determinism)
+    runs-on: ubuntu-latest
+    needs: install
+    # Pure static analysis: re-emit openapi/v1.yaml from packages/contracts/
+    # Zod schemas and assert byte-identical to the committed file. Architecture
+    # §3.2 line 1862-1865 generator-determinism CI gate. No DB / network.
+    # Story 1.4 commits the integrity primitive on a substrate-proof toy
+    # endpoint; substantive endpoints land at apps/api/ Stories 1.9+. The
+    # OpenAPI breaking-change semantic-diff CI gate (architecture §3.2 line
+    # 1856-1860) is deferred to Story 1.9+ when route surfaces substantively
+    # populate (deferred-work D1-1.4).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run contracts:check-openapi-determinism

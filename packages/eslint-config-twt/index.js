@@ -26,6 +26,15 @@ import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
 export default [
+  {
+    // Ignore generated build outputs across every consumer of this config.
+    // `tsc -p tsconfig.json` emits `.d.ts` files to `dist/` that contain
+    // drizzle-orm-emitted `{}` empty-object types (and other patterns) which
+    // are not under our control. Linting build outputs has no value; we lint
+    // sources. ESLint 9 flat-config ignores are global when the config block
+    // contains only `ignores`.
+    ignores: ['**/dist/**', '**/.next/**', '**/.expo/**', '**/build/**', '**/coverage/**'],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   prettier,

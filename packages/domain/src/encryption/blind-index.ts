@@ -22,6 +22,12 @@ export async function blindIndex(
   if (fieldClass.includes(':')) {
     throw new Error('blindIndex: fieldClass must not contain ":" (used as namespace separator)');
   }
+  if (plaintext.length === 0) {
+    throw new Error('blindIndex: plaintext must be non-empty');
+  }
+  if (context.pariwarId.includes('|')) {
+    throw new Error('blindIndex: pariwarId must not contain "|" (used as per-Pariwar HMAC separator)');
+  }
   const input = Buffer.from(`${fieldClass}:${plaintext}`, 'utf-8');
   const mac = await kms.computeHmac(hmacKeyRef, input, context);
   kms.auditHook?.('computeHmac', hmacKeyRef, {

@@ -610,3 +610,51 @@ Per Story 1.3 closure Decision 2026-06-09-039 + the substrate-only execution cho
 ## Deferred from: code review of 1-4-packages-contracts-zod-openapi-contract-scaffolding (2026-06-10)
 
 - **F07: `check-openapi-determinism.ts` relative path robustness** [`packages/contracts/scripts/check-openapi-determinism.ts:22`] — Uses `'scripts/emit-openapi.ts'` as a string literal (relative to `cwd: packages/contracts`) rather than an absolute path via `path.resolve(here, 'emit-openapi.ts')`. Correct given current monorepo depth but would silently resolve incorrectly if the `packages/contracts/scripts/` directory were moved or the package renamed. Revisit if packages/ is reorganized.
+
+## Deferred from: code review of 1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers Group D (2026-06-10)
+
+- **TDW1: §2.1.1 no pre-Story-1.10 rotation guard** [`docs/runbooks/secret-rotation.md:70`] — Runbook does not have a conditional branch warning that a live KEK rotation cannot be completed before Story 1.10 (saga worker not yet deployed). Add explicit: "Before Story 1.10 saga worker is deployed, do NOT initiate a planned KEK rotation. Emergency/compromise-driven rotation pre-Story-1.10 requires an out-of-band procedure reviewed by the Trustee Panel." Land at Story 1.10 runbook extension.
+
+- **TDW2: ADR-0006 HMAC truncation nuance undocumented** [`docs/adr/ADR-0006-pii-tier-1-kek-library.md`] — Cloud KMS MacSign returns full 256-bit HMAC-SHA-256 output; Tink's default `HMAC_SHA256_128BITTAG` template truncates to 128 bits. The Story 1.5 substrate uses 256-bit output (strictly stronger). This difference is not documented in the ADR. If cross-system Tink-Java verification is ever needed, the HMAC output format would need explicit alignment. Raise at ADR trustee-ratification session.
+
+- **TDW3: ADR-0006 forward-path supersession checklist** [`docs/adr/ADR-0006-pii-tier-1-kek-library.md:34,89`] — Forward-path conflates two distinct supersession scenarios ("new Tink-TS successor" vs "Cloud KMS API evolution") without a testable evaluation checklist or ciphertext-migration cost assessment. `enc:v1:` envelope is not wire-compatible with Tink-native keysets. Add evaluation criteria when the trigger fires.
+
+- **TDW4: Runbook cross-links to Terraform + source** [`docs/runbooks/secret-rotation.md`] — §2.1.1/§2.1.2 reference `pii-tier-1-kek` and `pii-tier-2-hmac` by name but do not link to `infra/gcp/cloud-kms-dev.tf` (authoritative resource definitions) or `packages/domain/src/encryption/kms-provider.ts` (`KmsKeyRef` interface). Add "See also" cross-links at Story 1.15 when operators first use the runbook against live keys.
+
+- **TDW5: `adr-index.md` Section L row count omission** [`docs/knowledge-transfer/adr-index.md:33`] — "Rows by section" footnote omits Section L (6 slots, added Story 0.15). Pre-existing carry-forward. Correct at next ADR index maintenance pass.
+
+- **TDW6: `adr-index.md` `ratified | 0` inconsistency** [`docs/knowledge-transfer/adr-index.md:24`] — Summary table shows `ratified | 0` but ADR-0001 and ADR-0002 are both ratified. Pre-existing carry-forward. Correct at next ADR index maintenance pass (update to `ratified | 2`).
+
+## Deferred from: code review of 1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers Group C (2026-06-10)
+
+- **TCW1: `kms_kek_rotation_period_seconds` variable name coupling** [`infra/gcp/variables.tf:162`] — Variable was named KEK-specific but was also applied to the HMAC key's `rotation_period`. Resolved by TC1 patch (HMAC key `rotation_period` removed); no rename needed. Noted for completeness.
+
+- **TCW2: No cross-variable guard for `destroy_scheduled_duration < rotation_period`** [`infra/gcp/variables.tf:162-182`] — Validation bands already constrain this (max destroy duration 30 days = min rotation period 30 days), making pathological cross-variable combinations uncommon. Add a `precondition` block or `check` block if Story 1.15 introduces tunable per-environment overrides where this invariant could be violated.
+
+- **TCW3: `outputs.tf` `.id` format comment absent** [`infra/gcp/outputs.tf:48,53`] — For `google_kms_crypto_key`, `.id` returns the full resource name path (not a `https://` self-link) and matches the format expected by `@google-cloud/kms` Node.js SDK. Confirmed correct for provider `~> 5.0`. Add an explicit comment clarifying the format when Story 1.15 wires the output values into Secret Manager or `apps/api` runtime config.
+
+## Deferred from: code review of 1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers Group B (2026-06-10)
+
+- **TBW1: DEK zeroing on `kms.encryptDek` rejection** [`packages/domain/src/encryption/envelope.ts:63-78`] — P7 patch moves `dek.fill(0)` into `finally`; test verification requires intercepting `crypto.randomBytes` or an internal test seam (unobservable from test boundary). Defense-in-depth behavior confirmed by code inspection; land an observable test if a test-seam is added at a future Story.
+
+- **TBW2: DEK in-place zeroing on `decryptTier1`** [`packages/domain/src/encryption/envelope.ts:101-103`] — Same observability constraint as TBW1. P4 patch confirmed at source level. Land test when/if internal seam is added.
+
+- **TBW3: `fake-kms-provider.test.ts` module-scope `randomBytes`** [`packages/domain/tests/encryption/fake-kms-provider.test.ts:15-16`] — `kekBytes`/`hmacKeyBytes` allocated at module-load time, not in `beforeAll`. Fragile if a future test mutates the shared buffers via `fill(0)`. Revisit if the test file is extended with mutation-path tests.
+
+- **TBW4: `EncryptionContext.rowKey` not tested** — Optional `rowKey` field is committed in the `EncryptionContext` type but unused by any Story 1.5 PII column. No test verifies that a context with `rowKey` produces a different AAD than one without. Land test at the first Story that introduces a per-row binding consumer (Story 3.1+).
+
+- **TBW5: AC-3 PARTIAL — D14-1.5 column-transformer auto-encrypt** [`packages/domain/tests/encryption/column-transformer.integration.test.ts`] — Integration test demonstrates service-layer encryption rather than `piiColumn` `toDriver`/`fromDriver` auto-encrypt because Drizzle 0.45 `customType` requires synchronous callbacks. Accepted design deviation per D14-1.5. AC-3 C2/C4 bullets remain PARTIAL; resolve when Drizzle adds async transformer support (Story 1.9+ or a later drizzle-orm major).
+
+- **TBW6: `KMS_TEST_MODE=live` opt-in not wired in test file** [`packages/domain/tests/encryption/column-transformer.integration.test.ts`] — AC-3 requires the test file itself to document the `KMS_TEST_MODE=live` env-var gate and route to `createCloudKmsProvider`. Currently documented in `tests/integration/encryption/README.md` only. Land in the test file when Story 1.15 activates the live `twt-dev` GCP KMS project.
+
+## Deferred from: code review of 1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers Group A (2026-06-10)
+
+- **W1-1.5-review: `encryptionContextAad` sort fragility** [`packages/domain/src/encryption/canonical-context.ts`:4–6] — `['fieldClass', 'pariwarId']` is hardcoded in already-sorted order then `keys.sort()` is called; correct today by alphabetical accident — a future field inserted out of order without noticing the sort convention would break AAD binding silently. Pre-existing code quality issue, not a current bug. Revisit if `EncryptionContext` gains new fields.
+
+## Deferred from: code review of 1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers Group E (2026-06-10)
+
+- **TEW1: `openapi/v1.yaml` `pattern: \S` admits embedded whitespace in error codes** [`openapi/v1.yaml:50`] — `\S` without anchors/quantifier checks for at least one non-whitespace character but allows strings like `"NOT FOUND"` (space inside). `^\S+$` would be strict. Current pattern is a meaningful improvement over unvalidated; tighten to `^\S+$` at next OpenAPI refinement pass (Story 1.14 or next OpenAPI contract PR).
+
+- **TEW2: Dual `google-gax` versions in lockfile** [`pnpm-lock.yaml`] — `@google-cloud/kms@4.5.0` resolves `google-gax@4.6.1`; `@google-cloud/secret-manager@6.1.3` already brought in `google-gax@5.0.7`. pnpm handles the peer divergence correctly at install time. Monitor at Story 1.15 live provisioning if both libraries are exercised in the same request path; resolve by upgrading `@google-cloud/kms` to `^5.x` when `@google-cloud/secret-manager` is also on `google-gax@5.x`.
+
+- **TEW3: `@types/request@2.48.13` as runtime transitive dep** [`pnpm-lock.yaml`] — `retry-request@7.0.2` (dep of `google-gax@4.6.1`) lists `@types/request` in `dependencies` not `devDependencies`, so pnpm installs it at runtime. Type-declarations-only package (~12 KB); zero runtime behavior impact. Known quirk of google-gax@4.x dep tree. Resolves automatically when `@google-cloud/kms` is upgraded to `^5.x` (uses google-gax@5.x dep tree, no `@types/request` transitive).

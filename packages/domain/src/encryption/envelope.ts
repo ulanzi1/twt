@@ -16,6 +16,7 @@ import type { EncryptionContext, KmsKeyRef, KmsProvider } from './kms-provider.j
 
 const DEK_LEN = 32;
 const IV_LEN = 12;
+const AUTH_TAG_LEN = 16;
 
 export interface Tier1Ciphertext {
   readonly kekRef: string;
@@ -59,20 +60,22 @@ export async function encryptTier1(
   const ciphertext = Buffer.concat([cipher.update(Buffer.from(plaintext)), cipher.final()]);
   const authTag = cipher.getAuthTag();
 
-  const encryptedDek = await kms.encryptDek(dek, kekRef, aad);
-  kms.auditHook?.('encryptDek', kekRef, context);
+  try {
+    const encryptedDek = await kms.encryptDek(dek, kekRef, aad);
+    kms.auditHook?.('encryptDek', kekRef, context);
 
-  // Zero the in-memory DEK after use — best-effort defense-in-depth.
-  dek.fill(0);
-
-  return {
-    kekRef: kekRef.resourceName,
-    encryptedDek: new Uint8Array(encryptedDek),
-    iv: new Uint8Array(iv),
-    ciphertext: new Uint8Array(ciphertext),
-    authTag: new Uint8Array(authTag),
-    aadShape: 'v1',
-  };
+    return {
+      kekRef: kekRef.resourceName,
+      encryptedDek: new Uint8Array(encryptedDek),
+      iv: new Uint8Array(iv),
+      ciphertext: new Uint8Array(ciphertext),
+      authTag: new Uint8Array(authTag),
+      aadShape: 'v1',
+    };
+  } finally {
+    // Zero the in-memory DEK — always fires, even if kms.encryptDek rejects.
+    dek.fill(0);
+  }
 }
 
 export async function decryptTier1(
@@ -96,8 +99,8 @@ export async function decryptTier1(
     const out = Buffer.concat([dec.update(Buffer.from(ct.ciphertext)), dec.final()]);
     return new Uint8Array(out);
   } finally {
-    // Zero the in-memory DEK after use.
-    Buffer.from(dekBuf).fill(0);
+    // Zero the in-memory DEK — fills the original Uint8Array in place, not a copy.
+    dekBuf.fill(0);
   }
 }
 
@@ -135,12 +138,27 @@ export function parseEnvelope(s: string): Tier1Ciphertext {
   if (obj['aadShape'] !== 'v1') {
     throw new Error(`parseEnvelope: unsupported aadShape: ${String(obj['aadShape'])}`);
   }
+  // Validate all fields are strings before base64-decoding — coercing non-strings
+  // silently produces garbage bytes that surface as opaque crypto errors later.
+  for (const k of ['kekRef', 'encryptedDek', 'iv', 'ciphertext', 'authTag'] as const) {
+    if (typeof obj[k] !== 'string') {
+      throw new Error(`parseEnvelope: field "${k}" must be a string, got ${typeof obj[k]}`);
+    }
+  }
+  const iv = new Uint8Array(Buffer.from(obj['iv'] as string, 'base64'));
+  const authTag = new Uint8Array(Buffer.from(obj['authTag'] as string, 'base64'));
+  if (iv.length !== IV_LEN) {
+    throw new Error(`parseEnvelope: iv must be ${IV_LEN} bytes after base64 decode, got ${iv.length}`);
+  }
+  if (authTag.length !== AUTH_TAG_LEN) {
+    throw new Error(`parseEnvelope: authTag must be ${AUTH_TAG_LEN} bytes after base64 decode, got ${authTag.length}`);
+  }
   return {
-    kekRef: String(obj['kekRef']),
-    encryptedDek: new Uint8Array(Buffer.from(String(obj['encryptedDek']), 'base64')),
-    iv: new Uint8Array(Buffer.from(String(obj['iv']), 'base64')),
-    ciphertext: new Uint8Array(Buffer.from(String(obj['ciphertext']), 'base64')),
-    authTag: new Uint8Array(Buffer.from(String(obj['authTag']), 'base64')),
+    kekRef: obj['kekRef'] as string,
+    encryptedDek: new Uint8Array(Buffer.from(obj['encryptedDek'] as string, 'base64')),
+    iv,
+    ciphertext: new Uint8Array(Buffer.from(obj['ciphertext'] as string, 'base64')),
+    authTag,
     aadShape: 'v1',
   };
 }

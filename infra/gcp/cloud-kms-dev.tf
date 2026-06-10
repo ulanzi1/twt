@@ -18,6 +18,10 @@ resource "google_kms_key_ring" "twt_dev" {
   name     = "twt-dev-keyring"
   location = var.region
   project  = var.project_id
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "google_kms_crypto_key" "pii_tier_1_kek" {
@@ -48,7 +52,9 @@ resource "google_kms_crypto_key" "pii_tier_2_hmac" {
     protection_level = "HSM"
   }
 
-  rotation_period            = "${var.kms_kek_rotation_period_seconds}s"
+  # Cloud KMS MAC keys do not support automatic rotation (only ENCRYPT_DECRYPT
+  # purpose keys do). Rotation for the HMAC key is manual — create a new key
+  # version and update the KmsKeyRef; see docs/runbooks/secret-rotation.md §2.1.2.
   destroy_scheduled_duration = "${var.kms_destroy_scheduled_duration_seconds}s"
 
   lifecycle {
@@ -59,18 +65,23 @@ resource "google_kms_crypto_key" "pii_tier_2_hmac" {
 # Per-key IAM bindings. var.app_service_account_email is nullable at Story 1.5
 # (allows commit-without-substantive-IAM-binding); Story 1.15 substantively
 # populates the service account email (D4-1.5).
-resource "google_kms_crypto_key_iam_binding" "pii_tier_1_kek_encrypter_decrypter" {
-  count         = var.app_service_account_email == null ? 0 : 1
+#
+# _iam_member (additive) is used instead of _iam_binding (replace-all) so that
+# Story 1.15 can add additional principals (DR / break-glass SA) without
+# removing this binding. for_each with empty set produces zero instances when
+# the SA email is null, cleanly avoiding any interpolation of a null value.
+resource "google_kms_crypto_key_iam_member" "pii_tier_1_kek_encrypter_decrypter" {
+  for_each      = var.app_service_account_email != null ? toset([var.app_service_account_email]) : toset([])
   crypto_key_id = google_kms_crypto_key.pii_tier_1_kek.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  members       = ["serviceAccount:${var.app_service_account_email}"]
+  member        = "serviceAccount:${each.value}"
 }
 
-resource "google_kms_crypto_key_iam_binding" "pii_tier_2_hmac_signer_verifier" {
-  count         = var.app_service_account_email == null ? 0 : 1
+resource "google_kms_crypto_key_iam_member" "pii_tier_2_hmac_signer_verifier" {
+  for_each      = var.app_service_account_email != null ? toset([var.app_service_account_email]) : toset([])
   crypto_key_id = google_kms_crypto_key.pii_tier_2_hmac.id
   role          = "roles/cloudkms.signerVerifier"
-  members       = ["serviceAccount:${var.app_service_account_email}"]
+  member        = "serviceAccount:${each.value}"
 }
 
 # Defense-in-depth: keyring-level IAM is intentionally empty at Story 1.5.

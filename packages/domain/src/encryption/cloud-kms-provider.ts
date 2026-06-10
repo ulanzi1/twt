@@ -18,27 +18,41 @@ export interface CloudKmsProviderOpts {
   readonly location: string;
 }
 
+// Numeric proto enum value for HSM protection level (gRPC clients may return int instead of string).
+const HSM_PROTECTION_LEVEL_INT = 2;
+
 export function createCloudKmsProvider(opts: CloudKmsProviderOpts): KmsProvider {
   const client = new KeyManagementServiceClient();
-  let hsmAssertionDone = false;
+  // Cached Promise — all concurrent callers share the same in-flight assertion.
+  // Cleared on rejection so transient network errors are retried on the next call.
+  let hsmAssertionPromise: Promise<void> | null = null;
 
-  async function assertHsmProtection(): Promise<void> {
-    if (hsmAssertionDone) return;
-    const checks: Array<[string, KmsKeyRef]> = [
-      ['kek', opts.kekRef],
-      ['hmacKey', opts.hmacKeyRef],
-    ];
-    for (const [label, ref] of checks) {
-      const [key] = await client.getCryptoKey({ name: ref.resourceName });
-      const level = key.versionTemplate?.protectionLevel;
-      const levelStr = typeof level === 'string' ? level : String(level);
-      if (levelStr !== HSM_PROTECTION_LEVEL) {
-        throw new Error(
-          `cloudKmsProvider: ${label} protectionLevel must be HSM, got ${levelStr} (resource: ${ref.resourceName})`,
-        );
+  function assertHsmProtection(): Promise<void> {
+    if (hsmAssertionPromise) return hsmAssertionPromise;
+    hsmAssertionPromise = (async () => {
+      const checks: Array<[string, KmsKeyRef]> = [
+        ['kek', opts.kekRef],
+        ['hmacKey', opts.hmacKeyRef],
+      ];
+      for (const [label, ref] of checks) {
+        const [key] = await client.getCryptoKey({ name: ref.resourceName });
+        const level = key.versionTemplate?.protectionLevel;
+        // proto-plus types protectionLevel as a string union; cast through unknown to
+        // also handle raw gRPC numeric enum value 2 (HSM) from older client versions.
+        const isHsm =
+          level === HSM_PROTECTION_LEVEL ||
+          (level as unknown) === HSM_PROTECTION_LEVEL_INT;
+        if (!isHsm) {
+          throw new Error(
+            `cloudKmsProvider: ${label} protectionLevel must be HSM, got ${String(level)} (resource: ${ref.resourceName})`,
+          );
+        }
       }
-    }
-    hsmAssertionDone = true;
+    })().catch((err: unknown) => {
+      hsmAssertionPromise = null; // clear on failure so next call retries
+      throw err;
+    });
+    return hsmAssertionPromise;
   }
 
   return {
@@ -57,8 +71,11 @@ export function createCloudKmsProvider(opts: CloudKmsProviderOpts): KmsProvider 
     },
     async decryptDek(encryptedDek, kekRef, aad) {
       await assertHsmProtection();
+      const name = kekRef.keyVersion
+        ? `${kekRef.resourceName}/cryptoKeyVersions/${kekRef.keyVersion}`
+        : kekRef.resourceName;
       const [resp] = await client.decrypt({
-        name: kekRef.resourceName,
+        name,
         ciphertext: Buffer.from(encryptedDek),
         additionalAuthenticatedData: Buffer.from(aad),
       });

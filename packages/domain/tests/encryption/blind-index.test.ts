@@ -58,6 +58,12 @@ describe('field-class namespacing — no cross-class collision (architecture lin
       /non-empty/,
     );
   });
+
+  it('rejects empty plaintext', async () => {
+    await expect(blindIndex('mobile', '', { pariwarId: 'A' }, kms, HMAC_REF)).rejects.toThrow(
+      /non-empty/,
+    );
+  });
 });
 
 describe('cross-Pariwar separation — no cross-Pariwar correlation (architecture line 1512-1513)', () => {
@@ -65,6 +71,12 @@ describe('cross-Pariwar separation — no cross-Pariwar correlation (architectur
     const a = await blindIndex('mobile', MOBILE, { pariwarId: 'A' }, kms, HMAC_REF);
     const b = await blindIndex('mobile', MOBILE, { pariwarId: 'B' }, kms, HMAC_REF);
     expect(a).not.toBe(b);
+  });
+
+  it('rejects pariwarId containing pipe character (HMAC input separator)', async () => {
+    await expect(
+      blindIndex('mobile', MOBILE, { pariwarId: 'A|B' }, kms, HMAC_REF),
+    ).rejects.toThrow(/must not contain/);
   });
 });
 

@@ -57,6 +57,33 @@ isolation, Secret Manager connection resolution, root db:* / Turbo
 db:check wiring rationale, and the Story 1.16c schema-diff CI gate
 boundary.
 
+## Contracts + OpenAPI
+
+`packages/contracts/` is the transport-contract source-of-truth: Zod schemas
+organized per domain that drive runtime validation in `apps/api/` (Story 1.9+),
+form validation in `apps/admin/` / `apps/mobile/` / `apps/public/`, and
+OpenAPI 3.1 spec generation for partner integrations. Per architecture §1.3 +
+§3.1 + §3.2 + AR-4 + AR-38 + ADR-0005.
+
+```sh
+# Re-emit openapi/v1.yaml from packages/contracts/ Zod schemas
+pnpm contracts:emit-openapi
+
+# CI gate: re-emit + assert byte-identical to the committed file
+pnpm contracts:check-openapi-determinism
+```
+
+The committed `openapi/v1.yaml` at the repository root is the generator
+output per architecture §Project Structure line 4176-4177. CI verifies
+emission determinism via the `contracts-check` job (architecture §3.2 line
+1862-1865). The breaking-change semantic-diff CI gate per architecture §3.2
+line 1856-1860 is deferred to Story 1.9+ when first `apps/api` routes
+substantively populate. See `packages/contracts/README.md` for the
+type-assignability + validation-parity test patterns + the type-shadowing
+prohibition + the `.strict()` discipline; see [ADR-0005](docs/adr/ADR-0005-openapi-client-generation.md)
+for the client-generation tool choice (`@hey-api/openapi-ts` primary +
+Orval secondary).
+
 ## Workspace layout
 
 Architecture-authoritative per `architecture.md` §Workspace Layout + §Complete project directory structure (lines 382-417 + 4137-4439).
@@ -71,7 +98,7 @@ Architecture-authoritative per `architecture.md` §Workspace Layout + §Complete
 | `packages/tokens/` | Design tokens (Story 1.17) | PR-1 placeholder |
 | `packages/i18n/` | Centralized i18n utility (Story 2.1) | PR-1 placeholder |
 | `packages/domain/` | Drizzle schema + repositories (Stories 1.2+) | **Active at Story 1.2 + Story 1.3** — Cloud SQL + Drizzle scaffolding + `events_log` table |
-| `packages/contracts/` | Zod schemas + OpenAPI (Story 1.4) | PR-1 placeholder |
+| `packages/contracts/` | Zod schemas + OpenAPI (Story 1.4) | **Active at Story 1.4** — 16-sub-domain layout + `_common/` primitives + Zod → OpenAPI 3.1 emission pipeline (see `packages/contracts/README.md` + [ADR-0005](docs/adr/ADR-0005-openapi-client-generation.md)) |
 | `packages/api-client/` | Generated typed API client (Story 1.4) | PR-1 placeholder |
 | `packages/platform-adapters/` | FM-1 adapter passthrough (Story 1.X) | PR-1 placeholder |
 | `packages/bank-parsers/` | Bank statement parsers (Story 7.X) | PR-1 placeholder |
@@ -80,7 +107,7 @@ Architecture-authoritative per `architecture.md` §Workspace Layout + §Complete
 | `packages/eslint-config-twt/` | Shared ESLint flat config + canonical rule inventory | **Active at PR-1** |
 | `infra/{cloudflare,gcp,dokploy}/` | IaC manifests | PR-1 placeholder; Stories 1.13/1.14/1.15 |
 | `tests/{integration,e2e}/` | Cross-workspace tests | PR-1 placeholder; per-surface |
-| `openapi/` | Generated `v1.yaml` | PR-1 placeholder; Story 1.4 |
+| `openapi/` | Generated `v1.yaml` | **Active at Story 1.4** — substrate-proof toy `/_meta/health` endpoint; substantive routes at Story 1.9+ |
 | `docs/` | **Phase-0 documentation (Stories 0.1-0.15)** + `adr/` + `onboarding-tour.md` | **Preserved** |
 
 ## Essential reading

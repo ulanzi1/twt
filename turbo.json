@@ -32,6 +32,17 @@
         "../../pnpm-lock.yaml"
       ],
       "outputs": []
+    },
+    "contracts:check-openapi-determinism": {
+      "dependsOn": [],
+      "inputs": [
+        "src/**/*.ts",
+        "scripts/**/*.ts",
+        "package.json",
+        "../../pnpm-lock.yaml",
+        "../../openapi/v1.yaml"
+      ],
+      "outputs": []
     }
   }
 }

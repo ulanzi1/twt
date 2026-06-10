@@ -40,3 +40,15 @@ output "secret_name" {
   description = "Secret Manager secret name (short form, e.g., twt-dev-cloud-sql-conn-string)."
   value       = google_secret_manager_secret.conn_string.secret_id
 }
+
+# Story 1.5 — Cloud KMS substrate outputs.
+
+output "kms_tier_1_kek_resource_name" {
+  description = "Fully-qualified Cloud KMS resource name for the Tier-1 KEK (HSM-backed). Format: projects/<id>/locations/<region>/keyRings/twt-dev-keyring/cryptoKeys/pii-tier-1-kek. Consumed by Secret Manager + apps/api at Story 1.15 live provisioning."
+  value       = google_kms_crypto_key.pii_tier_1_kek.id
+}
+
+output "kms_tier_2_hmac_resource_name" {
+  description = "Fully-qualified Cloud KMS resource name for the Tier-2 HMAC key (HSM-backed). Format: projects/<id>/locations/<region>/keyRings/twt-dev-keyring/cryptoKeys/pii-tier-2-hmac."
+  value       = google_kms_crypto_key.pii_tier_2_hmac.id
+}

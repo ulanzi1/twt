@@ -77,12 +77,40 @@ envelope-bounded in Phase-0 reconciliation; BigDev provisions against a
 personal-funded `twt-dev` project at minimal cost. `twt-staging` + `twt-prod`
 provisioning is Story 1.15 territory + lands with Dokploy auto-deploy.
 
+## Cloud KMS substrate (Story 1.5)
+
+Story 1.5 adds `cloud-kms-dev.tf` to this directory with:
+
+| Resource                                      | Name                                  | Notes                                                 |
+| --------------------------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| `google_kms_key_ring`                         | `twt-dev-keyring`                     | `asia-south1`; attached to `twt-dev` GCP project      |
+| `google_kms_crypto_key` (Tier-1 KEK)          | `pii-tier-1-kek`                      | ENCRYPT_DECRYPT + GOOGLE_SYMMETRIC_ENCRYPTION + HSM   |
+| `google_kms_crypto_key` (Tier-2 HMAC)         | `pii-tier-2-hmac`                     | MAC + HMAC_SHA256 + HSM                               |
+| `google_kms_crypto_key_iam_binding` (Tier-1)  | `roles/cloudkms.cryptoKeyEncrypterDecrypter` | bound to `var.app_service_account_email` when non-null |
+| `google_kms_crypto_key_iam_binding` (Tier-2)  | `roles/cloudkms.signerVerifier`        | bound to `var.app_service_account_email` when non-null |
+
+Both keys carry `rotation_period = ${var.kms_kek_rotation_period_seconds}s`
+(default 31536000 = 365 days; architecture §5.9 line 3324) and
+`destroy_scheduled_duration = ${var.kms_destroy_scheduled_duration_seconds}s`
+(default 2592000 = 30 days; architecture §5.9 line 3356 platform max) with
+`lifecycle { prevent_destroy = true }` (defense against unintended
+`terraform destroy`; aligns with §5.9 line 3357-3360 two-person approval).
+
+**Do NOT `terraform apply cloud-kms-dev.tf` at Story 1.5 closure.** Live Cloud
+KMS provisioning is deferred (D1-1.5, analogous to Story 1.2 D1-1.2).
+Story 1.15 substantively provisions multi-environment KMS (`cloud-kms-staging.tf`
++ `cloud-kms-prod.tf`) + high-sensitivity-tier IAM cross-project topology
+(D4-1.5). The Story 1.5 substrate is structurally exercised via the local-dev
+fake-KMS provider (`KMS_TEST_MODE=fake`) inside `pnpm crypto:check`.
+
+See `.terraform-plan-expectations.md` for the expected `terraform plan` shape.
+
 ## Landing-story map (full)
 
 | Subfolder / artifact                | Story / Epic            | Concern                                                  |
 | ----------------------------------- | ----------------------- | -------------------------------------------------------- |
-| `cloud-sql-dev.tf` (+ siblings)     | **Story 1.2 (this)**    | Cloud SQL Postgres dev instance + Secret Manager         |
-| Cloud KMS / HSM module              | Story 1.5               | Envelope encryption KEK provisioning per architecture §1.5 |
-| `twt-staging` + `twt-prod` SQL      | Story 1.15              | Module re-use with `environment` tfvar override          |
+| `cloud-sql-dev.tf` (+ siblings)     | Story 1.2               | Cloud SQL Postgres dev instance + Secret Manager         |
+| `cloud-kms-dev.tf`                  | **Story 1.5 (this)**    | Tier-1 KEK + Tier-2 HMAC HSM-backed; rotation; IaC only  |
+| `twt-staging` + `twt-prod` SQL/KMS  | Story 1.15              | Module re-use with `environment` tfvar override          |
 | Workload Identity Federation pool   | Story 1.15              | CI/CD auth per architecture §5.4                         |
 | Dokploy substrate                   | Story 1.15              | Deploy pipeline + multi-Pariwar provisioning             |

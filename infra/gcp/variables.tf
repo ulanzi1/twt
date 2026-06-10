@@ -156,3 +156,33 @@ variable "maintenance_window_hour" {
     error_message = "maintenance_window_hour must be between 0 and 23 (UTC)."
   }
 }
+
+# Story 1.5 — Cloud KMS substrate variables.
+
+variable "kms_kek_rotation_period_seconds" {
+  description = "Cloud KMS KEK rotation period in seconds. Default 31536000 = 365 days per architecture §5.9 line 3324 annual cadence. Validation band: 30 days minimum, 2 years maximum."
+  type        = number
+  default     = 31536000
+
+  validation {
+    condition     = var.kms_kek_rotation_period_seconds >= 2592000 && var.kms_kek_rotation_period_seconds <= 63072000
+    error_message = "kms_kek_rotation_period_seconds must be between 2592000 (30 days) and 63072000 (2 years)."
+  }
+}
+
+variable "kms_destroy_scheduled_duration_seconds" {
+  description = "Cloud KMS delayed-destruction window in seconds. Default 2592000 = 30 days per architecture §5.9 line 3356 Cloud KMS platform maximum. Validation band: 1 day minimum, 30 days maximum (Cloud KMS hard cap)."
+  type        = number
+  default     = 2592000
+
+  validation {
+    condition     = var.kms_destroy_scheduled_duration_seconds >= 86400 && var.kms_destroy_scheduled_duration_seconds <= 2592000
+    error_message = "kms_destroy_scheduled_duration_seconds must be between 86400 (1 day) and 2592000 (30 days, Cloud KMS platform max)."
+  }
+}
+
+variable "app_service_account_email" {
+  description = "Application service account email for KMS per-key IAM bindings. Nullable at Story 1.5 (commit-without-substantive-IAM-binding posture); Story 1.15 substantively populates."
+  type        = string
+  default     = null
+}

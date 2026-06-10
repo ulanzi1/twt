@@ -139,3 +139,27 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run contracts:check-openapi-determinism
+
+  crypto-check:
+    name: crypto-check (encryption substrate)
+    runs-on: ubuntu-latest
+    needs: install
+    # Encryption substrate unit tests for @twt/domain/src/encryption: Tier-1
+    # envelope round-trip + AAD binding; Tier-2 blind-index determinism +
+    # cross-Pariwar separation; fake-KMS provider correctness. No DB; no live
+    # KMS; KMS_TEST_MODE=fake. Architecture §2.7 + AR-12 + AR-13. Story 1.5
+    # commits the substrate; live Cloud KMS provisioning + integration-test
+    # live-DB substrate deferred per D1-1.5 + D2-1.3 (Story 1.6).
+    env:
+      KMS_TEST_MODE: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run crypto:check

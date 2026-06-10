@@ -19,7 +19,8 @@
     "db:check": "turbo run db:check",
     "db:studio": "pnpm --filter @twt/domain db:studio",
     "contracts:emit-openapi": "pnpm --filter @twt/contracts contracts:emit-openapi",
-    "contracts:check-openapi-determinism": "turbo run contracts:check-openapi-determinism"
+    "contracts:check-openapi-determinism": "turbo run contracts:check-openapi-determinism",
+    "crypto:check": "turbo run crypto:check"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

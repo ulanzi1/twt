@@ -13,6 +13,7 @@ import {
   type EncryptionContext,
   type KmsKeyRef,
   type KmsProvider,
+  type Tier1Ciphertext,
 } from '../../src/encryption/index.js';
 
 const KEK_REF: KmsKeyRef = {
@@ -53,25 +54,34 @@ describe('encryptTier1 + decryptTier1 round-trip', () => {
 describe('AAD binding — defense against cross-tenant ciphertext substitution', () => {
   it('decrypt fails when pariwarId differs from encrypt context', async () => {
     const env = await encryptTier1(Buffer.from(TEXT, 'utf-8'), CTX_A, kms, KEK_REF);
-    await expect(decryptTier1(env, CTX_B, kms, KEK_REF)).rejects.toThrow();
+    await expect(decryptTier1(env, CTX_B, kms, KEK_REF)).rejects.toThrow(
+      /unable to authenticate/,
+    );
   });
 
   it('decrypt fails when fieldClass differs from encrypt context', async () => {
     const env = await encryptTier1(Buffer.from(TEXT, 'utf-8'), CTX_A, kms, KEK_REF);
-    await expect(decryptTier1(env, CTX_A_EHRMS, kms, KEK_REF)).rejects.toThrow();
+    await expect(decryptTier1(env, CTX_A_EHRMS, kms, KEK_REF)).rejects.toThrow(
+      /unable to authenticate/,
+    );
   });
 });
 
 describe('DEK uniqueness — per-row DEK invariant per architecture §2.7 line 1504-1505', () => {
-  it('100 encryptions of the same plaintext under the same context produce 100 distinct ciphertexts', async () => {
+  it('100 encryptions produce 100 distinct ciphertexts and 100 distinct IVs', async () => {
     const seen = new Set<string>();
+    const ivSeen = new Set<string>();
     for (let i = 0; i < 100; i += 1) {
       const env = await encryptTier1(Buffer.from(TEXT, 'utf-8'), CTX_A, kms, KEK_REF);
       const key = Buffer.from(env.ciphertext).toString('hex') + '|' + Buffer.from(env.iv).toString('hex');
+      const ivHex = Buffer.from(env.iv).toString('hex');
       expect(seen.has(key)).toBe(false);
+      expect(ivSeen.has(ivHex)).toBe(false);
       seen.add(key);
+      ivSeen.add(ivHex);
     }
     expect(seen.size).toBe(100);
+    expect(ivSeen.size).toBe(100);
   });
 });
 
@@ -125,5 +135,63 @@ describe('envelope shape — no debug fields, no plaintext echo', () => {
       'utf-8',
     ).toString('base64');
     expect(() => parseEnvelope('enc:v1:' + tampered)).toThrow(/aadShape/);
+  });
+
+  it('parseEnvelope rejects input without enc:v1: prefix', () => {
+    expect(() => parseEnvelope('enc:v2:abc')).toThrow(/enc:v1: prefix/);
+    expect(() => parseEnvelope('plain:abc')).toThrow(/enc:v1: prefix/);
+  });
+
+  it('parseEnvelope rejects non-object JSON payloads', () => {
+    const str64 = Buffer.from('"hello"', 'utf-8').toString('base64');
+    expect(() => parseEnvelope('enc:v1:' + str64)).toThrow(/not an object/);
+    const num64 = Buffer.from('42', 'utf-8').toString('base64');
+    expect(() => parseEnvelope('enc:v1:' + num64)).toThrow(/not an object/);
+  });
+
+  it('parseEnvelope rejects non-string field values', () => {
+    const tampered = Buffer.from(
+      JSON.stringify({ kekRef: 'x', encryptedDek: '', iv: 42, ciphertext: '', authTag: '', aadShape: 'v1' }),
+      'utf-8',
+    ).toString('base64');
+    expect(() => parseEnvelope('enc:v1:' + tampered)).toThrow(/"iv" must be a string/);
+  });
+
+  it('parseEnvelope rejects IV that does not decode to 12 bytes', () => {
+    const tampered = Buffer.from(
+      JSON.stringify({
+        kekRef: 'x',
+        encryptedDek: Buffer.alloc(60).toString('base64'),
+        iv: Buffer.alloc(8).toString('base64'),
+        ciphertext: '',
+        authTag: Buffer.alloc(16).toString('base64'),
+        aadShape: 'v1',
+      }),
+      'utf-8',
+    ).toString('base64');
+    expect(() => parseEnvelope('enc:v1:' + tampered)).toThrow(/iv must be 12 bytes/);
+  });
+
+  it('parseEnvelope rejects authTag that does not decode to 16 bytes', () => {
+    const tampered = Buffer.from(
+      JSON.stringify({
+        kekRef: 'x',
+        encryptedDek: Buffer.alloc(60).toString('base64'),
+        iv: Buffer.alloc(12).toString('base64'),
+        ciphertext: '',
+        authTag: Buffer.alloc(8).toString('base64'),
+        aadShape: 'v1',
+      }),
+      'utf-8',
+    ).toString('base64');
+    expect(() => parseEnvelope('enc:v1:' + tampered)).toThrow(/authTag must be 16 bytes/);
+  });
+});
+
+describe('decryptTier1 input validation', () => {
+  it('rejects unsupported aadShape', async () => {
+    const env = await encryptTier1(Buffer.from(TEXT, 'utf-8'), CTX_A, kms, KEK_REF);
+    const tampered = { ...env, aadShape: 'v2' } as unknown as Tier1Ciphertext;
+    await expect(decryptTier1(tampered, CTX_A, kms, KEK_REF)).rejects.toThrow(/unsupported aadShape/);
   });
 });

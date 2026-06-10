@@ -48,7 +48,7 @@
       "dependsOn": [],
       "inputs": [
         "src/encryption/**/*.ts",
-        "tests/encryption/**/*.test.ts",
+        "tests/encryption/**/*.ts",
         "package.json",
         "../../pnpm-lock.yaml"
       ],

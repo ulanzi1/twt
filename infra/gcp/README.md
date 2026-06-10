@@ -86,15 +86,19 @@ Story 1.5 adds `cloud-kms-dev.tf` to this directory with:
 | `google_kms_key_ring`                         | `twt-dev-keyring`                     | `asia-south1`; attached to `twt-dev` GCP project      |
 | `google_kms_crypto_key` (Tier-1 KEK)          | `pii-tier-1-kek`                      | ENCRYPT_DECRYPT + GOOGLE_SYMMETRIC_ENCRYPTION + HSM   |
 | `google_kms_crypto_key` (Tier-2 HMAC)         | `pii-tier-2-hmac`                     | MAC + HMAC_SHA256 + HSM                               |
-| `google_kms_crypto_key_iam_binding` (Tier-1)  | `roles/cloudkms.cryptoKeyEncrypterDecrypter` | bound to `var.app_service_account_email` when non-null |
-| `google_kms_crypto_key_iam_binding` (Tier-2)  | `roles/cloudkms.signerVerifier`        | bound to `var.app_service_account_email` when non-null |
+| `google_kms_crypto_key_iam_member` (Tier-1)   | `roles/cloudkms.cryptoKeyEncrypterDecrypter` | additive; bound to `var.app_service_account_email` when non-null |
+| `google_kms_crypto_key_iam_member` (Tier-2)   | `roles/cloudkms.signerVerifier`        | additive; bound to `var.app_service_account_email` when non-null |
 
-Both keys carry `rotation_period = ${var.kms_kek_rotation_period_seconds}s`
-(default 31536000 = 365 days; architecture §5.9 line 3324) and
-`destroy_scheduled_duration = ${var.kms_destroy_scheduled_duration_seconds}s`
+The Tier-1 KEK carries `rotation_period = ${var.kms_kek_rotation_period_seconds}s`
+(default 31536000 = 365 days; architecture §5.9 line 3324). The Tier-2 HMAC key
+does **not** have `rotation_period` — Cloud KMS MAC keys do not support automatic
+rotation; HMAC key rotation is manual per `docs/runbooks/secret-rotation.md §2.1.2`.
+Both keys carry `destroy_scheduled_duration = ${var.kms_destroy_scheduled_duration_seconds}s`
 (default 2592000 = 30 days; architecture §5.9 line 3356 platform max) with
-`lifecycle { prevent_destroy = true }` (defense against unintended
-`terraform destroy`; aligns with §5.9 line 3357-3360 two-person approval).
+`lifecycle { prevent_destroy = true }` on both keys and the keyring (defense
+against unintended `terraform destroy`; aligns with §5.9 line 3357-3360
+two-person approval). IAM uses `_iam_member` (additive) so Story 1.15 can add
+additional principals without removing existing bindings.
 
 **Do NOT `terraform apply cloud-kms-dev.tf` at Story 1.5 closure.** Live Cloud
 KMS provisioning is deferred (D1-1.5, analogous to Story 1.2 D1-1.2).

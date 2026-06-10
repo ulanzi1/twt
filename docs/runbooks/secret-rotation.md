@@ -1,6 +1,7 @@
 # Runbook: Secret Rotation
 
 > **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Ledger status:** `substrate-tier-1-and-tier-2-landed` (Story 1.5 substrate committed 2026-06-10; Tier-1 KEK + Tier-2 HMAC IaC + rotation runbook sections authored; awaiting trustee ratification session)
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13) with co-sign for high-sensitivity tier (per architecture §5.9 two-person approval)
 > **Last material edit:** 2026-06-10 by Solo Builder — Story 1.5: Tier-1 KEK + Tier-2 HMAC substrate specifics added (§2.1.1 + §2.1.2 + §2.1.3)
 > **Architectural authority:** architecture.md §5.9 (Secret management + rotation), §2.7 (PII encryption — three-tier KEK), §5.4 (WIF — short-lived service-account tokens), §1.5 (Audit log — KEK-roots destruction alarm)
@@ -62,27 +63,20 @@ The Tier-1 KEK is the AES-256 KEK that wraps per-row DEKs for envelope-encrypted
     --location=asia-south1 \
     --keyring=twt-dev-keyring \
     --key=pii-tier-1-kek \
-    --protection-level=HSM \
     --primary
   ```
-  The `--protection-level=HSM` flag is non-negotiable per architecture §2.7 line 1504; the `cloud-kms-provider` asserts `versionTemplate.protectionLevel === 'HSM'` at first-call time and throws if drift is detected.
+  HSM protection is inherited from the key's `version_template` (set at Terraform provisioning time — `protection_level = "HSM"`); the `--protection-level` flag is not required when creating a new version under an existing HSM-backed key. `createCloudKmsProvider` independently asserts `versionTemplate.protectionLevel === 'HSM'` at first-call time and throws if drift is detected.
 - **Envelope format reference:** `enc:v1:<base64-json>` per ADR-0006-pii-tier-1-kek-library. The decrypt path supports both old + new KEK versions during the rotation window via the `kekRef` field inside the envelope JSON; the saga re-encrypts envelopes from old → new KEK version.
+- **KEK version reference after rotation.** The `kekRef` field inside the envelope payload is a `KmsKeyRef` object; its optional `keyVersion` field pins a specific KEK version (`projects/<project-id>/locations/asia-south1/keyRings/twt-dev-keyring/cryptoKeys/pii-tier-1-kek/cryptoKeyVersions/<n>`). After the rotation window opens, old envelopes still carry the old `kekRef`; `decryptDek` reads whichever version the envelope names. The saga (D3-1.5) re-encrypts old envelopes using the new `kekRef`; once the metric reads 100%, all envelopes reference the new version. Old KEK version must be retained (not destroyed) until that 100% confirmation is reached.
 - **DEK re-encryption saga.** The substantive saga substrate lands at Story 1.10+ (deferred-work D3-1.5). At Story 1.5 the application supports re-keying via `KmsProvider.encryptDek(dek, kekRef, aad)` with the new `kekRef`; the saga checkpointing + worker + metric land later.
-- **Verification query.** Per-PII-bearing-table check that 100% of Tier-1 ciphertexts use the new envelope version:
-  ```sql
-  -- Replace <table> + <column> per per-Epic PII-bearing table.
-  -- Returns 0 when 100% re-encryption is complete (no row still on the old envelope version).
-  SELECT COUNT(*)
-  FROM <table>
-  WHERE <column>::text NOT LIKE 'enc:v1:%';
-  ```
-  When the envelope format bumps to `enc:v2:` (future migration per ADR-0006 forward-path), the predicate becomes `NOT LIKE 'enc:v2:%'` and the migration saga walks both prefixes.
+- **Verification query.** Track re-encryption progress via the `encryption.dek_migration.tier_1.progress` metric (architecture §5.9 line 3343 — "DEK migration status is committed as a named observability metric"). The metric reads 100% when every DEK in storage is encrypted with the new KEK version; the saga populates it at Story 1.10+. A SQL form targeting the `kekRef` field inside the envelope payload is deferred alongside the saga wiring (D3-1.5). Note: the envelope format prefix (`enc:v1:`) does NOT change during KEK rotation — checking `NOT LIKE 'enc:v1:%'` always returns 0 and is not a valid KEK-rotation verification query.
 - **DEK migration metric reference:** `encryption.dek_migration.tier_1.progress` per architecture §5.9 line 3343 ("DEK migration status is committed as a named observability metric"). The metric is populated by the saga at Story 1.10+; at Story 1.5 the metric is reserved-but-unwritten.
 
 #### 2.1.2 Tier-2 HMAC key rotation specifics
 
 The Tier-2 HMAC key drives the equality-lookup blind index for fields like `mobile-hash`, `ehrms-hash`. Substrate landed at Story 1.5. Rotation **requires re-derivation of all hashes** per architecture §5.9 line 3341 ("Rotation re-encrypts DEKs and re-derives HMAC contents lazily").
 
+- **⚠ Cloud KMS MAC-purpose keys do NOT support automatic rotation.** There is no `rotation_period` on the `pii-tier-2-hmac` resource (Cloud KMS only supports `rotation_period` on `ENCRYPT_DECRYPT`-purpose keys). Every HMAC key rotation is a fully manual operator action — this runbook procedure must be triggered explicitly. There are no automatic Cloud KMS rotation notifications for this key.
 - **Cloud KMS resource path:** `projects/<project-id>/locations/asia-south1/keyRings/twt-dev-keyring/cryptoKeys/pii-tier-2-hmac`.
 - **Create the new key version (HSM-protected):**
   ```sh
@@ -90,15 +84,17 @@ The Tier-2 HMAC key drives the equality-lookup blind index for fields like `mobi
     --location=asia-south1 \
     --keyring=twt-dev-keyring \
     --key=pii-tier-2-hmac \
-    --protection-level=HSM \
     --primary
   ```
+  HSM protection is inherited from the key's `version_template` (`protection_level = "HSM"` at Terraform provisioning time); the `--protection-level` flag is not required when creating a new version under an existing HSM-backed key.
+- **Update `KmsKeyRef` in app config / Secret Manager.** Before initiating re-derivation, update the `KmsKeyRef` stored in Secret Manager (or app config) to reference the new primary version. The blind-index computation reads this reference at call time; all new HMAC calls will use the new version once the ref is updated. Old hashes computed with the old version remain valid for lookup until they are re-derived (lazy or eager).
 - **Lazy vs eager re-derivation strategy.**
   - **Lazy (default).** Recompute the HMAC on the next equality-lookup read of a row + persist the new hash back to the column. Existing rows that are never read on the lookup path stay on the old hash; equality lookups against the old hash continue to match until those rows roll over.
   - **Eager (saga).** Sweep every PII-bearing table, recompute every hash with the new key, write back. Saga substantive wiring at Story 1.10+ (deferred-work D3-1.5); same substrate as the Tier-1 DEK migration.
   - Story 1.5 substrate commits **lazy as default**; eager is an opt-in saga the operator chooses when the operations policy demands faster cutover (e.g., compromise-driven rotation).
 - **Per-Pariwar context-binding.** The HMAC input is prefixed with `pariwar:<id>|` (Option B per deferred-work D9-1.5) on both fake + Cloud KMS providers. Rotation does not change the prefix scheme; both old + new hashes are namespaced per-Pariwar identically.
 - **Verification query.** Per-PII-bearing-table check that 100% of Tier-2 hashes have been re-derived:
+  > **Prerequisite schema migration not yet landed:** the `hmac_key_version` column referenced below must be added in a future migration (Story 1.10+ / D3-1.5). This query cannot be executed until that migration lands. At Story 1.5 the query pattern is reserved as a placeholder.
   ```sql
   -- A row's hash is stale if it was last written before the rotation's start_at timestamp.
   -- Substantive wiring lands at Story 1.10+; the query pattern is reserved at Story 1.5.

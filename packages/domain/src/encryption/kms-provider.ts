@@ -20,6 +20,15 @@ export interface EncryptionContext {
 export interface KmsProvider {
   encryptDek(dek: Uint8Array, kekRef: KmsKeyRef, aad: Uint8Array): Promise<Uint8Array>;
   decryptDek(encryptedDek: Uint8Array, kekRef: KmsKeyRef, aad: Uint8Array): Promise<Uint8Array>;
+  /**
+   * Compute an HMAC for a blind-index input.
+   *
+   * CONTRACT (Option B, D9-1.5): implementors MUST prepend `pariwar:<pariwarId>|`
+   * to `input` before computing the HMAC. `blindIndex` passes `fieldClass:plaintext`
+   * as `input`; the full HMAC payload is therefore `pariwar:<id>|<fieldClass>:<plaintext>`.
+   * A provider that omits this prefix produces blind indexes incompatible with all other
+   * providers and breaks cross-provider round-trips silently.
+   */
   computeHmac(
     hmacKeyRef: KmsKeyRef,
     input: Uint8Array,

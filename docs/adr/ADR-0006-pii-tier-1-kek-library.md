@@ -61,7 +61,7 @@ The Decision is substantively re-openable post-Story-1.10 (first audit-log subst
 | KEK wrap | HSM-backed | ✅ Cloud KMS `encrypt({ name, plaintext: dek, ... })` with `HSM`-assertion-at-first-call |
 | AAD binding | Bound to row identity | ✅ `EncryptionContext` canonical-JSON serialized; passed as `additionalAuthenticatedData` |
 | Envelope wire format | Tink-equivalent | ✅ `{kekRef, encryptedDek, iv, ciphertext, authTag, aadShape}` Base64-JSON; `enc:v1:` prefix |
-| Field-class namespacing (Tier 2) | `HMAC(key, "<field-class>:" || value)` | ✅ `blindIndex` builds `${fieldClass}:${plaintext}` before `MacSign` |
+| Field-class namespacing (Tier 2) | `HMAC(key, "<field-class>:" || value)` | ✅ `blindIndex` builds `${fieldClass}:${plaintext}`; KmsProvider prepends `pariwar:${pariwarId}|`; full MacSign input = `pariwar:${pariwarId}|${fieldClass}:${plaintext}` |
 | Per-Pariwar separation (Tier 2) | "different keys per Pariwar where required" | ✅ Option B context-binding at substrate (D9-1.5 Story 1.6 substantive choice) |
 
 ### Not-chosen rationale
@@ -75,7 +75,7 @@ The Decision is substantively re-openable post-Story-1.10 (first audit-log subst
 
 1. **`packages/domain/src/encryption/cloud-kms-provider.ts` is the only file in the monorepo importing `@google-cloud/kms`.** The `KmsProvider` interface is the substitution seam per AR-13. Other workspaces consume Cloud KMS only via the `KmsProvider` interface from `@twt/domain`.
 2. **Envelope wire-format `enc:v1:<base64-json>` is committed as a versioned format.** Future format migrations (e.g., adding AES-256-GCM-SIV for nonce-misuse resistance) bump the prefix to `enc:v2:` and the decrypt path supports both. The `aadShape: 'v1'` field inside the envelope is the structural version marker for AAD-derivation logic.
-3. **Per-row DEK storage adds ~120 bytes per Tier-1 column.** 32-byte DEK Base64'd (~44 bytes encrypted-and-Base64'd in the envelope) + 12-byte IV (~16 bytes Base64'd) + 16-byte auth tag (~24 bytes Base64'd) + JSON envelope structural overhead. Columns previously sized for plaintext mobile (10-15 bytes) become ~200-byte TEXT columns. Downstream Drizzle migrations declare PII-Tier-1 columns as unbounded TEXT per Story 1.5 schema discipline.
+3. **Per-row DEK storage adds ~350-400 bytes per Tier-1 column for short plaintexts.** The 32-byte DEK, once wrapped by Cloud KMS (AES-256 GCM), becomes ~97-100 bytes binary (~132 chars Base64). The 12-byte IV is ~16 chars Base64; the 16-byte auth tag is ~24 chars Base64; the ciphertext is roughly the same size as the plaintext. JSON envelope structural overhead (field names, braces, `enc:v1:` prefix) adds another ~80-100 chars. Total: a column previously sized for a 10-15 byte plaintext (e.g., mobile number) becomes a ~350-400 char TEXT column. Downstream Drizzle migrations declare PII-Tier-1 columns as unbounded TEXT per Story 1.5 schema discipline.
 4. **KEK rotation triggers DEK re-encryption saga** (architecture §5.9 line 3339-3343). The saga substantive wiring lands at Story 1.10+ per D3-1.5. The Story 1.5 substrate provides the API seam (`KmsProvider.encryptDek`/`decryptDek` with `kekRef` argument; `auditHook?` slot for Story 1.10 audit-log substantive consumption).
 5. **AAD canonical-JSON helper is inlined per substrate constraint.** Story 1.3's `canonicalJsonStringify` lives in `@twt/events`, which depends on `@twt/domain`. Adding `@twt/events` as a dep of `@twt/domain` would create a circular workspace dep. Story 1.5 commits a scoped `encryptionContextAad` helper for the `EncryptionContext` shape only (3 string keys); byte-identical output to `canonicalJsonStringify` for this shape. Future consolidation captured in D13-1.5.
 6. **Drizzle 0.45 sync `customType` constraint.** Cloud KMS round-trips are async; Drizzle's `customType` requires sync `toDriver`/`fromDriver`. Story 1.5 commits `piiColumn(tier, fieldClass?)` as a TEXT customType with tier metadata attached — substantive encryption happens via explicit service-layer helpers. Auto-encrypt-on-write inside Drizzle is deferred per D14-1.5.
@@ -115,6 +115,6 @@ The Decision is substantively re-openable post-Story-1.10 (first audit-log subst
 - `_bmad-output/implementation-artifacts/1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers.md` — Story 1.5 file.
 - `_bmad-output/implementation-artifacts/deferred-work.md` `## Story 1.5 deferred` section — cross-Story discharge triggers.
 - `@google-cloud/kms` — https://www.npmjs.com/package/@google-cloud/kms (registry-current `^4.5.0` at Story 1.5 install time).
-- Google Tink — https://github.com/google/tink (Java/Go/Python/C++/Obj-C actively maintained); Tink-TypeScript sunset 2024.
+- Google Tink — https://github.com/tink-crypto (monorepo org; per-language repos: `tink-java`, `tink-go`, `tink-python`, `tink-cc`, `tink-objc` — actively maintained); Tink-TypeScript deprecated 2023 + sunset 2024 + last npm published 2022; no TS successor announced.
 - Cloud KMS `MacSign` API — https://cloud.google.com/kms/docs/create-validate-mac.
 - RFC 8785 JSON Canonicalization Scheme (JCS) — referenced for AAD canonical-JSON shape.

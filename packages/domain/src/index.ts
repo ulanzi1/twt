@@ -7,3 +7,4 @@
 export { createDb, type CreateDbOptions, type CreatedDb, type Db, type DbSchema } from './db.js';
 export { resolveConnectionString } from './secrets.js';
 export * as schema from './schema/index.js';
+export * as encryption from './encryption/index.js';

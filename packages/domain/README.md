@@ -290,12 +290,42 @@ drift; Story 1.16c's gate enforces architecture-committed scope.
 | --------------------------- | ---------- | ----------------------------------------------------------------------- |
 | `src/policies/`             | Story 1.6  | RLS `pgPolicy` declarations (multi-tenant isolation)                    |
 | `src/ids/`                  | Story 1.7+ | Branded ID types (`PariwarId`, `MemberId`, …)                           |
-| `src/encryption/`           | Story 1.5  | Envelope-encryption Drizzle column transformers                         |
+| `src/encryption/`           | **Story 1.5 (landed)** | Envelope-encryption + blind-index substrate; `piiColumn` factory       |
 | `src/snapshot-fixtures/`    | Story 7.x  | Pool Engine snapshot fixtures                                           |
 | `src/snapshot-adapters/`    | Story 7.x  | Per-version Pool Engine snapshot adapters                               |
 | `src/cross-tenant/`         | Story 1.6  | Named cross-tenant operations helper (single RLS-bypass call-site)       |
 | `src/bank-statement/`       | Story 9.2  | Normalized bank-statement row schema                                    |
 | `src/per-pariwar/bihar/`    | Story 1.7+ | Bihar-specific custom-field JSON Schema (Pariwar-Passport + Story 10.12) |
+
+### Story 1.5 — `src/encryption/` substantive landing
+
+Story 1.5 substantively populated `src/encryption/` per AR-12 + architecture
+§2.7 + §5.2 + §5.9 + §Cross-cutting concerns line 4539. The substrate exposes
+the three-tier PII encryption API:
+
+- **Tier 1 (`encryptTier1` / `decryptTier1`)** — envelope encryption with per-row
+  DEK + Cloud KMS HSM-backed KEK + AES-256-GCM AEAD + canonical-JSON AAD binding.
+- **Tier 2 (`blindIndex`)** — HMAC-SHA-256 blind index for equality lookup with
+  field-class namespacing + per-Pariwar context binding (Option B substrate
+  default; substantive Option-A-vs-B choice deferred to Story 1.6 per D9-1.5).
+- **Tier 3 (`passThroughTier3`)** — plaintext identity with `TIER_3_MARKER`
+  consumed by Story 1.16b PII shielding CI gate.
+- **`KmsProvider`** seam per AR-13 with `createCloudKmsProvider`
+  (`@google-cloud/kms ^4.5.0`) + `createFakeKmsProvider` (Node `crypto`; tests).
+- **`piiColumn(tier, fieldClass?)`** Drizzle column-transformer factory with
+  tier metadata attached + `AsyncLocalStorage`-backed `encryptionContextStorage`
+  + `withEncryptionContext` wrapper.
+- **Cloud KMS Terraform IaC** at `infra/gcp/cloud-kms-dev.tf` (keyring +
+  Tier-1 KEK HSM + Tier-2 HMAC HSM + IAM bindings + `lifecycle.prevent_destroy`).
+- **`pnpm crypto:check` CI gate** runs the encryption substrate unit tests
+  with `KMS_TEST_MODE=fake` (no external KMS dep).
+
+See `src/encryption/README.md` for the substantive API surface + downstream
+Story usage examples. ADR-0006-pii-tier-1-kek-library records the
+`@google-cloud/kms` + Node `crypto` library choice + the Tink-TypeScript
+sunset resolution (Tink envelope shape preserved + Tink-recommended
+algorithms used). `docs/runbooks/secret-rotation.md` §2.1.1 + §2.1.2 + §2.1.3
+covers Tier-1 KEK + Tier-2 HMAC rotation specifics.
 
 ---
 

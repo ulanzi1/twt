@@ -43,6 +43,17 @@
         "../../openapi/v1.yaml"
       ],
       "outputs": []
+    },
+    "crypto:check": {
+      "dependsOn": [],
+      "inputs": [
+        "src/encryption/**/*.ts",
+        "tests/encryption/**/*.test.ts",
+        "package.json",
+        "../../pnpm-lock.yaml"
+      ],
+      "outputs": [],
+      "env": ["KMS_TEST_MODE", "DATABASE_URL"]
     }
   }
 }

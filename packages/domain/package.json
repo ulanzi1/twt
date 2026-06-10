@@ -13,9 +13,11 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:check": "drizzle-kit check",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "crypto:check": "vitest run tests/encryption"
   },
   "dependencies": {
+    "@google-cloud/kms": "^4.5.0",
     "@google-cloud/secret-manager": "^6.1.0",
     "drizzle-orm": "^0.45.0",
     "pg": "^8.13.0"

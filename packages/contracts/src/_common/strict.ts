@@ -14,11 +14,21 @@
 import { z } from 'zod';
 
 export function assertStrict<T extends z.ZodObject<z.ZodRawShape>>(schema: T): T {
-  // Zod's ZodObject carries an internal `_def.unknownKeys` field; 'strict' is
-  // the canonical 'reject unknown keys' setting. The shape is z-internal so
-  // we treat the inspection defensively.
-  const unknownKeys = (schema as unknown as { _def: { unknownKeys?: string } })._def
-    ?.unknownKeys;
+  // Unwrap any ZodEffects layers (.refine()/.transform() chained after .strict())
+  // to reach the underlying ZodObject whose _def.unknownKeys carries the 'strict'
+  // flag. ZodEffects stores its base schema at _def.schema; iterating handles
+  // arbitrary nesting. The Zod internal shape is not documented so we access it
+  // via defensive casting.
+  let inner: unknown = schema;
+  while (
+    typeof inner === 'object' &&
+    inner !== null &&
+    typeof (inner as Record<string, unknown>)._def === 'object' &&
+    (inner as { _def: Record<string, unknown> })._def.schema !== undefined
+  ) {
+    inner = (inner as { _def: { schema: unknown } })._def.schema;
+  }
+  const unknownKeys = (inner as { _def?: { unknownKeys?: string } })?._def?.unknownKeys;
   if (unknownKeys !== 'strict') {
     throw new Error(
       'assertStrict: schema must end with .strict() per packages/contracts/ convention',

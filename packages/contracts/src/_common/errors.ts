@@ -35,6 +35,9 @@ export function defineErrorCode<D extends string, A extends string, S extends st
   sub: S,
 ): ErrorCode<D, A, S>;
 export function defineErrorCode(domain: string, action: string, sub?: string): string {
+  if (!domain || !action) {
+    throw new Error('defineErrorCode: domain and action must be non-empty strings');
+  }
   return sub === undefined ? `${domain}.${action}` : `${domain}.${action}.${sub}`;
 }
 
@@ -46,7 +49,7 @@ export const ErrorResponse = z
   .object({
     error: z
       .object({
-        code: z.string().min(1),
+        code: z.string().min(1).regex(/\S/, 'error code must not be blank'),
         message: z.string(),
         details: z.unknown().optional(),
         request_id: z.string().uuid(),

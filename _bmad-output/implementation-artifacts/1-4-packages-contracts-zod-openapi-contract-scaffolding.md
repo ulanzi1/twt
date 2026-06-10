@@ -1,6 +1,6 @@
 # Story 1.4: `packages/contracts` Zod + OpenAPI Contract Scaffolding
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -1079,4 +1079,28 @@ claude-opus-4-7 (via Claude Code; engineering agent under bmad-dev-story workflo
 
 ### Review Findings
 
-_(populated by code-review pass per Story 1.2/1.3 pattern — Blind Hunter + Edge Case Hunter + Acceptance Auditor parallel review layers; triage into patches applied + decisions resolved + deferred + dismissed; cross-references to deferred-work.md)_
+Code review pass: 2026-06-10. Layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor (all three completed). 34 raw signals → 14 dismissed, 2 decision-needed, 12 patch, 1 defer.
+
+#### Decision-Needed
+
+- [x] [Review][Decision] F10: `paginatedResponse` factory produces unregistered, unannotated OpenAPI schema — When downstream Stories pass the factory's output to `registry.registerPath(...)`, `@asteasolutions/zod-to-openapi` will inline the full schema rather than emit a `$ref`, producing duplicate inline definitions and defeating component reuse. The factory needs either (a) a `name` parameter so callers can call `.openapi(name)` on the result before registering, or (b) a wrapper that auto-registers via `registry.registerComponent`. The correct approach depends on whether the factory is meant to be a pure Zod constructor (callers annotate) or a registry-aware builder.
+- [x] [Review][Decision] F11: `EventLogContract.eventVersion` uses `z.number().int().nonnegative()` which allows `0` — Architecture §1.11 and the optimistic-concurrency convention in the codebase imply event versioning is 1-based (monotonically increasing from 1). A wire payload with `eventVersion: 0` would parse successfully but violate the concurrency invariant downstream. Confirm: is 0 a valid event version at the transport layer, or should this be `.min(1)`?
+
+#### Patches
+
+- [x] [Review][Patch] F01: `defineErrorCode` accepts empty-string `domain`/`action`, silently producing `.`, `..sub`, or `.action` error codes that violate the dotted-resource-action convention [packages/contracts/src/_common/errors.ts:37-38]
+- [x] [Review][Patch] F02: `ErrorResponse.error.code` uses `z.string().min(1)` which accepts a single space `" "`, producing a blank-but-valid error code in logs and audit entries [packages/contracts/src/_common/errors.ts:50]
+- [x] [Review][Patch] F03: `PaginationQuery.cursor` uses `z.string().min(1).optional()` which accepts whitespace-only strings; server receives a logically empty cursor and may produce undefined pagination behavior [packages/contracts/src/_common/pagination.ts:23]
+- [x] [Review][Patch] F04+F16: `emit-openapi.ts` calls `extendZodWithOpenApi(z)` but then uses `registry.register('HealthResponse', HealthResponse)` instead of the spec-prescribed `registry.registerComponent('schemas', 'HealthResponse', HealthResponse.openapi('HealthResponse'))` — the component schemas are inlined in path responses rather than `$ref`-referenced; additionally, `extendZodWithOpenApi(z)` is a body statement that runs after static imports of `health.ts`/`errors.ts` are hoisted and evaluated (ESM hoisting), making it redundant in current form but brittle if `.openapi()` call-sites are added to those modules [packages/contracts/scripts/emit-openapi.ts]
+- [x] [Review][Patch] F05: `check-openapi-determinism.ts` reads `before`, then calls `execSync` which overwrites `target` in-place; if the emission crashes mid-write, the committed reference file is corrupted with no recovery path — should emit to a temp file, compare buffers, leave the committed file intact [packages/contracts/scripts/check-openapi-determinism.ts]
+- [x] [Review][Patch] F06: `execSync('tsx scripts/emit-openapi.ts', ...)` in `check-openapi-determinism.ts` has no try/catch — an uncaught exception propagates as a raw stack dump rather than the clear determinism-violation message, making CI triage harder [packages/contracts/scripts/check-openapi-determinism.ts]
+- [x] [Review][Patch] F08: `yaml.stringify(doc, { lineWidth: 0 })` in `emit-openapi.ts` does not explicitly set `sortMapEntries: false` — a future `yaml` package upgrade defaulting to sorted keys would silently break byte-identity between environments and defeat the determinism guarantee [packages/contracts/scripts/emit-openapi.ts:67]
+- [x] [Review][Patch] F09: `assertStrict` reads Zod internal `_def.unknownKeys` which is undocumented and version-sensitive; additionally, a `ZodObject` wrapped in `ZodEffects` (e.g. `.transform()` or `.refine()` applied after `.strict()`) causes `_def.unknownKeys` to be `undefined` on the wrapper, making `assertStrict` throw a false positive on valid strict schemas [packages/contracts/src/_common/strict.ts:20-22]
+- [x] [Review][Patch] F12: `PaginationQuery.cursor` is defined as `z.string().min(1).optional()` instead of `Cursor.optional()` — if `Cursor` gains additional constraints (URL-safety regex, max-length) in a downstream Story, `PaginationQuery.cursor` silently remains looser [packages/contracts/src/_common/pagination.ts:24]
+- [x] [Review][Patch] F13: `contracts-check` CI job hardcodes `node-version: 20.18.0` and pnpm `version: 10.30.3` instead of using `node-version-file: '.nvmrc'` — contradicts AC-2 requirement to mirror the `db-check` job shape exactly; will silently diverge when the monorepo bumps its Node version [.github/workflows/ci.yml:contracts-check]
+- [x] [Review][Patch] F14: `validation-parity.test.ts` fixture set does not include `{ limit: 0, expected: 'reject' }` — `z.number().positive()` correctly rejects 0, but the boundary is untested; a future refactor to `.nonnegative()` would silently change behavior without a failing fixture [packages/contracts/tests/validation-parity.test.ts:43-47]
+- [x] [Review][Patch] F15: `validation-parity.test.ts` fixture set does not test that `PaginationQuery` rejects unknown keys — `.strict()` is applied but never exercised; a downstream runtime that strips unknowns silently instead of rejecting would not be caught [packages/contracts/tests/validation-parity.test.ts:43-47]
+
+#### Deferred
+
+- [x] [Review][Defer] F07: `check-openapi-determinism.ts` uses the string literal `'scripts/emit-openapi.ts'` (relative path) rather than an absolute path via `path.resolve(here, 'emit-openapi.ts')` — correct given current monorepo depth but would silently resolve incorrectly if the package moves [packages/contracts/scripts/check-openapi-determinism.ts:22] — deferred, structural assumption stable at current monorepo depth; revisit if packages/ is reorganized

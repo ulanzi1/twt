@@ -587,3 +587,7 @@ Per Story 1.3 closure Decision 2026-06-09-039 + the substrate-only execution cho
 - **W7: UUID string validation in `loadEvents` / `appendEvent`** [`packages/events/src/events-log.ts`] — `streamId`, `pariwarId`, `actorId` are typed `string`; invalid UUIDs produce opaque Postgres errors (`invalid input syntax for type uuid`). Story 1.7 branded types (`packages/domain/src/ids/`) are the intended fix; at Story 1.3, callers are trusted to pass valid UUIDs.
 
 - **W8: `StateMachine` `transitions` table not validated against `reduce` function** [`packages/events/src/state-machine.ts`] — The `transitions` array is documentation-only; a `StateMachine` constructed with a `transitions` table that contradicts `reduce` produces no runtime error or warning. Low risk at Story 1.3 scope (no concrete state machine yet); revisit at Story 3.1+ when concrete member-state machine is authored.
+
+## Deferred from: code review of 1-4-packages-contracts-zod-openapi-contract-scaffolding (2026-06-10)
+
+- **F07: `check-openapi-determinism.ts` relative path robustness** [`packages/contracts/scripts/check-openapi-determinism.ts:22`] — Uses `'scripts/emit-openapi.ts'` as a string literal (relative to `cwd: packages/contracts`) rather than an absolute path via `path.resolve(here, 'emit-openapi.ts')`. Correct given current monorepo depth but would silently resolve incorrectly if the `packages/contracts/scripts/` directory were moved or the package renamed. Revisit if packages/ is reorganized.

@@ -20,3 +20,6 @@ export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
 export * as crossTenant from './cross-tenant/index.js';
+export * as ids from './ids/index.js';
+export * as passport from './pariwar-passport/index.js';
+export { UUID_REGEX } from './db.js';

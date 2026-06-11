@@ -41,16 +41,18 @@ packages/domain/
 │   ├── secrets.ts          Secret Manager fetch + DATABASE_URL fallback
 │   ├── schema/
 │   │   ├── index.ts        schema barrel
+│   │   ├── pariwar_passport.ts [Story 1.7 — landed] Pariwar-Passport table + BrandingBundle + locale enum
 │   │   └── _baseline.ts    migration-zero marker (declares the `drizzle` metadata schema)
-│   ├── policies/           [Story 1.6 — landed] RLS pgPolicy declarations + _roles
-│   ├── ids/                [Story 1.7+] branded ID types
+│   ├── policies/           [Story 1.6 — landed] RLS pgPolicy declarations + _roles (+ 1.7 carve-out)
+│   ├── ids/                [Story 1.7 — landed] branded ID types + smart constructors
+│   ├── pariwar-passport/   [Story 1.7 — landed] read accessor + write path + 60s freshness cache
 │   ├── encryption/         [Story 1.5] envelope-encryption column transformers
 │   ├── test-utils/         [Story 1.6 — landed] shared live-DB integration substrate
 │   ├── snapshot-fixtures/  [Story 7.x] Pool Engine snapshot fixtures
 │   ├── snapshot-adapters/  [Story 7.x] Pool Engine snapshot version adapters
 │   ├── cross-tenant/       [Story 1.6 — landed] named cross-tenant operations helper
 │   ├── bank-statement/     [Story 9.2] normalized bank-statement row schema
-│   └── per-pariwar/bihar/  [Story 1.7+10.12] per-Pariwar JSON Schema fragments
+│   └── per-pariwar/bihar/  [Story 1.7 deferred + 10.12] per-Pariwar JSON Schema fragments (custom fields NOT landed at 1.7)
 └── tests/
     ├── smoke.test.ts       Story 1.1 placeholder (preserved)
     └── db.test.ts          createDb factory unit test (pool-config shape)
@@ -289,15 +291,16 @@ drift; Story 1.16c's gate enforces architecture-committed scope.
 
 | Path                        | Lands in   | Concern                                                                 |
 | --------------------------- | ---------- | ----------------------------------------------------------------------- |
-| `src/policies/`             | **Story 1.6 (landed)** | RLS `pgPolicy` declarations (multi-tenant isolation)        |
-| `src/ids/`                  | Story 1.7+ | Branded ID types (`PariwarId`, `MemberId`, …)                           |
+| `src/policies/`             | **Story 1.6 (landed)** | RLS `pgPolicy` declarations (multi-tenant isolation); Story 1.7 added the Pariwar-Passport carve-out |
+| `src/ids/`                  | **Story 1.7 (landed)** | Branded ID types (`PariwarId`, `MemberId`, …) + UUID-validating smart constructors |
+| `src/pariwar-passport/`     | **Story 1.7 (landed)** | Read accessor + write path + 60s freshness cache (`getPariwarPassport`, `upsertPariwarPassport`, `BRANDING_BUNDLE_MAX_STALENESS_MS`) |
 | `src/encryption/`           | **Story 1.5 (landed)** | Envelope-encryption + blind-index substrate; `piiColumn` factory       |
 | `src/test-utils/`           | **Story 1.6 (landed)** | Shared live-DB integration-test substrate (`setupLiveDb`)  |
 | `src/snapshot-fixtures/`    | Story 7.x  | Pool Engine snapshot fixtures                                           |
 | `src/snapshot-adapters/`    | Story 7.x  | Per-version Pool Engine snapshot adapters                               |
 | `src/cross-tenant/`         | **Story 1.6 (landed)** | Named cross-tenant operations helper (single RLS-bypass call-site) |
 | `src/bank-statement/`       | Story 9.2  | Normalized bank-statement row schema                                    |
-| `src/per-pariwar/bihar/`    | Story 1.7+ | Bihar-specific custom-field JSON Schema (Pariwar-Passport + Story 10.12) |
+| `src/per-pariwar/bihar/`    | Story 1.7 (deferred) + 10.12 | Bihar custom-field JSON Schema — **custom fields NOT landed at 1.7** (no host members/claims/pools tables until Epic 3/6/7; explicit deferral, see the dir README) |
 
 ### Story 1.5 — `src/encryption/` substantive landing
 

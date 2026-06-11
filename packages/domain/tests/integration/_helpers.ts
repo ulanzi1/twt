@@ -16,17 +16,22 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 
 import { setPariwarScope, type Db } from '../../src/db.js';
+import { pariwarId as toPariwarId } from '../../src/ids/index.js';
 import * as schema from '../../src/schema/index.js';
+import type { BrandingBundle } from '../../src/schema/pariwar_passport.js';
 
-export const PARIWAR_A = '11111111-1111-1111-1111-111111111111';
-export const PARIWAR_B = '22222222-2222-2222-2222-222222222222';
+// Branded PariwarId constants (Story 1.7). A PariwarId IS a string, so these stay
+// drop-in for the events_log helpers (string columns / setPariwarScope) AND
+// satisfy the branded pariwar_passport.pariwar_id column in `eq(...)` comparisons.
+export const PARIWAR_A = toPariwarId('11111111-1111-1111-1111-111111111111');
+export const PARIWAR_B = toPariwarId('22222222-2222-2222-2222-222222222222');
 
 // Dedicated tenants for the runAsCrossTenant helper tests, which COMMIT rows
 // (the append-only trigger blocks cleanup, so they persist). Kept distinct from
 // A/B so the exact-count RLS-enforcement assertions — which scope to A/B and
 // rely on per-test ROLLBACK isolation — never observe these committed rows.
-export const PARIWAR_X = '33333333-3333-3333-3333-333333333333';
-export const PARIWAR_Y = '44444444-4444-4444-4444-444444444444';
+export const PARIWAR_X = toPariwarId('33333333-3333-3333-3333-333333333333');
+export const PARIWAR_Y = toPariwarId('44444444-4444-4444-4444-444444444444');
 
 export interface SeedOptions {
   streamId?: string;
@@ -51,6 +56,47 @@ export async function seedEvent(
     pariwarId,
   });
   return streamId;
+}
+
+const DEFAULT_BRANDING: BrandingBundle = {
+  logo_url: 'https://cdn.twt.local/test/logo.png',
+  primary_color: '#0A3D62',
+  secondary_color: '#FFFFFF',
+};
+
+export interface SeedPassportOptions {
+  displayNameEn?: string;
+  displayNameHi?: string;
+  legalName?: string;
+  trustRegistrationId?: string | null;
+  brandingBundle?: BrandingBundle;
+  localeDefault?: 'hi' | 'en';
+  createdBy?: string | null;
+}
+
+/**
+ * Insert one pariwar_passport row. Like seedEvent, this is meant to run BEFORE
+ * entering app scope (as the Docker superuser, RLS bypassed) so both tenants'
+ * rows land regardless of the write-isolation policy; afterEach ROLLBACK
+ * (setupLiveDb) reverts it (the Passport table is NOT append-only, so a rollback
+ * — or even DELETE — would also work, but the per-test tx keeps it clean).
+ * `id` is branded via the `pariwarId()` smart constructor (validates UUID shape).
+ */
+export async function seedPassport(
+  tx: Db,
+  id: string,
+  opts: SeedPassportOptions = {},
+): Promise<void> {
+  await tx.insert(schema.pariwarPassport).values({
+    pariwarId: toPariwarId(id),
+    displayNameEn: opts.displayNameEn ?? 'Test Pariwar EN',
+    displayNameHi: opts.displayNameHi ?? 'परीक्षण परिवार',
+    legalName: opts.legalName ?? 'Test Welfare Trust',
+    trustRegistrationId: opts.trustRegistrationId ?? null,
+    brandingBundle: opts.brandingBundle ?? DEFAULT_BRANDING,
+    localeDefault: opts.localeDefault ?? 'en',
+    createdBy: opts.createdBy ?? null,
+  });
 }
 
 /** Shed Docker superuser (SET ROLE twt_app) + set the pariwar scope, in-tx. */

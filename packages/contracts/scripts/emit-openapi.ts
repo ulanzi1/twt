@@ -29,6 +29,11 @@ extendZodWithOpenApi(z);
 // Dynamic imports so extendZodWithOpenApi runs before schema construction.
 const { HealthResponse } = await import('../src/_common/health.js');
 const { ErrorResponse } = await import('../src/_common/errors.js');
+// Story 1.7 — Pariwar-Passport transport contracts. Register components/schemas
+// only (no paths): apps/api routes land at Story 1.9+, so a `paths` entry would
+// be speculative. Schemas are safe to publish as reusable components now.
+const { BrandingBundle } = await import('../src/pariwar-passport/branding-bundle.js');
+const { PariwarPassportResponse } = await import('../src/pariwar-passport/passport.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -36,11 +41,17 @@ const { ErrorResponse } = await import('../src/_common/errors.js');
 // is for raw OpenAPI objects (securitySchemes, responses, etc.).
 const HealthResponseSchema = HealthResponse.openapi('HealthResponse');
 const ErrorResponseSchema = ErrorResponse.openapi('ErrorResponse');
+const BrandingBundleSchema = BrandingBundle.openapi('BrandingBundle');
+const PariwarPassportResponseSchema = PariwarPassportResponse.openapi(
+  'PariwarPassportResponse',
+);
 
 const registry = new OpenAPIRegistry();
 
 registry.register('HealthResponse', HealthResponseSchema);
 registry.register('ErrorResponse', ErrorResponseSchema);
+registry.register('BrandingBundle', BrandingBundleSchema);
+registry.register('PariwarPassportResponse', PariwarPassportResponseSchema);
 
 registry.registerPath({
   method: 'get',

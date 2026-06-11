@@ -69,16 +69,18 @@ resource "google_kms_crypto_key" "pii_tier_2_hmac" {
 # _iam_member (additive) is used instead of _iam_binding (replace-all) so that
 # Story 1.15 can add additional principals (DR / break-glass SA) without
 # removing this binding. for_each with empty set produces zero instances when
-# the SA email is null, cleanly avoiding any interpolation of a null value.
+# the SA email is null OR empty-string, cleanly avoiding any interpolation of a
+# null/blank value (an empty string would otherwise emit an invalid
+# "serviceAccount:" member that fails only at apply time).
 resource "google_kms_crypto_key_iam_member" "pii_tier_1_kek_encrypter_decrypter" {
-  for_each      = var.app_service_account_email != null ? toset([var.app_service_account_email]) : toset([])
+  for_each      = var.app_service_account_email != null && var.app_service_account_email != "" ? toset([var.app_service_account_email]) : toset([])
   crypto_key_id = google_kms_crypto_key.pii_tier_1_kek.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:${each.value}"
 }
 
 resource "google_kms_crypto_key_iam_member" "pii_tier_2_hmac_signer_verifier" {
-  for_each      = var.app_service_account_email != null ? toset([var.app_service_account_email]) : toset([])
+  for_each      = var.app_service_account_email != null && var.app_service_account_email != "" ? toset([var.app_service_account_email]) : toset([])
   crypto_key_id = google_kms_crypto_key.pii_tier_2_hmac.id
   role          = "roles/cloudkms.signerVerifier"
   member        = "serviceAccount:${each.value}"

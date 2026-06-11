@@ -1,0 +1,400 @@
+{
+  "id": "fe183094-0e01-4e63-abc8-4842605c8090",
+  "prevId": "100a9e7a-103e-44cc-81b2-ddeb6f61ce23",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.events_log": {
+      "name": "events_log",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "stream_id": {
+          "name": "stream_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_version": {
+          "name": "event_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pariwar_id": {
+          "name": "pariwar_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "events_log_stream_id_event_version_uq": {
+          "name": "events_log_stream_id_event_version_uq",
+          "columns": [
+            {
+              "expression": "stream_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "events_log_pariwar_stream_idx": {
+          "name": "events_log_pariwar_stream_idx",
+          "columns": [
+            {
+              "expression": "pariwar_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "stream_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "events_log_pariwar_occurred_at_idx": {
+          "name": "events_log_pariwar_occurred_at_idx",
+          "columns": [
+            {
+              "expression": "pariwar_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "events_log_tenant_isolation_select": {
+          "name": "events_log_tenant_isolation_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "twt_app"
+          ],
+          "using": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid"
+        },
+        "events_log_tenant_isolation_write": {
+          "name": "events_log_tenant_isolation_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "twt_app"
+          ],
+          "using": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid",
+          "withCheck": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid"
+        }
+      },
+      "checkConstraints": {
+        "events_log_event_version_positive": {
+          "name": "events_log_event_version_positive",
+          "value": "\"events_log\".\"event_version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pariwar_passport": {
+      "name": "pariwar_passport",
+      "schema": "",
+      "columns": {
+        "pariwar_id": {
+          "name": "pariwar_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "display_name_en": {
+          "name": "display_name_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name_hi": {
+          "name": "display_name_hi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trust_registration_id": {
+          "name": "trust_registration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "branding_bundle": {
+          "name": "branding_bundle",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locale_default": {
+          "name": "locale_default",
+          "type": "locale",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "pariwar_passport_cross_readable_select": {
+          "name": "pariwar_passport_cross_readable_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "twt_app"
+          ],
+          "using": "true"
+        },
+        "pariwar_passport_tenant_isolation_write": {
+          "name": "pariwar_passport_tenant_isolation_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "twt_app"
+          ],
+          "using": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid",
+          "withCheck": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.role_grants": {
+      "name": "role_grants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pariwar_id": {
+          "name": "pariwar_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_dimension": {
+          "name": "scope_dimension",
+          "type": "scope_dimension",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_value": {
+          "name": "scope_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "role_grants_pariwar_user_idx": {
+          "name": "role_grants_pariwar_user_idx",
+          "columns": [
+            {
+              "expression": "pariwar_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "role_grants_tenant_isolation_select": {
+          "name": "role_grants_tenant_isolation_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "twt_app"
+          ],
+          "using": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid"
+        },
+        "role_grants_tenant_isolation_write": {
+          "name": "role_grants_tenant_isolation_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "twt_app"
+          ],
+          "using": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid",
+          "withCheck": "pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.locale": {
+      "name": "locale",
+      "schema": "public",
+      "values": [
+        "hi",
+        "en"
+      ]
+    },
+    "public.scope_dimension": {
+      "name": "scope_dimension",
+      "schema": "public",
+      "values": [
+        "global",
+        "pariwar",
+        "state",
+        "district",
+        "block",
+        "self"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

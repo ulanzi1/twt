@@ -4,7 +4,9 @@ Transport-layer contracts for **RBAC** — permission keys, role bundles, scope 
 
 ## Landing Story
 
-Substantive contracts authored at **Story 1.8** — RBAC permission keys + scope dimensions + 12 seeded roles per epics Epic 1. The seed-roles enumeration + permission-key namespace lands here; consumers at `apps/admin/` (role-management UI) + `apps/api/` (route-level RBAC middleware) import.
+✅ **Landed at Story 1.8** (was: reserved for Story 1.8). RBAC permission keys + scope dimensions + 12 seeded roles per epics Epic 1. The seed-roles enumeration + permission-key namespace lives here; consumers at `apps/admin/` (role-management UI) + `apps/api/` (route-level RBAC middleware) import at Story 1.9+.
+
+Authored: `scope.ts` (`ScopeDimensionSchema`), `permissions.ts` (`PermissionKeySchema`, `PermissionCatalogSchema`), `roles.ts` (`SeededRoleSchema`, `RoleBundleSchema`, `RoleGrantSchema`), `index.ts` (barrel). All objects `.strict()`. Registered as OpenAPI `components/schemas` (no paths — apps/api routes are Story 1.9+; mirrors Story 1.7). The domain-side primitive (catalog + bundles + scope model + fail-closed `requirePermission`/`hasPermission` guard) lives at `packages/domain/src/rbac/`; the `role_grants` storage table + scoped RLS at `packages/domain/src/schema/role_grants.ts` + `policies/role-grants-rls.ts`.
 
 ## Discipline reminders
 

@@ -34,6 +34,15 @@ const { ErrorResponse } = await import('../src/_common/errors.js');
 // be speculative. Schemas are safe to publish as reusable components now.
 const { BrandingBundle } = await import('../src/pariwar-passport/branding-bundle.js');
 const { PariwarPassportResponse } = await import('../src/pariwar-passport/passport.js');
+// Story 1.8 — RBAC transport contracts. Register components/schemas only (no
+// paths): apps/api role-admin routes land at Story 1.9+, so a `paths` entry would
+// be speculative (mirror Story 1.7). Schemas are safe to publish as reusable
+// components now.
+const { ScopeDimensionSchema } = await import('../src/rbac/scope.js');
+const { PermissionKeySchema, PermissionCatalogSchema } = await import(
+  '../src/rbac/permissions.js'
+);
+const { RoleBundleSchema, RoleGrantSchema } = await import('../src/rbac/roles.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -45,6 +54,12 @@ const BrandingBundleSchema = BrandingBundle.openapi('BrandingBundle');
 const PariwarPassportResponseSchema = PariwarPassportResponse.openapi(
   'PariwarPassportResponse',
 );
+// Story 1.8 — RBAC component schemas.
+const ScopeDimensionComponent = ScopeDimensionSchema.openapi('ScopeDimension');
+const PermissionKeyComponent = PermissionKeySchema.openapi('PermissionKey');
+const PermissionCatalogComponent = PermissionCatalogSchema.openapi('PermissionCatalog');
+const RoleBundleComponent = RoleBundleSchema.openapi('RoleBundle');
+const RoleGrantComponent = RoleGrantSchema.openapi('RoleGrant');
 
 const registry = new OpenAPIRegistry();
 
@@ -52,6 +67,11 @@ registry.register('HealthResponse', HealthResponseSchema);
 registry.register('ErrorResponse', ErrorResponseSchema);
 registry.register('BrandingBundle', BrandingBundleSchema);
 registry.register('PariwarPassportResponse', PariwarPassportResponseSchema);
+registry.register('ScopeDimension', ScopeDimensionComponent);
+registry.register('PermissionKey', PermissionKeyComponent);
+registry.register('PermissionCatalog', PermissionCatalogComponent);
+registry.register('RoleBundle', RoleBundleComponent);
+registry.register('RoleGrant', RoleGrantComponent);
 
 registry.registerPath({
   method: 'get',

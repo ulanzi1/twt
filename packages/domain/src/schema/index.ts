@@ -15,3 +15,4 @@
 export * from './_baseline.js';
 export * from './events_log.js';
 export * from './pariwar_passport.js';
+export * from './role_grants.js';

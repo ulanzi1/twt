@@ -60,5 +60,14 @@ policy behaviour.
   write-isolated exception per architecture §1.2 line 726-729; it is reviewed
   *together with* the scoped policies (D3-1.6). Migration `0003_pariwar-passport.sql`
   ENABLE+FORCE RLS + grants SELECT/INSERT/UPDATE (NOT DELETE) to `twt_app`.
+- **Story 1.8 — LANDED.** `role-grants-rls.ts` declares the SCOPED tenant-isolation
+  for `role_grants` (the RBAC grant store): `roleGrantsTenantIsolationSelect` +
+  `roleGrantsTenantIsolationWrite`, both keyed on `pariwar_id` via the Story 1.6
+  closed-failure construct. This is a SCOPED table (like `events_log`), NOT a
+  carve-out — cross-Pariwar grant reads are a real leak, so `role_grants` is in the
+  cross-pariwar-leak suite as a must-return-0 table (contrast `pariwar_passport`).
+  Migration `0004_role-grants.sql` ENABLE+FORCE RLS + grants SELECT/INSERT/UPDATE/
+  **DELETE** to `twt_app` (grants are mutable/revocable — DELETE included, unlike
+  the Passport singleton).
 - **Story 1.16a** wires the CI import-rule lint that forbids constructing
   service-role connections outside `../cross-tenant/` (deferred D1-1.6).

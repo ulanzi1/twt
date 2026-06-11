@@ -53,10 +53,19 @@ export async function upsertPariwarPassport(
     })
     .returning();
 
-  // Invalidate AFTER a successful write so a failed write does not evict a valid
-  // cached entry. `data.pariwarId` is the PK; the cache key is the raw string.
+  // A well-behaved upsert always returns exactly one row. An empty result
+  // signals a silent policy block (e.g., USING clause excluded the row on the
+  // conflict-DO UPDATE branch) — throw rather than returning a typed undefined.
+  if (!row) {
+    throw new Error(
+      `[upsertPariwarPassport] upsert returned no row for pariwar_id ${data.pariwarId} — check session scope`,
+    );
+  }
+
+  // Invalidate only after a confirmed write so a failed/no-op upsert does not
+  // evict a valid cached entry. `data.pariwarId` is the PK; the cache key is
+  // the raw string.
   invalidatePariwarPassport(data.pariwarId);
 
-  // `returning()` always yields exactly one row for a single-row upsert.
-  return row as PariwarPassportRow;
+  return row;
 }

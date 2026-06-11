@@ -16,9 +16,9 @@ const VALID_UUID = '11111111-1111-1111-1111-111111111111';
 const VALID_UUID_V4 = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 describe('branded-id smart constructors', () => {
-  it('returns the same string value for a valid UUID (no runtime wrapping)', () => {
+  it('returns the lowercase string value for a valid UUID', () => {
     const id = pariwarId(VALID_UUID);
-    expect(id).toBe(VALID_UUID);
+    expect(id).toBe(VALID_UUID); // all-lowercase input unchanged
     expect(typeof id).toBe('string');
   });
 
@@ -26,9 +26,9 @@ describe('branded-id smart constructors', () => {
     expect(pariwarId(VALID_UUID_V4)).toBe(VALID_UUID_V4);
   });
 
-  it('does NOT mutate / lowercase the value (Postgres normalises on store)', () => {
+  it('lowercases the value for canonical form (cache-key / invalidation consistency)', () => {
     const upper = VALID_UUID_V4.toUpperCase();
-    expect(pariwarId(upper)).toBe(upper);
+    expect(pariwarId(upper)).toBe(VALID_UUID_V4); // normalised to lowercase
   });
 
   it.each([

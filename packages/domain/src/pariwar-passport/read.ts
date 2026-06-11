@@ -130,3 +130,18 @@ export function getPariwarPassportCached(
 ): Promise<PariwarPassportRow | null> {
   return readThroughBrandingCache(id, () => getPariwarPassport(db, id), now);
 }
+
+/**
+ * Cache-aside read of just the branding bundle, honouring the 60s staleness
+ * ceiling. Use this instead of getBrandingBundle for chrome renders — it avoids
+ * a DB hit on every request. A path that needs guaranteed freshness should call
+ * getBrandingBundle directly.
+ */
+export async function getBrandingBundleCached(
+  db: Db,
+  id: PariwarId,
+  now: () => number = Date.now,
+): Promise<BrandingBundle | null> {
+  const row = await getPariwarPassportCached(db, id, now);
+  return row?.brandingBundle ?? null;
+}

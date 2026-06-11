@@ -16,6 +16,9 @@
 // UUID validation reuses the single `UUID_REGEX` already defined (and now
 // exported) in `../db.js` — the same matcher `setPariwarScope` guards on — so
 // there is exactly one UUID-shape authority in @twt/domain (no re-declaration).
+// The constructor lowercases before returning so branded IDs are always in the
+// same canonical form as Postgres uuid-column output, keeping cache keys and
+// invalidation keys consistent regardless of the caller's input casing.
 
 import { UUID_REGEX } from '../db.js';
 
@@ -52,7 +55,7 @@ function uuidBrand<B extends string>(brand: B): (value: string) => Brand<B> {
     if (!UUID_REGEX.test(value)) {
       throw new InvalidBrandedIdError(brand, value);
     }
-    return value as Brand<B>;
+    return value.toLowerCase() as Brand<B>;
   };
 }
 

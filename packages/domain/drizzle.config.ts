@@ -37,7 +37,15 @@ if (!databaseUrl && !process.env['CI']) {
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/schema/*.ts',
+  // Schema-shape tables live in src/schema/; RLS pgPolicy declarations live in
+  // src/policies/<table>-rls.ts (Story 1.6). Both globs feed drizzle-kit's
+  // entity graph so `db:generate` emits CREATE POLICY DDL for the linked
+  // policies and `db:check` tracks them in the snapshot. The glob matches only
+  // `*-rls.ts` so the `index.ts` barrel + `_roles.ts` are NOT double-scanned
+  // (the role objects are reachable through each policy module's import, and are
+  // `.existing()` so drizzle-kit emits no role DDL — `CREATE ROLE` is
+  // hand-supplemented idempotently in migration 0002).
+  schema: ['./src/schema/*.ts', './src/policies/*-rls.ts'],
   out: './migrations',
   dbCredentials: { url: databaseUrl ?? 'postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder' },
   verbose: true,

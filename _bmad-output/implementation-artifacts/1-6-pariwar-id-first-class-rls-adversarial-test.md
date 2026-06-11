@@ -1,6 +1,6 @@
 # Story 1.6: `pariwar_id` First-Class + RLS Adversarial Test
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -606,17 +606,17 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Pre-execution checks + branch creation + Story 1.4 + 1.5 inheritance reconciliation** (AC: foundational — no specific AC)
-  - [ ] 1.1 Run `git fetch origin && git checkout main && git pull --ff-only origin main` to bring local `main` to `origin/main` HEAD `7823fe4` (the Story 1.5 Group-A code-review-patches commit; Stories 1.1–1.5 all landed). Verify HEAD via `git log -1 --oneline`. (NOTE 2026-06-10e: an earlier copy of this story file referenced baseline `8aa8189` — the pre-Story-1.5 commit — because create-story ran on a stale local `main`; that has been reconciled. `8aa8189` is no longer on `origin/main`.)
-  - [ ] 1.2 Verify Story 1.5 status: read `_bmad-output/implementation-artifacts/sprint-status.yaml` for `1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers`. As of 2026-06-10e it reads `review` — Story 1.5 substrate IS landed (encryption envelope wired at `packages/domain/src/encryption/`; PR #8 merged). Proceed from main with Story 1.5 + Story 1.6 stacked-but-independent: Story 1.6 does NOT depend on Story 1.5 at the substrate level — RLS at `packages/domain/src/policies/` is orthogonal to envelope encryption at `packages/domain/src/encryption/`. (Historical note: this task originally branched on whether `1-5` was `done` vs `backlog` to handle out-of-order landing; that ambiguity is now resolved — 1.5 landed first.)
-  - [ ] 1.3 Verify deferred-work entries that Story 1.6 closes: read `deferred-work.md` sections for Story 1.2 (W1, D6-1.2, D13-1.2), Story 1.3 (D2-1.3, D9-1.3, D10-1.3, W4). Note the precise line numbers + wording for the Task 6 closure pass.
-  - [ ] 1.4 Verify upstream substrate state at HEAD: `pnpm install --frozen-lockfile`, `pnpm turbo run lint typecheck test build` should be 56/56 green (Story 1.4 baseline); `pnpm turbo run db:check contracts:check-openapi-determinism` should both exit 0. Capture any anomalies in Completion Notes.
-  - [ ] 1.5 Create new branch from main: `git checkout -b story-1.6-rls-adversarial-test`. Confirm via `git status` clean + `git rev-parse HEAD` matches main.
-  - [ ] 1.6 Verify Drizzle ORM v0.45 pgPolicy support is present + matches the architecture-cited [Drizzle ORM RLS docs](https://orm.drizzle.team/docs/rls): run a 5-minute spike against the v0.45 source or release notes to confirm `pgPolicy({ for, to, using, withCheck, ... })` API shape + that the generator emits `CREATE POLICY` DDL. If the pinned v0.45 turns out to NOT emit policy DDL (some drizzle-kit minor versions in 2024 had partial support), choose between (a) bumping drizzle-kit one minor or (b) hand-appending the `CREATE POLICY` DDL in migration 0002. Capture choice + version-check result in Completion Notes.
+- [x] **Task 1: Pre-execution checks + branch creation + Story 1.4 + 1.5 inheritance reconciliation** (AC: foundational — no specific AC)
+  - [x] 1.1 Run `git fetch origin && git checkout main && git pull --ff-only origin main` to bring local `main` to `origin/main` HEAD `7823fe4` (the Story 1.5 Group-A code-review-patches commit; Stories 1.1–1.5 all landed). Verify HEAD via `git log -1 --oneline`. (NOTE 2026-06-10e: an earlier copy of this story file referenced baseline `8aa8189` — the pre-Story-1.5 commit — because create-story ran on a stale local `main`; that has been reconciled. `8aa8189` is no longer on `origin/main`.)
+  - [x] 1.2 Verify Story 1.5 status: read `_bmad-output/implementation-artifacts/sprint-status.yaml` for `1-5-cloud-kms-hsm-google-tink-envelope-encryption-pii-tiers`. As of 2026-06-10e it reads `review` — Story 1.5 substrate IS landed (encryption envelope wired at `packages/domain/src/encryption/`; PR #8 merged). Proceed from main with Story 1.5 + Story 1.6 stacked-but-independent: Story 1.6 does NOT depend on Story 1.5 at the substrate level — RLS at `packages/domain/src/policies/` is orthogonal to envelope encryption at `packages/domain/src/encryption/`. (Historical note: this task originally branched on whether `1-5` was `done` vs `backlog` to handle out-of-order landing; that ambiguity is now resolved — 1.5 landed first.)
+  - [x] 1.3 Verify deferred-work entries that Story 1.6 closes: read `deferred-work.md` sections for Story 1.2 (W1, D6-1.2, D13-1.2), Story 1.3 (D2-1.3, D9-1.3, D10-1.3, W4). Note the precise line numbers + wording for the Task 6 closure pass.
+  - [x] 1.4 Verify upstream substrate state at HEAD: `pnpm install --frozen-lockfile`, `pnpm turbo run lint typecheck test build` should be 56/56 green (Story 1.4 baseline); `pnpm turbo run db:check contracts:check-openapi-determinism` should both exit 0. Capture any anomalies in Completion Notes.
+  - [x] 1.5 Create new branch from main: `git checkout -b story-1.6-rls-adversarial-test`. Confirm via `git status` clean + `git rev-parse HEAD` matches main.
+  - [x] 1.6 Verify Drizzle ORM v0.45 pgPolicy support is present + matches the architecture-cited [Drizzle ORM RLS docs](https://orm.drizzle.team/docs/rls): run a 5-minute spike against the v0.45 source or release notes to confirm `pgPolicy({ for, to, using, withCheck, ... })` API shape + that the generator emits `CREATE POLICY` DDL. If the pinned v0.45 turns out to NOT emit policy DDL (some drizzle-kit minor versions in 2024 had partial support), choose between (a) bumping drizzle-kit one minor or (b) hand-appending the `CREATE POLICY` DDL in migration 0002. Capture choice + version-check result in Completion Notes.
 
-- [ ] **Task 2: Schema source — `packages/domain/src/policies/_roles.ts` + `events-log-rls.ts` + `index.ts` + amend `events_log.ts` with the policy entries** (AC: #1)
-  - [ ] 2.1 Author `packages/domain/src/policies/_roles.ts` exporting `appRole = pgRole('twt_app')` + `serviceRole = pgRole('twt_service')` (both Drizzle `pgRole` declarations; the actual `CREATE ROLE` DDL lands in migration 0002 hand-supplements per Task 3). Add a brief header comment citing architecture §1.2 line 731-740 + the two-role model rationale.
-  - [ ] 2.2 Author `packages/domain/src/policies/events-log-rls.ts` exporting two `pgPolicy` declarations:
+- [x] **Task 2: Schema source — `packages/domain/src/policies/_roles.ts` + `events-log-rls.ts` + `index.ts` + amend `events_log.ts` with the policy entries** (AC: #1)
+  - [x] 2.1 Author `packages/domain/src/policies/_roles.ts` exporting `appRole = pgRole('twt_app')` + `serviceRole = pgRole('twt_service')` (both Drizzle `pgRole` declarations; the actual `CREATE ROLE` DDL lands in migration 0002 hand-supplements per Task 3). Add a brief header comment citing architecture §1.2 line 731-740 + the two-role model rationale.
+  - [x] 2.2 Author `packages/domain/src/policies/events-log-rls.ts` exporting two `pgPolicy` declarations:
     ```typescript
     import { sql } from 'drizzle-orm';
     import { pgPolicy } from 'drizzle-orm/pg-core';
@@ -645,18 +645,18 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
     ).link(eventsLog);
     ```
     **Verify at dev-time** that Drizzle v0.45's API for attaching a pgPolicy to an existing table is `.link(table)` OR the third-argument-to-pgTable callback pattern. The exact shape may have evolved across v0.31 → v0.45; consult [Drizzle RLS docs](https://orm.drizzle.team/docs/rls) and adapt. If the API is the third-arg-callback pattern, amend `events_log.ts` instead (Task 2.3).
-  - [ ] 2.3 Amend `packages/domain/src/schema/events_log.ts` IF the Drizzle pgPolicy API requires inline-with-table declaration (Task 2.2 alternative). The amended `(t) => [...]` callback gains two new policy entries; the existing uniqueIndex + check + index entries are preserved. **Prefer the standalone-file pattern (Task 2.2 with `.link(eventsLog)`) when supported** — keeps `schema/` focused on column shape and `policies/` focused on access policy, matching the README architectural separation.
-  - [ ] 2.4 Author `packages/domain/src/policies/index.ts` as a barrel:
+  - [x] 2.3 Amend `packages/domain/src/schema/events_log.ts` IF the Drizzle pgPolicy API requires inline-with-table declaration (Task 2.2 alternative). The amended `(t) => [...]` callback gains two new policy entries; the existing uniqueIndex + check + index entries are preserved. **Prefer the standalone-file pattern (Task 2.2 with `.link(eventsLog)`) when supported** — keeps `schema/` focused on column shape and `policies/` focused on access policy, matching the README architectural separation.
+  - [x] 2.4 Author `packages/domain/src/policies/index.ts` as a barrel:
     ```typescript
     export * from './_roles.js';
     export * from './events-log-rls.js';
     ```
-  - [ ] 2.5 Verify `pnpm --filter @twt/domain typecheck` passes after the schema additions; if Drizzle's pgPolicy types are missing or mismatched, debug at this point before proceeding to migration generation.
+  - [x] 2.5 Verify `pnpm --filter @twt/domain typecheck` passes after the schema additions; if Drizzle's pgPolicy types are missing or mismatched, debug at this point before proceeding to migration generation.
 
-- [ ] **Task 3: Migration 0002 generation + hand-supplementation** (AC: #2)
-  - [ ] 3.1 Run `pnpm --filter @twt/domain db:generate --name events-log-rls` to produce the drizzle-kit-emitted `packages/domain/migrations/0002_events-log-rls.sql` + `meta/0002_snapshot.json` + tick `meta/_journal.json` to `idx: 2`. Inspect the emitted SQL — drizzle-kit v0.31 may emit `CREATE POLICY` DDL OR may emit nothing (silent omission). If nothing: hand-write the CREATE POLICY statements per Task 3.3.
-  - [ ] 3.2 Add the `⚠ DO NOT REGENERATE` header comment block to `0002_events-log-rls.sql` (match the Story 1.3 migration 0001 header pattern verbatim), citing: (a) the hand-supplemented `CREATE ROLE` / `GRANT` / `ALTER ROLE` / `ALTER TABLE ENABLE` / `ALTER TABLE FORCE` statements; (b) architecture §1.2 line 717-770; (c) the migration-time self-test rationale (W1 closure).
-  - [ ] 3.3 Hand-append the role + RLS-toggle + self-test DDL with `--> statement-breakpoint` separators:
+- [x] **Task 3: Migration 0002 generation + hand-supplementation** (AC: #2)
+  - [x] 3.1 Run `pnpm --filter @twt/domain db:generate --name events-log-rls` to produce the drizzle-kit-emitted `packages/domain/migrations/0002_events-log-rls.sql` + `meta/0002_snapshot.json` + tick `meta/_journal.json` to `idx: 2`. Inspect the emitted SQL — drizzle-kit v0.31 may emit `CREATE POLICY` DDL OR may emit nothing (silent omission). If nothing: hand-write the CREATE POLICY statements per Task 3.3.
+  - [x] 3.2 Add the `⚠ DO NOT REGENERATE` header comment block to `0002_events-log-rls.sql` (match the Story 1.3 migration 0001 header pattern verbatim), citing: (a) the hand-supplemented `CREATE ROLE` / `GRANT` / `ALTER ROLE` / `ALTER TABLE ENABLE` / `ALTER TABLE FORCE` statements; (b) architecture §1.2 line 717-770; (c) the migration-time self-test rationale (W1 closure).
+  - [x] 3.3 Hand-append the role + RLS-toggle + self-test DDL with `--> statement-breakpoint` separators:
     ```sql
     -- Idempotent role creation
     DO $$ BEGIN
@@ -696,7 +696,7 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
     **Verify at dev-time**: the `twt_dev_app` Postgres user (Story 1.2 Terraform) exists in the local Docker Postgres container? In local dev, the user is created by Postgres entrypoint env vars (`POSTGRES_USER=twt_dev_app` per `packages/events/tests/integration-setup.ts`). In CI, the service-container env vars (per Task 5) create the same user. The `GRANT twt_app TO twt_dev_app` succeeds because the login role exists.
 
     **Security note for `GRANT twt_service TO twt_dev_app`:** This allows `twt_dev_app` to `SET ROLE twt_service` and is correct for local Docker / CI (single-user environment where `runAsCrossTenant` runs as the same login role). In production, separate `google_sql_user` resources for the `twt_app` login role and a `twt_service` login role are required — `twt_dev_app` would NOT be granted `twt_service` membership in prod migrations (deferred D9-1.6). Add a comment in the migration header citing this. The GRANT as written is dev/CI–only; the production service-pool credential separation lands at Story 1.10.
-  - [ ] 3.4 Apply migration locally: `DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5432/twt_dev?sslmode=disable pnpm --filter @twt/domain db:migrate`. Verify exit 0 + the role + RLS state via `psql`:
+  - [x] 3.4 Apply migration locally: `DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5432/twt_dev?sslmode=disable pnpm --filter @twt/domain db:migrate`. Verify exit 0 + the role + RLS state via `psql`:
     ```sql
     \dt events_log
     SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = 'events_log';
@@ -704,16 +704,16 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
     SELECT rolname, rolbypassrls FROM pg_roles WHERE rolname IN ('twt_app', 'twt_service', 'twt_dev_app');
     ```
     Expected: `relrowsecurity = t`, `relforcerowsecurity = t`, two policies, both roles `rolbypassrls = f`.
-  - [ ] 3.5 Idempotency check: re-run `pnpm db:migrate` — should be a no-op (drizzle migrations table skips already-applied + the role/grant/enable/force statements are idempotent guards).
-  - [ ] 3.6 Negative test: manually `ALTER ROLE twt_app BYPASSRLS;` in psql, then re-run `pnpm db:migrate` — the migration-time self-test should `RAISE EXCEPTION`. Revert via `ALTER ROLE twt_app NOBYPASSRLS;`. Confirm + capture in Completion Notes.
-  - [ ] 3.7 Run `pnpm --filter @twt/domain db:check` — should exit 0 (the snapshot tracks table-shape, not RLS / role state; the hand-supplements are invisible to db:check, matching Story 1.3's migration 0001 pattern).
+  - [x] 3.5 Idempotency check: re-run `pnpm db:migrate` — should be a no-op (drizzle migrations table skips already-applied + the role/grant/enable/force statements are idempotent guards).
+  - [x] 3.6 Negative test: manually `ALTER ROLE twt_app BYPASSRLS;` in psql, then re-run `pnpm db:migrate` — the migration-time self-test should `RAISE EXCEPTION`. Revert via `ALTER ROLE twt_app NOBYPASSRLS;`. Confirm + capture in Completion Notes.
+  - [x] 3.7 Run `pnpm --filter @twt/domain db:check` — should exit 0 (the snapshot tracks table-shape, not RLS / role state; the hand-supplements are invisible to db:check, matching Story 1.3's migration 0001 pattern).
 
-- [ ] **Task 4: Session-variable helpers + cross-tenant helper** (AC: #3, #4)
-  - [ ] 4.1 Author `packages/domain/src/errors.ts` exporting `InvalidPariwarScopeError` + `PariwarScopeMissingError` (per AC-3 spec body).
-  - [ ] 4.2 Amend `packages/domain/src/db.ts` to add `UUID_REGEX` + `setPariwarScope` + `assertPariwarScopeSet` + `withPariwarScope` (per AC-3 spec body). Import `drizzle` from `drizzle-orm/node-postgres` at the top of the file (already present per Story 1.2). Import `schema` from `./schema/index.js`.
-  - [ ] 4.3 Author `packages/domain/src/cross-tenant/run-as-cross-tenant.ts` exporting `runAsCrossTenant` + `CrossTenantContext` (per AC-4 spec body). Note the dynamic import of `@twt/events` per AC-4 — avoid a top-level static import that would create a `@twt/domain` → `@twt/events` dep cycle (currently `@twt/events` depends on `@twt/domain`; the reverse would be a cycle). Dynamic import resolves at call-time. **Add `"@twt/events": "workspace:*"` to `packages/domain/package.json` `devDependencies`** so TypeScript resolves `appendEvent`'s types from the dynamic import. Without this entry, TypeScript may produce `any`-typed calls and silently accept wrong argument shapes. Verify `pnpm --filter @twt/domain typecheck` resolves `appendEvent`'s parameter types correctly after adding the devDep. If TypeScript still emits `any` via `await import(...)`, use a type-only top-level import as a companion: `import type { appendEvent as _AppendEvent } from '@twt/events'` (erased at emit — no runtime cycle) and cast the dynamic result to that type.
-  - [ ] 4.4 Author `packages/domain/src/cross-tenant/index.ts` re-exporting `runAsCrossTenant` + `CrossTenantContext`.
-  - [ ] 4.5 Amend `packages/domain/src/index.ts` to export the new helpers + errors + the cross-tenant namespace + the policies barrel:
+- [x] **Task 4: Session-variable helpers + cross-tenant helper** (AC: #3, #4)
+  - [x] 4.1 Author `packages/domain/src/errors.ts` exporting `InvalidPariwarScopeError` + `PariwarScopeMissingError` (per AC-3 spec body).
+  - [x] 4.2 Amend `packages/domain/src/db.ts` to add `UUID_REGEX` + `setPariwarScope` + `assertPariwarScopeSet` + `withPariwarScope` (per AC-3 spec body). Import `drizzle` from `drizzle-orm/node-postgres` at the top of the file (already present per Story 1.2). Import `schema` from `./schema/index.js`.
+  - [x] 4.3 Author `packages/domain/src/cross-tenant/run-as-cross-tenant.ts` exporting `runAsCrossTenant` + `CrossTenantContext` (per AC-4 spec body). Note the dynamic import of `@twt/events` per AC-4 — avoid a top-level static import that would create a `@twt/domain` → `@twt/events` dep cycle (currently `@twt/events` depends on `@twt/domain`; the reverse would be a cycle). Dynamic import resolves at call-time. **Add `"@twt/events": "workspace:*"` to `packages/domain/package.json` `devDependencies`** so TypeScript resolves `appendEvent`'s types from the dynamic import. Without this entry, TypeScript may produce `any`-typed calls and silently accept wrong argument shapes. Verify `pnpm --filter @twt/domain typecheck` resolves `appendEvent`'s parameter types correctly after adding the devDep. If TypeScript still emits `any` via `await import(...)`, use a type-only top-level import as a companion: `import type { appendEvent as _AppendEvent } from '@twt/events'` (erased at emit — no runtime cycle) and cast the dynamic result to that type.
+  - [x] 4.4 Author `packages/domain/src/cross-tenant/index.ts` re-exporting `runAsCrossTenant` + `CrossTenantContext`.
+  - [x] 4.5 Amend `packages/domain/src/index.ts` to export the new helpers + errors + the cross-tenant namespace + the policies barrel:
     ```typescript
     export {
       createDb,
@@ -731,14 +731,14 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
     export * as policies from './policies/index.js';
     export * as crossTenant from './cross-tenant/index.js';
     ```
-  - [ ] 4.6 Verify `pnpm --filter @twt/domain build typecheck` passes after all additions.
+  - [x] 4.6 Verify `pnpm --filter @twt/domain build typecheck` passes after all additions.
 
-- [ ] **Task 5: Live-DB CI substrate — `.github/workflows/ci.yml` `integration-tests` job + vitest glob + per-test setup relocation** (AC: #5)
-  - [ ] 5.1 Read existing `.github/workflows/ci.yml` to confirm the post-Story-1.4 patched shape (node-version-file: '.nvmrc' on existing jobs per the Story 1.4 code-review patches commit `873f435`). Verify `.nvmrc` exists at repository root (`cat .nvmrc`); create if missing with `20.18.0` (the Story 1.1 baseline) + commit.
-  - [ ] 5.2 Add the `integration-tests` job to `.github/workflows/ci.yml` after `contracts-check` (per AC-5 spec body). Match indentation + style of existing jobs.
-  - [ ] 5.3 Relocate `packages/events/tests/integration-setup.ts` to `packages/domain/src/test-utils/integration-setup.ts` (moves the per-test transaction-rollback substrate to a workspace-shared location). The old path `packages/events/tests/integration-setup.ts` becomes a thin re-export: `export { setupLiveDb, getTx, type TxContext, hasDatabase, DATABASE_URL } from '@twt/domain/test-utils/integration-setup';` to preserve backward compatibility with the Story 1.3 `tests/{append-event,replay-state,append-only}.test.ts` imports. Verify `pnpm --filter @twt/events test` still SKIPs without `DATABASE_URL` + PASSes with it.
-  - [ ] 5.4 Amend `packages/domain/vitest.config.ts` to include `tests/integration/**/*.spec.ts` glob alongside the existing `tests/**/*.test.ts`. The new `.spec.ts` extension differentiates integration from unit tests; `tests/db.test.ts` (unit) continues to run via the `.test.ts` glob.
-  - [ ] 5.5 Amend `packages/domain/package.json` (if needed) to expose the `test-utils/integration-setup` subpath via `exports` map, OR export from the top-level `src/index.ts`: `export * as testUtils from './test-utils/index.js'`. The `test-utils/index.ts` barrel must export at minimum:
+- [x] **Task 5: Live-DB CI substrate — `.github/workflows/ci.yml` `integration-tests` job + vitest glob + per-test setup relocation** (AC: #5)
+  - [x] 5.1 Read existing `.github/workflows/ci.yml` to confirm the post-Story-1.4 patched shape (node-version-file: '.nvmrc' on existing jobs per the Story 1.4 code-review patches commit `873f435`). Verify `.nvmrc` exists at repository root (`cat .nvmrc`); create if missing with `20.18.0` (the Story 1.1 baseline) + commit.
+  - [x] 5.2 Add the `integration-tests` job to `.github/workflows/ci.yml` after `contracts-check` (per AC-5 spec body). Match indentation + style of existing jobs.
+  - [x] 5.3 Relocate `packages/events/tests/integration-setup.ts` to `packages/domain/src/test-utils/integration-setup.ts` (moves the per-test transaction-rollback substrate to a workspace-shared location). The old path `packages/events/tests/integration-setup.ts` becomes a thin re-export: `export { setupLiveDb, getTx, type TxContext, hasDatabase, DATABASE_URL } from '@twt/domain/test-utils/integration-setup';` to preserve backward compatibility with the Story 1.3 `tests/{append-event,replay-state,append-only}.test.ts` imports. Verify `pnpm --filter @twt/events test` still SKIPs without `DATABASE_URL` + PASSes with it.
+  - [x] 5.4 Amend `packages/domain/vitest.config.ts` to include `tests/integration/**/*.spec.ts` glob alongside the existing `tests/**/*.test.ts`. The new `.spec.ts` extension differentiates integration from unit tests; `tests/db.test.ts` (unit) continues to run via the `.test.ts` glob.
+  - [x] 5.5 Amend `packages/domain/package.json` (if needed) to expose the `test-utils/integration-setup` subpath via `exports` map, OR export from the top-level `src/index.ts`: `export * as testUtils from './test-utils/index.js'`. The `test-utils/index.ts` barrel must export at minimum:
     ```typescript
     // packages/domain/src/test-utils/index.ts
     export { setupLiveDb, hasDatabase, DATABASE_URL } from './integration-setup.js';
@@ -750,12 +750,12 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
     export type { LiveDbContext } from '@twt/domain/src/test-utils/index.js';
     ```
     Verify the type name `LiveDbContext` matches what Story 1.3's `integration-setup.ts` actually exports — rename if it differs. Capture the exact export surface in Completion Notes.
-  - [ ] 5.6 Verify locally: `DATABASE_URL=… pnpm --filter @twt/domain test` runs both the unit tests (existing) AND the new integration tests (per Task 6); without `DATABASE_URL`, the integration tests SKIP gracefully.
+  - [x] 5.6 Verify locally: `DATABASE_URL=… pnpm --filter @twt/domain test` runs both the unit tests (existing) AND the new integration tests (per Task 6); without `DATABASE_URL`, the integration tests SKIP gracefully.
 
-- [ ] **Task 6: Integration tests — RLS policy regression + cross-Pariwar adversarial leak** (AC: #6)
-  - [ ] 6.1 Author `packages/domain/tests/integration/rls/policy-regression.spec.ts` with the test cases enumerated in AC-6 (positive SELECT, negative SELECT, INSERT withCheck rejection, connection-level fail-closed without setPariwarScope, assertPariwarScopeSet throws when unset, FORCE RLS table-owner cannot escape).
-  - [ ] 6.2 Author `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts` with the adversarial cases enumerated in AC-6 (basic SELECT, explicit WHERE bypass attempt, raw SQL, COUNT aggregate, self-join, subquery, runAsCrossTenant positive cross-tenant read, audit-event emission verification).
-  - [ ] 6.3 **Per-test isolation — read this before writing any test.** `withPariwarScope(pool, …)` and `runAsCrossTenant(pool, …)` each `BEGIN` + `COMMIT` their own transactions; they CANNOT be rolled back by `setupLiveDb`'s `afterEach ROLLBACK`. For all policy-regression and adversarial-leak tests, use `ctx.client` (the raw `pg.PoolClient` from `setupLiveDb`) directly with inline `SET LOCAL` so every operation stays inside the managed transaction:
+- [x] **Task 6: Integration tests — RLS policy regression + cross-Pariwar adversarial leak** (AC: #6)
+  - [x] 6.1 Author `packages/domain/tests/integration/rls/policy-regression.spec.ts` with the test cases enumerated in AC-6 (positive SELECT, negative SELECT, INSERT withCheck rejection, connection-level fail-closed without setPariwarScope, assertPariwarScopeSet throws when unset, FORCE RLS table-owner cannot escape).
+  - [x] 6.2 Author `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts` with the adversarial cases enumerated in AC-6 (basic SELECT, explicit WHERE bypass attempt, raw SQL, COUNT aggregate, self-join, subquery, runAsCrossTenant positive cross-tenant read, audit-event emission verification).
+  - [x] 6.3 **Per-test isolation — read this before writing any test.** `withPariwarScope(pool, …)` and `runAsCrossTenant(pool, …)` each `BEGIN` + `COMMIT` their own transactions; they CANNOT be rolled back by `setupLiveDb`'s `afterEach ROLLBACK`. For all policy-regression and adversarial-leak tests, use `ctx.client` (the raw `pg.PoolClient` from `setupLiveDb`) directly with inline `SET LOCAL` so every operation stays inside the managed transaction:
     ```typescript
     it('positive: SELECT under A scope returns only A rows', async () => {
       // ctx.client is inside the setupLiveDb BEGIN — all SET LOCAL scopes to this tx
@@ -770,31 +770,31 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
     });
     ```
     Reserve the top-level `withPariwarScope(pool, …)` / `runAsCrossTenant(pool, …)` wrappers for the two dedicated helper-verification tests (`runAsCrossTenant positive cross-tenant read` + `audit-event emission verification`). Those tests accept row accumulation at the all-zeros sentinel stream (assert `auditEvents.length >= 1`, not `=== 1`) since committed rows cannot be rolled back via the append-only-trigger-blocked table.
-  - [ ] 6.4 Run locally: `DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5432/twt_dev?sslmode=disable pnpm --filter @twt/domain test` — all RLS + adversarial tests pass.
-  - [ ] 6.5 Run the events_log integration suite to verify no regression: `DATABASE_URL=… pnpm --filter @twt/events test` — all Story 1.3 tests still pass with the new RLS substrate active (the events_log inserts in those tests now require a set `app.pariwar_id`; the helper used is `setupLiveDb` which does NOT set the session variable — Story 1.3 tests pass `pariwarId` as a column value but rely on the absence of RLS to insert. **Story 1.6 will likely break these tests** unless Story 1.3's tests are updated to set the session variable via `setPariwarScope` OR `runAsCrossTenant`). Address by: (a) amending `packages/events/tests/integration-setup.ts` (now a re-export thin shim — substantively in `packages/domain/src/test-utils/integration-setup.ts`) to optionally accept a `pariwarId` in `beforeEach` that SETs `app.pariwar_id` from a test-fixture UUID, OR (b) updating each Story 1.3 test to wrap its operations in `withPariwarScope(...)` or `runAsCrossTenant(...)`. Choose (a) for minimal Story 1.3 test churn + capture in Completion Notes. The relocated `setupLiveDb` should accept an optional `defaultPariwarId` parameter; downstream tests pass it; Story 1.3 tests opt-in.
-  - [ ] 6.6 Run `pnpm turbo run lint typecheck test build` — all 56 (or more, given new tests) tasks green.
+  - [x] 6.4 Run locally: `DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5432/twt_dev?sslmode=disable pnpm --filter @twt/domain test` — all RLS + adversarial tests pass.
+  - [x] 6.5 Run the events_log integration suite to verify no regression: `DATABASE_URL=… pnpm --filter @twt/events test` — all Story 1.3 tests still pass with the new RLS substrate active (the events_log inserts in those tests now require a set `app.pariwar_id`; the helper used is `setupLiveDb` which does NOT set the session variable — Story 1.3 tests pass `pariwarId` as a column value but rely on the absence of RLS to insert. **Story 1.6 will likely break these tests** unless Story 1.3's tests are updated to set the session variable via `setPariwarScope` OR `runAsCrossTenant`). Address by: (a) amending `packages/events/tests/integration-setup.ts` (now a re-export thin shim — substantively in `packages/domain/src/test-utils/integration-setup.ts`) to optionally accept a `pariwarId` in `beforeEach` that SETs `app.pariwar_id` from a test-fixture UUID, OR (b) updating each Story 1.3 test to wrap its operations in `withPariwarScope(...)` or `runAsCrossTenant(...)`. Choose (a) for minimal Story 1.3 test churn + capture in Completion Notes. The relocated `setupLiveDb` should accept an optional `defaultPariwarId` parameter; downstream tests pass it; Story 1.3 tests opt-in.
+  - [x] 6.6 Run `pnpm turbo run lint typecheck test build` — all 56 (or more, given new tests) tasks green.
 
-- [ ] **Task 7: Upgrade Story 1.3 `append-event.test.ts` concurrency test to true two-connection parallel** (AC: #7)
-  - [ ] 7.1 Read existing `packages/events/tests/append-event.test.ts` to locate the SAVEPOINT-based concurrency test.
-  - [ ] 7.2 Replace the SAVEPOINT test with a true-two-connection test per AC-7 spec body. Use raw `pg.Pool.connect()` + manual `BEGIN` + manual `setPariwarScope` + parallel `appendEvent` calls + `Promise.allSettled` to capture both outcomes + assertions on the success/ConcurrencyError split.
-  - [ ] 7.3 Run `DATABASE_URL=… pnpm --filter @twt/events test` — the new true-concurrency test passes; the old SAVEPOINT test is gone; other tests unchanged.
-  - [ ] 7.4 Remove the W4 entry from `deferred-work.md` (resolved by Story 1.6 closure).
+- [x] **Task 7: Upgrade Story 1.3 `append-event.test.ts` concurrency test to true two-connection parallel** (AC: #7)
+  - [x] 7.1 Read existing `packages/events/tests/append-event.test.ts` to locate the SAVEPOINT-based concurrency test.
+  - [x] 7.2 Replace the SAVEPOINT test with a true-two-connection test per AC-7 spec body. Use raw `pg.Pool.connect()` + manual `BEGIN` + manual `setPariwarScope` + parallel `appendEvent` calls + `Promise.allSettled` to capture both outcomes + assertions on the success/ConcurrencyError split.
+  - [x] 7.3 Run `DATABASE_URL=… pnpm --filter @twt/events test` — the new true-concurrency test passes; the old SAVEPOINT test is gone; other tests unchanged.
+  - [x] 7.4 Remove the W4 entry from `deferred-work.md` (resolved by Story 1.6 closure).
 
-- [ ] **Task 8: Terraform comment update + W1 closure note** (AC: #8)
-  - [ ] 8.1 Amend `infra/gcp/cloud-sql-dev.tf` line 14-15 comment per AC-8 spec body — expand the existing BYPASSRLS reference to cite Story 1.6 migration-layer enforcement + the discoverability rationale.
-  - [ ] 8.2 (Optional, capture in Completion Notes if skipped) Add a `lifecycle { precondition { ... } }` block to `google_sql_user.app` asserting the password's character set; skip if it requires non-trivial Terraform plumbing.
-  - [ ] 8.3 Remove the W1 entry from `deferred-work.md` (resolved by Story 1.6 closure — substantive enforcement at the migration layer).
+- [x] **Task 8: Terraform comment update + W1 closure note** (AC: #8)
+  - [x] 8.1 Amend `infra/gcp/cloud-sql-dev.tf` line 14-15 comment per AC-8 spec body — expand the existing BYPASSRLS reference to cite Story 1.6 migration-layer enforcement + the discoverability rationale.
+  - [x] 8.2 (Optional, capture in Completion Notes if skipped) Add a `lifecycle { precondition { ... } }` block to `google_sql_user.app` asserting the password's character set; skip if it requires non-trivial Terraform plumbing.
+  - [x] 8.3 Remove the W1 entry from `deferred-work.md` (resolved by Story 1.6 closure — substantive enforcement at the migration layer).
 
-- [ ] **Task 9: Documentation — README updates** (AC: #9)
-  - [ ] 9.1 Amend `packages/domain/README.md` with new §RLS section per AC-9 spec body. Update the §10 "Placeholder sub-directory landing-Story map" to flip the `src/policies/` + `src/cross-tenant/` rows from "[Story 1.6] …" to "[Active at Story 1.6] …".
-  - [ ] 9.2 Rewrite `packages/domain/src/policies/README.md` substantively per AC-9 spec body.
-  - [ ] 9.3 Rewrite `packages/domain/src/cross-tenant/README.md` substantively per AC-9 spec body.
-  - [ ] 9.4 Amend root `README.md` with the one-line live-DB CI substrate entry per AC-9 spec body.
-  - [ ] 9.5 Amend `packages/domain/.env.example` (if needed) to document the per-developer DATABASE_URL convention + the local-Docker-Postgres-16 invocation pattern (cross-reference `packages/events/tests/integration-setup.ts` README inline comment). Likely no change required — Story 1.3 already documented this; verify + update if drift.
+- [x] **Task 9: Documentation — README updates** (AC: #9)
+  - [x] 9.1 Amend `packages/domain/README.md` with new §RLS section per AC-9 spec body. Update the §10 "Placeholder sub-directory landing-Story map" to flip the `src/policies/` + `src/cross-tenant/` rows from "[Story 1.6] …" to "[Active at Story 1.6] …".
+  - [x] 9.2 Rewrite `packages/domain/src/policies/README.md` substantively per AC-9 spec body.
+  - [x] 9.3 Rewrite `packages/domain/src/cross-tenant/README.md` substantively per AC-9 spec body.
+  - [x] 9.4 Amend root `README.md` with the one-line live-DB CI substrate entry per AC-9 spec body.
+  - [x] 9.5 Amend `packages/domain/.env.example` (if needed) to document the per-developer DATABASE_URL convention + the local-Docker-Postgres-16 invocation pattern (cross-reference `packages/events/tests/integration-setup.ts` README inline comment). Likely no change required — Story 1.3 already documented this; verify + update if drift.
 
-- [ ] **Task 10: Closure — sprint-status + deferred-work + decision-log + story-file Status** (AC: #10)
-  - [ ] 10.1 Read existing `_bmad-output/implementation-artifacts/deferred-work.md` to confirm the precise lines to mark RESOLVED (Story 1.2 W1, D6-1.2, D13-1.2; Story 1.3 D2-1.3, D9-1.3, D10-1.3, W4). Annotate each with "**RESOLVED 2026-06-XX per Story 1.6 closure**" inline rather than deleting (preserves traceability — matches Story 1.2 deferred-work resolution pattern via the `[[feedback_closure_language_precision]]` discipline).
-  - [ ] 10.2 Append a new `## Story 1.6 deferred (substrate author-commit, 2026-06-XX per Decision 2026-06-XX-XXX)` section to `deferred-work.md` enumerating Story 1.6's new deferred items:
+- [x] **Task 10: Closure — sprint-status + deferred-work + decision-log + story-file Status** (AC: #10)
+  - [x] 10.1 Read existing `_bmad-output/implementation-artifacts/deferred-work.md` to confirm the precise lines to mark RESOLVED (Story 1.2 W1, D6-1.2, D13-1.2; Story 1.3 D2-1.3, D9-1.3, D10-1.3, W4). Annotate each with "**RESOLVED 2026-06-XX per Story 1.6 closure**" inline rather than deleting (preserves traceability — matches Story 1.2 deferred-work resolution pattern via the `[[feedback_closure_language_precision]]` discipline).
+  - [x] 10.2 Append a new `## Story 1.6 deferred (substrate author-commit, 2026-06-XX per Decision 2026-06-XX-XXX)` section to `deferred-work.md` enumerating Story 1.6's new deferred items:
     - **D1-1.6: Story 1.16a CI import-rule lint forbidding `pg.Pool.connect()` direct construction outside `packages/domain/src/cross-tenant/`** — architecture §1.2 line 739-740 + line 768-769 commits the rule; Story 1.6 commits the helper + module structural posture; Story 1.16a substantively wires the ESLint rule. Trigger: Story 1.16a dev-story start.
     - **D2-1.6: Sentinel UUIDs in `runAsCrossTenant` audit event** (`00000000-0000-0000-0000-000000000000` for both audit-stream + cross-tenant pariwar_id marker) — Story 1.10 substantively re-keys to a dedicated audit-stream UUID once `audit_log_entries` lands. Trigger: Story 1.10 dev-story start.
     - **D3-1.6: Pariwar-Passport carve-out RLS policies** (cross-Pariwar-readable per architecture §1.2 line 726-729) — Story 1.7 substantively authors `pariwar-passport-rls.ts` with cross-readable policies + reviewed-together-with-scoped-policies discipline. Trigger: Story 1.7 dev-story start.
@@ -804,12 +804,12 @@ describe.skipIf(!process.env.DATABASE_URL)('cross-Pariwar adversarial leak test'
     - **D7-1.6: `setPariwarScope` SQL-injection-surface hardening** — current implementation uses single-quote interpolation guarded by `UUID_REGEX` upstream-validation; a future hardening could use `client.query('SET LOCAL app.pariwar_id = $1', [pariwarId])` parameter binding (Postgres parameter-binding for SET LOCAL has edge cases — verify at hardening time). Captured for defense-in-depth even though current implementation is safe.
     - **D8-1.6: Postgres service-container CI job per-step caching** — the integration-tests job currently does NOT cache the Postgres data volume or the migrated schema state; each run boots fresh + re-applies migrations. Story 1.16a friction-budget territory if CI duration becomes a long-pole.
     - **D9-1.6: `runAsCrossTenant` service-pool credential separation for production** — `SET LOCAL row_security = off` requires superuser or `BYPASSRLS` privilege. In local Docker + CI, `twt_dev_app = POSTGRES_USER = implicit superuser` so this works. Against Cloud SQL production, a separate service-role connection pool (credentials for a `twt_service`-login role carrying `BYPASSRLS`, distinct from the application `twt_dev_app` pool) is required per architecture §1.2 line 739 ("CI import-rule lint forbids constructing service-role connections outside the named cross-tenant operations module"). The `runAsCrossTenant` helper signature changes to accept `servicePool: pg.Pool` instead of (or in addition to) `pool: pg.Pool`. Trigger: Story 1.10 + Story 1.16a, when `runAsCrossTenant` is first exercised against a real Cloud SQL instance.
-  - [ ] 10.3 Append Decision 2026-06-XX-XXX (sequential: read `.decision-log.md` for the highest decision number ratified after 2026-06-09-040; if Story 1.4 code-review patches landed as Decision 2026-06-10-041, use 2026-06-XX-042 — verify at dev-time) to the top of `## Decisions` section in `.decision-log.md` per the reverse-chronological schema:
+  - [x] 10.3 Append Decision 2026-06-XX-XXX (sequential: read `.decision-log.md` for the highest decision number ratified after 2026-06-09-040; if Story 1.4 code-review patches landed as Decision 2026-06-10-041, use 2026-06-XX-042 — verify at dev-time) to the top of `## Decisions` section in `.decision-log.md` per the reverse-chronological schema:
     - Title: `### Decision 2026-06-XX-XXX: Story 1.6 substantive author-commit — pariwar_id first-class + RLS adversarial test substrate (pgPolicy declarations + migration 0002 enable/force RLS + session-variable helpers + cross-tenant named helper + Postgres CI service-container substrate + RLS policy-regression + cross-Pariwar adversarial integration tests + true two-connection concurrency upgrade + W1 + D2-1.3 + D6-1.2 + D9-1.3 + D10-1.3 + D13-1.2 + W4 closures)`.
     - Body: substrate author-commit summary, cross-Story discharge triggers (Story 1.7 Pariwar-Passport carve-out RLS; Story 1.9 apps/api scope-resolution middleware; Story 1.10 substantive audit-log integration replacing the Story 1.6 events_log audit-event placeholder; Story 1.16a CI import-rule lint; Stories 3.1+/6.x/7.x/8.x/9.x/10.x/11a/11b RLS-by-default inheritance), and explicit per-leg closure-language per `[[feedback_closure_language_precision]]`.
-  - [ ] 10.4 Update `_bmad-output/implementation-artifacts/sprint-status.yaml`: flip `1-6-pariwar-id-first-class-rls-adversarial-test`: `ready-for-dev` → `in-progress` → `review`. Append a `last_updated:` line with the substantive author-commit summary (matches Story 1.4 pattern).
-  - [ ] 10.5 Update this story file's Status to `review`; fill in Dev Agent Record (Agent Model Used, Debug Log References, Completion Notes List, File List, Change Log).
-  - [ ] 10.6 Commit-tree planning: prefer multiple small commits per Conventional Commits convention (Story 1.4 pattern):
+  - [x] 10.4 Update `_bmad-output/implementation-artifacts/sprint-status.yaml`: flip `1-6-pariwar-id-first-class-rls-adversarial-test`: `ready-for-dev` → `in-progress` → `review`. Append a `last_updated:` line with the substantive author-commit summary (matches Story 1.4 pattern).
+  - [x] 10.5 Update this story file's Status to `review`; fill in Dev Agent Record (Agent Model Used, Debug Log References, Completion Notes List, File List, Change Log).
+  - [x] 10.6 Commit-tree planning: prefer multiple small commits per Conventional Commits convention (Story 1.4 pattern):
     - `feat(packages/domain): add pgPolicy declarations + _roles + policies barrel` (Tasks 2.1-2.5)
     - `feat(packages/domain): migration 0002 — events_log RLS enable/force + role NOBYPASSRLS + self-test` (Task 3)
     - `feat(packages/domain): setPariwarScope + assertPariwarScopeSet + withPariwarScope + InvalidPariwarScopeError + PariwarScopeMissingError` (Task 4.1-4.2, 4.5-4.6)
@@ -1141,12 +1141,105 @@ twt/
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.8 (claude-opus-4-8) — bmad-dev-story workflow, Solo Builder (BigDev).
 
 ### Debug Log References
 
+Local verification environment: Docker `postgres:16-alpine` on host port **5433** (host already runs a Postgres on 5432); `DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5433/twt_dev?sslmode=disable`. CI uses 5432 (no host conflict).
+
+Empirical findings that shaped the implementation:
+
+- **`twt_dev_app` is a Docker/CI superuser + BYPASSRLS** (`SELECT rolsuper, rolbypassrls` → `t, t`). Superusers bypass RLS regardless of FORCE, so the RLS-enforcement tests `SET LOCAL ROLE twt_app` to shed superuser. In production `twt_dev_app` is a non-superuser member of `twt_app`, so RLS applies directly.
+- **Bare `''::uuid` cast in the USING clause RAISES** `invalid input syntax for type uuid: ""` and aborts the statement (probe at dev-time) — it does NOT silently return 0 rows as the AC-1/Dev-Note narrative claimed. Fixed with `nullif(current_setting('app.pariwar_id', true), '')::uuid` so unset scope → NULL → 0 rows. Verified probe: scoped(A)=1, unset=0, superuser=2.
+- **drizzle-kit duplicate-policy warning** when both `events-log-rls.ts` and the `index.ts` barrel were in the schema glob → narrowed glob to `*-rls.ts`.
+- **turbo task-graph cycle**: adding `@twt/events` to `@twt/domain` (for the AC-4 `appendEvent` import) made turbo abort with "Cyclic dependency detected" → switched `runAsCrossTenant` to a direct drizzle INSERT.
+- **turbo env sandbox**: with `DATABASE_URL` set, `pnpm turbo run test` STILL skipped the integration suites because turbo 2.x doesn't pass undeclared env to tasks → added `"env": ["DATABASE_URL"]` to the `turbo.json` `test` task; confirmed the suites then run (domain 55 passed/1 skip; events 31 passed) and still skip cleanly when unset.
+- **Migration self-test fires at fresh apply only** — drizzle skips already-applied migrations, so re-running `db:migrate` does not re-execute the BYPASSRLS self-test (demonstrated the DO-block RAISEs directly). Captured as D10-1.6.
+- **Latent pre-existing bug surfaced** by the new live-DB CI: `append-event.test.ts` "rejects negative expectedVersion" matched `/expectedVersion must be >= 0/` but the code throws `"...must be a non-negative integer"` — fixed.
+
 ### Completion Notes List
+
+- **AC-1..AC-10 satisfied.** `events_log` RLS is a Postgres-layer typed constraint; the only Pariwar-scoped table at closure.
+- **Deviations from the story's literal spec (all recorded in Decision 2026-06-11-042 with rationale):** (1) policy expression uses `nullif(...)` for correct quiet fail-closed; (2) RLS tests `SET LOCAL ROLE twt_app` because the Docker login role is a superuser, and the "FORCE — owner cannot escape" case became a `pg_class` catalog assertion; (3) `runAsCrossTenant` emits the audit event via a direct `events_log` INSERT (not `@twt/events.appendEvent`) to avoid a layering inversion + turbo cycle; (4) migration 0002 adds `GRANT SELECT, INSERT` to the group roles (beyond the spec) so a `SET ROLE twt_app` session can read/write; (5) the CI `integration-tests` job uses hardcoded `node-version: 20.18.0` matching the seven existing jobs (the AC-5 `.nvmrc` premise was factually wrong for this repo); (6) `turbo.json` `test` gains `env:[DATABASE_URL]` — REQUIRED for the live-DB suites to run under turbo (the original AC-5 plan would have skipped silently in CI).
+- **setupLiveDb relocation:** moved to `packages/domain/src/test-utils/integration-setup.ts` with a `test-utils/index.ts` barrel; `packages/events/tests/integration-setup.ts` is now a thin re-export from `@twt/domain/src/test-utils/integration-setup.js` (deep path; `@twt/domain` has no `exports` map so deep imports resolve, and test-utils is intentionally NOT re-exported from the package `index.ts` to keep `vitest` out of the production bundle). The exported type kept its Story 1.3 name `TxContext` (the AC referenced `LiveDbContext`; renamed to match reality).
+- **AC-8 optional `lifecycle.precondition`** skipped per the AC's own guidance (`random_password` already uses `special = false`).
+- **`.env.example`** unchanged — the Story 1.3 DATABASE_URL convention already covers it (no drift).
+- **Resilience:** integration suites pass on a second run against the already-populated DB (the committing `runAsCrossTenant` tests use dedicated tenants X/Y so persistent rows don't pollute the A/B exact-count assertions) and skip cleanly with no `DATABASE_URL`.
+- **W4 closed:** SAVEPOINT concurrency test replaced with a true two-connection parallel test (stable across 3 repeats).
+- ✅ Resolved deferral W1 (BYPASSRLS migration-layer enforcement + self-test). ✅ Resolved D6-1.2, D2-1.3, D9-1.3, D10-1.3, W4. ◑ Partially resolved D13-1.2 (2 of 6 integration slots).
 
 ### File List
 
+**New:**
+- `packages/domain/src/policies/_roles.ts`
+- `packages/domain/src/policies/events-log-rls.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/migrations/0002_events-log-rls.sql`
+- `packages/domain/migrations/meta/0002_snapshot.json`
+- `packages/domain/src/errors.ts`
+- `packages/domain/src/cross-tenant/run-as-cross-tenant.ts`
+- `packages/domain/src/cross-tenant/index.ts`
+- `packages/domain/src/test-utils/integration-setup.ts`
+- `packages/domain/src/test-utils/index.ts`
+- `packages/domain/tests/integration/_helpers.ts`
+- `packages/domain/tests/integration/rls/policy-regression.spec.ts`
+- `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts`
+
+**Modified:**
+- `packages/domain/drizzle.config.ts` (schema glob → `*-rls.ts`)
+- `packages/domain/migrations/meta/_journal.json` (idx → 2)
+- `packages/domain/src/db.ts` (UUID_REGEX + setPariwarScope + assertPariwarScopeSet + withPariwarScope)
+- `packages/domain/src/index.ts` (re-exports + policies/crossTenant namespaces + errors)
+- `packages/domain/vitest.config.ts` (integration `.spec.ts` glob)
+- `packages/domain/README.md` (§12 RLS + landing-Story map flips)
+- `packages/domain/src/policies/README.md` (substantive)
+- `packages/domain/src/cross-tenant/README.md` (substantive)
+- `packages/events/tests/append-event.test.ts` (true two-connection concurrency + regex fix)
+- `packages/events/tests/integration-setup.ts` (thin re-export shim)
+- `.github/workflows/ci.yml` (integration-tests job)
+- `turbo.json` (test task `env:[DATABASE_URL]`)
+- `infra/gcp/cloud-sql-dev.tf` (W1 closure note)
+- `README.md` (live-DB CI substrate line)
+- `.decision-log.md` (Decision 2026-06-11-042)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (RESOLVED markers + Story 1.6 deferred D1-1.6..D10-1.6)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (1-6 → review + last_updated)
+- `_bmad-output/implementation-artifacts/1-6-pariwar-id-first-class-rls-adversarial-test.md` (this file — Status + Dev Agent Record + checkboxes)
+
+### Review Findings
+
+_Code review 2026-06-11 — 3 layers (Blind Hunter + Edge Case Hunter + Acceptance Auditor). 8 patch · 12 defer · ~15 dismissed._
+
+**Patches:**
+
+- [x] [Review][Patch] P1: Race condition in `runAsCrossTenant` audit version — two concurrent calls read the same `MAX(event_version)` for the sentinel stream; second INSERT fails unique-constraint `(stream_id, event_version)` and rolls back the entire cross-tenant operation. Fix: use `gen_random_uuid()` as `stream_id` per call (each audit event gets its own stream at version 1; eliminates the race and the hot-row accumulation W9). [`packages/domain/src/cross-tenant/run-as-cross-tenant.ts:92-96`]
+- [x] [Review][Patch] P2: UUID not lowercased before `SET LOCAL` in `setPariwarScope` — `UUID_REGEX` accepts uppercase hex (`/i` flag); `assertPariwarScopeSet` returns the uppercase form; DB columns store lowercase; callers comparing the scope value against a stored ID will get a string mismatch. Fix: add `.toLowerCase()` before interpolating into `SET LOCAL app.pariwar_id`. [`packages/domain/src/db.ts`]
+- [x] [Review][Patch] P3: vitest integration config missing `pool: 'forks'` — `integration-setup.ts` comment says "run with `--pool=forks`" (module-level `txContext` requires per-file process isolation) but the config does not enforce it; under a non-forking pool, `txContext.current` could be shared across test files. Fix: add `pool: 'forks'` to `packages/domain/vitest.config.ts` for the integration test glob. [`packages/domain/vitest.config.ts`]
+- [x] [Review][Patch] P4: `activeClient` leaked if `BEGIN` throws in `setupLiveDb` `beforeEach` — `pool.connect()` succeeds and `activeClient` is assigned, but `activeClient.query('BEGIN')` throws with no `catch`/`finally` to release it, exhausting pool connections over repeated failures. Fix: wrap the `BEGIN` query in `try/catch` and call `activeClient.release()` on error. [`packages/domain/src/test-utils/integration-setup.ts`]
+- [x] [Review][Patch] P5: Broken connection returned to pool on `ROLLBACK` failure in `afterEach` — if `ROLLBACK` throws (e.g., broken TCP), the `finally` block calls `activeClient.release()` without the destroy flag, putting a broken-transaction client back in the pool. Fix: call `activeClient.release(true)` (destroy=true) when `ROLLBACK` fails. [`packages/domain/src/test-utils/integration-setup.ts`]
+- [x] [Review][Patch] P6: `not.toHaveProperty('currentVersion')` assertion dropped from two-connection concurrency test — the original W4 SAVEPOINT test asserted this per Decision 2026-06-09-039 §6 ("currentVersion intentionally absent from ConcurrencyError"); the replacement two-connection test does not carry it forward, breaking CI coverage of that behavioral commitment. Fix: add `expect(caught).not.toHaveProperty('currentVersion')` to the loser assertion block. [`packages/events/tests/append-event.test.ts`]
+- [x] [Review][Patch] P7: Missing trailing newline in `_journal.json` — diff shows `\ No newline at end of file`. Fix: add trailing newline. [`packages/domain/migrations/meta/_journal.json`]
+- [x] [Review][Patch] P8: `lifecycle.precondition` skip not captured in deferred-work — AC-8 prescribes "skip and capture in deferred-work"; no entry was added. Fix: add a one-line deferred-work entry for the Terraform `lifecycle.precondition` gap. [`_bmad-output/implementation-artifacts/deferred-work.md`]
+
+**Deferred:**
+
+- [x] [Review][Defer] W1-CR1.6: `fn()` throws after `SET LOCAL row_security = off` — no audit trail for partial cross-tenant reads [`packages/domain/src/cross-tenant/run-as-cross-tenant.ts:82-110`] — deferred, Story 1.10 audit hardening territory
+- [x] [Review][Defer] W2-CR1.6: `twt_service` has INSERT grant but no matching permissive RLS policy (deny-all via FORCE RLS in practice) [`packages/domain/migrations/0002_events-log-rls.sql`] — deferred, intentional current posture per D9-1.6; Story 1.10 wires twt_service substantively
+- [x] [Review][Defer] W3-CR1.6: Migration self-test fires at fresh-apply only (D10-1.6 already tracked) [`packages/domain/migrations/0002_events-log-rls.sql`] — deferred, pre-existing D10-1.6
+- [x] [Review][Defer] W4-CR1.6: ENABLE RLS could commit without FORCE if drizzle-kit breakpoints run per-statement in autocommit [`packages/domain/migrations/0002_events-log-rls.sql`] — deferred, follows Story 1.3 breakpoint precedent; verify drizzle-kit transaction semantics at Story 1.15 live provisioning
+- [x] [Review][Defer] W5-CR1.6: `withPariwarScope` tested in RLS-bypass mode — CI superuser bypasses FORCE RLS; the production API is never exercised with RLS actually active in this diff [`packages/domain/src/db.ts`] — deferred, D3-1.6 structural limitation
+- [x] [Review][Defer] W6-CR1.6: turbo cache — integration test results could be served stale on re-runs [`turbo.json`, `.github/workflows/ci.yml`] — deferred, low risk with ephemeral service containers; revisit if remote turbo cache is configured
+- [x] [Review][Defer] W7-CR1.6: Audit payload caller-controlled — `reason`/`pariwarIds`/`actorId` unconstrained free text/arrays [`packages/domain/src/cross-tenant/run-as-cross-tenant.ts`] — deferred, Story 1.10 audit hardening
+- [x] [Review][Defer] W8-CR1.6: `GRANT USAGE ON SCHEMA public` missing for `twt_app` role [`packages/domain/migrations/0002_events-log-rls.sql`] — deferred, passes on Docker/CI default; production schema hardening at Story 1.15
+- [x] [Review][Defer] W9-CR1.6: `CROSS_TENANT_SENTINEL_UUID` hot-row contention — single sentinel stream grows unboundedly; every call contends for `MAX(event_version)` on the same stream_id [`packages/domain/src/cross-tenant/run-as-cross-tenant.ts`] — deferred, resolved as side-effect of P1 (random-stream-per-call approach); otherwise Story 1.10+ production scale concern
+- [x] [Review][Defer] W10-CR1.6: `setPariwarScope` lacks runtime transaction-active guard — `SET LOCAL` silently degrades to `SET` outside a transaction, leaking pariwarId to next pooled request [`packages/domain/src/db.ts`] — deferred, documented via comment; Story 1.9 scope-resolution wiring is natural validation gate; round-trip cost of guard deferred
+- [x] [Review][Defer] W11-CR1.6: `@twt/domain/policies` subpath import not in exports map [`packages/domain/package.json`] — deferred, deep imports resolve currently; exports map is Story 1.16c territory
+- [x] [Review][Defer] W12-CR1.6: `GRANT twt_service TO twt_dev_app` requires ADMIN OPTION in non-superuser production [`packages/domain/migrations/0002_events-log-rls.sql`] — deferred, production migration executor will be a privileged user; address at Story 1.15 live provisioning
+
 ### Change Log
+
+| Date       | Change                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| 2026-06-11 | Story 1.6 substantive author-commit (Tasks 1-10) — RLS substrate, session-variable helpers, cross-tenant helper, live-DB CI substrate, RLS + adversarial integration tests, true two-connection concurrency upgrade. Status ready-for-dev → in-progress → review. |
+| 2026-06-11 | Closed deferrals W1 + D6-1.2 + D2-1.3 + D9-1.3 + D10-1.3 + W4; D13-1.2 partial; added Story 1.6 deferred D1-1.6..D10-1.6 (Date: 2026-06-11). |
+| 2026-06-11 | Code review (3-layer: Blind Hunter + Edge Case Hunter + Acceptance Auditor). 8 patch · 12 defer · ~15 dismissed. Status review → in-progress (patches outstanding). |
+| 2026-06-11 | Applied all 8 review patches (P1-P8). Status in-progress → done. |

@@ -149,6 +149,8 @@ Migration debt for downstream **Story 1.17 (Design System Foundation)** is docum
 
 `.github/workflows/ci.yml` runs `install → lint → typecheck → test → build` on every PR to `main` + `release/*`. The same four commands run locally via `pnpm turbo run <task>`.
 
+**Live-DB CI substrate active at Story 1.6** — a Postgres 16 service container in the `.github/workflows/ci.yml` `integration-tests` job applies migrations and runs the RLS + cross-Pariwar adversarial + events_log live-DB suites; `describe.skipIf(!hasDatabase)` (SKIP-on-missing-`DATABASE_URL`) preserves local-test ergonomics.
+
 ## Where to file issues
 
 - Engineering: in-repo issues (TODO: ISSUE_TEMPLATE landing in a downstream story).

@@ -12,7 +12,16 @@
 #   - google_sql_database_instance.main — the Cloud SQL instance.
 #   - google_sql_database.app — the application database (twt_${environment}).
 #   - google_sql_user.app — the application Postgres role; non-superuser, no
-#     BYPASSRLS per architecture §1.2 line 717-725.
+#     BYPASSRLS per architecture §1.2 line 717-725. The BYPASSRLS attribute is
+#     the Postgres role-level attribute that defeats Row-Level Security
+#     policies; Story 1.6 commits the substantive enforcement at the migration
+#     layer (packages/domain/migrations/0002_events-log-rls.sql includes
+#     `ALTER ROLE twt_app NOBYPASSRLS;` + a migration-time self-test that fails
+#     the migrator if the application group role somehow gained BYPASSRLS).
+#     Cloud SQL's google_sql_user resource does NOT expose the role-attribute
+#     flags directly, so the declarative enforcement lives at the migration
+#     layer; this Terraform comment is the discoverability surface for an
+#     operator reading the IaC. Closes Story 1.2 deferred W1.
 #   - google_secret_manager_secret.conn_string — connection-string secret.
 #   - google_secret_manager_secret_version.conn_string_v1 — first version.
 #

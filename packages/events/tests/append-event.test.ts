@@ -1,11 +1,15 @@
+import { randomUUID } from 'node:crypto';
+
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import pg from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { schema } from '@twt/domain';
+import { schema, setPariwarScope, type Db } from '@twt/domain';
 
 import { appendEvent, ConcurrencyError, loadEvents } from '../src/events-log';
-import { getTx, hasDatabase, setupLiveDb } from './integration-setup';
+import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from './integration-setup';
 
 const STREAM = '00000000-0000-0000-0000-00000000a001';
 const PARIWAR = '00000000-0000-0000-0000-0000000000a1';
@@ -70,58 +74,6 @@ describe.skipIf(!hasDatabase)('appendEvent (live DB)', () => {
     expect(r3.eventVersion).toBe(3);
   });
 
-  it('duplicate eventVersion on the same stream raises ConcurrencyError', async () => {
-    // The test-isolation transaction (from setupLiveDb) is already open.
-    // To exercise the unique-violation cleanly we use a SAVEPOINT around
-    // the conflicting INSERT so the outer ROLLBACK still cleans everything up.
-    // Note: true two-connection concurrency is deferred to Story 1.6 (W4).
-    const { client, tx } = getTx();
-
-    await appendEvent(tx, {
-      streamId: STREAM,
-      eventType: 'test.created',
-      payload: {},
-      expectedVersion: 0,
-      actorId: null,
-      pariwarId: PARIWAR,
-    });
-    await appendEvent(tx, {
-      streamId: STREAM,
-      eventType: 'test.updated',
-      payload: {},
-      expectedVersion: 1,
-      actorId: null,
-      pariwarId: PARIWAR,
-    });
-
-    // Caller observed version 1 but the stream is actually at version 2 now.
-    // Wrap in savepoint so the transaction isn't poisoned by the unique-violation.
-    await client.query('SAVEPOINT before_conflict');
-    let caught: unknown;
-    try {
-      await appendEvent(tx, {
-        streamId: STREAM,
-        eventType: 'test.updated',
-        payload: {},
-        expectedVersion: 1,
-        actorId: null,
-        pariwarId: PARIWAR,
-      });
-    } catch (e) {
-      caught = e;
-    }
-    await client.query('ROLLBACK TO SAVEPOINT before_conflict');
-
-    expect(caught).toBeInstanceOf(ConcurrencyError);
-    expect(caught).toMatchObject({
-      name: 'ConcurrencyError',
-      streamId: STREAM,
-      expectedVersion: 1,
-    });
-    // currentVersion is intentionally absent — see Decision 2026-06-09-039 §6.
-    expect(caught).not.toHaveProperty('currentVersion');
-  });
-
   it('rejects negative expectedVersion', async () => {
     const { tx } = getTx();
     await expect(
@@ -133,7 +85,7 @@ describe.skipIf(!hasDatabase)('appendEvent (live DB)', () => {
         actorId: null,
         pariwarId: PARIWAR,
       }),
-    ).rejects.toThrow(/expectedVersion must be >= 0/);
+    ).rejects.toThrow(/expectedVersion must be a non-negative integer/);
   });
 
   it('rejects payload BEFORE INSERT when payloadSchema mismatches (no row inserted)', async () => {
@@ -190,5 +142,84 @@ describe.skipIf(!hasDatabase)('appendEvent (live DB)', () => {
     expect(err).toBeInstanceOf(Error);
     const cause = (err as { cause?: { code?: string } }).cause;
     expect(cause?.code).toBe('23505');
+  });
+});
+
+// True two-connection optimistic-concurrency test (Story 1.6, closes Story 1.3
+// deferred W4 — the prior SAVEPOINT test simulated the unique-violation on a
+// single connection; this exercises the real production failure mode: two
+// pooled clients race on the same (stream_id, event_version)).
+//
+// This block manages its OWN pool + two physical connections (NOT setupLiveDb's
+// per-test transaction, which is single-connection). Each attempt runs a full
+// BEGIN → setPariwarScope → appendEvent → COMMIT unit; the loser's INSERT blocks
+// on the winner's uncommitted unique-index entry until the winner COMMITs, then
+// surfaces the unique-violation as ConcurrencyError. Running each unit
+// independently (rather than holding both transactions open and committing after
+// the race) is what avoids a deadlock. The winning row COMMITs (the append-only
+// trigger blocks cleanup), so a fresh randomUUID stream per run avoids
+// cross-run collisions.
+describe.skipIf(!hasDatabase)('appendEvent true concurrency (two connections)', () => {
+  let pool: pg.Pool;
+
+  beforeAll(() => {
+    pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4, ssl: false });
+    pool.on('error', (err) =>
+      console.error('[append-event concurrency pool]', err.message),
+    );
+  });
+  afterAll(() => pool.end());
+
+  it('two parallel appendEvent calls — one wins, one throws ConcurrencyError', async () => {
+    const stream = randomUUID();
+
+    async function attempt(client: pg.PoolClient): Promise<number> {
+      await client.query('BEGIN');
+      await setPariwarScope(client, PARIWAR);
+      const db = drizzle(client, { schema }) as unknown as Db;
+      try {
+        const res = await appendEvent(db, {
+          streamId: stream,
+          eventType: 'test.created',
+          payload: {},
+          expectedVersion: 0,
+          actorId: null,
+          pariwarId: PARIWAR,
+        });
+        await client.query('COMMIT');
+        return res.eventVersion;
+      } catch (e) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw e;
+      }
+    }
+
+    const c1 = await pool.connect();
+    const c2 = await pool.connect();
+    try {
+      const [r1, r2] = await Promise.allSettled([attempt(c1), attempt(c2)]);
+
+      const fulfilled = [r1, r2].filter((r) => r.status === 'fulfilled');
+      const rejected = [r1, r2].filter((r) => r.status === 'rejected');
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect((fulfilled[0] as PromiseFulfilledResult<number>).value).toBe(1);
+
+      const reason = (rejected[0] as PromiseRejectedResult).reason;
+      expect(reason).toBeInstanceOf(ConcurrencyError);
+      expect(reason).toMatchObject({
+        name: 'ConcurrencyError',
+        streamId: stream,
+        expectedVersion: 0,
+      });
+      // Decision 2026-06-09-039 §6: currentVersion is intentionally absent from
+      // ConcurrencyError (callers must not branch on the current version to avoid
+      // TOCTOU races; they must retry from scratch).
+      expect(reason).not.toHaveProperty('currentVersion');
+    } finally {
+      c1.release();
+      c2.release();
+    }
   });
 });

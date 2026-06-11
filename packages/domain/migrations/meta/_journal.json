@@ -15,6 +15,13 @@
       "when": 1780980430872,
       "tag": "0001_events-log",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781143209744,
+      "tag": "0002_events-log-rls",
+      "breakpoints": true
     }
   ]
 }

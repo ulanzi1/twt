@@ -42,12 +42,13 @@ packages/domain/
 │   ├── schema/
 │   │   ├── index.ts        schema barrel
 │   │   └── _baseline.ts    migration-zero marker (declares the `drizzle` metadata schema)
-│   ├── policies/           [Story 1.6] RLS pgPolicy declarations
+│   ├── policies/           [Story 1.6 — landed] RLS pgPolicy declarations + _roles
 │   ├── ids/                [Story 1.7+] branded ID types
 │   ├── encryption/         [Story 1.5] envelope-encryption column transformers
+│   ├── test-utils/         [Story 1.6 — landed] shared live-DB integration substrate
 │   ├── snapshot-fixtures/  [Story 7.x] Pool Engine snapshot fixtures
 │   ├── snapshot-adapters/  [Story 7.x] Pool Engine snapshot version adapters
-│   ├── cross-tenant/       [Story 1.6] named cross-tenant operations helper
+│   ├── cross-tenant/       [Story 1.6 — landed] named cross-tenant operations helper
 │   ├── bank-statement/     [Story 9.2] normalized bank-statement row schema
 │   └── per-pariwar/bihar/  [Story 1.7+10.12] per-Pariwar JSON Schema fragments
 └── tests/
@@ -288,12 +289,13 @@ drift; Story 1.16c's gate enforces architecture-committed scope.
 
 | Path                        | Lands in   | Concern                                                                 |
 | --------------------------- | ---------- | ----------------------------------------------------------------------- |
-| `src/policies/`             | Story 1.6  | RLS `pgPolicy` declarations (multi-tenant isolation)                    |
+| `src/policies/`             | **Story 1.6 (landed)** | RLS `pgPolicy` declarations (multi-tenant isolation)        |
 | `src/ids/`                  | Story 1.7+ | Branded ID types (`PariwarId`, `MemberId`, …)                           |
 | `src/encryption/`           | **Story 1.5 (landed)** | Envelope-encryption + blind-index substrate; `piiColumn` factory       |
+| `src/test-utils/`           | **Story 1.6 (landed)** | Shared live-DB integration-test substrate (`setupLiveDb`)  |
 | `src/snapshot-fixtures/`    | Story 7.x  | Pool Engine snapshot fixtures                                           |
 | `src/snapshot-adapters/`    | Story 7.x  | Per-version Pool Engine snapshot adapters                               |
-| `src/cross-tenant/`         | Story 1.6  | Named cross-tenant operations helper (single RLS-bypass call-site)       |
+| `src/cross-tenant/`         | **Story 1.6 (landed)** | Named cross-tenant operations helper (single RLS-bypass call-site) |
 | `src/bank-statement/`       | Story 9.2  | Normalized bank-statement row schema                                    |
 | `src/per-pariwar/bihar/`    | Story 1.7+ | Bihar-specific custom-field JSON Schema (Pariwar-Passport + Story 10.12) |
 
@@ -343,7 +345,69 @@ substantive author-commit) for the formal supersession record.
 
 ---
 
-## 12. References
+## 12. Row-Level Security (RLS) — `pariwar_id` typed constraint (Story 1.6)
+
+Story 1.6 makes multi-tenant isolation a **database-layer typed constraint**
+per architecture §1.2 line 717-725 (Cross-Cutting #1) + AR-3 + FR-59, rather
+than an application-layer discipline a forgotten `WHERE` clause can undo.
+
+### Two-role model
+
+| Role          | Kind            | Purpose                                                       |
+| ------------- | --------------- | ------------------------------------------------------------- |
+| `twt_app`     | NOLOGIN group   | Normal request handlers. Every RLS policy binds `TO twt_app`. |
+| `twt_service` | NOLOGIN group   | Batch jobs / cross-tenant tooling (Story 1.10 + 7.x).         |
+| `twt_dev_app` | Cloud SQL login | The application login role; GRANTed membership in both groups.|
+
+Both group roles are `NOBYPASSRLS` (migration 0002 sets it explicitly + a
+migration-time self-test fails the migrator if either ever regains BYPASSRLS —
+closes Story 1.2 deferred W1). The login role's effective privileges include the
+group's, so policies `TO twt_app` apply to `twt_dev_app` via membership. In
+production `twt_dev_app` is a non-superuser, so RLS applies directly; in local
+Docker / CI it is a superuser (created by `POSTGRES_USER`) that **bypasses** RLS,
+so the integration tests `SET LOCAL ROLE twt_app` to shed superuser.
+
+### Session-variable contract
+
+The policies key on `app.pariwar_id`, set per request/transaction:
+
+```ts
+import { setPariwarScope, assertPariwarScopeSet, withPariwarScope } from '@twt/domain';
+
+// Inside an open transaction (Story 1.9 scope-resolution middleware):
+await setPariwarScope(client, pariwarId);     // SET LOCAL app.pariwar_id (UUID re-parsed)
+const scope = await assertPariwarScopeSet(client); // loud fail-closed guard
+
+// For scripts/jobs — opens its own tx, sets scope, commits:
+await withPariwarScope(pool, pariwarId, (db, client) => db.select().from(/* … */));
+```
+
+`setPariwarScope` MUST run inside a transaction (`SET LOCAL` is tx-scoped;
+outside a tx it leaks to the next pooled request). The policy expression
+`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid` is the
+**quiet** fail-closed (unset scope → NULL → 0 rows); `assertPariwarScopeSet` is
+the **loud** complement (throws `PariwarScopeMissingError`).
+
+### Cross-tenant escape hatch
+
+The single named call-site `crossTenant.runAsCrossTenant(pool, ctx, fn)` issues
+`SET LOCAL row_security = off` + emits an `audit.cross_tenant_access` event. See
+`src/cross-tenant/README.md`. A CI import-rule lint forbidding cross-tenant
+construction outside that module lands at Story 1.16a (deferred D1-1.6).
+
+### Live-DB CI substrate
+
+Story 1.6 adds the `integration-tests` job to `.github/workflows/ci.yml` — a
+Postgres 16 service container that applies migrations and runs the live-DB
+suites under `@twt/domain` + `@twt/events`. The suites self-skip via
+`describe.skipIf(!hasDatabase)` when `DATABASE_URL` is unset, so local
+`pnpm test` without Docker still passes. The per-test transaction-rollback
+substrate (`src/test-utils/integration-setup.ts`, relocated from
+`packages/events/tests/` at Story 1.6) is shared by both packages.
+
+---
+
+## 13. References
 
 - [Source: architecture.md#1.1] line 691-714 — Datastore = Managed Postgres in India region (Cloud SQL).
 - [Source: architecture.md#1.2] line 715-770 — RLS via `pariwar_id` + Drizzle `pgPolicy`.

@@ -127,9 +127,13 @@ export function setupLiveDb(): void {
     let destroyOnRelease = false;
     try {
       await activeClient.query('ROLLBACK');
-    } catch (_err) {
+    } catch {
       // ROLLBACK failure (e.g., broken TCP) — destroy the connection so a broken
       // transaction is not returned to the pool for the next test (review P5).
+      // Optional catch binding (no error var) — the failure mode is identified by
+      // the comment, not the error object, and an unused `_err` binding trips
+      // @typescript-eslint/no-unused-vars (caughtErrors: 'all'); fixes the
+      // baseline lint failure committed in Story 1.6 (PR #12).
       destroyOnRelease = true;
     } finally {
       activeClient.release(destroyOnRelease);

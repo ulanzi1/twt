@@ -2,9 +2,16 @@
 
 Transport-layer contracts for the **Pariwar-Passport** data model + branding bundle per FR-63 — Pariwar identity, branding palette, locale + tone profile, public-facing passport surface.
 
-## Landing Story
+## Landing Story — LANDED (Story 1.7)
 
-Substantive contracts authored at **Story 1.7** — Pariwar-Passport data model + branding bundle per epics Epic 1. The Pariwar-Passport ADR is `ADR-NNNN-pariwar-passport-data-model` (Section A row 25 of `docs/knowledge-transfer/adr-index.md`); branded ID types live at `packages/domain/src/ids/` (Story 1.7 substantive landing per architecture §Cross-cutting concerns line 4538).
+Substantive contracts authored at **Story 1.7** — Pariwar-Passport data model + branding bundle per epics Epic 1. Landed:
+
+- `branding-bundle.ts` — `BrandingBundle` (snake_case JSONB keys; `.strict()`; runtime subset of FR-63, NOT the FR-60 build-time bundle).
+- `passport.ts` — `PariwarPassportResponse` (camelCase transport shape mirroring the domain row) + `LocaleDefault` (`hi | en`).
+- `_common/primitives.ts` — `PariwarIdSchema` (`z.string().uuid().brand<'PariwarId'>()`, D12-1.4) whose brand string aligns with the domain `ids.PariwarId` brand.
+- OpenAPI: `BrandingBundle` + `PariwarPassportResponse` registered as **components/schemas** in `scripts/emit-openapi.ts` (no paths — apps/api routes land at Story 1.9+). `contracts:check-openapi-determinism` stays green.
+
+The upsert/request contract is route-coupled and lands with the apps/api write route at **Story 1.9** (D4-1.6). The Pariwar-Passport ADR is `ADR-NNNN-pariwar-passport-data-model` (Section A of `docs/knowledge-transfer/adr-index.md`); branded ID types live at `packages/domain/src/ids/` (Story 1.7 substantive landing per architecture §Cross-cutting concerns line 4538).
 
 ## Discipline reminders
 

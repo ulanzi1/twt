@@ -47,6 +47,99 @@ components:
       required:
         - error
       additionalProperties: false
+    BrandingBundle:
+      type: object
+      properties:
+        logo_url:
+          type: string
+          format: uri
+        logo_url_dark:
+          type: string
+          format: uri
+        primary_color:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        secondary_color:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        accent_color:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+      required:
+        - logo_url
+        - primary_color
+        - secondary_color
+      additionalProperties: false
+    PariwarPassportResponse:
+      type: object
+      properties:
+        pariwarId:
+          type: string
+          format: uuid
+        displayNameEn:
+          type: string
+          minLength: 1
+        displayNameHi:
+          type: string
+          minLength: 1
+        legalName:
+          type: string
+          minLength: 1
+        trustRegistrationId:
+          type:
+            - string
+            - "null"
+        brandingBundle:
+          type: object
+          properties:
+            logo_url:
+              type: string
+              format: uri
+            logo_url_dark:
+              type: string
+              format: uri
+            primary_color:
+              type: string
+              pattern: ^#[0-9a-fA-F]{6}$
+            secondary_color:
+              type: string
+              pattern: ^#[0-9a-fA-F]{6}$
+            accent_color:
+              type: string
+              pattern: ^#[0-9a-fA-F]{6}$
+          required:
+            - logo_url
+            - primary_color
+            - secondary_color
+          additionalProperties: false
+        localeDefault:
+          type: string
+          enum:
+            - hi
+            - en
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type:
+            - string
+            - "null"
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - pariwarId
+        - displayNameEn
+        - displayNameHi
+        - legalName
+        - trustRegistrationId
+        - brandingBundle
+        - localeDefault
+        - createdAt
+        - createdBy
+        - updatedAt
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:

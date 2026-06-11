@@ -15,6 +15,18 @@ export type Iso8601Datetime = z.output<typeof Iso8601Datetime>;
 export const UuidString = z.string().uuid();
 export type UuidString = z.output<typeof UuidString>;
 
+/**
+ * Branded Pariwar identifier transport primitive (Story 1.7, D12-1.4). The Zod
+ * `.brand<'PariwarId'>()` brand STRING matches the domain TS brand at
+ * `packages/domain/src/ids/` (`PariwarId = string & { __brand: 'PariwarId' }`).
+ * Alignment is by brand-name (not structural symbol identity) per the Story 1.7
+ * "Branded-ID reconciliation" Dev Note — the transport boundary (Zod parse)
+ * applies the brand; domain code applies its own via the `pariwarId()` smart
+ * constructor. A plain `z.string().uuid()` underneath, so OpenAPI emits it as a
+ * uuid-format string. */
+export const PariwarIdSchema = z.string().uuid().brand<'PariwarId'>();
+export type PariwarIdSchema = z.output<typeof PariwarIdSchema>;
+
 /** Request correlation id echoed in headers + logs + audit (architecture §3.2 line 1832). */
 export const RequestId = z.string().uuid();
 export type RequestId = z.output<typeof RequestId>;

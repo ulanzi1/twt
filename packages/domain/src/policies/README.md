@@ -52,7 +52,13 @@ policy behaviour.
 
 ## Forward pointers
 
-- **Story 1.7** authors `pariwar-passport-rls.ts` with cross-Pariwar-readable
-  carve-out policies for the `pariwar_passport_*` tables.
+- **Story 1.7 — LANDED.** `pariwar-passport-rls.ts` declares the cross-Pariwar
+  carve-out for `pariwar_passport`: `pariwarPassportCrossReadableSelect`
+  (`USING (true)` — the named cross-readable SELECT condition) +
+  `pariwarPassportTenantIsolationWrite` (`for: 'all'`, the Story 1.6 closed-failure
+  construct — writes stay tenant-scoped). This is the deliberate read-cross /
+  write-isolated exception per architecture §1.2 line 726-729; it is reviewed
+  *together with* the scoped policies (D3-1.6). Migration `0003_pariwar-passport.sql`
+  ENABLE+FORCE RLS + grants SELECT/INSERT/UPDATE (NOT DELETE) to `twt_app`.
 - **Story 1.16a** wires the CI import-rule lint that forbids constructing
   service-role connections outside `../cross-tenant/` (deferred D1-1.6).

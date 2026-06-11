@@ -1,10 +1,18 @@
-// Cross-Pariwar adversarial leak test — Story 1.6 (AC-6).
+// Cross-Pariwar adversarial leak test — Story 1.6 (AC-6) + Story 1.7 carve-out.
 //
 // Epics line 1095-1098: Pariwar A admin attempts to read Pariwar B data → every
-// cross-tenant read returns zero rows REGARDLESS of query shape; any leak fails
-// CI as P0. This suite probes 6 query shapes (basic SELECT, explicit WHERE
-// bypass, raw SQL, COUNT aggregate, self-join, subquery) and the complementary
-// runAsCrossTenant positive path + its audit-event emission.
+// cross-tenant read of a SCOPED table returns zero rows REGARDLESS of query shape;
+// any leak fails CI as P0. This suite probes 6 query shapes on events_log (basic
+// SELECT, explicit WHERE bypass, raw SQL, COUNT aggregate, self-join, subquery)
+// and the complementary runAsCrossTenant positive path + its audit-event emission.
+//
+// ⚠ Story 1.7 adds the EXPECTED CROSS-READABLE EXCEPTION: pariwar_passport is the
+// architecture's single pre-authorised carve-out (§1.2 line 726-729). Its rows
+// ARE visible cross-tenant by design (USING true). The dedicated describe block
+// at the bottom asserts that positively. pariwar_passport must NEVER be added to
+// the "must return 0 rows" set above — that is the load-bearing distinction: a
+// wrong assertion here would either green-light a real leak on scoped tables or
+// red-fail the legitimate carve-out.
 //
 // RLS-in-tests model: see _helpers.ts — `SET LOCAL ROLE twt_app` sheds the
 // Docker superuser so the policies actually apply on the per-test transaction.
@@ -33,6 +41,7 @@ import {
   PARIWAR_Y,
   enterAppScope,
   seedEvent,
+  seedPassport,
 } from '../_helpers.js';
 
 describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', () => {
@@ -102,6 +111,44 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
       [PARIWAR_B],
     );
     expect(r.rows).toHaveLength(0);
+  });
+});
+
+describe.skipIf(!hasDatabase)('Pariwar-Passport carve-out (EXPECTED cross-readable exception)', () => {
+  setupLiveDb();
+
+  it('A scope DOES read B passport — the carve-out, NOT a leak', async () => {
+    const { tx, client } = getTx();
+    await seedPassport(tx, PARIWAR_A);
+    await seedPassport(tx, PARIWAR_B);
+    await enterAppScope(client, PARIWAR_A);
+
+    const bPassport = await tx
+      .select()
+      .from(schema.pariwarPassport)
+      .where(eq(schema.pariwarPassport.pariwarId, PARIWAR_B));
+    // Inverse of the events_log probes above: cross-tenant rows ARE visible here.
+    expect(bPassport).toHaveLength(1);
+    expect(bPassport[0]?.pariwarId).toBe(PARIWAR_B);
+  });
+
+  it('contrast in ONE test: events_log(B)=0 rows but pariwar_passport(B)=1 row under A scope', async () => {
+    const { tx, client } = getTx();
+    await seedEvent(tx, PARIWAR_B);
+    await seedPassport(tx, PARIWAR_B);
+    await enterAppScope(client, PARIWAR_A);
+
+    const bEvents = await tx
+      .select()
+      .from(schema.eventsLog)
+      .where(eq(schema.eventsLog.pariwarId, PARIWAR_B));
+    const bPassport = await tx
+      .select()
+      .from(schema.pariwarPassport)
+      .where(eq(schema.pariwarPassport.pariwarId, PARIWAR_B));
+
+    expect(bEvents).toHaveLength(0); // scoped table — fail-closed (the invariant)
+    expect(bPassport).toHaveLength(1); // carve-out table — cross-readable (the exception)
   });
 });
 

@@ -23,7 +23,7 @@ export type Db = NodePgDatabase<DbSchema>;
  * single-quote / semicolon characters that would matter for the SET LOCAL
  * interpolation in setPariwarScope below.
  */
-const UUID_REGEX =
+export const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface CreateDbOptions {

@@ -6,6 +6,7 @@
 // landing Story.
 
 export * from './_common/index.js';
+export * from './pariwar-passport/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';
 

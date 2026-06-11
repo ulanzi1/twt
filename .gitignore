@@ -48,3 +48,13 @@ coverage/
 # at session-time; the substantive patches land in commits, not these files)
 _bmad-output/*-review-diff.txt
 _bmad-output/**/*-review-diff.txt
+.claude/.story-automator-active
+.claude/settings.json
+
+# Python bytecode (story-automator skill)
+__pycache__/
+*.pyc
+*.pyo
+
+# Story-automator run artifacts
+_bmad-output/story-automator/

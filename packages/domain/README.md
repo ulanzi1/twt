@@ -42,8 +42,10 @@ packages/domain/
 │   ├── schema/
 │   │   ├── index.ts        schema barrel
 │   │   ├── pariwar_passport.ts [Story 1.7 — landed] Pariwar-Passport table + BrandingBundle + locale enum
+│   │   ├── role_grants.ts  [Story 1.8 — landed] role_grants table + scope_dimension enum (scoped, no-FK)
 │   │   └── _baseline.ts    migration-zero marker (declares the `drizzle` metadata schema)
-│   ├── policies/           [Story 1.6 — landed] RLS pgPolicy declarations + _roles (+ 1.7 carve-out)
+│   ├── policies/           [Story 1.6 — landed] RLS pgPolicy declarations + _roles (+ 1.7 carve-out, 1.8 role_grants scoped)
+│   ├── rbac/               [Story 1.8 — landed] permission catalog + scope model + 12 role bundles + fail-closed guard
 │   ├── ids/                [Story 1.7 — landed] branded ID types + smart constructors
 │   ├── pariwar-passport/   [Story 1.7 — landed] read accessor + write path + 60s freshness cache
 │   ├── encryption/         [Story 1.5] envelope-encryption column transformers
@@ -291,7 +293,8 @@ drift; Story 1.16c's gate enforces architecture-committed scope.
 
 | Path                        | Lands in   | Concern                                                                 |
 | --------------------------- | ---------- | ----------------------------------------------------------------------- |
-| `src/policies/`             | **Story 1.6 (landed)** | RLS `pgPolicy` declarations (multi-tenant isolation); Story 1.7 added the Pariwar-Passport carve-out |
+| `src/policies/`             | **Story 1.6 (landed)** | RLS `pgPolicy` declarations (multi-tenant isolation); Story 1.7 added the Pariwar-Passport carve-out; Story 1.8 added the `role_grants` scoped policy |
+| `src/rbac/`                 | **Story 1.8 (landed)** | Permission-key catalog + scope model (`scopeContains`) + 12 declarative role bundles (`seedRoles`) + fail-closed `requirePermission`/`hasPermission` guard + audit seam |
 | `src/ids/`                  | **Story 1.7 (landed)** | Branded ID types (`PariwarId`, `MemberId`, …) + UUID-validating smart constructors |
 | `src/pariwar-passport/`     | **Story 1.7 (landed)** | Read accessor + write path + 60s freshness cache (`getPariwarPassport`, `upsertPariwarPassport`, `BRANDING_BUNDLE_MAX_STALENESS_MS`) |
 | `src/encryption/`           | **Story 1.5 (landed)** | Envelope-encryption + blind-index substrate; `piiColumn` factory       |

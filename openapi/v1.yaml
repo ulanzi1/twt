@@ -140,6 +140,104 @@ components:
         - createdBy
         - updatedAt
       additionalProperties: false
+    ScopeDimension:
+      type: string
+      enum: &a1
+        - global
+        - pariwar
+        - state
+        - district
+        - block
+        - self
+    PermissionKey:
+      type: string
+      pattern: ^[a-z_]+\.[a-z_]+$
+    PermissionCatalog:
+      type: object
+      properties:
+        catalogVersion:
+          type: integer
+          exclusiveMinimum: 0
+        keys:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-z_]+\.[a-z_]+$
+      required:
+        - catalogVersion
+        - keys
+      additionalProperties: false
+    RoleBundle:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: &a2
+            - super_admin
+            - pariwar_admin
+            - state_trustee
+            - district_admin
+            - block_admin
+            - finance_officer
+            - it_cell
+            - media_comms
+            - field_worker
+            - verifier
+            - auditor
+            - helpline_operator
+        permissions:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-z_]+\.[a-z_]+$
+        scopeCeiling:
+          type: string
+          enum: *a1
+      required:
+        - role
+        - permissions
+        - scopeCeiling
+      additionalProperties: false
+    RoleGrant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        pariwarId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: *a2
+        scopeDimension:
+          type: string
+          enum: *a1
+        scopeValue:
+          type:
+            - string
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - id
+        - userId
+        - pariwarId
+        - role
+        - scopeDimension
+        - scopeValue
+        - createdAt
+        - createdBy
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:

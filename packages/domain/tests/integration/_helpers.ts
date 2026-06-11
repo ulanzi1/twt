@@ -17,6 +17,7 @@ import type pg from 'pg';
 
 import { setPariwarScope, type Db } from '../../src/db.js';
 import { pariwarId as toPariwarId } from '../../src/ids/index.js';
+import type { ScopeDimension } from '../../src/rbac/scope.js';
 import * as schema from '../../src/schema/index.js';
 import type { BrandingBundle } from '../../src/schema/pariwar_passport.js';
 
@@ -97,6 +98,38 @@ export async function seedPassport(
     localeDefault: opts.localeDefault ?? 'en',
     createdBy: opts.createdBy ?? null,
   });
+}
+
+export interface SeedRoleGrantOptions {
+  userId?: string;
+  role?: string;
+  scopeDimension?: ScopeDimension;
+  scopeValue?: string | null;
+  createdBy?: string | null;
+}
+
+/**
+ * Insert one role_grants row (Story 1.8). Like seedEvent/seedPassport, run this
+ * BEFORE entering app scope (as the Docker superuser, RLS bypassed) so rows for
+ * BOTH tenants land regardless of the write-isolation policy; afterEach ROLLBACK
+ * (setupLiveDb) reverts it. role_grants is a SCOPED table — cross-Pariwar reads
+ * must return 0 rows (asserted by cross-pariwar-leak.spec.ts). Returns the userId.
+ */
+export async function seedRoleGrant(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedRoleGrantOptions = {},
+): Promise<string> {
+  const userId = opts.userId ?? randomUUID();
+  await tx.insert(schema.roleGrants).values({
+    userId,
+    pariwarId: toPariwarId(pariwarId),
+    role: opts.role ?? 'district_admin',
+    scopeDimension: opts.scopeDimension ?? 'district',
+    scopeValue: opts.scopeValue ?? 'Patna',
+    createdBy: opts.createdBy ?? null,
+  });
+  return userId;
 }
 
 /** Shed Docker superuser (SET ROLE twt_app) + set the pariwar scope, in-tx. */

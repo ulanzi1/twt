@@ -1,0 +1,123 @@
+// Permission-key type + versioned catalog — Story 1.8 substrate (AC-1).
+//
+// KEY-FORMAT RECONCILIATION. Permission keys follow the `<resource>.<action>`
+// convention — `claim.approve`, `member.suspend`, `pariwar.provision`,
+// `audit.export`, `audit.verify`. This is the canonical form per architecture
+// §2.6 L1479 and EVERY concrete key in the artifacts. It RECONCILES the epic's
+// literal `verb.resource` wording (epics.md L1127), which is backwards relative
+// to all grounded examples — the epic's token-ORDER is the error; the concept (a
+// verb acting on a resource) is preserved. Ratified in ADR-0008 +
+// Decision 2026-06-11-044 + a correct-course note against epics.md L1127.
+//
+// ⚠ DO NOT confuse permission keys (imperative verb — what a role MAY do) with
+// EVENT names (past-tense — what HAPPENED: `claim.approved`, `member.suspended`,
+// `alert.published`, `niyamavali.amended`). Event names are `packages/events`
+// territory (the eventsLog.event_type column); permission keys live here.
+//
+// The catalog is VERSIONED and APPEND-ONLY / extensible. Most resources' endpoints
+// land in later epics (claims keys at Epic 6, members at Epic 3, pools at Epic 7,
+// audit at 1.10/1.11) — the catalog grows per-epic; it is NOT exhaustive at 1.8.
+// Seed EXACTLY the keys the artifacts reference; do NOT manufacture keys for
+// resources whose endpoints don't exist (that would create dead/wrong keys
+// downstream code must reconcile).
+
+import type { Brand } from '../ids/index.js';
+
+/**
+ * A validated permission key of the canonical `<resource>.<action>` shape:
+ * lowercase, exactly one dot, `[a-z_]+` on each side. Branded (compile-time
+ * phantom property, mirroring `packages/domain/src/ids/`) so a raw string can
+ * never be silently passed where a validated `PermissionKey` is expected. At
+ * runtime a `PermissionKey` IS a plain string.
+ */
+export type PermissionKey = Brand<'PermissionKey'>;
+
+/**
+ * The canonical `<resource>.<action>` matcher: lowercase letters/underscores,
+ * a single dot, no leading/trailing/double dots. Mirrors the `_common/errors.ts`
+ * `<domain>.<action>` namespacing convention and the contracts-layer regex
+ * (packages/contracts/src/rbac/permissions.ts) — keep the two in lockstep.
+ */
+export const PERMISSION_KEY_REGEX = /^[a-z_]+\.[a-z_]+$/;
+
+/** Thrown when the permission-key smart constructor receives a malformed string. */
+export class InvalidPermissionKeyError extends Error {
+  public readonly name = 'InvalidPermissionKeyError';
+  public constructor(public readonly received: string) {
+    super(
+      `[rbac] permission key must match <resource>.<action> ` +
+        `(${PERMISSION_KEY_REGEX.source}); received ${JSON.stringify(received)}`,
+    );
+  }
+}
+
+/**
+ * Smart constructor: validates the `<resource>.<action>` shape and returns a
+ * branded `PermissionKey`, throwing `InvalidPermissionKeyError` on failure
+ * (mirrors `uuidBrand` / `InvalidBrandedIdError` in `ids/index.ts`). Membership
+ * in `PERMISSION_CATALOG` is a SEPARATE check (`isCatalogKey`) — this validates
+ * shape only, so downstream stories can construct their own keys before adding
+ * them to the catalog.
+ */
+export function permissionKey(value: string): PermissionKey {
+  if (!PERMISSION_KEY_REGEX.test(value)) {
+    throw new InvalidPermissionKeyError(value);
+  }
+  return value as PermissionKey;
+}
+
+/**
+ * Catalog version. Bumped when keys are added/removed (append-only in practice —
+ * the catalog grows per-epic). Downstream consumers may pin/assert a minimum.
+ */
+export const PERMISSION_CATALOG_VERSION = 1 as const;
+
+/**
+ * The grounded v1 seed keys (architecture + epic + PRD references only — see file
+ * header). Deliberately sparse: most resources' endpoints land in later epics, so
+ * their keys are added by the owning story. `as const` preserves the literal
+ * union for type-level reasoning.
+ */
+export const SEED_PERMISSION_KEYS = [
+  'claim.approve',
+  'member.suspend',
+  'member.moderate',
+  'pariwar.amend_rule',
+  'pariwar.provision',
+  'niyamavali.amend',
+  'niyamavali.review',
+  'audit.export',
+  'audit.verify',
+] as const;
+
+/** The literal union of the v1 seed keys (extends per-epic as keys are added). */
+export type SeedPermissionKey = (typeof SEED_PERMISSION_KEYS)[number];
+
+/**
+ * The versioned, append-only permission-key registry. A single coherent catalog
+ * (AC-1) keyed by `catalogVersion`; `keys` is the validated, deduplicated set.
+ * GROWS PER-EPIC — adding a resource's keys is a one-line append in the owning
+ * story (no schema migration; this is pure-domain metadata).
+ */
+export interface PermissionCatalog {
+  readonly catalogVersion: number;
+  readonly keys: readonly PermissionKey[];
+}
+
+/** The v1 catalog — the 9 grounded keys, each validated through the constructor. */
+export const PERMISSION_CATALOG: PermissionCatalog = {
+  catalogVersion: PERMISSION_CATALOG_VERSION,
+  keys: SEED_PERMISSION_KEYS.map(permissionKey),
+};
+
+/** O(1) membership set over the catalog keys (used by the fail-closed guard). */
+const CATALOG_KEY_SET: ReadonlySet<string> = new Set(PERMISSION_CATALOG.keys);
+
+/**
+ * Is `key` an enumerated catalog key? The fail-closed guard (`check.ts`) treats a
+ * non-catalog key as UNKNOWN → deny. Accepts a raw string so callers needn't
+ * pre-validate; a malformed string is simply not in the set → `false`.
+ */
+export function isCatalogKey(key: string): key is PermissionKey {
+  return CATALOG_KEY_SET.has(key);
+}

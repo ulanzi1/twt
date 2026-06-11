@@ -42,6 +42,7 @@ import {
   enterAppScope,
   seedEvent,
   seedPassport,
+  seedRoleGrant,
 } from '../_helpers.js';
 
 describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', () => {
@@ -111,6 +112,33 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
       [PARIWAR_B],
     );
     expect(r.rows).toHaveLength(0);
+  });
+
+  // Story 1.8 — role_grants is a SCOPED table (NOT a Passport-style carve-out): a
+  // cross-Pariwar grant read is a real leak (who-holds-what-role in another
+  // tenant). It MUST return 0 rows cross-tenant, exactly like events_log.
+  it('role_grants (scoped) — A scope sees only A grants, never B', async () => {
+    const { tx, client } = getTx();
+    await seedRoleGrant(tx, PARIWAR_A, { role: 'district_admin' });
+    await seedRoleGrant(tx, PARIWAR_B, { role: 'state_trustee' });
+    await enterAppScope(client, PARIWAR_A);
+
+    const all = await tx.select().from(schema.roleGrants);
+    expect(all).toHaveLength(1);
+    expect(all[0]?.pariwarId).toBe(PARIWAR_A);
+
+    const bRows = await tx
+      .select()
+      .from(schema.roleGrants)
+      .where(eq(schema.roleGrants.pariwarId, PARIWAR_B));
+    expect(bRows).toHaveLength(0);
+
+    // Raw SQL bypass attempt — still RLS-filtered to 0 rows.
+    const raw = await client.query<{ pariwar_id: string }>(
+      `SELECT pariwar_id FROM role_grants WHERE pariwar_id = $1`,
+      [PARIWAR_B],
+    );
+    expect(raw.rows).toHaveLength(0);
   });
 });
 

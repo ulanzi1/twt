@@ -13,7 +13,7 @@
 
 import { z } from 'zod';
 
-export function assertStrict<T extends z.ZodObject<z.ZodRawShape>>(schema: T): T {
+export function assertStrict<T extends z.ZodTypeAny>(schema: T): T {
   // Unwrap any ZodEffects layers (.refine()/.transform() chained after .strict())
   // to reach the underlying ZodObject whose _def.unknownKeys carries the 'strict'
   // flag. ZodEffects stores its base schema at _def.schema; iterating handles

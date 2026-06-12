@@ -1,4 +1,5 @@
-// Named cross-tenant operations helper — Story 1.6 substrate.
+// Named cross-tenant operations helper — Story 1.6 substrate, re-keyed at Story
+// 1.10 (D5-1.6 / D2-1.6 / D9-1.6).
 //
 // Architecture §1.2 line 736-740 + line 764-770: operations that legitimately
 // span tenants are a single named code surface; every cross-tenant read writes
@@ -6,38 +7,55 @@
 // (Story 1.16a / deferred D1-1.6) forbids constructing service-role connections
 // outside this module. This file is that single surface.
 //
-// ⚠ Audit-emission layering note (deviation from the Story 1.6 AC-4 sample):
-// the AC-4 sample emitted the audit event via `@twt/events.appendEvent`. That
-// would make @twt/domain depend on @twt/events, but @twt/events ALREADY depends
-// on @twt/domain (for `Db` + `schema`) — the reverse edge is both a layering
-// inversion AND a turbo task-graph cycle (verified at dev-time). @twt/domain
-// owns the events_log table, so this helper emits the audit event with a direct
-// drizzle INSERT into its own schema instead. The audit row shape is identical
-// to what appendEvent would have written; Story 1.10 re-wires this to the
-// substantive audit_log_entries table (deferred D5-1.6).
+// ── Story 1.10 re-key (replaces the events_log placeholder) ───────────────────
+// Story 1.6 emitted the cross-tenant audit event into events_log via a direct
+// drizzle INSERT (a placeholder, to avoid the @twt/events↔@twt/domain cycle).
+// Story 1.10 re-keys that emission onto the substantive tamper-evident
+// `audit_log_entries` table via `writeAuditEntry` (same package — no cycle). The
+// events_log placeholder INSERT is GONE. The CROSS_TENANT_SENTINEL_UUID lives on
+// as the `audit_log_entries.pariwar_id` value for all cross-tenant audit rows.
+//
+// ── Two-transaction split (W1-CR1.6) ──────────────────────────────────────────
+// The audit line is written FIRST, in its own advisory-lock transaction that
+// COMMITS before the cross-tenant operation begins. So the record that
+// cross-tenant access was attempted is durable REGARDLESS of what `fn()` does — a
+// thrown `fn()` (or a rolled-back cross-tenant tx) cannot erase the audit. This
+// also fails CLOSED: if the audit write itself fails, runAsCrossTenant throws and
+// the RLS-bypassed operation never runs (no un-audited cross-tenant access).
+//
+// ⚠ Requires a `servicePool` (DD-3): in production a BYPASSRLS `twt_service`-login
+// pool; in dev/CI the same superuser pool as `pool`. `SET LOCAL row_security =
+// off` (below) likewise needs superuser/BYPASSRLS — do NOT invoke against Cloud
+// SQL without service-pool separation.
+//
+// ⚠ Commits its own transactions — cannot be rolled back by setupLiveDb's
+// per-test ROLLBACK. Tests that call it accept row accumulation at the sentinel
+// audit stream (assert `>= 1`, not `=== 1`).
 
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type pg from 'pg';
 
+import { writeAuditEntry } from '../audit/write.js';
+import { canonicalJsonStringify } from '../canonical-json.js';
 import type { Db } from '../db.js';
 import * as schema from '../schema/index.js';
 
-/** Well-known sentinel UUID for the cross-tenant audit stream + tenant marker. */
+/** Well-known sentinel UUID for the cross-tenant audit tenant marker. */
 const CROSS_TENANT_SENTINEL_UUID = '00000000-0000-0000-0000-000000000000';
 
 export interface CrossTenantContext {
   /**
-   * Free-form reason emitted in the audit event. Examples: 'super-admin audit
+   * Free-form reason emitted in the audit line. Examples: 'super-admin audit
    * dashboard query', 'matcher cron — multi-Pariwar batch', 'helpline triage
-   * routing'. Future auditors filter audit lines by reason to characterise
-   * cross-tenant access patterns.
+   * routing'. Auditors filter cross-tenant audit lines by reason to characterise
+   * access patterns.
    */
   reason: string;
   /**
    * The actor performing the operation. NULL = system/SIE per architecture
-   * §1.14 line 1262-1268 (the Story 1.3 events_log column semantic).
+   * §1.14 line 1262-1268.
    */
   actorId: string | null;
   /**
@@ -48,27 +66,47 @@ export interface CrossTenantContext {
   pariwarIds?: string[];
 }
 
+function sha256Hex(s: string): string {
+  return createHash('sha256').update(s, 'utf8').digest('hex');
+}
+
 /**
  * Single named call-site for cross-tenant operations (architecture §1.2 line
- * 736-740). Opens a transaction, sets `row_security = off` for its lifetime,
- * runs the callback against an RLS-bypassed Drizzle handle, emits an audit
- * event, and commits.
+ * 736-740). Writes a durable audit line FIRST (own advisory-lock tx), then opens
+ * a transaction, sets `row_security = off` for its lifetime, runs the callback
+ * against an RLS-bypassed Drizzle handle, and commits.
  *
- * ⚠ `SET LOCAL row_security = off` requires superuser or BYPASSRLS privilege.
- * In local Docker + CI, `twt_dev_app = POSTGRES_USER = implicit superuser`, so
- * this works. Against Cloud SQL production, a separate service-pool with
- * BYPASSRLS credentials is required (deferred D9-1.6 / Story 1.10). Do NOT
- * invoke against Cloud SQL without service-pool separation.
- *
- * ⚠ Commits its own transaction — cannot be rolled back by setupLiveDb's
- * per-test ROLLBACK. Tests that call it accept row accumulation at the sentinel
- * audit stream (assert `>= 1`, not `=== 1`).
+ * @param pool        the app/cross-tenant pool the RLS-bypassed operation runs on
+ * @param servicePool the BYPASSRLS service pool the audit writer runs on (DD-3)
  */
 export async function runAsCrossTenant<T>(
   pool: pg.Pool,
+  servicePool: pg.Pool,
   ctx: CrossTenantContext,
   fn: (db: Db, client: pg.PoolClient) => Promise<T>,
 ): Promise<T> {
+  const pariwarIds = ctx.pariwarIds ?? ['<unbounded>'];
+
+  // (1) Durable audit of the access ATTEMPT — commits independently (W1-CR1.6).
+  // Fails closed: a write error here aborts before any RLS-bypassed work.
+  await writeAuditEntry(servicePool, {
+    pariwarId: CROSS_TENANT_SENTINEL_UUID,
+    actorId: ctx.actorId,
+    actorRole: null,
+    action: 'audit.cross_tenant_access',
+    resourceLocator: `cross_tenant:[${pariwarIds.join(',')}] ${ctx.reason}`.slice(0, 1024),
+    requestPayloadHash: sha256Hex(
+      canonicalJsonStringify({
+        reason: ctx.reason,
+        pariwar_ids: pariwarIds,
+        emitted_by: 'packages/domain/src/cross-tenant/run-as-cross-tenant.ts',
+      }),
+    ),
+    responseStatus: 200,
+    traceId: null,
+  });
+
+  // (2) The RLS-bypassed operation, in its own transaction.
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -76,34 +114,11 @@ export async function runAsCrossTenant<T>(
     // with the application role's NOBYPASSRLS attribute (migration 0002
     // self-test), this is the ONLY path that can read cross-tenant rows.
     // row_security = off is a per-transaction toggle; FORCE ROW LEVEL SECURITY
-    // on events_log does NOT override it (FORCE makes RLS apply to the table
-    // owner; the off toggle is the documented escape hatch for legitimate
+    // does NOT override it (the documented escape hatch for legitimate
     // cross-tenant tooling).
     await client.query('SET LOCAL row_security = off');
     const tx = drizzle(client, { schema }) as unknown as Db;
     const result = await fn(tx, client);
-
-    // Emit the audit-trail event into events_log (Story 1.10 substitutes the
-    // substantive audit_log_entries row — deferred D5-1.6). Each call mints its
-    // own random stream_id so the UNIQUE (stream_id, event_version) constraint
-    // is never contested between concurrent callers (review P1 — the prior
-    // MAX-query approach raced on the shared sentinel stream under concurrent
-    // calls). The sentinel pariwarId marks the row as a cross-tenant audit event
-    // for consumers filtering by that column.
-    await tx.insert(schema.eventsLog).values({
-      streamId: randomUUID(),
-      eventType: 'audit.cross_tenant_access',
-      payload: {
-        reason: ctx.reason,
-        pariwar_ids: ctx.pariwarIds ?? ['<unbounded>'],
-        emitted_by: 'packages/domain/src/cross-tenant/run-as-cross-tenant.ts',
-        invocation_time_iso: new Date().toISOString(),
-      },
-      eventVersion: 1,
-      actorId: ctx.actorId,
-      pariwarId: CROSS_TENANT_SENTINEL_UUID,
-    });
-
     await client.query('COMMIT');
     return result;
   } catch (err) {

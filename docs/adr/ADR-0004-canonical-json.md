@@ -71,6 +71,20 @@ Authored at `packages/events/src/canonical-json.ts`. Tests at
 `packages/events/tests/canonical-json.test.ts` cover key-order independence,
 escaping, numeric normalization, and round-trip equivalence.
 
+> **Amendment — Story 1.10 (DD-1, 2026-06-12):** the implementation **moved** to
+> `packages/domain/src/canonical-json.ts` and is now the SINGLE canonicalizer
+> home. The audit-log hash chain (`audit_log_entries` writer + `verifyChainSegment`)
+> and its domain-level producers (`KmsProvider.auditHook`, `runAsCrossTenant`)
+> must call the canonicalizer from inside `@twt/domain`; since `@twt/events`
+> already depends on `@twt/domain`, keeping it in `@twt/events` would be a layering
+> inversion + a turbo task-graph cycle (D13-1.5). Consumers now import
+> `canonicalJsonStringify` from `@twt/domain`; **`@twt/events` re-exports it via a
+> thin shim at `packages/events/src/canonical-json.ts`** so its public surface +
+> tests are unchanged. The authoritative test suite is co-located at
+> `packages/domain/tests/canonical-json.test.ts`. There remains exactly ONE
+> definition in the repo (`encryption/canonical-context.ts` defines the scoped
+> `encryptionContextAad` AAD helper, not a second `canonicalJsonStringify`).
+
 ## Alternatives considered
 
 1. **`canonicalize` npm package** — well-maintained, exact RFC 8785 conformance,

@@ -18,11 +18,20 @@ export type { AppDeps } from './context.js';
 async function main(): Promise<void> {
   const config = loadConfig();
   const deps = await createDeps(config);
+  // End the service pool only when it is a DISTINCT pool (prod SERVICE_DATABASE_URL);
+  // in dev/CI it aliases deps.pool, so ending it once via deps.pool suffices.
+  const endPools = async (): Promise<void> => {
+    await deps.pool.end().catch(() => undefined);
+    if (deps.servicePool !== deps.pool) {
+      await deps.servicePool.end().catch(() => undefined);
+    }
+  };
+
   let app;
   try {
     app = await buildServer(deps);
   } catch (err) {
-    await deps.pool.end().catch(() => undefined);
+    await endPools();
     throw err;
   }
 
@@ -31,7 +40,7 @@ async function main(): Promise<void> {
     if (closing) return;
     closing = true;
     await app.close();
-    await deps.pool.end().catch(() => undefined);
+    await endPools();
   };
   process.on('SIGTERM', () => void close().then(() => process.exit(0)));
   process.on('SIGINT', () => void close().then(() => process.exit(0)));

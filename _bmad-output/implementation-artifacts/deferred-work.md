@@ -836,3 +836,36 @@ Independent re-review of Groups B–E confirmed the prior `7823fe4` triage as th
 - **CR-E-4: `recoveryCodes` first-enrollment semantics missing from OpenAPI schema description** — `PasskeyRegisterVerifyResponse.recoveryCodes` has no description stating "returned exactly once at first enrollment only". Low priority, informational. Re-trigger: API client generation story (D2-1.4).
 - **CR-E-5: ADR-0009 status → `under-trustee-review`** — **Closed by [edit] 2026-06-12**: status flipped `drafted` → `under-trustee-review` after the R2 architecture confirmation (Winston, `sprint-change-proposal-2026-06-12-R2.md`). The carve-out RLS *mechanism* is now architecture-confirmed (Option 1); what **remains Resolved via explicit deferral** is the **trustee ratification** itself (`under-trustee-review` → `ratified`), a process decision requiring trustee engagement, not a code change. Re-trigger: first trustee review session after Epic 1 stabilises.
 - **CR-B-4: `buildEncryptionDeps` reads `KMS_TEST_MODE` from `process.env` directly** — breaks the "env vars read once at boot via `loadConfig`" discipline; makes the function untestable without `process.env` mutation. `buildEncryptionDeps` is also called directly from test setup, making migration to `ApiConfig` invasive. Resolved via explicit deferral: test-infra coupling; address in a dedicated refactor PR. Re-trigger: next KMS or test-infra refactor.
+
+---
+
+## Story 1.10 — resolutions + new deferrals (substrate author-commit, 2026-06-12 per Decision 2026-06-12-046)
+
+Per [[feedback_closure_language_precision]]: "**Closed by [edit]**" = the artifact the deferral predicted was produced; "**Resolved via explicit deferral**" = the gap remains intentional with a recorded trigger.
+
+### Closed by [edit] at Story 1.10
+
+- **D2-1.9 (AuthAuditSink → real sink)** — Closed: `apps/api/src/audit/audit-log-sink.ts` `createAuditLogSink` maps `AuthAuditEvent` → `writeAuditEntry`, swapped into `createDeps`.
+- **D2-1.8 (rbac `onAuthorizationDenied` sink)** — Closed: routes through the same `deps.auditSink.emit`; lit up by the D2-1.9 swap (no rbac code touched). `scope.change` emission likewise.
+- **D10-1.5 (KmsProvider.auditHook)** — Closed: `createKmsAuditHook` populated + wired in `createDeps`; KEK wrap/unwrap + blind-index HMAC emit audit lines.
+- **D5-1.6 / D2-1.6 (cross-tenant audit re-key)** — Closed: `runAsCrossTenant` emits into `audit_log_entries` via `writeAuditEntry` (events_log placeholder removed; sentinel pariwar_id retained).
+- **D9-1.6 (service-pool credential separation)** — Closed (shape): `runAsCrossTenant` gains the `servicePool` param; `AppDeps.servicePool` exposed; migration 0007 documents the prod `twt_service`-login BYPASSRLS posture. (Live prod credential = Resolved via explicit deferral, below.)
+- **D7-1.3 (audit-log hash-chain consumer wiring)** — Closed: `audit_log_entries` table + `writeAuditEntry` producer + `verifyChainSegment` (the chain Story 1.11a verifies).
+- **D13-1.2 (audit-log/integrity-check test slot)** — Closed: `tests/integration/audit-log/integrity-check.spec.ts` (8 live-DB tests incl. synthetic tamper).
+- **D13-1.4 (audit transport contract — audit leg)** — Closed: `AuditLogEntryContract` (`.strict()`, standalone, OpenAPI `AuditLogEntry` component).
+- **D13-1.5 (canonical-JSON consolidation)** — Closed via path (a): `canonical-json.ts` moved to `@twt/domain`, re-exported by `@twt/events`. (The optional `encryption/canonical-context.ts` delegation sub-leg = Resolved via explicit deferral, below.)
+- **D3-1.3 (`audit.*` event-type registry leg)** — Closed by decision: audit lines are NOT double-written as `events_log` rows (Task 6.3); `audit_log_entries` is the canonical separately-retained store, so NO `audit.*` registry entries are added. The other registry legs (`member.*`/`claim.*`/…) remain per their own stories.
+- **W16 (pg_partman on Cloud SQL PG16)** — Closed (verified + recorded): `pg_partman` is on the Cloud SQL for PostgreSQL supported-extensions list (PG 12-16); absent from the local `postgres:16-alpine` image (irrelevant — partitioning deferred). Native declarative partitioning needs no pg_partman anyway. Shipping non-partitioned (DD-4).
+- **W2-CR1.6 (twt_service grant vs no policy)** — Closed: migration 0007 carries the explanatory comment — `twt_service` writes via the BYPASSRLS prod login, hence grants but no permissive write policy.
+- **W8-CR1.6 (sentinel hot-row contention)** — Closed: the writer serializes on `pg_advisory_xact_lock(AUDIT_CHAIN_LOCK_KEY)`, not a shared sentinel row.
+- **W6-CR1.6 (audit payload unconstrained / poisoning)** — Closed: `writeAuditEntry` validates input with a `.strict()` Zod schema (bounded lengths, dotted action, SHA-256-hex requestPayloadHash) at the boundary.
+- **W1-CR1.6 (cross-tenant audit durability)** — Closed: `runAsCrossTenant` two-transaction split — the audit line commits FIRST (own advisory-lock tx), so a thrown `fn()` cannot erase it; fails closed if the audit write fails.
+
+### Resolved via explicit deferral (gap intentional; trigger recorded)
+
+- **D1-1.10: Live `terraform apply` of `infra/gcp/audit-mirror.tf` + the irreversible retention LOCK** — committed the IaC shape only (Story 1.5 D1-1.5 precedent). `var.enable_retention_lock` defaults false. **Trigger: production audit-mirror provisioning** (mirror project created + billing-linked); set `enable_retention_lock = true` after verifying the 7-year period.
+- **D2-1.10: 6-hourly cron + durable watermark store** — the mirror push fn + CLI ship now; the 6h trigger + a durable `audit_mirror_state` watermark are wired with **pg-boss (Story 1.12)** (pg-boss not installed yet). v1 seeds the watermark from `AUDIT_MIRROR_SINCE_SEQ`.
+- **D3-1.10: Production `SERVICE_DATABASE_URL` (twt_service-login BYPASSRLS) credential** — the service pool reuses the app pool in dev/CI; the distinct prod login credential is Terraform/Secret-Manager. **Trigger: Cloud SQL deploy (Story 1.15) / first prod audit write.**
+- **D4-1.10: `audit_log_entries` table partitioning (DD-4)** — ships non-partitioned (events_log precedent); the chain is over `seq` (partition-agnostic). **Trigger: a scale story (170M-row sizing, §1.5 P2).**
+- **D5-1.10: `encryption/canonical-context.ts` → shared canonicalizer (D13-1.5 cleanup sub-leg)** — left untouched: it defines `encryptionContextAad` (a scoped AAD helper), not a second `canonicalJsonStringify`, so the "one canonicalizer" invariant already holds; re-deriving AES-GCM AAD risks making stored PII undecryptable. **Trigger: a dedicated encryption refactor with a ciphertext-roundtrip test.**
+- **W-USAGE-1.10 (local test-DB schema USAGE):** the Story-1.6 deferred "USAGE ON SCHEMA missing" surfaced when a manual `DROP SCHEMA public CASCADE` local reset stripped twt_app's default `PUBLIC` USAGE (CI's fresh container is unaffected). **Trigger: if a migration ever recreates the public schema, add an explicit `GRANT USAGE ON SCHEMA public`.**

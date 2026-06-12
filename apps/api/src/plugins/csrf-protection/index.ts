@@ -28,6 +28,11 @@ export async function registerCsrf(app: FastifyInstance): Promise<void> {
   });
 }
 
+function headerString(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 /** Parse an origin string from a URL-ish header value; null if unparseable. */
 function originOf(value: string | undefined): string | null {
   if (!value) return null;
@@ -53,7 +58,12 @@ export function originCheckHook(deps: AppDeps): onRequestHookHandler {
       done();
       return;
     }
-    const origin = originOf(request.headers.origin) ?? originOf(request.headers.referer);
+    const rawOrigin = headerString(request.headers.origin);
+    if (rawOrigin === 'null') {
+      done(new ForbiddenError('Origin not allowed', 'auth.csrf_origin'));
+      return;
+    }
+    const origin = originOf(rawOrigin) ?? originOf(headerString(request.headers.referer));
     // Both absent → non-browser client → not a CSRF vector → allow.
     if (origin === null) {
       done();

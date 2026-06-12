@@ -33,6 +33,11 @@ export function getRequestContext(): RequestContext | undefined {
 
 const TRACE_HEADER = 'x-request-id';
 
+function sanitizeTraceId(value: string): string {
+  // Keep only printable ASCII (0x20–0x7E); strips control chars and non-ASCII.
+  return value.replace(/[^ -~]/g, '').slice(0, 128);
+}
+
 /**
  * Build the onRequest hook bound to `deps`. The admin-global encryption store
  * (ADMIN_GLOBAL_NAMESPACE) is what the admin email blind-index + Tier-1 envelope
@@ -46,7 +51,9 @@ export function requestContextHook(deps: AppDeps): onRequestHookHandler {
   ): void {
     const incoming = request.headers[TRACE_HEADER];
     const traceId =
-      typeof incoming === 'string' && incoming.length > 0 ? incoming : randomUUID();
+      typeof incoming === 'string' && incoming.length > 0
+        ? sanitizeTraceId(incoming) || randomUUID()
+        : randomUUID();
 
     const ctx: RequestContext = { traceId };
     request.requestContext = ctx;

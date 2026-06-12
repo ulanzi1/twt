@@ -14,7 +14,7 @@ export type RecoveryConsumeRequest = z.output<typeof RecoveryConsumeRequest>;
 
 export const RecoveryConsumeResponse = z
   .object({
-    authenticated: z.boolean(),
+    authenticated: z.literal(true),
   })
   .strict();
 export type RecoveryConsumeResponse = z.output<typeof RecoveryConsumeResponse>;

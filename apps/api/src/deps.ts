@@ -51,6 +51,9 @@ export function buildEncryptionDeps(pepper: string): EncryptionDeps {
       hmacKeyRef,
     };
   }
+  if (mode !== 'fake') {
+    throw new Error(`[deps] KMS_TEST_MODE must be 'fake' or 'live', got ${JSON.stringify(mode)}`);
+  }
   return {
     kms: encryption.createFakeKmsProvider({
       kekBytes: deriveFakeKey('twt-admin-kek', pepper),
@@ -72,6 +75,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
   const pepper = await resolveSecretValue(config.argon2.pepperSecretName, {
     envFallback: config.argon2.pepperEnvFallback,
   });
+  if (!pepper || pepper.trim() === '') {
+    throw new Error(`[deps] Argon2id pepper resolved to an empty value — check Secret Manager secret '${config.argon2.pepperSecretName}'`);
+  }
 
   const isProd = config.nodeEnv === 'production';
 

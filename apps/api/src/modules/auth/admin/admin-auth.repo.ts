@@ -259,3 +259,7 @@ export async function countActiveRecoveryCodes(db: Queryable, userId: string): P
   );
   return Number(res.rows[0]?.n ?? 0);
 }
+
+export async function deleteRecoveryCodes(db: Queryable, userId: string): Promise<void> {
+  await db.query(`DELETE FROM recovery_codes WHERE user_id = $1`, [userId]);
+}

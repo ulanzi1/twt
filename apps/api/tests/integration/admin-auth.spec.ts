@@ -13,51 +13,17 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import type { AppDeps } from '../../src/context.js';
 import * as service from '../../src/modules/auth/admin/admin-auth.service.js';
-import { buildTestDeps, hasDatabase, CapturingAuditSink, type TestDeps } from './_setup.js';
+import {
+  buildTestDeps,
+  hasDatabase,
+  makeClient,
+  CapturingAuditSink,
+  type TestDeps,
+} from './_setup.js';
 import { FakeWebAuthnProvider } from './_webauthn-fake.js';
 import { buildServer } from '../../src/server.js';
 
-const ORIGIN = 'http://localhost:3001';
-
-interface InjectResult {
-  statusCode: number;
-  json<T = unknown>(): T;
-  body: string;
-}
-
-interface Client {
-  inject(opts: {
-    method: 'GET' | 'POST';
-    url: string;
-    payload?: object;
-    headers?: Record<string, string>;
-  }): Promise<InjectResult>;
-}
-
-function makeClient(app: Awaited<ReturnType<typeof buildServer>>): Client {
-  const jar: Record<string, string> = {};
-  return {
-    async inject(opts): Promise<InjectResult> {
-      const cookieHeader = Object.entries(jar)
-        .map(([k, v]) => `${k}=${v}`)
-        .join('; ');
-      const res = await app.inject({
-        method: opts.method,
-        url: opts.url,
-        payload: opts.payload,
-        headers: {
-          origin: ORIGIN,
-          ...(cookieHeader ? { cookie: cookieHeader } : {}),
-          ...opts.headers,
-        },
-      });
-      for (const c of res.cookies) {
-        jar[c.name] = c.value;
-      }
-      return { statusCode: res.statusCode, json: <T,>() => res.json<T>(), body: res.body };
-    },
-  };
-}
+type Client = ReturnType<typeof makeClient>;
 
 describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
   let td: TestDeps;
@@ -77,16 +43,19 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
 
   afterAll(async () => {
     await app.close();
-    const c = await td.pool.connect();
     try {
-      if (createdUserIds.length > 0) {
-        await c.query(`DELETE FROM admin_sessions WHERE sess ->> 'userId' = ANY($1)`, [createdUserIds]);
-        await c.query(`DELETE FROM users WHERE id = ANY($1)`, [createdUserIds]); // cascades
+      const c = await td.pool.connect();
+      try {
+        if (createdUserIds.length > 0) {
+          await c.query(`DELETE FROM admin_sessions WHERE sess ->> 'userId' = ANY($1)`, [createdUserIds]);
+          await c.query(`DELETE FROM users WHERE id = ANY($1)`, [createdUserIds]); // cascades
+        }
+      } finally {
+        c.release();
       }
     } finally {
-      c.release();
+      await td.pool.end();
     }
-    await td.pool.end();
   });
 
   let email: string;
@@ -195,6 +164,8 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
     expect(verify.statusCode).toBe(200);
     expect(verify.json<{ authenticated: boolean }>().authenticated).toBe(true);
     expect(audit.ofType('passkey.auth')).toHaveLength(1);
+    // AC-9: login.success fires for both first-factor and MFA completion.
+    expect(audit.ofType('login.success')).toHaveLength(2);
   });
 
   it('wrong email and wrong password are indistinguishable 401s (no enumeration)', async () => {
@@ -214,6 +185,8 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
     expect(wrongEmail.json<{ error: { code: string } }>().error.code).toBe(
       wrongPw.json<{ error: { code: string } }>().error.code,
     );
+    // AC-9: login.failure fires for each wrong-credential attempt.
+    expect(audit.ofType('login.failure')).toHaveLength(2);
   });
 
   it('lockout: N failed password attempts locks the account', async () => {
@@ -251,6 +224,8 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
       payload: { code },
     });
     expect(reuse.statusCode).toBe(401);
+    // AC-9: recovery_code.consume fires on the successful first use only.
+    expect(audit.ofType('recovery_code.consume')).toHaveLength(1);
   });
 
   it('≤2-device cap: a third passkey enrollment is rejected (409)', async () => {
@@ -311,6 +286,8 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
       payload: { response: { id: credentialId } },
     });
     expect(cloned.statusCode).toBe(401);
+    // AC-9: passkey.auth.failure fires when clone detection rejects the counter.
+    expect(audit.ofType('passkey.auth.failure')).toHaveLength(1);
   });
 
   it('authenticated admin reaches scoped routes; scope 404s non-members; RBAC 403s under-privileged', async () => {
@@ -360,7 +337,7 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
 
   it('password reset forces WebAuthn re-enrollment + changes the password', async () => {
     const client = makeClient(app);
-    await enrollFirstPasskey(client);
+    const { recoveryCodes } = await enrollFirstPasskey(client);
 
     // Mint the reset token via the service (delivery is seamed).
     const minted = await service.requestPasswordReset(deps, email);
@@ -387,5 +364,72 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
     // New password reaches the (passkey-less) MFA stage.
     const newLogin = await client.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password: newPassword } });
     expect(newLogin.statusCode).toBe(200);
+
+    // Old recovery codes must be burned — C-6: deleteRecoveryCodes runs alongside deleteAllCredentials.
+    const client3 = makeClient(app);
+    await client3.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password: newPassword } });
+    const oldCodeReuse = await client3.inject({
+      method: 'POST',
+      url: '/api/v1/auth/recovery/consume',
+      payload: { code: recoveryCodes[0]! },
+    });
+    expect(oldCodeReuse.statusCode).toBe(401);
+  });
+
+  it('logout emits login.logout audit and invalidates the session (AC-9)', async () => {
+    const client = makeClient(app);
+    const { credentialId } = await enrollFirstPasskey(client);
+    await fullLogin(client, credentialId);
+
+    const logout = await client.inject({ method: 'POST', url: '/api/v1/auth/logout', payload: {} });
+    expect(logout.statusCode).toBe(204);
+    expect(audit.ofType('login.logout')).toHaveLength(1);
+
+    // Session is gone — a subsequent guarded route returns 401.
+    const nonMember = await client.inject({ method: 'GET', url: `/api/v1/p/${randomUUID()}/whoami` });
+    expect(nonMember.statusCode).toBe(401);
+  });
+
+  it('WebAuthn counter=0 passthrough: zero-counter authenticators bypass clone detection (C-4)', async () => {
+    const client = makeClient(app);
+    const { credentialId } = await enrollFirstPasskey(client);
+
+    // Enrolled counter is 0; reporting newCounter=0 is the "authenticator has no counter" case → must pass.
+    fakeWebauthn.nextAuthentication = { verified: true, newCounter: 0 };
+    await client.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password } });
+    await client.inject({ method: 'POST', url: '/api/v1/auth/passkey/authenticate/options', payload: {} });
+    const zero = await client.inject({
+      method: 'POST',
+      url: '/api/v1/auth/passkey/authenticate/verify',
+      payload: { response: { id: credentialId } },
+    });
+    expect(zero.json<{ authenticated: boolean }>().authenticated).toBe(true);
+  });
+
+  it('WebAuthn counter=0 from a non-zero stored counter is a clone signal (C-4)', async () => {
+    const client = makeClient(app);
+    const { credentialId } = await enrollFirstPasskey(client);
+
+    // First auth advances stored counter to 5.
+    fakeWebauthn.nextAuthentication = { verified: true, newCounter: 5 };
+    await client.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password } });
+    await client.inject({ method: 'POST', url: '/api/v1/auth/passkey/authenticate/options', payload: {} });
+    await client.inject({
+      method: 'POST',
+      url: '/api/v1/auth/passkey/authenticate/verify',
+      payload: { response: { id: credentialId } },
+    });
+
+    // Stored counter is now 5. A report of newCounter=0 is a regression → clone detected → 401.
+    const client2 = makeClient(app);
+    fakeWebauthn.nextAuthentication = { verified: true, newCounter: 0 };
+    await client2.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password } });
+    await client2.inject({ method: 'POST', url: '/api/v1/auth/passkey/authenticate/options', payload: {} });
+    const cloned = await client2.inject({
+      method: 'POST',
+      url: '/api/v1/auth/passkey/authenticate/verify',
+      payload: { response: { id: credentialId } },
+    });
+    expect(cloned.statusCode).toBe(401);
   });
 });

@@ -61,11 +61,13 @@ export class PgSessionStore {
   public set(sessionId: string, session: Session, callback: Callback): void {
     const now = this.now();
     const expire = expiryOf(session, now, this.opts.fallbackTtlMs);
+    // userId may be absent for pre-auth sessions; written NULL and populated post-login.
+    const userId = (session as unknown as Record<string, unknown>)['userId'] as string | undefined ?? null;
     this.pool
       .query(
-        `INSERT INTO ${TABLE} (sid, sess, expire) VALUES ($1, $2, $3)
-           ON CONFLICT (sid) DO UPDATE SET sess = EXCLUDED.sess, expire = EXCLUDED.expire`,
-        [sessionId, JSON.stringify(session), expire.toISOString()],
+        `INSERT INTO ${TABLE} (sid, sess, expire, user_id) VALUES ($1, $2, $3, $4)
+           ON CONFLICT (sid) DO UPDATE SET sess = EXCLUDED.sess, expire = EXCLUDED.expire, user_id = EXCLUDED.user_id`,
+        [sessionId, JSON.stringify(session), expire.toISOString(), userId],
       )
       .then(() => callback())
       .catch((err: unknown) => callback(err));
@@ -85,7 +87,8 @@ export class PgSessionStore {
           return;
         }
         // Server-side expiry: an expired row is treated as absent + lazily reaped.
-        if (row.expire instanceof Date && row.expire.getTime() <= now.getTime()) {
+        const expire = row.expire instanceof Date ? row.expire : new Date(row.expire as string);
+        if (expire.getTime() <= now.getTime()) {
           this.destroy(sessionId, () => callback(null, null));
           return;
         }
@@ -114,9 +117,7 @@ export class PgSessionStore {
 
   /** Delete every session for a user — the FR-56 suspension cascade seam (§2.4). */
   public async destroyForUser(userId: string): Promise<number> {
-    const res = await this.pool.query(`DELETE FROM ${TABLE} WHERE sess ->> 'userId' = $1`, [
-      userId,
-    ]);
+    const res = await this.pool.query(`DELETE FROM ${TABLE} WHERE user_id = $1`, [userId]);
     return res.rowCount ?? 0;
   }
 }

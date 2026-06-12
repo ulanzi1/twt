@@ -31,6 +31,41 @@ Closure-language posture per [[feedback_closure_language_precision]]: the apps/a
 
 ---
 
+## Deferred from: code review of 1-9-admin-authentication (Groups B+C, 2026-06-12)
+
+Closure-language posture per [[feedback_closure_language_precision]]: code patches are **Closed by [edit]** (artifact produced); architectural/structural gaps are **Resolved via explicit deferral** (gap intentional, re-trigger recorded).
+
+**Group B — API Framework:**
+
+- **CR-B-1: `scope.change` audit flood** — `scope.change` audit event emitted on every scoped request, not just transitions; AC-9 intent is state-change events (§2.5); fix requires explicit scope-state delta detection. Deferred pending spec clarification of "scope-change" semantics. Re-trigger: Story 1.9 scoped-route expansion or Story 1.10 audit-log spec authoring.
+- **CR-B-2: `SESSION_SECRET` entropy not validated** — all-spaces 32-char string passes the length check; enforcing true entropy in code requires arbitrary heuristics and has limited security benefit over operational discipline. Deferred, operational concern. Re-trigger: ops hardening / infra ADR.
+- **CR-B-3: `AuthorizationDeniedError`/`ApiError` ordering in `errorMappingHandler`** — `ApiError` branch fires first; consequence depends on whether `AuthorizationDeniedError` extends `ApiError`; class hierarchy must be confirmed before a safe patch. Deferred pending hierarchy check. Re-trigger: any story touching error-mapping or `AuthorizationDeniedError` class hierarchy.
+- **CR-B-4: `buildEncryptionDeps` reads `KMS_TEST_MODE` from `process.env` directly** — breaks injection discipline; migration to `ApiConfig` injection is invasive (the function is also called with pepper-only from tests). Deferred, refactor scope. Re-trigger: encryption-surface refactor story or Story 1.5 D14-1.5 follow-up.
+
+**Group C — Auth Modules:**
+
+- **CR-C-1: Dummy hash uses weak Argon2id params (`m=8,t=1,p=1`)** — timing oracle distinguishing "no such user" from "wrong password"; a timing-equalized no-user path requires precomputing a production-params dummy hash and threading through `AppDeps`. Deferred, design work needed. Re-trigger: any story hardening the `verifyFirstFactor` user-enumeration surface.
+- **CR-C-2: Hostile-trustee-class lockout has no trustee-quorum unlock path (AC-1 gap)** — current lockout is time-based only; quorum-unlock requires a lock-tier enum + a separate ops-authenticated unlock route; quorum infrastructure does not exist in Epic 1. Deferred, needs quorum infrastructure. Re-trigger: ops-security story or trustee-management story post-Epic-1.
+- **CR-C-3: Session rotation on role change (AC-3 gap)** — role-grant mutation routes are not in Story 1.9; any story landing role mutations MUST call `session.regenerate()` to satisfy AC-3. Deferred, guard must land with the mutation story. Re-trigger: first story adding a role-mutation route.
+- **CR-C-4: `recovery_code.consume` audit missing consumed code hash** — `context: { code_hash }` would improve forensic traceability; current audit line lacks the hash. Deferred, completeness gap. Re-trigger: Story 1.10 audit-log substrate or any audit-enrichment story.
+- **CR-C-5: Enrollment-token concurrent TOCTOU** — two concurrent requests with the same token both see `count === 0` before either insert, allowing a double enroll; bounded by `MAX_DEVICES` cap (second insert attempts to exceed cap or hits a unique-constraint conflict); architectural fix needs an atomic check-and-lock pattern. Deferred, bounded risk. Re-trigger: enrollment hardening or multi-device story.
+
+---
+
+## Deferred from: code review of 1-9-admin-authentication (Group D — Tests, 2026-06-12)
+
+Closure-language posture per [[feedback_closure_language_precision]]: test correctness patches are **Closed by [edit]**; coverage gaps with infrastructure prerequisites are **Resolved via explicit deferral** (gap intentional, re-trigger recorded).
+
+- **CR-D-1: AC-3 session-rotation assertions absent** — no test captures the session cookie before and after any auth-state transition and asserts they differ; testing requires raw `app.inject()` cookie comparison or a `makeClient` redesign; fixation defense is deployed but untested end-to-end. Re-trigger: test-infrastructure story or `makeClient` extension.
+- **CR-D-2: AC-7 rate-limit fires — zero coverage** — `TEST_ENV` sets all rate-limit ceilings to 100 000 to prevent 429 interference; no test sets a low ceiling and asserts 429 fires at threshold for login or step-up request. Re-trigger: a per-test env-override pattern (e.g. `testConfig({ LOGIN_RATE_MAX: '3' })`) plus dedicated `rate-limit.spec.ts`.
+- **CR-D-3: AC-8 CSRF negative test absent** — all test clients inject valid `origin: TEST_ORIGIN` unconditionally; no test sends a mismatched or absent Origin header to a state-changing route and asserts 403. Re-trigger: dedicated `csrf.spec.ts` or first Story adding more state-changing routes.
+- **CR-D-4: AC-1 lockout time-based unlock** — test confirms account locks but never advances a clock past `lockoutMs` and verifies login succeeds again; requires clock injection in the HTTP E2E layer (clock currently not threaded through `requireAdminSession`). Re-trigger: ops hardening story or test-infrastructure clock-injection story.
+- **CR-D-5: Enrollment token single-use after device enrolled** — no test sends the same enrollment token after the first device is successfully enrolled and asserts rejection. Re-trigger: next story touching enrollment or a fast-follow test PR.
+- **CR-D-6: 7-day absolute session expiry enforcement** — no test advances the clock past `sessionAbsoluteMs` and asserts a protected route returns 401; requires `SESSION_ABSOLUTE_MS` override to a short value + frozen clock in E2E. Re-trigger: test-infrastructure clock injection in E2E.
+- **CR-D-7: WebAuthn challenge cleared on failure retry (C-7 path)** — no test attempts `authenticate/verify` a second time after a first failure and confirms the challenge is gone (stale-challenge retry rejected). Re-trigger: next auth hardening story.
+
+---
+
 ## Story 1.8 deferred (substrate author-commit, 2026-06-11 per Decision 2026-06-11-044)
 
 Closure-language posture per [[feedback_closure_language_precision]]: engineering substrate is **Closed by [edit]**; future-Story seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).
@@ -767,8 +802,37 @@ Independent re-review of Groups B–E confirmed the prior `7823fe4` triage as th
 ## Story 1.7 deferred (substrate author-commit, 2026-06-11 per Decision 2026-06-11-043)
 
 - **D1-1.7: `@twt/contracts/pariwar-passport` subpath export + upsert/request contract** [`packages/contracts/package.json` + `src/pariwar-passport/`] — Story 1.7 exports the Pariwar-Passport contracts via the package-root barrel only; no `exports`-map subpath is wired (no apps/api consumer until Story 1.9+). The upsert/request (write) contract is route-coupled and also lands with the apps/api write route. **Trigger: Story 1.9** (D4-1.6 scope-resolution middleware + first PII-bearing routes). Adding the `"./pariwar-passport"` exports entry then is trivial.
+---
+
+## Deferred from: code review of 1-9-admin-authentication (Group A — Domain + Contracts, 2026-06-12)
+
+- **CR-A-1: `isRLSEnabled: false` in 0005_snapshot.json vs `ENABLE ROW LEVEL SECURITY` in SQL** — pre-existing drizzle-kit pattern from 0002/0003/0004 (hand-supplements are invisible to drizzle-kit's snapshot); `db:check` stays byte-stable but the snapshot does not reflect actual DB state for the 6 new identity/auth tables. Informational drift, not a bug today. **Trigger: if drizzle-kit ever starts reading `isRLSEnabled` for drift detection, re-evaluate.**
+- **CR-A-2: `step_up_otps.pariwarId` nullable uuid with no FK to `pariwar_passport`** — spec explicitly marks this column informational only (not an RLS key); no FK is architecturally intentional. A stale/deleted pariwar_id in an OTP row is harmless (audit context only). **Trigger: if informational pariwar_id lookups are added to the step-up flow.**
+- **CR-A-3: `SecondFactorMethod` enum (`webauthn | recovery_code`) not extensible without a contract update** — adding a 3rd method (e.g. `totp`) would cause contract-validating clients to parse-fail until the contract is updated and deployed. Design choice for current scope. **Trigger: any new second-factor method added to the admin auth flow.**
+- **CR-A-4: `recovery_codes.codeHash` no per-user uniqueness constraint** — collision probability is negligible with proper CSPRNG code generation; the `consumed_at` burn-on-use path handles the consumed row correctly. **Trigger: if code generation ever diverges from CSPRNG (test code using sequential values, etc.).**
+- **CR-A-5: `seedUser` test helper passes non-UUID `id` without early validation** — would throw `InvalidBrandedIdError` inside `toUserId()` with a potentially confusing error message when FK failures are actually the root cause. Test infra only, no prod risk. **Trigger: a debugging session confused by the error message.**
+
+---
+
 - **D2-1.7: Per-Pariwar custom fields (`packages/domain/src/per-pariwar/bihar/`)** — NOT landed at Story 1.7 (explicit deferral). The GIN-indexed JSONB custom-field mechanism (architecture §1.7 line 936-985) attaches to the members / claims / pools tables, which do not exist until Epic 3 / 6 / 7. Story 1.7's epic ACs require only the Passport table + branding (landed). **Trigger: the first custom-field host table (Epic 3+)**. Recorded in the dir README. Per [[feedback_closure_language_precision]]: Resolved via explicit deferral, not "not addressed".
 - **D3-1.7: Distributed branding cache (Redis) replacing the in-process `Map`** [`packages/domain/src/pariwar-passport/read.ts`] — Story 1.7 ships an in-process cache-aside honouring `BRANDING_BUNDLE_MAX_STALENESS_MS = 60_000` (architecture §1.10 line 1047-1048). Redis is explicitly a future trigger (§1.10 line 1077). **Trigger: the §1.10 distributed-cache trigger fires** (multi-instance API + cache-coherence pressure). The successor must still honour the 60s staleness ceiling + the `invalidatePariwarPassport` seam.
 - **D4-1.7: FK on `pariwar_passport.created_by`** [`packages/domain/src/schema/pariwar_passport.ts`] — `created_by` is an unconstrained nullable `uuid` (no FK) because the admin-users table does not exist yet. **Trigger: Story 1.9+** (admin users table lands); add the FK retroactively then.
 - **D5-1.7: ADR-0007 trustee ratification** — `drafted` at Story 1.7 author-commit (`adr-index.md` Section A row at line 75); flips `under-trustee-review` post-merge; **ratified per Trustee Panel session** (light-touch path acceptable — engineering data-model decision). Per [[feedback_closure_language_precision]]: engineering Closed by [edit] on substrate; ADR ratification Resolved via explicit deferral.
 - **D6-1.7: `now()` vs `clock_timestamp()` in the `updated_at` trigger** [`packages/domain/migrations/0003_pariwar-passport.sql`] — the trigger uses `now()` (transaction timestamp) per the architecture freshness-marker intent. Two writes within ONE transaction share an `updated_at` (immaterial to the freshness contract; production writes are separate committed transactions where `now()` advances per commit). If a future need requires within-transaction monotonic `updated_at`, switch to `clock_timestamp()`. No current trigger.
+
+## Deferred from: code review of 1-9-admin-authentication (Group B — API Framework, 2026-06-12)
+
+- **CR-B-1: `scope.change` audit flood** — `scopeResolutionHook` emits `scope.change` on every scoped request, not only on scope transitions; AC-9 §2.5 intent is transition events. Producing one audit line per request makes the audit trail unqueryable for anomaly detection. Fix requires explicit scope-change detection (compare actorId + pariwarId against the previous scope in session). Deferred: architectural, needs spec clarification on rate-limiting or sampling semantics.
+- **CR-B-2: `SESSION_SECRET` entropy not code-enforceable** — 32-char length check passes for all-spaces or known public example values. True entropy validation (Shannon, charset checks) adds complexity without guarantees. Resolved via explicit deferral: operational concern; remediated at the deployment level (Secret Manager + rotation policy). Re-trigger: deployment hardening / secret-rotation policy.
+- **CR-B-3: `AuthorizationDeniedError`/`ApiError` class hierarchy in `errorMappingHandler`** — if `AuthorizationDeniedError` extends `ApiError` the `ApiError` branch fires first, bypassing the dedicated 403 handler. Depends on the `@twt/domain` class hierarchy (unverified in this review). Resolved via explicit deferral: low risk if `AuthorizationDeniedError` does NOT extend `ApiError`; verify at Group C review time.
+
+---
+
+## Deferred from: code review of 1-9-admin-authentication (Group E — ADR + OpenAPI, 2026-06-12)
+
+- **CR-E-1: `GET /api/v1/auth/csrf` absent from `openapi/v1.yaml`** — the CSRF token mint endpoint (`admin/index.ts` line 18) is documented in ADR §2 and is the prerequisite for `app.csrfProtection`-gated routes (currently only `logout`). It is marked `schema: { hide: true }` in Fastify's Swagger, matching the emit script convention for operational utility routes; the committed OpenAPI spec follows the same convention. Resolved via explicit deferral: ADR §2 already names the endpoint; add to v1.yaml when a second write route opts into CSRF protection and the endpoint becomes a first-class consumer concern. Re-trigger: first story adding a second `csrfProtection`-gated route.
+- **CR-E-2: Session cookie name `twt_admin_sid` not documented in ADR §2** — a stable protocol surface (browser clients + integration tests need it) but informational rather than decision-bearing. Deferred, add at next ADR editorial pass. Re-trigger: API client fast-follow story (D2-1.4).
+- **CR-E-3: `POST /api/v1/auth/passkey/register/options` and `register/verify` missing `401` response** — `requireAdminSession` fires before the enrollment gate; if the session has expired, 401 is returned. The two enrollment paths (session vs. enrollment-token) have different 401 exposure; deferring until the paths are split into separate spec entries. Re-trigger: enrollment-token fast-follow or API client story.
+- **CR-E-4: `recoveryCodes` first-enrollment semantics missing from OpenAPI schema description** — `PasskeyRegisterVerifyResponse.recoveryCodes` has no description stating "returned exactly once at first enrollment only". Low priority, informational. Re-trigger: API client generation story (D2-1.4).
+- **CR-E-5: ADR-0009 status → `under-trustee-review`** — R2 carve-out RLS posture awaits architecture confirmation; the ADR status remains `drafted` but the correct lifecycle state is `under-trustee-review`. Process decision requiring trustee engagement; not a code change. Re-trigger: first trustee review session after Epic 1 stabilises.
+- **CR-B-4: `buildEncryptionDeps` reads `KMS_TEST_MODE` from `process.env` directly** — breaks the "env vars read once at boot via `loadConfig`" discipline; makes the function untestable without `process.env` mutation. `buildEncryptionDeps` is also called directly from test setup, making migration to `ApiConfig` invasive. Resolved via explicit deferral: test-infra coupling; address in a dedicated refactor PR. Re-trigger: next KMS or test-infra refactor.

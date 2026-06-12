@@ -21,8 +21,8 @@ export function requireAdminSession(deps: AppDeps): preHandlerHookHandler {
       throw new UnauthorizedError('Authentication required', 'auth.session_required');
     }
     const absoluteExpiry = request.session.absoluteExpiry;
-    if (typeof absoluteExpiry === 'number' && deps.clock().getTime() > absoluteExpiry) {
-      // Absolute timeout breached — revoke the session row + cookie.
+    // Reject if absoluteExpiry is absent (migrated/corrupted row) OR past — both destroy + 401.
+    if (typeof absoluteExpiry !== 'number' || deps.clock().getTime() > absoluteExpiry) {
       await request.session.destroy();
       throw new UnauthorizedError('Session expired', 'auth.session_expired');
     }

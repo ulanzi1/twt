@@ -26,7 +26,7 @@ export type StepUpRequestResponse = z.output<typeof StepUpRequestResponse>;
 
 export const StepUpVerifyRequest = z
   .object({
-    otp: z.string().min(1).max(16),
+    otp: z.string().min(6).max(8),
   })
   .strict();
 export type StepUpVerifyRequest = z.output<typeof StepUpVerifyRequest>;

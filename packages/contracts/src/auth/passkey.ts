@@ -36,8 +36,8 @@ export type PasskeyRegisterVerifyRequest = z.output<typeof PasskeyRegisterVerify
 export const PasskeyRegisterVerifyResponse = z
   .object({
     verified: z.boolean(),
-    /** Returned ONCE at first enrollment — the 10 one-time recovery codes (AC-2). */
-    recoveryCodes: z.array(z.string()).optional(),
+    /** Returned ONCE at first enrollment — exactly 10 one-time recovery codes (AC-2). */
+    recoveryCodes: z.array(z.string().min(1)).length(10).optional(),
   })
   .strict();
 export type PasskeyRegisterVerifyResponse = z.output<typeof PasskeyRegisterVerifyResponse>;
@@ -56,7 +56,7 @@ export type PasskeyAuthVerifyRequest = z.output<typeof PasskeyAuthVerifyRequest>
 
 export const PasskeyAuthVerifyResponse = z
   .object({
-    authenticated: z.boolean(),
+    authenticated: z.literal(true),
   })
   .strict();
 export type PasskeyAuthVerifyResponse = z.output<typeof PasskeyAuthVerifyResponse>;

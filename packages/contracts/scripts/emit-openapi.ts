@@ -164,14 +164,14 @@ interface AuthPathSpec {
 const AUTH_PATHS: AuthPathSpec[] = [
   { path: '/api/v1/auth/login', summary: 'Admin login — first factor (email + password)', body: authComponents.LoginRequest, ok: authComponents.LoginResponse, errors: { 401: 'Invalid credentials', 429: 'Rate limited' } },
   { path: '/api/v1/auth/passkey/register/options', summary: 'WebAuthn enrollment — generate registration options', body: authComponents.PasskeyRegisterOptionsRequest, okDescription: 'WebAuthn PublicKeyCredentialCreationOptionsJSON (provider-controlled)', errors: { 403: 'Enrollment not authorized', 409: 'Device cap reached' } },
-  { path: '/api/v1/auth/passkey/register/verify', summary: 'WebAuthn enrollment — verify + persist the credential', body: authComponents.PasskeyRegisterVerifyRequest, ok: authComponents.PasskeyRegisterVerifyResponse, errors: { 403: 'Enrollment denied/failed' } },
-  { path: '/api/v1/auth/passkey/authenticate/options', summary: 'WebAuthn second factor — generate authentication options', body: authComponents.PasskeyAuthOptionsRequest, okDescription: 'WebAuthn PublicKeyCredentialRequestOptionsJSON (provider-controlled)', errors: { 401: 'No login in progress' } },
+  { path: '/api/v1/auth/passkey/register/verify', summary: 'WebAuthn enrollment — verify + persist the credential', body: authComponents.PasskeyRegisterVerifyRequest, ok: authComponents.PasskeyRegisterVerifyResponse, errors: { 403: 'Enrollment denied/failed', 409: 'Device cap reached' } },
+  { path: '/api/v1/auth/passkey/authenticate/options', summary: 'WebAuthn second factor — generate authentication options', body: authComponents.PasskeyAuthOptionsRequest, okDescription: 'WebAuthn PublicKeyCredentialRequestOptionsJSON (provider-controlled)', errors: { 401: 'No login in progress', 409: 'No passkey enrolled' } },
   { path: '/api/v1/auth/passkey/authenticate/verify', summary: 'WebAuthn second factor — verify the assertion', body: authComponents.PasskeyAuthVerifyRequest, ok: authComponents.PasskeyAuthVerifyResponse, errors: { 401: 'Authentication failed' } },
   { path: '/api/v1/auth/recovery/consume', summary: 'Recovery code second factor — consume + burn', body: authComponents.RecoveryConsumeRequest, ok: authComponents.RecoveryConsumeResponse, errors: { 401: 'Invalid recovery code' } },
-  { path: '/api/v1/auth/password-reset/request', summary: 'Request a password-reset link (anti-enumeration)', body: authComponents.PasswordResetRequestRequest, ok: authComponents.PasswordResetRequestResponse },
+  { path: '/api/v1/auth/password-reset/request', summary: 'Request a password-reset link (anti-enumeration)', body: authComponents.PasswordResetRequestRequest, ok: authComponents.PasswordResetRequestResponse, errors: { 429: 'Rate limited' } },
   { path: '/api/v1/auth/password-reset/consume', summary: 'Consume a password-reset link (forces WebAuthn re-enrollment)', body: authComponents.PasswordResetConsumeRequest, ok: authComponents.PasswordResetConsumeResponse, errors: { 403: 'Invalid or expired link' } },
-  { path: '/api/v1/auth/step-up/request', summary: 'Request a step-up OTP for a gated action', body: authComponents.StepUpRequestRequest, ok: authComponents.StepUpRequestResponse, errors: { 401: 'Authentication required' } },
-  { path: '/api/v1/auth/step-up/verify', summary: 'Verify a step-up OTP — elevate the session', body: authComponents.StepUpVerifyRequest, ok: authComponents.StepUpVerifyResponse, errors: { 401: 'Step-up verification failed' } },
+  { path: '/api/v1/auth/step-up/request', summary: 'Request a step-up OTP for a gated action', body: authComponents.StepUpRequestRequest, ok: authComponents.StepUpRequestResponse, errors: { 401: 'Authentication required', 429: 'Rate limited' } },
+  { path: '/api/v1/auth/step-up/verify', summary: 'Verify a step-up OTP — elevate the session', body: authComponents.StepUpVerifyRequest, ok: authComponents.StepUpVerifyResponse, errors: { 401: 'Step-up verification failed', 429: 'Rate limited' } },
 ];
 
 for (const spec of AUTH_PATHS) {
@@ -181,6 +181,7 @@ for (const spec of AUTH_PATHS) {
   } else {
     responses[200] = { description: spec.okDescription ?? 'OK' };
   }
+  responses[400] = errorResponse('Request validation failed');
   for (const [code, description] of Object.entries(spec.errors ?? {})) {
     responses[Number(code)] = errorResponse(description);
   }
@@ -189,10 +190,24 @@ for (const spec of AUTH_PATHS) {
     path: spec.path,
     summary: spec.summary,
     tags: ['admin-auth'],
-    request: { body: { content: jsonContent(spec.body) } },
+    request: { body: { content: jsonContent(spec.body), required: true } },
     responses: responses as Parameters<typeof registry.registerPath>[0]['responses'],
   });
 }
+
+// POST /api/v1/auth/logout — destroys session + emits login.logout audit.
+// CSRF-double-submit-protected (app.csrfProtection applied in admin-auth.routes.ts).
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/auth/logout',
+  summary: 'Logout — destroy the session and emit a login.logout audit event',
+  tags: ['admin-auth'],
+  responses: {
+    204: { description: 'Session destroyed' },
+    401: errorResponse('No authenticated session'),
+    403: errorResponse('CSRF token missing or invalid'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 

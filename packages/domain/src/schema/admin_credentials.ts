@@ -14,7 +14,7 @@
 // Argon2's keyed mode (the `secret` param, sourced from Secret Manager) — the
 // pepper is NOT stored here (§2.3). Lockout counters live here (AC-1).
 
-import { integer, pgTable, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { UserId } from '../ids/index.js';
@@ -36,7 +36,9 @@ export const adminCredentials = pgTable(
     emailBlindIndex: piiColumn(2, 'admin_email')('email_blind_index').notNull(),
 
     // Argon2id encoded hash (peppered via the secret param; pepper NOT stored).
-    passwordHash: piiColumn(1, 'admin_password_hash')('password_hash').notNull(),
+    // Plain text — a one-way hash is not reversible ciphertext; piiColumn(1) would
+    // misguide the Story 1.16b PII-shielding CI gate.
+    passwordHash: text('password_hash').notNull(),
 
     // Lockout counters (AC-1). `locked_until` NULL = not locked.
     failedAttempts: integer('failed_attempts').notNull().default(0),

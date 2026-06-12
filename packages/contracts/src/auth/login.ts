@@ -12,7 +12,7 @@ import { Email } from '../_common/primitives.js';
 export const LoginRequest = z
   .object({
     email: Email,
-    password: z.string().min(1).max(512),
+    password: z.string().min(12).max(512),
     /** Optional Cloudflare Turnstile token (seam — Story 1.13). */
     turnstileToken: z.string().optional(),
   })

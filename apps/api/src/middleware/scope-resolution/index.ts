@@ -65,7 +65,11 @@ export function scopeResolutionHook(deps: AppDeps): preHandlerHookHandler {
     } finally {
       // If we never attached (membership 404, or a DB error), close the tx here;
       // otherwise the multi-tenant lifecycle hook owns closing it.
-      if (!attached) await closeScopeTx(scopeTx, false);
+      if (!attached) {
+        await closeScopeTx(scopeTx, false).catch((closeErr: unknown) => {
+          console.error('[scope-resolution] closeScopeTx failed during cleanup:', closeErr);
+        });
+      }
     }
   };
 }

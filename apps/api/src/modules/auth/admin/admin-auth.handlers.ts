@@ -85,6 +85,8 @@ export function createAdminAuthHandlers(deps: AppDeps) {
       const body = request.body as PasskeyAuthVerifyRequest;
       const ok = await service.authVerify(deps, userId, body.response, challenge);
       if (!ok) {
+        request.session.webauthnChallenge = undefined;
+        request.session.webauthnChallengeKind = undefined;
         emitAuthAudit(deps, request, 'passkey.auth.failure', { actorId: userId });
         throw new UnauthorizedError('Authentication failed', 'auth.passkey_failed');
       }
@@ -154,8 +156,17 @@ export function createAdminAuthHandlers(deps: AppDeps) {
       if (!result.verified) {
         throw new ForbiddenError('Passkey verification failed', 'auth.enrollment_failed');
       }
-      // Re-enrollment / new device is an auth-state change → rotate (if logged in).
-      if (request.session.userId) request.session.authStateVersion = (request.session.authStateVersion ?? 0) + 1;
+      // Re-enrollment / new device is an auth-state change → rotate session id (§2.4, AC-3).
+      if (request.session.userId) {
+        const userId = request.session.userId;
+        const absoluteExpiry = request.session.absoluteExpiry;
+        const authStateVersion = (request.session.authStateVersion ?? 0) + 1;
+        await request.session.regenerate();
+        request.session.userId = userId;
+        request.session.absoluteExpiry = absoluteExpiry;
+        request.session.authStateVersion = authStateVersion;
+        request.requestContext.actorId = userId;
+      }
       emitAuthAudit(deps, request, 'passkey.enroll', { actorId: subject });
       return {
         verified: true,
@@ -195,7 +206,7 @@ export function createAdminAuthHandlers(deps: AppDeps) {
     async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
       const actorId = request.session.userId;
       await request.session.destroy();
-      if (actorId) emitAuthAudit(deps, request, 'login.success', { actorId, context: { event: 'logout' } });
+      if (actorId) emitAuthAudit(deps, request, 'login.logout', { actorId });
       void reply.status(204).send();
     },
   };

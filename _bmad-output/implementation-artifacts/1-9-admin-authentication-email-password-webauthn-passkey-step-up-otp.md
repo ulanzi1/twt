@@ -1,6 +1,6 @@
 # Story 1.9: Admin Authentication — Email/Password + WebAuthn Passkey + Step-Up OTP `[SURFACE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -362,6 +362,118 @@ claude-opus-4-8 (Claude Opus 4.8) via bmad-dev-story.
 **New — packages:** `domain/src/schema/{users,admin_credentials,webauthn_credentials,recovery_codes,admin_sessions,step_up_otps}.ts`, `domain/src/policies/identity-auth-rls.ts`, `domain/migrations/0005_admin-identity-auth.sql` + `meta/0005_snapshot.json`, `contracts/src/auth/{index,login,passkey,recovery,password-reset,step-up}.ts` + `README.md`, `contracts/tests/auth.test.ts`.
 **New — docs:** `docs/adr/ADR-0009-admin-authentication.md`.
 **Modified:** `apps/api/{package.json,.env.example,vitest.config.ts,src/index.ts,tests/smoke.test.ts}`; `domain/src/{db,index,secrets,ids/index,schema/index,schema/role_grants,schema/pariwar_passport,policies/index}.ts`, `domain/migrations/meta/_journal.json`, `domain/README.md`, `domain/tests/integration/{_helpers,multi-tenant/cross-pariwar-leak.spec}.ts`, `domain/tests/ids/branded-ids.test.ts`; `contracts/src/{index,_common/primitives}.ts`, `contracts/scripts/emit-openapi.ts`; `openapi/v1.yaml`; `pnpm-lock.yaml`; `docs/knowledge-transfer/adr-index.md`; `.decision-log.md`; `_bmad-output/implementation-artifacts/{deferred-work.md,sprint-status.yaml}`; this story file.
+
+### Review Findings
+
+> Code review of Group A (Domain + Contracts) — 2026-06-12. 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. 14 patches, 1 decision-needed, 5 deferred, 7 dismissed.
+
+**Decision-needed:**
+- [x] [Review][Patch] `admin_sessions` add `user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE` column — add to schema, migration 0005, and `PgSessionStore.set()` write path; update suspend-cascade query to `DELETE WHERE user_id = $1`; add index on `user_id` [`packages/domain/src/schema/admin_sessions.ts`, `apps/api/src/plugins/session/store.ts`, `packages/domain/migrations/0005_admin-identity-auth.sql`]
+
+**Patches — Group A (Domain + Contracts):**
+- [x] [Review][Patch] `LoginRequest.password` min(1) too permissive — enforce `min(12)` matching the reset-path floor [`packages/contracts/src/auth/login.ts:22`]
+- [x] [Review][Patch] `resolveSecretValue` routes through `fetchConnectionString` — semantic mismatch (pepper/generic secret calling a DB-connection-named fn); extract a shared `fetchSecretValue()` primitive used by both [`packages/domain/src/secrets.ts:106`]
+- [x] [Review][Patch] `users` + `admin_credentials` `updated_at` columns have no BEFORE UPDATE trigger — add `set_updated_at()` triggers in migration 0005 mirroring `pariwar_passport` (migration 0003 precedent) [`packages/domain/migrations/0005_admin-identity-auth.sql`]
+- [x] [Review][Patch] `admin_sessions` no index on `(sess->>'userId')` — FR-56 suspension `DELETE … WHERE sess->>'userId' = $1` is a full table scan; resolved via proper FK column + indexed `user_id` column (Decision 1) [`packages/domain/migrations/0005_admin-identity-auth.sql`]
+- [x] [Review][Patch] `step_up_otps` missing partial composite index — add `(user_id, expires_at) WHERE consumed_at IS NULL` for the hot verify-path lookup [`packages/domain/migrations/0005_admin-identity-auth.sql`]
+- [x] [Review][Patch] `RecoveryConsumeResponse.authenticated` + `PasskeyAuthVerifyResponse.authenticated` as `z.boolean()` — allows `{authenticated: false}` with 200 OK; must be `z.literal(true)` (failures must be 4xx, not 200+false) [`packages/contracts/src/auth/recovery.ts`, `passkey.ts`]
+- [x] [Review][Patch] `failedAttempts` + `attempts` columns have no `CHECK (>= 0)` — add non-negative constraints per `events_log.event_version` precedent [`packages/domain/migrations/0005_admin-identity-auth.sql`]
+- [x] [Review][Patch] `PasskeyRegisterVerifyResponse.recoveryCodes` unconstrained — first-enrollment must guarantee exactly 10 non-empty codes; add `.length(10)` + `z.string().min(1)` element schema [`packages/contracts/src/auth/passkey.ts:283`]
+- [x] [Review][Patch] `PasswordResetConsumeRequest.token` min(1) — no entropy floor on the reset token; add `min(32)` [`packages/contracts/src/auth/password-reset.ts:341`]
+- [x] [Review][Patch] `resolveSecretValue` envFallback accepts whitespace-only strings — add `.trim() !== ''` guard [`packages/domain/src/secrets.ts:114`]
+- [x] [Review][Patch] `StepUpVerifyRequest.otp` `min(1)/max(16)` too loose — tighten to actual 6-digit OTP bounds e.g. `min(6).max(8)` [`packages/contracts/src/auth/step-up.ts:416`]
+- [x] [Review][Patch] `_journal.json` + `0005_snapshot.json` missing trailing newlines — spec mandates trailing newline on journal bump [`packages/domain/migrations/meta/`]
+- [x] [Review][Patch] `password_hash` tagged `piiColumn(1, 'admin_password_hash')` — Argon2id hash is not reversible Tier-1 ciphertext; use plain `text()` column (piiColumn is annotation-only but the 1.16b CI gate will misclassify it) [`packages/domain/src/schema/admin_credentials.ts:47`]
+- [x] [Review][Patch] Migration 0005 CREATE TABLE ordering — header comment claims `users` is ordered before auth tables but SQL creates `admin_credentials` + `admin_sessions` first; reorder to match comment [`packages/domain/migrations/0005_admin-identity-auth.sql:52`]
+
+**Deferred — Group A:**
+- [x] [Review][Defer] `isRLSEnabled: false` in snapshot vs `ENABLE ROW LEVEL SECURITY` in SQL — pre-existing pattern from 0002/0003/0004 (hand-supplements invisible to drizzle-kit); consistent, but snapshot does not reflect actual DB state — deferred, pre-existing
+- [x] [Review][Defer] `step_up_otps.pariwarId` nullable uuid with no FK — spec explicitly marks this informational only, not an RLS key; no FK is architecturally intentional — deferred, pre-existing
+- [x] [Review][Defer] `SecondFactorMethod` enum not extensible — adding a 3rd method would break contract-validating clients before a contract update; design choice for future evolution — deferred, pre-existing
+- [x] [Review][Defer] `recovery_codes.codeHash` no per-user uniqueness constraint — collision probability negligible with proper random code generation; service handles the consumed_at burn correctly — deferred, pre-existing
+- [x] [Review][Defer] `seedUser` test helper non-UUID id — would throw `InvalidBrandedIdError` with potentially confusing message; test infra only, not prod risk — deferred, pre-existing
+
+> Code review of Group B (API Framework) — 2026-06-12. 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. 12 patches, 0 decision-needed, 4 deferred, 9 dismissed.
+
+**Patches — Group B (API Framework):**
+- [x] [Review][Patch] `intEnv` rejects `0` as invalid (`n <= 0`) — lockoutThreshold=0 is a valid ops override ("lock on first attempt"); change guard to `n < 0` [`apps/api/src/config.ts`]
+- [x] [Review][Patch] `WEBAUTHN_EXPECTED_ORIGIN` not validated as a URL in `loadConfig` — malformed value (no scheme) causes `originOf` to return null, falling back to raw string comparison that can never match a parsed origin; validate at boot [`apps/api/src/config.ts`]
+- [x] [Review][Patch] `buildEncryptionDeps` — unrecognized `KMS_TEST_MODE` value silently falls through to fake KMS provider; a production typo (e.g. `KMS_TEST_MODE=prod`) silently uses fake deterministic keys; throw on unrecognized modes [`apps/api/src/deps.ts`]
+- [x] [Review][Patch] `createDeps` — pepper not validated non-empty; an empty-payload Secret Manager secret passes through, zeroing out the Argon2 + HMAC key material; add non-empty guard before use [`apps/api/src/deps.ts`]
+- [x] [Review][Patch] `main()` — pool leaked if `buildServer()` throws (signal handlers registered only after `app.listen`); wrap post-`createDeps` code in try/finally to `pool.end()` on error [`apps/api/src/index.ts`]
+- [x] [Review][Patch] `main()` — SIGTERM/SIGINT double-invocation race: second signal calls `close()` concurrently; add a `closing` flag to prevent double pool drain [`apps/api/src/index.ts`]
+- [x] [Review][Patch] `requestContextHook` — `x-request-id` header accepted verbatim with no length cap or control-char filtering; attacker-controlled traceId is written to structured logs and echoed in `ErrorResponse`; sanitize: strip control chars + cap at 128 chars [`apps/api/src/middleware/request-context/index.ts`]
+- [x] [Review][Patch] `originCheckHook` — `request.headers.referer` may be `string[]` (duplicate headers); `originOf(string[])` coerces array to comma-joined string, `new URL` throws, returns null, silently bypassing the Referer branch; normalize to first element before passing to `originOf` [`apps/api/src/plugins/csrf-protection/index.ts`]
+- [x] [Review][Patch] `originCheckHook` — `Origin: null` (sandboxed iframes, `data:` URIs) causes `originOf` to return null; falls through to Referer branch and if absent → allowed; explicitly reject the literal string `'null'` as an origin for state-changing requests [`apps/api/src/plugins/csrf-protection/index.ts`]
+- [x] [Review][Patch] `PgSessionStore.get()` — `row.expire instanceof Date` is false when pg returns TIMESTAMPTZ as a string (driver type-parser config); server-side expiry check is silently skipped, serving expired sessions; coerce `row.expire` with `new Date(row.expire)` before the check [`apps/api/src/plugins/session/store.ts`]
+- [x] [Review][Patch] `scopeResolutionHook finally` — `closeScopeTx(scopeTx, false)` inside `finally` may itself throw, masking the original exception and producing a misleading 500; wrap the `closeScopeTx` call in a try/catch that logs the secondary error and re-throws the original [`apps/api/src/middleware/scope-resolution/index.ts`]
+- [x] [Review][Patch] `errorMappingHandler` 4xx catch-all — passes `error.message` verbatim to the client for Fastify-internal 4xx errors (e.g. rate-limit 429); violates the "no internal detail leaked" contract stated in the file header; replace with a static safe message keyed on the status code [`apps/api/src/middleware/error-mapping/index.ts`]
+
+**Deferred — Group B:**
+- [x] [Review][Defer] `scope.change` audit event emitted on every scoped request, not just transitions — produces audit flood; AC-9 intent is transition events (§2.5 "Scope-change audit emission"); architectural: requires explicit scope-change detection — deferred, needs spec clarification
+- [x] [Review][Defer] `SESSION_SECRET` entropy not validated — all-spaces string passes 32-char check; operational concern, cannot be fully enforced in code without arbitrary entropy checks — deferred, operational
+- [x] [Review][Defer] `AuthorizationDeniedError`/`ApiError` check ordering in `errorMappingHandler` — `ApiError` branch fires first; consequence depends on `AuthorizationDeniedError` class hierarchy (whether it extends `ApiError`); verify hierarchy before deciding — deferred, needs hierarchy check
+- [x] [Review][Defer] `buildEncryptionDeps` reads `KMS_TEST_MODE` directly from `process.env` instead of injected `ApiConfig` — breaks injection discipline; `buildEncryptionDeps` is also called from tests with pepper only, making migration to config invasive — deferred, refactor scope
+
+> Code review of Group C (Auth Modules) — 2026-06-12. 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. 7 patches, 5 deferred, 8 dismissed.
+
+**Patches — Group C (Auth Modules):**
+- [x] [Review][Patch] `burnOtp` TOCTOU — `UPDATE ... WHERE id = $1` lacks `AND consumed_at IS NULL`; two concurrent verify requests both succeed; replaced with atomic `UPDATE ... AND consumed_at IS NULL RETURNING id`, return false if no row — `step-up.repo.ts`, `step-up.service.ts`
+- [x] [Review][Patch] `passkeyRegisterVerify` missing `session.regenerate()` on re-enrollment — bumps `authStateVersion` only; AC-3 requires session ID rotation on every auth-state change including WebAuthn re-enrollment; added full regenerate-and-restore pattern — `admin-auth.handlers.ts`
+- [x] [Review][Patch] Logout emits `'login.success'` instead of `'login.logout'` — wrong audit type; added `'login.logout'` to `AuthAuditEventType` union and corrected the call site — `audit-sink.ts`, `admin-auth.handlers.ts`
+- [x] [Review][Patch] Clone detection skips counter=0 credentials (`owner.credential.counter > 0` guard) — a software passkey that always reports counter=0 is never clone-checked; replaced with `!(newCounter === 0 && owner.credential.counter === 0)` to skip only when authenticator provably doesn't use counters — `admin-auth.service.ts`
+- [x] [Review][Patch] `session-guard.ts` only enforces `absoluteExpiry` when `typeof absoluteExpiry === 'number'` — sessions with missing/undefined absoluteExpiry (migrated rows) bypass the 7-day hard cap; changed to strict check that destroys + 401s when undefined — `session-guard.ts`
+- [x] [Review][Patch] `consumePasswordReset` deletes passkeys but NOT recovery codes — old codes remain valid for MFA after a forced reset; added `repo.deleteRecoveryCodes` call after `deleteAllCredentials` — `admin-auth.repo.ts`, `admin-auth.service.ts`
+- [x] [Review][Patch] `passkeyAuthVerify` does not clear `webauthnChallenge`/`webauthnChallengeKind` on auth failure — stale challenge reusable in session; cleared on failure path before throwing — `admin-auth.handlers.ts`
+
+**Deferred — Group C:**
+- [x] [Review][Defer] `verifyFirstFactor` dummy hash uses weak params (`m=8,t=1,p=1`) — timing oracle distinguishing "no such user" from "wrong password"; fix requires precomputing a production-params dummy hash and threading through `AppDeps` — deferred, design work CR-C-1
+- [x] [Review][Defer] Hostile-trustee-class lockout has no trustee-quorum unlock path (AC-1) — current lockout is time-based only; quorum-unlock requires separate lock-tier + unlock route — deferred, needs quorum infrastructure not in Epic 1 CR-C-2
+- [x] [Review][Defer] Session rotation on role change (AC-3) — role-grant mutation routes not in Story 1.9; any story landing role mutations must call `session.regenerate()` — deferred, trigger: role-mutation story CR-C-3
+- [x] [Review][Defer] `recovery_code.consume` audit missing consumed code hash in context — `context: { code_hash }` would improve forensic traceability — deferred, completeness gap CR-C-4
+- [x] [Review][Defer] Enrollment-token concurrent TOCTOU — two concurrent requests with the same token both see `count === 0` and both enroll; bounded by `MAX_DEVICES` cap — deferred, architectural fix needed CR-C-5
+
+> Code review of Group D (Tests) — 2026-06-12. 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. 7 patches, 7 deferred, 3 dismissed (BH H-3 incorrect — `enrollFirstPasskey` if-guard preserves preset credential; BH M-9/ECH F10 duplicate — `openScopeTx` cleans up internally).
+
+**Patches — Group D (Tests):**
+- [x] [Review][Patch] `scope-tx.spec.ts` seeds pariwar-dimension grant with `scope_value = NULL` — ill-formed per `isGrantScopeWellFormed`; RBAC engine silently drops it; changed to `scope_value = pariwarA` — `scope-tx.spec.ts:34`
+- [x] [Review][Patch] `admin-auth.spec.ts` had a local duplicate `makeClient` (24 lines) identical to `_setup.ts` export — removed, import added; `Client` type derived via `ReturnType<typeof makeClient>` — `admin-auth.spec.ts:22–60`
+- [x] [Review][Patch] AC-9 audit assertions missing — added: `login.success` × 2 to full-login test, `login.failure` × 2 to enumeration test, `recovery_code.consume` × 1 to recovery-code test, `passkey.auth.failure` × 1 to counter-regression test — `admin-auth.spec.ts`
+- [x] [Review][Patch] Password-reset test did not verify old recovery codes are burned (C-6 untested end-to-end) — captured recovery codes from `enrollFirstPasskey`, then after reset attempted old code reuse → asserted 401 — `admin-auth.spec.ts:361`
+- [x] [Review][Patch] No logout test — added: authenticated login → `POST /logout` → 204 + `login.logout` audit; subsequent guarded request → 401 — `admin-auth.spec.ts`
+- [x] [Review][Patch] C-4 counter-zero paths untested — added: (a) `newCounter=0, stored=0` → auth succeeds (bypass correct); (b) `newCounter=0, stored=5` → auth rejected (regression from non-zero) — `admin-auth.spec.ts`
+- [x] [Review][Patch] `afterAll` pool cleanup: `pool.connect()` outside try/finally — if connect throws, `pool.end()` never called → test runner hangs; wrapped in nested try/finally — `admin-auth.spec.ts:78`, `scope-tx.spec.ts:47`
+
+**Deferred — Group D:**
+- [x] [Review][Defer] AC-3 session-rotation assertions — requires raw `app.inject()` cookie comparison or `makeClient` redesign to track SID across state transitions — deferred, test infrastructure change CR-D-1
+- [x] [Review][Defer] AC-7 rate-limit fires (login + step-up 429) — `TEST_ENV` sets ceilings to 100k by design; per-test env override pattern not yet established — deferred CR-D-2
+- [x] [Review][Defer] AC-8 CSRF negative test (mismatched/absent Origin → 403) — coverage gap, not a correctness bug; dedicated CSRF spec warranted when surface grows CR-D-3
+- [x] [Review][Defer] AC-1 lockout time-based unlock — requires clock injection in the HTTP E2E layer; clock not currently threaded to `requireAdminSession` — deferred CR-D-4
+- [x] [Review][Defer] Enrollment token single-use after device enrolled — coverage gap CR-D-5
+- [x] [Review][Defer] 7-day absolute session expiry test — needs `SESSION_ABSOLUTE_MS` override to a short value + frozen clock in E2E — deferred CR-D-6
+- [x] [Review][Defer] WebAuthn challenge cleared on failure retry (C-7 path) — coverage gap for the Group C patch CR-D-7
+
+> Code review of Group E (ADR + OpenAPI) — 2026-06-12. 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. 11 patches, 5 deferred, 3 dismissed (BH F-ADR-1 non-sequential AC tags — intentional architectural-dependency ordering; ECH PasskeyAuthOptionsRequest empty-body — Fastify body parser handles `{}` normally; AA scope.change flood duplicate — already tracked as CR-B-1 in deferred-work.md).
+
+**Patches — Group E (ADR + OpenAPI):**
+- [x] [Review][Patch] `emit-openapi.ts`: `POST /api/v1/auth/logout` absent from committed spec — route exists (204 + audit), is CSRF-gated, was undiscoverable by consumers; added to registry with 204/401/403 responses — `packages/contracts/scripts/emit-openapi.ts`
+- [x] [Review][Patch] `emit-openapi.ts`: `passkey/register/verify` missing `409` — `registerVerify` throws `ConflictError` "Maximum passkey devices reached" at line 101 (same cap as options); added to errors — `packages/contracts/scripts/emit-openapi.ts:167`
+- [x] [Review][Patch] `emit-openapi.ts`: `passkey/authenticate/options` missing `409` — `authOptions` throws `ConflictError` "No passkey enrolled" at line 137; added — `packages/contracts/scripts/emit-openapi.ts:168`
+- [x] [Review][Patch] `emit-openapi.ts`: `step-up/request` + `step-up/verify` missing `429` — `stepUpRate` applied in step-up/index.ts; both routes can return 429 — `packages/contracts/scripts/emit-openapi.ts:173-174`
+- [x] [Review][Patch] `emit-openapi.ts`: `password-reset/request` missing `429` — `LOGIN_RATE` applied at admin-auth.routes.ts line 85; added — `packages/contracts/scripts/emit-openapi.ts:171`
+- [x] [Review][Patch] `emit-openapi.ts`: `requestBody.required` absent on all 10 POST routes — OpenAPI 3.x defaults to `false`; added `required: true` to all POST requestBody blocks — `packages/contracts/scripts/emit-openapi.ts:191`
+- [x] [Review][Patch] `emit-openapi.ts`: `400` absent on all POST routes — Zod validation always possible; systematic gap across the spec; added `400: 'Request validation failed'` to every POST route — `packages/contracts/scripts/emit-openapi.ts:181`
+- [x] [Review][Patch] `openapi/v1.yaml` schema drift (Group A contracts not re-emitted): `LoginRequest.password` minLength 1→12, `StepUpVerifyRequest.otp` 1-16→6-8, `PasswordResetConsumeRequest.token` 1→32, `authenticated` boolean→literal(true) × 2, `recoveryCodes` gains length(10) constraint — fixed by re-running determinism check after emit script patches
+- [x] [Review][Patch] ADR-0009 §3: lockout parameters absent (AC-1 gap) — N=5, 15 min, `LOCKOUT_THRESHOLD`/`LOCKOUT_MS` env-overridable, `locked_until` column mechanism, trustee-quorum unlock deferred (CR-C-2) — `docs/adr/ADR-0009-admin-authentication.md:§3`
+- [x] [Review][Patch] ADR-0009 §7: rate limit thresholds absent — login 10 req/min (`LOGIN_RATE_MAX`), step-up 5 req/min (`STEP_UP_RATE_MAX`) composite `actorId|IP`, global 300 req/min (`RATE_LIMIT_MAX`) — `docs/adr/ADR-0009-admin-authentication.md:§7`
+- [x] [Review][Patch] ADR-0009 §8: AC-9 not cited + full audit event taxonomy absent — added explicit AC-9 citation and all 16 event types from `audit-sink.ts` — `docs/adr/ADR-0009-admin-authentication.md:§8`
+
+**Deferred — Group E:**
+- [x] [Review][Defer] `GET /api/v1/auth/csrf` absent from OpenAPI spec — `schema: {hide:true}` intentional; ADR §2 already names it; add to spec when a second CSRF-gated route lands CR-E-1
+- [x] [Review][Defer] Cookie name `twt_admin_sid` not documented in ADR §2 — LOW, add at API-client fast-follow CR-E-2
+- [x] [Review][Defer] `passkey/register/options` + `register/verify` missing `401` — session vs token paths have different exposure; defer until paths are split CR-E-3
+- [x] [Review][Defer] `recoveryCodes` first-enrollment semantics missing from OpenAPI description — LOW, informational CR-E-4
+- [x] [Review][Defer] ADR-0009 status → `under-trustee-review` — process decision; requires trustee engagement CR-E-5
 
 ### Change Log
 

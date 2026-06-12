@@ -52,13 +52,8 @@ export async function resolveConnectionString(
   return url;
 }
 
-/**
- * Fetches a secret from GCP Secret Manager. Uses Application Default
- * Credentials (ADC); the project is resolved from GOOGLE_CLOUD_PROJECT.
- *
- * Never logs the resolved value.
- */
-export async function fetchConnectionString(secretName: string): Promise<string> {
+/** Fetch a secret payload from GCP Secret Manager via ADC. Never logs the value. */
+async function fetchFromSecretManager(secretName: string): Promise<string> {
   const projectId = process.env['GOOGLE_CLOUD_PROJECT'];
   if (!projectId) {
     throw new Error(
@@ -79,6 +74,17 @@ export async function fetchConnectionString(secretName: string): Promise<string>
   }
 
   return Buffer.from(payload).toString('utf-8');
+}
+
+/**
+ * Fetches a secret from GCP Secret Manager. Uses Application Default
+ * Credentials (ADC); the project is resolved from GOOGLE_CLOUD_PROJECT.
+ *
+ * @deprecated Prefer `resolveSecretValue` for new callers. Kept for backwards
+ * compatibility with any external consumers.
+ */
+export async function fetchConnectionString(secretName: string): Promise<string> {
+  return fetchFromSecretManager(secretName);
 }
 
 /**
@@ -104,12 +110,12 @@ export async function resolveSecretValue(
     process.env['DRIZZLE_FORCE_SECRET_MANAGER'] === '1';
 
   if (useSecretManager) {
-    return fetchConnectionString(secretName);
+    return fetchFromSecretManager(secretName);
   }
 
   if (opts.envFallback) {
     const v = process.env[opts.envFallback];
-    if (v !== undefined && v !== '') {
+    if (v !== undefined && v.trim() !== '') {
       console.warn(
         `[secrets] Local-dev fallback (${opts.envFallback}) in use for '${secretName}'; ` +
           'production paths require Secret Manager.',

@@ -64,7 +64,9 @@ export async function verifyStepUp(
     return { ok: false };
   }
   if (hashOtp(code) === otp.otpHash) {
-    await repo.burnOtp(deps.pool, otp.id, now);
+    // Atomic consume: returns false if a concurrent request already burned this OTP.
+    const burned = await repo.burnOtp(deps.pool, otp.id, now);
+    if (!burned) return { ok: false };
     return { ok: true, actionContext: otp.actionContext };
   }
   await repo.incrementOtpAttempts(deps.pool, otp.id);

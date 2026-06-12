@@ -65,8 +65,13 @@ export async function findLatestLiveOtp(
   };
 }
 
-export async function burnOtp(pool: pg.Pool, id: string, now: Date): Promise<void> {
-  await pool.query(`UPDATE step_up_otps SET consumed_at = $2 WHERE id = $1`, [id, now.toISOString()]);
+/** Atomically consume an OTP. Returns true iff this call was the one that consumed it. */
+export async function burnOtp(pool: pg.Pool, id: string, now: Date): Promise<boolean> {
+  const res = await pool.query(
+    `UPDATE step_up_otps SET consumed_at = $2 WHERE id = $1 AND consumed_at IS NULL RETURNING id`,
+    [id, now.toISOString()],
+  );
+  return (res.rowCount ?? 0) === 1;
 }
 
 export async function incrementOtpAttempts(pool: pg.Pool, id: string): Promise<number> {

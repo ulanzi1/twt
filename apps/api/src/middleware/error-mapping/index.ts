@@ -95,7 +95,7 @@ export function errorMappingHandler(
   if (statusCode >= 400 && statusCode < 500) {
     void reply
       .status(statusCode)
-      .send(envelope(error.code ?? 'request.error', error.message || 'Request error', requestId));
+      .send(envelope(error.code ?? 'request.error', 'Request error', requestId));
     return;
   }
 

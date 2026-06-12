@@ -1,6 +1,6 @@
 # Story 1.7: Pariwar-Passport Data Model + Branding Bundle
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

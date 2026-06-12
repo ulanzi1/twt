@@ -77,8 +77,8 @@ function intEnv(env: NodeJS.ProcessEnv, key: string, fallback: number): number {
   const v = env[key];
   if (v === undefined || v.trim() === '') return fallback;
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) {
-    throw new Error(`[config] env var ${key} must be a positive number, got ${JSON.stringify(v)}`);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`[config] env var ${key} must be a non-negative number, got ${JSON.stringify(v)}`);
   }
   return n;
 }
@@ -98,6 +98,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     );
   }
 
+  const expectedOrigin = requireEnv(env, 'WEBAUTHN_EXPECTED_ORIGIN');
+  try { new URL(expectedOrigin); } catch {
+    throw new Error(`[config] WEBAUTHN_EXPECTED_ORIGIN must be a valid URL (got ${JSON.stringify(expectedOrigin)})`);
+  }
+
   return {
     nodeEnv,
     port: intEnv(env, 'PORT', 3000),
@@ -107,7 +112,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     webauthn: {
       rpId: requireEnv(env, 'WEBAUTHN_RP_ID'),
       rpName: env['WEBAUTHN_RP_NAME'] ?? 'TWT Admin',
-      expectedOrigin: requireEnv(env, 'WEBAUTHN_EXPECTED_ORIGIN'),
+      expectedOrigin,
     },
     argon2: {
       pepperSecretName: requireEnv(env, 'ARGON2_PEPPER_SECRET_NAME'),

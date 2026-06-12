@@ -158,12 +158,13 @@ export async function authVerify(
   });
   if (!result.verified) return false;
 
-  // Explicit clone-detection: a non-increasing counter (when the authenticator
-  // uses counters) signals a cloned authenticator → reject + do NOT bump (§2.3).
+  // Explicit clone-detection: a non-increasing counter signals a cloned authenticator
+  // → reject + do NOT bump (§2.3). Skip only when both stored AND new are 0 (the
+  // authenticator does not maintain counters at all).
   const newCounter = result.newCounter;
   if (
     newCounter !== undefined &&
-    owner.credential.counter > 0 &&
+    !(newCounter === 0 && owner.credential.counter === 0) &&
     newCounter <= owner.credential.counter
   ) {
     return false;
@@ -259,6 +260,9 @@ export async function consumePasswordReset(
   await repo.updatePassword(deps.pool, payload.sub, newHash);
   // Force WebAuthn re-enrollment (a reset must not silently retain the 2nd factor).
   await repo.deleteAllCredentials(deps.pool, payload.sub);
+  // Old recovery codes are also 2nd-factor material — delete them so only a fresh
+  // enrollment provisions new ones.
+  await repo.deleteRecoveryCodes(deps.pool, payload.sub);
   return { ok: true, userId: payload.sub };
 }
 

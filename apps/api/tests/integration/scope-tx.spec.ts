@@ -31,7 +31,7 @@ describe.skipIf(!hasDatabase)('scope-tx + RBAC grant load (Task 3)', () => {
       await c.query(`INSERT INTO users (id) VALUES ($1),($2),($3)`, [userA, userB, userC]);
       await c.query(
         `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
-           VALUES ($1, $2, 'auditor', 'pariwar', NULL)`,
+           VALUES ($1, $2, 'auditor', 'pariwar', $2)`,
         [userA, pariwarA],
       );
       await c.query(
@@ -45,14 +45,17 @@ describe.skipIf(!hasDatabase)('scope-tx + RBAC grant load (Task 3)', () => {
   });
 
   afterAll(async () => {
-    const c = await td.pool.connect();
     try {
-      await c.query(`DELETE FROM role_grants WHERE user_id = ANY($1)`, [[userA, userB, userC]]);
-      await c.query(`DELETE FROM users WHERE id = ANY($1)`, [[userA, userB, userC]]);
+      const c = await td.pool.connect();
+      try {
+        await c.query(`DELETE FROM role_grants WHERE user_id = ANY($1)`, [[userA, userB, userC]]);
+        await c.query(`DELETE FROM users WHERE id = ANY($1)`, [[userA, userB, userC]]);
+      } finally {
+        c.release();
+      }
     } finally {
-      c.release();
+      await td.pool.end();
     }
-    await td.pool.end();
   });
 
   it('opens a scope tx and loads the member actor grants in the active Pariwar', async () => {

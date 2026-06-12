@@ -18,9 +18,18 @@ export type { AppDeps } from './context.js';
 async function main(): Promise<void> {
   const config = loadConfig();
   const deps = await createDeps(config);
-  const app = await buildServer(deps);
+  let app;
+  try {
+    app = await buildServer(deps);
+  } catch (err) {
+    await deps.pool.end().catch(() => undefined);
+    throw err;
+  }
 
+  let closing = false;
   const close = async (): Promise<void> => {
+    if (closing) return;
+    closing = true;
     await app.close();
     await deps.pool.end().catch(() => undefined);
   };

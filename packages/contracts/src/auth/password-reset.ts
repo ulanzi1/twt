@@ -26,7 +26,7 @@ export type PasswordResetRequestResponse = z.output<typeof PasswordResetRequestR
 
 export const PasswordResetConsumeRequest = z
   .object({
-    token: z.string().min(1),
+    token: z.string().min(32),
     newPassword: z.string().min(12).max(512),
   })
   .strict();

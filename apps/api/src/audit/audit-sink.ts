@@ -16,6 +16,7 @@ export type AuthAuditEventType =
   | 'login.success'
   | 'login.failure'
   | 'login.lockout'
+  | 'login.logout'
   | 'passkey.enroll'
   | 'passkey.auth'
   | 'passkey.auth.failure'

@@ -1,8 +1,9 @@
 # ADR-0009: Admin authentication — Fastify surface, session model, Argon2id+pepper, WebAuthn v13 enrollment ceremony, identity/auth RLS carve-out, step-up gating
 
-> **Status:** drafted
+> **Status:** under-trustee-review
 > **Date:** 2026-06-12 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.9 closure
+> **Architecture-confirmed:** 2026-06-12 (Winston, System Architect) — R2 identity/auth RLS-carve-out mechanism (§5); rationale in `sprint-change-proposal-2026-06-12-R2.md`
 > **Ratifying trustees:** <pending; populated at `ratified` status>
 > **Supersedes:** —
 > **Superseded by:** —
@@ -44,7 +45,13 @@ Per [[feedback_architecture_vs_prd_boundary]] (architecture commits state/mechan
 
 `users` (global identity, `identity_type` pgEnum seeded `admin`, extensible §3.13) + `admin_credentials` / `webauthn_credentials` / `recovery_codes` / `admin_sessions` / `step_up_otps`. **These are GLOBAL, NOT pariwar-scoped:** login executes before any `app.pariwar_id` is set, so copying the `role_grants` scoped construct would make every login return 0 rows and make auth structurally impossible. Modeled as a **carve-out family** (`policies/identity-auth-rls.ts`) alongside `pariwar-passport-rls.ts`: **ENABLE + FORCE RLS** + a permissive `USING(true)/WITH CHECK(true)` policy per table for `twt_app` (defense-in-depth + explicit/auditable + consistent), accessed via the narrow apps/api auth repo. Stored secrets are hardened regardless (email Tier-1 + blind index; password Argon2id+pepper; recovery codes + OTPs hashed). In the cross-pariwar-leak suite they are classified **global/non-tenant (cross-readable-by-design), NOT scoped-must-return-0** (contrast `role_grants`). Retro FKs added now that `users` exists: **`role_grants.user_id → users.id` (D4-1.8)** + **`pariwar_passport.created_by → users.id` (D4-1.7)**.
 
-> **⚠ Surfaced for architecture confirmation.** The exact mechanism (carve-out USING(true) policy vs a dedicated auth DB role vs documented no-RLS-with-grants) is a real architecture decision. Story 1.9 chose **ENABLE+FORCE+USING(true) carve-out** for consistency with the established Passport precedent + defense-in-depth. Trustees/architecture to confirm or revise.
+**`USING(true)` is NOT a row-isolation control** — it admits every row to `twt_app`. The confidentiality of identity data rests on three *other* controls: the narrow apps/api auth repo as the sole query path, crypto-at-rest (email Tier-1 ciphertext + blind index, Argon2id+pepper, hashed OTPs/recovery codes), and table-level GRANTs. RLS's role on this family is **regime-consistency** (every table stays ENABLE+FORCE so no owner-run migration or stray `row_security = off` silently changes isolation behaviour) + **auditable explicitness** (the "this table is global" decision is a visible policy in the catalog, not the *absence* of one) — not protection.
+
+**Asymmetry vs. the Passport carve-out — do not conflate.** `pariwar_passport` is READ-cross / **WRITE-isolated**: it keeps a real `pariwar_id` write boundary because it is *public-by-design tenant data*. The identity family has **no tenant dimension at all**, so read *and* write are global — it is *pre-tenant non-data*. Same word ("carve-out"), different justification.
+
+**Graduation trigger to a dedicated auth role (Option 2).** A dedicated `twt_auth` Postgres role — which `twt_app` is NOT a member of, so a compromised tenant request-handler cannot read `admin_credentials` — is the genuinely stronger boundary. It is not adopted at Epic 1 because it fractures the single-pool / `SET LOCAL ROLE twt_app`-per-tx model, adds a third role to the deliberate two-role architecture (§1.2), and forces a mid-request role switch in the login flow. **Revisit when:** (i) a future story adds a `pariwar_id`-bearing column to any identity table that needs scoping, OR (ii) the threat model elevates to "defend credentials against a compromised tenant request-handler" as a first-class boundary.
+
+> **✅ Architecture-confirmed 2026-06-12 (Winston, System Architect).** The mechanism choice (carve-out `USING(true)` vs dedicated auth DB role vs documented no-RLS-with-grants) is confirmed as **ENABLE+FORCE+`USING(true)` carve-out** for v1. Reasoning: Option 3 (no-RLS-with-grants) is *dominated* by it — identical nil row-level protection, but it breaks the Story 1.6 FORCE-RLS-everywhere invariant; Option 2 (dedicated auth role) is the stronger boundary but unwarranted at Epic 1 (graduation trigger recorded above). Full rationale: `sprint-change-proposal-2026-06-12-R2.md`. **Trustee ratification remains pending** (Resolved via explicit deferral, CR-E-5) — architecture confirmation and trustee ratification are distinct lifecycle gates.
 
 ### 6. Scope-resolution + RBAC HTTP adapter (AC-6)
 
@@ -65,7 +72,7 @@ Every privileged auth event emits to an injectable `AuthAuditSink` (default stru
 ## Consequences
 
 - 14 downstream epics inherit a working Fastify substrate (plugins/middleware/module tree, scope-resolution, RBAC adapter, the auth seams).
-- The identity/auth RLS posture (R2) is load-bearing and awaits architecture confirmation; the session-model patch (R1) and scope-enum precedents await correct-course ratification.
+- The identity/auth RLS posture (R2) is load-bearing and was **architecture-confirmed 2026-06-12 (Winston)** — ENABLE+FORCE+`USING(true)` carve-out (Option 1); trustee ratification pending (status now `under-trustee-review`). The session-model patch (R1) was applied via correct-course (`sprint-change-proposal-2026-06-12.md`); scope-enum precedents await correct-course ratification.
 - Deferred legs recorded in `deferred-work.md`: closed (apps/api-landing cluster) + opened (SMS→5.6/5.9, audit sink→1.10, Turnstile→1.13, admin UI→post-1.17, api-client fast-follow).
 
 ## Review cadence

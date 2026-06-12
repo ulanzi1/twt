@@ -1144,7 +1144,7 @@ So that admin access is phishing-resistant and high-stakes actions carry a secon
 **When** the admin login flow is implemented
 **Then** the first factor is email + password (Argon2id hash, peppered)
 **And** the second factor is a WebAuthn passkey registered to the admin's device(s); max 2 trusted devices per admin
-**And** refresh tokens are 90 days; access tokens are short-lived (≤ 15 min)
+**And** the admin session is server-side: `@fastify/session` + Postgres-backed session store, HttpOnly + Secure + SameSite=Lax cookie, **idle 12h / absolute 7d**, server-side revocation by row delete; the session id rotates on every auth-state change (first-factor → MFA-pending, full login, password reset, WebAuthn (re-)enrollment). The "90d refresh / ≤15min access" properties of AR-23 belong to the **member/mobile** leg of the §2.4 hybrid (Story 3.2); "2 trusted devices" (line above) is realised as **≤2 registered WebAuthn passkeys** per admin.
 **And** step-up OTP fires on flagged sensitive actions (defined by the consuming endpoint via middleware annotation)
 
 **Given** an admin attempts a step-up-gated action

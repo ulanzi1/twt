@@ -9,3 +9,4 @@ export * from './_roles.js';
 export * from './events-log-rls.js';
 export * from './pariwar-passport-rls.js';
 export * from './role-grants-rls.js';
+export * from './identity-auth-rls.js';

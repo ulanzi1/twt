@@ -4,6 +4,33 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Story 1.9 deferred + discharged (substrate author-commit, 2026-06-12 per Decision 2026-06-12-045)
+
+Closure-language posture per [[feedback_closure_language_precision]]: the apps/api-landing cluster is **Closed by [edit]** (the work directly produced the artifact); future-Story seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).
+
+**Discharged by Story 1.9 (Closed by [edit]):**
+- **D3-1.8 / D4-1.6: HTTP-middleware adapter + scope-resolution middleware** — `apps/api/src/modules/rbac/` mounts the framework-agnostic `requirePermission` as a Fastify pre-handler; `apps/api/src/middleware/scope-resolution/` extracts `:pariwarId`, re-parses strict-UUID, opens the scope tx, verifies membership, 404s on miss. **Closed by [edit]** (Task 3).
+- **D4-1.7: `pariwar_passport.created_by → users.id` FK** — added in migration `0005` now that `users` exists. **Closed by [edit]** (Task 2.4).
+- **D4-1.8: `role_grants.user_id → users.id` FK** — added in migration `0005`; an orphan insert is now rejected (integrity-tested). **Closed by [edit]** (Task 2.4). (`role_grants.created_by` remains a no-FK `uuid` — not in this story's scope.)
+- **D3-1.4: `fastify-type-provider-zod` + `@fastify/swagger` runtime wiring** — wired in `apps/api` (Zod validator/serializer + live `/docs/json`). **Closed by [edit]** (Task 1). NOTE: `fastify-zod-openapi` was DROPPED (competing type provider; incompatible with the repo's classic Zod 3) — recorded in ADR-0009.
+- **D14-1.5(b): Fastify pre-handler populates `encryptionContextStorage`** — request-context middleware hydrates the admin-global encryption store. **Closed by [edit]** (Task 1.3).
+- **W9-CR1.6: `setPariwarScope` tx-active runtime guard** — implemented (assert-scope-set immediately after `setPariwarScope` + an in-context `scopeSet` flag the grant loader checks). **Closed by [edit]** (Task 3.4).
+- **D14-1.4: OpenAPI emission decision** — resolved to **build-time-script** (the existing `@asteasolutions/zod-to-openapi` contracts script; the runtime `/docs/json` is a convenience, not the canonical artifact). **Resolved via explicit decision** (Task 7.2).
+
+**Newly opened (Resolved via explicit deferral):**
+- **D1-1.9: SMS-DLT step-up delivery** — the `StepUpOtpDeliveryPort` ships a dev/log stub; the real SMS-DLT transactional delivery via the channel dispatcher is **Story 5.6/5.9** (R3). No SMS provider dependency added. Re-trigger: Epic 5 channel dispatcher.
+- **D2-1.9: FR-47 tamper-evident audit sink** — the `AuthAuditSink` default is a structured log; the hash-chain sink + `events_log` writes + off-site mirror are **Story 1.10** (R4). Re-trigger: Story 1.10 audit-log substrate.
+- **D3-1.9: Cloudflare Turnstile verification** — the no-op `TurnstileVerifier` seam is called at the login + password-reset entry points; the real Cloudflare/edge integration is **Story 1.13**. Re-trigger: Story 1.13.
+- **D4-1.9: admin web UI** — `[SURFACE]` shipped API-first; the `apps/admin` login UI lands with the design-system foundation + admin chrome **post-Story 1.17** (UI scope decision). Re-trigger: post-1.17 admin chrome.
+- **D5-1.9: `packages/api-client/` first generator invocation (D2-1.4)** — DEFERRED to a fast-follow. The committed `openapi/v1.yaml` is determinism-gated and the `@hey-api/openapi-ts` client is generatable from it anytime; deferring keeps this story focused on the auth surface. Re-trigger: a fast-follow PR (the auth `paths` now exist as its trigger).
+- **D7-1.9: ADR-0009 trustee + architecture confirmation** — `drafted` at author-commit; flips `under-trustee-review` post-merge. The identity/auth RLS posture (R2) is **surfaced for architecture confirmation** (carve-out USING(true) vs dedicated auth role vs no-RLS-with-grants). Engineering substrate Closed by [edit]; ratification/confirmation Resolved via explicit deferral. Cross-link: adr-index.md ADR-0009 Section A row.
+
+**Remain deferred (NOT pulled in):** D1-1.4 (OpenAPI semantic-diff CI gate → 1.16c), D7-1.4 (validator-presence ESLint rule → 1.16a), D8-1.4 (cross-surface parity fastify runtime — light touch only), D6-1.6 (TanStack query isolation → admin UI, post-1.17), D1-1.7 (`@twt/contracts/pariwar-passport` subpath + write/upsert contract — no PII-bearing passport write route landed in this story).
+
+> **Correct-course note (source-doc patch — surfaced, NOT silently applied).** **R1 — epics.md L1147**: the admin "refresh tokens 90 days / access tokens ≤15 min" wording imported member/mobile session properties; admin auth is the §2.4 `@fastify/session` + Postgres-store model (idle 12h / absolute 7d). This is a one-line patch against epics.md L1147 for the maintainers to apply at the next epics revision (recorded here + in ADR-0009 §Decision-2 + Decision 2026-06-12-045). Per [[feedback_architecture_vs_prd_boundary]] the docs are not edited from within a dev-story.
+
+---
+
 ## Story 1.8 deferred (substrate author-commit, 2026-06-11 per Decision 2026-06-11-044)
 
 Closure-language posture per [[feedback_closure_language_precision]]: engineering substrate is **Closed by [edit]**; future-Story seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).

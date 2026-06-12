@@ -21,7 +21,8 @@
 
 import { jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import type { PariwarId } from '../ids/index.js';
+import type { PariwarId, UserId } from '../ids/index.js';
+import { users } from './users.js';
 
 /**
  * Runtime-readable branding subset (FR-63). This is NOT the FR-60 build-time
@@ -90,10 +91,12 @@ export const pariwarPassport = pgTable('pariwar_passport', {
     .defaultNow(),
 
   // NULL = system / SIE per the events_log.actor_id precedent (architecture §1.14
-  // line 1262-1268). Unconstrained `uuid` — NO foreign key: the admin users table
-  // does not exist until Story 1.9+, so a FK has nothing to reference yet. A FK
-  // can be added retroactively once that table lands.
-  createdBy: uuid('created_by'),
+  // line 1262-1268). FK → users.id (D4-1.7, retro-added in migration 0005 now that
+  // the global identity table exists) — the FK "until Story 1.9+" the no-FK column
+  // deferred. Nullable, so a system-seeded passport (created_by NULL) is unaffected.
+  createdBy: uuid('created_by')
+    .$type<UserId>()
+    .references(() => users.id, { onDelete: 'set null' }),
 
   // Additive vs the epic column list — the cache freshness-timestamp /
   // stale-while-revalidate marker per architecture §1.10 line 1068-1070 (AC-3).

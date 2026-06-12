@@ -10,6 +10,7 @@ import {
   InvalidBrandedIdError,
   claimId,
   pariwarId,
+  userId,
 } from '../../src/ids/index.js';
 
 const VALID_UUID = '11111111-1111-1111-1111-111111111111';
@@ -57,5 +58,15 @@ describe('branded-id smart constructors', () => {
   it('distinct constructors share the validator but tag distinct brands', () => {
     // Runtime values are equal strings; the brands differ only at compile time.
     expect(claimId(VALID_UUID)).toBe(pariwarId(VALID_UUID));
+  });
+
+  it('userId (Story 1.9) validates + brands like the others', () => {
+    expect(userId(VALID_UUID_V4)).toBe(VALID_UUID_V4);
+    expect(() => userId('not-a-uuid')).toThrow(InvalidBrandedIdError);
+    try {
+      userId('bad');
+    } catch (err) {
+      expect((err as InvalidBrandedIdError).brand).toBe('UserId');
+    }
   });
 });

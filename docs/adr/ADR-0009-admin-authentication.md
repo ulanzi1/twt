@@ -1,0 +1,73 @@
+# ADR-0009: Admin authentication — Fastify surface, session model, Argon2id+pepper, WebAuthn v13 enrollment ceremony, identity/auth RLS carve-out, step-up gating
+
+> **Status:** drafted
+> **Date:** 2026-06-12 (date entered current status)
+> **Author:** Solo Builder (BigDev), at Story 1.9 closure
+> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Supersedes:** —
+> **Superseded by:** —
+
+## Context
+
+Story 1.9 stands up `apps/api` (Fastify) — the first runnable HTTP surface — and proves it by shipping admin authentication end-to-end: email + Argon2id(peppered) first factor, WebAuthn-passkey second factor, server-side `@fastify/session` Postgres-backed sessions, and a step-up-OTP mechanism + gating middleware. It also creates the global `users` identity table the system has waited on, mounts Story 1.8's framework-agnostic `requirePermission` + the §2.5 scope-resolution middleware as real Fastify pre-handlers, and discharges a cluster of `apps/api`-landing deferrals.
+
+Per [[feedback_architecture_vs_prd_boundary]] (architecture commits state/mechanism; PRD/epic commits policy/cadence) and [[feedback_closure_language_precision]], the source docs commit properties; this ADR records the controls chosen. Four reconciliations were surfaced (not silently resolved); the session-model one (R1) and the identity-table RLS posture (R2) are load-bearing.
+
+## Decision
+
+### 1. Framework substrate (AC-5)
+
+`apps/api/src/server.ts` is a `buildServer(deps)` factory bound to an injected `AppDeps` (config + pool + KMS + audit/step-up/turnstile/webauthn seams + clock), exported for `fastify.inject` tests. The committed §3 tree is followed exactly: `plugins/{zod-openapi,swagger,session,cookie,rate-limit,csrf-protection}`, `middleware/{request-context,scope-resolution,audit-context(error-mapping)}`, `modules/auth/{admin,shared}`, `modules/rbac`, `modules/multi-tenant`, plus `modules/step-up`. request-context hydrates an AsyncLocalStorage `{traceId, actorId?, pariwarId?}` and the domain `encryptionContextStorage` (admin-global namespace) so Tier-1 admin-email crypto works inside handlers (discharges D14-1.5(b)). error-mapping projects every throw into the `_common/errors.ts` `ErrorResponse` envelope (Zod-validation→400, `ApiError`→its status, `AuthorizationDeniedError`→403, scope/id errors→4xx, uncaught→500 no-leak).
+
+**Dependency-version reconciliation (surfaced).** The §3.1 stack names `fastify-type-provider-zod` + `fastify-zod-openapi` + `@fastify/swagger`. Two adjustments, both forced by the repo's actual **zod 3.25.76 (classic Zod-3 API)** + Fastify 5:
+- **`fastify-type-provider-zod` pinned to ^4.0.2, not ^5/^6.** v5/v6 require **Zod 4** schemas (`$ZodType`); against the committed classic-Zod-3 contracts they throw `FST_ERR_INVALID_SCHEMA` at serialize time. v4.0.2 (peer `zod ^3.14.2`, `fastify ^5`) is the only Fastify-5 provider compatible with Zod-3 schemas.
+- **`fastify-zod-openapi` dropped.** It is a *competing* type provider (cannot both be active on one instance) targeting a different `zod-openapi` API. `fastify-type-provider-zod` is the single wired provider. The canonical OpenAPI artifact remains the **build-time contracts script** (`packages/contracts/scripts/emit-openapi.ts`, `@asteasolutions/zod-to-openapi`) — **D14-1.4 = build-time-script**. `@fastify/swagger` exposes a live `/docs/json` from the same Zod route schemas.
+- Newer-stable bumps (story-authorised): `@fastify/session` ^11, `@fastify/rate-limit` ^11, `@fastify/csrf-protection` ^8 (current Fastify-5 majors); `fastify` ^5.8, `@node-rs/argon2` ^2.0.2, `@simplewebauthn/server` ^13.3.1.
+
+### 2. Session model — `@fastify/session` + Postgres store (AC-3, **Reconciliation R1**)
+
+**Canonical for admin auth: architecture §2.4 admin-web session-cookie model**, NOT the epic AC's JWT/refresh wording. `@fastify/session` + `@fastify/cookie` + a **direct pg-pool-backed `PgSessionStore`** (`connect-pg-simple` avoided per fastify/help #604; raw parameterized SQL on the shared pool — equivalent guarantees, decoupled from the Drizzle schema object). HttpOnly + Secure + SameSite=Lax cookie; **idle 12h** (cookie maxAge, `rolling:true`) / **absolute 7d** (tracked in the session, enforced in `requireAdminSession`); server-side revocation by row delete. The session id **rotates** (`regenerate`) on every auth-state change: first-factor → MFA-pending, full login, password reset (sessions destroyed), WebAuthn (re-)enrollment. The epic AC's "90d refresh / 15min access" is the **member/mobile** model (§2.2/§2.4 → Story 3.2); "2 trusted devices" maps to **≤2 registered WebAuthn passkeys** (kept). → **correct-course note** flags epics.md L1147.
+
+**CSRF posture.** The GLOBAL Origin/Referer check + SameSite=Lax cookie are the baseline on every state-changing request. `@fastify/csrf-protection` (`sessionPlugin:'@fastify/session'`) double-submit token (minted at `GET /auth/csrf`) is the defense-in-depth layer, applied to `logout` (a stable authenticated session) as the representative mutation; the login/MFA/enrollment flow rotates the session id mid-flow so a per-request token would churn — those rely on the Origin+SameSite baseline. Downstream admin write-routes opt into `app.csrfProtection`.
+
+### 3. Password — Argon2id + pepper (AC-1)
+
+`@node-rs/argon2` (native). **Argon2id** is the library default and is relied upon (the `Algorithm.Argon2id` const-enum member cannot be referenced under `isolatedModules`); a unit test locks the `$argon2id$` prefix. **Peppered via Argon2's keyed mode** (the `secret` option), the pepper resolved from **Secret Manager** via `resolveSecretValue` (`packages/domain/src/secrets.ts`), env fallback local-only — never an env literal in prod. Params: OWASP-2026 baseline **memoryCost 65536 KiB (64 MiB), timeCost 3, parallelism 1**, env-overridable for ops tuning. **Review cadence: re-evaluate the params + rotate the pepper at each annual security review (or on a relevant CVE).** Email lookup is by **Tier-2 blind index** (HMAC, deterministic) over the **Tier-1 ciphertext** email — never a plaintext column.
+
+### 4. WebAuthn — SimpleWebAuthn v13 + enrollment ceremony + ≤2 devices + recovery codes (AC-2)
+
+`@simplewebauthn/server@13` `WebAuthnCredential` (`id`/`publicKey`/`counter`; types from `/server`). Wrapped behind an injectable `WebAuthnProvider` seam so the ceremony crypto is the library's tested concern while the integration logic (≤2-device cap, enrollment gate, counter-regression rejection, persistence) is exercised with a fake. `rpID`/`expectedOrigin` are per-environment config, server-side. **Counter regression** (a non-increasing counter when the authenticator uses counters) is rejected as a cloned-authenticator signal. **Enrollment ceremony:** a passkey may be enrolled ONLY via (a) a full session (an existing 2nd factor was used to log in) OR (b) a single-use out-of-band **signed enrollment link** — password-only access never grants enrollment. **10 one-time recovery codes** are provisioned at first enrollment (returned once, stored SHA-256-hashed, single-use burn).
+
+**Single-use links via state-binding (no extra columns / no 0006 migration).** Signed HMAC tokens (`base64url(payload).hmac`). A password-reset link binds to a prefix of the current password hash → once the password changes the token cannot be replayed. An enrollment link is honoured only while the user has 0 passkeys (the bootstrap window). The enrollment-link ISSUANCE is an ops/super-admin path (NOT a public route) — `mintEnrollmentToken` is exposed for that caller + tests.
+
+### 5. Identity/auth tables — GLOBAL carve-out family (AC-7, **Reconciliation R2 — load-bearing**)
+
+`users` (global identity, `identity_type` pgEnum seeded `admin`, extensible §3.13) + `admin_credentials` / `webauthn_credentials` / `recovery_codes` / `admin_sessions` / `step_up_otps`. **These are GLOBAL, NOT pariwar-scoped:** login executes before any `app.pariwar_id` is set, so copying the `role_grants` scoped construct would make every login return 0 rows and make auth structurally impossible. Modeled as a **carve-out family** (`policies/identity-auth-rls.ts`) alongside `pariwar-passport-rls.ts`: **ENABLE + FORCE RLS** + a permissive `USING(true)/WITH CHECK(true)` policy per table for `twt_app` (defense-in-depth + explicit/auditable + consistent), accessed via the narrow apps/api auth repo. Stored secrets are hardened regardless (email Tier-1 + blind index; password Argon2id+pepper; recovery codes + OTPs hashed). In the cross-pariwar-leak suite they are classified **global/non-tenant (cross-readable-by-design), NOT scoped-must-return-0** (contrast `role_grants`). Retro FKs added now that `users` exists: **`role_grants.user_id → users.id` (D4-1.8)** + **`pariwar_passport.created_by → users.id` (D4-1.7)**.
+
+> **⚠ Surfaced for architecture confirmation.** The exact mechanism (carve-out USING(true) policy vs a dedicated auth DB role vs documented no-RLS-with-grants) is a real architecture decision. Story 1.9 chose **ENABLE+FORCE+USING(true) carve-out** for consistency with the established Passport precedent + defense-in-depth. Trustees/architecture to confirm or revise.
+
+### 6. Scope-resolution + RBAC HTTP adapter (AC-6)
+
+scope-resolution (`middleware/scope-resolution/`) extracts `:pariwarId` from `/api/v1/p/:pariwarId/…`, strict-UUID re-parses at the boundary, opens a request tx, runs the request as `twt_app` (`SET LOCAL ROLE` — production-faithful RLS; sheds the test superuser), `setPariwarScope` inside the tx, `assertPariwarScopeSet`, loads the actor's grants (RLS-scoped → membership = ≥1 grant; 0 → 404, no enumeration oracle). The multi-tenant module owns the scope-tx lifecycle (commit-on-2xx/rollback hooks). The RBAC adapter mounts `requirePermission` as a pre-handler; deny → 403 `ErrorResponse` + the `onAuthorizationDenied` seam fires into the audit sink. **W9-CR1.6 implemented now:** `assertPariwarScopeSet` immediately after `setPariwarScope` (a no-op `SET LOCAL` outside a tx → empty read-back → throw) + an in-context `scopeSet` flag the grant loader checks. Closes D4-1.6.
+
+### 7. Step-up OTP + gating (AC-4, **Reconciliation R3**)
+
+The MIDDLEWARE owns the gating decision; the channel owns transport. OTP mechanism: 6-digit code, store SHA-256 hash only, TTL 3 min, single-use burn, invalidate-on-next (one live OTP per actor), attempt-capped; per-actor/per-IP rate limit. Delivery behind `StepUpOtpDeliveryPort` with a **dev/log stub** — the real SMS-DLT delivery via the channel dispatcher is **Story 5.6/5.9**; no SMS provider dependency added. `requireStepUp(deps, actionContext)` pre-handler passes only on a fresh elevated context (~5 min) bound to that exact `action_context`; missing → structured 403 "step-up required". Audit per send (otp_hash, action_context, sent_at — never the code) + per consume + per failure.
+
+### 8. Seams — audit sink (R4) + Turnstile
+
+Every privileged auth event emits to an injectable `AuthAuditSink` (default structured log). The FR-47 tamper-evident hash-chain sink is **Story 1.10** — NOT built here (no hash chaining, no `events_log` writes). A no-op `TurnstileVerifier` seam is called at the login + password-reset entry points so **Story 1.13** can wire Cloudflare Turnstile without touching auth code.
+
+### 9. Contracts + OpenAPI + api-client (AC-8)
+
+`.strict()` Zod contracts in `packages/contracts/src/auth/` (login, passkey register/auth options+verify, recovery, password-reset request/consume, step-up request/verify) + `UserIdSchema` in `_common/primitives.ts`. WebAuthn options responses (provider-controlled) are unmodelled; verify-request `response` fields are passthrough records inside `.strict()` envelopes. These become the **first real OpenAPI `paths`** (re-emitted, determinism byte-stable). **api-client (D2-1.4) DEFERRED to a fast-follow** — the committed `openapi/v1.yaml` is determinism-gated and the `@hey-api/openapi-ts` client is generatable from it anytime; deferring keeps this story focused on the auth surface (Resolved via explicit deferral).
+
+## Consequences
+
+- 14 downstream epics inherit a working Fastify substrate (plugins/middleware/module tree, scope-resolution, RBAC adapter, the auth seams).
+- The identity/auth RLS posture (R2) is load-bearing and awaits architecture confirmation; the session-model patch (R1) and scope-enum precedents await correct-course ratification.
+- Deferred legs recorded in `deferred-work.md`: closed (apps/api-landing cluster) + opened (SMS→5.6/5.9, audit sink→1.10, Turnstile→1.13, admin UI→post-1.17, api-client fast-follow).
+
+## Review cadence
+
+Argon2id params + pepper rotation: annual security review. Identity-table RLS posture + session model: confirm at the next architecture review. The 12-role seed remains OQ-3-provisional (ADR-0008).

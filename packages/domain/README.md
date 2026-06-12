@@ -41,10 +41,12 @@ packages/domain/
 │   ├── secrets.ts          Secret Manager fetch + DATABASE_URL fallback
 │   ├── schema/
 │   │   ├── index.ts        schema barrel
-│   │   ├── pariwar_passport.ts [Story 1.7 — landed] Pariwar-Passport table + BrandingBundle + locale enum
-│   │   ├── role_grants.ts  [Story 1.8 — landed] role_grants table + scope_dimension enum (scoped, no-FK)
+│   │   ├── pariwar_passport.ts [Story 1.7 — landed] Pariwar-Passport table + BrandingBundle + locale enum (+ 1.9 created_by→users FK)
+│   │   ├── role_grants.ts  [Story 1.8 — landed] role_grants table + scope_dimension enum (scoped; + 1.9 user_id→users FK)
+│   │   ├── users.ts        [Story 1.9 — landed] GLOBAL identity table (identity_type enum, carve-out family)
+│   │   ├── admin_credentials.ts / webauthn_credentials.ts / recovery_codes.ts / admin_sessions.ts / step_up_otps.ts [Story 1.9 — landed] admin-auth tables (global carve-out)
 │   │   └── _baseline.ts    migration-zero marker (declares the `drizzle` metadata schema)
-│   ├── policies/           [Story 1.6 — landed] RLS pgPolicy declarations + _roles (+ 1.7 carve-out, 1.8 role_grants scoped)
+│   ├── policies/           [Story 1.6 — landed] RLS pgPolicy declarations + _roles (+ 1.7 carve-out, 1.8 role_grants scoped, 1.9 identity-auth-rls carve-out family)
 │   ├── rbac/               [Story 1.8 — landed] permission catalog + scope model + 12 role bundles + fail-closed guard
 │   ├── ids/                [Story 1.7 — landed] branded ID types + smart constructors
 │   ├── pariwar-passport/   [Story 1.7 — landed] read accessor + write path + 60s freshness cache

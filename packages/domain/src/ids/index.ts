@@ -71,6 +71,13 @@ export type ClaimId = Brand<'ClaimId'>;
 export type PoolId = Brand<'PoolId'>;
 export type AlertId = Brand<'AlertId'>;
 export type ContributionId = Brand<'ContributionId'>;
+/**
+ * The global identity id (Story 1.9, §3.13). Keyed to the human, NOT a Pariwar —
+ * a person can admin multiple Pariwars (the `role_grants (user_id, pariwar_id,
+ * role)` join carries the tenancy). Branding is mandatory on a new ID's first PR
+ * (§Naming L3706); this is that PR for `UserId`.
+ */
+export type UserId = Brand<'UserId'>;
 
 /** Smart constructor: validates UUID shape, returns a branded `PariwarId`. */
 export const pariwarId = uuidBrand('PariwarId');
@@ -84,3 +91,5 @@ export const poolId = uuidBrand('PoolId');
 export const alertId = uuidBrand('AlertId');
 /** Smart constructor: validates UUID shape, returns a branded `ContributionId`. */
 export const contributionId = uuidBrand('ContributionId');
+/** Smart constructor: validates UUID shape, returns a branded `UserId`. */
+export const userId = uuidBrand('UserId');

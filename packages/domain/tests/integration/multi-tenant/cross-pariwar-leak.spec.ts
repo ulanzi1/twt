@@ -43,6 +43,7 @@ import {
   seedEvent,
   seedPassport,
   seedRoleGrant,
+  seedUser,
 } from '../_helpers.js';
 
 describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', () => {
@@ -238,5 +239,64 @@ describe.skipIf(!hasDatabase)('cross-Pariwar helper verification (runAsCrossTena
     expect(auditEvents.length).toBeGreaterThanOrEqual(1);
     expect(auditEvents[0]?.pariwarId).toBe(CROSS_TENANT_SENTINEL_UUID);
     expect(auditEvents[0]?.payload).toMatchObject({ reason: expect.any(String) });
+  });
+});
+
+// Story 1.9 — the identity/auth carve-out family (users + admin-auth tables) is
+// GLOBAL / non-tenant (Reconciliation R2): these tables have NO pariwar_id, so
+// "cross-Pariwar read" is not even meaningful. They are classified as
+// cross-readable-by-design (USING(true) for twt_app) — NOT scoped-must-return-0.
+// ⚠ They must NEVER be added to the "must return 0 rows" set above: a wrong
+// classification would make login (which runs BEFORE any scope is set) return 0
+// rows and break authentication structurally.
+describe.skipIf(!hasDatabase)('identity/auth carve-out family (GLOBAL, NOT must-return-0)', () => {
+  setupLiveDb();
+
+  it('users is readable under an arbitrary active scope (global, not fail-closed)', async () => {
+    const { tx, client } = getTx();
+    const uid = await seedUser(tx); // seeded as superuser
+    await enterAppScope(client, PARIWAR_A); // SET LOCAL ROLE twt_app + scope A
+
+    // Contrast events_log (which would be 0 rows for a B-scoped read): users is
+    // global — the just-seeded row IS visible under the twt_app role + USING(true).
+    const rows = await client.query<{ id: string }>(`SELECT id FROM users WHERE id = $1`, [uid]);
+    expect(rows.rows).toHaveLength(1);
+  });
+
+  it('admin_credentials is readable under app role (the login lookup path works)', async () => {
+    const { tx, client } = getTx();
+    const uid = await seedUser(tx);
+    await client.query(
+      `INSERT INTO admin_credentials (user_id, email_ciphertext, email_blind_index, password_hash)
+         VALUES ($1, 'enc:v1:x', $2, 'hash')`,
+      [uid, `bidx-${uid}`],
+    );
+    await enterAppScope(client, PARIWAR_A);
+    const rows = await client.query(`SELECT user_id FROM admin_credentials WHERE user_id = $1`, [uid]);
+    expect(rows.rows).toHaveLength(1);
+  });
+
+  it('retro FK: an orphan role_grants.user_id (no users row) is rejected', async () => {
+    const { client } = getTx();
+    // No users row for this id → the D4-1.8 FK rejects the insert (23503).
+    await expect(
+      client.query(
+        `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
+           VALUES (gen_random_uuid(), $1, 'auditor', 'pariwar', $2)`,
+        [PARIWAR_A, PARIWAR_A],
+      ),
+    ).rejects.toMatchObject({ code: '23503' });
+  });
+
+  it('retro FK: a role_grants row with an existing users row is accepted', async () => {
+    const { tx, client } = getTx();
+    const uid = await seedUser(tx);
+    await expect(
+      client.query(
+        `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
+           VALUES ($1, $2, 'auditor', 'pariwar', $3)`,
+        [uid, PARIWAR_A, PARIWAR_A],
+      ),
+    ).resolves.toBeDefined();
   });
 });

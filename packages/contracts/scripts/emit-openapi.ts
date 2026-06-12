@@ -43,6 +43,28 @@ const { PermissionKeySchema, PermissionCatalogSchema } = await import(
   '../src/rbac/permissions.js'
 );
 const { RoleBundleSchema, RoleGrantSchema } = await import('../src/rbac/roles.js');
+// Story 1.9 — admin-auth transport contracts. THE FIRST REAL `paths` (Stories
+// 1.4/1.7/1.8 registered components-only). apps/api now serves these routes.
+const {
+  LoginRequest,
+  LoginResponse,
+  PasskeyRegisterOptionsRequest,
+  PasskeyRegisterVerifyRequest,
+  PasskeyRegisterVerifyResponse,
+  PasskeyAuthOptionsRequest,
+  PasskeyAuthVerifyRequest,
+  PasskeyAuthVerifyResponse,
+  RecoveryConsumeRequest,
+  RecoveryConsumeResponse,
+  PasswordResetRequestRequest,
+  PasswordResetRequestResponse,
+  PasswordResetConsumeRequest,
+  PasswordResetConsumeResponse,
+  StepUpRequestRequest,
+  StepUpRequestResponse,
+  StepUpVerifyRequest,
+  StepUpVerifyResponse,
+} = await import('../src/auth/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -61,6 +83,28 @@ const PermissionCatalogComponent = PermissionCatalogSchema.openapi('PermissionCa
 const RoleBundleComponent = RoleBundleSchema.openapi('RoleBundle');
 const RoleGrantComponent = RoleGrantSchema.openapi('RoleGrant');
 
+// Story 1.9 — admin-auth component schemas (request + response objects).
+const authComponents = {
+  LoginRequest: LoginRequest.openapi('LoginRequest'),
+  LoginResponse: LoginResponse.openapi('LoginResponse'),
+  PasskeyRegisterOptionsRequest: PasskeyRegisterOptionsRequest.openapi('PasskeyRegisterOptionsRequest'),
+  PasskeyRegisterVerifyRequest: PasskeyRegisterVerifyRequest.openapi('PasskeyRegisterVerifyRequest'),
+  PasskeyRegisterVerifyResponse: PasskeyRegisterVerifyResponse.openapi('PasskeyRegisterVerifyResponse'),
+  PasskeyAuthOptionsRequest: PasskeyAuthOptionsRequest.openapi('PasskeyAuthOptionsRequest'),
+  PasskeyAuthVerifyRequest: PasskeyAuthVerifyRequest.openapi('PasskeyAuthVerifyRequest'),
+  PasskeyAuthVerifyResponse: PasskeyAuthVerifyResponse.openapi('PasskeyAuthVerifyResponse'),
+  RecoveryConsumeRequest: RecoveryConsumeRequest.openapi('RecoveryConsumeRequest'),
+  RecoveryConsumeResponse: RecoveryConsumeResponse.openapi('RecoveryConsumeResponse'),
+  PasswordResetRequestRequest: PasswordResetRequestRequest.openapi('PasswordResetRequestRequest'),
+  PasswordResetRequestResponse: PasswordResetRequestResponse.openapi('PasswordResetRequestResponse'),
+  PasswordResetConsumeRequest: PasswordResetConsumeRequest.openapi('PasswordResetConsumeRequest'),
+  PasswordResetConsumeResponse: PasswordResetConsumeResponse.openapi('PasswordResetConsumeResponse'),
+  StepUpRequestRequest: StepUpRequestRequest.openapi('StepUpRequestRequest'),
+  StepUpRequestResponse: StepUpRequestResponse.openapi('StepUpRequestResponse'),
+  StepUpVerifyRequest: StepUpVerifyRequest.openapi('StepUpVerifyRequest'),
+  StepUpVerifyResponse: StepUpVerifyResponse.openapi('StepUpVerifyResponse'),
+} as const;
+
 const registry = new OpenAPIRegistry();
 
 registry.register('HealthResponse', HealthResponseSchema);
@@ -72,6 +116,11 @@ registry.register('PermissionKey', PermissionKeyComponent);
 registry.register('PermissionCatalog', PermissionCatalogComponent);
 registry.register('RoleBundle', RoleBundleComponent);
 registry.register('RoleGrant', RoleGrantComponent);
+
+// Story 1.9 — register the admin-auth components.
+for (const [name, schema] of Object.entries(authComponents)) {
+  registry.register(name, schema);
+}
 
 registry.registerPath({
   method: 'get',
@@ -92,6 +141,58 @@ registry.registerPath({
     },
   },
 });
+
+// ── Story 1.9 — the first real admin-auth `paths` ─────────────────────────────
+type Schema = (typeof authComponents)[keyof typeof authComponents];
+const jsonContent = (schema: Schema): { 'application/json': { schema: Schema } } => ({
+  'application/json': { schema },
+});
+const errorResponse = (description: string): {
+  description: string;
+  content: { 'application/json': { schema: typeof ErrorResponseSchema } };
+} => ({ description, content: { 'application/json': { schema: ErrorResponseSchema } } });
+
+interface AuthPathSpec {
+  path: string;
+  summary: string;
+  body: Schema;
+  ok?: Schema;
+  okDescription?: string;
+  errors?: Record<number, string>;
+}
+
+const AUTH_PATHS: AuthPathSpec[] = [
+  { path: '/api/v1/auth/login', summary: 'Admin login — first factor (email + password)', body: authComponents.LoginRequest, ok: authComponents.LoginResponse, errors: { 401: 'Invalid credentials', 429: 'Rate limited' } },
+  { path: '/api/v1/auth/passkey/register/options', summary: 'WebAuthn enrollment — generate registration options', body: authComponents.PasskeyRegisterOptionsRequest, okDescription: 'WebAuthn PublicKeyCredentialCreationOptionsJSON (provider-controlled)', errors: { 403: 'Enrollment not authorized', 409: 'Device cap reached' } },
+  { path: '/api/v1/auth/passkey/register/verify', summary: 'WebAuthn enrollment — verify + persist the credential', body: authComponents.PasskeyRegisterVerifyRequest, ok: authComponents.PasskeyRegisterVerifyResponse, errors: { 403: 'Enrollment denied/failed' } },
+  { path: '/api/v1/auth/passkey/authenticate/options', summary: 'WebAuthn second factor — generate authentication options', body: authComponents.PasskeyAuthOptionsRequest, okDescription: 'WebAuthn PublicKeyCredentialRequestOptionsJSON (provider-controlled)', errors: { 401: 'No login in progress' } },
+  { path: '/api/v1/auth/passkey/authenticate/verify', summary: 'WebAuthn second factor — verify the assertion', body: authComponents.PasskeyAuthVerifyRequest, ok: authComponents.PasskeyAuthVerifyResponse, errors: { 401: 'Authentication failed' } },
+  { path: '/api/v1/auth/recovery/consume', summary: 'Recovery code second factor — consume + burn', body: authComponents.RecoveryConsumeRequest, ok: authComponents.RecoveryConsumeResponse, errors: { 401: 'Invalid recovery code' } },
+  { path: '/api/v1/auth/password-reset/request', summary: 'Request a password-reset link (anti-enumeration)', body: authComponents.PasswordResetRequestRequest, ok: authComponents.PasswordResetRequestResponse },
+  { path: '/api/v1/auth/password-reset/consume', summary: 'Consume a password-reset link (forces WebAuthn re-enrollment)', body: authComponents.PasswordResetConsumeRequest, ok: authComponents.PasswordResetConsumeResponse, errors: { 403: 'Invalid or expired link' } },
+  { path: '/api/v1/auth/step-up/request', summary: 'Request a step-up OTP for a gated action', body: authComponents.StepUpRequestRequest, ok: authComponents.StepUpRequestResponse, errors: { 401: 'Authentication required' } },
+  { path: '/api/v1/auth/step-up/verify', summary: 'Verify a step-up OTP — elevate the session', body: authComponents.StepUpVerifyRequest, ok: authComponents.StepUpVerifyResponse, errors: { 401: 'Step-up verification failed' } },
+];
+
+for (const spec of AUTH_PATHS) {
+  const responses: Record<number, unknown> = {};
+  if (spec.ok) {
+    responses[200] = { description: 'OK', content: jsonContent(spec.ok) };
+  } else {
+    responses[200] = { description: spec.okDescription ?? 'OK' };
+  }
+  for (const [code, description] of Object.entries(spec.errors ?? {})) {
+    responses[Number(code)] = errorResponse(description);
+  }
+  registry.registerPath({
+    method: 'post',
+    path: spec.path,
+    summary: spec.summary,
+    tags: ['admin-auth'],
+    request: { body: { content: jsonContent(spec.body) } },
+    responses: responses as Parameters<typeof registry.registerPath>[0]['responses'],
+  });
+}
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 

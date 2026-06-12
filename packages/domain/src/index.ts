@@ -9,12 +9,13 @@ export {
   setPariwarScope,
   assertPariwarScopeSet,
   withPariwarScope,
+  bindScopedDb,
   type CreateDbOptions,
   type CreatedDb,
   type Db,
   type DbSchema,
 } from './db.js';
-export { resolveConnectionString } from './secrets.js';
+export { resolveConnectionString, resolveSecretValue } from './secrets.js';
 export {
   InvalidPariwarScopeError,
   PariwarScopeMissingError,

@@ -238,6 +238,212 @@ components:
         - createdAt
         - createdBy
       additionalProperties: false
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 512
+        turnstileToken:
+          type: string
+      required:
+        - email
+        - password
+      additionalProperties: false
+    LoginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - mfa_required
+        methods:
+          type: array
+          items:
+            type: string
+            enum:
+              - webauthn
+              - recovery_code
+      required:
+        - status
+        - methods
+      additionalProperties: false
+    PasskeyRegisterOptionsRequest:
+      type: object
+      properties:
+        enrollmentToken:
+          type: string
+        deviceLabel:
+          type: string
+          maxLength: 64
+      additionalProperties: false
+    PasskeyRegisterVerifyRequest:
+      type: object
+      properties:
+        response:
+          type: object
+          additionalProperties: {}
+        enrollmentToken:
+          type: string
+        deviceLabel:
+          type: string
+          maxLength: 64
+      required:
+        - response
+      additionalProperties: false
+    PasskeyRegisterVerifyResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+        recoveryCodes:
+          type: array
+          items:
+            type: string
+      required:
+        - verified
+      additionalProperties: false
+    PasskeyAuthOptionsRequest:
+      type: object
+      properties: {}
+      additionalProperties: false
+    PasskeyAuthVerifyRequest:
+      type: object
+      properties:
+        response:
+          type: object
+          additionalProperties: {}
+      required:
+        - response
+      additionalProperties: false
+    PasskeyAuthVerifyResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+      required:
+        - authenticated
+      additionalProperties: false
+    RecoveryConsumeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+        - code
+      additionalProperties: false
+    RecoveryConsumeResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+      required:
+        - authenticated
+      additionalProperties: false
+    PasswordResetRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        turnstileToken:
+          type: string
+      required:
+        - email
+      additionalProperties: false
+    PasswordResetRequestResponse:
+      type: object
+      properties:
+        sent:
+          type: boolean
+          enum:
+            - true
+      required:
+        - sent
+      additionalProperties: false
+    PasswordResetConsumeRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 12
+          maxLength: 512
+      required:
+        - token
+        - newPassword
+      additionalProperties: false
+    PasswordResetConsumeResponse:
+      type: object
+      properties:
+        reset:
+          type: boolean
+          enum:
+            - true
+        webauthnReenrollmentRequired:
+          type: boolean
+          enum:
+            - true
+      required:
+        - reset
+        - webauthnReenrollmentRequired
+      additionalProperties: false
+    StepUpRequestRequest:
+      type: object
+      properties:
+        actionContext:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+        - actionContext
+      additionalProperties: false
+    StepUpRequestResponse:
+      type: object
+      properties:
+        sent:
+          type: boolean
+          enum:
+            - true
+        expiresInSeconds:
+          type: integer
+          exclusiveMinimum: 0
+      required:
+        - sent
+        - expiresInSeconds
+      additionalProperties: false
+    StepUpVerifyRequest:
+      type: object
+      properties:
+        otp:
+          type: string
+          minLength: 1
+          maxLength: 16
+      required:
+        - otp
+      additionalProperties: false
+    StepUpVerifyResponse:
+      type: object
+      properties:
+        elevated:
+          type: boolean
+          enum:
+            - true
+        elevatedUntil:
+          type: string
+          format: date-time
+      required:
+        - elevated
+        - elevatedUntil
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:
@@ -255,6 +461,234 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
         "503":
           description: Service is degraded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/login:
+    post:
+      summary: Admin login — first factor (email + password)
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/passkey/register/options:
+    post:
+      summary: WebAuthn enrollment — generate registration options
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyRegisterOptionsRequest"
+      responses:
+        "200":
+          description: WebAuthn PublicKeyCredentialCreationOptionsJSON (provider-controlled)
+        "403":
+          description: Enrollment not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Device cap reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/passkey/register/verify:
+    post:
+      summary: WebAuthn enrollment — verify + persist the credential
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyRegisterVerifyRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasskeyRegisterVerifyResponse"
+        "403":
+          description: Enrollment denied/failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/passkey/authenticate/options:
+    post:
+      summary: WebAuthn second factor — generate authentication options
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthOptionsRequest"
+      responses:
+        "200":
+          description: WebAuthn PublicKeyCredentialRequestOptionsJSON (provider-controlled)
+        "401":
+          description: No login in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/passkey/authenticate/verify:
+    post:
+      summary: WebAuthn second factor — verify the assertion
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasskeyAuthVerifyRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasskeyAuthVerifyResponse"
+        "401":
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/recovery/consume:
+    post:
+      summary: Recovery code second factor — consume + burn
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecoveryConsumeRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryConsumeResponse"
+        "401":
+          description: Invalid recovery code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/password-reset/request:
+    post:
+      summary: Request a password-reset link (anti-enumeration)
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequestRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordResetRequestResponse"
+  /api/v1/auth/password-reset/consume:
+    post:
+      summary: Consume a password-reset link (forces WebAuthn re-enrollment)
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetConsumeRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordResetConsumeResponse"
+        "403":
+          description: Invalid or expired link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/step-up/request:
+    post:
+      summary: Request a step-up OTP for a gated action
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StepUpRequestRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StepUpRequestResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/step-up/verify:
+    post:
+      summary: Verify a step-up OTP — elevate the session
+      tags:
+        - admin-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StepUpVerifyRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StepUpVerifyResponse"
+        "401":
+          description: Step-up verification failed
           content:
             application/json:
               schema:

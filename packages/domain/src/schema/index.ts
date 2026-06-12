@@ -16,3 +16,10 @@ export * from './_baseline.js';
 export * from './events_log.js';
 export * from './pariwar_passport.js';
 export * from './role_grants.js';
+// Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
+export * from './users.js';
+export * from './admin_credentials.js';
+export * from './webauthn_credentials.js';
+export * from './recovery_codes.js';
+export * from './admin_sessions.js';
+export * from './step_up_otps.js';

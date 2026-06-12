@@ -36,6 +36,13 @@
       "when": 1781177450645,
       "tag": "0004_role-grants",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781197905463,
+      "tag": "0005_admin-identity-auth",
+      "breakpoints": true
     }
   ]
 }

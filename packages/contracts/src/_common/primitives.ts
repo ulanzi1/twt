@@ -27,6 +27,13 @@ export type UuidString = z.output<typeof UuidString>;
 export const PariwarIdSchema = z.string().uuid().brand<'PariwarId'>();
 export type PariwarIdSchema = z.output<typeof PariwarIdSchema>;
 
+/**
+ * Branded global-identity (user) id transport primitive (Story 1.9). Brand STRING
+ * matches the domain `UserId` brand at `packages/domain/src/ids/`. A plain
+ * `z.string().uuid()` underneath, so OpenAPI emits it as a uuid-format string. */
+export const UserIdSchema = z.string().uuid().brand<'UserId'>();
+export type UserIdSchema = z.output<typeof UserIdSchema>;
+
 /** Request correlation id echoed in headers + logs + audit (architecture §3.2 line 1832). */
 export const RequestId = z.string().uuid();
 export type RequestId = z.output<typeof RequestId>;

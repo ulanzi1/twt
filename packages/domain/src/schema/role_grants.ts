@@ -17,8 +17,9 @@
 
 import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import type { PariwarId } from '../ids/index.js';
+import type { PariwarId, UserId } from '../ids/index.js';
 import { SCOPE_DIMENSIONS } from '../rbac/scope.js';
+import { users } from './users.js';
 
 /**
  * The `scope_dimension` Postgres enum, derived from the single canonical
@@ -39,10 +40,14 @@ export const roleGrants = pgTable(
     // lookup index below serves the read path.
     id: uuid('id').defaultRandom().primaryKey(),
 
-    // The granted subject. Unconstrained `uuid` — NO foreign key: the admin/users
-    // table does not exist until Story 1.9+ (same precedent as
-    // pariwar_passport.created_by). A FK can be added retroactively then.
-    userId: uuid('user_id').notNull(),
+    // The granted subject. FK → users.id (D4-1.8, retro-added in migration 0005 now
+    // that the global identity table exists). An orphan grant (user_id with no users
+    // row) is now rejected at INSERT — the integrity the no-FK column deferred
+    // "until Story 1.9+". Branded `UserId` at the TS layer.
+    userId: uuid('user_id')
+      .$type<UserId>()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
 
     // Tenant key AND the column RLS scopes on. Branded `PariwarId` at the TS layer
     // (compile-time only; the column is a plain pg `uuid`).

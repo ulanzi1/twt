@@ -1,0 +1,136 @@
+// apps/api environment configuration loader.
+//
+// Reads + validates the required env vars at boot so a missing var is a loud
+// startup failure, not a silent runtime fault (Task 1.5 — "without these the app
+// crashes on startup"). Argon2id parameters default to the OWASP-2026 baseline
+// (§2.3, ADR-0009) and are overridable via env for ops tuning. The pepper VALUE
+// is never read here — only the Secret Manager secret NAME — so the secret stays
+// resolved through `resolveSecretValue` (packages/domain/src/secrets.ts), never an
+// env literal in prod (AC-1).
+
+const MIN_SESSION_SECRET_LEN = 32;
+
+export interface Argon2Params {
+  /** KiB of memory. OWASP-2026 baseline ≈ 64 MiB. */
+  readonly memoryCost: number;
+  /** Iterations. */
+  readonly timeCost: number;
+  /** Lanes. */
+  readonly parallelism: number;
+}
+
+export interface ApiConfig {
+  readonly nodeEnv: string;
+  /** Listen port (boot guard only; tests use fastify.inject without a port). */
+  readonly port: number;
+  /** @fastify/session signing secret (≥32 chars). */
+  readonly sessionSecret: string;
+  /** HttpOnly+Secure+SameSite=Lax cookie — `secure` is off only in local dev. */
+  readonly cookieSecure: boolean;
+  readonly webauthn: {
+    readonly rpId: string;
+    readonly rpName: string;
+    readonly expectedOrigin: string;
+  };
+  readonly argon2: {
+    /** Secret Manager secret NAME for the pepper (never the value). */
+    readonly pepperSecretName: string;
+    /** Local-dev env fallback var name holding the pepper value. */
+    readonly pepperEnvFallback: string;
+    readonly params: Argon2Params;
+  };
+  /** Admin session idle timeout (§2.4 — 12h). */
+  readonly sessionIdleMs: number;
+  /** Admin session absolute timeout (§2.4 — 7d). */
+  readonly sessionAbsoluteMs: number;
+  /** Failed-password attempts before lockout (AC-1). */
+  readonly lockoutThreshold: number;
+  /** Lockout duration after threshold breached. */
+  readonly lockoutMs: number;
+  /** Step-up OTP TTL (§2.2 — 3 min). */
+  readonly stepUpOtpTtlMs: number;
+  /** Elevated-context window after a successful step-up (§2.2 — ~5 min). */
+  readonly stepUpElevatedMs: number;
+  /** Global per-IP rate-limit ceiling (requests/minute). */
+  readonly globalRateMax: number;
+  /** Tight per-route rate-limit ceiling for login + reset-request (requests/minute). */
+  readonly loginRateMax: number;
+  /** Step-up per-actor/per-IP rate-limit ceiling (requests/minute, §2.2). */
+  readonly stepUpRateMax: number;
+}
+
+const HOUR = 60 * 60 * 1000;
+const MINUTE = 60 * 1000;
+const DAY = 24 * HOUR;
+
+function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
+  const v = env[key];
+  if (v === undefined || v.trim() === '') {
+    throw new Error(
+      `[config] required env var ${key} is missing — set it (see apps/api/.env.example)`,
+    );
+  }
+  return v;
+}
+
+function intEnv(env: NodeJS.ProcessEnv, key: string, fallback: number): number {
+  const v = env[key];
+  if (v === undefined || v.trim() === '') return fallback;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`[config] env var ${key} must be a non-negative number, got ${JSON.stringify(v)}`);
+  }
+  return n;
+}
+
+/**
+ * Build the validated config from the environment. Throws on any missing required
+ * var so the process fails fast at boot rather than mid-request.
+ */
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
+  const nodeEnv = (env['NODE_ENV'] ?? 'development').toLowerCase();
+  const isProd = nodeEnv === 'production';
+
+  const sessionSecret = requireEnv(env, 'SESSION_SECRET');
+  if (sessionSecret.length < MIN_SESSION_SECRET_LEN) {
+    throw new Error(
+      `[config] SESSION_SECRET must be ≥${MIN_SESSION_SECRET_LEN} chars (got ${sessionSecret.length})`,
+    );
+  }
+
+  const expectedOrigin = requireEnv(env, 'WEBAUTHN_EXPECTED_ORIGIN');
+  try { new URL(expectedOrigin); } catch {
+    throw new Error(`[config] WEBAUTHN_EXPECTED_ORIGIN must be a valid URL (got ${JSON.stringify(expectedOrigin)})`);
+  }
+
+  return {
+    nodeEnv,
+    port: intEnv(env, 'PORT', 3000),
+    sessionSecret,
+    // Secure cookies are mandatory in production; relaxed for local http dev.
+    cookieSecure: env['COOKIE_SECURE'] === '1' || isProd,
+    webauthn: {
+      rpId: requireEnv(env, 'WEBAUTHN_RP_ID'),
+      rpName: env['WEBAUTHN_RP_NAME'] ?? 'TWT Admin',
+      expectedOrigin,
+    },
+    argon2: {
+      pepperSecretName: requireEnv(env, 'ARGON2_PEPPER_SECRET_NAME'),
+      pepperEnvFallback: env['ARGON2_PEPPER_ENV_FALLBACK'] ?? 'ARGON2_PEPPER',
+      params: {
+        memoryCost: intEnv(env, 'ARGON2_MEMORY_COST', 65536), // 64 MiB
+        timeCost: intEnv(env, 'ARGON2_TIME_COST', 3),
+        parallelism: intEnv(env, 'ARGON2_PARALLELISM', 1),
+      },
+    },
+    sessionIdleMs: intEnv(env, 'SESSION_IDLE_MS', 12 * HOUR),
+    sessionAbsoluteMs: intEnv(env, 'SESSION_ABSOLUTE_MS', 7 * DAY),
+    lockoutThreshold: intEnv(env, 'LOCKOUT_THRESHOLD', 5),
+    lockoutMs: intEnv(env, 'LOCKOUT_MS', 15 * MINUTE),
+    stepUpOtpTtlMs: intEnv(env, 'STEP_UP_OTP_TTL_MS', 3 * MINUTE),
+    stepUpElevatedMs: intEnv(env, 'STEP_UP_ELEVATED_MS', 5 * MINUTE),
+    globalRateMax: intEnv(env, 'RATE_LIMIT_MAX', 300),
+    loginRateMax: intEnv(env, 'LOGIN_RATE_MAX', 10),
+    stepUpRateMax: intEnv(env, 'STEP_UP_RATE_MAX', 5),
+  };
+}

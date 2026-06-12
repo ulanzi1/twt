@@ -16,7 +16,7 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 
 import { setPariwarScope, type Db } from '../../src/db.js';
-import { pariwarId as toPariwarId } from '../../src/ids/index.js';
+import { pariwarId as toPariwarId, userId as toUserId } from '../../src/ids/index.js';
 import type { ScopeDimension } from '../../src/rbac/scope.js';
 import * as schema from '../../src/schema/index.js';
 import type { BrandingBundle } from '../../src/schema/pariwar_passport.js';
@@ -88,6 +88,9 @@ export async function seedPassport(
   id: string,
   opts: SeedPassportOptions = {},
 ): Promise<void> {
+  // createdBy → users.id is an FK now (D4-1.7); seed the creator when one is given.
+  const createdBy = opts.createdBy ?? null;
+  if (createdBy !== null) await seedUser(tx, createdBy);
   await tx.insert(schema.pariwarPassport).values({
     pariwarId: toPariwarId(id),
     displayNameEn: opts.displayNameEn ?? 'Test Pariwar EN',
@@ -96,8 +99,36 @@ export async function seedPassport(
     trustRegistrationId: opts.trustRegistrationId ?? null,
     brandingBundle: opts.brandingBundle ?? DEFAULT_BRANDING,
     localeDefault: opts.localeDefault ?? 'en',
-    createdBy: opts.createdBy ?? null,
+    createdBy: createdBy === null ? null : toUserId(createdBy),
   });
+}
+
+export interface SeedUserOptions {
+  identityType?: 'admin';
+  status?: 'active' | 'suspended' | 'disabled';
+}
+
+/**
+ * Insert one global `users` row (Story 1.9). Idempotent (ON CONFLICT DO NOTHING) so
+ * a repeated id is a no-op. `users` is GLOBAL (carve-out family) — seed it BEFORE
+ * entering app scope (as the Docker superuser); afterEach ROLLBACK reverts it.
+ * Returns the (branded) user id used. The retro FK `role_grants.user_id → users.id`
+ * means a grant's subject must exist here first — seedRoleGrant calls this.
+ */
+export async function seedUser(
+  tx: Db,
+  id: string = randomUUID(),
+  opts: SeedUserOptions = {},
+): Promise<string> {
+  await tx
+    .insert(schema.users)
+    .values({
+      id: toUserId(id),
+      identityType: opts.identityType ?? 'admin',
+      status: opts.status ?? 'active',
+    })
+    .onConflictDoNothing();
+  return id;
 }
 
 export interface SeedRoleGrantOptions {
@@ -113,23 +144,27 @@ export interface SeedRoleGrantOptions {
  * BEFORE entering app scope (as the Docker superuser, RLS bypassed) so rows for
  * BOTH tenants land regardless of the write-isolation policy; afterEach ROLLBACK
  * (setupLiveDb) reverts it. role_grants is a SCOPED table — cross-Pariwar reads
- * must return 0 rows (asserted by cross-pariwar-leak.spec.ts). Returns the userId.
+ * must return 0 rows (asserted by cross-pariwar-leak.spec.ts). Seeds the subject
+ * `users` row first (retro FK D4-1.8). Returns the userId.
  */
 export async function seedRoleGrant(
   tx: Db,
   pariwarId: string,
   opts: SeedRoleGrantOptions = {},
 ): Promise<string> {
-  const userId = opts.userId ?? randomUUID();
+  const uid = opts.userId ?? randomUUID();
+  await seedUser(tx, uid);
+  const createdBy = opts.createdBy ?? null;
+  if (createdBy !== null) await seedUser(tx, createdBy);
   await tx.insert(schema.roleGrants).values({
-    userId,
+    userId: toUserId(uid),
     pariwarId: toPariwarId(pariwarId),
     role: opts.role ?? 'district_admin',
     scopeDimension: opts.scopeDimension ?? 'district',
     scopeValue: opts.scopeValue ?? 'Patna',
-    createdBy: opts.createdBy ?? null,
+    createdBy: createdBy === null ? null : toUserId(createdBy),
   });
-  return userId;
+  return uid;
 }
 
 /** Shed Docker superuser (SET ROLE twt_app) + set the pariwar scope, in-tx. */

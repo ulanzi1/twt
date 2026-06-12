@@ -137,6 +137,18 @@ export async function assertPariwarScopeSet(client: pg.PoolClient): Promise<stri
 }
 
 /**
+ * Bind a Drizzle handle to an already-checked-out pg client (Story 1.9). The
+ * apps/api scope-resolution middleware checks out a client, opens its own
+ * transaction, and calls `setPariwarScope` on it — then needs a Drizzle handle
+ * bound to THAT client (not the pool) so queries run inside the scoped tx and RLS
+ * applies. This is the named primitive for that (so apps/api does not import
+ * drizzle-orm directly). The caller owns the client's tx + release lifecycle.
+ */
+export function bindScopedDb(client: pg.PoolClient): Db {
+  return drizzle(client, { schema }) as unknown as Db;
+}
+
+/**
  * Higher-order wrapper for scripts/jobs: checks out a client, opens a
  * transaction, calls setPariwarScope, runs the callback against a
  * transaction-bound Drizzle handle, commits (or rolls back on throw).

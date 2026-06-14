@@ -30,6 +30,9 @@ export function createGcsMirrorTarget(opts: {
         const storage = new Storage(opts.projectId ? { projectId: opts.projectId } : {});
         return storage.bucket(opts.bucketName);
       })();
+      // Clear on rejection so a transient init error (bad credentials, import failure)
+      // does not permanently cache the rejected promise for all subsequent putObject calls.
+      bucketPromise.catch(() => { bucketPromise = null; });
     }
     return bucketPromise;
   }

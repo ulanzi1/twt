@@ -271,6 +271,8 @@ components:
           minLength: 1
         responseStatus:
           type: integer
+          minimum: 100
+          maximum: 599
         prevAuditHash:
           type:
             - string

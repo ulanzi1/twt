@@ -45,8 +45,8 @@ export const AuditLogEntryContract = z
     resourceLocator: z.string().min(1),
     // SHA-256 hex of the request payload — never the payload itself.
     requestPayloadHash: z.string().min(1),
-    // HTTP-equivalent response status.
-    responseStatus: z.number().int(),
+    // HTTP-equivalent response status (100–599).
+    responseStatus: z.number().int().min(100).max(599),
     // Previous row's audit_hash; null ONLY for the genesis row.
     prevAuditHash: z.string().min(1).nullable(),
     // This row's chain hash (SHA-256 hex).

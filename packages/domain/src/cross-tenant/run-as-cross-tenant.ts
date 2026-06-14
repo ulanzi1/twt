@@ -15,13 +15,18 @@
 // events_log placeholder INSERT is GONE. The CROSS_TENANT_SENTINEL_UUID lives on
 // as the `audit_log_entries.pariwar_id` value for all cross-tenant audit rows.
 //
-// ── Two-transaction split (W1-CR1.6) ──────────────────────────────────────────
-// The audit line is written FIRST, in its own advisory-lock transaction that
-// COMMITS before the cross-tenant operation begins. So the record that
-// cross-tenant access was attempted is durable REGARDLESS of what `fn()` does — a
-// thrown `fn()` (or a rolled-back cross-tenant tx) cannot erase the audit. This
-// also fails CLOSED: if the audit write itself fails, runAsCrossTenant throws and
-// the RLS-bypassed operation never runs (no un-audited cross-tenant access).
+// ── Two-transaction split + outcome audit (W1-CR1.6, CR-P1-1.10) ─────────────
+// Three-step protocol:
+//   (1) Pre-audit (responseStatus 102 — Processing): commits FIRST so the record
+//       that access was authorized is durable before any RLS-bypassed work.
+//       Fails CLOSED: if this write fails, the operation never runs.
+//   (2) The RLS-bypassed operation runs in its own transaction.
+//   (3) Outcome audit (responseStatus 200 or 500): best-effort commit after fn()
+//       resolves. Records the actual result. Never suppresses the operation error.
+//
+// 102 means "access authorized, operation commencing" — NOT that it succeeded.
+// This closes the gap where a hardcoded 200 pre-audit would record success for
+// an operation that never executed (e.g. pool.connect() fails between steps 1→2).
 //
 // ⚠ Requires a `servicePool` (DD-3): in production a BYPASSRLS `twt_service`-login
 // pool; in dev/CI the same superuser pool as `pool`. `SET LOCAL row_security =
@@ -87,27 +92,43 @@ export async function runAsCrossTenant<T>(
 ): Promise<T> {
   const pariwarIds = ctx.pariwarIds ?? ['<unbounded>'];
 
-  // (1) Durable audit of the access ATTEMPT — commits independently (W1-CR1.6).
-  // Fails closed: a write error here aborts before any RLS-bypassed work.
-  await writeAuditEntry(servicePool, {
+  // P5: guard against silent mid-content truncation — throw early so the caller
+  // knows to reduce the pariwarIds list or shorten the reason string.
+  const resourceLocator = `cross_tenant:[${pariwarIds.join(',')}] ${ctx.reason}`;
+  if (resourceLocator.length > 1024) {
+    throw new Error(
+      `runAsCrossTenant: resourceLocator would be ${resourceLocator.length} chars (max 1024) — reduce pariwarIds count or shorten reason`,
+    );
+  }
+
+  const requestPayloadHash = sha256Hex(
+    canonicalJsonStringify({
+      reason: ctx.reason,
+      pariwar_ids: pariwarIds,
+      emitted_by: 'packages/domain/src/cross-tenant/run-as-cross-tenant.ts',
+    }),
+  );
+
+  // Shared fields for the pre-audit and outcome audit (same action, same locator).
+  const auditBase = {
     pariwarId: CROSS_TENANT_SENTINEL_UUID,
     actorId: ctx.actorId,
-    actorRole: null,
+    actorRole: null as null,
     action: 'audit.cross_tenant_access',
-    resourceLocator: `cross_tenant:[${pariwarIds.join(',')}] ${ctx.reason}`.slice(0, 1024),
-    requestPayloadHash: sha256Hex(
-      canonicalJsonStringify({
-        reason: ctx.reason,
-        pariwar_ids: pariwarIds,
-        emitted_by: 'packages/domain/src/cross-tenant/run-as-cross-tenant.ts',
-      }),
-    ),
-    responseStatus: 200,
-    traceId: null,
-  });
+    resourceLocator,
+    requestPayloadHash,
+    traceId: null as null,
+  };
+
+  // (1) Pre-audit: access authorized, operation commencing (responseStatus 102).
+  // Fails closed: a write error here aborts before any RLS-bypassed work.
+  await writeAuditEntry(servicePool, { ...auditBase, responseStatus: 102 });
 
   // (2) The RLS-bypassed operation, in its own transaction.
   const client = await pool.connect();
+  let fnError: unknown;
+  let result: T | undefined;
+  let responseStatus = 500;
   try {
     await client.query('BEGIN');
     // Bypass every RLS policy for the duration of this transaction. Combined
@@ -118,15 +139,22 @@ export async function runAsCrossTenant<T>(
     // cross-tenant tooling).
     await client.query('SET LOCAL row_security = off');
     const tx = drizzle(client, { schema }) as unknown as Db;
-    const result = await fn(tx, client);
+    result = await fn(tx, client);
     await client.query('COMMIT');
-    return result;
+    responseStatus = 200;
   } catch (err) {
     await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
+    fnError = err;
   } finally {
     client.release();
   }
+
+  // (3) Outcome audit: 200 = operation succeeded; 500 = operation threw.
+  // Best-effort — .catch ensures this never suppresses the operation's own error.
+  await writeAuditEntry(servicePool, { ...auditBase, responseStatus }).catch(() => undefined);
+
+  if (fnError !== undefined) throw fnError;
+  return result as T;
 }
 
 // Exported so callers needing the sentinel for assertions/queries (and the

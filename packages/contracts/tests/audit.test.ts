@@ -82,4 +82,24 @@ describe('AuditLogEntryContract (Story 1.10, AC-1)', () => {
     const wire = { ...row, recordedAt: row.recordedAt.toISOString() };
     expect(AuditLogEntryContract.safeParse(wire).success).toBe(true);
   });
+
+  it('rejects seq: 0 (min(1) lower bound)', () => {
+    const row = { ...sampleRow(), seq: 0 };
+    const wire = { ...row, recordedAt: row.recordedAt.toISOString() };
+    expect(AuditLogEntryContract.safeParse(wire).success).toBe(false);
+  });
+
+  it('accepts non-null optional fields (actorId, actorRole, traceId)', () => {
+    const row = {
+      ...sampleRow(),
+      actorId: '00000000-0000-0000-0000-000000000099',
+      actorRole: 'super_admin',
+      traceId: 'trace-abc-123',
+    };
+    const wire = { ...row, recordedAt: row.recordedAt.toISOString() };
+    const parsed = AuditLogEntryContract.parse(wire);
+    expect(parsed.actorId).toBe(row.actorId);
+    expect(parsed.actorRole).toBe('super_admin');
+    expect(parsed.traceId).toBe('trace-abc-123');
+  });
 });

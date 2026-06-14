@@ -34,8 +34,15 @@ async function main(): Promise<void> {
 
   try {
     const target = await resolveMirrorTargetFromEnv();
-    const sinceSeq = Number(process.env['AUDIT_MIRROR_SINCE_SEQ'] ?? '0');
-    const watermark = createInMemoryWatermarkStore(Number.isFinite(sinceSeq) ? sinceSeq : 0);
+    // `||` treats '' (explicitly set but empty) the same as absent, matching ?? semantics for env vars.
+    const rawSinceSeq = process.env['AUDIT_MIRROR_SINCE_SEQ'] || '0';
+    const sinceSeq = Number(rawSinceSeq);
+    if (!Number.isInteger(sinceSeq) || sinceSeq < 0 || sinceSeq > Number.MAX_SAFE_INTEGER) {
+      throw new Error(
+        `[audit-mirror] AUDIT_MIRROR_SINCE_SEQ must be a non-negative integer ≤ ${Number.MAX_SAFE_INTEGER}, got ${JSON.stringify(rawSinceSeq)}`,
+      );
+    }
+    const watermark = createInMemoryWatermarkStore(sinceSeq);
 
     const result = await pushNewAuditLinesToMirror({ servicePool: pool, target, watermark });
     console.info(

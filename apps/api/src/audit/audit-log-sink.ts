@@ -40,9 +40,22 @@ function sha256Hex(s: string): string {
   return createHash('sha256').update(s, 'utf8').digest('hex');
 }
 
-/** SHA-256 of the canonical-JSON of a non-secret context object (or '{}'). */
+/**
+ * SHA-256 of the canonical-JSON of a non-secret context object.
+ * Falls back to sha256Hex('{}') if the context is non-canonicalizable (e.g. contains
+ * a Date, Symbol, or BigInt), so the audit line is still written with a known-safe
+ * hash rather than being silently dropped.
+ */
 function hashContext(context: unknown): string {
-  return sha256Hex(canonicalJsonStringify(context ?? {}));
+  try {
+    return sha256Hex(canonicalJsonStringify(context ?? {}));
+  } catch (err) {
+    console.error(
+      '[audit-log-sink] context not canonicalizable, using {} hash fallback',
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+    );
+    return sha256Hex('{}');
+  }
 }
 
 /** HTTP-equivalent status for an auth event type. */
@@ -59,10 +72,13 @@ export function authEventToAuditInput(event: AuthAuditEvent): AuditEntryInput {
     // Admin auth is GLOBAL (pre-scope) — null pariwar maps to the nil sentinel.
     pariwarId: event.pariwarId ?? GLOBAL_AUDIT_PARIWAR,
     actorId: event.actorId,
-    actorRole:
-      typeof event.context?.['actorRole'] === 'string'
-        ? (event.context['actorRole'] as string)
-        : null,
+    actorRole: (() => {
+      const v = event.context?.['actorRole'];
+      // Guard: empty string fails the writer's min(1) and > 128 chars fails max(128).
+      // Both would cause writeAuditEntry to throw and drop the audit line silently.
+      if (typeof v !== 'string' || v.length === 0 || v.length > 128) return null;
+      return v;
+    })(),
     action: event.type, // already a dotted lowercase resource.action
     resourceLocator: `user:${event.actorId ?? 'anonymous'}`,
     requestPayloadHash: hashContext(event.context),
@@ -114,14 +130,22 @@ export function kmsEventToAuditInput(
   kekRef: KmsKeyRef,
   ctx: EncryptionContext,
 ): AuditEntryInput {
+  // Throw early on over-length locators (consistent with runAsCrossTenant P5 invariant):
+  // silent truncation would corrupt the hash-chain record of which key was used.
+  const resourceLocator = `kms:${kekRef.resourceName}/${ctx.fieldClass}${
+    ctx.rowKey ? `/${ctx.rowKey}` : ''
+  }`;
+  if (resourceLocator.length > 1024) {
+    throw new Error(
+      `kmsEventToAuditInput: resourceLocator would be ${resourceLocator.length} chars (max 1024) — shorten kekRef.resourceName or ctx.rowKey`,
+    );
+  }
   return {
     pariwarId: ctx.pariwarId,
     actorId: null, // system-level crypto op
     actorRole: null,
     action: KMS_OP_ACTION[op],
-    resourceLocator: `kms:${kekRef.resourceName}/${ctx.fieldClass}${
-      ctx.rowKey ? `/${ctx.rowKey}` : ''
-    }`.slice(0, 1024),
+    resourceLocator,
     requestPayloadHash: hashContext({
       op,
       fieldClass: ctx.fieldClass,

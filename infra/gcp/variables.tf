@@ -202,13 +202,13 @@ variable "audit_mirror_bucket_name" {
 }
 
 variable "audit_retention_seconds" {
-  description = "Audit-mirror retention period in seconds. Default 220752000 = 7 years (7*365*86400) per FR-47 + architecture §5.2. Validation band: 7 years minimum (the FR-47 floor) to 10 years."
+  description = "Audit-mirror retention period in seconds. Default 220924800 = 7 years (7*365*86400 + 2 leap days) per FR-47 + architecture §5.2. Using 7*365*86400 = 220752000 would land 1–2 days short of a calendar 7-year anniversary on leap-year spans. Validation band: 220924800 (worst-case 7 calendar years) to 315360000 (10 years)."
   type        = number
-  default     = 220752000
+  default     = 220924800
 
   validation {
-    condition     = var.audit_retention_seconds >= 220752000 && var.audit_retention_seconds <= 315360000
-    error_message = "audit_retention_seconds must be between 220752000 (7 years, FR-47 floor) and 315360000 (10 years)."
+    condition     = var.audit_retention_seconds >= 220924800 && var.audit_retention_seconds <= 315360000
+    error_message = "audit_retention_seconds must be between 220924800 (worst-case 7 calendar years including 2 leap days, FR-47 floor) and 315360000 (10 years)."
   }
 }
 

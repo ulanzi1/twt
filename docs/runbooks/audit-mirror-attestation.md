@@ -47,7 +47,7 @@ chain-verification primitive (`verifyChainSegment`) that Story 1.11a's job runs.
    ```sh
    gcloud storage buckets describe gs://<bucket> --project=twt-audit-mirror \
      --format="value(retentionPolicy.isLocked, retentionPolicy.retentionPeriod)"
-   # expect: True  220752000 (or greater)
+   # expect: True  220924800 (or greater)
    ```
 5. **Chain continuity.** Confirm the mirror is current: the latest segment
    object's `maxSeq` is within one mirror interval (6h) of the live chain tail,
@@ -69,7 +69,7 @@ Attestation is read-only — there is nothing to roll back. If any property FAIL
 
 ## 4. Verification checks
 
-- `retentionPolicy.isLocked == True` AND `retentionPeriod >= 220752000` (7y).
+- `retentionPolicy.isLocked == True` AND `retentionPeriod >= 220924800` (7 calendar years including 2 leap days, FR-47 floor).
 - Bucket objectCreator binding members == exactly `[audit-mirror-writer SA]`.
 - Zero primary↔mirror cross-project IAM bindings (both directions).
 - Latest mirrored segment within one 6h interval of the live `audit_log_entries`

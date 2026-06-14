@@ -48,6 +48,11 @@ export function canonicalJsonStringify(value: unknown): string {
       'canonicalJsonStringify: Date is not representable in JSON — convert to ISO string first',
     );
   }
+  if (typeof value === 'symbol') {
+    throw new TypeError(
+      'canonicalJsonStringify: Symbol is not representable in JSON (RFC 8785)',
+    );
+  }
   return canonicalize(value as CanonicalJsonValue);
 }
 
@@ -67,7 +72,25 @@ function canonicalize(value: CanonicalJsonValue): string {
   if (typeof value === 'string') return JSON.stringify(value);
 
   if (Array.isArray(value)) {
-    return '[' + value.map((v) => canonicalize(v)).join(',') + ']';
+    // Cast to unknown[] so the runtime guard for undefined array elements
+    // (which the CanonicalJsonValue[] type cannot express) can be applied.
+    return '[' + (value as unknown[]).map((v) => {
+      if (v === undefined) {
+        throw new TypeError('canonicalJsonStringify: undefined is not representable in JSON');
+      }
+      return canonicalize(v as CanonicalJsonValue);
+    }).join(',') + ']';
+  }
+
+  // Runtime guard for types that are non-serializable when nested inside objects.
+  // The top-level canonicalJsonStringify has guards for Date/Symbol/BigInt, but the
+  // recursive canonicalize bypasses them. Object.keys(new Date()) returns [], so a
+  // Date nested in an object would silently produce '{}' — distinct Dates would hash
+  // identically, a silent correctness defect in the hash chain.
+  if ((value as unknown) instanceof Date) {
+    throw new TypeError(
+      'canonicalJsonStringify: Date is not representable in JSON — convert to ISO string first',
+    );
   }
 
   // Object: sort keys lexicographically by UTF-16 code unit order per

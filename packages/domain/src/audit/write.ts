@@ -182,6 +182,13 @@ export async function writeAuditEntry(
     if (!row) {
       throw new Error('writeAuditEntry: INSERT returning produced no row');
     }
+    // seq is a bigint IDENTITY column read back as JS number (mode:'number').
+    // Precision is exact up to 2^53; assert the ceiling is not silently crossed.
+    if (row.seq > Number.MAX_SAFE_INTEGER) {
+      throw new Error(
+        `writeAuditEntry: seq ${row.seq} exceeds Number.MAX_SAFE_INTEGER — migrate schema to mode:'bigint' before this ceiling is reached`,
+      );
+    }
     await client.query('COMMIT');
     return row;
   } catch (err) {

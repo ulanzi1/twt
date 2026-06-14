@@ -1,6 +1,6 @@
 # Story 1.10: Tamper-Evident Audit Log + Hash Chain + 6h Off-Site Mirror
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -313,3 +313,107 @@ claude-opus-4-8 (Claude Opus 4.8) via bmad-dev-story workflow.
 
 - **Task 7 (wire producers):** Real `createAuditLogSink` + `createKmsAuditHook` (apps/api) map auth/KMS events → `writeAuditEntry` on a new `AppDeps.servicePool` (prod: separate BYPASSRLS `twt_service`-login via `SERVICE_DATABASE_URL`; dev/CI: reuses the app pool). Swapped in `createDeps` only — the test path (CapturingAuditSink, no KMS hook) is unchanged, so envelope/blind-index/auth unit tests stay sink-free. `runAsCrossTenant` re-keyed onto `audit_log_entries` with the W1-CR1.6 two-tx split. Verified: workspace typecheck green; domain suite 196/1-skip green (incl. re-keyed cross-tenant); apps/api 10 new mapping unit tests green; **zero new apps/api regressions** (the 3 admin-auth fails are pre-existing on main — see Task 7 note).
 - **Task 8 (mirror + IaC):** `apps/jobs/src/audit/{mirror,gcs-mirror-target,cli}.ts` — `pushNewAuditLinesToMirror` + `MirrorTarget`/`WatermarkStore` ports + in-memory fakes + GCS adapter (`MIRROR_MODE` fake|live, dynamic GCS import). Append-only seq-encoded segment objects; no-overwrite enforced. 5 mirror tests green (incl. live-DB push/watermark/idempotency). `infra/gcp/audit-mirror.tf` commits the separate-project WORM bucket + write-only SA + authoritative objectCreator binding (AC-4), `enable_retention_lock` default-false irreversibility guard; README + variables updated; `docs/runbooks/audit-mirror-attestation.md` for §2.10a. Live apply + pg-boss 6h cron deferred. Full `lint typecheck build` 42/42 green.
+
+### Review Findings
+
+> Code review of domain layer chunk (2026-06-14). 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. 9 dismissed as noise/by-design.
+
+- [x] [Review][Patch] `runAsCrossTenant` two-audit split: pre-audit with `responseStatus: 102`, outcome audit with actual status — Decision: option 2. Write `responseStatus: 102` (Processing) in the pre-audit; after `fn()` resolves or throws, write a best-effort outcome audit with `200` (success) or `500` (exception). Outcome audit uses `.catch(() => undefined)` so it never suppresses the original error. [`packages/domain/src/cross-tenant/run-as-cross-tenant.ts`] ✅ Applied
+
+- [x] [Review][Patch] `seq` precision loss above 2^53 — `bigint('seq', { mode: 'number' })` silently loses precision when seq exceeds `Number.MAX_SAFE_INTEGER`. Added runtime assertion in `writeAuditEntry` after the RETURNING clause: throws with migration guidance. [`packages/domain/src/audit/write.ts`] ✅ Applied
+
+- [x] [Review][Patch] `canonicalJsonStringify` throws opaque TypeError on Symbol — Added `typeof value === 'symbol'` guard with clear message, matching the BigInt treatment. [`packages/domain/src/canonical-json.ts`] ✅ Applied
+
+- [x] [Review][Patch] `canonicalize()` throws confusing TypeError on `undefined` inside an array — Added undefined guard in the array-branch map with cast to `unknown[]`. [`packages/domain/src/canonical-json.ts`] ✅ Applied
+
+- [x] [Review][Patch] `resourceLocator` silently truncated mid-UUID when `pariwarIds` list is long — Changed to throw when constructed string exceeds 1024 chars, with byte-count and guidance in the error message. [`packages/domain/src/cross-tenant/run-as-cross-tenant.ts`] ✅ Applied
+
+- [x] [Review][Defer] `canonical-context.ts` is a second hand-rolled RFC 8785 implementation inside `@twt/domain` post-DD-1 — explicitly deferred in Task 1.4 (asymmetric risk: re-deriving AES-GCM AAD bytes risks making stored Tier-1/Tier-2 PII undecryptable). [`packages/domain/src/encryption/canonical-context.ts`] — deferred, pre-existing
+
+- [x] [Review][Defer] `verifyChainSegment` single-row non-genesis segment has no programmatic signal that predecessor linkage is unverified — callers get `chainValid: true` but cannot distinguish "clean segment" from "content-verified, predecessor gap possible". A `predecessorLinkageVerified` field on `ChainVerificationResult` would close this for 1.11a. [`packages/domain/src/audit/hash-chain.ts`] — deferred, pre-existing
+
+- [x] [Review][Defer] `timestamptz` ISO round-trip byte-stable only within JS/node-postgres — pg truncates microseconds to milliseconds; a future cross-language verifier (Go, Python) formatting `2023-11-14T22:13:20.123000Z` would fail every hash check. Millisecond-precision contract should be pinned in ADR-0004. [`packages/domain/src/audit/hash-chain.ts:auditRowDigestInput`] — deferred, pre-existing
+
+- [x] [Review][Defer] Nil UUID (`00000000-...`) not rejected by `auditEntryInputSchema` for non-sentinel callers — a real pariwar provisioned with the nil UUID would see all cross-tenant sentinel audit rows via RLS. Fix belongs at the pariwar provisioning layer, not the audit boundary. [`packages/domain/src/audit/write.ts:auditEntryInputSchema`] — deferred, pre-existing
+
+- [x] [Review][Defer] `Function` values in object properties silently serialize as `'{}'` in `canonicalJsonStringify`, diverging from `JSON.stringify` (which omits them) — no current caller exercises this path. [`packages/domain/src/canonical-json.ts:canonicalize()`] — deferred, pre-existing
+
+> Contracts + OpenAPI chunk (2026-06-14). 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. 4 dismissed as false positives/by-design; 3 patched; 2 deferred.
+
+- [x] [Review][Patch] `responseStatus` missing bounds in `AuditLogEntryContract` — `z.number().int()` accepts any integer; the domain writer enforces `min(100).max(599)`. Contract should reflect the invariant for tamper-detection at parse boundary. Added `.min(100).max(599)`; regenerated `openapi/v1.yaml` (picks up `minimum: 100, maximum: 599` automatically). [`packages/contracts/src/audit/audit-log-entry.ts:49`] ✅ Applied
+
+- [x] [Review][Patch] `seq: 0` not tested — `z.number().int().min(1)` constraint was untested with a below-floor value. Added rejection test. [`packages/contracts/tests/audit.test.ts`] ✅ Applied
+
+- [x] [Review][Patch] Optional fields only tested as null — `actorId`, `actorRole`, `traceId` had no positive test for non-null values. Added parse test asserting all three non-null fields are accepted and round-trip correctly. [`packages/contracts/tests/audit.test.ts`] ✅ Applied
+
+- [x] [Review][False Positive] OAS 3.1 `format: uuid` alongside `type: [string, "null"]` — valid per JSON Schema 2020-12; format applies to string instances, is ignored for null; Blind Hunter flagged incorrectly
+
+- [x] [Review][False Positive] Type-assignability assertion `pariwarId` cast — `as AuditLogEntryRow['pariwarId']` is correct; branded `PariwarId extends string` satisfies the unbranded contract field; direction is architecture-canonical (§1.3 L787-790)
+
+- [x] [Review][False Positive] No chain-linkage test in contract tests — contract is stateless (per-entry parse); chain verification is `verifyChainSegment`'s domain (domain tests cover it)
+
+- [x] [Review][False Positive] `additionalProperties: false` dropped by emitter — not dropped; `@asteasolutions/zod-to-openapi` preserves `.strict()` as `additionalProperties: false`; confirmed in emitted yaml
+
+- [x] [Review][Defer] Hash field format not constrained in contract (`requestPayloadHash`, `auditHash`, `prevAuditHash` accept any `min(1)` string) — writer enforces `/^[0-9a-f]{64}$/i` at the write boundary; read contract intentionally permissive. Cross-language chain verifiers need the format pinned. **Trigger: Story 1.11a cross-language verifier / ADR-0004 amendment.** → CR-D6-1.10
+
+- [x] [Review][Defer] `seq` missing `format: int64` in OpenAPI component — emitter emits `type: integer` with no format; code generators default to `int32` (max ~2.1B vs actual ceiling ~9×10¹⁵). **Trigger: Story 1.11b client SDK generation.** → CR-D7-1.10
+
+> API layer chunk (2026-06-14). 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. All AC-7 / DD-3 / D2-1.9 / D10-1.5 PASS; 4 false-positive dismissals; 5 patches applied; 1 deferred.
+
+- [x] [Review][Patch] Nested `Date` in `canonicalize()` silently produces `'{}'` — `Object.keys(new Date())` returns `[]`; two different Dates in object properties produce identical hashes. Added `instanceof Date` guard before the object branch (consistent with top-level guard wording). [`packages/domain/src/canonical-json.ts:canonicalize()`] ✅ Applied
+
+- [x] [Review][Patch] `hashContext` throws on non-canonicalizable context → entire audit line silently dropped — now catches `TypeError`, logs a structured error, and falls back to `sha256Hex('{}')` so the audit line is still written. [`apps/api/src/audit/audit-log-sink.ts:hashContext`] ✅ Applied
+
+- [x] [Review][Patch] `actorRole: ''` (empty string from context) fails Zod `min(1)` at write boundary → silent audit line drop — added guards: `typeof v !== 'string' || v.length === 0 || v.length > 128 → null`. [`apps/api/src/audit/audit-log-sink.ts:authEventToAuditInput`] ✅ Applied
+
+- [x] [Review][Patch] `kmsEventToAuditInput` silently truncates `resourceLocator` with `.slice(0, 1024)` — domain P5 invariant (`runAsCrossTenant`) established throw-not-truncate; silent truncation corrupts the audit record of which key was used. Changed to throw with byte-count and guidance. [`apps/api/src/audit/audit-log-sink.ts:kmsEventToAuditInput`] ✅ Applied
+
+- [x] [Review][Patch] No test for `rowKey`-absent KMS locator — missing branch confirming no stray `/undefined` or `/null` segment. Added test asserting `resourceLocator = 'kms:fake:admin-kek/admin_email'`. [`apps/api/tests/unit/audit-log-sink.test.ts`] ✅ Applied
+
+- [x] [Review][False Positive] `login.logout` → `statusForAuthEvent` returns 200 — correct; logout is a successful operation, 200 is the HTTP-equivalent
+- [x] [Review][False Positive] Fire-and-forget vs two-audit split — auth sink events are retrospective (record what already happened); two-phase split is only needed for `runAsCrossTenant` (pre-authorizes a future RLS-bypassed op). Fire-and-forget appropriate here.
+- [x] [Review][False Positive] `servicePool` leak — `endPools()` in index.ts correctly guards all exit paths; test harness sets `servicePool: pool` (same ref)
+- [x] [Review][False Positive] `createDb().db` discarded — no consequence; the `pool.on('error')` handler is attached to the pool object before return; `writeAuditEntry` creates its own per-call Drizzle instance
+
+- [x] [Review][Defer] Non-UUID `actorId` string causes silent audit write failure — `AuthAuditEvent.actorId` is `string | null` with no UUID constraint; all current callers pass UUIDs, but a future caller with a non-UUID string would fail Zod at the writer and drop the line. **Trigger: any non-UUID auth actor introduction.** → CR-D8-1.10
+
+> Jobs chunk (2026-06-14). 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. All AC-3/AC-4/DD-1/DD-5 PASS; 4 patches applied; 2 deferred; several false positives confirmed safe.
+
+- [x] [Review][Patch] Permanent 412 wedge — in-memory watermark resets on every process start; second CLI invocation recomputes same `objectName` → 412 → stuck forever. Added `isAlreadyExistsError` helper and idempotent-already-exists handling in `pushNewAuditLinesToMirror`: "already exists" is treated as a deterministic idempotent success (same sinceSeq → same rows → same canonical bytes → same object), watermark still advances. [`apps/jobs/src/audit/mirror.ts`] ✅ Applied
+
+- [x] [Review][Patch] `getBucket` permanently caches a rejected promise — transient GCS init error (bad credentials, import failure) permanently breaks the target. Added `.catch(() => { bucketPromise = null; })` so the next `putObject` call retries the init. [`apps/jobs/src/audit/gcs-mirror-target.ts:getBucket`] ✅ Applied
+
+- [x] [Review][Patch] `AUDIT_MIRROR_SINCE_SEQ` validation too lenient — floats (1.5), scientific notation (1e20), and `''` were accepted silently or incorrectly. Changed to: use `||` to treat `''` same as absent, then validate `Number.isInteger && >= 0 && <= MAX_SAFE_INTEGER`; throw on invalid values. [`apps/jobs/src/audit/cli.ts`] ✅ Applied
+
+- [x] [Review][Patch] `batchLimit: 0` silently produces `LIMIT 0` → zero rows → watermark never advances. Added guard: throw if `batchLimit <= 0`. [`apps/jobs/src/audit/mirror.ts:pushNewAuditLinesToMirror`] ✅ Applied
+
+- [x] [Review][False Positive] GCS lazy init double-init race — not possible; JavaScript single-threaded event loop means the `if (!bucketPromise)` check and assignment are synchronous; no two callers can interleave them
+- [x] [Review][False Positive] `PariwarId` brand in `serializeRow` — phantom type only; at runtime it's a plain string; `canonicalJsonStringify` serializes it correctly
+- [x] [Review][False Positive] `padSeq(20)` insufficient — `Number.MAX_SAFE_INTEGER` is 16 digits; 20-char padding is correct for all representable values (writeAuditEntry throws before seq exceeds MAX_SAFE_INTEGER)
+
+- [x] [Review][Defer] `recordedAt` → ISO string in JSONL; Story 1.11a verifier must reconstitute a `Date` before calling `verifyChainSegment` — undocumented runtime contract between mirror producer and chain verifier. **Trigger: Story 1.11a integrity-check job implementation.** → CR-D10-1.10
+
+- [x] [Review][Defer] Seq gaps in segment files — PostgreSQL IDENTITY sequences are not gap-free (rolled-back txns burn seqs); segment files may span non-contiguous seqs. Story 1.11a verifier must not infer missing rows from segment-name gaps. **Trigger: Story 1.11a spec / verifier implementation.** → CR-D11-1.10
+
+> IaC + Events chunk (2026-06-14). 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. All 8 AC checks PASS (separate project, write-only credential, overwrite blocked, 7y retention, live apply deferred, events shim correct, §2.10a isolation commitments, prevent_destroy + lock irreversibility documented). 2 patches applied; 6 false positives dismissed; 2 deferred.
+
+- [x] [Review][Patch] `audit_retention_seconds` floor 1–2 days short — `7*365*86400 = 220752000` ignores leap years; a 7-year window spanning 2 leap years lands on the 7-year anniversary minus 2 days. Changed default and validation floor to `220924800` (7×365×86400 + 2 leap days = worst-case 7 calendar years). [`infra/gcp/variables.tf:audit_retention_seconds`] ✅ Applied
+
+- [x] [Review][Patch] Google provider pin `~> 5.0` too broad for `enable_object_retention` — attribute added in hashicorp/google 5.10.0; operators running 5.0–5.9 hit `An argument named "enable_object_retention" is not expected here` at plan time. Tightened to `>= 5.10, < 6.0`. [`infra/gcp/versions.tf`] ✅ Applied
+
+- [x] [Review][False Positive] Events shim backward compat — `@twt/domain` public `index.ts` exports both `canonicalJsonStringify` (value) and `CanonicalJsonValue` (type); shim re-exports are valid; `packages/events/src/index.ts` re-exports from the shim; full two-hop chain intact; 10 canonical-json tests pass through the shim
+- [x] [Review][False Positive] Events behavioral parity — old events impl also threw on Symbol (native TypeError via Object.keys), undefined-in-array (native TypeError), and top-level Date; domain impl is strictly more explicit; no caller relied on lenient behavior; no regression
+- [x] [Review][False Positive] `coalesce()` with empty bucket name — Terraform coalesce skips empty string same as null; `coalesce("", "twt-audit-mirror-${environment}")` correctly falls through to the default
+- [x] [Review][False Positive] IAM binding `provider` attribute — `provider = google.audit_mirror` is required on `google_storage_bucket_iam_binding`; without it Terraform uses the primary project provider, which lacks authorization on the mirror-project bucket
+- [x] [Review][False Positive] `enable_object_retention` + `retention_policy` coexistence — two distinct GCS features: `enable_object_retention` enables per-object WORM, `retention_policy` enforces a bucket-wide minimum retention period; both can coexist and the combination gives defense-in-depth per §5.2
+- [x] [Review][False Positive] IAM binding authoritative gap window — `_iam_binding` is intentional (AC-4: purges any drifted-in principals on apply); 6h push cadence means a brief re-apply gap is detectable at the next mirror run; accepted per AC-4 posture
+
+- [x] [Review][Defer] `prevent_destroy = true` unconditional on all environments — Terraform `lifecycle` blocks cannot be conditioned on input variables; same pattern as KMS resources in this repo. In dev/staging a `terraform destroy` requires removing the block from source. Operator escape-hatch documented as known obligation (same as KMS). **No code change available in HCL; document in runbook.** → CR-D12-1.10
+
+- [x] [Review][Defer] Same region for mirror and primary (`var.region` defaulting to `asia-south1`) — reduces DR value if a regional GCS outage affects both. No `audit_mirror_region` variable to decouple. Acceptable for v1 (architecture §5.1 freezes asia-south1). **Trigger: Story 1.15 staging/prod expansion.** → CR-D13-1.10
+
+> Docs chunk (2026-06-14). Inline review (108 lines, 2 files). 1 patch; 1 false positive dismissed; ADR-0004 amendment and attestation runbook both accurate.
+
+- [x] [Review][Patch] Runbook referenced stale `220752000` floor in two places (step 4 gcloud comment + §4 verification checks) — P1-E raised the floor to `220924800`; both occurrences updated. [`docs/runbooks/audit-mirror-attestation.md:50,72`] ✅ Applied
+
+- [x] [Review][False Positive] ADR-0004 amendment accuracy — correctly describes the DD-1 move: implementation at `packages/domain/src/canonical-json.ts`, authoritative tests at `packages/domain/tests/canonical-json.test.ts` (confirmed exists), shim at `packages/events/src/canonical-json.ts`, `encryption/canonical-context.ts` correctly distinguished as a scoped AAD helper not a second canonicalizer. No issues found.

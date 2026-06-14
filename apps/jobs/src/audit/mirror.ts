@@ -65,6 +65,21 @@ export interface MirrorResult {
 /** Default per-run batch ceiling (bounded memory; the next run picks up the rest). */
 const DEFAULT_BATCH_LIMIT = 5000;
 
+/**
+ * Returns true when `err` indicates the target object already exists.
+ * Used to treat "already exists" as idempotent: since `serializeRow` +
+ * `canonicalJsonStringify` are deterministic, the same `sinceSeq` always
+ * produces the same bytes for the same row set. This recovers from:
+ *   - process crash between putObject and setLastMirroredSeq
+ *   - concurrent runs seeded from the same watermark
+ *   - repeated CLI invocations without updating AUDIT_MIRROR_SINCE_SEQ
+ */
+function isAlreadyExistsError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if ((err as { code?: unknown }).code === 412) return true; // GCS ifGenerationMatch:0
+  return err.message.includes('already exists');
+}
+
 /** Zero-pad a seq for lexically-sortable, fixed-width object names. */
 function padSeq(seq: number): string {
   return String(seq).padStart(20, '0');
@@ -102,6 +117,11 @@ export async function pushNewAuditLinesToMirror(opts: {
   watermark: WatermarkStore;
   batchLimit?: number;
 }): Promise<MirrorResult> {
+  const batchLimit = opts.batchLimit ?? DEFAULT_BATCH_LIMIT;
+  if (batchLimit <= 0) {
+    throw new Error(`pushNewAuditLinesToMirror: batchLimit must be > 0, got ${batchLimit}`);
+  }
+
   const sinceSeq = await opts.watermark.getLastMirroredSeq();
   const db = drizzle(opts.servicePool, { schema }) as unknown as Db;
 
@@ -110,7 +130,7 @@ export async function pushNewAuditLinesToMirror(opts: {
     .from(schema.auditLogEntries)
     .where(gt(schema.auditLogEntries.seq, sinceSeq))
     .orderBy(asc(schema.auditLogEntries.seq))
-    .limit(opts.batchLimit ?? DEFAULT_BATCH_LIMIT);
+    .limit(batchLimit);
 
   if (rows.length === 0) {
     return { pushedCount: 0, fromSeq: sinceSeq, toSeq: sinceSeq, objectName: null };
@@ -121,7 +141,17 @@ export async function pushNewAuditLinesToMirror(opts: {
   const objectName = `audit/segment-${padSeq(minSeq)}-${padSeq(maxSeq)}.jsonl`;
   const body = Buffer.from(rows.map(serializeRow).join('\n') + '\n', 'utf-8');
 
-  await opts.target.putObject(objectName, body);
+  try {
+    await opts.target.putObject(objectName, body);
+  } catch (err) {
+    if (!isAlreadyExistsError(err)) throw err;
+    // Deterministic serialization: same sinceSeq → same row query → same canonical bytes.
+    // Advance the watermark so the next run queries rows beyond maxSeq.
+    console.warn(
+      '[audit-mirror] segment already exists — idempotent watermark advance',
+      JSON.stringify({ objectName }),
+    );
+  }
   await opts.watermark.setLastMirroredSeq(maxSeq);
 
   return { pushedCount: rows.length, fromSeq: sinceSeq, toSeq: maxSeq, objectName };

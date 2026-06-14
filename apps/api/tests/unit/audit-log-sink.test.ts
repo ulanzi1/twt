@@ -104,6 +104,14 @@ describe('kmsEventToAuditInput', () => {
     expect(input.resourceLocator).toContain('fake:admin-kek');
     expect(input.resourceLocator).toContain('admin_email');
   });
+
+  it('omits rowKey segment when absent — no stray /undefined or /null in locator', () => {
+    const ctxNoRowKey = { pariwarId: A_UUID, fieldClass: 'admin_email' };
+    const input = kmsEventToAuditInput('computeHmac', kekRef, ctxNoRowKey);
+    expect(input.resourceLocator).toBe('kms:fake:admin-kek/admin_email');
+    expect(input.resourceLocator).not.toContain('undefined');
+    expect(input.resourceLocator).not.toContain('null');
+  });
 });
 
 describe('createAuditLogSink / createKmsAuditHook (never throw into the request path)', () => {
@@ -114,7 +122,9 @@ describe('createAuditLogSink / createKmsAuditHook (never throw into the request 
 
   it('sink.emit does not throw when the context is not canonical-JSON-representable', () => {
     const sink = createAuditLogSink(failingPool);
-    // A Date in context would throw inside canonicalJsonStringify — the sink must swallow it.
+    // A Date nested in context throws inside canonicalJsonStringify (recursive Date guard);
+    // hashContext catches it and falls back to sha256Hex('{}') so the audit line is still
+    // attempted (and then fails at the DB write, which the .catch handler absorbs).
     expect(() => sink.emit(evt({ context: { when: new Date() } }))).not.toThrow();
   });
 

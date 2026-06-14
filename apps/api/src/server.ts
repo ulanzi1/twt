@@ -21,6 +21,7 @@ import type { AppDeps } from './context.js';
 import { registerHealthRoutes } from './health.js';
 import { errorMappingHandler } from './middleware/error-mapping/index.js';
 import { requestContextHook } from './middleware/request-context/index.js';
+import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
@@ -68,6 +69,8 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   registerHealthRoutes(app, deps);
   registerMultiTenant(app, deps);
   registerAdminAuthModule(app, deps);
+  // Story 1.11a — global on-demand audit-integrity verification endpoint.
+  registerAuditLogModule(app, deps);
 
   await app.ready();
   return app;

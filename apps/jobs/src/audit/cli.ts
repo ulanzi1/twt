@@ -19,6 +19,11 @@
 
 import { createDb, resolveConnectionString } from '@twt/domain';
 
+import { verifyAuditChain } from './integrity-check.js';
+import {
+  resolveIntegrityAlerterFromEnv,
+  resolveIntegritySinkFromEnv,
+} from './integrity-observability.js';
 import {
   createInMemoryWatermarkStore,
   pushNewAuditLinesToMirror,
@@ -55,6 +60,30 @@ async function main(): Promise<void> {
         objectName: result.objectName,
       }),
     );
+
+    // Post-mirror integrity hook (Story 1.11a Task 8 / AC-2c): after every mirror
+    // push, walk the chain and record a verdict. Wired HERE in the entrypoint —
+    // the pure `pushNewAuditLinesToMirror` stays uncoupled from the checker. The
+    // 6h cadence itself rides whatever invokes the mirror (pg-boss → Story 1.12).
+    const integrity = await verifyAuditChain({
+      servicePool: pool,
+      sink: resolveIntegritySinkFromEnv(),
+      alerter: resolveIntegrityAlerterFromEnv(),
+      verifierActor: 'post-mirror',
+      triggerSource: 'post_mirror',
+    });
+    console.info(
+      '[audit-integrity] post-mirror',
+      JSON.stringify({
+        checkId: integrity.checkId,
+        chainValid: integrity.chainValid,
+        rowsVerified: integrity.rowsVerified,
+        firstBrokenSeq: integrity.firstBrokenSeq,
+      }),
+    );
+    // A broken chain detected post-mirror is a non-zero exit so the scheduler
+    // sees the failure (consistent with integrity-cli.ts; Decision D1-1.11a).
+    if (!integrity.chainValid) process.exitCode = 1;
   } finally {
     await pool.end().catch(() => undefined);
   }

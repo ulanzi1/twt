@@ -4,6 +4,46 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Story 1.11a deferred + discharged (substrate author-commit, 2026-06-14 per Decision 2026-06-14-047)
+
+Closure-language posture per [[feedback_closure_language_precision]]: an item is **Closed by [edit]** only where this story produced the artifact; future-Story / future-environment seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).
+
+**Discharged by Story 1.11a (Closed by [edit]) — the inherited 1.10 → 1.11a landmines:**
+- **CR-D2-1.10: chunk-boundary / head-truncation blind spot in per-chunk verification** — the integrity walk (`apps/jobs/src/audit/integrity-check.ts`) closes it at the JOB level WITHOUT changing `verifyChainSegment`: a **genesis anchor** (the lowest-seq row of the whole chain must have `prevAuditHash === null`) + a **cross-chunk stitch** (carry the prior chunk's last `auditHash`; assert `chunk[0].prevAuditHash === carriedPrevHash` before each non-first `verifyChainSegment`). Proven by deterministic pure unit tests (boundary deletion + head-truncation) in `apps/jobs/tests/audit/integrity-check.test.ts`. **Closed by [edit]** (Tasks 5.2/5.3/11.1).
+- **CR-D11-1.10: seq gaps are benign** — the walk pages with `seq > cursor` and links rows by `auditHash`, NEVER by seq contiguity; a forged `[1,5,9,100]` chain verifies as valid (gap-tolerance unit test). **Closed by [edit]** (Task 5.4/11.1).
+- **CR-D10-1.10: mirror-JSONL `recordedAt` is a string** — the v1 hot-DB reader returns a `Date` (no reconstitution needed); the walk is written SOURCE-AGNOSTIC and the future cold-mirror JSONL reader's `new Date(...)` reconstitution requirement is documented in the integrity-check header. **Closed by [edit]** (the producer-consumer contract is now documented; the JSONL reader itself is deferred — see DD-1 below).
+
+**Newly opened (Resolved via explicit deferral):**
+- **D1-1.11a: verify-from-COLD-MIRROR in a separate GCP project** — v1 walks the HOT Postgres chain via the service pool (DD-1); the architecture's ideal (read the cold GCS mirror from a separate-project read SA in its own execution environment, §1.5 L850-853 / §2.10) is a NEW `ChunkReader`, not a rewrite. **Re-trigger:** live GCS mirror apply (D1-1.10) + the §5.6 audit-read stack land. (`apps/jobs/src/audit/integrity-check.ts:ChunkReader`)
+- **D2-1.11a: live observability sink + alert-policy wiring** — DD-5 ships provider-fluid `IntegrityObservabilitySink` / `IntegrityAlerter` ports + structured-log fakes; `INTEGRITY_OBSERVABILITY_MODE=live` fails closed. **Re-trigger:** Category 5 (§5.6 Cloud Monitoring / Grafana+Loki + the chain-break alert threshold). (`apps/jobs/src/audit/integrity-observability.ts`)
+- **D3-1.11a: prod-pointed nightly run + canonical cron** — `.github/workflows/nightly-integrity.yml` runs the synthetic-tamper gate + a walk against a seeded CI DB (mechanism proof). The prod run against the live chain from a separate execution environment + the canonical pg-boss/Cloud-Scheduler cron of all three triggers are deferred. **Re-trigger:** Story 1.12 (pg-boss job queue; D2-1.10) + prod `SERVICE_DATABASE_URL` + separate-project creds (§2.10).
+- **D4-1.11a: RBAC `audit.verify` gate upgrade for the on-demand endpoint** — `POST /api/v1/audit/verify-integrity` gates on `requireAdminSession` ONLY; `requirePermissionHook` needs `request.scopeTx` (set from `/:pariwarId/`), which a GLOBAL route lacks → it hard-throws 500. The `audit.verify` permission key exists (Story 1.8). **Re-trigger:** a global-scope preHandler that loads national-scope grants without a `:pariwarId` param. (`apps/api/src/modules/audit-log/index.ts`)
+- **D5-1.11a: optional `predecessorLinkageVerified` field on `ChainVerificationResult`** — NOT taken; the job-level stitch closes CR-D2-1.10 with lower blast radius than a pure-function signature change. **Re-trigger:** a caller that needs the per-segment linkage signal directly from `verifyChainSegment`. (`packages/domain/src/audit/hash-chain.ts`)
+
+**Remain deferred (NOT pulled in):** CR-D3-1.10 (ms-precision ISO contract → ADR-0004) + CR-D6-1.10 (64-char-lowercase-hex format pin → ADR-0004 / 1.11b SDK gen) are load-bearing only for a non-JS verifier or an SDK client; v1 is JS-only, so they are noted and left deferred (no gold-plating). CR-D7-1.10 (`seq` `format: int64` in OpenAPI) → Story 1.11b client SDK gen.
+
+---
+
+## Deferred from: code review of 1-11a-audit-log-integrity-verification-primitive — Group 3 (2026-06-14)
+
+- **`AuditIntegrityCheckResult` has no cross-field constraint: `rowsVerified > 0 → endSeq IS NOT NULL`** — the implementation of `verifyChainWalk` upholds this invariant (lastGood is always set if any rows verify), but neither the Zod schema nor the DB CHECK constraints enforce it. Re-trigger: if a future audit-client needs contract-level enforcement; a `z.refine` or sixth CHECK constraint in migration 0010 would close it. (`packages/contracts/src/audit/integrity-check.ts`, `packages/domain/migrations/0010_audit-integrity-checks-invariants.sql`)
+- **`triggerSource` wire type is `z.string()` not a Zod enum** — intentional: Drizzle `text` column is `string`, which would not extend a `z.union(['cron','on_demand','post_mirror'])` type. Valid values documented in schema comment. Re-trigger: when the contracts layer adds a shared `TriggerSource` type that both the domain schema and the contract can reference. (`packages/contracts/src/audit/integrity-check.ts`)
+- **Sink and alerter resolved separately at route registration** — two calls to `resolveIntegrity*FromEnv()` read the same env var independently; combining into a single `resolveIntegrityObservabilityFromEnv() → { sink, alerter }` makes the coupled read explicit. Re-trigger: when adding a live observability adapter (D2-1.11a). (`apps/api/src/modules/audit-log/index.ts:52-53`)
+
+## Deferred from: code review of 1-11a-audit-log-integrity-verification-primitive — Group 2 (2026-06-14)
+
+- **`bigint mode:'number'` precision for seq columns in `audit_integrity_checks` schema** — `startSeq`, `endSeq`, `firstBrokenSeq` use `mode:'number'` (IEEE-754 float, safe to 2^53). Matches the existing `audit_log_entries.seq` pattern. Theoretical at any realistic chain length. Re-trigger: if the codebase migrates seq columns to `mode:'bigint'` globally. (`packages/domain/src/schema/audit_integrity_checks.ts`)
+- **`rows_verified` integer overflow at 2^31 rows** — `rows_verified` is `integer` (max ~2.1B). A full-chain walk on a mature chain at scale could overflow. Re-trigger: if `rows_verified` is expected to approach 2B in a single run (would require years of high-frequency writes). (`packages/domain/src/schema/audit_integrity_checks.ts`)
+- **No `CHECK` constraint on `trigger_source` vocabulary** — `trigger_source` is free-text `NOT NULL`; valid values are `cron|on_demand|post_mirror`. A CHECK or enum would catch caller bugs. Re-trigger: when `trigger_source` vocabulary is ADR-stable and no new values are expected. (`packages/domain/src/schema/audit_integrity_checks.ts`)
+
+## Deferred from: code review of 1-11a-audit-log-integrity-verification-primitive (2026-06-14)
+
+- **No transactional atomicity between verdict INSERT and sink.publish on `servicePool` path** — `verifyAuditChain` commits the verdict row, then calls `sink.publish`; if publish throws the verdict is committed but observability is lost. Only matters with a live adapter (Category 5). Re-trigger: D2-1.11a (live sink landing). (`apps/jobs/src/audit/integrity-check.ts:285-296`)
+- **Point-in-time staleness of `endSeq` on `servicePool` path** — new rows may be appended between the last chunk read and the verdict INSERT, so `endSeq` reflects the chain tail at walk-time, not at persist-time. Inherent to non-transactional walk design; endSeq is "what was verified," not "current tail." Re-trigger: if a future requirement needs the verdict to reflect the atomic chain state at insert time. (`apps/jobs/src/audit/integrity-check.ts:269`)
+- **`createInMemoryChunkReader` drops second row if two rows share seq** — test-only helper; IDENTITY seq makes production duplicates impossible. Re-trigger: if in-memory reader is ever used for data with non-unique seq. (`apps/jobs/src/audit/integrity-check.ts:227-232`)
+
+---
+
 ## Story 1.9 deferred + discharged (substrate author-commit, 2026-06-12 per Decision 2026-06-12-045)
 
 Closure-language posture per [[feedback_closure_language_precision]]: the apps/api-landing cluster is **Closed by [edit]** (the work directly produced the artifact); future-Story seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).

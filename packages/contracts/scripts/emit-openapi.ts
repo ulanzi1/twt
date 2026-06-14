@@ -45,7 +45,11 @@ const { PermissionKeySchema, PermissionCatalogSchema } = await import(
 const { RoleBundleSchema, RoleGrantSchema } = await import('../src/rbac/roles.js');
 // Story 1.10 — audit-log transport contract. Component/schema only (no paths):
 // the tenant-scoped audit READ endpoints land at Story 1.11b (mirror 1.7/1.8).
-const { AuditLogEntryContract } = await import('../src/audit/index.js');
+// Story 1.11a — the on-demand integrity-verification request + verdict-result.
+// This DOES register a real `path` (POST /api/v1/audit/verify-integrity) because
+// apps/api serves it now; the verdict READ surface is still Story 1.11b.
+const { AuditLogEntryContract, AuditIntegrityCheckRequest, AuditIntegrityCheckResult } =
+  await import('../src/audit/index.js');
 // Story 1.9 — admin-auth transport contracts. THE FIRST REAL `paths` (Stories
 // 1.4/1.7/1.8 registered components-only). apps/api now serves these routes.
 const {
@@ -88,6 +92,13 @@ const RoleGrantComponent = RoleGrantSchema.openapi('RoleGrant');
 
 // Story 1.10 — audit-log-entry component schema.
 const AuditLogEntryComponent = AuditLogEntryContract.openapi('AuditLogEntry');
+// Story 1.11a — integrity-verification request + verdict-result component schemas.
+const AuditIntegrityCheckRequestComponent = AuditIntegrityCheckRequest.openapi(
+  'AuditIntegrityCheckRequest',
+);
+const AuditIntegrityCheckResultComponent = AuditIntegrityCheckResult.openapi(
+  'AuditIntegrityCheckResult',
+);
 
 // Story 1.9 — admin-auth component schemas (request + response objects).
 const authComponents = {
@@ -124,6 +135,9 @@ registry.register('RoleBundle', RoleBundleComponent);
 registry.register('RoleGrant', RoleGrantComponent);
 // Story 1.10 — audit-log-entry component (no path; reads are Story 1.11b).
 registry.register('AuditLogEntry', AuditLogEntryComponent);
+// Story 1.11a — integrity-verification request + verdict-result components.
+registry.register('AuditIntegrityCheckRequest', AuditIntegrityCheckRequestComponent);
+registry.register('AuditIntegrityCheckResult', AuditIntegrityCheckResultComponent);
 
 // Story 1.9 — register the admin-auth components.
 for (const [name, schema] of Object.entries(authComponents)) {
@@ -214,6 +228,35 @@ registry.registerPath({
     204: { description: 'Session destroyed' },
     401: errorResponse('No authenticated session'),
     403: errorResponse('CSRF token missing or invalid'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 1.11a — on-demand audit-integrity verification (GLOBAL) ─────────────
+// POST /api/v1/audit/verify-integrity. GLOBAL (not under /p/:pariwarId/ — the
+// audit chain is one global chain). Gated on an authenticated admin session
+// (apps/api requireAdminSession); the full RBAC `audit.verify` gate graduates
+// when a global-scope preHandler exists (deferred-work). The verdict READ surface
+// (list/inspect prior checks) is Story 1.11b.
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/audit/verify-integrity',
+  summary: 'On-demand audit-log integrity verification (walk the global hash chain)',
+  description:
+    'Walks the entire global audit hash chain, records a verdict to ' +
+    'audit_integrity_checks, and returns it. Requires an authenticated admin session.',
+  tags: ['audit'],
+  request: {
+    body: {
+      content: { 'application/json': { schema: AuditIntegrityCheckRequestComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'Integrity-check verdict',
+      content: { 'application/json': { schema: AuditIntegrityCheckResultComponent } },
+    },
+    401: errorResponse('Authentication required'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

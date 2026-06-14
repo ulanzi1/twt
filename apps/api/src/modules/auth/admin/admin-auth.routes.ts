@@ -27,6 +27,7 @@ import {
   PasswordResetRequestResponse,
   RecoveryConsumeRequest,
   RecoveryConsumeResponse,
+  SessionResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -34,11 +35,13 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { AppDeps } from '../../../context.js';
 import { requireAdminSession } from '../shared/session-guard.js';
 import { createAdminAuthHandlers } from './admin-auth.handlers.js';
+import { createSessionHandler } from './admin-session.handler.js';
 
 const AUTH_TAG = 'admin-auth';
 
 export function registerAdminAuthRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createAdminAuthHandlers(deps);
+  const sessionHandler = createSessionHandler(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const LOGIN_RATE = { max: deps.config.loginRateMax, timeWindow: '1 minute' } as const;
 
@@ -46,6 +49,16 @@ export function registerAdminAuthRoutes(app: FastifyInstance, deps: AppDeps): vo
     '/api/v1/auth/login',
     { schema: { body: LoginRequest, response: { 200: LoginResponse }, tags: [AUTH_TAG] }, config: { rateLimit: LOGIN_RATE } },
     h.login,
+  );
+
+  // ── Session introspection (Story 1.11b, DD-6) ───────────────────────────────
+  // GET /api/v1/auth/session → { userId, nationalGrants[] }. The admin SPA reads
+  // this on session boot to gate nav + routes on global-scope grants (advisory;
+  // requireAdminSession is the real boundary). A read-only GET → no CSRF posture.
+  r.get(
+    '/api/v1/auth/session',
+    { schema: { response: { 200: SessionResponse }, tags: [AUTH_TAG] }, preHandler: [requireAdminSession(deps)] },
+    sessionHandler,
   );
 
   // ── Passkey enrollment ──────────────────────────────────────────────────────

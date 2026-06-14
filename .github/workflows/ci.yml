@@ -205,8 +205,11 @@ jobs:
         run: pnpm db:migrate
       - name: Run integration tests
         # Filter to the workspaces with live-DB tests. @twt/jobs joined at Story
-        # 1.11a (the audit-integrity walk's synthetic-tamper suite). Downstream
+        # 1.11a (the audit-integrity walk's synthetic-tamper suite); @twt/api
+        # joined at Story 1.11b (the trustee-UI endpoint suite: session
+        # introspection + integrity-check history + acknowledge, plus the
+        # pre-existing admin-auth / scope-tx / step-up live-DB specs). Downstream
         # Stories (7.x Pool Engine, 9.x reconciliation) extend this filter when
         # their integration suites land. With DATABASE_URL set the
         # `describe.skipIf(!hasDatabase)` guards run instead of skipping.
-        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs
+        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api

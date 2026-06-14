@@ -31,8 +31,8 @@ describe.skipIf(!hasDatabase)('scope-tx + RBAC grant load (Task 3)', () => {
       await c.query(`INSERT INTO users (id) VALUES ($1),($2),($3)`, [userA, userB, userC]);
       await c.query(
         `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
-           VALUES ($1, $2, 'auditor', 'pariwar', $2)`,
-        [userA, pariwarA],
+           VALUES ($1, $2, 'auditor', 'pariwar', $3)`,
+        [userA, pariwarA, pariwarA],
       );
       await c.query(
         `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)

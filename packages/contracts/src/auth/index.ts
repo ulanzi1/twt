@@ -10,3 +10,6 @@ export * from './passkey.js';
 export * from './recovery.js';
 export * from './password-reset.js';
 export * from './step-up.js';
+// Story 1.11b — session introspection (DD-6): the global-scope grant read the
+// admin SPA gates nav + routes on.
+export * from './session.js';

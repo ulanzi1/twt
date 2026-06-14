@@ -102,16 +102,30 @@ export async function verifyChainWalk(
   let start: AuditLogEntryRow | null = null;
   let lastGood: AuditLogEntryRow | null = null;
 
-  const brokenAt = (brokenRow: AuditLogEntryRow): ChainWalkVerdict => ({
-    chainValid: false,
-    rowsVerified,
-    startSeq: start?.seq ?? null,
-    startAuditId: start?.auditId ?? null,
-    endSeq: lastGood?.seq ?? null,
-    endAuditId: lastGood?.auditId ?? null,
-    firstBrokenSeq: brokenRow.seq,
-    firstBrokenAuditId: brokenRow.auditId,
-  });
+  const brokenAt = (brokenRow: AuditLogEntryRow): ChainWalkVerdict => {
+    // Boundary-pair coherence (migration 0010 audit_integrity_checks_boundary_pair_coherent):
+    // `start_*` and `end_*` must be BOTH null or BOTH populated. When the break is
+    // at the very head of the chain (genesis-anchor failure, or a first-chunk break
+    // before any row verifies), `lastGood` is null — so we report start=null too,
+    // rather than the head we merely *read* but never *confirmed*. The break itself
+    // is still localized by `firstBroken*`; reporting start=null only withholds a
+    // verified-range claim we cannot make. Without this, verifyAuditChain would
+    // THROW the CHECK violation on a real head-truncation instead of persisting the
+    // failed verdict — defeating the very tamper-detection it exists for (and
+    // breaking Story 1.11b AC-4's head-truncation banner). (Story 1.11a defect,
+    // fixed under 1.11b; the AuditIntegrityCheckResult SHAPE is unchanged.)
+    const verifiedSomething = lastGood !== null;
+    return {
+      chainValid: false,
+      rowsVerified,
+      startSeq: verifiedSomething ? (start?.seq ?? null) : null,
+      startAuditId: verifiedSomething ? (start?.auditId ?? null) : null,
+      endSeq: lastGood?.seq ?? null,
+      endAuditId: lastGood?.auditId ?? null,
+      firstBrokenSeq: brokenRow.seq,
+      firstBrokenAuditId: brokenRow.auditId,
+    };
+  };
 
   for (;;) {
     const chunk = await readChunkAfter(cursor, chunkSize);

@@ -372,6 +372,227 @@ components:
         - verifierActor
         - triggerSource
       additionalProperties: false
+    AuditIntegrityCheckListItem:
+      type: object
+      properties:
+        checkId:
+          type: string
+          format: uuid
+        verifiedAt:
+          type: string
+          format: date-time
+        chainValid:
+          type: boolean
+        startSeq:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        startAuditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        endSeq:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        endAuditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        firstBrokenSeq:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        firstBrokenAuditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        rowsVerified:
+          type: integer
+          minimum: 0
+        verifierActor:
+          type: string
+          minLength: 1
+        triggerSource:
+          type: string
+          minLength: 1
+        acknowledgement:
+          type:
+            - object
+            - "null"
+          properties:
+            acknowledgementId:
+              type: string
+              format: uuid
+            checkId:
+              type: string
+              format: uuid
+            acknowledgedAt:
+              type: string
+              format: date-time
+            acknowledgedBy:
+              type: string
+              format: uuid
+            ticketRef:
+              type: string
+              minLength: 1
+          required:
+            - acknowledgementId
+            - checkId
+            - acknowledgedAt
+            - acknowledgedBy
+            - ticketRef
+          additionalProperties: false
+      required:
+        - checkId
+        - verifiedAt
+        - chainValid
+        - startSeq
+        - startAuditId
+        - endSeq
+        - endAuditId
+        - firstBrokenSeq
+        - firstBrokenAuditId
+        - rowsVerified
+        - verifierActor
+        - triggerSource
+        - acknowledgement
+      additionalProperties: false
+    AuditIntegrityCheckList:
+      type: array
+      items:
+        type: object
+        properties:
+          checkId:
+            type: string
+            format: uuid
+          verifiedAt:
+            type: string
+            format: date-time
+          chainValid:
+            type: boolean
+          startSeq:
+            type:
+              - integer
+              - "null"
+            minimum: 1
+          startAuditId:
+            type:
+              - string
+              - "null"
+            format: uuid
+          endSeq:
+            type:
+              - integer
+              - "null"
+            minimum: 1
+          endAuditId:
+            type:
+              - string
+              - "null"
+            format: uuid
+          firstBrokenSeq:
+            type:
+              - integer
+              - "null"
+            minimum: 1
+          firstBrokenAuditId:
+            type:
+              - string
+              - "null"
+            format: uuid
+          rowsVerified:
+            type: integer
+            minimum: 0
+          verifierActor:
+            type: string
+            minLength: 1
+          triggerSource:
+            type: string
+            minLength: 1
+          acknowledgement:
+            type:
+              - object
+              - "null"
+            properties:
+              acknowledgementId:
+                type: string
+                format: uuid
+              checkId:
+                type: string
+                format: uuid
+              acknowledgedAt:
+                type: string
+                format: date-time
+              acknowledgedBy:
+                type: string
+                format: uuid
+              ticketRef:
+                type: string
+                minLength: 1
+            required:
+              - acknowledgementId
+              - checkId
+              - acknowledgedAt
+              - acknowledgedBy
+              - ticketRef
+            additionalProperties: false
+        required:
+          - checkId
+          - verifiedAt
+          - chainValid
+          - startSeq
+          - startAuditId
+          - endSeq
+          - endAuditId
+          - firstBrokenSeq
+          - firstBrokenAuditId
+          - rowsVerified
+          - verifierActor
+          - triggerSource
+          - acknowledgement
+        additionalProperties: false
+    AuditIntegrityAcknowledgeRequest:
+      type: object
+      properties:
+        ticketRef:
+          type: string
+          minLength: 1
+          maxLength: 512
+      required:
+        - ticketRef
+      additionalProperties: false
+    AuditIntegrityAcknowledgement:
+      type: object
+      properties:
+        acknowledgementId:
+          type: string
+          format: uuid
+        checkId:
+          type: string
+          format: uuid
+        acknowledgedAt:
+          type: string
+          format: date-time
+        acknowledgedBy:
+          type: string
+          format: uuid
+        ticketRef:
+          type: string
+          minLength: 1
+      required:
+        - acknowledgementId
+        - checkId
+        - acknowledgedAt
+        - acknowledgedBy
+        - ticketRef
+      additionalProperties: false
     LoginRequest:
       type: object
       properties:
@@ -582,6 +803,20 @@ components:
       required:
         - elevated
         - elevatedUntil
+      additionalProperties: false
+    SessionResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        nationalGrants:
+          type: array
+          items:
+            type: string
+      required:
+        - userId
+        - nationalGrants
       additionalProperties: false
   parameters: {}
 paths:
@@ -971,6 +1206,90 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuditIntegrityCheckResult"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/session:
+    get:
+      summary: Session introspection — the authenticated admin id + global-scope grants
+      description: Returns the current admin session id + the permission keys held at the global ("national") scope ceiling. The admin SPA gates nav + routes on these grants (advisory; requireAdminSession is the real boundary on every endpoint).
+      tags:
+        - admin-auth
+      responses:
+        "200":
+          description: Current admin session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/audit/integrity-checks:
+    get:
+      summary: Audit-integrity check history (last automated + recent checks)
+      description: Returns recent integrity-check verdicts (default 30, most-recent first), each with its most-recent acknowledgement (null if never acknowledged). Optionally filtered to one trigger source. Requires an authenticated admin session.
+      tags:
+        - audit
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            minLength: 1
+          required: false
+          name: triggerSource
+          in: query
+      responses:
+        "200":
+          description: Integrity-check history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditIntegrityCheckList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/audit/integrity-checks/{checkId}/acknowledge:
+    post:
+      summary: Acknowledge a (failed) integrity check with an investigation-ticket reference
+      description: Records an append-only acknowledgement (separate audit_integrity_acknowledgements table — the verdict ledger stays immutable) capturing the external ticket reference. Requires an authenticated admin session.
+      tags:
+        - audit
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: checkId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditIntegrityAcknowledgeRequest"
+      responses:
+        "200":
+          description: Acknowledgement recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditIntegrityAcknowledgement"
         "400":
           description: Request validation failed
           content:
@@ -979,6 +1298,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Integrity check not found
           content:
             application/json:
               schema:

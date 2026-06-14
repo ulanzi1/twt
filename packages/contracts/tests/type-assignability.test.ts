@@ -13,13 +13,18 @@
 
 import { describe, it, expect } from 'vitest';
 import { schema } from '@twt/domain';
+import { SessionResponse } from '../src/auth/session.js';
 import {
   EventLogContract,
   type EventLogContract as EventLogContractType,
 } from '../src/_common/event-log-contract.js';
 import {
+  AuditIntegrityAcknowledgement,
+  AuditIntegrityCheckList,
+  AuditIntegrityCheckListItem,
   AuditIntegrityCheckRequest,
   AuditIntegrityCheckResult,
+  type AuditIntegrityAcknowledgement as AuditIntegrityAcknowledgementType,
   type AuditIntegrityCheckResult as AuditIntegrityCheckResultType,
 } from '../src/audit/integrity-check.js';
 
@@ -39,6 +44,18 @@ type _AssertAuditIntegrityWireFromDrizzle =
   AuditIntegrityCheckWireProjection extends AuditIntegrityCheckResultType ? true : never;
 const _auditIntegrityWireFromDrizzle: _AssertAuditIntegrityWireFromDrizzle = true;
 void _auditIntegrityWireFromDrizzle;
+
+// Inferred Drizzle row type (Story 1.11b audit_integrity_acknowledgements table).
+// The wire shape serializes `acknowledgedAt` as Iso8601 string (Drizzle row is a
+// JS Date); the projection narrows the row to a structurally compatible wire shape.
+type AuditIntegrityAckRow = typeof schema.auditIntegrityAcknowledgements.$inferSelect;
+type AuditIntegrityAckWireProjection = Omit<AuditIntegrityAckRow, 'acknowledgedAt'> & {
+  acknowledgedAt: string;
+};
+type _AssertAuditIntegrityAckWireFromDrizzle =
+  AuditIntegrityAckWireProjection extends AuditIntegrityAcknowledgementType ? true : never;
+const _auditIntegrityAckWireFromDrizzle: _AssertAuditIntegrityAckWireFromDrizzle = true;
+void _auditIntegrityAckWireFromDrizzle;
 
 // Compile-time mapping from the Drizzle row to the wire-shape contract.
 // The wire shape serializes `occurredAt` as Iso8601 string (Drizzle row is
@@ -176,5 +193,81 @@ describe('AuditIntegrityCheckResult (packages/contracts) — Story 1.11a', () =>
   it('AuditIntegrityCheckRequest accepts {} and rejects extra keys', () => {
     expect(AuditIntegrityCheckRequest.safeParse({}).success).toBe(true);
     expect(AuditIntegrityCheckRequest.safeParse({ range: 'all' }).success).toBe(false);
+  });
+});
+
+describe('SessionResponse (packages/contracts) — Story 1.11b DD-6', () => {
+  it('parses a well-formed session payload', () => {
+    const parsed = SessionResponse.parse({
+      userId: '00000000-0000-0000-0000-000000000001',
+      nationalGrants: ['audit.verify', 'audit.export'],
+    });
+    expect(parsed.nationalGrants).toContain('audit.verify');
+  });
+
+  it('parses an empty nationalGrants array (no global-scope grants)', () => {
+    const parsed = SessionResponse.parse({
+      userId: '00000000-0000-0000-0000-000000000001',
+      nationalGrants: [],
+    });
+    expect(parsed.nationalGrants).toHaveLength(0);
+  });
+
+  it('rejects unknown keys (.strict() discipline)', () => {
+    expect(
+      SessionResponse.safeParse({
+        userId: '00000000-0000-0000-0000-000000000001',
+        nationalGrants: [],
+        __extra: true,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('AuditIntegrityAcknowledgement + history list (packages/contracts) — Story 1.11b', () => {
+  const ackWire = {
+    acknowledgementId: '00000000-0000-0000-0000-0000000000d1',
+    checkId: '00000000-0000-0000-0000-0000000000a2',
+    acknowledgedAt: '2026-06-14T03:00:00.000Z',
+    acknowledgedBy: '00000000-0000-0000-0000-0000000000c1',
+    ticketRef: 'JIRA-1234',
+  };
+
+  it('parses a Drizzle-shaped acknowledgement (acknowledgedAt serialized to ISO)', () => {
+    const parsed = AuditIntegrityAcknowledgement.parse(ackWire);
+    expect(parsed.ticketRef).toBe('JIRA-1234');
+    expect(parsed.checkId).toBe(ackWire.checkId);
+  });
+
+  it('rejects unknown acknowledgement keys (.strict() discipline)', () => {
+    expect(
+      AuditIntegrityAcknowledgement.safeParse({ ...ackWire, __extra: 1 }).success,
+    ).toBe(false);
+  });
+
+  it('a list item carries the verdict + a nullable acknowledgement', () => {
+    const verdict = {
+      checkId: '00000000-0000-0000-0000-0000000000a2',
+      verifiedAt: '2026-06-14T02:00:00.000Z',
+      chainValid: false,
+      startSeq: 1,
+      startAuditId: '00000000-0000-0000-0000-0000000000b1',
+      endSeq: 6,
+      endAuditId: '00000000-0000-0000-0000-0000000000b6',
+      firstBrokenSeq: 7,
+      firstBrokenAuditId: '00000000-0000-0000-0000-0000000000b7',
+      rowsVerified: 6,
+      verifierActor: 'cron',
+      triggerSource: 'cron',
+    };
+    // Never-acknowledged → acknowledgement is null.
+    expect(
+      AuditIntegrityCheckListItem.parse({ ...verdict, acknowledgement: null }).acknowledgement,
+    ).toBeNull();
+    // Acknowledged → acknowledgement carries the ack row.
+    const item = AuditIntegrityCheckListItem.parse({ ...verdict, acknowledgement: ackWire });
+    expect(item.acknowledgement?.ticketRef).toBe('JIRA-1234');
+    // The list is just an array of items.
+    expect(AuditIntegrityCheckList.parse([{ ...verdict, acknowledgement: null }])).toHaveLength(1);
   });
 });

@@ -78,6 +78,13 @@
       "when": 1781424852700,
       "tag": "0010_audit-integrity-checks-invariants",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781429850835,
+      "tag": "0011_audit-integrity-acknowledgements",
+      "breakpoints": true
     }
   ]
 }

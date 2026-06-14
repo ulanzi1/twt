@@ -1,6 +1,7 @@
-# Multi-stage Dockerfile for @twt/admin.
-# PR-1 scope: image builds successfully; runtime entrypoint is a placeholder.
-# Substantive runtime correctness lands in subsequent Epic 1 stories.
+# Multi-stage Dockerfile for @twt/admin — the trustee/admin SPA (Story 1.11b).
+# Builds the Vite static bundle, then serves it from nginx with SPA history
+# fallback. The /api surface is reverse-proxied to apps/api at the deployment
+# ingress so the SPA + API share an origin (SameSite=Lax session cookie).
 
 # ---------- base ----------
 FROM node:20-alpine AS base
@@ -29,10 +30,9 @@ FROM deps AS build
 COPY . .
 RUN pnpm turbo run build --filter=@twt/admin
 
-# ---------- runtime ----------
-FROM base AS runtime
-ENV NODE_ENV=production
-COPY --from=build /app/apps/admin/dist ./apps/admin/dist
-COPY --from=build /app/apps/admin/package.json ./apps/admin/
-# PR-1 placeholder entrypoint — runtime correctness lands in subsequent stories.
-CMD ["node", "apps/admin/dist/index.js"]
+# ---------- runtime (static SPA via nginx) ----------
+FROM nginx:1.27-alpine AS runtime
+COPY --from=build /app/apps/admin/dist /usr/share/nginx/html
+COPY apps/admin/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+# nginx's default CMD serves /usr/share/nginx/html per nginx.conf.

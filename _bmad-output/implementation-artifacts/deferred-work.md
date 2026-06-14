@@ -4,6 +4,61 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 1-11b-trustee-facing-audit-log-integrity-verification-ui — Group D (2026-06-14)
+
+- **CR-D-1: Mock data uses non-UUID strings for UUID-typed contract fields** — `runVerification` mock uses `checkId: 'run-1'`, `startAuditId: 'run-ac3-start'`, etc.; `acknowledgeCheck` mock uses `acknowledgementId: 'ack-1'`, `acknowledgedBy: 'tester'`. These bypass Zod today because the mocked queryFn returns the object directly without schema parsing. Re-trigger: contract validation added to queryFn, or a mock/real-server divergence causes a test to fail with a schema error. (`apps/admin/tests/integrity-page.test.tsx`)
+- **CR-D-2: CI `test` job has redundant `needs: [install, build]`** — turbo's `^build` task graph already ensures package dependencies are built before their dependents' tests run. The explicit `build` CI job gate serialises the test job unnecessarily. Re-trigger: CI performance audit or turbo pipeline is audited for redundant ordering. (`.github/workflows/ci.yml`)
+
+---
+
+## Deferred from: code review of 1-11b-trustee-facing-audit-log-integrity-verification-ui — Group C (2026-06-14)
+
+- **CR-C-1: Stale `acknowledgeError` in re-opened AcknowledgeDialog after cancel mid-flight** — `Dialog.Root` is uncontrolled; if the mutation errors after the user cancels (Cancel button closes the dialog while `isPending`), the stale error persists and appears pre-populated when the dialog re-opens. UX-only (not data-integrity). Fix: make `Dialog.Root` controlled with `onOpenChange` that calls `acknowledge.reset()` on open. Re-trigger: trustee UAT complaint about confusing dialog state. (`apps/admin/src/modules/audit-integrity/AcknowledgeDialog.tsx`)
+
+---
+
+## Deferred from: code review of 1-11b-trustee-facing-audit-log-integrity-verification-ui — Group B (2026-06-14)
+
+- **CR-B-1: `ticket_ref` has no DB-level minimum-length or non-whitespace CHECK** — 512-char cap and non-empty enforcement live only in the Zod contract layer; a direct BYPASSRLS INSERT can store `''` or `'   '`. Write path is currently API-only and Zod-validated. Re-trigger: DB hardening pass. (`packages/domain/migrations/0011_audit-integrity-acknowledgements.sql`)
+- **CR-B-2: `acknowledged_at` accepts past/future timestamps via direct BYPASSRLS INSERT** — no CHECK anchors it to `now()`; a future-dated ack would sort first in `ORDER BY acknowledged_at DESC` and prematurely clear the failure banner. The API endpoint omits the column (uses DB default). Re-trigger: DB hardening pass. (`packages/domain/migrations/0011_audit-integrity-acknowledgements.sql`)
+- **CR-B-3: Ack bulk-load query has no LIMIT** — `WHERE check_id = ANY($1) ORDER BY acknowledged_at DESC, acknowledgement_id ASC` fetches every ack ever written for the listed checks; unbounded for a check that is repeatedly acknowledged. Re-trigger: ack count approaches observable performance threshold. (`apps/api/src/modules/audit-log/index.ts`)
+- **CR-B-4: `breakpoints:true` journal setting means 0011 DDL may partially commit before the `DO` self-test block runs** — if the self-test raises, the DDL is not rolled back (pre-existing pattern identical to 0007/0009). Re-trigger: migration runner gains explicit transaction wrapping. (`packages/domain/migrations/0011_audit-integrity-acknowledgements.sql`)
+
+---
+
+## Deferred from: code review of 1-11b-trustee-facing-audit-log-integrity-verification-ui — Group A (2026-06-14)
+
+- **CR-A-1: Session endpoint maps via static `defaultRoleBundles`** — `nationalGrants` reflects the compile-time permission catalog, not live FR-44 DB-edited bundles. Gate is advisory by design (DD-6); endpoint-side RBAC upgrade stays D4-1.11a. Re-trigger: FR-44 bundle-edit story or endpoint RBAC graduation. (`apps/api/src/modules/auth/admin/admin-session.handler.ts`)
+- **CR-A-2: Any admin can acknowledge a `chainValid=true` (passing) check** — no guard prevents inserting ack rows for verdicts that are not failures; produces junk rows in the append-only ledger. Banner logic (client-derived `chainValid=false AND no ack`) is unaffected. Re-trigger: product decision to restrict acknowledge to failed checks only. (`apps/api/src/modules/audit-log/index.ts`)
+- **CR-A-3: `auditor` role at global scope bypasses `scopeCeiling` cross-check** — the session handler filters `role_grants` rows to `scope_dimension='global'` and maps permissions for any matching role, even roles whose `scopeCeiling` is `pariwar`. Gate is advisory; endpoint-side RBAC stays D4-1.11a. Re-trigger: global-scope `requirePermission` preHandler (D4-1.11a). (`apps/api/src/modules/auth/admin/admin-session.handler.ts`)
+- **CR-A-4: Concurrent `POST /acknowledge` produces silent duplicate ack rows** — no idempotency key or deduplication guard; two rapid requests for the same `checkId` both succeed and insert separate rows. Intentional by append-only design; list endpoint takes the most-recent ack correctly. Re-trigger: if banner UX requires idempotent acknowledge. (`apps/api/src/modules/audit-log/index.ts`)
+- **CR-A-5: `seqToNumber` precision loss above `Number.MAX_SAFE_INTEGER`** — bigint seq values converted via `Number()` lose precision above ~9×10¹⁵; implausible in v1. Re-trigger: seq columns migrate to `mode:'bigint'` globally or chain length approaches MAX_SAFE_INTEGER. (`apps/api/src/modules/audit-log/index.ts`)
+- **CR-A-6: `auditor` role at global scope not tested as `audit.verify` source** — the integration test only validates `super_admin` at global scope; the `auditor` role (which also carries `audit.verify`) granted at `scope_dimension='global'` is an untested path. Architecturally unusual path. Re-trigger: global-scope auditor grants land in prod or CR-A-3 is addressed. (`apps/api/tests/integration/audit-integrity-ui.spec.ts`)
+
+---
+
+## Story 1.11b deferred + discharged (surface author-commit, 2026-06-14)
+
+Closure-language posture per [[feedback_closure_language_precision]]: **Closed by [edit]** only where this story produced the artifact; future-Story / future-environment seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).
+
+**Closed by [edit] (defects fixed under 1.11b):**
+- **1.11a `verifyChainWalk` boundary-pair incoherence on head-truncation** — when the break is at the chain head (genesis-anchor failure / first-chunk break before any row verifies), `brokenAt` reported `startSeq = <head>` but `endSeq = null`, which migration 0010's `audit_integrity_checks_boundary_pair_coherent` CHECK rejects → `verifyAuditChain` **threw** instead of persisting the failed verdict, defeating the head-truncation tamper-detection path (and Story 1.11b AC-4's head-truncation banner). Fixed so a no-rows-verified break reports `start = null` too (coherent; the break is still localized by `firstBroken*`). The `AuditIntegrityCheckResult` SHAPE is unchanged. Proven by a fresh-DB repro + a regression assertion in the pure head-truncation test. **Closed by [edit]** (`apps/jobs/src/audit/integrity-check.ts`, `apps/jobs/tests/audit/integrity-check.test.ts`).
+- **1.10/1.11a `@twt/jobs` live-DB test-file-parallelism flake** — `integrity-check.test.ts` and `mirror.test.ts` both append to the ONE global chain via `writeAuditEntry`; Vitest's parallel file execution interleaved their seq writes, breaking the chunk-walk tests' consecutive-seq assumption (a load-sensitive failure surfaced once `@twt/api` joined the CI integration run). Fixed with `fileParallelism: false` in the jobs Vitest config. **Closed by [edit]** (`apps/jobs/vitest.config.ts`).
+- **Pre-existing `scope-tx.spec.ts` `$2`-parameter-reuse bug** — `VALUES ($1, $2, 'auditor', 'pariwar', $2)` made pg deduce two types for `$2` (uuid vs text) → the whole `@twt/api` integration file errored at setup. It never failed CI only because `@twt/api` was not in the integration-tests filter. Fixed (`$3` + a third param) to unblock adding `@twt/api` to the CI filter so the new 1.11b endpoint tests ride CI (Task 10.3). No production code touched. **Closed by [edit]** (`apps/api/tests/integration/scope-tx.spec.ts`, `.github/workflows/ci.yml`).
+
+**Resolved via explicit deferral (newly opened by 1.11b):**
+- **D1-1.11b: real cold-mirror last-good-state pointer (graduation of D1-1.11a)** — AC-4's "cold-mirror pointer" is rendered as the HOT-chain proxy (the last `chainValid=true` check's end boundary), explicitly labelled, with a "cold-mirror cross-verification: deferred (D1-1.11a)" line. **Re-trigger:** the live GCS mirror apply + separate-project reader (D1-1.11a) land. (`apps/admin/src/modules/audit-integrity/derive.ts`, `StatusBanner.tsx`)
+- **D2-1.11b: helpdesk/ticketing integration for acknowledge (FR-52)** — v1 captures a free-text external `ticketRef` (recording it IS the "investigation ticket opened" artifact, AC-5). **Re-trigger:** the helpdesk module (`apps/api/modules/helpdesk/`, FR-52) lands. (`apps/api/src/modules/audit-log/index.ts`, `apps/admin/src/modules/audit-integrity/AcknowledgeForm.tsx`)
+- **D3-1.11b: full OpenAPI→client codegen + tool-choice ADR (DD-7)** — v1 is a hand-written typed `fetch` layer that parses responses with the `@twt/contracts` Zod schemas (single source of types). This also keeps the inherited **CR-D6-1.10 / CR-D7-1.10** (64-char-hex / `seq` int64 pins for a generated SDK) deferred — the hand-written client parses with Zod (`z.number().int()`), so the int32-default-cap risk does not apply to it. **Re-trigger:** standing up the codegen pipeline + its ADR. (`apps/admin/src/api/client.ts`)
+- **D4-1.11b: `packages/ui` + `packages/tokens` extraction (DD-1)** — v1 uses Tailwind v4 + Radix directly in `apps/admin/` (theme tokens in `src/styles.css` `@theme`). **Re-trigger:** a 2nd admin surface needs the same atoms. (`apps/admin/`)
+- **D5-1.11b: passkey-enrollment / password-reset / step-up-OTP UI (DD-2)** — the minimal `/login` drives the existing 1.9 login + passkey-authenticate / recovery-consume endpoints for an ALREADY-enrolled admin; the enrollment/reset/step-up server flows exist but have no UI yet. **Re-trigger:** a story that needs in-product admin enrollment/reset. (`apps/admin/src/routes/LoginPage.tsx`)
+- **D6-1.11b: endpoint-side `audit.verify` RBAC gate (still D4-1.11a)** — the UI nav + route gate on `audit.verify` is CLIENT-SIDE + ADVISORY (DD-6); `requireAdminSession` is the real server boundary on every endpoint. **Re-trigger:** a global-scope `requirePermission` preHandler (D4-1.11a). (`apps/api/src/modules/audit-log/index.ts`, `apps/admin/src/routes/IntegrityRoute.tsx`)
+- **D7-1.11b: Zustand auth store (§4.3 / DD-6) — DEVIATION recorded** — the session + national-scope grants are kept in TanStack Query (a server read; §4.3's own boundary places server state in Query) rather than a separate Zustand store. Fewer moving parts; no client durable store is needed for v1. **Re-trigger:** genuinely client-only auth/UI state (e.g. active-scope selection) that does NOT belong in Query. (`apps/admin/src/api/hooks.ts`)
+- **D8-1.11b: file-based routing + committed `routeTree.gen.ts` (DD-1 Task 2.2) — DEVIATION recorded** — v1 uses TanStack Router CODE-based routing (routes assembled in `src/router.tsx` from `src/routes/*`) to keep the `tsc → vite build` gate + CI deterministic for a 3-route dev surface, avoiding a build-time codegen step. The committed TanStack Router stack (§4.7) is unchanged. **Re-trigger:** the route count grows enough that file-based codegen + `@tanstack/router-plugin` pays for itself. (`apps/admin/src/router.tsx`)
+- **D9-1.11b: IndexedDB cache persister** — deliberately NOT added: the verifier-console reads are cache-disabled (§4.5 strong-consistency). Noted for completeness, not a gap.
+
+---
+
 ## Story 1.11a deferred + discharged (substrate author-commit, 2026-06-14 per Decision 2026-06-14-047)
 
 Closure-language posture per [[feedback_closure_language_precision]]: an item is **Closed by [edit]** only where this story produced the artifact; future-Story / future-environment seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).

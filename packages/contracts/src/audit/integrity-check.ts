@@ -62,3 +62,73 @@ export const AuditIntegrityCheckResult = z
   })
   .strict();
 export type AuditIntegrityCheckResult = z.output<typeof AuditIntegrityCheckResult>;
+
+// ── Story 1.11b — acknowledgement (DD-5) ──────────────────────────────────────
+//
+// The red audit-failure banner persists "until manually acknowledged and an
+// investigation ticket is opened" (AC-5). There is no helpdesk/ticketing system
+// yet (FR-52, not built), so v1 captures a free-text external ticket reference the
+// trustee pastes — recording it IS the "ticket opened" artifact. The ack is stored
+// in a SEPARATE append-only table (`audit_integrity_acknowledgements`, migration
+// 0011) so `audit_integrity_checks` stays strictly immutable.
+
+/**
+ * Acknowledge a (failed) integrity check. `ticketRef` is a non-empty external
+ * ticket id/URL — recording it is the v1 "investigation ticket opened" artifact
+ * (graduates to the helpdesk module, FR-52, when it lands).
+ */
+export const AuditIntegrityAcknowledgeRequest = z
+  .object({
+    ticketRef: z.string().trim().min(1).max(512),
+  })
+  .strict();
+export type AuditIntegrityAcknowledgeRequest = z.output<
+  typeof AuditIntegrityAcknowledgeRequest
+>;
+
+/**
+ * The wire shape of one `audit_integrity_acknowledgements` row — a controlled,
+ * append-only record that a specific check was acknowledged by an admin with an
+ * external ticket reference. `acknowledgedAt` is serialized ISO-8601.
+ */
+export const AuditIntegrityAcknowledgement = z
+  .object({
+    // Surrogate addressable id of the acknowledgement row (gen_random_uuid()).
+    acknowledgementId: UuidString,
+    // The check this acknowledgement refers to (FK → audit_integrity_checks).
+    checkId: UuidString,
+    // DB-authoritative time the acknowledgement was recorded, ISO-8601 on the wire.
+    acknowledgedAt: Iso8601Datetime,
+    // The admin (session userId) who acknowledged.
+    acknowledgedBy: UuidString,
+    // The external investigation-ticket reference the trustee provided.
+    ticketRef: z.string().min(1).max(512),
+  })
+  .strict();
+export type AuditIntegrityAcknowledgement = z.output<
+  typeof AuditIntegrityAcknowledgement
+>;
+
+// ── Story 1.11b — history / list (DD-3) ───────────────────────────────────────
+//
+// The trustee UI reads recent verdicts (AC-2: "last automated check" + "history of
+// the last 30 checks"). Each list item is a verdict PLUS its most-recent
+// acknowledgement (or null) so the client can derive banner persistence in one
+// read (DD-5: "latest check has chainValid=false AND no acknowledgement" → banner
+// shown). Additive: `AuditIntegrityCheckResult` is unchanged — the list item
+// EXTENDS it (the 1.11a verdict contract + its type-assignability test stay green).
+
+/**
+ * One row of the integrity-check history: the verdict plus the most-recent
+ * acknowledgement (`null` when never acknowledged).
+ */
+export const AuditIntegrityCheckListItem = AuditIntegrityCheckResult.extend({
+  acknowledgement: AuditIntegrityAcknowledgement.nullable(),
+}).strict();
+export type AuditIntegrityCheckListItem = z.output<
+  typeof AuditIntegrityCheckListItem
+>;
+
+/** The history response: most-recent-first list of check+acknowledgement items. */
+export const AuditIntegrityCheckList = z.array(AuditIntegrityCheckListItem);
+export type AuditIntegrityCheckList = z.output<typeof AuditIntegrityCheckList>;

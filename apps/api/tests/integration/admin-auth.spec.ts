@@ -192,7 +192,7 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
   it('lockout: N failed password attempts locks the account', async () => {
     const client = makeClient(app);
     for (let i = 0; i < deps.config.lockoutThreshold; i++) {
-      await client.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password: 'nope' } });
+      await client.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password: 'incorrect-password-for-lockout' } });
     }
     // Even the CORRECT password is now refused (locked).
     const afterLock = await client.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password } });
@@ -381,7 +381,10 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
     const { credentialId } = await enrollFirstPasskey(client);
     await fullLogin(client, credentialId);
 
-    const logout = await client.inject({ method: 'POST', url: '/api/v1/auth/logout', payload: {} });
+    const csrfRes = await client.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+    const { csrfToken } = csrfRes.json<{ csrfToken: string }>();
+
+    const logout = await client.inject({ method: 'POST', url: '/api/v1/auth/logout', payload: {}, headers: { 'csrf-token': csrfToken } });
     expect(logout.statusCode).toBe(204);
     expect(audit.ofType('login.logout')).toHaveLength(1);
 

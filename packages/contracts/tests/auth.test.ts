@@ -55,9 +55,9 @@ describe('auth contracts — .strict()', () => {
 
 describe('auth contracts — validation', () => {
   it('LoginRequest accepts a valid body, rejects unknown keys + bad email', () => {
-    expect(LoginRequest.safeParse({ email: 'a@b.com', password: 'pw' }).success).toBe(true);
-    expect(LoginRequest.safeParse({ email: 'a@b.com', password: 'pw', extra: 1 }).success).toBe(false);
-    expect(LoginRequest.safeParse({ email: 'not-an-email', password: 'pw' }).success).toBe(false);
+    expect(LoginRequest.safeParse({ email: 'a@b.com', password: 'valid-password' }).success).toBe(true);
+    expect(LoginRequest.safeParse({ email: 'a@b.com', password: 'valid-password', extra: 1 }).success).toBe(false);
+    expect(LoginRequest.safeParse({ email: 'not-an-email', password: 'valid-password' }).success).toBe(false);
   });
 
   it('PasskeyRegisterVerifyRequest accepts a provider-controlled response object', () => {
@@ -79,9 +79,9 @@ describe('auth contracts — validation', () => {
   });
 
   it('PasswordResetConsumeRequest enforces a minimum new-password length', () => {
-    expect(PasswordResetConsumeRequest.safeParse({ token: 't', newPassword: 'short' }).success).toBe(false);
+    expect(PasswordResetConsumeRequest.safeParse({ token: 'a'.repeat(32), newPassword: 'short' }).success).toBe(false);
     expect(
-      PasswordResetConsumeRequest.safeParse({ token: 't', newPassword: 'a-sufficiently-long-password' }).success,
+      PasswordResetConsumeRequest.safeParse({ token: 'a'.repeat(32), newPassword: 'a-sufficiently-long-password' }).success,
     ).toBe(true);
   });
 

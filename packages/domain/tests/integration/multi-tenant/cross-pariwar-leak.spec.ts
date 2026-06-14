@@ -195,7 +195,7 @@ describe.skipIf(!hasDatabase)('cross-Pariwar helper verification (runAsCrossTena
     // tenants X/Y (committed rows; the append-only trigger blocks cleanup), so
     // the read asserts membership rather than an exact count and does not
     // pollute the A/B exact-count assertions in the RLS-enforced block above.
-    await runAsCrossTenant(pool, { reason: 'test-seed', actorId: null }, async (db) => {
+    await runAsCrossTenant(pool, pool, { reason: 'test-seed', actorId: null }, async (db) => {
       await db.insert(schema.eventsLog).values({
         streamId: randomUUID(),
         eventType: 'test.created',
@@ -216,6 +216,7 @@ describe.skipIf(!hasDatabase)('cross-Pariwar helper verification (runAsCrossTena
 
     const rows = await runAsCrossTenant(
       pool,
+      pool,
       { reason: 'test-cross-tenant-read', actorId: null },
       (db) => db.select().from(schema.eventsLog),
     );
@@ -224,21 +225,25 @@ describe.skipIf(!hasDatabase)('cross-Pariwar helper verification (runAsCrossTena
     expect(pariwarIds.has(PARIWAR_Y)).toBe(true);
   });
 
-  it('runAsCrossTenant emits an audit.cross_tenant_access event', async () => {
-    await runAsCrossTenant(pool, { reason: 'test-audit-verification', actorId: null }, async () => undefined);
+  it('runAsCrossTenant emits an audit.cross_tenant_access row into audit_log_entries (Story 1.10 re-key)', async () => {
+    // Re-keyed from events_log → audit_log_entries (D5-1.6). The audit line is now
+    // a tamper-evident hash-chained row carrying the sentinel pariwar_id.
+    await runAsCrossTenant(pool, pool, { reason: 'test-audit-verification', actorId: null }, async () => undefined);
 
-    const auditEvents = await runAsCrossTenant(
+    // Read the audit rows cross-tenant (row_security=off sees the sentinel rows).
+    const auditRows = await runAsCrossTenant(
+      pool,
       pool,
       { reason: 'test-read-audit', actorId: null },
       (db) =>
         db
           .select()
-          .from(schema.eventsLog)
-          .where(eq(schema.eventsLog.eventType, 'audit.cross_tenant_access')),
+          .from(schema.auditLogEntries)
+          .where(eq(schema.auditLogEntries.action, 'audit.cross_tenant_access')),
     );
-    expect(auditEvents.length).toBeGreaterThanOrEqual(1);
-    expect(auditEvents[0]?.pariwarId).toBe(CROSS_TENANT_SENTINEL_UUID);
-    expect(auditEvents[0]?.payload).toMatchObject({ reason: expect.any(String) });
+    expect(auditRows.length).toBeGreaterThanOrEqual(1);
+    expect(auditRows.every((r) => r.pariwarId === CROSS_TENANT_SENTINEL_UUID)).toBe(true);
+    expect(auditRows[0]?.auditHash).toMatch(/^[0-9a-f]{64}$/);
   });
 });
 

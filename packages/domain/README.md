@@ -36,11 +36,13 @@ packages/domain/
 │   ├── dev/                synthetic seed data (no PII per architecture §5.5)
 │   └── staging/
 ├── src/
-│   ├── index.ts            barrel: createDb + resolveConnectionString + schema
+│   ├── index.ts            barrel: createDb + resolveConnectionString + schema + canonicalJsonStringify + audit
 │   ├── db.ts               Drizzle factory bound to a node-postgres pool
 │   ├── secrets.ts          Secret Manager fetch + DATABASE_URL fallback
+│   ├── canonical-json.ts   [Story 1.10 — landed; moved from @twt/events per DD-1] the SINGLE RFC-8785 canonicalizer (events re-exports it)
 │   ├── schema/
 │   │   ├── index.ts        schema barrel
+│   │   ├── audit_log_entries.ts [Story 1.10 — landed] tamper-evident audit log (seq IDENTITY + hash chain + append-only; SEPARATE from events_log)
 │   │   ├── pariwar_passport.ts [Story 1.7 — landed] Pariwar-Passport table + BrandingBundle + locale enum (+ 1.9 created_by→users FK)
 │   │   ├── role_grants.ts  [Story 1.8 — landed] role_grants table + scope_dimension enum (scoped; + 1.9 user_id→users FK)
 │   │   ├── users.ts        [Story 1.9 — landed] GLOBAL identity table (identity_type enum, carve-out family)
@@ -54,7 +56,8 @@ packages/domain/
 │   ├── test-utils/         [Story 1.6 — landed] shared live-DB integration substrate
 │   ├── snapshot-fixtures/  [Story 7.x] Pool Engine snapshot fixtures
 │   ├── snapshot-adapters/  [Story 7.x] Pool Engine snapshot version adapters
-│   ├── cross-tenant/       [Story 1.6 — landed] named cross-tenant operations helper
+│   ├── audit/              [Story 1.10 — landed] hash-chain primitives (computeAuditHash / verifyChainSegment) + writeAuditEntry advisory-lock writer
+│   ├── cross-tenant/       [Story 1.6 — landed] named cross-tenant operations helper (1.10: re-keyed audit → audit_log_entries + servicePool)
 │   ├── bank-statement/     [Story 9.2] normalized bank-statement row schema
 │   └── per-pariwar/bihar/  [Story 1.7 deferred + 10.12] per-Pariwar JSON Schema fragments (custom fields NOT landed at 1.7)
 └── tests/

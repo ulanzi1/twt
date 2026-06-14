@@ -16,6 +16,10 @@ export {
   type DbSchema,
 } from './db.js';
 export { resolveConnectionString, resolveSecretValue } from './secrets.js';
+// Single canonical-JSON home (DD-1 / Story 1.10). @twt/events re-exports these
+// for backward compatibility — see packages/events/src/canonical-json.ts.
+export { canonicalJsonStringify } from './canonical-json.js';
+export type { CanonicalJsonValue } from './canonical-json.js';
 export {
   InvalidPariwarScopeError,
   PariwarScopeMissingError,
@@ -28,6 +32,7 @@ export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
 export * as crossTenant from './cross-tenant/index.js';
+export * as audit from './audit/index.js';
 export * as ids from './ids/index.js';
 export * as passport from './pariwar-passport/index.js';
 export * as rbac from './rbac/index.js';

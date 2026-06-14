@@ -14,6 +14,8 @@
 //   - Story 9.x reconciliation
 export * from './_baseline.js';
 export * from './events_log.js';
+// Story 1.10 — tamper-evident audit log (hash chain + 6h off-site mirror).
+export * from './audit_log_entries.js';
 export * from './pariwar_passport.js';
 export * from './role_grants.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).

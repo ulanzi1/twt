@@ -109,12 +109,50 @@ fake-KMS provider (`KMS_TEST_MODE=fake`) inside `pnpm crypto:check`.
 
 See `.terraform-plan-expectations.md` for the expected `terraform plan` shape.
 
+## Audit-log off-site mirror (Story 1.10)
+
+Story 1.10 adds `audit-mirror.tf` — the Object-Retention-Locked GCS bucket + the
+write-only push service account, provisioned in a **separate GCP project**
+(`var.audit_mirror_project_id`, default `twt-audit-mirror`) via an aliased
+provider. This is the cold-tier WORM mirror for `audit_log_entries` (AR-9/10,
+§2.10a, §5.2).
+
+| Resource                                   | Name                              | Notes                                                                |
+| ------------------------------------------ | --------------------------------- | -------------------------------------------------------------------- |
+| `provider "google"` (alias)                | `google.audit_mirror`             | Bound to the SEPARATE `twt-audit-mirror` project (AC-4 tenancy split)|
+| `google_storage_bucket`                    | `twt-audit-mirror-${env}`         | `asia-south1`; Bucket Lock + Object Retention Lock; 7-year; PAP enforced |
+| `google_service_account`                   | `audit-mirror-writer`             | Write-only one-way push credential (key → Secret Manager, deferred)  |
+| `google_storage_bucket_iam_binding`        | `roles/storage.objectCreator`     | **Authoritative** — ONLY the writer SA; no delete/admin/read anywhere |
+
+Key properties:
+
+- **Append-only / no overwrite:** the mirror job (`apps/jobs/src/audit/mirror.ts`)
+  writes one segment object per run, named by the seq range it carries
+  (`audit/segment-<minSeq>-<maxSeq>.jsonl`). The objectCreator-only SA + Object
+  Retention Lock + the `ifGenerationMatch:0` upload precondition forbid overwrites
+  (§1.5 L885).
+- **AC-4 one-way push:** the bucket + SA live in the separate project; **no
+  primary-project identity holds any role in the mirror project**. Even a full
+  prod-credential compromise cannot modify/erase mirrored audit data (§2.10a
+  property 1). The primary pushes using the mirror writer SA's own key.
+- **Irreversible lock guard:** `var.enable_retention_lock` defaults **false** —
+  dev/staging get a retention policy that is NOT locked (still tear-down-able).
+  Set `true` only for the production mirror after verifying the 7-year period;
+  locking is permanent (§5.2 L2968).
+
+**Do NOT `terraform apply audit-mirror.tf` at Story 1.10 closure.** Live
+provisioning + the retention LOCK are deferred (D1-1.5 precedent). The substrate
+is structurally exercised by the local/CI fake `MirrorTarget`
+(`MIRROR_MODE=fake`) in `pnpm --filter @twt/jobs test`. The 6-hourly trigger is
+pg-boss cron at Story 1.12. Quarterly attestation: `docs/runbooks/audit-mirror-attestation.md`.
+
 ## Landing-story map (full)
 
 | Subfolder / artifact                | Story / Epic            | Concern                                                  |
 | ----------------------------------- | ----------------------- | -------------------------------------------------------- |
 | `cloud-sql-dev.tf` (+ siblings)     | Story 1.2               | Cloud SQL Postgres dev instance + Secret Manager         |
-| `cloud-kms-dev.tf`                  | **Story 1.5 (this)**    | Tier-1 KEK + Tier-2 HMAC HSM-backed; rotation; IaC only  |
+| `cloud-kms-dev.tf`                  | Story 1.5               | Tier-1 KEK + Tier-2 HMAC HSM-backed; rotation; IaC only  |
+| `audit-mirror.tf`                   | **Story 1.10 (this)**   | Separate-project WORM GCS audit mirror + write-only SA    |
 | `twt-staging` + `twt-prod` SQL/KMS  | Story 1.15              | Module re-use with `environment` tfvar override          |
 | Workload Identity Federation pool   | Story 1.15              | CI/CD auth per architecture §5.4                         |
 | Dokploy substrate                   | Story 1.15              | Deploy pipeline + multi-Pariwar provisioning             |

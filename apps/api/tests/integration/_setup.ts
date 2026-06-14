@@ -108,6 +108,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     config,
     db,
     pool,
+    // Tests use the CapturingAuditSink (not the real hash-chain sink), so the
+    // service pool is never exercised; reuse the single test pool (§1.1).
+    servicePool: pool,
     encryption: enc,
     pepper: Buffer.from(TEST_PEPPER, 'utf-8'),
     auditSink,

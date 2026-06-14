@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto';
 import { createDb, resolveConnectionString, resolveSecretValue } from '@twt/domain';
 import { encryption } from '@twt/domain';
 
-import { consoleAuthAuditSink } from './audit/audit-sink.js';
+import { createAuditLogSink, createKmsAuditHook } from './audit/audit-log-sink.js';
 import type { ApiConfig } from './config.js';
 import type { AppDeps, EncryptionDeps } from './context.js';
 import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.js';
@@ -72,6 +72,17 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
   const connectionString = await resolveConnectionString();
   const { db, pool } = createDb(connectionString);
 
+  // Service pool for the audit-log writer (DD-3 / Story 1.10). In production a
+  // distinct BYPASSRLS `twt_service`-login pool (SERVICE_DATABASE_URL); in dev/CI
+  // it reuses the app pool (the superuser login already bypasses RLS). The live
+  // SERVICE_DATABASE_URL credential is Terraform/Secret-Manager, apply-deferrable
+  // (Story 1.5 D1-1.5 precedent). The caller ends `servicePool` only when it is a
+  // distinct pool (see apps/api/src/index.ts).
+  const serviceConnectionString = process.env['SERVICE_DATABASE_URL'];
+  const servicePool = serviceConnectionString
+    ? createDb(serviceConnectionString).pool
+    : pool;
+
   const pepper = await resolveSecretValue(config.argon2.pepperSecretName, {
     envFallback: config.argon2.pepperEnvFallback,
   });
@@ -81,13 +92,22 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
 
   const isProd = config.nodeEnv === 'production';
 
+  // Build the encryption deps, then populate the KMS audit hook (D10-1.5) so KEK
+  // wrap/unwrap + blind-index HMAC emit tamper-evident audit lines. Mutating the
+  // provider's optional `auditHook` keeps buildEncryptionDeps (+ the test path
+  // that reuses it) sink-free.
+  const encryptionDeps = buildEncryptionDeps(pepper);
+  encryptionDeps.kms.auditHook = createKmsAuditHook(servicePool);
+
   return {
     config,
     db,
     pool,
-    encryption: buildEncryptionDeps(pepper),
+    servicePool,
+    encryption: encryptionDeps,
     pepper: Buffer.from(pepper, 'utf-8'),
-    auditSink: consoleAuthAuditSink,
+    // The real FR-47 hash-chain sink (Story 1.10) replaces consoleAuthAuditSink.
+    auditSink: createAuditLogSink(servicePool),
     stepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd }),
     turnstile: noopTurnstileVerifier,
     webauthn: createSimpleWebAuthnProvider({

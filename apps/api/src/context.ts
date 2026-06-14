@@ -43,6 +43,15 @@ export interface AppDeps {
   readonly db: Db;
   /** The node-postgres pool the session store + scope tx check out clients from. */
   readonly pool: pg.Pool;
+  /**
+   * The BYPASSRLS service-role pool for the audit-log writer (DD-3 / Story 1.10).
+   * In production this is a SEPARATE pool bound to the `twt_service`-login
+   * connection string (SERVICE_DATABASE_URL, from Secret Manager) so the
+   * hash-chain writer can read the global tail across tenants; in dev/CI it
+   * reuses `pool` (the superuser login already bypasses RLS). The audit sink +
+   * KMS audit hook write through this pool, never the request's app pool.
+   */
+  readonly servicePool: pg.Pool;
   readonly encryption: EncryptionDeps;
   /** Resolved Argon2id pepper (Secret Manager in prod; env fallback in local dev). */
   readonly pepper: Buffer;

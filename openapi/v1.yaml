@@ -238,6 +238,72 @@ components:
         - createdAt
         - createdBy
       additionalProperties: false
+    AuditLogEntry:
+      type: object
+      properties:
+        auditId:
+          type: string
+          format: uuid
+        seq:
+          type: integer
+          minimum: 1
+        pariwarId:
+          type: string
+          format: uuid
+        actorId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        actorRole:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        action:
+          type: string
+          minLength: 1
+        resourceLocator:
+          type: string
+          minLength: 1
+        requestPayloadHash:
+          type: string
+          minLength: 1
+        responseStatus:
+          type: integer
+          minimum: 100
+          maximum: 599
+        prevAuditHash:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        auditHash:
+          type: string
+          minLength: 1
+        recordedAt:
+          type: string
+          format: date-time
+        traceId:
+          type:
+            - string
+            - "null"
+          minLength: 1
+      required:
+        - auditId
+        - seq
+        - pariwarId
+        - actorId
+        - actorRole
+        - action
+        - resourceLocator
+        - requestPayloadHash
+        - responseStatus
+        - prevAuditHash
+        - auditHash
+        - recordedAt
+        - traceId
+      additionalProperties: false
     LoginRequest:
       type: object
       properties:

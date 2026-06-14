@@ -4,7 +4,9 @@ Transport-layer contracts for the **audit log** surface — audit-log entry shap
 
 ## Landing Story
 
-Substantive contracts authored at **Stories 1.10 / 1.11a / 1.11b** — tamper-evident audit log + integrity verification primitive + trustee-facing integrity verification UI per epics Epic 1. Hash-chain consumers use `canonicalJsonStringify` from `@twt/events` per ADR-0004. The transport shape for `events_log` rows (consumed at Stories 1.10 + 1.11b) lives at `_common/event-log-contract.ts` (authored at Story 1.4 as the demonstration case for the contract-↔-domain type-assignability test).
+Substantive contracts authored at **Stories 1.10 / 1.11a / 1.11b** — tamper-evident audit log + integrity verification primitive + trustee-facing integrity verification UI per epics Epic 1. Hash-chain consumers use `canonicalJsonStringify` from `@twt/domain` per ADR-0004 (the canonicalizer moved there at Story 1.10 / DD-1; `@twt/events` re-exports it). The transport shape for `events_log` rows (consumed at Stories 1.10 + 1.11b) lives at `_common/event-log-contract.ts` (authored at Story 1.4 as the demonstration case for the contract-↔-domain type-assignability test).
+
+**Story 1.10 landed** `audit-log-entry.ts` — `AuditLogEntryContract` (`.strict()`, the AC-1 wire shape; registered as the OpenAPI `AuditLogEntry` component, no paths). It is **standalone** — NOT a base-type share with `EventLogContract` (the `seq` / `prevAuditHash` / `auditHash` hash-chain columns have no events_log analogue; D13-1.4 audit leg closed). The read **paths** (`/api/v1/p/<pariwar_id>/audit/...`) are Story 1.11b.
 
 ## Discipline reminders
 

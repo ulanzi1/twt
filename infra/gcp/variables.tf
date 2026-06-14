@@ -186,3 +186,34 @@ variable "app_service_account_email" {
   type        = string
   default     = null
 }
+
+# Story 1.10 — off-site audit-log mirror substrate variables (AC-3/AC-4).
+
+variable "audit_mirror_project_id" {
+  description = "GCP project ID for the SEPARATE audit-mirror tenancy (§2.10a). Default twt-audit-mirror. Assumed provisioned + billing-linked out-of-band (prerequisite, like the primary project)."
+  type        = string
+  default     = "twt-audit-mirror"
+}
+
+variable "audit_mirror_bucket_name" {
+  description = "GCS bucket name for the WORM audit mirror. If null, defaults to twt-audit-mirror-${environment}. Bucket names are globally unique — override per environment."
+  type        = string
+  default     = null
+}
+
+variable "audit_retention_seconds" {
+  description = "Audit-mirror retention period in seconds. Default 220924800 = 7 years (7*365*86400 + 2 leap days) per FR-47 + architecture §5.2. Using 7*365*86400 = 220752000 would land 1–2 days short of a calendar 7-year anniversary on leap-year spans. Validation band: 220924800 (worst-case 7 calendar years) to 315360000 (10 years)."
+  type        = number
+  default     = 220924800
+
+  validation {
+    condition     = var.audit_retention_seconds >= 220924800 && var.audit_retention_seconds <= 315360000
+    error_message = "audit_retention_seconds must be between 220924800 (worst-case 7 calendar years including 2 leap days, FR-47 floor) and 315360000 (10 years)."
+  }
+}
+
+variable "enable_retention_lock" {
+  description = "IRREVERSIBLE Bucket Lock toggle. false (default) for dev/staging — the bucket has a retention policy but it is NOT locked, so it can still be torn down. Set true ONLY for the production mirror after verifying the retention period (§5.2 L2968 misconfiguration guard: locking is permanent)."
+  type        = bool
+  default     = false
+}

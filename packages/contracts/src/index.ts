@@ -6,6 +6,7 @@
 // landing Story.
 
 export * from './_common/index.js';
+export * from './audit/index.js';
 export * from './auth/index.js';
 export * from './pariwar-passport/index.js';
 export * from './rbac/index.js';

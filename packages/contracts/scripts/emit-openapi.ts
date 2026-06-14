@@ -43,6 +43,9 @@ const { PermissionKeySchema, PermissionCatalogSchema } = await import(
   '../src/rbac/permissions.js'
 );
 const { RoleBundleSchema, RoleGrantSchema } = await import('../src/rbac/roles.js');
+// Story 1.10 — audit-log transport contract. Component/schema only (no paths):
+// the tenant-scoped audit READ endpoints land at Story 1.11b (mirror 1.7/1.8).
+const { AuditLogEntryContract } = await import('../src/audit/index.js');
 // Story 1.9 — admin-auth transport contracts. THE FIRST REAL `paths` (Stories
 // 1.4/1.7/1.8 registered components-only). apps/api now serves these routes.
 const {
@@ -83,6 +86,9 @@ const PermissionCatalogComponent = PermissionCatalogSchema.openapi('PermissionCa
 const RoleBundleComponent = RoleBundleSchema.openapi('RoleBundle');
 const RoleGrantComponent = RoleGrantSchema.openapi('RoleGrant');
 
+// Story 1.10 — audit-log-entry component schema.
+const AuditLogEntryComponent = AuditLogEntryContract.openapi('AuditLogEntry');
+
 // Story 1.9 — admin-auth component schemas (request + response objects).
 const authComponents = {
   LoginRequest: LoginRequest.openapi('LoginRequest'),
@@ -116,6 +122,8 @@ registry.register('PermissionKey', PermissionKeyComponent);
 registry.register('PermissionCatalog', PermissionCatalogComponent);
 registry.register('RoleBundle', RoleBundleComponent);
 registry.register('RoleGrant', RoleGrantComponent);
+// Story 1.10 — audit-log-entry component (no path; reads are Story 1.11b).
+registry.register('AuditLogEntry', AuditLogEntryComponent);
 
 // Story 1.9 — register the admin-auth components.
 for (const [name, schema] of Object.entries(authComponents)) {

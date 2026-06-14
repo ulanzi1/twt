@@ -204,8 +204,9 @@ jobs:
       - name: Apply migrations
         run: pnpm db:migrate
       - name: Run integration tests
-        # Filter to the two workspaces with live-DB tests. Downstream Stories
-        # (1.10 audit-log, 7.x Pool Engine, 9.x reconciliation) extend this
-        # filter when their integration suites land. With DATABASE_URL set the
+        # Filter to the workspaces with live-DB tests. @twt/jobs joined at Story
+        # 1.11a (the audit-integrity walk's synthetic-tamper suite). Downstream
+        # Stories (7.x Pool Engine, 9.x reconciliation) extend this filter when
+        # their integration suites land. With DATABASE_URL set the
         # `describe.skipIf(!hasDatabase)` guards run instead of skipping.
-        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events
+        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs

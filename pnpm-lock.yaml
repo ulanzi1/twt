@@ -92,6 +92,9 @@ importers:
       '@twt/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@twt/jobs':
+        specifier: workspace:*
+        version: link:../jobs
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1

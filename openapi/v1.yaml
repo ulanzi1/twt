@@ -304,6 +304,74 @@ components:
         - recordedAt
         - traceId
       additionalProperties: false
+    AuditIntegrityCheckRequest:
+      type: object
+      properties: {}
+      additionalProperties: false
+    AuditIntegrityCheckResult:
+      type: object
+      properties:
+        checkId:
+          type: string
+          format: uuid
+        verifiedAt:
+          type: string
+          format: date-time
+        chainValid:
+          type: boolean
+        startSeq:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        startAuditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        endSeq:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        endAuditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        firstBrokenSeq:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        firstBrokenAuditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        rowsVerified:
+          type: integer
+          minimum: 0
+        verifierActor:
+          type: string
+          minLength: 1
+        triggerSource:
+          type: string
+          minLength: 1
+      required:
+        - checkId
+        - verifiedAt
+        - chainValid
+        - startSeq
+        - startAuditId
+        - endSeq
+        - endAuditId
+        - firstBrokenSeq
+        - firstBrokenAuditId
+        - rowsVerified
+        - verifierActor
+        - triggerSource
+      additionalProperties: false
     LoginRequest:
       type: object
       properties:
@@ -880,6 +948,31 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: CSRF token missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/audit/verify-integrity:
+    post:
+      summary: On-demand audit-log integrity verification (walk the global hash chain)
+      description: Walks the entire global audit hash chain, records a verdict to audit_integrity_checks, and returns it. Requires an authenticated admin session.
+      tags:
+        - audit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditIntegrityCheckRequest"
+      responses:
+        "200":
+          description: Integrity-check verdict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditIntegrityCheckResult"
+        "401":
+          description: Authentication required
           content:
             application/json:
               schema:

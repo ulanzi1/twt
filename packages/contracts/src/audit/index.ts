@@ -13,3 +13,5 @@
 // apps/api — consume `AuditLogEntryContract`, do not redeclare.
 
 export * from './audit-log-entry.js';
+// Story 1.11a — on-demand integrity-verification request + verdict-result contracts.
+export * from './integrity-check.js';

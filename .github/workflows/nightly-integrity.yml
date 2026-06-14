@@ -1,0 +1,74 @@
+name: nightly-integrity
+
+# Daily audit-log integrity verification (Story 1.11a, AC-2a / DD-4).
+#
+# ⚠ GitHub Actions `schedule:` cron is in UTC. The story's "02:00 daily" is
+# interpreted as 02:00 IST (Asia/Kolkata, UTC+5:30) = 20:30 UTC → '30 20 * * *'.
+# Scheduled workflows run only from the DEFAULT branch and may be delayed under
+# GitHub load — acceptable for this v1 MECHANISM proof. The prod-grade daily run
+# against the LIVE chain from a separate execution environment (separate-project
+# read SA per architecture §2.10 / DD-1) is the recorded graduation, wired with
+# the pg-boss / Cloud Scheduler cron when Story 1.12 lands (D2-1.10).
+#
+# What this job proves in v1 (mechanism, not prod coverage):
+#   1. The SYNTHETIC-TAMPER GATE — the @twt/jobs live-DB integrity suite, which
+#      breaks the chain mid-chunk, at a chunk boundary, and via head-truncation
+#      and asserts each break is localized (AC-6). This is the load-bearing gate.
+#   2. A real end-to-end WALK via the CLI against the migrated DB (the cron
+#      entrypoint runs, records a verdict, exits 0 on an intact chain).
+
+on:
+  schedule:
+    - cron: '30 20 * * *' # 02:00 IST (Asia/Kolkata) — see UTC note above
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+concurrency:
+  group: nightly-integrity-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  integrity-check:
+    name: audit-integrity (synthetic-tamper gate + walk)
+    runs-on: ubuntu-latest
+    # Postgres 16 service container — copied from ci.yml's integration-tests job
+    # (same image / creds / health-check) so the live-DB integrity suite + the
+    # walk run against a real chain.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: twt_dev_app
+          POSTGRES_PASSWORD: devpass
+          POSTGRES_DB: twt_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U twt_dev_app -d twt_dev"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgresql://twt_dev_app:devpass@127.0.0.1:5432/twt_dev?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        run: pnpm db:migrate
+      - name: Synthetic-tamper gate (live-DB integrity suite)
+        # With DATABASE_URL set the `describe.skipIf(!hasDatabase)` guards run.
+        run: pnpm turbo run test --filter=@twt/jobs
+      - name: End-to-end walk (cron entrypoint against the migrated chain)
+        # Mechanism proof: the CLI walks the chain, records a verdict, exits
+        # non-zero if the chain is broken. INTEGRITY_OBSERVABILITY_MODE=fake →
+        # the structured-log sink (live wiring is the Category-5 graduation).
+        run: pnpm --filter @twt/jobs audit:verify-integrity

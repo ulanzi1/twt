@@ -57,6 +57,20 @@
       "when": 1781263902951,
       "tag": "0007_audit-log-entries-rls",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781420996274,
+      "tag": "0008_audit-integrity-checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781421052882,
+      "tag": "0009_audit-integrity-checks-rls",
+      "breakpoints": true
     }
   ]
 }

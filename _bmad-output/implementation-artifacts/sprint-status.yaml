@@ -150,7 +150,7 @@ development_status:
   1-8-rbac-permission-keys-scope-dimensions-12-seeded-roles: done
   1-9-admin-authentication-email-password-webauthn-passkey-step-up-otp: done
   1-10-tamper-evident-audit-log-hash-chain-6h-off-site-mirror: done
-  1-11a-audit-log-integrity-verification-primitive: review
+  1-11a-audit-log-integrity-verification-primitive: done
   1-11b-trustee-facing-audit-log-integrity-verification-ui: backlog
   1-12-pg-boss-job-queue-idempotency-keyed-store: backlog
   1-13-cloudflare-bot-management-turnstile-edge-protection: backlog

@@ -300,4 +300,98 @@ describe.skipIf(!hasDatabase)('verifyAuditChain (live DB)', () => {
       client2.release();
     }
   });
+
+  it('chunk-boundary deletion → caught by cross-chunk stitch, verdict persisted + alerted (AC-6)', async () => {
+    // Write 3 rows. With chunkSize=1 every row is its own chunk, so the row
+    // after the deleted one becomes chunk[0] of the next chunk. verifyChainSegment
+    // skips row[0] linkage by design — only the cross-chunk STITCH catches it.
+    const rows = await writeRows(randomUUID(), 3);
+    const victim = rows[1]!;
+    const sink = createCapturingIntegritySink();
+    const alerter = createCapturingIntegrityAlerter();
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'ALTER TABLE audit_log_entries DISABLE TRIGGER audit_log_entries_no_delete',
+      );
+      await client.query('DELETE FROM audit_log_entries WHERE audit_id = $1', [victim.auditId]);
+      const db = drizzle(client, { schema }) as unknown as Db;
+
+      const verdict = await verifyAuditChain({
+        db,
+        sink,
+        alerter,
+        chunkSize: 1,
+        verifierActor: 'cron',
+        triggerSource: 'cron',
+      });
+
+      expect(verdict.chainValid).toBe(false);
+      // The row AFTER the deleted boundary row is where the stitch fails.
+      expect(verdict.firstBrokenSeq).toBe(rows[2]!.seq);
+      expect(verdict.firstBrokenAuditId).toBe(rows[2]!.auditId);
+      expect(alerter.alerts).toHaveLength(1);
+      expect(sink.published).toHaveLength(1);
+
+      const found = await db
+        .select()
+        .from(schema.auditIntegrityChecks)
+        .where(eq(schema.auditIntegrityChecks.checkId, verdict.checkId));
+      expect(found).toHaveLength(1);
+      expect(found[0]!.chainValid).toBe(false);
+      expect(found[0]!.firstBrokenSeq).toBe(rows[2]!.seq);
+    } finally {
+      await client.query('ROLLBACK').catch(() => undefined);
+      client.release();
+    }
+  });
+
+  it('head-truncation → caught by genesis anchor, verdict persisted + alerted (AC-6)', async () => {
+    const sink = createCapturingIntegritySink();
+    const alerter = createCapturingIntegrityAlerter();
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Find the true genesis row — the lowest-seq row with prevAuditHash IS NULL.
+      const genesisResult = await client.query<{ audit_id: string; seq: string }>(
+        'SELECT audit_id, seq FROM audit_log_entries WHERE prev_audit_hash IS NULL ORDER BY seq ASC LIMIT 1',
+      );
+      expect(genesisResult.rows.length).toBeGreaterThan(0);
+      const genesis = genesisResult.rows[0]!;
+
+      await client.query(
+        'ALTER TABLE audit_log_entries DISABLE TRIGGER audit_log_entries_no_delete',
+      );
+      await client.query('DELETE FROM audit_log_entries WHERE audit_id = $1', [genesis.audit_id]);
+      const db = drizzle(client, { schema }) as unknown as Db;
+
+      const verdict = await verifyAuditChain({
+        db,
+        sink,
+        alerter,
+        verifierActor: 'cron',
+        triggerSource: 'cron',
+      });
+
+      // The new head has prevAuditHash != null → genesis anchor fires.
+      expect(verdict.chainValid).toBe(false);
+      expect(verdict.firstBrokenSeq).not.toBeNull();
+      expect(verdict.rowsVerified).toBe(0);
+      expect(alerter.alerts).toHaveLength(1);
+      expect(sink.published).toHaveLength(1);
+
+      const found = await db
+        .select()
+        .from(schema.auditIntegrityChecks)
+        .where(eq(schema.auditIntegrityChecks.checkId, verdict.checkId));
+      expect(found).toHaveLength(1);
+      expect(found[0]!.chainValid).toBe(false);
+    } finally {
+      await client.query('ROLLBACK').catch(() => undefined);
+      client.release();
+    }
+  });
 });

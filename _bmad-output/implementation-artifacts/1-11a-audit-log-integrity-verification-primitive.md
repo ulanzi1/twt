@@ -1,6 +1,6 @@
 # Story 1.11a: Audit-Log Integrity Verification Primitive
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -118,6 +118,26 @@ AC-4 ("published to observability sink") and AC-5 ("alert fires — vendor-fluid
   - [x] 12.1 `pnpm turbo run lint typecheck test build` green; `db:migrate`+`db:check` idempotent; `contracts:check-openapi-determinism` byte-stable.
   - [x] 12.2 `deferred-work.md`: mark **CR-D2-1.10 / CR-D10-1.10 / CR-D11-1.10** handled-in-1.11a; add deferrals (verify-from-mirror DD-1, live observability/alerting DD-5, prod nightly run DD-4, optional `predecessorLinkageVerified` DD-2, **RBAC gate upgrade** — "upgrade `POST /api/v1/audit/verify-integrity` from `requireAdminSession`-only to full `audit.verify` RBAC gate when a global-scope preHandler exists"). Per `[[feedback_closure_language_precision]]`: "Closed by [edit]" only where an artifact exists; else "Resolved via explicit deferral" with a trigger.
   - [x] 12.3 READMEs (`apps/jobs` integrity job; `packages/domain` audit_integrity_checks) + decision-log entries.
+
+### Review Findings
+
+> Code review of Group 1 (apps/jobs/src/audit/ + tests) — 2026-06-14. 2 decision-needed, 1 patch, 3 deferred, 12 dismissed.
+
+- [x] [Review][Patch] **Post-mirror CLI exit code on chain break** — set `process.exitCode=1` in `cli.ts` after the post-mirror hook when `chainValid=false`, consistent with `integrity-cli.ts`. Decision: A (mirror job should fail loudly on detected chain break). [`apps/jobs/src/audit/cli.ts:82`]
+- [x] [Review][Patch] **AC-6 live-DB tests: add chunk-boundary deletion and head-truncation** — add two live-DB tests to `verifyAuditChain` suite: (1) DISABLE TRIGGER + DELETE boundary row + small chunkSize → detects stitch failure, verdict persisted + alert fired; (2) DISABLE TRIGGER + DELETE genesis row → detects head-truncation, verdict persisted + alert fired. Decision: A (satisfies AC-6 literally). [`apps/jobs/tests/audit/integrity-check.test.ts`]
+- [x] [Review][Patch] **`sink.publish` throw before `alertChainBroken` suppresses the alert on a broken chain** — reordered: `alertChainBroken` now runs before `sink.publish` so a live-adapter publish failure cannot silence the break alert. [`apps/jobs/src/audit/integrity-check.ts:291-296`]
+- [x] [Review][Patch] **Missing CHECK constraints on `audit_integrity_checks` — structural invariants not enforced at the DB layer** — added migration 0010 with: (1) `CHECK (NOT chain_valid OR (first_broken_seq IS NULL AND first_broken_audit_id IS NULL))` — valid chain implies no broken row; (2) `CHECK ((start_seq IS NULL) = (end_seq IS NULL) AND (start_seq IS NULL) = (start_audit_id IS NULL) AND (end_seq IS NULL) = (end_audit_id IS NULL))` — boundary seq+id pairs are co-present; (3) `CHECK (rows_verified >= 0)` — never negative (0 is valid for empty chain). [`packages/domain/migrations/0010_audit-integrity-checks-invariants.sql`]
+- [x] [Review][Defer] **No transactional atomicity between verdict INSERT and sink.publish on `servicePool` path** [`apps/jobs/src/audit/integrity-check.ts:285-296`] — deferred, pre-existing; only matters with a live adapter (Category 5); D2-1.11a already recorded
+- [x] [Review][Defer] **New rows may be appended between the last chunk read and the verdict INSERT on `servicePool` path** [`apps/jobs/src/audit/integrity-check.ts:269`] — deferred, pre-existing; inherent to point-in-time verification design; `endSeq` correctly captures what was verified
+- [x] [Review][Defer] **`createInMemoryChunkReader` silently drops second occurrence if two rows share the same seq** [`apps/jobs/src/audit/integrity-check.ts:227-232`] — deferred, test-only helper; IDENTITY seq makes duplicates impossible in production
+
+> Code review of Group 3 (contracts, API route, OpenAPI) — 2026-06-14. 2 patches, 1 dismiss-revised, 9 dismissed/deferred.
+
+- [x] [Review][Patch] **Broken-chain test fixture `endSeq: null` with `rowsVerified: 6` is semantically inconsistent** — when 6 rows verify before the break at seq=7, `endSeq` must be seq 6 (the last good row), not null. Fixed: `endSeq: 6, endAuditId: '...'` in the broken-chain fixture. The Zod schema has no cross-field constraint preventing the inconsistent shape, so the test still passed — but the fixture would mislead future readers. [`packages/contracts/tests/type-assignability.test.ts:146-147`]
+- [x] [Review][Patch] **OpenAPI path `/api/v1/audit/verify-integrity` missing `400` response** — all other POST paths in `v1.yaml` declare `400` for Zod body validation failure; `AuditIntegrityCheckRequest.strict()` rejects unknown keys with a 400 that was undocumented. Added `400: Request validation failed`. [`openapi/v1.yaml:975-980`]
+- [x] [Review][Dismiss] **CSRF double-submit omitted on write route** — `originCheckHook` runs globally on all POST requests as the baseline CSRF layer; `app.csrfProtection` (double-submit token) is NOT applied to all admin write routes, only `logout`; `password-reset/consume` (also a state-changing admin POST) does not use it. `verify-integrity` is consistent with the project's existing pattern.
+- [x] [Review][Defer] **`triggerSource` contract uses `z.string()` not a Zod enum** — intentional: Drizzle `text` column is `string`; using `z.union(['cron','on_demand','post_mirror'])` would break the `$inferSelect` type-assignability the test verifies; upgrade to an enum when the contracts layer adds a dedicated `TriggerSource` type. [`packages/contracts/src/audit/integrity-check.ts`]
+- [x] [Review][Defer] **Sink and alerter resolved separately from env at registration; `live` mode throws at startup** — two-call pattern is correct for v1; combining into `resolveIntegrityObservabilityFromEnv() → { sink, alerter }` is a tidy refactor for a post-v1 story; startup fail-fast on `live` mode is intentional. [`apps/api/src/modules/audit-log/index.ts:52-53`]
 
 ## Dev Notes
 

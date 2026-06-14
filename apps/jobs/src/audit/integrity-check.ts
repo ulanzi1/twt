@@ -238,12 +238,13 @@ export async function verifyAuditChain(
     .returning();
   if (!persisted) throw new Error('verifyAuditChain: verdict insert returned no row');
 
-  // AC-4: every completion is published to the observability sink.
-  await opts.sink.publish(persisted);
-  // AC-5: a broken chain additionally fires the alert.
+  // AC-5: alert FIRST — if publish throws on a live adapter, the alert must
+  // still fire (a chain break is the highest-priority event).
   if (!persisted.chainValid) {
     await opts.alerter.alertChainBroken(persisted);
   }
+  // AC-4: every completion is published to the observability sink.
+  await opts.sink.publish(persisted);
 
   return persisted;
 }

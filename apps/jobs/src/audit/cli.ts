@@ -81,6 +81,9 @@ async function main(): Promise<void> {
         firstBrokenSeq: integrity.firstBrokenSeq,
       }),
     );
+    // A broken chain detected post-mirror is a non-zero exit so the scheduler
+    // sees the failure (consistent with integrity-cli.ts; Decision D1-1.11a).
+    if (!integrity.chainValid) process.exitCode = 1;
   } finally {
     await pool.end().catch(() => undefined);
   }

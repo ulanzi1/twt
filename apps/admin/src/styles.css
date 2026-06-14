@@ -1,0 +1,32 @@
+/* Tailwind v4 CSS-first entry (Story 1.11b, DD-1).
+ *
+ * No tailwind.config.ts — v4 is configured in CSS. The @theme block defines the
+ * design tokens this dev-grade admin surface uses; extraction into packages/tokens
+ * is deferred (DD-1) until a 2nd admin surface needs the same atoms. Token pairs
+ * are chosen for WCAG 2.1 AA contrast on the status banners (§4.10): the red
+ * failure banner and green status both clear 4.5:1 against their backgrounds. */
+@import 'tailwindcss';
+
+@theme {
+  /* Status palette — AA-contrast pairs for the integrity banners (§4.10, AC-6). */
+  --color-status-ok-bg: #e7f6ec;
+  --color-status-ok-fg: #0f5132;
+  --color-status-ok-border: #198754;
+  --color-status-fail-bg: #fdecec;
+  --color-status-fail-fg: #842029;
+  --color-status-fail-border: #dc3545;
+  --color-status-muted-bg: #f3f4f6;
+  --color-status-muted-fg: #374151;
+}
+
+/* Honour reduced-motion preferences (§4.10): no spinners/transitions when the
+ * user has asked the OS to minimize motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

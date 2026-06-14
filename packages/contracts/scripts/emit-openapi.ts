@@ -48,8 +48,17 @@ const { RoleBundleSchema, RoleGrantSchema } = await import('../src/rbac/roles.js
 // Story 1.11a — the on-demand integrity-verification request + verdict-result.
 // This DOES register a real `path` (POST /api/v1/audit/verify-integrity) because
 // apps/api serves it now; the verdict READ surface is still Story 1.11b.
-const { AuditLogEntryContract, AuditIntegrityCheckRequest, AuditIntegrityCheckResult } =
-  await import('../src/audit/index.js');
+// Story 1.11b — the verdict READ surface (history list) + the acknowledgement
+// request/result shapes the trustee UI consumes.
+const {
+  AuditLogEntryContract,
+  AuditIntegrityCheckRequest,
+  AuditIntegrityCheckResult,
+  AuditIntegrityCheckListItem,
+  AuditIntegrityCheckList,
+  AuditIntegrityAcknowledgeRequest,
+  AuditIntegrityAcknowledgement,
+} = await import('../src/audit/index.js');
 // Story 1.9 — admin-auth transport contracts. THE FIRST REAL `paths` (Stories
 // 1.4/1.7/1.8 registered components-only). apps/api now serves these routes.
 const {
@@ -71,6 +80,9 @@ const {
   StepUpRequestResponse,
   StepUpVerifyRequest,
   StepUpVerifyResponse,
+  // Story 1.11b — session introspection (DD-6): the global-scope grant read the
+  // admin SPA gates nav + routes on.
+  SessionResponse,
 } = await import('../src/auth/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
@@ -99,6 +111,20 @@ const AuditIntegrityCheckRequestComponent = AuditIntegrityCheckRequest.openapi(
 const AuditIntegrityCheckResultComponent = AuditIntegrityCheckResult.openapi(
   'AuditIntegrityCheckResult',
 );
+// Story 1.11b — history list item (verdict + most-recent acknowledgement) + the
+// list response + the acknowledge request/result.
+const AuditIntegrityCheckListItemComponent = AuditIntegrityCheckListItem.openapi(
+  'AuditIntegrityCheckListItem',
+);
+const AuditIntegrityCheckListComponent = AuditIntegrityCheckList.openapi(
+  'AuditIntegrityCheckList',
+);
+const AuditIntegrityAcknowledgeRequestComponent = AuditIntegrityAcknowledgeRequest.openapi(
+  'AuditIntegrityAcknowledgeRequest',
+);
+const AuditIntegrityAcknowledgementComponent = AuditIntegrityAcknowledgement.openapi(
+  'AuditIntegrityAcknowledgement',
+);
 
 // Story 1.9 — admin-auth component schemas (request + response objects).
 const authComponents = {
@@ -120,6 +146,8 @@ const authComponents = {
   StepUpRequestResponse: StepUpRequestResponse.openapi('StepUpRequestResponse'),
   StepUpVerifyRequest: StepUpVerifyRequest.openapi('StepUpVerifyRequest'),
   StepUpVerifyResponse: StepUpVerifyResponse.openapi('StepUpVerifyResponse'),
+  // Story 1.11b — session introspection response.
+  SessionResponse: SessionResponse.openapi('SessionResponse'),
 } as const;
 
 const registry = new OpenAPIRegistry();
@@ -138,6 +166,11 @@ registry.register('AuditLogEntry', AuditLogEntryComponent);
 // Story 1.11a — integrity-verification request + verdict-result components.
 registry.register('AuditIntegrityCheckRequest', AuditIntegrityCheckRequestComponent);
 registry.register('AuditIntegrityCheckResult', AuditIntegrityCheckResultComponent);
+// Story 1.11b — history list + acknowledgement components.
+registry.register('AuditIntegrityCheckListItem', AuditIntegrityCheckListItemComponent);
+registry.register('AuditIntegrityCheckList', AuditIntegrityCheckListComponent);
+registry.register('AuditIntegrityAcknowledgeRequest', AuditIntegrityAcknowledgeRequestComponent);
+registry.register('AuditIntegrityAcknowledgement', AuditIntegrityAcknowledgementComponent);
 
 // Story 1.9 — register the admin-auth components.
 for (const [name, schema] of Object.entries(authComponents)) {
@@ -257,6 +290,87 @@ registry.registerPath({
       content: { 'application/json': { schema: AuditIntegrityCheckResultComponent } },
     },
     401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 1.11b — session introspection (DD-6) ────────────────────────────────
+// GET /api/v1/auth/session → { userId, nationalGrants[] }. Read-only; gates the
+// admin SPA's nav + routes on global-scope grants (advisory).
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/auth/session',
+  summary: 'Session introspection — the authenticated admin id + global-scope grants',
+  description:
+    'Returns the current admin session id + the permission keys held at the global ' +
+    '("national") scope ceiling. The admin SPA gates nav + routes on these grants ' +
+    '(advisory; requireAdminSession is the real boundary on every endpoint).',
+  tags: ['admin-auth'],
+  responses: {
+    200: {
+      description: 'Current admin session',
+      content: { 'application/json': { schema: authComponents.SessionResponse } },
+    },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 1.11b — integrity-check history list (DD-3) ─────────────────────────
+// GET /api/v1/audit/integrity-checks?limit&triggerSource → most-recent-first list
+// of verdicts, each with its most-recent acknowledgement (or null). GLOBAL,
+// requireAdminSession-gated (NOT requirePermissionHook — a global route has no
+// scopeTx). The "last automated check" is derived client-side from this history.
+const integrityChecksQuery = z.object({
+  limit: z.number().int().min(1).max(200).optional(),
+  triggerSource: z.string().min(1).optional(),
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/audit/integrity-checks',
+  summary: 'Audit-integrity check history (last automated + recent checks)',
+  description:
+    'Returns recent integrity-check verdicts (default 30, most-recent first), each ' +
+    'with its most-recent acknowledgement (null if never acknowledged). Optionally ' +
+    'filtered to one trigger source. Requires an authenticated admin session.',
+  tags: ['audit'],
+  request: { query: integrityChecksQuery },
+  responses: {
+    200: {
+      description: 'Integrity-check history',
+      content: { 'application/json': { schema: AuditIntegrityCheckListComponent } },
+    },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 1.11b — acknowledge a (failed) integrity check (DD-5) ───────────────
+// POST /api/v1/audit/integrity-checks/{checkId}/acknowledge { ticketRef }. Records
+// an append-only acknowledgement (separate table) so the red banner can be cleared
+// once an investigation ticket is opened (AC-5). requireAdminSession only.
+const acknowledgeParams = z.object({ checkId: z.string().uuid() });
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/audit/integrity-checks/{checkId}/acknowledge',
+  summary: 'Acknowledge a (failed) integrity check with an investigation-ticket reference',
+  description:
+    'Records an append-only acknowledgement (separate audit_integrity_acknowledgements ' +
+    'table — the verdict ledger stays immutable) capturing the external ticket reference. ' +
+    'Requires an authenticated admin session.',
+  tags: ['audit'],
+  request: {
+    params: acknowledgeParams,
+    body: {
+      content: { 'application/json': { schema: AuditIntegrityAcknowledgeRequestComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'Acknowledgement recorded',
+      content: { 'application/json': { schema: AuditIntegrityAcknowledgementComponent } },
+    },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    404: errorResponse('Integrity check not found'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

@@ -151,6 +151,12 @@ describe('verifyChainWalk (pure — closes the DD-2 landmines)', () => {
     const verdict = await verifyChainWalk(createInMemoryChunkReader(truncated), 2);
     expect(verdict.chainValid).toBe(false);
     expect(verdict.firstBrokenSeq).toBe(2); // new head has a non-null prev_audit_hash
+    // Boundary-pair coherence: nothing verified before the break → start AND end
+    // are both null (Story 1.11a defect fix — the migration 0010 CHECK rejects a
+    // start-without-end verdict, which would make verifyAuditChain throw instead
+    // of persisting the failed verdict).
+    expect(verdict.startSeq).toBeNull();
+    expect(verdict.endSeq).toBeNull();
   });
 
   it('rejects a non-positive chunkSize', async () => {

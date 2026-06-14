@@ -18,6 +18,8 @@ export * from './events_log.js';
 export * from './audit_log_entries.js';
 // Story 1.11a — audit-log integrity-verification verdict ledger.
 export * from './audit_integrity_checks.js';
+// Story 1.11b — append-only acknowledgement ledger for failed integrity checks.
+export * from './audit_integrity_acknowledgements.js';
 export * from './pariwar_passport.js';
 export * from './role_grants.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).

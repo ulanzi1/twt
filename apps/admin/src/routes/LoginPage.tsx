@@ -14,11 +14,38 @@ import { LoginRequest, type LoginRequest as LoginCredentials } from '@twt/contra
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import * as api from '../api/client.js';
 import { sessionKey } from '../api/hooks.js';
+
+// The Cloudflare Turnstile widget (api.js) is the ONE admin-side vendor touch-point
+// (Story 1.13, AC-5). It mirrors `@twt/edge`'s TURNSTILE_WIDGET_SCRIPT_URL but is NOT
+// imported from the package — that would pull `node:crypto` into the browser bundle.
+// A pivot to a different edge vendor swaps this single component (AR-52, client side).
+const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+const TURNSTILE_SCRIPT_ID = 'cf-turnstile-script';
+
+interface TurnstileApi {
+  render(
+    el: HTMLElement,
+    opts: {
+      sitekey: string;
+      callback: (token: string) => void;
+      'error-callback'?: () => void;
+      'expired-callback'?: () => void;
+    },
+  ): string;
+  reset(widgetId?: string): void;
+  remove(widgetId?: string): void;
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi;
+  }
+}
 
 function messageFor(err: unknown): string {
   if (err instanceof api.ApiError) {
@@ -37,6 +64,13 @@ export function LoginPage(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Turnstile widget state (AC-5). The widget renders ONLY when a build-time site key
+  // is present; absent ⇒ no widget + no token ⇒ the server's no-op verifier passes.
+  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const [turnstileToken, setTurnstileToken] = useState<string | undefined>(undefined);
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | undefined>(undefined);
+
   const {
     register,
     handleSubmit,
@@ -45,6 +79,59 @@ export function LoginPage(): ReactElement {
     resolver: zodResolver(LoginRequest),
     defaultValues: { email: '', password: '' },
   });
+
+  // Load the Cloudflare Turnstile script + render the widget on the credentials stage.
+  useEffect(() => {
+    if (!siteKey || stage !== 'credentials') return;
+
+    function renderWidget(): void {
+      if (!window.turnstile || !widgetRef.current || widgetIdRef.current !== undefined) return;
+      widgetIdRef.current = window.turnstile.render(widgetRef.current, {
+        sitekey: siteKey as string,
+        callback: (token) => setTurnstileToken(token),
+        'error-callback': () => setTurnstileToken(undefined),
+        'expired-callback': () => setTurnstileToken(undefined),
+      });
+    }
+
+    // Track which element received the load listener so cleanup can remove it.
+    let listenerTarget: HTMLElement | null = null;
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      const existing = document.getElementById(TURNSTILE_SCRIPT_ID);
+      if (existing) {
+        existing.addEventListener('load', renderWidget);
+        listenerTarget = existing;
+      } else {
+        const script = document.createElement('script');
+        script.id = TURNSTILE_SCRIPT_ID;
+        script.src = TURNSTILE_SCRIPT_URL;
+        script.async = true;
+        script.defer = true;
+        script.addEventListener('load', renderWidget);
+        listenerTarget = script;
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      listenerTarget?.removeEventListener('load', renderWidget);
+      if (window.turnstile && widgetIdRef.current !== undefined) {
+        window.turnstile.remove(widgetIdRef.current);
+      }
+      widgetIdRef.current = undefined;
+    };
+  }, [siteKey, stage]);
+
+  /** Tokens are single-use — reset the widget + clear state so a retry gets a fresh one. */
+  function resetTurnstile(): void {
+    setTurnstileToken(undefined);
+    if (window.turnstile && widgetIdRef.current !== undefined) {
+      window.turnstile.reset(widgetIdRef.current);
+    }
+  }
 
   async function completeLogin(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: sessionKey });
@@ -55,11 +142,12 @@ export function LoginPage(): ReactElement {
     setError(null);
     setBusy(true);
     try {
-      const res = await api.login(values.email, values.password);
+      const res = await api.login(values.email, values.password, turnstileToken);
       setMethods(res.methods);
       setStage('mfa');
     } catch (err) {
       setError(messageFor(err));
+      resetTurnstile(); // single-use token — refresh it for the next attempt
     } finally {
       setBusy(false);
     }
@@ -127,6 +215,14 @@ export function LoginPage(): ReactElement {
             />
             {errors.password && <p role="alert" className="text-sm text-status-fail-fg">{errors.password.message}</p>}
           </div>
+          {siteKey && (
+            <div
+              ref={widgetRef}
+              data-testid="turnstile-widget"
+              className="min-h-[65px]"
+              aria-label="Verification challenge"
+            />
+          )}
           <button type="submit" disabled={busy} aria-busy={busy} className="rounded bg-black px-3 py-2 text-white disabled:opacity-60">
             {busy ? 'Signing in…' : 'Continue'}
           </button>

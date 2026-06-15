@@ -105,11 +105,21 @@ export function getSession(): Promise<Session> {
   return apiFetch('/api/v1/auth/session', SessionResponse);
 }
 
-/** POST the first factor (email + password) → mfa_required. */
-export function login(email: string, password: string): Promise<LoginResult> {
+/**
+ * POST the first factor (email + password) → mfa_required. The optional Turnstile
+ * token is forwarded ONLY when present (the `LoginRequest` contract already carries
+ * `turnstileToken?`); absent ⇒ the server's no-op verifier passes (dev default).
+ * Story 1.13 — only `login` carries the token (recovery/consume is the MFA second
+ * factor, which the server does NOT Turnstile-gate).
+ */
+export function login(
+  email: string,
+  password: string,
+  turnstileToken?: string,
+): Promise<LoginResult> {
   return apiFetch('/api/v1/auth/login', LoginResponse, {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, ...(turnstileToken ? { turnstileToken } : {}) }),
   });
 }
 

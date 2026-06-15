@@ -43,7 +43,16 @@ export function createAdminAuthHandlers(deps: AppDeps) {
     // ── First factor ──────────────────────────────────────────────────────────
     async login(request: FastifyRequest): Promise<LoginResponse> {
       const body = request.body as LoginRequest;
-      await deps.turnstile.verify({ token: body.turnstileToken, remoteIp: request.ip });
+      // AC-3: ENFORCE the Turnstile verdict (the result was previously discarded — a
+      // real verifier returning false would have been inert). Reject with the GENERIC
+      // credential envelope (anti-enumeration: identical to a bad password / lockout,
+      // never "captcha failed") + audit. The no-op default returns true, so the
+      // existing Story 1.9 auth tests stay green.
+      const turnstileOk = await deps.turnstile.verify({ token: body.turnstileToken, remoteIp: request.ip });
+      if (!turnstileOk) {
+        emitAuthAudit(deps, request, 'login.failure', { context: { reason: 'turnstile' } });
+        throw new UnauthorizedError('Invalid credentials', 'auth.invalid_credentials');
+      }
 
       const result = await service.verifyFirstFactor(deps, body.email, body.password);
       if (!result.ok) {
@@ -177,7 +186,17 @@ export function createAdminAuthHandlers(deps: AppDeps) {
     // ── Password reset ─────────────────────────────────────────────────────────
     async passwordResetRequest(request: FastifyRequest): Promise<PasswordResetRequestResponse> {
       const body = request.body as PasswordResetRequestRequest;
-      await deps.turnstile.verify({ token: body.turnstileToken, remoteIp: request.ip });
+      // AC-3: ENFORCE the Turnstile verdict before any work. The turnstile gate is
+      // independent of email existence (it runs before the lookup), so rejecting here
+      // is no enumeration oracle — it only reveals the token was invalid. The no-op
+      // default returns true (existing tests unaffected).
+      const turnstileOk = await deps.turnstile.verify({ token: body.turnstileToken, remoteIp: request.ip });
+      if (!turnstileOk) {
+        emitAuthAudit(deps, request, 'password_reset.failure', {
+          context: { reason: 'turnstile' },
+        });
+        throw new UnauthorizedError('Invalid credentials', 'auth.invalid_credentials');
+      }
       const minted = await service.requestPasswordReset(deps, body.email);
       if (minted) {
         // Delivery is seamed (email channel → Story 5.x). Dev: log the link token.

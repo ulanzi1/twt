@@ -39,6 +39,21 @@ export interface ApiConfig {
     readonly pepperEnvFallback: string;
     readonly params: Argon2Params;
   };
+  /**
+   * Cloudflare Turnstile (Story 1.13, AC-4). OPTIONAL — unlike argon2 (which uses
+   * requireEnv and throws when absent), an absent `secretName` resolves the seam to
+   * the no-op verifier in `deps.ts` so the stack boots with ZERO Cloudflare config
+   * (local dev / CI / not-yet-provisioned). Setting `secretName` opts into real
+   * siteverify.
+   */
+  readonly turnstile: {
+    /** Secret Manager secret NAME for the Turnstile secret key (never the value). Absent ⇒ no-op. */
+    readonly secretName?: string;
+    /** Local-dev env fallback var NAME holding the Turnstile secret VALUE (mirrors argon2). */
+    readonly secretEnvFallback: string;
+    /** Fail OPEN on a siteverify transport failure. Default false — fail closed in prod (AC-4). */
+    readonly failOpen: boolean;
+  };
   /** Admin session idle timeout (§2.4 — 12h). */
   readonly sessionIdleMs: number;
   /** Admin session absolute timeout (§2.4 — 7d). */
@@ -103,6 +118,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     throw new Error(`[config] WEBAUTHN_EXPECTED_ORIGIN must be a valid URL (got ${JSON.stringify(expectedOrigin)})`);
   }
 
+  // Turnstile secret NAME is OPTIONAL (env[...] not requireEnv) — absent ⇒ no-op seam.
+  const rawTurnstileSecretName = env['TURNSTILE_SECRET_NAME'];
+  const turnstileSecretName =
+    rawTurnstileSecretName && rawTurnstileSecretName.trim() !== '' ? rawTurnstileSecretName : undefined;
+
   return {
     nodeEnv,
     port: intEnv(env, 'PORT', 3000),
@@ -122,6 +142,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         timeCost: intEnv(env, 'ARGON2_TIME_COST', 3),
         parallelism: intEnv(env, 'ARGON2_PARALLELISM', 1),
       },
+    },
+    turnstile: {
+      ...(turnstileSecretName ? { secretName: turnstileSecretName } : {}),
+      secretEnvFallback: env['TURNSTILE_SECRET_ENV_FALLBACK'] ?? 'TURNSTILE_SECRET',
+      failOpen: env['TURNSTILE_FAIL_OPEN'] === '1',
     },
     sessionIdleMs: intEnv(env, 'SESSION_IDLE_MS', 12 * HOUR),
     sessionAbsoluteMs: intEnv(env, 'SESSION_ABSOLUTE_MS', 7 * DAY),

@@ -12,11 +12,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import type { AddPariwarRequest } from '@twt/contracts';
 
 import * as api from './client.js';
 
 export const sessionKey = ['session'] as const;
 export const integrityChecksKey = ['integrity-checks'] as const;
+export const provisionedPariwarsKey = ['provisioned-pariwars'] as const;
 
 /** A QueryClient with the cache-disabled defaults this surface requires (§4.5). */
 export function createQueryClient(): QueryClient {
@@ -60,4 +62,34 @@ export function useAcknowledge() {
 /** True iff the session carries the `audit.verify` grant at global scope (AC-1). */
 export function hasAuditVerify(grants: readonly string[] | undefined): boolean {
   return grants?.includes('audit.verify') ?? false;
+}
+
+// ── Multi-Pariwar provisioning surface (Story 1.15) ───────────────────────────
+
+/** The provisioning-status view: provisioned Pariwars + latest deploy status. */
+export function useProvisionedPariwars() {
+  return useQuery({ queryKey: provisionedPariwarsKey, queryFn: () => api.listProvisionedPariwars(100) });
+}
+
+/** Provision a new Pariwar, then refresh the status list. */
+export function useAddPariwar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AddPariwarRequest) => api.addPariwar(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: provisionedPariwarsKey }),
+  });
+}
+
+/** Trigger a Dokploy build for a Pariwar, then refresh the status list. */
+export function useTriggerDeploy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (pariwarId: string) => api.triggerDeploy(pariwarId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: provisionedPariwarsKey }),
+  });
+}
+
+/** True iff the session carries the `pariwar.provision` grant at global scope (AC-4). */
+export function hasPariwarProvision(grants: readonly string[] | undefined): boolean {
+  return grants?.includes('pariwar.provision') ?? false;
 }

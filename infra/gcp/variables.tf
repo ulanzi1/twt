@@ -30,7 +30,7 @@ variable "environment" {
 }
 
 variable "instance_name" {
-  description = "Cloud SQL instance name. If null, defaults to twt-${environment}-postgres."
+  description = "Cloud SQL instance name. If null, defaults to twt-<environment>-postgres."
   type        = string
   default     = null
 }
@@ -100,19 +100,19 @@ variable "enable_pgaudit" {
 }
 
 variable "app_database_name" {
-  description = "Application database name. If null, defaults to twt_${environment}."
+  description = "Application database name. If null, defaults to twt_<environment>."
   type        = string
   default     = null
 }
 
 variable "app_role_name" {
-  description = "Application Postgres role. Non-superuser, no BYPASSRLS, preparing Story 1.6 RLS isolation per architecture §1.2 line 717-725. If null, defaults to twt_${environment}_app."
+  description = "Application Postgres role. Non-superuser, no BYPASSRLS, preparing Story 1.6 RLS isolation per architecture §1.2 line 717-725. If null, defaults to twt_<environment>_app."
   type        = string
   default     = null
 }
 
 variable "secret_name" {
-  description = "Secret Manager secret name for the connection string. If null, defaults to twt-${environment}-cloud-sql-conn-string."
+  description = "Secret Manager secret name for the connection string. If null, defaults to twt-<environment>-cloud-sql-conn-string."
   type        = string
   default     = null
 }
@@ -196,7 +196,7 @@ variable "audit_mirror_project_id" {
 }
 
 variable "audit_mirror_bucket_name" {
-  description = "GCS bucket name for the WORM audit mirror. If null, defaults to twt-audit-mirror-${environment}. Bucket names are globally unique — override per environment."
+  description = "GCS bucket name for the WORM audit mirror. If null, defaults to twt-audit-mirror-<environment>. Bucket names are globally unique — override per environment."
   type        = string
   default     = null
 }
@@ -216,4 +216,31 @@ variable "enable_retention_lock" {
   description = "IRREVERSIBLE Bucket Lock toggle. false (default) for dev/staging — the bucket has a retention policy but it is NOT locked, so it can still be torn down. Set true ONLY for the production mirror after verifying the retention period (§5.2 L2968 misconfiguration guard: locking is permanent)."
   type        = bool
   default     = false
+}
+
+# Story 1.15 — Workload Identity Federation (keyless GitHub Actions → GCP) + the
+# Artifact Registry the deploy pipeline pushes images to (architecture §5.4 + D4-1.2).
+
+variable "github_repository" {
+  description = "GitHub repo in owner/name form (e.g., ulanzi1/TWT) — the WIF `attribute.repository` claim the deploy service account trusts. NULL (default) ⇒ WIF resources are NOT provisioned (dev / not-yet-wired); staging + prod MUST set it."
+  type        = string
+  default     = null
+}
+
+variable "wif_allowed_ref" {
+  description = "The git ref WIF trusts for STAGING deploys (release-branch model, §5.4). Default refs/heads/main. Prod tightens to a release-branch + the deploy-prod workflow in the attribute condition regardless."
+  type        = string
+  default     = "refs/heads/main"
+}
+
+variable "wif_prod_workflow_ref" {
+  description = "The fully-qualified workflow ref the PROD WIF provider trusts (strictest claim, §5.4): only this workflow on a release branch can impersonate the prod deployer. Format: <owner>/<repo>/.github/workflows/deploy-prod.yml@refs/heads/release/<x>. NULL ⇒ falls back to the repo+ref condition."
+  type        = string
+  default     = null
+}
+
+variable "artifact_registry_repository" {
+  description = "Artifact Registry Docker repository name images are pushed to (asia-south1). The deploy SA gets artifactregistry.writer on it."
+  type        = string
+  default     = "twt-images"
 }

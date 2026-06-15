@@ -16,6 +16,7 @@ import type { ApiConfig } from './config.js';
 import type { StepUpOtpDeliveryPort } from './modules/auth/shared/step-up-delivery.js';
 import type { TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import type { WebAuthnProvider } from './modules/auth/shared/webauthn.js';
+import type { DeployTrigger } from './modules/pariwar-provisioning/deploy-trigger.js';
 
 /**
  * The fixed namespace the admin-identity blind index + Tier-1 encryption context
@@ -60,6 +61,12 @@ export interface AppDeps {
   readonly turnstile: TurnstileVerifier;
   /** WebAuthn ceremony provider (SimpleWebAuthn in prod; a fake in tests). */
   readonly webauthn: WebAuthnProvider;
+  /**
+   * Deploy seam (Story 1.15, AC-3) — env-resolved: the in-memory fake in dev/test/CI,
+   * the live Dokploy-API client in staging/prod. Same seam pattern as `auditSink` /
+   * `turnstile`.
+   */
+  readonly deployTrigger: DeployTrigger;
   /** Injectable clock — tests freeze it to assert TTL / lockout / window expiry. */
   readonly clock: () => Date;
 }

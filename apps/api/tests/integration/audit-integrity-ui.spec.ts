@@ -129,6 +129,20 @@ describe.skipIf(!hasDatabase)('audit-integrity UI endpoints (Story 1.11b)', () =
     }
   }
 
+  /** Grant the user global `super_admin` (carries `audit.verify` at the global ceiling). */
+  async function grantGlobalSuperAdmin(userId: string): Promise<void> {
+    const c = await td.pool.connect();
+    try {
+      await c.query(
+        `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
+           VALUES ($1, $2, 'super_admin', 'global', NULL)`,
+        [userId, randomUUID()],
+      );
+    } finally {
+      c.release();
+    }
+  }
+
   beforeEach(() => {
     fakeWebauthn.nextRegistration = undefined;
   });
@@ -201,7 +215,8 @@ describe.skipIf(!hasDatabase)('audit-integrity UI endpoints (Story 1.11b)', () =
 
   // ── DD-3: history list ──────────────────────────────────────────────────────
   it('GET /audit/integrity-checks returns persisted verdicts newest-first', async () => {
-    const { client } = await authenticate();
+    const { client, userId } = await authenticate();
+    await grantGlobalSuperAdmin(userId); // AC-1b: the surface now needs global audit.verify
     const olderId = await insertCheck({ chainValid: true, triggerSource: 'cron' });
     const newerId = await insertCheck({ chainValid: false, triggerSource: 'on_demand' });
 
@@ -218,7 +233,8 @@ describe.skipIf(!hasDatabase)('audit-integrity UI endpoints (Story 1.11b)', () =
   });
 
   it('the triggerSource filter narrows the history to one source', async () => {
-    const { client } = await authenticate();
+    const { client, userId } = await authenticate();
+    await grantGlobalSuperAdmin(userId);
     const cronId = await insertCheck({ chainValid: true, triggerSource: 'cron' });
     await insertCheck({ chainValid: true, triggerSource: 'on_demand' });
 
@@ -234,6 +250,7 @@ describe.skipIf(!hasDatabase)('audit-integrity UI endpoints (Story 1.11b)', () =
   // ── DD-5: acknowledgement ───────────────────────────────────────────────────
   it('POST acknowledge records an append-only ack + the list then carries it', async () => {
     const { client, userId } = await authenticate();
+    await grantGlobalSuperAdmin(userId);
     const checkId = await insertCheck({ chainValid: false, triggerSource: 'cron' });
 
     const ackRes = await client.inject({
@@ -254,7 +271,8 @@ describe.skipIf(!hasDatabase)('audit-integrity UI endpoints (Story 1.11b)', () =
   });
 
   it('acknowledging an unknown check 404s (not a 500 FK leak)', async () => {
-    const { client } = await authenticate();
+    const { client, userId } = await authenticate();
+    await grantGlobalSuperAdmin(userId); // pass the gate so the handler's 404 path is reached
     const res = await client.inject({
       method: 'POST',
       url: `/api/v1/audit/integrity-checks/${randomUUID()}/acknowledge`,
@@ -264,7 +282,8 @@ describe.skipIf(!hasDatabase)('audit-integrity UI endpoints (Story 1.11b)', () =
   });
 
   it('acknowledge rejects an empty ticketRef (validation)', async () => {
-    const { client } = await authenticate();
+    const { client, userId } = await authenticate();
+    await grantGlobalSuperAdmin(userId); // 400 must win regardless of gate ordering
     const checkId = await insertCheck({ chainValid: false, triggerSource: 'cron' });
     const res = await client.inject({
       method: 'POST',
@@ -272,5 +291,53 @@ describe.skipIf(!hasDatabase)('audit-integrity UI endpoints (Story 1.11b)', () =
       payload: { ticketRef: '   ' },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  // ── AC-1b: the surface is now a REAL audit.verify gate, not session-only ──────
+  // Story 1.15 retrofits requireGlobalPermission('audit.verify') onto all three
+  // endpoints (closing D4-1.11a at the call site). An authenticated admin WITHOUT
+  // the global grant now gets a real 403; a global super_admin still passes all three.
+  describe('global audit.verify gate (Story 1.15, AC-1b)', () => {
+    it('an authenticated admin WITHOUT global audit.verify is FORBIDDEN (403) on all three endpoints', async () => {
+      const { client } = await authenticate(); // no grant
+      const checkId = await insertCheck({ chainValid: false, triggerSource: 'cron' });
+
+      const verify = await client.inject({ method: 'POST', url: '/api/v1/audit/verify-integrity', payload: {} });
+      expect(verify.statusCode).toBe(403);
+
+      const list = await client.inject({ method: 'GET', url: '/api/v1/audit/integrity-checks' });
+      expect(list.statusCode).toBe(403);
+
+      const ack = await client.inject({
+        method: 'POST',
+        url: `/api/v1/audit/integrity-checks/${checkId}/acknowledge`,
+        payload: { ticketRef: 'JIRA-403' },
+      });
+      expect(ack.statusCode).toBe(403);
+    });
+
+    it('a pariwar-scoped auditor (NOT global) is still FORBIDDEN (403) — scope ceiling enforced', async () => {
+      const { client, userId } = await authenticate();
+      const pariwarId = randomUUID();
+      const c = await td.pool.connect();
+      try {
+        await c.query(
+          `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
+             VALUES ($1, $2, 'auditor', 'pariwar', $3)`,
+          [userId, pariwarId, pariwarId],
+        );
+      } finally {
+        c.release();
+      }
+      const list = await client.inject({ method: 'GET', url: '/api/v1/audit/integrity-checks' });
+      expect(list.statusCode).toBe(403);
+    });
+
+    it('a global super_admin PASSES the gate (verify-integrity reachable, 200)', async () => {
+      const { client, userId } = await authenticate();
+      await grantGlobalSuperAdmin(userId);
+      const verify = await client.inject({ method: 'POST', url: '/api/v1/audit/verify-integrity', payload: {} });
+      expect(verify.statusCode).toBe(200);
+    });
   });
 });

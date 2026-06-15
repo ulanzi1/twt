@@ -84,6 +84,17 @@ const {
   // admin SPA gates nav + routes on.
   SessionResponse,
 } = await import('../src/auth/index.js');
+// Story 1.15 — multi-Pariwar provisioning transport contracts. THE FIRST
+// global-scoped, permission-gated WRITE surface; apps/api serves these routes now,
+// so they register real `paths` (mirror 1.9/1.11a). REUSES the 1.7 passport +
+// branding components by $ref (PariwarPassportResponse / BrandingBundle).
+const {
+  AddPariwarRequest,
+  DeployStatusView,
+  DeployTriggerResponse,
+  ProvisionedPariwar,
+  ProvisioningStatusList,
+} = await import('../src/pariwar-provisioning/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -125,6 +136,13 @@ const AuditIntegrityAcknowledgeRequestComponent = AuditIntegrityAcknowledgeReque
 const AuditIntegrityAcknowledgementComponent = AuditIntegrityAcknowledgement.openapi(
   'AuditIntegrityAcknowledgement',
 );
+
+// Story 1.15 — provisioning component schemas.
+const AddPariwarRequestComponent = AddPariwarRequest.openapi('AddPariwarRequest');
+const DeployStatusViewComponent = DeployStatusView.openapi('DeployStatusView');
+const DeployTriggerResponseComponent = DeployTriggerResponse.openapi('DeployTriggerResponse');
+const ProvisionedPariwarComponent = ProvisionedPariwar.openapi('ProvisionedPariwar');
+const ProvisioningStatusListComponent = ProvisioningStatusList.openapi('ProvisioningStatusList');
 
 // Story 1.9 — admin-auth component schemas (request + response objects).
 const authComponents = {
@@ -171,6 +189,13 @@ registry.register('AuditIntegrityCheckListItem', AuditIntegrityCheckListItemComp
 registry.register('AuditIntegrityCheckList', AuditIntegrityCheckListComponent);
 registry.register('AuditIntegrityAcknowledgeRequest', AuditIntegrityAcknowledgeRequestComponent);
 registry.register('AuditIntegrityAcknowledgement', AuditIntegrityAcknowledgementComponent);
+// Story 1.15 — provisioning components (PariwarPassportResponse + BrandingBundle
+// are already registered above, so ProvisionedPariwar $refs them).
+registry.register('AddPariwarRequest', AddPariwarRequestComponent);
+registry.register('DeployStatusView', DeployStatusViewComponent);
+registry.register('DeployTriggerResponse', DeployTriggerResponseComponent);
+registry.register('ProvisionedPariwar', ProvisionedPariwarComponent);
+registry.register('ProvisioningStatusList', ProvisioningStatusListComponent);
 
 // Story 1.9 — register the admin-auth components.
 for (const [name, schema] of Object.entries(authComponents)) {
@@ -371,6 +396,89 @@ registry.registerPath({
     400: errorResponse('Request validation failed'),
     401: errorResponse('Authentication required'),
     404: errorResponse('Integrity check not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 1.15 — multi-Pariwar provisioning (GLOBAL, pariwar.provision gate) ──
+// THE FIRST global-scoped, permission-gated WRITE surface. NOT under /p/:pariwarId/
+// (a new Pariwar has no id to scope to). Gated on requireAdminSession +
+// requireGlobalPermission('pariwar.provision'). The GET is forced-paginated
+// (Story 1.14): a bounded `limit` (max 100, default applied server-side).
+const provisioningListQuery = z.object({
+  limit: z.number().int().min(1).max(100).optional(),
+});
+const provisioningDeployParams = z.object({ pariwarId: z.string().uuid() });
+const forbidden = (key: string): ReturnType<typeof errorResponse> =>
+  errorResponse(`Forbidden — ${key} at global scope required`);
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/provisioning/pariwars',
+  summary: 'Provision a new Pariwar (mint id + persist passport)',
+  description:
+    'Mints a fresh pariwar_id (UUID v4), persists the Pariwar-Passport via a ' +
+    'self-scoped write, emits a pariwar.provisioned audit event, and returns the ' +
+    'created passport + its derived /p/<id>/ path-scope. GLOBAL surface; requires an ' +
+    'authenticated admin holding pariwar.provision at global scope.',
+  tags: ['provisioning'],
+  request: {
+    body: {
+      content: { 'application/json': { schema: AddPariwarRequestComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'Pariwar provisioned',
+      content: { 'application/json': { schema: ProvisionedPariwarComponent } },
+    },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: forbidden('pariwar.provision'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/provisioning/pariwars/{pariwarId}/deploy',
+  summary: 'Trigger a Dokploy build for an existing Pariwar',
+  description:
+    'Invokes the deploy seam (env-resolved fake in dev/test, live Dokploy-API client ' +
+    'in staging/prod), emits a pariwar.deploy_triggered audit event, and returns the ' +
+    'deploy status + the path-scope. Requires pariwar.provision at global scope.',
+  tags: ['provisioning'],
+  request: {
+    params: provisioningDeployParams,
+    body: { content: { 'application/json': { schema: z.object({}) } }, required: false },
+  },
+  responses: {
+    200: {
+      description: 'Deploy triggered',
+      content: { 'application/json': { schema: DeployTriggerResponseComponent } },
+    },
+    401: errorResponse('Authentication required'),
+    403: forbidden('pariwar.provision'),
+    404: errorResponse('Pariwar not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/provisioning/pariwars',
+  summary: 'Provisioning-status view (provisioned Pariwars + latest deploy status)',
+  description:
+    'Lists provisioned Pariwars (cross-readable passport rows) with their derived ' +
+    '/p/<id>/ path-scope + latest deploy status. Forced-paginated (bounded limit, ' +
+    'Story 1.14) + under the named read rate ceiling. Requires pariwar.provision at global scope.',
+  tags: ['provisioning'],
+  request: { query: provisioningListQuery },
+  responses: {
+    200: {
+      description: 'Provisioning-status list',
+      content: { 'application/json': { schema: ProvisioningStatusListComponent } },
+    },
+    401: errorResponse('Authentication required'),
+    403: forbidden('pariwar.provision'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

@@ -85,6 +85,15 @@ export interface ApiConfig {
   readonly searchRateMax: number;
   /** Write/mutation endpoints (requests/minute, stricter than read). */
   readonly writeRateMax: number;
+  /**
+   * Deploy seam mode (Story 1.15, AC-3/AC-5). `fake` (default) = the in-memory
+   * structured-log fake (dev/test/CI); `live` = the Dokploy-API client (staging/prod,
+   * reads DOKPLOY_API_URL + DOKPLOY_API_TOKEN). Validated here so a bad value fails
+   * at boot; the seam itself is built by `resolveDeployTriggerFromEnv` in deps.ts.
+   */
+  readonly deployTrigger: {
+    readonly mode: 'fake' | 'live';
+  };
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -136,6 +145,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const turnstileSecretName =
     rawTurnstileSecretName && rawTurnstileSecretName.trim() !== '' ? rawTurnstileSecretName : undefined;
 
+  // Deploy seam mode (Story 1.15) — default `fake` so dev/test/CI run with ZERO
+  // Dokploy config; `live` opts into the Dokploy-API client (staging/prod).
+  const deployTriggerMode = (env['DEPLOY_TRIGGER_MODE'] ?? 'fake').toLowerCase();
+  if (deployTriggerMode !== 'fake' && deployTriggerMode !== 'live') {
+    throw new Error(
+      `[config] DEPLOY_TRIGGER_MODE must be 'fake' or 'live', got ${JSON.stringify(deployTriggerMode)}`,
+    );
+  }
+
   return {
     nodeEnv,
     port: intEnv(env, 'PORT', 3000),
@@ -174,5 +192,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     readRateMax: intEnv(env, 'READ_RATE_MAX', 120),
     searchRateMax: intEnv(env, 'SEARCH_RATE_MAX', 60),
     writeRateMax: intEnv(env, 'WRITE_RATE_MAX', 30),
+    deployTrigger: { mode: deployTriggerMode as 'fake' | 'live' },
   };
 }

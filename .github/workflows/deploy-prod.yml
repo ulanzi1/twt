@@ -1,0 +1,70 @@
+name: deploy-prod
+
+# GitHub Actions → Dokploy API deploy — PRODUCTION (Story 1.15, AC-5; architecture §5.4).
+# The strictest rung of the dev→staging→prod promotion gate. Runs ONLY after staging
+# is confirmed green; promotion is MANUAL (workflow_dispatch) and passes through the
+# `production` GitHub Environment, whose protection rule requires ≥2 reviewers — the
+# §5.4 ≥2-principal promotion approval gate (configured in repo Settings → Environments).
+#
+# WIF for prod is the strictest claim (infra/gcp/wif.tf): the prod provider's
+# attribute condition trusts ONLY a release branch + this workflow. No long-lived key.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to promote (the git SHA built + verified on staging).'
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  GCP_PROJECT: twt-prod
+  GCP_REGION: asia-south1
+  AR_REPO: twt-images
+
+jobs:
+  promote:
+    name: promote to prod (Dokploy)
+    runs-on: ubuntu-latest
+    # The `production` environment carries the ≥2-reviewer protection rule — the
+    # §5.4 ≥2-principal approval gate. The job is held until approvers sign off.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate to GCP (WIF, keyless, strictest claim)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Verify the promoted image tag exists in Artifact Registry
+        run: |
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          if ! [[ "${IMAGE_TAG}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid image_tag: must be a 40-char lowercase git SHA" >&2
+            exit 1
+          fi
+          IMAGE_BASE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${AR_REPO}"
+          for app in api admin jobs public; do
+            gcloud artifacts docker images describe \
+              "${IMAGE_BASE}/${app}:${IMAGE_TAG}" --project="$GCP_PROJECT"
+          done
+      - name: Resolve Dokploy creds + POST the deploy API
+        run: |
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          DOKPLOY_API_URL="$(gcloud secrets versions access latest --secret=twt-prod-dokploy-api-url --project="$GCP_PROJECT")"
+          DOKPLOY_API_TOKEN="$(gcloud secrets versions access latest --secret=twt-prod-dokploy-api-token --project="$GCP_PROJECT")"
+          echo "::add-mask::${DOKPLOY_API_TOKEN}"
+          curl --fail --silent --show-error -X POST "$DOKPLOY_API_URL" \
+            -H "Authorization: Bearer ${DOKPLOY_API_TOKEN}" \
+            -H 'content-type: application/json' \
+            -d "$(jq -n --arg env prod --arg tag "${IMAGE_TAG}" '{environment: $env, imageTag: $tag}')"

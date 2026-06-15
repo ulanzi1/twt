@@ -114,7 +114,7 @@ components:
           additionalProperties: false
         localeDefault:
           type: string
-          enum:
+          enum: &a3
             - hi
             - en
         createdAt:
@@ -442,6 +442,7 @@ components:
             ticketRef:
               type: string
               minLength: 1
+              maxLength: 512
           required:
             - acknowledgementId
             - checkId
@@ -536,6 +537,7 @@ components:
               ticketRef:
                 type: string
                 minLength: 1
+                maxLength: 512
             required:
               - acknowledgementId
               - checkId
@@ -586,6 +588,7 @@ components:
         ticketRef:
           type: string
           minLength: 1
+          maxLength: 512
       required:
         - acknowledgementId
         - checkId
@@ -593,6 +596,322 @@ components:
         - acknowledgedBy
         - ticketRef
       additionalProperties: false
+    AddPariwarRequest:
+      type: object
+      properties:
+        displayNameEn:
+          type: string
+          minLength: 1
+        displayNameHi:
+          type: string
+          minLength: 1
+        legalName:
+          type: string
+          minLength: 1
+        trustRegistrationId:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        localeDefault:
+          type: string
+          enum: *a3
+        brandingBundle:
+          type: object
+          properties:
+            logo_url:
+              type: string
+              format: uri
+            logo_url_dark:
+              type: string
+              format: uri
+            primary_color:
+              type: string
+              pattern: ^#[0-9a-fA-F]{6}$
+            secondary_color:
+              type: string
+              pattern: ^#[0-9a-fA-F]{6}$
+            accent_color:
+              type: string
+              pattern: ^#[0-9a-fA-F]{6}$
+          required:
+            - logo_url
+            - primary_color
+            - secondary_color
+          additionalProperties: false
+      required:
+        - displayNameEn
+        - displayNameHi
+        - legalName
+        - localeDefault
+        - brandingBundle
+      additionalProperties: false
+    DeployStatusView:
+      type: object
+      properties:
+        deployId:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum: &a4
+            - unknown
+            - triggered
+            - succeeded
+            - failed
+        triggeredAt:
+          type: string
+          format: date-time
+        detail:
+          type:
+            - string
+            - "null"
+      required:
+        - deployId
+        - status
+        - triggeredAt
+      additionalProperties: false
+    DeployTriggerResponse:
+      type: object
+      properties:
+        pariwarId:
+          type: string
+          format: uuid
+        pathScope:
+          type: string
+          minLength: 1
+        deploy:
+          type: object
+          properties:
+            deployId:
+              type: string
+              minLength: 1
+            status:
+              type: string
+              enum: *a4
+            triggeredAt:
+              type: string
+              format: date-time
+            detail:
+              type:
+                - string
+                - "null"
+          required:
+            - deployId
+            - status
+            - triggeredAt
+          additionalProperties: false
+      required:
+        - pariwarId
+        - pathScope
+        - deploy
+      additionalProperties: false
+    ProvisionedPariwar:
+      type: object
+      properties:
+        passport:
+          type: object
+          properties:
+            pariwarId:
+              type: string
+              format: uuid
+            displayNameEn:
+              type: string
+              minLength: 1
+            displayNameHi:
+              type: string
+              minLength: 1
+            legalName:
+              type: string
+              minLength: 1
+            trustRegistrationId:
+              type:
+                - string
+                - "null"
+            brandingBundle:
+              type: object
+              properties:
+                logo_url:
+                  type: string
+                  format: uri
+                logo_url_dark:
+                  type: string
+                  format: uri
+                primary_color:
+                  type: string
+                  pattern: ^#[0-9a-fA-F]{6}$
+                secondary_color:
+                  type: string
+                  pattern: ^#[0-9a-fA-F]{6}$
+                accent_color:
+                  type: string
+                  pattern: ^#[0-9a-fA-F]{6}$
+              required:
+                - logo_url
+                - primary_color
+                - secondary_color
+              additionalProperties: false
+            localeDefault:
+              type: string
+              enum: *a3
+            createdAt:
+              type: string
+              format: date-time
+            createdBy:
+              type:
+                - string
+                - "null"
+              format: uuid
+            updatedAt:
+              type: string
+              format: date-time
+          required:
+            - pariwarId
+            - displayNameEn
+            - displayNameHi
+            - legalName
+            - trustRegistrationId
+            - brandingBundle
+            - localeDefault
+            - createdAt
+            - createdBy
+            - updatedAt
+          additionalProperties: false
+        pathScope:
+          type: string
+          minLength: 1
+        latestDeploy:
+          type:
+            - object
+            - "null"
+          properties:
+            deployId:
+              type: string
+              minLength: 1
+            status:
+              type: string
+              enum: *a4
+            triggeredAt:
+              type: string
+              format: date-time
+            detail:
+              type:
+                - string
+                - "null"
+          required:
+            - deployId
+            - status
+            - triggeredAt
+          additionalProperties: false
+      required:
+        - passport
+        - pathScope
+        - latestDeploy
+      additionalProperties: false
+    ProvisioningStatusList:
+      type: array
+      items:
+        type: object
+        properties:
+          passport:
+            type: object
+            properties:
+              pariwarId:
+                type: string
+                format: uuid
+              displayNameEn:
+                type: string
+                minLength: 1
+              displayNameHi:
+                type: string
+                minLength: 1
+              legalName:
+                type: string
+                minLength: 1
+              trustRegistrationId:
+                type:
+                  - string
+                  - "null"
+              brandingBundle:
+                type: object
+                properties:
+                  logo_url:
+                    type: string
+                    format: uri
+                  logo_url_dark:
+                    type: string
+                    format: uri
+                  primary_color:
+                    type: string
+                    pattern: ^#[0-9a-fA-F]{6}$
+                  secondary_color:
+                    type: string
+                    pattern: ^#[0-9a-fA-F]{6}$
+                  accent_color:
+                    type: string
+                    pattern: ^#[0-9a-fA-F]{6}$
+                required:
+                  - logo_url
+                  - primary_color
+                  - secondary_color
+                additionalProperties: false
+              localeDefault:
+                type: string
+                enum: *a3
+              createdAt:
+                type: string
+                format: date-time
+              createdBy:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+              updatedAt:
+                type: string
+                format: date-time
+            required:
+              - pariwarId
+              - displayNameEn
+              - displayNameHi
+              - legalName
+              - trustRegistrationId
+              - brandingBundle
+              - localeDefault
+              - createdAt
+              - createdBy
+              - updatedAt
+            additionalProperties: false
+          pathScope:
+            type: string
+            minLength: 1
+          latestDeploy:
+            type:
+              - object
+              - "null"
+            properties:
+              deployId:
+                type: string
+                minLength: 1
+              status:
+                type: string
+                enum: *a4
+              triggeredAt:
+                type: string
+                format: date-time
+              detail:
+                type:
+                  - string
+                  - "null"
+            required:
+              - deployId
+              - status
+              - triggeredAt
+            additionalProperties: false
+        required:
+          - passport
+          - pathScope
+          - latestDeploy
+        additionalProperties: false
     LoginRequest:
       type: object
       properties:
@@ -1304,6 +1623,120 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Integrity check not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/provisioning/pariwars:
+    post:
+      summary: Provision a new Pariwar (mint id + persist passport)
+      description: Mints a fresh pariwar_id (UUID v4), persists the Pariwar-Passport via a self-scoped write, emits a pariwar.provisioned audit event, and returns the created passport + its derived /p/<id>/ path-scope. GLOBAL surface; requires an authenticated admin holding pariwar.provision at global scope.
+      tags:
+        - provisioning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPariwarRequest"
+      responses:
+        "200":
+          description: Pariwar provisioned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisionedPariwar"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — pariwar.provision at global scope required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: Provisioning-status view (provisioned Pariwars + latest deploy status)
+      description: Lists provisioned Pariwars (cross-readable passport rows) with their derived /p/<id>/ path-scope + latest deploy status. Forced-paginated (bounded limit, Story 1.14) + under the named read rate ceiling. Requires pariwar.provision at global scope.
+      tags:
+        - provisioning
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Provisioning-status list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningStatusList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — pariwar.provision at global scope required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/provisioning/pariwars/{pariwarId}/deploy:
+    post:
+      summary: Trigger a Dokploy build for an existing Pariwar
+      description: Invokes the deploy seam (env-resolved fake in dev/test, live Dokploy-API client in staging/prod), emits a pariwar.deploy_triggered audit event, and returns the deploy status + the path-scope. Requires pariwar.provision at global scope.
+      tags:
+        - provisioning
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        "200":
+          description: Deploy triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeployTriggerResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — pariwar.provision at global scope required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Pariwar not found
           content:
             application/json:
               schema:

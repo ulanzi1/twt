@@ -1,0 +1,56 @@
+# Dokploy application stack — Story 1.15 (AC-5). The four TWT services as Dokploy
+# applications. Imported by the operator into the staging + prod Dokploy projects
+# (twt-dokploy-staging / twt-dokploy-prod, distinct IAM per §5.3). Images are built
+# + pushed by .github/workflows/deploy-{staging,prod}.yml; ${IMAGE_TAG} + ${ENV} +
+# ${AR_BASE} are substituted by Dokploy from the deploy API POST payload / project env.
+#
+# This is the AS-BUILT shape the deploy-config reader (AC-3) targets; it is NOT
+# applied by the dev agent (operator activation leg). Secrets (DATABASE_URL,
+# DOKPLOY_API_*, SESSION_SECRET, ARGON2_PEPPER, KMS resource names) are injected by
+# Dokploy from Secret Manager-sourced project secrets, NEVER committed here.
+
+services:
+  api:
+    image: ${AR_BASE}/api:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Story 1.15: live deploy seam in staging/prod (fake in dev/CI).
+      DEPLOY_TRIGGER_MODE: live
+      # Secret refs are resolved by Dokploy from project secrets (Secret Manager).
+      DATABASE_URL: ${DATABASE_URL}
+      SERVICE_DATABASE_URL: ${SERVICE_DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      ARGON2_PEPPER_SECRET_NAME: twt-${ENV}-argon2-pepper
+      DOKPLOY_API_URL: ${DOKPLOY_API_URL}
+      DOKPLOY_API_TOKEN: ${DOKPLOY_API_TOKEN}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID}
+      WEBAUTHN_EXPECTED_ORIGIN: ${WEBAUTHN_EXPECTED_ORIGIN}
+    labels:
+      # Dokploy/Traefik path routing — the API surface.
+      - "traefik.http.routers.twt-api.rule=PathPrefix(`/api/v1`)"
+
+  admin:
+    image: ${AR_BASE}/admin:${IMAGE_TAG}
+    restart: unless-stopped
+    labels:
+      - "traefik.http.routers.twt-admin.rule=PathPrefix(`/admin`)"
+
+  jobs:
+    image: ${AR_BASE}/jobs:${IMAGE_TAG}
+    restart: unless-stopped
+    # Worker — no ingress route. Runs the pg-boss queue (audit-integrity cron,
+    # off-site mirror, idempotency vacuum).
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      SERVICE_DATABASE_URL: ${SERVICE_DATABASE_URL}
+
+  public:
+    image: ${AR_BASE}/public:${IMAGE_TAG}
+    restart: unless-stopped
+    labels:
+      # Per-Pariwar path-scope (architecture §2.5 + AR-25): every Pariwar served
+      # under /p/<pariwar_id>/ on this single multi-tenant deployment. Branding is
+      # resolved at request time from the Pariwar-Passport (no per-Pariwar rebuild).
+      - "traefik.http.routers.twt-public.rule=PathPrefix(`/p/`)"

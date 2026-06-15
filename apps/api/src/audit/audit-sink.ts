@@ -35,7 +35,13 @@ export type AuthAuditEventType =
   // authz.denied + scope.change); a rename to SecurityAuditEventType is out of
   // scope (noted, not done — Story 1.14 Project Structure Notes).
   | 'rate_limit.exceeded'
-  | 'abuse.honeypot';
+  | 'abuse.honeypot'
+  // ── Provisioning surface (Story 1.15, FR-61/FR-62) ───────────────────────────
+  // The first global-scoped write surface. `pariwar.provisioned` records a new
+  // Pariwar mint+passport-persist; `pariwar.deploy_triggered` records a Dokploy
+  // build trigger via the deploy seam.
+  | 'pariwar.provisioned'
+  | 'pariwar.deploy_triggered';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

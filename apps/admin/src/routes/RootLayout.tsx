@@ -10,7 +10,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import * as api from '../api/client.js';
-import { hasAuditVerify, sessionKey, useSession } from '../api/hooks.js';
+import { hasAuditVerify, hasPariwarProvision, sessionKey, useSession } from '../api/hooks.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -18,6 +18,7 @@ function TopBar(): ReactElement {
   const queryClient = useQueryClient();
   const authed = Boolean(session.data);
   const canVerify = hasAuditVerify(session.data?.nationalGrants);
+  const canProvision = hasPariwarProvision(session.data?.nationalGrants);
   const [logoutError, setLogoutError] = useState(false);
 
   async function onLogout(): Promise<void> {
@@ -37,10 +38,15 @@ function TopBar(): ReactElement {
     <header className="flex items-center justify-between border-b bg-white px-6 py-3">
       <div className="flex items-center gap-6">
         <span className="font-bold">TWT Admin</span>
-        <nav aria-label="Primary">
+        <nav aria-label="Primary" className="flex items-center gap-4">
           {canVerify && (
             <Link to="/audit/integrity" className="text-sm underline" data-testid="nav-integrity">
               Verify audit-log integrity
+            </Link>
+          )}
+          {canProvision && (
+            <Link to="/provisioning" className="text-sm underline" data-testid="nav-provisioning">
+              Provisioning
             </Link>
           )}
         </nav>

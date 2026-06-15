@@ -1,11 +1,27 @@
 # Runbook: Multi-Pariwar Provisioning
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger) — **reconciled to AS-BUILT by Story 1.15 (material edit, re-sign required)**
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13) with Engineering Lead co-sign at provisioning trigger
-> **Last material edit:** 2026-05-29 by Solo Builder (initial)
+> **Last material edit:** 2026-06-15 by Solo Builder (Story 1.15 AS-BUILT reconciliation)
 > **Architectural authority:** architecture.md §1.2 (Multi-tenant isolation — Postgres RLS via `pariwar_id`), §2.5 (Multi-Pariwar active scope — URL path prefix), §5.14 (Per-Pariwar infrastructure isolation strategy), AR-25 (multi-Pariwar URL path scope), FR-59 (`pariwar_id` first-class + RLS), FR-60 (branding bundle), FR-61 (separate-app-per-Pariwar build), FR-62 (Dokploy auto-deploy + K8s migration path); epics.md Epic 1 Story 1.7 (Pariwar-Passport data model + branding bundle), Story 1.15 (Dokploy auto-deploy + multi-Pariwar provisioning), Story 7.2 (Pool naming — dual-identifier UX-DR72)
 
 Multi-Pariwar provisioning is a Dokploy auto-deploy + branding-bundle swap, NOT a code fork. URL path scope is the active-Pariwar dimension. Per-Pariwar build profile is a `turbo.json` + `apps/mobile/eas.json` addition.
+
+## 0. AS-BUILT reconciliation (Story 1.15)
+
+Story 1.15 implemented the provisioning slice; the procedure below is reconciled to what shipped:
+
+- **Surface = the admin Provisioning page** (`apps/admin` `/provisioning`, AC-4) → the API module `apps/api/src/modules/pariwar-provisioning/`. EXACTLY three controls: Add-Pariwar form, Trigger-Dokploy-build, provisioning-status view. NO Epic-10 controls.
+- **Endpoints (AC-1), GLOBAL — NOT under `/p/:pariwarId/`:**
+  - `POST /api/v1/provisioning/pariwars` — **mints the `pariwar_id` (UUID v4) server-side** (NOT pre-allocated by hand) + persists the Pariwar-Passport + emits `pariwar.provisioned`.
+  - `POST /api/v1/provisioning/pariwars/:pariwarId/deploy` — invokes the deploy seam + emits `pariwar.deploy_triggered`.
+  - `GET /api/v1/provisioning/pariwars` — the provisioning-status view (cross-readable passports + latest deploy status), forced-paginated.
+- **Authorization = the GLOBAL `pariwar.provision` gate** (`requireGlobalPermission`, AC-1a). super_admin holds it at `global` scope; a Pariwar-scoped-only admin gets 403. (Note: there is no `national` scope — the canonical value is `global`; ADR-0008.)
+- **The self-scoped provisioning write** (the chicken-and-egg): the handler self-scopes to the freshly-minted id (`openScopeTx(deps, newId)` → `upsertPariwarPassport` → commit) so the RLS `WITH CHECK` passes. RLS is exercised faithfully (no BYPASSRLS shortcut).
+- **Deploy seam (AC-3)** = `deps.deployTrigger`, env-resolved (`DEPLOY_TRIGGER_MODE=fake|live`): the in-memory fake in dev/test, the live Dokploy-API client in staging/prod. The deploy-config reader emits the `/p/<pariwar_id>/` path-scope + branding reference from the Passport.
+- **No new DB migration** for a new Pariwar (AC-8) — RLS-tagged rows inherit isolation (§2.2 below).
+- **Branding swap is RUNTIME** (a Passport read via `getBrandingBundleCached`, 60s cache-aside), not a per-Pariwar rebuild — see `infra/dokploy/per-pariwar-profile.md`.
+- **Cloudflare path-routing STAYS GATED** (D1-1.13, §5.8a DPDPA legal review, ADR-0010 OPEN): route straight to Dokploy; do NOT assert DPDPA compliance.
 
 ## 1. Prerequisites
 
@@ -37,7 +53,7 @@ Multi-Pariwar provisioning is a Dokploy auto-deploy + branding-bundle swap, NOT 
 
 ### 2.2 Database setup
 
-1. **Schema migrations: none new for provisioning.** Per architecture §1.2, RLS is enforced via `pariwar_id`; new rows tagged with the new ID inherit isolation automatically. There is no new schema for a new Pariwar.
+1. **Schema migrations: none new for provisioning.** Per architecture §1.2, RLS is enforced via `pariwar_id`; new rows tagged with the new ID inherit isolation automatically. There is no new schema for a new Pariwar. **AS-BUILT (Story 1.15, AC-8):** confirmed — the provisioning write is a single `pariwar_passport` row INSERT via the **self-scoped write** (`openScopeTx(deps, newId)` → `upsertPariwarPassport`), authorized by the GLOBAL `pariwar.provision` gate. RLS is the data boundary; the permission gate is the action boundary (§2.6 "RLS then authz").
 
 2. **Initial data seeding for the new Pariwar:**
    - Apply the RBAC seed script (per `rbac-seed-reset.md` §2.4) scoped to the new `pariwar_id`. This seeds the 12 canonical roles for the new Pariwar.
@@ -49,7 +65,7 @@ Multi-Pariwar provisioning is a Dokploy auto-deploy + branding-bundle swap, NOT 
 
 ### 2.3 URL path scope + edge
 
-1. **Configure Cloudflare routing** (per architecture §1.13 / Story 1.13). The new path prefix routes to the same backend; the backend dispatches per `pariwar_id` derived from the path prefix per architecture §2.5.
+1. **Configure routing.** The new path prefix routes to the same backend; the backend dispatches per `pariwar_id` derived from the path prefix per architecture §2.5. **AS-BUILT (Story 1.15):** route **straight to Dokploy** (Traefik `PathPrefix(\`/p/\`)` in `infra/dokploy/compose.yaml`). **Cloudflare path-routing STAYS GATED** on the §5.8a DPDPA legal review (D1-1.13, ADR-0010 OPEN) — do NOT enable the Cloudflare path-route or assert DPDPA compliance until the gate clears.
 
 2. **Bot Management + Turnstile** apply to all Pariwars uniformly (Story 1.13). No per-Pariwar bypass.
 
@@ -59,7 +75,7 @@ Multi-Pariwar provisioning is a Dokploy auto-deploy + branding-bundle swap, NOT 
 
 1. **Per-Pariwar build profile** in `turbo.json` + `apps/mobile/eas.json` per architecture §Workspace Layout R-5. The Bihar profile is the v1 reference; the new Pariwar adds a profile, not a code branch.
 
-2. **Trigger Dokploy auto-deploy** per FR-62 / Story 1.15. The deploy workflow applies the per-Pariwar build profile + branding bundle swap (FR-60) for each deployable workspace (`apps/admin`, `apps/member`, public Astro shell per Story 2.5).
+2. **Trigger Dokploy auto-deploy** per FR-62 / Story 1.15. **AS-BUILT:** the admin "Trigger Dokploy build" action → `POST /api/v1/provisioning/pariwars/:pariwarId/deploy` → the env-resolved `DeployTrigger` (`DEPLOY_TRIGGER_MODE=live` in staging/prod) POSTs the Dokploy deploy API; `.github/workflows/deploy-{staging,prod}.yml` build + push the per-app images (`api`/`admin`/`jobs`/`public`) to Artifact Registry first. The **branding-bundle swap is RUNTIME** (a Passport read), not a per-app rebuild (`infra/dokploy/per-pariwar-profile.md`); a per-Pariwar bespoke build is only needed at the §5.3 migration trigger.
 
 3. **Verify image SHAs.** Each deployable workspace gets a Pariwar-specific image built from the per-Pariwar profile + branding bundle. Image SHAs differ per Pariwar; confirm SHAs against expected.
 
@@ -71,6 +87,8 @@ Multi-Pariwar provisioning is a Dokploy auto-deploy + branding-bundle swap, NOT 
    - Second Pariwar provisioning via the FR-61/FR-62 Dokploy auto-deploy flow with FR-60 branding-bundle swap.
    - Second Pariwar serves traffic on its own URL path scope (AR-25).
    - Independent rule set (Niyamavali version + per-Pariwar custom-fields).
+
+   **AS-BUILT (Story 1.15, AC-7):** the **in-story proof is the dev/FAKE end-to-end** (the `apps/api` `pariwar-provisioning.spec.ts` integration test: Add-Pariwar → `POST provisioning/pariwars` → `POST .../deploy` [fake `DeployTrigger`] → status view reflects the new Pariwar + its `/p/<id>/` scope). The **live path is wired** (`DEPLOY_TRIGGER_MODE=live` → Dokploy API) and is the operator's **staging walkthrough** ahead of prod. The **live on-stage 2nd-Pariwar demo (real traffic on its own `/p/<id>/` URL) is a TRACKED FOLLOW-ON** (`.decision-log.md` + deferred-work, owner BigDev), to run once the operator confirms staging green — explicitly NOT a merge gate.
 
 2. **Trustee-facing audit-log integrity check** per Epic 1 demoable closure beat C11 — both Pariwars' audit chains intact.
 
@@ -138,3 +156,4 @@ Provisioning is largely additive (new rows tagged with new `pariwar_id`); rollba
 | Date | git SHA | Author | Material edit? | Re-sign required? | Ledger entry |
 |---|---|---|---|---|---|
 | 2026-05-29 | _initial_ | Solo Builder | initial | yes (≥2 trustees) | _pending_ |
+| 2026-06-15 | _Story 1.15_ | Solo Builder | **yes — AS-BUILT reconciliation** (§0 added; server-minted `pariwar_id` + the GLOBAL `pariwar.provision` gate + self-scoped write + env-resolved `DeployTrigger`; Cloudflare path-routing GATED → straight-to-Dokploy) | **yes (≥2 trustees)** | _pending_ |

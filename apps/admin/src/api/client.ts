@@ -11,13 +11,20 @@ import {
   AuditIntegrityAcknowledgement,
   AuditIntegrityCheckList,
   AuditIntegrityCheckResult,
+  DeployTriggerResponse,
   LoginResponse,
+  ProvisionedPariwar,
+  ProvisioningStatusList,
   RecoveryConsumeResponse,
   SessionResponse,
+  type AddPariwarRequest as AddPariwarPayload,
   type AuditIntegrityAcknowledgement as Acknowledgement,
   type AuditIntegrityCheckList as CheckList,
   type AuditIntegrityCheckResult as CheckResult,
+  type DeployTriggerResponse as DeployResult,
   type LoginResponse as LoginResult,
+  type ProvisionedPariwar as Provisioned,
+  type ProvisioningStatusList as StatusList,
   type SessionResponse as Session,
 } from '@twt/contracts';
 import type { z } from 'zod';
@@ -41,10 +48,15 @@ interface ErrorEnvelope {
   error?: { code?: string; message?: string };
 }
 
-/** Core fetch: same-origin, cookie-bearing, schema-validated. */
+/**
+ * Core fetch: same-origin, cookie-bearing, schema-validated. The schema's INPUT
+ * type is left `unknown` so `T` infers purely from the schema OUTPUT — branded
+ * contracts (e.g. `PariwarIdSchema = z.string().uuid().brand()`) have a plain-string
+ * input but a branded output, which would otherwise collapse the inference.
+ */
 async function apiFetch<T>(
   path: string,
-  schema: z.ZodType<T>,
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
   init?: RequestInit,
 ): Promise<T> {
   const res = await fetch(path, {
@@ -95,6 +107,30 @@ export function acknowledgeCheck(
     `/api/v1/audit/integrity-checks/${encodeURIComponent(checkId)}/acknowledge`,
     AuditIntegrityAcknowledgement,
     { method: 'POST', body: JSON.stringify({ ticketRef }) },
+  );
+}
+
+// ── Multi-Pariwar provisioning surface (Story 1.15) ───────────────────────────
+
+/** GET the provisioning-status view: provisioned Pariwars + latest deploy status. */
+export function listProvisionedPariwars(limit = 100): Promise<StatusList> {
+  return apiFetch(`/api/v1/provisioning/pariwars?limit=${limit}`, ProvisioningStatusList);
+}
+
+/** POST the Add-Pariwar form → provisions a new Pariwar (mints id + persists passport). */
+export function addPariwar(payload: AddPariwarPayload): Promise<Provisioned> {
+  return apiFetch('/api/v1/provisioning/pariwars', ProvisionedPariwar, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/** POST to trigger a Dokploy build for an existing Pariwar via the deploy seam. */
+export function triggerDeploy(pariwarId: string): Promise<DeployResult> {
+  return apiFetch(
+    `/api/v1/provisioning/pariwars/${encodeURIComponent(pariwarId)}/deploy`,
+    DeployTriggerResponse,
+    { method: 'POST', body: JSON.stringify({}) },
   );
 }
 

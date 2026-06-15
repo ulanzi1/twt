@@ -1,9 +1,20 @@
 # Runbook: Deploy
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger) — **reconciled to AS-BUILT by Story 1.15 (material edit, re-sign required)**
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13)
-> **Last material edit:** 2026-05-29 by Solo Builder (initial)
+> **Last material edit:** 2026-06-15 by Solo Builder (Story 1.15 AS-BUILT reconciliation — GitHub Actions → Dokploy API leg)
 > **Architectural authority:** architecture.md §5.3 (Deployment substrate), §5.4 (CI/CD pipeline), §5.5 (Environment topology), §1.8 (Migration tool — forward-only)
+
+## 0. AS-BUILT reconciliation (Story 1.15)
+
+Story 1.15 wired the **GitHub Actions → Dokploy API** deploy leg (architecture §5.4). The procedure below is reconciled to what shipped:
+
+- **Deploy model:** release-branch push → WIF-keyless auth → build + push per-app images to **Artifact Registry** (`asia-south1-docker.pkg.dev/<project>/twt-images/<app>:<git-sha>`) → `POST` the **Dokploy deploy API**. The 4 deployable workspaces are **`api` / `admin` / `jobs` / `public`** (`apps/member` is a future workspace — not in v1).
+- **Workflows:** `.github/workflows/deploy-staging.yml` (trigger: push to `release/**` + `workflow_dispatch`) and `deploy-prod.yml` (trigger: `workflow_dispatch` only — manual promotion after staging green).
+- **Env scope:** **dev stays authored** (no live deploy); **staging + prod are live-wired** (operator-applied). WIF per-env (`infra/gcp/wif.tf`); prod carries the strictest claim (`wif_prod_workflow_ref`).
+- **The ≥2-principal prod approval gate** is the GitHub **`production` Environment** protection rule (required reviewers), referenced by `deploy-prod.yml` `environment: production`.
+- **Dev-agent / operator split:** the dev agent authored + CI-validated the workflows + the live `DeployTrigger` Dokploy-API client + the WIF/Cloud-SQL Terraform; the **operator** runs the live apply-sequence (`infra/gcp/README.md` §Story 1.15) — no live cloud commands ran in dev.
+- ADR: the deploy model + the dev-agent-wires/operator-applies split are recorded in **ADR-0011**.
 
 ## 1. Prerequisites
 
@@ -28,7 +39,7 @@ Numbered, executable steps. Solo Builder is silent during execution if simulatin
 
 3. **Confirm the signed image.** For each deployable workspace (`apps/api`, `apps/admin`, `apps/member`, `apps/jobs/audit`, etc. per architecture §Workspace Layout), confirm the image at the workspace's expected tag is present in Artifact Registry, signed by the trusted signer, and matches an immutable tag for prod.
 
-   - `[deferred ADR — placeholder procedure]` The specific Artifact Registry path and signer identity per workspace are committed in the deployment-substrate ADR. Until that ADR lands, follow the conventions in the Dokploy configuration repo and confirm signer identity against the project's signing key inventory.
+   - **AS-BUILT (Story 1.15, ADR-0011):** the Artifact Registry path is `asia-south1-docker.pkg.dev/<project>/twt-images/<app>:<git-sha>` (app ∈ {`api`,`admin`,`jobs`,`public`}); the build + push runs in `deploy-{staging,prod}.yml` under the WIF deployer SA. Image signing (Sigstore/Cosign or Binary Authorization) remains an operator-hardening follow-on; tag immutability for prod is set on the Artifact Registry repo at apply time.
 
 4. **Migration phase (only if the deploy includes schema changes).** Execute migrations against the target environment's Postgres before promoting code.
 
@@ -93,3 +104,4 @@ Roles, not individuals. Specific contacts live in operations policy.
 | Date | git SHA | Author | Material edit? | Re-sign required? | Ledger entry |
 |---|---|---|---|---|---|
 | 2026-05-29 | _initial_ | Solo Builder | initial | yes (≥2 trustees) | _pending in `operational-readiness-ledger.md`_ |
+| 2026-06-15 | _Story 1.15_ | Solo Builder | **yes — AS-BUILT reconciliation** (§0 added; GitHub Actions → Dokploy API leg, `deploy-{staging,prod}.yml`, Artifact Registry path, `production` Environment ≥2-reviewer gate, dev authored / staging+prod live-wired) | **yes (≥2 trustees)** | _pending_ |

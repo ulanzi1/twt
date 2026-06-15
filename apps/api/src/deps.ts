@@ -20,6 +20,7 @@ import type { AppDeps, EncryptionDeps } from './context.js';
 import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
+import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 
 /** Derive a deterministic 32-byte fake key from a label + the pepper (local/CI only). */
 function deriveFakeKey(label: string, pepper: string): Uint8Array {
@@ -140,6 +141,8 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
       rpName: config.webauthn.rpName,
       expectedOrigin: config.webauthn.expectedOrigin,
     }),
+    // Deploy seam (Story 1.15) — fake in dev/CI, Dokploy-API client in staging/prod.
+    deployTrigger: resolveDeployTriggerFromEnv(config.deployTrigger.mode),
     clock: () => new Date(),
   };
 }

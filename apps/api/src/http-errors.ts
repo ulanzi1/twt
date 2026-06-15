@@ -85,6 +85,13 @@ export class TooManyRequestsError extends ApiError {
   }
 }
 
+/** 502 — an upstream dependency (e.g. the Dokploy deploy API) failed or was unreachable. */
+export class BadGatewayError extends ApiError {
+  public constructor(message = 'Upstream dependency failed', code = 'upstream.bad_gateway', details?: unknown) {
+    super(502, code, message, details);
+  }
+}
+
 /**
  * The structured "step-up required" response (AC-4). A step-up-gated action with
  * no fresh elevated context returns this; the client then drives the OTP

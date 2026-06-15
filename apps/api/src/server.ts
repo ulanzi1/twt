@@ -24,6 +24,7 @@ import { requestContextHook } from './middleware/request-context/index.js';
 import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
+import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
@@ -81,6 +82,8 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   registerAdminAuthModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
+  // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).
+  registerPariwarProvisioningModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

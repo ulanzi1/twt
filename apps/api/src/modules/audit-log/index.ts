@@ -6,14 +6,20 @@
 // chain, so the route is NOT under /p/:pariwarId/. Placing it there would wrongly
 // imply a per-tenant chain.
 //
-// ── Why requireAdminSession, NOT requirePermissionHook ────────────────────────
+// ── Gate: requireAdminSession + requireGlobalPermission('audit.verify') ───────
 // requirePermissionHook (modules/rbac) requires `request.scopeTx`, which
 // scopeResolutionHook sets from the `/:pariwarId/` path param. A GLOBAL route has
-// no such param, so the RBAC hook would hard-throw 500. v1 therefore gates on an
-// authenticated admin session ONLY (requireAdminSession). Recorded deferred work:
-// upgrade to the full RBAC `audit.verify` gate when a global-scope preHandler
-// exists. The permission-gated probe at /p/:pariwarId/audit/verify-probe stays in
-// place (it exercises the scoped RBAC second-guard independently).
+// no such param, so the per-tenant RBAC hook would hard-throw 500. Story 1.11a
+// therefore gated on an authenticated admin session ONLY and recorded D4-1.11a:
+// "upgrade to the full RBAC `audit.verify` gate when a global-scope preHandler
+// exists." Story 1.15 ships that primitive — `requireGlobalPermission` (modules/
+// rbac) — so all three routes below now gate on
+// `[requireAdminSession(deps), requireGlobalPermission(deps, 'audit.verify')]`:
+// an authenticated admin LACKING `audit.verify` at `global` scope gets a real 403,
+// not merely a hidden nav entry. This also tightens CR-A-3 at the endpoint boundary
+// (the gate runs `hasPermission`, which enforces `scopeWithinCeiling`). The
+// permission-gated probe at /p/:pariwarId/audit/verify-probe stays in place (it
+// exercises the SCOPED RBAC second-guard independently).
 //
 // ── URL convention ────────────────────────────────────────────────────────────
 // Architecture §3.1 names /api/v1/global/<resource> for cross-Pariwar endpoints,
@@ -50,6 +56,7 @@ import type { AppDeps } from '../../context.js';
 import { NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { namedRateLimits } from '../../plugins/rate-limit/index.js';
 import { requireAdminSession } from '../auth/shared/session-guard.js';
+import { requireGlobalPermission } from '../rbac/index.js';
 
 const AUDIT_TAG = 'audit';
 
@@ -149,7 +156,7 @@ export function registerAuditLogModule(app: FastifyInstance, deps: AppDeps): voi
         response: { 200: AuditIntegrityCheckResult },
         tags: [AUDIT_TAG],
       },
-      preHandler: [requireAdminSession(deps)],
+      preHandler: [requireAdminSession(deps), requireGlobalPermission(deps, 'audit.verify')],
     },
     async (request) => {
       // requireAdminSession guarantees userId; re-narrow for the type system.
@@ -186,7 +193,7 @@ export function registerAuditLogModule(app: FastifyInstance, deps: AppDeps): voi
         response: { 200: AuditIntegrityCheckList },
         tags: [AUDIT_TAG],
       },
-      preHandler: [requireAdminSession(deps)],
+      preHandler: [requireAdminSession(deps), requireGlobalPermission(deps, 'audit.verify')],
       config: { rateLimit: readLimit },
     },
     async (request) => {
@@ -249,7 +256,7 @@ export function registerAuditLogModule(app: FastifyInstance, deps: AppDeps): voi
         response: { 200: AuditIntegrityAcknowledgement },
         tags: [AUDIT_TAG],
       },
-      preHandler: [requireAdminSession(deps)],
+      preHandler: [requireAdminSession(deps), requireGlobalPermission(deps, 'audit.verify')],
     },
     async (request) => {
       const userId = request.session.userId;

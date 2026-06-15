@@ -16,6 +16,7 @@ import {
 
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
+import { ProvisioningRoute } from './routes/ProvisioningRoute.js';
 import { RootErrorComponent, RootLayout } from './routes/RootLayout.js';
 
 const rootRoute = createRootRoute({
@@ -43,7 +44,13 @@ const integrityRoute = createRoute({
   component: IntegrityRoute,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute, integrityRoute]);
+const provisioningRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/provisioning',
+  component: ProvisioningRoute,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, integrityRoute, provisioningRoute]);
 
 export const router = createRouter({ routeTree });
 

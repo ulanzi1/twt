@@ -11,8 +11,9 @@
 
 import { rbac } from '@twt/domain';
 import type { FastifyRequest, preHandlerHookHandler } from 'fastify';
+import type pg from 'pg';
 
-import type { AppDeps } from '../../context.js';
+import { ADMIN_GLOBAL_NAMESPACE, type AppDeps } from '../../context.js';
 import type { ScopeTx } from '../../types.js';
 
 interface RoleGrantRow {
@@ -94,6 +95,92 @@ export function requirePermissionHook(
             type: 'authz.denied',
             actorId,
             pariwarId: scopeTx.pariwarId,
+            traceId: request.requestContext.traceId,
+            context: {
+              permissionKey: denial.permissionKey,
+              requiredScope: denial.requiredScope,
+              targetLocator: denial.targetLocator,
+            },
+            at: deps.clock(),
+          });
+        },
+      },
+    );
+  };
+}
+
+// ── GLOBAL-scope gate (Story 1.15, AC-1a) — discharges D4-1.11a ────────────────
+//
+// `requirePermissionHook` above needs `request.scopeTx` (set from `/:pariwarId/`),
+// so it hard-throws 500 on a GLOBAL route (no path param → no scope tx). That was
+// the documented D4-1.11a landmine forcing the audit-log surface (and now the
+// provisioning surface) to gate on `requireAdminSession` only. This is the missing
+// primitive: a global-scope pre-handler that loads the actor's grants WITHOUT a
+// scope tx and checks them at `global` scope.
+
+/**
+ * Load ALL of the actor's grants across every tenant — the union a GLOBAL-scope
+ * check needs. A global route has no active `pariwar_id`, so there is no scope tx
+ * to gate on (`loadActorGrants`'s W9-CR1.6 guard would throw). We instead query the
+ * BYPASSRLS `servicePool` directly: with no `app.pariwar_id` set, RLS does not
+ * filter, so this returns the actor's grant rows across ALL Pariwars. Same SQL +
+ * same row→`EffectiveGrant` mapping as `loadActorGrants`.
+ */
+export async function loadGlobalActorGrants(
+  pool: pg.Pool,
+  actorId: string,
+): Promise<rbac.EffectiveGrant[]> {
+  const res = await pool.query<RoleGrantRow>(
+    `SELECT pariwar_id, role, scope_dimension, scope_value
+       FROM role_grants
+      WHERE user_id = $1`,
+    [actorId],
+  );
+  return res.rows.map((r) => ({
+    pariwarId: r.pariwar_id,
+    role: r.role,
+    scopeDimension: r.scope_dimension,
+    scopeValue: r.scope_value,
+  }));
+}
+
+/**
+ * Build a Fastify pre-handler enforcing `key` at GLOBAL scope — the sibling of
+ * `requirePermissionHook` for routes that are NOT under `/p/:pariwarId/`. MUST run
+ * AFTER `requireAdminSession` (which sets `request.requestContext.actorId`); a
+ * missing actorId is a programming error → fail loud (500), the same contract as
+ * `requirePermissionHook`.
+ *
+ * Loads grants from the BYPASSRLS `servicePool` (all tenants) and checks them
+ * against a `global` resource locator. `ADMIN_GLOBAL_NAMESPACE` (the nil-UUID
+ * sentinel) stands in for the absent active Pariwar; a `global` grant bypasses the
+ * active-Pariwar filter regardless (check.ts L172), and a non-global grant can
+ * never match the nil-UUID active scope → fail-closed deny. On deny the domain
+ * guard fires the audit seam (`authz.denied`, `pariwarId: null`) then throws
+ * `AuthorizationDeniedError` → the error-mapping middleware renders the 403.
+ */
+export function requireGlobalPermission(deps: AppDeps, key: string): preHandlerHookHandler {
+  return async function preHandler(request: FastifyRequest): Promise<void> {
+    const actorId = request.requestContext.actorId;
+    if (!actorId) {
+      // Programming error — registered without `requireAdminSession` ahead of it.
+      throw new Error('[rbac] requireGlobalPermission ran without an admin session');
+    }
+    const grants = await loadGlobalActorGrants(deps.servicePool, actorId);
+
+    rbac.requirePermission(
+      {
+        actorId,
+        grants,
+        key,
+        resource: { dimension: 'global', value: null, pariwarId: ADMIN_GLOBAL_NAMESPACE },
+      },
+      {
+        onAuthorizationDenied: (denial) => {
+          deps.auditSink.emit({
+            type: 'authz.denied',
+            actorId,
+            pariwarId: null,
             traceId: request.requestContext.traceId,
             context: {
               permissionKey: denial.permissionKey,

@@ -20,6 +20,7 @@ import { buildEncryptionDeps } from '../../src/deps.js';
 import type { StepUpOtpDelivery, StepUpOtpDeliveryPort } from '../../src/modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider, type WebAuthnProvider } from '../../src/modules/auth/shared/webauthn.js';
+import { createFakeDeployTrigger, type DeployTrigger } from '../../src/modules/pariwar-provisioning/deploy-trigger.js';
 import { buildServer } from '../../src/server.js';
 
 export const DATABASE_URL = process.env['DATABASE_URL'];
@@ -81,6 +82,7 @@ export interface TestDepsOverrides {
   stepUpDelivery?: StepUpOtpDeliveryPort;
   turnstile?: TurnstileVerifier;
   webauthn?: WebAuthnProvider;
+  deployTrigger?: DeployTrigger;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
 }
@@ -128,6 +130,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
         rpName: config.webauthn.rpName,
         expectedOrigin: config.webauthn.expectedOrigin,
       }),
+    // Deploy seam (Story 1.15) — the in-memory fake by default; a spec may pass its
+    // own to assert deploy-trigger interactions.
+    deployTrigger: overrides.deployTrigger ?? createFakeDeployTrigger(),
     clock: overrides.clock ?? ((): Date => new Date()),
   };
   return { deps, pool, auditSink, stepUpDelivery };

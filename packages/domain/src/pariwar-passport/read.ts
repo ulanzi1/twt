@@ -24,7 +24,7 @@
 // is deliberately an in-process Map, not gold-plated for consumers that don't
 // exist yet.
 
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { PariwarId } from '../ids/index.js';
@@ -68,6 +68,24 @@ export async function getBrandingBundle(
 ): Promise<BrandingBundle | null> {
   const row = await getPariwarPassport(db, id);
   return row?.brandingBundle ?? null;
+}
+
+/**
+ * List passports across ALL Pariwars — the provisioning-status view (Story 1.15).
+ * Cross-Pariwar readable via the carve-out SELECT policy (`USING true`), so NO
+ * scope is required (same posture as `getPariwarPassport`). `limit` is the
+ * forced-pagination bound (Story 1.14) — the caller passes a `.max()`-capped value.
+ * Ordered newest-first (created_at DESC, then pariwar_id) for a stable page.
+ */
+export async function listPariwarPassports(
+  db: Db,
+  opts: { limit: number },
+): Promise<PariwarPassportRow[]> {
+  return db
+    .select()
+    .from(pariwarPassport)
+    .orderBy(desc(pariwarPassport.createdAt), pariwarPassport.pariwarId)
+    .limit(opts.limit);
 }
 
 // ── Cache-aside layer (the 60s-freshness primitive) ──────────────────────────

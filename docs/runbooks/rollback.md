@@ -1,11 +1,16 @@
 # Runbook: Rollback
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger) — **reconciled to AS-BUILT by Story 1.15 (material edit, re-sign required)**
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13)
-> **Last material edit:** 2026-05-29 by Solo Builder (initial)
+> **Last material edit:** 2026-06-15 by Solo Builder (Story 1.15 AS-BUILT reconciliation — new-Pariwar rollback + Dokploy redeploy)
 > **Architectural authority:** architecture.md §1.8 (Migration tool — drizzle-kit forward-only), §5.4 (CI/CD pipeline — signed image promotion, tag immutability), §5.3 (Deployment substrate — Dokploy fallback to Cloud Run), §1.5 (Audit log — single-DB-access tampering posture)
 
 This runbook covers rollback in two dimensions: **code rollback** (redeploy of a previously-signed image) and **schema rollback** (a new forward migration that inverts an unwanted effect). These are different procedures with different invariants; do not conflate them.
+
+## 0. AS-BUILT reconciliation (Story 1.15)
+
+- **Code rollback = redeploy the prior image tag** via the deploy workflow. Images are tagged by **git SHA** in Artifact Registry (`asia-south1-docker.pkg.dev/<project>/twt-images/<app>:<git-sha>`); a prod rollback re-runs **`deploy-prod.yml`** (`workflow_dispatch`) with the prior `git-sha` as the `image_tag` input — the `production` Environment ≥2-reviewer gate applies to the rollback deploy too. Staging re-runs `deploy-staging.yml`.
+- **New-Pariwar rollback** (a provisioning that must be undone) is covered in **§2.4** below and defers to the **authoritative forbidden-actions list in `multi-pariwar-provisioning.md` §3** (`inactive ≠ deleted`; never re-allocate a `pariwar_id`).
 
 ## 1. Prerequisites
 
@@ -57,6 +62,19 @@ When a deploy that included a schema migration produced a regression, the rollba
 
 Reversing the order can crash the application against a schema it no longer expects. Always: code first, then schema.
 
+### 2.4 New-Pariwar rollback (Story 1.15)
+
+Undoing a just-provisioned Pariwar (provisioned via `POST /api/v1/provisioning/pariwars`, AC-1). Provisioning is largely additive (one `pariwar_passport` row tagged with the new `pariwar_id` + its seed data); there is **no new schema** to roll back (AC-8).
+
+1. **Mark the Pariwar inactive in its Passport** — do NOT delete the row. The full procedure + the verification checks live in **`multi-pariwar-provisioning.md` §3** (Rollback procedure), whose **forbidden-actions list is authoritative**:
+   - ❌ Deleting `pariwar_id`-tagged rows (inactive ≠ deleted — the data may be needed for forensics / trust reconciliation).
+   - ❌ **Re-using / re-allocating a `pariwar_id`** — once minted it is permanent; rollback marks it inactive, never re-allocates.
+   - ❌ Cross-Pariwar data migration during rollback (RLS boundary, §1.2).
+2. **Remove the `/p/<pariwar_id>/` routing** (Dokploy / Traefik) so the path returns unavailable — see `multi-pariwar-provisioning.md` §3 step 1.
+3. **Record the rollback in `.decision-log.md`** with the rationale, trustee authorization, and the disposition of the new Pariwar's seeded data.
+
+This is data-state rollback, NOT a code/schema rollback — §2.1/§2.2 do not apply (the provisioning slice shipped no migration).
+
 ## 3. Rollback procedure (i.e., recovering from a failed rollback)
 
 A failed rollback is a P0 incident. The system is now in an unknown state.
@@ -101,3 +119,4 @@ A failed rollback is a P0 incident. The system is now in an unknown state.
 | Date | git SHA | Author | Material edit? | Re-sign required? | Ledger entry |
 |---|---|---|---|---|---|
 | 2026-05-29 | _initial_ | Solo Builder | initial | yes (≥2 trustees) | _pending_ |
+| 2026-06-15 | _Story 1.15_ | Solo Builder | **yes — AS-BUILT reconciliation** (§0 + §2.4 new-Pariwar rollback; code rollback = redeploy prior git-sha image via `deploy-prod.yml`; defers to provisioning runbook §3 authoritative forbidden-actions) | **yes (≥2 trustees)** | _pending_ |

@@ -9,6 +9,7 @@ export * from './_common/index.js';
 export * from './audit/index.js';
 export * from './auth/index.js';
 export * from './pariwar-passport/index.js';
+export * from './pariwar-provisioning/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

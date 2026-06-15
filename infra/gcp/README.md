@@ -146,6 +146,62 @@ is structurally exercised by the local/CI fake `MirrorTarget`
 (`MIRROR_MODE=fake`) in `pnpm --filter @twt/jobs test`. The 6-hourly trigger is
 pg-boss cron at Story 1.12. Quarterly attestation: `docs/runbooks/audit-mirror-attestation.md`.
 
+## Story 1.15 — staging + prod (module reuse) + WIF + Dokploy
+
+Story 1.15 (D3-1.2) extracted the Cloud SQL resources into **`./modules/cloud-sql/`**
+and the root now consumes it once per env (`cloud-sql-{dev,staging,prod}.tf`), each
+`count`-gated on `var.environment` so one apply provisions exactly one environment.
+The **D3-1.2 test holds**: staging + prod are provisioned with tfvar overrides only
+(`environment` / `availability_type` / `tier` / `network_self_link` / `secret_name`) —
+no HCL edit to the module. `wif.tf` adds the keyless GitHub-Actions→GCP federation
+(pool + provider + deployer SA + Artifact Registry), provisioned for staging + prod
+when `github_repository` is set (prod carries the strictest claim).
+
+> **Module-address note:** the extraction moved `google_sql_database_instance.main`
+> → `module.cloud_sql_<env>[0].google_sql_database_instance.main`. A FRESH apply plans
+> the same resources under the new address. An ALREADY-applied dev state migrates
+> in-place with `terraform state mv` (no destroy) — see `.terraform-plan-expectations.md`.
+
+### Operator apply-sequence (BigDev — staging → smoke → prod)
+
+```sh
+# 0. Prereqs per env (twt-staging, twt-prod): create project, link billing, enable
+#    sqladmin / secretmanager / servicenetworking / compute / artifactregistry /
+#    iamcredentials / sts APIs, and `gcloud auth application-default login`.
+
+cd infra/gcp
+terraform init
+
+# 1. STAGING — REGIONAL Cloud SQL + WIF + Artifact Registry.
+#    terraform.staging.tfvars sets: project_id=twt-staging, environment="staging",
+#    tier, network_self_link (explicit custom VPC), github_repository,
+#    wif_allowed_ref. Then:
+terraform plan  -var-file=terraform.staging.tfvars -out=tfplan-staging
+terraform apply tfplan-staging
+
+#    Run the D3-1.12 pg-boss CREATE grant once (echoed by the module):
+PGBOSS_GRANT="$(terraform output -raw pgboss_create_grant_sql)"
+#    pipe "$PGBOSS_GRANT" into psql against the new instance (via the Auth Proxy).
+
+#    Wire the GitHub `staging` Environment variables from the outputs:
+terraform output -raw wif_provider_name              # → WIF_PROVIDER
+terraform output -raw deployer_service_account_email # → DEPLOYER_SA
+#    Push the Dokploy secrets: twt-staging-dokploy-api-url / -api-token.
+
+# 2. SMOKE staging — push a release branch (triggers deploy-staging.yml): WIF auth →
+#    build+push 4 images → POST Dokploy. Verify the 2nd-Pariwar provision→deploy flow
+#    against the live staging substrate (AC-7 operator walkthrough).
+
+# 3. PROD — same module, terraform.prod.tfvars (environment="prod", larger tier,
+#    longer transaction_log_retention_days, wif_prod_workflow_ref set to the strictest
+#    claim). The deploy-prod.yml `production` Environment requires ≥2 reviewers (§5.4).
+terraform plan  -var-file=terraform.prod.tfvars -out=tfplan-prod
+terraform apply tfplan-prod
+```
+
+**The dev agent runs NONE of the above** — the credentials are escrow-sealed and
+absent from the dev environment. See `docs/runbooks/deploy.md` for the full runbook.
+
 ## Landing-story map (full)
 
 | Subfolder / artifact                | Story / Epic            | Concern                                                  |

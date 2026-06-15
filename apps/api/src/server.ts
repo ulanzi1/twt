@@ -27,9 +27,11 @@ import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
+import { registerHoneypot, registerSecurityHeaders } from './plugins/security-headers/index.js';
 import { registerSession } from './plugins/session/index.js';
 import { registerSwagger } from './plugins/swagger/index.js';
 import { registerZodOpenapi } from './plugins/zod-openapi/index.js';
+import { collectRoutes } from './route-registry.js';
 
 export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
@@ -44,6 +46,14 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
 
   registerZodOpenapi(app);
   app.setErrorHandler(errorMappingHandler);
+
+  // Record every route into the registry FIRST so the AC-2 login-wall + AC-3
+  // forced-pagination guards can introspect the full table (Story 1.14).
+  collectRoutes(app);
+
+  // X-Robots-Tag: noindex, nofollow on every response (FR-92). onSend runs late, so
+  // registering the hook here covers all routes declared below.
+  registerSecurityHeaders(app);
 
   // Unmatched routes get the same ErrorResponse envelope (the global onRequest
   // hooks have already set request.requestContext, so traceId is present).
@@ -71,6 +81,8 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   registerAdminAuthModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
+  // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
+  registerHoneypot(app, deps);
 
   await app.ready();
   return app;

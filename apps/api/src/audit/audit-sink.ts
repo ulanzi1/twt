@@ -22,6 +22,7 @@ export type AuthAuditEventType =
   | 'passkey.auth.failure'
   | 'recovery_code.consume'
   | 'recovery_code.failure'
+  | 'password_reset.failure'
   | 'password_reset.request'
   | 'password_reset.consume'
   | 'step_up.send'

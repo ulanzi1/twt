@@ -1,25 +1,13 @@
-// TurnstileVerifier — the Cloudflare Turnstile verification seam (AC-9, Task 6.3).
+// TurnstileVerifier — thin re-export of the @twt/edge vendor-neutral seam (Story 1.13).
 //
-// The login + passkey-auth entry points call this BEFORE doing expensive crypto so
-// **Story 1.13** can wire real Cloudflare Turnstile without touching auth code
-// (epics.md L1244). The default is a no-op that always passes — do NOT build the
-// Cloudflare/edge integration here. New D-item → 1.13.
+// Story 1.9 pre-built the no-op `TurnstileVerifier` seam here; Story 1.13 PROMOTED the
+// interface + the no-op default into the `@twt/edge` package (AR-52 — the edge
+// integration lives behind a single-module-change abstraction) and the real Cloudflare
+// `createCloudflareTurnstileVerifier` landed there. This file stays as a re-export so
+// the existing import sites (context.ts, deps.ts, tests/integration/_setup.ts) keep
+// importing the type/default from a stable apps/api path — no consumer imports
+// `@twt/edge` (or anything `cloudflare`-named) directly except `deps.ts`, the one
+// place that selects the real-vs-noop verifier from config.
 
-export interface TurnstileVerification {
-  /** The client-supplied Turnstile token (absent when the seam is no-op). */
-  readonly token?: string;
-  /** Remote IP for Cloudflare's siteverify (used by the real adapter only). */
-  readonly remoteIp?: string;
-}
-
-export interface TurnstileVerifier {
-  /** Resolves true when the challenge passes. The no-op default always resolves true. */
-  verify(input: TurnstileVerification): Promise<boolean>;
-}
-
-/** No-op default: every request passes. The real verifier lands at Story 1.13. */
-export const noopTurnstileVerifier: TurnstileVerifier = {
-  async verify(): Promise<boolean> {
-    return true;
-  },
-};
+export type { TurnstileVerifier, TurnstileVerification } from '@twt/edge';
+export { noopTurnstileVerifier } from '@twt/edge';

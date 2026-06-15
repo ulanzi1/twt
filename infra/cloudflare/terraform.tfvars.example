@@ -1,0 +1,35 @@
+# Sample tfvars for the Cloudflare edge module (Story 1.13).
+#
+# Usage (DEFERRED — there is no live TWT Cloudflare zone yet; this is the onboarding
+# runbook for the live-apply D-item):
+#   1. cp terraform.tfvars.example terraform.tfvars
+#   2. Edit terraform.tfvars with your account_id / zone_id / zone_name (do NOT commit).
+#   3. export CLOUDFLARE_API_TOKEN=...   (scoped: Zone:Edit, Bot Management, Turnstile)
+#   4. terraform init
+#   5. terraform plan -out=tfplan
+#   6. terraform apply tfplan
+#   7. Push the Turnstile SECRET outputs to Secret Manager (see README) and set
+#      apps/api TURNSTILE_SECRET_NAME + apps/admin VITE_TURNSTILE_SITE_KEY.
+#
+# terraform.tfvars is .gitignored. Per architecture §5.9, secret VALUES (the API
+# token, the Turnstile secret keys, the edge-auth header value) never enter the repo.
+
+account_id  = "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID"
+zone_id     = "REPLACE_WITH_CLOUDFLARE_ZONE_ID"
+zone_name   = "example.org"
+environment = "dev"
+
+# origin_hostname omitted at dev — the proxied DNS records are skipped until Story
+# 1.15 provisions the live Cloud Run origin.
+# origin_hostname = "twt-prod-xxxxx.a.run.app"
+
+# Optional overrides (defaults shown):
+# enable_bot_management          = false   # true only on a Pro/Business/Enterprise plan
+# bot_score_challenge_threshold  = 30
+# bot_score_sensitive_threshold  = 50
+# turnstile_widget_mode          = "managed"
+# turnstile_extra_domains        = []
+# edge_only_ingress_mechanism    = "header_secret"   # tunnel | header_secret | aop_mtls
+# edge_auth_header_name          = "x-twt-edge-auth"
+# enable_logpush                 = false
+# logpush_destination_conf       = "gs://twt-edge-logs/{DATE}"

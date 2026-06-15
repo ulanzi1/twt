@@ -12,12 +12,13 @@ import { createHash } from 'node:crypto';
 
 import { createDb, resolveConnectionString, resolveSecretValue } from '@twt/domain';
 import { encryption } from '@twt/domain';
+import { createCloudflareTurnstileVerifier } from '@twt/edge';
 
 import { createAuditLogSink, createKmsAuditHook } from './audit/audit-log-sink.js';
 import type { ApiConfig } from './config.js';
 import type { AppDeps, EncryptionDeps } from './context.js';
 import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.js';
-import { noopTurnstileVerifier } from './modules/auth/shared/turnstile.js';
+import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
 
 /** Derive a deterministic 32-byte fake key from a label + the pepper (local/CI only). */
@@ -65,6 +66,30 @@ export function buildEncryptionDeps(pepper: string): EncryptionDeps {
 }
 
 /**
+ * Select the Turnstile verifier from config (AC-2/AC-4). When a secret NAME is
+ * configured, resolve the secret VALUE (Secret Manager in prod; env fallback locally
+ * — the SAME `resolveSecretValue` path the argon2 pepper uses) and build the real
+ * Cloudflare siteverify verifier; otherwise keep the no-op default so the stack runs
+ * with ZERO Cloudflare config (local/CI/not-yet-provisioned). Fail-closed is the
+ * verifier's default; `config.turnstile.failOpen` opts into degraded-mode pass-through.
+ */
+async function buildTurnstileVerifier(config: ApiConfig): Promise<TurnstileVerifier> {
+  const secretName = config.turnstile.secretName;
+  if (!secretName) return noopTurnstileVerifier;
+
+  const secret = await resolveSecretValue(secretName, {
+    envFallback: config.turnstile.secretEnvFallback,
+  });
+  if (!secret || secret.trim() === '') {
+    throw new Error(
+      `[deps] Turnstile secret resolved to an empty value — check Secret Manager secret ` +
+        `'${secretName}' (or unset TURNSTILE_SECRET_NAME to use the no-op verifier)`,
+    );
+  }
+  return createCloudflareTurnstileVerifier({ secret, failOpen: config.turnstile.failOpen });
+}
+
+/**
  * Production / local-dev deps. Builds its own pool (§1.1 per-workspace isolation)
  * and resolves the pepper. The caller owns the pool lifecycle via `deps.pool.end()`.
  */
@@ -109,7 +134,7 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // The real FR-47 hash-chain sink (Story 1.10) replaces consoleAuthAuditSink.
     auditSink: createAuditLogSink(servicePool),
     stepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd }),
-    turnstile: noopTurnstileVerifier,
+    turnstile: await buildTurnstileVerifier(config),
     webauthn: createSimpleWebAuthnProvider({
       rpId: config.webauthn.rpId,
       rpName: config.webauthn.rpName,

@@ -29,7 +29,13 @@ export type AuthAuditEventType =
   | 'step_up.consume'
   | 'step_up.failure'
   | 'scope.change'
-  | 'authz.denied';
+  | 'authz.denied'
+  // ── Security-policy abuse signals (Story 1.14, §2.11 Layer-2) ────────────────
+  // The taxonomy is becoming a general security-audit surface (it already carries
+  // authz.denied + scope.change); a rename to SecurityAuditEventType is out of
+  // scope (noted, not done — Story 1.14 Project Structure Notes).
+  | 'rate_limit.exceeded'
+  | 'abuse.honeypot';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

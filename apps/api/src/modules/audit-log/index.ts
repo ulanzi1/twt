@@ -48,6 +48,7 @@ import { z } from 'zod';
 
 import type { AppDeps } from '../../context.js';
 import { NotFoundError, UnauthorizedError } from '../../http-errors.js';
+import { namedRateLimits } from '../../plugins/rate-limit/index.js';
 import { requireAdminSession } from '../auth/shared/session-guard.js';
 
 const AUDIT_TAG = 'audit';
@@ -134,6 +135,11 @@ export function registerAuditLogModule(app: FastifyInstance, deps: AppDeps): voi
   // fakes; the live Cloud Monitoring wiring is the Category-5 graduation, DD-5).
   const sink = resolveIntegritySinkFromEnv();
   const alerter = resolveIntegrityAlerterFromEnv();
+  // The named per-session read threshold (Story 1.14, AC-1/AC-3). This is the ONE
+  // existing authenticated list endpoint, so it is the proof-of-concept for
+  // `perSessionKey` + the inherited global onExceeded audit emit. The 200-row
+  // admin-tier cap stays on `ListChecksQuery` (the sanctioned bound per §3.2).
+  const readLimit = namedRateLimits(deps).read;
 
   r.post(
     '/api/v1/audit/verify-integrity',
@@ -181,6 +187,7 @@ export function registerAuditLogModule(app: FastifyInstance, deps: AppDeps): voi
         tags: [AUDIT_TAG],
       },
       preHandler: [requireAdminSession(deps)],
+      config: { rateLimit: readLimit },
     },
     async (request) => {
       const { limit, triggerSource } = request.query as z.infer<typeof ListChecksQuery>;

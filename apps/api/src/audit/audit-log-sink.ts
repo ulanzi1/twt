@@ -62,6 +62,12 @@ function hashContext(context: unknown): string {
 function statusForAuthEvent(type: AuthAuditEvent['type']): number {
   if (type === 'authz.denied') return 403;
   if (type === 'login.lockout') return 429;
+  // A tripped rate limit maps to its HTTP-equivalent 429 (Story 1.14, AC-5).
+  if (type === 'rate_limit.exceeded') return 429;
+  // A honeypot hit returns a benign 200 to the bot (the trap looks like a normal
+  // response so it does not tip off the scanner); the `abuse.honeypot` action is
+  // what flags it as an abuse signal, not the status (Story 1.14, AC-4 — documented).
+  if (type === 'abuse.honeypot') return 200;
   if (type.endsWith('.failure')) return 401;
   return 200;
 }

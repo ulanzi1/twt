@@ -39,10 +39,15 @@ const TEST_ENV: NodeJS.ProcessEnv = {
   ARGON2_TIME_COST: '2',
   ARGON2_PARALLELISM: '1',
   // High rate-limit ceilings — the per-IP limit otherwise accumulates across the
-  // many inject() calls in a test file (all from 127.0.0.1) and trips 429s.
+  // many inject() calls in a test file (all from 127.0.0.1) and trips 429s. The
+  // dedicated rate-limit.spec.ts overrides these LOCALLY to a low ceiling to force
+  // the trip; do NOT lower them here (it would break every other suite).
   RATE_LIMIT_MAX: '100000',
   LOGIN_RATE_MAX: '100000',
   STEP_UP_RATE_MAX: '100000',
+  READ_RATE_MAX: '100000',
+  SEARCH_RATE_MAX: '100000',
+  WRITE_RATE_MAX: '100000',
 };
 
 export function testConfig(extra: NodeJS.ProcessEnv = {}): ApiConfig {

@@ -72,6 +72,19 @@ export interface ApiConfig {
   readonly loginRateMax: number;
   /** Step-up per-actor/per-IP rate-limit ceiling (requests/minute, §2.2). */
   readonly stepUpRateMax: number;
+  /**
+   * Named per-endpoint ceilings (Story 1.14, §2.11 Layer-2 — "write stricter than
+   * read"). These are GENEROUS-BUT-FINITE bootstrap ceilings (§2.11 "default-deny
+   * ceiling at bootstrap", not "unlimited until Category 5"); the values are policy
+   * tuned in Category 5 Observability, so they are env-overridable. Keyed per-session
+   * (session actor when present, else IP) via `perSessionKey`.
+   */
+  /** Read/list endpoints (requests/minute). */
+  readonly readRateMax: number;
+  /** Search endpoints (requests/minute, ~§A L3483). */
+  readonly searchRateMax: number;
+  /** Write/mutation endpoints (requests/minute, stricter than read). */
+  readonly writeRateMax: number;
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -157,5 +170,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     globalRateMax: intEnv(env, 'RATE_LIMIT_MAX', 300),
     loginRateMax: intEnv(env, 'LOGIN_RATE_MAX', 10),
     stepUpRateMax: intEnv(env, 'STEP_UP_RATE_MAX', 5),
+    // Bootstrap ceilings: read generous, search per §A L3483, write stricter than read.
+    readRateMax: intEnv(env, 'READ_RATE_MAX', 120),
+    searchRateMax: intEnv(env, 'SEARCH_RATE_MAX', 60),
+    writeRateMax: intEnv(env, 'WRITE_RATE_MAX', 30),
   };
 }

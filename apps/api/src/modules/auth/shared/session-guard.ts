@@ -14,8 +14,16 @@ import type { FastifyRequest, preHandlerHookHandler } from 'fastify';
 import type { AppDeps } from '../../../context.js';
 import { UnauthorizedError } from '../../../http-errors.js';
 
+/**
+ * Marks a preHandler as the admin-session login-wall. The AC-2 fails-closed guard
+ * (login-wall.spec.ts) introspects the route table for this marker so any
+ * authenticated route that forgets the gate — and is not on the explicit public
+ * allowlist — fails CI, not prod. (Story 1.14.)
+ */
+export const ADMIN_SESSION_GUARD = Symbol('twt.requireAdminSession');
+
 export function requireAdminSession(deps: AppDeps): preHandlerHookHandler {
-  return async function preHandler(request: FastifyRequest): Promise<void> {
+  const guard: preHandlerHookHandler = async function preHandler(request: FastifyRequest): Promise<void> {
     const userId = request.session.userId;
     if (!userId) {
       throw new UnauthorizedError('Authentication required', 'auth.session_required');
@@ -28,4 +36,7 @@ export function requireAdminSession(deps: AppDeps): preHandlerHookHandler {
     }
     request.requestContext.actorId = userId;
   };
+  // Tag the returned handler so the AC-2 route-table guard can recognise it.
+  Object.defineProperty(guard, ADMIN_SESSION_GUARD, { value: true, enumerable: false });
+  return guard;
 }

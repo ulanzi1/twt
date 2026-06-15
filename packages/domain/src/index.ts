@@ -33,6 +33,7 @@ export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
 export * as crossTenant from './cross-tenant/index.js';
 export * as audit from './audit/index.js';
+export * as idempotency from './idempotency/index.js';
 export * as ids from './ids/index.js';
 export * as passport from './pariwar-passport/index.js';
 export * as rbac from './rbac/index.js';

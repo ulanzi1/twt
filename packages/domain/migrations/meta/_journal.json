@@ -85,6 +85,20 @@
       "when": 1781429850835,
       "tag": "0011_audit-integrity-acknowledgements",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781458743733,
+      "tag": "0012_idempotency-keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781458903198,
+      "tag": "0013_idempotency-keys-rls",
+      "breakpoints": true
     }
   ]
 }

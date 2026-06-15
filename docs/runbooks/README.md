@@ -98,3 +98,4 @@ Specific cadence (monthly, quarterly, etc.) belongs in operations policy, not in
 - `_template.md` — five-section starter; copy this when authoring a new runbook.
 - `operational-readiness-ledger.md` — trustee sign-off and execution-validation record. **Sole source of truth for runbook authority.**
 - `deploy.md` · `rollback.md` · `secret-rotation.md` · `audit-log-integrity-verification.md` · `reconciliation-manual-intervention.md` · `rbac-seed-reset.md` · `multi-pariwar-provisioning.md` — the Phase-0 seven.
+- `job-queue-operations.md` — pg-boss job queue + idempotency keyed store operations (Story 1.12; architecture §1.4 / §5.9 / §5.11). The copy-me reference for every downstream queue consumer.

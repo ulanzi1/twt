@@ -122,10 +122,10 @@ describe.skipIf(!hasDatabase)('idempotency keyed store (live DB, own-committing)
 
     const [a, b] = await Promise.all([runOnce(), runOnce()]);
     expect(executions).toBe(1);
-    // Both callers observe the SAME single result.
-    const winner = a ?? b;
-    expect(a ?? winner).toEqual(winner);
-    expect(b ?? winner).toEqual(winner);
+    // Both callers must observe the same non-null result (AC-4).
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    expect(a).toEqual(b);
   });
 
   it('expired key is reclaimable (path b); a live key is not (path c)', async () => {

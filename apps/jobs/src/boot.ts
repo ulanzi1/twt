@@ -48,6 +48,26 @@ function logError(scope: string, err: unknown): void {
 }
 
 async function main(): Promise<void> {
+  // Validate numeric env overrides before any resource allocation (NaN from a
+  // non-numeric string would reach listen() or stop() with undefined behaviour).
+  if (!Number.isInteger(HEALTH_PORT) || HEALTH_PORT < 1 || HEALTH_PORT > 65535) {
+    throw new RangeError(
+      `[jobs] HEALTH_PORT / PORT must be an integer 1–65535 (got ${HEALTH_PORT})`,
+    );
+  }
+  if (!Number.isFinite(SHUTDOWN_TIMEOUT_MS) || SHUTDOWN_TIMEOUT_MS < 0) {
+    throw new RangeError(
+      `[jobs] JOBS_SHUTDOWN_TIMEOUT_MS must be a non-negative number (got ${SHUTDOWN_TIMEOUT_MS})`,
+    );
+  }
+  // Basic 5-field cron sanity check — reject obviously invalid values before
+  // boss.start() so the failure surfaces before the worker is registered.
+  if (!/^(\S+\s+){4}\S+$/.test(VACUUM_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] IDEMPOTENCY_VACUUM_CRON must be a 5-field cron expression (got "${VACUUM_CRON}")`,
+    );
+  }
+
   const connectionString = process.env['SERVICE_DATABASE_URL'] ?? (await resolveConnectionString());
 
   // pg-boss client (manages its own pool from the connection string).
@@ -100,33 +120,41 @@ async function main(): Promise<void> {
     void shutdown('SIGINT');
   });
 
-  // Start the boss — creates the `pgboss` schema on first run (the connection role
-  // needs CREATE on the DB; CI's superuser has it — see the runbook for prod).
-  await boss.start();
+  // Wrap the startup sequence: if any step throws after pool + boss are created,
+  // clean them up before re-throwing so the process exits without leaked handles.
+  try {
+    // Start the boss — creates the `pgboss` schema on first run (the connection role
+    // needs CREATE on the DB; CI's superuser has it — see the runbook for prod).
+    await boss.start();
 
-  // ── TTL-vacuum queue + worker + cron (AC-5) ─────────────────────────────────
-  // createQueue() is required before work()/schedule() in v12.
-  await boss.createQueue(QUEUE_NAMES.IDEMPOTENCY_VACUUM);
+    // ── TTL-vacuum queue + worker + cron (AC-5) ───────────────────────────────
+    // createQueue() is required before work()/schedule() in v12.
+    await boss.createQueue(QUEUE_NAMES.IDEMPOTENCY_VACUUM);
 
-  // v12: the handler receives an ARRAY of jobs even at batchSize 1 — iterate. The
-  // vacuum is a single idempotent DELETE regardless of how many trigger jobs
-  // coalesced; returning a value stores it in the job `output`, an unhandled throw
-  // auto-fails + retries.
-  await boss.work(QUEUE_NAMES.IDEMPOTENCY_VACUUM, async (jobs: Job[]) => {
-    const deleted = await idempotency.purgeExpiredKeys(pool);
-    console.info('[jobs] idempotency-vacuum', JSON.stringify({ jobs: jobs.length, deleted }));
-    return { deleted };
-  });
-
-  // Schedule the vacuum cron in IST.
-  await boss.schedule(QUEUE_NAMES.IDEMPOTENCY_VACUUM, VACUUM_CRON, {}, { tz: VACUUM_TZ });
-
-  await new Promise<void>((resolve, reject) => {
-    healthServer.once('error', reject);
-    healthServer.listen(HEALTH_PORT, () => {
-      resolve();
+    // v12: the handler receives an ARRAY of jobs even at batchSize 1 — iterate. The
+    // vacuum is a single idempotent DELETE regardless of how many trigger jobs
+    // coalesced; returning a value stores it in the job `output`, an unhandled throw
+    // auto-fails + retries.
+    await boss.work(QUEUE_NAMES.IDEMPOTENCY_VACUUM, async (jobs: Job[]) => {
+      const deleted = await idempotency.purgeExpiredKeys(pool);
+      console.info('[jobs] idempotency-vacuum', JSON.stringify({ jobs: jobs.length, deleted }));
+      return { deleted };
     });
-  });
+
+    // Schedule the vacuum cron in IST.
+    await boss.schedule(QUEUE_NAMES.IDEMPOTENCY_VACUUM, VACUUM_CRON, {}, { tz: VACUUM_TZ });
+
+    await new Promise<void>((resolve, reject) => {
+      healthServer.once('error', reject);
+      healthServer.listen(HEALTH_PORT, () => {
+        resolve();
+      });
+    });
+  } catch (err) {
+    await boss.stop({ graceful: false }).catch(() => undefined);
+    await pool.end().catch(() => undefined);
+    throw err;
+  }
 
   ready = true;
   console.info(

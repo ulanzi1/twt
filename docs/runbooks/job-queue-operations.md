@@ -94,6 +94,8 @@ Jobs that exhaust retries (`retryLimit`, default 2) route to a **dead-letter** q
 
 The worker traps `SIGTERM`/`SIGINT` and drains via `stopQueueClient(boss, { timeoutMs })` → `boss.stop({ graceful: true, timeout })`, which waits for in-flight jobs up to the timeout, then forces shutdown. The health endpoint flips to 503 during drain. A non-zero exit (crash discipline, §5.9) triggers a container restart.
 
+Default drain timeout is **30 000 ms (30 s)**. Override via `JOBS_SHUTDOWN_TIMEOUT_MS` (milliseconds) — set this higher than your longest expected job runtime to avoid forced mid-flight termination. The health-check port defaults to **8080**; override via `HEALTH_PORT` or `PORT`.
+
 ## 3. Rollback procedure
 
 - **The `pgboss` schema is forward-managed by pg-boss** (it runs its own migrations on `start()`). There is no app-level down-migration. To roll back a queue-consumer change, deploy the prior image (forward operation) — pg-boss is backward-compatible across patch/minor within 12.x.

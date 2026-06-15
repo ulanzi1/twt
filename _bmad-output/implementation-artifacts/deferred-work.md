@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 1-12-pg-boss-job-queue-idempotency-keyed-store (2026-06-15)
+
+- **CR-D1-1.12: `hashtext()` 32-bit advisory lock collision** — `pg_advisory_xact_lock(hashtext($1))` collapses the key space to 32 bits; two distinct keys that collide cause unnecessary false serialization. Data integrity is preserved by `ON CONFLICT (key)`. The spec mandates `hashtext()` (no extra hashing util). Re-trigger: post-ship hardening pass or a high-throughput consumer hits measurable false-lock contention. (`packages/domain/src/idempotency/keyed-store.ts`)
+- **CR-D2-1.12: `apps/jobs` Dockerfile runtime stage incomplete** — the runtime stage copies only `apps/jobs/dist` and `package.json`, no `node_modules` or workspace package dists. `node dist/src/boot.js` would fail `ERR_MODULE_NOT_FOUND` in a real container run. Pre-existing pattern across all app Dockerfiles (api, admin, public also incomplete); Docker runtime completeness is a separate workstream. Re-trigger: first production deploy preparation for the jobs image. (`apps/jobs/Dockerfile`)
+- **CR-D3-1.12: Health server has no request/headers timeout** — `http.createServer` with no `headersTimeout`/`requestTimeout` leaves sockets open indefinitely on slow-read. Internal port only; hardening concern. Re-trigger: security hardening pass or a load-balancer misconfiguration causes socket accumulation. (`apps/jobs/src/boot.ts`)
+- **CR-D4-1.12: `status` column has no CHECK DB constraint** — `status text NOT NULL` accepts arbitrary strings; only the TypeScript type enforces `'pending' | 'completed'`. Drizzle ORM limitation (no `CHECK` emitted for text columns by default). Re-trigger: a future status enum change or a raw-INSERT path bypasses the app layer. (`packages/domain/migrations/0012_idempotency-keys.sql`)
+
+---
+
 ## Deferred from: dev-story of 1-12-pg-boss-job-queue-idempotency-keyed-store (2026-06-15)
 
 **Newly opened (Resolved via explicit deferral):**

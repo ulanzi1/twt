@@ -18,9 +18,10 @@
 //      the TOCTOU gap between the INSERT-conflict and the SELECT/UPDATE below.
 //   2. `INSERT … ON CONFLICT (key) DO NOTHING`. rowCount === 1 → we inserted →
 //      'acquired' (path a).
-//   3. On conflict, inspect the existing row: if it is EXPIRED, reclaim it via
-//      UPDATE → 'acquired' (path b); otherwise it is a live claim → 'already_claimed'
-//      (path c).
+//   3. On conflict, inspect the existing row: if it is EXPIRED AND PENDING, reclaim
+//      it via UPDATE → 'acquired' (path b); a completed+expired row is left intact
+//      (still readable by getResult until the vacuum runs) → 'already_claimed' (path c).
+//      A live row of any status → 'already_claimed' (path c).
 // The claim transaction COMMITS independently of any caller transaction: an
 // idempotency claim MUST be durable even if the caller's own work later rolls back
 // or the process crashes — the TTL is what makes a crashed/abandoned claim
@@ -129,18 +130,21 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
         return 'acquired'; // path (a): fresh claim
       }
 
-      // Conflict: a row already exists under the lock. Inspect its expiry.
-      const existing = await client.query<{ expires_at: Date }>(
-        `SELECT expires_at FROM idempotency_keys WHERE key = $1`,
+      // Conflict: a row already exists under the lock. Inspect its expiry AND status.
+      const existing = await client.query<{ expires_at: Date; status: string }>(
+        `SELECT expires_at, status FROM idempotency_keys WHERE key = $1`,
         [key],
       );
       const row = existing.rows[0];
-      if (row && row.expires_at.getTime() < now.getTime()) {
-        // path (b): the prior claim expired — reclaim it (reset result + window).
+      // path (b): expired AND still pending — reclaim it (reset result + window).
+      // A completed+expired row is treated as already_claimed: its result is still
+      // readable by getResult until the vacuum runs (wiping it here would destroy
+      // a result the losing caller may be about to read via getResult).
+      if (row && row.expires_at.getTime() < now.getTime() && row.status === 'pending') {
         await client.query(
           `UPDATE idempotency_keys
              SET status = 'pending', result = NULL, created_at = $2, expires_at = $3, completed_at = NULL
-           WHERE key = $1`,
+           WHERE key = $1 AND status = 'pending'`,
           [key, now, expiresAt],
         );
         await client.query('COMMIT');
@@ -164,18 +168,22 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
     // boolean/null) becomes a valid jsonb literal; `?? null` coerces undefined.
     const serialized = JSON.stringify(result ?? null);
     const client = await pool.connect();
+    let releaseErr: unknown;
     try {
       const updated = await client.query(
         `UPDATE idempotency_keys
            SET status = 'completed', result = $2::jsonb, completed_at = $3
-         WHERE key = $1`,
+         WHERE key = $1 AND status = 'pending'`,
         [key, serialized, now],
       );
       if (updated.rowCount === 0) {
         throw new IdempotencyKeyNotClaimedError(key);
       }
+    } catch (e) {
+      releaseErr = e;
+      throw e;
     } finally {
-      client.release();
+      client.release(releaseErr as Error | undefined);
     }
   }
 
@@ -183,6 +191,7 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
     assertKey(key);
     const now = clock();
     const client = await pool.connect();
+    let releaseErr: unknown;
     try {
       // AC-2: completed AND not-yet-expired. The Task-3 pseudocode omits the expiry
       // guard, but AC-2 says "null if … expired" — honoured here so a stale result
@@ -193,8 +202,11 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
         [key, now],
       );
       return rows.length === 0 ? null : (rows[0]?.result ?? null);
+    } catch (e) {
+      releaseErr = e;
+      throw e;
     } finally {
-      client.release();
+      client.release(releaseErr as Error | undefined);
     }
   }
 

@@ -1,6 +1,6 @@
 # Story 1.12: pg-boss Job Queue + Idempotency Keyed Store `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -171,6 +171,28 @@ pg-boss `singletonKey` dedupes **enqueues within a throttle window** — it does
   - [x] Re-affirmed **D2-1.10** / **D3-1.11a** deferred with updated re-triggers (pg-boss substrate now exists; crons not graduated); added a Story 1.12 `deferred-work.md` section (D1-1.12 per-tenant isolation, D2-1.12 enqueue-from-api, D3-1.12 prod CREATE grant, D4-1.12 per-class pools/DLQ) + decision-log entry **2026-06-15-049** (DD-1 Node bump, DD-2 global-table scope + twt_service-grant refinement, DD-3 packages/queue, DD-4 deferrals).
 - [x] **Task 9 — Full verification**
   - [x] `pnpm turbo run lint typecheck build db:check` green (46/46 tasks, Node 22.22.2); unit `test` green (19/19 tasks); live-DB integration suite green (domain 207+1 pre-existing skip, events 31, jobs 17, api 62, queue 3 — `--filter` set incl. `@twt/queue`). Prettier-clean on all new files.
+
+### Review Findings
+
+> Code review: 2026-06-15 — 0 decision-needed, 8 patch, 4 deferred, 5 dismissed.
+
+**Patch — must fix before merge:**
+
+- [x] [Review][Patch] **F1 (HIGH)** `recordResult` no `status='pending'` guard — silently overwrites a completed key's result on any retry or programmer-error double-call [`packages/domain/src/idempotency/keyed-store.ts`]
+- [x] [Review][Patch] **F2 (MEDIUM)** `claim` path (b) has no `AND status='pending'` on the reclaim UPDATE — a completed+expired row's stored result is destroyed before the vacuum runs [`packages/domain/src/idempotency/keyed-store.ts`]
+- [x] [Review][Patch] **F3 (MEDIUM)** AC-4 concurrent test assertions are tautological: `expect(a ?? winner).toEqual(winner)` is always true regardless of `a`; the "both callers see same result" property is not actually proven [`packages/domain/tests/integration/idempotency/keyed-store.spec.ts`]
+- [x] [Review][Patch] **F4 (MEDIUM)** `Number(process.env['HEALTH_PORT'] ?? ...)` silently produces `NaN` on non-numeric env values — `listen(NaN)` is undefined/platform-specific behaviour [`apps/jobs/src/boot.ts`]
+- [x] [Review][Patch] **F5 (LOW)** `client.release()` in `recordResult` and `getResult` is not passed the caught error — on a broken connection, the pool recycles a dead client and the original Postgres error is swallowed [`packages/domain/src/idempotency/keyed-store.ts`]
+- [x] [Review][Patch] **F6 (LOW)** Startup resource leak: if any step after `createDb` throws (boss.start, createQueue, work, schedule, healthServer.listen), neither `pool.end()` nor `boss.stop()` is called before `process.exit(1)` [`apps/jobs/src/boot.ts`]
+- [x] [Review][Patch] **F7 (LOW)** `IDEMPOTENCY_VACUUM_CRON` env override not validated before `boss.start()` — an invalid cron string reaches `boss.schedule()` after the worker is already registered, leaving a partially-started runtime [`apps/jobs/src/boot.ts`]
+- [x] [Review][Patch] **F8 (LOW)** Runbook §2.7 documents graceful drain but omits the `JOBS_SHUTDOWN_TIMEOUT_MS` env var operators use to tune it [`docs/runbooks/job-queue-operations.md`]
+
+**Deferred:**
+
+- [x] [Review][Defer] **D1 (MEDIUM)** `hashtext()` returns a 32-bit int — distinct keys that collide cause false serialization (correctness preserved by ON CONFLICT; spec mandates `hashtext()` — defer to a post-ship hardening pass) [`packages/domain/src/idempotency/keyed-store.ts`] — deferred, pre-existing db limitation + spec constraint
+- [x] [Review][Defer] **D2 (HIGH)** `apps/jobs` Dockerfile runtime stage copies only `dist/` and `package.json`, no `node_modules` — image builds but container would fail `ERR_MODULE_NOT_FOUND` at startup; pre-existing pattern across all app Dockerfiles [`apps/jobs/Dockerfile`] — deferred, pre-existing pattern across all apps; Docker runtime completeness is a separate workstream
+- [x] [Review][Defer] **D3 (LOW)** Health server has no `headersTimeout`/`requestTimeout` — slow-read DoS on open sockets (internal port, hardening concern) [`apps/jobs/src/boot.ts`] — deferred, pre-existing
+- [x] [Review][Defer] **D4 (LOW)** `status` column has no `CHECK (status IN ('pending','completed'))` DB constraint — Drizzle ORM limitation, enforced at application layer only [`packages/domain/migrations/0012_idempotency-keys.sql`] — deferred, pre-existing ORM limitation pattern
 
 ---
 

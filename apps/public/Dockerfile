@@ -3,7 +3,7 @@
 # Substantive runtime correctness lands in subsequent Epic 1 stories.
 
 # ---------- base ----------
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 WORKDIR /app
 

@@ -13,3 +13,4 @@ export * from './audit-integrity-acknowledgements-rls.js';
 export * from './pariwar-passport-rls.js';
 export * from './role-grants-rls.js';
 export * from './identity-auth-rls.js';
+export * from './idempotency-keys-rls.js';

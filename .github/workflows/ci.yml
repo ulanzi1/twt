@@ -28,7 +28,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
@@ -43,7 +43,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run lint
@@ -59,7 +59,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run typecheck
@@ -75,7 +75,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run test
@@ -91,7 +91,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build
@@ -111,7 +111,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run db:check
@@ -135,7 +135,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run contracts:check-openapi-determinism
@@ -159,7 +159,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run crypto:check
@@ -198,7 +198,7 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.18.0
+          node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Apply migrations
@@ -208,8 +208,10 @@ jobs:
         # 1.11a (the audit-integrity walk's synthetic-tamper suite); @twt/api
         # joined at Story 1.11b (the trustee-UI endpoint suite: session
         # introspection + integrity-check history + acknowledge, plus the
-        # pre-existing admin-auth / scope-tx / step-up live-DB specs). Downstream
+        # pre-existing admin-auth / scope-tx / step-up live-DB specs); @twt/queue
+        # joined at Story 1.12 (the pg-boss queue-client smoke suite). The Story
+        # 1.12 keyed-store concurrency + RLS specs ride @twt/domain. Downstream
         # Stories (7.x Pool Engine, 9.x reconciliation) extend this filter when
         # their integration suites land. With DATABASE_URL set the
         # `describe.skipIf(!hasDatabase)` guards run instead of skipping.
-        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api
+        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue

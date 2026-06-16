@@ -20,7 +20,9 @@
     "db:studio": "pnpm --filter @twt/domain db:studio",
     "contracts:emit-openapi": "pnpm --filter @twt/contracts contracts:emit-openapi",
     "contracts:check-openapi-determinism": "turbo run contracts:check-openapi-determinism",
-    "crypto:check": "turbo run crypto:check"
+    "crypto:check": "turbo run crypto:check",
+    "friction:check": "tsx scripts/friction-budget/check.ts",
+    "friction:test": "vitest run scripts/friction-budget"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
@@ -32,9 +34,11 @@
     "eslint-config-prettier": "^10.1.1",
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
+    "tsx": "^4.19.0",
     "turbo": "^2.9.16",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.50.0",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "yaml": "^2.6.1"
   }
 }

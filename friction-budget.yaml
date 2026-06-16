@@ -1,0 +1,65 @@
+# friction-budget.yaml — metric-threshold registry (UX-DR3, metric facet)
+# Story 1.16a. Architecture Principle #8 (line 294) + §4.11.1 page-weight budget
+# (lines 2785-2799). The named-payer DECLARATION ledger is the sibling file
+# friction-budget.md; one CI job (scripts/friction-budget/check.ts) runs both.
+#
+# ┌─ CHANGING A CEILING REQUIRES A SEPARATE PR WITH WRITTEN RATIONALE ──────────┐
+# │ Loosening a ceiling (raising the budget) must land in its OWN PR with a     │
+# │ written rationale — never bundled with a measurement/code change. The gate  │
+# │ (AC-1) detects a same-PR ceiling raise + measurement change and fails with  │
+# │ "split into a rationale PR".                                                │
+# └────────────────────────────────────────────────────────────────────────────┘
+#
+# baseline-of-record (AC-3): `baseline` is the committed current value the gate
+# compares against. It is `null` until a surface produces measurable build
+# output. On an improvement the author commits the lowered baseline IN THIS PR;
+# the gate asserts committed === measured (it never auto-pushes commits).
+#
+# BOOTSTRAPPING / no-op (AC-2): no member-facing build output exists in
+# `pnpm turbo run build` yet (apps/public is a tsc stub until the Story 2.5 Astro
+# shell; apps/mobile `build` is an intentional EAS no-op). Each surface is a
+# graceful no-op (passes) until its `manifest` path exists, then grows teeth
+# surface-by-surface. See friction-budget.md + scripts/friction-budget/README.md.
+
+version: 1
+
+surfaces:
+  # The member mobile app JS bundle. Canonical device = 3GB Android
+  # (architecture line 34). `build` is an EAS no-op today → no-op until a
+  # bundle manifest lands.
+  - id: member-app-native
+    description: Member mobile app JS bundle (apps/mobile, Expo / EAS)
+    manifest: apps/mobile/dist/bundle-manifest.json
+    metrics:
+      - id: js_bundle_bytes
+        ceiling: 2621440 # 2.5 MiB
+        baseline: null
+      - id: page_weight_bytes
+        ceiling: 3145728 # 3 MiB total transferred
+        baseline: null
+
+  # The public member-facing web surface. apps/public is a tsc stub until the
+  # Astro SSR shell lands at Story 2.5 (AR-48) → no-op until then. Web budgets
+  # are tighter than native per architecture §4.11.1.
+  - id: member-public-web
+    description: Public member-facing web (apps/public Astro SSR — Story 2.5)
+    manifest: apps/public/dist/page-weight.json
+    metrics:
+      - id: js_bundle_bytes
+        ceiling: 153600 # 150 KiB
+        baseline: null
+      - id: page_weight_bytes
+        ceiling: 512000 # 500 KiB total transferred
+        baseline: null
+
+# Live critical-render-path TIMING on the canonical device (3GB Android,
+# architecture line 34) is EXPLICITLY DEFERRED (AC-6): no device-farm /
+# CPU-throttled-Lighthouse harness exists in CI. The statically measurable
+# proxies (js_bundle_bytes + page_weight_bytes above) ship now; live timing is
+# recorded as "Resolved via explicit deferral" in deferred-work.md with a
+# trigger. This placeholder keeps the metric named in the registry.
+deferred_metrics:
+  - id: critical_render_path_ms
+    canonical_device: 3GB Android
+    status: deferred
+    trigger: throttled-Lighthouse-CI harness lands alongside the Story 2.5 Astro shell or Story 1.17 design-system surface

@@ -80,6 +80,7 @@ function main(): void {
     const verdict = evaluateSnapshot(matrix, snapshot);
     const glyph = verdict.status === 'fail' ? '✗' : verdict.status === 'no-op' ? '·' : '✓';
     console.log(`  ${glyph} ${verdict.message}`);
+    for (const w of verdict.warnings) console.log(`    ⚠ ${w}`);
     if (verdict.status === 'fail') {
       for (const leak of verdict.leaks) failures.push(`tier-leak: ${leak.message}`);
       for (const pii of verdict.piiMatches) {

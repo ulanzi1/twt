@@ -1,6 +1,6 @@
 # Story 1.16b: PII Scrape CI Gate (FR-74 Foundational) `[GOVERNANCE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -221,6 +221,36 @@ claude-opus-4-8 (Claude Code, bmad-dev-story workflow)
 - `docs/knowledge-transfer/adr-index.md` — ADR-0013 row + status reconciliation (drafted 9→10, total 130→131, Section A 31→32)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — Story 1.16b section + D8-1.5/D13-1.2/D7-1.5 inline annotations
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `1-16b` ready-for-dev → in-progress → review + ledger comment
+
+### Review Findings
+
+#### Decision-Needed
+
+_(all resolved)_
+
+- [x] [Review][Decision] ~~Email regex scans raw HTML — resolved: attribute-level detection is intentional~~ — BigDev confirmed option 2: any email anywhere in the DOM (including attributes) is a leak. Current behavior is correct. Dismissed. [`packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **`MatrixSurface.fields` permits empty array — add no-op warning, not a schema error** — BigDev confirmed option 2: allow `fields: []` structurally but emit a warning log in `evaluateSurfaceRender` (or `evaluateSnapshot`) when a matched surface has an empty fields list so scaffold surfaces are visible in gate output rather than silently skipped. [`packages/contracts/src/public-pages/scrape.ts`, `packages/contracts/src/public-pages/matrix.ts`]
+
+#### Patch
+
+- [x] [Review][Patch] **Rule (a) `never_exposed` test coverage incomplete** — missing `authenticated_member` viewer test, missing explicit pass-case test, and existing `operator_restricted` test asserts only `toHaveLength(1)` (not the offending tier/field); the most critical rule has the weakest fixture suite. [`packages/contracts/tests/public-pages.test.ts`]
+- [x] [Review][Patch] **`pii-scrape` CI job missing `needs: install`** — AC-4 requires mirroring the `contracts-check` / `friction-budget` job shape with `needs: install`; the job currently performs an inline install instead, diverging from the spec and the sibling job pattern. [`.github/workflows/ci.yml`]
+- [x] [Review][Patch] **Duplicate `surfaceId` values in matrix silently shadow the second entry** — `findSurface` uses `Array.find` (first-wins); the Zod schema has no uniqueness constraint on surface `id` values; a misconfigured matrix with duplicate surface IDs will silently discard the second declaration. [`packages/contracts/src/public-pages/matrix.ts`, `packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **Duplicate field `id` within a surface silently shadows the second tier** — `surface.fields.find(f => f.id === fieldId)` returns the first match; no intra-surface uniqueness constraint in the Zod schema; a field declared twice with different tiers (e.g. `public` then `never_exposed`) evaluates only the first. [`packages/contracts/src/public-pages/matrix.ts`, `packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **Duplicate entries in `renderedFieldIds` inflate the leak count** — `evaluateSurfaceRender` iterates without deduplication; the same `(surfaceId, fieldId)` pair produces duplicate `Leak` objects and inflates `failures[]`. [`packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **`html: ''` (empty string) silently passes as a clean render** — `'' !== undefined` → `hasHtml = true` → `detectNakedPii('')` returns `[]` → verdict `pass`; a scraper that returns an HTTP 200 with empty body is indistinguishable from a genuinely clean render. [`packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **`fields: null` at runtime bypasses the no-op guard** — TypeScript types prevent `null` statically, but JSON deserialization can produce it; `null !== undefined` → `hasFields = true` → `fields ?? []` → engine evaluates zero fields and passes. Guard should use `!= null`. [`packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **Phone regex double-fires on email addresses with 10-digit local parts** — `user9876543210@example.com` is correctly matched by the email pattern AND incorrectly matched by the phone pattern (lookbehind sees `r`, lookahead sees `@`); failure count is inflated with a spurious `phone` finding for the same value. [`packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **Aadhaar/phone regex overlap — Aadhaar numbers starting with 6-9 are double-counted** — the phone regex matches the first 10 of 12 Aadhaar digits when the leading digit is `[6-9]`; the same value is reported as both `aadhaar` and `phone`, inflating the count and misidentifying the type. [`packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **`ceilingTierName` falls back to `'public'` on unrecognised ceiling rank** — if the `VIEWER_CEILING → TIER_RANK` reverse lookup fails, the diagnostic message says "may only see tier ≤ public" regardless of the actual viewer context; should throw on an unrecognised rank rather than silently mislead. [`packages/contracts/src/public-pages/scrape.ts`]
+- [x] [Review][Patch] **`evaluateSurfaceRender` passes `snapshot.fields ?? []` when `hasFields` is already true — dead code indicating type-safety gap** — `hasFields = snapshot.fields !== undefined`; within the `hasFields` branch `?? []` is unreachable; if `fields` type is ever widened to include `null`, the guard silently breaks while the coalescion masks it. [`packages/contracts/src/public-pages/scrape.ts`]
+
+#### Deferred
+
+- [x] [Review][Defer] `evaluateSnapshot` silently passes non-public HTML renders with no `fields` — spec-consistent (AC-2: PII detection is explicitly public-only; tier-leak requires `fields`); risk materialises at Story 2.5/11a.2 when the live-render integration spec constructs `RenderSnapshot` objects [`packages/contracts/src/public-pages/scrape.ts`] — deferred, pre-existing
+- [x] [Review][Defer] Phone regex false positives on non-phone 10-digit strings (URL paths, order IDs, `0`-prefix landlines) — v1 limitation; spec documents "conservative patterns"; Story 11a.4 obfuscation is defence-in-depth; refine when real HTML snapshots are wired [`packages/contracts/src/public-pages/scrape.ts`] — deferred, pre-existing
+- [x] [Review][Defer] `loadSnapshots()` hardcoded stub with no discovery mechanism — by design v1 (no public renders exist); the live-render path is `scrape-test.spec.ts` (D13-1.2); gate grows teeth with data, not code changes [`packages/contracts/scripts/check-pii-scrape.ts`] — deferred, pre-existing
+- [x] [Review][Defer] `pii-scrape` CI job has no `needs: [test]` dependency — a failing engine test does not block the gate-specific CI check; acceptable if branch protection requires all status checks to pass [`.github/workflows/ci.yml`] — deferred, pre-existing
 
 ### Change Log
 

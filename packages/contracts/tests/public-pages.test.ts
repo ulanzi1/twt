@@ -97,11 +97,25 @@ describe('tier-leak rules (AC-2)', () => {
     expect(leaks[0]?.surfaceId).toBe('member-directory');
     expect(leaks[0]?.tier).toBe('never_exposed');
   });
+  it('never_exposed leaks on an authenticated_member render (no viewer context is exempt)', () => {
+    const leaks = evaluateSurfaceRender(FIXTURE, 'member-directory', 'authenticated_member', [
+      'aadhaar',
+    ]);
+    expect(leaks).toHaveLength(1);
+    expect(leaks[0]?.field).toBe('aadhaar');
+    expect(leaks[0]?.tier).toBe('never_exposed');
+  });
   it('never_exposed leaks even on an operator render (highest viewer)', () => {
     const leaks = evaluateSurfaceRender(FIXTURE, 'member-directory', 'operator_restricted', [
       'aadhaar',
     ]);
     expect(leaks).toHaveLength(1);
+    expect(leaks[0]?.field).toBe('aadhaar');
+    expect(leaks[0]?.tier).toBe('never_exposed');
+  });
+  it('never_exposed absent from a render is compliant (pass)', () => {
+    const leaks = evaluateSurfaceRender(FIXTURE, 'member-directory', 'public', ['full_name']);
+    expect(leaks).toHaveLength(0);
   });
 
   // Rule (b): operator_restricted → not on member or public renders.
@@ -251,6 +265,58 @@ describe('evaluateSnapshot orchestration (AC-2/AC-3)', () => {
       fields: ['full_name', 'district'],
     });
     expect(v.status).toBe('pass');
+  });
+});
+
+describe('matrix uniqueness constraints', () => {
+  it('throws on duplicate surface ids in the matrix', () => {
+    const raw =
+      'version: 1\nsurfaces:\n' +
+      '  - id: dup\n    search_indexing_policy: index\n    fields: []\n' +
+      '  - id: dup\n    search_indexing_policy: noindex\n    fields: []\n';
+    expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/duplicate surface id "dup"/);
+  });
+  it('throws on duplicate field ids within a surface', () => {
+    const raw =
+      'version: 1\nsurfaces:\n  - id: s\n    search_indexing_policy: index\n    fields:\n' +
+      '      - id: mobile\n        tier: public\n' +
+      '      - id: mobile\n        tier: never_exposed\n';
+    expect(() => parsePublicVsPrivateMatrix(raw)).toThrow(/duplicate field id "mobile"/);
+  });
+});
+
+describe('evaluateSnapshot — edge cases', () => {
+  const EMPTY_SURFACE_FIXTURE: PublicVsPrivateMatrix = {
+    version: 1,
+    surfaces: [{ id: 'stub-surface', search_indexing_policy: 'noindex', fields: [] }],
+  };
+
+  it('emits a warning when the matched surface has no declared fields', () => {
+    const v = evaluateSnapshot(EMPTY_SURFACE_FIXTURE, {
+      surfaceId: 'stub-surface',
+      viewerContext: 'public',
+      fields: ['some_field'],
+    });
+    expect(v.status).toBe('fail'); // fail-closed: unclassified field
+    expect(v.warnings.length).toBeGreaterThan(0);
+    expect(v.warnings[0]).toMatch(/no fields/);
+  });
+
+  it('treats an empty-string html as no-op (no render available)', () => {
+    const v = evaluateSnapshot(FIXTURE, {
+      surfaceId: 'member-directory',
+      viewerContext: 'public',
+      html: '',
+    });
+    expect(v.status).toBe('no-op');
+  });
+
+  it('deduplicates repeated entries in renderedFieldIds', () => {
+    const leaks = evaluateSurfaceRender(FIXTURE, 'member-directory', 'public', [
+      'aadhaar',
+      'aadhaar',
+    ]);
+    expect(leaks).toHaveLength(1);
   });
 });
 

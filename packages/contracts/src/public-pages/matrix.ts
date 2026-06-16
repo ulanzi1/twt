@@ -66,7 +66,20 @@ export const MatrixSurfaceSchema = z
     search_indexing_policy: SearchIndexingPolicySchema,
     fields: z.array(MatrixFieldSchema),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const seen = new Set<string>();
+    for (const field of data.fields) {
+      if (seen.has(field.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['fields'],
+          message: `duplicate field id "${field.id}" in surface "${data.id}"`,
+        });
+      }
+      seen.add(field.id);
+    }
+  });
 export type MatrixSurface = z.output<typeof MatrixSurfaceSchema>;
 
 /** The canonical Public-vs-Private matrix (FR-74). */
@@ -75,7 +88,20 @@ export const PublicVsPrivateMatrixSchema = z
     version: z.number().int().positive(),
     surfaces: z.array(MatrixSurfaceSchema),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const seen = new Set<string>();
+    for (const surface of data.surfaces) {
+      if (seen.has(surface.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['surfaces'],
+          message: `duplicate surface id "${surface.id}" in matrix`,
+        });
+      }
+      seen.add(surface.id);
+    }
+  });
 export type PublicVsPrivateMatrix = z.output<typeof PublicVsPrivateMatrixSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────

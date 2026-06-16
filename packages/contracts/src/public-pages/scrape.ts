@@ -106,8 +106,9 @@ export function evaluateSurfaceRender(
   const leaks: Leak[] = [];
   const ceiling = VIEWER_CEILING[viewerContext];
   const surface = findSurface(matrix, surfaceId);
+  const uniqueFieldIds = [...new Set(renderedFieldIds)];
 
-  for (const fieldId of renderedFieldIds) {
+  for (const fieldId of uniqueFieldIds) {
     const field = surface?.fields.find((f) => f.id === fieldId);
     if (field === undefined) {
       leaks.push({
@@ -139,9 +140,13 @@ export function evaluateSurfaceRender(
 }
 
 function ceilingTierName(ceiling: number): string {
-  return (
-    (Object.keys(TIER_RANK) as VisibilityTier[]).find((t) => TIER_RANK[t] === ceiling) ?? 'public'
-  );
+  const name = (Object.keys(TIER_RANK) as VisibilityTier[]).find((t) => TIER_RANK[t] === ceiling);
+  if (name === undefined) {
+    throw new Error(
+      `BUG: unrecognised viewer ceiling rank ${ceiling} — VIEWER_CEILING is out of sync with TIER_RANK`,
+    );
+  }
+  return name;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -157,17 +162,19 @@ export interface PiiMatch {
 
 // Conservative patterns (Story 11a.4 obfuscation is defense-in-depth; the gate
 // detects LEAKS). Fresh RegExp per scan so the global `lastIndex` never leaks
-// between calls.
+// between calls. Patterns run in priority order (email first) so that a phone-
+// number-shaped local part of an email address is not double-counted.
 //   email   — standard local@domain.tld.
 //   aadhaar — 12 digits, optionally grouped 4-4-4 by space/hyphen; digit
 //             boundaries on both sides so it never overlaps a 10-digit phone.
 //   phone   — Indian mobile: optional +91 / 0 prefix, then [6-9] + 9 digits;
-//             digit boundaries so it never matches a slice of an Aadhaar.
+//             extended lookbehind excludes digits AND email-local chars so the
+//             pattern never fires inside an email address or another number.
 function piiPatterns(): { type: PiiPatternType; re: RegExp }[] {
   return [
     { type: 'email', re: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g },
     { type: 'aadhaar', re: /(?<!\d)\d{4}[\s-]?\d{4}[\s-]?\d{4}(?!\d)/g },
-    { type: 'phone', re: /(?<!\d)(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g },
+    { type: 'phone', re: /(?<![a-zA-Z0-9._%+\-\d])(?:\+?91[\s-]?|0)?[6-9]\d{9}(?!\d)/g },
   ];
 }
 
@@ -198,6 +205,7 @@ export interface SnapshotVerdict {
   status: SnapshotStatus;
   leaks: Leak[];
   piiMatches: PiiMatch[];
+  warnings: string[];
   message: string;
 }
 
@@ -216,25 +224,36 @@ export function evaluateSnapshot(
   snapshot: RenderSnapshot,
 ): SnapshotVerdict {
   const { surfaceId, viewerContext } = snapshot;
-  const hasFields = snapshot.fields !== undefined;
-  const hasHtml = snapshot.html !== undefined;
+  // null-safe guard (handles JSON-deserialised null at runtime); empty string is no-op
+  const fields = snapshot.fields != null ? snapshot.fields : null;
+  const html = snapshot.html !== undefined && snapshot.html !== '' ? snapshot.html : null;
 
-  if (!hasFields && !hasHtml) {
+  if (fields === null && html === null) {
     return {
       surfaceId,
       viewerContext,
       status: 'no-op',
       leaks: [],
       piiMatches: [],
+      warnings: [],
       message: `no-op — no render snapshot available for surface "${surfaceId}" (${viewerContext})`,
     };
   }
 
-  const leaks = hasFields
-    ? evaluateSurfaceRender(matrix, surfaceId, viewerContext, snapshot.fields ?? [])
-    : [];
-  const piiMatches =
-    hasHtml && viewerContext === 'public' ? detectNakedPii(snapshot.html ?? '') : [];
+  const warnings: string[] = [];
+  if (fields !== null) {
+    const surface = matrix.surfaces.find((s) => s.id === surfaceId);
+    if (surface !== undefined && surface.fields.length === 0) {
+      warnings.push(
+        `surface "${surfaceId}" is declared in the matrix but has no fields — ` +
+          `leak check is a no-op until Epic 11a (Story 11a.1) populates its field list.`,
+      );
+    }
+  }
+
+  const leaks =
+    fields !== null ? evaluateSurfaceRender(matrix, surfaceId, viewerContext, fields) : [];
+  const piiMatches = html !== null && viewerContext === 'public' ? detectNakedPii(html) : [];
 
   if (leaks.length > 0 || piiMatches.length > 0) {
     const piiNote =
@@ -247,6 +266,7 @@ export function evaluateSnapshot(
       status: 'fail',
       leaks,
       piiMatches,
+      warnings,
       message:
         `FAIL — surface "${surfaceId}" (${viewerContext}): ${leaks.length} tier-leak(s),` +
         ` ${piiMatches.length} naked-PII match(es).${piiNote}`,
@@ -259,6 +279,7 @@ export function evaluateSnapshot(
     status: 'pass',
     leaks: [],
     piiMatches: [],
+    warnings,
     message: `pass — surface "${surfaceId}" (${viewerContext}): no leaks, no naked PII`,
   };
 }

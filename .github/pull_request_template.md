@@ -20,7 +20,7 @@ six requires retiring one or merging categories.
 - [ ] **Friction-budget declaration** — change stays within its surface's friction budget; any member-facing form/interaction friction is declared in `friction-budget.md` (payer + protects + event_type) and metric ceilings in `friction-budget.yaml` hold (per UX Stance #2 + architecture §AR-60; enforced by the `friction-budget` CI gate, Story 1.16a).
 - [ ] **Accessibility-impact note** — change preserves or improves accessibility (RN Accessibility props for mobile; ARIA + semantic HTML for web).
 - [ ] **Performance-impact note** — change preserves or improves performance budgets (P5 measurement criteria for mobile; budget docs for web/api).
-- [ ] **Security-impact note** — change does not introduce DPDPA / FR-43A / RLS / audit-log regressions; no new secrets-handling paths uncovered by Cloud KMS envelope encryption.
+- [ ] **Security-impact note** — change does not introduce DPDPA / FR-43A / RLS / audit-log regressions; no new secrets-handling paths uncovered by Cloud KMS envelope encryption; no PII renders above its tier in the FR-74 Public-vs-Private matrix on any public surface (enforced by the `pii-scrape` CI gate, Story 1.16b).
 
 ## Test plan
 

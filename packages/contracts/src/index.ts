@@ -10,6 +10,10 @@ export * from './audit/index.js';
 export * from './auth/index.js';
 export * from './pariwar-passport/index.js';
 export * from './pariwar-provisioning/index.js';
+// Story 1.16b — FR-74 Public-vs-Private matrix schema + the PII scrape
+// verification engine (consumed by the future tests/integration/public-pages/
+// scrape-test.spec.ts, D13-1.2). Components/schemas only; no OpenAPI path.
+export * from './public-pages/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

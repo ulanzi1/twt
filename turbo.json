@@ -45,6 +45,17 @@
       ],
       "outputs": []
     },
+    "contracts:check-pii-scrape": {
+      "dependsOn": [],
+      "inputs": [
+        "src/**/*.ts",
+        "scripts/**/*.ts",
+        "package.json",
+        "../../pnpm-lock.yaml",
+        "public-pages/public-vs-private-matrix.yaml"
+      ],
+      "outputs": []
+    },
     "crypto:check": {
       "dependsOn": ["typecheck"],
       "inputs": [

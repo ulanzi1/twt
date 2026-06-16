@@ -11,7 +11,8 @@
     "test": "vitest run --passWithNoTests",
     "dev": "tsc --watch --preserveWatchOutput",
     "contracts:emit-openapi": "tsx scripts/emit-openapi.ts",
-    "contracts:check-openapi-determinism": "tsx scripts/check-openapi-determinism.ts"
+    "contracts:check-openapi-determinism": "tsx scripts/check-openapi-determinism.ts",
+    "contracts:check-pii-scrape": "tsx scripts/check-pii-scrape.ts"
   },
   "dependencies": {
     "@twt/domain": "workspace:*",

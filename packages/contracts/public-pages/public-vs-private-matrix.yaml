@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# public-vs-private-matrix.yaml — the FR-74 Public-vs-Private visibility matrix
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# THE CONSUMED CONTRACT for the PII scrape CI gate (Story 1.16b). This file is a
+# structurally-valid SCAFFOLD: it fixes the FORMAT so Epic 11a (Story 11a.1)
+# POPULATES content into it rather than inventing a format. It is intentionally
+# empty at v1 (`surfaces: []`) → the gate is a graceful no-op until populated.
+#
+# GOVERNANCE: Epic 11a (Story 11a.1) populates surfaces/fields; raising any
+# field's visibility (escalation toward `public`) requires a trustee-attested PR
+# (epics L3602). Do NOT pre-populate real surfaces here — that is Epic 11a's job.
+#
+# Authority: architecture §2.7 L1522-1524 (the Public-vs-Private matrix (FR-74)
+# is canonical) · Story 11a.1 AC (epics L3586-3620) · PRD FR-74 (L1030-1040).
+# Schema + parser: packages/contracts/src/public-pages/matrix.ts.
+#
+# ── Schema ───────────────────────────────────────────────────────────────────
+#   version: <positive integer>
+#   surfaces:
+#     - id: <surface-slug>                     # e.g. niyamavali, terms, member-directory
+#       description: <optional human note>
+#       search_indexing_policy: index | noindex | conditional   # per-surface (epics L3614)
+#       fields:
+#         - id: <field-slug>                   # e.g. full_name, district, mobile
+#           tier: public | authenticated_member | operator_restricted | never_exposed
+#           description: <optional human note>
+#
+# ── The 4 visibility tiers (Story 11a.1 AC, epics L3596-3600) ─────────────────
+#   public               — Internet-visible without auth.
+#   authenticated_member — logged-in members only (Story 1.9 admin / 3.2 member auth).
+#   operator_restricted  — staff/trustees/admins with RBAC scope (Story 1.8).
+#   never_exposed        — never rendered on any surface (Aadhaar, bank details;
+#                          Tier-1 PII per Story 1.5).
+#
+# ── The 4 tier-leak rules the gate enforces (epics L3618-3620) ────────────────
+#   never_exposed        → appears on NO surface.
+#   operator_restricted  → not on member-authenticated or public renders.
+#   authenticated_member → not on public renders.
+#   public               → renderable everywhere.
+#
+# ── Surfaces Epic 11a will populate (context only; do NOT add here) ───────────
+#   Niyamavali (Story 2.5) · T&C (Story 2.6) · Member Directory (Story 11a.3) ·
+#   Sahyog Drive / Vivran / In Memoriam (Epic 11b).
+
+version: 1
+surfaces: []

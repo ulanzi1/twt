@@ -25,7 +25,9 @@
     "friction:check": "tsx scripts/friction-budget/check.ts",
     "friction:test": "vitest run scripts/friction-budget",
     "schema:check": "tsx scripts/schema-diff/check.ts",
-    "schema:test": "vitest run scripts/schema-diff"
+    "schema:test": "vitest run scripts/schema-diff",
+    "benefit:check": "tsx scripts/benefit-mechanism/check.ts",
+    "benefit:test": "vitest run scripts/benefit-mechanism"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

@@ -1,0 +1,29 @@
+version: 1
+# ─────────────────────────────────────────────────────────────────────────────
+# FR-100 forward-compat hooks — Durghatana Sahayata (Accident Assistance)
+# NON-ADD guard (architecture §1.13 Hook 2, L1149-1163; PRD §4.15 FR-100 L1253).
+#
+# v1 ships ZERO payout-destination surface. The Durghatana Sahayata activation at
+# v2/v3 MUST be a GREENFIELD addition (a NEW table + NEW endpoints + a NEW module),
+# never a column/index add to a v1 table. This registry is the versioned pattern
+# list the repo-global `schema-diff` CI gate (scripts/schema-diff/) reads to assert
+# that none of the four forbidden artifact kinds exist in the v1 codebase.
+#
+# This is an INVARIANT SCAN of current repo state, not a git-diff against a base
+# ref: the v1 baseline permits zero payout-destination artifacts ever, so the gate
+# asserts zero exist (a whole-state scan can neither miss an artifact added earlier
+# on the branch nor wrongly pass one already merged). See scripts/schema-diff/README.md.
+#
+# v2 EXTENSION GOVERNANCE: v2 introducing the greenfield payout-destination surface
+# adds explicit `allow` entries here — each `{ kind, artifact, rationale, adr }` —
+# with a rationale + a trustee-attested ADR ref per Story 14.7 (capability-bar
+# update). The continuous gate's FINAL closure (it ran on every PR across Epics
+# 1-13 and persists post-v1 as a permanent governance gate) is recorded at
+# Story 14.4 (`_bmad-output/research/fr-100-schema-diff-verification.md`).
+# ─────────────────────────────────────────────────────────────────────────────
+patterns:
+  forbidden_table: payout_destinations # exact table name
+  forbidden_column: payout_destination # column-name prefix → payout_destination*
+  forbidden_endpoint: /payout-destinations # route-path prefix → /payout-destinations*
+  forbidden_zod: PayoutDestination # Zod export substring → *PayoutDestination*
+allow: [] # v1: nothing allowed. v2 adds { kind, artifact, rationale, adr } entries here.

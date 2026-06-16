@@ -266,6 +266,48 @@ jobs:
       - run: pnpm schema:test
       - run: pnpm schema:check
 
+  benefit-mechanism:
+    name: benefit-mechanism (FR-100 / FR-7 Hook 1 enum-tag guard)
+    runs-on: ubuntu-latest
+    needs: install
+    # Repo-global FR-100 Hook 1 enum-tag gate (Story 1.16d): asserts every
+    # Niyamavali rule record carries a benefit_mechanism ∈ {pool, reserve}, and
+    # that v1 rules only ever use `pool` (architecture §1.13 Hook 1 L1133-1147 +
+    # FR-7 + PRD §4.15 FR-100) — so the Durghatana Sahayata v2/v3 `reserve`
+    # activation is forward-compatible (rules ADD without re-tagging existing v1
+    # rules). The SIBLING of 1.16c's schema-diff (Hook 2, non-add): epics L566
+    # pairs them as the FR-100 forward-compat-hooks CI. Three pure checks read
+    # benefit-mechanism.yaml + run: (a) rule-record tag scan over migration SQL /
+    # seed / fixture rule_sources; (b) enum-definition cross-check (dynamic-imports
+    # the shipped BenefitMechanism z.enum, asserts .options == config.mechanisms);
+    # (c) rule-table schema-column check over the latest drizzle snapshot. It is
+    # repo-global (rule artifacts span packages/domain + apps/api/src/modules/rules)
+    # → a repo-root tsx script, NOT a per-package turbo task; the forward-compat
+    # enum lives in packages/contracts (importable by Epic 2). INVARIANT SCAN of
+    # current state, NOT a git-diff → like `schema-diff`/`pii-scrape` and UNLIKE
+    # `friction-budget`, this job does NOT set fetch-depth: 0. NO-OP UNTIL EPIC 2:
+    # the rule registry (clause_versions + seed + apps/api/src/modules/rules) is
+    # Story 2.3 — at v1 checks (a)/(c) find nothing (no rule records / no rule
+    # table) and check (b) has TEETH (enum == config), so the gate is green by
+    # construction WITH teeth on the introducing PR; teeth grow surface-by-surface
+    # as Epic 2 populates rule_sources (data-driven, no code change). Story 14.5
+    # records the final-state closure (every v1 rule `pool`, reserve tags zero v1
+    # rules) + flips v1_only at v2 (trustee-attested ADR per Story 14.7). `scripts/`
+    # is not a workspace → the job runs `pnpm benefit:test` explicitly (mirror
+    # schema:test); no turbo.json entry (a repo-root tsx script is not a turbo task).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm benefit:test
+      - run: pnpm benefit:check
+
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest

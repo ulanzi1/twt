@@ -14,6 +14,11 @@ export * from './pariwar-provisioning/index.js';
 // verification engine (consumed by the future tests/integration/public-pages/
 // scrape-test.spec.ts, D13-1.2). Components/schemas only; no OpenAPI path.
 export * from './public-pages/index.js';
+// Story 1.16d — FR-7 / FR-100 Hook 1 forward-compat `BenefitMechanism` z.enum
+// (the discriminator Epic 2's Story 2.3 clause_versions column imports; the
+// enum the repo-global benefit-mechanism CI gate cross-checks). Plain z.enum;
+// no OpenAPI path (openapi/v1.yaml stays byte-identical).
+export * from './rules/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

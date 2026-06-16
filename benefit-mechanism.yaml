@@ -1,0 +1,46 @@
+version: 1
+# ─────────────────────────────────────────────────────────────────────────────
+# FR-100 forward-compat hooks — Durghatana Sahayata (Accident Assistance)
+# ENUM-TAG guard (architecture §1.13 Hook 1, L1133-1147; PRD §4.15 FR-100; FR-7).
+#
+# Every Niyamavali rule record landing in the registry (the `clause_versions`
+# table + seed + apps/api/src/modules/rules/ payload, Epic 2 / Story 2.3) MUST
+# carry a `benefit_mechanism` discriminator:
+#   pool    — crowdfunded daan / Pool-Engine benefits (death-support today; later
+#             Jivandan / Kanyadan / Retirementdaan). v1 ships ONLY pool-tagged
+#             rules (R5, R7, R8, R9, R10, …).
+#   reserve — trust-paid assistance (Durghatana Sahayata + future reserve-funded
+#             benefits). reserve exists in the enum so v2/v3 rules ADD without
+#             re-tagging any existing v1 rule (architecture L1143-1145).
+#
+# This registry is the versioned config the repo-global `benefit-mechanism` CI
+# gate (scripts/benefit-mechanism/) reads. It is the SIBLING of fr-100-non-add.yaml
+# (Hook 2, non-add): Hook 2 asserts ZERO forbidden artifacts exist; Hook 1 (here)
+# asserts EVERY rule record carries a valid `benefit_mechanism`, v1 only `pool`.
+#
+# NO-OP UNTIL EPIC 2: there are zero rules in v1 (the registry is Story 2.3). So
+# the rule-record tag scan + the schema-column check are graceful no-ops until
+# Epic 2 lands the `clause_versions` table + seeds R5/R7/R8/R9/R10 as `pool` and
+# populates seed_globs / fixture_globs — the gate grows teeth surface-by-surface
+# with NO code change (data-driven, mirroring fr-100-non-add.yaml's empty allow).
+# The enum-definition cross-check has TEETH NOW (it asserts the shipped
+# BenefitMechanism z.enum is exactly `mechanisms`). See scripts/benefit-mechanism/README.md.
+#
+# v2-FLIP GOVERNANCE: flipping `v1_only: false` (admitting reserve-tagged rules)
+# requires a trustee-attested ADR per Story 14.7 (capability-bar update) + the
+# continuous-gate final-closure recorded at Story 14.5 (gate ran across Epic 2+,
+# every v1 rule `pool`, `reserve` tags zero v1 rules). `v1_only` is a versioned,
+# reviewable field here so the v2 flip is an auditable config change — exactly how
+# fr-100-non-add.yaml's `allow: []` is the v2 escape hatch.
+# ─────────────────────────────────────────────────────────────────────────────
+mechanisms: [pool, reserve] # the full enum width — reserve ships so v2 adds without re-tagging
+v1_only: true # realizes the BENEFIT_MECHANISM_V1_ONLY build flag (epics L1356/L1358)
+v1_permitted: [pool] # values an insert may carry while v1_only (v1 ships only pool)
+rule_sources:
+  # Where rule records will live. `tables` is set from day one so the schema-column
+  # check enforces the column the moment `clause_versions` appears in the drizzle
+  # snapshot (Story 2.3) — no config change required at that point. Only the globs
+  # are empty at v1 (no seed / fixture rule records exist yet).
+  tables: [clause_versions] # the Story 2.3 registry table (benefit_mechanism enum NOT NULL)
+  seed_globs: [] # Epic 2 populates → the pool-tagged R5/R7/R8/R9/R10 seed
+  fixture_globs: [] # Epic 2 populates → rule fixtures

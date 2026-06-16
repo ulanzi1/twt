@@ -23,7 +23,9 @@
     "pii:check": "turbo run contracts:check-pii-scrape",
     "crypto:check": "turbo run crypto:check",
     "friction:check": "tsx scripts/friction-budget/check.ts",
-    "friction:test": "vitest run scripts/friction-budget"
+    "friction:test": "vitest run scripts/friction-budget",
+    "schema:check": "tsx scripts/schema-diff/check.ts",
+    "schema:test": "vitest run scripts/schema-diff"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

@@ -102,8 +102,12 @@ jobs:
     needs: install
     # Pure static analysis over packages/domain/src/schema/*.ts +
     # packages/domain/migrations/meta/*.json. No DB connection required.
-    # Story 1.2 commits the integrity primitive; Story 1.16c commits the
-    # substantive v1-baseline forbidden-pattern asserts.
+    # `db:check` is `drizzle-kit check` — a canned migration-consistency command;
+    # it CANNOT host custom forbidden-pattern asserts. The substantive FR-100
+    # v1-baseline non-add asserts (no payout_destinations table / column /
+    # endpoint / Zod schema) therefore land in the separate repo-global
+    # `schema-diff` job below (Story 1.16c), NOT here — disjoint ownership
+    # (deferred-work D9-1.2). Story 1.2 commits this lightweight drift primitive.
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -223,6 +227,44 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm friction:test
       - run: pnpm friction:check
+
+  schema-diff:
+    name: schema-diff (FR-100 non-add guard)
+    runs-on: ubuntu-latest
+    needs: install
+    # Repo-global FR-100 non-add gate (Story 1.16c): asserts the v1 codebase ships
+    # ZERO payout-destination surface (architecture §1.13 Hook 2 L1149-1163 + PRD
+    # §4.15 FR-100 L1253) so the v2/v3 Durghatana Sahayata activation is a
+    # GREENFIELD addition, never a column/index add to a v1 table. Four
+    # precision-scoped scanners read fr-100-non-add.yaml + scan the latest drizzle
+    # snapshot + migrations/*.sql (tables/columns), apps/api/src/**/*.ts route
+    # literals (endpoints), and packages/contracts/src/**/*.ts exports (Zod). It is
+    # repo-global (spans packages/domain + apps/api + packages/contracts) → a
+    # repo-root tsx script, NOT a per-package turbo task, and NOT a `db:check` fold-in
+    # (db:check = canned drizzle-kit check, can't host custom asserts — see db-check
+    # job above; disjoint ownership, deferred-work D9-1.2). INVARIANT SCAN of current
+    # state, NOT a git-diff → like `pii-scrape` and UNLIKE `friction-budget`, this
+    # job does NOT set fetch-depth: 0 (no base-ref diff; a whole-state scan can
+    # neither miss an artifact added earlier on the branch nor wrongly pass one
+    # already merged). Green by construction on the introducing PR — the four real
+    # scan roots are clean and the dozens of documentary keyword mentions
+    # (docs/_bmad-output/*.md/sprint-status.yaml/this gate's fixtures/the config) are
+    # precision-scoped OUT. Runs continuously across Epics 1-13; Story 14.4 records
+    # the final-state proof + permanent post-v1 governance (v2 allowlist extension =
+    # trustee-attested ADR per Story 14.7). `scripts/` is not a workspace → the job
+    # runs `pnpm schema:test` explicitly (mirror friction-budget's friction:test).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm schema:test
+      - run: pnpm schema:check
 
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)

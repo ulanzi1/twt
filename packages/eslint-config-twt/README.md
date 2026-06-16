@@ -6,27 +6,28 @@ This README is the inventory itself.
 
 ## §1 Inventory (active rules at HEAD)
 
-| Rule key | Source | Severity | What it catches |
-|---|---|---|---|
-| `js.configs.recommended` | `@eslint/js` | error | ESLint built-in baseline (no-undef, no-unused-vars, etc.) |
-| `typescript-eslint.configs.recommended` | `typescript-eslint` | error | TS baseline (no-explicit-any warns, etc.) |
-| `eslint-config-prettier` | `eslint-config-prettier` | suppress | Disables formatting rules that conflict with Prettier (Prettier owns them) |
-| `no-restricted-imports` (relative cross-package paths) | local | error | Cross-workspace imports must use the package name (`@twt/events`), not relative paths (`../../packages/events`) per architecture §Cross-workspace imports use the package name (architecture lines 3779-3781) |
+| Rule key                                                             | Source                   | Severity | What it catches                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `js.configs.recommended`                                             | `@eslint/js`             | error    | ESLint built-in baseline (no-undef, no-unused-vars, etc.)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `typescript-eslint.configs.recommended`                              | `typescript-eslint`      | error    | TS baseline (no-explicit-any warns, etc.)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `eslint-config-prettier`                                             | `eslint-config-prettier` | suppress | Disables formatting rules that conflict with Prettier (Prettier owns them)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `no-restricted-imports` (relative cross-package paths)               | local                    | error    | Cross-workspace imports must use the package name (`@twt/events`), not relative paths (`../../packages/events`) per architecture §Cross-workspace imports use the package name (architecture lines 3779-3781)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `@typescript-eslint/no-restricted-imports` (`pg` driver containment) | local                    | error    | Raw `pg` Pool/Client construction is confined to the data layer (`packages/domain`: `db.ts` + `cross-tenant/`); apps + other packages receive connections via DI. `import type pg` is allowed (typing an injected pool ≠ constructing one). Carved out by file ROLE (cwd-relative — the shared config runs per-package, so a package-path glob can't match): `db.ts` modules + `test-utils/` + test files. Story 1.16a / deferred D1-1.6; architecture §1.2 (lines 736-740, 764-770). NB: the architectural property names `cross-tenant/` specifically, but `cross-tenant/` only _receives_ pools by parameter; `db.ts` is where they are actually constructed, so the achievable lint-green carve-out is role-based (see ADR-0012). |
 
 ## §2 Pending rules (TODO — activated per surface they govern)
 
 Each pending rule cites the Story or surface that will activate it. Rules are intentionally inert at PR-1; the architecture commits the rule + the eventual landing site, not the present-tense enforcement.
 
-| Rule | Activates in | Architecture authority |
-|---|---|---|
-| Ban raw `logger.error` (require audit-log wrapper) | Story 1.10 | architecture §Top-10 anti-patterns (architecture lines 4074-4090) |
-| Ban `Date.now()` + `new Date()` in business-logic packages; require clock injection | Stories that introduce business logic packages | architecture essential-pattern row (architecture line 3618) + §Top-10 anti-patterns |
-| Ban `as any` + `as unknown as T` outside test fixtures | Any Story that lands TypeScript code | architecture §Top-10 anti-patterns (architecture lines 4085-4086) |
-| Ban cross-store Zustand imports | Any Story that lands Zustand stores | architecture state-management essential-pattern |
-| Ban camelCase in raw SQL strings (snake_case at DB boundary) | Stories that introduce raw SQL | architecture §Naming patterns |
-| Ban type-shadowing of `packages/contracts/` exports | Story 1.4 + downstream | architecture §Branding mandatory on first PR for new IDs (architecture lines 3706-3708) + §Type-shadowing essential-pattern |
-| Gateway-SDK dependency-lint rule (block direct gateway-SDK imports from non-crowdfunding modules) | Phase-2/3 crowdfunding module materializes | architecture §Crowdfunding Boundary Rule (architecture lines 458-477) |
-| kebab-case file names + PascalCase component file names | Optional baseline (likely via `eslint-plugin-unicorn` or custom) | architecture §Naming patterns |
+| Rule                                                                                              | Activates in                                                     | Architecture authority                                                                                                      |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Ban raw `logger.error` (require audit-log wrapper)                                                | Story 1.10                                                       | architecture §Top-10 anti-patterns (architecture lines 4074-4090)                                                           |
+| Ban `Date.now()` + `new Date()` in business-logic packages; require clock injection               | Stories that introduce business logic packages                   | architecture essential-pattern row (architecture line 3618) + §Top-10 anti-patterns                                         |
+| Ban `as any` + `as unknown as T` outside test fixtures                                            | Any Story that lands TypeScript code                             | architecture §Top-10 anti-patterns (architecture lines 4085-4086)                                                           |
+| Ban cross-store Zustand imports                                                                   | Any Story that lands Zustand stores                              | architecture state-management essential-pattern                                                                             |
+| Ban camelCase in raw SQL strings (snake_case at DB boundary)                                      | Stories that introduce raw SQL                                   | architecture §Naming patterns                                                                                               |
+| Ban type-shadowing of `packages/contracts/` exports                                               | Story 1.4 + downstream                                           | architecture §Branding mandatory on first PR for new IDs (architecture lines 3706-3708) + §Type-shadowing essential-pattern |
+| Gateway-SDK dependency-lint rule (block direct gateway-SDK imports from non-crowdfunding modules) | Phase-2/3 crowdfunding module materializes                       | architecture §Crowdfunding Boundary Rule (architecture lines 458-477)                                                       |
+| kebab-case file names + PascalCase component file names                                           | Optional baseline (likely via `eslint-plugin-unicorn` or custom) | architecture §Naming patterns                                                                                               |
 
 ## §3 Rule lifecycle (additions, deprecations, retirements)
 
@@ -36,7 +37,7 @@ Each pending rule cites the Story or surface that will activate it. Rules are in
 
 ## §4 Deprecated rules (kept for historical reference)
 
-*(none at PR-1 — populated as rules earn retirement)*
+_(none at PR-1 — populated as rules earn retirement)_
 
 ## §5 Cadence (quarterly review)
 
@@ -51,16 +52,16 @@ Per architecture §Cumulative friction budget reviewed quarterly (architecture l
 
 The Prettier config lives at `/prettier.config.js` (repo root). Substantive choices:
 
-| Option | Value | Rationale |
-|---|---|---|
-| `printWidth` | 100 | Architecture-conventional |
-| `singleQuote` | true | Architecture-conventional |
-| `trailingComma` | `all` | Reduces diff noise on list mutations |
-| `semi` | true | Architecture-conventional |
-| `tabWidth` | 2 | Architecture-conventional |
-| `useTabs` | false | Architecture-conventional |
-| `arrowParens` | `always` | Less ambiguity in single-arg arrows |
-| `endOfLine` | `lf` | Cross-platform consistency |
+| Option          | Value    | Rationale                            |
+| --------------- | -------- | ------------------------------------ |
+| `printWidth`    | 100      | Architecture-conventional            |
+| `singleQuote`   | true     | Architecture-conventional            |
+| `trailingComma` | `all`    | Reduces diff noise on list mutations |
+| `semi`          | true     | Architecture-conventional            |
+| `tabWidth`      | 2        | Architecture-conventional            |
+| `useTabs`       | false    | Architecture-conventional            |
+| `arrowParens`   | `always` | Less ambiguity in single-arg arrows  |
+| `endOfLine`     | `lf`     | Cross-platform consistency           |
 
 Changes to Prettier config update this section + bump the relevant rule activations in §1 / §2 if alignment with Prettier suppresses an ESLint rule.
 

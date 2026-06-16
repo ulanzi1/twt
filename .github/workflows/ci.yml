@@ -164,6 +164,36 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run crypto:check
 
+  friction-budget:
+    name: friction-budget (UX-DR3 friction-as-budget gate)
+    runs-on: ubuntu-latest
+    needs: install
+    # Repo-global friction-budget gate (Story 1.16a): friction-budget.yaml metric
+    # ceilings (bundle bytes + page-weight, baseline-of-record) + friction-budget.md
+    # named-payer declaration ledger. Architecture Principle #8 (line 294) + §4.11.1
+    # (lines 2785-2799) + UX Stance #2 / AR-60 / UX-DR3. Repo-global (root config +
+    # cross-app build scan + PR git-diff) → a repo-root tsx script, not a per-package
+    # turbo task. fetch-depth: 0 because the declaration facet diffs against the PR
+    # base ref (GITHUB_BASE_REF) — every other job uses the default shallow clone;
+    # this one can't. Green by construction at v1 (seed ledger + no-op-on-absent-
+    # build-output); grows teeth surface-by-surface as member build outputs land
+    # (Epic 2 public Astro, later member web/native bundles). Live critical-render-
+    # path timing on the canonical 3GB-Android device is explicitly deferred (AC-6).
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm friction:test
+      - run: pnpm friction:check
+
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest

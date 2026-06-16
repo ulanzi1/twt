@@ -20,6 +20,7 @@
     "db:studio": "pnpm --filter @twt/domain db:studio",
     "contracts:emit-openapi": "pnpm --filter @twt/contracts contracts:emit-openapi",
     "contracts:check-openapi-determinism": "turbo run contracts:check-openapi-determinism",
+    "pii:check": "turbo run contracts:check-pii-scrape",
     "crypto:check": "turbo run crypto:check",
     "friction:check": "tsx scripts/friction-budget/check.ts",
     "friction:test": "vitest run scripts/friction-budget"

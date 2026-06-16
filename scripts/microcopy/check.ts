@@ -104,6 +104,11 @@ async function main(): Promise<void> {
     `▸ Scope — ${codeFiles.length} code file(s) [teeth: FM-14 colors + active vocab/tone + numerals], ` +
       `${copyFiles.length} copy file(s) [member-surface register; forward-compat]\n`,
   );
+  if (codeFiles.length + copyFiles.length === 0) {
+    console.warn(
+      '⚠ microcopy gate: no files matched scope globs — scanned zero files (verify scope config in microcopy.yaml)',
+    );
+  }
 
   const findings: Finding[] = [];
 

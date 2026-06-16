@@ -37,6 +37,14 @@ vocabulary:
   - term: Late Teacher
     canonical: Deceased Member
     member_only: true
+  - term: invoice
+    canonical: Contribution Note (Yogdaan Pratigya)
+  - term: customer
+    canonical: colleague
+    member_only: true
+  - term: donor
+    canonical: colleague
+    member_only: true
 tone:
   - label: scarcity
     pattern: 'only\\s+\\d+\\s+days?\\s+left'
@@ -56,7 +64,7 @@ scope:
   copy_globs: []
 allow:
   - file: apps/admin/src/modules/pariwar-provisioning/AddPariwarForm.tsx
-    pattern: 'primary_color|secondary_color'
+    pattern: 'primary_color|secondary_color|accent_color'
     reason: Pariwar brand-color form data, not styling.
   - pattern: 'passbook[ -]row'
     reason: Internal CSS pattern name.
@@ -71,7 +79,7 @@ const config: MicrocopyConfig = parseMicrocopyConfig(SAMPLE_YAML);
 describe('parseMicrocopyConfig', () => {
   it('parses a valid config into a typed shape', () => {
     expect(config.version).toBe(1);
-    expect(config.vocabulary).toHaveLength(5);
+    expect(config.vocabulary).toHaveLength(8);
     expect(config.vocabulary[0]).toEqual({
       term: 'passbook',
       canonical: 'Yogdaan Bahi',
@@ -204,6 +212,47 @@ describe('checkVocabulary (c)', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0].match).toBe('passbook');
   });
+
+  it('does NOT suppress an unrelated prohibited term on the same line as an allow-listed pattern (P1 regression)', () => {
+    // "passbook-row" allow-list suppresses the passbook match (positional overlap),
+    // but "receipt" elsewhere on the same line must still be flagged.
+    const findings = checkVocabulary(
+      'f.tsx',
+      'className="passbook-row" — download your receipt here',
+      config,
+      { includeMemberOnly: false },
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].match).toBe('receipt');
+  });
+
+  it('flags "invoice" as a prohibited term, requiring Contribution Note', () => {
+    const findings = checkVocabulary('f.tsx', 'Please download your invoice', config, {
+      includeMemberOnly: false,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].match).toBe('invoice');
+    expect(findings[0].replacement).toMatch(/Contribution Note/);
+  });
+
+  it('flags "customer" and "donor" as member-only prohibited terms in copy scope', () => {
+    const findings = checkVocabulary(
+      'locale.json',
+      'Dear customer, thank you dear donor',
+      config,
+      { includeMemberOnly: true },
+    );
+    expect(findings.map((f) => f.match).sort()).toEqual(['customer', 'donor'].sort());
+    findings.forEach((f) => expect(f.replacement).toMatch(/colleague/));
+  });
+
+  it('EXCLUDES customer and donor in code scope (member_only: true)', () => {
+    expect(
+      checkVocabulary('f.tsx', 'const customer = await getCustomer()', config, {
+        includeMemberOnly: false,
+      }),
+    ).toEqual([]);
+  });
 });
 
 // ─── tone ────────────────────────────────────────────────────────────────────
@@ -302,8 +351,18 @@ describe('checkMagicNumberColors (b / FM-14 #2)', () => {
     );
   });
 
-  it('does NOT flag a non-color "#" (anchor / fragment)', () => {
+  it('does NOT flag a non-color "#" (anchor / fragment with non-hex chars)', () => {
+    // "#section-overview" contains non-hex chars — no match. Note: an all-hex anchor
+    // like href="#abcdef" WOULD be flagged (indistinguishable from a hex color literal);
+    // add an allow-list entry in microcopy.yaml if such an anchor exists in scope.
     expect(checkMagicNumberColors('f.tsx', 'href="#section-overview"', config)).toEqual([]);
+  });
+
+  it('does NOT flag a method call ending in rgba/hsl (e.g. color.rgba(…)) (P3)', () => {
+    // (?<!\.) lookbehind excludes "color.rgba(" — a utility call, not a color literal.
+    expect(
+      checkMagicNumberColors('f.tsx', 'const c = color.rgba(255, 0, 0, 0.5)', config),
+    ).toEqual([]);
   });
 
   it('allow-lists Pariwar brand-color form data (file-scoped)', () => {
@@ -314,6 +373,11 @@ describe('checkMagicNumberColors (b / FM-14 #2)', () => {
     expect(
       checkMagicNumberColors('apps/admin/src/other.tsx', "x = '#0A3D62'", config),
     ).toHaveLength(1);
+  });
+
+  it('allow-lists accent_color form data in the file-scoped entry (P7)', () => {
+    const file = 'apps/admin/src/modules/pariwar-provisioning/AddPariwarForm.tsx';
+    expect(checkMagicNumberColors(file, "accent_color: '#3C1F8D',", config)).toEqual([]);
   });
 
   it('no-ops when flag_color_literals is false', () => {

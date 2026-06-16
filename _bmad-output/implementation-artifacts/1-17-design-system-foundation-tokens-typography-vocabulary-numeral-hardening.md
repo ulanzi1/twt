@@ -1,6 +1,6 @@
 # Story 1.17: Design System Foundation — Tokens / Typography / Vocabulary / Numeral Hardening
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -80,6 +80,19 @@ so that the UX-DR7–UX-DR12 (design-system foundation), UX-DR71 (vocabulary dis
   - [x] `pnpm turbo run lint typecheck test build` green; `pnpm microcopy:test && pnpm microcopy:check` green
   - [x] Author an ADR for the design-system-foundation gate + the FM-1..FM-14 reconciliation (mirror `docs/adr/ADR-00xx-*` convention used by the sibling CI gates)
   - [x] Update `sprint-status.yaml` ledger comment per the project convention at completion
+
+### Review Findings
+
+- [x] [Review][Patch] Allow-list suppresses entire line — co-located violations on allow-listed lines are silently dropped [scripts/microcopy/lib.ts:308]
+- [x] [Review][Patch] HEX_COLOR regex false-positives on 6-char hex anchor IDs (e.g. `href="#abcdef"`) [scripts/microcopy/lib.ts:410]
+- [x] [Review][Patch] FUNCTIONAL_COLOR regex matches function names ending in `rgb`/`hsl` (e.g. `parseRgba(`) [scripts/microcopy/lib.ts:411]
+- [x] [Review][Patch] Empty scope config produces silent false-green — no diagnostic when zero files are scanned [scripts/microcopy/lib.ts scope parsing]
+- [x] [Review][Patch] `invoice` prohibited term absent from lib.test.ts SAMPLE_YAML fixture — AC3 "each prohibited-term hit" bar not met [scripts/microcopy/lib.test.ts]
+- [x] [Review][Patch] `customer` and `donor` prohibited terms absent from lib.test.ts SAMPLE_YAML fixture [scripts/microcopy/lib.test.ts]
+- [x] [Review][Patch] `accent_color` allow-list branch not covered by fixture tests [scripts/microcopy/lib.test.ts]
+- [x] [Review][Defer] `resolveGlobs` walks entire repo on globs without a path prefix — latent CI-timeout risk [scripts/microcopy/check.ts:46-82] — deferred, latent until a short glob is added to config
+- [x] [Review][Defer] `isCeremonial` rebuilds ceremonial-file set on every call — O(n) fs reads per file scanned [scripts/microcopy/check.ts:85-89] — deferred, latent until ceremonial globs are non-empty (Shradhanjali surface)
+- [x] [Review][Defer] Pool-Reality regex `\d+\s*%\s+achieved` narrower than spec exemplar — digit-prefixed regex adequately meets spec intent; non-digit framing unrealistic in production copy [microcopy.yaml:819] — deferred, spec intent met
 
 ## Dev Notes
 

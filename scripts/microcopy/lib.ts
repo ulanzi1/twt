@@ -258,14 +258,38 @@ export function formatFinding(f: Finding): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * True iff some allow entry suppresses a finding on `lineText` in `file`: the entry's
- * `pattern` (case-insensitive regex) matches the line AND, if the entry pins a `file`,
- * the finding's path ends with it. The #1 false-positive guard (e.g. `passbook row`).
+ * True iff some allow entry suppresses a finding on `lineText` in `file`.
+ *
+ * When `matchRange` is provided (vocabulary and tone checks), suppression is
+ * position-aware: the allow-list entry's pattern must OVERLAP the prohibited-term
+ * match range on the line. This prevents an allow-listed CSS-pattern-name (e.g.
+ * `passbook-row`) from silently dropping an UNRELATED prohibited term (`receipt`)
+ * that appears elsewhere on the same line.
+ *
+ * Without `matchRange` (numeral and magic-number checks), line-level behaviour
+ * applies: any allow-list pattern match anywhere on the line suppresses the finding.
+ * This is correct for magic-number checks, where the allow-listed variable name
+ * (`primary_color`) is the semantic reason the literal on that line is not a
+ * violation — even if they don't positionally overlap.
  */
-export function isAllowed(file: string, lineText: string, config: MicrocopyConfig): boolean {
+export function isAllowed(
+  file: string,
+  lineText: string,
+  config: MicrocopyConfig,
+  matchRange?: { start: number; end: number },
+): boolean {
   return config.allow.some((entry) => {
     if (entry.file !== undefined && !file.endsWith(entry.file)) return false;
-    return new RegExp(entry.pattern, 'i').test(lineText);
+    const re = new RegExp(entry.pattern, 'gi');
+    if (matchRange === undefined) {
+      return re.test(lineText);
+    }
+    // Position-aware: allow-list match must overlap the prohibited-term match range.
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(lineText)) !== null) {
+      if (m.index < matchRange.end && m.index + m[0].length > matchRange.start) return true;
+    }
+    return false;
   });
 }
 
@@ -306,7 +330,7 @@ export function checkVocabulary(
       const re = new RegExp(`\\b${escapeRegex(entry.term)}\\b`, 'gi');
       let m: RegExpExecArray | null;
       while ((m = re.exec(line)) !== null) {
-        if (isAllowed(file, line, config)) continue;
+        if (isAllowed(file, line, config, { start: m.index, end: m.index + m[0].length })) continue;
         findings.push({
           kind: 'vocabulary',
           file,
@@ -333,7 +357,7 @@ export function checkTone(file: string, text: string, config: MicrocopyConfig): 
       let m: RegExpExecArray | null;
       while ((m = re.exec(line)) !== null) {
         if (m[0].length === 0) break; // guard against a zero-width pattern looping
-        if (isAllowed(file, line, config)) continue;
+        if (isAllowed(file, line, config, { start: m.index, end: m.index + m[0].length })) continue;
         findings.push({
           kind: 'tone',
           file,
@@ -406,9 +430,12 @@ export function checkNumerals(
 // Check (b) — FM-14 #2 magic-number color literals
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Hex colors of valid length (3/4/6/8) + functional rgb()/rgba()/hsl()/hsla().
+// Hex colors of valid length (3/4/6/8). Note: all-hex HTML fragment IDs (e.g.
+// href="#abcdef") are structurally indistinguishable from hex color literals —
+// add an allow-list entry in microcopy.yaml if such an anchor exists in scope.
 const HEX_COLOR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g;
-const FUNCTIONAL_COLOR = /\b(?:rgba?|hsla?)\s*\(/g;
+// Functional color notations. (?<!\.) excludes method calls like color.rgba(…).
+const FUNCTIONAL_COLOR = /(?<!\.)\b(?:rgba?|hsla?)\s*\(/g;
 
 /**
  * Flag hardcoded color literals (hex, rgb/rgba, hsl/hsla) in component code — FM-14 #2

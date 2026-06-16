@@ -168,6 +168,31 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run crypto:check
 
+  tokens-theme-check:
+    name: tokens-theme-check (FM-4 @theme sync determinism)
+    runs-on: ubuntu-latest
+    needs: install
+    # FM-4 token-sync gate (Story 1.17, AC2): re-render packages/tokens/src/theme.css
+    # from the canonical TS token source (packages/tokens/src/tokens.ts) and assert
+    # byte-identical to the committed artifact. UX spec §6 FM-4 (source canonical,
+    # compiled output tracked) — the "regenerate and assert identical" shape of the
+    # contracts-check OpenAPI-determinism gate above. A packages/tokens turbo task
+    # (the token source is a single-workspace artifact, NO git-diff) — NOT a repo-root
+    # script and NO fetch-depth: 0. The token-module unit tests ride the `test` job
+    # (@twt/tokens is a workspace). Green by construction on the introducing PR; bites
+    # the moment src/tokens.ts changes without regenerating src/theme.css.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run tokens:check-theme-determinism
+
   pii-scrape:
     name: pii-scrape (FR-74 Public-vs-Private matrix gate)
     runs-on: ubuntu-latest
@@ -307,6 +332,40 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm benefit:test
       - run: pnpm benefit:check
+
+  microcopy:
+    name: microcopy (UX-DR71 vocabulary + UX-DR73 numeral + FM-14 token-governance)
+    runs-on: ubuntu-latest
+    needs: install
+    # Repo-global forensic-microcopy / vocabulary / numeral-discipline gate (Story 1.17,
+    # AC3): enforces the UX-DR71 vocabulary register (prohibited member-visible terms →
+    # canonical terminology + scarcity/panic/Pool-Reality-comparison tone prohibitions),
+    # UX-DR73 + amendment-A2 numeral discipline (Devanagari digits operational-vs-ceremonial;
+    # inline locale formatting must route through packages/i18n at Story 2.1), and the
+    # FM-14 #2 token-governance subset (no magic-number color literals in component code).
+    # Every finding names file + line + the canonical replacement (the benefit-mechanism
+    # "name the offender" contract). Repo-global (a microcopy.yaml root config + a
+    # cross-app copy/component scan) → a repo-root tsx script, NOT a per-package turbo task;
+    # scripts/ is not a workspace so the job runs `pnpm microcopy:test` explicitly before
+    # `pnpm microcopy:check` (the schema-diff / benefit-mechanism precedent). INVARIANT SCAN
+    # of the declared scope, NOT a git-diff → NO fetch-depth: 0 (mirror schema-diff /
+    # benefit-mechanism, not friction-budget). v1 footprint [Decision 2]: the FM-14
+    # magic-number check + active vocabulary/tone checks have teeth NOW over a bounded
+    # allow-listed apps/admin slice; the broad member-surface vocabulary/numeral register
+    # stays forward-compat (scope.copy_globs empty) until Epic 2+ member surfaces land —
+    # data-driven, no gate code change. Green-with-teeth on the introducing PR.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm microcopy:test
+      - run: pnpm microcopy:check
 
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)

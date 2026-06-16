@@ -1,0 +1,116 @@
+# microcopy.yaml — the versioned config for the `scripts/microcopy/` CI gate
+# (Story 1.17, AC3 — deliverables (b) FM-14 magic-number + (c) vocabulary + (d) numeral).
+#
+# The forensic-microcopy / vocabulary / numeral-discipline gate enforces UX-DR71
+# (vocabulary register) + UX-DR73 (numeral discipline) + the §8 amendment-A2 numeral
+# split + the FM-14 token-governance subset. Every finding names file + line + the
+# canonical replacement (the benefit-mechanism "name the offender" contract).
+#
+# v1 ENFORCEMENT FOOTPRINT [Decision 2, LOCKED]: forward-compat is the primary goal,
+# but the gate is NOT entirely no-op — it scans a bounded, allow-listed `apps/admin`
+# slice now (scope.code_globs), so the FM-14 magic-number check + admin vocabulary/tone
+# checks have real teeth on day one. The broad member-surface vocabulary/numeral checks
+# stay forward-compat until member surfaces land (scope.copy_globs is empty until Epic
+# 2+). Land green-with-teeth: real admin findings are fixed in-story; only
+# genuinely-not-applicable cases sit on the allow-list (each with a reason).
+#
+# Parser: strict (unknown keys throw) — a malformed config must fail the gate loudly,
+# never silently disable enforcement (the 1.16d benefit-mechanism rigor).
+
+version: 1
+
+# (c) Vocabulary register — prohibited member-visible term → canonical replacement.
+#   member_only: true  → forward-compat: scanned ONLY in scope.copy_globs (empty at
+#                        v1) so it bites Epic 2+ member surfaces, NOT admin code where
+#                        e.g. "user" is a ubiquitous identifier (false-positive storm).
+#   member_only: false (default) → active now: scanned in code_globs AND copy_globs.
+#                        These four nouns are unambiguous in copy and are NOT code
+#                        identifiers in the admin slice (verified green on introduction).
+vocabulary:
+  - term: passbook
+    canonical: Yogdaan Bahi
+  - term: receipt
+    canonical: Contribution Note (Yogdaan Pratigya)
+  - term: invoice
+    canonical: Contribution Note (Yogdaan Pratigya)
+  - term: report
+    canonical: Sahyog Vivran
+  # Member-address + deceased-member terminology (UX-DR71) — forward-compat (member copy).
+  - term: customer
+    canonical: colleague / सम्मानित साथी
+    member_only: true
+  - term: donor
+    canonical: colleague / सम्मानित साथी
+    member_only: true
+  - term: user
+    canonical: colleague / सम्मानित साथी
+    member_only: true
+  - term: Late Teacher
+    canonical: Deceased Member
+    member_only: true
+
+# Tone prohibitions — member-visible copy must not pressure (scarcity / panic) or frame
+# the pool against a target (Pool-Reality comparison). Each pattern is a case-insensitive
+# regex; the label classifies the finding. (epics L2782 / L2883 / L2984.)
+tone:
+  - label: scarcity
+    pattern: 'only\s+\d+\s+days?\s+left'
+  - label: panic
+    pattern: '\bURGENT\b'
+  - label: pool-reality-comparison
+    pattern: 'fell\s+short|target\s+missed|\d+\s*%\s+achieved|needed\s+more\s+contributions'
+
+# (d) Numeral discipline — amendment A2 (UX spec L1119-1127 / L1303). Operational
+# surfaces = Gregorian dates + Latin numerals; Hindi/Devanagari numerals (०-९) are
+# reserved EXCLUSIVELY for memorial Devanagari prose on the Shradhanjali surface.
+numerals:
+  # Flag Devanagari digits on operational (non-ceremonial) surfaces.
+  flag_devanagari_digits: true
+  # Flag inline Hindi/Devanagari numeral formatting (must route through the future
+  # packages/i18n utility, Story 2.1 — NOT inline). Forward-compat at v1 (no member
+  # surface formats numerals yet); flags-by-policy now and tightens once 2.1 lands.
+  flag_inline_locale_formatting: true
+  # Surfaces where Devanagari digits ARE permitted in narrative prose (the Shradhanjali
+  # memorial). Empty at v1 — that surface lands Epic 11/12.
+  ceremonial_globs: []
+
+# (b) FM-14 #2 token-governance — flag hardcoded color literals in component code.
+#   Color is the token facet with COMMITTED values at v1 (the subsumed admin status
+#   palette), so its magic-number check is actionable now. The spacing/border/font
+#   px-literal facet is forward-compat: those token values are PLACEHOLDER until P0-2,
+#   so demanding their replacement now would be incoherent — it tightens when P0-2
+#   commits real px (documented in the gate README's teeth table).
+magic_number:
+  flag_color_literals: true
+
+# Scan scope (precision-scoped, like pii-scrape / benefit-mechanism — the gate reads
+# ONLY these globs; never docs / _bmad-output / *.md / its own scripts dir / this config).
+scope:
+  # Token-consuming component / source files — the live admin slice (real teeth now).
+  code_globs:
+    - apps/admin/src/**/*.tsx
+    - apps/admin/src/**/*.ts
+  # Member-visible copy (locale strings / templates) — EMPTY at v1; member surfaces
+  # land Epic 2+ (the broad vocabulary/numeral register grows teeth surface-by-surface,
+  # data-driven, with no gate code change — the benefit-mechanism / pii-scrape pattern).
+  copy_globs: []
+
+# Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
+# matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE
+# non-applicables ONLY; each carries a reason. The #1 false-positive risk is the internal
+# `passbook row` CSS pattern name + the `Yogdaan Bahi (passbook)` documentation gloss.
+allow:
+  - file: apps/admin/src/modules/pariwar-provisioning/AddPariwarForm.tsx
+    pattern: 'primary_color|secondary_color|accent_color'
+    reason: >-
+      Pariwar brand-color form DEFAULTS (brandingBundle.*_color) — tenant DATA submitted
+      to the API, not design-system styling. FM-14 #2 governs styling literals, not the
+      values a Pariwar chooses for its own brand.
+  - pattern: 'passbook[ -]row'
+    reason: >-
+      Internal CSS pattern name "passbook row" (UX spec L1156) — a code identifier, not
+      member-visible copy.
+  - pattern: '\(passbook\)'
+    reason: >-
+      Documentation gloss "Yogdaan Bahi (passbook)" pairing the canonical term with its
+      English referent — not member-visible copy that uses the prohibited word.

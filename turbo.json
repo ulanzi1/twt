@@ -66,6 +66,17 @@
       ],
       "outputs": [],
       "env": ["KMS_TEST_MODE", "DATABASE_URL"]
+    },
+    "tokens:check-theme-determinism": {
+      "dependsOn": [],
+      "inputs": [
+        "src/**/*.ts",
+        "src/theme.css",
+        "scripts/**/*.ts",
+        "package.json",
+        "../../pnpm-lock.yaml"
+      ],
+      "outputs": []
     }
   }
 }

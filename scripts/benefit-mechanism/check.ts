@@ -182,6 +182,12 @@ async function main(): Promise<void> {
     const text = readRepo(rel);
     if (rel.endsWith('.sql')) sqlFixtures.push({ path: rel, text });
     else if (rel.endsWith('.json')) jsonSeeds.push({ path: rel, text });
+    else {
+      console.warn(
+        `  ! Skipping ${rel}: only .sql and .json rule-source files are parsed ` +
+          `(declare .ts/.yaml seeds in rule_sources after Epic 2 establishes the seed shape)`,
+      );
+    }
   }
   const records = [
     ...extractFromSqlInserts([...migrationSql, ...sqlFixtures], config),

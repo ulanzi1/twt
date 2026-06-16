@@ -53,6 +53,14 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  'version',
+  'mechanisms',
+  'v1_only',
+  'v1_permitted',
+  'rule_sources',
+]);
+
 /** Validate a value is a list of non-empty strings, returning it (throws on malformed). */
 function asStringList(value: unknown, label: string): string[] {
   if (!Array.isArray(value)) {
@@ -77,6 +85,15 @@ export function parseBenefitMechanismConfig(raw: string): BenefitMechanismConfig
   const doc: unknown = parseYaml(raw);
   if (!isObject(doc)) throw new Error('benefit-mechanism.yaml: top-level must be a mapping');
 
+  for (const key of Object.keys(doc)) {
+    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
+      throw new Error(
+        `benefit-mechanism.yaml: unknown key '${key}' ` +
+          `(allowed: ${[...KNOWN_TOP_LEVEL_KEYS].join(', ')})`,
+      );
+    }
+  }
+
   if (typeof doc.version !== 'number') {
     throw new Error('benefit-mechanism.yaml: `version` must be a number');
   }
@@ -98,6 +115,13 @@ export function parseBenefitMechanismConfig(raw: string): BenefitMechanismConfig
           `(${mechanisms.join(' | ')})`,
       );
     }
+  }
+
+  if (doc.v1_only && v1Permitted.length === 0) {
+    throw new Error(
+      'benefit-mechanism.yaml: `v1_permitted` must be non-empty when `v1_only` is true ' +
+        '(an empty v1_permitted forbids every rule value including `pool`)',
+    );
   }
 
   const rsRaw = doc.rule_sources;
@@ -261,8 +285,18 @@ export function enumMatchesMechanisms(options: string[], config: BenefitMechanis
  */
 export async function checkEnumDefinition(config: BenefitMechanismConfig): Promise<Finding[]> {
   const mod = (await import('../../packages/contracts/src/rules/benefit-mechanism.ts')) as {
-    BenefitMechanism: { options: readonly string[] };
+    BenefitMechanism?: { options: readonly string[] };
   };
+  if (!mod.BenefitMechanism || !Array.isArray(mod.BenefitMechanism.options)) {
+    return [
+      {
+        kind: 'enum-drift',
+        artifact: 'BenefitMechanism',
+        location: 'packages/contracts/src/rules/benefit-mechanism.ts',
+        detail: 'BenefitMechanism export not found or has no .options array (enum renamed or removed)',
+      },
+    ];
+  }
   const options = [...mod.BenefitMechanism.options];
   if (enumMatchesMechanisms(options, config)) return [];
   return [
@@ -297,7 +331,8 @@ function snapshotTables(snapshot: unknown): { name: string; table: unknown }[] {
 function tableHasBenefitMechanismColumn(table: unknown): boolean {
   if (!isObject(table) || !isObject(table.columns)) return false;
   return Object.entries(table.columns).some(([colKey, col]) => {
-    if (colKey === 'benefit_mechanism') return true;
+    // Handle plain 'benefit_mechanism' and schema-qualified 'public.benefit_mechanism'
+    if (colKey === 'benefit_mechanism' || colKey.endsWith('.benefit_mechanism')) return true;
     return isObject(col) && col.name === 'benefit_mechanism';
   });
 }
@@ -311,7 +346,8 @@ export function scanRuleTableColumns(snapshot: unknown, config: BenefitMechanism
   const tables = snapshotTables(snapshot);
   const findings: Finding[] = [];
   for (const target of config.ruleSources.tables) {
-    const found = tables.find((t) => t.name === target);
+    const targetLower = target.toLowerCase();
+    const found = tables.find((t) => t.name.toLowerCase() === targetLower);
     if (!found) continue; // table not yet in the snapshot → no-op (Story 2.3 not landed)
     if (!tableHasBenefitMechanismColumn(found.table)) {
       findings.push({
@@ -344,7 +380,7 @@ export interface JsonSeedFile {
 /** Column names whose value is used as the rule record id, in priority order. */
 const ID_COLUMNS = ['rule_id', 'clause_id', 'clause_version_id', 'code', 'id'];
 
-/** Split a SQL column/value list on top-level commas (fixtures have no nested commas). */
+/** Split a SQL column list on top-level commas (column names do not contain commas). */
 function splitSqlList(list: string): string[] {
   return list.split(',').map((s) => s.trim());
 }
@@ -352,13 +388,6 @@ function splitSqlList(list: string): string[] {
 /** Strip a SQL identifier of surrounding double quotes / backticks. */
 function stripIdent(token: string): string {
   return token.replace(/^["`]|["`]$/g, '').trim();
-}
-
-/** Strip a SQL scalar value of surrounding single quotes (a string literal → its text). */
-function stripValue(token: string): string {
-  const t = token.trim();
-  if (t.startsWith("'") && t.endsWith("'")) return t.slice(1, -1);
-  return t;
 }
 
 /** 1-based line number of `index` within `text`. */
@@ -371,12 +400,73 @@ function lineOf(text: string, index: number): number {
 }
 
 /**
+ * Parse a SQL VALUES tuple starting at `start` (must point to `(`).
+ * Handles string literals with embedded `)` characters and SQL `''` escape
+ * sequences. Returns the unquoted/raw column values and the index after the
+ * closing `)`, or null if the tuple is malformed / unterminated.
+ */
+function parseSqlValueTuple(
+  text: string,
+  start: number,
+): { values: string[]; end: number } | null {
+  if (start >= text.length || text[start] !== '(') return null;
+  const values: string[] = [];
+  let i = start + 1;
+  let current = '';
+  let depth = 1;
+
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === "'") {
+      // SQL string literal — consume until unescaped closing quote; '' = escaped '
+      i++;
+      let str = '';
+      while (i < text.length) {
+        if (text[i] === "'" && text[i + 1] === "'") {
+          str += "'";
+          i += 2;
+        } else if (text[i] === "'") {
+          i++;
+          break;
+        } else {
+          str += text[i++];
+        }
+      }
+      current = str;
+    } else if (ch === ',' && depth === 1) {
+      values.push(current.trim());
+      current = '';
+      i++;
+    } else if (ch === '(') {
+      depth++;
+      current += ch;
+      i++;
+    } else if (ch === ')') {
+      depth--;
+      if (depth === 0) {
+        values.push(current.trim());
+        i++;
+        return { values, end: i };
+      }
+      current += ch;
+      i++;
+    } else {
+      current += ch;
+      i++;
+    }
+  }
+  return null; // unclosed tuple — malformed SQL
+}
+
+/**
  * Extract rule records from `INSERT INTO <ruletable> (cols) VALUES (vals)` rows in
- * migration / fixture SQL. Only tables in `config.ruleSources.tables` are scanned;
- * for each matching insert the column list locates the `benefit_mechanism` index
- * and the corresponding value is read off the VALUES clause (undefined if the
- * column is absent → check (a) flags the missing tag). At v1 there are no inserts
- * into the rule table → this finds nothing (no-op).
+ * migration / fixture SQL. Handles:
+ *   - optional schema prefix (`public.clause_versions`, `"public"."clause_versions"`)
+ *   - multi-row VALUES: `VALUES (r1), (r2), ...`
+ *   - string literals with embedded `)` or commas via a proper tuple tokeniser
+ *   - multi-line INSERT statements
+ * Only tables in `config.ruleSources.tables` are scanned. At v1 there are no
+ * inserts into the rule table → finds nothing (no-op).
  */
 export function extractFromSqlInserts(
   sqlFiles: SqlFile[],
@@ -385,37 +475,66 @@ export function extractFromSqlInserts(
   const ruleTables = new Set(config.ruleSources.tables.map((t) => t.toLowerCase()));
   if (ruleTables.size === 0) return [];
 
-  const re = /INSERT\s+INTO\s+"?(\w+)"?\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/gi;
+  // Match INSERT INTO [schema.]table (cols).
+  // Schema prefix is optional and stripped; table name is captured in group 1.
+  // The 'si' flags give case-insensitive + dotAll (for \s across newlines — already
+  // matched by \s, but dotAll future-proofs any '.' metachar additions).
+  const headerRe = /INSERT\s+INTO\s+(?:"?\w+"?\.)?"?(\w+)"?\s*\(([^)]+)\)/gis;
   const records: RuleRecord[] = [];
 
   for (const file of sqlFiles) {
-    for (const m of file.text.matchAll(re)) {
+    for (const m of file.text.matchAll(headerRe)) {
       const table = m[1].toLowerCase();
       if (!ruleTables.has(table)) continue;
 
       const cols = splitSqlList(m[2]).map((c) => stripIdent(c).toLowerCase());
-      const vals = splitSqlList(m[3]);
-      const line = lineOf(file.text, m.index ?? 0);
+      let pos = (m.index ?? 0) + m[0].length;
 
-      const bmIdx = cols.indexOf('benefit_mechanism');
-      const benefit_mechanism =
-        bmIdx >= 0 && bmIdx < vals.length ? stripValue(vals[bmIdx]) : undefined;
+      // Locate the VALUES keyword immediately after the column list.
+      const valuesMatch = /\bVALUES\s*/i.exec(file.text.slice(pos));
+      if (!valuesMatch) continue;
+      pos += valuesMatch.index! + valuesMatch[0].length;
 
-      let id: string | undefined;
-      for (const idCol of ID_COLUMNS) {
-        const idx = cols.indexOf(idCol);
-        if (idx >= 0 && idx < vals.length) {
-          id = stripValue(vals[idx]);
+      // Parse each VALUES tuple row; a single INSERT may have multiple: (r1), (r2), ...
+      while (pos < file.text.length) {
+        const wsLen = file.text.slice(pos).match(/^\s*/)![0].length;
+        pos += wsLen;
+
+        const tupleResult = parseSqlValueTuple(file.text, pos);
+        if (!tupleResult) break;
+
+        const { values: vals, end } = tupleResult;
+        const line = lineOf(file.text, m.index ?? 0);
+
+        const bmIdx = cols.indexOf('benefit_mechanism');
+        const benefit_mechanism =
+          bmIdx >= 0 && bmIdx < vals.length ? vals[bmIdx] : undefined;
+
+        let id: string | undefined;
+        for (const idCol of ID_COLUMNS) {
+          const idx = cols.indexOf(idCol);
+          if (idx >= 0 && idx < vals.length && vals[idx]) {
+            id = vals[idx];
+            break;
+          }
+        }
+
+        records.push({
+          id: id ?? `${table}@${file.path}:${line}`,
+          benefit_mechanism,
+          _source: file.path,
+          _line: line,
+        });
+
+        pos = end;
+        // Advance past comma separator between tuple rows.
+        const commaMatch = file.text.slice(pos).match(/^\s*,\s*/);
+        if (commaMatch) {
+          pos += commaMatch[0].length;
+        } else {
           break;
         }
       }
-
-      records.push({
-        id: id ?? `${table}@${file.path}:${line}`,
-        benefit_mechanism,
-        _source: file.path,
-        _line: line,
-      });
     }
   }
 

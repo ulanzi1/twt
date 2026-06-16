@@ -109,6 +109,38 @@ v1_permitted: [pool]
       ),
     ).toThrow(/v1_permitted value 'death' is not one of mechanisms/);
   });
+
+  it('throws when v1_only is absent (missing field)', () => {
+    expect(() =>
+      parseBenefitMechanismConfig(
+        'version: 1\nmechanisms: [pool, reserve]\nv1_permitted: [pool]',
+      ),
+    ).toThrow(/v1_only. must be a boolean/);
+  });
+
+  it('throws when v1_permitted is absent (missing field)', () => {
+    expect(() =>
+      parseBenefitMechanismConfig(
+        'version: 1\nmechanisms: [pool, reserve]\nv1_only: true',
+      ),
+    ).toThrow(/v1_permitted. must be a list/);
+  });
+
+  it('throws when v1_permitted is empty and v1_only is true (incoherent)', () => {
+    expect(() =>
+      parseBenefitMechanismConfig(
+        'version: 1\nmechanisms: [pool, reserve]\nv1_only: true\nv1_permitted: []',
+      ),
+    ).toThrow(/v1_permitted. must be non-empty when .v1_only. is true/);
+  });
+
+  it('throws on an unknown top-level key (strict parsing)', () => {
+    expect(() =>
+      parseBenefitMechanismConfig(
+        'version: 1\nmechanisms: [pool, reserve]\nv1_only: true\nv1_permitted: [pool]\nmachanism: typo',
+      ),
+    ).toThrow(/unknown key 'machanism'/);
+  });
 });
 
 // ─── check (a): validateRuleRecord(s) ────────────────────────────────────────
@@ -254,6 +286,35 @@ describe('scanRuleTableColumns (c)', () => {
   it('no-ops on a null snapshot (no migrations meta yet)', () => {
     expect(scanRuleTableColumns(null, config)).toEqual([]);
   });
+
+  it('finds the column when its key is schema-qualified (public.benefit_mechanism)', () => {
+    const snapshot = {
+      tables: {
+        'public.clause_versions': {
+          name: 'clause_versions',
+          columns: {
+            'public.clause_version_id': { name: 'clause_version_id', type: 'uuid' },
+            'public.benefit_mechanism': { name: 'benefit_mechanism', type: 'benefit_mechanism' },
+          },
+        },
+      },
+    };
+    expect(scanRuleTableColumns(snapshot, config)).toEqual([]);
+  });
+
+  it('matches the rule table case-insensitively', () => {
+    const snapshot = {
+      tables: {
+        'public.Clause_Versions': {
+          name: 'Clause_Versions',
+          columns: {
+            benefit_mechanism: { name: 'benefit_mechanism', type: 'benefit_mechanism' },
+          },
+        },
+      },
+    };
+    expect(scanRuleTableColumns(snapshot, config)).toEqual([]);
+  });
 });
 
 // ─── extractors ──────────────────────────────────────────────────────────────
@@ -310,6 +371,62 @@ describe('extractFromSqlInserts', () => {
       text: "INSERT INTO clause_versions (rule_id, benefit_mechanism) VALUES ('R5', 'pool');",
     };
     expect(extractFromSqlInserts([sql], noTables)).toEqual([]);
+  });
+
+  it('extracts all rows from a multi-row VALUES clause', () => {
+    const sql = {
+      path: 'm.sql',
+      text:
+        "INSERT INTO clause_versions (rule_id, benefit_mechanism) VALUES " +
+        "('R5', 'pool'), ('R7', 'pool'), ('R9', 'reserve');",
+    };
+    const records = extractFromSqlInserts([sql], config);
+    expect(records).toHaveLength(3);
+    expect(records.map((r) => r.id)).toEqual(['R5', 'R7', 'R9']);
+    expect(records.map((r) => r.benefit_mechanism)).toEqual(['pool', 'pool', 'reserve']);
+  });
+
+  it('extracts from a schema-qualified INSERT (public.clause_versions)', () => {
+    const sql = {
+      path: 'm.sql',
+      text: "INSERT INTO public.clause_versions (rule_id, benefit_mechanism) VALUES ('R5', 'pool');",
+    };
+    const records = extractFromSqlInserts([sql], config);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ id: 'R5', benefit_mechanism: 'pool' });
+  });
+
+  it('extracts from a fully double-quoted schema-qualified INSERT', () => {
+    const sql = {
+      path: 'm.sql',
+      text: 'INSERT INTO "public"."clause_versions" ("rule_id", "benefit_mechanism") VALUES (\'R8\', \'pool\');',
+    };
+    const records = extractFromSqlInserts([sql], config);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ id: 'R8', benefit_mechanism: 'pool' });
+  });
+
+  it('handles a value string containing a closing parenthesis', () => {
+    const sql = {
+      path: 'm.sql',
+      text: "INSERT INTO clause_versions (rule_id, benefit_mechanism, body) VALUES ('R5', 'pool', 'rule(v2)');",
+    };
+    const records = extractFromSqlInserts([sql], config);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ id: 'R5', benefit_mechanism: 'pool' });
+  });
+
+  it('handles a multi-line INSERT statement', () => {
+    const sql = {
+      path: 'm.sql',
+      text:
+        'INSERT INTO clause_versions\n' +
+        '  (rule_id, benefit_mechanism)\n' +
+        "  VALUES\n  ('R5', 'pool');",
+    };
+    const records = extractFromSqlInserts([sql], config);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ id: 'R5', benefit_mechanism: 'pool' });
   });
 });
 

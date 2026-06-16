@@ -25,8 +25,10 @@ import {
   type MetricVerdict,
   detectBaselineChanges,
   detectLoosenedCeilings,
+  detectRaisedBaselines,
   evaluateDeclaration,
   evaluateMetric,
+  isMemberFacingPath,
   loosenedGuardVerdict,
   parseAndValidateLedger,
   parseFrictionBudgetYaml,
@@ -58,16 +60,18 @@ function tryGit(args: string[]): string | null {
  * Resolve the PR base ref for diffing:
  *   - CI `pull_request`: GITHUB_BASE_REF is set → origin/<base>.
  *   - local: the merge-base against origin/main.
- *   - push events / no remote: null (PR-only facets skip with a notice).
+ *   - push events / no remote: ref=null, ciError=false (PR-only facets skip with a notice).
+ *   - CI with unresolvable GITHUB_BASE_REF: ref=null, ciError=true (fails the gate).
  */
-function resolveBaseRef(): string | null {
+function resolveBaseRef(): { ref: string | null; ciError: boolean } {
   const ghBase = process.env.GITHUB_BASE_REF;
   if (ghBase) {
     const ref = `origin/${ghBase}`;
-    if (tryGit(['rev-parse', '--verify', ref]) !== null) return ref;
+    if (tryGit(['rev-parse', '--verify', ref]) !== null) return { ref, ciError: false };
+    return { ref: null, ciError: true };
   }
   const mergeBase = tryGit(['merge-base', 'HEAD', 'origin/main']);
-  return mergeBase;
+  return { ref: mergeBase, ciError: false };
 }
 
 function getChangedFiles(baseRef: string | null): string[] | null {
@@ -121,12 +125,22 @@ function main(): void {
   if (ledger.errors.length > 0) {
     for (const e of ledger.errors) failures.push(`ledger: ${e}`);
     for (const e of ledger.errors) console.log(`  ✗ ${e}`);
+  } else if (ledger.rows.length === 0) {
+    const msg =
+      'ledger has no declaration rows — the seed ledger must contain at least the four UX-spec ' +
+      'entries (payer/protects/event_type per AC-4). Add the missing rows or restore the seed.';
+    failures.push(`ledger: ${msg}`);
+    console.log(`  ✗ ${msg}`);
   } else {
     console.log(`  ✓ ${ledger.rows.length} declaration row(s), all structurally valid`);
   }
 
   // ── METRIC facet: measure each surface against its ceilings + baseline ─────
   console.log('\n▸ Metric facet (friction-budget.yaml)');
+  if (config.surfaces.length === 0) {
+    notes.push('metric facet: no surfaces defined in friction-budget.yaml — all metric checks are no-ops');
+    console.log('  · no surfaces defined — all metric checks are no-ops');
+  }
   const verdicts: MetricVerdict[] = [];
   for (const surface of config.surfaces) {
     const manifest = loadManifest(surface.manifest);
@@ -147,7 +161,14 @@ function main(): void {
   }
 
   // ── git context (PR diff) ─────────────────────────────────────────────────
-  const baseRef = resolveBaseRef();
+  const { ref: baseRef, ciError: baseRefCiError } = resolveBaseRef();
+  if (baseRefCiError) {
+    const msg =
+      `GITHUB_BASE_REF="${process.env.GITHUB_BASE_REF}" is set but could not be resolved — ` +
+      `PR-diff-dependent facets skipped. Ensure fetch-depth: 0 in the checkout step.`;
+    failures.push(`git: ${msg}`);
+    console.log(`\n  ✗ ${msg}`);
+  }
   const changedFiles = getChangedFiles(baseRef);
   const baseConfig = getBaseConfig(baseRef);
 
@@ -155,20 +176,33 @@ function main(): void {
   console.log('\n▸ Threshold-loosening guard (AC-1)');
   const loosenings = detectLoosenedCeilings(baseConfig, config);
   const baselineChanged = detectBaselineChanges(baseConfig, config);
-  const memberTouched =
-    changedFiles !== null && changedFiles.some((f) => f.replace(/\\/g, '/').startsWith('apps/'));
+  const memberTouched = changedFiles !== null && changedFiles.some(isMemberFacingPath);
   const guard = loosenedGuardVerdict(loosenings, baselineChanged || memberTouched);
   console.log(`  ${guard.ok ? '✓' : '✗'} ${guard.message}`);
   if (!guard.ok) failures.push(`threshold: ${guard.message}`);
+  const raisedBaselines = detectRaisedBaselines(baseConfig, config);
+  if (raisedBaselines.length > 0) {
+    const list = raisedBaselines
+      .map((r) => `${r.surface}.${r.metric} ${r.from}→${r.to}`)
+      .join(', ');
+    const msg =
+      `BASELINE RAISED in this PR (${list}). The baseline-of-record can only decrease ` +
+      `(an improvement the author commits in-PR); raising it requires a separate rationale PR.`;
+    failures.push(`threshold: ${msg}`);
+    console.log(`  ✗ ${msg}`);
+  }
 
   // ── AC-4: declaration attribution-on-change ───────────────────────────────
   console.log('\n▸ Declaration attribution-on-change (AC-4)');
   if (changedFiles === null) {
-    notes.push(
-      'declaration facet skipped — no PR base ref resolvable (push event or no origin/main). ' +
-        'This facet is PR-scoped; CI pull_request runs it with fetch-depth: 0.',
-    );
-    console.log(`  · ${notes[notes.length - 1]}`);
+    if (!baseRefCiError) {
+      notes.push(
+        'declaration facet skipped — no PR base ref resolvable (push event or no origin/main). ' +
+          'This facet is PR-scoped; CI pull_request runs it with fetch-depth: 0.',
+      );
+      console.log(`  · ${notes[notes.length - 1]}`);
+    }
+    // If baseRefCiError, the failure was already emitted in the git context section.
   } else {
     const decl = evaluateDeclaration(changedFiles);
     console.log(`  ${decl.ok ? '✓' : '✗'} ${decl.message}`);

@@ -113,6 +113,11 @@ export function parseFrictionBudgetYaml(raw: string): FrictionBudgetConfig {
           `friction-budget.yaml: metric "${s.id}.${m.id}".baseline must be a number or null`,
         );
       }
+      if (typeof baseline === 'number' && baseline > (m.ceiling as number)) {
+        throw new Error(
+          `friction-budget.yaml: metric "${s.id}.${m.id}".baseline (${baseline}) exceeds ceiling (${m.ceiling as number}) — committed baseline must be ≤ its ceiling`,
+        );
+      }
       return { id: m.id, ceiling: m.ceiling, baseline: baseline ?? null };
     });
     return {
@@ -278,6 +283,35 @@ export function detectBaselineChanges(
   return false;
 }
 
+export interface BaselineRaise {
+  surface: string;
+  metric: string;
+  from: number;
+  to: number;
+}
+
+/**
+ * Baselines that were RAISED (inflated) between base and HEAD. A baseline can
+ * only decrease in-PR (the author commits an improved lower value); an increase
+ * erodes the improvement-tracking discipline and must ship in a rationale PR.
+ */
+export function detectRaisedBaselines(
+  base: FrictionBudgetConfig | null,
+  head: FrictionBudgetConfig,
+): BaselineRaise[] {
+  if (base === null) return [];
+  const baseBaselines = baselineIndex(base);
+  const out: BaselineRaise[] = [];
+  for (const [key, to] of baselineIndex(head)) {
+    const from = baseBaselines.get(key);
+    if (from !== undefined && from !== null && to !== null && to > from) {
+      const [surface, metric] = key.split(/\.(.*)/s);
+      out.push({ surface, metric, from, to });
+    }
+  }
+  return out;
+}
+
 /**
  * AC-1: a ceiling loosening must ship in its OWN PR with written rationale, not
  * bundled with a measurement change. Fail when a loosening co-occurs with a
@@ -376,6 +410,7 @@ export function parseAndValidateLedger(markdown: string): LedgerResult {
 
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const line = lines[i];
+    if (!line.trim()) continue;              // skip blank lines within the table
     if (!line.trim().startsWith('|')) break; // table ended
     const cells = splitTableRow(line);
     if (isSeparatorRow(cells)) continue;

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 import {
   detectBaselineChanges,
   detectLoosenedCeilings,
+  detectRaisedBaselines,
   evaluateDeclaration,
   evaluateMetric,
   isMemberFacingPath,
@@ -91,6 +92,20 @@ surfaces:
     expect(() => parseFrictionBudgetYaml('version: one\nsurfaces: []')).toThrow(
       /version. must be a number/,
     );
+  });
+
+  it('throws when baseline exceeds ceiling (P7)', () => {
+    const bad = `
+version: 1
+surfaces:
+  - id: x
+    manifest: x/m.json
+    metrics:
+      - id: a
+        ceiling: 1000
+        baseline: 2000
+`;
+    expect(() => parseFrictionBudgetYaml(bad)).toThrow(/baseline.*exceeds ceiling/);
   });
 });
 
@@ -286,5 +301,35 @@ describe('threshold-loosening guard (AC-1)', () => {
 
   it('passes when there is no loosening at all', () => {
     expect(loosenedGuardVerdict([], true).ok).toBe(true);
+  });
+});
+
+describe('detectRaisedBaselines (P2 — creeping baseline inflation guard)', () => {
+  const mkCfg = (baseline: number | null): FrictionBudgetConfig => ({
+    version: 1,
+    surfaces: [{ id: 's', manifest: 'm.json', metrics: [{ id: 'a', ceiling: 5000, baseline }] }],
+    deferredMetrics: [],
+  });
+
+  it('detects a raised baseline as a raise', () => {
+    const raises = detectRaisedBaselines(mkCfg(800), mkCfg(1000));
+    expect(raises).toEqual([{ surface: 's', metric: 'a', from: 800, to: 1000 }]);
+  });
+
+  it('does not flag a lowered baseline (improvement)', () => {
+    const raises = detectRaisedBaselines(mkCfg(800), mkCfg(600));
+    expect(raises).toEqual([]);
+  });
+
+  it('does not flag when baseline is unchanged', () => {
+    expect(detectRaisedBaselines(mkCfg(800), mkCfg(800))).toEqual([]);
+  });
+
+  it('does not flag when base is null (new file)', () => {
+    expect(detectRaisedBaselines(null, mkCfg(800))).toEqual([]);
+  });
+
+  it('does not flag when baseline moves from null to a value (first commit)', () => {
+    expect(detectRaisedBaselines(mkCfg(null), mkCfg(800))).toEqual([]);
   });
 });

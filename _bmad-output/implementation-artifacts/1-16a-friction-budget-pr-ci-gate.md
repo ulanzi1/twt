@@ -1,6 +1,6 @@
 # Story 1.16a: Friction-Budget PR CI Gate (UX-DR3) `[GOVERNANCE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -230,6 +230,22 @@ claude-opus-4-8 (Claude Opus 4.8) via bmad-dev-story
 - `docs/knowledge-transfer/adr-index.md` — ADR-0012 row + counts (drafted 8→9, total 129→130, Section A 30→31)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — "Story 1.16a deferred + discharged" section + inline cluster annotations (D1-1.6 Closed-by-edit; D4/D5/D6/D7/D12-1.4 + documentary gates deferred)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `1-16a` flip ready-for-dev→in-progress→review + ledger entry
+
+### Review Findings
+
+- [x] [Review][Defer] AC-1: `page_weight_bytes` declared as aggregate per-surface, not per route — AC-1 says "per route" but the YAML, TypeScript types, manifest format, and gate logic implement aggregate-per-surface. Intentional v1 deferral (gate is no-op until Story 2.5 Astro surface lands); per-route breakdown deferred to that trigger. [friction-budget.yaml, scripts/friction-budget/lib.ts] — deferred, accepted as v1 design
+- [x] [Review][Patch] AC-1 threshold-loosening guard uses `apps/` prefix instead of `isMemberFacingPath()` — false-positives on admin/api/jobs PRs [scripts/friction-budget/check.ts:~159]
+- [x] [Review][Patch] Creeping baseline inflation: author can raise `baseline` without ceiling change; passes all checks silently [scripts/friction-budget/lib.ts]
+- [x] [Review][Patch] `surfaces: []` in `friction-budget.yaml` silently passes metric facet with zero checks and no diagnostic output [scripts/friction-budget/lib.ts]
+- [x] [Review][Patch] Ledger with header + separator but zero data rows passes structural validation (`"✓ 0 declaration row(s)"`) [scripts/friction-budget/lib.ts]
+- [x] [Review][Patch] `GITHUB_BASE_REF` resolution failure in CI silently skips declaration facet (emits to `notes[]` not `failures[]`) [scripts/friction-budget/check.ts]
+- [x] [Review][Patch] Blank line inside ledger Markdown table stops `parseAndValidateLedger`, silently ignoring all remaining rows [scripts/friction-budget/lib.ts]
+- [x] [Review][Patch] `parseFrictionBudgetYaml` does not validate `baseline <= ceiling` — contradictory error messages when baseline exceeds ceiling [scripts/friction-budget/lib.ts]
+- [x] [Review][Defer] Push events to `main` bypass both AC-1 and AC-4 enforcement (merge-base = HEAD itself on push) [scripts/friction-budget/check.ts] — deferred, expected behavior; branch protection on `main` is the external guard
+- [x] [Review][Defer] `**/db.ts` carve-out in ESLint config exempts ANY `db.ts` in the monorepo, not just `packages/domain/src/db.ts` [packages/eslint-config-twt/index.js] — deferred, known per-package cwd limitation; role-based glob is the best achievable with shared flat config
+- [x] [Review][Defer] Subpath imports (`pg/lib/client`) and dynamic `import('pg')` bypass `no-restricted-imports` rule [packages/eslint-config-twt/index.js] — deferred, needs custom `eslint-plugin-twt`; punts with D9-1.6
+- [x] [Review][Defer] Dot in surface/metric `id` produces wrong surface attribution in `detectLoosenedCeilings` error messages [scripts/friction-budget/lib.ts] — deferred, no current IDs contain dots; add ID validation when surface definitions expand
+- [x] [Review][Defer] `parseAndValidateLedger` pushes structurally-invalid rows into `rows[]` alongside `errors[]` [scripts/friction-budget/lib.ts] — deferred, no current consumer uses malformed row fields; safe to fix in a future hardening pass
 
 ### Change Log
 

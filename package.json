@@ -31,7 +31,8 @@
     "benefit:check": "tsx scripts/benefit-mechanism/check.ts",
     "benefit:test": "vitest run scripts/benefit-mechanism",
     "microcopy:check": "tsx scripts/microcopy/check.ts",
-    "microcopy:test": "vitest run scripts/microcopy"
+    "microcopy:test": "vitest run scripts/microcopy",
+    "ci:local": "bash scripts/ci-local.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

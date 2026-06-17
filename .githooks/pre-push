@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# pre-push — run the local CI mirror before every push.
+# Active while GitHub Actions is unavailable (account under review).
+#
+# Enable (one-time, per clone):   git config core.hooksPath .githooks
+# Skip once:                      git push --no-verify
+#                          (or)   SKIP_CI_LOCAL=1 git push
+#
+if [ "${SKIP_CI_LOCAL:-}" = "1" ]; then
+  echo "[pre-push] SKIP_CI_LOCAL=1 — skipping ci:local"
+  exit 0
+fi
+
+echo "[pre-push] running pnpm ci:local (skip with: git push --no-verify) …"
+pnpm ci:local

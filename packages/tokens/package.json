@@ -4,16 +4,23 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme.css": "./src/theme.css"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "dev": "tsc --watch --preserveWatchOutput"
+    "dev": "tsc --watch --preserveWatchOutput",
+    "tokens:generate-theme": "tsx scripts/generate-theme.ts",
+    "tokens:check-theme-determinism": "tsx scripts/check-theme-determinism.ts"
   },
   "devDependencies": {
     "@twt/eslint-config-twt": "workspace:*",
     "typescript": "~5.9.2",
+    "tsx": "^4.19.0",
     "vitest": "^2.1.8",
     "@types/node": "^22.15.3"
   }

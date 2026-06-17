@@ -20,6 +20,8 @@
     "db:studio": "pnpm --filter @twt/domain db:studio",
     "contracts:emit-openapi": "pnpm --filter @twt/contracts contracts:emit-openapi",
     "contracts:check-openapi-determinism": "turbo run contracts:check-openapi-determinism",
+    "tokens:check-theme": "turbo run tokens:check-theme-determinism",
+    "tokens:generate-theme": "pnpm --filter @twt/tokens tokens:generate-theme",
     "pii:check": "turbo run contracts:check-pii-scrape",
     "crypto:check": "turbo run crypto:check",
     "friction:check": "tsx scripts/friction-budget/check.ts",
@@ -27,7 +29,9 @@
     "schema:check": "tsx scripts/schema-diff/check.ts",
     "schema:test": "vitest run scripts/schema-diff",
     "benefit:check": "tsx scripts/benefit-mechanism/check.ts",
-    "benefit:test": "vitest run scripts/benefit-mechanism"
+    "benefit:test": "vitest run scripts/benefit-mechanism",
+    "microcopy:check": "tsx scripts/microcopy/check.ts",
+    "microcopy:test": "vitest run scripts/microcopy"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

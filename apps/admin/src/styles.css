@@ -1,23 +1,14 @@
-/* Tailwind v4 CSS-first entry (Story 1.11b, DD-1).
+/* Tailwind v4 CSS-first entry (Story 1.11b DD-1; design tokens subsumed at Story 1.17).
  *
- * No tailwind.config.ts — v4 is configured in CSS. The @theme block defines the
- * design tokens this dev-grade admin surface uses; extraction into packages/tokens
- * is deferred (DD-1) until a 2nd admin surface needs the same atoms. Token pairs
- * are chosen for WCAG 2.1 AA contrast on the status banners (§4.10): the red
- * failure banner and green status both clear 4.5:1 against their backgrounds. */
+ * No tailwind.config.ts — v4 is configured in CSS. The design tokens (incl. the
+ * status palette whose pairs clear WCAG 2.1 AA contrast on the §4.10 integrity
+ * banners) are now sourced from the single token registry @twt/tokens via its
+ * generated Tailwind v4 @theme artifact. Story 1.17 is the DD-1 / D4-1.11b
+ * extraction trigger: the previously-inline @theme status pairs moved INTO
+ * @twt/tokens unchanged (same names, same AA-contrast values — no visual
+ * regression), so admin now CONSUMES the generated @theme instead of declaring it. */
 @import 'tailwindcss';
-
-@theme {
-  /* Status palette — AA-contrast pairs for the integrity banners (§4.10, AC-6). */
-  --color-status-ok-bg: #e7f6ec;
-  --color-status-ok-fg: #0f5132;
-  --color-status-ok-border: #198754;
-  --color-status-fail-bg: #fdecec;
-  --color-status-fail-fg: #842029;
-  --color-status-fail-border: #dc3545;
-  --color-status-muted-bg: #f3f4f6;
-  --color-status-muted-fg: #374151;
-}
+@import '@twt/tokens/theme.css';
 
 /* Honour reduced-motion preferences (§4.10): no spinners/transitions when the
  * user has asked the OS to minimize motion. */

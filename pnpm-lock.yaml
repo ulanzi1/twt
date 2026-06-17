@@ -77,6 +77,9 @@ importers:
       '@twt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@twt/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -628,6 +631,9 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.20
+      tsx:
+        specifier: ^4.19.0
+        version: 4.22.4
       typescript:
         specifier: ~5.9.2
         version: 5.9.3

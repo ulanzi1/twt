@@ -94,6 +94,19 @@ so that the UX-DR7–UX-DR12 (design-system foundation), UX-DR71 (vocabulary dis
 - [x] [Review][Defer] `isCeremonial` rebuilds ceremonial-file set on every call — O(n) fs reads per file scanned [scripts/microcopy/check.ts:85-89] — deferred, latent until ceremonial globs are non-empty (Shradhanjali surface)
 - [x] [Review][Defer] Pool-Reality regex `\d+\s*%\s+achieved` narrower than spec exemplar — digit-prefixed regex adequately meets spec intent; non-digit framing unrealistic in production copy [microcopy.yaml:819] — deferred, spec intent met
 
+### Review Findings (Round 2)
+
+- [x] [Review][Patch] `isAllowed()` exec loop has no zero-width guard — allow-list patterns like `x*` cause infinite loop [scripts/microcopy/lib.ts isAllowed]
+- [x] [Review][Patch] Zero-files diagnostic exits 0 when `code_globs` declared but resolves empty — gate is silently toothless [scripts/microcopy/check.ts:107-111]
+- [x] [Review][Patch] `tokens.test.ts` hex color regex `{3,8}` permits invalid 5- and 7-digit hex lengths [packages/tokens/tests/tokens.test.ts]
+- [x] [Review][Patch] `FUNCTIONAL_COLOR` lookbehind only excludes `.` not `[` — Tailwind `bg-[rgba(...)]` arbitrary values are false-positively flagged [scripts/microcopy/lib.ts FUNCTIONAL_COLOR]
+- [x] [Review][Patch] `resolveGlobs` silently skips nonexistent glob base dirs with no per-glob diagnostic [scripts/microcopy/check.ts resolveGlobs]
+- [x] [Review][Patch] `report` → Sahyog Vivran has no positive fixture test in lib.test.ts (same coverage bar as invoice/customer/donor) [scripts/microcopy/lib.test.ts]
+- [x] [Review][Defer] `INLINE_HINDI_FORMAT` misses `hi-u-nu-deva` and `numberingSystem: 'devanagari'` locale-extension forms — forward-compat, no member surfaces at v1; re-trigger Epic 2+ [scripts/microcopy/lib.ts INLINE_HINDI_FORMAT]
+- [x] [Review][Defer] Duplicate findings when a file matches both `code_globs` and `copy_globs` — impossible at v1 (copy_globs empty); re-trigger when Epic 2+ populates copy_globs [scripts/microcopy/check.ts]
+- [x] [Review][Defer] `checkNumerals` fires on Devanagari digits in source-code comments — requires parser-level fix; allow-list is the v1 escape hatch [scripts/microcopy/lib.ts]
+- [x] [Review][Defer] `check-theme-determinism.ts` byte-compare fails on UTF-8 BOM — macOS/Linux native; re-trigger on first Windows contributor [packages/tokens/scripts/check-theme-determinism.ts]
+
 ## Dev Notes
 
 ### ⚠️ Scope Decisions & Boundary Reconciliations (READ FIRST — these prevent the most likely failures)

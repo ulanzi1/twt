@@ -51,7 +51,10 @@ function resolveGlobs(globs: string[]): string[] {
     const prefix = firstStar === -1 ? glob : glob.slice(0, firstStar);
     const baseDir = prefix.includes('/') ? prefix.slice(0, prefix.lastIndexOf('/')) : '';
     const absBase = path.join(repoRoot, baseDir);
-    if (!fs.existsSync(absBase)) continue;
+    if (!fs.existsSync(absBase)) {
+      console.warn(`⚠ microcopy gate: glob '${glob}' base dir '${baseDir || '.'}' not found — no files matched`);
+      continue;
+    }
 
     const re = new RegExp(
       '^' +
@@ -104,7 +107,12 @@ async function main(): Promise<void> {
     `▸ Scope — ${codeFiles.length} code file(s) [teeth: FM-14 colors + active vocab/tone + numerals], ` +
       `${copyFiles.length} copy file(s) [member-surface register; forward-compat]\n`,
   );
-  if (codeFiles.length + copyFiles.length === 0) {
+  if (config.scope.codeGlobs.length > 0 && codeFiles.length === 0) {
+    console.error(
+      '✗ microcopy gate: declared code_globs matched no files — gate has no teeth (verify scope config in microcopy.yaml)',
+    );
+    process.exit(1);
+  } else if (codeFiles.length + copyFiles.length === 0) {
     console.warn(
       '⚠ microcopy gate: no files matched scope globs — scanned zero files (verify scope config in microcopy.yaml)',
     );

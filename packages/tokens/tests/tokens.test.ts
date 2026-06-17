@@ -55,7 +55,7 @@ describe('color tokens (AC1 (i))', () => {
 
   it('every color value is a CSS color literal', () => {
     for (const value of Object.values(color)) {
-      expect(value).toMatch(/^#[0-9a-fA-F]{3,8}$/);
+      expect(value).toMatch(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
     }
   });
 });

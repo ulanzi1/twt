@@ -287,6 +287,7 @@ export function isAllowed(
     // Position-aware: allow-list match must overlap the prohibited-term match range.
     let m: RegExpExecArray | null;
     while ((m = re.exec(lineText)) !== null) {
+      if (m[0].length === 0) { re.lastIndex++; continue; } // guard zero-width match looping
       if (m.index < matchRange.end && m.index + m[0].length > matchRange.start) return true;
     }
     return false;
@@ -434,8 +435,9 @@ export function checkNumerals(
 // href="#abcdef") are structurally indistinguishable from hex color literals —
 // add an allow-list entry in microcopy.yaml if such an anchor exists in scope.
 const HEX_COLOR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g;
-// Functional color notations. (?<!\.) excludes method calls like color.rgba(…).
-const FUNCTIONAL_COLOR = /(?<!\.)\b(?:rgba?|hsla?)\s*\(/g;
+// Functional color notations. (?<![.\[]) excludes method calls like color.rgba(…) and
+// Tailwind arbitrary values like bg-[rgba(...)].
+const FUNCTIONAL_COLOR = /(?<![.\[])\b(?:rgba?|hsla?)\s*\(/g;
 
 /**
  * Flag hardcoded color literals (hex, rgb/rgba, hsl/hsla) in component code — FM-14 #2

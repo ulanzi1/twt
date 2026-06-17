@@ -226,6 +226,15 @@ describe('checkVocabulary (c)', () => {
     expect(findings[0].match).toBe('receipt');
   });
 
+  it('flags "report" as a prohibited term, requiring Sahyog Vivran', () => {
+    const findings = checkVocabulary('f.tsx', 'Download the annual report here', config, {
+      includeMemberOnly: false,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].match).toBe('report');
+    expect(findings[0].replacement).toMatch(/Sahyog Vivran/);
+  });
+
   it('flags "invoice" as a prohibited term, requiring Contribution Note', () => {
     const findings = checkVocabulary('f.tsx', 'Please download your invoice', config, {
       includeMemberOnly: false,

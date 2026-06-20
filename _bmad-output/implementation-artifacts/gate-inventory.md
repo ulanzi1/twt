@@ -48,8 +48,11 @@ These gates are installed and passing, but are no-op or partially no-op until a 
 | `benefit-mechanism` check (c): rule-table schema-column find | 1.16d | Rule table not yet created. Find returns zero → pass. | **Story 2.3** — same as above. |
 | `friction-budget` — `critical_render_path_ms` metric | 1.16a | Placeholder in `friction-budget.yaml` under `deferred_metrics`. No throttled-Lighthouse harness in CI. | **Story 2.5** — Astro shell or design-system surface; add throttled-Lighthouse-CI harness. |
 | Per-tag bundle-subsetting CI test (D4-1.4) | 1.4 | No member/admin JS bundle in `pnpm turbo run build` yet. | **Epic 2 / later** — member/admin bundles land with public Astro + member web/native. |
+| `tone-review` publish gate — **Type: runtime Fastify pre-handler, NOT a CI lint** (tracked here for consumer-wiring visibility, not as a `pnpm` CI job) | 2.2 | No member-visible-copy publish endpoint exists yet. `apps/api/src/modules/tone-review/` (`requireToneReviewSignoff` + the dedicated `tone_review.*` audit seam) is installed + unit-tested but mounted by **no route**; teeth proven with a stub resolver + fake audit sink (no live DB). | **Story 2.4** — Niyamavali publish mounts `requireToneReviewSignoff` in its `preHandler` chain (supplies the sign-off resolver + the durable persistence Story 2.2 deferred). Future surfaces (News/Blog · T&C · push templates · helpdesk macros) re-trigger in their owning stories. |
 
 **Note on `benefit-mechanism` check (b):** The enum-definition cross-check (`BenefitMechanism` z.enum === `benefit-mechanism.yaml` `mechanisms`) **has teeth now** — this check is active and enforcing. Only checks (a) and (c) are no-op.
+
+**Note on the `tone-review` row (Story 2.2):** unlike every other row in this table, this is **not** a `pnpm` CI lint — it is a *runtime* Fastify publish guard (tone review is a human-judgment check that cannot be a static lint; the *automatable* vocabulary/tone/numeral subset is already the Story 1.17 `microcopy` CI gate in Category A). It is listed here because it shares the Category-B lifecycle: installed green-by-construction now, full teeth on consumer wiring (Story 2.4). The human process it enforces is `docs/tone-guide.md` + `docs/tone-review-checklist.md` (Story 2.2). Cross-ref: `_bmad-output/implementation-artifacts/2-2-tone-guide-vocabulary-enforcement-process.md`.
 
 ---
 

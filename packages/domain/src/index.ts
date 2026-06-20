@@ -28,6 +28,16 @@ export {
   type AuthorizationDenial,
   type ErrorResponseShape,
 } from './errors.js';
+// Tone-review gate (Story 2.2). Surfaced at the top level — mirroring
+// `AuthorizationDeniedError` — so the apps/api error-mapping middleware imports the
+// error + code from `@twt/domain` directly; the full primitive is also under the
+// `toneReview` namespace below.
+export {
+  ToneReviewRequiredError,
+  TONE_REVIEW_REQUIRED_CODE,
+  type ToneReviewDenial,
+  type ToneReviewDenialReason,
+} from './tone-review/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
@@ -37,4 +47,5 @@ export * as idempotency from './idempotency/index.js';
 export * as ids from './ids/index.js';
 export * as passport from './pariwar-passport/index.js';
 export * as rbac from './rbac/index.js';
+export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

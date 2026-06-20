@@ -17,6 +17,7 @@ import type { StepUpOtpDeliveryPort } from './modules/auth/shared/step-up-delive
 import type { TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import type { WebAuthnProvider } from './modules/auth/shared/webauthn.js';
 import type { DeployTrigger } from './modules/pariwar-provisioning/deploy-trigger.js';
+import type { ToneReviewAuditSink } from './modules/tone-review/index.js';
 
 /**
  * The fixed namespace the admin-identity blind index + Tier-1 encryption context
@@ -57,6 +58,14 @@ export interface AppDeps {
   /** Resolved Argon2id pepper (Secret Manager in prod; env fallback in local dev). */
   readonly pepper: Buffer;
   readonly auditSink: AuthAuditSink;
+  /**
+   * Dedicated tone-review audit seam (Story 2.2). Records `tone_review.signoff` +
+   * `tone_review.publish_blocked` through the Story 1.10 hash-chain writer — a SIBLING
+   * of `auditSink`, deliberately NOT the auth-typed `AuthAuditSink` (tone-review is not
+   * a security event; the auth taxonomy's SecurityAuditEventType rename is deferred).
+   * Production wires the real `writeAuditEntry`-backed sink; tests inject a capturing fake.
+   */
+  readonly toneReviewAuditSink: ToneReviewAuditSink;
   readonly stepUpDelivery: StepUpOtpDeliveryPort;
   readonly turnstile: TurnstileVerifier;
   /** WebAuthn ceremony provider (SimpleWebAuthn in prod; a fake in tests). */

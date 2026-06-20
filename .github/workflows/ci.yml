@@ -21,6 +21,7 @@ jobs:
   install:
     name: install
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -30,11 +31,13 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
 
   lint:
     name: lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     steps:
       - uses: actions/checkout@v4
@@ -45,12 +48,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run lint
 
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     steps:
       - uses: actions/checkout@v4
@@ -61,12 +66,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run typecheck
 
   test:
     name: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [install, build]
     steps:
       - uses: actions/checkout@v4
@@ -77,12 +84,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run test
 
   build:
     name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     steps:
       - uses: actions/checkout@v4
@@ -93,12 +102,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build
 
   db-check:
     name: db-check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # Pure static analysis over packages/domain/src/schema/*.ts +
     # packages/domain/migrations/meta/*.json. No DB connection required.
@@ -117,12 +128,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run db:check
 
   contracts-check:
     name: contracts-check (OpenAPI generator determinism)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # Pure static analysis: re-emit openapi/v1.yaml from packages/contracts/
     # Zod schemas and assert byte-identical to the committed file. Architecture
@@ -141,12 +154,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run contracts:check-openapi-determinism
 
   crypto-check:
     name: crypto-check (encryption substrate)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # Encryption substrate unit tests for @twt/domain/src/encryption: Tier-1
     # envelope round-trip + AAD binding; Tier-2 blind-index determinism +
@@ -165,12 +180,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run crypto:check
 
   tokens-theme-check:
     name: tokens-theme-check (FM-4 @theme sync determinism)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # FM-4 token-sync gate (Story 1.17, AC2): re-render packages/tokens/src/theme.css
     # from the canonical TS token source (packages/tokens/src/tokens.ts) and assert
@@ -190,12 +207,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run tokens:check-theme-determinism
 
   pii-scrape:
     name: pii-scrape (FR-74 Public-vs-Private matrix gate)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # FR-74 PII scrape gate (Story 1.16b): consumes the Public-vs-Private
     # visibility matrix (packages/contracts/public-pages/public-vs-private-matrix.yaml)
@@ -220,12 +239,14 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run contracts:check-pii-scrape
 
   friction-budget:
     name: friction-budget (UX-DR3 friction-as-budget gate)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # Repo-global friction-budget gate (Story 1.16a): friction-budget.yaml metric
     # ceilings (bundle bytes + page-weight, baseline-of-record) + friction-budget.md
@@ -249,6 +270,7 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm friction:test
       - run: pnpm friction:check
@@ -256,6 +278,7 @@ jobs:
   schema-diff:
     name: schema-diff (FR-100 non-add guard)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # Repo-global FR-100 non-add gate (Story 1.16c): asserts the v1 codebase ships
     # ZERO payout-destination surface (architecture §1.13 Hook 2 L1149-1163 + PRD
@@ -287,6 +310,7 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm schema:test
       - run: pnpm schema:check
@@ -294,6 +318,7 @@ jobs:
   benefit-mechanism:
     name: benefit-mechanism (FR-100 / FR-7 Hook 1 enum-tag guard)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # Repo-global FR-100 Hook 1 enum-tag gate (Story 1.16d): asserts every
     # Niyamavali rule record carries a benefit_mechanism ∈ {pool, reserve}, and
@@ -329,6 +354,7 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm benefit:test
       - run: pnpm benefit:check
@@ -336,6 +362,7 @@ jobs:
   microcopy:
     name: microcopy (UX-DR71 vocabulary + UX-DR73 numeral + FM-14 token-governance)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     # Repo-global forensic-microcopy / vocabulary / numeral-discipline gate (Story 1.17,
     # AC3): enforces the UX-DR71 vocabulary register (prohibited member-visible terms →
@@ -363,13 +390,39 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm microcopy:test
       - run: pnpm microcopy:check
 
+  cadence-check:
+    name: cadence-check (AI-1 cadence-actuals gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # AI-1 preflight gate (Epic 1 retrospective): asserts ai-cadence-actuals.md
+    # exists and is opened for the current epic. Prevents the A-5 failure mode
+    # (file never created → 80 hr/wk NET assumption stays un-attested forever).
+    # Hard fail: file absent. Hard fail: no ## Epic N section (file is a stub).
+    # Warn: measurement rows still TBD (cycle open, mid-epic — not a failure).
+    # Static, no DB / network. See scripts/cadence-check/check.ts.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm cadence:check
+
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: install
     # Live-DB integration tests: events_log RLS policy regression +
     # cross-Pariwar adversarial leak test (Story 1.6) + events_log
@@ -403,6 +456,7 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - name: Apply migrations
         run: pnpm db:migrate

@@ -1514,6 +1514,11 @@ So that "is this trust real?" returns a credible answer before I consider signin
 **When** the gate inspects rendered output
 **Then** the matrix has no entries yet (Epic 11a populates it), so the gate is a no-op against this page initially — but the page is rendered in CI's test-environment public render so the gate can verify on every PR going forward
 
+**Given** architecture P0-4 gate (Empty/Skeleton/Error Inventory, inventory-roster.md Row 6) re-homed here via Decision 2026-06-20-054 (AI-3)
+**When** Story 2.5 ships
+**Then** a UX-led empty/skeleton/error-state inventory is produced covering every screen surface in `apps/public` built at this story; the inventory artifact lives at `docs/ux/empty-skeleton-error-inventory.md` (or a named equivalent); ≥2-trustee ratification is recorded in `.decision-log.md`; inventory-roster.md Row 6 `current_status` flips `open` → `in-progress`
+**And** the inventory is understood as partial at 2.5: it covers apps/public Niyamavali + shell surfaces; it is extended at Epic 11a (Member Directory) and Epic 11b (per-claim + In Memoriam); Row 6 closes fully when the Phase-1 complete surface inventory is attested (Epic 11a completion)
+
 ### Story 2.6: T&C Version-Pinning Mechanism + Public Render (Pending Legal Review per Story 0.13) `[SURFACE]`
 
 As a Trustee Panel,

@@ -32,6 +32,7 @@
     "benefit:test": "vitest run scripts/benefit-mechanism",
     "microcopy:check": "tsx scripts/microcopy/check.ts",
     "microcopy:test": "vitest run scripts/microcopy",
+    "cadence:check": "tsx scripts/cadence-check/check.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },
   "devDependencies": {
@@ -44,7 +45,7 @@
     "eslint-config-prettier": "^10.1.1",
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
-    "tsx": "^4.19.0",
+    "tsx": "4.19.0",
     "turbo": "^2.9.16",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.50.0",

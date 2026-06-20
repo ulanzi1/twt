@@ -94,4 +94,5 @@ Cloudflare-DPDPA compatibility is a [P0] surface **pending legal review** (archi
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-20 | (no status flip — DPDPA still OPEN) | BigDev | Epic 1 retro AI-6 posture gate: Epic 2 public-surface posture recorded as Decision 2026-06-20-051 — Cloudflare off Epic 2 critical path; Story 2.5 designed non-edge-capable (Dokploy precedent); D1-1.13 remains gated on legal-review clearance. |
 | 2026-06-15 | (initial draft) | Solo Builder (BigDev) | Authored at Story 1.13 closure — Cloudflare v1 edge/WAF default, `packages/edge` abstraction, Turnstile server-verify + AC-3 regression fix, edge-only-ingress mechanism (`header_secret` default → `tunnel` end-state), Bot-Management plan-tier dependency, DPDPA-compatibility OPEN |

@@ -2,15 +2,15 @@
 #
 # ci-local.sh — local mirror of .github/workflows/ci.yml
 #
-# Runs every CI job that needs no external service (13 jobs), plus the live-DB
-# `integration-tests` job (the 14th) when DATABASE_URL is set. Stopgap while
+# Runs every CI job that needs no external service (15 jobs), plus the live-DB
+# `integration-tests` job (the 16th) when DATABASE_URL is set. Stopgap while
 # GitHub Actions is unavailable (account under review). Each job invokes the
 # exact command its ci.yml counterpart runs, so a green run here means a green
 # run there.
 #
 # Usage:
 #   pnpm ci:local
-#       → 13 static jobs (lint, typecheck, build, unit test, + all gates)
+#       → 15 static jobs (lint, typecheck, build, unit test, + all gates)
 #   DATABASE_URL='postgresql://twt_dev_app:devpass@127.0.0.1:5433/twt_dev?sslmode=disable' pnpm ci:local
 #       → also runs integration-tests against the twt-test-pg container (port 5433)
 #
@@ -41,6 +41,7 @@ run "db-check"              "pnpm turbo run db:check"
 run "contracts-determinism" "pnpm turbo run contracts:check-openapi-determinism"
 run "crypto-check"          "KMS_TEST_MODE=fake pnpm turbo run crypto:check"
 run "tokens-theme-check"    "pnpm turbo run tokens:check-theme-determinism"
+run "i18n-parity"           "pnpm turbo run i18n:check-parity"
 run "pii-scrape"            "pnpm turbo run contracts:check-pii-scrape"
 run "friction-budget"       "pnpm friction:test && pnpm friction:check"
 run "schema-diff"           "pnpm schema:test && pnpm schema:check"

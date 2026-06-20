@@ -77,6 +77,17 @@
         "../../pnpm-lock.yaml"
       ],
       "outputs": []
+    },
+    "i18n:check-parity": {
+      "dependsOn": [],
+      "inputs": [
+        "locales/**",
+        "scripts/**/*.ts",
+        "src/**/*.ts",
+        "package.json",
+        "../../pnpm-lock.yaml"
+      ],
+      "outputs": []
     }
   }
 }

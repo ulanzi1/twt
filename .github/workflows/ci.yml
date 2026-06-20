@@ -211,6 +211,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run tokens:check-theme-determinism
 
+  i18n-parity:
+    name: i18n-parity (bilingual surface contract — Hindi parity gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: install
+    # Bilingual surface contract gate (Story 2.1, AC3/AC5): assert every member-facing
+    # en/ translation key has a non-empty hi/ parity entry (architectural-freeze row 10).
+    # The pure core (packages/i18n/scripts/lib.ts) is unit-tested on the `test` job
+    # (@twt/i18n is a workspace); this job runs the impure check over locales/. A
+    # packages/i18n turbo task (the locale catalog is a single-workspace artifact, NO
+    # git-diff) — NOT a repo-root script and NO fetch-depth: 0. Green-with-teeth on the
+    # introducing PR: `common` defaults member-facing and is parity-enforced now; teeth
+    # grow domain-by-domain as Epic 2+ surfaces add locale strings (data-driven, no gate
+    # code change). admin-facing namespaces may ship English-only.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run i18n:check-parity
+
   pii-scrape:
     name: pii-scrape (FR-74 Public-vs-Private matrix gate)
     runs-on: ubuntu-latest
@@ -368,7 +395,7 @@ jobs:
     # AC3): enforces the UX-DR71 vocabulary register (prohibited member-visible terms →
     # canonical terminology + scarcity/panic/Pool-Reality-comparison tone prohibitions),
     # UX-DR73 + amendment-A2 numeral discipline (Devanagari digits operational-vs-ceremonial;
-    # inline locale formatting must route through packages/i18n at Story 2.1), and the
+    # packages/i18n is the sanctioned home for locale/numeral formatting (Story 2.1 landed), and the
     # FM-14 #2 token-governance subset (no magic-number color literals in component code).
     # Every finding names file + line + the canonical replacement (the benefit-mechanism
     # "name the offender" contract). Repo-global (a microcopy.yaml root config + a

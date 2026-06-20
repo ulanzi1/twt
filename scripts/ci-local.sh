@@ -46,6 +46,7 @@ run "friction-budget"       "pnpm friction:test && pnpm friction:check"
 run "schema-diff"           "pnpm schema:test && pnpm schema:check"
 run "benefit-mechanism"     "pnpm benefit:test && pnpm benefit:check"
 run "microcopy"             "pnpm microcopy:test && pnpm microcopy:check"
+run "cadence-check"         "pnpm cadence:check"
 
 # ── live-DB job (opt-in via DATABASE_URL) ─────────────────────────────────────
 if [ -n "${DATABASE_URL:-}" ]; then

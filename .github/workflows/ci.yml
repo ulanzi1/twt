@@ -395,6 +395,30 @@ jobs:
       - run: pnpm microcopy:test
       - run: pnpm microcopy:check
 
+  cadence-check:
+    name: cadence-check (AI-1 cadence-actuals gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # AI-1 preflight gate (Epic 1 retrospective): asserts ai-cadence-actuals.md
+    # exists and is opened for the current epic. Prevents the A-5 failure mode
+    # (file never created → 80 hr/wk NET assumption stays un-attested forever).
+    # Hard fail: file absent. Hard fail: no ## Epic N section (file is a stub).
+    # Warn: measurement rows still TBD (cycle open, mid-epic — not a failure).
+    # Static, no DB / network. See scripts/cadence-check/check.ts.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm cadence:check
+
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest

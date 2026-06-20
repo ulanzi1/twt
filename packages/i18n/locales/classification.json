@@ -1,0 +1,5 @@
+{
+  "$comment": "Surface-classification registry (Story 2.1, AC4). Maps a namespace (domain) to its surface class. The DEFAULT is member-facing — every member-visible surface is Hindi-primary per architectural-freeze row 10, so a namespace must carry full Hindi parity UNLESS it is explicitly declared admin-facing here. admin-facing namespaces may ship English-only. This static file is the single source of truth read by BOTH the runtime registry (src/classification.ts) and the build-time parity gate (scripts/check-parity.ts) — classification is declarative, NOT a hardcoded app-path allow-list (apps/member does not exist). `namespaces` is EMPTY at v1 (no admin-only namespace yet — `common` defaults member-facing and is parity-enforced NOW), mirroring the microcopy.yaml empty copy_globs pattern: green-with-teeth + forward-compat. App→class mapping today: apps/admin = admin-facing; apps/mobile (+ future apps/public member pages) = member-facing.",
+  "default": "member-facing",
+  "namespaces": {}
+}

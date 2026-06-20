@@ -22,6 +22,7 @@
     "contracts:check-openapi-determinism": "turbo run contracts:check-openapi-determinism",
     "tokens:check-theme": "turbo run tokens:check-theme-determinism",
     "tokens:generate-theme": "pnpm --filter @twt/tokens tokens:generate-theme",
+    "i18n:check": "turbo run i18n:check-parity",
     "pii:check": "turbo run contracts:check-pii-scrape",
     "crypto:check": "turbo run crypto:check",
     "friction:check": "tsx scripts/friction-budget/check.ts",

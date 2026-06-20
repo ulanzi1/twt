@@ -15,7 +15,7 @@ During Stories 1.11–1.17 (approximately 2026-06-13 through 2026-06-17), the Gi
 
 The gap was mitigated immediately: `scripts/ci-local.sh` was authored (commit `480128e`) to mirror all 14 ci.yml jobs sequentially, and `.githooks/pre-push` was installed to run `pnpm ci:local` before every push. Stories 1.11–1.17 were subsequently reconciled green on 2026-06-17 via `ci:local`. The sprint-status.yaml ledger entry for 2026-06-17b records this explicitly.
 
-This ADR ratifies the `ci:local` + pre-push model as the sanctioned merge gate while GitHub Actions remains unavailable, back-attests the 2026-06-17 reconciliation, and records the residual hardening gaps (AI-5).
+This ADR adopts the `ci:local` + pre-push model as the sanctioned merge gate while GitHub Actions remains unavailable, back-attests the 2026-06-17 reconciliation, and records the residual hardening gaps (AI-5). Adoption is solo-builder-authored and operative immediately per project convention; formal `ratified` status (per the adr-index legend: ≥2-trustee sign-off) remains pending.
 
 ## Decision
 
@@ -40,6 +40,7 @@ This ADR ratifies the `ci:local` + pre-push model as the sanctioned merge gate w
 | schema-diff | `pnpm schema:test && pnpm schema:check` |
 | benefit-mechanism | `pnpm benefit:test && pnpm benefit:check` |
 | microcopy | `pnpm microcopy:test && pnpm microcopy:check` |
+| cadence-check | `pnpm cadence:check` |
 | integration-tests | `pnpm db:migrate && pnpm turbo run test --force --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue` _(opt-in: `DATABASE_URL` must be set to the twt-test-pg container on port 5433)_ |
 
 A non-zero exit from any job fails the run and blocks the push.
@@ -92,4 +93,4 @@ When GitHub Actions is restored, this ADR is superseded by a successor entry tha
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
-| 2026-06-20 | (initial draft) | BigDev (Solo Builder) | Authored at Epic 1 retrospective AI-4 closure — ratifies `ci:local` + pre-push as sanctioned merge gate; back-attests 1.11–1.17 reconciliation green 2026-06-17; records AI-5 hardening gaps as open follow-ups |
+| 2026-06-20 | (initial draft) | BigDev (Solo Builder) | Authored at Epic 1 retrospective AI-4 closure — adopts `ci:local` + pre-push as sanctioned merge gate (formal trustee ratification pending); back-attests 1.11–1.17 reconciliation green 2026-06-17; records AI-5 hardening gaps as open follow-ups |

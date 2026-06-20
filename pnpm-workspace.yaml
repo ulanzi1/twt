@@ -1,3 +1,11 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
+
+# Without this, pnpm's default "ignore build scripts" policy leaves esbuild's
+# postinstall (native binary fetch) unrun, so a hoisted @esbuild/<platform>
+# package can end up at a version that doesn't match the JS wrapper version
+# tsx/vite/vitest actually require -- "Host version does not match binary
+# version" at runtime. Confirmed reproducible on a clean install (2026-06-20).
+onlyBuiltDependencies:
+  - esbuild

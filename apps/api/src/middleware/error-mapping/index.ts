@@ -6,6 +6,7 @@
 //   1. Zod validation failures (fastify-type-provider-zod) → 400 `request.validation`.
 //   2. `ApiError` (this surface's own errors) → its statusCode/code/details.
 //   3. `AuthorizationDeniedError` (RBAC second guard) → 403 via its own projector.
+//   3a. `ToneReviewRequiredError` (tone-review publish gate, Story 2.2) → 409 via projector.
 //   4. Known domain errors (scope invalid/missing, branded-id invalid) → mapped 4xx/5xx.
 //   5. Anything else → 500 `internal.error` with NO internal detail leaked.
 //
@@ -17,6 +18,7 @@ import {
   AuthorizationDeniedError,
   InvalidPariwarScopeError,
   PariwarScopeMissingError,
+  ToneReviewRequiredError,
   ids,
   type ErrorResponseShape,
 } from '@twt/domain';
@@ -69,6 +71,13 @@ export function errorMappingHandler(
   // (3) RBAC denial (the second guard — §2.6).
   if (error instanceof AuthorizationDeniedError) {
     void reply.status(403).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3a) Tone-review publish gate denial (Story 2.2) → 409 `tone-review-required`
+  // (matches Story 2.4 publish contract). Same own-projector pattern as the RBAC 403.
+  if (error instanceof ToneReviewRequiredError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
     return;
   }
 

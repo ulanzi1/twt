@@ -21,6 +21,7 @@ import type { StepUpOtpDelivery, StepUpOtpDeliveryPort } from '../../src/modules
 import { noopTurnstileVerifier, type TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider, type WebAuthnProvider } from '../../src/modules/auth/shared/webauthn.js';
 import { createFakeDeployTrigger, type DeployTrigger } from '../../src/modules/pariwar-provisioning/deploy-trigger.js';
+import type { ToneReviewAuditEvent, ToneReviewAuditSink } from '../../src/modules/tone-review/index.js';
 import { buildServer } from '../../src/server.js';
 
 export const DATABASE_URL = process.env['DATABASE_URL'];
@@ -66,6 +67,17 @@ export class CapturingAuditSink implements AuthAuditSink {
   }
 }
 
+/** A tone-review audit sink that records every emitted event for assertions (Story 2.2). */
+export class CapturingToneReviewAuditSink implements ToneReviewAuditSink {
+  public readonly events: ToneReviewAuditEvent[] = [];
+  public emit(event: ToneReviewAuditEvent): void {
+    this.events.push(event);
+  }
+  public ofType(type: string): ToneReviewAuditEvent[] {
+    return this.events.filter((e) => e.type === type);
+  }
+}
+
 /** A step-up delivery that records every code so tests can complete the flow. */
 export class CapturingStepUpDelivery implements StepUpOtpDeliveryPort {
   public readonly deliveries: StepUpOtpDelivery[] = [];
@@ -79,6 +91,7 @@ export class CapturingStepUpDelivery implements StepUpOtpDeliveryPort {
 
 export interface TestDepsOverrides {
   auditSink?: AuthAuditSink;
+  toneReviewAuditSink?: ToneReviewAuditSink;
   stepUpDelivery?: StepUpOtpDeliveryPort;
   turnstile?: TurnstileVerifier;
   webauthn?: WebAuthnProvider;
@@ -91,6 +104,7 @@ export interface TestDeps {
   deps: AppDeps;
   pool: pg.Pool;
   auditSink: CapturingAuditSink;
+  toneReviewAuditSink: CapturingToneReviewAuditSink;
   stepUpDelivery: CapturingStepUpDelivery;
 }
 
@@ -105,6 +119,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   });
 
   const auditSink = (overrides.auditSink as CapturingAuditSink) ?? new CapturingAuditSink();
+  const toneReviewAuditSink =
+    (overrides.toneReviewAuditSink as CapturingToneReviewAuditSink) ??
+    new CapturingToneReviewAuditSink();
   const stepUpDelivery =
     (overrides.stepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
 
@@ -121,6 +138,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     encryption: enc,
     pepper: Buffer.from(TEST_PEPPER, 'utf-8'),
     auditSink,
+    toneReviewAuditSink,
     stepUpDelivery,
     turnstile: overrides.turnstile ?? noopTurnstileVerifier,
     webauthn:
@@ -135,7 +153,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     deployTrigger: overrides.deployTrigger ?? createFakeDeployTrigger(),
     clock: overrides.clock ?? ((): Date => new Date()),
   };
-  return { deps, pool, auditSink, stepUpDelivery };
+  return { deps, pool, auditSink, toneReviewAuditSink, stepUpDelivery };
 }
 
 export interface TestApp extends TestDeps {

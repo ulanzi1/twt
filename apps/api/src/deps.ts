@@ -21,6 +21,7 @@ import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.
 import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
+import { createToneReviewAuditSink } from './modules/tone-review/index.js';
 
 /** Derive a deterministic 32-byte fake key from a label + the pepper (local/CI only). */
 function deriveFakeKey(label: string, pepper: string): Uint8Array {
@@ -134,6 +135,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     pepper: Buffer.from(pepper, 'utf-8'),
     // The real FR-47 hash-chain sink (Story 1.10) replaces consoleAuthAuditSink.
     auditSink: createAuditLogSink(servicePool),
+    // Tone-review sign-off / publish-blocked audit seam (Story 2.2) — same hash-chain
+    // writer + service pool as auditSink, but the dedicated tone-review taxonomy.
+    toneReviewAuditSink: createToneReviewAuditSink(servicePool),
     stepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd }),
     turnstile: await buildTurnstileVerifier(config),
     webauthn: createSimpleWebAuthnProvider({

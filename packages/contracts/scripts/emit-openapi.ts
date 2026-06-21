@@ -95,6 +95,20 @@ const {
   ProvisionedPariwar,
   ProvisioningStatusList,
 } = await import('../src/pariwar-provisioning/index.js');
+// Story 2.4 — Niyamavali amendment-workflow contracts. THE FIRST niyamavali
+// endpoints (the 2.3 clause DTOs were components-free), so apps/api serves these
+// tenant-scoped routes now and they register real `paths` + components.
+const {
+  ClauseVersionResponse,
+  NiyamavaliAmendmentResponse,
+  ClauseDraftResponse,
+  ClauseDraftStatusSchema,
+  CreateDraftBody,
+  UpdateClauseDraftRequest,
+  ToneReviewSignoffRequest,
+  DiffPreviewResponse,
+  PublishClauseResponse,
+} = await import('../src/rules/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -143,6 +157,18 @@ const DeployStatusViewComponent = DeployStatusView.openapi('DeployStatusView');
 const DeployTriggerResponseComponent = DeployTriggerResponse.openapi('DeployTriggerResponse');
 const ProvisionedPariwarComponent = ProvisionedPariwar.openapi('ProvisionedPariwar');
 const ProvisioningStatusListComponent = ProvisioningStatusList.openapi('ProvisioningStatusList');
+
+// Story 2.4 — Niyamavali amendment-workflow component schemas.
+const ClauseVersionResponseComponent = ClauseVersionResponse.openapi('ClauseVersionResponse');
+const NiyamavaliAmendmentResponseComponent = NiyamavaliAmendmentResponse.openapi(
+  'NiyamavaliAmendmentResponse',
+);
+const ClauseDraftResponseComponent = ClauseDraftResponse.openapi('ClauseDraftResponse');
+const CreateDraftBodyComponent = CreateDraftBody.openapi('CreateDraftBody');
+const UpdateClauseDraftRequestComponent = UpdateClauseDraftRequest.openapi('UpdateClauseDraftRequest');
+const ToneReviewSignoffRequestComponent = ToneReviewSignoffRequest.openapi('ToneReviewSignoffRequest');
+const DiffPreviewResponseComponent = DiffPreviewResponse.openapi('DiffPreviewResponse');
+const PublishClauseResponseComponent = PublishClauseResponse.openapi('PublishClauseResponse');
 
 // Story 1.9 — admin-auth component schemas (request + response objects).
 const authComponents = {
@@ -196,6 +222,15 @@ registry.register('DeployStatusView', DeployStatusViewComponent);
 registry.register('DeployTriggerResponse', DeployTriggerResponseComponent);
 registry.register('ProvisionedPariwar', ProvisionedPariwarComponent);
 registry.register('ProvisioningStatusList', ProvisioningStatusListComponent);
+// Story 2.4 — Niyamavali amendment-workflow components.
+registry.register('ClauseVersionResponse', ClauseVersionResponseComponent);
+registry.register('NiyamavaliAmendmentResponse', NiyamavaliAmendmentResponseComponent);
+registry.register('ClauseDraftResponse', ClauseDraftResponseComponent);
+registry.register('CreateDraftBody', CreateDraftBodyComponent);
+registry.register('UpdateClauseDraftRequest', UpdateClauseDraftRequestComponent);
+registry.register('ToneReviewSignoffRequest', ToneReviewSignoffRequestComponent);
+registry.register('DiffPreviewResponse', DiffPreviewResponseComponent);
+registry.register('PublishClauseResponse', PublishClauseResponseComponent);
 
 // Story 1.9 — register the admin-auth components.
 for (const [name, schema] of Object.entries(authComponents)) {
@@ -479,6 +514,269 @@ registry.registerPath({
     },
     401: errorResponse('Authentication required'),
     403: forbidden('pariwar.provision'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 2.4 — Niyamavali amendment workflow (TENANT-SCOPED, RBAC-gated) ─────
+// The first `/p/{pariwarId}/`-scoped admin surface. Every route runs the
+// [requireAdminSession, scopeResolutionHook, requirePermissionHook] chain;
+// reads gate on niyamavali.amend|review, writes on niyamavali.amend (sign-off on
+// niyamavali.review). Publish additionally mounts the tone-review sign-off gate
+// (409 tone-review-required) — Story 2.2's gate, here mounted on its first route.
+const niyTags = ['niyamavali'];
+const niyPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const niyClauseParams = z.object({ pariwarId: z.string().uuid(), clauseId: z.string() });
+const niyDraftParams = z.object({ pariwarId: z.string().uuid(), draftId: z.string().uuid() });
+const niyListQuery = z.object({ limit: z.number().int().min(1).max(100).optional() });
+const niyDraftListQuery = z.object({
+  limit: z.number().int().min(1).max(100).optional(),
+  status: ClauseDraftStatusSchema.optional(),
+});
+const niyForbidden = errorResponse('Forbidden — the required niyamavali permission at this scope');
+const niyAuth = errorResponse('Authentication required');
+const niyNotFound = errorResponse('Not found');
+const niyValidation = errorResponse('Request validation failed');
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses',
+  summary: 'List the Niyamavali registry (latest version per clause)',
+  description:
+    'Returns the chain-head (latest version) of every clause in the Pariwar, ' +
+    'newest-first (forced-paginated). Requires niyamavali.amend at pariwar scope.',
+  tags: niyTags,
+  request: { params: niyPariwarParams, query: niyListQuery },
+  responses: {
+    200: {
+      description: 'Registry clauses (latest version each)',
+      content: { 'application/json': { schema: z.array(ClauseVersionResponseComponent) } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/{clauseId}/versions',
+  summary: 'Version history of a clause (oldest → newest)',
+  description:
+    'Returns the most-recent `limit` version rows of a clause_id (forced-paginated, ' +
+    'Story 1.14). Requires niyamavali.amend at pariwar scope.',
+  tags: niyTags,
+  request: { params: niyClauseParams, query: niyListQuery },
+  responses: {
+    200: {
+      description: 'Clause version history',
+      content: { 'application/json': { schema: z.array(ClauseVersionResponseComponent) } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+    404: niyNotFound,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/niyamavali/amendments',
+  summary: 'List the amendment ledger (time-ordered)',
+  description:
+    'Returns the niyamavali_amendments ledger newest-first (the De4 (pariwar_id, ' +
+    'created_at) index). Requires niyamavali.amend at pariwar scope.',
+  tags: niyTags,
+  request: { params: niyPariwarParams, query: niyListQuery },
+  responses: {
+    200: {
+      description: 'Amendment ledger',
+      content: { 'application/json': { schema: z.array(NiyamavaliAmendmentResponseComponent) } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts',
+  summary: 'List clause drafts (optionally by lifecycle state)',
+  description:
+    'Returns drafts for the Pariwar, newest-first, optionally filtered by status ' +
+    '(e.g. in_review to find drafts awaiting sign-off). Requires niyamavali.amend.',
+  tags: niyTags,
+  request: { params: niyPariwarParams, query: niyDraftListQuery },
+  responses: {
+    200: {
+      description: 'Clause drafts',
+      content: { 'application/json': { schema: z.array(ClauseDraftResponseComponent) } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts',
+  summary: 'Create a clause draft (create or amend)',
+  description:
+    'Creates a server-persisted draft (the non-author reviewer loads the exact ' +
+    'pending content). Body is a discriminated union on operation. Requires niyamavali.amend.',
+  tags: niyTags,
+  request: {
+    params: niyPariwarParams,
+    body: { content: { 'application/json': { schema: CreateDraftBodyComponent } }, required: true },
+  },
+  responses: {
+    200: {
+      description: 'Draft created',
+      content: { 'application/json': { schema: ClauseDraftResponseComponent } },
+    },
+    400: niyValidation,
+    401: niyAuth,
+    403: niyForbidden,
+    409: errorResponse('A clause-id conflict or an existing open draft for this clause'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}',
+  summary: 'Load a single clause draft',
+  description:
+    'Returns the draft (incl. the pending payload) — the mechanism by which a ' +
+    'NON-AUTHOR reviewer loads the exact content to review (AC1d). Requires ' +
+    'niyamavali.amend or niyamavali.review.',
+  tags: niyTags,
+  request: { params: niyDraftParams },
+  responses: {
+    200: {
+      description: 'The draft',
+      content: { 'application/json': { schema: ClauseDraftResponseComponent } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+    404: niyNotFound,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}',
+  summary: 'Edit a clause draft (resets the tone-review sign-off)',
+  description:
+    'Patches a non-published draft. ANY edit resets the draft to `draft` and clears ' +
+    'a prior tone-review sign-off (content-bound, AC1d). Requires niyamavali.amend.',
+  tags: niyTags,
+  request: {
+    params: niyDraftParams,
+    body: {
+      content: { 'application/json': { schema: UpdateClauseDraftRequestComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'Draft updated',
+      content: { 'application/json': { schema: ClauseDraftResponseComponent } },
+    },
+    400: niyValidation,
+    401: niyAuth,
+    403: niyForbidden,
+    404: niyNotFound,
+    409: errorResponse('The draft is published or discarded and cannot be edited'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/diff',
+  summary: 'Preview the draft diff (structured + rendered)',
+  description:
+    'Returns BOTH the structured-payload diff (computePayloadDiff vs the current ' +
+    'published version, or {} for a create) AND a rendered display-field diff (AC1c). ' +
+    'Requires niyamavali.amend or niyamavali.review.',
+  tags: niyTags,
+  request: { params: niyDraftParams },
+  responses: {
+    200: {
+      description: 'Diff preview',
+      content: { 'application/json': { schema: DiffPreviewResponseComponent } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+    404: niyNotFound,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/submit-for-review',
+  summary: 'Submit a draft for tone-review',
+  description: 'Transitions a draft → in_review, routing it to a non-author reviewer. Requires niyamavali.amend.',
+  tags: niyTags,
+  request: { params: niyDraftParams },
+  responses: {
+    200: {
+      description: 'Submitted for review',
+      content: { 'application/json': { schema: ClauseDraftResponseComponent } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+    404: niyNotFound,
+    409: errorResponse('The draft is not in a submittable state'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/tone-review',
+  summary: 'Record a non-author tone-review sign-off',
+  description:
+    'A reviewer (niyamavali.review) records a sign-off bound to the exact reviewed ' +
+    'payload. Rejects a self-review (author === reviewer) with 409. Emits the Story ' +
+    '2.2 tone_review.signoff audit line.',
+  tags: niyTags,
+  request: {
+    params: niyDraftParams,
+    body: {
+      content: { 'application/json': { schema: ToneReviewSignoffRequestComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'Sign-off recorded',
+      content: { 'application/json': { schema: ClauseDraftResponseComponent } },
+    },
+    400: niyValidation,
+    401: niyAuth,
+    403: niyForbidden,
+    404: niyNotFound,
+    409: errorResponse('Self-review, or the draft is not in review'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/publish',
+  summary: 'Publish a clause draft (audit-logged, tone-review-gated)',
+  description:
+    'Mints the immutable clause_versions row + a single audit line carrying the diff ' +
+    'hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-' +
+    'notification hook (AC3 placeholder). Gated on a recorded non-author, content-' +
+    'current tone-review sign-off — without one, 409 tone-review-required (AC4). ' +
+    'Requires niyamavali.amend.',
+  tags: niyTags,
+  request: { params: niyDraftParams },
+  responses: {
+    200: {
+      description: 'Published',
+      content: { 'application/json': { schema: PublishClauseResponseComponent } },
+    },
+    401: niyAuth,
+    403: niyForbidden,
+    404: niyNotFound,
+    409: errorResponse('tone-review-required, or the draft is not signed off'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

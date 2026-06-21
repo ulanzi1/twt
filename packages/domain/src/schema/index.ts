@@ -28,6 +28,9 @@ export * from './role_grants.js';
 // append-only amendment-with-diff ledger (the FR-7 rule-registry shape).
 export * from './clause_versions.js';
 export * from './niyamavali_amendments.js';
+// Story 2.4 — the server-persisted Niyamavali draft store (the central net-new
+// design; pre-publish pending content + content-bound tone-review sign-off).
+export * from './clause_drafts.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

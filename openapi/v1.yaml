@@ -912,6 +912,564 @@ components:
           - pathScope
           - latestDeploy
         additionalProperties: false
+    ClauseVersionResponse:
+      type: object
+      properties:
+        clauseVersionId:
+          type: string
+          format: uuid
+        clauseId:
+          type: string
+          pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+        pariwarId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          exclusiveMinimum: 0
+        effectiveDate:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: {}
+        benefitMechanism:
+          type: string
+          enum: &a5
+            - pool
+            - reserve
+        predecessorClauseIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        supersededByVersion:
+          type:
+            - string
+            - "null"
+          format: uuid
+        deprecatedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        authoredByActor:
+          type:
+            - string
+            - "null"
+          format: uuid
+        authoredAt:
+          type: string
+          format: date-time
+        auditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - clauseVersionId
+        - clauseId
+        - pariwarId
+        - version
+        - effectiveDate
+        - payload
+        - benefitMechanism
+        - predecessorClauseIds
+        - supersededByVersion
+        - deprecatedAt
+        - authoredByActor
+        - authoredAt
+        - auditId
+      additionalProperties: false
+    NiyamavaliAmendmentResponse:
+      type: object
+      properties:
+        amendmentId:
+          type: string
+          format: uuid
+        pariwarId:
+          type: string
+          format: uuid
+        fromClauseVersionId:
+          type: string
+          format: uuid
+        toClauseVersionId:
+          type: string
+          format: uuid
+        diffDocument:
+          type: object
+          properties:
+            added:
+              type: object
+              additionalProperties: {}
+            removed:
+              type: object
+              additionalProperties: {}
+            changed:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  from: {}
+                  to: {}
+          required:
+            - added
+            - removed
+            - changed
+          additionalProperties: false
+        affectedMemberScope:
+          oneOf:
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - all_members
+              required:
+                - kind
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - past_lockin
+              required:
+                - kind
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - rule_subclause
+                clause_id:
+                  type: string
+                  pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+                subclause:
+                  type: string
+                  minLength: 1
+              required:
+                - kind
+                - clause_id
+                - subclause
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - named_cohort
+                definition:
+                  type: string
+                  minLength: 1
+              required:
+                - kind
+                - definition
+              additionalProperties: false
+        createdAt:
+          type: string
+          format: date-time
+        auditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - amendmentId
+        - pariwarId
+        - fromClauseVersionId
+        - toClauseVersionId
+        - diffDocument
+        - affectedMemberScope
+        - createdAt
+        - auditId
+      additionalProperties: false
+    ClauseDraftResponse:
+      type: object
+      properties:
+        draftId:
+          type: string
+          format: uuid
+        pariwarId:
+          type: string
+          format: uuid
+        clauseId:
+          type: string
+          pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+        operation:
+          type: string
+          enum:
+            - create
+            - amend
+        payload:
+          type: object
+          additionalProperties: {}
+        effectiveDate:
+          type: string
+          format: date-time
+        benefitMechanism:
+          type: string
+          enum: *a5
+        affectedMemberScope:
+          oneOf:
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - all_members
+              required:
+                - kind
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - past_lockin
+              required:
+                - kind
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - rule_subclause
+                clause_id:
+                  type: string
+                  pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+                subclause:
+                  type: string
+                  minLength: 1
+              required:
+                - kind
+                - clause_id
+                - subclause
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - named_cohort
+                definition:
+                  type: string
+                  minLength: 1
+              required:
+                - kind
+                - definition
+              additionalProperties: false
+            - type: "null"
+        status:
+          type: string
+          enum: &a7
+            - draft
+            - in_review
+            - signed_off
+            - published
+            - discarded
+        authoredByActor:
+          type: string
+          format: uuid
+        toneReviewedBy:
+          type:
+            - string
+            - "null"
+          format: uuid
+        toneReviewedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        toneReviewContentHash:
+          type:
+            - string
+            - "null"
+        publishedClauseVersionId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        auditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - draftId
+        - pariwarId
+        - clauseId
+        - operation
+        - payload
+        - effectiveDate
+        - benefitMechanism
+        - affectedMemberScope
+        - status
+        - authoredByActor
+        - toneReviewedBy
+        - toneReviewedAt
+        - toneReviewContentHash
+        - publishedClauseVersionId
+        - createdAt
+        - updatedAt
+        - auditId
+      additionalProperties: false
+    CreateDraftBody:
+      oneOf:
+        - type: object
+          properties:
+            operation:
+              type: string
+              enum:
+                - create
+            clauseId:
+              type: string
+              pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+            payload:
+              type: object
+              additionalProperties: {}
+            effectiveDate:
+              type: string
+              format: date-time
+            benefitMechanism:
+              type: string
+              enum: *a5
+          required:
+            - operation
+            - clauseId
+            - payload
+            - effectiveDate
+            - benefitMechanism
+          additionalProperties: false
+        - type: object
+          properties:
+            operation:
+              type: string
+              enum:
+                - amend
+            clauseId:
+              type: string
+              pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+            payload:
+              type: object
+              additionalProperties: {}
+            effectiveDate:
+              type: string
+              format: date-time
+            affectedMemberScope:
+              oneOf:
+                - type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - all_members
+                  required:
+                    - kind
+                  additionalProperties: false
+                - type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - past_lockin
+                  required:
+                    - kind
+                  additionalProperties: false
+                - type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - rule_subclause
+                    clause_id:
+                      type: string
+                      pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+                    subclause:
+                      type: string
+                      minLength: 1
+                  required:
+                    - kind
+                    - clause_id
+                    - subclause
+                  additionalProperties: false
+                - type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - named_cohort
+                    definition:
+                      type: string
+                      minLength: 1
+                  required:
+                    - kind
+                    - definition
+                  additionalProperties: false
+            benefitMechanism:
+              type: string
+              enum: *a5
+          required:
+            - operation
+            - clauseId
+            - payload
+            - effectiveDate
+            - affectedMemberScope
+          additionalProperties: false
+    UpdateClauseDraftRequest:
+      type: object
+      properties:
+        payload:
+          type: object
+          additionalProperties: {}
+        effectiveDate:
+          type: string
+          format: date-time
+        benefitMechanism:
+          type: string
+          enum: *a5
+        affectedMemberScope:
+          oneOf:
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - all_members
+              required:
+                - kind
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - past_lockin
+              required:
+                - kind
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - rule_subclause
+                clause_id:
+                  type: string
+                  pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+                subclause:
+                  type: string
+                  minLength: 1
+              required:
+                - kind
+                - clause_id
+                - subclause
+              additionalProperties: false
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - named_cohort
+                definition:
+                  type: string
+                  minLength: 1
+              required:
+                - kind
+                - definition
+              additionalProperties: false
+            - type: "null"
+      additionalProperties: false
+    ToneReviewSignoffRequest:
+      type: object
+      properties:
+        confirm:
+          type: boolean
+          enum:
+            - true
+      required:
+        - confirm
+      additionalProperties: false
+    DiffPreviewResponse:
+      type: object
+      properties:
+        structuredDiff:
+          type: object
+          properties:
+            added:
+              type: object
+              additionalProperties: {}
+            removed:
+              type: object
+              additionalProperties: {}
+            changed:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  from: {}
+                  to: {}
+          required:
+            - added
+            - removed
+            - changed
+          additionalProperties: false
+        renderedDiff:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              before:
+                type:
+                  - string
+                  - "null"
+              after:
+                type:
+                  - string
+                  - "null"
+              changed:
+                type: boolean
+            required:
+              - field
+              - before
+              - after
+              - changed
+            additionalProperties: false
+      required:
+        - structuredDiff
+        - renderedDiff
+      additionalProperties: false
+    PublishClauseResponse:
+      type: object
+      properties:
+        clauseVersionId:
+          type: string
+          format: uuid
+        clauseId:
+          type: string
+          pattern: ^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$
+        version:
+          type: integer
+          exclusiveMinimum: 0
+        auditId:
+          type: string
+          format: uuid
+      required:
+        - clauseVersionId
+        - clauseId
+        - version
+        - auditId
+      additionalProperties: false
     LoginRequest:
       type: object
       properties:
@@ -1737,6 +2295,537 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Pariwar not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses:
+    get:
+      summary: List the Niyamavali registry (latest version per clause)
+      description: Returns the chain-head (latest version) of every clause in the Pariwar, newest-first (forced-paginated). Requires niyamavali.amend at pariwar scope.
+      tags: &a6
+        - niyamavali
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Registry clauses (latest version each)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClauseVersionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses/{clauseId}/versions:
+    get:
+      summary: Version history of a clause (oldest → newest)
+      description: Returns the most-recent `limit` version rows of a clause_id (forced-paginated, Story 1.14). Requires niyamavali.amend at pariwar scope.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+          required: true
+          name: clauseId
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Clause version history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClauseVersionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/amendments:
+    get:
+      summary: List the amendment ledger (time-ordered)
+      description: Returns the niyamavali_amendments ledger newest-first (the De4 (pariwar_id, created_at) index). Requires niyamavali.amend at pariwar scope.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Amendment ledger
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NiyamavaliAmendmentResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses/drafts:
+    get:
+      summary: List clause drafts (optionally by lifecycle state)
+      description: Returns drafts for the Pariwar, newest-first, optionally filtered by status (e.g. in_review to find drafts awaiting sign-off). Requires niyamavali.amend.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            enum: *a7
+          required: false
+          name: status
+          in: query
+      responses:
+        "200":
+          description: Clause drafts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClauseDraftResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create a clause draft (create or amend)
+      description: Creates a server-persisted draft (the non-author reviewer loads the exact pending content). Body is a discriminated union on operation. Requires niyamavali.amend.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDraftBody"
+      responses:
+        "200":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClauseDraftResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: A clause-id conflict or an existing open draft for this clause
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}:
+    get:
+      summary: Load a single clause draft
+      description: Returns the draft (incl. the pending payload) — the mechanism by which a NON-AUTHOR reviewer loads the exact content to review (AC1d). Requires niyamavali.amend or niyamavali.review.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: draftId
+          in: path
+      responses:
+        "200":
+          description: The draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClauseDraftResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Edit a clause draft (resets the tone-review sign-off)
+      description: Patches a non-published draft. ANY edit resets the draft to `draft` and clears a prior tone-review sign-off (content-bound, AC1d). Requires niyamavali.amend.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: draftId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClauseDraftRequest"
+      responses:
+        "200":
+          description: Draft updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClauseDraftResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The draft is published or discarded and cannot be edited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/diff:
+    get:
+      summary: Preview the draft diff (structured + rendered)
+      description: Returns BOTH the structured-payload diff (computePayloadDiff vs the current published version, or {} for a create) AND a rendered display-field diff (AC1c). Requires niyamavali.amend or niyamavali.review.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: draftId
+          in: path
+      responses:
+        "200":
+          description: Diff preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiffPreviewResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/submit-for-review:
+    post:
+      summary: Submit a draft for tone-review
+      description: Transitions a draft → in_review, routing it to a non-author reviewer. Requires niyamavali.amend.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: draftId
+          in: path
+      responses:
+        "200":
+          description: Submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClauseDraftResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The draft is not in a submittable state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/tone-review:
+    post:
+      summary: Record a non-author tone-review sign-off
+      description: A reviewer (niyamavali.review) records a sign-off bound to the exact reviewed payload. Rejects a self-review (author === reviewer) with 409. Emits the Story 2.2 tone_review.signoff audit line.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: draftId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToneReviewSignoffRequest"
+      responses:
+        "200":
+          description: Sign-off recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClauseDraftResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Self-review, or the draft is not in review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/publish:
+    post:
+      summary: Publish a clause draft (audit-logged, tone-review-gated)
+      description: Mints the immutable clause_versions row + a single audit line carrying the diff hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-notification hook (AC3 placeholder). Gated on a recorded non-author, content-current tone-review sign-off — without one, 409 tone-review-required (AC4). Requires niyamavali.amend.
+      tags: *a6
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: draftId
+          in: path
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishClauseResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required niyamavali permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: tone-review-required, or the draft is not signed off
           content:
             application/json:
               schema:

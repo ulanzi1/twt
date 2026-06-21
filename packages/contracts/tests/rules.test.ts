@@ -18,9 +18,16 @@ import { BenefitMechanism } from '../src/rules/benefit-mechanism.js';
 import {
   AffectedMemberScopeSchema,
   CLAUSE_ID_PATTERN,
+  ClauseDraftOperationSchema,
+  ClauseDraftResponse,
+  ClauseDraftStatusSchema,
   ClauseIdSchema,
   ClauseResolutionQuery,
   ClauseVersionResponse,
+  CreateClauseDraftRequest,
+  PublishClauseResponse,
+  ToneReviewSignoffRequest,
+  type ClauseDraftResponse as ClauseDraftResponseType,
   type ClauseVersionResponse as ClauseVersionResponseType,
 } from '../src/rules/index.js';
 
@@ -49,6 +56,34 @@ type WireProjection = Omit<
 type _AssertWireFromDrizzle = WireProjection extends ClauseVersionResponseType ? true : never;
 const _wireFromDrizzle: _AssertWireFromDrizzle = true;
 void _wireFromDrizzle;
+
+// ── Story 2.4 — clause_drafts row → wire projection → ClauseDraftResponse ─────
+type DraftRow = typeof schema.clauseDrafts.$inferSelect;
+type DraftWireProjection = Omit<
+  DraftRow,
+  | 'effectiveDate'
+  | 'toneReviewedAt'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'draftId'
+  | 'pariwarId'
+  | 'clauseId'
+  | 'affectedMemberScope'
+  | 'publishedClauseVersionId'
+> & {
+  effectiveDate: string;
+  toneReviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  draftId: ClauseDraftResponseType['draftId'];
+  pariwarId: ClauseDraftResponseType['pariwarId'];
+  clauseId: ClauseDraftResponseType['clauseId'];
+  affectedMemberScope: ClauseDraftResponseType['affectedMemberScope'];
+  publishedClauseVersionId: ClauseDraftResponseType['publishedClauseVersionId'];
+};
+type _AssertDraftWireFromDrizzle = DraftWireProjection extends ClauseDraftResponseType ? true : never;
+const _draftWireFromDrizzle: _AssertDraftWireFromDrizzle = true;
+void _draftWireFromDrizzle;
 
 const VALID_WIRE = {
   clauseVersionId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
@@ -161,6 +196,68 @@ describe('AffectedMemberScopeSchema (architecture §1.10)', () => {
         subclause: '',
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('Story 2.4 — clause-draft enum lockstep (anti-drift guard)', () => {
+  it('domain clause_draft_operation pgEnum === contracts ClauseDraftOperationSchema.options', () => {
+    expect([...schema.clauseDraftOperationEnum.enumValues].sort()).toEqual(
+      [...ClauseDraftOperationSchema.options].sort(),
+    );
+  });
+
+  it('domain clause_draft_status pgEnum === contracts ClauseDraftStatusSchema.options', () => {
+    expect([...schema.clauseDraftStatusEnum.enumValues].sort()).toEqual(
+      [...ClauseDraftStatusSchema.options].sort(),
+    );
+  });
+});
+
+describe('Story 2.4 — draft endpoint DTOs', () => {
+  it('ClauseDraftResponse is .strict()', () => {
+    expect(() => assertStrict(ClauseDraftResponse)).not.toThrow();
+  });
+
+  it('CreateClauseDraftRequest accepts a well-formed create body, rejects unknown keys', () => {
+    const ok = CreateClauseDraftRequest.safeParse({
+      operation: 'create',
+      clauseId: 'niy.a.b',
+      payload: { rule_code: 'R1' },
+      effectiveDate: '2026-07-01T00:00:00.000Z',
+      benefitMechanism: 'pool',
+    });
+    expect(ok.success).toBe(true);
+    expect(
+      CreateClauseDraftRequest.safeParse({
+        operation: 'create',
+        clauseId: 'niy.a.b',
+        payload: {},
+        effectiveDate: '2026-07-01T00:00:00.000Z',
+        benefitMechanism: 'pool',
+        __x: 1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('ToneReviewSignoffRequest requires confirm === true', () => {
+    expect(ToneReviewSignoffRequest.safeParse({ confirm: true }).success).toBe(true);
+    expect(ToneReviewSignoffRequest.safeParse({ confirm: false }).success).toBe(false);
+    expect(ToneReviewSignoffRequest.safeParse({}).success).toBe(false);
+  });
+
+  it('PublishClauseResponse requires a non-null auditId (AC5)', () => {
+    const base = {
+      clauseVersionId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      clauseId: 'niy.a.b',
+      version: 2,
+    };
+    expect(PublishClauseResponse.safeParse({ ...base, auditId: null }).success).toBe(false);
+    expect(
+      PublishClauseResponse.safeParse({
+        ...base,
+        auditId: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+      }).success,
+    ).toBe(true);
   });
 });
 

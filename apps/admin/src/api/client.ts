@@ -11,23 +11,33 @@ import {
   AuditIntegrityAcknowledgement,
   AuditIntegrityCheckList,
   AuditIntegrityCheckResult,
+  ClauseDraftResponse,
+  ClauseVersionResponse,
   DeployTriggerResponse,
+  DiffPreviewResponse,
   LoginResponse,
   ProvisionedPariwar,
   ProvisioningStatusList,
+  PublishClauseResponse,
   RecoveryConsumeResponse,
   SessionResponse,
   type AddPariwarRequest as AddPariwarPayload,
   type AuditIntegrityAcknowledgement as Acknowledgement,
   type AuditIntegrityCheckList as CheckList,
   type AuditIntegrityCheckResult as CheckResult,
+  type ClauseDraftResponse as ClauseDraft,
+  type ClauseVersionResponse as ClauseVersion,
+  type CreateDraftBody,
   type DeployTriggerResponse as DeployResult,
+  type DiffPreviewResponse as DiffPreview,
   type LoginResponse as LoginResult,
   type ProvisionedPariwar as Provisioned,
   type ProvisioningStatusList as StatusList,
+  type PublishClauseResponse as Published,
   type SessionResponse as Session,
+  type UpdateClauseDraftRequest,
 } from '@twt/contracts';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 /** A typed transport error — carries the HTTP status + the server's error code. */
 export class ApiError extends Error {
@@ -130,6 +140,84 @@ export function triggerDeploy(pariwarId: string): Promise<DeployResult> {
   return apiFetch(
     `/api/v1/provisioning/pariwars/${encodeURIComponent(pariwarId)}/deploy`,
     DeployTriggerResponse,
+    { method: 'POST', body: JSON.stringify({}) },
+  );
+}
+
+// ── Niyamavali amendment-workflow surface (Story 2.4) ─────────────────────────
+// Tenant-scoped under /p/:pariwarId/. Each call parses the response with the
+// `@twt/contracts` schema the server validates against (DD-7 — no shadow types).
+
+const niyBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/niyamavali`;
+
+/** GET the registry (latest version per clause), newest-first. */
+export function listClauses(pariwarId: string, limit = 50): Promise<ClauseVersion[]> {
+  return apiFetch(`${niyBase(pariwarId)}/clauses?limit=${limit}`, z.array(ClauseVersionResponse));
+}
+
+/** GET clause drafts, optionally filtered by lifecycle state. */
+export function listDrafts(pariwarId: string, status?: string, limit = 50): Promise<ClauseDraft[]> {
+  const q = status ? `&status=${encodeURIComponent(status)}` : '';
+  return apiFetch(`${niyBase(pariwarId)}/clauses/drafts?limit=${limit}${q}`, z.array(ClauseDraftResponse));
+}
+
+/** GET a single draft (the reviewer loads the exact pending content — AC1d). */
+export function getDraft(pariwarId: string, draftId: string): Promise<ClauseDraft> {
+  return apiFetch(`${niyBase(pariwarId)}/clauses/drafts/${encodeURIComponent(draftId)}`, ClauseDraftResponse);
+}
+
+/** POST a new draft (create | amend). */
+export function createDraft(pariwarId: string, body: CreateDraftBody): Promise<ClauseDraft> {
+  return apiFetch(`${niyBase(pariwarId)}/clauses/drafts`, ClauseDraftResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** PUT an edit to a draft (resets the sign-off — content-bound, AC1d). */
+export function updateDraft(
+  pariwarId: string,
+  draftId: string,
+  patch: UpdateClauseDraftRequest,
+): Promise<ClauseDraft> {
+  return apiFetch(`${niyBase(pariwarId)}/clauses/drafts/${encodeURIComponent(draftId)}`, ClauseDraftResponse, {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  });
+}
+
+/** GET the structured + rendered diff preview (AC1c). */
+export function getDraftDiff(pariwarId: string, draftId: string): Promise<DiffPreview> {
+  return apiFetch(
+    `${niyBase(pariwarId)}/clauses/drafts/${encodeURIComponent(draftId)}/diff`,
+    DiffPreviewResponse,
+  );
+}
+
+/** POST submit-for-review (draft → in_review). */
+export function submitForReview(pariwarId: string, draftId: string): Promise<ClauseDraft> {
+  return apiFetch(
+    `${niyBase(pariwarId)}/clauses/drafts/${encodeURIComponent(draftId)}/submit-for-review`,
+    ClauseDraftResponse,
+    { method: 'POST', body: JSON.stringify({}) },
+  );
+}
+
+/** POST a non-author tone-review sign-off. */
+export function signoffDraft(pariwarId: string, draftId: string): Promise<ClauseDraft> {
+  return apiFetch(
+    `${niyBase(pariwarId)}/clauses/drafts/${encodeURIComponent(draftId)}/tone-review`,
+    ClauseDraftResponse,
+    { method: 'POST', body: JSON.stringify({ confirm: true }) },
+  );
+}
+
+/** POST publish (audit-logged, tone-review-gated). Throws ApiError(409) when ungated. */
+export function publishDraft(pariwarId: string, draftId: string): Promise<Published> {
+  return apiFetch(
+    `${niyBase(pariwarId)}/clauses/drafts/${encodeURIComponent(draftId)}/publish`,
+    PublishClauseResponse,
     { method: 'POST', body: JSON.stringify({}) },
   );
 }

@@ -47,6 +47,13 @@ export {
   CLAUSE_ID_CONFLICT_CODE,
   ClauseNotFoundError,
   CLAUSE_NOT_FOUND_CODE,
+  // Story 2.4 — draft-store typed errors (the 2.4 route maps these to HTTP).
+  DraftNotFoundError,
+  DRAFT_NOT_FOUND_CODE,
+  DraftStateError,
+  DRAFT_INVALID_STATE_CODE,
+  DraftSelfReviewError,
+  DRAFT_SELF_REVIEW_CODE,
 } from './niyamavali/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';

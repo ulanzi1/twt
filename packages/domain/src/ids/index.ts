@@ -162,3 +162,15 @@ export function clauseId(value: string): ClauseId {
   }
   return value as ClauseId;
 }
+
+// ── Niyamavali draft-store id (Story 2.4, Task 1) ────────────────────────────
+// The server-persisted draft row address (`clause_drafts.draft_id`). A UUID row
+// address (unlike `ClauseId`), so it reuses the shared `uuidBrand` validator. The
+// draft store is the central net-new design of Story 2.4 (ADR-0021): a clause's
+// pending content lives here until publish mints the immutable `clause_versions`
+// row — the non-author reviewer loads the draft by this id.
+
+/** Per-row address of a Niyamavali clause draft (`clause_drafts.draft_id`). */
+export type ClauseDraftId = Brand<'ClauseDraftId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ClauseDraftId`. */
+export const clauseDraftId = uuidBrand('ClauseDraftId');

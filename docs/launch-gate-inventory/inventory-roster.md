@@ -52,11 +52,11 @@
 - **support:** Legal Counsel (review), BigDev (pivot design)
 - **closure_criteria:** Substantive: Legal Counsel first-artifact return per Story 0.13 review-scope-charter §1 + `.decision-log.md` Decision ratifying Cloudflare-keep OR self-hosted WAF pivot per architecture §5.8a + ADR substantively authored at `docs/knowledge-transfer/adr-index.md`. Testable signal: ADR index row for Cloudflare/WAF decision flips from `slot-reserved-pre-write` to `committed` with substantive ADR body; `inventory-roster.md` row `closure_evidence_link` resolves to the Decision + ADR + Legal Counsel return artifact.
 - **target_date:** `<TO-BE-AUTHORED-AT-TASK-8>`
-- **current_status:** `open`
-- **closure_evidence_link:** (empty)
+- **current_status:** `closed`
+- **closure_evidence_link:** [Decision 2026-06-21-057](../../.decision-log.md#decision-2026-06-21-057) (Cloudflare-keep ratified; DPDPA legal review cleared) + [ADR-0010](../../adr/ADR-0010-edge-waf-cloudflare-turnstile.md) (ratified 2026-06-21, ≥2-trustee) + Legal Counsel return: Adv. Mohit Agrawal — "Cloudflare acceptable as designed" (Story 0.13 review-scope-charter §1 first-artifact).
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** Story 0.13 Legal Counsel first-artifact + subsequent-artifact returns per Decision 2026-06-02-013 + Task 11 first-return + `.decision-log.md` decision ratifying Cloudflare-keep OR self-hosted WAF pivot + ADR substantively authored at `docs/knowledge-transfer/adr-index.md`.
-- **notes:** Row remains `open` at Story 0.15 author-commit — Story 0.13 framework-leg author-commit closes but Tasks 7-11 substantive Legal Counsel engagement-signature + first-artifact submission + Trustee Panel ratification have not occurred. The substantive Cloudflare-vs-self-hosted-WAF decision requires Legal Counsel DPDPA compatibility analysis + Trustee Panel ratification recorded in `.decision-log.md` — neither has happened at Story 0.15 author-commit time.
+- **notes:** Row flipped `open` → `closed` 2026-06-21 per Decision 2026-06-21-057. Closure criteria fully met: (a) Legal Counsel first-artifact return — Adv. Mohit Agrawal cleared the Cloudflare-DPDPA posture for the `asia-south1` target ("acceptable as designed"); (b) `.decision-log.md` Decision ratifying **Cloudflare-keep** (not the self-hosted-WAF pivot) per architecture §5.8a; (c) ADR-0010 substantively authored AND ratified (≥2 trustees: Dhiraj Rahul + Kalpana Bharti). Scope note: the clearance covers the edge design as recorded in ADR-0010; a material change to the edge data-flow re-opens this row. Operational note (per [[feedback_closure_language_precision]]): the live `terraform apply` (deferred-work D1-1.13) remains gated on the *provisioning* half (a live Cloudflare zone) — a deploy-execution item, not a launch-gate-inventory decision gate — so this decision row is `closed`.
 
 ### Row 4 — `p0-1-lifecycle-operational-state-coverage`
 

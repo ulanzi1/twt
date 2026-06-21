@@ -1,9 +1,9 @@
 # ADR-0010: Edge / WAF — Cloudflare as v1 default, Turnstile server-verify, `packages/edge` pivot abstraction, edge-only ingress mechanism
 
-> **Status:** drafted
-> **Date:** 2026-06-15 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.13 closure
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2); DPDPA legal-review clearance by Adv. Mohit Agrawal (Story 0.13 engaged counsel) — `.decision-log.md` Decision 2026-06-21-057
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -17,7 +17,7 @@ The forcing conditions:
 - **AR-33.** Edge-only ingress: the backend is not directly reachable from the public internet; the break-glass bypass is time-bounded + audit-logged (§5.8 L3251-3266).
 - **FR-88.** CAPTCHA-style challenge on signup, claim filing, and helpdesk forms; the auth entry points (Story 1.9) are the additional real wiring target.
 - **Story 1.9 pre-built the seam.** A no-op `TurnstileVerifier` was already called (but its result discarded) at the login + password-reset entry points; deferred-work D3-1.9 handed the real integration to Story 1.13.
-- **Residency / regulatory constraint — OPEN.** Cloudflare-DPDPA compatibility is a [P0] surface pending legal review (architecture L247-254). Target region is GCP `asia-south1`. The decision deadline for the *live apply* is the legal-review clearance, not Story 1.13 closure.
+- **Residency / regulatory constraint — OPEN at authoring; CLEARED 2026-06-21 (see §6).** Cloudflare-DPDPA compatibility was a [P0] surface pending legal review (architecture L247-254). Target region is GCP `asia-south1`. The decision deadline for the *live apply* was the legal-review clearance, not Story 1.13 closure — that clearance landed 2026-06-21 (Adv. Mohit Agrawal, "acceptable as designed"); the *live apply* now turns on provisioning only (deferred-work D1-1.13).
 
 ## Decision
 
@@ -52,9 +52,9 @@ Architecture §5.8 commits the *property* (backend not publicly reachable) and d
 
 Full **Bot Management** (`cf.bot_management.score`, verified-bot list, managed challenge) is a Cloudflare **Enterprise** add-on; **Super Bot Fight Mode** is the Pro/Business equivalent. The architecture commits the *capability* ("bot management + challenge"), **not the SKU**. `infra/cloudflare/waf.tf` expresses per-surface sensitivity (the FR-88 surfaces get a stricter `cf.bot_management.score` threshold than read surfaces); `var.enable_bot_management` defaults **false** (no paid plan at dev). **The score-based rules require a plan that populates the score** — recorded here so the capability bar is not quietly assumed at a tier the trust has not bought (D5-1.13).
 
-### 6. DPDPA compatibility — **OPEN** (do not assert compliance)
+### 6. DPDPA compatibility — **CLEARED** (legal review: "acceptable as designed")
 
-Cloudflare-DPDPA compatibility is a [P0] surface **pending legal review** (architecture L247-254). This ADR does **NOT** assert that Cloudflare is DPDPA-compliant. The live `terraform apply` is gated on the legal-review clearance (D1-1.13). If the review rejects Cloudflare's data-residency / sub-processor posture for the `asia-south1` target, the pivot path (§Alternatives) activates — and the `packages/edge` abstraction is precisely what keeps that pivot a single-module change.
+Cloudflare-DPDPA compatibility was a [P0] surface pending legal review (architecture L247-254). **Resolved 2026-06-21:** Story 0.13 engaged counsel **Adv. Mohit Agrawal** reviewed the design as recorded in this ADR and returned **"Cloudflare acceptable as designed"** — clearing Cloudflare's data-residency / sub-processor posture for the `asia-south1` target. Per [[feedback_closure_language_precision]] the clearance is recorded precisely: it is scoped to **the edge design as recorded in this ADR**; a material change to the edge data-flow (a new sub-processor, a newly-proxied PII surface) re-opens the review. **Closure precision:** this clears the *legal* half of the D1-1.13 gate only — the live `terraform apply` remains gated on the *operational* half (a provisioned live Cloudflare zone + account) per deferred-work D1-1.13. The §Alternatives pivot path and the `packages/edge` abstraction remain the recorded reversibility surface if the posture is later withdrawn. Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti); logged in `.decision-log.md` Decision 2026-06-21-057.
 
 ## Alternatives considered
 
@@ -94,5 +94,7 @@ Cloudflare-DPDPA compatibility is a [P0] surface **pending legal review** (archi
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | under-trustee-review → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at trustee panel session 2026-06-21; DPDPA legal review cleared by Adv. Mohit Agrawal ("Cloudflare acceptable as designed"); logged in `.decision-log.md` Decision 2026-06-21-057. §6 flipped OPEN → CLEARED (clears the legal half of D1-1.13; the provisioning half stays gated). |
+| 2026-06-21 | drafted → under-trustee-review | Solo Builder (BigDev) | Presented to Trustee Panel with Adv. Mohit Agrawal's DPDPA clearance as the closing evidence for the §6 OPEN [P0] surface (resolves Decision 2026-06-20-051 open follow-ups #1–#2). |
 | 2026-06-20 | (no status flip — DPDPA still OPEN) | BigDev | Epic 1 retro AI-6 posture gate: Epic 2 public-surface posture recorded as Decision 2026-06-20-051 — Cloudflare off Epic 2 critical path; Story 2.5 designed non-edge-capable (Dokploy precedent); D1-1.13 remains gated on legal-review clearance. |
 | 2026-06-15 | (initial draft) | Solo Builder (BigDev) | Authored at Story 1.13 closure — Cloudflare v1 edge/WAF default, `packages/edge` abstraction, Turnstile server-verify + AC-3 regression fix, edge-only-ingress mechanism (`header_secret` default → `tunnel` end-state), Bot-Management plan-tier dependency, DPDPA-compatibility OPEN |

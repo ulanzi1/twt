@@ -38,6 +38,16 @@ export {
   type ToneReviewDenial,
   type ToneReviewDenialReason,
 } from './tone-review/errors.js';
+// Niyamavali registry conflict error (Story 2.3). Surfaced at the top level —
+// mirroring `ToneReviewRequiredError` — so the apps/api error-mapping middleware
+// (Story 2.4 admin route) imports the 409 conflict error + code from `@twt/domain`
+// directly; the full registry primitive is also under the `niyamavali` namespace.
+export {
+  ClauseIdConflictError,
+  CLAUSE_ID_CONFLICT_CODE,
+  ClauseNotFoundError,
+  CLAUSE_NOT_FOUND_CODE,
+} from './niyamavali/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
@@ -46,6 +56,7 @@ export * as audit from './audit/index.js';
 export * as idempotency from './idempotency/index.js';
 export * as ids from './ids/index.js';
 export * as passport from './pariwar-passport/index.js';
+export * as niyamavali from './niyamavali/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

@@ -37,10 +37,11 @@ mechanisms: [pool, reserve] # the full enum width — reserve ships so v2 adds w
 v1_only: true # realizes the BENEFIT_MECHANISM_V1_ONLY build flag (epics L1356/L1358)
 v1_permitted: [pool] # values an insert may carry while v1_only (v1 ships only pool)
 rule_sources:
-  # Where rule records will live. `tables` is set from day one so the schema-column
+  # Where rule records live. `tables` is set from day one so the schema-column
   # check enforces the column the moment `clause_versions` appears in the drizzle
-  # snapshot (Story 2.3) — no config change required at that point. Only the globs
-  # are empty at v1 (no seed / fixture rule records exist yet).
+  # snapshot (Story 2.3 — now landed; check (c) ENFORCING). `seed_globs` is
+  # populated at Story 2.3 with the pool-tagged structural seed → check (a)
+  # ENFORCING (the `.sql` extractor reads it; every record carries `pool`).
   tables: [clause_versions] # the Story 2.3 registry table (benefit_mechanism enum NOT NULL)
-  seed_globs: [] # Epic 2 populates → the pool-tagged R5/R7/R8/R9/R10 seed
-  fixture_globs: [] # Epic 2 populates → rule fixtures
+  seed_globs: [packages/domain/seed/niyamavali-*.sql] # Story 2.3 pool-tagged structural seed (R7(A)/R8/R9)
+  fixture_globs: [] # no separate rule fixtures at 2.3 (the seed is the teeth source)

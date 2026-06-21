@@ -136,10 +136,15 @@ describe.skipIf(!hasDatabase)('audit-log hash chain (live DB)', () => {
       ).rejects.toThrow(/append-only/);
     });
 
-    it('TRUNCATE is rejected (statement-level trigger)', async () => {
+    it('TRUNCATE is rejected (FK-reference guard or append-only trigger)', async () => {
       const { client } = getTx();
+      // Story 2.3 added the FIRST incoming FKs to audit_log_entries
+      // (clause_versions.audit_id + niyamavali_amendments.audit_id), so a plain
+      // TRUNCATE is now blocked by Postgres' FK-reference guard BEFORE the
+      // append-only BEFORE-TRUNCATE trigger gets a chance to fire. Either guard
+      // keeps audit_log_entries non-truncatable — assert on both messages.
       await expect(client.query('TRUNCATE audit_log_entries')).rejects.toThrow(
-        /append-only/,
+        /append-only|cannot truncate a table referenced/,
       );
     });
   });

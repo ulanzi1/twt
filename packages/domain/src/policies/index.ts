@@ -14,3 +14,6 @@ export * from './pariwar-passport-rls.js';
 export * from './role-grants-rls.js';
 export * from './identity-auth-rls.js';
 export * from './idempotency-keys-rls.js';
+// Story 2.3 — Niyamavali rule registry tenant-isolation policies.
+export * from './clause-versions-rls.js';
+export * from './niyamavali-amendments-rls.js';

@@ -50,6 +50,29 @@ export async function loadActorGrants(
   }));
 }
 
+/** Shared `authz.denied` audit-emission shape — the standard denial callback every permission gate in this module fires on deny. */
+export function auditAuthorizationDenied(
+  deps: AppDeps,
+  request: FastifyRequest,
+  actorId: string,
+  pariwarId: string | null,
+): (denial: rbac.AuthorizationDenial) => void {
+  return (denial) => {
+    deps.auditSink.emit({
+      type: 'authz.denied',
+      actorId,
+      pariwarId,
+      traceId: request.requestContext.traceId,
+      context: {
+        permissionKey: denial.permissionKey,
+        requiredScope: denial.requiredScope,
+        targetLocator: denial.targetLocator,
+      },
+      at: deps.clock(),
+    });
+  };
+}
+
 export interface RequirePermissionOptions {
   /** The scope dimension the action is required at. Default: `pariwar`. */
   dimension?: rbac.ScopeDimension;
@@ -90,20 +113,7 @@ export function requirePermissionHook(
         resource: { dimension, value, pariwarId: scopeTx.pariwarId },
       },
       {
-        onAuthorizationDenied: (denial) => {
-          deps.auditSink.emit({
-            type: 'authz.denied',
-            actorId,
-            pariwarId: scopeTx.pariwarId,
-            traceId: request.requestContext.traceId,
-            context: {
-              permissionKey: denial.permissionKey,
-              requiredScope: denial.requiredScope,
-              targetLocator: denial.targetLocator,
-            },
-            at: deps.clock(),
-          });
-        },
+        onAuthorizationDenied: auditAuthorizationDenied(deps, request, actorId, scopeTx.pariwarId),
       },
     );
   };
@@ -176,20 +186,7 @@ export function requireGlobalPermission(deps: AppDeps, key: string): preHandlerH
         resource: { dimension: 'global', value: null, pariwarId: ADMIN_GLOBAL_NAMESPACE },
       },
       {
-        onAuthorizationDenied: (denial) => {
-          deps.auditSink.emit({
-            type: 'authz.denied',
-            actorId,
-            pariwarId: null,
-            traceId: request.requestContext.traceId,
-            context: {
-              permissionKey: denial.permissionKey,
-              requiredScope: denial.requiredScope,
-              targetLocator: denial.targetLocator,
-            },
-            at: deps.clock(),
-          });
-        },
+        onAuthorizationDenied: auditAuthorizationDenied(deps, request, actorId, null),
       },
     );
   };

@@ -25,6 +25,7 @@ import {
   AmendClauseDraftRequest as _AmendClauseDraftRequest,
   ClauseDraftResponse,
   ClauseDraftStatusSchema,
+  ClauseIdSchema,
   ClauseVersionResponse,
   CreateDraftBody,
   DiffPreviewResponse,
@@ -51,7 +52,7 @@ import { ConflictError } from '../../http-errors.js';
 import { namedRateLimits } from '../../plugins/rate-limit/index.js';
 import { requireAdminSession } from '../auth/shared/session-guard.js';
 import { scopeResolutionHook } from '../../middleware/scope-resolution/index.js';
-import { requirePermissionHook } from '../rbac/index.js';
+import { auditAuthorizationDenied, requirePermissionHook } from '../rbac/index.js';
 import { recordToneReviewSignoff, requireToneReviewSignoff } from '../tone-review/index.js';
 import { renderDisplayDiff } from './render-diff.js';
 import {
@@ -69,7 +70,7 @@ const REVIEW_KEY = 'niyamavali.review';
 void _AmendClauseDraftRequest;
 
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
-const ClauseParam = z.object({ pariwarId: z.string().uuid(), clauseId: z.string() }).strict();
+const ClauseParam = z.object({ pariwarId: z.string().uuid(), clauseId: ClauseIdSchema }).strict();
 const DraftParam = z.object({ pariwarId: z.string().uuid(), draftId: z.string().uuid() }).strict();
 const ListQuery = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).strict();
 const DraftListQuery = z
@@ -114,22 +115,7 @@ function requireNiyamavaliReadAccess(deps: AppDeps): preHandlerHookHandler {
     // Neither held → standard audited denial (keyed on amend for the 403 message).
     rbac.requirePermission(
       { actorId, grants, key: AMEND_KEY, resource },
-      {
-        onAuthorizationDenied: (denial) => {
-          deps.auditSink.emit({
-            type: 'authz.denied',
-            actorId,
-            pariwarId: scopeTx.pariwarId,
-            traceId: request.requestContext.traceId,
-            context: {
-              permissionKey: denial.permissionKey,
-              requiredScope: denial.requiredScope,
-              targetLocator: denial.targetLocator,
-            },
-            at: deps.clock(),
-          });
-        },
-      },
+      { onAuthorizationDenied: auditAuthorizationDenied(deps, request, actorId, scopeTx.pariwarId) },
     );
   };
 }
@@ -162,7 +148,7 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
         response: { 200: z.array(ClauseVersionResponse) },
         tags: [NIY_TAG],
       },
-      preHandler: [session, scope, amend],
+      preHandler: [session, scope, read],
       config: { rateLimit: named.read },
     },
     async (request) => {
@@ -182,7 +168,7 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
         response: { 200: z.array(ClauseVersionResponse) },
         tags: [NIY_TAG],
       },
-      preHandler: [session, scope, amend],
+      preHandler: [session, scope, read],
       config: { rateLimit: named.read },
     },
     async (request) => {
@@ -191,7 +177,7 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
       const rows = await niyamavali.versionsOfClause(
         tx(request),
         pid(request),
-        clauseId as ReturnType<typeof ids.clauseId>,
+        clauseId as unknown as ReturnType<typeof ids.clauseId>,
       );
       // Forced-pagination bound (Story 1.14): cap the most-recent `limit` versions
       // (history is small by construction — a clause has few versions).
@@ -210,7 +196,7 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
         response: { 200: z.array(NiyamavaliAmendmentResponse) },
         tags: [NIY_TAG],
       },
-      preHandler: [session, scope, amend],
+      preHandler: [session, scope, read],
       config: { rateLimit: named.read },
     },
     async (request) => {
@@ -452,7 +438,10 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
   // ── POST /clauses/drafts/:draftId/publish — audit-logged, tone-review-gated ───
   const loadDraftForPublish: preHandlerHookHandler = async (request) => {
     const { draftId } = request.params as z.infer<typeof DraftParam>;
-    const draft = await niyamavali.getDraftOrThrow(
+    // FOR UPDATE: serializes concurrent publish requests for the same draft so a
+    // second request re-reads post-commit state and fails the signed_off check
+    // before any audit-or-throw write happens (closes the publish TOCTOU race).
+    const draft = await niyamavali.getDraftForUpdateOrThrow(
       tx(request),
       pid(request),
       ids.clauseDraftId(draftId),
@@ -487,6 +476,17 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
         prevPayload = current?.payload ?? {};
       }
       const diff = niyamavali.computePayloadDiff(prevPayload, draft.payload);
+
+      // Validate the amend-required field BEFORE the audit write — an audit line must
+      // never be written for a publish attempt that is already certain to fail.
+      const scopeDecl = draft.operation === 'amend' ? draft.affectedMemberScope : null;
+      if (draft.operation === 'amend' && !scopeDecl) {
+        throw new niyamavali.DraftStateError(
+          draft.draftId,
+          draft.status,
+          'an amend draft must carry affected_member_scope',
+        );
+      }
 
       // Pre-generate the version id so the (audit-first) line references the exact cvid.
       const clauseVersionId = ids.clauseVersionId(randomUUID());
@@ -533,20 +533,13 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
         });
         version = row.version;
       } else {
-        const scopeDecl = draft.affectedMemberScope;
-        if (!scopeDecl) {
-          throw new niyamavali.DraftStateError(
-            draft.draftId,
-            draft.status,
-            'an amend draft must carry affected_member_scope',
-          );
-        }
         const { version: row } = await niyamavali.amendClause(handle, {
           pariwarId,
           clauseId: draft.clauseId,
           payload: draft.payload,
           effectiveDate: draft.effectiveDate,
-          affectedMemberScope: scopeDecl,
+          // Validated non-null above (operation === 'amend').
+          affectedMemberScope: scopeDecl as schema.AffectedMemberScope,
           benefitMechanism: draft.benefitMechanism,
           authoredByActor: draft.authoredByActor,
           auditId,

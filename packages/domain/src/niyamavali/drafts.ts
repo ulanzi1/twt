@@ -137,6 +137,31 @@ export async function getDraftOrThrow(
   return draft;
 }
 
+/**
+ * Resolve a draft with a `SELECT ... FOR UPDATE` row lock, or throw
+ * `DraftNotFoundError`. MUST run inside the caller's transaction. Closes the
+ * concurrent-publish race: without the lock, two simultaneous publish requests for
+ * the same `signed_off` draft can both pass the tone-review gate and both write an
+ * audit line before either reaches `markDraftPublished`'s conditional UPDATE — this
+ * lock serializes them so the second waits, re-reads post-commit state, and fails
+ * the `signed_off` status check before any audit-or-throw write happens.
+ */
+export async function getDraftForUpdateOrThrow(
+  db: Db,
+  pariwarId: PariwarId,
+  draftId: ClauseDraftId,
+): Promise<ClauseDraftRow> {
+  const rows = await db
+    .select()
+    .from(clauseDrafts)
+    .where(and(eq(clauseDrafts.pariwarId, pariwarId), eq(clauseDrafts.draftId, draftId)))
+    .for('update')
+    .limit(1);
+  const draft = rows[0];
+  if (!draft) throw new DraftNotFoundError(pariwarId, draftId);
+  return draft;
+}
+
 export interface ListDraftsOptions {
   status?: ClauseDraftStatus;
   /** Forced-pagination ceiling (Story 1.14). */
@@ -193,10 +218,20 @@ export async function updateDraft(
     );
   }
 
+  // An amend draft must always carry a scope (publish requires it) — only a `create`
+  // draft may clear it to null.
+  if (draft.operation === 'amend' && patch.affectedMemberScope === null) {
+    throw new DraftStateError(
+      draftId,
+      draft.status,
+      'an amend draft cannot have affected_member_scope cleared to null',
+    );
+  }
+
   const scope =
     patch.affectedMemberScope !== undefined && patch.affectedMemberScope !== null
       ? assertAffectedMemberScope(patch.affectedMemberScope)
-      : patch.affectedMemberScope; // null passes through (caller clearing it)
+      : patch.affectedMemberScope; // null passes through (caller clearing it; create drafts only)
 
   const updated = await db
     .update(clauseDrafts)

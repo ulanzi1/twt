@@ -140,7 +140,13 @@ deferred-work.md.
 - **Negative / accepted:** an orphan audit line is possible on a post-audit publish
   rollback (intentional, §4); the `createClause`/`amendClause` signatures gained an
   optional parameter (backward-compatible); the De2 guard has a far-fetched residual
-  gap closed only by a future composite FK (§6).
+  gap closed only by a future composite FK (§6). **AC5's "no published clause without
+  `audit_id`" is an app-level-enforced invariant (the publish route always supplies a
+  pre-generated `auditId`), not a database-level `NOT NULL` constraint** —
+  `clause_versions.audit_id` remains nullable at the schema level (migration 0015),
+  since pre-2.4 domain-direct creates / the structural seed may predate this audited
+  route. A future non-route write path could still insert a null-`audit_id` row
+  without the database objecting (code review, 2026-06-21).
 - **Follow-ups:** split/merge/deprecate UI; richer payload authoring (Epic 4);
   bilingual display contract (Story 2.5); composite-FK De2 hardening — all in
   deferred-work.md (Story 2.4 section).

@@ -4,6 +4,7 @@
 
 import type {
   ClauseDraftResponse,
+  ClauseIdSchema,
   CreateDraftBody,
   UpdateClauseDraftRequest,
 } from '@twt/contracts';
@@ -89,22 +90,27 @@ export function buildDraftBody(f: DraftFormFields): CreateDraftBody {
   // A date input yields `yyyy-mm-dd`; normalise to an ISO-8601 instant (UTC midnight).
   const effectiveDate = new Date(`${f.effectiveDate}T00:00:00.000Z`).toISOString();
 
+  // Only `clauseId` needs a brand cast (the wire format is validated + branded by
+  // the server's Zod schema when it arrives) — every other field is left structurally
+  // checked against its discriminated-union arm.
+  const clauseId = f.clauseId as ClauseIdSchema;
+
   if (f.operation === 'amend') {
     return {
       operation: 'amend',
-      clauseId: f.clauseId,
+      clauseId,
       payload,
       effectiveDate,
       affectedMemberScope: { kind: f.affectedMemberScopeKind ?? 'all_members' },
-    } as CreateDraftBody;
+    };
   }
   return {
     operation: 'create',
-    clauseId: f.clauseId,
+    clauseId,
     payload,
     effectiveDate,
     benefitMechanism: f.benefitMechanism,
-  } as CreateDraftBody;
+  };
 }
 
 /** Build a partial update body from the same guided draft form. */

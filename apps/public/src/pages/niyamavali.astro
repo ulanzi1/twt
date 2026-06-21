@@ -1,0 +1,327 @@
+---
+// The public Niyamavali render (Story 2.5, AC2–AC5, AC8). Fully server-rendered,
+// works with JS disabled; the version + diff selectors are SERVER-ROUNDTRIP query
+// params (no client island). All Niyamavali data is read under an UNAUTHENTICATED
+// `withPublicScope` (twt_app + RLS, NOT a superuser bypass — AC8); branding is read
+// via the cross-readable passport cache (no scope). The display logic lives in the
+// tested pure module `lib/niyamavali-render.ts` — this frontmatter is thin glue.
+import { getLocale, isLocale, t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+import { ids, niyamavali, passport } from '@twt/domain';
+import type { schema } from '@twt/domain';
+
+import PublicShell from '../layouts/PublicShell.astro';
+import { getDb, withPublicScope } from '../lib/db.server.js';
+import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
+import {
+  type DiffDisplay,
+  type NiyamavaliRenderModel,
+  renderDiff,
+  renderNiyamavaliClauses,
+} from '../lib/niyamavali-render.js';
+
+type ClauseRow = schema.ClauseVersionRow;
+
+const tr = (key: string, params?: Record<string, string | number>) =>
+  t(key, params, { locale, namespace: 'niyamavali' });
+
+// ── Locale + branding (cache-safe: no session, no member state) ──────────────
+const langParam = Astro.url.searchParams.get('lang');
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const db = getDb().db;
+const passportRow = await passport.getPariwarPassportCached(db, ACTIVE_PARIWAR_ID);
+const locale: Locale = isLocale(langParam)
+  ? langParam
+  : getLocale({ pariwarPassportLocale: passportRow?.localeDefault, acceptLanguage });
+const trustName =
+  (locale === 'hi'
+    ? (passportRow?.displayNameHi ?? passportRow?.displayNameEn)
+    : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? tr('page_title');
+const branding = passportRow?.brandingBundle ?? null;
+
+// ── Selector params (server roundtrip) ───────────────────────────────────────
+const clauseParam = Astro.url.searchParams.get('clause');
+const fromParam = Astro.url.searchParams.get('from');
+const toParam = Astro.url.searchParams.get('to');
+let selectedClauseId: ids.ClauseId | null = null;
+if (clauseParam !== null) {
+  try {
+    selectedClauseId = ids.clauseId(clauseParam);
+  } catch {
+    selectedClauseId = null; // malformed slug → fall through to the unknown-clause view
+  }
+}
+
+function titleOf(row: ClauseRow): string {
+  return renderNiyamavaliClauses([row], { locale }).clauses[0]?.title ?? row.clauseId;
+}
+
+type View =
+  | { kind: 'list'; model: NiyamavaliRenderModel }
+  | { kind: 'versions'; clauseId: string; title: string; versions: NiyamavaliRenderModel['clauses'] }
+  | { kind: 'diff'; clauseId: string; title: string; from: number; to: number; diff: DiffDisplay }
+  | { kind: 'unknown-clause'; clauseId: string };
+
+let view: View;
+if (selectedClauseId !== null) {
+  const clauseId = selectedClauseId;
+  const versions = await withPublicScope((sdb) =>
+    niyamavali.versionsOfClause(sdb, ACTIVE_PARIWAR_ID, clauseId),
+  );
+  if (versions.length === 0) {
+    view = { kind: 'unknown-clause', clauseId };
+  } else {
+    const a = fromParam !== null ? versions.find((v) => String(v.version) === fromParam) : undefined;
+    const b = toParam !== null ? versions.find((v) => String(v.version) === toParam) : undefined;
+    if (a !== undefined && b !== undefined) {
+      view = {
+        kind: 'diff',
+        clauseId,
+        title: titleOf(a),
+        from: a.version,
+        to: b.version,
+        diff: renderDiff(a, b),
+      };
+    } else {
+      // Newest-first version list; each links to a diff against the prior version.
+      const ordered = renderNiyamavaliClauses(versions, { locale }).clauses.sort(
+        (x, y) => y.version - x.version,
+      );
+      view = { kind: 'versions', clauseId, title: titleOf(versions[0] as ClauseRow), versions: ordered };
+    }
+  }
+} else {
+  const clauses = await withPublicScope((sdb) =>
+    niyamavali.listEffectiveClauses(sdb, ACTIVE_PARIWAR_ID),
+  );
+  view = { kind: 'list', model: renderNiyamavaliClauses(clauses, { locale }) };
+}
+
+// ── Cache headers (AC4): edge-cacheable, no PII/member-state rendered ─────────
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+Astro.response.headers.set('Vary', 'Accept-Language');
+
+const pageTitle = tr('page_title');
+const pageDescription = tr('page_intro');
+
+/** Link to a clause's version history, preserving the active locale. */
+function clauseLink(clauseId: string): string {
+  const u = new URL(Astro.url);
+  u.search = '';
+  u.searchParams.set('clause', clauseId);
+  if (langParam !== null) u.searchParams.set('lang', locale);
+  return u.pathname + u.search;
+}
+
+/** Link comparing two versions of the selected clause. */
+function diffLink(clauseId: string, from: number, to: number): string {
+  const u = new URL(Astro.url);
+  u.search = '';
+  u.searchParams.set('clause', clauseId);
+  u.searchParams.set('from', String(from));
+  u.searchParams.set('to', String(to));
+  if (langParam !== null) u.searchParams.set('lang', locale);
+  return u.pathname + u.search;
+}
+
+/** Link back to the effective-clause list, preserving the active locale. */
+function listLink(): string {
+  const u = new URL(Astro.url);
+  u.search = '';
+  if (langParam !== null) u.searchParams.set('lang', locale);
+  return u.pathname + u.search;
+}
+---
+
+<PublicShell
+  locale={locale}
+  title={pageTitle}
+  description={pageDescription}
+  trustName={trustName}
+  branding={branding}
+>
+  <h1 class="niy-title">{pageTitle}</h1>
+
+  {view.kind === 'list' && (
+    <section aria-labelledby="niy-current">
+      <p class="niy-intro">{pageDescription}</p>
+      <h2 id="niy-current" class="niy-h2">{tr('current_heading')}</h2>
+      {view.model.clauses.length === 0 ? (
+        <div class="niy-empty">
+          <h3 class="niy-empty__title">{tr('empty_title')}</h3>
+          <p>{tr('empty_body')}</p>
+        </div>
+      ) : (
+        <ul class="niy-list">
+          {view.model.clauses.map((c) => (
+            <li class="niy-clause">
+              <div class="niy-clause__head">
+                <h3 class="niy-clause__title">{c.title}</h3>
+                {c.ruleCode && <span class="niy-badge">{c.ruleCode}</span>}
+              </div>
+              <dl class="niy-meta">
+                <div><dt>{tr('clause_id_label')}</dt><dd><code>{c.clauseId}</code></dd></div>
+                <div><dt>{tr('version_label')}</dt><dd>{c.version}</dd></div>
+                <div><dt>{tr('effective_label')}</dt><dd>{c.effectiveDate}</dd></div>
+              </dl>
+              {c.fields.length > 0 && (
+                <dl class="niy-fields">
+                  {c.fields.map((f) => (
+                    <div><dt>{f.key}</dt><dd>{f.value}</dd></div>
+                  ))}
+                </dl>
+              )}
+              <p class="niy-actions">
+                <a href={clauseLink(c.clauseId)}>{tr('view_versions')}</a>
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )}
+
+  {view.kind === 'versions' && (
+    <section aria-labelledby="niy-versions">
+      <p class="niy-actions"><a href={listLink()}>← {tr('back_link')}</a></p>
+      <h2 id="niy-versions" class="niy-h2">{view.title}</h2>
+      <p class="niy-meta-line">
+        <span>{tr('clause_id_label')}: <code>{view.clauseId}</code></span>
+        <span> · {tr('version_history_label')}</span>
+      </p>
+      <ul class="niy-list">
+        {view.versions.map((v, i) => (
+          <li class="niy-clause">
+            <div class="niy-clause__head">
+              <h3 class="niy-clause__title">{tr('version_label')} {v.version}</h3>
+              {v.ruleCode && <span class="niy-badge">{v.ruleCode}</span>}
+            </div>
+            <dl class="niy-meta">
+              <div><dt>{tr('effective_label')}</dt><dd>{v.effectiveDate}</dd></div>
+            </dl>
+            {i + 1 < view.versions.length && (
+              <p class="niy-actions">
+                <a href={diffLink(view.clauseId, view.versions[i + 1]!.version, v.version)}>
+                  {tr('compare_label')}
+                </a>
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  {view.kind === 'diff' && (
+    <section aria-labelledby="niy-diff">
+      <p class="niy-actions"><a href={clauseLink(view.clauseId)}>← {tr('back_link')}</a></p>
+      <h2 id="niy-diff" class="niy-h2">{view.title}</h2>
+      <p class="niy-meta-line">
+        {tr('compare_heading')}: {tr('version_label')} {view.from} → {tr('version_label')} {view.to}
+      </p>
+      {view.diff.added.length === 0 &&
+      view.diff.removed.length === 0 &&
+      view.diff.changed.length === 0 ? (
+        <p class="niy-empty__title">{tr('diff_none')}</p>
+      ) : (
+        <div class="niy-diff">
+          {view.diff.changed.length > 0 && (
+            <div>
+              <h3 class="niy-diff__h">{tr('diff_changed')}</h3>
+              <dl class="niy-fields">
+                {view.diff.changed.map((c) => (
+                  <div>
+                    <dt>{c.key}</dt>
+                    <dd>{c.from} <span aria-hidden="true">→</span> {c.to}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+          {view.diff.added.length > 0 && (
+            <div>
+              <h3 class="niy-diff__h">{tr('diff_added')}</h3>
+              <dl class="niy-fields">
+                {view.diff.added.map((f) => (
+                  <div><dt>{f.key}</dt><dd>{f.value}</dd></div>
+                ))}
+              </dl>
+            </div>
+          )}
+          {view.diff.removed.length > 0 && (
+            <div>
+              <h3 class="niy-diff__h">{tr('diff_removed')}</h3>
+              <dl class="niy-fields">
+                {view.diff.removed.map((f) => (
+                  <div><dt>{f.key}</dt><dd>{f.value}</dd></div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  )}
+
+  {view.kind === 'unknown-clause' && (
+    <section>
+      <p class="niy-actions"><a href={listLink()}>← {tr('back_link')}</a></p>
+      <h2 class="niy-h2">{tr('not_found_title')}</h2>
+      <p>{tr('not_found_body')}</p>
+    </section>
+  )}
+</PublicShell>
+
+<style>
+  .niy-title {
+    font-family: var(--font-display-name);
+    color: var(--color-rule-heavy);
+    margin: 0 0 var(--space-block);
+  }
+  .niy-intro { color: var(--color-rule-heavy); margin-top: 0; }
+  .niy-h2 {
+    font-family: var(--font-display-parichay);
+    border-bottom: var(--border-hairline) solid var(--color-rule-hairline);
+    padding-bottom: var(--space-row);
+  }
+  .niy-list { list-style: none; padding: 0; margin: 0; }
+  .niy-clause {
+    border: var(--border-hairline) solid var(--color-rule-hairline);
+    background: var(--color-surface);
+    padding: var(--space-block);
+    margin-bottom: var(--space-block);
+  }
+  .niy-clause__head { display: flex; align-items: baseline; gap: var(--space-row); }
+  .niy-clause__title { margin: 0; font-size: 1.1rem; }
+  .niy-badge {
+    font-family: var(--font-numeric-tabular);
+    font-size: 0.8rem;
+    border: var(--border-hairline) solid var(--color-rule-hairline);
+    padding: 0.05rem 0.4rem;
+  }
+  .niy-meta, .niy-fields { margin: var(--space-row) 0 0; }
+  .niy-meta div, .niy-fields div {
+    display: flex;
+    gap: var(--space-row);
+    padding: 2px 0;
+    border-bottom: var(--border-hairline) dotted var(--color-rule-hairline);
+  }
+  .niy-meta dt, .niy-fields dt {
+    color: var(--color-rule-heavy);
+    min-width: 9rem;
+    font-size: 0.9rem;
+  }
+  .niy-meta dd, .niy-fields dd { margin: 0; font-family: var(--font-numeric-tabular); }
+  .niy-fields dd { font-family: var(--font-body-ledger); }
+  .niy-actions { margin: var(--space-block) 0 0; }
+  .niy-meta-line { color: var(--color-rule-heavy); font-size: 0.9rem; }
+  .niy-empty {
+    border: var(--border-rule) dashed var(--color-rule-hairline);
+    padding: var(--space-page-gutter);
+    text-align: center;
+    color: var(--color-rule-heavy);
+  }
+  .niy-empty__title { margin-top: 0; }
+  .niy-diff__h { margin-bottom: var(--space-row); }
+  code { font-family: var(--font-numeric-tabular); }
+</style>

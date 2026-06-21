@@ -120,6 +120,54 @@ export async function listClauses(
 }
 
 /**
+ * Story 2.5 (AC2/AC8) — the current EFFECTIVE clause set for an ENTIRE Pariwar:
+ * the public-render read. For each `clause_id` in the Pariwar, returns the single
+ * latest NON-deprecated version that is effective at `asOf` — the exact per-clause
+ * predicate `resolveByClauseId` applies (`isNull(deprecatedAt) + effectiveDate <=
+ * asOf`, max `version`), lifted to the whole-Pariwar set via `DISTINCT ON
+ * (clause_id)` ordered `clause_id, version DESC`.
+ *
+ * `asOf` defaults to DB `now()` (DB-authoritative time §1.11 — NEVER an app-server
+ * clock). A clause with no version effective at `asOf`, or whose only effective
+ * version is deprecated, contributes NOTHING (it is simply absent) — mirroring
+ * `resolveByClauseId` returning null for that clause. Rows come back ordered by
+ * `clause_id` (the DISTINCT-ON leading order) → a stable, deterministic page the
+ * public render consumes directly.
+ *
+ * Contrast `listClauses` (the admin browse: latest HEAD per clause, INCLUDES
+ * deprecated, IGNORES effective-date) — this is the reader's "what is in force right
+ * now" view. Tenant-scoped: the caller sets `app.pariwar_id` (RLS) AND passes
+ * `pariwarId` explicitly (the indexed predicate + cross-tenant defense-in-depth, the
+ * module convention). No forced-pagination ceiling: the effective Niyamavali is the
+ * full public rulebook and is rendered whole (the v1 body is small; a future ceiling
+ * is a render-surface concern, not a data-read one).
+ */
+export async function listEffectiveClauses(
+  db: Db,
+  pariwarId: PariwarId,
+  asOf?: Date,
+): Promise<ClauseVersionRow[]> {
+  // Default to DB now() when no explicit instant is supplied (DB-authoritative) —
+  // identical predicate construction to resolveByClauseId.
+  const effectivePredicate =
+    asOf === undefined
+      ? sql`${clauseVersions.effectiveDate} <= now()`
+      : lte(clauseVersions.effectiveDate, asOf);
+
+  return db
+    .selectDistinctOn([clauseVersions.clauseId])
+    .from(clauseVersions)
+    .where(
+      and(
+        eq(clauseVersions.pariwarId, pariwarId),
+        isNull(clauseVersions.deprecatedAt),
+        effectivePredicate,
+      ),
+    )
+    .orderBy(clauseVersions.clauseId, desc(clauseVersions.version));
+}
+
+/**
  * Story 2.4 — the time-ordered amendment ledger read (newest-first). Uses the
  * `(pariwar_id, created_at)` index added in migration 0015 (AC8 De4). Forced-
  * pagination ceiling (Story 1.14).

@@ -177,6 +177,8 @@ export interface SeedClauseOptions {
   effectiveDate?: Date;
   payload?: Record<string, unknown>;
   benefitMechanism?: 'pool' | 'reserve';
+  /** Set to mark this version retired (Story 2.5 effective-set tests exclude it). */
+  deprecatedAt?: Date;
 }
 
 /**
@@ -200,6 +202,7 @@ export async function seedClauseVersion(
       effectiveDate: opts.effectiveDate ?? new Date('2025-01-01T00:00:00Z'),
       payload: opts.payload ?? { rule_code: 'TEST' },
       benefitMechanism: opts.benefitMechanism ?? 'pool',
+      deprecatedAt: opts.deprecatedAt ?? null,
     })
     .returning();
   if (!row) throw new Error('seedClauseVersion: insert returned no row');

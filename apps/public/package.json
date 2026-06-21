@@ -3,18 +3,30 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "astro build && node scripts/page-weight.mjs",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "dev": "tsc --watch --preserveWatchOutput"
+    "typecheck": "astro check",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@astrojs/node": "^10.1.4",
+    "@twt/contracts": "workspace:*",
+    "@twt/domain": "workspace:*",
+    "@twt/i18n": "workspace:*",
+    "@twt/tokens": "workspace:*",
+    "astro": "^6.4.8"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@twt/eslint-config-twt": "workspace:*",
+    "@types/node": "^22.15.3",
+    "astro-eslint-parser": "^1.4.0",
+    "eslint-plugin-astro": "^1.7.0",
     "typescript": "~5.9.2",
-    "vitest": "^2.1.8",
-    "@types/node": "^22.15.3"
+    "vitest": "^2.1.8"
   }
 }

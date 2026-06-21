@@ -1,0 +1,11 @@
+---
+// The public root. v1's only public surface is the Niyamavali, so the root sends
+// the visitor there (preserving a `?lang=` override if present). A server redirect —
+// no client JS. Downstream public surfaces (Epic 11a/11b) extend this shell.
+return Astro.redirect(
+  Astro.url.searchParams.has('lang')
+    ? `/niyamavali?lang=${encodeURIComponent(Astro.url.searchParams.get('lang') ?? '')}`
+    : '/niyamavali',
+  302,
+);
+---

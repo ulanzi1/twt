@@ -1,0 +1,26 @@
+---
+// 500 — the SSR error fallback (Astro renders this when a route throws). MUST be
+// DB-independent (the data layer may be the very thing that failed) and must NOT be
+// cached. noindex. Dignified, tone-guide register — never blames the visitor.
+import { getLocale, isLocale, t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+
+import PublicShell from '../layouts/PublicShell.astro';
+
+const langParam = Astro.url.searchParams.get('lang');
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const locale: Locale = isLocale(langParam) ? langParam : getLocale({ acceptLanguage });
+const tr = (key: string) => t(key, undefined, { locale, namespace: 'niyamavali' });
+
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<PublicShell locale={locale} title={tr('error_title')} trustName={tr('page_title')} branding={null} noindex>
+  <h1 class="err-title">{tr('error_title')}</h1>
+  <p>{tr('error_body')}</p>
+  <p><a href="/niyamavali">← {tr('back_link')}</a></p>
+</PublicShell>
+
+<style>
+  .err-title { font-family: var(--font-display-name); color: var(--color-rule-heavy); }
+</style>

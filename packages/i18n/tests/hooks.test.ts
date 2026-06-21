@@ -3,8 +3,8 @@ import { act, renderHook } from '@testing-library/react';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LOCALE, LocaleProvider, useLocale } from '../src/locale.js';
-import { useT } from '../src/resolver.js';
+import { DEFAULT_LOCALE } from '../src/locale.js';
+import { LocaleProvider, useLocale, useT } from '../src/react.js';
 
 function provider(initialLocale?: 'hi' | 'en') {
   return ({ children }: { children: ReactNode }) =>

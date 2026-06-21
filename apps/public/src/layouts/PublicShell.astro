@@ -1,0 +1,151 @@
+---
+// PublicShell — the cache-safe public chrome (Story 2.5, AC1, AC3, AC4).
+//
+// CACHE-SAFE BY CONSTRUCTION: this layout reads NO session, NO member state, NO
+// per-visitor signal. Its only inputs are the public Pariwar branding (cross-readable
+// config) + the resolved locale (from the URL/Accept-Language) + the page content.
+// The Hindi/English toggle is a SERVER ROUNDTRIP — plain <a> links to the same URL
+// with `?lang=…`, never a client island (AC3: works with JS disabled).
+import { t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+import type { schema } from '@twt/domain';
+
+import { rootTokenCss } from '../lib/theme.server.js';
+
+type BrandingBundle = schema.BrandingBundle;
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description?: string;
+  trustName: string;
+  branding: BrandingBundle | null;
+  /** When true, emit `<meta name="robots" content="noindex">` (error/utility pages). */
+  noindex?: boolean;
+}
+
+const { locale, title, description, trustName, branding, noindex = false } = Astro.props;
+
+// Build the locale-toggle links from the current URL, preserving any selector params
+// (clause/from/to). Distinct URLs ⇒ distinct edge-cache entries (no Vary needed for
+// the toggle; the default render negotiates Accept-Language and sets Vary on the page).
+function withLang(next: Locale): string {
+  const u = new URL(Astro.url);
+  u.searchParams.set('lang', next);
+  return u.pathname + u.search;
+}
+
+// Hex-guard the Pariwar-supplied brand colours before they enter an inline style
+// (defense-in-depth against a malformed config value injecting CSS).
+const HEX = /^#[0-9a-fA-F]{3,8}$/;
+function safeHex(value: string | undefined, fallback: string): string {
+  return value !== undefined && HEX.test(value) ? value : fallback;
+}
+const brandPrimary = safeHex(branding?.primary_color, 'var(--color-rule-heavy)');
+const brandAccent = safeHex(branding?.accent_color ?? branding?.primary_color, 'var(--color-accent)');
+const logoUrl = branding?.logo_url ?? null;
+
+// Dedupe when the page title and trust name coincide (the degraded no-passport
+// fallback, where trustName falls back to the page title).
+const pageTitle = title === trustName ? title : `${title} · ${trustName}`;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    {description && <meta name="description" content={description} />}
+    <meta name="robots" content={noindex ? 'noindex,nofollow' : 'index,follow'} />
+    <style set:html={rootTokenCss()}></style>
+    {/* The Pariwar's actual branding (hex-guarded by safeHex() — safe to inline)
+        as the --brand-primary/--brand-accent custom properties every rule below
+        consumes. safeHex() already bakes in the design-system default fallback,
+        so this is the single source of truth for both vars. */}
+    <style set:html={`:root{--brand-primary:${brandPrimary};--brand-accent:${brandAccent};}`}></style>
+    <style is:global>
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--color-surface-base);
+        color: var(--color-ink-primary);
+        font-family: var(--font-body-ledger);
+        line-height: 1.55;
+      }
+      .shell-main {
+        max-width: 56rem;
+        margin: 0 auto;
+        padding: var(--space-page-gutter);
+      }
+      .shell-header {
+        border-bottom: var(--border-rule) solid var(--brand-primary);
+        background: var(--color-surface);
+      }
+      .shell-header__inner {
+        max-width: 56rem;
+        margin: 0 auto;
+        padding: var(--space-block) var(--space-page-gutter);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-block);
+        flex-wrap: wrap;
+      }
+      .shell-brand { display: flex; align-items: center; gap: var(--space-row); }
+      .shell-brand__logo { height: 2.25rem; width: auto; display: block; }
+      .shell-brand__name {
+        font-family: var(--font-display-name);
+        font-size: 1.25rem;
+        color: var(--brand-primary);
+        margin: 0;
+      }
+      .lang-toggle { display: flex; gap: var(--space-hairline); font-size: 0.95rem; }
+      .lang-toggle a {
+        padding: 0.25rem 0.6rem;
+        text-decoration: none;
+        color: var(--color-ink-primary);
+        border: var(--border-hairline) solid var(--color-rule-hairline);
+      }
+      .lang-toggle a[aria-current='true'] {
+        background: var(--brand-accent);
+        color: var(--color-surface);
+        border-color: var(--brand-accent);
+      }
+      .shell-footer {
+        border-top: var(--border-hairline) solid var(--color-rule-hairline);
+        color: var(--color-rule-heavy);
+        font-size: 0.85rem;
+        padding: var(--space-block) var(--space-page-gutter);
+        max-width: 56rem;
+        margin: 0 auto;
+      }
+      a { color: var(--brand-accent); }
+    </style>
+  </head>
+  <body>
+    <header class="shell-header">
+      <div class="shell-header__inner">
+        <div class="shell-brand">
+          {logoUrl && <img class="shell-brand__logo" src={logoUrl} alt={trustName} />}
+          <p class="shell-brand__name" style={`color:${brandPrimary}`}>{trustName}</p>
+        </div>
+        <nav class="lang-toggle" aria-label={t('language_label', undefined, { locale, namespace: 'niyamavali' })}>
+          <a href={withLang('hi')} aria-current={locale === 'hi' ? 'true' : 'false'} hreflang="hi">
+            {t('switch_to_hindi', undefined, { locale, namespace: 'niyamavali' })}
+          </a>
+          <a href={withLang('en')} aria-current={locale === 'en' ? 'true' : 'false'} hreflang="en">
+            {t('switch_to_english', undefined, { locale, namespace: 'niyamavali' })}
+          </a>
+        </nav>
+      </div>
+    </header>
+    <main class="shell-main">
+      <slot />
+    </main>
+    <footer class="shell-footer">
+      <p style={`border-top-color:${brandAccent}`}>{trustName}</p>
+    </footer>
+  </body>
+</html>

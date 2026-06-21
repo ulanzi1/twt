@@ -29,6 +29,14 @@ deliberately accepted.
 | Anita (verifier, over-payment recovery judgment) | Pool Engine                                | forced     |
 | Sunita (nominee bank-statement upload)           | facilitator-not-intermediary trust posture | forced     |
 
+**Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
+Astro SSR shell + the public Niyamavali list/version/diff render are
+**read-only** — no forms, no upload, no member-initiated action — so they
+introduce **zero deliberate friction**. AC-4 still fires on the path touch
+(conservative by design); this affirms the ledger was reviewed and no row is
+warranted. The lang-toggle is a plain `<a>` server roundtrip, not a friction
+surface.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

@@ -79,13 +79,19 @@ Precedence (AC1): `sessionLocale` → `pariwarPassportLocale` → parsed `Accept
 → **Hindi (`hi`) fallback**. The **caller** resolves these from its framework (Fastify
 request, Astro locals, …) and passes a plain object — `getLocale` imports no HTTP type.
 
-> **Server consumers (re-trigger).** The client hooks (`LocaleProvider` / `useLocale` /
-> `useT`) are re-exported from the package root, so importing `@twt/i18n` pulls `react`
-> into the module graph. At v1 there are no consumers, so this is inert. **When the first
-> non-React server consumer (e.g. `apps/api` for API copy/locale layering) imports the
-> package, split the React hooks into a `@twt/i18n/react` subpath export** so the
-> server-safe core (`t`, `getLocale`, numerals) loads without `react`. Tracked in
-> `deferred-work.md`.
+> **Server consumers — the `@twt/i18n/react` subpath split (DONE, Story 2.5).** The
+> package **root is server-safe**: it imports no `react`, so Astro SSR (`apps/public`,
+> the first non-React server consumer) and `apps/api` (Fastify) import `@twt/i18n`
+> without dragging React into the module graph. The client hooks live behind a subpath:
+>
+> ```ts
+> import { getLocale, t } from '@twt/i18n';          // server-safe core (no react)
+> import { LocaleProvider, useLocale, useT } from '@twt/i18n/react'; // React hosts only
+> ```
+>
+> React hosts (`apps/admin` web, `apps/mobile` RN, an Astro client island if one is
+> introduced) import the `/react` subpath. The split was the documented re-trigger in
+> `deferred-work.md` (CR-D1-2.1), discharged when `apps/public` Astro SSR landed.
 
 ## Surface classification (AC4)
 

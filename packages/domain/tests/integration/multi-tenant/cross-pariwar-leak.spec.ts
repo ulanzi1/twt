@@ -27,6 +27,8 @@ import {
   CROSS_TENANT_SENTINEL_UUID,
   runAsCrossTenant,
 } from '../../../src/cross-tenant/index.js';
+import { clauseId as toClauseId } from '../../../src/ids/index.js';
+import { amendClause, createClause } from '../../../src/niyamavali/index.js';
 import * as schema from '../../../src/schema/index.js';
 import {
   DATABASE_URL,
@@ -40,6 +42,7 @@ import {
   PARIWAR_X,
   PARIWAR_Y,
   enterAppScope,
+  seedClauseVersion,
   seedEvent,
   seedPassport,
   seedRoleGrant,
@@ -137,6 +140,67 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
     // Raw SQL bypass attempt — still RLS-filtered to 0 rows.
     const raw = await client.query<{ pariwar_id: string }>(
       `SELECT pariwar_id FROM role_grants WHERE pariwar_id = $1`,
+      [PARIWAR_B],
+    );
+    expect(raw.rows).toHaveLength(0);
+  });
+
+  // Story 2.3 — clause_versions is a SCOPED table (NOT a Passport carve-out, even
+  // though the Niyamavali is publicly rendered — each Pariwar's public site reads
+  // with its OWN app.pariwar_id set). A cross-Pariwar clause read is a real leak.
+  it('clause_versions (scoped) — A scope sees only A clauses, never B', async () => {
+    const { tx, client } = getTx();
+    await seedClauseVersion(tx, PARIWAR_A, { clauseId: 'niy.a.one' });
+    await seedClauseVersion(tx, PARIWAR_B, { clauseId: 'niy.b.one' });
+    await enterAppScope(client, PARIWAR_A);
+
+    const all = await tx.select().from(schema.clauseVersions);
+    expect(all).toHaveLength(1);
+    expect(all[0]?.pariwarId).toBe(PARIWAR_A);
+
+    const bRows = await tx
+      .select()
+      .from(schema.clauseVersions)
+      .where(eq(schema.clauseVersions.pariwarId, PARIWAR_B));
+    expect(bRows).toHaveLength(0);
+
+    const raw = await client.query<{ pariwar_id: string }>(
+      `SELECT pariwar_id FROM clause_versions WHERE pariwar_id = $1`,
+      [PARIWAR_B],
+    );
+    expect(raw.rows).toHaveLength(0);
+  });
+
+  // Story 2.3 — niyamavali_amendments is also SCOPED (amendment lineage is
+  // per-tenant). Seeded via the accessors as superuser (RLS bypassed) so both
+  // tenants' rows land; then A scope must see only its own.
+  it('niyamavali_amendments (scoped) — A scope sees only A amendments, never B', async () => {
+    const { tx, client } = getTx();
+    // Seed an amendment per tenant (superuser, before entering app scope).
+    for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
+      await createClause(tx, {
+        pariwarId: pariwar,
+        clauseId: toClauseId('niy.leak.amend'),
+        effectiveDate: new Date('2025-01-01T00:00:00Z'),
+        payload: { v: 1 },
+        benefitMechanism: 'pool',
+      });
+      await amendClause(tx, {
+        pariwarId: pariwar,
+        clauseId: toClauseId('niy.leak.amend'),
+        payload: { v: 2 },
+        effectiveDate: new Date('2025-06-01T00:00:00Z'),
+        affectedMemberScope: { kind: 'all_members' },
+      });
+    }
+    await enterAppScope(client, PARIWAR_A);
+
+    const all = await tx.select().from(schema.niyamavaliAmendments);
+    expect(all).toHaveLength(1);
+    expect(all[0]?.pariwarId).toBe(PARIWAR_A);
+
+    const raw = await client.query<{ pariwar_id: string }>(
+      `SELECT pariwar_id FROM niyamavali_amendments WHERE pariwar_id = $1`,
       [PARIWAR_B],
     );
     expect(raw.rows).toHaveLength(0);

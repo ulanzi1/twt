@@ -7,3 +7,7 @@
 // so consumers import the `BenefitMechanism` enum from `@twt/contracts`.
 
 export * from './benefit-mechanism.js';
+// Story 2.3 — Niyamavali registry transport contracts (clause/version DTO,
+// amendment/diff DTO, affected-member-scope declaration, AC7 resolution query).
+// Plain z.* — no `.openapi()` (2.3 adds no endpoint; openapi/v1.yaml byte-identical).
+export * from './clause.js';

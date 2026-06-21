@@ -42,6 +42,24 @@ export class InvalidBrandedIdError extends Error {
 }
 
 /**
+ * Thrown when the `clauseId` smart constructor receives a string that does not
+ * match the AC2 `niy.<section>.<clause>[.<subclause>]` slug format. Mirrors
+ * `InvalidBrandedIdError` (brand + received for diagnostics) but is a DISTINCT
+ * type — a `ClauseId` is the first branded id that is NOT a UUID (Story 2.3), so
+ * the "must be a UUID" message would be misleading. The format authority is
+ * `CLAUSE_ID_REGEX` below.
+ */
+export class InvalidClauseIdError extends Error {
+  constructor(public readonly received: string) {
+    super(
+      `[ids] ClauseId must match niy.<section>.<clause>[.<subclause>] ` +
+        `(lowercase kebab-with-dots); received ${JSON.stringify(received)}`,
+    );
+    this.name = 'InvalidClauseIdError';
+  }
+}
+
+/**
  * Factory that produces a UUID-validating smart constructor for a given brand.
  * The returned function validates with the shared `UUID_REGEX` and throws
  * `InvalidBrandedIdError` on failure — a typed, defense-in-depth guard against an
@@ -93,3 +111,54 @@ export const alertId = uuidBrand('AlertId');
 export const contributionId = uuidBrand('ContributionId');
 /** Smart constructor: validates UUID shape, returns a branded `UserId`. */
 export const userId = uuidBrand('UserId');
+
+// ── Niyamavali rule-registry IDs (Story 2.3, AC1/AC2/AC7) ────────────────────
+// Two NEW branded ids land here per the §Naming "branding mandatory on a new
+// ID's first PR" discipline (L3700-3708): `ClauseVersionId` (a UUID row address)
+// and `ClauseId` (the FIRST non-UUID branded id in the codebase — a stable,
+// trustee-allocated, human-readable slug that survives amendment/version history).
+
+/**
+ * Per-row address of a clause version (`clause_versions.clause_version_id`). It
+ * IS a UUID, so it reuses the shared `uuidBrand` validator — unlike `ClauseId`.
+ */
+export type ClauseVersionId = Brand<'ClauseVersionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ClauseVersionId`. */
+export const clauseVersionId = uuidBrand('ClauseVersionId');
+
+/**
+ * The stable, human-readable clause identifier (AC2). NOT a UUID — it is the
+ * `niy.<section>.<clause>[.<subclause>]` slug, allocated by the trustee at
+ * clause-create time (AC3), immutable across amendment / deprecation / version
+ * increment, and never reused. Because it is not a UUID it has a bespoke
+ * format-validating constructor (`clauseId` below), not `uuidBrand`.
+ */
+export type ClauseId = Brand<'ClauseId'>;
+
+/**
+ * AC2 format authority for `ClauseId`: `niy.<section-slug>.<clause-slug>` with an
+ * OPTIONAL `.<subclause-slug>`. Each slug segment is lowercase kebab —
+ * `[a-z0-9]+` groups joined by single hyphens (no leading/trailing/double
+ * hyphen, no uppercase). Examples: `niy.contribution-discipline.r7-a`,
+ * `niy.ninety-percent-rule.r8`, `niy.special-death.r9-suicide-murder`.
+ *
+ * Exported so the transport contract (`@twt/contracts` `ClauseIdSchema`) imports
+ * the SAME pattern rather than re-declaring it — one regex authority, no drift
+ * (contracts → domain is the legal import direction).
+ */
+export const CLAUSE_ID_REGEX =
+  /^niy\.[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
+
+/**
+ * Smart constructor: validates the AC2 slug format, returns a branded `ClauseId`.
+ * Throws `InvalidClauseIdError` (typed, mirrors `InvalidBrandedIdError`) on a
+ * malformed slug. The value is returned UNCHANGED — the regex already constrains
+ * it to lowercase, so no normalisation is applied (AC2: the slug is lowercase by
+ * construction).
+ */
+export function clauseId(value: string): ClauseId {
+  if (!CLAUSE_ID_REGEX.test(value)) {
+    throw new InvalidClauseIdError(value);
+  }
+  return value as ClauseId;
+}

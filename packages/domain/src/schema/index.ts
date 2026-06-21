@@ -24,6 +24,10 @@ export * from './audit_integrity_acknowledgements.js';
 export * from './idempotency_keys.js';
 export * from './pariwar_passport.js';
 export * from './role_grants.js';
+// Story 2.3 — Niyamavali rule registry: versioned clause registry + the
+// append-only amendment-with-diff ledger (the FR-7 rule-registry shape).
+export * from './clause_versions.js';
+export * from './niyamavali_amendments.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

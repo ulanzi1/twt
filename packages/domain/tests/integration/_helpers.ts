@@ -16,7 +16,11 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 
 import { setPariwarScope, type Db } from '../../src/db.js';
-import { pariwarId as toPariwarId, userId as toUserId } from '../../src/ids/index.js';
+import {
+  clauseId as toClauseId,
+  pariwarId as toPariwarId,
+  userId as toUserId,
+} from '../../src/ids/index.js';
 import type { ScopeDimension } from '../../src/rbac/scope.js';
 import * as schema from '../../src/schema/index.js';
 import type { BrandingBundle } from '../../src/schema/pariwar_passport.js';
@@ -165,6 +169,41 @@ export async function seedRoleGrant(
     createdBy: createdBy === null ? null : toUserId(createdBy),
   });
   return uid;
+}
+
+export interface SeedClauseOptions {
+  clauseId?: string;
+  version?: number;
+  effectiveDate?: Date;
+  payload?: Record<string, unknown>;
+  benefitMechanism?: 'pool' | 'reserve';
+}
+
+/**
+ * Insert one clause_versions row (Story 2.3). Like seedEvent/seedPassport, run
+ * BEFORE entering app scope (as the Docker superuser, RLS bypassed) so rows for
+ * BOTH tenants land regardless of the write-isolation policy; afterEach ROLLBACK
+ * reverts it. clause_versions is a SCOPED table — cross-Pariwar reads must return
+ * 0 rows (asserted by cross-pariwar-leak.spec.ts). Returns the clause_version_id.
+ */
+export async function seedClauseVersion(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedClauseOptions = {},
+): Promise<string> {
+  const [row] = await tx
+    .insert(schema.clauseVersions)
+    .values({
+      clauseId: toClauseId(opts.clauseId ?? 'niy.test.r1'),
+      pariwarId: toPariwarId(pariwarId),
+      version: opts.version ?? 1,
+      effectiveDate: opts.effectiveDate ?? new Date('2025-01-01T00:00:00Z'),
+      payload: opts.payload ?? { rule_code: 'TEST' },
+      benefitMechanism: opts.benefitMechanism ?? 'pool',
+    })
+    .returning();
+  if (!row) throw new Error('seedClauseVersion: insert returned no row');
+  return row.clauseVersionId;
 }
 
 /** Shed Docker superuser (SET ROLE twt_app) + set the pariwar scope, in-tx. */

@@ -244,11 +244,13 @@ Priority tags: **[P0]** security / data correctness; **[P1]** operations;
   Optional → mandatory switch is itself a migration gated by FR-58C. Isolate behind a
   provider interface so parser, rate-limit, and downtime concerns don't leak into the
   membership lifecycle.
-- **[P0] Edge / WAF surface — Cloudflare ↔ India-PII residency.** Cloudflare is
-  the v1 default; DPDPA compatibility per legal review remains open. This is an
-  open architectural surface with a committed pivot path. Architecture commits
+- **[P0 — CLEARED 2026-06-21] Edge / WAF surface — Cloudflare ↔ India-PII residency.** Cloudflare is
+  the v1 default; DPDPA compatibility per legal review is **cleared** — Story 0.13 counsel
+  Adv. Mohit Agrawal returned "acceptable as designed" (`.decision-log.md` Decision 2026-06-21-057),
+  and the provider is committed + ≥2-trustee-ratified in **ADR-0010**. The committed pivot
+  path is retained (reversibility if the posture is later withdrawn). Architecture commits
   the property requirements (§5.8a Edge / WAF capability bar); the specific
-  provider is committed in an ADR after legal review. **Pivot readiness:**
+  provider is committed in that ADR (legal review cleared). **Pivot readiness:**
   Cloudflare-dependent sections (§2.1, §2.11, §3.11, §5.8) must identify
   substitution boundaries and avoid irreversible coupling; substitution points
   enumerated in §5.8a.

@@ -1,21 +1,22 @@
 // packages/i18n/src/resolver.ts
 //
-// The translation resolver `t()` (Story 2.1, AC1) + the React-bound `useT()` hook.
+// The translation resolver `t()` (Story 2.1, AC1) — the FRAMEWORK-AGNOSTIC,
+// server-safe core.
 //
-// `t()` is the FRAMEWORK-AGNOSTIC, server-safe core: it never calls a React hook, so
-// it is importable from `apps/api` (Fastify), Astro SSR, edge, and tests without React.
-// Because a plain function cannot legally call `useLocale()`, the AC's "options.locale
-// defaults to useLocale()" is realized by `useT()` — a React hook that binds the active
-// context locale as the per-call default while still allowing an explicit override.
-// `t()` itself defaults to `DEFAULT_LOCALE` (`hi`) so it never silently serves a wrong
-// locale.
+// `t()` never calls a React hook, so it is importable from `apps/api` (Fastify),
+// Astro SSR, edge, and tests without React. Because a plain function cannot legally
+// call `useLocale()`, the AC's "options.locale defaults to useLocale()" is realized
+// by the React-bound `useT()` hook — which, from Story 2.5's `/react` subpath split,
+// lives in `./react.ts` (reached via `@twt/i18n/react`) so importing the resolver
+// never drags `react` into the module graph. `t()` itself defaults to
+// `DEFAULT_LOCALE` (`hi`) so it never silently serves a wrong locale.
 //
 // Missing-key / missing-namespace / missing-interpolation-param are LOUD by default
 // (throw, naming the offender) — the same strict loud-throw posture as the 1.17
 // scripts/microcopy config parsing.
 
 import { getCatalog } from './catalog.js';
-import { DEFAULT_LOCALE, useLocale } from './locale.js';
+import { DEFAULT_LOCALE } from './locale.js';
 import type { Locale } from './locale.js';
 
 /** Per-call resolver options. Both optional — see `t()` defaults. */
@@ -66,20 +67,13 @@ export function t(key: string, params?: TranslateParams, options?: TranslateOpti
   return interpolate(template, params, `'${locale}/${namespace}:${key}'`);
 }
 
-/** The shape `useT()` returns — `t` pre-bound to the active context locale. */
+/**
+ * The shape `useT()` returns — `t` pre-bound to the active context locale. The
+ * `useT()` hook itself lives in `./react.ts` (the `@twt/i18n/react` subpath); this
+ * type stays in the server-safe core so non-React callers can name the bound shape.
+ */
 export type BoundTranslate = (
   key: string,
   params?: TranslateParams,
   options?: TranslateOptions,
 ) => string;
-
-/**
- * React hook: returns a `t` bound to the active `useLocale()` locale, so components
- * call `t('welcome')` without passing a locale. A per-call `options.locale` still wins
- * (e.g. rendering the non-active locale in a toggle preview). This is the AC's
- * "options.locale defaults to useLocale() result" realized for React hosts.
- */
-export function useT(): BoundTranslate {
-  const { locale } = useLocale();
-  return (key, params, options) => t(key, params, { locale, ...options });
-}

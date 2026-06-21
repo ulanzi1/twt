@@ -2,6 +2,14 @@
 //
 // The Locale primitive + the locale-resolution surfaces (Story 2.1, AC1).
 //
+// SERVER-SAFE CORE (Story 2.5 `/react` subpath split): this module imports NO
+// `react` — the locale primitive, `parseAcceptLanguage`, and the server-side
+// `getLocale` resolver load in any context (Fastify, Astro SSR, edge, native,
+// tests) without dragging React into the module graph. The client locale-toggle
+// context (`LocaleProvider` / `useLocale`) moved to `./react.ts`, reachable via
+// the `@twt/i18n/react` subpath export. `apps/public` Astro SSR (the first
+// non-React server consumer) was the documented re-trigger for this split.
+//
 // `Locale` is defined LOCALLY here — i18n is a low-level shared package usable from
 // edge / public / native contexts, so it deliberately does NOT import `@twt/domain`
 // (the DB layer). The type is value-aligned with the domain `localeEnum`
@@ -12,13 +20,7 @@
 //
 // Framework posture (AC1): `getLocale` takes a plain context object the CALLER
 // assembles from its framework (Fastify request, Astro locals, …) — this module
-// imports NO HTTP framework. The React context (`LocaleProvider` / `useLocale`) is
-// the client toggle surface; `react` is an OPTIONAL peer dep (see package.json) so
-// the server-safe pieces (`Locale`, `getLocale`) remain importable in contexts that
-// have no React. See README "Server consumers" for the subpath-split re-trigger.
-
-import { createContext, createElement, useContext, useState } from 'react';
-import type { ReactNode } from 'react';
+// imports NO HTTP framework.
 
 /** The two surface locales. `hi` = Hindi (Devanagari), `en` = English. */
 export type Locale = 'hi' | 'en';
@@ -92,38 +94,8 @@ export function getLocale(ctx: LocaleContext): Locale {
   return DEFAULT_LOCALE;
 }
 
-// ── Client-side React context (the locale toggle surface) ─────────────────────────
-
 /** The value exposed by `useLocale()`: the active locale + a setter for the client toggle. */
 export interface LocaleState {
   locale: Locale;
   setLocale: (next: Locale) => void;
-}
-
-// A React CONTEXT (not a module-level singleton) — a singleton would break SSR and
-// cause hydration mismatches in Astro (Story 2.5+). `null` sentinel = "no provider",
-// so `useLocale()` can throw loudly rather than silently serve a wrong default.
-const LocaleReactContext = createContext<LocaleState | null>(null);
-
-/**
- * Wraps a React tree (works in both `apps/admin` React-19 web and `apps/mobile`
- * RN + Tamagui — both are React hosts). `initialLocale` is what the SERVER resolved
- * via `getLocale` (so SSR markup and the first client render agree → no hydration
- * mismatch); the client toggle then drives the in-memory state from there.
- */
-export function LocaleProvider(props: {
-  initialLocale?: Locale;
-  children: ReactNode;
-}): ReactNode {
-  const [locale, setLocale] = useState<Locale>(props.initialLocale ?? DEFAULT_LOCALE);
-  return createElement(LocaleReactContext.Provider, { value: { locale, setLocale } }, props.children);
-}
-
-/** Client hook: the active `Locale` + a setter. Throws if used outside a `LocaleProvider`. */
-export function useLocale(): LocaleState {
-  const state = useContext(LocaleReactContext);
-  if (state === null) {
-    throw new Error('[i18n] useLocale() must be used within a <LocaleProvider>');
-  }
-  return state;
 }

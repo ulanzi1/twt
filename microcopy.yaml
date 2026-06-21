@@ -90,10 +90,17 @@ scope:
   code_globs:
     - apps/admin/src/**/*.tsx
     - apps/admin/src/**/*.ts
-  # Member-visible copy (locale strings / templates) — EMPTY at v1; member surfaces
-  # land Epic 2+ (the broad vocabulary/numeral register grows teeth surface-by-surface,
-  # data-driven, with no gate code change — the benefit-mechanism / pii-scrape pattern).
-  copy_globs: []
+  # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
+  # member surface: the public Niyamavali (apps/public). These globs scan the PURE
+  # member copy (the `niyamavali` i18n namespace strings), so the member-register
+  # vocabulary (user/customer/donor → canonical) + Devanagari-numeral discipline now
+  # have TEETH on real member text. Mixed code+template files (`.astro`, like admin
+  # `.tsx`) stay OUT of copy_globs — `member_only` terms are ubiquitous code
+  # identifiers there (false-positive storm); they belong in code_globs with
+  # member_only OFF. The register grows surface-by-surface as Epic 11a/11b land.
+  copy_globs:
+    - packages/i18n/locales/hi/niyamavali.json
+    - packages/i18n/locales/en/niyamavali.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

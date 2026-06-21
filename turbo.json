@@ -1,7 +1,7 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
-  "globalEnv": ["PARIWAR_PROFILE"],
+  "globalEnv": ["PARIWAR_PROFILE", "PUBLIC_PARIWAR_ID", "PUBLIC_SITE_ORIGIN"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

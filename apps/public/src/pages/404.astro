@@ -1,0 +1,27 @@
+---
+// 404 — DB-independent by design (graceful degradation, Story 0.4): the not-found
+// page must render even if the data layer is unavailable, so it reads NO passport
+// and NO clauses. noindex (a not-found page is never SEO content). Locale resolves
+// from `?lang=`/Accept-Language only.
+import { getLocale, isLocale, t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+
+import PublicShell from '../layouts/PublicShell.astro';
+
+const langParam = Astro.url.searchParams.get('lang');
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const locale: Locale = isLocale(langParam) ? langParam : getLocale({ acceptLanguage });
+const tr = (key: string) => t(key, undefined, { locale, namespace: 'niyamavali' });
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+---
+
+<PublicShell locale={locale} title={tr('not_found_title')} trustName={tr('page_title')} branding={null} noindex>
+  <h1 class="err-title">{tr('not_found_title')}</h1>
+  <p>{tr('not_found_body')}</p>
+  <p><a href="/niyamavali">← {tr('back_link')}</a></p>
+</PublicShell>
+
+<style>
+  .err-title { font-family: var(--font-display-name); color: var(--color-rule-heavy); }
+</style>

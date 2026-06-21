@@ -38,28 +38,36 @@ surfaces:
         ceiling: 3145728 # 3 MiB total transferred
         baseline: null
 
-  # The public member-facing web surface. apps/public is a tsc stub until the
-  # Astro SSR shell lands at Story 2.5 (AR-48) → no-op until then. Web budgets
-  # are tighter than native per architecture §4.11.1.
+  # The public member-facing web surface. LANDED at Story 2.5 (AR-48): apps/public is
+  # now a real Astro 6 SSR app emitting dist/page-weight.json, so this surface has
+  # TEETH (was a no-op while it was a tsc stub). Web budgets are tighter than native
+  # per architecture §4.11.1. baselines-of-record committed at the first measurable
+  # build: zero client JS (no hydrated islands) + the extracted CSS transfer.
   - id: member-public-web
     description: Public member-facing web (apps/public Astro SSR — Story 2.5)
     manifest: apps/public/dist/page-weight.json
     metrics:
       - id: js_bundle_bytes
         ceiling: 153600 # 150 KiB
-        baseline: null
+        baseline: 0 # no client islands ⇒ zero hydrated JS at Story 2.5
       - id: page_weight_bytes
-        ceiling: 512000 # 500 KiB total transferred
-        baseline: null
+        ceiling: 512000 # 500 KiB static client assets (CSS/JS under dist/client/ — excludes the dynamic SSR HTML response)
+        baseline: 3942 # extracted CSS (inlineStylesheets:'never') at Story 2.5
 
 # Live critical-render-path TIMING on the canonical device (3GB Android,
 # architecture line 34) is EXPLICITLY DEFERRED (AC-6): no device-farm /
 # CPU-throttled-Lighthouse harness exists in CI. The statically measurable
 # proxies (js_bundle_bytes + page_weight_bytes above) ship now; live timing is
-# recorded as "Resolved via explicit deferral" in deferred-work.md with a
-# trigger. This placeholder keeps the metric named in the registry.
+# recorded as "Resolved via explicit deferral" in deferred-work.md with a trigger.
+#
+# Story 2.5 disposition (Decision 2026-06-20-055(b), which PERMITS deferral so long
+# as it is WRITTEN): the Astro shell landed WITHOUT a throttled-Lighthouse-CI harness.
+# The static byte proxies above acquired teeth instead (member-public-web baselines
+# committed). The live-timing harness is RE-TARGETED to the first Epic 11a public
+# surface (Member Directory), where a second public route makes a device-throttled
+# render budget worth standing up. Not silently dropped — carried with a gate.
 deferred_metrics:
   - id: critical_render_path_ms
     canonical_device: 3GB Android
     status: deferred
-    trigger: throttled-Lighthouse-CI harness lands alongside the Story 2.5 Astro shell or Story 1.17 design-system surface
+    trigger: throttled-Lighthouse-CI harness lands at Epic 11a (first additional public surface); Story 2.5 shipped the static byte proxies instead (Decision 2026-06-20-055(b))

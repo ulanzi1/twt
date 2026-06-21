@@ -16,7 +16,9 @@
 // then enforces Hindi parity on the new domain automatically.
 
 import enCommon from '../locales/en/common.json';
+import enNiyamavali from '../locales/en/niyamavali.json';
 import hiCommon from '../locales/hi/common.json';
+import hiNiyamavali from '../locales/hi/niyamavali.json';
 
 import type { Locale } from './locale.js';
 
@@ -24,12 +26,12 @@ import type { Locale } from './locale.js';
 export type Catalog = Record<string, string>;
 
 const catalogs: Record<Locale, Record<string, Catalog>> = {
-  en: { common: enCommon },
-  hi: { common: hiCommon },
+  en: { common: enCommon, niyamavali: enNiyamavali },
+  hi: { common: hiCommon, niyamavali: hiNiyamavali },
 };
 
 /** The domain (namespace) names that have at least one locale catalog. */
-export const KNOWN_NAMESPACES: readonly string[] = ['common'];
+export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali'];
 
 /** Look up a `{locale}/{namespace}` catalog, or `undefined` if it is not registered. */
 export function getCatalog(locale: Locale, namespace: string): Catalog | undefined {

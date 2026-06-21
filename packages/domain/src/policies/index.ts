@@ -17,3 +17,5 @@ export * from './idempotency-keys-rls.js';
 // Story 2.3 — Niyamavali rule registry tenant-isolation policies.
 export * from './clause-versions-rls.js';
 export * from './niyamavali-amendments-rls.js';
+// Story 2.4 — Niyamavali draft-store tenant-isolation policies.
+export * from './clause-drafts-rls.js';

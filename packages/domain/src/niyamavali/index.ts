@@ -8,3 +8,5 @@ export * from './write.js';
 export * from './diff.js';
 export * from './scope.js';
 export * from './errors.js';
+// Story 2.4 — the server-persisted draft store + content-bound sign-off resolver.
+export * from './drafts.js';

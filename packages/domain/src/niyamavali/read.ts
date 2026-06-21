@@ -11,6 +11,10 @@ import { and, arrayOverlaps, desc, eq, inArray, isNull, lte, sql } from 'drizzle
 import type { Db } from '../db.js';
 import type { ClauseId, ClauseVersionId, PariwarId } from '../ids/index.js';
 import { type ClauseVersionRow, clauseVersions } from '../schema/clause_versions.js';
+import {
+  type NiyamavaliAmendmentRow,
+  niyamavaliAmendments,
+} from '../schema/niyamavali_amendments.js';
 
 /**
  * AC7 "current rule": the latest NON-deprecated version of a clause that is
@@ -88,6 +92,49 @@ export async function latestVersionRow(
     .orderBy(desc(clauseVersions.version))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Story 2.4 — the admin "browse the registry / pick a clause to amend" read: the
+ * LATEST version of every clause in the Pariwar, newest-first. The latest version of
+ * a `clause_id` is its chain HEAD — the row with no successor (`superseded_by_version
+ * IS NULL`); amendClause always points the prior version forward, so each `clause_id`
+ * chain has exactly one such head (the max version). Deprecated clauses are INCLUDED
+ * (their head row carries `deprecated_at`) so the registry browse is complete; the
+ * caller filters by `deprecatedAt` when offering amend targets (amendClause rejects a
+ * deprecated head). Forced-pagination ceiling (Story 1.14).
+ */
+export async function listClauses(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: { limit?: number } = {},
+): Promise<ClauseVersionRow[]> {
+  return db
+    .select()
+    .from(clauseVersions)
+    .where(
+      and(eq(clauseVersions.pariwarId, pariwarId), isNull(clauseVersions.supersededByVersion)),
+    )
+    .orderBy(desc(clauseVersions.authoredAt))
+    .limit(opts.limit ?? 50);
+}
+
+/**
+ * Story 2.4 — the time-ordered amendment ledger read (newest-first). Uses the
+ * `(pariwar_id, created_at)` index added in migration 0015 (AC8 De4). Forced-
+ * pagination ceiling (Story 1.14).
+ */
+export async function listAmendments(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: { limit?: number } = {},
+): Promise<NiyamavaliAmendmentRow[]> {
+  return db
+    .select()
+    .from(niyamavaliAmendments)
+    .where(eq(niyamavaliAmendments.pariwarId, pariwarId))
+    .orderBy(desc(niyamavaliAmendments.createdAt))
+    .limit(opts.limit ?? 50);
 }
 
 /** All version rows of a clause, oldest→newest (the version chain / audit history). */

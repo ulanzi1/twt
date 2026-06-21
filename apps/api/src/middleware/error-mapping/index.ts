@@ -16,6 +16,11 @@
 
 import {
   AuthorizationDeniedError,
+  ClauseIdConflictError,
+  ClauseNotFoundError,
+  DraftNotFoundError,
+  DraftSelfReviewError,
+  DraftStateError,
   InvalidPariwarScopeError,
   PariwarScopeMissingError,
   ToneReviewRequiredError,
@@ -77,6 +82,34 @@ export function errorMappingHandler(
   // (3a) Tone-review publish gate denial (Story 2.2) → 409 `tone-review-required`
   // (matches Story 2.4 publish contract). Same own-projector pattern as the RBAC 403.
   if (error instanceof ToneReviewRequiredError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3b) Niyamavali registry typed errors (Story 2.4, AC6 + the draft state machine).
+  // Each owns its code + projector — the 2.3-deferred 409/404 mapping lands here.
+  //   ClauseIdConflictError → 409 niyamavali.clause_id_conflict (create allocation race)
+  //   ClauseNotFoundError   → 404 niyamavali.clause_not_found   (amend/deprecate absent)
+  //   DraftNotFoundError    → 404 niyamavali.draft_not_found
+  //   DraftStateError       → 409 niyamavali.draft_invalid_state (illegal transition)
+  //   DraftSelfReviewError  → 409 niyamavali.draft_self_review   (author signed own draft)
+  if (error instanceof ClauseIdConflictError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ClauseNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof DraftNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof DraftStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof DraftSelfReviewError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
     return;
   }

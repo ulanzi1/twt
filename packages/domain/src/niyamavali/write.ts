@@ -60,6 +60,14 @@ interface NewClauseFields {
   benefitMechanism: BenefitMechanism;
   authoredByActor?: string | null;
   auditId?: string | null;
+  /**
+   * Optional caller-supplied row address. Defaults to the DB `gen_random_uuid()`.
+   * The Story 2.4 audited publish path PRE-GENERATES this so the `audit_id`-bearing
+   * audit line (written FIRST, before this insert — the amendment ledger is
+   * append-only so its `audit_id` cannot be back-filled) can reference the exact
+   * `clause_version_id` in its provenance (AC2). 2.3 call sites omit it.
+   */
+  clauseVersionId?: ClauseVersionId;
 }
 
 /**
@@ -82,6 +90,9 @@ async function insertClauseV1(
   const inserted = await db
     .insert(clauseVersions)
     .values({
+      // `undefined` → omitted → DB default gen_random_uuid() (2.3 behaviour);
+      // a caller-supplied id (2.4 audited publish) is used verbatim.
+      clauseVersionId: fields.clauseVersionId ?? undefined,
       clauseId: fields.clauseId,
       pariwarId,
       version: 1,
@@ -139,6 +150,14 @@ export interface AmendClauseInput {
   benefitMechanism?: BenefitMechanism;
   authoredByActor?: string | null;
   auditId?: string | null;
+  /**
+   * Optional caller-supplied new-version row address (defaults to DB
+   * gen_random_uuid()). The Story 2.4 audited publish PRE-GENERATES it so the
+   * audit line — written first, then passed as `auditId` so the append-only
+   * amendment row carries it at INSERT (AC5) — can reference the exact
+   * `clause_version_id` (AC2). 2.3 call sites omit it.
+   */
+  clauseVersionId?: ClauseVersionId;
 }
 
 export interface AmendClauseResult {
@@ -167,6 +186,7 @@ export async function amendClause(db: Db, input: AmendClauseInput): Promise<Amen
   const insertedVersions = await db
     .insert(clauseVersions)
     .values({
+      clauseVersionId: input.clauseVersionId ?? undefined,
       clauseId: input.clauseId,
       pariwarId: input.pariwarId,
       version: prior.version + 1,

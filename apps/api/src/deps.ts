@@ -21,6 +21,7 @@ import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.
 import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
+import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
 import { createToneReviewAuditSink } from './modules/tone-review/index.js';
 
 /** Derive a deterministic 32-byte fake key from a label + the pepper (local/CI only). */
@@ -147,6 +148,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     }),
     // Deploy seam (Story 1.15) — fake in dev/CI, Dokploy-API client in staging/prod.
     deployTrigger: resolveDeployTriggerFromEnv(config.deployTrigger.mode),
+    // Member-notification scaffolding hook (Story 2.4, AC3) — console placeholder
+    // until Epic 5 wires the real niyamavali.amended push fan-out.
+    niyamavaliAmendedHook: consoleNiyamavaliAmendedHook,
     clock: () => new Date(),
   };
 }

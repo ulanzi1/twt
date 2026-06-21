@@ -6,12 +6,7 @@
 // + acknowledge are pessimistic/server-confirmed mutations (§4.2) that invalidate
 // the history so the banner + table re-derive from fresh server state.
 
-import {
-  QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AddPariwarRequest } from '@twt/contracts';
 
 import * as api from './client.js';
@@ -68,7 +63,10 @@ export function hasAuditVerify(grants: readonly string[] | undefined): boolean {
 
 /** The provisioning-status view: provisioned Pariwars + latest deploy status. */
 export function useProvisionedPariwars() {
-  return useQuery({ queryKey: provisionedPariwarsKey, queryFn: () => api.listProvisionedPariwars(100) });
+  return useQuery({
+    queryKey: provisionedPariwarsKey,
+    queryFn: () => api.listProvisionedPariwars(100),
+  });
 }
 
 /** Provision a new Pariwar, then refresh the status list. */
@@ -92,4 +90,99 @@ export function useTriggerDeploy() {
 /** True iff the session carries the `pariwar.provision` grant at global scope (AC-4). */
 export function hasPariwarProvision(grants: readonly string[] | undefined): boolean {
   return grants?.includes('pariwar.provision') ?? false;
+}
+
+// ── Niyamavali amendment-workflow surface (Story 2.4) ─────────────────────────
+// Authoring is NOT a strong-consistency surface like audit-integrity, so these use
+// the default cache (the createQueryClient defaults already set staleTime 0 here;
+// the lists invalidate on every mutation so the UI re-derives from server state).
+
+export const niyamavaliClausesKey = (pariwarId: string) =>
+  ['niyamavali-clauses', pariwarId] as const;
+export const niyamavaliDraftsKey = (pariwarId: string) => ['niyamavali-drafts', pariwarId] as const;
+export const niyamavaliDiffKey = (pariwarId: string, draftId: string) =>
+  ['niyamavali-diff', pariwarId, draftId] as const;
+
+/** The clause registry (latest version per clause). */
+export function useNiyamavaliClauses(pariwarId: string) {
+  return useQuery({
+    queryKey: niyamavaliClausesKey(pariwarId),
+    queryFn: () => api.listClauses(pariwarId),
+  });
+}
+
+/** Clause drafts (optionally a single lifecycle state). */
+export function useNiyamavaliDrafts(pariwarId: string, status?: string) {
+  return useQuery({
+    queryKey: [...niyamavaliDraftsKey(pariwarId), status ?? 'all'],
+    queryFn: () => api.listDrafts(pariwarId, status),
+  });
+}
+
+/** The structured + rendered diff preview for a draft (AC1c). */
+export function useDraftDiff(pariwarId: string, draftId: string | null) {
+  return useQuery({
+    queryKey: niyamavaliDiffKey(pariwarId, draftId ?? ''),
+    queryFn: () => api.getDraftDiff(pariwarId, draftId as string),
+    enabled: Boolean(draftId),
+  });
+}
+
+/** Invalidate the clause + draft lists after a workflow mutation. */
+function useInvalidateNiyamavali(pariwarId: string) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: niyamavaliClausesKey(pariwarId) });
+    void qc.invalidateQueries({ queryKey: niyamavaliDraftsKey(pariwarId) });
+  };
+}
+
+/** Create a draft (create | amend), then refresh the lists. */
+export function useCreateDraft(pariwarId: string) {
+  const invalidate = useInvalidateNiyamavali(pariwarId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createDraft>[1]) => api.createDraft(pariwarId, body),
+    onSuccess: invalidate,
+  });
+}
+
+/** Edit a draft, then refresh the lists and diff preview. */
+export function useUpdateDraft(pariwarId: string) {
+  const invalidate = useInvalidateNiyamavali(pariwarId);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { draftId: string; patch: Parameters<typeof api.updateDraft>[2] }) =>
+      api.updateDraft(pariwarId, vars.draftId, vars.patch),
+    onSuccess: (_draft, vars) => {
+      invalidate();
+      void qc.invalidateQueries({ queryKey: niyamavaliDiffKey(pariwarId, vars.draftId) });
+    },
+  });
+}
+
+/** Submit a draft for review, then refresh. */
+export function useSubmitForReview(pariwarId: string) {
+  const invalidate = useInvalidateNiyamavali(pariwarId);
+  return useMutation({
+    mutationFn: (draftId: string) => api.submitForReview(pariwarId, draftId),
+    onSuccess: invalidate,
+  });
+}
+
+/** Record a non-author sign-off, then refresh. */
+export function useSignoffDraft(pariwarId: string) {
+  const invalidate = useInvalidateNiyamavali(pariwarId);
+  return useMutation({
+    mutationFn: (draftId: string) => api.signoffDraft(pariwarId, draftId),
+    onSuccess: invalidate,
+  });
+}
+
+/** Publish a draft (tone-review-gated), then refresh. */
+export function usePublishDraft(pariwarId: string) {
+  const invalidate = useInvalidateNiyamavali(pariwarId);
+  return useMutation({
+    mutationFn: (draftId: string) => api.publishDraft(pariwarId, draftId),
+    onSuccess: invalidate,
+  });
 }

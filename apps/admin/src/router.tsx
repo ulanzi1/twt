@@ -16,6 +16,7 @@ import {
 
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
+import { NiyamavaliRoute } from './routes/NiyamavaliRoute.js';
 import { ProvisioningRoute } from './routes/ProvisioningRoute.js';
 import { RootErrorComponent, RootLayout } from './routes/RootLayout.js';
 
@@ -50,7 +51,22 @@ const provisioningRoute = createRoute({
   component: ProvisioningRoute,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute, integrityRoute, provisioningRoute]);
+// Story 2.4 — the FIRST `/p/:pariwarId/`-scoped admin route (the Niyamavali
+// amendment workflow). The path-scoped `pariwarId` threads into the tenant-scoped
+// API calls.
+const niyamavaliRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/niyamavali',
+  component: NiyamavaliRoute,
+});
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  loginRoute,
+  integrityRoute,
+  provisioningRoute,
+  niyamavaliRoute,
+]);
 
 export const router = createRouter({ routeTree });
 

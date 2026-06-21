@@ -9,5 +9,8 @@
 export * from './benefit-mechanism.js';
 // Story 2.3 — Niyamavali registry transport contracts (clause/version DTO,
 // amendment/diff DTO, affected-member-scope declaration, AC7 resolution query).
-// Plain z.* — no `.openapi()` (2.3 adds no endpoint; openapi/v1.yaml byte-identical).
+// Story 2.4 ADDS the amendment-workflow endpoint DTOs (create/amend/update draft,
+// draft response, tone-review sign-off, diff-preview, publish) — the FIRST
+// niyamavali endpoints, so these DO register via `.openapi()` in emit-openapi.ts and
+// `openapi/v1.yaml` changes (expected). The lockstep tests live in tests/rules.test.ts.
 export * from './clause.js';

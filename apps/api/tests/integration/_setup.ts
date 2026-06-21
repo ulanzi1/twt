@@ -21,6 +21,10 @@ import type { StepUpOtpDelivery, StepUpOtpDeliveryPort } from '../../src/modules
 import { noopTurnstileVerifier, type TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider, type WebAuthnProvider } from '../../src/modules/auth/shared/webauthn.js';
 import { createFakeDeployTrigger, type DeployTrigger } from '../../src/modules/pariwar-provisioning/deploy-trigger.js';
+import type {
+  NiyamavaliAmendedEvent,
+  NiyamavaliAmendedHook,
+} from '../../src/modules/rules/notification-hook.js';
 import type { ToneReviewAuditEvent, ToneReviewAuditSink } from '../../src/modules/tone-review/index.js';
 import { buildServer } from '../../src/server.js';
 
@@ -78,6 +82,17 @@ export class CapturingToneReviewAuditSink implements ToneReviewAuditSink {
   }
 }
 
+/** A member-notification hook that records every fired event (Story 2.4, AC3). */
+export class CapturingNiyamavaliHook {
+  public readonly events: NiyamavaliAmendedEvent[] = [];
+  public readonly hook: NiyamavaliAmendedHook = (event) => {
+    this.events.push(event);
+  };
+  public get last(): NiyamavaliAmendedEvent | undefined {
+    return this.events.at(-1);
+  }
+}
+
 /** A step-up delivery that records every code so tests can complete the flow. */
 export class CapturingStepUpDelivery implements StepUpOtpDeliveryPort {
   public readonly deliveries: StepUpOtpDelivery[] = [];
@@ -96,6 +111,7 @@ export interface TestDepsOverrides {
   turnstile?: TurnstileVerifier;
   webauthn?: WebAuthnProvider;
   deployTrigger?: DeployTrigger;
+  niyamavaliAmendedHook?: NiyamavaliAmendedHook;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
 }
@@ -106,6 +122,7 @@ export interface TestDeps {
   auditSink: CapturingAuditSink;
   toneReviewAuditSink: CapturingToneReviewAuditSink;
   stepUpDelivery: CapturingStepUpDelivery;
+  niyamavaliHook: CapturingNiyamavaliHook;
 }
 
 const FALLBACK_URL = 'postgresql://twt_test:twt_test@127.0.0.1:1/twt_unused';
@@ -124,6 +141,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     new CapturingToneReviewAuditSink();
   const stepUpDelivery =
     (overrides.stepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
+  const niyamavaliHook = new CapturingNiyamavaliHook();
 
   // Build fake-KMS encryption deps with the test pepper (KMS_TEST_MODE defaults to fake).
   const enc = buildEncryptionDeps(TEST_PEPPER);
@@ -151,9 +169,12 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Deploy seam (Story 1.15) — the in-memory fake by default; a spec may pass its
     // own to assert deploy-trigger interactions.
     deployTrigger: overrides.deployTrigger ?? createFakeDeployTrigger(),
+    // Member-notification hook (Story 2.4) — capturing fake by default so the publish
+    // spec can assert it fired with the right payload (AC3).
+    niyamavaliAmendedHook: overrides.niyamavaliAmendedHook ?? niyamavaliHook.hook,
     clock: overrides.clock ?? ((): Date => new Date()),
   };
-  return { deps, pool, auditSink, toneReviewAuditSink, stepUpDelivery };
+  return { deps, pool, auditSink, toneReviewAuditSink, stepUpDelivery, niyamavaliHook };
 }
 
 export interface TestApp extends TestDeps {
@@ -182,7 +203,7 @@ export interface InjectResult {
 /** A cookie-threading HTTP client over fastify.inject (no supertest). */
 export function makeClient(app: TestApp['app']): {
   inject(opts: {
-    method: 'GET' | 'POST';
+    method: 'GET' | 'POST' | 'PUT';
     url: string;
     payload?: object;
     headers?: Record<string, string>;

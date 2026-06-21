@@ -137,3 +137,172 @@ export const ClauseResolutionQuery = z.union([
   z.object({ clauseVersionId: ClauseVersionIdSchema }).strict(),
 ]);
 export type ClauseResolutionQuery = z.output<typeof ClauseResolutionQuery>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Story 2.4 — the Niyamavali amendment-workflow ENDPOINT DTOs.
+//
+// These are the FIRST niyamavali endpoints, so they register via `.openapi()` in
+// scripts/emit-openapi.ts and `openapi/v1.yaml` CHANGES (unlike 2.3's plain-z.*
+// components-free additions). The two enums are value-aligned with the domain
+// `clause_draft_operation` / `clause_draft_status` pgEnums; `@twt/domain` cannot
+// import this package (browser-bundle constraint), so tests/rules.test.ts asserts
+// the lockstep (the BenefitMechanism precedent). Per-row clause-draft id is a UUID.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Per-row clause-draft address (UUID), branded `ClauseDraftId`. */
+export const ClauseDraftIdSchema = z.string().uuid().brand<'ClauseDraftId'>();
+export type ClauseDraftIdSchema = z.output<typeof ClauseDraftIdSchema>;
+
+/** The draft operation the trustee is performing (2.4 surfaces create + amend only). */
+export const ClauseDraftOperationSchema = z.enum(['create', 'amend']);
+export type ClauseDraftOperationSchema = z.output<typeof ClauseDraftOperationSchema>;
+
+/** The draft lifecycle state (ADR-0021 state machine). */
+export const ClauseDraftStatusSchema = z.enum([
+  'draft',
+  'in_review',
+  'signed_off',
+  'published',
+  'discarded',
+]);
+export type ClauseDraftStatusSchema = z.output<typeof ClauseDraftStatusSchema>;
+
+/**
+ * Create a brand-new clause draft (operation `create`). `affected_member_scope` is
+ * NOT carried — a brand-new clause affects no prior member (the server forces null).
+ * The `clause_id` format/uniqueness is authoritatively checked at PUBLISH by
+ * `createClause` (the 409 seam); the draft-create may pre-check + surface early.
+ */
+export const CreateClauseDraftRequest = z
+  .object({
+    operation: z.literal('create'),
+    clauseId: ClauseIdSchema,
+    payload: ClausePayloadSchema,
+    effectiveDate: Iso8601Datetime,
+    benefitMechanism: BenefitMechanism,
+  })
+  .strict();
+export type CreateClauseDraftRequest = z.output<typeof CreateClauseDraftRequest>;
+
+/**
+ * Amend an existing clause via a draft (operation `amend`). `affected_member_scope`
+ * is REQUIRED (architecture §1.10). `benefitMechanism` is optional — when omitted the
+ * server defaults it to the prior published version's mechanism.
+ */
+export const AmendClauseDraftRequest = z
+  .object({
+    operation: z.literal('amend'),
+    clauseId: ClauseIdSchema,
+    payload: ClausePayloadSchema,
+    effectiveDate: Iso8601Datetime,
+    affectedMemberScope: AffectedMemberScopeSchema,
+    benefitMechanism: BenefitMechanism.optional(),
+  })
+  .strict();
+export type AmendClauseDraftRequest = z.output<typeof AmendClauseDraftRequest>;
+
+/**
+ * The POST /clauses/drafts body — a discriminated union on `operation` so the
+ * server dispatches create vs amend with full type-narrowing + per-arm validation.
+ */
+export const CreateDraftBody = z.discriminatedUnion('operation', [
+  CreateClauseDraftRequest,
+  AmendClauseDraftRequest,
+]);
+export type CreateDraftBody = z.output<typeof CreateDraftBody>;
+
+/**
+ * Edit an existing draft (PUT /clauses/drafts/:draftId). A partial patch — any
+ * supplied field is updated; the server RESETS the draft to `draft` + clears the
+ * tone-review sign-off on ANY edit (content-bound sign-off, AC1d). `null` on
+ * `affectedMemberScope` clears it.
+ */
+export const UpdateClauseDraftRequest = z
+  .object({
+    payload: ClausePayloadSchema.optional(),
+    effectiveDate: Iso8601Datetime.optional(),
+    benefitMechanism: BenefitMechanism.optional(),
+    affectedMemberScope: AffectedMemberScopeSchema.nullable().optional(),
+  })
+  .strict();
+export type UpdateClauseDraftRequest = z.output<typeof UpdateClauseDraftRequest>;
+
+/**
+ * The reviewer sign-off body (POST /clauses/drafts/:draftId/tone-review). Carries
+ * nothing the server cannot derive (reviewer = session actor; content hash = the
+ * current payload) EXCEPT an explicit `confirm` flag — the reviewer affirming they
+ * applied the tone-review checklist (docs/tone-review-checklist.md).
+ */
+export const ToneReviewSignoffRequest = z
+  .object({
+    confirm: z.literal(true),
+  })
+  .strict();
+export type ToneReviewSignoffRequest = z.output<typeof ToneReviewSignoffRequest>;
+
+/** The draft response DTO — mirrors the domain `clause_drafts` row. `.strict()`. */
+export const ClauseDraftResponse = z
+  .object({
+    draftId: ClauseDraftIdSchema,
+    pariwarId: UuidString.brand<'PariwarId'>(),
+    clauseId: ClauseIdSchema,
+    operation: ClauseDraftOperationSchema,
+    payload: ClausePayloadSchema,
+    effectiveDate: Iso8601Datetime,
+    benefitMechanism: BenefitMechanism,
+    affectedMemberScope: AffectedMemberScopeSchema.nullable(),
+    status: ClauseDraftStatusSchema,
+    authoredByActor: UuidString,
+    toneReviewedBy: UuidString.nullable(),
+    toneReviewedAt: Iso8601Datetime.nullable(),
+    toneReviewContentHash: z.string().nullable(),
+    publishedClauseVersionId: ClauseVersionIdSchema.nullable(),
+    createdAt: Iso8601Datetime,
+    updatedAt: Iso8601Datetime,
+    auditId: UuidString.nullable(),
+  })
+  .strict();
+export type ClauseDraftResponse = z.output<typeof ClauseDraftResponse>;
+
+/**
+ * One field-aligned row of the rendered-content diff (AC1c). The payload is OPAQUE
+ * (freeze row 14), so this is a DISPLAY-FIELD rendering — readable `key: value`
+ * before/after strings — NOT a rule interpretation. `before`/`after` are null when
+ * the field is absent on that side (added / removed).
+ */
+export const RenderedDiffRow = z
+  .object({
+    field: z.string(),
+    before: z.string().nullable(),
+    after: z.string().nullable(),
+    changed: z.boolean(),
+  })
+  .strict();
+export type RenderedDiffRow = z.output<typeof RenderedDiffRow>;
+
+/**
+ * The diff-preview response (GET /clauses/drafts/:draftId/diff, AC1c): BOTH the
+ * structured-payload diff (`computePayloadDiff`) AND the rendered-content diff.
+ */
+export const DiffPreviewResponse = z
+  .object({
+    structuredDiff: DiffDocumentSchema,
+    renderedDiff: z.array(RenderedDiffRow),
+  })
+  .strict();
+export type DiffPreviewResponse = z.output<typeof DiffPreviewResponse>;
+
+/**
+ * The publish response (POST /clauses/drafts/:draftId/publish). The newly-minted
+ * immutable version coordinates + the audit line id (AC2/AC5 — `auditId` is
+ * NON-null: no published clause exists without an audit line).
+ */
+export const PublishClauseResponse = z
+  .object({
+    clauseVersionId: ClauseVersionIdSchema,
+    clauseId: ClauseIdSchema,
+    version: z.number().int().positive(),
+    auditId: UuidString,
+  })
+  .strict();
+export type PublishClauseResponse = z.output<typeof PublishClauseResponse>;

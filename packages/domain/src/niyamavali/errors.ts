@@ -62,4 +62,106 @@ export class ClauseNotFoundError extends Error {
   ) {
     super(`no clause_id '${clauseId}' exists for this Pariwar`);
   }
+
+  /** Project into the transport ErrorResponse envelope (the 2.4 route supplies requestId). */
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { clause_id: this.clauseId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+// ── Draft-store errors (Story 2.4) ───────────────────────────────────────────
+// The draft accessors (niyamavali/drafts.ts) own a small state machine; these
+// typed errors let the 2.4 route map them to stable HTTP envelopes without 500ing
+// on a legitimate out-of-order request. Mirrors the ClauseId* projector shape.
+
+/** Namespaced error code for an absent draft (HTTP 404 at transport). */
+export const DRAFT_NOT_FOUND_CODE = 'niyamavali.draft_not_found';
+
+/** Thrown when a `draft_id` does not resolve in the active Pariwar. → HTTP 404. */
+export class DraftNotFoundError extends Error {
+  public readonly name = 'DraftNotFoundError';
+  public readonly code = DRAFT_NOT_FOUND_CODE;
+  public constructor(
+    public readonly pariwarId: string,
+    public readonly draftId: string,
+  ) {
+    super(`no draft '${draftId}' exists for this Pariwar`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { draft_id: this.draftId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced error code for an invalid draft state transition (HTTP 409). */
+export const DRAFT_INVALID_STATE_CODE = 'niyamavali.draft_invalid_state';
+
+/**
+ * Thrown when a draft state transition is illegal for the draft's current status
+ * (e.g. editing a published draft, signing off a draft not in review, publishing
+ * an unsigned draft). The 2.4 route maps this → HTTP 409 (a conflict with current
+ * resource state, retryable once the precondition holds).
+ */
+export class DraftStateError extends Error {
+  public readonly name = 'DraftStateError';
+  public readonly code = DRAFT_INVALID_STATE_CODE;
+  public constructor(
+    public readonly draftId: string,
+    public readonly currentStatus: string,
+    public readonly detail: string,
+  ) {
+    super(`draft '${draftId}' (status=${currentStatus}): ${detail}`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { draft_id: this.draftId, current_status: this.currentStatus },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced error code for a self-review sign-off attempt (HTTP 409). */
+export const DRAFT_SELF_REVIEW_CODE = 'niyamavali.draft_self_review';
+
+/**
+ * Thrown by `recordDraftSignoff` when the would-be reviewer authored the draft —
+ * an author cannot tone-review their own copy (AC1d; defense-in-depth alongside the
+ * publish gate's invariant 3). The 2.4 route maps this → HTTP 409.
+ */
+export class DraftSelfReviewError extends Error {
+  public readonly name = 'DraftSelfReviewError';
+  public readonly code = DRAFT_SELF_REVIEW_CODE;
+  public constructor(public readonly draftId: string) {
+    super(`draft '${draftId}': the author cannot tone-review their own draft`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { draft_id: this.draftId },
+        request_id: requestId,
+      },
+    };
+  }
 }

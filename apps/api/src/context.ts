@@ -17,6 +17,7 @@ import type { StepUpOtpDeliveryPort } from './modules/auth/shared/step-up-delive
 import type { TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import type { WebAuthnProvider } from './modules/auth/shared/webauthn.js';
 import type { DeployTrigger } from './modules/pariwar-provisioning/deploy-trigger.js';
+import type { NiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
 import type { ToneReviewAuditSink } from './modules/tone-review/index.js';
 
 /**
@@ -76,6 +77,13 @@ export interface AppDeps {
    * `turnstile`.
    */
   readonly deployTrigger: DeployTrigger;
+  /**
+   * Member-notification scaffolding hook (Story 2.4, AC3) — fired on a successful
+   * Niyamavali publish. A placeholder seam at 2.4 (console in prod/dev, a capturing
+   * fake in tests); Epic 5 wires the real `niyamavali.amended` push fan-out. Same
+   * injectable-seam pattern as `deployTrigger` / `toneReviewAuditSink`.
+   */
+  readonly niyamavaliAmendedHook: NiyamavaliAmendedHook;
   /** Injectable clock — tests freeze it to assert TTL / lockout / window expiry. */
   readonly clock: () => Date;
 }

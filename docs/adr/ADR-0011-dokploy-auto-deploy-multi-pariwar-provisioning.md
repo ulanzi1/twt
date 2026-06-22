@@ -1,9 +1,9 @@
 # ADR-0011: Multi-Pariwar provisioning surface — global-scope permission gate, self-scoped write, env-resolved DeployTrigger, GitHub Actions → Dokploy API deploy model, dev-agent-wires/operator-applies split
 
-> **Status:** drafted
-> **Date:** 2026-06-15 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.15 closure
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); co-requisite still open (3 reconciled runbooks await ≥2-trustee re-sign, Decision 2026-06-21-050); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -85,4 +85,5 @@ The dev agent **authored + wired + TESTED** the entire slice + the live client +
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (continuation of the ADR-0010 session). **Co-requisite still OPEN** (NOT discharged here): the 3 reconciled runbooks await ≥2-trustee re-sign (Decision 2026-06-21-050). `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-15 | (initial draft) | Solo Builder (BigDev) | Authored at Story 1.15 closure — `requireGlobalPermission` global-scope gate (closes D4-1.11a) + audit retrofit (AC-1b); self-scoped provisioning write; env-resolved `DeployTrigger` (fake + live Dokploy-API client); GitHub Actions → Dokploy API deploy model (staging + prod, prod ≥2-principal + strictest WIF); dev-agent-wires/operator-applies split; Cloudflare path-routing GATED (D1-1.13) |

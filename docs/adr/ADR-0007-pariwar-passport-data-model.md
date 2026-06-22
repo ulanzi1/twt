@@ -1,9 +1,9 @@
 # ADR-0007: Pariwar-Passport data model v1 — cross-readable carve-out, runtime branding bundle, branded IDs, 60s freshness
 
-> **Status:** drafted
-> **Date:** 2026-06-11 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.7 closure
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -82,4 +82,5 @@ Author `pariwar_passport` in `packages/domain/` with a **read-cross / write-isol
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (data-model — trustee judgment; continuation of the ADR-0010 session); `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-11 | (initial draft) | Solo Builder (BigDev) | Authored at Story 1.7 closure (Pariwar-Passport data model + branding bundle); paired with Decision 2026-06-11-043 |

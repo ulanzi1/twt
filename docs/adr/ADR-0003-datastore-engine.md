@@ -1,9 +1,9 @@
 # ADR-0003: Datastore engine — Cloud SQL Postgres 16 + Drizzle ORM + drizzle-kit forward-only migrations
 
-> **Status:** drafted
-> **Date:** 2026-06-08
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), discharging the architecture §Deferred Decisions L157-159 + adr-index.md line 54 slot at Story 1.2 closure.
-> **Ratifying trustees:** _pending Trustee Panel session_
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** (none)
 > **Superseded by:** (none)
 
@@ -241,5 +241,4 @@ Load-bearing details:
 | Date       | Status flip                                | Author             | Notes                                                                                  |
 | ---------- | ------------------------------------------ | ------------------ | -------------------------------------------------------------------------------------- |
 | 2026-06-08 | (initial draft)                            | Solo Builder       | Authored at Story 1.2 closure; closes `ADR-NNNN-datastore-engine` slot at adr-index L54 |
-| _pending_  | drafted → under-trustee-review             | _pending_          | Presented to Trustee Panel — _pending_                                                 |
-| _pending_  | under-trustee-review → ratified            | _pending_          | Ratified at Trustee Panel — _pending_                                                  |
+| 2026-06-21 | drafted → ratified                         | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (light-touch — drafted directly to ratified; continuation of the ADR-0010 session); `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |

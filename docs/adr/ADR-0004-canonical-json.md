@@ -1,9 +1,9 @@
 # ADR-0004: Canonical-JSON serialization — RFC 8785 JCS hand-rolled subset
 
-> **Status:** drafted
-> **Date:** 2026-06-09
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), discharging architecture §1.5 line 898-902 + the latent §Deferred Decisions slot that emerged with the first hash-chain consumer at Story 1.3 closure.
-> **Ratifying trustees:** _pending Trustee Panel session_
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** (none)
 > **Superseded by:** (none)
 

@@ -1,9 +1,9 @@
 # ADR-0006: PII Tier-1 KEK library — `@google-cloud/kms` + Node `crypto` AES-256-GCM + HMAC-SHA-256
 
-> **Status:** drafted
-> **Date:** 2026-06-10
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), discharging architecture §2.7 line 1508 + `docs/knowledge-transfer/adr-index.md` line 89 at Story 1.5 closure.
-> **Ratifying trustees:** _pending Trustee Panel session (light-touch ratification path acceptable with security-review checklist appended — engineering with security review)_
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (security-relevant — trustee judgment); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** (none)
 > **Superseded by:** (none)
 

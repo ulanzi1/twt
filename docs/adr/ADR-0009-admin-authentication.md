@@ -1,10 +1,10 @@
 # ADR-0009: Admin authentication — Fastify surface, session model, Argon2id+pepper, WebAuthn v13 enrollment ceremony, identity/auth RLS carve-out, step-up gating
 
-> **Status:** under-trustee-review
-> **Date:** 2026-06-12 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.9 closure
 > **Architecture-confirmed:** 2026-06-12 (Winston, System Architect) — R2 identity/auth RLS-carve-out mechanism (§5); rationale in `sprint-change-proposal-2026-06-12-R2.md`
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); R2 identity/auth RLS posture architecture-confirmed 2026-06-12 (Winston); Super Admin governance amendment adopted in-session (see §Ratification); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -72,9 +72,21 @@ Every privileged auth event emits to an injectable `AuthAuditSink` (default stru
 ## Consequences
 
 - 14 downstream epics inherit a working Fastify substrate (plugins/middleware/module tree, scope-resolution, RBAC adapter, the auth seams).
-- The identity/auth RLS posture (R2) is load-bearing and was **architecture-confirmed 2026-06-12 (Winston)** — ENABLE+FORCE+`USING(true)` carve-out (Option 1); trustee ratification pending (status now `under-trustee-review`). The session-model patch (R1) was applied via correct-course (`sprint-change-proposal-2026-06-12.md`); scope-enum precedents await correct-course ratification.
+- The identity/auth RLS posture (R2) is load-bearing and was **architecture-confirmed 2026-06-12 (Winston)** — ENABLE+FORCE+`USING(true)` carve-out (Option 1); **trustee-ratified 2026-06-21** (Decision 2026-06-21-059; status now `ratified`). The session-model patch (R1) was applied via correct-course (`sprint-change-proposal-2026-06-12.md`); scope-enum precedents await correct-course ratification.
 - Deferred legs recorded in `deferred-work.md`: closed (apps/api-landing cluster) + opened (SMS→5.6/5.9, audit sink→1.10, Turnstile→1.13, admin UI→post-1.17, api-client fast-follow).
+
+## Ratification (2026-06-21)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-06-21 Trustee Panel session (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059. The R2 identity/auth RLS posture was architecture-confirmed 2026-06-12 (Winston), discharging the recorded caveat.
+
+**Governance amendment adopted in-session — Super Admin management model** (canonical record: Decision 2026-06-21-059 amendment A):
+1. Super Admin manages ordinary admin accounts.
+2. Super Admin assignment requires trustee approval.
+3. At least one active trustee must continuously hold Super Admin access.
+4. No single non-trustee individual may be the sole holder of Super Admin privileges.
+
+**Follow-up (gated — required before production go-live):** a trustee credential-loss & succession runbook covering lost passkeys, exhausted recovery codes, trustee death / resignation / incapacity, and Super Admin transfer/revocation. Tracked as an open follow-up under Decision 2026-06-21-059; NOT discharged by this ratification.
 
 ## Review cadence
 
-Argon2id params + pepper rotation: annual security review. Identity-table RLS posture + session model: confirm at the next architecture review. The 12-role seed remains OQ-3-provisional (ADR-0008).
+Argon2id params + pepper rotation: annual security review. Identity-table RLS posture + session model: confirm at the next architecture review. The 12-role seed's OQ-3 gate was resolved 2026-06-21 (ADR-0008; Decision 2026-06-21-059 amendment B) — the seed-matrix amendments remain a gated pre-production-seed follow-up.

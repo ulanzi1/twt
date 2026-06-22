@@ -1,9 +1,9 @@
 # ADR-0005: OpenAPI client-generation tool — `@hey-api/openapi-ts` primary, Orval secondary
 
-> **Status:** drafted
-> **Date:** 2026-06-09
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), discharging architecture §3.1 line 1812 + §5.15 deferred decision row L3585 + `docs/knowledge-transfer/adr-index.md` Section B row 12 at Story 1.4 closure.
-> **Ratifying trustees:** _pending Trustee Panel session (light-touch ratification path acceptable — engineering tooling choice, not trust-posture-load-bearing)_
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (light-touch path, as flagged at authoring; discharges the Decision 2026-06-09-040 deferred-ratification commitment); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** (none)
 > **Superseded by:** (none)
 

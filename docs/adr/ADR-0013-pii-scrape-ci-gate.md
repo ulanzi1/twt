@@ -1,9 +1,9 @@
 # ADR-0013: PII scrape CI gate — FR-74 matrix-consumer, 4-tier leak engine + naked-PII detection, no-op-until-populated, contracts-turbo-task repo-scope
 
-> **Status:** drafted
-> **Date:** 2026-06-16 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.16b closure
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -212,4 +212,5 @@ Resolved via explicit deferral to its landing Story.
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (engineering substrate — light-touch; continuation of the ADR-0010 session); `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-16 | (initial draft) | Solo Builder (BigDev) | Authored under Story 1.16b (PII scrape CI gate) closure |

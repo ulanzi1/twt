@@ -1,9 +1,9 @@
 # ADR-0020: Niyamavali rule-registry data model — versioned clause registry + amendment-with-diff
 
-> **Status:** drafted
-> **Date:** 2026-06-21
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** <pending>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -164,4 +164,5 @@ block-all-UPDATE trigger (the events_log posture) is wrong for it.
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (data-model — trustee judgment; continuation of the ADR-0010 session); `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-21 | (initial draft) | BigDev (Solo Builder) | Authored under Story 2.3 (Niyamavali rule registry data model + amendment-with-diff storage) closure |

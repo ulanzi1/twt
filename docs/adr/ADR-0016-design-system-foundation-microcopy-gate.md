@@ -1,9 +1,9 @@
 # ADR-0016: Design-system foundation — hand-rolled `@twt/tokens` registry + Tailwind v4 `@theme` generator (FM-4 sync gate) + the `microcopy` vocabulary/numeral/FM-14 CI gate, with the FM-1..FM-14 reconciliation
 
-> **Status:** drafted
-> **Date:** 2026-06-16 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.17 closure
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -243,4 +243,5 @@ so `packages/ui` is not populated. The `packages/ui` leg of D4-1.11b stays defer
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (engineering substrate — light-touch; continuation of the ADR-0010 session); `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-16 | (initial draft) | Solo Builder (BigDev) | Authored under Story 1.17 (design-system foundation — tokens + theme generator + microcopy gate) closure |

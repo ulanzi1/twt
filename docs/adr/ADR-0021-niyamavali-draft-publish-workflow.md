@@ -1,9 +1,9 @@
 # ADR-0021: Niyamavali draft store + audit-logged publish state machine
 
-> **Status:** drafted
-> **Date:** 2026-06-21
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** <pending>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); governance clarification adopted in-session — this audit-logged draft→publish workflow is the authoritative path by which Niyamavali amendments become official and publishable (Decision 2026-06-21-059 amendment C); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 

@@ -1,9 +1,9 @@
 # ADR-0019: Tone-review publish gate + automated-floor-vs-human-check relationship (Story 2.2)
 
-> **Status:** drafted
-> **Date:** 2026-06-20 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Story 2.2 closure
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -161,4 +161,5 @@ the consuming surface (persistence deferred to Story 2.4).** The load-bearing ch
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (policy-adjacent — trustee judgment; continuation of the ADR-0010 session); `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-20 | (initial draft) | BigDev (Solo Builder) | Authored under Story 2.2 (tone-guide + vocabulary enforcement process) closure |

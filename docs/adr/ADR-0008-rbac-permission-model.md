@@ -1,9 +1,9 @@
 # ADR-0008: RBAC permission model v1 — `<resource>.<action>` keys, reconciled scope enum, `(role, scope)` grant tuple + containment, 12 seeded roles, fail-closed guard
 
-> **Status:** drafted
-> **Date:** 2026-06-11 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** Solo Builder (BigDev), at Story 1.8 closure
-> **Ratifying trustees:** <pending; populated at `ratified` status>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session); OQ-3 resolved in-session (see Consequences); logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -65,7 +65,7 @@ Author the RBAC primitive in **`packages/domain/src/rbac/`** (`scope.ts`, `permi
 
 - **Operational** — Migration `0004` is forward-only and hand-supplemented (GRANT/FORCE) like `0002`/`0003`; `DO NOT REGENERATE`. The manual inverse is documented in the migration header for operator reference (the forward-only project still benefits from a recorded rollback path). `db:check` stays clean; the snapshot records only the table-shape view.
 - **Security** — Fail-closed is the invariant; the unit-test matrix is the tripwire. `role_grants` is a scoped table asserted at 0 rows cross-tenant by the adversarial leak suite (a wrong assertion would either green-light a leak or red-fail a legitimate read). DELETE is privilege-granted because grants are revocable.
-- **Provisional status** — The 12-role matrix is provisional pending **OQ-3** (Trustee confirm/revise pre-launch, "Blocks RBAC seed in production"). The bundles are data, editable by Super Admin (FR-44).
+- **Provisional status — OQ-3 RESOLVED 2026-06-21.** The 12-role matrix was provisional pending **OQ-3** (Trustee confirm/revise pre-launch, "Blocks RBAC seed in production"). The Trustee Panel resolved OQ-3 at the 2026-06-21 session (Decision 2026-06-21-059 amendment B): the 12-role catalogue is **approved**; the seed permission matrix is **approved subject to implementation of the trustee-approved amendments** (a gated pre-production-seed follow-up, NOT yet implemented); future permission additions for Finance Officer, Media/Comms, Field Worker, and Helpline Operator are ratified when their feature sets ship. The bundles remain data, editable by Super Admin (FR-44); the set may still evolve under that approval, so the `text`-column choice (Decision #7) stands.
 - **Deferred seams** — geo-tree containment resolver (→ Epic 3); FR-47 audit sink (→ Story 1.10); HTTP-middleware + scope-resolution adapter (→ Story 1.9); `role_grants` FK to the users table (→ Story 1.9+).
 - **Cost / performance** — Pure-domain check (no I/O). The `role_grants` read path is a single indexed lookup (`(pariwar_id, user_id)`); no new infra.
 - **Migration / pivot path** — A real geo resolver drops into `scopeContains` behind the existing interface; the audit sink drops into `onAuthorizationDenied`; a FK on `user_id`/`created_by` is added retroactively once the users table lands; `role` can flip to a pgEnum if the role set freezes post-OQ-3.
@@ -87,4 +87,5 @@ Author the RBAC primitive in **`packages/domain/src/rbac/`** (`scope.ts`, `permi
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session (trustee judgment; continuation of the ADR-0010 session). **OQ-3 resolved** (Decision 2026-06-21-059 amendment B): 12-role catalogue approved; seed matrix approved subject to trustee-approved amendments; future-role permissions ratified per feature-set ship. `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-11 | (initial draft) | Solo Builder (BigDev) | Authored at Story 1.8 closure (RBAC permission model v1); paired with Decision 2026-06-11-044 |

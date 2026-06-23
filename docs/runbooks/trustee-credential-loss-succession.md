@@ -2,19 +2,20 @@
 
 > **Status:** draft (author-committed; **awaiting ≥2-trustee sign-off** per ledger) — discharges the gated follow-up of `.decision-log.md` Decision 2026-06-21-059 amendment A. **Required before production go-live; NOT yet sign-off-attested.**
 > **Owner role:** Trustee Panel (governance owner) + Infrastructure on-call (execution; Solo Builder primary at v1, backup engineer per A-13 / Story 0.6)
-> **Last material edit:** 2026-06-23 by BigDev (Solo Builder) — Trustee Panel amendments (§2.4 three-way separation of duties + §2.6 24-hour break-glass reconciliation); initial draft 2026-06-22
+> **Last material edit:** 2026-06-23 by BigDev (Solo Builder) — Trustee Panel amendments: three-way separation of duties elevated to invariant **SA-5** and extended to §2.5 transfer/revocation; §2.6 24-hour break-glass reconciliation; initial draft 2026-06-22
 > **Architectural authority:** ADR-0009 (admin authentication — passkeys, recovery codes, step-up, identity tables, `mintEnrollmentToken`) · ADR-0008 (RBAC — Super Admin = the only `global`-scoped role) · `.decision-log.md` Decision 2026-06-21-059 amendment A (Super Admin governance model) + Decision 2026-06-12-045 · architecture §2.3–§2.7 (admin auth + RBAC) + §2.10 (sole-engineer credential restrictions) + §5.9 (credential rotation) + §5.10 (backup-engineer access posture) · Story 0.2 credential-escrow framework (`docs/escrow/`) · Story 0.6 backup engineer (`docs/backup-engineer/`)
 
 This runbook governs recovery from **loss of an administrator's authentication credentials** and **succession of Super-Admin authority** when a holder departs (death, resignation, incapacity) or must be transferred/revoked. It exists because Super Admin is the apex of the admin trust chain (ADR-0008: the only `global`-scoped role, applied cross-Pariwar via `requireGlobalPermission`), and a botched recovery can either lock the trust out of its own platform or hand apex authority to the wrong party.
 
-## Super-Admin governance invariants (non-negotiable — every procedure below preserves all four)
+## Super-Admin governance invariants (non-negotiable — every procedure below preserves all five)
 
-Per Decision 2026-06-21-059 amendment A:
+SA-1…SA-4 per Decision 2026-06-21-059 amendment A; SA-5 per Trustee Panel directive 2026-06-23:
 
 1. **SA-1** — Super Admin manages ordinary admin accounts (Super Admin is the issuing authority for the recovery paths below; an ordinary admin never self-elevates).
 2. **SA-2** — Super-Admin assignment requires **trustee approval** (every grant in §2.4/§2.5/§2.6 carries a recorded trustee approval — never an operator acting alone).
 3. **SA-3** — **At least one active trustee must continuously hold Super-Admin access** (the continuity invariant — the spine of the **grant-before-revoke** discipline; never revoke the last trustee Super Admin).
 4. **SA-4** — **No single non-trustee individual may be the sole holder of Super-Admin privileges** (the anti-capture invariant — a lone operator holding SA with no trustee co-holder is an incident, not a steady state).
+5. **SA-5** — **Three-way separation of duties on Super-Admin authority changes.** No single individual may **simultaneously** (1) **approve** a Super-Admin grant or revocation, (2) **execute** it, and (3) **verify** its completion. These three roles are held by **three distinct individuals**, named in the recovery log, for **every** change to the Super-Admin holder set (§2.4 succession **and** §2.5 transfer/revocation; the §2.6 break-glass data-layer path is reconciled under the same separation per §2.6 step 7).
 
 > **Central safety discipline:** any change to the Super-Admin holder set is **grant-before-revoke** and is gated on a post-change re-check of SA-3 + SA-4 (§4). If a procedure cannot complete without transiently violating SA-3, **stop and escalate to §2.6** — do not proceed.
 
@@ -76,7 +77,7 @@ Precondition: the admin has **no passkey and no recovery code**. Password alone 
 
 Precondition: a person who **holds Super Admin** is permanently unavailable. Goal: install the successor **before** removing the departed holder (SA-3), under recorded trustee approval (SA-2).
 
-> **Separation of duties (Trustee Panel directive, 2026-06-23).** No single individual may **simultaneously** (1) **approve** a Super-Admin grant, (2) **execute** the grant, and (3) **verify** its completion. These three roles are held by **three distinct individuals** for every grant in this section — e.g., the Trustee Panel approves (SA-2), Infrastructure on-call executes, and a second trustee or independent party verifies (§4). The three named roles are recorded in the recovery log for each grant. (Enforced as a forbidden action in §3 and a verification check in §4.)
+> **Separation of duties — SA-5 applies.** Every grant in this section is bound by **SA-5**: the **approve / execute / verify** roles are three distinct individuals — e.g., the Trustee Panel approves (SA-2), Infrastructure on-call executes, and a second trustee or independent party verifies (§4) — named in the recovery log. (Enforced as a forbidden action in §3 and a verification check in §4.)
 
 1. **Establish the governance fact.** Obtain the out-of-band proof appropriate to the cause: **death** → death certificate; **incapacity** → medical certification; **resignation** → trustee/board resolution. Per the trust deed and Story 0.13 legal counsel where the cause has legal weight. **Policy point for sign-off:** confirm the proof standard per cause.
 2. **Confirm the post-departure invariant state.** Using the holder register (§1), determine whether removing the departed holder would breach **SA-3** (no active trustee left holding SA) or **SA-4** (a lone non-trustee left as sole holder). If either would breach → the successor grant in step 3 is **mandatory and blocking** before step 4.
@@ -86,7 +87,7 @@ Precondition: a person who **holds Super Admin** is permanently unavailable. Goa
 
 ### 2.5 Super-Admin transfer / revocation (routine governance)
 
-For planned changes that are not a loss event. Same spine: **grant-before-revoke**, **trustee-approved**, **invariant-checked**.
+For planned changes that are not a loss event. Same spine: **grant-before-revoke**, **trustee-approved**, **invariant-checked**, and — per **SA-5** — **three-way separation of duties** (the approve / execute / verify roles are three distinct individuals, named in the recovery log, for **both** the transfer and the revocation below).
 
 - **Transfer (A → B):** (1) ≥2-trustee approval recorded (SA-2); (2) ensure B has a hardened admin account (factors per §2.1–§2.3); (3) **grant** B the `global` Super-Admin role; (4) run §4 invariant checks **with both A and B holding**; (5) only then **revoke** A. Never revoke A first.
 - **Revocation (remove a holder):** (1) ≥2-trustee approval recorded; (2) **before** revoking, verify the holder is **not** the last trustee Super Admin (SA-3) and that revocation leaves **no lone non-trustee sole holder** (SA-4); (3) if either check fails, **first** grant a qualifying trustee Super Admin (§2.4 step 3), then revoke; (4) revoke grant + disable credentials + destroy sessions; (5) update register + audit.
@@ -115,7 +116,7 @@ Trigger: the **sole** Super Admin is lost, **or all** Super-Admin holders are si
 - ❌ Revoke the **last trustee** Super Admin. There is no valid procedure that leaves zero trustee Super Admins.
 - ❌ Leave a **lone non-trustee** as sole Super Admin (SA-4) as a steady state — restore a trustee SA immediately.
 - ❌ Issue an enrollment link or grant Super Admin **without** out-of-band identity verification (§1) and recorded **trustee approval** (SA-2).
-- ❌ Allow a **single individual** to approve, execute, **and** verify the same Super-Admin grant (§2.4 separation of duties). These three roles are always three distinct people.
+- ❌ Allow a **single individual** to approve, execute, **and** verify the same Super-Admin grant **or revocation** (SA-5; §2.4 succession + §2.5 transfer/revocation). These three roles are always three distinct people.
 - ❌ Deliver an enrollment link or recovery codes **in-band** or in any logged/plaintext channel.
 - ❌ Bypass audit emission. Every action here must produce its ADR-0009 §8 audit event; bypass invalidates the recovery's provenance and the bus-factor posture.
 - ❌ Open the credential escrow without the **≥2-trustee quorum** (Story 0.2), or skip the **re-seal** after a break-glass open.
@@ -129,7 +130,7 @@ Run after **every** procedure that changes the admin/SA holder set:
 - [ ] **SA-4 holds:** no single non-trustee is the **sole** Super-Admin holder (if any non-trustee holds SA, ≥1 trustee also holds it).
 - [ ] **Grant-before-revoke honoured:** for transfers/succession, the successor's grant audit event (`scope.change`) **precedes** the departed holder's revocation event.
 - [ ] **Trustee approval recorded** (SA-2) for every Super-Admin grant/revoke in this run.
-- [ ] **Separation of duties honoured** (§2.4 succession): the individuals who **approved**, **executed**, and **verified** the Super-Admin grant are three distinct people, named in the recovery log.
+- [ ] **Separation of duties honoured** (SA-5; §2.4 succession + §2.5 transfer/revocation): the individuals who **approved**, **executed**, and **verified** the Super-Admin grant or revocation are three distinct people, named in the recovery log.
 - [ ] **Recovery is auditable:** the expected ADR-0009 §8 events are present (`passkey.enroll` / `recovery_code.consume` / `scope.change`) with the issuing Super Admin and the out-of-band verification recorded.
 - [ ] **Departed holder fully de-authorised** (§2.4/§2.5): grant revoked, `admin_credentials` disabled, `webauthn_credentials` removed, live `admin_sessions` destroyed.
 - [ ] **Bootstrap window closed:** any enrollment link issued is consumed or invalidated; the target now has ≥1 passkey and a fresh recovery-code set.
@@ -164,5 +165,6 @@ Roles, not individuals where possible; specific contacts live in operations poli
 
 | Date | git SHA | Author | Material edit? | Re-sign required? | Ledger entry |
 |---|---|---|---|---|---|
+| 2026-06-23 | _draft_ | BigDev (Solo Builder) | yes — Trustee Panel amendments | yes (≥2 trustees) | _pending sign-off — separation of duties elevated to top-level invariant **SA-5** and extended to §2.5 transfer/revocation (Trustee Panel decision 2026-06-23)_ |
 | 2026-06-23 | _draft_ | BigDev (Solo Builder) | yes — Trustee Panel amendments | yes (≥2 trustees) | _pending sign-off — incorporates Trustee Panel recommendations: §2.4 three-way separation of duties (approve / execute / verify) + §2.6 24-hour independent break-glass reconciliation_ |
 | 2026-06-22 | _initial_ | BigDev (Solo Builder) | initial | yes (≥2 trustees) | _pending — discharges Decision 2026-06-21-059 amendment A on ≥2-trustee sign-off_ |

@@ -1,6 +1,6 @@
 # Runbook: Rollback
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger) — **reconciled to AS-BUILT by Story 1.15 (material edit, re-sign required)**
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md`; AS-BUILT (Story 1.15) sign-off discharges the ADR-0011 co-requisite (Decision 2026-06-21-050). Recorded as Decision 2026-06-23-060.
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13)
 > **Last material edit:** 2026-06-15 by Solo Builder (Story 1.15 AS-BUILT reconciliation — new-Pariwar rollback + Dokploy redeploy)
 > **Architectural authority:** architecture.md §1.8 (Migration tool — drizzle-kit forward-only), §5.4 (CI/CD pipeline — signed image promotion, tag immutability), §5.3 (Deployment substrate — Dokploy fallback to Cloud Run), §1.5 (Audit log — single-DB-access tampering posture)

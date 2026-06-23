@@ -1,6 +1,6 @@
 # Runbook: Secret Rotation
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md` (Decision 2026-06-23-060)
 > **Ledger status:** `substrate-tier-1-and-tier-2-landed` (Story 1.5 substrate committed 2026-06-10; Tier-1 KEK + Tier-2 HMAC IaC + rotation runbook sections authored; awaiting trustee ratification session)
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13) with co-sign for high-sensitivity tier (per architecture §5.9 two-person approval)
 > **Last material edit:** 2026-06-10 by Solo Builder — Story 1.5: Tier-1 KEK + Tier-2 HMAC substrate specifics added (§2.1.1 + §2.1.2 + §2.1.3)

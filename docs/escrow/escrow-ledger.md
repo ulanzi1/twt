@@ -22,6 +22,8 @@ Each row records one envelope-sealing event. A credential may have multiple rows
 |---|---|---|---|---|---|---|---|---|---|
 | _Story 0.2 Task 7 sealing rows go here once trustees execute sealings (Task 7 is `_AWAITING EXTERNAL ACTION_` at Story 0.2 closure)_ | | | | | | | | | |
 
+**Task-7 sealing AUTHORIZED 2026-06-23** (`.decision-log.md` Decision 2026-06-23-060): the Trustee Panel (Dhiraj Rahul + Kalpana Bharti) authorized the Task-7 sealing of the three `sealable-now` `prod-credential` envelopes — `cloudflare-account-admin`, `dokploy-substrate-admin`, `trust-bank-operational-access` — plus the Task-8 dry-run (≥1 per envelope-class), under the ADR-0001 mechanism + custodial paths (physical tamper-evident envelopes; trustee-residence custody). **Execution-pending:** the physical seal events are recorded as rows above when performed — until then the seals remain **un-attested** (not fabricated). Confirm each envelope's credential is provisioned at the sealing session; the Cloud SQL envelopes stay `pending-task-7` until live prod provisioning (Story 1.15).
+
 ## Dry-run log
 
 Each row records one dry-run quorum-open event. Per Story 0.2 AC-2 (as amended by Story 0.2 review Decision 4), the framework requires **≥1 dry-run per `envelope_class`** before AC-2 fully closes:

@@ -1,6 +1,6 @@
 # Runbook: Deploy
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger) — **reconciled to AS-BUILT by Story 1.15 (material edit, re-sign required)**
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md`; AS-BUILT (Story 1.15) sign-off discharges the ADR-0011 co-requisite (Decision 2026-06-21-050). Recorded as Decision 2026-06-23-060.
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13)
 > **Last material edit:** 2026-06-15 by Solo Builder (Story 1.15 AS-BUILT reconciliation — GitHub Actions → Dokploy API leg)
 > **Architectural authority:** architecture.md §5.3 (Deployment substrate), §5.4 (CI/CD pipeline), §5.5 (Environment topology), §1.8 (Migration tool — forward-only)

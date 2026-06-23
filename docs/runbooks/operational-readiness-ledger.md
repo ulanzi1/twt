@@ -12,7 +12,16 @@ Each row records one sign-off event. A runbook may have multiple rows over its l
 |---|---|---|---|---|---|
 | _example_ `deploy.md` | `abc1234` | _Trustee A_ | 2026-MM-DD | "Reviewed; deploy procedure matches §5.3/§5.4. Verified manual-gate step." | initial |
 | _example_ `deploy.md` | `abc1234` | _Trustee B_ | 2026-MM-DD | "Concur with Trustee A." | initial |
-| _Story 0.1 sign-off rows go here once trustees review_ | | | | | |
+| `deploy.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off at the 2026-06-23 consent session; AS-BUILT (Story 1.15) reviewed — discharges the ADR-0011 co-requisite (Decision 2026-06-21-050)." | initial (AS-BUILT re-sign) |
+| `rollback.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off; AS-BUILT (Story 1.15) — ADR-0011 co-requisite (Decision 2026-06-21-050)." | initial (AS-BUILT re-sign) |
+| `multi-pariwar-provisioning.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off; AS-BUILT (Story 1.15) — ADR-0011 co-requisite (Decision 2026-06-21-050)." | initial (AS-BUILT re-sign) |
+| `secret-rotation.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off at the 2026-06-23 consent session." | initial |
+| `audit-log-integrity-verification.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off at the 2026-06-23 consent session." | initial |
+| `reconciliation-manual-intervention.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off at the 2026-06-23 consent session." | initial |
+| `rbac-seed-reset.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off; the OQ-3 seed-matrix amendments (Decision 2026-06-21-059 amendment B) remain a separate pre-production-seed gate." | initial |
+| `job-queue-operations.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off at the 2026-06-23 consent session (Story 1.12 pg-boss queue ops)." | initial |
+| `trustee-credential-loss-succession.md` | `f247e6d` | Dhiraj Rahul + Kalpana Bharti | 2026-06-23 | "≥2-trustee sign-off; invariants SA-1…SA-5 incl. the 2026-06-23 amendments — discharges the Decision 2026-06-21-059 amendment-A go-live gate." | initial |
+| _All nine rows above recorded via `.decision-log.md` Decision 2026-06-23-060 (2026-06-23 trustee consent session)._ | | | | | |
 
 **To-be-signed inventory (as of story implementation):**
 
@@ -28,6 +37,8 @@ Each row records one sign-off event. A runbook may have multiple rows over its l
 
 When each row receives ≥2 trustee sign-offs, move the row into the sign-off table above with the SHA at sign-off (which may differ from the first commit SHA if revisions happened between author and review).
 
+**✓ ALL SIGNED 2026-06-23** (Decision 2026-06-23-060): the seven runbooks above — **plus** the two downstream runbooks `job-queue-operations.md` (Story 1.12) and `trustee-credential-loss-succession.md` (Decision 2026-06-21-059 amendment A), which post-date this Story-0.1-era inventory — received ≥2-trustee sign-off (Dhiraj Rahul + Kalpana Bharti) against git SHA `f247e6d` at the 2026-06-23 trustee consent session. All nine rows are recorded in the sign-off table above.
+
 ## Execution-validation log
 
 Per Story 0.1 AC-4, at least one runbook per topic must have a logged successful execution attempt by a non-Solo-Builder engineer under simulated bus-factor activation. Each row records one execution event. Gaps discovered during execution trigger the AC-3 re-sign protocol (fix → re-sign → re-execute).
@@ -35,6 +46,9 @@ Per Story 0.1 AC-4, at least one runbook per topic must have a logged successful
 | Runbook file | Runbook git SHA at execution | Executor identity | Executor role | Date | Target environment | Outcome (success / gaps) | Linked ledger re-sign (if gaps) |
 |---|---|---|---|---|---|---|---|
 | _Story 0.1 execution rows go here once Task 5 executes_ | | | | | | | |
+| _**PENDING** — deploy + rollback execution-validation (Decision 2026-06-23-060 trustee directive; see note below)_ | | | | | | not yet executed | |
+
+**Trustee directive (2026-06-23, Decision 2026-06-23-060) — GATED, pending execution:** beyond the AC-4 minimum, the Trustee Panel directs that **`deploy.md` and `rollback.md` each have at least one successful, documented execution using the now-signed runbooks** before production go-live — ideally by a non-Solo-Builder engineer under simulated bus-factor activation (the AC-4 model). This is **not yet executed**; it is recorded here as an open execution-validation gate (no execution row is fabricated). On execution, log the event in the table above; any gap triggers the AC-3 fix → re-sign → re-execute protocol, and a discovered gap would re-open the corresponding runbook's sign-off.
 
 **Execution path selected for AC-4 closure:**
 

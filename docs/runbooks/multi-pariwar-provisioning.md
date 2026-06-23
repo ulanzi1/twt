@@ -1,6 +1,6 @@
 # Runbook: Multi-Pariwar Provisioning
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger) — **reconciled to AS-BUILT by Story 1.15 (material edit, re-sign required)**
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md`; AS-BUILT (Story 1.15) sign-off discharges the ADR-0011 co-requisite (Decision 2026-06-21-050). Recorded as Decision 2026-06-23-060.
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13) with Engineering Lead co-sign at provisioning trigger
 > **Last material edit:** 2026-06-15 by Solo Builder (Story 1.15 AS-BUILT reconciliation)
 > **Architectural authority:** architecture.md §1.2 (Multi-tenant isolation — Postgres RLS via `pariwar_id`), §2.5 (Multi-Pariwar active scope — URL path prefix), §5.14 (Per-Pariwar infrastructure isolation strategy), AR-25 (multi-Pariwar URL path scope), FR-59 (`pariwar_id` first-class + RLS), FR-60 (branding bundle), FR-61 (separate-app-per-Pariwar build), FR-62 (Dokploy auto-deploy + K8s migration path); epics.md Epic 1 Story 1.7 (Pariwar-Passport data model + branding bundle), Story 1.15 (Dokploy auto-deploy + multi-Pariwar provisioning), Story 7.2 (Pool naming — dual-identifier UX-DR72)

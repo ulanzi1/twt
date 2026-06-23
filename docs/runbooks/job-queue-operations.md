@@ -1,6 +1,6 @@
 # Runbook: Job Queue Operations (pg-boss)
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md` (Decision 2026-06-23-060)
 > **Owner role:** Infrastructure on-call
 > **Last material edit:** 2026-06-15 by Solo Builder (initial — Story 1.12)
 > **Architectural authority:** architecture.md §1.4 (Postgres-only queue / idempotency / cache; advisory-lock + idempotency-key table + TTL vacuum; job classes; dead-letter) · §5.9 (worker process lifecycle — health, SIGTERM drain, crash discipline) · §5.11 (queue schema isolation; per-class worker pools) · §context-propagation (ALS does not cross pg-boss; metadata-envelope rehydration) · AR-5 (pg-boss, no Redis) · AR-58 (idempotency keyed store)

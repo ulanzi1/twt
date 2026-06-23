@@ -1,6 +1,6 @@
 # Runbook: Audit-Log Integrity Verification
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md` (Decision 2026-06-23-060)
 > **Owner role:** Audit-mirror integrity-check on-call (separately routed from infrastructure on-call per architecture §1.5)
 > **Last material edit:** 2026-05-29 by Solo Builder (initial)
 > **Architectural authority:** architecture.md §1.5 (Audit log storage — two-tier; hash chain; integrity-check job; Merkle-root publication), §2.10 (Audit log access controls), §2.10a (Isolation Commitment — preserving audit independence), §5.15 (related: audit-mirror integrity-check failure response — distinct runbook)

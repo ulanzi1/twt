@@ -10,6 +10,8 @@ architecture L4783) — re-homed to **Story 2.5** by Decision 2026-06-20-054 (AI
 > `open` → `in-progress` at Story 2.5 and `closed` only when the full Phase-1 surface
 > inventory is attested at Epic 11a completion. **No `<TBD>` cells for the 2.5 surfaces.**
 
+> **≥2-trustee ratified 2026-06-23** (Dhiraj Rahul + Kalpana Bharti) — `.decision-log.md` Decision 2026-06-23-060. This attests the Story 2.5 `apps/public` surface set (supersedes the un-attested-pending leg of Decision 2026-06-21-058). Launch-gate **Row 6 stays `in-progress`** — the `closed` trigger remains the full Phase-1 surface inventory at Epic 11a; closure criteria NOT relaxed.
+
 ## Design register (applies to every state below)
 
 - **Tone:** dignified, never blames the visitor; member-register vocabulary (no

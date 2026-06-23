@@ -1,6 +1,6 @@
 # Runbook: Reconciliation Manual-Intervention
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md` (Decision 2026-06-23-060)
 > **Owner role:** Reconciliation operator (helpdesk subsystem per Epic 10) with Engineering Lead on second-line for matcher-internal issues
 > **Last material edit:** 2026-05-29 by Solo Builder (initial)
 > **Architectural authority:** architecture.md §3.6 (Bank statement intake transport), §3.9 (Read consistency policy), §1.4 (Idempotency keyed store), epics.md Epic 9 (Reconciliation Engine — esp. Stories 9.1 nominee console, 9.4 UTR matching engine, 9.7 mismatch detection, 9.8 review queue, 9.9 dual nominee bank accounts, 9.11 over-payment), epics.md Epic 7 Story 7.6 (Pool-bound payment enforcement: wrong-pool rejected, no refund, facilitated recovery)

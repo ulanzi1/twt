@@ -1,6 +1,6 @@
 # Runbook: RBAC Seed Reset
 
-> **Status:** draft (author-committed; awaiting ≥2-trustee sign-off per ledger)
+> **Status:** signed-off — ≥2-trustee (Dhiraj Rahul + Kalpana Bharti) 2026-06-23 at git SHA `f247e6d` per `operational-readiness-ledger.md` (Decision 2026-06-23-060). NB: OQ-3 seed-matrix amendments (Decision 2026-06-21-059 amendment B) remain a separate pre-production-seed gate.
 > **Owner role:** Infrastructure on-call (Solo Builder primary at v1; backup engineer per A-13) with Engineering Lead co-sign for prod resets
 > **Last material edit:** 2026-05-29 by Solo Builder (initial)
 > **Architectural authority:** architecture.md §2.6 (RBAC enforcement — permission keys + scope dimensions), §1.5 (Audit log — every privileged action audited), AR-26 (server-side RBAC enforcement), FR-44 (RBAC permission keys), FR-45 (scope dimensions), FR-46 (12 seeded roles); epics.md Epic 1 Story 1.8 (RBAC permission-keys + scope-dimensions + 12 seeded roles — owns the seed script)

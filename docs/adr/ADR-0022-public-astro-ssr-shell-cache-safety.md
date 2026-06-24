@@ -1,9 +1,9 @@
 # ADR-0022: Public Astro SSR shell foundation + cache-safe public render + unauthenticated read-scope
 
-> **Status:** drafted
+> **Status:** ratified
 > **Date:** 2026-06-21
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** <pending>
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-24; logged in `.decision-log.md` Decision 2026-06-24-062
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -52,6 +52,11 @@ enforced by construction, not by a comment:
 - `/niyamavali` sets `Cache-Control: public, max-age=60, s-maxage=300` + `Vary:
   Accept-Language` (the default render negotiates language; the `?lang=` toggle produces
   distinct cache keys). `/404` → `public, max-age=60`; `/500` → `no-store`.
+- **Cache key rule:** Cache keys must include all language selection inputs — both the
+  `Accept-Language` header and any `?lang=` query parameter override. A response cached
+  without capturing locale variation would silently serve the wrong language to subsequent
+  visitors (cache poisoning via locale variation). `Vary: Accept-Language` is the CDN
+  mechanism; `?lang=` produces a distinct URL key at the edge automatically.
 - The **PII scrape integration spec** (`apps/public/tests/integration/public-pages/
   scrape-test.spec.ts`, the architecture-committed D13-1.2 slot) is the regression guard:
   it renders the real Niyamavali HTML from fixtures via the pure render module and asserts
@@ -65,8 +70,11 @@ directly from `@twt/domain` in Astro SSR via an **unauthenticated `withPublicSco
 (`apps/public/src/lib/db.server.ts`): `BEGIN` → `SET LOCAL ROLE twt_app` (shed any
 superuser login so RLS is genuinely enforced — **the AC8 "scope tx pattern, NOT a
 superuser bypass"**) → `SET LOCAL app.pariwar_id` → read → `ROLLBACK` (a public render
-never writes). `apps/public` owns its OWN pool (`DATABASE_URL`) per per-workspace pool
-isolation. Branding is read via the cross-readable passport cache (`USING true` carve-out
+never writes). **Write-capable credentials must not be issued to or configured in
+`apps/public`** — the database role and secrets provisioned for this app must carry
+`SELECT`-only grants; `INSERT`/`UPDATE`/`DELETE` capability is prohibited at the
+credential level, not only by code convention. `apps/public` owns its OWN pool
+(`DATABASE_URL`) per per-workspace pool isolation. Branding is read via the cross-readable passport cache (`USING true` carve-out
 — no scope). A new domain accessor `listEffectiveClauses(db, pariwarId, asOf?)` returns the
 latest non-deprecated version effective at `asOf` per `clause_id` (DB-authoritative time).
 
@@ -113,6 +121,27 @@ auth surface is introduced at the public page layer; Epic 11a/11b populate the r
   Actions runtime (carry-forward — 2.5 render is read-only, no form); authenticated-fragment
   registry (→ Epic 11a/11b).
 
+## Accepted Risk
+
+**Direct-DB-read from the public renderer.** `apps/public` holds a `DATABASE_URL` and reads
+from `@twt/domain` directly under the `twt_app` role with RLS enforced. The defensible
+alternative — a thin `apps/api` public-read endpoint that keeps DB credentials out of the
+public renderer — is the one open data-path question, deferred to Epic 11b (`apps/api/src/
+modules/public-pages/`).
+
+This risk is accepted at Story 2.5 on the following structural mitigations (not procedural):
+
+1. Reads execute under `SET LOCAL ROLE twt_app` + RLS; no superuser bypass — the scope-tx
+   is NOT a `SECURITY DEFINER` shortcut.
+2. Only public-tier columns are selected; no member-state, no audit data, no per-actor
+   columns can appear in the rendered HTML.
+3. Write-capable credentials are prohibited at the provisioning level (see §3 above).
+4. The FR-74 PII scrape integration spec (`scrape-test.spec.ts`) is a structural regression
+   guard that runs on every PR — any leak of restricted-tier content into the HTML would
+   fail the gate before merge.
+
+Risk is revisited when Epic 11b evaluates whether to adopt the thin-API alternative.
+
 ## References
 
 - [Source: epics.md#Story-2.5 L1492-1521] — the five epic ACs (AC1–AC5).
@@ -122,3 +151,12 @@ auth surface is introduced at the public page layer; Epic 11a/11b populate the r
 - [Source: packages/domain/src/niyamavali/read.ts `listEffectiveClauses`; packages/domain/src/db.ts `withPariwarScope`/`setPariwarScope`/`bindScopedDb`].
 - [Source: packages/i18n/src/react.ts + package.json `exports['./react']`] — the `/react` subpath split.
 - Memory: [[feedback_architecture_vs_adr_boundary]], [[feedback_closure_language_precision]], [[feedback_record_unattested_no_backfill]].
+
+## Ratification (2026-06-24)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-06-24 Trustee Panel session; logged in `.decision-log.md` Decision 2026-06-24-062.
+
+**Three governance amendments adopted in-session and applied to this ADR:**
+1. **Explicit Accepted Risk section** — the direct-DB-read risk is now formally named, its structural mitigations enumerated, and the Epic 11b revisit trigger recorded (see `## Accepted Risk` above).
+2. **Write-credential prohibition** — write-capable credentials must not be issued to or configured in `apps/public`; the `SELECT`-only grant requirement is an explicit provisioning constraint, not merely code convention (see §3).
+3. **Cache key completeness rule** — cache keys must include all language selection inputs; the locale-variation vector is explicitly named and the `Vary: Accept-Language` + `?lang=` URL mechanism identified as the enforcement path (see §2).

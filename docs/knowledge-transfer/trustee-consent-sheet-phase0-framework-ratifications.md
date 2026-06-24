@@ -25,6 +25,8 @@
 
 ## Session Resolution
 
+> **Standing governance rule:** Any directive that changes an already-ratified ADR, runbook, or launch-gate requirement requires a successor decision-log entry and does not take effect solely through meeting notes.
+
 _To be completed by the Trustee Panel:_
 
 - **Panel present (≥2):** ______________________  ·  ______________________

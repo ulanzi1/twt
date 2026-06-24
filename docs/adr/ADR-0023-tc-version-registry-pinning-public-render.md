@@ -1,9 +1,9 @@
 # ADR-0023: T&C version-pinning registry + sanitized precomputed render + public `/terms`
 
-> **Status:** drafted
+> **Status:** ratified
 > **Date:** 2026-06-24
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** &lt;pending&gt;
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-24; logged in `.decision-log.md` Decision 2026-06-24-061; consent sheet `docs/knowledge-transfer/trustee-consent-sheet-phase0-framework-ratifications.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -126,3 +126,9 @@ leak invariant — the rationale is identical to ADR-0020 and already ratified t
 - ADR-0020 (the `clause_versions` registry + RLS-not-cross-readable rationale this mirrors)
 - ADR-0021 (the audit-or-throw publish path this mirrors) · ADR-0022 (the public shell + `withPublicScope`)
 - [[feedback_architecture_vs_adr_boundary]] · [[project_live_db_test_gotchas]]
+
+## Ratification (2026-06-24)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-06-24 Trustee Panel session; logged in `.decision-log.md` Decision 2026-06-24-061.
+
+No governance amendments or open caveats — the data-model and workflow controls are accepted as authored. The `tc_legal_review_status` pending-legal-review carve-out on the public `/terms` render is an operational state recorded in the ADR, not a caveat requiring trustee direction; it closes when Story 0.13 counsel returns.

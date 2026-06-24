@@ -1,9 +1,9 @@
 # ADR-0024: Consent registry — granular, revocable, version-resolvable (UX-DR2 primitive)
 
-> **Status:** drafted
+> **Status:** ratified
 > **Date:** 2026-06-24
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** &lt;pending&gt;
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-24; logged in `.decision-log.md` Decision 2026-06-24-061; consent sheet `docs/knowledge-transfer/trustee-consent-sheet-phase0-framework-ratifications.md`
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -160,6 +160,12 @@ speculatively for flows that do not yet exist.
   L1750-1754 (per-data-class retention matrix names "consent registry")
 - ADR-0020 (the `clause_versions` registry + RLS-tenant-isolated-not-cross-readable
   rationale this mirrors) · ADR-0023 (the sibling T&C registry — the substrate-slice
-  patterns, migration/RLS/lockstep discipline, un-attested-pending ADR governance)
+  patterns, migration/RLS/lockstep discipline)
 - [[feedback_architecture_vs_adr_boundary]] · [[feedback_record_unattested_no_backfill]] ·
   [[project_live_db_test_gotchas]]
+
+## Ratification (2026-06-24)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-06-24 Trustee Panel session; logged in `.decision-log.md` Decision 2026-06-24-061. Supersedes the "un-attested-pending" status recorded at author-commit time (per [[feedback_record_unattested_no_backfill]]): the ratification event has occurred and is attested.
+
+No governance amendments — the domain+contracts-only scope fencing and the audit-linkage-as-consumer-obligation consequence are accepted as authored. The audit-linkage flag for Epic 3/6 (they MUST write the audit line first) carries forward as an open implementation reminder, not a gated follow-up requiring trustee action.

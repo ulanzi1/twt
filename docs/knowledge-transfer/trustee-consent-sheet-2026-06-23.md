@@ -14,6 +14,8 @@
 
 A runbook in `docs/runbooks/` is authoritative **only** when the ledger records ≥2-trustee sign-off at a specific git SHA. All nine below are currently `draft — awaiting ≥2-trustee sign-off`. Sign-off is recorded against the runbook's **current git SHA**.
 
+> **Trustee attestation:** By signing a runbook row, the trustee attests that they reviewed the runbook at the git SHA recorded in the operational-readiness ledger and found it suitable for operational use.
+
 | # | Runbook | Why it needs sign-off | Recorded gate | Trustee decision |
 |---|---|---|---|---|
 | A1 | `deploy.md` | AS-BUILT-reconciled by Story 1.15 (GitHub Actions → Dokploy API leg) — material edit. **ADR-0011 co-requisite.** | Decision 2026-06-21-050 | Sign-off — init __kp & dr__ |
@@ -46,7 +48,7 @@ The sealing **mechanism + custodial paths are already ratified** (ADR-0001 + Dec
 
 | # | Action | Scope | Recorded gate | Trustee decision |
 |---|---|---|---|---|
-| C1 | Authorize + schedule the **Task-7 sealing session** | 3 `sealable-now` `prod-credential` envelopes: `cloudflare-account-admin` · `dokploy-substrate-admin` · `trust-bank-operational-access` | Story 0.2 Task 7 (`AWAITING EXTERNAL ACTION`) |  Authorize — init __kp & dr__ |
+| C1 | Authorize + schedule the **Task-7 sealing session**. Sealing events must be recorded in `escrow-ledger.md` and witnessed by at least one trustee participant. | 3 `sealable-now` `prod-credential` envelopes: `cloudflare-account-admin` · `dokploy-substrate-admin` · `trust-bank-operational-access` | Story 0.2 Task 7 (`AWAITING EXTERNAL ACTION`) |  Authorize — init __kp & dr__ |
 | C2 | Authorize the **Task-8 dry-run** quorum-open (≥1 per envelope-class) | `prod-credential` class | Story 0.2 Task 8 | Authorize — init __kp & dr__ |
 
 > Confirm at the session that each envelope's credential is provisioned. The Cloud SQL envelopes (`cloud-sql-service-account-prod`, `cloud-sql-iam-recovery-grant`) stay `pending-task-7` until live prod provisioning (Story 1.15) and are **not** on this sheet.
@@ -54,6 +56,8 @@ The sealing **mechanism + custodial paths are already ratified** (ADR-0001 + Dec
 ---
 
 ## Session Resolution
+
+> **Standing governance rule:** Any directive that changes an already-ratified ADR, runbook, or launch-gate requirement requires a successor decision-log entry and does not take effect solely through meeting notes.
 
 _To be completed by the Trustee Panel:_
 

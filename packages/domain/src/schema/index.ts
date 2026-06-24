@@ -38,6 +38,10 @@ export * from './terms_and_conditions_pinned_clauses.js';
 // Story 2.7 — the consent registry: granular, revocable, version-resolvable consent
 // records (UX-DR2 primitive; Epic 3/6 record consent by touching only recordConsent).
 export * from './consent_records.js';
+// Story 3.1 — member lifecycle anchor (members table + member_lifecycle_state
+// pgEnum). `members.state` is a replay-derived cache, not the source of truth —
+// guarded by the DB trigger (migration) + the member-state-invariant CI gate.
+export * from './members.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

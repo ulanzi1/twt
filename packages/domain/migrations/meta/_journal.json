@@ -127,6 +127,13 @@
       "when": 1782287314442,
       "tag": "0017_bumpy_norman_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782316376228,
+      "tag": "0018_ordinary_venom",
+      "breakpoints": true
     }
   ]
 }

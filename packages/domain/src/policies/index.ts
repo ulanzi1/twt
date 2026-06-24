@@ -24,3 +24,5 @@ export * from './terms-and-conditions-versions-rls.js';
 export * from './terms-and-conditions-pinned-clauses-rls.js';
 // Story 2.7 — consent registry tenant-isolation policies (NOT cross-readable).
 export * from './consent-records-rls.js';
+// Story 3.1 — member lifecycle anchor tenant-isolation policies (NOT cross-readable).
+export * from './members-rls.js';

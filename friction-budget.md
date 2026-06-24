@@ -37,6 +37,13 @@ introduce **zero deliberate friction**. AC-4 still fires on the path touch
 warranted. The lang-toggle is a plain `<a>` server roundtrip, not a friction
 surface.
 
+**Story 2.6 disposition (declaration affirmed, no new row):** the public `/terms`
+render (`apps/public/src/pages/terms.astro`, `lib/tc-render.ts`) is **read-only**
+— the T&C body is precomputed and edge-cached; the page has no forms, no upload,
+no member-initiated action. The provisional banner and the lang-toggle are
+informational / server-roundtrip respectively, not friction surfaces. Zero
+deliberate friction introduced; ledger reviewed, no row warranted.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

@@ -35,6 +35,8 @@
     "microcopy:test": "vitest run scripts/microcopy",
     "domain-invariants:check": "tsx scripts/domain-accessor-invariants/check.ts",
     "domain-invariants:test": "vitest run scripts/domain-accessor-invariants",
+    "member-state:check": "tsx scripts/member-state-invariant/check.ts",
+    "member-state:test": "vitest run scripts/member-state-invariant",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

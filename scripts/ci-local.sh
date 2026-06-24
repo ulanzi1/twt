@@ -2,15 +2,15 @@
 #
 # ci-local.sh — local mirror of .github/workflows/ci.yml
 #
-# Runs every CI job that needs no external service (15 jobs), plus the live-DB
-# `integration-tests` job (the 16th) when DATABASE_URL is set. Stopgap while
+# Runs every CI job that needs no external service (16 jobs), plus the live-DB
+# `integration-tests` job (the 17th) when DATABASE_URL is set. Stopgap while
 # GitHub Actions is unavailable (account under review). Each job invokes the
 # exact command its ci.yml counterpart runs, so a green run here means a green
 # run there.
 #
 # Usage:
 #   pnpm ci:local
-#       → 15 static jobs (lint, typecheck, build, unit test, + all gates)
+#       → 16 static jobs (lint, typecheck, build, unit test, + all gates)
 #   DATABASE_URL='postgresql://twt_dev_app:devpass@127.0.0.1:5433/twt_dev?sslmode=disable' pnpm ci:local
 #       → also runs integration-tests against the twt-test-pg container (port 5433)
 #
@@ -48,6 +48,7 @@ run "schema-diff"           "pnpm schema:test && pnpm schema:check"
 run "benefit-mechanism"     "pnpm benefit:test && pnpm benefit:check"
 run "microcopy"             "pnpm microcopy:test && pnpm microcopy:check"
 run "domain-invariants"     "pnpm domain-invariants:test && pnpm domain-invariants:check"
+run "member-state-invariant" "pnpm member-state:test && pnpm member-state:check"
 
 # ── live-DB job (opt-in via DATABASE_URL) ─────────────────────────────────────
 if [ -n "${DATABASE_URL:-}" ]; then

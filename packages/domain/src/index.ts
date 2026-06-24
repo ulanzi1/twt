@@ -20,6 +20,11 @@ export { resolveConnectionString, resolveSecretValue } from './secrets.js';
 // for backward compatibility — see packages/events/src/canonical-json.ts.
 export { canonicalJsonStringify } from './canonical-json.js';
 export type { CanonicalJsonValue } from './canonical-json.js';
+// State-machine framework (relocated from @twt/events at Story 3.1 to break the
+// domain↔events cycle — see state-machine.ts header). @twt/events re-exports these
+// for backward compatibility; the member lifecycle reducer consumes them locally.
+export { StateMachine, defineStateMachine } from './state-machine.js';
+export type { StateMachineConfig } from './state-machine.js';
 // Forced-pagination clamp (Story 1.14) — the family-(a) domain-accessor invariant
 // (enforced by the domain-accessor-invariants CI gate; see docs/domain-accessor-invariants.md).
 export { clampLimit, type ClampLimitOptions } from './pagination.js';
@@ -82,6 +87,16 @@ export {
   ConsentStateError,
   CONSENT_INVALID_STATE_CODE,
 } from './consent/errors.js';
+// Member lifecycle direct-write rejection (Story 3.1, AC3). Surfaced at the top
+// level — mirroring the consent errors — so the apps/api error-mapping middleware
+// (Story 3.6 signup route) imports the class + code constant from `@twt/domain`
+// directly to map the DB trigger's rejection → HTTP + the P0 audit line; the full
+// primitive (reducer, projector, reads, overlay) is also under the `member` namespace.
+export {
+  MemberStateDirectWriteError,
+  MEMBER_STATE_DIRECT_WRITE_CODE,
+  isMemberStateDirectWriteError,
+} from './member/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
@@ -93,6 +108,7 @@ export * as passport from './pariwar-passport/index.js';
 export * as niyamavali from './niyamavali/index.js';
 export * as termsAndConditions from './terms-and-conditions/index.js';
 export * as consent from './consent/index.js';
+export * as member from './member/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

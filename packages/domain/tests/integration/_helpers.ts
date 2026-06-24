@@ -18,6 +18,7 @@ import type pg from 'pg';
 import { setPariwarScope, type Db } from '../../src/db.js';
 import {
   clauseId as toClauseId,
+  memberId as toMemberId,
   pariwarId as toPariwarId,
   userId as toUserId,
 } from '../../src/ids/index.js';
@@ -260,6 +261,35 @@ export async function seedConsentRecord(
     .returning();
   if (!row) throw new Error('seedConsentRecord: insert returned no row');
   return row.consentId;
+}
+
+export interface SeedMemberOptions {
+  memberId?: string;
+  state?: schema.MemberLifecycleState;
+  stateEventVersion?: number;
+}
+
+/**
+ * Insert one members row (Story 3.1) DIRECTLY (bypassing the projector). Like
+ * seedConsentRecord, run this BEFORE entering app scope (as the Docker superuser, RLS
+ * bypassed) so rows for BOTH tenants land regardless of the write-isolation policy;
+ * afterEach ROLLBACK reverts it. members is a SCOPED table — cross-Pariwar reads must
+ * return 0 rows. The INSERT is unaffected by the members.state write-rejection trigger
+ * (that trigger is BEFORE UPDATE only). Returns the member_id used.
+ */
+export async function seedMember(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedMemberOptions = {},
+): Promise<string> {
+  const id = opts.memberId ?? randomUUID();
+  await tx.insert(schema.members).values({
+    memberId: toMemberId(id),
+    pariwarId: toPariwarId(pariwarId),
+    state: opts.state ?? 'pending-kyc',
+    stateEventVersion: opts.stateEventVersion ?? 1,
+  });
+  return id;
 }
 
 /** Shed Docker superuser (SET ROLE twt_app) + set the pariwar scope, in-tx. */

@@ -7,6 +7,7 @@
 
 import { and, asc, desc, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
 
+import { clampLimit } from '../pagination.js';
 import type { Db } from '../db.js';
 import type { ClauseVersionId, PariwarId, TcVersionId } from '../ids/index.js';
 import { termsAndConditionsPinnedClauses } from '../schema/terms_and_conditions_pinned_clauses.js';
@@ -135,7 +136,7 @@ export async function listTcVersions(
     .from(termsAndConditionsVersions)
     .where(eq(termsAndConditionsVersions.pariwarId, pariwarId))
     .orderBy(desc(termsAndConditionsVersions.version))
-    .limit(Math.min(opts.limit ?? 50, 200));
+    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }));
 }
 
 /**

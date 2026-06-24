@@ -422,6 +422,31 @@ jobs:
       - run: pnpm microcopy:test
       - run: pnpm microcopy:check
 
+  domain-invariants:
+    name: domain-invariants (domain-accessor-invariants gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Family (a) forced-pagination clamp: every dynamic `.limit(...)` in
+    # packages/domain/src must route through clampLimit() (or be an integer literal) —
+    # an unbounded limit drains a connection, a negative limit is a Postgres `LIMIT -1`
+    # bypass (2.7 P2). Static TS-AST scan, no DB / network. See
+    # scripts/domain-accessor-invariants/ + docs/domain-accessor-invariants.md.
+    # INVARIANT SCAN of the declared scope → NO fetch-depth: 0 (mirror microcopy).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm domain-invariants:test
+      - run: pnpm domain-invariants:check
+
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest

@@ -20,6 +20,9 @@ export { resolveConnectionString, resolveSecretValue } from './secrets.js';
 // for backward compatibility — see packages/events/src/canonical-json.ts.
 export { canonicalJsonStringify } from './canonical-json.js';
 export type { CanonicalJsonValue } from './canonical-json.js';
+// Forced-pagination clamp (Story 1.14) — the family-(a) domain-accessor invariant
+// (enforced by the domain-accessor-invariants CI gate; see docs/domain-accessor-invariants.md).
+export { clampLimit, type ClampLimitOptions } from './pagination.js';
 export {
   InvalidPariwarScopeError,
   PariwarScopeMissingError,

@@ -26,6 +26,7 @@
 
 import { desc, eq } from 'drizzle-orm';
 
+import { clampLimit } from '../pagination.js';
 import type { Db } from '../db.js';
 import type { PariwarId } from '../ids/index.js';
 import {
@@ -85,7 +86,7 @@ export async function listPariwarPassports(
     .select()
     .from(pariwarPassport)
     .orderBy(desc(pariwarPassport.createdAt), pariwarPassport.pariwarId)
-    .limit(opts.limit);
+    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }));
 }
 
 // ── Cache-aside layer (the 60s-freshness primitive) ──────────────────────────

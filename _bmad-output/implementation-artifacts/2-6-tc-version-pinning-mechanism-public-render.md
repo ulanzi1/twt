@@ -1,6 +1,6 @@
 # Story 2.6: T&C Version-Pinning Mechanism + Public Render (Pending Legal Review per Story 0.13) `[SURFACE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

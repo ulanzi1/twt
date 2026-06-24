@@ -221,7 +221,7 @@ development_status:
   2-3-niyamavali-rule-registry-data-model-amendment-with-diff-storage: done
   2-4-niyamavali-amendment-workflow-admin-ui-audit-logged-publish: done
   2-5-public-astro-ssr-shell-foundation-niyamavali-public-render-with-version-diff: done
-  2-6-tc-version-pinning-mechanism-public-render: review
+  2-6-tc-version-pinning-mechanism-public-render: done
   2-7-consent-registry-granular-revocable: done
   epic-2-retrospective: optional
 

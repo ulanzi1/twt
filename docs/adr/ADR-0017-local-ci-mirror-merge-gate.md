@@ -40,10 +40,11 @@ This ADR adopts the `ci:local` + pre-push model as the sanctioned merge gate whi
 | schema-diff | `pnpm schema:test && pnpm schema:check` |
 | benefit-mechanism | `pnpm benefit:test && pnpm benefit:check` |
 | microcopy | `pnpm microcopy:test && pnpm microcopy:check` |
-| cadence-check | `pnpm cadence:check` |
 | integration-tests | `pnpm db:migrate && pnpm turbo run test --force --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue` _(opt-in: `DATABASE_URL` must be set to the twt-test-pg container on port 5433)_ |
 
 A non-zero exit from any job fails the run and blocks the push.
+
+> **Update 2026-06-24 (ADR-0025):** the `cadence-check` job was removed from this mirror when the AI-cadence instrument was retired — the list above is now 14 static jobs + `integration-tests`.
 
 ### 2. Pre-push hook enforcement
 

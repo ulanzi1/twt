@@ -11,7 +11,7 @@
 | Mechanism | Status |
 |---|---|
 | GitHub Actions | ⚠️ **Suspended** (account under review since ~1.11). 1.11–1.17 merged via `pnpm ci:local` + pre-push hook (commit 480128e). |
-| `pnpm ci:local` | ✅ Active as merge gate. Mirrors all 15 ci.yml gate jobs sequentially (incl. `cadence-check`). Integration jobs need `DATABASE_URL` on `:5433`. |
+| `pnpm ci:local` | ✅ Active as merge gate. Mirrors all 14 ci.yml gate jobs sequentially. Integration jobs need `DATABASE_URL` on `:5433`. _(`cadence-check` retired 2026-06-24 — ADR-0025.)_ |
 | Pre-push hook | ✅ Active. `.githooks/pre-push` runs `ci:local` before every push. |
 | AI-4 | ✅ Done (ADR-0017 authored, adopting `ci:local` + pre-push as the sanctioned merge gate). ⚠️ Formal trustee ratification of ADR-0017 still pending. |
 | AI-5 | ✅ Done — `timeout-minutes` + `cache-dependency-path: pnpm-lock.yaml` applied across **all** ci.yml jobs (not just 1.16x); `tsx` pinned to an exact version in `package.json`. |

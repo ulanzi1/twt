@@ -33,7 +33,6 @@
     "benefit:test": "vitest run scripts/benefit-mechanism",
     "microcopy:check": "tsx scripts/microcopy/check.ts",
     "microcopy:test": "vitest run scripts/microcopy",
-    "cadence:check": "tsx scripts/cadence-check/check.ts",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

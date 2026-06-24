@@ -209,6 +209,59 @@ export async function seedClauseVersion(
   return row.clauseVersionId;
 }
 
+export interface SeedConsentOptions {
+  subjectId?: string;
+  consentType?: schema.ConsentType;
+  consentArtifactRef?: string | null;
+  grantedViaActor?: schema.ConsentGrantedVia;
+  consentPayload?: schema.ConsentPayload;
+  grantedAt?: Date;
+  revokedAt?: Date | null;
+}
+
+// A FIXED subject uuid so both PARIWAR_A and PARIWAR_B consent rows resolve under
+// the same subject in cross-tenant isolation tests (the tenant key is pariwar_id,
+// not subject_id). Callers needing a distinct subject pass `subjectId`.
+const FIXED_CONSENT_SUBJECT = '55555555-5555-5555-5555-555555555555';
+
+/**
+ * Insert one consent_records row (Story 2.7). Like seedClauseVersion, run this
+ * BEFORE entering app scope (as the Docker superuser, RLS bypassed) so rows for
+ * BOTH tenants land regardless of the write-isolation policy — without this the
+ * positive `not.toHaveLength(0)` guard cannot be satisfied for both tenants in the
+ * cross-tenant isolation test (a `recordConsent` after enterAppScope would lock you
+ * to one tenant's scope). afterEach ROLLBACK (setupLiveDb) reverts it. consent_records
+ * is a SCOPED table — cross-Pariwar reads must return 0 rows. `audit_id` /
+ * `revoked_audit_id` stay null (the audit-or-throw linkage is a consumer concern).
+ * Returns the consent_id.
+ */
+export async function seedConsentRecord(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedConsentOptions = {},
+): Promise<string> {
+  if (opts.revokedAt && !opts.grantedAt) {
+    throw new Error(
+      'seedConsentRecord: revokedAt without grantedAt produces an invalid row (grantedAt defaults to DB now(), making revokedAt < grantedAt)',
+    );
+  }
+  const [row] = await tx
+    .insert(schema.consentRecords)
+    .values({
+      subjectId: opts.subjectId ?? FIXED_CONSENT_SUBJECT,
+      pariwarId: toPariwarId(pariwarId),
+      consentType: opts.consentType ?? 'marketing',
+      consentArtifactRef: opts.consentArtifactRef ?? null,
+      grantedViaActor: opts.grantedViaActor ?? 'member_self',
+      consentPayload: opts.consentPayload ?? {},
+      grantedAt: opts.grantedAt ?? undefined,
+      revokedAt: opts.revokedAt ?? null,
+    })
+    .returning();
+  if (!row) throw new Error('seedConsentRecord: insert returned no row');
+  return row.consentId;
+}
+
 /** Shed Docker superuser (SET ROLE twt_app) + set the pariwar scope, in-tx. */
 export async function enterAppScope(
   client: pg.PoolClient,

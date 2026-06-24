@@ -22,3 +22,5 @@ export * from './clause-drafts-rls.js';
 // Story 2.6 — T&C registry tenant-isolation policies (versions + pinned-clauses).
 export * from './terms-and-conditions-versions-rls.js';
 export * from './terms-and-conditions-pinned-clauses-rls.js';
+// Story 2.7 — consent registry tenant-isolation policies (NOT cross-readable).
+export * from './consent-records-rls.js';

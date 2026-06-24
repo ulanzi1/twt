@@ -120,6 +120,13 @@
       "when": 1782242967826,
       "tag": "0016_motionless_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782287314442,
+      "tag": "0017_bumpy_norman_osborn",
+      "breakpoints": true
     }
   ]
 }

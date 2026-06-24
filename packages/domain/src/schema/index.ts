@@ -35,6 +35,9 @@ export * from './clause_drafts.js';
 // the FK-enforced clause-pinning junction table (the AC8 recoverable handle).
 export * from './terms_and_conditions_versions.js';
 export * from './terms_and_conditions_pinned_clauses.js';
+// Story 2.7 — the consent registry: granular, revocable, version-resolvable consent
+// records (UX-DR2 primitive; Epic 3/6 record consent by touching only recordConsent).
+export * from './consent_records.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

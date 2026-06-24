@@ -69,6 +69,16 @@ export {
   TcPinnedClauseNotFoundError,
   TC_PINNED_CLAUSE_NOT_FOUND_CODE,
 } from './terms-and-conditions/errors.js';
+// Consent registry typed errors (Story 2.7). Surfaced at the top level — mirroring
+// the T&C errors — so the CONSUMER route (Epic 3/6) error-mapping middleware imports
+// the class + code constant from `@twt/domain` directly (it matches on the code, not
+// the class); the full primitive is also under the `consent` namespace below.
+export {
+  ConsentNotFoundError,
+  CONSENT_NOT_FOUND_CODE,
+  ConsentStateError,
+  CONSENT_INVALID_STATE_CODE,
+} from './consent/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
@@ -79,6 +89,7 @@ export * as ids from './ids/index.js';
 export * as passport from './pariwar-passport/index.js';
 export * as niyamavali from './niyamavali/index.js';
 export * as termsAndConditions from './terms-and-conditions/index.js';
+export * as consent from './consent/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

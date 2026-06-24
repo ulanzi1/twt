@@ -23,6 +23,11 @@ export * from './rules/index.js';
 // CreateTcVersionRequest, ApproveTcVersionRequest, TcLegalReviewStatusSchema). The
 // FIRST T&C endpoints — the DTOs register via `.openapi()` so openapi/v1.yaml changes.
 export * from './terms-and-conditions/index.js';
+// Story 2.7 — consent-registry transport DTOs (ConsentRecordResponse,
+// RecordConsentRequest, RevokeConsentRequest, ConsentTypeSchema,
+// ConsentGrantedViaSchema) for Epic 3/6 to import + the dual lockstep guard. NO
+// endpoint in this story → NO `.openapi()` registration, openapi/v1.yaml unchanged.
+export * from './consent/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

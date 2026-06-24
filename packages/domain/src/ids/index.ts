@@ -186,3 +186,21 @@ export const clauseDraftId = uuidBrand('ClauseDraftId');
 export type TcVersionId = Brand<'TcVersionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `TcVersionId`. */
 export const tcVersionId = uuidBrand('TcVersionId');
+
+// ── Consent-registry id (Story 2.7, Task 1) ──────────────────────────────────
+// Per-row address of a consent record (`consent_records.consent_id`). A UUID row
+// address (mirror `TcVersionId`), so it reuses the shared `uuidBrand` validator.
+// Each consent transaction (grant) mints a NEW `ConsentId` — grant→revoke→re-grant
+// produces distinct rows over time (no unique constraint on (subject, type)), and
+// `consentExists(..., validAt?)` resolves the one valid at the queried instant.
+// Branding mandatory on a new id's first PR (§Naming L3700-3708).
+//
+// NOTE: `subject_id` (the member-or-pre-member-applicant id) is deliberately NOT
+// branded — it is POLYMORPHIC (no single owning entity; the `members` table does
+// not exist until Epic 3) and has no FK. A brand implies a single owning entity,
+// which would mis-describe this column. See schema/consent_records.ts header.
+
+/** Per-row address of a consent record (`consent_records.consent_id`). */
+export type ConsentId = Brand<'ConsentId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ConsentId`. */
+export const consentId = uuidBrand('ConsentId');

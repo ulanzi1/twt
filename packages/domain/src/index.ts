@@ -55,6 +55,20 @@ export {
   DraftSelfReviewError,
   DRAFT_SELF_REVIEW_CODE,
 } from './niyamavali/errors.js';
+// T&C registry typed errors (Story 2.6). Surfaced at the top level — mirroring
+// the niyamavali errors — so the apps/api error-mapping middleware imports the
+// class + code from `@twt/domain` directly; the full primitive is also under the
+// `termsAndConditions` namespace below.
+export {
+  TcVersionNotFoundError,
+  TC_VERSION_NOT_FOUND_CODE,
+  TcVersionConflictError,
+  TC_VERSION_CONFLICT_CODE,
+  TcStateError,
+  TC_INVALID_STATE_CODE,
+  TcPinnedClauseNotFoundError,
+  TC_PINNED_CLAUSE_NOT_FOUND_CODE,
+} from './terms-and-conditions/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
@@ -64,6 +78,7 @@ export * as idempotency from './idempotency/index.js';
 export * as ids from './ids/index.js';
 export * as passport from './pariwar-passport/index.js';
 export * as niyamavali from './niyamavali/index.js';
+export * as termsAndConditions from './terms-and-conditions/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

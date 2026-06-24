@@ -1470,6 +1470,106 @@ components:
         - version
         - auditId
       additionalProperties: false
+    TcVersionResponse:
+      type: object
+      properties:
+        tcVersionId:
+          type: string
+          format: uuid
+        pariwarId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          exclusiveMinimum: 0
+        bodyMarkdown:
+          type: string
+        bodyHtmlRendered:
+          type: string
+        effectiveFrom:
+          type: string
+          format: date-time
+        effectiveUntil:
+          type:
+            - string
+            - "null"
+          format: date-time
+        legalReviewStatus:
+          type: string
+          enum:
+            - pending
+            - under-review
+            - reviewed-with-changes-required
+            - approved
+            - superseded
+        legalReviewerActorId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        authoredByActor:
+          type:
+            - string
+            - "null"
+          format: uuid
+        authoredAt:
+          type: string
+          format: date-time
+        auditId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        pinnedToClauseVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - tcVersionId
+        - pariwarId
+        - version
+        - bodyMarkdown
+        - bodyHtmlRendered
+        - effectiveFrom
+        - effectiveUntil
+        - legalReviewStatus
+        - legalReviewerActorId
+        - authoredByActor
+        - authoredAt
+        - auditId
+        - pinnedToClauseVersionIds
+      additionalProperties: false
+    CreateTcVersionRequest:
+      type: object
+      properties:
+        bodyMarkdown:
+          type: string
+          minLength: 1
+        pinnedToClauseVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+        effectiveFrom:
+          type: string
+          format: date-time
+      required:
+        - bodyMarkdown
+        - pinnedToClauseVersionIds
+        - effectiveFrom
+      additionalProperties: false
+    ApproveTcVersionRequest:
+      type: object
+      properties:
+        confirm:
+          type: boolean
+          enum:
+            - true
+      required:
+        - confirm
+      additionalProperties: false
     LoginRequest:
       type: object
       properties:
@@ -2826,6 +2926,123 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: tone-review-required, or the draft is not signed off
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/terms/versions:
+    post:
+      summary: Create a T&C version (audit-logged)
+      description: "Creates a version-pinned T&C: renders body_html_rendered from bodyMarkdown at write time (sanitized), pins the supplied clause versions (each validated to exist in the Pariwar), defaults legal_review_status → pending, and writes a single audit line first (audit-or-throw). Requires tc.publish at pariwar scope."
+      tags: &a8
+        - terms-and-conditions
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTcVersionRequest"
+      responses:
+        "200":
+          description: T&C version created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TcVersionResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required T&C permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Concurrent T&C version creation conflict — retry the request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: A pinned clause version does not exist in this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/terms/versions/{tcVersionId}/approve:
+    post:
+      summary: Approve a T&C version (audit-logged)
+      description: "Marks a T&C approved: sets legal_reviewer_actor_id = the acting trustee, flips legal_review_status → approved, and supersedes the prior currently-effective version (set effective_until + status → superseded). Audit-or-throw. The superseded version stays queryable by tc_version_id. Requires tc.approve."
+      tags: *a8
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: tcVersionId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveTcVersionRequest"
+      responses:
+        "200":
+          description: T&C version approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TcVersionResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — the required T&C permission at this scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The version is already approved or superseded
           content:
             application/json:
               schema:

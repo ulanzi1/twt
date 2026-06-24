@@ -174,3 +174,15 @@ export function clauseId(value: string): ClauseId {
 export type ClauseDraftId = Brand<'ClauseDraftId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ClauseDraftId`. */
 export const clauseDraftId = uuidBrand('ClauseDraftId');
+
+// ── T&C version-registry id (Story 2.6, Task 1) ──────────────────────────────
+// Per-row address of a Terms & Conditions version (`terms_and_conditions_versions
+// .tc_version_id`). A UUID row address (mirror `ClauseVersionId`), so it reuses the
+// shared `uuidBrand` validator. This is the AC8 "stable recoverable handle": it is
+// immutable, never reused, and is the reference target Story 2.7's consent registry
+// + Epic 3's acceptance flow will store. Branding mandatory on a new id's first PR.
+
+/** Per-row address of a T&C version (`terms_and_conditions_versions.tc_version_id`). */
+export type TcVersionId = Brand<'TcVersionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `TcVersionId`. */
+export const tcVersionId = uuidBrand('TcVersionId');

@@ -68,20 +68,34 @@ architecture L4783) — re-homed to **Story 2.5** by Decision 2026-06-20-054 (AI
 | **Empty** | **N/A** — an error page has no data-driven empty state. | — |
 | **Skeleton/loading** | **N/A** — static server render. | — |
 
+## Surface inventory (Story 2.6 — `apps/public` `/terms`)
+
+### 6. `/terms` — effective T&C render
+
+| State | Design | Source |
+| --- | --- | --- |
+| **Empty** | Dignified empty card: `empty_title` ("No Terms & Conditions published yet") + `empty_body` ("…have not been published yet. Please check back soon."). Shown when `getEffectiveTc` returns null (no effective T&C). The branded shell (header + language toggle + footer) still renders. The empty-state HTML is composed by the pure `lib/tc-render.ts` (`buildTcRenderModel(null, …)` → `renderTcHtml`), unit-tested. | `terms.astro`; `lib/tc-render.ts`; copy keys `empty_title` / `empty_body` |
+| **Provisional (content present, pending review)** | When `legal_review_status ∈ {pending, under-review}` the page shows the AC5 banner (`provisional_banner`, exact copy + Hindi parity) above the rendered body. Not an error/empty state — a first-class content state for the demoable placeholder until Story 0.13 returns. | `terms.astro`; `lib/tc-render.ts` (`showProvisionalBanner`); key `provisional_banner` |
+| **Skeleton/loading** | **N/A — server-rendered, no client fetch.** Delivered as complete HTML; no loading phase (same rationale as `/niyamavali`). | — |
+| **Error** | Delegated to the `/500` route: any failure in the frontmatter read (or the `withPublicScope` read) surfaces as the SSR error fallback. | `500.astro` |
+
 ## Coverage attestation
 
-- **Surfaces covered:** 5 (the Niyamavali list + version + diff sub-views + 404 + 500) —
-  i.e. every screen surface `apps/public` builds at Story 2.5.
-- **No `<TBD>` cells** for the 2.5 surfaces. Every `N/A` carries a recorded rationale.
+- **Surfaces covered:** 6 (the Niyamavali list + version + diff sub-views + 404 + 500 at
+  Story 2.5; the `/terms` render added at Story 2.6) — i.e. every screen surface `apps/public`
+  builds through Story 2.6.
+- **No `<TBD>` cells** for the 2.5/2.6 surfaces. Every `N/A` carries a recorded rationale.
 - **Extended at:** Epic 11a (Member Directory empty/skeleton/error), Epic 11b (per-claim +
   In Memoriam). Row 6 `closed` only at Epic 11a full-Phase-1-surface completion.
 
 ## Ratification
 
-- **Author-committed (Story 2.5):** BigDev (Solo Builder) — the inventory artifact above.
-- **≥2-trustee ratification:** RECORDED AS **un-attested / pending** in `.decision-log.md`
-  (Decision 2026-06-21-058) per [[feedback_record_unattested_no_backfill]] — the dev
-  workflow authors the artifact and author-commits it; the Trustee Panel ratification is a
-  governance event that is **carried openly as a gated open follow-up**, not reconstructed
-  here. Row 6 is `in-progress` (artifact produced; full ratification + full-surface coverage
-  pending Epic 11a), never asserted as `closed`.
+- **Author-committed (Story 2.5):** BigDev (Solo Builder) — the original inventory artifact.
+- **Author-committed (Story 2.6):** BigDev (Solo Builder) — the `/terms` surface row above.
+- **≥2-trustee ratification:** RECORDED AS **un-attested / pending** per
+  [[feedback_record_unattested_no_backfill]] — the Story 2.5 surface set was trustee-ratified
+  2026-06-23 (Decision 2026-06-23-060); the Story 2.6 `/terms` extension is author-committed and
+  its trustee ratification is **carried openly as a gated open follow-up**, NOT reconstructed
+  or back-dated here (no Trustee-Panel session is fabricated for it). Row 6 stays `in-progress`
+  (artifact produced; full ratification + full-surface coverage pending Epic 11a), never
+  asserted as `closed`.

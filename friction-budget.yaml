@@ -52,7 +52,7 @@ surfaces:
         baseline: 0 # no client islands ⇒ zero hydrated JS at Story 2.5
       - id: page_weight_bytes
         ceiling: 512000 # 500 KiB static client assets (CSS/JS under dist/client/ — excludes the dynamic SSR HTML response)
-        baseline: 3942 # extracted CSS (inlineStylesheets:'never') at Story 2.5
+        baseline: 3942 # best-ever extracted-CSS record (inlineStylesheets:'never') from Story 2.5. A baseline-of-record only DECREASES in-PR (the AC-1 ratchet); /terms raised the measured weight to 5219 (still far under the 512000 ceiling), so the baseline stays at its best-ever 3942 — NOT bumped (the gate's detectRaisedBaselines forbids an in-PR raise).
 
 # Live critical-render-path TIMING on the canonical device (3GB Android,
 # architecture line 34) is EXPLICITLY DEFERRED (AC-6): no device-farm /

@@ -59,6 +59,8 @@ const PARIWAR_AMEND_RULE = permissionKey('pariwar.amend_rule');
 const PARIWAR_PROVISION = permissionKey('pariwar.provision');
 const NIYAMAVALI_AMEND = permissionKey('niyamavali.amend');
 const NIYAMAVALI_REVIEW = permissionKey('niyamavali.review');
+const TC_PUBLISH = permissionKey('tc.publish');
+const TC_APPROVE = permissionKey('tc.approve');
 const AUDIT_EXPORT = permissionKey('audit.export');
 const AUDIT_VERIFY = permissionKey('audit.verify');
 
@@ -85,12 +87,16 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_APPROVE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
+      // Story 2.6 — the Pariwar admin authors + approves T&C versions.
+      TC_PUBLISH,
+      TC_APPROVE,
     ],
     scopeCeiling: 'pariwar',
   },
   {
     role: 'state_trustee',
-    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, NIYAMAVALI_REVIEW],
+    // Story 2.6 — the "Trustee Panel" approves T&C versions (tc.approve).
+    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, NIYAMAVALI_REVIEW, TC_APPROVE],
     scopeCeiling: 'state',
   },
   {

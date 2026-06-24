@@ -19,6 +19,10 @@ export * from './public-pages/index.js';
 // enum the repo-global benefit-mechanism CI gate cross-checks). Plain z.enum;
 // no OpenAPI path (openapi/v1.yaml stays byte-identical).
 export * from './rules/index.js';
+// Story 2.6 — T&C version-registry transport contracts (TcVersionResponse,
+// CreateTcVersionRequest, ApproveTcVersionRequest, TcLegalReviewStatusSchema). The
+// FIRST T&C endpoints — the DTOs register via `.openapi()` so openapi/v1.yaml changes.
+export * from './terms-and-conditions/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

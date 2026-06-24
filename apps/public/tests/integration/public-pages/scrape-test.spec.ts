@@ -30,6 +30,7 @@ import type { schema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { renderNiyamavaliClauses, renderNiyamavaliHtml } from '../../../src/lib/niyamavali-render.js';
+import { buildTcRenderModel, renderTcHtml, type TcRenderLabels } from '../../../src/lib/tc-render.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const matrixPath = join(
@@ -113,5 +114,67 @@ describe('PII scrape — Niyamavali public render (FR-74)', () => {
     });
     expect(verdict.status).toBe('fail');
     expect(verdict.piiMatches.map((m) => m.type).sort()).toEqual(['email', 'phone']);
+  });
+});
+
+// ── Story 2.6 — the /terms public surface (same fixture-fed pattern) ──────────
+const TC_LABELS: TcRenderLabels = {
+  provisionalBanner:
+    'This T&C is provisional pending legal counsel review; revisions may follow before final publication',
+  effectiveLabel: 'In effect from',
+  pinnedLabel: 'Pinned rule versions',
+  emptyTitle: 'No Terms & Conditions published yet',
+  emptyBody: 'The Terms & Conditions have not been published yet. Please check back soon.',
+};
+
+// The never-rendered internal-attribution fields (AC4) — sentinel UUIDs we assert
+// NEVER appear in the public HTML.
+const TC_REVIEWER_SENTINEL = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const TC_AUDIT_SENTINEL = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+
+function tcRow(): schema.TcVersionRow {
+  return {
+    tcVersionId: '11111111-1111-4111-8111-111111111111',
+    pariwarId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    version: 1,
+    bodyMarkdown: '# Terms & Conditions\n\nBe excellent to each other.',
+    // body_html_rendered: already sanitized at write time (no PII, structurally real).
+    bodyHtmlRendered:
+      '<h1>Terms &#x26; Conditions</h1><p>Members contribute in accordance with the Niyamavali.</p>',
+    effectiveFrom: new Date('2026-01-01T00:00:00Z'),
+    effectiveUntil: null,
+    legalReviewStatus: 'pending',
+    legalReviewerActorId: TC_REVIEWER_SENTINEL,
+    authoredByActor: null,
+    authoredAt: new Date('2026-01-01T00:00:00Z'),
+    auditId: TC_AUDIT_SENTINEL,
+  } as unknown as schema.TcVersionRow;
+}
+
+describe('PII scrape — T&C public render (/terms, FR-74)', () => {
+  const html = renderTcHtml(
+    buildTcRenderModel(tcRow(), ['0e1c0001-0000-4000-8000-000000000001'], TC_LABELS),
+  );
+  const snapshot: RenderSnapshot = { surfaceId: 'terms', viewerContext: 'public', html };
+
+  it('the rendered public HTML contains no naked PII (active leg, AC9)', () => {
+    expect(detectNakedPii(html)).toEqual([]);
+  });
+
+  it('evaluateSnapshot passes: no tier leaks + no naked PII', () => {
+    const verdict = evaluateSnapshot(matrix, snapshot);
+    expect(verdict.status).toBe('pass');
+    expect(verdict.leaks).toEqual([]);
+    expect(verdict.piiMatches).toEqual([]);
+  });
+
+  it('NEVER renders legal_reviewer_actor_id / audit_id (AC4 internal attribution)', () => {
+    expect(html).not.toContain(TC_REVIEWER_SENTINEL);
+    expect(html).not.toContain(TC_AUDIT_SENTINEL);
+  });
+
+  it('the empty-state render also leaks nothing', () => {
+    const emptyHtml = renderTcHtml(buildTcRenderModel(null, [], TC_LABELS));
+    expect(detectNakedPii(emptyHtml)).toEqual([]);
   });
 });

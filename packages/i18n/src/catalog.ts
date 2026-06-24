@@ -17,8 +17,10 @@
 
 import enCommon from '../locales/en/common.json';
 import enNiyamavali from '../locales/en/niyamavali.json';
+import enTerms from '../locales/en/terms.json';
 import hiCommon from '../locales/hi/common.json';
 import hiNiyamavali from '../locales/hi/niyamavali.json';
+import hiTerms from '../locales/hi/terms.json';
 
 import type { Locale } from './locale.js';
 
@@ -26,12 +28,12 @@ import type { Locale } from './locale.js';
 export type Catalog = Record<string, string>;
 
 const catalogs: Record<Locale, Record<string, Catalog>> = {
-  en: { common: enCommon, niyamavali: enNiyamavali },
-  hi: { common: hiCommon, niyamavali: hiNiyamavali },
+  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms },
+  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms },
 };
 
 /** The domain (namespace) names that have at least one locale catalog. */
-export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali'];
+export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms'];
 
 /** Look up a `{locale}/{namespace}` catalog, or `undefined` if it is not registered. */
 export function getCatalog(locale: Locale, namespace: string): Catalog | undefined {

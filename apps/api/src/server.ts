@@ -26,6 +26,7 @@ import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerRulesModule } from './modules/rules/index.js';
+import { registerTermsModule } from './modules/terms-and-conditions/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
@@ -88,6 +89,9 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 2.4 — Niyamavali amendment workflow (tenant-scoped; the first consumer of
   // the Story 2.2 tone-review publish gate).
   registerRulesModule(app, deps);
+  // Story 2.6 — T&C version registry trustee write surface (tenant-scoped;
+  // audit-or-throw create + approve, gated on tc.publish / tc.approve).
+  registerTermsModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

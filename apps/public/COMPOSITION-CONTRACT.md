@@ -18,11 +18,12 @@ In Memoriam) populate it. Because there are zero authenticated fragments, **no a
 boundary is introduced at the public page layer** — the auth boundary stays at the API
 (`apps/api/src/modules/public-pages/`, which does not exist yet).
 
-## Public-shell-rendered surfaces (Story 2.5)
+## Public-shell-rendered surfaces (Story 2.5; `/terms` added Story 2.6)
 
 | Route | Content | Tier | Indexing |
 | --- | --- | --- | --- |
 | `/niyamavali` | Effective Niyamavali clauses + version/diff selectors | `public` | `index,follow` |
+| `/terms` | Effective T&C version (sanitized `body_html_rendered`) + provisional banner when pending | `public` | `index,follow` |
 | `/` | Server redirect → `/niyamavali` | — | — |
 | `/404` | Not-found state (DB-independent) | `public` | `noindex` |
 | `/500` | Error state (DB-independent) | `public` | `noindex` |

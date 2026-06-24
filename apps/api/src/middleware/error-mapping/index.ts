@@ -23,6 +23,10 @@ import {
   DraftStateError,
   InvalidPariwarScopeError,
   PariwarScopeMissingError,
+  TcPinnedClauseNotFoundError,
+  TcStateError,
+  TcVersionConflictError,
+  TcVersionNotFoundError,
   ToneReviewRequiredError,
   ids,
   type ErrorResponseShape,
@@ -111,6 +115,28 @@ export function errorMappingHandler(
   }
   if (error instanceof DraftSelfReviewError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3c) T&C registry typed errors (Story 2.6, AC6/AC7). Each owns its code + projector.
+  //   TcVersionConflictError      → 409 terms_and_conditions.version_conflict (concurrent create race)
+  //   TcVersionNotFoundError      → 404 terms_and_conditions.version_not_found
+  //   TcStateError                → 409 terms_and_conditions.invalid_state (illegal transition)
+  //   TcPinnedClauseNotFoundError → 422 terms_and_conditions.pinned_clause_not_found (absent/cross-tenant pin)
+  if (error instanceof TcVersionConflictError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof TcVersionNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof TcStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof TcPinnedClauseNotFoundError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }
 

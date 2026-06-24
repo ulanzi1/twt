@@ -31,6 +31,10 @@ export * from './niyamavali_amendments.js';
 // Story 2.4 — the server-persisted Niyamavali draft store (the central net-new
 // design; pre-publish pending content + content-bound tone-review sign-off).
 export * from './clause_drafts.js';
+// Story 2.6 — the T&C version registry: version-pinned Terms & Conditions +
+// the FK-enforced clause-pinning junction table (the AC8 recoverable handle).
+export * from './terms_and_conditions_versions.js';
+export * from './terms_and_conditions_pinned_clauses.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

@@ -1,0 +1,120 @@
+---
+// The public T&C render (Story 2.6, AC4/AC5/AC8). Fully server-rendered, works with
+// JS disabled; the Hindi/English toggle is a SERVER-ROUNDTRIP query param (no client
+// island). The effective T&C is read under an UNAUTHENTICATED `withPublicScope`
+// (twt_app + RLS, NOT a superuser bypass); branding is read via the cross-readable
+// passport cache (no scope). ALL display logic lives in the tested pure module
+// `lib/tc-render.ts` — this frontmatter is thin glue. `body_html_rendered` is
+// sanitized at WRITE time, so the public renderer carries NO markdown dependency.
+import { getLocale, isLocale, t } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+import { passport, termsAndConditions } from '@twt/domain';
+
+import PublicShell from '../layouts/PublicShell.astro';
+import { getDb, withPublicScope } from '../lib/db.server.js';
+import { ACTIVE_PARIWAR_ID } from '../lib/pariwar.server.js';
+import { buildTcRenderModel, renderTcHtml, type TcRenderLabels } from '../lib/tc-render.js';
+
+const tr = (key: string, params?: Record<string, string | number>) =>
+  t(key, params, { locale, namespace: 'terms' });
+
+// ── Locale + branding (cache-safe: no session, no member state) ──────────────
+const langParam = Astro.url.searchParams.get('lang');
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const db = getDb().db;
+const passportRow = await passport.getPariwarPassportCached(db, ACTIVE_PARIWAR_ID);
+const locale: Locale = isLocale(langParam)
+  ? langParam
+  : getLocale({ pariwarPassportLocale: passportRow?.localeDefault, acceptLanguage });
+const trustName =
+  (locale === 'hi'
+    ? (passportRow?.displayNameHi ?? passportRow?.displayNameEn)
+    : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? tr('page_title');
+const branding = passportRow?.brandingBundle ?? null;
+
+// ── The effective T&C + its pinned clause versions (unauthenticated RLS read) ─
+const effective = await withPublicScope((sdb) =>
+  termsAndConditions.getEffectiveTc(sdb, ACTIVE_PARIWAR_ID),
+);
+const pinnedClauseIds = effective
+  ? await withPublicScope((sdb) =>
+      termsAndConditions.listPinnedClauses(sdb, ACTIVE_PARIWAR_ID, effective.tcVersionId),
+    )
+  : [];
+
+const labels: TcRenderLabels = {
+  provisionalBanner: tr('provisional_banner'),
+  effectiveLabel: tr('effective_label'),
+  pinnedLabel: tr('pinned_label'),
+  emptyTitle: tr('empty_title'),
+  emptyBody: tr('empty_body'),
+};
+const model = buildTcRenderModel(effective, pinnedClauseIds, labels);
+const bodyHtml = renderTcHtml(model);
+
+// ── Cache headers (AC4): edge-cacheable, no PII/member-state rendered ─────────
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+Astro.response.headers.set('Vary', 'Accept-Language');
+
+const pageTitle = tr('page_title');
+const pageDescription = tr('page_intro');
+---
+
+<PublicShell
+  locale={locale}
+  title={pageTitle}
+  description={pageDescription}
+  trustName={trustName}
+  branding={branding}
+>
+  <h1 class="tc-title">{pageTitle}</h1>
+  <p class="tc-intro">{pageDescription}</p>
+  <div set:html={bodyHtml} />
+</PublicShell>
+
+<style>
+  .tc-title {
+    font-family: var(--font-display-name);
+    color: var(--color-rule-heavy);
+    margin: 0 0 var(--space-block);
+  }
+  .tc-intro { color: var(--color-rule-heavy); margin-top: 0; }
+  :global(.tc-provisional) {
+    border: var(--border-rule) solid var(--color-rule-heavy);
+    background: var(--color-surface);
+    color: var(--color-rule-heavy);
+    padding: var(--space-row) var(--space-block);
+    margin: 0 0 var(--space-block);
+    font-size: 0.95rem;
+  }
+  :global(.tc-body) {
+    font-family: var(--font-body-ledger);
+    line-height: 1.6;
+  }
+  :global(.tc-body h1), :global(.tc-body h2) {
+    font-family: var(--font-display-parichay);
+    border-bottom: var(--border-hairline) solid var(--color-rule-hairline);
+    padding-bottom: var(--space-row);
+  }
+  :global(.tc-meta), :global(.tc-pinned) { margin: var(--space-block) 0 0; }
+  :global(.tc-meta div), :global(.tc-pinned div) {
+    display: flex;
+    gap: var(--space-row);
+    padding: 2px 0;
+    border-bottom: var(--border-hairline) dotted var(--color-rule-hairline);
+  }
+  :global(.tc-meta dt), :global(.tc-pinned dt) {
+    color: var(--color-rule-heavy);
+    min-width: 9rem;
+    font-size: 0.9rem;
+  }
+  :global(.tc-meta dd), :global(.tc-pinned dd) { margin: 0; font-family: var(--font-numeric-tabular); }
+  :global(.tc-empty) {
+    border: var(--border-rule) dashed var(--color-rule-hairline);
+    padding: var(--space-page-gutter);
+    text-align: center;
+    color: var(--color-rule-heavy);
+  }
+  :global(.tc-empty__title) { margin-top: 0; }
+  :global(.tc-pinned code) { font-family: var(--font-numeric-tabular); font-size: 0.85rem; }
+</style>

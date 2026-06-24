@@ -41,12 +41,18 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 9 grounded keys', () => {
+  it('is versioned and seeded with exactly the 11 grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(2); // Story 2.6 bump (was 1)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(9);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(11);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
+  });
+
+  it('includes the Story 2.6 T&C keys (tc.publish, tc.approve)', () => {
+    expect(isCatalogKey('tc.publish')).toBe(true);
+    expect(isCatalogKey('tc.approve')).toBe(true);
   });
 
   it('does NOT contain past-tense EVENT names (catalog ≠ events)', () => {

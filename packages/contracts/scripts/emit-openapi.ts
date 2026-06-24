@@ -109,6 +109,12 @@ const {
   DiffPreviewResponse,
   PublishClauseResponse,
 } = await import('../src/rules/index.js');
+// Story 2.6 — T&C version-registry contracts. THE FIRST T&C endpoints (trustee
+// create + approve), so apps/api serves these tenant-scoped routes now and they
+// register real `paths` + components (mirror Story 2.4).
+const { TcVersionResponse, CreateTcVersionRequest, ApproveTcVersionRequest } = await import(
+  '../src/terms-and-conditions/index.js'
+);
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -169,6 +175,11 @@ const UpdateClauseDraftRequestComponent = UpdateClauseDraftRequest.openapi('Upda
 const ToneReviewSignoffRequestComponent = ToneReviewSignoffRequest.openapi('ToneReviewSignoffRequest');
 const DiffPreviewResponseComponent = DiffPreviewResponse.openapi('DiffPreviewResponse');
 const PublishClauseResponseComponent = PublishClauseResponse.openapi('PublishClauseResponse');
+
+// Story 2.6 — T&C version-registry component schemas.
+const TcVersionResponseComponent = TcVersionResponse.openapi('TcVersionResponse');
+const CreateTcVersionRequestComponent = CreateTcVersionRequest.openapi('CreateTcVersionRequest');
+const ApproveTcVersionRequestComponent = ApproveTcVersionRequest.openapi('ApproveTcVersionRequest');
 
 // Story 1.9 — admin-auth component schemas (request + response objects).
 const authComponents = {
@@ -231,6 +242,10 @@ registry.register('UpdateClauseDraftRequest', UpdateClauseDraftRequestComponent)
 registry.register('ToneReviewSignoffRequest', ToneReviewSignoffRequestComponent);
 registry.register('DiffPreviewResponse', DiffPreviewResponseComponent);
 registry.register('PublishClauseResponse', PublishClauseResponseComponent);
+// Story 2.6 — T&C version-registry components.
+registry.register('TcVersionResponse', TcVersionResponseComponent);
+registry.register('CreateTcVersionRequest', CreateTcVersionRequestComponent);
+registry.register('ApproveTcVersionRequest', ApproveTcVersionRequestComponent);
 
 // Story 1.9 — register the admin-auth components.
 for (const [name, schema] of Object.entries(authComponents)) {
@@ -777,6 +792,79 @@ registry.registerPath({
     403: niyForbidden,
     404: niyNotFound,
     409: errorResponse('tone-review-required, or the draft is not signed off'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 2.6 — T&C version registry (TENANT-SCOPED, RBAC-gated) ──────────────
+// Trustee write surface. Both routes run the [requireAdminSession,
+// scopeResolutionHook, requirePermissionHook] chain; create gates on tc.publish,
+// approve on tc.approve. Audit-or-throw (the audit line is written first). No read
+// endpoint ships in 2.6 — the public /terms page reads the registry directly.
+const tcTags = ['terms-and-conditions'];
+const tcPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const tcVersionParams = z.object({ pariwarId: z.string().uuid(), tcVersionId: z.string().uuid() });
+const tcForbidden = errorResponse('Forbidden — the required T&C permission at this scope');
+const tcAuth = errorResponse('Authentication required');
+const tcNotFound = errorResponse('Not found');
+const tcValidation = errorResponse('Request validation failed');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/terms/versions',
+  summary: 'Create a T&C version (audit-logged)',
+  description:
+    'Creates a version-pinned T&C: renders body_html_rendered from bodyMarkdown at ' +
+    'write time (sanitized), pins the supplied clause versions (each validated to ' +
+    'exist in the Pariwar), defaults legal_review_status → pending, and writes a ' +
+    'single audit line first (audit-or-throw). Requires tc.publish at pariwar scope.',
+  tags: tcTags,
+  request: {
+    params: tcPariwarParams,
+    body: {
+      content: { 'application/json': { schema: CreateTcVersionRequestComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'T&C version created',
+      content: { 'application/json': { schema: TcVersionResponseComponent } },
+    },
+    400: tcValidation,
+    401: tcAuth,
+    403: tcForbidden,
+    409: errorResponse('Concurrent T&C version creation conflict — retry the request'),
+    422: errorResponse('A pinned clause version does not exist in this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/terms/versions/{tcVersionId}/approve',
+  summary: 'Approve a T&C version (audit-logged)',
+  description:
+    'Marks a T&C approved: sets legal_reviewer_actor_id = the acting trustee, flips ' +
+    'legal_review_status → approved, and supersedes the prior currently-effective ' +
+    'version (set effective_until + status → superseded). Audit-or-throw. The ' +
+    'superseded version stays queryable by tc_version_id. Requires tc.approve.',
+  tags: tcTags,
+  request: {
+    params: tcVersionParams,
+    body: {
+      content: { 'application/json': { schema: ApproveTcVersionRequestComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'T&C version approved',
+      content: { 'application/json': { schema: TcVersionResponseComponent } },
+    },
+    400: tcValidation,
+    401: tcAuth,
+    403: tcForbidden,
+    404: tcNotFound,
+    409: errorResponse('The version is already approved or superseded'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

@@ -69,8 +69,9 @@ export function permissionKey(value: string): PermissionKey {
 /**
  * Catalog version. Bumped when keys are added/removed (append-only in practice —
  * the catalog grows per-epic). Downstream consumers may pin/assert a minimum.
+ * Bumped 1 → 2 at Story 2.6 (added `tc.publish` + `tc.approve`).
  */
-export const PERMISSION_CATALOG_VERSION = 1 as const;
+export const PERMISSION_CATALOG_VERSION = 2 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -86,6 +87,10 @@ export const SEED_PERMISSION_KEYS = [
   'pariwar.provision',
   'niyamavali.amend',
   'niyamavali.review',
+  // Story 2.6 — T&C version registry (the create + approve trustee endpoints DO
+  // exist, so these keys are grounded, not speculative).
+  'tc.publish',
+  'tc.approve',
   'audit.export',
   'audit.verify',
 ] as const;
@@ -104,7 +109,7 @@ export interface PermissionCatalog {
   readonly keys: readonly PermissionKey[];
 }
 
-/** The v1 catalog — the 9 grounded keys, each validated through the constructor. */
+/** The catalog — the 11 grounded keys, each validated through the constructor. */
 export const PERMISSION_CATALOG: PermissionCatalog = {
   catalogVersion: PERMISSION_CATALOG_VERSION,
   keys: SEED_PERMISSION_KEYS.map(permissionKey),

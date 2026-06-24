@@ -7,6 +7,10 @@
 >
 > **Authority:** Epic 1 retrospective H-4 + AI-8. See Decision 2026-06-20-056 in `.decision-log.md`.
 > Related memory: `[[project_live_db_test_gotchas]]`.
+>
+> **Scope note:** Rules 1–5 are live-DB / integration landmines (AI-8). **Rule 6
+> (assertion quality)** applies to **all** tests — unit and integration — and comes from
+> Epic 2 (H-4 / AI-2-3).
 
 ---
 
@@ -118,11 +122,46 @@ so the suite structure is visible to the test runner even when skipped.
 
 ---
 
+## Rule 6 — Assertions Must Be Falsifiable (No Vacuous / Tautological Tests)
+
+> **Authority:** Epic 2 retrospective **H-4 / AI-2-3**. Applies to **all** tests (unit and
+> integration), not only the live-DB rules above. Companion to the domain-accessor invariants
+> (`docs/domain-accessor-invariants.md`, families b/c required-tests).
+
+**Problem:** A test can be green while asserting nothing. Three forms recurred across Epic 2:
+
+- **Vacuous-on-empty.** A positive assertion over a result set passes when the set is empty.
+  `expect(rows.every(r => r.pariwarId === A)).toBe(true)` is **trivially true on `[]`** — if RLS
+  broke and returned zero rows, the test would still pass. (2.6 P12, P17.)
+- **Tautology / constant-vs-itself.** `expect(CATALOG.version).toBe(CATALOG_VERSION)` compares a
+  value to the same imported constant — it can never catch a wrong literal. (2.6 P15.)
+- **Untested guard.** A guard / branch added in the code with no test that fails when the guard
+  is removed (empty-pins guard, double-revoke guard, RLS `WITH CHECK`). (2.6 P13/P14/P16; 2.1 P3.)
+
+**Rule — every assertion must be able to fail:**
+
+1. **Prove non-empty before asserting over a set.** Pair any `rows.every(...)` / `rows.some(...)`
+   positive check with `expect(rows).not.toHaveLength(0)` (or assert the exact expected row). A
+   negative test (`rows.some(A) === false`) is *also* satisfied by `[]` — add the symmetric
+   positive (`rows.every(B) === true` **and** non-empty) so the test proves the data is there.
+2. **Pin literals, not the constant under test.** Assert against the **expected literal value**
+   (`expect(CATALOG_VERSION).toBe(2)`), not against the same constant the code imports.
+3. **Every guard gets a test that fails without it.** If you add a domain guard / branch / RLS
+   policy, add a test that goes red when the guard is deleted (the family-b/c required-tests in
+   `docs/domain-accessor-invariants.md`). "The guard exists" is not coverage; "removing the guard
+   breaks a test" is.
+4. **Sanity check before the PR:** for each new assertion ask *"what bug would make this fail?"*
+   If the answer is "none," the assertion is decoration — strengthen or delete it.
+
+---
+
 ## References
 
 - `packages/domain/migrations/meta/_journal.json` — Drizzle migration journal
 - `.github/workflows/ci.yml` `integration-tests` job — the authoritative CI filter
 - `scripts/ci-local.sh` — local mirror of the integration-tests job
 - Memory `[[project_live_db_test_gotchas]]` — session-level live-DB gotchas
-- Epic 1 retrospective H-4 — `_bmad-output/implementation-artifacts/epic-1-retro-2026-06-20.md`
-- Decision 2026-06-20-056 — this runbook's authority entry
+- Epic 1 retrospective H-4 — `_bmad-output/implementation-artifacts/epic-1-retro-2026-06-20.md` (Rules 1–5)
+- Epic 2 retrospective H-4 / AI-2-3 — `_bmad-output/implementation-artifacts/epic-2-retro-2026-06-24.md` (Rule 6)
+- `docs/domain-accessor-invariants.md` — family-b/c required-tests (Rule 6 §3) + reviewer checklist
+- Decision 2026-06-20-056 — this runbook's authority entry (AI-8)

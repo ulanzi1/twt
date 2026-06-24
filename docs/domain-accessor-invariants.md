@@ -100,7 +100,7 @@ Paste into a domain-touching PR review (families b/c are the non-gated half of A
 - [ ] **(a)** Every `.limit()` with a caller value uses `clampLimit(...)`. *(also enforced by the `domain-invariants` gate)*
 - [ ] **(b)** Every accessor taking an array/collection rejects empty (and duplicates where identity matters) **at the domain layer**, with a direct-call test.
 - [ ] **(c)** Every read-then-write-same-row mutation locks (`FOR UPDATE`) or uses a conditional `WHERE` + 0-row re-read, maps `23505` → typed 409, with a concurrency/double-op test.
-- [ ] Tests are **not vacuous** — positive assertions prove non-empty results (`expect(rows).not.toHaveLength(0)`); no constant-compared-to-itself; literal values pinned. *(AI-2-3)*
+- [ ] Tests are **not vacuous** — positive assertions prove non-empty results (`expect(rows).not.toHaveLength(0)`); no constant-compared-to-itself; literal values pinned. *(AI-2-3 — see `docs/runbooks/test-runbook.md` Rule 6)*
 
 ## References
 

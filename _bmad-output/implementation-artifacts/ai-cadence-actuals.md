@@ -1,5 +1,7 @@
 # AI Cadence Actuals
 
+> **🗄️ RETIRED — 2026-06-24 · Decision 2026-06-24-063 · ADR-0025.** This instrument is retired (instrumentation-only). The 80 hr/wk NET **re-attestation obligation is released**: per-story focused-NET-hours proved **non-capturable in a solo + AI workflow**, so the re-attestation cannot be satisfied with trustworthy data. The `cadence-check` CI gate has been **removed**. **No backfill** — Epic 0/1/2 remain recorded UN-ATTESTED below; the honest record is preserved, not reconstructed. The Epic-0 `ceiling_ratio = 1.497` no-trigger finding (Decision 2026-06-04-016) **STANDS** as ratified; `reconciliation-decision-framework.md §1` is unchanged. See `docs/adr/ADR-0025-retire-ai-cadence-instrument.md`.
+
 Instruments the 80 hr/wk NET assumption that underlies `ceiling_ratio = 1.497` (the ratio that
 cleared the 1.5× reconciliation trigger by 0.003 / 0.2%). Epic 2 is the first instrumented
 measurement cycle. At each epic close, re-attest the assumption against these actuals and cite
@@ -75,4 +77,4 @@ in the retrospective. Re-attest or escalate per reconciliation-decision-framewor
 - reconciliation-decision-framework.md §1 — trigger threshold (> 1.5)
 - `.decision-log.md` Decision 2026-06-04-016 — 80 hr/wk cadence override sign-off
 - Epic 1 retrospective AI-1 — `_bmad-output/implementation-artifacts/epic-1-retro-2026-06-20.md`
-- `scripts/cadence-check/check.ts` — CI gate enforcing this file's existence + currency
+- `scripts/cadence-check/check.ts` — **REMOVED 2026-06-24** (gate retired per ADR-0025 / Decision 2026-06-24-063; previously enforced this file's existence + currency)

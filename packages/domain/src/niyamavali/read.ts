@@ -8,6 +8,7 @@
 
 import { and, arrayOverlaps, desc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
 
+import { clampLimit } from '../pagination.js';
 import type { Db } from '../db.js';
 import type { ClauseId, ClauseVersionId, PariwarId } from '../ids/index.js';
 import { type ClauseVersionRow, clauseVersions } from '../schema/clause_versions.js';
@@ -116,7 +117,7 @@ export async function listClauses(
       and(eq(clauseVersions.pariwarId, pariwarId), isNull(clauseVersions.supersededByVersion)),
     )
     .orderBy(desc(clauseVersions.authoredAt))
-    .limit(opts.limit ?? 50);
+    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }));
 }
 
 /**
@@ -182,7 +183,7 @@ export async function listAmendments(
     .from(niyamavaliAmendments)
     .where(eq(niyamavaliAmendments.pariwarId, pariwarId))
     .orderBy(desc(niyamavaliAmendments.createdAt))
-    .limit(opts.limit ?? 50);
+    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }));
 }
 
 /** All version rows of a clause, oldest→newest (the version chain / audit history). */

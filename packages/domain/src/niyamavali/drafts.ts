@@ -30,6 +30,7 @@ import { createHash } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import { canonicalJsonStringify } from '../canonical-json.js';
+import { clampLimit } from '../pagination.js';
 import type { Db } from '../db.js';
 import type { ClauseDraftId, ClauseId, ClauseVersionId, PariwarId } from '../ids/index.js';
 import {
@@ -183,7 +184,7 @@ export async function listDrafts(
     .from(clauseDrafts)
     .where(predicate)
     .orderBy(desc(clauseDrafts.createdAt))
-    .limit(opts.limit ?? 30);
+    .limit(clampLimit(opts.limit, { default: 30, cap: 200 }));
 }
 
 // ── edit / lifecycle transitions ──────────────────────────────────────────────

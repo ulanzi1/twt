@@ -8,6 +8,7 @@
 
 import { and, desc, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
 
+import { clampLimit } from '../pagination.js';
 import type { Db } from '../db.js';
 import type { ConsentId, PariwarId } from '../ids/index.js';
 import {
@@ -108,7 +109,7 @@ export async function listConsents(
     .from(consentRecords)
     .where(and(...filters))
     .orderBy(desc(consentRecords.grantedAt))
-    .limit(Math.max(1, Math.min(opts.limit ?? 50, 200)));
+    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }));
 }
 
 /**

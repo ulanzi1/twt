@@ -11,7 +11,7 @@
 | Mechanism | Status |
 |---|---|
 | GitHub Actions | ⚠️ **Suspended** (account under review since ~1.11). 1.11–1.17 merged via `pnpm ci:local` + pre-push hook (commit 480128e). |
-| `pnpm ci:local` | ✅ Active as merge gate. Mirrors all 14 ci.yml gate jobs sequentially. Integration jobs need `DATABASE_URL` on `:5433`. _(`cadence-check` retired 2026-06-24 — ADR-0025.)_ |
+| `pnpm ci:local` | ✅ Active as merge gate. Mirrors all 15 ci.yml gate jobs sequentially. Integration jobs need `DATABASE_URL` on `:5433`. _(`cadence-check` retired — ADR-0025; `domain-invariants` added — AI-2-2; both 2026-06-24.)_ |
 | Pre-push hook | ✅ Active. `.githooks/pre-push` runs `ci:local` before every push. |
 | AI-4 | ✅ Done (ADR-0017 authored, adopting `ci:local` + pre-push as the sanctioned merge gate). ⚠️ Formal trustee ratification of ADR-0017 still pending. |
 | AI-5 | ✅ Done — `timeout-minutes` + `cache-dependency-path: pnpm-lock.yaml` applied across **all** ci.yml jobs (not just 1.16x); `tsx` pinned to an exact version in `package.json`. |
@@ -33,6 +33,7 @@
 | `friction-budget` (UX-DR3) | 1.16a | `pnpm friction:check` / `scripts/friction-budget/check.ts` | Bundle-size YAML ceilings + named-payer ledger. **`member-public-web` has TEETH as of Story 2.5** (apps/public emits `dist/page-weight.json`; js_bundle_bytes + page_weight_bytes baselines committed). `critical_render_path_ms` live-timing is **explicitly deferred → Epic 11a** (Decision 2026-06-20-055(b)). | ✅ Active (static proxies enforcing; live-timing deferred — see §C) |
 | `schema-diff` (FR-100 non-add guard) | 1.16c | `pnpm schema:check` | ZERO payout-destination surface across 4 scan roots (table / column / endpoint / Zod schema). Invariant scan — no `fetch-depth:0`. | ✅ Active and enforcing |
 | `microcopy` (UX-DR71 / UX-DR73 / FM-14) | 1.17 | `pnpm microcopy:check` / `scripts/microcopy/check.ts` | Vocabulary register (passbook→Yogdaan Bahi etc.) + tone prohibitions + FM-14 #2 magic-number colors. `code_globs` bounded to `apps/admin`; **`copy_globs` POPULATED at Story 2.5** with the `niyamavali` member-copy locale files — member-register vocabulary (user/customer/donor) + Devanagari-numeral discipline now have teeth on the first member surface. | ✅ Active (admin code + first member-copy surface enforcing) |
+| `domain-accessor-invariants` (AI-2-2 family a) | retro AI-2-2 | `pnpm domain-invariants:check` / `scripts/domain-accessor-invariants/check.ts` | Family (a) forced-pagination clamp: every dynamic `.limit(...)` in `packages/domain/src` must route through `clampLimit(...)` (or be an integer literal) — no unbounded `LIMIT`, no negative-limit `LIMIT -1` bypass (the 2.7 P2 class). Static TS-AST scan. Families (b) collection-input guards + (c) read-then-write FOR UPDATE are convention + required-test in `docs/domain-accessor-invariants.md`. | ✅ Active and enforcing (landed green-with-teeth; 5 live accessors fixed) |
 | `integration-tests` (RLS + multi-tenant + events_log) | 1.6 | `pnpm test:integration` / `apps/api/tests/integration/` | Single-row RLS leak → CI fail; multi-tenant isolation; append-only `events_log` enforcement. Needs `DATABASE_URL` on `:5433`. | ✅ Active via `ci:local` (⚠️ GH Actions suspended) |
 
 ---

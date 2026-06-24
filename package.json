@@ -33,6 +33,8 @@
     "benefit:test": "vitest run scripts/benefit-mechanism",
     "microcopy:check": "tsx scripts/microcopy/check.ts",
     "microcopy:test": "vitest run scripts/microcopy",
+    "domain-invariants:check": "tsx scripts/domain-accessor-invariants/check.ts",
+    "domain-invariants:test": "vitest run scripts/domain-accessor-invariants",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

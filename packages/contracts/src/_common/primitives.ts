@@ -41,3 +41,23 @@ export type RequestId = z.output<typeof RequestId>;
 /** RFC 5321 email; relaxed validation — strict policy at downstream Stories. */
 export const Email = z.string().email();
 export type Email = z.output<typeof Email>;
+
+/**
+ * Indian mobile number transport primitive (Story 3.2, AC-1). Deliberately
+ * LENIENT on the wire shape — the member login screen submits whatever the user
+ * types (`+91 98765 43210`, `09876543210`, `9876543210`). The server's
+ * `normalizeMobile` canonicalises to a single E.164 form (`+91XXXXXXXXXX`) before
+ * the blind-index lookup, so `+91 98765 43210`, `09876543210`, and `9876543210`
+ * all resolve to one member. Validation here only bounds the input + restricts the
+ * character set (digits + the conventional separators `+ - ( ) space`); a value
+ * that passes this shape but normalises to nothing is treated by the handler as a
+ * non-existent member (enumeration defense — the request endpoint still returns
+ * `{ sent: true }`). Tier-1 PII (§2.7): NEVER logged/echoed in plaintext.
+ */
+export const MobileNumber = z
+  .string()
+  .trim()
+  .min(10)
+  .max(20)
+  .regex(/^[+0-9][0-9\s\-()]*$/, 'Must be a mobile number (digits + optional + - ( ) separators)');
+export type MobileNumber = z.output<typeof MobileNumber>;

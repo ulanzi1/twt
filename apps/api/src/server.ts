@@ -23,6 +23,7 @@ import { errorMappingHandler } from './middleware/error-mapping/index.js';
 import { requestContextHook } from './middleware/request-context/index.js';
 import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
+import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerRulesModule } from './modules/rules/index.js';
@@ -30,6 +31,7 @@ import { registerTermsModule } from './modules/terms-and-conditions/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
+import { registerMemberJwt } from './plugins/jwt/index.js';
 import { registerHoneypot, registerSecurityHeaders } from './plugins/security-headers/index.js';
 import { registerSession } from './plugins/session/index.js';
 import { registerSwagger } from './plugins/swagger/index.js';
@@ -74,6 +76,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   await registerSession(app, deps);
   await registerCsrf(app);
   await registerRateLimit(app, deps);
+  // Member (mobile) JWT — access-token + signup-continuation signing/verification
+  // (Story 3.2). Independent of @fastify/session; adds no automatic auth (the member
+  // routes call the member-session guard explicitly).
+  await registerMemberJwt(app, deps);
   await registerSwagger(app);
 
   // Defense-in-depth Origin/Referer check on state-changing requests.
@@ -82,6 +88,9 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   registerHealthRoutes(app, deps);
   registerMultiTenant(app, deps);
   registerAdminAuthModule(app, deps);
+  // Story 3.2 — member mobile+OTP auth surface (token-bearer; the first non-admin
+  // authenticated surface). Public OTP/refresh/select + member-session-gated step-up.
+  registerMemberAuthModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

@@ -115,6 +115,22 @@ const {
 const { TcVersionResponse, CreateTcVersionRequest, ApproveTcVersionRequest } = await import(
   '../src/terms-and-conditions/index.js'
 );
+// Story 3.2 — member mobile+OTP auth contracts. THE FIRST members/ endpoints
+// (mobile login OTP → session, refresh, multi-Pariwar select, member step-up), so
+// apps/api serves these routes now and they register real `paths` + components.
+const {
+  MemberOtpRequestRequest,
+  MemberOtpRequestResponse,
+  MemberOtpVerifyRequest,
+  MemberOtpVerifyResponse,
+  MemberFullSession,
+  MemberSelectPariwarRequest,
+  MemberTokenRefreshRequest,
+  MemberStepUpRequestRequest,
+  MemberStepUpRequestResponse,
+  MemberStepUpVerifyRequest,
+  MemberStepUpVerifyResponse,
+} = await import('../src/members/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -249,6 +265,25 @@ registry.register('ApproveTcVersionRequest', ApproveTcVersionRequestComponent);
 
 // Story 1.9 — register the admin-auth components.
 for (const [name, schema] of Object.entries(authComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 3.2 — member mobile+OTP auth components. MemberFullSession is registered
+// once + $ref'd by the verify union, the select response, and the refresh response.
+const memberComponents = {
+  MemberOtpRequestRequest: MemberOtpRequestRequest.openapi('MemberOtpRequestRequest'),
+  MemberOtpRequestResponse: MemberOtpRequestResponse.openapi('MemberOtpRequestResponse'),
+  MemberFullSession: MemberFullSession.openapi('MemberFullSession'),
+  MemberOtpVerifyRequest: MemberOtpVerifyRequest.openapi('MemberOtpVerifyRequest'),
+  MemberOtpVerifyResponse: MemberOtpVerifyResponse.openapi('MemberOtpVerifyResponse'),
+  MemberSelectPariwarRequest: MemberSelectPariwarRequest.openapi('MemberSelectPariwarRequest'),
+  MemberTokenRefreshRequest: MemberTokenRefreshRequest.openapi('MemberTokenRefreshRequest'),
+  MemberStepUpRequestRequest: MemberStepUpRequestRequest.openapi('MemberStepUpRequestRequest'),
+  MemberStepUpRequestResponse: MemberStepUpRequestResponse.openapi('MemberStepUpRequestResponse'),
+  MemberStepUpVerifyRequest: MemberStepUpVerifyRequest.openapi('MemberStepUpVerifyRequest'),
+  MemberStepUpVerifyResponse: MemberStepUpVerifyResponse.openapi('MemberStepUpVerifyResponse'),
+} as const;
+for (const [name, schema] of Object.entries(memberComponents)) {
   registry.register(name, schema);
 }
 
@@ -867,6 +902,85 @@ registry.registerPath({
     409: errorResponse('The version is already approved or superseded'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
+
+// ── Story 3.2 — member mobile+OTP auth (TOKEN-BEARER; the first member surface) ──
+// Public OTP request/verify + multi-Pariwar select + token refresh; member-session-
+// gated step-up request/verify (the gate's synthetic probe is hidden from the spec).
+const memberTags = ['member-auth'];
+const memberAuth = errorResponse('Authentication required');
+const memberValidation = errorResponse('Request validation failed');
+const jsonOf = (schema: unknown): { 'application/json': { schema: unknown } } => ({
+  'application/json': { schema },
+});
+
+const MEMBER_PATHS: {
+  path: string;
+  summary: string;
+  body: unknown;
+  ok: unknown;
+  errors?: Record<number, string>;
+}[] = [
+  {
+    path: '/api/v1/member/auth/otp/request',
+    summary: 'Member login — request a mobile OTP (enumeration-safe, per-phone throttled)',
+    body: memberComponents.MemberOtpRequestRequest,
+    ok: memberComponents.MemberOtpRequestResponse,
+    errors: { 429: 'Too many OTP requests (per-phone 5/15min)' },
+  },
+  {
+    path: '/api/v1/member/auth/otp/verify',
+    summary: 'Member login — verify OTP → full session / pariwar-select / signup-continuation',
+    body: memberComponents.MemberOtpVerifyRequest,
+    ok: memberComponents.MemberOtpVerifyResponse,
+    errors: { 401: 'Invalid code', 403: 'Member is withdrawn', 429: 'Rate limited' },
+  },
+  {
+    path: '/api/v1/member/auth/otp/select-pariwar',
+    summary: 'Member login — pick a Pariwar scope (multi-membership) → full session',
+    body: memberComponents.MemberSelectPariwarRequest,
+    ok: memberComponents.MemberFullSession,
+    errors: { 401: 'Invalid selection token' },
+  },
+  {
+    path: '/api/v1/member/auth/token/refresh',
+    summary: 'Member session — rotate the refresh token (reuse detection)',
+    body: memberComponents.MemberTokenRefreshRequest,
+    ok: memberComponents.MemberFullSession,
+    errors: { 401: 'Invalid refresh token' },
+  },
+  {
+    path: '/api/v1/member/auth/step-up/request',
+    summary: 'Member step-up — request an OTP for a gated action',
+    body: memberComponents.MemberStepUpRequestRequest,
+    ok: memberComponents.MemberStepUpRequestResponse,
+    errors: { 401: 'Authentication required' },
+  },
+  {
+    path: '/api/v1/member/auth/step-up/verify',
+    summary: 'Member step-up — verify the OTP → elevate for the action_context',
+    body: memberComponents.MemberStepUpVerifyRequest,
+    ok: memberComponents.MemberStepUpVerifyResponse,
+    errors: { 401: 'Step-up verification failed' },
+  },
+];
+
+for (const spec of MEMBER_PATHS) {
+  const responses: Record<number, unknown> = {
+    200: { description: 'OK', content: jsonOf(spec.ok) },
+    400: memberValidation,
+  };
+  for (const [code, description] of Object.entries(spec.errors ?? {})) {
+    responses[Number(code)] = code === '401' ? memberAuth : errorResponse(description);
+  }
+  registry.registerPath({
+    method: 'post',
+    path: spec.path,
+    summary: spec.summary,
+    tags: memberTags,
+    request: { body: { content: jsonOf(spec.body), required: true } },
+    responses: responses as Parameters<typeof registry.registerPath>[0]['responses'],
+  });
+}
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 

@@ -62,10 +62,55 @@ export interface ApiConfig {
   readonly lockoutThreshold: number;
   /** Lockout duration after threshold breached. */
   readonly lockoutMs: number;
-  /** Step-up OTP TTL (§2.2 — 3 min). */
+  /** Step-up OTP TTL (§2.2 — 3 min). Reused by member step-up (Story 3.2, R4). */
   readonly stepUpOtpTtlMs: number;
-  /** Elevated-context window after a successful step-up (§2.2 — ~5 min). */
+  /** Elevated-context window after a successful step-up (§2.2 — ~5 min). Reused by member step-up. */
   readonly stepUpElevatedMs: number;
+  /** Member LOGIN-OTP TTL (Story 3.2, §2.2 line 1370 — 5 min, distinct from the 3-min step-up TTL). */
+  readonly loginOtpTtlMs: number;
+  /** Member access-token (JWT) TTL (Story 3.2, §2.4 — ≤15 min). */
+  readonly memberAccessTtlMs: number;
+  /** Member refresh-token TTL (Story 3.2, §2.2/AR-23/R1 — 90 days, NOT the §2.4 generic 30d). */
+  readonly memberRefreshTtlMs: number;
+  /** Signup-continuation token TTL (Story 3.2, R5 — 30 min, spans the full signup wizard). */
+  readonly signupContinuationTtlMs: number;
+  /** Member OTP send ceiling per-phone (Story 3.2, §2.11 line 3484 — 5 per 15-min window). */
+  readonly otpPerPhoneMax: number;
+  /** Member OTP per-phone window (Story 3.2 — 15 min, NOT the 1-min named limits). */
+  readonly otpPerPhoneWindowMs: number;
+  /** Max trusted devices per member (Story 3.2, §2.2 line 1337 — 2; a 3rd drops the oldest). */
+  readonly memberMaxTrustedDevices: number;
+  /**
+   * Member-JWT signing key (Story 3.2, §2.4). The private key NAME (never the value)
+   * for Secret Manager + a local-dev env fallback var name (mirror the argon2 pepper).
+   * Asymmetric algorithm pinned (ES256/RS256). When neither the secret nor the env
+   * fallback resolves AND NODE_ENV != production, deps.ts generates an ephemeral
+   * ES256 keypair (dev/test/CI run with ZERO key config).
+   */
+  readonly memberJwt: {
+    readonly algorithm: 'ES256' | 'RS256';
+    readonly privateKeySecretName: string;
+    readonly privateKeyEnvFallback: string;
+  };
+  /**
+   * HMAC-SHA256 key for the otp_hash field in audit events (P28 / D1). Plain SHA-256
+   * of a 6-digit OTP is brute-forceable in <1 ms; keying with this server-side secret
+   * makes audit-log otp_hash non-invertible by log readers who lack the key. Required
+   * in production; in dev/test falls back to a placeholder so zero config is needed.
+   */
+  readonly auditOtpCorrelationKey: string;
+  /** Pariwar-select token TTL (Story 3.2, R2 — default 5 min). */
+  readonly pariwarSelectTtlMs: number;
+  /** Absolute member refresh-token ceiling: revoke if token was issued more than N ms ago (P32 / D5 — default 180 days). */
+  readonly memberRefreshAbsoluteMs: number;
+  /**
+   * Grace window for a concurrent refresh of the SAME valid token (PR-Patch-11 / D3).
+   * On flaky rural connectivity a double-tap / retry sends the same refresh token
+   * twice; the loser of the atomic-rotation race is treated as a BENIGN concurrent
+   * rotation (no chain revoke) iff the token was rotated within this window. Older
+   * rotated tokens are still genuine reuse → revoke. Default 10s.
+   */
+  readonly memberRefreshRaceGraceMs: number;
   /** Global per-IP rate-limit ceiling (requests/minute). */
   readonly globalRateMax: number;
   /** Tight per-route rate-limit ceiling for login + reset-request (requests/minute). */
@@ -185,6 +230,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     lockoutMs: intEnv(env, 'LOCKOUT_MS', 15 * MINUTE),
     stepUpOtpTtlMs: intEnv(env, 'STEP_UP_OTP_TTL_MS', 3 * MINUTE),
     stepUpElevatedMs: intEnv(env, 'STEP_UP_ELEVATED_MS', 5 * MINUTE),
+    loginOtpTtlMs: intEnv(env, 'LOGIN_OTP_TTL_MS', 5 * MINUTE),
+    memberAccessTtlMs: intEnv(env, 'MEMBER_ACCESS_TTL_MS', 15 * MINUTE),
+    memberRefreshTtlMs: intEnv(env, 'MEMBER_REFRESH_TTL_MS', 90 * DAY),
+    signupContinuationTtlMs: intEnv(env, 'SIGNUP_CONTINUATION_TTL_MS', 30 * MINUTE),
+    otpPerPhoneMax: intEnv(env, 'OTP_PER_PHONE_MAX', 5),
+    otpPerPhoneWindowMs: intEnv(env, 'OTP_PER_PHONE_WINDOW_MS', 15 * MINUTE),
+    memberMaxTrustedDevices: intEnv(env, 'MEMBER_MAX_TRUSTED_DEVICES', 2),
+    memberJwt: {
+      algorithm: 'ES256',
+      privateKeySecretName: env['MEMBER_JWT_PRIVATE_KEY_SECRET_NAME'] ?? 'twt-dev-member-jwt-private-key',
+      privateKeyEnvFallback: env['MEMBER_JWT_PRIVATE_KEY_ENV_FALLBACK'] ?? 'MEMBER_JWT_PRIVATE_KEY',
+    },
+    auditOtpCorrelationKey: isProd
+      ? requireEnv(env, 'OTP_AUDIT_CORRELATION_KEY')
+      : (env['OTP_AUDIT_CORRELATION_KEY'] ?? 'twt-dev-otp-audit-correlation-key-placeholder'),
+    pariwarSelectTtlMs: intEnv(env, 'PARIWAR_SELECT_TTL_MS', 5 * MINUTE),
+    memberRefreshAbsoluteMs: intEnv(env, 'MEMBER_REFRESH_ABSOLUTE_MS', 180 * DAY),
+    memberRefreshRaceGraceMs: intEnv(env, 'MEMBER_REFRESH_RACE_GRACE_MS', 10 * 1000),
     globalRateMax: intEnv(env, 'RATE_LIMIT_MAX', 300),
     loginRateMax: intEnv(env, 'LOGIN_RATE_MAX', 10),
     stepUpRateMax: intEnv(env, 'STEP_UP_RATE_MAX', 5),

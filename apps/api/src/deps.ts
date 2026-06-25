@@ -17,6 +17,7 @@ import { createCloudflareTurnstileVerifier } from '@twt/edge';
 import { createAuditLogSink, createKmsAuditHook } from './audit/audit-log-sink.js';
 import type { ApiConfig } from './config.js';
 import type { AppDeps, EncryptionDeps } from './context.js';
+import { resolveMemberJwtKeys } from './modules/auth/member/jwt-keys.js';
 import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
@@ -107,9 +108,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
   // (Story 1.5 D1-1.5 precedent). The caller ends `servicePool` only when it is a
   // distinct pool (see apps/api/src/index.ts).
   const serviceConnectionString = process.env['SERVICE_DATABASE_URL'];
-  const servicePool = serviceConnectionString
-    ? createDb(serviceConnectionString).pool
-    : pool;
+  const serviceCreated = serviceConnectionString ? createDb(serviceConnectionString) : { db, pool };
+  const servicePool = serviceCreated.pool;
+  const serviceDb = serviceCreated.db;
 
   const pepper = await resolveSecretValue(config.argon2.pepperSecretName, {
     envFallback: config.argon2.pepperEnvFallback,
@@ -132,6 +133,7 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     db,
     pool,
     servicePool,
+    serviceDb,
     encryption: encryptionDeps,
     pepper: Buffer.from(pepper, 'utf-8'),
     // The real FR-47 hash-chain sink (Story 1.10) replaces consoleAuthAuditSink.
@@ -140,6 +142,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // writer + service pool as auditSink, but the dedicated tone-review taxonomy.
     toneReviewAuditSink: createToneReviewAuditSink(servicePool),
     stepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd }),
+    // Member access-token + signup-continuation JWT keypair (Story 3.2, §2.4) —
+    // Secret Manager in prod; an ephemeral ES256 keypair in dev/CI.
+    memberJwt: await resolveMemberJwtKeys(config),
     turnstile: await buildTurnstileVerifier(config),
     webauthn: createSimpleWebAuthnProvider({
       rpId: config.webauthn.rpId,

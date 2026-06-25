@@ -4,10 +4,12 @@ import { useEffect } from 'react'
 import { useColorScheme } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
+import { LocaleProvider } from '@twt/i18n/react'
 import { useFonts } from 'expo-font'
-import { SplashScreen, Stack } from 'expo-router'
+import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router'
 import { Provider } from 'components/Provider'
 import { useTheme } from 'tamagui'
+import { SessionProvider, useSession } from '../lib/session-context'
 
 // Devanagari font roles per UX spec lines 712-714 + 1108-1114
 // Display (Tiro Devanagari Hindi): memorial names, claim titles, ceremonial copy
@@ -75,19 +77,52 @@ export default function RootLayout() {
   )
 }
 
+// Hindi-default (Epic 3 intro line 1575) — LocaleProvider's initialLocale defaults to
+// DEFAULT_LOCALE ('hi'). SessionProvider loads the persisted member session so the
+// auth guard can redirect; both sit outside Tamagui so screens can use useT/useSession.
 const Providers = ({ children }: { children: React.ReactNode }) => {
-  return <Provider>{children}</Provider>
+  return (
+    <LocaleProvider>
+      <SessionProvider>
+        <Provider>{children}</Provider>
+      </SessionProvider>
+    </LocaleProvider>
+  )
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme()
   const theme = useTheme()
+  const { session, isLoading } = useSession()
+  const segments = useSegments()
+  const router = useRouter()
+
+  // Expo Router auth guard: redirect unauthenticated users into the (auth) group,
+  // and authenticated users out of it. The (auth) group is NOT inherently protected
+  // — this guard, in the root layout, is what enforces the login wall.
+  useEffect(() => {
+    if (isLoading) return
+    const inAuthGroup = segments[0] === '(auth)'
+    if (!session && !inAuthGroup) {
+      router.replace('/(auth)/login')
+    } else if (session && inAuthGroup) {
+      router.replace('/(tabs)')
+    }
+  }, [session, isLoading, segments, router])
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack>
         <Stack.Screen
           name="(tabs)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
+          name="(auth)"
           options={{
             headerShown: false,
           }}

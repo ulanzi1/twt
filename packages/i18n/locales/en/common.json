@@ -3,5 +3,17 @@
   "welcome": "Welcome",
   "loading": "Loading…",
   "save": "Save",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "auth.mobile_prompt": "Enter your mobile number",
+  "auth.mobile_help": "We'll send a one-time code to verify it's you.",
+  "auth.send_otp": "Send code",
+  "auth.otp_prompt": "Enter the code",
+  "auth.otp_help": "Enter the 6-digit code sent to {mobile}.",
+  "auth.otp_sent": "Code sent to {mobile}",
+  "auth.verify": "Verify",
+  "auth.resend": "Resend code",
+  "auth.otp_error_invalid": "That code isn't right. Please check and try again.",
+  "auth.otp_error_expired": "That code has expired. Please request a new one.",
+  "auth.otp_error_rate_limit": "Too many attempts. Please wait a little and try again.",
+  "auth.mobile_error_invalid": "Please enter a valid 10-digit mobile number."
 }

@@ -28,6 +28,7 @@ deliberately accepted.
 | relative (manual-KYC fallback)                   | "facilitator" posture                      | forced     |
 | Anita (verifier, over-payment recovery judgment) | Pool Engine                                | forced     |
 | Sunita (nominee bank-statement upload)           | facilitator-not-intermediary trust posture | forced     |
+| member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -43,6 +44,17 @@ render (`apps/public/src/pages/terms.astro`, `lib/tc-render.ts`) is **read-only*
 no member-initiated action. The provisional banner and the lang-toggle are
 informational / server-roundtrip respectively, not friction surfaces. Zero
 deliberate friction introduced; ledger reviewed, no row warranted.
+
+**Story 3.2 disposition (NEW row — forced auth friction):** the member mobile
+login (`apps/mobile/app/(auth)/login.tsx` + `otp.tsx`, with the session wiring in
+`apps/mobile/lib/*` and the root-layout auth guard) and the member step-up gate are
+**deliberate forced friction** — the member enters a mobile number + a
+DLT-transactional OTP to establish a session, and a fresh OTP on high-trust actions
+(mobile/nominee change, withdrawal, account-deletion ack, DigiLocker re-link, claim
+filing — §2.2). This protects **account & session security** (the §2.2
+OTP-security-floor + the step-up set), so it is declared as the `forced` row above.
+Phone+OTP is transferable-by-design (Ravi-mode, UX line 263) — no identity gating
+beyond phone+OTP+device — so no friction beyond the OTP itself is imposed.
 
 ## How to declare (attribution-on-change — AC-4)
 

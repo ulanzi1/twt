@@ -26,3 +26,8 @@ export * from './terms-and-conditions-pinned-clauses-rls.js';
 export * from './consent-records-rls.js';
 // Story 3.1 — member lifecycle anchor tenant-isolation policies (NOT cross-readable).
 export * from './members-rls.js';
+// Story 3.2 — member mobile-identity tenant-isolation + the GLOBAL member-identity/
+// auth carve-out (OTP / refresh-token / trusted-device / step-up-elevation /
+// signup-continuation). Mirrors members-rls + identity-auth-rls respectively.
+export * from './member-identities-rls.js';
+export * from './member-auth-rls.js';

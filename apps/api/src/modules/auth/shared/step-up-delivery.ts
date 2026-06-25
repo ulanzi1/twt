@@ -23,6 +23,8 @@ export interface StepUpOtpDelivery {
 
 export interface StepUpOtpDeliveryPort {
   deliver(delivery: StepUpOtpDelivery): Promise<void>;
+  /** Called iff the primary delivery channel throws. Use for alerting / fallback (P29 / D2). */
+  onPrimaryDeliveryFailure?: (delivery: StepUpOtpDelivery, error: unknown) => void;
 }
 
 /**

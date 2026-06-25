@@ -17,6 +17,7 @@ import type { AuthAuditEvent, AuthAuditSink } from '../../src/audit/audit-sink.j
 import { loadConfig, type ApiConfig } from '../../src/config.js';
 import type { AppDeps } from '../../src/context.js';
 import { buildEncryptionDeps } from '../../src/deps.js';
+import { generateEphemeralMemberJwtKeys } from '../../src/modules/auth/member/jwt-keys.js';
 import type { StepUpOtpDelivery, StepUpOtpDeliveryPort } from '../../src/modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider, type WebAuthnProvider } from '../../src/modules/auth/shared/webauthn.js';
@@ -153,11 +154,15 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Tests use the CapturingAuditSink (not the real hash-chain sink), so the
     // service pool is never exercised; reuse the single test pool (§1.1).
     servicePool: pool,
+    // serviceDb = the same superuser-bound handle (bypasses RLS) for pre-scope reads.
+    serviceDb: db,
     encryption: enc,
     pepper: Buffer.from(TEST_PEPPER, 'utf-8'),
     auditSink,
     toneReviewAuditSink,
     stepUpDelivery,
+    // Member-JWT keypair (Story 3.2) — a fresh ephemeral ES256 pair per test app.
+    memberJwt: generateEphemeralMemberJwtKeys(),
     turnstile: overrides.turnstile ?? noopTurnstileVerifier,
     webauthn:
       overrides.webauthn ??

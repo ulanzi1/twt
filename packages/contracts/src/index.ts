@@ -28,6 +28,9 @@ export * from './terms-and-conditions/index.js';
 // ConsentGrantedViaSchema) for Epic 3/6 to import + the dual lockstep guard. NO
 // endpoint in this story → NO `.openapi()` registration, openapi/v1.yaml unchanged.
 export * from './consent/index.js';
+// Story 3.2 — member mobile+OTP auth transport contracts (the first members/ DTOs).
+// apps/api serves these member routes now → they register real `paths` in emit-openapi.ts.
+export * from './members/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

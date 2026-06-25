@@ -14,6 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { MEMBER_SESSION_GUARD } from '../../src/modules/auth/shared/member-session-guard.js';
 import { ADMIN_SESSION_GUARD } from '../../src/modules/auth/shared/session-guard.js';
 import type { TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { HONEYPOT_PATHS } from '../../src/plugins/security-headers/index.js';
@@ -37,6 +38,15 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   'POST /api/v1/auth/recovery/consume',
   'POST /api/v1/auth/password-reset/request',
   'POST /api/v1/auth/password-reset/consume',
+  // ── Story 3.2 — member mobile+OTP auth: pre-session surfaces ─────────────────
+  // OTP request/verify, multi-Pariwar scope select, and token refresh all run
+  // BEFORE a member session exists (bearer-token model) — they cannot require the
+  // member-session guard. The member step-up routes + the probe ARE guarded
+  // (MEMBER_SESSION_GUARD), so they are NOT allowlisted.
+  'POST /api/v1/member/auth/otp/request',
+  'POST /api/v1/member/auth/otp/verify',
+  'POST /api/v1/member/auth/otp/select-pariwar',
+  'POST /api/v1/member/auth/token/refresh',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
   // Honeypot traps are public by design (bot-bait); added programmatically below.
@@ -44,10 +54,13 @@ const PUBLIC_ALLOWLIST = new Set<string>([
 ]);
 
 function hasSessionGuard(preHandlers: readonly unknown[]): boolean {
+  // A route is "guarded" if it carries EITHER the admin-session guard OR the
+  // member-session guard (Story 3.2) — both are login-walls for their surface.
   return preHandlers.some(
     (h) =>
       typeof h === 'function' &&
-      (h as unknown as Record<symbol, unknown>)[ADMIN_SESSION_GUARD] === true,
+      ((h as unknown as Record<symbol, unknown>)[ADMIN_SESSION_GUARD] === true ||
+        (h as unknown as Record<symbol, unknown>)[MEMBER_SESSION_GUARD] === true),
   );
 }
 

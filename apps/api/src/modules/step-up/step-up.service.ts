@@ -6,22 +6,17 @@
 // owns the gating decision; the channel owns transport — delivery is behind
 // `StepUpOtpDeliveryPort` (dev/log stub here; real SMS-DLT is Story 5.6/5.9, R3).
 
-import { createHash, randomInt } from 'node:crypto';
-
 import type { AppDeps } from '../../context.js';
+// The pure OTP helpers now live in auth/shared/otp.ts (Story 3.2, Task 2) so admin
+// step-up + member auth share ONE implementation. Re-exported here API-preservingly
+// so existing `import { generateOtp, hashOtp } from './step-up.service.js'` callers
+// (+ the Story 1.9 unit tests) keep working.
+import { generateOtp, hashOtp, OTP_MAX_ATTEMPTS } from '../auth/shared/otp.js';
 import * as repo from './step-up.repo.js';
 
-const OTP_DIGITS = 6;
-const MAX_ATTEMPTS = 5;
+export { generateOtp, hashOtp };
 
-/** A 6-digit numeric OTP (leading zeros preserved). */
-export function generateOtp(): string {
-  return String(randomInt(0, 10 ** OTP_DIGITS)).padStart(OTP_DIGITS, '0');
-}
-
-export function hashOtp(code: string): string {
-  return createHash('sha256').update(code.trim()).digest('hex');
-}
+const MAX_ATTEMPTS = OTP_MAX_ATTEMPTS;
 
 export interface RequestedStepUp {
   code: string;

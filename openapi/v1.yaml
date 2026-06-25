@@ -1795,6 +1795,276 @@ components:
         - userId
         - nationalGrants
       additionalProperties: false
+    MemberOtpRequestRequest:
+      type: object
+      properties:
+        mobile:
+          type: string
+          minLength: 10
+          maxLength: 20
+          pattern: ^[+0-9][0-9\s\-()]*$
+      required:
+        - mobile
+      additionalProperties: false
+    MemberOtpRequestResponse:
+      type: object
+      properties:
+        sent:
+          type: boolean
+          enum:
+            - true
+        expiresInSeconds:
+          type: integer
+          exclusiveMinimum: 0
+      required:
+        - sent
+        - expiresInSeconds
+      additionalProperties: false
+    MemberFullSession:
+      type: object
+      properties:
+        sessionType:
+          type: string
+          enum:
+            - full_session
+        accessToken:
+          type: string
+          minLength: 1
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          minLength: 1
+        memberId:
+          type: string
+          format: uuid
+        pariwarId:
+          type: string
+          format: uuid
+        droppedDevice:
+          type: object
+          properties:
+            deviceId:
+              type: string
+              minLength: 1
+            deviceLabel:
+              type: string
+              minLength: 1
+            boundAt:
+              type: string
+              format: date-time
+          required:
+            - deviceId
+            - boundAt
+          additionalProperties: false
+      required:
+        - sessionType
+        - accessToken
+        - accessTokenExpiresAt
+        - refreshToken
+        - deviceId
+        - memberId
+        - pariwarId
+      additionalProperties: false
+    MemberOtpVerifyRequest:
+      type: object
+      properties:
+        mobile:
+          type: string
+          minLength: 10
+          maxLength: 20
+          pattern: ^[+0-9][0-9\s\-()]*$
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 8
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        deviceLabel:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+        - mobile
+        - otp
+        - deviceId
+      additionalProperties: false
+    MemberOtpVerifyResponse:
+      oneOf:
+        - type: object
+          properties:
+            sessionType:
+              type: string
+              enum:
+                - full_session
+            accessToken:
+              type: string
+              minLength: 1
+            accessTokenExpiresAt:
+              type: string
+              format: date-time
+            refreshToken:
+              type: string
+              minLength: 1
+            deviceId:
+              type: string
+              minLength: 1
+            memberId:
+              type: string
+              format: uuid
+            pariwarId:
+              type: string
+              format: uuid
+            droppedDevice:
+              type: object
+              properties:
+                deviceId:
+                  type: string
+                  minLength: 1
+                deviceLabel:
+                  type: string
+                  minLength: 1
+                boundAt:
+                  type: string
+                  format: date-time
+              required:
+                - deviceId
+                - boundAt
+              additionalProperties: false
+          required:
+            - sessionType
+            - accessToken
+            - accessTokenExpiresAt
+            - refreshToken
+            - deviceId
+            - memberId
+            - pariwarId
+          additionalProperties: false
+        - type: object
+          properties:
+            sessionType:
+              type: string
+              enum:
+                - pariwar_select
+            memberships:
+              type: array
+              items:
+                type: object
+                properties:
+                  memberId:
+                    type: string
+                    format: uuid
+                  pariwarId:
+                    type: string
+                    format: uuid
+                  pariwarName:
+                    type: string
+                required:
+                  - memberId
+                  - pariwarId
+                  - pariwarName
+                additionalProperties: false
+            selectToken:
+              type: string
+              minLength: 1
+          required:
+            - sessionType
+            - memberships
+            - selectToken
+          additionalProperties: false
+        - type: object
+          properties:
+            sessionType:
+              type: string
+              enum:
+                - signup_continuation
+            signupContinuationToken:
+              type: string
+              minLength: 1
+            expiresAt:
+              type: string
+              format: date-time
+          required:
+            - sessionType
+            - signupContinuationToken
+            - expiresAt
+          additionalProperties: false
+    MemberSelectPariwarRequest:
+      type: object
+      properties:
+        selectToken:
+          type: string
+          minLength: 1
+        pariwarId:
+          type: string
+          format: uuid
+      required:
+        - selectToken
+        - pariwarId
+      additionalProperties: false
+    MemberTokenRefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+      required:
+        - refreshToken
+      additionalProperties: false
+    MemberStepUpRequestRequest:
+      type: object
+      properties:
+        actionContext:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+        - actionContext
+      additionalProperties: false
+    MemberStepUpRequestResponse:
+      type: object
+      properties:
+        sent:
+          type: boolean
+          enum:
+            - true
+        expiresInSeconds:
+          type: integer
+          exclusiveMinimum: 0
+      required:
+        - sent
+        - expiresInSeconds
+      additionalProperties: false
+    MemberStepUpVerifyRequest:
+      type: object
+      properties:
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 8
+      required:
+        - otp
+      additionalProperties: false
+    MemberStepUpVerifyResponse:
+      type: object
+      properties:
+        elevated:
+          type: boolean
+          enum:
+            - true
+        elevatedUntil:
+          type: string
+          format: date-time
+      required:
+        - elevated
+        - elevatedUntil
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:
@@ -3043,6 +3313,193 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: The version is already approved or superseded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/auth/otp/request:
+    post:
+      summary: Member login — request a mobile OTP (enumeration-safe, per-phone throttled)
+      tags: &a9
+        - member-auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberOtpRequestRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberOtpRequestResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many OTP requests (per-phone 5/15min)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/auth/otp/verify:
+    post:
+      summary: Member login — verify OTP → full session / pariwar-select / signup-continuation
+      tags: *a9
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberOtpVerifyRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberOtpVerifyResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Member is withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/auth/otp/select-pariwar:
+    post:
+      summary: Member login — pick a Pariwar scope (multi-membership) → full session
+      tags: *a9
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberSelectPariwarRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberFullSession"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/auth/token/refresh:
+    post:
+      summary: Member session — rotate the refresh token (reuse detection)
+      tags: *a9
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberTokenRefreshRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberFullSession"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/auth/step-up/request:
+    post:
+      summary: Member step-up — request an OTP for a gated action
+      tags: *a9
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberStepUpRequestRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberStepUpRequestResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/auth/step-up/verify:
+    post:
+      summary: Member step-up — verify the OTP → elevate for the action_context
+      tags: *a9
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberStepUpVerifyRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberStepUpVerifyResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
           content:
             application/json:
               schema:

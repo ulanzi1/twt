@@ -33,11 +33,40 @@ export const ADMIN_GLOBAL_NAMESPACE = '00000000-0000-0000-0000-000000000000';
 /** Field-class namespace for the admin email blind index (HMAC input prefix). */
 export const ADMIN_EMAIL_FIELD_CLASS = 'admin_email';
 
+/**
+ * The fixed namespace the member mobile-number blind index + Tier-1 encryption
+ * context key on (Story 3.2, Task 1 + Reconciliation R2). Member login runs BEFORE
+ * `app.pariwar_id` is known — the person types a mobile and we don't yet know which
+ * Pariwar(s) they belong to — so (mirroring the admin-email pattern) the mobile
+ * blind index is computed under this fixed nil-style sentinel, NOT a real tenant.
+ * It MUST be distinct from `ADMIN_GLOBAL_NAMESPACE` (…000) so a numeric admin email
+ * and a mobile can never collide on the same blind index. Recorded in Completion Notes.
+ */
+export const MEMBER_IDENTITY_NAMESPACE = '00000000-0000-0000-0000-000000000001';
+
+/** Field-class namespace for the member mobile blind index (HMAC input prefix). */
+export const MEMBER_MOBILE_FIELD_CLASS = 'member_mobile';
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;
   readonly kekRef: encryption.KmsKeyRef;
   readonly hmacKeyRef: encryption.KmsKeyRef;
+}
+
+/**
+ * Asymmetric keypair the member ACCESS token + signup-continuation JWTs are
+ * signed/verified with (Story 3.2, Task 3 — §2.4 algorithm pinning line 1447:
+ * asymmetric ES256/RS256 ONLY; `none` + symmetric rejected). The private key is
+ * resolved via Secret Manager in prod (mirror the pepper path); dev/test/CI
+ * generate an ephemeral ES256 keypair. The public key is derived from the private
+ * key, never configured separately. Refresh tokens are NOT JWTs (opaque + hashed,
+ * `member_refresh_tokens`) — only the short-lived access + continuation tokens.
+ */
+export interface MemberJwtKeys {
+  readonly algorithm: 'ES256' | 'RS256';
+  readonly privateKeyPem: string;
+  readonly publicKeyPem: string;
 }
 
 export interface AppDeps {
@@ -55,6 +84,13 @@ export interface AppDeps {
    * KMS audit hook write through this pool, never the request's app pool.
    */
   readonly servicePool: pg.Pool;
+  /**
+   * Drizzle handle bound to `servicePool` (BYPASSRLS). Used for the rare PRE-SCOPE
+   * cross-tenant domain-accessor read — e.g. Story 3.2's `getMemberStateAt` on a
+   * member resolved by mobile BEFORE `app.pariwar_id` is set (the admin-session.handler
+   * servicePool posture, R2). In dev/CI it equals `db` (the superuser bypasses RLS).
+   */
+  readonly serviceDb: Db;
   readonly encryption: EncryptionDeps;
   /** Resolved Argon2id pepper (Secret Manager in prod; env fallback in local dev). */
   readonly pepper: Buffer;
@@ -68,6 +104,13 @@ export interface AppDeps {
    */
   readonly toneReviewAuditSink: ToneReviewAuditSink;
   readonly stepUpDelivery: StepUpOtpDeliveryPort;
+  /**
+   * Member access-token + signup-continuation JWT signing keypair (Story 3.2,
+   * §2.4). Asymmetric (ES256/RS256). Resolved from Secret Manager in prod; an
+   * ephemeral ES256 keypair in dev/test/CI. The `plugins/jwt` plugin registers
+   * `@fastify/jwt` from this; the member-session guard verifies access tokens with it.
+   */
+  readonly memberJwt: MemberJwtKeys;
   readonly turnstile: TurnstileVerifier;
   /** WebAuthn ceremony provider (SimpleWebAuthn in prod; a fake in tests). */
   readonly webauthn: WebAuthnProvider;

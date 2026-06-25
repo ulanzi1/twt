@@ -41,7 +41,26 @@ export type AuthAuditEventType =
   // Pariwar mint+passport-persist; `pariwar.deploy_triggered` records a Dokploy
   // build trigger via the deploy seam.
   | 'pariwar.provisioned'
-  | 'pariwar.deploy_triggered';
+  | 'pariwar.deploy_triggered'
+  // ── Member mobile+OTP auth surface (Story 3.2, FR-1) ─────────────────────────
+  // Member login/session/step-up/device events. EVERY context carries the otp_hash
+  // (never the code) + masked mobile (last-4) only — never plaintext mobile, never a
+  // token. The default sink is the Story 1.10 hash-chain (FR-47).
+  | 'member_login.otp_send'
+  | 'member_login.otp_consume'
+  | 'member_login.failure'
+  | 'member_session.refresh'
+  | 'member_session.reuse_revoke'
+  // Refresh rejected because the member's lifecycle state is withdrawn/anonymized
+  // (PR-Patch-9): the login gate blocks such members, so a long-lived refresh chain
+  // must too — the chain is revoked and this records it.
+  | 'member_session.revoked'
+  | 'member_session.logout'
+  | 'member_step_up.send'
+  | 'member_step_up.consume'
+  | 'member_step_up.failure'
+  | 'member_device.bound'
+  | 'member_device.dropped';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

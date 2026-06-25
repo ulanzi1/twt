@@ -42,6 +42,20 @@ export * from './consent_records.js';
 // pgEnum). `members.state` is a replay-derived cache, not the source of truth —
 // guarded by the DB trigger (migration) + the member-state-invariant CI gate.
 export * from './members.js';
+// Story 3.2 — member mobile+OTP auth substrate. `member_identities` is tenant-
+// isolated (mobile Tier-1 envelope + blind index; the members table stays PII-free);
+// the OTP / refresh-token / trusted-device / step-up-elevation / signup-continuation
+// tables are the GLOBAL member-identity/auth carve-out (pre-scope, mobile/bearer-keyed).
+export * from './member_identities.js';
+export * from './member_auth_otps.js';
+export * from './member_refresh_tokens.js';
+export * from './member_trusted_devices.js';
+export * from './member_step_up_elevations.js';
+export * from './member_signup_continuations.js';
+// Story 3.2 patch PR-Patch-10 — single-use multi-Pariwar scope-select registry.
+export * from './member_pariwar_selects.js';
+// Story 3.2 patch P31 — Postgres-backed OTP send rate-bucket table.
+export * from './otp_rate_buckets.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

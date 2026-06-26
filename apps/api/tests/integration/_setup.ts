@@ -22,6 +22,11 @@ import type { StepUpOtpDelivery, StepUpOtpDeliveryPort } from '../../src/modules
 import { noopTurnstileVerifier, type TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider, type WebAuthnProvider } from '../../src/modules/auth/shared/webauthn.js';
 import { createFakeDeployTrigger, type DeployTrigger } from '../../src/modules/pariwar-provisioning/deploy-trigger.js';
+import {
+  createKycProviderRegistry,
+  fixtureKycProvider,
+  type KycProviderRegistry,
+} from '../../src/modules/kyc/index.js';
 import type {
   NiyamavaliAmendedEvent,
   NiyamavaliAmendedHook,
@@ -113,6 +118,7 @@ export interface TestDepsOverrides {
   webauthn?: WebAuthnProvider;
   deployTrigger?: DeployTrigger;
   niyamavaliAmendedHook?: NiyamavaliAmendedHook;
+  kycProviders?: KycProviderRegistry;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
 }
@@ -177,6 +183,14 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Member-notification hook (Story 2.4) — capturing fake by default so the publish
     // spec can assert it fired with the right payload (AC3).
     niyamavaliAmendedHook: overrides.niyamavaliAmendedHook ?? niyamavaliHook.hook,
+    // KYC provider registry (Story 3.3a) — the fixture provider by default (the
+    // config-absent seam); a spec may override to assert DigiLocker-provider wiring.
+    kycProviders:
+      overrides.kycProviders ??
+      createKycProviderRegistry({
+        activeProviderKey: 'fixture',
+        builders: { fixture: () => fixtureKycProvider },
+      }),
     clock: overrides.clock ?? ((): Date => new Date()),
   };
   return { deps, pool, auditSink, toneReviewAuditSink, stepUpDelivery, niyamavaliHook };

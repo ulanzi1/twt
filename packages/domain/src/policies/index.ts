@@ -31,3 +31,8 @@ export * from './members-rls.js';
 // signup-continuation). Mirrors members-rls + identity-auth-rls respectively.
 export * from './member-identities-rls.js';
 export * from './member-auth-rls.js';
+// Story 3.3a — KYC provider substrate policies. `digilocker_public_certs` GLOBAL access
+// (member-auth carve-out posture — public certs, no tenant dimension); `kyc_transactions`
+// tenant-isolated (mirror consent-records).
+export * from './digilocker-public-certs-rls.js';
+export * from './kyc-transactions-rls.js';

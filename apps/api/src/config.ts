@@ -54,6 +54,35 @@ export interface ApiConfig {
     /** Fail OPEN on a siteverify transport failure. Default false — fail closed in prod (AC-4). */
     readonly failOpen: boolean;
   };
+  /**
+   * DigiLocker KYC provider (Story 3.3a, AC2/AC7). OPTIONAL — like Turnstile, an absent
+   * `clientIdSecretName`/`clientSecretSecretName` resolves the active provider to the
+   * `fixtureKycProvider` in `deps.ts` so the stack boots with ZERO live-govt config (local
+   * dev / CI / not-yet-provisioned). The `client_id`/`client_secret` are Secret-Manager
+   * NAMEs (never the values — §2.3/AC-1), resolved via `resolveSecretValue`. Endpoints +
+   * the redirect_uri allowlist (§2.8) + the NFR-27 8s timeout + the 15-min PKCE TTL are
+   * plain config.
+   */
+  readonly digilocker: {
+    /** Secret-Manager NAME for the DigiLocker client_id (never the value). Absent ⇒ fixture. */
+    readonly clientIdSecretName?: string;
+    /** Secret-Manager NAME for the DigiLocker client_secret (never the value). Absent ⇒ fixture. */
+    readonly clientSecretSecretName?: string;
+    /** Local-dev env fallback var NAMEs holding the values (mirror argon2/turnstile). */
+    readonly clientIdEnvFallback: string;
+    readonly clientSecretEnvFallback: string;
+    /** Meri Pehchaan OAuth endpoints (§2.8 / Latest Tech). */
+    readonly authorizeUrl: string;
+    readonly tokenUrl: string;
+    readonly eaadhaarUrl: string;
+    /** The canonical callback redirect_uri + the server-side allowlist (§2.8). */
+    readonly redirectUri: string;
+    readonly redirectUriAllowlist: readonly string[];
+    /** HTTP timeout (NFR-27 — 8s p95 budget). */
+    readonly httpTimeoutMs: number;
+    /** Transaction (PKCE) TTL — 15 min. */
+    readonly transactionTtlMs: number;
+  };
   /** Admin session idle timeout (§2.4 — 12h). */
   readonly sessionIdleMs: number;
   /** Admin session absolute timeout (§2.4 — 7d). */
@@ -190,6 +219,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const turnstileSecretName =
     rawTurnstileSecretName && rawTurnstileSecretName.trim() !== '' ? rawTurnstileSecretName : undefined;
 
+  // DigiLocker secret NAMEs are OPTIONAL — absent (either one) ⇒ fixture provider seam.
+  const rawDigilockerClientId = env['DIGILOCKER_CLIENT_ID_SECRET_NAME'];
+  const digilockerClientIdSecretName =
+    rawDigilockerClientId && rawDigilockerClientId.trim() !== '' ? rawDigilockerClientId : undefined;
+  const rawDigilockerClientSecret = env['DIGILOCKER_CLIENT_SECRET_SECRET_NAME'];
+  const digilockerClientSecretSecretName =
+    rawDigilockerClientSecret && rawDigilockerClientSecret.trim() !== ''
+      ? rawDigilockerClientSecret
+      : undefined;
+
   // Deploy seam mode (Story 1.15) — default `fake` so dev/test/CI run with ZERO
   // Dokploy config; `live` opts into the Dokploy-API client (staging/prod).
   const deployTriggerMode = (env['DEPLOY_TRIGGER_MODE'] ?? 'fake').toLowerCase();
@@ -223,6 +262,31 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
       ...(turnstileSecretName ? { secretName: turnstileSecretName } : {}),
       secretEnvFallback: env['TURNSTILE_SECRET_ENV_FALLBACK'] ?? 'TURNSTILE_SECRET',
       failOpen: env['TURNSTILE_FAIL_OPEN'] === '1',
+    },
+    digilocker: {
+      // OPTIONAL secret NAMEs — absent ⇒ fixture provider (deps.ts), like Turnstile.
+      ...(digilockerClientIdSecretName ? { clientIdSecretName: digilockerClientIdSecretName } : {}),
+      ...(digilockerClientSecretSecretName
+        ? { clientSecretSecretName: digilockerClientSecretSecretName }
+        : {}),
+      clientIdEnvFallback: env['DIGILOCKER_CLIENT_ID_ENV_FALLBACK'] ?? 'DIGILOCKER_CLIENT_ID',
+      clientSecretEnvFallback:
+        env['DIGILOCKER_CLIENT_SECRET_ENV_FALLBACK'] ?? 'DIGILOCKER_CLIENT_SECRET',
+      authorizeUrl:
+        env['DIGILOCKER_AUTHORIZE_URL'] ?? 'https://api.digitallocker.gov.in/public/oauth2/1/authorize',
+      tokenUrl: env['DIGILOCKER_TOKEN_URL'] ?? 'https://api.digitallocker.gov.in/public/oauth2/1/token',
+      eaadhaarUrl:
+        env['DIGILOCKER_EAADHAAR_URL'] ?? 'https://api.digitallocker.gov.in/public/oauth2/3/xml/eaadhaar',
+      redirectUri: env['DIGILOCKER_REDIRECT_URI'] ?? 'http://localhost:3000/api/v1/kyc/callback',
+      // Comma-separated server-side allowlist (§2.8); defaults to the single redirect_uri.
+      redirectUriAllowlist: (env['DIGILOCKER_REDIRECT_URI_ALLOWLIST'] ??
+        env['DIGILOCKER_REDIRECT_URI'] ??
+        'http://localhost:3000/api/v1/kyc/callback')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s !== ''),
+      httpTimeoutMs: intEnv(env, 'DIGILOCKER_HTTP_TIMEOUT_MS', 8 * 1000),
+      transactionTtlMs: intEnv(env, 'DIGILOCKER_TRANSACTION_TTL_MS', 15 * MINUTE),
     },
     sessionIdleMs: intEnv(env, 'SESSION_IDLE_MS', 12 * HOUR),
     sessionAbsoluteMs: intEnv(env, 'SESSION_ABSOLUTE_MS', 7 * DAY),

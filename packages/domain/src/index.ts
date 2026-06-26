@@ -109,6 +109,10 @@ export * as niyamavali from './niyamavali/index.js';
 export * as termsAndConditions from './terms-and-conditions/index.js';
 export * as consent from './consent/index.js';
 export * as member from './member/index.js';
+// Story 3.3a — KYC provider substrate accessors (cert cache + kyc_transactions). The
+// DigiLocker provider (apps/api) consumes these; the frozen abstraction itself lives in
+// `@twt/contracts/kyc`.
+export * as kyc from './kyc/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

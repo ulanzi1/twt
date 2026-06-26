@@ -31,6 +31,12 @@ export * from './consent/index.js';
 // Story 3.2 — member mobile+OTP auth transport contracts (the first members/ DTOs).
 // apps/api serves these member routes now → they register real `paths` in emit-openapi.ts.
 export * from './members/index.js';
+// Story 3.3a — DigiLocker KYC provider-abstraction contracts (the FROZEN seam:
+// `KycProvider` port + `KycProfile` + `KycError` + `KycProviderError`). AR-43 /
+// architectural-freeze row 13 — a future KYC-provider swap is a single-module change.
+// NO `.openapi()` registration in 3.3a (no HTTP endpoint yet → openapi/v1.yaml
+// byte-identical); the signup KYC surface DTOs land in Story 3.3b.
+export * from './kyc/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

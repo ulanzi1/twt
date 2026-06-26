@@ -4,7 +4,7 @@ Transport-layer contracts for **KYC** — DigiLocker provider abstraction + sign
 
 ## Landing Story
 
-Substantive contracts authored at **Stories 3.3 / 3.3a / 3.3b** — DigiLocker KYC + provider abstraction + signature verification policy per epics Epic 3. The DigiLocker signature verification policy ADR is `ADR-NNNN-digilocker-signature-policy` (Section A row 13 of `docs/knowledge-transfer/adr-index.md`); the fallback provider posture lands per Story 3.3b.
+Substantive contracts authored at **Stories 3.3 / 3.3a / 3.3b** — DigiLocker KYC + provider abstraction + signature verification policy per epics Epic 3. The DigiLocker signature verification policy ADR is `ADR-0026-digilocker-signature-policy` (`docs/adr/ADR-0026-digilocker-signature-policy.md`; Section A of `docs/knowledge-transfer/adr-index.md`), authored `drafted` at Story 3.3a closure; the fallback provider posture lands per Story 3.3b.
 
 ## Discipline reminders
 

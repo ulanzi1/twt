@@ -474,6 +474,31 @@ jobs:
       - run: pnpm member-state:test
       - run: pnpm member-state:check
 
+  kyc-provider-boundary:
+    name: kyc-provider-boundary (DigiLocker transport is provider-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 3.3a AC3 / AR-43 (architectural-freeze row 13): the DigiLocker SDK/transport
+    # (xml-crypto + @xmldom/xmldom / xpath / @xmldom/is-dom-node) may be imported ONLY from
+    # apps/api/src/modules/kyc/providers/digilocker/**. Static TS-AST scan of apps/api/src +
+    # packages/*/src — flags any import/export/dynamic-import/require of the transport
+    # outside that allowlisted directory. No DB / network. INVARIANT SCAN → NO fetch-depth: 0
+    # (mirror member-state-invariant). See scripts/kyc-provider-boundary/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm kyc-provider:test
+      - run: pnpm kyc-provider:check
+
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest

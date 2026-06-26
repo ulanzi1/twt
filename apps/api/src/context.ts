@@ -16,6 +16,7 @@ import type { ApiConfig } from './config.js';
 import type { StepUpOtpDeliveryPort } from './modules/auth/shared/step-up-delivery.js';
 import type { TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import type { WebAuthnProvider } from './modules/auth/shared/webauthn.js';
+import type { KycProviderRegistry } from './modules/kyc/index.js';
 import type { DeployTrigger } from './modules/pariwar-provisioning/deploy-trigger.js';
 import type { NiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
 import type { ToneReviewAuditSink } from './modules/tone-review/index.js';
@@ -127,6 +128,14 @@ export interface AppDeps {
    * injectable-seam pattern as `deployTrigger` / `toneReviewAuditSink`.
    */
   readonly niyamavaliAmendedHook: NiyamavaliAmendedHook;
+  /**
+   * KYC provider registry + FR-58C swap seam (Story 3.3a, AC2/AC6). The active provider
+   * is DigiLocker when its secret-NAMEs are configured, else the `fixtureKycProvider`
+   * (the Turnstile optional-seam pattern — the stack boots with ZERO live-govt config and
+   * CI never calls the real DigiLocker API). NO route consumes it in 3.3a (PRIMITIVE);
+   * the 3.3b signup route resolves a provider via `getActiveKycProvider(ctx)`.
+   */
+  readonly kycProviders: KycProviderRegistry;
   /** Injectable clock — tests freeze it to assert TTL / lockout / window expiry. */
   readonly clock: () => Date;
 }

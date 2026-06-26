@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 3-3a-digilocker-provider-interface-abstraction (2026-06-26)
+
+- **XPath injection risk in `mapper.ts` `attr()` / `text()`.** `localName` is interpolated directly into the XPath expression (`//*[local-name(.)='${localName}']`) without escaping. Currently called only with string literals (`'Poi'`, `'Pht'`, `'UidData'`) so there is no active vulnerability. **Re-trigger:** if future eAadhaar format handling ever derives element names from input data, or if `attr()`/`text()` are reused with non-literal arguments.
+
+- **`assertRedirectUriAllowed` in `initiate` always self-validates.** `initiate` calls `assertRedirectUriAllowed(config, config.redirectUri)` — `config.redirectUri` is always in `config.redirectUriAllowlist`, making the check vacuous today. The guard is architecturally correct for a future surface where the caller supplies a dynamic redirect URI. **Re-trigger:** Story 3.3b, when the signup route passes a caller-controlled `redirect_uri` to `initiate`.
+
+---
+
 ## Deferred from: code review of story-2.5 (2026-06-21)
 
 - **`microcopy.yaml` `code_globs` doesn't cover `apps/public` source.** `scope.copy_globs` was correctly populated with the new `niyamavali` member-copy locale files (AC6c teeth), but `scope.code_globs` remains `apps/admin/src/**/*.tsx`/`.ts` only — `apps/public/src/**` is not scanned for hardcoded copy. No actual leak today (verified by grep — all visible copy in `apps/public` templates routes through `tr()`), but the gate's code-glob coverage is structurally incomplete for the new workspace going forward. **Re-trigger:** extend `code_globs` to include `apps/public/src/**` the next time `apps/public` gains a surface with template literals or inline copy.

@@ -49,6 +49,7 @@ run "benefit-mechanism"     "pnpm benefit:test && pnpm benefit:check"
 run "microcopy"             "pnpm microcopy:test && pnpm microcopy:check"
 run "domain-invariants"     "pnpm domain-invariants:test && pnpm domain-invariants:check"
 run "member-state-invariant" "pnpm member-state:test && pnpm member-state:check"
+run "kyc-provider-boundary" "pnpm kyc-provider:test && pnpm kyc-provider:check"
 
 # ── live-DB job (opt-in via DATABASE_URL) ─────────────────────────────────────
 if [ -n "${DATABASE_URL:-}" ]; then

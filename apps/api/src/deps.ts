@@ -21,6 +21,15 @@ import { resolveMemberJwtKeys } from './modules/auth/member/jwt-keys.js';
 import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
+import {
+  createDigiLockerProvider,
+  createHttpDigiLockerTransport,
+  createKycProviderRegistry,
+  fixtureKycProvider,
+  DIGILOCKER_PROVIDER_KEY,
+  type DigiLockerProviderConfig,
+  type KycProviderRegistry,
+} from './modules/kyc/index.js';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
 import { createToneReviewAuditSink } from './modules/tone-review/index.js';
@@ -94,6 +103,70 @@ async function buildTurnstileVerifier(config: ApiConfig): Promise<TurnstileVerif
 }
 
 /**
+ * Select the KYC provider registry from config (Story 3.3a, AC2/AC6). When the DigiLocker
+ * secret NAMEs are configured, resolve the secret VALUES (Secret Manager in prod; env
+ * fallback locally — the same `resolveSecretValue` path) and register the real DigiLocker
+ * provider as active (with the fixture also registered, ready for an FR-58C swap);
+ * otherwise the `fixtureKycProvider` is the sole + active provider so the stack boots with
+ * ZERO live-govt config and CI never calls the real DigiLocker API. Mirrors
+ * `buildTurnstileVerifier` (the optional-seam pattern).
+ */
+async function buildKycProviderRegistry(config: ApiConfig): Promise<KycProviderRegistry> {
+  const dl = config.digilocker;
+  if (!dl.clientIdSecretName || !dl.clientSecretSecretName) {
+    return createKycProviderRegistry({
+      activeProviderKey: 'fixture',
+      builders: { fixture: () => fixtureKycProvider },
+    });
+  }
+
+  const clientId = await resolveSecretValue(dl.clientIdSecretName, {
+    envFallback: dl.clientIdEnvFallback,
+  });
+  const clientSecret = await resolveSecretValue(dl.clientSecretSecretName, {
+    envFallback: dl.clientSecretEnvFallback,
+  });
+  if (!clientId.trim() || !clientSecret.trim()) {
+    throw new Error(
+      '[deps] DigiLocker client_id/client_secret resolved to an empty value — check Secret ' +
+        'Manager (or unset DIGILOCKER_CLIENT_ID_SECRET_NAME to use the fixture provider)',
+    );
+  }
+
+  const providerConfig: DigiLockerProviderConfig = {
+    clientId,
+    clientSecret,
+    authorizeUrl: dl.authorizeUrl,
+    tokenUrl: dl.tokenUrl,
+    eaadhaarUrl: dl.eaadhaarUrl,
+    redirectUri: dl.redirectUri,
+    redirectUriAllowlist: dl.redirectUriAllowlist,
+    httpTimeoutMs: dl.httpTimeoutMs,
+    transactionTtlMs: dl.transactionTtlMs,
+  };
+  const transport = createHttpDigiLockerTransport(providerConfig);
+
+  return createKycProviderRegistry({
+    activeProviderKey: DIGILOCKER_PROVIDER_KEY,
+    builders: {
+      [DIGILOCKER_PROVIDER_KEY]: (ctx) =>
+        createDigiLockerProvider(ctx, {
+          config: providerConfig,
+          transport,
+          now: () => new Date(),
+          onStalenessAlarm: (alarm) =>
+            console.warn(
+              `[kyc] DigiLocker cert staleness alarm: key=${alarm.keyId} age=${alarm.ageDays}d ` +
+                '(within budget; refresh job degraded — see ADR-0026)',
+            ),
+        }),
+      // The fixture stays registered so an FR-58C flip can select it without a code change.
+      fixture: () => fixtureKycProvider,
+    },
+  });
+}
+
+/**
  * Production / local-dev deps. Builds its own pool (§1.1 per-workspace isolation)
  * and resolves the pepper. The caller owns the pool lifecycle via `deps.pool.end()`.
  */
@@ -156,6 +229,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Member-notification scaffolding hook (Story 2.4, AC3) — console placeholder
     // until Epic 5 wires the real niyamavali.amended push fan-out.
     niyamavaliAmendedHook: consoleNiyamavaliAmendedHook,
+    // KYC provider registry + FR-58C swap seam (Story 3.3a) — DigiLocker when configured,
+    // else the fixture provider (boots with zero live-govt config).
+    kycProviders: await buildKycProviderRegistry(config),
     clock: () => new Date(),
   };
 }

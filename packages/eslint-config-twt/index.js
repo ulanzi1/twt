@@ -95,6 +95,15 @@ export default [
       // TODO Stories that introduce raw SQL — ban camelCase in raw SQL strings (snake_case at the database boundary).
       // TODO Story 1.4 + downstream — ban type-shadowing of packages/contracts/ exports.
       // TODO Phase-2/3 crowdfunding module — gateway-SDK dependency-lint rule per architecture §Crowdfunding Boundary Rule (architecture lines 458-477).
+      // TODO Story 3.3a (optional dev-time companion) — ban the DigiLocker transport
+      // (`xml-crypto` / `@xmldom/xmldom` / `xpath` / `@xmldom/is-dom-node`) outside
+      // `apps/api/src/modules/kyc/providers/digilocker/**`. PARKED (not active) because
+      // this shared config runs per-package with cwd-relative globs, so a base ban + a
+      // digilocker carve-out would have to re-declare the whole `no-restricted-imports`
+      // rule to preserve the `pg` ban — net risk > value for a dev-time signal. The
+      // AUTHORITATIVE teeth are the `kyc-provider-boundary` CI gate
+      // (scripts/kyc-provider-boundary/, Story 3.3a AC3 / AR-43); this lint rule would
+      // only be an earlier editor-time hint. Mirrors the parked crowdfunding-SDK TODO above.
     },
   },
   {

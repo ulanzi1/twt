@@ -37,6 +37,8 @@
     "domain-invariants:test": "vitest run scripts/domain-accessor-invariants",
     "member-state:check": "tsx scripts/member-state-invariant/check.ts",
     "member-state:test": "vitest run scripts/member-state-invariant",
+    "kyc-provider:check": "tsx scripts/kyc-provider-boundary/check.ts",
+    "kyc-provider:test": "vitest run scripts/kyc-provider-boundary",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

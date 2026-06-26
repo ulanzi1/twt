@@ -204,3 +204,25 @@ export const tcVersionId = uuidBrand('TcVersionId');
 export type ConsentId = Brand<'ConsentId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ConsentId`. */
 export const consentId = uuidBrand('ConsentId');
+
+// ── KYC provider-abstraction ids (Story 3.3a, Task 3) ────────────────────────
+// Two NEW branded ids land here per the §Naming "branding mandatory on a new ID's
+// first PR" discipline (L3700-3708): `KycTransactionId` (the per-row address of a
+// provider KYC transaction — OAuth `state`/PKCE-verifier holder) and `DigiLockerCertId`
+// (the per-row address of a cached issuer public certificate). Both are UUID row
+// addresses, so both reuse the shared `uuidBrand` validator.
+//
+// NOTE: `kyc_transactions.member_id` is deliberately NOT branded to a single owner via
+// a FK — like consent's `subject_id` it is written for a member-or-pre-member-applicant
+// (signup mints the member id as the event-stream id at Story 3.6); it carries the
+// `MemberId` brand as a `$type` hint only (no FK to the RLS-forced `members`).
+
+/** Per-row address of a provider KYC transaction (`kyc_transactions.transaction_id`). */
+export type KycTransactionId = Brand<'KycTransactionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `KycTransactionId`. */
+export const kycTransactionId = uuidBrand('KycTransactionId');
+
+/** Per-row address of a cached DigiLocker issuer cert (`digilocker_public_certs.cert_id`). */
+export type DigiLockerCertId = Brand<'DigiLockerCertId'>;
+/** Smart constructor: validates UUID shape, returns a branded `DigiLockerCertId`. */
+export const digilockerCertId = uuidBrand('DigiLockerCertId');

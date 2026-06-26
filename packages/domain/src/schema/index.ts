@@ -56,6 +56,11 @@ export * from './member_signup_continuations.js';
 export * from './member_pariwar_selects.js';
 // Story 3.2 patch P31 — Postgres-backed OTP send rate-bucket table.
 export * from './otp_rate_buckets.js';
+// Story 3.3a — DigiLocker KYC provider substrate. `digilocker_public_certs` is a GLOBAL
+// issuer-cert cache (no tenant dimension; member-auth carve-out posture);
+// `kyc_transactions` is tenant-isolated provider OAuth/PKCE state (stores NO eAadhaar PII).
+export * from './digilocker_public_certs.js';
+export * from './kyc_transactions.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

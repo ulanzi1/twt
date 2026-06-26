@@ -25,6 +25,7 @@ import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
+import { registerNomineeModule } from './modules/nominee/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerRulesModule } from './modules/rules/index.js';
@@ -96,6 +97,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 3.1 lifecycle (member.kyc_completed / member.kyc_manual_fallback) + consumes the
   // 3.3a KycProvider seam. Member-session-gated, except the PUBLIC state-correlated callback.
   registerKycModule(app, deps);
+  // Story 3.4 — member nominee-declaration signup surface (1–2 nominees, server-derived
+  // 75/25 split, Tier-1 encrypted; emits member.nominees_declared, a non-transition marker).
+  // Member-session-gated; NO step-up at signup (Life Events update + step-up is Story 3.9).
+  registerNomineeModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

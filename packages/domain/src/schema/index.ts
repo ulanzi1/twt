@@ -64,6 +64,10 @@ export * from './kyc_transactions.js';
 // Story 3.3b — member KYC profile persistence (tenant-isolated; name/dob/photo Tier-1
 // envelope, masked-Aadhaar Tier-3). The first member-PII table after member_identities.
 export * from './member_kyc_profiles.js';
+// Story 3.4 — member nominee declaration (tenant-isolated; name/mobile/address Tier-1
+// envelope, relationship Tier-3 plaintext). Composite PK (member_id, rank); 1–2 rows per
+// member, latest-wins (delete-then-insert); FK cascade for RTBF (Story 3.12).
+export * from './member_nominees.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

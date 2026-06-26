@@ -99,7 +99,22 @@ export const RtbfAnonymizedPayloadSchema = z.object({ ...auditShape }).strict();
 //   · withdrawal_requested — the withdrawal-initiated marker (the state moves to
 //     `withdrawn` via `withdrawal_completed`).
 
-export const NomineesDeclaredPayloadSchema = z.object({ ...auditShape }).strict();
+/**
+ * Story 3.4: nominee declaration. NON-PII audit only — the events_log payload is plaintext
+ * JSONB and MUST NEVER carry nominee names / mobiles / addresses (R1; mirrors the 3.3b
+ * `kyc.completed` precedent, which carries only the masked-Aadhaar reference). The nominee
+ * PII lives Tier-1-encrypted in `member_nominees`; here we record only the COUNT + the
+ * SERVER-derived split shape. Still a non-transition marker (from_state === to_state) — the
+ * reducer treats `member.nominees_declared` as identity; widening this payload does NOT
+ * change reducer behavior.
+ */
+export const NomineesDeclaredPayloadSchema = z
+  .object({
+    ...auditShape,
+    nominee_count: z.union([z.literal(1), z.literal(2)]),
+    split: z.enum(['sole', '75-25']),
+  })
+  .strict();
 export const MedicalDisclosedPayloadSchema = z.object({ ...auditShape }).strict();
 export const LockInEnteredPayloadSchema = z.object({ ...auditShape }).strict();
 export const ValidThroughReachedPayloadSchema = z.object({ ...auditShape }).strict();

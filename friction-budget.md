@@ -69,6 +69,19 @@ unchanged**: the KYC step is in the authenticated mobile app (`apps/mobile`, an 
 build no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has
 teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 3.4 disposition (declaration affirmed, no new row):** the nominee-declaration
+step (`apps/mobile/app/(signup)/nominees.tsx` → `POST /api/v1/member/nominees`) is
+**necessary signup data entry**, not deliberate friction — the member names the 1–2
+people who should receive support, the 75/25 split is **server-derived** (no decision
+imposed on the member), and the form explicitly does **NOT** ask for nominee KYC/Aadhaar
+(AC2) or nominee bank/IFSC (AC3) at signup, *removing* would-be friction by deferring
+both to claim time (Epic 6). Zero deliberate friction introduced; ledger reviewed, no row
+warranted. The **page-weight baseline is unchanged**: the screen is in the authenticated
+mobile app (`apps/mobile`, an EAS build no-op → `member-app-native` stays a no-op); the
+page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface,
+which this story does not touch. (The Life Events nominee-UPDATE + its step-up friction is
+Story 3.9 — that gating, not this signup declaration, is where a `forced`-row review applies.)
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

@@ -142,6 +142,9 @@ const {
   KycProfileSummaryResponse,
   KycStatusResponse,
 } = await import('../src/kyc/index.js');
+// Story 3.4 — the signup nominee-declaration DTOs (declare + status). The third signup-
+// wizard SURFACE; both routes are member-session-gated (no step-up at signup — 3.9 adds it).
+const { NomineeDeclareRequest, NomineeStatusResponse } = await import('../src/nominee/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -308,6 +311,15 @@ const kycComponents = {
   KycStatusResponse: KycStatusResponse.openapi('KycStatusResponse'),
 } as const;
 for (const [name, schema] of Object.entries(kycComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 3.4 — signup nominee-declaration components (declare request + status response).
+const nomineeComponents = {
+  NomineeDeclareRequest: NomineeDeclareRequest.openapi('NomineeDeclareRequest'),
+  NomineeStatusResponse: NomineeStatusResponse.openapi('NomineeStatusResponse'),
+} as const;
+for (const [name, schema] of Object.entries(nomineeComponents)) {
   registry.register(name, schema);
 }
 
@@ -1121,6 +1133,50 @@ registry.registerPath({
   responses: {
     200: { description: 'KYC status', content: jsonOf(kycComponents.KycStatusResponse) },
     401: kycAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 3.4 — signup nominee declaration (member-session-gated; no step-up at signup) ──
+// declare (1–2 nominees, server-derived 75/25 split, emits member.nominees_declared) + status
+// (the current effective declaration — NO PII echo-back). The Life Events UPDATE + step-up
+// gate is Story 3.9 (re-runs this declare service). NO nominee KYC and NO nominee bank at
+// signup (AC2/AC3 — claim-time only).
+const nomineeTags = ['member-nominee'];
+const nomineeAuth = errorResponse('Authentication required');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/nominees',
+  summary: 'Signup nominees — declare 1–2 nominees (emits member.nominees_declared)',
+  description:
+    'Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) ' +
+    'with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot ' +
+    'override the split. Replaces any prior declaration (latest-wins) and emits ' +
+    'member.nominees_declared (a non-PII audit marker; count + split only) on the member stream. ' +
+    'NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, ' +
+    'Epic 6). Requires a member session (no step-up at signup — Life Events adds it in 3.9).',
+  tags: nomineeTags,
+  request: { body: { content: jsonOf(nomineeComponents.NomineeDeclareRequest), required: true } },
+  responses: {
+    200: { description: 'Nominees declared', content: jsonOf(nomineeComponents.NomineeStatusResponse) },
+    400: errorResponse('Request validation failed (0 or >2 nominees, or bad fields)'),
+    401: nomineeAuth,
+    409: errorResponse('Member is in a terminal state (withdrawn / anonymized)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/nominees',
+  summary: 'Signup nominees — the current effective declaration (NO PII echo-back)',
+  description:
+    "Returns the member's current nominee declaration as NON-PII summaries: rank, relationship, " +
+    'the server-stamped splitPct, and presence flags for the encrypted fields. NEVER the raw ' +
+    'name/mobile/address bytes (Tier-1 echo-back discipline). Requires a member session.',
+  tags: nomineeTags,
+  responses: {
+    200: { description: 'Current nominee declaration', content: jsonOf(nomineeComponents.NomineeStatusResponse) },
+    401: nomineeAuth,
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

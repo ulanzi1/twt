@@ -38,3 +38,5 @@ export * from './digilocker-public-certs-rls.js';
 export * from './kyc-transactions-rls.js';
 // Story 3.3b — member_kyc_profiles tenant-isolation (mirror member-identities-rls).
 export * from './member-kyc-profiles-rls.js';
+// Story 3.4 — member_nominees tenant-isolation (mirror member-kyc-profiles-rls).
+export * from './member-nominees-rls.js';

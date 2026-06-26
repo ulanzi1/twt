@@ -57,6 +57,15 @@ export const MEMBER_MOBILE_FIELD_CLASS = 'member_mobile';
  */
 export const MEMBER_KYC_FIELD_CLASS = 'member_kyc';
 
+/**
+ * Field-class namespace for the member NOMINEE Tier-1 envelope (Story 3.4). Like the KYC
+ * profile (and unlike the admin-email / member-mobile families that key on a fixed global
+ * sentinel because their lookup runs pre-scope), `member_nominees` is a TENANT table — its
+ * encryption context keys on the member's REAL `pariwarId`. Matches the
+ * `piiColumn(1, 'member_nominee')` field-class annotation on the name/mobile/address columns.
+ */
+export const MEMBER_NOMINEE_FIELD_CLASS = 'member_nominee';
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;

@@ -37,6 +37,9 @@ export * from './members/index.js';
 // NO `.openapi()` registration in 3.3a (no HTTP endpoint yet → openapi/v1.yaml
 // byte-identical); the signup KYC surface DTOs land in Story 3.3b.
 export * from './kyc/index.js';
+// Story 3.4 — signup nominee-declaration transport DTOs (declare + status). The third
+// signup-wizard SURFACE; registers real OpenAPI components + paths (see emit-openapi.ts).
+export * from './nominee/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

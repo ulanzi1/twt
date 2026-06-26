@@ -113,6 +113,9 @@ export * as member from './member/index.js';
 // DigiLocker provider (apps/api) consumes these; the frozen abstraction itself lives in
 // `@twt/contracts/kyc`.
 export * as kyc from './kyc/index.js';
+// Story 3.4 — member nominee-declaration accessors (the latest-wins replace write + the
+// status read). Tenant-scoped; encryption + split derivation are app-layer (the route).
+export * as nominee from './nominee/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

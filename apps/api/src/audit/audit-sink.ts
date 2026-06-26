@@ -73,7 +73,11 @@ export type AuthAuditEventType =
   | 'member_kyc.verified'
   | 'member_kyc.confirmed'
   | 'member_kyc.manual'
-  | 'member_kyc.failure';
+  | 'member_kyc.failure'
+  // Story 3.4 — signup nominee declaration. NON-PII context only (nominee_count + split);
+  // NEVER nominee name/mobile/address. Emitted once per declare (and re-declare via 3.9).
+  //   declared — 1–2 nominees were declared with a server-derived 75/25 (or sole) split.
+  | 'member_nominees.declared';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

@@ -1164,7 +1164,7 @@ components:
             - type: "null"
         status:
           type: string
-          enum: &a7
+          enum: &a8
             - draft
             - in_review
             - signed_off
@@ -2184,6 +2184,89 @@ components:
         - lifecycleState
         - manualFallbackEnabled
       additionalProperties: false
+    NomineeDeclareRequest:
+      type: object
+      properties:
+        nominees:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                minLength: 1
+                maxLength: 200
+              relationship:
+                type: string
+                enum: &a6
+                  - spouse
+                  - child
+                  - parent
+                  - sibling
+                  - other
+              mobile:
+                type: string
+                minLength: 10
+                maxLength: 20
+                pattern: ^[+0-9][0-9\s\-()]*$
+              address:
+                type: string
+                minLength: 1
+                maxLength: 500
+            required:
+              - name
+              - relationship
+              - mobile
+            additionalProperties: false
+          minItems: 1
+          maxItems: 2
+      required:
+        - nominees
+      additionalProperties: false
+    NomineeStatusResponse:
+      type: object
+      properties:
+        nominees:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                anyOf:
+                  - type: number
+                    enum:
+                      - 1
+                  - type: number
+                    enum:
+                      - 2
+              relationship:
+                type: string
+                enum: *a6
+              splitPct:
+                anyOf:
+                  - type: number
+                    enum:
+                      - 100
+                  - type: number
+                    enum:
+                      - 75
+                  - type: number
+                    enum:
+                      - 25
+              mobilePresent:
+                type: boolean
+              addressPresent:
+                type: boolean
+            required:
+              - rank
+              - relationship
+              - splitPct
+              - mobilePresent
+              - addressPresent
+            additionalProperties: false
+      required:
+        - nominees
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:
@@ -2792,7 +2875,7 @@ paths:
     get:
       summary: List the Niyamavali registry (latest version per clause)
       description: Returns the chain-head (latest version) of every clause in the Pariwar, newest-first (forced-paginated). Requires niyamavali.amend at pariwar scope.
-      tags: &a6
+      tags: &a7
         - niyamavali
       parameters:
         - schema:
@@ -2833,7 +2916,7 @@ paths:
     get:
       summary: Version history of a clause (oldest → newest)
       description: Returns the most-recent `limit` version rows of a clause_id (forced-paginated, Story 1.14). Requires niyamavali.amend at pariwar scope.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -2884,7 +2967,7 @@ paths:
     get:
       summary: List the amendment ledger (time-ordered)
       description: Returns the niyamavali_amendments ledger newest-first (the De4 (pariwar_id, created_at) index). Requires niyamavali.amend at pariwar scope.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -2924,7 +3007,7 @@ paths:
     get:
       summary: List clause drafts (optionally by lifecycle state)
       description: Returns drafts for the Pariwar, newest-first, optionally filtered by status (e.g. in_review to find drafts awaiting sign-off). Requires niyamavali.amend.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -2941,7 +3024,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a7
+            enum: *a8
           required: false
           name: status
           in: query
@@ -2969,7 +3052,7 @@ paths:
     post:
       summary: Create a clause draft (create or amend)
       description: Creates a server-persisted draft (the non-author reviewer loads the exact pending content). Body is a discriminated union on operation. Requires niyamavali.amend.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -3018,7 +3101,7 @@ paths:
     get:
       summary: Load a single clause draft
       description: Returns the draft (incl. the pending payload) — the mechanism by which a NON-AUTHOR reviewer loads the exact content to review (AC1d). Requires niyamavali.amend or niyamavali.review.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -3060,7 +3143,7 @@ paths:
     put:
       summary: Edit a clause draft (resets the tone-review sign-off)
       description: Patches a non-published draft. ANY edit resets the draft to `draft` and clears a prior tone-review sign-off (content-bound, AC1d). Requires niyamavali.amend.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -3121,7 +3204,7 @@ paths:
     get:
       summary: Preview the draft diff (structured + rendered)
       description: Returns BOTH the structured-payload diff (computePayloadDiff vs the current published version, or {} for a create) AND a rendered display-field diff (AC1c). Requires niyamavali.amend or niyamavali.review.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -3164,7 +3247,7 @@ paths:
     post:
       summary: Submit a draft for tone-review
       description: Transitions a draft → in_review, routing it to a non-author reviewer. Requires niyamavali.amend.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -3213,7 +3296,7 @@ paths:
     post:
       summary: Record a non-author tone-review sign-off
       description: A reviewer (niyamavali.review) records a sign-off bound to the exact reviewed payload. Rejects a self-review (author === reviewer) with 409. Emits the Story 2.2 tone_review.signoff audit line.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -3274,7 +3357,7 @@ paths:
     post:
       summary: Publish a clause draft (audit-logged, tone-review-gated)
       description: Mints the immutable clause_versions row + a single audit line carrying the diff hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-notification hook (AC3 placeholder). Gated on a recorded non-author, content-current tone-review sign-off — without one, 409 tone-review-required (AC4). Requires niyamavali.amend.
-      tags: *a6
+      tags: *a7
       parameters:
         - schema:
             type: string
@@ -3323,7 +3406,7 @@ paths:
     post:
       summary: Create a T&C version (audit-logged)
       description: "Creates a version-pinned T&C: renders body_html_rendered from bodyMarkdown at write time (sanitized), pins the supplied clause versions (each validated to exist in the Pariwar), defaults legal_review_status → pending, and writes a single audit line first (audit-or-throw). Requires tc.publish at pariwar scope."
-      tags: &a8
+      tags: &a9
         - terms-and-conditions
       parameters:
         - schema:
@@ -3379,7 +3462,7 @@ paths:
     post:
       summary: Approve a T&C version (audit-logged)
       description: "Marks a T&C approved: sets legal_reviewer_actor_id = the acting trustee, flips legal_review_status → approved, and supersedes the prior currently-effective version (set effective_until + status → superseded). Audit-or-throw. The superseded version stays queryable by tc_version_id. Requires tc.approve."
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3439,7 +3522,7 @@ paths:
   /api/v1/member/auth/otp/request:
     post:
       summary: Member login — request a mobile OTP (enumeration-safe, per-phone throttled)
-      tags: &a9
+      tags: &a10
         - member-auth
       requestBody:
         required: true
@@ -3469,7 +3552,7 @@ paths:
   /api/v1/member/auth/otp/verify:
     post:
       summary: Member login — verify OTP → full session / pariwar-select / signup-continuation
-      tags: *a9
+      tags: *a10
       requestBody:
         required: true
         content:
@@ -3510,7 +3593,7 @@ paths:
   /api/v1/member/auth/otp/select-pariwar:
     post:
       summary: Member login — pick a Pariwar scope (multi-membership) → full session
-      tags: *a9
+      tags: *a10
       requestBody:
         required: true
         content:
@@ -3539,7 +3622,7 @@ paths:
   /api/v1/member/auth/token/refresh:
     post:
       summary: Member session — rotate the refresh token (reuse detection)
-      tags: *a9
+      tags: *a10
       requestBody:
         required: true
         content:
@@ -3568,7 +3651,7 @@ paths:
   /api/v1/member/auth/step-up/request:
     post:
       summary: Member step-up — request an OTP for a gated action
-      tags: *a9
+      tags: *a10
       requestBody:
         required: true
         content:
@@ -3597,7 +3680,7 @@ paths:
   /api/v1/member/auth/step-up/verify:
     post:
       summary: Member step-up — verify the OTP → elevate for the action_context
-      tags: *a9
+      tags: *a10
       requestBody:
         required: true
         content:
@@ -3627,7 +3710,7 @@ paths:
     post:
       summary: Signup KYC — begin a DigiLocker pull (returns the authorization redirect)
       description: Resolves the active KYC provider and begins a DigiLocker authorization-code flow for the authenticated member (must be pending-kyc), returning the authorizationUrl the client opens + the transactionId the callback correlates. Requires a member session.
-      tags: &a10
+      tags: &a11
         - member-kyc
       responses:
         "200":
@@ -3658,7 +3741,7 @@ paths:
     post:
       summary: DigiLocker OAuth callback (PUBLIC; state-correlated) — verify + pull the profile
       description: The OAuth redirect target DigiLocker sends the browser to with ?state&code. PUBLIC (no member JWT) — correlated by the unguessable state, which resolves the kyc_transaction (member_id + pariwar_id). Verifies the eAadhaar signature, pulls the profile, and persists it awaiting member confirmation. On provider failure returns the normalized KYC error so the client can branch to the manual fallback (AC2).
-      tags: *a10
+      tags: *a11
       requestBody:
         required: true
         content:
@@ -3700,7 +3783,7 @@ paths:
     post:
       summary: Signup KYC — confirm the verified DigiLocker profile (emits member.kyc_completed)
       description: "Confirms a verified DigiLocker profile: emits member.kyc_completed via the projector (pending-kyc → pending-fee) + an audit line. Idempotent (a re-confirm emits no second event). Requires a member session."
-      tags: *a10
+      tags: *a11
       requestBody:
         required: true
         content:
@@ -3742,7 +3825,7 @@ paths:
     post:
       summary: Signup KYC — manual fallback (emits member.kyc_manual_fallback)
       description: Stores a self-declared KYC record (name/dob/optional photo, Tier-1 encrypted; verification_strength=self_declared, trustee_verified=false) and emits member.kyc_manual_fallback (pending-kyc → pending-fee). The AC2 fallback target. Requires a member session.
-      tags: *a10
+      tags: *a11
       requestBody:
         required: true
         content:
@@ -3778,7 +3861,7 @@ paths:
     get:
       summary: Signup KYC — decrypt and return the stored KYC profile for member confirmation
       description: "Returns the decrypted stored KYC profile for the authenticated member: name, dob, masked-Aadhaar (last-4 only), verificationStrength, and photoPresent flag (never the raw photo bytes — Tier-1 discipline). Called by the mobile confirm screen after the DigiLocker callback has persisted the profile. Requires a member session."
-      tags: *a10
+      tags: *a11
       responses:
         "200":
           description: KYC profile summary
@@ -3802,7 +3885,7 @@ paths:
     get:
       summary: Signup KYC — the step entry/poll read (transaction + member KYC + manual-enabled seam)
       description: Returns the current DigiLocker transaction status (when a flow is in flight), the member's KYC standing, the lifecycle state, and the FR-58C manualFallbackEnabled seam flag (false → the UI hides the manual CTA + shows the hard-mandatory copy block). Requires a member session.
-      tags: *a10
+      tags: *a11
       responses:
         "200":
           description: KYC status
@@ -3810,6 +3893,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KycStatusResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/nominees:
+    post:
+      summary: Signup nominees — declare 1–2 nominees (emits member.nominees_declared)
+      description: Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot override the split. Replaces any prior declaration (latest-wins) and emits member.nominees_declared (a non-PII audit marker; count + split only) on the member stream. NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, Epic 6). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
+      tags: &a12
+        - member-nominee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NomineeDeclareRequest"
+      responses:
+        "200":
+          description: Nominees declared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NomineeStatusResponse"
+        "400":
+          description: Request validation failed (0 or >2 nominees, or bad fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Member is in a terminal state (withdrawn / anonymized)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: Signup nominees — the current effective declaration (NO PII echo-back)
+      description: "Returns the member's current nominee declaration as NON-PII summaries: rank, relationship, the server-stamped splitPct, and presence flags for the encrypted fields. NEVER the raw name/mobile/address bytes (Tier-1 echo-back discipline). Requires a member session."
+      tags: *a12
+      responses:
+        "200":
+          description: Current nominee declaration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NomineeStatusResponse"
         "401":
           description: Authentication required
           content:

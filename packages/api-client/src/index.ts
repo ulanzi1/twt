@@ -17,10 +17,13 @@ import {
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
   MemberStepUpVerifyResponse,
+  NomineeStatusResponse,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
   type KycProfileSummaryResponse as KycProfileSummaryResult,
   type KycStatusResponse as KycStatusResult,
+  type NomineeDeclareRequest,
+  type NomineeStatusResponse as NomineeStatusResult,
   type MemberFullSession as FullSession,
   type MemberOtpRequestResponse as OtpRequestResult,
   type MemberOtpVerifyRequest,
@@ -60,6 +63,7 @@ export interface MemberAuthClientOptions {
 
 const MEMBER_BASE = '/api/v1/member/auth';
 const KYC_BASE = '/api/v1/member/kyc';
+const NOMINEE_BASE = '/api/v1/member/nominees';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -159,6 +163,20 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Fetch the stored KYC profile for the confirm screen (decrypted name/dob; auth). */
     kycProfileSummary(): Promise<KycProfileSummaryResult> {
       return call(`${KYC_BASE}/profile-summary`, KycProfileSummaryResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Declare 1–2 nominees (Story 3.4). The 75/25 split is server-derived from the count —
+     * the client sends only name/relationship/mobile/optional-address (no percentage). Emits
+     * member.nominees_declared. Returns the current NON-PII declaration summary (auth).
+     */
+    nomineesDeclare(input: NomineeDeclareRequest): Promise<NomineeStatusResult> {
+      return call(NOMINEE_BASE, NomineeStatusResponse, input, true);
+    },
+
+    /** Read the current effective nominee declaration (NON-PII summaries; auth). */
+    nomineesStatus(): Promise<NomineeStatusResult> {
+      return call(NOMINEE_BASE, NomineeStatusResponse, undefined, true, 'GET');
     },
   };
 }

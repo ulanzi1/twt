@@ -12,6 +12,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 3-4-nominee-declaration-with-75-25-split (2026-06-27)
+
+- **D1 — `split_pct` no DB CHECK constraint.** `member_nominees.split_pct` is `smallint NOT NULL` with no `CHECK (split_pct IN (25, 75, 100))`. Server derivation is the correct enforcement layer (R4), but a direct SQL insert bypassing the application could write any value. Defense-in-depth hardening only. **Re-trigger:** add a CHECK in a future migration (e.g., alongside the Story 3.12 RTBF schema work).
+
+- **D2 — Concurrent re-declarations → PK conflict → 500.** Two simultaneous `POST /member/nominees` from the same member both DELETE then INSERT the same `(member_id, rank)` composite PK; the second INSERT gets a PK violation → unhandled 500 instead of graceful behavior. Unlikely within the 30-min signup session TTL. **Re-trigger:** when the nominee surface is exposed via Life Events (Story 3.9) where re-declarations under normal use are more frequent; add serializable isolation or an `ON CONFLICT DO UPDATE` strategy then.
+
+- **D3 — `getMemberStateAt` returns `null` for non-existent member, bypasses terminal guard.** `TERMINAL_STATES.has(null)` = `false`; execution continues until the FK on `member_nominees → members` raises a 500 instead of a clean 404/409. The session guard provides the first line of defence and the FK protects data integrity. **Re-trigger:** add explicit null-state check (`if (!state) throw new NotFoundError(...)`) during any handler refactor that touches the lifecycle guard pattern.
+
+---
+
 ## Deferred from: code review of story-2.5 (2026-06-21)
 
 - **`microcopy.yaml` `code_globs` doesn't cover `apps/public` source.** `scope.copy_globs` was correctly populated with the new `niyamavali` member-copy locale files (AC6c teeth), but `scope.code_globs` remains `apps/admin/src/**/*.tsx`/`.ts` only — `apps/public/src/**` is not scanned for hardcoded copy. No actual leak today (verified by grep — all visible copy in `apps/public` templates routes through `tr()`), but the gate's code-glob coverage is structurally incomplete for the new workspace going forward. **Re-trigger:** extend `code_globs` to include `apps/public/src/**` the next time `apps/public` gains a surface with template literals or inline copy.

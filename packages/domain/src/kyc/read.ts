@@ -13,7 +13,7 @@
 import { and, desc, eq } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { PariwarId } from '../ids/index.js';
+import type { MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import {
   type DigiLockerPublicCertRow,
@@ -94,6 +94,26 @@ export async function getKycTransactionByState(
     .select()
     .from(kycTransactions)
     .where(and(eq(kycTransactions.pariwarId, pariwarId), eq(kycTransactions.state, state)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Resolve a member's MOST-RECENT transaction within a Pariwar — backs `GET /member/kyc/status`
+ * (the step-entry/poll read reports the in-flight transaction's status). Returns null when the
+ * member has no transaction. Tenant-scoped (explicit predicate + RLS). Fixed `.limit(1)` (the
+ * Story 1.14 forced-pagination point-read form).
+ */
+export async function getLatestKycTransactionForMember(
+  db: Db,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+): Promise<KycTransactionRow | null> {
+  const rows = await db
+    .select()
+    .from(kycTransactions)
+    .where(and(eq(kycTransactions.pariwarId, pariwarId), eq(kycTransactions.memberId, memberId)))
+    .orderBy(desc(kycTransactions.createdAt))
     .limit(1);
   return rows[0] ?? null;
 }

@@ -47,12 +47,9 @@ export {
   type DigiLockerTransport,
   createHttpDigiLockerTransport,
 } from './client.js';
-export {
-  type DigiLockerCertFetcher,
-  type FetchedIssuerCert,
-  type RefreshCertsResult,
-  refreshDigiLockerCerts,
-} from './cert-refresh.js';
+// NB: `refreshDigiLockerCerts` + its `DigiLockerCertFetcher`/`FetchedIssuerCert`/
+// `RefreshCertsResult` types RELOCATED to `@twt/domain` (`kyc.*`) in Story 3.3b (R6) so the
+// apps/jobs daily cron can reuse them without a package cycle. Import them from `@twt/domain`.
 export {
   type CertStaleness,
   CERT_STALENESS_HARD_LIMIT_MS,

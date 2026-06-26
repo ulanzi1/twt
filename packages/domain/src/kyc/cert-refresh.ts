@@ -1,18 +1,26 @@
-// DigiLocker issuer-certificate refresh — Story 3.3a (Task 3; AC7).
+// DigiLocker issuer-certificate refresh — Story 3.3a (Task 3; AC7), RELOCATED to
+// @twt/domain in Story 3.3b (R6).
 //
 // `refreshDigiLockerCerts()` fetches the current issuer public certificate(s) and upserts
-// them into the GLOBAL `digilocker_public_certs` cache (the domain accessor). It parses
-// the X.509 `notAfter`/`notBefore`/`subject` with Node's built-in `X509Certificate` and
-// bumps `fetched_at` (resetting the staleness clock for the two-window budget). The daily
-// pg-boss CRON that calls this lands in 3.3b/ops — 3.3a ships ONLY the function (the
-// confirmed split). The fetcher is injected so tests never hit the live government API.
+// them into the GLOBAL `digilocker_public_certs` cache (the `upsertDigiLockerCert` accessor).
+// It parses the X.509 `notAfter`/`notBefore`/`subject` with Node's built-in `X509Certificate`
+// and bumps `fetched_at` (resetting the staleness clock for the two-window budget). The fetcher
+// is injected so tests never hit the live government API.
 //
-// This file lives in the provider directory (the import-boundary allowlist); it imports
-// `@twt/domain` (legal) + `node:crypto` — neither is the gate-fenced DigiLocker transport.
+// ── Why this lives in @twt/domain (Story 3.3b R6 resolution) ──────────────────────────
+// It only ever used `@twt/domain` (`upsertDigiLockerCert`) + `node:crypto` — NEVER the
+// gate-fenced DigiLocker transport (xml-crypto / @xmldom/xmldom / xpath). The 3.3b daily
+// cert-refresh CRON lives in `apps/jobs`, which depends on `@twt/domain` but NOT `apps/api`
+// (and CAN'T — apps/api already depends on @twt/jobs, so a reverse edge would cycle the build
+// graph; R6's "recommended" cross-app import is therefore infeasible). Relocating this gate-safe
+// primitive HERE lets BOTH apps/api (the provider) and apps/jobs (the cron) reuse the SAME
+// function with no cycle and no transport spread (freeze row 13 honored — the transport never
+// leaves apps/api/src/modules/kyc/providers/digilocker/).
 
 import { X509Certificate } from 'node:crypto';
 
-import { type Db, kyc } from '@twt/domain';
+import type { Db } from '../db.js';
+import { upsertDigiLockerCert } from './write.js';
 
 /** One issuer cert fetched from the source (keyId optional → derived from the fingerprint). */
 export interface FetchedIssuerCert {
@@ -58,9 +66,12 @@ export async function refreshDigiLockerCerts(
     return { pem: cert.pem, keyId: cert.keyId ?? x509.fingerprint256, x509 };
   });
 
-  // Phase 2: write all parsed certs.
+  // Phase 2: write all parsed certs. No nested db.transaction() here — callers that need
+  // atomic batch writes are responsible for wrapping at the pool level. Nesting a drizzle
+  // transaction inside an already-open pg.PoolClient transaction causes a spurious COMMIT
+  // that defeats the caller's ROLLBACK (breaks withProvider test-isolation discipline).
   for (const { pem, keyId, x509 } of parsed) {
-    await kyc.upsertDigiLockerCert(db, {
+    await upsertDigiLockerCert(db, {
       keyId,
       pem,
       notAfter: new Date(x509.validTo),

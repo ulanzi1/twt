@@ -14,6 +14,7 @@
 // traceId) and returns an opaque envelope, per architecture §3.2 "uncaught → 500,
 // no internal leak".
 
+import { KycProviderError } from '@twt/contracts';
 import {
   AuthorizationDeniedError,
   ClauseIdConflictError,
@@ -35,6 +36,17 @@ import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 
 import { ApiError } from '../../http-errors.js';
+
+/** KYC error-code → HTTP status (Story 3.3b). transport-down → 502; everything else 4xx. */
+const KYC_ERROR_STATUS: Readonly<Record<string, number>> = {
+  transaction_not_found: 404,
+  transaction_expired: 409,
+  user_consent_denied: 422,
+  verification_failed: 422,
+  signature_invalid: 422,
+  certificate_stale: 422,
+  provider_unavailable: 502,
+};
 
 function envelope(code: string, message: string, requestId: string, details?: unknown): ErrorResponseShape {
   return {
@@ -87,6 +99,17 @@ export function errorMappingHandler(
   // (matches Story 2.4 publish contract). Same own-projector pattern as the RBAC 403.
   if (error instanceof ToneReviewRequiredError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3a′) KYC provider failure (Story 3.3b, AC2/AC5). The normalized, provider-neutral
+  // KycProviderError thrown by the DigiLocker provider's verifyAndPullProfile/getStatus.
+  // Its own `toErrorResponse` projector carries `{ code, retriable }` so the member app
+  // branches to the manual-fallback empathy path. Mapped to HTTP by code (the callback is
+  // the throw site; the 3.3a transport stays fenced).
+  if (KycProviderError.is(error)) {
+    const status = KYC_ERROR_STATUS[error.code] ?? 422;
+    void reply.status(status).send(error.toErrorResponse(requestId));
     return;
   }
 

@@ -17,7 +17,6 @@ import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/sco
 import type { KycProviderContext } from '../../../src/modules/kyc/index.js';
 import {
   createDigiLockerProvider,
-  refreshDigiLockerCerts,
   type DigiLockerProviderConfig,
   type DigiLockerTransport,
 } from '../../../src/modules/kyc/index.js';
@@ -216,7 +215,7 @@ describe.skipIf(!hasDatabase)('DigiLocker provider — full flow (:5433)', () =>
           return [{ keyId: 'uidai-test-key', pem: TEST_ISSUER_CERT_PEM }];
         },
       };
-      const result = await refreshDigiLockerCerts(ctx.db, fetcher, {
+      const result = await kyc.refreshDigiLockerCerts(ctx.db, fetcher, {
         now: () => new Date('2026-06-25T00:00:00Z'),
       });
       expect(result).toEqual({ refreshed: 1, keyIds: ['uidai-test-key'] });

@@ -48,6 +48,15 @@ export const MEMBER_IDENTITY_NAMESPACE = '00000000-0000-0000-0000-000000000001';
 /** Field-class namespace for the member mobile blind index (HMAC input prefix). */
 export const MEMBER_MOBILE_FIELD_CLASS = 'member_mobile';
 
+/**
+ * Field-class namespace for the member KYC-profile Tier-1 envelope (Story 3.3b). Unlike
+ * the admin-email / member-mobile families (which key on a fixed global sentinel because
+ * their lookup runs pre-scope), the KYC profile is a TENANT table — its encryption context
+ * keys on the member's REAL `pariwarId`. Matches the `piiColumn(…, 'member_kyc')` field-class
+ * annotation on the `member_kyc_profiles` Tier-1 columns.
+ */
+export const MEMBER_KYC_FIELD_CLASS = 'member_kyc';
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;

@@ -60,7 +60,20 @@ export type AuthAuditEventType =
   | 'member_step_up.consume'
   | 'member_step_up.failure'
   | 'member_device.bound'
-  | 'member_device.dropped';
+  | 'member_device.dropped'
+  // ── Member KYC signup surface (Story 3.3b, FR-2) ─────────────────────────────
+  // KYC step events. Context carries masked-Aadhaar (last-4) + transaction_id ONLY —
+  // NEVER name/dob/photo/raw Aadhaar, NEVER the OAuth code or PKCE code_verifier.
+  //   initiate   — a DigiLocker pull was begun;
+  //   verified   — the eAadhaar was verified+persisted (callback step);
+  //   confirmed  — the member confirmed the shown DigiLocker profile (confirm step);
+  //   manual     — a self-declared manual-fallback record was stored;
+  //   failure    — a DigiLocker verification failure (routes the member to manual, AC2).
+  | 'member_kyc.initiate'
+  | 'member_kyc.verified'
+  | 'member_kyc.confirmed'
+  | 'member_kyc.manual'
+  | 'member_kyc.failure';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

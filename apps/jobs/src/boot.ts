@@ -31,6 +31,13 @@ import http from 'node:http';
 import { createDb, idempotency, resolveConnectionString } from '@twt/domain';
 import { QUEUE_NAMES, createQueueClient, stopQueueClient, type Job } from '@twt/queue';
 
+import {
+  CERT_REFRESH_TZ,
+  DEFAULT_CERT_REFRESH_CRON,
+  createEnvCertFetcher,
+  registerDigiLockerCertRefreshCron,
+} from './digilocker-cert-refresh.js';
+
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
 const HEALTH_PORT = Number(process.env['HEALTH_PORT'] ?? process.env['PORT'] ?? 8080);
@@ -40,6 +47,8 @@ const VACUUM_CRON = process.env['IDEMPOTENCY_VACUUM_CRON'] ?? '0 * * * *';
 // IST timezone for the cron — do NOT repeat the UTC-cron foot-gun the
 // nightly-integrity workflow documents (architecture §scheduling).
 const VACUUM_TZ = 'Asia/Kolkata';
+// Daily DigiLocker cert refresh (Story 3.3b, AC5.2). Cadence is operations policy (IST).
+const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT_CERT_REFRESH_CRON;
 
 /** The single error helper — every fatal/uncaught path logs code + message only. */
 function logError(scope: string, err: unknown): void {
@@ -67,6 +76,11 @@ async function main(): Promise<void> {
       `[jobs] IDEMPOTENCY_VACUUM_CRON must be a 5-field cron expression (got "${VACUUM_CRON}")`,
     );
   }
+  if (!/^(\S+\s+){4}\S+$/.test(CERT_REFRESH_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] DIGILOCKER_CERT_REFRESH_CRON must be a 5-field cron expression (got "${CERT_REFRESH_CRON}")`,
+    );
+  }
 
   const connectionString = process.env['SERVICE_DATABASE_URL'] ?? (await resolveConnectionString());
 
@@ -75,7 +89,7 @@ async function main(): Promise<void> {
 
   // Separate light pool for domain-table maintenance (the vacuum DELETE). max:2 —
   // the integrity-cli.ts service-pool precedent.
-  const { pool } = createDb(connectionString, { max: 2, logger: false });
+  const { db, pool } = createDb(connectionString, { max: 2, logger: false });
 
   let shuttingDown = false;
   let ready = false;
@@ -144,6 +158,16 @@ async function main(): Promise<void> {
     // Schedule the vacuum cron in IST.
     await boss.schedule(QUEUE_NAMES.IDEMPOTENCY_VACUUM, VACUUM_CRON, {}, { tz: VACUUM_TZ });
 
+    // ── DigiLocker daily cert-refresh cron (Story 3.3b, AC5.2 / ADR-0026 Category-5) ──
+    // Reuses the @twt/domain `refreshDigiLockerCerts` primitive (R6) with a config-gated
+    // fetcher; bumps `fetched_at`. Not fail-closed (§2.8) — a refresh failure alarms + leaves
+    // the last-good cert in place within budget.
+    await registerDigiLockerCertRefreshCron(
+      boss,
+      { db, fetcher: createEnvCertFetcher() },
+      { cron: CERT_REFRESH_CRON, tz: CERT_REFRESH_TZ },
+    );
+
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);
       healthServer.listen(HEALTH_PORT, () => {
@@ -159,7 +183,12 @@ async function main(): Promise<void> {
   ready = true;
   console.info(
     '[jobs] worker runtime ready',
-    JSON.stringify({ healthPort: HEALTH_PORT, vacuumCron: VACUUM_CRON, tz: VACUUM_TZ }),
+    JSON.stringify({
+      healthPort: HEALTH_PORT,
+      vacuumCron: VACUUM_CRON,
+      certRefreshCron: CERT_REFRESH_CRON,
+      tz: VACUUM_TZ,
+    }),
   );
 }
 

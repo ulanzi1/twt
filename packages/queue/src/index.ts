@@ -45,6 +45,13 @@ export const QUEUE_NAMES = {
    * end-to-end. Job class C (background) per architecture §1.4.
    */
   IDEMPOTENCY_VACUUM: 'idempotency.vacuum',
+  /**
+   * Daily DigiLocker issuer-certificate refresh (Story 3.3b, AC5.2 / ADR-0026 Category-5).
+   * Invokes `kyc.refreshDigiLockerCerts()`, bumping `digilocker_public_certs.fetched_at` so
+   * the two-window staleness budget means something. NOT fail-closed on a refresh failure
+   * (§2.8): the last-good cert is trusted within budget. Job class C (background).
+   */
+  DIGILOCKER_CERT_REFRESH: 'digilocker.cert_refresh',
 } as const;
 
 /** Union of the registered queue names. */

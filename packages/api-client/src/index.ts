@@ -9,11 +9,18 @@
 // The full OpenAPI→client codegen stays deferred (DD-7).
 
 import {
+  KycInitiateResponse,
+  KycProfileSummaryResponse,
+  KycStatusResponse,
   MemberFullSession,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
   MemberStepUpVerifyResponse,
+  type KycInitiateResponse as KycInitiateResult,
+  type KycManualSubmitRequest,
+  type KycProfileSummaryResponse as KycProfileSummaryResult,
+  type KycStatusResponse as KycStatusResult,
   type MemberFullSession as FullSession,
   type MemberOtpRequestResponse as OtpRequestResult,
   type MemberOtpVerifyRequest,
@@ -52,6 +59,7 @@ export interface MemberAuthClientOptions {
 }
 
 const MEMBER_BASE = '/api/v1/member/auth';
+const KYC_BASE = '/api/v1/member/kyc';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -62,16 +70,18 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
     body: unknown,
     auth = false,
+    method: 'GET' | 'POST' = 'POST',
   ): Promise<T> {
-    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    const headers: Record<string, string> = {};
+    if (method !== 'GET') headers['content-type'] = 'application/json';
     if (auth && opts.getAccessToken) {
       const token = await opts.getAccessToken();
       if (token) headers['authorization'] = `Bearer ${token}`;
     }
     const res = await doFetch(`${base}${path}`, {
-      method: 'POST',
+      method,
       headers,
-      body: JSON.stringify(body ?? {}),
+      ...(method === 'GET' ? {} : { body: JSON.stringify(body ?? {}) }),
     });
     if (!res.ok) {
       let code = `http.${res.status}`;
@@ -123,6 +133,32 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Verify a step-up OTP → elevate for its action_context (requires an access token). */
     stepUpVerify(otp: string): Promise<StepUpVerifyResult> {
       return call(`${MEMBER_BASE}/step-up/verify`, MemberStepUpVerifyResponse, { otp }, true);
+    },
+
+    // ── Signup KYC step (Story 3.3b) ────────────────────────────────────────────
+    /** Begin a DigiLocker KYC pull → the authorization redirect (requires an access token). */
+    kycInitiate(): Promise<KycInitiateResult> {
+      return call(`${KYC_BASE}/initiate`, KycInitiateResponse, {}, true);
+    },
+
+    /** Confirm the verified DigiLocker profile → emits member.kyc_completed (auth). */
+    kycConfirm(transactionId: string): Promise<KycStatusResult> {
+      return call(`${KYC_BASE}/confirm`, KycStatusResponse, { transactionId }, true);
+    },
+
+    /** Submit the manual fallback (name/dob/optional photo) → member.kyc_manual_fallback (auth). */
+    kycManualSubmit(input: KycManualSubmitRequest): Promise<KycStatusResult> {
+      return call(`${KYC_BASE}/manual`, KycStatusResponse, input, true);
+    },
+
+    /** Poll the KYC step status (transaction + member KYC standing + manual-enabled seam) (auth). */
+    kycStatus(): Promise<KycStatusResult> {
+      return call(`${KYC_BASE}/status`, KycStatusResponse, undefined, true, 'GET');
+    },
+
+    /** Fetch the stored KYC profile for the confirm screen (decrypted name/dob; auth). */
+    kycProfileSummary(): Promise<KycProfileSummaryResult> {
+      return call(`${KYC_BASE}/profile-summary`, KycProfileSummaryResponse, undefined, true, 'GET');
     },
   };
 }

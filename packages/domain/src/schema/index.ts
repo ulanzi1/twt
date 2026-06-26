@@ -61,6 +61,9 @@ export * from './otp_rate_buckets.js';
 // `kyc_transactions` is tenant-isolated provider OAuth/PKCE state (stores NO eAadhaar PII).
 export * from './digilocker_public_certs.js';
 export * from './kyc_transactions.js';
+// Story 3.3b — member KYC profile persistence (tenant-isolated; name/dob/photo Tier-1
+// envelope, masked-Aadhaar Tier-3). The first member-PII table after member_identities.
+export * from './member_kyc_profiles.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

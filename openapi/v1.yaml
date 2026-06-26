@@ -2065,6 +2065,125 @@ components:
         - elevated
         - elevatedUntil
       additionalProperties: false
+    KycInitiateResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          minLength: 1
+        authorizationUrl:
+          type: string
+          format: uri
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - transactionId
+        - authorizationUrl
+        - expiresAt
+      additionalProperties: false
+    KycCallbackRequest:
+      type: object
+      properties:
+        state:
+          type: string
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+      required:
+        - state
+        - code
+      additionalProperties: false
+    KycConfirmRequest:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          minLength: 1
+      required:
+        - transactionId
+      additionalProperties: false
+    KycManualSubmitRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        dob:
+          type: string
+          minLength: 1
+          maxLength: 40
+        photo:
+          type: string
+          maxLength: 7000000
+          pattern: ^data:image\/(jpeg|jpg|png);base64,
+      required:
+        - name
+        - dob
+      additionalProperties: false
+    KycProfileSummaryResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        dob:
+          type: string
+        aadhaarMaskedId:
+          type:
+            - string
+            - "null"
+        verificationStrength:
+          type: string
+          enum:
+            - aadhaar_kyc
+            - self_declared
+            - unverified
+        photoPresent:
+          type: boolean
+      required:
+        - name
+        - dob
+        - aadhaarMaskedId
+        - verificationStrength
+        - photoPresent
+      additionalProperties: false
+    KycStatusResponse:
+      type: object
+      properties:
+        transactionStatus:
+          type: string
+          enum:
+            - pending
+            - verified
+            - failed
+            - expired
+        memberKycState:
+          type: string
+          enum:
+            - none
+            - digilocker_verified
+            - manual_pending
+        lifecycleState:
+          type: string
+          enum:
+            - pending-kyc
+            - pending-fee
+            - pending-valid
+            - lock-in
+            - active
+            - active-in-grace
+            - lapsed-unpaid
+            - withdrawn
+            - anonymized
+        manualFallbackEnabled:
+          type: boolean
+      required:
+        - memberKycState
+        - lifecycleState
+        - manualFallbackEnabled
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:
@@ -3498,6 +3617,199 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/kyc/initiate:
+    post:
+      summary: Signup KYC — begin a DigiLocker pull (returns the authorization redirect)
+      description: Resolves the active KYC provider and begins a DigiLocker authorization-code flow for the authenticated member (must be pending-kyc), returning the authorizationUrl the client opens + the transactionId the callback correlates. Requires a member session.
+      tags: &a10
+        - member-kyc
+      responses:
+        "200":
+          description: KYC flow initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycInitiateResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Member is not pending-kyc (KYC already completed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: KYC provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/kyc/callback:
+    post:
+      summary: DigiLocker OAuth callback (PUBLIC; state-correlated) — verify + pull the profile
+      description: The OAuth redirect target DigiLocker sends the browser to with ?state&code. PUBLIC (no member JWT) — correlated by the unguessable state, which resolves the kyc_transaction (member_id + pariwar_id). Verifies the eAadhaar signature, pulls the profile, and persists it awaiting member confirmation. On provider failure returns the normalized KYC error so the client can branch to the manual fallback (AC2).
+      tags: *a10
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycCallbackRequest"
+      responses:
+        "200":
+          description: Profile verified + persisted (awaiting confirm)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycProfileSummaryResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No transaction for the supplied state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Verification failed / signature invalid / certificate stale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: DigiLocker provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/kyc/confirm:
+    post:
+      summary: Signup KYC — confirm the verified DigiLocker profile (emits member.kyc_completed)
+      description: "Confirms a verified DigiLocker profile: emits member.kyc_completed via the projector (pending-kyc → pending-fee) + an audit line. Idempotent (a re-confirm emits no second event). Requires a member session."
+      tags: *a10
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycConfirmRequest"
+      responses:
+        "200":
+          description: KYC confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycStatusResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No verified transaction / stored profile to confirm
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Transaction not verified, or member not pending-kyc
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/kyc/manual:
+    post:
+      summary: Signup KYC — manual fallback (emits member.kyc_manual_fallback)
+      description: Stores a self-declared KYC record (name/dob/optional photo, Tier-1 encrypted; verification_strength=self_declared, trustee_verified=false) and emits member.kyc_manual_fallback (pending-kyc → pending-fee). The AC2 fallback target. Requires a member session.
+      tags: *a10
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycManualSubmitRequest"
+      responses:
+        "200":
+          description: Manual KYC recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycStatusResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Member is not pending-kyc
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/kyc/profile-summary:
+    get:
+      summary: Signup KYC — decrypt and return the stored KYC profile for member confirmation
+      description: "Returns the decrypted stored KYC profile for the authenticated member: name, dob, masked-Aadhaar (last-4 only), verificationStrength, and photoPresent flag (never the raw photo bytes — Tier-1 discipline). Called by the mobile confirm screen after the DigiLocker callback has persisted the profile. Requires a member session."
+      tags: *a10
+      responses:
+        "200":
+          description: KYC profile summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycProfileSummaryResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No KYC profile found for this member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/kyc/status:
+    get:
+      summary: Signup KYC — the step entry/poll read (transaction + member KYC + manual-enabled seam)
+      description: Returns the current DigiLocker transaction status (when a flow is in flight), the member's KYC standing, the lifecycle state, and the FR-58C manualFallbackEnabled seam flag (false → the UI hides the manual CTA + shows the hard-mandatory copy block). Requires a member session.
+      tags: *a10
+      responses:
+        "200":
+          description: KYC status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycStatusResponse"
         "401":
           description: Authentication required
           content:

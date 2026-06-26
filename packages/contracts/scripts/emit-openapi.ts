@@ -131,6 +131,17 @@ const {
   MemberStepUpVerifyRequest,
   MemberStepUpVerifyResponse,
 } = await import('../src/members/index.js');
+// Story 3.3b — the signup KYC-step DTOs. THE FIRST KYC endpoints (3.3a's KycProvider seam
+// shipped components-free), so apps/api serves these routes now and they register real
+// `paths` + components. The callback is PUBLIC (state-correlated); the rest are member-session.
+const {
+  KycInitiateResponse,
+  KycCallbackRequest,
+  KycConfirmRequest,
+  KycManualSubmitRequest,
+  KycProfileSummaryResponse,
+  KycStatusResponse,
+} = await import('../src/kyc/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -284,6 +295,19 @@ const memberComponents = {
   MemberStepUpVerifyResponse: MemberStepUpVerifyResponse.openapi('MemberStepUpVerifyResponse'),
 } as const;
 for (const [name, schema] of Object.entries(memberComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 3.3b — signup KYC-step components (the first KYC HTTP DTOs).
+const kycComponents = {
+  KycInitiateResponse: KycInitiateResponse.openapi('KycInitiateResponse'),
+  KycCallbackRequest: KycCallbackRequest.openapi('KycCallbackRequest'),
+  KycConfirmRequest: KycConfirmRequest.openapi('KycConfirmRequest'),
+  KycManualSubmitRequest: KycManualSubmitRequest.openapi('KycManualSubmitRequest'),
+  KycProfileSummaryResponse: KycProfileSummaryResponse.openapi('KycProfileSummaryResponse'),
+  KycStatusResponse: KycStatusResponse.openapi('KycStatusResponse'),
+} as const;
+for (const [name, schema] of Object.entries(kycComponents)) {
   registry.register(name, schema);
 }
 
@@ -981,6 +1005,124 @@ for (const spec of MEMBER_PATHS) {
     responses: responses as Parameters<typeof registry.registerPath>[0]['responses'],
   });
 }
+
+// ── Story 3.3b — signup KYC step (member-session, except the PUBLIC OAuth callback) ──
+// initiate → DigiLocker callback (public, state-correlated) → confirm, plus the manual
+// fallback + status. The member routes require a member session + a pending-kyc member;
+// the callback is unauthenticated (DigiLocker redirects the browser with ?state&code) and
+// is correlated by the unguessable state (R3 — on the login-wall PUBLIC allowlist).
+const kycTags = ['member-kyc'];
+const kycAuth = errorResponse('Authentication required');
+const kycValidation = errorResponse('Request validation failed');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/kyc/initiate',
+  summary: 'Signup KYC — begin a DigiLocker pull (returns the authorization redirect)',
+  description:
+    'Resolves the active KYC provider and begins a DigiLocker authorization-code flow for ' +
+    'the authenticated member (must be pending-kyc), returning the authorizationUrl the ' +
+    'client opens + the transactionId the callback correlates. Requires a member session.',
+  tags: kycTags,
+  responses: {
+    200: { description: 'KYC flow initiated', content: jsonOf(kycComponents.KycInitiateResponse) },
+    401: kycAuth,
+    409: errorResponse('Member is not pending-kyc (KYC already completed)'),
+    502: errorResponse('KYC provider unavailable'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/kyc/callback',
+  summary: 'DigiLocker OAuth callback (PUBLIC; state-correlated) — verify + pull the profile',
+  description:
+    'The OAuth redirect target DigiLocker sends the browser to with ?state&code. PUBLIC ' +
+    '(no member JWT) — correlated by the unguessable state, which resolves the kyc_transaction ' +
+    '(member_id + pariwar_id). Verifies the eAadhaar signature, pulls the profile, and ' +
+    'persists it awaiting member confirmation. On provider failure returns the normalized ' +
+    'KYC error so the client can branch to the manual fallback (AC2).',
+  tags: kycTags,
+  request: { body: { content: jsonOf(kycComponents.KycCallbackRequest), required: true } },
+  responses: {
+    200: { description: 'Profile verified + persisted (awaiting confirm)', content: jsonOf(kycComponents.KycProfileSummaryResponse) },
+    400: kycValidation,
+    404: errorResponse('No transaction for the supplied state'),
+    422: errorResponse('Verification failed / signature invalid / certificate stale'),
+    502: errorResponse('DigiLocker provider unavailable'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/kyc/confirm',
+  summary: 'Signup KYC — confirm the verified DigiLocker profile (emits member.kyc_completed)',
+  description:
+    'Confirms a verified DigiLocker profile: emits member.kyc_completed via the projector ' +
+    '(pending-kyc → pending-fee) + an audit line. Idempotent (a re-confirm emits no second ' +
+    'event). Requires a member session.',
+  tags: kycTags,
+  request: { body: { content: jsonOf(kycComponents.KycConfirmRequest), required: true } },
+  responses: {
+    200: { description: 'KYC confirmed', content: jsonOf(kycComponents.KycStatusResponse) },
+    400: kycValidation,
+    401: kycAuth,
+    404: errorResponse('No verified transaction / stored profile to confirm'),
+    409: errorResponse('Transaction not verified, or member not pending-kyc'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/kyc/manual',
+  summary: 'Signup KYC — manual fallback (emits member.kyc_manual_fallback)',
+  description:
+    'Stores a self-declared KYC record (name/dob/optional photo, Tier-1 encrypted; ' +
+    'verification_strength=self_declared, trustee_verified=false) and emits ' +
+    'member.kyc_manual_fallback (pending-kyc → pending-fee). The AC2 fallback target. ' +
+    'Requires a member session.',
+  tags: kycTags,
+  request: { body: { content: jsonOf(kycComponents.KycManualSubmitRequest), required: true } },
+  responses: {
+    200: { description: 'Manual KYC recorded', content: jsonOf(kycComponents.KycStatusResponse) },
+    400: kycValidation,
+    401: kycAuth,
+    409: errorResponse('Member is not pending-kyc'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/kyc/profile-summary',
+  summary: 'Signup KYC — decrypt and return the stored KYC profile for member confirmation',
+  description:
+    'Returns the decrypted stored KYC profile for the authenticated member: name, dob, ' +
+    'masked-Aadhaar (last-4 only), verificationStrength, and photoPresent flag (never the ' +
+    'raw photo bytes — Tier-1 discipline). Called by the mobile confirm screen after the ' +
+    'DigiLocker callback has persisted the profile. Requires a member session.',
+  tags: kycTags,
+  responses: {
+    200: { description: 'KYC profile summary', content: jsonOf(kycComponents.KycProfileSummaryResponse) },
+    401: kycAuth,
+    404: errorResponse('No KYC profile found for this member'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/kyc/status',
+  summary: 'Signup KYC — the step entry/poll read (transaction + member KYC + manual-enabled seam)',
+  description:
+    'Returns the current DigiLocker transaction status (when a flow is in flight), the ' +
+    "member's KYC standing, the lifecycle state, and the FR-58C manualFallbackEnabled seam " +
+    'flag (false → the UI hides the manual CTA + shows the hard-mandatory copy block). ' +
+    'Requires a member session.',
+  tags: kycTags,
+  responses: {
+    200: { description: 'KYC status', content: jsonOf(kycComponents.KycStatusResponse) },
+    401: kycAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 

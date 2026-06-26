@@ -47,6 +47,12 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   'POST /api/v1/member/auth/otp/verify',
   'POST /api/v1/member/auth/otp/select-pariwar',
   'POST /api/v1/member/auth/token/refresh',
+  // Story 3.3b — the DigiLocker OAuth callback is PUBLIC by design (R3): DigiLocker
+  // redirects the browser here with ?state&code and NO member JWT, so it cannot carry
+  // requireMemberSession. It is authenticated-equivalent via the unguessable OAuth `state`
+  // (resolves the kyc_transaction's member_id + pariwar_id), exactly like the OTP routes.
+  // The other KYC routes (initiate/confirm/manual/status) ARE member-session-gated.
+  'POST /api/v1/kyc/callback',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
   // Honeypot traps are public by design (bot-bait); added programmatically below.

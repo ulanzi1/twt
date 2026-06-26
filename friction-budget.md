@@ -56,6 +56,19 @@ OTP-security-floor + the step-up set), so it is declared as the `forced` row abo
 Phone+OTP is transferable-by-design (Ravi-mode, UX line 263) — no identity gating
 beyond phone+OTP+device — so no friction beyond the OTP itself is imposed.
 
+**Story 3.3b disposition (existing row REALIZED — no new row):** the manual-KYC
+fallback (`apps/mobile/app/(signup)/kyc.tsx` manual path → `POST /api/v1/member/kyc/manual`)
+is the SURFACE that realizes the already-declared **`relative (manual-KYC fallback)
+→ "facilitator" posture → forced`** row above (seeded at Story 1.16a from UX line 269).
+The relative/facilitator pays a small friction (typing name + DoB instead of the
+one-tap DigiLocker pull) to protect the **facilitator-not-intermediary trust posture**
+— the manual record is self-declared + trustee-verifiable later (R1), never an
+intermediary acting on the member's behalf. No NEW row is warranted (the friction was
+named at 1.16a); this affirms it is now implemented. The **page-weight baseline is
+unchanged**: the KYC step is in the authenticated mobile app (`apps/mobile`, an EAS
+build no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has
+teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

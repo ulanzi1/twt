@@ -24,6 +24,7 @@ import { requestContextHook } from './middleware/request-context/index.js';
 import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMemberAuthModule } from './modules/auth/member/index.js';
+import { registerKycModule } from './modules/kyc/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerRulesModule } from './modules/rules/index.js';
@@ -91,6 +92,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 3.2 — member mobile+OTP auth surface (token-bearer; the first non-admin
   // authenticated surface). Public OTP/refresh/select + member-session-gated step-up.
   registerMemberAuthModule(app, deps);
+  // Story 3.3b — member KYC signup surface (DigiLocker pull + manual fallback). Drives the
+  // Story 3.1 lifecycle (member.kyc_completed / member.kyc_manual_fallback) + consumes the
+  // 3.3a KycProvider seam. Member-session-gated, except the PUBLIC state-correlated callback.
+  registerKycModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

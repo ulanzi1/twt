@@ -16,3 +16,6 @@
 export * from './profile.js';
 export * from './provider.js';
 export * from './errors.js';
+// Story 3.3b — the signup KYC-step transport DTOs (initiate / callback / confirm / manual /
+// status). The FIRST KYC HTTP endpoints; they register real OpenAPI `paths` (3.3a was seam-only).
+export * from './signup.js';

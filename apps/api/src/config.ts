@@ -82,6 +82,14 @@ export interface ApiConfig {
     readonly httpTimeoutMs: number;
     /** Transaction (PKCE) TTL — 15 min. */
     readonly transactionTtlMs: number;
+    /**
+     * FR-58C documented seam (Story 3.3b, AC3) — whether the manual KYC fallback is
+     * available. TODAY defaults TRUE (manual is ALWAYS available — the safe default).
+     * The FR-58C hard-mandatory feature-flag infrastructure is NOT built; this single
+     * config read is where a future flag flip would set it `false` to hide the manual
+     * CTA + show the hard-mandatory copy block (mirrors the 3.3a provider-registry seam).
+     */
+    readonly manualFallbackEnabled: boolean;
   };
   /** Admin session idle timeout (§2.4 — 12h). */
   readonly sessionIdleMs: number;
@@ -287,6 +295,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         .filter((s) => s !== ''),
       httpTimeoutMs: intEnv(env, 'DIGILOCKER_HTTP_TIMEOUT_MS', 8 * 1000),
       transactionTtlMs: intEnv(env, 'DIGILOCKER_TRANSACTION_TTL_MS', 15 * MINUTE),
+      // FR-58C seam (AC3): manual fallback is available unless explicitly disabled
+      // (env=='false'). Default TRUE — manual ALWAYS available today.
+      manualFallbackEnabled: (env['KYC_MANUAL_FALLBACK_ENABLED'] ?? 'true').toLowerCase() !== 'false',
     },
     sessionIdleMs: intEnv(env, 'SESSION_IDLE_MS', 12 * HOUR),
     sessionAbsoluteMs: intEnv(env, 'SESSION_ABSOLUTE_MS', 7 * DAY),

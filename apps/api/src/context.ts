@@ -66,6 +66,16 @@ export const MEMBER_KYC_FIELD_CLASS = 'member_kyc';
  */
 export const MEMBER_NOMINEE_FIELD_CLASS = 'member_nominee';
 
+/**
+ * Field-class namespace for the member MEDICAL-disclosure Tier-1 envelope (Story 3.5). Like the
+ * KYC profile + nominee families (and unlike the admin-email / member-mobile families that key on
+ * a fixed global sentinel because their lookup runs pre-scope), `member_medical_disclosures` is a
+ * TENANT table — its encryption context keys on the member's REAL `pariwarId`. Matches the
+ * `piiColumn(1, 'member_medical')` field-class annotation on the disclosed-conditions /
+ * additional-context columns.
+ */
+export const MEMBER_MEDICAL_FIELD_CLASS = 'member_medical';
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;

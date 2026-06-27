@@ -68,6 +68,10 @@ export * from './member_kyc_profiles.js';
 // envelope, relationship Tier-3 plaintext). Composite PK (member_id, rank); 1–2 rows per
 // member, latest-wins (delete-then-insert); FK cascade for RTBF (Story 3.12).
 export * from './member_nominees.js';
+// Story 3.5 — member medical disclosure (tenant-isolated; condition codes + free-text Tier-1
+// envelope). Per-disclosure PK (disclosure_id) — APPEND-ONLY history (NOT latest-wins; Epic 4
+// walks the full history); FK cascade to members for RTBF (Story 3.12) + FK to consent_records.
+export * from './member_medical_disclosures.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

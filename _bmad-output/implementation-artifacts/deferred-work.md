@@ -22,6 +22,38 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 3-5-medical-disclosure-with-ima-list-concealment-denial-ack (Chunk B — API + Contracts layer, 2026-06-27)
+
+- **W4 — `MemberStreamConcurrencyError` → 500 on concurrent submit.** `projectMemberState` can throw `MemberStreamConcurrencyError` (unique constraint on `(stream_id, event_version)`); this error is not caught and falls through to the generic 500 handler. The scope tx rolls back cleanly, but the client receives `internal.error` instead of a retryable conflict. Pre-existing: same gap in 3.4 (no nominee concurrency handler). **Re-trigger:** Story 3.9 Life Events, where concurrent re-disclosure is more likely in normal use.
+
+- **W5 — `TERMINAL_STATES` local hardcoded set.** `const TERMINAL_STATES = new Set(['withdrawn', 'anonymized'])` in `medical.handlers.ts`; if the domain state machine adds a new terminal state (e.g., `'deceased'`), this check silently accepts medical disclosures for members in that state. **Re-trigger:** any state-machine extension that adds a state which should block medical disclosure.
+
+- **W6 — TOCTOU between clause resolutions under READ COMMITTED.** Both `submit` (resolveImaList → resolveConcealmentClause) and `imaList` GET (same pair) make two separate queries; under READ COMMITTED isolation a Niyamavali amendment committing between them produces a mixed-provenance row (submit) or mismatched catalog response (imaList). Rare; amendments are admin-controlled. **Re-trigger:** if amendment frequency increases, or if Epic 4 auditability requires row-level snapshot consistency.
+
+- **W7 — Read-only handlers open write-capable scope tx.** `status` and `imaList` do only SELECTs yet call `openScopeTx` (write connection, full transaction overhead). **Re-trigger:** performance audit or connection-pool pressure.
+
+- **W8 — POST submit missing per-actor rate limit.** Global IP ceiling applies but does not throttle by authenticated member; a stolen JWT can drive unbounded append-only writes + audit + consent rows. **Re-trigger:** when per-actor rate limiting is added to other member-write routes.
+
+- **W9 — Encryption context doesn't include field name.** `encContext` uses identical `{ pariwarId, fieldClass: 'member_medical' }` for both `disclosedConditionsCiphertext` and `additionalContextCiphertext`; under AEAD, swapping the two ciphertexts on the same row passes authentication. **Re-trigger:** codebase-wide encryption context convention review.
+
+- **W10 — `emitAuthAudit` no rejection capture.** All `emitAuthAudit` callers are fire-and-forget with no `.catch()`; rejection on pool exhaustion or network partition is silently swallowed. Pre-existing codebase-wide pattern. **Re-trigger:** when a `.catch(logger.error)` convention is adopted globally.
+
+- **W11 — `status` returns 200 for non-existent member.** `{ latest: null, historyCount: 0 }` is indistinguishable from "member exists, nothing disclosed yet". The session guard is the primary defence. **Re-trigger:** if the session guard is ever loosened or ghost-member scenarios require explicit detection.
+
+- **W12 — `unknownCodes` in error message.** `unknownCodes.join(', ')` in the `BadRequestError` message — submitted IMA condition codes (potentially PHI) appear in structured logs and the API error response. **Re-trigger:** PHI-scrubbing logging convention adoption.
+
+- **W13 — `ServiceUnavailableError` default code `'request.unavailable'`.** Default code is semantically incorrect for a 503; all callers pass explicit codes so the default is never reached in production. **Re-trigger:** if a caller omits the explicit code argument.
+
+---
+
+## Deferred from: code review of 3-5-medical-disclosure-with-ima-list-concealment-denial-ack (Chunk C — Tests + Mobile + i18n, 2026-06-27)
+
+- **W14 — `toSummary` ZodError on bad `acknowledgment_text_locale` in a historical row.** `MedicalAckLocale.parse(row.acknowledgmentTextLocale)` throws if a row has a locale outside `['en','hi']` (the column is plain `text`, no DB CHECK constraint). Any `GET /status` or re-submit `buildStatus` for that member returns 500. **Re-trigger:** add `CHECK (acknowledgment_text_locale IN ('en','hi'))` in a future migration — good candidate for the Story 3.12 RTBF schema work.
+
+- **W15 — `conditionCodes.max(50)` blocks submit when IMA list exceeds 50 entries.** `MedicalDiscloseRequest.conditionCodes` is capped at 50 items; the `ImaListPayloadSchema` payload has no upper bound on the conditions array. A member wanting to submit all listed conditions would receive a 400 if the catalog ever grows beyond 50. **Re-trigger:** if the `niy.medical.ima-list` clause is updated with >50 conditions — raise the contract cap to match.
+
+---
+
 ## Deferred from: code review of story-2.5 (2026-06-21)
 
 - **`microcopy.yaml` `code_globs` doesn't cover `apps/public` source.** `scope.copy_globs` was correctly populated with the new `niyamavali` member-copy locale files (AC6c teeth), but `scope.code_globs` remains `apps/admin/src/**/*.tsx`/`.ts` only — `apps/public/src/**` is not scanned for hardcoded copy. No actual leak today (verified by grep — all visible copy in `apps/public` templates routes through `tr()`), but the gate's code-glob coverage is structurally incomplete for the new workspace going forward. **Re-trigger:** extend `code_globs` to include `apps/public/src/**` the next time `apps/public` gains a surface with template literals or inline copy.
@@ -1497,3 +1529,13 @@ These are RUNBOOK / PROCESS obligations, NOT code. Story 3.3b shipped the code l
 - **W1: Photo field validates only data-URI prefix; arbitrary base64 bytes pass validation and are stored encrypted.** The `KycManualSubmitRequest.photo` regex anchors only to the MIME prefix — any payload after the comma is accepted. Server-side image decoding was out of scope for 3.3b (spec doesn't require it). Future hardening: decode the base64 payload + validate it is a well-formed image (dimensions / file signature check) before encrypting and persisting. Also consider a tighter size ceiling for typical Aadhaar card photos. (`packages/contracts/src/kyc/signup.ts:94-98`)
 
 - **W2: `dob` field in `KycManualSubmitRequest` accepts arbitrary strings — no date format constraint.** The field is `z.string().trim().min(1).max(40)`. The spec is silent on format; the trustee verification step (Epic 4) does visual verification, so no runtime comparison is needed today. Future hardening before trustee tooling is built: enforce a canonical format (ISO 8601 `YYYY-MM-DD` or explicit regex matching the eAadhaar DoB string format) so the field is deterministically parseable. (`packages/contracts/src/kyc/signup.ts`)
+
+---
+
+## Deferred from: code review of 3-5-medical-disclosure-with-ima-list-concealment-denial-ack (Chunk A — Domain layer, 2026-06-27)
+
+- **W1: `conditionCount: number` in `AppendMedicalDisclosureInput` has no upper-bound guard against PostgreSQL `smallint` overflow (max 32,767).** (`packages/domain/src/medical/disclosure-write.ts:585`) Contract layer caps `conditionCodes` to ≤50, making the overflow unreachable in practice. **Re-trigger:** if the contract cap is ever relaxed beyond 32,767.
+
+- **W2: `getMedicalDisclosures` fetches unbounded disclosure history into memory for `buildStatus`.** (`packages/domain/src/medical/disclosure-read.ts:499`) Acceptable for signup (one row expected). **Re-trigger:** Story 3.9 (Life Events medical update) where repeated re-disclosures accumulate; switch to a single COUNT query + `getLatestMedicalDisclosure` so the status read stays O(1).
+
+- **W3: No retry idempotency guard on the submit path — a client network-timeout retry creates a second independent disclosure + consent row.** No `UNIQUE(consent_id)` constraint or idempotency key prevents it. Append-only is by design per Dev Notes R2 and the spec's re-submit test (AC4). **Re-trigger:** Story 3.9 handler, where member-initiated re-disclosures under step-up are the expected path; add a client-supplied idempotency key or short dedup window then.

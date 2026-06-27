@@ -40,3 +40,5 @@ export * from './kyc-transactions-rls.js';
 export * from './member-kyc-profiles-rls.js';
 // Story 3.4 — member_nominees tenant-isolation (mirror member-kyc-profiles-rls).
 export * from './member-nominees-rls.js';
+// Story 3.5 — member_medical_disclosures tenant-isolation (mirror member-nominees-rls).
+export * from './member-medical-disclosures-rls.js';

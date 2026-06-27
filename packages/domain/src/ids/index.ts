@@ -226,3 +226,17 @@ export const kycTransactionId = uuidBrand('KycTransactionId');
 export type DigiLockerCertId = Brand<'DigiLockerCertId'>;
 /** Smart constructor: validates UUID shape, returns a branded `DigiLockerCertId`. */
 export const digilockerCertId = uuidBrand('DigiLockerCertId');
+
+// ── Medical-disclosure id (Story 3.5, Task 1) ────────────────────────────────
+// Per-row address of a member medical disclosure (`member_medical_disclosures
+// .disclosure_id`). A UUID row address (mirror `ConsentId`), so it reuses the
+// shared `uuidBrand` validator. Unlike `member_nominees`' composite (member_id,
+// rank) latest-wins PK, the disclosure table is APPEND-ONLY history: every submit
+// mints a NEW `MedicalDisclosureId`, and Epic 4 concealment evaluation walks the
+// full per-member history. Branding mandatory on a new id's first PR (§Naming
+// L3700-3708).
+
+/** Per-row address of a member medical disclosure (`member_medical_disclosures.disclosure_id`). */
+export type MedicalDisclosureId = Brand<'MedicalDisclosureId'>;
+/** Smart constructor: validates UUID shape, returns a branded `MedicalDisclosureId`. */
+export const medicalDisclosureId = uuidBrand('MedicalDisclosureId');

@@ -69,5 +69,20 @@
   "nominees.no_bank_reassurance": "Bank details will be collected from your nominee at the time of a claim.",
   "nominees.submit": "Save my nominees",
   "nominees.done": "Your nominees are saved.",
-  "nominees.error_generic": "We couldn't save your nominees just now. Please try again."
+  "nominees.error_generic": "We couldn't save your nominees just now. Please try again.",
+  "medical.title": "Your health disclosure",
+  "medical.intro": "Please let us know if you have any of the listed serious illnesses. Most members have nothing to disclose — that's perfectly fine.",
+  "medical.conditions_label": "Listed illnesses",
+  "medical.conditions_help": "Select any that apply to you. You can select more than one, or none at all.",
+  "medical.no_conditions_reassurance": "You haven't selected any conditions — you can still continue.",
+  "medical.additional_context_label": "Anything else to add (optional)",
+  "medical.additional_context_help": "You can share any extra detail about your health here. This is optional.",
+  "medical.additional_context_placeholder": "Add any extra detail (optional)",
+  "medical.ack_help": "Please read the acknowledgment below in full, then check the box to continue.",
+  "medical.ack_required": "Please check the acknowledgment to continue.",
+  "medical.submit": "Save my disclosure",
+  "medical.done": "Your disclosure is saved.",
+  "medical.unavailable": "This step isn't available right now. Please try again shortly.",
+  "medical.error_generic": "We couldn't save your disclosure just now. Please try again.",
+  "medical.retry": "Try again"
 }

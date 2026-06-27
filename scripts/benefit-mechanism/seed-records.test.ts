@@ -38,12 +38,15 @@ function loadSeedRecords() {
 }
 
 describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', () => {
-  it('extracts the three structurally-real clause records from the seed', () => {
+  it('extracts the structurally-real clause records from the seed (Story 2.3 + Story 3.5)', () => {
     const { records } = loadSeedRecords();
-    expect(records).toHaveLength(3);
+    // 3 Story-2.3 clauses + 2 Story-3.5 medical clauses (niy.medical.ima-list + niy.concealment.r14).
+    expect(records).toHaveLength(5);
     const ids = records.map((r) => r.id).sort();
     expect(ids).toEqual([
+      'niy.concealment.r14',
       'niy.contribution-discipline.r7-a',
+      'niy.medical.ima-list',
       'niy.ninety-percent-rule.r8',
       'niy.special-death.r9-suicide-murder',
     ]);

@@ -77,7 +77,12 @@ export type AuthAuditEventType =
   // Story 3.4 — signup nominee declaration. NON-PII context only (nominee_count + split);
   // NEVER nominee name/mobile/address. Emitted once per declare (and re-declare via 3.9).
   //   declared — 1–2 nominees were declared with a server-derived 75/25 (or sole) split.
-  | 'member_nominees.declared';
+  | 'member_nominees.declared'
+  // Story 3.5 — signup medical disclosure. NON-PII context only (ima_list_version +
+  // condition_count); NEVER the selected condition codes / free-text additional context.
+  // Emitted once per submit (and re-submit via 3.9 — append-only history).
+  //   disclosed — a medical disclosure + concealment-denial ack was recorded.
+  | 'member_medical.disclosed';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

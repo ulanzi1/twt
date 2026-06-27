@@ -82,6 +82,21 @@ page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro 
 which this story does not touch. (The Life Events nominee-UPDATE + its step-up friction is
 Story 3.9 — that gating, not this signup declaration, is where a `forced`-row review applies.)
 
+**Story 3.5 disposition (declaration affirmed, no new row):** the medical-disclosure step
+(`apps/mobile/app/(signup)/medical.tsx` → `POST /api/v1/member/medical-disclosure`) is
+**necessary v1-M signup data entry plus a mandatory compliance acknowledgment**, not
+deliberate friction. The IMA multi-select is **zero-or-more** (most members disclose nothing
+— a single tap to continue), the free-text is **optional**, and the one required interaction
+is the concealment-denial acknowledgment — a **legal/compliance gate (FR-11), not gratuitous
+friction**: it gives R14 concealment-penalty enforcement (Epic 4) the consent + audit trail to
+*flag for State Trustee review rather than auto-deny*, which is friction *removed* from the
+nominee's future claim. Zero gratuitous friction introduced; ledger reviewed, no row warranted.
+The **page-weight baseline is unchanged**: the screen is in the authenticated mobile app
+(`apps/mobile`, an EAS build no-op → `member-app-native` stays a no-op); the page-weight
+ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story
+does not touch. (The Life Events medical-UPDATE + its step-up friction is Story 3.9 — that
+gating, not this signup disclosure, is where a `forced`-row review applies.)
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

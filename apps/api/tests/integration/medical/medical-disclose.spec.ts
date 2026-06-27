@@ -24,6 +24,7 @@ import { ids, member as memberDomain } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { createMedicalHandlers } from '../../../src/modules/medical/medical.handlers.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
@@ -361,7 +362,11 @@ describe.skipIf(!hasDatabase)('Medical disclosure — E2E (:5433)', () => {
     }
   });
 
-  it('rejects a missing/false acknowledgment (400)', async () => {
+  // AC2 has TWO enforcement layers: the contract's `z.literal(true)` (rejects over HTTP, below) AND
+  // the handler's own `medical.acknowledgment_required` guard (the next test). The HTTP path can
+  // only ever exercise the contract layer — so the handler guard, which Story 3.9 relies on when it
+  // re-runs the submit SERVICE behind step-up, gets its own direct-call test.
+  it('AC2: the contract layer rejects a false acknowledgment over HTTP (400)', async () => {
     const t = await createTestApp();
     try {
       const { memberId, pariwarId } = await seedMemberPendingFee(t);
@@ -372,6 +377,30 @@ describe.skipIf(!hasDatabase)('Medical disclosure — E2E (:5433)', () => {
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(400);
+      expect(await disclosureCount(t, memberId)).toBe(0);
+      expect(await consentRows(t, memberId)).toHaveLength(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('AC2: the handler server-enforces the ack independently of the contract (defense-in-depth for 3.9)', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberPendingFee(t);
+      await seedMedicalClauses(t, pariwarId);
+      const handlers = createMedicalHandlers(t.deps);
+
+      // Call the SERVICE directly with acknowledged:false — bypassing the Fastify `z.literal(true)`
+      // gate — to prove the handler's own guard fires (the branch 3.9 re-runs behind step-up). The
+      // guard runs before openScopeTx, so nothing is written.
+      const fakeRequest = {
+        body: { conditionCodes: [], imaListVersion: 'x', acknowledged: false, ackLocale: 'en' },
+        requestContext: { actorId: memberId, pariwarId, traceId: null },
+      } as unknown as Parameters<typeof handlers.submit>[0];
+      await expect(handlers.submit(fakeRequest)).rejects.toMatchObject({
+        code: 'medical.acknowledgment_required',
+      });
       expect(await disclosureCount(t, memberId)).toBe(0);
       expect(await consentRows(t, memberId)).toHaveLength(0);
     } finally {
@@ -523,6 +552,61 @@ describe.skipIf(!hasDatabase)('Medical disclosure — E2E (:5433)', () => {
       expect(after.body.version).toBe(imaVersion);
       expect((after.body.conditions as Json[]).map((c) => c.code)).toEqual(['ckd', 'malignancy']);
       expect(after.body.ackText).toMatchObject({ en: ACK_EN, hi: ACK_HI });
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('GET ima-list 503s when ONLY the concealment clause is unprovisioned (partial provisioning)', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberPendingFee(t);
+      // IMA list resolves but the concealment clause is absent — the handler's SECOND 503 branch.
+      await seedMedicalClauses(t, pariwarId, { concealment: false });
+
+      const res = await inject(t, 'GET', '/api/v1/member/medical-disclosure/ima-list', {
+        token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(503);
+      expect(String((res.body.error as Json)?.code)).toBe('medical.concealment_clause_service_unavailable');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('GET status returns the empty shape for a member who has never disclosed (200)', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberPendingFee(t);
+
+      const get = await inject(t, 'GET', '/api/v1/member/medical-disclosure', {
+        token: token(t, memberId, pariwarId),
+      });
+      expect(get.status).toBe(200);
+      expect(get.body).toMatchObject({ latest: null, historyCount: 0 });
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('rejects additionalContext longer than the 2000-char cap (400)', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberPendingFee(t);
+      const { imaVersion } = await seedMedicalClauses(t, pariwarId);
+
+      const res = await inject(t, 'POST', '/api/v1/member/medical-disclosure', {
+        payload: {
+          conditionCodes: [],
+          additionalContext: 'a'.repeat(2001),
+          imaListVersion: imaVersion,
+          acknowledged: true,
+          ackLocale: 'en',
+        },
+        token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(400);
+      expect(await disclosureCount(t, memberId)).toBe(0);
     } finally {
       await teardown(t);
     }

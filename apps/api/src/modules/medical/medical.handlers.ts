@@ -12,7 +12,9 @@
 // tx → auditId) → recordConsent({ auditId }) → appendMedicalDisclosure({ consentId }) →
 // projectMemberState event → buildStatus → ok=true → emitAuthAudit (fire-and-forget, last). The
 // consent insert + disclosure insert + event all run inside the member scope tx, so a throw rolls
-// them back together (AC6). An orphan audit line on a later rollback is the known, benign artifact.
+// them back together (AC6). The step-5 audit line commits on its own pool and SURVIVES that
+// rollback; a `catch` therefore emits a compensating `member_medical.disclosure_rolled_back` (5xx)
+// line so the chain reconciles with events_log instead of over-counting (P1 — re-review).
 //
 // ── PII discipline (R1) ──────────────────────────────────────────────────────────────────────
 // Selected condition codes + free-text are Tier-1 encrypted in the handler before the accessor
@@ -124,6 +126,9 @@ export function createMedicalHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
+      // P1 (compensating audit): armed once the step-5 audit line is durably committed; consumed by
+      // the catch below to settle the chain if a later scope-tx step rolls back.
+      let compensation: { requestPayloadHash: string; resourceLocator: string } | null = null;
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
@@ -195,17 +200,21 @@ export function createMedicalHandlers(deps: AppDeps) {
             'utf8',
           )
           .digest('hex');
+        const resourceLocator = `member:${memberIdStr}:medical-disclosure`;
         const auditRow = await audit.writeAuditEntry(deps.servicePool, {
           pariwarId: pariwarIdStr,
           actorId: memberIdStr,
           actorRole: null,
           action: 'member_medical.disclosed',
-          resourceLocator: `member:${memberIdStr}:medical-disclosure`,
+          resourceLocator,
           requestPayloadHash,
           responseStatus: 200,
           traceId,
         });
         const auditId = auditRow.auditId;
+        // From here the audit line is durably committed on servicePool and SURVIVES a scope-tx
+        // rollback — arm the compensating entry (P1).
+        compensation = { requestPayloadHash, resourceLocator };
 
         // 6. Record the consent (insert FIRST — let the DB mint consent_id; the disclosure carries
         //    its returned id). consent_artifact_ref = the niy.concealment.r14 clause_version_id.
@@ -261,6 +270,30 @@ export function createMedicalHandlers(deps: AppDeps) {
           context: { ima_list_version: imaList.version, condition_count: conditionCount },
         });
         return result;
+      } catch (err) {
+        // P1 — Compensating audit on rollback. The step-5 `member_medical.disclosed` line was
+        // committed on servicePool (its own tx) and SURVIVES the scope-tx rollback in `finally`.
+        // Without this, a throw in steps 6–9 (e.g. a MemberStreamConcurrencyError, W4, or a
+        // buildStatus failure) would leave the chain asserting a 200 disclosure that never
+        // persisted — over-counting vs events_log / member_medical_disclosures. Settle the chain
+        // with a 5xx line. Best-effort: a failed compensation must NEVER mask the original error.
+        if (compensation !== null) {
+          try {
+            await audit.writeAuditEntry(deps.servicePool, {
+              pariwarId: pariwarIdStr,
+              actorId: memberIdStr,
+              actorRole: null,
+              action: 'member_medical.disclosure_rolled_back',
+              resourceLocator: compensation.resourceLocator,
+              requestPayloadHash: compensation.requestPayloadHash,
+              responseStatus: 500,
+              traceId,
+            });
+          } catch {
+            // swallow — the original error is the one the caller must see.
+          }
+        }
+        throw err;
       } finally {
         // 11.
         await closeScopeTx(scopeTx, ok);

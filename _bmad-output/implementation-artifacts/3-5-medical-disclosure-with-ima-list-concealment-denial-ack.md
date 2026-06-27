@@ -319,6 +319,33 @@ No `project-context.md` exists in this repo (only the generator template). Bindi
 - [x] [Review][Defer] `unknownCodes.join(', ')` in BadRequestError message — submitted condition codes (potentially PHI if from the IMA list) appear in structured logs and the API error response. Re-trigger: when a PHI-scrubbing logging convention is adopted. (W12)
 - [x] [Review][Defer] `ServiceUnavailableError` default code is `'request.unavailable'` — semantically incorrect for a 503 (all callers pass explicit codes so the default is never reached; code smell only). Re-trigger: if a caller omits the explicit code argument. (W13)
 
+### Review Findings (Re-review — full-diff adversarial pass, 2026-06-27)
+
+_Three-layer pass (Blind Hunter / Edge Case Hunter / Acceptance Auditor) over the committed `origin/main...HEAD` diff. Acceptance Auditor: 0 Critical/High/Medium, all 6 ACs + every scope guard verified held. Most findings re-derive items already on record (W2/W3/W6/W9/W14) or already adjudicated (Chunk A `.strict()` decision); only the items below are net-new._
+
+**Decision needed:**
+
+- [x] [Review][Decision] **RESOLVED → Patch (option b, compensating audit line).** BigDev chose: wrap scope-tx steps 6–9; on catch, emit a compensating audit entry (`responseStatus: 5xx` / disclosure-failed) so the chain reconciles with `events_log`. See Patch P1 below. — _Orphan audit line on post-audit rollback —_ `audit.writeAuditEntry(deps.servicePool, { … action: 'member_medical.disclosed', responseStatus: 200 … })` commits on its own auto-committing pool at submit **step 5**, before the rollback-able scope-tx steps 6–9 (`recordConsent` → `appendMedicalDisclosure` → `projectMemberState` → `buildStatus`). A throw after step 5 (e.g. the W4 `MemberStreamConcurrencyError`, or a `buildStatus` failure) rolls back consent+disclosure+event but leaves a **committed audit line asserting a 200 `member_medical.disclosed` that never persisted** — the audit chain over-counts vs `events_log` / `member_medical_disclosures`, and `responseStatus: 200` is hardcoded regardless of real outcome. The spec mandates audit-first-then-thread (auditId → `consent_records.audit_id`), so the write cannot simply move after the tx. **This is the first consent-registry consumer and the copy template for 3.6 / Epic 6.** Options: (a) accept as benign-orphan (current implied stance) + document the over-count invariant explicitly; (b) emit a compensating audit line on rollback; (c) two-phase audit (pending → settled) so `responseStatus` reflects the true outcome. [`apps/api/src/modules/medical/medical.handlers.ts` submit step 5] — _net-new vs W1–W15; flagged Medium by Edge, Low by Blind._
+
+**Patch:**
+
+- [x] [Review][Patch] **(P1, from D1) Compensating audit line on rollback** — ✅ APPLIED: `submit` now `catch`es scope-tx failures and emits a `member_medical.disclosure_rolled_back` (5xx) audit line so the chain reconciles. [`medical.handlers.ts`] — wrap submit scope-tx steps 6–9 in a try/catch; on failure emit a compensating audit entry (e.g. `member_medical.disclosure_failed`, `responseStatus: 5xx`, threading the original `auditId`) so the audit chain reconciles with `events_log`/`member_medical_disclosures` instead of over-counting. This sets the template for 3.6 / Epic 6 consent consumers. [`apps/api/src/modules/medical/medical.handlers.ts` submit steps 5–9]
+- [x] [Review][Patch] **AC2 server-ack enforcement is unverified at the enforcing layer** — ✅ APPLIED: split into a contract-layer HTTP test + a NEW direct-handler test (`createMedicalHandlers(t.deps).submit` with `acknowledged:false`) that proves the handler's own `medical.acknowledgment_required` guard fires (the branch 3.9 reuses). [`medical-disclose.spec.ts`]
+- [x] [Review][Patch] **Test coverage gaps** — ✅ APPLIED: added (a) GET `/ima-list` concealment-absent → 503 `medical.concealment_clause_service_unavailable`; (b) `additionalContext` 2001-char → 400; (c) GET-status zero-disclosure `{ latest: null, historyCount: 0 }`. [`medical-disclose.spec.ts`]
+
+**Defer (already on record — mapped, no duplicate entry created):**
+
+- [x] [Review][Defer] AEAD `encContext` identical for both ciphertext columns (on-row swap authenticates) — already recorded **W9**.
+- [x] [Review][Defer] `toSummary` `MedicalAckLocale.parse()` on the unconstrained `text` locale column → permanent 500 on an append-only row — already recorded **W14**.
+- [x] [Review][Defer] `imaListVersion` required-by-contract but never compared / amendment TOCTOU turns a validly-shown selection into a 400 — already recorded **W6**.
+- [x] [Review][Defer] `getMedicalDisclosures` unbounded fetch for `buildStatus`; the O(1) `getLatestMedicalDisclosure` helper ships unused — already recorded **W2**.
+- [x] [Review][Defer] No submit idempotency → network-retry duplicates disclosure+consent+event — already recorded **W3** (append-only by design).
+
+**Dismissed (noise / already adjudicated):**
+
+- `ImaConditionSchema.strict()` (and the concealment ack-text required-keys) → 503 on a future centrally-amended clause — **already adjudicated** in the Chunk A decision: kept `.strict()` + `.safeParse()` so it degrades to a typed 503 by design; OQ-13 per-condition enrichment was consciously accepted as deploy-gated. (Edge re-raised the PRD "update without code deploy" tension; noting, not re-opening.)
+- `disclosedAt` derived from `acknowledgedAt` while history orders on `createdAt` — equal in production (both `defaultNow()` in one INSERT); no behavioral divergence.
+
 ## Story Completion Status
 
 Ultimate context engine analysis completed — comprehensive developer guide created. Ready for `dev-story`. **The IMA-list design decision is resolved: registry-backed (Option A), BigDev-confirmed 2026-06-27** — the IMA list is the seeded `niy.medical.ima-list` clause, resolved per-Pariwar, `ima_list_version` = its `clause_version_id`. No open decisions remain.

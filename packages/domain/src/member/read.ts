@@ -20,9 +20,31 @@
 import { and, asc, eq, lte } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { MemberId } from '../ids/index.js';
+import type { MemberId, PariwarId } from '../ids/index.js';
 import { eventsLog } from '../schema/events_log.js';
+import { members } from '../schema/members.js';
 import { type MemberLifecycleState, replayMemberState } from './state.js';
+
+/**
+ * Does a member row physically exist in this Pariwar? Story 3.5 (Task 6) uses this as the
+ * explicit pre-check the medical-disclosure submit runs BEFORE `getMemberStateAt` — that
+ * accessor is non-nullable (a non-existent member replays to `pending-kyc`), so a clean 409
+ * for "member not found" needs a real existence probe (it resolves 3.4's deferred D3). The
+ * FK on `member_medical_disclosures → members` is only a data-integrity backstop (it yields a
+ * 500, not a clean 409). Tenant-scoped (RLS + the explicit predicate).
+ */
+export async function memberExists(
+  db: Db,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+): Promise<boolean> {
+  const rows = await db
+    .select({ memberId: members.memberId })
+    .from(members)
+    .where(and(eq(members.pariwarId, pariwarId), eq(members.memberId, memberId)))
+    .limit(1);
+  return rows.length > 0;
+}
 
 /**
  * Compute a member's lifecycle state as of `atTimestamp` by replaying its event

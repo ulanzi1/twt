@@ -25,6 +25,7 @@ import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
+import { registerMedicalModule } from './modules/medical/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
@@ -101,6 +102,11 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // 75/25 split, Tier-1 encrypted; emits member.nominees_declared, a non-transition marker).
   // Member-session-gated; NO step-up at signup (Life Events update + step-up is Story 3.9).
   registerNomineeModule(app, deps);
+  // Story 3.5 — member medical-disclosure signup surface (0..N IMA conditions + concealment-
+  // denial ack, Tier-1 encrypted, APPEND-ONLY history; records a consent via the audit-or-throw
+  // chain + emits member.medical_disclosed, a non-transition marker). Member-session-gated; NO
+  // step-up at signup (Life Events update + step-up is Story 3.9).
+  registerMedicalModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

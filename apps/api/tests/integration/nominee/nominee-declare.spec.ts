@@ -81,7 +81,9 @@ async function seedWithdrawnMember(t: TestApp): Promise<{ memberId: string; pari
       payload: { from_state: 'pending-fee', to_state: 'lock-in', trigger: 'payment', actor: 'member', utr: 'TEST-UTR-0000', amount_inr: 1000 },
     });
     await memberDomain.projectMemberState(scopeTx.client, {
-      memberId: mid, pariwarId: pid, eventType: 'member.lock_in_expired', actorId: 'system',
+      // NULL = system / SIE (events_log.actor_id is a uuid column — 'system' is not a valid uuid).
+      // Pre-existing 3.4 test defect surfaced under Story 3.5's ci:local run (CI Actions suspended).
+      memberId: mid, pariwarId: pid, eventType: 'member.lock_in_expired', actorId: null,
       payload: { from_state: 'lock-in', to_state: 'active', trigger: 'lock_in_expiry', actor: 'system', kyc_verified: true },
     });
     await memberDomain.projectMemberState(scopeTx.client, {

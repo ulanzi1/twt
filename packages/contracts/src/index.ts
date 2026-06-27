@@ -40,6 +40,9 @@ export * from './kyc/index.js';
 // Story 3.4 — signup nominee-declaration transport DTOs (declare + status). The third
 // signup-wizard SURFACE; registers real OpenAPI components + paths (see emit-openapi.ts).
 export * from './nominee/index.js';
+// Story 3.5 — signup medical-disclosure transport DTOs (submit + status + ima-list). The fourth
+// signup-wizard SURFACE; registers real OpenAPI components + paths (see emit-openapi.ts).
+export * from './medical/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

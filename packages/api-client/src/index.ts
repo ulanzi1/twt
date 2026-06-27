@@ -11,17 +11,22 @@
 import {
   KycInitiateResponse,
   KycProfileSummaryResponse,
+  ImaListResponse,
   KycStatusResponse,
+  MedicalDisclosureStatusResponse,
   MemberFullSession,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
   MemberStepUpVerifyResponse,
   NomineeStatusResponse,
+  type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
   type KycProfileSummaryResponse as KycProfileSummaryResult,
   type KycStatusResponse as KycStatusResult,
+  type MedicalDiscloseRequest,
+  type MedicalDisclosureStatusResponse as MedicalStatusResult,
   type NomineeDeclareRequest,
   type NomineeStatusResponse as NomineeStatusResult,
   type MemberFullSession as FullSession,
@@ -64,6 +69,7 @@ export interface MemberAuthClientOptions {
 const MEMBER_BASE = '/api/v1/member/auth';
 const KYC_BASE = '/api/v1/member/kyc';
 const NOMINEE_BASE = '/api/v1/member/nominees';
+const MEDICAL_BASE = '/api/v1/member/medical-disclosure';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -177,6 +183,26 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Read the current effective nominee declaration (NON-PII summaries; auth). */
     nomineesStatus(): Promise<NomineeStatusResult> {
       return call(NOMINEE_BASE, NomineeStatusResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Submit a medical disclosure (Story 3.5). Sends the selected IMA condition codes (0..N — zero
+     * is valid), the optional free-text additional context, the rendered imaListVersion, and the
+     * MANDATORY concealment-denial ack. Records a consent + emits member.medical_disclosed.
+     * Returns the NON-PII status (latest summary + history count; auth).
+     */
+    medicalDisclose(input: MedicalDiscloseRequest): Promise<MedicalStatusResult> {
+      return call(MEDICAL_BASE, MedicalDisclosureStatusResponse, input, true);
+    },
+
+    /** Read the member's latest medical disclosure status (NON-PII summary + history count; auth). */
+    medicalStatus(): Promise<MedicalStatusResult> {
+      return call(MEDICAL_BASE, MedicalDisclosureStatusResponse, undefined, true, 'GET');
+    },
+
+    /** Read the IMA catalog + concealment-ack copy the screen renders (auth). 503 if unprovisioned. */
+    medicalImaList(): Promise<ImaListResult> {
+      return call(`${MEDICAL_BASE}/ima-list`, ImaListResponse, undefined, true, 'GET');
     },
   };
 }

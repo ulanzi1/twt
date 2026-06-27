@@ -93,6 +93,18 @@ export class BadGatewayError extends ApiError {
 }
 
 /**
+ * 503 — a required server-side resource is not provisioned/available yet (NOT a client error).
+ * Story 3.5's medical ima-list GET returns this when the per-Pariwar Niyamavali registry has no
+ * `niy.medical.ima-list` / `niy.concealment.r14` clause — the screen renders a graceful
+ * "disclosure unavailable" state. (The SUBMIT path returns 409 per AC6 — 503 is GET-only.)
+ */
+export class ServiceUnavailableError extends ApiError {
+  public constructor(message = 'Service unavailable', code = 'request.unavailable', details?: unknown) {
+    super(503, code, message, details);
+  }
+}
+
+/**
  * The structured "step-up required" response (AC-4). A step-up-gated action with
  * no fresh elevated context returns this; the client then drives the OTP
  * request/verify flow and retries. 403 with a distinct code so the client can

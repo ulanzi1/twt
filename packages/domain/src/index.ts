@@ -116,6 +116,10 @@ export * as kyc from './kyc/index.js';
 // Story 3.4 — member nominee-declaration accessors (the latest-wins replace write + the
 // status read). Tenant-scoped; encryption + split derivation are app-layer (the route).
 export * as nominee from './nominee/index.js';
+// Story 3.5 — member medical-disclosure accessors (the append-only history write + reads) +
+// the registry-backed IMA-list resolver (`resolveImaList` wraps niyamavali.resolveByClauseId).
+// Tenant-scoped; encryption + clause/consent/audit orchestration are app-layer (the route).
+export * as medical from './medical/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

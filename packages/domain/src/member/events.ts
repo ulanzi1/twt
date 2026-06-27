@@ -115,7 +115,26 @@ export const NomineesDeclaredPayloadSchema = z
     split: z.enum(['sole', '75-25']),
   })
   .strict();
-export const MedicalDisclosedPayloadSchema = z.object({ ...auditShape }).strict();
+/**
+ * Story 3.5: medical disclosure. NON-PII audit only — the events_log payload is plaintext JSONB
+ * and MUST NEVER carry selected condition codes / free-text additional context (R1; mirrors the
+ * 3.4 `nominees_declared` precedent, which carries only count + split). The medical PII lives
+ * Tier-1-encrypted in `member_medical_disclosures`; here we record only the COUNT + the resolved
+ * `ima_list_version` (the `niy.medical.ima-list` clause_version_id the member saw) + the ack
+ * marker. `acknowledged` is `z.literal(true)` — a recorded disclosure is ALWAYS acknowledged
+ * (server rejects `acknowledged !== true` before emitting, AC2/AC6). Still a non-transition
+ * marker (from_state === to_state) — the reducer treats `member.medical_disclosed` as identity;
+ * widening this payload does NOT change reducer behavior (R4).
+ */
+export const MedicalDisclosedPayloadSchema = z
+  .object({
+    ...auditShape,
+    ima_list_version: z.string().min(1),
+    condition_count: z.number().int().nonnegative(),
+    acknowledged: z.literal(true),
+    ack_locale: z.enum(['en', 'hi']),
+  })
+  .strict();
 export const LockInEnteredPayloadSchema = z.object({ ...auditShape }).strict();
 export const ValidThroughReachedPayloadSchema = z.object({ ...auditShape }).strict();
 export const WithdrawalRequestedPayloadSchema = z.object({ ...auditShape }).strict();

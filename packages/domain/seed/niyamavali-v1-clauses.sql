@@ -54,3 +54,41 @@ VALUES
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── Story 3.5 — medical-disclosure clauses (IMA list + concealment-denial ack) ────────
+-- TWO registry-backed clauses the medical-disclosure SURFACE resolves per-Pariwar:
+--   · niy.medical.ima-list   — the curated, versioned IMA condition catalog (Option A,
+--     PRD FR-5 "configured in the rule registry"). The disclosure resolves this and records
+--     the resolved clause_version_id as `ima_list_version`. The bilingual label_en/label_hi
+--     in the payload are what the signup screen renders (so condition labels are NOT i18n keys).
+--   · niy.concealment.r14    — the concealment-ack legal basis (FR-11, R14-adapted: flag for
+--     State Trustee review, NEVER auto-deny). The consent's `consent_artifact_ref` resolves to
+--     this clause_version_id; the payload's ack_text_en/ack_text_hi are the exact acknowledged
+--     wording recorded as consent_payload.checkboxTextShown.
+-- BOTH carry benefit_mechanism='pool' (the Story 1.16d gate's seed_globs include this file).
+-- CONTENT is PROVISIONAL per OQ-13 (canonical IMA source is a pre-launch Trustee-Panel open
+-- question). Story 4.4 will AMEND niy.concealment.r14 (same clause_id, new clause_version_id)
+-- with the R14 rule-engine evaluation logic — the 3.5 seed is the consent-ack v1 ONLY (do NOT
+-- pre-bake scoring/flag-criteria fields here). Idempotent (ON CONFLICT DO NOTHING).
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c0004-0000-4000-8000-000000000004',
+    'niy.medical.ima-list',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"IMA-LIST","title_en":"IMA-listed serious illnesses (disclosure catalog)","conditions":[{"code":"ckd","label_en":"Chronic kidney disease","label_hi":"दीर्घकालिक गुर्दा रोग"},{"code":"malignancy","label_en":"Cancer / malignancy","label_hi":"कैंसर / दुर्दमता"},{"code":"cardiovascular","label_en":"Cardiovascular disease","label_hi":"हृदय रोग"},{"code":"stroke","label_en":"Stroke","label_hi":"पक्षाघात (स्ट्रोक)"},{"code":"diabetes-complications","label_en":"Severe diabetes complications","label_hi":"गंभीर मधुमेह जटिलताएँ"},{"code":"chronic-liver","label_en":"Chronic liver disease","label_hi":"दीर्घकालिक यकृत रोग"},{"code":"copd","label_en":"Severe respiratory disease / COPD","label_hi":"गंभीर श्वसन रोग / सीओपीडी"},{"code":"hiv-aids","label_en":"HIV / AIDS","label_hi":"एचआईवी / एड्स"},{"code":"tuberculosis","label_en":"Tuberculosis (active)","label_hi":"क्षय रोग (सक्रिय)"},{"code":"neurological","label_en":"Serious neurological disorder","label_hi":"गंभीर तंत्रिका तंत्र विकार"}],"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0005-0000-4000-8000-000000000005',
+    'niy.concealment.r14',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R14","title_en":"Concealment denial — undeclared IMA-listed illness","ack_text_en":"I understand that if I conceal an IMA-listed condition and my death is later linked to that condition, my nominees'' claim may be denied or flagged for State Trustee review per Niyamavali clause niy.concealment.r14.","ack_text_hi":"मैं समझता/समझती हूँ कि यदि मैं किसी IMA-सूचीबद्ध बीमारी को छिपाता/छिपाती हूँ और बाद में मेरी मृत्यु उस बीमारी से जुड़ी पाई जाती है, तो Niyamavali खंड niy.concealment.r14 के अनुसार मेरे नामितों का दावा अस्वीकार किया जा सकता है या State Trustee समीक्षा के लिए चिह्नित किया जा सकता है।","never_auto_deny":true,"provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;

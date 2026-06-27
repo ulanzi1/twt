@@ -145,6 +145,11 @@ const {
 // Story 3.4 — the signup nominee-declaration DTOs (declare + status). The third signup-
 // wizard SURFACE; both routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { NomineeDeclareRequest, NomineeStatusResponse } = await import('../src/nominee/index.js');
+// Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
+// signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
+const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
+  '../src/medical/index.js'
+);
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -320,6 +325,18 @@ const nomineeComponents = {
   NomineeStatusResponse: NomineeStatusResponse.openapi('NomineeStatusResponse'),
 } as const;
 for (const [name, schema] of Object.entries(nomineeComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 3.5 — signup medical-disclosure components (submit request + status response + ima-list).
+const medicalComponents = {
+  MedicalDiscloseRequest: MedicalDiscloseRequest.openapi('MedicalDiscloseRequest'),
+  MedicalDisclosureStatusResponse: MedicalDisclosureStatusResponse.openapi(
+    'MedicalDisclosureStatusResponse',
+  ),
+  ImaListResponse: ImaListResponse.openapi('ImaListResponse'),
+} as const;
+for (const [name, schema] of Object.entries(medicalComponents)) {
   registry.register(name, schema);
 }
 
@@ -1177,6 +1194,78 @@ registry.registerPath({
   responses: {
     200: { description: 'Current nominee declaration', content: jsonOf(nomineeComponents.NomineeStatusResponse) },
     401: nomineeAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 3.5 — signup medical disclosure (member-session-gated; no step-up at signup) ──
+// submit (0..N IMA conditions + mandatory concealment-denial ack → emits member.medical_disclosed
+// + records a consent via the audit-or-throw chain; APPEND-ONLY history) + status (the latest
+// disclosure, NO PII echo-back) + ima-list (the catalog + concealment-ack copy). The Life Events
+// UPDATE + step-up gate is Story 3.9 (re-runs this submit service). NO condition codes / free-text
+// ever appear in the event/audit (claim-time concealment evaluation is Epic 4).
+const medicalTags = ['member-medical'];
+const medicalAuth = errorResponse('Authentication required');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/medical-disclosure',
+  summary: 'Signup medical disclosure — submit IMA disclosures + concealment-denial ack',
+  description:
+    'Submits 0..N IMA-listed conditions (zero is valid — most members disclose nothing) + the ' +
+    'optional free-text additional context (both Tier-1 encrypted) with a MANDATORY ' +
+    'concealment-denial acknowledgment (server rejects acknowledged !== true). Records a ' +
+    'consent (medical_disclosure_ack, referencing niy.concealment.r14) via the audit-or-throw ' +
+    'chain, APPENDS a disclosure row (append-only history — Epic 4 walks the full history), and ' +
+    'emits member.medical_disclosed (a non-PII marker; count + ima_list_version + ack only). ' +
+    'Requires a member session (no step-up at signup — Life Events adds it in 3.9).',
+  tags: medicalTags,
+  request: { body: { content: jsonOf(medicalComponents.MedicalDiscloseRequest), required: true } },
+  responses: {
+    200: {
+      description: 'Disclosure recorded',
+      content: jsonOf(medicalComponents.MedicalDisclosureStatusResponse),
+    },
+    400: errorResponse('Validation failed (ack not true, or an unknown IMA condition code)'),
+    401: medicalAuth,
+    409: errorResponse(
+      'Member not found / terminal state, or a required clause (IMA list / concealment) is unresolvable',
+    ),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/medical-disclosure',
+  summary: 'Signup medical disclosure — the latest disclosure status (NO PII echo-back)',
+  description:
+    "Returns the member's latest medical disclosure as a NON-PII summary (disclosedAt, " +
+    'imaListVersion, conditionCount, a presence flag for the free-text, ackLocale) + the total ' +
+    'history count. NEVER the raw condition codes / free-text bytes (Tier-1 echo-back ' +
+    'discipline). Requires a member session.',
+  tags: medicalTags,
+  responses: {
+    200: {
+      description: 'Latest disclosure + history count',
+      content: jsonOf(medicalComponents.MedicalDisclosureStatusResponse),
+    },
+    401: medicalAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/medical-disclosure/ima-list',
+  summary: 'Signup medical disclosure — the IMA catalog + concealment-ack copy',
+  description:
+    'Returns the resolved IMA condition catalog (version = the niy.medical.ima-list ' +
+    'clause_version_id + bilingual conditions) plus the concealment-ack copy (ackText.en / ' +
+    'ackText.hi from niy.concealment.r14) the screen renders. Returns 503 when the registry is ' +
+    'unprovisioned for the Pariwar (either clause absent). Requires a member session.',
+  tags: medicalTags,
+  responses: {
+    200: { description: 'IMA catalog + ack copy', content: jsonOf(medicalComponents.ImaListResponse) },
+    401: medicalAuth,
+    503: errorResponse('The IMA list / concealment clause is not provisioned for this Pariwar'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

@@ -61,6 +61,15 @@ export type AuthAuditEventType =
   | 'member_step_up.failure'
   | 'member_device.bound'
   | 'member_device.dropped'
+  // ── Member first-signup creation surface (Story 3.6a, FR-1) ──────────────────
+  // The signup-create endpoint that finally mints the member from the signup_continuation seam
+  // (the FIRST production member.signup_initiated). Context carries masked-mobile (last-4) ONLY —
+  // NEVER plaintext mobile, NEVER the continuation token / jti.
+  //   created — a member was created (members row + member_identities + the full session issued).
+  //   failure — a signup-create attempt was rejected (bad/expired/consumed continuation, mobile
+  //             mismatch, duplicate member, or the default Pariwar is unconfigured).
+  | 'member_signup.created'
+  | 'member_signup.failure'
   // ── Member KYC signup surface (Story 3.3b, FR-2) ─────────────────────────────
   // KYC step events. Context carries masked-Aadhaar (last-4) + transaction_id ONLY —
   // NEVER name/dob/photo/raw Aadhaar, NEVER the OAuth code or PKCE code_verifier.
@@ -82,7 +91,14 @@ export type AuthAuditEventType =
   // condition_count); NEVER the selected condition codes / free-text additional context.
   // Emitted once per submit (and re-submit via 3.9 — append-only history).
   //   disclosed — a medical disclosure + concealment-denial ack was recorded.
-  | 'member_medical.disclosed';
+  | 'member_medical.disclosed'
+  // Story 3.6a — signup T&C acceptance (the SECOND consent-registry consumer, copying 3.5's
+  // audit-or-throw chain). NON-PII context (tc_version_id only); the legal body is public text.
+  //   accepted — a tc_acceptance consent was recorded (fire-and-forget emitAuthAudit, after ok=true).
+  // The compensating `member_terms.accept_rolled_back` (5xx) line is written DIRECTLY via
+  // writeAuditEntry on a post-audit rollback (NOT via emitAuthAudit) — mirroring 3.5's
+  // `member_medical.disclosure_rolled_back`, which is likewise absent from this emit-sink union.
+  | 'member_terms.accepted';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

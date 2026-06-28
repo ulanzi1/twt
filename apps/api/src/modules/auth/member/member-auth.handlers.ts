@@ -46,7 +46,7 @@ const secs = (ms: number): number => Math.max(1, Math.floor(ms / 1000));
  * `otpAuditTag` is the HMAC-keyed otp_hash for the consume audit (P20/P28); absent
  * on the selectPariwar path (no OTP is verified there).
  */
-async function completeMemberLogin(
+export async function completeMemberLogin(
   deps: AppDeps,
   request: FastifyRequest,
   membership: { memberId: string; pariwarId: string },

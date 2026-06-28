@@ -84,5 +84,22 @@
   "medical.done": "Your disclosure is saved.",
   "medical.unavailable": "This step isn't available right now. Please try again shortly.",
   "medical.error_generic": "We couldn't save your disclosure just now. Please try again.",
-  "medical.retry": "Try again"
+  "medical.retry": "Try again",
+  "signup.creating": "Setting up your account…",
+  "signup.error_generic": "We couldn't start your signup just now. Please try again.",
+  "wizard.step_progress": "Step {current} of {total}",
+  "wizard.payment_pending_title": "Almost done",
+  "wizard.payment_pending_body": "Your details are saved. The membership payment step is coming soon.",
+  "tc.title": "Terms & Conditions",
+  "tc.intro": "Please read the Terms & Conditions below. You'll need to accept them to continue.",
+  "tc.accept_cta": "I accept the Terms & Conditions",
+  "tc.accept_hint": "Check the box to accept the terms, then continue.",
+  "tc.read_more": "Please scroll through and read the full terms before accepting.",
+  "tc.continue": "Continue",
+  "tc.unavailable": "The Terms & Conditions aren't available right now. Please try again shortly.",
+  "tc.retry": "Try again",
+  "tc.retry_hint": "Tap to try loading the Terms & Conditions again.",
+  "tc.continue_hint": "Tap to proceed to the next step after accepting the terms.",
+  "tc.error_generic": "We couldn't record your acceptance just now. Please try again.",
+  "payment.continue_hint": "Tap to continue. The payment step will be available soon."
 }

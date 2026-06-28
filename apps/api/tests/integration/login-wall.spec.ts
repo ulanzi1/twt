@@ -47,6 +47,11 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   'POST /api/v1/member/auth/otp/verify',
   'POST /api/v1/member/auth/otp/select-pariwar',
   'POST /api/v1/member/auth/token/refresh',
+  // Story 3.6a — first-signup member creation is PUBLIC (pre-session): the caller holds a
+  // signup_continuation bearer (intent-scoped, single-use), not a member session, so it cannot
+  // carry requireMemberSession. It is authenticated-equivalent via that verified-mobile token
+  // (re-derived blind index must match the token sub), exactly like /otp/verify.
+  'POST /api/v1/member/auth/signup/create',
   // Story 3.3b — the DigiLocker OAuth callback is PUBLIC by design (R3): DigiLocker
   // redirects the browser here with ?state&code and NO member JWT, so it cannot carry
   // requireMemberSession. It is authenticated-equivalent via the unguessable OAuth `state`

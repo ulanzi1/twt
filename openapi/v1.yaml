@@ -1164,7 +1164,7 @@ components:
             - type: "null"
         status:
           type: string
-          enum: &a9
+          enum: &a10
             - draft
             - in_review
             - signed_off
@@ -2065,6 +2065,80 @@ components:
         - elevated
         - elevatedUntil
       additionalProperties: false
+    MemberSignupCreateRequest:
+      type: object
+      properties:
+        mobile:
+          type: string
+          minLength: 10
+          maxLength: 20
+          pattern: ^[+0-9][0-9\s\-()]*$
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        deviceLabel:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+        - mobile
+        - deviceId
+      additionalProperties: false
+    MemberTermsResponse:
+      type: object
+      properties:
+        tcVersionId:
+          type: string
+          format: uuid
+        effectiveFrom:
+          type: string
+          format: date-time
+        html:
+          type: string
+          minLength: 1
+        locale:
+          type: string
+          enum: &a6
+            - en
+            - hi
+      required:
+        - tcVersionId
+        - effectiveFrom
+        - html
+        - locale
+      additionalProperties: false
+    MemberTermsAcceptRequest:
+      type: object
+      properties:
+        tcVersionId:
+          type: string
+          format: uuid
+        locale:
+          type: string
+          enum: *a6
+      required:
+        - tcVersionId
+        - locale
+      additionalProperties: false
+    MemberTermsAcceptResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+          enum:
+            - true
+        consentId:
+          type: string
+          format: uuid
+        tcVersionId:
+          type: string
+          format: uuid
+      required:
+        - accepted
+        - consentId
+        - tcVersionId
+      additionalProperties: false
     KycInitiateResponse:
       type: object
       properties:
@@ -2198,7 +2272,7 @@ components:
                 maxLength: 200
               relationship:
                 type: string
-                enum: &a6
+                enum: &a7
                   - spouse
                   - child
                   - parent
@@ -2241,7 +2315,7 @@ components:
                       - 2
               relationship:
                 type: string
-                enum: *a6
+                enum: *a7
               splitPct:
                 anyOf:
                   - type: number
@@ -2291,7 +2365,7 @@ components:
             - true
         ackLocale:
           type: string
-          enum: &a7
+          enum: &a8
             - en
             - hi
       required:
@@ -2320,7 +2394,7 @@ components:
               type: boolean
             ackLocale:
               type: string
-              enum: *a7
+              enum: *a8
           required:
             - disclosedAt
             - imaListVersion
@@ -2985,7 +3059,7 @@ paths:
     get:
       summary: List the Niyamavali registry (latest version per clause)
       description: Returns the chain-head (latest version) of every clause in the Pariwar, newest-first (forced-paginated). Requires niyamavali.amend at pariwar scope.
-      tags: &a8
+      tags: &a9
         - niyamavali
       parameters:
         - schema:
@@ -3026,7 +3100,7 @@ paths:
     get:
       summary: Version history of a clause (oldest → newest)
       description: Returns the most-recent `limit` version rows of a clause_id (forced-paginated, Story 1.14). Requires niyamavali.amend at pariwar scope.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3077,7 +3151,7 @@ paths:
     get:
       summary: List the amendment ledger (time-ordered)
       description: Returns the niyamavali_amendments ledger newest-first (the De4 (pariwar_id, created_at) index). Requires niyamavali.amend at pariwar scope.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3117,7 +3191,7 @@ paths:
     get:
       summary: List clause drafts (optionally by lifecycle state)
       description: Returns drafts for the Pariwar, newest-first, optionally filtered by status (e.g. in_review to find drafts awaiting sign-off). Requires niyamavali.amend.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3134,7 +3208,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a9
+            enum: *a10
           required: false
           name: status
           in: query
@@ -3162,7 +3236,7 @@ paths:
     post:
       summary: Create a clause draft (create or amend)
       description: Creates a server-persisted draft (the non-author reviewer loads the exact pending content). Body is a discriminated union on operation. Requires niyamavali.amend.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3211,7 +3285,7 @@ paths:
     get:
       summary: Load a single clause draft
       description: Returns the draft (incl. the pending payload) — the mechanism by which a NON-AUTHOR reviewer loads the exact content to review (AC1d). Requires niyamavali.amend or niyamavali.review.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3253,7 +3327,7 @@ paths:
     put:
       summary: Edit a clause draft (resets the tone-review sign-off)
       description: Patches a non-published draft. ANY edit resets the draft to `draft` and clears a prior tone-review sign-off (content-bound, AC1d). Requires niyamavali.amend.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3314,7 +3388,7 @@ paths:
     get:
       summary: Preview the draft diff (structured + rendered)
       description: Returns BOTH the structured-payload diff (computePayloadDiff vs the current published version, or {} for a create) AND a rendered display-field diff (AC1c). Requires niyamavali.amend or niyamavali.review.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3357,7 +3431,7 @@ paths:
     post:
       summary: Submit a draft for tone-review
       description: Transitions a draft → in_review, routing it to a non-author reviewer. Requires niyamavali.amend.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3406,7 +3480,7 @@ paths:
     post:
       summary: Record a non-author tone-review sign-off
       description: A reviewer (niyamavali.review) records a sign-off bound to the exact reviewed payload. Rejects a self-review (author === reviewer) with 409. Emits the Story 2.2 tone_review.signoff audit line.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3467,7 +3541,7 @@ paths:
     post:
       summary: Publish a clause draft (audit-logged, tone-review-gated)
       description: Mints the immutable clause_versions row + a single audit line carrying the diff hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-notification hook (AC3 placeholder). Gated on a recorded non-author, content-current tone-review sign-off — without one, 409 tone-review-required (AC4). Requires niyamavali.amend.
-      tags: *a8
+      tags: *a9
       parameters:
         - schema:
             type: string
@@ -3516,7 +3590,7 @@ paths:
     post:
       summary: Create a T&C version (audit-logged)
       description: "Creates a version-pinned T&C: renders body_html_rendered from bodyMarkdown at write time (sanitized), pins the supplied clause versions (each validated to exist in the Pariwar), defaults legal_review_status → pending, and writes a single audit line first (audit-or-throw). Requires tc.publish at pariwar scope."
-      tags: &a10
+      tags: &a11
         - terms-and-conditions
       parameters:
         - schema:
@@ -3572,7 +3646,7 @@ paths:
     post:
       summary: Approve a T&C version (audit-logged)
       description: "Marks a T&C approved: sets legal_reviewer_actor_id = the acting trustee, flips legal_review_status → approved, and supersedes the prior currently-effective version (set effective_until + status → superseded). Audit-or-throw. The superseded version stays queryable by tc_version_id. Requires tc.approve."
-      tags: *a10
+      tags: *a11
       parameters:
         - schema:
             type: string
@@ -3632,7 +3706,7 @@ paths:
   /api/v1/member/auth/otp/request:
     post:
       summary: Member login — request a mobile OTP (enumeration-safe, per-phone throttled)
-      tags: &a11
+      tags: &a12
         - member-auth
       requestBody:
         required: true
@@ -3662,7 +3736,7 @@ paths:
   /api/v1/member/auth/otp/verify:
     post:
       summary: Member login — verify OTP → full session / pariwar-select / signup-continuation
-      tags: *a11
+      tags: *a12
       requestBody:
         required: true
         content:
@@ -3703,7 +3777,7 @@ paths:
   /api/v1/member/auth/otp/select-pariwar:
     post:
       summary: Member login — pick a Pariwar scope (multi-membership) → full session
-      tags: *a11
+      tags: *a12
       requestBody:
         required: true
         content:
@@ -3732,7 +3806,7 @@ paths:
   /api/v1/member/auth/token/refresh:
     post:
       summary: Member session — rotate the refresh token (reuse detection)
-      tags: *a11
+      tags: *a12
       requestBody:
         required: true
         content:
@@ -3761,7 +3835,7 @@ paths:
   /api/v1/member/auth/step-up/request:
     post:
       summary: Member step-up — request an OTP for a gated action
-      tags: *a11
+      tags: *a12
       requestBody:
         required: true
         content:
@@ -3790,7 +3864,7 @@ paths:
   /api/v1/member/auth/step-up/verify:
     post:
       summary: Member step-up — verify the OTP → elevate for the action_context
-      tags: *a11
+      tags: *a12
       requestBody:
         required: true
         content:
@@ -3816,11 +3890,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/auth/signup/create:
+    post:
+      summary: First signup — create the member from the signup-continuation seam → full session
+      tags: *a12
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberSignupCreateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberFullSession"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Continuation already consumed, or a member already exists for this mobile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The v1 default signup Pariwar is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/member/kyc/initiate:
     post:
       summary: Signup KYC — begin a DigiLocker pull (returns the authorization redirect)
       description: Resolves the active KYC provider and begins a DigiLocker authorization-code flow for the authenticated member (must be pending-kyc), returning the authorizationUrl the client opens + the transactionId the callback correlates. Requires a member session.
-      tags: &a12
+      tags: &a13
         - member-kyc
       responses:
         "200":
@@ -3851,7 +3966,7 @@ paths:
     post:
       summary: DigiLocker OAuth callback (PUBLIC; state-correlated) — verify + pull the profile
       description: The OAuth redirect target DigiLocker sends the browser to with ?state&code. PUBLIC (no member JWT) — correlated by the unguessable state, which resolves the kyc_transaction (member_id + pariwar_id). Verifies the eAadhaar signature, pulls the profile, and persists it awaiting member confirmation. On provider failure returns the normalized KYC error so the client can branch to the manual fallback (AC2).
-      tags: *a12
+      tags: *a13
       requestBody:
         required: true
         content:
@@ -3893,7 +4008,7 @@ paths:
     post:
       summary: Signup KYC — confirm the verified DigiLocker profile (emits member.kyc_completed)
       description: "Confirms a verified DigiLocker profile: emits member.kyc_completed via the projector (pending-kyc → pending-fee) + an audit line. Idempotent (a re-confirm emits no second event). Requires a member session."
-      tags: *a12
+      tags: *a13
       requestBody:
         required: true
         content:
@@ -3935,7 +4050,7 @@ paths:
     post:
       summary: Signup KYC — manual fallback (emits member.kyc_manual_fallback)
       description: Stores a self-declared KYC record (name/dob/optional photo, Tier-1 encrypted; verification_strength=self_declared, trustee_verified=false) and emits member.kyc_manual_fallback (pending-kyc → pending-fee). The AC2 fallback target. Requires a member session.
-      tags: *a12
+      tags: *a13
       requestBody:
         required: true
         content:
@@ -3971,7 +4086,7 @@ paths:
     get:
       summary: Signup KYC — decrypt and return the stored KYC profile for member confirmation
       description: "Returns the decrypted stored KYC profile for the authenticated member: name, dob, masked-Aadhaar (last-4 only), verificationStrength, and photoPresent flag (never the raw photo bytes — Tier-1 discipline). Called by the mobile confirm screen after the DigiLocker callback has persisted the profile. Requires a member session."
-      tags: *a12
+      tags: *a13
       responses:
         "200":
           description: KYC profile summary
@@ -3995,7 +4110,7 @@ paths:
     get:
       summary: Signup KYC — the step entry/poll read (transaction + member KYC + manual-enabled seam)
       description: Returns the current DigiLocker transaction status (when a flow is in flight), the member's KYC standing, the lifecycle state, and the FR-58C manualFallbackEnabled seam flag (false → the UI hides the manual CTA + shows the hard-mandatory copy block). Requires a member session.
-      tags: *a12
+      tags: *a13
       responses:
         "200":
           description: KYC status
@@ -4013,7 +4128,7 @@ paths:
     post:
       summary: Signup nominees — declare 1–2 nominees (emits member.nominees_declared)
       description: Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot override the split. Replaces any prior declaration (latest-wins) and emits member.nominees_declared (a non-PII audit marker; count + split only) on the member stream. NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, Epic 6). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
-      tags: &a13
+      tags: &a14
         - member-nominee
       requestBody:
         required: true
@@ -4049,7 +4164,7 @@ paths:
     get:
       summary: Signup nominees — the current effective declaration (NO PII echo-back)
       description: "Returns the member's current nominee declaration as NON-PII summaries: rank, relationship, the server-stamped splitPct, and presence flags for the encrypted fields. NEVER the raw name/mobile/address bytes (Tier-1 echo-back discipline). Requires a member session."
-      tags: *a13
+      tags: *a14
       responses:
         "200":
           description: Current nominee declaration
@@ -4067,7 +4182,7 @@ paths:
     post:
       summary: Signup medical disclosure — submit IMA disclosures + concealment-denial ack
       description: Submits 0..N IMA-listed conditions (zero is valid — most members disclose nothing) + the optional free-text additional context (both Tier-1 encrypted) with a MANDATORY concealment-denial acknowledgment (server rejects acknowledged !== true). Records a consent (medical_disclosure_ack, referencing niy.concealment.r14) via the audit-or-throw chain, APPENDS a disclosure row (append-only history — Epic 4 walks the full history), and emits member.medical_disclosed (a non-PII marker; count + ima_list_version + ack only). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
-      tags: &a14
+      tags: &a15
         - member-medical
       requestBody:
         required: true
@@ -4103,7 +4218,7 @@ paths:
     get:
       summary: Signup medical disclosure — the latest disclosure status (NO PII echo-back)
       description: Returns the member's latest medical disclosure as a NON-PII summary (disclosedAt, imaListVersion, conditionCount, a presence flag for the free-text, ackLocale) + the total history count. NEVER the raw condition codes / free-text bytes (Tier-1 echo-back discipline). Requires a member session.
-      tags: *a14
+      tags: *a15
       responses:
         "200":
           description: Latest disclosure + history count
@@ -4121,7 +4236,7 @@ paths:
     get:
       summary: Signup medical disclosure — the IMA catalog + concealment-ack copy
       description: Returns the resolved IMA condition catalog (version = the niy.medical.ima-list clause_version_id + bilingual conditions) plus the concealment-ack copy (ackText.en / ackText.hi from niy.concealment.r14) the screen renders. Returns 503 when the registry is unprovisioned for the Pariwar (either clause absent). Requires a member session.
-      tags: *a14
+      tags: *a15
       responses:
         "200":
           description: IMA catalog + ack copy
@@ -4137,6 +4252,67 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
           description: The IMA list / concealment clause is not provisioned for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/terms:
+    get:
+      summary: Signup T&C — the current effective Terms & Conditions for the member’s Pariwar
+      description: "Returns the current effective T&C version for the member’s Pariwar: the tcVersionId, the effective-from instant, the PRECOMPUTED sanitized HTML body (rendered once at write time — the screen emits it verbatim, no markdown render at read), and the echoed locale. Returns 503 when no effective T&C is provisioned for the Pariwar (a server-side gap, not a client error — the screen renders a graceful unavailable state). Requires a member session."
+      tags: &a16
+        - member-terms
+      responses:
+        "200":
+          description: Current effective T&C
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberTermsResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: No effective T&C is provisioned for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/terms/accept:
+    post:
+      summary: Signup T&C — accept the current effective T&C (records a tc_acceptance consent)
+      description: Records a tc_acceptance consent_records entry (consent_artifact_ref = the resolved tcVersionId, granted_via_actor = member_self) via the audit-or-throw chain (write the audit line FIRST, thread its id into recordConsent, all inside one member scope-tx; a compensating audit line is emitted on rollback). The effective version is resolved SERVER-SIDE (the client tcVersionId is an advisory staleness signal); if no effective T&C is resolvable the accept fails atomically (409, no orphan consent/audit). Requires a member session.
+      tags: *a16
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberTermsAcceptRequest"
+      responses:
+        "200":
+          description: T&C accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberTermsAcceptResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Member not found / terminal, or no effective T&C is resolvable
           content:
             application/json:
               schema:

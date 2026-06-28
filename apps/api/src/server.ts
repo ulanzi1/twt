@@ -26,6 +26,7 @@ import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
+import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
@@ -107,6 +108,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // chain + emits member.medical_disclosed, a non-transition marker). Member-session-gated; NO
   // step-up at signup (Life Events update + step-up is Story 3.9).
   registerMedicalModule(app, deps);
+  // Story 3.6a — member-facing T&C read/accept signup surface (the SECOND consent-registry
+  // consumer; records a tc_acceptance consent via the audit-or-throw chain). Member-session-gated;
+  // distinct from the trustee terms-and-conditions authoring module above.
+  registerMemberTermsModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

@@ -16,6 +16,7 @@ import {
   PARIWAR_SELECT_TYP,
   SIGNUP_CONTINUATION_TYP,
 } from '../../../plugins/jwt/index.js';
+import type { SignupContinuationClaims } from '../../../plugins/jwt/index.js';
 
 const REFRESH_TOKEN_BYTES = 32; // 256 bits of entropy
 
@@ -42,6 +43,27 @@ export function signAccessToken(
     { typ: MEMBER_ACCESS_TYP, sub: claims.memberId, pariwar_id: claims.pariwarId, device_id: claims.deviceId },
     { expiresIn: ms2s(ttlMs) },
   );
+}
+
+/**
+ * Verify + narrow a first-signup CONTINUATION token (Story 3.6a — mirrors how `selectPariwar`
+ * verifies a `PariwarSelectClaims`). Returns the claims on a valid `intent === 'signup'`
+ * continuation token, or `null` on any failure (bad signature, expired, wrong `typ`/`intent`) —
+ * the caller maps `null` to a 401. The single-use `jti` is burned separately by
+ * `consumeSignupContinuation` (the JWT `exp` enforces freshness; the table enforces single-use).
+ */
+export function verifySignupContinuation(
+  app: FastifyInstance,
+  token: string,
+): (SignupContinuationClaims & { iat: number; exp: number }) | null {
+  let claims: SignupContinuationClaims & { iat: number; exp: number };
+  try {
+    claims = app.jwt.verify<SignupContinuationClaims & { iat: number; exp: number }>(token);
+  } catch {
+    return null;
+  }
+  if (claims.typ !== SIGNUP_CONTINUATION_TYP || claims.intent !== 'signup') return null;
+  return claims;
 }
 
 /** Sign a first-signup CONTINUATION token (the verified-mobile seam, R5). */

@@ -43,6 +43,10 @@ export * from './nominee/index.js';
 // Story 3.5 — signup medical-disclosure transport DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; registers real OpenAPI components + paths (see emit-openapi.ts).
 export * from './medical/index.js';
+// Story 3.6a — member-facing T&C read/accept transport DTOs (the signup wizard's `tc` step). The
+// MEMBER surface (distinct from the trustee terms-and-conditions/ authoring DTOs); registers real
+// OpenAPI components + paths (see emit-openapi.ts).
+export * from './terms/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

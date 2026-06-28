@@ -380,6 +380,37 @@ export async function insertSignupContinuation(
   );
 }
 
+/**
+ * Atomically consume a signup-continuation jti (single-use, Story 3.6a — the mirror of
+ * `consumePariwarSelect`). Burns the row only if it is unconsumed AND unexpired, so the two
+ * failure modes are distinguished (AC1(c)):
+ *   'consumed'          — THIS call burned it → proceed with member creation;
+ *   'already_consumed'  — the row exists with `consumed_at` set (replay) → 409;
+ *   'expired_or_missing'— no such jti, or it is past `expires_at` → 401 (member restarts OTP).
+ * Freshness (`expires_at`) is ALSO checked here (not only by the JWT `exp`) so a row that lingers
+ * past its window is treated as expired rather than silently reusable.
+ */
+export async function consumeSignupContinuation(
+  pool: pg.Pool,
+  jti: string,
+  now: Date,
+): Promise<'consumed' | 'already_consumed' | 'expired_or_missing'> {
+  const burn = await pool.query(
+    `UPDATE member_signup_continuations SET consumed_at = $2
+       WHERE jti = $1 AND consumed_at IS NULL AND expires_at > $2 RETURNING jti`,
+    [jti, now.toISOString()],
+  );
+  if ((burn.rowCount ?? 0) === 1) return 'consumed';
+  // The UPDATE missed — probe the row to tell "already consumed" (409) from "expired/missing" (401).
+  const probe = await pool.query<{ consumed_at: Date | null }>(
+    `SELECT consumed_at FROM member_signup_continuations WHERE jti = $1 LIMIT 1`,
+    [jti],
+  );
+  const row = probe.rows[0];
+  if (row && row.consumed_at !== null) return 'already_consumed';
+  return 'expired_or_missing';
+}
+
 // ── member_pariwar_selects — single-use scope-select registry (carve-out) ───────
 
 /** Register a single-use pariwar-select jti (PR-Patch-10). */

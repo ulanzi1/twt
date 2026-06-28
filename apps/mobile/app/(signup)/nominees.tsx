@@ -121,7 +121,7 @@ export default function NomineesScreen() {
           height={56}
           accessibilityRole="button"
           accessibilityLabel={t('nominees.done')}
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => router.replace('/(signup)/medical')}
         >
           {t('nominees.done')}
         </Button>

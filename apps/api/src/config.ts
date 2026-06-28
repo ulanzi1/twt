@@ -176,6 +176,16 @@ export interface ApiConfig {
   readonly deployTrigger: {
     readonly mode: 'fake' | 'live';
   };
+  /**
+   * The v1 default/launch Pariwar a first-time signup creates the member in (Story 3.6a, D1).
+   * The `signup_continuation` token carries only the mobile blind index (no `pariwarId`), and v1
+   * launches a SINGLE Pariwar — so the signup-create endpoint resolves the new member's tenant from
+   * this one documented source. `null` when unset: the endpoint then returns a clean
+   * `auth.signup_pariwar_unconfigured` 503 instead of minting a member with no tenant. Multi-Pariwar
+   * signup selection is deferred (the architecture already supports one mobile → members in several
+   * Pariwars via Pariwar-Passport; v1 signup creates exactly one).
+   */
+  readonly defaultSignupPariwarId: string | null;
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -331,5 +341,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     searchRateMax: intEnv(env, 'SEARCH_RATE_MAX', 60),
     writeRateMax: intEnv(env, 'WRITE_RATE_MAX', 30),
     deployTrigger: { mode: deployTriggerMode as 'fake' | 'live' },
+    // Story 3.6a (D1) — the v1 single-Pariwar launch tenant signup creates members in. Optional
+    // (absent ⇒ null ⇒ signup-create 503s cleanly); set to the launch Pariwar's id in prod.
+    defaultSignupPariwarId: env['DEFAULT_SIGNUP_PARIWAR_ID'] ?? null,
   };
 }

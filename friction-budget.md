@@ -97,6 +97,24 @@ ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, whi
 does not touch. (The Life Events medical-UPDATE + its step-up friction is Story 3.9 — that
 gating, not this signup disclosure, is where a `forced`-row review applies.)
 
+**Story 3.6a disposition (declaration affirmed, no new row):** the signup-wizard chrome
+(`apps/mobile/app/(signup)/_layout.tsx` progress indicator + ordered step flow) and the new T&C
+step (`apps/mobile/app/(signup)/tc.tsx` → `GET`/`POST /api/v1/member/terms`) are **necessary v1
+signup steps with zero gratuitous friction**. The wizard chrome *removes* friction — a progress
+indicator and resumable navigation orient the member through the steps every prior Epic-3 story
+shipped in isolation. The T&C step's single required interaction is **accepting the Terms &
+Conditions** — a **mandatory legal acceptance (the second consent-registry consumer; the basis the
+audit chain + DPDPA rely on), not deliberate friction**: a member must accept terms exactly once to
+join, which is the minimum a regulated mutual-aid platform can ask. (The member-creation endpoint +
+the OTP→wizard hand-off add **no** member-facing interaction — they make the existing OTP step
+finally reach the wizard.) Zero gratuitous friction introduced; ledger reviewed, no row warranted.
+The **page-weight baseline is unchanged**: the new screens are in the authenticated mobile app
+(`apps/mobile`, an EAS build no-op → `member-app-native` stays a no-op), and the page-weight ceilings
+the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch
+(the new screens stay **under** the ceiling; the best-ever baseline is left put — it only ever
+decreases in-PR). (The ₹110 Vyawastha Shulk UPI payment + its lock-in gate is Story 3.6b — that
+*payment* friction, not this T&C acceptance, is where a `forced`-row review applies.)
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

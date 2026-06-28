@@ -130,7 +130,14 @@ const {
   MemberStepUpRequestResponse,
   MemberStepUpVerifyRequest,
   MemberStepUpVerifyResponse,
+  // Story 3.6a — first-signup member-creation request (response reuses MemberFullSession).
+  MemberSignupCreateRequest,
 } = await import('../src/members/index.js');
+// Story 3.6a — the member-facing T&C read/accept DTOs (the signup wizard's `tc` step; the SECOND
+// consent-registry consumer). The MEMBER surface, distinct from the trustee authoring contracts.
+const { MemberTermsResponse, MemberTermsAcceptRequest, MemberTermsAcceptResponse } = await import(
+  '../src/terms/index.js'
+);
 // Story 3.3b — the signup KYC-step DTOs. THE FIRST KYC endpoints (3.3a's KycProvider seam
 // shipped components-free), so apps/api serves these routes now and they register real
 // `paths` + components. The callback is PUBLIC (state-correlated); the rest are member-session.
@@ -301,8 +308,20 @@ const memberComponents = {
   MemberStepUpRequestResponse: MemberStepUpRequestResponse.openapi('MemberStepUpRequestResponse'),
   MemberStepUpVerifyRequest: MemberStepUpVerifyRequest.openapi('MemberStepUpVerifyRequest'),
   MemberStepUpVerifyResponse: MemberStepUpVerifyResponse.openapi('MemberStepUpVerifyResponse'),
+  // Story 3.6a — first-signup member-creation request (the response is MemberFullSession, above).
+  MemberSignupCreateRequest: MemberSignupCreateRequest.openapi('MemberSignupCreateRequest'),
 } as const;
 for (const [name, schema] of Object.entries(memberComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 3.6a — member-facing T&C read/accept components (the signup wizard's `tc` step).
+const memberTermsComponents = {
+  MemberTermsResponse: MemberTermsResponse.openapi('MemberTermsResponse'),
+  MemberTermsAcceptRequest: MemberTermsAcceptRequest.openapi('MemberTermsAcceptRequest'),
+  MemberTermsAcceptResponse: MemberTermsAcceptResponse.openapi('MemberTermsAcceptResponse'),
+} as const;
+for (const [name, schema] of Object.entries(memberTermsComponents)) {
   registry.register(name, schema);
 }
 
@@ -1015,6 +1034,18 @@ const MEMBER_PATHS: {
     ok: memberComponents.MemberStepUpVerifyResponse,
     errors: { 401: 'Step-up verification failed' },
   },
+  {
+    // Story 3.6a — first-signup member creation (holds a signup_continuation bearer, not a session).
+    path: '/api/v1/member/auth/signup/create',
+    summary: 'First signup — create the member from the signup-continuation seam → full session',
+    body: memberComponents.MemberSignupCreateRequest,
+    ok: memberComponents.MemberFullSession,
+    errors: {
+      401: 'Invalid/expired continuation token, or the mobile does not match the token',
+      409: 'Continuation already consumed, or a member already exists for this mobile',
+      503: 'The v1 default signup Pariwar is not configured',
+    },
+  },
 ];
 
 for (const spec of MEMBER_PATHS) {
@@ -1266,6 +1297,53 @@ registry.registerPath({
     200: { description: 'IMA catalog + ack copy', content: jsonOf(medicalComponents.ImaListResponse) },
     401: medicalAuth,
     503: errorResponse('The IMA list / concealment clause is not provisioned for this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 3.6a — member-facing Terms & Conditions (member-session-gated; the signup `tc` step) ──
+// GET the current effective T&C (precomputed sanitized HTML; 503 when unprovisioned for the
+// Pariwar) + POST accept → records a tc_acceptance consent via the audit-or-throw chain (the SECOND
+// consent-registry consumer after Story 3.5). The legal body is per-Pariwar canonical text from the
+// terms_and_conditions_versions registry — NOT i18n.
+const memberTermsTags = ['member-terms'];
+const memberTermsAuth = errorResponse('Authentication required');
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/terms',
+  summary: 'Signup T&C — the current effective Terms & Conditions for the member’s Pariwar',
+  description:
+    'Returns the current effective T&C version for the member’s Pariwar: the tcVersionId, the ' +
+    'effective-from instant, the PRECOMPUTED sanitized HTML body (rendered once at write time — the ' +
+    'screen emits it verbatim, no markdown render at read), and the echoed locale. Returns 503 when ' +
+    'no effective T&C is provisioned for the Pariwar (a server-side gap, not a client error — the ' +
+    'screen renders a graceful unavailable state). Requires a member session.',
+  tags: memberTermsTags,
+  responses: {
+    200: { description: 'Current effective T&C', content: jsonOf(memberTermsComponents.MemberTermsResponse) },
+    401: memberTermsAuth,
+    503: errorResponse('No effective T&C is provisioned for this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/terms/accept',
+  summary: 'Signup T&C — accept the current effective T&C (records a tc_acceptance consent)',
+  description:
+    'Records a tc_acceptance consent_records entry (consent_artifact_ref = the resolved tcVersionId, ' +
+    'granted_via_actor = member_self) via the audit-or-throw chain (write the audit line FIRST, ' +
+    'thread its id into recordConsent, all inside one member scope-tx; a compensating audit line is ' +
+    'emitted on rollback). The effective version is resolved SERVER-SIDE (the client tcVersionId is ' +
+    'an advisory staleness signal); if no effective T&C is resolvable the accept fails atomically ' +
+    '(409, no orphan consent/audit). Requires a member session.',
+  tags: memberTermsTags,
+  request: { body: { content: jsonOf(memberTermsComponents.MemberTermsAcceptRequest), required: true } },
+  responses: {
+    200: { description: 'T&C accepted', content: jsonOf(memberTermsComponents.MemberTermsAcceptResponse) },
+    400: errorResponse('Request validation failed'),
+    401: memberTermsAuth,
+    409: errorResponse('Member not found / terminal, or no effective T&C is resolvable'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

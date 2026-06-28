@@ -38,8 +38,18 @@ export default function OtpScreen() {
         await signIn(res)
         router.replace('/(tabs)')
       } else if (res.sessionType === 'signup_continuation') {
-        // First signup — the wizard (Story 3.6) consumes this continuation token.
-        setNotice(t('auth.otp_sent', { mobile }))
+        // First signup (Story 3.6a) — create the member from the continuation token, store the full
+        // session it returns, and enter the wizard at the first step (T&C). No second OTP. A failure
+        // here is its own dignified message (the OTP WAS valid — only member-creation failed).
+        setNotice(t('signup.creating'))
+        try {
+          const full = await memberAuth.signupCreate(res.signupContinuationToken, { mobile, deviceId })
+          await signIn(full)
+          router.replace('/(signup)/tc')
+        } catch {
+          setNotice(null)
+          setError(t('signup.error_generic'))
+        }
       } else {
         // Multi-Pariwar — the Passport scope-selection UI defers (R2).
         setNotice(t('auth.otp_sent', { mobile }))

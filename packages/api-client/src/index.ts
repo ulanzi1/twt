@@ -19,6 +19,8 @@ import {
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
   MemberStepUpVerifyResponse,
+  MemberTermsResponse,
+  MemberTermsAcceptResponse,
   NomineeStatusResponse,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
@@ -27,6 +29,11 @@ import {
   type KycStatusResponse as KycStatusResult,
   type MedicalDiscloseRequest,
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
+  type MemberSignupCreateRequest,
+  type MemberTermsResponse as MemberTermsResult,
+  type MemberTermsAcceptRequest,
+  type MemberTermsAcceptResponse as MemberTermsAcceptResult,
+  type MemberTermsLocale,
   type NomineeDeclareRequest,
   type NomineeStatusResponse as NomineeStatusResult,
   type MemberFullSession as FullSession,
@@ -70,6 +77,7 @@ const MEMBER_BASE = '/api/v1/member/auth';
 const KYC_BASE = '/api/v1/member/kyc';
 const NOMINEE_BASE = '/api/v1/member/nominees';
 const MEDICAL_BASE = '/api/v1/member/medical-disclosure';
+const TERMS_BASE = '/api/v1/member/terms';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -81,10 +89,15 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     body: unknown,
     auth = false,
     method: 'GET' | 'POST' = 'POST',
+    bearerOverride?: string,
   ): Promise<T> {
     const headers: Record<string, string> = {};
     if (method !== 'GET') headers['content-type'] = 'application/json';
-    if (auth && opts.getAccessToken) {
+    // An explicit bearer (e.g. the one-shot signup_continuation token) wins over the
+    // stored access token — signup-create runs BEFORE a member session exists.
+    if (bearerOverride) {
+      headers['authorization'] = `Bearer ${bearerOverride}`;
+    } else if (auth && opts.getAccessToken) {
       const token = await opts.getAccessToken();
       if (token) headers['authorization'] = `Bearer ${token}`;
     }
@@ -203,6 +216,28 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Read the IMA catalog + concealment-ack copy the screen renders (auth). 503 if unprovisioned. */
     medicalImaList(): Promise<ImaListResult> {
       return call(`${MEDICAL_BASE}/ima-list`, ImaListResponse, undefined, true, 'GET');
+    },
+
+    // ── First-signup member creation (Story 3.6a) ───────────────────────────────
+    /**
+     * Create the member from a first-signup `signup_continuation` token (Story 3.6a). The token is
+     * sent as the Authorization bearer (NOT a member session — none exists yet); the body re-sends
+     * the `mobile` (the server binds it to the token's blind index) + the device. Emits
+     * member.signup_initiated → pending-kyc and returns a FULL session the wizard proceeds with.
+     */
+    signupCreate(continuationToken: string, input: MemberSignupCreateRequest): Promise<FullSession> {
+      return call(`${MEMBER_BASE}/signup/create`, MemberFullSession, input, false, 'POST', continuationToken);
+    },
+
+    // ── Member-facing Terms & Conditions (Story 3.6a) ───────────────────────────
+    /** Fetch the current effective T&C for the member's Pariwar (auth). 503 if unprovisioned. */
+    memberTerms(locale: MemberTermsLocale): Promise<MemberTermsResult> {
+      return call(`${TERMS_BASE}?locale=${locale}`, MemberTermsResponse, undefined, true, 'GET');
+    },
+
+    /** Accept the current effective T&C → records a tc_acceptance consent (auth). */
+    memberTermsAccept(input: MemberTermsAcceptRequest): Promise<MemberTermsAcceptResult> {
+      return call(`${TERMS_BASE}/accept`, MemberTermsAcceptResponse, input, true);
     },
   };
 }

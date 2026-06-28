@@ -25,6 +25,8 @@ import {
   MemberStepUpVerifyResponse,
   MemberTokenRefreshRequest,
   MemberTokenRefreshResponse,
+  MemberSignupCreateRequest,
+  MemberFullSession,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -32,6 +34,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { AppDeps } from '../../../context.js';
 import { requireMemberSession } from '../shared/member-session-guard.js';
 import { createMemberAuthHandlers } from './member-auth.handlers.js';
+import { createSignupHandlers } from './signup.handlers.js';
 import { requireMemberStepUp } from './member-step-up.gate.js';
 import { memberOtpSendThrottle, memberStepUpSendThrottle } from './otp-rate-limit.js';
 
@@ -39,6 +42,7 @@ const MEMBER_TAG = 'member-auth';
 
 export function registerMemberAuthRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createMemberAuthHandlers(deps);
+  const signup = createSignupHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
   const otpThrottle = memberOtpSendThrottle(deps);
@@ -83,6 +87,18 @@ export function registerMemberAuthRoutes(app: FastifyInstance, deps: AppDeps): v
       config: { rateLimit: MEMBER_OTP_IP_RATE },
     },
     h.tokenRefresh,
+  );
+
+  // First-signup member creation (Story 3.6a). PUBLIC (pre-session): the caller holds a
+  // signup_continuation bearer, not a member session — so it sits with the other public OTP routes
+  // (per-IP rate limited, parallel to /otp/verify) and is on the login-wall PUBLIC allowlist.
+  r.post(
+    '/api/v1/member/auth/signup/create',
+    {
+      schema: { body: MemberSignupCreateRequest, response: { 200: MemberFullSession }, tags: [MEMBER_TAG] },
+      config: { rateLimit: MEMBER_OTP_IP_RATE },
+    },
+    signup.signupCreate,
   );
 
   // ── Authenticated (member-session-gated) ──────────────────────────────────────

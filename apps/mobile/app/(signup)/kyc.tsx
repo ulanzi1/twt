@@ -212,7 +212,7 @@ export default function KycScreen() {
           height={56}
           accessibilityRole="button"
           accessibilityLabel={t('kyc.done')}
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => router.replace('/(signup)/nominees')}
         >
           {t('kyc.done')}
         </Button>

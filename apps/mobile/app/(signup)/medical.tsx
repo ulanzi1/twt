@@ -127,7 +127,7 @@ export default function MedicalScreen() {
           height={56}
           accessibilityRole="button"
           accessibilityLabel={t('medical.done')}
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => router.replace('/(signup)/payment')}
         >
           {t('medical.done')}
         </Button>

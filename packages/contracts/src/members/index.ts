@@ -5,3 +5,5 @@
 // …) add siblings. Consume via the `@twt/contracts` top barrel.
 
 export * from './auth.js';
+// Story 3.6a — first-signup member-creation request (response reuses MemberFullSession from auth).
+export * from './signup.js';

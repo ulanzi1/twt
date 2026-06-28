@@ -98,6 +98,8 @@
   "tc.continue": "Continue",
   "tc.unavailable": "The Terms & Conditions aren't available right now. Please try again shortly.",
   "tc.retry": "Try again",
+  "tc.retry_hint": "Tap to try loading the Terms & Conditions again.",
+  "tc.continue_hint": "Tap to proceed to the next step after accepting the terms.",
   "tc.error_generic": "We couldn't record your acceptance just now. Please try again.",
-  "tc.done": "Thank you — your acceptance is recorded."
+  "payment.continue_hint": "Tap to continue. The payment step will be available soon."
 }

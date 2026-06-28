@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from 'react'
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
-import { ScrollView } from 'react-native'
+import { ScrollView, type LayoutChangeEvent } from 'react-native'
 
 import { useLocale, useT } from '@twt/i18n/react'
 import { useRouter } from 'expo-router'
@@ -39,12 +39,25 @@ function htmlToPlainText(html: string): string {
     .replace(/<\s*(br|\/p|\/div|\/li|\/h[1-6])\s*\/?>/gi, '\n')
     .replace(/<li[^>]*>/gi, '• ')
     .replace(/<[^>]+>/g, '')
+    // Decode numeric character references first (covers &#8212; em-dash, &#8217; right-quote, etc.)
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    // Common named entities found in legal text
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&quot;/gi, '"')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&ldquo;/gi, '“')
+    .replace(/&rdquo;/gi, '”')
+    .replace(/&lsquo;/gi, '‘')
+    .replace(/&rsquo;/gi, '’')
+    .replace(/&hellip;/gi, '…')
+    .replace(/&copy;/gi, '©')
+    .replace(/&reg;/gi, '®')
+    .replace(/&sect;/gi, '§')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
@@ -62,6 +75,15 @@ export default function TcScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [contentHeight, setContentHeight] = useState(0)
+  const [viewportHeight, setViewportHeight] = useState(0)
+
+  // Auto-mark viewed when the entire T&C body fits on screen without scrolling.
+  useEffect(() => {
+    if (contentHeight > 0 && viewportHeight > 0 && contentHeight <= viewportHeight + 24) {
+      setViewed(true)
+    }
+  }, [contentHeight, viewportHeight])
 
   // Load the current effective T&C on mount (or retry). A 503 (unprovisioned for the Pariwar) or any
   // other failure renders the graceful "unavailable" state.
@@ -87,6 +109,10 @@ export default function TcScreen() {
     if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 24) {
       setViewed(true)
     }
+  }
+
+  function onLayout(e: LayoutChangeEvent): void {
+    setViewportHeight(e.nativeEvent.layout.height)
   }
 
   async function onAccept(): Promise<void> {
@@ -120,6 +146,7 @@ export default function TcScreen() {
           height={56}
           accessibilityRole="button"
           accessibilityLabel={t('tc.retry')}
+          accessibilityHint={t('tc.retry_hint')}
           onPress={() => setRetryCount((n) => n + 1)}
         >
           {t('tc.retry')}
@@ -141,7 +168,13 @@ export default function TcScreen() {
   const canAccept = viewed && accepted && !busy && !done
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }} onScroll={onScroll} scrollEventThrottle={64}>
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      onScroll={onScroll}
+      scrollEventThrottle={64}
+      onContentSizeChange={(_, h) => setContentHeight(h)}
+      onLayout={onLayout}
+    >
       <YStack gap="$4" px="$6" py="$6" bg="$background">
         <H2>{t('tc.title')}</H2>
         <Paragraph color="$colorPress" accessibilityRole="text">
@@ -189,6 +222,7 @@ export default function TcScreen() {
           disabled={!canAccept}
           accessibilityRole="button"
           accessibilityLabel={t('tc.continue')}
+          accessibilityHint={t('tc.continue_hint')}
           accessibilityState={{ disabled: !canAccept }}
           onPress={onAccept}
         >

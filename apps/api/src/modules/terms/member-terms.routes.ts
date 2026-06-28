@@ -8,10 +8,12 @@
 import {
   MemberTermsAcceptRequest,
   MemberTermsAcceptResponse,
+  MemberTermsLocale,
   MemberTermsResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 
 import type { AppDeps } from '../../context.js';
 import { requireMemberSession } from '../auth/shared/member-session-guard.js';
@@ -27,7 +29,11 @@ export function registerMemberTermsRoutes(app: FastifyInstance, deps: AppDeps): 
   r.get(
     '/api/v1/member/terms',
     {
-      schema: { response: { 200: MemberTermsResponse }, tags: [MEMBER_TERMS_TAG] },
+      schema: {
+        querystring: z.object({ locale: MemberTermsLocale.optional() }).strict(),
+        response: { 200: MemberTermsResponse },
+        tags: [MEMBER_TERMS_TAG],
+      },
       preHandler: [memberSession],
     },
     h.getEffective,

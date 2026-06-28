@@ -45,14 +45,19 @@ export async function insertMemberIdentity(db: Db, input: InsertMemberIdentityIn
 const UNIQUE_VIOLATION = '23505';
 
 /**
- * True iff `err` is the `member_identities` per-Pariwar-mobile unique violation — the signpost the
- * signup-create handler uses to convert a duplicate-signup race into a clean 409.
+ * True iff `err` is the `member_identities_pariwar_mobile_uq` unique violation — the signpost the
+ * signup-create handler uses to convert a duplicate-signup race into a clean 409. Checks the
+ * constraint name so any other unique violation on the table (e.g., a future index) is not
+ * silently swallowed.
  */
 export function isMemberIdentityDuplicate(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    (err as { code?: unknown }).code === UNIQUE_VIOLATION
-  );
+  if (
+    typeof err !== 'object' ||
+    err === null ||
+    !('code' in err) ||
+    (err as { code?: unknown }).code !== UNIQUE_VIOLATION
+  ) {
+    return false;
+  }
+  return (err as { constraint?: unknown }).constraint === 'member_identities_pariwar_mobile_uq';
 }

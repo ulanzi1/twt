@@ -46,7 +46,14 @@ export async function getEffectiveTc(
   const rows = await db
     .select()
     .from(termsAndConditionsVersions)
-    .where(and(eq(termsAndConditionsVersions.pariwarId, pariwarId), lowerBound, upperBound))
+    .where(
+      and(
+        eq(termsAndConditionsVersions.pariwarId, pariwarId),
+        eq(termsAndConditionsVersions.legalReviewStatus, 'approved'),
+        lowerBound,
+        upperBound,
+      ),
+    )
     .orderBy(desc(termsAndConditionsVersions.effectiveFrom), desc(termsAndConditionsVersions.version))
     .limit(1);
   return rows[0] ?? null;

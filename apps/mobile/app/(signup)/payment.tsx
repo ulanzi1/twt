@@ -28,7 +28,8 @@ export default function PaymentPlaceholderScreen() {
         theme="accent"
         height={56}
         accessibilityRole="button"
-        accessibilityLabel={t('wizard.payment_pending_title')}
+        accessibilityLabel={t('tc.continue')}
+        accessibilityHint={t('payment.continue_hint')}
         onPress={() => router.replace('/(tabs)')}
       >
         {t('tc.continue')}

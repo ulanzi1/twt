@@ -1,6 +1,6 @@
 # Story 3.6a: Member Creation from Signup-Continuation + Wizard Assembly + T&C Acceptance `[SURFACE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -307,3 +307,25 @@ claude-opus-4-8 (BMAD dev-story workflow, 2026-06-28).
 ### Change Log
 
 - 2026-06-28 — Implemented Story 3.6a (dev-story): member creation from the `signup_continuation` seam (first production `projectMemberState`), the member-facing T&C read/accept (2nd consent-registry consumer, audit-or-throw), and the signup-wizard assembly + entry hand-off + `tc.tsx`/`payment.tsx`. Migration-free. 14 new integration tests; `ci:local` green (integration-tests canonical signal; `test (unit)` parallel-:5433 flake confirmed via isolated run). Status ready-for-dev → in-progress → review.
+
+### Review Findings
+
+_Code review via bmad-code-review (Blind Hunter + Edge Case Hunter + Acceptance Auditor), 2026-06-28. 0 decision-needed · 11 patch · 3 defer · 2 dismissed._
+
+**`patch` findings:**
+- [x] [Review][Patch] **P1 (HIGH)** `mobileBlindIndex` called with raw `body.mobile` not normalized `canonical` — blind index stored in `member_identities` mismatches login-time lookup; member cannot be found after signup; mobile-mismatch 401 fires for any non-normalized input [`apps/api/src/modules/auth/member/signup.handlers.ts`]
+- [x] [Review][Patch] **P2 (HIGH)** `tc.tsx` scroll gate permanently locked when T&C content fits on screen — `onScroll` never fires if `contentSize.height ≤ layoutMeasurement.height`; `viewed` stays `false`; accept CTA permanently disabled [`apps/mobile/app/(signup)/tc.tsx`]
+- [x] [Review][Patch] **P3 (MEDIUM)** `getEffectiveTc` returns T&C versions with any `legal_review_status` including `pending` — member could be shown and consent to an unapproved draft T&C [`packages/domain/src/terms-and-conditions/read.ts`]
+- [x] [Review][Patch] **P4 (MEDIUM)** Missing `accessibilityHint` on `tc.tsx` retry button in `loadFailed` state — P0-2c gate requires every control to carry both `accessibilityLabel` and `accessibilityHint`; no `tc.retry_hint` i18n key defined [`apps/mobile/app/(signup)/tc.tsx`]
+- [x] [Review][Patch] **P5 (MEDIUM)** Missing `accessibilityHint` on `tc.tsx` main continue/submit button — same P0-2c gate; accept checkbox above it correctly carries a hint but the CTA does not; no `tc.continue_hint` i18n key defined [`apps/mobile/app/(signup)/tc.tsx`]
+- [x] [Review][Patch] **P6 (MEDIUM)** Missing `accessibilityHint` on `payment.tsx` placeholder continue button — P0-2c gate applies to placeholder screens equally [`apps/mobile/app/(signup)/payment.tsx`]
+- [x] [Review][Patch] **P7 (MEDIUM)** `payment.tsx` `accessibilityLabel` announces screen heading (`wizard.payment_pending_title` = "Almost done") not the button action; visible text is `tc.continue` ("Continue") — WCAG 2.5.3 Label-in-Name violation; screen reader user hears one thing, sighted user reads another [`apps/mobile/app/(signup)/payment.tsx`]
+- [x] [Review][Patch] **P8 (MEDIUM)** `htmlToPlainText` decodes only 6 entities; legal text containing `&mdash;`, `&ndash;`, `&ldquo;`/`&rdquo;`, `&rsquo;`, `&copy;`, `&hellip;`, numeric refs (`&#8212;` etc.) renders as raw escape strings — garbled consent text is a data-integrity risk for `tc_acceptance` consent records [`apps/mobile/app/(signup)/tc.tsx`]
+- [x] [Review][Patch] **P9 (LOW)** `isMemberIdentityDuplicate` matches any `23505` unique-violation, not specifically `member_identities_pariwar_mobile_uq` — any other unique constraint on the table (e.g., PK UUID collision) silently maps to `auth.member_already_exists` 409 instead of an unexpected 500 [`packages/domain/src/member/identity-write.ts`]
+- [x] [Review][Patch] **P10 (LOW)** `GET /member/terms` `?locale=` query parameter not declared in route schema — bypasses `fastify-type-provider-zod` validation; absent from generated OpenAPI spec [`apps/api/src/modules/terms/member-terms.routes.ts`]
+- [x] [Review][Patch] **P11 (LOW)** `tc.done` i18n key pair defined in both locales but unreachable — `router.replace` fires immediately after `setDone(true)`; the key has no consumer [`packages/i18n/locales/en/common.json`, `hi/common.json`]
+
+**`defer` findings:**
+- [x] [Review][Defer] `emitAuthAudit` synchronous throw after `ok = true` emits false compensating `member_terms.accept_rolled_back` while scope-tx commits — pre-existing pattern copied verbatim from `medical.handlers.ts` P1 template [`apps/api/src/modules/terms/member-terms.handlers.ts`] — deferred, pre-existing
+- [x] [Review][Defer] `consumeSignupContinuation` TOCTOU window: probe SELECT runs outside the UPDATE's lock; expired+consumed row yields 409 instead of 401 — write-once transition makes this benign; the error-code ambiguity only arises after the 30-min window when both 409 and 401 are equivalent to the caller [`apps/api/src/modules/auth/member/member-auth.repo.ts`] — deferred, pre-existing
+- [x] [Review][Defer] After `completeMemberLogin` fails post-commit, member exists in `pending-kyc` with no session; re-attempt returns 409 `auth.member_already_exists`; `signup.error_generic` gives no recovery path — inherent 2-phase design limitation; recovery is the returning-member OTP path but this is not communicated in the error message [`apps/api/src/modules/auth/member/signup.handlers.ts`] — deferred, pre-existing

@@ -64,7 +64,7 @@ export function createSignupHandlers(deps: AppDeps) {
       // 2. Re-derive the blind index from the supplied plaintext mobile and bind it to the token
       //    `sub` (R2) — a mismatch (or an unnormalizable mobile) is a 401.
       const canonical = normalizeMobile(body.mobile);
-      const blindIndex = canonical ? await mobileBlindIndex(body.mobile, deps.encryption) : null;
+      const blindIndex = canonical ? await mobileBlindIndex(canonical, deps.encryption) : null;
       if (blindIndex === null || blindIndex !== claims.sub) {
         emitAuthAudit(deps, request, 'member_signup.failure', {
           context: { reason: 'mobile_mismatch', ...(canonical ? { masked_mobile: maskMobile(canonical) } : {}) },

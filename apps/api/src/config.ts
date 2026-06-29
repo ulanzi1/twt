@@ -186,6 +186,18 @@ export interface ApiConfig {
    * Pariwars via Pariwar-Passport; v1 signup creates exactly one).
    */
   readonly defaultSignupPariwarId: string | null;
+  /**
+   * The trust's UPI VPA the signup ₹110 Vyawastha Shulk is paid to (Story 3.6b, AC1). SERVER-
+   * authoritative — baked into the UPI Intent URL server-side so the client never names the payee.
+   * `null` when unset: the intent endpoint returns a clean `vyawastha_shulk.unconfigured` 503 instead
+   * of building a URL with no payee. Set to the launch trust's VPA in prod.
+   */
+  readonly vyawasthaShulkVpa: string | null;
+  /**
+   * The mandatory signup-fee amount in whole INR (Story 3.6b, FR-1; v1 = 110). SERVER-authoritative —
+   * baked into the UPI Intent `am=` and recorded on the receipt; the client never names the amount.
+   */
+  readonly vyawasthaShulkAmountInr: number;
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -344,5 +356,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     // Story 3.6a (D1) — the v1 single-Pariwar launch tenant signup creates members in. Optional
     // (absent ⇒ null ⇒ signup-create 503s cleanly); set to the launch Pariwar's id in prod.
     defaultSignupPariwarId: env['DEFAULT_SIGNUP_PARIWAR_ID'] ?? null,
+    // Story 3.6b (AC1) — the trust VPA the signup fee is paid to (server-authoritative; absent ⇒ null
+    // ⇒ the intent endpoint 503s cleanly) + the mandatory ₹110 amount (FR-1; env-overridable default).
+    vyawasthaShulkVpa: env['VYAWASTHA_SHULK_VPA'] ?? null,
+    vyawasthaShulkAmountInr: intEnv(env, 'VYAWASTHA_SHULK_AMOUNT_INR', 110),
   };
 }

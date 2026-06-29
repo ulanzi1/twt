@@ -157,6 +157,14 @@ const { NomineeDeclareRequest, NomineeStatusResponse } = await import('../src/no
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
   '../src/medical/index.js'
 );
+// Story 3.6b — the signup ₹110 Vyawastha Shulk DTOs (intent + confirm + status). The FINAL
+// signup-wizard SURFACE (closes the loop); all routes are member-session-gated.
+const {
+  VyawasthaShulkIntentResponse,
+  VyawasthaShulkConfirmRequest,
+  VyawasthaShulkConfirmResponse,
+  VyawasthaShulkStatusResponse,
+} = await import('../src/payments/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
 // resolution. Using registry.register() (not registerComponent) is the correct
@@ -356,6 +364,20 @@ const medicalComponents = {
   ImaListResponse: ImaListResponse.openapi('ImaListResponse'),
 } as const;
 for (const [name, schema] of Object.entries(medicalComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 3.6b — signup ₹110 Vyawastha Shulk components (intent response + confirm request/response +
+// status response). The final signup-wizard surface.
+const vyawasthaShulkComponents = {
+  VyawasthaShulkIntentResponse: VyawasthaShulkIntentResponse.openapi('VyawasthaShulkIntentResponse'),
+  VyawasthaShulkConfirmRequest: VyawasthaShulkConfirmRequest.openapi('VyawasthaShulkConfirmRequest'),
+  VyawasthaShulkConfirmResponse: VyawasthaShulkConfirmResponse.openapi(
+    'VyawasthaShulkConfirmResponse',
+  ),
+  VyawasthaShulkStatusResponse: VyawasthaShulkStatusResponse.openapi('VyawasthaShulkStatusResponse'),
+} as const;
+for (const [name, schema] of Object.entries(vyawasthaShulkComponents)) {
   registry.register(name, schema);
 }
 
@@ -1344,6 +1366,70 @@ registry.registerPath({
     400: errorResponse('Request validation failed'),
     401: memberTermsAuth,
     409: errorResponse('Member not found / terminal, or no effective T&C is resolvable'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 3.6b — signup ₹110 Vyawastha Shulk (member-session-gated; the wizard's final step) ──
+// intent (build the server-authoritative upi://pay URL + the tr idempotency nonce) + confirm
+// (self-attest the UTR → ALWAYS persist the AR-67 receipt; emit member.vyawastha_shulk_paid +
+// member.lock_in_entered ONLY when all five conditions hold — the load-bearing gate, AC2) + status.
+const vyawasthaShulkTags = ['member-vyawastha-shulk'];
+const vyawasthaShulkAuth = errorResponse('Authentication required');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/vyawastha-shulk/intent',
+  summary: 'Signup fee — build the ₹110 Vyawastha Shulk UPI Intent URL',
+  description:
+    'Returns a SERVER-constructed UPI Intent URL (upi://pay?pa={trust VPA}&am={110}&cu=INR&' +
+    'tn=signup-shulk-{memberId}&tr=signup-{memberId}-{nonce}) — the VPA + amount are resolved ' +
+    'server-side from config (never client-supplied). Echoes the `tr` idempotency nonce for the ' +
+    'confirm step. 503 when the trust VPA is unconfigured (a server gap). Requires a member session.',
+  tags: vyawasthaShulkTags,
+  responses: {
+    200: { description: 'UPI Intent URL + tr', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkIntentResponse) },
+    401: vyawasthaShulkAuth,
+    503: errorResponse('The trust VPA is not configured (vyawastha_shulk.unconfigured)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/vyawastha-shulk/confirm',
+  summary: 'Signup fee — self-attest the UTR → persist the receipt + the GATED lock-in transition',
+  description:
+    'Persists a vyawastha_shulk_receipts row ALWAYS (AR-67 indefinite retention; idempotent on the ' +
+    '`tr` — a re-confirm returns the existing receipt without a second insert or re-emit). Captures ' +
+    'the optional 6-digit Reference Code (D2 port seam — stored, NOT validated). Then evaluates the ' +
+    '5-condition lock-in gate (KYC + nominees + medical + T&C + the receipt); emits ' +
+    'member.vyawastha_shulk_paid (pending-fee → lock-in) + member.lock_in_entered (with the FR-8 ' +
+    'lock_in_days_at_join snapshot) ONLY when all five hold — otherwise the receipt persists, no ' +
+    'event fires, and `outstanding` names the incomplete step(s). 503 lock_in.policy_unavailable when ' +
+    'the gate passes but niy.lock-in.policy is unprovisioned (receipt kept; idempotent re-confirm ' +
+    'completes once provisioned). Requires a member session.',
+  tags: vyawasthaShulkTags,
+  request: { body: { content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkConfirmRequest), required: true } },
+  responses: {
+    200: { description: 'Receipt persisted (lock-in entered, or outstanding steps listed)', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkConfirmResponse) },
+    400: errorResponse('Validation failed (bad UTR format or Reference Code)'),
+    401: vyawasthaShulkAuth,
+    409: errorResponse('Member not found / terminal state'),
+    503: errorResponse('The lock-in policy is not provisioned for this Pariwar (lock_in.policy_unavailable)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/vyawastha-shulk/status',
+  summary: 'Signup fee — the member’s paid / lock-in status',
+  description:
+    'Returns whether the member has paid (a receipt exists), the latest receipt’s validThrough, ' +
+    'whether lock-in has been entered, and any still-outstanding pre-payment steps. Requires a ' +
+    'member session.',
+  tags: vyawasthaShulkTags,
+  responses: {
+    200: { description: 'Paid / lock-in status', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkStatusResponse) },
+    401: vyawasthaShulkAuth,
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

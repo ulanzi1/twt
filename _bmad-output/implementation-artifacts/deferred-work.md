@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 3-6b-vyawastha-shulk-payment-upi-reference-code-seam-lock-in-gate (2026-06-29)
+
+- **D1 — `pgViolation` `.cause` fallback fragility in `receipt-write.ts`.** `isReceiptTrDuplicate` falls back to `err.cause` only when `e.code === undefined`. If a future Drizzle version sets its own `code` property on the wrapper error, the inner pg `23505` is never seen, causing a duplicate `tr` to propagate as an uncaught 500. Deliberately mirrors 3.6a's `isMemberIdentityDuplicate`; architectural, not 3.6b-introduced. **Re-trigger:** if Drizzle updates its error wrapper shape or if a duplicate-`tr` 500 is observed in integration testing.
+
+- **D2 — Headline test missing `tr=` assertion in the UPI URL.** `vyawastha-shulk.spec.ts` asserts `pa=`, `am=`, and `tn=` in `upiUrl` but not `tr=`. The implementation is correct; no regression guard exists if the URL construction drops the `&tr=...` segment in a future refactor. **Re-trigger:** add the assertion alongside any refactor of the intent handler's URL builder.
+
+---
+
 ## Deferred from: code review of 3-3a-digilocker-provider-interface-abstraction (2026-06-26)
 
 - **XPath injection risk in `mapper.ts` `attr()` / `text()`.** `localName` is interpolated directly into the XPath expression (`//*[local-name(.)='${localName}']`) without escaping. Currently called only with string literals (`'Poi'`, `'Pht'`, `'UidData'`) so there is no active vulnerability. **Re-trigger:** if future eAadhaar format handling ever derives element names from input data, or if `attr()`/`text()` are reused with non-literal arguments.

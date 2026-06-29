@@ -29,7 +29,7 @@
 // Naming discipline per architecture line 3663-3677: DB columns snake_case, TS
 // fields camelCase. Table snake_case-plural. Header style mirrors consent_records.ts.
 
-import { bigint, index, pgEnum, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, index, pgEnum, pgTable, smallint, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import type { MemberId, PariwarId } from '../ids/index.js';
 
@@ -96,6 +96,15 @@ export const members = pgTable(
     // precedent (without it Drizzle returns a JS BigInt that breaks numeric
     // comparison with the `number` that appendEvent / the projector produce).
     stateEventVersion: bigint('state_event_version', { mode: 'number' }).notNull(),
+
+    // Story 3.6b (AC3 / R3) — the FR-8 lock-in-policy snapshot at join time, in days. A DERIVED
+    // query optimization (Story 4.1's snapshot-resolution read-cache), NOT the source of truth: the
+    // authoritative record is the `member.lock_in_entered` event payload's `lock_in_days_at_join`,
+    // and this column is written from the SAME resolved value in the SAME scope-tx that emits the
+    // event (so they cannot diverge at write time). Nullable — populated ONLY at lock-in entry;
+    // pre-lock-in members carry NULL. Written by a plain in-scope-tx UPDATE: the 0018 state-writer
+    // trigger fires only on `state` changes, so this non-`state` write needs no projector guard.
+    lockInDaysAtJoin: smallint('lock_in_days_at_join').$type<number>(),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()

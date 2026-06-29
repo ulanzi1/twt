@@ -47,6 +47,9 @@ export * from './medical/index.js';
 // MEMBER surface (distinct from the trustee terms-and-conditions/ authoring DTOs); registers real
 // OpenAPI components + paths (see emit-openapi.ts).
 export * from './terms/index.js';
+// Story 3.6b — signup ₹110 Vyawastha Shulk transport DTOs (intent + confirm + status). The FINAL
+// signup-wizard SURFACE (closes the loop); registers real OpenAPI components + paths (see emit-openapi.ts).
+export * from './payments/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

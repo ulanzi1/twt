@@ -120,6 +120,10 @@ export * as nominee from './nominee/index.js';
 // the registry-backed IMA-list resolver (`resolveImaList` wraps niyamavali.resolveByClauseId).
 // Tenant-scoped; encryption + clause/consent/audit orchestration are app-layer (the route).
 export * as medical from './medical/index.js';
+// Story 3.6b — signup ₹110 Vyawastha Shulk receipt accessors (the always-persisted AR-67 receipt
+// write + status/idempotency reads) + the Reference Code port-seam capture (D2). Tenant-scoped;
+// the lock-in gate + projector emission + audit orchestration are app-layer (the route).
+export * as payment from './payment/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

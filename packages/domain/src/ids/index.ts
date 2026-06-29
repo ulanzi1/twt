@@ -240,3 +240,20 @@ export const digilockerCertId = uuidBrand('DigiLockerCertId');
 export type MedicalDisclosureId = Brand<'MedicalDisclosureId'>;
 /** Smart constructor: validates UUID shape, returns a branded `MedicalDisclosureId`. */
 export const medicalDisclosureId = uuidBrand('MedicalDisclosureId');
+
+// ── Signup-fee receipt + attribution ids (Story 3.6b, Task 2) ────────────────
+// Two NEW branded ids per the §Naming "branding mandatory on a new ID's first PR"
+// discipline (L3700-3708): `VyawasthaShulkReceiptId` (the per-row address of an
+// indefinitely-retained ₹110 signup-fee receipt, AR-67) and `MemberAttributionId`
+// (the per-row address of the Reference Code port-seam capture — D2, no field-worker
+// FK). Both are UUID row addresses, so both reuse the shared `uuidBrand` validator.
+
+/** Per-row address of a Vyawastha Shulk receipt (`vyawastha_shulk_receipts.receipt_id`). */
+export type VyawasthaShulkReceiptId = Brand<'VyawasthaShulkReceiptId'>;
+/** Smart constructor: validates UUID shape, returns a branded `VyawasthaShulkReceiptId`. */
+export const vyawasthaShulkReceiptId = uuidBrand('VyawasthaShulkReceiptId');
+
+/** Per-row address of a member attribution capture (`member_attribution.attribution_id`). */
+export type MemberAttributionId = Brand<'MemberAttributionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `MemberAttributionId`. */
+export const memberAttributionId = uuidBrand('MemberAttributionId');

@@ -135,7 +135,23 @@ export const MedicalDisclosedPayloadSchema = z
     ack_locale: z.enum(['en', 'hi']),
   })
   .strict();
-export const LockInEnteredPayloadSchema = z.object({ ...auditShape }).strict();
+/**
+ * Story 3.6b: the lock-in clock-start MARKER (`from_state === to_state === 'lock-in'`; the reducer
+ * treats `member.lock_in_entered` as identity — `default → identity` in state.ts). The payload is
+ * WIDENED (AC3 / R3) to carry the FR-8 lock-in snapshot for audit-reproducibility — exactly as 3.4
+ * widened `NomineesDeclaredPayloadSchema` and 3.5 widened `MedicalDisclosedPayloadSchema`. This is the
+ * AUTHORITATIVE historical record of the snapshot (replay-derivable, immutable); the
+ * `members.lock_in_days_at_join` column is a derived read-cache of these two fields. Widening does NOT
+ * change reducer behaviour (the marker is already identity). `lock_in_days_at_join` is the resolved
+ * `niy.lock-in.policy` `lock_in_days`; `lock_in_policy_version` is that clause's `clause_version_id`.
+ */
+export const LockInEnteredPayloadSchema = z
+  .object({
+    ...auditShape,
+    lock_in_days_at_join: z.number().int().positive(),
+    lock_in_policy_version: z.string().min(1),
+  })
+  .strict();
 export const ValidThroughReachedPayloadSchema = z.object({ ...auditShape }).strict();
 export const WithdrawalRequestedPayloadSchema = z.object({ ...auditShape }).strict();
 

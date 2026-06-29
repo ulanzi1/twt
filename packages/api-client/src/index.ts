@@ -22,6 +22,9 @@ import {
   MemberTermsResponse,
   MemberTermsAcceptResponse,
   NomineeStatusResponse,
+  VyawasthaShulkConfirmResponse,
+  VyawasthaShulkIntentResponse,
+  VyawasthaShulkStatusResponse,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
@@ -36,6 +39,10 @@ import {
   type MemberTermsLocale,
   type NomineeDeclareRequest,
   type NomineeStatusResponse as NomineeStatusResult,
+  type VyawasthaShulkConfirmRequest,
+  type VyawasthaShulkConfirmResponse as VyawasthaShulkConfirmResult,
+  type VyawasthaShulkIntentResponse as VyawasthaShulkIntentResult,
+  type VyawasthaShulkStatusResponse as VyawasthaShulkStatusResult,
   type MemberFullSession as FullSession,
   type MemberOtpRequestResponse as OtpRequestResult,
   type MemberOtpVerifyRequest,
@@ -78,6 +85,7 @@ const KYC_BASE = '/api/v1/member/kyc';
 const NOMINEE_BASE = '/api/v1/member/nominees';
 const MEDICAL_BASE = '/api/v1/member/medical-disclosure';
 const TERMS_BASE = '/api/v1/member/terms';
+const VYAWASTHA_SHULK_BASE = '/api/v1/member/vyawastha-shulk';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -238,6 +246,31 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Accept the current effective T&C → records a tc_acceptance consent (auth). */
     memberTermsAccept(input: MemberTermsAcceptRequest): Promise<MemberTermsAcceptResult> {
       return call(`${TERMS_BASE}/accept`, MemberTermsAcceptResponse, input, true);
+    },
+
+    // ── Signup ₹110 Vyawastha Shulk (Story 3.6b) ────────────────────────────────
+    /**
+     * Build the server-constructed UPI Intent for the ₹110 signup fee (Story 3.6b). The VPA + amount
+     * are resolved server-side (never client-named); returns the upi:// URL to hand off to the OS UPI
+     * app + the `tr` idempotency nonce for the confirm step (auth). 503 if the trust VPA is unconfigured.
+     */
+    vyawasthaShulkIntent(): Promise<VyawasthaShulkIntentResult> {
+      return call(`${VYAWASTHA_SHULK_BASE}/intent`, VyawasthaShulkIntentResponse, undefined, true);
+    },
+
+    /**
+     * Self-attest the UTR after returning from the UPI app (Story 3.6b). ALWAYS persists the AR-67
+     * receipt; emits member.vyawastha_shulk_paid + member.lock_in_entered ONLY when the 5-condition
+     * lock-in gate passes (else `outstanding` names the incomplete steps). Optionally captures the
+     * 6-digit Reference Code (D2 port seam). Idempotent on `tr` (auth).
+     */
+    vyawasthaShulkConfirm(input: VyawasthaShulkConfirmRequest): Promise<VyawasthaShulkConfirmResult> {
+      return call(`${VYAWASTHA_SHULK_BASE}/confirm`, VyawasthaShulkConfirmResponse, input, true);
+    },
+
+    /** Read the member's signup-fee paid / lock-in status (auth). */
+    vyawasthaShulkStatus(): Promise<VyawasthaShulkStatusResult> {
+      return call(`${VYAWASTHA_SHULK_BASE}/status`, VyawasthaShulkStatusResponse, undefined, true, 'GET');
     },
   };
 }

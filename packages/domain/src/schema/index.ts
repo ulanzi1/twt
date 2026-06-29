@@ -72,6 +72,11 @@ export * from './member_nominees.js';
 // envelope). Per-disclosure PK (disclosure_id) — APPEND-ONLY history (NOT latest-wins; Epic 4
 // walks the full history); FK cascade to members for RTBF (Story 3.12) + FK to consent_records.
 export * from './member_medical_disclosures.js';
+// Story 3.6b — signup ₹110 Vyawastha Shulk receipt (tenant-isolated; append-only, AR-67 indefinite
+// retention; `tr` UNIQUE idempotency key) + the Reference Code port-seam capture (tenant-isolated, no
+// field-worker FK — D2). FK cascade to members for RTBF (Story 3.12).
+export * from './vyawastha_shulk_receipts.js';
+export * from './member_attribution.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

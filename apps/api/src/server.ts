@@ -28,6 +28,7 @@ import { registerKycModule } from './modules/kyc/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
+import { registerVyawasthaShulkModule } from './modules/vyawastha-shulk/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerRulesModule } from './modules/rules/index.js';
@@ -112,6 +113,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // consumer; records a tc_acceptance consent via the audit-or-throw chain). Member-session-gated;
   // distinct from the trustee terms-and-conditions authoring module above.
   registerMemberTermsModule(app, deps);
+  // Story 3.6b — member signup ₹110 Vyawastha Shulk surface (UPI Intent + UTR self-attest →
+  // AR-67 receipt always; the FIRST production member.vyawastha_shulk_paid + member.lock_in_entered
+  // caller, emitted ONLY when the 5-condition lock-in gate passes). Member-session-gated.
+  registerVyawasthaShulkModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

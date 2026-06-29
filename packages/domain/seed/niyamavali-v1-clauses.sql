@@ -92,3 +92,26 @@ VALUES
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── Story 3.6b — lock-in policy clause (the FR-8 lock-in-days the signup lock-in step snapshots) ──
+-- The registry-backed lock-in policy the Vyawastha Shulk confirm resolves per-Pariwar (lock-in.ts
+-- resolveLockInPolicy → resolveByClauseId). v1 payload {"lock_in_days": 30} (FR-8 ramp v1 = 30-day;
+-- trustee-adjustable post-launch via the Story 2.4 amend workflow — new graduations do NOT re-lock
+-- existing members, who each carry the join-time snapshot). The resolved clause_version_id is recorded
+-- on the member.lock_in_entered event as lock_in_policy_version (audit-reproducibility). PROVISIONING
+-- PRECONDITION (R6): every production Pariwar MUST carry an effective niy.lock-in.policy clause or a
+-- paid member 503s (lock_in.policy_unavailable) at the lock-in step (receipt retained; idempotent
+-- re-confirm completes once provisioned) — joins the 3.6a R3 T&C + the pariwar_passport preconditions.
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c0006-0000-4000-8000-000000000006',
+    'niy.lock-in.policy',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"LOCK-IN","title_en":"Membership lock-in policy (join-time clock)","lock_in_days":30,"provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;

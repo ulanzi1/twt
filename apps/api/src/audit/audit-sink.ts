@@ -98,7 +98,23 @@ export type AuthAuditEventType =
   // The compensating `member_terms.accept_rolled_back` (5xx) line is written DIRECTLY via
   // writeAuditEntry on a post-audit rollback (NOT via emitAuthAudit) — mirroring 3.5's
   // `member_medical.disclosure_rolled_back`, which is likewise absent from this emit-sink union.
-  | 'member_terms.accepted';
+  | 'member_terms.accepted'
+  // ── Member signup ₹110 Vyawastha Shulk surface (Story 3.6b, FR-1 / AR-67) ─────
+  // The signup-fee payment + the 5-condition lock-in entry gate. Context is NON-PII: masked UTR
+  // (last-4) + amount only — NEVER a full UTR, NEVER a token. The reference-code capture (D2 port
+  // seam) + the lock-in clock-start marker emit here too.
+  //   intent   — a UPI Intent URL was built (the OS-level handoff seam).
+  //   paid     — a receipt was persisted (the load-bearing confirm; AR-67 indefinite retention).
+  //   failure  — a confirm/intent attempt was rejected (unconfigured VPA, terminal member, etc.).
+  | 'member_vyawastha_shulk.intent'
+  | 'member_vyawastha_shulk.paid'
+  | 'member_vyawastha_shulk.failure'
+  // The Reference Code port-seam capture (D2/R5) — attribution_source stored; NO registry validation,
+  // NO new lifecycle event (the 14-event member vocabulary is frozen). Context carries no PII.
+  | 'member_attribution.captured'
+  // The lock-in clock-start marker (member.lock_in_entered emitted) — context carries the FR-8
+  // lock_in_days_at_join snapshot + the resolved lock_in_policy_version (both NON-PII).
+  | 'member.lock_in_entered';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

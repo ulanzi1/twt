@@ -115,6 +115,23 @@ the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this s
 decreases in-PR). (The ₹110 Vyawastha Shulk UPI payment + its lock-in gate is Story 3.6b — that
 *payment* friction, not this T&C acceptance, is where a `forced`-row review applies.)
 
+**Story 3.6b disposition (necessary signup-completion steps, no new row):** the signup payment step
+(`apps/mobile/app/(signup)/payment.tsx` — REPLACES the 3.6a placeholder — → `POST /api/v1/member/
+vyawastha-shulk/intent` + `/confirm`) introduces three member interactions, all **necessary v1
+signup-completion steps with zero gratuitous friction**: (1) the **Pay via UPI** hand-off — the
+mandatory ₹110 Vyawastha Shulk is **FR-1**, the minimum a mutual-aid membership can ask, and the OS
+UPI Intent is the *lowest-friction* payment surface (no card form, no gateway redirect chain — one tap
+to the member's own UPI app); (2) the **UTR self-attest** — the minimum payment-confirmation surface
+when there is no payment gateway (architecture L1568: UPI Intent is OS-level; the matcher/reconciliation
+is Epic 8, deliberately *not* gating signup); (3) the **Reference Code** — explicitly **optional and
+skippable** (D2 port seam), so it adds zero forced friction. No urgency theater, no dark patterns
+(UX-DR55 "Agency without anxiety"). Zero gratuitous friction introduced; ledger reviewed, no row
+warranted. The **page-weight baseline is unchanged**: the new screen is in the authenticated mobile app
+(`apps/mobile`, an EAS build no-op → `member-app-native` stays a no-op), and the page-weight ceilings
+the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch (the
+new screen stays **under** the ceiling; the best-ever baseline is left put — it only ever decreases
+in-PR). This closes the signup loop: payment is the wizard's final step.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

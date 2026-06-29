@@ -26,6 +26,7 @@ import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
+import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
 import { registerVyawasthaShulkModule } from './modules/vyawastha-shulk/index.js';
@@ -117,6 +118,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // AR-67 receipt always; the FIRST production member.vyawastha_shulk_paid + member.lock_in_entered
   // caller, emitted ONLY when the 5-condition lock-in gate passes). Member-session-gated.
   registerVyawasthaShulkModule(app, deps);
+  // Story 3.7 — member home-screen lock-in clock widget read surface (GET /member/lock-in-status; the
+  // read seam over the 3.6b member.lock_in_entered marker — countdown + clause ref + unlock date).
+  // Member-session-gated; NO write path / event / schema change.
+  registerMemberHomeModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

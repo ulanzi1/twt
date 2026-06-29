@@ -4,6 +4,20 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 3-7-lock-in-clock-widget-on-home-screen (2026-06-29)
+
+- **D1 — `clauseId` constant not snapshot-stored in event payload.** `handlers.ts` supplies `clauseId` from `LOCK_IN_POLICY_CLAUSE_ID` (compile-time constant) rather than from the `lock_in_entered` event payload. If the policy clause is ever renamed or restructured, existing members' deep-links will point to the new clause ID paired with their old `clauseVersion` UUID. Fix requires storing `clauseId` in the `LockInEnteredPayloadSchema` alongside `lock_in_policy_version`. **Re-trigger:** if the Niyamavali clause registry ever supersedes `niy.lock-in.policy` with a new clause ID.
+
+- **D2 — Server `setDate`/`getDate` uses local timezone for `unlockDate` computation.** `handlers.ts:71` uses `new Date().getDate()` / `setDate()` which operate in the server's local timezone. Latent off-by-one near DST transitions if the server ever moves off UTC. Currently no bug (production server is UTC). **Re-trigger:** if server deployment timezone changes or a DST-observing TZ is used.
+
+- **D3 — No `memberExists` guard on the lock-in-status read endpoint.** A member whose event stream is absent (RTBF, test cleanup) returns `{ state: 'pending-kyc', lockIn: null }` (200 OK) rather than any error signal. Pre-existing pattern across all read endpoints (vyawastha-shulk/status, etc.); not introduced by 3.7. **Re-trigger:** if a future consumer branches on state to distinguish "not yet signed up" from "record deleted."
+
+- **D4 — Dev Agent Record job count discrepancy.** The record claims "16 static jobs green" but enumerates 17 items; project memory records 14 `ci:local` jobs. Bookkeeping inconsistency only; actual code is unaffected. **Re-trigger:** if the ci:local job list is audited for accuracy.
+
+- **D5 — React Query `refetchOnWindowFocus` is a no-op in React Native without AppState wiring.** `useLockInClockQuery.ts` relies on home-tab remount for refresh cadence. Spec explicitly accepts this as sufficient for day-granular countdown. If a future story requires tighter focus-based refresh, wire `focusManager` to `AppState.addEventListener`. **Re-trigger:** Epic 8 or any story requiring immediate post-background refresh.
+
+---
+
 ## Deferred from: code review of 3-6b-vyawastha-shulk-payment-upi-reference-code-seam-lock-in-gate (2026-06-29)
 
 - **D1 — `pgViolation` `.cause` fallback fragility in `receipt-write.ts`.** `isReceiptTrDuplicate` falls back to `err.cause` only when `e.code === undefined`. If a future Drizzle version sets its own `code` property on the wrapper error, the inner pg `23505` is never seen, causing a duplicate `tr` to propagate as an uncaught 500. Deliberately mirrors 3.6a's `isMemberIdentityDuplicate`; architectural, not 3.6b-introduced. **Re-trigger:** if Drizzle updates its error wrapper shape or if a duplicate-`tr` 500 is observed in integration testing.

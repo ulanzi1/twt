@@ -126,5 +126,14 @@
   "payment.unconfigured": "Payment isn't available right now. Please try again shortly.",
   "payment.error_generic": "We couldn't complete your payment just now. Please try again.",
   "payment.go_back": "Go back to fix this step",
-  "payment.go_back_hint": "Return to the previous screen to complete the missing step, then come back here to confirm."
+  "payment.go_back_hint": "Return to the previous screen to complete the missing step, then come back here to confirm.",
+  "lock_in.title": "Membership lock-in",
+  "lock_in.days_remaining": "{count} days remaining",
+  "lock_in.days_remaining_a11y": "{count} days remaining until your membership lock-in period ends",
+  "lock_in.unlock_date_label": "Cover begins on",
+  "lock_in.rationale": "Your one-time membership fee is held during the lock-in period. This keeps the pool fair for every member. You'll be eligible for claim cover once the lock-in ends.",
+  "lock_in.clause_ref_label": "Policy clause",
+  "lock_in.clause_link": "Read the lock-in rule",
+  "lock_in.clause_link_hint": "Opens the membership rules page at the lock-in clause",
+  "lock_in.unlock_date_a11y": "Your lock-in period ends on {date}"
 }

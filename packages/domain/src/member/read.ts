@@ -17,12 +17,13 @@
 // member/project.ts header. The `events_log_pariwar_occurred_at_idx` index assists
 // the bound, and the stream is small per member.
 
-import { and, asc, eq, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, lte } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
 import { eventsLog } from '../schema/events_log.js';
 import { members } from '../schema/members.js';
+import { LockInEnteredPayloadSchema } from './events.js';
 import { type MemberLifecycleState, replayMemberState } from './state.js';
 
 /**
@@ -68,4 +69,66 @@ export async function getMemberStateAt(
     .where(and(eq(eventsLog.streamId, memberId), lte(eventsLog.occurredAt, atTimestamp)))
     .orderBy(asc(eventsLog.eventVersion));
   return replayMemberState(rows);
+}
+
+/**
+ * The lock-in clock snapshot Story 3.7's home-screen widget keys off. All three figures derive from
+ * the `member.lock_in_entered` MARKER event (the clock-start; see events.ts:94-96): `enteredAt` is its
+ * `occurred_at`, and the two snapshot fields come from its WIDENED payload (the AUTHORITATIVE record —
+ * `members.lock_in_days_at_join` is only a read-cache mirror; events.ts:138-154).
+ */
+export interface LockInClock {
+  enteredAt: Date;
+  lockInDaysAtJoin: number;
+  lockInPolicyVersion: string;
+}
+
+/**
+ * Pure: map the most-recent `member.lock_in_entered` row (the targeted query result) to the clock
+ * snapshot, or `null` when there is no such event OR its payload is malformed. Extracted as a DB-free
+ * seam so the snapshot/parse logic is unit-testable with replay fixtures (mirrors how `getMemberStateAt`
+ * delegates to the pure `replayMemberState`). `.safeParse` keeps a malformed payload non-throwing —
+ * treated as `null`, the same discipline as `resolveLockInPolicy` (lock-in.ts:64).
+ */
+export function deriveLockInClock(
+  row: { occurredAt: Date; payload: unknown } | undefined,
+): LockInClock | null {
+  if (!row) return null;
+  const parsed = LockInEnteredPayloadSchema.safeParse(row.payload);
+  if (!parsed.success) return null;
+  return {
+    enteredAt: row.occurredAt,
+    lockInDaysAtJoin: parsed.data.lock_in_days_at_join,
+    lockInPolicyVersion: parsed.data.lock_in_policy_version,
+  };
+}
+
+/**
+ * Read a member's lock-in clock snapshot for the Story 3.7 widget: the SINGLE most-recent
+ * `member.lock_in_entered` event on the stream (ordered by `event_version` DESC — the opposite sort
+ * of `getMemberStateAt`'s ASC replay, because here we want the latest marker, not a forward replay).
+ * Returns `null` when the member never entered lock-in (no such event) or the payload is malformed.
+ *
+ * Reads `events_log` directly via Drizzle — domain owns the table and cannot import `@twt/events` (the
+ * cycle; see this module's header). Tenant scope is enforced by RLS (the caller set `app.pariwar_id`);
+ * the query filters by `stream_id` (= member_id), which is globally unique.
+ */
+export async function getLockInClock(
+  db: Db,
+  memberId: MemberId,
+  atTimestamp: Date,
+): Promise<LockInClock | null> {
+  const rows = await db
+    .select()
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.streamId, memberId),
+        eq(eventsLog.eventType, 'member.lock_in_entered'),
+        lte(eventsLog.occurredAt, atTimestamp),
+      ),
+    )
+    .orderBy(desc(eventsLog.eventVersion))
+    .limit(1);
+  return deriveLockInClock(rows[0]);
 }

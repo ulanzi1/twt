@@ -132,6 +132,22 @@ the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this s
 new screen stays **under** the ceiling; the best-ever baseline is left put — it only ever decreases
 in-PR). This closes the signup loop: payment is the wizard's final step.
 
+**Story 3.7 disposition (declaration affirmed, no new row):** the lock-in clock widget
+(`apps/mobile/components/lock-in/LockInClockWidget.tsx`, `useLockInClockQuery.ts`,
+`apps/mobile/lib/niyamavali-link.ts`) and its home-tab mount (`apps/mobile/app/(tabs)/index.tsx`)
+are **read-only, conditionally-rendered, ambient-status elements** — they display a day-granular
+countdown + unlock date + rationale + clause reference for members in `lock-in` state; for everyone
+else the widget renders `null` with no visible change. The one interactive element is the
+**optional deep-link tap-target** that opens the public Niyamavali clause page in the OS browser
+(`Linking.openURL`). This is user-initiated, non-blocking, and leads to a read-only public page
+already affirmed as zero-friction in the Story 2.5 disposition above; the tap adds no forced step,
+no form, no upload, and no gate. The UX spec characterises the widget explicitly as *calm presence*
+(lines 299/313/973/977-979): no urgency theater, no red countdown, no per-second tick. Zero
+gratuitous friction introduced; ledger reviewed, no row warranted. The **page-weight baseline is
+unchanged**: all new files are in the authenticated mobile app (`apps/mobile`, EAS build is a
+no-op → `member-app-native` stays a no-op), and the page-weight ceilings the gate has teeth on
+cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

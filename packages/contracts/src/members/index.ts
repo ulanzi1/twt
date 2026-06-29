@@ -7,3 +7,5 @@
 export * from './auth.js';
 // Story 3.6a — first-signup member-creation request (response reuses MemberFullSession from auth).
 export * from './signup.js';
+// Story 3.7 — lock-in home-widget read DTO (GET /member/lock-in-status; reuses MemberLifecycleStateWire).
+export * from './lock-in.js';

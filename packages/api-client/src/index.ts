@@ -15,6 +15,7 @@ import {
   KycStatusResponse,
   MedicalDisclosureStatusResponse,
   MemberFullSession,
+  MemberLockInStatusResponse,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
@@ -32,6 +33,7 @@ import {
   type KycStatusResponse as KycStatusResult,
   type MedicalDiscloseRequest,
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
+  type MemberLockInStatusResponse as MemberLockInStatusResult,
   type MemberSignupCreateRequest,
   type MemberTermsResponse as MemberTermsResult,
   type MemberTermsAcceptRequest,
@@ -86,6 +88,7 @@ const NOMINEE_BASE = '/api/v1/member/nominees';
 const MEDICAL_BASE = '/api/v1/member/medical-disclosure';
 const TERMS_BASE = '/api/v1/member/terms';
 const VYAWASTHA_SHULK_BASE = '/api/v1/member/vyawastha-shulk';
+const MEMBER_HOME_BASE = '/api/v1/member';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -271,6 +274,17 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Read the member's signup-fee paid / lock-in status (auth). */
     vyawasthaShulkStatus(): Promise<VyawasthaShulkStatusResult> {
       return call(`${VYAWASTHA_SHULK_BASE}/status`, VyawasthaShulkStatusResponse, undefined, true, 'GET');
+    },
+
+    // ── Home-screen lock-in clock widget (Story 3.7) ────────────────────────────
+    /**
+     * Read the member's lock-in clock for the topmost home-screen widget (Story 3.7). Returns the
+     * current lifecycle `state` always, plus the `lockIn` clock figures (countdown + clause ref +
+     * unlock date) when `state === 'lock-in'` (else `lockIn` is null and the widget self-suppresses).
+     * Server-authoritative (`daysRemaining` / `unlockDate` computed server-side) (auth).
+     */
+    memberLockInStatus(): Promise<MemberLockInStatusResult> {
+      return call(`${MEMBER_HOME_BASE}/lock-in-status`, MemberLockInStatusResponse, undefined, true, 'GET');
     },
   };
 }

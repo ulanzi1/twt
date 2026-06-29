@@ -400,4 +400,8 @@ describe.skipIf(!hasDatabase)('verifyAuditChain (live DB)', () => {
       client.release();
     }
   });
-});
+  // Live-DB suite timeout: these tests write real rows + walk the chain against a shared :5433
+  // container; under concurrent `turbo`/`ci:local` load they can exceed the 5s vitest default
+  // (the chunk-boundary stitch is the heaviest). 20s removes the contention flake without masking
+  // a real hang. (Standalone each runs in ~1s.)
+}, { timeout: 20000 });

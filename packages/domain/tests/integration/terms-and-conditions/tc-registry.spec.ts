@@ -41,7 +41,7 @@ describe.skipIf(!hasDatabase)('T&C version registry (PARIWAR_A scope)', () => {
     return { tx, clauseVersionId };
   }
 
-  it('createTcVersion: genesis is open-ended + pending + effective; pins recorded', async () => {
+  it('createTcVersion: genesis is open-ended + pending; effective ONLY once approved; pins recorded', async () => {
     const { tx, clauseVersionId } = await scopeAWithClause();
     const v1 = await createTcVersion(tx, {
       pariwarId: PARIWAR_A,
@@ -55,7 +55,17 @@ describe.skipIf(!hasDatabase)('T&C version registry (PARIWAR_A scope)', () => {
     expect(v1.effectiveUntil).toBeNull(); // genesis is open-ended
     expect(v1.bodyHtmlRendered).toContain('<h1>Terms</h1>'); // precomputed sanitized render
 
-    // getEffectiveTc (DB now()) returns the genesis even while pending.
+    // getEffectiveTc is approved-only (read.ts §legalReviewStatus='approved', added by Story 3.6a's
+    // member T&C-acceptance surface — members must never be served un-reviewed terms). A pending
+    // genesis is therefore NOT yet the effective T&C, even though its window is open.
+    expect(await getEffectiveTc(tx, PARIWAR_A)).toBeNull();
+
+    // Once approved, the open genesis becomes the in-force effective version.
+    await approveTcVersion(tx, {
+      pariwarId: PARIWAR_A,
+      tcVersionId: v1.tcVersionId,
+      legalReviewerActorId: TRUSTEE,
+    });
     const eff = await getEffectiveTc(tx, PARIWAR_A);
     expect(eff?.tcVersionId).toBe(v1.tcVersionId);
 
@@ -64,7 +74,7 @@ describe.skipIf(!hasDatabase)('T&C version registry (PARIWAR_A scope)', () => {
     expect(new Set(pins)).toContain(clauseVersionId);
   });
 
-  it('version increments monotonically; a second version is staged (not effective)', async () => {
+  it('version increments monotonically; a staged second version never displaces the in-force one', async () => {
     const { tx, clauseVersionId } = await scopeAWithClause();
     const v1 = await createTcVersion(tx, {
       pariwarId: PARIWAR_A,
@@ -72,6 +82,13 @@ describe.skipIf(!hasDatabase)('T&C version registry (PARIWAR_A scope)', () => {
       pinnedClauseVersionIds: [clauseVersionId],
       effectiveFrom: D1,
     });
+    // Approve the genesis so it is the in-force effective version (approved-only resolver).
+    await approveTcVersion(tx, {
+      pariwarId: PARIWAR_A,
+      tcVersionId: v1.tcVersionId,
+      legalReviewerActorId: TRUSTEE,
+    });
+
     const v2 = await createTcVersion(tx, {
       pariwarId: PARIWAR_A,
       bodyMarkdown: '# v2',
@@ -80,8 +97,11 @@ describe.skipIf(!hasDatabase)('T&C version registry (PARIWAR_A scope)', () => {
     });
 
     expect(v2.version).toBe(2);
-    // v2 is staged (v1 still open) → not the effective version yet.
+    // An open version (v1) already exists → v2 is staged (bounded window) + pending review.
     expect(v2.effectiveUntil).not.toBeNull();
+    expect(v2.legalReviewStatus).toBe('pending');
+    // The effective T&C is still the approved, in-force genesis — a staged/pending v2 does not
+    // displace it until it is itself approved (and the prior superseded). See the AC6/AC8 test below.
     const eff = await getEffectiveTc(tx, PARIWAR_A);
     expect(eff?.tcVersionId).toBe(v1.tcVersionId);
   });

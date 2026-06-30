@@ -2555,6 +2555,65 @@ components:
         - lockInEntered
         - outstanding
       additionalProperties: false
+    VyawasthaShulkRenewalStatusResponse:
+      type: object
+      properties:
+        paid_through:
+          type:
+            - string
+            - "null"
+          format: date-time
+        days_until_lapse:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        in_renewal_grace:
+          type: boolean
+        grace_remaining_days:
+          type:
+            - integer
+            - "null"
+      required:
+        - paid_through
+        - days_until_lapse
+        - in_renewal_grace
+        - grace_remaining_days
+      additionalProperties: false
+    VyawasthaShulkRenewalConfirmResponse:
+      type: object
+      properties:
+        receipt:
+          type: object
+          properties:
+            paidAt:
+              type: string
+              format: date-time
+            validThrough:
+              type: string
+              format: date-time
+            amountInr:
+              type: integer
+              exclusiveMinimum: 0
+            utr:
+              type: string
+              minLength: 1
+            paymentMethod:
+              type: string
+              minLength: 1
+          required:
+            - paidAt
+            - validThrough
+            - amountInr
+            - utr
+            - paymentMethod
+          additionalProperties: false
+        renewed:
+          type: boolean
+      required:
+        - receipt
+        - renewed
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:
@@ -4502,6 +4561,84 @@ paths:
                 $ref: "#/components/schemas/VyawasthaShulkStatusResponse"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/vyawastha-shulk/renewal-status:
+    get:
+      summary: Renewal — the canonical FR-12A vyawastha_shulk_status payload
+      description: "Returns the renewal/validity status Epic 4’s Validity Service (FR-12A) consumes: paid_through (latest receipt valid_through), days_until_lapse (ceil-clamped days to the valid_through + 91d grace-end/lapse boundary), in_renewal_grace (true iff the member’s state is active-in-grace), and grace_remaining_days. Computed live per request → within the ≤60s freshness invariant. Requires a member session."
+      tags: *a18
+      responses:
+        "200":
+          description: Renewal/validity status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VyawasthaShulkRenewalStatusResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/vyawastha-shulk/renew/intent:
+    post:
+      summary: Renewal — build the annual ₹ Vyawastha Shulk UPI Intent URL
+      description: Identical to the signup intent (server-authoritative VPA + amount from config; `tr` idempotency nonce) but with a renewal `tn` grammar (renewal-shulk-{memberId}-{year}). Requires a member session. 503 when the trust VPA is unconfigured.
+      tags: *a18
+      responses:
+        "200":
+          description: UPI Intent URL + tr
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VyawasthaShulkIntentResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The trust VPA is not configured (vyawastha_shulk.unconfigured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/vyawastha-shulk/renew/confirm:
+    post:
+      summary: Renewal — self-attest the UTR → persist the receipt + emit the renewal event
+      description: "Persists a vyawastha_shulk_receipts row (server-stamped valid_through = now + 365d; idempotent on the `tr`) and emits member.vyawastha_shulk_paid (kind: renewal) in the same scope-tx. A renewing member is already post-lock-in, so there is NO lock-in gate and renewal NEVER re-applies lock-in (the reducer routes active-in-grace/lapsed-unpaid → active, and is identity from active). 409 when the member is in a terminal/pre-active state (renewal requires a post-lock-in member). Requires a member session."
+      tags: *a18
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VyawasthaShulkConfirmRequest"
+      responses:
+        "200":
+          description: Receipt persisted + renewal event emitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VyawasthaShulkRenewalConfirmResponse"
+        "400":
+          description: Validation failed (bad UTR format)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Member not found / not in a renewable state
           content:
             application/json:
               schema:

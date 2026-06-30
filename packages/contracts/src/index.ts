@@ -50,6 +50,9 @@ export * from './terms/index.js';
 // Story 3.6b — signup ₹110 Vyawastha Shulk transport DTOs (intent + confirm + status). The FINAL
 // signup-wizard SURFACE (closes the loop); registers real OpenAPI components + paths (see emit-openapi.ts).
 export * from './payments/index.js';
+// Story 3.8 — the renewal-reminder nudge SEAM (FR-23). The producing half (Epic 3 schedules); Epic 5's
+// dispatcher subscribes later. Internal queue seam — NO `.openapi()` path, openapi/v1.yaml unchanged.
+export * from './notifications/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

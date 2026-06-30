@@ -10,6 +10,8 @@ import {
   VyawasthaShulkConfirmRequest,
   VyawasthaShulkConfirmResponse,
   VyawasthaShulkIntentResponse,
+  VyawasthaShulkRenewalConfirmResponse,
+  VyawasthaShulkRenewalStatusResponse,
   VyawasthaShulkStatusResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
@@ -55,5 +57,38 @@ export function registerVyawasthaShulkRoutes(app: FastifyInstance, deps: AppDeps
       preHandler: [memberSession],
     },
     h.status,
+  );
+
+  // ── Story 3.8 — annual renewal surface (renewal-status read + renew intent/confirm) ──────────────
+  // All member-session-gated (token-bearer), like the signup routes above — NOT login-wall-allowlisted.
+  r.get(
+    '/api/v1/member/vyawastha-shulk/renewal-status',
+    {
+      schema: { response: { 200: VyawasthaShulkRenewalStatusResponse }, tags: [VYAWASTHA_SHULK_TAG] },
+      preHandler: [memberSession],
+    },
+    h.renewalStatus,
+  );
+
+  r.post(
+    '/api/v1/member/vyawastha-shulk/renew/intent',
+    {
+      schema: { response: { 200: VyawasthaShulkIntentResponse }, tags: [VYAWASTHA_SHULK_TAG] },
+      preHandler: [memberSession],
+    },
+    h.renewIntent,
+  );
+
+  r.post(
+    '/api/v1/member/vyawastha-shulk/renew/confirm',
+    {
+      schema: {
+        body: VyawasthaShulkConfirmRequest,
+        response: { 200: VyawasthaShulkRenewalConfirmResponse },
+        tags: [VYAWASTHA_SHULK_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    h.renewConfirm,
   );
 }

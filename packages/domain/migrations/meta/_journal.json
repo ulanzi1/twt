@@ -197,6 +197,20 @@
       "when": 1783050000000,
       "tag": "0027_vyawastha-shulk-receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1783136400000,
+      "tag": "0028_renewal-valid-through-index",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783222800000,
+      "tag": "0029_receipt-pariwar-utr-unique",
+      "breakpoints": true
     }
   ]
 }

@@ -25,6 +25,8 @@ import {
   NomineeStatusResponse,
   VyawasthaShulkConfirmResponse,
   VyawasthaShulkIntentResponse,
+  VyawasthaShulkRenewalConfirmResponse,
+  VyawasthaShulkRenewalStatusResponse,
   VyawasthaShulkStatusResponse,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
@@ -44,6 +46,8 @@ import {
   type VyawasthaShulkConfirmRequest,
   type VyawasthaShulkConfirmResponse as VyawasthaShulkConfirmResult,
   type VyawasthaShulkIntentResponse as VyawasthaShulkIntentResult,
+  type VyawasthaShulkRenewalConfirmResponse as VyawasthaShulkRenewalConfirmResult,
+  type VyawasthaShulkRenewalStatusResponse as VyawasthaShulkRenewalStatusResult,
   type VyawasthaShulkStatusResponse as VyawasthaShulkStatusResult,
   type MemberFullSession as FullSession,
   type MemberOtpRequestResponse as OtpRequestResult,
@@ -274,6 +278,47 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Read the member's signup-fee paid / lock-in status (auth). */
     vyawasthaShulkStatus(): Promise<VyawasthaShulkStatusResult> {
       return call(`${VYAWASTHA_SHULK_BASE}/status`, VyawasthaShulkStatusResponse, undefined, true, 'GET');
+    },
+
+    // ── Annual renewal (Story 3.8) ──────────────────────────────────────────────
+    /**
+     * Read the member's canonical renewal status — the FR-12A `vyawastha_shulk_status` payload
+     * (`paid_through`, `days_until_lapse`, `in_renewal_grace`, `grace_remaining_days`). Computed live
+     * server-side (≤60s fresh). Backs the home-screen renewal widget; self-suppresses when not paid (auth).
+     */
+    vyawasthaShulkRenewalStatus(): Promise<VyawasthaShulkRenewalStatusResult> {
+      return call(
+        `${VYAWASTHA_SHULK_BASE}/renewal-status`,
+        VyawasthaShulkRenewalStatusResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    /**
+     * Build the server-constructed UPI Intent for the annual renewal fee (Story 3.8) — mirrors the
+     * signup intent (server-authoritative VPA + amount) with the renewal `tn` grammar. 503 if the trust
+     * VPA is unconfigured (auth).
+     */
+    vyawasthaShulkRenewIntent(): Promise<VyawasthaShulkIntentResult> {
+      return call(`${VYAWASTHA_SHULK_BASE}/renew/intent`, VyawasthaShulkIntentResponse, undefined, true);
+    },
+
+    /**
+     * Self-attest the UTR after returning from the UPI app to complete a renewal (Story 3.8). Persists a
+     * renewal receipt + emits member.vyawastha_shulk_paid (kind: renewal) — NO lock-in gate, NO re-lock-in.
+     * Idempotent on `tr` (`renewed` is false on a re-confirm). 409 if the member is not renewable (auth).
+     */
+    vyawasthaShulkRenewConfirm(
+      input: VyawasthaShulkConfirmRequest,
+    ): Promise<VyawasthaShulkRenewalConfirmResult> {
+      return call(
+        `${VYAWASTHA_SHULK_BASE}/renew/confirm`,
+        VyawasthaShulkRenewalConfirmResponse,
+        input,
+        true,
+      );
     },
 
     // ── Home-screen lock-in clock widget (Story 3.7) ────────────────────────────

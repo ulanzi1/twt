@@ -223,6 +223,9 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.21.0
         version: 7.21.0
+      '@twt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@twt/domain':
         specifier: workspace:*
         version: link:../../packages/domain

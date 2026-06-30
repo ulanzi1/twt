@@ -52,6 +52,19 @@ export const QUEUE_NAMES = {
    * (§2.8): the last-good cert is trusted within budget. Job class C (background).
    */
   DIGILOCKER_CERT_REFRESH: 'digilocker.cert_refresh',
+  /**
+   * Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). The FIRST emitter of the member grace
+   * transitions (member.valid_through_reached / grace_entered / grace_expired) over an INDEXED candidate
+   * scan, + the source of the renewal-reminder nudges. System actor (SIE; actorId=null). Job class C.
+   */
+  MEMBER_RENEWAL_LIFECYCLE: 'member.renewal_lifecycle',
+  /**
+   * Reserved renewal-reminder nudge queue (Story 3.8, AC1 / Decision 5; FR-23). The renewal-lifecycle
+   * tick publishes RenewalReminderNudge intents here at +30/60/75/89 past valid_through; a no-op/log
+   * sink consumes them until Epic 5 (Story 5-1 central dispatcher) lands its channel-delivery worker.
+   * Idempotent per cycle via the send-time singletonKey ({member}-{cycle}-{offset}). Job class C.
+   */
+  RENEWAL_REMINDER: 'member.renewal_reminder',
 } as const;
 
 /** Union of the registered queue names. */

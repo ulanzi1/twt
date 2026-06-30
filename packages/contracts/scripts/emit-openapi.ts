@@ -164,6 +164,9 @@ const {
   VyawasthaShulkConfirmRequest,
   VyawasthaShulkConfirmResponse,
   VyawasthaShulkStatusResponse,
+  // Story 3.8 — the renewal/validity surface: the FR-12A status payload + the renewal-confirm response.
+  VyawasthaShulkRenewalStatusResponse,
+  VyawasthaShulkRenewalConfirmResponse,
 } = await import('../src/payments/index.js');
 
 // Annotate schemas with their OpenAPI component name, then register for $ref
@@ -376,6 +379,13 @@ const vyawasthaShulkComponents = {
     'VyawasthaShulkConfirmResponse',
   ),
   VyawasthaShulkStatusResponse: VyawasthaShulkStatusResponse.openapi('VyawasthaShulkStatusResponse'),
+  // Story 3.8 — renewal/validity components.
+  VyawasthaShulkRenewalStatusResponse: VyawasthaShulkRenewalStatusResponse.openapi(
+    'VyawasthaShulkRenewalStatusResponse',
+  ),
+  VyawasthaShulkRenewalConfirmResponse: VyawasthaShulkRenewalConfirmResponse.openapi(
+    'VyawasthaShulkRenewalConfirmResponse',
+  ),
 } as const;
 for (const [name, schema] of Object.entries(vyawasthaShulkComponents)) {
   registry.register(name, schema);
@@ -1430,6 +1440,61 @@ registry.registerPath({
   responses: {
     200: { description: 'Paid / lock-in status', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkStatusResponse) },
     401: vyawasthaShulkAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 3.8 — annual renewal surface (renewal-status read + renew intent/confirm) ────────────────
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/vyawastha-shulk/renewal-status',
+  summary: 'Renewal — the canonical FR-12A vyawastha_shulk_status payload',
+  description:
+    'Returns the renewal/validity status Epic 4’s Validity Service (FR-12A) consumes: paid_through ' +
+    '(latest receipt valid_through), days_until_lapse (ceil-clamped days to the valid_through + 91d ' +
+    'grace-end/lapse boundary), in_renewal_grace (true iff the member’s state is active-in-grace), and ' +
+    'grace_remaining_days. Computed live per request → within the ≤60s freshness invariant. Requires a ' +
+    'member session.',
+  tags: vyawasthaShulkTags,
+  responses: {
+    200: { description: 'Renewal/validity status', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkRenewalStatusResponse) },
+    401: vyawasthaShulkAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/vyawastha-shulk/renew/intent',
+  summary: 'Renewal — build the annual ₹ Vyawastha Shulk UPI Intent URL',
+  description:
+    'Identical to the signup intent (server-authoritative VPA + amount from config; `tr` idempotency ' +
+    'nonce) but with a renewal `tn` grammar (renewal-shulk-{memberId}-{year}). Requires a member ' +
+    'session. 503 when the trust VPA is unconfigured.',
+  tags: vyawasthaShulkTags,
+  responses: {
+    200: { description: 'UPI Intent URL + tr', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkIntentResponse) },
+    401: vyawasthaShulkAuth,
+    503: errorResponse('The trust VPA is not configured (vyawastha_shulk.unconfigured)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/vyawastha-shulk/renew/confirm',
+  summary: 'Renewal — self-attest the UTR → persist the receipt + emit the renewal event',
+  description:
+    'Persists a vyawastha_shulk_receipts row (server-stamped valid_through = now + 365d; idempotent on ' +
+    'the `tr`) and emits member.vyawastha_shulk_paid (kind: renewal) in the same scope-tx. A renewing ' +
+    'member is already post-lock-in, so there is NO lock-in gate and renewal NEVER re-applies lock-in ' +
+    '(the reducer routes active-in-grace/lapsed-unpaid → active, and is identity from active). 409 when ' +
+    'the member is in a terminal/pre-active state (renewal requires a post-lock-in member). Requires a ' +
+    'member session.',
+  tags: vyawasthaShulkTags,
+  request: { body: { content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkConfirmRequest), required: true } },
+  responses: {
+    200: { description: 'Receipt persisted + renewal event emitted', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkRenewalConfirmResponse) },
+    400: errorResponse('Validation failed (bad UTR format)'),
+    401: vyawasthaShulkAuth,
+    409: errorResponse('Member not found / not in a renewable state'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

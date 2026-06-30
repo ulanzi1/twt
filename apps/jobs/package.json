@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
+    "@twt/contracts": "workspace:*",
     "@twt/domain": "workspace:*",
     "@twt/queue": "workspace:*",
     "pg": "^8.13.0",

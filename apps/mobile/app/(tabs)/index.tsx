@@ -1,19 +1,25 @@
 import { YStack } from 'tamagui'
 
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
+import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
 import { YogdaanBahi } from 'components/yogdaan-bahi/YogdaanBahi'
 
 // Tab 1 — home. The lock-in clock widget (Story 3.7) is the TOPMOST element: for a member in `lock-in`
 // it renders the countdown + clause ref + unlock date; for everyone else it returns null and the home
 // content below shows unchanged (fail-soft — a failed status fetch simply renders nothing).
 //
-// Below it: the Yogdaan Bahi pattern per UX spec §8 + lines 805 + 1156 (P0-5 measurement target —
+// Below it, the renewal-status widget (Story 3.8): for a PAID member whose renewal is due / in grace /
+// lapsed it renders the renewal state + a UPI "Renew membership" CTA; for everyone else it self-suppresses
+// (the two widgets are mutually exclusive in practice — lock-in is pre-active, renewal is post-lock-in).
+//
+// Below those: the Yogdaan Bahi pattern per UX spec §8 + lines 805 + 1156 (P0-5 measurement target —
 // P1 Devanagari rendering + P5 list-performance baseline). The Epic-8 "My Pool" / Panchayat home
 // stack eventually owns this surface (AC3 forward-compat).
 export default function YogdaanTab() {
   return (
     <YStack flex={1}>
       <LockInClockWidget />
+      <RenewalStatusWidget />
       <YogdaanBahi />
     </YStack>
   )

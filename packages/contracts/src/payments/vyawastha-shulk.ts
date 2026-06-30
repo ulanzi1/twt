@@ -108,3 +108,54 @@ export const VyawasthaShulkStatusResponse = z
   })
   .strict();
 export type VyawasthaShulkStatusResponse = z.output<typeof VyawasthaShulkStatusResponse>;
+
+// ── renewal-status (the FR-12A `vyawastha_shulk_status` payload — Story 3.8, Task 2) ─────────────────
+
+/**
+ * `GET /member/vyawastha-shulk/renewal-status` — the canonical FR-12A renewal/validity surface Epic 4's
+ * Validity Service will consume (DISTINCT from `VyawasthaShulkStatusResponse`, which is the signup
+ * paid/lock-in view; keep them separate — the 3.7 "don't overload /status" precedent). The WIRE fields
+ * are snake_case to match the FR-12A payload spec VERBATIM (PRD line 252 / architecture line 1255):
+ *   · `paid_through`        — latest receipt `valid_through` (= paid_at + 365d); null when never paid.
+ *   · `days_until_lapse`    — ceil-clamped days to the grace-end/lapse boundary (`valid_through + 91d`);
+ *                             null when never paid. (The domain field is `daysUntilGraceEnds` — the API
+ *                             handler maps the rename; this wire vocabulary is fixed by PRD line 252.)
+ *   · `in_renewal_grace`    — true iff the member's replayed state is `active-in-grace`.
+ *   · `grace_remaining_days`— `days_until_lapse` while in grace; null outside grace.
+ * Computed live per request (no cache) → trivially within the ≤60s freshness invariant (freeze row 11).
+ */
+export const VyawasthaShulkRenewalStatusResponse = z
+  .object({
+    paid_through: Iso8601Datetime.nullable(),
+    days_until_lapse: z.number().int().min(0).nullable(),
+    in_renewal_grace: z.boolean(),
+    grace_remaining_days: z.number().int().nullable(),
+  })
+  .strict();
+export type VyawasthaShulkRenewalStatusResponse = z.output<
+  typeof VyawasthaShulkRenewalStatusResponse
+>;
+
+// ── renewal payment (UPI Intent + confirm — Story 3.8, Task 4) ───────────────────────────────────────
+// The renewal intent reuses the SIGNUP intent shape (`VyawasthaShulkIntentResponse`) — same
+// server-authoritative VPA/amount + `tr` nonce, differing only in the `tn` grammar
+// (`renewal-shulk-{memberId}-{year}`) which is server-internal and not part of the wire contract. The
+// renewal confirm REQUEST reuses `VyawasthaShulkConfirmRequest` (`tr` + `utr`; `referenceCode` is
+// signup-only and simply unused on renewal). Only the confirm RESPONSE differs — a renewal has NO
+// lock-in gate, so it carries the receipt + whether a fresh receipt was persisted this request.
+
+/**
+ * `POST /member/vyawastha-shulk/renew/confirm` response. A renewing member is already post-lock-in, so
+ * there is NO lock-in gate and NO `outstanding`/`lockInEntered` (the 3.6b signup-confirm fields). The
+ * receipt is always returned; `renewed` is true when a NEW receipt was persisted this request (false on
+ * an idempotent same-`tr` re-confirm, where the existing receipt is returned unchanged).
+ */
+export const VyawasthaShulkRenewalConfirmResponse = z
+  .object({
+    receipt: VyawasthaShulkReceiptView,
+    renewed: z.boolean(),
+  })
+  .strict();
+export type VyawasthaShulkRenewalConfirmResponse = z.output<
+  typeof VyawasthaShulkRenewalConfirmResponse
+>;

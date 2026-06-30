@@ -135,5 +135,15 @@
   "lock_in.clause_ref_label": "Policy clause",
   "lock_in.clause_link": "Read the lock-in rule",
   "lock_in.clause_link_hint": "Opens the membership rules page at the lock-in clause",
-  "lock_in.unlock_date_a11y": "Your lock-in period ends on {date}"
+  "lock_in.unlock_date_a11y": "Your lock-in period ends on {date}",
+  "renewal.title": "Membership renewal",
+  "renewal.due": "Your membership is due for renewal.",
+  "renewal.due_soon": "Your membership is due for renewal. Renew whenever you're ready.",
+  "renewal.grace_remaining": "You have {count} days of grace to renew.",
+  "renewal.grace_remaining_a11y": "You have {count} days of grace remaining to renew your membership.",
+  "renewal.lapsed": "Your membership has lapsed. Renew to restore your cover.",
+  "renewal.paid_through_label": "Covered through",
+  "renewal.renew_cta": "Renew membership",
+  "renewal.renew_cta_a11y": "Renew your membership via UPI",
+  "renewal.renew_cta_hint": "Opens your UPI app to pay the renewal fee"
 }

@@ -59,9 +59,23 @@ export const KycManualFallbackPayloadSchema = z
   .object({ ...auditShape, reason: z.string().min(1) })
   .strict();
 
-/** Vyawastha Shulk (membership fee) paid — UPI Intent + UTR confirmed. FR-1/FR-3. */
+/**
+ * Vyawastha Shulk (membership fee) paid — UPI Intent + UTR confirmed. FR-1/FR-3.
+ *
+ * Story 3.8 (Decision 1): the SAME event type is the renewal transition trigger (the
+ * architecture-committed vocabulary has no separate `vyawastha_shulk_renewed`; the reducer routes
+ * `active-in-grace`/`lapsed-unpaid` → `active` off this event, and it is identity from `active`). The
+ * OPTIONAL `kind` discriminator distinguishes a signup payment from a renewal for audit/reporting
+ * WITHOUT changing reducer behaviour (the marker-widening precedent: 3.4/3.5/3.6b widened payloads).
+ * Absent `kind` ≡ signup (the 3.6b signup path omits it); the 3.8 renewal path sets `kind: 'renewal'`.
+ */
 export const VyawasthaShulkPaidPayloadSchema = z
-  .object({ ...auditShape, utr: z.string().min(1), amount_inr: z.number().positive() })
+  .object({
+    ...auditShape,
+    utr: z.string().min(1),
+    amount_inr: z.number().positive(),
+    kind: z.enum(['signup', 'renewal']).optional(),
+  })
   .strict();
 
 /**

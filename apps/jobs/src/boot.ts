@@ -37,6 +37,11 @@ import {
   createEnvCertFetcher,
   registerDigiLockerCertRefreshCron,
 } from './digilocker-cert-refresh.js';
+import {
+  DEFAULT_RENEWAL_LIFECYCLE_CRON,
+  RENEWAL_LIFECYCLE_TZ,
+  registerMemberRenewalLifecycleCron,
+} from './member-renewal-lifecycle.js';
 
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
@@ -49,6 +54,9 @@ const VACUUM_CRON = process.env['IDEMPOTENCY_VACUUM_CRON'] ?? '0 * * * *';
 const VACUUM_TZ = 'Asia/Kolkata';
 // Daily DigiLocker cert refresh (Story 3.3b, AC5.2). Cadence is operations policy (IST).
 const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT_CERT_REFRESH_CRON;
+// Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). Cadence is operations policy (IST).
+const RENEWAL_LIFECYCLE_CRON =
+  process.env['MEMBER_RENEWAL_LIFECYCLE_CRON'] ?? DEFAULT_RENEWAL_LIFECYCLE_CRON;
 
 /** The single error helper — every fatal/uncaught path logs code + message only. */
 function logError(scope: string, err: unknown): void {
@@ -79,6 +87,11 @@ async function main(): Promise<void> {
   if (!/^(\S+\s+){4}\S+$/.test(CERT_REFRESH_CRON.trim())) {
     throw new RangeError(
       `[jobs] DIGILOCKER_CERT_REFRESH_CRON must be a 5-field cron expression (got "${CERT_REFRESH_CRON}")`,
+    );
+  }
+  if (!/^(\S+\s+){4}\S+$/.test(RENEWAL_LIFECYCLE_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] MEMBER_RENEWAL_LIFECYCLE_CRON must be a 5-field cron expression (got "${RENEWAL_LIFECYCLE_CRON}")`,
     );
   }
 
@@ -168,6 +181,16 @@ async function main(): Promise<void> {
       { cron: CERT_REFRESH_CRON, tz: CERT_REFRESH_TZ },
     );
 
+    // ── Renewal-lifecycle daily cron (Story 3.8, AC1/AC3) ─────────────────────
+    // The FIRST emitter of the member grace transitions (valid_through_reached / grace_entered /
+    // grace_expired) over an indexed candidate scan + the renewal-reminder nudge producer. Uses the
+    // domain-table `pool` directly (per-candidate scope txs). IST.
+    await registerMemberRenewalLifecycleCron(
+      boss,
+      { pool },
+      { cron: RENEWAL_LIFECYCLE_CRON, tz: RENEWAL_LIFECYCLE_TZ },
+    );
+
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);
       healthServer.listen(HEALTH_PORT, () => {
@@ -187,6 +210,7 @@ async function main(): Promise<void> {
       healthPort: HEALTH_PORT,
       vacuumCron: VACUUM_CRON,
       certRefreshCron: CERT_REFRESH_CRON,
+      renewalLifecycleCron: RENEWAL_LIFECYCLE_CRON,
       tz: VACUUM_TZ,
     }),
   );

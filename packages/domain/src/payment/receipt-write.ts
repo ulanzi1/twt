@@ -23,6 +23,8 @@ import {
 const UNIQUE_VIOLATION = '23505';
 /** The `tr` UNIQUE constraint name (matches the 0027 migration). */
 const TR_CONSTRAINT = 'vyawastha_shulk_receipts_tr_uq';
+/** The `(pariwar_id, utr)` UNIQUE constraint name (matches the 0029 migration). */
+const PARIWAR_UTR_CONSTRAINT = 'vyawastha_shulk_receipts_pariwar_utr_uq';
 
 /** Read {code, constraint} off a pg error, whether raw or wrapped by Drizzle in `.cause`. */
 function pgViolation(err: unknown): { code?: unknown; constraint?: unknown } {
@@ -43,6 +45,16 @@ function pgViolation(err: unknown): { code?: unknown; constraint?: unknown } {
 export function isReceiptTrDuplicate(err: unknown): boolean {
   const v = pgViolation(err);
   return v.code === UNIQUE_VIOLATION && v.constraint === TR_CONSTRAINT;
+}
+
+/**
+ * True iff `err` is the `vyawastha_shulk_receipts_pariwar_utr_uq` unique violation — the signpost the
+ * renewal confirm handler uses to detect a bank UTR already submitted in this pariwar (D2: payment
+ * integrity guard). A ConflictError is raised so the member sees a clear "already used" message.
+ */
+export function isReceiptPariwarUtrDuplicate(err: unknown): boolean {
+  const v = pgViolation(err);
+  return v.code === UNIQUE_VIOLATION && v.constraint === PARIWAR_UTR_CONSTRAINT;
 }
 
 /** One receipt to persist (amount/validThrough are SERVER-derived — the handler stamps them). */

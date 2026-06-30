@@ -148,6 +148,33 @@ unchanged**: all new files are in the authenticated mobile app (`apps/mobile`, E
 no-op → `member-app-native` stays a no-op), and the page-weight ceilings the gate has teeth on
 cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 3.8 disposition (declaration affirmed, no new row):** the renewal surfaces span two categories:
+
+(1) **Read-only ambient widget** (`apps/mobile/components/renewal/RenewalStatusWidget.tsx`,
+`useRenewalStatusQuery.ts`, home-tab mount in `apps/mobile/app/(tabs)/index.tsx`): a calm
+passbook strip that self-suppresses when the member is not yet at renewal-due (`days_until_lapse > 91`)
+or has never paid. It displays the paid-through date + a grace-days countdown + a "Renew membership"
+CTA. The CTA is **user-initiated, non-blocking, and navigates to a payment screen** — it adds no
+forced step, no form, and no gate. The UX spec characterises the widget as *calm presence* (lines
+973/977-979): no urgency theater, no red countdown, no per-second tick. Identical pattern to the
+Story 3.7 lock-in clock widget.
+
+(2) **Annual renewal payment screen** (`apps/mobile/app/(renewal)/_layout.tsx`,
+`apps/mobile/app/(renewal)/payment.tsx`, `apps/mobile/app/_layout.tsx` registration): the member
+navigates here voluntarily from the widget CTA. The screen introduces two interactions — both are
+verbatim mirrors of the Story 3.6b signup payment disposition already affirmed: (a) **Pay via UPI**
+hand-off — the ₹110 annual Vyawastha Shulk renewal is FR-1A, the minimum for continued mutual-aid
+coverage, and the OS UPI Intent is the lowest-friction payment surface (one tap to the member's own
+UPI app; no card form, no gateway redirect); (b) **UTR self-attest** — the minimum payment-
+confirmation surface when there is no payment gateway (architecture L1568). No reference-code field
+(renewal-only: that was a signup port seam). No lock-in gate. No urgency theater (UX-DR55 "Agency
+without anxiety"; the 3-month grace exists precisely to avoid penalising a brief lapse, PRD line 256).
+Zero gratuitous friction introduced — the payment is optional (a member may let their membership lapse)
+and the screen is reached only by deliberate CTA tap. Ledger reviewed, no row warranted. The
+**page-weight baseline is unchanged**: all new files are in the authenticated mobile app (`apps/mobile`,
+EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth
+on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

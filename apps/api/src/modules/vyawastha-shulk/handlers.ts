@@ -26,6 +26,8 @@ import type {
   VyawasthaShulkConfirmRequest,
   VyawasthaShulkConfirmResponse,
   VyawasthaShulkIntentResponse,
+  VyawasthaShulkRenewalConfirmResponse,
+  VyawasthaShulkRenewalStatusResponse,
   VyawasthaShulkStatusResponse,
 } from '@twt/contracts';
 import { eq, sql } from 'drizzle-orm';
@@ -48,6 +50,14 @@ const LOCK_IN_OR_PAST = new Set([
   'active-in-grace',
   'lapsed-unpaid',
 ]);
+
+/**
+ * States a RENEWAL confirm accepts — a renewing member is already POST-lock-in (Story 3.8, Task 4).
+ * Restricting to these three is load-bearing: it keeps a renewal from ever routing through the
+ * reducer's `pending-fee → lock-in` arm (which would re-apply lock-in — exactly what AC3 forbids).
+ * `active` (early renewal before grace) is identity in the reducer → just extends `validThrough`.
+ */
+const RENEWABLE_STATES = new Set(['active', 'active-in-grace', 'lapsed-unpaid']);
 
 /** Mask a UTR for audit/logging — last 4 only (never the full self-attested transaction ref). */
 function maskUtr(utr: string): string {
@@ -395,6 +405,213 @@ export function createVyawasthaShulkHandlers(deps: AppDeps) {
         };
         ok = true;
         return result;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * GET /api/v1/member/vyawastha-shulk/renewal-status — the canonical FR-12A `vyawastha_shulk_status`
+     * payload (Story 3.8, AC4/AC5). Computed live per request from events + the latest receipt (no
+     * cache) → trivially within the ≤60s freshness invariant. The domain field `daysUntilGraceEnds`
+     * maps to the wire `days_until_lapse` (the FR-12A vocabulary, fixed by PRD line 252).
+     */
+    async renewalStatus(request: FastifyRequest): Promise<VyawasthaShulkRenewalStatusResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const now = deps.clock();
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const status = await memberDomain.getVyawasthaShulkStatus(
+          scopeTx.tx,
+          pariwarId,
+          memberId,
+          now,
+        );
+        const result: VyawasthaShulkRenewalStatusResponse = {
+          paid_through: status.paidThrough ? status.paidThrough.toISOString() : null,
+          days_until_lapse: status.daysUntilGraceEnds,
+          in_renewal_grace: status.inRenewalGrace,
+          grace_remaining_days: status.graceRemainingDays,
+        };
+        ok = true;
+        return result;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * POST /api/v1/member/vyawastha-shulk/renew/intent — the renewal UPI Intent (Story 3.8, AC2).
+     * Identical to the signup intent (server-authoritative VPA + amount; `tr` idempotency nonce) but
+     * with the renewal `tn` grammar `renewal-shulk-{memberId}-{year}` (year from the injected clock).
+     */
+    async renewIntent(request: FastifyRequest): Promise<VyawasthaShulkIntentResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const vpa = deps.config.vyawasthaShulkVpa;
+      const amountInr = deps.config.vyawasthaShulkAmountInr;
+      if (!vpa) {
+        emitAuthAudit(deps, request, 'member_vyawastha_shulk.failure', {
+          actorId: memberIdStr,
+          pariwarId: pariwarIdStr,
+          context: { reason: 'unconfigured', kind: 'renewal' },
+        });
+        throw new ServiceUnavailableError(
+          'The renewal fee is not available',
+          'vyawastha_shulk.unconfigured',
+        );
+      }
+
+      const year = deps.clock().getFullYear();
+      const tr = `renewal-${memberIdStr}-${randomUUID()}`;
+      const tn = `renewal-shulk-${memberIdStr}-${year}`;
+      const upiUrl =
+        `upi://pay?pa=${encodeURIComponent(vpa)}&am=${amountInr}&cu=INR` +
+        `&tn=${encodeURIComponent(tn)}&tr=${encodeURIComponent(tr)}`;
+
+      emitAuthAudit(deps, request, 'member_vyawastha_shulk.intent', {
+        actorId: memberIdStr,
+        pariwarId: pariwarIdStr,
+        context: { amount_inr: amountInr, kind: 'renewal' },
+      });
+      return { upiUrl, tr, amountInr, vpa };
+    },
+
+    /**
+     * POST /api/v1/member/vyawastha-shulk/renew/confirm — self-attest the UTR → persist a renewal
+     * receipt + emit member.vyawastha_shulk_paid (kind: 'renewal') in ONE scope-tx (Story 3.8, AC2/AC3).
+     *
+     * Differs from the signup confirm: (a) NO lock-in gate — a renewing member is post-lock-in;
+     * (b) only renewable states (active / active-in-grace / lapsed-unpaid) are accepted (a pre-active
+     * state would route the reducer through `pending-fee → lock-in`, re-applying lock-in — AC3 forbids
+     * it); (c) receipt + event commit ATOMICALLY (no gate to separate them). Idempotent on the `tr`:
+     * a same-`tr` re-confirm returns the existing receipt and re-emits NOTHING (the pre-check on
+     * `getReceiptByTr` keeps the single tx un-aborted; the UNIQUE constraint is the race backstop).
+     */
+    async renewConfirm(request: FastifyRequest): Promise<VyawasthaShulkRenewalConfirmResponse> {
+      const body = request.body as VyawasthaShulkConfirmRequest;
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const now = deps.clock();
+      const amountInr = deps.config.vyawasthaShulkAmountInr;
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      let renewed = false;
+      try {
+        const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
+        if (!exists) {
+          throw new ConflictError('Member not found', 'vyawastha_shulk.member_not_found');
+        }
+        const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, now);
+        if (!RENEWABLE_STATES.has(state)) {
+          // Pre-active / lock-in / terminal — renewal does not apply (would re-apply lock-in or be a
+          // no-op on a member who hasn't completed signup). The UI surfaces renewal only post-lock-in.
+          throw new ConflictError(
+            'Member is not in a renewable state',
+            'vyawastha_shulk.not_renewable',
+          );
+        }
+
+        // Idempotency pre-check: an existing receipt for this `tr` means a re-confirm — return it and
+        // emit nothing (keeps the single tx un-aborted, unlike relying on the UNIQUE-violation abort).
+        const existing = await paymentDomain.getReceiptByTr(scopeTx.tx, pariwarId, memberId, body.tr);
+        let receiptRow = existing;
+        if (!existing) {
+          // P9: setFullYear handles leap years (365×24h fixed-ms is a day short on ~25% of cohorts).
+          const validThrough = new Date(now);
+          validThrough.setFullYear(now.getFullYear() + 1);
+          // P2 + D2: SAVEPOINT guards the insert so a 23505 race doesn't abort the outer tx. After a
+          // violation we roll back to the savepoint, leaving the tx in a clean (non-aborted) state, and
+          // then either re-read the committed receipt (same-`tr` race → idempotent path) or raise a
+          // 409 (same-UTR within the pariwar → D2 payment-integrity guard).
+          await scopeTx.client.query(`SAVEPOINT renewal_confirm_insert`);
+          try {
+            receiptRow = await paymentDomain.insertVyawasthaShulkReceipt(scopeTx.tx, {
+              memberId,
+              pariwarId,
+              tr: body.tr,
+              utr: body.utr,
+              amountInr,
+              paymentMethod: 'upi_intent',
+              validThrough,
+            });
+            await scopeTx.client.query(`RELEASE SAVEPOINT renewal_confirm_insert`);
+            // Emit the renewal transition in the SAME scope-tx (atomic with the receipt). The reducer
+            // routes active-in-grace/lapsed-unpaid → active and is identity from active — NEVER through
+            // pending-fee → lock-in, so AC3's "no re-lock-in" holds by construction. actorId = member.
+            await memberDomain.projectMemberState(scopeTx.client, {
+              memberId,
+              pariwarId,
+              eventType: 'member.vyawastha_shulk_paid',
+              payload: {
+                from_state: state,
+                to_state: 'active',
+                trigger: 'vyawastha_shulk_paid',
+                actor: 'member',
+                utr: body.utr,
+                amount_inr: amountInr,
+                kind: 'renewal',
+              },
+              actorId: memberIdStr,
+            });
+            renewed = true;
+          } catch (insertErr) {
+            await scopeTx.client.query(`ROLLBACK TO SAVEPOINT renewal_confirm_insert`);
+            if (paymentDomain.isReceiptTrDuplicate(insertErr)) {
+              // Concurrent same-`tr` race resolved in another request — re-read the committed receipt.
+              receiptRow = await paymentDomain.getReceiptByTr(
+                scopeTx.tx,
+                pariwarId,
+                memberId,
+                body.tr,
+              );
+            } else if (paymentDomain.isReceiptPariwarUtrDuplicate(insertErr)) {
+              throw new ConflictError(
+                'This payment reference has already been used within your trust',
+                'vyawastha_shulk.utr_already_used',
+              );
+            } else {
+              throw insertErr;
+            }
+          }
+        }
+        if (!receiptRow) {
+          throw new Error('[vyawastha-shulk] renewal receipt row missing after persistence');
+        }
+
+        const result: VyawasthaShulkRenewalConfirmResponse = {
+          receipt: {
+            paidAt: receiptRow.paidAt.toISOString(),
+            validThrough: receiptRow.validThrough.toISOString(),
+            amountInr: receiptRow.amountInr,
+            utr: receiptRow.utr,
+            paymentMethod: receiptRow.paymentMethod,
+          },
+          renewed,
+        };
+        ok = true;
+        if (renewed) {
+          emitAuthAudit(deps, request, 'member_vyawastha_shulk.paid', {
+            actorId: memberIdStr,
+            pariwarId: pariwarIdStr,
+            context: { masked_utr: maskUtr(body.utr), amount_inr: amountInr, kind: 'renewal' },
+          });
+        }
+        return result;
+      } catch (err) {
+        emitAuthAudit(deps, request, 'member_vyawastha_shulk.failure', {
+          actorId: memberIdStr,
+          pariwarId: pariwarIdStr,
+          context: {
+            reason: err instanceof ConflictError ? err.code : 'error',
+            kind: 'renewal',
+          },
+        });
+        throw err;
       } finally {
         await closeScopeTx(scopeTx, ok);
       }

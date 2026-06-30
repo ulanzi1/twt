@@ -74,9 +74,20 @@ export const vyawasthaShulkReceipts = pgTable(
   (t) => [
     // The status / idempotency lookup key (a member's receipts within a Pariwar).
     index('vyawastha_shulk_receipts_pariwar_member_idx').on(t.pariwarId, t.memberId),
+    // Story 3.8 — the renewal-lifecycle scheduler's INDEXED candidate scan: the latest receipt per
+    // member (DISTINCT ON (member_id) … ORDER BY member_id, valid_through DESC) filtered on the
+    // grace-end window. Additive, non-destructive (migration 0028).
+    index('vyawastha_shulk_receipts_member_valid_through_idx').on(
+      t.memberId,
+      t.validThrough.desc(),
+    ),
     // The idempotency UNIQUE (AC1) — name matches the migration constraint so the receipt-write
     // accessor can narrow the 23505 to exactly this constraint (mirror 3.6a's identity narrowing).
     unique('vyawastha_shulk_receipts_tr_uq').on(t.tr),
+    // Story 3.8 D2 — payment-integrity guard: one bank UTR per pariwar (scoped to pariwar, not
+    // global, for test isolation). Matches the 0029 migration constraint name for receipt-write
+    // narrowing (`isReceiptPariwarUtrDuplicate`).
+    unique('vyawastha_shulk_receipts_pariwar_utr_uq').on(t.pariwarId, t.utr),
   ],
 );
 

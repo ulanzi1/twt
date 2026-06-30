@@ -135,5 +135,15 @@
   "lock_in.clause_ref_label": "नियम धारा",
   "lock_in.clause_link": "लॉक-इन नियम पढ़ें",
   "lock_in.clause_link_hint": "नियमावली पृष्ठ को लॉक-इन धारा पर खोलता है",
-  "lock_in.unlock_date_a11y": "आपकी लॉक-इन अवधि {date} को समाप्त होगी"
+  "lock_in.unlock_date_a11y": "आपकी लॉक-इन अवधि {date} को समाप्त होगी",
+  "renewal.title": "सदस्यता नवीनीकरण",
+  "renewal.due": "आपकी सदस्यता नवीनीकरण के लिए देय है।",
+  "renewal.due_soon": "आपकी सदस्यता नवीनीकरण के लिए देय है। जब आप तैयार हों तब नवीनीकरण करें।",
+  "renewal.grace_remaining": "नवीनीकरण के लिए आपके पास {count} दिन की छूट अवधि है।",
+  "renewal.grace_remaining_a11y": "अपनी सदस्यता का नवीनीकरण करने के लिए आपके पास {count} दिन की छूट अवधि शेष है।",
+  "renewal.lapsed": "आपकी सदस्यता समाप्त हो गई है। कवरेज पुनः आरंभ करने हेतु नवीनीकरण करें।",
+  "renewal.paid_through_label": "इस तिथि तक कवर",
+  "renewal.renew_cta": "सदस्यता नवीनीकरण करें",
+  "renewal.renew_cta_a11y": "UPI के माध्यम से अपनी सदस्यता का नवीनीकरण करें",
+  "renewal.renew_cta_hint": "नवीनीकरण शुल्क का भुगतान करने के लिए आपका UPI ऐप खोलता है"
 }

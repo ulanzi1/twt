@@ -4,7 +4,7 @@
 // for defense-in-depth alongside RLS (the member_medical_disclosures read precedent). Transport-free
 // PRIMITIVES: NO HTTP, NO audit — the handler orchestrates.
 
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, lte } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
@@ -56,6 +56,32 @@ export async function getLatestReceipt(
       and(
         eq(vyawasthaShulkReceipts.pariwarId, pariwarId),
         eq(vyawasthaShulkReceipts.memberId, memberId),
+      ),
+    )
+    .orderBy(desc(vyawasthaShulkReceipts.paidAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Resolve a member's LATEST receipt within a Pariwar AS-OF `atTimestamp` (newest `paid_at ≤ atTimestamp`
+ * first) — the AC5-correct variant for status reads at a historical point in time. Returns null when the
+ * member had no receipt at or before `atTimestamp`. Tenant-scoped.
+ */
+export async function getLatestReceiptAt(
+  db: Db,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+  atTimestamp: Date,
+): Promise<VyawasthaShulkReceiptRow | null> {
+  const rows = await db
+    .select()
+    .from(vyawasthaShulkReceipts)
+    .where(
+      and(
+        eq(vyawasthaShulkReceipts.pariwarId, pariwarId),
+        eq(vyawasthaShulkReceipts.memberId, memberId),
+        lte(vyawasthaShulkReceipts.paidAt, atTimestamp),
       ),
     )
     .orderBy(desc(vyawasthaShulkReceipts.paidAt))

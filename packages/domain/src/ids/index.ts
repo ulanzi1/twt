@@ -257,3 +257,21 @@ export const vyawasthaShulkReceiptId = uuidBrand('VyawasthaShulkReceiptId');
 export type MemberAttributionId = Brand<'MemberAttributionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `MemberAttributionId`. */
 export const memberAttributionId = uuidBrand('MemberAttributionId');
+
+// ── Life Events history ids (Story 3.9, Task 2/3) ─────────────────────────────
+// Two NEW branded ids per the §Naming "branding mandatory on a new ID's first PR"
+// discipline (L3700-3708): `AddressId` (per-row address of a member's Tier-1-encrypted
+// address history) + `PostingId` (per-row address of a member's posting/transfer history).
+// Both tables are APPEND-ONLY (mirror member_medical_disclosures) — every Life Events update
+// mints a NEW row so the prior value is preserved (AC1 "prior value preserved"). Both ids are
+// UUID row addresses, so both reuse the shared `uuidBrand` validator.
+
+/** Per-row address of a member address-history row (`member_addresses.address_id`). */
+export type AddressId = Brand<'AddressId'>;
+/** Smart constructor: validates UUID shape, returns a branded `AddressId`. */
+export const addressId = uuidBrand('AddressId');
+
+/** Per-row address of a member posting-history row (`member_postings.posting_id`). */
+export type PostingId = Brand<'PostingId'>;
+/** Smart constructor: validates UUID shape, returns a branded `PostingId`. */
+export const postingId = uuidBrand('PostingId');

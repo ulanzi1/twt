@@ -211,6 +211,20 @@
       "when": 1783222800000,
       "tag": "0029_receipt-pariwar-utr-unique",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1783309200000,
+      "tag": "0030_member-addresses",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1783395600000,
+      "tag": "0031_member-postings",
+      "breakpoints": true
     }
   ]
 }

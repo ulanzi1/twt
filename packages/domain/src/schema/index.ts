@@ -77,6 +77,12 @@ export * from './member_medical_disclosures.js';
 // field-worker FK — D2). FK cascade to members for RTBF (Story 3.12).
 export * from './vyawastha_shulk_receipts.js';
 export * from './member_attribution.js';
+// Story 3.9 — Life Events history tables (tenant-isolated; APPEND-ONLY, "prior value preserved").
+// member_addresses: address line Tier-1 envelope; per-row address_id. member_postings: district
+// plaintext (non-PII geographic) + is_retirement flag (Epic 4 Story 4.5 retirement anchor);
+// per-row posting_id. Both FK cascade to members for RTBF (Story 3.12).
+export * from './member_addresses.js';
+export * from './member_postings.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

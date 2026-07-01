@@ -23,8 +23,8 @@
 //
 // ── Re-runnable for Story 3.9 (R3/scope guard) ───────────────────────────────────────────────
 // `submit` is the re-runnable disclosure SERVICE: Story 3.9 attaches `requireMemberStepUp(deps,
-// 'medical_disclosure_update')` on its Life Events route and reuses this handler with zero
-// changes. NO step-up here (signup — the member holds a fresh signup-continuation session).
+// 'medical_change')` on its Life Events route and reuses this handler with zero changes. NO
+// step-up here (signup — the member holds a fresh signup-continuation session).
 
 import { createHash } from 'node:crypto';
 

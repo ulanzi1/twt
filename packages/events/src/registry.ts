@@ -103,4 +103,16 @@ export const EVENT_TYPE_REGISTRY = {
     description: 'RTBF anonymization (Story 3.12): withdrawn → anonymized (terminal, FR-96).',
     schema: member.RtbfAnonymizedPayloadSchema,
   },
+  'member.address_updated': {
+    type: 'member.address_updated',
+    description:
+      'Address changed via the Life Events panel (Story 3.9) — non-transition marker; NON-PII presence marker only (address bytes live Tier-1 in member_addresses).',
+    schema: member.AddressUpdatedPayloadSchema,
+  },
+  'member.posting_updated': {
+    type: 'member.posting_updated',
+    description:
+      'Posting / transfer-in-out changed via the Life Events panel (Story 3.9) — non-transition marker; carries non-PII district + optional pariwar_ref + is_retirement (Epic 4 Story 4.5 retirement anchor).',
+    schema: member.PostingUpdatedPayloadSchema,
+  },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

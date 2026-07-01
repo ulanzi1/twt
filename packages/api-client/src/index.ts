@@ -13,6 +13,7 @@ import {
   KycProfileSummaryResponse,
   ImaListResponse,
   KycStatusResponse,
+  LifeEventsSummaryResponse,
   MedicalDisclosureStatusResponse,
   MemberFullSession,
   MemberLockInStatusResponse,
@@ -33,6 +34,9 @@ import {
   type KycManualSubmitRequest,
   type KycProfileSummaryResponse as KycProfileSummaryResult,
   type KycStatusResponse as KycStatusResult,
+  type AddressUpdateRequest,
+  type LifeEventsSummaryResult,
+  type PostingUpdateRequest,
   type MedicalDiscloseRequest,
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
   type MemberLockInStatusResponse as MemberLockInStatusResult,
@@ -93,6 +97,7 @@ const MEDICAL_BASE = '/api/v1/member/medical-disclosure';
 const TERMS_BASE = '/api/v1/member/terms';
 const VYAWASTHA_SHULK_BASE = '/api/v1/member/vyawastha-shulk';
 const MEMBER_HOME_BASE = '/api/v1/member';
+const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -330,6 +335,36 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     memberLockInStatus(): Promise<MemberLockInStatusResult> {
       return call(`${MEMBER_HOME_BASE}/lock-in-status`, MemberLockInStatusResponse, undefined, true, 'GET');
+    },
+
+    // ── Life Events panel (Story 3.9) ───────────────────────────────────────────
+    // Self-service updates to the four life-change sub-types. The nominee + medical routes are
+    // STEP-UP-gated server-side: a 403 with `error.code === 'auth.step_up_required'` drives the
+    // caller through stepUpRequest('nominee_change'|'medical_change') → stepUpVerify → retry (the
+    // caller keys on the error CODE, not the bare 403). Address + posting need NO step-up.
+    /** Life Events nominee update — re-runs the declare service behind a step-up gate (auth). */
+    lifeEventsUpdateNominees(input: NomineeDeclareRequest): Promise<NomineeStatusResult> {
+      return call(`${LIFE_EVENTS_BASE}/nominees`, NomineeStatusResponse, input, true);
+    },
+
+    /** Life Events medical update — re-runs the submit service (append-only) behind a step-up gate (auth). */
+    lifeEventsUpdateMedical(input: MedicalDiscloseRequest): Promise<MedicalStatusResult> {
+      return call(`${LIFE_EVENTS_BASE}/medical`, MedicalDisclosureStatusResponse, input, true);
+    },
+
+    /** Life Events address update — append-only Tier-1 write; NO step-up. Returns the refreshed summary (auth). */
+    lifeEventsUpdateAddress(input: AddressUpdateRequest): Promise<LifeEventsSummaryResult> {
+      return call(`${LIFE_EVENTS_BASE}/address`, LifeEventsSummaryResponse, input, true);
+    },
+
+    /** Life Events posting / transfer update — append-only write; NO step-up. Returns the refreshed summary (auth). */
+    lifeEventsUpdatePosting(input: PostingUpdateRequest): Promise<LifeEventsSummaryResult> {
+      return call(`${LIFE_EVENTS_BASE}/posting`, LifeEventsSummaryResponse, input, true);
+    },
+
+    /** Read the Life Events panel summary (presence flags + counts across all four sub-types; auth). */
+    lifeEventsSummary(): Promise<LifeEventsSummaryResult> {
+      return call(LIFE_EVENTS_BASE, LifeEventsSummaryResponse, undefined, true, 'GET');
     },
   };
 }

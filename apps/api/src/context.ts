@@ -76,6 +76,15 @@ export const MEMBER_NOMINEE_FIELD_CLASS = 'member_nominee';
  */
 export const MEMBER_MEDICAL_FIELD_CLASS = 'member_medical';
 
+/**
+ * Field-class namespace for the member ADDRESS Tier-1 envelope (Story 3.9 Life Events). Like the
+ * KYC / nominee / medical families (and unlike the admin-email / member-mobile families that key on
+ * a fixed global sentinel because their lookup runs pre-scope), `member_addresses` is a TENANT table
+ * — its encryption context keys on the member's REAL `pariwarId`. Matches the
+ * `piiColumn(1, 'member_address')` field-class annotation on the address-line column.
+ */
+export const MEMBER_ADDRESS_FIELD_CLASS = 'member_address';
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;

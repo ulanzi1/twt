@@ -169,7 +169,41 @@ export const LockInEnteredPayloadSchema = z
 export const ValidThroughReachedPayloadSchema = z.object({ ...auditShape }).strict();
 export const WithdrawalRequestedPayloadSchema = z.object({ ...auditShape }).strict();
 
-// ── The 14-event vocabulary + the type→schema map (single source) ─────────────
+/**
+ * Story 3.9: address change via the Life Events panel. NON-PII audit only — the events_log
+ * payload is plaintext JSONB and MUST NEVER carry the member's raw address bytes (R1; the same
+ * discipline as `nominees_declared`, which carries only count + split). The address PII lives
+ * Tier-1-encrypted in `member_addresses`; "prior value preserved" (AC1) is satisfied by that
+ * APPEND-ONLY history table, NOT by stuffing the old value into this payload. Here we record
+ * only the presence MARKER — a recorded address is always present. Still a non-transition marker
+ * (from_state === to_state) — the reducer treats `member.address_updated` as identity (R5).
+ */
+export const AddressUpdatedPayloadSchema = z
+  .object({
+    ...auditShape,
+    address_present: z.literal(true),
+  })
+  .strict();
+/**
+ * Story 3.9: posting / transfer-in-out change via the Life Events panel. The posting `district`
+ * is a geographic location, NOT sensitive identity data → non-PII, so it is safe in BOTH the
+ * column and this payload (Dev Notes §"Posting PII tier"). `pariwar_ref` is an OPTIONAL
+ * forward-compat reference (a true cross-Pariwar tenant migration is out of scope for v1-S —
+ * this records the district change as a member attribute + marker only). `is_retirement` is a
+ * non-PII boolean lifecycle marker — Epic 4 Story 4.5 computes `retired_at` from the FIRST
+ * `posting.updated` where `is_retirement === true` (omitting it now would force a migration +
+ * event-schema extension in Epic 4). Non-transition marker (from_state === to_state; R5).
+ */
+export const PostingUpdatedPayloadSchema = z
+  .object({
+    ...auditShape,
+    district: z.string().min(1),
+    pariwar_ref: z.string().min(1).optional(),
+    is_retirement: z.boolean(),
+  })
+  .strict();
+
+// ── The 16-event vocabulary + the type→schema map (single source) ─────────────
 
 export const MEMBER_EVENT_TYPES = [
   'member.signup_initiated',
@@ -186,9 +220,12 @@ export const MEMBER_EVENT_TYPES = [
   'member.withdrawal_requested',
   'member.withdrawal_completed',
   'member.rtbf_anonymized',
+  // Story 3.9 — Life Events panel: two NON-TRANSITION markers (address + posting change).
+  'member.address_updated',
+  'member.posting_updated',
 ] as const;
 
-/** The dotted `member.*` event-type literal union (the 14 AC1 events). */
+/** The dotted `member.*` event-type literal union (the 16 AC1 events). */
 export type MemberEventType = (typeof MEMBER_EVENT_TYPES)[number];
 
 /**
@@ -212,4 +249,7 @@ export const MEMBER_EVENT_PAYLOAD_SCHEMAS = {
   'member.withdrawal_requested': WithdrawalRequestedPayloadSchema,
   'member.withdrawal_completed': WithdrawalCompletedPayloadSchema,
   'member.rtbf_anonymized': RtbfAnonymizedPayloadSchema,
+  // Story 3.9 — Life Events markers (both non-transition; reducer treats them as identity).
+  'member.address_updated': AddressUpdatedPayloadSchema,
+  'member.posting_updated': PostingUpdatedPayloadSchema,
 } as const satisfies Record<MemberEventType, z.ZodTypeAny>;

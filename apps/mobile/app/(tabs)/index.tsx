@@ -1,5 +1,6 @@
 import { YStack } from 'tamagui'
 
+import { LifeEventsEntry } from 'components/life-events/LifeEventsEntry'
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
 import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
 import { YogdaanBahi } from 'components/yogdaan-bahi/YogdaanBahi'
@@ -20,6 +21,7 @@ export default function YogdaanTab() {
     <YStack flex={1}>
       <LockInClockWidget />
       <RenewalStatusWidget />
+      <LifeEventsEntry />
       <YogdaanBahi />
     </YStack>
   )

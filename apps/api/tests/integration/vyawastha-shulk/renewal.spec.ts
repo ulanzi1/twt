@@ -73,10 +73,15 @@ async function seedMember(
     throw err;
   }
   if (validThrough) {
+    // The seeded PRIOR receipt must use a UTR distinct from `goodUtr` (the renewal confirm's UTR):
+    // migration 0029's UNIQUE(pariwar_id, utr) rejects reusing a UTR within a Pariwar, so a shared
+    // value would make the later renewal confirm 409 (utr_already_used). The seed UTR value is never
+    // asserted, so a per-seed-unique value is the faithful fixture. (Pre-existing 3.8 test defect
+    // surfaced when isolating renewal.spec on a fresh DB; unrelated to Story 3.9.)
     await t.pool.query(
       `INSERT INTO vyawastha_shulk_receipts (member_id, pariwar_id, tr, utr, amount_inr, payment_method, valid_through)
        VALUES ($1, $2, $3, $4, 110, 'upi_intent', $5)`,
-      [memberId, pariwarId, `seed-${randomUUID()}`, goodUtr, validThrough.toISOString()],
+      [memberId, pariwarId, `seed-${randomUUID()}`, `seedutr-${randomUUID().slice(0, 18)}`, validThrough.toISOString()],
     );
   }
   return { memberId, pariwarId };

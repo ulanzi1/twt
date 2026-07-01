@@ -25,6 +25,7 @@ import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
+import { registerLifeEventsModule } from './modules/life-events/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
@@ -122,6 +123,11 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // read seam over the 3.6b member.lock_in_entered marker — countdown + clause ref + unlock date).
   // Member-session-gated; NO write path / event / schema change.
   registerMemberHomeModule(app, deps);
+  // Story 3.9 — member Life Events panel surface (FR-5): update nominees / address / transfer-in-out
+  // / medical disclosure. Nominee + medical REUSE the 3.4/3.5 declare/submit services behind a member
+  // step-up gate ('nominee_change' / 'medical_change'); address + posting are NEW append-only writes
+  // (NO step-up) emitting the two non-transition markers member.address_updated / member.posting_updated.
+  registerLifeEventsModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

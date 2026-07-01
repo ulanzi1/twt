@@ -12,6 +12,7 @@ import type { MemberFullSession } from '@twt/contracts'
 
 import { memberAuth } from './member-api'
 import { clearSession, loadSession, saveSession, type StoredSession } from './session'
+import { clearAllMemberDrafts } from '../components/life-events/draft-store'
 
 interface SessionContextValue {
   session: StoredSession | null
@@ -52,6 +53,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   }
 
   async function signOut(): Promise<void> {
+    // Purge member-scoped drafts before clearing the session so the memberId is still available.
+    if (session?.memberId) clearAllMemberDrafts(session.memberId)
     try {
       await memberAuth.logout()
     } catch {

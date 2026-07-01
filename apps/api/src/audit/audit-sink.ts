@@ -114,7 +114,15 @@ export type AuthAuditEventType =
   | 'member_attribution.captured'
   // The lock-in clock-start marker (member.lock_in_entered emitted) — context carries the FR-8
   // lock_in_days_at_join snapshot + the resolved lock_in_policy_version (both NON-PII).
-  | 'member.lock_in_entered';
+  | 'member.lock_in_entered'
+  // ── Member Life Events panel surface (Story 3.9, FR-5) ───────────────────────
+  // Self-service address + posting updates (nominee + medical Life Events updates reuse the 3.4/3.5
+  // audit lines above). Context is NON-PII: address carries a presence marker ONLY (NEVER the raw
+  // address bytes); posting carries district (non-PII geographic) + is_retirement.
+  //   address.updated — a new append-only member_addresses row was written + member.address_updated emitted.
+  //   posting.updated — a new append-only member_postings row was written + member.posting_updated emitted.
+  | 'member_life_events.address_updated'
+  | 'member_life_events.posting_updated';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

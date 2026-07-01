@@ -53,6 +53,10 @@ export * from './payments/index.js';
 // Story 3.8 — the renewal-reminder nudge SEAM (FR-23). The producing half (Epic 3 schedules); Epic 5's
 // dispatcher subscribes later. Internal queue seam — NO `.openapi()` path, openapi/v1.yaml unchanged.
 export * from './notifications/index.js';
+// Story 3.9 — Life Events panel transport DTOs (address + posting update requests + the shared
+// summary response). Nominee + medical Life Events routes REUSE the existing declare/submit
+// contracts. Match the nominee/medical openapi posture — NO `.openapi()`, openapi/v1.yaml unchanged.
+export * from './life-events/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

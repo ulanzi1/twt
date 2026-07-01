@@ -80,10 +80,10 @@ describe('PostingUpdatedPayloadSchema — non-PII district + retirement flag', (
     actor: 'member',
   } as const;
 
-  it('accepts district alone (optional fields omitted)', () => {
-    expect(PostingUpdatedPayloadSchema.parse({ ...base, district: 'Pune' })).toMatchObject({
-      district: 'Pune',
-    });
+  it('accepts district + is_retirement (pariwar_ref is the only optional field)', () => {
+    expect(
+      PostingUpdatedPayloadSchema.parse({ ...base, district: 'Pune', is_retirement: false }),
+    ).toMatchObject({ district: 'Pune', is_retirement: false });
   });
 
   it('accepts pariwar_ref + is_retirement when present', () => {

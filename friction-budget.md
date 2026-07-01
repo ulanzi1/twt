@@ -175,6 +175,18 @@ and the screen is reached only by deliberate CTA tap. Ledger reviewed, no row wa
 EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth
 on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 3.9 disposition (existing step-up row REALIZED for Life Events updates; no new row):** the Life Events panel (`apps/mobile/app/(life-events)/` + `apps/mobile/components/life-events/`) adds four self-service member-update flows. Friction analysis by sub-type:
+
+(1) **Nominee + medical updates — step-up OTP gate (forced, pre-declared):** both routes require `requireMemberStepUp` (Story 3.9's `useStepUpGate` hook), which drives the member through the OTP request → verify → retry loop. This is identical step-up friction to the Story 3.2 login OTP and is already captured in the existing **"member (mobile + OTP at login; fresh OTP at step-up) → Account & session security → forced"** row. The Story 3.2 disposition (`apps/mobile/app/(auth)/login.tsx` + step-up gate) explicitly scoped step-up to "high-trust actions (mobile/nominee change, withdrawal, account-deletion ack, DigiLocker re-link, claim filing — §2.2)". Life Events nominee + medical updates are exactly those high-trust actions. No new row warranted — the existing forced row covers it.
+
+(2) **Address + posting updates — zero forced friction:** both routes require only `requireMemberSession` (no step-up). The forms are user-initiated self-service data entry with calm register (UX-DR55 Pattern 4 dignified-validation copy — "Take your time — there's no rush", "Please enter your address when you're ready"). No upload, no gate, no urgency theater; the prior value is preserved as append-only history so no destructive decision is required of the member. Zero deliberate friction introduced.
+
+(3) **Signup form refactor (signup nominees + medical shared components):** `apps/mobile/app/(signup)/nominees.tsx` and `apps/mobile/app/(signup)/medical.tsx` are refactored to consume the new shared `NomineeForm` / `MedicalForm` components. The signup **behavior is unchanged** — no step-up added, no new fields, no additional interactions. The refactor removes code rather than adding friction.
+
+(4) **Session-context signOut purge + home-tab entry point:** `apps/mobile/lib/session-context.tsx` gains a draft-purge call on logout (invisible to the member) and `apps/mobile/app/(tabs)/index.tsx` gains a `<LifeEventsEntry>` below the renewal widget (an ambient, user-initiated navigation tile — no forced interaction). Neither introduces deliberate friction.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

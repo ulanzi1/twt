@@ -199,6 +199,16 @@ Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The 
 
 Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 3.11 disposition (existing step-up row REALIZED for data-export download; no new row):** the data export flow touches six mobile files across three categories:
+
+(1) **Data export download step-up OTP gate (forced, pre-declared):** `apps/mobile/app/(data-export)/index.tsx` gates the ZIP download behind `useStepUpGate('data_export')`, which drives the member through the OTP request → verify → retry loop before the one-time download is unlocked. This is identical step-up friction to the Story 3.2 login OTP and is already captured in the existing **"member (mobile + OTP at login; fresh OTP at step-up) → Account & session security → forced"** row. The Story 3.2 disposition explicitly scoped step-up to "high-trust actions (mobile/nominee change, withdrawal, account-deletion ack, DigiLocker re-link, claim filing — §2.2)"; DPDPA data-portability export is a one-time-download high-trust action in the same class. No new row warranted — the existing forced row covers it.
+
+(2) **OS share sheet (optional, user-initiated):** after the ZIP is downloaded and written to the device cache via `apps/mobile/lib/save-export.ts`, the OS share sheet is presented via `expo-sharing` — the member may share, save, or dismiss it. The share sheet is **fully optional and user-initiated**: dismissed it carries no penalty; the ZIP is already written locally. No forced upload, no coercive decision, no urgency theater. Zero deliberate friction introduced beyond the step-up OTP already declared.
+
+(3) **DataExportEntry nav tile + route registration — user-initiated, non-blocking:** `apps/mobile/components/data-export/DataExportEntry.tsx` (the home-tab navigation tile), `apps/mobile/app/(tabs)/index.tsx` (mount point), and `apps/mobile/app/_layout.tsx` (route registration) are identical in character to the Story 3.9 `<LifeEventsEntry>` and Story 3.10 `<WithdrawalEntry>` already affirmed: the tile is user-initiated, non-blocking, and navigates to the export flow only when the member deliberately taps it. No forced step, no form, no gate.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

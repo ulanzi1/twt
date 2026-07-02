@@ -13,9 +13,11 @@
 import { createDb } from '@twt/domain';
 import type pg from 'pg';
 
+import type { JobEnvelope } from '@twt/queue';
+
 import type { AuthAuditEvent, AuthAuditSink } from '../../src/audit/audit-sink.js';
 import { loadConfig, type ApiConfig } from '../../src/config.js';
-import type { AppDeps } from '../../src/context.js';
+import type { AppDeps, DataExportEnqueuer } from '../../src/context.js';
 import { buildEncryptionDeps } from '../../src/deps.js';
 import { generateEphemeralMemberJwtKeys } from '../../src/modules/auth/member/jwt-keys.js';
 import type { StepUpOtpDelivery, StepUpOtpDeliveryPort } from '../../src/modules/auth/shared/step-up-delivery.js';
@@ -110,6 +112,26 @@ export class CapturingStepUpDelivery implements StepUpOtpDeliveryPort {
   }
 }
 
+/**
+ * A capturing data-export queue (Story 3.11). Records every enqueued build envelope so the API
+ * integration test can assert the request path enqueued the job (spy the send-only client) WITHOUT a
+ * live pg-boss. `close` is a no-op. Throw-on-enqueue can be simulated by setting `failNext = true`.
+ */
+export class CapturingDataExportQueue implements DataExportEnqueuer {
+  public readonly enqueued: JobEnvelope<{ exportId: string }>[] = [];
+  public failNext = false;
+  public async enqueueBuild(envelope: JobEnvelope<{ exportId: string }>): Promise<void> {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error('simulated enqueue failure');
+    }
+    this.enqueued.push(envelope);
+  }
+  public get last(): JobEnvelope<{ exportId: string }> | undefined {
+    return this.enqueued.at(-1);
+  }
+}
+
 export interface TestDepsOverrides {
   auditSink?: AuthAuditSink;
   toneReviewAuditSink?: ToneReviewAuditSink;
@@ -119,6 +141,7 @@ export interface TestDepsOverrides {
   deployTrigger?: DeployTrigger;
   niyamavaliAmendedHook?: NiyamavaliAmendedHook;
   kycProviders?: KycProviderRegistry;
+  dataExportQueue?: DataExportEnqueuer;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
 }
@@ -130,6 +153,7 @@ export interface TestDeps {
   toneReviewAuditSink: CapturingToneReviewAuditSink;
   stepUpDelivery: CapturingStepUpDelivery;
   niyamavaliHook: CapturingNiyamavaliHook;
+  dataExportQueue: CapturingDataExportQueue;
 }
 
 const FALLBACK_URL = 'postgresql://twt_test:twt_test@127.0.0.1:1/twt_unused';
@@ -149,6 +173,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const stepUpDelivery =
     (overrides.stepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
   const niyamavaliHook = new CapturingNiyamavaliHook();
+  const dataExportQueue =
+    (overrides.dataExportQueue as CapturingDataExportQueue) ?? new CapturingDataExportQueue();
 
   // Build fake-KMS encryption deps with the test pepper (KMS_TEST_MODE defaults to fake).
   const enc = buildEncryptionDeps(TEST_PEPPER);
@@ -191,9 +217,20 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
         activeProviderKey: 'fixture',
         builders: { fixture: () => fixtureKycProvider },
       }),
+    // Data-export queue producer (Story 3.11) — a capturing fake by default so the request spec can
+    // assert the build job was enqueued without a live pg-boss.
+    dataExportQueue,
     clock: overrides.clock ?? ((): Date => new Date()),
   };
-  return { deps, pool, auditSink, toneReviewAuditSink, stepUpDelivery, niyamavaliHook };
+  return {
+    deps,
+    pool,
+    auditSink,
+    toneReviewAuditSink,
+    stepUpDelivery,
+    niyamavaliHook,
+    dataExportQueue,
+  };
 }
 
 export interface TestApp extends TestDeps {

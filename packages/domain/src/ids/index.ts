@@ -253,6 +253,18 @@ export type VyawasthaShulkReceiptId = Brand<'VyawasthaShulkReceiptId'>;
 /** Smart constructor: validates UUID shape, returns a branded `VyawasthaShulkReceiptId`. */
 export const vyawasthaShulkReceiptId = uuidBrand('VyawasthaShulkReceiptId');
 
+// ── Data-export id (Story 3.11, Task 1) ──────────────────────────────────────
+// NEW branded id per the §Naming "branding mandatory on a new ID's first PR"
+// discipline (L3700-3708): `DataExportId` is the per-row address of a member's
+// DPDPA data-portability export request (`data_exports.export_id`) — the handle
+// the request/status/download API routes key on. A UUID row address, so it reuses
+// the shared `uuidBrand` validator.
+
+/** Per-row address of a member data-export request (`data_exports.export_id`). */
+export type DataExportId = Brand<'DataExportId'>;
+/** Smart constructor: validates UUID shape, returns a branded `DataExportId`. */
+export const dataExportId = uuidBrand('DataExportId');
+
 /** Per-row address of a member attribution capture (`member_attribution.attribution_id`). */
 export type MemberAttributionId = Brand<'MemberAttributionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `MemberAttributionId`. */

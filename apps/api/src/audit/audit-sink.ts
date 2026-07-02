@@ -131,7 +131,18 @@ export type AuthAuditEventType =
   //   completed      — a withdrawal was confirmed (₹110 forfeited; 12-month rejoin lock written).
   //   rejoin_blocked — a same-identity signup was blocked inside the 12-month rejoin-lock window.
   | 'member_withdrawal.completed'
-  | 'member_withdrawal.rejoin_blocked';
+  | 'member_withdrawal.rejoin_blocked'
+  // ── Member data-export surface (Story 3.11, FR-95 / DPDPA data-portability) ───
+  // The export request + the one-time gated download. Context is NON-PII: export_id, member_id (the
+  // actorId), status, byte size — NEVER any exported field value, NEVER the plaintext. The `.generated`
+  // line is emitted by the apps/jobs build worker (via writeAuditEntry directly, not this sink); it is
+  // listed here for taxonomy completeness.
+  //   requested  — a member requested an export (pending row created + build job enqueued).
+  //   generated  — the build worker finished the ZIP + stored it envelope-encrypted (jobs-side).
+  //   downloaded — the one-time gated download streamed the ZIP (consumed_at stamped).
+  | 'member_data_export.requested'
+  | 'member_data_export.generated'
+  | 'member_data_export.downloaded';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

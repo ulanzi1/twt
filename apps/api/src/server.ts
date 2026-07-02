@@ -35,6 +35,7 @@ import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerRulesModule } from './modules/rules/index.js';
 import { registerTermsModule } from './modules/terms-and-conditions/index.js';
+import { registerDataExportModule } from './modules/data-export/index.js';
 import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
@@ -134,6 +135,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // lock written; history retained until Story 3.12 anonymizes). Signup rejoin-lock enforcement lives
   // in the member-auth signup handler (a pre-scope cross-tenant read), not here.
   registerWithdrawalModule(app, deps);
+  // Story 3.11 — member DPDPA data-export surface (FR-95): request (session) + status-poll (session) +
+  // one-time, 24h, step-up-gated ('data_export' context) ZIP download stream. The FIRST api-side queue
+  // producer (enqueues DATA_EXPORT_BUILD via deps.dataExportQueue); the build/vacuum workers are apps/jobs.
+  registerDataExportModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

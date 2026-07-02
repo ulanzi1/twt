@@ -71,6 +71,17 @@ export class ConflictError extends ApiError {
   }
 }
 
+/**
+ * 410 — the resource existed but is permanently gone. Story 3.11's data-export download uses this for
+ * a one-time artifact already consumed (`data_export.consumed`) or past its 24h window
+ * (`data_export.expired`) — a distinct signal from 404 (never existed) or 409 (not ready yet).
+ */
+export class GoneError extends ApiError {
+  public constructor(message: string, code = 'request.gone', details?: unknown) {
+    super(410, code, message, details);
+  }
+}
+
 /** 423 — account locked (lockout). Escalation policy in ADR-0009. */
 export class LockedError extends ApiError {
   public constructor(message = 'Account locked', code = 'auth.locked', details?: unknown) {

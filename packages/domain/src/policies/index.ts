@@ -47,3 +47,5 @@ export * from './member-addresses-rls.js';
 export * from './member-postings-rls.js';
 // Story 3.10 — member_withdrawals tenant-isolation (mirror member-addresses-rls; GRANTs UPDATE too).
 export * from './member-withdrawals-rls.js';
+// Story 3.11 — data_exports tenant-isolation (mirror member-withdrawals-rls; GRANTs UPDATE too).
+export * from './data-exports-rls.js';

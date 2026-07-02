@@ -21,6 +21,8 @@ async function main(): Promise<void> {
   // End the service pool only when it is a DISTINCT pool (prod SERVICE_DATABASE_URL);
   // in dev/CI it aliases deps.pool, so ending it once via deps.pool suffices.
   const endPools = async (): Promise<void> => {
+    // Drain the send-only data-export queue client (Story 3.11) before the pools.
+    await deps.dataExportQueue.close?.().catch(() => undefined);
     await deps.pool.end().catch(() => undefined);
     if (deps.servicePool !== deps.pool) {
       await deps.servicePool.end().catch(() => undefined);

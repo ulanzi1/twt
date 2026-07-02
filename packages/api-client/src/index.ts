@@ -30,6 +30,8 @@ import {
   VyawasthaShulkRenewalStatusResponse,
   VyawasthaShulkStatusResponse,
   WithdrawalStatusResponse,
+  DataExportRequestResponse,
+  DataExportStatusResponse,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
@@ -62,6 +64,8 @@ import {
   type MemberStepUpVerifyResponse as StepUpVerifyResult,
   type WithdrawalConfirmRequest,
   type WithdrawalStatusResponse as WithdrawalStatusResult,
+  type DataExportRequestResponse as DataExportRequestResult,
+  type DataExportStatusResponse as DataExportStatusResult,
 } from '@twt/contracts';
 import type { z } from 'zod';
 
@@ -108,6 +112,7 @@ const VYAWASTHA_SHULK_BASE = '/api/v1/member/vyawastha-shulk';
 const MEMBER_HOME_BASE = '/api/v1/member';
 const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
 const WITHDRAWAL_BASE = '/api/v1/member/withdrawal';
+const DATA_EXPORT_BASE = '/api/v1/member/data-export';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -152,6 +157,37 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     }
     if (res.status === 204) return undefined as T;
     return schema.parse(await res.json());
+  }
+
+  /**
+   * Binary variant of `call` for the data-export ZIP download (Story 3.11) — the response body is an
+   * `application/zip` stream, NOT JSON, so it must NOT be `.json()`-parsed. Preserves the SAME
+   * error-envelope handling (an error response IS JSON), so a missing step-up elevation still surfaces
+   * as `ApiError` with `error.code === 'auth.step_up_required'` (the client keys on the CODE, not the
+   * bare 403 — the 3.9/3.10 step-up lesson). Returns the raw `ArrayBuffer`.
+   */
+  async function callBinary(path: string): Promise<ArrayBuffer> {
+    const headers: Record<string, string> = {};
+    if (opts.getAccessToken) {
+      const token = await opts.getAccessToken();
+      if (token) headers['authorization'] = `Bearer ${token}`;
+    }
+    const res = await doFetch(`${base}${path}`, { method: 'GET', headers });
+    if (!res.ok) {
+      let code = `http.${res.status}`;
+      let message = res.statusText || 'Request failed';
+      let details: unknown;
+      try {
+        const env = (await res.json()) as ErrorEnvelope;
+        if (env.error?.code) code = env.error.code;
+        if (env.error?.message) message = env.error.message;
+        if (env.error?.details !== undefined) details = env.error.details;
+      } catch {
+        // Non-JSON error body — keep the status-derived defaults.
+      }
+      throw new ApiError(res.status, code, message, details);
+    }
+    return res.arrayBuffer();
   }
 
   return {
@@ -389,6 +425,32 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     withdrawMember(input: WithdrawalConfirmRequest): Promise<WithdrawalStatusResult> {
       return call(WITHDRAWAL_BASE, WithdrawalStatusResponse, input, true);
+    },
+
+    // ── DPDPA data export (Story 3.11) ────────────────────────────────────────
+    // request (session) → poll status → step-up-gated one-time download. The download's
+    // `auth.step_up_required` surfaces as a distinguishable ApiError `error.code` (the caller drives
+    // stepUpRequest('data_export') → stepUpVerify → retry `downloadDataExport` — the 3.9/3.10 lesson).
+
+    /** Request a data export (session; auth). Idempotent — returns an in-flight export if one exists. */
+    requestDataExport(): Promise<DataExportRequestResult> {
+      return call(DATA_EXPORT_BASE, DataExportRequestResponse, {}, true);
+    },
+
+    /** Poll a data-export's status (session only, NO step-up; auth). */
+    getDataExportStatus(id: string): Promise<DataExportStatusResult> {
+      return call(`${DATA_EXPORT_BASE}/${id}`, DataExportStatusResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Download the export ZIP (Story 3.11) — the one-time, 24h, step-up-gated ('data_export' context)
+     * binary stream. Returns the raw `ArrayBuffer` (NOT JSON-parsed — the caller writes it to a file /
+     * hands it to the OS share sheet). A missing/expired elevation throws ApiError
+     * `auth.step_up_required`; an already-consumed / expired export throws `data_export.consumed` /
+     * `data_export.expired` (keyed on `error.code`).
+     */
+    downloadDataExport(id: string): Promise<ArrayBuffer> {
+      return callBinary(`${DATA_EXPORT_BASE}/${id}/download`);
     },
   };
 }

@@ -1,5 +1,6 @@
 import { YStack } from 'tamagui'
 
+import { DataExportEntry } from 'components/data-export/DataExportEntry'
 import { LifeEventsEntry } from 'components/life-events/LifeEventsEntry'
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
 import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
@@ -24,6 +25,8 @@ export default function YogdaanTab() {
       <RenewalStatusWidget />
       <LifeEventsEntry />
       <YogdaanBahi />
+      {/* Story 3.11 — understated DPDPA data-export entry (a member right, framed neutrally). */}
+      <DataExportEntry />
       {/* Story 3.10 — understated voluntary-withdrawal entry at the very bottom (deliberate, not encouraged). */}
       <WithdrawalEntry />
     </YStack>

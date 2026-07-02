@@ -87,6 +87,11 @@ export * from './member_postings.js';
 // rejoin lock). reason_text Tier-1 envelope, reason_code + aadhaar_hmac seam non-PII; GRANTs UPDATE
 // (NOT append-only) for the aadhaar_hmac backfill + RTBF. FK cascade to members for RTBF (Story 3.12).
 export * from './member_withdrawals.js';
+// Story 3.11 — data_exports (tenant-isolated; one row per DPDPA data-portability export request). The
+// whole ZIP artifact Tier-1 envelope-encrypted at rest (artifact_ciphertext); status/failed_reason
+// non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum zeroing). FK cascade to
+// members for RTBF (Story 3.12).
+export * from './data_exports.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

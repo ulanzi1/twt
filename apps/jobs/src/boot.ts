@@ -28,7 +28,7 @@
 
 import http from 'node:http';
 
-import { createDb, idempotency, resolveConnectionString } from '@twt/domain';
+import { createDb, idempotency, resolveConnectionString, resolveSecretValue } from '@twt/domain';
 import { QUEUE_NAMES, createQueueClient, stopQueueClient, type Job } from '@twt/queue';
 
 import {
@@ -37,6 +37,12 @@ import {
   createEnvCertFetcher,
   registerDigiLockerCertRefreshCron,
 } from './digilocker-cert-refresh.js';
+import {
+  DATA_EXPORT_VACUUM_TZ,
+  DEFAULT_DATA_EXPORT_VACUUM_CRON,
+  registerDataExportWorkers,
+} from './data-export.js';
+import { buildJobsEncryptionDeps } from './deps.js';
 import {
   DEFAULT_RENEWAL_LIFECYCLE_CRON,
   RENEWAL_LIFECYCLE_TZ,
@@ -57,6 +63,9 @@ const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT
 // Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). Cadence is operations policy (IST).
 const RENEWAL_LIFECYCLE_CRON =
   process.env['MEMBER_RENEWAL_LIFECYCLE_CRON'] ?? DEFAULT_RENEWAL_LIFECYCLE_CRON;
+// Data-export hygiene vacuum (Story 3.11, AC5). Cadence is operations policy (IST).
+const DATA_EXPORT_VACUUM_CRON =
+  process.env['DATA_EXPORT_VACUUM_CRON'] ?? DEFAULT_DATA_EXPORT_VACUUM_CRON;
 
 /** The single error helper — every fatal/uncaught path logs code + message only. */
 function logError(scope: string, err: unknown): void {
@@ -94,15 +103,32 @@ async function main(): Promise<void> {
       `[jobs] MEMBER_RENEWAL_LIFECYCLE_CRON must be a 5-field cron expression (got "${RENEWAL_LIFECYCLE_CRON}")`,
     );
   }
+  if (!/^(\S+\s+){4}\S+$/.test(DATA_EXPORT_VACUUM_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] DATA_EXPORT_VACUUM_CRON must be a 5-field cron expression (got "${DATA_EXPORT_VACUUM_CRON}")`,
+    );
+  }
 
   const connectionString = process.env['SERVICE_DATABASE_URL'] ?? (await resolveConnectionString());
 
   // pg-boss client (manages its own pool from the connection string).
   const boss = createQueueClient(connectionString, { applicationName: 'twt-jobs' });
 
-  // Separate light pool for domain-table maintenance (the vacuum DELETE). max:2 —
-  // the integrity-cli.ts service-pool precedent.
+  // Separate light pool for domain-table maintenance (the vacuum DELETE + the data-export scope-txs).
+  // max:2 — the integrity-cli.ts service-pool precedent.
   const { db, pool } = createDb(connectionString, { max: 2, logger: false });
+
+  // ── Data-export KMS deps (Story 3.11) — the FIRST apps/jobs crypto wiring ──────
+  // Resolve the Argon2id pepper (fake-KMS mode derives the KEK from it; live mode ignores it) via the
+  // same Secret-Manager-name-with-env-fallback path apps/api uses, so the fake KEK is byte-identical to
+  // the api's (required for the api↔jobs encrypt/decrypt round-trip). In live mode the pepper is unused.
+  const pepperSecretName = process.env['ARGON2_PEPPER_SECRET_NAME'];
+  const pepper = pepperSecretName
+    ? await resolveSecretValue(pepperSecretName, {
+        envFallback: process.env['ARGON2_PEPPER_ENV_FALLBACK'] ?? 'ARGON2_PEPPER',
+      })
+    : (process.env['ARGON2_PEPPER'] ?? '');
+  const jobsEncryption = buildJobsEncryptionDeps(pepper);
 
   let shuttingDown = false;
   let ready = false;
@@ -191,6 +217,16 @@ async function main(): Promise<void> {
       { cron: RENEWAL_LIFECYCLE_CRON, tz: RENEWAL_LIFECYCLE_TZ },
     );
 
+    // ── Data-export build worker + hygiene vacuum (Story 3.11, AC1/AC5) ────────
+    // The FIRST request-path-triggered worker (the API enqueues DATA_EXPORT_BUILD) + the FIRST apps/jobs
+    // KMS consumer. The build worker opens per-request scope-txs on `pool`; the vacuum runs cross-tenant
+    // on `pool` (BYPASSRLS service login). IST cron.
+    await registerDataExportWorkers(
+      boss,
+      { pool, kms: jobsEncryption.kms, kekRef: jobsEncryption.kekRef },
+      { vacuumCron: DATA_EXPORT_VACUUM_CRON, vacuumTz: DATA_EXPORT_VACUUM_TZ },
+    );
+
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);
       healthServer.listen(HEALTH_PORT, () => {
@@ -211,6 +247,7 @@ async function main(): Promise<void> {
       vacuumCron: VACUUM_CRON,
       certRefreshCron: CERT_REFRESH_CRON,
       renewalLifecycleCron: RENEWAL_LIFECYCLE_CRON,
+      dataExportVacuumCron: DATA_EXPORT_VACUUM_CRON,
       tz: VACUUM_TZ,
     }),
   );

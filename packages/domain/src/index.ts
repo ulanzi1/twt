@@ -124,6 +124,10 @@ export * as medical from './medical/index.js';
 // write + status/idempotency reads) + the Reference Code port-seam capture (D2). Tenant-scoped;
 // the lock-in gate + projector emission + audit orchestration are app-layer (the route).
 export * as payment from './payment/index.js';
+// Story 3.11 — member data-export section-assembly core (the DPDPA data-portability ZIP gathering
+// logic; decrypts Tier-1 PII — the member is the legitimate audience). The apps/jobs build worker
+// consumes `assembleMemberExport`; the ZIP/encrypt/persist orchestration is the thin job runtime.
+export * as dataExport from './data-export/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
 export { UUID_REGEX } from './db.js';

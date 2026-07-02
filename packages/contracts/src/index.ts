@@ -60,6 +60,9 @@ export * from './life-events/index.js';
 // Story 3.10 — voluntary-withdrawal confirm request + status response + the bounded reason enum.
 // Match the nominee/medical/life-events openapi posture — NO `.openapi()`, openapi/v1.yaml unchanged.
 export * from './withdrawal/index.js';
+// Story 3.11 — DPDPA data-export request/status DTOs + the ZIP section-shape schemas (validated in the
+// job before zipping). Same openapi posture — NO `.openapi()`, openapi/v1.yaml unchanged.
+export * from './data-export/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

@@ -30,6 +30,7 @@ import {
   type DigiLockerProviderConfig,
   type KycProviderRegistry,
 } from './modules/kyc/index.js';
+import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
 import { createToneReviewAuditSink } from './modules/tone-review/index.js';
@@ -232,6 +233,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // KYC provider registry + FR-58C swap seam (Story 3.3a) — DigiLocker when configured,
     // else the fixture provider (boots with zero live-govt config).
     kycProviders: await buildKycProviderRegistry(config),
+    // Data-export build-job producer (Story 3.11) — the FIRST api-side queue producer (send-only). Uses
+    // the same DB connection string as the app pool (pgboss schema; apps/jobs already created it).
+    dataExportQueue: await createPgBossDataExportEnqueuer(connectionString),
     clock: () => new Date(),
   };
 }

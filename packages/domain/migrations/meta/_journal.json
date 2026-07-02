@@ -232,6 +232,13 @@
       "when": 1783482000000,
       "tag": "0032_member-withdrawals",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783568400000,
+      "tag": "0033_data-exports",
+      "breakpoints": true
     }
   ]
 }

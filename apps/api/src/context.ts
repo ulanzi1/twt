@@ -10,6 +10,7 @@
 import type pg from 'pg';
 
 import type { Db, encryption } from '@twt/domain';
+import type { JobEnvelope } from '@twt/queue';
 
 import type { AuthAuditSink } from './audit/audit-sink.js';
 import type { ApiConfig } from './config.js';
@@ -93,6 +94,31 @@ export const MEMBER_ADDRESS_FIELD_CLASS = 'member_address';
  * `piiColumn(1, 'member_withdrawal')` field-class annotation on the reason_text_ciphertext column.
  */
 export const MEMBER_WITHDRAWAL_FIELD_CLASS = 'member_withdrawal';
+
+/**
+ * Field-class namespace for the member DATA-EXPORT artifact Tier-1 envelope (Story 3.11). Like the
+ * KYC / nominee / medical / address / withdrawal families (and unlike the admin-email / member-mobile
+ * families that key on a fixed global sentinel because their lookup runs pre-scope), `data_exports` is
+ * a TENANT table — its encryption context keys on the member's REAL `pariwarId`. Matches the
+ * `piiColumn(1, 'data_export')` field-class annotation on the artifact_ciphertext column.
+ *
+ * NOTE: this value is intentionally duplicated by the parallel constant in `apps/jobs/src/data-export.ts`
+ * (the build worker envelope-encrypts the artifact). `apps/jobs` MUST NOT import from here — apps cannot
+ * depend on apps. The two declarations are kept in sync BY VALUE.
+ */
+export const MEMBER_DATA_EXPORT_FIELD_CLASS = 'data_export';
+
+/**
+ * The data-export build-job producer seam (Story 3.11). The API is the FIRST request-path queue
+ * producer: it enqueues a `DATA_EXPORT_BUILD` job (send-only — the API produces, apps/jobs consumes;
+ * NEVER `boss.work()`). Injectable like `auditSink` / `deployTrigger`: production wires a pg-boss-backed
+ * enqueuer (deps.ts); tests inject a capturing fake. `close` (optional) drains the send-only client on
+ * shutdown.
+ */
+export interface DataExportEnqueuer {
+  enqueueBuild(envelope: JobEnvelope<{ exportId: string }>): Promise<void>;
+  close?(): Promise<void>;
+}
 
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
@@ -182,6 +208,12 @@ export interface AppDeps {
    * the 3.3b signup route resolves a provider via `getActiveKycProvider(ctx)`.
    */
   readonly kycProviders: KycProviderRegistry;
+  /**
+   * Data-export build-job producer (Story 3.11) — the FIRST api-side queue producer (send-only). A
+   * pg-boss-backed enqueuer in prod/dev; a capturing fake in tests. The request handler enqueues a
+   * `DATA_EXPORT_BUILD` job here after inserting the `pending` row.
+   */
+  readonly dataExportQueue: DataExportEnqueuer;
   /** Injectable clock — tests freeze it to assert TTL / lockout / window expiry. */
   readonly clock: () => Date;
 }

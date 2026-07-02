@@ -65,6 +65,19 @@ export const QUEUE_NAMES = {
    * Idempotent per cycle via the send-time singletonKey ({member}-{cycle}-{offset}). Job class C.
    */
   RENEWAL_REMINDER: 'member.renewal_reminder',
+  /**
+   * Member data-export ZIP build (Story 3.11, FR-95 / AC1). The FIRST request-path producer: the API
+   * enqueues this when a member requests a data export; the apps/jobs worker assembles the seven-file
+   * human-readable ZIP off the request path + stores it envelope-encrypted at rest. Job class B
+   * (priority) per architecture §1.4 ("Data export (FR-95): pg-boss job (Class B priority)").
+   */
+  DATA_EXPORT_BUILD: 'member.data_export.build',
+  /**
+   * Member data-export TTL/consume hygiene vacuum (Story 3.11, AC5). Zeroes `artifact_ciphertext` for
+   * consumed/expired exports (PII hygiene — the artifact holds the member's full decrypted PII set) and
+   * flips past-window rows → `expired`. Mirrors IDEMPOTENCY_VACUUM. Job class C (background).
+   */
+  DATA_EXPORT_VACUUM: 'member.data_export.vacuum',
 } as const;
 
 /** Union of the registered queue names. */

@@ -25,7 +25,12 @@ import { ids, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../../context.js';
-import { ConflictError, ServiceUnavailableError, UnauthorizedError } from '../../../http-errors.js';
+import {
+  ConflictError,
+  ForbiddenError,
+  ServiceUnavailableError,
+  UnauthorizedError,
+} from '../../../http-errors.js';
 import { emitAuthAudit } from '../shared/audit.js';
 import { encryptMobile, maskMobile, mobileBlindIndex, normalizeMobile } from '../shared/mobile-index.js';
 import { closeScopeTx, openScopeTx } from '../../multi-tenant/scope-tx.js';
@@ -98,7 +103,30 @@ export function createSignupHandlers(deps: AppDeps) {
       // 5. Duplicate-signup guard (AC2) — a clean 409 instead of the raw unique-index 500. Reads via
       //    the BYPASSRLS servicePool (pre-scope, mirror login's resolveMembersByMobile).
       const existing = await repo.resolveMembersByMobile(deps.servicePool, blindIndex);
-      if (existing.some((m) => m.pariwarId === pariwarIdStr)) {
+      const priorInThisPariwar = existing.find((m) => m.pariwarId === pariwarIdStr);
+      if (priorInThisPariwar) {
+        // Story 3.10 — 12-month rejoin lock. A WITHDRAWN/ANONYMIZED identity within its rejoin window
+        // is blocked with the dignified 403 auth.rejoin_locked (carrying the dates the client renders).
+        // A non-withdrawn duplicate is the UNCHANGED 409. A withdrawn identity PAST its window is v1
+        // OUT-OF-SCOPE (arch §1.14 `withdrawn → pending-fee` reactivation collides with the
+        // member_identities UNIQUE(pariwar_id, mobile_blind_index) row) — it keeps the 409 behavior
+        // and is recorded DEFERRED (Completion Notes + deferred-work.md). Do NOT pretend it works.
+        const isTerminal =
+          priorInThisPariwar.state === 'withdrawn' || priorInThisPariwar.state === 'anonymized';
+        const rejoinPermittedAt = priorInThisPariwar.rejoinPermittedAt;
+        if (isTerminal && rejoinPermittedAt && now < new Date(rejoinPermittedAt)) {
+          emitAuthAudit(deps, request, 'member_withdrawal.rejoin_blocked', {
+            context: { masked_mobile: masked, rejoin_permitted_at: rejoinPermittedAt },
+          });
+          throw new ForbiddenError(
+            'This identity withdrew and rejoin is not yet permitted',
+            'auth.rejoin_locked',
+            {
+              ...(priorInThisPariwar.withdrawnAt ? { withdrawn_at: priorInThisPariwar.withdrawnAt } : {}),
+              rejoin_permitted_at: rejoinPermittedAt,
+            },
+          );
+        }
         emitAuthAudit(deps, request, 'member_signup.failure', {
           context: { reason: 'member_already_exists', masked_mobile: masked },
         });

@@ -23,6 +23,22 @@ export interface ResolvedMembership {
   pariwarId: string;
   /** Public display name (pariwar_passport.display_name_en); the pariwarId if absent. */
   pariwarName: string;
+  /**
+   * The member's cached lifecycle state (members.state), or null if the row is missing (Story 3.10).
+   * The signup rejoin-lock guard branches on this — {withdrawn, anonymized} route to the rejoin check.
+   */
+  state?: string | null;
+  /**
+   * The 12-month rejoin-lock lift instant (member_withdrawals.rejoin_permitted_at), ISO-8601, or null
+   * when the member never withdrew (Story 3.10). Load-bearing for the signup rejoin-lock guard.
+   */
+  rejoinPermittedAt?: string | null;
+  /**
+   * When the member withdrew (member_withdrawals.withdrawn_at), ISO-8601, or null (Story 3.10). Carried
+   * so the rejoin-block copy can render "This identity withdrew on {withdrawn_at}; rejoin is permitted
+   * on {rejoin_permitted_at}" (AC3).
+   */
+  withdrawnAt?: string | null;
 }
 
 /**
@@ -31,6 +47,11 @@ export interface ResolvedMembership {
  * (multi-Pariwar membership, R2). Ordered by created_at for a stable membership list.
  * Joins pariwar_passport (cross-readable carve-out) for the display name the
  * pariwar_select branch shows.
+ *
+ * Story 3.10: also LEFT JOINs `members` (for `state`) + `member_withdrawals` (for `rejoin_permitted_at`)
+ * so the signup handler's rejoin-lock guard can, PRE-scope, distinguish a withdrawn-in-window identity
+ * (→ 403 auth.rejoin_locked) from a live duplicate (→ 409). Both joins read cross-tenant safely on the
+ * BYPASSRLS servicePool (there is no `app.pariwar_id` set yet on the signup path).
  */
 export async function resolveMembersByMobile(
   servicePool: pg.Pool,
@@ -40,10 +61,16 @@ export async function resolveMembersByMobile(
     member_id: string;
     pariwar_id: string;
     display_name_en: string | null;
+    state: string | null;
+    rejoin_permitted_at: Date | null;
+    withdrawn_at: Date | null;
   }>(
-    `SELECT mi.member_id, mi.pariwar_id, pp.display_name_en
+    `SELECT mi.member_id, mi.pariwar_id, pp.display_name_en, m.state,
+            mw.rejoin_permitted_at, mw.withdrawn_at
        FROM member_identities mi
        LEFT JOIN pariwar_passport pp ON pp.pariwar_id = mi.pariwar_id
+       LEFT JOIN members m ON m.member_id = mi.member_id
+       LEFT JOIN member_withdrawals mw ON mw.member_id = mi.member_id
       WHERE mi.mobile_blind_index = $1
       ORDER BY mi.created_at ASC`,
     [mobileBlindIndex],
@@ -52,6 +79,9 @@ export async function resolveMembersByMobile(
     memberId: r.member_id,
     pariwarId: r.pariwar_id,
     pariwarName: r.display_name_en ?? r.pariwar_id,
+    state: r.state,
+    rejoinPermittedAt: r.rejoin_permitted_at ? r.rejoin_permitted_at.toISOString() : null,
+    withdrawnAt: r.withdrawn_at ? r.withdrawn_at.toISOString() : null,
   }));
 }
 

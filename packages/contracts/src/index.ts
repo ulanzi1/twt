@@ -57,6 +57,9 @@ export * from './notifications/index.js';
 // summary response). Nominee + medical Life Events routes REUSE the existing declare/submit
 // contracts. Match the nominee/medical openapi posture — NO `.openapi()`, openapi/v1.yaml unchanged.
 export * from './life-events/index.js';
+// Story 3.10 — voluntary-withdrawal confirm request + status response + the bounded reason enum.
+// Match the nominee/medical/life-events openapi posture — NO `.openapi()`, openapi/v1.yaml unchanged.
+export * from './withdrawal/index.js';
 export * from './rbac/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';

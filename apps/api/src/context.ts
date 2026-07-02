@@ -85,6 +85,15 @@ export const MEMBER_MEDICAL_FIELD_CLASS = 'member_medical';
  */
 export const MEMBER_ADDRESS_FIELD_CLASS = 'member_address';
 
+/**
+ * Field-class namespace for the member WITHDRAWAL free-text-reason Tier-1 envelope (Story 3.10). Like
+ * the KYC / nominee / medical / address families (and unlike the admin-email / member-mobile families
+ * that key on a fixed global sentinel because their lookup runs pre-scope), `member_withdrawals` is a
+ * TENANT table — its encryption context keys on the member's REAL `pariwarId`. Matches the
+ * `piiColumn(1, 'member_withdrawal')` field-class annotation on the reason_text_ciphertext column.
+ */
+export const MEMBER_WITHDRAWAL_FIELD_CLASS = 'member_withdrawal';
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;

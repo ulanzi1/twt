@@ -122,7 +122,16 @@ export type AuthAuditEventType =
   //   address.updated — a new append-only member_addresses row was written + member.address_updated emitted.
   //   posting.updated — a new append-only member_postings row was written + member.posting_updated emitted.
   | 'member_life_events.address_updated'
-  | 'member_life_events.posting_updated';
+  | 'member_life_events.posting_updated'
+  // ── Member voluntary-withdrawal surface (Story 3.10, FR-6) ───────────────────
+  // The withdrawal confirm (member.withdrawal_completed emitted → state withdrawn) + the signup
+  // rejoin-lock block. Context is NON-PII: reason_code (bounded enum) + rejoin_permitted_at only —
+  // NEVER the free-text reason_text (Tier-1, member_withdrawals only), NEVER a token. The actorId
+  // carries the member_id; the rejoin-block line carries masked mobile (last-4) + rejoin_permitted_at.
+  //   completed      — a withdrawal was confirmed (₹110 forfeited; 12-month rejoin lock written).
+  //   rejoin_blocked — a same-identity signup was blocked inside the 12-month rejoin-lock window.
+  | 'member_withdrawal.completed'
+  | 'member_withdrawal.rejoin_blocked';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

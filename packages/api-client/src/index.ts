@@ -29,6 +29,7 @@ import {
   VyawasthaShulkRenewalConfirmResponse,
   VyawasthaShulkRenewalStatusResponse,
   VyawasthaShulkStatusResponse,
+  WithdrawalStatusResponse,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
@@ -59,6 +60,8 @@ import {
   type MemberOtpVerifyResponse as OtpVerifyResult,
   type MemberStepUpRequestResponse as StepUpRequestResult,
   type MemberStepUpVerifyResponse as StepUpVerifyResult,
+  type WithdrawalConfirmRequest,
+  type WithdrawalStatusResponse as WithdrawalStatusResult,
 } from '@twt/contracts';
 import type { z } from 'zod';
 
@@ -68,6 +71,12 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    /**
+     * The server's structured `error.details` (Story 3.10) — e.g. the `auth.rejoin_locked` 403 carries
+     * `{ withdrawn_at, rejoin_permitted_at }` so the mobile rejoin-block screen can render the dignified
+     * date copy. `unknown` (the caller narrows); undefined when the response carried none.
+     */
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -78,7 +87,7 @@ export class ApiError extends Error {
 }
 
 interface ErrorEnvelope {
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: unknown };
 }
 
 export interface MemberAuthClientOptions {
@@ -98,6 +107,7 @@ const TERMS_BASE = '/api/v1/member/terms';
 const VYAWASTHA_SHULK_BASE = '/api/v1/member/vyawastha-shulk';
 const MEMBER_HOME_BASE = '/api/v1/member';
 const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
+const WITHDRAWAL_BASE = '/api/v1/member/withdrawal';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -129,14 +139,16 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     if (!res.ok) {
       let code = `http.${res.status}`;
       let message = res.statusText || 'Request failed';
+      let details: unknown;
       try {
         const env = (await res.json()) as ErrorEnvelope;
         if (env.error?.code) code = env.error.code;
         if (env.error?.message) message = env.error.message;
+        if (env.error?.details !== undefined) details = env.error.details;
       } catch {
         // Non-JSON body — keep the status-derived defaults.
       }
-      throw new ApiError(res.status, code, message);
+      throw new ApiError(res.status, code, message, details);
     }
     if (res.status === 204) return undefined as T;
     return schema.parse(await res.json());
@@ -365,6 +377,18 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Read the Life Events panel summary (presence flags + counts across all four sub-types; auth). */
     lifeEventsSummary(): Promise<LifeEventsSummaryResult> {
       return call(LIFE_EVENTS_BASE, LifeEventsSummaryResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Voluntary withdrawal confirm (Story 3.10) — step-up gated (context 'withdrawal'; auth). Emits
+     * member.withdrawal_completed → `withdrawn`; returns the terminal state + the 12-month rejoin-lock
+     * window. A missing/expired elevation surfaces as ApiError `auth.step_up_required` (drive the
+     * step-up request/verify then retry the SAME call — the 3.9 useStepUpGate precedent). The signup
+     * rejoin-lock 403 surfaces on the SEPARATE signupCreate path as ApiError `auth.rejoin_locked`
+     * (keyed on `error.code`, with `error.details.{withdrawn_at,rejoin_permitted_at}` for the copy).
+     */
+    withdrawMember(input: WithdrawalConfirmRequest): Promise<WithdrawalStatusResult> {
+      return call(WITHDRAWAL_BASE, WithdrawalStatusResponse, input, true);
     },
   };
 }

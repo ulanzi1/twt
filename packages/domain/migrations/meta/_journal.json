@@ -225,6 +225,13 @@
       "when": 1783395600000,
       "tag": "0031_member-postings",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783482000000,
+      "tag": "0032_member-withdrawals",
+      "breakpoints": true
     }
   ]
 }

@@ -45,3 +45,5 @@ export * from './member-medical-disclosures-rls.js';
 // Story 3.9 — Life Events history tables tenant-isolation (mirror member-medical-disclosures-rls).
 export * from './member-addresses-rls.js';
 export * from './member-postings-rls.js';
+// Story 3.10 — member_withdrawals tenant-isolation (mirror member-addresses-rls; GRANTs UPDATE too).
+export * from './member-withdrawals-rls.js';

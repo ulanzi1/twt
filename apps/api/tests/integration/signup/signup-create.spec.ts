@@ -290,6 +290,86 @@ describe.skipIf(!hasDatabase)('First-signup member creation — E2E (:5433)', ()
     }
   });
 
+  // ── Story 3.10 — 12-month rejoin lock at signup ────────────────────────────────────────────────
+  /** Seed a WITHDRAWN member for `mobile` in the default Pariwar, with a member_withdrawals row whose
+   * rejoin window is future (locked) or past (deferred). Committed (superuser bypass). */
+  async function seedWithdrawnMember(
+    t: TestApp,
+    mobile: string,
+    opts: { rejoinInFuture: boolean; withdrawnAt?: Date },
+  ): Promise<{ memberId: string; withdrawnAt: Date; rejoinPermittedAt: Date }> {
+    const blindIndex = (await mobileBlindIndex(mobile, t.deps.encryption)) as string;
+    const ciphertext = await encryptMobile(normalizeMobile(mobile) as string, t.deps.encryption);
+    const memberId = randomUUID();
+    const withdrawnAt = opts.withdrawnAt ?? new Date('2026-01-01T00:00:00Z');
+    const rejoinPermittedAt = opts.rejoinInFuture
+      ? new Date(Date.now() + 200 * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await t.pool.query(
+      `INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'withdrawn', 5)`,
+      [memberId, DEFAULT_PARIWAR],
+    );
+    await t.pool.query(
+      `INSERT INTO member_identities (member_id, pariwar_id, mobile_ciphertext, mobile_blind_index)
+         VALUES ($1, $2, $3, $4)`,
+      [memberId, DEFAULT_PARIWAR, ciphertext, blindIndex],
+    );
+    await t.pool.query(
+      `INSERT INTO member_withdrawals (member_id, pariwar_id, withdrawn_at, rejoin_permitted_at)
+         VALUES ($1, $2, $3, $4)`,
+      [memberId, DEFAULT_PARIWAR, withdrawnAt.toISOString(), rejoinPermittedAt.toISOString()],
+    );
+    return { memberId, withdrawnAt, rejoinPermittedAt };
+  }
+
+  it('AC3: a withdrawn member INSIDE the 12-month window → 403 auth.rejoin_locked with the dates', async () => {
+    const t = await signupApp();
+    try {
+      const mobile = randomMobile();
+      const { withdrawnAt, rejoinPermittedAt } = await seedWithdrawnMember(t, mobile, {
+        rejoinInFuture: true,
+      });
+      const token = await mintContinuation(t, mobile);
+
+      const res = await inject(t, 'POST', `${BASE}/signup/create`, {
+        payload: { mobile, deviceId: 'device-A' },
+        token,
+      });
+      expect(res.status).toBe(403);
+      const err = res.body.error as Json;
+      expect(String(err?.code)).toBe('auth.rejoin_locked');
+      // The dignified date copy fields are carried in details (AC3).
+      const details = err?.details as Json;
+      expect(details?.rejoin_permitted_at).toBe(rejoinPermittedAt.toISOString());
+      expect(details?.withdrawn_at).toBe(withdrawnAt.toISOString());
+      // Audited as a rejoin block (masked mobile only — never plaintext).
+      expect(t.auditSink.ofType('member_withdrawal.rejoin_blocked').length).toBe(1);
+      expect(JSON.stringify(t.auditSink.events)).not.toContain(normalizeMobile(mobile) as string);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('AC3 (DEFERRED): a withdrawn member PAST the window → still 409 member_already_exists (post-window rejoin out of scope)', async () => {
+    const t = await signupApp();
+    try {
+      const mobile = randomMobile();
+      await seedWithdrawnMember(t, mobile, { rejoinInFuture: false });
+      const token = await mintContinuation(t, mobile);
+
+      const res = await inject(t, 'POST', `${BASE}/signup/create`, {
+        payload: { mobile, deviceId: 'device-A' },
+        token,
+      });
+      // The post-12-month reactivation path (arch §1.14 withdrawn → pending-fee) is DEFERRED for v1;
+      // the current behavior is the unchanged 409 (documented in Completion Notes + deferred-work.md).
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('auth.member_already_exists');
+    } finally {
+      await teardown(t);
+    }
+  });
+
   it('503 when the default signup Pariwar is unconfigured (no token burned)', async () => {
     // No DEFAULT_SIGNUP_PARIWAR_ID override → defaultSignupPariwarId is null.
     const t = await createTestApp();

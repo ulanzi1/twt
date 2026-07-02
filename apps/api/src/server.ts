@@ -35,6 +35,7 @@ import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
 import { registerRulesModule } from './modules/rules/index.js';
 import { registerTermsModule } from './modules/terms-and-conditions/index.js';
+import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
@@ -128,6 +129,11 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // step-up gate ('nominee_change' / 'medical_change'); address + posting are NEW append-only writes
   // (NO step-up) emitting the two non-transition markers member.address_updated / member.posting_updated.
   registerLifeEventsModule(app, deps);
+  // Story 3.10 — member voluntary-withdrawal surface (FR-6): step-up-gated confirm ('withdrawal'
+  // context) → member.withdrawal_completed transition to `withdrawn` (₹110 forfeited; 12-month rejoin
+  // lock written; history retained until Story 3.12 anonymizes). Signup rejoin-lock enforcement lives
+  // in the member-auth signup handler (a pre-scope cross-tenant read), not here.
+  registerWithdrawalModule(app, deps);
   // Story 1.11a — global on-demand audit-integrity verification endpoint.
   registerAuditLogModule(app, deps);
   // Story 1.15 — global multi-Pariwar provisioning surface (pariwar.provision gate).

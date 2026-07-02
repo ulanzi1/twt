@@ -46,9 +46,26 @@ export default function OtpScreen() {
           const full = await memberAuth.signupCreate(res.signupContinuationToken, { mobile, deviceId })
           await signIn(full)
           router.replace('/(signup)/tc')
-        } catch {
+        } catch (createErr) {
           setNotice(null)
-          setError(t('signup.error_generic'))
+          // Story 3.10 — a withdrawn identity inside its 12-month rejoin window is blocked with
+          // auth.rejoin_locked (keyed on error.code, NOT bare 403). Route to the dignified date-block
+          // surface carrying the withdrawn/rejoin dates (error.details), NOT a generic toast.
+          if (createErr instanceof ApiError && createErr.code === 'auth.rejoin_locked') {
+            const d = (createErr.details ?? {}) as {
+              withdrawn_at?: string
+              rejoin_permitted_at?: string
+            }
+            router.replace({
+              pathname: '/(auth)/rejoin-locked',
+              params: {
+                ...(d.withdrawn_at ? { withdrawnDate: d.withdrawn_at } : {}),
+                ...(d.rejoin_permitted_at ? { rejoinDate: d.rejoin_permitted_at } : {}),
+              },
+            })
+          } else {
+            setError(t('signup.error_generic'))
+          }
         }
       } else {
         // Multi-Pariwar — the Passport scope-selection UI defers (R2).

@@ -143,6 +143,13 @@ function RootLayoutNav() {
         />
 
         <Stack.Screen
+          name="(withdrawal)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
           name="modal"
           options={{
             title: 'Tamagui + Expo',

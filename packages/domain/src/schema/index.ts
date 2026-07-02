@@ -83,6 +83,10 @@ export * from './member_attribution.js';
 // per-row posting_id. Both FK cascade to members for RTBF (Story 3.12).
 export * from './member_addresses.js';
 export * from './member_postings.js';
+// Story 3.10 — member_withdrawals (tenant-isolated; SINGLE-ROW-per-member withdrawal record + 12-month
+// rejoin lock). reason_text Tier-1 envelope, reason_code + aadhaar_hmac seam non-PII; GRANTs UPDATE
+// (NOT append-only) for the aadhaar_hmac backfill + RTBF. FK cascade to members for RTBF (Story 3.12).
+export * from './member_withdrawals.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

@@ -3,6 +3,7 @@ import { YStack } from 'tamagui'
 import { LifeEventsEntry } from 'components/life-events/LifeEventsEntry'
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
 import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
+import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
 import { YogdaanBahi } from 'components/yogdaan-bahi/YogdaanBahi'
 
 // Tab 1 — home. The lock-in clock widget (Story 3.7) is the TOPMOST element: for a member in `lock-in`
@@ -23,6 +24,8 @@ export default function YogdaanTab() {
       <RenewalStatusWidget />
       <LifeEventsEntry />
       <YogdaanBahi />
+      {/* Story 3.10 — understated voluntary-withdrawal entry at the very bottom (deliberate, not encouraged). */}
+      <WithdrawalEntry />
     </YStack>
   )
 }

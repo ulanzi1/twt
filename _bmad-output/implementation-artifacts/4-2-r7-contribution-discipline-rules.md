@@ -4,7 +4,7 @@ baseline_commit: a60edd4af5c2a04eadc6bcdc4a339149937962d7
 
 # Story 4.2: R7 Contribution Discipline Rules (R7(A–G) Restoration Ladder)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -62,6 +62,23 @@ Verbatim from `epics.md#Story 4.2` (L1908–1923), decomposed into testable ACs.
 - [x] **Task 6 — Gate + merge reconciliation**
   - [x] Run the `benefit-mechanism` gate over the amended seed: `pnpm tsx scripts/benefit-mechanism/check.ts` (or the package's test) + `scripts/benefit-mechanism/seed-records.test.ts` — every R7 record must scan as `pool`.
   - [x] `pnpm --filter @twt/niyamavali-engine lint | typecheck | test`; then `pnpm ci:local` reconciled green (merge gate — GitHub Actions suspended; integration needs `DATABASE_URL` on `:5433`). The engine's integration-tests filter is already wired in `ci.yml` + `ci-local.sh` (4.1) — no CI change expected.
+
+### Review Findings
+
+- [x] [Review][Patch] Add `missingClauseIds?: string[]` to `R7LadderResult` — `evaluateR7LadderAt` silently omits clauses whose `evaluateAt` returns null; `perClauseResults` can have < 7 entries with no signal to Story 4.6. Add the field and populate it in `evaluateR7LadderAt`; pure `evaluateR7Ladder` also updated to populate it for omitted null entries (none possible in pure path — will always be empty, but keeps the type consistent). [`src/r7-ladder.ts`]
+
+- [x] [Review][Patch] Missing test: R7(A)+R7(B) simultaneous applicability — when `ever_contributed=false, in_lapse=true, total_count=0, r7a_restorations_used=0`, both R7(A) and R7(B) preconditions pass; R7(B) should win (precedence 60 > 50). This is the FR-9 "after R7(A) exhausted, R7(B) applies" ambiguity the story documents — the most policy-sensitive ladder transition — yet it has no test in the overlap block. [`tests/r7-ladder.test.ts`]
+- [x] [Review][Patch] `R7LadderMetaSchema` uses `z.number().int()` — a non-integer `precedence` value (e.g. `45.5` after a trustee amendment) causes `safeParse` to fail, `parseR7Meta` to return `null`, and the clause to be silently marked `applied: false` even if `interpretClause` correctly evaluated it as applicable. Fix: drop `.int()` from the schema. [`src/r7-ladder.ts:114`]
+- [x] [Review][Patch] R7(C) absent from per-letter isolated test matrix without explanation — the `cases` array covers A, B, D, E, F, G (6 of 7 letters); C is omitted because its precondition (`months_since_last >= 12`) always co-fires with R7(F) (`>= 6`), making "exactly one applies" structurally impossible. Add a comment in the array explaining this and pointing to the overlap block where C is proven. [`tests/r7-ladder.test.ts:1179`]
+- [x] [Review][Patch] Integration test omits `clauseVersionId` assertion in provenance (violates AC1.3) — the test asserts `provenance.clauseId` and `provenance.inputsSummary.fact_keys` for the winning clause but never asserts `provenance.clauseVersionId`, leaving the AC1.3 "clause_version_id used" requirement unvalidated at integration level. [`tests/integration/r7-ladder.spec.ts:1021`]
+- [x] [Review][Patch] `R7_VERSION_IDS` and `R7_CLAUSE_IDS` are parallel arrays coupled only by positional index — inserting, removing, or reordering one without updating the other silently pairs the wrong version ID with a clause with no compile-time guard. Fix: convert to a `Record<typeof R7_CLAUSE_IDS[number], string>` keyed map. [`tests/fixtures/r7-clauses.ts:849`]
+- [x] [Review][Patch] `R7LadderMetaSchema` does not disallow `on_pass === 'r7_not_applicable'` — a payload with `on_pass` and `on_fail` accidentally swapped would cause `isApplied` to return `true` for a clause whose `all_of` conditions actually FAILED (the decision would be `r7_not_applicable`, matching `meta.onPass`). Fix: add `.refine(s => s !== R7_NOT_APPLICABLE)` to the `on_pass` schema. [`src/r7-ladder.ts:114`]
+
+- [x] [Review][Defer] 7 uncached `resolveByClauseId` calls per re-eval (shell read amplification) [`src/r7-ladder.ts:706`] — deferred, pre-existing; the dual-resolve design is explicitly documented in the Dev Agent Record and r7-ladder.ts; 100×-thread concern noted for Story 4.6 optimisation
+- [x] [Review][Defer] Shell `isApplied` uses a second independent `resolveByClauseId` rather than the payload used by `evaluateAt` [`src/r7-ladder.ts:706`] — deferred, pre-existing; the design is documented as "NOT a TOCTOU window" and immutable clause rows make inconsistency near-impossible in practice; could be revisited if 4.1 API surfaces the resolved payload
+- [x] [Review][Defer] R7(C) encodes lighter lock-in (3 months) than R7(F) (5 months + complete_all), inverting the apparent severity/gap relationship [`packages/domain/seed/niyamavali-v1-clauses.sql`] — deferred, provisional policy; `policy_review_required: true` already set; flag for trustee panel with note that R7(C) is "treat-as-new" (different path, not necessarily softer)
+- [x] [Review][Defer] `selectDbNow` exported from `evaluate.ts` but not the barrel — weak internal API encapsulation [`src/evaluate.ts:413`] — deferred, intentional per Dev Agent Record; internal import within the package only
+- [x] [Review][Defer] `fact_lt` admits `max: Infinity` / `max: NaN` (same as `fact_gte`) [`src/interpret.ts`] — deferred, consistent with 4.1's accepted approach for all operators; the entire operator-arg-validation family was an explicit 4.1 defer
 
 ## Dev Notes
 

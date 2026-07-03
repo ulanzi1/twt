@@ -105,13 +105,26 @@ export interface R7LadderResult {
   applicableClauseId: string | null;
   /** Full result for the applicable clause, or null if none applied. */
   applicableResult: EvaluationResult | null;
+  /**
+   * Clause IDs from `R7_CLAUSE_IDS` that had no version effective at the evaluation instant —
+   * omitted from `perClauseResults`. Always empty from `evaluateR7Ladder` (pure core receives
+   * already-resolved clauses); populated by `evaluateR7LadderAt` when `evaluateAt` returns null
+   * for a sub-clause (e.g. its `effective_date` is after `at`, or it is not seeded for this pariwar).
+   */
+  missingClauseIds: string[];
 }
 
 // ── Ladder-selection primitives (pure, shared by the pure core + the shell) ────────
 
 /** The payload subset the LADDER reads as DATA: the outcome slug + the overlap-precedence. */
 const R7LadderMetaSchema = z
-  .object({ on_pass: z.string().min(1), precedence: z.number().int() })
+  .object({
+    // Disallow on_pass === R7_NOT_APPLICABLE: a swapped on_pass/on_fail payload would mark a
+    // non-applicable clause as applied (isApplied compares decision against meta.onPass).
+    on_pass: z.string().min(1).refine((s) => s !== R7_NOT_APPLICABLE),
+    // Accept any number (not just integer) so non-integer trustee amendments are not silently dropped.
+    precedence: z.number(),
+  })
   .passthrough();
 
 interface R7Meta {
@@ -161,7 +174,7 @@ function selectApplicable(sortedEntries: LadderEntry[]): LadderEntry | null {
 }
 
 /** Assemble the public result from sorted working entries. */
-function toLadderResult(sortedEntries: LadderEntry[]): R7LadderResult {
+function toLadderResult(sortedEntries: LadderEntry[], missingClauseIds: string[] = []): R7LadderResult {
   const best = selectApplicable(sortedEntries);
   return {
     perClauseResults: sortedEntries.map((e) => ({
@@ -171,6 +184,7 @@ function toLadderResult(sortedEntries: LadderEntry[]): R7LadderResult {
     })),
     applicableClauseId: best?.clauseId ?? null,
     applicableResult: best?.result ?? null,
+    missingClauseIds,
   };
 }
 
@@ -228,12 +242,17 @@ export async function evaluateR7LadderAt(
 ): Promise<R7LadderResult> {
   const { db }: { db: Db } = deps;
   const entries: LadderEntry[] = [];
+  const missingClauseIds: string[] = [];
 
   for (const clauseIdStr of R7_CLAUSE_IDS) {
     const clauseId = ids.clauseId(clauseIdStr);
     // 4.1 primitive: resolve + interpret + memo + audit-on-compute at the pinned instant.
     const result = await evaluateAt(deps, clauseId, context, at);
-    if (result == null) continue; // this R7 letter has no clause effective at `at` → omit
+    if (result == null) {
+      // No clause version is effective at `at` for this pariwar — signal to the caller.
+      missingClauseIds.push(clauseIdStr);
+      continue;
+    }
 
     // Read the ladder DATA (on_pass + precedence) from the payload resolved at the SAME `at`.
     const row = await niyamavali.resolveByClauseId(db, context.pariwarId, clauseId, at);
@@ -248,7 +267,7 @@ export async function evaluateR7LadderAt(
   }
 
   entries.sort(byClauseId);
-  return toLadderResult(entries);
+  return toLadderResult(entries, missingClauseIds);
 }
 
 /**

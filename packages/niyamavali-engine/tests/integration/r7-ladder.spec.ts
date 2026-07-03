@@ -140,8 +140,11 @@ describe.skipIf(!hasDatabase)('niyamavali-engine — R7 ladder (live DB, own-com
     expect(r.applicableClauseId).toBe('niy.contribution-discipline.r7-c');
     expect(r.applicableResult?.result.decision).toBe('treat_as_new_registration');
 
-    // Provenance carries the applicable clause id + a PII-FREE inputs summary (fact KEYS only).
+    // Provenance carries the applicable clause id + version id + a PII-FREE inputs summary (fact KEYS only).
     expect(r.applicableResult?.provenance.clauseId).toBe('niy.contribution-discipline.r7-c');
+    // AC1.3: clauseVersionId is present in provenance (DB-generated, so just assert non-empty).
+    expect(typeof r.applicableResult?.provenance.clauseVersionId).toBe('string');
+    expect(r.applicableResult?.provenance.clauseVersionId).toBeTruthy();
     const summary = r.applicableResult?.provenance.inputsSummary as { fact_keys: string[] };
     expect(summary.fact_keys).toContain(F.MONTHS_SINCE_LAST);
     // The applied set is exactly {C, F}; C governs.

@@ -107,16 +107,16 @@ export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
   },
 };
 
-/** The seed's pre-allocated clause_version_ids, parallel to R7_CLAUSE_IDS (a,b,c,d,e,f,g). */
-export const R7_VERSION_IDS = [
-  '0e1c0001-0000-4000-8000-000000000001',
-  '0e1c0007-0000-4000-8000-000000000007',
-  '0e1c0008-0000-4000-8000-000000000008',
-  '0e1c0009-0000-4000-8000-000000000009',
-  '0e1c000a-0000-4000-8000-00000000000a',
-  '0e1c000b-0000-4000-8000-00000000000b',
-  '0e1c000c-0000-4000-8000-00000000000c',
-] as const;
+/** The seed's pre-allocated clause_version_ids, keyed by clause_id. */
+export const R7_VERSION_IDS: Readonly<Record<string, string>> = {
+  'niy.contribution-discipline.r7-a': '0e1c0001-0000-4000-8000-000000000001',
+  'niy.contribution-discipline.r7-b': '0e1c0007-0000-4000-8000-000000000007',
+  'niy.contribution-discipline.r7-c': '0e1c0008-0000-4000-8000-000000000008',
+  'niy.contribution-discipline.r7-d': '0e1c0009-0000-4000-8000-000000000009',
+  'niy.contribution-discipline.r7-e': '0e1c000a-0000-4000-8000-00000000000a',
+  'niy.contribution-discipline.r7-f': '0e1c000b-0000-4000-8000-00000000000b',
+  'niy.contribution-discipline.r7-g': '0e1c000c-0000-4000-8000-00000000000c',
+};
 
 /** A base fact set under which NO R7 sub-clause applies (every precondition fails). */
 export const NO_R7_FACTS: Readonly<Record<string, unknown>> = {

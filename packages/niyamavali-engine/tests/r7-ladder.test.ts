@@ -27,9 +27,9 @@ const AT = new Date('2025-06-01T00:00:00.000Z');
 
 /** Build the seven resolved R7 clauses (optionally overriding one clause's payload). */
 function resolvedR7Clauses(overrides: Record<string, Record<string, unknown>> = {}): ResolvedClause[] {
-  return R7_CLAUSE_IDS.map((cid, i) => ({
+  return R7_CLAUSE_IDS.map((cid) => ({
     clauseId: ids.clauseId(cid),
-    clauseVersionId: ids.clauseVersionId(R7_VERSION_IDS[i]!),
+    clauseVersionId: ids.clauseVersionId(R7_VERSION_IDS[cid]!),
     payload: overrides[cid] ?? R7_PAYLOADS[cid]!,
     benefitMechanism: 'pool' as const,
   }));
@@ -42,7 +42,7 @@ function ctx(facts: Facts): ResolvedEvaluationContext {
     memberState: 'active',
     facts,
     evaluatedAt: AT,
-    resolvedClauseVersionIds: R7_VERSION_IDS.map((v) => ids.clauseVersionId(v)),
+    resolvedClauseVersionIds: R7_CLAUSE_IDS.map((cid) => ids.clauseVersionId(R7_VERSION_IDS[cid]!)),
   };
 }
 
@@ -65,6 +65,10 @@ describe('evaluateR7Ladder — stable structure', () => {
 });
 
 // AC3.7 — facts satisfying exactly one sub-clause identify that restoration path.
+// NOTE: R7(C) is intentionally absent from this "exactly one applies" matrix — its precondition
+// (months_since_last >= 12) is a strict superset of R7(F)'s (>= 6), so any input that fires
+// R7(C) also fires R7(F). R7(C)'s coverage lives in the overlap block below (AC3.8), where it
+// proves R7(C) governs over R7(F) by payload precedence (70 > 45).
 describe('evaluateR7Ladder — one applicable sub-clause per R7 letter (AC3.7)', () => {
   const cases: Array<{ letter: string; clauseId: string; decision: string; facts: Facts }> = [
     {
@@ -118,6 +122,24 @@ describe('evaluateR7Ladder — one applicable sub-clause per R7 letter (AC3.7)',
 
 // AC3.8 — overlaps resolved by the payload-encoded `precedence` (data, not a hardcoded order).
 describe('evaluateR7Ladder — overlap resolved by payload precedence (AC3.8)', () => {
+  it('both A and B preconditions met (ever_contributed=false, in_lapse=true, total_count=0) → R7(B) wins (precedence 60 > 50)', () => {
+    // The FR-9 policy ambiguity ("after R7(A) is exhausted R7(B) applies") produces a real
+    // overlap: a member who never contributed (ever_contributed=false) with a lapse satisfies
+    // BOTH R7(A) (in_lapse + total_count < 10 + restorations_used < 2) AND R7(B) (ever_contributed==false).
+    // The ladder correctly picks R7(B) by precedence (60 > 50) — data, not a hardcoded branch.
+    const r = evaluateR7Ladder(
+      resolvedR7Clauses(),
+      ctx(facts({ [F.EVER_CONTRIBUTED]: false, [F.TOTAL_COUNT]: 0, [F.IN_LAPSE]: true })),
+    );
+    const applied = r.perClauseResults.filter((x) => x.applied).map((x) => x.clauseId).sort();
+    expect(applied).toEqual([
+      'niy.contribution-discipline.r7-a',
+      'niy.contribution-discipline.r7-b',
+    ]);
+    expect(r.applicableClauseId).toBe('niy.contribution-discipline.r7-b');
+    expect(r.applicableResult?.result.decision).toBe('restore_5_consecutive_plus_lockin');
+  });
+
   it('a 12-month gap satisfies R7(C) AND R7(F) → R7(C) wins (precedence 70 > 45)', () => {
     const r = evaluateR7Ladder(resolvedR7Clauses(), ctx(facts({ [F.MONTHS_SINCE_LAST]: 12 })));
     const applied = r.perClauseResults.filter((x) => x.applied).map((x) => x.clauseId).sort();

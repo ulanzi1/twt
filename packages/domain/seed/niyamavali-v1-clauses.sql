@@ -32,7 +32,10 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R7(A)","title_en":"Restoration after contribution lapse","restoration_window_days":30,"provisional":true}'::jsonb,
+    -- Story 4.2: upgraded from the provisional display stub to a REAL rule_kind:'conditional'
+    -- spec interpreted by the @twt/niyamavali-engine primitive (Story 4.1). See the R7(A–G)
+    -- family block below for the full ladder + the provisional precedence/threshold caveat.
+    '{"rule_code":"R7(A)","title_en":"Restoration after contribution lapse (member with under 10 lifetime contributions)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":50,"on_pass":"restore_3_consecutive_one_time","on_fail":"r7_not_applicable","all_of":[{"op":"fact_equals","fact":"contribution.in_lapse","value":true},{"op":"fact_lt","fact":"contribution.total_count","max":10},{"op":"fact_lt","fact":"contribution.r7a_restorations_used","max":2}],"restoration":{"consecutive_required":3,"lock_in_months":0,"one_time_only":true,"lifetime_max":2},"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   ),
   (
@@ -112,6 +115,88 @@ VALUES
     1,
     '2025-01-01T00:00:00+00:00'::timestamptz,
     '{"rule_code":"LOCK-IN","title_en":"Membership lock-in policy (join-time clock)","lock_in_days":30,"provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── Story 4.2 — R7(A–G) contribution-discipline restoration ladder ────────────────────
+-- The R7 family (FR-9) as REAL rule_kind:'conditional' payloads interpreted by the
+-- @twt/niyamavali-engine primitive (Story 4.1). r7-a is UPGRADED in place above; r7-b…r7-g
+-- are ADDED here. Each clause is self-contained: `all_of` preconditions over the
+-- caller-supplied `contribution.*` facts (Epic 8/9 producer, assembled by the 4.6 Validity
+-- Service — NO source system exists yet at Epic 4), `on_pass` = restoration-path slug,
+-- `on_fail` = 'r7_not_applicable'. The engine picks WHICH R7(x) applies by the payload
+-- `precedence` field (DATA, not hardcoded) when facts overlap (e.g. a 12-month gap satisfies
+-- R7(C) and R7(F); most-structural-wins: C > B > A > F > E > D > G).
+--
+-- ⚠ PROVISIONAL POLICY (FR-9 `policy_review_required`): the `precedence` ints, R7(C)'s
+-- long-gap threshold (12 months), R7(C)'s lock-in, and the R7(A)→R7(B) fall-through wording
+-- are Trustee-Panel-tunable. FR-9 says R7(A) is "max 2 lifetime, after that R7(B) applies",
+-- but R7(B)'s stated precondition is "registered but NEVER contributed" — which does not
+-- match a member who contributed <10× and exhausted R7(A). R7(A)'s `< 2` cap is encoded
+-- faithfully; the "falls through to R7(B)" wording is an inherited-TSCT ambiguity flagged
+-- for trustee clarification, NOT an engine defect. R7(A) restoration SATISFACTION (counting
+-- 3 consecutive contributions, incrementing r7a_restorations_used) is a downstream Epic 8/9
+-- workflow — this seed only encodes the precondition evaluation. R7(G) is declarative: it
+-- exists as an auditable clause that records an explicit non-exemption ('no_exemption') when
+-- a personal-event excuse is claimed, and NEVER produces a restoration path.
+-- All benefit_mechanism='pool' (the benefit-mechanism CI gate's seed_globs cover this file).
+-- Idempotent (ON CONFLICT DO NOTHING). snake_case JSONB keys.
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c0007-0000-4000-8000-000000000007',
+    'niy.contribution-discipline.r7-b',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-03-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R7(B)","title_en":"Restoration for member registered but never contributed","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":60,"on_pass":"restore_5_consecutive_plus_lockin","on_fail":"r7_not_applicable","all_of":[{"op":"fact_equals","fact":"contribution.ever_contributed","value":false}],"restoration":{"consecutive_required":5,"lock_in_months":3,"core_team_recommendation":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0008-0000-4000-8000-000000000008',
+    'niy.contribution-discipline.r7-c',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-03-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R7(C)","title_en":"Long-gap restoration (treat as new registration)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":70,"on_pass":"treat_as_new_registration","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.months_since_last","min":12}],"restoration":{"consecutive_required":5,"lock_in_months":3},"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0009-0000-4000-8000-000000000009',
+    'niy.contribution-discipline.r7-d',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-03-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R7(D)","title_en":"Established member single-skip restoration (3-month lock-in plus catch-up)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":30,"on_pass":"lockin_3mo_plus_catchup","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_equals","fact":"contribution.skips_current_year","value":1}],"restoration":{"lock_in_months":3,"catch_up_required":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c000a-0000-4000-8000-00000000000a',
+    'niy.contribution-discipline.r7-e',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-03-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R7(E)","title_en":"Established member multi-skip restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":40,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_gte","fact":"contribution.skips_current_year","min":2}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c000b-0000-4000-8000-00000000000b',
+    'niy.contribution-discipline.r7-f',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-03-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R7(F)","title_en":"Six-month gap restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":45,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.months_since_last","min":6}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c000c-0000-4000-8000-00000000000c',
+    'niy.contribution-discipline.r7-g',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-03-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R7(G)","title_en":"Personal events do not excuse contribution skips (non-exemption)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":10,"on_pass":"no_exemption","on_fail":"r7_not_applicable","all_of":[{"op":"fact_equals","fact":"contribution.personal_event_excuse_claimed","value":true}],"restoration":{"never_excuses":true},"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;

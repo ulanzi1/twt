@@ -110,6 +110,18 @@ const OPERATORS: Readonly<Record<string, Operator>> = {
     const passed = typeof actual === 'number' && typeof min === 'number' && actual >= min;
     return { passed, detail: { op: 'fact_gte', fact } };
   },
+  /**
+   * numeric facts[fact] < `max` (the strict-upper-bound mirror of `fact_gte`; Story 4.2).
+   * The ONLY new vocabulary R7 strictly needs — R7(A)'s `total_count < 10` / `r7a_restorations_used < 2`
+   * lifetime caps. PII-free `detail` echoes the fact KEY, never the (potentially PII) value.
+   */
+  fact_lt(cond, ctx) {
+    const fact = String(cond['fact']);
+    const max = cond['max'];
+    const actual = ctx.facts[fact];
+    const passed = typeof actual === 'number' && typeof max === 'number' && actual < max;
+    return { passed, detail: { op: 'fact_lt', fact } };
+  },
 };
 
 /** The registered operator names — exported so tests + 4.2–4.5 can assert the vocabulary. */

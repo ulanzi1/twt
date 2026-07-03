@@ -13,6 +13,17 @@
 export { evaluate, evaluateAt, type EvaluateDeps } from './evaluate.js';
 export { interpretClause, OPERATOR_NAMES } from './interpret.js';
 export {
+  evaluateR7Ladder,
+  evaluateR7LadderAt,
+  evaluateR7LadderLive,
+  R7_CLAUSE_IDS,
+  R7_CONTRIBUTION_FACT_KEYS,
+  R7_NOT_APPLICABLE,
+  type R7ClauseEvaluation,
+  type R7ContributionFactKey,
+  type R7LadderResult,
+} from './r7-ladder.js';
+export {
   buildCacheKey,
   memberStateHash,
   niyamavaliVersionHash,

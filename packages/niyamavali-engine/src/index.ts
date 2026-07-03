@@ -37,6 +37,30 @@ export {
   type R8LadderResult,
 } from './r8-ladder.js';
 export {
+  evaluateLadder,
+  evaluateLadderAt,
+  evaluateLadderLive,
+  type LadderClauseEvaluation,
+  type LadderResult,
+} from './ladder.js';
+export {
+  evaluateSpecialDeathLadder,
+  evaluateSpecialDeathLadderAt,
+  evaluateSpecialDeathLadderLive,
+  evaluateConcealmentAt,
+  evaluateConcealmentLive,
+  SPECIAL_DEATH_CLAUSE_IDS,
+  SPECIAL_DEATH_NOT_APPLICABLE,
+  SPECIAL_DEATH_CLAIM_FACT_KEYS,
+  CONCEALMENT_FACT_KEYS,
+  CONCEALMENT_CLAUSE_ID,
+  CONCEALMENT_REVIEW_FLAG,
+  type SpecialDeathClauseEvaluation,
+  type SpecialDeathClaimFactKey,
+  type SpecialDeathLadderResult,
+  type ConcealmentFactKey,
+} from './special-death.js';
+export {
   buildCacheKey,
   memberStateHash,
   niyamavaliVersionHash,

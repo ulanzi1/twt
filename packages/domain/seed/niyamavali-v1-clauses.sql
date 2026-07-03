@@ -58,7 +58,15 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R9","title_en":"Special death (suicide / murder) per Mar 2025 rule","provisional":true}'::jsonb,
+    -- Story 4.4 (D2): upgraded IN PLACE from the provisional display stub to a REAL
+    -- rule_kind conditional spec interpreted by the @twt/niyamavali-engine primitive. The
+    -- STABLE clause_id niy.special-death.r9-suicide-murder and this clause_version_id and
+    -- effective_date are kept (clause_id is immutable-by-contract per ids/index.ts). The epic
+    -- literal suffix -2025-03 is recorded as a descriptive variance and NOT minted as a new id.
+    -- Mar-2025 rule: death in {suicide murder} AND nominee accused is an exclusion candidate that
+    -- ROUTES to State Trustee R9 voting and NEVER auto-denies (SM-1 C7). See the Story 4.4
+    -- special-death block below for the R9 family ladder and precedence discipline.
+    '{"rule_code":"R9(Mar-2025)","title_en":"Special death (suicide / murder with nominee accused) — Mar 2025 exclusion candidate","rule_kind":"conditional","family":"special-death","precedence":80,"on_pass":"route_r9_voting","on_fail":"special_death_not_applicable","all_of":[{"op":"fact_in","fact":"claim.death_classification","values":["suicide","murder"]},{"op":"fact_equals","fact":"claim.nominee_accused","value":true}],"exclusion_candidate":true,"voting_required":true,"never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;
@@ -75,9 +83,12 @@ ON CONFLICT (clause_version_id) DO NOTHING;
 --     wording recorded as consent_payload.checkboxTextShown.
 -- BOTH carry benefit_mechanism='pool' (the Story 1.16d gate's seed_globs include this file).
 -- CONTENT is PROVISIONAL per OQ-13 (canonical IMA source is a pre-launch Trustee-Panel open
--- question). Story 4.4 will AMEND niy.concealment.r14 (same clause_id, new clause_version_id)
--- with the R14 rule-engine evaluation logic — the 3.5 seed is the consent-ack v1 ONLY (do NOT
--- pre-bake scoring/flag-criteria fields here). Idempotent (ON CONFLICT DO NOTHING).
+-- question). Story 4.4 AMENDED niy.concealment.r14 IN PLACE (D1: same clause_id AND same
+-- clause_version_id 0e1c0005 — a VARIANCE from this comment's original "new clause_version_id"
+-- plan, chosen to preserve the consent's consent_artifact_ref → 0e1c0005 reference and avoid a
+-- two-versions-same-effective-date ambiguity) — see the amended r14 payload below for the added
+-- R14 rule-engine evaluation logic. The 3.5 seed was the consent-ack v1 ONLY.
+-- Idempotent (ON CONFLICT DO NOTHING).
 INSERT INTO clause_versions
   (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
 VALUES
@@ -96,7 +107,18 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-01-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R14","title_en":"Concealment denial — undeclared IMA-listed illness","ack_text_en":"I understand that if I conceal an IMA-listed condition and my death is later linked to that condition, my nominees'' claim may be denied or flagged for State Trustee review per Niyamavali clause niy.concealment.r14.","ack_text_hi":"मैं समझता/समझती हूँ कि यदि मैं किसी IMA-सूचीबद्ध बीमारी को छिपाता/छिपाती हूँ और बाद में मेरी मृत्यु उस बीमारी से जुड़ी पाई जाती है, तो Niyamavali खंड niy.concealment.r14 के अनुसार मेरे नामितों का दावा अस्वीकार किया जा सकता है या State Trustee समीक्षा के लिए चिह्नित किया जा सकता है।","never_auto_deny":true,"provisional":true}'::jsonb,
+    -- Story 4.4 (D1): AMENDED IN PLACE (kept clause_version_id 0e1c0005 and effective_date).
+    -- ADDED the rule_kind conditional engine fields (all_of and on_pass/on_fail and the
+    -- flag_if_true concealment condition) ALONGSIDE the preserved ack_text_en/ack_text_hi and
+    -- never_auto_deny. The interpreter .passthrough() lets rule and ack coexist in one payload.
+    -- In-place amendment preserves the Story 3.5 consent consent_artifact_ref to 0e1c0005 (a
+    -- VARIANCE vs the 3.5 seed comment above which anticipated a NEW clause_version_id). SM-1 C7
+    -- seam: when the pre-derived fact claim.concealed_ima_condition_linked is true the flag_if_true
+    -- condition adds special_flags concealment_review_required and the decision routes to State
+    -- Trustee review — the engine produces a FLAG and NEVER an auto-deny (never_auto_deny true per
+    -- prd.md 370). The full disclosure-event and IMA-list-version trace is the Story 4.6 Validity
+    -- Service job (D4) and NOT this engine fact/provenance channel (keys-only and PII-free).
+    '{"rule_code":"R14","title_en":"Concealment denial — undeclared IMA-listed illness","rule_kind":"conditional","on_pass":"route_state_trustee_review","on_fail":"concealment_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.concealed_ima_condition_linked","value":true,"flag_if_true":"concealment_review_required"}],"ack_text_en":"I understand that if I conceal an IMA-listed condition and my death is later linked to that condition, my nominees'' claim may be denied or flagged for State Trustee review per Niyamavali clause niy.concealment.r14.","ack_text_hi":"मैं समझता/समझती हूँ कि यदि मैं किसी IMA-सूचीबद्ध बीमारी को छिपाता/छिपाती हूँ और बाद में मेरी मृत्यु उस बीमारी से जुड़ी पाई जाती है, तो Niyamavali खंड niy.concealment.r14 के अनुसार मेरे नामितों का दावा अस्वीकार किया जा सकता है या State Trustee समीक्षा के लिए चिह्नित किया जा सकता है।","never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;
@@ -257,6 +279,96 @@ VALUES
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
     '{"rule_code":"R7(G)","title_en":"Personal events do not excuse contribution skips (non-exemption)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":10,"on_pass":"no_exemption","on_fail":"r7_not_applicable","all_of":[{"op":"fact_equals","fact":"contribution.personal_event_excuse_claimed","value":true}],"restoration":{"never_excuses":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── Story 4.4 — R5/R9 special-death family + R14 concealment (SM-1 C7) ─────────────────
+-- The FR-11 special-death family (R5(C.2)/R5(D)/R5(E)/R5(F)/R9/R9(A) + the Mar-2025 rule,
+-- upgraded in place above) as REAL rule_kind:'conditional' payloads interpreted by the
+-- @twt/niyamavali-engine primitive (Story 4.1). r9-suicide-murder is UPGRADED in place above;
+-- r14 is AMENDED in place above; the six rows below are ADDED. Each clause is self-contained:
+-- `all_of` preconditions over the caller-supplied `claim.*` facts (Epic 6 claim intake + Story
+-- 3.9 disclosure history + Story 3.5 IMA-list resolution, assembled by the 4.6 Validity Service —
+-- NO source system exists yet at Epic 4), `on_pass` = a routing/flag slug, `on_fail` =
+-- 'special_death_not_applicable'. The engine picks WHICH sub-clause applies by the payload
+-- `precedence` field (DATA, not hardcoded) when facts overlap.
+--
+-- ⚠ LOAD-BEARING INVARIANT (SM-1 C7, prd.md:370 "never auto-denial"): NO clause in this family
+-- has `on_pass` or `on_fail` equal to a deny/ineligible slug. Every path is a ROUTING slug
+-- (route_r9_voting / route_state_trustee_review / route_actual_cause_governs /
+-- route_core_team_discretion / route_recovery_assistance) or the family not-applicable slug.
+-- The engine surfaces a FLAG or a routing trigger; the consumer (Epic 6 claim filing) makes the
+-- actual deny decision via State Trustee review / R9 voting. never_auto_deny:true on every row.
+--
+-- ⚠ `precedence` selects the surfaced EXPLANATION, not eligibility: every applied sub-clause
+-- already means the special case applies; the pick only decides which reason is reported when
+-- several apply (re-tune the DATA, never add engine logic). Exceptions/most-specific win:
+-- Mar-2025 (80) > R9 (60) > R9(A) (50) > R5(E) (40) > R5(F) (30) > R5(C.2) (20) > R5(D) (10).
+--
+-- ⚠ R5(C.2) vs concealment are COMPLEMENTARY, not in conflict (prd.md:371): R5(C.2) fires on
+-- claim.honestly_declared_preexisting (honest declarer → actual cause governs, eligible); the
+-- concealment flag fires on claim.concealed_ima_condition_linked (dishonesty). The distinction
+-- lives in how the PRODUCER derives the two facts, NOT in engine branching.
+--
+-- ⚠ PROVISIONAL POLICY (FR-11 `policy_review_required` — Trustee-Panel-tunable): the `precedence`
+-- ints and the routing-slug vocabulary are provisional; final legally-reviewed copy lands via
+-- Story 0.13. All benefit_mechanism='pool'. Idempotent (ON CONFLICT DO NOTHING). snake_case keys.
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c000f-0000-4000-8000-00000000000f',
+    'niy.special-death.r5-c-2',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R5(C.2)","title_en":"Actual cause of death governs (honestly-declared pre-existing illness does not bar eligibility)","rule_kind":"conditional","family":"special-death","precedence":20,"on_pass":"route_actual_cause_governs","on_fail":"special_death_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.honestly_declared_preexisting","value":true}],"eligibility_preserving":true,"never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0010-0000-4000-8000-000000000010',
+    'niy.special-death.r5-d',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R5(D)","title_en":"Core team full discretion (no member legal claim; commitment purely ethical)","rule_kind":"conditional","family":"special-death","precedence":10,"on_pass":"route_core_team_discretion","on_fail":"special_death_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.legal_claim_asserted","value":true}],"discretionary":true,"no_legal_claim":true,"never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0011-0000-4000-8000-000000000011',
+    'niy.special-death.r5-e',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R5(E)","title_en":"Multi-nominee dispute / defamatory beneficiary (State Trustee discretion; funds recoverable)","rule_kind":"conditional","family":"special-death","precedence":40,"on_pass":"route_state_trustee_review","on_fail":"special_death_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.multi_nominee_dispute","value":true}],"funds_recoverable":true,"never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0012-0000-4000-8000-000000000012',
+    'niy.special-death.r5-f',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R5(F)","title_en":"Erroneous excess transfer (trust assists recovery; no guarantee, no liability)","rule_kind":"conditional","family":"special-death","precedence":30,"on_pass":"route_recovery_assistance","on_fail":"special_death_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.erroneous_excess_transfer","value":true}],"no_guarantee":true,"no_liability":true,"never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0013-0000-4000-8000-000000000013',
+    'niy.special-death.r9',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R9","title_en":"Special death (suicide / controversial) — core-team investigation, R9 voting may apply","rule_kind":"conditional","family":"special-death","precedence":60,"on_pass":"route_r9_voting","on_fail":"special_death_not_applicable","all_of":[{"op":"fact_in","fact":"claim.death_classification","values":["suicide","murder"]}],"voting_required":true,"majority_required":true,"never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c0014-0000-4000-8000-000000000014',
+    'niy.special-death.r9-a',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R9(A)","title_en":"Multiple deaths same date (priority to higher contribution/support record)","rule_kind":"conditional","family":"special-death","precedence":50,"on_pass":"route_r9_voting","on_fail":"special_death_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.multiple_deaths_same_date","value":true}],"voting_required":true,"priority_basis":"higher_contribution_record","never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;

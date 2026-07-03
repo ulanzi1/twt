@@ -27,7 +27,8 @@
 // `(member_id, rank)` where `rank smallint ∈ {1, 2}` (the third-argument `primaryKey({...})`
 // pattern from `otp_rate_buckets.ts` — `member_kyc_profiles.ts`'s single-column PK cannot
 // be mirrored here). `member_id` carries an FK → `members.member_id` `onDelete: 'cascade'`
-// so RTBF (Story 3.12) sweeps the nominee rows when the member is deleted.
+// for hard-delete scenarios only; RTBF (Story 3.12) is soft-delete — overwrites Tier-1
+// PII in-place (name/mobile → sentinel; address → NULL; rows retained).
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 // Header style mirrors member_kyc_profiles.ts.
@@ -43,7 +44,7 @@ export const memberNominees = pgTable(
   {
     // The declaring member. FK → members.member_id keeps referential integrity; the in-scope
     // declare write runs under the member's Pariwar so the FK check sees the row (same RLS
-    // family). RTBF (Story 3.12) deletes via cascade. NOT `.primaryKey()` — see composite PK below.
+    // family). RTBF (Story 3.12) overwrites Tier-1 PII in-place (soft-delete — see header). NOT `.primaryKey()` — see composite PK below.
     memberId: uuid('member_id')
       .$type<MemberId>()
       .notNull()

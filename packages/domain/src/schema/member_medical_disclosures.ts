@@ -17,6 +17,12 @@
 // DELETE beyond the FK cascade — immutable history, mirror the consent-records "no DELETE"
 // rationale). See Dev Notes §R2.
 //
+// ── DEVIATION (Story 3.12 RTBF) ──────────────────────────────────────────────────────────
+// Migration 0034 adds a NARROW column-level UPDATE grant on `disclosed_conditions_ciphertext` +
+// `additional_context_ciphertext` ONLY, so RTBF anonymization (member/anonymize.ts) can overwrite the
+// Tier-1 ciphertext with the anonymized sentinel. The rest of the row stays immutable; the FOR ALL
+// tenant write policy already permits it.
+//
 // TENANT-ISOLATED (mirrors `member_nominees` / `members`, NOT the global identity-auth
 // carve-out). A disclosure belongs to exactly one member in exactly one Pariwar; the in-scope
 // submit write + the history read run under that Pariwar's `app.pariwar_id`. RLS in

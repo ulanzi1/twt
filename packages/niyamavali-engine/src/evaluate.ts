@@ -89,7 +89,7 @@ async function resolveLockInSnapshot(
  * the row array directly, and timestamptz may arrive as a `Date` or an ISO string — both
  * are DB-authoritative (the value ORIGINATES from the DB clock, never an app clock).
  */
-async function selectDbNow(db: Db): Promise<Date> {
+export async function selectDbNow(db: Db): Promise<Date> {
   const res = (await db.execute(sql`SELECT now() AS now`)) as unknown;
   const rows = (Array.isArray(res) ? res : ((res as { rows?: unknown[] }).rows ?? [])) as Array<{
     now?: unknown;

@@ -162,8 +162,41 @@ describe('interpretClause — malformed / unknown vocabulary (never throws)', ()
   });
 });
 
+describe('interpretClause — fact_lt operator (Story 4.2, strict upper bound)', () => {
+  const payload = {
+    rule_kind: 'conditional',
+    on_pass: 'applies',
+    on_fail: 'does_not_apply',
+    all_of: [{ op: 'fact_lt', fact: 'contribution.total_count', max: 10 }],
+  };
+
+  it('passes when the numeric fact is strictly below max (boundary: max-1)', () => {
+    expect(
+      interpretClause(clause(payload), ctx('active', { 'contribution.total_count': 9 })).result.decision,
+    ).toBe('applies');
+  });
+
+  it('fails at the boundary (fact === max is NOT < max)', () => {
+    expect(
+      interpretClause(clause(payload), ctx('active', { 'contribution.total_count': 10 })).result.decision,
+    ).toBe('does_not_apply');
+  });
+
+  it('fails when the fact is absent or non-numeric (typed, never a throw)', () => {
+    expect(interpretClause(clause(payload), ctx('active', {})).result.decision).toBe('does_not_apply');
+    expect(
+      interpretClause(clause(payload), ctx('active', { 'contribution.total_count': 'nope' })).result.decision,
+    ).toBe('does_not_apply');
+  });
+
+  it('detail echoes the fact KEY only, never the value (PII-free)', () => {
+    const r = interpretClause(clause(payload), ctx('active', { 'contribution.total_count': 3 }));
+    expect(r.subClauseResults[0]!.detail).toEqual({ op: 'fact_lt', fact: 'contribution.total_count' });
+  });
+});
+
 describe('operator registry', () => {
-  it('exposes exactly the 4.1 minimal proven operator set (sorted)', () => {
-    expect(OPERATOR_NAMES).toEqual(['fact_equals', 'fact_gte', 'fact_in', 'member_state_in']);
+  it('exposes the 4.1 minimal set plus the Story 4.2 fact_lt operator (sorted)', () => {
+    expect(OPERATOR_NAMES).toEqual(['fact_equals', 'fact_gte', 'fact_in', 'fact_lt', 'member_state_in']);
   });
 });

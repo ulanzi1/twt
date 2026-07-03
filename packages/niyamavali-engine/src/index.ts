@@ -24,6 +24,19 @@ export {
   type R7LadderResult,
 } from './r7-ladder.js';
 export {
+  evaluateR8Ladder,
+  evaluateR8LadderAt,
+  evaluateR8LadderLive,
+  R8_CLAUSE_IDS,
+  R8_CONTRIBUTION_FACT_KEYS,
+  R8_CLAIM_FACT_KEYS,
+  R8_NOT_APPLICABLE,
+  type R8ClauseEvaluation,
+  type R8ContributionFactKey,
+  type R8ClaimFactKey,
+  type R8LadderResult,
+} from './r8-ladder.js';
+export {
   buildCacheKey,
   memberStateHash,
   niyamavaliVersionHash,

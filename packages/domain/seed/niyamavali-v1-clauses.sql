@@ -44,7 +44,12 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-01-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R8","title_en":"Ninety-percent contribution rule","threshold_percent":90,"provisional":true}'::jsonb,
+    -- Story 4.3: upgraded from the provisional display stub to a REAL rule_kind:'conditional'
+    -- spec interpreted by the @twt/niyamavali-engine primitive (Story 4.1). See the R8 family
+    -- block below (r8-a / r8-b) for the full ladder + the provisional precedence/threshold caveat.
+    -- The "90% computation" is a PRE-DERIVED fact (contribution.compliance_percent): the base
+    -- clause only checks fact_gte >= 90; the engine never computes the percentage.
+    '{"rule_code":"R8","title_en":"Ninety-percent contribution rule (illness-death eligibility gate)","rule_kind":"conditional","family":"r8-ninety-percent","precedence":30,"on_pass":"ninety_percent_met","on_fail":"r8_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.death_classification","value":"illness"},{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_gte","fact":"contribution.compliance_percent","min":90}],"threshold_percent":90,"min_contributions":10,"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   ),
   (
@@ -115,6 +120,61 @@ VALUES
     1,
     '2025-01-01T00:00:00+00:00'::timestamptz,
     '{"rule_code":"LOCK-IN","title_en":"Membership lock-in policy (join-time clock)","lock_in_days":30,"provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── Story 4.3 — R8 ninety-percent rule (illness-death eligibility gate) + R8(A)/R8(B) ─────
+-- The R8 family (FR-10) as REAL rule_kind:'conditional' payloads interpreted by the
+-- @twt/niyamavali-engine primitive (Story 4.1). r8 is UPGRADED in place above; r8-a / r8-b
+-- are ADDED here. Each clause is self-contained: `all_of` preconditions over the caller-supplied
+-- `contribution.*` / `claim.*` facts (Epic 8/9 contribution history + Epic 6 claim intake,
+-- assembled by the 4.6 Validity Service — NO source system exists yet at Epic 4), `on_pass` =
+-- eligibility-path slug, `on_fail` = 'r8_not_applicable'. The engine picks WHICH R8 sub-clause
+-- applies by the payload `precedence` field (DATA, not hardcoded) when facts overlap.
+--
+-- ⚠ ILLNESS-ONLY GATE (AC2.4, FR-10): all three sub-clauses gate on
+-- `claim.death_classification == 'illness'` — an accident-classified death fails every R8
+-- precondition → R8 does not apply (accident eligibility is a SEPARATE path, not this story).
+-- The gate is DATA (a precondition), never a hardcoded `if (accident)` engine branch.
+--
+-- ⚠ THE "90% COMPUTATION" IS A PRE-DERIVED FACT, not an engine calculation:
+-- `contribution.compliance_percent` arrives already computed; the base clause only checks
+-- `fact_gte >= 90`. The engine EVALUATES facts, it never DERIVES them — a different compliance
+-- calculation is a PRODUCER change (Epic 8/9), never an engine change.
+--
+-- ⚠ PROVISIONAL POLICY (FR-10 `policy_review_required` — Trustee-Panel-tunable): the 90%
+-- threshold (FR-10 "reviewed at the 10/20/50 milestones") and the `precedence` ints are
+-- provisional. Precedence is exceptions-win — R8(B) mid-contribution death (50, "presumed would
+-- have paid") > R8(A) skip-allowance (40) > R8 base 90% gate (30). Precedence selects the
+-- surfaced EXPLANATION, not eligibility: every applied sub-clause already means "eligible"; the
+-- pick only decides which reason is reported when several apply (re-tune the DATA, never add
+-- engine logic). R8(A) encodes the FR-10 canonical "prior compliance 100%"
+-- (`prior_period_full_compliance == true`); the PRD glossary's "prior >= 90%" phrasing variance
+-- (prd.md:167) is flagged for trustee clarification, NOT resolved here — an inherited-copy
+-- ambiguity, not an engine defect. R8(A) restoration SATISFACTION + the contribution-cycle
+-- alert/deadline mechanics behind `mid_contribution_death` are downstream (Epic 6 / Epic 8/9).
+-- All benefit_mechanism='pool' (the benefit-mechanism CI gate's seed_globs cover this file).
+-- Idempotent (ON CONFLICT DO NOTHING). snake_case JSONB keys.
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c000d-0000-4000-8000-00000000000d',
+    'niy.ninety-percent-rule.r8-a',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R8(A)","title_en":"One-skip-per-year allowance (prior compliance 100%)","rule_kind":"conditional","family":"r8-ninety-percent","precedence":40,"on_pass":"skip_allowance_granted","on_fail":"r8_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.death_classification","value":"illness"},{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_equals","fact":"contribution.skips_current_year","value":1},{"op":"fact_equals","fact":"contribution.prior_period_full_compliance","value":true}],"skips_allowed":1,"requires_prior_full_compliance":true,"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  ),
+  (
+    '0e1c000e-0000-4000-8000-00000000000e',
+    'niy.ninety-percent-rule.r8-b',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R8(B)","title_en":"Mid-contribution death (presumed would have paid)","rule_kind":"conditional","family":"r8-ninety-percent","precedence":50,"on_pass":"mid_contribution_eligible","on_fail":"r8_not_applicable","all_of":[{"op":"fact_equals","fact":"claim.death_classification","value":"illness"},{"op":"fact_equals","fact":"claim.mid_contribution_death","value":true}],"presumed_would_have_paid":true,"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;

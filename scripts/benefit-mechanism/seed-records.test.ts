@@ -38,11 +38,12 @@ function loadSeedRecords() {
 }
 
 describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', () => {
-  it('extracts the structurally-real clause records from the seed (Story 2.3 + Story 3.5 + Story 3.6b + Story 4.2)', () => {
+  it('extracts the structurally-real clause records from the seed (Story 2.3 + Story 3.5 + Story 3.6b + Story 4.2 + Story 4.3)', () => {
     const { records } = loadSeedRecords();
     // 3 Story-2.3 clauses + 2 Story-3.5 medical clauses + 1 Story-3.6b lock-in policy clause
-    // + 6 Story-4.2 R7(B–G) restoration-ladder clauses (r7-a was pre-existing from Story 2.3).
-    expect(records).toHaveLength(12);
+    // + 6 Story-4.2 R7(B–G) restoration-ladder clauses (r7-a was pre-existing from Story 2.3)
+    // + 2 Story-4.3 R8(A)/R8(B) clauses (r8 base was pre-existing from Story 2.3, upgraded in place).
+    expect(records).toHaveLength(14);
     const ids = records.map((r) => r.id).sort();
     expect(ids).toEqual([
       'niy.concealment.r14',
@@ -56,6 +57,8 @@ describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', (
       'niy.lock-in.policy',
       'niy.medical.ima-list',
       'niy.ninety-percent-rule.r8',
+      'niy.ninety-percent-rule.r8-a',
+      'niy.ninety-percent-rule.r8-b',
       'niy.special-death.r9-suicide-murder',
     ]);
   });

@@ -57,7 +57,8 @@ export type MemberKycSource = (typeof MEMBER_KYC_SOURCES)[number];
 export const memberKycProfiles = pgTable('member_kyc_profiles', {
   // One profile per member (PK = member_id). FK → members.member_id keeps referential
   // integrity; the in-scope upsert runs under the member's Pariwar so the FK check sees
-  // the row (same RLS family). RTBF (Story 3.12) deletes via cascade.
+  // the row (same RLS family). RTBF (Story 3.12) is soft-delete — overwrites Tier-1 PII
+  // fields in-place (name/dob → sentinel; photo/aadhaar_masked_id → NULL; row retained).
   memberId: uuid('member_id')
     .$type<MemberId>()
     .primaryKey()

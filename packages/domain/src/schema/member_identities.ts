@@ -30,7 +30,9 @@ export const memberIdentities = pgTable(
     // One identity row per member (PK = member_id). FK → members.member_id keeps
     // referential integrity; the in-scope INSERT (Story 3.6) runs under the member's
     // Pariwar so the FK check sees the row (same RLS family). Members are never
-    // row-deleted (cascade is moot); RTBF (Story 3.12) deletes THIS row in place.
+    // row-deleted (cascade is moot); RTBF (Story 3.12) is soft-delete — overwrites
+    // `mobile_ciphertext` with the anonymized sentinel while RETAINING `mobile_blind_index`
+    // (the 12-month rejoin lock keys on it — clearing it would silently break AC4).
     memberId: uuid('member_id')
       .$type<MemberId>()
       .primaryKey()

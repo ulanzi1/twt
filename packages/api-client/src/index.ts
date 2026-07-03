@@ -32,6 +32,7 @@ import {
   WithdrawalStatusResponse,
   DataExportRequestResponse,
   DataExportStatusResponse,
+  RtbfStatusResponse,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
@@ -66,6 +67,8 @@ import {
   type WithdrawalStatusResponse as WithdrawalStatusResult,
   type DataExportRequestResponse as DataExportRequestResult,
   type DataExportStatusResponse as DataExportStatusResult,
+  type RtbfConfirmRequest,
+  type RtbfStatusResponse as RtbfStatusResult,
 } from '@twt/contracts';
 import type { z } from 'zod';
 
@@ -113,6 +116,7 @@ const MEMBER_HOME_BASE = '/api/v1/member';
 const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
 const WITHDRAWAL_BASE = '/api/v1/member/withdrawal';
 const DATA_EXPORT_BASE = '/api/v1/member/data-export';
+const RTBF_BASE = '/api/v1/member/rtbf';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
@@ -425,6 +429,19 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     withdrawMember(input: WithdrawalConfirmRequest): Promise<WithdrawalStatusResult> {
       return call(WITHDRAWAL_BASE, WithdrawalStatusResponse, input, true);
+    },
+
+    // ── RTBF anonymization (Story 3.12) ───────────────────────────────────────
+    /**
+     * Confirm RTBF anonymization (FR-96) — step-up gated ('rtbf' context; the confirm requires a FRESH
+     * elevation, RTBF being irreversible). Legal ONLY from `withdrawn` (Story 3.10): a not-yet-withdrawn
+     * or already-anonymized member surfaces as ApiError `rtbf.already_anonymized` (409). Takes NO input (there
+     * is no reason to collect). Returns the terminal `anonymized` state + the anonymization instant; NO
+     * cleared PII is echoed (R1). A missing/expired elevation surfaces as ApiError `auth.step_up_required`
+     * (drive the step-up request/verify then retry the SAME call — the 3.9/3.10 useStepUpGate precedent).
+     */
+    anonymizeMember(input: RtbfConfirmRequest = {}): Promise<RtbfStatusResult> {
+      return call(RTBF_BASE, RtbfStatusResponse, input, true);
     },
 
     // ── DPDPA data export (Story 3.11) ────────────────────────────────────────

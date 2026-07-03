@@ -12,6 +12,11 @@
 // INSERT only (no UPDATE, no DELETE beyond the FK cascade — immutable history). The "current"
 // address is simply the newest row by `created_at` (getMemberAddressLatest).
 //
+// ── DEVIATION (Story 3.12 RTBF) ──────────────────────────────────────────────────────────
+// Migration 0034 adds a NARROW column-level UPDATE grant on `address_line_ciphertext` ONLY, so
+// RTBF anonymization (member/anonymize.ts) can overwrite the Tier-1 ciphertext with the anonymized
+// sentinel. The rest of the row stays immutable; the FOR ALL tenant write policy already permits it.
+//
 // TENANT-ISOLATED (mirrors `member_medical_disclosures` / `members`). An address belongs to
 // exactly one member in exactly one Pariwar; the in-scope update write + the history read run
 // under that Pariwar's `app.pariwar_id`. RLS in policies/member-addresses-rls.ts. Every access

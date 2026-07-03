@@ -239,6 +239,13 @@
       "when": 1783568400000,
       "tag": "0033_data-exports",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1783654800000,
+      "tag": "0034_rtbf-anonymization-grants",
+      "breakpoints": true
     }
   ]
 }

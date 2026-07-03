@@ -24,4 +24,8 @@ export * from './posting.js';
 // Story 3.10 — voluntary-withdrawal record write + in-scope read (the rejoin-lock read is folded into
 // the signup repo's cross-tenant resolveMembersByMobile, NOT here).
 export * from './withdrawal.js';
+// Story 3.12 — RTBF field-level anonymization core (the inverse of data-export/assemble.ts) + the
+// display-time member-name resolver seam that renders "an anonymous member" for anonymized members.
+export * from './anonymize.js';
+export * from './display-name.js';
 export * from './errors.js';

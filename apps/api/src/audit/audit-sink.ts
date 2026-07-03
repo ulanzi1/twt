@@ -142,7 +142,14 @@ export type AuthAuditEventType =
   //   downloaded — the one-time gated download streamed the ZIP (consumed_at stamped).
   | 'member_data_export.requested'
   | 'member_data_export.generated'
-  | 'member_data_export.downloaded';
+  | 'member_data_export.downloaded'
+  // ── Member RTBF anonymization surface (Story 3.12, FR-96 / DPDPA Right-To-Be-Forgotten) ──────
+  // The member-initiated RTBF confirm (member.rtbf_anonymized emitted → state anonymized; every
+  // Tier-1 PII column field-level anonymized). Context is NON-PII: anonymized_at + anonymization_actor
+  // (the member_id) ONLY — NEVER any cleared PII value, NEVER a token. The actorId carries the member_id.
+  //   completed — RTBF anonymization was confirmed (soft-delete: member row + history retained,
+  //               PII fields overwritten with the anonymized sentinel; mobile_blind_index retained).
+  | 'member_rtbf.completed';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

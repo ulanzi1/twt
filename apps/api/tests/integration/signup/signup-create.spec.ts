@@ -296,7 +296,7 @@ describe.skipIf(!hasDatabase)('First-signup member creation — E2E (:5433)', ()
   async function seedWithdrawnMember(
     t: TestApp,
     mobile: string,
-    opts: { rejoinInFuture: boolean; withdrawnAt?: Date },
+    opts: { rejoinInFuture: boolean; withdrawnAt?: Date; state?: 'withdrawn' | 'anonymized' },
   ): Promise<{ memberId: string; withdrawnAt: Date; rejoinPermittedAt: Date }> {
     const blindIndex = (await mobileBlindIndex(mobile, t.deps.encryption)) as string;
     const ciphertext = await encryptMobile(normalizeMobile(mobile) as string, t.deps.encryption);
@@ -305,9 +305,12 @@ describe.skipIf(!hasDatabase)('First-signup member creation — E2E (:5433)', ()
     const rejoinPermittedAt = opts.rejoinInFuture
       ? new Date(Date.now() + 200 * 24 * 60 * 60 * 1000)
       : new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Story 3.12: an anonymized member (RTBF) still carries the rejoin key — the lock keys on the
+    // retained mobile_blind_index + member_withdrawals, NOT on the (anonymized) mobile ciphertext.
+    const state = opts.state ?? 'withdrawn';
     await t.pool.query(
-      `INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'withdrawn', 5)`,
-      [memberId, DEFAULT_PARIWAR],
+      `INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, $3, 5)`,
+      [memberId, DEFAULT_PARIWAR, state],
     );
     await t.pool.query(
       `INSERT INTO member_identities (member_id, pariwar_id, mobile_ciphertext, mobile_blind_index)
@@ -345,6 +348,32 @@ describe.skipIf(!hasDatabase)('First-signup member creation — E2E (:5433)', ()
       // Audited as a rejoin block (masked mobile only — never plaintext).
       expect(t.auditSink.ofType('member_withdrawal.rejoin_blocked').length).toBe(1);
       expect(JSON.stringify(t.auditSink.events)).not.toContain(normalizeMobile(mobile) as string);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('Story 3.12 rejoin regression: an ANONYMIZED member INSIDE the window → still 403 auth.rejoin_locked', async () => {
+    const t = await signupApp();
+    try {
+      const mobile = randomMobile();
+      // RTBF anonymized the mobile ciphertext but RETAINED mobile_blind_index + the rejoin columns, so
+      // the pre-scope resolveMembersByMobile lookup still finds this identity and the lock still fires.
+      const { rejoinPermittedAt } = await seedWithdrawnMember(t, mobile, {
+        rejoinInFuture: true,
+        state: 'anonymized',
+      });
+      const token = await mintContinuation(t, mobile);
+
+      const res = await inject(t, 'POST', `${BASE}/signup/create`, {
+        payload: { mobile, deviceId: 'device-A' },
+        token,
+      });
+      expect(res.status).toBe(403);
+      const err = res.body.error as Json;
+      expect(String(err?.code)).toBe('auth.rejoin_locked');
+      expect((err?.details as Json)?.rejoin_permitted_at).toBe(rejoinPermittedAt.toISOString());
+      expect(t.auditSink.ofType('member_withdrawal.rejoin_blocked').length).toBe(1);
     } finally {
       await teardown(t);
     }

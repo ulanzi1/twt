@@ -53,7 +53,7 @@ run "kyc-provider-boundary" "pnpm kyc-provider:test && pnpm kyc-provider:check"
 
 # ── live-DB job (opt-in via DATABASE_URL) ─────────────────────────────────────
 if [ -n "${DATABASE_URL:-}" ]; then
-  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue"
+  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine"
 else
   SKIPPED+=("integration-tests — set DATABASE_URL (twt-test-pg on :5433) to enable")
 fi

@@ -690,6 +690,37 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
 
+  packages/niyamavali-engine:
+    dependencies:
+      '@twt/domain':
+        specifier: workspace:*
+        version: link:../domain
+      drizzle-orm:
+        specifier: ^0.45.0
+        version: 0.45.2(@types/pg@8.20.0)(pg@8.21.0)
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      '@twt/eslint-config-twt':
+        specifier: workspace:*
+        version: link:../eslint-config-twt
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.19.20
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.13.0
+        version: 8.21.0
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
+
   packages/platform-adapters:
     devDependencies:
       '@twt/eslint-config-twt':
@@ -14445,6 +14476,14 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 2.0.0
 
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.20)(lightningcss@1.32.0)(terser@5.48.0))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@22.19.20)(lightningcss@1.32.0)(terser@5.48.0)
+
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@25.9.2)(lightningcss@1.32.0)(terser@5.48.0))':
     dependencies:
       '@vitest/spy': 2.1.9
@@ -19828,7 +19867,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@25.9.2)(lightningcss@1.32.0)(terser@5.48.0))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.20)(lightningcss@1.32.0)(terser@5.48.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

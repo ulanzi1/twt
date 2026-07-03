@@ -547,8 +547,10 @@ jobs:
         # introspection + integrity-check history + acknowledge, plus the
         # pre-existing admin-auth / scope-tx / step-up live-DB specs); @twt/queue
         # joined at Story 1.12 (the pg-boss queue-client smoke suite). The Story
-        # 1.12 keyed-store concurrency + RLS specs ride @twt/domain. Downstream
-        # Stories (7.x Pool Engine, 9.x reconciliation) extend this filter when
-        # their integration suites land. With DATABASE_URL set the
+        # 1.12 keyed-store concurrency + RLS specs ride @twt/domain.
+        # @twt/niyamavali-engine joined at Story 4.1 (the rule-evaluation engine's
+        # clause-resolution / snapshot / idempotency-memo / audit-on-compute live-DB
+        # specs). Downstream Stories (7.x Pool Engine, 9.x reconciliation) extend this
+        # filter when their integration suites land. With DATABASE_URL set the
         # `describe.skipIf(!hasDatabase)` guards run instead of skipping.
-        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue
+        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine

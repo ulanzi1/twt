@@ -9,3 +9,7 @@ export * from './auth.js';
 export * from './signup.js';
 // Story 3.7 — lock-in home-widget read DTO (GET /member/lock-in-status; reuses MemberLifecycleStateWire).
 export * from './lock-in.js';
+// Story 4.7 — FR-12A member-validity payload DTO (member-self + admin reads) + the AR-65 admin
+// member-search request/response DTOs (the compound read model). Mirrors the @twt/validity-service
+// payload shape with plain Zod (no @twt/domain import); camelCase wire (matches lock-in.ts/auth.ts).
+export * from './validity.js';

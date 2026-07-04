@@ -183,6 +183,9 @@ importers:
       '@twt/queue':
         specifier: workspace:*
         version: link:../../packages/queue
+      '@twt/validity-service':
+        specifier: workspace:*
+        version: link:../../packages/validity-service
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1
@@ -777,6 +780,10 @@ importers:
         version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/ui:
+    dependencies:
+      '@twt/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@twt/eslint-config-twt':
         specifier: workspace:*

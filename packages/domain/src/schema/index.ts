@@ -92,6 +92,12 @@ export * from './member_withdrawals.js';
 // non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum zeroing). FK cascade to
 // members for RTBF (Story 3.12).
 export * from './data_exports.js';
+// Story 4.7 — member_search_projection: the AR-65 admin member-search compound read model (a
+// denormalized NON-PII read store: lifecycle state + nominee summary + D2 producer_unavailable
+// sentinels). Write-owned EXCLUSIVELY by the member projector (member/project.ts); guarded by a
+// write-rejection trigger (migration) + the extended member-state-invariant CI gate. NOT the FR-12A
+// validity cache (that is Story 4.8's materialized view).
+export * from './member_search_projection.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

@@ -499,6 +499,30 @@ jobs:
       - run: pnpm kyc-provider:test
       - run: pnpm kyc-provider:check
 
+  determinism-replay:
+    name: determinism-replay (FR-12A validity payload — P0 order invariant)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 4.6 AC2 (the load-bearing P0 commitment; AR-57). Runs the SAME pinned-instant Member
+    # Validity composition 100× across REAL OS worker threads and asserts exactly ONE distinct
+    # validity_payload_hash. ANY variance FAILS as a P0 architectural violation. This surfaces
+    # hash-map / async-completion-order nondeterminism at the service composition layer that a
+    # single-threaded loop cannot (confirmed D4-A). DB-free (the composition is pure). Any future
+    # parallel/async rule-execution optimization MUST keep this green or be rejected at code review.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @twt/validity-service test:determinism
+
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest
@@ -553,4 +577,8 @@ jobs:
         # specs). Downstream Stories (7.x Pool Engine, 9.x reconciliation) extend this
         # filter when their integration suites land. With DATABASE_URL set the
         # `describe.skipIf(!hasDatabase)` guards run instead of skipping.
-        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine
+        # @twt/validity-service joined at Story 4.6 (the FR-12A Member Validity
+        # Service live-DB spec: canonical payload assembly + real tenure/retirement
+        # producer + audit-on-admin-call + idempotent replay + the p95 benchmark
+        # harness).
+        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service

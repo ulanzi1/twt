@@ -72,6 +72,36 @@ export async function getMemberStateAt(
 }
 
 /**
+ * The member's tenure-anchor instant: the `occurred_at` of the FIRST `member.signup_initiated`
+ * event at/before `atTimestamp`, or `null` when the member had not signed up by then. Story 4.6's
+ * Validity Service reads this as the `joined_at` anchor for the calendar-correct
+ * `valid_membership_years` derivation (the schema has NO `joined_at` column — the anchor lives only
+ * in the signup event's `occurred_at`; events.ts:238 / SignupInitiatedPayloadSchema carries no date
+ * field). Ordered by `event_version` ASC (mirror `getMemberStateAt`'s replay ordering — monotonic,
+ * tie-free) so the FIRST signup is deterministic. Reads `events_log` directly (domain owns it;
+ * cannot import `@twt/events` — the cycle; see this module's header). RLS-scoped by `stream_id`.
+ */
+export async function getMemberSignupInstantAt(
+  db: Db,
+  memberId: MemberId,
+  atTimestamp: Date,
+): Promise<Date | null> {
+  const rows = await db
+    .select({ occurredAt: eventsLog.occurredAt })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.streamId, memberId),
+        eq(eventsLog.eventType, 'member.signup_initiated'),
+        lte(eventsLog.occurredAt, atTimestamp),
+      ),
+    )
+    .orderBy(asc(eventsLog.eventVersion))
+    .limit(1);
+  return rows[0]?.occurredAt ?? null;
+}
+
+/**
  * The lock-in clock snapshot Story 3.7's home-screen widget keys off. All three figures derive from
  * the `member.lock_in_entered` MARKER event (the clock-start; see events.ts:94-96): `enteredAt` is its
  * `occurred_at`, and the two snapshot fields come from its WIDENED payload (the AUTHORITATIVE record —

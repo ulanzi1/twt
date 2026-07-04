@@ -70,8 +70,11 @@ export function permissionKey(value: string): PermissionKey {
  * Catalog version. Bumped when keys are added/removed (append-only in practice —
  * the catalog grows per-epic). Downstream consumers may pin/assert a minimum.
  * Bumped 1 → 2 at Story 2.6 (added `tc.publish` + `tc.approve`).
+ * Bumped 2 → 3 at Story 4.6 (added `member.view_validity` — the FR-12A Member
+ * Validity read key; the reuse-check confirmed no existing `member.*` key signals a
+ * READ: `member.suspend`/`member.moderate` are both WRITE actions).
  */
-export const PERMISSION_CATALOG_VERSION = 2 as const;
+export const PERMISSION_CATALOG_VERSION = 3 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -83,6 +86,12 @@ export const SEED_PERMISSION_KEYS = [
   'claim.approve',
   'member.suspend',
   'member.moderate',
+  // Story 4.6 — the FR-12A Member Validity READ key. Distinct from the write-oriented
+  // `member.suspend`/`member.moderate` (a caller that may READ a member's validity is not
+  // necessarily one that may suspend/moderate them, and vice-versa). Granted to the
+  // read-capable FR-46 roles in roles.ts; the member's own self-call is authorized via the
+  // `self` scope dimension, not this key.
+  'member.view_validity',
   'pariwar.amend_rule',
   'pariwar.provision',
   'niyamavali.amend',

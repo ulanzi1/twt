@@ -1,0 +1,239 @@
+// Member Validity Service — live-DB integration (Story 4.6, Task 6; :5433).
+//
+// Drives getValidity/getValidityAt against real Postgres: seeds a member (signup events → active) +
+// (for the retired case) a member_postings retirement anchor + the R12 clause, then asserts the
+// GENUINELY-producible fields (is_valid/is_active, lock_in, vyawastha_shulk, retirement_coverage with
+// its real projection, applicable_niyamavali_clauses=[R12] + provenance + one rule_registry_version at
+// the pinned instant), the ADMIN-call audit row + NO audit on a self-call, and idempotent byte-identical
+// replay. Own-committing (NOT setupLiveDb): the idempotency store + audit writer COMMIT their own tx.
+// Assertions key on membership / our own rows / idempotent outcome, NEVER global counts
+// ([[project_live_db_test_gotchas]]). Real CI `test (unit)` runs with DATABASE_URL UNSET → this skips.
+
+import { randomUUID } from 'node:crypto';
+
+import { canonicalJsonStringify, createDb, ids, idempotency, schema, type Db } from '@twt/domain';
+import type pg from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { getValidity, getValidityAt, type ValidityCaller, type ValidityServiceDeps } from '../../src/index.js';
+import { R12_PAYLOAD } from '../fixtures/r12-clause.js';
+
+const DATABASE_URL = process.env['DATABASE_URL'];
+const hasDatabase = Boolean(DATABASE_URL);
+
+describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, own-committing) (:5433)', () => {
+  let db: Db;
+  let pool: pg.Pool;
+  let deps: ValidityServiceDeps;
+  const pariwars: string[] = [];
+  const members: string[] = [];
+
+  function track(pariwarId: string, memberId: string): void {
+    pariwars.push(pariwarId);
+    members.push(memberId);
+  }
+
+  async function seedR12(pariwarId: ids.PariwarId): Promise<ids.ClauseVersionId> {
+    const clauseVersionId = ids.clauseVersionId(randomUUID());
+    await db.insert(schema.clauseVersions).values({
+      clauseVersionId,
+      clauseId: ids.clauseId('niy.retirement-coverage.r12'),
+      pariwarId,
+      version: 1,
+      effectiveDate: new Date('2000-01-01T00:00:00Z'),
+      payload: { ...R12_PAYLOAD },
+      benefitMechanism: 'pool',
+    });
+    return clauseVersionId;
+  }
+
+  async function seedEvent(
+    pariwarId: ids.PariwarId,
+    memberId: ids.MemberId,
+    version: number,
+    eventType: string,
+    occurredAt: Date,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    await db.insert(schema.eventsLog).values({
+      streamId: memberId,
+      eventType,
+      payload,
+      eventVersion: version,
+      actorId: null,
+      pariwarId,
+      occurredAt,
+    });
+  }
+
+  /** Seed the event chain that replays to `active`, with signup at `joinedAt` (the tenure anchor). */
+  async function seedActiveMember(
+    pariwarId: ids.PariwarId,
+    memberId: ids.MemberId,
+    joinedAt: Date,
+  ): Promise<void> {
+    const at = (n: number): Date => new Date(joinedAt.getTime() + n * 1000);
+    await seedEvent(pariwarId, memberId, 1, 'member.signup_initiated', joinedAt, {});
+    await seedEvent(pariwarId, memberId, 2, 'member.kyc_completed', at(2), {});
+    await seedEvent(pariwarId, memberId, 3, 'member.vyawastha_shulk_paid', at(3), {});
+    await seedEvent(pariwarId, memberId, 4, 'member.lock_in_expired', at(4), { kyc_verified: true });
+  }
+
+  /** Insert the members row (FK target for postings) + a retirement posting anchor. */
+  async function seedRetirement(
+    pariwarId: ids.PariwarId,
+    memberId: ids.MemberId,
+    retiredAt: Date,
+  ): Promise<void> {
+    await db.insert(schema.members).values({
+      memberId,
+      pariwarId,
+      state: 'active',
+      stateEventVersion: 4,
+    });
+    await db.insert(schema.memberPostings).values({
+      memberId,
+      pariwarId,
+      district: 'Patna',
+      isRetirement: true,
+      createdAt: retiredAt,
+    });
+  }
+
+  async function countValidityAudits(memberId: ids.MemberId): Promise<number> {
+    const res = await pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM audit_log_entries WHERE action = 'validity.evaluate' AND resource_locator = $1`,
+      [`member/${memberId}`],
+    );
+    return res.rows[0]?.n ?? 0;
+  }
+
+  function adminCaller(pariwarId: string): ValidityCaller {
+    return {
+      actorId: randomUUID(),
+      grants: [{ pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+      resource: { dimension: 'pariwar', value: pariwarId, pariwarId },
+      isSelf: false,
+    };
+  }
+
+  function selfCaller(pariwarId: string, memberId: string): ValidityCaller {
+    return { actorId: memberId, grants: [], resource: { dimension: 'self', value: memberId, pariwarId }, isSelf: true };
+  }
+
+  beforeAll(() => {
+    if (!hasDatabase) return;
+    const created = createDb(DATABASE_URL!, { ssl: false, max: 8 });
+    db = created.db;
+    pool = created.pool;
+    deps = { db, keyedStore: idempotency.createKeyedStore(pool), servicePool: pool };
+  });
+
+  afterAll(async () => {
+    if (!hasDatabase) return;
+    if (pariwars.length > 0) {
+      await pool.query('DELETE FROM clause_versions WHERE pariwar_id::text = ANY($1)', [pariwars]).catch(() => undefined);
+      await pool.query('DELETE FROM member_postings WHERE pariwar_id::text = ANY($1)', [pariwars]).catch(() => undefined);
+      await pool.query('DELETE FROM members WHERE pariwar_id::text = ANY($1)', [pariwars]).catch(() => undefined);
+      await pool.query('DELETE FROM events_log WHERE pariwar_id::text = ANY($1)', [pariwars]).catch(() => undefined);
+    }
+    for (const m of members) {
+      await pool.query('DELETE FROM idempotency_keys WHERE key LIKE $1', [`rule-eval:v1:%:${m}:%`]).catch(() => undefined);
+    }
+    await pool.end();
+  });
+
+  it('assembles the canonical payload for an active non-retired member with real tenure-derived coverage', async () => {
+    const pariwarId = ids.pariwarId(randomUUID());
+    const memberId = ids.memberId(randomUUID());
+    track(pariwarId, memberId);
+    await seedActiveMember(pariwarId, memberId, new Date('2010-06-01T00:00:00Z'));
+    const versionId = await seedR12(pariwarId);
+
+    const at = new Date('2025-06-01T00:00:00Z'); // 15 years of tenure → +3 earned
+    const p = await getValidityAt(deps, { pariwarId, memberId }, at, { internal: true });
+
+    expect(p.memberId).toBe(memberId);
+    expect(p.isValid).toBe(true); // active
+    expect(p.isActive).toBe(true);
+    expect(p.contributionHistorySummary).toEqual({ status: 'producer_unavailable', producer: 'epic-8-9' });
+    // R12 is the single applicable clause at member standing (R7/R8 omitted; D2-A).
+    expect(p.applicableNiyamavaliClauses.map((c) => String(c.clauseId))).toEqual(['niy.retirement-coverage.r12']);
+    expect(p.provenanceTrace[0]?.clauseVersionId).toBe(versionId);
+    expect(p.ruleRegistryVersion).toBe(versionId);
+    // Non-retired: nonzero years earned (15yr → +3) but no active projection ([[CR-4.5-D3]]).
+    expect(p.retirementCoverage).toMatchObject({
+      isRetired: false,
+      yearsOfCoverageEarned: 3,
+      coverageThrough: null,
+      active: false,
+    });
+    expect(p.validityPayloadHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('projects active retirement coverage for a retired member (real posting anchor)', async () => {
+    const pariwarId = ids.pariwarId(randomUUID());
+    const memberId = ids.memberId(randomUUID());
+    track(pariwarId, memberId);
+    await seedActiveMember(pariwarId, memberId, new Date('2005-06-01T00:00:00Z'));
+    await seedRetirement(pariwarId, memberId, new Date('2023-06-01T00:00:00Z')); // 18yr tenure → +3
+    await seedR12(pariwarId);
+
+    const at = new Date('2024-06-01T00:00:00Z');
+    const p = await getValidityAt(deps, { pariwarId, memberId }, at, { internal: true });
+
+    expect(p.retirementCoverage).toMatchObject({ isRetired: true, active: true });
+    if ('yearsOfCoverageEarned' in p.retirementCoverage) {
+      expect(p.retirementCoverage.yearsOfCoverageEarned).toBe(3);
+      // coverage_through = retiredAt (2023-06-01) + 3 years = 2026-06-01.
+      expect(p.retirementCoverage.coverageThrough).toBe('2026-06-01T00:00:00.000Z');
+    }
+  });
+
+  it('audits an ADMIN call and does NOT audit a self-call (PRD FR-12A)', async () => {
+    const pariwarId = ids.pariwarId(randomUUID());
+    const memberId = ids.memberId(randomUUID());
+    track(pariwarId, memberId);
+    await seedActiveMember(pariwarId, memberId, new Date('2015-06-01T00:00:00Z'));
+    await seedR12(pariwarId);
+    const at = new Date('2025-06-01T00:00:00Z');
+
+    const before = await countValidityAudits(memberId);
+    // Self-call first → no validity.evaluate audit line.
+    await getValidityAt(deps, { pariwarId, memberId }, at, { caller: selfCaller(pariwarId, memberId) });
+    const afterSelf = await countValidityAudits(memberId);
+    expect(afterSelf - before).toBe(0);
+
+    // Admin call → exactly one validity.evaluate audit line.
+    await getValidityAt(deps, { pariwarId, memberId }, at, { caller: adminCaller(pariwarId) });
+    const afterAdmin = await countValidityAudits(memberId);
+    expect(afterAdmin - afterSelf).toBe(1);
+  });
+
+  it('is idempotent: identical pinned-instant evaluations are byte-identical', async () => {
+    const pariwarId = ids.pariwarId(randomUUID());
+    const memberId = ids.memberId(randomUUID());
+    track(pariwarId, memberId);
+    await seedActiveMember(pariwarId, memberId, new Date('2012-06-01T00:00:00Z'));
+    await seedR12(pariwarId);
+    const at = new Date('2025-06-01T00:00:00Z');
+
+    const first = await getValidityAt(deps, { pariwarId, memberId }, at, { internal: true });
+    const second = await getValidityAt(deps, { pariwarId, memberId }, at, { internal: true });
+    expect(canonicalJsonStringify(second as never)).toBe(canonicalJsonStringify(first as never));
+    expect(second.validityPayloadHash).toBe(first.validityPayloadHash);
+  });
+
+  it('getValidity pins one DB-authoritative instant across the payload', async () => {
+    const pariwarId = ids.pariwarId(randomUUID());
+    const memberId = ids.memberId(randomUUID());
+    track(pariwarId, memberId);
+    await seedActiveMember(pariwarId, memberId, new Date('2018-06-01T00:00:00Z'));
+    const versionId = await seedR12(pariwarId);
+
+    const p = await getValidity(deps, { pariwarId, memberId }, { internal: true });
+    // One rule_registry_version (the single R12 clause) + a consistent provenance instant.
+    expect(p.ruleRegistryVersion).toBe(versionId);
+    expect(p.provenanceTrace.every((e) => e.evaluatedAt === p.provenanceTrace[0]?.evaluatedAt)).toBe(true);
+  });
+});

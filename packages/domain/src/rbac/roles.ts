@@ -55,6 +55,7 @@ export interface RoleBundle {
 const CLAIM_APPROVE = permissionKey('claim.approve');
 const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
+const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
 const PARIWAR_AMEND_RULE = permissionKey('pariwar.amend_rule');
 const PARIWAR_PROVISION = permissionKey('pariwar.provision');
 const NIYAMAVALI_AMEND = permissionKey('niyamavali.amend');
@@ -84,6 +85,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       PARIWAR_AMEND_RULE,
       MEMBER_SUSPEND,
       MEMBER_MODERATE,
+      // Story 4.6 — reads the FR-12A Member Validity payload (admin surfaces).
+      MEMBER_VIEW_VALIDITY,
       CLAIM_APPROVE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
@@ -95,18 +98,20 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   },
   {
     role: 'state_trustee',
-    // Story 2.6 — the "Trustee Panel" approves T&C versions (tc.approve).
-    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, NIYAMAVALI_REVIEW, TC_APPROVE],
+    // Story 2.6 — the "Trustee Panel" approves T&C versions (tc.approve). Story 4.6 —
+    // reads FR-12A validity + is the ONLY role that sees the pending_concealment_flag
+    // (gated by role/scope in the validity service, NOT a second permission key).
+    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY, NIYAMAVALI_REVIEW, TC_APPROVE],
     scopeCeiling: 'state',
   },
   {
     role: 'district_admin',
-    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND],
+    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'district',
   },
   {
     role: 'block_admin',
-    permissions: [MEMBER_SUSPEND],
+    permissions: [MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'block',
   },
   {
@@ -135,20 +140,22 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   },
   {
     role: 'verifier',
-    permissions: [MEMBER_MODERATE],
+    // Story 4.6 — the verifier console (Epic 6) reads FR-12A validity to verify standing.
+    permissions: [MEMBER_MODERATE, MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'district',
   },
   {
     role: 'auditor',
     // The cross-cutting read role (FR-47 / Story 1.11b gates the verify UI on
-    // audit.verify).
-    permissions: [AUDIT_EXPORT, AUDIT_VERIFY],
+    // audit.verify). Story 4.6 — reads FR-12A validity as part of the audit read surface.
+    permissions: [AUDIT_EXPORT, AUDIT_VERIFY, MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'pariwar',
   },
   {
     role: 'helpline_operator',
-    // Helpdesk keys land Epic 10 — seed empty at v1.
-    permissions: [],
+    // Helpdesk keys land Epic 10 — but the helpline reads a caller's member validity to
+    // assist them (Story 4.6, FR-12A "consistent across admin and member apps").
+    permissions: [MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'pariwar',
   },
 ];

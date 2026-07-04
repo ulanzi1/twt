@@ -10,7 +10,7 @@
 //   · cache-key + audit helpers — exported for the consuming surfaces (4.6 validity, Epic 6)
 //   · all result / context / provenance types
 
-export { evaluate, evaluateAt, type EvaluateDeps } from './evaluate.js';
+export { evaluate, evaluateAt, selectDbNow, type EvaluateDeps } from './evaluate.js';
 export { interpretClause, OPERATOR_NAMES, COMPUTATION_NAMES } from './interpret.js';
 export {
   evaluateR7Ladder,

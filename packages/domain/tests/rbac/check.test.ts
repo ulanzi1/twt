@@ -162,6 +162,38 @@ describe('hasPermission — fail-closed matrix (every uncertain path denies)', (
   });
 });
 
+// ── Story 4.6 — member.view_validity read key (D5 tripwire) ───────────────────
+
+describe('hasPermission — member.view_validity (Story 4.6 FR-12A read key)', () => {
+  it('District Admin at district=Patna allows member.view_validity on a Patna target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'member.view_validity', resource())).toBe(true);
+  });
+
+  it('Verifier (Epic 6 console) holds member.view_validity within its district ceiling', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'verifier', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'member.view_validity', resource())).toBe(true);
+  });
+
+  it('a role WITHOUT the read key (Field Worker) is denied member.view_validity', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'field_worker', scopeDimension: 'self', scopeValue: ACTOR },
+    ];
+    expect(hasPermission(grants, 'member.view_validity', resource({ dimension: 'self', value: ACTOR }))).toBe(false);
+  });
+
+  it('member.view_validity does NOT leak across Pariwar (grant in A, action in B → deny)', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'member.view_validity', resource({ pariwarId: PARIWAR_B }))).toBe(false);
+  });
+});
+
 // ── The guard: structured 403 denial + audit seam ────────────────────────────
 
 describe('requirePermission — guard + structured denial + audit seam', () => {

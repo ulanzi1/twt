@@ -65,14 +65,40 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(bundleForRole('block_admin')?.scopeCeiling).toBe('block');
   });
 
-  it('sparse/empty bundles are allowed (finance_officer, media_comms, field_worker, helpline_operator)', () => {
-    for (const role of ['finance_officer', 'media_comms', 'field_worker', 'helpline_operator'] as const) {
+  it('sparse/empty bundles are allowed (finance_officer, media_comms, field_worker)', () => {
+    // helpline_operator gained member.view_validity at Story 4.6 (it reads a caller's validity),
+    // so it is no longer empty; the remaining three keep empty bundles at v1.
+    for (const role of ['finance_officer', 'media_comms', 'field_worker'] as const) {
       expect(bundleForRole(role)?.permissions).toEqual([]);
     }
   });
 
   it('bundleForRole returns undefined for an unknown role (fail-closed at the lookup)', () => {
     expect(bundleForRole('nonexistent_role')).toBeUndefined();
+  });
+
+  it('Story 4.6 — member.view_validity is granted to exactly the read-capable FR-46 roles', () => {
+    const KEY = 'member.view_validity';
+    // The read-capable set (D5): admin surfaces + verifier/auditor/helpline + super_admin (full catalog).
+    const readCapable = [
+      'super_admin',
+      'pariwar_admin',
+      'state_trustee',
+      'district_admin',
+      'block_admin',
+      'verifier',
+      'auditor',
+      'helpline_operator',
+    ].sort();
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(readCapable);
+    // The non-read roles (finance_officer, it_cell, media_comms, field_worker) do NOT hold it.
+    for (const role of ['finance_officer', 'it_cell', 'media_comms', 'field_worker'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
   });
 });
 

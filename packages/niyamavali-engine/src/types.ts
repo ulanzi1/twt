@@ -41,6 +41,20 @@ export interface EvaluationContext {
 export interface RuleOutcome {
   decision: string;
   specialFlags: string[];
+  /**
+   * The R12-anticipated computed-output channel (Story 4.5). ABSENT for `conditional`
+   * rules (`interpretClause` never sets it there — so every pre-4.5 conditional result is
+   * byte-identical). A `computed` rule (`rule_kind: 'computed'`) populates it with the raw
+   * values its declared computation produces (R12 emits `granted_years` + echoes
+   * `is_retired`). The `{ values }` wrapper reserves the `computed.*` namespace so a future
+   * computed rule can add sibling metadata (`computed.units`, per-value provenance, a
+   * discriminator) WITHOUT a breaking result-shape change — a bare top-level `Record`
+   * cannot grow. Every value is `CanonicalJsonValue` and the keys are emitted in explicitly
+   * sorted order, so the result hashes byte-stably (the 100×-thread determinism replay,
+   * Story 4.6, depends on this). Naming + date projection (`coverage_through`/
+   * `days_remaining`/`active`) are the Story 4.6 Validity Service's job, NOT the engine's.
+   */
+  computed?: { values: Record<string, CanonicalJsonValue> };
 }
 
 /** One interpreted sub-clause result, emitted in stable (payload array) order. */

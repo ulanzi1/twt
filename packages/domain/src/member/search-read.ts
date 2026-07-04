@@ -28,6 +28,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
+import { clampLimit } from '../pagination.js';
 import { memberIdentities } from '../schema/member_identities.js';
 import { memberKycProfiles, type MemberKycVerificationStrength } from '../schema/member_kyc_profiles.js';
 import {
@@ -75,6 +76,8 @@ export interface MemberSearchResultRow {
 }
 
 const DEFAULT_LIMIT = 50;
+/** Hard cap on a page (matches the MemberSearchRequest contract's `limit.max(200)`). */
+const MAX_LIMIT = 200;
 
 /**
  * Resolve a page of admin member-search results in ONE query. Scope is enforced by RLS + the explicit
@@ -113,8 +116,10 @@ export async function searchMembers(
     .leftJoin(memberKycProfiles, eq(memberKycProfiles.memberId, memberSearchProjection.memberId))
     .where(where)
     .orderBy(asc(memberSearchProjection.memberId))
-    .limit(input.limit ?? DEFAULT_LIMIT)
-    .offset(input.offset ?? 0);
+    // Clamp the page size (never a raw caller value — the domain-accessor-invariants gate): a garbage or
+    // oversized `limit` is bounded to [1, MAX_LIMIT], defaulting to DEFAULT_LIMIT.
+    .limit(clampLimit(input.limit, { default: DEFAULT_LIMIT, cap: MAX_LIMIT }))
+    .offset(Math.max(0, input.offset ?? 0));
 
   return rows as MemberSearchResultRow[];
 }

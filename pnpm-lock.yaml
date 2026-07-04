@@ -80,6 +80,9 @@ importers:
       '@twt/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
+      '@twt/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -311,6 +314,9 @@ importers:
       '@twt/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@twt/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       babel-preset-expo:
         specifier: ~55.0.0
         version: 55.0.22(@babel/core@7.29.7)(@babel/runtime@7.29.7)(expo@55.0.26)(react-refresh@0.18.0)

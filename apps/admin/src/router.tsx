@@ -16,6 +16,7 @@ import {
 
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
+import { MemberSearchRoute } from './routes/MemberSearchRoute.js';
 import { NiyamavaliRoute } from './routes/NiyamavaliRoute.js';
 import { ProvisioningRoute } from './routes/ProvisioningRoute.js';
 import { RootErrorComponent, RootLayout } from './routes/RootLayout.js';
@@ -60,12 +61,20 @@ const niyamavaliRoute = createRoute({
   component: NiyamavaliRoute,
 });
 
+// Story 4.7 — the tenant-scoped admin member-search + `<MemberStatusPanel>` surface.
+const memberSearchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/members',
+  component: MemberSearchRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   integrityRoute,
   provisioningRoute,
   niyamavaliRoute,
+  memberSearchRoute,
 ]);
 
 export const router = createRouter({ routeTree });

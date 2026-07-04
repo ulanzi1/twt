@@ -20,6 +20,7 @@
     "@tanstack/react-router": "^1.95.1",
     "@twt/contracts": "workspace:*",
     "@twt/tokens": "workspace:*",
+    "@twt/ui": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",

@@ -7,7 +7,7 @@
 // the history so the banner + table re-derive from fresh server state.
 
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPariwarRequest } from '@twt/contracts';
+import type { AddPariwarRequest, MemberSearchRequest } from '@twt/contracts';
 
 import * as api from './client.js';
 
@@ -184,5 +184,31 @@ export function usePublishDraft(pariwarId: string) {
   return useMutation({
     mutationFn: (draftId: string) => api.publishDraft(pariwarId, draftId),
     onSuccess: invalidate,
+  });
+}
+
+// ── Member-status surface (Story 4.7) ─────────────────────────────────────────
+// The member search is a POST (server blind-indexes a raw mobile), modelled as a
+// mutation whose result the page holds. The per-member validity read is a query,
+// enabled only once a member is selected. This is a support/dispute read surface,
+// NOT the member self-service cached path — the createQueryClient staleTime:0
+// defaults (fresh-on-mount) are the right freshness class here.
+
+export const memberValidityKey = (pariwarId: string, memberId: string) =>
+  ['member-validity', pariwarId, memberId] as const;
+
+/** The AR-65 compound-read-model member search (exact-match). */
+export function useMemberSearch(pariwarId: string) {
+  return useMutation({
+    mutationFn: (body: MemberSearchRequest) => api.searchMembers(pariwarId, body),
+  });
+}
+
+/** A selected member's FR-12A validity payload (enabled only once a member is chosen). */
+export function useMemberValidity(pariwarId: string, memberId: string | null) {
+  return useQuery({
+    queryKey: memberValidityKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getMemberValidity(pariwarId, memberId as string),
+    enabled: Boolean(memberId),
   });
 }

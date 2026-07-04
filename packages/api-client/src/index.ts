@@ -14,6 +14,7 @@ import {
   ImaListResponse,
   KycStatusResponse,
   LifeEventsSummaryResponse,
+  MemberValidityResponse,
   MedicalDisclosureStatusResponse,
   MemberFullSession,
   MemberLockInStatusResponse,
@@ -40,6 +41,7 @@ import {
   type KycStatusResponse as KycStatusResult,
   type AddressUpdateRequest,
   type LifeEventsSummaryResult,
+  type MemberValidityResponse as MemberValidityResult,
   type PostingUpdateRequest,
   type MedicalDiscloseRequest,
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
@@ -417,6 +419,15 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Read the Life Events panel summary (presence flags + counts across all four sub-types; auth). */
     lifeEventsSummary(): Promise<LifeEventsSummaryResult> {
       return call(LIFE_EVENTS_BASE, LifeEventsSummaryResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Read the member's OWN FR-12A validity payload (Story 4.7; auth). The server returns the redacted
+     * self-payload (State-Trustee-only fields stripped) and does NOT audit the self-call (PRD FR-12A).
+     * Drives the member-facing `<MemberStatusPanel>` (Hindi-first, identity-suppressed).
+     */
+    memberValidity(): Promise<MemberValidityResult> {
+      return call(`${MEMBER_HOME_BASE}/validity`, MemberValidityResponse, undefined, true, 'GET');
     },
 
     /**

@@ -50,10 +50,11 @@ run "microcopy"             "pnpm microcopy:test && pnpm microcopy:check"
 run "domain-invariants"     "pnpm domain-invariants:test && pnpm domain-invariants:check"
 run "member-state-invariant" "pnpm member-state:test && pnpm member-state:check"
 run "kyc-provider-boundary" "pnpm kyc-provider:test && pnpm kyc-provider:check"
+run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"
 
 # ── live-DB job (opt-in via DATABASE_URL) ─────────────────────────────────────
 if [ -n "${DATABASE_URL:-}" ]; then
-  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine"
+  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service"
 else
   SKIPPED+=("integration-tests — set DATABASE_URL (twt-test-pg on :5433) to enable")
 fi

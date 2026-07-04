@@ -9,7 +9,7 @@
 // NO encryption here — the district is plaintext non-PII geographic data (Dev Notes §"Posting PII
 // tier"). NO HTTP, NO audit, NO event emission — the route orchestrates.
 
-import { desc, and, eq } from 'drizzle-orm';
+import { asc, desc, and, eq, lte } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
@@ -75,6 +75,39 @@ export async function getMemberPostingRetiredEver(
     )
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * The member's retirement ANCHOR instant: the `created_at` of the FIRST (`is_retirement = true`)
+ * posting at/before `atTimestamp`, or `null` when the member had not retired by then. Retirement is
+ * a one-way permanent fact (Story 3.9) — the FIRST such row is the anchor regardless of later
+ * district changes, so this orders `created_at ASC` (the earliest), NOT the `getMemberPostingLatest`
+ * DESC head. A secondary `posting_id ASC` tiebreak makes the pick deterministic (query-plan-independent)
+ * even if two rows share an identical `created_at` (e.g. a bulk seed/import) — required because this
+ * feeds the AC2 replay-determinism-sensitive validity payload (Story 4.6). Story 4.6's Validity Service
+ * reads this as `retired_at` for the tenure cutoff + the `coverage_through` date projection (the
+ * bool-only `getMemberPostingRetiredEver` cannot supply the date the projection needs). Tenant-scoped.
+ */
+export async function getMemberRetirementAnchorAt(
+  db: Db,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+  atTimestamp: Date,
+): Promise<Date | null> {
+  const rows = await db
+    .select({ createdAt: memberPostings.createdAt })
+    .from(memberPostings)
+    .where(
+      and(
+        eq(memberPostings.pariwarId, pariwarId),
+        eq(memberPostings.memberId, memberId),
+        eq(memberPostings.isRetirement, true),
+        lte(memberPostings.createdAt, atTimestamp),
+      ),
+    )
+    .orderBy(asc(memberPostings.createdAt), asc(memberPostings.postingId))
+    .limit(1);
+  return rows[0]?.createdAt ?? null;
 }
 
 /**

@@ -791,6 +791,40 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
 
+  packages/validity-service:
+    dependencies:
+      '@twt/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@twt/niyamavali-engine':
+        specifier: workspace:*
+        version: link:../niyamavali-engine
+      drizzle-orm:
+        specifier: ^0.45.0
+        version: 0.45.2(@types/pg@8.20.0)(pg@8.21.0)
+    devDependencies:
+      '@twt/eslint-config-twt':
+        specifier: workspace:*
+        version: link:../eslint-config-twt
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.19.20
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.13.0
+        version: 8.21.0
+      tsx:
+        specifier: ^4.19.0
+        version: 4.19.0
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
+
 packages:
 
   '@adobe/css-tools@4.5.0':

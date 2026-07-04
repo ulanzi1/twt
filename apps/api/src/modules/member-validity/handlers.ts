@@ -13,8 +13,10 @@
 // shipped wire format is camelCase; see contracts/members/validity.ts). It does NOT re-implement
 // redaction or the permission decision — the service's `assertCanReadValidity` is the gate.
 
+import { createHash } from 'node:crypto';
+
 import { getValidity, type ValidityCaller, type ValidityServiceDeps } from '@twt/validity-service';
-import { idempotency, ids, member as memberDomain, type Db } from '@twt/domain';
+import { audit, idempotency, ids, member as memberDomain, type Db } from '@twt/domain';
 import type {
   MemberSearchRequest,
   MemberSearchResponse,
@@ -24,7 +26,7 @@ import type {
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { UnauthorizedError } from '../../http-errors.js';
+import { NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { decryptMobile, maskMobile, mobileBlindIndex } from '../auth/shared/mobile-index.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
@@ -104,6 +106,13 @@ export function createMemberValidityHandlers(deps: AppDeps) {
       const memberId = ids.memberId(memberIdParam);
       const pariwarId = ids.pariwarId(scopeTx.pariwarId);
 
+      // `getMemberStateAt` is non-nullable (a nonexistent — or cross-tenant, RLS-filtered — member
+      // replays to `pending-kyc`), so without an existence probe the service would fabricate a 200
+      // payload AND write a `validity.evaluate` audit line for a phantom member. Fail 404 first.
+      if (!(await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId))) {
+        throw new NotFoundError('Member not found', 'member.not_found');
+      }
+
       const caller: ValidityCaller = {
         actorId,
         grants: request.scopeGrants ?? [],
@@ -126,8 +135,9 @@ export function createMemberValidityHandlers(deps: AppDeps) {
      */
     async adminMemberSearch(request: FastifyRequest): Promise<MemberSearchResponse> {
       const scopeTx = request.scopeTx;
-      if (!scopeTx) {
-        throw new Error('[member-validity] adminMemberSearch ran without scope-resolution');
+      const actorId = request.requestContext.actorId;
+      if (!scopeTx || !actorId) {
+        throw new Error('[member-validity] adminMemberSearch ran without session + scope-resolution');
       }
       const body = request.body as MemberSearchRequest;
       const pariwarId = ids.pariwarId(scopeTx.pariwarId);
@@ -155,13 +165,17 @@ export function createMemberValidityHandlers(deps: AppDeps) {
 
       const results: MemberSearchResultItem[] = await Promise.all(
         rows.map(async (r) => {
-          // Decrypt the mobile → masked last-4 (NEVER plaintext); resolve the display name (null for an
-          // anonymized member — the display-name seam; and null when no KYC profile exists).
-          const maskedMobile = r.mobileCiphertext
-            ? maskMobile(await decryptMobile(r.mobileCiphertext, deps.encryption))
-            : null;
+          // An anonymized member (RTBF) has its mobile/name ciphertext overwritten with an encryption
+          // of the anonymized sentinel — it decrypts to garbage, so BOTH identity fields are suppressed
+          // for `anonymized` (the display-name seam discipline). Decrypt the mobile → masked last-4
+          // (NEVER plaintext); resolve the display name (null when no KYC profile exists).
+          const anonymized = r.state === 'anonymized';
+          const maskedMobile =
+            anonymized || r.mobileCiphertext === null
+              ? null
+              : maskMobile(await decryptMobile(r.mobileCiphertext, deps.encryption));
           const name =
-            r.state === 'anonymized' || r.nameCiphertext === null
+            anonymized || r.nameCiphertext === null
               ? null
               : await decryptKycField(r.nameCiphertext, scopeTx.pariwarId, deps.encryption);
           return {
@@ -177,6 +191,25 @@ export function createMemberValidityHandlers(deps: AppDeps) {
           };
         }),
       );
+
+      // Admin member-search bulk-decrypts identity for display — it MUST leave an audit trail (D5-A:
+      // "admin validity read + member-search … audit-logged"). ONE `member.search` line per search
+      // records who searched, the (hashed, never plaintext) criteria, and how many members were
+      // decrypted. Written through the Story 1.10 hash-chain writer on the BYPASSRLS servicePool.
+      const criteriaHash = createHash('sha256')
+        .update(`${body.by}:${body.value ?? ''}`)
+        .digest('hex');
+      await audit.writeAuditEntry(deps.servicePool, {
+        pariwarId: scopeTx.pariwarId,
+        actorId,
+        actorRole: null,
+        action: 'member.search',
+        resourceLocator: `pariwar/${scopeTx.pariwarId}/members?by=${body.by}&n=${results.length}`,
+        requestPayloadHash: criteriaHash,
+        responseStatus: 200,
+        traceId: request.requestContext.traceId ?? null,
+      });
+
       return { results };
     },
   };

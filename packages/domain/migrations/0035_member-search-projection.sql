@@ -44,6 +44,28 @@ CREATE INDEX "member_search_projection_pariwar_id_idx" ON "member_search_project
 -- GRANT (SELECT/INSERT/UPDATE — the projector inserts the first row + updates on every refresh; NO
 -- DELETE — RTBF is the member FK cascade). Policies bind TO twt_app, so grants go only to twt_app.
 GRANT SELECT, INSERT, UPDATE ON "member_search_projection" TO twt_app;--> statement-breakpoint
+-- Backfill existing members (Story 4.7 review finding #1). The projection is otherwise written ONLY on
+-- the NEXT member-state event, so every member that existed BEFORE this migration would be invisible to
+-- admin search until their next lifecycle event (for a stable `active` member, possibly not until annual
+-- renewal). This backfill runs HERE — after GRANT, but BEFORE RLS is enabled + the write-rejection
+-- trigger is installed — so it needs NEITHER an `app.pariwar_id` scope NOR the projector write-guard, and
+-- it populates all tenants in one pass. contribution_section / claim_section take their column DEFAULT
+-- (the D2 `producer_unavailable` sentinel). The nominee summary aggregates the non-PII columns only.
+INSERT INTO "member_search_projection"
+  (member_id, pariwar_id, state, state_event_version, nominee_summary)
+SELECT
+  m.member_id,
+  m.pariwar_id,
+  m.state,
+  m.state_event_version,
+  COALESCE(
+    (SELECT jsonb_agg(
+              jsonb_build_object('rank', n.rank, 'relationship', n.relationship, 'splitPct', n.split_pct)
+              ORDER BY n.rank)
+       FROM member_nominees n
+      WHERE n.member_id = m.member_id),
+    '[]'::jsonb)
+FROM members m;--> statement-breakpoint
 ALTER TABLE "member_search_projection" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "member_search_projection" FORCE ROW LEVEL SECURITY;--> statement-breakpoint
 -- Tenant-isolation policies (mirror members). Story 1.6 closed-failure construct: unset scope → '' →

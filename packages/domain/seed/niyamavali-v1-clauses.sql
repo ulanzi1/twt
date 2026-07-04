@@ -372,3 +372,49 @@ VALUES
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── Story 4.5 — R12 retirement-coverage extension (FR-12) ──────────────────────────────
+-- FR-12's "+1 year post-retirement coverage per 5 years of valid membership (15 years -> +3)"
+-- delivered as DATA: a single `rule_kind:'computed'` clause interpreted by the @twt/niyamavali-engine
+-- primitive (Story 4.1). This is the FIRST computed rule — it COMPUTES AND RETURNS A VALUE
+-- (`granted_years`) via the interpreter's registered `grant_ladder` computation, rather than a
+-- boolean decision. The engine reads exactly two PRE-DERIVED, caller-injected `member.*` facts
+-- (`member.valid_membership_years` int + `member.is_retired` bool); the raw `joined_at`/`retired_at`
+-- dates are DELIBERATELY NOT engine facts (they are the producer's calendar-correct derivation
+-- inputs and the Story 4.6 date-projection's inputs). NO source system exists yet at Epic 4 — the
+-- producer is the Story 4.6 Validity Service.
+--
+-- The grant ladder is DATA (`grant_every_years`/`years_per_grant`/`min_years`); re-tuning the policy
+-- is a clause amendment with ZERO engine change. No `cap` in v1 (the FR-12 addendum implies none;
+-- add one only via a future amendment). The engine emits `granted_years` + echoes `is_retired` under
+-- `result.computed.values` ONLY; Story 4.6 does the calendar date projection (`coverage_through`/
+-- `days_remaining`/`active`) and maps the PRD `retirement_coverage` <-> epic `retirement_coverage_extension`
+-- field-name variance.
+--
+-- LOAD-BEARING: retirement coverage EXTENDS eligibility, NEVER denies. `granted_years` is a PURE
+-- function of tenure (`floor(valid_membership_years / grant_every_years) * years_per_grant`,
+-- gated by `min_years`), independent of `is_retired` — a non-retired member with enough tenure
+-- still earns a nonzero `granted_years` (PRD FR-12A's `years_of_coverage_earned`). `is_retired` is
+-- echoed separately and gates ONLY the decision slug (`retirement_coverage_computed` iff retired
+-- AND `granted_years > 0`, else `retirement_coverage_not_applicable`) + Story 4.6's `active` —
+-- never an ineligible verdict either way (`on_computed`/`on_not_applicable` are routing/status
+-- slugs, SM-1 posture). See `deferred-work.md` CR-4.5-D3.
+--
+-- PROVISIONAL POLICY (FR-12 `policy_review_required`): the "valid membership" lapse-netting question
+-- (does a lapsed/withdrawn period reduce the count?) is unspecified — flagged for Trustee Panel review;
+-- the producer's `valid_membership_years` derivation applies whatever policy is settled (D4). Final
+-- legally-reviewed copy lands via Story 0.13. benefit_mechanism='pool' (the coverage extension governs
+-- the crowdfunded death-support window, not the future v3 reserve). Idempotent (ON CONFLICT DO NOTHING).
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c0015-0000-4000-8000-000000000015',
+    'niy.retirement-coverage.r12',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"R12","title_en":"Retirement coverage extension (+1 year post-retirement per 5 years of valid membership; 15 years grants +3)","rule_kind":"computed","computation":"grant_ladder","inputs":{"tenure_years":"member.valid_membership_years","retirement_flag":"member.is_retired"},"params":{"grant_every_years":5,"years_per_grant":1,"min_years":5},"output_key":"granted_years","retirement_output_key":"is_retired","on_computed":"retirement_coverage_computed","on_not_applicable":"retirement_coverage_not_applicable","family":"retirement-coverage","eligibility_extension":true,"never_auto_deny":true,"policy_review_required":true,"provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;

@@ -11,7 +11,7 @@
 //   · all result / context / provenance types
 
 export { evaluate, evaluateAt, type EvaluateDeps } from './evaluate.js';
-export { interpretClause, OPERATOR_NAMES } from './interpret.js';
+export { interpretClause, OPERATOR_NAMES, COMPUTATION_NAMES } from './interpret.js';
 export {
   evaluateR7Ladder,
   evaluateR7LadderAt,
@@ -60,6 +60,17 @@ export {
   type SpecialDeathLadderResult,
   type ConcealmentFactKey,
 } from './special-death.js';
+export {
+  evaluateRetirementCoverageAt,
+  evaluateRetirementCoverageLive,
+  R12_CLAUSE_ID,
+  R12_MEMBER_FACT_KEYS,
+  R12_GRANTED_YEARS_KEY,
+  R12_IS_RETIRED_KEY,
+  RETIREMENT_COVERAGE_COMPUTED,
+  RETIREMENT_COVERAGE_NOT_APPLICABLE,
+  type R12MemberFactKey,
+} from './retirement-coverage.js';
 export {
   buildCacheKey,
   memberStateHash,

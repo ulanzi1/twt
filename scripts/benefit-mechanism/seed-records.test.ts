@@ -38,15 +38,17 @@ function loadSeedRecords() {
 }
 
 describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', () => {
-  it('extracts the structurally-real clause records from the seed (Story 2.3 + Story 3.5 + Story 3.6b + Story 4.2 + Story 4.3 + Story 4.4)', () => {
+  it('extracts the structurally-real clause records from the seed (Story 2.3 + Story 3.5 + Story 3.6b + Story 4.2 + Story 4.3 + Story 4.4 + Story 4.5)', () => {
     const { records } = loadSeedRecords();
     // 3 Story-2.3 clauses + 2 Story-3.5 medical clauses + 1 Story-3.6b lock-in policy clause
     // + 6 Story-4.2 R7(B–G) restoration-ladder clauses (r7-a was pre-existing from Story 2.3)
     // + 2 Story-4.3 R8(A)/R8(B) clauses (r8 base was pre-existing from Story 2.3, upgraded in place)
     // + 6 Story-4.4 R5/R9 special-death clauses (r5-c-2/r5-d/r5-e/r5-f/r9/r9-a NET-new; the Mar-2025
     //   r9-suicide-murder stub + the r14 concealment clause were both upgraded/amended IN PLACE per
-    //   D1/D2, so they add NO new rows).
-    expect(records).toHaveLength(20);
+    //   D1/D2, so they add NO new rows)
+    // + 1 Story-4.5 R12 retirement-coverage clause (niy.retirement-coverage.r12 NET-new — the first
+    //   `rule_kind:'computed'` clause).
+    expect(records).toHaveLength(21);
     const ids = records.map((r) => r.id).sort();
     expect(ids).toEqual([
       'niy.concealment.r14',
@@ -62,6 +64,7 @@ describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', (
       'niy.ninety-percent-rule.r8',
       'niy.ninety-percent-rule.r8-a',
       'niy.ninety-percent-rule.r8-b',
+      'niy.retirement-coverage.r12',
       'niy.special-death.r5-c-2',
       'niy.special-death.r5-d',
       'niy.special-death.r5-e',

@@ -25,6 +25,15 @@
 // Scope for 4.1: the interpreter FRAMEWORK + a MINIMAL proven operator set, validated
 // against a representative fixture clause. Stories 4.2–4.5 each ADD the operators their
 // rules need (R7/R8/R5/R9/R12) — this file is not the place to pre-build that vocabulary.
+//
+// ── Two rule kinds (Story 4.5) ────────────────────────────────────────────────────
+// `rule_kind: 'conditional'` (4.1–4.4): boolean operators over facts → a decision slug +
+// optional flags. `rule_kind: 'computed'` (4.5, R12): the FIRST rule that COMPUTES AND
+// RETURNS A VALUE — a pure integer/`CanonicalJsonValue` computation (declared as DATA:
+// input fact keys + params + a named computation) whose output lands in
+// `result.computed.values`. Like operators, the COMPUTATION registry is CODE (extended
+// additively, never keyed by clause id); the +N/5 grant params are DATA in the payload.
+// The computed branch stays Date-free + pure — the calendar date projection is Story 4.6's.
 
 import { canonicalJsonStringify, type CanonicalJsonValue } from '@twt/domain';
 import { z } from 'zod';
@@ -127,6 +136,46 @@ const OPERATORS: Readonly<Record<string, Operator>> = {
 /** The registered operator names — exported so tests + 4.2–4.5 can assert the vocabulary. */
 export const OPERATOR_NAMES: readonly string[] = Object.keys(OPERATORS).sort();
 
+// ── Computation registry (the `rule_kind: 'computed'` vocabulary — Story 4.5) ──────
+//
+// A computed rule's arithmetic. Like the operator registry above this is CODE (the
+// interpreter vocabulary), extended ADDITIVELY and NEVER keyed by clause id — the +N/5
+// grant PARAMS are DATA in the payload, so re-tuning the policy (e.g. +1 per 4 years) is
+// a clause amendment with ZERO engine change. Each computation is PURE integer/finite
+// arithmetic ONLY — no Date, no Math.random, no mutable state (determinism epic). It
+// returns a raw number the caller places under `result.computed.values`.
+
+/** Grant-ladder params (R12): `+years_per_grant` per `grant_every_years`, gated by `min_years`. */
+interface GrantLadderParams {
+  grant_every_years: number;
+  years_per_grant: number;
+  min_years: number;
+  /** Optional hard cap on the granted total (R12 declares none in v1). */
+  cap?: number;
+}
+
+/** A registered computation: pure `(tenureYears, params) → grantedYears` integer arithmetic. */
+type Computation = (tenureYears: number, params: GrantLadderParams) => number;
+
+const COMPUTATIONS: Readonly<Record<string, Computation>> = {
+  /**
+   * FR-12 retirement-coverage grant ladder:
+   *   granted = min(cap?, floor(tenureYears / grant_every_years) * years_per_grant),
+   *   gated by tenureYears >= min_years (below the gate → 0).
+   * Pure integer arithmetic — the load-bearing FR-12 on-the-fly computation. Below-`min_years`
+   * (or negative/short tenure) yields 0, NEVER a denial (retirement coverage is an EXTENSION).
+   */
+  grant_ladder(tenureYears, params) {
+    if (tenureYears < params.min_years) return 0;
+    const raw = Math.floor(tenureYears / params.grant_every_years) * params.years_per_grant;
+    const capped = params.cap != null ? Math.min(params.cap, raw) : raw;
+    return Math.max(0, capped);
+  },
+};
+
+/** The registered computation names — exported so tests + future computed rules assert the vocabulary. */
+export const COMPUTATION_NAMES: readonly string[] = Object.keys(COMPUTATIONS).sort();
+
 // ── Rule-spec envelope (the interpreter-vocabulary subset of the opaque payload) ──
 //
 // `.passthrough()` tolerates the structural display keys the seed/registry carries
@@ -146,6 +195,46 @@ const ConditionalRuleSchema = z
     on_fail: z.string().regex(OUTCOME_SLUG),
   })
   .passthrough();
+
+/**
+ * The `rule_kind: 'computed'` envelope (Story 4.5, R12). Declares its arithmetic as DATA:
+ * a named `computation` (looked up in the CODE registry above), the `inputs` fact keys it
+ * reads, the numeric `params`, and the `output_key`/`retirement_output_key` its values land
+ * under in `result.computed.values`. `on_computed`/`on_not_applicable` are the DATA decision
+ * slugs (routing/status, NEVER a deny — retirement coverage EXTENDS eligibility). Nested
+ * objects `.passthrough()` for descriptive keys; a malformed/unknown-shape payload yields the
+ * typed `rule.payload_unrecognized` outcome, NEVER a throw.
+ */
+const ComputedRuleSchema = z
+  .object({
+    rule_kind: z.literal('computed'),
+    computation: z.string().min(1),
+    inputs: z
+      .object({
+        tenure_years: z.string().min(1),
+        retirement_flag: z.string().min(1),
+      })
+      .passthrough()
+      .refine((v) => v.tenure_years !== v.retirement_flag, {
+        message: 'inputs.tenure_years and inputs.retirement_flag must be distinct fact keys',
+      }),
+    params: z
+      .object({
+        grant_every_years: z.number().int().positive(),
+        years_per_grant: z.number().int().positive(),
+        min_years: z.number().int().nonnegative(),
+        cap: z.number().int().nonnegative().optional(),
+      })
+      .passthrough(),
+    output_key: z.string().min(1),
+    retirement_output_key: z.string().min(1),
+    on_computed: z.string().regex(OUTCOME_SLUG),
+    on_not_applicable: z.string().regex(OUTCOME_SLUG),
+  })
+  .passthrough()
+  .refine((v) => v.output_key !== v.retirement_output_key, {
+    message: 'output_key and retirement_output_key must be distinct — otherwise one computed value silently overwrites the other',
+  });
 
 /** PII-FREE canonical summary of the inputs — hashed into the audit digest + carried in provenance. */
 function buildInputsSummary(
@@ -194,6 +283,12 @@ export function interpretClause(
     reasonCode: 'rule.payload_unrecognized',
   });
 
+  // Dispatch on the DATA `rule_kind` (peer branches, never a `switch (clauseId)`). The
+  // computed branch (4.5) is a sibling of the conditional branch, not a new operator.
+  if (clause.payload['rule_kind'] === 'computed') {
+    return interpretComputedClause(clause, ctx, provenance, unrecognized);
+  }
+
   const parsed = ConditionalRuleSchema.safeParse(clause.payload);
   if (!parsed.success) return unrecognized();
   const spec = parsed.data;
@@ -222,6 +317,90 @@ export function interpretClause(
     result: { decision, specialFlags: [...flags].sort() },
     provenance,
     subClauseResults,
+    reasonCode: `rule.${decision}`,
+  };
+}
+
+/**
+ * The `rule_kind: 'computed'` branch (Story 4.5, R12) — a PURE integer computation whose
+ * output lands in `result.computed.values`. It reads the two declared input facts, runs the
+ * registered `computation`, and emits `granted_years` (+ echoes `is_retired`). NO date math
+ * (Date-free — the `coverage_through`/`days_remaining`/`active` projection is Story 4.6's);
+ * NO boolean operators (so `subClauseResults` is empty and `OPERATOR_NAMES` is untouched).
+ *
+ * ── Absent-input handling (CR-4.5-D1; the same class as CR-4.4-D3) ─────────────────
+ * `fact_equals`/`fact_in` treat an ABSENT fact identically to an explicit `false`/`0`. R12
+ * must NOT: a missing `member.valid_membership_years`/`member.is_retired` (producer hasn't
+ * derived it yet) routes to the DISTINCT, typed, non-throwing `rule.inputs_unavailable`
+ * outcome (no `computed` field) — never a silent `granted_years: 0` indistinguishable from a
+ * genuine zero-tenure non-retiree. A present-but-wrong-type input takes the same path.
+ */
+function interpretComputedClause(
+  clause: ResolvedClause,
+  ctx: ResolvedEvaluationContext,
+  provenance: Provenance,
+  unrecognized: () => EvaluationResult,
+): EvaluationResult {
+  const parsed = ComputedRuleSchema.safeParse(clause.payload);
+  if (!parsed.success) return unrecognized();
+  const spec = parsed.data;
+
+  // `hasOwnProperty`-gated lookup (not a bare `COMPUTATIONS[spec.computation]` truthiness check): a
+  // plain object literal inherits `Object.prototype`, so an unconstrained payload string like
+  // "toString" or "constructor" would otherwise resolve to a real, callable inherited member and
+  // silently corrupt `computed.values` instead of hitting the typed `rule.payload_unrecognized`
+  // fallback.
+  const computation = Object.prototype.hasOwnProperty.call(COMPUTATIONS, spec.computation)
+    ? COMPUTATIONS[spec.computation]
+    : undefined;
+  if (!computation) return unrecognized(); // unknown computation vocabulary → typed reason, not a throw
+
+  // Absent (or present-but-wrong-type) inputs → a DISTINCT typed outcome, never a silent 0/false.
+  const inputsUnavailable = (): EvaluationResult => ({
+    result: { decision: 'indeterminate', specialFlags: [] },
+    provenance,
+    subClauseResults: [],
+    reasonCode: 'rule.inputs_unavailable',
+  });
+
+  const { tenure_years: tenureKey, retirement_flag: flagKey } = spec.inputs;
+  if (!hasFact(ctx.facts, tenureKey) || !hasFact(ctx.facts, flagKey)) return inputsUnavailable();
+  const tenureRaw = ctx.facts[tenureKey];
+  const flagRaw = ctx.facts[flagKey];
+  // A negative tenure is only reachable via a producer bug — never a legitimate value. Route it
+  // through the same typed `inputs_unavailable` path as a wrong-type input rather than silently
+  // flooring it to `granted_years: 0`, indistinguishable from a genuine zero-tenure non-retiree.
+  if (
+    typeof tenureRaw !== 'number' ||
+    !Number.isInteger(tenureRaw) ||
+    tenureRaw < 0 ||
+    typeof flagRaw !== 'boolean'
+  ) {
+    return inputsUnavailable();
+  }
+
+  const grantedYears = computation(tenureRaw, spec.params);
+  const isRetired = flagRaw;
+
+  // Decision (DATA slugs): applicable iff the member is retired AND has earned coverage.
+  // A non-retired member, or one below the min-years gate, is NOT-APPLICABLE — never a deny.
+  const applicable = isRetired && grantedYears > 0;
+  const decision = applicable ? spec.on_computed : spec.on_not_applicable;
+
+  // `computed.values` keys emitted in EXPLICITLY SORTED order (determinism — never hash-map order).
+  const rawEntries: Array<[string, CanonicalJsonValue]> = [
+    [spec.output_key, grantedYears],
+    [spec.retirement_output_key, isRetired],
+  ];
+  const values: Record<string, CanonicalJsonValue> = {};
+  for (const [key, value] of [...rawEntries].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
+    values[key] = value;
+  }
+
+  return {
+    result: { decision, specialFlags: [], computed: { values } },
+    provenance,
+    subClauseResults: [],
     reasonCode: `rule.${decision}`,
   };
 }

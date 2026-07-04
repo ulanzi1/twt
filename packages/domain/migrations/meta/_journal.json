@@ -246,6 +246,13 @@
       "when": 1783654800000,
       "tag": "0034_rtbf-anonymization-grants",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1783741200000,
+      "tag": "0035_member-search-projection",
+      "breakpoints": true
     }
   ]
 }

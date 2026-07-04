@@ -32,6 +32,7 @@
     "@twt/api-client": "workspace:*",
     "@twt/contracts": "workspace:*",
     "@twt/i18n": "workspace:*",
+    "@twt/ui": "workspace:*",
     "babel-preset-expo": "~55.0.0",
     "burnt": "^0.12.2",
     "expo": "~55.0.6",

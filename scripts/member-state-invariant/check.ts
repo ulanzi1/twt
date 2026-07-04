@@ -14,7 +14,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { type MemberStateWriteFinding, formatFinding, scanMemberStateWrites } from './lib.js';
+import {
+  type MemberStateWriteFinding,
+  formatFinding,
+  formatProjectionFinding,
+  scanMemberSearchProjectionWrites,
+  scanMemberStateWrites,
+} from './lib.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../..');
@@ -24,6 +30,11 @@ const SCAN_ROOT = 'packages/domain/src';
 // to repoRoot, forward-slashed. A new legitimate writer must be a deliberate,
 // reviewed addition here AND must set the app.member_state_writer trigger guard.
 const ALLOWLIST = new Set<string>(['packages/domain/src/member/project.ts']);
+
+// The ONLY legitimate writer to member_search_projection (the AR-65 read-model refresh, called by the
+// projector). Story 4.7 D1 refinement ii. A new legitimate writer must be a deliberate, reviewed
+// addition here AND must set the app.member_search_projection_writer trigger guard.
+const PROJECTION_ALLOWLIST = new Set<string>(['packages/domain/src/member/search-projection.ts']);
 
 function collectTsFiles(absDir: string, acc: string[]): void {
   for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
@@ -52,26 +63,32 @@ function main(): void {
   console.log(`▸ Allowlisted writer(s): ${[...ALLOWLIST].join(', ')}\n`);
 
   const findings: MemberStateWriteFinding[] = [];
+  const projectionFindings: MemberStateWriteFinding[] = [];
   for (const abs of files) {
     const rel = path.relative(repoRoot, abs).split(path.sep).join('/');
-    if (ALLOWLIST.has(rel)) continue; // the projector is the one legitimate writer
-    findings.push(...scanMemberStateWrites(rel, fs.readFileSync(abs, 'utf8')));
+    const src = fs.readFileSync(abs, 'utf8');
+    if (!ALLOWLIST.has(rel)) findings.push(...scanMemberStateWrites(rel, src)); // projector-only members.state
+    if (!PROJECTION_ALLOWLIST.has(rel)) {
+      projectionFindings.push(...scanMemberSearchProjectionWrites(rel, src)); // projector-only read model
+    }
   }
 
   console.log('▸ Findings');
-  if (findings.length === 0) {
+  if (findings.length === 0 && projectionFindings.length === 0) {
     console.log('  ✓ no code outside the projector writes members.state\n');
+    console.log('  ✓ no code outside the refresh writer writes member_search_projection\n');
     console.log('✓ member-state-invariant gate passed');
     return;
   }
 
   for (const f of findings) console.error(`  ✗ ${formatFinding(f)}`);
+  for (const f of projectionFindings) console.error(`  ✗ ${formatProjectionFinding(f)}`);
   console.error(
-    `\n✗ member-state-invariant gate FAILED with ${findings.length} finding(s).\n` +
-      '  members.state is DERIVED from event replay (architectural-freeze row 2). A write\n' +
-      '  outside the projector lets the cache diverge from the source of truth — the exact\n' +
-      '  failure the DB trigger (migration 0018) blocks at runtime. Fix: route the state\n' +
-      '  change through member.projectMemberState(...). See scripts/member-state-invariant/README.md.',
+    `\n✗ member-state-invariant gate FAILED with ${findings.length + projectionFindings.length} finding(s).\n` +
+      '  members.state + member_search_projection are DERIVED from event replay (architectural-freeze\n' +
+      '  row 2). A write outside the projector lets the cache diverge from the source of truth — the\n' +
+      '  exact failure the DB triggers (migrations 0018 / 0035) block at runtime. Fix: route the change\n' +
+      '  through member.projectMemberState(...). See scripts/member-state-invariant/README.md.',
   );
   process.exit(1);
 }

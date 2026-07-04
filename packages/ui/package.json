@@ -11,6 +11,9 @@
     "test": "vitest run --passWithNoTests",
     "dev": "tsc --watch --preserveWatchOutput"
   },
+  "dependencies": {
+    "@twt/contracts": "workspace:*"
+  },
   "devDependencies": {
     "@twt/eslint-config-twt": "workspace:*",
     "typescript": "~5.9.2",

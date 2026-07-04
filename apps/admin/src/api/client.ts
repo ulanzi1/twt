@@ -16,11 +16,16 @@ import {
   DeployTriggerResponse,
   DiffPreviewResponse,
   LoginResponse,
+  MemberSearchResponse,
+  MemberValidityResponse,
   ProvisionedPariwar,
   ProvisioningStatusList,
   PublishClauseResponse,
   RecoveryConsumeResponse,
   SessionResponse,
+  type MemberSearchRequest,
+  type MemberSearchResponse as MemberSearchResult,
+  type MemberValidityResponse as MemberValidityResult,
   type AddPariwarRequest as AddPariwarPayload,
   type AuditIntegrityAcknowledgement as Acknowledgement,
   type AuditIntegrityCheckList as CheckList,
@@ -219,6 +224,36 @@ export function publishDraft(pariwarId: string, draftId: string): Promise<Publis
     `${niyBase(pariwarId)}/clauses/drafts/${encodeURIComponent(draftId)}/publish`,
     PublishClauseResponse,
     { method: 'POST', body: JSON.stringify({}) },
+  );
+}
+
+// ── Member-status surface (Story 4.7) ─────────────────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/members. The AR-65 compound-read-model
+// search + the FR-12A validity read the `<MemberStatusPanel>` renders. Each call
+// parses with the `@twt/contracts` schema the server validates against (DD-7).
+
+const adminMemberBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members`;
+
+/** POST the AR-65 compound-read-model member search (exact-match: memberId | mobile | pariwar browse). */
+export function searchMembers(
+  pariwarId: string,
+  body: MemberSearchRequest,
+): Promise<MemberSearchResult> {
+  return apiFetch(`${adminMemberBase(pariwarId)}/search`, MemberSearchResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET a member's FR-12A validity payload (scope-gated, audited server-side). */
+export function getMemberValidity(
+  pariwarId: string,
+  memberId: string,
+): Promise<MemberValidityResult> {
+  return apiFetch(
+    `${adminMemberBase(pariwarId)}/${encodeURIComponent(memberId)}/validity`,
+    MemberValidityResponse,
   );
 }
 

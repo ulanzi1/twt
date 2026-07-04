@@ -143,3 +143,53 @@ export function formatFinding(f: MemberStateWriteFinding): string {
     `state change through projectMemberState(...) instead.`
   );
 }
+
+// ── member_search_projection projector-exclusive-write invariant (Story 4.7 D1 refinement ii) ─────────
+//
+// The AR-65 admin member-search read model is write-owned EXCLUSIVELY by the projector
+// (member/search-projection.ts, called by member/project.ts). Unlike members.state (where only the
+// `state` COLUMN is projector-only), the WHOLE `member_search_projection` table is projector-owned — so
+// ANY `.insert(memberSearchProjection)` / `.update(memberSearchProjection)` outside the allowlisted
+// refresh module is an out-of-band write. The DB write-rejection trigger (migration 0035) is the runtime
+// backstop; this is the static authoring-time guard (both layers, mirroring members.state).
+
+const MEMBER_SEARCH_PROJECTION_TABLE = 'memberSearchProjection';
+
+/** Scan one TypeScript source for ANY write to the member_search_projection table. */
+export function scanMemberSearchProjectionWrites(
+  file: string,
+  source: string,
+): MemberStateWriteFinding[] {
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, /* setParentNodes */ true);
+  const findings: MemberStateWriteFinding[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+      const method = node.expression.name.text;
+      if ((method === 'insert' || method === 'update') && node.arguments.length >= 1) {
+        const a = node.arguments[0];
+        if (a && ts.isIdentifier(a) && a.text === MEMBER_SEARCH_PROJECTION_TABLE) {
+          const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+          findings.push({
+            file,
+            line: line + 1,
+            detail: `.${method}(memberSearchProjection) — write to the projector-owned AR-65 read model`,
+          });
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sf);
+  return findings;
+}
+
+export function formatProjectionFinding(f: MemberStateWriteFinding): string {
+  return (
+    `${f.file}:${f.line} — ${f.detail}. ` +
+    `member_search_projection is a projector-owned read model; only the refresh writer ` +
+    `(packages/domain/src/member/search-projection.ts, called by the projector) may write it ` +
+    `(Story 4.7 D1). Route the change through projectMemberState(...) instead.`
+  );
+}

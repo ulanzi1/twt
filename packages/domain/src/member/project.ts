@@ -38,6 +38,7 @@ import { eventsLog } from '../schema/events_log.js';
 import { members } from '../schema/members.js';
 import { MEMBER_EVENT_PAYLOAD_SCHEMAS, type MemberEventType } from './events.js';
 import { MemberStreamConcurrencyError, isMemberStreamVersionConflict } from './errors.js';
+import { refreshMemberSearchProjection } from './search-projection.js';
 import { type MemberLifecycleState, replayMemberState } from './state.js';
 
 export interface ProjectMemberStateInput {
@@ -137,6 +138,17 @@ export async function projectMemberState(
     // rollback/commit clears it regardless.
     await client.query("SET LOCAL app.member_state_writer = 'off'");
   }
+
+  // (4) Refresh the AR-65 admin member-search compound read model (Story 4.7) in the SAME tx, so the
+  //     projection never lags a state change by more than the projector's own latency (freshness =
+  //     eventual consistency within the projector budget). This is the ONLY writer to
+  //     member_search_projection — the write-rejection trigger enforces it structurally.
+  await refreshMemberSearchProjection(client, {
+    memberId: input.memberId,
+    pariwarId: input.pariwarId,
+    state: newState,
+    stateEventVersion: inserted.eventVersion,
+  });
 
   return { eventId: inserted.eventId, eventVersion: inserted.eventVersion, state: newState };
 }

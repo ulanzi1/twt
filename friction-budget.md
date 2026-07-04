@@ -209,6 +209,14 @@ Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The 
 
 Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 4.7 disposition (declaration affirmed, no new row):** the member-facing `<MemberStatusPanel>` (Story 4.7, Task 6) touches six mobile files:
+
+(1) **Membership status screen — read-only, no forced friction:** `apps/mobile/app/(membership)/index.tsx` (+ `_layout.tsx`) renders the member's OWN validity payload (`variant: 'member'`) via the shared `@twt/ui` presenter — identity/Aadhaar/KYC suppressed, provenance simplified to "what applies to you" (AC2). This is a pure GET (`useMemberValidityQuery` → `GET /api/v1/member/validity`, the member-self read, redacted + NOT audited per PRD FR-12A) with no form, no upload, no step-up gate, and no coercive decision — same category as the read-only guard/confirmation screens already affirmed (e.g. Story 3.10's `rejoin-locked.tsx`). The appeal CTA is a navigation affordance, not friction itself. Zero deliberate friction introduced.
+
+(2) **MembershipStatusEntry nav tile + home-tab mount — user-initiated, non-blocking:** `apps/mobile/components/member-status/MembershipStatusEntry.tsx` (the home-tab entry point) and `apps/mobile/app/(tabs)/index.tsx` (mount point) are identical in character to the Story 3.9 `<LifeEventsEntry>`, Story 3.10 `<WithdrawalEntry>`, and Story 3.11 `<DataExportEntry>` already affirmed: a chromeless, always-available tile that navigates to the status screen only when the member deliberately taps it. No forced step, no form, no gate. `apps/mobile/components/member-status/useMemberValidityQuery.ts` is a data-fetch hook, not a friction surface.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

@@ -80,6 +80,9 @@ importers:
       '@twt/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
+      '@twt/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -183,6 +186,9 @@ importers:
       '@twt/queue':
         specifier: workspace:*
         version: link:../../packages/queue
+      '@twt/validity-service':
+        specifier: workspace:*
+        version: link:../../packages/validity-service
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1
@@ -308,6 +314,9 @@ importers:
       '@twt/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@twt/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       babel-preset-expo:
         specifier: ~55.0.0
         version: 55.0.22(@babel/core@7.29.7)(@babel/runtime@7.29.7)(expo@55.0.26)(react-refresh@0.18.0)
@@ -777,6 +786,10 @@ importers:
         version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/ui:
+    dependencies:
+      '@twt/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@twt/eslint-config-twt':
         specifier: workspace:*

@@ -7,6 +7,10 @@ export * from './state.js';
 export * from './events.js';
 export * from './project.js';
 export * from './read.js';
+// Story 4.7 — the AR-65 admin member-search compound read model: the projector-exclusive projection
+// refresh (search-projection.ts) + the scope-respecting search/read accessor (search-read.ts).
+export * from './search-projection.js';
+export * from './search-read.js';
 // Story 3.8 — the canonical vyawastha_shulk renewal-status read (the FR-12A surface) + pure derive seam.
 export * from './renewal-read.js';
 // Story 3.8 — the renewal-lifecycle scheduler tick (the FIRST emitter of grace transitions + reminders).

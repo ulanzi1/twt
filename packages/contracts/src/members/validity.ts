@@ -2,9 +2,9 @@
 //
 // The FR-12A Member Validity + admin member-search transport contracts (Story 4.7, Task 4). The wire
 // DTOs for:
-//   · GET  /api/v1/member/validity                 — the member's own (redacted) validity payload
-//   · GET  /api/v1/admin/members/:memberId/validity — an admin's (scope-gated, audited) validity read
-//   · POST /api/v1/admin/members/search             — the AR-65 compound-read-model member search
+//   · GET  /api/v1/member/validity                            — the member's own (redacted) validity payload
+//   · GET  /api/v1/p/:pariwarId/admin/members/:memberId/validity — an admin's (scope-gated, audited) read
+//   · POST /api/v1/p/:pariwarId/admin/members/search             — the AR-65 compound-read-model search
 //
 // ── Contracts discipline ──────────────────────────────────────────────────────────────────────────
 // A contracts SOURCE file MUST NOT import `@twt/domain` (the browser-bundle rule). So this mirrors the

@@ -41,7 +41,7 @@ export interface PanelSection {
   /** i18n KEYS for the section's human-readable detail lines (full prose, NOT error codes — UX a11y). */
   detailKeys: string[];
   /** Structured values the render layer formats (dates, counts, the lock-in policy clause deep-link). */
-  data: Record<string, string | number | boolean | null>;
+  data: Record<string, string | number | boolean | string[] | null>;
   /** Whether to render this section at all (e.g. retirement only when applicable; special-flags only when present). */
   visible: boolean;
 }

@@ -219,7 +219,18 @@ describe('buildMemberStatusViewModel', () => {
   });
 
   it('retirement section is visible only when retired or coverage earned', () => {
-    const notApplicable = buildMemberStatusViewModel(basePayload(), { variant: 'admin' });
+    const notApplicable = buildMemberStatusViewModel(
+      basePayload({
+        retirementCoverage: {
+          isRetired: false,
+          yearsOfCoverageEarned: 0,
+          coverageThrough: null,
+          daysRemaining: null,
+          active: false,
+        },
+      }),
+      { variant: 'admin' },
+    );
     expect(notApplicable.sections.find((s) => s.id === 'retirement')!.visible).toBe(false);
     const retired = buildMemberStatusViewModel(
       basePayload({
@@ -234,5 +245,14 @@ describe('buildMemberStatusViewModel', () => {
       { variant: 'admin' },
     );
     expect(retired.sections.find((s) => s.id === 'retirement')!.visible).toBe(true);
+  });
+
+  it('retirement section renders the clause_unavailable gap as visible "not yet available" — never silently hidden', () => {
+    // basePayload()'s default retirementCoverage is { status: 'clause_unavailable' } — a typed gap
+    // (R12 registry unprovisioned), NOT the same as "not applicable" (Review Findings, 2026-07-04).
+    const vm = buildMemberStatusViewModel(basePayload(), { variant: 'admin' });
+    const retirement = vm.sections.find((s) => s.id === 'retirement')!;
+    expect(retirement.visible).toBe(true);
+    expect(retirement.status).toBe('unavailable');
   });
 });

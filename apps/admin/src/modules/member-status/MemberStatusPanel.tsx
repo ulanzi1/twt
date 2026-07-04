@@ -39,6 +39,21 @@ export function MemberStatusPanel({ payload, identity }: MemberStatusPanelProps)
             <dt className="opacity-60">KYC</dt>
             <dd>{identity.verificationStrength ?? 'unverified'}</dd>
           </dl>
+          {/* Nominee summary (AR-65 compound read model — AC1a; non-PII: count/split/relationship only). */}
+          <div className="mt-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide opacity-60">Nominees</h3>
+            {identity.nomineeSummary.length === 0 ? (
+              <p className="mt-1 text-sm opacity-70">No nominees declared.</p>
+            ) : (
+              <ul className="mt-1 flex flex-col gap-0.5 text-sm" data-testid="nominee-summary">
+                {identity.nomineeSummary.map((n, i) => (
+                  <li key={`${n.relationship}-${i}`}>
+                    {n.relationship} — {n.splitPct}%
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </header>
       )}
 
@@ -47,7 +62,7 @@ export function MemberStatusPanel({ payload, identity }: MemberStatusPanelProps)
         <span
           data-testid="headline-status"
           className={`rounded border px-3 py-1 text-sm font-semibold ${statusClass(
-            vm.sections[0]?.status ?? 'info',
+            vm.sections.find((s) => s.id === 'headline')?.status ?? 'info',
           )}`}
         >
           {resolveEn(vm.headlineKey)}

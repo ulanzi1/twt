@@ -113,6 +113,13 @@ function lockInSection(payload: MemberValidityPayloadDto): PanelSection {
   // The lock-in policy clause the deep-link targets: the applicable clause whose id addresses lock-in, if
   // present in the provenance (else null — the render layer omits the link). We surface the clauseId as a
   // structured value; the render layer builds the Niyamavali deep-link.
+  //
+  // KNOWN SIMPLIFICATION (Review Findings, 2026-07-04): matched by substring because
+  // `applicableNiyamavaliClauses` carries no stable category/type field to match on exactly — only
+  // `clauseId`/`clauseVersionId`/`reasonCode`/`outcome`. A future clause whose id happens to contain
+  // "lock-in" would false-match; a clause-naming change could silently break this. Accepted as a v1
+  // tradeoff rather than adding a producer-side payload field for this alone — revisit if either risk
+  // materializes.
   const lockInClause =
     payload.applicableNiyamavaliClauses.find((c) => c.clauseId.includes('lock-in')) ?? null;
   const detailKey =
@@ -176,13 +183,15 @@ function retirementSection(payload: MemberValidityPayloadDto): PanelSection {
   const rc = payload.retirementCoverage;
   if ('status' in rc) {
     // clause_unavailable — the R12 registry was unprovisioned for this Pariwar (a typed gap, not a zero).
+    // Rendered as an explicit "not yet available" affordance — same never-hide-a-gap discipline the D2
+    // sentinel applies to the contribution/claim sections (a gap is not the same as "not applicable").
     return {
       id: 'retirement',
       titleKey: SECTION_TITLE_KEYS.retirement,
       status: 'unavailable',
       detailKeys: [DETAIL_KEYS.retirementUnavailable],
       data: {},
-      visible: false,
+      visible: true,
     };
   }
   const applicable = rc.isRetired || rc.yearsOfCoverageEarned > 0;
@@ -213,7 +222,7 @@ function specialFlagsSection(payload: MemberValidityPayloadDto): PanelSection {
     titleKey: SECTION_TITLE_KEYS['special-flags'],
     status: hasConcealment ? 'fail' : 'ok',
     detailKeys,
-    data: { flags: flags.join(','), concealmentReviewRequired: hasConcealment },
+    data: { flags, concealmentReviewRequired: hasConcealment },
     // Only render when there is a flag to surface (prominent for the Epic 6 verifier console — AC1g).
     visible: flags.length > 0 || hasConcealment,
   };

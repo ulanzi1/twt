@@ -144,40 +144,53 @@ export function createMemberValidityHandlers(deps: AppDeps) {
 
       // Resolve the exact-match criteria. A raw mobile is blind-indexed at THIS boundary (the login
       // path's helper) — the domain accessor never sees the plaintext. An un-normalizable mobile → no
-      // results (never a plaintext scan).
+      // results (never a plaintext scan), but the attempt is still audited below (D5-A: every search,
+      // including ones that resolve to nothing, leaves a trail).
       let criteria: memberDomain.MemberSearchCriteria | null;
+      let mobileBi: string | null = null;
       if (body.by === 'memberId') {
         criteria = { by: 'memberId', memberId: ids.memberId(body.value!) };
       } else if (body.by === 'mobile') {
-        const bi = await mobileBlindIndex(body.value!, deps.encryption);
-        criteria = bi === null ? null : { by: 'mobileBlindIndex', mobileBlindIndex: bi };
+        mobileBi = await mobileBlindIndex(body.value!, deps.encryption);
+        criteria = mobileBi === null ? null : { by: 'mobileBlindIndex', mobileBlindIndex: mobileBi };
       } else {
         criteria = { by: 'pariwar' };
       }
-      if (criteria === null) return { results: [] };
 
-      const rows = await memberDomain.searchMembers(scopeTx.tx, {
-        pariwarId,
-        criteria,
-        limit: body.limit,
-        offset: body.offset,
-      });
+      const rows =
+        criteria === null
+          ? []
+          : await memberDomain.searchMembers(scopeTx.tx, {
+              pariwarId,
+              criteria,
+              limit: body.limit,
+              offset: body.offset,
+            });
 
       const results: MemberSearchResultItem[] = await Promise.all(
         rows.map(async (r) => {
           // An anonymized member (RTBF) has its mobile/name ciphertext overwritten with an encryption
           // of the anonymized sentinel — it decrypts to garbage, so BOTH identity fields are suppressed
           // for `anonymized` (the display-name seam discipline). Decrypt the mobile → masked last-4
-          // (NEVER plaintext); resolve the display name (null when no KYC profile exists).
+          // (NEVER plaintext); resolve the display name (null when no KYC profile exists). A corrupt or
+          // otherwise undecryptable ciphertext degrades just this row rather than failing the whole page.
           const anonymized = r.state === 'anonymized';
-          const maskedMobile =
-            anonymized || r.mobileCiphertext === null
-              ? null
-              : maskMobile(await decryptMobile(r.mobileCiphertext, deps.encryption));
-          const name =
-            anonymized || r.nameCiphertext === null
-              ? null
-              : await decryptKycField(r.nameCiphertext, scopeTx.pariwarId, deps.encryption);
+          let maskedMobile: string | null = null;
+          if (!anonymized && r.mobileCiphertext !== null) {
+            try {
+              maskedMobile = maskMobile(await decryptMobile(r.mobileCiphertext, deps.encryption));
+            } catch (err) {
+              request.log.error({ err, memberId: r.memberId }, 'member-search: mobile decrypt failed');
+            }
+          }
+          let name: string | null = null;
+          if (!anonymized && r.nameCiphertext !== null) {
+            try {
+              name = await decryptKycField(r.nameCiphertext, scopeTx.pariwarId, deps.encryption);
+            } catch (err) {
+              request.log.error({ err, memberId: r.memberId }, 'member-search: name decrypt failed');
+            }
+          }
           return {
             memberId: r.memberId,
             state: r.state,
@@ -193,12 +206,14 @@ export function createMemberValidityHandlers(deps: AppDeps) {
       );
 
       // Admin member-search bulk-decrypts identity for display — it MUST leave an audit trail (D5-A:
-      // "admin validity read + member-search … audit-logged"). ONE `member.search` line per search
-      // records who searched, the (hashed, never plaintext) criteria, and how many members were
-      // decrypted. Written through the Story 1.10 hash-chain writer on the BYPASSRLS servicePool.
-      const criteriaHash = createHash('sha256')
-        .update(`${body.by}:${body.value ?? ''}`)
-        .digest('hex');
+      // "admin validity read + member-search … audit-logged"), including attempts that resolve to zero
+      // results. ONE `member.search` line per search records who searched, the (hashed, never plaintext)
+      // criteria, and how many members were decrypted. Written through the Story 1.10 hash-chain writer
+      // on the BYPASSRLS servicePool. For mobile criteria the audit hash reuses the already-computed HMAC
+      // blind index (`mobileBi`) rather than re-hashing the raw value with unsalted SHA-256 — the blind
+      // index is a keyed digest and does not reintroduce a brute-forceable correlation surface.
+      const criteriaHashInput = body.by === 'mobile' ? (mobileBi ?? '') : (body.value ?? '');
+      const criteriaHash = createHash('sha256').update(`${body.by}:${criteriaHashInput}`).digest('hex');
       await audit.writeAuditEntry(deps.servicePool, {
         pariwarId: scopeTx.pariwarId,
         actorId,

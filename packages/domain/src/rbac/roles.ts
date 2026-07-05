@@ -56,6 +56,7 @@ const CLAIM_APPROVE = permissionKey('claim.approve');
 const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
+const VALIDITY_INVALIDATE_CACHE = permissionKey('validity.invalidate_cache');
 const PARIWAR_AMEND_RULE = permissionKey('pariwar.amend_rule');
 const PARIWAR_PROVISION = permissionKey('pariwar.provision');
 const NIYAMAVALI_AMEND = permissionKey('niyamavali.amend');
@@ -81,12 +82,19 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   },
   {
     role: 'pariwar_admin',
+    // Story 4.8 code review — the emergency cache "invalidate all" WRITE (AC3) is a PARIWAR-WIDE action
+    // (the route's permission check runs at `pariwar` scope dimension), so only a role whose scopeCeiling
+    // is `pariwar` or broader can ever satisfy it (`scopeWithinCeiling` fail-closes any narrower-ceiling
+    // role, e.g. `state_trustee` at `state`, regardless of what grant row exists for it) — pariwar_admin
+    // is this system's pariwar-wide administrative authority, so it (+ super_admin, which carries the full
+    // catalog) is the correct holder, not `state_trustee`.
     permissions: [
       PARIWAR_AMEND_RULE,
       MEMBER_SUSPEND,
       MEMBER_MODERATE,
       // Story 4.6 — reads the FR-12A Member Validity payload (admin surfaces).
       MEMBER_VIEW_VALIDITY,
+      VALIDITY_INVALIDATE_CACHE,
       CLAIM_APPROVE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,

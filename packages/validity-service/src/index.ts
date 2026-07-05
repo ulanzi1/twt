@@ -15,9 +15,24 @@
 export {
   getValidity,
   getValidityAt,
+  auditValidityRead,
   type ValidityServiceDeps,
   type ValidityServiceOptions,
 } from './service.js';
+
+// Story 4.8 — the per-cohort cache-aside wrapper (the p95<200ms@4L delivery + the conservative-recompute
+// fallback that makes stale validity structurally impossible) + its observability contract.
+export { getValidityCached, type ValidityCachedOptions } from './cache.js';
+export {
+  FallbackRateMonitor,
+  NOOP_CACHE_OBSERVER,
+  type ValidityCacheObserver,
+  type ValidityCacheEvent,
+  type ValidityCacheOutcome,
+  type ValidityCacheFallbackReason,
+  type FallbackRateMonitorOptions,
+  type FallbackRateSnapshot,
+} from './cache-observability.js';
 
 export type {
   MemberValidityPayload,

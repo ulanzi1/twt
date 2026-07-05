@@ -130,4 +130,8 @@ export * as payment from './payment/index.js';
 export * as dataExport from './data-export/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
+// Story 4.8 — the FR-12A per-cohort validity cache substrate: cheap key resolution + low-level
+// member_validity_cache access + the cohort_invalidation_epochs bump/read + the GC sweep. The
+// cache-aside orchestration (getValidityCached) lives in @twt/validity-service.
+export * as validityCache from './validity-cache/index.js';
 export { UUID_REGEX } from './db.js';

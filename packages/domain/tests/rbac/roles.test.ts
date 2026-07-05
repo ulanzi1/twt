@@ -100,6 +100,29 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
+
+  it('Story 4.8 code review — validity.invalidate_cache is granted ONLY to pariwar_admin (+ super_admin)', () => {
+    const KEY = 'validity.invalidate_cache';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // Every OTHER read-capable role (incl. state_trustee, district_admin, block_admin, verifier,
+    // auditor, helpline_operator) may still read validity but may NOT force a tenant-wide invalidation.
+    // state_trustee in particular COULD NOT hold it even if granted: its `state` scopeCeiling is
+    // structurally narrower than the `pariwar`-dimension check this action requires.
+    for (const role of [
+      'state_trustee',
+      'district_admin',
+      'block_admin',
+      'verifier',
+      'auditor',
+      'helpline_operator',
+    ] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

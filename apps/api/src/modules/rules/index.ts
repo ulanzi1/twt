@@ -42,6 +42,7 @@ import {
   niyamavali,
   rbac,
   type schema,
+  validityCache,
 } from '@twt/domain';
 import type { FastifyInstance, FastifyRequest, preHandlerHookHandler } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -532,6 +533,10 @@ export function registerRulesModule(app: FastifyInstance, deps: AppDeps): void {
           clauseVersionId,
         });
         version = row.version;
+        // Story 4.8 (AC1a / D4-A) — a create publishes a new clause version that can become applicable to
+        // existing members, so conservatively invalidate the whole cohort in the SAME publish tx. (The
+        // amend branch bumps INSIDE amendClause, so it is NOT bumped here — no double-bump.)
+        await validityCache.bumpCohortEpoch(handle, pariwarId);
       } else {
         const { version: row } = await niyamavali.amendClause(handle, {
           pariwarId,

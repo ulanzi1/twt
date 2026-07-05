@@ -98,6 +98,12 @@ export * from './data_exports.js';
 // write-rejection trigger (migration) + the extended member-state-invariant CI gate. NOT the FR-12A
 // validity cache (that is Story 4.8's materialized view).
 export * from './member_search_projection.js';
+// Story 4.8 — the FR-12A per-cohort validity cache substrate: `member_validity_cache` (the Postgres
+// cache-aside store for the full unredacted MemberValidityPayload, keyed by the AC1 composite; TTL +
+// per-cohort epoch + per-member trigger make stale validity structurally impossible) +
+// `cohort_invalidation_epochs` (the transactional per-cohort invalidation counter, D2-A/D4-A).
+export * from './member_validity_cache.js';
+export * from './cohort_invalidation_epochs.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

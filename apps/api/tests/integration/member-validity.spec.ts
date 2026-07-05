@@ -95,6 +95,33 @@ describe.skipIf(!hasDatabase)('Member-validity + admin member-search (Story 4.7)
     }
   }
 
+  /** Grant state_trustee (carries member.view_validity but NOT validity.invalidate_cache — catalog v4) in a Pariwar. */
+  async function grantStateTrustee(userId: string, pariwarId: string): Promise<void> {
+    const c = await td.pool.connect();
+    try {
+      await c.query(
+        `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
+           VALUES ($1, $2, 'state_trustee', 'pariwar', $3)`,
+        [userId, pariwarId, pariwarId],
+      );
+    } finally {
+      c.release();
+    }
+  }
+
+  async function readCohortEpoch(pariwarId: string): Promise<number> {
+    const c = await td.pool.connect();
+    try {
+      const res = await c.query<{ epoch: string }>(
+        `SELECT epoch::text AS epoch FROM cohort_invalidation_epochs WHERE pariwar_id = $1`,
+        [pariwarId],
+      );
+      return Number(res.rows[0]?.epoch ?? '0');
+    } finally {
+      c.release();
+    }
+  }
+
   async function countAudits(actorId: string, action: string, pariwarId: string): Promise<number> {
     const c = await td.pool.connect();
     try {
@@ -157,5 +184,41 @@ describe.skipIf(!hasDatabase)('Member-validity + admin member-search (Story 4.7)
     // hit the hook's 403. Either way the surface is fail-closed — never a 200 leak.
     expect(res.statusCode).not.toBe(200);
     expect([403, 404]).toContain(res.statusCode);
+  });
+
+  it('admin "invalidate all" (pariwar_admin) bumps the cohort epoch + writes an emergency-invalidation audit line', async () => {
+    // pariwar_admin, not state_trustee: the route's permission check runs at `pariwar` scope dimension, and
+    // state_trustee's `state` scopeCeiling is structurally narrower — it can never satisfy a pariwar-wide
+    // check regardless of grant (see packages/domain/tests/rbac/roles.test.ts).
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantPariwarAdmin(userId, pariwarId);
+    const before = await readCohortEpoch(pariwarId);
+
+    const res = await client.inject({
+      method: 'POST',
+      url: `/api/v1/p/${pariwarId}/admin/validity-cache/invalidate-all`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ invalidated: true, pariwarId });
+    expect(await readCohortEpoch(pariwarId)).toBe(before + 1);
+    expect(await countAudits(userId, 'validity_cache.invalidate_all', pariwarId)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('admin "invalidate all" is denied for a state_trustee that only holds the READ-only member.view_validity grant', async () => {
+    // Story 4.8 code-review fix: invalidate-all is gated on validity.invalidate_cache (pariwar_admin-only),
+    // NOT member.view_validity — a caller who may merely READ validity must not force a tenant-wide
+    // cache invalidation. state_trustee holds member.view_validity but not the new key.
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantStateTrustee(userId, pariwarId);
+
+    const res = await client.inject({
+      method: 'POST',
+      url: `/api/v1/p/${pariwarId}/admin/validity-cache/invalidate-all`,
+    });
+
+    expect(res.statusCode).toBe(403);
   });
 });

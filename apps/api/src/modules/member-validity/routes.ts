@@ -34,6 +34,7 @@ export function registerMemberValidityRoutes(app: FastifyInstance, deps: AppDeps
   const adminSession = requireAdminSession(deps);
   const scope = scopeResolutionHook(deps);
   const viewValidity = requirePermissionHook(deps, h.MEMBER_VIEW_VALIDITY_KEY);
+  const invalidateCache = requirePermissionHook(deps, h.VALIDITY_INVALIDATE_CACHE_KEY);
 
   // ── Member-self validity read (redacted, NOT audited) ────────────────────────────────────────────
   r.get(
@@ -57,6 +58,25 @@ export function registerMemberValidityRoutes(app: FastifyInstance, deps: AppDeps
       preHandler: [adminSession, scope, viewValidity],
     },
     h.adminValidityRead,
+  );
+
+  // ── Admin trustee "invalidate all" — emergency cache invalidation (Story 4.8 AC1c/AC3) ────────────
+  // Gated on the dedicated validity.invalidate_cache WRITE key (code review 2026-07-05), NOT the
+  // read-only viewValidity gate above — a caller who may merely READ validity must not be able to
+  // force a tenant-wide cache invalidation.
+  r.post(
+    '/api/v1/p/:pariwarId/admin/validity-cache/invalidate-all',
+    {
+      schema: {
+        params: PariwarParam,
+        response: {
+          200: z.object({ invalidated: z.literal(true), pariwarId: z.string().uuid() }).strict(),
+        },
+        tags: [MEMBER_VALIDITY_TAG],
+      },
+      preHandler: [adminSession, scope, invalidateCache],
+    },
+    h.adminInvalidateValidityCache,
   );
 
   // ── Admin member-search (the AR-65 compound read model) ──────────────────────────────────────────

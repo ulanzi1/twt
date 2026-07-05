@@ -52,3 +52,8 @@ export * from './data-exports-rls.js';
 // Story 4.7 — member_search_projection tenant-isolation (mirror members-rls; the AR-65 admin-search
 // compound read model, projector-exclusive write + a write-rejection trigger like members.state).
 export * from './member-search-projection-rls.js';
+// Story 4.8 — the FR-12A validity cache tenant-isolation (mirror members-rls). `member_validity_cache`
+// holds the full per-member payload keyed by pariwar_id; `cohort_invalidation_epochs` the per-cohort
+// invalidation counter. Both tenant-isolated exactly like the data they cache (NOT cross-readable).
+export * from './member-validity-cache-rls.js';
+export * from './cohort-invalidation-epochs-rls.js';

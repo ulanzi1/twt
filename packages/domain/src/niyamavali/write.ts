@@ -38,6 +38,7 @@ import {
   type NiyamavaliAmendmentRow,
   niyamavaliAmendments,
 } from '../schema/niyamavali_amendments.js';
+import { bumpCohortEpoch } from '../validity-cache/epoch.js';
 import { computePayloadDiff } from './diff.js';
 import { ClauseIdConflictError, ClauseNotFoundError } from './errors.js';
 import { latestVersionRow } from './read.js';
@@ -228,6 +229,15 @@ export async function amendClause(db: Db, input: AmendClauseInput): Promise<Amen
   if (!amendment) {
     throw new Error('[amendClause] amendment insert returned no row — check session scope');
   }
+
+  // Story 4.8 (AC1a / D2-A / D4-A) — bump the Pariwar's cohort invalidation epoch in the SAME
+  // publish transaction. The `member_validity_cache` key includes the cohort epoch, so this makes every
+  // subsequent validity read for this Pariwar's members miss → recompute → reflect the amendment
+  // SYNCHRONOUSLY the instant this tx commits. Conservative whole-cohort bump (D4-A): the amendment's
+  // `scope` is recorded on the ledger row above for the deferred narrowing optimization, but correctness
+  // is NEVER gated on it (a narrowing bug under-invalidates = trust-corrupting stale validity). This is
+  // the domain-level can't-forget hook — any amendClause caller invalidates, not just the publish route.
+  await bumpCohortEpoch(db, input.pariwarId);
 
   return { version: newVersion, amendment };
 }

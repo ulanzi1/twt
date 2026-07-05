@@ -15,8 +15,14 @@
 
 import { createHash } from 'node:crypto';
 
-import { getValidity, type ValidityCaller, type ValidityServiceDeps } from '@twt/validity-service';
-import { audit, idempotency, ids, member as memberDomain, type Db } from '@twt/domain';
+import {
+  FallbackRateMonitor,
+  getValidityCached,
+  type ValidityCacheObserver,
+  type ValidityCaller,
+  type ValidityServiceDeps,
+} from '@twt/validity-service';
+import { audit, idempotency, ids, member as memberDomain, validityCache, type Db } from '@twt/domain';
 import type {
   MemberSearchRequest,
   MemberSearchResponse,
@@ -33,6 +39,9 @@ import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 
 /** The `member.view_validity` key (Story 4.6, catalog v3) — the admin search/read gate. */
 const MEMBER_VIEW_VALIDITY_KEY = 'member.view_validity';
+/** The `validity.invalidate_cache` key (Story 4.8 code review, catalog v4) — the trustee-only
+ *  emergency "invalidate all" WRITE gate, distinct from the read-only key above. */
+const VALIDITY_INVALIDATE_CACHE_KEY = 'validity.invalidate_cache';
 
 export function createMemberValidityHandlers(deps: AppDeps) {
   /** Assemble the engine DI for a scope-bound Db (reads via RLS-scoped `db`; audit via servicePool). */
@@ -42,6 +51,50 @@ export function createMemberValidityHandlers(deps: AppDeps) {
       keyedStore: idempotency.createKeyedStore(deps.servicePool),
       servicePool: deps.servicePool,
       traceId,
+    };
+  }
+
+  // Story 4.8 (Task 5) — ONE shared fallback-rate monitor across this surface's requests. A sustained
+  // conservative-recompute fallback rate > threshold over the window signals cache degradation (backend
+  // down, broadcast lag, clock anomaly). The alert TRANSPORT is a documented ops hook (Category-5 CR for
+  // the real metrics sink); here the crossing is surfaced on the request logger.
+  const fallbackMonitor = new FallbackRateMonitor();
+
+  /** Per-request cache observer: structured fallback + write-error logging (no PII/payload) + rate monitor. */
+  function cacheObserver(request: FastifyRequest): ValidityCacheObserver {
+    return {
+      onCacheEvent(event) {
+        const alert = fallbackMonitor.record(event.outcome);
+        if (event.outcome.kind === 'fallback') {
+          request.log.warn(
+            {
+              op: 'validity_cache.fallback',
+              reason: event.outcome.reason,
+              pariwarId: event.pariwarId,
+              durationMs: event.durationMs,
+            },
+            'validity cache: conservative-recompute fallback (served fresh, never stale)',
+          );
+        }
+        if (event.outcome.kind === 'poisoned') {
+          request.log.warn(
+            { op: 'validity_cache.poisoned', pariwarId: event.pariwarId, durationMs: event.durationMs },
+            'validity cache: poisoned entry (stored hash mismatch) — recomputed and overwritten',
+          );
+        }
+        if (alert) {
+          request.log.error(
+            { op: 'validity_cache.fallback_rate_alert', ...alert },
+            'validity cache: sustained fallback rate exceeded threshold',
+          );
+        }
+      },
+      onCacheWriteError(err, pariwarId) {
+        request.log.warn(
+          { err, op: 'validity_cache.write_error', pariwarId },
+          'validity cache: best-effort write failed (swallowed — request unaffected)',
+        );
+      },
     };
   }
 
@@ -57,6 +110,7 @@ export function createMemberValidityHandlers(deps: AppDeps) {
 
   return {
     MEMBER_VIEW_VALIDITY_KEY,
+    VALIDITY_INVALIDATE_CACHE_KEY,
 
     /**
      * GET /api/v1/member/validity — the member's own validity payload. Self-call: the service verifies
@@ -78,10 +132,10 @@ export function createMemberValidityHandlers(deps: AppDeps) {
           resource: { dimension: 'self', value: memberIdStr, pariwarId: pariwarIdStr },
           isSelf: true,
         };
-        const validity = await getValidity(
+        const validity = await getValidityCached(
           validityDeps(scopeTx.tx, request.requestContext.traceId ?? null),
           { pariwarId, memberId },
-          { caller },
+          { caller, observer: cacheObserver(request) },
         );
         ok = true;
         return { validity };
@@ -119,12 +173,53 @@ export function createMemberValidityHandlers(deps: AppDeps) {
         resource: { dimension: 'pariwar', value: scopeTx.pariwarId, pariwarId: scopeTx.pariwarId },
         isSelf: false,
       };
-      const validity = await getValidity(
+      const validity = await getValidityCached(
         validityDeps(scopeTx.tx, request.requestContext.traceId ?? null),
         { pariwarId, memberId },
-        { caller },
+        { caller, observer: cacheObserver(request) },
       );
       return { validity };
+    },
+
+    /**
+     * POST /api/v1/p/:pariwarId/admin/validity-cache/invalidate-all — the trustee "invalidate all"
+     * emergency posture change (Story 4.8 AC1c / AC3). Bumps EVERY cohort epoch for the Pariwar in the
+     * scoped tx, so every subsequent validity read misses → direct recomputation until the cache
+     * repopulates organically (the performance dip is the accepted cost of never serving stale validity).
+     * Records the emergency invalidation on the Story 1.10 hash-chain audit. The route chain already
+     * enforced `member.view_validity` — v1 reuses that gate (a dedicated `validity.invalidate` key + the
+     * UI surface are Epic-10 admin-polish; the epic AC only says "the trustee triggers it").
+     */
+    async adminInvalidateValidityCache(
+      request: FastifyRequest,
+    ): Promise<{ invalidated: true; pariwarId: string }> {
+      const scopeTx = request.scopeTx;
+      const actorId = request.requestContext.actorId;
+      if (!scopeTx || !actorId) {
+        throw new Error(
+          '[member-validity] adminInvalidateValidityCache ran without session + scope-resolution',
+        );
+      }
+      const pariwarId = ids.pariwarId(scopeTx.pariwarId);
+
+      await validityCache.invalidateAllForPariwar(scopeTx.tx, pariwarId);
+
+      // Emergency-invalidation audit line (BYPASSRLS hash-chain writer). No PII — records who invalidated
+      // which Pariwar's validity cache and when.
+      await audit.writeAuditEntry(deps.servicePool, {
+        pariwarId: scopeTx.pariwarId,
+        actorId,
+        actorRole: null,
+        action: 'validity_cache.invalidate_all',
+        resourceLocator: `pariwar/${scopeTx.pariwarId}/validity-cache`,
+        requestPayloadHash: createHash('sha256')
+          .update(`validity_cache.invalidate_all:${scopeTx.pariwarId}`)
+          .digest('hex'),
+        responseStatus: 200,
+        traceId: request.requestContext.traceId ?? null,
+      });
+
+      return { invalidated: true, pariwarId: scopeTx.pariwarId };
     },
 
     /**

@@ -102,5 +102,9 @@ describe.skipIf(!hasDatabase)('validity-service — p95 benchmark harness (D3-A;
     // pathological regression WITHOUT asserting the 200ms@4L target (that is Story 4.8's cache to green).
     expect(Number.isFinite(budget.p95_ms)).toBe(true);
     expect(budget.p95_ms).toBeLessThan(SANITY_CEILING_MS);
-  });
+    // Explicit generous timeout: this runs WARMUP+ITERATIONS sequential uncached DB round-trips, so under
+    // the full `pnpm ci:local` parallel-suite load (CPU/DB contention) the default 5s can be exceeded even
+    // though it completes in <1s in isolation (Story 4.8 added integration suites that raise that load).
+    // A wall-clock ceiling here would be flaky; the p95 measurement itself is the real assertion.
+  }, 30_000);
 });

@@ -253,6 +253,13 @@
       "when": 1783741200000,
       "tag": "0035_member-search-projection",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783827600000,
+      "tag": "0036_member-validity-cache",
+      "breakpoints": true
     }
   ]
 }

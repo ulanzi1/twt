@@ -28,7 +28,13 @@
 
 import http from 'node:http';
 
-import { createDb, idempotency, resolveConnectionString, resolveSecretValue } from '@twt/domain';
+import {
+  createDb,
+  idempotency,
+  resolveConnectionString,
+  resolveSecretValue,
+  validityCache,
+} from '@twt/domain';
 import { QUEUE_NAMES, createQueueClient, stopQueueClient, type Job } from '@twt/queue';
 
 import {
@@ -66,6 +72,12 @@ const RENEWAL_LIFECYCLE_CRON =
 // Data-export hygiene vacuum (Story 3.11, AC5). Cadence is operations policy (IST).
 const DATA_EXPORT_VACUUM_CRON =
   process.env['DATA_EXPORT_VACUUM_CRON'] ?? DEFAULT_DATA_EXPORT_VACUUM_CRON;
+// Validity-cache GC sweep (Story 4.8, Task 4). Every 15 min by default (IST). Storage hygiene ONLY.
+const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * * * *';
+// Rows older than this (default the 10× TTL constant) are reclaimed. Overridable like the cron cadences.
+const VALIDITY_CACHE_GC_MAX_AGE_SECONDS = Number(
+  process.env['VALIDITY_CACHE_GC_MAX_AGE_SECONDS'] ?? validityCache.VALIDITY_CACHE_GC_MAX_AGE_SECONDS,
+);
 
 /** The single error helper — every fatal/uncaught path logs code + message only. */
 function logError(scope: string, err: unknown): void {
@@ -101,6 +113,16 @@ async function main(): Promise<void> {
   if (!/^(\S+\s+){4}\S+$/.test(RENEWAL_LIFECYCLE_CRON.trim())) {
     throw new RangeError(
       `[jobs] MEMBER_RENEWAL_LIFECYCLE_CRON must be a 5-field cron expression (got "${RENEWAL_LIFECYCLE_CRON}")`,
+    );
+  }
+  if (!/^(\S+\s+){4}\S+$/.test(VALIDITY_CACHE_GC_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] VALIDITY_CACHE_GC_CRON must be a 5-field cron expression (got "${VALIDITY_CACHE_GC_CRON}")`,
+    );
+  }
+  if (!Number.isFinite(VALIDITY_CACHE_GC_MAX_AGE_SECONDS) || VALIDITY_CACHE_GC_MAX_AGE_SECONDS <= 0) {
+    throw new RangeError(
+      `[jobs] VALIDITY_CACHE_GC_MAX_AGE_SECONDS must be a positive number (got ${VALIDITY_CACHE_GC_MAX_AGE_SECONDS})`,
     );
   }
   if (!/^(\S+\s+){4}\S+$/.test(DATA_EXPORT_VACUUM_CRON.trim())) {
@@ -197,6 +219,19 @@ async function main(): Promise<void> {
     // Schedule the vacuum cron in IST.
     await boss.schedule(QUEUE_NAMES.IDEMPOTENCY_VACUUM, VACUUM_CRON, {}, { tz: VACUUM_TZ });
 
+    // ── Validity-cache GC sweep queue + worker + cron (Story 4.8, Task 4) ──────
+    // A single idempotent DELETE of member_validity_cache rows older than the GC threshold — storage
+    // hygiene ONLY (expired rows are already unservable via the read-path TTL guard; this reclaims the
+    // rows orphaned by amendment epoch bumps + member-state changes). Runs on the BYPASSRLS service `pool`
+    // so it sweeps across all tenants (member_validity_cache is FORCE-RLS). Mirrors IDEMPOTENCY_VACUUM.
+    await boss.createQueue(QUEUE_NAMES.VALIDITY_CACHE_GC);
+    await boss.work(QUEUE_NAMES.VALIDITY_CACHE_GC, async (jobs: Job[]) => {
+      const deleted = await validityCache.purgeExpiredValidityCache(pool, VALIDITY_CACHE_GC_MAX_AGE_SECONDS);
+      console.info('[jobs] validity-cache-gc', JSON.stringify({ jobs: jobs.length, deleted }));
+      return { deleted };
+    });
+    await boss.schedule(QUEUE_NAMES.VALIDITY_CACHE_GC, VALIDITY_CACHE_GC_CRON, {}, { tz: VACUUM_TZ });
+
     // ── DigiLocker daily cert-refresh cron (Story 3.3b, AC5.2 / ADR-0026 Category-5) ──
     // Reuses the @twt/domain `refreshDigiLockerCerts` primitive (R6) with a config-gated
     // fetcher; bumps `fetched_at`. Not fail-closed (§2.8) — a refresh failure alarms + leaves
@@ -248,6 +283,7 @@ async function main(): Promise<void> {
       certRefreshCron: CERT_REFRESH_CRON,
       renewalLifecycleCron: RENEWAL_LIFECYCLE_CRON,
       dataExportVacuumCron: DATA_EXPORT_VACUUM_CRON,
+      validityCacheGcCron: VALIDITY_CACHE_GC_CRON,
       tz: VACUUM_TZ,
     }),
   );

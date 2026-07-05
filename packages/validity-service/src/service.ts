@@ -164,7 +164,7 @@ function toRenewalPayload(r: member.VyawasthaShulkRenewalStatus): VyawasthaShulk
  * lower-level invariant (audit-on-compute; audit.ts) that fires on cache-miss regardless of caller —
  * this line is the service-level access record.
  */
-async function auditValidityRead(
+export async function auditValidityRead(
   deps: ValidityServiceDeps,
   memberCtx: { pariwarId: ids.PariwarId; memberId: ids.MemberId },
   payload: MemberValidityPayload,

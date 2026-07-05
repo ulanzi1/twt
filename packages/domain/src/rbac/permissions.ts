@@ -73,8 +73,12 @@ export function permissionKey(value: string): PermissionKey {
  * Bumped 2 → 3 at Story 4.6 (added `member.view_validity` — the FR-12A Member
  * Validity read key; the reuse-check confirmed no existing `member.*` key signals a
  * READ: `member.suspend`/`member.moderate` are both WRITE actions).
+ * Bumped 3 → 4 at Story 4.8 code review (added `validity.invalidate_cache` — the
+ * emergency "invalidate all" action is a WRITE distinct from the READ-only
+ * `member.view_validity` it was provisionally gated on; reusing a read key for a
+ * tenant-wide mutating action let any validity-reading role trigger it).
  */
-export const PERMISSION_CATALOG_VERSION = 3 as const;
+export const PERMISSION_CATALOG_VERSION = 4 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -92,6 +96,12 @@ export const SEED_PERMISSION_KEYS = [
   // read-capable FR-46 roles in roles.ts; the member's own self-call is authorized via the
   // `self` scope dimension, not this key.
   'member.view_validity',
+  // Story 4.8 code review — the emergency "invalidate all" WRITE action (POST
+  // .../admin/validity-cache/invalidate-all). Distinct from the READ-only
+  // `member.view_validity` it was provisionally gated on. Granted to `pariwar_admin`
+  // (+ super_admin) — a PARIWAR-WIDE action needs a `pariwar`-ceiling-or-broader
+  // role; `state_trustee`'s narrower `state` ceiling cannot satisfy it regardless.
+  'validity.invalidate_cache',
   'pariwar.amend_rule',
   'pariwar.provision',
   'niyamavali.amend',
@@ -118,7 +128,7 @@ export interface PermissionCatalog {
   readonly keys: readonly PermissionKey[];
 }
 
-/** The catalog — the 11 grounded keys, each validated through the constructor. */
+/** The catalog — the 13 grounded keys, each validated through the constructor. */
 export const PERMISSION_CATALOG: PermissionCatalog = {
   catalogVersion: PERMISSION_CATALOG_VERSION,
   keys: SEED_PERMISSION_KEYS.map(permissionKey),

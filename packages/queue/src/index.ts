@@ -78,6 +78,13 @@ export const QUEUE_NAMES = {
    * flips past-window rows → `expired`. Mirrors IDEMPOTENCY_VACUUM. Job class C (background).
    */
   DATA_EXPORT_VACUUM: 'member.data_export.vacuum',
+  /**
+   * FR-12A validity-cache GC sweep (Story 4.8, Task 4). DELETEs `member_validity_cache` rows older than a
+   * small multiple of the 60s TTL — storage hygiene ONLY (an expired row is already unservable via the
+   * read-path TTL guard; amendment epoch bumps + member-state changes orphan rows no read will address).
+   * Mirrors IDEMPOTENCY_VACUUM (a single idempotent DELETE on the BYPASSRLS service pool). Job class C.
+   */
+  VALIDITY_CACHE_GC: 'validity_cache.gc',
 } as const;
 
 /** Union of the registered queue names. */

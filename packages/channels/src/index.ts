@@ -9,13 +9,28 @@
 
 export type { Channel, ProviderId, RenderedMessage, SendTarget, SendResult, SendStatus, ChannelProvider } from './provider.js';
 export {
-  apnsProvider,
-  fcmProvider,
+  createFcmProvider,
+  createApnsProvider,
+  createFixturePushProvider,
+  createPushProviders,
+  fixturePushProviders,
   smsDltProvider,
   telegramProvider,
   whatsappBusinessProvider,
   DEFAULT_PROVIDER_REGISTRY,
+  type PushProviderDeps,
+  type FixturePushOptions,
 } from './providers/index.js';
+// Story 5.2 — real push transports: the per-Pariwar Firebase App cache, the messaging seam, and the
+// send-error classification the invalidation seam (Task 5) reads back off SendResult.detail.
+export { createFirebaseAppCache, type FirebaseAppCache, type PushMessagingHandle } from './providers/firebase-app.js';
+export {
+  classifyPushError,
+  firebaseErrorCode,
+  isUnrecoverableTokenRejection,
+  rejectionDetail,
+  type PushErrorClass,
+} from './providers/push-errors.js';
 export { deepFreeze, isFrozenMutationError, type DeepReadonly } from './freeze.js';
 export { render, escapeText, type RenderableAlert } from './render.js';
 export {

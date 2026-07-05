@@ -7,13 +7,21 @@
 // provenance, and classification are never altered — the input is `DeepReadonly<Alert>`, so a renderer
 // cannot even express a mutation (AC4 type layer).
 //
-// ── Escaping discipline (AC6) ─────────────────────────────────────────────────────────────────────────
-// EVERY variable substituted from the payload passes through `escapeText`. Admin-authored strings
-// (announcement titles/bodies, module titles, amendment summaries) are the injection surface: an admin who
-// types markdown / template syntax / HTML must render as INERT TEXT on every channel. Static template
-// text (headings the code owns) is safe and not escaped.
+// ── Escaping discipline — now PER-CHANNEL (Story 5.1 AC6 + Story 5.2 D1) ──────────────────────────────
+// EVERY variable substituted from the payload is a potential injection surface: admin-authored strings
+// (announcement titles/bodies, module titles, amendment summaries) where an admin who types markdown /
+// template syntax / HTML must render as INERT TEXT. Static template text (headings the code owns) is safe
+// and never transformed.
+//
+// Story 5.1 escaped UNCONDITIONALLY for all channels. Story 5.2 (deferred-work.md D1) parameterizes it:
+// the `content(alert, esc)` builder takes a per-channel transform. Markup channels (WhatsApp/SMS/Telegram)
+// pass `escapeText` (unchanged behavior); `push` passes the IDENTITY transform because a push notification
+// renders no markup — HTML-entity-encoding `&`→`&amp;` / backslash-escaping `#`/`(` there would garble
+// admin prose in the notification tray (the exact bug deferred-work.md:1812 flags). Push injection payloads
+// stay INERT simply by being plaintext (a push tray never interprets `<script>` / `{{tpl}}`).
 
 import type { Alert } from '@twt/contracts';
+import { deepLinkTargetForAlert, formatDeepLink } from '@twt/contracts';
 
 import type { DeepReadonly } from './freeze.js';
 import type { Channel, RenderedMessage } from './provider.js';
@@ -44,26 +52,33 @@ function rupees(paise: number): string {
   return `₹${(paise / 100).toFixed(2)}`;
 }
 
+/** The identity transform — used for `push`, whose plaintext tray renders no markup (Story 5.2 D1). */
+function identity(value: string): string {
+  return value;
+}
+
 /**
- * Category → a `{ heading, line }` pair with all payload-derived substitutions ESCAPED. The channel
- * renderers below assemble these into channel-specific presentation.
+ * Category → a `{ heading, line }` pair. Payload-derived substitutions pass through `esc` (per-channel:
+ * `escapeText` for markup channels, IDENTITY for plaintext push). Static template text the code owns
+ * (headings) is never transformed. The 8 non-broadcast + the niyamavali broadcast = all 9 categories are
+ * handled exhaustively so a new category is a compile error, not a silent blank.
  */
-function content(alert: RenderableAlert): { heading: string; line: string } {
+function content(alert: RenderableAlert, esc: (value: string) => string): { heading: string; line: string } {
   switch (alert.alert_category) {
     case 'alert_published':
-      return { heading: escapeText(alert.payload_data.title), line: escapeText(alert.payload_data.body) };
+      return { heading: esc(alert.payload_data.title), line: esc(alert.payload_data.body) };
     case 'deadline_reminder':
       // `deadline_display` is the PRODUCER-formatted human-readable deadline (never the raw ISO-8601
       // `deadline_at` — a machine timestamp in UTC is not member-facing copy, and render must stay a pure
       // function of the payload, so formatting cannot happen here).
       return {
         heading: 'Deadline reminder',
-        line: `${escapeText(alert.payload_data.subject)} — due ${escapeText(alert.payload_data.deadline_display)}`,
+        line: `${esc(alert.payload_data.subject)} — due ${esc(alert.payload_data.deadline_display)}`,
       };
     case 'contribution_confirmed':
       return {
         heading: 'Contribution recorded',
-        line: `${rupees(alert.payload_data.amount_paise)} for ${escapeText(alert.payload_data.period_label)}`,
+        line: `${rupees(alert.payload_data.amount_paise)} for ${esc(alert.payload_data.period_label)}`,
       };
     case 'contribution_mismatch':
       return {
@@ -73,33 +88,46 @@ function content(alert: RenderableAlert): { heading: string; line: string } {
     case 'claim_status_change':
       return {
         heading: 'Claim update',
-        line: `Your claim is now ${escapeText(alert.payload_data.new_status)}`,
+        line: `Your claim is now ${esc(alert.payload_data.new_status)}`,
       };
     case 'helpdesk_reply':
       return { heading: 'Helpdesk reply', line: 'You have a new reply on your ticket.' };
     case 'module_new':
-      return { heading: 'New module', line: escapeText(alert.payload_data.module_title) };
+      return { heading: 'New module', line: esc(alert.payload_data.module_title) };
     case 'step_up_otp':
       return {
         heading: 'Verification code',
-        line: `A code was requested for ${escapeText(alert.payload_data.purpose)}.`,
+        line: `A code was requested for ${esc(alert.payload_data.purpose)}.`,
       };
     case 'niyamavali_amended':
-      return { heading: 'Rule amended', line: escapeText(alert.payload_data.amendment_summary) };
+      return { heading: 'Rule amended', line: esc(alert.payload_data.amendment_summary) };
   }
+}
+
+/**
+ * Derive the push deep-link URI from the frozen payload (Story 5.2, AC4). PURE — the target is a function
+ * of `alert_category` + `payload_data` only (contracts' `deepLinkTargetForAlert`). `null` for a category
+ * with no push deep-link (`step_up_otp`). Reading the frozen alert never mutates it, so purity/immutability
+ * hold. The `Alert` param is mutable-typed but only READ — a `DeepReadonly<Alert>` reads structurally.
+ */
+function pushDeepLink(alert: RenderableAlert): string | null {
+  const target = deepLinkTargetForAlert(alert as Alert);
+  return target === null ? null : formatDeepLink(target);
 }
 
 /** The pure renderer for ONE channel — the AC5 byte-identical-replay unit. */
 export function render(alert: RenderableAlert, channel: Channel): RenderedMessage {
-  const { heading, line } = content(alert);
+  // Push owns PLAINTEXT escaping semantics (Story 5.2 D1); markup channels keep `escapeText` (AC6).
+  const esc = channel === 'push' ? identity : escapeText;
+  const { heading, line } = content(alert, esc);
   switch (channel) {
     case 'push':
-      return { channel, title: heading, body: line };
+      return { channel, title: heading, body: line, deepLink: pushDeepLink(alert) };
     case 'whatsapp':
-      return { channel, title: null, body: `${heading}\n\n${line}` };
+      return { channel, title: null, body: `${heading}\n\n${line}`, deepLink: null };
     case 'sms':
-      return { channel, title: null, body: `${heading}: ${line}` };
+      return { channel, title: null, body: `${heading}: ${line}`, deepLink: null };
     case 'telegram':
-      return { channel, title: null, body: `📢 ${heading}\n${line}` };
+      return { channel, title: null, body: `📢 ${heading}\n${line}`, deepLink: null };
   }
 }

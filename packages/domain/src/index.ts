@@ -134,4 +134,8 @@ export * as toneReview from './tone-review/index.js';
 // member_validity_cache access + the cohort_invalidation_epochs bump/read + the GC sweep. The
 // cache-aside orchestration (getValidityCached) lives in @twt/validity-service.
 export * as validityCache from './validity-cache/index.js';
+// Story 5.2 — the push device-token registration substrate: the app-open-rebuild upsert, the active-token
+// read (delivery resolver), the AC5 invalidation write, and the Class C stale/invalid cleanup prune.
+// Tenant-scoped; encryption + blind-index + audit orchestration are app-layer (the registration route).
+export * as deviceToken from './device-token/index.js';
 export { UUID_REGEX } from './db.js';

@@ -51,9 +51,28 @@ const TELEGRAM_ELIGIBLE_CATEGORIES: ReadonlySet<AlertCategory> = new Set<AlertCa
   'niyamavali_amended',
 ]);
 
-/** Per-channel category eligibility. Only Telegram is constrained in 5.1 (the AC3-mandated gate). */
+/**
+ * Categories the PUSH channel is NOT eligible for (Story 5.2, AC4). Exactly `step_up_otp` — a step-up OTP
+ * delivers over SMS (Story 5.9), never push.
+ *
+ * ── TWO things, not one — do NOT collapse them (Dev Notes "Push category eligibility") ─────────────────
+ *   1. FR-71's push category TAXONOMY is and stays SEVEN (alert_published, deadline_reminder,
+ *      contribution_confirmed, contribution_mismatch, claim_status_change, helpdesk_reply, module_new) —
+ *      the guaranteed-tested renderers with bespoke title/body/deep-link copy. This story does NOT redefine
+ *      FR-71 into "8 push categories".
+ *   2. The dispatcher's per-channel ELIGIBILITY GATE is a TRANSPORT-ROUTING decision, separate from the
+ *      taxonomy: push accepts every category EXCEPT `step_up_otp`. `niyamavali_amended` is a BROADCAST
+ *      that epics.md L1486 routes to push ("fire niyamavali.amended push notifications to affected
+ *      members") — so the gate permits it to REACH the push transport (rendered via the general
+ *      announcement path, deep-link → announcements/:alert_id) WITHOUT promoting it into FR-71's taxonomy
+ *      or giving it a bespoke FR-71 renderer slot.
+ */
+const PUSH_INELIGIBLE_CATEGORIES: ReadonlySet<AlertCategory> = new Set<AlertCategory>(['step_up_otp']);
+
+/** Per-channel category eligibility. Telegram = announcements-only (5.1); push = all-except-`step_up_otp`. */
 export function isCategoryEligible(channel: Channel, category: AlertCategory): boolean {
   if (channel === TELEGRAM_SIDE_CHANNEL) return TELEGRAM_ELIGIBLE_CATEGORIES.has(category);
+  if (channel === 'push') return !PUSH_INELIGIBLE_CATEGORIES.has(category);
   return true;
 }
 

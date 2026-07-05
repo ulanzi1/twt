@@ -13,6 +13,9 @@ import { Worker } from 'node:worker_threads';
 
 import { describe, expect, it } from 'vitest';
 
+import { render } from '../src/render.js';
+import { announcement } from './fixtures.js';
+
 const WORKER_URL = new URL('./determinism.worker.mjs', import.meta.url);
 const TOTAL_RUNS = 100;
 const WORKERS = 8;
@@ -49,4 +52,16 @@ describe('P0 determinism-replay gate (AC5 — 100× per channel across real OS t
     },
     30_000,
   );
+
+  // Story 5.2 (AC6): the byte-identical hash above already covers the push deep-link/data field (it is
+  // part of the RenderedMessage the worker hashes), so a non-deterministic deep-link would break the
+  // single-hash assertion. This guard makes the coverage EXPLICIT: the push render carries a stable,
+  // grammar-shaped deep-link that a regression dropping the field (→ null) or randomizing it would trip.
+  it('push render carries a stable, non-null deep-link (covered by the byte-identical gate)', () => {
+    const a = render(announcement(), 'push');
+    const b = render(announcement(), 'push');
+    expect(a.deepLink).not.toBeNull();
+    expect(a.deepLink).toMatch(/^twt:\/\/p\/[0-9a-f-]+\/announcements\/[0-9a-f-]+$/);
+    expect(a.deepLink).toBe(b.deepLink); // replay-stable
+  });
 });

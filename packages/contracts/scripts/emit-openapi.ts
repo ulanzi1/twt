@@ -152,6 +152,10 @@ const {
 // Story 3.4 — the signup nominee-declaration DTOs (declare + status). The third signup-
 // wizard SURFACE; both routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { NomineeDeclareRequest, NomineeStatusResponse } = await import('../src/nominee/index.js');
+// Story 5.2 — push device-token registration DTOs (member + admin endpoints; shared request/ack).
+const { DeviceTokenRegisterRequest, DeviceTokenRegisterResponse } = await import(
+  '../src/device-tokens/index.js'
+);
 // Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
@@ -355,6 +359,15 @@ const nomineeComponents = {
   NomineeStatusResponse: NomineeStatusResponse.openapi('NomineeStatusResponse'),
 } as const;
 for (const [name, schema] of Object.entries(nomineeComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 5.2 — push device-token registration components (shared request + ack).
+const deviceTokenComponents = {
+  DeviceTokenRegisterRequest: DeviceTokenRegisterRequest.openapi('DeviceTokenRegisterRequest'),
+  DeviceTokenRegisterResponse: DeviceTokenRegisterResponse.openapi('DeviceTokenRegisterResponse'),
+} as const;
+for (const [name, schema] of Object.entries(deviceTokenComponents)) {
   registry.register(name, schema);
 }
 
@@ -1257,6 +1270,50 @@ registry.registerPath({
   responses: {
     200: { description: 'Current nominee declaration', content: jsonOf(nomineeComponents.NomineeStatusResponse) },
     401: nomineeAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 5.2 — push device-token registration (member + admin; Epic 5's first [CONSUMER]) ──
+// The mobile app registers its FCM/APNs token on app open (member-session-gated); admin device
+// tokens register on admin auth (admin-session-gated). Both share the request/ack; the upsert is
+// idempotent and marks the principal's OTHER same-platform tokens stale (app-open rebuild). The
+// token is Tier-1 PII (request-only, never echoed back).
+const deviceTokenTags = ['device-token'];
+const deviceTokenAuth = errorResponse('Authentication required');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/device-tokens',
+  summary: 'Register the member device push token (FCM/APNs) on app open',
+  description:
+    "Registers the current device's FCM (Android) / APNs (iOS) push token for the authenticated " +
+    'member (the Story 3.2 app-open consumer). The token is Tier-1-encrypted at rest + blind-indexed; ' +
+    'the upsert is idempotent and marks the member’s OTHER same-platform tokens stale (app-open ' +
+    'rebuild). Requires a member session. The token is NEVER echoed back (Tier-1 discipline).',
+  tags: deviceTokenTags,
+  request: { body: { content: jsonOf(deviceTokenComponents.DeviceTokenRegisterRequest), required: true } },
+  responses: {
+    200: { description: 'Device token registered', content: jsonOf(deviceTokenComponents.DeviceTokenRegisterResponse) },
+    400: errorResponse('Request validation failed (bad platform or token)'),
+    401: deviceTokenAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/device-tokens',
+  summary: 'Register the admin device push token (FCM/APNs) on admin auth',
+  description:
+    "Registers the current device's FCM (Android) / APNs (iOS) push token for the authenticated " +
+    'admin (the Story 1.9 admin-auth consumer). Admin identity is global — the token keys on the ' +
+    'admin-global namespace. Same idempotent upsert + app-open rebuild as the member endpoint. ' +
+    'Requires an admin session. The token is NEVER echoed back (Tier-1 discipline).',
+  tags: deviceTokenTags,
+  request: { body: { content: jsonOf(deviceTokenComponents.DeviceTokenRegisterRequest), required: true } },
+  responses: {
+    200: { description: 'Device token registered', content: jsonOf(deviceTokenComponents.DeviceTokenRegisterResponse) },
+    400: errorResponse('Request validation failed (bad platform or token)'),
+    401: deviceTokenAuth,
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

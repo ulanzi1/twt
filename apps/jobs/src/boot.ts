@@ -54,6 +54,11 @@ import {
   RENEWAL_LIFECYCLE_TZ,
   registerMemberRenewalLifecycleCron,
 } from './member-renewal-lifecycle.js';
+import {
+  DEFAULT_DEVICE_TOKEN_CLEANUP_CRON,
+  DEVICE_TOKEN_CLEANUP_TZ,
+  registerDeviceTokenCleanupCron,
+} from './device-token-cleanup.js';
 
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
@@ -72,6 +77,9 @@ const RENEWAL_LIFECYCLE_CRON =
 // Data-export hygiene vacuum (Story 3.11, AC5). Cadence is operations policy (IST).
 const DATA_EXPORT_VACUUM_CRON =
   process.env['DATA_EXPORT_VACUUM_CRON'] ?? DEFAULT_DATA_EXPORT_VACUUM_CRON;
+// Push device-token stale/invalid cleanup (Story 5.2, AC5). Cadence is operations policy (IST).
+const DEVICE_TOKEN_CLEANUP_CRON =
+  process.env['DEVICE_TOKEN_CLEANUP_CRON'] ?? DEFAULT_DEVICE_TOKEN_CLEANUP_CRON;
 // Validity-cache GC sweep (Story 4.8, Task 4). Every 15 min by default (IST). Storage hygiene ONLY.
 const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * * * *';
 // Rows older than this (default the 10× TTL constant) are reclaimed. Overridable like the cron cadences.
@@ -128,6 +136,11 @@ async function main(): Promise<void> {
   if (!/^(\S+\s+){4}\S+$/.test(DATA_EXPORT_VACUUM_CRON.trim())) {
     throw new RangeError(
       `[jobs] DATA_EXPORT_VACUUM_CRON must be a 5-field cron expression (got "${DATA_EXPORT_VACUUM_CRON}")`,
+    );
+  }
+  if (!/^(\S+\s+){4}\S+$/.test(DEVICE_TOKEN_CLEANUP_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] DEVICE_TOKEN_CLEANUP_CRON must be a 5-field cron expression (got "${DEVICE_TOKEN_CLEANUP_CRON}")`,
     );
   }
 
@@ -262,6 +275,15 @@ async function main(): Promise<void> {
       { vacuumCron: DATA_EXPORT_VACUUM_CRON, vacuumTz: DATA_EXPORT_VACUUM_TZ },
     );
 
+    // ── Push device-token stale/invalid cleanup cron (Story 5.2, AC5) ──────────
+    // Prunes member_device_tokens that are stale past 7d / invalid past 30d (provisional defaults) on
+    // the BYPASSRLS service `pool` (cross-tenant). Mirrors DIGILOCKER_CERT_REFRESH's registration shape.
+    await registerDeviceTokenCleanupCron(
+      boss,
+      { pool },
+      { cron: DEVICE_TOKEN_CLEANUP_CRON, tz: DEVICE_TOKEN_CLEANUP_TZ },
+    );
+
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);
       healthServer.listen(HEALTH_PORT, () => {
@@ -284,6 +306,7 @@ async function main(): Promise<void> {
       renewalLifecycleCron: RENEWAL_LIFECYCLE_CRON,
       dataExportVacuumCron: DATA_EXPORT_VACUUM_CRON,
       validityCacheGcCron: VALIDITY_CACHE_GC_CRON,
+      deviceTokenCleanupCron: DEVICE_TOKEN_CLEANUP_CRON,
       tz: VACUUM_TZ,
     }),
   );

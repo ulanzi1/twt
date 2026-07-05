@@ -109,6 +109,18 @@ export const MEMBER_WITHDRAWAL_FIELD_CLASS = 'member_withdrawal';
 export const MEMBER_DATA_EXPORT_FIELD_CLASS = 'data_export';
 
 /**
+ * Field-class namespace for the push DEVICE-TOKEN Tier-1 envelope + blind index (Story 5.2). Device tokens
+ * are Tier-1 PII (architecture §3.4 L1937). Unlike the admin-email / member-mobile families (fixed global
+ * sentinel because their lookup runs pre-scope), `member_device_tokens` is a TENANT table — its encryption
+ * context keys on the owning principal's `pariwar_id` (a member's REAL Pariwar; for an ADMIN principal, the
+ * `ADMIN_GLOBAL_NAMESPACE` nil-UUID sentinel, matching the admin-identity family). The write (registration
+ * route) + the read (delivery resolver) MUST bind the SAME (pariwarId, fieldClass) — a mismatched context
+ * throws at decrypt time rather than silently succeeding. Matches the `piiColumn(1, 'member_device_token')`
+ * annotation on the `token_ciphertext` column + the `blindIndex('member_device_token', …)` on the token.
+ */
+export const MEMBER_DEVICE_TOKEN_FIELD_CLASS = 'member_device_token';
+
+/**
  * The data-export build-job producer seam (Story 3.11). The API is the FIRST request-path queue
  * producer: it enqueues a `DATA_EXPORT_BUILD` job (send-only — the API produces, apps/jobs consumes;
  * NEVER `boss.work()`). Injectable like `auditSink` / `deployTrigger`: production wires a pg-boss-backed

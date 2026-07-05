@@ -32,8 +32,19 @@ export interface RenderedMessage {
   readonly channel: Channel;
   /** Short heading (push notification title). `null` for body-only channels (SMS/WA/Telegram). */
   readonly title: string | null;
-  /** The message body — all variable substitutions escaped as inert text (AC6). */
+  /**
+   * The message body. Escaping is PER-CHANNEL (Story 5.2, D1): markup channels (WhatsApp/SMS/Telegram)
+   * escape every payload-derived substitution as inert text (AC6); `push` is PLAINTEXT (no HTML-entity
+   * encoding) since a push notification renders no markup.
+   */
   readonly body: string;
+  /**
+   * Push-only deep-link target URI (Story 5.2, AC4) — the canonical `twt://p/<pariwar_id>/…` grammar,
+   * derived from `alert_category` + `payload_data`. `null` on every non-push channel (and on a push for a
+   * non-push-eligible category). This is render OUTPUT — NOT a field on the frozen `Alert` — so it does
+   * not touch the immutability invariant; it IS covered by the byte-identical determinism gate (AC6).
+   */
+  readonly deepLink: string | null;
 }
 
 /**
@@ -48,6 +59,16 @@ export interface SendTarget {
   readonly address: string;
   /** Push-only: which transport provider to use for this device. */
   readonly platform?: 'android' | 'ios';
+  /**
+   * Push-only, optional (Story 5.2 code-review fix): the owning principal that registered this device
+   * token. `ChannelProvider.send` never reads these — they exist so the composition-layer invalidation
+   * seam (apps/api's `invalidatePushTokenOnFailure`) can scope a `markInvalid` write to the EXACT ownership
+   * tuple (pariwarId, principalType, principalId, platform, token) the table's own unique key models,
+   * instead of invalidating by blind-index alone (which two different principals could collide on if they
+   * ever registered the identical raw token string).
+   */
+  readonly principalType?: 'member' | 'admin';
+  readonly principalId?: string;
 }
 
 /** The outcome of one `send`. `not_implemented` is the Story 5.1 stub marker (no real SDK yet). */

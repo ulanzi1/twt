@@ -18,9 +18,9 @@ The framework was author-committed by Solo Builder (BigDev) under Story 0.5 via 
 
 | Row | Author | Date | Scope | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | Solo Builder (BigDev) | 2026-05-30 | `docs/knowledge-transfer/` framework: README + ADR-index (64 deferred-ADR slots) + Niyamavali→FR mapping (14 clause rows + 20 FR inverse-lookup rows + §1.14 verbatim extract) + deployment-topology (8 sections + ASCII schematic) + on-call-playbook (5-section + 13 incident classes) + dependency-inventory (34 rows across 7 sections) + comprehension-questionnaire (30 questions across 5 sections) + answer-key + this ledger; `docs/adr/` scaffold (README + template) discharging Decision 2026-05-29-003 Open Follow-up #6 | **Author-committed; awaiting trustee sign-off** | Tasks 1-7 closed per Story 0.5 spec; Tasks 8-10 remain `_AWAITING EXTERNAL ACTION_` per AC-1/AC-2 deferral language. `.decision-log.md` Decision 2026-05-30-005 appended per the Story 0.1+0.2+0.3+0.4 schema. |
+| 1 | Solo Builder (BigDev) | 2026-05-30 | `docs/knowledge-transfer/` framework: README + ADR-index (64 deferred-ADR slots) + Niyamavali→FR mapping (14 clause rows + 20 FR inverse-lookup rows + §1.14 verbatim extract) + deployment-topology (8 sections + ASCII schematic) + on-call-playbook (5-section + 13 incident classes) + dependency-inventory (34 rows across 7 sections) + comprehension-questionnaire (30 questions across 5 sections) + answer-key + this ledger; `docs/adr/` scaffold (README + template) discharging Decision 2026-05-29-003 Open Follow-up #6 | **Trustee-ratified** (superseded 2026-07-05 — see Row 2 below) | Tasks 1-7 closed per Story 0.5 spec; Task 8 closed 2026-07-05. Tasks 9-10 remain `_AWAITING EXTERNAL ACTION_` (gated on Story 0.6 backup engineer, B3). `.decision-log.md` Decision 2026-05-30-005 appended per the Story 0.1+0.2+0.3+0.4 schema. |
 
-The framework-commit row supersedes to status `Trustee-ratified` when Task 8 closes per the supersession schema below.
+The framework-commit row is superseded to status `Trustee-ratified` by the Task 8 sign-off recorded below.
 
 ## 2. Trustee sign-off log
 
@@ -32,8 +32,8 @@ The framework-commit row supersedes to status `Trustee-ratified` when Task 8 clo
 
 | Row | Trustee | Date | Scope ratified | Mode | Supersession-schema marker | Notes |
 |---|---|---|---|---|---|---|
-| _(awaiting Task 8)_ | _name_ | YYYY-MM-DD | _scope per ratification mode_ | _per-bundle OR per-surface_ | Supersedes Framework-commit row 1 ("Author-committed; awaiting trustee sign-off") via `.decision-log.md` Decision 2026-05-??-NNN | _(remarks on partial-ratification, conditional ratification, etc.)_ |
-| _(awaiting Task 8 — second trustee row for quorum)_ | _name_ | YYYY-MM-DD | _same scope_ | _same mode_ | Supersedes the same Framework-commit row | _(remarks)_ |
+| 1 | Dhiraj Rahul | 2026-07-05 | Full KT pack (README, ADR-index, Niyamavali→FR mapping, deployment-topology, on-call-playbook, dependency-inventory, comprehension-questionnaire + answer-key) | pack-as-a-unit | Supersedes Framework-commit row 1 ("Author-committed; awaiting trustee sign-off") via `.decision-log.md` Decision 2026-07-05-064 | Ratified via `docs/knowledge-transfer/trustee-consent-sheet-phase0-framework-ratifications.md` row R2. Task 9 comprehension administration stays open under Story 0.6 (B3). |
+| 2 | Kalpana Bharti | 2026-07-05 | Full KT pack (same scope) | pack-as-a-unit | Supersedes the same Framework-commit row | Quorum row (≥2-trustee sign-off complete). |
 
 **AC-1 + AC-2 closure rule.** AC-1 + AC-2 are **fully closed** when ≥ 2 trustees have signed off (per Story 0.5 AC-1 + AC-2 + the Story 0.4 quorum precedent). Rows with `pending-system-availability` (e.g., Niyamavali → FR mapping `spec-only` rows; dependency inventory `pending-system-availability` rows) are enumerated as deferred in the sign-off Notes — they do NOT block AC-1/AC-2 full closure per the closure-language precision discipline ([[feedback_closure_language_precision]]).
 

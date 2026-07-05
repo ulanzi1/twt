@@ -31,6 +31,8 @@ _Empty at Story 0.4 author-commit time — populates as Task 7 (≥2-trustee sig
 
 | Date | Trustee | Scope (per-bundle OR per-surface) | Mode | PENDING LEGAL REVIEW acknowledgement | Supersession-schema marker | Signature line | Notes |
 |---|---|---|---|---|---|---|---|
+| 2026-07-05 | Dhiraj Rahul | Framework: surface-inventory.md + table-top-exercise.md | per-bundle | Acknowledged — the 5 comms templates remain `PENDING LEGAL REVIEW` and are excluded from this sign-off; ratification is conditional on the marker being preserved until Story 0.13 counsel returns | Supersedes Decision 2026-05-29-004 framework-leg via `.decision-log.md` Decision 2026-07-05-064 | Dhiraj Rahul | Ratified via `docs/knowledge-transfer/trustee-consent-sheet-phase0-framework-ratifications.md` row R3; framework + inventory + table-top only. |
+| 2026-07-05 | Kalpana Bharti | Framework: surface-inventory.md + table-top-exercise.md | per-bundle | Acknowledged — same carve-out as above | Supersedes the same Decision 2026-05-29-004 framework-leg | Kalpana Bharti | Quorum row (≥2-trustee sign-off complete). |
 
 **Quorum requirement:** each sign-off event requires **≥2 rows** — one row per ratifying trustee. A single-row sign-off event is incomplete and does not satisfy the ≥2-trustee quorum. When adding a sign-off row, always verify that a co-signing trustee's row is also present (or pending) for the same scope/date.
 

@@ -126,7 +126,7 @@ Annual re-attestation is recorded in `engagement-ledger.md` §7 per-row annual r
 - `dependency_predecessors`: Story 0.6 author-commit closure (already at Decision 2026-05-30-006).
 - `dependency_successors`: A-13 cascade — backup-engineer-availability unblocks runbook execution under Solo-Builder-unavailability scenarios per `docs/runbooks/operational-readiness-ledger.md`.
 - `slippage_tolerance`: 2 trustee-meeting-cycles (≈2 months) before escalation.
-- `reviewed_by`: `<TO-BE-AUTHORED-AT-TASK-8>`
+- `reviewed_by`: Dhiraj Rahul + Kalpana Bharti, 2026-07-05 (Decision 2026-07-05-064)
 
 ### Row 7 — `p0-5-native-stack-validation-experiment`
 
@@ -136,7 +136,7 @@ Annual re-attestation is recorded in `engagement-ledger.md` §7 per-row annual r
 - `dependency_predecessors`: Story 0.14 Tasks 7-11 substantive closure (Trustee Panel scope ratification + device procurement + prototype build + measurement + ratify-decision).
 - `dependency_successors`: Epic 1 substrate-work unblock per Story 1.1 line 990 precondition; Story 0.10 P0-2c PRECONDITION-2 prototype-operability unblock; AR-49 substrate-conditional commitments unfrozen.
 - `slippage_tolerance`: 1 trustee-meeting-cycle (≈1 month) — P0-5 is on the critical path for Epic 1.
-- `reviewed_by`: `<TO-BE-AUTHORED-AT-TASK-8>`
+- `reviewed_by`: Dhiraj Rahul + Kalpana Bharti, 2026-07-05 (Decision 2026-07-05-064)
 
 ### Row 11 — `trust-formation-and-legal-registration` (decomposed)
 
@@ -146,7 +146,7 @@ Annual re-attestation is recorded in `engagement-ledger.md` §7 per-row annual r
 - `dependency_predecessors`: Trustee Panel quorum availability for trust-deed drafting; Story 0.13 Legal Counsel return for DPDPA Data Fiduciary scope.
 - `dependency_successors`: Phase 1 launch — trust as legal entity is the substrate for member-facing operations; all upstream regulatory commitments depend on trust-as-entity.
 - `slippage_tolerance`: 3 trustee-meeting-cycles (≈3 months) per sub-row before escalation; parent row escalates if any sub-row escalates >2 times in same calendar quarter per `escalation-protocol.md` §5.
-- `reviewed_by`: `<TO-BE-AUTHORED-AT-TASK-8>`
+- `reviewed_by`: Dhiraj Rahul + Kalpana Bharti, 2026-07-05 (Decision 2026-07-05-064)
 
 ### Row 12 — `feature-flag-tool-selection-p1-conditional` (conditional candidate)
 
@@ -156,7 +156,7 @@ Annual re-attestation is recorded in `engagement-ledger.md` §7 per-row annual r
 - `dependency_predecessors`: DigiLocker-mandatory migration begin event OR first FR-58C-gated rollout begin event (architecture §Gap Analysis observation lines 4823-4828).
 - `dependency_successors`: Phase 1 launch readiness signal arming per AC-2 (conditional rows must transition before launch readiness signal arms); Cross-Cutting #15 visibility + no-secret-flags properties.
 - `slippage_tolerance`: N/A — predicate-decision-point is event-anchored.
-- `reviewed_by`: `<TO-BE-AUTHORED-AT-TASK-8>`
+- `reviewed_by`: Dhiraj Rahul + Kalpana Bharti, 2026-07-05 (Decision 2026-07-05-064)
 
 ## §9 — Cross-links
 

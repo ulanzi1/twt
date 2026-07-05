@@ -39,6 +39,8 @@
     "member-state:test": "vitest run scripts/member-state-invariant",
     "kyc-provider:check": "tsx scripts/kyc-provider-boundary/check.ts",
     "kyc-provider:test": "vitest run scripts/kyc-provider-boundary",
+    "access-wrapper:check": "tsx scripts/access-wrapper-invariants/check.ts",
+    "access-wrapper:test": "vitest run scripts/access-wrapper-invariants",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

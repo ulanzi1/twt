@@ -499,6 +499,36 @@ jobs:
       - run: pnpm kyc-provider:test
       - run: pnpm kyc-provider:check
 
+  access-wrapper-invariants:
+    name: access-wrapper-invariants (validity entrypoints fail closed on omitted caller)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Epic-4 retrospective AI-4-3 (the I-3 "access wrapper is the new TOCTOU" family):
+    # every validity ACCESS ENTRYPOINT (exported async fn returning
+    # Promise<…MemberValidityPayload>) in packages/validity-service/src must declare an
+    # explicit caller-XOR-internal marker and fail CLOSED when neither is supplied, so
+    # none can default to returning a full unredacted, unaudited payload (the 4.6
+    # omitted-caller defect). Mechanizes the cheapest slice of the AI-4-3 checklist; the
+    # rest (independent caller-auth, HMAC audit hashes, isolated best-effort writes,
+    # permission-key scope match) are reviewer-checklist convention. Static TS-AST scan,
+    # no DB / network. See scripts/access-wrapper-invariants/ +
+    # docs/access-wrapper-invariants.md. INVARIANT SCAN → NO fetch-depth: 0 (mirror
+    # member-state-invariant).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm access-wrapper:test
+      - run: pnpm access-wrapper:check
+
   determinism-replay:
     name: determinism-replay (FR-12A validity payload — P0 order invariant)
     runs-on: ubuntu-latest

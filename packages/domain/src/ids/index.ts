@@ -287,3 +287,15 @@ export const addressId = uuidBrand('AddressId');
 export type PostingId = Brand<'PostingId'>;
 /** Smart constructor: validates UUID shape, returns a branded `PostingId`. */
 export const postingId = uuidBrand('PostingId');
+
+// ── Device-token id (Story 5.2, Task 3) ───────────────────────────────────────
+// NEW branded id per the §Naming "branding mandatory on a new ID's first PR" discipline
+// (L3700-3708): `DeviceTokenId` is the per-row address of a member/admin push device-token
+// registration (`member_device_tokens.token_id`) — the FCM/APNs token itself is Tier-1 PII
+// (encrypted), so the row is keyed by this opaque UUID, never by the token. A UUID row address,
+// so it reuses the shared `uuidBrand` validator.
+
+/** Per-row address of a push device-token registration (`member_device_tokens.token_id`). */
+export type DeviceTokenId = Brand<'DeviceTokenId'>;
+/** Smart constructor: validates UUID shape, returns a branded `DeviceTokenId`. */
+export const deviceTokenId = uuidBrand('DeviceTokenId');

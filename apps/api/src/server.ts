@@ -31,6 +31,7 @@ import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
+import { registerDeviceTokenModule } from './modules/device-token/index.js';
 import { registerVyawasthaShulkModule } from './modules/vyawastha-shulk/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
 import { registerPariwarProvisioningModule } from './modules/pariwar-provisioning/index.js';
@@ -110,6 +111,11 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // 75/25 split, Tier-1 encrypted; emits member.nominees_declared, a non-transition marker).
   // Member-session-gated; NO step-up at signup (Life Events update + step-up is Story 3.9).
   registerNomineeModule(app, deps);
+  // Story 5.2 — push device-token registration (Epic 5's first [CONSUMER]): POST /member/device-tokens
+  // (requireMemberSession, the Story 3.2 app-open consumer) + POST /admin/device-tokens (requireAdminSession,
+  // the Story 1.9 admin-auth consumer). Registers the FCM/APNs token as Tier-1-encrypted, marks siblings
+  // stale (app-open rebuild); the push channel's real firebase-admin transports live in @twt/channels.
+  registerDeviceTokenModule(app, deps);
   // Story 3.5 — member medical-disclosure signup surface (0..N IMA conditions + concealment-
   // denial ack, Tier-1 encrypted, APPEND-ONLY history; records a consent via the audit-or-throw
   // chain + emits member.medical_disclosed, a non-transition marker). Member-session-gated; NO

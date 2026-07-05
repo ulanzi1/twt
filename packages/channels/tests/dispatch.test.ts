@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CANONICAL_CHANNEL_LADDER,
   TELEGRAM_SIDE_CHANNEL,
-  fcmProvider,
+  createFixturePushProvider,
   type AuditPort,
   type ChannelProvider,
   type DispatchDeps,
@@ -89,14 +89,34 @@ describe('category eligibility (AC3)', () => {
     }
   });
 
+  it('push accepts every category EXCEPT step_up_otp (transport routing, Story 5.2 AC4)', () => {
+    // step_up_otp is NOT push-eligible (SMS transport, Story 5.9).
+    expect(isCategoryEligible('push', 'step_up_otp')).toBe(false);
+    // niyamavali_amended IS eligible — it reaches push as a broadcast (epics L1486), NOT an 8th FR-71
+    // category. The 7 FR-71 categories are all eligible too.
+    expect(isCategoryEligible('push', 'niyamavali_amended')).toBe(true);
+    for (const category of [
+      'alert_published',
+      'deadline_reminder',
+      'contribution_confirmed',
+      'contribution_mismatch',
+      'claim_status_change',
+      'helpdesk_reply',
+      'module_new',
+    ] as const) {
+      expect(isCategoryEligible('push', category), category).toBe(true);
+    }
+  });
+
   it('skips Telegram for a per-member category EVEN with a telegram target present', async () => {
     const { deps } = makeDeps();
     const outcome = await dispatch(claimStatusChange(), deps);
     const telegram = outcome.attempts.find((a) => a.channel === 'telegram');
     expect(telegram?.outcome).toBe('skipped_ineligible');
-    // push/whatsapp/sms still attempted (they are eligible + have targets; stubs report not_implemented).
+    // push/whatsapp/sms still attempted (all eligible + have targets). push is now the REAL fixture
+    // transport (Story 5.2 — accepted ⇒ 'sent'); whatsapp/sms are still 5.1 stubs (not_implemented).
+    expect(outcome.attempts.find((a) => a.channel === 'push')?.outcome).toBe('sent');
     expect(outcome.attempts.filter((a) => a.outcome === 'not_implemented').map((a) => a.channel)).toEqual([
-      'push',
       'whatsapp',
       'sms',
     ]);
@@ -134,7 +154,7 @@ describe('delivery gate (AC3)', () => {
 
   it('errors (never silently falls back to fcm) for an iOS target when no apns provider is registered', async () => {
     const { deps } = makeDeps({
-      providers: { push: [fcmProvider], whatsapp: [], sms: [], telegram: [] },
+      providers: { push: [createFixturePushProvider('fcm')], whatsapp: [], sms: [], telegram: [] },
       resolveDelivery: () =>
         Promise.resolve({ push: { channel: 'push', address: 'tok', platform: 'ios' } }),
     });
@@ -158,7 +178,7 @@ describe('audit lines (AC7 / AI-4-3(c))', () => {
     expect(dispatchLines[0]!.responseStatus).toBe(200);
     // The dispatch line records EVERY channel with its honest outcome (AC7 'attempted', not a sent filter).
     expect(dispatchLines[0]!.resourceLocator).toContain(
-      'channels=push:not_implemented,whatsapp:not_implemented,sms:not_implemented,telegram:not_implemented',
+      'channels=push:sent,whatsapp:not_implemented,sms:not_implemented,telegram:not_implemented',
     );
   });
 
@@ -220,7 +240,7 @@ describe('P0 immutability-violation path (AC4)', () => {
       // A renderer that ATTEMPTS to mutate the frozen alert → throws in strict mode.
       render: (alert) => {
         (alert as { time_critical: boolean }).time_critical = true;
-        return { channel: 'push', title: null, body: 'x' };
+        return { channel: 'push', title: null, body: 'x', deepLink: null };
       },
     });
     const outcome = await dispatch(announcement(), deps);
@@ -303,7 +323,7 @@ describe('per-channel failure isolation (the critical review finding)', () => {
   it("a telegram failure never affects the ladder outcome (AC3 fire-and-forget)", async () => {
     const { deps } = makeDeps({
       providers: {
-        push: [fcmProvider],
+        push: [createFixturePushProvider('fcm')],
         whatsapp: [throwingProvider('whatsapp-business', 'whatsapp')],
         sms: [throwingProvider('sms-dlt', 'sms')],
         telegram: [throwingProvider('telegram', 'telegram')],
@@ -311,7 +331,7 @@ describe('per-channel failure isolation (the critical review finding)', () => {
     });
     const outcome = await dispatch(announcement(), deps);
     expect(outcome.attempts.find((a) => a.channel === 'telegram')?.outcome).toBe('error');
-    expect(outcome.attempts.find((a) => a.channel === 'push')?.outcome).toBe('not_implemented');
+    expect(outcome.attempts.find((a) => a.channel === 'push')?.outcome).toBe('sent');
     // Order in the record is still canonical: ladder then side-channel.
     expect(outcome.attempts.map((a) => a.channel)).toEqual(['push', 'whatsapp', 'sms', 'telegram']);
   });

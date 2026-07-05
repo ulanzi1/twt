@@ -15,6 +15,7 @@
   "dependencies": {
     "@twt/contracts": "workspace:*",
     "@twt/domain": "workspace:*",
+    "firebase-admin": "^14.1.0",
     "pg": "^8.13.0"
   },
   "devDependencies": {

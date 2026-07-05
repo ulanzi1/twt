@@ -104,6 +104,11 @@ export * from './member_search_projection.js';
 // `cohort_invalidation_epochs` (the transactional per-cohort invalidation counter, D2-A/D4-A).
 export * from './member_validity_cache.js';
 export * from './cohort_invalidation_epochs.js';
+// Story 5.2 — member_device_tokens: the per-member / per-admin push device-token registration substrate
+// (tenant-isolated; token → Tier-1 ciphertext + a blind index for dedup/lookup/audit). Backs the `push`
+// channel (FCM/APNs). App-open rebuild marks siblings stale; unrecoverable Firebase token errors mark
+// invalid; a Class C cleanup job prunes stale/invalid. member_id FK cascade for RTBF (Story 3.12).
+export * from './member_device_tokens.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

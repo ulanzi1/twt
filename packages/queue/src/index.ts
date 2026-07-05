@@ -85,6 +85,14 @@ export const QUEUE_NAMES = {
    * Mirrors IDEMPOTENCY_VACUUM (a single idempotent DELETE on the BYPASSRLS service pool). Job class C.
    */
   VALIDITY_CACHE_GC: 'validity_cache.gc',
+  /**
+   * Push device-token stale/invalid cleanup (Story 5.2, AC5). DELETEs `member_device_tokens` rows that
+   * are `stale` past 7d or `invalid` past 30d (provisional operational defaults — not policy-derived).
+   * Storage hygiene: reclaims dead Tier-1 ciphertext for tokens the app-open rebuild superseded or a
+   * Firebase not-registered error killed. Mirrors IDEMPOTENCY_VACUUM (a single idempotent DELETE on the
+   * BYPASSRLS service pool). Job class C (background).
+   */
+  DEVICE_TOKEN_CLEANUP: 'member.device_token.cleanup',
 } as const;
 
 /** Union of the registered queue names. */

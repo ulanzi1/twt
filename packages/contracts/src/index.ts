@@ -73,6 +73,15 @@ export * from './rbac/index.js';
 // (same posture as notifications/ + consent/).
 export * from './alerts/index.js';
 
+// Story 5.2 — the deep-link URI grammar (per-category target derived from alert_category + payload_data).
+// Populated into PUSH payloads by @twt/channels' renderer; the mobile/public/admin landing is a later
+// story. Internal render seam — NO `.openapi()` path, openapi/v1.yaml stays byte-identical.
+export * from './deep-links/index.js';
+
+// Story 5.2 — push device-token registration DTOs (member + admin endpoints). HTTP endpoints → these DO
+// register in openapi/v1.yaml (the two new routes are the EXPECTED diff for this story).
+export * from './device-tokens/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

@@ -45,11 +45,19 @@ The architectural-launch-gate-inventory framework moves through the following st
 
 **Framework-lifecycle deadline (D-03 resolution):** Task 8 ratification is due on or before **2026-07-01** (Story 0.15 Task 7 author-commit 2026-06-03 + 4 weeks per `target-date-rationale-template.md` §0). If Task 8 has not occurred by 2026-07-01, BigDev surfaces the slip to the Trustee Panel as an emergency agenda item per `monthly-review-cadence-protocol.md` §6; slip reason recorded below.
 
-`<PENDING-TASK-8>` — populated at Task 8 closure with: ratification date | ratifying trustees ≥2 | ratified-inventory-version | per-row ratified target-date | per-row ratified closure-criteria | cross-reference to `.decision-log.md` `[VALIDATION]` supersession entry on Decision 015.
+**Slip recorded:** deadline 2026-07-01; ratification occurred **2026-07-05** — a **4-day slip**. Slip reason: session-scheduling delay; no roster row was affected and no ratified content changed as a result. Surfaced as agenda item 1 of the first monthly review (`docs/launch-gate-inventory/meeting-minutes/2026-07-05.md`) per §6.
+
+| Date | Ratifying trustees | Ratified-inventory version | Notes | Cross-reference |
+|---|---|---|---|---|
+| 2026-07-05 | Dhiraj Rahul + Kalpana Bharti (≥2 met) | `inventory-roster.md` 15-row roster + per-row owner + per-row closure-criteria + per-row target-date, as authored at Story 0.15 Task 7 | Ratifies the tracker + the review process (`monthly-review-cadence-protocol.md`), arming Task 9. Does **not** close individual rows — each row closes per its own discharge path. Ratified via `docs/knowledge-transfer/trustee-consent-sheet-phase0-framework-ratifications.md` row R4. | `.decision-log.md` Decision 2026-07-05-064 (supersedes the un-ratified leg of Decision 2026-06-03-015) |
 
 ## §4 — Per-monthly-review log
 
-`<PENDING-TASK-9>` — populated at each monthly review per `monthly-review-cadence-protocol.md` §5 meeting-minutes schema with: meeting date | attending trustees | Legal Counsel attendance | open-row count | rows closed | rows escalated | rows newly elevated | revision proposals | next meeting date | emergency-trigger (if applicable) | cross-reference to `docs/launch-gate-inventory/meeting-minutes/YYYY-MM-DD.md`.
+| Meeting date | Attending trustees | Legal Counsel attendance | Open-row count | Rows closed | Rows escalated | Rows newly elevated | Revision proposals | Next meeting date | Emergency trigger | Cross-reference |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-07-05 (first monthly review, per Task 9) | Dhiraj Rahul + Kalpana Bharti (≥2 met) | Not required this session (no Legal Counsel engaged yet; B1 selection just opened) | 7 open + 1 in-progress + 3 conditional-escalation-pending-predicate + 1 reserved | None | None | None | None proposed | 2026-08-05 | No | `docs/launch-gate-inventory/meeting-minutes/2026-07-05.md` |
+
+**Trustee assessment notes (agenda item 1, not a formal escalation):** Rows 4 (P0-1 lifecycle/operational-state coverage) and 5 (P0-2 member-class validation) assessed **at-risk** by the Trustee Panel; Rows 6, 7, 8, 9, 10, 11 assessed on-track (6 not yet due). No `target_date` has been missed (none is yet in scope for an escalation-protocol trigger), so this is recorded as a trustee-assessment flag for the next review, not an `escalation-protocol.md` §3/§4 escalation event. **Additional directive recorded:** proceed with legal-counsel selection under the ratified R1 scope; continue B1/B4/B6/B8 and revisit at the 2026-08-05 review.
 
 ## §5 — Per-row closure log
 

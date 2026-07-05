@@ -50,7 +50,7 @@
 
 | Date | Ratifying trustees | Mode | Ratified scope items | Conditions / Notes |
 |---|---|---|---|---|
-| `<PENDING-TASK-7>` | `<≥2 trustees>` | `<pack-as-a-unit OR per-scope-item>` | `review-scope-charter.md` §1 + §3 + §4 + §5 + §6 + §7 | If per-scope-item, enumerate items + per-item rationale |
+| 2026-07-05 | Dhiraj Rahul + Kalpana Bharti | pack-as-a-unit | `review-scope-charter.md` §1 + §3 + §4 + §5 + §6 + §7 | Ratified via `docs/knowledge-transfer/trustee-consent-sheet-phase0-framework-ratifications.md` row R1; discharges Story 0.13 Task 7; unblocks Task 8 (counsel shortlist + selection). Cross-reference: `.decision-log.md` Decision 2026-07-05-064. |
 
 ---
 

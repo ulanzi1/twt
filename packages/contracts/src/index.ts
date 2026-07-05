@@ -67,6 +67,11 @@ export * from './data-export/index.js';
 // Same openapi posture — NO `.openapi()`, openapi/v1.yaml unchanged.
 export * from './rtbf/index.js';
 export * from './rbac/index.js';
+// Story 5.1 — the structured `alert` channel-primitive payload (Alert discriminated union + AlertCategory
+// + ProvenanceRefs). Consumed by @twt/channels' central dispatcher; the eventual target shape the FR-23
+// nudge seam maps into. Internal queue seam — NO `.openapi()` path, openapi/v1.yaml stays byte-identical
+// (same posture as notifications/ + consent/).
+export * from './alerts/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';
 

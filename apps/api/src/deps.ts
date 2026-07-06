@@ -236,6 +236,13 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Data-export build-job producer (Story 3.11) — the FIRST api-side queue producer (send-only). Uses
     // the same DB connection string as the app pool (pgboss schema; apps/jobs already created it).
     dataExportQueue: await createPgBossDataExportEnqueuer(connectionString),
+    // Channel Secret-Manager resolver (Story 5.4) — resolves a per-Pariwar WA webhook credential NAME →
+    // value. Local dev falls back to an env var derived from the NAME (non-alphanumerics → `_`, uppercased),
+    // the SAME resolveSecretValue path the argon2 pepper / DigiLocker secrets use; prod uses Secret Manager.
+    resolveChannelSecret: (secretName: string) =>
+      resolveSecretValue(secretName, {
+        envFallback: secretName.replace(/[^A-Za-z0-9]/g, '_').toUpperCase(),
+      }),
     clock: () => new Date(),
   };
 }

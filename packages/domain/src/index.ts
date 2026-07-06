@@ -87,6 +87,17 @@ export {
   ConsentStateError,
   CONSENT_INVALID_STATE_CODE,
 } from './consent/errors.js';
+// Member WA opt-in typed errors (Story 5.4). Surfaced at the top level — mirroring the consent errors — so
+// the apps/api member opt-in route error-mapping imports the class + code constant directly; the full
+// primitive is also under the `waOptIn` namespace below.
+export {
+  WaOptInNotFoundError,
+  WA_OPT_IN_NOT_FOUND_CODE,
+  WaOptInPendingExistsError,
+  WA_OPT_IN_PENDING_EXISTS_CODE,
+  WaOptInStateError,
+  WA_OPT_IN_INVALID_STATE_CODE,
+} from './wa-opt-in/errors.js';
 // Member lifecycle direct-write rejection (Story 3.1, AC3). Surfaced at the top
 // level — mirroring the consent errors — so the apps/api error-mapping middleware
 // (Story 3.6 signup route) imports the class + code constant from `@twt/domain`
@@ -143,4 +154,10 @@ export * as deviceToken from './device-token/index.js';
 // and the delivery-gate resolveApprovedTemplate (null ⇒ category not WA-eligible). Tenant-scoped; the
 // access-token NAME is a pointer resolved by the composition layer, never here.
 export * as channelConfig from './channel-config/index.js';
+// Story 5.4 — member WA opt-in state-machine accessors: the five-state operational lifecycle transitions
+// (createPendingOptIn/activateOptIn/revokeOptIn), the match/status reads (matchPendingOptIn/isOptInActive/
+// getOptInForMember), the §3.11 webhook-queue seam (persistInboundWebhookEvent/claimUnprocessedWebhookEvents/
+// markWebhookEventProcessed), and the verification-phrase generate/extract helpers. Tenant-scoped; audit
+// linkage is the consumer route/worker's obligation (audit-or-throw).
+export * as waOptIn from './wa-opt-in/index.js';
 export { UUID_REGEX } from './db.js';

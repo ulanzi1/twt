@@ -101,6 +101,12 @@ export const consentTypeEnum = pgEnum('consent_type', [
   'medical_disclosure_ack',
   'nominee_share_split',
   'claim_time_dpdpa',
+  // Story 5.4 — member WhatsApp opt-in consent (the Epic-5 additive named in the
+  // schema header). Recorded on the PENDING→ACTIVE inbound-webhook match; revoked on
+  // member/STOP/Meta-block/admin opt-out. APPENDED at the END — never reorder an
+  // existing pgEnum (stored ordinals). Added by an `ALTER TYPE … ADD VALUE` migration
+  // in its OWN file (that DDL cannot run in a tx / be used in the same tx it is added).
+  'whatsapp_opt_in',
 ]);
 
 /**

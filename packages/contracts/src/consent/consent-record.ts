@@ -36,6 +36,9 @@ export const ConsentTypeSchema = z.enum([
   'medical_disclosure_ack',
   'nominee_share_split',
   'claim_time_dpdpa',
+  // Story 5.4 — member WhatsApp opt-in consent (lockstep with the domain `consent_type`
+  // pgEnum; the tests/consent.test.ts equality assertion is the anti-drift guard).
+  'whatsapp_opt_in',
 ]);
 export type ConsentTypeSchema = z.output<typeof ConsentTypeSchema>;
 

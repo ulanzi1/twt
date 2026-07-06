@@ -34,6 +34,8 @@ function baseConfig(pariwar: string) {
     wabaId: 'waba-abc',
     accessTokenSecretName: 'twt-wa-token-pariwar-a',
     graphApiVersion: 'v21.0',
+    appSecretSecretName: 'twt-wa-app-secret-pariwar-a',
+    webhookVerifyTokenSecretName: 'twt-wa-verify-token-pariwar-a',
     updatedByActor: null,
   };
 }

@@ -29,6 +29,9 @@ import {
   TcVersionConflictError,
   TcVersionNotFoundError,
   ToneReviewRequiredError,
+  WaOptInNotFoundError,
+  WaOptInPendingExistsError,
+  WaOptInStateError,
   ids,
   type ErrorResponseShape,
 } from '@twt/domain';
@@ -160,6 +163,23 @@ export function errorMappingHandler(
   }
   if (error instanceof TcPinnedClauseNotFoundError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3d) WA opt-in typed errors (Story 5.4, AC1/AC3/AC4). Each owns its code + projector.
+  //   WaOptInNotFoundError       → 404 wa_opt_in.not_found
+  //   WaOptInPendingExistsError  → 409 wa_opt_in.pending_exists (a PENDING is already outstanding)
+  //   WaOptInStateError          → 409 wa_opt_in.invalid_state (illegal transition, e.g. a concurrent race)
+  if (error instanceof WaOptInNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof WaOptInPendingExistsError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof WaOptInStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
     return;
   }
 

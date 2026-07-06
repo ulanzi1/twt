@@ -281,6 +281,41 @@
       "when": 1784086800000,
       "tag": "0039_whatsapp-send-status",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1784173200000,
+      "tag": "0040_consent-type-whatsapp-opt-in",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1784259600000,
+      "tag": "0041_pariwar-wa-config-webhook-credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1784346000000,
+      "tag": "0042_member-wa-opt-in",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1784432400000,
+      "tag": "0043_wa-inbound-webhook-events",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1784518800000,
+      "tag": "0044_member-wa-opt-in-pending-member-uq",
+      "breakpoints": true
     }
   ]
 }

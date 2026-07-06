@@ -35,6 +35,10 @@ export interface WaConfigUpsertInput {
   /** Secret-Manager NAME pointer (NOT the token value). NULL ⇒ fixture. */
   readonly accessTokenSecretName: string | null;
   readonly graphApiVersion: string;
+  /** Story 5.4 — NAME of the Meta app secret for X-Hub-Signature-256 verification (NOT the value). NULL ⇒ reject. */
+  readonly appSecretSecretName: string | null;
+  /** Story 5.4 — NAME of the GET-challenge verify token (NOT the value). NULL ⇒ challenge fails-closed. */
+  readonly webhookVerifyTokenSecretName: string | null;
   /** The admin actor writing the config (audit provenance). NULL = system/seed. */
   readonly updatedByActor: UserId | null;
 }
@@ -74,6 +78,8 @@ export async function upsertWaConfig(db: Db, input: WaConfigUpsertInput): Promis
       wabaId: input.wabaId,
       accessTokenSecretName: input.accessTokenSecretName,
       graphApiVersion: input.graphApiVersion,
+      appSecretSecretName: input.appSecretSecretName,
+      webhookVerifyTokenSecretName: input.webhookVerifyTokenSecretName,
       updatedByActor: input.updatedByActor,
     })
     .onConflictDoUpdate({
@@ -85,10 +91,32 @@ export async function upsertWaConfig(db: Db, input: WaConfigUpsertInput): Promis
         wabaId: input.wabaId,
         accessTokenSecretName: input.accessTokenSecretName,
         graphApiVersion: input.graphApiVersion,
+        appSecretSecretName: input.appSecretSecretName,
+        webhookVerifyTokenSecretName: input.webhookVerifyTokenSecretName,
         updatedByActor: input.updatedByActor,
         updatedAt: new Date(),
       },
     });
+}
+
+/**
+ * Reverse-lookup a Pariwar's WA config by Meta's `phone_number_id` (Story 5.4, Task 2) — the async webhook
+ * worker needs Pariwar-from-phone_number_id when correlating a persisted status callback. The trust-
+ * establishing signature-verification path uses the URL `:pariwarId` (NOT this — the payload must not be
+ * trusted to select the verification key); this backs status-callback correlation + cross-checks AFTER the
+ * event is already verified + persisted. Runs on the passed (service or scoped) `Db`. Returns null when no
+ * config carries that phone_number_id.
+ */
+export async function getWaConfigByPhoneNumberId(
+  db: Db,
+  phoneNumberId: string,
+): Promise<PariwarWaConfigRow | null> {
+  const rows = await db
+    .select()
+    .from(pariwarWaConfig)
+    .where(eq(pariwarWaConfig.phoneNumberId, phoneNumberId))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 /** List all per-category template mappings for a Pariwar (the admin read + delivery listing). Tenant-scoped. */

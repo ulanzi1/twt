@@ -45,6 +45,8 @@ const FULL_CONFIG = {
   wabaId: 'waba',
   accessTokenSecretName: 'twt-wa-token',
   graphApiVersion: 'v21.0',
+  appSecretSecretName: 'twt-wa-app-secret',
+  webhookVerifyTokenSecretName: 'twt-wa-verify-token',
   updatedByActor: null,
   createdAt: new Date(),
   updatedAt: new Date(),

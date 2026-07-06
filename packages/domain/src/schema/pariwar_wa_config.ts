@@ -56,6 +56,20 @@ export const pariwarWaConfig = pgTable('pariwar_wa_config', {
   // change, not a redeploy (AC3). The provider reads this into the send URL.
   graphApiVersion: text('graph_api_version').notNull().default(DEFAULT_GRAPH_API_VERSION),
 
+  // ── Story 5.4 (Task 2) — inbound-webhook credential NAME pointers ─────────────────────────────────────
+  // Both are Secret-Manager NAMEs (pointers), NEVER the secret value — the SAME AI-4-3(c) discipline
+  // access_token_secret_name uses. Plain text (a NAME is not a secret); NULLABLE. The webhook ingress
+  // primitive (apps/api/src/modules/channel-webhooks/) resolves NAME → value at request time and NEVER
+  // persists/logs/audits the resolved value.
+
+  // The NAME of the Meta APP SECRET used to verify inbound X-Hub-Signature-256 (HMAC-SHA256 over the RAW
+  // request body). NULL ⇒ this Pariwar's webhook cannot be verified ⇒ the POST receiver rejects (fail-closed).
+  appSecretSecretName: text('app_secret_secret_name'),
+
+  // The NAME of the token echoed in Meta's GET subscription-verification challenge (`hub.verify_token`).
+  // NULL ⇒ the GET challenge fails-closed (no subscription can be verified for this Pariwar).
+  webhookVerifyTokenSecretName: text('webhook_verify_token_secret_name'),
+
   // The admin actor who last wrote this config (audit provenance). NULL = system/seed. FK-free at the
   // column layer (mirrors events_log.actor_id nullable-actor precedent); the audit line carries the actor.
   updatedByActor: uuid('updated_by_actor').$type<UserId>(),

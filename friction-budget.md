@@ -29,6 +29,7 @@ deliberately accepted.
 | Anita (verifier, over-payment recovery judgment) | Pool Engine                                | forced     |
 | Sunita (nominee bank-statement upload)           | facilitator-not-intermediary trust posture | forced     |
 | member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |
+| member (opting in to WhatsApp notifications; sends a pre-filled "Send Hello" WhatsApp message to confirm) | Explicit, member-initiated consent provenance (AC4 — no inferred/passive consent for a new communication channel) | optional |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -216,6 +217,23 @@ Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The 
 (2) **MembershipStatusEntry nav tile + home-tab mount — user-initiated, non-blocking:** `apps/mobile/components/member-status/MembershipStatusEntry.tsx` (the home-tab entry point) and `apps/mobile/app/(tabs)/index.tsx` (mount point) are identical in character to the Story 3.9 `<LifeEventsEntry>`, Story 3.10 `<WithdrawalEntry>`, and Story 3.11 `<DataExportEntry>` already affirmed: a chromeless, always-available tile that navigates to the status screen only when the member deliberately taps it. No forced step, no form, no gate. `apps/mobile/components/member-status/useMemberValidityQuery.ts` is a data-fetch hook, not a friction surface.
 
 Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
+**Story 5.4 disposition (NEW row — optional opt-in friction):** the WhatsApp notification
+opt-in surface (`apps/mobile/app/(settings)/notifications.tsx` + `_layout.tsx`,
+`apps/mobile/components/notifications/NotificationSettingsEntry.tsx`, the home-tab entry
+in `apps/mobile/app/(tabs)/index.tsx`) introduces one deliberate, member-initiated friction:
+after tapping "Receive notifications via WhatsApp," the member is handed off to WhatsApp via
+a pre-filled Send-Hello deep-link (`Linking.openURL`) and must actively send that message to
+confirm. This is **not gratuitous** — it is the explicit, non-inferred consent mechanism AC4
+requires (no passive/pre-checked/bundled consent is permitted for a new communication
+channel) and doubles as the phone-number-ownership proof the inbound-webhook match relies on.
+The toggle itself is entirely **optional** — a member who never taps it experiences zero
+friction; the settings entry point and screen are ordinary, ambient settings navigation, not
+a gate. Declared as the NEW row above (`member (opting in to WhatsApp notifications) →
+explicit consent provenance (AC4) → optional`). The **page-weight baseline is unchanged**:
+all new files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op →
+`member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the
+PUBLIC `apps/public` Astro surface, which this story does not touch.
 
 ## How to declare (attribution-on-change — AC-4)
 

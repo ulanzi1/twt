@@ -79,6 +79,25 @@ export function WaConfigForm({ initial, onSubmit, pending, submitError }: WaConf
         {errors.graphApiVersion && <p role="alert" className="text-sm text-status-fail-fg">{errors.graphApiVersion.message}</p>}
       </div>
 
+      {/* Story 5.4 — inbound-webhook credential NAMEs (pointers, never the secret values). */}
+      <div className="flex flex-col gap-1">
+        <label htmlFor="appSecretSecretName" className="text-sm font-medium">
+          App-secret Secret-Manager NAME (inbound webhook signature — a pointer, never the value)
+        </label>
+        <input id="appSecretSecretName" className="rounded border px-2 py-1" {...register('appSecretSecretName', { setValueAs: blankToNull })} />
+        <p className="text-xs opacity-60">Verifies Meta's X-Hub-Signature-256 on inbound webhooks. Leave blank to reject inbound webhooks (fail-closed).</p>
+        {errors.appSecretSecretName && <p role="alert" className="text-sm text-status-fail-fg">{errors.appSecretSecretName.message}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="webhookVerifyTokenSecretName" className="text-sm font-medium">
+          Webhook verify-token Secret-Manager NAME (GET challenge — a pointer, never the value)
+        </label>
+        <input id="webhookVerifyTokenSecretName" className="rounded border px-2 py-1" {...register('webhookVerifyTokenSecretName', { setValueAs: blankToNull })} />
+        <p className="text-xs opacity-60">Echoed to Meta's subscription-verification GET. Leave blank to fail the challenge (fail-closed).</p>
+        {errors.webhookVerifyTokenSecretName && <p role="alert" className="text-sm text-status-fail-fg">{errors.webhookVerifyTokenSecretName.message}</p>}
+      </div>
+
       <button type="submit" disabled={pending} aria-busy={pending} className="rounded bg-black px-4 py-2 text-white disabled:opacity-60" data-testid="wa-config-submit">
         {pending ? 'Saving…' : 'Save config'}
       </button>

@@ -30,6 +30,8 @@ import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
+import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
+import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
 import { registerDeviceTokenModule } from './modules/device-token/index.js';
@@ -142,6 +144,16 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 5.3 — trustee WhatsApp Business config surface (FR-72): GET/PUT the per-Pariwar WA config
   // singleton + GET/PUT the per-category UTILITY template mapping, gated by pariwar.configure_channels.
   registerChannelConfigModule(app, deps);
+  // Story 5.4 — WhatsApp inbound-webhook ingress primitive (§3.11): per-Pariwar Meta webhook receiver
+  // (GET subscription challenge + POST verify-persist-ack-within-5s). Public (Meta is unauthenticated — the
+  // verify-token / X-Hub-Signature-256 IS the auth; login-wall-allowlisted). Encapsulated so its raw-body
+  // parser (for the HMAC) is scoped. NO business logic in the handler — the apps/jobs worker drains the queue.
+  registerChannelWebhooksModule(app, deps);
+  // Story 5.4 — member WhatsApp opt-in surface (FR-72 + AR-16): POST mint a PENDING opt-in (Send-Hello
+  // deep-link + verification phrase) / GET status / DELETE revoke (independently revocable) — member-session
+  // -gated — plus the trustee admin_action force-opt-out (member.moderate). The inbound-webhook worker
+  // advances PENDING→ACTIVE; this is the member-facing half of the dual gate (AC6).
+  registerWaOptInModule(app, deps);
   // Story 3.9 — member Life Events panel surface (FR-5): update nominees / address / transfer-in-out
   // / medical disclosure. Nominee + medical REUSE the 3.4/3.5 declare/submit services behind a member
   // step-up gate ('nominee_change' / 'medical_change'); address + posting are NEW append-only writes

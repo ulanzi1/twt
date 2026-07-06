@@ -142,6 +142,7 @@ export interface TestDepsOverrides {
   niyamavaliAmendedHook?: NiyamavaliAmendedHook;
   kycProviders?: KycProviderRegistry;
   dataExportQueue?: DataExportEnqueuer;
+  resolveChannelSecret?: (secretName: string) => Promise<string>;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
 }
@@ -220,6 +221,11 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Data-export queue producer (Story 3.11) — a capturing fake by default so the request spec can
     // assert the build job was enqueued without a live pg-boss.
     dataExportQueue,
+    // Channel secret resolver (Story 5.4) — a deterministic fake by default so the webhook signature
+    // round-trip is testable without Secret Manager: a NAME resolves to `test-secret::<name>`. A spec that
+    // signs a webhook computes its HMAC over this same value.
+    resolveChannelSecret:
+      overrides.resolveChannelSecret ?? (async (name: string): Promise<string> => `test-secret::${name}`),
     clock: overrides.clock ?? ((): Date => new Date()),
   };
   return {
@@ -259,9 +265,9 @@ export interface InjectResult {
 /** A cookie-threading HTTP client over fastify.inject (no supertest). */
 export function makeClient(app: TestApp['app']): {
   inject(opts: {
-    method: 'GET' | 'POST' | 'PUT';
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE';
     url: string;
-    payload?: object;
+    payload?: object | string;
     headers?: Record<string, string>;
   }): Promise<InjectResult>;
 } {

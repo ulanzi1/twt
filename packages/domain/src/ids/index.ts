@@ -311,3 +311,24 @@ export const deviceTokenId = uuidBrand('DeviceTokenId');
 export type WaTemplateId = Brand<'WaTemplateId'>;
 /** Smart constructor: validates UUID shape, returns a branded `WaTemplateId`. */
 export const waTemplateId = uuidBrand('WaTemplateId');
+
+// ── Member WA opt-in + inbound-webhook-event ids (Story 5.4, Task 3/4) ─────────
+// Two NEW branded ids per the §Naming "branding mandatory on a new ID's first PR" discipline
+// (L3700-3708): `MemberWaOptInId` is the per-row address of a member WhatsApp opt-in state-machine row
+// (`member_wa_opt_in.opt_in_id`); `WaInboundWebhookEventId` is the per-row address of a persisted Meta
+// inbound-webhook event on the §3.11 webhook queue (`wa_inbound_webhook_events.event_id`). Both are UUID
+// row addresses, so both reuse the shared `uuidBrand` validator.
+//
+// NOTE: `member_wa_opt_in.member_id` is deliberately NOT FK-branded to a single owner — like consent's
+// `subject_id` it is a polymorphic member reference (the members cross-reference lives in Epic 3); it
+// carries the `MemberId` brand as a `$type` hint only (no FK to the RLS-forced `members`).
+
+/** Per-row address of a member WA opt-in state-machine row (`member_wa_opt_in.opt_in_id`). */
+export type MemberWaOptInId = Brand<'MemberWaOptInId'>;
+/** Smart constructor: validates UUID shape, returns a branded `MemberWaOptInId`. */
+export const memberWaOptInId = uuidBrand('MemberWaOptInId');
+
+/** Per-row address of a persisted Meta inbound-webhook event (`wa_inbound_webhook_events.event_id`). */
+export type WaInboundWebhookEventId = Brand<'WaInboundWebhookEventId'>;
+/** Smart constructor: validates UUID shape, returns a branded `WaInboundWebhookEventId`. */
+export const waInboundWebhookEventId = uuidBrand('WaInboundWebhookEventId');

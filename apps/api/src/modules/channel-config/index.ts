@@ -18,6 +18,10 @@ export {
   type WhatsappCompositionDeps,
 } from './composition.js';
 
+// Story 5.4 (Task 7 / AC6) — the dual-gated WA delivery-resolver read (admin toggle AND member opt-in
+// ACTIVE). Closes the 5.3 seam; a reusable read for the future live dispatch (still NO live call site).
+export { resolveWaTarget, type WaTargetDeps } from './composition.js';
+
 export function registerChannelConfigModule(app: FastifyInstance, deps: AppDeps): void {
   registerChannelConfigRoutes(app, deps);
 }

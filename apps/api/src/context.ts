@@ -226,6 +226,14 @@ export interface AppDeps {
    * `DATA_EXPORT_BUILD` job here after inserting the `pending` row.
    */
   readonly dataExportQueue: DataExportEnqueuer;
+  /**
+   * Channel Secret-Manager resolver (Story 5.4) — resolves a per-Pariwar Secret-Manager NAME (a pointer) to
+   * its VALUE for the WhatsApp inbound-webhook signature/challenge (the app secret + the verify token). The
+   * NAME comes from `pariwar_wa_config`; the resolved value NEVER leaves the handler (AI-4-3(c)). Prod wires
+   * `resolveSecretValue`; tests inject a deterministic fake so the webhook signature round-trip is testable
+   * without Secret Manager. Same injectable-seam pattern as `deployTrigger` / `turnstile`.
+   */
+  readonly resolveChannelSecret: (secretName: string) => Promise<string>;
   /** Injectable clock — tests freeze it to assert TTL / lockout / window expiry. */
   readonly clock: () => Date;
 }

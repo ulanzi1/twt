@@ -87,6 +87,11 @@ export * from './device-tokens/index.js';
 // internal Alert / WA template-render seam still must NOT appear).
 export * from './channel-config/index.js';
 
+// Story 5.4 — member WhatsApp opt-in DTOs (member-session-gated opt-in surface) + the wa_opt_in_state
+// lockstep. HTTP endpoints → these DO register in openapi/v1.yaml (the member opt-in routes are the
+// EXPECTED diff for this story).
+export * from './wa-opt-in/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

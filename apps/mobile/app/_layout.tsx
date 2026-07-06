@@ -156,6 +156,14 @@ function RootLayoutNav() {
           }}
         />
 
+        {/* Story 5.4 — notification settings (WhatsApp opt-in) route group. */}
+        <Stack.Screen
+          name="(settings)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
         <Stack.Screen
           name="modal"
           options={{

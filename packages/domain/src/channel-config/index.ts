@@ -4,6 +4,7 @@
 
 export {
   getWaConfig,
+  getWaConfigByPhoneNumberId,
   upsertWaConfig,
   listWaTemplates,
   upsertWaTemplate,

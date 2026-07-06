@@ -138,6 +138,8 @@ describe.skipIf(!hasDatabase)('Trustee WhatsApp Business config (Story 5.3)', ()
         wabaId: 'waba-xyz',
         accessTokenSecretName: 'twt-wa-token-p1',
         graphApiVersion: 'v21.0',
+        appSecretSecretName: 'twt-wa-app-secret-p1',
+        webhookVerifyTokenSecretName: 'twt-wa-verify-token-p1',
       },
     });
     expect(put.statusCode).toBe(200);
@@ -164,7 +166,7 @@ describe.skipIf(!hasDatabase)('Trustee WhatsApp Business config (Story 5.3)', ()
     await client.inject({
       method: 'PUT',
       url: waBase(pariwarId),
-      payload: { enabled: true, displayPhoneNumber: null, phoneNumberId: null, wabaId: null, accessTokenSecretName: null, graphApiVersion: 'v21.0' },
+      payload: { enabled: true, displayPhoneNumber: null, phoneNumberId: null, wabaId: null, accessTokenSecretName: null, graphApiVersion: 'v21.0', appSecretSecretName: null, webhookVerifyTokenSecretName: null },
     });
 
     const putTpl = await client.inject({
@@ -193,7 +195,7 @@ describe.skipIf(!hasDatabase)('Trustee WhatsApp Business config (Story 5.3)', ()
     const res = await client.inject({
       method: 'PUT',
       url: waBase(pariwarId),
-      payload: { enabled: true, displayPhoneNumber: null, phoneNumberId: null, wabaId: null, accessTokenSecretName: null, graphApiVersion: 'v21.0' },
+      payload: { enabled: true, displayPhoneNumber: null, phoneNumberId: null, wabaId: null, accessTokenSecretName: null, graphApiVersion: 'v21.0', appSecretSecretName: null, webhookVerifyTokenSecretName: null },
     });
     expect(res.statusCode).not.toBe(200);
     expect([403, 404]).toContain(res.statusCode);
@@ -207,7 +209,7 @@ describe.skipIf(!hasDatabase)('Trustee WhatsApp Business config (Story 5.3)', ()
     const res = await client.inject({
       method: 'PUT',
       url: waBase(pariwarId),
-      payload: { enabled: true, displayPhoneNumber: null, phoneNumberId: null, wabaId: null, accessTokenSecretName: null, graphApiVersion: 'v21.0' },
+      payload: { enabled: true, displayPhoneNumber: null, phoneNumberId: null, wabaId: null, accessTokenSecretName: null, graphApiVersion: 'v21.0', appSecretSecretName: null, webhookVerifyTokenSecretName: null },
     });
     expect([401, 403]).toContain(res.statusCode);
   });

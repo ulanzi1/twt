@@ -2,6 +2,7 @@ import { YStack } from 'tamagui'
 
 import { DataExportEntry } from 'components/data-export/DataExportEntry'
 import { LifeEventsEntry } from 'components/life-events/LifeEventsEntry'
+import { NotificationSettingsEntry } from 'components/notifications/NotificationSettingsEntry'
 import { MembershipStatusEntry } from 'components/member-status/MembershipStatusEntry'
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
 import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
@@ -28,6 +29,8 @@ export default function YogdaanTab() {
       {/* Story 4.7 — the member-facing MemberStatusPanel entry (own status; Hindi-first, a11y). */}
       <MembershipStatusEntry />
       <YogdaanBahi />
+      {/* Story 5.4 — understated notification-settings (WhatsApp opt-in) entry (a member choice). */}
+      <NotificationSettingsEntry />
       {/* Story 3.11 — understated DPDPA data-export entry (a member right, framed neutrally). */}
       <DataExportEntry />
       {/* Story 3.10 — understated voluntary-withdrawal entry at the very bottom (deliberate, not encouraged). */}

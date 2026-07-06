@@ -43,6 +43,10 @@ export const WaConfigDto = z
       .trim()
       .regex(/^v\d+\.\d+$/, 'must be a Meta Graph API version like v21.0')
       .max(16),
+    // Story 5.4 — inbound-webhook credential NAME pointers (NOT the secret values; AI-4-3(c)). Both nullable
+    // (a config row may exist before the webhook is provisioned). NULL ⇒ that webhook path fails-closed.
+    appSecretSecretName: optionalConfigString,
+    webhookVerifyTokenSecretName: optionalConfigString,
   })
   .strict();
 export type WaConfigDto = z.output<typeof WaConfigDto>;

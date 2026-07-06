@@ -27,6 +27,10 @@ import { registerMemberJwt } from '../../src/plugins/jwt/index.js';
 const ENC = buildEncryptionDeps('unit-test-pepper-value');
 
 describe('normalizeMobile', () => {
+  // ⚠ apps/jobs/src/wa-webhook-processor.ts replicates this function BYTE-IDENTICAL (it cannot import
+  // apps/api). Its own test suite (apps/jobs/tests/wa-webhook-processor.test.ts, "normalizeMobile parity"
+  // describe block) asserts its copy against these SAME two fixture arrays — if you change either array here,
+  // mirror the change there too, or the two implementations can silently drift apart.
   it('canonicalises common Indian formats to +91XXXXXXXXXX', () => {
     for (const raw of ['+91 98765 43210', '09876543210', '9876543210', '+919876543210', '(91) 98765-43210']) {
       expect(normalizeMobile(raw)).toBe('+919876543210');

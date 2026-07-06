@@ -57,6 +57,8 @@ export function createChannelConfigHandlers(deps: AppDeps) {
             wabaId: null,
             accessTokenSecretName: null,
             graphApiVersion: schema.DEFAULT_GRAPH_API_VERSION,
+            appSecretSecretName: null,
+            webhookVerifyTokenSecretName: null,
           },
         };
       }
@@ -69,6 +71,8 @@ export function createChannelConfigHandlers(deps: AppDeps) {
           wabaId: row.wabaId,
           accessTokenSecretName: row.accessTokenSecretName,
           graphApiVersion: row.graphApiVersion,
+          appSecretSecretName: row.appSecretSecretName,
+          webhookVerifyTokenSecretName: row.webhookVerifyTokenSecretName,
         },
       };
     },
@@ -87,6 +91,8 @@ export function createChannelConfigHandlers(deps: AppDeps) {
         wabaId: body.wabaId,
         accessTokenSecretName: body.accessTokenSecretName,
         graphApiVersion: body.graphApiVersion,
+        appSecretSecretName: body.appSecretSecretName,
+        webhookVerifyTokenSecretName: body.webhookVerifyTokenSecretName,
         updatedByActor: ids.userId(actorId),
       });
 
@@ -106,8 +112,11 @@ export function createChannelConfigHandlers(deps: AppDeps) {
               display_phone_number: body.displayPhoneNumber,
               phone_number_id: body.phoneNumberId,
               waba_id: body.wabaId,
+              // NAME pointers only — the resolved secret values NEVER reach the audit hash (AI-4-3(c)).
               access_token_secret_name: body.accessTokenSecretName,
               graph_api_version: body.graphApiVersion,
+              app_secret_secret_name: body.appSecretSecretName,
+              webhook_verify_token_secret_name: body.webhookVerifyTokenSecretName,
             }),
             'utf8',
           )
@@ -125,6 +134,8 @@ export function createChannelConfigHandlers(deps: AppDeps) {
           wabaId: body.wabaId,
           accessTokenSecretName: body.accessTokenSecretName,
           graphApiVersion: body.graphApiVersion,
+          appSecretSecretName: body.appSecretSecretName,
+          webhookVerifyTokenSecretName: body.webhookVerifyTokenSecretName,
         },
       };
     },

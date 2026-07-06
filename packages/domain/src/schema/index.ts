@@ -118,6 +118,13 @@ export * from './pariwar_wa_templates.js';
 // Story 5.3 — the per-send WA delivery-status substrate (keyed by Meta wamid; tenant-isolated). 5.3 ships
 // the persistence seam + mapMetaStatus; Story 5.4's webhook receiver consumes them.
 export * from './whatsapp_send_status.js';
+// Story 5.4 — member WA opt-in state-machine substrate: `member_wa_opt_in` (the five-state operational
+// lifecycle PENDING|ACTIVE|REVOKED|BLOCKED_BY_META|EXPIRED_24H_WINDOW + verification_phrase partial-unique
+// match token + mobile_blind_index match key + 24h window; tenant-isolated inline RLS) + the §3.11 webhook
+// queue `wa_inbound_webhook_events` (raw Meta inbound payloads persisted by the ingress primitive, drained
+// by the apps/jobs worker; tenant-isolated inline RLS).
+export * from './member_wa_opt_in.js';
+export * from './wa_inbound_webhook_events.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

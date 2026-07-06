@@ -60,6 +60,11 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   'POST /api/v1/kyc/callback',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
+  // Story 5.4 — the WhatsApp inbound-webhook ingress (§3.11) is PUBLIC by design: Meta is unauthenticated,
+  // so it cannot carry a member/admin session. Its auth is the per-Pariwar verify-token (GET challenge) +
+  // the X-Hub-Signature-256 HMAC over the raw body (POST) — verified in the handler, fail-closed (403).
+  'GET /api/v1/webhooks/whatsapp/:pariwarId',
+  'POST /api/v1/webhooks/whatsapp/:pariwarId',
   // Honeypot traps are public by design (bot-bait); added programmatically below.
   ...HONEYPOT_PATHS.map((p) => `GET ${p}`),
 ]);

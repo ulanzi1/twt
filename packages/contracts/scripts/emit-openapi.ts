@@ -160,6 +160,11 @@ const { WaConfigDto, WaConfigResponse, WaTemplateDto, WaTemplatesResponse } = aw
 const { DeviceTokenRegisterRequest, DeviceTokenRegisterResponse } = await import(
   '../src/device-tokens/index.js'
 );
+// Story 5.4 — the member WhatsApp opt-in DTOs (mint PENDING → deep-link + phrase, status, revoke).
+// Member-session-gated; the inbound-webhook worker advances PENDING → ACTIVE out-of-band.
+const { CreateWaOptInResponse, WaOptInStatusResponse, RevokeWaOptInResponse } = await import(
+  '../src/wa-opt-in/index.js'
+);
 // Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
@@ -372,6 +377,16 @@ const deviceTokenComponents = {
   DeviceTokenRegisterResponse: DeviceTokenRegisterResponse.openapi('DeviceTokenRegisterResponse'),
 } as const;
 for (const [name, schema] of Object.entries(deviceTokenComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 5.4 — member WhatsApp opt-in components (mint / status / revoke).
+const waOptInComponents = {
+  CreateWaOptInResponse: CreateWaOptInResponse.openapi('CreateWaOptInResponse'),
+  WaOptInStatusResponse: WaOptInStatusResponse.openapi('WaOptInStatusResponse'),
+  RevokeWaOptInResponse: RevokeWaOptInResponse.openapi('RevokeWaOptInResponse'),
+} as const;
+for (const [name, schema] of Object.entries(waOptInComponents)) {
   registry.register(name, schema);
 }
 
@@ -1329,6 +1344,78 @@ registry.registerPath({
     200: { description: 'Device token registered', content: jsonOf(deviceTokenComponents.DeviceTokenRegisterResponse) },
     400: errorResponse('Request validation failed (bad platform or token)'),
     401: deviceTokenAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 5.4 — member WhatsApp opt-in surface (member-session-gated) + trustee admin_action opt-out ──
+const waOptInTags = ['wa-opt-in'];
+const waOptInAuth = errorResponse('Authentication required');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/wa-opt-in',
+  summary: 'Mint (or re-use) a PENDING WhatsApp opt-in → Send-Hello deep-link + verification phrase',
+  description:
+    'Mints a PENDING opt-in for the authenticated member with a unique verification phrase, and returns ' +
+    'the Pariwar’s WA Business number + a wa.me Send-Hello deep-link pre-filled with that phrase. A re-tap ' +
+    're-uses the outstanding PENDING. 409 when the Pariwar has WA disabled / no number. The member sends ' +
+    'the message; the inbound-webhook worker advances the opt-in to ACTIVE.',
+  tags: waOptInTags,
+  responses: {
+    200: { description: 'PENDING opt-in minted', content: jsonOf(waOptInComponents.CreateWaOptInResponse) },
+    401: waOptInAuth,
+    409: errorResponse('WhatsApp unavailable for this Pariwar, or already opted in'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/wa-opt-in',
+  summary: 'Read the member’s current WhatsApp opt-in status',
+  description:
+    'Returns the member’s current opt-in state (null when never opted in) + whether the toggle is ' +
+    'available (WA enabled + number) + the deep-link/phrase (PENDING) or window expiry (ACTIVE).',
+  tags: waOptInTags,
+  responses: {
+    200: { description: 'Opt-in status', content: jsonOf(waOptInComponents.WaOptInStatusResponse) },
+    401: waOptInAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/member/wa-opt-in',
+  summary: 'Revoke the member’s active WhatsApp opt-in (independently revocable)',
+  description:
+    'Member-initiated revocation of an ACTIVE opt-in — disables WA delivery immediately, touching ONLY ' +
+    'the whatsapp_opt_in consent. 409 when there is no ACTIVE opt-in. Re-opt-in requires a new WhatsApp ' +
+    'message (no inferred re-consent).',
+  tags: waOptInTags,
+  responses: {
+    200: { description: 'Opt-in revoked', content: jsonOf(waOptInComponents.RevokeWaOptInResponse) },
+    401: waOptInAuth,
+    409: errorResponse('No active opt-in to revoke'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/admin/members/{memberId}/wa-opt-out',
+  summary: 'Trustee force opt-out of a member’s WhatsApp opt-in (admin_action)',
+  description:
+    'Scoped-admin force opt-out of a member’s ACTIVE WhatsApp opt-in (trustee defensibility). Gated by the ' +
+    'existing member.moderate permission [requireAdminSession, scopeResolutionHook, ' +
+    'requirePermissionHook(member.moderate)] — 401 no session, 403 no permission. 409 when the member has ' +
+    'no ACTIVE opt-in.',
+  tags: waOptInTags,
+  request: {
+    params: z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() }),
+  },
+  responses: {
+    200: { description: 'Opt-in revoked', content: jsonOf(waOptInComponents.RevokeWaOptInResponse) },
+    401: waOptInAuth,
+    403: errorResponse('Missing member.moderate permission'),
+    409: errorResponse('No active opt-in to revoke'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

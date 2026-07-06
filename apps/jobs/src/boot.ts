@@ -59,6 +59,11 @@ import {
   DEVICE_TOKEN_CLEANUP_TZ,
   registerDeviceTokenCleanupCron,
 } from './device-token-cleanup.js';
+import {
+  DEFAULT_WA_WEBHOOK_PROCESSOR_CRON,
+  WA_WEBHOOK_PROCESSOR_TZ,
+  registerWaWebhookProcessorCron,
+} from './wa-webhook-processor.js';
 
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
@@ -80,6 +85,10 @@ const DATA_EXPORT_VACUUM_CRON =
 // Push device-token stale/invalid cleanup (Story 5.2, AC5). Cadence is operations policy (IST).
 const DEVICE_TOKEN_CLEANUP_CRON =
   process.env['DEVICE_TOKEN_CLEANUP_CRON'] ?? DEFAULT_DEVICE_TOKEN_CLEANUP_CRON;
+// WhatsApp inbound-webhook processing + opt-in expiry sweep (Story 5.4, AC3/AC4). Near-real-time (every
+// minute by default) so opt-in confirmation is prompt. Cadence is operations policy (IST).
+const WA_WEBHOOK_PROCESSOR_CRON =
+  process.env['WA_WEBHOOK_PROCESSOR_CRON'] ?? DEFAULT_WA_WEBHOOK_PROCESSOR_CRON;
 // Validity-cache GC sweep (Story 4.8, Task 4). Every 15 min by default (IST). Storage hygiene ONLY.
 const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * * * *';
 // Rows older than this (default the 10× TTL constant) are reclaimed. Overridable like the cron cadences.
@@ -141,6 +150,11 @@ async function main(): Promise<void> {
   if (!/^(\S+\s+){4}\S+$/.test(DEVICE_TOKEN_CLEANUP_CRON.trim())) {
     throw new RangeError(
       `[jobs] DEVICE_TOKEN_CLEANUP_CRON must be a 5-field cron expression (got "${DEVICE_TOKEN_CLEANUP_CRON}")`,
+    );
+  }
+  if (!/^(\S+\s+){4}\S+$/.test(WA_WEBHOOK_PROCESSOR_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] WA_WEBHOOK_PROCESSOR_CRON must be a 5-field cron expression (got "${WA_WEBHOOK_PROCESSOR_CRON}")`,
     );
   }
 
@@ -282,6 +296,17 @@ async function main(): Promise<void> {
       boss,
       { pool },
       { cron: DEVICE_TOKEN_CLEANUP_CRON, tz: DEVICE_TOKEN_CLEANUP_TZ },
+    );
+
+    // ── WhatsApp inbound-webhook processor + opt-in expiry sweep (Story 5.4, AC3/AC4) ──
+    // Drains wa_inbound_webhook_events: inbound match → ACTIVE + consent + 24h window, STOP → REVOKED,
+    // Meta block → BLOCKED_BY_META, status callbacks → 5.3's mapMetaStatus/upsertWaSendStatus; plus the
+    // stale-PENDING / past-window sweep → EXPIRED_24H_WINDOW. Uses the member-family hmac key (same
+    // by-value parallel as the api) for the mobile blind-index match. Cross-tenant on the service `pool`.
+    await registerWaWebhookProcessorCron(
+      boss,
+      { pool, db, enc: { kms: jobsEncryption.kms, hmacKeyRef: jobsEncryption.hmacKeyRef } },
+      { cron: WA_WEBHOOK_PROCESSOR_CRON, tz: WA_WEBHOOK_PROCESSOR_TZ },
     );
 
     await new Promise<void>((resolve, reject) => {

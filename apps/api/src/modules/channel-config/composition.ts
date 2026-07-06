@@ -28,10 +28,19 @@
 // no-op send (dishonest, the opposite of this story's "no fabricated success" discipline). Whoever wires the
 // live dispatch call site (5.4+) is responsible for deciding how a rejection here is surfaced/retried.
 
-import { channelConfig, ids, type Db } from '@twt/domain';
-import { createWhatsappProvider, type ChannelProvider, type WhatsappAppCache } from '@twt/channels';
+import { channelConfig, ids, waOptIn, type Db } from '@twt/domain';
+import {
+  createWhatsappProvider,
+  type ChannelProvider,
+  type SendTarget,
+  type WhatsappAppCache,
+} from '@twt/channels';
+
+import type { EncryptionDeps } from '../../context.js';
+import { decryptMobile } from '../auth/shared/mobile-index.js';
 
 type PariwarId = ids.PariwarId;
+type MemberId = ids.MemberId;
 
 /** What the composition seam needs: a scoped Db, the process WA client cache, and a secret resolver. */
 export interface WhatsappCompositionDeps {
@@ -96,4 +105,49 @@ export async function resolveWhatsappProvider(
 ): Promise<ChannelProvider> {
   const providerDeps = await resolveWhatsappProviderDeps(deps, pariwarId, alertCategory);
   return createWhatsappProvider(providerDeps);
+}
+
+/** What the WA delivery-resolver read needs: a scoped Db + the member-mobile decryption material. */
+export interface WaTargetDeps {
+  /** RLS-scoped Db (the caller's tenant tx) for the config + opt-in reads. */
+  readonly db: Db;
+  /** Encryption material to decrypt the member's Tier-1 mobile → the WhatsApp recipient number. */
+  readonly encryption: EncryptionDeps;
+}
+
+/**
+ * The AC6 dual-gated WA delivery-resolver read (Story 5.4) — closes the Story 5.3 seam that "resolved no
+ * member target until 5.4 lands its ACTIVE-state read". Resolves a WhatsApp `SendTarget` for a member ONLY
+ * when BOTH gates pass:
+ *   1. the per-Pariwar admin toggle (`pariwar_wa_config.enabled`, Story 5.3), AND
+ *   2. the member opt-in is ACTIVE and within the 24h Meta window (`isOptInActive`, this story).
+ * Otherwise returns `null` (no WA delivery for this member). When both pass, the member's Tier-1 mobile is
+ * decrypted HERE (the composition layer — never inside `dispatch` / the provider; mirrors resolvePushTargets)
+ * to the recipient number the WA provider's `toMsisdn` addresses.
+ *
+ * ── Frozen-shape discipline ([[project_channels_no_live_dispatch_yet]]) ──────────────────────────────────
+ * This is a reusable composition READ — it does NOT modify `DeliveryResolver` / `dispatch` / `ChannelProvider`
+ * / `CANONICAL_CHANNEL_LADDER`, and there is still NO live `dispatch` call site (5.2/5.3 posture). Whoever
+ * wires the live fan-out consumes this read.
+ */
+export async function resolveWaTarget(
+  deps: WaTargetDeps,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+  at?: Date,
+): Promise<SendTarget | null> {
+  // Gate 1 — the admin toggle (Story 5.3).
+  const config = await channelConfig.getWaConfig(deps.db, pariwarId);
+  if (!config || !config.enabled) return null;
+
+  // Gate 2 — the member opt-in ACTIVE + within the 24h window (this story).
+  const active = await waOptIn.isOptInActive(deps.db, { pariwarId, memberId, at });
+  if (!active) return null;
+
+  // Both gates pass — resolve the member's WhatsApp recipient number (their registered mobile). Decrypt in
+  // the composition layer; a member with no identity row (⇒ no number) resolves to null.
+  const ciphertext = await waOptIn.getMemberMobileCiphertext(deps.db, { pariwarId, memberId });
+  if (!ciphertext) return null;
+  const address = await decryptMobile(ciphertext, deps.encryption);
+  return { channel: 'whatsapp', address };
 }

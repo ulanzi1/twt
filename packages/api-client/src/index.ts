@@ -34,6 +34,12 @@ import {
   DataExportRequestResponse,
   DataExportStatusResponse,
   RtbfStatusResponse,
+  CreateWaOptInResponse,
+  WaOptInStatusResponse,
+  RevokeWaOptInResponse,
+  type CreateWaOptInResponse as CreateWaOptInResult,
+  type WaOptInStatusResponse as WaOptInStatusResult,
+  type RevokeWaOptInResponse as RevokeWaOptInResult,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
@@ -118,6 +124,7 @@ const MEMBER_HOME_BASE = '/api/v1/member';
 const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
 const WITHDRAWAL_BASE = '/api/v1/member/withdrawal';
 const DATA_EXPORT_BASE = '/api/v1/member/data-export';
+const WA_OPT_IN_BASE = '/api/v1/member/wa-opt-in';
 const RTBF_BASE = '/api/v1/member/rtbf';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
@@ -129,7 +136,7 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
     body: unknown,
     auth = false,
-    method: 'GET' | 'POST' = 'POST',
+    method: 'GET' | 'POST' | 'DELETE' = 'POST',
     bearerOverride?: string,
   ): Promise<T> {
     const headers: Record<string, string> = {};
@@ -479,6 +486,26 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     downloadDataExport(id: string): Promise<ArrayBuffer> {
       return callBinary(`${DATA_EXPORT_BASE}/${id}/download`);
+    },
+
+    // ── WhatsApp opt-in (Story 5.4) ───────────────────────────────────────────
+    // POST mints (or re-uses) a PENDING opt-in → Send-Hello deep-link + verification phrase; GET reads the
+    // current state (drives the settings toggle + copy); DELETE revokes an ACTIVE opt-in (independently
+    // revocable). The inbound-webhook worker advances PENDING → ACTIVE out-of-band.
+
+    /** Mint (or re-use) a PENDING WhatsApp opt-in → deep-link + verification phrase (session; auth). */
+    requestWaOptIn(): Promise<CreateWaOptInResult> {
+      return call(WA_OPT_IN_BASE, CreateWaOptInResponse, {}, true);
+    },
+
+    /** Read the member's current WhatsApp opt-in status (session; auth). */
+    getWaOptInStatus(): Promise<WaOptInStatusResult> {
+      return call(WA_OPT_IN_BASE, WaOptInStatusResponse, undefined, true, 'GET');
+    },
+
+    /** Revoke the member's active WhatsApp opt-in (session; auth). */
+    revokeWaOptIn(): Promise<RevokeWaOptInResult> {
+      return call(WA_OPT_IN_BASE, RevokeWaOptInResponse, {}, true, 'DELETE');
     },
   };
 }

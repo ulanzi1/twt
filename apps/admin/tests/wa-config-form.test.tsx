@@ -15,6 +15,8 @@ const ZERO_CONFIG = {
   wabaId: null,
   accessTokenSecretName: null,
   graphApiVersion: 'v21.0',
+  appSecretSecretName: null,
+  webhookVerifyTokenSecretName: null,
 };
 
 describe('WaConfigForm (AC4)', () => {

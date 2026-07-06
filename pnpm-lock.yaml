@@ -235,6 +235,9 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.21.0
         version: 7.21.0
+      '@twt/channels':
+        specifier: workspace:*
+        version: link:../../packages/channels
       '@twt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts

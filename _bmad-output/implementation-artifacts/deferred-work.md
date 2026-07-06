@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 5-4-member-wa-opt-in-via-inbound-webhook-matching-webhook-ingress-primitive (2026-07-06)
+
+- **TOCTOU on webhook config read vs event persist (two separate transactions).** `POST /webhooks/whatsapp/:pariwarId` opens one scope tx to read `pariwar_wa_config` (secret names) and a second, independent scope tx to persist the event; between them the config could change (secret rotated/deleted). Accepted by BigDev (2026-07-06): secret rotation is rare, treated as a narrow pre-existing-style risk rather than a required refactor. **Re-trigger:** if secret rotation ever becomes routine/scripted, or a rotation-window bug is observed in production.
+- **Webhook GET/POST endpoints have no app-level rate limiting.** A flood of garbage requests against arbitrary/guessed `pariwarId` values still triggers a Secret-Manager lookup + DB scope-tx per request before signature verification fails it closed — real cost/load even though nothing is ever persisted. Pre-existing pattern: no other public unauthenticated route in this codebase has app-level rate limiting either; this is an infra/gateway-level concern. **Re-trigger:** if webhook-endpoint abuse or Secret-Manager cost is ever observed in production, or when a general rate-limiting story is scheduled.
+- **Hardcoded Meta error codes (`WA_BLOCK_ERROR_CODES`) and `STOP_KEYWORDS` have no config-override surface.** `apps/jobs/src/wa-webhook-processor.ts` hardcodes these as constants explicitly flagged "indicative... verify at deploy time"; fixing a wrong assumption requires a code change + redeploy, not a config update. Already disclosed as a known caveat in this story's own Dev Agent Record. **Re-trigger:** at deploy time when the assumptions are verified against live Meta Cloud API docs, or if a wrong block-code/keyword is observed misclassifying a real event.
+
+---
+
 ## Deferred from: code review of 5-3-whatsapp-business-api-integration-behind-provider-abstraction-per-pariwar-config (2026-07-06)
 
 - **`upsertWaConfig` has no optimistic-concurrency check on the singleton row.** Two trustees racing PUTs to the same Pariwar's WA config silently last-write-wins. Pre-existing class — no other singleton-config admin write in the repo guards this either. **Re-trigger:** if concurrent trustee admin edits become a real support complaint, or a future story adds a version/`updated_at` optimistic-lock convention.

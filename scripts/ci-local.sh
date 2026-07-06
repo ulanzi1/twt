@@ -36,7 +36,13 @@ run() {
 run "lint"                  "pnpm turbo run lint"
 run "typecheck"             "pnpm turbo run typecheck"
 run "build"                 "pnpm turbo run build"
-run "test (unit)"           "pnpm turbo run test"
+# --concurrency=4: this job's own dedicated re-runs below (determinism-replay, channels-determinism)
+# already exist because those two suites are sensitive to CPU contention (8 real OS worker threads each,
+# each registering tsx + dynamic-importing a TS module from cold). Running all ~20 packages' test tasks
+# fully unbounded oversubscribes an 8-core machine and pushes the flake onto whichever suite gets starved
+# that run (observed: validity-service/channels determinism, then apps/admin's userEvent-driven RTL tests).
+# Capping concurrency gives each running package real CPU share instead of cascading timeouts.
+run "test (unit)"           "pnpm turbo run test --concurrency=4"
 run "db-check"              "pnpm turbo run db:check"
 run "contracts-determinism" "pnpm turbo run contracts:check-openapi-determinism"
 run "crypto-check"          "KMS_TEST_MODE=fake pnpm turbo run crypto:check"
@@ -56,7 +62,7 @@ run "channels-determinism"  "pnpm --filter @twt/channels test:determinism"
 
 # ── live-DB job (opt-in via DATABASE_URL) ─────────────────────────────────────
 if [ -n "${DATABASE_URL:-}" ]; then
-  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels"
+  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --concurrency=4 --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels"
 else
   SKIPPED+=("integration-tests — set DATABASE_URL (twt-test-pg on :5433) to enable")
 fi

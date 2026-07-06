@@ -64,4 +64,17 @@ describe('P0 determinism-replay gate (AC5 — 100× per channel across real OS t
     expect(a.deepLink).toMatch(/^twt:\/\/p\/[0-9a-f-]+\/announcements\/[0-9a-f-]+$/);
     expect(a.deepLink).toBe(b.deepLink); // replay-stable
   });
+
+  // Story 5.3 (AC7): the byte-identical hash above already covers the WA template body (it is part of the
+  // RenderedMessage the worker hashes), so a non-deterministic WA render would break the single-hash
+  // assertion. This guard makes the coverage EXPLICIT: the WA body is a stable, Meta-valid, whitespace-
+  // normalized string (no newlines/tabs/4+ spaces) that a regression would trip.
+  it('whatsapp render is replay-stable + whitespace-normalized (covered by the byte-identical gate)', () => {
+    const a = render(announcement(), 'whatsapp');
+    const b = render(announcement(), 'whatsapp');
+    expect(a.body).toBe(b.body); // replay-stable
+    expect(a.body).not.toMatch(/[\n\t]/);
+    expect(a.body).not.toMatch(/ {4,}/);
+    expect(a.body).toBe(a.body.trim());
+  });
 });

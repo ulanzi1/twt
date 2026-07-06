@@ -23,6 +23,14 @@ import {
   PublishClauseResponse,
   RecoveryConsumeResponse,
   SessionResponse,
+  WaConfigResponse,
+  WaTemplateDto,
+  WaTemplatesResponse,
+  type WaConfigResponse as WaConfig,
+  type WaConfigUpsertRequest,
+  type WaTemplateDto as WaTemplate,
+  type WaTemplateUpsertRequest,
+  type WaTemplatesResponse as WaTemplates,
   type MemberSearchRequest,
   type MemberSearchResponse as MemberSearchResult,
   type MemberValidityResponse as MemberValidityResult,
@@ -255,6 +263,40 @@ export function getMemberValidity(
     `${adminMemberBase(pariwarId)}/${encodeURIComponent(memberId)}/validity`,
     MemberValidityResponse,
   );
+}
+
+// ── Channel-config surface (Story 5.3) ────────────────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/channel-config/whatsapp. The trustee WA
+// config singleton + per-category UTILITY template mapping. The access-token field is
+// a Secret-Manager NAME (a pointer), never a token value.
+
+const waConfigBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/channel-config/whatsapp`;
+
+/** GET the WA config singleton (zero-config defaults when unprovisioned). */
+export function getWaConfig(pariwarId: string): Promise<WaConfig> {
+  return apiFetch(waConfigBase(pariwarId), WaConfigResponse);
+}
+
+/** PUT (upsert) the WA config singleton. */
+export function putWaConfig(pariwarId: string, body: WaConfigUpsertRequest): Promise<WaConfig> {
+  return apiFetch(waConfigBase(pariwarId), WaConfigResponse, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET the per-category UTILITY template mapping. */
+export function getWaTemplates(pariwarId: string): Promise<WaTemplates> {
+  return apiFetch(`${waConfigBase(pariwarId)}/templates`, WaTemplatesResponse);
+}
+
+/** PUT (upsert) one category's template mapping. */
+export function putWaTemplate(pariwarId: string, body: WaTemplateUpsertRequest): Promise<WaTemplate> {
+  return apiFetch(`${waConfigBase(pariwarId)}/templates`, WaTemplateDto, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
 }
 
 // ── Auth surface (Story 1.9 endpoints, driven by the login page) ──────────────

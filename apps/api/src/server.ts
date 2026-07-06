@@ -29,6 +29,7 @@ import { registerLifeEventsModule } from './modules/life-events/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
+import { registerChannelConfigModule } from './modules/channel-config/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
 import { registerDeviceTokenModule } from './modules/device-token/index.js';
@@ -138,6 +139,9 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // AR-65 admin member-search (POST …/admin/members/search over member_search_projection). Redaction +
   // audit stay in @twt/validity-service; this module maps service payload → wire DTO.
   registerMemberValidityModule(app, deps);
+  // Story 5.3 — trustee WhatsApp Business config surface (FR-72): GET/PUT the per-Pariwar WA config
+  // singleton + GET/PUT the per-category UTILITY template mapping, gated by pariwar.configure_channels.
+  registerChannelConfigModule(app, deps);
   // Story 3.9 — member Life Events panel surface (FR-5): update nominees / address / transfer-in-out
   // / medical disclosure. Nominee + medical REUSE the 3.4/3.5 declare/submit services behind a member
   // step-up gate ('nominee_change' / 'medical_change'); address + posting are NEW append-only writes

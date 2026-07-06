@@ -41,10 +41,10 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 13 grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(4); // Story 4.8 code-review bump (was 3 at 4.6, 2 at 2.6, 1 at 1.8)
+  it('is versioned and seeded with exactly the 14 grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(5); // Story 5.3 bump (4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(13);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(14);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -64,6 +64,10 @@ describe('PERMISSION_CATALOG', () => {
 
   it('includes the Story 4.8 code-review cache-invalidation WRITE key (validity.invalidate_cache)', () => {
     expect(isCatalogKey('validity.invalidate_cache')).toBe(true);
+  });
+
+  it('includes the Story 5.3 WhatsApp config WRITE key (pariwar.configure_channels)', () => {
+    expect(isCatalogKey('pariwar.configure_channels')).toBe(true);
   });
 
   it('does NOT contain past-tense EVENT names (catalog ≠ events)', () => {

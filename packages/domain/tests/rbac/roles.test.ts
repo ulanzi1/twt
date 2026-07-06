@@ -123,6 +123,18 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
+
+  it('Story 5.3 — pariwar.configure_channels is granted ONLY to pariwar_admin (+ super_admin)', () => {
+    const KEY = 'pariwar.configure_channels';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // A PARIWAR-WIDE config action — state_trustee's narrower `state` ceiling cannot satisfy it even if
+    // granted (same rationale as validity.invalidate_cache).
+    expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

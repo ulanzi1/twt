@@ -138,4 +138,9 @@ export * as validityCache from './validity-cache/index.js';
 // read (delivery resolver), the AC5 invalidation write, and the Class C stale/invalid cleanup prune.
 // Tenant-scoped; encryption + blind-index + audit orchestration are app-layer (the registration route).
 export * as deviceToken from './device-token/index.js';
+// Story 5.3 — the per-Pariwar WhatsApp Business config substrate accessors: config singleton read/write
+// (getWaConfig/upsertWaConfig), per-category UTILITY template registry (listWaTemplates/upsertWaTemplate),
+// and the delivery-gate resolveApprovedTemplate (null ⇒ category not WA-eligible). Tenant-scoped; the
+// access-token NAME is a pointer resolved by the composition layer, never here.
+export * as channelConfig from './channel-config/index.js';
 export { UUID_REGEX } from './db.js';

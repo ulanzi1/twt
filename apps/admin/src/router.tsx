@@ -14,6 +14,7 @@ import {
   redirect,
 } from '@tanstack/react-router';
 
+import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
 import { MemberSearchRoute } from './routes/MemberSearchRoute.js';
@@ -68,6 +69,13 @@ const memberSearchRoute = createRoute({
   component: MemberSearchRoute,
 });
 
+// Story 5.3 — the tenant-scoped trustee WhatsApp Business config surface (FR-72).
+const channelConfigRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/channel-config',
+  component: ChannelConfigRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -75,6 +83,7 @@ const routeTree = rootRoute.addChildren([
   provisioningRoute,
   niyamavaliRoute,
   memberSearchRoute,
+  channelConfigRoute,
 ]);
 
 export const router = createRouter({ routeTree });

@@ -109,6 +109,15 @@ export * from './cohort_invalidation_epochs.js';
 // channel (FCM/APNs). App-open rebuild marks siblings stale; unrecoverable Firebase token errors mark
 // invalid; a Class C cleanup job prunes stale/invalid. member_id FK cascade for RTBF (Story 3.12).
 export * from './member_device_tokens.js';
+// Story 5.3 — the per-Pariwar WhatsApp Business config substrate: `pariwar_wa_config` (1:1 singleton — the
+// FR-72 admin toggle + display number + Meta phone_number_id/waba_id + access-token-secret NAME pointer +
+// pinned Graph API version; tenant-isolated RLS) + `pariwar_wa_templates` (per-(pariwar, alert_category)
+// UTILITY template name/language/approval_status; a category with no `approved` row is not WA-eligible).
+export * from './pariwar_wa_config.js';
+export * from './pariwar_wa_templates.js';
+// Story 5.3 — the per-send WA delivery-status substrate (keyed by Meta wamid; tenant-isolated). 5.3 ships
+// the persistence seam + mapMetaStatus; Story 5.4's webhook receiver consumes them.
+export * from './whatsapp_send_status.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

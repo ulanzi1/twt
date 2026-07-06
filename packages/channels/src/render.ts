@@ -14,11 +14,16 @@
 // and never transformed.
 //
 // Story 5.1 escaped UNCONDITIONALLY for all channels. Story 5.2 (deferred-work.md D1) parameterizes it:
-// the `content(alert, esc)` builder takes a per-channel transform. Markup channels (WhatsApp/SMS/Telegram)
-// pass `escapeText` (unchanged behavior); `push` passes the IDENTITY transform because a push notification
-// renders no markup — HTML-entity-encoding `&`→`&amp;` / backslash-escaping `#`/`(` there would garble
-// admin prose in the notification tray (the exact bug deferred-work.md:1812 flags). Push injection payloads
-// stay INERT simply by being plaintext (a push tray never interprets `<script>` / `{{tpl}}`).
+// the `content(alert, esc)` builder takes a per-channel transform. Story 5.3 adds the third arm:
+//   · SMS/Telegram — `escapeText` (markup channels; unchanged behavior).
+//   · push — the IDENTITY transform (a push tray renders no markup; HTML-entity-encoding `&`→`&amp;` /
+//     backslash-escaping there would garble admin prose in the tray — the bug deferred-work.md:1812 flags).
+//   · whatsapp — IDENTITY substitution + WHITESPACE-NORMALIZATION of the assembled body (Story 5.3, AC5).
+//     WA UTILITY-template parameters are NOT markup-interpreted, so HTML-entity encoding would GARBLE the
+//     member's message (the same D1 bug) — and Meta REJECTS a template parameter containing newlines/tabs/
+//     4+ consecutive spaces. So WA's correct transform is: keep substitutions raw (inert-by-non-
+//     interpretation) and collapse all whitespace runs to single spaces so the single `{{1}}` body param is
+//     Meta-valid (Q1=A: one pre-composed body string, no RenderedMessage shape change).
 
 import type { Alert } from '@twt/contracts';
 import { deepLinkTargetForAlert, formatDeepLink } from '@twt/contracts';
@@ -52,9 +57,20 @@ function rupees(paise: number): string {
   return `₹${(paise / 100).toFixed(2)}`;
 }
 
-/** The identity transform — used for `push`, whose plaintext tray renders no markup (Story 5.2 D1). */
+/** The identity transform — used for `push`/`whatsapp` substitutions (no markup interpretation; Story 5.2 D1). */
 function identity(value: string): string {
   return value;
+}
+
+/**
+ * Whitespace-normalize a WA template body (Story 5.3, AC5): collapse every run of whitespace (spaces, tabs,
+ * newlines — including the 4+ consecutive spaces Meta rejects) to a SINGLE space and trim the ends. This
+ * makes the single `{{1}}` body parameter Meta-valid (Meta rejects a template param with newlines/tabs/4+
+ * spaces). Injection stays inert because a template parameter is never markup-interpreted — the raw text is
+ * carried literally, just with its whitespace flattened. Pure + deterministic.
+ */
+function whitespaceNormalize(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -117,14 +133,17 @@ function pushDeepLink(alert: RenderableAlert): string | null {
 
 /** The pure renderer for ONE channel — the AC5 byte-identical-replay unit. */
 export function render(alert: RenderableAlert, channel: Channel): RenderedMessage {
-  // Push owns PLAINTEXT escaping semantics (Story 5.2 D1); markup channels keep `escapeText` (AC6).
-  const esc = channel === 'push' ? identity : escapeText;
+  // Push + WhatsApp own NON-markup substitution semantics (Story 5.2 D1 / 5.3 AC5) — HTML-entity encoding
+  // would garble admin prose in a push tray / a WA template param; SMS/Telegram keep `escapeText` (AC6).
+  const esc = channel === 'push' || channel === 'whatsapp' ? identity : escapeText;
   const { heading, line } = content(alert, esc);
   switch (channel) {
     case 'push':
       return { channel, title: heading, body: line, deepLink: pushDeepLink(alert) };
     case 'whatsapp':
-      return { channel, title: null, body: `${heading}\n\n${line}`, deepLink: null };
+      // The single `{{1}}` template body parameter: the assembled body, whitespace-normalized so it is
+      // Meta-valid (no newlines/tabs/4+ spaces). Injection stays inert (params are not markup-interpreted).
+      return { channel, title: null, body: whitespaceNormalize(`${heading}. ${line}`), deepLink: null };
     case 'sms':
       return { channel, title: null, body: `${heading}: ${line}`, deepLink: null };
     case 'telegram':

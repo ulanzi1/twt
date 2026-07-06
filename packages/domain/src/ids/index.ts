@@ -299,3 +299,15 @@ export const postingId = uuidBrand('PostingId');
 export type DeviceTokenId = Brand<'DeviceTokenId'>;
 /** Smart constructor: validates UUID shape, returns a branded `DeviceTokenId`. */
 export const deviceTokenId = uuidBrand('DeviceTokenId');
+
+// ── WhatsApp per-category template id (Story 5.3, Task 1) ──────────────────────
+// NEW branded id per the §Naming "branding mandatory on a new ID's first PR" discipline
+// (L3700-3708): `WaTemplateId` is the per-row address of a per-(pariwar, alert_category) WA
+// UTILITY template mapping (`pariwar_wa_templates.template_id`). The row's natural key is
+// (pariwar_id, alert_category) — enforced by a UNIQUE — but the row is addressed by this opaque
+// UUID (mirrors member_device_tokens keying by token_id). A UUID row address → shared validator.
+
+/** Per-row address of a per-category WA template mapping (`pariwar_wa_templates.template_id`). */
+export type WaTemplateId = Brand<'WaTemplateId'>;
+/** Smart constructor: validates UUID shape, returns a branded `WaTemplateId`. */
+export const waTemplateId = uuidBrand('WaTemplateId');

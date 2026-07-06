@@ -50,7 +50,11 @@ describe('P0 determinism-replay gate (AC5 — 100× per channel across real OS t
         expect([...distinct][0]).toMatch(/^[0-9a-f]{64}$/);
       }
     },
-    30_000,
+    // Each of the 8 workers registers tsx's ESM resolve hook + dynamic-imports a TS module from cold —
+    // real transpilation work, not free. Under `pnpm turbo run test` across all ~20 monorepo packages
+    // (this machine: 8 cores), that startup cost can get starved past a tight budget. The assertion above
+    // is unaffected — this is wall-clock headroom for CI/local full-parallel contention, not a weaker gate.
+    90_000,
   );
 
   // Story 5.2 (AC6): the byte-identical hash above already covers the push deep-link/data field (it is

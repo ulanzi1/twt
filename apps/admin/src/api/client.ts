@@ -26,11 +26,14 @@ import {
   WaConfigResponse,
   WaTemplateDto,
   WaTemplatesResponse,
+  TelegramConfigResponse,
   type WaConfigResponse as WaConfig,
   type WaConfigUpsertRequest,
   type WaTemplateDto as WaTemplate,
   type WaTemplateUpsertRequest,
   type WaTemplatesResponse as WaTemplates,
+  type TelegramConfigResponse as TelegramConfig,
+  type TelegramConfigUpsertRequest,
   type MemberSearchRequest,
   type MemberSearchResponse as MemberSearchResult,
   type MemberValidityResponse as MemberValidityResult,
@@ -294,6 +297,25 @@ export function getWaTemplates(pariwarId: string): Promise<WaTemplates> {
 /** PUT (upsert) one category's template mapping. */
 export function putWaTemplate(pariwarId: string, body: WaTemplateUpsertRequest): Promise<WaTemplate> {
   return apiFetch(`${waConfigBase(pariwarId)}/templates`, WaTemplateDto, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Telegram config (Story 5.5) — the per-Pariwar Telegram Bot config singleton. The bot-token +
+// webhook-secret-token fields are Secret-Manager NAMEs (pointers), never the values.
+
+const telegramConfigBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/channel-config/telegram`;
+
+/** GET the Telegram config singleton (zero-config defaults when unprovisioned). */
+export function getTelegramConfig(pariwarId: string): Promise<TelegramConfig> {
+  return apiFetch(telegramConfigBase(pariwarId), TelegramConfigResponse);
+}
+
+/** PUT (upsert) the Telegram config singleton. */
+export function putTelegramConfig(pariwarId: string, body: TelegramConfigUpsertRequest): Promise<TelegramConfig> {
+  return apiFetch(telegramConfigBase(pariwarId), TelegramConfigResponse, {
     method: 'PUT',
     body: JSON.stringify(body),
   });

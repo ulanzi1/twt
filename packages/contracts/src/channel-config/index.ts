@@ -10,4 +10,8 @@ export {
   WaTemplateDto,
   WaTemplateUpsertRequest,
   WaTemplatesResponse,
+  // Story 5.5 — per-Pariwar Telegram Bot config (trustee admin surface).
+  TelegramConfigDto,
+  TelegramConfigResponse,
+  TelegramConfigUpsertRequest,
 } from './config.js';

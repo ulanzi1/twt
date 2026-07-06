@@ -248,3 +248,21 @@ export function usePutWaTemplate(pariwarId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: waTemplatesKey(pariwarId) }),
   });
 }
+
+// ── Telegram config surface (Story 5.5) — the per-Pariwar Telegram Bot config singleton. ──
+
+export const telegramConfigKey = (pariwarId: string) => ['telegram-config', pariwarId] as const;
+
+/** The Telegram config singleton (zero-config defaults when unprovisioned). */
+export function useTelegramConfig(pariwarId: string) {
+  return useQuery({ queryKey: telegramConfigKey(pariwarId), queryFn: () => api.getTelegramConfig(pariwarId) });
+}
+
+/** Upsert the Telegram config, then refresh the config query. */
+export function usePutTelegramConfig(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.putTelegramConfig>[1]) => api.putTelegramConfig(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: telegramConfigKey(pariwarId) }),
+  });
+}

@@ -20,3 +20,11 @@ export {
   getWaSendStatus,
   type WaSendStatusUpsertInput,
 } from './wa-status.js';
+// Story 5.5 — the per-Pariwar Telegram Bot config substrate (config singleton). Transport-free primitives
+// consumed by the apps/api admin module (config write) + the composition/webhook layers (bot-token /
+// webhook-secret NAME resolution at send/verify time).
+export {
+  getTelegramConfig,
+  upsertTelegramConfig,
+  type TelegramConfigUpsertInput,
+} from './telegram-config.js';

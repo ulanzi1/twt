@@ -12,17 +12,21 @@ export {
   createFcmProvider,
   createApnsProvider,
   createFixturePushProvider,
+  createFixtureTelegramProvider,
   createFixtureWhatsappProvider,
   createPushProviders,
+  createTelegramProvider,
+  createTelegramBotProvider,
   createWhatsappProvider,
   createWhatsappBusinessProvider,
   fixturePushProviders,
   smsDltProvider,
-  telegramProvider,
   DEFAULT_PROVIDER_REGISTRY,
   type PushProviderDeps,
   type FixturePushOptions,
+  type FixtureTelegramOptions,
   type FixtureWhatsappOptions,
+  type TelegramProviderDeps,
   type WhatsappProviderDeps,
 } from './providers/index.js';
 // Story 5.2 — real push transports: the per-Pariwar Firebase App cache, the messaging seam, and the
@@ -54,6 +58,22 @@ export {
   rejectionDetail as whatsappRejectionDetail,
   type WhatsappErrorClass,
 } from './providers/whatsapp-errors.js';
+// Story 5.5 — real Telegram Bot transport: the per-Pariwar Telegram Bot API client cache + the narrow
+// messaging seam, and the Telegram send-error classifier (the honest AC2 failure classes read off
+// SendResult.detail). Telegram is a fire-and-forget mirror side-channel — no cascade, no fallback.
+export {
+  createTelegramAppCache,
+  TelegramSendError,
+  type TelegramAppCache,
+  type TelegramMessagingHandle,
+  type TelegramTextMessage,
+  type TelegramClientConfig,
+} from './providers/telegram-app.js';
+export {
+  classifyTelegramError,
+  rejectionDetail as telegramRejectionDetail,
+  type TelegramErrorClass,
+} from './providers/telegram-errors.js';
 export { mapMetaStatus, type MetaDeliveryStatus } from './providers/whatsapp-status.js';
 export { deepFreeze, isFrozenMutationError, type DeepReadonly } from './freeze.js';
 export { render, escapeText, type RenderableAlert } from './render.js';

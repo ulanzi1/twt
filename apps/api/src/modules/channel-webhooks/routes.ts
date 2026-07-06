@@ -51,4 +51,13 @@ export function registerChannelWebhookRoutes(instance: FastifyInstance, deps: Ap
     { schema: { hide: true, tags: [WEBHOOK_TAG] } },
     h.receive,
   );
+
+  // POST Telegram inbound receiver (public; the X-Telegram-Bot-Api-Secret-Token header is the auth). Telegram
+  // is POST-only — NO GET challenge (unlike Meta). Verify the secret token (constant-time) → persist the raw
+  // update → ack 200 fast; hidden from OpenAPI (a Telegram-facing operational endpoint).
+  instance.post(
+    '/api/v1/webhooks/telegram/:pariwarId',
+    { schema: { hide: true, tags: [WEBHOOK_TAG] } },
+    h.receiveTelegram,
+  );
 }

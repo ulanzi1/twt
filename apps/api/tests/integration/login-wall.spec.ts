@@ -65,6 +65,10 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // the X-Hub-Signature-256 HMAC over the raw body (POST) — verified in the handler, fail-closed (403).
   'GET /api/v1/webhooks/whatsapp/:pariwarId',
   'POST /api/v1/webhooks/whatsapp/:pariwarId',
+  // Story 5.5 — the Telegram inbound-update webhook (§3.11) is PUBLIC by design: Telegram is unauthenticated,
+  // so it cannot carry a member/admin session. Its auth is the per-Pariwar X-Telegram-Bot-Api-Secret-Token
+  // header (constant-time compare) — verified in the handler, fail-closed (403). Telegram is POST-only.
+  'POST /api/v1/webhooks/telegram/:pariwarId',
   // Honeypot traps are public by design (bot-bait); added programmatically below.
   ...HONEYPOT_PATHS.map((p) => `GET ${p}`),
 ]);

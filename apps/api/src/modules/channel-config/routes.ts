@@ -5,7 +5,7 @@
 // request.scopeGrants; the permission hook fail-closes on deny (401 no session, 403 no permission — never a
 // silent config write; AI-4-3(b)). All four routes register in openapi/v1.yaml (the EXPECTED diff).
 
-import { WaConfigResponse, WaConfigUpsertRequest, WaTemplateDto, WaTemplateUpsertRequest, WaTemplatesResponse } from '@twt/contracts';
+import { TelegramConfigResponse, TelegramConfigUpsertRequest, WaConfigResponse, WaConfigUpsertRequest, WaTemplateDto, WaTemplateUpsertRequest, WaTemplatesResponse } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -72,5 +72,28 @@ export function registerChannelConfigRoutes(app: FastifyInstance, deps: AppDeps)
       preHandler: chain,
     },
     h.putWaTemplate,
+  );
+
+  // ── Story 5.5 — Telegram config singleton (GET + PUT) ────────────────────────────────────────────
+  r.get(
+    '/api/v1/p/:pariwarId/admin/channel-config/telegram',
+    {
+      schema: { params: PariwarParam, response: { 200: TelegramConfigResponse }, tags: [CHANNEL_CONFIG_TAG] },
+      preHandler: chain,
+    },
+    h.getTelegramConfig,
+  );
+  r.put(
+    '/api/v1/p/:pariwarId/admin/channel-config/telegram',
+    {
+      schema: {
+        params: PariwarParam,
+        body: TelegramConfigUpsertRequest,
+        response: { 200: TelegramConfigResponse },
+        tags: [CHANNEL_CONFIG_TAG],
+      },
+      preHandler: chain,
+    },
+    h.putTelegramConfig,
   );
 }

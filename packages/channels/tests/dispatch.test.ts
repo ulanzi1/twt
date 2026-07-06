@@ -178,7 +178,7 @@ describe('audit lines (AC7 / AI-4-3(c))', () => {
     expect(dispatchLines[0]!.responseStatus).toBe(200);
     // The dispatch line records EVERY channel with its honest outcome (AC7 'attempted', not a sent filter).
     expect(dispatchLines[0]!.resourceLocator).toContain(
-      'channels=push:sent,whatsapp:sent,sms:not_implemented,telegram:not_implemented',
+      'channels=push:sent,whatsapp:sent,sms:not_implemented,telegram:sent',
     );
   });
 

@@ -64,6 +64,11 @@ import {
   WA_WEBHOOK_PROCESSOR_TZ,
   registerWaWebhookProcessorCron,
 } from './wa-webhook-processor.js';
+import {
+  DEFAULT_TELEGRAM_WEBHOOK_PROCESSOR_CRON,
+  TELEGRAM_WEBHOOK_PROCESSOR_TZ,
+  registerTelegramWebhookProcessorCron,
+} from './tg-webhook-processor.js';
 
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
@@ -89,6 +94,8 @@ const DEVICE_TOKEN_CLEANUP_CRON =
 // minute by default) so opt-in confirmation is prompt. Cadence is operations policy (IST).
 const WA_WEBHOOK_PROCESSOR_CRON =
   process.env['WA_WEBHOOK_PROCESSOR_CRON'] ?? DEFAULT_WA_WEBHOOK_PROCESSOR_CRON;
+const TELEGRAM_WEBHOOK_PROCESSOR_CRON =
+  process.env['TELEGRAM_WEBHOOK_PROCESSOR_CRON'] ?? DEFAULT_TELEGRAM_WEBHOOK_PROCESSOR_CRON;
 // Validity-cache GC sweep (Story 4.8, Task 4). Every 15 min by default (IST). Storage hygiene ONLY.
 const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * * * *';
 // Rows older than this (default the 10× TTL constant) are reclaimed. Overridable like the cron cadences.
@@ -155,6 +162,11 @@ async function main(): Promise<void> {
   if (!/^(\S+\s+){4}\S+$/.test(WA_WEBHOOK_PROCESSOR_CRON.trim())) {
     throw new RangeError(
       `[jobs] WA_WEBHOOK_PROCESSOR_CRON must be a 5-field cron expression (got "${WA_WEBHOOK_PROCESSOR_CRON}")`,
+    );
+  }
+  if (!/^(\S+\s+){4}\S+$/.test(TELEGRAM_WEBHOOK_PROCESSOR_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] TELEGRAM_WEBHOOK_PROCESSOR_CRON must be a 5-field cron expression (got "${TELEGRAM_WEBHOOK_PROCESSOR_CRON}")`,
     );
   }
 
@@ -307,6 +319,17 @@ async function main(): Promise<void> {
       boss,
       { pool, db, enc: { kms: jobsEncryption.kms, hmacKeyRef: jobsEncryption.hmacKeyRef } },
       { cron: WA_WEBHOOK_PROCESSOR_CRON, tz: WA_WEBHOOK_PROCESSOR_TZ },
+    );
+
+    // ── Telegram inbound-update processor + opt-in stale-PENDING sweep (Story 5.5, AC4/AC8/AC10) ──
+    // Drains telegram_inbound_webhook_events: `/start <code>` → ACTIVE + consent (capturing chat_id),
+    // `/stop` → REVOKED, my_chat_member block → BLOCKED; plus the stale-PENDING sweep → EXPIRED (no
+    // past-window sweep). No blind index (Telegram never shares the phone — the code alone is the match key).
+    // Cross-tenant on the service `pool`.
+    await registerTelegramWebhookProcessorCron(
+      boss,
+      { pool, db },
+      { cron: TELEGRAM_WEBHOOK_PROCESSOR_CRON, tz: TELEGRAM_WEBHOOK_PROCESSOR_TZ },
     );
 
     await new Promise<void>((resolve, reject) => {

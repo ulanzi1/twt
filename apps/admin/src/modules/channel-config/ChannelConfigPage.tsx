@@ -8,7 +8,15 @@
 import type { ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { usePutWaConfig, usePutWaTemplate, useWaConfig, useWaTemplates } from '../../api/hooks.js';
+import {
+  usePutTelegramConfig,
+  usePutWaConfig,
+  usePutWaTemplate,
+  useTelegramConfig,
+  useWaConfig,
+  useWaTemplates,
+} from '../../api/hooks.js';
+import { TelegramConfigForm } from './TelegramConfigForm.js';
 import { WaConfigForm } from './WaConfigForm.js';
 import { WaTemplateForm } from './WaTemplateForm.js';
 
@@ -27,6 +35,8 @@ export function ChannelConfigPage({ pariwarId }: ChannelConfigPageProps): ReactE
   const putConfig = usePutWaConfig(pariwarId);
   const templates = useWaTemplates(pariwarId);
   const putTemplate = usePutWaTemplate(pariwarId);
+  const telegramConfig = useTelegramConfig(pariwarId);
+  const putTelegramConfig = usePutTelegramConfig(pariwarId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,6 +105,28 @@ export function ChannelConfigPage({ pariwarId }: ChannelConfigPageProps): ReactE
             </table>
           )}
         </div>
+      </section>
+
+      <section aria-label="Telegram config" className="rounded border p-4">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">
+          Telegram mirror (v1 feature flag)
+        </h2>
+        <p className="mb-3 text-sm opacity-70">
+          Configure this Pariwar’s Telegram bot. Telegram is a fire-and-forget announcements-only mirror,
+          disabled by default. The token fields are Secret-Manager NAMEs (pointers), never the values.
+        </p>
+        {telegramConfig.isLoading ? (
+          <p role="status">Loading Telegram config…</p>
+        ) : telegramConfig.isError ? (
+          <p role="alert" className="text-status-fail-fg">{errorMessage(telegramConfig.error)}</p>
+        ) : (
+          <TelegramConfigForm
+            initial={telegramConfig.data!.config}
+            pending={putTelegramConfig.isPending}
+            submitError={errorMessage(putTelegramConfig.error)}
+            onSubmit={(payload) => putTelegramConfig.mutate(payload)}
+          />
+        )}
       </section>
     </div>
   );

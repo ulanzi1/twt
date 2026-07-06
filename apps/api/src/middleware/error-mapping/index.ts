@@ -28,6 +28,9 @@ import {
   TcStateError,
   TcVersionConflictError,
   TcVersionNotFoundError,
+  TelegramOptInNotFoundError,
+  TelegramOptInPendingExistsError,
+  TelegramOptInStateError,
   ToneReviewRequiredError,
   WaOptInNotFoundError,
   WaOptInPendingExistsError,
@@ -179,6 +182,23 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof WaOptInStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3e) Telegram opt-in typed errors (Story 5.5, AC4/AC10). Each owns its code + projector.
+  //   TelegramOptInNotFoundError      → 404 telegram_opt_in.not_found
+  //   TelegramOptInPendingExistsError → 409 telegram_opt_in.pending_exists (a PENDING is already outstanding)
+  //   TelegramOptInStateError         → 409 telegram_opt_in.invalid_state (illegal transition, e.g. a race)
+  if (error instanceof TelegramOptInNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof TelegramOptInPendingExistsError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof TelegramOptInStateError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
     return;
   }

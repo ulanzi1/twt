@@ -91,3 +91,46 @@ export const WaTemplatesResponse = z
   })
   .strict();
 export type WaTemplatesResponse = z.output<typeof WaTemplatesResponse>;
+
+// ── Story 5.5 — per-Pariwar Telegram Bot config DTOs (trustee admin endpoints) ─────────────────────────
+// The request/response shapes for the trustee Telegram config endpoints (admin-session +
+// `pariwar.configure_channels`-gated):
+//   · GET/PUT  /api/v1/p/{pariwarId}/admin/channel-config/telegram — the Telegram config singleton.
+// `botTokenSecretName` / `webhookSecretTokenSecretName` are Secret-Manager NAMEs (POINTERS), NOT the values
+// — safe to round-trip in the admin form (AI-4-3(c)).
+
+/**
+ * The Telegram config singleton — request (PUT) + response (GET) share this shape. `enabled` is the FR-58C v1
+ * flag (disabled by default). `botUsername` is member-facing (the `t.me/<bot>?start=` deep-link). The two NAME
+ * pointers are nullable (a config row may exist, disabled, before provisioning); NULL bot-token ⇒ fixture,
+ * NULL webhook secret-token ⇒ the webhook receiver fails-closed.
+ */
+export const TelegramConfigDto = z
+  .object({
+    enabled: z.boolean(),
+    // Telegram bot handle shape (5-32 chars, `[A-Za-z0-9_]`, optional leading `@`) — rejects a bare "@" or
+    // whitespace-only value at save time, before it can reach `buildStartDeepLink` and throw at read time.
+    botUsername: z
+      .string()
+      .trim()
+      .regex(/^@?[A-Za-z0-9_]{5,32}$/, 'must be a Telegram bot username, e.g. @twt_notify_bot')
+      .nullable(),
+    botTokenSecretName: optionalConfigString,
+    webhookSecretTokenSecretName: optionalConfigString,
+  })
+  .strict();
+export type TelegramConfigDto = z.output<typeof TelegramConfigDto>;
+
+/** GET /api/v1/p/{pariwarId}/admin/channel-config/telegram — the config + whether a row has been provisioned. */
+export const TelegramConfigResponse = z
+  .object({
+    /** false when no config row exists yet (the DTO carries the zero-config defaults). */
+    configured: z.boolean(),
+    config: TelegramConfigDto,
+  })
+  .strict();
+export type TelegramConfigResponse = z.output<typeof TelegramConfigResponse>;
+
+/** PUT /api/v1/p/{pariwarId}/admin/channel-config/telegram — upsert the config. */
+export const TelegramConfigUpsertRequest = TelegramConfigDto;
+export type TelegramConfigUpsertRequest = z.output<typeof TelegramConfigUpsertRequest>;

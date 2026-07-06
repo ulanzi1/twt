@@ -75,7 +75,7 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
     );
   });
 
-  it('consent_type declares the seven AC1 values + the Story 5.4 whatsapp_opt_in additive', () => {
+  it('consent_type declares the seven AC1 values + the Story 5.4/5.5 opt-in additives', () => {
     expect([...ConsentTypeSchema.options].sort()).toEqual(
       [
         'claim_time_dpdpa',
@@ -85,6 +85,8 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
         'medical_disclosure_ack',
         'nominee_share_split',
         'tc_acceptance',
+        // Story 5.5 — member Telegram opt-in consent (additive via ALTER TYPE + lockstep).
+        'telegram_opt_in',
         // Story 5.4 — member WhatsApp opt-in consent (additive via ALTER TYPE + lockstep).
         'whatsapp_opt_in',
       ],
@@ -130,9 +132,9 @@ describe('ConsentRecordResponse', () => {
   });
 
   it('rejects an out-of-enum consent_type', () => {
-    // `whatsapp_opt_in` is now a VALID Story 5.4 additive — use a genuinely unknown value here.
+    // `whatsapp_opt_in`/`telegram_opt_in` are now VALID additives — use a genuinely unknown value here.
     expect(
-      ConsentRecordResponse.safeParse({ ...VALID_WIRE, consentType: 'telegram_opt_in' }).success,
+      ConsentRecordResponse.safeParse({ ...VALID_WIRE, consentType: 'signal_opt_in' }).success,
     ).toBe(false);
   });
 

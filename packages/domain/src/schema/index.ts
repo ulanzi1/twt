@@ -125,6 +125,16 @@ export * from './whatsapp_send_status.js';
 // by the apps/jobs worker; tenant-isolated inline RLS).
 export * from './member_wa_opt_in.js';
 export * from './wa_inbound_webhook_events.js';
+// Story 5.5 — member Telegram opt-in state-machine substrate: `pariwar_telegram_config` (1:1 singleton —
+// the FR-58C v1 `enabled` toggle + bot username + bot-token/webhook-secret-token NAME pointers;
+// tenant-isolated RLS) + `member_telegram_opt_in` (the five-state operational lifecycle
+// PENDING|ACTIVE|REVOKED|BLOCKED|EXPIRED + verification_code partial-unique match token + captured chat_id;
+// NO mobile blind index, NO window; tenant-isolated inline RLS) + the §3.11 webhook queue
+// `telegram_inbound_webhook_events` (raw Telegram inbound updates persisted by the ingress primitive, drained
+// by the apps/jobs worker; tenant-isolated inline RLS).
+export * from './pariwar_telegram_config.js';
+export * from './member_telegram_opt_in.js';
+export * from './telegram_inbound_webhook_events.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

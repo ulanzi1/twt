@@ -28,3 +28,25 @@ export function NotificationSettingsEntry() {
     </YStack>
   )
 }
+
+/** Sibling understated entry into the Telegram opt-in screen (Story 5.5, Task 10). Same low-prominence framing. */
+export function TelegramNotificationSettingsEntry() {
+  const t = useT()
+  const router = useRouter()
+  return (
+    <YStack px="$6" py="$3">
+      <Button
+        chromeless
+        height={40}
+        justify="flex-start"
+        opacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={t('telegramNotifications.entry_label')}
+        accessibilityHint={t('telegramNotifications.entry_hint')}
+        onPress={() => router.push('/(settings)/telegram-notifications')}
+      >
+        {t('telegramNotifications.entry_label')}
+      </Button>
+    </YStack>
+  )
+}

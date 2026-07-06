@@ -154,9 +154,8 @@ const {
 const { NomineeDeclareRequest, NomineeStatusResponse } = await import('../src/nominee/index.js');
 // Story 5.2 — push device-token registration DTOs (member + admin endpoints; shared request/ack).
 // Story 5.3 — per-Pariwar WhatsApp Business config DTOs (trustee admin endpoints; config + templates).
-const { WaConfigDto, WaConfigResponse, WaTemplateDto, WaTemplatesResponse } = await import(
-  '../src/channel-config/index.js'
-);
+const { WaConfigDto, WaConfigResponse, WaTemplateDto, WaTemplatesResponse, TelegramConfigDto, TelegramConfigResponse } =
+  await import('../src/channel-config/index.js');
 const { DeviceTokenRegisterRequest, DeviceTokenRegisterResponse } = await import(
   '../src/device-tokens/index.js'
 );
@@ -165,6 +164,10 @@ const { DeviceTokenRegisterRequest, DeviceTokenRegisterResponse } = await import
 const { CreateWaOptInResponse, WaOptInStatusResponse, RevokeWaOptInResponse } = await import(
   '../src/wa-opt-in/index.js'
 );
+// Story 5.5 — the member Telegram opt-in DTOs (mint PENDING → t.me `/start` deep-link, status, revoke).
+// Member-session-gated; the tg-webhook-processor worker advances PENDING → ACTIVE out-of-band.
+const { TelegramOptInRequestResponse, TelegramOptInStatusResponse, RevokeTelegramOptInResponse } =
+  await import('../src/telegram-opt-in/index.js');
 // Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
@@ -390,12 +393,25 @@ for (const [name, schema] of Object.entries(waOptInComponents)) {
   registry.register(name, schema);
 }
 
+// Story 5.5 — member Telegram opt-in components (request-mint / status / revoke).
+const telegramOptInComponents = {
+  TelegramOptInRequestResponse: TelegramOptInRequestResponse.openapi('TelegramOptInRequestResponse'),
+  TelegramOptInStatusResponse: TelegramOptInStatusResponse.openapi('TelegramOptInStatusResponse'),
+  RevokeTelegramOptInResponse: RevokeTelegramOptInResponse.openapi('RevokeTelegramOptInResponse'),
+} as const;
+for (const [name, schema] of Object.entries(telegramOptInComponents)) {
+  registry.register(name, schema);
+}
+
 // Story 5.3 — WhatsApp Business config components (config singleton + per-category template mapping).
 const channelConfigComponents = {
   WaConfigDto: WaConfigDto.openapi('WaConfigDto'),
   WaConfigResponse: WaConfigResponse.openapi('WaConfigResponse'),
   WaTemplateDto: WaTemplateDto.openapi('WaTemplateDto'),
   WaTemplatesResponse: WaTemplatesResponse.openapi('WaTemplatesResponse'),
+  // Story 5.5 — Telegram config singleton.
+  TelegramConfigDto: TelegramConfigDto.openapi('TelegramConfigDto'),
+  TelegramConfigResponse: TelegramConfigResponse.openapi('TelegramConfigResponse'),
 } as const;
 for (const [name, schema] of Object.entries(channelConfigComponents)) {
   registry.register(name, schema);
@@ -1419,6 +1435,57 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 5.5 — member Telegram opt-in surface (member-session-gated) ──
+const telegramOptInTags = ['telegram-opt-in'];
+const telegramOptInAuth = errorResponse('Authentication required');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/telegram-opt-in',
+  summary: 'Mint (or re-use) a PENDING Telegram opt-in → t.me `/start` deep-link',
+  description:
+    'Mints a PENDING opt-in for the authenticated member with a unique verification code, and returns a ' +
+    'https://t.me/<bot>?start=<code> deep-link. Tapping it opens the bot and sends `/start <code>`. A re-tap ' +
+    're-uses the outstanding PENDING. 409 when the Pariwar has Telegram disabled / no bot. The bot `/start` ' +
+    'is matched by the tg-webhook-processor worker, which advances the opt-in to ACTIVE.',
+  tags: telegramOptInTags,
+  responses: {
+    200: { description: 'PENDING opt-in minted', content: jsonOf(telegramOptInComponents.TelegramOptInRequestResponse) },
+    401: telegramOptInAuth,
+    409: errorResponse('Telegram unavailable for this Pariwar, or already opted in'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/telegram-opt-in',
+  summary: 'Read the member’s current Telegram opt-in status',
+  description:
+    'Returns the member’s current opt-in state (null when never opted in) + whether the toggle is ' +
+    'available (Telegram enabled + bot) + the `/start` deep-link (PENDING only).',
+  tags: telegramOptInTags,
+  responses: {
+    200: { description: 'Opt-in status', content: jsonOf(telegramOptInComponents.TelegramOptInStatusResponse) },
+    401: telegramOptInAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/telegram-opt-in/revoke',
+  summary: 'Revoke the member’s active Telegram opt-in (independently revocable)',
+  description:
+    'Member-initiated revocation of an ACTIVE opt-in — disables Telegram delivery immediately, touching ' +
+    'ONLY the telegram_opt_in consent. 409 when there is no ACTIVE opt-in. Re-opt-in requires a new bot ' +
+    '`/start` interaction (no inferred re-consent).',
+  tags: telegramOptInTags,
+  responses: {
+    200: { description: 'Opt-in revoked', content: jsonOf(telegramOptInComponents.RevokeTelegramOptInResponse) },
+    401: telegramOptInAuth,
+    409: errorResponse('No active opt-in to revoke'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 // ── Story 5.3 — trustee WhatsApp Business config (per-Pariwar; the [SURFACE] half) ──
 // GET/PUT the WA config singleton + GET/PUT the per-category UTILITY template mapping. Scoped admin chain
 // [requireAdminSession, scopeResolutionHook, requirePermissionHook(pariwar.configure_channels)] — 401 no
@@ -1501,6 +1568,44 @@ registry.registerPath({
     401: channelConfigAuth,
     403: channelConfigForbidden,
     409: errorResponse('The WhatsApp Business config must be saved before a template mapping can be added'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 5.5 — trustee Telegram Bot config (per-Pariwar; the [SURFACE] half) ──
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/channel-config/telegram',
+  summary: 'Read the per-Pariwar Telegram Bot config (zero-config defaults when unprovisioned)',
+  description:
+    'Returns the Telegram config singleton (the FR-58C v1 `enabled` flag, bot username, + the bot-token / ' +
+    'webhook-secret-token Secret-Manager NAME pointers — never the values). Requires pariwar.configure_channels.',
+  tags: channelConfigTags,
+  request: { params: channelConfigParams },
+  responses: {
+    200: { description: 'Telegram config', content: jsonOf(channelConfigComponents.TelegramConfigResponse) },
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/channel-config/telegram',
+  summary: 'Upsert the per-Pariwar Telegram Bot config (audited)',
+  description:
+    'Upserts the Telegram config singleton (the FR-58C v1 `enabled` flag, bot username, + the two ' +
+    'Secret-Manager NAME pointers — the resolved token values NEVER appear here or in the audit). Audited. ' +
+    'Requires pariwar.configure_channels at pariwar scope.',
+  tags: channelConfigTags,
+  request: {
+    params: channelConfigParams,
+    body: { content: jsonOf(channelConfigComponents.TelegramConfigDto), required: true },
+  },
+  responses: {
+    200: { description: 'Telegram config upserted', content: jsonOf(channelConfigComponents.TelegramConfigResponse) },
+    400: errorResponse('Request validation failed'),
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

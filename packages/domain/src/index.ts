@@ -98,6 +98,17 @@ export {
   WaOptInStateError,
   WA_OPT_IN_INVALID_STATE_CODE,
 } from './wa-opt-in/errors.js';
+// Member Telegram opt-in typed errors (Story 5.5). Surfaced at the top level — mirroring the WA opt-in
+// errors — so the apps/api member opt-in route error-mapping imports the class + code constant directly; the
+// full primitive is also under the `telegramOptIn` namespace below.
+export {
+  TelegramOptInNotFoundError,
+  TELEGRAM_OPT_IN_NOT_FOUND_CODE,
+  TelegramOptInPendingExistsError,
+  TELEGRAM_OPT_IN_PENDING_EXISTS_CODE,
+  TelegramOptInStateError,
+  TELEGRAM_OPT_IN_INVALID_STATE_CODE,
+} from './telegram-opt-in/errors.js';
 // Member lifecycle direct-write rejection (Story 3.1, AC3). Surfaced at the top
 // level — mirroring the consent errors — so the apps/api error-mapping middleware
 // (Story 3.6 signup route) imports the class + code constant from `@twt/domain`
@@ -160,4 +171,11 @@ export * as channelConfig from './channel-config/index.js';
 // markWebhookEventProcessed), and the verification-phrase generate/extract helpers. Tenant-scoped; audit
 // linkage is the consumer route/worker's obligation (audit-or-throw).
 export * as waOptIn from './wa-opt-in/index.js';
+// Story 5.5 — member Telegram opt-in state-machine accessors: the five-state operational lifecycle
+// transitions (createPendingOptIn/activateOptIn/revokeOptIn), the match/status reads (matchPendingOptIn/
+// isOptInActive/getOptInForMember/getChatIdForMember/getActiveOptInByChatId), the §3.11 webhook-queue seam
+// (persistInboundWebhookEvent/claimUnprocessedWebhookEvents/markWebhookEventProcessed), and the
+// verification-code generate/extract helpers. Tenant-scoped; audit linkage is the consumer route/worker's
+// obligation (audit-or-throw).
+export * as telegramOptIn from './telegram-opt-in/index.js';
 export { UUID_REGEX } from './db.js';

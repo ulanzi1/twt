@@ -15,6 +15,8 @@ import { createHash } from 'node:crypto';
 
 import { audit, canonicalJsonStringify, channelConfig, ids, schema, type Db } from '@twt/domain';
 import type {
+  TelegramConfigResponse,
+  TelegramConfigUpsertRequest,
   WaConfigResponse,
   WaConfigUpsertRequest,
   WaTemplateDto,
@@ -203,6 +205,85 @@ export function createChannelConfigHandlers(deps: AppDeps) {
         templateName: body.templateName,
         languageCode: body.languageCode,
         approvalStatus: body.approvalStatus,
+      };
+    },
+
+    // ── Story 5.5 — trustee Telegram Bot config (GET + PUT) ───────────────────────────────────────────
+
+    /** GET the Telegram config singleton (zero-config defaults when no row exists yet). */
+    async getTelegramConfig(request: FastifyRequest): Promise<TelegramConfigResponse> {
+      const { tx, pariwarIdStr } = scopeCtx(request);
+      const row = await channelConfig.getTelegramConfig(tx, ids.pariwarId(pariwarIdStr));
+      if (!row) {
+        return {
+          configured: false,
+          config: {
+            enabled: false,
+            botUsername: null,
+            botTokenSecretName: null,
+            webhookSecretTokenSecretName: null,
+          },
+        };
+      }
+      return {
+        configured: true,
+        config: {
+          enabled: row.enabled,
+          botUsername: row.botUsername,
+          botTokenSecretName: row.botTokenSecretName,
+          webhookSecretTokenSecretName: row.webhookSecretTokenSecretName,
+        },
+      };
+    },
+
+    /** PUT the Telegram config singleton (upsert + audit). NEVER audits a token value (the NAME is a pointer). */
+    async putTelegramConfig(request: FastifyRequest): Promise<TelegramConfigResponse> {
+      const { tx, pariwarIdStr, actorId } = scopeCtx(request);
+      const body = request.body as TelegramConfigUpsertRequest;
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+
+      await channelConfig.upsertTelegramConfig(tx, {
+        pariwarId,
+        enabled: body.enabled,
+        botUsername: body.botUsername,
+        botTokenSecretName: body.botTokenSecretName,
+        webhookSecretTokenSecretName: body.webhookSecretTokenSecretName,
+        updatedByActor: ids.userId(actorId),
+      });
+
+      // Audit over NON-secret config fields only (the credential NAMEs are safe pointers; the resolved token
+      // never appears here). No token value ever reaches the audit hash (AI-4-3(c)).
+      await audit.writeAuditEntry(deps.servicePool, {
+        pariwarId: pariwarIdStr,
+        actorId,
+        actorRole: null,
+        action: 'pariwar.telegram_config_update',
+        resourceLocator: `pariwar/${pariwarIdStr}/channel-config/telegram`,
+        requestPayloadHash: createHash('sha256')
+          .update(
+            canonicalJsonStringify({
+              pariwar_id: pariwarIdStr,
+              enabled: body.enabled,
+              bot_username: body.botUsername,
+              // NAME pointers only — the resolved secret values NEVER reach the audit hash (AI-4-3(c)).
+              bot_token_secret_name: body.botTokenSecretName,
+              webhook_secret_token_secret_name: body.webhookSecretTokenSecretName,
+            }),
+            'utf8',
+          )
+          .digest('hex'),
+        responseStatus: 200,
+        traceId: request.requestContext.traceId ?? null,
+      });
+
+      return {
+        configured: true,
+        config: {
+          enabled: body.enabled,
+          botUsername: body.botUsername,
+          botTokenSecretName: body.botTokenSecretName,
+          webhookSecretTokenSecretName: body.webhookSecretTokenSecretName,
+        },
       };
     },
   };

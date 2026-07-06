@@ -37,9 +37,15 @@ import {
   CreateWaOptInResponse,
   WaOptInStatusResponse,
   RevokeWaOptInResponse,
+  TelegramOptInRequestResponse,
+  TelegramOptInStatusResponse,
+  RevokeTelegramOptInResponse,
   type CreateWaOptInResponse as CreateWaOptInResult,
   type WaOptInStatusResponse as WaOptInStatusResult,
   type RevokeWaOptInResponse as RevokeWaOptInResult,
+  type TelegramOptInRequestResponse as TelegramOptInRequestResult,
+  type TelegramOptInStatusResponse as TelegramOptInStatusResult,
+  type RevokeTelegramOptInResponse as RevokeTelegramOptInResult,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
   type KycManualSubmitRequest,
@@ -125,6 +131,7 @@ const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
 const WITHDRAWAL_BASE = '/api/v1/member/withdrawal';
 const DATA_EXPORT_BASE = '/api/v1/member/data-export';
 const WA_OPT_IN_BASE = '/api/v1/member/wa-opt-in';
+const TELEGRAM_OPT_IN_BASE = '/api/v1/member/telegram-opt-in';
 const RTBF_BASE = '/api/v1/member/rtbf';
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
@@ -506,6 +513,26 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Revoke the member's active WhatsApp opt-in (session; auth). */
     revokeWaOptIn(): Promise<RevokeWaOptInResult> {
       return call(WA_OPT_IN_BASE, RevokeWaOptInResponse, {}, true, 'DELETE');
+    },
+
+    // ── Telegram opt-in (Story 5.5) ───────────────────────────────────────────
+    // POST mints (or re-uses) a PENDING opt-in → t.me `/start` deep-link; GET reads the current state
+    // (drives the settings toggle + copy); POST …/revoke revokes an ACTIVE opt-in (independently revocable).
+    // The tg-webhook-processor worker advances PENDING → ACTIVE out-of-band on the bot `/start`.
+
+    /** Mint (or re-use) a PENDING Telegram opt-in → t.me `/start` deep-link (session; auth). */
+    requestTelegramOptIn(): Promise<TelegramOptInRequestResult> {
+      return call(TELEGRAM_OPT_IN_BASE, TelegramOptInRequestResponse, {}, true);
+    },
+
+    /** Read the member's current Telegram opt-in status (session; auth). */
+    getTelegramOptInStatus(): Promise<TelegramOptInStatusResult> {
+      return call(TELEGRAM_OPT_IN_BASE, TelegramOptInStatusResponse, undefined, true, 'GET');
+    },
+
+    /** Revoke the member's active Telegram opt-in (session; auth). */
+    revokeTelegramOptIn(): Promise<RevokeTelegramOptInResult> {
+      return call(`${TELEGRAM_OPT_IN_BASE}/revoke`, RevokeTelegramOptInResponse, {}, true);
     },
   };
 }

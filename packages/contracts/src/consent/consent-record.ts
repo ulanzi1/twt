@@ -39,6 +39,10 @@ export const ConsentTypeSchema = z.enum([
   // Story 5.4 — member WhatsApp opt-in consent (lockstep with the domain `consent_type`
   // pgEnum; the tests/consent.test.ts equality assertion is the anti-drift guard).
   'whatsapp_opt_in',
+  // Story 5.5 — member Telegram opt-in consent (a separate first-class consent type mirroring
+  // whatsapp_opt_in; consent is independent of transport policy — see the Story 5.5 "Consent vs.
+  // operational delivery state" invariant). Lockstep with the domain `consent_type` pgEnum.
+  'telegram_opt_in',
 ]);
 export type ConsentTypeSchema = z.output<typeof ConsentTypeSchema>;
 

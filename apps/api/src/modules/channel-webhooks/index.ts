@@ -10,7 +10,7 @@ import { registerChannelWebhookRoutes } from './routes.js';
 
 export { registerChannelWebhookRoutes } from './routes.js';
 export { verifyMetaSignature, META_SIGNATURE_HEADER } from './signature.js';
-export { createChannelWebhookHandlers } from './handlers.js';
+export { createChannelWebhookHandlers, TELEGRAM_SECRET_TOKEN_HEADER } from './handlers.js';
 
 export function registerChannelWebhooksModule(app: FastifyInstance, deps: AppDeps): void {
   // Encapsulate so the raw-body content-type parser is scoped to the webhook routes only. The parent's

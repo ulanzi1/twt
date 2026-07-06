@@ -102,6 +102,14 @@ export const QUEUE_NAMES = {
    * service pool. Job class C (background).
    */
   WA_WEBHOOK_PROCESSOR: 'wa.webhook_processor',
+  /**
+   * Telegram inbound-update processing + opt-in stale-PENDING sweep (Story 5.5, Task 7). A scheduled drain of
+   * the `telegram_inbound_webhook_events` §3.11 queue table: per persisted update it matches a bot `/start
+   * <code>` to a PENDING opt-in (→ ACTIVE + consent, capturing chat_id), handles `/stop` (→ REVOKED) and a
+   * `my_chat_member` block (→ BLOCKED); plus a stale-PENDING sweep (→ EXPIRED — NO past-window sweep, Telegram
+   * has no window). Best-effort, cross-tenant on the BYPASSRLS service pool. Job class C (background).
+   */
+  TELEGRAM_WEBHOOK_PROCESSOR: 'telegram.webhook_processor',
 } as const;
 
 /** Union of the registered queue names. */

@@ -30,6 +30,7 @@ deliberately accepted.
 | Sunita (nominee bank-statement upload)           | facilitator-not-intermediary trust posture | forced     |
 | member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |
 | member (opting in to WhatsApp notifications; sends a pre-filled "Send Hello" WhatsApp message to confirm) | Explicit, member-initiated consent provenance (AC4 — no inferred/passive consent for a new communication channel) | optional |
+| member (opting in to Telegram notifications; taps a t.me deep-link to /start the bot) | Explicit member-initiated consent for a new channel | optional |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -234,6 +235,24 @@ explicit consent provenance (AC4) → optional`). The **page-weight baseline is 
 all new files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op →
 `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the
 PUBLIC `apps/public` Astro surface, which this story does not touch.
+
+**Story 5.5 disposition (NEW row — optional opt-in friction):** the Telegram notification
+opt-in surface (`apps/mobile/app/(settings)/telegram-notifications.tsx`, the second entry in
+`apps/mobile/components/notifications/NotificationSettingsEntry.tsx`, the home-tab entry in
+`apps/mobile/app/(tabs)/index.tsx`) introduces one deliberate, member-initiated friction that
+mirrors Story 5.4's WhatsApp opt-in: after tapping "Enable Telegram notifications," the member
+is handed off to Telegram via a `https://t.me/<bot>?start=<code>` deep-link (`Linking.openURL`)
+and must actively start the bot to confirm. This is **not gratuitous** — it is the explicit,
+non-inferred consent AC4/AC10 require (no passive/pre-checked/bundled consent for a new
+communication channel) and the `/start <code>` is the match token the inbound-webhook worker
+uses to advance PENDING→ACTIVE. The toggle is entirely **optional** — a member who never taps it
+experiences zero friction; Telegram is a fire-and-forget mirror side-channel, never a primary
+delivery path. Declared as the NEW row above (`member (opting in to Telegram notifications) →
+explicit member-initiated consent for a new channel → optional`). The **page-weight baseline is
+unchanged**: all new files are in the authenticated mobile app (`apps/mobile`, EAS build is a
+no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover
+the PUBLIC `apps/public` Astro surface, which this story does not touch
+([[project_friction_budget_baseline_ratchet]]).
 
 ## How to declare (attribution-on-change — AC-4)
 

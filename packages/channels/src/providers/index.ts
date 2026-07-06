@@ -8,22 +8,26 @@ import type { Channel, ChannelProvider } from '../provider.js';
 import { createApnsProvider } from './apns.js';
 import { createFcmProvider, type PushProviderDeps } from './fcm.js';
 import { createFixturePushProvider, type FixturePushOptions } from './fixture-push.js';
+import { createFixtureTelegramProvider, type FixtureTelegramOptions } from './fixture-telegram.js';
 import { createFixtureWhatsappProvider, type FixtureWhatsappOptions } from './fixture-whatsapp.js';
 import { smsDltProvider } from './sms-dlt.js';
-import { telegramProvider } from './telegram.js';
+import { createTelegramBotProvider, type TelegramProviderDeps } from './telegram.js';
 import { createWhatsappBusinessProvider, type WhatsappProviderDeps } from './whatsapp-business.js';
 
 export {
   createApnsProvider,
   createFcmProvider,
   createFixturePushProvider,
+  createFixtureTelegramProvider,
   createFixtureWhatsappProvider,
+  createTelegramBotProvider,
   createWhatsappBusinessProvider,
   smsDltProvider,
-  telegramProvider,
   type PushProviderDeps,
   type FixturePushOptions,
+  type FixtureTelegramOptions,
   type FixtureWhatsappOptions,
+  type TelegramProviderDeps,
   type WhatsappProviderDeps,
 };
 
@@ -64,6 +68,20 @@ export function createWhatsappProvider(
 }
 
 /**
+ * Select the `telegram` provider: the REAL Telegram Bot provider when the per-Pariwar bot deps are available
+ * (config `enabled`, bot-token NAME resolved), else the log-only fixture. Mirrors createWhatsappProvider's
+ * real-vs-fixture seam; the selection stays OUT of `dispatch` (the dispatcher stays policy-agnostic). Guards
+ * BOTH `null` AND `undefined` (the 5.2 review-fix pre-applied).
+ */
+export function createTelegramProvider(
+  tg: TelegramProviderDeps | null | undefined,
+  fixtureOptions: FixtureTelegramOptions = {},
+): ChannelProvider {
+  if (tg == null) return createFixtureTelegramProvider(fixtureOptions);
+  return createTelegramBotProvider(tg);
+}
+
+/**
  * The default provider registry: each logical channel → the provider(s) that serve it. `push` defaults to
  * the log-only fixtures (zero Firebase config); `whatsapp` defaults to the log-only fixture (zero Meta
  * config). A real per-Pariwar registry is built by the composition layer via createPushProviders /
@@ -74,5 +92,5 @@ export const DEFAULT_PROVIDER_REGISTRY: Readonly<Record<Channel, readonly Channe
   push: fixturePushProviders(),
   whatsapp: [createFixtureWhatsappProvider()],
   sms: [smsDltProvider],
-  telegram: [telegramProvider],
+  telegram: [createFixtureTelegramProvider()],
 };

@@ -107,6 +107,12 @@ export const consentTypeEnum = pgEnum('consent_type', [
   // existing pgEnum (stored ordinals). Added by an `ALTER TYPE … ADD VALUE` migration
   // in its OWN file (that DDL cannot run in a tx / be used in the same tx it is added).
   'whatsapp_opt_in',
+  // Story 5.5 — member Telegram opt-in consent (a separate first-class consent type mirroring
+  // whatsapp_opt_in; consent is independent of transport policy — see the Story 5.5 "Consent vs.
+  // operational delivery state" invariant). Recorded on the PENDING→ACTIVE `/start` match; revoked on
+  // member/`/stop`/block/admin opt-out. APPENDED at the END. Added by its OWN `ALTER TYPE … ADD VALUE`
+  // migration (0048).
+  'telegram_opt_in',
 ]);
 
 /**

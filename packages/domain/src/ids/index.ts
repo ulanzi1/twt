@@ -332,3 +332,22 @@ export const memberWaOptInId = uuidBrand('MemberWaOptInId');
 export type WaInboundWebhookEventId = Brand<'WaInboundWebhookEventId'>;
 /** Smart constructor: validates UUID shape, returns a branded `WaInboundWebhookEventId`. */
 export const waInboundWebhookEventId = uuidBrand('WaInboundWebhookEventId');
+
+// ── Member Telegram opt-in + inbound-webhook-event ids (Story 5.5, Task 2) ─────
+// Two NEW branded ids per the §Naming "branding mandatory on a new ID's first PR" discipline
+// (L3700-3708), mirroring the WA opt-in ids: `MemberTelegramOptInId` is the per-row address of a member
+// Telegram opt-in state-machine row (`member_telegram_opt_in.opt_in_id`); `TelegramInboundWebhookEventId` is
+// the per-row address of a persisted Telegram inbound-update event on the §3.11 webhook queue
+// (`telegram_inbound_webhook_events.event_id`). Both are UUID row addresses, so both reuse the shared
+// `uuidBrand` validator. As with WA, `member_telegram_opt_in.member_id` is NOT FK-branded (polymorphic
+// member reference — the MemberId brand is a `$type` hint only, no FK to the RLS-forced `members`).
+
+/** Per-row address of a member Telegram opt-in state-machine row (`member_telegram_opt_in.opt_in_id`). */
+export type MemberTelegramOptInId = Brand<'MemberTelegramOptInId'>;
+/** Smart constructor: validates UUID shape, returns a branded `MemberTelegramOptInId`. */
+export const memberTelegramOptInId = uuidBrand('MemberTelegramOptInId');
+
+/** Per-row address of a persisted Telegram inbound-webhook event (`telegram_inbound_webhook_events.event_id`). */
+export type TelegramInboundWebhookEventId = Brand<'TelegramInboundWebhookEventId'>;
+/** Smart constructor: validates UUID shape, returns a branded `TelegramInboundWebhookEventId`. */
+export const telegramInboundWebhookEventId = uuidBrand('TelegramInboundWebhookEventId');

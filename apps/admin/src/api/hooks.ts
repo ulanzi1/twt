@@ -212,3 +212,39 @@ export function useMemberValidity(pariwarId: string, memberId: string | null) {
     enabled: Boolean(memberId),
   });
 }
+
+// ── Channel-config surface (Story 5.3) ────────────────────────────────────────
+// The trustee WhatsApp Business config singleton + per-category template mapping.
+// Not a strong-consistency surface — the default cache; each mutation invalidates
+// its query so the form re-derives from fresh server state.
+
+export const waConfigKey = (pariwarId: string) => ['wa-config', pariwarId] as const;
+export const waTemplatesKey = (pariwarId: string) => ['wa-templates', pariwarId] as const;
+
+/** The WA config singleton (zero-config defaults when unprovisioned). */
+export function useWaConfig(pariwarId: string) {
+  return useQuery({ queryKey: waConfigKey(pariwarId), queryFn: () => api.getWaConfig(pariwarId) });
+}
+
+/** Upsert the WA config, then refresh the config query. */
+export function usePutWaConfig(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.putWaConfig>[1]) => api.putWaConfig(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: waConfigKey(pariwarId) }),
+  });
+}
+
+/** The per-category UTILITY template mapping. */
+export function useWaTemplates(pariwarId: string) {
+  return useQuery({ queryKey: waTemplatesKey(pariwarId), queryFn: () => api.getWaTemplates(pariwarId) });
+}
+
+/** Upsert one category's template mapping, then refresh the template list. */
+export function usePutWaTemplate(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.putWaTemplate>[1]) => api.putWaTemplate(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: waTemplatesKey(pariwarId) }),
+  });
+}

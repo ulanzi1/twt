@@ -57,6 +57,7 @@ const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
 const VALIDITY_INVALIDATE_CACHE = permissionKey('validity.invalidate_cache');
+const PARIWAR_CONFIGURE_CHANNELS = permissionKey('pariwar.configure_channels');
 const PARIWAR_AMEND_RULE = permissionKey('pariwar.amend_rule');
 const PARIWAR_PROVISION = permissionKey('pariwar.provision');
 const NIYAMAVALI_AMEND = permissionKey('niyamavali.amend');
@@ -95,6 +96,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 4.6 — reads the FR-12A Member Validity payload (admin surfaces).
       MEMBER_VIEW_VALIDITY,
       VALIDITY_INVALIDATE_CACHE,
+      // Story 5.3 — the FR-72 per-Pariwar WhatsApp Business config write (a pariwar-wide config action,
+      // same ceiling rationale as validity.invalidate_cache).
+      PARIWAR_CONFIGURE_CHANNELS,
       CLAIM_APPROVE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,

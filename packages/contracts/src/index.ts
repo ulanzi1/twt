@@ -82,6 +82,11 @@ export * from './deep-links/index.js';
 // register in openapi/v1.yaml (the two new routes are the EXPECTED diff for this story).
 export * from './device-tokens/index.js';
 
+// Story 5.3 — per-Pariwar WhatsApp Business config DTOs (trustee admin endpoints). HTTP endpoints → these
+// DO register in openapi/v1.yaml (the config + template routes are the EXPECTED diff for this story; the
+// internal Alert / WA template-render seam still must NOT appear).
+export * from './channel-config/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

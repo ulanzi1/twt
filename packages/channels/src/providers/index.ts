@@ -1,25 +1,30 @@
-// Provider barrel + channel→provider registry. Story 5.1 shipped 5 STUBS; Story 5.2 turns the two `push`
-// transports (fcm/apns) into REAL firebase-admin providers (+ a log-only fixture default) while
-// whatsapp/sms/telegram remain 5.1 stubs (real integration lands in 5.3–5.6). The registry SHAPE and the
-// dispatcher are unchanged — real providers plug INTO the fixed channel order.
+// Provider barrel + channel→provider registry. Story 5.1 shipped 5 STUBS; Story 5.2 turned the two `push`
+// transports (fcm/apns) into REAL firebase-admin providers; Story 5.3 turns `whatsapp` into a REAL Meta
+// WhatsApp Business Cloud API provider (+ a log-only fixture default), while sms/telegram remain 5.1 stubs
+// (real integration lands in 5.5–5.6). The registry SHAPE and the dispatcher are unchanged — real providers
+// plug INTO the fixed channel order.
 
 import type { Channel, ChannelProvider } from '../provider.js';
 import { createApnsProvider } from './apns.js';
 import { createFcmProvider, type PushProviderDeps } from './fcm.js';
 import { createFixturePushProvider, type FixturePushOptions } from './fixture-push.js';
+import { createFixtureWhatsappProvider, type FixtureWhatsappOptions } from './fixture-whatsapp.js';
 import { smsDltProvider } from './sms-dlt.js';
 import { telegramProvider } from './telegram.js';
-import { whatsappBusinessProvider } from './whatsapp-business.js';
+import { createWhatsappBusinessProvider, type WhatsappProviderDeps } from './whatsapp-business.js';
 
 export {
   createApnsProvider,
   createFcmProvider,
   createFixturePushProvider,
+  createFixtureWhatsappProvider,
+  createWhatsappBusinessProvider,
   smsDltProvider,
   telegramProvider,
-  whatsappBusinessProvider,
   type PushProviderDeps,
   type FixturePushOptions,
+  type FixtureWhatsappOptions,
+  type WhatsappProviderDeps,
 };
 
 /**
@@ -45,14 +50,29 @@ export function createPushProviders(
 }
 
 /**
+ * Select the `whatsapp` provider: the REAL Meta WhatsApp Business provider when the per-Pariwar WA deps are
+ * available (config `enabled`, credential NAME resolved, an approved template for the category), else the
+ * log-only fixture. Mirrors createPushProviders' real-vs-fixture seam; the selection stays OUT of `dispatch`.
+ * Guards BOTH `null` AND `undefined` (the 5.2 review-fix pre-applied).
+ */
+export function createWhatsappProvider(
+  wa: WhatsappProviderDeps | null | undefined,
+  fixtureOptions: FixtureWhatsappOptions = {},
+): ChannelProvider {
+  if (wa == null) return createFixtureWhatsappProvider(fixtureOptions);
+  return createWhatsappBusinessProvider(wa);
+}
+
+/**
  * The default provider registry: each logical channel → the provider(s) that serve it. `push` defaults to
- * the log-only fixtures (zero Firebase config); a real per-Pariwar registry is built by the composition
- * layer via `createPushProviders`. Every value is a readonly non-empty tuple so channel iteration order
- * never depends on object-key order.
+ * the log-only fixtures (zero Firebase config); `whatsapp` defaults to the log-only fixture (zero Meta
+ * config). A real per-Pariwar registry is built by the composition layer via createPushProviders /
+ * createWhatsappProvider. Every value is a readonly non-empty tuple so channel iteration order never
+ * depends on object-key order.
  */
 export const DEFAULT_PROVIDER_REGISTRY: Readonly<Record<Channel, readonly ChannelProvider[]>> = {
   push: fixturePushProviders(),
-  whatsapp: [whatsappBusinessProvider],
+  whatsapp: [createFixtureWhatsappProvider()],
   sms: [smsDltProvider],
   telegram: [telegramProvider],
 };

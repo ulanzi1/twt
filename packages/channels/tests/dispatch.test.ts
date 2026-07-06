@@ -113,11 +113,11 @@ describe('category eligibility (AC3)', () => {
     const outcome = await dispatch(claimStatusChange(), deps);
     const telegram = outcome.attempts.find((a) => a.channel === 'telegram');
     expect(telegram?.outcome).toBe('skipped_ineligible');
-    // push/whatsapp/sms still attempted (all eligible + have targets). push is now the REAL fixture
-    // transport (Story 5.2 — accepted ⇒ 'sent'); whatsapp/sms are still 5.1 stubs (not_implemented).
+    // push/whatsapp/sms still attempted (all eligible + have targets). push (Story 5.2) + whatsapp
+    // (Story 5.3) are now REAL fixture transports (accepted ⇒ 'sent'); sms is still a 5.1 stub.
     expect(outcome.attempts.find((a) => a.channel === 'push')?.outcome).toBe('sent');
+    expect(outcome.attempts.find((a) => a.channel === 'whatsapp')?.outcome).toBe('sent');
     expect(outcome.attempts.filter((a) => a.outcome === 'not_implemented').map((a) => a.channel)).toEqual([
-      'whatsapp',
       'sms',
     ]);
   });
@@ -178,7 +178,7 @@ describe('audit lines (AC7 / AI-4-3(c))', () => {
     expect(dispatchLines[0]!.responseStatus).toBe(200);
     // The dispatch line records EVERY channel with its honest outcome (AC7 'attempted', not a sent filter).
     expect(dispatchLines[0]!.resourceLocator).toContain(
-      'channels=push:sent,whatsapp:not_implemented,sms:not_implemented,telegram:not_implemented',
+      'channels=push:sent,whatsapp:sent,sms:not_implemented,telegram:not_implemented',
     );
   });
 

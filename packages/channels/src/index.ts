@@ -12,14 +12,18 @@ export {
   createFcmProvider,
   createApnsProvider,
   createFixturePushProvider,
+  createFixtureWhatsappProvider,
   createPushProviders,
+  createWhatsappProvider,
+  createWhatsappBusinessProvider,
   fixturePushProviders,
   smsDltProvider,
   telegramProvider,
-  whatsappBusinessProvider,
   DEFAULT_PROVIDER_REGISTRY,
   type PushProviderDeps,
   type FixturePushOptions,
+  type FixtureWhatsappOptions,
+  type WhatsappProviderDeps,
 } from './providers/index.js';
 // Story 5.2 — real push transports: the per-Pariwar Firebase App cache, the messaging seam, and the
 // send-error classification the invalidation seam (Task 5) reads back off SendResult.detail.
@@ -31,6 +35,26 @@ export {
   rejectionDetail,
   type PushErrorClass,
 } from './providers/push-errors.js';
+// Story 5.3 — real WhatsApp Business transport: the per-Pariwar Meta Cloud API client cache + the narrow
+// messaging seam, the Meta send-error classifier (the honest AC6 failure classes read off
+// SendResult.detail), and the pure Meta-status mapping seam Story 5.4's webhook receiver consumes.
+export {
+  createWhatsappAppCache,
+  WhatsappSendError,
+  type WhatsappAppCache,
+  type WhatsappMessagingHandle,
+  type WhatsappTemplateMessage,
+  type WhatsappClientConfig,
+  type FetchLike,
+  type FetchInit,
+  type FetchResponse,
+} from './providers/whatsapp-app.js';
+export {
+  classifyWhatsappError,
+  rejectionDetail as whatsappRejectionDetail,
+  type WhatsappErrorClass,
+} from './providers/whatsapp-errors.js';
+export { mapMetaStatus, type MetaDeliveryStatus } from './providers/whatsapp-status.js';
 export { deepFreeze, isFrozenMutationError, type DeepReadonly } from './freeze.js';
 export { render, escapeText, type RenderableAlert } from './render.js';
 export {

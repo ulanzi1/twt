@@ -77,8 +77,12 @@ export function permissionKey(value: string): PermissionKey {
  * emergency "invalidate all" action is a WRITE distinct from the READ-only
  * `member.view_validity` it was provisionally gated on; reusing a read key for a
  * tenant-wide mutating action let any validity-reading role trigger it).
+ * Bumped 4 → 5 at Story 5.3 (added `pariwar.configure_channels` — the FR-72
+ * per-Pariwar WhatsApp Business config write, a PARIWAR-WIDE config action gating
+ * the WA config/template admin endpoints; granted to `pariwar_admin` (+ super_admin),
+ * exactly like `validity.invalidate_cache` — a `pariwar`-ceiling-or-broader role).
  */
-export const PERMISSION_CATALOG_VERSION = 4 as const;
+export const PERMISSION_CATALOG_VERSION = 5 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -102,6 +106,11 @@ export const SEED_PERMISSION_KEYS = [
   // (+ super_admin) — a PARIWAR-WIDE action needs a `pariwar`-ceiling-or-broader
   // role; `state_trustee`'s narrower `state` ceiling cannot satisfy it regardless.
   'validity.invalidate_cache',
+  // Story 5.3 — the FR-72 per-Pariwar WhatsApp Business config WRITE (POST/PUT the WA number, toggle,
+  // credential NAME, and per-category template mapping). A PARIWAR-WIDE config action → granted to
+  // `pariwar_admin` (+ super_admin), the exact `validity.invalidate_cache` posture (a `pariwar`-ceiling-
+  // or-broader role; `state_trustee`'s narrower `state` ceiling cannot satisfy it).
+  'pariwar.configure_channels',
   'pariwar.amend_rule',
   'pariwar.provision',
   'niyamavali.amend',

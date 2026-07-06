@@ -153,6 +153,10 @@ const {
 // wizard SURFACE; both routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { NomineeDeclareRequest, NomineeStatusResponse } = await import('../src/nominee/index.js');
 // Story 5.2 — push device-token registration DTOs (member + admin endpoints; shared request/ack).
+// Story 5.3 — per-Pariwar WhatsApp Business config DTOs (trustee admin endpoints; config + templates).
+const { WaConfigDto, WaConfigResponse, WaTemplateDto, WaTemplatesResponse } = await import(
+  '../src/channel-config/index.js'
+);
 const { DeviceTokenRegisterRequest, DeviceTokenRegisterResponse } = await import(
   '../src/device-tokens/index.js'
 );
@@ -368,6 +372,17 @@ const deviceTokenComponents = {
   DeviceTokenRegisterResponse: DeviceTokenRegisterResponse.openapi('DeviceTokenRegisterResponse'),
 } as const;
 for (const [name, schema] of Object.entries(deviceTokenComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 5.3 — WhatsApp Business config components (config singleton + per-category template mapping).
+const channelConfigComponents = {
+  WaConfigDto: WaConfigDto.openapi('WaConfigDto'),
+  WaConfigResponse: WaConfigResponse.openapi('WaConfigResponse'),
+  WaTemplateDto: WaTemplateDto.openapi('WaTemplateDto'),
+  WaTemplatesResponse: WaTemplatesResponse.openapi('WaTemplatesResponse'),
+} as const;
+for (const [name, schema] of Object.entries(channelConfigComponents)) {
   registry.register(name, schema);
 }
 
@@ -1314,6 +1329,91 @@ registry.registerPath({
     200: { description: 'Device token registered', content: jsonOf(deviceTokenComponents.DeviceTokenRegisterResponse) },
     400: errorResponse('Request validation failed (bad platform or token)'),
     401: deviceTokenAuth,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 5.3 — trustee WhatsApp Business config (per-Pariwar; the [SURFACE] half) ──
+// GET/PUT the WA config singleton + GET/PUT the per-category UTILITY template mapping. Scoped admin chain
+// [requireAdminSession, scopeResolutionHook, requirePermissionHook(pariwar.configure_channels)] — 401 no
+// session, 403 no permission (fail-closed; never a silent config write). The credential is a Secret-Manager
+// NAME pointer (safe to round-trip); the resolved token never appears on this surface.
+const channelConfigTags = ['channel-config'];
+const channelConfigParams = z.object({ pariwarId: z.string().uuid() });
+const channelConfigAuth = errorResponse('Authentication required');
+const channelConfigForbidden = errorResponse('Forbidden — requires pariwar.configure_channels at pariwar scope');
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/channel-config/whatsapp',
+  summary: 'Read the per-Pariwar WhatsApp Business config (toggle, number, credential NAME, graph version)',
+  description:
+    "Returns the Pariwar's WA Business config singleton (zero-config defaults when none exists yet). " +
+    'The access-token field is a Secret-Manager NAME (a pointer), never the token value. Requires ' +
+    'pariwar.configure_channels at pariwar scope.',
+  tags: channelConfigTags,
+  request: { params: channelConfigParams },
+  responses: {
+    200: { description: 'WA config', content: jsonOf(channelConfigComponents.WaConfigResponse) },
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/channel-config/whatsapp',
+  summary: 'Upsert the per-Pariwar WhatsApp Business config (audited)',
+  description:
+    "Upserts the Pariwar's WA Business config singleton (the FR-72 admin toggle + number + credential " +
+    'NAME + graph version). Audited via the hash-chain writer; the resolved token value never appears. ' +
+    'Requires pariwar.configure_channels at pariwar scope.',
+  tags: channelConfigTags,
+  request: {
+    params: channelConfigParams,
+    body: { content: jsonOf(channelConfigComponents.WaConfigDto), required: true },
+  },
+  responses: {
+    200: { description: 'WA config upserted', content: jsonOf(channelConfigComponents.WaConfigResponse) },
+    400: errorResponse('Request validation failed'),
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/channel-config/whatsapp/templates',
+  summary: 'List the per-category WhatsApp UTILITY template mapping',
+  description:
+    "Returns the Pariwar's per-(alert_category) UTILITY template mapping (name, language, approval " +
+    'status). A category with no `approved` row is not WA-eligible. Requires pariwar.configure_channels.',
+  tags: channelConfigTags,
+  request: { params: channelConfigParams },
+  responses: {
+    200: { description: 'WA template mapping', content: jsonOf(channelConfigComponents.WaTemplatesResponse) },
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/channel-config/whatsapp/templates',
+  summary: 'Upsert one category’s WhatsApp UTILITY template mapping (audited)',
+  description:
+    "Upserts one (alert_category) → UTILITY template mapping (Meta-registered name + language + approval " +
+    'status). Audited. Requires pariwar.configure_channels at pariwar scope.',
+  tags: channelConfigTags,
+  request: {
+    params: channelConfigParams,
+    body: { content: jsonOf(channelConfigComponents.WaTemplateDto), required: true },
+  },
+  responses: {
+    200: { description: 'WA template mapping upserted', content: jsonOf(channelConfigComponents.WaTemplateDto) },
+    400: errorResponse('Request validation failed'),
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+    409: errorResponse('The WhatsApp Business config must be saved before a template mapping can be added'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

@@ -267,6 +267,20 @@
       "when": 1783914000000,
       "tag": "0037_member-device-tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1784000400000,
+      "tag": "0038_pariwar-wa-config",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1784086800000,
+      "tag": "0039_whatsapp-send-status",
+      "breakpoints": true
     }
   ]
 }

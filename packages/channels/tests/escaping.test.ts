@@ -12,9 +12,11 @@ import type { Channel } from '../src/provider.js';
 import { announcement } from './fixtures.js';
 
 const INJECTION = '<script>alert(1)</script> **bold** _it_ [l](u) {{tpl}} ${expr} `code`';
-// Story 5.2 (D1): escaping is PER-CHANNEL. The markup channels (WhatsApp/SMS/Telegram) escape; `push` is
-// plaintext (a notification tray renders no markup), so it is carved into its OWN assertion below.
-const MARKUP_CHANNELS: readonly Channel[] = ['whatsapp', 'sms', 'telegram'];
+// Story 5.2 (D1) + Story 5.3 (AC5): escaping is PER-CHANNEL. The markup channels (SMS/Telegram) HTML-entity
+// + markdown escape; `push` is plaintext (its own assertion below); `whatsapp` is a UTILITY-template
+// parameter — NOT markup-interpreted, so it is whitespace-normalized + inert-by-non-interpretation (its own
+// assertion below), NOT HTML-escaped (that would garble the member's message — the D1 re-trigger).
+const MARKUP_CHANNELS: readonly Channel[] = ['sms', 'telegram'];
 
 describe('escapeText (AC6)', () => {
   it('HTML-encodes angle brackets + ampersand', () => {
@@ -36,7 +38,7 @@ describe('escapeText (AC6)', () => {
 });
 
 describe('renderer escaping — markup channels (AC6)', () => {
-  it('renders injection payloads as inert text on WhatsApp/SMS/Telegram', () => {
+  it('renders injection payloads as inert text on SMS/Telegram', () => {
     const alert = announcement({ title: INJECTION, body: INJECTION });
     for (const channel of MARKUP_CHANNELS) {
       const rendered = render(alert, channel);
@@ -48,6 +50,33 @@ describe('renderer escaping — markup channels (AC6)', () => {
       expect(combined, `${channel} must escape markdown emphasis`).toContain('\\*\\*');
       expect(rendered.deepLink, `${channel} has no deep-link`).toBeNull();
     }
+  });
+});
+
+describe('renderer escaping — WhatsApp is WHITESPACE-NORMALIZED, not HTML-escaped (Story 5.3 AC5)', () => {
+  it('produces a Meta-valid, injection-inert template param (no newlines/tabs/4+ spaces; not HTML-escaped)', () => {
+    // Multi-line + wide-whitespace admin prose PLUS injection payloads — the WA body must collapse all
+    // whitespace (Meta rejects newlines/tabs/4+ spaces in a template param) yet keep the injection inert.
+    const alert = announcement({
+      title: `line one\n\nline two\ttabbed     wide`,
+      body: INJECTION,
+    });
+    const rendered = render(alert, 'whatsapp');
+    expect(rendered.title, 'whatsapp is body-only (no push title)').toBeNull();
+    const body = rendered.body;
+
+    // Meta-validity: no newlines, no tabs, no run of 4+ consecutive spaces anywhere in the param.
+    expect(body, 'no newlines').not.toMatch(/\n/);
+    expect(body, 'no tabs').not.toMatch(/\t/);
+    expect(body, 'no 4+ consecutive spaces').not.toMatch(/ {4,}/);
+    expect(body, 'no leading/trailing whitespace').toBe(body.trim());
+
+    // Injection-inert BY NON-INTERPRETATION: the raw text is carried literally (a template param is never
+    // markup-interpreted), so it is NOT HTML-entity-encoded (that would garble the member's message — D1).
+    expect(body, 'whatsapp must preserve raw text (not HTML-encode)').toContain('<script>alert(1)</script>');
+    expect(body, 'whatsapp must NOT HTML-encode angle brackets').not.toContain('&lt;');
+    expect(body, 'whatsapp must NOT backslash-escape markdown').not.toContain('\\*\\*');
+    expect(rendered.deepLink, 'whatsapp has no deep-link').toBeNull();
   });
 });
 

@@ -168,6 +168,9 @@ const { CreateWaOptInResponse, WaOptInStatusResponse, RevokeWaOptInResponse } = 
 // Member-session-gated; the tg-webhook-processor worker advances PENDING → ACTIVE out-of-band.
 const { TelegramOptInRequestResponse, TelegramOptInStatusResponse, RevokeTelegramOptInResponse } =
   await import('../src/telegram-opt-in/index.js');
+// Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
+const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
+  await import('../src/degraded-mode/index.js');
 // Story 3.5 — the signup medical-disclosure DTOs (submit + status + ima-list). The fourth
 // signup-wizard SURFACE; all routes are member-session-gated (no step-up at signup — 3.9 adds it).
 const { MedicalDiscloseRequest, MedicalDisclosureStatusResponse, ImaListResponse } = await import(
@@ -414,6 +417,16 @@ const channelConfigComponents = {
   TelegramConfigResponse: TelegramConfigResponse.openapi('TelegramConfigResponse'),
 } as const;
 for (const [name, schema] of Object.entries(channelConfigComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 5.8 — degraded-mode declaration components (declare request + declaration + active response).
+const degradedModeComponents = {
+  DegradedModeDeclareRequest: DegradedModeDeclareRequest.openapi('DegradedModeDeclareRequest'),
+  DegradedModeDeclarationResponse: DegradedModeDeclarationResponse.openapi('DegradedModeDeclarationResponse'),
+  DegradedModeActiveResponse: DegradedModeActiveResponse.openapi('DegradedModeActiveResponse'),
+} as const;
+for (const [name, schema] of Object.entries(degradedModeComponents)) {
   registry.register(name, schema);
 }
 
@@ -1606,6 +1619,68 @@ registry.registerPath({
     400: errorResponse('Request validation failed'),
     401: channelConfigAuth,
     403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 5.8 — trustee degraded-mode declare/revoke/read (per-Pariwar; the AR-20 SMS-bridge governance) ──
+const degradedModeTags = ['degraded-mode'];
+const degradedModeParams = z.object({ pariwarId: z.string().uuid() });
+const degradedModeRevokeParams = z.object({ pariwarId: z.string().uuid(), id: z.string().uuid() });
+const degradedModeAuth = errorResponse('Authentication required');
+const degradedModeForbidden = errorResponse('Forbidden — requires pariwar.declare_degraded_mode at pariwar scope');
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/admin/degraded-mode/declarations',
+  summary: 'Declare degraded mode (the AR-20 cycle-open SMS bridge; audited)',
+  description:
+    'Declares degraded mode for the Pariwar so the cycle-open SMS bridge can force SMS for cycle-open ' +
+    '(alert_published) alerts, bypassing cost-optimization. Auto-revokes any currently-active declaration ' +
+    '(single-active-per-Pariwar). effectiveFrom cannot be backdated (NO BACKDATING). Audited. Requires ' +
+    'pariwar.declare_degraded_mode at pariwar scope.',
+  tags: degradedModeTags,
+  request: {
+    params: degradedModeParams,
+    body: { content: jsonOf(degradedModeComponents.DegradedModeDeclareRequest), required: true },
+  },
+  responses: {
+    200: { description: 'Degraded mode declared', content: jsonOf(degradedModeComponents.DegradedModeDeclarationResponse) },
+    400: errorResponse('Request validation failed (e.g. a backdated effectiveFrom)'),
+    401: degradedModeAuth,
+    403: degradedModeForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/admin/degraded-mode/declarations/{id}/revoke',
+  summary: 'Manually revoke a degraded-mode declaration (idempotent; audited)',
+  description:
+    'Revokes the identified declaration (a state transition, not a delete). Idempotent — revoking an ' +
+    'already-revoked/expired row is a no-op. Audited. Requires pariwar.declare_degraded_mode at pariwar scope.',
+  tags: degradedModeTags,
+  request: { params: degradedModeRevokeParams },
+  responses: {
+    200: { description: 'Declaration revoked', content: jsonOf(degradedModeComponents.DegradedModeActiveResponse) },
+    401: degradedModeAuth,
+    403: degradedModeForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/degraded-mode/active',
+  summary: 'Read the currently-active degraded-mode declaration (the banner read)',
+  description:
+    'Returns the currently-active degraded-mode declaration for the Pariwar, or null when none is active. ' +
+    '"Active" is computed (revoked_at IS NULL AND effective_from<=now AND (expires_at IS NULL OR ' +
+    'expires_at>now)). Requires pariwar.declare_degraded_mode at pariwar scope.',
+  tags: degradedModeTags,
+  request: { params: degradedModeParams },
+  responses: {
+    200: { description: 'The active declaration or null', content: jsonOf(degradedModeComponents.DegradedModeActiveResponse) },
+    401: degradedModeAuth,
+    403: degradedModeForbidden,
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

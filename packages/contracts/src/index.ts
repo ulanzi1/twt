@@ -97,6 +97,11 @@ export * from './wa-opt-in/index.js';
 // EXPECTED diff for this story).
 export * from './telegram-opt-in/index.js';
 
+// Story 5.8 — per-Pariwar degraded-mode declaration DTOs (trustee declare/revoke/read admin endpoints). HTTP
+// endpoints → these DO register in openapi/v1.yaml (the declare/revoke/active routes are the EXPECTED diff
+// for this story).
+export * from './degraded-mode/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

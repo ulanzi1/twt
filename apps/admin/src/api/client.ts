@@ -23,10 +23,15 @@ import {
   PublishClauseResponse,
   RecoveryConsumeResponse,
   SessionResponse,
+  DegradedModeActiveResponse,
+  DegradedModeDeclarationResponse,
   WaConfigResponse,
   WaTemplateDto,
   WaTemplatesResponse,
   TelegramConfigResponse,
+  type DegradedModeActiveResponse as DegradedModeActive,
+  type DegradedModeDeclarationResponse as DegradedModeDeclaration,
+  type DegradedModeDeclareRequest,
   type WaConfigResponse as WaConfig,
   type WaConfigUpsertRequest,
   type WaTemplateDto as WaTemplate,
@@ -319,6 +324,39 @@ export function putTelegramConfig(pariwarId: string, body: TelegramConfigUpsertR
     method: 'PUT',
     body: JSON.stringify(body),
   });
+}
+
+// ── Degraded-mode surface (Story 5.8) ─────────────────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/degraded-mode. The trustee declare/revoke/read-active surface for
+// the AR-20 cycle-open SMS bridge. Gated server-side by pariwar.declare_degraded_mode (a pariwar-scoped grant
+// not in the session's global-grant set — the server's requirePermissionHook is the real boundary).
+
+const degradedModeBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/degraded-mode`;
+
+/** GET the currently-active degraded-mode declaration (or null). */
+export function getActiveDegradedMode(pariwarId: string): Promise<DegradedModeActive> {
+  return apiFetch(`${degradedModeBase(pariwarId)}/active`, DegradedModeActiveResponse);
+}
+
+/** POST declare degraded mode. */
+export function declareDegradedMode(
+  pariwarId: string,
+  body: DegradedModeDeclareRequest,
+): Promise<DegradedModeDeclaration> {
+  return apiFetch(`${degradedModeBase(pariwarId)}/declarations`, DegradedModeDeclarationResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST manual revocation of a declaration; returns the now-active declaration (or null). */
+export function revokeDegradedMode(pariwarId: string, id: string): Promise<DegradedModeActive> {
+  return apiFetch(
+    `${degradedModeBase(pariwarId)}/declarations/${encodeURIComponent(id)}/revoke`,
+    DegradedModeActiveResponse,
+    { method: 'POST', body: JSON.stringify({}) },
+  );
 }
 
 // ── Auth surface (Story 1.9 endpoints, driven by the login page) ──────────────

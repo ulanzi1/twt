@@ -351,6 +351,13 @@
       "when": 1784950800000,
       "tag": "0049_sms-rate-buckets",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1785037200000,
+      "tag": "0050_pariwar-degraded-mode-declarations",
+      "breakpoints": true
     }
   ]
 }

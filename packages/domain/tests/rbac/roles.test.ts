@@ -135,6 +135,18 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // granted (same rationale as validity.invalidate_cache).
     expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
   });
+
+  it('Story 5.8 — pariwar.declare_degraded_mode is granted ONLY to pariwar_admin (+ super_admin)', () => {
+    const KEY = 'pariwar.declare_degraded_mode';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // The AC's "trustees" resolves to pariwar_admin — state_trustee's `state` ceiling cannot hold a
+    // `pariwar`-scoped grant (same rationale as pariwar.configure_channels / validity.invalidate_cache).
+    expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

@@ -249,6 +249,39 @@ export function usePutWaTemplate(pariwarId: string) {
   });
 }
 
+// ── Degraded-mode surface (Story 5.8) — the trustee declare/revoke/read-active AR-20 bridge surface. ──
+// Not a strong-consistency surface — the default cache; each mutation invalidates the active query so the
+// banner re-derives from fresh server state.
+
+export const degradedModeActiveKey = (pariwarId: string) => ['degraded-mode-active', pariwarId] as const;
+
+/** The currently-active degraded-mode declaration (or null). */
+export function useActiveDegradedMode(pariwarId: string) {
+  return useQuery({
+    queryKey: degradedModeActiveKey(pariwarId),
+    queryFn: () => api.getActiveDegradedMode(pariwarId),
+  });
+}
+
+/** Declare degraded mode, then refresh the active query. */
+export function useDeclareDegradedMode(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.declareDegradedMode>[1]) =>
+      api.declareDegradedMode(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: degradedModeActiveKey(pariwarId) }),
+  });
+}
+
+/** Revoke a declaration, then refresh the active query (banner clears). */
+export function useRevokeDegradedMode(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.revokeDegradedMode(pariwarId, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: degradedModeActiveKey(pariwarId) }),
+  });
+}
+
 // ── Telegram config surface (Story 5.5) — the per-Pariwar Telegram Bot config singleton. ──
 
 export const telegramConfigKey = (pariwarId: string) => ['telegram-config', pariwarId] as const;

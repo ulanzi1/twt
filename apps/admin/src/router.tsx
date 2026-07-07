@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-router';
 
 import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
+import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
 import { MemberSearchRoute } from './routes/MemberSearchRoute.js';
@@ -76,6 +77,13 @@ const channelConfigRoute = createRoute({
   component: ChannelConfigRoute,
 });
 
+// Story 5.8 — the tenant-scoped trustee degraded-mode declare/revoke surface (AR-20 SMS bridge).
+const degradedModeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/degraded-mode',
+  component: DegradedModeRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -84,6 +92,7 @@ const routeTree = rootRoute.addChildren([
   niyamavaliRoute,
   memberSearchRoute,
   channelConfigRoute,
+  degradedModeRoute,
 ]);
 
 export const router = createRouter({ routeTree });

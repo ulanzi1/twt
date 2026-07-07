@@ -138,6 +138,13 @@ export * from './wa_inbound_webhook_events.js';
 export * from './pariwar_telegram_config.js';
 export * from './member_telegram_opt_in.js';
 export * from './telegram_inbound_webhook_events.js';
+// Story 5.8 — the per-Pariwar degraded-mode declaration substrate: `pariwar_degraded_mode_declarations`
+// (tenant-isolated; a trustee-declared degraded-mode window — mode CHECK IN('cycle_open_sms_bridge'),
+// effective_from + nullable expires_at/revoked_at, declared_by/revoked_by actor, reason). "Active" is a
+// COMPUTED predicate (revoked_at IS NULL AND effective_from<=at AND (expires_at IS NULL OR expires_at>at)),
+// never a stored boolean; single-active-per-Pariwar is enforced by the app transaction (advisory lock +
+// auto-revoke-on-declare), NOT a DB constraint. Backs the AR-20 cycle-open SMS bridge.
+export * from './pariwar_degraded_mode_declarations.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

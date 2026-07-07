@@ -81,8 +81,16 @@ export function permissionKey(value: string): PermissionKey {
  * per-Pariwar WhatsApp Business config write, a PARIWAR-WIDE config action gating
  * the WA config/template admin endpoints; granted to `pariwar_admin` (+ super_admin),
  * exactly like `validity.invalidate_cache` — a `pariwar`-ceiling-or-broader role).
+ * Bumped 5 → 6 at Story 5.8 (added `pariwar.declare_degraded_mode` — the AR-20
+ * degraded-mode declaration WRITE gating the declare/revoke admin endpoints; a
+ * PARIWAR-WIDE governance action granted to `pariwar_admin` (+ super_admin), same
+ * ceiling rationale as `pariwar.configure_channels`. KEY-FORMAT RECONCILIATION: the
+ * epic AC's two-dot `pariwar.degraded_mode.declare` VIOLATES PERMISSION_KEY_REGEX;
+ * the single-dot `pariwar.declare_degraded_mode` (ADR-0008 <resource>.<action>) is
+ * the correct key. The two-dot form survives only as the audit ACTION, whose regex
+ * permits multiple dots).
  */
-export const PERMISSION_CATALOG_VERSION = 5 as const;
+export const PERMISSION_CATALOG_VERSION = 6 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -111,6 +119,13 @@ export const SEED_PERMISSION_KEYS = [
   // `pariwar_admin` (+ super_admin), the exact `validity.invalidate_cache` posture (a `pariwar`-ceiling-
   // or-broader role; `state_trustee`'s narrower `state` ceiling cannot satisfy it).
   'pariwar.configure_channels',
+  // Story 5.8 — the AR-20 degraded-mode declaration WRITE (POST declare / revoke the cycle-open SMS bridge).
+  // A PARIWAR-WIDE governance action → granted to `pariwar_admin` (+ super_admin), the exact
+  // `pariwar.configure_channels` posture (a `pariwar`-ceiling-or-broader role; `state_trustee`'s narrower
+  // `state` ceiling cannot satisfy it). ⚠ The epic AC's two-dot `pariwar.degraded_mode.declare` VIOLATES
+  // PERMISSION_KEY_REGEX — this single-dot `<resource>.<action>` form (ADR-0008) is correct; the two-dot
+  // form survives only as the audit ACTION (`pariwar.degraded_mode.declared`).
+  'pariwar.declare_degraded_mode',
   'pariwar.amend_rule',
   'pariwar.provision',
   'niyamavali.amend',
@@ -137,7 +152,7 @@ export interface PermissionCatalog {
   readonly keys: readonly PermissionKey[];
 }
 
-/** The catalog — the 13 grounded keys, each validated through the constructor. */
+/** The catalog — the 15 grounded keys, each validated through the constructor. */
 export const PERMISSION_CATALOG: PermissionCatalog = {
   catalogVersion: PERMISSION_CATALOG_VERSION,
   keys: SEED_PERMISSION_KEYS.map(permissionKey),

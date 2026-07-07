@@ -58,6 +58,7 @@ const MEMBER_MODERATE = permissionKey('member.moderate');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
 const VALIDITY_INVALIDATE_CACHE = permissionKey('validity.invalidate_cache');
 const PARIWAR_CONFIGURE_CHANNELS = permissionKey('pariwar.configure_channels');
+const PARIWAR_DECLARE_DEGRADED_MODE = permissionKey('pariwar.declare_degraded_mode');
 const PARIWAR_AMEND_RULE = permissionKey('pariwar.amend_rule');
 const PARIWAR_PROVISION = permissionKey('pariwar.provision');
 const NIYAMAVALI_AMEND = permissionKey('niyamavali.amend');
@@ -99,6 +100,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 5.3 — the FR-72 per-Pariwar WhatsApp Business config write (a pariwar-wide config action,
       // same ceiling rationale as validity.invalidate_cache).
       PARIWAR_CONFIGURE_CHANNELS,
+      // Story 5.8 — the AR-20 degraded-mode declaration write (a pariwar-wide governance action; the AC's
+      // "trustees" resolves to pariwar_admin here — state_trustee's `state` ceiling cannot hold a
+      // `pariwar`-scoped grant, same rationale as pariwar.configure_channels / validity.invalidate_cache).
+      PARIWAR_DECLARE_DEGRADED_MODE,
       CLAIM_APPROVE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,

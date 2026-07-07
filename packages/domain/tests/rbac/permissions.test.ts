@@ -41,10 +41,10 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 14 grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(5); // Story 5.3 bump (4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+  it('is versioned and seeded with exactly the 15 grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(6); // Story 5.8 bump (5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(14);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(15);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -68,6 +68,15 @@ describe('PERMISSION_CATALOG', () => {
 
   it('includes the Story 5.3 WhatsApp config WRITE key (pariwar.configure_channels)', () => {
     expect(isCatalogKey('pariwar.configure_channels')).toBe(true);
+  });
+
+  it('includes the Story 5.8 degraded-mode declaration WRITE key (pariwar.declare_degraded_mode)', () => {
+    expect(isCatalogKey('pariwar.declare_degraded_mode')).toBe(true);
+    // The single-dot <resource>.<action> form is valid; the epic AC's two-dot form is NOT a permission key.
+    expect(permissionKey('pariwar.declare_degraded_mode')).toBe('pariwar.declare_degraded_mode');
+    expect(() => permissionKey('pariwar.degraded_mode.declare')).toThrow(InvalidPermissionKeyError);
+    // The two-dot form is not in the catalog (it survives only as the audit action, a different regex).
+    expect(isCatalogKey('pariwar.degraded_mode.declare')).toBe(false);
   });
 
   it('does NOT contain past-tense EVENT names (catalog ≠ events)', () => {

@@ -133,6 +133,22 @@ export {
   type CostSuppressionReason,
   type CostSuppressionAuditInput,
 } from './cost-optimization.js';
+// Story 5.8 — the pariwar-degraded-mode cycle-open SMS-bridge decision primitive the dispatch.ts seam
+// reserves for 5.8: a pure, deterministically-testable decision function that returns a BRIDGE decision (a
+// direct-to-SMS carve-out for cycle-open `alert_published` under an active trustee degraded-mode
+// declaration). The SIBLING of 5.7's cost-optimization POLICY primitive — 5.8 WINS over 5.7's suppression
+// for cycle-open under degraded mode. Both WRAP dispatch, neither lives inside it. NO live dispatch call
+// site; does NOT change the frozen dispatch / ChannelProvider / CANONICAL_CHANNEL_LADDER /
+// LifecycleSuppressionHook shapes; MUST NOT import or call evaluateCostOptimization.
+export {
+  evaluateDegradedModeBridge,
+  CYCLE_OPEN_CATEGORY,
+  DEGRADED_MODE_BRIDGE_CHANNELS,
+  type DegradedModeBridgeInput,
+  type DegradedModeBridgeDecision,
+  type DegradedModeNonBridgeReason,
+  type DegradedModeBridgeReason,
+} from './degraded-mode.js';
 export { mapMetaStatus, type MetaDeliveryStatus } from './providers/whatsapp-status.js';
 export { deepFreeze, isFrozenMutationError, type DeepReadonly } from './freeze.js';
 export { render, escapeText, type RenderableAlert } from './render.js';

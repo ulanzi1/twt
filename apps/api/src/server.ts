@@ -30,6 +30,7 @@ import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
+import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
 import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
 import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
 import { registerTelegramOptInModule } from './modules/telegram-opt-in/index.js';
@@ -145,6 +146,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 5.3 — trustee WhatsApp Business config surface (FR-72): GET/PUT the per-Pariwar WA config
   // singleton + GET/PUT the per-category UTILITY template mapping, gated by pariwar.configure_channels.
   registerChannelConfigModule(app, deps);
+  // Story 5.8 — trustee degraded-mode declare/revoke/read surface (AR-20 cycle-open SMS bridge): declare +
+  // manual revoke + read-active, gated by pariwar.declare_degraded_mode. The declaration substrate for the
+  // (future) live bridge fan-out; NO live dispatch call site here.
+  registerDegradedModeModule(app, deps);
   // Story 5.4 — WhatsApp inbound-webhook ingress primitive (§3.11): per-Pariwar Meta webhook receiver
   // (GET subscription challenge + POST verify-persist-ack-within-5s). Public (Meta is unauthenticated — the
   // verify-token / X-Hub-Signature-256 IS the auth; login-wall-allowlisted). Encapsulated so its raw-body

@@ -182,4 +182,10 @@ export * as telegramOptIn from './telegram-opt-in/index.js';
 // check-and-consume (checkAndConsumeSmsBudget) + the expiry vacuum (deleteExpiredSmsRateBuckets). A
 // dedicated budget SEPARATE from the OTP send buckets so an alert-SMS flood can't drain the OTP budget.
 export * as smsRateLimit from './sms-rate-limit/index.js';
+// Story 5.8 — the per-Pariwar degraded-mode declaration accessors: declareDegradedMode (advisory-locked,
+// auto-revoke-then-insert — enforces single-active-per-Pariwar), revokeDegradedMode (idempotent manual
+// revocation), and getActiveDegradedMode (the computed-active read: revoked_at IS NULL AND
+// effective_from<=at AND (expires_at IS NULL OR expires_at>at)). Tenant-scoped; audit linkage is the
+// consumer route's obligation. Backs the AR-20 cycle-open SMS bridge.
+export * as degradedMode from './degraded-mode/index.js';
 export { UUID_REGEX } from './db.js';

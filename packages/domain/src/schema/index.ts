@@ -56,6 +56,9 @@ export * from './member_signup_continuations.js';
 export * from './member_pariwar_selects.js';
 // Story 3.2 patch P31 — Postgres-backed OTP send rate-bucket table.
 export * from './otp_rate_buckets.js';
+// Story 5.6 — Postgres-backed per-MEMBER transactional-SMS send rate-bucket table. Mirrors otp_rate_buckets
+// but keyed per member and DELIBERATELY SEPARATE — an alert-SMS flood must never drain the OTP send budget.
+export * from './sms_rate_buckets.js';
 // Story 3.3a — DigiLocker KYC provider substrate. `digilocker_public_certs` is a GLOBAL
 // issuer-cert cache (no tenant dimension; member-auth carve-out posture);
 // `kyc_transactions` is tenant-isolated provider OAuth/PKCE state (stores NO eAadhaar PII).

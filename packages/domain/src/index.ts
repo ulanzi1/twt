@@ -178,4 +178,8 @@ export * as waOptIn from './wa-opt-in/index.js';
 // verification-code generate/extract helpers. Tenant-scoped; audit linkage is the consumer route/worker's
 // obligation (audit-or-throw).
 export * as telegramOptIn from './telegram-opt-in/index.js';
+// Story 5.6 — per-member transactional-SMS send rate-limit accessor: the atomic `sms_rate_buckets`
+// check-and-consume (checkAndConsumeSmsBudget) + the expiry vacuum (deleteExpiredSmsRateBuckets). A
+// dedicated budget SEPARATE from the OTP send buckets so an alert-SMS flood can't drain the OTP budget.
+export * as smsRateLimit from './sms-rate-limit/index.js';
 export { UUID_REGEX } from './db.js';

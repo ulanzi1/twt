@@ -13,3 +13,5 @@ export {
   DEVICE_TOKEN_STALE_MAX_AGE_SECONDS,
   DEVICE_TOKEN_INVALID_MAX_AGE_SECONDS,
 } from './cleanup.js';
+// Story 5.7 — the in-app-engagement read (MAX last_seen_at over active tokens) the cost-optimization policy consumes.
+export { getMemberLastEngagementAt } from './engagement.js';

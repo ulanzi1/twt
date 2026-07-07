@@ -28,7 +28,7 @@
 // no-op send (dishonest, the opposite of this story's "no fabricated success" discipline). Whoever wires the
 // live dispatch call site (5.4+) is responsible for deciding how a rejection here is surfaced/retried.
 
-import { channelConfig, ids, telegramOptIn, waOptIn, type Db } from '@twt/domain';
+import { channelConfig, deviceToken, ids, telegramOptIn, waOptIn, type Db } from '@twt/domain';
 import {
   createSmsProvider,
   createTelegramProvider,
@@ -367,4 +367,64 @@ export async function resolveSmsTarget(
   if (!ciphertext) return null;
   const address = await decryptMobile(ciphertext, deps.encryption);
   return { channel: 'sms', address };
+}
+
+// ── Cost-optimization composition seams — Story 5.7 (Task 3; AC4) ────────────────────────────────────────
+// The two thin READ-seams the (future) live cost-optimization wrapper resolves its policy inputs through: the
+// member's last in-app-engagement instant + the per-Pariwar cost-optimization toggle. These are BUILDING
+// BLOCKS ONLY — there is still NO live `dispatch` call site ([[project_channels_no_live_dispatch_yet]]), and
+// this does NOT construct a live fan-out that calls `evaluateCostOptimization` + `dispatch` together. Whoever
+// wires the live fan-out (the story that first drives a real dispatch, when Epic 10's FR-58C flag makes the
+// toggle meaningful) consumes these reads. This is app-composition wiring, NOT a change to `dispatch` / the
+// frozen `ChannelProvider` port / `CANONICAL_CHANNEL_LADDER` / `DeliveryResolver`.
+
+/** What the cost-optimization read-seams need: a scoped Db (the engagement + toggle reads run under RLS). */
+export interface CostOptimizationCompositionDeps {
+  /** RLS-scoped Db (the caller's tenant tx) for the engagement / toggle reads. */
+  readonly db: Db;
+}
+
+/**
+ * Resolve a member's last in-app-engagement instant (Story 5.7 AC4) — a thin wrapper over the pure-domain
+ * `getMemberLastEngagementAt` accessor (`MAX(last_seen_at)` over the member's ACTIVE device tokens, the
+ * app-open proxy). RLS scopes the read to the Pariwar (the `pariwarId` arg documents the tenant boundary the
+ * caller has already entered via `SET LOCAL app.pariwar_id`). Returns `null` when there is no engagement
+ * signal (⇒ the policy fails toward reach and does not suppress). Reads only the timestamp — no decrypt.
+ *
+ * ── Frozen-shape discipline ([[project_channels_no_live_dispatch_yet]]) ──────────────────────────────────
+ * A reusable composition READ — it does NOT modify `DeliveryResolver` / `dispatch` / `ChannelProvider` /
+ * `CANONICAL_CHANNEL_LADDER`, and there is still NO live `dispatch` call site.
+ */
+export async function resolveMemberLastEngagement(
+  deps: CostOptimizationCompositionDeps,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+): Promise<Date | null> {
+  // `pariwarId` documents the RLS tenant boundary; the domain accessor is RLS-scoped + member_id-keyed
+  // (globally unique), mirroring getMemberStateAt's RLS-only convention.
+  void pariwarId;
+  return deviceToken.getMemberLastEngagementAt(deps.db, memberId);
+}
+
+/**
+ * Resolve the per-Pariwar cost-optimization toggle (Story 5.7 AC4) — currently ALWAYS `false` (OFF).
+ *
+ * The real per-Pariwar FR-58C flag read + its admin surface + its persistence land at EPIC 10 (contracts
+ * `feature-flags/README.md` — "substantive contracts authored at Stories 10.x"); there is no flag subsystem
+ * and no live dispatch site yet, so this seam returns the FAIL-SAFE default. OFF ⇒ the policy suppresses
+ * NOTHING ⇒ full delivery, zero risk of a missed alert — cost-optimization can only ever REDUCE sends once
+ * explicitly enabled, never regress reach silently. This toggle is SEPARATE from the WA admin toggle (FR-72).
+ *
+ * Do NOT add a per-Pariwar toggle DB column / migration / admin form here — that persistence + UI belongs to
+ * the FR-58C subsystem at Epic 10 (adding a producer-less toggle column now repeats the anti-pattern 5.6
+ * called out for a producer-less pg-boss worker). The args are bound for the Epic 10 signature; unused today.
+ */
+export async function resolveCostOptimizationToggle(
+  deps: CostOptimizationCompositionDeps,
+  pariwarId: PariwarId,
+): Promise<boolean> {
+  // `void` — bound for the Epic 10 FR-58C flag read; the fail-safe default is OFF until then.
+  void deps;
+  void pariwarId;
+  return false;
 }

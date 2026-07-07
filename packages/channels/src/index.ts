@@ -115,6 +115,24 @@ export {
   type CascadeOutcome,
   type CascadeTrailEntry,
 } from './cascade.js';
+// Story 5.7 — the in-app-engagement cost-optimization POLICY primitive the dispatch.ts seam reserves for 5.7:
+// a pure, deterministically-testable decision function + per-category staleness-window config + PII-free
+// suppression-reason record + best-effort audit-emit helper. The POLICY sibling of 5.6's cascade RETRY
+// primitive — both WRAP dispatch, neither lives inside it. NO live dispatch call site; does NOT change the
+// frozen dispatch / ChannelProvider / CANONICAL_CHANNEL_LADDER / LifecycleSuppressionHook shapes.
+export {
+  evaluateCostOptimization,
+  auditCostSuppression,
+  stalenessWindowFor,
+  COST_OPTIMIZED_CHANNELS,
+  DEFAULT_STALENESS_WINDOW_MS,
+  STALENESS_WINDOW_BY_CATEGORY,
+  type CostOptimizationInput,
+  type CostOptimizationDecision,
+  type CostNonSuppressionReason,
+  type CostSuppressionReason,
+  type CostSuppressionAuditInput,
+} from './cost-optimization.js';
 export { mapMetaStatus, type MetaDeliveryStatus } from './providers/whatsapp-status.js';
 export { deepFreeze, isFrozenMutationError, type DeepReadonly } from './freeze.js';
 export { render, escapeText, type RenderableAlert } from './render.js';

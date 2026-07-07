@@ -30,6 +30,7 @@ import {
 } from '../../../src/encryption/index.js';
 import type { KmsKeyRef, KmsProvider } from '../../../src/encryption/kms-provider.js';
 import {
+  getMemberLastEngagementAt,
   listActiveTokens,
   markInvalid,
   purgeExpiredDeviceTokens,
@@ -319,5 +320,91 @@ describe.skipIf(!hasDatabase)('member_device_tokens accessors — RLS + rebuild 
     // markInvalid works the same way for an admin-owned row.
     expect(await markInvalid(tx, toPariwarId(PARIWAR_A), 'admin', adminUserId, 'ios', newBi)).toBe(1);
     expect(await listActiveTokens(tx, toPariwarId(PARIWAR_A), 'admin', adminUserId)).toHaveLength(0);
+  });
+});
+
+// ── getMemberLastEngagementAt — the Story 5.7 in-app-engagement read (:5433) ──────────────────────────────
+// MAX(last_seen_at) over the member's ACTIVE tokens (the app-open proxy) — or null when there is no active
+// token. Asserts BEHAVIOR (the resolved MAX / null), never raw counts (own-committing writers accumulate rows
+// — [[project_live_db_test_gotchas]]; this suite is per-test ROLLBACK-scoped so it reads its own seeds).
+describe.skipIf(!hasDatabase)('getMemberLastEngagementAt — in-app-engagement read (Story 5.7, :5433)', () => {
+  setupLiveDb();
+
+  async function seedTokenAt(
+    tx: ReturnType<typeof getTx>['tx'],
+    kmsBundle: ReturnType<typeof fakeKms>,
+    mid: string,
+    platform: 'android' | 'ios',
+    status: 'active' | 'stale' | 'invalid',
+    lastSeenAt: Date,
+    tokenLabel: string,
+  ): Promise<void> {
+    const { kms, kekRef, hmacKeyRef } = kmsBundle;
+    await tx.insert(schema.memberDeviceTokens).values({
+      pariwarId: toPariwarId(PARIWAR_A),
+      principalType: 'member',
+      principalId: mid,
+      memberId: toMemberId(mid),
+      platform,
+      tokenCiphertext: await encToken(kms, kekRef, tokenLabel, PARIWAR_A),
+      tokenBlindIndex: await biToken(kms, hmacKeyRef, tokenLabel, PARIWAR_A),
+      status,
+      lastSeenAt,
+    });
+  }
+
+  it('a member with ACTIVE tokens ⇒ the MAX last_seen_at across them', async () => {
+    const { tx, client } = getTx();
+    const kmsBundle = fakeKms();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid });
+    await enterAppScope(client, PARIWAR_A);
+
+    const older = new Date('2026-07-07T09:00:00.000Z');
+    const newest = new Date('2026-07-07T11:30:00.000Z');
+    await seedTokenAt(tx, kmsBundle, mid, 'android', 'active', older, 'eng-android');
+    await seedTokenAt(tx, kmsBundle, mid, 'ios', 'active', newest, 'eng-ios');
+
+    const last = await getMemberLastEngagementAt(tx, toMemberId(mid));
+    expect(last).not.toBeNull();
+    expect(last!.getTime()).toBe(newest.getTime());
+  });
+
+  it('a STALE/INVALID token is excluded even if it is more recent than the newest ACTIVE token', async () => {
+    const { tx, client } = getTx();
+    const kmsBundle = fakeKms();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid });
+    await enterAppScope(client, PARIWAR_A);
+
+    const activeAt = new Date('2026-07-07T10:00:00.000Z');
+    const staleNewer = new Date('2026-07-07T11:59:00.000Z'); // more recent, but NOT active → excluded
+    await seedTokenAt(tx, kmsBundle, mid, 'android', 'active', activeAt, 'eng-active');
+    await seedTokenAt(tx, kmsBundle, mid, 'ios', 'stale', staleNewer, 'eng-stale');
+
+    const last = await getMemberLastEngagementAt(tx, toMemberId(mid));
+    expect(last!.getTime()).toBe(activeAt.getTime());
+  });
+
+  it('a member with NO active token ⇒ null (no engagement signal → the policy fails toward reach)', async () => {
+    const { tx, client } = getTx();
+    const kmsBundle = fakeKms();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid });
+    await enterAppScope(client, PARIWAR_A);
+
+    // Only a stale token exists — no ACTIVE row.
+    await seedTokenAt(tx, kmsBundle, mid, 'android', 'stale', new Date('2026-07-07T08:00:00.000Z'), 'eng-only-stale');
+
+    expect(await getMemberLastEngagementAt(tx, toMemberId(mid))).toBeNull();
+  });
+
+  it('a member with no tokens at all ⇒ null', async () => {
+    const { tx, client } = getTx();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid });
+    await enterAppScope(client, PARIWAR_A);
+
+    expect(await getMemberLastEngagementAt(tx, toMemberId(mid))).toBeNull();
   });
 });

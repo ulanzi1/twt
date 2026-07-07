@@ -344,6 +344,13 @@
       "when": 1784864400000,
       "tag": "0048_consent-type-telegram-opt-in",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1784950800000,
+      "tag": "0049_sms-rate-buckets",
+      "breakpoints": true
     }
   ]
 }

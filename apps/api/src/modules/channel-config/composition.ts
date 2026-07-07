@@ -30,10 +30,14 @@
 
 import { channelConfig, ids, telegramOptIn, waOptIn, type Db } from '@twt/domain';
 import {
+  createSmsProvider,
   createTelegramProvider,
   createWhatsappProvider,
+  resolveDltTemplate,
   type ChannelProvider,
   type SendTarget,
+  type SmsAppClient,
+  type SmsProviderDeps,
   type TelegramAppCache,
   type WhatsappAppCache,
 } from '@twt/channels';
@@ -249,4 +253,118 @@ export async function resolveTelegramTarget(
   const chatId = await telegramOptIn.getChatIdForMember(deps.db, { pariwarId, memberId });
   if (!chatId) return null;
   return { channel: 'telegram', address: chatId };
+}
+
+// ── SMS composition seam — Story 5.6 (Task 6; AC1, AC2, AC4) ─────────────────────────────────────────────
+// The SMS twin of the WhatsApp seam above: a reusable building block the (future) live SMS cascade resolves
+// the `sms` TERMINAL rung through. This is app-composition wiring, NOT a change to `dispatch` / the frozen
+// `ChannelProvider` port ([[project_channels_no_live_dispatch_yet]]) — there is still NO live dispatch call
+// site.
+//
+// SMS ≠ WhatsApp (the deliberate differences): NO opt-in gate (the member's KYC mobile IS the address — SMS
+// is a transactional fallback, not a consented channel), NO per-Pariwar config table (DLT registration is
+// PLATFORM-GLOBAL — one gateway, one PE/OE sender), and eligibility is decided by the STATIC DLT template
+// registry (resolveDltTemplate), not a per-Pariwar approved-template row. The eligibility POLICY (§3.4:
+// fallback SMS fires per-message only for members whose higher-tier channel failed after the retry window)
+// is NOT wired here — this seam builds the MECHANISM; the live cascade / cost-opt wrapper (5.7) enforces the
+// policy (see the story's "§3.4 vs AR-19(c) eligibility tension" — architecture §3.4 is the default).
+//
+// ── "Not configured" vs. "configured but failing" (mirrors WA exactly) ────────────────────────────────────
+// `resolveWhatsappProviderDeps` treats a blank/missing OWN config field (accessTokenSecretName,
+// phoneNumberId on the per-Pariwar config row) as "not provisioned" ⇒ `null` ⇒ fixture — a `resolveSecret`
+// FAILURE (Secret Manager outage) is the separate thing that propagates. `resolveSmsProviderDeps` mirrors
+// this exactly: `deps.appClient.isConfigured()` is the SMS twin of that own-config blank check (the global
+// gateway credential NAME/value is absent) ⇒ `null` ⇒ fixture. A `resolveConfig` FAILURE (the DLT template
+// id NAME lookup outage) still propagates, same as WA's `resolveSecret`.
+
+/** What the SMS provider composition seam needs: the global gateway client + a global config/NAME resolver. */
+export interface SmsCompositionDeps {
+  /**
+   * The single GLOBAL SMS gateway client (sms-app.ts), built ONCE at boot with the resolved platform gateway
+   * credential + PE/OE sender header (restart-required-on-rotation). There is no per-Pariwar dimension.
+   */
+  readonly appClient: SmsAppClient;
+  /**
+   * Resolve a global config / Secret-Manager NAME → its value (e.g. the TRAI-assigned DLT template id for a
+   * category's `dltTemplateIdConfigKey`). Returns `null` for an explicit "not provisioned" state (⇒ the
+   * caller falls back to the fixture). A DB / Secret-Manager OUTAGE must THROW (propagate) — never silently
+   * degrade to the fixture (mirror the composition.ts head-comment discipline).
+   */
+  readonly resolveConfig: (configKey: string) => Promise<string | null>;
+}
+
+/**
+ * Resolve the REAL SMS provider deps for an alert category, or `null` when SMS is not provisioned for it
+ * (⇒ the caller falls back to the fixture). Returns null when: the global gateway credential is NOT
+ * configured (`appClient.isConfigured()` — mirrors WA's own-config blank check), the category has NO
+ * registered DLT template (not SMS-eligible — mirrors WA's "no approved template ⇒ not WA-eligible"), or the
+ * resolved DLT template id NAME is absent/blank (not provisioned). The template id is resolved from a global
+ * NAME pointer and never logged (AI-4-3(c)). Infra failures in `resolveConfig` PROPAGATE (not caught) — only
+ * the explicit not-provisioned states resolve to `null`.
+ */
+export async function resolveSmsProviderDeps(
+  deps: SmsCompositionDeps,
+  alertCategory: string,
+): Promise<SmsProviderDeps | null> {
+  // The global SMS gateway credential is NOT configured — same "not provisioned" treatment as WA's blank
+  // accessTokenSecretName/phoneNumberId check. Fall back to the fixture (never a thrown error for this).
+  if (!deps.appClient.isConfigured()) return null;
+
+  // A category absent from the DLT registry is NOT SMS-eligible — no real send can be built (the gateway
+  // requires a registered template). Fall back to the fixture (the caller passes null → createSmsProvider).
+  const template = resolveDltTemplate(alertCategory);
+  if (!template) return null;
+
+  // Resolve the TRAI-assigned DLT template id from its global NAME pointer at send time (never hardcoded).
+  const dltTemplateId = await deps.resolveConfig(template.dltTemplateIdConfigKey);
+  if (!dltTemplateId || dltTemplateId.trim() === '') return null;
+
+  const messaging = deps.appClient.messaging();
+  return { messaging, dltTemplateId };
+}
+
+/**
+ * Resolve the `sms` `ChannelProvider` for an alert category: the REAL DLT provider when provisioned, else
+ * the log-only fixture. Always returns a provider (fixture on the null path) — the real-vs-fixture selection
+ * is `createSmsProvider`'s (kept OUT of `dispatch`). Building block only — still NO live dispatch call site.
+ */
+export async function resolveSmsProvider(
+  deps: SmsCompositionDeps,
+  alertCategory: string,
+): Promise<ChannelProvider> {
+  const providerDeps = await resolveSmsProviderDeps(deps, alertCategory);
+  return createSmsProvider(providerDeps);
+}
+
+/** What the SMS delivery-resolver read needs: a scoped Db + the member-mobile decryption material. */
+export interface SmsTargetDeps {
+  /** RLS-scoped Db (the caller's tenant tx) for the member-mobile ciphertext read. */
+  readonly db: Db;
+  /** Encryption material to decrypt the member's Tier-1 mobile → the SMS recipient E.164. */
+  readonly encryption: EncryptionDeps;
+}
+
+/**
+ * The SMS delivery-resolver read (Story 5.6, AC4) — mirrors `resolveWaTarget` MINUS the opt-in gate: SMS has
+ * NO opt-in (the member's registered KYC mobile IS the address). Resolves an `sms` `SendTarget` by reading
+ * the member's Tier-1 mobile ciphertext and decrypting it HERE (the composition layer — never inside
+ * `dispatch` / the provider; mirrors resolvePushTargets / resolveWaTarget), or `null` when the member has no
+ * identity row (⇒ no number). Reuses `waOptIn.getMemberMobileCiphertext` — a NEUTRAL member-mobile ciphertext
+ * read that merely lives in that module — so SMS is NOT coupled to WA opt-in state.
+ *
+ * ── Frozen-shape discipline ([[project_channels_no_live_dispatch_yet]]) ──────────────────────────────────
+ * A reusable composition READ — it does NOT modify `DeliveryResolver` / `dispatch` / `ChannelProvider` /
+ * `CANONICAL_CHANNEL_LADDER`, and there is still NO live `dispatch` call site.
+ */
+export async function resolveSmsTarget(
+  deps: SmsTargetDeps,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+): Promise<SendTarget | null> {
+  // No opt-in gate (SMS is transactional). Resolve the member's registered mobile; a member with no identity
+  // row (⇒ no number) resolves to null.
+  const ciphertext = await waOptIn.getMemberMobileCiphertext(deps.db, { pariwarId, memberId });
+  if (!ciphertext) return null;
+  const address = await decryptMobile(ciphertext, deps.encryption);
+  return { channel: 'sms', address };
 }

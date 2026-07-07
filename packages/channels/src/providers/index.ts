@@ -1,16 +1,18 @@
 // Provider barrel + channel→provider registry. Story 5.1 shipped 5 STUBS; Story 5.2 turned the two `push`
-// transports (fcm/apns) into REAL firebase-admin providers; Story 5.3 turns `whatsapp` into a REAL Meta
-// WhatsApp Business Cloud API provider (+ a log-only fixture default), while sms/telegram remain 5.1 stubs
-// (real integration lands in 5.5–5.6). The registry SHAPE and the dispatcher are unchanged — real providers
-// plug INTO the fixed channel order.
+// transports (fcm/apns) into REAL firebase-admin providers; Story 5.3 turned `whatsapp` into a REAL Meta
+// WhatsApp Business Cloud API provider; Story 5.5 turned `telegram` into a REAL Telegram Bot provider; Story
+// 5.6 turns `sms` into a REAL DLT-transactional telephony-gateway provider (each + a log-only fixture
+// default). The registry SHAPE and the dispatcher are unchanged — real providers plug INTO the fixed
+// channel order.
 
 import type { Channel, ChannelProvider } from '../provider.js';
 import { createApnsProvider } from './apns.js';
 import { createFcmProvider, type PushProviderDeps } from './fcm.js';
 import { createFixturePushProvider, type FixturePushOptions } from './fixture-push.js';
+import { createFixtureSmsProvider, type FixtureSmsOptions } from './fixture-sms.js';
 import { createFixtureTelegramProvider, type FixtureTelegramOptions } from './fixture-telegram.js';
 import { createFixtureWhatsappProvider, type FixtureWhatsappOptions } from './fixture-whatsapp.js';
-import { smsDltProvider } from './sms-dlt.js';
+import { createSmsDltProvider, type SmsProviderDeps } from './sms-dlt.js';
 import { createTelegramBotProvider, type TelegramProviderDeps } from './telegram.js';
 import { createWhatsappBusinessProvider, type WhatsappProviderDeps } from './whatsapp-business.js';
 
@@ -18,15 +20,18 @@ export {
   createApnsProvider,
   createFcmProvider,
   createFixturePushProvider,
+  createFixtureSmsProvider,
   createFixtureTelegramProvider,
   createFixtureWhatsappProvider,
+  createSmsDltProvider,
   createTelegramBotProvider,
   createWhatsappBusinessProvider,
-  smsDltProvider,
   type PushProviderDeps,
   type FixturePushOptions,
+  type FixtureSmsOptions,
   type FixtureTelegramOptions,
   type FixtureWhatsappOptions,
+  type SmsProviderDeps,
   type TelegramProviderDeps,
   type WhatsappProviderDeps,
 };
@@ -82,15 +87,30 @@ export function createTelegramProvider(
 }
 
 /**
+ * Select the `sms` provider: the REAL DLT-transactional telephony-gateway provider when the global gateway
+ * deps are available (credential resolved + the alert's category has a registered DLT template), else the
+ * log-only fixture. Mirrors createWhatsappProvider's real-vs-fixture seam; the selection stays OUT of
+ * `dispatch` (the dispatcher stays policy-agnostic). Guards BOTH `null` AND `undefined` (the 5.2 review-fix
+ * convention). SMS has NO per-Pariwar dimension — DLT registration is platform-global.
+ */
+export function createSmsProvider(
+  sms: SmsProviderDeps | null | undefined,
+  fixtureOptions: FixtureSmsOptions = {},
+): ChannelProvider {
+  if (sms == null) return createFixtureSmsProvider(fixtureOptions);
+  return createSmsDltProvider(sms);
+}
+
+/**
  * The default provider registry: each logical channel → the provider(s) that serve it. `push` defaults to
- * the log-only fixtures (zero Firebase config); `whatsapp` defaults to the log-only fixture (zero Meta
- * config). A real per-Pariwar registry is built by the composition layer via createPushProviders /
- * createWhatsappProvider. Every value is a readonly non-empty tuple so channel iteration order never
- * depends on object-key order.
+ * the log-only fixtures (zero Firebase config); `whatsapp`/`sms`/`telegram` default to their log-only
+ * fixtures (zero Meta / telephony / Telegram config). A real registry is built by the composition layer via
+ * createPushProviders / createWhatsappProvider / createSmsProvider / createTelegramProvider. Every value is a
+ * readonly non-empty tuple so channel iteration order never depends on object-key order.
  */
 export const DEFAULT_PROVIDER_REGISTRY: Readonly<Record<Channel, readonly ChannelProvider[]>> = {
   push: fixturePushProviders(),
   whatsapp: [createFixtureWhatsappProvider()],
-  sms: [smsDltProvider],
+  sms: [createFixtureSmsProvider()],
   telegram: [createFixtureTelegramProvider()],
 };

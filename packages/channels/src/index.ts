@@ -12,20 +12,24 @@ export {
   createFcmProvider,
   createApnsProvider,
   createFixturePushProvider,
+  createFixtureSmsProvider,
   createFixtureTelegramProvider,
   createFixtureWhatsappProvider,
   createPushProviders,
+  createSmsProvider,
+  createSmsDltProvider,
   createTelegramProvider,
   createTelegramBotProvider,
   createWhatsappProvider,
   createWhatsappBusinessProvider,
   fixturePushProviders,
-  smsDltProvider,
   DEFAULT_PROVIDER_REGISTRY,
   type PushProviderDeps,
   type FixturePushOptions,
+  type FixtureSmsOptions,
   type FixtureTelegramOptions,
   type FixtureWhatsappOptions,
+  type SmsProviderDeps,
   type TelegramProviderDeps,
   type WhatsappProviderDeps,
 } from './providers/index.js';
@@ -74,6 +78,43 @@ export {
   rejectionDetail as telegramRejectionDetail,
   type TelegramErrorClass,
 } from './providers/telegram-errors.js';
+// Story 5.6 — real SMS-DLT transport: the GLOBAL DLT-transactional telephony-gateway client + the narrow
+// messaging seam, the gateway send-error classifier (the honest failure classes read off SendResult.detail),
+// and the static per-category DLT template registry (SMS-eligibility = category present in the registry).
+export {
+  createSmsAppClient,
+  SmsSendError,
+  type SmsAppClient,
+  type SmsMessagingHandle,
+  type SmsGatewayMessage,
+  type SmsClientConfig,
+  type SmsFetchLike,
+  type SmsFetchInit,
+  type SmsFetchResponse,
+} from './providers/sms-app.js';
+export {
+  classifySmsError,
+  rejectionDetail as smsRejectionDetail,
+  type SmsErrorClass,
+} from './providers/sms-errors.js';
+export {
+  resolveDltTemplate,
+  SMS_DLT_TEMPLATE_REGISTRY,
+  type DltTemplate,
+} from './sms-dlt-registry.js';
+// Story 5.6 — the retry / backoff / cascade primitive the dispatch.ts seam reserves for 5.6: a reusable,
+// deterministically-testable in-process primitive (injectable clock) the future live fan-out drives. NO live
+// dispatch call site; does NOT change the frozen dispatch / ChannelProvider / CANONICAL_CHANNEL_LADDER shapes.
+export {
+  runChannelCascade,
+  DEFAULT_SMS_BACKOFF_MS,
+  RETRYABLE_CASCADE_OUTCOMES,
+  type CascadeConfig,
+  type CascadeSender,
+  type ChannelSendOutcome,
+  type CascadeOutcome,
+  type CascadeTrailEntry,
+} from './cascade.js';
 export { mapMetaStatus, type MetaDeliveryStatus } from './providers/whatsapp-status.js';
 export { deepFreeze, isFrozenMutationError, type DeepReadonly } from './freeze.js';
 export { render, escapeText, type RenderableAlert } from './render.js';

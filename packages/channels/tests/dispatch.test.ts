@@ -113,13 +113,12 @@ describe('category eligibility (AC3)', () => {
     const outcome = await dispatch(claimStatusChange(), deps);
     const telegram = outcome.attempts.find((a) => a.channel === 'telegram');
     expect(telegram?.outcome).toBe('skipped_ineligible');
-    // push/whatsapp/sms still attempted (all eligible + have targets). push (Story 5.2) + whatsapp
-    // (Story 5.3) are now REAL fixture transports (accepted ⇒ 'sent'); sms is still a 5.1 stub.
+    // push/whatsapp/sms still attempted (all eligible + have targets). push (5.2) + whatsapp (5.3) + sms
+    // (5.6) are now REAL fixture transports (accepted ⇒ 'sent') — no channel is a 5.1 stub any longer.
     expect(outcome.attempts.find((a) => a.channel === 'push')?.outcome).toBe('sent');
     expect(outcome.attempts.find((a) => a.channel === 'whatsapp')?.outcome).toBe('sent');
-    expect(outcome.attempts.filter((a) => a.outcome === 'not_implemented').map((a) => a.channel)).toEqual([
-      'sms',
-    ]);
+    expect(outcome.attempts.find((a) => a.channel === 'sms')?.outcome).toBe('sent');
+    expect(outcome.attempts.filter((a) => a.outcome === 'not_implemented')).toHaveLength(0);
   });
 });
 
@@ -130,7 +129,7 @@ describe('delivery gate (AC3)', () => {
     });
     const outcome = await dispatch(announcement(), deps);
     const byChannel = Object.fromEntries(outcome.attempts.map((a) => [a.channel, a.outcome]));
-    expect(byChannel.sms).toBe('not_implemented'); // attempted; the 5.1 stub honestly reports its status
+    expect(byChannel.sms).toBe('sent'); // attempted; the 5.6 fixture transport reports accepted ⇒ sent
     expect(byChannel.push).toBe('skipped_no_target');
     expect(byChannel.whatsapp).toBe('skipped_no_target');
     expect(byChannel.telegram).toBe('skipped_no_target');
@@ -178,7 +177,7 @@ describe('audit lines (AC7 / AI-4-3(c))', () => {
     expect(dispatchLines[0]!.responseStatus).toBe(200);
     // The dispatch line records EVERY channel with its honest outcome (AC7 'attempted', not a sent filter).
     expect(dispatchLines[0]!.resourceLocator).toContain(
-      'channels=push:sent,whatsapp:sent,sms:not_implemented,telegram:sent',
+      'channels=push:sent,whatsapp:sent,sms:sent,telegram:sent',
     );
   });
 
@@ -212,7 +211,7 @@ describe('lifecycle suppression (AC3 — the sole boundary)', () => {
     });
     const outcome = await dispatch(announcement(), deps);
     expect(outcome.attempts.find((a) => a.channel === 'push')?.outcome).toBe('suppressed');
-    expect(outcome.attempts.find((a) => a.channel === 'sms')?.outcome).toBe('not_implemented');
+    expect(outcome.attempts.find((a) => a.channel === 'sms')?.outcome).toBe('sent');
   });
 
   it("carries the hook's reason on suppressed attempts (forensic 'why did this member get nothing')", async () => {

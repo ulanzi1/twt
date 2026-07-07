@@ -4,6 +4,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-5-6-sms-transactional-fallback-3-retry-exp-backoff (2026-07-07)
+
+- **`resolveSmsProviderDeps` doesn't trim the resolved `dltTemplateId` before use.** It blank-checks the resolved value via `.trim() === ''` but then stores/passes the untrimmed string on to the gateway request body. Identical pattern already present in the mirrored `resolveWhatsappProviderDeps`'s `accessTokenSecretName` handling — not a regression introduced by this story. **Re-trigger:** if a whitespace-polluted config value is ever observed causing a DLT template mismatch in production.
+- **`resolveSmsTarget` trusts `decryptMobile`'s output uncritically** — no try/catch around a decrypt failure, no E.164 format validation on the successful output before it's forwarded to the gateway. Mirrors the identical unguarded pattern in `resolveWaTarget`, which this function was built to copy — not new. **Re-trigger:** if a corrupted ciphertext or malformed decrypted mobile number is ever observed reaching the SMS gateway.
+
+---
+
 ## Deferred from: code review of 5-5-telegram-mirror-fire-and-forget (2026-07-06)
 
 - **CR-5.5-D1: Revisit Telegram verification semantics (bare-code vs `/start`-only) if the threat model changes or before enabling production Telegram onboarding.** Verification-code decision split during implementation: initial review recommended anchoring `extractStartCode` to a leading `/start` (currently it matches a bare pasted code as well as `/start <code>`, and combined with no DB constraint stopping two members from ending up `ACTIVE` on the same `chat_id`, a leaked/shoulder-surfed code lets someone else bind their chat to a member's opt-in). Implementation discovered committed tests (`code.test.ts`) explicitly documenting bare-code matching as intentional behavior. To preserve existing contractual behavior, `/start` anchoring was NOT implemented — current behavior is intentionally preserved, not overlooked. Mitigated meanwhile by the 48h PENDING TTL and the spec's own "no mobile blind index" simplification (Telegram never shares the member's phone, so no secondary match key is available). The multi-member-per-`chat_id` revoke gap (only the latest match got revoked on `/stop`/block) WAS fixed in this same review pass. **Re-trigger:** if code leakage/hijacking is ever observed in production, if the threat model changes, or before enabling production Telegram onboarding.

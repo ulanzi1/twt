@@ -14,7 +14,7 @@
     "dev": "expo start -c",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "true",
+    "test": "vitest run",
     "test:web": "true"
   },
   "dependencies": {

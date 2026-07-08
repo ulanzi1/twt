@@ -48,7 +48,10 @@ export async function requestOtp(
 
 export type VerifyOtpResult =
   | { ok: true; memberId: string | null; actionContext: string | null; otpHash: string }
-  | { ok: false };
+  // `otpHash` is present on a wrong-code failure (the hash of the OTP record the guess was
+  // checked against) so callers can still build an HMAC audit-correlation tag on failure;
+  // absent when no live OTP was found to check against.
+  | { ok: false; otpHash?: string };
 
 /**
  * Verify a submitted OTP; burns it on success, attempt-caps on failure.
@@ -100,5 +103,5 @@ export async function verifyOtp(
     // threat requires prior DB-level compromise and is accepted as residual risk.
     console.warn('[member-otp] atomicIncrementOtpAttempts failed — attempt budget may be stale', err);
   }
-  return { ok: false };
+  return { ok: false, otpHash: otp.otpHash };
 }

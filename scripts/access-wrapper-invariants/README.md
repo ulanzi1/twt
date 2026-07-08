@@ -1,13 +1,19 @@
 # `access-wrapper-invariants` gate
 
-A precision CI gate mechanizing the **cheapest, most-corrosive slice** of the Epic-4
-retrospective **AI-4-3** action item (the I-3 "access wrapper is the new TOCTOU"
-family): every validity **access entrypoint** in `packages/validity-service/src/**`
-must fail **closed** on an omitted caller, so none can default to returning a full,
-unredacted, unaudited payload (the exact Story 4.6 omitted-caller defect).
+A precision CI gate mechanizing the **cheapest, most-corrosive slices** of the I-3
+"access wrapper is the new TOCTOU" family. **One gate, two invariants**, each scanned
+over the code its commitment is about:
 
-- **lib.ts** — pure TS-AST scanner (`scanAccessWrapperInvariant`). DB-free, unit-tested in `lib.test.ts`.
-- **check.ts** — entrypoint: scans `packages/validity-service/src`, exits 1 naming file + line.
+1. **Validity caller/internal fail-closed (AI-4-3)** — every validity **access entrypoint**
+   in `packages/validity-service/src/**` must fail **closed** on an omitted caller, so none
+   can default to returning a full, unredacted, unaudited payload (the Story 4.6 defect).
+2. **Channel constant-time secret compare (AI-5-1)** — within any **verification context** on
+   the Epic-5 channel access surface, a compare of two runtime values must go through an
+   approved constant-time comparator, never `===`/`!==`/`.includes`/`.startsWith`/
+   `.localeCompare` (the Story 5.4 `hub.verify_token` timing side-channel).
+
+- **lib.ts** — pure TS-AST scanners (`scanAccessWrapperInvariant`, `scanSecretCompareInvariant`). DB-free, unit-tested in `lib.test.ts`.
+- **check.ts** — entrypoint: runs each invariant over its own root set, exits 1 naming file + line.
 
 ```
 pnpm access-wrapper:test    # vitest run scripts/access-wrapper-invariants (teeth)
@@ -42,14 +48,48 @@ fix made the absence of both markers throw. This gate freezes that: a future ent
 (the Epic 5 channels are wall-to-wall new access paths) that assembles + returns the
 payload without the guard is rejected at CI, not at the next adversarial review.
 
+## Invariant 2 — channel constant-time secret compare (AI-5-1)
+
+A **verification context** is a function (including a class constructor) that establishes
+trust by checking an incoming credential: it computes an HMAC (`createHmac`), reads a
+signature / verify-token header matching the shape `x-*-signature[-256]` / `x-*-secret-token`
+/ `hub.verify_token` (case-insensitive, e.g. `x-hub-signature-256`,
+`x-telegram-bot-api-secret-token`, and future channels' headers of the same shape), resolves a
+channel secret via a `resolve*Secret*`-named call (e.g. `resolveChannelSecret`), or calls an
+approved comparator / `verify*Signature` helper. The invariant is **conditional on the
+presence of verification** — where none exists there is nothing to get wrong, so there is **no
+synthetic "≥1 compare" canary**; a finding is *produced by* the verification context, not
+asserted against a global minimum.
+
+Within such a context, a `===`/`!==`/`==`/`!=` or `.includes`/`.startsWith`/`.localeCompare`
+of **two runtime values** is flagged unless routed through `timingSafeEqual` /
+`timingSafeEqualString` / `timingSafeHashCompare`. A compare where **either** operand is a
+literal, a `.length` read, or a const-literal is exempt — that clears the legitimate
+control-flow compares a handler contains (`mode !== 'subscribe'`, `challenge === undefined`,
+`provided.length !== expected.length`, `header.startsWith(SIGNATURE_PREFIX)`) while catching
+the real defect (`token !== expectedToken`, both runtime). The const-literal exemption is
+lexically scoped — a module-top-level const or a const local to the *same* function — so a
+same-named literal local to an unrelated function in the file can never exempt a genuine
+secret compare elsewhere.
+
+**Known heuristic limits (deferred, not built):** a verification signal and its compare split
+across nested closures/factory-method boundaries, `switch`/`case` equality, and
+non-import-resolved aliasing (`import { timingSafeEqual as tse }`) are out of scope for this
+cheap AST heuristic — see the story's Review Findings for the retrigger conditions.
+
+Scanned over the Epic-5 access surface: `packages/channels/src` + the `apps/api` channel
+entrypoints (`channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`,
+`degraded-mode`, `device-token`).
+
 ## Scope
 
-This gate covers the **entrypoint-must-declare-caller/internal** slice only. The rest of
-the AI-4-3 pre-review checklist — independent caller-authorization, HMAC/blind-index
-audit hashes, isolated best-effort writes, and permission-key scope-dimension match — are
-judgment calls a heuristic static lint would false-positive on, and are enforced by
-**convention + reviewer checklist** in [`docs/access-wrapper-invariants.md`](../../docs/access-wrapper-invariants.md).
+The gate covers the **caller/internal fail-closed** and **constant-time secret-compare**
+slices only. The rest of the pre-review checklist — independent caller-authorization,
+HMAC/blind-index audit hashes, isolated best-effort writes, and permission-key
+scope-dimension match — are judgment calls a heuristic static lint would false-positive on,
+and are enforced by **convention + reviewer checklist** in
+[`docs/access-wrapper-invariants.md`](../../docs/access-wrapper-invariants.md).
 
-INVARIANT SCAN of `packages/validity-service/src` — not a git-diff (no `fetch-depth: 0`;
-mirrors `member-state-invariant` / `domain-invariants`). Precision-scoped → self-green by
-construction.
+INVARIANT SCAN of the declared roots — not a git-diff (no `fetch-depth: 0`; mirrors
+`member-state-invariant` / `domain-invariants`). Precision-scoped → self-green by
+construction (each invariant only fires on its own defect shape).

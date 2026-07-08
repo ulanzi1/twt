@@ -20,7 +20,11 @@ import { loadConfig, type ApiConfig } from '../../src/config.js';
 import type { AppDeps, DataExportEnqueuer } from '../../src/context.js';
 import { buildEncryptionDeps } from '../../src/deps.js';
 import { generateEphemeralMemberJwtKeys } from '../../src/modules/auth/member/jwt-keys.js';
-import type { StepUpOtpDelivery, StepUpOtpDeliveryPort } from '../../src/modules/auth/shared/step-up-delivery.js';
+import type {
+  StepUpDeliveryResult,
+  StepUpOtpDelivery,
+  StepUpOtpDeliveryPort,
+} from '../../src/modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider, type WebAuthnProvider } from '../../src/modules/auth/shared/webauthn.js';
 import { createFakeDeployTrigger, type DeployTrigger } from '../../src/modules/pariwar-provisioning/deploy-trigger.js';
@@ -104,8 +108,10 @@ export class CapturingNiyamavaliHook {
 /** A step-up delivery that records every code so tests can complete the flow. */
 export class CapturingStepUpDelivery implements StepUpOtpDeliveryPort {
   public readonly deliveries: StepUpOtpDelivery[] = [];
-  public async deliver(delivery: StepUpOtpDelivery): Promise<void> {
+  public async deliver(delivery: StepUpOtpDelivery): Promise<StepUpDeliveryResult> {
     this.deliveries.push(delivery);
+    // Mirror the reveal/log stub's result shape (Story 5.9, Task 3).
+    return { channel: 'log', status: 'stub' };
   }
   public get last(): StepUpOtpDelivery | undefined {
     return this.deliveries.at(-1);
@@ -136,6 +142,7 @@ export interface TestDepsOverrides {
   auditSink?: AuthAuditSink;
   toneReviewAuditSink?: ToneReviewAuditSink;
   stepUpDelivery?: StepUpOtpDeliveryPort;
+  adminStepUpDelivery?: StepUpOtpDeliveryPort;
   turnstile?: TurnstileVerifier;
   webauthn?: WebAuthnProvider;
   deployTrigger?: DeployTrigger;
@@ -153,6 +160,7 @@ export interface TestDeps {
   auditSink: CapturingAuditSink;
   toneReviewAuditSink: CapturingToneReviewAuditSink;
   stepUpDelivery: CapturingStepUpDelivery;
+  adminStepUpDelivery: CapturingStepUpDelivery;
   niyamavaliHook: CapturingNiyamavaliHook;
   dataExportQueue: CapturingDataExportQueue;
 }
@@ -173,6 +181,10 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     new CapturingToneReviewAuditSink();
   const stepUpDelivery =
     (overrides.stepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
+  // Story 5.9: admin OTP delivery is a SEPARATE always-stub key (admin OTP-over-SMS deferred). A capturing
+  // fake by default so the admin step-up spec asserts against it.
+  const adminStepUpDelivery =
+    (overrides.adminStepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
   const niyamavaliHook = new CapturingNiyamavaliHook();
   const dataExportQueue =
     (overrides.dataExportQueue as CapturingDataExportQueue) ?? new CapturingDataExportQueue();
@@ -194,6 +206,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     auditSink,
     toneReviewAuditSink,
     stepUpDelivery,
+    adminStepUpDelivery,
     // Member-JWT keypair (Story 3.2) — a fresh ephemeral ES256 pair per test app.
     memberJwt: generateEphemeralMemberJwtKeys(),
     turnstile: overrides.turnstile ?? noopTurnstileVerifier,
@@ -234,6 +247,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     auditSink,
     toneReviewAuditSink,
     stepUpDelivery,
+    adminStepUpDelivery,
     niyamavaliHook,
     dataExportQueue,
   };

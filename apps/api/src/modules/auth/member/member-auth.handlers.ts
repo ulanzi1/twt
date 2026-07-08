@@ -34,6 +34,7 @@ import type { PariwarSelectClaims } from '../../../plugins/jwt/index.js';
 import { emitAuthAudit } from '../shared/audit.js';
 import { hmacOtpAuditCorrelation } from '../shared/otp.js';
 import { maskMobile, mobileBlindIndex, normalizeMobile } from '../shared/mobile-index.js';
+import type { StepUpDeliveryResult, StepUpOtpDelivery } from '../shared/step-up-delivery.js';
 import * as authService from './member-auth.service.js';
 import * as repo from './member-auth.repo.js';
 import * as otpService from './member-otp.service.js';
@@ -137,16 +138,21 @@ export function createMemberAuthHandlers(deps: AppDeps) {
         const masked = canonical ? maskMobile(canonical) : undefined;
         const { code, otpHash, expiresAt } = await otpService.requestOtp(deps, 'login', blindIndex, {});
         const auditTag = hmacOtpAuditCorrelation(otpHash, deps.config.auditOtpCorrelationKey);
-        const delivery = {
+        // Story 5.9: `login` intent — the caller already holds the canonical E.164 (no member resolved yet:
+        // `blindIndex` is a mobile blind index, not a MemberId), so thread it as `resolvedMobile` (no decrypt).
+        const delivery: StepUpOtpDelivery = {
           code,
           actorId: blindIndex,
           actionContext: 'member.login',
+          intent: 'login',
+          resolvedMobile: canonical ?? '',
           ...(masked ? { destinationHint: masked } : {}),
         };
         // P8: audit delivery failures; do not re-throw (enumeration defense requires
         // the same 200 response regardless of delivery outcome).
+        let deliveryResult: StepUpDeliveryResult | undefined;
         try {
-          await deps.stepUpDelivery.deliver(delivery);
+          deliveryResult = await deps.stepUpDelivery.deliver(delivery);
         } catch (err) {
           deps.stepUpDelivery.onPrimaryDeliveryFailure?.(delivery, err);
           emitAuthAudit(deps, request, 'member_login.failure', {
@@ -159,12 +165,16 @@ export function createMemberAuthHandlers(deps: AppDeps) {
         }
         // P28: use HMAC-keyed tag instead of raw otp_hash (raw SHA-256 of a 6-digit
         // OTP is brute-forceable in <1 ms — the tag is non-invertible without the key).
+        // Story 5.9 (Task 3): record how the OTP was delivered on a successful real send.
         emitAuthAudit(deps, request, 'member_login.otp_send', {
           context: {
             otp_audit_tag: auditTag,
             ...(masked ? { masked_mobile: masked } : {}),
             sent_at: deps.clock().toISOString(),
             expires_at: expiresAt.toISOString(),
+            ...(deliveryResult
+              ? { delivery_channel: deliveryResult.channel, delivery_status: deliveryResult.status }
+              : {}),
           },
         });
       }
@@ -395,13 +405,22 @@ export function createMemberAuthHandlers(deps: AppDeps) {
       });
       // P28: HMAC-keyed audit tag (same key → same tag for matching send+consume events).
       const auditTag = hmacOtpAuditCorrelation(otpHash, deps.config.auditOtpCorrelationKey);
-      const delivery = { code, actorId: memberId, actionContext: body.actionContext };
+      // Story 5.9: `step_up` intent — `memberId` is a real MemberId; thread `pariwarId` so the adapter can
+      // decrypt the member's Tier-1 mobile (the Story 5.6 path). `resolvedMobile` is forbidden here.
+      const delivery: StepUpOtpDelivery = {
+        code,
+        actorId: memberId,
+        actionContext: body.actionContext,
+        intent: 'step_up',
+        pariwarId: request.requestContext.pariwarId ?? null,
+      };
       // PR-Patch-8: surface step-up delivery failures. The login path already audits +
       // calls the alert hook on a delivery throw; step-up previously let it 500 with no
       // record. This is an authenticated surface (no enumeration concern) → audit the
       // failure + invoke the alert hook, then propagate so the member sees a retriable error.
+      let deliveryResult: StepUpDeliveryResult;
       try {
-        await deps.stepUpDelivery.deliver(delivery);
+        deliveryResult = await deps.stepUpDelivery.deliver(delivery);
       } catch (err) {
         deps.stepUpDelivery.onPrimaryDeliveryFailure?.(delivery, err);
         emitAuthAudit(deps, request, 'member_step_up.failure', {
@@ -411,10 +430,17 @@ export function createMemberAuthHandlers(deps: AppDeps) {
         });
         throw err;
       }
+      // Story 5.9 (Task 3): record how the OTP was delivered on a successful real send.
       emitAuthAudit(deps, request, 'member_step_up.send', {
         actorId: memberId,
         pariwarId: request.requestContext.pariwarId ?? null,
-        context: { otp_audit_tag: auditTag, action_context: body.actionContext, sent_at: deps.clock().toISOString() },
+        context: {
+          otp_audit_tag: auditTag,
+          action_context: body.actionContext,
+          sent_at: deps.clock().toISOString(),
+          delivery_channel: deliveryResult.channel,
+          delivery_status: deliveryResult.status,
+        },
       });
       void expiresAt;
       return { sent: true, expiresInSeconds: secs(deps.config.stepUpOtpTtlMs) };

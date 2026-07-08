@@ -165,3 +165,255 @@ export function formatFinding(f: AccessWrapperFinding): string {
     `guarded entrypoint forwarding \`opts\`. See docs/access-wrapper-invariants.md (AI-4-3).`
   );
 }
+
+// ---------------------------------------------------------------------------
+// AI-5-1 — channel-surface constant-time secret-compare invariant (the second
+// mechanized slice; extends the gate to the Epic-5 access surface).
+//
+// The invariant is CONDITIONAL on the presence of verification: within a
+// VERIFICATION CONTEXT, any comparison of two RUNTIME values must go through an
+// approved constant-time comparator — never `===`/`!==`/`==`/`!=` or
+// `.includes`/`.startsWith`/`.localeCompare`. Where no verification exists there
+// is nothing to get wrong and the invariant is satisfied by construction — so
+// there is no synthetic "≥1 compare" canary; the finding is PRODUCED BY the
+// verification context, not asserted against a global minimum.
+//
+// This catches the exact Story 5.4 defect (`hub.verify_token` compared with a
+// plain `!==` — a webhook-auth timing side-channel). Anchoring on the
+// verification *context* (not on a secret-name lexicon) also catches a secret
+// compared under an innocuously-named variable.
+// ---------------------------------------------------------------------------
+
+/** Approved constant-time comparators — a compare routed through one is conformant. */
+const APPROVED_COMPARATORS = new Set(['timingSafeEqual', 'timingSafeEqualString', 'timingSafeHashCompare']);
+/** String methods that leak a byte-wise / early-exit compare when used on two runtime values. */
+const UNSAFE_STRING_METHODS = new Set(['includes', 'startsWith', 'localeCompare']);
+/**
+ * Signature / verify-token header keys whose read marks a verification context —
+ * matched by shape (`x-*-signature[-256]` / `x-*-secret-token` / `hub.verify_token`)
+ * rather than a fixed lexicon, so a future channel's differently-named header
+ * (e.g. `x-line-signature`) still registers without a code change.
+ */
+function isVerifyHeaderKey(text: string): boolean {
+  const t = text.toLowerCase();
+  if (t === 'hub.verify_token') return true;
+  return t.startsWith('x-') && (t.endsWith('-signature') || t.endsWith('-signature-256') || t.endsWith('-secret-token'));
+}
+const HMAC_FN = 'createHmac';
+/** A `resolve*Secret*` call resolves a channel secret for comparison (e.g. `resolveChannelSecret`). */
+const SECRET_RESOLVER_RE = /^resolve.*Secret/i;
+const VERIFY_SIGNATURE_RE = /^verify.*Signature$/;
+
+type FunctionLike =
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ArrowFunction
+  | ts.MethodDeclaration
+  | ts.GetAccessorDeclaration
+  | ts.SetAccessorDeclaration
+  | ts.ConstructorDeclaration;
+
+function isFunctionLike(node: ts.Node): node is FunctionLike {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node) ||
+    ts.isConstructorDeclaration(node)
+  );
+}
+
+/** The `name` of a call's callee, receiver-insensitive (`f()` and `x.f()` both → 'f'). */
+function calleeName(call: ts.CallExpression): string | null {
+  const e = call.expression;
+  if (ts.isIdentifier(e)) return e.text;
+  if (ts.isPropertyAccessExpression(e)) return e.name.text;
+  return null;
+}
+
+/**
+ * Collect a function's OWN body nodes, NOT descending into nested function-like
+ * scopes — so a verification signal (or a compare) inside a nested method is
+ * attributed to that method, never leaked up to its enclosing factory.
+ */
+function collectOwnNodes(fn: FunctionLike): ts.Node[] {
+  const acc: ts.Node[] = [];
+  const body = fn.body;
+  if (!body) return acc;
+  const visit = (node: ts.Node): void => {
+    acc.push(node);
+    node.forEachChild((child) => {
+      if (isFunctionLike(child)) return; // stop at a nested scope
+      visit(child);
+    });
+  };
+  body.forEachChild(visit);
+  return acc;
+}
+
+/**
+ * A function body is a VERIFICATION CONTEXT iff it (in its own nodes) computes an
+ * HMAC, reads a signature/verify-token header, resolves a channel secret, or
+ * calls an approved constant-time comparator / `verify*Signature` helper. Any of
+ * these establishes that the function checks an incoming credential.
+ */
+function isVerificationContext(ownNodes: ts.Node[]): boolean {
+  for (const node of ownNodes) {
+    if (ts.isCallExpression(node)) {
+      const name = calleeName(node);
+      if (name === HMAC_FN || (name && SECRET_RESOLVER_RE.test(name))) return true;
+      if (name && APPROVED_COMPARATORS.has(name)) return true;
+      if (name && VERIFY_SIGNATURE_RE.test(name)) return true;
+    }
+    if (ts.isStringLiteral(node) && isVerifyHeaderKey(node.text)) return true;
+  }
+  return false;
+}
+
+/** A compile-time-constant operand — never a runtime secret value. */
+function isLiteralNode(n: ts.Node): boolean {
+  return (
+    ts.isStringLiteral(n) ||
+    ts.isNumericLiteral(n) ||
+    ts.isBigIntLiteral(n) ||
+    ts.isRegularExpressionLiteral(n) ||
+    ts.isNoSubstitutionTemplateLiteral(n) ||
+    ts.isVoidExpression(n) || // `void 0`
+    n.kind === ts.SyntaxKind.TrueKeyword ||
+    n.kind === ts.SyntaxKind.FalseKeyword ||
+    n.kind === ts.SyntaxKind.NullKeyword ||
+    (ts.isIdentifier(n) && n.text === 'undefined')
+  );
+}
+
+/**
+ * An operand is EXEMPT (not a runtime secret) if it is a literal, a `.length`
+ * read (public shape metadata, never the secret bytes), or a local `const`
+ * initialized to a literal (`SIGNATURE_PREFIX = 'sha256='`). A compare where
+ * EITHER operand is exempt is a control-flow / shape check, not a secret compare.
+ */
+function isExemptOperand(n: ts.Node, constLiterals: Set<string>): boolean {
+  if (isLiteralNode(n)) return true;
+  if (ts.isPropertyAccessExpression(n) && n.name.text === 'length') return true;
+  if (ts.isIdentifier(n) && constLiterals.has(n.text)) return true;
+  return false;
+}
+
+/**
+ * `const`-with-literal-initializer names among a flat list of nodes (no recursion —
+ * callers pass either a source file's top-level statements or a function's own
+ * nodes, both already the right shape to scan directly).
+ */
+function collectConstLiteralsFromNodes(nodes: readonly ts.Node[]): Set<string> {
+  const names = new Set<string>();
+  for (const node of nodes) {
+    if (ts.isVariableStatement(node) && (node.declarationList.flags & ts.NodeFlags.Const) !== 0) {
+      for (const d of node.declarationList.declarations) {
+        if (ts.isIdentifier(d.name) && d.initializer && isLiteralNode(d.initializer)) {
+          names.add(d.name.text);
+        }
+      }
+    }
+  }
+  return names;
+}
+
+/**
+ * const-literals declared at MODULE scope (the source file's top-level statements,
+ * outside any function) — genuinely visible from every function in the file.
+ * Deliberately NOT a whole-file recursive walk: a `const` local to one function
+ * must never exempt an unrelated compare in a different function (that was the
+ * bug — a same-named local literal anywhere in the file silently exempted a real
+ * secret compare elsewhere). Per-function locals are scoped separately in
+ * `scanSecretCompareInvariant` via `collectOwnNodes` + this same helper.
+ */
+function collectTopLevelConstLiterals(sf: ts.SourceFile): Set<string> {
+  return collectConstLiteralsFromNodes(sf.statements);
+}
+
+const EQUALITY_OPS = new Set<ts.SyntaxKind>([
+  ts.SyntaxKind.EqualsEqualsEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsEqualsToken,
+  ts.SyntaxKind.EqualsEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsToken,
+]);
+
+/**
+ * If `node` is a runtime-vs-runtime unsafe compare, return the node to report;
+ * else null. Covers `===`/`!==`/`==`/`!=` and `.includes`/`.startsWith`/
+ * `.localeCompare`. Exempt if EITHER operand is a literal / `.length` /
+ * const-literal (§ isExemptOperand).
+ */
+function unsafeCompareNode(node: ts.Node, constLiterals: Set<string>): ts.Node | null {
+  if (ts.isBinaryExpression(node) && EQUALITY_OPS.has(node.operatorToken.kind)) {
+    if (!isExemptOperand(node.left, constLiterals) && !isExemptOperand(node.right, constLiterals)) {
+      return node;
+    }
+    return null;
+  }
+  if (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    UNSAFE_STRING_METHODS.has(node.expression.name.text)
+  ) {
+    const receiver = node.expression.expression;
+    const arg = node.arguments[0];
+    if (arg && !isExemptOperand(receiver, constLiterals) && !isExemptOperand(arg, constLiterals)) {
+      return node;
+    }
+  }
+  return null;
+}
+
+/** The display name of a function-like node (declared name, or the var/property it's bound to). */
+function functionDisplayName(fn: FunctionLike, sf: ts.SourceFile): string {
+  if (ts.isConstructorDeclaration(fn)) return 'constructor';
+  if (!ts.isArrowFunction(fn) && fn.name) return fn.name.getText(sf);
+  const p = fn.parent;
+  if (p && ts.isVariableDeclaration(p) && ts.isIdentifier(p.name)) return p.name.getText(sf);
+  if (p && ts.isPropertyAssignment(p)) return p.name.getText(sf);
+  return '<anonymous>';
+}
+
+/**
+ * Scan one TypeScript source for runtime-vs-runtime compares inside verification
+ * contexts that bypass an approved constant-time comparator. Pure TS-AST, DB-free.
+ */
+export function scanSecretCompareInvariant(file: string, source: string): AccessWrapperFinding[] {
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, /* setParentNodes */ true);
+  const topLevelConstLiterals = collectTopLevelConstLiterals(sf);
+  const findings: AccessWrapperFinding[] = [];
+
+  const walk = (node: ts.Node): void => {
+    if (isFunctionLike(node)) {
+      const own = collectOwnNodes(node);
+      if (isVerificationContext(own)) {
+        const fn = functionDisplayName(node, sf);
+        const constLiterals = new Set([...topLevelConstLiterals, ...collectConstLiteralsFromNodes(own)]);
+        for (const n of own) {
+          const bad = unsafeCompareNode(n, constLiterals);
+          if (bad) {
+            const { line } = sf.getLineAndCharacterOfPosition(bad.getStart(sf));
+            findings.push({ file, line: line + 1, fn });
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, walk);
+  };
+
+  walk(sf);
+  return findings;
+}
+
+export function formatSecretCompareFinding(f: AccessWrapperFinding): string {
+  return (
+    `${f.file}:${f.line} — verification context \`${f.fn}\` compares two runtime values with a ` +
+    `non-constant-time operator (\`===\`/\`!==\`/\`==\`/\`!=\`/\`.includes\`/\`.startsWith\`/\`.localeCompare\`). A ` +
+    `credential compare must be timing-safe: route it through \`timingSafeEqual\` / ` +
+    `\`timingSafeEqualString\` / \`timingSafeHashCompare\` (the Story 5.4 \`hub.verify_token\` defect). ` +
+    `See docs/access-wrapper-invariants.md (AI-5-1).`
+  );
+}

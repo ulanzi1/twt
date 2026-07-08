@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { scanAccessWrapperInvariant } from './lib.js';
+import { formatSecretCompareFinding, scanAccessWrapperInvariant, scanSecretCompareInvariant } from './lib.js';
 
 // The real guard shape (service.ts step 0), operand order preserved.
 const GUARD =
@@ -91,5 +91,175 @@ describe('scanAccessWrapperInvariant — AI-4-3 gate teeth', () => {
     expect(f[0].file).toBe('packages/validity-service/src/service.ts');
     expect(f[0].fn).toBe('getX');
     expect(f[0].line).toBe(3); // two blank lines + `export async function getX` on line 3
+  });
+});
+
+// A verification context modeled on channel-webhooks/handlers.ts `verifyChallenge`
+// (an object-literal method). `resolveChannelSecret` + the `hub.verify_token` read
+// mark it as verification; `body` is the credential-compare line under test.
+const verificationMethod = (body: string): string =>
+  `export function makeHandlers(deps: any) {\n` +
+  `  return {\n` +
+  `    async verifyChallenge(request: any): Promise<void> {\n` +
+  `      const q = request.query as Record<string, string | undefined>;\n` +
+  `      const mode = q['hub.mode'];\n` +
+  `      const token = q['hub.verify_token'];\n` +
+  `      const challenge = q['hub.challenge'];\n` +
+  `      const expectedToken = await deps.resolveChannelSecret('name');\n` +
+  `${body}` +
+  `      await reply.status(200).send(challenge);\n` +
+  `    },\n` +
+  `  };\n` +
+  `}\n`;
+
+describe('scanSecretCompareInvariant — AI-5-1 gate teeth (channel-surface constant-time compare)', () => {
+  it('(a) FLAGS the pre-fix Story 5.4 defect: `token !== expectedToken` (both runtime) in a verification context', () => {
+    const src = verificationMethod(
+      `      if (mode !== 'subscribe' || !token || token !== expectedToken) throw new Error('nope');\n`,
+    );
+    const f = scanSecretCompareInvariant('apps/api/src/modules/channel-webhooks/handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('verifyChallenge');
+  });
+
+  it('(b) ACCEPTS the shipped fix: `timingSafeEqualString(token, expectedToken)`', () => {
+    const src = verificationMethod(
+      `      if (mode !== 'subscribe' || !token || !timingSafeEqualString(token, expectedToken) || challenge === undefined) throw new Error('nope');\n`,
+    );
+    expect(scanSecretCompareInvariant('handlers.ts', src)).toHaveLength(0);
+  });
+
+  it('(c) ACCEPTS legitimate control-flow compares against literals (mode !== "subscribe", challenge === undefined, !token)', () => {
+    const src = verificationMethod(
+      `      if (mode !== 'subscribe') throw new Error('a');\n` +
+        `      if (challenge === undefined) throw new Error('b');\n` +
+        `      if (!token) throw new Error('c');\n` +
+        `      if (!timingSafeEqualString(token, expectedToken)) throw new Error('d');\n`,
+    );
+    expect(scanSecretCompareInvariant('handlers.ts', src)).toHaveLength(0);
+  });
+
+  it('(d) FLAGS `.includes` between two runtime values inside a verification context', () => {
+    const src = verificationMethod(
+      `      if (!token || !expectedToken.includes(token)) throw new Error('nope');\n`,
+    );
+    const f = scanSecretCompareInvariant('handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('verifyChallenge');
+  });
+
+  it('(e) does NOT scan a plain `a === b` in a NON-verification function (conditional scoping)', () => {
+    // No HMAC / secret-resolver / header-read / approved comparator → not a verification context.
+    const src =
+      `export function renderLabel(a: string, b: string): boolean {\n` +
+      `  return a === b;\n` +
+      `}\n`;
+    expect(scanSecretCompareInvariant('packages/channels/src/render.ts', src)).toHaveLength(0);
+  });
+
+  it('does NOT flag a `.length !== .length` shape guard (public metadata, not the secret bytes)', () => {
+    // Mirrors signature.ts verifyMetaSignature / timingSafeEqualString length pre-checks.
+    const src =
+      `import { createHmac, timingSafeEqual } from 'node:crypto';\n` +
+      `export function verifyMetaSignature(raw: Buffer, provided: Buffer, secret: string): boolean {\n` +
+      `  const expected = Buffer.from(createHmac('sha256', secret).update(raw).digest('hex'), 'hex');\n` +
+      `  if (provided.length !== expected.length) return false;\n` +
+      `  return timingSafeEqual(provided, expected);\n` +
+      `}\n`;
+    expect(scanSecretCompareInvariant('signature.ts', src)).toHaveLength(0);
+  });
+
+  it('does NOT flag `.startsWith(CONST)` where CONST is a local const-literal (SIGNATURE_PREFIX)', () => {
+    const src =
+      `import { createHmac } from 'node:crypto';\n` +
+      `const SIGNATURE_PREFIX = 'sha256=';\n` +
+      `export function verifySig(header: string, secret: string, raw: Buffer): boolean {\n` +
+      `  if (!header.startsWith(SIGNATURE_PREFIX)) return false;\n` +
+      `  const expected = createHmac('sha256', secret).update(raw).digest('hex');\n` +
+      `  return header.slice(7) === expected ? true : false;\n` + // string vs runtime — both runtime → flagged below
+      `}\n`;
+    // The `.startsWith(SIGNATURE_PREFIX)` is exempt (const-literal). But `header.slice(7) === expected`
+    // is two runtime values in a verification context → the invariant DOES bite here (proves the
+    // const-literal exemption is scoped to the prefix check, not a blanket pass).
+    const f = scanSecretCompareInvariant('signature.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('verifySig');
+  });
+
+  it('attributes a nested-method compare to the method, not its enclosing factory', () => {
+    const src = verificationMethod(
+      `      if (token !== expectedToken) throw new Error('nope');\n`,
+    );
+    const f = scanSecretCompareInvariant('handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('verifyChallenge'); // NOT 'makeHandlers'
+  });
+
+  it('[review patch] does NOT let a same-named local const-literal in an UNRELATED function exempt a genuine compare (const-literal scope fix)', () => {
+    const src =
+      // Unrelated function declares its own local `token` bound to a literal — must NOT leak into verifyChallenge's scope.
+      `function unrelatedHelper(): string {\n` +
+      `  const token = 'placeholder';\n` +
+      `  return token;\n` +
+      `}\n` +
+      verificationMethod(`      if (token !== expectedToken) throw new Error('nope');\n`);
+    const f = scanSecretCompareInvariant('handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('verifyChallenge');
+  });
+
+  it('[review patch] still exempts a genuine module-scope const-literal used across functions (SIGNATURE_PREFIX-style)', () => {
+    const src =
+      `const SIGNATURE_PREFIX = 'sha256=';\n` +
+      `export function verifySig(header: string, expected: string): boolean {\n` +
+      `  const expectedToken = expected;\n` +
+      `  if (!header.startsWith(SIGNATURE_PREFIX)) return false;\n` +
+      `  return timingSafeEqualString(header, expectedToken);\n` +
+      `}\n`;
+    expect(scanSecretCompareInvariant('signature.ts', src)).toHaveLength(0);
+  });
+
+  it('[review patch] scans a verification context written as a class constructor', () => {
+    const src =
+      `export class WhatsAppApp {\n` +
+      `  constructor(deps: any, token: string) {\n` +
+      `    const expectedToken = deps.resolveChannelSecret('name');\n` +
+      `    if (token !== expectedToken) throw new Error('nope');\n` +
+      `  }\n` +
+      `}\n`;
+    const f = scanSecretCompareInvariant('packages/channels/src/providers/whatsapp-app.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('constructor');
+  });
+
+  it('[review patch] recognizes a differently-named secret resolver matching the resolve*Secret* shape', () => {
+    const src =
+      `export async function verifyWebhook(deps: any, token: string): Promise<void> {\n` +
+      `  const expectedToken = await deps.resolveWebhookSecret('name');\n` +
+      `  if (token !== expectedToken) throw new Error('nope');\n` +
+      `}\n`;
+    const f = scanSecretCompareInvariant('handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('verifyWebhook');
+  });
+
+  it('[review patch] recognizes a differently-named signature header matching the x-*-signature shape', () => {
+    const src =
+      `export async function verifyLine(request: any, token: string, expectedToken: string): Promise<void> {\n` +
+      `  const sig = request.headers['x-line-signature'];\n` +
+      `  if (token !== expectedToken) throw new Error('nope');\n` +
+      `}\n`;
+    const f = scanSecretCompareInvariant('handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('verifyLine');
+  });
+
+  it('[review patch] formatSecretCompareFinding mentions loose equality (==/!=) alongside the other unsafe operators', () => {
+    const src = verificationMethod(`      if (token != expectedToken) throw new Error('nope');\n`);
+    const f = scanSecretCompareInvariant('handlers.ts', src);
+    expect(f).toHaveLength(1);
+    const msg = formatSecretCompareFinding(f[0]);
+    expect(msg).toContain('`==`');
+    expect(msg).toContain('`!=`');
   });
 });

@@ -417,3 +417,89 @@ export function formatSecretCompareFinding(f: AccessWrapperFinding): string {
     `See docs/access-wrapper-invariants.md (AI-5-1).`
   );
 }
+
+// ---------------------------------------------------------------------------
+// AI-5-3 — compensating-audit invariant (the third mechanized slice; ADR-0030 /
+// Epic 5 retrospective AI-5-3).
+//
+// POSITIVE invariant (not a mutation-name heuristic): within the declared scan
+// roots, a direct call to `audit.writeAuditEntry` is non-conformant UNLESS the
+// enclosing FILE is on the named exemption list below. This deliberately does NOT
+// try to detect "does this function hold a rollback-capable transaction handle" —
+// that would require either fragile per-project naming assumptions (`scopeTx`) that
+// miss real call sites (e.g. channel-config/degraded-mode's `scopeCtx(request)`
+// indirection, which never mentions `scopeTx` in the handler body at all) or full
+// cross-function dataflow tracing, which is out of scope for a cheap AST heuristic
+// (mirrors the AI-4-3/AI-5-1 invariants' own precision-scoping discipline).
+//
+// Instead: `packages/domain/src/audit/compensating.ts` (`withCompensatingAudit` +
+// `writeRolledBackAudit`) is the SOLE sanctioned caller of `audit.writeAuditEntry`
+// for a compensatable write. A handful of pre-existing, reviewed AI-4-3(d)
+// isolated-best-effort writes (no rollback-capable tx in scope at all — see
+// ADR-0030 Context/Non-goals) are exempt BY FILE, not by function name (an
+// anonymous-arrow return shape, e.g. `channels/audit.ts`'s `createAuditPort`, has no
+// stable function-name to key on). Adding a file to the exemption list is a
+// deliberate, reviewed scope-widening edit — the gate never infers an exemption.
+// ---------------------------------------------------------------------------
+
+/**
+ * Files exempt from the compensating-audit invariant — each holds exactly one
+ * direct `audit.writeAuditEntry` call, already documented inline as an isolated
+ * best-effort write (AI-4-3(d)): no rollback-capable transaction handle is ever in
+ * scope in these functions, so there is nothing for a subsequent audit failure to
+ * diverge from (a missing audit line for an event that did happen, never a
+ * persisted line for an event that didn't — see ADR-0030 Context).
+ */
+const COMPENSATING_AUDIT_EXEMPT_FILES = new Set<string>([
+  'packages/channels/src/audit.ts',
+  'apps/api/src/modules/device-token/push-invalidation.ts',
+  'apps/api/src/modules/device-token/device-token.handlers.ts',
+]);
+
+/** Is `call` a call to `audit.writeAuditEntry(...)` (the `import { audit } from '@twt/domain'` shape)? */
+function isAuditWriteAuditEntryCall(call: ts.CallExpression): boolean {
+  const e = call.expression;
+  return (
+    ts.isPropertyAccessExpression(e) &&
+    e.name.text === 'writeAuditEntry' &&
+    ts.isIdentifier(e.expression) &&
+    e.expression.text === 'audit'
+  );
+}
+
+/**
+ * Scan one TypeScript source for direct `audit.writeAuditEntry` calls outside the
+ * canonical `withCompensatingAudit`/`writeRolledBackAudit` helper and the named
+ * file exemptions. Pure TS-AST, DB-free.
+ */
+export function scanCompensatingAuditInvariant(file: string, source: string): AccessWrapperFinding[] {
+  if (COMPENSATING_AUDIT_EXEMPT_FILES.has(file)) return [];
+
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, /* setParentNodes */ true);
+  const findings: AccessWrapperFinding[] = [];
+
+  const walk = (node: ts.Node): void => {
+    if (isFunctionLike(node)) {
+      const fn = functionDisplayName(node, sf);
+      for (const n of collectOwnNodes(node)) {
+        if (ts.isCallExpression(n) && isAuditWriteAuditEntryCall(n)) {
+          const { line } = sf.getLineAndCharacterOfPosition(n.getStart(sf));
+          findings.push({ file, line: line + 1, fn });
+        }
+      }
+    }
+    ts.forEachChild(node, walk);
+  };
+
+  walk(sf);
+  return findings;
+}
+
+export function formatCompensatingAuditFinding(f: AccessWrapperFinding): string {
+  return (
+    `${f.file}:${f.line} — \`${f.fn}\` calls \`audit.writeAuditEntry\` directly. Route mutation+audit ` +
+    `pairs through \`audit.withCompensatingAudit\` (or \`audit.writeRolledBackAudit\` for a recoverable ` +
+    `compensation branch) — packages/domain/src/audit/compensating.ts is the sole sanctioned caller ` +
+    `outside a named file exemption (ADR-0030). See docs/adr/ADR-0030-compensating-audit-mechanization.md (AI-5-3).`
+  );
+}

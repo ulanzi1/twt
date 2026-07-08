@@ -79,67 +79,70 @@ export function createChannelConfigHandlers(deps: AppDeps) {
       };
     },
 
-    /** PUT the WA config singleton (upsert + audit). NEVER audits a token value (the NAME is a pointer). */
+    /** PUT the WA config singleton (upsert + audit, compensated on failure per ADR-0030). NEVER audits a
+     *  token value (the NAME is a pointer). */
     async putWaConfig(request: FastifyRequest): Promise<WaConfigResponse> {
       const { tx, pariwarIdStr, actorId } = scopeCtx(request);
       const body = request.body as WaConfigUpsertRequest;
       const pariwarId = ids.pariwarId(pariwarIdStr);
 
-      await channelConfig.upsertWaConfig(tx, {
-        pariwarId,
-        enabled: body.enabled,
-        displayPhoneNumber: body.displayPhoneNumber,
-        phoneNumberId: body.phoneNumberId,
-        wabaId: body.wabaId,
-        accessTokenSecretName: body.accessTokenSecretName,
-        graphApiVersion: body.graphApiVersion,
-        appSecretSecretName: body.appSecretSecretName,
-        webhookVerifyTokenSecretName: body.webhookVerifyTokenSecretName,
-        updatedByActor: ids.userId(actorId),
-      });
-
-      // Audit over NON-secret config fields only (the credential NAME is a safe pointer; the resolved token
-      // never appears here). No token value ever reaches the audit hash.
-      await audit.writeAuditEntry(deps.servicePool, {
-        pariwarId: pariwarIdStr,
-        actorId,
-        actorRole: null,
-        action: 'pariwar.wa_config_update',
-        resourceLocator: `pariwar/${pariwarIdStr}/channel-config/whatsapp`,
-        requestPayloadHash: createHash('sha256')
-          .update(
-            canonicalJsonStringify({
-              pariwar_id: pariwarIdStr,
-              enabled: body.enabled,
-              display_phone_number: body.displayPhoneNumber,
-              phone_number_id: body.phoneNumberId,
-              waba_id: body.wabaId,
-              // NAME pointers only — the resolved secret values NEVER reach the audit hash (AI-4-3(c)).
-              access_token_secret_name: body.accessTokenSecretName,
-              graph_api_version: body.graphApiVersion,
-              app_secret_secret_name: body.appSecretSecretName,
-              webhook_verify_token_secret_name: body.webhookVerifyTokenSecretName,
-            }),
-            'utf8',
-          )
-          .digest('hex'),
-        responseStatus: 200,
-        traceId: request.requestContext.traceId ?? null,
-      });
-
-      return {
-        configured: true,
-        config: {
-          enabled: body.enabled,
-          displayPhoneNumber: body.displayPhoneNumber,
-          phoneNumberId: body.phoneNumberId,
-          wabaId: body.wabaId,
-          accessTokenSecretName: body.accessTokenSecretName,
-          graphApiVersion: body.graphApiVersion,
-          appSecretSecretName: body.appSecretSecretName,
-          webhookVerifyTokenSecretName: body.webhookVerifyTokenSecretName,
+      return audit.withCompensatingAudit(deps.servicePool, {
+        // Audit over NON-secret config fields only (the credential NAME is a safe pointer; the resolved
+        // token never appears here). No token value ever reaches the audit hash.
+        auditIntent: {
+          pariwarId: pariwarIdStr,
+          actorId,
+          actorRole: null,
+          action: 'pariwar.wa_config_update',
+          resourceLocator: `pariwar/${pariwarIdStr}/channel-config/whatsapp`,
+          requestPayloadHash: createHash('sha256')
+            .update(
+              canonicalJsonStringify({
+                pariwar_id: pariwarIdStr,
+                enabled: body.enabled,
+                display_phone_number: body.displayPhoneNumber,
+                phone_number_id: body.phoneNumberId,
+                waba_id: body.wabaId,
+                // NAME pointers only — the resolved secret values NEVER reach the audit hash (AI-4-3(c)).
+                access_token_secret_name: body.accessTokenSecretName,
+                graph_api_version: body.graphApiVersion,
+                app_secret_secret_name: body.appSecretSecretName,
+                webhook_verify_token_secret_name: body.webhookVerifyTokenSecretName,
+              }),
+              'utf8',
+            )
+            .digest('hex'),
+          traceId: request.requestContext.traceId ?? null,
         },
-      };
+        mutate: async () => {
+          await channelConfig.upsertWaConfig(tx, {
+            pariwarId,
+            enabled: body.enabled,
+            displayPhoneNumber: body.displayPhoneNumber,
+            phoneNumberId: body.phoneNumberId,
+            wabaId: body.wabaId,
+            accessTokenSecretName: body.accessTokenSecretName,
+            graphApiVersion: body.graphApiVersion,
+            appSecretSecretName: body.appSecretSecretName,
+            webhookVerifyTokenSecretName: body.webhookVerifyTokenSecretName,
+            updatedByActor: ids.userId(actorId),
+          });
+
+          return {
+            configured: true,
+            config: {
+              enabled: body.enabled,
+              displayPhoneNumber: body.displayPhoneNumber,
+              phoneNumberId: body.phoneNumberId,
+              wabaId: body.wabaId,
+              accessTokenSecretName: body.accessTokenSecretName,
+              graphApiVersion: body.graphApiVersion,
+              appSecretSecretName: body.appSecretSecretName,
+              webhookVerifyTokenSecretName: body.webhookVerifyTokenSecretName,
+            },
+          };
+        },
+      });
     },
 
     /** GET the full per-category UTILITY template mapping. */
@@ -155,7 +158,7 @@ export function createChannelConfigHandlers(deps: AppDeps) {
       return { templates };
     },
 
-    /** PUT one category's template mapping (upsert + audit). */
+    /** PUT one category's template mapping (upsert + audit, compensated on failure per ADR-0030). */
     async putWaTemplate(request: FastifyRequest): Promise<WaTemplateDto> {
       const { tx, pariwarIdStr, actorId } = scopeCtx(request);
       const body = request.body as WaTemplateUpsertRequest;
@@ -163,7 +166,8 @@ export function createChannelConfigHandlers(deps: AppDeps) {
 
       // pariwar_wa_templates.pariwar_id is a NOT-NULL FK to pariwar_wa_config — fail with a clean 409
       // instead of letting the insert hit an opaque Postgres FK violation (the config form must be saved
-      // first; the admin UI does not otherwise enforce that ordering).
+      // first; the admin UI does not otherwise enforce that ordering). Checked BEFORE the audit-or-mutate
+      // section — a missing config is not an audited event.
       const config = await channelConfig.getWaConfig(tx, pariwarId);
       if (!config) {
         throw new ConflictError(
@@ -172,40 +176,42 @@ export function createChannelConfigHandlers(deps: AppDeps) {
         );
       }
 
-      await channelConfig.upsertWaTemplate(tx, pariwarId, body.alertCategory, {
-        templateName: body.templateName,
-        languageCode: body.languageCode,
-        approvalStatus: body.approvalStatus,
-      });
+      return audit.withCompensatingAudit(deps.servicePool, {
+        auditIntent: {
+          pariwarId: pariwarIdStr,
+          actorId,
+          actorRole: null,
+          action: 'pariwar.wa_template_update',
+          resourceLocator: `pariwar/${pariwarIdStr}/channel-config/whatsapp/templates/${body.alertCategory}`,
+          requestPayloadHash: createHash('sha256')
+            .update(
+              canonicalJsonStringify({
+                pariwar_id: pariwarIdStr,
+                alert_category: body.alertCategory,
+                template_name: body.templateName,
+                language_code: body.languageCode,
+                approval_status: body.approvalStatus,
+              }),
+              'utf8',
+            )
+            .digest('hex'),
+          traceId: request.requestContext.traceId ?? null,
+        },
+        mutate: async () => {
+          await channelConfig.upsertWaTemplate(tx, pariwarId, body.alertCategory, {
+            templateName: body.templateName,
+            languageCode: body.languageCode,
+            approvalStatus: body.approvalStatus,
+          });
 
-      await audit.writeAuditEntry(deps.servicePool, {
-        pariwarId: pariwarIdStr,
-        actorId,
-        actorRole: null,
-        action: 'pariwar.wa_template_update',
-        resourceLocator: `pariwar/${pariwarIdStr}/channel-config/whatsapp/templates/${body.alertCategory}`,
-        requestPayloadHash: createHash('sha256')
-          .update(
-            canonicalJsonStringify({
-              pariwar_id: pariwarIdStr,
-              alert_category: body.alertCategory,
-              template_name: body.templateName,
-              language_code: body.languageCode,
-              approval_status: body.approvalStatus,
-            }),
-            'utf8',
-          )
-          .digest('hex'),
-        responseStatus: 200,
-        traceId: request.requestContext.traceId ?? null,
+          return {
+            alertCategory: body.alertCategory,
+            templateName: body.templateName,
+            languageCode: body.languageCode,
+            approvalStatus: body.approvalStatus,
+          };
+        },
       });
-
-      return {
-        alertCategory: body.alertCategory,
-        templateName: body.templateName,
-        languageCode: body.languageCode,
-        approvalStatus: body.approvalStatus,
-      };
     },
 
     // ── Story 5.5 — trustee Telegram Bot config (GET + PUT) ───────────────────────────────────────────
@@ -236,55 +242,58 @@ export function createChannelConfigHandlers(deps: AppDeps) {
       };
     },
 
-    /** PUT the Telegram config singleton (upsert + audit). NEVER audits a token value (the NAME is a pointer). */
+    /** PUT the Telegram config singleton (upsert + audit, compensated on failure per ADR-0030). NEVER
+     *  audits a token value (the NAME is a pointer). */
     async putTelegramConfig(request: FastifyRequest): Promise<TelegramConfigResponse> {
       const { tx, pariwarIdStr, actorId } = scopeCtx(request);
       const body = request.body as TelegramConfigUpsertRequest;
       const pariwarId = ids.pariwarId(pariwarIdStr);
 
-      await channelConfig.upsertTelegramConfig(tx, {
-        pariwarId,
-        enabled: body.enabled,
-        botUsername: body.botUsername,
-        botTokenSecretName: body.botTokenSecretName,
-        webhookSecretTokenSecretName: body.webhookSecretTokenSecretName,
-        updatedByActor: ids.userId(actorId),
-      });
-
-      // Audit over NON-secret config fields only (the credential NAMEs are safe pointers; the resolved token
-      // never appears here). No token value ever reaches the audit hash (AI-4-3(c)).
-      await audit.writeAuditEntry(deps.servicePool, {
-        pariwarId: pariwarIdStr,
-        actorId,
-        actorRole: null,
-        action: 'pariwar.telegram_config_update',
-        resourceLocator: `pariwar/${pariwarIdStr}/channel-config/telegram`,
-        requestPayloadHash: createHash('sha256')
-          .update(
-            canonicalJsonStringify({
-              pariwar_id: pariwarIdStr,
-              enabled: body.enabled,
-              bot_username: body.botUsername,
-              // NAME pointers only — the resolved secret values NEVER reach the audit hash (AI-4-3(c)).
-              bot_token_secret_name: body.botTokenSecretName,
-              webhook_secret_token_secret_name: body.webhookSecretTokenSecretName,
-            }),
-            'utf8',
-          )
-          .digest('hex'),
-        responseStatus: 200,
-        traceId: request.requestContext.traceId ?? null,
-      });
-
-      return {
-        configured: true,
-        config: {
-          enabled: body.enabled,
-          botUsername: body.botUsername,
-          botTokenSecretName: body.botTokenSecretName,
-          webhookSecretTokenSecretName: body.webhookSecretTokenSecretName,
+      return audit.withCompensatingAudit(deps.servicePool, {
+        // Audit over NON-secret config fields only (the credential NAMEs are safe pointers; the resolved
+        // token never appears here). No token value ever reaches the audit hash (AI-4-3(c)).
+        auditIntent: {
+          pariwarId: pariwarIdStr,
+          actorId,
+          actorRole: null,
+          action: 'pariwar.telegram_config_update',
+          resourceLocator: `pariwar/${pariwarIdStr}/channel-config/telegram`,
+          requestPayloadHash: createHash('sha256')
+            .update(
+              canonicalJsonStringify({
+                pariwar_id: pariwarIdStr,
+                enabled: body.enabled,
+                bot_username: body.botUsername,
+                // NAME pointers only — the resolved secret values NEVER reach the audit hash (AI-4-3(c)).
+                bot_token_secret_name: body.botTokenSecretName,
+                webhook_secret_token_secret_name: body.webhookSecretTokenSecretName,
+              }),
+              'utf8',
+            )
+            .digest('hex'),
+          traceId: request.requestContext.traceId ?? null,
         },
-      };
+        mutate: async () => {
+          await channelConfig.upsertTelegramConfig(tx, {
+            pariwarId,
+            enabled: body.enabled,
+            botUsername: body.botUsername,
+            botTokenSecretName: body.botTokenSecretName,
+            webhookSecretTokenSecretName: body.webhookSecretTokenSecretName,
+            updatedByActor: ids.userId(actorId),
+          });
+
+          return {
+            configured: true,
+            config: {
+              enabled: body.enabled,
+              botUsername: body.botUsername,
+              botTokenSecretName: body.botTokenSecretName,
+              webhookSecretTokenSecretName: body.webhookSecretTokenSecretName,
+            },
+          };
+        },
+      });
     },
   };
 }

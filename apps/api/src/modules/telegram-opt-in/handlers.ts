@@ -8,9 +8,10 @@
 //
 // The member session (requireMemberSession) sets request.requestContext.actorId = member_id + .pariwarId.
 // Unlike WhatsApp there is NO mobile blind index (Telegram never shares the phone) — the match key is the
-// verification code alone, minted by createPendingOptIn. Audit-or-throw: the audit line is written FIRST
-// (servicePool, its own tx), then the consent + state transition run on the scope tx (rolled back together on
-// failure). NO secret value ever reaches an audit line (there is none in this flow).
+// verification code alone, minted by createPendingOptIn. Audit-or-throw via `audit.withCompensatingAudit`
+// (ADR-0030): the audit line is written FIRST (servicePool, its own tx), then the consent + state transition
+// run on the scope tx (rolled back together on failure, with a compensating rolled_back line settling the
+// chain). NO secret value ever reaches an audit line (there is none in this flow).
 
 import { audit, channelConfig, consent, ids, telegramOptIn } from '@twt/domain';
 import type {
@@ -53,61 +54,32 @@ export function createTelegramOptInHandlers(deps: AppDeps) {
     return { memberId, pariwarId };
   }
 
-  /** Write one opt-in-transition audit line (servicePool, own tx). Returns the auditId + the facts needed to
-   *  write a compensating `*_rolled_back` line if a later step in the same request rolls back. */
-  async function writeOptInAudit(
-    request: FastifyRequest,
-    args: {
-      pariwarId: string;
-      memberId: string;
-      action: string;
-      originatingChannel: telegramOptIn.TelegramOptInOriginatingChannel;
-      beforeState: string;
-      afterState: string;
-      verificationCode?: string | null;
-      responseStatus?: number;
-    },
-  ): Promise<{ auditId: string; requestPayloadHash: string; resourceLocator: string }> {
-    const resourceLocator = `pariwar/${args.pariwarId}/member/${args.memberId}/telegram-opt-in`;
-    const requestPayloadHash = telegramOptIn.telegramOptInAuditPayloadHash({
-      originatingChannel: args.originatingChannel,
-      memberId: args.memberId,
-      verificationCode: args.verificationCode ?? null,
-      beforeState: args.beforeState,
-      afterState: args.afterState,
-    });
-    const row = await audit.writeAuditEntry(deps.servicePool, {
+  /** Build the audit-intent args for a member-initiated opt-in transition (ADR-0030). */
+  function optInAuditIntent(args: {
+    pariwarId: string;
+    memberId: string;
+    action: string;
+    originatingChannel: telegramOptIn.TelegramOptInOriginatingChannel;
+    beforeState: string;
+    afterState: string;
+    verificationCode?: string | null;
+    traceId: string | null;
+  }): audit.AuditIntentArgs {
+    return {
       pariwarId: args.pariwarId,
       actorId: args.memberId,
       actorRole: null,
       action: args.action,
-      resourceLocator,
-      requestPayloadHash,
-      responseStatus: args.responseStatus ?? 200,
-      traceId: request.requestContext.traceId ?? null,
-    });
-    return { auditId: row.auditId, requestPayloadHash, resourceLocator };
-  }
-
-  /** Best-effort compensating `*_rolled_back` audit line (status 500). Never masks the original error. */
-  async function writeCompensatingAudit(
-    request: FastifyRequest,
-    args: { pariwarId: string; memberId: string; action: string; requestPayloadHash: string; resourceLocator: string },
-  ): Promise<void> {
-    try {
-      await audit.writeAuditEntry(deps.servicePool, {
-        pariwarId: args.pariwarId,
-        actorId: args.memberId,
-        actorRole: null,
-        action: args.action,
-        resourceLocator: args.resourceLocator,
-        requestPayloadHash: args.requestPayloadHash,
-        responseStatus: 500,
-        traceId: request.requestContext.traceId ?? null,
-      });
-    } catch {
-      // swallow — the original error is the one the caller must see.
-    }
+      resourceLocator: `pariwar/${args.pariwarId}/member/${args.memberId}/telegram-opt-in`,
+      requestPayloadHash: telegramOptIn.telegramOptInAuditPayloadHash({
+        originatingChannel: args.originatingChannel,
+        memberId: args.memberId,
+        verificationCode: args.verificationCode ?? null,
+        beforeState: args.beforeState,
+        afterState: args.afterState,
+      }),
+      traceId: args.traceId,
+    };
   }
 
   return {
@@ -119,9 +91,6 @@ export function createTelegramOptInHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
-      // Compensating audit: armed once the 'requested' audit line is durably committed; consumed by the catch
-      // below to settle the chain if the PENDING insert then fails (e.g. a concurrent-mint race).
-      let compensation: { requestPayloadHash: string; resourceLocator: string } | null = null;
       try {
         const config = await channelConfig.getTelegramConfig(scopeTx.tx, pariwarId);
         if (!config || !config.enabled || !config.botUsername) {
@@ -130,6 +99,9 @@ export function createTelegramOptInHandlers(deps: AppDeps) {
             'telegram_opt_in.channel_unavailable',
           );
         }
+        // Captured as a local so the null-narrowing above survives into the `mutate` closure below (TS does
+        // not carry a narrowed object-property type across a function boundary).
+        const botUsername = config.botUsername;
 
         const existing = await telegramOptIn.getOptInForMember(scopeTx.tx, {
           pariwarId,
@@ -141,64 +113,53 @@ export function createTelegramOptInHandlers(deps: AppDeps) {
         if (existing?.state === 'PENDING') {
           // Re-tap: re-use the outstanding PENDING (re-issue the deep-link; no new transition, no audit).
           // Build the deep-link BEFORE flipping `ok` — a misconfigured botUsername must not commit anything.
-          const deepLink = buildStartDeepLink(config.botUsername, existing.verificationCode);
+          const deepLink = buildStartDeepLink(botUsername, existing.verificationCode);
           ok = true;
           return { state: 'PENDING', deepLink };
         }
 
-        // Fresh mint (none / REVOKED / BLOCKED / EXPIRED) — a NEW PENDING + code (no inferred re-consent; AC10).
-        // Audit FIRST (member_app; before 'none', after PENDING) — committed on its own tx before the mint. No
-        // verificationCode yet (the code doesn't exist until createPendingOptIn mints/regenerates it).
-        const audited = await writeOptInAudit(request, {
+        // Fresh mint (none / REVOKED / BLOCKED / EXPIRED) — a NEW PENDING + code (no inferred re-consent;
+        // AC10). Audit-or-throw (ADR-0030): intent FIRST (member_app; before 'none', after PENDING),
+        // committed on its own tx before the mint. No verificationCode yet (the code doesn't exist until
+        // createPendingOptIn mints/regenerates it).
+        const auditIntent = optInAuditIntent({
           pariwarId: pariwarIdStr,
           memberId,
           action: 'member.telegram_opt_in_requested',
           originatingChannel: 'member_app',
           beforeState: 'none',
           afterState: 'PENDING',
+          traceId: request.requestContext.traceId ?? null,
         });
-        compensation = { requestPayloadHash: audited.requestPayloadHash, resourceLocator: audited.resourceLocator };
-
-        let pending;
-        try {
-          pending = await telegramOptIn.createPendingOptIn(scopeTx.tx, {
-            pariwarId,
-            memberId: memberIdBranded,
-          });
-        } catch (err) {
-          if (err instanceof telegramOptIn.TelegramOptInPendingExistsError) {
-            // A concurrent double-tap lost the DB race — re-use the winning row's deep-link (documented
-            // recovery behavior) rather than surfacing a bare 409 to the loser. No state change here, so
-            // settle the 'requested' audit line as rolled back for THIS request's attempt.
-            await writeCompensatingAudit(request, {
-              pariwarId: pariwarIdStr,
-              memberId,
-              action: 'member.telegram_opt_in_requested_rolled_back',
-              requestPayloadHash: compensation.requestPayloadHash,
-              resourceLocator: compensation.resourceLocator,
-            });
-            compensation = null;
-            const deepLink = buildStartDeepLink(config.botUsername, err.verificationCode);
+        return await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent,
+          mutate: async () => {
+            let pending;
+            try {
+              pending = await telegramOptIn.createPendingOptIn(scopeTx.tx, {
+                pariwarId,
+                memberId: memberIdBranded,
+              });
+            } catch (err) {
+              if (err instanceof telegramOptIn.TelegramOptInPendingExistsError) {
+                // A concurrent double-tap lost the DB race — re-use the winning row's deep-link (documented
+                // recovery behavior) rather than surfacing a bare 409 to the loser. No state change happened
+                // in THIS attempt, so settle the 'requested' intent line as rolled back directly (NOT by
+                // rethrowing — withCompensatingAudit's own catch would double-compensate and turn this
+                // legitimate recovery into a 500).
+                await audit.writeRolledBackAudit(deps.servicePool, auditIntent);
+                const deepLink = buildStartDeepLink(botUsername, err.verificationCode);
+                ok = true;
+                return { state: 'PENDING', deepLink };
+              }
+              throw err;
+            }
+            // Build the deep-link BEFORE flipping `ok` — a misconfigured botUsername must not commit the mint.
+            const deepLink = buildStartDeepLink(botUsername, pending.verificationCode);
             ok = true;
             return { state: 'PENDING', deepLink };
-          }
-          throw err;
-        }
-        // Build the deep-link BEFORE flipping `ok` — a misconfigured botUsername must not commit the mint.
-        const deepLink = buildStartDeepLink(config.botUsername, pending.verificationCode);
-        ok = true;
-        return { state: 'PENDING', deepLink };
-      } catch (err) {
-        if (compensation !== null) {
-          await writeCompensatingAudit(request, {
-            pariwarId: pariwarIdStr,
-            memberId,
-            action: 'member.telegram_opt_in_requested_rolled_back',
-            requestPayloadHash: compensation.requestPayloadHash,
-            resourceLocator: compensation.resourceLocator,
-          });
-        }
-        throw err;
+          },
+        });
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
@@ -243,7 +204,6 @@ export function createTelegramOptInHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
-      let compensation: { requestPayloadHash: string; resourceLocator: string } | null = null;
       try {
         const existing = await telegramOptIn.getOptInForMember(scopeTx.tx, {
           pariwarId,
@@ -253,45 +213,37 @@ export function createTelegramOptInHandlers(deps: AppDeps) {
           throw new ConflictError('You have no active Telegram opt-in to revoke', 'telegram_opt_in.not_active');
         }
 
-        // Audit FIRST (member_app; before ACTIVE, after REVOKED).
-        const audited = await writeOptInAudit(request, {
-          pariwarId: pariwarIdStr,
-          memberId,
-          action: 'member.telegram_opt_in_revoked',
-          originatingChannel: 'member_app',
-          beforeState: 'ACTIVE',
-          afterState: 'REVOKED',
-          verificationCode: existing.verificationCode,
-        });
-        compensation = { requestPayloadHash: audited.requestPayloadHash, resourceLocator: audited.resourceLocator };
-
-        // Consent revoke + state revoke in ONE scope tx (rolled back together on failure).
-        if (existing.consentId) {
-          await consent.revokeConsent(scopeTx.tx, {
-            pariwarId,
-            consentId: existing.consentId,
-            reason: 'member revoked Telegram opt-in from app settings',
-            revokedAuditId: audited.auditId,
-          });
-        }
-        await telegramOptIn.revokeOptIn(scopeTx.tx, {
-          pariwarId,
-          optInId: existing.optInId,
-          toState: 'REVOKED',
-        });
-        ok = true;
-        return { state: 'REVOKED' };
-      } catch (err) {
-        if (compensation !== null) {
-          await writeCompensatingAudit(request, {
+        // Audit-or-throw (ADR-0030): intent FIRST (member_app; before ACTIVE, after REVOKED), then consent
+        // revoke + state revoke in ONE scope tx (rolled back together on failure, compensated on the ledger).
+        return await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: optInAuditIntent({
             pariwarId: pariwarIdStr,
             memberId,
-            action: 'member.telegram_opt_in_revoked_rolled_back',
-            requestPayloadHash: compensation.requestPayloadHash,
-            resourceLocator: compensation.resourceLocator,
-          });
-        }
-        throw err;
+            action: 'member.telegram_opt_in_revoked',
+            originatingChannel: 'member_app',
+            beforeState: 'ACTIVE',
+            afterState: 'REVOKED',
+            verificationCode: existing.verificationCode,
+            traceId: request.requestContext.traceId ?? null,
+          }),
+          mutate: async ({ auditId }) => {
+            if (existing.consentId) {
+              await consent.revokeConsent(scopeTx.tx, {
+                pariwarId,
+                consentId: existing.consentId,
+                reason: 'member revoked Telegram opt-in from app settings',
+                revokedAuditId: auditId,
+              });
+            }
+            await telegramOptIn.revokeOptIn(scopeTx.tx, {
+              pariwarId,
+              optInId: existing.optInId,
+              toState: 'REVOKED',
+            });
+            ok = true;
+            return { state: 'REVOKED' };
+          },
+        });
       } finally {
         await closeScopeTx(scopeTx, ok);
       }

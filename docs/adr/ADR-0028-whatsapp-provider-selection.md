@@ -1,9 +1,9 @@
 # ADR-0028: WhatsApp Business provider selection (direct Meta WhatsApp Business Cloud API for v1 — no BSP intermediary)
 
-> **Status:** drafted
-> **Date:** 2026-07-05
+> **Status:** ratified
+> **Date:** 2026-07-08 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** — (un-attested-pending; a reviewer convenes the Trustee Panel — no fabricated session, [[feedback_record_unattested_no_backfill]])
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — ratified at the 2026-07-08 Trustee Panel session; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-07-08.md`; logged in `.decision-log.md` Decision 2026-07-08-065
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -124,3 +124,4 @@ https://graph.facebook.com/<graph_api_version>/<phone_number_id>/messages` with 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-07-05 | (initial draft) | BigDev (Solo Builder) | Authored at Story 5.3 (Epic 5's second `[CONSUMER]`). Commits direct Meta WhatsApp Business Cloud API (thin `fetch` client, zero new deps) for v1, closing the direct-vs-BSP decision in favour of the shape already anticipated at §3.4 L1935; the AR-53 abstraction keeps a future BSP swap a single-module change. Ratification is a later Trustee-Panel event — lands `drafted`, un-attested-pending. |
+| 2026-07-08 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-07-08 Trustee Panel session (consent sheet `adr-ratification-consent-sheet-2026-07-08.md`, light-touch vendor selection); Decision 2026-07-08-065. |

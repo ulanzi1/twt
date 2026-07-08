@@ -8,13 +8,14 @@
 // as a NON-PII summary + the history count. `imaList` returns the resolved catalog + ack copy.
 //
 // ── Audit-or-throw chain (R3 — mirror rules/index.ts:508-518) ─────────────────────────────
-// Ordering inside submit: resolve BOTH clauses → writeAuditEntry (servicePool, BYPASSRLS, its own
-// tx → auditId) → recordConsent({ auditId }) → appendMedicalDisclosure({ consentId }) →
-// projectMemberState event → buildStatus → ok=true → emitAuthAudit (fire-and-forget, last). The
-// consent insert + disclosure insert + event all run inside the member scope tx, so a throw rolls
-// them back together (AC6). The step-5 audit line commits on its own pool and SURVIVES that
-// rollback; a `catch` therefore emits a compensating `member_medical.disclosure_rolled_back` (5xx)
-// line so the chain reconciles with events_log instead of over-counting (P1 — re-review).
+// Ordering inside submit: resolve BOTH clauses → audit.withCompensatingAudit (ADR-0030: intent line
+// FIRST, servicePool, BYPASSRLS, its own tx → auditId) → recordConsent({ auditId }) →
+// appendMedicalDisclosure({ consentId }) → projectMemberState event → buildStatus → ok=true →
+// emitAuthAudit (fire-and-forget, last). The consent insert + disclosure insert + event all run
+// inside the member scope tx, so a throw rolls them back together (AC6). The intent audit line
+// commits on its own pool and SURVIVES that rollback; withCompensatingAudit's own catch therefore
+// emits a compensating `member_medical.disclosure_rolled_back` (5xx) line so the chain reconciles
+// with events_log instead of over-counting (P1 — re-review, now mechanized by the shared helper).
 //
 // ── PII discipline (R1) ──────────────────────────────────────────────────────────────────────
 // Selected condition codes + free-text are Tier-1 encrypted in the handler before the accessor
@@ -126,9 +127,6 @@ export function createMedicalHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
-      // P1 (compensating audit): armed once the step-5 audit line is durably committed; consumed by
-      // the catch below to settle the chain if a later scope-tx step rolls back.
-      let compensation: { requestPayloadHash: string; resourceLocator: string } | null = null;
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
@@ -188,112 +186,89 @@ export function createMedicalHandlers(deps: AppDeps) {
           : null;
         const conditionCount = body.conditionCodes.length;
 
-        // 5. Audit-or-throw: write the audit line FIRST (servicePool, its own tx) — the hash is
-        //    over NON-PII only (never the codes / free-text) — then thread its id.
-        const requestPayloadHash = createHash('sha256')
-          .update(
-            canonicalJsonStringify({
-              ima_list_version: imaList.version,
-              condition_count: conditionCount,
-              concealment_clause_version_id: concealment.clauseVersionId,
-            }),
-            'utf8',
-          )
-          .digest('hex');
-        const resourceLocator = `member:${memberIdStr}:medical-disclosure`;
-        const auditRow = await audit.writeAuditEntry(deps.servicePool, {
-          pariwarId: pariwarIdStr,
-          actorId: memberIdStr,
-          actorRole: null,
-          action: 'member_medical.disclosed',
-          resourceLocator,
-          requestPayloadHash,
-          responseStatus: 200,
-          traceId,
-        });
-        const auditId = auditRow.auditId;
-        // From here the audit line is durably committed on servicePool and SURVIVES a scope-tx
-        // rollback — arm the compensating entry (P1).
-        compensation = { requestPayloadHash, resourceLocator };
-
-        // 6. Record the consent (insert FIRST — let the DB mint consent_id; the disclosure carries
-        //    its returned id). consent_artifact_ref = the niy.concealment.r14 clause_version_id.
-        const consentRow = await consent.recordConsent(scopeTx.tx, {
-          pariwarId,
-          subjectId: memberIdStr,
-          consentType: 'medical_disclosure_ack',
-          consentArtifactRef: concealment.clauseVersionId,
-          grantedViaActor: 'member_self',
-          consentPayload: { checkboxTextShown: ackText, locale: body.ackLocale },
-          auditId,
-        });
-
-        // 7. Append the disclosure row (append-only history — NO delete of prior rows).
-        await medicalDomain.appendMedicalDisclosure(scopeTx.tx, {
-          memberId,
-          pariwarId,
-          imaListVersion: imaList.version,
-          disclosedConditionsCiphertext,
-          additionalContextCiphertext,
-          conditionCount,
-          acknowledgmentTextLocale: body.ackLocale,
-          clauseVersionId: concealment.clauseVersionId,
-          consentId: consentRow.consentId,
-        });
-
-        // 8. Emit the non-transition marker event (from_state === to_state — R4). NON-PII payload.
-        await memberDomain.projectMemberState(scopeTx.client, {
-          memberId,
-          pariwarId,
-          eventType: 'member.medical_disclosed',
-          payload: {
-            from_state: state,
-            to_state: state,
-            trigger: 'medical_disclosure',
-            actor: 'member',
-            ima_list_version: imaList.version,
-            condition_count: conditionCount,
-            acknowledged: true,
-            ack_locale: body.ackLocale,
+        // 5. Audit-or-throw (ADR-0030): the intent line is written FIRST (servicePool, its own tx) —
+        //    the hash is over NON-PII only (never the codes / free-text) — then its id threads into
+        //    recordConsent. On a later step's failure (6-9), withCompensatingAudit settles the chain
+        //    with a 5xx `member_medical.disclosure_rolled_back` line (the step-5 line survives the
+        //    scope-tx rollback in `finally` — without this, a throw in steps 6-9, e.g. a
+        //    MemberStreamConcurrencyError or a buildStatus failure, would leave the chain asserting a
+        //    200 disclosure that never persisted, over-counting vs events_log).
+        return await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: {
+            pariwarId: pariwarIdStr,
+            actorId: memberIdStr,
+            actorRole: null,
+            action: 'member_medical.disclosed',
+            resourceLocator: `member:${memberIdStr}:medical-disclosure`,
+            requestPayloadHash: createHash('sha256')
+              .update(
+                canonicalJsonStringify({
+                  ima_list_version: imaList.version,
+                  condition_count: conditionCount,
+                  concealment_clause_version_id: concealment.clauseVersionId,
+                }),
+                'utf8',
+              )
+              .digest('hex'),
+            traceId,
           },
-          actorId: memberIdStr,
-        });
-
-        // 9. Assemble the response; set ok=true ONLY after it succeeds (3.4 P2: if buildStatus
-        //    throws, the scope tx rolls back and a fire-and-forget audit must NOT have fired).
-        const result = await buildStatus(scopeTx, pariwarId, memberId);
-        ok = true;
-        // 10. Fire-and-forget audit, AFTER ok=true — NO PII (count + version only).
-        emitAuthAudit(deps, request, 'member_medical.disclosed', {
-          actorId: memberIdStr,
-          pariwarId: pariwarIdStr,
-          context: { ima_list_version: imaList.version, condition_count: conditionCount },
-        });
-        return result;
-      } catch (err) {
-        // P1 — Compensating audit on rollback. The step-5 `member_medical.disclosed` line was
-        // committed on servicePool (its own tx) and SURVIVES the scope-tx rollback in `finally`.
-        // Without this, a throw in steps 6–9 (e.g. a MemberStreamConcurrencyError, W4, or a
-        // buildStatus failure) would leave the chain asserting a 200 disclosure that never
-        // persisted — over-counting vs events_log / member_medical_disclosures. Settle the chain
-        // with a 5xx line. Best-effort: a failed compensation must NEVER mask the original error.
-        if (compensation !== null) {
-          try {
-            await audit.writeAuditEntry(deps.servicePool, {
-              pariwarId: pariwarIdStr,
-              actorId: memberIdStr,
-              actorRole: null,
-              action: 'member_medical.disclosure_rolled_back',
-              resourceLocator: compensation.resourceLocator,
-              requestPayloadHash: compensation.requestPayloadHash,
-              responseStatus: 500,
-              traceId,
+          mutate: async ({ auditId }) => {
+            // 6. Record the consent (insert FIRST — let the DB mint consent_id; the disclosure carries
+            //    its returned id). consent_artifact_ref = the niy.concealment.r14 clause_version_id.
+            const consentRow = await consent.recordConsent(scopeTx.tx, {
+              pariwarId,
+              subjectId: memberIdStr,
+              consentType: 'medical_disclosure_ack',
+              consentArtifactRef: concealment.clauseVersionId,
+              grantedViaActor: 'member_self',
+              consentPayload: { checkboxTextShown: ackText, locale: body.ackLocale },
+              auditId,
             });
-          } catch {
-            // swallow — the original error is the one the caller must see.
-          }
-        }
-        throw err;
+
+            // 7. Append the disclosure row (append-only history — NO delete of prior rows).
+            await medicalDomain.appendMedicalDisclosure(scopeTx.tx, {
+              memberId,
+              pariwarId,
+              imaListVersion: imaList.version,
+              disclosedConditionsCiphertext,
+              additionalContextCiphertext,
+              conditionCount,
+              acknowledgmentTextLocale: body.ackLocale,
+              clauseVersionId: concealment.clauseVersionId,
+              consentId: consentRow.consentId,
+            });
+
+            // 8. Emit the non-transition marker event (from_state === to_state — R4). NON-PII payload.
+            await memberDomain.projectMemberState(scopeTx.client, {
+              memberId,
+              pariwarId,
+              eventType: 'member.medical_disclosed',
+              payload: {
+                from_state: state,
+                to_state: state,
+                trigger: 'medical_disclosure',
+                actor: 'member',
+                ima_list_version: imaList.version,
+                condition_count: conditionCount,
+                acknowledged: true,
+                ack_locale: body.ackLocale,
+              },
+              actorId: memberIdStr,
+            });
+
+            // 9. Assemble the response; set ok=true ONLY after it succeeds (3.4 P2: if buildStatus
+            //    throws, the scope tx rolls back and a fire-and-forget audit must NOT have fired).
+            const result = await buildStatus(scopeTx, pariwarId, memberId);
+            ok = true;
+            // 10. Fire-and-forget audit, AFTER ok=true — NO PII (count + version only).
+            emitAuthAudit(deps, request, 'member_medical.disclosed', {
+              actorId: memberIdStr,
+              pariwarId: pariwarIdStr,
+              context: { ima_list_version: imaList.version, condition_count: conditionCount },
+            });
+            return result;
+          },
+        });
       } finally {
         // 11.
         await closeScopeTx(scopeTx, ok);

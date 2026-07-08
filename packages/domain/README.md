@@ -57,7 +57,7 @@ packages/domain/
 │   ├── test-utils/         [Story 1.6 — landed] shared live-DB integration substrate
 │   ├── snapshot-fixtures/  [Story 7.x] Pool Engine snapshot fixtures
 │   ├── snapshot-adapters/  [Story 7.x] Pool Engine snapshot version adapters
-│   ├── audit/              [Story 1.10 — landed] hash-chain primitives (computeAuditHash / verifyChainSegment) + writeAuditEntry advisory-lock writer
+│   ├── audit/              [Story 1.10 — landed] hash-chain primitives (computeAuditHash / verifyChainSegment) + writeAuditEntry advisory-lock writer + withCompensatingAudit (ADR-0030 — the sole sanctioned way to pair a mutation on a rollback-capable tx with a compensatable audit line)
 │   ├── cross-tenant/       [Story 1.6 — landed] named cross-tenant operations helper (1.10: re-keyed audit → audit_log_entries + servicePool)
 │   ├── bank-statement/     [Story 9.2] normalized bank-statement row schema
 │   └── per-pariwar/bihar/  [Story 1.7 deferred + 10.12] per-Pariwar JSON Schema fragments (custom fields NOT landed at 1.7)

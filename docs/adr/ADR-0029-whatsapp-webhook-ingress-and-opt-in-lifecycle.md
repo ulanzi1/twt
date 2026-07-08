@@ -1,9 +1,9 @@
 # ADR-0029: WhatsApp inbound-webhook ingress design + member opt-in lifecycle (per-Pariwar signed webhook, persist-and-ack, async worker, state-table + consent-registry split)
 
-> **Status:** drafted
-> **Date:** 2026-07-06
+> **Status:** ratified
+> **Date:** 2026-07-08 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** — (un-attested-pending; a reviewer convenes the Trustee Panel — no fabricated session, [[feedback_record_unattested_no_backfill]])
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — ratified at the 2026-07-08 Trustee Panel session; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-07-08.md` (flagged policy-adjacent for the AR-16 consent posture — read closely, no amendment recorded); logged in `.decision-log.md` Decision 2026-07-08-065
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -164,3 +164,4 @@ worker).
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-07-06 | (initial draft) | BigDev (Solo Builder) | Authored at Story 5.4 (Epic 5's first `[SURFACE]`). Commits the per-Pariwar signed webhook URL (signature key known from the path before the body is trusted; shared-Meta-App fallback = same NAME resolves to a shared secret), the §3.11 persist-and-ack + async-worker split, and the five-state `member_wa_opt_in` state machine kept consistent with the `consentExists('whatsapp_opt_in')` registry by audit-or-throw. Ratification is a later Trustee-Panel event — lands `drafted`, un-attested-pending. |
+| 2026-07-08 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-07-08 Trustee Panel session (consent sheet `adr-ratification-consent-sheet-2026-07-08.md`, flagged policy-adjacent for the AR-16 user-initiated-only consent posture; no amendment recorded — ratified as drafted); Decision 2026-07-08-065. |

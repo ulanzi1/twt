@@ -1,9 +1,9 @@
 # ADR-0027: In-app push provider selection (FCM HTTP v1 + APNs via the Firebase Admin SDK — single SDK, no native APNs path)
 
-> **Status:** drafted
-> **Date:** 2026-07-05
+> **Status:** ratified
+> **Date:** 2026-07-08 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** — (un-attested-pending; a reviewer convenes the Trustee Panel — no fabricated session, [[feedback_record_unattested_no_backfill]])
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — ratified at the 2026-07-08 Trustee Panel session; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-07-08.md`; logged in `.decision-log.md` Decision 2026-07-08-065
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -109,3 +109,4 @@ id); firebase-admin forwards iOS-token sends to APNs on TWT's behalf. There is *
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-07-05 | (initial draft) | BigDev (Solo Builder) | Authored at Story 5.2 (Epic 5's first `[CONSUMER]`). Commits single-SDK (firebase-admin) push for both Android + iOS, closing architecture's open §2 L2436 / §5 L3580 decision in favour of the shape already anticipated at §3.4 L1935. No native APNs `.p8` path. Ratification is a later Trustee-Panel event — lands `drafted`, un-attested-pending. |
+| 2026-07-08 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-07-08 Trustee Panel session (consent sheet `adr-ratification-consent-sheet-2026-07-08.md`, light-touch vendor selection); Decision 2026-07-08-065. |

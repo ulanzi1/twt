@@ -28,6 +28,14 @@ import {
 
 /** The fields a trustee declaration records (AC1's six recorded fields). */
 export interface DeclareDegradedModeInput {
+  /**
+   * Optional caller-supplied row address. Defaults to the DB `gen_random_uuid()`.
+   * The audited `declare` handler (ADR-0030) PRE-GENERATES this so the intent audit
+   * line — written FIRST, before this insert, per the compensating-audit protocol —
+   * can reference the exact declaration id in its resourceLocator (mirrors the
+   * Story 2.4 `clauseVersionId` pre-generation precedent). Omit to let the DB assign it.
+   */
+  readonly id?: string;
   readonly pariwarId: PariwarId;
   /** The degraded-mode kind (v1 `'cycle_open_sms_bridge'`). */
   readonly mode: string;
@@ -93,6 +101,9 @@ export async function declareDegradedMode(
   const [row] = await db
     .insert(pariwarDegradedModeDeclarations)
     .values({
+      // `undefined` → omitted → DB default gen_random_uuid(); a caller-supplied id (the audited `declare`
+      // handler, ADR-0030) is used verbatim.
+      id: input.id ?? undefined,
       pariwarId: input.pariwarId,
       mode: input.mode,
       effectiveFrom: input.effectiveFrom,

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatSecretCompareFinding, scanAccessWrapperInvariant, scanSecretCompareInvariant } from './lib.js';
+import {
+  formatCompensatingAuditFinding,
+  formatSecretCompareFinding,
+  scanAccessWrapperInvariant,
+  scanCompensatingAuditInvariant,
+  scanSecretCompareInvariant,
+} from './lib.js';
 
 // The real guard shape (service.ts step 0), operand order preserved.
 const GUARD =
@@ -261,5 +267,82 @@ describe('scanSecretCompareInvariant — AI-5-1 gate teeth (channel-surface cons
     const msg = formatSecretCompareFinding(f[0]);
     expect(msg).toContain('`==`');
     expect(msg).toContain('`!=`');
+  });
+});
+
+describe('scanCompensatingAuditInvariant — AI-5-3 gate teeth (ADR-0030)', () => {
+  it('FLAGS a direct `audit.writeAuditEntry` call (the H-4 shape this gate closes)', () => {
+    const src =
+      `export async function putWaConfig(request: any): Promise<void> {\n` +
+      `  await channelConfig.upsertWaConfig(tx, body);\n` +
+      `  await audit.writeAuditEntry(deps.servicePool, { action: 'pariwar.wa_config_update' });\n` +
+      `}\n`;
+    const f = scanCompensatingAuditInvariant('apps/api/src/modules/channel-config/handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('putWaConfig');
+  });
+
+  it('ACCEPTS a mutation routed through `audit.withCompensatingAudit` (no direct writeAuditEntry call)', () => {
+    const src =
+      `export async function putWaConfig(request: any): Promise<void> {\n` +
+      `  return audit.withCompensatingAudit(deps.servicePool, {\n` +
+      `    auditIntent: { action: 'pariwar.wa_config_update' },\n` +
+      `    mutate: async () => channelConfig.upsertWaConfig(tx, body),\n` +
+      `  });\n` +
+      `}\n`;
+    expect(
+      scanCompensatingAuditInvariant('apps/api/src/modules/channel-config/handlers.ts', src),
+    ).toHaveLength(0);
+  });
+
+  it('ACCEPTS a recoverable-compensation branch that calls `audit.writeRolledBackAudit` (not writeAuditEntry)', () => {
+    const src =
+      `export async function request(request: any): Promise<void> {\n` +
+      `  return audit.withCompensatingAudit(deps.servicePool, {\n` +
+      `    auditIntent,\n` +
+      `    mutate: async () => {\n` +
+      `      try {\n` +
+      `        return await telegramOptIn.createPendingOptIn(tx, {});\n` +
+      `      } catch (err) {\n` +
+      `        await audit.writeRolledBackAudit(deps.servicePool, auditIntent);\n` +
+      `        return recovered;\n` +
+      `      }\n` +
+      `    },\n` +
+      `  });\n` +
+      `}\n`;
+    expect(
+      scanCompensatingAuditInvariant('apps/api/src/modules/telegram-opt-in/handlers.ts', src),
+    ).toHaveLength(0);
+  });
+
+  it('EXEMPTS the named AI-4-3(d) isolated-best-effort files entirely, even with a direct call', () => {
+    const src =
+      `export function createAuditPort(servicePool: any) {\n` +
+      `  return async (input: any) => {\n` +
+      `    try {\n` +
+      `      await audit.writeAuditEntry(servicePool, input);\n` +
+      `    } catch (err) {\n` +
+      `      console.error(err);\n` +
+      `    }\n` +
+      `  };\n` +
+      `}\n`;
+    expect(scanCompensatingAuditInvariant('packages/channels/src/audit.ts', src)).toHaveLength(0);
+    // A DIFFERENT, non-exempt file with the identical shape IS flagged — the exemption is per-file, not
+    // per-shape (proves the exemption isn't accidentally matching on the "swallowed try/catch" pattern).
+    expect(scanCompensatingAuditInvariant('apps/api/src/modules/some-new-module/handlers.ts', src)).toHaveLength(1);
+  });
+
+  it('formatCompensatingAuditFinding names the file, line, function, and the ADR', () => {
+    const src =
+      `export async function declare(request: any): Promise<void> {\n` +
+      `  await audit.writeAuditEntry(deps.servicePool, { action: 'pariwar.degraded_mode.declared' });\n` +
+      `}\n`;
+    const f = scanCompensatingAuditInvariant('apps/api/src/modules/degraded-mode/handlers.ts', src);
+    expect(f).toHaveLength(1);
+    const msg = formatCompensatingAuditFinding(f[0]);
+    expect(msg).toContain('apps/api/src/modules/degraded-mode/handlers.ts');
+    expect(msg).toContain('declare');
+    expect(msg).toContain('withCompensatingAudit');
+    expect(msg).toContain('ADR-0030');
   });
 });

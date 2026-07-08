@@ -1,9 +1,9 @@
 # ADR-0026: DigiLocker signature-verification policy (cert staleness budget, key rotation, compromise procedure, offline-cache validity)
 
-> **Status:** drafted
-> **Date:** 2026-06-25
+> **Status:** ratified
+> **Date:** 2026-07-08 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** — (un-attested-pending; a reviewer convenes the Trustee Panel — no fabricated session, [[feedback_record_unattested_no_backfill]])
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — ratified at the 2026-07-08 Trustee Panel session; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-07-08.md`; logged in `.decision-log.md` Decision 2026-07-08-065
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -182,3 +182,4 @@ round-trip, and allowlist changes are audit-logged.
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-06-25 | (initial draft) | BigDev (Solo Builder) | Authored at Story 3.3a closure (the slot's write-trigger). Commits the two-window staleness budget (7d / 30d), key-rotation cadence (annual review + daily refresh), key-compromise + re-verification procedure, offline-cache validity, and the redirect_uri allowlist. Ratification is a later Trustee-Panel event — lands `drafted`, un-attested-pending. |
+| 2026-07-08 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-07-08 Trustee Panel session (consent sheet `adr-ratification-consent-sheet-2026-07-08.md`, flagged trustee-judgment weight given the P0 KYC fail-closed thresholds); Decision 2026-07-08-065. |

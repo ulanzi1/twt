@@ -10,6 +10,14 @@
 
 const MIN_SESSION_SECRET_LEN = 32;
 
+/**
+ * RFC 2606 reserved "must not resolve" placeholder — the `SMS_GATEWAY_API_URL` default when unset. Exported
+ * so `deps.ts`'s prod fail-startup check can detect "the operator never actually set the gateway URL" (Story
+ * 5.9 review): the endpoint isn't a secret, so it isn't covered by the credential/template-id blank-check, but
+ * a prod boot on this placeholder would only fail at the first real OTP send, not at startup.
+ */
+export const SMS_GATEWAY_API_URL_PLACEHOLDER = 'https://sms-gateway.invalid/send';
+
 export interface Argon2Params {
   /** KiB of memory. OWASP-2026 baseline ≈ 64 MiB. */
   readonly memoryCost: number;
@@ -198,6 +206,26 @@ export interface ApiConfig {
    * baked into the UPI Intent `am=` and recorded on the receipt; the client never names the amount.
    */
   readonly vyawasthaShulkAmountInr: number;
+  /**
+   * Global SMS-DLT gateway (Story 5.9) — the FIRST live caller of the SMS gateway. Used to build the real
+   * `createSmsDltStepUpDelivery` OTP adapter for the MEMBER call sites in prod. The credential + PE/OE sender
+   * header are Secret-Manager NAME pointers (never the values — AI-4-3(c)), resolved via `resolveSecretValue`;
+   * the per-intent OTP DLT template ids are separate NAME pointers (in the OTP template registry) resolved at
+   * send time. In dev/CI the member adapter is the reveal stub, so ALL of these are OPTIONAL there; in prod a
+   * blank/missing credential or template id FAILS STARTUP (BigDev 2026-07-07 — no silent reveal-stub fallback).
+   */
+  readonly sms: {
+    /** Telephony-gateway send endpoint (plain config, not a secret). */
+    readonly apiUrl: string;
+    /** Secret-Manager NAME for the gateway API key (never the value). Absent in prod ⇒ FAIL STARTUP. */
+    readonly apiKeySecretName?: string;
+    /** Local-dev env fallback var NAME holding the gateway API-key VALUE (mirrors argon2). */
+    readonly apiKeyEnvFallback: string;
+    /** Secret-Manager/config NAME for the PE/OE-registered sender header (never the value). Absent in prod ⇒ FAIL STARTUP. */
+    readonly senderIdSecretName?: string;
+    /** Local-dev env fallback var NAME holding the sender-header VALUE. */
+    readonly senderIdEnvFallback: string;
+  };
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -360,5 +388,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     // ⇒ the intent endpoint 503s cleanly) + the mandatory ₹110 amount (FR-1; env-overridable default).
     vyawasthaShulkVpa: env['VYAWASTHA_SHULK_VPA'] ?? null,
     vyawasthaShulkAmountInr: intEnv(env, 'VYAWASTHA_SHULK_AMOUNT_INR', 110),
+    // Story 5.9 — global SMS-DLT gateway for OTP delivery. Secret NAMEs are OPTIONAL at config-load time
+    // (absent ⇒ reveal stub in dev/CI); deps.ts enforces the prod FAIL-STARTUP check when they resolve blank.
+    sms: {
+      apiUrl: env['SMS_GATEWAY_API_URL'] ?? SMS_GATEWAY_API_URL_PLACEHOLDER,
+      ...(env['SMS_GATEWAY_API_KEY_SECRET_NAME'] && env['SMS_GATEWAY_API_KEY_SECRET_NAME'].trim() !== ''
+        ? { apiKeySecretName: env['SMS_GATEWAY_API_KEY_SECRET_NAME'] }
+        : {}),
+      apiKeyEnvFallback: env['SMS_GATEWAY_API_KEY_ENV_FALLBACK'] ?? 'SMS_GATEWAY_API_KEY',
+      ...(env['SMS_GATEWAY_SENDER_ID_SECRET_NAME'] && env['SMS_GATEWAY_SENDER_ID_SECRET_NAME'].trim() !== ''
+        ? { senderIdSecretName: env['SMS_GATEWAY_SENDER_ID_SECRET_NAME'] }
+        : {}),
+      senderIdEnvFallback: env['SMS_GATEWAY_SENDER_ID_ENV_FALLBACK'] ?? 'SMS_GATEWAY_SENDER_ID',
+    },
   };
 }

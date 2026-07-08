@@ -41,7 +41,9 @@ export async function requestStepUp(
 }
 
 export type VerifyStepUpResult =
-  | { ok: true; actionContext: string }
+  // Story 5.9 (Task 4): return the burned OTP's hash so the CONSUME audit can carry the SAME HMAC
+  // correlation tag as the SEND (send↔consume linkage), mirroring the member `verifyOtp` result.
+  | { ok: true; actionContext: string; otpHash: string }
   | { ok: false };
 
 /** Verify a submitted OTP; burns it on success, attempt-caps on failure. */
@@ -62,7 +64,7 @@ export async function verifyStepUp(
     // Atomic consume: returns false if a concurrent request already burned this OTP.
     const burned = await repo.burnOtp(deps.pool, otp.id, now);
     if (!burned) return { ok: false };
-    return { ok: true, actionContext: otp.actionContext };
+    return { ok: true, actionContext: otp.actionContext, otpHash: otp.otpHash };
   }
   await repo.incrementOtpAttempts(deps.pool, otp.id);
   return { ok: false };

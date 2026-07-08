@@ -40,7 +40,7 @@ describe.skipIf(!hasDatabase)('step-up OTP + gating (Task 5)', () => {
     fakeWebauthn = new FakeWebAuthnProvider();
     td = buildTestDeps({ webauthn: fakeWebauthn, clock: () => new Date(nowMs) });
     deps = td.deps;
-    delivery = td.stepUpDelivery;
+    delivery = td.adminStepUpDelivery;
     audit = td.auditSink;
     app = await buildServer(deps);
   });
@@ -105,12 +105,20 @@ describe.skipIf(!hasDatabase)('step-up OTP + gating (Task 5)', () => {
     const allowed = await client.inject({ method: 'POST', url: '/api/v1/auth/step-up/protected-probe', payload: {} });
     expect(allowed.statusCode).toBe(200);
 
-    // Audit: the SEND line carries otp_hash (never the code), the CONSUME the action.
+    // Audit (Story 5.9, Task 4): the SEND line carries the HMAC-keyed otp_audit_tag (NOT the plain
+    // brute-forceable otp_hash, and never the code) + delivery metadata; the CONSUME carries the MATCHING
+    // tag (send↔consume linkage) + the action.
     const sent = audit.ofType('step_up.send');
     expect(sent).toHaveLength(1);
-    expect(typeof sent[0]?.context?.['otp_hash']).toBe('string');
-    expect(sent[0]?.context?.['otp_hash']).not.toBe(code);
-    expect(audit.ofType('step_up.consume')).toHaveLength(1);
+    expect(sent[0]?.context?.['otp_hash']).toBeUndefined();
+    const sendTag = sent[0]?.context?.['otp_audit_tag'];
+    expect(typeof sendTag).toBe('string');
+    expect(sendTag).not.toBe(code);
+    expect(sent[0]?.context?.['delivery_channel']).toBe('log');
+    expect(sent[0]?.context?.['delivery_status']).toBe('stub');
+    const consumed = audit.ofType('step_up.consume');
+    expect(consumed).toHaveLength(1);
+    expect(consumed[0]?.context?.['otp_audit_tag']).toBe(sendTag);
   });
 
   it('OTP is single-use', async () => {

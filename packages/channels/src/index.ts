@@ -102,6 +102,16 @@ export {
   SMS_DLT_TEMPLATE_REGISTRY,
   type DltTemplate,
 } from './sms-dlt-registry.js';
+// Story 5.9 — the dedicated OTP DLT template registry (AR-56): TWO separately-TRAI-registered templates
+// keyed by intent (login / step_up), DISTINCT from 5.6's per-category transactional registry (which
+// deliberately excludes `step_up_otp`). OTP delivery is a direct time-critical send on its OWN rate budget.
+export {
+  resolveOtpTemplate,
+  renderOtpBody,
+  OTP_DLT_TEMPLATE_REGISTRY,
+  type OtpIntent,
+  type OtpDltTemplate,
+} from './otp-sms-template.js';
 // Story 5.6 — the retry / backoff / cascade primitive the dispatch.ts seam reserves for 5.6: a reusable,
 // deterministically-testable in-process primitive (injectable clock) the future live fan-out drives. NO live
 // dispatch call site; does NOT change the frozen dispatch / ChannelProvider / CANONICAL_CHANNEL_LADDER shapes.

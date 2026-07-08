@@ -10,15 +10,20 @@
 
 import { createHash } from 'node:crypto';
 
-import { createDb, resolveConnectionString, resolveSecretValue } from '@twt/domain';
+import { createDb, resolveConnectionString, resolveSecretValue, type Db } from '@twt/domain';
 import { encryption } from '@twt/domain';
+import { createSmsAppClient, resolveOtpTemplate } from '@twt/channels';
 import { createCloudflareTurnstileVerifier } from '@twt/edge';
 
 import { createAuditLogSink, createKmsAuditHook } from './audit/audit-log-sink.js';
-import type { ApiConfig } from './config.js';
+import { SMS_GATEWAY_API_URL_PLACEHOLDER, type ApiConfig } from './config.js';
 import type { AppDeps, EncryptionDeps } from './context.js';
 import { resolveMemberJwtKeys } from './modules/auth/member/jwt-keys.js';
-import { createLogStepUpDelivery } from './modules/auth/shared/step-up-delivery.js';
+import { createSmsDltStepUpDelivery } from './modules/auth/shared/sms-step-up-delivery.js';
+import {
+  createLogStepUpDelivery,
+  type StepUpOtpDeliveryPort,
+} from './modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
 import {
@@ -168,6 +173,57 @@ async function buildKycProviderRegistry(config: ApiConfig): Promise<KycProviderR
 }
 
 /**
+ * Build the MEMBER step-up / login OTP delivery port (Story 5.9, Task 5). Env-gated: the reveal/log stub in
+ * dev/CI (local + tests complete the OTP flow without SMS — mirror the WA/push fixture-in-dev seam); the REAL
+ * SMS-DLT adapter in prod. Prod FAILS STARTUP (BigDev 2026-07-07) when the global gateway credential, either
+ * OTP DLT template-id NAME, OR the gateway URL resolves blank/unset — a prod system that cannot deliver OTPs
+ * must not boot and pretend it can (do NOT reuse `SmsAppClient.isConfigured()`, whose silent-fallback is the
+ * wrong posture here).
+ */
+export async function buildMemberStepUpDelivery(
+  config: ApiConfig,
+  encryptionDeps: EncryptionDeps,
+  serviceDb: Db,
+  resolveChannelSecret: (secretName: string) => Promise<string>,
+): Promise<StepUpOtpDeliveryPort> {
+  const isProd = config.nodeEnv === 'production';
+  if (!isProd) {
+    // Dev/CI: no gateway credential required; reveal the code so local/tests complete the flow.
+    return createLogStepUpDelivery({ revealForDev: true });
+  }
+
+  // Prod: resolve the gateway credential + PE/OE sender header + both OTP DLT template ids, then FAIL-FAST if
+  // any is blank (never a silent reveal-stub fallback in prod).
+  const apiKey = config.sms.apiKeySecretName
+    ? await resolveSecretValue(config.sms.apiKeySecretName, { envFallback: config.sms.apiKeyEnvFallback })
+    : '';
+  const senderId = config.sms.senderIdSecretName
+    ? await resolveSecretValue(config.sms.senderIdSecretName, { envFallback: config.sms.senderIdEnvFallback })
+    : '';
+  const loginTemplateId = await resolveChannelSecret(resolveOtpTemplate('login').dltTemplateIdConfigKey);
+  const stepUpTemplateId = await resolveChannelSecret(resolveOtpTemplate('step_up').dltTemplateIdConfigKey);
+  const apiUrlUnset = !config.sms.apiUrl.trim() || config.sms.apiUrl === SMS_GATEWAY_API_URL_PLACEHOLDER;
+  if (!apiKey.trim() || !senderId.trim() || !loginTemplateId.trim() || !stepUpTemplateId.trim() || apiUrlUnset) {
+    throw new Error(
+      '[deps] production SMS-DLT OTP delivery requires a gateway API key (SMS_GATEWAY_API_KEY_SECRET_NAME), ' +
+        'a PE/OE sender header (SMS_GATEWAY_SENDER_ID_SECRET_NAME), both OTP DLT template ids ' +
+        '(sms.dlt.template_id.otp_login / .otp_step_up), and a real gateway URL (SMS_GATEWAY_API_URL) — ' +
+        'one or more resolved to an empty value or the unset placeholder',
+    );
+  }
+
+  const client = createSmsAppClient({ apiUrl: config.sms.apiUrl, apiKey, senderId });
+  return createSmsDltStepUpDelivery({
+    messaging: client.messaging(),
+    // serviceDb (BYPASSRLS) — the step_up decrypt read is keyed by (pariwarId, memberId), the R2 pre-scope pattern.
+    db: serviceDb,
+    encryption: encryptionDeps,
+    // Resolve the per-intent OTP DLT template id NAME → value (send-time indirection; never hardcoded/logged).
+    resolveConfig: (configKey: string) => resolveChannelSecret(configKey),
+  });
+}
+
+/**
  * Production / local-dev deps. Builds its own pool (§1.1 per-workspace isolation)
  * and resolves the pepper. The caller owns the pool lifecycle via `deps.pool.end()`.
  */
@@ -202,6 +258,13 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
   const encryptionDeps = buildEncryptionDeps(pepper);
   encryptionDeps.kms.auditHook = createKmsAuditHook(servicePool);
 
+  // Channel Secret-Manager resolver (Story 5.4) — resolves a NAME → value (Secret Manager in prod; a local
+  // env fallback derived from the NAME). Hoisted so the Story 5.9 member OTP-delivery builder reuses it.
+  const resolveChannelSecret = (secretName: string): Promise<string> =>
+    resolveSecretValue(secretName, {
+      envFallback: secretName.replace(/[^A-Za-z0-9]/g, '_').toUpperCase(),
+    });
+
   return {
     config,
     db,
@@ -215,7 +278,12 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Tone-review sign-off / publish-blocked audit seam (Story 2.2) — same hash-chain
     // writer + service pool as auditSink, but the dedicated tone-review taxonomy.
     toneReviewAuditSink: createToneReviewAuditSink(servicePool),
-    stepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd }),
+    // MEMBER OTP delivery (Story 5.9) — real SMS-DLT adapter in prod (FAIL-STARTUP on missing credential),
+    // reveal stub in dev/CI. Split from the admin key so the prod env-gate never routes admin through SMS.
+    stepUpDelivery: await buildMemberStepUpDelivery(config, encryptionDeps, serviceDb, resolveChannelSecret),
+    // ADMIN OTP delivery (Story 5.9, R4) — ALWAYS the reveal/log stub (admin OTP-over-SMS deferred; admins
+    // carry email only, no mobile column). No env branch: reveal only outside prod.
+    adminStepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd }),
     // Member access-token + signup-continuation JWT keypair (Story 3.2, §2.4) —
     // Secret Manager in prod; an ephemeral ES256 keypair in dev/CI.
     memberJwt: await resolveMemberJwtKeys(config),
@@ -239,10 +307,7 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Channel Secret-Manager resolver (Story 5.4) — resolves a per-Pariwar WA webhook credential NAME →
     // value. Local dev falls back to an env var derived from the NAME (non-alphanumerics → `_`, uppercased),
     // the SAME resolveSecretValue path the argon2 pepper / DigiLocker secrets use; prod uses Secret Manager.
-    resolveChannelSecret: (secretName: string) =>
-      resolveSecretValue(secretName, {
-        envFallback: secretName.replace(/[^A-Za-z0-9]/g, '_').toUpperCase(),
-      }),
+    resolveChannelSecret,
     clock: () => new Date(),
   };
 }

@@ -188,7 +188,20 @@ export interface AppDeps {
    * Production wires the real `writeAuditEntry`-backed sink; tests inject a capturing fake.
    */
   readonly toneReviewAuditSink: ToneReviewAuditSink;
+  /**
+   * MEMBER step-up / login OTP delivery (Story 5.9). Env-gated: the REAL SMS-DLT adapter in prod
+   * (`createSmsDltStepUpDelivery`), the reveal/log stub in dev/CI. Consumed by the two member call sites
+   * (login-OTP send + step-up-request) ONLY — split from `adminStepUpDelivery` so wiring the real SMS
+   * adapter in prod never routes the ADMIN call site (which has no mobile to resolve) through it.
+   */
   readonly stepUpDelivery: StepUpOtpDeliveryPort;
+  /**
+   * ADMIN step-up OTP delivery (Story 5.9, R4). ALWAYS the reveal/log stub in every environment — admin
+   * OTP-over-SMS is DEFERRED pending an admin-mobile substrate (admins carry email only, no mobile column).
+   * A SEPARATE key from `stepUpDelivery` so the member env-gate can select the real SMS adapter without ever
+   * constructing the admin call site with it.
+   */
+  readonly adminStepUpDelivery: StepUpOtpDeliveryPort;
   /**
    * Member access-token + signup-continuation JWT signing keypair (Story 3.2,
    * §2.4). Asymmetric (ES256/RS256). Resolved from Secret Manager in prod; an

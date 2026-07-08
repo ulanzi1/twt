@@ -149,7 +149,25 @@ export type AuthAuditEventType =
   // (the member_id) ONLY — NEVER any cleared PII value, NEVER a token. The actorId carries the member_id.
   //   completed — RTBF anonymization was confirmed (soft-delete: member row + history retained,
   //               PII fields overwritten with the anonymized sentinel; mobile_blind_index retained).
-  | 'member_rtbf.completed';
+  | 'member_rtbf.completed'
+  // ── Member-app claim filing surface (Story 6.2, FR-37 / Epic 6) ──────────────
+  // The Ravi-mode intake flow. Context is NON-PII throughout: the handover-OTP lines carry
+  // the otp_hash HMAC correlation (never the code) + masked nominee mobile (last-4) ONLY —
+  // NEVER the nominee's name/mobile/UPI/Aadhaar; the intake lines carry claim_case_id +
+  // deceased_member_id + intake_channel + relationship ONLY — NEVER any claimant PII.
+  //   handover_otp_send    — a handover-trust OTP was sent to the nominee's declared mobile.
+  //   handover_otp_consume — a submitted handover-trust OTP verified (elevation recorded).
+  //   handover_otp_failure — a wrong/expired/absent handover-trust OTP verify attempt.
+  //   intake_initiated     — claim.intake_initiated appended → a new claim frozen the account.
+  //   intake_idempotent    — a double-tap/retry returned the EXISTING claim (no second freeze).
+  //   intake_failed        — the intake attempt threw (neither created nor an idempotent hit);
+  //                          recorded so a failed account-freeze attempt is never audit-silent.
+  | 'member_claim.handover_otp_send'
+  | 'member_claim.handover_otp_consume'
+  | 'member_claim.handover_otp_failure'
+  | 'member_claim.intake_initiated'
+  | 'member_claim.intake_idempotent'
+  | 'member_claim.intake_failed';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

@@ -254,6 +254,22 @@ no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate 
 the PUBLIC `apps/public` Astro surface, which this story does not touch
 ([[project_friction_budget_baseline_ratchet]]).
 
+**Story 6.2 disposition (existing step-up row REALIZED for claim filing; no new row):** the Ravi-mode claim-filing proxy flow (`apps/mobile/app/(claim)/` + `apps/mobile/components/claim/` + `apps/mobile/lib/claim-*.ts`) touches twenty mobile files. Friction analysis by sub-type:
+
+(1) **Handover-trust OTP — step-up friction (forced, pre-declared):** `(claim)/handover-otp.tsx` drives the member (Ravi, on the deceased's session) through an OTP send → verify → resend loop before the flow can proceed to relationship-confirm. This is identical step-up friction to the Story 3.2 login OTP and is already captured in the existing **"member (mobile + OTP at login; fresh OTP at step-up) → Account & session security → forced"** row — the Story 3.2 disposition explicitly named **"claim filing — §2.2"** among the high-trust actions the step-up row was declared to cover. No new row warranted — the existing forced row covers it.
+
+(2) **Entry gate + relationship-confirm — necessary flow steps, not gratuitous friction:** `(claim)/index.tsx`'s "Are you family of [name]?" question and `(claim)/relationship.tsx`'s relationship pick are the minimum confirmation a proxy-filing flow can ask before minting a claim and freezing an account (AC3) — both have an explicit escape ("No — continue as [member]"; the "confirm" tap itself). This is necessary data entry, not deliberate friction, and mirrors the Story 3.4/3.5 signup-data-entry dispositions above.
+
+(3) **Death-certificate upload — deliberately LOW friction, defer-7-days escape (not gratuitous):** `(claim)/document.tsx` offers "Take a photo" / "Choose a PDF" / "I'll upload later (within 7 days)" — the defer option means the step imposes **zero forced friction** on a grieving family; no countdown, no penalty (UX §7 grief register, AC6). The real OCR/storage backend is Story 6.5 — 6.2 ships only the seam.
+
+(4) **Nominee review + `<CallHelplineCTA>` + `<SaveAndResumeAffordance>` — read-only / friction-REMOVING:** `(claim)/nominee-review.tsx` is a read-only pre-populated view (AC4); `<CallHelplineCTA>` (present at every node, AR-61) and `<SaveAndResumeAffordance>` (AC6) both *remove* friction — they are one-tap escapes to live help and a persistent no-time-pressure save point, not friction imposed on the member. `(claim)/acknowledgement.tsx` is read-only.
+
+(5) **`<ClaimProxyFlowEntry>` home-tab entry point — user-initiated, non-blocking:** `apps/mobile/components/claim/ClaimProxyFlowEntry.tsx` (mounted in `apps/mobile/app/(tabs)/index.tsx`) is identical in character to the Story 3.9/3.10/3.11/4.7 nav-tile entries already affirmed: an ambient, session-gated tile that navigates to the claim flow only when the member deliberately taps it. No forced step, no form, no gate.
+
+(6) **`claim-steps.ts` / `claim-draft.ts` / `claim-i18n.ts` / `claim-api.ts` / test + config files:** pure logic, storage, i18n wiring, and test scaffolding — not member-facing friction surfaces themselves.
+
+Zero gratuitous friction introduced beyond the pre-declared step-up row; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

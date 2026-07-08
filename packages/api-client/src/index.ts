@@ -83,6 +83,13 @@ import {
   type DataExportStatusResponse as DataExportStatusResult,
   type RtbfConfirmRequest,
   type RtbfStatusResponse as RtbfStatusResult,
+  HandoverOtpResponse,
+  HandoverOtpVerifyResponse,
+  ClaimIntakeInitiateResponse,
+  type HandoverOtpResponse as HandoverOtpResult,
+  type HandoverOtpVerifyResponse as HandoverOtpVerifyResult,
+  type ClaimIntakeInitiateRequest,
+  type ClaimIntakeInitiateResponse as ClaimIntakeInitiateResult,
 } from '@twt/contracts';
 import type { z } from 'zod';
 
@@ -133,8 +140,15 @@ const DATA_EXPORT_BASE = '/api/v1/member/data-export';
 const WA_OPT_IN_BASE = '/api/v1/member/wa-opt-in';
 const TELEGRAM_OPT_IN_BASE = '/api/v1/member/telegram-opt-in';
 const RTBF_BASE = '/api/v1/member/rtbf';
+const CLAIMS_BASE = '/api/v1/member/claims';
 
-export function createMemberAuthClient(opts: MemberAuthClientOptions) {
+/**
+ * The shared fetch/error-envelope/response-validation machinery, factored out so a focused
+ * client (e.g. `createMemberClaimClient`) can reuse it WITHOUT instantiating the full
+ * `createMemberAuthClient` surface (kyc/nominee/medical/terms/data-export/…) just to reach
+ * a handful of methods.
+ */
+function createApiCallers(opts: MemberAuthClientOptions) {
   const doFetch = opts.fetchImpl ?? globalThis.fetch;
   const base = opts.baseUrl.replace(/\/$/, '');
 
@@ -209,6 +223,12 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     }
     return res.arrayBuffer();
   }
+
+  return { call, callBinary };
+}
+
+export function createMemberAuthClient(opts: MemberAuthClientOptions) {
+  const { call, callBinary } = createApiCallers(opts);
 
   return {
     /** Request a login OTP for a mobile (enumeration-safe — always resolves). */
@@ -538,3 +558,38 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberAuthClient = ReturnType<typeof createMemberAuthClient>;
+
+/**
+ * The member-app claim-filing client (Story 6.2, Ravi-mode) — a focused, STANDALONE client
+ * over the three claim endpoints, sharing only the `call` fetch/error/validation machinery
+ * with `createMemberAuthClient` (via `createApiCallers`), not the full auth-client surface.
+ * The mobile app wires one instance in `lib/claim-api.ts`.
+ *
+ * The FIRST live caller of the claim primitive. Send the handover-trust OTP to the nominee's
+ * mobile, verify it (establishing the elevation the intake requires), then relationship-confirm
+ * → intake (mints claim_case_id + freezes the deceased's account). A 403 on initiateIntake
+ * carries `error.code === 'auth.step_up_required'` — the app routes back to the handover-OTP
+ * step (the 3.9/3.10 step-up lesson: key on the CODE).
+ */
+export function createMemberClaimClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+
+  return {
+    /** Send the handover-trust OTP to the deceased's nominee's mobile (session; auth). */
+    requestHandoverOtp(): Promise<HandoverOtpResult> {
+      return call(`${CLAIMS_BASE}/handover-otp`, HandoverOtpResponse, {}, true);
+    },
+
+    /** Verify the submitted handover-trust OTP → establish handover-trust (session; auth). */
+    verifyHandoverOtp(code: string): Promise<HandoverOtpVerifyResult> {
+      return call(`${CLAIMS_BASE}/handover-otp/verify`, HandoverOtpVerifyResponse, { code }, true);
+    },
+
+    /** Relationship-confirm → mint claim_case_id + emit claim.intake_initiated (session; auth). */
+    initiateIntake(input: ClaimIntakeInitiateRequest): Promise<ClaimIntakeInitiateResult> {
+      return call(`${CLAIMS_BASE}/intake`, ClaimIntakeInitiateResponse, input, true);
+    },
+  };
+}
+
+export type MemberClaimClient = ReturnType<typeof createMemberClaimClient>;

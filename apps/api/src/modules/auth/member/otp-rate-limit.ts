@@ -125,3 +125,34 @@ export function memberStepUpSendThrottle(deps: AppDeps): preHandlerHookHandler {
     return memberId ? `stepup:${memberId}` : request.ip;
   });
 }
+
+/**
+ * Per-MEMBER handover-trust-OTP send throttle (Story 6.2, claim-filing). Deliberately a
+ * SEPARATE namespace (`claim-handover:`) from `memberStepUpSendThrottle`'s `stepup:` bucket
+ * — the generic `/member/auth/step-up/request` route and the claim-handover OTP send are
+ * unrelated features; sharing one bucket would let either drain the other's budget and
+ * produce confusing cross-feature 429s.
+ */
+export function memberClaimHandoverSendThrottle(deps: AppDeps): preHandlerHookHandler {
+  return makeOtpSendThrottle(deps, (request) => {
+    const memberId = request.requestContext?.actorId;
+    return memberId ? `claim-handover:${memberId}` : request.ip;
+  });
+}
+
+/**
+ * Per-MEMBER handover-trust-OTP VERIFY throttle (Story 6.2 review). Independent of the
+ * send bucket (its own `claim-handover-verify:` namespace) so verify retries never consume
+ * SMS-send quota — but it closes the gap where a resend resets `OTP_MAX_ATTEMPTS`'s per-code
+ * counter: without this, `otpPerPhoneMax` resends x `OTP_MAX_ATTEMPTS` guesses each would let
+ * an attacker rack up far more than `otpPerPhoneMax` total guesses per window. This throttle
+ * caps total verify CALLS per member per window to `otpPerPhoneMax`, regardless of how many
+ * distinct OTPs were sent in that window — the primary anti-brute-force control; the
+ * per-code attempt-cap remains a secondary guard.
+ */
+export function memberClaimHandoverVerifyThrottle(deps: AppDeps): preHandlerHookHandler {
+  return makeOtpSendThrottle(deps, (request) => {
+    const memberId = request.requestContext?.actorId;
+    return memberId ? `claim-handover-verify:${memberId}` : request.ip;
+  });
+}

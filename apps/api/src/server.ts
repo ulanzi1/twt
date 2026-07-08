@@ -36,6 +36,7 @@ import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
 import { registerTelegramOptInModule } from './modules/telegram-opt-in/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
+import { registerClaimsModule } from './modules/claims/index.js';
 import { registerDeviceTokenModule } from './modules/device-token/index.js';
 import { registerVyawasthaShulkModule } from './modules/vyawastha-shulk/index.js';
 import { registerMultiTenant } from './modules/multi-tenant/index.js';
@@ -116,6 +117,12 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // 75/25 split, Tier-1 encrypted; emits member.nominees_declared, a non-transition marker).
   // Member-session-gated; NO step-up at signup (Life Events update + step-up is Story 3.9).
   registerNomineeModule(app, deps);
+  // Story 6.2 — member-app claim-filing surface (Ravi-mode): handover-trust OTP send/verify to
+  // the nominee's mobile + the intake route (the FIRST live caller of the Story 6.1 claim
+  // primitive). POST /member/claims/intake mints claim_case_id + projects claim.intake_initiated,
+  // which — carrying deceased_member_id — freezes the deceased's account via the merged Story 3.1
+  // overlay. Member-session-gated; the intake is behind the handover-trust step-up gate.
+  registerClaimsModule(app, deps);
   // Story 5.2 — push device-token registration (Epic 5's first [CONSUMER]): POST /member/device-tokens
   // (requireMemberSession, the Story 3.2 app-open consumer) + POST /admin/device-tokens (requireAdminSession,
   // the Story 1.9 admin-auth consumer). Registers the FCM/APNs token as Tier-1-encrypted, marks siblings

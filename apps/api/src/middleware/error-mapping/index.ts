@@ -17,6 +17,7 @@
 import { KycProviderError } from '@twt/contracts';
 import {
   AuthorizationDeniedError,
+  ClaimStateDirectWriteError,
   ClauseIdConflictError,
   ClauseNotFoundError,
   DraftNotFoundError,
@@ -200,6 +201,17 @@ export function errorMappingHandler(
   }
   if (error instanceof TelegramOptInStateError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3f) Claim-state direct-write rejection (Story 6.1 typed error, Story 6.2 boundary). The
+  // DB trigger rejects any write to `claims.current_state` not issued by the projector — an
+  // architectural violation (§AC3). 6.2 never writes current_state directly (always via
+  // projectClaimState), so this is a forward-safe guard: map → 500 with the stable code, no
+  // internal leak (the P0 audit line is the catching write-boundary's job, not the mapper's).
+  if (error instanceof ClaimStateDirectWriteError) {
+    request.log.error({ err: error, traceId: requestId }, 'claims.current_state direct write rejected');
+    void reply.status(500).send(error.toErrorResponse(requestId));
     return;
   }
 

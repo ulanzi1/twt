@@ -102,6 +102,11 @@ export * from './telegram-opt-in/index.js';
 // for this story).
 export * from './degraded-mode/index.js';
 
+// Story 6.2 — member-app claim-filing DTOs (handover-trust OTP send/verify + intake). The FIRST
+// live claim-subsystem transport surface. HTTP endpoints → these DO register in openapi/v1.yaml
+// (the member claim routes are the EXPECTED diff for this story).
+export * from './claims/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

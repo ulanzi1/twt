@@ -15,9 +15,11 @@
 // glob) and is the only manual step — the build-time parity gate (scripts/check-parity.ts)
 // then enforces Hindi parity on the new domain automatically.
 
+import enClaim from '../locales/en/claim.json';
 import enCommon from '../locales/en/common.json';
 import enNiyamavali from '../locales/en/niyamavali.json';
 import enTerms from '../locales/en/terms.json';
+import hiClaim from '../locales/hi/claim.json';
 import hiCommon from '../locales/hi/common.json';
 import hiNiyamavali from '../locales/hi/niyamavali.json';
 import hiTerms from '../locales/hi/terms.json';
@@ -28,12 +30,12 @@ import type { Locale } from './locale.js';
 export type Catalog = Record<string, string>;
 
 const catalogs: Record<Locale, Record<string, Catalog>> = {
-  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms },
-  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms },
+  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms, claim: enClaim },
+  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms, claim: hiClaim },
 };
 
 /** The domain (namespace) names that have at least one locale catalog. */
-export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms'];
+export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms', 'claim'];
 
 /** Look up a `{locale}/{namespace}` catalog, or `undefined` if it is not registered. */
 export function getCatalog(locale: Locale, namespace: string): Catalog | undefined {

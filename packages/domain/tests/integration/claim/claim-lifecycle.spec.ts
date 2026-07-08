@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { claimId as toClaimId, memberId as toMemberId } from '../../../src/ids/index.js';
 import {
+  getClaimByDeceasedMember,
   getClaimCase,
   getClaimStateAt,
   isClaimStateDirectWriteError,
@@ -252,6 +253,43 @@ describe.skipIf(!hasDatabase)('claim lifecycle (PARIWAR_A scope)', () => {
 
     expect((await getMemberAccountOverlay(tx, mid, FREEZE)).accountFrozen).toBe(true);
     expect((await getMemberAccountOverlay(tx, mid, CLEAR)).accountFrozen).toBe(false);
+  });
+
+  it('6.2 review fix: getClaimByDeceasedMember excludes TERMINAL claims (settled/denied) so a death can be re-filed', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+
+    // A death whose ONLY claim already reached a terminal state → no live intake found, so a
+    // fresh member-app intake will mint a NEW claim_case_id rather than silently re-attaching
+    // to the stale terminal one (the review-flagged bug: the read previously had no state filter
+    // at all, so a re-file after `denied`/`settled` would resolve to the dead claim).
+    const deniedMid = toMemberId(randomUUID());
+    await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(deniedMid), currentState: 'denied' });
+    expect(await getClaimByDeceasedMember(tx, PARIWAR_A, deniedMid)).toBeUndefined();
+
+    const settledMid = toMemberId(randomUUID());
+    await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(settledMid), currentState: 'settled' });
+    expect(await getClaimByDeceasedMember(tx, PARIWAR_A, settledMid)).toBeUndefined();
+
+    // A death with a NON-terminal claim is still found (the idempotency guard's actual job).
+    const pendingMid = toMemberId(randomUUID());
+    const pendingCid = await seedClaim(tx, PARIWAR_A, {
+      deceasedMemberId: String(pendingMid),
+      currentState: 'documents_pending',
+    });
+    const found = await getClaimByDeceasedMember(tx, PARIWAR_A, pendingMid);
+    expect(found?.claimCaseId).toBe(pendingCid);
+
+    // A death with BOTH an earlier terminal claim and a later non-terminal one (e.g. a re-file
+    // after denial) resolves to the LIVE one, not the terminal one, regardless of recency.
+    const mixedMid = toMemberId(randomUUID());
+    await seedClaim(tx, PARIWAR_A, { deceasedMemberId: String(mixedMid), currentState: 'denied' });
+    const liveCid = await seedClaim(tx, PARIWAR_A, {
+      deceasedMemberId: String(mixedMid),
+      currentState: 'intake_pending',
+    });
+    const mixedFound = await getClaimByDeceasedMember(tx, PARIWAR_A, mixedMid);
+    expect(mixedFound?.claimCaseId).toBe(liveCid);
   });
 
   it('AC5: cross-tenant — a PARIWAR_B claim intake naming a PARIWAR_A member does not freeze that member under PARIWAR_A scope', async () => {

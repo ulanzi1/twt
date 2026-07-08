@@ -17,13 +17,20 @@
 // @twt/events.loadEvents — domain cannot import @twt/events (the cycle); see
 // claim/project.ts header. The stream is small per claim.
 
-import { and, asc, eq, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, lte, notInArray } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { ClaimId, PariwarId } from '../ids/index.js';
+import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
 import { eventsLog } from '../schema/events_log.js';
 import { claims, type ClaimRow } from '../schema/claims.js';
 import { type ClaimLifecycleState, replayClaimState } from './state.js';
+
+/**
+ * Lifecycle states from which a claim never re-opens (Story 6.1 state.ts:
+ * `settled` and `denied` are both annotated terminal; `reversed` re-enters
+ * `approved` via an appeal, so it is NOT terminal).
+ */
+const CLAIM_TERMINAL_STATES: ClaimLifecycleState[] = ['settled', 'denied'];
 
 /**
  * Compute a claim's lifecycle state as of `atTimestamp` by replaying its event stream
@@ -70,6 +77,42 @@ export async function getClaimCase(
     .select()
     .from(claims)
     .where(and(eq(claims.pariwarId, pariwarId), eq(claims.claimCaseId, claimCaseId)))
+    .limit(1);
+  return rows[0];
+}
+
+/**
+ * The existing claim (if any) filed against a deceased member in this Pariwar — the
+ * single-channel intake-idempotency read (Story 6.2 AC3). One death yields one claim
+ * (ICP / Story 6.4 enforces cross-channel convergence); this returns the most-recently-
+ * created matching row so a member-app double-tap/retry resolves the same case instead of
+ * minting a second `claim_case_id` (which would double-freeze the account). Uses the
+ * `claims_deceased_member_id_idx`. Tenant-scoped by RLS + the explicit `pariwar_id`
+ * predicate (a cross-tenant `deceased_member_id` guess resolves to `undefined`).
+ *
+ * Scope note: 6.2 owns only the single-channel trivial-duplicate guard. FULL cross-channel
+ * dedup (member-app + helpline for one death) is Story 6.4's ICP — this read deliberately
+ * does not filter by channel, so any live intake for the death is found. It DOES filter out
+ * `CLAIM_TERMINAL_STATES` (`settled`/`denied`): a death whose earlier claim already reached a
+ * terminal outcome must be able to re-file (e.g. a fresh claim after `denied`), so a terminal
+ * row must not be handed back as "the existing intake."
+ */
+export async function getClaimByDeceasedMember(
+  db: Db,
+  pariwarId: PariwarId,
+  deceasedMemberId: MemberId,
+): Promise<ClaimRow | undefined> {
+  const rows = await db
+    .select()
+    .from(claims)
+    .where(
+      and(
+        eq(claims.pariwarId, pariwarId),
+        eq(claims.deceasedMemberId, deceasedMemberId),
+        notInArray(claims.currentState, CLAIM_TERMINAL_STATES),
+      ),
+    )
+    .orderBy(desc(claims.createdAt))
     .limit(1);
   return rows[0];
 }

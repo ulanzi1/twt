@@ -145,6 +145,12 @@ export * from './telegram_inbound_webhook_events.js';
 // never a stored boolean; single-active-per-Pariwar is enforced by the app transaction (advisory lock +
 // auto-revoke-on-declare), NOT a DB constraint. Backs the AR-20 cycle-open SMS bridge.
 export * from './pariwar_degraded_mode_declarations.js';
+// Story 6.1 — claim case lifecycle anchor (claims table + claim_lifecycle_state +
+// claim_intake_channel pgEnums). `claims.current_state` is a replay-derived cache,
+// not the source of truth — guarded by the DB trigger (migration) + the
+// claim-state-invariant CI gate. Death-support nominee claims ONLY (§1.9/§1.13:
+// no payout_destination_id / accident / reserve columns). Twin of Story 3.1.
+export * from './claims.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

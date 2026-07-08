@@ -50,6 +50,16 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
     const memberId = randomUUID();
     const pariwarId = randomUUID();
     let exportId = '';
+    // runDataExportVacuum discovers tenants via `SELECT pariwar_id FROM pariwar_passport`
+    // (data-export.ts) — without this row the vacuum sweep never visits this test's
+    // pariwarId at all, so its seeded data_exports rows are structurally invisible to it.
+    await pool.query(
+      `INSERT INTO pariwar_passport
+         (pariwar_id, display_name_en, display_name_hi, legal_name, branding_bundle, locale_default)
+       VALUES ($1, 'Test Pariwar EN', 'परीक्षण परिवार', 'Test Welfare Trust', $2, 'en')
+       ON CONFLICT (pariwar_id) DO NOTHING`,
+      [pariwarId, JSON.stringify({ logo_url: 'https://x/l.png', primary_color: '#0A3D62', secondary_color: '#FFFFFF' })],
+    );
     await withPariwarScope(pool, pariwarId, async (_tx, client) => {
       await client.query(
         `INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 4)`,

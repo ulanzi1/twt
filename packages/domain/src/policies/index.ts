@@ -57,3 +57,5 @@ export * from './member-search-projection-rls.js';
 // invalidation counter. Both tenant-isolated exactly like the data they cache (NOT cross-readable).
 export * from './member-validity-cache-rls.js';
 export * from './cohort-invalidation-epochs-rls.js';
+// Story 6.1 — claim case lifecycle anchor tenant-isolation policies (NOT cross-readable; mirror members-rls).
+export * from './claims-rls.js';

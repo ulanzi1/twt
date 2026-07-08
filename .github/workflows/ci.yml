@@ -474,6 +474,33 @@ jobs:
       - run: pnpm member-state:test
       - run: pnpm member-state:check
 
+  claim-state-invariant:
+    name: claim-state-invariant (claims.current_state is projector-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 6.1 AC3: claims.current_state is a replay-derived cache writable ONLY by the
+    # event-replay projector (packages/domain/src/claim/project.ts). Static TS-AST scan
+    # of packages/domain/src — flags any .update(claims).set({ currentState }),
+    # .insert(claims)…onConflictDoUpdate({ set: { currentState } }), or
+    # claims.currentState = … outside the projector allowlist. The independent runtime
+    # guard is the BEFORE UPDATE trigger in migration 0051. No DB / network. See
+    # scripts/claim-state-invariant/. INVARIANT SCAN → NO fetch-depth: 0 (mirror
+    # member-state-invariant). Twin of Story 3.1's members.state gate.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm claim-state:test
+      - run: pnpm claim-state:check
+
   kyc-provider-boundary:
     name: kyc-provider-boundary (DigiLocker transport is provider-only)
     runs-on: ubuntu-latest

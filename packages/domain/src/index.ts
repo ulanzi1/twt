@@ -119,6 +119,16 @@ export {
   MEMBER_STATE_DIRECT_WRITE_CODE,
   isMemberStateDirectWriteError,
 } from './member/errors.js';
+// Claim lifecycle direct-write rejection (Story 6.1, AC3). Surfaced at the top level —
+// mirroring the member errors — so the apps/api error-mapping middleware (Story 6.2
+// intake route) imports the class + code constant from `@twt/domain` directly to map
+// the DB trigger's rejection → HTTP + the P0 audit line; the full primitive (reducer,
+// projector, reads, events) is also under the `claim` namespace.
+export {
+  ClaimStateDirectWriteError,
+  CLAIM_STATE_DIRECT_WRITE_CODE,
+  isClaimStateDirectWriteError,
+} from './claim/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
@@ -131,6 +141,9 @@ export * as niyamavali from './niyamavali/index.js';
 export * as termsAndConditions from './terms-and-conditions/index.js';
 export * as consent from './consent/index.js';
 export * as member from './member/index.js';
+// Story 6.1 — claim case lifecycle primitive (claims table + claim.* state machine +
+// pure reducer + single-writer projector + time-travel reads). Twin of `member`.
+export * as claim from './claim/index.js';
 // Story 3.3a — KYC provider substrate accessors (cert cache + kyc_transactions). The
 // DigiLocker provider (apps/api) consumes these; the frozen abstraction itself lives in
 // `@twt/contracts/kyc`.

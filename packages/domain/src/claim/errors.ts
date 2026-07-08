@@ -1,0 +1,138 @@
+// Claim lifecycle typed domain errors — Story 6.1 (Tasks 4 + 6; AC3). Twin of
+// member/errors.ts.
+//
+// `ClaimStateDirectWriteError` is the application-layer counterpart to the DB
+// write-rejection trigger (migration). The trigger RAISEs `ERRCODE = 'P0001'` with
+// the message prefix `claims.current_state direct write rejected` when any code path
+// other than the projector tries to change `claims.current_state`. A `BEFORE UPDATE`
+// trigger that RAISEs aborts its own transaction, so it CANNOT durably write the P0
+// architectural-violation audit line — that is the job of the application boundary
+// that CATCHES the trigger error (mirror how @twt/events appendEvent catches `23505`
+// → ConcurrencyError).
+//
+// Surfaced at the @twt/domain top-level barrel (../index.ts) so the apps/api
+// error-mapping middleware imports the class AND the code constant directly — it
+// matches on the code constant, not the class instance. Story 6.1 has no route; it
+// provides the typed error + the SQLSTATE/message detector so the future boundary
+// (Story 6.2 intake) maps the trigger rejection → this error, emits the P0 audit line,
+// and returns the right HTTP code. Match by PREFIX with `.startsWith()` (NOT
+// `.includes()` — a Story 3.1 review defect carried forward as a fix, not a bug).
+
+import type { ErrorResponseShape } from '../errors.js';
+
+/** Namespaced error code for a rejected direct write to `claims.current_state`. */
+export const CLAIM_STATE_DIRECT_WRITE_CODE = 'claim.state_direct_write_rejected';
+
+/**
+ * The trigger's RAISE message prefix. The detector matches on this because the
+ * trigger uses the default `RAISE EXCEPTION` SQLSTATE `P0001` (`raise_exception`),
+ * which — unlike `23505` (concurrency) or `23xxx` (integrity) — is generic, so the
+ * message prefix is the discriminator. Keep IN SYNC with the trigger DDL in the
+ * claims migration.
+ */
+export const CLAIM_STATE_DIRECT_WRITE_MESSAGE_PREFIX = 'claims.current_state direct write rejected';
+
+/** The SQLSTATE the trigger RAISEs with (default `RAISE EXCEPTION` class). */
+export const CLAIM_STATE_DIRECT_WRITE_SQLSTATE = 'P0001';
+
+/**
+ * Thrown by the application boundary when a write to `claims.current_state` is
+ * rejected by the DB trigger — i.e. a code path OTHER than the projector attempted to
+ * mutate the replay-derived state cache (an architectural violation, AC3). The
+ * boundary emits a P0 audit line alongside throwing this.
+ */
+export class ClaimStateDirectWriteError extends Error {
+  public readonly name = 'ClaimStateDirectWriteError';
+  public readonly code = CLAIM_STATE_DIRECT_WRITE_CODE;
+
+  public constructor(public readonly detail: string) {
+    super(`${CLAIM_STATE_DIRECT_WRITE_MESSAGE_PREFIX}: ${detail}`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: {},
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+interface PgErrorLike {
+  code?: string;
+  message: string;
+}
+
+/**
+ * Unwrap drizzle-orm's wrapped pg error (it nests the original on `.cause`) and read
+ * the SQLSTATE `.code` + `.message`. Mirrors `extractPgError` in member/errors.ts
+ * (kept local — domain cannot import @twt/events).
+ */
+function extractPgError(err: unknown): PgErrorLike | null {
+  if (!(err instanceof Error)) return null;
+  const causeRaw = (err as { cause?: unknown }).cause;
+  const candidate = causeRaw !== undefined && causeRaw !== null ? causeRaw : err;
+  if (typeof candidate !== 'object' || candidate === null) return null;
+  const obj = candidate as { code?: unknown; message?: unknown };
+  if (typeof obj.message !== 'string') return null;
+  return {
+    code: typeof obj.code === 'string' ? obj.code : undefined,
+    message: obj.message,
+  };
+}
+
+/**
+ * True iff `err` is the `claims.current_state` write-rejection raised by the DB
+ * trigger (SQLSTATE `P0001` + the message prefix). The catching boundary uses this to
+ * map a raw DB rejection → `ClaimStateDirectWriteError`. Prefix match via
+ * `.startsWith()` (Story 3.1 review finding — NOT `.includes()`).
+ */
+export function isClaimStateDirectWriteError(err: unknown): boolean {
+  const pgErr = extractPgError(err);
+  return (
+    pgErr !== null &&
+    pgErr.code === CLAIM_STATE_DIRECT_WRITE_SQLSTATE &&
+    pgErr.message.startsWith(CLAIM_STATE_DIRECT_WRITE_MESSAGE_PREFIX)
+  );
+}
+
+// ── Optimistic-concurrency on the claim's event stream (projector) ────────────
+// The projector appends the next event at `head_version + 1`; the events_log unique
+// index `(stream_id, event_version)` is the backstop. A concurrent projector landing
+// the same version raises `23505` → this typed error (mirror @twt/events
+// ConcurrencyError, which domain cannot import). An EXPECTED failure — the caller
+// re-reads and retries; NOT surfaced at the top-level barrel (claim namespace only).
+
+/** The events_log unique-index name for `(stream_id, event_version)`. Keep IN SYNC
+ * with schema/events_log.ts. */
+const STREAM_VERSION_CONSTRAINT = 'events_log_stream_id_event_version_uq';
+
+export class ClaimStreamConcurrencyError extends Error {
+  public readonly name = 'ClaimStreamConcurrencyError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly attemptedVersion: number,
+  ) {
+    super(
+      `claim stream ${claimCaseId} concurrency conflict appending event_version ${attemptedVersion}`,
+    );
+  }
+}
+
+/** True iff `err` is the events_log `(stream_id, event_version)` unique-violation. */
+export function isClaimStreamVersionConflict(err: unknown): boolean {
+  const pgErr = extractPgError(err);
+  if (pgErr === null || pgErr.code !== '23505') return false;
+  const constraint = (() => {
+    if (!(err instanceof Error)) return undefined;
+    const cause = (err as { cause?: unknown }).cause;
+    const candidate = cause !== undefined && cause !== null ? cause : err;
+    if (typeof candidate !== 'object' || candidate === null) return undefined;
+    const c = (candidate as { constraint?: unknown }).constraint;
+    return typeof c === 'string' ? c : undefined;
+  })();
+  return constraint === STREAM_VERSION_CONSTRAINT;
+}

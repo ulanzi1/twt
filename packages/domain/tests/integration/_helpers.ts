@@ -13,10 +13,12 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { setPariwarScope, type Db } from '../../src/db.js';
 import {
+  claimId as toClaimId,
   clauseId as toClauseId,
   memberId as toMemberId,
   pariwarId as toPariwarId,
@@ -289,6 +291,57 @@ export async function seedMember(
     state: opts.state ?? 'pending-kyc',
     stateEventVersion: opts.stateEventVersion ?? 1,
   });
+  return id;
+}
+
+export interface SeedClaimOptions {
+  claimCaseId?: string;
+  deceasedMemberId?: string;
+  claimantActorId?: string | null;
+  intakeChannels?: schema.ClaimIntakeChannel[];
+  currentState?: schema.ClaimLifecycleState;
+  stateEventVersion?: number;
+}
+
+/**
+ * Insert one claims row (Story 6.1) DIRECTLY (bypassing the projector). Like
+ * seedMember, run this BEFORE entering app scope (as the Docker superuser, RLS
+ * bypassed) so rows for BOTH tenants land regardless of the write-isolation policy;
+ * afterEach ROLLBACK reverts it. claims is a SCOPED table — cross-Pariwar reads must
+ * return 0 rows.
+ *
+ * The claims.current_state write-rejection trigger (Story 6.1 AC3) fires on BOTH
+ * INSERT and UPDATE (review fix — a BEFORE UPDATE-only trigger never guarded the
+ * create-time write; see migration 0051 + claim/project.ts). This helper seeds a row
+ * directly for test setup, so it sets the same session guard the projector uses for
+ * the one INSERT, then resets it immediately — tests that go on to exercise the
+ * trigger's rejection behavior (e.g. a raw UPDATE with no guard) depend on the guard
+ * being back 'off' before they run. Returns the claim_case_id used.
+ */
+export async function seedClaim(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedClaimOptions = {},
+): Promise<string> {
+  const id = opts.claimCaseId ?? randomUUID();
+  await tx.execute(sql.raw("SET LOCAL app.claim_state_writer = 'on'"));
+  try {
+    await tx.insert(schema.claims).values({
+      claimCaseId: toClaimId(id),
+      pariwarId: toPariwarId(pariwarId),
+      deceasedMemberId: toMemberId(opts.deceasedMemberId ?? randomUUID()),
+      claimantActorId: opts.claimantActorId ?? null,
+      intakeChannels: opts.intakeChannels ?? ['member_app'],
+      currentState: opts.currentState ?? 'intake_pending',
+      stateEventVersion: opts.stateEventVersion ?? 1,
+    });
+  } finally {
+    try {
+      await tx.execute(sql.raw("SET LOCAL app.claim_state_writer = 'off'"));
+    } catch {
+      // tx already aborted (the seed insert itself failed) — nothing to reset.
+    }
+  }
   return id;
 }
 

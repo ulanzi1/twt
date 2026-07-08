@@ -12,7 +12,7 @@
 // digest of the canonical-JSON declaration fields (mirror channel-config/handlers.ts's node:crypto usage —
 // NOT the `sha256Hex` @twt/channels helper apps/api does not import).
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { audit, canonicalJsonStringify, degradedMode, ids, schema, type Db } from '@twt/domain';
 import type {
@@ -58,55 +58,76 @@ export function createDegradedModeHandlers(deps: AppDeps) {
   return {
     PARIWAR_DECLARE_DEGRADED_MODE_KEY,
 
-    /** POST declare degraded mode (auto-revoke-then-insert + audit). */
+    /** POST declare degraded mode (auto-revoke-then-insert + audit, compensated on failure per ADR-0030). */
     async declare(request: FastifyRequest): Promise<DegradedModeDeclarationResponse> {
       const { tx, pariwarIdStr, actorId } = scopeCtx(request);
       const body = request.body as DegradedModeDeclareRequest;
       // effectiveFrom defaults to now; the contract already rejected any backdated supplied value (AC4 #8).
       const effectiveFrom = body.effectiveFrom ? new Date(body.effectiveFrom) : new Date();
       const expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
+      const pariwarId = ids.pariwarId(pariwarIdStr);
 
-      const row = await degradedMode.declareDegradedMode(tx, {
-        pariwarId: ids.pariwarId(pariwarIdStr),
-        mode: body.mode,
-        effectiveFrom,
-        expiresAt,
-        declaredByActor: ids.userId(actorId),
-        reason: body.reason,
+      // Pre-generate the declaration id so the audit intent line and the eventual INSERT agree on a
+      // resourceLocator (declare is unconditional — unlike revoke, there is no no-op branch to decide here).
+      const declarationId = randomUUID();
+
+      return audit.withCompensatingAudit(deps.servicePool, {
+        // Audit over the PII-free declaration fields (ids + timestamps + mode + reason).
+        auditIntent: {
+          pariwarId: pariwarIdStr,
+          actorId,
+          actorRole: null,
+          action: AUDIT_ACTION_DECLARED,
+          resourceLocator: `pariwar/${pariwarIdStr}/degraded-mode/declarations/${declarationId};mode=${body.mode}`,
+          requestPayloadHash: createHash('sha256')
+            .update(
+              canonicalJsonStringify({
+                pariwar_id: pariwarIdStr,
+                declaration_id: declarationId,
+                mode: body.mode,
+                effective_from: effectiveFrom.toISOString(),
+                expires_at: expiresAt ? expiresAt.toISOString() : null,
+                reason: body.reason,
+              }),
+              'utf8',
+            )
+            .digest('hex'),
+          traceId: request.requestContext.traceId ?? null,
+        },
+        mutate: async () => {
+          const row = await degradedMode.declareDegradedMode(tx, {
+            id: declarationId,
+            pariwarId,
+            mode: body.mode,
+            effectiveFrom,
+            expiresAt,
+            declaredByActor: ids.userId(actorId),
+            reason: body.reason,
+          });
+          return toDeclarationDto(row);
+        },
       });
-
-      // Audit over the PII-free declaration fields (ids + timestamps + mode + reason).
-      await audit.writeAuditEntry(deps.servicePool, {
-        pariwarId: pariwarIdStr,
-        actorId,
-        actorRole: null,
-        action: AUDIT_ACTION_DECLARED,
-        resourceLocator: `pariwar/${pariwarIdStr}/degraded-mode/declarations/${row.id};mode=${row.mode}`,
-        requestPayloadHash: createHash('sha256')
-          .update(
-            canonicalJsonStringify({
-              pariwar_id: pariwarIdStr,
-              declaration_id: row.id,
-              mode: row.mode,
-              effective_from: row.effectiveFrom.toISOString(),
-              expires_at: row.expiresAt ? row.expiresAt.toISOString() : null,
-              reason: row.reason,
-            }),
-            'utf8',
-          )
-          .digest('hex'),
-        responseStatus: 200,
-        traceId: request.requestContext.traceId ?? null,
-      });
-
-      return toDeclarationDto(row);
     },
 
-    /** POST manual revocation (idempotent + audit). Returns the now-active declaration (or null). */
+    /**
+     * POST manual revocation (idempotent + audit, compensated on failure per ADR-0030). Returns the
+     * now-active declaration (or null).
+     *
+     * The mutation decides whether an audit is warranted — NOT a pre-check read — because
+     * `revokeDegradedMode`'s own WHERE clause (`id = declarationId AND revoked_at IS NULL`) is the only
+     * race-free way to know whether THIS call actually revoked anything. A pre-check via
+     * `getActiveDegradedMode` would use the WRONG predicate (temporally-active-now, not
+     * exists-and-unrevoked-by-id — it would refuse to revoke a legitimate not-yet-active future-dated
+     * declaration) and would reintroduce a TOCTOU race with a concurrent revoke of the same id (the exact
+     * false-positive-audit shape the Review Finding below already fixed once). So `revoke` stays
+     * mutate-then-decide; only the AUDITED branch (an actual revocation) routes through
+     * `withCompensatingAudit`, covering the trailing read against a rollback after the audit commits.
+     */
     async revoke(request: FastifyRequest): Promise<DegradedModeActiveResponse> {
       const { tx, pariwarIdStr, actorId } = scopeCtx(request);
       const { id } = request.params as { id: string };
       const at = new Date();
+      const pariwarId = ids.pariwarId(pariwarIdStr);
 
       const revoked = await degradedMode.revokeDegradedMode(tx, {
         declarationId: id,
@@ -114,10 +135,16 @@ export function createDegradedModeHandlers(deps: AppDeps) {
         at,
       });
 
-      // Only audit an ACTUAL revocation — a no-op (already-revoked / nonexistent / cross-tenant id) must
-      // not produce an audit line claiming a revocation happened (Review Finding: false-positive audit entry).
-      if (revoked) {
-        await audit.writeAuditEntry(deps.servicePool, {
+      // A no-op (already-revoked / nonexistent / cross-tenant id) must NOT produce an audit line claiming a
+      // revocation happened (Review Finding: false-positive audit entry) — and nothing here is compensatable
+      // (nothing was mutated), so it never enters `withCompensatingAudit`.
+      if (!revoked) {
+        const active = await degradedMode.getActiveDegradedMode(tx, pariwarId, at);
+        return { active: active ? toDeclarationDto(active) : null };
+      }
+
+      return audit.withCompensatingAudit(deps.servicePool, {
+        auditIntent: {
           pariwarId: pariwarIdStr,
           actorId,
           actorRole: null,
@@ -133,13 +160,13 @@ export function createDegradedModeHandlers(deps: AppDeps) {
               'utf8',
             )
             .digest('hex'),
-          responseStatus: 200,
           traceId: request.requestContext.traceId ?? null,
-        });
-      }
-
-      const active = await degradedMode.getActiveDegradedMode(tx, ids.pariwarId(pariwarIdStr), at);
-      return { active: active ? toDeclarationDto(active) : null };
+        },
+        mutate: async () => {
+          const active = await degradedMode.getActiveDegradedMode(tx, pariwarId, at);
+          return { active: active ? toDeclarationDto(active) : null };
+        },
+      });
     },
 
     /** GET the currently-active declaration, or null (the banner read). */

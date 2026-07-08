@@ -2,15 +2,15 @@
 #
 # ci-local.sh — local mirror of .github/workflows/ci.yml
 #
-# Runs every CI job that needs no external service (17 jobs), plus the live-DB
-# `integration-tests` job (the 18th) when DATABASE_URL is set. Stopgap while
+# Runs every CI job that needs no external service (18 jobs), plus the live-DB
+# `integration-tests` job (the 19th) when DATABASE_URL is set. Stopgap while
 # GitHub Actions is unavailable (account under review). Each job invokes the
 # exact command its ci.yml counterpart runs, so a green run here means a green
 # run there.
 #
 # Usage:
 #   pnpm ci:local
-#       → 17 static jobs (lint, typecheck, build, unit test, + all gates)
+#       → 18 static jobs (lint, typecheck, build, unit test, + all gates)
 #   DATABASE_URL='postgresql://twt_dev_app:devpass@127.0.0.1:5433/twt_dev?sslmode=disable' pnpm ci:local
 #       → also runs integration-tests against the twt-test-pg container (port 5433)
 #
@@ -55,6 +55,7 @@ run "benefit-mechanism"     "pnpm benefit:test && pnpm benefit:check"
 run "microcopy"             "pnpm microcopy:test && pnpm microcopy:check"
 run "domain-invariants"     "pnpm domain-invariants:test && pnpm domain-invariants:check"
 run "member-state-invariant" "pnpm member-state:test && pnpm member-state:check"
+run "claim-state-invariant" "pnpm claim-state:test && pnpm claim-state:check"
 run "kyc-provider-boundary" "pnpm kyc-provider:test && pnpm kyc-provider:check"
 run "access-wrapper-invariants" "pnpm access-wrapper:test && pnpm access-wrapper:check"
 run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"

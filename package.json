@@ -37,6 +37,8 @@
     "domain-invariants:test": "vitest run scripts/domain-accessor-invariants",
     "member-state:check": "tsx scripts/member-state-invariant/check.ts",
     "member-state:test": "vitest run scripts/member-state-invariant",
+    "claim-state:check": "tsx scripts/claim-state-invariant/check.ts",
+    "claim-state:test": "vitest run scripts/claim-state-invariant",
     "kyc-provider:check": "tsx scripts/kyc-provider-boundary/check.ts",
     "kyc-provider:test": "vitest run scripts/kyc-provider-boundary",
     "access-wrapper:check": "tsx scripts/access-wrapper-invariants/check.ts",

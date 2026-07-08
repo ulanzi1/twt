@@ -358,6 +358,13 @@
       "when": 1785037200000,
       "tag": "0050_pariwar-degraded-mode-declarations",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1785123600000,
+      "tag": "0051_claims-lifecycle",
+      "breakpoints": true
     }
   ]
 }

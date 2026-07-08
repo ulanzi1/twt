@@ -12,13 +12,14 @@ webhook, member opt-in, step-up-OTP delivery). This checklist is the **required 
 every new access / webhook / consent path** before it merges.
 
 This is the human half of the family. The [`access-wrapper-invariants`](../scripts/access-wrapper-invariants/README.md)
-CI gate mechanizes **two** slices (the cheapest, most-corrosive ones):
+CI gate mechanizes **three** slices (the cheapest, most-corrosive ones):
 - **(a)/(b)** — validity access entrypoints fail closed on an omitted caller (AI-4-3, 4.6's default-open failure), scanned over `packages/validity-service/src`.
 - **(f)** — channel verification contexts use a constant-time secret compare (AI-5-1, the Story 5.4 `hub.verify_token` timing side-channel), scanned over the Epic-5 channel + `apps/api` access surface.
+- **(g)** — mutation+audit pairs route through the compensating-audit helper (AI-5-3 / ADR-0030, the H-4 audit-write-ordering gap), scanned over the same Epic-5 channel + `apps/api` access surface.
 
 Items **(c)–(e)** are judgment calls a heuristic lint would false-positive on, so they stay
-checklist + required-test. Epic 6's claim access surface inherits both mechanized invariants
-from day one.
+checklist + required-test. Epic 6's claim access surface inherits all three mechanized
+invariants from day one.
 
 ---
 
@@ -73,24 +74,42 @@ early-exit / byte-wise timing side-channel.
   or a local const-literal prefix are exempt by construction — the gate only bites on a
   runtime-vs-runtime credential compare.
 
+### (g) A mutation + its audit line are paired via the compensating-audit helper — **gated** ⚙️
+When a handler performs a domain-state mutation and records an audit line for it, the
+audit write must go through `audit.withCompensatingAudit` (`packages/domain/src/audit/compensating.ts`)
+— never a bare `audit.writeAuditEntry` call — so a failure after the intent line durably
+commits fires a compensating `${action}_rolled_back` line instead of leaving the ledger
+claiming a transition that never landed.
+- **Epic 5 defect (H-4):** `channel-config`/`degraded-mode` shipped 5 mutation+audit pairs
+  with no compensation at all, while four OTHER modules (`wa-opt-in`, `telegram-opt-in`,
+  `terms`, `medical`) had already hand-rolled the correct pattern independently — never
+  extracted into a shared helper.
+- Enforced by CI over the same channel access surface (`pnpm access-wrapper:check`). A
+  handful of pre-existing, reviewed AI-4-3(d) isolated-best-effort writes (no
+  rollback-capable transaction in scope at all — dispatch's audit port, device-token's
+  invalidation/registration audits) are exempt **by file**, named explicitly in
+  `scripts/access-wrapper-invariants/lib.ts`.
+
 ---
 
 ## How to use it
 
 - **Author:** walk (a)–(e) before opening the PR; for each, link the test that proves it (a required test, not a vacuous one — retro H-7).
 - **Reviewer:** the code-review pass confirms each item is addressed or explicitly N/A with a reason.
-- **CI:** `pnpm access-wrapper:check` mechanically enforces (a)/(b) for validity access entrypoints **and** (f) for channel verification contexts. It runs in `ci.yml` (`access-wrapper-invariants` job) and `pnpm ci:local`.
+- **CI:** `pnpm access-wrapper:check` mechanically enforces (a)/(b) for validity access entrypoints, (f) for channel verification contexts, **and** (g) for mutation+audit pairs. It runs in `ci.yml` (`access-wrapper-invariants` job) and `pnpm ci:local`.
 
 ## Relationship to the AST gate
 
 The gate is deliberately **narrow by invariant, but now honest about scope** — one gate,
-two mechanized slices, each scanned over the code its commitment is about:
+three mechanized slices, each scanned over the code its commitment is about:
 - **(a)/(b)** over `packages/validity-service/src` — the validity caller/internal fail-closed slice.
 - **(f)** over the Epic-5 channel surface (`packages/channels/src` + the `apps/api` channel entrypoints: `channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`, `degraded-mode`, `device-token`) — the constant-time secret-compare slice.
+- **(g)** over the SAME Epic-5 channel surface — the compensating-audit mechanization slice (AI-5-3 / ADR-0030).
 
-This closes the AI-4-3 → AI-5-1 split the Epic-5 retro flagged (I-1, "you can build the gate
-and still miss the target"): the gate previously scanned only `validity-service` and read
-none of Epic 5's access surface. It now does. Items **(c)–(e)** remain "mechanize the
-cheapest / most-corrosive slice, sharpen the review for the rest" — carried by this
-checklist + required tests. When a future slice becomes cheaply mechanizable, add it as a
-third invariant scanner rather than widening an existing one past its precision.
+This closes the AI-4-3 → AI-5-1 → AI-5-3 chain the Epic-4/5 retros flagged (I-1, "you can
+build the gate and still miss the target"): each new mechanized slice reads the code its own
+commitment was actually about, rather than widening an existing scanner past its precision
+or leaving the next corrosive-family instance to convention alone. Items **(c)–(e)** remain
+"mechanize the cheapest / most-corrosive slice, sharpen the review for the rest" — carried
+by this checklist + required tests. When a future slice becomes cheaply mechanizable, add it
+as a fourth invariant scanner rather than widening an existing one past its precision.

@@ -9,9 +9,10 @@
 // The member session (requireMemberSession) sets request.requestContext.actorId = member_id + .pariwarId.
 // The PENDING match key is the member's STORED member_identities.mobile_blind_index (so the worker's inbound
 // match — which recomputes the blind index from the sender `from` — agrees when the member messages from
-// their registered number). Audit-or-throw: the audit line is written FIRST (servicePool, its own tx), then
-// the consent + state transition run on the scope tx (rolled back together on failure). NO secret value ever
-// reaches an audit line (there is none in this flow).
+// their registered number). Audit-or-throw via `audit.withCompensatingAudit` (ADR-0030): the audit line is
+// written FIRST (servicePool, its own tx), then the consent + state transition run on the scope tx (rolled
+// back together on failure, with a compensating `*_rolled_back` line settling the chain). NO secret value
+// ever reaches an audit line (there is none in this flow).
 
 import { audit, channelConfig, consent, ids, waOptIn } from '@twt/domain';
 import type {
@@ -54,62 +55,33 @@ export function createWaOptInHandlers(deps: AppDeps) {
     return { memberId, pariwarId };
   }
 
-  /** Write one opt-in-transition audit line (servicePool, own tx). Returns the auditId + the facts needed to
-   *  write a P1 compensating `*_rolled_back` line if a later step in the same request rolls back. */
-  async function writeOptInAudit(
-    request: FastifyRequest,
-    args: {
-      pariwarId: string;
-      memberId: string;
-      action: string;
-      originatingChannel: waOptIn.WaOptInOriginatingChannel;
-      beforeState: string;
-      afterState: string;
-      /** The phrase this transition matched/consumed, when already known (AC4 matched_member_identity). */
-      verificationPhrase?: string | null;
-      responseStatus?: number;
-    },
-  ): Promise<{ auditId: string; requestPayloadHash: string; resourceLocator: string }> {
-    const resourceLocator = `pariwar/${args.pariwarId}/member/${args.memberId}/wa-opt-in`;
-    const requestPayloadHash = waOptIn.waOptInAuditPayloadHash({
-      originatingChannel: args.originatingChannel,
-      memberId: args.memberId,
-      verificationPhrase: args.verificationPhrase ?? null,
-      beforeState: args.beforeState,
-      afterState: args.afterState,
-    });
-    const row = await audit.writeAuditEntry(deps.servicePool, {
+  /** Build the audit-intent args for a member-initiated opt-in transition (ADR-0030). */
+  function optInAuditIntent(args: {
+    pariwarId: string;
+    memberId: string;
+    action: string;
+    originatingChannel: waOptIn.WaOptInOriginatingChannel;
+    beforeState: string;
+    afterState: string;
+    /** The phrase this transition matched/consumed, when already known (AC4 matched_member_identity). */
+    verificationPhrase?: string | null;
+    traceId: string | null;
+  }): audit.AuditIntentArgs {
+    return {
       pariwarId: args.pariwarId,
       actorId: args.memberId,
       actorRole: null,
       action: args.action,
-      resourceLocator,
-      requestPayloadHash,
-      responseStatus: args.responseStatus ?? 200,
-      traceId: request.requestContext.traceId ?? null,
-    });
-    return { auditId: row.auditId, requestPayloadHash, resourceLocator };
-  }
-
-  /** P1 — best-effort compensating `*_rolled_back` audit line (status 500). Never masks the original error. */
-  async function writeCompensatingAudit(
-    request: FastifyRequest,
-    args: { pariwarId: string; memberId: string; action: string; requestPayloadHash: string; resourceLocator: string },
-  ): Promise<void> {
-    try {
-      await audit.writeAuditEntry(deps.servicePool, {
-        pariwarId: args.pariwarId,
-        actorId: args.memberId,
-        actorRole: null,
-        action: args.action,
-        resourceLocator: args.resourceLocator,
-        requestPayloadHash: args.requestPayloadHash,
-        responseStatus: 500,
-        traceId: request.requestContext.traceId ?? null,
-      });
-    } catch {
-      // swallow — the original error is the one the caller must see.
-    }
+      resourceLocator: `pariwar/${args.pariwarId}/member/${args.memberId}/wa-opt-in`,
+      requestPayloadHash: waOptIn.waOptInAuditPayloadHash({
+        originatingChannel: args.originatingChannel,
+        memberId: args.memberId,
+        verificationPhrase: args.verificationPhrase ?? null,
+        beforeState: args.beforeState,
+        afterState: args.afterState,
+      }),
+      traceId: args.traceId,
+    };
   }
 
   return {
@@ -121,9 +93,6 @@ export function createWaOptInHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
-      // P1 (compensating audit): armed once the 'requested' audit line is durably committed; consumed by the
-      // catch below to settle the chain if the PENDING insert then fails (e.g. a concurrent-mint race).
-      let compensation: { requestPayloadHash: string; resourceLocator: string } | null = null;
       try {
         const config = await channelConfig.getWaConfig(scopeTx.tx, pariwarId);
         if (!config || !config.enabled || !config.displayPhoneNumber) {
@@ -132,6 +101,9 @@ export function createWaOptInHandlers(deps: AppDeps) {
             'wa_opt_in.channel_unavailable',
           );
         }
+        // Captured as a local so the null-narrowing above survives into the `mutate` closure below (TS does
+        // not carry a narrowed object-property type across a function boundary).
+        const displayPhoneNumber = config.displayPhoneNumber;
 
         const existing = await waOptIn.getOptInForMember(scopeTx.tx, {
           pariwarId,
@@ -145,8 +117,8 @@ export function createWaOptInHandlers(deps: AppDeps) {
           ok = true;
           return {
             state: 'PENDING',
-            displayPhoneNumber: config.displayPhoneNumber,
-            deepLink: buildSendHelloDeepLink(config.displayPhoneNumber, existing.verificationPhrase),
+            displayPhoneNumber,
+            deepLink: buildSendHelloDeepLink(displayPhoneNumber, existing.verificationPhrase),
             verificationPhrase: existing.verificationPhrase,
           };
         }
@@ -161,41 +133,35 @@ export function createWaOptInHandlers(deps: AppDeps) {
           throw new ConflictError('No mobile number is on file for this member', 'wa_opt_in.no_mobile');
         }
 
-        // Audit FIRST (member_app; before 'none', after PENDING) — committed on its own tx before the mint.
-        // No verificationPhrase yet (the phrase doesn't exist until createPendingOptIn mints/regenerates it).
-        const audited = await writeOptInAudit(request, {
-          pariwarId: pariwarIdStr,
-          memberId,
-          action: 'member.wa_opt_in_requested',
-          originatingChannel: 'member_app',
-          beforeState: 'none',
-          afterState: 'PENDING',
-        });
-        compensation = { requestPayloadHash: audited.requestPayloadHash, resourceLocator: audited.resourceLocator };
-
-        const pending = await waOptIn.createPendingOptIn(scopeTx.tx, {
-          pariwarId,
-          memberId: memberIdBranded,
-          mobileBlindIndex,
-        });
-        ok = true;
-        return {
-          state: 'PENDING',
-          displayPhoneNumber: config.displayPhoneNumber,
-          deepLink: buildSendHelloDeepLink(config.displayPhoneNumber, pending.verificationPhrase),
-          verificationPhrase: pending.verificationPhrase,
-        };
-      } catch (err) {
-        if (compensation !== null) {
-          await writeCompensatingAudit(request, {
+        // Audit-or-throw (ADR-0030): the intent line is written FIRST (member_app; before 'none', after
+        // PENDING), committed on its own tx before the mint; on failure (e.g. a concurrent-mint race) a
+        // compensating rolled_back line settles the chain. No verificationPhrase yet (the phrase doesn't
+        // exist until createPendingOptIn mints/regenerates it).
+        return await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: optInAuditIntent({
             pariwarId: pariwarIdStr,
             memberId,
-            action: 'member.wa_opt_in_requested_rolled_back',
-            requestPayloadHash: compensation.requestPayloadHash,
-            resourceLocator: compensation.resourceLocator,
-          });
-        }
-        throw err;
+            action: 'member.wa_opt_in_requested',
+            originatingChannel: 'member_app',
+            beforeState: 'none',
+            afterState: 'PENDING',
+            traceId: request.requestContext.traceId ?? null,
+          }),
+          mutate: async () => {
+            const pending = await waOptIn.createPendingOptIn(scopeTx.tx, {
+              pariwarId,
+              memberId: memberIdBranded,
+              mobileBlindIndex,
+            });
+            ok = true;
+            return {
+              state: 'PENDING',
+              displayPhoneNumber,
+              deepLink: buildSendHelloDeepLink(displayPhoneNumber, pending.verificationPhrase),
+              verificationPhrase: pending.verificationPhrase,
+            };
+          },
+        });
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
@@ -242,8 +208,6 @@ export function createWaOptInHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
-      // P1 (compensating audit) — see mint() above for the rationale.
-      let compensation: { requestPayloadHash: string; resourceLocator: string } | null = null;
       try {
         const existing = await waOptIn.getOptInForMember(scopeTx.tx, {
           pariwarId,
@@ -253,45 +217,37 @@ export function createWaOptInHandlers(deps: AppDeps) {
           throw new ConflictError('You have no active WhatsApp opt-in to revoke', 'wa_opt_in.not_active');
         }
 
-        // Audit FIRST (member_app; before ACTIVE, after REVOKED).
-        const audited = await writeOptInAudit(request, {
-          pariwarId: pariwarIdStr,
-          memberId,
-          action: 'member.wa_opt_in_revoked',
-          originatingChannel: 'member_app',
-          beforeState: 'ACTIVE',
-          afterState: 'REVOKED',
-          verificationPhrase: existing.verificationPhrase,
-        });
-        compensation = { requestPayloadHash: audited.requestPayloadHash, resourceLocator: audited.resourceLocator };
-
-        // Consent revoke + state revoke in ONE scope tx (rolled back together on failure).
-        if (existing.consentId) {
-          await consent.revokeConsent(scopeTx.tx, {
-            pariwarId,
-            consentId: existing.consentId,
-            reason: 'member revoked WhatsApp opt-in from app settings',
-            revokedAuditId: audited.auditId,
-          });
-        }
-        await waOptIn.revokeOptIn(scopeTx.tx, {
-          pariwarId,
-          optInId: existing.optInId,
-          toState: 'REVOKED',
-        });
-        ok = true;
-        return { state: 'REVOKED' };
-      } catch (err) {
-        if (compensation !== null) {
-          await writeCompensatingAudit(request, {
+        // Audit-or-throw (ADR-0030): intent FIRST (member_app; before ACTIVE, after REVOKED), then consent
+        // revoke + state revoke in ONE scope tx (rolled back together on failure, compensated on the ledger).
+        return await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: optInAuditIntent({
             pariwarId: pariwarIdStr,
             memberId,
-            action: 'member.wa_opt_in_revoked_rolled_back',
-            requestPayloadHash: compensation.requestPayloadHash,
-            resourceLocator: compensation.resourceLocator,
-          });
-        }
-        throw err;
+            action: 'member.wa_opt_in_revoked',
+            originatingChannel: 'member_app',
+            beforeState: 'ACTIVE',
+            afterState: 'REVOKED',
+            verificationPhrase: existing.verificationPhrase,
+            traceId: request.requestContext.traceId ?? null,
+          }),
+          mutate: async ({ auditId }) => {
+            if (existing.consentId) {
+              await consent.revokeConsent(scopeTx.tx, {
+                pariwarId,
+                consentId: existing.consentId,
+                reason: 'member revoked WhatsApp opt-in from app settings',
+                revokedAuditId: auditId,
+              });
+            }
+            await waOptIn.revokeOptIn(scopeTx.tx, {
+              pariwarId,
+              optInId: existing.optInId,
+              toState: 'REVOKED',
+            });
+            ok = true;
+            return { state: 'REVOKED' };
+          },
+        });
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
@@ -321,61 +277,41 @@ export function createWaOptInHandlers(deps: AppDeps) {
         throw new ConflictError('This member has no active WhatsApp opt-in to revoke', 'wa_opt_in.not_active');
       }
 
-      const traceId = request.requestContext.traceId ?? null;
-      const resourceLocator = `pariwar/${pariwarIdStr}/member/${memberId}/wa-opt-in`;
-      const requestPayloadHash = waOptIn.waOptInAuditPayloadHash({
-        originatingChannel: 'admin_action',
-        memberId,
-        verificationPhrase: existing.verificationPhrase,
-        beforeState: 'ACTIVE',
-        afterState: 'REVOKED',
-      });
-
-      // Audit FIRST (admin_action; actor = the admin user; before ACTIVE, after REVOKED).
-      const row = await audit.writeAuditEntry(deps.servicePool, {
-        pariwarId: pariwarIdStr,
-        actorId: adminId,
-        actorRole: null,
-        action: 'member.wa_opt_in_revoked',
-        resourceLocator,
-        requestPayloadHash,
-        responseStatus: 200,
-        traceId,
-      });
-
-      try {
-        if (existing.consentId) {
-          await consent.revokeConsent(scopeTx.tx, {
+      // Audit-or-throw (ADR-0030): intent FIRST (admin_action; actor = the admin user; before ACTIVE, after
+      // REVOKED), then consent revoke + state revoke (compensated on failure).
+      return audit.withCompensatingAudit(deps.servicePool, {
+        auditIntent: {
+          pariwarId: pariwarIdStr,
+          actorId: adminId,
+          actorRole: null,
+          action: 'member.wa_opt_in_revoked',
+          resourceLocator: `pariwar/${pariwarIdStr}/member/${memberId}/wa-opt-in`,
+          requestPayloadHash: waOptIn.waOptInAuditPayloadHash({
+            originatingChannel: 'admin_action',
+            memberId,
+            verificationPhrase: existing.verificationPhrase,
+            beforeState: 'ACTIVE',
+            afterState: 'REVOKED',
+          }),
+          traceId: request.requestContext.traceId ?? null,
+        },
+        mutate: async ({ auditId }) => {
+          if (existing.consentId) {
+            await consent.revokeConsent(scopeTx.tx, {
+              pariwarId,
+              consentId: existing.consentId,
+              reason: 'trustee force opt-out (admin action)',
+              revokedAuditId: auditId,
+            });
+          }
+          await waOptIn.revokeOptIn(scopeTx.tx, {
             pariwarId,
-            consentId: existing.consentId,
-            reason: 'trustee force opt-out (admin action)',
-            revokedAuditId: row.auditId,
+            optInId: existing.optInId,
+            toState: 'REVOKED',
           });
-        }
-        await waOptIn.revokeOptIn(scopeTx.tx, {
-          pariwarId,
-          optInId: existing.optInId,
-          toState: 'REVOKED',
-        });
-      } catch (err) {
-        // P1 (compensating audit) — see mint() above for the rationale.
-        try {
-          await audit.writeAuditEntry(deps.servicePool, {
-            pariwarId: pariwarIdStr,
-            actorId: adminId,
-            actorRole: null,
-            action: 'member.wa_opt_in_revoked_rolled_back',
-            resourceLocator,
-            requestPayloadHash,
-            responseStatus: 500,
-            traceId,
-          });
-        } catch {
-          // swallow — the original error is the one the caller must see.
-        }
-        throw err;
-      }
-      return { state: 'REVOKED' };
+          return { state: 'REVOKED' };
+        },
+      });
     },
   };
 }

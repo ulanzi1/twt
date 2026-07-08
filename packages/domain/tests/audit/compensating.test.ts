@@ -13,7 +13,7 @@ vi.mock('../../src/audit/write.js', () => ({
   writeAuditEntry,
 }));
 
-const { withCompensatingAudit } = await import('../../src/audit/compensating.js');
+const { withCompensatingAudit, writeRolledBackAudit } = await import('../../src/audit/compensating.js');
 
 const INTENT = {
   pariwarId: '11111111-1111-1111-1111-111111111111',
@@ -32,7 +32,7 @@ describe('withCompensatingAudit', () => {
     writeAuditEntry.mockReset();
   });
 
-  it('writes the intent audit line, then runs mutate, and returns its result on success', async () => {
+  it('writes the intent audit line, then runs mutate with its auditId, and returns its result on success', async () => {
     writeAuditEntry.mockResolvedValue({ auditId: 'row-1' });
     const mutate = vi.fn().mockResolvedValue('mutate-result');
 
@@ -41,6 +41,8 @@ describe('withCompensatingAudit', () => {
     expect(result).toBe('mutate-result');
     expect(writeAuditEntry).toHaveBeenCalledTimes(1);
     expect(writeAuditEntry).toHaveBeenCalledWith(FAKE_POOL, { ...INTENT, responseStatus: 200 });
+    // mutate receives the intent audit's id (threaded into e.g. consent.recordConsent({ auditId })).
+    expect(mutate).toHaveBeenCalledWith({ auditId: 'row-1' });
     // mutate must run AFTER the intent audit commits — assert ordering via call sequencing.
     const auditOrder = writeAuditEntry.mock.invocationCallOrder[0];
     const mutateOrder = mutate.mock.invocationCallOrder[0];
@@ -85,5 +87,49 @@ describe('withCompensatingAudit', () => {
     expect(mutate).not.toHaveBeenCalled();
     // No compensating write either — nothing was armed (the intent line never committed).
     expect(writeAuditEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports the "recoverable" shape: mutate catches its own specific error, settles the chain via ' +
+    'writeRolledBackAudit, and returns a normal success — withCompensatingAudit must not double-compensate ' +
+    'or rethrow (the telegram-opt-in.request() concurrent double-tap pattern)', async () => {
+    writeAuditEntry.mockResolvedValueOnce({ auditId: 'row-1' }).mockResolvedValueOnce({ auditId: 'row-2' });
+    const mutate = vi.fn().mockImplementation(async () => {
+      await writeRolledBackAudit(FAKE_POOL, INTENT);
+      return 'recovered-result';
+    });
+
+    const result = await withCompensatingAudit(FAKE_POOL, { auditIntent: INTENT, mutate });
+
+    expect(result).toBe('recovered-result');
+    expect(writeAuditEntry).toHaveBeenCalledTimes(2);
+    expect(writeAuditEntry).toHaveBeenNthCalledWith(2, FAKE_POOL, {
+      ...INTENT,
+      action: 'pariwar.wa_config_update_rolled_back',
+      responseStatus: 500,
+    });
+  });
+});
+
+describe('writeRolledBackAudit', () => {
+  beforeEach(() => {
+    writeAuditEntry.mockReset();
+  });
+
+  it('writes a `${action}_rolled_back` line at status 500', async () => {
+    writeAuditEntry.mockResolvedValue({ auditId: 'row-1' });
+
+    await writeRolledBackAudit(FAKE_POOL, INTENT);
+
+    expect(writeAuditEntry).toHaveBeenCalledWith(FAKE_POOL, {
+      ...INTENT,
+      action: 'pariwar.wa_config_update_rolled_back',
+      responseStatus: 500,
+    });
+  });
+
+  it('swallows its own failure silently (never throws)', async () => {
+    writeAuditEntry.mockRejectedValue(new Error('boom'));
+
+    await expect(writeRolledBackAudit(FAKE_POOL, INTENT)).resolves.toBeUndefined();
   });
 });

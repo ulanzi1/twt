@@ -13,7 +13,7 @@ export {
   AUDIT_CHAIN_LOCK_KEY,
   type AuditEntryInput,
 } from './write.js';
-export { withCompensatingAudit, type AuditIntentArgs } from './compensating.js';
+export { withCompensatingAudit, writeRolledBackAudit, type AuditIntentArgs } from './compensating.js';
 export {
   GENESIS_PREV_HASH,
   auditRowDigestInput,

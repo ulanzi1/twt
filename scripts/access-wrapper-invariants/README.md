@@ -1,7 +1,7 @@
 # `access-wrapper-invariants` gate
 
 A precision CI gate mechanizing the **cheapest, most-corrosive slices** of the I-3
-"access wrapper is the new TOCTOU" family. **One gate, two invariants**, each scanned
+"access wrapper is the new TOCTOU" family. **One gate, three invariants**, each scanned
 over the code its commitment is about:
 
 1. **Validity caller/internal fail-closed (AI-4-3)** — every validity **access entrypoint**
@@ -11,8 +11,13 @@ over the code its commitment is about:
    the Epic-5 channel access surface, a compare of two runtime values must go through an
    approved constant-time comparator, never `===`/`!==`/`.includes`/`.startsWith`/
    `.localeCompare` (the Story 5.4 `hub.verify_token` timing side-channel).
+3. **Compensating-audit mechanization (AI-5-3 / ADR-0030)** — on the SAME Epic-5 access
+   surface, a direct `audit.writeAuditEntry` call is non-conformant unless the file is a
+   named AI-4-3(d) isolated-best-effort exemption; `packages/domain/src/audit/compensating.ts`
+   (`withCompensatingAudit` / `writeRolledBackAudit`) is the sole sanctioned caller otherwise
+   (the H-4 audit-write-ordering gap from the Epic-5 retro).
 
-- **lib.ts** — pure TS-AST scanners (`scanAccessWrapperInvariant`, `scanSecretCompareInvariant`). DB-free, unit-tested in `lib.test.ts`.
+- **lib.ts** — pure TS-AST scanners (`scanAccessWrapperInvariant`, `scanSecretCompareInvariant`, `scanCompensatingAuditInvariant`). DB-free, unit-tested in `lib.test.ts`.
 - **check.ts** — entrypoint: runs each invariant over its own root set, exits 1 naming file + line.
 
 ```
@@ -81,11 +86,38 @@ Scanned over the Epic-5 access surface: `packages/channels/src` + the `apps/api`
 entrypoints (`channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`,
 `degraded-mode`, `device-token`).
 
+## Invariant 3 — compensating-audit mechanization (AI-5-3 / ADR-0030)
+
+A direct call to `audit.writeAuditEntry` anywhere in the Epic-5 access surface (the same
+scan roots as Invariant 2) is flagged UNLESS the enclosing **file** is on the named
+exemption list in `lib.ts` (`COMPENSATING_AUDIT_EXEMPT_FILES`). The invariant is
+deliberately a **positive** one — "reaches the canonical helper" — not a heuristic that
+tries to detect a mutation call adjacent to an audit write: an open-ended mutation-name
+lexicon would drift the moment a new domain accessor is named differently, and would have
+missed real call sites in this very codebase (`channel-config`/`degraded-mode` never
+mention a `scopeTx` identifier in the handler body at all — they read `request.scopeTx`
+through a same-file `scopeCtx()` indirection).
+
+`packages/domain/src/audit/compensating.ts` exports the two sanctioned callers:
+- `withCompensatingAudit` — write the intent line, run the mutation, compensate + rethrow
+  on failure.
+- `writeRolledBackAudit` — fire just the compensating line, for a `mutate` that catches a
+  specific recoverable error itself and wants to settle the chain while still returning a
+  normal success (the `telegram-opt-in.request()` concurrent-double-tap pattern).
+
+**File exemptions** (not function-name exemptions — an anonymous-arrow return shape like
+`channels/audit.ts`'s `createAuditPort` has no stable function name to key on) cover the
+pre-existing, reviewed AI-4-3(d) isolated-best-effort writes, where no rollback-capable
+transaction is ever in scope: `packages/channels/src/audit.ts`,
+`apps/api/src/modules/device-token/push-invalidation.ts`,
+`apps/api/src/modules/device-token/device-token.handlers.ts`. Adding a file here is a
+deliberate, reviewed scope-widening edit, not something the gate infers.
+
 ## Scope
 
-The gate covers the **caller/internal fail-closed** and **constant-time secret-compare**
-slices only. The rest of the pre-review checklist — independent caller-authorization,
-HMAC/blind-index audit hashes, isolated best-effort writes, and permission-key
+The gate covers the **caller/internal fail-closed**, **constant-time secret-compare**, and
+**compensating-audit mechanization** slices only. The rest of the pre-review checklist —
+independent caller-authorization, HMAC/blind-index audit hashes, and permission-key
 scope-dimension match — are judgment calls a heuristic static lint would false-positive on,
 and are enforced by **convention + reviewer checklist** in
 [`docs/access-wrapper-invariants.md`](../../docs/access-wrapper-invariants.md).

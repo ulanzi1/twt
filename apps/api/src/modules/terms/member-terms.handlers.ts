@@ -7,11 +7,12 @@
 // from `medical.handlers.ts` submit.
 //
 // ── Audit-or-throw chain (R4 — copy 3.5 exactly) ──────────────────────────────────────────────
-// resolve the effective version (server-side — the client tcVersionId is advisory) → writeAuditEntry
-// (servicePool, NON-PII hash) FIRST → recordConsent({ auditId }) inside the member scope-tx → set
-// ok=true after success → emitAuthAudit fire-and-forget LAST → a compensating
-// `member_terms.accept_rolled_back` (5xx) audit line on a post-audit scope-tx rollback so the chain
-// reconciles instead of over-counting (3.5's P1 patch — MANDATORY).
+// resolve the effective version (server-side — the client tcVersionId is advisory) →
+// audit.withCompensatingAudit (ADR-0030: intent line FIRST, servicePool, NON-PII hash) →
+// recordConsent({ auditId }) inside the member scope-tx → set ok=true after success → emitAuthAudit
+// fire-and-forget LAST → a compensating `member_terms.accept_rolled_back` (5xx) audit line on a
+// post-audit scope-tx rollback so the chain reconciles instead of over-counting (3.5's P1 patch —
+// MANDATORY, now mechanized by the shared helper).
 //
 // ── PII discipline ────────────────────────────────────────────────────────────────────────────
 // tc_acceptance is a NON-PII consent (the T&C body is public legal text). The audit hash covers
@@ -101,9 +102,6 @@ export function createMemberTermsHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
-      // P1 (compensating audit): armed once the audit line is durably committed; consumed by the
-      // catch below to settle the chain if a later scope-tx step rolls back.
-      let compensation: { requestPayloadHash: string; resourceLocator: string } | null = null;
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
@@ -134,74 +132,49 @@ export function createMemberTermsHandlers(deps: AppDeps) {
         const tcVersionId = effective.tcVersionId;
         const locale = body.locale;
 
-        // 3. Audit-or-throw: write the audit line FIRST (servicePool, its own tx) — the hash is over
-        //    NON-PII only ({ tc_version_id, locale }) — then thread its id into recordConsent.
-        const requestPayloadHash = createHash('sha256')
-          .update(canonicalJsonStringify({ tc_version_id: tcVersionId, locale }), 'utf8')
-          .digest('hex');
-        const resourceLocator = `member:${memberIdStr}:tc`;
-        const auditRow = await audit.writeAuditEntry(deps.servicePool, {
-          pariwarId: pariwarIdStr,
-          actorId: memberIdStr,
-          actorRole: null,
-          action: 'member_terms.accepted',
-          resourceLocator,
-          requestPayloadHash,
-          responseStatus: 200,
-          traceId,
-        });
-        const auditId = auditRow.auditId;
-        // The audit line is durably committed on servicePool and SURVIVES a scope-tx rollback — arm
-        // the compensating entry (P1).
-        compensation = { requestPayloadHash, resourceLocator };
-
-        // 4. Record the consent (consent_artifact_ref = the resolved tcVersionId — the legal basis).
-        const consentRow = await consent.recordConsent(scopeTx.tx, {
-          pariwarId,
-          subjectId: memberIdStr,
-          consentType: 'tc_acceptance',
-          consentArtifactRef: tcVersionId,
-          grantedViaActor: 'member_self',
-          consentPayload: { tcVersionId, locale },
-          auditId,
-        });
-
-        const result: MemberTermsAcceptResponse = {
-          accepted: true,
-          consentId: consentRow.consentId,
-          tcVersionId,
-        };
-        // 5. Set ok=true only after success; fire-and-forget audit LAST (NON-PII context).
-        ok = true;
-        emitAuthAudit(deps, request, 'member_terms.accepted', {
-          actorId: memberIdStr,
-          pariwarId: pariwarIdStr,
-          context: { tc_version_id: tcVersionId },
-        });
-        return result;
-      } catch (err) {
-        // P1 — Compensating audit on rollback. The step-3 `member_terms.accepted` line was committed
-        // on servicePool (its own tx) and SURVIVES the scope-tx rollback in `finally`. Without this,
-        // a throw in step 4 would leave the chain asserting a 200 acceptance with no consent row —
-        // an orphan that breaks the audit-chain invariant Epic 6 inherits. Settle it with a 5xx line.
-        // Best-effort: a failed compensation must NEVER mask the original error.
-        if (compensation !== null) {
-          try {
-            await audit.writeAuditEntry(deps.servicePool, {
-              pariwarId: pariwarIdStr,
-              actorId: memberIdStr,
-              actorRole: null,
-              action: 'member_terms.accept_rolled_back',
-              resourceLocator: compensation.resourceLocator,
-              requestPayloadHash: compensation.requestPayloadHash,
-              responseStatus: 500,
-              traceId,
+        // 3. Audit-or-throw (ADR-0030): the intent line is written FIRST (servicePool, its own tx) —
+        //    the hash is over NON-PII only ({ tc_version_id, locale }) — then its id threads into
+        //    recordConsent. On a later step's failure, withCompensatingAudit settles the chain with a
+        //    5xx `member_terms.accept_rolled_back` line (the step-3 line survives the scope-tx rollback).
+        return await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: {
+            pariwarId: pariwarIdStr,
+            actorId: memberIdStr,
+            actorRole: null,
+            action: 'member_terms.accepted',
+            resourceLocator: `member:${memberIdStr}:tc`,
+            requestPayloadHash: createHash('sha256')
+              .update(canonicalJsonStringify({ tc_version_id: tcVersionId, locale }), 'utf8')
+              .digest('hex'),
+            traceId,
+          },
+          mutate: async ({ auditId }) => {
+            // 4. Record the consent (consent_artifact_ref = the resolved tcVersionId — the legal basis).
+            const consentRow = await consent.recordConsent(scopeTx.tx, {
+              pariwarId,
+              subjectId: memberIdStr,
+              consentType: 'tc_acceptance',
+              consentArtifactRef: tcVersionId,
+              grantedViaActor: 'member_self',
+              consentPayload: { tcVersionId, locale },
+              auditId,
             });
-          } catch {
-            // swallow — the original error is the one the caller must see.
-          }
-        }
-        throw err;
+
+            const result: MemberTermsAcceptResponse = {
+              accepted: true,
+              consentId: consentRow.consentId,
+              tcVersionId,
+            };
+            // 5. Set ok=true only after success; fire-and-forget audit LAST (NON-PII context).
+            ok = true;
+            emitAuthAudit(deps, request, 'member_terms.accepted', {
+              actorId: memberIdStr,
+              pariwarId: pariwarIdStr,
+              context: { tc_version_id: tcVersionId },
+            });
+            return result;
+          },
+        });
       } finally {
         await closeScopeTx(scopeTx, ok);
       }

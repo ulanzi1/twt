@@ -500,11 +500,11 @@ jobs:
       - run: pnpm kyc-provider:check
 
   access-wrapper-invariants:
-    name: access-wrapper-invariants (validity fail-closed + channel constant-time secret compare)
+    name: access-wrapper-invariants (validity fail-closed + channel constant-time secret compare + compensating-audit mechanization)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: install
-    # The I-3 "access wrapper is the new TOCTOU" family — ONE gate, TWO mechanized
+    # The I-3 "access wrapper is the new TOCTOU" family — ONE gate, THREE mechanized
     # invariants, each scanned over the code its commitment is about:
     #  (1) AI-4-3 — every validity ACCESS ENTRYPOINT (exported async fn returning
     #      Promise<…MemberValidityPayload>) in packages/validity-service/src must declare an
@@ -516,8 +516,13 @@ jobs:
     #      of two runtime values must use an approved constant-time comparator, never
     #      ===/!==/.includes/.startsWith/.localeCompare (the Story 5.4 hub.verify_token timing
     #      side-channel). Closes the AI-4-3 → AI-5-1 scope split (Epic-5 retro I-1).
-    # The rest of the checklist (independent caller-auth, HMAC audit hashes, isolated
-    # best-effort writes, permission-key scope match) stays reviewer-checklist convention.
+    #  (3) AI-5-3 (ADR-0030) — on the SAME Epic-5 access surface, a direct
+    #      audit.writeAuditEntry call is non-conformant unless the file is a named AI-4-3(d)
+    #      isolated-best-effort exemption; packages/domain/src/audit/compensating.ts
+    #      (withCompensatingAudit / writeRolledBackAudit) is the sole sanctioned caller
+    #      otherwise (the H-4 audit-write-ordering gap from the Epic-5 retro).
+    # The rest of the checklist (independent caller-auth, HMAC audit hashes, permission-key
+    # scope match) stays reviewer-checklist convention.
     # Static TS-AST scan, no DB / network. See scripts/access-wrapper-invariants/ +
     # docs/access-wrapper-invariants.md. INVARIANT SCAN → NO fetch-depth: 0 (mirror
     # member-state-invariant).

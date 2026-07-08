@@ -4,6 +4,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of ai-5-2-live-dispatch-integration-test (2026-07-08)
+
+- **Unbounded accumulation in the shared global `audit_log_entries` table with no cleanup across CI runs.** All three new tests write real rows via `createAuditPort`/`writeAuditEntry`, which own-commits into the global hash-chain — nothing in this file (or its precedent, `dispatch-audit.spec.ts`) truncates or deletes rows after a run. Membership-by-`resourceLocator` assertions stay correct regardless of accumulation, but the table grows unbounded across every CI run indefinitely. Pre-existing pattern inherited from the established live-DB test convention ([[project_live_db_test_gotchas]]), not introduced by this diff. **Re-trigger:** if live-DB test-table growth is ever observed causing CI slowdown, or when a general test-data-retention/cleanup convention is scheduled for the live-DB integration suite.
+
+---
+
 ## Deferred from: code review of story-5-6-sms-transactional-fallback-3-retry-exp-backoff (2026-07-07)
 
 - **`resolveSmsProviderDeps` doesn't trim the resolved `dltTemplateId` before use.** It blank-checks the resolved value via `.trim() === ''` but then stores/passes the untrimmed string on to the gateway request body. Identical pattern already present in the mirrored `resolveWhatsappProviderDeps`'s `accessTokenSecretName` handling — not a regression introduced by this story. **Re-trigger:** if a whitespace-polluted config value is ever observed causing a DLT template mismatch in production.

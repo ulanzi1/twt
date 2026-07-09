@@ -14,6 +14,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { useEffect } from 'react';
 
 import { useSession } from '../api/hooks.js';
+import { ConvergenceDecisionStripContainer } from '../modules/helpline-claims/ConvergenceDecisionStrip.js';
 import { HelplineClaimPage } from '../modules/helpline-claims/HelplineClaimPage.js';
 
 export interface HelplineClaimGateViewProps {
@@ -45,7 +46,11 @@ export function HelplineClaimRoute(): ReactElement {
 
   return (
     <HelplineClaimGateView status={status}>
-      <HelplineClaimPage pariwarId={pariwarId} />
+      <div className="flex flex-col gap-6">
+        <HelplineClaimPage pariwarId={pariwarId} />
+        {/* Story 6.4 — the ICP pending cross-channel resolution surface, inside the console. */}
+        <ConvergenceDecisionStripContainer pariwarId={pariwarId} />
+      </div>
     </HelplineClaimGateView>
   );
 }

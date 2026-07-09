@@ -183,18 +183,24 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
 
     const res = await client.inject({ method: 'POST', url: intakeUrl(pariwarId), payload: validBody(deceasedMemberId) });
     expect(res.statusCode).toBe(200);
-    const body = res.json<{ claimCaseId: string; state: string; created: boolean }>();
-    expect(body.state).toBe('intake_pending');
+    const body = res.json<{ claimCaseId: string; state: string; created: boolean; convergencePending: boolean }>();
+    // Story 6.4: the lone helpline intake AUTO-CONVERGES → intake_converged (was intake_pending).
+    expect(body.state).toBe('intake_converged');
     expect(body.created).toBe(true);
+    expect(body.convergencePending).toBe(false);
     const claimCaseId = body.claimCaseId;
 
-    // Exactly ONE claim.intake_initiated, carrying the helpline channel/actor + the pinned seam, and
-    // the events_log.actor_id is the OPERATOR's admin actor id (claim-scoped operator attribution).
+    // The lone-intake stream is [intake_initiated, intake_converged]. The freeze fires on the FIRST
+    // (carrying the helpline channel/actor + the pinned seam); events_log.actor_id is the OPERATOR's
+    // admin actor id (claim-scoped operator attribution).
     const events = await td.pool.query<{ event_type: string; payload: Json; actor_id: string }>(
       `SELECT event_type, payload, actor_id FROM events_log WHERE stream_id = $1 ORDER BY event_version`,
       [claimCaseId],
     );
-    expect(events.rows.map((r) => r.event_type)).toEqual(['claim.intake_initiated']);
+    expect(events.rows.map((r) => r.event_type)).toEqual([
+      'claim.intake_initiated',
+      'claim.intake_converged',
+    ]);
     expect(events.rows[0]?.actor_id).toBe(userId);
     expect(events.rows[0]?.payload).toMatchObject({
       deceased_member_id: deceasedMemberId,
@@ -215,7 +221,7 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
       [claimCaseId],
     );
     expect(claimRow.rows[0]).toMatchObject({
-      current_state: 'intake_pending',
+      current_state: 'intake_converged',
       deceased_member_id: deceasedMemberId,
       claimant_actor_id: null,
       created_by_actor: userId,
@@ -241,7 +247,7 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
     expect(initiated.at(-1)?.actorId).toBe(userId);
   });
 
-  it('AC3 convergence: a prior member_app claim → helpline intake returns the SAME claim, created:false, no double freeze', async () => {
+  it('AC3 cross-channel (Story 6.4): a prior member_app claim → helpline intake returns the SAME claim, convergencePending:true, records a pending attempt, no double freeze', async () => {
     const pariwarId = randomUUID();
     const { client, userId } = await authenticate();
     await grantRole(userId, pariwarId, 'helpline_operator');
@@ -251,17 +257,32 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
 
     const res = await client.inject({ method: 'POST', url: intakeUrl(pariwarId), payload: validBody(deceasedMemberId) });
     expect(res.statusCode).toBe(200);
-    const body = res.json<{ claimCaseId: string; created: boolean }>();
+    const body = res.json<{ claimCaseId: string; created: boolean; convergencePending: boolean }>();
+    // The second filer is NOT blocked — the existing canonical claim is returned unchanged.
     expect(body.claimCaseId).toBe(priorClaimId);
     expect(body.created).toBe(false);
+    // Story 6.4: a genuine cross-channel second intake is PENDING resolution (NOT auto-merged).
+    expect(body.convergencePending).toBe(true);
 
-    // No second claim.intake_initiated event on the stream.
+    // No second claim.intake_initiated event on the canonical stream (no mint, no second freeze).
     const n = await td.pool.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1 AND event_type = 'claim.intake_initiated'`,
       [priorClaimId],
     );
     expect((n.rows[0] as { n: number }).n).toBe(1);
-    expect(td.auditSink.ofType('helpline_claim.intake_idempotent').length).toBeGreaterThanOrEqual(1);
+
+    // A durable `pending` intake_attempts row for the helpline channel now awaits operator resolution.
+    const attempts = await td.pool.query<{ attempt_status: string; intake_channel: string; superseded_by_claim_case_id: string | null }>(
+      `SELECT attempt_status, intake_channel, superseded_by_claim_case_id FROM intake_attempts WHERE deceased_member_id = $1`,
+      [deceasedMemberId],
+    );
+    expect(attempts.rows).toContainEqual(
+      expect.objectContaining({ attempt_status: 'pending', intake_channel: 'helpline', superseded_by_claim_case_id: null }),
+    );
+
+    // The distinct convergence_pending audit line (NOT intake_idempotent — a reviewable event).
+    expect(td.auditSink.ofType('helpline_claim.convergence_pending').length).toBeGreaterThanOrEqual(1);
+    expect(td.auditSink.ofType('helpline_claim.intake_idempotent').length).toBe(0);
   });
 
   it('AC1 RBAC: an admin WITHOUT claim.file → 403 (fail-closed) + no claim, no freeze', async () => {
@@ -327,5 +348,249 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
     const anon = makeClient(app);
     const res = await anon.inject({ method: 'POST', url: intakeUrl(pariwarId), payload: validBody(randomUUID()) });
     expect(res.statusCode).toBe(401);
+  });
+
+  // ── Story 6.4 — the ICP convergence-resolution endpoints (merge + override) ──
+  const convBase = (pariwarId: string): string => `/api/v1/p/${pariwarId}/admin/claims/convergence`;
+
+  /** Drive a cross-channel pending attempt: seed a member_app claim, then a helpline intake for the
+   * same death → convergencePending. Returns the canonical claim id + the pending attempt id. */
+  async function seedCrossChannelPending(
+    client: Client,
+    pariwarId: string,
+    deceasedMemberId: string,
+  ): Promise<{ canonicalClaimId: string; intakeAttemptId: string }> {
+    const canonicalClaimId = await seedMemberAppClaim(pariwarId, deceasedMemberId);
+    await elevateClaimFile(client);
+    const intake = await client.inject({ method: 'POST', url: intakeUrl(pariwarId), payload: validBody(deceasedMemberId) });
+    expect(intake.statusCode).toBe(200);
+    expect(intake.json<{ convergencePending: boolean }>().convergencePending).toBe(true);
+
+    const pendingRes = await client.inject({ method: 'GET', url: `${convBase(pariwarId)}/pending` });
+    expect(pendingRes.statusCode).toBe(200);
+    const pending = pendingRes.json<{ pending: Array<{ intakeAttemptId: string; intakeChannel: string; candidates: Array<{ claimCaseId: string; intakeChannels: string[] }> }> }>().pending;
+    const row = pending.find((p) => p.intakeChannel === 'helpline' && p.candidates.some((c) => c.claimCaseId === canonicalClaimId));
+    expect(row).toBeDefined();
+    // AC3 cross-channel visibility: the strip feed shows the candidate's channel set (member_app).
+    expect(row!.candidates.some((c) => c.intakeChannels.includes('member_app'))).toBe(true);
+    return { canonicalClaimId, intakeAttemptId: row!.intakeAttemptId };
+  }
+
+  /** Same fixture as `seedCrossChannelPending`, but entirely via the DOMAIN layer (no HTTP intake
+   * call) — the admin session never touches the step-up flow, so `elevatedUntil` stays unset.
+   * Used ONLY for the step-up negative test, where any incidental elevation would invalidate it. */
+  async function seedCrossChannelPendingViaDomain(
+    pariwarId: string,
+    deceasedMemberId: string,
+  ): Promise<{ canonicalClaimId: string; intakeAttemptId: string }> {
+    const canonicalClaimId = await seedMemberAppClaim(pariwarId, deceasedMemberId);
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      const r = await claim.tryConverge(scopeTx.client, {
+        pariwarId: ids.pariwarId(pariwarId),
+        deceasedMemberId: ids.memberId(deceasedMemberId),
+        intakeChannel: 'helpline',
+        actor: 'operator',
+        claimantActorId: null,
+        trigger: 'test_helpline_intake',
+        actorId: null,
+        auditId: randomUUID(),
+      });
+      expect(r.convergencePending).toBe(true);
+      await closeScopeTx(scopeTx, true);
+      return { canonicalClaimId, intakeAttemptId: String(r.intakeAttemptId) };
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+  }
+
+  it('AC2 merge: operator confirms convergence → channel unioned, attempt converged, convergence_merged audit, NO lifecycle event', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    const deceasedMemberId = await seedMember(pariwarId);
+    const { canonicalClaimId, intakeAttemptId } = await seedCrossChannelPending(client, pariwarId, deceasedMemberId);
+
+    const before = await td.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1`,
+      [canonicalClaimId],
+    );
+
+    const merge = await client.inject({
+      method: 'POST',
+      url: `${convBase(pariwarId)}/merge`,
+      payload: { intakeAttemptId, claimCaseId: canonicalClaimId },
+    });
+    expect(merge.statusCode).toBe(200);
+    const body = merge.json<{ merged: boolean; intakeChannels: string[] }>();
+    expect(body.merged).toBe(true);
+    expect([...body.intakeChannels].sort()).toEqual(['helpline', 'member_app']);
+
+    // The canonical claim's channel set is unioned; the attempt is converged + superseded.
+    const claimRow = await td.pool.query<{ intake_channels: string }>(
+      `SELECT intake_channels::text FROM claims WHERE claim_case_id = $1`,
+      [canonicalClaimId],
+    );
+    // Order-insensitive (the SQL union orders by enum-declaration order, not alphabetically).
+    const channels = claimRow.rows[0]!.intake_channels.replace(/[{}]/g, '').split(',').sort();
+    expect(channels).toEqual(['helpline', 'member_app']);
+    const attempt = await td.pool.query<{ attempt_status: string; superseded_by_claim_case_id: string }>(
+      `SELECT attempt_status, superseded_by_claim_case_id FROM intake_attempts WHERE intake_attempt_id = $1`,
+      [intakeAttemptId],
+    );
+    expect(attempt.rows[0]).toMatchObject({ attempt_status: 'converged', superseded_by_claim_case_id: canonicalClaimId });
+
+    // NO new lifecycle event appended by the merge (the stream length is unchanged).
+    const after = await td.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1`,
+      [canonicalClaimId],
+    );
+    expect(after.rows[0]?.n).toBe(before.rows[0]?.n);
+    expect(td.auditSink.ofType('helpline_claim.convergence_merged').length).toBeGreaterThanOrEqual(1);
+
+    // Single freeze intact.
+    expect((await memberDomain.getMemberAccountOverlay(deps.db, ids.memberId(deceasedMemberId), new Date())).accountFrozen).toBe(true);
+
+    // The attempt is off the pending strip now.
+    const pendingAfter = await client.inject({ method: 'GET', url: `${convBase(pariwarId)}/pending` });
+    expect(pendingAfter.json<{ pending: unknown[] }>().pending.some((p) => (p as { intakeAttemptId: string }).intakeAttemptId === intakeAttemptId)).toBe(false);
+  });
+
+  it('AC4 override: operator treats as separate → distinct claim minted + override ledger; aggregate overlay STAYS frozen (both claims open)', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    const deceasedMemberId = await seedMember(pariwarId);
+    const { canonicalClaimId, intakeAttemptId } = await seedCrossChannelPending(client, pariwarId, deceasedMemberId);
+
+    // Override mints a claim → the operator's own fresh step-up (§2.2).
+    await elevateClaimFile(client);
+    const override = await client.inject({
+      method: 'POST',
+      url: `${convBase(pariwarId)}/override`,
+      payload: { intakeAttemptId, againstClaimCaseId: canonicalClaimId, reason: 'disputed re-file — distinct claimant' },
+    });
+    expect(override.statusCode).toBe(200);
+    const body = override.json<{ overridden: boolean; newClaimCaseId: string; state: string }>();
+    expect(body.overridden).toBe(true);
+    expect(body.newClaimCaseId).not.toBe(canonicalClaimId);
+    expect(body.state).toBe('intake_converged');
+
+    // The override ledger row + the attempt flipped overridden_separate → the NEW distinct claim.
+    const overrides = await td.pool.query<{ against_claim_case_id: string; reason: string }>(
+      `SELECT against_claim_case_id, reason FROM convergence_overrides WHERE deceased_member_id = $1`,
+      [deceasedMemberId],
+    );
+    expect(overrides.rows).toContainEqual(expect.objectContaining({ against_claim_case_id: canonicalClaimId }));
+    const attempt = await td.pool.query<{ attempt_status: string; superseded_by_claim_case_id: string }>(
+      `SELECT attempt_status, superseded_by_claim_case_id FROM intake_attempts WHERE intake_attempt_id = $1`,
+      [intakeAttemptId],
+    );
+    expect(attempt.rows[0]).toMatchObject({ attempt_status: 'overridden_separate', superseded_by_claim_case_id: body.newClaimCaseId });
+
+    // TWO distinct claims now exist for the death.
+    const claims = await td.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM claims WHERE deceased_member_id = $1`,
+      [deceasedMemberId],
+    );
+    expect(claims.rows[0]?.n).toBe(2);
+
+    // ⚠ NORMATIVE: the aggregate overlay STAYS frozen while ANY claim is non-terminal (both are).
+    expect((await memberDomain.getMemberAccountOverlay(deps.db, ids.memberId(deceasedMemberId), new Date())).accountFrozen).toBe(true);
+    expect(td.auditSink.ofType('helpline_claim.convergence_overridden').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('AC1 convergence RBAC: an admin WITHOUT claim.file → 403 on the pending-list endpoint (fail-closed)', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    // pariwar_admin holds claim.approve but NOT claim.file (the reused convergence permission key).
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+    const res = await client.inject({ method: 'GET', url: `${convBase(pariwarId)}/pending` });
+    expect(res.statusCode).toBe(403);
+    expect(td.auditSink.ofType('authz.denied').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('override step-up: a claim.file holder WITHOUT a fresh elevation → 403 auth.step_up_required, no claim minted', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    const deceasedMemberId = await seedMember(pariwarId);
+    // Seeded via the domain layer, NOT the HTTP intake route — the step-up elevation window
+    // (~5 min, shared across the whole `claim_file` action context) would otherwise still be
+    // live from the intake call and silently satisfy the override gate too.
+    const { canonicalClaimId, intakeAttemptId } = await seedCrossChannelPendingViaDomain(pariwarId, deceasedMemberId);
+
+    // This session has NEVER elevated — the override route MUST demand its own fresh elevation
+    // (route header: "the operator's own fresh admin step-up").
+    const res = await client.inject({
+      method: 'POST',
+      url: `${convBase(pariwarId)}/override`,
+      payload: { intakeAttemptId, againstClaimCaseId: canonicalClaimId, reason: 'disputed re-file — distinct claimant' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe('auth.step_up_required');
+
+    const claims = await td.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM claims WHERE deceased_member_id = $1`,
+      [deceasedMemberId],
+    );
+    expect(claims.rows[0]?.n).toBe(1); // still just the canonical claim — no second claim minted
+  });
+
+  it('AC5 merge identity guard (Review Finding): a claimCaseId for an UNRELATED death → 409, no channel union', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    const deceasedMemberId = await seedMember(pariwarId);
+    const { intakeAttemptId } = await seedCrossChannelPending(client, pariwarId, deceasedMemberId);
+
+    // An unrelated death's claim in the SAME Pariwar — a valid claimCaseId, but not a candidate
+    // for THIS attempt's death.
+    const otherDeceasedMemberId = await seedMember(pariwarId);
+    const unrelatedClaimId = await seedMemberAppClaim(pariwarId, otherDeceasedMemberId);
+
+    const res = await client.inject({
+      method: 'POST',
+      url: `${convBase(pariwarId)}/merge`,
+      payload: { intakeAttemptId, claimCaseId: unrelatedClaimId },
+    });
+    expect(res.statusCode).toBe(409);
+
+    const unrelatedClaim = await td.pool.query<{ intake_channels: string }>(
+      `SELECT intake_channels::text FROM claims WHERE claim_case_id = $1`,
+      [unrelatedClaimId],
+    );
+    expect(unrelatedClaim.rows[0]?.intake_channels).toBe('{member_app}'); // unchanged — no union happened
+  });
+
+  it('AC4/AC9 override identity guard (Review Finding): an againstClaimCaseId for an UNRELATED death → 409, no claim minted', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    const deceasedMemberId = await seedMember(pariwarId);
+    const { intakeAttemptId } = await seedCrossChannelPending(client, pariwarId, deceasedMemberId);
+
+    const otherDeceasedMemberId = await seedMember(pariwarId);
+    const unrelatedClaimId = await seedMemberAppClaim(pariwarId, otherDeceasedMemberId);
+
+    await elevateClaimFile(client);
+    const res = await client.inject({
+      method: 'POST',
+      url: `${convBase(pariwarId)}/override`,
+      payload: { intakeAttemptId, againstClaimCaseId: unrelatedClaimId, reason: 'disputed re-file — distinct claimant' },
+    });
+    expect(res.statusCode).toBe(409);
+
+    const overrides = await td.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM convergence_overrides WHERE deceased_member_id = $1`,
+      [deceasedMemberId],
+    );
+    expect(overrides.rows[0]?.n).toBe(0); // no ledger row recorded
+    const claims = await td.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM claims WHERE deceased_member_id = $1`,
+      [deceasedMemberId],
+    );
+    expect(claims.rows[0]?.n).toBe(1); // still just the canonical claim — no second claim minted
   });
 });

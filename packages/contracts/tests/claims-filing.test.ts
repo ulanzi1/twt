@@ -50,12 +50,18 @@ describe('Claim-filing DTOs (strict + shapes)', () => {
     expect(() => ClaimIntakeInitiateRequest.parse({ relationship: 'cousin' })).toThrow();
   });
 
-  it('ClaimIntakeInitiateResponse round-trips a minted intake_pending claim', () => {
+  it('ClaimIntakeInitiateResponse round-trips a minted intake_converged claim (Story 6.4 auto-converge)', () => {
     const parsed = ClaimIntakeInitiateResponse.parse({
       claimCaseId: '22222222-2222-2222-2222-222222222222',
-      state: 'intake_pending',
+      state: 'intake_converged',
+      convergencePending: false,
     });
-    expect(parsed.state).toBe('intake_pending');
+    expect(parsed.state).toBe('intake_converged');
+    expect(parsed.convergencePending).toBe(false);
+    // `convergencePending` is required — the old {claimCaseId,state} shape is now rejected.
+    expect(() =>
+      ClaimIntakeInitiateResponse.parse({ claimCaseId: '22222222-2222-2222-2222-222222222222', state: 'intake_converged' }),
+    ).toThrow();
   });
 
   it('HandoverOtpVerifyRequest requires a 6-digit numeric code', () => {

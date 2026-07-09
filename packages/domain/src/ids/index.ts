@@ -351,3 +351,17 @@ export const memberTelegramOptInId = uuidBrand('MemberTelegramOptInId');
 export type TelegramInboundWebhookEventId = Brand<'TelegramInboundWebhookEventId'>;
 /** Smart constructor: validates UUID shape, returns a branded `TelegramInboundWebhookEventId`. */
 export const telegramInboundWebhookEventId = uuidBrand('TelegramInboundWebhookEventId');
+
+// ── Intake-attempt id (Story 6.4, Task 2) ─────────────────────────────────────
+// NEW branded id per the §Naming "branding mandatory on a new ID's first PR" discipline
+// (L3700-3708): `IntakeAttemptId` is the per-row address of an ICP intake attempt
+// (`intake_attempts.intake_attempt_id`). This is the TEMPORARY / channel-originating id
+// that AC7 forbids downstream flows from ever using as a lookup key — the canonical
+// `ClaimId` is the ONLY id that persists past convergence. A UUID row address, so it
+// reuses the shared `uuidBrand` validator. The `superseded_by_claim_case_id` column on
+// the same table is `$type<ClaimId>()` (reuse the existing ClaimId brand — same canonical id).
+
+/** Per-row address of an ICP intake attempt (`intake_attempts.intake_attempt_id`). */
+export type IntakeAttemptId = Brand<'IntakeAttemptId'>;
+/** Smart constructor: validates UUID shape, returns a branded `IntakeAttemptId`. */
+export const intakeAttemptId = uuidBrand('IntakeAttemptId');

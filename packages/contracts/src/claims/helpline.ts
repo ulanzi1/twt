@@ -86,6 +86,10 @@ export const HelplineClaimIntakeResponse = z
     claimCaseId: z.string().uuid(),
     state: ClaimLifecycleState,
     created: z.boolean(),
+    // Story 6.4: `true` when this was a genuine cross-channel SECOND intake recorded `pending`
+    // awaiting an operator/trustee merge/override on the <ConvergenceDecisionStrip>. The existing
+    // canonical claim is returned unchanged (single freeze intact); the console routes it to the strip.
+    convergencePending: z.boolean(),
   })
   .strict();
 export type HelplineClaimIntakeResponse = z.output<typeof HelplineClaimIntakeResponse>;

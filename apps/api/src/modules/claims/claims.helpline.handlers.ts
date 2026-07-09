@@ -102,41 +102,66 @@ export function createHelplineClaimsHandlers(deps: AppDeps) {
           },
         });
 
-        emitAuthAudit(
-          deps,
-          request,
-          outcome.created ? 'helpline_claim.intake_initiated' : 'helpline_claim.intake_idempotent',
-          {
+        // Three outcomes (Story 6.4): a fresh mint (intake_initiated); a genuine cross-channel
+        // SECOND intake recorded pending awaiting operator/trustee resolution on the
+        // <ConvergenceDecisionStrip> (convergence_pending — DISTINCT from a trivial same-channel
+        // retry); or a same-channel double-tap (intake_idempotent).
+        if (outcome.created) {
+          emitAuthAudit(deps, request, 'helpline_claim.intake_initiated', {
             actorId: operatorId,
             pariwarId: pariwarIdStr,
-            context: outcome.created
-              ? {
-                  claim_case_id: outcome.claimCaseId,
-                  deceased_member_id: body.deceasedMemberId,
-                  intake_channel: 'helpline',
-                  relationship: body.relationship,
-                  // lookup_method is NON-PII operational-insight AUDIT metadata (the search
-                  // dimension the operator used) — recorded here ONLY, NEVER in the domain payload.
-                  lookup_method: body.lookupMethod,
-                  audit_id: auditId,
-                }
-              : {
-                  // Convergence hit: the ORIGINAL intake's relationship is what's on record
-                  // (in that intake's own audit line). This retry's relationship/lookup were
-                  // NOT persisted; log them under distinct keys so the line never reads as
-                  // "relationship updated."
-                  claim_case_id: outcome.claimCaseId,
-                  deceased_member_id: body.deceasedMemberId,
-                  intake_channel: 'helpline',
-                  relationship_submitted: body.relationship,
-                  lookup_method: body.lookupMethod,
-                  note: 'idempotent_hit_relationship_not_persisted',
-                  audit_id: auditId,
-                },
-          },
-        );
+            context: {
+              claim_case_id: outcome.claimCaseId,
+              deceased_member_id: body.deceasedMemberId,
+              intake_channel: 'helpline',
+              relationship: body.relationship,
+              // lookup_method is NON-PII operational-insight AUDIT metadata (the search
+              // dimension the operator used) — recorded here ONLY, NEVER in the domain payload.
+              lookup_method: body.lookupMethod,
+              audit_id: auditId,
+            },
+          });
+        } else if (outcome.convergencePending) {
+          emitAuthAudit(deps, request, 'helpline_claim.convergence_pending', {
+            actorId: operatorId,
+            pariwarId: pariwarIdStr,
+            context: {
+              claim_case_id: outcome.claimCaseId,
+              intake_attempt_id: outcome.intakeAttemptId,
+              deceased_member_id: body.deceasedMemberId,
+              intake_channel: 'helpline',
+              relationship_submitted: body.relationship,
+              lookup_method: body.lookupMethod,
+              note: 'cross_channel_second_intake_pending_resolution',
+              audit_id: auditId,
+            },
+          });
+        } else {
+          emitAuthAudit(deps, request, 'helpline_claim.intake_idempotent', {
+            actorId: operatorId,
+            pariwarId: pariwarIdStr,
+            context: {
+              // Convergence hit: the ORIGINAL intake's relationship is what's on record
+              // (in that intake's own audit line). This retry's relationship/lookup were
+              // NOT persisted; log them under distinct keys so the line never reads as
+              // "relationship updated."
+              claim_case_id: outcome.claimCaseId,
+              deceased_member_id: body.deceasedMemberId,
+              intake_channel: 'helpline',
+              relationship_submitted: body.relationship,
+              lookup_method: body.lookupMethod,
+              note: 'idempotent_hit_relationship_not_persisted',
+              audit_id: auditId,
+            },
+          });
+        }
 
-        return { claimCaseId: outcome.claimCaseId, state: outcome.state as HelplineClaimIntakeResponse['state'], created: outcome.created };
+        return {
+          claimCaseId: outcome.claimCaseId,
+          state: outcome.state as HelplineClaimIntakeResponse['state'],
+          created: outcome.created,
+          convergencePending: outcome.convergencePending,
+        };
       } catch (err) {
         // An account-freezing operation must never fail audit-silently — covers BOTH the
         // memberExists 404 guard above and any initiateIntake failure. `err.message` (not just

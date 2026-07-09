@@ -34,8 +34,6 @@
 // (ClaimStreamConcurrencyError → return the existing claim), though the advisory lock
 // means it should never be reached in practice.
 
-import { createHash, randomUUID } from 'node:crypto';
-
 import { claim, ids, nominee as nomineeDomain, schema } from '@twt/domain';
 import type pg from 'pg';
 
@@ -67,16 +65,6 @@ export const HELPLINE_INTAKE_TRIGGER = 'helpline_operator_intake';
  * can never equal a real mobile blind index (hex HMAC) — no cross-talk with login/step-up. */
 function handoverPoolKey(deceasedMemberId: string): string {
   return `handover:${deceasedMemberId}`;
-}
-
-/** The transaction-scoped advisory-lock key for one death's intake (serializes concurrent
- * double-submits). Postgres advisory locks take a bigint — derive a stable one from the
- * (pariwarId, deceasedMemberId) pair via a truncated SHA-256. */
-function intakeAdvisoryLockKey(pariwarId: string, deceasedMemberId: string): bigint {
-  const hex = createHash('sha256').update(`${pariwarId}:${deceasedMemberId}`).digest('hex');
-  // Take 15 hex chars (60 bits) → always positive, safely inside Postgres' signed
-  // bigint advisory-lock arg (63 usable magnitude bits).
-  return BigInt(`0x${hex.slice(0, 15)}`);
 }
 
 export interface HandoverOtpSendOutcome {
@@ -198,8 +186,16 @@ export async function hasHandoverTrust(deps: AppDeps, deceasedMemberId: string):
 export interface IntakeOutcome {
   claimCaseId: string;
   state: string;
-  /** True when this call minted a NEW claim (freeze fired); false on an idempotent hit. */
+  /** True when this call minted a NEW claim (freeze fired); false on an idempotent hit OR a
+   * cross-channel pending attempt. Maps from the ICP's `minted`. */
   created: boolean;
+  /** True when this was a genuine cross-channel SECOND intake recorded `pending` awaiting an
+   * operator/trustee merge/override on the <ConvergenceDecisionStrip> (Story 6.4). The
+   * existing canonical claim is returned unchanged (single freeze intact); no second freeze. */
+  convergencePending: boolean;
+  /** The recorded ICP intake attempt (the minted `converged` attempt, or the cross-channel
+   * `pending` attempt); null for a same-channel double-tap (no new attempt recorded). */
+  intakeAttemptId: string | null;
 }
 
 /** The claim-INTAKE channel + acting-actor attribution — the ONLY things that differ between
@@ -221,15 +217,25 @@ export interface IntakeAttribution {
 }
 
 /**
- * Mint `claim_case_id` + project `claim.intake_initiated` for the deceased member,
- * idempotently (AC3). MUST run inside the caller's scope tx (pariwar scope already set) —
- * it passes the raw `scopeTx.client` to the projector. Acquires a tx-scoped advisory lock
- * on the death, then dedups: returns any existing claim instead of a second freeze.
+ * Route a claim intake through the Intake Convergence Point (Story 6.4). MUST run inside the
+ * caller's scope tx (pariwar scope already set) — it passes the raw `scopeTx.client` to the ICP,
+ * which acquires the tx-scoped advisory lock, dedups against the windowed candidate, and resolves
+ * per the single convergence model:
+ *   · no candidate      → mint the canonical claim + freeze + auto-converge (state
+ *                         `intake_converged`); `created: true`.
+ *   · same-channel retry → idempotent no-op, returns the existing claim; `created: false`.
+ *   · cross-channel      → records a `pending` attempt, returns the EXISTING canonical claim
+ *                         (single freeze intact, no second freeze); `convergencePending: true`.
  *
- * THE LOAD-BEARING CONVERGENCE POINT (Story 6.3): both the member-app and helpline handlers
- * call THIS function, so the advisory-lock + `getClaimByDeceasedMember` dedup run against ONE
- * accessor — a member-app filing and a helpline filing for the same death can never both mint.
- * `attribution` is optional; when omitted it defaults to the member-app values (6.2 unchanged).
+ * THE LOAD-BEARING CONVERGENCE POINT (Story 6.3 → 6.4): both the member-app and helpline handlers
+ * call THIS function, so both channels route through ONE ICP — a member-app filing and a helpline
+ * filing for the same death can never both mint. `attribution` is optional; when omitted it
+ * defaults to the member-app (Ravi-mode) values so the shipped 6.2 caller is unchanged.
+ *
+ * NOTE (Story 6.4 variance): a freshly-minted LONE intake now returns/persists state
+ * `intake_converged` (was `intake_pending`) — this is intended (it unblocks the 6.5 documents
+ * chain). The account freeze still fires on `claim.intake_initiated` (unchanged; the overlay is
+ * state-agnostic — it matches the event by `deceased_member_id`).
  */
 export async function initiateIntake(
   deps: AppDeps,
@@ -255,53 +261,38 @@ export async function initiateIntake(
     trigger: input.attribution?.trigger ?? INTAKE_TRIGGER,
   };
 
-  // (1) Serialize concurrent intakes for THIS death so the dedup read is race-safe. The
-  // lock is transaction-scoped — released on COMMIT/ROLLBACK, no explicit unlock needed.
-  await client.query('SELECT pg_advisory_xact_lock($1)', [
-    intakeAdvisoryLockKey(input.pariwarId, input.deceasedMemberId).toString(),
-  ]);
-
-  // (2) Route-level dedup: an existing claim for this death → return it (no second freeze).
-  //     Same accessor for BOTH channels — the crude cross-channel convergence guard (AC3).
-  const existing = await claim.getClaimByDeceasedMember(scopeTx.tx, input.pariwarId, input.deceasedMemberId);
-  if (existing) {
-    return { claimCaseId: existing.claimCaseId, state: existing.currentState, created: false };
-  }
-
-  const claimCaseId = ids.claimId(randomUUID());
   try {
-    const result = await claim.projectClaimState(client, {
-      claimCaseId,
+    const result = await claim.tryConverge(client, {
       pariwarId: input.pariwarId,
       deceasedMemberId: input.deceasedMemberId,
-      intakeChannels: [attribution.intakeChannel],
-      // v1 null-claimant policy (Dev Notes "Decisions"): no distinct caller actor entity on
-      // either path; the claims.claimant_actor_id is null, the acting actor is the audit actor.
+      intakeChannel: attribution.intakeChannel,
+      actor: attribution.actor,
       claimantActorId: attribution.claimantActorId,
-      eventType: 'claim.intake_initiated',
-      payload: {
-        from_state: null,
-        to_state: 'intake_pending',
-        trigger: attribution.trigger,
-        actor: attribution.actor,
-        // THE PINNED SEAM: snake_case `deceased_member_id` or the account-frozen overlay
-        // never fires (member/overlay.ts:97 matches `payload ->> 'deceased_member_id'`).
-        deceased_member_id: deceasedMemberIdStr,
-        intake_channel: attribution.intakeChannel,
-        claimant_actor_id: attribution.claimantActorId,
-      },
+      trigger: attribution.trigger,
       actorId: attribution.actorId,
       auditId: input.auditId,
     });
-    return { claimCaseId: String(claimCaseId), state: result.state, created: true };
+    return {
+      claimCaseId: result.claimCaseId,
+      state: result.state,
+      created: result.minted,
+      convergencePending: result.convergencePending,
+      intakeAttemptId: result.intakeAttemptId !== null ? String(result.intakeAttemptId) : null,
+    };
   } catch (err) {
-    // Backstop (should be unreachable under the advisory lock): a concurrent submit that
-    // slipped past layer 1 collided at the (stream_id, event_version) unique index. Re-read
-    // and return the existing claim rather than surfacing a 500.
+    // Backstop (should be unreachable under the ICP's advisory lock): a concurrent submit that
+    // slipped past the lock collided at the (stream_id, event_version) unique index. Re-read and
+    // return the existing canonical claim rather than surfacing a 500.
     if (err instanceof claim.ClaimStreamConcurrencyError) {
       const raced = await claim.getClaimByDeceasedMember(scopeTx.tx, input.pariwarId, input.deceasedMemberId);
       if (raced) {
-        return { claimCaseId: raced.claimCaseId, state: raced.currentState, created: false };
+        return {
+          claimCaseId: raced.claimCaseId,
+          state: raced.currentState,
+          created: false,
+          convergencePending: false,
+          intakeAttemptId: null,
+        };
       }
     }
     throw err;

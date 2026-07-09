@@ -15,9 +15,12 @@ import {
   ClauseVersionResponse,
   DeployTriggerResponse,
   DiffPreviewResponse,
+  ConvergenceMergeResponse,
+  ConvergenceOverrideResponse,
   HelplineClaimIntakeResponse,
   HelplineOperatorEventResponse,
   LoginResponse,
+  PendingIntakeAttemptsResponse,
   MemberSearchResponse,
   MemberValidityResponse,
   StepUpRequestResponse,
@@ -43,10 +46,15 @@ import {
   type WaTemplatesResponse as WaTemplates,
   type TelegramConfigResponse as TelegramConfig,
   type TelegramConfigUpsertRequest,
+  type ConvergenceMergeRequest,
+  type ConvergenceMergeResponse as ConvergenceMergeResult,
+  type ConvergenceOverrideRequest,
+  type ConvergenceOverrideResponse as ConvergenceOverrideResult,
   type HelplineClaimIntakeRequest,
   type HelplineClaimIntakeResponse as HelplineClaimIntakeResult,
   type HelplineOperatorEventRequest,
   type HelplineOperatorEventResponse as HelplineOperatorEventResult,
+  type PendingIntakeAttemptsResponse as PendingConvergence,
   type MemberSearchRequest,
   type MemberSearchResponse as MemberSearchResult,
   type MemberValidityResponse as MemberValidityResult,
@@ -313,6 +321,42 @@ export function recordHelplineOperatorEvent(
   body: HelplineOperatorEventRequest,
 ): Promise<HelplineOperatorEventResult> {
   return apiFetch(`${adminClaimsBase(pariwarId)}/operator-event`, HelplineOperatorEventResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── ICP convergence-resolution surface (Story 6.4) ────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/claims/convergence. The operator/trustee
+// <ConvergenceDecisionStrip> back end: list the pending cross-channel attempts + resolve each by
+// MERGE (confirm convergence) or OVERRIDE (treat as separate — mints a distinct claim). Gated
+// server-side by [adminSession, scope, requirePermissionHook(claim.file)] (+ step-up on override).
+
+const adminConvergenceBase = (pariwarId: string): string =>
+  `${adminClaimsBase(pariwarId)}/convergence`;
+
+/** GET the pending intake attempts + their candidate canonical claims (the strip feed; AC2/AC3). */
+export function listPendingConvergence(pariwarId: string): Promise<PendingConvergence> {
+  return apiFetch(`${adminConvergenceBase(pariwarId)}/pending`, PendingIntakeAttemptsResponse);
+}
+
+/** POST confirm-convergence (union the channel into the canonical claim + flip the attempt). */
+export function confirmConvergenceMerge(
+  pariwarId: string,
+  body: ConvergenceMergeRequest,
+): Promise<ConvergenceMergeResult> {
+  return apiFetch(`${adminConvergenceBase(pariwarId)}/merge`, ConvergenceMergeResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST override (treat the attempt as separate → mint a distinct claim + the override ledger row). */
+export function overrideConvergence(
+  pariwarId: string,
+  body: ConvergenceOverrideRequest,
+): Promise<ConvergenceOverrideResult> {
+  return apiFetch(`${adminConvergenceBase(pariwarId)}/override`, ConvergenceOverrideResponse, {
     method: 'POST',
     body: JSON.stringify(body),
   });

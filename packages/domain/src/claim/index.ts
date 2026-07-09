@@ -8,3 +8,6 @@ export * from './events.js';
 export * from './project.js';
 export * from './read.js';
 export * from './errors.js';
+// Story 6.4 — the Intake Convergence Point (ICP): tryConverge + the merge/override writers +
+// the read accessors + CONVERGENCE_WINDOW_DAYS + the shared intakeAdvisoryLockKey.
+export * from './icp.js';

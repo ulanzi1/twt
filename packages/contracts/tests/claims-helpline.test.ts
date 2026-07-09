@@ -68,15 +68,15 @@ describe('Helpline claim-intake DTOs (strict + shapes)', () => {
     expect(() => HelplineClaimIntakeRequest.parse({ ...validRequest, relationship: 'cousin' })).toThrow();
   });
 
-  it('HelplineClaimIntakeResponse carries the created discriminator', () => {
+  it('HelplineClaimIntakeResponse carries the created + convergencePending discriminators', () => {
     expect(
-      HelplineClaimIntakeResponse.parse({ claimCaseId: CLAIM, state: 'intake_pending', created: true }),
-    ).toEqual({ claimCaseId: CLAIM, state: 'intake_pending', created: true });
-    // The convergence hit is a valid response (created:false, existing claim returned).
+      HelplineClaimIntakeResponse.parse({ claimCaseId: CLAIM, state: 'intake_converged', created: true, convergencePending: false }),
+    ).toEqual({ claimCaseId: CLAIM, state: 'intake_converged', created: true, convergencePending: false });
+    // The cross-channel convergence hit is a valid response (created:false, convergencePending:true).
     expect(
-      HelplineClaimIntakeResponse.parse({ claimCaseId: CLAIM, state: 'intake_pending', created: false }).created,
-    ).toBe(false);
-    // `created` is required — an old {claimCaseId,state} shape is rejected.
-    expect(() => HelplineClaimIntakeResponse.parse({ claimCaseId: CLAIM, state: 'intake_pending' })).toThrow();
+      HelplineClaimIntakeResponse.parse({ claimCaseId: CLAIM, state: 'intake_converged', created: false, convergencePending: true }).convergencePending,
+    ).toBe(true);
+    // `created` + `convergencePending` are required — an old {claimCaseId,state,created} shape is rejected.
+    expect(() => HelplineClaimIntakeResponse.parse({ claimCaseId: CLAIM, state: 'intake_converged', created: true })).toThrow();
   });
 });

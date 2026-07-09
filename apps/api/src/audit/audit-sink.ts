@@ -167,7 +167,30 @@ export type AuthAuditEventType =
   | 'member_claim.handover_otp_failure'
   | 'member_claim.intake_initiated'
   | 'member_claim.intake_idempotent'
-  | 'member_claim.intake_failed';
+  | 'member_claim.intake_failed'
+  // ── Helpline-mediated claim filing surface (Story 6.3, FR-37 / Epic 6) ────────
+  // The operator-console (Priya-path) intake — the TWIN of the member-app lines above.
+  // Context is NON-PII throughout: the intake lines carry claim_case_id + deceased_member_id
+  // + intake_channel + relationship + lookup_method + the OPERATOR's id (the audit actor) —
+  // NEVER caller/nominee PII. `lookup_method` (memberId | mobile | pariwar) is the search
+  // dimension the operator used; it rides on the AUDIT context ONLY, never the domain payload.
+  // Operator attribution is claim-scoped (events_log.actor_id = operator admin actor id + this
+  // audit line); the fuller helpdesk operator-attribution model is Story 10.3.
+  //   intake_initiated  — claim.intake_initiated appended → a new claim frozen the account.
+  //   intake_idempotent — a convergence hit (prior app OR helpline claim) returned the EXISTING
+  //                       claim (no second freeze) — the crude cross-channel dedup (RICH ICP = 6.4).
+  //   intake_failed     — the intake attempt threw; recorded so a failed account-freeze attempt
+  //                       is never audit-silent.
+  //   readback_confirmed — the operator confirmed the identity read-back with the caller
+  //                        (Review Finding — AC4's literal "read-back-confirm" audit line).
+  //   escalated         — the operator escalated to a supervisor (AR-61, AC5). Audit-only; the
+  //                        fuller Story 0.7 fallback-handler ledger is referenced, not
+  //                        re-implemented here.
+  | 'helpline_claim.intake_initiated'
+  | 'helpline_claim.intake_idempotent'
+  | 'helpline_claim.intake_failed'
+  | 'helpline_claim.readback_confirmed'
+  | 'helpline_claim.escalated';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

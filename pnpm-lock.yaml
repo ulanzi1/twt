@@ -77,6 +77,9 @@ importers:
       '@twt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@twt/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@twt/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens

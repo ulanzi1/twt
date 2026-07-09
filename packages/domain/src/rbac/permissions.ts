@@ -89,8 +89,13 @@ export function permissionKey(value: string): PermissionKey {
  * the single-dot `pariwar.declare_degraded_mode` (ADR-0008 <resource>.<action>) is
  * the correct key. The two-dot form survives only as the audit ACTION, whose regex
  * permits multiple dots).
+ * Bumped 6 → 7 at Story 6.3 (added `claim.file` — the helpline/operator claim-INTAKE WRITE
+ * key gating the freeze-firing `POST …/admin/claims/intake`. Distinct from `claim.approve`
+ * (the verifier/trustee APPROVAL action, Story 6.10/6.11): a role that may FILE a claim on a
+ * caller's behalf is not necessarily one that may APPROVE it. Granted to `helpline_operator`
+ * (+ super_admin, which derives the full catalog); the trustee-initiated filing path is later).
  */
-export const PERMISSION_CATALOG_VERSION = 6 as const;
+export const PERMISSION_CATALOG_VERSION = 7 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -100,6 +105,11 @@ export const PERMISSION_CATALOG_VERSION = 6 as const;
  */
 export const SEED_PERMISSION_KEYS = [
   'claim.approve',
+  // Story 6.3 — the helpline/operator claim-INTAKE WRITE key. Gates the freeze-firing
+  // POST /p/:pariwarId/admin/claims/intake (the operator files a claim on a bereaved
+  // caller's behalf). Distinct from `claim.approve` (verifier/trustee APPROVAL, 6.10/6.11):
+  // filing an intake ≠ approving the claim. Granted to `helpline_operator` (+ super_admin).
+  'claim.file',
   'member.suspend',
   'member.moderate',
   // Story 4.6 — the FR-12A Member Validity READ key. Distinct from the write-oriented
@@ -152,7 +162,7 @@ export interface PermissionCatalog {
   readonly keys: readonly PermissionKey[];
 }
 
-/** The catalog — the 15 grounded keys, each validated through the constructor. */
+/** The catalog — the 16 grounded keys, each validated through the constructor. */
 export const PERMISSION_CATALOG: PermissionCatalog = {
   catalogVersion: PERMISSION_CATALOG_VERSION,
   keys: SEED_PERMISSION_KEYS.map(permissionKey),

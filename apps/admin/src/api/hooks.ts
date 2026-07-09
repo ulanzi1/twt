@@ -7,7 +7,12 @@
 // the history so the banner + table re-derive from fresh server state.
 
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPariwarRequest, MemberSearchRequest } from '@twt/contracts';
+import type {
+  AddPariwarRequest,
+  HelplineClaimIntakeRequest,
+  HelplineOperatorEventRequest,
+  MemberSearchRequest,
+} from '@twt/contracts';
 
 import * as api from './client.js';
 
@@ -211,6 +216,47 @@ export function useMemberValidity(pariwarId: string, memberId: string | null) {
     queryFn: () => api.getMemberValidity(pariwarId, memberId as string),
     enabled: Boolean(memberId),
   });
+}
+
+// ── Helpline claim-filing surface (Story 6.3) ─────────────────────────────────
+// The operator intake is a POST (freeze-firing), modelled as a mutation whose result the page
+// holds. The step-up request/verify are mutations too. This is the support/dispute freshness
+// class (the createQueryClient staleTime:0 defaults are right). `claim.file` is a PER-PARIWAR
+// grant (absent from the session's nationalGrants, like member.view_validity), so — like the
+// member-search surface — the client gate is only "is there a live session"; the REAL boundary
+// is the server permission hook. `hasClaimFile` is an advisory helper for surfaces that DO hold
+// the per-Pariwar grant set (e.g. scope-resolved views); it is NOT used to gate a national nav.
+
+/** The helpline claim intake mutation. On `created:false` the page surfaces "claim already
+ * exists" rather than an error (a cross-channel convergence hit, not a failure). */
+export function useHelplineClaimIntake(pariwarId: string) {
+  return useMutation({
+    mutationFn: (body: HelplineClaimIntakeRequest) => api.initiateHelplineClaim(pariwarId, body),
+  });
+}
+
+/** Request a step-up OTP for a named action context (the console drives 'claim_file'). */
+export function useRequestStepUp() {
+  return useMutation({ mutationFn: (actionContext: string) => api.requestStepUp(actionContext) });
+}
+
+/** Verify a step-up OTP → the session gains the fresh elevated context the intake route needs. */
+export function useVerifyStepUp() {
+  return useMutation({ mutationFn: (otp: string) => api.verifyStepUp(otp) });
+}
+
+/** Record a non-freezing operator-action audit line (read-back confirm / escalation — Review
+ * Finding, AC4/AC5). Fire-and-forget from the page: the audit trail is best-effort and must
+ * never block the operator's workflow. */
+export function useHelplineOperatorEvent(pariwarId: string) {
+  return useMutation({
+    mutationFn: (body: HelplineOperatorEventRequest) => api.recordHelplineOperatorEvent(pariwarId, body),
+  });
+}
+
+/** True iff the (per-Pariwar) grant set carries `claim.file` — advisory only (AC1/AC6). */
+export function hasClaimFile(grants: readonly string[] | undefined): boolean {
+  return grants?.includes('claim.file') ?? false;
 }
 
 // ── Channel-config surface (Story 5.3) ────────────────────────────────────────

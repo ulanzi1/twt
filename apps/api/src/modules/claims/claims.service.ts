@@ -36,7 +36,7 @@
 
 import { createHash, randomUUID } from 'node:crypto';
 
-import { claim, ids, nominee as nomineeDomain } from '@twt/domain';
+import { claim, ids, nominee as nomineeDomain, schema } from '@twt/domain';
 import type pg from 'pg';
 
 import type { AppDeps } from '../../context.js';
@@ -55,8 +55,13 @@ export const CLAIM_HANDOVER_ACTION_CONTEXT = 'claim_handover';
 const HANDOVER_OTP_INTENT = 'step_up' as const;
 
 /** The freeform `trigger` audit note on the `claim.intake_initiated` payload (Story 6.1:
- * the trigger field is deliberately unconstrained — a descriptive string). */
+ * the trigger field is deliberately unconstrained — a descriptive string). Member-app
+ * (Ravi-mode) default; the helpline path passes HELPLINE_INTAKE_TRIGGER. */
 const INTAKE_TRIGGER = 'member_app_ravi_intake';
+
+/** The helpline-origin `trigger` audit note (Story 6.3) — distinguishes the operator-console
+ * intake from the member-app one in the event payload's freeform trigger field. */
+export const HELPLINE_INTAKE_TRIGGER = 'helpline_operator_intake';
 
 /** The synthetic, collision-proof OTP-pool key for a death's handover OTP. Namespaced so it
  * can never equal a real mobile blind index (hex HMAC) — no cross-talk with login/step-up. */
@@ -197,11 +202,34 @@ export interface IntakeOutcome {
   created: boolean;
 }
 
+/** The claim-INTAKE channel + acting-actor attribution — the ONLY things that differ between
+ * the member-app (Ravi-mode, Story 6.2) and helpline (operator, Story 6.3) intake paths. All
+ * fields default to the member-app values so the shipped 6.2 handler is behaviourally
+ * unchanged when it omits them; the helpline handler overrides all four. */
+export interface IntakeAttribution {
+  /** The originating intake channel (payload `intake_channel` + the claim-row set). */
+  readonly intakeChannel: schema.ClaimIntakeChannel;
+  /** The event actor (payload `actor`): 'member' for Ravi-mode, 'operator' for helpline. */
+  readonly actor: claim.ClaimEventActor;
+  /** The `events_log.actor_id` — the deceased member (Ravi-mode acting session) for the
+   *  member app, or the OPERATOR's admin actor id for helpline (Decision #3 attribution). */
+  readonly actorId: string;
+  /** The `claims.claimant_actor_id` — null under the v1 null-claimant policy on BOTH paths. */
+  readonly claimantActorId: string | null;
+  /** The freeform payload `trigger` audit note (member_app_ravi_intake / helpline_operator_intake). */
+  readonly trigger: string;
+}
+
 /**
  * Mint `claim_case_id` + project `claim.intake_initiated` for the deceased member,
  * idempotently (AC3). MUST run inside the caller's scope tx (pariwar scope already set) —
  * it passes the raw `scopeTx.client` to the projector. Acquires a tx-scoped advisory lock
  * on the death, then dedups: returns any existing claim instead of a second freeze.
+ *
+ * THE LOAD-BEARING CONVERGENCE POINT (Story 6.3): both the member-app and helpline handlers
+ * call THIS function, so the advisory-lock + `getClaimByDeceasedMember` dedup run against ONE
+ * accessor — a member-app filing and a helpline filing for the same death can never both mint.
+ * `attribution` is optional; when omitted it defaults to the member-app values (6.2 unchanged).
  */
 export async function initiateIntake(
   deps: AppDeps,
@@ -210,10 +238,22 @@ export async function initiateIntake(
     deceasedMemberId: ids.MemberId;
     pariwarId: ids.PariwarId;
     auditId: string;
+    /** Channel + attribution overrides (Story 6.3). Defaults to member-app (Story 6.2). */
+    attribution?: Partial<IntakeAttribution>;
   },
 ): Promise<IntakeOutcome> {
   const client: pg.PoolClient = scopeTx.client;
   const deceasedMemberIdStr = String(input.deceasedMemberId);
+
+  // Resolve the attribution, defaulting every field to the member-app (Ravi-mode) values so
+  // the shipped 6.2 caller (which passes no attribution) is behaviourally identical.
+  const attribution: IntakeAttribution = {
+    intakeChannel: input.attribution?.intakeChannel ?? 'member_app',
+    actor: input.attribution?.actor ?? 'member',
+    actorId: input.attribution?.actorId ?? deceasedMemberIdStr,
+    claimantActorId: input.attribution?.claimantActorId ?? null,
+    trigger: input.attribution?.trigger ?? INTAKE_TRIGGER,
+  };
 
   // (1) Serialize concurrent intakes for THIS death so the dedup read is race-safe. The
   // lock is transaction-scoped — released on COMMIT/ROLLBACK, no explicit unlock needed.
@@ -222,6 +262,7 @@ export async function initiateIntake(
   ]);
 
   // (2) Route-level dedup: an existing claim for this death → return it (no second freeze).
+  //     Same accessor for BOTH channels — the crude cross-channel convergence guard (AC3).
   const existing = await claim.getClaimByDeceasedMember(scopeTx.tx, input.pariwarId, input.deceasedMemberId);
   if (existing) {
     return { claimCaseId: existing.claimCaseId, state: existing.currentState, created: false };
@@ -233,23 +274,23 @@ export async function initiateIntake(
       claimCaseId,
       pariwarId: input.pariwarId,
       deceasedMemberId: input.deceasedMemberId,
-      intakeChannels: ['member_app'],
-      // v1 null-claimant policy (Dev Notes "Decisions" #1): no distinct Ravi actor entity;
-      // the claims.claimant_actor_id is null, the acting session member is the audit actor.
-      claimantActorId: null,
+      intakeChannels: [attribution.intakeChannel],
+      // v1 null-claimant policy (Dev Notes "Decisions"): no distinct caller actor entity on
+      // either path; the claims.claimant_actor_id is null, the acting actor is the audit actor.
+      claimantActorId: attribution.claimantActorId,
       eventType: 'claim.intake_initiated',
       payload: {
         from_state: null,
         to_state: 'intake_pending',
-        trigger: INTAKE_TRIGGER,
-        actor: 'member',
+        trigger: attribution.trigger,
+        actor: attribution.actor,
         // THE PINNED SEAM: snake_case `deceased_member_id` or the account-frozen overlay
         // never fires (member/overlay.ts:97 matches `payload ->> 'deceased_member_id'`).
         deceased_member_id: deceasedMemberIdStr,
-        intake_channel: 'member_app',
-        claimant_actor_id: null,
+        intake_channel: attribution.intakeChannel,
+        claimant_actor_id: attribution.claimantActorId,
       },
-      actorId: deceasedMemberIdStr,
+      actorId: attribution.actorId,
       auditId: input.auditId,
     });
     return { claimCaseId: String(claimCaseId), state: result.state, created: true };

@@ -53,6 +53,8 @@ export interface RoleBundle {
 // load-time throw, not a silent dead key. (Referential integrity to the catalog
 // is additionally asserted by tests/rbac/roles.test.ts.)
 const CLAIM_APPROVE = permissionKey('claim.approve');
+// Story 6.3 — the helpline/operator claim-INTAKE key (distinct from CLAIM_APPROVE).
+const CLAIM_FILE = permissionKey('claim.file');
 const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
@@ -171,8 +173,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   {
     role: 'helpline_operator',
     // Helpdesk keys land Epic 10 — but the helpline reads a caller's member validity to
-    // assist them (Story 4.6, FR-12A "consistent across admin and member apps").
-    permissions: [MEMBER_VIEW_VALIDITY],
+    // assist them (Story 4.6, FR-12A "consistent across admin and member apps") AND, from
+    // Story 6.3, FILES a claim on a bereaved caller's behalf (the freeze-firing helpline
+    // intake, gated on the operator's own admin step-up). `claim.file` is the intake key,
+    // distinct from `claim.approve` (verifier/trustee approval) which this role does NOT hold.
+    permissions: [MEMBER_VIEW_VALIDITY, CLAIM_FILE],
     scopeCeiling: 'pariwar',
   },
 ];

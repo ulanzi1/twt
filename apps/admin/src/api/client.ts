@@ -15,9 +15,13 @@ import {
   ClauseVersionResponse,
   DeployTriggerResponse,
   DiffPreviewResponse,
+  HelplineClaimIntakeResponse,
+  HelplineOperatorEventResponse,
   LoginResponse,
   MemberSearchResponse,
   MemberValidityResponse,
+  StepUpRequestResponse,
+  StepUpVerifyResponse,
   ProvisionedPariwar,
   ProvisioningStatusList,
   PublishClauseResponse,
@@ -39,9 +43,15 @@ import {
   type WaTemplatesResponse as WaTemplates,
   type TelegramConfigResponse as TelegramConfig,
   type TelegramConfigUpsertRequest,
+  type HelplineClaimIntakeRequest,
+  type HelplineClaimIntakeResponse as HelplineClaimIntakeResult,
+  type HelplineOperatorEventRequest,
+  type HelplineOperatorEventResponse as HelplineOperatorEventResult,
   type MemberSearchRequest,
   type MemberSearchResponse as MemberSearchResult,
   type MemberValidityResponse as MemberValidityResult,
+  type StepUpRequestResponse as StepUpRequestResult,
+  type StepUpVerifyResponse as StepUpVerifyResult,
   type AddPariwarRequest as AddPariwarPayload,
   type AuditIntegrityAcknowledgement as Acknowledgement,
   type AuditIntegrityCheckList as CheckList,
@@ -271,6 +281,60 @@ export function getMemberValidity(
     `${adminMemberBase(pariwarId)}/${encodeURIComponent(memberId)}/validity`,
     MemberValidityResponse,
   );
+}
+
+// ── Helpline claim-filing surface (Story 6.3) ─────────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/claims. The operator (Priya-path) files a claim on
+// a bereaved caller's behalf. The route is gated server-side by [adminSession, scope,
+// requirePermissionHook(claim.file), requireStepUp('claim_file')] — the step-up is the
+// operator's OWN admin step-up (driven via the step-up request/verify endpoints below). A
+// StepUpRequiredError (403, code 'auth.step_up_required') is the signal to run that elevation,
+// NOT a hard error. The response carries `created` — false on a cross-channel convergence hit
+// ("a claim already exists for this member"), true on a fresh filing.
+
+const adminClaimsBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims`;
+
+/** POST the helpline intake → emit claim.intake_initiated (→ freeze), idempotently + convergently. */
+export function initiateHelplineClaim(
+  pariwarId: string,
+  body: HelplineClaimIntakeRequest,
+): Promise<HelplineClaimIntakeResult> {
+  return apiFetch(`${adminClaimsBase(pariwarId)}/intake`, HelplineClaimIntakeResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST a non-freezing operator-action audit line (read-back confirm / AR-61 escalation —
+ * Review Finding, AC4/AC5). No step-up: neither action mutates claim/member state. */
+export function recordHelplineOperatorEvent(
+  pariwarId: string,
+  body: HelplineOperatorEventRequest,
+): Promise<HelplineOperatorEventResult> {
+  return apiFetch(`${adminClaimsBase(pariwarId)}/operator-event`, HelplineOperatorEventResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Admin step-up surface (Story 1.9) — driven by the helpline console for §2.2 claim-filing.
+// The operator elevates for actionContext 'claim_file' before the freeze-firing intake POST.
+
+/** POST to request a step-up OTP for the named action context (delivery is seamed, Story 5.6/5.9). */
+export function requestStepUp(actionContext: string): Promise<StepUpRequestResult> {
+  return apiFetch('/api/v1/auth/step-up/request', StepUpRequestResponse, {
+    method: 'POST',
+    body: JSON.stringify({ actionContext }),
+  });
+}
+
+/** POST the OTP to verify the step-up → the session gains a fresh elevated context (~5 min). */
+export function verifyStepUp(otp: string): Promise<StepUpVerifyResult> {
+  return apiFetch('/api/v1/auth/step-up/verify', StepUpVerifyResponse, {
+    method: 'POST',
+    body: JSON.stringify({ otp }),
+  });
 }
 
 // ── Channel-config surface (Story 5.3) ────────────────────────────────────────

@@ -11,15 +11,18 @@
 //                                  requireMemberStepUp('claim_handover') handover-trust gate.
 
 import {
+  ClaimDocumentUploadResponse,
   ClaimIntakeInitiateRequest,
   ClaimIntakeInitiateResponse,
   HandoverOtpRequest,
   HandoverOtpResponse,
   HandoverOtpVerifyRequest,
   HandoverOtpVerifyResponse,
+  OcrDocumentType,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 
 import type { AppDeps } from '../../context.js';
 import { requireMemberStepUp } from '../auth/member/member-step-up.gate.js';
@@ -30,11 +33,17 @@ import {
 import { requireMemberSession } from '../auth/shared/member-session-guard.js';
 import { CLAIM_HANDOVER_ACTION_CONTEXT } from './claims.service.js';
 import { createClaimsHandlers } from './claims.handlers.js';
+import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
 
 const CLAIM_TAG = 'member-claim';
 
+/** Route params + querystring for the document upload (the file rides the multipart body). */
+const ClaimDocumentParam = z.object({ claimCaseId: z.string().uuid() }).strict();
+const ClaimDocumentQuery = z.object({ documentType: OcrDocumentType }).strict();
+
 export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createClaimsHandlers(deps);
+  const docs = createClaimDocumentHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
   const sendThrottle = memberClaimHandoverSendThrottle(deps);
@@ -82,5 +91,23 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
       preHandler: [memberSession, requireMemberStepUp(deps, CLAIM_HANDOVER_ACTION_CONTEXT)],
     },
     h.initiateIntake,
+  );
+
+  // Story 6.5 — death-certificate upload (multipart). Reuses the handover-trust step-up posture
+  // (claims.service.ts) — the same gate the freeze-firing intake required. The file rides the
+  // multipart body; `documentType` (the <DocumentTypeChooser> selection) is a validated query param.
+  r.post(
+    '/api/v1/member/claims/:claimCaseId/documents',
+    {
+      schema: {
+        params: ClaimDocumentParam,
+        querystring: ClaimDocumentQuery,
+        response: { 202: ClaimDocumentUploadResponse },
+        tags: [CLAIM_TAG],
+        consumes: ['multipart/form-data'],
+      },
+      preHandler: [memberSession, requireMemberStepUp(deps, CLAIM_HANDOVER_ACTION_CONTEXT)],
+    },
+    docs.uploadMemberDocument,
   );
 }

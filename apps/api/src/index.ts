@@ -23,6 +23,8 @@ async function main(): Promise<void> {
   const endPools = async (): Promise<void> => {
     // Drain the send-only data-export queue client (Story 3.11) before the pools.
     await deps.dataExportQueue.close?.().catch(() => undefined);
+    // Drain the send-only claim OCR + parity queue client (Story 6.5).
+    await deps.claimOcrParityQueue.close?.().catch(() => undefined);
     await deps.pool.end().catch(() => undefined);
     if (deps.servicePool !== deps.pool) {
       await deps.servicePool.end().catch(() => undefined);

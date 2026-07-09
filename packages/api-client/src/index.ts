@@ -86,10 +86,13 @@ import {
   HandoverOtpResponse,
   HandoverOtpVerifyResponse,
   ClaimIntakeInitiateResponse,
+  ClaimDocumentUploadResponse,
   type HandoverOtpResponse as HandoverOtpResult,
   type HandoverOtpVerifyResponse as HandoverOtpVerifyResult,
   type ClaimIntakeInitiateRequest,
   type ClaimIntakeInitiateResponse as ClaimIntakeInitiateResult,
+  type ClaimDocumentUploadResponse as ClaimDocumentUploadResult,
+  type OcrDocumentType,
 } from '@twt/contracts';
 import type { z } from 'zod';
 
@@ -224,7 +227,41 @@ function createApiCallers(opts: MemberAuthClientOptions) {
     return res.arrayBuffer();
   }
 
-  return { call, callBinary };
+  /**
+   * Multipart variant of `call` (Story 6.5) — POSTs a `FormData` body (a file upload). Does NOT set
+   * `content-type` (the fetch impl derives the multipart boundary from the FormData). Same
+   * auth-bearer + error-envelope handling as `call`, so a 409/415/413 surfaces as an `ApiError` the
+   * caller keys on by `error.code`. Parses a JSON response against `schema`.
+   */
+  async function callMultipart<T>(
+    path: string,
+    schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+    form: FormData,
+  ): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (opts.getAccessToken) {
+      const token = await opts.getAccessToken();
+      if (token) headers['authorization'] = `Bearer ${token}`;
+    }
+    const res = await doFetch(`${base}${path}`, { method: 'POST', headers, body: form });
+    if (!res.ok) {
+      let code = `http.${res.status}`;
+      let message = res.statusText || 'Request failed';
+      let details: unknown;
+      try {
+        const env = (await res.json()) as ErrorEnvelope;
+        if (env.error?.code) code = env.error.code;
+        if (env.error?.message) message = env.error.message;
+        if (env.error?.details !== undefined) details = env.error.details;
+      } catch {
+        // Non-JSON error body — keep the status-derived defaults.
+      }
+      throw new ApiError(res.status, code, message, details);
+    }
+    return schema.parse(await res.json());
+  }
+
+  return { call, callBinary, callMultipart };
 }
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
@@ -572,7 +609,7 @@ export type MemberAuthClient = ReturnType<typeof createMemberAuthClient>;
  * step (the 3.9/3.10 step-up lesson: key on the CODE).
  */
 export function createMemberClaimClient(opts: MemberAuthClientOptions) {
-  const { call } = createApiCallers(opts);
+  const { call, callMultipart } = createApiCallers(opts);
 
   return {
     /** Send the handover-trust OTP to the deceased's nominee's mobile (session; auth). */
@@ -588,6 +625,25 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
     /** Relationship-confirm → mint claim_case_id + emit claim.intake_initiated (session; auth). */
     initiateIntake(input: ClaimIntakeInitiateRequest): Promise<ClaimIntakeInitiateResult> {
       return call(`${CLAIMS_BASE}/intake`, ClaimIntakeInitiateResponse, input, true);
+    },
+
+    /**
+     * Upload a death certificate (or other doc type) against a claim (Story 6.5; session; auth). The
+     * caller builds the `FormData` with the picked file (RN: `{ uri, name, type }` appended as `file`).
+     * Returns `{ documentId, status: 'processing' }` (HTTP 202 — OCR + parity run asynchronously). A
+     * 409 `claim_document.upload_not_allowed` / 415 / 413 surfaces as `ApiError` (key on `error.code`).
+     */
+    uploadClaimDocument(
+      claimCaseId: string,
+      form: FormData,
+      documentType: OcrDocumentType = 'death_certificate',
+    ): Promise<ClaimDocumentUploadResult> {
+      const qs = `?documentType=${encodeURIComponent(documentType)}`;
+      return callMultipart(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/documents${qs}`,
+        ClaimDocumentUploadResponse,
+        form,
+      );
     },
   };
 }

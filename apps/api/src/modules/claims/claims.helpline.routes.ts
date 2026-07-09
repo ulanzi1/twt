@@ -15,10 +15,12 @@
 // operator authority + the verbal identity read-back is the trust anchor.
 
 import {
+  ClaimDocumentUploadResponse,
   HelplineClaimIntakeRequest,
   HelplineClaimIntakeResponse,
   HelplineOperatorEventRequest,
   HelplineOperatorEventResponse,
+  OcrDocumentType,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -30,6 +32,7 @@ import { requireAdminSession } from '../auth/shared/session-guard.js';
 import { requirePermissionHook } from '../rbac/index.js';
 import { requireStepUp } from '../step-up/gate.js';
 import { createHelplineClaimsHandlers } from './claims.helpline.handlers.js';
+import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
 
 const HELPLINE_CLAIM_TAG = 'helpline-claim';
 
@@ -40,9 +43,15 @@ const CLAIM_FILE_KEY = 'claim.file';
 const CLAIM_FILE_STEP_UP_CONTEXT = 'claim_file';
 
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
+/** Path params + querystring for the helpline document upload (file rides the multipart body). */
+const HelplineDocumentParam = z
+  .object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() })
+  .strict();
+const ClaimDocumentQuery = z.object({ documentType: OcrDocumentType }).strict();
 
 export function registerHelplineClaimsRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createHelplineClaimsHandlers(deps);
+  const docs = createClaimDocumentHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const adminSession = requireAdminSession(deps);
   const scope = scopeResolutionHook(deps);
@@ -78,5 +87,24 @@ export function registerHelplineClaimsRoutes(app: FastifyInstance, deps: AppDeps
       preHandler: [adminSession, scope, canFileClaim],
     },
     h.recordOperatorEvent,
+  );
+
+  // Story 6.5 — helpline operator upload-on-behalf (multipart death-certificate upload). Permission-
+  // gated (claim.file); rides the scope-resolution middleware's scope tx. The upload is NOT a
+  // freeze-firing mutation, so it needs no fresh step-up (unlike the intake route). The file rides
+  // the multipart body; `documentType` (the <DocumentTypeChooser> selection) is a validated query param.
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/documents',
+    {
+      schema: {
+        params: HelplineDocumentParam,
+        querystring: ClaimDocumentQuery,
+        response: { 202: ClaimDocumentUploadResponse },
+        tags: [HELPLINE_CLAIM_TAG],
+        consumes: ['multipart/form-data'],
+      },
+      preHandler: [adminSession, scope, canFileClaim],
+    },
+    docs.uploadHelplineDocument,
   );
 }

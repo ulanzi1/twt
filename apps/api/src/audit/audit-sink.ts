@@ -183,6 +183,11 @@ export type AuthAuditEventType =
   | 'member_claim.convergence_pending'
   | 'member_claim.convergence_merged'
   | 'member_claim.convergence_overridden'
+  // ── Death-certificate upload surface (Story 6.5, FR-38 / Epic 6) ──────────────
+  // A death-certificate (or other doc-type) upload was accepted (202) → bytes stored + the OCR
+  // parity job enqueued. NON-PII context: claim_case_id + claim_document_id + document_type +
+  // intake_channel + the acting actor. NEVER the extracted identity fields (Tier-1).
+  | 'member_claim.document_uploaded'
   // ── Helpline-mediated claim filing surface (Story 6.3, FR-37 / Epic 6) ────────
   // The operator-console (Priya-path) intake — the TWIN of the member-app lines above.
   // Context is NON-PII throughout: the intake lines carry claim_case_id + deceased_member_id
@@ -206,6 +211,8 @@ export type AuthAuditEventType =
   | 'helpline_claim.intake_failed'
   | 'helpline_claim.readback_confirmed'
   | 'helpline_claim.escalated'
+  // Death-certificate operator upload-on-behalf accepted (Story 6.5) — TWIN of the member line.
+  | 'helpline_claim.document_uploaded'
   // ── ICP convergence-resolution surface (Story 6.4, AR-62) ─────────────────────
   // The operator-console pending/merge/override lines (the <ConvergenceDecisionStrip>). Context
   // is NON-PII throughout: claim ids + intake_attempt_id + intake_channel(s) + the resolving

@@ -10,14 +10,24 @@
 // DB-touching specs guard with `describe.skipIf(!hasDatabase)` so the suite passes
 // without Docker; the live-DB CI job sets DATABASE_URL (Story 1.6 substrate).
 
+import type { ClaimDocumentStorage } from '@twt/contracts';
 import { createDb } from '@twt/domain';
+import {
+  createInMemoryClaimDocumentStorage,
+  type InMemoryClaimDocumentStorage,
+} from '@twt/platform-adapters';
 import type pg from 'pg';
 
 import type { JobEnvelope } from '@twt/queue';
 
 import type { AuthAuditEvent, AuthAuditSink } from '../../src/audit/audit-sink.js';
 import { loadConfig, type ApiConfig } from '../../src/config.js';
-import type { AppDeps, DataExportEnqueuer } from '../../src/context.js';
+import type {
+  AppDeps,
+  ClaimOcrParityEnqueuer,
+  ClaimOcrParityJobPayload,
+  DataExportEnqueuer,
+} from '../../src/context.js';
 import { buildEncryptionDeps } from '../../src/deps.js';
 import { generateEphemeralMemberJwtKeys } from '../../src/modules/auth/member/jwt-keys.js';
 import type {
@@ -138,6 +148,21 @@ export class CapturingDataExportQueue implements DataExportEnqueuer {
   }
 }
 
+/**
+ * A capturing claim OCR + parity queue (Story 6.5). Records every enqueued envelope so the upload
+ * spec can assert the request path enqueued the job — and, critically, that a REJECTED upload
+ * (409 lifecycle guard) enqueues NOTHING. `close` is a no-op.
+ */
+export class CapturingClaimOcrParityQueue implements ClaimOcrParityEnqueuer {
+  public readonly enqueued: JobEnvelope<ClaimOcrParityJobPayload>[] = [];
+  public async enqueue(envelope: JobEnvelope<ClaimOcrParityJobPayload>): Promise<void> {
+    this.enqueued.push(envelope);
+  }
+  public get last(): JobEnvelope<ClaimOcrParityJobPayload> | undefined {
+    return this.enqueued.at(-1);
+  }
+}
+
 export interface TestDepsOverrides {
   auditSink?: AuthAuditSink;
   toneReviewAuditSink?: ToneReviewAuditSink;
@@ -149,6 +174,8 @@ export interface TestDepsOverrides {
   niyamavaliAmendedHook?: NiyamavaliAmendedHook;
   kycProviders?: KycProviderRegistry;
   dataExportQueue?: DataExportEnqueuer;
+  claimDocumentStorage?: ClaimDocumentStorage;
+  claimOcrParityQueue?: ClaimOcrParityEnqueuer;
   resolveChannelSecret?: (secretName: string) => Promise<string>;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
@@ -163,6 +190,8 @@ export interface TestDeps {
   adminStepUpDelivery: CapturingStepUpDelivery;
   niyamavaliHook: CapturingNiyamavaliHook;
   dataExportQueue: CapturingDataExportQueue;
+  claimDocumentStorage: InMemoryClaimDocumentStorage;
+  claimOcrParityQueue: CapturingClaimOcrParityQueue;
 }
 
 const FALLBACK_URL = 'postgresql://twt_test:twt_test@127.0.0.1:1/twt_unused';
@@ -188,6 +217,12 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const niyamavaliHook = new CapturingNiyamavaliHook();
   const dataExportQueue =
     (overrides.dataExportQueue as CapturingDataExportQueue) ?? new CapturingDataExportQueue();
+  const claimDocumentStorage =
+    (overrides.claimDocumentStorage as InMemoryClaimDocumentStorage) ??
+    createInMemoryClaimDocumentStorage();
+  const claimOcrParityQueue =
+    (overrides.claimOcrParityQueue as CapturingClaimOcrParityQueue) ??
+    new CapturingClaimOcrParityQueue();
 
   // Build fake-KMS encryption deps with the test pepper (KMS_TEST_MODE defaults to fake).
   const enc = buildEncryptionDeps(TEST_PEPPER);
@@ -234,6 +269,12 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Data-export queue producer (Story 3.11) — a capturing fake by default so the request spec can
     // assert the build job was enqueued without a live pg-boss.
     dataExportQueue,
+    // Claim-document object store (Story 6.5) — in-memory fake so the upload spec can assert the
+    // bytes were `put` (and that a rejected upload never reaches storage).
+    claimDocumentStorage,
+    // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
+    // enqueued on a 202, and NOT enqueued on a 409 lifecycle-guard rejection.
+    claimOcrParityQueue,
     // Channel secret resolver (Story 5.4) — a deterministic fake by default so the webhook signature
     // round-trip is testable without Secret Manager: a NAME resolves to `test-secret::<name>`. A spec that
     // signs a webhook computes its HMAC over this same value.
@@ -250,6 +291,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     adminStepUpDelivery,
     niyamavaliHook,
     dataExportQueue,
+    claimDocumentStorage,
+    claimOcrParityQueue,
   };
 }
 

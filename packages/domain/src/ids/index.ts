@@ -365,3 +365,14 @@ export const telegramInboundWebhookEventId = uuidBrand('TelegramInboundWebhookEv
 export type IntakeAttemptId = Brand<'IntakeAttemptId'>;
 /** Smart constructor: validates UUID shape, returns a branded `IntakeAttemptId`. */
 export const intakeAttemptId = uuidBrand('IntakeAttemptId');
+
+// ── Claim-document id (Story 6.5, Task 2) ─────────────────────────────────────
+// NEW branded id per the §Naming "branding mandatory on a new ID's first PR" discipline.
+// `ClaimDocumentId` is the per-row address of an uploaded claim document
+// (`claim_documents.claim_document_id`) AND the caller-facing upload handle (the GCS object
+// key is never exposed to the client — the id is). A UUID row address; reuses `uuidBrand`.
+
+/** Per-row address of a claim document (`claim_documents.claim_document_id`). */
+export type ClaimDocumentId = Brand<'ClaimDocumentId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ClaimDocumentId`. */
+export const claimDocumentId = uuidBrand('ClaimDocumentId');

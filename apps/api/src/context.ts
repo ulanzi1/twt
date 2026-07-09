@@ -9,6 +9,7 @@
 
 import type pg from 'pg';
 
+import type { ClaimDocumentStorage } from '@twt/contracts';
 import type { Db, encryption } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 
@@ -132,6 +133,29 @@ export interface DataExportEnqueuer {
   close?(): Promise<void>;
 }
 
+/**
+ * The claim-document OCR + parity job producer seam (Story 6.5). The upload endpoint stores
+ * the bytes in `claimDocumentStorage` and enqueues a `CLAIM_OCR_PARITY` job here (send-only —
+ * the API produces, apps/jobs consumes; NEVER `boss.work()`). Injectable like `dataExportQueue`:
+ * production wires a pg-boss-backed enqueuer; tests inject a capturing fake. The payload is the
+ * NON-PII job metadata (structurally aligned with apps/jobs `ClaimOcrParityPayload` — apps
+ * cannot depend on apps).
+ */
+export interface ClaimOcrParityJobPayload {
+  claimDocumentId: string;
+  claimCaseId: string;
+  deceasedMemberId: string;
+  documentType: string;
+  storageObjectKey: string;
+  contentType: string;
+  byteSize: number;
+}
+
+export interface ClaimOcrParityEnqueuer {
+  enqueue(envelope: JobEnvelope<ClaimOcrParityJobPayload>): Promise<void>;
+  close?(): Promise<void>;
+}
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;
@@ -239,6 +263,18 @@ export interface AppDeps {
    * `DATA_EXPORT_BUILD` job here after inserting the `pending` row.
    */
   readonly dataExportQueue: DataExportEnqueuer;
+  /**
+   * Claim-document object store (Story 6.5, Decision D1) — the upload endpoint `put`s the
+   * death-cert bytes here and `<DocumentPreview>` mints signed read URLs. The live GCS adapter
+   * (`asia-south1`) when `CLAIM_DOCUMENT_BUCKET` is set; an in-memory fake in dev/CI + tests.
+   */
+  readonly claimDocumentStorage: ClaimDocumentStorage;
+  /**
+   * Claim-document OCR + parity job producer (Story 6.5) — the upload endpoint enqueues a
+   * `CLAIM_OCR_PARITY` job here after storing the bytes. A pg-boss-backed enqueuer in prod/dev;
+   * a capturing fake in tests.
+   */
+  readonly claimOcrParityQueue: ClaimOcrParityEnqueuer;
   /**
    * Channel Secret-Manager resolver (Story 5.4) — resolves a per-Pariwar Secret-Manager NAME (a pointer) to
    * its VALUE for the WhatsApp inbound-webhook signature/challenge (the app secret + the verify token). The

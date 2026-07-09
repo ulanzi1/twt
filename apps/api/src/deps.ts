@@ -36,6 +36,11 @@ import {
   type KycProviderRegistry,
 } from './modules/kyc/index.js';
 import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
+import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
+import {
+  createGcsClaimDocumentStorage,
+  createLocalFsClaimDocumentStorage,
+} from '@twt/platform-adapters';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
 import { createToneReviewAuditSink } from './modules/tone-review/index.js';
@@ -304,6 +309,25 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Data-export build-job producer (Story 3.11) — the FIRST api-side queue producer (send-only). Uses
     // the same DB connection string as the app pool (pgboss schema; apps/jobs already created it).
     dataExportQueue: await createPgBossDataExportEnqueuer(connectionString),
+    // Claim-document object store (Story 6.5, Decision D1) — the live GCS adapter when
+    // CLAIM_DOCUMENT_BUCKET is set (private bucket, asia-south1), else a shared local-disk
+    // fake (dev/CI — no live bucket). The bytes never touch Postgres; only the object key +
+    // Tier-1 metadata persist (the OCR job writes that row). MUST be a shared filesystem
+    // fake, not an in-process Map: apps/api and apps/jobs are separate processes, so a
+    // per-process in-memory store is invisible to the other (a real local upload would 404
+    // in the OCR job). The local-fs fake resolves to the same fixed temp directory in both
+    // processes with no extra config.
+    claimDocumentStorage: process.env['CLAIM_DOCUMENT_BUCKET']
+      ? createGcsClaimDocumentStorage({
+          bucketName: process.env['CLAIM_DOCUMENT_BUCKET'],
+          ...(process.env['GOOGLE_CLOUD_PROJECT']
+            ? { projectId: process.env['GOOGLE_CLOUD_PROJECT'] }
+            : {}),
+        })
+      : createLocalFsClaimDocumentStorage(),
+    // Claim OCR + parity job producer (Story 6.5) — send-only, same DB connection string as the
+    // app pool (pgboss schema; apps/jobs already created it).
+    claimOcrParityQueue: await createPgBossClaimOcrParityEnqueuer(connectionString),
     // Channel Secret-Manager resolver (Story 5.4) — resolves a per-Pariwar WA webhook credential NAME →
     // value. Local dev falls back to an env var derived from the NAME (non-alphanumerics → `_`, uppercased),
     // the SAME resolveSecretValue path the argon2 pepper / DigiLocker secrets use; prod uses Secret Manager.

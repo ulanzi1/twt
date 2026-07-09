@@ -110,6 +110,17 @@ export const QUEUE_NAMES = {
    * has no window). Best-effort, cross-tenant on the BYPASSRLS service pool. Job class C (background).
    */
   TELEGRAM_WEBHOOK_PROCESSOR: 'telegram.webhook_processor',
+  /**
+   * Death-certificate OCR + parity evaluation (Story 6.5, Task 4). The API upload endpoint
+   * enqueues this after storing the document bytes in object storage (send-only producer);
+   * the apps/jobs worker fetches the bytes by key, runs the `OcrProvider`, evaluates parity
+   * against the deceased member's KYC record, upserts the `claim_documents` metadata row, and
+   * advances the claim `intake_converged → documents_pending` via `claim.documents_received`.
+   * Idempotent (one doc row per (claim, document_type); the append is skipped once the claim
+   * is already `documents_pending`). A provider/parse failure is non-blocking (→ `ambiguous` +
+   * verifier review; AR-61). Job class B (request-triggered) per architecture §1.4.
+   */
+  CLAIM_OCR_PARITY: 'claim.ocr_parity',
 } as const;
 
 /** Union of the registered queue names. */

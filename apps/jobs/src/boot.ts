@@ -69,6 +69,12 @@ import {
   TELEGRAM_WEBHOOK_PROCESSOR_TZ,
   registerTelegramWebhookProcessorCron,
 } from './tg-webhook-processor.js';
+import { registerClaimOcrParityWorker } from './claim-ocr-parity.js';
+import { createDeterministicOcrProvider } from './ocr/index.js';
+import {
+  createGcsClaimDocumentStorage,
+  createLocalFsClaimDocumentStorage,
+} from '@twt/platform-adapters';
 
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
@@ -331,6 +337,33 @@ async function main(): Promise<void> {
       { pool, db },
       { cron: TELEGRAM_WEBHOOK_PROCESSOR_CRON, tz: TELEGRAM_WEBHOOK_PROCESSOR_TZ },
     );
+
+    // ── Death-cert OCR + parity worker (Story 6.5, Task 4) — Class B (request-triggered) ──
+    // The API enqueues CLAIM_OCR_PARITY on upload; this worker fetches the bytes by key,
+    // runs the v1 deterministic OcrProvider (Decision D3 — no live vendor), evaluates parity
+    // against the deceased's KYC record, upserts the claim_documents row + advances the claim
+    // to documents_pending (idempotently). Storage is env-gated: the live GCS adapter when
+    // CLAIM_DOCUMENT_BUCKET is set, else a shared local-disk fake (dev/CI — no live bucket) —
+    // MUST be shared-filesystem, not an in-process Map: apps/api and apps/jobs are separate
+    // processes, so a per-process in-memory store would be invisible to this worker (a real
+    // local upload would 404 here). Reuses the same jobs KMS deps (data-export precedent) for
+    // the Tier-1 decrypt/encrypt.
+    const claimDocumentBucket = process.env['CLAIM_DOCUMENT_BUCKET'];
+    const claimDocumentStorage = claimDocumentBucket
+      ? createGcsClaimDocumentStorage({
+          bucketName: claimDocumentBucket,
+          ...(process.env['GOOGLE_CLOUD_PROJECT']
+            ? { projectId: process.env['GOOGLE_CLOUD_PROJECT'] }
+            : {}),
+        })
+      : createLocalFsClaimDocumentStorage();
+    await registerClaimOcrParityWorker(boss, {
+      pool,
+      storage: claimDocumentStorage,
+      ocr: createDeterministicOcrProvider(),
+      kms: jobsEncryption.kms,
+      kekRef: jobsEncryption.kekRef,
+    });
 
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);

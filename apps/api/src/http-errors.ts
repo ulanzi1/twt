@@ -82,6 +82,20 @@ export class GoneError extends ApiError {
   }
 }
 
+/** 413 — request entity too large (e.g. an uploaded claim document over the byte cap). */
+export class PayloadTooLargeError extends ApiError {
+  public constructor(message = 'Payload too large', code = 'request.too_large', details?: unknown) {
+    super(413, code, message, details);
+  }
+}
+
+/** 415 — unsupported media type (e.g. an upload MIME outside the allowlist). */
+export class UnsupportedMediaTypeError extends ApiError {
+  public constructor(message = 'Unsupported media type', code = 'request.unsupported_media_type', details?: unknown) {
+    super(415, code, message, details);
+  }
+}
+
 /** 423 — account locked (lockout). Escalation policy in ADR-0009. */
 export class LockedError extends ApiError {
   public constructor(message = 'Account locked', code = 'auth.locked', details?: unknown) {

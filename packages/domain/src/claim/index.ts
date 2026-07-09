@@ -11,3 +11,7 @@ export * from './errors.js';
 // Story 6.4 — the Intake Convergence Point (ICP): tryConverge + the merge/override writers +
 // the read accessors + CONVERGENCE_WINDOW_DAYS + the shared intakeAdvisoryLockKey.
 export * from './icp.js';
+// Story 6.5 — death-cert OCR + parity: the claim_documents read accessors + the pure
+// parity-check (evaluateParity + normalization).
+export * from './documents.js';
+export * from './parity.js';

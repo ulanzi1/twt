@@ -156,6 +156,11 @@ export * from './claims.js';
 // (the AC4 append-only "do not converge" ledger). Both tenant-isolated (mirror claims); no state trigger.
 export * from './intake_attempts.js';
 export * from './convergence_overrides.js';
+// Story 6.5 — `claim_documents`: the death-cert OCR + parity metadata table (tenant-isolated;
+// the FIRST object-storage consumer — stores the GCS object key + Tier-1 extracted-field
+// ciphertext + NON-PII parity outcome/flags, NEVER the document bytes). One row per
+// (claim, document_type); the OCR parity job is the sole writer.
+export * from './claim_documents.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

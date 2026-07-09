@@ -13,3 +13,8 @@ export * from './helpline.js';
 // Story 6.4 — the ICP convergence-resolution DTOs (pending list + merge + override) for the
 // operator/trustee <ConvergenceDecisionStrip>.
 export * from './convergence.js';
+// Story 6.5 — the FROZEN OcrProvider port + DTOs + the provider-neutral error taxonomy
+// (death-certificate OCR extraction seam) and the claim-document upload wire DTOs +
+// the reusable ClaimDocumentStorage port.
+export * from './ocr.js';
+export * from './documents.js';

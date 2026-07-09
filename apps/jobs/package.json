@@ -18,6 +18,7 @@
     "@twt/channels": "workspace:*",
     "@twt/contracts": "workspace:*",
     "@twt/domain": "workspace:*",
+    "@twt/platform-adapters": "workspace:*",
     "@twt/queue": "workspace:*",
     "jszip": "^3.10.1",
     "pg": "^8.13.0",

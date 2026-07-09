@@ -50,6 +50,7 @@ import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
 import { registerMemberJwt } from './plugins/jwt/index.js';
+import { registerMultipart } from './plugins/multipart/index.js';
 import { registerHoneypot, registerSecurityHeaders } from './plugins/security-headers/index.js';
 import { registerSession } from './plugins/session/index.js';
 import { registerSwagger } from './plugins/swagger/index.js';
@@ -98,6 +99,9 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // (Story 3.2). Independent of @fastify/session; adds no automatic auth (the member
   // routes call the member-session guard explicitly).
   await registerMemberJwt(app, deps);
+  // Story 6.5 — multipart file upload (claim-document endpoints). Adds the multipart/form-data
+  // content-type parser; other routes stay JSON.
+  await registerMultipart(app);
   await registerSwagger(app);
 
   // Defense-in-depth Origin/Referer check on state-changing requests.

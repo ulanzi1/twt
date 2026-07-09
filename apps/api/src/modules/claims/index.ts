@@ -13,10 +13,13 @@
 import type { FastifyInstance } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
+import { registerConvergenceRoutes } from './claims.convergence.routes.js';
 import { registerHelplineClaimsRoutes } from './claims.helpline.routes.js';
 import { registerClaimsRoutes } from './claims.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
   registerHelplineClaimsRoutes(app, deps);
+  // Story 6.4 — the ICP convergence-resolution surface (pending list + merge + override).
+  registerConvergenceRoutes(app, deps);
 }

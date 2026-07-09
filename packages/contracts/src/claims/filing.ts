@@ -114,14 +114,20 @@ export const ClaimIntakeInitiateRequest = z
 export type ClaimIntakeInitiateRequest = z.output<typeof ClaimIntakeInitiateRequest>;
 
 /**
- * The intake response — the minted (or, on an idempotent retry, the EXISTING) canonical
- * claim id + its current lifecycle state. A double-tap/retry returns the SAME `claimCaseId`
- * with `state: 'intake_pending'` (AC3 idempotency), never a second claim.
+ * The intake response — the minted (or, on an idempotent retry / cross-channel convergence,
+ * the EXISTING) canonical claim id + its current lifecycle state. A freshly-minted LONE intake
+ * now returns `state: 'intake_converged'` (Story 6.4 — the ICP auto-converges the lone case,
+ * unblocking the 6.5 documents chain); a same-channel double-tap returns the SAME `claimCaseId`
+ * (never a second claim). `convergencePending` (Story 6.4) is `true` when this was a genuine
+ * cross-channel SECOND intake recorded awaiting an operator/trustee merge/override — the existing
+ * canonical claim is returned unchanged (single freeze intact) and the client shows "claim exists,
+ * a second-channel record is pending review".
  */
 export const ClaimIntakeInitiateResponse = z
   .object({
     claimCaseId: z.string().uuid(),
     state: ClaimLifecycleState,
+    convergencePending: z.boolean(),
   })
   .strict();
 export type ClaimIntakeInitiateResponse = z.output<typeof ClaimIntakeInitiateResponse>;

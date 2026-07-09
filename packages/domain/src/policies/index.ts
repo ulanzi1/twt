@@ -59,3 +59,6 @@ export * from './member-validity-cache-rls.js';
 export * from './cohort-invalidation-epochs-rls.js';
 // Story 6.1 — claim case lifecycle anchor tenant-isolation policies (NOT cross-readable; mirror members-rls).
 export * from './claims-rls.js';
+// Story 6.4 — ICP substrate (intake_attempts + convergence_overrides) tenant-isolation policies
+// (NOT cross-readable; mirror claims-rls). No write-rejection trigger — attempt_status is a plain column.
+export * from './intake-attempts-rls.js';

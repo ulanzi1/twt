@@ -501,6 +501,32 @@ jobs:
       - run: pnpm claim-state:test
       - run: pnpm claim-state:check
 
+  claim-canonical-id-invariant:
+    name: claim-canonical-id-invariant (downstream flows key on claim_case_id only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 6.4 AC6/AC8: after ICP convergence the ONLY canonical id is claim_case_id; the
+    # temporary intake_attempt_id is discarded downstream (AC7). Static TS-AST scan of the
+    # downstream-flow roots (notification today; verification/appeal/publication as they land) —
+    # flags any reference to intakeAttemptId / 'intake_attempt_id'. The ICP's own files are
+    # outside the scanned roots (self-green); the teeth are proven by a known-bad fixture in
+    # lib.test.ts. No DB / network. INVARIANT SCAN → NO fetch-depth: 0 (mirror claim-state-
+    # invariant). See scripts/claim-canonical-id-invariant/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm claim-canonical-id:test
+      - run: pnpm claim-canonical-id:check
+
   kyc-provider-boundary:
     name: kyc-provider-boundary (DigiLocker transport is provider-only)
     runs-on: ubuntu-latest

@@ -60,4 +60,44 @@ describe('evaluateAccountOverlay — derived governance overlay (AC5)', () => {
     expect(r.accountFrozen).toBe(true);
     expect(r.frozenSince).toEqual(at('2026-02-01T00:00:00Z'));
   });
+
+  // ── AGGREGATE over multiple claim streams (Story 6.4 — ICP override safety) ──
+  // With more than one claim for one deceased member (e.g. an ICP-overridden separate case),
+  // the account stays frozen while ANY associated claim is non-terminal; a single claim's
+  // settle/deny must NOT clear the freeze another claim still needs.
+
+  const intakeS = (streamId: string, iso: string): AccountOverlayEventInput => ({ type: 'claim.intake_initiated', occurredAt: at(iso), streamId });
+  const settledS = (streamId: string, iso: string): AccountOverlayEventInput => ({ type: 'claim.settled', occurredAt: at(iso), streamId });
+  const deniedS = (streamId: string, iso: string): AccountOverlayEventInput => ({ type: 'claim.denied_no_appeal', occurredAt: at(iso), streamId });
+
+  it('two claims, one settled + one still open → STAYS frozen (aggregate)', () => {
+    const r = evaluateAccountOverlay([
+      intakeS('claim-A', '2026-01-01T00:00:00Z'),
+      intakeS('claim-B', '2026-01-02T00:00:00Z'),
+      settledS('claim-A', '2026-02-01T00:00:00Z'),
+    ]);
+    expect(r.accountFrozen).toBe(true);
+    // frozenSince = the earliest still-active freeze (claim-B's intake).
+    expect(r.frozenSince).toEqual(at('2026-01-02T00:00:00Z'));
+  });
+
+  it('two claims, BOTH terminal → unfrozen (aggregate)', () => {
+    const r = evaluateAccountOverlay([
+      intakeS('claim-A', '2026-01-01T00:00:00Z'),
+      intakeS('claim-B', '2026-01-02T00:00:00Z'),
+      settledS('claim-A', '2026-02-01T00:00:00Z'),
+      deniedS('claim-B', '2026-03-01T00:00:00Z'),
+    ]);
+    expect(r).toEqual({ accountFrozen: false, frozenSince: null });
+  });
+
+  it("aggregate frozenSince tracks the earliest active claim, not a later-settled one's", () => {
+    const r = evaluateAccountOverlay([
+      intakeS('claim-A', '2026-01-01T00:00:00Z'),
+      settledS('claim-A', '2026-01-15T00:00:00Z'),
+      intakeS('claim-B', '2026-02-01T00:00:00Z'),
+    ]);
+    expect(r.accountFrozen).toBe(true);
+    expect(r.frozenSince).toEqual(at('2026-02-01T00:00:00Z'));
+  });
 });

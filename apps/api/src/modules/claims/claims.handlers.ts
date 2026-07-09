@@ -141,36 +141,58 @@ export function createClaimsHandlers(deps: AppDeps) {
           auditId,
         });
         ok = true;
-        emitAuthAudit(
-          deps,
-          request,
-          outcome.created ? 'member_claim.intake_initiated' : 'member_claim.intake_idempotent',
-          {
+        // Three outcomes (Story 6.4): a fresh mint (intake_initiated); a genuine cross-channel
+        // SECOND intake recorded pending awaiting resolution (convergence_pending — DISTINCT from a
+        // trivial retry); or a same-channel double-tap (intake_idempotent).
+        if (outcome.created) {
+          emitAuthAudit(deps, request, 'member_claim.intake_initiated', {
             actorId: memberIdStr,
             pariwarId: pariwarIdStr,
-            context: outcome.created
-              ? {
-                  claim_case_id: outcome.claimCaseId,
-                  deceased_member_id: memberIdStr,
-                  intake_channel: 'member_app',
-                  relationship: body.relationship,
-                  audit_id: auditId,
-                }
-              : {
-                  // Dedup hit: the ORIGINAL intake's relationship is what's actually on
-                  // record (recorded in that intake's own audit line, not here) — this
-                  // retry's relationship was NOT persisted or compared. Log it under a
-                  // distinct key so this line never reads as "relationship updated."
-                  claim_case_id: outcome.claimCaseId,
-                  deceased_member_id: memberIdStr,
-                  intake_channel: 'member_app',
-                  relationship_submitted: body.relationship,
-                  note: 'idempotent_hit_relationship_not_persisted',
-                  audit_id: auditId,
-                },
-          },
-        );
-        return { claimCaseId: outcome.claimCaseId, state: outcome.state as ClaimIntakeInitiateResponse['state'] };
+            context: {
+              claim_case_id: outcome.claimCaseId,
+              deceased_member_id: memberIdStr,
+              intake_channel: 'member_app',
+              relationship: body.relationship,
+              audit_id: auditId,
+            },
+          });
+        } else if (outcome.convergencePending) {
+          emitAuthAudit(deps, request, 'member_claim.convergence_pending', {
+            actorId: memberIdStr,
+            pariwarId: pariwarIdStr,
+            context: {
+              claim_case_id: outcome.claimCaseId,
+              intake_attempt_id: outcome.intakeAttemptId,
+              deceased_member_id: memberIdStr,
+              intake_channel: 'member_app',
+              relationship_submitted: body.relationship,
+              note: 'cross_channel_second_intake_pending_resolution',
+              audit_id: auditId,
+            },
+          });
+        } else {
+          emitAuthAudit(deps, request, 'member_claim.intake_idempotent', {
+            actorId: memberIdStr,
+            pariwarId: pariwarIdStr,
+            context: {
+              // Dedup hit: the ORIGINAL intake's relationship is what's actually on
+              // record (recorded in that intake's own audit line, not here) — this
+              // retry's relationship was NOT persisted or compared. Log it under a
+              // distinct key so this line never reads as "relationship updated."
+              claim_case_id: outcome.claimCaseId,
+              deceased_member_id: memberIdStr,
+              intake_channel: 'member_app',
+              relationship_submitted: body.relationship,
+              note: 'idempotent_hit_relationship_not_persisted',
+              audit_id: auditId,
+            },
+          });
+        }
+        return {
+          claimCaseId: outcome.claimCaseId,
+          state: outcome.state as ClaimIntakeInitiateResponse['state'],
+          convergencePending: outcome.convergencePending,
+        };
       } catch (err) {
         // An account-freezing operation must never fail audit-silently.
         emitAuthAudit(deps, request, 'member_claim.intake_failed', {

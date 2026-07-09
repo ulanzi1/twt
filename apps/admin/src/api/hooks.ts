@@ -9,6 +9,8 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AddPariwarRequest,
+  ConvergenceMergeRequest,
+  ConvergenceOverrideRequest,
   HelplineClaimIntakeRequest,
   HelplineOperatorEventRequest,
   MemberSearchRequest,
@@ -257,6 +259,43 @@ export function useHelplineOperatorEvent(pariwarId: string) {
 /** True iff the (per-Pariwar) grant set carries `claim.file` — advisory only (AC1/AC6). */
 export function hasClaimFile(grants: readonly string[] | undefined): boolean {
   return grants?.includes('claim.file') ?? false;
+}
+
+// ── ICP convergence-resolution surface (Story 6.4) ────────────────────────────
+// The <ConvergenceDecisionStrip> feed + the merge/override mutations. The pending list is a
+// support-freshness query (staleTime:0 default); both mutations invalidate it so a resolved
+// attempt drops off the strip. `claim.file` is a per-Pariwar grant — the client only gates on a
+// live session; the server permission hook is the real boundary.
+
+const convergencePendingKey = (pariwarId: string): readonly unknown[] => [
+  'convergence-pending',
+  pariwarId,
+];
+
+/** GET the pending cross-channel attempts + their candidate claims (the strip feed). */
+export function useConvergencePending(pariwarId: string) {
+  return useQuery({
+    queryKey: convergencePendingKey(pariwarId),
+    queryFn: () => api.listPendingConvergence(pariwarId),
+  });
+}
+
+/** Confirm convergence (merge). Invalidates the pending list on success (the attempt is resolved). */
+export function useConfirmConvergenceMerge(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ConvergenceMergeRequest) => api.confirmConvergenceMerge(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: convergencePendingKey(pariwarId) }),
+  });
+}
+
+/** Override (treat as separate → mint a distinct claim). Invalidates the pending list on success. */
+export function useOverrideConvergence(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ConvergenceOverrideRequest) => api.overrideConvergence(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: convergencePendingKey(pariwarId) }),
+  });
 }
 
 // ── Channel-config surface (Story 5.3) ────────────────────────────────────────

@@ -105,7 +105,7 @@ async function establishHandoverTrust(t: TestApp, memberId: string, pariwarId: s
 }
 
 describe.skipIf(!hasDatabase)('Member-app claim filing — E2E (:5433)', () => {
-  it('AC2/AC3/AC6: handover-trust → intake → intake_pending + account FROZEN + idempotent, no PII', async () => {
+  it('AC2/AC3/AC6: handover-trust → intake → intake_converged (Story 6.4 ICP auto-converge) + account FROZEN + idempotent, no PII', async () => {
     const t = await createTestApp();
     try {
       const { memberId, pariwarId } = await seedMember(t);
@@ -136,16 +136,23 @@ describe.skipIf(!hasDatabase)('Member-app claim filing — E2E (:5433)', () => {
         payload: { relationship: 'spouse' }, token: token(t, memberId, pariwarId),
       });
       expect(intake.status).toBe(200);
-      expect(intake.body.state).toBe('intake_pending');
+      // Story 6.4: a lone intake now AUTO-CONVERGES — the ICP emits claim.intake_converged
+      // immediately, so the response/persisted state is intake_converged (was intake_pending).
+      expect(intake.body.state).toBe('intake_converged');
+      expect(intake.body.convergencePending).toBe(false);
       const claimCaseId = intake.body.claimCaseId as string;
       expect(claimCaseId).toMatch(/^[0-9a-f-]{36}$/);
 
-      // Exactly ONE claim.intake_initiated on the claim stream, carrying the pinned seam.
+      // The lone-intake stream is [intake_initiated, intake_converged] — the freeze fires on the
+      // FIRST (intake_initiated, carrying the pinned seam), convergence is the SECOND (Story 6.4).
       const events = await t.pool.query<{ event_type: string; payload: Json }>(
         `SELECT event_type, payload FROM events_log WHERE stream_id = $1 ORDER BY event_version`,
         [claimCaseId],
       );
-      expect(events.rows.map((r) => r.event_type)).toEqual(['claim.intake_initiated']);
+      expect(events.rows.map((r) => r.event_type)).toEqual([
+        'claim.intake_initiated',
+        'claim.intake_converged',
+      ]);
       expect(events.rows[0]?.payload).toMatchObject({
         deceased_member_id: memberId,
         intake_channel: 'member_app',
@@ -165,7 +172,7 @@ describe.skipIf(!hasDatabase)('Member-app claim filing — E2E (:5433)', () => {
         [claimCaseId],
       );
       expect(claimRow.rows[0]).toMatchObject({
-        current_state: 'intake_pending',
+        current_state: 'intake_converged',
         deceased_member_id: memberId,
         claimant_actor_id: null,
       });

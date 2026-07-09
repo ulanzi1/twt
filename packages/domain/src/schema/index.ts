@@ -151,6 +151,11 @@ export * from './pariwar_degraded_mode_declarations.js';
 // claim-state-invariant CI gate. Death-support nominee claims ONLY (§1.9/§1.13:
 // no payout_destination_id / accident / reserve columns). Twin of Story 3.1.
 export * from './claims.js';
+// Story 6.4 — ICP substrate: `intake_attempts` (the dedup ledger — one row per intake attempt;
+// attempt_status is a PLAIN projected column, NOT an event-sourced cache) + `convergence_overrides`
+// (the AC4 append-only "do not converge" ledger). Both tenant-isolated (mirror claims); no state trigger.
+export * from './intake_attempts.js';
+export * from './convergence_overrides.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

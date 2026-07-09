@@ -10,3 +10,6 @@
 
 export * from './filing.js';
 export * from './helpline.js';
+// Story 6.4 — the ICP convergence-resolution DTOs (pending list + merge + override) for the
+// operator/trustee <ConvergenceDecisionStrip>.
+export * from './convergence.js';

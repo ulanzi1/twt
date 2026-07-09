@@ -30,7 +30,7 @@ import { type ClaimLifecycleState, replayClaimState } from './state.js';
  * `settled` and `denied` are both annotated terminal; `reversed` re-enters
  * `approved` via an appeal, so it is NOT terminal).
  */
-const CLAIM_TERMINAL_STATES: ClaimLifecycleState[] = ['settled', 'denied'];
+export const CLAIM_TERMINAL_STATES: readonly ClaimLifecycleState[] = ['settled', 'denied'] as const;
 
 /**
  * Compute a claim's lifecycle state as of `atTimestamp` by replaying its event stream
@@ -109,7 +109,7 @@ export async function getClaimByDeceasedMember(
       and(
         eq(claims.pariwarId, pariwarId),
         eq(claims.deceasedMemberId, deceasedMemberId),
-        notInArray(claims.currentState, CLAIM_TERMINAL_STATES),
+        notInArray(claims.currentState, [...CLAIM_TERMINAL_STATES]),
       ),
     )
     .orderBy(desc(claims.createdAt))

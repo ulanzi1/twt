@@ -168,6 +168,21 @@ export type AuthAuditEventType =
   | 'member_claim.intake_initiated'
   | 'member_claim.intake_idempotent'
   | 'member_claim.intake_failed'
+  // ── Intake Convergence Point (ICP) surface (Story 6.4, AR-62 / Epic 6) ────────
+  // A genuine cross-channel SECOND intake was recorded `pending` awaiting operator/trustee
+  // resolution on the <ConvergenceDecisionStrip>. DISTINCT from intake_idempotent (a trivial
+  // same-channel retry) — a pending cross-channel attempt is a reviewable event. Context is
+  // NON-PII: claim_case_id + intake_attempt_id + deceased_member_id + intake_channel + actor.
+  //   convergence_pending — a second-channel attempt awaits resolution (no second freeze).
+  //   convergence_merged  — an operator confirmed convergence (channel unioned; NO lifecycle event).
+  //   convergence_overridden — an operator treated the attempt as separate (a distinct claim minted).
+  // `convergence_merged`/`convergence_overridden` are resolved from the shared admin console
+  // (claims.convergence.handlers.ts), NOT from this member-app handler — but the resolved
+  // attempt's ORIGINATING channel decides the prefix (Review Finding: the resolution endpoint
+  // is channel-agnostic and must not mislabel a member-app-originated attempt as helpline_claim.*).
+  | 'member_claim.convergence_pending'
+  | 'member_claim.convergence_merged'
+  | 'member_claim.convergence_overridden'
   // ── Helpline-mediated claim filing surface (Story 6.3, FR-37 / Epic 6) ────────
   // The operator-console (Priya-path) intake — the TWIN of the member-app lines above.
   // Context is NON-PII throughout: the intake lines carry claim_case_id + deceased_member_id
@@ -190,7 +205,14 @@ export type AuthAuditEventType =
   | 'helpline_claim.intake_idempotent'
   | 'helpline_claim.intake_failed'
   | 'helpline_claim.readback_confirmed'
-  | 'helpline_claim.escalated';
+  | 'helpline_claim.escalated'
+  // ── ICP convergence-resolution surface (Story 6.4, AR-62) ─────────────────────
+  // The operator-console pending/merge/override lines (the <ConvergenceDecisionStrip>). Context
+  // is NON-PII throughout: claim ids + intake_attempt_id + intake_channel(s) + the resolving
+  // operator id + (override only) the audited reason. NEVER caller/nominee PII.
+  | 'helpline_claim.convergence_pending'
+  | 'helpline_claim.convergence_merged'
+  | 'helpline_claim.convergence_overridden';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

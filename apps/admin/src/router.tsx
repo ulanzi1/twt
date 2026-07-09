@@ -16,6 +16,7 @@ import {
 
 import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
+import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
 import { MemberSearchRoute } from './routes/MemberSearchRoute.js';
@@ -84,6 +85,13 @@ const degradedModeRoute = createRoute({
   component: DegradedModeRoute,
 });
 
+// Story 6.3 — the tenant-scoped helpline operator console (claim intake on a caller's behalf).
+const helplineRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/helpline',
+  component: HelplineClaimRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -93,6 +101,7 @@ const routeTree = rootRoute.addChildren([
   memberSearchRoute,
   channelConfigRoute,
   degradedModeRoute,
+  helplineRoute,
 ]);
 
 export const router = createRouter({ routeTree });

@@ -147,6 +147,20 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // `pariwar`-scoped grant (same rationale as pariwar.configure_channels / validity.invalidate_cache).
     expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
   });
+
+  it('Story 6.3 — claim.file is granted ONLY to helpline_operator (+ super_admin)', () => {
+    const KEY = 'claim.file';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['helpline_operator', 'super_admin']);
+    // The intake/FILE key is distinct from the verifier/trustee APPROVE key: roles that may
+    // APPROVE a claim (pariwar_admin, state_trustee, district_admin) do NOT gain intake-filing in v1.
+    for (const role of ['pariwar_admin', 'state_trustee', 'district_admin', 'verifier'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

@@ -46,5 +46,9 @@
   "nominee.load_error": "We couldn't load these details right now. Please call us — we'll help.",
   "ack.title": "We're with you",
   "ack.body": "Thank you. Verification usually takes 2–3 weeks, and a field worker will visit. We'll keep you updated — there's nothing more you need to do right now.",
-  "ack.done": "Done"
+  "ack.done": "Done",
+  "readback.identity.title": "Identity read-back — confirm before filing",
+  "readback.identity.script": "I'd like to confirm a few details before we file the claim. Am I right that this is for {name}? Please confirm the name is correct.",
+  "readback.nominee.title": "Nominee summary read-back — advisory only",
+  "readback.nominee.script": "For our records, {name} has {count} registered nominee(s). This is only to help — it does not affect filing the claim."
 }

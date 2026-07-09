@@ -41,10 +41,10 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 15 grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(6); // Story 5.8 bump (5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+  it('is versioned and seeded with exactly the 16 grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(7); // Story 6.3 bump (6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(15);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(16);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -77,6 +77,13 @@ describe('PERMISSION_CATALOG', () => {
     expect(() => permissionKey('pariwar.degraded_mode.declare')).toThrow(InvalidPermissionKeyError);
     // The two-dot form is not in the catalog (it survives only as the audit action, a different regex).
     expect(isCatalogKey('pariwar.degraded_mode.declare')).toBe(false);
+  });
+
+  it('includes the Story 6.3 helpline claim-intake WRITE key (claim.file)', () => {
+    expect(isCatalogKey('claim.file')).toBe(true);
+    // It is the intake/FILE key — distinct from the verifier/trustee APPROVE key.
+    expect(isCatalogKey('claim.approve')).toBe(true);
+    expect(permissionKey('claim.file')).toBe('claim.file');
   });
 
   it('does NOT contain past-tense EVENT names (catalog ≠ events)', () => {

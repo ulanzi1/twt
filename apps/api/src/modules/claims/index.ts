@@ -1,17 +1,22 @@
-// Claims module barrel — Story 6.2 (Task 2).
+// Claims module barrel — Story 6.2 (member app) + Story 6.3 (helpline).
 //
-// Registers the member-app claim-filing SURFACE: the handover-trust OTP send/verify + the
-// intake route (the FIRST live caller of the Story 6.1 claim primitive). Wired into
-// server.ts next to registerNomineeModule. Member-session-gated throughout — no pre-scope
-// path — so (like the nominee module) there is no `claims.repo.ts`: the handler talks to the
-// `@twt/domain` `claim.*` / `nominee.*` accessors + the shared member-OTP machinery directly
-// inside its own scope tx.
+// The module now serves BOTH claim-filing surfaces, both live callers of the Story 6.1 claim
+// primitive, both converging on the SAME `initiateIntake` dedup core (claims.service.ts):
+//   · member-app (Ravi-mode, 6.2): /api/v1/member/claims/* — handover-trust OTP + intake,
+//     member-session-gated, deriving the pariwar from the session.
+//   · helpline (operator, 6.3): /api/v1/p/:pariwarId/admin/claims/intake — the operator files
+//     on a caller's behalf, scope-gated by the admin chain + the operator's own admin step-up.
+//
+// Wired into server.ts next to registerNomineeModule. The member surface owns its scope tx
+// (openScopeTx); the helpline surface rides the scope-resolution middleware's scope tx.
 
 import type { FastifyInstance } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
+import { registerHelplineClaimsRoutes } from './claims.helpline.routes.js';
 import { registerClaimsRoutes } from './claims.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
+  registerHelplineClaimsRoutes(app, deps);
 }

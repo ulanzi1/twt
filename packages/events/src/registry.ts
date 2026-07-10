@@ -137,8 +137,15 @@ export const EVENT_TYPE_REGISTRY = {
   },
   'claim.peer_mesh_pinged': {
     type: 'claim.peer_mesh_pinged',
-    description: 'Peer-mesh verification pinged → verification_in_progress (Story 6.6).',
+    description:
+      'Peer-mesh verification pinged → verification_in_progress; payload carries the deterministic selection (selected_member_ids + metric_id/version) (Story 6.6).',
     schema: claim.ClaimPeerMeshPingedPayloadSchema,
+  },
+  'claim.peer_mesh_responded': {
+    type: 'claim.peer_mesh_responded',
+    description:
+      'Peer-mesh response recorded — annotation event; identity transition (state unchanged); carries responder_member_id + response (Story 6.6).',
+    schema: claim.ClaimPeerMeshRespondedPayloadSchema,
   },
   'claim.ground_inspection_scheduled': {
     type: 'claim.ground_inspection_scheduled',

@@ -111,6 +111,12 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
       if (state === 'documents_pending') return 'verification_in_progress';
       return state;
 
+    // ANNOTATION: peer-mesh response recorded (Story 6.6) — peer-mesh AND ground-inspection
+    // signals BOTH gather during verification (PRD §4.6 "both, not either"), so a response
+    // does NOT advance the primary state. Identity, exactly like ground_inspection_scheduled.
+    case 'claim.peer_mesh_responded':
+      return state;
+
     // ANNOTATION: ground inspection scheduled — both signals required (PRD §4.6
     // "both, not either"), so this does NOT advance the primary state. Identity.
     case 'claim.ground_inspection_scheduled':

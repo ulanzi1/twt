@@ -376,3 +376,24 @@ export const intakeAttemptId = uuidBrand('IntakeAttemptId');
 export type ClaimDocumentId = Brand<'ClaimDocumentId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ClaimDocumentId`. */
 export const claimDocumentId = uuidBrand('ClaimDocumentId');
+
+// ── Peer-mesh selection + ping-intent ids (Story 6.6, Task 1/3) ───────────────
+// Two NEW branded ids per the §Naming "branding mandatory on a new ID's first PR"
+// discipline (L3700-3708). `PeerMeshSelectionId` is the per-row address of a
+// deterministic peer-mesh selection (`claim_peer_mesh_selections.selection_id`) — the
+// audit-replay anchor that the ping intents + the window-expiry fallback key off.
+// `PeerMeshPingId` is the per-row address of a delivery-neutral ping intent
+// (`claim_peer_mesh_pings.ping_id`), ONE per selected member (Decision D1 — recorded,
+// not dispatched). Both are UUID row addresses, so both reuse the shared `uuidBrand`
+// validator. `claim_case_id` / `member_id` columns on those tables reuse the existing
+// `ClaimId` / `MemberId` brands (same canonical ids — never re-declared).
+
+/** Per-row address of a peer-mesh selection (`claim_peer_mesh_selections.selection_id`). */
+export type PeerMeshSelectionId = Brand<'PeerMeshSelectionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `PeerMeshSelectionId`. */
+export const peerMeshSelectionId = uuidBrand('PeerMeshSelectionId');
+
+/** Per-row address of a peer-mesh ping intent (`claim_peer_mesh_pings.ping_id`). */
+export type PeerMeshPingId = Brand<'PeerMeshPingId'>;
+/** Smart constructor: validates UUID shape, returns a branded `PeerMeshPingId`. */
+export const peerMeshPingId = uuidBrand('PeerMeshPingId');

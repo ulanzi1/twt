@@ -15,3 +15,10 @@ export * from './icp.js';
 // parity-check (evaluateParity + normalization).
 export * from './documents.js';
 export * from './parity.js';
+// Story 6.6 — peer-mesh deterministic 5-nearest selection: the pure engine + metric
+// registry, the candidate-snapshot + selection/ping/response reads, and the persistence +
+// annotation-event writers (selection, ping intents, response recording, AR-61 disposition).
+export * from './peer-mesh.js';
+export * from './peer-mesh-metric-registry.js';
+export * from './peer-mesh-read.js';
+export * from './peer-mesh-persist.js';

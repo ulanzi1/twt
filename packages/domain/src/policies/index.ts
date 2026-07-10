@@ -62,3 +62,6 @@ export * from './claims-rls.js';
 // Story 6.4 — ICP substrate (intake_attempts + convergence_overrides) tenant-isolation policies
 // (NOT cross-readable; mirror claims-rls). No write-rejection trigger — attempt_status is a plain column.
 export * from './intake-attempts-rls.js';
+// Story 6.6 — peer-mesh tables (claim_peer_mesh_selections + claim_peer_mesh_pings) tenant-isolation
+// policies (NOT cross-readable; mirror claims-rls). No write-rejection trigger — outcome is a plain column.
+export * from './claim-peer-mesh-selections-rls.js';

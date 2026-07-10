@@ -104,8 +104,35 @@ export const ClaimDocumentsReceivedPayloadSchema = z.object({ ...auditShape }).s
 
 // ── Verification (peer mesh + ground inspection) ──────────────────────────────
 
-/** Peer-mesh verification pinged → `verification_in_progress`. Owner: Story 6.6. */
-export const ClaimPeerMeshPingedPayloadSchema = z.object({ ...auditShape }).strict();
+/**
+ * Peer-mesh verification pinged → `verification_in_progress`. Owner: Story 6.6.
+ *
+ * 6.6 OWNS this event and is its FIRST emitter — there are NO historical events of this
+ * type, so ENRICHING the Story 6.1 placeholder payload with the selection outputs is safe
+ * + correct (self-describing for audit-replay). Carries the deterministic selection's
+ * ordered member ids (1..5) + the metric identity it ran under.
+ */
+export const ClaimPeerMeshPingedPayloadSchema = z
+  .object({
+    ...auditShape,
+    selected_member_ids: z.array(z.string().uuid()).min(1).max(5),
+    metric_id: z.string().min(1),
+    metric_version: z.number().int().positive(),
+  })
+  .strict();
+
+/**
+ * Peer-mesh response recorded. ANNOTATION event (NEW in Story 6.6 — NOT in the 6.1
+ * vocabulary) — an identity transition (`from_state === to_state === 'verification_in_progress'`;
+ * the reducer treats it as identity, it does NOT advance the primary state). Carries the
+ * responder + their response. A non-response is an ABSENCE (no event) — never `denied`
+ * (AC4). Owner: Story 6.6.
+ */
+export const ClaimPeerMeshRespondedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  responder_member_id: z.string().uuid(),
+  response: z.enum(['confirmed', 'denied', 'unknown']),
+});
 
 /**
  * Ground inspection scheduled. ANNOTATION event — both peer-mesh AND ground-inspection
@@ -241,13 +268,17 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 20-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 21-event vocabulary + the type→schema map (single source) ─────────────
+// (Story 6.1 committed the 20 state-advancing events; Story 6.6 adds the 21st —
+// `claim.peer_mesh_responded`, an annotation/identity event — per the "owner stories add
+// their annotation events" discipline.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
   'claim.intake_converged',
   'claim.documents_received',
   'claim.peer_mesh_pinged',
+  'claim.peer_mesh_responded',
   'claim.ground_inspection_scheduled',
   'claim.verifier_reviewing',
   'claim.verifier_approved',
@@ -266,11 +297,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 20 AC2 events). */
+/** The dotted `claim.*` event-type literal union (the 21 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 20 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 21 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -280,6 +311,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.intake_converged': ClaimIntakeConvergedPayloadSchema,
   'claim.documents_received': ClaimDocumentsReceivedPayloadSchema,
   'claim.peer_mesh_pinged': ClaimPeerMeshPingedPayloadSchema,
+  'claim.peer_mesh_responded': ClaimPeerMeshRespondedPayloadSchema,
   'claim.ground_inspection_scheduled': ClaimGroundInspectionScheduledPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,
   'claim.verifier_approved': ClaimVerifierApprovedPayloadSchema,

@@ -4,6 +4,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6-7-ground-inspection-scheduling-notes-photos (2026-07-10)
+
+- **Idempotency `expiresAt` (7-day TTL) is written but never consulted on replay** (`packages/domain/src/claim/ground-inspection-persist.ts:73,228`). `getBoundAssignment` resolves the bound assignment regardless of the key's expiry. Harmless while `idempotency_keys` rows persist, but there is deliberately no DB uniqueness on the assignment (per D5), so the dedup guarantee silently depends on keys living forever. **Re-trigger:** if/when an idempotency-key cleanup/purge job is scheduled — a post-TTL retry of the same schedule/reschedule would re-claim the key and mint a duplicate assignment.
+- **Refusal disposition does not freeze the claim, and a `photo_refused`/`evidence_unavailable` assignment coexists with fresh `scheduled` ones with no cross-assignment invariant** (`packages/domain/src/claim/ground-inspection-persist.ts:663`). Refusal only sets its own row's status; a later `schedule`/`reschedule` on the same claim+district is still permitted, so a newer `scheduled` row can bury the refusal signal in the district read. Refusal→verifier escalation + cross-assignment adjudication is explicitly the Story 6.10/6.11 verifier-console boundary (Decision D4) — 6.7 only records the disposition. **Re-trigger:** Story 6.10 must ensure the verifier console surfaces a refusal disposition as terminal escalation and does not let a later `scheduled` row mask it.
+
+---
+
 ## Deferred from: code review of ai-5-2-live-dispatch-integration-test (2026-07-08)
 
 - **Unbounded accumulation in the shared global `audit_log_entries` table with no cleanup across CI runs.** All three new tests write real rows via `createAuditPort`/`writeAuditEntry`, which own-commits into the global hash-chain — nothing in this file (or its precedent, `dispatch-audit.spec.ts`) truncates or deletes rows after a run. Membership-by-`resourceLocator` assertions stay correct regardless of accumulation, but the table grows unbounded across every CI run indefinitely. Pre-existing pattern inherited from the established live-DB test convention ([[project_live_db_test_gotchas]]), not introduced by this diff. **Re-trigger:** if live-DB test-table growth is ever observed causing CI slowdown, or when a general test-data-retention/cleanup convention is scheduled for the live-DB integration suite.

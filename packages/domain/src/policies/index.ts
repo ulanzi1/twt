@@ -65,3 +65,7 @@ export * from './intake-attempts-rls.js';
 // Story 6.6 — peer-mesh tables (claim_peer_mesh_selections + claim_peer_mesh_pings) tenant-isolation
 // policies (NOT cross-readable; mirror claims-rls). No write-rejection trigger — outcome is a plain column.
 export * from './claim-peer-mesh-selections-rls.js';
+// Story 6.7 — ground-inspection tables (claim_ground_inspections + claim_ground_inspection_photos)
+// tenant-isolation policies (NOT cross-readable; mirror claims-rls). No write-rejection trigger —
+// status/structured_findings are plain columns; the claim's lifecycle stays on claims.current_state.
+export * from './claim-ground-inspections-rls.js';

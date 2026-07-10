@@ -150,8 +150,14 @@ export const EVENT_TYPE_REGISTRY = {
   'claim.ground_inspection_scheduled': {
     type: 'claim.ground_inspection_scheduled',
     description:
-      'Ground inspection scheduled — annotation event; both signals required so state unchanged (Story 6.7).',
+      'Ground inspection ASSIGNMENT scheduled — annotation event; identity (both signals required, state unchanged); carries ground_inspection_id + district + inspector_actor_id + scheduled_at + supersedes_ground_inspection_id (a reschedule back-reference), NO PII (Story 6.7).',
     schema: claim.ClaimGroundInspectionScheduledPayloadSchema,
+  },
+  'claim.ground_inspection_completed': {
+    type: 'claim.ground_inspection_completed',
+    description:
+      'Ground inspection completed — annotation event (the 22nd claim event); identity transition (state unchanged); carries ground_inspection_id + optional photo_count, NO PII; write-guarded to verification_in_progress (Story 6.7).',
+    schema: claim.ClaimGroundInspectionCompletedPayloadSchema,
   },
   'claim.verifier_reviewing': {
     type: 'claim.verifier_reviewing',

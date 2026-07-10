@@ -70,6 +70,20 @@ describe('claim lifecycle reducer — transitions', () => {
     );
   });
 
+  it('ground_inspection_completed (Story 6.7, 22nd event) is an annotation no-op in verification_in_progress', () => {
+    expect(step('verification_in_progress', ev('claim.ground_inspection_completed'))).toBe(
+      'verification_in_progress',
+    );
+  });
+
+  it('ground_inspection_completed reducer stays TOTAL — identity from ANY state, never throws (replay-robustness)', () => {
+    // The reducer is deliberately identity from terminal/pre-verification states too; the
+    // write-path guard (not the reducer) is what prevents an append onto a resolved claim.
+    for (const s of ['intake_pending', 'documents_pending', 'settled', 'denied'] as ClaimLifecycleState[]) {
+      expect(step(s, ev('claim.ground_inspection_completed'))).toBe(s);
+    }
+  });
+
   it('verifier denial → denied; State-Trustee denial → denied', () => {
     expect(step('verifier_review', ev('claim.verifier_denied'))).toBe('denied');
     expect(step('state_trustee_freeze', ev('claim.state_trustee_denied'))).toBe('denied');

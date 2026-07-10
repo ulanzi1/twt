@@ -122,6 +122,16 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.ground_inspection_scheduled':
       return state;
 
+    // ANNOTATION: ground inspection completed (Story 6.7 — the 22nd event). A material
+    // evidentiary fact, but gathers DURING verification (like peer_mesh_responded /
+    // ground_inspection_scheduled) → does NOT advance the primary state. Identity.
+    // The reducer STAYS total (never throws — a historical annotation event must replay as
+    // identity from any state; the replay-robustness contract). Correctness lives in the
+    // WRITE-PATH guard (ground-inspection-persist.ts: GroundInspectionClaimNotInVerificationError),
+    // NOT here — an unconditional identity append onto a resolved claim is the exact 6.6 hazard.
+    case 'claim.ground_inspection_completed':
+      return state;
+
     // Verifier console opens review (Story 6.10/6.11).
     case 'claim.verifier_reviewing':
       if (state === 'verification_in_progress') return 'verifier_review';

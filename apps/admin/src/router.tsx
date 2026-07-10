@@ -16,6 +16,7 @@ import {
 
 import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
+import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
@@ -92,6 +93,13 @@ const helplineRoute = createRoute({
   component: HelplineClaimRoute,
 });
 
+// Story 6.7 — the tenant-scoped ground-inspection console (schedule/notes/photos/complete/refusal).
+const groundInspectionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/ground-inspection',
+  component: GroundInspectionRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -102,6 +110,7 @@ const routeTree = rootRoute.addChildren([
   channelConfigRoute,
   degradedModeRoute,
   helplineRoute,
+  groundInspectionRoute,
 ]);
 
 export const router = createRouter({ routeTree });

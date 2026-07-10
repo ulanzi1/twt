@@ -55,6 +55,9 @@ export interface RoleBundle {
 const CLAIM_APPROVE = permissionKey('claim.approve');
 // Story 6.3 — the helpline/operator claim-INTAKE key (distinct from CLAIM_APPROVE).
 const CLAIM_FILE = permissionKey('claim.file');
+// Story 6.7 — the FR-40 ground-inspection ACTION key + the D6 supervisor-OVERRIDE key.
+const CLAIM_CONDUCT_GROUND_INSPECTION = permissionKey('claim.conduct_ground_inspection');
+const CLAIM_OVERRIDE_GROUND_INSPECTION = permissionKey('claim.override_ground_inspection');
 const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
@@ -107,6 +110,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // `pariwar`-scoped grant, same rationale as pariwar.configure_channels / validity.invalidate_cache).
       PARIWAR_DECLARE_DEGRADED_MODE,
       CLAIM_APPROVE,
+      // Story 6.7 — the D6 supervisor override for ground inspection (author evidence on an
+      // assignment you are not the assigned inspector of). A supervisory `pariwar`-ceiling
+      // authority above the district inspector; checked at the assignment's district.
+      CLAIM_OVERRIDE_GROUND_INSPECTION,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -125,11 +132,28 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   },
   {
     role: 'district_admin',
-    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY],
+    // Story 6.7 — the FR-40 ground-inspection ACTION key (schedule/findings/complete/photo/
+    // refusal), checked at `dimension: 'district'` against the assignment's own district; a
+    // `district` scopeCeiling is exactly what makes that gate meaningful (an exact-node match
+    // authorizes an assignment in the same district). See the D1-reconciliation note in
+    // permissions.ts for why block_admin is DEFERRED (a block grant cannot satisfy a district check).
+    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY, CLAIM_CONDUCT_GROUND_INSPECTION],
     scopeCeiling: 'district',
   },
   {
     role: 'block_admin',
+    // Story 6.7 D1 RECONCILIATION — block_admin ground-inspection scheduling is DEFERRED (NOT
+    // granted). PRD FR-40 names block- and district-level admins as ground-inspection actors, but
+    // ground-inspection assignments authorize at `dimension: 'district'` while block_admin has
+    // `scopeCeiling: 'block'`: a block-scoped grant cannot satisfy a district-scoped resource check
+    // (a block is NARROWER than a district → the district target is "broader than the grant" → deny),
+    // and granting district scope would VIOLATE the block ceiling. No geo-tree resolver exists yet to
+    // prove block→parent-district ancestry (denyDeeperGeoResolver, until Epic 3). So NO inert conduct
+    // grant is seeded here. ACCEPTANCE CONDITION: block_admin support may be enabled only when the
+    // authorization layer can resolve a block grant through verified block→district ancestry while
+    // preserving the role's `scopeCeiling: 'block'` — and enabling it must require no district-scoped
+    // grant to the block administrator. (See check.test.ts for the explicit block-grant-fails-district
+    // assertion that pins this behaviour.)
     permissions: [MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'block',
   },

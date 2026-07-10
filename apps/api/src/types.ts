@@ -43,6 +43,10 @@ declare module 'fastify' {
     scopeTx?: ScopeTx;
     /** The actor's effective grants in the active Pariwar (loaded by scope-resolution). */
     scopeGrants?: readonly rbac.EffectiveGrant[];
+    /** Story 6.7 — the ground-inspection assignment a row-sourced route resolved (set by the
+     *  `resolveGroundInspectionAssignment` preHandler so `requirePermissionHook`'s district
+     *  resolveValue can read the assignment's own district; the handler reuses it). */
+    groundInspection?: import('@twt/domain').schema.ClaimGroundInspectionRow;
   }
 
   // @fastify/session merges this `Session` interface into the session data object.

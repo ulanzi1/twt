@@ -122,6 +122,58 @@ export class ClaimStreamConcurrencyError extends Error {
   }
 }
 
+// ── Ground-inspection write-path guards (Story 6.7) ───────────────────────────
+// These mirror the 6.6 lesson: an identity annotation event (ground_inspection_scheduled/
+// _completed) is semantically identity ONLY from `verification_in_progress`; the reducer
+// stays total (never throws — replay-robustness), so the WRITE PATH must guard against
+// appending a `scheduled`/`completed` event onto a resolved or pre-verification claim (a
+// false evidentiary trail). NOTE the 6.6 precedent class `PeerMeshClaimNotInVerificationError`
+// lives in peer-mesh-persist.ts, NOT here — these three NEW ground-inspection errors are
+// consolidated here alongside `ClaimStreamConcurrencyError`. NOT surfaced at the top-level
+// barrel (claim namespace only); the route maps them to stable 4xx codes.
+
+/** Thrown by a ground-inspection writer when the claim has left `verification_in_progress`
+ *  (guards a false `scheduled`/`completed` audit fact on a resolved/pre-verification claim). */
+export class GroundInspectionClaimNotInVerificationError extends Error {
+  public readonly name = 'GroundInspectionClaimNotInVerificationError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly currentState: string,
+  ) {
+    super(
+      `[ground-inspection] claim ${claimCaseId} is '${currentState}', not 'verification_in_progress' — rejected`,
+    );
+  }
+}
+
+/** Thrown by `completeGroundInspection` when the active assignment has ZERO persisted photos
+ *  (D6/AC4 — ≥1 photo is MANDATORY completion evidence; the no-photo case is the refusal
+ *  disposition, not a completion). Verified transactionally under the assignment row lock. */
+export class GroundInspectionPhotoRequiredError extends Error {
+  public readonly name = 'GroundInspectionPhotoRequiredError';
+  public constructor(public readonly groundInspectionId: string) {
+    super(
+      `[ground-inspection] assignment ${groundInspectionId} cannot be completed without ≥ 1 persisted photo`,
+    );
+  }
+}
+
+/** Thrown when a mutating verb (reschedule/findings/complete/refusal/photo) targets an
+ *  assignment that is no longer `scheduled` — a terminal assignment (`completed`/`superseded`/
+ *  `photo_refused`/`evidence_unavailable`) is IMMUTABLE (the assignment state-transition matrix,
+ *  enforced under the row lock). */
+export class GroundInspectionNotActiveError extends Error {
+  public readonly name = 'GroundInspectionNotActiveError';
+  public constructor(
+    public readonly groundInspectionId: string,
+    public readonly status: string,
+  ) {
+    super(
+      `[ground-inspection] assignment ${groundInspectionId} is '${status}', not 'scheduled' — mutation rejected`,
+    );
+  }
+}
+
 /** True iff `err` is the events_log `(stream_id, event_version)` unique-violation. */
 export function isClaimStreamVersionConflict(err: unknown): boolean {
   const pgErr = extractPgError(err);

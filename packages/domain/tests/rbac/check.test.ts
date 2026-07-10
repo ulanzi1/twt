@@ -162,6 +162,52 @@ describe('hasPermission — fail-closed matrix (every uncertain path denies)', (
   });
 });
 
+// ── Story 6.7 — ground-inspection district gate (D1/D6) ───────────────────────
+
+describe('hasPermission — Story 6.7 ground-inspection district gate', () => {
+  it('District Admin at district=Patna allows claim.conduct_ground_inspection on a Patna assignment (D6 exact-node)', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'claim.conduct_ground_inspection', resource())).toBe(true);
+  });
+
+  it('District Admin at district=Patna is DENIED on a Vaishali assignment (per-assignment district authz, D6)', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(
+      hasPermission(grants, 'claim.conduct_ground_inspection', resource({ value: 'Vaishali' })),
+    ).toBe(false);
+  });
+
+  it('D1 DEFERRAL PIN: a BLOCK-scoped grant can NEVER satisfy a district-dimension check', () => {
+    // This is WHY block_admin is not granted claim.conduct_ground_inspection in v1 (roles.ts D1
+    // reconciliation). block_admin holds member.suspend at block scope; even so, that block grant
+    // cannot authorize a district-dimension target — the district target is BROADER than a block
+    // grant (scope.ts: tRank < gRank → deny), and no geo-tree resolver maps block→parent-district
+    // yet. Granting the conduct key to block_admin would therefore be inert under the district gate.
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'block_admin', scopeDimension: 'block', scopeValue: 'Block-1' },
+    ];
+    expect(
+      hasPermission(grants, 'member.suspend', resource({ dimension: 'district', value: 'Patna' })),
+    ).toBe(false);
+  });
+
+  it('Pariwar Admin holds claim.override_ground_inspection (D6 supervisor override) at pariwar scope', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'claim.override_ground_inspection', resource())).toBe(true);
+    // The district inspector role does NOT hold the override key.
+    const districtAdmin: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(districtAdmin, 'claim.override_ground_inspection', resource())).toBe(false);
+  });
+});
+
 // ── Story 4.6 — member.view_validity read key (D5 tripwire) ───────────────────
 
 describe('hasPermission — member.view_validity (Story 4.6 FR-12A read key)', () => {

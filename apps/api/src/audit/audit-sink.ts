@@ -219,7 +219,19 @@ export type AuthAuditEventType =
   // operator id + (override only) the audited reason. NEVER caller/nominee PII.
   | 'helpline_claim.convergence_pending'
   | 'helpline_claim.convergence_merged'
-  | 'helpline_claim.convergence_overridden';
+  | 'helpline_claim.convergence_overridden'
+  // ── Ground-inspection admin surface (Story 6.7, FR-40 / Epic 6) ───────────────
+  // The schedule/reschedule/findings/complete/refusal/photo verbs on a ground-inspection
+  // ASSIGNMENT. Post-commit SINK lines (NOT a same-tx DB write — the durable record is the
+  // events_log event for schedule/complete + the assignment row state). Context is NON-PII:
+  // ground_inspection_id + claim_case_id + district + inspector_actor_id (+ override actor,
+  // photo_count, disposition/refusal_reason) — NEVER the encrypted location/contact/notes/caption.
+  | 'admin_ground_inspection.scheduled'
+  | 'admin_ground_inspection.rescheduled'
+  | 'admin_ground_inspection.findings_recorded'
+  | 'admin_ground_inspection.photo_uploaded'
+  | 'admin_ground_inspection.completed'
+  | 'admin_ground_inspection.refused';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

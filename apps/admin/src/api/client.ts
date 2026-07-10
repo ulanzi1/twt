@@ -545,3 +545,155 @@ export async function logout(): Promise<void> {
     throw new ApiError(res.status, `http.${res.status}`, 'Logout failed');
   }
 }
+
+// ── Ground-inspection admin surface (Story 6.7) ───────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/claims/:claimCaseId/ground-inspection. The console is
+// English-facing; these are internal admin calls (no @twt/contracts mirror — the shapes are defined
+// here). PII typed by the caller travels plaintext over the same-origin TLS channel + is encrypted
+// server-side before insert; the read returns decrypted values + short-lived signed photo URLs.
+
+const giBase = (pariwarId: string, claimCaseId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/ground-inspection`;
+
+export const GroundInspectionPhoto = z.object({
+  photoId: z.string(),
+  contentType: z.string(),
+  byteSize: z.number(),
+  caption: z.string().nullable(),
+  signedUrl: z.string(),
+});
+export const GroundInspectionAssignment = z.object({
+  groundInspectionId: z.string(),
+  district: z.string(),
+  inspectionStage: z.string(),
+  inspectionSiteType: z.string(),
+  inspectorActorId: z.string(),
+  scheduledAt: z.string(),
+  status: z.string(),
+  refusalReason: z.string().nullable(),
+  supersedesGroundInspectionId: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  structuredFindings: z.unknown().nullable(),
+  locationDetail: z.string().nullable(),
+  familyContact: z.string().nullable(),
+  notes: z.string().nullable(),
+  photos: z.array(GroundInspectionPhoto),
+});
+const GroundInspectionReadResponse = z.object({ assignments: z.array(GroundInspectionAssignment) });
+const GroundInspectionWriteResponse = z.object({
+  groundInspectionId: z.string(),
+  status: z.string(),
+  created: z.boolean().optional(),
+});
+
+export type GroundInspectionAssignmentT = z.infer<typeof GroundInspectionAssignment>;
+
+export interface ScheduleGroundInspectionBody {
+  district: string;
+  inspectionStage: string;
+  inspectionSiteType: string;
+  inspectorActorId: string;
+  scheduledAt: string;
+  locationDetail?: string | null;
+  familyContact?: string | null;
+  notes?: string | null;
+  structuredFindings?: Record<string, unknown>;
+}
+
+/** GET the claim's ground-inspection assignments in ONE district (the AC5 absence-is-a-signal read). */
+export function listGroundInspection(
+  pariwarId: string,
+  claimCaseId: string,
+  district: string,
+): Promise<{ assignments: GroundInspectionAssignmentT[] }> {
+  return apiFetch(
+    `${giBase(pariwarId, claimCaseId)}?district=${encodeURIComponent(district)}`,
+    GroundInspectionReadResponse,
+  );
+}
+
+/** POST a new ground-inspection assignment (schedule). Idempotency-Key dedups a retry. */
+export function scheduleGroundInspection(
+  pariwarId: string,
+  claimCaseId: string,
+  body: ScheduleGroundInspectionBody,
+  idempotencyKey: string,
+): Promise<{ groundInspectionId: string; status: string; created?: boolean }> {
+  return apiFetch(giBase(pariwarId, claimCaseId), GroundInspectionWriteResponse, {
+    method: 'POST',
+    headers: { 'idempotency-key': idempotencyKey },
+    body: JSON.stringify(body),
+  });
+}
+
+/** PATCH structured findings + free-text notes onto an assignment. */
+export function recordGroundInspectionFindings(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+  body: { structuredFindings?: Record<string, unknown>; notes?: string | null },
+): Promise<{ groundInspectionId: string; status: string }> {
+  return apiFetch(
+    `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}`,
+    GroundInspectionWriteResponse,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  );
+}
+
+/** POST completion (requires ≥1 photo — the server enforces it). */
+export function completeGroundInspection(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+  body: { structuredFindings?: Record<string, unknown>; notes?: string | null } = {},
+): Promise<{ groundInspectionId: string; status: string }> {
+  return apiFetch(
+    `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/complete`,
+    GroundInspectionWriteResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+/** POST the AC4a refusal disposition (photo_refused | evidence_unavailable + mandatory note). */
+export function refuseGroundInspection(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+  body: { disposition: string; refusalReason: string; reasonNote: string },
+): Promise<{ groundInspectionId: string; status: string }> {
+  return apiFetch(
+    `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/refusal`,
+    GroundInspectionWriteResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+/** POST one photo (multipart). The caption (optional PII) rides a field before the file part. */
+export async function uploadGroundInspectionPhoto(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+  file: File,
+  caption?: string,
+): Promise<{ photoId: string }> {
+  const form = new FormData();
+  if (caption) form.append('caption', caption);
+  form.append('file', file);
+  const res = await fetch(
+    `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/photos`,
+    { method: 'POST', credentials: 'include', body: form },
+  );
+  if (!res.ok) {
+    let code = `http.${res.status}`;
+    let message = res.statusText || 'Upload failed';
+    try {
+      const b = (await res.json()) as ErrorEnvelope;
+      if (b.error?.code) code = b.error.code;
+      if (b.error?.message) message = b.error.message;
+    } catch {
+      // keep defaults
+    }
+    throw new ApiError(res.status, code, message);
+  }
+  return (await res.json()) as { photoId: string };
+}

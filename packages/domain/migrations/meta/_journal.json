@@ -379,6 +379,13 @@
       "when": 1785296400000,
       "tag": "0053_claim-documents",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1785382800000,
+      "tag": "0054_claim-peer-mesh",
+      "breakpoints": true
     }
   ]
 }

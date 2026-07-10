@@ -212,7 +212,15 @@ describe.skipIf(!hasDatabase)('claim lifecycle (PARIWAR_A scope)', () => {
     for (const [eventType, payload] of [
       ['claim.intake_converged', audit('intake_pending', 'intake_converged', 'c', 'system')],
       ['claim.documents_received', audit('intake_converged', 'documents_pending', 'd', 'operator')],
-      ['claim.peer_mesh_pinged', audit('documents_pending', 'verification_in_progress', 'p', 'system')],
+      [
+        'claim.peer_mesh_pinged',
+        audit('documents_pending', 'verification_in_progress', 'p', 'system', {
+          // Story 6.6 enriched the payload (6.6 owns this event) — the selection outputs are required.
+          selected_member_ids: [mid],
+          metric_id: 'district_cohort_v1',
+          metric_version: 1,
+        }),
+      ],
       ['claim.verifier_reviewing', audit('verification_in_progress', 'verifier_review', 'r', 'operator')],
       ['claim.verifier_approved', audit('verifier_review', 'verifier_approved', 'a', 'operator')],
       ['claim.state_trustee_frozen', audit('verifier_approved', 'state_trustee_freeze', 'f', 'trustee')],

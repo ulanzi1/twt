@@ -121,6 +121,25 @@ export const QUEUE_NAMES = {
    * verifier review; AR-61). Job class B (request-triggered) per architecture §1.4.
    */
   CLAIM_OCR_PARITY: 'claim.ocr_parity',
+  /**
+   * Peer-mesh deterministic 5-nearest selection + ping (Story 6.6, Task 5). Enqueued by the
+   * OCR-parity worker AFTER it advances the claim to `documents_pending` (singletonKey =
+   * claim_case_id, so a re-run does not double-select). The worker deterministically selects
+   * the 5 nearest active members, persists the immutable selection snapshot, emits
+   * `claim.peer_mesh_pinged` (→ verification_in_progress), records ONE delivery-neutral ping
+   * intent per selected member (Decision D1 — no live fan-out), and enqueues the window job.
+   * Idempotent (one selection per claim). Job class B (request-triggered).
+   */
+  CLAIM_PEER_MESH_SELECT: 'claim.peer_mesh_select',
+  /**
+   * Peer-mesh response-window expiry → AR-61 fallback disposition (Story 6.6, Task 6). Enqueued
+   * DELAYED by the select worker (startAfter = the response window; singletonKey = claim_case_id).
+   * On fire it counts DISTINCT `claim.peer_mesh_responded` events: ≥3 → outcome `sufficient`;
+   * <3 → `insufficient_responses_fallback` (ground-inspection-primary; operator signal). NEVER
+   * auto-denies, NEVER advances state past `verification_in_progress`. Idempotent (re-fire
+   * recomputes the same outcome from the same event count). Job class C (scheduled/delayed).
+   */
+  CLAIM_PEER_MESH_WINDOW: 'claim.peer_mesh_window',
 } as const;
 
 /** Union of the registered queue names. */

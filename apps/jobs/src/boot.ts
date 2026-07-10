@@ -35,7 +35,13 @@ import {
   resolveSecretValue,
   validityCache,
 } from '@twt/domain';
-import { QUEUE_NAMES, createQueueClient, stopQueueClient, type Job } from '@twt/queue';
+import {
+  QUEUE_NAMES,
+  createQueueClient,
+  stopQueueClient,
+  type Job,
+  type JobEnvelope,
+} from '@twt/queue';
 
 import {
   CERT_REFRESH_TZ,
@@ -70,6 +76,11 @@ import {
   registerTelegramWebhookProcessorCron,
 } from './tg-webhook-processor.js';
 import { registerClaimOcrParityWorker } from './claim-ocr-parity.js';
+import {
+  DEFAULT_PEER_MESH_WINDOW_SECONDS,
+  registerClaimPeerMeshWorkers,
+  type ClaimPeerMeshSelectPayload,
+} from './claim-peer-mesh.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
 import {
   createGcsClaimDocumentStorage,
@@ -107,6 +118,12 @@ const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * 
 // Rows older than this (default the 10× TTL constant) are reclaimed. Overridable like the cron cadences.
 const VALIDITY_CACHE_GC_MAX_AGE_SECONDS = Number(
   process.env['VALIDITY_CACHE_GC_MAX_AGE_SECONDS'] ?? validityCache.VALIDITY_CACHE_GC_MAX_AGE_SECONDS,
+);
+// Peer-mesh response window (Story 6.6, FR-39 default 72h). Seconds; overridable. ONE named
+// config value — never a hardcoded `72h` inline (the select job enqueues the window job with
+// startAfter = this).
+const PEER_MESH_WINDOW_SECONDS = Number(
+  process.env['CLAIM_PEER_MESH_WINDOW_SECONDS'] ?? DEFAULT_PEER_MESH_WINDOW_SECONDS,
 );
 
 /** The single error helper — every fatal/uncaught path logs code + message only. */
@@ -153,6 +170,11 @@ async function main(): Promise<void> {
   if (!Number.isFinite(VALIDITY_CACHE_GC_MAX_AGE_SECONDS) || VALIDITY_CACHE_GC_MAX_AGE_SECONDS <= 0) {
     throw new RangeError(
       `[jobs] VALIDITY_CACHE_GC_MAX_AGE_SECONDS must be a positive number (got ${VALIDITY_CACHE_GC_MAX_AGE_SECONDS})`,
+    );
+  }
+  if (!Number.isFinite(PEER_MESH_WINDOW_SECONDS) || PEER_MESH_WINDOW_SECONDS <= 0) {
+    throw new RangeError(
+      `[jobs] CLAIM_PEER_MESH_WINDOW_SECONDS must be a positive number (got ${PEER_MESH_WINDOW_SECONDS})`,
     );
   }
   if (!/^(\S+\s+){4}\S+$/.test(DATA_EXPORT_VACUUM_CRON.trim())) {
@@ -357,12 +379,35 @@ async function main(): Promise<void> {
             : {}),
         })
       : createLocalFsClaimDocumentStorage();
+    // ── Peer-mesh deterministic selection + AR-61 window fallback (Story 6.6) ──────
+    // Register BEFORE the OCR worker so the SELECT queue exists when OCR enqueues onto it.
+    // The window's default (72h) is a named config value (CLAIM_PEER_MESH_WINDOW_SECONDS).
+    await registerClaimPeerMeshWorkers(boss, {
+      pool,
+      windowSeconds: PEER_MESH_WINDOW_SECONDS,
+    });
+
     await registerClaimOcrParityWorker(boss, {
       pool,
       storage: claimDocumentStorage,
       ocr: createDeterministicOcrProvider(),
       kms: jobsEncryption.kms,
       kekRef: jobsEncryption.kekRef,
+      // Story 6.6 trigger seam — enqueue the peer-mesh SELECT job after documents_pending.
+      // singletonKey = claim_case_id so an OCR re-run does not double-select.
+      enqueuePeerMeshSelect: async (input) => {
+        await boss.send(
+          QUEUE_NAMES.CLAIM_PEER_MESH_SELECT,
+          {
+            requestId: input.traceId,
+            pariwarId: input.pariwarId,
+            actorId: input.actorId,
+            traceId: input.traceId,
+            payload: { claimCaseId: input.claimCaseId, deceasedMemberId: input.deceasedMemberId },
+          } satisfies JobEnvelope<ClaimPeerMeshSelectPayload>,
+          { singletonKey: input.claimCaseId },
+        );
+      },
     });
 
     await new Promise<void>((resolve, reject) => {

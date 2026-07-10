@@ -161,6 +161,13 @@ export * from './convergence_overrides.js';
 // ciphertext + NON-PII parity outcome/flags, NEVER the document bytes). One row per
 // (claim, document_type); the OCR parity job is the sole writer.
 export * from './claim_documents.js';
+// Story 6.6 — peer-mesh deterministic 5-nearest selection: `claim_peer_mesh_selections`
+// (ONE row per claim — the audit-replay source: candidate snapshot + ordered output +
+// metric identity; immutable selection, mutable outcome/window) + `claim_peer_mesh_pings`
+// (ONE delivery-neutral ping intent per selected member — Decision D1: recorded, not
+// dispatched). Both tenant-isolated (mirror claims); no state trigger (outcome is a plain column).
+export * from './claim_peer_mesh_selections.js';
+export * from './claim_peer_mesh_pings.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

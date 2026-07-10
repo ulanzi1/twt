@@ -93,6 +93,21 @@ export interface ClaimOcrParityDeps {
   readonly now?: () => Date;
   /** Failure alarm sink — a console stub by default. */
   readonly onAlarm?: (message: string) => void;
+  /**
+   * Story 6.6 trigger seam: enqueue the peer-mesh SELECT job after the claim reaches
+   * `documents_pending` (the "auto-ping 5 nearest" trigger, epics.md:2260). Optional — when
+   * unset (e.g. the OCR-only unit/integration tests) no peer-mesh job is enqueued. Wired in
+   * boot.ts to `boss.send(CLAIM_PEER_MESH_SELECT, …, { singletonKey: claim_case_id })` so a
+   * re-run of the OCR job does not double-select. Best-effort: a failure here NEVER fails the
+   * OCR job (the document row + documents_received event already committed).
+   */
+  readonly enqueuePeerMeshSelect?: (input: {
+    claimCaseId: string;
+    deceasedMemberId: string;
+    pariwarId: string;
+    actorId: string | null;
+    traceId: string;
+  }) => Promise<void>;
 }
 
 /** The job payload (wrapped in a JobEnvelope by the API producer). All fields NON-PII. */
@@ -288,6 +303,30 @@ export async function runClaimOcrParity(
       }
     }
   });
+
+  // ── (2b) Story 6.6 trigger seam: the claim is now `documents_pending` (this run advanced it
+  //        or a prior run did) → enqueue the peer-mesh SELECT job (the automatic "auto-ping 5
+  //        nearest" trigger, epics.md:2260). singletonKey = claim_case_id (in boot.ts) so a
+  //        re-run of the OCR job does not double-select; the select job is itself idempotent.
+  //        Best-effort: an enqueue failure NEVER fails the OCR job (the doc row + the
+  //        documents_received event already committed) — alarm only.
+  if (deps.enqueuePeerMeshSelect) {
+    try {
+      await deps.enqueuePeerMeshSelect({
+        claimCaseId: p.claimCaseId,
+        deceasedMemberId: p.deceasedMemberId,
+        pariwarId,
+        actorId: actorId ?? null,
+        traceId: traceId ?? crypto.randomUUID(),
+      });
+    } catch (err) {
+      const e = err as Error & { code?: string };
+      alarm(
+        `[jobs] claim-ocr-parity: failed to enqueue peer-mesh select for claim ${p.claimCaseId} — ` +
+          `${e?.code ?? 'NO_CODE'} ${e?.message ?? String(err)}`,
+      );
+    }
+  }
 
   // ── (3) Best-effort audit (AC6 — logged, NON-PII, non-blocking).
   try {

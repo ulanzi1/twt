@@ -161,6 +161,37 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
+
+  it('Story 6.7 — claim.conduct_ground_inspection is granted to district_admin (+ super_admin); block_admin DEFERRED', () => {
+    const KEY = 'claim.conduct_ground_inspection';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // D1 reconciliation: district_admin only in v1 (+ super_admin, full catalog). block_admin is
+    // DEFERRED — a block-scoped grant cannot satisfy the D6 dimension:'district' gate under the
+    // current scope model (see check.test.ts for the pinning assertion + roles.ts for the rationale).
+    expect(holders).toEqual(['district_admin', 'super_admin']);
+    expect((bundleForRole('block_admin')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    // NOT the verifier/trustee/pariwar APPROVE roles, and NOT field_worker (deferred to Epic 12).
+    for (const role of ['pariwar_admin', 'state_trustee', 'verifier', 'field_worker'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
+  it('Story 6.7 — claim.override_ground_inspection is granted ONLY to pariwar_admin (+ super_admin)', () => {
+    const KEY = 'claim.override_ground_inspection';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // The D6 supervisor override — a pariwar-ceiling authority above the district inspector.
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // The district inspector role itself does NOT hold the override (it acts as itself, not over peers).
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

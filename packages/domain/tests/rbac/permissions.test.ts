@@ -41,10 +41,10 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 16 grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(7); // Story 6.3 bump (6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+  it('is versioned and seeded with exactly the 18 grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(9); // Story 6.7 bump +2 (7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(16);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(18);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -84,6 +84,15 @@ describe('PERMISSION_CATALOG', () => {
     // It is the intake/FILE key — distinct from the verifier/trustee APPROVE key.
     expect(isCatalogKey('claim.approve')).toBe(true);
     expect(permissionKey('claim.file')).toBe('claim.file');
+  });
+
+  it('includes the Story 6.7 ground-inspection keys (conduct + override, single-dot)', () => {
+    expect(isCatalogKey('claim.conduct_ground_inspection')).toBe(true);
+    expect(isCatalogKey('claim.override_ground_inspection')).toBe(true);
+    // The single-dot <resource>.<action> form is valid; the epic AC's two-dot form is NOT a key.
+    expect(permissionKey('claim.conduct_ground_inspection')).toBe('claim.conduct_ground_inspection');
+    expect(() => permissionKey('claim.ground_inspection.conduct')).toThrow(InvalidPermissionKeyError);
+    expect(isCatalogKey('claim.ground_inspection.conduct')).toBe(false);
   });
 
   it('does NOT contain past-tense EVENT names (catalog ≠ events)', () => {

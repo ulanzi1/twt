@@ -94,8 +94,32 @@ export function permissionKey(value: string): PermissionKey {
  * (the verifier/trustee APPROVAL action, Story 6.10/6.11): a role that may FILE a claim on a
  * caller's behalf is not necessarily one that may APPROVE it. Granted to `helpline_operator`
  * (+ super_admin, which derives the full catalog); the trustee-initiated filing path is later).
+ * Bumped 7 → 9 at Story 6.7 (added TWO keys for the ground-inspection admin surface — FR-40):
+ * `claim.conduct_ground_inspection` (the schedule/findings/complete/photo/refusal action) and
+ * `claim.override_ground_inspection` (the D6 supervisor override — act on an assignment you are
+ * NOT the assigned inspector of; granted to `pariwar_admin` (+ super_admin)). KEY-FORMAT
+ * RECONCILIATION mirrors Story 5.8's `pariwar.declare_degraded_mode`: the epic AC's two-dot
+ * `claim.ground_inspection.conduct` VIOLATES PERMISSION_KEY_REGEX; the single-dot
+ * `<resource>.<action>` form (ADR-0008) is correct.
+ *
+ * ── D1 RECONCILIATION — block_admin DEFERRED (v1: district_admin only) ─────────
+ * PRD FR-40 names block- AND district-level admins as ground-inspection actors. In the current
+ * RBAC model, however, ground-inspection assignments are authorized at `dimension: 'district'`,
+ * while `block_admin` has `scopeCeiling: 'block'`. A block-scoped grant cannot satisfy a
+ * district-scoped resource check (a block is narrower than a district → the district target is
+ * "broader than the grant" → deny, scope.ts), and granting district scope would VIOLATE the role
+ * ceiling. No geo-tree resolver currently exists to prove block→parent-district ancestry
+ * (`denyDeeperGeoResolver`, until Epic 3). Therefore v1 grants `claim.conduct_ground_inspection`
+ * to `district_admin` ONLY; block_admin scheduling is deferred until the Epic-3 geo-tree resolver
+ * supports ancestry-aware authorization. NO inert block_admin grant is seeded.
+ * ACCEPTANCE CONDITION: block_admin support may be enabled only when the authorization layer can
+ * resolve a block grant through verified block→district ancestry while preserving the role's
+ * `scopeCeiling: 'block'` — enabling it must require no district-scoped grant to the block admin.
+ *
+ * `field_worker` is likewise DEFERRED to Epic 12 (its `self` scopeCeiling + the dispatch/
+ * assignment substrate that would let a field worker act on an arbitrary claim land there).
  */
-export const PERMISSION_CATALOG_VERSION = 7 as const;
+export const PERMISSION_CATALOG_VERSION = 9 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -110,6 +134,21 @@ export const SEED_PERMISSION_KEYS = [
   // caller's behalf). Distinct from `claim.approve` (verifier/trustee APPROVAL, 6.10/6.11):
   // filing an intake ≠ approving the claim. Granted to `helpline_operator` (+ super_admin).
   'claim.file',
+  // Story 6.7 — the FR-40 ground-inspection ACTION key. Gates the admin
+  // schedule/reschedule/findings/complete/refusal/photo endpoints (checked at
+  // `dimension: 'district'` against the assignment's OWN stored district). Granted to
+  // `district_admin` ONLY in v1 (block_admin DEFERRED — see the D1-reconciliation note above:
+  // a block-scoped grant cannot satisfy a district-dimension check). ⚠ The epic AC's two-dot
+  // `claim.ground_inspection.conduct` VIOLATES PERMISSION_KEY_REGEX — this single-dot
+  // `<resource>.<action>` form (ADR-0008) is correct, the exact 5.8
+  // `pariwar.declare_degraded_mode` reconciliation. `field_worker` grant deferred to Epic 12.
+  'claim.conduct_ground_inspection',
+  // Story 6.7 — the D6 supervisor-OVERRIDE key. Lets a holder author evidence
+  // (complete/findings/photo/refusal) on a ground-inspection assignment they are NOT the
+  // assigned inspector of, checked at the assignment's district when acting_actor ≠
+  // inspector_actor_id. Never implicit, never "any district admin". Granted to
+  // `pariwar_admin` (+ super_admin) — a supervisor above the district inspector.
+  'claim.override_ground_inspection',
   'member.suspend',
   'member.moderate',
   // Story 4.6 — the FR-12A Member Validity READ key. Distinct from the write-oriented
@@ -162,7 +201,7 @@ export interface PermissionCatalog {
   readonly keys: readonly PermissionKey[];
 }
 
-/** The catalog — the 16 grounded keys, each validated through the constructor. */
+/** The catalog — the 18 grounded keys, each validated through the constructor. */
 export const PERMISSION_CATALOG: PermissionCatalog = {
   catalogVersion: PERMISSION_CATALOG_VERSION,
   keys: SEED_PERMISSION_KEYS.map(permissionKey),

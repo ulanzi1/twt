@@ -168,6 +168,13 @@ export * from './claim_documents.js';
 // dispatched). Both tenant-isolated (mirror claims); no state trigger (outcome is a plain column).
 export * from './claim_peer_mesh_selections.js';
 export * from './claim_peer_mesh_pings.js';
+// Story 6.7 — ground inspection: `claim_ground_inspections` (ONE row per ASSIGNMENT — the
+// scheduling + structured findings (non-PII jsonb) + Tier-1 ciphertext for location/family
+// contact/notes; separate per-assignment status machine, NO active-uniqueness — D5) + the child
+// `claim_ground_inspection_photos` (MANY per assignment — object key + non-PII metadata + encrypted
+// caption; Decision D2, NOT a claim_documents row). Both tenant-isolated (mirror claims); no state trigger.
+export * from './claim_ground_inspections.js';
+export * from './claim_ground_inspection_photos.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

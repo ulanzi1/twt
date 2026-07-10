@@ -122,6 +122,15 @@ export const MEMBER_DATA_EXPORT_FIELD_CLASS = 'data_export';
 export const MEMBER_DEVICE_TOKEN_FIELD_CLASS = 'member_device_token';
 
 /**
+ * The ground-inspection Tier-1 field class (Story 6.7). The admin route encrypts the assignment's
+ * PII — the exact location/site detail (`location_ciphertext`), the family contact
+ * (`family_contact_ciphertext`), the free-text findings / mandatory refusal note (`notes_ciphertext`),
+ * and each photo's caption (`caption_ciphertext`) — before insert, and the read route decrypts under
+ * the SAME (pariwarId, fieldClass). Matches the `piiColumn(1, 'ground_inspection')` column annotation.
+ */
+export const CLAIM_GROUND_INSPECTION_FIELD_CLASS = 'ground_inspection';
+
+/**
  * The data-export build-job producer seam (Story 3.11). The API is the FIRST request-path queue
  * producer: it enqueues a `DATA_EXPORT_BUILD` job (send-only — the API produces, apps/jobs consumes;
  * NEVER `boss.work()`). Injectable like `auditSink` / `deployTrigger`: production wires a pg-boss-backed

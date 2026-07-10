@@ -58,7 +58,7 @@ export interface ProjectClaimStateInput {
   intakeChannels: readonly ClaimIntakeChannel[];
   /** The filer (nominee / operator); NULL for a trustee-initiated claim. */
   claimantActorId: string | null;
-  /** One of the 20 `claim.*` event types. */
+  /** One of the 22 `claim.*` event types. */
   eventType: ClaimEventType;
   /** Event payload — validated against the event's strict Zod schema before insert. */
   payload: unknown;

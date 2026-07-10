@@ -397,3 +397,23 @@ export const peerMeshSelectionId = uuidBrand('PeerMeshSelectionId');
 export type PeerMeshPingId = Brand<'PeerMeshPingId'>;
 /** Smart constructor: validates UUID shape, returns a branded `PeerMeshPingId`. */
 export const peerMeshPingId = uuidBrand('PeerMeshPingId');
+
+// ── Ground-inspection assignment + photo ids (Story 6.7, Task 3) ──────────────
+// Two NEW branded ids per the §Naming "branding mandatory on a new ID's first PR"
+// discipline (L3700-3708). `GroundInspectionId` is the per-row address of a ground-inspection
+// ASSIGNMENT (`claim_ground_inspections.ground_inspection_id`) — the addressable unit (a claim
+// may hold MANY, D5); every mutating verb (reschedule/findings/complete/refusal/photo) addresses
+// it by this id under a row lock, never a read-side "latest row". `GroundInspectionPhotoId` is the
+// per-row address of one uploaded inspection photo (`claim_ground_inspection_photos.photo_id`),
+// MANY per assignment. Both are UUID row addresses, so both reuse the shared `uuidBrand` validator.
+// `claim_case_id` / `pariwar_id` on those tables reuse the existing `ClaimId` / `PariwarId` brands.
+
+/** Per-row address of a ground-inspection assignment (`claim_ground_inspections.ground_inspection_id`). */
+export type GroundInspectionId = Brand<'GroundInspectionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `GroundInspectionId`. */
+export const groundInspectionId = uuidBrand('GroundInspectionId');
+
+/** Per-row address of a ground-inspection photo (`claim_ground_inspection_photos.photo_id`). */
+export type GroundInspectionPhotoId = Brand<'GroundInspectionPhotoId'>;
+/** Smart constructor: validates UUID shape, returns a branded `GroundInspectionPhotoId`. */
+export const groundInspectionPhotoId = uuidBrand('GroundInspectionPhotoId');

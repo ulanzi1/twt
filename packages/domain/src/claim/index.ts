@@ -22,3 +22,8 @@ export * from './peer-mesh.js';
 export * from './peer-mesh-metric-registry.js';
 export * from './peer-mesh-read.js';
 export * from './peer-mesh-persist.js';
+// Story 6.7 — ground inspection: the assignment/photo persistence writers (schedule/reschedule/
+// findings/photo/complete/refusal — row-lock + idempotency + write-path guards) + the read
+// accessor (getClaimGroundInspection — ciphertext AS STORED; the AC5 absence-is-a-signal read).
+export * from './ground-inspection-persist.js';
+export * from './ground-inspection-read.js';

@@ -14,6 +14,7 @@ import type { FastifyInstance } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { registerConvergenceRoutes } from './claims.convergence.routes.js';
+import { registerGroundInspectionRoutes } from './claims.ground-inspection.routes.js';
 import { registerHelplineClaimsRoutes } from './claims.helpline.routes.js';
 import { registerClaimsRoutes } from './claims.routes.js';
 
@@ -22,4 +23,6 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerHelplineClaimsRoutes(app, deps);
   // Story 6.4 — the ICP convergence-resolution surface (pending list + merge + override).
   registerConvergenceRoutes(app, deps);
+  // Story 6.7 — the ground-inspection admin surface (schedule/reschedule/findings/complete/refusal/photos/read).
+  registerGroundInspectionRoutes(app, deps);
 }

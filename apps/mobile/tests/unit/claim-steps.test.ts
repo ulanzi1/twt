@@ -15,10 +15,11 @@ describe('claim-steps', () => {
     expect(otpIdx).toBeLessThan(relIdx)
   })
 
-  it('runs relationship (intake) → document → nominee-review → acknowledgement', () => {
+  it('runs relationship (intake) → consent → document → nominee-review → acknowledgement', () => {
     expect([...CLAIM_STEPS]).toEqual([
       'handover-otp',
       'relationship',
+      'consent',
       'document',
       'nominee-review',
       'acknowledgement',
@@ -26,17 +27,18 @@ describe('claim-steps', () => {
   })
 
   it('claimStepProgress gives 1-based position + total for a step', () => {
-    expect(claimStepProgress('handover-otp')).toEqual({ current: 1, total: 5 })
-    expect(claimStepProgress('acknowledgement')).toEqual({ current: 5, total: 5 })
+    expect(claimStepProgress('handover-otp')).toEqual({ current: 1, total: 6 })
+    expect(claimStepProgress('acknowledgement')).toEqual({ current: 6, total: 6 })
   })
 
   it('claimStepProgress returns current:1 for the entry gate (a non-step segment)', () => {
-    expect(claimStepProgress('index')).toEqual({ current: 1, total: 5 })
+    expect(claimStepProgress('index')).toEqual({ current: 1, total: 6 })
   })
 
   it('nextClaimStep returns the following step, and undefined past the last step (resume support)', () => {
     expect(nextClaimStep('handover-otp')).toBe('relationship')
-    expect(nextClaimStep('relationship')).toBe('document')
+    expect(nextClaimStep('relationship')).toBe('consent')
+    expect(nextClaimStep('consent')).toBe('document')
     expect(nextClaimStep('document')).toBe('nominee-review')
     expect(nextClaimStep('nominee-review')).toBe('acknowledgement')
     expect(nextClaimStep('acknowledgement')).toBeUndefined()

@@ -70,5 +70,14 @@
   "readback.identity.title": "Identity read-back — confirm before filing",
   "readback.identity.script": "I'd like to confirm a few details before we file the claim. Am I right that this is for {name}? Please confirm the name is correct.",
   "readback.nominee.title": "Nominee summary read-back — advisory only",
-  "readback.nominee.script": "For our records, {name} has {count} registered nominee(s). This is only to help — it does not affect filing the claim."
+  "readback.nominee.script": "For our records, {name} has {count} registered nominee(s). This is only to help — it does not affect filing the claim.",
+  "dpdpa.title": "Consent for this claim",
+  "dpdpa.help": "Please choose what you agree to. You are in control — you can decline the last two and it will not affect this claim.",
+  "dpdpa.processing": "I consent to the Trust processing the deceased member’s, my, and the nominees’ personal information as needed to verify and settle this claim.",
+  "dpdpa.sahyog_vivran": "I consent to publishing the contributor list and verifier names on the deceased member’s Sahyog Vivran (contribution transparency) page. You may decline this without affecting the claim.",
+  "dpdpa.in_memoriam": "I consent to the deceased member appearing in the In Memoriam remembrance listing. You may decline this without affecting the claim.",
+  "dpdpa.continue": "Continue",
+  "dpdpa.processing_required_hint": "Please agree to the first item so we can process this claim.",
+  "dpdpa.error": "We couldn't save your choices right now. Please try again, or call us — we'll help.",
+  "dpdpa.error_missing_claim": "We couldn't find this claim to record your consent. Please call us — we'll help you continue."
 }

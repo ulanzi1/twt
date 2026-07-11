@@ -80,10 +80,16 @@ import { auditLogEntries } from './audit_log_entries.js';
  *   · `nominee_share_split`     — Epic 3 nominee share-split acknowledgement
  *   · `claim_time_dpdpa`        — Epic 6 claim-time DPDPA consent
  *
- * New consent types (e.g. `whatsapp_opt_in` Epic 5, `sahyog_vivran_publication` /
- * `in_memoriam_listing` Epic 11b, `module_lead_handoff` Epic 12) are added by their
- * OWN consumer epic via an additive `ALTER TYPE … ADD VALUE` migration. Do NOT seed
- * types for surfaces that do not exist yet.
+ * New consent types (e.g. `whatsapp_opt_in` Epic 5, `module_lead_handoff` Epic 12) are
+ * added by the epic that FIRST WRITES them via an additive `ALTER TYPE … ADD VALUE`
+ * migration. Do NOT seed types for surfaces that do not exist yet.
+ *
+ * NOTE (Story 6.9, D2): `sahyog_vivran_publication` + `in_memoriam_listing` were
+ * TENTATIVELY assigned to Epic 11b here originally, but consent is CAPTURED at
+ * claim-time (Story 6.9) and only CONSUMED at publication-time (Epic 11b) — the enum
+ * value must exist when the FIRST writer records it, so Story 6.9 (Epic 6) owns the
+ * additive extension (migration 0058), exactly as Story 5.4 owned `whatsapp_opt_in`
+ * even though the "consumers" live elsewhere.
  *
  * ⚠ LOCKSTEP with the `@twt/contracts` `ConsentTypeSchema` z.enum: the literal list
  * is DUPLICATED there because `@twt/domain` must NOT import `@twt/contracts` (turbo
@@ -113,6 +119,12 @@ export const consentTypeEnum = pgEnum('consent_type', [
   // member/`/stop`/block/admin opt-out. APPENDED at the END. Added by its OWN `ALTER TYPE … ADD VALUE`
   // migration (0048).
   'telegram_opt_in',
+  // Story 6.9 (D2) — the two claim-time public-transparency consents, captured at claim-time by the
+  // 6.9 DPDPA consent step and CONSUMED at publication-time by Epic 11b's render gate (consentExists).
+  // 6.9 is the FIRST writer, so it owns the additive extension (migration 0058), superseding the stale
+  // "Epic 11b adds them" note that used to sit in the header. APPENDED at the END — never reorder.
+  'sahyog_vivran_publication',
+  'in_memoriam_listing',
 ]);
 
 /**

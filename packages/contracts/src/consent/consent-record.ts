@@ -43,6 +43,10 @@ export const ConsentTypeSchema = z.enum([
   // whatsapp_opt_in; consent is independent of transport policy — see the Story 5.5 "Consent vs.
   // operational delivery state" invariant). Lockstep with the domain `consent_type` pgEnum.
   'telegram_opt_in',
+  // Story 6.9 (D2) — the two claim-time public-transparency consents (captured at claim-time, consumed
+  // by Epic 11b's render gate). Lockstep with the domain `consent_type` pgEnum (migration 0058).
+  'sahyog_vivran_publication',
+  'in_memoriam_listing',
 ]);
 export type ConsentTypeSchema = z.output<typeof ConsentTypeSchema>;
 

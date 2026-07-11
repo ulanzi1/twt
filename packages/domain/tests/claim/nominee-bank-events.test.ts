@@ -27,7 +27,9 @@ const recordedBase = {
 describe('ClaimNomineeBankRecordedPayloadSchema (the 23rd claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.nominee_bank_recorded');
-    expect(CLAIM_EVENT_TYPES).toHaveLength(23);
+    // 25 total: 24th = claim.dpdpa_consent_recorded (Story 6.9), 25th = claim.dpdpa_consent_revoked
+    // (Story 6.9 code review) — dpdpa-consent-events.test.ts now owns the exact-count invariant.
+    expect(CLAIM_EVENT_TYPES).toHaveLength(25);
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.nominee_bank_recorded']).toBe(
       ClaimNomineeBankRecordedPayloadSchema,
     );

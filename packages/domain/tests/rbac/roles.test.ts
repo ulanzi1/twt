@@ -222,6 +222,40 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
+
+  it('Story 6.9 — claim.manage_dpdpa_consent is granted to helpline_operator AND pariwar_admin (+ super_admin)', () => {
+    const KEY = 'claim.manage_dpdpa_consent';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // The DPDPA consent REVOCATION key (D5a) — the RECORD path reuses claim.file (consent capture is
+    // part of filing). helpline_operator honors a family's later takedown request; pariwar_admin is
+    // the supervisor-escalation grant (the claim.manage_nominee_bank/override_ground_inspection shape).
+    expect(holders).toEqual(['helpline_operator', 'pariwar_admin', 'super_admin']);
+    for (const role of ['state_trustee', 'district_admin', 'verifier'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
+  it('Story 6.9 code review — no seeded non-catalog role holds claim.file WITHOUT claim.manage_dpdpa_consent', () => {
+    // The RECORD-vs-REVOKE permission split (D5a) is only meaningful if SOME actor can hold claim.file
+    // alone: otherwise "claim.file is insufficient to revoke" is unfalsifiable against real grants (the
+    // live-DB dpdpa-consent-helpline.spec.ts NOTE documents this exact gap — no seeded role currently
+    // demonstrates it). This structurally confirms every claim.file holder (besides the full-catalog
+    // super_admin) also holds claim.manage_dpdpa_consent today, and stands as the trip-wire: if a future
+    // role ever gains claim.file without claim.manage_dpdpa_consent, this test starts failing and should
+    // be read as a prompt to add the live-DB negative test the helpline spec's NOTE describes.
+    const fileHolders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('claim.file'))
+      .filter((b) => b.role !== 'super_admin')
+      .map((b) => b.role);
+    for (const role of fileHolders) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes('claim.manage_dpdpa_consent')).toBe(
+        true,
+      );
+    }
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

@@ -368,3 +368,45 @@ describe('Story 6.8 code review — claim.manage_nominee_bank / claim.correct_no
     expect(hasPermission(grants, 'claim.manage_nominee_bank', pariwarResource)).toBe(false);
   });
 });
+
+// ── Story 6.9 code review — claim.file alone must NOT satisfy claim.manage_dpdpa_consent ─────
+//
+// No SEEDED role currently holds claim.file without ALSO holding claim.manage_dpdpa_consent
+// (helpline_operator holds both), so the live-DB dpdpa-consent-helpline.spec.ts negative test can
+// only demonstrate denial via an admin with NO relevant grants at all — it cannot isolate whether
+// claim.file itself would be (wrongly) sufficient. This test closes that gap with a SYNTHETIC role
+// bundle (hasPermission's `ctx.bundles` override, the same seam roles.ts's admin-edited-bundle
+// support exists for) that holds ONLY claim.file, independent of what any seeded role happens to
+// carry today — a permanent, catalog-independent proof that the two keys are checked separately.
+describe('hasPermission — Story 6.9 code review: claim.file does not imply claim.manage_dpdpa_consent', () => {
+  const pariwarResource = resource({ dimension: 'pariwar', value: PARIWAR_A });
+  // `role`/`permissions` are branded/literal-union types not exported from the public rbac barrel
+  // (by design — only the smart constructors in roles.ts/permissions.ts mint them). This cast
+  // constructs a runtime-equivalent bundle shape purely to exercise `hasPermission`'s behavior; it
+  // never touches the real seeded catalog.
+  const claimFileOnlyCtx: Partial<AuthzContext> = {
+    bundles: [
+      { role: 'test_claim_file_only', permissions: ['claim.file'], scopeCeiling: 'pariwar' },
+    ] as unknown as AuthzContext['bundles'],
+  };
+
+  it('a synthetic role holding ONLY claim.file is DENIED claim.manage_dpdpa_consent', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'test_claim_file_only', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    // Sanity: the synthetic bundle + grant resolution mechanics work (claim.file itself allows).
+    expect(hasPermission(grants, 'claim.file', pariwarResource, claimFileOnlyCtx)).toBe(true);
+    // The actual property under test: holding claim.file alone does NOT satisfy the dedicated
+    // revocation key — the D5a permission split is a real, independently-enforced boundary, not
+    // just two names that happen to always travel together on seeded roles.
+    expect(hasPermission(grants, 'claim.manage_dpdpa_consent', pariwarResource, claimFileOnlyCtx)).toBe(false);
+  });
+
+  it('control: helpline_operator (holds BOTH keys on the real catalog) is allowed both', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'helpline_operator', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'claim.file', pariwarResource)).toBe(true);
+    expect(hasPermission(grants, 'claim.manage_dpdpa_consent', pariwarResource)).toBe(true);
+  });
+});

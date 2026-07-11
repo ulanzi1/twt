@@ -99,6 +99,14 @@ import {
   type RecordNomineeBankRequest,
   type RecordNomineeBankResponse as RecordNomineeBankResult,
   type NomineeBankStatusResponse as NomineeBankStatusResult,
+  RecordDpdpaConsentResponse,
+  DpdpaConsentStatusResponse,
+  RevokeDpdpaConsentResponse,
+  type RecordDpdpaConsentRequest,
+  type RevokeDpdpaConsentRequest,
+  type RecordDpdpaConsentResponse as RecordDpdpaConsentResult,
+  type DpdpaConsentStatusResponse as DpdpaConsentStatusResult,
+  type RevokeDpdpaConsentResponse as RevokeDpdpaConsentResult,
   type OcrDocumentType,
 } from '@twt/contracts';
 import type { z } from 'zod';
@@ -689,6 +697,55 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
         undefined,
         true,
         'GET',
+      );
+    },
+
+    /**
+     * Record the three granular claim-time DPDPA consents (Story 6.9; session; auth). The request
+     * carries ONLY the box selections + the `locale` — the server resolves the canonical consent
+     * copy (consent-copy integrity). NO step-up (consent capture is not a financial action, unlike
+     * the nominee-bank route). Returns the NON-PII presence view (which types are now granted).
+     */
+    recordDpdpaConsent(
+      claimCaseId: string,
+      input: RecordDpdpaConsentRequest,
+    ): Promise<RecordDpdpaConsentResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/dpdpa-consent`,
+        RecordDpdpaConsentResponse,
+        input,
+        true,
+      );
+    },
+
+    /**
+     * The presence view of which claim-time DPDPA consents are currently granted (Story 6.9; session;
+     * auth) — lets the consent step render current state on re-entry (the save-and-resume thread).
+     */
+    dpdpaConsentStatus(claimCaseId: string): Promise<DpdpaConsentStatusResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/dpdpa-consent`,
+        DpdpaConsentStatusResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    /**
+     * Withdraw one PUBLICATION consent (Sahyog Vivran / In Memoriam) for a claim (Story 6.9; session;
+     * auth) — the AC3 revoke MECHANISM (Epic 11b performs the actual page takedown on the next render
+     * check). The `reason` is required. Returns the remaining granted subset.
+     */
+    revokeDpdpaConsent(
+      claimCaseId: string,
+      input: RevokeDpdpaConsentRequest,
+    ): Promise<RevokeDpdpaConsentResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/dpdpa-consent/revoke`,
+        RevokeDpdpaConsentResponse,
+        input,
+        true,
       );
     },
   };

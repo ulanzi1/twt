@@ -88,8 +88,9 @@ describe('ClaimGroundInspectionCompletedPayloadSchema (the 22nd claim event)', (
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.ground_inspection_completed');
     // The vocabulary grows as owner stories add annotation events (Story 6.8 added the 23rd,
-    // claim.nominee_bank_recorded); nominee-bank-events.test.ts owns the exact-count invariant.
-    expect(CLAIM_EVENT_TYPES).toHaveLength(23);
+    // claim.nominee_bank_recorded; Story 6.9 the 24th + 25th, claim.dpdpa_consent_recorded/_revoked);
+    // dpdpa-consent-events.test.ts owns the exact-count invariant.
+    expect(CLAIM_EVENT_TYPES).toHaveLength(25);
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.ground_inspection_completed']).toBe(
       ClaimGroundInspectionCompletedPayloadSchema,
     );

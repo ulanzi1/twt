@@ -25,6 +25,10 @@ import {
   OcrDocumentType,
   RecordNomineeBankHelplineRequest,
   RecordNomineeBankResponse,
+  RecordDpdpaConsentRequest,
+  RecordDpdpaConsentResponse,
+  RevokeDpdpaConsentRequest,
+  RevokeDpdpaConsentResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -38,6 +42,7 @@ import { requireStepUp } from '../step-up/gate.js';
 import { createHelplineClaimsHandlers } from './claims.helpline.handlers.js';
 import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
 import { createNomineeBankHandlers } from './claims.nominee-bank.handlers.js';
+import { createDpdpaConsentHandlers } from './claims.dpdpa-consent.handlers.js';
 
 const HELPLINE_CLAIM_TAG = 'helpline-claim';
 
@@ -51,6 +56,10 @@ const CLAIM_FILE_STEP_UP_CONTEXT = 'claim_file';
  *  note). The tier-2 correction check is a SEPARATE, finer-grained gate inside the handler
  *  (`claim.correct_nominee_bank` — mirrors `claim.override_ground_inspection`'s in-handler check). */
 const CLAIM_MANAGE_NOMINEE_BANK_KEY = 'claim.manage_nominee_bank';
+/** Story 6.9 (D5a) — the DPDPA consent REVOCATION key (catalog v12). The RECORD route reuses
+ *  `claim.file` (consent capture is part of filing); only the REVOKE route mints its own key (a
+ *  later withdrawal/management action, NOT filing — the 6.8 semantic-scope lesson). */
+const CLAIM_MANAGE_DPDPA_CONSENT_KEY = 'claim.manage_dpdpa_consent';
 
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 /** Path params + querystring for the helpline document upload (file rides the multipart body). */
@@ -63,16 +72,22 @@ const HelplineNomineeBankParam = z
   .object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() })
   .strict();
 const HelplineIfscLookupParam = z.object({ pariwarId: z.string().uuid(), ifsc: z.string().min(1).max(20) }).strict();
+/** Story 6.9 — helpline DPDPA consent route params (the pariwar + claim id). */
+const HelplineDpdpaConsentParam = z
+  .object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() })
+  .strict();
 
 export function registerHelplineClaimsRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createHelplineClaimsHandlers(deps);
   const docs = createClaimDocumentHandlers(deps);
   const bank = createNomineeBankHandlers(deps);
+  const consent = createDpdpaConsentHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const adminSession = requireAdminSession(deps);
   const scope = scopeResolutionHook(deps);
   const canFileClaim = requirePermissionHook(deps, CLAIM_FILE_KEY);
   const canManageNomineeBank = requirePermissionHook(deps, CLAIM_MANAGE_NOMINEE_BANK_KEY);
+  const canManageDpdpaConsent = requirePermissionHook(deps, CLAIM_MANAGE_DPDPA_CONSENT_KEY);
   const stepUp = requireStepUp(deps, CLAIM_FILE_STEP_UP_CONTEXT);
 
   r.post(
@@ -176,5 +191,40 @@ export function registerHelplineClaimsRoutes(app: FastifyInstance, deps: AppDeps
       preHandler: [adminSession, scope, canManageNomineeBank],
     },
     bank.getStatusHelpline,
+  );
+
+  // Story 6.9 (D5a) — helpline DPDPA consent RECORD (operator read-back at intake). Consent capture
+  // is part of FILING, so it reuses the intake chain: claim.file + the operator's OWN fresh admin
+  // step-up (matching the intake/nominee-bank posture). NO catalog bump for record.
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/dpdpa-consent',
+    {
+      schema: {
+        params: HelplineDpdpaConsentParam,
+        body: RecordDpdpaConsentRequest,
+        response: { 201: RecordDpdpaConsentResponse },
+        tags: [HELPLINE_CLAIM_TAG],
+      },
+      preHandler: [adminSession, scope, canFileClaim, stepUp],
+    },
+    consent.recordHelpline,
+  );
+
+  // Story 6.9 (D5a) — helpline DPDPA consent REVOKE (a later withdrawal/management action, NOT
+  // filing). Gated on the DEDICATED claim.manage_dpdpa_consent key (reusing claim.file would
+  // reproduce the exact semantic-scope mismatch the 6.8 review corrected). No step-up (revocation is
+  // not a financial action).
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/dpdpa-consent/revoke',
+    {
+      schema: {
+        params: HelplineDpdpaConsentParam,
+        body: RevokeDpdpaConsentRequest,
+        response: { 200: RevokeDpdpaConsentResponse },
+        tags: [HELPLINE_CLAIM_TAG],
+      },
+      preHandler: [adminSession, scope, canManageDpdpaConsent],
+    },
+    consent.revokeHelpline,
   );
 }

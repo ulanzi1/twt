@@ -76,6 +76,8 @@ const AUDIT_VERIFY = permissionKey('audit.verify');
 // replacing an initial CLAIM_FILE reuse (see permissions.ts's version-bump note).
 const CLAIM_MANAGE_NOMINEE_BANK = permissionKey('claim.manage_nominee_bank');
 const CLAIM_CORRECT_NOMINEE_BANK = permissionKey('claim.correct_nominee_bank');
+// Story 6.9 (D5a) — the claim-time DPDPA consent REVOCATION key (the RECORD path reuses claim.file).
+const CLAIM_MANAGE_DPDPA_CONSENT = permissionKey('claim.manage_dpdpa_consent');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -124,6 +126,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // post-approval correction window; a pure pariwar_admin still cannot reach the route without
       // ALSO holding a claim.manage_nominee_bank grant (this role does not carry that key).
       CLAIM_CORRECT_NOMINEE_BANK,
+      // Story 6.9 (D5a) — the DPDPA consent revocation key (a later consent-management action). A
+      // supervisor-escalation grant alongside helpline_operator — the claim.correct_nominee_bank /
+      // claim.override_ground_inspection shape (both roles hold it), NOT the helpline_operator-only
+      // claim.manage_nominee_bank shape.
+      CLAIM_MANAGE_DPDPA_CONSENT,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -218,7 +225,15 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // helpline_operator keeps BOTH new keys: this preserves the exact pre-review functional
     // capability (any claim.file-holding operator could always do both actions before), while
     // giving each action its own semantically-scoped key.
-    permissions: [MEMBER_VIEW_VALIDITY, CLAIM_FILE, CLAIM_MANAGE_NOMINEE_BANK, CLAIM_CORRECT_NOMINEE_BANK],
+    // Story 6.9 (D5a) — the operator records consent at intake (via CLAIM_FILE) and honors a later
+    // family revocation request (CLAIM_MANAGE_DPDPA_CONSENT — the revoke path's dedicated key).
+    permissions: [
+      MEMBER_VIEW_VALIDITY,
+      CLAIM_FILE,
+      CLAIM_MANAGE_NOMINEE_BANK,
+      CLAIM_CORRECT_NOMINEE_BANK,
+      CLAIM_MANAGE_DPDPA_CONSENT,
+    ],
     scopeCeiling: 'pariwar',
   },
 ];

@@ -12,16 +12,17 @@
 // (this is where claim.intake_initiated is emitted + the account freezes) → death-cert upload →
 // nominee review → acknowledgement. Handover-trust MUST be established BEFORE the freeze.
 //
-// ── Reserved slot: claim-time DPDPA consent (Story 6.9) ───────────────────────────────────────
+// ── Claim-time DPDPA consent step (Story 6.9) ─────────────────────────────────────────────────
 // Story 6.9 adds a 3-checkbox DPDPA consent step. It slots AFTER `relationship` (post-intake) and
-// BEFORE `document`. Because each screen hardcodes its OWN next-route literal and the progress math
-// derives M from this list's length, inserting `'consent'` here later is a one-line change that
-// reshuffles NO existing typed-route literals — the reservation the story asks for.
+// BEFORE `document` — activating the slot the Story 6.2 author pre-reserved. Because each screen
+// hardcodes its OWN next-route literal and the progress math derives M from this list's length,
+// uncommenting `'consent'` here reshuffled NO existing typed-route literals (relationship.tsx now
+// pushes /(claim)/consent and consent.tsx pushes /(claim)/document — the two adjacent screens).
 
 export const CLAIM_STEPS = [
   'handover-otp',
   'relationship',
-  // 'consent',  ← reserved for Story 6.9 (claim-time DPDPA consent); see header.
+  'consent', // Story 6.9 — claim-time DPDPA consent (three granular opt-ins).
   'document',
   'nominee-review',
   'acknowledgement',

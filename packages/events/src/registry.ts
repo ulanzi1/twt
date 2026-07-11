@@ -165,6 +165,18 @@ export const EVENT_TYPE_REGISTRY = {
       'Claim-time nominee bank details recorded — annotation event (the 23rd claim event); identity transition (state unchanged, D2); carries account_ranks_present ([1,2] in v1) + ifsc_validated, NO PII; write-guarded to the pre-adjudication collectable window (Story 6.8).',
     schema: claim.ClaimNomineeBankRecordedPayloadSchema,
   },
+  'claim.dpdpa_consent_recorded': {
+    type: 'claim.dpdpa_consent_recorded',
+    description:
+      'Claim-time DPDPA consent recorded — annotation event (the 24th claim event); identity transition (state unchanged, D6); carries consent_types_granted (the granted subset, always non-empty), NO PII; emitted only when ≥1 grant row was written, write-guarded to the pre-adjudication window (Story 6.9).',
+    schema: claim.ClaimDpdpaConsentRecordedPayloadSchema,
+  },
+  'claim.dpdpa_consent_revoked': {
+    type: 'claim.dpdpa_consent_revoked',
+    description:
+      'Claim-time DPDPA consent revoked — annotation event (the 25th claim event, Story 6.9 code review); identity transition (state unchanged); carries the single consent_type revoked, NO PII, NO revocation reason; allowed at any claim state (AC3).',
+    schema: claim.ClaimDpdpaConsentRevokedPayloadSchema,
+  },
   'claim.verifier_reviewing': {
     type: 'claim.verifier_reviewing',
     description: 'Verifier console opened review → verifier_review (Story 6.10/6.11).',

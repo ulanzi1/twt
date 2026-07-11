@@ -47,6 +47,11 @@ declare module 'fastify' {
      *  `resolveGroundInspectionAssignment` preHandler so `requirePermissionHook`'s district
      *  resolveValue can read the assignment's own district; the handler reuses it). */
     groundInspection?: import('@twt/domain').schema.ClaimGroundInspectionRow;
+    /** Story 6.10 — the deceased member's server-derived latest posting district, resolved by the
+     *  `resolveVerifierConsoleDistrict` preHandler so `requirePermissionHook`'s (synchronous) district
+     *  resolveValue reads it (the client NEVER submits the authz district). `null` when the deceased has
+     *  no resolvable posting district → the district gate fails closed (the D3a no-district exception). */
+    verifierConsoleDistrict?: string | null;
   }
 
   // @fastify/session merges this `Session` interface into the session data object.

@@ -17,6 +17,7 @@ import { registerConvergenceRoutes } from './claims.convergence.routes.js';
 import { registerGroundInspectionRoutes } from './claims.ground-inspection.routes.js';
 import { registerHelplineClaimsRoutes } from './claims.helpline.routes.js';
 import { registerClaimsRoutes } from './claims.routes.js';
+import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -25,4 +26,6 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerConvergenceRoutes(app, deps);
   // Story 6.7 — the ground-inspection admin surface (schedule/reschedule/findings/complete/refusal/photos/read).
   registerGroundInspectionRoutes(app, deps);
+  // Story 6.10 — the READ-ONLY verifier-console bounded compound signals view (one district-gated GET).
+  registerVerifierConsoleRoutes(app, deps);
 }

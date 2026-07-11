@@ -141,6 +141,16 @@ export const CLAIM_GROUND_INSPECTION_FIELD_CLASS = 'ground_inspection';
 export const CLAIM_NOMINEE_BANK_FIELD_CLASS = 'claim_nominee_bank';
 
 /**
+ * The claim-document Tier-1 field class (Story 6.5). The OCR-parity job encrypts the extracted
+ * death-certificate identity fields (`deceased_name_ciphertext`, `dob_ciphertext`,
+ * `date_of_death_ciphertext`, `issuing_authority_ciphertext`, `certificate_number_ciphertext`)
+ * before upsert; the Story 6.10 verifier console is the first READ consumer to decrypt them for
+ * the authorized verifier's side-by-side parity view, under the SAME (pariwarId, fieldClass).
+ * Matches the `piiColumn(1, 'claim_document')` column annotation on `claim_documents`.
+ */
+export const CLAIM_DOCUMENT_FIELD_CLASS = 'claim_document';
+
+/**
  * The data-export build-job producer seam (Story 3.11). The API is the FIRST request-path queue
  * producer: it enqueues a `DATA_EXPORT_BUILD` job (send-only — the API produces, apps/jobs consumes;
  * NEVER `boss.work()`). Injectable like `auditSink` / `deployTrigger`: production wires a pg-boss-backed

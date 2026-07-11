@@ -41,10 +41,10 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 21 grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(12); // Story 6.9 bump +1 (claim.manage_dpdpa_consent; 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+  it('is versioned and seeded with exactly the 22 grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(13); // Story 6.10 bump +1 (claim.verify; 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(21);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(22);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -100,6 +100,15 @@ describe('PERMISSION_CATALOG', () => {
     expect(isCatalogKey('claim.correct_nominee_bank')).toBe(true);
     expect(permissionKey('claim.manage_nominee_bank')).toBe('claim.manage_nominee_bank');
     expect(permissionKey('claim.correct_nominee_bank')).toBe('claim.correct_nominee_bank');
+  });
+
+  it('includes the Story 6.10 verifier-console READ key (claim.verify), distinct from the claim.approve WRITE', () => {
+    expect(isCatalogKey('claim.verify')).toBe(true);
+    expect(permissionKey('claim.verify')).toBe('claim.verify');
+    // It is a READ key — distinct from the pre-existing claim.approve WRITE (the 6.11 adjudication action).
+    expect(isCatalogKey('claim.approve')).toBe(true);
+    // The past-tense event name is NOT a permission key.
+    expect(isCatalogKey('claim.verified')).toBe(false);
   });
 
   it('does NOT contain past-tense EVENT names (catalog ≠ events)', () => {

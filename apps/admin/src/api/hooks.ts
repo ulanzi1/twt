@@ -367,6 +367,25 @@ export function useRevokeDegradedMode(pariwarId: string) {
   });
 }
 
+// ── Verifier-console surface (Story 6.10) — the READ-ONLY bounded compound signals view. ──
+// A ₹50L-stakes strong-consistency read: cache-disabled by the createQueryClient defaults (staleTime/
+// gcTime 0, refetchOnMount 'always', no IndexedDB persister — §4.5, D7). The query key carries the
+// effective `pariwarId` + `claimCaseId` (AC3/D8) so a scope switch (or a different claim) never serves
+// another scope's packet from client cache — cache-key isolation matches the server's cache-disabled
+// behavior. `claim.verify` is a per-Pariwar district grant, so the client only gates on a live session.
+
+export const verifierConsoleKey = (pariwarId: string, claimCaseId: string) =>
+  ['verifier-console', pariwarId, claimCaseId] as const;
+
+/** The bounded compound verifier-console packet for one claim (enabled once both ids are known). */
+export function useVerifierConsole(pariwarId: string, claimCaseId: string | null) {
+  return useQuery({
+    queryKey: verifierConsoleKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getVerifierConsole(pariwarId, claimCaseId as string),
+    enabled: Boolean(claimCaseId),
+  });
+}
+
 // ── Telegram config surface (Story 5.5) — the per-Pariwar Telegram Bot config singleton. ──
 
 export const telegramConfigKey = (pariwarId: string) => ['telegram-config', pariwarId] as const;

@@ -15,3 +15,14 @@ export {
   type VerifierReviewData,
   type ParityOutcome,
 } from './VerifierReviewPanel.js';
+// Story 6.10 — the READ-ONLY verifier console shell + signals panel + cross-Pariwar scope chrome.
+export { VerificationConsoleShell, type VerificationConsoleShellProps } from './VerificationConsoleShell.js';
+export { SignalsPanel, type SignalsPanelProps } from './SignalsPanel.js';
+export {
+  ScopeChrome,
+  ScopeSwitcher,
+  type ScopeChromeProps,
+  type ScopeSwitcherProps,
+  type PariwarOption,
+} from './ScopeChrome.js';
+export { verifierConsoleEn } from './i18n-en.js';

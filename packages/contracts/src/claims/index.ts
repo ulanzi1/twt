@@ -25,3 +25,7 @@ export * from './nominee-bank.js';
 // Story 2.7 consent registry). Constrained ['en','hi'] locale; NON-PII presence-view responses; the
 // request carries box selections + locale only (the server resolves the canonical consent copy).
 export * from './dpdpa-consent.js';
+// Story 6.10 — the READ-ONLY verifier-console compound read model (VerifierConsolePacket): the six
+// signal sections over the four-state vocabulary (present|empty|unavailable|not_available_yet), the
+// D10 concealment tri-state, and the response envelope. NO adjudication controls (Story 6.11).
+export * from './verifier-console.js';

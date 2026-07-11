@@ -18,6 +18,7 @@ import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
+import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
 import { MemberSearchRoute } from './routes/MemberSearchRoute.js';
@@ -100,6 +101,13 @@ const groundInspectionRoute = createRoute({
   component: GroundInspectionRoute,
 });
 
+// Story 6.10 — the tenant-scoped READ-ONLY verifier console (single-case, entered by claim id).
+const verifierConsoleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/claims/$claimCaseId/verify',
+  component: VerifierConsoleRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -111,6 +119,7 @@ const routeTree = rootRoute.addChildren([
   degradedModeRoute,
   helplineRoute,
   groundInspectionRoute,
+  verifierConsoleRoute,
 ]);
 
 export const router = createRouter({ routeTree });

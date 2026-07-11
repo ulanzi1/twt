@@ -23,6 +23,8 @@ import {
   PendingIntakeAttemptsResponse,
   MemberSearchResponse,
   MemberValidityResponse,
+  VerifierConsoleResponse,
+  type VerifierConsoleResponse as VerifierConsole,
   StepUpRequestResponse,
   StepUpVerifyResponse,
   ProvisionedPariwar,
@@ -90,6 +92,9 @@ export class ApiError extends Error {
   }
   public get isUnauthorized(): boolean {
     return this.status === 401;
+  }
+  public get isForbidden(): boolean {
+    return this.status === 403;
   }
 }
 
@@ -696,4 +701,19 @@ export async function uploadGroundInspectionPhoto(
     throw new ApiError(res.status, code, message);
   }
   return (await res.json()) as { photoId: string };
+}
+
+// ── Verifier-console read surface (Story 6.10) ────────────────────────────────
+// The READ-ONLY bounded compound signals view for one claim. Tenant-scoped under
+// /p/:pariwarId/admin/claims/:claimCaseId/verifier-console. `claim.verify` is a per-Pariwar
+// district-scoped grant, so the CLIENT gate is only "is there a live session"; the REAL boundary is
+// the server permission hook (deriving the district server-side). Parsed with the shared @twt/contracts
+// schema — no hand-written shadow type.
+
+/** GET the bounded compound verifier-console packet for one claim (one request; no N+1 server-side). */
+export function getVerifierConsole(pariwarId: string, claimCaseId: string): Promise<VerifierConsole> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/verifier-console`,
+    VerifierConsoleResponse,
+  );
 }

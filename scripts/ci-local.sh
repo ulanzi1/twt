@@ -57,6 +57,7 @@ run "domain-invariants"     "pnpm domain-invariants:test && pnpm domain-invarian
 run "member-state-invariant" "pnpm member-state:test && pnpm member-state:check"
 run "claim-state-invariant" "pnpm claim-state:test && pnpm claim-state:check"
 run "claim-canonical-id-invariant" "pnpm claim-canonical-id:test && pnpm claim-canonical-id:check"
+run "claim-adjudication-human-actor-invariant" "pnpm claim-adjudication-human-actor:test && pnpm claim-adjudication-human-actor:check"
 run "kyc-provider-boundary" "pnpm kyc-provider:test && pnpm kyc-provider:check"
 run "access-wrapper-invariants" "pnpm access-wrapper:test && pnpm access-wrapper:check"
 run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"

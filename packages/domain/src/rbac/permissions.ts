@@ -138,7 +138,17 @@ export function permissionKey(value: string): PermissionKey {
 // REVOKE path mints a dedicated key, exactly the 6.8 lesson that replaced a `claim.file` reuse for a
 // distinct management action with its own semantically-scoped key. Granted to `helpline_operator` +
 // `pariwar_admin` (mirroring the `claim.manage_nominee_bank` grant shape) — see roles.ts.
-export const PERMISSION_CATALOG_VERSION = 12 as const;
+// Bumped 12 → 13 at Story 6.10 (added ONE key): `claim.verify` — the verifier-console READ key gating
+// the bounded compound read-model route (GET …/admin/claims/:claimCaseId/verifier-console). A READ key,
+// DISTINCT from the pre-existing `claim.approve` WRITE (the 6.11 adjudication action): a role that may
+// READ a claim's signals to verify standing is not necessarily one that may APPROVE it (the 4.6
+// `member.view_validity` read-key precedent + the 6.7/6.8/6.9 "don't reuse a write key for a distinct
+// action" lesson). Checked at `dimension: 'district'` against the deceased member's server-derived
+// posting district. Granted to `district_admin` + `verifier` (both `district` ceiling; derives to
+// `super_admin`). NOT `state_trustee` (D3a — a `state`-ceiling grant cannot satisfy a district-dimension
+// check under the deny-deeper geo resolver until Epic 3; State-Trustee district-console access is
+// deferred, the exact 6.7 block_admin precedent). See roles.ts for the grant rationale.
+export const PERMISSION_CATALOG_VERSION = 13 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -228,6 +238,15 @@ export const SEED_PERMISSION_KEYS = [
   // `claim.override_ground_inspection` grant shape — NOT the helpline_operator-only
   // `claim.manage_nominee_bank` shape).
   'claim.manage_dpdpa_consent',
+  // Story 6.10 — the verifier-console READ key. Gates the bounded compound read-model route
+  // GET …/admin/claims/:claimCaseId/verifier-console (checked at `dimension: 'district'` against the
+  // deceased member's SERVER-DERIVED latest posting district — the client never submits the authz
+  // district). Distinct from `claim.approve` (the 6.11 WRITE): reading a claim's signals to verify
+  // standing ≠ approving it (the 4.6 `member.view_validity` read-key precedent). Granted to
+  // `district_admin` + `verifier` ONLY (+ derived `super_admin`) — NOT `state_trustee` (D3a: a
+  // `state`-ceiling grant cannot satisfy a district-dimension check until the Epic-3 geo-tree resolver;
+  // the exact 6.7 block_admin deferral). See roles.ts.
+  'claim.verify',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */
@@ -244,7 +263,7 @@ export interface PermissionCatalog {
   readonly keys: readonly PermissionKey[];
 }
 
-/** The catalog — the 18 grounded keys, each validated through the constructor. */
+/** The catalog — the grounded seed keys, each validated through the constructor. */
 export const PERMISSION_CATALOG: PermissionCatalog = {
   catalogVersion: PERMISSION_CATALOG_VERSION,
   keys: SEED_PERMISSION_KEYS.map(permissionKey),

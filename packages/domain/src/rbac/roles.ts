@@ -78,6 +78,8 @@ const CLAIM_MANAGE_NOMINEE_BANK = permissionKey('claim.manage_nominee_bank');
 const CLAIM_CORRECT_NOMINEE_BANK = permissionKey('claim.correct_nominee_bank');
 // Story 6.9 (D5a) — the claim-time DPDPA consent REVOCATION key (the RECORD path reuses claim.file).
 const CLAIM_MANAGE_DPDPA_CONSENT = permissionKey('claim.manage_dpdpa_consent');
+// Story 6.10 — the verifier-console READ key (district-dimension; distinct from the claim.approve WRITE).
+const CLAIM_VERIFY = permissionKey('claim.verify');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -154,7 +156,16 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // `district` scopeCeiling is exactly what makes that gate meaningful (an exact-node match
     // authorizes an assignment in the same district). See the D1-reconciliation note in
     // permissions.ts for why block_admin is DEFERRED (a block grant cannot satisfy a district check).
-    permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY, CLAIM_CONDUCT_GROUND_INSPECTION],
+    permissions: [
+      CLAIM_APPROVE,
+      MEMBER_SUSPEND,
+      MEMBER_VIEW_VALIDITY,
+      CLAIM_CONDUCT_GROUND_INSPECTION,
+      // Story 6.10 — the verifier-console READ key (Anita). Checked at `dimension: 'district'` against
+      // the deceased member's server-derived posting district; the `district` scopeCeiling makes that
+      // exact-node gate meaningful. Distinct from the CLAIM_APPROVE write above (6.11 owns the verdict).
+      CLAIM_VERIFY,
+    ],
     scopeCeiling: 'district',
   },
   {
@@ -201,7 +212,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   {
     role: 'verifier',
     // Story 4.6 — the verifier console (Epic 6) reads FR-12A validity to verify standing.
-    permissions: [MEMBER_MODERATE, MEMBER_VIEW_VALIDITY],
+    // Story 6.10 — CLAIM_VERIFY: the verifier-console read key. A `district` ceiling makes the
+    // district-dimension gate meaningful (exact-node match on the deceased's posting district).
+    // NOT state_trustee (D3a — a state-ceiling grant cannot satisfy a district check until Epic 3).
+    permissions: [MEMBER_MODERATE, MEMBER_VIEW_VALIDITY, CLAIM_VERIFY],
     scopeCeiling: 'district',
   },
   {

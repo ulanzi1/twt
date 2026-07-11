@@ -248,7 +248,13 @@ export type AuthAuditEventType =
   | 'member_claim.dpdpa_consent_recorded'
   | 'helpline_claim.dpdpa_consent_recorded'
   | 'member_claim.dpdpa_consent_revoked'
-  | 'helpline_claim.dpdpa_consent_revoked';
+  | 'helpline_claim.dpdpa_consent_revoked'
+  // ── Verifier-console read surface (Story 6.10, FR-42 / UX-DR39 / Epic 6) ──────
+  // The READ-ONLY bounded compound signals view for one claim. An AUDITED read (the
+  // adminValidityRead precedent — a ₹50L-stakes decision-support surface leaves a trail of who
+  // read which claim's signals). Context is NON-PII: claim_case_id + district + deceased_member_id —
+  // NEVER a decrypted identity/extracted field, note, caption, or any signal payload.
+  | 'admin_verifier_console.read';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

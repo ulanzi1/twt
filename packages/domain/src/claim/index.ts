@@ -33,3 +33,7 @@ export * from './ground-inspection-read.js';
 // (getClaimNomineeBankAccountsCiphertext — ciphertext AS STORED; the AC3 absence-is-a-signal read for Epic 7/9).
 export * from './nominee-bank-persist.js';
 export * from './nominee-bank-read.js';
+// Story 6.10 — the verifier-console prior-decisions + recent-precedents reads (sections (e)/(f)) +
+// the 6.11 decision-read-model dependency contract (VerifierDecisionRecord) + the pure ordering /
+// latest-3-exclude-current helpers. Producer-gated: returns `not_available_yet` until Story 6.11 (D6).
+export * from './verifier-console-read.js';

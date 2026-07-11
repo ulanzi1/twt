@@ -238,6 +238,27 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 6.10 — claim.verify is granted to district_admin AND verifier (+ super_admin); NOT state_trustee (D3a)', () => {
+    const KEY = 'claim.verify';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // The verifier-console READ key. Anita (district_admin) + verifier hold it — both `district`
+    // ceiling, so the dimension:'district' gate is meaningful. + super_admin (full catalog).
+    expect(holders).toEqual(['district_admin', 'super_admin', 'verifier']);
+    // D3a — state_trustee is NOT granted claim.verify: a `state`-ceiling grant cannot satisfy a
+    // district-dimension check under the deny-deeper geo resolver (Epic 3). Their concealment-detail +
+    // escalation decisions live in the dedicated 6.13/6.15 State-Trustee surfaces (the block_admin
+    // deferral precedent). block_admin / pariwar_admin / field_worker do not hold it either.
+    for (const role of ['state_trustee', 'block_admin', 'pariwar_admin', 'field_worker'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+    // Distinct from the pre-existing claim.approve WRITE (the 6.11 adjudication action) — a role may
+    // hold the READ key without the WRITE and vice-versa; verifier holds verify but NOT approve.
+    expect((bundleForRole('verifier')?.permissions as readonly string[]).includes('claim.approve')).toBe(false);
+  });
+
   it('Story 6.9 code review — no seeded non-catalog role holds claim.file WITHOUT claim.manage_dpdpa_consent', () => {
     // The RECORD-vs-REVOKE permission split (D5a) is only meaningful if SOME actor can hold claim.file
     // alone: otherwise "claim.file is insufficient to revoke" is unfalsifiable against real grants (the

@@ -41,6 +41,8 @@
     "claim-state:test": "vitest run scripts/claim-state-invariant",
     "claim-canonical-id:check": "tsx scripts/claim-canonical-id-invariant/check.ts",
     "claim-canonical-id:test": "vitest run scripts/claim-canonical-id-invariant",
+    "claim-adjudication-human-actor:check": "tsx scripts/claim-adjudication-human-actor-invariant/check.ts",
+    "claim-adjudication-human-actor:test": "vitest run scripts/claim-adjudication-human-actor-invariant",
     "kyc-provider:check": "tsx scripts/kyc-provider-boundary/check.ts",
     "kyc-provider:test": "vitest run scripts/kyc-provider-boundary",
     "access-wrapper:check": "tsx scripts/access-wrapper-invariants/check.ts",

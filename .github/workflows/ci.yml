@@ -527,6 +527,32 @@ jobs:
       - run: pnpm claim-canonical-id:test
       - run: pnpm claim-canonical-id:check
 
+  claim-adjudication-human-actor-invariant:
+    name: claim-adjudication-human-actor-invariant (adjudication routes require a human actor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 6.10 AC4/AC5 (D5): every claim-adjudication route composes the HUMAN-actor guard chain
+    # [requireAdminSession, scopeResolutionHook, requirePermissionHook(...)] and carries NO machine/
+    # service/system/null-actor path. Structured TS-AST scan of the explicit coverage set (the verifier
+    # console today; Story 6.11 MUST add its approve/deny/escalate routes) — the runtime chain is the
+    # real control, this gate is defense-in-depth. Teeth proven by inline known-bad fixtures in
+    # lib.test.ts. No DB / network. INVARIANT SCAN → NO fetch-depth: 0 (mirror claim-canonical-id-
+    # invariant). See scripts/claim-adjudication-human-actor-invariant/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm claim-adjudication-human-actor:test
+      - run: pnpm claim-adjudication-human-actor:check
+
   kyc-provider-boundary:
     name: kyc-provider-boundary (DigiLocker transport is provider-only)
     runs-on: ubuntu-latest

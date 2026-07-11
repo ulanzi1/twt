@@ -238,7 +238,17 @@ export type AuthAuditEventType =
   // Context is NON-PII: claim_case_id + account_ranks_present + ifsc_validated + intake_channel +
   // the acting actor — NEVER the encrypted holder name / account number / IFSC.
   | 'member_claim.nominee_bank_recorded'
-  | 'helpline_claim.nominee_bank_recorded';
+  | 'helpline_claim.nominee_bank_recorded'
+  // ── Claim-time DPDPA consent surface (Story 6.9, FR-97 / UX-DR2) ──────────────
+  // The three-checkbox granular consent capture + the AC3 revoke mechanism — member-app (Ravi-mode)
+  // + helpline twin. Post-commit SINK lines (the durable record is the claim.dpdpa_consent_recorded
+  // event + the consent_records rows/audit-or-throw chain). Context is NON-PII: claim_case_id +
+  // consent_types_granted / consent_type + intake_channel — NEVER the checkbox text, locale, or any
+  // subject identity beyond the claim id.
+  | 'member_claim.dpdpa_consent_recorded'
+  | 'helpline_claim.dpdpa_consent_recorded'
+  | 'member_claim.dpdpa_consent_revoked'
+  | 'helpline_claim.dpdpa_consent_revoked';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

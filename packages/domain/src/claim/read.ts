@@ -82,6 +82,29 @@ export async function getClaimCase(
 }
 
 /**
+ * `getClaimCase` under a `SELECT … FOR UPDATE` row lock (Story 6.9, AC5) — the ENFORCEMENT-POINT
+ * read for a consumer that guards a claim-state window then mutates related rows in the SAME
+ * scope-tx (the 6.8 `recordClaimNomineeBankAccounts` locking discipline). Serializes concurrent edits
+ * on the claim and closes the TOCTOU window: the tenant / ownership / current-state / deceased-member
+ * values the caller enforces on all come from THIS locked row, never a stale route-level pre-read.
+ * MUST be called inside an active scope-tx (the lock is released on COMMIT/ROLLBACK). Returns
+ * `undefined` when no claim row exists in this Pariwar.
+ */
+export async function lockClaimCase(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<ClaimRow | undefined> {
+  const rows = await db
+    .select()
+    .from(claims)
+    .where(and(eq(claims.pariwarId, pariwarId), eq(claims.claimCaseId, claimCaseId)))
+    .for('update')
+    .limit(1);
+  return rows[0];
+}
+
+/**
  * The existing claim (if any) filed against a deceased member in this Pariwar — the
  * single-channel intake-idempotency read (Story 6.2 AC3). One death yields one claim
  * (ICP / Story 6.4 enforces cross-channel convergence); this returns the most-recently-

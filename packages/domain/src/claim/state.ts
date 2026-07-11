@@ -140,6 +140,21 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.nominee_bank_recorded':
       return state;
 
+    // ANNOTATION: claim-time DPDPA consent recorded (Story 6.9 — the 24th event). Claim-time capture
+    // of the granular DPDPA consents via the Story 2.7 registry; it does NOT advance the primary state
+    // (an annotation captured across the pre-adjudication window, like nominee_bank_recorded). Identity.
+    // The reducer STAYS total (never throws); correctness lives in the WRITE-PATH guard
+    // (claims.dpdpa-consent.handlers.ts pre-adjudication window), not here.
+    case 'claim.dpdpa_consent_recorded':
+      return state;
+
+    // ANNOTATION: claim-time DPDPA consent revoked (Story 6.9 code review — the 25th event). Mirrors
+    // dpdpa_consent_recorded so the claim's evidentiary timeline stays symmetric. Revocation is
+    // allowed at ANY state (AC3 — a post-settlement takedown is the whole point), so this identity
+    // case has no state precondition, unlike the record-side guard. Identity — reducer stays total.
+    case 'claim.dpdpa_consent_revoked':
+      return state;
+
     // Verifier console opens review (Story 6.10/6.11).
     case 'claim.verifier_reviewing':
       if (state === 'verification_in_progress') return 'verifier_review';

@@ -132,7 +132,13 @@ export function permissionKey(value: string): PermissionKey {
  * `claim.override_ground_inspection` split — one key for the routine action, one for the
  * escalated/supervisory action — see roles.ts for the grant rationale.
  */
-export const PERMISSION_CATALOG_VERSION = 11 as const;
+// Bumped 11 → 12 at Story 6.9 (added ONE key): `claim.manage_dpdpa_consent` (the claim-time DPDPA
+// consent REVOCATION action — a later withdrawal/management action, semantically NOT filing). The
+// RECORD path reuses `claim.file` (consent capture is part of intake), so no key for it; only the
+// REVOKE path mints a dedicated key, exactly the 6.8 lesson that replaced a `claim.file` reuse for a
+// distinct management action with its own semantically-scoped key. Granted to `helpline_operator` +
+// `pariwar_admin` (mirroring the `claim.manage_nominee_bank` grant shape) — see roles.ts.
+export const PERMISSION_CATALOG_VERSION = 12 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -213,6 +219,15 @@ export const SEED_PERMISSION_KEYS = [
   // supervisor-escalation grant, same rationale as claim.override_ground_inspection; a pure
   // pariwar_admin still cannot reach the route without ALSO holding a manage-nominee-bank grant).
   'claim.correct_nominee_bank',
+  // Story 6.9 (D5a) — the claim-time DPDPA consent REVOCATION action key. Gates the helpline
+  // `POST …/admin/claims/:claimCaseId/dpdpa-consent/revoke` route. Distinct from `claim.file` (which
+  // gates the RECORD path, since consent capture IS part of filing): a revocation is a LATER
+  // withdrawal/management action performed by an operator who is not filing anything — reusing
+  // `claim.file` would reproduce the exact semantic-scope mismatch the 6.8 review corrected. Granted
+  // to `helpline_operator` + `pariwar_admin` (the `claim.correct_nominee_bank` /
+  // `claim.override_ground_inspection` grant shape — NOT the helpline_operator-only
+  // `claim.manage_nominee_bank` shape).
+  'claim.manage_dpdpa_consent',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

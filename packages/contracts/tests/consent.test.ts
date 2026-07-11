@@ -75,15 +75,19 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
     );
   });
 
-  it('consent_type declares the seven AC1 values + the Story 5.4/5.5 opt-in additives', () => {
+  it('consent_type declares the seven AC1 values + the 5.4/5.5 opt-in + 6.9 publication additives', () => {
     expect([...ConsentTypeSchema.options].sort()).toEqual(
       [
         'claim_time_dpdpa',
         'dpdpa_data_processing',
         'dpdpa_data_sharing',
+        // Story 6.9 (D2) — In Memoriam appearance consent (additive via ALTER TYPE 0058 + lockstep).
+        'in_memoriam_listing',
         'marketing',
         'medical_disclosure_ack',
         'nominee_share_split',
+        // Story 6.9 (D2) — Sahyog Vivran publication consent (additive via ALTER TYPE 0058 + lockstep).
+        'sahyog_vivran_publication',
         'tc_acceptance',
         // Story 5.5 — member Telegram opt-in consent (additive via ALTER TYPE + lockstep).
         'telegram_opt_in',

@@ -21,3 +21,7 @@ export * from './documents.js';
 // Story 6.8 — the claim-time nominee bank-detail collection DTOs (dual-account #1/#2 collection +
 // the IFSC-lookup read). NON-PII presence-view responses; the IFSC wire regex re-declared.
 export * from './nominee-bank.js';
+// Story 6.9 — the claim-time DPDPA consent DTOs (three granular opt-ins + revoke; CONSUMER of the
+// Story 2.7 consent registry). Constrained ['en','hi'] locale; NON-PII presence-view responses; the
+// request carries box selections + locale only (the server resolves the canonical consent copy).
+export * from './dpdpa-consent.js';

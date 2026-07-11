@@ -44,7 +44,7 @@ export default function RelationshipScreen(): React.ReactElement {
       if (session?.memberId) {
         saveClaimDraft(session.memberId, { relationship, claimCaseId: res.claimCaseId, lastStep: 'relationship' })
       }
-      router.push('/(claim)/document')
+      router.push('/(claim)/consent')
     } catch (e) {
       // A lapsed handover-trust elevation → return to the OTP step (keyed on the CODE).
       if (e instanceof ApiError && e.code === 'auth.step_up_required') {

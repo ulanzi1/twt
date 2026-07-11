@@ -206,6 +206,47 @@ export const ClaimNomineeBankRecordedPayloadSchema = requireIdentityTransition({
   corrected: z.boolean().optional(),
 });
 
+/**
+ * Claim-time DPDPA consent recorded. ANNOTATION event — the 24th claim event, NEW in Story 6.9
+ * (NOT in the 6.1/6.6/6.7/6.8 vocabulary). Claim-time capture of the granular DPDPA consents
+ * (the trust-processing consent + the two public-transparency opt-ins) via the Story 2.7
+ * consent-registry primitive; it does NOT advance the claim's primary state (an identity
+ * transition; `from_state === to_state`; D6) — consent capture happens across the pre-adjudication
+ * intake window. The reducer STAYS total (identity from any state — replay-robustness); the
+ * WRITE-PATH guards emission to the pre-adjudication window (the 6.8 lesson), and emits this event
+ * ONLY when ≥1 grant row was written (`consent_types_granted` is ALWAYS non-empty — "consent
+ * recorded" never means "nothing was granted"; keeps the D3a legal-posture flip a pure guard change).
+ *
+ * PII discipline (AC2): the payload carries ONLY the non-PII granted-type flags —
+ * `consent_types_granted` (the granted subset). NO checkbox text, NO locale, NO subject identity
+ * beyond the ambient `claim_case_id` (the stream id). Owner: Story 6.9.
+ */
+export const ClaimDpdpaConsentRecordedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  // The granted subset — always non-empty (the event is emitted only when ≥1 grant row is written).
+  // Non-PII type flags ONLY (no checkbox text, no subject id).
+  consent_types_granted: z
+    .array(z.enum(['claim_time_dpdpa', 'sahyog_vivran_publication', 'in_memoriam_listing']))
+    .min(1),
+});
+
+/**
+ * Claim-time DPDPA consent revoked. ANNOTATION event (code review addition, Story 6.9) — mirrors
+ * `claim.dpdpa_consent_recorded` so the claim's evidentiary timeline stays symmetric: "consent was
+ * captured at claim-time" (D6's own rationale) should be explainable against a later revoke too, not
+ * just against an audit-sink line. Identity transition (`from_state === to_state`) — revocation does
+ * NOT advance claim state (AC3/D7; Epic 11b performs the actual publication takedown). Emitted once
+ * per revoke call, for the single publication type revoked in that call.
+ *
+ * PII discipline: the payload carries ONLY the non-PII `consent_type` revoked. NO revocation reason
+ * (that lives in `consent_records.revocation_reason` + the audit sink only), NO subject identity
+ * beyond the ambient `claim_case_id`. Owner: Story 6.9 code review.
+ */
+export const ClaimDpdpaConsentRevokedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  consent_type: z.enum(['sahyog_vivran_publication', 'in_memoriam_listing']),
+});
+
 /** Verifier console opened review → `verifier_review`. Owner: Story 6.10/6.11. */
 export const ClaimVerifierReviewingPayloadSchema = z.object({ ...auditShape }).strict();
 
@@ -330,11 +371,14 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 23-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 25-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
-// Story 6.8 adds the 23rd — `claim.nominee_bank_recorded`, all annotation/identity events — per
-// the "owner stories add their annotation events" discipline.)
+// Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
+// `claim.dpdpa_consent_recorded`; the Story 6.9 code review adds the 25th —
+// `claim.dpdpa_consent_revoked` (a symmetric annotation for the revoke path, mirroring the
+// record-side event so the claim's evidentiary timeline stays complete), all annotation/identity
+// events — per the "owner stories add their annotation events" discipline.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -345,6 +389,8 @@ export const CLAIM_EVENT_TYPES = [
   'claim.ground_inspection_scheduled',
   'claim.ground_inspection_completed',
   'claim.nominee_bank_recorded',
+  'claim.dpdpa_consent_recorded',
+  'claim.dpdpa_consent_revoked',
   'claim.verifier_reviewing',
   'claim.verifier_approved',
   'claim.verifier_denied',
@@ -362,11 +408,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 22 claim events). */
+/** The dotted `claim.*` event-type literal union (the 25 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 23 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 25 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -380,6 +426,8 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.ground_inspection_scheduled': ClaimGroundInspectionScheduledPayloadSchema,
   'claim.ground_inspection_completed': ClaimGroundInspectionCompletedPayloadSchema,
   'claim.nominee_bank_recorded': ClaimNomineeBankRecordedPayloadSchema,
+  'claim.dpdpa_consent_recorded': ClaimDpdpaConsentRecordedPayloadSchema,
+  'claim.dpdpa_consent_revoked': ClaimDpdpaConsentRevokedPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,
   'claim.verifier_approved': ClaimVerifierApprovedPayloadSchema,
   'claim.verifier_denied': ClaimVerifierDeniedPayloadSchema,

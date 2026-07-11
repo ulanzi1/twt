@@ -233,6 +233,29 @@ export class NomineeBankCorrectionReasonRequiredError extends Error {
   }
 }
 
+// ── Claim-time DPDPA consent write-path guard (Story 6.9, AC5) ─────────────────
+// Consent RECORDING happens inside the intake wizard (the (claim)/consent step sits between
+// relationship and document), so the claim is in an early PRE-ADJUDICATION state. The write path
+// re-reads the claim's state INSIDE the scope-tx (under the row lock) and rejects recording onto an
+// adjudicated / terminal claim (the 6.8 write-path-guard discipline). REVOCATION, by contrast, is
+// allowed at ANY later state — the whole point of AC3 is a post-settlement takedown — so this window
+// gates RECORD only, never revoke. `verifier_approved` onward (adjudication complete), the trustee
+// freeze/approval/settled terminals, and the denied/appeal/reversed states are all CLOSED to
+// recording: consent captured after adjudication would be evidentially meaningless for the claim it
+// was supposed to gate. (Note: the literal `under_verification` / `intake_initiated` are NOT states —
+// the real initial state is `intake_pending`; `claim.intake_initiated` is the EVENT type. 6.8 D2 note.)
+
+/** The pre-adjudication states in which claim-time DPDPA consent may be RECORDED (AC5). Mirrors the
+ *  shape of NOMINEE_BANK_COLLECTABLE_STATES but includes `intake_pending` — the consent wizard step
+ *  runs immediately post-intake, before ICP convergence may have advanced the claim. */
+export const DPDPA_CONSENT_RECORDABLE_STATES = [
+  'intake_pending',
+  'intake_converged',
+  'documents_pending',
+  'verification_in_progress',
+  'verifier_review',
+] as const;
+
 /** True iff `err` is the events_log `(stream_id, event_version)` unique-violation. */
 export function isClaimStreamVersionConflict(err: unknown): boolean {
   const pgErr = extractPgError(err);

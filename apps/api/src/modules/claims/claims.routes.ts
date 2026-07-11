@@ -23,6 +23,11 @@ import {
   OcrDocumentType,
   RecordNomineeBankRequest,
   RecordNomineeBankResponse,
+  DpdpaConsentStatusResponse,
+  RecordDpdpaConsentRequest,
+  RecordDpdpaConsentResponse,
+  RevokeDpdpaConsentRequest,
+  RevokeDpdpaConsentResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -39,6 +44,7 @@ import { CLAIM_HANDOVER_ACTION_CONTEXT } from './claims.service.js';
 import { createClaimsHandlers } from './claims.handlers.js';
 import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
 import { createNomineeBankHandlers } from './claims.nominee-bank.handlers.js';
+import { createDpdpaConsentHandlers } from './claims.dpdpa-consent.handlers.js';
 
 const CLAIM_TAG = 'member-claim';
 
@@ -50,10 +56,14 @@ const ClaimDocumentQuery = z.object({ documentType: OcrDocumentType }).strict();
 const NomineeBankParam = z.object({ claimCaseId: z.string().uuid() }).strict();
 const IfscLookupParam = z.object({ ifsc: z.string().min(1).max(20) }).strict();
 
+/** Story 6.9 — DPDPA consent route params (the claim id). */
+const DpdpaConsentParam = z.object({ claimCaseId: z.string().uuid() }).strict();
+
 export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createClaimsHandlers(deps);
   const docs = createClaimDocumentHandlers(deps);
   const bank = createNomineeBankHandlers(deps);
+  const consent = createDpdpaConsentHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
   const sendThrottle = memberClaimHandoverSendThrottle(deps);
@@ -167,5 +177,53 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
       preHandler: [memberSession],
     },
     bank.getStatusMember,
+  );
+
+  // Story 6.9 — claim-time DPDPA consent (the reserved (claim)/consent wizard step). Consent capture
+  // is NOT a financial action (unlike nominee-bank), so NO step-up — just the member session (D5/AC4).
+  // The member records onto their OWN claim (claim-ownership asserted in the handler off the locked row).
+  r.post(
+    '/api/v1/member/claims/:claimCaseId/dpdpa-consent',
+    {
+      schema: {
+        params: DpdpaConsentParam,
+        body: RecordDpdpaConsentRequest,
+        response: { 201: RecordDpdpaConsentResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    consent.recordMember,
+  );
+
+  // The presence view (which consents are currently granted) — so the consent step renders current
+  // state on re-entry (the save-and-resume thread). Read-only + NON-PII → no step-up.
+  r.get(
+    '/api/v1/member/claims/:claimCaseId/dpdpa-consent',
+    {
+      schema: {
+        params: DpdpaConsentParam,
+        response: { 200: DpdpaConsentStatusResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    consent.getStatusMember,
+  );
+
+  // The AC3 revoke MECHANISM (Epic 11b performs the actual page takedown). Withdraw one publication
+  // consent (Sahyog Vivran / In Memoriam). Member's own session + own claim; NO step-up.
+  r.post(
+    '/api/v1/member/claims/:claimCaseId/dpdpa-consent/revoke',
+    {
+      schema: {
+        params: DpdpaConsentParam,
+        body: RevokeDpdpaConsentRequest,
+        response: { 200: RevokeDpdpaConsentResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    consent.revokeMember,
   );
 }

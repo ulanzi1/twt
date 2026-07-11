@@ -10,7 +10,8 @@
 >
 > **Scope note:** Rules 1–5 are live-DB / integration landmines (AI-8). **Rule 6
 > (assertion quality)** applies to **all** tests — unit and integration — and comes from
-> Epic 2 (H-4 / AI-2-3).
+> Epic 2 (H-4 / AI-2-3). **Rule 7 (suite-level timeout)** is a live-DB landmine added
+> 2026-07-11 during Story 6.8 code review.
 
 ---
 
@@ -152,6 +153,53 @@ so the suite structure is visible to the test runner even when skipped.
    breaks a test" is.
 4. **Sanity check before the PR:** for each new assertion ask *"what bug would make this fail?"*
    If the answer is "none," the assertion is decoration — strengthen or delete it.
+
+---
+
+## Rule 7 — Suite-Level Timeout for Live-DB Tests That Round-Trip the DB Several Times
+
+**Problem:** vitest's default `testTimeout` is 5000ms. A live-DB integration test that makes
+several *individually fast* sequential round-trips to the shared :5433 Postgres (setup writes +
+multiple HTTP `inject()` legs each doing DB work + assertion queries) can comfortably finish in
+under 1s when run in isolation, but blow past 5000ms under `pnpm ci:local`'s concurrent
+`turbo run test` load, where many other packages are hitting the same DB container at once. This
+is a **contention flake**, not a real hang — the fix is a longer timeout, not a faster test.
+
+**Rule:**
+- If a live-DB test times out under `ci:local` but passes in isolation
+  (`pnpm --filter <pkg> test <path>`), do not chase it as a correctness bug. Confirm the
+  isolation-pass first, then apply a **suite-level** timeout override — the 3rd argument to the
+  outer `describe(...)` call, NOT a per-`it()` override:
+
+  ```ts
+  describe.skipIf(!hasDatabase)('My live-DB suite (:5433)', () => {
+    // ...tests...
+  }, { timeout: 20000 });
+  ```
+
+- 20000ms (20s) is the established value — generous enough to absorb contention, still low enough
+  to catch a real hang.
+- Scope the override to the specific `describe` block that owns the slow test(s), not the whole
+  file, if the file has multiple independent `describe` blocks.
+- Add a one-line comment above the closing `}, { timeout: 20000 });` explaining *why* (contention
+  under concurrent `ci:local` load, fast standalone) so a future reader doesn't "fix" it away.
+
+**Precedent fixes using this exact pattern:** `apps/jobs/tests/audit/integrity-check.test.ts`
+(2026-06-29), `apps/api/tests/integration/niyamavali-workflow.spec.ts`,
+`apps/api/tests/integration/device-token/device-token.spec.ts`,
+`apps/jobs/tests/data-export.test.ts`, `apps/api/tests/integration/terms-and-conditions.spec.ts`,
+and `apps/api/tests/integration/medical/medical-disclose.spec.ts` (all 2026-07-11) — see
+`[[project_known_livedb_test_failures]]` for the full list and per-file detail.
+
+**If this keeps recurring across new files (whack-a-mole), stop patching per-suite and bump the
+package's global `testTimeout` instead.** Five ci:local re-runs in one session each surfaced a
+*different, previously-clean* file timing out — the per-suite override doesn't converge because any
+sufficiently round-trip-heavy live-DB spec is a candidate under enough concurrent load, not a fixed
+list. `apps/api/vitest.config.ts` and `apps/jobs/vitest.config.ts` both carry a global
+`testTimeout: 20000` (added 2026-07-11) for exactly this reason — the per-suite overrides on
+individual files are now redundant but left in place as documentation of which suites are known-slow.
+If a THIRD package starts showing this pattern, add the same global bump there rather than
+per-file-patching it first.
 
 ---
 

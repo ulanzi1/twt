@@ -245,7 +245,11 @@ describe.skipIf(!hasDatabase)('Device-token registration — E2E (:5433)', () =>
       await teardown(t);
     }
   });
-});
+  // Live-DB suite timeout: these tests run several sequential live-DB round-trips (setup + HTTP
+  // legs + row/audit assertions) against a shared :5433 container; under concurrent `turbo`/
+  // `ci:local` load they can exceed the 5s vitest default. 20s removes the contention flake without
+  // masking a real hang (see apps/jobs/tests/audit/integrity-check.test.ts precedent).
+}, { timeout: 20000 });
 
 describe.skipIf(!hasDatabase)('Device-token registration — admin endpoint E2E (:5433)', () => {
   /** Create an admin, enroll a passkey, log in fully — returns an authenticated client + userId. Mirrors

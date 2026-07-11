@@ -41,10 +41,10 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 18 grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(9); // Story 6.7 bump +2 (7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+  it('is versioned and seeded with exactly the 20 grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(11); // Story 6.8 bump +2 (9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(18);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(20);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -93,6 +93,13 @@ describe('PERMISSION_CATALOG', () => {
     expect(permissionKey('claim.conduct_ground_inspection')).toBe('claim.conduct_ground_inspection');
     expect(() => permissionKey('claim.ground_inspection.conduct')).toThrow(InvalidPermissionKeyError);
     expect(isCatalogKey('claim.ground_inspection.conduct')).toBe(false);
+  });
+
+  it('includes the Story 6.8 nominee-bank keys (manage + correct, replacing an initial claim.file reuse)', () => {
+    expect(isCatalogKey('claim.manage_nominee_bank')).toBe(true);
+    expect(isCatalogKey('claim.correct_nominee_bank')).toBe(true);
+    expect(permissionKey('claim.manage_nominee_bank')).toBe('claim.manage_nominee_bank');
+    expect(permissionKey('claim.correct_nominee_bank')).toBe('claim.correct_nominee_bank');
   });
 
   it('does NOT contain past-tense EVENT names (catalog ≠ events)', () => {

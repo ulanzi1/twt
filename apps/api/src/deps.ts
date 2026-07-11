@@ -39,6 +39,7 @@ import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
 import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
 import {
   createGcsClaimDocumentStorage,
+  createInMemoryBankIfscLookup,
   createLocalFsClaimDocumentStorage,
 } from '@twt/platform-adapters';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
@@ -328,6 +329,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Claim OCR + parity job producer (Story 6.5) — send-only, same DB connection string as the
     // app pool (pgboss schema; apps/jobs already created it).
     claimOcrParityQueue: await createPgBossClaimOcrParityEnqueuer(connectionString),
+    // IFSC bank-lookup port (Story 6.8, D4) — the in-memory stub (fixture + cache). A real-vendor
+    // adapter (a bundled IFSC dataset / public IFSC API) is a future seam; no live config booted here.
+    bankIfscLookup: createInMemoryBankIfscLookup(),
     // Channel Secret-Manager resolver (Story 5.4) — resolves a per-Pariwar WA webhook credential NAME →
     // value. Local dev falls back to an env var derived from the NAME (non-alphanumerics → `_`, uppercased),
     // the SAME resolveSecretValue path the argon2 pepper / DigiLocker secrets use; prod uses Secret Manager.

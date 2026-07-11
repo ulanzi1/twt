@@ -175,6 +175,12 @@ export * from './claim_peer_mesh_pings.js';
 // caption; Decision D2, NOT a claim_documents row). Both tenant-isolated (mirror claims); no state trigger.
 export * from './claim_ground_inspections.js';
 export * from './claim_ground_inspection_photos.js';
+// Story 6.8 — claim-time nominee bank: `claim_nominee_bank_accounts` (ONE row per disbursement
+// account, ranked #1/#2 on the composite PK (claim_case_id, account_rank); Tier-1 ciphertext for
+// holder name / account number / IFSC; bank_name/branch Tier-3 plaintext). A claim-scoped dual-
+// account disbursement channel (D1) — NOT nominee-linked, NOT the 75/25 split. Tenant-isolated
+// (mirror claims); annotation-only, no state trigger.
+export * from './claim_nominee_bank_accounts.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

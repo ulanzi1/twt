@@ -393,6 +393,20 @@
       "when": 1785469200000,
       "tag": "0055_claim-ground-inspection",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1785555600000,
+      "tag": "0056_claim-nominee-bank",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1785642000000,
+      "tag": "0057_claim-nominee-bank-rank-check",
+      "breakpoints": true
     }
   ]
 }

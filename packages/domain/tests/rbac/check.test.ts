@@ -336,3 +336,35 @@ describe('checkPermission — non-throwing result variant', () => {
     expect(fired).toHaveLength(1);
   });
 });
+
+describe('Story 6.8 code review — claim.manage_nominee_bank / claim.correct_nominee_bank are independent keys', () => {
+  // The tier-1 (route preHandler) and tier-2 (in-handler, claims.nominee-bank.handlers.ts
+  // assertCorrectionAuthorized) checks must be genuinely separate hasPermission calls, not two
+  // names for the same check — pin both directions with a `pariwar`-dimension resource (the
+  // dimension the handler's checkPermission call actually uses).
+  const pariwarResource = resource({ dimension: 'pariwar', value: PARIWAR_A });
+
+  it('helpline_operator holds BOTH keys (preserves the pre-review claim.file-reuse capability)', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'helpline_operator', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'claim.manage_nominee_bank', pariwarResource)).toBe(true);
+    expect(hasPermission(grants, 'claim.correct_nominee_bank', pariwarResource)).toBe(true);
+  });
+
+  it('a role holding an UNRELATED claim key (district_admin: conduct_ground_inspection) holds NEITHER nominee-bank key', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'claim.manage_nominee_bank', pariwarResource)).toBe(false);
+    expect(hasPermission(grants, 'claim.correct_nominee_bank', pariwarResource)).toBe(false);
+  });
+
+  it('pariwar_admin holds the ESCALATION key (correct) but NOT the routine key (manage) — mirrors claim.override_ground_inspection not implying claim.conduct_ground_inspection', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'claim.correct_nominee_bank', pariwarResource)).toBe(true);
+    expect(hasPermission(grants, 'claim.manage_nominee_bank', pariwarResource)).toBe(false);
+  });
+});

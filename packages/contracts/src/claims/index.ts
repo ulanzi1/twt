@@ -18,3 +18,6 @@ export * from './convergence.js';
 // the reusable ClaimDocumentStorage port.
 export * from './ocr.js';
 export * from './documents.js';
+// Story 6.8 — the claim-time nominee bank-detail collection DTOs (dual-account #1/#2 collection +
+// the IFSC-lookup read). NON-PII presence-view responses; the IFSC wire regex re-declared.
+export * from './nominee-bank.js';

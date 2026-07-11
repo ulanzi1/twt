@@ -320,4 +320,8 @@ describe.skipIf(!hasDatabase)('Niyamavali amendment workflow (Story 2.4)', () =>
     const res = await client.inject({ method: 'GET', url: niy(randomUUID(), '/clauses') });
     expect(res.statusCode).toBe(404);
   });
-});
+  // Live-DB suite timeout: the full-flow test alone runs ~9 sequential live-DB round-trips
+  // (setup + 4 HTTP legs + audit assertions) against a shared :5433 container; under concurrent
+  // `turbo`/`ci:local` load it can exceed the 5s vitest default. 20s removes the contention flake
+  // without masking a real hang (see apps/jobs/tests/audit/integrity-check.test.ts precedent).
+}, { timeout: 20000 });

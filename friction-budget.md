@@ -31,6 +31,7 @@ deliberately accepted.
 | member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |
 | member (opting in to WhatsApp notifications; sends a pre-filled "Send Hello" WhatsApp message to confirm) | Explicit, member-initiated consent provenance (AC4 — no inferred/passive consent for a new communication channel) | optional |
 | member (opting in to Telegram notifications; taps a t.me deep-link to /start the bot) | Explicit member-initiated consent for a new channel | optional |
+| member/nominee (claim-time dual bank-account entry — a SECOND full account, not just one) | Disbursement resilience (Epic 9 RBI per-payee-per-day-cap failover) | forced |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -271,6 +272,30 @@ the PUBLIC `apps/public` Astro surface, which this story does not touch
 Zero gratuitous friction introduced beyond the pre-declared step-up row; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
 **Story 6.5 disposition (existing low-friction row REALIZED — no new row):** the death-certificate upload step (`apps/mobile/app/(claim)/document.tsx`, `apps/mobile/package.json` +`expo-image-picker`/`expo-document-picker`) is the SURFACE that realizes the friction already declared **not gratuitous** at Story 6.2 disposition item (3): *"Death-certificate upload — deliberately LOW friction, defer-7-days escape (not gratuitous) ... The real OCR/storage backend is Story 6.5 — 6.2 ships only the seam."* 6.5 wires the REAL native camera/file picker + multipart upload + OCR-parity trigger BEHIND that seam, but preserves every friction-reducing property already affirmed: the **"I'll upload later (within 7 days)"** defer escape stays present and un-enforced client-side (no countdown, no penalty — UX §7 grief register, AC6), save-and-resume survives app restarts (`documentStage` in the draft), and an upload failure is a dignified retry/defer (never a hard error or forced re-entry). Picking a photo or a PDF and uploading it is the minimum interaction the already-accepted AC1 upload step requires — no NEW gate, no NEW required field, no urgency theater. Zero gratuitous friction introduced beyond what Story 6.2 already declared; ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: the screen is in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
+**Story 6.8 disposition (NEW row — forced dual-account friction):** the claim-time nominee
+bank-collection form (`apps/mobile/app/(claim)/nominee-review.tsx` — Story 6.2 declared this
+screen **read-only**; 6.8 extends it with the `<NomineeDetailEditor>` dual-bank form — +
+`apps/mobile/lib/nominee-bank-ifsc.ts` + its test) introduces one deliberate friction: the
+filer must provide **TWO complete bank accounts** (holder name + account number + IFSC each),
+not one. A single account would functionally suffice to file the payout destination — the
+second is imposed specifically to give Epic 9's disbursement a **pre-validated failover**
+against the RBI UPI per-payee-per-day cap (D1/AC1, FR-37), the exact "payer pays extra effort
+to protect a named downstream subsystem" shape the ledger already models (mirrors the
+Sushil/Sunita rows). Declared as the NEW row above (`member/nominee (claim-time dual
+bank-account entry) → Disbursement resilience (Epic 9 RBI per-payee-cap failover) → forced`).
+Everything else on this surface **removes or avoids** friction rather than adding it: IFSC
+pre-validation resolves the bank name on blur (no separate lookup step); a malformed/unknown
+IFSC is a dignified Pattern-4 message, never a raw error; the account-holder name is captured
+verbatim with **no penny-drop verification** (FR-37 `[v1-S]` explicitly deferred, D4); the
+member-side step-up is the SAME handover-trust OTP already declared under the Story 6.2
+disposition item (1) (`requireMemberStepUp('claim_handover')`, reused per D5 — not a new
+step-up context); and the review-follow-up "bank details already on file (…)" notice added to
+this screen is **read-only, informational, and self-suppresses** when nothing is on file — it
+*reduces* re-entry friction on a correction/re-edit rather than adding any. The **page-weight
+baseline is unchanged**: all touched files are in the authenticated mobile app (`apps/mobile`,
+EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate
+has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
 ## How to declare (attribution-on-change — AC-4)
 

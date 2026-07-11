@@ -132,6 +132,14 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.ground_inspection_completed':
       return state;
 
+    // ANNOTATION: nominee bank details recorded (Story 6.8 — the 23rd event). Claim-time capture
+    // of the two disbursement accounts (Epic 7/9 pay them out); it does NOT advance the primary
+    // state (an editable, pre-adjudication annotation, like ground_inspection_scheduled). Identity.
+    // The reducer STAYS total (never throws); correctness lives in the WRITE-PATH guard
+    // (nominee-bank-persist.ts: NomineeBankClaimNotCollectableError), not here.
+    case 'claim.nominee_bank_recorded':
+      return state;
+
     // Verifier console opens review (Story 6.10/6.11).
     case 'claim.verifier_reviewing':
       if (state === 'verification_in_progress') return 'verifier_review';

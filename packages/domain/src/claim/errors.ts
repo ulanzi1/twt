@@ -174,6 +174,65 @@ export class GroundInspectionNotActiveError extends Error {
   }
 }
 
+// ── Nominee-bank write-path guard (Story 6.8, D3 — three-tier edit governance) ─
+// Claim-time nominee bank collection is an editable annotation (D2). The edit rights are
+// role-and-state-differentiated (governance decision, BigDev 2026-07-11):
+//   1. NOMINEE (member-app Ravi-mode + helpline-as-proxy) — freely record/edit BOTH accounts
+//      any time BEFORE the verifier approves (through `verifier_review`); permanently read-only
+//      for the nominee once the claim reaches `verifier_approved`.
+//   2. AUTHORIZED ADMIN CORRECTION — after `verifier_approved` but BEFORE the claim/cycle freeze
+//      (`state_trustee_freeze`), an authorized admin (helpline) may make an audited, REASON-required,
+//      step-up-protected correction. NOT open to the nominee.
+//   3. EVERYTHING ELSE (pre-converged; frozen/published `state_trustee_freeze` onward; AND the
+//      `reversed` / `appeal_stage_*` states) — CLOSED to both nominee edits and routine admin
+//      corrections in v1. Any bank-detail change there requires the separately governed EMERGENCY
+//      or APPEAL-REMEDIATION workflow (OUT OF SCOPE — the writer simply rejects). Reopening a
+//      correction window on those states is a FUTURE story that must first define re-verification,
+//      approval invalidation, downstream-readiness invalidation, audit, and notification semantics
+//      (BigDev, 2026-07-11) — do NOT widen `NOMINEE_BANK_ADMIN_CORRECTION_STATES` without them.
+// The reducer stays total (identity from any state); the WRITE PATH re-reads the claim's state
+// INSIDE the scope-tx and enforces the tier for the caller's authority. NOT surfaced at the
+// top-level barrel (claim namespace only); the route maps these to stable 4xx codes.
+
+/** Tier-1 (nominee) window: the filer may record/edit both accounts before verifier approval. */
+export const NOMINEE_BANK_COLLECTABLE_STATES = [
+  'intake_converged',
+  'documents_pending',
+  'verification_in_progress',
+  'verifier_review',
+] as const;
+
+/** Tier-2 (admin correction) window: after verifier approval, before the claim/cycle freeze — an
+ *  authorized admin may make an audited, reason-required correction. NOT open to the nominee.
+ *  DELIBERATELY `verifier_approved` ONLY — `reversed`/`appeal_stage_*` are v1-closed (tier-3), NOT
+ *  correction windows; widening this set is a future story with re-verification/invalidation/audit/
+ *  notification semantics (BigDev, 2026-07-11). */
+export const NOMINEE_BANK_ADMIN_CORRECTION_STATES = ['verifier_approved'] as const;
+
+/** Thrown when bank details are not editable for the claim in its current state under the caller's
+ *  authority (a pre-converged claim; a post-approval claim for a NON-admin caller; or a frozen/
+ *  published claim, whose changes require the separately governed emergency correction workflow). */
+export class NomineeBankClaimNotCollectableError extends Error {
+  public readonly name = 'NomineeBankClaimNotCollectableError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly currentState: string,
+  ) {
+    super(
+      `[nominee-bank] claim ${claimCaseId} is '${currentState}' — bank details are not editable in this state`,
+    );
+  }
+}
+
+/** Thrown when an authorized-admin correction (the post-approval window) is attempted WITHOUT the
+ *  mandatory reason — corrections are audited + reason-required (governance decision). */
+export class NomineeBankCorrectionReasonRequiredError extends Error {
+  public readonly name = 'NomineeBankCorrectionReasonRequiredError';
+  public constructor(public readonly claimCaseId: string) {
+    super(`[nominee-bank] a correction after verifier approval requires a reason`);
+  }
+}
+
 /** True iff `err` is the events_log `(stream_id, event_version)` unique-violation. */
 export function isClaimStreamVersionConflict(err: unknown): boolean {
   const pgErr = extractPgError(err);

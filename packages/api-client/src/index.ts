@@ -92,6 +92,13 @@ import {
   type ClaimIntakeInitiateRequest,
   type ClaimIntakeInitiateResponse as ClaimIntakeInitiateResult,
   type ClaimDocumentUploadResponse as ClaimDocumentUploadResult,
+  IfscLookupResponse,
+  RecordNomineeBankResponse,
+  NomineeBankStatusResponse,
+  type IfscLookupResponse as IfscLookupResult,
+  type RecordNomineeBankRequest,
+  type RecordNomineeBankResponse as RecordNomineeBankResult,
+  type NomineeBankStatusResponse as NomineeBankStatusResult,
   type OcrDocumentType,
 } from '@twt/contracts';
 import type { z } from 'zod';
@@ -643,6 +650,45 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
         `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/documents${qs}`,
         ClaimDocumentUploadResponse,
         form,
+      );
+    },
+
+    /**
+     * Resolve an IFSC to its public bank/branch (Story 6.8; session; auth) — backs the
+     * <NomineeDetailEditor> bank-name autocomplete on IFSC blur. A malformed/unknown IFSC surfaces
+     * as `ApiError` (404 `nominee_bank.ifsc_unrecognized` — key on `error.code` for Pattern-4 copy).
+     */
+    ifscLookup(ifsc: string): Promise<IfscLookupResult> {
+      return call(`${CLAIMS_BASE}/ifsc/${encodeURIComponent(ifsc)}`, IfscLookupResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Record BOTH nominee bank accounts (#1 primary / #2 secondary) for a claim (Story 6.8; session;
+     * auth). Exactly two complete accounts in one atomic request (latest-wins replace). Requires
+     * handover-trust step-up (a `auth.step_up_required` code routes back to the handover-OTP step).
+     * Returns the NON-PII presence view (rank + bank name + validated flag + holder-name-present).
+     */
+    recordNomineeBank(claimCaseId: string, input: RecordNomineeBankRequest): Promise<RecordNomineeBankResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/nominee-bank`,
+        RecordNomineeBankResponse,
+        input,
+        true,
+      );
+    },
+
+    /**
+     * The presence view of whatever nominee-bank accounts are currently on file (review finding,
+     * 2026-07-11; session; auth) — `[]` when nothing has been recorded yet. Lets `<NomineeDetailEditor>`
+     * show what's on file before a re-edit instead of always rendering blank.
+     */
+    nomineeBankStatus(claimCaseId: string): Promise<NomineeBankStatusResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/nominee-bank`,
+        NomineeBankStatusResponse,
+        undefined,
+        true,
+        'GET',
       );
     },
   };

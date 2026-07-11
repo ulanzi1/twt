@@ -18,7 +18,11 @@ import {
   HandoverOtpResponse,
   HandoverOtpVerifyRequest,
   HandoverOtpVerifyResponse,
+  IfscLookupResponse,
+  NomineeBankStatusResponse,
   OcrDocumentType,
+  RecordNomineeBankRequest,
+  RecordNomineeBankResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -34,6 +38,7 @@ import { requireMemberSession } from '../auth/shared/member-session-guard.js';
 import { CLAIM_HANDOVER_ACTION_CONTEXT } from './claims.service.js';
 import { createClaimsHandlers } from './claims.handlers.js';
 import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
+import { createNomineeBankHandlers } from './claims.nominee-bank.handlers.js';
 
 const CLAIM_TAG = 'member-claim';
 
@@ -41,9 +46,14 @@ const CLAIM_TAG = 'member-claim';
 const ClaimDocumentParam = z.object({ claimCaseId: z.string().uuid() }).strict();
 const ClaimDocumentQuery = z.object({ documentType: OcrDocumentType }).strict();
 
+/** Story 6.8 — nominee-bank route params. The claim id (record) + the IFSC (lookup). */
+const NomineeBankParam = z.object({ claimCaseId: z.string().uuid() }).strict();
+const IfscLookupParam = z.object({ ifsc: z.string().min(1).max(20) }).strict();
+
 export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createClaimsHandlers(deps);
   const docs = createClaimDocumentHandlers(deps);
+  const bank = createNomineeBankHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
   const sendThrottle = memberClaimHandoverSendThrottle(deps);
@@ -109,5 +119,53 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
       preHandler: [memberSession, requireMemberStepUp(deps, CLAIM_HANDOVER_ACTION_CONTEXT)],
     },
     docs.uploadMemberDocument,
+  );
+
+  // Story 6.8 — IFSC lookup (public bank/branch, cache-first) backing the <NomineeDetailEditor>
+  // bank-name autocomplete + pre-validation. Member-session-gated (returns only public data).
+  r.get(
+    '/api/v1/member/claims/ifsc/:ifsc',
+    {
+      schema: {
+        params: IfscLookupParam,
+        response: { 200: IfscLookupResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    bank.ifscLookupMember,
+  );
+
+  // Story 6.8 — dual-account (#1/#2) nominee-bank collection. Bank entry is a member-side FINANCIAL
+  // action (architecture §1.14) → behind the SAME handover-trust step-up the freeze-firing intake +
+  // document upload require (D5 — the elevation is already present in the 6.2 flow).
+  r.post(
+    '/api/v1/member/claims/:claimCaseId/nominee-bank',
+    {
+      schema: {
+        params: NomineeBankParam,
+        body: RecordNomineeBankRequest,
+        response: { 201: RecordNomineeBankResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession, requireMemberStepUp(deps, CLAIM_HANDOVER_ACTION_CONTEXT)],
+    },
+    bank.recordMember,
+  );
+
+  // Review finding (2026-07-11) — the presence view of whatever is currently on file, so
+  // <NomineeDetailEditor> can render existing accounts on load instead of always starting blank.
+  // Read-only + NON-PII → no step-up (mirrors the IFSC-lookup route's posture).
+  r.get(
+    '/api/v1/member/claims/:claimCaseId/nominee-bank',
+    {
+      schema: {
+        params: NomineeBankParam,
+        response: { 200: NomineeBankStatusResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    bank.getStatusMember,
   );
 }

@@ -72,6 +72,10 @@ const TC_PUBLISH = permissionKey('tc.publish');
 const TC_APPROVE = permissionKey('tc.approve');
 const AUDIT_EXPORT = permissionKey('audit.export');
 const AUDIT_VERIFY = permissionKey('audit.verify');
+// Story 6.8 code review — the nominee-bank tier-1 (ordinary) + tier-2 (correction) keys,
+// replacing an initial CLAIM_FILE reuse (see permissions.ts's version-bump note).
+const CLAIM_MANAGE_NOMINEE_BANK = permissionKey('claim.manage_nominee_bank');
+const CLAIM_CORRECT_NOMINEE_BANK = permissionKey('claim.correct_nominee_bank');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -114,6 +118,12 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // assignment you are not the assigned inspector of). A supervisory `pariwar`-ceiling
       // authority above the district inspector; checked at the assignment's district.
       CLAIM_OVERRIDE_GROUND_INSPECTION,
+      // Story 6.8 code review — the D3 tier-2 nominee-bank correction escalation (the
+      // claim.override_ground_inspection rationale: a supervisor above the routine helpline
+      // operator). Checked inside the handler once the claim is confirmed to be in the
+      // post-approval correction window; a pure pariwar_admin still cannot reach the route without
+      // ALSO holding a claim.manage_nominee_bank grant (this role does not carry that key).
+      CLAIM_CORRECT_NOMINEE_BANK,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -201,7 +211,14 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // Story 6.3, FILES a claim on a bereaved caller's behalf (the freeze-firing helpline
     // intake, gated on the operator's own admin step-up). `claim.file` is the intake key,
     // distinct from `claim.approve` (verifier/trustee approval) which this role does NOT hold.
-    permissions: [MEMBER_VIEW_VALIDITY, CLAIM_FILE],
+    //
+    // Story 6.8 code review — CLAIM_MANAGE_NOMINEE_BANK (tier-1 ordinary bank collection/edit) +
+    // CLAIM_CORRECT_NOMINEE_BANK (tier-2 post-approval correction) REPLACE an initial CLAIM_FILE
+    // reuse for these two actions (CLAIM_FILE itself stays — it still gates the intake route).
+    // helpline_operator keeps BOTH new keys: this preserves the exact pre-review functional
+    // capability (any claim.file-holding operator could always do both actions before), while
+    // giving each action its own semantically-scoped key.
+    permissions: [MEMBER_VIEW_VALIDITY, CLAIM_FILE, CLAIM_MANAGE_NOMINEE_BANK, CLAIM_CORRECT_NOMINEE_BANK],
     scopeCeiling: 'pariwar',
   },
 ];

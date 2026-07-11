@@ -20,7 +20,11 @@ import {
   HelplineClaimIntakeResponse,
   HelplineOperatorEventRequest,
   HelplineOperatorEventResponse,
+  IfscLookupResponse,
+  NomineeBankStatusResponse,
   OcrDocumentType,
+  RecordNomineeBankHelplineRequest,
+  RecordNomineeBankResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -33,6 +37,7 @@ import { requirePermissionHook } from '../rbac/index.js';
 import { requireStepUp } from '../step-up/gate.js';
 import { createHelplineClaimsHandlers } from './claims.helpline.handlers.js';
 import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
+import { createNomineeBankHandlers } from './claims.nominee-bank.handlers.js';
 
 const HELPLINE_CLAIM_TAG = 'helpline-claim';
 
@@ -41,6 +46,11 @@ const CLAIM_FILE_KEY = 'claim.file';
 /** The admin step-up action context the intake route requires (§2.2 fresh-transactional-OTP
  *  leg, satisfied by the operator's OWN admin step-up — NOT a nominee handover OTP). */
 const CLAIM_FILE_STEP_UP_CONTEXT = 'claim_file';
+/** Story 6.8 code review — the tier-1 nominee-bank ACTION key (catalog v11), replacing an
+ *  initial `claim.file` reuse for the record/status routes (see permissions.ts's version-bump
+ *  note). The tier-2 correction check is a SEPARATE, finer-grained gate inside the handler
+ *  (`claim.correct_nominee_bank` — mirrors `claim.override_ground_inspection`'s in-handler check). */
+const CLAIM_MANAGE_NOMINEE_BANK_KEY = 'claim.manage_nominee_bank';
 
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 /** Path params + querystring for the helpline document upload (file rides the multipart body). */
@@ -48,14 +58,21 @@ const HelplineDocumentParam = z
   .object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() })
   .strict();
 const ClaimDocumentQuery = z.object({ documentType: OcrDocumentType }).strict();
+/** Story 6.8 — helpline nominee-bank route params (claim id for record; IFSC for lookup). */
+const HelplineNomineeBankParam = z
+  .object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() })
+  .strict();
+const HelplineIfscLookupParam = z.object({ pariwarId: z.string().uuid(), ifsc: z.string().min(1).max(20) }).strict();
 
 export function registerHelplineClaimsRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createHelplineClaimsHandlers(deps);
   const docs = createClaimDocumentHandlers(deps);
+  const bank = createNomineeBankHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const adminSession = requireAdminSession(deps);
   const scope = scopeResolutionHook(deps);
   const canFileClaim = requirePermissionHook(deps, CLAIM_FILE_KEY);
+  const canManageNomineeBank = requirePermissionHook(deps, CLAIM_MANAGE_NOMINEE_BANK_KEY);
   const stepUp = requireStepUp(deps, CLAIM_FILE_STEP_UP_CONTEXT);
 
   r.post(
@@ -106,5 +123,58 @@ export function registerHelplineClaimsRoutes(app: FastifyInstance, deps: AppDeps
       preHandler: [adminSession, scope, canFileClaim],
     },
     docs.uploadHelplineDocument,
+  );
+
+  // Story 6.8 — helpline IFSC lookup (public bank/branch). Permission-gated (claim.file); no
+  // step-up (a read of public data mutates nothing).
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/ifsc/:ifsc',
+    {
+      schema: {
+        params: HelplineIfscLookupParam,
+        response: { 200: IfscLookupResponse },
+        tags: [HELPLINE_CLAIM_TAG],
+      },
+      preHandler: [adminSession, scope, canFileClaim],
+    },
+    bank.ifscLookupHelpline,
+  );
+
+  // Story 6.8 — helpline dual-account nominee-bank collection. Bank entry is a financial action →
+  // behind the tier-1 claim.manage_nominee_bank permission (review finding, 2026-07-11 — replaces
+  // the initial claim.file reuse; see permissions.ts) + the operator's OWN fresh admin step-up (D5,
+  // §2.2), the same posture as the freeze-firing intake route. A tier-2 CORRECTION additionally
+  // requires claim.correct_nominee_bank, checked INSIDE the handler once the claim's locked state
+  // confirms a correction is actually being attempted (the claim.override_ground_inspection
+  // in-handler-check pattern — the tier isn't knowable at the route preHandler stage).
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/nominee-bank',
+    {
+      schema: {
+        params: HelplineNomineeBankParam,
+        body: RecordNomineeBankHelplineRequest,
+        response: { 201: RecordNomineeBankResponse },
+        tags: [HELPLINE_CLAIM_TAG],
+      },
+      preHandler: [adminSession, scope, canManageNomineeBank, stepUp],
+    },
+    bank.recordHelpline,
+  );
+
+  // Review finding (2026-07-11) — the presence view of whatever is currently on file, so a D3
+  // tier-2 admin correction can see what it's correcting instead of blindly overwriting. Permission-
+  // gated (claim.manage_nominee_bank); no step-up — a read mutates nothing (mirrors the IFSC-lookup
+  // route).
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/nominee-bank',
+    {
+      schema: {
+        params: HelplineNomineeBankParam,
+        response: { 200: NomineeBankStatusResponse },
+        tags: [HELPLINE_CLAIM_TAG],
+      },
+      preHandler: [adminSession, scope, canManageNomineeBank],
+    },
+    bank.getStatusHelpline,
   );
 }

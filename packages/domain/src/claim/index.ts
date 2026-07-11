@@ -27,3 +27,9 @@ export * from './peer-mesh-persist.js';
 // accessor (getClaimGroundInspection — ciphertext AS STORED; the AC5 absence-is-a-signal read).
 export * from './ground-inspection-persist.js';
 export * from './ground-inspection-read.js';
+// Story 6.8 — claim-time nominee bank: the latest-wins dual-account writer
+// (recordClaimNomineeBankAccounts — claim row-lock + D3 collectable-window guard + delete-then-
+// insert both rows + the claim.nominee_bank_recorded identity annotation) + the read accessor
+// (getClaimNomineeBankAccountsCiphertext — ciphertext AS STORED; the AC3 absence-is-a-signal read for Epic 7/9).
+export * from './nominee-bank-persist.js';
+export * from './nominee-bank-read.js';

@@ -118,8 +118,21 @@ export function permissionKey(value: string): PermissionKey {
  *
  * `field_worker` is likewise DEFERRED to Epic 12 (its `self` scopeCeiling + the dispatch/
  * assignment substrate that would let a field worker act on an arbitrary claim land there).
+ *
+ * Bumped 9 → 11 at Story 6.8 code review (added TWO keys, replacing an initial `claim.file`
+ * reuse): `claim.manage_nominee_bank` (the tier-1 ordinary bank-account collection/edit action,
+ * spanning `intake_converged` through `verifier_review`) and `claim.correct_nominee_bank` (the D3
+ * tier-2 post-approval correction at `verifier_approved` — audited, reason-required). The initial
+ * implementation gated BOTH actions on the pre-existing `claim.file` intake-filing key; review
+ * found this a semantic-scope mismatch (`claim.file`'s own doc comment scopes it to "the
+ * freeze-firing POST …/admin/claims/intake" — a single one-time action, not a multi-state
+ * collection window plus a distinct post-approval correction), and inconsistent with THIS epic's
+ * own precedent: Story 6.7 minted two new keys for its two new claim-admin actions rather than
+ * reusing `claim.file`. Mirrors the 6.7 `claim.conduct_ground_inspection` /
+ * `claim.override_ground_inspection` split — one key for the routine action, one for the
+ * escalated/supervisory action — see roles.ts for the grant rationale.
  */
-export const PERMISSION_CATALOG_VERSION = 9 as const;
+export const PERMISSION_CATALOG_VERSION = 11 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -185,6 +198,21 @@ export const SEED_PERMISSION_KEYS = [
   'tc.approve',
   'audit.export',
   'audit.verify',
+  // Story 6.8 code review — the tier-1 ordinary nominee-bank collection/edit ACTION key (replaces
+  // an initial `claim.file` reuse — see the PERMISSION_CATALOG_VERSION 9→11 note above). Gates the
+  // helpline `POST`/`GET …/admin/claims/:claimCaseId/nominee-bank` routes. Granted to
+  // `helpline_operator` (+ super_admin).
+  'claim.manage_nominee_bank',
+  // Story 6.8 code review — the D3 tier-2 post-approval CORRECTION key (verifier_approved window,
+  // reason-required, audited). A distinct, more-privileged action from ordinary collection — the
+  // 6.7 conduct/override split precedent. Checked INSIDE the handler (not the route preHandler,
+  // since the tier is only knowable after reading the claim's locked state) — mirrors
+  // `claim.override_ground_inspection`'s `resolveInspectorOverride` pattern in
+  // claims.ground-inspection.handlers.ts. Granted to `helpline_operator` (unchanged capability —
+  // the original `claim.file` reuse let any claim.file holder correct) AND `pariwar_admin` (a
+  // supervisor-escalation grant, same rationale as claim.override_ground_inspection; a pure
+  // pariwar_admin still cannot reach the route without ALSO holding a manage-nominee-bank grant).
+  'claim.correct_nominee_bank',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

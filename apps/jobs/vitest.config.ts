@@ -13,5 +13,9 @@ export default defineConfig({
     // it asserts. (Tests run on the shared global chain — they assert membership,
     // not absolute counts; this just removes cross-file interleaving.)
     fileParallelism: false,
+    // Live-DB suite timeout (review finding, 2026-07-11 — Rule 7, docs/runbooks/test-runbook.md):
+    // same root-cause fix as apps/api/vitest.config.ts — a global bump instead of chasing each
+    // newly-discovered flaky file individually (integrity-check.test.ts, data-export.test.ts, ...).
+    testTimeout: 20000,
   },
 });

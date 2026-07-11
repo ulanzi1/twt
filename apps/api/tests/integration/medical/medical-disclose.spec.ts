@@ -623,4 +623,9 @@ describe.skipIf(!hasDatabase)('Medical disclosure — E2E (:5433)', () => {
       await teardown(t);
     }
   });
-});
+  // Live-DB suite timeout: several tests here run multiple sequential live-DB round-trips (seed +
+  // HTTP submit + event/consent/row assertions) against a shared :5433 container; under concurrent
+  // `turbo`/`ci:local` load they can exceed the 5s vitest default (observed 2026-07-11 during Story
+  // 6.8's ci:local verification — passes in isolation). 20s removes the contention flake without
+  // masking a real hang (see apps/jobs/tests/audit/integrity-check.test.ts precedent).
+}, { timeout: 20000 });

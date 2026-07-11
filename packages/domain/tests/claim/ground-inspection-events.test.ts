@@ -85,9 +85,11 @@ describe('ClaimGroundInspectionCompletedPayloadSchema (the 22nd claim event)', (
     ground_inspection_id: GID,
   } as const;
 
-  it('is registered as the 22nd claim event type + bound in the payload-schema map', () => {
+  it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.ground_inspection_completed');
-    expect(CLAIM_EVENT_TYPES).toHaveLength(22);
+    // The vocabulary grows as owner stories add annotation events (Story 6.8 added the 23rd,
+    // claim.nominee_bank_recorded); nominee-bank-events.test.ts owns the exact-count invariant.
+    expect(CLAIM_EVENT_TYPES).toHaveLength(23);
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.ground_inspection_completed']).toBe(
       ClaimGroundInspectionCompletedPayloadSchema,
     );

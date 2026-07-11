@@ -192,6 +192,36 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
+
+  it('Story 6.8 code review — claim.manage_nominee_bank is granted ONLY to helpline_operator (+ super_admin)', () => {
+    const KEY = 'claim.manage_nominee_bank';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['helpline_operator', 'super_admin']);
+    // Replaces an initial claim.file reuse — pariwar_admin (an APPROVE-capable role) does NOT gain
+    // ordinary nominee-bank collection/edit, the same posture as claim.file itself.
+    for (const role of ['pariwar_admin', 'state_trustee', 'district_admin', 'verifier'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
+  it('Story 6.8 code review — claim.correct_nominee_bank is granted to helpline_operator AND pariwar_admin (+ super_admin)', () => {
+    const KEY = 'claim.correct_nominee_bank';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // helpline_operator: preserves the exact pre-review capability (claim.file previously gated
+    // both ordinary collection AND correction). pariwar_admin: the supervisor-escalation grant —
+    // the claim.override_ground_inspection rationale — though a pure pariwar_admin still cannot
+    // reach the route without ALSO holding claim.manage_nominee_bank (it does not carry that key).
+    expect(holders).toEqual(['helpline_operator', 'pariwar_admin', 'super_admin']);
+    for (const role of ['state_trustee', 'district_admin', 'verifier'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
 });
 
 describe('seedRoles — idempotent + deterministic (AC-3)', () => {

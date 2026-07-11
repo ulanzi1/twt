@@ -231,7 +231,14 @@ export type AuthAuditEventType =
   | 'admin_ground_inspection.findings_recorded'
   | 'admin_ground_inspection.photo_uploaded'
   | 'admin_ground_inspection.completed'
-  | 'admin_ground_inspection.refused';
+  | 'admin_ground_inspection.refused'
+  // ── Claim-time nominee bank collection surface (Story 6.8, FR-37 / Epic 6) ────
+  // The dual-account (#1/#2) disbursement-detail collection — member-app (Ravi-mode) + helpline
+  // twin. Post-commit SINK lines (the durable record is the claim.nominee_bank_recorded event).
+  // Context is NON-PII: claim_case_id + account_ranks_present + ifsc_validated + intake_channel +
+  // the acting actor — NEVER the encrypted holder name / account number / IFSC.
+  | 'member_claim.nominee_bank_recorded'
+  | 'helpline_claim.nominee_bank_recorded';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

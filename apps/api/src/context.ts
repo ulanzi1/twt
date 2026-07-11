@@ -10,6 +10,7 @@
 import type pg from 'pg';
 
 import type { ClaimDocumentStorage } from '@twt/contracts';
+import type { BankIfscLookup } from '@twt/platform-adapters';
 import type { Db, encryption } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 
@@ -129,6 +130,15 @@ export const MEMBER_DEVICE_TOKEN_FIELD_CLASS = 'member_device_token';
  * the SAME (pariwarId, fieldClass). Matches the `piiColumn(1, 'ground_inspection')` column annotation.
  */
 export const CLAIM_GROUND_INSPECTION_FIELD_CLASS = 'ground_inspection';
+
+/**
+ * The claim-nominee-bank Tier-1 field class (Story 6.8, D6). The member + helpline nominee-bank
+ * routes encrypt each account's `account_holder_name`, `account_number`, and `ifsc` before insert,
+ * and any read consumer decrypts under the SAME (pariwarId, fieldClass). Matches the
+ * `piiColumn(1, 'claim_nominee_bank')` column annotation. `bank_name` / `branch` are Tier-3
+ * plaintext (public, IFSC-derived) and are NOT encrypted.
+ */
+export const CLAIM_NOMINEE_BANK_FIELD_CLASS = 'claim_nominee_bank';
 
 /**
  * The data-export build-job producer seam (Story 3.11). The API is the FIRST request-path queue
@@ -284,6 +294,13 @@ export interface AppDeps {
    * a capturing fake in tests.
    */
   readonly claimOcrParityQueue: ClaimOcrParityEnqueuer;
+  /**
+   * IFSC bank-lookup port (Story 6.8, D4) — the nominee-bank routes format-validate + resolve an
+   * IFSC to its public `{ bankName, branch }` (cache-first) before persisting an account. The
+   * in-memory stub in dev/CI + tests; a real-vendor adapter is a future seam (no CI boundary gate
+   * yet — the 6.5 `OcrProvider` posture). Same injectable-seam pattern as `claimDocumentStorage`.
+   */
+  readonly bankIfscLookup: BankIfscLookup;
   /**
    * Channel Secret-Manager resolver (Story 5.4) — resolves a per-Pariwar Secret-Manager NAME (a pointer) to
    * its VALUE for the WhatsApp inbound-webhook signature/challenge (the app secret + the verify token). The

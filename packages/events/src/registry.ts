@@ -159,6 +159,12 @@ export const EVENT_TYPE_REGISTRY = {
       'Ground inspection completed — annotation event (the 22nd claim event); identity transition (state unchanged); carries ground_inspection_id + optional photo_count, NO PII; write-guarded to verification_in_progress (Story 6.7).',
     schema: claim.ClaimGroundInspectionCompletedPayloadSchema,
   },
+  'claim.nominee_bank_recorded': {
+    type: 'claim.nominee_bank_recorded',
+    description:
+      'Claim-time nominee bank details recorded — annotation event (the 23rd claim event); identity transition (state unchanged, D2); carries account_ranks_present ([1,2] in v1) + ifsc_validated, NO PII; write-guarded to the pre-adjudication collectable window (Story 6.8).',
+    schema: claim.ClaimNomineeBankRecordedPayloadSchema,
+  },
   'claim.verifier_reviewing': {
     type: 'claim.verifier_reviewing',
     description: 'Verifier console opened review → verifier_review (Story 6.10/6.11).',

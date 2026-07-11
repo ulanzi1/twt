@@ -13,7 +13,10 @@
 import type { ClaimDocumentStorage } from '@twt/contracts';
 import { createDb } from '@twt/domain';
 import {
+  type BankIfscLookup,
+  createInMemoryBankIfscLookup,
   createInMemoryClaimDocumentStorage,
+  type InMemoryBankIfscLookup,
   type InMemoryClaimDocumentStorage,
 } from '@twt/platform-adapters';
 import type pg from 'pg';
@@ -176,6 +179,7 @@ export interface TestDepsOverrides {
   dataExportQueue?: DataExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
+  bankIfscLookup?: BankIfscLookup;
   resolveChannelSecret?: (secretName: string) => Promise<string>;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
@@ -192,6 +196,7 @@ export interface TestDeps {
   dataExportQueue: CapturingDataExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
+  bankIfscLookup: InMemoryBankIfscLookup;
 }
 
 const FALLBACK_URL = 'postgresql://twt_test:twt_test@127.0.0.1:1/twt_unused';
@@ -223,6 +228,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const claimOcrParityQueue =
     (overrides.claimOcrParityQueue as CapturingClaimOcrParityQueue) ??
     new CapturingClaimOcrParityQueue();
+  const bankIfscLookup =
+    (overrides.bankIfscLookup as InMemoryBankIfscLookup) ?? createInMemoryBankIfscLookup();
 
   // Build fake-KMS encryption deps with the test pepper (KMS_TEST_MODE defaults to fake).
   const enc = buildEncryptionDeps(TEST_PEPPER);
@@ -275,6 +282,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
     // enqueued on a 202, and NOT enqueued on a 409 lifecycle-guard rejection.
     claimOcrParityQueue,
+    // IFSC bank-lookup port (Story 6.8) — in-memory stub so the nominee-bank spec resolves fixture
+    // IFSCs and asserts a dignified rejection on an unknown one. A spec may seed extra branches.
+    bankIfscLookup,
     // Channel secret resolver (Story 5.4) — a deterministic fake by default so the webhook signature
     // round-trip is testable without Secret Manager: a NAME resolves to `test-secret::<name>`. A spec that
     // signs a webhook computes its HMAC over this same value.
@@ -293,6 +303,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     dataExportQueue,
     claimDocumentStorage,
     claimOcrParityQueue,
+    bankIfscLookup,
   };
 }
 

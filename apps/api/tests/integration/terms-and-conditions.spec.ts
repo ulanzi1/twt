@@ -254,4 +254,9 @@ describe.skipIf(!hasDatabase)('T&C version registry endpoints (Story 2.6)', () =
     const res = await anon.inject({ method: 'POST', url: terms(randomUUID(), '/versions'), payload: createBody(randomUUID()) });
     expect(res.statusCode).toBe(401);
   });
-});
+  // Live-DB suite timeout: the create→approve→supersede test alone runs several sequential live-DB
+  // round-trips (setup + multiple HTTP legs + audit assertions) against a shared :5433 container;
+  // under concurrent `turbo`/`ci:local` load it can exceed the 5s vitest default (observed 2026-07-11
+  // during Story 6.8's ci:local verification — passes in isolation). 20s removes the contention flake
+  // without masking a real hang (see apps/jobs/tests/audit/integrity-check.test.ts precedent).
+}, { timeout: 20000 });

@@ -178,6 +178,34 @@ export const ClaimGroundInspectionCompletedPayloadSchema = requireIdentityTransi
   photo_count: z.number().int().nonnegative().optional(),
 });
 
+/**
+ * Nominee bank details recorded. ANNOTATION event — the 23rd claim event, NEW in Story 6.8
+ * (NOT in the 6.1/6.6/6.7 vocabulary). Claim-time capture of the two disbursement accounts
+ * (#1/#2) that Epic 7/9 will pay out; it does NOT advance the claim's primary state (an identity
+ * transition; `from_state === to_state`; D2) — collection happens across the pre-adjudication
+ * window and can be re-edited. The write path GUARDS emission to the three-tier D3 window: tier-1
+ * nominee collection (`intake_converged | documents_pending | verification_in_progress |
+ * verifier_review`) or tier-2 authorized-admin correction (`verifier_approved`, reason-required) —
+ * `NomineeBankClaimNotCollectableError` otherwise — so an account is never recorded onto a
+ * not-yet-converged, post-freeze, or reversed/appeal claim (the 6.6/6.7 write-path-guard lesson).
+ * The reducer STAYS total (identity from any state — replay-robustness).
+ *
+ * PII discipline (D6): the payload carries `account_ranks_present` (always `[1, 2]` in v1 — exactly
+ * two accounts, Task 5 RESOLVED) + `ifsc_validated` (a non-PII flag) ONLY. NO account number, NO
+ * holder name, NO IFSC ever reaches `events_log`. Owner: Story 6.8.
+ */
+export const ClaimNomineeBankRecordedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  // Which account ranks were recorded — always [1, 2] in v1 (exactly two accounts). Non-PII.
+  account_ranks_present: z.array(z.union([z.literal(1), z.literal(2)])).length(2),
+  // Whether every IFSC passed format + branch lookup at claim time (D4). Non-PII flag.
+  ifsc_validated: z.boolean(),
+  // `true` when this was an authorized-admin CORRECTION in the post-verifier-approval window (D3
+  // tier-2), vs an ordinary pre-approval collection. Non-PII forensic flag; the reason itself lives
+  // in the audit sink, NEVER here. Absent/`false` on an ordinary collection. Optional (back-compat).
+  corrected: z.boolean().optional(),
+});
+
 /** Verifier console opened review → `verifier_review`. Owner: Story 6.10/6.11. */
 export const ClaimVerifierReviewingPayloadSchema = z.object({ ...auditShape }).strict();
 
@@ -302,11 +330,11 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 22-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 23-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
-// `claim.peer_mesh_responded`; Story 6.7 adds the 22nd — `claim.ground_inspection_completed`,
-// both annotation/identity events — per the "owner stories add their annotation events"
-// discipline.)
+// `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
+// Story 6.8 adds the 23rd — `claim.nominee_bank_recorded`, all annotation/identity events — per
+// the "owner stories add their annotation events" discipline.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -316,6 +344,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.peer_mesh_responded',
   'claim.ground_inspection_scheduled',
   'claim.ground_inspection_completed',
+  'claim.nominee_bank_recorded',
   'claim.verifier_reviewing',
   'claim.verifier_approved',
   'claim.verifier_denied',
@@ -337,7 +366,7 @@ export const CLAIM_EVENT_TYPES = [
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 22 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 23 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -350,6 +379,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.peer_mesh_responded': ClaimPeerMeshRespondedPayloadSchema,
   'claim.ground_inspection_scheduled': ClaimGroundInspectionScheduledPayloadSchema,
   'claim.ground_inspection_completed': ClaimGroundInspectionCompletedPayloadSchema,
+  'claim.nominee_bank_recorded': ClaimNomineeBankRecordedPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,
   'claim.verifier_approved': ClaimVerifierApprovedPayloadSchema,
   'claim.verifier_denied': ClaimVerifierDeniedPayloadSchema,

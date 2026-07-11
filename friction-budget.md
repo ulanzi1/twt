@@ -297,6 +297,37 @@ baseline is unchanged**: all touched files are in the authenticated mobile app (
 EAS build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate
 has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 6.9 disposition (declaration affirmed, no new row):** the claim-time DPDPA consent step
+(`apps/mobile/app/(claim)/consent.tsx`, activated via the reserved slot in `apps/mobile/lib/claim-steps.ts`,
+with `apps/mobile/app/(claim)/relationship.tsx` updated to point its next-route literal at it) introduces
+three checkboxes. Friction analysis by sub-type:
+
+(1) **Trust-processing consent (a) — mandatory legal/compliance acknowledgment, not gratuitous friction:**
+requiring the filer to affirmatively consent to the trust processing the deceased/claimant/nominee PII
+needed to adjudicate the claim is the **same category as the Story 3.5 medical-disclosure concealment-denial
+acknowledgment and the Story 3.6a T&C acceptance** already affirmed above — a mandatory legal/compliance
+gate (DPDPA, UX-DR2), not a deliberate friction imposed for its own sake. A claim genuinely cannot be
+processed while forbidding processing of its own data; one tap to affirm is the minimum a regulated
+mutual-aid platform can ask.
+
+(2) **Sahyog Vivran publication (b) + In Memoriam listing (c) — fully optional, zero forced friction:**
+both boxes render UNCHECKED by default and declining either or both **never blocks** claim progression,
+verification, approval, or disbursement (D3, UX-DR2 "private processing must not compromise disbursement" —
+the same shape as the Story 5.4/5.5 optional channel opt-ins already declared above, except here declining
+carries no re-consent step at all — a member who leaves both unchecked experiences zero friction beyond
+reading the reassurance copy).
+
+(3) **`claim-steps.ts` reserved-slot activation + `relationship.tsx` next-route repoint:** pure wizard
+sequencing (identical in character to the Story 6.2 disposition item (6) treatment of `claim-steps.ts`) —
+not a friction surface itself.
+
+Zero gratuitous friction introduced; the one mandatory interaction is a legal/compliance acknowledgment
+in the same class as Stories 3.5/3.6a, and the two optional opt-ins are strictly friction-free to decline.
+Ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: the new screen is in the
+authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the
+page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story
+does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

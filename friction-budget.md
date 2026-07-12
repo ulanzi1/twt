@@ -328,6 +328,48 @@ authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-na
 page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story
 does not touch.
 
+**Story 6.12 disposition (declaration affirmed, no new row):** the human-shepherd
+member-facing surfaces (`apps/mobile/app/(claim)/shepherd.tsx`,
+`apps/mobile/components/claim/ShepherdContactCard.tsx`,
+`apps/mobile/components/claim/ClaimPointOfContactEntry.tsx`, the
+`<ShepherdContactCard>` mount on `apps/mobile/app/(claim)/acknowledgement.tsx`, the
+`<ClaimPointOfContactEntry>` mount on `apps/mobile/app/(tabs)/index.tsx`, and
+`apps/mobile/lib/filed-claim.ts`) introduce **zero deliberate friction**:
+
+(1) **`<ShepherdContactCard>` — read-only, no forced interaction:** the card is a
+pure GET (`GET /api/v1/member/claims/:claimCaseId/shepherd`) rendering the live
+shepherd's name + role + contact, or a typed not-yet-assigned/offline state. No
+form, no upload, no step-up gate, no coercive decision — same category as the
+Story 3.10 `rejoin-locked.tsx` / Story 4.7 `<MemberStatusPanel>` read-only
+surfaces already affirmed. The `tel:`/`wa.me` deep-links are **optional,
+user-initiated** — tapping to call/message the shepherd is the family's choice,
+never a required step to progress the claim.
+
+(2) **`<ClaimPointOfContactEntry>` home-tab entry point — user-initiated,
+non-blocking:** identical in character to the Story 3.9/3.10/3.11/4.7/6.2 nav-tile
+entries already affirmed (`<LifeEventsEntry>`, `<WithdrawalEntry>`,
+`<DataExportEntry>`, `<MembershipStatusEntry>`, `<ClaimProxyFlowEntry>`): an
+ambient tile, present only when the member has a filed claim (`filed-claim.ts`'s
+persisted pointer), that navigates to the shepherd screen only when the member
+deliberately taps it. No forced step, no form, no gate.
+
+(3) **`filed-claim.ts` — pure storage logic, not a friction surface:** the
+filed-claim-id pointer + the offline shepherd-read cache are invisible
+plumbing (identical in character to the Story 6.2 disposition item (6) treatment
+of `claim-steps.ts`/`claim-draft.ts`) — not a member-facing interaction
+themselves.
+
+(4) **`acknowledgement.tsx` mount — no NEW interaction on an already-read-only
+screen:** Story 6.2's disposition already affirmed `(claim)/acknowledgement.tsx`
+as read-only; mounting `<ShepherdContactCard>` there adds a read-only card to an
+already-read-only screen, not a new interaction.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The
+**page-weight baseline is unchanged**: all new and modified files are in the
+authenticated mobile app (`apps/mobile`, EAS build is a no-op →
+`member-app-native` stays a no-op); the page-weight ceilings the gate has teeth
+on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

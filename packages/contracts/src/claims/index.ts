@@ -33,3 +33,7 @@ export * from './verifier-console.js';
 // the request DTOs (outcome + reason_code + rationale?, .strict() — server-derived actor identity, R5),
 // the outcome↔reason-code compat superRefine (AC8), and the NON-PII decision response.
 export * from './verification-decision.js';
+// Story 6.12 — the member-facing shepherd read DTO (GET /member/claims/:id/shepherd) backing the mobile
+// <ShepherdContactCard>: a discriminated union (assigned → display_name + role_label + contact snapshot |
+// not_assigned). The E.164 wire regex is re-declared (no @twt/domain import).
+export * from './shepherd.js';

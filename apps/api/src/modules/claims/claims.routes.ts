@@ -28,6 +28,7 @@ import {
   RecordDpdpaConsentResponse,
   RevokeDpdpaConsentRequest,
   RevokeDpdpaConsentResponse,
+  MemberShepherdResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -45,6 +46,7 @@ import { createClaimsHandlers } from './claims.handlers.js';
 import { createClaimDocumentHandlers } from './claims.documents.handlers.js';
 import { createNomineeBankHandlers } from './claims.nominee-bank.handlers.js';
 import { createDpdpaConsentHandlers } from './claims.dpdpa-consent.handlers.js';
+import { createShepherdHandlers } from './claims.shepherd.handlers.js';
 
 const CLAIM_TAG = 'member-claim';
 
@@ -64,6 +66,7 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
   const docs = createClaimDocumentHandlers(deps);
   const bank = createNomineeBankHandlers(deps);
   const consent = createDpdpaConsentHandlers(deps);
+  const shepherd = createShepherdHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
   const sendThrottle = memberClaimHandoverSendThrottle(deps);
@@ -225,5 +228,22 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
       preHandler: [memberSession],
     },
     consent.revokeMember,
+  );
+
+  // Story 6.12 (AC3) — the member-facing <ShepherdContactCard> read. The claimant sees their claim's LIVE
+  // shepherd (name + role + tappable contact), or a typed not_assigned state. Read-only + own claim only
+  // (the sibling nominee-bank/dpdpa oracle guard); NO step-up (read-only, the shepherd contact is the
+  // authorized member-facing surface).
+  r.get(
+    '/api/v1/member/claims/:claimCaseId/shepherd',
+    {
+      schema: {
+        params: z.object({ claimCaseId: z.string().uuid() }).strict(),
+        response: { 200: MemberShepherdResponse },
+        tags: [CLAIM_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    shepherd.getShepherdMember,
   );
 }

@@ -421,6 +421,20 @@
       "when": 1785814800000,
       "tag": "0059_claim-verifier-decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1785901200000,
+      "tag": "0060_claim-shepherd-assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1785987600000,
+      "tag": "0061_shepherd-contact-e164-check",
+      "breakpoints": true
     }
   ]
 }

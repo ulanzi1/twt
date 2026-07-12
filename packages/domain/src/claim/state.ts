@@ -184,6 +184,15 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.verifier_decision_revised':
       return state;
 
+    // ANNOTATION: human shepherd assigned to the claim (Story 6.12). Assignment is a ROUTING/attribution
+    // concern — there is NO shepherd lifecycle state and this adds none (a District Admin becomes the
+    // family's named contact; being shepherd grants no claim.approve — AC6). Identity from any state
+    // (reducer stays total); a reassignment (fallback/manual) re-emits this SAME event with a
+    // previous_shepherd_actor_id + supersedes_assignment_id back-reference (the ground_inspection reschedule
+    // precedent — no separate shepherd_reassigned event). The write path owns all correctness, never here.
+    case 'claim.shepherd_assigned':
+      return state;
+
     // Cycle-freeze window opens for this claim (Story 6.13). Enters from a fresh
     // verifier approval OR when an appeal reversed a prior denial (re-enters approval).
     case 'claim.state_trustee_frozen':

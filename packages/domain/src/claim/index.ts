@@ -44,3 +44,12 @@ export * from './verifier-decision.js';
 // Story 6.11 — the decision read model producer queries (getPriorVerifierDecisions /
 // getRecentInScopePrecedents) + the atomic adjudication/supersession writers + write-path guards.
 export * from './verifier-decision-persist.js';
+// Story 6.12 — shepherd assignment writers + candidate resolver: the scope-respecting workload-balanced
+// contactable candidate pool (resolveShepherdCandidates), the automatic first-assignment (assignShepherd
+// — advisory lock + pre-write idempotency + candidate pick), the manual/fallback reassignment
+// (reassignShepherd — self-assignment guard + atomic supersession + re-emit), the live-assignment read +
+// the manual-path contactability resolver, and the typed write-path guards. Claim-scoped (not top-level).
+export * from './shepherd-assign-persist.js';
+// Story 6.12 — the LIVE-shepherd read (getLiveShepherd) consumed by the member card (AC3) + the admin
+// verifier-console shepherd section (AC6). Scope-safe; returns the display + contact snapshot or null.
+export * from './shepherd-read.js';

@@ -81,6 +81,12 @@ import {
   registerClaimPeerMeshWorkers,
   type ClaimPeerMeshSelectPayload,
 } from './claim-peer-mesh.js';
+import {
+  registerClaimShepherdAssignWorker,
+  type ClaimShepherdAssignPayload,
+} from './claim-shepherd-assign.js';
+import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
+import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
 import {
   createGcsClaimDocumentStorage,
@@ -379,12 +385,40 @@ async function main(): Promise<void> {
             : {}),
         })
       : createLocalFsClaimDocumentStorage();
+    // ── Human shepherd assignment (Story 6.12, Task 4) — Class B (request-triggered) ──
+    // Register BEFORE the peer-mesh workers so the SHEPHERD_ASSIGN queue exists when the SELECT worker's
+    // injected callback enqueues onto it. Assigns the least-loaded contactable in-scope district_admin;
+    // routes an empty/ineligible pool to the AR-61 fallback (config-backed resolver — the ledger is
+    // documentation-only, so NO runtime .md resolution); fires the member-notification seam post-commit
+    // (console placeholder; NEVER the first live dispatch() caller — R4).
+    await registerClaimShepherdAssignWorker(boss, {
+      pool,
+      fallbackResolver: createConfigShepherdFallbackResolver(),
+      notify: consoleShepherdAssignedNotificationHook,
+    });
+
     // ── Peer-mesh deterministic selection + AR-61 window fallback (Story 6.6) ──────
     // Register BEFORE the OCR worker so the SELECT queue exists when OCR enqueues onto it.
     // The window's default (72h) is a named config value (CLAIM_PEER_MESH_WINDOW_SECONDS).
     await registerClaimPeerMeshWorkers(boss, {
       pool,
       windowSeconds: PEER_MESH_WINDOW_SECONDS,
+      // Story 6.12 (R2) — enqueue the shepherd-assign job after the SELECT worker commits
+      // claim.peer_mesh_pinged (→ verification_in_progress). singletonKey = claim_case_id so a re-run
+      // does not double-enqueue (the worker is idempotent regardless).
+      enqueueShepherdAssign: async (envelope, claimCaseId, deceasedMemberId) => {
+        await boss.send(
+          QUEUE_NAMES.CLAIM_SHEPHERD_ASSIGN,
+          {
+            requestId: envelope.requestId,
+            pariwarId: envelope.pariwarId,
+            actorId: envelope.actorId,
+            traceId: envelope.traceId,
+            payload: { claimCaseId, deceasedMemberId },
+          } satisfies JobEnvelope<ClaimShepherdAssignPayload>,
+          { singletonKey: claimCaseId },
+        );
+      },
     });
 
     await registerClaimOcrParityWorker(boss, {

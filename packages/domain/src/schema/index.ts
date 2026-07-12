@@ -186,6 +186,12 @@ export * from './claim_nominee_bank_accounts.js';
 // linkage; partial-unique one-live-per-claim invariant). The DECISION-METADATA authority (AC0) — NOT a
 // projection of claim state; state stays on the claim.verifier_* events. Tenant-isolated (mirror claims).
 export * from './claim_verifier_decisions.js';
+// Story 6.12 — shepherd ASSIGNMENT-METADATA store: `claim_shepherd_assignments` (ONE row per shepherd
+// assignment — shepherd_actor_id + display/contact snapshot (R1) + assignment_reason + supersession
+// linkage; partial-unique one-live-per-claim invariant). The ASSIGNMENT-METADATA authority (AC0) — NOT a
+// projection of claim state; state stays on the claim.shepherd_assigned IDENTITY-annotation event.
+// Tenant-isolated (mirror claims). Also lands `users.contact_phone` / `users.contact_whatsapp` (R1).
+export * from './claim_shepherd_assignments.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

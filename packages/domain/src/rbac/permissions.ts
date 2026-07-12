@@ -148,7 +148,14 @@ export function permissionKey(value: string): PermissionKey {
 // `super_admin`). NOT `state_trustee` (D3a — a `state`-ceiling grant cannot satisfy a district-dimension
 // check under the deny-deeper geo resolver until Epic 3; State-Trustee district-console access is
 // deferred, the exact 6.7 block_admin precedent). See roles.ts for the grant rationale.
-export const PERMISSION_CATALOG_VERSION = 13 as const;
+// Bumped 13 → 14 at Story 6.12 (added ONE key): `claim.assign_shepherd` — the R6 MANUAL shepherd
+// reassignment WRITE key gating `POST …/admin/claims/:claimCaseId/shepherd/reassign`. FR-41 requires an
+// ordinary administrative reassignment/correction path that the AR-61 automatic fallback alone does not
+// provide. Checked at `dimension: 'district'` against the deceased member's SERVER-DERIVED posting
+// district (the 6.10/6.11 pattern). DISTINCT from `claim.approve` + `claim.verify` (being able to route
+// the family's contact ≠ adjudicating the ₹50L claim — AC6; the "don't reuse a write key for a distinct
+// action" lesson). Granted to `district_admin` + `pariwar_admin` + `super_admin` (see roles.ts).
+export const PERMISSION_CATALOG_VERSION = 14 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -247,6 +254,14 @@ export const SEED_PERMISSION_KEYS = [
   // `state`-ceiling grant cannot satisfy a district-dimension check until the Epic-3 geo-tree resolver;
   // the exact 6.7 block_admin deferral). See roles.ts.
   'claim.verify',
+  // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
+  // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the
+  // deceased member's SERVER-DERIVED posting district — the client never submits the authz district).
+  // DISTINCT from `claim.approve` + `claim.verify`: being assigned/able-to-reassign the family's human
+  // contact grants NO adjudication power (AC6) — the 6.10/6.11 read/write-key-separation lesson. The
+  // automatic assignment (AC1) + AR-61 fallback (AC4) are `actor: 'system'` and need no key; only the
+  // human-initiated correction path does. Granted to `district_admin` + `pariwar_admin` + `super_admin`.
+  'claim.assign_shepherd',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

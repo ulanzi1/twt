@@ -61,6 +61,18 @@ export interface ClaimPeerMeshDeps {
   readonly now?: () => Date;
   /** Failure alarm sink — a console stub by default. */
   readonly onAlarm?: (message: string) => void;
+  /**
+   * Story 6.12 (R2) — enqueue the shepherd-assign job AFTER this worker commits `claim.peer_mesh_pinged`
+   * (→ verification_in_progress). Injected (the OCR→SELECT cross-file precedent) so this frozen 6.6 file
+   * never imports the shepherd queue name nor calls `boss.send` for it directly; the assignment gets its
+   * OWN retry/DLQ envelope and never couples into the selection tx. Optional — omitted, no shepherd is
+   * enqueued (Story 6.6's own tests do not wire it). Best-effort: a failure alarms, never fails the select.
+   */
+  readonly enqueueShepherdAssign?: (
+    envelope: Pick<JobEnvelope<unknown>, 'requestId' | 'pariwarId' | 'actorId' | 'traceId'>,
+    claimCaseId: string,
+    deceasedMemberId: string,
+  ) => Promise<void>;
 }
 
 /** CLAIM_PEER_MESH_SELECT payload (wrapped in a JobEnvelope). All fields NON-PII. */
@@ -164,11 +176,16 @@ export async function runClaimPeerMeshSelect(
     //     (Decision 2 — a previously lost `boss.send` no longer strands the claim).
     const existing = await claim.getPeerMeshSelectionByClaim(db, brandedPariwarId, claimCaseId);
     if (existing) {
+      // Story 6.12: self-heal a lost shepherd-assign enqueue on redelivery — a claim already advanced to
+      // verification_in_progress by a prior run still needs its shepherd enqueued if that post-commit
+      // enqueue was lost. Precise read of the claim state (the shepherd worker is itself idempotent).
+      const claimNow = await claim.getClaimCase(db, brandedPariwarId, claimCaseId);
       return {
         created: false,
         selectedCount: existing.selectedMemberIds.length,
         outcome: existing.outcome,
         responseWindowExpiresAt: existing.responseWindowExpiresAt,
+        pinged: claimNow?.currentState === 'verification_in_progress',
       };
     }
 
@@ -241,6 +258,8 @@ export async function runClaimPeerMeshSelect(
         selectedCount: 0,
         outcome: 'skipped' as schema.PeerMeshOutcome,
         responseWindowExpiresAt,
+        // No ping emitted (the claim stays documents_pending) → no shepherd (Story 6.12).
+        pinged: false,
       };
     }
 
@@ -297,6 +316,11 @@ export async function runClaimPeerMeshSelect(
       selectedCount: selectionRow.selectedMemberIds.length,
       outcome: selectionRow.outcome,
       responseWindowExpiresAt: selectionRow.responseWindowExpiresAt,
+      // Story 6.12: the claim reached verification_in_progress this run (ping emitted) or was already there
+      // (a sibling advanced it) → enqueue the shepherd assignment after commit.
+      pinged:
+        claimRow.currentState === 'documents_pending' ||
+        claimRow.currentState === 'verification_in_progress',
     };
   });
 
@@ -313,6 +337,22 @@ export async function runClaimPeerMeshSelect(
       now,
       alarm,
     );
+  }
+
+  // (11) Story 6.12 (R2) — enqueue the shepherd-assign job AFTER commit, ONLY when the claim reached
+  //      verification_in_progress (the ping committed). Best-effort + self-healing (fires on the idempotent
+  //      no-op branch too when a prior enqueue was lost); a failure alarms, never fails the select job. The
+  //      shepherd worker is idempotent, so a duplicate enqueue is a safe no-op.
+  if (outcome.pinged && deps.enqueueShepherdAssign) {
+    try {
+      await deps.enqueueShepherdAssign(envelope, p.claimCaseId, p.deceasedMemberId);
+    } catch (err) {
+      const e = err as Error & { code?: string };
+      alarm(
+        `[jobs] claim-peer-mesh: failed to enqueue shepherd-assign for claim ${p.claimCaseId} — ` +
+          `${e?.code ?? 'NO_CODE'} ${e?.message ?? String(err)}`,
+      );
+    }
   }
 
   console.info(

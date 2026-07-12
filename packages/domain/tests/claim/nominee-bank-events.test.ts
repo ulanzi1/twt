@@ -30,7 +30,7 @@ describe('ClaimNomineeBankRecordedPayloadSchema (the 23rd claim event)', () => {
     // 27 total: 24th/25th = claim.dpdpa_consent_recorded/_revoked (Story 6.9), 26th/27th =
     // claim.verifier_escalated/_decision_revised (Story 6.11) — dpdpa-consent-events.test.ts owns the
     // exact-count invariant.
-    expect(CLAIM_EVENT_TYPES).toHaveLength(27);
+    expect(CLAIM_EVENT_TYPES).toHaveLength(28);
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.nominee_bank_recorded']).toBe(
       ClaimNomineeBankRecordedPayloadSchema,
     );

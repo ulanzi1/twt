@@ -29,3 +29,14 @@ export {
   type CapturingIntegritySink,
   type CapturingIntegrityAlerter,
 } from './audit/integrity-observability.js';
+
+// Story 6.12 — the shepherd-assigned member-notification hook seam. Exported here (the apps/api-facing
+// barrel; pure, no pg-boss/GCS pulled in) so the R6 manual apps/api reassignment route fires the SAME hook
+// as the assign worker — one definition, both call sites (RATIFIED correction iii). Never sends bytes (R4).
+export {
+  consoleShepherdAssignedNotificationHook,
+  createCapturingShepherdAssignedHook,
+  type ShepherdAssignedEvent,
+  type ShepherdAssignedNotificationHook,
+  type CapturingShepherdAssignedHook,
+} from './shepherd-notification-hook.js';

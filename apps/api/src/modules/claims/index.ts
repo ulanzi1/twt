@@ -19,6 +19,7 @@ import { registerHelplineClaimsRoutes } from './claims.helpline.routes.js';
 import { registerClaimsRoutes } from './claims.routes.js';
 import { registerVerificationDecisionRoutes } from './claims.verification-decision.routes.js';
 import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.js';
+import { registerShepherdRoutes } from './claims.shepherd.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -31,4 +32,6 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerVerifierConsoleRoutes(app, deps);
   // Story 6.11 — the verifier adjudication WRITE surface (approve/deny/escalate + step-up-gated revise).
   registerVerificationDecisionRoutes(app, deps);
+  // Story 6.12 — the R6 manual shepherd reassignment WRITE surface (claim.assign_shepherd, district-gated).
+  registerShepherdRoutes(app, deps);
 }

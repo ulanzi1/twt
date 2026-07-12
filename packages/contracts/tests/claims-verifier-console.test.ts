@@ -95,6 +95,8 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     groundInspection: { status: 'empty' as const },
     priorVerifierComments: { status: 'not_available_yet' as const },
     recentPrecedents: { status: 'not_available_yet' as const },
+    // Story 6.12 — the live-shepherd section (AC6). `empty` = no live shepherd yet (pre-verification).
+    shepherd: { status: 'empty' as const },
   };
 
   it('parses a full packet and preserves array order', () => {

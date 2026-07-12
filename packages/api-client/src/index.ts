@@ -107,6 +107,8 @@ import {
   type RecordDpdpaConsentResponse as RecordDpdpaConsentResult,
   type DpdpaConsentStatusResponse as DpdpaConsentStatusResult,
   type RevokeDpdpaConsentResponse as RevokeDpdpaConsentResult,
+  MemberShepherdResponse,
+  type MemberShepherdResponse as MemberShepherdResult,
   type OcrDocumentType,
 } from '@twt/contracts';
 import type { z } from 'zod';
@@ -746,6 +748,22 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
         RevokeDpdpaConsentResponse,
         input,
         true,
+      );
+    },
+
+    /**
+     * The live shepherd assigned to a claim (Story 6.12; session; auth) — backs the <ShepherdContactCard>.
+     * Returns `{ status: 'assigned', display_name, role_label, contact: { phone, whatsapp } }` for a claim
+     * that has entered verification (a named human contact), or `{ status: 'not_assigned' }` before then.
+     * Own claim only (a non-owner surfaces as `ApiError` 404 `claim.not_found`).
+     */
+    getShepherd(claimCaseId: string): Promise<MemberShepherdResult> {
+      return call(
+        `${CLAIMS_BASE}/${encodeURIComponent(claimCaseId)}/shepherd`,
+        MemberShepherdResponse,
+        undefined,
+        true,
+        'GET',
       );
     },
   };

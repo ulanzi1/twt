@@ -79,5 +79,16 @@
   "dpdpa.continue": "Continue",
   "dpdpa.processing_required_hint": "Please agree to the first item so we can process this claim.",
   "dpdpa.error": "We couldn't save your choices right now. Please try again, or call us — we'll help.",
-  "dpdpa.error_missing_claim": "We couldn't find this claim to record your consent. Please call us — we'll help you continue."
+  "dpdpa.error_missing_claim": "We couldn't find this claim to record your consent. Please call us — we'll help you continue.",
+  "shepherd.title": "Your point of contact",
+  "shepherd.body": "A real person is looking after your claim. You can reach them any time.",
+  "shepherd.not_assigned": "We'll assign a named point of contact once we begin verifying the claim. There's nothing you need to do.",
+  "shepherd.call": "Call",
+  "shepherd.whatsapp": "WhatsApp",
+  "shepherd.contact_being_arranged": "We're arranging a way for you to reach them. In the meantime, you can always call us.",
+  "shepherd.offline": "Showing your saved contact details — you appear to be offline.",
+  "shepherd.error": "We couldn't load your point of contact just now. Please try again, or call us — we'll help.",
+  "shepherd.entry": "Your claim — point of contact",
+  "shepherd.screen_title": "Your point of contact",
+  "shepherd.back_home": "Back to home"
 }

@@ -204,6 +204,12 @@ export const EVENT_TYPE_REGISTRY = {
       'Verifier revised a prior same-outcome decision — identity annotation, not a verdict re-emit (Story 6.11, D-E).',
     schema: claim.ClaimVerifierDecisionRevisedPayloadSchema,
   },
+  'claim.shepherd_assigned': {
+    type: 'claim.shepherd_assigned',
+    description:
+      'Human shepherd (District Admin) assigned to the claim — identity annotation, no lifecycle state (the 28th claim event); carries shepherd_actor_id + previous_shepherd_actor_id + assignment_reason + supersedes_assignment_id + district (a reassignment back-reference), NO PII name/phone/WhatsApp; grants no claim.approve (Story 6.12).',
+    schema: claim.ClaimShepherdAssignedPayloadSchema,
+  },
   'claim.state_trustee_frozen': {
     type: 'claim.state_trustee_frozen',
     description: 'Cycle-freeze window opened for this claim → state_trustee_freeze (Story 6.13).',

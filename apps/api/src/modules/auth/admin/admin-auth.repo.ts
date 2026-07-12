@@ -69,10 +69,37 @@ export async function getAdminById(
   return { userId, status: row.status, passwordHash: row.password_hash };
 }
 
+/** Canonical E.164 shape (`+<country><subscriber>`): a leading `+`, a non-zero country digit, then up to
+ *  14 more digits (15 total max). Story 6.12 (R1) validates the two `users` contact columns on the write
+ *  path; the column stays plain text. Exported so tests + the manual-provision path share one authority. */
+export const E164_REGEX = /^\+[1-9]\d{1,14}$/;
+
+/** Thrown by `createAdmin` / `updateShepherdContact` when a provided contact value is not canonical E.164
+ *  — a caller-input error (ops script/seed/future profile UI). NULL is always allowed (a channel may be
+ *  absent); only a PRESENT-but-malformed value throws. */
+export class InvalidContactChannelError extends Error {
+  public readonly name = 'InvalidContactChannelError';
+  public constructor(public readonly channel: 'phone' | 'whatsapp') {
+    super(`[admin-auth] ${channel} contact must be canonical E.164 (+<country><subscriber>) or null`);
+  }
+}
+
+/** Validate an optional E.164 contact value: `undefined`/`null` → null (channel absent); a present value
+ *  must match E164_REGEX or throw. */
+function normalizeContact(value: string | null | undefined, channel: 'phone' | 'whatsapp'): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  if (!E164_REGEX.test(trimmed)) throw new InvalidContactChannelError(channel);
+  return trimmed;
+}
+
 /** Bootstrap/create an admin (users + admin_credentials) atomically. Story 6.11 (R5): an OPTIONAL
  *  `displayName` seeds the controlled staff-attribution `users.display_name` (the actor_display source)
  *  at provisioning time; omitted, it stays NULL and the admin cannot adjudicate until ops sets it via
- *  updateDisplayName (AdminDisplayNameMissingError). NEVER email-derived. */
+ *  updateDisplayName (AdminDisplayNameMissingError). NEVER email-derived. Story 6.12 (R1): OPTIONAL
+ *  `contactPhone` / `contactWhatsapp` (canonical E.164, validated) seed the shepherd-contact snapshot
+ *  source; omitted, they stay NULL (the shepherd auto-path skips a channel-less admin, AC2). */
 export async function createAdmin(
   pool: pg.Pool,
   p: {
@@ -81,15 +108,20 @@ export async function createAdmin(
     emailBlindIndex: string;
     passwordHash: string;
     displayName?: string;
+    contactPhone?: string | null;
+    contactWhatsapp?: string | null;
   },
 ): Promise<void> {
+  const contactPhone = normalizeContact(p.contactPhone, 'phone');
+  const contactWhatsapp = normalizeContact(p.contactWhatsapp, 'whatsapp');
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query(`INSERT INTO users (id, identity_type, display_name) VALUES ($1, 'admin', $2)`, [
-      p.userId,
-      p.displayName ?? null,
-    ]);
+    await client.query(
+      `INSERT INTO users (id, identity_type, display_name, contact_phone, contact_whatsapp)
+         VALUES ($1, 'admin', $2, $3, $4)`,
+      [p.userId, p.displayName ?? null, contactPhone, contactWhatsapp],
+    );
     await client.query(
       `INSERT INTO admin_credentials (user_id, email_ciphertext, email_blind_index, password_hash)
          VALUES ($1, $2, $3, $4)`,
@@ -102,6 +134,24 @@ export async function createAdmin(
   } finally {
     client.release();
   }
+}
+
+/** Story 6.12 (R1) — set/replace an admin's controlled staff-CONTACT channels (ops/seed + tests provision
+ *  them here; a self-serve profile UI is out of scope in v1). Each value is `null` (clear the channel) or
+ *  a canonical-E.164 string (validated); a malformed present value throws InvalidContactChannelError.
+ *  Returns the number of rows updated (0 = no such user). Runs on the GLOBAL users carve-out. */
+export async function updateShepherdContact(
+  pool: pg.Pool,
+  userId: string,
+  contact: { phone?: string | null; whatsapp?: string | null },
+): Promise<number> {
+  const contactPhone = normalizeContact(contact.phone, 'phone');
+  const contactWhatsapp = normalizeContact(contact.whatsapp, 'whatsapp');
+  const res = await pool.query(
+    `UPDATE users SET contact_phone = $2, contact_whatsapp = $3, updated_at = now() WHERE id = $1`,
+    [userId, contactPhone, contactWhatsapp],
+  );
+  return res.rowCount ?? 0;
 }
 
 /** Thrown by `updateDisplayName` when the caller passes an empty/whitespace-only display name — a

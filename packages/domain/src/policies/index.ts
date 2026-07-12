@@ -76,3 +76,7 @@ export * from './claim-nominee-bank-rls.js';
 // No write-rejection trigger — the decision row is the DECISION-METADATA authority, not a state cache
 // (claim state stays on claims.current_state, derived from the claim.verifier_* events).
 export * from './claim-verifier-decisions-rls.js';
+// Story 6.12 — claim_shepherd_assignments tenant-isolation policies (NOT cross-readable; mirror
+// claims-rls). No write-rejection trigger — the assignment row is the ASSIGNMENT-METADATA authority, not
+// a state cache (claim state stays on claims.current_state, derived from the claim.shepherd_assigned event).
+export * from './claim-shepherd-assignments-rls.js';

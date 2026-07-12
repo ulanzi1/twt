@@ -430,3 +430,16 @@ export const groundInspectionPhotoId = uuidBrand('GroundInspectionPhotoId');
 export type VerifierDecisionId = Brand<'VerifierDecisionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `VerifierDecisionId`. */
 export const verifierDecisionId = uuidBrand('VerifierDecisionId');
+
+// ── Shepherd-assignment id (Story 6.12, Task 1) ───────────────────────────────
+// The per-row address of one shepherd assignment (`claim_shepherd_assignments.assignment_id`) — the
+// ASSIGNMENT-METADATA authority row (AC0). A claim may hold MANY assignment rows over its life
+// (reassignments supersede prior rows, D-E); each row is addressed by this id (a reassignment names its
+// predecessor via `supersedes_assignment_id`, the AC5 back-reference that also rides the event timeline).
+// A UUID row address, so it reuses the shared `uuidBrand` validator; `claim_case_id` / `pariwar_id` reuse
+// the existing `ClaimId` / `PariwarId` brands.
+
+/** Per-row address of a shepherd assignment (`claim_shepherd_assignments.assignment_id`). */
+export type ShepherdAssignmentId = Brand<'ShepherdAssignmentId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ShepherdAssignmentId`. */
+export const shepherdAssignmentId = uuidBrand('ShepherdAssignmentId');

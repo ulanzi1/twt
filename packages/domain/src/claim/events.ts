@@ -26,6 +26,7 @@
 
 import { z } from 'zod';
 
+import { SHEPHERD_ASSIGNMENT_REASONS } from '../schema/claim_shepherd_assignments.js';
 import { CLAIM_INTAKE_CHANNELS, CLAIM_LIFECYCLE_STATES } from '../schema/claims.js';
 
 /**
@@ -278,6 +279,37 @@ export const ClaimVerifierEscalatedPayloadSchema = requireIdentityTransition({ .
  */
 export const ClaimVerifierDecisionRevisedPayloadSchema = requireIdentityTransition({ ...auditShape });
 
+/**
+ * Human shepherd assigned to the claim. ANNOTATION event — the 28th claim event, NEW in Story 6.12. An
+ * IDENTITY transition (`from_state === to_state`; the reducer has NO shepherd state and gains none) —
+ * shepherd assignment is a ROUTING/attribution concern (a named human for the family), NOT a
+ * lifecycle-state change or adjudication power (being the shepherd grants no `claim.approve`, AC6). It is
+ * the assignment half of the actionable State-level queue the escalation comment names 6.12/6.13 for. A
+ * REASSIGNMENT (fallback OR admin-initiated) re-emits this SAME event for the NEW shepherd with
+ * `previous_shepherd_actor_id` set + `supersedes_assignment_id` = the superseded assignment's id (a fresh
+ * `initial` assignment sets both `null`) — there is NO separate `shepherd_reassigned` event; the new
+ * event's back-reference + the row supersession make the reassignment replayable (the
+ * `ground_inspection_scheduled` reschedule precedent).
+ *
+ * PII discipline (AC8): the payload carries NON-PII routing COORDINATES ONLY — actor ids + reason +
+ * district. NEVER the shepherd's name / phone / WhatsApp (those live only in claim_shepherd_assignments +
+ * the authorized member card read). Owner: Story 6.12.
+ */
+export const ClaimShepherdAssignedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  // The assigned District Admin (users.id — an actor id, not a name). Non-PII join key.
+  shepherd_actor_id: z.string().uuid(),
+  // The shepherd this assignment replaced (null on a fresh `initial` assignment; set on reassignment/fallback).
+  previous_shepherd_actor_id: z.string().uuid().nullable(),
+  // Why: initial (auto) | reassignment (admin-initiated, R6) | fallback (AR-61, AC4). Non-PII.
+  assignment_reason: z.enum(SHEPHERD_ASSIGNMENT_REASONS),
+  // The AC5 back-reference: which assignment row this one superseded (null on the first assignment). REQUIRED
+  // in the schema (nullable) so the reassignment linkage actually rides the timeline (RATIFIED correction).
+  supersedes_assignment_id: z.string().uuid().nullable(),
+  // The assignment's jurisdiction — the deceased's server-derived posting district. Non-PII bounded metadata.
+  district: z.string().min(1),
+});
+
 // ── State Trustee cycle-freeze ────────────────────────────────────────────────
 
 /** Cycle-freeze window opened for this claim → `state_trustee_freeze`. Owner: 6.13. */
@@ -393,15 +425,15 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 27-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 28-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
 // `claim.dpdpa_consent_recorded`; the Story 6.9 code review added the 25th —
-// `claim.dpdpa_consent_revoked`; Story 6.11 adds the 26th + 27th — `claim.verifier_escalated`
-// (D-D) and `claim.verifier_decision_revised` (D-E), the two verifier-adjudication annotation
-// events — all annotation/identity events, per the "owner stories add their annotation events"
-// discipline.)
+// `claim.dpdpa_consent_revoked`; Story 6.11 added the 26th + 27th — `claim.verifier_escalated`
+// (D-D) and `claim.verifier_decision_revised` (D-E); Story 6.12 adds the 28th —
+// `claim.shepherd_assigned` (the shepherd routing/attribution annotation) — all annotation/identity
+// events, per the "owner stories add their annotation events" discipline.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -419,6 +451,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.verifier_denied',
   'claim.verifier_escalated',
   'claim.verifier_decision_revised',
+  'claim.shepherd_assigned',
   'claim.state_trustee_frozen',
   'claim.state_trustee_approved',
   'claim.approved',
@@ -433,11 +466,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 25 claim events). */
+/** The dotted `claim.*` event-type literal union (the 28 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 25 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 28 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -458,6 +491,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.verifier_denied': ClaimVerifierDeniedPayloadSchema,
   'claim.verifier_escalated': ClaimVerifierEscalatedPayloadSchema,
   'claim.verifier_decision_revised': ClaimVerifierDecisionRevisedPayloadSchema,
+  'claim.shepherd_assigned': ClaimShepherdAssignedPayloadSchema,
   'claim.state_trustee_frozen': ClaimStateTrusteeFrozenPayloadSchema,
   'claim.state_trustee_approved': ClaimStateTrusteeApprovedPayloadSchema,
   'claim.approved': ClaimApprovedPayloadSchema,

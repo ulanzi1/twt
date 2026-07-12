@@ -91,6 +91,43 @@ export class AdminDisplayNameMissingError extends ApiError {
 }
 
 /**
+ * 409 — Story 6.12 (R1/AC2): a MANUAL shepherd reassignment targets an admin with a display name but NO
+ * usable contact channel (neither `contact_phone` nor `contact_whatsapp`). FR-41 promises the family a
+ * REACHABLE human, so an un-contactable shepherd is blocked fail-closed BEFORE any event/row is written —
+ * NO fallback, no placeholder. The distinct machine code tells ops to provision a contact channel (via
+ * repo.updateShepherdContact). A 409 (not 400): the request is well-formed; the target account state is
+ * the blocker. (The automatic + AR-61 fallback paths never hit this — they SKIP an uncontactable candidate.)
+ */
+export class ShepherdNotContactableError extends ApiError {
+  public constructor(public readonly targetActorId: string) {
+    super(
+      409,
+      'shepherd.not_contactable',
+      'The chosen shepherd has no usable contact channel configured; reassignment is blocked until one is provisioned.',
+      { targetActorId },
+    );
+  }
+}
+
+/**
+ * 403 — Story 6.12 review finding: a MANUAL shepherd reassignment targets a user who is NOT an active
+ * `district_admin` at the claim's server-derived district (or not in the claim's tenant at all). Unlike
+ * `AdminDisplayNameMissingError`/`ShepherdNotContactableError` (a real district admin missing an
+ * attribution field), this target is not authorized to be a shepherd for this claim at all — routing a
+ * claim's family contact to an arbitrary user id is blocked fail-closed BEFORE any event/row is written.
+ */
+export class ShepherdTargetNotEligibleError extends ApiError {
+  public constructor(public readonly targetActorId: string) {
+    super(
+      403,
+      'shepherd.target_not_eligible',
+      'The chosen target is not an authorized district admin for this claim’s district.',
+      { targetActorId },
+    );
+  }
+}
+
+/**
  * 410 — the resource existed but is permanently gone. Story 3.11's data-export download uses this for
  * a one-time artifact already consumed (`data_export.consumed`) or past its 24h window
  * (`data_export.expired`) — a distinct signal from 404 (never existed) or 409 (not ready yet).

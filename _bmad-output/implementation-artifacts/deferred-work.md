@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-6-12-human-shepherd-assignment-member-facing-visibility (2026-07-12)
+
+- **Mobile `<ShepherdContactCard>` has no render/interaction test coverage** (`apps/mobile/components/claim/ShepherdContactCard.tsx`) — the AC3 defensive "contact being arranged" branch, the offline-cache fallback, and the `tel:`/`wa.me` deep-link construction are implemented but never exercised by any RTL/render test. Honestly disclosed in the story's own Completion Notes ("no RN render harness for the card mount — typecheck + filed-claim unit test only"), consistent with [[feedback_record_unattested_no_backfill]]. **Re-trigger:** when an RN render-test harness exists for this app (or the next story touching this component), add the missing render/interaction tests.
+- **District matching in `resolveShepherdCandidates` is raw string equality with no case/whitespace normalization** between the district resolved from member postings and `role_grants.scope_value` (`packages/domain/src/claim/shepherd-assign-persist.ts`). A casing/whitespace mismatch would silently empty the candidate pool and route to the generic AR-61 fallback with no diagnostic pointing at the actual cause. **Re-trigger:** if this ever surfaces as a real empty-pool incident in production (district values are server-derived and controlled today, so likelihood is low).
+- **Offline shepherd cache (`cacheShepherd`/`loadCachedShepherd`) has no staleness/expiry marker**, keyed only by `claimCaseId` (`apps/mobile/lib/filed-claim.ts`). A member who goes offline right after a real (re)assignment could see a stale prior-shepherd card for an unbounded time. **Re-trigger:** if support reports member confusion from a stale shepherd card, or when a broader offline-cache/staleness reliability pass touches mobile claim surfaces.
+
+---
+
 ## Deferred from: code review of story-6-10-verifier-console-signals-panel-cross-pariwar-scope-handling (2026-07-11)
 
 - **`ScopeSwitcher` is wired to a single-entry stub (own Pariwar only)** — `VerifierConsoleRoute.tsx` hardcodes `pariwars={[{ id: pariwarId, name: pariwarId }]}`, so the switcher can never render for a real multi-Pariwar actor and the "prominent active scope" shows a raw Pariwar UUID rather than a resolved name. Already an acknowledged deviation in the story's own Dev Agent Record (Deviation #2 — no "my pariwars" endpoint per DD-6; deferred alongside the verifier queue). **Re-trigger:** when the verifier queue / a per-Pariwar grant-list endpoint lands, wire real accessible-Pariwar data (with names) into the switcher and drop the single-item stub.

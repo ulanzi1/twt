@@ -140,6 +140,18 @@ export const QUEUE_NAMES = {
    * recomputes the same outcome from the same event count). Job class C (scheduled/delayed).
    */
   CLAIM_PEER_MESH_WINDOW: 'claim.peer_mesh_window',
+  /**
+   * Human shepherd assignment (Story 6.12, Task 4). Enqueued by the peer-mesh SELECT worker AFTER it
+   * commits `claim.peer_mesh_pinged` (→ verification_in_progress) — via an injected enqueue callback wired
+   * in boot.ts (the OCR→SELECT cross-file precedent), NEVER a direct `boss.send` inside the frozen 6.6
+   * file, so assignment failure gets its OWN retry/DLQ envelope and never couples into the selection tx.
+   * The worker resolves the deceased's posting district, picks the least-loaded CONTACTABLE in-scope
+   * district_admin (deterministic tiebreak), emits `claim.shepherd_assigned` (identity annotation) +
+   * inserts the live assignment row, and on an empty/ineligible pool routes to the AR-61 fallback
+   * (injected resolver). Idempotent (advisory lock + pre-write live-assignment check + partial-unique).
+   * singletonKey = claim_case_id. Job class B (request-triggered).
+   */
+  CLAIM_SHEPHERD_ASSIGN: 'claim.shepherd_assign',
 } as const;
 
 /** Union of the registered queue names. */

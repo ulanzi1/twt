@@ -25,6 +25,7 @@ export const verifierConsoleEn = {
     groundInspection: 'Ground inspection',
     priorComments: 'Prior verifier comments',
     precedents: 'Recent in-scope precedents',
+    shepherd: 'Assigned shepherd (family contact)',
   },
   states: {
     empty: 'No records yet.',
@@ -50,6 +51,11 @@ export const verifierConsoleEn = {
   },
   identity: {
     dateOfBirthLabel: 'Date of birth',
+  },
+  shepherd: {
+    nameLabel: 'Shepherd',
+    roleLabel: 'Role',
+    note: 'The family’s named point of contact. Read-only — being shepherd grants no adjudication power.',
   },
   peerMesh: {
     responders: 'Distinct responders',

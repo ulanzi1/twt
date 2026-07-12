@@ -38,6 +38,7 @@ import type {
   PeerMeshSection,
   PriorVerifierCommentsSection,
   RecentPrecedentsSection,
+  ShepherdSection,
   ValiditySection,
   VerifierConsoleIdentity,
   VerifierConsolePacket,
@@ -73,11 +74,12 @@ const SIGNED_URL_TTL_SECONDS = 300;
  *
  * Ceiling = baseline 6 + a small explicit allowance of 2 = 8. The allowance is exactly the two Story
  * 6.11 producer reads (getPriorVerifierDecisions + getRecentInScopePrecedents) that light up when the
- * decision read model ships — so 6.11 needs no bump. Any FURTHER increase requires an explanation at
- * review, not a casual bump; the counter is asserted in the live-DB integration test so it cannot be
- * silently "fixed" by excluding a newly-added read.
+ * decision read model ships — so 6.11 needs no bump. Story 6.12 adds ONE bounded read (the live-shepherd
+ * section, getLiveShepherd) → ceiling 8 + 1 = 9. Any FURTHER increase requires an explanation at review,
+ * not a casual bump; the counter is asserted in the live-DB integration test so it cannot be silently
+ * "fixed" by excluding a newly-added read.
  */
-export const VERIFIER_CONSOLE_MAX_READS = 8;
+export const VERIFIER_CONSOLE_MAX_READS = 9;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -178,6 +180,9 @@ export async function assembleVerifierConsole(
   const priorVerifierComments = await assemblePriorComments(deps, ctx, claimCaseId);
   const recentPrecedents = await assembleRecentPrecedents(deps, ctx, claimCaseId);
 
+  // ── (g) live shepherd (Story 6.12) — the family's named contact, READ-ONLY; grants no adjudication ─
+  const shepherd = await assembleShepherd(ctx, claimCaseId, reads);
+
   const packet: VerifierConsolePacket = {
     claimCaseId: ctx.claimCaseId,
     pariwarId: ctx.pariwarId,
@@ -191,8 +196,36 @@ export async function assembleVerifierConsole(
     groundInspection,
     priorVerifierComments,
     recentPrecedents,
+    shepherd,
   };
   return { packet, readCount: reads.count };
+}
+
+/**
+ * (g) The live-shepherd section (Story 6.12, AC6) — the family's named human contact. Isolated + fail-soft
+ * (a transient throw ⇒ `unavailable`, request still 200; NEVER converted to `empty`). Surfaces the display
+ * + role + actor id ONLY — NEVER the shepherd's phone/WhatsApp on this admin console (AC8). READ-ONLY:
+ * being shown here grants the shepherd no console access / no claim.approve (AC6).
+ */
+async function assembleShepherd(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  reads: ReadCounter,
+): Promise<ShepherdSection> {
+  try {
+    reads.bump();
+    const live = await claim.getLiveShepherd(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId);
+    if (!live) return { status: 'empty' }; // no live shepherd yet (pre-verification_in_progress)
+    return {
+      status: 'present',
+      shepherdActorId: live.shepherdActorId,
+      shepherdDisplay: live.displayName,
+      roleLabel: claim.SHEPHERD_ROLE_LABEL,
+    };
+  } catch (err) {
+    ctx.log?.warn({ err, claimCaseId: ctx.claimCaseId }, 'verifier-console: shepherd section unavailable');
+    return { status: 'unavailable' };
+  }
 }
 
 async function assembleValidity(

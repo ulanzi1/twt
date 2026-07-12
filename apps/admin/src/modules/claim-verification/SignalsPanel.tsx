@@ -241,6 +241,21 @@ export function SignalsPanel({ packet }: SignalsPanelProps): ReactElement {
           <NonPresent status={packet.recentPrecedents.status} />
         )}
       </Section>
+
+      {/* (g) live shepherd — the family's named human contact (Story 6.12, AC6). READ-ONLY: surfaces WHO
+          the shepherd is (display + role), NEVER their phone/WhatsApp (AC8), and grants no adjudication. */}
+      <Section title={t.sections.shepherd} testId="section-shepherd">
+        {packet.shepherd.status === 'present' ? (
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm" data-testid="shepherd-present">
+            <dt className="opacity-60">{t.shepherd.nameLabel}</dt>
+            <dd>{packet.shepherd.shepherdDisplay}</dd>
+            <dt className="opacity-60">{t.shepherd.roleLabel}</dt>
+            <dd>{packet.shepherd.roleLabel}</dd>
+          </dl>
+        ) : (
+          <NonPresent status={packet.shepherd.status} />
+        )}
+      </Section>
     </div>
   );
 }

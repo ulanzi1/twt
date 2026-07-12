@@ -271,7 +271,16 @@ export type AuthAuditEventType =
   | 'admin_claim.verifier_denied'
   | 'admin_claim.verifier_escalated'
   | 'admin_claim.decision_revised'
-  | 'admin_claim.decision_rejected';
+  | 'admin_claim.decision_rejected'
+  // ── Shepherd assignment surface (Story 6.12, FR-41 / Epic 6) ──────────────────
+  // The human-shepherd routing/attribution surface (a District Admin as the family's named contact).
+  // Post-commit SINK lines (the durable records are the claim.shepherd_assigned event + the
+  // claim_shepherd_assignments row). Context is NON-PII: claim_case_id + district + shepherd_actor_id +
+  // previous_shepherd_actor_id + assignment_reason — NEVER the shepherd's name/phone/WhatsApp (AC8, D-G).
+  //   shepherd_assigned   — a shepherd was assigned (the automatic first assignment, reason `initial`).
+  //   shepherd_reassigned — a shepherd was reassigned (manual R6 `reassignment` or AR-61 `fallback`).
+  | 'admin_claim.shepherd_assigned'
+  | 'admin_claim.shepherd_reassigned';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

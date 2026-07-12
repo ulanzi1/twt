@@ -1,6 +1,7 @@
 import { YStack } from 'tamagui'
 
 import { ClaimProxyFlowEntry } from 'components/claim/ClaimProxyFlowEntry'
+import { ClaimPointOfContactEntry } from 'components/claim/ClaimPointOfContactEntry'
 import { DataExportEntry } from 'components/data-export/DataExportEntry'
 import { LifeEventsEntry } from 'components/life-events/LifeEventsEntry'
 import {
@@ -33,6 +34,9 @@ export default function YogdaanTab() {
       {/* Story 6.2 — Ravi-mode claim-filing entry (understated; opens the (claim) proxy flow). The
           ONLY entry surface in 6.2 (the helpline deep-link handover is Story 6.3). */}
       <ClaimProxyFlowEntry />
+      {/* Story 6.12 — the persistent post-filing point-of-contact entry (self-suppresses when the member
+          has no filed claim on record). Re-opens the named-human shepherd view (R3). */}
+      <ClaimPointOfContactEntry />
       {/* Story 4.7 — the member-facing MemberStatusPanel entry (own status; Hindi-first, a11y). */}
       <MembershipStatusEntry />
       <YogdaanBahi />

@@ -228,6 +228,25 @@ export const RecentPrecedentsSection = z.discriminatedUnion('status', [
 ]);
 export type RecentPrecedentsSection = z.output<typeof RecentPrecedentsSection>;
 
+// ── (g) live shepherd — Story 6.12 (AC6), the family's named human contact, READ-ONLY ──────────────
+// Isolated, fail-soft: the live shepherd's display + role + actor id, or `empty` (no live shepherd yet)
+// / `unavailable` (a transient throw). NEVER the shepherd's phone/WhatsApp on this admin console (AC8 —
+// contact PII stays on the member card). Being shown here grants the shepherd NO console access / no
+// claim.approve (AC6) — this section merely surfaces WHO the family's contact is.
+export const ShepherdSection = z.discriminatedUnion('status', [
+  z
+    .object({
+      status: z.literal('present'),
+      shepherdActorId: z.string().uuid(),
+      shepherdDisplay: z.string().min(1),
+      roleLabel: z.string().min(1),
+    })
+    .strict(),
+  z.object({ status: z.literal('empty') }).strict(),
+  z.object({ status: z.literal('unavailable') }).strict(),
+]);
+export type ShepherdSection = z.output<typeof ShepherdSection>;
+
 // ── The bounded compound packet (one request; the whole verifier signals view) ─────────────────────
 export const VerifierConsolePacket = z
   .object({
@@ -243,6 +262,8 @@ export const VerifierConsolePacket = z
     groundInspection: GroundInspectionSection,
     priorVerifierComments: PriorVerifierCommentsSection,
     recentPrecedents: RecentPrecedentsSection,
+    // Story 6.12 — the live shepherd (the family's named human contact), READ-ONLY. Grants no adjudication.
+    shepherd: ShepherdSection,
   })
   .strict();
 export type VerifierConsolePacket = z.output<typeof VerifierConsolePacket>;

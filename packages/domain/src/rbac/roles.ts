@@ -80,6 +80,9 @@ const CLAIM_CORRECT_NOMINEE_BANK = permissionKey('claim.correct_nominee_bank');
 const CLAIM_MANAGE_DPDPA_CONSENT = permissionKey('claim.manage_dpdpa_consent');
 // Story 6.10 — the verifier-console READ key (district-dimension; distinct from the claim.approve WRITE).
 const CLAIM_VERIFY = permissionKey('claim.verify');
+// Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key (district-dimension; distinct from
+// claim.approve/claim.verify — routing the family's contact grants no adjudication power, AC6).
+const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -133,6 +136,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // claim.override_ground_inspection shape (both roles hold it), NOT the helpline_operator-only
       // claim.manage_nominee_bank shape.
       CLAIM_MANAGE_DPDPA_CONSENT,
+      // Story 6.12 (R6) — the manual shepherd reassignment key (a supervisor-escalation correction path,
+      // the claim.correct_nominee_bank / claim.override_ground_inspection shape). Checked at the deceased's
+      // server-derived district; grants no adjudication power (AC6).
+      CLAIM_ASSIGN_SHEPHERD,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -165,6 +172,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // the deceased member's server-derived posting district; the `district` scopeCeiling makes that
       // exact-node gate meaningful. Distinct from the CLAIM_APPROVE write above (6.11 owns the verdict).
       CLAIM_VERIFY,
+      // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
+      // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
+      // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.
+      CLAIM_ASSIGN_SHEPHERD,
     ],
     scopeCeiling: 'district',
   },

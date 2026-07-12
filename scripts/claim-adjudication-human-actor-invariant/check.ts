@@ -52,6 +52,16 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     pathSubstrings: ['verifier-decision'],
     owner: 'Story 6.11',
   },
+  {
+    // Story 6.12 — the R6 manual shepherd reassignment WRITE. A human-actor write (routing the family's
+    // ₹50L-stakes contact) MUST compose [requireAdminSession, scopeResolutionHook,
+    // requirePermissionHook(claim.assign_shepherd, district)] — never a system/service actor. The
+    // AUTOMATIC assignment + AR-61 fallback are pg-boss workers (actor: 'system'), not HTTP routes, and
+    // are correctly outside this HTTP-route gate.
+    file: 'apps/api/src/modules/claims/claims.shepherd.routes.ts',
+    pathSubstrings: ['shepherd/reassign'],
+    owner: 'Story 6.12',
+  },
 ];
 
 function main(): void {

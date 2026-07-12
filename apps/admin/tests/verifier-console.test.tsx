@@ -79,6 +79,13 @@ const PRESENT_PACKET: VerifierConsolePacket = {
   groundInspection: { status: 'empty' },
   priorVerifierComments: { status: 'not_available_yet' },
   recentPrecedents: { status: 'not_available_yet' },
+  // Story 6.12 — the live shepherd (AC6): the family's named contact, read-only (no phone/WhatsApp here).
+  shepherd: {
+    status: 'present',
+    shepherdActorId: '11111111-1111-1111-1111-111111111111',
+    shepherdDisplay: 'Anita Sharma',
+    roleLabel: 'District Admin',
+  },
 };
 
 describe('<VerificationConsoleShell> — anatomy + read-only + decision slot (AC6)', () => {
@@ -120,13 +127,28 @@ describe('<VerificationConsoleShell> — anatomy + read-only + decision slot (AC
 describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state concealment', () => {
   it('renders all six sections and embeds the 6.5 <VerifierReviewPanel> for (b)', () => {
     render(<SignalsPanel packet={PRESENT_PACKET} />);
-    for (const id of ['section-identity', 'section-concealment', 'section-documents', 'section-peer-mesh', 'section-ground-inspection', 'section-prior-comments', 'section-precedents']) {
+    for (const id of ['section-identity', 'section-concealment', 'section-documents', 'section-peer-mesh', 'section-ground-inspection', 'section-prior-comments', 'section-precedents', 'section-shepherd']) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
     // (b) embeds the 6.5 panel.
     expect(screen.getByTestId('verifier-review-panel')).toBeInTheDocument();
     // (c) transcript renders responder counts.
     expect(screen.getByTestId('peer-mesh-transcript')).toHaveTextContent('1');
+  });
+
+  it('renders the live shepherd section (AC6) with name + role, and NO contact PII on the admin console (AC8)', () => {
+    render(<SignalsPanel packet={PRESENT_PACKET} />);
+    const present = screen.getByTestId('shepherd-present');
+    expect(present).toHaveTextContent('Anita Sharma');
+    expect(present).toHaveTextContent('District Admin');
+    // The admin console NEVER shows the shepherd's phone/WhatsApp (that is the member card's authorized surface).
+    expect(present).not.toHaveTextContent('+91');
+  });
+
+  it('renders the shepherd section as empty when no shepherd is assigned yet (pre-verification)', () => {
+    render(<SignalsPanel packet={{ ...PRESENT_PACKET, shepherd: { status: 'empty' } }} />);
+    const section = screen.getByTestId('section-shepherd');
+    expect(within(section).getByTestId('section-state-empty')).toBeInTheDocument();
   });
 
   it('renders AC2c verifier annotations as explicitly not_available_yet (2026-07-11 decision — no owning producer yet)', () => {

@@ -6,15 +6,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  getPriorVerifierDecisions,
-  getRecentInScopePrecedents,
   orderPriorDecisions,
   RECENT_PRECEDENTS_LIMIT,
   selectRecentInScopePrecedents,
   VERIFIER_DECISION_READ_MODEL_AVAILABLE,
   type VerifierDecisionRecord,
 } from '../../src/claim/verifier-console-read.js';
-import { ids } from '../../src/index.js';
 
 const rec = (over: Partial<VerifierDecisionRecord>): VerifierDecisionRecord => ({
   claimCaseId: 'c-x',
@@ -65,18 +62,12 @@ describe('selectRecentInScopePrecedents — latest-3, exclude-current, newest-fi
   });
 });
 
-describe('producer-gated reads — not_available_yet until Story 6.11 (AC7, D6)', () => {
-  it('the decision read model is NOT yet available (6.10 defines the consumer shape only)', () => {
-    expect(VERIFIER_DECISION_READ_MODEL_AVAILABLE).toBe(false);
-  });
-
-  it('getPriorVerifierDecisions returns not_available_yet — NOT an empty [] (absence-is-signal)', async () => {
-    const r = await getPriorVerifierDecisions({}, ids.pariwarId('11111111-1111-1111-1111-111111111111'), ids.claimId('22222222-2222-2222-2222-222222222222'));
-    expect(r.status).toBe('not_available_yet');
-  });
-
-  it('getRecentInScopePrecedents returns not_available_yet — NOT an empty []', async () => {
-    const r = await getRecentInScopePrecedents({}, ids.pariwarId('11111111-1111-1111-1111-111111111111'), ids.claimId('22222222-2222-2222-2222-222222222222'));
-    expect(r.status).toBe('not_available_yet');
+describe('producer availability — flipped ON in Story 6.11 (AC4, D-A)', () => {
+  it('the decision read model IS now available (6.11 ships the producer + wired queries)', () => {
+    // 6.10 defined the consumer shape gated OFF; 6.11 flips this to true. The live-DB round-trip
+    // (present/empty, escalated/superseded exclusion, empty ≠ not_available_yet) is exercised in the
+    // apps/api verifier-console integration spec — getPriorVerifierDecisions/getRecentInScopePrecedents
+    // now issue real scope-safe queries and cannot run against a `{}` stub.
+    expect(VERIFIER_DECISION_READ_MODEL_AVAILABLE).toBe(true);
   });
 });

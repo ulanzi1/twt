@@ -386,6 +386,30 @@ export function useVerifierConsole(pariwarId: string, claimCaseId: string | null
   });
 }
 
+// ── Verifier adjudication WRITE surface (Story 6.11) — the FIRST verifier WRITE. ──
+// On success both mutations invalidate the console packet key so (e)/(f) + the audit trail refetch with
+// the just-written decision (fresh present/empty; the new AuditTrailEntry).
+
+/** POST an approve / deny / escalate decision; refetches the console packet on success. */
+export function usePostVerifierDecision(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postVerifierDecision>[2]) =>
+      api.postVerifierDecision(pariwarId, claimCaseId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) }),
+  });
+}
+
+/** POST a same-outcome revision (step-up-gated server-side); refetches the console packet on success. */
+export function useReviseVerifierDecision(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.reviseVerifierDecision>[2]) =>
+      api.reviseVerifierDecision(pariwarId, claimCaseId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) }),
+  });
+}
+
 // ── Telegram config surface (Story 5.5) — the per-Pariwar Telegram Bot config singleton. ──
 
 export const telegramConfigKey = (pariwarId: string) => ['telegram-config', pariwarId] as const;

@@ -181,6 +181,11 @@ export * from './claim_ground_inspection_photos.js';
 // account disbursement channel (D1) — NOT nominee-linked, NOT the 75/25 split. Tenant-isolated
 // (mirror claims); annotation-only, no state trigger.
 export * from './claim_nominee_bank_accounts.js';
+// Story 6.11 — verifier DECISION-METADATA store: `claim_verifier_decisions` (ONE row per adjudication
+// decision — outcome/reason_code + Tier-1 rationale ciphertext + actor_display snapshot + supersession
+// linkage; partial-unique one-live-per-claim invariant). The DECISION-METADATA authority (AC0) — NOT a
+// projection of claim state; state stays on the claim.verifier_* events. Tenant-isolated (mirror claims).
+export * from './claim_verifier_decisions.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

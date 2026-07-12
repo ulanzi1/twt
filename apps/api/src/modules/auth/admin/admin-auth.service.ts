@@ -270,7 +270,7 @@ export async function consumePasswordReset(
 
 export async function createAdminAccount(
   deps: AppDeps,
-  params: { email: string; password: string; userId?: string },
+  params: { email: string; password: string; userId?: string; displayName?: string },
 ): Promise<string> {
   const userId = params.userId ?? randomUUID();
   const [emailCiphertext, emailBlindIndexValue, passwordHash] = await Promise.all([
@@ -283,8 +283,22 @@ export async function createAdminAccount(
     emailCiphertext,
     emailBlindIndex: emailBlindIndexValue,
     passwordHash,
+    // Story 6.11 (R5): the controlled staff-attribution display source (the actor_display snapshot
+    // source). Optional — omitted leaves users.display_name NULL and adjudication blocks until ops
+    // provisions it. NEVER derived from the email.
+    ...(params.displayName !== undefined ? { displayName: params.displayName } : {}),
   });
   return userId;
+}
+
+/** Story 6.11 (R5) — set/replace an admin's controlled staff-attribution display name (ops/seed +
+ *  tests). Delegates to the repo (validates non-empty trimmed); returns rows updated. */
+export async function setAdminDisplayName(
+  deps: AppDeps,
+  userId: string,
+  displayName: string,
+): Promise<number> {
+  return repo.updateDisplayName(deps.pool, userId, displayName);
 }
 
 export type { StoredCredential };

@@ -417,3 +417,16 @@ export const groundInspectionId = uuidBrand('GroundInspectionId');
 export type GroundInspectionPhotoId = Brand<'GroundInspectionPhotoId'>;
 /** Smart constructor: validates UUID shape, returns a branded `GroundInspectionPhotoId`. */
 export const groundInspectionPhotoId = uuidBrand('GroundInspectionPhotoId');
+
+// ── Verifier-decision id (Story 6.11, Task 1) ─────────────────────────────────
+// The per-row address of one verifier adjudication decision
+// (`claim_verifier_decisions.decision_id`) — the DECISION-METADATA authority row (AC0). A claim
+// may hold MANY decision rows over its life (revisions supersede prior rows, D-E); each row is
+// addressed by this id (a revision names its predecessor via `supersedes_decision_id`). A UUID row
+// address, so it reuses the shared `uuidBrand` validator; `claim_case_id` / `pariwar_id` reuse the
+// existing `ClaimId` / `PariwarId` brands.
+
+/** Per-row address of a verifier decision (`claim_verifier_decisions.decision_id`). */
+export type VerifierDecisionId = Brand<'VerifierDecisionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `VerifierDecisionId`. */
+export const verifierDecisionId = uuidBrand('VerifierDecisionId');

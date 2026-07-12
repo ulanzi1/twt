@@ -15,6 +15,7 @@ import type {
 } from '@twt/contracts';
 import type { ReactElement, ReactNode } from 'react';
 
+import { AuditTrail } from './AuditTrailEntry.js';
 import { VerifierReviewPanel, type VerifierReviewData } from './VerifierReviewPanel.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 
@@ -205,21 +206,20 @@ export function SignalsPanel({ packet }: SignalsPanelProps): ReactElement {
         )}
       </Section>
 
-      {/* (e) prior verifier comments */}
+      {/* (e) prior verifier comments — the full transcript for this claim, semantic-verb entries (AC4).
+          NOTE: `superseded`/`isRevision` linkage isn't rendered here — the wire model (PriorVerifierComment)
+          doesn't yet carry those flags; a follow-up must extend the read model + contract to show it. */}
       <Section title={t.sections.priorComments} testId="section-prior-comments">
         {packet.priorVerifierComments.status === 'present' ? (
-          <ul className="flex flex-col gap-2 text-sm">
-            {packet.priorVerifierComments.comments.map((c, i) => (
-              <li key={`${c.claimCaseId}-${i}`} className="rounded border p-2">
-                <p className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{c.outcome}</span>
-                  <span className="text-xs opacity-60">{c.decidedAt}</span>
-                </p>
-                <p className="text-xs opacity-80">{c.rationale}</p>
-                <p className="text-xs opacity-60">— {c.actorDisplay}</p>
-              </li>
-            ))}
-          </ul>
+          <AuditTrail
+            entries={packet.priorVerifierComments.comments.map((c) => ({
+              outcome: c.outcome,
+              reasonCode: c.reasonCode,
+              actorDisplay: c.actorDisplay,
+              decidedAt: c.decidedAt,
+              rationale: c.rationale,
+            }))}
+          />
         ) : (
           <NonPresent status={packet.priorVerifierComments.status} />
         )}
@@ -228,17 +228,15 @@ export function SignalsPanel({ packet }: SignalsPanelProps): ReactElement {
       {/* (f) recent in-scope precedents — recency, NOT similarity */}
       <Section title={t.sections.precedents} testId="section-precedents">
         {packet.recentPrecedents.status === 'present' ? (
-          <ul className="flex flex-col gap-2 text-sm">
-            {packet.recentPrecedents.precedents.map((p, i) => (
-              <li key={`${p.claimCaseId}-${i}`} className="rounded border p-2">
-                <p className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{p.outcome}</span>
-                  <span className="text-xs opacity-60">{p.decidedAt}</span>
-                </p>
-                {p.rationale ? <p className="text-xs opacity-80">{p.rationale}</p> : null}
-              </li>
-            ))}
-          </ul>
+          <AuditTrail
+            entries={packet.recentPrecedents.precedents.map((p) => ({
+              outcome: p.outcome,
+              reasonCode: p.reasonCode,
+              actorDisplay: p.actorDisplay ?? t.audit.unattributed,
+              decidedAt: p.decidedAt,
+              ...(p.rationale != null ? { rationale: p.rationale } : {}),
+            }))}
+          />
         ) : (
           <NonPresent status={packet.recentPrecedents.status} />
         )}

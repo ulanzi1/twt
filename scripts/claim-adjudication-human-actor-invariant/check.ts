@@ -43,9 +43,15 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     pathSubstrings: ['verifier-console'],
     owner: 'Story 6.10',
   },
-  // Story 6.11 MUST add its approve/deny/escalate route file + substrings here, e.g.:
-  //   { file: 'apps/api/src/modules/claims/claims.verification-decision.routes.ts',
-  //     pathSubstrings: ['approve', 'deny', 'escalate'], owner: 'Story 6.11' },
+  {
+    // Story 6.11 — the FIRST verifier WRITE surface (approve/deny/escalate + step-up-gated revise).
+    // Both routes MUST compose the human-actor chain [requireAdminSession, scopeResolutionHook,
+    // requirePermissionHook(claim.approve, district)] — the runtime is the real control, this gate is
+    // the structural defense-in-depth. `verifier-decision` matches BOTH the base + the /revise path.
+    file: 'apps/api/src/modules/claims/claims.verification-decision.routes.ts',
+    pathSubstrings: ['verifier-decision'],
+    owner: 'Story 6.11',
+  },
 ];
 
 function main(): void {

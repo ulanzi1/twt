@@ -69,15 +69,27 @@ export async function getAdminById(
   return { userId, status: row.status, passwordHash: row.password_hash };
 }
 
-/** Bootstrap/create an admin (users + admin_credentials) atomically. */
+/** Bootstrap/create an admin (users + admin_credentials) atomically. Story 6.11 (R5): an OPTIONAL
+ *  `displayName` seeds the controlled staff-attribution `users.display_name` (the actor_display source)
+ *  at provisioning time; omitted, it stays NULL and the admin cannot adjudicate until ops sets it via
+ *  updateDisplayName (AdminDisplayNameMissingError). NEVER email-derived. */
 export async function createAdmin(
   pool: pg.Pool,
-  p: { userId: string; emailCiphertext: string; emailBlindIndex: string; passwordHash: string },
+  p: {
+    userId: string;
+    emailCiphertext: string;
+    emailBlindIndex: string;
+    passwordHash: string;
+    displayName?: string;
+  },
 ): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query(`INSERT INTO users (id, identity_type) VALUES ($1, 'admin')`, [p.userId]);
+    await client.query(`INSERT INTO users (id, identity_type, display_name) VALUES ($1, 'admin', $2)`, [
+      p.userId,
+      p.displayName ?? null,
+    ]);
     await client.query(
       `INSERT INTO admin_credentials (user_id, email_ciphertext, email_blind_index, password_hash)
          VALUES ($1, $2, $3, $4)`,
@@ -90,6 +102,44 @@ export async function createAdmin(
   } finally {
     client.release();
   }
+}
+
+/** Thrown by `updateDisplayName` when the caller passes an empty/whitespace-only display name — a
+ *  caller-input error (ops script/seed/future profile UI), distinct from `AdminDisplayNameMissingError`
+ *  (the READ-side "no display name set yet" block at adjudication time). */
+export class InvalidDisplayNameError extends Error {
+  public readonly name = 'InvalidDisplayNameError';
+  public constructor() {
+    super('[admin-auth] display name must be a non-empty trimmed string');
+  }
+}
+
+/** Story 6.11 (R5) — set/replace an admin's controlled staff-attribution display name (ops/seed +
+ *  tests provision it here; a self-serve profile UI is out of scope in v1). Validates a non-empty
+ *  trimmed value; NEVER accepts an email-derived string (the caller passes a real display name).
+ *  Returns the number of rows updated (0 = no such user). Runs on the GLOBAL users carve-out. */
+export async function updateDisplayName(pool: pg.Pool, userId: string, displayName: string): Promise<number> {
+  const trimmed = displayName.trim();
+  if (trimmed === '') {
+    throw new InvalidDisplayNameError();
+  }
+  const res = await pool.query(
+    `UPDATE users SET display_name = $2, updated_at = now() WHERE id = $1`,
+    [userId, trimmed],
+  );
+  return res.rowCount ?? 0;
+}
+
+/** Story 6.11 (R5) — read an admin's controlled staff-attribution display name (the actor_display
+ *  source). Returns `null` when the user has no display name set — the adjudication write path treats
+ *  that (or a whitespace-only value) as "missing" and blocks with AdminDisplayNameMissingError. */
+export async function getDisplayName(db: Queryable, userId: string): Promise<string | null> {
+  const res = await db.query<{ display_name: string | null }>(
+    `SELECT display_name FROM users WHERE id = $1`,
+    [userId],
+  );
+  const raw = res.rows[0]?.display_name ?? null;
+  return raw !== null && raw.trim() !== '' ? raw : null;
 }
 
 export async function incrementFailedAttempts(db: Queryable, userId: string): Promise<number> {

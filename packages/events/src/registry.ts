@@ -192,6 +192,18 @@ export const EVENT_TYPE_REGISTRY = {
     description: 'Verifier denied → denied (Story 6.11).',
     schema: claim.ClaimVerifierDeniedPayloadSchema,
   },
+  'claim.verifier_escalated': {
+    type: 'claim.verifier_escalated',
+    description:
+      'Verifier escalated to State Trustee — identity annotation, no lifecycle state (Story 6.11, D-D).',
+    schema: claim.ClaimVerifierEscalatedPayloadSchema,
+  },
+  'claim.verifier_decision_revised': {
+    type: 'claim.verifier_decision_revised',
+    description:
+      'Verifier revised a prior same-outcome decision — identity annotation, not a verdict re-emit (Story 6.11, D-E).',
+    schema: claim.ClaimVerifierDecisionRevisedPayloadSchema,
+  },
   'claim.state_trustee_frozen': {
     type: 'claim.state_trustee_frozen',
     description: 'Cycle-freeze window opened for this claim → state_trustee_freeze (Story 6.13).',

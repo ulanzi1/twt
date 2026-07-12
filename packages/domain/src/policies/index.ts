@@ -72,3 +72,7 @@ export * from './claim-ground-inspections-rls.js';
 // Story 6.8 — claim_nominee_bank_accounts tenant-isolation policies (NOT cross-readable; mirror
 // claims-rls). No write-rejection trigger — bank collection is an annotation, not a state cache.
 export * from './claim-nominee-bank-rls.js';
+// Story 6.11 — claim_verifier_decisions tenant-isolation policies (NOT cross-readable; mirror claims-rls).
+// No write-rejection trigger — the decision row is the DECISION-METADATA authority, not a state cache
+// (claim state stays on claims.current_state, derived from the claim.verifier_* events).
+export * from './claim-verifier-decisions-rls.js';

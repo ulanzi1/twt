@@ -256,6 +256,28 @@ export const ClaimVerifierApprovedPayloadSchema = z.object({ ...auditShape }).st
 /** Verifier denied → `denied`. Owner: Story 6.11. */
 export const ClaimVerifierDeniedPayloadSchema = z.object({ ...auditShape }).strict();
 
+/**
+ * Verifier escalated the claim to the State Trustee. ANNOTATION event — the 26th claim event, NEW in
+ * Story 6.11 (D-D). An identity transition (`from_state === to_state`; the reducer has NO `escalated`
+ * state and gains none) — escalation is a ROUTING/reassignment concern, NOT a lifecycle-state change or
+ * queue mutation (the actionable State-level queue stays 6.12/6.13). Emitted with its OWN state-window
+ * guard (`{verification_in_progress, verifier_review}`) in the write path — and it MUST NOT auto-emit
+ * `verifier_reviewing` (escalating is not "entering review"; contrast the approve/deny path). `auditShape`
+ * only — the reason-code + rationale live in the claim_verifier_decisions row, NEVER here (AC0/D-G).
+ */
+export const ClaimVerifierEscalatedPayloadSchema = requireIdentityTransition({ ...auditShape });
+
+/**
+ * Verifier revised a prior SAME-outcome decision (reason-code/rationale correction). ANNOTATION event
+ * — the 27th claim event, NEW in Story 6.11 (D-E). A DEDICATED identity annotation
+ * (`from_state === to_state`), NOT a re-emit of `verifier_approved`/`denied` (claim state is unchanged;
+ * cross-outcome reversal stays Story 6.16). Its sole job is to keep the claim's evidentiary timeline
+ * explainable ("the decision was revised") alongside the supersession linkage on the decision rows.
+ * `auditShape` only — the corrected reason-code + rationale live in the new claim_verifier_decisions
+ * row, NEVER here (AC0/D-G).
+ */
+export const ClaimVerifierDecisionRevisedPayloadSchema = requireIdentityTransition({ ...auditShape });
+
 // ── State Trustee cycle-freeze ────────────────────────────────────────────────
 
 /** Cycle-freeze window opened for this claim → `state_trustee_freeze`. Owner: 6.13. */
@@ -371,14 +393,15 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 25-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 27-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
-// `claim.dpdpa_consent_recorded`; the Story 6.9 code review adds the 25th —
-// `claim.dpdpa_consent_revoked` (a symmetric annotation for the revoke path, mirroring the
-// record-side event so the claim's evidentiary timeline stays complete), all annotation/identity
-// events — per the "owner stories add their annotation events" discipline.)
+// `claim.dpdpa_consent_recorded`; the Story 6.9 code review added the 25th —
+// `claim.dpdpa_consent_revoked`; Story 6.11 adds the 26th + 27th — `claim.verifier_escalated`
+// (D-D) and `claim.verifier_decision_revised` (D-E), the two verifier-adjudication annotation
+// events — all annotation/identity events, per the "owner stories add their annotation events"
+// discipline.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -394,6 +417,8 @@ export const CLAIM_EVENT_TYPES = [
   'claim.verifier_reviewing',
   'claim.verifier_approved',
   'claim.verifier_denied',
+  'claim.verifier_escalated',
+  'claim.verifier_decision_revised',
   'claim.state_trustee_frozen',
   'claim.state_trustee_approved',
   'claim.approved',
@@ -431,6 +456,8 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,
   'claim.verifier_approved': ClaimVerifierApprovedPayloadSchema,
   'claim.verifier_denied': ClaimVerifierDeniedPayloadSchema,
+  'claim.verifier_escalated': ClaimVerifierEscalatedPayloadSchema,
+  'claim.verifier_decision_revised': ClaimVerifierDecisionRevisedPayloadSchema,
   'claim.state_trustee_frozen': ClaimStateTrusteeFrozenPayloadSchema,
   'claim.state_trustee_approved': ClaimStateTrusteeApprovedPayloadSchema,
   'claim.approved': ClaimApprovedPayloadSchema,

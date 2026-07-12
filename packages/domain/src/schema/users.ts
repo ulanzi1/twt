@@ -19,7 +19,7 @@
 // their landing epics). Modeled as a pgEnum (the canonical, architecturally
 // enumerated set) — contrast `role_grants.role` (text, OQ-3-provisional).
 
-import { pgEnum, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import type { UserId } from '../ids/index.js';
 
@@ -40,6 +40,18 @@ export const users = pgTable('users', {
   // Account lifecycle (default active). FR-56 suspension flips this + cascades
   // session revocation (the seam — not the flow — lands here).
   status: userStatusEnum('status').notNull().default('active'),
+
+  // Story 6.11 (R5) — the controlled staff-attribution DISPLAY name, the SOURCE for a decision's
+  // `claim_verifier_decisions.actor_display` snapshot (AC7). Controlled staff personal data —
+  // plaintext BY DELIBERATE, RATIFIED DECISION: its whole purpose is to be shown on audit surfaces
+  // (the verifier decision transcript, the trustee audit UI). It is NEVER derived from the Tier-1
+  // encrypted admin email (the "NEVER a plaintext email column" rule stands). NULLABLE at the column
+  // (existing admins have none) — the adjudication write path is where absence BLOCKS with a typed
+  // error (AdminDisplayNameMissingError), and the decision-row `actor_display` is where NOT NULL is
+  // enforced. The 1.16b PII-shielding gate reviewer: this is intentional plaintext staff attribution,
+  // not member PII. Provisioned via createAdminAccount / repo.createAdmin (optional) +
+  // repo.updateDisplayName (ops/seed/tests); a self-serve admin-profile UI is out of scope in v1.
+  displayName: text('display_name'),
 
   // Database-authoritative timestamps (architecture §1.11 + L3809).
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

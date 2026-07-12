@@ -168,6 +168,22 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
       if (state === 'verifier_review') return 'denied';
       return state;
 
+    // ANNOTATION: verifier escalated to the State Trustee (Story 6.11, D-D). Escalation is a
+    // ROUTING/reassignment concern — there is NO `escalated` lifecycle state and this adds none.
+    // Identity from any state (reducer stays total); the write-path guard (verifier-decision-persist.ts:
+    // ClaimNotEscalatableError) restricts EMISSION to the pre-verdict window, and it must NOT auto-emit
+    // verifier_reviewing (contrast approve/deny). The actionable State-level queue stays 6.12/6.13.
+    case 'claim.verifier_escalated':
+      return state;
+
+    // ANNOTATION: verifier revised a prior SAME-outcome decision (Story 6.11, D-E). A dedicated identity
+    // annotation — NOT a re-emit of verifier_approved/denied; claim state is unchanged (cross-outcome
+    // reversal stays Story 6.16). Identity from any state (reducer stays total); the write path guards the
+    // post-verdict pre-freeze window + atomic supersession (verifier-decision-persist.ts). Correctness
+    // lives in the write path, never here.
+    case 'claim.verifier_decision_revised':
+      return state;
+
     // Cycle-freeze window opens for this claim (Story 6.13). Enters from a fresh
     // verifier approval OR when an appeal reversed a prior denial (re-enters approval).
     case 'claim.state_trustee_frozen':

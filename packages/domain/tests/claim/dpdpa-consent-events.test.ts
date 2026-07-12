@@ -38,9 +38,10 @@ const revokedBase = {
 describe('ClaimDpdpaConsentRecordedPayloadSchema (the 24th claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.dpdpa_consent_recorded');
-    // 6.9 owns the exact-count invariant: 25 = 23 (Story 6.8) + recorded (24th) + revoked (25th,
-    // code review).
-    expect(CLAIM_EVENT_TYPES).toHaveLength(25);
+    // The vocabulary grows as owner stories add annotation events: 25 = 23 (Story 6.8) + recorded
+    // (24th) + revoked (25th, code review); Story 6.11 added the 26th + 27th (claim.verifier_escalated
+    // + claim.verifier_decision_revised).
+    expect(CLAIM_EVENT_TYPES).toHaveLength(27);
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.dpdpa_consent_recorded']).toBe(
       ClaimDpdpaConsentRecordedPayloadSchema,
     );

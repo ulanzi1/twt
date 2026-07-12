@@ -72,6 +72,25 @@ export class ConflictError extends ApiError {
 }
 
 /**
+ * 409 — Story 6.11 (R5): the authenticated admin has no `users.display_name`, so their controlled
+ * staff-attribution snapshot cannot be resolved and adjudication is BLOCKED fail-closed BEFORE any
+ * event/decision row is written. NO fallback (never the email, UUID, role/district label, placeholder,
+ * or client input). The distinct machine code tells ops to provision the display name (via
+ * setAdminDisplayName / repo.updateDisplayName). A 409 (not 400) — the request is well-formed; the
+ * server-side account state is the blocker.
+ */
+export class AdminDisplayNameMissingError extends ApiError {
+  public constructor(public readonly actorId: string) {
+    super(
+      409,
+      'admin.display_name_missing',
+      'Your admin account has no display name configured; adjudication is blocked until it is provisioned.',
+      { actorId },
+    );
+  }
+}
+
+/**
  * 410 — the resource existed but is permanently gone. Story 3.11's data-export download uses this for
  * a one-time artifact already consumed (`data_export.consumed`) or past its 24h window
  * (`data_export.expired`) — a distinct signal from 404 (never existed) or 409 (not ready yet).

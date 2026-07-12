@@ -9,7 +9,8 @@
 //   · runtime 401 (unauthenticated) — the console read is human-actor + session gated (AC5);
 //   · cross-tenant no-leak — a Pariwar-A claim is not fetchable while scoped to Pariwar B;
 //   · the FOUR-STATE section vocabulary on a minimal claim (AC7) — empty (documents/peer/inspection),
-//     not_available_yet ((e)/(f)), not_evaluated (concealment) — the three are DISTINCT, never collapsed;
+//     empty ((e)/(f) — the 6.11 producer shipped, so no-records is `empty` not `not_available_yet`),
+//     not_evaluated (concealment) — the states are DISTINCT, never collapsed;
 //   · the AUDITED read (admin_verifier_console.read);
 //   · the bounded no-N+1 ceiling — assembleVerifierConsole stays within VERIFIER_CONSOLE_MAX_READS and
 //     the read count does NOT grow with document-row count (D9).
@@ -370,20 +371,156 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(packet.documentReview.status).toBe('empty');
     expect(packet.peerMesh.status).toBe('empty');
     expect(packet.groundInspection.status).toBe('empty');
-    // Sections (e)/(f) — the 6.11 producer has not shipped → `not_available_yet` (NOT empty).
-    expect(packet.priorVerifierComments.status).toBe('not_available_yet');
-    expect(packet.recentPrecedents.status).toBe('not_available_yet');
+    // Sections (e)/(f) — Story 6.11 SHIPPED the producer + flipped VERIFIER_DECISION_READ_MODEL_AVAILABLE,
+    // so a minimal claim with no decisions now returns `empty` (genuine no-records), NOT `not_available_yet`
+    // (the retired producer-absent state). `empty` ≠ `not_available_yet` — the four-state vocabulary holds.
+    expect(packet.priorVerifierComments.status).toBe('empty');
+    expect(packet.recentPrecedents.status).toBe('empty');
     // Concealment — the honest v1 posture, never a green/clear.
     expect(packet.concealment.status).toBe('not_evaluated');
     expect(packet.concealment.detailVisibility).toBe('indicator_only');
     // Validity is either present or a transient unavailable — never a crash, never `empty`.
     expect(['present', 'unavailable']).toContain(packet.validity.status);
-    // The three non-present states are DISTINCT values (never collapsed).
-    expect(packet.documentReview.status).not.toBe(packet.priorVerifierComments.status);
 
     // AUDITED read.
     const audits = td.auditSink.ofType('admin_verifier_console.read');
     expect(audits.some((a) => (a.context as { claim_case_id?: string })?.claim_case_id === claimCaseId)).toBe(true);
+  });
+
+  it('recentPrecedents is bounded to the latest 3, newest-first, excluding the current claim (SQL-bounded, not an in-memory full scan)', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+
+    // Resolve 5 OTHER claims in this Pariwar so there are more candidates than the recency cap.
+    const resolvedClaimIds: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const c = await seedClaim(pariwarId, deceased);
+      const scopeTx = await openScopeTx(deps, pariwarId);
+      try {
+        await claim.adjudicateClaim(scopeTx.client, {
+          claimCaseId: ids.claimId(c),
+          pariwarId: ids.pariwarId(pariwarId),
+          outcome: 'approved',
+          reasonCode: 'r8_90pct_met',
+          rationaleCiphertext: null,
+          actorId: randomUUID(),
+          actorDisplay: 'Seed Actor',
+          actor: 'operator',
+        });
+        await closeScopeTx(scopeTx, true);
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
+      resolvedClaimIds.push(c);
+    }
+    // Deterministic recency ordering — oldest (index 0) to newest (index 4) — independent of wall-clock
+    // timing between the sequential writes above.
+    const conn = await td.pool.connect();
+    try {
+      for (const [i, c] of resolvedClaimIds.entries()) {
+        await conn.query(`UPDATE claim_verifier_decisions SET decided_at = now() - ($1 || ' minutes')::interval WHERE claim_case_id = $2`, [String(5 - i), c]);
+      }
+    } finally {
+      conn.release();
+    }
+
+    const currentClaim = await seedClaim(pariwarId, deceased);
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const res = await client.inject({ method: 'GET', url: url(pariwarId, currentClaim) });
+    expect(res.statusCode).toBe(200);
+    const { packet } = res.json<{ packet: VerifierConsolePacket }>();
+    expect(packet.recentPrecedents.status).toBe('present');
+    const precedents = packet.recentPrecedents.status === 'present' ? packet.recentPrecedents.precedents : [];
+    expect(precedents).toHaveLength(3);
+    // Newest-first: the 3 most-recently-resolved of the 5 (indices 4, 3, 2 — the smallest "minutes ago").
+    expect(precedents.map((p) => p.claimCaseId)).toEqual([
+      resolvedClaimIds[4],
+      resolvedClaimIds[3],
+      resolvedClaimIds[2],
+    ]);
+  });
+
+  it('NULL rationale maps to "" in the full-history transcript (e) and to null in precedents (f) — never the reverse', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+
+    // A resolved claim with NO rationale at all (approved, non-`other` reason — rationale genuinely optional).
+    const resolvedClaimId = await seedClaim(pariwarId, deceased);
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      await claim.adjudicateClaim(scopeTx.client, {
+        claimCaseId: ids.claimId(resolvedClaimId),
+        pariwarId: ids.pariwarId(pariwarId),
+        outcome: 'approved',
+        reasonCode: 'r8_90pct_met',
+        rationaleCiphertext: null,
+        actorId: randomUUID(),
+        actorDisplay: 'No Rationale Actor',
+        actor: 'operator',
+      });
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+
+    // (e) — this claim's OWN transcript: the contract's `rationale` is non-nullable — NULL maps to ''.
+    const ownConsole = await client.inject({ method: 'GET', url: url(pariwarId, resolvedClaimId) });
+    const ownPacket = ownConsole.json<{ packet: VerifierConsolePacket }>().packet;
+    expect(ownPacket.priorVerifierComments.status).toBe('present');
+    const ownComments = ownPacket.priorVerifierComments.status === 'present' ? ownPacket.priorVerifierComments.comments : [];
+    expect(ownComments[0]!.rationale).toBe('');
+
+    // (f) — viewed as a PRECEDENT from a DIFFERENT claim: the contract's `rationale` is nullable — NULL
+    // stays null (never coerced to '').
+    const otherClaimId = await seedClaim(pariwarId, deceased);
+    const otherConsole = await client.inject({ method: 'GET', url: url(pariwarId, otherClaimId) });
+    const otherPacket = otherConsole.json<{ packet: VerifierConsolePacket }>().packet;
+    expect(otherPacket.recentPrecedents.status).toBe('present');
+    const precedents = otherPacket.recentPrecedents.status === 'present' ? otherPacket.recentPrecedents.precedents : [];
+    const match = precedents.find((p) => p.claimCaseId === resolvedClaimId)!;
+    expect(match.rationale).toBeNull();
+  });
+
+  it('recentPrecedents never leaks a DIFFERENT Pariwar\'s resolved decision (RLS + explicit pariwarId predicate)', async () => {
+    const pariwarA = randomUUID();
+    const pariwarB = randomUUID();
+    const deceasedA = await seedDeceasedMember(pariwarA, DISTRICT);
+    const deceasedB = await seedDeceasedMember(pariwarB, DISTRICT);
+
+    // Resolve a claim in Pariwar B — same district, same reason code/outcome shape as A would use.
+    const claimInB = await seedClaim(pariwarB, deceasedB);
+    const scopeTxB = await openScopeTx(deps, pariwarB);
+    try {
+      await claim.adjudicateClaim(scopeTxB.client, {
+        claimCaseId: ids.claimId(claimInB),
+        pariwarId: ids.pariwarId(pariwarB),
+        outcome: 'approved',
+        reasonCode: 'r8_90pct_met',
+        rationaleCiphertext: null,
+        actorId: randomUUID(),
+        actorDisplay: 'Pariwar B Actor',
+        actor: 'operator',
+      });
+      await closeScopeTx(scopeTxB, true);
+    } catch (err) {
+      await closeScopeTx(scopeTxB, false);
+      throw err;
+    }
+
+    // View a DIFFERENT, unresolved claim in Pariwar A — it has no resolved decisions of its OWN, so if
+    // Pariwar B's decision ever leaked across tenants, it would show up here as a false precedent.
+    const claimInA = await seedClaim(pariwarA, deceasedA);
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarA, 'district_admin', 'district', DISTRICT);
+    const res = await client.inject({ method: 'GET', url: url(pariwarA, claimInA) });
+    expect(res.statusCode).toBe(200);
+    const packet = res.json<{ packet: VerifierConsolePacket }>().packet;
+    expect(packet.recentPrecedents.status).toBe('empty');
   });
 
   it('read-only guarantee: opening AND refreshing the console appends ZERO claim.* events', async () => {
@@ -488,6 +625,13 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
       });
       await closeScopeTx(scopeTx, true);
       expect(packet.documentReview.status).toBe('unavailable'); // NOT empty — a failure ≠ "no records"
+      // Sections are isolated, never collapsed together (the four-state vocabulary discipline): a
+      // dependency failure in (b) does NOT drag (e)/(f) — which don't touch claimDocumentStorage at
+      // all — down to `unavailable` too. They correctly stay distinct from (b)'s failed state.
+      expect(packet.priorVerifierComments.status).not.toBe(packet.documentReview.status);
+      expect(packet.recentPrecedents.status).not.toBe(packet.documentReview.status);
+      expect(packet.priorVerifierComments.status).toBe('empty');
+      expect(packet.recentPrecedents.status).toBe('empty');
     } catch (err) {
       await closeScopeTx(scopeTx, false);
       throw err;

@@ -25,6 +25,10 @@ import {
   MemberValidityResponse,
   VerifierConsoleResponse,
   type VerifierConsoleResponse as VerifierConsole,
+  VerifierDecisionResponse,
+  type VerifierDecisionResponse as VerifierDecision,
+  type VerifierDecisionRequest as VerifierDecisionPayload,
+  type VerifierDecisionReviseRequest as VerifierDecisionRevisePayload,
   StepUpRequestResponse,
   StepUpVerifyResponse,
   ProvisionedPariwar,
@@ -716,4 +720,39 @@ export function getVerifierConsole(pariwarId: string, claimCaseId: string): Prom
     `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/verifier-console`,
     VerifierConsoleResponse,
   );
+}
+
+// ── Verifier adjudication WRITE surface (Story 6.11) ──────────────────────────
+// The FIRST verifier WRITE. Tenant-scoped under /p/:pariwarId/admin/claims/:claimCaseId/verifier-decision.
+// The client gate is only "is there a live session"; the REAL boundary is the server's human-actor chain
+// (claim.approve at the deceased's server-derived district). The request carries NO actor identity — the
+// server resolves + snapshots users.display_name (R5). A StepUpRequiredError (403, 'auth.step_up_required')
+// on the revise call is the signal to run the operator's elevation (requestStepUp/verifyStepUp), NOT a
+// hard error. On success the caller invalidates verifierConsoleKey so (e)/(f)/the audit trail refetch.
+
+const decisionBase = (pariwarId: string, claimCaseId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/verifier-decision`;
+
+/** POST an approve / deny / escalate decision (outcome in the body). */
+export function postVerifierDecision(
+  pariwarId: string,
+  claimCaseId: string,
+  body: VerifierDecisionPayload,
+): Promise<VerifierDecision> {
+  return apiFetch(decisionBase(pariwarId, claimCaseId), VerifierDecisionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST a same-outcome revision (reason/rationale correction; step-up-gated server-side). */
+export function reviseVerifierDecision(
+  pariwarId: string,
+  claimCaseId: string,
+  body: VerifierDecisionRevisePayload,
+): Promise<VerifierDecision> {
+  return apiFetch(`${decisionBase(pariwarId, claimCaseId)}/revise`, VerifierDecisionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

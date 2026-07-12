@@ -17,6 +17,7 @@ import { registerConvergenceRoutes } from './claims.convergence.routes.js';
 import { registerGroundInspectionRoutes } from './claims.ground-inspection.routes.js';
 import { registerHelplineClaimsRoutes } from './claims.helpline.routes.js';
 import { registerClaimsRoutes } from './claims.routes.js';
+import { registerVerificationDecisionRoutes } from './claims.verification-decision.routes.js';
 import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
@@ -28,4 +29,6 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerGroundInspectionRoutes(app, deps);
   // Story 6.10 — the READ-ONLY verifier-console bounded compound signals view (one district-gated GET).
   registerVerifierConsoleRoutes(app, deps);
+  // Story 6.11 — the verifier adjudication WRITE surface (approve/deny/escalate + step-up-gated revise).
+  registerVerificationDecisionRoutes(app, deps);
 }

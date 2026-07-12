@@ -11,17 +11,19 @@
 //   · the client query key isolates by pariwarId + claimCaseId (no cross-scope cache bleed — D8/AC3).
 
 import type { VerifierConsolePacket } from '@twt/contracts';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { verifierConsoleKey } from '../src/api/hooks.js';
+import { ApiError } from '../src/api/client.js';
 import {
   ScopeChrome,
   ScopeSwitcher,
   SignalsPanel,
   VerificationConsoleShell,
+  verifierConsoleEn as t,
 } from '../src/modules/claim-verification/index.js';
-import { verifierConsoleSwitchTarget } from '../src/routes/VerifierConsoleRoute.js';
+import { decisionErrorMessage, verifierConsoleSwitchTarget } from '../src/routes/VerifierConsoleRoute.js';
 
 const PRESENT_PACKET: VerifierConsolePacket = {
   claimCaseId: 'claim-1',
@@ -144,6 +146,29 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     expect(indicator.className).toContain('status-warn');
   });
 
+  it('(e)/(f) render semantic-verb audit-trail entries when present, not raw outcome/rationale markup (AC1/AC4)', () => {
+    const packet: VerifierConsolePacket = {
+      ...PRESENT_PACKET,
+      priorVerifierComments: {
+        status: 'present',
+        comments: [
+          { outcome: 'approved', reasonCode: 'r8_90pct_met', rationale: 'Meets threshold.', actorDisplay: 'Anita (District Admin)', decidedAt: '2026-07-11T00:00:00Z', claimCaseId: 'claim-1' },
+        ],
+      },
+      recentPrecedents: {
+        status: 'present',
+        precedents: [
+          { claimCaseId: 'claim-2', outcome: 'denied', reasonCode: 'concealment_flag_uphold', rationale: null, actorDisplay: null, decidedAt: '2026-07-10T00:00:00Z' },
+        ],
+      },
+    };
+    render(<SignalsPanel packet={packet} />);
+    expect(within(screen.getByTestId('section-prior-comments')).getByText(/Approved by/i)).toBeInTheDocument();
+    expect(within(screen.getByTestId('section-prior-comments')).getByTestId('audit-actor')).toHaveTextContent('Anita (District Admin)');
+    expect(within(screen.getByTestId('section-precedents')).getByText(/Denied by/i)).toBeInTheDocument();
+    expect(within(screen.getByTestId('section-precedents')).getByText(/Unattributed/i)).toBeInTheDocument();
+  });
+
   it('renders the three non-present states DISTINCTLY (never collapsed)', () => {
     const packet: VerifierConsolePacket = {
       ...PRESENT_PACKET,
@@ -207,5 +232,28 @@ describe('verifierConsoleSwitchTarget — D8 safe-switch navigation target (code
     const target = verifierConsoleSwitchTarget('pariwar-B');
     expect(Object.keys(target.params)).toEqual(['pariwarId']);
     expect(JSON.stringify(target)).not.toMatch(/claim/i);
+  });
+});
+
+describe('decisionErrorMessage — distinct submit-error messages (Review Finding)', () => {
+  it('step-up required → the step-up message', () => {
+    expect(decisionErrorMessage(new ApiError(403, 'auth.step_up_required', 'x'))).toBe(t.decision.stepUpRequired);
+  });
+
+  it('missing display name → the display-name message, not the generic fallback', () => {
+    expect(decisionErrorMessage(new ApiError(409, 'admin.display_name_missing', 'x'))).toBe(t.decision.displayNameMissing);
+  });
+
+  it.each(['verifier_decision.already_decided', 'verifier_decision.revision_conflict', 'verifier_decision.stream_conflict'])(
+    '%s → the stale-decision/conflict message',
+    (code) => {
+      expect(decisionErrorMessage(new ApiError(409, code, 'x'))).toBe(t.decision.decisionConflict);
+    },
+  );
+
+  it('anything else (forbidden, transient 500, a plain Error) → the generic fallback', () => {
+    expect(decisionErrorMessage(new ApiError(403, 'auth.forbidden', 'x'))).toBe(t.decision.submitError);
+    expect(decisionErrorMessage(new ApiError(500, 'request.internal', 'x'))).toBe(t.decision.submitError);
+    expect(decisionErrorMessage(new Error('boom'))).toBe(t.decision.submitError);
   });
 });

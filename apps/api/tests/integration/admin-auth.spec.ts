@@ -435,4 +435,10 @@ describe.skipIf(!hasDatabase)('admin auth end-to-end (Task 4)', () => {
     });
     expect(cloned.statusCode).toBe(401);
   });
+
+  it('setAdminDisplayName rejects an empty/whitespace-only name with a typed error, not a bare Error (Story 6.11 R5)', async () => {
+    await expect(service.setAdminDisplayName(deps, userId, '   ')).rejects.toMatchObject({
+      name: 'InvalidDisplayNameError',
+    });
+  });
 });

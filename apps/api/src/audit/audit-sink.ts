@@ -254,7 +254,24 @@ export type AuthAuditEventType =
   // adminValidityRead precedent — a ₹50L-stakes decision-support surface leaves a trail of who
   // read which claim's signals). Context is NON-PII: claim_case_id + district + deceased_member_id —
   // NEVER a decrypted identity/extracted field, note, caption, or any signal payload.
-  | 'admin_verifier_console.read';
+  | 'admin_verifier_console.read'
+  // ── Verifier adjudication surface (Story 6.11, FR-42 / UX-DR40 / Epic 6) ──────
+  // The FIRST verifier WRITE — approve/deny/escalate/revise on the decision strip. Post-commit SINK
+  // lines (the durable records are the claim.verifier_* event + the claim_verifier_decisions row).
+  // Context is NON-PII: claim_case_id + district + outcome + reason_code + the acting actor — NEVER
+  // the encrypted rationale (D-G — the rationale is never on an audit line, log, index, or filter).
+  //   verifier_approved — a verifier approved the claim (→ verifier_approved).
+  //   verifier_denied   — a verifier denied the claim (→ denied).
+  //   verifier_escalated — a verifier escalated to the State Trustee (identity annotation; no state change).
+  //   decision_revised  — a verifier revised a prior same-outcome decision (reason/rationale correction).
+  //   decision_rejected — an approve/deny/escalate/revise attempt was rejected by a domain guard (state
+  //     window, reason/outcome mismatch, revision conflict) — no event/row written; recorded so a failed
+  //     adjudication attempt is still audited (AC10 — fail-closed, AND audited, not just fail-closed).
+  | 'admin_claim.verifier_approved'
+  | 'admin_claim.verifier_denied'
+  | 'admin_claim.verifier_escalated'
+  | 'admin_claim.decision_revised'
+  | 'admin_claim.decision_rejected';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

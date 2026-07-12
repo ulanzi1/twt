@@ -141,6 +141,15 @@ export const CLAIM_GROUND_INSPECTION_FIELD_CLASS = 'ground_inspection';
 export const CLAIM_NOMINEE_BANK_FIELD_CLASS = 'claim_nominee_bank';
 
 /**
+ * The verifier-decision Tier-1 field class (Story 6.11, D-G). The adjudication route encrypts the brief
+ * verifier rationale free-text (`rationale_ciphertext`) before the domain writer, and the verifier
+ * console (the authorized READ) decrypts it under the SAME (pariwarId, fieldClass). Arbitrary verifier
+ * free-text is PII-capable (it can reference member facts). Matches the `piiColumn(1, 'verifier_decision')`
+ * column annotation on `claim_verifier_decisions`. NEVER in an event payload / audit line / index / filter.
+ */
+export const CLAIM_VERIFIER_DECISION_FIELD_CLASS = 'verifier_decision';
+
+/**
  * The claim-document Tier-1 field class (Story 6.5). The OCR-parity job encrypts the extracted
  * death-certificate identity fields (`deceased_name_ciphertext`, `dob_ciphertext`,
  * `date_of_death_ciphertext`, `issuing_authority_ciphertext`, `certificate_number_ciphertext`)

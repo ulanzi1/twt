@@ -37,3 +37,10 @@ export * from './nominee-bank-read.js';
 // the 6.11 decision-read-model dependency contract (VerifierDecisionRecord) + the pure ordering /
 // latest-3-exclude-current helpers. Producer-gated: returns `not_available_yet` until Story 6.11 (D6).
 export * from './verifier-console-read.js';
+// Story 6.11 — verifier DECISION-METADATA vocabulary: the bounded reason-code + outcome pgEnums/tuples
+// and the SINGLE outcome↔reason-code compatibility source of truth (REASON_CODE_OUTCOME_COMPAT +
+// isReasonCodeValidForOutcome), consumed by BOTH the contract superRefine and the domain write-path (AC8).
+export * from './verifier-decision.js';
+// Story 6.11 — the decision read model producer queries (getPriorVerifierDecisions /
+// getRecentInScopePrecedents) + the atomic adjudication/supersession writers + write-path guards.
+export * from './verifier-decision-persist.js';

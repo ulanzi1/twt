@@ -25,4 +25,16 @@ export {
   type ScopeSwitcherProps,
   type PariwarOption,
 } from './ScopeChrome.js';
+// Story 6.11 — the verifier decision strip + reason-code dropdown + audit-trail entry (the FIRST WRITE).
+export {
+  VerificationDecisionStrip,
+  type VerificationDecisionStripProps,
+  type DecisionSubmit,
+} from './VerificationDecisionStrip.js';
+export { ReasonCodeDropdown, type ReasonCodeDropdownProps } from './ReasonCodeDropdown.js';
+export {
+  AuditTrail,
+  AuditTrailEntry,
+  type AuditTrailEntryData,
+} from './AuditTrailEntry.js';
 export { verifierConsoleEn } from './i18n-en.js';

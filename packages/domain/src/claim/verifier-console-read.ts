@@ -24,7 +24,12 @@
 // (`empty`), a state distinct from `not_available_yet` (producer absent) and `unavailable` (an existing
 // producer failed). NEVER collapse the three.
 
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+
+import type { Db } from '../db.js';
 import type { ClaimId, PariwarId } from '../ids/index.js';
+import { clampLimit } from '../pagination.js';
+import { claimVerifierDecisions, type ClaimVerifierDecisionRow } from '../schema/claim_verifier_decisions.js';
 
 /**
  * The 6.11 decision read model record — the consumer shape 6.10 pins (D6). A single resolved verifier
@@ -47,7 +52,7 @@ export interface VerifierDecisionRecord {
  * return `not_available_yet` (AC7). Flipping this to `true` is part of Story 6.11 (along with the real
  * query), and the pure helpers here become the ordering/selection the producer relies on.
  */
-export const VERIFIER_DECISION_READ_MODEL_AVAILABLE = false as boolean;
+export const VERIFIER_DECISION_READ_MODEL_AVAILABLE = true as boolean;
 
 /** The recent-precedents cap (AC2f — "latest 3"). */
 export const RECENT_PRECEDENTS_LIMIT = 3;
@@ -99,45 +104,81 @@ export function selectRecentInScopePrecedents(
 }
 
 /**
- * The full ordered prior-verifier-decision transcript for the current claim (section (e)). Until Story
- * 6.11 ships the decision read model this returns `not_available_yet` (AC7 — the producer does not
- * exist; an empty array must later mean "producer exists, genuinely no records"). NEVER a spinner/error.
- * The `db`/`pariwarId`/`claimCaseId` parameters pin the signature 6.11 fills in (scope-safe, tenant
- * predicate) with `orderPriorDecisions` over the fetched rows.
+ * Map a stored decision row → the 6.10-pinned `VerifierDecisionRecord`. The `rationale` carries the
+ * ciphertext AS STORED (the 6.10 ciphertext-as-stored rule — the apps/api route decrypts it AFTER
+ * authorization, never this accessor). NULL-ciphertext → `''` (the pinned record type is non-null,
+ * Task 3 NULL-mapping rule); the route's fail-soft decrypt likewise maps a failure to `''` for (e).
+ * `actorDisplay` is the stored decision-time SNAPSHOT (AC7) — surfaced verbatim, never re-resolved.
  */
-export function getPriorVerifierDecisions(
-  db: unknown,
-  pariwarId: PariwarId,
-  claimCaseId: ClaimId,
-): Promise<PriorVerifierDecisionsResult> {
-  // Story 6.11 wires the real query here:
-  //   const rows = await <decision read model query>(db, pariwarId, claimCaseId);
-  //   return rows.length ? { status: 'present', decisions: orderPriorDecisions(rows) } : { status: 'empty' };
-  void db;
-  void pariwarId;
-  void claimCaseId;
-  if (!VERIFIER_DECISION_READ_MODEL_AVAILABLE) return Promise.resolve({ status: 'not_available_yet' });
-  // Unreachable until 6.11 flips the flag AND wires the query above.
-  throw new Error('[verifier-console] decision read model marked available but no producer wired (Story 6.11)');
+function toDecisionRecord(row: ClaimVerifierDecisionRow): VerifierDecisionRecord {
+  return {
+    claimCaseId: row.claimCaseId,
+    pariwarId: row.pariwarId,
+    outcome: row.outcome,
+    reasonCode: row.reasonCode,
+    rationale: row.rationaleCiphertext ?? '',
+    actorDisplay: row.actorDisplay,
+    decidedAt: row.decidedAt,
+  };
 }
 
 /**
- * The latest three recent in-scope resolved precedents (section (f)) — same Pariwar, resolved outcome
- * only, excluding the current claim, latest 3 by decision timestamp (`selectRecentInScopePrecedents`).
- * Until Story 6.11 ships the decision read model this returns `not_available_yet` (AC7), NOT `[]`.
+ * The full ordered prior-verifier-decision transcript for the current claim (section (e), AC4/AC6).
+ * Scope-safe (RLS + explicit `pariwar_id` + `claim_case_id`). Returns the COMPLETE history — including
+ * escalations AND superseded rows (with their linkage) — so the audit trail is complete (AC6);
+ * `orderPriorDecisions` imposes the deterministic oldest→newest ordering. Rationale is ciphertext AS
+ * STORED (route decrypts). `present` when ≥1 row; `empty` (genuinely no records) — NEVER
+ * `not_available_yet` now that the producer ships (the 6.10 four-state vocabulary; empty ≠ not_available_yet).
  */
-export function getRecentInScopePrecedents(
-  db: unknown,
+export async function getPriorVerifierDecisions(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<PriorVerifierDecisionsResult> {
+  const rows = await db
+    .select()
+    .from(claimVerifierDecisions)
+    .where(
+      and(
+        eq(claimVerifierDecisions.pariwarId, pariwarId),
+        eq(claimVerifierDecisions.claimCaseId, claimCaseId),
+      ),
+    );
+  if (rows.length === 0) return { status: 'empty' };
+  return { status: 'present', decisions: orderPriorDecisions(rows.map(toDecisionRecord)) };
+}
+
+/**
+ * The latest three recent in-scope RESOLVED precedents (section (f), AC4/AC6) — same Pariwar, resolved
+ * approve/deny only (`outcome IN ('approved','denied')` AND `superseded_at IS NULL`; EXCLUDES escalated
+ * + superseded rows, AC6), excluding the current claim, latest 3 by decision timestamp
+ * (`selectRecentInScopePrecedents`). Scope-safe (RLS + explicit `pariwar_id`). `present` when ≥1;
+ * `empty` when genuinely none — NEVER `not_available_yet` now that the producer ships.
+ */
+export async function getRecentInScopePrecedents(
+  db: Db,
   pariwarId: PariwarId,
   currentClaimCaseId: ClaimId,
 ): Promise<RecentInScopePrecedentsResult> {
-  // Story 6.11 wires the real query here (same-Pariwar, resolved-only, RLS + explicit pariwar_id):
-  //   const rows = await <decision read model precedents query>(db, pariwarId);
-  //   const precedents = selectRecentInScopePrecedents(rows, { excludeClaimCaseId: currentClaimCaseId });
-  //   return precedents.length ? { status: 'present', precedents } : { status: 'empty' };
-  void db;
-  void pariwarId;
-  void currentClaimCaseId;
-  if (!VERIFIER_DECISION_READ_MODEL_AVAILABLE) return Promise.resolve({ status: 'not_available_yet' });
-  throw new Error('[verifier-console] decision read model marked available but no producer wired (Story 6.11)');
+  // Bounded at the SQL level (ordered to match `selectRecentInScopePrecedents`'s own tiebreak) rather
+  // than pulling every resolved decision for the whole Pariwar into memory. The current claim contributes
+  // AT MOST one candidate row (the partial-unique "one live decision per claim" invariant), so LIMIT+1
+  // always leaves the full top-`RECENT_PRECEDENTS_LIMIT` window intact after excluding it below.
+  const rows = await db
+    .select()
+    .from(claimVerifierDecisions)
+    .where(
+      and(
+        eq(claimVerifierDecisions.pariwarId, pariwarId),
+        inArray(claimVerifierDecisions.outcome, ['approved', 'denied']),
+        isNull(claimVerifierDecisions.supersededAt),
+      ),
+    )
+    .orderBy(desc(claimVerifierDecisions.decidedAt), desc(claimVerifierDecisions.claimCaseId))
+    .limit(clampLimit(RECENT_PRECEDENTS_LIMIT + 1, { default: RECENT_PRECEDENTS_LIMIT + 1, cap: 200 }));
+  const precedents = selectRecentInScopePrecedents(rows.map(toDecisionRecord), {
+    excludeClaimCaseId: currentClaimCaseId,
+  });
+  if (precedents.length === 0) return { status: 'empty' };
+  return { status: 'present', precedents };
 }

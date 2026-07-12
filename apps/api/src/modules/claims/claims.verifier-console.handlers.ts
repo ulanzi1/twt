@@ -52,6 +52,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { decryptClaimDocumentField } from './claim-document-crypto.js';
 import { decryptGroundInspectionField } from './ground-inspection-crypto.js';
+import { decryptVerifierRationale } from './verifier-decision-crypto.js';
 
 /** The verifier-console READ key (Story 6.10, catalog v13) — gates the route (district dimension). */
 export const VERIFIER_CONSOLE_KEY = 'claim.verify';
@@ -174,8 +175,8 @@ export async function assembleVerifierConsole(
   const groundInspection = await assembleGroundInspection(deps, ctx, claimCaseId, reads);
 
   // ── (e)/(f) prior comments + recent precedents — `not_available_yet` until Story 6.11 (D6) ───────
-  const priorVerifierComments = await assemblePriorComments(ctx, claimCaseId);
-  const recentPrecedents = await assembleRecentPrecedents(ctx, claimCaseId);
+  const priorVerifierComments = await assemblePriorComments(deps, ctx, claimCaseId);
+  const recentPrecedents = await assembleRecentPrecedents(deps, ctx, claimCaseId);
 
   const packet: VerifierConsolePacket = {
     claimCaseId: ctx.claimCaseId,
@@ -356,6 +357,7 @@ async function assembleGroundInspection(
 }
 
 async function assemblePriorComments(
+  deps: AppDeps,
   ctx: VerifierConsoleContext,
   claimCaseId: ids.ClaimId,
 ): Promise<PriorVerifierCommentsSection> {
@@ -365,14 +367,20 @@ async function assemblePriorComments(
     if (result.status === 'empty') return { status: 'empty' };
     return {
       status: 'present',
-      comments: result.decisions.map((d) => ({
-        outcome: d.outcome,
-        reasonCode: d.reasonCode,
-        rationale: d.rationale,
-        actorDisplay: d.actorDisplay,
-        decidedAt: d.decidedAt.toISOString(),
-        claimCaseId: d.claimCaseId,
-      })),
+      // The domain read returns the rationale AS STORED ciphertext (NULL → ''); decrypt here AFTER
+      // authorization (D-G — never the accessor). Section (e)'s contract is non-null: NULL/'' AND a
+      // fail-soft decrypt failure both map to '' (Task 3 NULL-mapping rule).
+      comments: await Promise.all(
+        result.decisions.map(async (d) => ({
+          outcome: d.outcome,
+          reasonCode: d.reasonCode,
+          rationale:
+            d.rationale === '' ? '' : (await safeDecrypt(() => decryptVerifierRationale(d.rationale, ctx.pariwarId, deps.encryption), ctx, 'verifier_decision.rationale')) ?? '',
+          actorDisplay: d.actorDisplay,
+          decidedAt: d.decidedAt.toISOString(),
+          claimCaseId: d.claimCaseId,
+        })),
+      ),
     };
   } catch (err) {
     ctx.log?.warn({ err, claimCaseId: ctx.claimCaseId }, 'verifier-console: prior-comments section unavailable');
@@ -381,6 +389,7 @@ async function assemblePriorComments(
 }
 
 async function assembleRecentPrecedents(
+  deps: AppDeps,
   ctx: VerifierConsoleContext,
   claimCaseId: ids.ClaimId,
 ): Promise<RecentPrecedentsSection> {
@@ -390,14 +399,19 @@ async function assembleRecentPrecedents(
     if (result.status === 'empty') return { status: 'empty' };
     return {
       status: 'present',
-      precedents: result.precedents.map((d) => ({
-        claimCaseId: d.claimCaseId,
-        outcome: d.outcome,
-        reasonCode: d.reasonCode,
-        rationale: d.rationale,
-        actorDisplay: d.actorDisplay,
-        decidedAt: d.decidedAt.toISOString(),
-      })),
+      // Decrypt AFTER authorization (D-G). Section (f)'s contract is nullable: NULL/'' AND a fail-soft
+      // decrypt failure map to `null` (Task 3 NULL-mapping rule — (f) may pass null through).
+      precedents: await Promise.all(
+        result.precedents.map(async (d) => ({
+          claimCaseId: d.claimCaseId,
+          outcome: d.outcome,
+          reasonCode: d.reasonCode,
+          rationale:
+            d.rationale === '' ? null : (await safeDecrypt(() => decryptVerifierRationale(d.rationale, ctx.pariwarId, deps.encryption), ctx, 'verifier_decision.rationale')),
+          actorDisplay: d.actorDisplay,
+          decidedAt: d.decidedAt.toISOString(),
+        })),
+      ),
     };
   } catch (err) {
     ctx.log?.warn({ err, claimCaseId: ctx.claimCaseId }, 'verifier-console: recent-precedents section unavailable');

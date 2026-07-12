@@ -52,6 +52,12 @@ declare module 'fastify' {
      *  resolveValue reads it (the client NEVER submits the authz district). `null` when the deceased has
      *  no resolvable posting district → the district gate fails closed (the D3a no-district exception). */
     verifierConsoleDistrict?: string | null;
+    /** Story 6.11 — the deceased member's server-derived latest posting district, resolved by the
+     *  `resolveDecisionDistrict` preHandler so `requirePermissionHook`'s (synchronous) district
+     *  resolveValue reads it for the `claim.approve` gate (the client NEVER submits the authz
+     *  district — the 6.10 pattern). `null` when the deceased has no resolvable posting district →
+     *  the district gate fails closed (403). */
+    decisionDistrict?: string | null;
   }
 
   // @fastify/session merges this `Session` interface into the session data object.

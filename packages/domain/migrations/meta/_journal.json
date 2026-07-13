@@ -435,6 +435,13 @@
       "when": 1785987600000,
       "tag": "0061_shepherd-contact-e164-check",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1786074000000,
+      "tag": "0062_state-trustee-cycle-freeze",
+      "breakpoints": true
     }
   ]
 }

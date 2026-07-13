@@ -410,6 +410,39 @@ export function useReviseVerifierDecision(pariwarId: string, claimCaseId: string
   });
 }
 
+// ── State-Trustee cycle-freeze surface (Story 6.13) — the FIRST state_trustee-facing surface. ──
+// The two-bucket pending list + per-claim decision + the step-up-gated bulk commit. On any write the
+// pending list is invalidated so the buckets re-read the just-changed state.
+
+export const cycleFreezePendingKey = (pariwarId: string) => ['cycle-freeze-pending', pariwarId] as const;
+
+/** The two-bucket pending list (ready-to-freeze + escalated) for a Pariwar. */
+export function useCycleFreezePending(pariwarId: string) {
+  return useQuery({
+    queryKey: cycleFreezePendingKey(pariwarId),
+    queryFn: () => api.getCycleFreezePending(pariwarId),
+  });
+}
+
+/** POST a per-claim decision (approve/deny/route/resolve); refetches the pending list on success. */
+export function usePostCycleFreezeDecision(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postCycleFreezeDecision>[1]) =>
+      api.postCycleFreezeDecision(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: cycleFreezePendingKey(pariwarId) }),
+  });
+}
+
+/** POST the step-up-gated bulk commit; refetches the pending list on success. */
+export function useCommitCycleFreeze(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.commitCycleFreeze>[1]) => api.commitCycleFreeze(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: cycleFreezePendingKey(pariwarId) }),
+  });
+}
+
 // ── Telegram config surface (Story 5.5) — the per-Pariwar Telegram Bot config singleton. ──
 
 export const telegramConfigKey = (pariwarId: string) => ['telegram-config', pariwarId] as const;

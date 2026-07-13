@@ -370,6 +370,22 @@ authenticated mobile app (`apps/mobile`, EAS build is a no-op →
 `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth
 on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 6.13 disposition (declaration affirmed, no new row):** the State-Trustee
+cycle-freeze (bulk-approval) surface is an **admin-only** surface — the new/modified
+files are the `apps/admin` bulk-approval page + route
+(`apps/admin/src/modules/cycle-freeze/*`, `apps/admin/src/routes/CycleFreezeRoute.tsx`,
+`router.tsx`), the `apps/api` cycle-freeze routes/handlers, the `@twt/domain`
+write-paths/read-model/schema, the `@twt/contracts` DTOs, and the `@twt/jobs`
+pool-spawn trigger seam. **NONE touch `apps/mobile` or the public `apps/public`
+Astro surface** — there is no member-facing form, interaction, or page-weight change.
+The step-up gate on the commit is admin operator friction (a State Trustee attesting a
+₹50L-cohort bulk approval — the exact class of high-trust admin action the Story 5.9 /
+1.9 admin step-up was declared to cover), not member-facing friction, and mirrors the
+6.11 verifier-revise step-up already affirmed as admin-side. Zero member-facing friction
+introduced; ledger reviewed, no new row warranted. The **page-weight baseline is
+unchanged**: `apps/admin` is not a page-weight-gated surface (the ceilings the gate has
+teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

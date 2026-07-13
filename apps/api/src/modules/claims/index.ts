@@ -20,6 +20,7 @@ import { registerClaimsRoutes } from './claims.routes.js';
 import { registerVerificationDecisionRoutes } from './claims.verification-decision.routes.js';
 import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.js';
 import { registerShepherdRoutes } from './claims.shepherd.routes.js';
+import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -34,4 +35,8 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerVerificationDecisionRoutes(app, deps);
   // Story 6.12 — the R6 manual shepherd reassignment WRITE surface (claim.assign_shepherd, district-gated).
   registerShepherdRoutes(app, deps);
+  // Story 6.13 — the State-Trustee cycle-freeze (bulk-approval) surface: the two-bucket pending list +
+  // per-claim decision + the step-up-gated bulk commit (cycle.freeze, pariwar-gated; the FIRST
+  // state_trustee-facing surface). The commit fires the POST-COMMIT pool-spawn trigger seam (AC6).
+  registerCycleFreezeRoutes(app, deps);
 }

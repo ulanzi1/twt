@@ -53,3 +53,14 @@ export * from './shepherd-assign-persist.js';
 // Story 6.12 — the LIVE-shepherd read (getLiveShepherd) consumed by the member card (AC3) + the admin
 // verifier-console shepherd section (AC6). Scope-safe; returns the display + contact snapshot or null.
 export * from './shepherd-read.js';
+// Story 6.13 — State-Trustee cycle-freeze DECISION-METADATA vocabulary: the phase/outcome/reason-code
+// pgEnums/tuples + the trustee-scoped compat/required rules (TRUSTEE_REASON_CODE_OUTCOME_COMPAT +
+// isTrusteeReasonCodeValidForOutcome + trusteeReasonCodeRequiredForOutcome), consumed by BOTH the contract
+// superRefine and the domain write-path (D-F). Trustee-scoped names (the 6.11 verifier-decision.ts owns the
+// generic names).
+export * from './state-trustee-decision.js';
+// Story 6.13 — the four atomic cycle-freeze write paths (voteOnFrozenClaim / routeToR9 / resolveEscalation /
+// commitCycleFreeze — DB-only, the trigger is the handler's job), the compound pending read model, and the
+// typed write-path guards. Claim-scoped (not top-level).
+export * from './state-trustee-decision-persist.js';
+export * from './cycle-freeze-read.js';

@@ -80,3 +80,9 @@ export * from './claim-verifier-decisions-rls.js';
 // claims-rls). No write-rejection trigger — the assignment row is the ASSIGNMENT-METADATA authority, not
 // a state cache (claim state stays on claims.current_state, derived from the claim.shepherd_assigned event).
 export * from './claim-shepherd-assignments-rls.js';
+// Story 6.13 — claim_state_trustee_decisions + cycle_freeze_commits tenant-isolation policies (NOT
+// cross-readable; mirror claims-rls). No write-rejection trigger — the decision/commit rows are the
+// DECISION-METADATA authorities, not state caches (claim state stays on claims.current_state, derived from
+// the paired claim.state_trustee_* / claim.approved / claim.verifier_* events).
+export * from './claim-state-trustee-decisions-rls.js';
+export * from './cycle-freeze-commits-rls.js';

@@ -29,6 +29,15 @@ import {
   type VerifierDecisionResponse as VerifierDecision,
   type VerifierDecisionRequest as VerifierDecisionPayload,
   type VerifierDecisionReviseRequest as VerifierDecisionRevisePayload,
+  // Story 6.13 — the State-Trustee cycle-freeze surface (pending list + decision + commit).
+  CycleFreezePendingResponse,
+  CycleFreezeDecisionResponse,
+  CycleFreezeCommitResponse,
+  type CycleFreezePendingResponse as CycleFreezePending,
+  type CycleFreezeDecisionResponse as CycleFreezeDecision,
+  type CycleFreezeCommitResponse as CycleFreezeCommit,
+  type CycleFreezeDecisionRequest as CycleFreezeDecisionPayload,
+  type CycleFreezeCommitRequest as CycleFreezeCommitPayload,
   StepUpRequestResponse,
   StepUpVerifyResponse,
   ProvisionedPariwar,
@@ -752,6 +761,42 @@ export function reviseVerifierDecision(
   body: VerifierDecisionRevisePayload,
 ): Promise<VerifierDecision> {
   return apiFetch(`${decisionBase(pariwarId, claimCaseId)}/revise`, VerifierDecisionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── State-Trustee cycle-freeze surface (Story 6.13) ───────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/cycle-freeze/*. cycle.freeze is a per-Pariwar grant, so the
+// CLIENT gate is only "is there a live session"; the REAL boundary is the server permission hook. The
+// commit is step-up-gated server-side — a StepUpRequiredError (403, 'auth.step_up_required') is the signal
+// to run the trustee's elevation (requestStepUp/verifyStepUp with 'cycle_freeze_commit'), NOT a hard error.
+
+const cycleFreezeBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/cycle-freeze`;
+
+/** GET the two-bucket pending list (ready-to-freeze + escalated). */
+export function getCycleFreezePending(pariwarId: string): Promise<CycleFreezePending> {
+  return apiFetch(`${cycleFreezeBase(pariwarId)}/pending`, CycleFreezePendingResponse);
+}
+
+/** POST a per-claim decision (approve | deny | route_to_r9 | resolve_escalation; claim_case_id in body). */
+export function postCycleFreezeDecision(
+  pariwarId: string,
+  body: CycleFreezeDecisionPayload,
+): Promise<CycleFreezeDecision> {
+  return apiFetch(`${cycleFreezeBase(pariwarId)}/decision`, CycleFreezeDecisionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST the step-up-gated bulk commit (client-generated commit_id idempotency key). */
+export function commitCycleFreeze(
+  pariwarId: string,
+  body: CycleFreezeCommitPayload,
+): Promise<CycleFreezeCommit> {
+  return apiFetch(`${cycleFreezeBase(pariwarId)}/commit`, CycleFreezeCommitResponse, {
     method: 'POST',
     body: JSON.stringify(body),
   });

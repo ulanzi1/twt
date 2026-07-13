@@ -83,6 +83,9 @@ const CLAIM_VERIFY = permissionKey('claim.verify');
 // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key (district-dimension; distinct from
 // claim.approve/claim.verify — routing the family's contact grants no adjudication power, AC6).
 const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
+// Story 6.13 (D-B) — the State-Trustee cycle-freeze (bulk-approval) WRITE key (pariwar-dimension; the FIRST
+// state_trustee-facing surface, gated on pariwar_admin-as-Trustee-Lite pending the Epic-3 geo-tree resolver).
+const CYCLE_FREEZE = permissionKey('cycle.freeze');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -140,6 +143,13 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // the claim.correct_nominee_bank / claim.override_ground_inspection shape). Checked at the deceased's
       // server-derived district; grants no adjudication power (AC6).
       CLAIM_ASSIGN_SHEPHERD,
+      // Story 6.13 (D-B) — the State-Trustee cycle-freeze (bulk-approval) key. A PARIWAR-WIDE bulk action
+      // (checked at `dimension: 'pariwar'` = scopeTx.pariwarId), the exact validity.invalidate_cache /
+      // pariwar.configure_channels ceiling rationale (a `pariwar`-ceiling-or-broader role). v1 actor =
+      // pariwar_admin acting as Trustee-Lite; direct state_trustee gating is DEFERRED to Epic 3 (see
+      // permissions.ts — a `state`-ceiling grant cannot satisfy a pariwar check pre-Epic-3). No inert
+      // state_trustee grant is seeded.
+      CYCLE_FREEZE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.

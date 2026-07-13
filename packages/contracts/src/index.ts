@@ -107,6 +107,12 @@ export * from './degraded-mode/index.js';
 // (the member claim routes are the EXPECTED diff for this story).
 export * from './claims/index.js';
 
+// Story 6.13 — the FIRST pools contract: the injectable pool-spawn TRIGGER SEAM payload
+// (PoolSpawnTriggerPayload). The cycle-freeze commit fires it POST-COMMIT into a v1 stub port; Epic 7's
+// Pool Engine is the live consumer. Internal seam — NO `.openapi()` path, openapi/v1.yaml stays
+// byte-identical (same posture as notifications/ + alerts/).
+export * from './pools/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

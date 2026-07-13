@@ -62,6 +62,17 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     pathSubstrings: ['shepherd/reassign'],
     owner: 'Story 6.12',
   },
+  {
+    // Story 6.13 — the State-Trustee cycle-freeze (bulk-approval) surface: the pending list + per-claim
+    // decision + the step-up-gated commit. Every route MUST compose the human-actor chain
+    // [requireAdminSession, scopeResolutionHook, requirePermissionHook(cycle.freeze, pariwar)] — the FIRST
+    // state_trustee-facing adjudication surface, extending the Story 6.10 AC5 human-attribution invariant
+    // to the trustee layer (AC7). `cycle-freeze` matches the pending / decision / commit paths. NO
+    // system-decided actor may reach any cycle-freeze adjudication endpoint.
+    file: 'apps/api/src/modules/claims/claims.cycle-freeze.routes.ts',
+    pathSubstrings: ['cycle-freeze'],
+    owner: 'Story 6.13',
+  },
 ];
 
 function main(): void {

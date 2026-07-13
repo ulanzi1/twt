@@ -443,3 +443,22 @@ export const verifierDecisionId = uuidBrand('VerifierDecisionId');
 export type ShepherdAssignmentId = Brand<'ShepherdAssignmentId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ShepherdAssignmentId`. */
 export const shepherdAssignmentId = uuidBrand('ShepherdAssignmentId');
+
+// ── State-Trustee decision id + cycle-freeze commit id (Story 6.13, Task 2) ────
+// `TrusteeDecisionId` is the per-row address of one State-Trustee cycle-freeze decision
+// (`claim_state_trustee_decisions.decision_id`) — the DECISION-METADATA authority row (AC0). A claim
+// accrues MANY rows across the flow (a frozen vote, then a commit; an escalation resolution; a routing
+// exclusion) — one live row per phase (D-F). `CycleFreezeCommitId` is the durable commit record's id
+// (`cycle_freeze_commits.commit_id`) — CLIENT-GENERATED (the AC5 idempotency key that lets a client
+// safely retry a commit) and the Epic-7 pool-spawn handoff anchor. Both are UUID row addresses, so they
+// reuse the shared `uuidBrand` validator; `claim_case_id` / `pariwar_id` reuse `ClaimId` / `PariwarId`.
+
+/** Per-row address of a State-Trustee decision (`claim_state_trustee_decisions.decision_id`). */
+export type TrusteeDecisionId = Brand<'TrusteeDecisionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `TrusteeDecisionId`. */
+export const trusteeDecisionId = uuidBrand('TrusteeDecisionId');
+
+/** The durable cycle-freeze commit record's id (`cycle_freeze_commits.commit_id`); client-generated (AC5). */
+export type CycleFreezeCommitId = Brand<'CycleFreezeCommitId'>;
+/** Smart constructor: validates UUID shape, returns a branded `CycleFreezeCommitId`. */
+export const cycleFreezeCommitId = uuidBrand('CycleFreezeCommitId');

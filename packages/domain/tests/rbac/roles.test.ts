@@ -148,6 +148,19 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
   });
 
+  it('Story 6.13 (D-B) — cycle.freeze is granted ONLY to pariwar_admin (+ super_admin), NOT state_trustee', () => {
+    const KEY = 'cycle.freeze';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // The story's "State Trustee" actor DEFERS to Epic 3 — a `state`-ceiling grant cannot satisfy a
+    // pariwar-dimension check pre-Epic-3 (the 6.7 block_admin / 6.10 state_trustee deferral precedent). v1
+    // gates on pariwar_admin acting as Trustee-Lite; NO inert state_trustee grant is seeded.
+    expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+  });
+
   it('Story 6.3 — claim.file is granted ONLY to helpline_operator (+ super_admin)', () => {
     const KEY = 'claim.file';
     const holders = defaultRoleBundles

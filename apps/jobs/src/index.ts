@@ -40,3 +40,15 @@ export {
   type ShepherdAssignedNotificationHook,
   type CapturingShepherdAssignedHook,
 } from './shepherd-notification-hook.js';
+
+// Story 6.13 — the pool-spawn TRIGGER seam (AC6). Exported here (the apps/api-facing barrel; pure, no
+// pg-boss/GCS pulled in) so the cycle-freeze commit handler fires it POST-COMMIT — the FIRST live emitter
+// of the Epic-7 pool-spawn trigger, with NO live Pool Engine consumer yet (the dispatch()/shepherd-hook
+// discipline). Never rolls back the committed freeze (a throw is swallowed).
+export {
+  consolePoolSpawnTrigger,
+  createCapturingPoolSpawnTrigger,
+  createThrowingPoolSpawnTrigger,
+  type PoolSpawnTrigger,
+  type CapturingPoolSpawnTrigger,
+} from './pool-spawn-trigger.js';

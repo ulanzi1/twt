@@ -37,3 +37,9 @@ export * from './verification-decision.js';
 // <ShepherdContactCard>: a discriminated union (assigned → display_name + role_label + contact snapshot |
 // not_assigned). The E.164 wire regex is re-declared (no @twt/domain import).
 export * from './shepherd.js';
+// Story 6.13 — the State-Trustee cycle-freeze (bulk-approval) DTOs (the FIRST state_trustee WRITE surface):
+// the two-bucket pending-list read model (CycleFreezePendingResponse), the per-claim decision request
+// (approve | deny | route_to_r9 | resolve_escalation, with the D-F required-reason-code superRefine), and
+// the client-generated-idempotency-key bulk commit request/response. The trustee outcome/reason-code wire
+// enums are re-declared value-aligned with the @twt/domain pgEnums (the browser-bundle rule; lockstep-pinned).
+export * from './cycle-freeze.js';

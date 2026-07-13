@@ -192,6 +192,16 @@ export * from './claim_verifier_decisions.js';
 // projection of claim state; state stays on the claim.shepherd_assigned IDENTITY-annotation event.
 // Tenant-isolated (mirror claims). Also lands `users.contact_phone` / `users.contact_whatsapp` (R1).
 export * from './claim_shepherd_assignments.js';
+// Story 6.13 — State-Trustee cycle-freeze DECISION-METADATA store: `claim_state_trustee_decisions` (ONE
+// row per PHASE — frozen_vote | commit | escalation_resolution | routing — outcome/reason_code + Tier-1
+// rationale ciphertext + actor_display snapshot; partial-unique one-live-per-(claim,phase) invariant). The
+// DECISION-METADATA authority (AC0) — NOT a projection of claim state; state stays on the paired
+// claim.state_trustee_* / claim.approved / claim.verifier_* events. Tenant-isolated (mirror claims).
+export * from './claim_state_trustee_decisions.js';
+// Story 6.13 — the durable cycle-freeze COMMIT record: `cycle_freeze_commits` (client-generated commit_id
+// idempotency key + actor_display snapshot + committed claim-id set + trigger_delivered flag). The AC5
+// audit/idempotency anchor + the Epic-7 pool-spawn (AC6) handoff payload. Tenant-isolated (mirror claims).
+export * from './cycle_freeze_commits.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

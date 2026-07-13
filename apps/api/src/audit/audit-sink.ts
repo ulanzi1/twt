@@ -280,7 +280,22 @@ export type AuthAuditEventType =
   //   shepherd_assigned   — a shepherd was assigned (the automatic first assignment, reason `initial`).
   //   shepherd_reassigned — a shepherd was reassigned (manual R6 `reassignment` or AR-61 `fallback`).
   | 'admin_claim.shepherd_assigned'
-  | 'admin_claim.shepherd_reassigned';
+  | 'admin_claim.shepherd_reassigned'
+  // ── State-Trustee cycle-freeze surface (Story 6.13, D-B / Epic 6) ──────────────
+  // The FIRST state_trustee-facing surface (v1 actor = pariwar_admin-as-Trustee-Lite). Post-commit SINK
+  // lines (the durable records are the claim.state_trustee_* / claim.approved / claim.verifier_* events +
+  // the claim_state_trustee_decisions rows + the cycle_freeze_commits record). Context is NON-PII:
+  // claim_case_id (or commit_id) + outcome/phase + reason_code — NEVER the rationale (D-G/AC10).
+  //   vote      — a per-claim frozen vote (approve → state_trustee_approved / deny → denied).
+  //   route     — a durable route-to-R9 exclusion (metadata only; no lifecycle change).
+  //   escalation_resolved — a verifier escalation resolved to verifier_approved / denied.
+  //   committed — the bulk claim.approved commit (the cycle-boundary milestone Epic 7 keys off).
+  //   rejected  — a vote/route/resolve/commit attempt rejected by a domain guard (fail-closed AND audited).
+  | 'admin_cycle_freeze.vote'
+  | 'admin_cycle_freeze.route'
+  | 'admin_cycle_freeze.escalation_resolved'
+  | 'admin_cycle_freeze.committed'
+  | 'admin_cycle_freeze.rejected';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

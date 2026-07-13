@@ -150,6 +150,15 @@ export const CLAIM_NOMINEE_BANK_FIELD_CLASS = 'claim_nominee_bank';
 export const CLAIM_VERIFIER_DECISION_FIELD_CLASS = 'verifier_decision';
 
 /**
+ * The State-Trustee-decision Tier-1 field class (Story 6.13, D-G). The cycle-freeze routes encrypt the
+ * brief trustee rationale free-text (`rationale_ciphertext`) before the domain writer, and the authorized
+ * pending-list read decrypts it under the SAME (pariwarId, fieldClass). Arbitrary trustee free-text is
+ * PII-capable. Matches the `piiColumn(1, 'state_trustee_decision')` annotation on
+ * `claim_state_trustee_decisions`. NEVER in an event payload / audit line / index / filter.
+ */
+export const CLAIM_STATE_TRUSTEE_DECISION_FIELD_CLASS = 'state_trustee_decision';
+
+/**
  * The claim-document Tier-1 field class (Story 6.5). The OCR-parity job encrypts the extracted
  * death-certificate identity fields (`deceased_name_ciphertext`, `dob_ciphertext`,
  * `date_of_death_ciphertext`, `issuing_authority_ciphertext`, `certificate_number_ciphertext`)

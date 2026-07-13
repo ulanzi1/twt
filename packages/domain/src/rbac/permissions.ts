@@ -155,7 +155,23 @@ export function permissionKey(value: string): PermissionKey {
 // district (the 6.10/6.11 pattern). DISTINCT from `claim.approve` + `claim.verify` (being able to route
 // the family's contact ≠ adjudicating the ₹50L claim — AC6; the "don't reuse a write key for a distinct
 // action" lesson). Granted to `district_admin` + `pariwar_admin` + `super_admin` (see roles.ts).
-export const PERMISSION_CATALOG_VERSION = 14 as const;
+// Bumped 14 → 15 at Story 6.13 (added ONE key): `cycle.freeze` — the State-Trustee cycle-freeze
+// (bulk-approval) WRITE key gating the FIRST state_trustee-facing surface (GET/POST
+// …/admin/cycle-freeze/{pending,decision,commit}). A PARIWAR-WIDE bulk action (the freeze commits the
+// Pariwar's pending cycle) → checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId, resolvable
+// TODAY — the validity.invalidate_cache / pariwar.configure_channels pariwar-wide-key precedent), granted
+// to `pariwar_admin` + `super_admin`.
+// ── D-B RECONCILIATION — direct `state_trustee` authorization DEFERRED to Epic 3 ───────────────
+// The story's actor is the "State Trustee", but a `state`-ceiling role CANNOT satisfy a `pariwar`-dimension
+// check (`scopeWithinCeiling('pariwar','state')` is false) NOR hold a `pariwar` grant, and there is no
+// Pariwar→state geo data pre-Epic-3 (no `pariwars` base table with a state column; the geo tree is Epic 3).
+// So v1 gates on `pariwar_admin` acting as Trustee-Lite; direct `state_trustee` gating is DEFERRED to the
+// Epic-3 geo-tree resolver — the EXACT 6.7 block_admin + 6.10 state_trustee deferral precedent. This is a
+// DELIBERATE deferral, NOT an oversight (the 6.12 review lesson: a deliberate authz deferral must read as
+// deliberate). NO inert state_trustee grant is seeded. ACCEPTANCE CONDITION: direct state_trustee gating
+// may be enabled only when the authorization layer can resolve a state grant through verified
+// state→Pariwar containment while preserving the role's `scopeCeiling: 'state'`.
+export const PERMISSION_CATALOG_VERSION = 15 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -262,6 +278,15 @@ export const SEED_PERMISSION_KEYS = [
   // automatic assignment (AC1) + AR-61 fallback (AC4) are `actor: 'system'` and need no key; only the
   // human-initiated correction path does. Granted to `district_admin` + `pariwar_admin` + `super_admin`.
   'claim.assign_shepherd',
+  // Story 6.13 (D-B) — the State-Trustee cycle-freeze (bulk-approval) WRITE key. Gates the FIRST
+  // state_trustee-facing surface (GET/POST …/admin/cycle-freeze/{pending,decision,commit}). Checked at
+  // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the validity.invalidate_cache /
+  // pariwar.configure_channels pariwar-wide-key precedent; NO server-derived district). Granted to
+  // `pariwar_admin` + `super_admin`. Direct `state_trustee` authorization is DEFERRED to the Epic-3
+  // geo-tree resolver (see the version-bump note above — a `state`-ceiling grant cannot satisfy a
+  // pariwar-dimension check pre-Epic-3; the 6.7/6.10 deferral precedent). v1 actor = pariwar_admin-as-
+  // Trustee-Lite. A DELIBERATE deferral, documented so it never reads as an oversight.
+  'cycle.freeze',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

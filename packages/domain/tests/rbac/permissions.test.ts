@@ -41,13 +41,17 @@ describe('permissionKey smart constructor', () => {
 });
 
 describe('PERMISSION_CATALOG', () => {
-  it('is versioned and seeded with exactly the 22 grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(14); // Story 6.12 bump +1 (claim.assign_shepherd; 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+  it('is versioned and seeded with exactly the grounded keys', () => {
+    expect(PERMISSION_CATALOG_VERSION).toBe(15); // Story 6.13 bump +1 (cycle.freeze; 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(23);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(24);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
+  });
+
+  it('includes the Story 6.13 cycle-freeze WRITE key (cycle.freeze — the first state_trustee surface)', () => {
+    expect(isCatalogKey('cycle.freeze')).toBe(true);
   });
 
   it('includes the Story 2.6 T&C keys (tc.publish, tc.approve)', () => {

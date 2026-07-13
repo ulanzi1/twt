@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-router';
 
 import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
+import { CycleFreezeRoute } from './routes/CycleFreezeRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
@@ -108,6 +109,13 @@ const verifierConsoleRoute = createRoute({
   component: VerifierConsoleRoute,
 });
 
+// Story 6.13 — the tenant-scoped State-Trustee cycle-freeze (bulk-approval) surface.
+const cycleFreezeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/cycle-freeze',
+  component: CycleFreezeRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -120,6 +128,7 @@ const routeTree = rootRoute.addChildren([
   helplineRoute,
   groundInspectionRoute,
   verifierConsoleRoute,
+  cycleFreezeRoute,
 ]);
 
 export const router = createRouter({ routeTree });

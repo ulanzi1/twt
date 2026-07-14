@@ -161,6 +161,18 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
   });
 
+  it('Story 6.14 (D-B) — claim.r9_vote is granted ONLY to pariwar_admin (+ super_admin), NOT state_trustee', () => {
+    const KEY = 'claim.r9_vote';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // Same Trustee-Lite posture as cycle.freeze — direct state_trustee gating DEFERRED to the Epic-3 geo-tree
+    // resolver; NO inert state_trustee grant is seeded.
+    expect((bundleForRole('state_trustee')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+  });
+
   it('Story 6.3 — claim.file is granted ONLY to helpline_operator (+ super_admin)', () => {
     const KEY = 'claim.file';
     const holders = defaultRoleBundles

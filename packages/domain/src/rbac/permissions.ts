@@ -33,12 +33,20 @@ import type { Brand } from '../ids/index.js';
 export type PermissionKey = Brand<'PermissionKey'>;
 
 /**
- * The canonical `<resource>.<action>` matcher: lowercase letters/underscores,
+ * The canonical `<resource>.<action>` matcher: lowercase letters/DIGITS/underscores,
  * a single dot, no leading/trailing/double dots. Mirrors the `_common/errors.ts`
  * `<domain>.<action>` namespacing convention and the contracts-layer regex
  * (packages/contracts/src/rbac/permissions.ts) — keep the two in lockstep.
+ *
+ * ⚠ Story 6.14 WIDENED this to allow DIGITS (`[a-z0-9_]`, was `[a-z_]`). The R9
+ * panel-voting key `claim.r9_vote` (D-B/AC6) carries a rule number (`r9`) that the
+ * original letters-only pattern rejected — the FIRST permission key to reference a
+ * numbered niyamavali rule. Digits were always legal in the ADJACENT vocabularies
+ * (reason codes like `r9_special_case`, clause ids like `niy.special-death.r9`), so
+ * this closes an accidental gap rather than loosening a deliberate constraint. Case,
+ * the single-dot shape, and the no-leading/trailing/double-dot rules are unchanged.
  */
-export const PERMISSION_KEY_REGEX = /^[a-z_]+\.[a-z_]+$/;
+export const PERMISSION_KEY_REGEX = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 
 /** Thrown when the permission-key smart constructor receives a malformed string. */
 export class InvalidPermissionKeyError extends Error {
@@ -171,7 +179,17 @@ export function permissionKey(value: string): PermissionKey {
 // deliberate). NO inert state_trustee grant is seeded. ACCEPTANCE CONDITION: direct state_trustee gating
 // may be enabled only when the authorization layer can resolve a state grant through verified
 // state→Pariwar containment while preserving the role's `scopeCeiling: 'state'`.
-export const PERMISSION_CATALOG_VERSION = 15 as const;
+// Bumped 15 → 16 at Story 6.14 (D-B; added ONE key): `claim.r9_vote` — the R9 special-case panel-voting
+// WRITE key gating the R9 voting surface (GET/POST …/admin/r9-voting/*). Checked at `dimension: 'pariwar'`
+// (value = scopeTx.pariwarId — the cycle.freeze / validity.invalidate_cache pariwar-wide-key precedent; NO
+// server-derived district). Granted to `pariwar_admin` + `super_admin`. Direct `state_trustee` authorization
+// is DEFERRED to the Epic-3 geo-tree resolver (a `state`-ceiling grant cannot satisfy a pariwar-dimension
+// check pre-Epic-3 — the 6.13 D-B / 6.7 block_admin deferral precedent); v1 actor = pariwar_admin-as-
+// Trustee-Lite. A DELIBERATE deferral, documented so it never reads as an oversight. NO inert state_trustee
+// grant is seeded. The FINALIZE route is ADDITIONALLY step-up-gated (`r9_finalize`) — a route concern, not a
+// permission key. The panel-membership eligibility check (every panel actor must hold THIS key) is the
+// domain write-path's `assertPanelAuthorized`, distinct from the requester's own route gate.
+export const PERMISSION_CATALOG_VERSION = 16 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -287,6 +305,14 @@ export const SEED_PERMISSION_KEYS = [
   // pariwar-dimension check pre-Epic-3; the 6.7/6.10 deferral precedent). v1 actor = pariwar_admin-as-
   // Trustee-Lite. A DELIBERATE deferral, documented so it never reads as an oversight.
   'cycle.freeze',
+  // Story 6.14 (D-B) — the R9 special-case panel-voting WRITE key. Gates the R9 voting surface
+  // (GET/POST …/admin/r9-voting/{queue,:claimCaseId,open,vote,finalize,cancel,votes-by-trustee}). Checked at
+  // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze pariwar-wide-key precedent; NO
+  // server-derived district). Granted to `pariwar_admin` + `super_admin`. Direct `state_trustee` gating is
+  // DEFERRED to Epic 3 (the 6.13 D-B Trustee-Lite precedent). This key is ALSO the panel-membership
+  // eligibility credential: openR9VotingSession validates EVERY panel_actor_ids member holds it @ pariwar
+  // (assertPanelAuthorized). The finalize route ADDS an r9_finalize step-up (a route concern, not a key).
+  'claim.r9_vote',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

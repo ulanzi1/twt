@@ -30,21 +30,30 @@ describe('permissionKey smart constructor', () => {
     'claim..approve', // double dot
     'claim.approved ', // trailing space
     '', // empty
+    'claim/r9_vote', // slash instead of dot
+    'claim.r9/vote', // slash within the action segment
+    'claim.r١_vote', // Arabic-Indic digit one (U+0661) lookalike for '1' — not ASCII [0-9]
+    'claim.r９_vote', // fullwidth digit nine (U+FF19) lookalike for '9' — not ASCII [0-9]
+    '.r9_vote', // leading separator (empty resource) — the Story 6.14 digit-widening didn't loosen this
+    'claim.r9_vote.', // trailing separator (empty action)
   ])('rejects malformed key %j with InvalidPermissionKeyError', (bad) => {
     expect(() => permissionKey(bad)).toThrow(InvalidPermissionKeyError);
   });
 
   it('the regex is the canonical <resource>.<action> matcher', () => {
     expect(PERMISSION_KEY_REGEX.test('member.suspend')).toBe(true);
+    // Story 6.14 — digits are legal (the R9 key carries a rule number). Regression guard against a re-narrowing.
+    expect(PERMISSION_KEY_REGEX.test('claim.r9_vote')).toBe(true);
+    expect(permissionKey('claim.r9_vote')).toBe('claim.r9_vote');
     expect(PERMISSION_KEY_REGEX.test('member.suspended.now')).toBe(false);
   });
 });
 
 describe('PERMISSION_CATALOG', () => {
   it('is versioned and seeded with exactly the grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(15); // Story 6.13 bump +1 (cycle.freeze; 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+    expect(PERMISSION_CATALOG_VERSION).toBe(16); // Story 6.14 bump +1 (claim.r9_vote; 15 at 6.13, 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(24);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(25);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -52,6 +61,10 @@ describe('PERMISSION_CATALOG', () => {
 
   it('includes the Story 6.13 cycle-freeze WRITE key (cycle.freeze — the first state_trustee surface)', () => {
     expect(isCatalogKey('cycle.freeze')).toBe(true);
+  });
+
+  it('includes the Story 6.14 R9 panel-voting WRITE key (claim.r9_vote)', () => {
+    expect(isCatalogKey('claim.r9_vote')).toBe(true);
   });
 
   it('includes the Story 2.6 T&C keys (tc.publish, tc.approve)', () => {

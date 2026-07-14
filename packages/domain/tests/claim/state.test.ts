@@ -162,6 +162,8 @@ describe('claim lifecycle reducer — transitions table stays in sync with reduc
   // asserts reduce() agrees, so a future edit to one side without the other fails
   // loudly instead of silently drifting.
   const decisionForTarget = (event: string, to: ClaimLifecycleState): unknown => {
+    // Story 6.14 — claim.r9_outcome branches on payload.outcome (approved → state_trustee_approved; denied → denied).
+    if (event === 'claim.r9_outcome') return { outcome: to === 'denied' ? 'denied' : 'approved' };
     if (!event.endsWith('_reviewed')) return {};
     if (to === 'reversed') return { decision: 'reversed' };
     if (to === 'denied') return { decision: 'upheld' };

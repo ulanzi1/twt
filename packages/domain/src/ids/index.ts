@@ -462,3 +462,21 @@ export const trusteeDecisionId = uuidBrand('TrusteeDecisionId');
 export type CycleFreezeCommitId = Brand<'CycleFreezeCommitId'>;
 /** Smart constructor: validates UUID shape, returns a branded `CycleFreezeCommitId`. */
 export const cycleFreezeCommitId = uuidBrand('CycleFreezeCommitId');
+
+// ── R9 special-case voting ids (Story 6.14, Task 2) ────────────────────────────
+// `R9VotingSessionId` is the per-row address of one R9 voting panel session
+// (`claim_r9_voting_sessions.session_id`) — the panel + clause-snapshot + outcome anchor (D-D). At most
+// one non-superseded session per claim (open OR finalized). `R9VoteId` is the per-row address of one
+// individual R9 vote (`claim_r9_votes.vote_id`) — one live vote per panelist per session, revisable (each
+// revision supersedes the prior via `supersedes_vote_id`) until finalize. Both are UUID row addresses, so
+// they reuse the shared `uuidBrand` validator; `claim_case_id` / `pariwar_id` reuse `ClaimId` / `PariwarId`.
+
+/** Per-row address of an R9 voting session (`claim_r9_voting_sessions.session_id`). */
+export type R9VotingSessionId = Brand<'R9VotingSessionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `R9VotingSessionId`. */
+export const r9VotingSessionId = uuidBrand('R9VotingSessionId');
+
+/** Per-row address of an individual R9 vote (`claim_r9_votes.vote_id`). */
+export type R9VoteId = Brand<'R9VoteId'>;
+/** Smart constructor: validates UUID shape, returns a branded `R9VoteId`. */
+export const r9VoteId = uuidBrand('R9VoteId');

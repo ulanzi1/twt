@@ -151,7 +151,7 @@ components:
         - self
     PermissionKey:
       type: string
-      pattern: ^[a-z_]+\.[a-z_]+$
+      pattern: ^[a-z0-9_]+\.[a-z0-9_]+$
     PermissionCatalog:
       type: object
       properties:
@@ -162,7 +162,7 @@ components:
           type: array
           items:
             type: string
-            pattern: ^[a-z_]+\.[a-z_]+$
+            pattern: ^[a-z0-9_]+\.[a-z0-9_]+$
       required:
         - catalogVersion
         - keys
@@ -189,7 +189,7 @@ components:
           type: array
           items:
             type: string
-            pattern: ^[a-z_]+\.[a-z_]+$
+            pattern: ^[a-z0-9_]+\.[a-z0-9_]+$
         scopeCeiling:
           type: string
           enum: *a1

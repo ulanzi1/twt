@@ -39,6 +39,11 @@ export const STATE_TRUSTEE_DECISION_PHASES = [
   'commit',
   'escalation_resolution',
   'routing',
+  // Story 6.14 (AC4) — the R9 panel outcome slot. `finalizeR9Outcome` writes ONE live `r9_outcome` row per
+  // claim into the trustee transcript alongside the paired claim.r9_outcome event + the session-outcome row,
+  // so the R9 resolution is queryable on the same decision surface as the freeze/vote/commit/routing phases.
+  // Added to the `state_trustee_decision_phase` pgEnum via migration 0064 (ALTER TYPE ADD VALUE).
+  'r9_outcome',
 ] as const;
 export const stateTrusteeDecisionPhaseEnum = pgEnum(
   'state_trustee_decision_phase',
@@ -74,6 +79,13 @@ export const STATE_TRUSTEE_REASON_CODES = [
   'concealment_upheld', // a concealment flag was reviewed and upheld → deny
   // Route-to-R9 family — the trustee judged this an R9 special-case for panel voting (Story 6.14).
   'r9_special_case',
+  // R9 panel-outcome family (Story 6.14 AC4, code review 2026-07-14) — the `phase='r9_outcome'` decision row
+  // `finalizeR9Outcome` writes on a panel DENIAL. Distinct from the deny-family codes above (those are a
+  // single trustee's administrative-review grounds; this is a PANEL VOTE outcome — the per-voter rationale
+  // already lives on each `claim_r9_votes` row, AC3). Keeps this writer consistent with the D-F "reason code
+  // required for denied" rule every other trustee-decision writer enforces via `assertReasonCode`.
+  // Added to the `state_trustee_reason_code` pgEnum via migration 0065 (ALTER TYPE ADD VALUE).
+  'r9_panel_denied',
   // Any-outcome (deny/route) escape hatch — mandatory free-text rationale.
   'other',
 ] as const;
@@ -98,6 +110,7 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   documents_insufficient: ['denied'],
   concealment_upheld: ['denied'],
   r9_special_case: ['routed_to_r9'],
+  r9_panel_denied: ['denied'],
   other: ['denied', 'routed_to_r9'],
 };
 

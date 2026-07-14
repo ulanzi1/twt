@@ -21,6 +21,7 @@ import { registerVerificationDecisionRoutes } from './claims.verification-decisi
 import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.js';
 import { registerShepherdRoutes } from './claims.shepherd.routes.js';
 import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
+import { registerR9VotingRoutes } from './claims.r9-voting.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -39,4 +40,8 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   // per-claim decision + the step-up-gated bulk commit (cycle.freeze, pariwar-gated; the FIRST
   // state_trustee-facing surface). The commit fires the POST-COMMIT pool-spawn trigger seam (AC6).
   registerCycleFreezeRoutes(app, deps);
+  // Story 6.14 — the R9 special-case voting panel surface: the queue + per-claim panel + open/vote/finalize/
+  // cancel + votes-by-trustee (claim.r9_vote, pariwar-gated; finalize additionally r9_finalize step-up-gated).
+  // The CONSUMER end of 6.13's routeToR9 parking seam; finalize is the sole lifecycle-changer (claim.r9_outcome).
+  registerR9VotingRoutes(app, deps);
 }

@@ -442,6 +442,41 @@
       "when": 1786074000000,
       "tag": "0062_state-trustee-cycle-freeze",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1786160400000,
+      "tag": "0063_claim-r9-voting",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1786246800000,
+      "tag": "0064_r9-outcome-trustee-phase",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1786333200000,
+      "tag": "0065_r9-panel-denied-reason-code",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1786419600000,
+      "tag": "0066_r9-clause-version-fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1786506000000,
+      "tag": "0067_r9-session-finalizer-and-tally-checks",
+      "breakpoints": true
     }
   ]
 }

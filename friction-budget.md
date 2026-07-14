@@ -386,6 +386,39 @@ introduced; ledger reviewed, no new row warranted. The **page-weight baseline is
 unchanged**: `apps/admin` is not a page-weight-gated surface (the ceilings the gate has
 teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch).
 
+**Story 6.14 disposition (declaration affirmed, no new row):** the R9 special-case
+voting panel surface is an **admin-only** (State-Trustee) surface — the new/modified
+files are the `apps/admin` R9 voting page + route
+(`apps/admin/src/modules/r9-voting/*`, `apps/admin/src/routes/R9VotingRoute.tsx`,
+`router.tsx`), the `apps/api` r9-voting routes/handlers/crypto, the `@twt/domain`
+event/reducer/write-paths/read-models/schema (+ migrations 0063/0064), the
+`@twt/contracts` DTOs, and the `claim.r9_vote` RBAC key. **NONE touch `apps/mobile`
+or the public `apps/public` Astro surface** — there is no member-facing form,
+interaction, or page-weight change. The step-up gate on FINALIZE is admin operator
+friction (a State Trustee attesting a ₹50L-stakes R9 outcome — the exact class of
+high-trust admin action the Story 5.9 / 1.9 admin step-up was declared to cover, and
+the 6.13 cycle-commit step-up already affirmed as admin-side), not member-facing
+friction. Zero member-facing friction introduced; ledger reviewed, no new row
+warranted. The **page-weight baseline is unchanged**: `apps/admin` is not a
+page-weight-gated surface (the ceilings the gate has teeth on cover the PUBLIC
+`apps/public` Astro surface, which this story does not touch).
+
+**AR-61 discharge-by-reference (AC12).** Story 6.14 IS on the epics.md:2280 AR-61
+cross-cutting staff-fallback list (`6.2, 6.3, 6.5, 6.6, 6.7, 6.10, 6.11, 6.12, 6.14,
+6.16`), and AR-61's own rule is that Story 0.7's fallback-handler ledger is
+**referenced rather than re-implemented per-story**. R9 voting is a State-Trustee
+PANEL action (not a member-facing intake node), so its R9-specific "staff-fallback"
+is the CONCRETE panel/quorum model this story lands: an immutable panel roster
+captured + authorized at open (AC2), a quorum (`⌊N/2⌋+1` of the panel) required to
+finalize (AC4), the outcome computed against the panel size `N` from that fixed
+roster, and the cancel/re-open correction path for a wrong-or-unavailable panel
+(AC5). Trustee-unavailability is thus a panel-composition/quorum concern handled by
+that model, NOT a member-facing intake fallback handler. The true multi-trustee panel
++ separation-of-duties (opener≠finalizer, a distinct minimum-panel-size rule) is an
+Epic-3 geo-tree hardening, DEFERRED + noted. Discharged **by reference** to Story 0.7's
+ledger — recorded here so the AR-61 line reads as discharged, not omitted (the
+6.12/6.13 deferral-legibility lesson).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

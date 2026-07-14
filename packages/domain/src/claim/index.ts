@@ -64,3 +64,12 @@ export * from './state-trustee-decision.js';
 // typed write-path guards. Claim-scoped (not top-level).
 export * from './state-trustee-decision-persist.js';
 export * from './cycle-freeze-read.js';
+// Story 6.14 — R9 special-case voting: the bounded vocabulary (vote / voting_requirement / session-outcome
+// pgEnums + tuples), the allowed-clause set (R9_VOTING_CLAUSE_IDS + isR9VotingClauseId), and the PURE,
+// DATA-driven derivations (deriveVotingRequirement / r9QuorumFor / computeR9Outcome — panel-size denominator).
+export * from './r9-voting.js';
+// Story 6.14 — the four atomic R9 voting write paths (openR9VotingSession / castR9Vote / finalizeR9Outcome /
+// cancelR9VotingSession — advisory-locked per claim; finalize is the sole lifecycle-changer via
+// projectClaimState) + the queue/panel/votes-by-trustee read models + the typed write-path guards.
+export * from './r9-voting-persist.js';
+export * from './r9-voting-read.js';

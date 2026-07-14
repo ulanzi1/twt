@@ -38,6 +38,22 @@ import {
   type CycleFreezeCommitResponse as CycleFreezeCommit,
   type CycleFreezeDecisionRequest as CycleFreezeDecisionPayload,
   type CycleFreezeCommitRequest as CycleFreezeCommitPayload,
+  // Story 6.14 — the R9 special-case voting surface DTOs.
+  R9QueueResponse,
+  R9PanelResponse,
+  R9SessionResponse,
+  R9VoteResponse,
+  R9FinalizeResponse,
+  R9VotesByTrusteeResponse,
+  type R9QueueResponse as R9Queue,
+  type R9PanelResponse as R9Panel,
+  type R9SessionResponse as R9Session,
+  type R9VoteResponse as R9VoteResult,
+  type R9FinalizeResponse as R9Finalize,
+  type R9VotesByTrusteeResponse as R9VotesByTrustee,
+  type R9OpenSessionRequest as R9OpenPayload,
+  type R9VoteRequest as R9VotePayload,
+  type R9CancelRequest as R9CancelPayload,
   StepUpRequestResponse,
   StepUpVerifyResponse,
   ProvisionedPariwar,
@@ -109,6 +125,13 @@ export class ApiError extends Error {
   public get isForbidden(): boolean {
     return this.status === 403;
   }
+}
+
+/** Render a caught error (typically from a React Query mutation/query) as a short user-facing string. */
+export function errorMessage(error: unknown): string | undefined {
+  if (!error) return undefined;
+  if (error instanceof ApiError) return `${error.code}: ${error.message}`;
+  return error instanceof Error ? error.message : 'Something went wrong.';
 }
 
 interface ErrorEnvelope {
@@ -800,4 +823,64 @@ export function commitCycleFreeze(
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+// ── R9 special-case voting surface (Story 6.14) ───────────────────────────────
+// Tenant-scoped under /p/:pariwarId/admin/r9-voting/*. claim.r9_vote is a per-Pariwar grant, so the REAL
+// boundary is the server permission hook; the FINALIZE call is step-up-gated ('r9_finalize') — a 403
+// 'auth.step_up_required' is the signal to elevate, NOT a hard error (the cycle-freeze commit precedent).
+
+const r9Base = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/r9-voting`;
+
+/** GET the R9 voting queue (claims routed to R9 awaiting/undergoing panel voting). */
+export function getR9Queue(pariwarId: string): Promise<R9Queue> {
+  return apiFetch(`${r9Base(pariwarId)}/queue`, R9QueueResponse);
+}
+
+/** GET the per-claim panel model (session + immutable roster + live votes + tally). */
+export function getR9Panel(pariwarId: string, claimCaseId: string): Promise<R9Panel> {
+  return apiFetch(`${r9Base(pariwarId)}/${encodeURIComponent(claimCaseId)}`, R9PanelResponse);
+}
+
+/** POST open an R9 voting session (clause selection + immutable panel roster). */
+export function openR9Session(pariwarId: string, claimCaseId: string, body: R9OpenPayload): Promise<R9Session> {
+  return apiFetch(`${r9Base(pariwarId)}/${encodeURIComponent(claimCaseId)}/open`, R9SessionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST cast/revise a vote (rationale required ≤500 chars). */
+export function castR9Vote(pariwarId: string, claimCaseId: string, body: R9VotePayload): Promise<R9VoteResult> {
+  return apiFetch(`${r9Base(pariwarId)}/${encodeURIComponent(claimCaseId)}/vote`, R9VoteResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST finalize the panel outcome (step-up-gated 'r9_finalize'). */
+export function finalizeR9(pariwarId: string, claimCaseId: string): Promise<R9Finalize> {
+  return apiFetch(`${r9Base(pariwarId)}/${encodeURIComponent(claimCaseId)}/finalize`, R9FinalizeResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/** POST cancel/correct a session (reason-code + rationale required). */
+export function cancelR9Session(pariwarId: string, claimCaseId: string, body: R9CancelPayload): Promise<R9Session> {
+  return apiFetch(`${r9Base(pariwarId)}/${encodeURIComponent(claimCaseId)}/cancel`, R9SessionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET the votes-by-trustee transcript (LIVE + superseded votes bound to session/panel/rule identity). */
+export function getR9VotesByTrustee(
+  pariwarId: string,
+  actorId: string,
+  sinceDays?: number,
+): Promise<R9VotesByTrustee> {
+  const qs = new URLSearchParams({ actorId });
+  if (sinceDays !== undefined) qs.set('sinceDays', String(sinceDays));
+  return apiFetch(`${r9Base(pariwarId)}/votes-by-trustee?${qs.toString()}`, R9VotesByTrusteeResponse);
 }

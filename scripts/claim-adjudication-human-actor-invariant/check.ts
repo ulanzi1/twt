@@ -73,6 +73,17 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     pathSubstrings: ['cycle-freeze'],
     owner: 'Story 6.13',
   },
+  {
+    // Story 6.14 — the R9 special-case voting panel surface: the queue + per-claim panel + open/vote/finalize/
+    // cancel + votes-by-trustee. Every route MUST compose the human-actor chain [requireAdminSession,
+    // scopeResolutionHook, requirePermissionHook(claim.r9_vote, pariwar)] — the CONSUMER end of the 6.13
+    // routeToR9 seam + the FIRST claim-flow read of the niyamavali registry. The finalize route ADDS an
+    // r9_finalize step-up AFTER the permission hook (an extra hook, not a machine actor). NO system-decided
+    // actor may reach any R9 voting endpoint. `r9-voting` matches all seven paths.
+    file: 'apps/api/src/modules/claims/claims.r9-voting.routes.ts',
+    pathSubstrings: ['r9-voting'],
+    owner: 'Story 6.14',
+  },
 ];
 
 function main(): void {

@@ -40,6 +40,7 @@ export const StateTrusteeReasonCode = z.enum([
   'documents_insufficient',
   'concealment_upheld',
   'r9_special_case',
+  'r9_panel_denied',
   'other',
 ]);
 export type StateTrusteeReasonCode = z.output<typeof StateTrusteeReasonCode>;
@@ -62,6 +63,7 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   documents_insufficient: ['denied'],
   concealment_upheld: ['denied'],
   r9_special_case: ['routed_to_r9'],
+  r9_panel_denied: ['denied'],
   other: ['denied', 'routed_to_r9'],
 };
 
@@ -235,7 +237,10 @@ export const CycleFreezeDecisionResponse = z
     decision_id: z.string().uuid(),
     claim_case_id: z.string().uuid(),
     pariwar_id: z.string().uuid(),
-    phase: z.enum(['frozen_vote', 'commit', 'escalation_resolution', 'routing']),
+    // The full state_trustee_decision_phase vocabulary. `r9_outcome` (Story 6.14) is a valid table phase
+    // (the R9 finalize writes one) though a cycle-freeze DECISION response itself never carries it — the
+    // enum mirrors the shared domain phase set, value-aligned with STATE_TRUSTEE_DECISION_PHASES.
+    phase: z.enum(['frozen_vote', 'commit', 'escalation_resolution', 'routing', 'r9_outcome']),
     outcome: StateTrusteeDecisionOutcome,
     reason_code: StateTrusteeReasonCode.nullable(),
     actor_display: z.string(),

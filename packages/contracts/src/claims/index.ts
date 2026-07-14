@@ -43,3 +43,9 @@ export * from './shepherd.js';
 // the client-generated-idempotency-key bulk commit request/response. The trustee outcome/reason-code wire
 // enums are re-declared value-aligned with the @twt/domain pgEnums (the browser-bundle rule; lockstep-pinned).
 export * from './cycle-freeze.js';
+// Story 6.14 — the R9 special-case voting DTOs (the R9 panel surface + the FIRST claim-flow read of the
+// niyamavali clause registry): the queue + per-claim panel model (clause snapshot + immutable panel roster +
+// live votes + tally), the open (clause-id superRefine + non-empty roster) / vote (rationale required ≤500) /
+// finalize / cancel requests, and the votes-by-trustee transcript. The R9 wire enums + clause-id set are
+// re-declared value-aligned with the @twt/domain pgEnums + R9_VOTING_CLAUSE_IDS (browser-bundle rule; lockstep-pinned).
+export * from './r9-voting.js';

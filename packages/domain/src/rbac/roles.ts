@@ -86,6 +86,10 @@ const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
 // Story 6.13 (D-B) — the State-Trustee cycle-freeze (bulk-approval) WRITE key (pariwar-dimension; the FIRST
 // state_trustee-facing surface, gated on pariwar_admin-as-Trustee-Lite pending the Epic-3 geo-tree resolver).
 const CYCLE_FREEZE = permissionKey('cycle.freeze');
+// Story 6.14 (D-B) — the R9 special-case panel-voting WRITE key (pariwar-dimension; ALSO the panel-membership
+// eligibility credential — assertPanelAuthorized requires every panel actor to hold it). Same Trustee-Lite
+// posture as cycle.freeze; direct state_trustee gating deferred to Epic 3.
+const CLAIM_R9_VOTE = permissionKey('claim.r9_vote');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -150,6 +154,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // permissions.ts — a `state`-ceiling grant cannot satisfy a pariwar check pre-Epic-3). No inert
       // state_trustee grant is seeded.
       CYCLE_FREEZE,
+      // Story 6.14 (D-B) — the R9 special-case panel-voting key. A PARIWAR-WIDE bulk-adjudication surface
+      // (checked at `dimension: 'pariwar'`), the exact cycle.freeze ceiling rationale (a `pariwar`-ceiling-
+      // or-broader role). v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating DEFERRED to
+      // Epic 3 (see permissions.ts). No inert state_trustee grant is seeded.
+      CLAIM_R9_VOTE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.

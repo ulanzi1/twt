@@ -159,6 +159,15 @@ export const CLAIM_VERIFIER_DECISION_FIELD_CLASS = 'verifier_decision';
 export const CLAIM_STATE_TRUSTEE_DECISION_FIELD_CLASS = 'state_trustee_decision';
 
 /**
+ * The R9-vote Tier-1 field class (Story 6.14, AC3/AC10). The R9 voting route encrypts the brief per-vote
+ * rationale free-text (`rationale_ciphertext`) before the domain writer, and the authorized panel / votes-by-
+ * trustee reads decrypt it under the SAME (pariwarId, fieldClass) — with a decrypt-FAILURE-DISTINCT sentinel
+ * (never blank-collapsed, the 6.13 review lesson). Arbitrary trustee free-text is PII-capable. Matches the
+ * `piiColumn(1, 'r9_vote')` annotation on `claim_r9_votes`. NEVER in an event payload / audit line / index.
+ */
+export const CLAIM_R9_VOTE_FIELD_CLASS = 'r9_vote';
+
+/**
  * The claim-document Tier-1 field class (Story 6.5). The OCR-parity job encrypts the extracted
  * death-certificate identity fields (`deceased_name_ciphertext`, `dob_ciphertext`,
  * `date_of_death_ciphertext`, `issuing_authority_ciphertext`, `certificate_number_ciphertext`)

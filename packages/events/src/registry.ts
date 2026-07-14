@@ -232,6 +232,12 @@ export const EVENT_TYPE_REGISTRY = {
     description: 'State Trustee denied during freeze → denied (Story 6.13).',
     schema: claim.ClaimStateTrusteeDeniedPayloadSchema,
   },
+  'claim.r9_outcome': {
+    type: 'claim.r9_outcome',
+    description:
+      'R9 special-case panel outcome finalized → state_trustee_approved (approved) / denied (denied); carries the non-PII tally + rule snapshot only (Story 6.14).',
+    schema: claim.ClaimR9OutcomePayloadSchema,
+  },
   'claim.appeal_stage1_initiated': {
     type: 'claim.appeal_stage1_initiated',
     description: 'Appeal stage 1 initiated (from denied) → appeal_stage_1 (Story 6.16).',

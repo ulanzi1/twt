@@ -295,7 +295,21 @@ export type AuthAuditEventType =
   | 'admin_cycle_freeze.route'
   | 'admin_cycle_freeze.escalation_resolved'
   | 'admin_cycle_freeze.committed'
-  | 'admin_cycle_freeze.rejected';
+  | 'admin_cycle_freeze.rejected'
+  // Story 6.14 — the R9 special-case voting panel surface. Post-action SINK lines (the durable records are
+  // the claim_r9_voting_sessions / claim_r9_votes rows + the finalize's claim.r9_outcome event + trustee
+  // decision row). Context is NON-PII: claim_case_id + clause_id/outcome/counts + reason_code — NEVER the
+  // per-vote rationale (AC10).
+  //   open      — an R9 voting session opened (clause snapshot + immutable panel captured; metadata-only).
+  //   vote      — a per-vote cast/revise (metadata-only).
+  //   finalize  — the panel outcome finalized (the sole lifecycle-changer → claim.r9_outcome).
+  //   cancel    — a session cancelled/corrected (session + votes superseded; routed_to_r9 stays live).
+  //   rejected  — an open/vote/finalize/cancel attempt rejected by a domain guard (fail-closed AND audited).
+  | 'admin_r9_voting.open'
+  | 'admin_r9_voting.vote'
+  | 'admin_r9_voting.finalize'
+  | 'admin_r9_voting.cancel'
+  | 'admin_r9_voting.rejected';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

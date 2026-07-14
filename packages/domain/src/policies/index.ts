@@ -86,3 +86,9 @@ export * from './claim-shepherd-assignments-rls.js';
 // the paired claim.state_trustee_* / claim.approved / claim.verifier_* events).
 export * from './claim-state-trustee-decisions-rls.js';
 export * from './cycle-freeze-commits-rls.js';
+// Story 6.14 — claim_r9_voting_sessions + claim_r9_votes tenant-isolation policies (NOT cross-readable;
+// mirror claims-rls). No write-rejection trigger — the session/vote rows are the panel/decision-metadata
+// authorities, not state caches (claim state stays on claims.current_state, derived from the paired
+// claim.r9_outcome event).
+export * from './claim-r9-voting-sessions-rls.js';
+export * from './claim-r9-votes-rls.js';

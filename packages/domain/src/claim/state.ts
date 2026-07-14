@@ -63,6 +63,27 @@ export interface ClaimEventInput {
  * hand-maintained copy could silently drift from the payload schema's). */
 const decisionSchema = z.object({ decision: appealReviewDecisionSchema });
 
+/** Minimal extractor for the ONE payload field the `claim.r9_outcome` branch reads (Story 6.14, D-A).
+ * The FULL strict payload (with the tally + rule snapshot) is validated at append time; the reducer reads
+ * only `outcome` so it stays robust + easy to unit-test. `.safeParse` keeps it total (identity on malformed). */
+const r9OutcomeSchema = z.object({ outcome: z.enum(['approved', 'denied']) });
+
+/**
+ * The six states 6.13's `routeToR9` permits routing from (`state-trustee-decision-persist.ts`
+ * `TRUSTEE_ROUTABLE_STATES`) — the `from` set for the `claim.r9_outcome` edges (D-A). Inlined here (NOT
+ * imported) to avoid a `state.ts → state-trustee-decision-persist → project → state` import cycle; a
+ * lockstep unit test pins this tuple against the canonical `TRUSTEE_ROUTABLE_STATES`. A claim legally routed
+ * to R9 from any of these must resolve at finalize (a narrower `from` set would silently no-op → identity).
+ */
+export const R9_OUTCOME_FROM_STATES = [
+  'verification_in_progress',
+  'verifier_review',
+  'verifier_approved',
+  'reversed',
+  'state_trustee_freeze',
+  'state_trustee_approved',
+] as const satisfies readonly ClaimLifecycleState[];
+
 /** Resolve an appeal-review outcome from the payload's `decision`, given the state
  * reached when `decision === 'advance'`. Returns identity (`from`) when the payload
  * is malformed OR when `advance` is illegal at this stage (`advanceTo === null`). */
@@ -215,6 +236,19 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
       if (state === 'state_trustee_approved') return 'approved';
       return state;
 
+    // R9 special-case panel outcome finalized (Story 6.14, D-A — the 29th event). LIFECYCLE-ADVANCING:
+    // branches on payload.outcome (the appeal-review payload.decision precedent; .safeParse keeps it total —
+    // a malformed payload returns identity, never throws). Legal from any of the six TRUSTEE_ROUTABLE_STATES
+    // 6.13's routeToR9 could have parked the claim in: approved → state_trustee_approved (identity if already
+    // there, so the claim rejoins the ordinary 6.13 commit), denied → denied. From any OTHER state → identity
+    // (the reducer stays total). The write-path guard (r9-voting-persist.ts) owns "is this finalizable".
+    case 'claim.r9_outcome': {
+      if (!(R9_OUTCOME_FROM_STATES as readonly string[]).includes(state)) return state;
+      const parsed = r9OutcomeSchema.safeParse(event.payload);
+      if (!parsed.success) return state;
+      return parsed.data.outcome === 'approved' ? 'state_trustee_approved' : 'denied';
+    }
+
     // Pool spawn + disbursement complete → terminal. Also clears the account-frozen
     // overlay (member/overlay.ts consumes this event type by name).
     case 'claim.settled':
@@ -282,6 +316,21 @@ export const claimStateMachine: StateMachine<ClaimLifecycleState, ClaimEventInpu
       { from: 'state_trustee_freeze', event: 'claim.state_trustee_approved', to: 'state_trustee_approved' },
       { from: 'state_trustee_freeze', event: 'claim.state_trustee_denied', to: 'denied' },
       { from: 'state_trustee_approved', event: 'claim.approved', to: 'approved' },
+      // R9 panel outcome (Story 6.14, D-A) — two edges from EACH of the six TRUSTEE_ROUTABLE_STATES 6.13's
+      // routeToR9 permits: approved → state_trustee_approved (identity when already there), denied → denied.
+      // The runtime authority is `reduce` (it branches on payload.outcome); these rows are documentation only.
+      { from: 'verification_in_progress', event: 'claim.r9_outcome', to: 'state_trustee_approved' },
+      { from: 'verification_in_progress', event: 'claim.r9_outcome', to: 'denied' },
+      { from: 'verifier_review', event: 'claim.r9_outcome', to: 'state_trustee_approved' },
+      { from: 'verifier_review', event: 'claim.r9_outcome', to: 'denied' },
+      { from: 'verifier_approved', event: 'claim.r9_outcome', to: 'state_trustee_approved' },
+      { from: 'verifier_approved', event: 'claim.r9_outcome', to: 'denied' },
+      { from: 'reversed', event: 'claim.r9_outcome', to: 'state_trustee_approved' },
+      { from: 'reversed', event: 'claim.r9_outcome', to: 'denied' },
+      { from: 'state_trustee_freeze', event: 'claim.r9_outcome', to: 'state_trustee_approved' },
+      { from: 'state_trustee_freeze', event: 'claim.r9_outcome', to: 'denied' },
+      { from: 'state_trustee_approved', event: 'claim.r9_outcome', to: 'state_trustee_approved' },
+      { from: 'state_trustee_approved', event: 'claim.r9_outcome', to: 'denied' },
       { from: 'approved', event: 'claim.settled', to: 'settled' },
       { from: 'denied', event: 'claim.appeal_stage1_initiated', to: 'appeal_stage_1' },
       { from: 'appeal_stage_1', event: 'claim.appeal_stage1_reviewed', to: 'appeal_stage_2' },

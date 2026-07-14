@@ -19,6 +19,7 @@ import { CycleFreezeRoute } from './routes/CycleFreezeRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
+import { R9VotingRoute } from './routes/R9VotingRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
@@ -116,6 +117,13 @@ const cycleFreezeRoute = createRoute({
   component: CycleFreezeRoute,
 });
 
+// Story 6.14 — the tenant-scoped R9 special-case voting panel surface.
+const r9VotingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/r9-voting',
+  component: R9VotingRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -129,6 +137,7 @@ const routeTree = rootRoute.addChildren([
   groundInspectionRoute,
   verifierConsoleRoute,
   cycleFreezeRoute,
+  r9VotingRoute,
 ]);
 
 export const router = createRouter({ routeTree });

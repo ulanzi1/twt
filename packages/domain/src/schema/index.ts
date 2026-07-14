@@ -202,6 +202,13 @@ export * from './claim_state_trustee_decisions.js';
 // idempotency key + actor_display snapshot + committed claim-id set + trigger_delivered flag). The AC5
 // audit/idempotency anchor + the Epic-7 pool-spawn (AC6) handoff payload. Tenant-isolated (mirror claims).
 export * from './cycle_freeze_commits.js';
+// Story 6.14 — R9 special-case voting: `claim_r9_voting_sessions` (the panel — clause snapshot +
+// voting_requirement + IMMUTABLE panel roster + quorum + computed outcome; the finalize anchor) +
+// `claim_r9_votes` (per-vote provenance — vote + Tier-1 rationale ciphertext + per-vote clause-version
+// snapshot; one live vote per panelist, revisable until finalize). The panel/decision-metadata authority
+// (AC0) — NOT a projection of claim state; state stays on the paired claim.r9_outcome event.
+export * from './claim_r9_voting_sessions.js';
+export * from './claim_r9_votes.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

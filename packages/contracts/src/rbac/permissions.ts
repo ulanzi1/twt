@@ -10,10 +10,12 @@
 import { z } from 'zod';
 
 /**
- * Canonical `<resource>.<action>` matcher: lowercase letters/underscores, a single
- * dot. Mirrors domain `PERMISSION_KEY_REGEX` (packages/domain/src/rbac/permissions.ts).
+ * Canonical `<resource>.<action>` matcher: lowercase letters/DIGITS/underscores, a
+ * single dot. Mirrors domain `PERMISSION_KEY_REGEX` (packages/domain/src/rbac/permissions.ts).
+ * ⚠ Story 6.14 widened this to allow digits (`[a-z0-9_]`) for the R9 key `claim.r9_vote`
+ * — kept in lockstep with the domain regex (tests/rbac.test.ts asserts parity).
  */
-const PERMISSION_KEY_PATTERN = /^[a-z_]+\.[a-z_]+$/;
+const PERMISSION_KEY_PATTERN = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 
 /** A permission key — `<resource>.<action>`, branded `PermissionKey` (name-aligned). */
 export const PermissionKeySchema = z

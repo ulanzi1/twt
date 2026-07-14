@@ -443,6 +443,91 @@ export function useCommitCycleFreeze(pariwarId: string) {
   });
 }
 
+// ── R9 special-case voting surface (Story 6.14) — the R9 panel that consumes 6.13's routed_to_r9 claims. ──
+// The queue + per-claim panel + open/vote/finalize/cancel + votes-by-trustee. On any write the queue + the
+// touched panel are invalidated so they re-read the just-changed state.
+
+export const r9QueueKey = (pariwarId: string) => ['r9-queue', pariwarId] as const;
+export const r9PanelKey = (pariwarId: string, claimCaseId: string) => ['r9-panel', pariwarId, claimCaseId] as const;
+export const r9VotesByTrusteeKey = (pariwarId: string, actorId: string, sinceDays?: number) =>
+  ['r9-votes-by-trustee', pariwarId, actorId, sinceDays ?? 180] as const;
+
+/** The R9 voting queue for a Pariwar. */
+export function useR9Queue(pariwarId: string) {
+  return useQuery({ queryKey: r9QueueKey(pariwarId), queryFn: () => api.getR9Queue(pariwarId) });
+}
+
+/** The per-claim panel model (enabled only when a claim is selected). */
+export function useR9Panel(pariwarId: string, claimCaseId: string | null) {
+  return useQuery({
+    queryKey: r9PanelKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getR9Panel(pariwarId, claimCaseId as string),
+    enabled: claimCaseId !== null,
+  });
+}
+
+/** Refetches the queue + the touched panel + EVERY votes-by-trustee transcript for this Pariwar (a partial
+ *  key match — `sinceDays`/`actorId` vary per lookup, so an exact key would miss the transcript a vote/
+ *  finalize/cancel just affected). Called on BOTH success AND error (a 409 conflict means the server-side
+ *  state moved even though this specific mutation lost — the panel/tally/vote list must refetch the
+ *  authoritative session rather than leave stale pre-mutation state on screen next to the error). */
+function invalidateR9(qc: ReturnType<typeof useQueryClient>, pariwarId: string, claimCaseId: string): void {
+  void qc.invalidateQueries({ queryKey: r9QueueKey(pariwarId) });
+  void qc.invalidateQueries({ queryKey: r9PanelKey(pariwarId, claimCaseId) });
+  void qc.invalidateQueries({ queryKey: ['r9-votes-by-trustee', pariwarId] });
+}
+
+/** POST open a session; refetches the queue + panel on success OR a conflict (e.g. session-already-exists). */
+export function useOpenR9Session(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.openR9Session>[2]) => api.openR9Session(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateR9(qc, pariwarId, claimCaseId),
+    onError: () => invalidateR9(qc, pariwarId, claimCaseId),
+  });
+}
+
+/** POST cast/revise a vote; refetches the panel on success OR a conflict (e.g. a concurrent revise/finalize). */
+export function useCastR9Vote(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.castR9Vote>[2]) => api.castR9Vote(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateR9(qc, pariwarId, claimCaseId),
+    onError: () => invalidateR9(qc, pariwarId, claimCaseId),
+  });
+}
+
+/** POST finalize the outcome (step-up-gated); refetches the queue + panel on success OR a conflict (e.g.
+ *  quorum no longer met, or a racing finalize already won). */
+export function useFinalizeR9(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.finalizeR9(pariwarId, claimCaseId),
+    onSuccess: () => invalidateR9(qc, pariwarId, claimCaseId),
+    onError: () => invalidateR9(qc, pariwarId, claimCaseId),
+  });
+}
+
+/** POST cancel/correct a session; refetches the queue + panel on success OR a conflict (e.g. already
+ *  finalized/superseded). */
+export function useCancelR9Session(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.cancelR9Session>[2]) => api.cancelR9Session(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateR9(qc, pariwarId, claimCaseId),
+    onError: () => invalidateR9(qc, pariwarId, claimCaseId),
+  });
+}
+
+/** The votes-by-trustee transcript (enabled only when an actor id is entered). */
+export function useR9VotesByTrustee(pariwarId: string, actorId: string | null, sinceDays?: number) {
+  return useQuery({
+    queryKey: r9VotesByTrusteeKey(pariwarId, actorId ?? '', sinceDays),
+    queryFn: () => api.getR9VotesByTrustee(pariwarId, actorId as string, sinceDays),
+    enabled: actorId !== null && actorId !== '',
+  });
+}
+
 // ── Telegram config surface (Story 5.5) — the per-Pariwar Telegram Bot config singleton. ──
 
 export const telegramConfigKey = (pariwarId: string) => ['telegram-config', pariwarId] as const;

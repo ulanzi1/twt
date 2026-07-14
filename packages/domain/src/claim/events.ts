@@ -332,6 +332,41 @@ export const ClaimStateTrusteeDeniedPayloadSchema = z.object({ ...auditShape }).
  */
 export const ClaimApprovedPayloadSchema = z.object({ ...auditShape }).strict();
 
+// ── R9 special-case panel voting ──────────────────────────────────────────────
+
+/**
+ * R9 special-case panel outcome finalized (Story 6.14, D-A — the 29th claim event). This is a
+ * LIFECYCLE-ADVANCING event, NOT an annotation: it is the sole outcome of the R9 voting panel, and the
+ * reducer branches on `payload.outcome` (the contained `payload.decision` precedent the three appeal-review
+ * events set) — `approved` → `state_trustee_approved`, `denied` → `denied`, from any of the six
+ * `TRUSTEE_ROUTABLE_STATES` a 6.13 `routeToR9` could have parked the claim in (so it is NOT
+ * `requireIdentityTransition` — `from_state !== to_state` for a fresh routable state, and IS identity when
+ * an already-`state_trustee_approved` claim is re-approved). An `approved` R9 claim then rejoins the
+ * ORDINARY 6.13 cycle-freeze commit (`state_trustee_approved → claim.approved`, the single step-up-gated
+ * milestone Epic 7 keys off) — 6.14 emits NO `claim.approved`.
+ *
+ * PII discipline (AC0/AC10): carries the NON-PII tally + rule snapshot ONLY — NO human display name, NO
+ * per-voter identity, NO deceased/nominee PII. `clause_id` + `clause_version_id` + `voting_requirement` are
+ * the rule provenance; `approve_count`/`deny_count` are the panel tally. Every R5 display name + voter
+ * identity lives in the metadata rows (`claim_r9_voting_sessions` / `claim_r9_votes`), NEVER in this event.
+ */
+export const ClaimR9OutcomePayloadSchema = z
+  .object({
+    ...auditShape,
+    // The finalized panel outcome — the reducer's branch key (approved → state_trustee_approved; denied → denied).
+    outcome: z.enum(['approved', 'denied']),
+    // The applicable R9 sub-clause id (a `route_r9_voting` clause) — non-PII rule provenance.
+    clause_id: z.string().min(1),
+    // The registry-snapshotted rule version the panel voted under (Story 2.3 clause_versions) — non-PII.
+    clause_version_id: z.string().uuid(),
+    // The DATA-derived requirement the outcome was computed against (v1 seed resolves all three R9 clauses to majority).
+    voting_requirement: z.enum(['majority', 'supermajority', 'unanimous']),
+    // The panel tally (non-PII counts) — the denominator is the panel size, an absent/deny panelist counts against approval.
+    approve_count: z.number().int().nonnegative(),
+    deny_count: z.number().int().nonnegative(),
+  })
+  .strict();
+
 // ── Internal appeal (3-stage) ─────────────────────────────────────────────────
 
 /**
@@ -433,7 +468,9 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
 // `claim.dpdpa_consent_revoked`; Story 6.11 added the 26th + 27th — `claim.verifier_escalated`
 // (D-D) and `claim.verifier_decision_revised` (D-E); Story 6.12 adds the 28th —
 // `claim.shepherd_assigned` (the shepherd routing/attribution annotation) — all annotation/identity
-// events, per the "owner stories add their annotation events" discipline.)
+// events, per the "owner stories add their annotation events" discipline. Story 6.14 adds the 29th —
+// `claim.r9_outcome` (D-A), a LIFECYCLE-ADVANCING event (NOT an annotation) whose reducer branches on
+// `payload.outcome` from the six TRUSTEE_ROUTABLE_STATES → state_trustee_approved / denied.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -456,6 +493,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.state_trustee_approved',
   'claim.approved',
   'claim.state_trustee_denied',
+  'claim.r9_outcome',
   'claim.appeal_stage1_initiated',
   'claim.appeal_stage1_reviewed',
   'claim.appeal_stage2_initiated',
@@ -466,11 +504,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 28 claim events). */
+/** The dotted `claim.*` event-type literal union (the 29 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 28 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 29 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -496,6 +534,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.state_trustee_approved': ClaimStateTrusteeApprovedPayloadSchema,
   'claim.approved': ClaimApprovedPayloadSchema,
   'claim.state_trustee_denied': ClaimStateTrusteeDeniedPayloadSchema,
+  'claim.r9_outcome': ClaimR9OutcomePayloadSchema,
   'claim.appeal_stage1_initiated': ClaimAppealStage1InitiatedPayloadSchema,
   'claim.appeal_stage1_reviewed': ClaimAppealStage1ReviewedPayloadSchema,
   'claim.appeal_stage2_initiated': ClaimAppealStage2InitiatedPayloadSchema,

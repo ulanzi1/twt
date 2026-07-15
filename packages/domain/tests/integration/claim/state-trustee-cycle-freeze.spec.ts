@@ -20,13 +20,14 @@ import {
   commitCycleFreeze,
   getCycleFreezePending,
   projectClaimState,
+  recordConcealmentAssessment,
   resolveEscalation,
   routeToR9,
   voteOnFrozenClaim,
 } from '../../../src/claim/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedClauseVersion } from '../_helpers.js';
 
 const TRUSTEE = 'a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
 const VERIFIER = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2';
@@ -333,6 +334,41 @@ describe.skipIf(!hasDatabase)('state-trustee cycle-freeze (PARIWAR_A scope)', ()
     const otherTenant = await getCycleFreezePending(tx, PARIWAR_B);
     expect(otherTenant.readyToFreeze.map((c) => c.claimCaseId)).not.toContain(ready);
     expect(otherTenant.escalated.map((c) => c.claimCaseId)).not.toContain(esc);
+  });
+
+  it('AC6 — the pending list surfaces the REAL claim concealment flag from the bulk tri-state producer, not a placeholder', async () => {
+    const { client, tx } = getTx();
+    await seedClauseVersion(tx, PARIWAR_A, {
+      clauseId: 'niy.concealment.r14',
+      payload: {
+        ack_text_en: 'I acknowledge the concealment-review clause.',
+        ack_text_hi: 'मैं छिपाव-समीक्षा खंड को स्वीकार करता/करती हूँ।',
+        rule_code: 'R14',
+        never_auto_deny: true,
+      },
+    });
+    const flagged = toClaimId(randomUUID());
+    const clear = toClaimId(randomUUID());
+    await enterAppScope(client, PARIWAR_A);
+    await driveTo(client, flagged, toMemberId(randomUUID()), 'verifier_approved');
+    await driveTo(client, clear, toMemberId(randomUUID()), 'verifier_approved');
+
+    // A `linked` assessment on `flagged`; `clear` carries no assessment at all.
+    await recordConcealmentAssessment(client, {
+      claimCaseId: flagged,
+      pariwarId: PARIWAR_A,
+      kind: 'linked',
+      noteCiphertext: null,
+      actorId: VERIFIER,
+      actorDisplay: 'Verifier Anita',
+      actor: 'operator',
+    });
+
+    const pending = await getCycleFreezePending(tx, PARIWAR_A);
+    const flaggedCase = pending.readyToFreeze.find((c) => c.claimCaseId === flagged)!;
+    const clearCase = pending.readyToFreeze.find((c) => c.claimCaseId === clear)!;
+    expect(flaggedCase.concealmentFlags).toEqual(['concealment_review_required']);
+    expect(clearCase.concealmentFlags).toEqual([]);
   });
 
   it('AC9/D-F — the phase-model partial-unique blocks a second live frozen_vote row for one claim', async () => {

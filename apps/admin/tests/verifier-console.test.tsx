@@ -11,7 +11,7 @@
 //   · the client query key isolates by pariwarId + claimCaseId (no cross-scope cache bleed — D8/AC3).
 
 import type { VerifierConsolePacket } from '@twt/contracts';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { verifierConsoleKey } from '../src/api/hooks.js';
@@ -166,6 +166,67 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     // It must NOT carry the OK/clear tone class.
     expect(indicator.className).not.toContain('status-ok');
     expect(indicator.className).toContain('status-warn');
+    // No PROMINENT banner when not flagged.
+    expect(screen.queryByTestId('concealment-flagged-banner')).toBeNull();
+  });
+
+  it('renders the PROMINENT flagged banner ABOVE the sections when concealment is `flagged` (Story 6.15 AC1)', () => {
+    const packet: VerifierConsolePacket = {
+      ...PRESENT_PACKET,
+      concealment: { status: 'flagged', detailVisibility: 'indicator_only' },
+    };
+    render(<SignalsPanel packet={packet} />);
+    const banner = screen.getByTestId('concealment-flagged-banner');
+    const panel = screen.getByTestId('signals-panel');
+    // Prominent = rendered as the FIRST child, above every standard section.
+    expect(panel.firstElementChild).toBe(banner);
+    // NEVER reads as a denial — it routes to the trustee (never auto-denied).
+    expect(banner).toHaveTextContent(/not auto-denied/i);
+    expect(banner).toHaveTextContent(/state trustee/i);
+    // The indicator carries the danger tone (not green/clear).
+    const indicator = screen.getByTestId('concealment-indicator');
+    expect(indicator).toHaveAttribute('data-concealment-status', 'flagged');
+    expect(indicator.className).not.toContain('status-ok');
+  });
+
+  it('surfaces the R14 clause version ONLY for a `full`-visibility caller (D-C)', () => {
+    const full: VerifierConsolePacket = {
+      ...PRESENT_PACKET,
+      concealment: { status: 'flagged', detailVisibility: 'full', clauseVersionId: 'cv-r14-1' },
+    };
+    render(<SignalsPanel packet={full} />);
+    expect(screen.getByTestId('concealment-clause-version')).toHaveTextContent('cv-r14-1');
+  });
+
+  it('hides the clause version for an `indicator_only` caller (presence-only)', () => {
+    const indicatorOnly: VerifierConsolePacket = {
+      ...PRESENT_PACKET,
+      concealment: { status: 'flagged', detailVisibility: 'indicator_only', clauseVersionId: null },
+    };
+    render(<SignalsPanel packet={indicatorOnly} />);
+    expect(screen.queryByTestId('concealment-clause-version')).toBeNull();
+    expect(screen.getByText(t.concealment.indicatorOnly)).toBeInTheDocument();
+  });
+
+  it('mounts the assessment capture control when onAssessConcealment is provided; submits the chosen kind + note', async () => {
+    const onAssess = vi.fn().mockResolvedValue(undefined);
+    render(<SignalsPanel packet={PRESENT_PACKET} onAssessConcealment={onAssess} />);
+    // Requires a kind before recording (never a blank submit).
+    fireEvent.click(screen.getByTestId('concealment-assessment-submit'));
+    expect(screen.getByTestId('concealment-kind-error')).toBeInTheDocument();
+    expect(onAssess).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId('concealment-kind-select'), { target: { value: 'linked' } });
+    fireEvent.change(screen.getByTestId('concealment-note-input'), { target: { value: 'Undeclared cardiac condition.' } });
+    fireEvent.click(screen.getByTestId('concealment-assessment-submit'));
+    expect(onAssess).toHaveBeenCalledWith({ kind: 'linked', note: 'Undeclared cardiac condition.' });
+    // On success the control resets (kind/note clear) — await that state settling.
+    await waitFor(() => expect(screen.getByTestId('concealment-kind-select')).toHaveValue(''));
+  });
+
+  it('hides the assessment control on a read-only surface (no onAssessConcealment)', () => {
+    render(<SignalsPanel packet={PRESENT_PACKET} />);
+    expect(screen.queryByTestId('concealment-assessment-control')).toBeNull();
   });
 
   it('(e)/(f) render semantic-verb audit-trail entries when present, not raw outcome/rationale markup (AC1/AC4)', () => {

@@ -410,6 +410,17 @@ export function useReviseVerifierDecision(pariwarId: string, claimCaseId: string
   });
 }
 
+/** POST a record/revise concealment-linkage assessment (Story 6.15); refetches the console packet on
+ *  success so the concealment tri-state + the flagged banner re-render with the new signal. */
+export function usePostConcealmentAssessment(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postConcealmentAssessment>[2]) =>
+      api.postConcealmentAssessment(pariwarId, claimCaseId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) }),
+  });
+}
+
 // ── State-Trustee cycle-freeze surface (Story 6.13) — the FIRST state_trustee-facing surface. ──
 // The two-bucket pending list + per-claim decision + the step-up-gated bulk commit. On any write the
 // pending list is invalidated so the buckets re-read the just-changed state.

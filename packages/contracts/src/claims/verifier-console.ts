@@ -40,13 +40,19 @@ export type VerifierConsoleSectionState = (typeof VERIFIER_CONSOLE_SECTION_STATE
 // ── (a) concealment tri-state (D10) — request-time, scope-safe; NEVER inferred from redacted flags ──
 //
 // District actors receive `indicator_only` — presence status only, never names/notes/evidence/counts.
-// Until the claim-scoped R14 producer lands (deferred, likely Story 6.15) `status` is `not_evaluated` —
-// NEVER `not_flagged`, NEVER a green/clear. When the producer lands it plugs into THIS same shape
-// (`status` flips to `flagged`/`not_flagged`) without changing the console API.
+// Story 6.15 LANDED the claim-scoped R14 producer: `status` now reflects the verifier assessment
+// (`flagged`/`not_flagged`/`not_evaluated`) — still NEVER inferred from the redacted validity flags (D10),
+// NEVER `not_flagged` on an absent/indeterminate assessment (fail-soft to `not_evaluated`).
+//
+// `clauseVersionId` (Story 6.15, D-C) — the R14 rule-version basis. Populated ONLY for a `full`-visibility
+// caller (effective `cycle.freeze` authority) AND only on a `flagged`/`not_flagged` status; `null` for
+// `indicator_only` and for `not_evaluated`. `full` adds ONLY this metadata — NEVER medical evidence,
+// disclosed-condition detail, or inferred linkage (D-C).
 export const ConcealmentSignal = z
   .object({
     status: z.enum(['flagged', 'not_flagged', 'not_evaluated']),
     detailVisibility: z.enum(['indicator_only', 'full']),
+    clauseVersionId: z.string().nullable().optional(),
   })
   .strict();
 export type ConcealmentSignal = z.output<typeof ConcealmentSignal>;

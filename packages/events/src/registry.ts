@@ -210,6 +210,12 @@ export const EVENT_TYPE_REGISTRY = {
       'Human shepherd (District Admin) assigned to the claim — identity annotation, no lifecycle state (the 28th claim event); carries shepherd_actor_id + previous_shepherd_actor_id + assignment_reason + supersedes_assignment_id + district (a reassignment back-reference), NO PII name/phone/WhatsApp; grants no claim.approve (Story 6.12).',
     schema: claim.ClaimShepherdAssignedPayloadSchema,
   },
+  'claim.concealment_assessed': {
+    type: 'claim.concealment_assessed',
+    description:
+      'Verifier recorded/revised a concealment-linkage assessment — identity annotation, no lifecycle state (the 30th claim event); flags/routes but NEVER denies (the State Trustee alone decides, Story 6.13/D-B). auditShape only — the tri-state kind + optional Tier-1 note live in claim_concealment_assessments, NEVER in the event (Story 6.15, D-E).',
+    schema: claim.ClaimConcealmentAssessedPayloadSchema,
+  },
   'claim.state_trustee_frozen': {
     type: 'claim.state_trustee_frozen',
     description: 'Cycle-freeze window opened for this claim → state_trustee_freeze (Story 6.13).',

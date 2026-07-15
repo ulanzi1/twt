@@ -22,6 +22,7 @@ import { registerVerifierConsoleRoutes } from './claims.verifier-console.routes.
 import { registerShepherdRoutes } from './claims.shepherd.routes.js';
 import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
 import { registerR9VotingRoutes } from './claims.r9-voting.routes.js';
+import { registerConcealmentAssessmentRoutes } from './claims.concealment-assessment.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -44,4 +45,8 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   // cancel + votes-by-trustee (claim.r9_vote, pariwar-gated; finalize additionally r9_finalize step-up-gated).
   // The CONSUMER end of 6.13's routeToR9 parking seam; finalize is the sole lifecycle-changer (claim.r9_outcome).
   registerR9VotingRoutes(app, deps);
+  // Story 6.15 — the verifier concealment-linkage assessment WRITE surface (claim.verify, district-gated):
+  // records/revises the human-supplied claim.concealed_ima_condition_linked fact. A review annotation — it
+  // flags/routes, NEVER denies (the State Trustee alone decides at cycle-freeze, D-B).
+  registerConcealmentAssessmentRoutes(app, deps);
 }

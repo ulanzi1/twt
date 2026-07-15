@@ -209,6 +209,11 @@ export * from './cycle_freeze_commits.js';
 // (AC0) — NOT a projection of claim state; state stays on the paired claim.r9_outcome event.
 export * from './claim_r9_voting_sessions.js';
 export * from './claim_r9_votes.js';
+// Story 6.15 — verifier concealment-linkage assessment: `claim_concealment_assessments` (the human-supplied
+// `claim.concealed_ima_condition_linked` fact — tri-state kind + Tier-1 note + actor snapshot; one live row
+// per claim, revisable). The AUTHORITATIVE current/read model the tri-state concealment producer reads;
+// NOT a projection of claim state (the paired claim.concealment_assessed event is an identity annotation).
+export * from './claim_concealment_assessments.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

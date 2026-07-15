@@ -29,6 +29,10 @@ import {
   type VerifierDecisionResponse as VerifierDecision,
   type VerifierDecisionRequest as VerifierDecisionPayload,
   type VerifierDecisionReviseRequest as VerifierDecisionRevisePayload,
+  // Story 6.15 — the verifier concealment-linkage assessment surface (record/revise).
+  ConcealmentAssessmentResponse,
+  type ConcealmentAssessmentResponse as ConcealmentAssessment,
+  type ConcealmentAssessmentRequest as ConcealmentAssessmentPayload,
   // Story 6.13 — the State-Trustee cycle-freeze surface (pending list + decision + commit).
   CycleFreezePendingResponse,
   CycleFreezeDecisionResponse,
@@ -787,6 +791,25 @@ export function reviseVerifierDecision(
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+// ── Verifier concealment-linkage assessment WRITE surface (Story 6.15) ────────
+// Tenant-scoped under /p/:pariwarId/admin/claims/:claimCaseId/concealment-assessment. A review annotation
+// (kind + optional Tier-1 note) — it flags/routes, never decides (the State Trustee decides). The client
+// gate is only "is there a live session"; the REAL boundary is the server's human-actor chain (claim.verify
+// at the deceased's server-derived district). The request carries NO actor identity (R5 server-resolved).
+
+/** POST a record/revise concealment-linkage assessment (kind + optional note). */
+export function postConcealmentAssessment(
+  pariwarId: string,
+  claimCaseId: string,
+  body: ConcealmentAssessmentPayload,
+): Promise<ConcealmentAssessment> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/concealment-assessment`,
+    ConcealmentAssessmentResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
 }
 
 // ── State-Trustee cycle-freeze surface (Story 6.13) ───────────────────────────

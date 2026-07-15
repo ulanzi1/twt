@@ -51,6 +51,7 @@ import {
   claimStateTrusteeDecisions,
 } from '../schema/claim_state_trustee_decisions.js';
 import { type CycleFreezeCommitRow, cycleFreezeCommits } from '../schema/cycle_freeze_commits.js';
+import { assessClaimConcealment } from './concealment-review.js';
 import { type ClaimEventActor } from './events.js';
 import { projectClaimState } from './project.js';
 import {
@@ -86,6 +87,31 @@ export const TRUSTEE_ROUTABLE_STATES = [
 export const TRUSTEE_ESCALATION_RESOLVABLE_STATES = ['verification_in_progress', 'verifier_review'] as const;
 
 // ── Typed write-path guards (the route maps each to a stable 4xx) ─────────────
+
+/** Story 6.15 (AC3) — the trustee reason codes that carry an R14 concealment-clause snapshot. Both the
+ *  uphold (→deny) and the override (→approve) resolve `niy.concealment.r14` server-side inside the decision
+ *  tx and persist `concealment_clause_version_id`. */
+const CONCEALMENT_TRUSTEE_REASON_CODES = ['concealment_upheld', 'concealment_override'] as const;
+
+/** Thrown when a concealment-coded reason code (`concealment_upheld`/`concealment_override`) is applied to
+ *  a claim whose LIVE concealment signal (the same claim-scoped producer the 6.10 console/6.13 queue read)
+ *  is NOT `flagged` — D1, ratified BigDev 2026-07-15. Covers a never-flagged claim, a formerly-`linked`
+ *  assessment since revised off it, and an unresolvable R14 clause (the producer fail-softs an unprovisioned
+ *  registry to `not_evaluated`, D10) — all collapse to the SAME rejection, never a silent null-snapshot
+ *  concealment decision (AC3's invariant, now enforced by construction: a `flagged` signal always carries a
+ *  non-null `clauseVersionId`). Generic reason codes remain available for independent trustee judgment. */
+export class ConcealmentNotFlaggedError extends Error {
+  public readonly name = 'ConcealmentNotFlaggedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reasonCode: string,
+    public readonly signalStatus: string,
+  ) {
+    super(
+      `[state-trustee] cannot apply '${reasonCode}' to claim ${claimCaseId} — the live concealment signal is '${signalStatus}', not 'flagged'`,
+    );
+  }
+}
 
 /** Thrown when no claim row exists for the id the writer targets (tenant-scoped miss → 404). */
 export class TrusteeClaimNotFoundError extends Error {
@@ -286,13 +312,22 @@ export interface TrusteeDecisionResult {
   eventVersion: number | null;
   /** The claim's lifecycle state AFTER the write (routing leaves it unchanged). */
   claimState: string;
+  /** Story 6.15 (AC3) — the resolved R14 clause-version snapshot on a concealment-coded decision (the route
+   *  adds it to the non-PII audit-line context); `null`/absent for every non-concealment decision. */
+  concealmentClauseVersionId?: string | null;
 }
 
 // ── Shared decision-row insert ────────────────────────────────────────────────
 
 async function insertTrusteeDecisionRow(
   db: Db,
-  input: TrusteeWriteBase & { phase: StateTrusteeDecisionPhase; outcome: StateTrusteeDecisionOutcome },
+  input: TrusteeWriteBase & {
+    phase: StateTrusteeDecisionPhase;
+    outcome: StateTrusteeDecisionOutcome;
+    /** Story 6.15 (AC3) — the R14 clause-version snapshot, resolved server-side; set ONLY on a
+     *  concealment-coded decision, null otherwise. */
+    concealmentClauseVersionId?: string | null;
+  },
 ): Promise<ClaimStateTrusteeDecisionRow> {
   const rows = await db
     .insert(claimStateTrusteeDecisions)
@@ -305,9 +340,40 @@ async function insertTrusteeDecisionRow(
       rationaleCiphertext: input.rationaleCiphertext,
       actorId: input.actorId,
       actorDisplay: input.actorDisplay,
+      ...(input.concealmentClauseVersionId != null
+        ? { concealmentClauseVersionId: input.concealmentClauseVersionId }
+        : {}),
     })
     .returning();
   return rows[0]!;
+}
+
+/**
+ * Story 6.15 (AC3 + D1, ratified BigDev 2026-07-15) — for a concealment-coded decision (`concealment_upheld`
+ * / `concealment_override`), resolve the `niy.concealment.r14` clause version SERVER-SIDE, using the tx's
+ * OWN scoped `db` handle, INSIDE the decision transaction (never accepted from the route/client), from the
+ * SAME claim-scoped concealment PRODUCER the 6.10 console / 6.13 queue read (`assessClaimConcealment`) — not
+ * a second independent clause resolution. D1: the claim's LIVE signal must be `flagged`; `not_flagged`,
+ * `not_evaluated` (absent assessment, a revised-off-`linked` assessment, or an unresolvable R14 clause — all
+ * fail-soft to `not_evaluated`, D10) are rejected with `ConcealmentNotFlaggedError` (409) BEFORE any write.
+ * A `flagged` signal always carries a non-null `clauseVersionId` by construction (the AC3 "never persist a
+ * null snapshot" invariant, now structural). Generic reason codes remain available for independent trustee
+ * judgment — for every non-concealment reason code this returns `null` (the column stays null).
+ */
+async function resolveConcealmentSnapshot(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  reasonCode: StateTrusteeReasonCode | null,
+): Promise<string | null> {
+  if (reasonCode === null || !(CONCEALMENT_TRUSTEE_REASON_CODES as readonly string[]).includes(reasonCode)) {
+    return null;
+  }
+  const signal = await assessClaimConcealment(db, { pariwarId, claimCaseId });
+  if (signal.status !== 'flagged') {
+    throw new ConcealmentNotFlaggedError(claimCaseId, reasonCode, signal.status);
+  }
+  return signal.clauseVersionId;
 }
 
 /** Validate the reason-code against the outcome (D-F defense-in-depth): required for denied/routed_to_r9,
@@ -351,6 +417,16 @@ export async function voteOnFrozenClaim(
     throw new ClaimAlreadyRoutedError(input.claimCaseId);
   }
 
+  // Story 6.15 (AC3) — resolve the R14 clause snapshot server-side INSIDE this tx for a concealment-coded
+  // decision (uphold→deny, override→approve), BEFORE any write so a null resolution aborts cleanly (no
+  // orphaned events). Non-concealment codes → null (the column stays null). Never from the route/client.
+  const concealmentClauseVersionId = await resolveConcealmentSnapshot(
+    db,
+    input.pariwarId,
+    input.claimCaseId,
+    input.reasonCode,
+  );
+
   const projectBase = {
     claimCaseId: input.claimCaseId,
     pariwarId: input.pariwarId,
@@ -388,15 +464,26 @@ export async function voteOnFrozenClaim(
     },
   });
 
-  // (c) Insert the DECISION-METADATA row in the SAME tx (AC0). The partial-unique 23505 is the backstop.
+  // (c) Insert the DECISION-METADATA row in the SAME tx (AC0), carrying the R14 snapshot for a concealment
+  //     decision (AC3). The partial-unique 23505 is the backstop.
   let decision: ClaimStateTrusteeDecisionRow;
   try {
-    decision = await insertTrusteeDecisionRow(db, { ...input, phase: 'frozen_vote', outcome: input.outcome });
+    decision = await insertTrusteeDecisionRow(db, {
+      ...input,
+      phase: 'frozen_vote',
+      outcome: input.outcome,
+      concealmentClauseVersionId,
+    });
   } catch (err) {
     if (isUniqueViolation(err)) throw new TrusteeDecisionConflictError(input.claimCaseId, 'frozen_vote');
     throw err;
   }
-  return { decision, eventVersion: projected.eventVersion, claimState: projected.state };
+  return {
+    decision,
+    eventVersion: projected.eventVersion,
+    claimState: projected.state,
+    concealmentClauseVersionId,
+  };
 }
 
 // ── Route to R9 (durable exclusion, metadata-only, AC4) ───────────────────────
@@ -460,6 +547,18 @@ export async function resolveEscalation(
       `claim is '${claimRow.currentState}', not in {verification_in_progress, verifier_review}`,
     );
   }
+
+  // Story 6.15 (AC3) — resolve the R14 clause snapshot server-side INSIDE this tx for a concealment-coded
+  // decision (uphold→deny, override→approve), BEFORE any write so a rejection aborts cleanly (no orphaned
+  // events/supersession). Escalation resolution is a Story 6.13 concealment-deciding path exactly like
+  // `voteOnFrozenClaim` — omitting this call here would silently persist a null snapshot on a
+  // concealment-coded escalation decision (the bug this mirrors `voteOnFrozenClaim` to close).
+  const concealmentClauseVersionId = await resolveConcealmentSnapshot(
+    db,
+    input.pariwarId,
+    input.claimCaseId,
+    input.reasonCode,
+  );
 
   // The live `escalated` verifier decision (partial-unique guarantees ≤1 live per claim).
   const liveEscalated = (
@@ -530,8 +629,9 @@ export async function resolveEscalation(
     ...input,
     phase: 'escalation_resolution',
     outcome: input.outcome,
+    concealmentClauseVersionId,
   });
-  return { decision, eventVersion: projected.eventVersion, claimState: projected.state };
+  return { decision, eventVersion: projected.eventVersion, claimState: projected.state, concealmentClauseVersionId };
 }
 
 // ── Commit (bulk claim.approved milestone, DB-only, AC5) ──────────────────────

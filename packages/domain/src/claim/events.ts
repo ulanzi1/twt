@@ -280,6 +280,19 @@ export const ClaimVerifierEscalatedPayloadSchema = requireIdentityTransition({ .
 export const ClaimVerifierDecisionRevisedPayloadSchema = requireIdentityTransition({ ...auditShape });
 
 /**
+ * Verifier recorded (or revised) a concealment-linkage assessment on the claim. ANNOTATION event — the
+ * 30th claim event, NEW in Story 6.15 (D-E). A DEDICATED identity annotation (`from_state === to_state`;
+ * the reducer has NO concealment state and gains none) — the assessment is a review ANNOTATION, NOT an
+ * adjudication: it emits no approval/denial and changes no lifecycle state (the State Trustee, Story 6.13,
+ * alone decides the claim — D-B). Its sole job is to place the assessment on the claim's IMMUTABLE
+ * evidentiary timeline (`events_log`, evidence layer 2 — distinct from the assessment TABLE, the
+ * authoritative current/read model, and the audit sink, the admin-action record; none collapsed — D-E).
+ * `auditShape` only — the tri-state `kind` + the optional Tier-1 note live in `claim_concealment_assessments`,
+ * NEVER here (the note is PII; the kind is deliberately kept out of `events_log` — the row is the source).
+ */
+export const ClaimConcealmentAssessedPayloadSchema = requireIdentityTransition({ ...auditShape });
+
+/**
  * Human shepherd assigned to the claim. ANNOTATION event — the 28th claim event, NEW in Story 6.12. An
  * IDENTITY transition (`from_state === to_state`; the reducer has NO shepherd state and gains none) —
  * shepherd assignment is a ROUTING/attribution concern (a named human for the family), NOT a
@@ -460,7 +473,7 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
   deceased_member_id: z.string().uuid(),
 });
 
-// ── The 28-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 30-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -470,7 +483,8 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
 // `claim.shepherd_assigned` (the shepherd routing/attribution annotation) — all annotation/identity
 // events, per the "owner stories add their annotation events" discipline. Story 6.14 adds the 29th —
 // `claim.r9_outcome` (D-A), a LIFECYCLE-ADVANCING event (NOT an annotation) whose reducer branches on
-// `payload.outcome` from the six TRUSTEE_ROUTABLE_STATES → state_trustee_approved / denied.)
+// `payload.outcome` from the six TRUSTEE_ROUTABLE_STATES → state_trustee_approved / denied. Story 6.15
+// adds the 30th — `claim.concealment_assessed` (D-E), an IDENTITY annotation whose reducer is a no-op.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -488,6 +502,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.verifier_denied',
   'claim.verifier_escalated',
   'claim.verifier_decision_revised',
+  'claim.concealment_assessed',
   'claim.shepherd_assigned',
   'claim.state_trustee_frozen',
   'claim.state_trustee_approved',
@@ -504,11 +519,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 29 claim events). */
+/** The dotted `claim.*` event-type literal union (the 30 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 29 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 30 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -529,6 +544,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.verifier_denied': ClaimVerifierDeniedPayloadSchema,
   'claim.verifier_escalated': ClaimVerifierEscalatedPayloadSchema,
   'claim.verifier_decision_revised': ClaimVerifierDecisionRevisedPayloadSchema,
+  'claim.concealment_assessed': ClaimConcealmentAssessedPayloadSchema,
   'claim.shepherd_assigned': ClaimShepherdAssignedPayloadSchema,
   'claim.state_trustee_frozen': ClaimStateTrusteeFrozenPayloadSchema,
   'claim.state_trustee_approved': ClaimStateTrusteeApprovedPayloadSchema,

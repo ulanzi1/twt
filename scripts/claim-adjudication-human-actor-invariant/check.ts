@@ -84,6 +84,16 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     pathSubstrings: ['r9-voting'],
     owner: 'Story 6.14',
   },
+  {
+    // Story 6.15 — the verifier concealment-linkage assessment WRITE. Recording the human-supplied
+    // claim.concealed_ima_condition_linked fact is a ₹50L-stakes review annotation that MUST compose the
+    // human-actor chain [requireAdminSession, scopeResolutionHook, requirePermissionHook(claim.verify,
+    // district)] — never a system/service actor. A verifier annotates; the State Trustee alone decides
+    // (D-B). `concealment-assessment` matches the single record/revise path.
+    file: 'apps/api/src/modules/claims/claims.concealment-assessment.routes.ts',
+    pathSubstrings: ['concealment-assessment'],
+    owner: 'Story 6.15',
+  },
 ];
 
 function main(): void {

@@ -16,6 +16,10 @@ import type {
 import type { ReactElement, ReactNode } from 'react';
 
 import { AuditTrail } from './AuditTrailEntry.js';
+import {
+  ConcealmentAssessmentControl,
+  type ConcealmentAssessmentSubmit,
+} from './ConcealmentAssessmentControl.js';
 import { VerifierReviewPanel, type VerifierReviewData } from './VerifierReviewPanel.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 
@@ -42,7 +46,7 @@ function NonPresent({ status }: { status: 'empty' | 'unavailable' | 'not_availab
 
 function ConcealmentIndicator({ signal }: { signal: ConcealmentSignal }): ReactElement {
   // NEVER render `not_evaluated` (or a redacted absence) as a green/clear (D10). Only an explicit
-  // `not_flagged` from a real producer is a "clear"; v1 is always `not_evaluated`.
+  // `not_flagged` from the real producer is a "clear"; an absent/indeterminate assessment is `not_evaluated`.
   const tone =
     signal.status === 'flagged'
       ? 'bg-status-danger-bg text-status-danger-fg'
@@ -67,6 +71,28 @@ function ConcealmentIndicator({ signal }: { signal: ConcealmentSignal }): ReactE
       {signal.detailVisibility === 'indicator_only' ? (
         <p className="text-xs opacity-60">{t.concealment.indicatorOnly}</p>
       ) : null}
+      {/* `full` visibility adds ONLY the R14 clause-version metadata (D-C) — never medical evidence. */}
+      {signal.detailVisibility === 'full' && signal.clauseVersionId != null ? (
+        <p className="text-xs opacity-60" data-testid="concealment-clause-version">
+          {t.concealment.clauseVersionLabel}: <span className="font-mono">{signal.clauseVersionId}</span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** The PROMINENT flagged banner (AC1) — rendered ABOVE all standard signal sections when the claim's
+ *  concealment signal is `flagged`. It NEVER reads as a denial: the claim routes to the State Trustee for
+ *  an explicit decision; it is never auto-denied. */
+function ConcealmentFlaggedBanner(): ReactElement {
+  return (
+    <div
+      role="alert"
+      className="rounded border border-status-danger-fg/40 bg-status-danger-bg p-3 text-status-danger-fg"
+      data-testid="concealment-flagged-banner"
+    >
+      <p className="text-sm font-bold">{t.concealment.bannerTitle}</p>
+      <p className="text-xs">{t.concealment.bannerBody}</p>
     </div>
   );
 }
@@ -133,11 +159,24 @@ function toReviewData(item: VerifierReviewItem): VerifierReviewData {
 
 export interface SignalsPanelProps {
   packet: VerifierConsolePacket;
+  /** Records/revises a concealment-linkage assessment (Story 6.15, AC7). When provided, the concealment
+   *  section mounts the capture control; when omitted (a read-only surface), it is hidden. */
+  onAssessConcealment?: (input: ConcealmentAssessmentSubmit) => Promise<void>;
+  concealmentAssessing?: boolean;
+  concealmentAssessError?: string | null;
 }
 
-export function SignalsPanel({ packet }: SignalsPanelProps): ReactElement {
+export function SignalsPanel({
+  packet,
+  onAssessConcealment,
+  concealmentAssessing,
+  concealmentAssessError,
+}: SignalsPanelProps): ReactElement {
   return (
     <div className="flex flex-col gap-4" data-testid="signals-panel">
+      {/* AC1 — the PROMINENT flagged banner, ABOVE all standard sections (never auto-denied). */}
+      {packet.concealment.status === 'flagged' ? <ConcealmentFlaggedBanner /> : null}
+
       {/* (a) identity + validity + concealment */}
       <Section title={t.sections.identity} testId="section-identity">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -151,6 +190,13 @@ export function SignalsPanel({ packet }: SignalsPanelProps): ReactElement {
 
       <Section title={t.sections.concealment} testId="section-concealment">
         <ConcealmentIndicator signal={packet.concealment} />
+        {onAssessConcealment ? (
+          <ConcealmentAssessmentControl
+            onSubmit={onAssessConcealment}
+            {...(concealmentAssessing !== undefined ? { processing: concealmentAssessing } : {})}
+            {...(concealmentAssessError !== undefined ? { error: concealmentAssessError } : {})}
+          />
+        ) : null}
       </Section>
 
       {/* (b) OCR document parity — embeds the 6.5 <VerifierReviewPanel> per document */}

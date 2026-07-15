@@ -168,6 +168,16 @@ export const CLAIM_STATE_TRUSTEE_DECISION_FIELD_CLASS = 'state_trustee_decision'
 export const CLAIM_R9_VOTE_FIELD_CLASS = 'r9_vote';
 
 /**
+ * The concealment-assessment Tier-1 field class (Story 6.15, D-G). The verifier concealment-assessment
+ * route encrypts the OPTIONAL note free-text (`note_ciphertext`) before the domain writer, and the
+ * authorized read (if any) decrypts it under the SAME (pariwarId, fieldClass). Arbitrary verifier free-text
+ * is PII-capable (it can reference member medical/disclosure facts). Matches the
+ * `piiColumn(1, 'concealment_assessment')` annotation on `claim_concealment_assessments`. NEVER in an event
+ * payload / audit line / index / filter (the tri-state kind + reason ride those surfaces; the note may not).
+ */
+export const CLAIM_CONCEALMENT_ASSESSMENT_FIELD_CLASS = 'concealment_assessment';
+
+/**
  * The claim-document Tier-1 field class (Story 6.5). The OCR-parity job encrypts the extracted
  * death-certificate identity fields (`deceased_name_ciphertext`, `dob_ciphertext`,
  * `date_of_death_ciphertext`, `issuing_authority_ciphertext`, `certificate_number_ciphertext`)

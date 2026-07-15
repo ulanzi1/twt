@@ -111,6 +111,13 @@ function translateCycleFreezeError(err: unknown): never {
   if (err instanceof claim.ClaimStreamConcurrencyError) {
     throw new ConflictError('This claim was updated concurrently — reload and try again', 'cycle_freeze.stream_conflict');
   }
+  if (err instanceof claim.ConcealmentNotFlaggedError) {
+    throw new ConflictError(
+      'This claim’s concealment signal is not flagged — a concealment reason code requires a live `flagged` signal',
+      'cycle_freeze.concealment_not_flagged',
+      { signalStatus: err.signalStatus },
+    );
+  }
   throw err;
 }
 
@@ -304,6 +311,11 @@ export function createCycleFreezeHandlers(
         phase: result.decision.phase,
         outcome: result.decision.outcome,
         reason_code: result.decision.reasonCode ?? null,
+        // Story 6.15 (AC3) — the R14 clause-version snapshot on a concealment decision (non-PII); absent
+        // for every non-concealment decision.
+        ...(result.concealmentClauseVersionId != null
+          ? { concealment_clause_version_id: result.concealmentClauseVersionId }
+          : {}),
       });
       void reply.status(201);
       return toDecisionResponse(result);

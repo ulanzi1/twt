@@ -32,6 +32,12 @@ export {
   type DecisionSubmit,
 } from './VerificationDecisionStrip.js';
 export { ReasonCodeDropdown, type ReasonCodeDropdownProps } from './ReasonCodeDropdown.js';
+// Story 6.15 — the verifier concealment-linkage assessment capture control (tri-state + optional note).
+export {
+  ConcealmentAssessmentControl,
+  type ConcealmentAssessmentControlProps,
+  type ConcealmentAssessmentSubmit,
+} from './ConcealmentAssessmentControl.js';
 export {
   AuditTrail,
   AuditTrailEntry,

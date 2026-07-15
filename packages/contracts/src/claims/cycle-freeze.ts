@@ -41,6 +41,8 @@ export const StateTrusteeReasonCode = z.enum([
   'concealment_upheld',
   'r9_special_case',
   'r9_panel_denied',
+  // Story 6.15 (AC2) — the concealment OVERRIDE approve code (the only code valid for `approved`).
+  'concealment_override',
   'other',
 ]);
 export type StateTrusteeReasonCode = z.output<typeof StateTrusteeReasonCode>;
@@ -64,6 +66,9 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   concealment_upheld: ['denied'],
   r9_special_case: ['routed_to_r9'],
   r9_panel_denied: ['denied'],
+  // Story 6.15 (AC2) — the concealment override approves; the ONLY code pinned to `approved`. The D-F
+  // presence rule is unchanged (an ordinary approve still requires no code).
+  concealment_override: ['approved'],
   other: ['denied', 'routed_to_r9'],
 };
 
@@ -85,9 +90,10 @@ export function isTrusteeReasonCodeValidForOutcome(outcome: string, reasonCode: 
  * ONE pending case's denormalized provenance (AC1). NON-PII except the route-decrypted `verifier_rationale`
  * (ciphertext-as-stored in the accessor; decrypted only AFTER authorization at the route, AC10). The
  * verifier provenance (decision id + display + reason-code) is from `claim_verifier_decisions`; the
- * `concealment_flags` carry `concealment_review_required` when the claim's decision history shows a
- * concealment review (the durable, scope-safe indicator; a validity-service-sourced member flag is
- * deferred to the same integration the 6.10 console's `not_evaluated` tri-state awaits).
+ * `concealment_flags` carry `concealment_review_required` from the REAL claim-scoped concealment signal
+ * (Story 6.15, AC6) — sourced from the tri-state producer over the verifier ASSESSMENT
+ * (`assessClaimConcealmentBulk`, ONE clamped read for the whole pending page, no per-claim N+1), NOT the
+ * pre-6.15 decision-history placeholder heuristic.
  */
 export const CycleFreezePendingItem = z
   .object({
@@ -102,7 +108,7 @@ export const CycleFreezePendingItem = z
     verifier_rationale: z.string().nullable(),
     /** A compact, deterministic signals summary (intake provenance + verification posture). */
     signals_summary: z.string(),
-    /** `[concealment_review_required]` when the claim's decision history shows a concealment review; else []. */
+    /** `[concealment_review_required]` when the claim-scoped concealment producer resolves `flagged`; else []. */
     concealment_flags: z.array(z.string()),
     /** True when the claim carries a LIVE route-to-R9 exclusion row → excluded from the commit set (AC4). */
     routed_to_r9: z.boolean(),
@@ -208,13 +214,21 @@ export const CycleFreezeDecisionRequest = z
         message: `reason_code '${val.reason_code}' is not valid for this decision`,
       });
     }
-    // (c) rationale required on `other` and on a deny (the appeal record needs the ground); ≤500 chars.
+    // (c) rationale required on `other`, on a deny (the appeal record needs the ground), and on a
+    //     `concealment_override` approve (Story 6.15 AC2 — an override MUST carry a mandatory rationale);
+    //     ≤500 chars.
     const rationale = val.rationale?.trim() ?? '';
-    if ((val.reason_code === 'other' || outcome === 'denied') && rationale === '') {
+    if (
+      (val.reason_code === 'other' ||
+        val.reason_code === 'concealment_override' ||
+        outcome === 'denied') &&
+      rationale === ''
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['rationale'],
-        message: 'a rationale is required for the "other" reason code and for a deny',
+        message:
+          'a rationale is required for the "other" and "concealment_override" reason codes and for a deny',
       });
     }
     if ((val.rationale?.length ?? 0) > TRUSTEE_RATIONALE_MAX_CHARS) {

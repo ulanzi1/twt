@@ -309,7 +309,16 @@ export type AuthAuditEventType =
   | 'admin_r9_voting.vote'
   | 'admin_r9_voting.finalize'
   | 'admin_r9_voting.cancel'
-  | 'admin_r9_voting.rejected';
+  | 'admin_r9_voting.rejected'
+  // Story 6.15 — the verifier concealment-linkage assessment surface (the human-supplied
+  // claim.concealed_ima_condition_linked fact). Post-action SINK line (the durable records are the
+  // claim_concealment_assessments row + the claim.concealment_assessed identity event). Context is NON-PII:
+  // claim_case_id + kind + actor — NEVER the optional Tier-1 note (D-G). The assessment flags/routes; it
+  // never denies, so there is no approve/deny audit line here (the State Trustee decides at cycle-freeze).
+  //   write     — a tri-state concealment assessment recorded/revised (metadata-only).
+  //   rejected  — an assessment attempt rejected by a domain guard (fail-closed AND audited).
+  | 'admin_concealment_assessment.write'
+  | 'admin_concealment_assessment.rejected';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

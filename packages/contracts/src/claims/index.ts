@@ -49,3 +49,8 @@ export * from './cycle-freeze.js';
 // finalize / cancel requests, and the votes-by-trustee transcript. The R9 wire enums + clause-id set are
 // re-declared value-aligned with the @twt/domain pgEnums + R9_VOTING_CLAUSE_IDS (browser-bundle rule; lockstep-pinned).
 export * from './r9-voting.js';
+// Story 6.15 — the verifier concealment-linkage assessment DTOs (the human-supplied
+// claim.concealed_ima_condition_linked fact): the tri-state record/revise request (kind + optional Tier-1
+// note, .strict() — server-derived actor identity, R5) + the NON-PII assessment response. `kind` is
+// re-declared value-aligned with the @twt/domain claim_concealment_assessment_kind pgEnum (browser-bundle rule).
+export * from './concealment-assessment.js';

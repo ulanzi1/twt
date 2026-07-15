@@ -86,6 +86,13 @@ export const STATE_TRUSTEE_REASON_CODES = [
   // required for denied" rule every other trustee-decision writer enforces via `assertReasonCode`.
   // Added to the `state_trustee_reason_code` pgEnum via migration 0065 (ALTER TYPE ADD VALUE).
   'r9_panel_denied',
+  // Approve family (Story 6.15 AC2) — the ONLY reason code valid for `approved`. The trustee reviewed a
+  // concealment flag and OVERRODE it → approve (with a mandatory free-text rationale). Distinct from the
+  // verifier `concealment_flag_override` (6.11 — a different authority/enum, D-F). It does NOT change the
+  // D-F presence rule: an ordinary approve still requires NO reason code
+  // (`trusteeReasonCodeRequiredForOutcome('approved')` stays false); this code is merely PERMITTED on an
+  // approve once supplied. Added to the pgEnum via migration 0069 (ALTER TYPE ADD VALUE).
+  'concealment_override',
   // Any-outcome (deny/route) escape hatch — mandatory free-text rationale.
   'other',
 ] as const;
@@ -111,6 +118,10 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   concealment_upheld: ['denied'],
   r9_special_case: ['routed_to_r9'],
   r9_panel_denied: ['denied'],
+  // Story 6.15 (AC2) — the concealment OVERRIDE approves; the ONLY code pinned to `approved`. The D-F
+  // presence rule is unchanged (`trusteeReasonCodeRequiredForOutcome('approved')` stays false) — an
+  // ordinary approve still takes NO code; this one is merely ACCEPTED on an approve once supplied.
+  concealment_override: ['approved'],
   other: ['denied', 'routed_to_r9'],
 };
 

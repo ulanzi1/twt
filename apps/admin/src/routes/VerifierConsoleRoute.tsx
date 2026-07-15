@@ -29,11 +29,13 @@ import {
 } from '../modules/claim-verification/index.js';
 import { ApiError } from '../api/client.js';
 import {
+  usePostConcealmentAssessment,
   usePostVerifierDecision,
   useReviseVerifierDecision,
   useSession,
   useVerifierConsole,
 } from '../api/hooks.js';
+import type { ConcealmentAssessmentSubmit } from '../modules/claim-verification/index.js';
 
 export interface VerifierConsoleGateViewProps {
   status: 'loading' | 'error' | 'success';
@@ -92,6 +94,7 @@ export function VerifierConsoleRoute(): ReactElement {
   const console_ = useVerifierConsole(pariwarId, claimCaseId);
   const decision = usePostVerifierDecision(pariwarId, claimCaseId);
   const revise = useReviseVerifierDecision(pariwarId, claimCaseId);
+  const concealmentAssessment = usePostConcealmentAssessment(pariwarId, claimCaseId);
 
   useEffect(() => {
     if (session.isError) void navigate({ to: '/login' });
@@ -145,6 +148,18 @@ export function VerifierConsoleRoute(): ReactElement {
   const submitError = decision.error ?? revise.error;
   const decisionErrorText = submitError ? decisionErrorMessage(submitError) : null;
 
+  // Story 6.15 — record/revise a concealment-linkage assessment; the console packet is invalidated on
+  // success so the concealment tri-state + the flagged banner re-render with the new signal.
+  const submitConcealmentAssessment = async (input: ConcealmentAssessmentSubmit): Promise<void> => {
+    await concealmentAssessment.mutateAsync({
+      kind: input.kind,
+      ...(input.note !== undefined ? { note: input.note } : {}),
+    });
+  };
+  const concealmentAssessErrorText = concealmentAssessment.error
+    ? decisionErrorMessage(concealmentAssessment.error)
+    : null;
+
   return (
     <VerifierConsoleGateView status={status}>
       <VerificationConsoleShell
@@ -189,7 +204,12 @@ export function VerifierConsoleRoute(): ReactElement {
               : t.states.unavailable}
           </p>
         ) : packet ? (
-          <SignalsPanel packet={packet} />
+          <SignalsPanel
+            packet={packet}
+            onAssessConcealment={submitConcealmentAssessment}
+            concealmentAssessing={concealmentAssessment.isPending}
+            concealmentAssessError={concealmentAssessErrorText}
+          />
         ) : null}
       </VerificationConsoleShell>
     </VerifierConsoleGateView>

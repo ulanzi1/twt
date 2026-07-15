@@ -48,6 +48,35 @@ describe('CycleFreezeDecisionRequest superRefine (D-F)', () => {
     expect(CycleFreezeDecisionRequest.safeParse({ claim_case_id: CLAIM, action: 'approve' }).success).toBe(true);
   });
 
+  it('Story 6.15 — approve WITH concealment_override + rationale is accepted (the override path)', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'approve',
+      reason_code: 'concealment_override',
+      rationale: 'Reviewed the concealment flag; the linkage does not hold — approving.',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('Story 6.15 — approve WITH concealment_override but NO rationale is rejected (mandatory rationale)', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'approve',
+      reason_code: 'concealment_override',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('Story 6.15 — a DENY-only code on an approve is still rejected (outcome compat unchanged)', () => {
+    const r = CycleFreezeDecisionRequest.safeParse({
+      claim_case_id: CLAIM,
+      action: 'approve',
+      reason_code: 'concealment_upheld',
+      rationale: 'x',
+    });
+    expect(r.success).toBe(false);
+  });
+
   it('deny REQUIRES a reason code', () => {
     expect(CycleFreezeDecisionRequest.safeParse({ claim_case_id: CLAIM, action: 'deny' }).success).toBe(false);
   });

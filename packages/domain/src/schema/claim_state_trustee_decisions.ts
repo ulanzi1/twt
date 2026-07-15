@@ -89,6 +89,14 @@ export const claimStateTrusteeDecisions = pgTable(
 
     decidedAt: timestamp('decided_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 
+    // Story 6.15 (AC3) — the R14 concealment-clause rule-version snapshot, resolved SERVER-SIDE inside the
+    // decision transaction (`resolveConcealmentClause`), persisted ONLY on a concealment-coded decision
+    // (`concealment_upheld` / `concealment_override`). NULLABLE at the column: every non-concealment trustee
+    // decision leaves it null; the writer enforces non-null-on-concealment (and aborts the tx on a null
+    // clause resolution — the 3.5 precedent). NEVER accepted from the route/client. Scoped to THIS table
+    // ONLY (D-B — no R9 table carries an R14 snapshot). Added via migration 0068.
+    concealmentClauseVersionId: text('concealment_clause_version_id'),
+
     // When this row was superseded (e.g. an escalation resolution re-decides, or a routing exclusion is
     // lifted). NULL = the LIVE/current row for its phase (the partial-unique index keys off this). A
     // superseded row stays in the transcript for audit.

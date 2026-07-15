@@ -25,7 +25,7 @@
 // fail-soft (a corrupt envelope ⇒ null for that field, never a failed read). The packet is
 // authorized-display-sensitive — never logged, never persisted client-side.
 
-import { claim, idempotency, ids, type Db } from '@twt/domain';
+import { claim, idempotency, ids, rbac, type Db } from '@twt/domain';
 import {
   getValidityCached,
   type ValidityCaller,
@@ -38,6 +38,7 @@ import type {
   PeerMeshSection,
   PriorVerifierCommentsSection,
   RecentPrecedentsSection,
+  ConcealmentSignal,
   ShepherdSection,
   ValiditySection,
   VerifierConsoleIdentity,
@@ -75,11 +76,16 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * Ceiling = baseline 6 + a small explicit allowance of 2 = 8. The allowance is exactly the two Story
  * 6.11 producer reads (getPriorVerifierDecisions + getRecentInScopePrecedents) that light up when the
  * decision read model ships — so 6.11 needs no bump. Story 6.12 adds ONE bounded read (the live-shepherd
- * section, getLiveShepherd) → ceiling 8 + 1 = 9. Any FURTHER increase requires an explanation at review,
- * not a casual bump; the counter is asserted in the live-DB integration test so it cannot be silently
- * "fixed" by excluding a newly-added read.
+ * section, getLiveShepherd) → ceiling 8 + 1 = 9. Story 6.15 adds the claim-scoped concealment producer
+ * (claim.assessClaimConcealment) — the live-assessment single-row read PLUS a conditional R14 clause
+ * resolution (only when the live assessment is decisive — `linked`/`not_linked`, never for an absent/
+ * `unable_to_determine` assessment): up to TWO real bounded reads, both row-count-independent → no N+1, but
+ * bumped/budgeted as two so the counter reflects the actual worst-case query cost, not just "one producer
+ * call" → ceiling 9 + 2 = 11. Any FURTHER increase requires an explanation at review, not a casual bump; the
+ * counter is asserted in the live-DB integration test so it cannot be silently "fixed" by excluding a
+ * newly-added read.
  */
-export const VERIFIER_CONSOLE_MAX_READS = 9;
+export const VERIFIER_CONSOLE_MAX_READS = 11;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -160,12 +166,38 @@ export async function assembleVerifierConsole(
   // ── (a) validity — scope-redacted by the service; `unavailable` on a transient fail ──────────────
   const validity = await assembleValidity(deps, ctx, deceasedMemberId, reads);
 
-  // ── (a) concealment tri-state (D10) — request-time, scope-safe; district = indicator_only ────────
-  // NEVER inferred from the redacted validity `specialFlags` (absence can't distinguish "no flag" from
-  // "redacted flag"), NEVER the member-standing flag. No claim-scoped R14 producer exists yet, so the
-  // honest v1 posture is `not_evaluated` — never `not_flagged`, never a green/clear. When the producer
-  // lands (deferred, likely Story 6.15) it plugs into this SAME shape without changing the console API.
-  const concealment = { status: 'not_evaluated', detailVisibility: 'indicator_only' } as const;
+  // ── (a) concealment tri-state (Story 6.15; AC1/AC5; D10) — from the claim-scoped verifier-assessment
+  // PRODUCER (claim.assessClaimConcealment), NEVER inferred from the redacted validity `specialFlags`
+  // (absence can't distinguish "no flag" from "redacted flag"), NEVER the member-standing flag. An absent/
+  // indeterminate assessment (or an unprovisioned R14 clause) fails soft to `not_evaluated` — never a false
+  // `not_flagged`, never a green/clear. `detailVisibility` = `full` iff the caller holds EFFECTIVE
+  // `cycle.freeze` authority at `dimension:'pariwar'` (the SAME key + scopeContains 6.13 gates its decision
+  // on — effective-scope, fails closed on every uncertain path; NOT a role-name check — D-C revision 4).
+  // `full` adds ONLY the clause-version metadata (D-C) — NEVER medical evidence / disclosed-condition
+  // detail / inferred linkage. It plugs into the SAME ConcealmentSignal shape the console API already had.
+  // Budgeted as TWO reads (the live-assessment read + a conditional R14 clause resolution) — the worst-case
+  // query cost, matching the one-bump-per-real-query convention this file uses elsewhere.
+  reads.bump();
+  reads.bump();
+  const concealmentSignal = await claim.assessClaimConcealment(ctx.db, {
+    pariwarId,
+    claimCaseId: ids.claimId(ctx.claimCaseId),
+  });
+  const concealmentFull = rbac.hasPermission(ctx.grants, 'cycle.freeze', {
+    dimension: 'pariwar',
+    value: ctx.pariwarId,
+    pariwarId: ctx.pariwarId,
+  });
+  const concealment: ConcealmentSignal = {
+    status: concealmentSignal.status,
+    detailVisibility: concealmentFull ? 'full' : 'indicator_only',
+    // Clause-version surfaced ONLY to a full-visibility caller AND only when there is a resolved basis
+    // (flagged/not_flagged carry it; not_evaluated never does). indicator_only always → null.
+    clauseVersionId:
+      concealmentFull && concealmentSignal.status !== 'not_evaluated'
+        ? concealmentSignal.clauseVersionId
+        : null,
+  };
 
   // ── (b) OCR document-review parity (embeds the 6.5 <VerifierReviewPanel> shape) ──────────────────
   const documentReview = await assembleDocumentReview(deps, ctx, core, memberRecord);

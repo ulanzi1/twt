@@ -39,6 +39,31 @@ export const verifierConsoleEn = {
     notFlagged: 'No concealment flag',
     notEvaluated: 'Concealment review not yet evaluated',
     indicatorOnly: 'Presence indicator only — full detail is reviewed by the State Trustee.',
+    clauseVersionLabel: 'Rule version (R14)',
+    // The PROMINENT banner shown above all signals when the claim is flagged (AC1). It must NEVER read as
+    // a denial — the claim routes to the State Trustee for an explicit decision; it is never auto-denied.
+    bannerTitle: 'Concealment review required',
+    bannerBody:
+      'This claim is flagged for concealment review. It is NOT auto-denied — it routes to the State Trustee for an explicit uphold/override decision.',
+  },
+  // The verifier concealment-linkage assessment control (Story 6.15, AC7) — records the human judgement
+  // (linked | not_linked | unable_to_determine). A review annotation; it flags/routes, it never decides.
+  concealmentAssessment: {
+    heading: 'Concealment linkage assessment',
+    help: 'Record whether an undeclared IMA-listed condition appears linked to the death. This is a review annotation — it never decides the claim (the State Trustee decides).',
+    kindLabel: 'Assessment',
+    kindPlaceholder: 'Select an assessment…',
+    kinds: {
+      linked: 'Linked — undeclared condition appears linked to the death',
+      not_linked: 'Not linked — no linkage found',
+      unable_to_determine: 'Unable to determine',
+    },
+    noteLabel: 'Note (optional)',
+    notePlaceholder: 'Optional context for this assessment (encrypted).',
+    noteEncryptedNote: 'Stored encrypted; never shown on audit lines.',
+    submit: 'Record assessment',
+    processing: 'Recording…',
+    kindRequiredError: 'Select an assessment before recording.',
   },
   validity: {
     validityLabel: 'Validity',

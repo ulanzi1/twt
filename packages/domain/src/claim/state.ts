@@ -205,6 +205,15 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.verifier_decision_revised':
       return state;
 
+    // ANNOTATION: verifier recorded/revised a concealment-linkage assessment (Story 6.15, D-E/D-D). The
+    // assessment is a review ANNOTATION, NOT an adjudication: it flags/routes but NEVER denies — the State
+    // Trustee (6.13) alone decides the claim (D-B). There is NO concealment lifecycle state and this adds
+    // none. Identity from any state (reducer stays total) — "changes no lifecycle state" (D-D) is
+    // structural here: the flag has NO edge to `denied`, so no auto-deny is possible. The write path
+    // (concealment-assessment-persist.ts) owns supersession + same-tx event/row atomicity; never here.
+    case 'claim.concealment_assessed':
+      return state;
+
     // ANNOTATION: human shepherd assigned to the claim (Story 6.12). Assignment is a ROUTING/attribution
     // concern — there is NO shepherd lifecycle state and this adds none (a District Admin becomes the
     // family's named contact; being shepherd grants no claim.approve — AC6). Identity from any state

@@ -92,3 +92,8 @@ export * from './cycle-freeze-commits-rls.js';
 // claim.r9_outcome event).
 export * from './claim-r9-voting-sessions-rls.js';
 export * from './claim-r9-votes-rls.js';
+// Story 6.15 — claim_concealment_assessments tenant-isolation policies (NOT cross-readable; mirror
+// claims-rls; SYMMETRIC — no 6.13 asymmetry). No write-rejection trigger — the assessment row is a review
+// annotation / read model, not a state cache (claim state stays on claims.current_state; the paired
+// claim.concealment_assessed event is an identity annotation).
+export * from './claim-concealment-assessments-rls.js';

@@ -73,3 +73,12 @@ export * from './r9-voting.js';
 // projectClaimState) + the queue/panel/votes-by-trustee read models + the typed write-path guards.
 export * from './r9-voting-persist.js';
 export * from './r9-voting-read.js';
+// Story 6.15 — concealment-flagged claim path: the tri-state verifier concealment-linkage assessment
+// vocabulary (linked | not_linked | unable_to_determine — the human-supplied claim.concealed_ima_condition_linked
+// fact, D-D), the assessment write path (recordConcealmentAssessment — advisory-locked; atomic supersession +
+// the same-tx claim.concealment_assessed identity event, D-E) + the live/bulk read accessors, and the
+// tri-state concealment PRODUCER (assessClaimConcealment / assessClaimConcealmentBulk — reads the assessment,
+// invokes the reviewed engine R14 eval; flag-surface-only, never derived from redacted validity flags — D10).
+export * from './concealment-assessment.js';
+export * from './concealment-assessment-persist.js';
+export * from './concealment-review.js';

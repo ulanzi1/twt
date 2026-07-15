@@ -480,3 +480,15 @@ export const r9VotingSessionId = uuidBrand('R9VotingSessionId');
 export type R9VoteId = Brand<'R9VoteId'>;
 /** Smart constructor: validates UUID shape, returns a branded `R9VoteId`. */
 export const r9VoteId = uuidBrand('R9VoteId');
+
+// ── Verifier concealment-linkage assessment id (Story 6.15, Task 1) ────────────
+// `ConcealmentAssessmentId` is the per-row address of one verifier concealment-linkage assessment
+// (`claim_concealment_assessments.assessment_id`) — the human-supplied `claim.concealed_ima_condition_linked`
+// fact (D-D). At most one live (non-superseded) assessment per claim; revisable (each revision supersedes
+// the prior via `supersedes_assessment_id`). A UUID row address, so it reuses the shared `uuidBrand`
+// validator; `claim_case_id` / `pariwar_id` reuse `ClaimId` / `PariwarId`.
+
+/** Per-row address of a verifier concealment-linkage assessment (`claim_concealment_assessments.assessment_id`). */
+export type ConcealmentAssessmentId = Brand<'ConcealmentAssessmentId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ConcealmentAssessmentId`. */
+export const concealmentAssessmentId = uuidBrand('ConcealmentAssessmentId');

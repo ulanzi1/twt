@@ -15,13 +15,14 @@
 // AFTER authorization, AC10) + a compact signals summary + a concealment indicator + the durable
 // route-to-R9 exclusion flag.
 //
-// ── Concealment indicator (the durable, scope-safe signal — the 6.10 posture) ───────────────
-// The 6.10 verifier console deliberately returns `not_evaluated` for concealment rather than inferring it
-// from the volatile/redacted validity cache (absence can't distinguish "no flag" from "redacted"). So this
-// read surfaces the DURABLE signal that actually ships: `concealment_review_required` when the claim's
-// verifier-decision history carries a concealment reason-code (`concealment_flag_override` /
-// `concealment_flag_uphold` — a concealment dimension was reviewed on this claim). A richer
-// validity-service-sourced member flag is DEFERRED to the same integration the 6.10 tri-state awaits.
+// ── Concealment indicator (the REAL claim flag — Story 6.15, AC6) ───────────────────────────
+// Story 6.15 LANDED the claim-scoped concealment producer, so this read now surfaces the ACTUAL claim
+// concealment flag: `concealment_review_required` iff the tri-state producer over the verifier ASSESSMENT
+// resolves `flagged` (via `assessClaimConcealmentBulk` — ONE clamped assessment read for the whole page +
+// the R14 clause resolved ONCE per pariwar; NO per-claim call in a loop, the explicit no-N+1 requirement).
+// This REPLACES the prior 6.13 placeholder (which read the verifier-decision HISTORY for a concealment
+// reason-code). Still NEVER inferred from the redacted validity cache (absence can't distinguish "no flag"
+// from "redacted"), and a `not_flagged`/`not_evaluated` signal surfaces nothing (never a green/clear — D10).
 //
 // ── Scope-safe + clamped (AC1) ──────────────────────────────────────────────────────────────
 // Every read is scope-safe (RLS + explicit `pariwar_id`); the bounded per-Pariwar scans pass their cap
@@ -36,10 +37,9 @@ import { clampLimit } from '../pagination.js';
 import { claims } from '../schema/claims.js';
 import { claimVerifierDecisions } from '../schema/claim_verifier_decisions.js';
 import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
+import { assessClaimConcealmentBulk } from './concealment-review.js';
 
-/** The verifier reason codes that mean a concealment dimension was reviewed on the claim (Story 4.4/6.11). */
-const CONCEALMENT_REASON_CODES = ['concealment_flag_override', 'concealment_flag_uphold'] as const;
-/** The surfaced special-flag label (Story 4.4 vocabulary) when a concealment review is present. */
+/** The surfaced special-flag label (Story 4.4 vocabulary) when a claim's concealment signal is `flagged`. */
 export const CONCEALMENT_REVIEW_REQUIRED_FLAG = 'concealment_review_required';
 
 /** A per-Pariwar bounded cap for the pending scans (clamped through the domain limit-clamp gate). */
@@ -180,21 +180,23 @@ export async function getCycleFreezePending(db: Db, pariwarId: PariwarId): Promi
 
   const allClaimIds = [...readyRows, ...escalatedRows, ...votedRows].map((r) => r.claimCaseId as ClaimId);
 
-  // Bulk concealment-history + routing-row reads for the collected claims (no N+1).
+  // Bulk concealment (Story 6.15, AC6) + routing-row reads for the collected claims (no N+1). The real
+  // claim concealment flag now comes from the tri-state PRODUCER over the verifier ASSESSMENT
+  // (`assessClaimConcealmentBulk` — ONE clamped assessment read for the whole page + the R14 clause
+  // resolved ONCE per pariwar; NOT the prior verifier-decision-history heuristic, NOT a per-claim call in a
+  // loop). Only a `flagged` signal surfaces `concealment_review_required`; `not_flagged`/`not_evaluated`
+  // surface nothing (never green a redacted/absent signal — D10).
   const concealmentClaimIds = new Set<string>();
   const routedClaimIds = new Set<string>();
   if (allClaimIds.length > 0) {
-    const concealmentRows = await db
-      .select({ claimCaseId: claimVerifierDecisions.claimCaseId })
-      .from(claimVerifierDecisions)
-      .where(
-        and(
-          eq(claimVerifierDecisions.pariwarId, pariwarId),
-          inArray(claimVerifierDecisions.claimCaseId, allClaimIds),
-          inArray(claimVerifierDecisions.reasonCode, [...CONCEALMENT_REASON_CODES]),
-        ),
-      );
-    for (const r of concealmentRows) concealmentClaimIds.add(r.claimCaseId);
+    const concealmentSignals = await assessClaimConcealmentBulk(
+      db,
+      pariwarId,
+      allClaimIds.map((id) => ({ claimCaseId: id })),
+    );
+    for (const [claimCaseId, signal] of concealmentSignals) {
+      if (signal.status === 'flagged') concealmentClaimIds.add(claimCaseId);
+    }
 
     const routingRows = await db
       .select({ claimCaseId: claimStateTrusteeDecisions.claimCaseId })

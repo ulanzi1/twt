@@ -23,6 +23,7 @@ import { registerShepherdRoutes } from './claims.shepherd.routes.js';
 import { registerCycleFreezeRoutes } from './claims.cycle-freeze.routes.js';
 import { registerR9VotingRoutes } from './claims.r9-voting.routes.js';
 import { registerConcealmentAssessmentRoutes } from './claims.concealment-assessment.routes.js';
+import { registerAppealRoutes } from './claims.appeal.routes.js';
 
 export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void {
   registerClaimsRoutes(app, deps);
@@ -49,4 +50,11 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   // records/revises the human-supplied claim.concealed_ima_condition_linked fact. A review annotation — it
   // flags/routes, NEVER denies (the State Trustee alone decides at cycle-freeze, D-B).
   registerConcealmentAssessmentRoutes(app, deps);
+  // Story 6.16 — the internal 3-stage appeal surface (the LAST story of Epic 6): member/operator initiate +
+  // member status + Stage-1 District-Admin review (district-gated) + the Stage-2 State-Trustee panel
+  // (pariwar-gated; finalize step-up-gated) + Stage-3 Trustee discretion (pariwar-gated + step-up) + the AC6
+  // decisions-by-reviewer audit query. Reversal emits the claim.reversed publish hook (D-A); every admin
+  // stage route is covered by the claim-adjudication human-actor CI gate. Gated per-Pariwar by the D-G
+  // legal-review go-live config until counsel clears it.
+  registerAppealRoutes(app, deps);
 }

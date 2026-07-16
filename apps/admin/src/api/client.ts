@@ -58,6 +58,25 @@ import {
   type R9OpenSessionRequest as R9OpenPayload,
   type R9VoteRequest as R9VotePayload,
   type R9CancelRequest as R9CancelPayload,
+  // Story 6.16 — the internal 3-stage appeal surface DTOs.
+  AdminAppealCaseResponse,
+  AppealDecisionResponse,
+  AppealPanelSessionResponse,
+  AppealPanelVoteResponse,
+  AppealPanelFinalizeResponse,
+  AppealDecisionsByReviewerResponse,
+  type AdminAppealCaseResponse as AppealCase,
+  type AppealDecisionResponse as AppealDecision,
+  type AppealPanelSessionResponse as AppealPanelSession,
+  type AppealPanelVoteResponse as AppealPanelVoteResult,
+  type AppealPanelFinalizeResponse as AppealFinalize,
+  type AppealDecisionsByReviewerResponse as AppealDecisionsByReviewer,
+  type AppealStage1ReviewRequest as AppealStage1Payload,
+  type AppealStage2OpenRequest as AppealOpenPayload,
+  type AppealStage2VoteRequest as AppealVotePayload,
+  type AppealStage2FinalizeRequest as AppealFinalizePayload,
+  type AppealStage2CancelRequest as AppealCancelPayload,
+  type AppealStage3DecideRequest as AppealStage3Payload,
   StepUpRequestResponse,
   StepUpVerifyResponse,
   ProvisionedPariwar,
@@ -906,4 +925,60 @@ export function getR9VotesByTrustee(
   const qs = new URLSearchParams({ actorId });
   if (sinceDays !== undefined) qs.set('sinceDays', String(sinceDays));
   return apiFetch(`${r9Base(pariwarId)}/votes-by-trustee?${qs.toString()}`, R9VotesByTrusteeResponse);
+}
+
+// ── Story 6.16 — the internal 3-stage appeal admin surface ──
+
+const appealBase = (pariwarId: string, claimCaseId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/appeal`;
+
+/** GET the per-claim admin appeal case model (state + journey + panel + tally + current-stage SLA). */
+export function getAppealCase(pariwarId: string, claimCaseId: string): Promise<AppealCase> {
+  return apiFetch(appealBase(pariwarId, claimCaseId), AdminAppealCaseResponse);
+}
+
+/** POST the Stage-1 District-Admin review (reverse | advance; disposition required iff reverse). */
+export function reviewAppealStage1(pariwarId: string, claimCaseId: string, body: AppealStage1Payload): Promise<AppealDecision> {
+  return apiFetch(`${appealBase(pariwarId, claimCaseId)}/stage1`, AppealDecisionResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** POST open a Stage-2 panel (immutable roster ≥2). */
+export function openAppealPanel(pariwarId: string, claimCaseId: string, body: AppealOpenPayload): Promise<AppealPanelSession> {
+  return apiFetch(`${appealBase(pariwarId, claimCaseId)}/stage2/open`, AppealPanelSessionResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** POST cast/revise a Stage-2 vote (rationale required ≤500 chars). */
+export function castAppealVote(pariwarId: string, claimCaseId: string, body: AppealVotePayload): Promise<AppealPanelVoteResult> {
+  return apiFetch(`${appealBase(pariwarId, claimCaseId)}/stage2/vote`, AppealPanelVoteResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** POST finalize the Stage-2 panel (step-up-gated 'appeal_stage2_finalize'; disposition required iff reverse). */
+export function finalizeAppealPanel(pariwarId: string, claimCaseId: string, body: AppealFinalizePayload): Promise<AppealFinalize> {
+  return apiFetch(`${appealBase(pariwarId, claimCaseId)}/stage2/finalize`, AppealPanelFinalizeResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** POST cancel/correct a Stage-2 panel (reason-code + rationale required). */
+export function cancelAppealPanel(pariwarId: string, claimCaseId: string, body: AppealCancelPayload): Promise<AppealPanelSession> {
+  return apiFetch(`${appealBase(pariwarId, claimCaseId)}/stage2/cancel`, AppealPanelSessionResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** POST the Stage-3 Trustee discretion decision (step-up-gated 'appeal_stage3_decide'; reverse | uphold). */
+export function decideAppealStage3(pariwarId: string, claimCaseId: string, body: AppealStage3Payload): Promise<AppealDecision> {
+  return apiFetch(`${appealBase(pariwarId, claimCaseId)}/stage3`, AppealDecisionResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** GET the decisions-by-reviewer audit transcript (+ the D-H sla_breached/elapsed_days fields). */
+export function getAppealDecisionsByReviewer(
+  pariwarId: string,
+  reviewerActorId: string,
+  opts?: { stage?: '1' | '2' | '3'; sinceDays?: number; limit?: number },
+): Promise<AppealDecisionsByReviewer> {
+  const qs = new URLSearchParams({ reviewerActorId });
+  if (opts?.stage) qs.set('stage', opts.stage);
+  if (opts?.sinceDays !== undefined) qs.set('sinceDays', String(opts.sinceDays));
+  if (opts?.limit !== undefined) qs.set('limit', String(opts.limit));
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/appeal/decisions-by-reviewer?${qs.toString()}`,
+    AppealDecisionsByReviewerResponse,
+  );
 }

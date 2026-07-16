@@ -90,6 +90,13 @@ const CYCLE_FREEZE = permissionKey('cycle.freeze');
 // eligibility credential — assertPanelAuthorized requires every panel actor to hold it). Same Trustee-Lite
 // posture as cycle.freeze; direct state_trustee gating deferred to Epic 3.
 const CLAIM_R9_VOTE = permissionKey('claim.r9_vote');
+// Story 6.16 — the internal 3-stage appeal keys. Stage-1 reviewer (district-dimension; the claim.verify
+// precedent); Stage-2 panel voter (pariwar-dimension; ALSO the panel-membership eligibility credential, the
+// claim.r9_vote precedent); Stage-3 Trustee discretion (pariwar-dimension, RESOLVED v1). Same Trustee-Lite
+// posture — direct state_trustee gating for the pariwar keys deferred to Epic 3.
+const CLAIM_APPEAL_REVIEW = permissionKey('claim.appeal_review');
+const CLAIM_APPEAL_VOTE = permissionKey('claim.appeal_vote');
+const CLAIM_APPEAL_FINAL = permissionKey('claim.appeal_final');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -159,6 +166,13 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // or-broader role). v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating DEFERRED to
       // Epic 3 (see permissions.ts). No inert state_trustee grant is seeded.
       CLAIM_R9_VOTE,
+      // Story 6.16 — the Stage-2 State-Trustee appeal panel-voting key + the Stage-3 Trustee discretion key.
+      // Both PARIWAR-WIDE bulk-adjudication surfaces (checked at `dimension: 'pariwar'`), the exact
+      // cycle.freeze / claim.r9_vote ceiling rationale. v1 actor = pariwar_admin-as-Trustee-Lite; direct
+      // state_trustee gating DEFERRED to Epic 3. claim.appeal_vote is ALSO the panel-membership eligibility
+      // credential (openAppealPanel's assertPanelAuthorized). No inert state_trustee grant is seeded.
+      CLAIM_APPEAL_VOTE,
+      CLAIM_APPEAL_FINAL,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -195,6 +209,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.
       CLAIM_ASSIGN_SHEPHERD,
+      // Story 6.16 — the Stage-1 District-Admin appeal-reviewer key. Checked at `dimension: 'district'`
+      // against the deceased member's server-derived posting district (the claim.verify precedent); the
+      // `district` scopeCeiling makes that exact-node gate meaningful. The D-D reviewer-conflict (reviewer ≠
+      // original decider) is enforced in the domain write-path + handler, ORTHOGONAL to this route gate.
+      CLAIM_APPEAL_REVIEW,
     ],
     scopeCeiling: 'district',
   },

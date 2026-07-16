@@ -90,5 +90,14 @@
   "shepherd.error": "We couldn't load your point of contact just now. Please try again, or call us — we'll help.",
   "shepherd.entry": "Your claim — point of contact",
   "shepherd.screen_title": "Your point of contact",
-  "shepherd.back_home": "Back to home"
+  "shepherd.back_home": "Back to home",
+  "appeal.eligible": "This claim was not approved. If you believe that was a mistake, you can ask us to look at it again.",
+  "appeal.no_deadline": "There's no time limit — you can ask for a review whenever you're ready.",
+  "appeal.file_button": "Ask for a review",
+  "appeal.status_stage1": "A reviewer is taking a fresh look at your claim.",
+  "appeal.status_stage2": "A panel of trustees is reviewing your claim together.",
+  "appeal.status_stage3": "A trustee is making the final decision on your claim.",
+  "appeal.reversed": "Good news — the earlier decision was overturned and your claim is being taken forward again.",
+  "appeal.upheld_final": "After a full review, the earlier decision stands. We're sorry this isn't the outcome you hoped for.",
+  "appeal.external_remedy": "Completing this review does not affect your right to seek help outside — you may still approach a consumer commission or civil court if you wish."
 }

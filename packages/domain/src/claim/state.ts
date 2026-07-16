@@ -288,6 +288,15 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
       if (state === 'appeal_stage_3') return resolveAppealReview(state, event.payload, null);
       return state;
 
+    // ANNOTATION: appeal reversal → Sahyog Vivran publish hook (Story 6.16, D-A — the 31st event). The
+    // reducer already reached `reversed` via `appeal_stageN_reviewed(reversed)` in the SAME tx; THIS is the
+    // Epic 11b subscription annotation, IDENTITY from any state (in practice appended only at `reversed`,
+    // a requireIdentityTransition). It advances NOTHING — deliberately NOT in the transitions table below —
+    // and is deliberately ABSENT from member/overlay.ts ACCOUNT_UNFREEZE_EVENT_TYPES (a reversed claim
+    // re-enters approval, so the deceased member's freeze persists until `settled`/`denied_no_appeal`).
+    case 'claim.reversed':
+      return state;
+
     // ANNOTATION: appeal window closed/exhausted — claim STAYS `denied` (terminal).
     // Sole current consumer is the account-frozen overlay UNFREEZE. Identity.
     case 'claim.denied_no_appeal':

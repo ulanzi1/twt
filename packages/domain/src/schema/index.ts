@@ -214,6 +214,18 @@ export * from './claim_r9_votes.js';
 // per claim, revisable). The AUTHORITATIVE current/read model the tri-state concealment producer reads;
 // NOT a projection of claim state (the paired claim.concealment_assessed event is an identity annotation).
 export * from './claim_concealment_assessments.js';
+// Story 6.16 — internal 3-stage appeal: `claim_appeals` (the SINGLE appeal-journey anchor per claim, D-F —
+// unconditional unique on claim_case_id) + `claim_appeal_decisions` (per-stage decision-metadata; mirrors
+// claim_verifier_decisions with `stage` in the uniqueness key) + `claim_appeal_panel_sessions` /
+// `claim_appeal_panel_votes` (the Stage-2 State-Trustee panel — the R9 pattern MINUS the clause registry) +
+// `pariwar_appeal_config` (the D-G legal-review go-live gate + the D-H per-stage SLA durations). The
+// decision/panel/journey authorities — NOT projections of claim state; state stays on the paired
+// claim.appeal_* events (+ the new claim.reversed publish hook, D-A).
+export * from './claim_appeals.js';
+export * from './claim_appeal_decisions.js';
+export * from './claim_appeal_panel_sessions.js';
+export * from './claim_appeal_panel_votes.js';
+export * from './pariwar_appeal_config.js';
 // Story 1.9 — global identity + admin-auth tables (carve-out family, R2).
 export * from './users.js';
 export * from './admin_credentials.js';

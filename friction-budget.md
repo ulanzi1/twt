@@ -419,6 +419,34 @@ Epic-3 geo-tree hardening, DEFERRED + noted. Discharged **by reference** to Stor
 ledger — recorded here so the AR-61 line reads as discharged, not omitted (the
 6.12/6.13 deferral-legibility lesson).
 
+**Story 6.16 disposition (new member-facing "file appeal" affordance — declared LOW-friction, deliberately
+NOT step-up-gated; no new forced row):** the internal 3-stage appeal (the LAST story of Epic 6) adds ONE
+member-facing affordance — the "Ask for a review" / file-appeal button on the mobile claim-status surface
+(`apps/mobile/components/claim/AppealStatusCard.tsx` + `apps/mobile/lib/appeal-status.ts`, rendered in the
+`(claim)` flow). Friction analysis:
+
+(1) **File-appeal affordance — LOW friction by deliberate design (NOT forced/step-up).** Unlike the Story 3.2
+forced-OTP row (which scoped step-up to "mobile/nominee change, withdrawal, account-deletion ack, DigiLocker
+re-link, **claim filing**"), appeal-FILING is deliberately **NOT** added to that forced-OTP set. Rationale: a
+denied family's right to ask for a review must be as low-friction as possible (PRD "no formal time limit,
+grief-aware" — D-E); gating it behind an OTP step-up would contradict that dignity posture. The claimant is
+already an authenticated member (the `requireMemberSession` route gate is the real boundary), the action is
+reversible/non-destructive (it opens a review, it does not move money), and the AR-61 helpline fallback covers
+anyone who cannot self-file. So the disposition is an **explicit LOW-friction declaration**, not a forced-row
+realization — recorded here so the choice reads as deliberate (the 6.12/6.13 legibility lesson), NOT an
+omitted step-up. No new forced row warranted; the existing forced-OTP row is deliberately NOT extended to
+appeal-filing.
+
+(2) **Admin appeal surfaces — admin operator friction only.** The Stage-2 finalize + Stage-3 decide step-ups
+(`apps/admin` + `apps/api`) are admin operator friction (a trustee attesting a ₹50L-stakes reversal/uphold —
+the exact class the 6.13/6.14 admin step-up already affirmed), not member-facing. Zero member page-weight
+change (`apps/admin` is not page-weight-gated; the public Astro surface is untouched).
+
+**AR-61 discharge-by-reference.** Story 6.16 IS on the epics.md:2280 AR-61 list; the member-facing initiate
+route accepts an operator-on-behalf path (the `claim.file` helpline capability, `initiated_on_behalf`) so a
+grieving family unable to self-file is covered. Discharged **by reference** to Story 0.7's fallback-handler
+ledger — recorded so the AR-61 line reads as discharged, not omitted.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

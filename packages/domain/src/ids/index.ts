@@ -492,3 +492,33 @@ export const r9VoteId = uuidBrand('R9VoteId');
 export type ConcealmentAssessmentId = Brand<'ConcealmentAssessmentId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ConcealmentAssessmentId`. */
 export const concealmentAssessmentId = uuidBrand('ConcealmentAssessmentId');
+
+// ── Internal 3-stage appeal ids (Story 6.16, Task 1) ───────────────────────────
+// Four NEW branded ids per the §Naming "branding mandatory on a new ID's first PR" discipline (L3700-3708):
+// `AppealId` is the per-row address of one claim's SINGLE appeal journey anchor (`claim_appeals.appeal_id`)
+// — exactly one per claim, ever (D-F unconditional unique on claim_case_id). `AppealDecisionId` is the
+// per-row address of one per-stage single/panel decision-metadata row (`claim_appeal_decisions
+// .appeal_decision_id`) — mirrors VerifierDecisionId. `AppealPanelSessionId` / `AppealPanelVoteId` are the
+// Stage-2 panel session + per-vote addresses (`claim_appeal_panel_sessions.session_id` /
+// `claim_appeal_panel_votes.vote_id`) — mirror R9VotingSessionId / R9VoteId. All UUID row addresses, so all
+// reuse the shared `uuidBrand` validator; `claim_case_id` / `pariwar_id` reuse `ClaimId` / `PariwarId`.
+
+/** Per-row address of a claim's single appeal-journey anchor (`claim_appeals.appeal_id`). */
+export type AppealId = Brand<'AppealId'>;
+/** Smart constructor: validates UUID shape, returns a branded `AppealId`. */
+export const appealId = uuidBrand('AppealId');
+
+/** Per-row address of one per-stage appeal decision (`claim_appeal_decisions.appeal_decision_id`). */
+export type AppealDecisionId = Brand<'AppealDecisionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `AppealDecisionId`. */
+export const appealDecisionId = uuidBrand('AppealDecisionId');
+
+/** Per-row address of a Stage-2 appeal panel session (`claim_appeal_panel_sessions.session_id`). */
+export type AppealPanelSessionId = Brand<'AppealPanelSessionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `AppealPanelSessionId`. */
+export const appealPanelSessionId = uuidBrand('AppealPanelSessionId');
+
+/** Per-row address of an individual Stage-2 appeal panel vote (`claim_appeal_panel_votes.vote_id`). */
+export type AppealPanelVoteId = Brand<'AppealPanelVoteId'>;
+/** Smart constructor: validates UUID shape, returns a branded `AppealPanelVoteId`. */
+export const appealPanelVoteId = uuidBrand('AppealPanelVoteId');

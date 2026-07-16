@@ -318,7 +318,24 @@ export type AuthAuditEventType =
   //   write     — a tri-state concealment assessment recorded/revised (metadata-only).
   //   rejected  — an assessment attempt rejected by a domain guard (fail-closed AND audited).
   | 'admin_concealment_assessment.write'
-  | 'admin_concealment_assessment.rejected';
+  | 'admin_concealment_assessment.rejected'
+  // Story 6.16 — the internal 3-stage appeal surface (the LAST story of Epic 6). Post-action SINK lines
+  // (the durable records are the claim_appeal_* rows + the claim.appeal_* events + the claim.reversed publish
+  // hook). Context is NON-PII: claim_case_id + stage + decision/outcome + disposition_category + reason_code —
+  // NEVER the Tier-1 rationale (AC10/D-G). `member_claim.appeal_initiated` is the claimant/operator initiate
+  // line (AC1/AC7 — AR-61 on-behalf carries on_behalf:true).
+  //   stage1     — a Stage-1 District-Admin review decision (reverse/advance).
+  //   stage2_open/vote/finalize/cancel — the Stage-2 panel verbs.
+  //   stage3     — a Stage-3 Trustee discretion decision (reverse/uphold-final).
+  //   rejected   — any appeal write rejected by a domain guard (fail-closed AND audited).
+  | 'member_claim.appeal_initiated'
+  | 'admin_appeal.stage1'
+  | 'admin_appeal.stage2_open'
+  | 'admin_appeal.stage2_vote'
+  | 'admin_appeal.stage2_finalize'
+  | 'admin_appeal.stage2_cancel'
+  | 'admin_appeal.stage3'
+  | 'admin_appeal.rejected';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

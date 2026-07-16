@@ -27,7 +27,7 @@ const validPayload = {
 describe('ClaimR9OutcomePayloadSchema (the 29th claim event)', () => {
   it('is registered as a claim event type + bound in the payload-schema map', () => {
     expect(CLAIM_EVENT_TYPES).toContain('claim.r9_outcome');
-    expect(CLAIM_EVENT_TYPES).toHaveLength(30); // Story 6.15 added the 30th (claim.concealment_assessed)
+    expect(CLAIM_EVENT_TYPES).toHaveLength(31); // Story 6.16 added the 31st (claim.reversed)
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.r9_outcome']).toBe(ClaimR9OutcomePayloadSchema);
   });
 

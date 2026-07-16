@@ -444,6 +444,42 @@ export const ClaimAppealStage3ReviewedPayloadSchema = z
   .object({ ...auditShape, decision: appealFinalDecisionSchema })
   .strict();
 
+/**
+ * The bounded, NON-PII public disposition tag the reversing reviewer selects (Story 6.16, D-A). Value-mirrors
+ * the `claim_appeal_decisions.disposition_category` enum + `APPEAL_DISPOSITION_CATEGORIES` (appeal.ts) — the
+ * ONE authority is the pgEnum tuple; this z.enum is the same list for the event payload. NEVER the Tier-1
+ * rationale text or an individual reviewer's name (the D-A reconciliation of PRD §4.6's public-accountability
+ * ask). Declared inline (NOT imported from appeal.ts) to avoid an events.ts → appeal.ts import edge; a lockstep
+ * test pins it against the pgEnum tuple.
+ */
+export const appealDispositionCategorySchema = z.enum([
+  'new_evidence_presented',
+  'procedural_correction',
+  'reconsideration_on_merits',
+]);
+// NOTE: the inferred TS type lives in appeal.ts (`AppealDispositionCategory`, from the pgEnum tuple) — the
+// ONE authority. Not re-exported here to avoid a duplicate-export collision through the claim barrel.
+
+/**
+ * Appeal reversal → the Sahyog Vivran PUBLISH HOOK (Story 6.16, D-A — the 31st claim event). Written in the
+ * SAME scope-tx as the `claim.appeal_stageN_reviewed { decision: 'reversed' }` transition, ONCE, when the
+ * claim has already reached `reversed` — a `requireIdentityTransition` (`from_state === to_state ===
+ * 'reversed'`), reducer IDENTITY. It changes NO lifecycle state and does NOT unfreeze the deceased member's
+ * account (deliberately ABSENT from member/overlay.ts ACCOUNT_UNFREEZE_EVENT_TYPES — a reversed claim
+ * re-enters approval, so the freeze persists until `settled`/`denied_no_appeal`).
+ *
+ * It is the ONE clean subscription point Epic 11b consumes (epics.md:3831-3834 names it by this exact type):
+ * the `claim_case_id` (the event stream id) identifies the claim for the publish queue; `reversed_at_stage`
+ * (1|2|3) + `disposition_category` (a bounded NON-PII tag — NEVER rationale text or a reviewer identity) drive
+ * the "Reversed by appeal" narrative. The `appeal_stageN_reviewed(reversed)` event is the DECISION (carries
+ * reviewer attribution + Tier-1 rationale in the metadata row, never public); THIS is the PUBLISH SIGNAL.
+ */
+export const ClaimReversedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  reversed_at_stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  disposition_category: appealDispositionCategorySchema,
+});
+
 // ── Terminal ──────────────────────────────────────────────────────────────────
 
 /**
@@ -484,7 +520,11 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
 // events, per the "owner stories add their annotation events" discipline. Story 6.14 adds the 29th —
 // `claim.r9_outcome` (D-A), a LIFECYCLE-ADVANCING event (NOT an annotation) whose reducer branches on
 // `payload.outcome` from the six TRUSTEE_ROUTABLE_STATES → state_trustee_approved / denied. Story 6.15
-// adds the 30th — `claim.concealment_assessed` (D-E), an IDENTITY annotation whose reducer is a no-op.)
+// adds the 30th — `claim.concealment_assessed` (D-E), an IDENTITY annotation whose reducer is a no-op.
+// Story 6.16 adds the 31st — `claim.reversed` (D-A), the Sahyog Vivran PUBLISH HOOK: an IDENTITY annotation
+// appended in the SAME tx as an `appeal_stageN_reviewed(reversed)` transition, valid ONLY at `reversed`, the
+// SOLE subscription point Epic 11b consumes. It carries `reversed_at_stage` + a NON-PII `disposition_category`
+// tag; it changes no state and does NOT unfreeze the account.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -515,15 +555,16 @@ export const CLAIM_EVENT_TYPES = [
   'claim.appeal_stage2_reviewed',
   'claim.appeal_stage3_initiated',
   'claim.appeal_stage3_reviewed',
+  'claim.reversed',
   'claim.settled',
   'claim.denied_no_appeal',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 30 claim events). */
+/** The dotted `claim.*` event-type literal union (the 31 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 30 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 31 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -557,6 +598,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.appeal_stage2_reviewed': ClaimAppealStage2ReviewedPayloadSchema,
   'claim.appeal_stage3_initiated': ClaimAppealStage3InitiatedPayloadSchema,
   'claim.appeal_stage3_reviewed': ClaimAppealStage3ReviewedPayloadSchema,
+  'claim.reversed': ClaimReversedPayloadSchema,
   'claim.settled': ClaimSettledPayloadSchema,
   'claim.denied_no_appeal': ClaimDeniedNoAppealPayloadSchema,
 } as const satisfies Record<ClaimEventType, z.ZodTypeAny>;

@@ -178,6 +178,18 @@ export const CLAIM_R9_VOTE_FIELD_CLASS = 'r9_vote';
 export const CLAIM_CONCEALMENT_ASSESSMENT_FIELD_CLASS = 'concealment_assessment';
 
 /**
+ * The appeal Tier-1 field classes (Story 6.16, D-A/AC2/AC3). The appeal routes encrypt the mandatory reviewer
+ * rationale (Stage 1/3 decisions + the Stage-2 finalize audit row) under `CLAIM_APPEAL_DECISION_FIELD_CLASS`
+ * and each panel vote's rationale under `CLAIM_APPEAL_VOTE_FIELD_CLASS`, before the domain writer; authorized
+ * reads decrypt under the SAME (pariwarId, fieldClass) with a decrypt-FAILURE-DISTINCT sentinel. Arbitrary
+ * reviewer/trustee free-text is PII-capable. Match the `piiColumn(1, 'appeal_decision')` /
+ * `piiColumn(1, 'appeal_vote')` annotations on `claim_appeal_decisions` / `claim_appeal_panel_votes`. NEVER
+ * in an event payload / audit line / index (the decision/stage/disposition_category ride those; rationale may not).
+ */
+export const CLAIM_APPEAL_DECISION_FIELD_CLASS = 'appeal_decision';
+export const CLAIM_APPEAL_VOTE_FIELD_CLASS = 'appeal_vote';
+
+/**
  * The claim-document Tier-1 field class (Story 6.5). The OCR-parity job encrypts the extracted
  * death-certificate identity fields (`deceased_name_ciphertext`, `dob_ciphertext`,
  * `date_of_death_ciphertext`, `issuing_authority_ciphertext`, `certificate_number_ciphertext`)

@@ -54,3 +54,9 @@ export * from './r9-voting.js';
 // note, .strict() — server-derived actor identity, R5) + the NON-PII assessment response. `kind` is
 // re-declared value-aligned with the @twt/domain claim_concealment_assessment_kind pgEnum (browser-bundle rule).
 export * from './concealment-assessment.js';
+// Story 6.16 — the internal 3-stage appeal DTOs (the LAST story of Epic 6): initiate (no deadline, D-E),
+// Stage-1 District-Admin review, the Stage-2 panel open/vote/finalize/cancel (the R9 shape minus the clause),
+// Stage-3 Trustee decision, the AC6 decisions-by-reviewer audit query (+ the D-H sla_breached/elapsed_days
+// fields), and the member-facing appeal-status view. All enums re-declared value-aligned with the @twt/domain
+// appeal pgEnums (browser-bundle rule); a lockstep test pins them.
+export * from './appeal.js';

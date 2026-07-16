@@ -277,6 +277,12 @@ export const EVENT_TYPE_REGISTRY = {
       'Appeal stage 3 reviewed (Trustee discretion, final); payload.decision reversed → reversed, upheld → denied (no advance; Story 6.16).',
     schema: claim.ClaimAppealStage3ReviewedPayloadSchema,
   },
+  'claim.reversed': {
+    type: 'claim.reversed',
+    description:
+      'Appeal reversal → the Sahyog Vivran publish hook (Story 6.16, D-A — the 31st claim event). Identity annotation appended in the same tx as an appeal_stageN_reviewed(reversed) transition; the SOLE subscription point Epic 11b routes to the Sahyog Vivran publication queue. Carries reversed_at_stage + a NON-PII disposition_category tag; changes no state, does NOT unfreeze the account.',
+    schema: claim.ClaimReversedPayloadSchema,
+  },
   'claim.settled': {
     type: 'claim.settled',
     description:

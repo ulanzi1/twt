@@ -94,6 +94,22 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     pathSubstrings: ['concealment-assessment'],
     owner: 'Story 6.15',
   },
+  {
+    // Story 6.16 — the internal 3-stage appeal ADJUDICATION routes: Stage-1 review (district-gated), the
+    // Stage-2 panel open/vote/finalize/cancel (pariwar-gated; finalize step-up-gated), Stage-3 decision
+    // (pariwar-gated + step-up), and the decisions-by-reviewer audit query. Every one MUST compose the
+    // human-actor chain [requireAdminSession, scopeResolutionHook, requirePermissionHook(...)] — these are
+    // high-stakes adjudication operations (NOT because each emits a lifecycle event: stage-2 vote/cancel emit
+    // none — the 6.14 R9 precedent). The path substrings match ONLY the adjudication routes:
+    // `appeal/stage{1,2,3}` and `appeal/decisions-by-reviewer`. The member self-initiate route
+    // (/member/claims/:id/appeal, memberSession) and the operator on-behalf initiate
+    // (…/admin/claims/:id/appeal, claim.file) are CLAIMANT/filer actions — NOT adjudication — and are
+    // DELIBERATELY excluded (they end in `/appeal`, not `/appeal/stage`), documented here so the exclusion
+    // reads as intentional, not an oversight.
+    file: 'apps/api/src/modules/claims/claims.appeal.routes.ts',
+    pathSubstrings: ['appeal/stage', 'appeal/decisions-by-reviewer'],
+    owner: 'Story 6.16',
+  },
 ];
 
 function main(): void {

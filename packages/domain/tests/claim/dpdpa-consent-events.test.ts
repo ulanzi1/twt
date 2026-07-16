@@ -41,7 +41,7 @@ describe('ClaimDpdpaConsentRecordedPayloadSchema (the 24th claim event)', () => 
     // The vocabulary grows as owner stories add annotation events: 25 = 23 (Story 6.8) + recorded
     // (24th) + revoked (25th, code review); Story 6.11 added the 26th + 27th (claim.verifier_escalated
     // + claim.verifier_decision_revised).
-    expect(CLAIM_EVENT_TYPES).toHaveLength(30); // Story 6.15 added the 30th (claim.concealment_assessed)
+    expect(CLAIM_EVENT_TYPES).toHaveLength(31); // Story 6.16 added the 31st (claim.reversed)
     expect(CLAIM_EVENT_PAYLOAD_SCHEMAS['claim.dpdpa_consent_recorded']).toBe(
       ClaimDpdpaConsentRecordedPayloadSchema,
     );

@@ -539,6 +539,93 @@ export function useR9VotesByTrustee(pariwarId: string, actorId: string | null, s
   });
 }
 
+// ── Story 6.16 — the internal 3-stage appeal surface hooks. ──
+
+export const appealCaseKey = (pariwarId: string, claimCaseId: string) => ['appeal-case', pariwarId, claimCaseId] as const;
+export const appealDecisionsByReviewerKey = (pariwarId: string, reviewerActorId: string) =>
+  ['appeal-decisions-by-reviewer', pariwarId, reviewerActorId] as const;
+
+/** The per-claim admin appeal case model (enabled only when a claim is selected). */
+export function useAppealCase(pariwarId: string, claimCaseId: string | null) {
+  return useQuery({
+    queryKey: appealCaseKey(pariwarId, claimCaseId ?? ''),
+    queryFn: () => api.getAppealCase(pariwarId, claimCaseId as string),
+    enabled: claimCaseId !== null && claimCaseId !== '',
+  });
+}
+
+/** Refetch the touched case model on BOTH success AND error (a 409 means server state moved). */
+function invalidateAppeal(qc: ReturnType<typeof useQueryClient>, pariwarId: string, claimCaseId: string): void {
+  void qc.invalidateQueries({ queryKey: appealCaseKey(pariwarId, claimCaseId) });
+}
+
+export function useReviewAppealStage1(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.reviewAppealStage1>[2]) => api.reviewAppealStage1(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+    onError: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+  });
+}
+
+export function useOpenAppealPanel(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.openAppealPanel>[2]) => api.openAppealPanel(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+    onError: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+  });
+}
+
+export function useCastAppealVote(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.castAppealVote>[2]) => api.castAppealVote(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+    onError: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+  });
+}
+
+export function useFinalizeAppealPanel(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.finalizeAppealPanel>[2]) => api.finalizeAppealPanel(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+    onError: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+  });
+}
+
+export function useCancelAppealPanel(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.cancelAppealPanel>[2]) => api.cancelAppealPanel(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+    onError: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+  });
+}
+
+export function useDecideAppealStage3(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.decideAppealStage3>[2]) => api.decideAppealStage3(pariwarId, claimCaseId, body),
+    onSuccess: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+    onError: () => invalidateAppeal(qc, pariwarId, claimCaseId),
+  });
+}
+
+/** The decisions-by-reviewer audit transcript (enabled only when a reviewer id is entered). */
+export function useAppealDecisionsByReviewer(
+  pariwarId: string,
+  reviewerActorId: string | null,
+  opts?: { stage?: '1' | '2' | '3'; sinceDays?: number },
+) {
+  return useQuery({
+    queryKey: [...appealDecisionsByReviewerKey(pariwarId, reviewerActorId ?? ''), opts?.stage ?? 'all', opts?.sinceDays ?? 180],
+    queryFn: () => api.getAppealDecisionsByReviewer(pariwarId, reviewerActorId as string, opts),
+    enabled: reviewerActorId !== null && reviewerActorId !== '',
+  });
+}
+
 // ── Telegram config surface (Story 5.5) — the per-Pariwar Telegram Bot config singleton. ──
 
 export const telegramConfigKey = (pariwarId: string) => ['telegram-config', pariwarId] as const;

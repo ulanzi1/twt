@@ -97,3 +97,12 @@ export * from './claim-r9-votes-rls.js';
 // annotation / read model, not a state cache (claim state stays on claims.current_state; the paired
 // claim.concealment_assessed event is an identity annotation).
 export * from './claim-concealment-assessments-rls.js';
+// Story 6.16 — the four appeal tables + the per-Pariwar appeal-config tenant-isolation policies (NOT
+// cross-readable; mirror claims-rls; SYMMETRIC — no 6.13 asymmetry). No write-rejection trigger — the
+// decision/panel/journey/config rows are metadata / read models, not state caches (claim state stays on
+// claims.current_state, derived from the paired claim.appeal_* events + claim.reversed).
+export * from './claim-appeals-rls.js';
+export * from './claim-appeal-decisions-rls.js';
+export * from './claim-appeal-panel-sessions-rls.js';
+export * from './claim-appeal-panel-votes-rls.js';
+export * from './pariwar-appeal-config-rls.js';

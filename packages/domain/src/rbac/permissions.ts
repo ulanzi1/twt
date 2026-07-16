@@ -189,7 +189,27 @@ export function permissionKey(value: string): PermissionKey {
 // grant is seeded. The FINALIZE route is ADDITIONALLY step-up-gated (`r9_finalize`) — a route concern, not a
 // permission key. The panel-membership eligibility check (every panel actor must hold THIS key) is the
 // domain write-path's `assertPanelAuthorized`, distinct from the requester's own route gate.
-export const PERMISSION_CATALOG_VERSION = 16 as const;
+// Bumped 16 → 19 at Story 6.16 (the LAST story of Epic 6; added THREE keys for the internal 3-stage appeal):
+// `claim.appeal_review` — the Stage-1 District-Admin reviewer WRITE key. Gates
+// `POST …/admin/claims/:claimCaseId/appeal/stage1`. Checked at `dimension: 'district'` against the deceased
+// member's SERVER-DERIVED posting district (the 6.10/6.11/6.12 verifier-decision precedent). Granted to
+// `district_admin` (+ super_admin). The D-D reviewer-conflict (reviewer ≠ original verifier/state-trustee/R9
+// voter) is enforced in the domain write-path + the handler — a SEPARATE concern from this route gate.
+// `claim.appeal_vote` — the Stage-2 State-Trustee panel-voting WRITE key. Gates
+// `POST …/admin/claims/:claimCaseId/appeal/stage2/{open,vote,finalize,cancel}`. Checked at
+// `dimension: 'pariwar'` (value = scopeTx.pariwarId — the claim.r9_vote / cycle.freeze pariwar-wide-key
+// precedent). Granted to `pariwar_admin` (+ super_admin). Also the panel-membership eligibility credential:
+// openAppealPanel validates EVERY panel member holds it @ pariwar (assertPanelAuthorized). The FINALIZE route
+// ADDS an `appeal_stage2_finalize` step-up (a route concern, not a key).
+// `claim.appeal_final` — the Stage-3 Trustee discretion WRITE key. Gates
+// `POST …/admin/claims/:claimCaseId/appeal/stage3`. Checked at `dimension: 'pariwar'` (RESOLVED, v1 — a
+// global-scope Trustee escalation is a future extension). Granted to `pariwar_admin` (+ super_admin). The
+// DECIDE route is step-up-gated (`appeal_stage3_decide`). Direct `state_trustee` gating for the pariwar-
+// dimension keys is DEFERRED to the Epic-3 geo-tree resolver (the 6.13/6.14 Trustee-Lite precedent); v1 actor
+// = pariwar_admin-as-Trustee-Lite. NO inert state_trustee grant is seeded. The member-facing INITIATE route
+// needs NO admin key — it is a claimant-or-operator action (member session, or an operator with the helpline
+// capability under AR-61).
+export const PERMISSION_CATALOG_VERSION = 19 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -313,6 +333,23 @@ export const SEED_PERMISSION_KEYS = [
   // eligibility credential: openR9VotingSession validates EVERY panel_actor_ids member holds it @ pariwar
   // (assertPanelAuthorized). The finalize route ADDS an r9_finalize step-up (a route concern, not a key).
   'claim.r9_vote',
+  // Story 6.16 — the Stage-1 District-Admin appeal-reviewer WRITE key. Gates
+  // POST …/admin/claims/:claimCaseId/appeal/stage1 (checked at `dimension: 'district'` against the deceased
+  // member's SERVER-DERIVED posting district — the 6.10/6.11/6.12 precedent). Granted to `district_admin`
+  // (+ super_admin). The D-D reviewer-conflict exclusion (reviewer ≠ original decider) is a domain/handler
+  // concern, distinct from this route gate.
+  'claim.appeal_review',
+  // Story 6.16 — the Stage-2 State-Trustee appeal panel-voting WRITE key. Gates
+  // POST …/admin/claims/:claimCaseId/appeal/stage2/{open,vote,finalize,cancel} (checked at
+  // `dimension: 'pariwar'` — the claim.r9_vote precedent). Granted to `pariwar_admin` (+ super_admin). Also
+  // the panel-membership eligibility credential (openAppealPanel's assertPanelAuthorized). Finalize ADDS an
+  // `appeal_stage2_finalize` step-up (a route concern).
+  'claim.appeal_vote',
+  // Story 6.16 — the Stage-3 Trustee discretion (final) WRITE key. Gates
+  // POST …/admin/claims/:claimCaseId/appeal/stage3 (checked at `dimension: 'pariwar'` — RESOLVED v1; a
+  // global-scope escalation is a future extension). Granted to `pariwar_admin` (+ super_admin). The route is
+  // step-up-gated (`appeal_stage3_decide`). Direct state_trustee gating deferred to Epic 3 (Trustee-Lite).
+  'claim.appeal_final',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

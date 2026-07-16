@@ -82,3 +82,14 @@ export * from './r9-voting-read.js';
 export * from './concealment-assessment.js';
 export * from './concealment-assessment-persist.js';
 export * from './concealment-review.js';
+// Story 6.16 — internal 3-stage appeal (the LAST story of Epic 6): the appeal vocabulary (five pgEnums + the
+// FROZEN computeAppealOutcome tally helper + the panel bounds + the Tier-1 ciphertext boundary + the D-H SLA
+// config shape), the reviewer-conflict/exhaustion/SLA-status derivations (appeal-eligibility.ts), and the
+// write-paths: Stage-1/3 single-decider (appeal-persist.ts) + the Stage-2 panel (appeal-panel-persist.ts —
+// the R9 pattern MINUS the clause registry). All emit the pre-defined Story 6.1 appeal events via
+// projectClaimState + the new claim.reversed publish hook (D-A); the reducer stays TOTAL.
+export * from './appeal.js';
+export * from './appeal-eligibility.js';
+export * from './appeal-persist.js';
+export * from './appeal-panel-persist.js';
+export * from './appeal-read.js';

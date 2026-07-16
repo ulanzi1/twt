@@ -579,7 +579,7 @@ jobs:
       - run: pnpm kyc-provider:check
 
   access-wrapper-invariants:
-    name: access-wrapper-invariants (validity fail-closed + channel constant-time secret compare + compensating-audit mechanization)
+    name: access-wrapper-invariants (validity fail-closed + constant-time secret compare + compensating-audit mechanization; channel + claim surface)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: install
@@ -589,19 +589,22 @@ jobs:
     #      Promise<…MemberValidityPayload>) in packages/validity-service/src must declare an
     #      explicit caller-XOR-internal marker and fail CLOSED when neither is supplied (the
     #      Story 4.6 omitted-caller default-open defect).
-    #  (2) AI-5-1 — within any VERIFICATION CONTEXT on the Epic-5 channel access surface
+    #  (2) AI-5-1 / AI-6-1 — within any VERIFICATION CONTEXT on the channel access surface
     #      (packages/channels/src + the apps/api channel entrypoints: channel-webhooks,
-    #      wa-opt-in, telegram-opt-in, channel-config, degraded-mode, device-token), a compare
-    #      of two runtime values must use an approved constant-time comparator, never
+    #      wa-opt-in, telegram-opt-in, channel-config, degraded-mode, device-token) AND the
+    #      Epic-6 claim surface (apps/api/src/modules/{claims,nominee}, packages/domain/src/claim),
+    #      a compare of two runtime values must use an approved constant-time comparator, never
     #      ===/!==/.includes/.startsWith/.localeCompare (the Story 5.4 hub.verify_token timing
-    #      side-channel). Closes the AI-4-3 → AI-5-1 scope split (Epic-5 retro I-1).
-    #  (3) AI-5-3 (ADR-0030) — on the SAME Epic-5 access surface, a direct
+    #      side-channel). Closes the AI-4-3 → AI-5-1 → AI-6-1 scope chain (Epic-4/5/6 retro I-1).
+    #  (3) AI-5-3 (ADR-0030) / AI-6-1 — on the SAME channel + claim access surface, a direct
     #      audit.writeAuditEntry call is non-conformant unless the file is a named AI-4-3(d)
     #      isolated-best-effort exemption; packages/domain/src/audit/compensating.ts
     #      (withCompensatingAudit / writeRolledBackAudit) is the sole sanctioned caller
     #      otherwise (the H-4 audit-write-ordering gap from the Epic-5 retro).
-    # The rest of the checklist (independent caller-auth, HMAC audit hashes, permission-key
-    # scope match) stays reviewer-checklist convention.
+    # Per the standing per-epic scope-extension convention (docs/access-wrapper-invariants.md),
+    # (2)+(3) grow to cover each epic's new access surface. The rest of the checklist
+    # (independent caller-auth, HMAC audit hashes, permission-key scope match, claim route
+    # ownership/IDOR) stays reviewer-checklist convention.
     # Static TS-AST scan, no DB / network. See scripts/access-wrapper-invariants/ +
     # docs/access-wrapper-invariants.md. INVARIANT SCAN → NO fetch-depth: 0 (mirror
     # member-state-invariant).

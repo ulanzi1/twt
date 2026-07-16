@@ -346,3 +346,39 @@ describe('scanCompensatingAuditInvariant — AI-5-3 gate teeth (ADR-0030)', () =
     expect(msg).toContain('ADR-0030');
   });
 });
+
+describe('AI-6-1 — claim-surface scope extension (compensating-audit invariant has meaningful coverage)', () => {
+  it('FLAGS a bare `audit.writeAuditEntry` on a claim handler (the future regression this scope-extension catches)', () => {
+    const src =
+      `export async function record(request: any): Promise<void> {\n` +
+      `  await audit.writeAuditEntry(deps.servicePool, { action: 'claim.dpdpa_consent_recorded' });\n` +
+      `}\n`;
+    const f = scanCompensatingAuditInvariant('apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts', src);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('record');
+  });
+
+  it('ACCEPTS the consent path routed through `audit.withCompensatingAudit`', () => {
+    const src =
+      `export async function record(request: any): Promise<void> {\n` +
+      `  return audit.withCompensatingAudit(deps.servicePool, {\n` +
+      `    action: 'claim.dpdpa_consent_recorded',\n` +
+      `    mutate: async () => persistConsent(request),\n` +
+      `  });\n` +
+      `}\n`;
+    expect(
+      scanCompensatingAuditInvariant('apps/api/src/modules/claims/claims.dpdpa-consent.handlers.ts', src),
+    ).toHaveLength(0);
+  });
+
+  it('ACCEPTS the claim post-commit sink pattern (`emitAuthAudit`, not `audit.writeAuditEntry`) — no exemption needed', () => {
+    const src =
+      `export async function schedule(request: any): Promise<void> {\n` +
+      `  await runCommittedScopeTx(request);\n` +
+      `  emitAuthAudit(deps, request, 'admin_ground_inspection.scheduled', { context });\n` +
+      `}\n`;
+    expect(
+      scanCompensatingAuditInvariant('apps/api/src/modules/claims/claims.ground-inspection.handlers.ts', src),
+    ).toHaveLength(0);
+  });
+});

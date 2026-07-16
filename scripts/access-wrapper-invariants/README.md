@@ -7,13 +7,13 @@ over the code its commitment is about:
 1. **Validity caller/internal fail-closed (AI-4-3)** — every validity **access entrypoint**
    in `packages/validity-service/src/**` must fail **closed** on an omitted caller, so none
    can default to returning a full, unredacted, unaudited payload (the Story 4.6 defect).
-2. **Channel constant-time secret compare (AI-5-1)** — within any **verification context** on
-   the Epic-5 channel access surface, a compare of two runtime values must go through an
-   approved constant-time comparator, never `===`/`!==`/`.includes`/`.startsWith`/
-   `.localeCompare` (the Story 5.4 `hub.verify_token` timing side-channel).
-3. **Compensating-audit mechanization (AI-5-3 / ADR-0030)** — on the SAME Epic-5 access
-   surface, a direct `audit.writeAuditEntry` call is non-conformant unless the file is a
-   named AI-4-3(d) isolated-best-effort exemption; `packages/domain/src/audit/compensating.ts`
+2. **Constant-time secret compare (AI-5-1, AI-6-1)** — within any **verification context** on
+   the channel access surface **and the Epic-6 claim surface**, a compare of two runtime values
+   must go through an approved constant-time comparator, never `===`/`!==`/`.includes`/
+   `.startsWith`/`.localeCompare` (the Story 5.4 `hub.verify_token` timing side-channel).
+3. **Compensating-audit mechanization (AI-5-3 / ADR-0030, AI-6-1)** — on the SAME channel **+
+   claim** access surface, a direct `audit.writeAuditEntry` call is non-conformant unless the
+   file is a named AI-4-3(d) isolated-best-effort exemption; `packages/domain/src/audit/compensating.ts`
    (`withCompensatingAudit` / `writeRolledBackAudit`) is the sole sanctioned caller otherwise
    (the H-4 audit-write-ordering gap from the Epic-5 retro).
 
@@ -82,14 +82,29 @@ across nested closures/factory-method boundaries, `switch`/`case` equality, and
 non-import-resolved aliasing (`import { timingSafeEqual as tse }`) are out of scope for this
 cheap AST heuristic — see the story's Review Findings for the retrigger conditions.
 
-Scanned over the Epic-5 access surface: `packages/channels/src` + the `apps/api` channel
+Scanned over the channel access surface — `packages/channels/src` + the `apps/api` channel
 entrypoints (`channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`,
-`degraded-mode`, `device-token`).
+`degraded-mode`, `device-token`) — **and, as of AI-6-1, the Epic-6 claim surface**
+(`apps/api/src/modules/{claims,nominee}`, `packages/domain/src/claim`). On the claim surface
+this invariant is **vacuous-safe forward-coverage** today: claim step-up-OTP delegates to the
+already-scanned auth OTP service, so no local verification context exists yet — but a future
+*local* credential compare on the claim surface is caught.
+
+**Known heuristic trade-off on the (larger, compare-dense) claim surface:** the
+verification-context signal is name-based and per-function. The first time a function in a
+compare-heavy claim file gains a `createHmac` / `resolve*Secret` / `verify*Signature` call, the
+*whole* function becomes a verification context and every runtime-vs-runtime `===`/`!==` in it
+is flagged — even ones unrelated to a credential. This is expected: if the new call is a genuine
+credential check, route the real compare through `timingSafeEqual*`; if it is a **blind-index /
+MAC that is not a credential compare** (e.g. a nominee-mobile blind index), the plain compares
+around it are legitimate and the finding is a false positive — resolve it the same way the other
+documented heuristic limits are (narrow the shape or add a reviewed carve-out), not by weakening
+the invariant. Same class as the deferred limits below.
 
 ## Invariant 3 — compensating-audit mechanization (AI-5-3 / ADR-0030)
 
-A direct call to `audit.writeAuditEntry` anywhere in the Epic-5 access surface (the same
-scan roots as Invariant 2) is flagged UNLESS the enclosing **file** is on the named
+A direct call to `audit.writeAuditEntry` anywhere in the channel **or claim** access surface
+(the same scan roots as Invariant 2) is flagged UNLESS the enclosing **file** is on the named
 exemption list in `lib.ts` (`COMPENSATING_AUDIT_EXEMPT_FILES`). The invariant is
 deliberately a **positive** one — "reaches the canonical helper" — not a heuristic that
 tries to detect a mutation call adjacent to an audit write: an open-ended mutation-name
@@ -112,6 +127,22 @@ transaction is ever in scope: `packages/channels/src/audit.ts`,
 `apps/api/src/modules/device-token/push-invalidation.ts`,
 `apps/api/src/modules/device-token/device-token.handlers.ts`. Adding a file here is a
 deliberate, reviewed scope-widening edit, not something the gate infers.
+
+On the **claim surface** this invariant is **self-green today and has real teeth**: the consent
+path uses `withCompensatingAudit` (the canonical helper) and the other ~49 audit sites use the
+`emitAuthAudit` post-commit sink (not a bare `audit.writeAuditEntry`), so nothing is flagged —
+but a future handler that writes a bare `audit.writeAuditEntry` is caught (revert-sanity
+verified on `claims.dpdpa-consent.handlers.ts`). No claim file needs an exemption.
+
+## Per-epic scope-extension convention (AI-6-1)
+
+Expanding this gate's scan scope is complete only when at least one invariant has **meaningful
+semantic coverage** of the new surface — a green scan over new files alone proves nothing. When
+an epic's primitive (Story-1) access surface lands: (1) add it to a `*_ROOTS` group in
+`check.ts`; (2) confirm an invariant materially fires (or is vacuous-safe forward-coverage for a
+real defect shape) and do **not** run one where it can only be vacuous for the wrong reason (the
+validity invariant is deliberately not run over the claim surface); (3) prove teeth via
+revert-sanity. See [`docs/access-wrapper-invariants.md`](../../docs/access-wrapper-invariants.md).
 
 ## Scope
 

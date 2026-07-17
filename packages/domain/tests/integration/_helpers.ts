@@ -22,6 +22,7 @@ import {
   clauseId as toClauseId,
   memberId as toMemberId,
   pariwarId as toPariwarId,
+  postingId as toPostingId,
   userId as toUserId,
 } from '../../src/ids/index.js';
 import type { ScopeDimension } from '../../src/rbac/scope.js';
@@ -342,6 +343,50 @@ export async function seedClaim(
       // tx already aborted (the seed insert itself failed) — nothing to reset.
     }
   }
+  return id;
+}
+
+export interface SeedMemberPostingOptions {
+  postingId?: string;
+  createdAt?: Date;
+  isRetirement?: boolean;
+}
+
+// Default-`createdAt` clock for seedMemberPosting: the column's `defaultNow()` is
+// TRANSACTION-pinned (`now()` = tx start), so two default-seeded postings in one
+// test tx would TIE on created_at and make "latest posting" nondeterministic.
+// A module-level monotonic counter gives every default call a unique, strictly
+// increasing timestamp instead (later call = newer posting — the intuitive seed
+// semantics). Explicit `createdAt` callers are unaffected.
+let postingSeedClockMs = Date.now();
+
+/**
+ * Insert one member_postings row (AI-6-3 shape tests). Like seedMember, run BEFORE
+ * entering app scope (as the Docker superuser, RLS bypassed); afterEach ROLLBACK
+ * reverts it. The member row must already exist (FK member_postings.member_id →
+ * members.member_id). Accepts a fixed `postingId` + `createdAt` so a shape test can
+ * pin the production "latest posting" pick (`created_at DESC, posting_id DESC` —
+ * peer-mesh-read.ts) deterministically, including the posting_id tiebreak on a
+ * created_at tie. When `createdAt` is omitted, a unique monotonically-increasing
+ * timestamp is used (never the tx-pinned DB default — see postingSeedClockMs).
+ * Returns the posting_id used.
+ */
+export async function seedMemberPosting(
+  tx: Db,
+  pariwarId: string,
+  memberId: string,
+  district: string,
+  opts: SeedMemberPostingOptions = {},
+): Promise<string> {
+  const id = opts.postingId ?? randomUUID();
+  await tx.insert(schema.memberPostings).values({
+    postingId: toPostingId(id),
+    memberId: toMemberId(memberId),
+    pariwarId: toPariwarId(pariwarId),
+    district,
+    isRetirement: opts.isRetirement ?? false,
+    createdAt: opts.createdAt ?? new Date((postingSeedClockMs += 1)),
+  });
   return id;
 }
 

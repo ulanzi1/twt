@@ -1,0 +1,12 @@
+# AI-6-5 (epic-6-retro-2026-07-16, confirmed BigDev 2026-07-16): fold the W-6
+# post-review load-bearing-invariant second pass into the Acceptance-Auditor
+# lens so residual load-bearing invariants are caught on the FIRST review pass,
+# not only on BigDev's manual sweep (H-6: 6.13 needed three addenda).
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/load-bearing-invariant-checklist.md",
+  "AI-6-5 load-bearing-invariant lens: treat the load-bearing-invariant checklist (loaded above) as an additional acceptance lens for the Acceptance Auditor — the Auditor audits the diff against the checklist alongside the spec. Only checklist families the diff actually touches are evaluated; untouched families are skipped silently. For each touched family the Auditor reports a verdict: covered-by-test (name the test), covered-by-construction (state the structural reason), REAL GAP (emit as a finding), or not-constructible-in-this-system (explain honestly, never fake coverage). If review_mode is not 'full' (no Acceptance Auditor runs), the Edge Case Hunter carries the same checklist lens instead, so it never silently drops.",
+  "A REAL GAP verdict on a checklist family the diff touches is triaged with the same severity ladder as an acceptance-criteria violation — never downgraded to a note.",
+]

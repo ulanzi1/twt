@@ -140,6 +140,32 @@ The trust's Phase 1 launch readiness requires every architecture §Launch Gate R
 - **≥2-trustee quorum uniform** across inventory-ratification (Task 8) + per-row-closure (Task 10) + final-sign-off (Task 11) — distinct from Story 0.14's ≥1-trustee BigDev-decision-authority pattern (which applies to substrate-binding-for-v1 under BigDev authority).
 - **Architecture-vs-UX/epics P0-4 divergence** documented per [[feedback_architecture_vs_prd_boundary]]: architecture line 4783 P0-4 = "Empty/Skeleton/Error Inventory" (UX deliverable) preserved verbatim in `inventory-roster.md` Row 6; UX/epics P0-4 = legal-counsel-onboarding = Story 0.13 discharge captured via Rows 3, 8, 9, 10 of inventory-roster + engagement-ledger §9.
 
+## Migration snapshot-drift reconciliation — pre-launch gate (AI-5-4 / AI-6-4)
+
+The Drizzle migration journal has accumulated hand-authored migrations on a stale
+generated snapshot: migrations ~0021–0061 were hand-authored against the 0020
+snapshot across Epics 4–6 (epic-5-retro H-6, elevated per AI-5-4 confirmed BigDev
+2026-07-08; carried per AI-6-4 confirmed BigDev 2026-07-16).
+
+- **Gate:** before production go-live:
+  1. perform the `db:generate` snapshot reconciliation;
+  2. verify the generated snapshot matches the intended live schema;
+  3. pass the FR-100 schema-diff gate;
+  4. pass the migration-level policy-regression suites;
+  5. record the reconciliation event below.
+
+  Reconciliation is not complete merely because `db:generate` produces a clean
+  snapshot — all five steps form the evidence chain.
+- **Known hazards (must be respected during reconciliation):** never regenerate an
+  applied migration — drizzle journals by `when`, not SQL hash (42P07); never reset
+  the test DB via DROP SCHEMA — it strips `twt_app` USAGE (42P01).
+- **Re-trigger:** this section IS the re-trigger — the gate is open until a
+  reconciliation event row is added below. Not epic-blocking; launch-blocking.
+
+| Reconciliation date | Executor | Snapshot range reconciled | Verification evidence | Outcome |
+|---|---|---|---|---|
+| _open — no reconciliation yet; fabricating a row is prohibited_ | | | | |
+
 ## Re-sign protocol (reference; full text in README §"Sign-off lifecycle")
 
 - **Minor edits** (clarifications, link updates, prerequisite-cite refinements): ≥1 trustee re-attestation noted as a new row in the sign-off table.

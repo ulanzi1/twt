@@ -14,12 +14,16 @@ every new access / webhook / consent path** before it merges.
 This is the human half of the family. The [`access-wrapper-invariants`](../scripts/access-wrapper-invariants/README.md)
 CI gate mechanizes **three** slices (the cheapest, most-corrosive ones):
 - **(a)/(b)** — validity access entrypoints fail closed on an omitted caller (AI-4-3, 4.6's default-open failure), scanned over `packages/validity-service/src`.
-- **(f)** — channel verification contexts use a constant-time secret compare (AI-5-1, the Story 5.4 `hub.verify_token` timing side-channel), scanned over the Epic-5 channel + `apps/api` access surface.
-- **(g)** — mutation+audit pairs route through the compensating-audit helper (AI-5-3 / ADR-0030, the H-4 audit-write-ordering gap), scanned over the same Epic-5 channel + `apps/api` access surface.
+- **(f)** — verification contexts use a constant-time secret compare (AI-5-1, the Story 5.4 `hub.verify_token` timing side-channel), scanned over the Epic-5 channel surface **and — as of AI-6-1 — the Epic-6 claim surface**.
+- **(g)** — mutation+audit pairs route through the compensating-audit helper (AI-5-3 / ADR-0030, the H-4 audit-write-ordering gap), scanned over the same channel **and claim** surface.
 
 Items **(c)–(e)** are judgment calls a heuristic lint would false-positive on, so they stay
-checklist + required-test. Epic 6's claim access surface inherits all three mechanized
-invariants from day one.
+checklist + required-test. As of **AI-6-1**, Epic 6's claim access surface
+(`apps/api/src/modules/{claims,nominee}` + `packages/domain/src/claim`) is scanned by
+**(f)** and **(g)** — closing the recurring "gate covers the *previous* epic" miss (retro
+H-1/I-1). The validity invariant **(a)/(b)** is deliberately *not* run over the claim surface
+(no `MemberValidityPayload` boundary exists there — it would be vacuous for the wrong reason;
+see the scope-extension convention below).
 
 ---
 
@@ -103,13 +107,38 @@ claiming a transition that never landed.
 The gate is deliberately **narrow by invariant, but now honest about scope** — one gate,
 three mechanized slices, each scanned over the code its commitment is about:
 - **(a)/(b)** over `packages/validity-service/src` — the validity caller/internal fail-closed slice.
-- **(f)** over the Epic-5 channel surface (`packages/channels/src` + the `apps/api` channel entrypoints: `channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`, `degraded-mode`, `device-token`) — the constant-time secret-compare slice.
-- **(g)** over the SAME Epic-5 channel surface — the compensating-audit mechanization slice (AI-5-3 / ADR-0030).
+- **(f)** over the channel surface (`packages/channels/src` + the `apps/api` channel entrypoints: `channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`, `degraded-mode`, `device-token`) **and the claim surface** (`apps/api/src/modules/{claims,nominee}`, `packages/domain/src/claim`) — the constant-time secret-compare slice.
+- **(g)** over the SAME channel **+ claim** surface — the compensating-audit mechanization slice (AI-5-3 / ADR-0030).
 
-This closes the AI-4-3 → AI-5-1 → AI-5-3 chain the Epic-4/5 retros flagged (I-1, "you can
-build the gate and still miss the target"): each new mechanized slice reads the code its own
-commitment was actually about, rather than widening an existing scanner past its precision
-or leaving the next corrosive-family instance to convention alone. Items **(c)–(e)** remain
-"mechanize the cheapest / most-corrosive slice, sharpen the review for the rest" — carried
-by this checklist + required tests. When a future slice becomes cheaply mechanizable, add it
-as a fourth invariant scanner rather than widening an existing one past its precision.
+This closes the AI-4-3 → AI-5-1 → AI-5-3 → **AI-6-1** chain the Epic-4/5/6 retros flagged (I-1,
+"you can build the gate and still miss the target"): each new mechanized slice — and each
+scope extension — reads the code its own commitment was actually about, rather than widening
+an existing scanner past its precision or leaving the next corrosive-family instance to
+convention alone. Items **(c)–(e)** remain "mechanize the cheapest / most-corrosive slice,
+sharpen the review for the rest" — carried by this checklist + required tests. When a future
+slice becomes cheaply mechanizable, add it as a fourth invariant scanner rather than widening
+an existing one past its precision.
+
+## Per-epic scope-extension convention (AI-6-1)
+
+> **Principle.** Expanding a gate's scan scope is only *complete* when at least one existing
+> invariant has **meaningful semantic coverage** of the new surface. Merely producing a green
+> scan over additional files is not evidence that the gate now protects that surface.
+
+For **three epics running** the mechanized gate covered the *previous* epic's surface: it scanned
+validity (Epic 4), then channels (Epic 5), while each epic in turn built a new access surface
+outside the roots — the scope of a control is itself a per-epic commitment that decays. AI-6-1
+turns closing that miss into a **standing item on every epic's primitive (Story-1) access story**:
+
+1. **Extend `SCAN_ROOTS`** — add the epic's new access surface to a `*_ROOTS` group in
+   `scripts/access-wrapper-invariants/check.ts` (a new group, or an existing one).
+2. **Confirm meaningful semantic coverage** — identify at least one invariant that *materially
+   fires* on the new surface (or is vacuous-safe forward-coverage for a real defect shape that
+   surface can grow), and do **not** run an invariant over a root where it can only be vacuous
+   for the wrong reason (e.g. the validity `MemberValidityPayload` invariant over the claim
+   surface). A green scan over the new files alone does **not** close the item.
+3. **Prove teeth** — revert-sanity: introduce the defect shape on the new surface, confirm the
+   gate goes red naming the file, restore.
+
+This is verified **before the epic's first access story merges**, so the gate grows *with* the
+code instead of a retro catching the miss two epics later.

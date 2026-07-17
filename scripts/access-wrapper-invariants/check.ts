@@ -9,26 +9,33 @@
 //       declare a caller-XOR-internal marker and fail CLOSED when neither is
 //       supplied (the Story 4.6 omitted-caller default-open defect).
 //
-//   (2) CHANNEL constant-time secret compare (Epic-5 AI-5-1) — within any
-//       VERIFICATION CONTEXT on the Epic-5 access surface (packages/channels +
-//       the apps/api channel entrypoints), a compare of two runtime values must
-//       go through an approved constant-time comparator, never `===`/`!==`/
-//       `.includes`/`.startsWith`/`.localeCompare` (the Story 5.4 `hub.verify_token`
-//       timing side-channel).
+//   (2) CONSTANT-TIME secret compare (Epic-5 AI-5-1, Epic-6 AI-6-1) — within any
+//       VERIFICATION CONTEXT on the access surface (packages/channels + the apps/api
+//       channel entrypoints + the Epic-6 CLAIM surface), a compare of two runtime
+//       values must go through an approved constant-time comparator, never `===`/
+//       `!==`/`.includes`/`.startsWith`/`.localeCompare` (the Story 5.4
+//       `hub.verify_token` timing side-channel).
 //
-//   (3) COMPENSATING-AUDIT mechanization (Epic-5 AI-5-3 / ADR-0030) — on the SAME
-//       Epic-5 access surface, a direct `audit.writeAuditEntry` call is
+//   (3) COMPENSATING-AUDIT mechanization (Epic-5 AI-5-3 / ADR-0030, Epic-6 AI-6-1) —
+//       on the SAME access surface, a direct `audit.writeAuditEntry` call is
 //       non-conformant unless the file is a named AI-4-3(d) isolated-best-effort
 //       exemption. `packages/domain/src/audit/compensating.ts`
 //       (`withCompensatingAudit` / `writeRolledBackAudit`) is the sole sanctioned
 //       caller for every other mutation+audit pairing on this surface.
 //
-// This closes the AI-4-3 → AI-5-1 → AI-5-3 chain: the gate now honestly reads the
-// code each commitment was about (Epic-5's channels + apps/api surface), not just
-// last epic's validity-service package. The remaining access-wrapper checklist
+// Invariants (2)+(3) scan the channel surface AND — as of AI-6-1 — Epic-6's claim
+// surface (apps/api/src/modules/{claims,nominee} + packages/domain/src/claim), so
+// the gate reads the code THIS epic was about, not just last epic's. Per the
+// standing per-epic scope-extension convention, this scope grows with each epic's
+// primitive access story and is complete only when an invariant has MEANINGFUL
+// semantic coverage of the new surface (see CLAIM_ROOTS below).
+//
+// This closes the AI-4-3 → AI-5-1 → AI-5-3 → AI-6-1 chain: the gate now honestly
+// reads the code each commitment was about. The remaining access-wrapper checklist
 // items (independent caller-auth, HMAC-not-raw-PII audit hashing, permission-key
-// scope match) stay CONVENTION + reviewer checklist — judgment calls a heuristic
-// lint would false-positive on. See docs/access-wrapper-invariants.md.
+// scope match, claim route ownership/IDOR) stay CONVENTION + reviewer checklist —
+// judgment calls a heuristic lint would false-positive on. See
+// docs/access-wrapper-invariants.md.
 //
 // INVARIANT SCAN of the declared scope — NOT a git-diff (mirror domain-invariants /
 // member-state-invariant; NO fetch-depth: 0). DB/network-free. Precision-scoped →
@@ -68,6 +75,32 @@ const CHANNEL_ROOTS = [
   'apps/api/src/modules/degraded-mode',
   'apps/api/src/modules/device-token',
 ];
+
+/**
+ * (3) claim access surface — AI-6-1. Epic 6's highest-stakes access surface
+ * (₹50L adjudication, step-up-OTP revision, appeal reviewer-conflict, KMS, and
+ * audit-after-mutation pairs). The secret-compare (f) and compensating-audit (g)
+ * invariants scan this surface too, so the gate reads the code THIS epic was about
+ * — not just last epic's. Per the standing per-epic scope-extension convention
+ * (docs/access-wrapper-invariants.md), scope is extended when an epic's primitive
+ * access surface lands, and is complete only when an invariant has MEANINGFUL
+ * semantic coverage of it — not merely a green scan over new files.
+ *
+ * Meaningful coverage here: (g) bites a future bare `audit.writeAuditEntry`
+ * bypassing the surface's `withCompensatingAudit` (consent) / `emitAuthAudit`
+ * (post-commit sink) patterns; (f) bites a future LOCAL credential compare (today
+ * claim step-up-OTP delegates to the already-scanned auth OTP service). The
+ * validity (1) invariant is NOT run here — no `MemberValidityPayload` boundary
+ * exists on the claim surface, so it would be vacuous for the wrong reason.
+ */
+const CLAIM_ROOTS = [
+  'apps/api/src/modules/claims',
+  'apps/api/src/modules/nominee',
+  'packages/domain/src/claim',
+];
+
+/** The full Epic-5 + Epic-6 access surface scanned by the (f) and (g) invariants. */
+const ACCESS_SURFACE_ROOTS = [...CHANNEL_ROOTS, ...CLAIM_ROOTS];
 
 function collectTsFiles(absDir: string, acc: string[]): void {
   for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
@@ -128,14 +161,14 @@ function main(): void {
     formatFinding,
   );
   const secret = runInvariant(
-    'AI-5-1 channel constant-time secret compare',
-    CHANNEL_ROOTS,
+    'AI-5-1/6-1 constant-time secret compare (channel + claim surface)',
+    ACCESS_SURFACE_ROOTS,
     scanSecretCompareInvariant,
     formatSecretCompareFinding,
   );
   const compensatingAudit = runInvariant(
-    'AI-5-3 compensating-audit mechanization',
-    CHANNEL_ROOTS,
+    'AI-5-3/6-1 compensating-audit mechanization (channel + claim surface)',
+    ACCESS_SURFACE_ROOTS,
     scanCompensatingAuditInvariant,
     formatCompensatingAuditFinding,
   );
@@ -144,8 +177,8 @@ function main(): void {
   console.log('\n▸ Findings');
   if (allLines.length === 0) {
     console.log('  ✓ validity entrypoints fail closed on an omitted caller');
-    console.log('  ✓ every channel verification context uses a constant-time secret compare');
-    console.log('  ✓ every mutation+audit pairing on this surface flows through withCompensatingAudit\n');
+    console.log('  ✓ every verification context (channel + claim) uses a constant-time secret compare');
+    console.log('  ✓ every mutation+audit pairing (channel + claim) flows through withCompensatingAudit\n');
     console.log('✓ access-wrapper-invariants gate passed');
     return;
   }

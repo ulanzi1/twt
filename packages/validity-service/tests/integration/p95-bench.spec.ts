@@ -23,6 +23,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { getValidityAt, type ValidityServiceDeps } from '../../src/index.js';
 import { R12_PAYLOAD } from '../fixtures/r12-clause.js';
+// The AI-6-2 shared measured-validation core's `percentile` — this placeholder harness's SCOPE is
+// superseded by `measured-validation-fr12a.spec.ts` (real 4L cached-path + concurrency), but the FILE
+// stays (D3-A budget-establishment record); it now imports the ONE percentile implementation rather than
+// carrying its own duplicate (review fix — a grep for `function percentile` must find exactly one source).
+import { percentile } from '../framework/index.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -30,11 +35,6 @@ const ITERATIONS = 120;
 const WARMUP = 10;
 /** A LOOSE sanity ceiling for the uncached single-member path — NOT the 200ms@4L target (Story 4.8). */
 const SANITY_CEILING_MS = 2000;
-
-function percentile(sorted: number[], p: number): number {
-  const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
-  return sorted[idx]!;
-}
 
 describe.skipIf(!hasDatabase)('validity-service — p95 benchmark harness (D3-A; live DB) (:5433)', () => {
   let db: Db;

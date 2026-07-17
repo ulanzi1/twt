@@ -25,6 +25,13 @@ const WARMUP = 10;
 /** LOOSE sanity ceiling = the AR-65 ~5s admin-search budget (NOT the 200ms@4L validity cache). */
 const SANITY_CEILING_MS = 5000;
 
+// NOT migrated to import the AI-6-2 measured-validation framework's `percentile` (review note, 2026-07-17):
+// that core lives in `packages/validity-service/tests/framework/`, and `@twt/domain` does not (and
+// structurally should not) depend on `@twt/validity-service` — validity-service depends on domain, not
+// the reverse, so importing across that boundary here would invert the package dependency graph. This
+// duplicate is therefore a DELIBERATE, ARCHITECTURE-DRIVEN exception, not an oversight; "single source"
+// (AI-6-2's acceptance criteria) is scoped to callers that CAN share the core without an inversion —
+// `p95-bench.spec.ts` (same package) was migrated; this file was not, and is not expected to be.
 function percentile(sorted: number[], p: number): number {
   const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
   return sorted[idx]!;

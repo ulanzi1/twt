@@ -27,8 +27,21 @@ const repoRoot = path.resolve(here, '../..');
 
 // The POOL-ENGINE surface (relative to repoRoot). Directories are walked recursively;
 // explicit files are scanned as-is. ADD new pool-engine roots here as they land.
+// NOTE the asymmetry: SCAN_DIRS is walked RECURSIVELY, so new files under
+// packages/domain/src/pool (e.g. Story 7.2's naming.ts + names.ts) are in scope with no
+// edit here. SCAN_FILES is a hand-maintained explicit list — packages/domain/src/schema is
+// NOT walked (it is full of legitimate claim-side death-vocabulary), so every new
+// POOL-ENGINE schema file must be added below by hand. That hand-maintenance is the
+// per-epic scope tax [[project_access_wrapper_gate_pending_scope]] — forget it and the
+// gate silently under-covers.
 const SCAN_DIRS = ['packages/domain/src/pool', 'packages/domain/src/snapshot-adapters'];
-const SCAN_FILES = ['packages/domain/src/schema/pools.ts', 'packages/domain/src/schema/pool_snapshots.ts'];
+const SCAN_FILES = [
+  'packages/domain/src/schema/pools.ts',
+  'packages/domain/src/schema/pool_snapshots.ts',
+  // Story 7.2 — the naming substrate.
+  'packages/domain/src/schema/pool_canonical_counters.ts',
+  'packages/domain/src/schema/pool_names.ts',
+];
 
 // The ONLY legitimate home for the `death_support` literal — the enum DEFINITION file
 // (AC4 "outside the enum definition file"). Everything else in the pool engine reads the

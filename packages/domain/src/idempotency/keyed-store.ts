@@ -66,6 +66,15 @@ export interface KeyedStore {
    * is none / it expired (AC-2). The replay path the second caller uses (AC-4).
    */
   getResult(key: string): Promise<unknown>;
+  /**
+   * Release a still-`pending` claim early (before its TTL), so the very next `claim` call
+   * succeeds immediately instead of waiting out the TTL. A no-op if the key is absent or
+   * already `completed` (never releases a recorded result out from under a reader). Callers
+   * use this when the claimed work fails outright — there is no point making a caller wait
+   * the full TTL to retry a claim that is known to have failed (Story 7.3's cycle-spawn-parent
+   * precedent).
+   */
+  release(key: string): Promise<void>;
 }
 
 export interface KeyedStoreOptions {
@@ -210,7 +219,23 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
     }
   }
 
-  return { claim, recordResult, getResult };
+  async function release(key: string): Promise<void> {
+    assertKey(key);
+    const client = await pool.connect();
+    let releaseErr: unknown;
+    try {
+      // Only a still-pending row is ours to drop — a completed row's result must survive for
+      // getResult (AC-4), and a row some other claimant reclaimed since is not ours to touch.
+      await client.query(`DELETE FROM idempotency_keys WHERE key = $1 AND status = 'pending'`, [key]);
+    } catch (e) {
+      releaseErr = e;
+      throw e;
+    } finally {
+      client.release(releaseErr as Error | undefined);
+    }
+  }
+
+  return { claim, recordResult, getResult, release };
 }
 
 /**

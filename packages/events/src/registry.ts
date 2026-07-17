@@ -323,4 +323,28 @@ export const EVENT_TYPE_REGISTRY = {
       'Pool disbursed to the deceased\'s nominee accounts → settled (terminal; Epic 7/9 disbursement + reconciliation) (Story 7.1).',
     schema: pool.PoolSettledPayloadSchema,
   },
+  // ── Story 7.3 — cycle.* vocabulary (the pool spawn saga's CYCLE-stream events) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/pool/cycle-events.ts) — they
+  // are appended on the CYCLE stream (stream_id = cycle_id = cycle_freeze_commits.commit_id;
+  // there is no `cycles` table). `cycle.frozen` is the single atomic commit-point event the
+  // saga emits exactly once (Epic 8 consumes it for the cycle-open trigger);
+  // `cycle.spawn.aborted` is a RETRYABLE diagnostic breadcrumb, never a terminal spawn-lock.
+  'cycle.spawn.started': {
+    type: 'cycle.spawn.started',
+    description:
+      'The pool-spawn parent job began a fresh plan for this cycle (Story 7.3) — the durable "parent-job-started" audit element AC4 requires; emitted EXACTLY ONCE, in the same tx as the plan, never on the idempotent-replay path.',
+    schema: pool.CycleSpawnStartedPayloadSchema,
+  },
+  'cycle.frozen': {
+    type: 'cycle.frozen',
+    description:
+      'Cycle fully spawned → the atomic commit-point event, emitted EXACTLY ONCE when the last child pool commits (Story 7.3); payload carries pool_count N + pool_ids + pool_canonical_identifiers + the trustee attestation. The event Epic 8 keys the cycle-open trigger off.',
+    schema: pool.CycleFrozenPayloadSchema,
+  },
+  'cycle.spawn.aborted': {
+    type: 'cycle.spawn.aborted',
+    description:
+      'A single pool-spawn attempt failed → a RETRYABLE audit/diagnostic breadcrumb, NOT terminal (Story 7.3); a cycle stream may carry multiple aborted events followed by a successful cycle.frozen. Carries a NON-PII reason string. Never a spawn-lock.',
+    schema: pool.CycleSpawnAbortedPayloadSchema,
+  },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

@@ -9,7 +9,7 @@
 
 import type pg from 'pg';
 
-import type { ClaimDocumentStorage } from '@twt/contracts';
+import type { ClaimDocumentStorage, PoolSpawnTriggerPayload } from '@twt/contracts';
 import type { BankIfscLookup } from '@twt/platform-adapters';
 import type { Db, encryption } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
@@ -234,6 +234,20 @@ export interface ClaimOcrParityEnqueuer {
   close?(): Promise<void>;
 }
 
+/**
+ * The pool-spawn PARENT job producer seam (Story 7.3, Task 6). Replaces the Story 6.13
+ * `consolePoolSpawnTrigger` stub: the cycle-freeze commit handler fires this POST-COMMIT, once,
+ * with the committed set, and it durably enqueues the `CYCLE_SPAWN_PARENT` job (send-only — the API
+ * produces, apps/jobs consumes the saga; NEVER `boss.work()`). Its `enqueue` is shaped exactly as
+ * the injectable `PoolSpawnTrigger` (a function of `PoolSpawnTriggerPayload`) so the handler takes it
+ * directly. Best-effort + durable: once enqueued the saga runs/retries independently. Production
+ * wires a pg-boss-backed enqueuer; tests inject a capturing fake.
+ */
+export interface PoolSpawnTriggerEnqueuer {
+  enqueue(payload: PoolSpawnTriggerPayload): Promise<void>;
+  close?(): Promise<void>;
+}
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;
@@ -353,6 +367,12 @@ export interface AppDeps {
    * a capturing fake in tests.
    */
   readonly claimOcrParityQueue: ClaimOcrParityEnqueuer;
+  /**
+   * Pool-spawn parent-job producer (Story 7.3) — the real post-commit `PoolSpawnTrigger`. A
+   * pg-boss-backed enqueuer in prod/dev; a capturing fake in tests. Injected into
+   * `createCycleFreezeHandlers` (replacing the Story 6.13 console stub).
+   */
+  readonly poolSpawnQueue: PoolSpawnTriggerEnqueuer;
   /**
    * IFSC bank-lookup port (Story 6.8, D4) — the nominee-bank routes format-validate + resolve an
    * IFSC to its public `{ bankName, branch }` (cache-first) before persisting an account. The

@@ -41,6 +41,12 @@ const SCAN_FILES = [
   // Story 7.2 — the naming substrate.
   'packages/domain/src/schema/pool_canonical_counters.ts',
   'packages/domain/src/schema/pool_names.ts',
+  // Story 7.3 — the spawn-saga worker runtime (apps/jobs). The domain half (pool/spawn.ts +
+  // pool/cycle-events.ts) is already covered by the recursive SCAN_DIRS walk of pool/; this is the
+  // apps/* pool-engine root the story's per-epic scope-extension convention calls for. The child
+  // job threads support_category through from the enum (never a literal), so this file must stay
+  // death-free like the rest of the engine.
+  'apps/jobs/src/cycle-spawn.ts',
 ];
 
 // The ONLY legitimate home for the `death_support` literal — the enum DEFINITION file

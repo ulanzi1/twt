@@ -202,10 +202,22 @@ export const pools = pgTable(
     // generation service; 7.1 declares the structural guard).
     uniqueIndex('pools_pariwar_canonical_identifier_uq').on(t.pariwarId, t.poolCanonicalIdentifier),
     // Cycle → pools lookup (list the pools spawned in a cycle, ordered by index).
-    // NON-unique + NOT the spawn-idempotency key: architecture.md's canonical
-    // data-flow diagram states pool-spawn idempotency is keyed on (alert_id, claim_id),
-    // not (cycle_id, pool_index); that key decision belongs to Story 7.3's spawn saga.
+    // NON-unique: kept for the un-scoped/system "list pools in a cycle" scan; the
+    // spawn-idempotency guarantee is the UNIQUE index below (which leads with
+    // pariwar_id and so does not serve a bare cycle_id scan as cheaply).
     index('pools_cycle_pool_index_idx').on(t.cycleId, t.poolIndex),
+    // The SPAWN-IDEMPOTENCY KEY (Story 7.3, Task 1). Story 7.1 deliberately left the
+    // (cycle_id, pool_index) index NON-unique and deferred this decision here. A cycle
+    // spawns exactly one pool per (pariwar, cycle, index); this UNIQUE index is the
+    // DB-level backstop that makes a child-job retry a true no-op — a second
+    // `cycle.spawn.child(cycle_id, pool_index)` for an already-spawned pool hits this
+    // index (23505 → isPoolSpawnIndexConflict → detect + no-op), never a duplicate pool.
+    // Reconciliation (Dev Notes): the epic keys idempotency on (cycle_id, pool_index);
+    // architecture §1.4 names (alert_id, claim_id) → pool_id, but there is no `alerts`
+    // table until Epic 8 (which CONSUMES cycle.frozen), so (cycle_id, pool_index) — 1:1
+    // with (cycle_id, claim_case_id) since one pool = one approved claim — is the
+    // expressible key; the alert_id binding is an Epic-8 follow-up, not a blocker.
+    uniqueIndex('pools_pariwar_cycle_pool_index_uq').on(t.pariwarId, t.cycleId, t.poolIndex),
     // The disbursement path joins claim_nominee_bank_accounts by the originating claim.
     index('pools_claim_case_id_idx').on(t.claimCaseId),
   ],

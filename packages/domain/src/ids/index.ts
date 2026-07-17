@@ -522,3 +522,16 @@ export const appealPanelSessionId = uuidBrand('AppealPanelSessionId');
 export type AppealPanelVoteId = Brand<'AppealPanelVoteId'>;
 /** Smart constructor: validates UUID shape, returns a branded `AppealPanelVoteId`. */
 export const appealPanelVoteId = uuidBrand('AppealPanelVoteId');
+
+// ── Story 7.2 — pool naming ────────────────────────────────────────────────────────────────────────────
+// `PoolNameId` is the per-row address of one curated pool name in a Pariwar's `pool_names` registry
+// (`pool_names.pool_name_id`) — mirrors WaTemplateId (the other per-Pariwar curated-list row address). The
+// registry's NATURAL key is `(pariwar_id, position_in_ordered_list)` (enforced by a UNIQUE), but the row is
+// addressed by this opaque id. `pariwar_id` reuses `PariwarId`. Branding is mandatory on a new ID's first
+// PR (§Naming L3706); this is that PR for `PoolNameId`. The `pool_canonical_counters` table needs no brand —
+// its PK is `(pariwar_id, period)`, a composite of an existing brand + a plain `YYYY-MM` text period.
+
+/** Per-row address of one curated name in a Pariwar's pool-name registry (`pool_names.pool_name_id`). */
+export type PoolNameId = Brand<'PoolNameId'>;
+/** Smart constructor: validates UUID shape, returns a branded `PoolNameId`. */
+export const poolNameId = uuidBrand('PoolNameId');

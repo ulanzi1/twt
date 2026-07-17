@@ -243,3 +243,11 @@ export * from './pools.js';
 // per row; append-only history for the last 12–18 months, §1.6). A plain append table
 // (NOT a state cache — no write-rejection trigger). Tenant-isolated (mirror pools).
 export * from './pool_snapshots.js';
+// Story 7.2 (Task 3) — the per-(pariwar, YYYY-MM) monotonic counter behind the canonical
+// `P-YYYY-MM-###` allocator (the cohort_invalidation_epochs transactional-counter shape).
+export * from './pool_canonical_counters.js';
+// Story 7.2 (Task 5) — the per-Pariwar curated pool-name registry (the
+// pariwar_wa_templates ordered-list precedent). A CAPABILITY: TWT-Bihar seeds ZERO rows
+// at launch (the UX amendment vetoed the culture-name overlay), so its pools display
+// letter codes; a future tenant may populate it only after the governance review.
+export * from './pool_names.js';

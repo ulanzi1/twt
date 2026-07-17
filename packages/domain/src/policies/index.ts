@@ -113,3 +113,8 @@ export * from './pools-rls.js';
 // Story 7.1 (Task 6) — pool_snapshots tenant-isolation policies (NOT cross-readable; mirror
 // pools-rls). No write-rejection trigger — the hot snapshot table is a plain append table.
 export * from './pool-snapshots-rls.js';
+// Story 7.2 — pool_names + pool_canonical_counters tenant-isolation policies (NOT
+// cross-readable; mirror pools-rls). A Pariwar's curated name list and its identifier
+// counter are its own.
+export * from './pool-names-rls.js';
+export * from './pool-canonical-counters-rls.js';

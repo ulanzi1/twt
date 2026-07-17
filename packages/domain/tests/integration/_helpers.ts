@@ -24,6 +24,7 @@ import {
   memberId as toMemberId,
   pariwarId as toPariwarId,
   poolId as toPoolId,
+  poolNameId as toPoolNameId,
   postingId as toPostingId,
   userId as toUserId,
 } from '../../src/ids/index.js';
@@ -401,6 +402,46 @@ export async function seedPool(
       // tx already aborted (the seed insert itself failed) — nothing to reset.
     }
   }
+  return id;
+}
+
+export interface SeedPoolNameOptions {
+  poolNameId?: string;
+  displayNameEn?: string;
+  displayNameHi?: string;
+  culturalLineageNote?: string | null;
+  approvalStatus?: schema.PoolNameApprovalStatus;
+}
+
+/**
+ * Insert one pool_names row (Story 7.2 registry). Like seedPool, run BEFORE entering app
+ * scope (as the Docker superuser, RLS bypassed); afterEach ROLLBACK reverts it.
+ *
+ * ⚠ This is a TEST fixture, and the ONLY place pool-name rows may be created outside a
+ * trustee mutation. TWT-Bihar ships with an EMPTY registry by product decision (the UX
+ * amendment vetoed the culture-name overlay; adversarial review M-10 gates any curated
+ * seed on a governance review) — so nothing in src/ or migrations/ may seed names. The
+ * illustrative names here exist ONLY to prove ordering + the exhaustion branch.
+ *
+ * `position` is explicit and required: reservation order IS the property under test, so a
+ * defaulted/implicit position would make the tests assert nothing. Returns the id used.
+ */
+export async function seedPoolName(
+  tx: Db,
+  pariwarId: string,
+  position: number,
+  opts: SeedPoolNameOptions = {},
+): Promise<string> {
+  const id = opts.poolNameId ?? randomUUID();
+  await tx.insert(schema.poolNames).values({
+    poolNameId: toPoolNameId(id),
+    pariwarId: toPariwarId(pariwarId),
+    positionInOrderedList: position,
+    displayNameEn: opts.displayNameEn ?? `Name-${String(position)}`,
+    displayNameHi: opts.displayNameHi ?? `नाम-${String(position)}`,
+    culturalLineageNote: opts.culturalLineageNote ?? null,
+    approvalStatus: opts.approvalStatus ?? 'approved',
+  });
   return id;
 }
 

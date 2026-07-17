@@ -512,6 +512,13 @@
       "when": 1786938000000,
       "tag": "0072_pool-snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1787024400000,
+      "tag": "0073_pool-naming",
+      "breakpoints": true
     }
   ]
 }

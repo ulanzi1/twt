@@ -1,7 +1,8 @@
 # src/snapshot-fixtures/
 
-**Landing Story: 7.x** — Pool Engine snapshot migration per architecture §1.6
+**Landed: Story 7.1** — Pool Engine snapshot migration per architecture §1.6
 line 925-934.
 
-Versioned Pool Engine state snapshots used for replay-based migration. Story
-7.x authors fixtures + the snapshot replay harness. Empty at Story 1.2.
+Versioned Pool Engine state snapshots used for replay-based migration.
+`pool-v1.example.json` is the v1 canonical fixture — its `integrity_hash` is
+independently recomputed against `packages/domain/tests/pool/pool-snapshot.test.ts`.

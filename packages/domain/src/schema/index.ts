@@ -233,3 +233,13 @@ export * from './webauthn_credentials.js';
 export * from './recovery_codes.js';
 export * from './admin_sessions.js';
 export * from './step_up_otps.js';
+// Story 7.1 — pool lifecycle anchor (pools table + pool_lifecycle_state +
+// pool_support_category pgEnums). `pools.current_state` is a replay-derived cache,
+// not the source of truth — guarded by the DB trigger (migration 0071) + the
+// pool-state-invariant CI gate. `support_category` v1 = death_support ONLY (AC4;
+// _daan reserved for v2). Twin of Story 3.1 members / Story 6.1 claims.
+export * from './pools.js';
+// Story 7.1 (Task 6) — the HOT snapshot tier: `pool_snapshots` (one serialized snapshot
+// per row; append-only history for the last 12–18 months, §1.6). A plain append table
+// (NOT a state cache — no write-rejection trigger). Tenant-isolated (mirror pools).
+export * from './pool_snapshots.js';

@@ -19,3 +19,12 @@ export { IFSC_REGEX, isValidIfscFormat } from './bank-ifsc-lookup/port.js';
 export type { BankIfscLookup, BankIfscRecord } from './bank-ifsc-lookup/port.js';
 export { createInMemoryBankIfscLookup } from './bank-ifsc-lookup/in-memory.js';
 export type { InMemoryBankIfscLookup } from './bank-ifsc-lookup/in-memory.js';
+
+// Story 7.1 — the pool-snapshot cold-storage adapters (Task 6, AC3). The `SnapshotStorage`
+// PORT lives in `@twt/contracts`; these are its GCS (live) + in-memory (test) implementations.
+// The port EXPOSES a write/read seam only — the daily dump job (Story 1.10 mirror pattern) +
+// bucket/Object-Retention-Lock provisioning are DEFERRED infra, calling through this port.
+export { createGcsSnapshotStorage } from './snapshot-storage/gcs.js';
+export type { GcsSnapshotStorageOpts } from './snapshot-storage/gcs.js';
+export { createInMemorySnapshotStorage } from './snapshot-storage/in-memory.js';
+export type { InMemorySnapshotStorage } from './snapshot-storage/in-memory.js';

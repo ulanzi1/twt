@@ -47,6 +47,10 @@
     "kyc-provider:test": "vitest run scripts/kyc-provider-boundary",
     "access-wrapper:check": "tsx scripts/access-wrapper-invariants/check.ts",
     "access-wrapper:test": "vitest run scripts/access-wrapper-invariants",
+    "pool-state:check": "tsx scripts/pool-state-invariant/check.ts",
+    "pool-state:test": "vitest run scripts/pool-state-invariant",
+    "pool-support-category:check": "tsx scripts/pool-support-category-invariant/check.ts",
+    "pool-support-category:test": "vitest run scripts/pool-support-category-invariant",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

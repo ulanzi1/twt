@@ -501,6 +501,63 @@ jobs:
       - run: pnpm claim-state:test
       - run: pnpm claim-state:check
 
+  pool-state-invariant:
+    name: pool-state-invariant (pools.current_state is projector-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 7.1 AC5: pools.current_state is a replay-derived cache writable ONLY by the
+    # event-replay projector (packages/domain/src/pool/project.ts). Static TS-AST scan of
+    # packages/domain/src — flags any .update(pools).set({ currentState }),
+    # .insert(pools)…onConflictDoUpdate({ set: { currentState } }), or
+    # pools.currentState = … outside the projector allowlist. The independent runtime guard
+    # is the BEFORE INSERT OR UPDATE trigger in migration 0071. No DB / network. See
+    # scripts/pool-state-invariant/. INVARIANT SCAN → NO fetch-depth: 0 (mirror
+    # claim-state-invariant). Twin of Story 3.1/6.1's state gates.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pool-state:test
+      - run: pnpm pool-state:check
+
+  pool-support-category-invariant:
+    name: pool-support-category-invariant (pool engine has no death branches)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: install
+    # Story 7.1 AC4: the pool engine has NO death-specific branches — every path keys on
+    # the support_category enum, never a hardcoded 'death'/'death_support' string (so v2
+    # _daan activation is a config change, not an engine refactor). String-match scan of
+    # the POOL-ENGINE surface (packages/domain/src/pool + snapshot-adapters + schema/pools
+    # .ts [enum-def allowlist] + schema/pool_snapshots.ts) — NOT all of domain (the death-
+    # claim subsystem legitimately says "death"). As pool-engine code lands in apps/* the
+    # SCAN roots MUST expand (the standing per-epic scope-extension convention). Teeth: a
+    # known-bad fixture in lib.test.ts. No DB / network. INVARIANT SCAN → NO fetch-depth: 0.
+    # timeout-minutes: 10 (the benefit-mechanism enum-tag-gate budget, not the 5 the
+    # state-invariant gates use — the two job families keep different budgets). See
+    # scripts/pool-support-category-invariant/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pool-support-category:test
+      - run: pnpm pool-support-category:check
+
   claim-canonical-id-invariant:
     name: claim-canonical-id-invariant (downstream flows key on claim_case_id only)
     runs-on: ubuntu-latest

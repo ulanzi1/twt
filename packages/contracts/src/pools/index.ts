@@ -10,3 +10,7 @@
 // Stories 7.1/7.2/7.3+.
 
 export * from './pool-spawn-trigger.js';
+// Story 7.1 — the pool-snapshot cold-storage port (AC3). The write/read-by-key seam the
+// snapshot writer + the (deferred) dump job call through; concrete GCS + in-memory
+// adapters live in @twt/platform-adapters (apps cannot depend on apps).
+export * from './snapshot-storage.js';

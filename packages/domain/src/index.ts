@@ -129,6 +129,16 @@ export {
   CLAIM_STATE_DIRECT_WRITE_CODE,
   isClaimStateDirectWriteError,
 } from './claim/errors.js';
+// Pool lifecycle direct-write rejection (Story 7.1, AC5). Surfaced at the top level —
+// mirroring the member/claim errors — so a future apps/api error-mapping middleware
+// (Story 7.3 spawn saga) imports the class + code constant from `@twt/domain` directly
+// to map the DB trigger's rejection → HTTP + the P0 audit line; the full primitive
+// (reducer, projector, events) is also under the `pool` namespace.
+export {
+  PoolStateDirectWriteError,
+  POOL_STATE_DIRECT_WRITE_CODE,
+  isPoolStateDirectWriteError,
+} from './pool/errors.js';
 export * as schema from './schema/index.js';
 export * as encryption from './encryption/index.js';
 export * as policies from './policies/index.js';
@@ -144,6 +154,13 @@ export * as member from './member/index.js';
 // Story 6.1 — claim case lifecycle primitive (claims table + claim.* state machine +
 // pure reducer + single-writer projector + time-travel reads). Twin of `member`.
 export * as claim from './claim/index.js';
+// Story 7.1 — pool lifecycle primitive (pools table + pool.* state machine + pure
+// reducer + single-writer projector). The THIRD event-derived-state primitive; twin
+// of `claim` + `member`. Consumed by the Story 7.3 spawn saga + Epic 7/9 downstream.
+export * as pool from './pool/index.js';
+// Story 7.1 (Task 6) — pool-snapshot migration adapters (§1.6 read-through-adapters).
+// The FIRST real adapter (pool v1); selected by `format_version` via readPoolSnapshot.
+export * as snapshotAdapters from './snapshot-adapters/index.js';
 // Story 3.3a — KYC provider substrate accessors (cert cache + kyc_transactions). The
 // DigiLocker provider (apps/api) consumes these; the frozen abstraction itself lives in
 // `@twt/contracts/kyc`.

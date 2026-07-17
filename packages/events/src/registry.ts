@@ -20,7 +20,7 @@
 // @twt/domain, so importing them here is the legal direction (domain must NOT
 // import contracts/events). Each record key equals its `type` string.
 
-import { claim, member } from '@twt/domain';
+import { claim, member, pool } from '@twt/domain';
 import type { z } from 'zod';
 
 export interface EventTypeRegistryEntry {
@@ -294,5 +294,33 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       'Appeal window closed/exhausted — claim stays denied (terminal); annotation event that clears the account-frozen overlay (Story 6.16).',
     schema: claim.ClaimDeniedNoAppealPayloadSchema,
+  },
+  // ── Story 7.1 — pool.* lifecycle vocabulary (the pool-object state machine) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/pool/events.ts). Names are
+  // single-dot snake_case — the merged-registry convention (contrast the epic AC's
+  // hyphen/double-dot forms; the `opened_for_contributions` reconciliation is recorded in
+  // pool/events.ts "PINNED SEAM" + the Story 7.1 Dev Agent Record).
+  'pool.spawned': {
+    type: 'pool.spawned',
+    description:
+      'Pool spawned → spawned (initial; the creation event of the pool stream); payload carries the spawn-snapshot identity (support_category, benefit_mechanism, fixed_amount, pool_index, cycle_id, pool_canonical_identifier) (Story 7.1; emitted by the Story 7.3 spawn saga).',
+    schema: pool.PoolSpawnedPayloadSchema,
+  },
+  'pool.opened_for_contributions': {
+    type: 'pool.opened_for_contributions',
+    description:
+      'Pool opened for contributions → live (the contribution-window scheduler; the delimiter-reconciled name of the epic AC\'s pool.opened-for-contributions) (Story 7.1).',
+    schema: pool.PoolOpenedForContributionsPayloadSchema,
+  },
+  'pool.closed': {
+    type: 'pool.closed',
+    description: 'Pool contribution window closed → closed (Story 7.1).',
+    schema: pool.PoolClosedPayloadSchema,
+  },
+  'pool.settled': {
+    type: 'pool.settled',
+    description:
+      'Pool disbursed to the deceased\'s nominee accounts → settled (terminal; Epic 7/9 disbursement + reconciliation) (Story 7.1).',
+    schema: pool.PoolSettledPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

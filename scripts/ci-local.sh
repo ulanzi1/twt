@@ -60,6 +60,8 @@ run "claim-canonical-id-invariant" "pnpm claim-canonical-id:test && pnpm claim-c
 run "claim-adjudication-human-actor-invariant" "pnpm claim-adjudication-human-actor:test && pnpm claim-adjudication-human-actor:check"
 run "kyc-provider-boundary" "pnpm kyc-provider:test && pnpm kyc-provider:check"
 run "access-wrapper-invariants" "pnpm access-wrapper:test && pnpm access-wrapper:check"
+run "pool-state-invariant"  "pnpm pool-state:test && pnpm pool-state:check"
+run "pool-support-category-invariant" "pnpm pool-support-category:test && pnpm pool-support-category:check"
 run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"
 run "channels-determinism"  "pnpm --filter @twt/channels test:determinism"
 

@@ -20,8 +20,10 @@ import { setPariwarScope, type Db } from '../../src/db.js';
 import {
   claimId as toClaimId,
   clauseId as toClauseId,
+  cycleFreezeCommitId as toCycleFreezeCommitId,
   memberId as toMemberId,
   pariwarId as toPariwarId,
+  poolId as toPoolId,
   postingId as toPostingId,
   userId as toUserId,
 } from '../../src/ids/index.js';
@@ -339,6 +341,62 @@ export async function seedClaim(
   } finally {
     try {
       await tx.execute(sql.raw("SET LOCAL app.claim_state_writer = 'off'"));
+    } catch {
+      // tx already aborted (the seed insert itself failed) — nothing to reset.
+    }
+  }
+  return id;
+}
+
+export interface SeedPoolOptions {
+  poolId?: string;
+  cycleId?: string;
+  claimCaseId?: string;
+  poolIndex?: number;
+  poolCanonicalIdentifier?: string;
+  supportCategory?: schema.PoolSupportCategory;
+  benefitMechanism?: 'pool' | 'reserve';
+  fixedAmount?: number;
+  currentState?: schema.PoolLifecycleState;
+  stateEventVersion?: number;
+}
+
+/**
+ * Insert one pools row (Story 7.1) DIRECTLY (bypassing the projector). Like seedClaim,
+ * run this BEFORE entering app scope (as the Docker superuser, RLS bypassed) so rows
+ * for BOTH tenants land regardless of the write-isolation policy; afterEach ROLLBACK
+ * reverts it. pools is a SCOPED table — cross-Pariwar reads must return 0 rows.
+ *
+ * The pools.current_state write-rejection trigger (Story 7.1 AC5) fires on BOTH INSERT
+ * and UPDATE (migration 0071 + pool/project.ts), so this helper sets the same session
+ * guard the projector uses for the one INSERT, then resets it immediately — tests that
+ * go on to exercise the trigger's rejection (e.g. a raw UPDATE with no guard) depend on
+ * the guard being back 'off' before they run. Returns the pool_id used.
+ */
+export async function seedPool(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedPoolOptions = {},
+): Promise<string> {
+  const id = opts.poolId ?? randomUUID();
+  await tx.execute(sql.raw("SET LOCAL app.pool_state_writer = 'on'"));
+  try {
+    await tx.insert(schema.pools).values({
+      poolId: toPoolId(id),
+      pariwarId: toPariwarId(pariwarId),
+      cycleId: toCycleFreezeCommitId(opts.cycleId ?? randomUUID()),
+      claimCaseId: toClaimId(opts.claimCaseId ?? randomUUID()),
+      poolIndex: opts.poolIndex ?? 0,
+      poolCanonicalIdentifier: opts.poolCanonicalIdentifier ?? `P-2026-07-${id.slice(0, 3)}`,
+      supportCategory: opts.supportCategory ?? 'death_support',
+      benefitMechanism: opts.benefitMechanism ?? 'pool',
+      fixedAmount: opts.fixedAmount ?? 500,
+      currentState: opts.currentState ?? 'spawned',
+      stateEventVersion: opts.stateEventVersion ?? 1,
+    });
+  } finally {
+    try {
+      await tx.execute(sql.raw("SET LOCAL app.pool_state_writer = 'off'"));
     } catch {
       // tx already aborted (the seed insert itself failed) — nothing to reset.
     }

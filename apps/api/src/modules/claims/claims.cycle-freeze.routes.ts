@@ -41,7 +41,9 @@ const COMMIT_STEP_UP_CONTEXT = 'cycle_freeze_commit';
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 
 export function registerCycleFreezeRoutes(app: FastifyInstance, deps: AppDeps): void {
-  const h = createCycleFreezeHandlers(deps);
+  // Inject the REAL post-commit pool-spawn trigger (Story 7.3) — the pg-boss-backed
+  // CYCLE_SPAWN_PARENT producer, replacing the Story 6.13 `consolePoolSpawnTrigger` default.
+  const h = createCycleFreezeHandlers(deps, (payload) => deps.poolSpawnQueue.enqueue(payload));
   const r = app.withTypeProvider<ZodTypeProvider>();
   const adminSession = requireAdminSession(deps);
   const scope = scopeResolutionHook(deps);

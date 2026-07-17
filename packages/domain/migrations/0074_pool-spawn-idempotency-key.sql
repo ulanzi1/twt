@@ -1,0 +1,23 @@
+-- Migration 0074 — pool-spawn idempotency key (Story 7.3, Task 1; AC1/AC2).
+--
+-- Story 7.1 deliberately left `pools_cycle_pool_index_idx` NON-unique and handed the
+-- spawn-idempotency-key decision to this story (schema/pools.ts + the migration comment).
+-- This migration adds the UNIQUE index that makes a child-job retry a true no-op: a cycle
+-- spawns exactly one pool per (pariwar_id, cycle_id, pool_index), so a second
+-- `cycle.spawn.child(cycle_id, pool_index)` for an already-spawned pool hits this index
+-- (23505 → isPoolSpawnIndexConflict → detect + no-op), never a duplicate pool. Combined
+-- with the DETERMINISTIC pool_id (UUIDv5 of `${cycle_id}:${pool_index}` — pool/spawn.ts)
+-- this is the structural backstop behind the atomic cycle-freeze invariant (AC2).
+--
+-- The pre-existing non-unique `pools_cycle_pool_index_idx` (migration 0071) is kept — it
+-- serves the un-scoped/system "list the pools in a cycle" scan; the new UNIQUE index leads
+-- with pariwar_id (RLS-scoped queries always carry it) and is the correctness backstop.
+--
+-- ⚠ DO NOT REGENERATE THIS FILE with `db:generate` (same discipline as 0021–0073). The
+-- drizzle snapshot baseline is frozen at 0020; a regenerate emits a bloated catch-up and
+-- drizzle-kit skips an already-applied migration by journal `when`, not SQL hash. This is
+-- HAND-AUTHORED and carries ONLY this story's DDL. No FKs (pariwar_id is unFK'd across the
+-- pool substrate — the pre-Epic-3 posture). No new GRANT/RLS (the index rides the existing
+-- `pools` table privileges + policies from 0071). No snapshot file (baseline frozen at 0020).
+
+CREATE UNIQUE INDEX "pools_pariwar_cycle_pool_index_uq" ON "pools" USING btree ("pariwar_id","cycle_id","pool_index");

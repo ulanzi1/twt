@@ -25,6 +25,8 @@ async function main(): Promise<void> {
     await deps.dataExportQueue.close?.().catch(() => undefined);
     // Drain the send-only claim OCR + parity queue client (Story 6.5).
     await deps.claimOcrParityQueue.close?.().catch(() => undefined);
+    // Drain the send-only pool-spawn parent-job queue client (Story 7.3).
+    await deps.poolSpawnQueue.close?.().catch(() => undefined);
     await deps.pool.end().catch(() => undefined);
     if (deps.servicePool !== deps.pool) {
       await deps.servicePool.end().catch(() => undefined);

@@ -30,7 +30,9 @@ import type {
   ClaimOcrParityEnqueuer,
   ClaimOcrParityJobPayload,
   DataExportEnqueuer,
+  PoolSpawnTriggerEnqueuer,
 } from '../../src/context.js';
+import type { PoolSpawnTriggerPayload } from '@twt/contracts';
 import { buildEncryptionDeps } from '../../src/deps.js';
 import { generateEphemeralMemberJwtKeys } from '../../src/modules/auth/member/jwt-keys.js';
 import type {
@@ -166,6 +168,21 @@ export class CapturingClaimOcrParityQueue implements ClaimOcrParityEnqueuer {
   }
 }
 
+/**
+ * A capturing pool-spawn parent-job queue (Story 7.3). Records every fired trigger payload so the
+ * cycle-freeze commit spec can assert the CYCLE_SPAWN_PARENT job was enqueued post-commit (and NOT on
+ * a rejected commit). `close` is a no-op.
+ */
+export class CapturingPoolSpawnQueue implements PoolSpawnTriggerEnqueuer {
+  public readonly enqueued: PoolSpawnTriggerPayload[] = [];
+  public async enqueue(payload: PoolSpawnTriggerPayload): Promise<void> {
+    this.enqueued.push(payload);
+  }
+  public get last(): PoolSpawnTriggerPayload | undefined {
+    return this.enqueued.at(-1);
+  }
+}
+
 export interface TestDepsOverrides {
   auditSink?: AuthAuditSink;
   toneReviewAuditSink?: ToneReviewAuditSink;
@@ -179,6 +196,7 @@ export interface TestDepsOverrides {
   dataExportQueue?: DataExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
+  poolSpawnQueue?: PoolSpawnTriggerEnqueuer;
   bankIfscLookup?: BankIfscLookup;
   resolveChannelSecret?: (secretName: string) => Promise<string>;
   clock?: () => Date;
@@ -196,6 +214,7 @@ export interface TestDeps {
   dataExportQueue: CapturingDataExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
+  poolSpawnQueue: CapturingPoolSpawnQueue;
   bankIfscLookup: InMemoryBankIfscLookup;
 }
 
@@ -228,6 +247,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const claimOcrParityQueue =
     (overrides.claimOcrParityQueue as CapturingClaimOcrParityQueue) ??
     new CapturingClaimOcrParityQueue();
+  const poolSpawnQueue =
+    (overrides.poolSpawnQueue as CapturingPoolSpawnQueue) ?? new CapturingPoolSpawnQueue();
   const bankIfscLookup =
     (overrides.bankIfscLookup as InMemoryBankIfscLookup) ?? createInMemoryBankIfscLookup();
 
@@ -282,6 +303,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
     // enqueued on a 202, and NOT enqueued on a 409 lifecycle-guard rejection.
     claimOcrParityQueue,
+    // Pool-spawn parent-job queue (Story 7.3) — capturing fake so the cycle-freeze commit spec asserts
+    // the CYCLE_SPAWN_PARENT job was enqueued post-commit (and not on a rejected commit).
+    poolSpawnQueue,
     // IFSC bank-lookup port (Story 6.8) — in-memory stub so the nominee-bank spec resolves fixture
     // IFSCs and asserts a dignified rejection on an unknown one. A spec may seed extra branches.
     bankIfscLookup,
@@ -303,6 +327,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     dataExportQueue,
     claimDocumentStorage,
     claimOcrParityQueue,
+    poolSpawnQueue,
     bankIfscLookup,
   };
 }

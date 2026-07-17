@@ -37,6 +37,7 @@ import {
 } from './modules/kyc/index.js';
 import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
 import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
+import { createPgBossCycleSpawnEnqueuer } from './modules/claims/cycle-spawn-queue.js';
 import {
   createGcsClaimDocumentStorage,
   createInMemoryBankIfscLookup,
@@ -329,6 +330,10 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Claim OCR + parity job producer (Story 6.5) — send-only, same DB connection string as the
     // app pool (pgboss schema; apps/jobs already created it).
     claimOcrParityQueue: await createPgBossClaimOcrParityEnqueuer(connectionString),
+    // Pool-spawn parent-job producer (Story 7.3) — the real post-commit trigger, send-only, same DB
+    // connection string as the app pool (pgboss schema; apps/jobs already created it). Replaces the
+    // Story 6.13 console stub at the composition root.
+    poolSpawnQueue: await createPgBossCycleSpawnEnqueuer(connectionString),
     // IFSC bank-lookup port (Story 6.8, D4) — the in-memory stub (fixture + cache). A real-vendor
     // adapter (a bundled IFSC dataset / public IFSC API) is a future seam; no live config booted here.
     bankIfscLookup: createInMemoryBankIfscLookup(),

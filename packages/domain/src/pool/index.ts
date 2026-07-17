@@ -21,3 +21,11 @@ export * from './naming.js';
 // deterministic ordering/reservation service over `pool_names`. TWT-Bihar's registry is
 // empty at launch, so its pools display letter codes (the tested launch invariant).
 export * from './names.js';
+// Story 7.3 (Task 2) — the cycle-level event vocabulary (cycle.frozen, cycle.spawn.aborted)
+// the spawn saga emits on the CYCLE stream (stream_id = cycle_id). Homed here (under pool/)
+// so the pool-engine CI gates' recursive scan keeps them covered.
+export * from './cycle-events.js';
+// Story 7.3 (Tasks 1/3/4) — the pool spawn saga: deterministic pool_id derivation, the
+// spawn-idempotency-conflict detector, the parent planner + child spawner + the
+// last-child cycle-freeze finalizer (the atomic cycle-freeze invariant).
+export * from './spawn.js';

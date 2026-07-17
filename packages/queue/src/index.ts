@@ -152,6 +152,23 @@ export const QUEUE_NAMES = {
    * singletonKey = claim_case_id. Job class B (request-triggered).
    */
   CLAIM_SHEPHERD_ASSIGN: 'claim.shepherd_assign',
+  /**
+   * Pool spawn saga — PARENT job (Story 7.3, Task 5). Enqueued once per cycle-freeze commit by
+   * the apps/api post-commit PoolSpawnTrigger (send-only; singletonKey = cycle_id). The parent
+   * worker validates the committed set, reserves N display names + allocates the N-wide canonical
+   * identifier range (idempotently, via the keyed store), derives N deterministic pool ids, and
+   * fans out N `cycle.spawn.child` jobs. Job class A (cycle-open burst) per architecture §1.4.
+   */
+  CYCLE_SPAWN_PARENT: 'cycle.spawn.parent',
+  /**
+   * Pool spawn saga — CHILD job (Story 7.3, Task 5). One per pool, dispatched CONCURRENTLY (no
+   * inter-pool serialization — architecture capacity envelope). singletonKey = `${cycle_id}:${pool_index}`.
+   * The child spawns its pool (the projector `pool.spawned` + snapshot) in its own short tx, then —
+   * in a second tx under a cycle advisory lock — checks whether it was the LAST to commit and, if
+   * so, appends the single `cycle.frozen` event (the atomic commit point). Idempotent + re-runnable
+   * in isolation. Job class A (cycle-open burst).
+   */
+  CYCLE_SPAWN_CHILD: 'cycle.spawn.child',
 } as const;
 
 /** Union of the registered queue names. */

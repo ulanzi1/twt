@@ -85,6 +85,7 @@ import {
   registerClaimShepherdAssignWorker,
   type ClaimShepherdAssignPayload,
 } from './claim-shepherd-assign.js';
+import { DEFAULT_CHILD_LOCAL_CONCURRENCY, registerCycleSpawnWorkers } from './cycle-spawn.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -130,6 +131,19 @@ const VALIDITY_CACHE_GC_MAX_AGE_SECONDS = Number(
 // startAfter = this).
 const PEER_MESH_WINDOW_SECONDS = Number(
   process.env['CLAIM_PEER_MESH_WINDOW_SECONDS'] ?? DEFAULT_PEER_MESH_WINDOW_SECONDS,
+);
+// Pool spawn saga v1 fixed-contribution amount, whole INR (Story 7.3, Task 5). ONE named config
+// value snapshotted onto every pool at spawn — Story 7.5 (BACKLOG) replaces this with the real
+// per-Pariwar "effective at cycle-freeze date" snapshot. Overridable; the default is a placeholder.
+const POOL_SPAWN_FIXED_AMOUNT_INR = Number(process.env['POOL_SPAWN_FIXED_AMOUNT_INR'] ?? 500);
+// Guard-rail ceiling for POOL_SPAWN_FIXED_AMOUNT_INR (1 crore INR) — a misconfigured env var (an
+// extra zero) must not silently snapshot an absurd contribution onto every pool in a cycle.
+const MAX_POOL_SPAWN_FIXED_AMOUNT_INR = 10_000_000;
+// CYCLE_SPAWN_CHILD worker count (Story 7.3, Task 5) — pg-boss `localConcurrency` for the child
+// queue. The natural unit of work is one child job, so scaling is via worker count, not batch
+// size. Named config value (never an inline magic number).
+const POOL_SPAWN_CHILD_CONCURRENCY = Number(
+  process.env['POOL_SPAWN_CHILD_CONCURRENCY'] ?? DEFAULT_CHILD_LOCAL_CONCURRENCY,
 );
 
 /** The single error helper — every fatal/uncaught path logs code + message only. */
@@ -181,6 +195,20 @@ async function main(): Promise<void> {
   if (!Number.isFinite(PEER_MESH_WINDOW_SECONDS) || PEER_MESH_WINDOW_SECONDS <= 0) {
     throw new RangeError(
       `[jobs] CLAIM_PEER_MESH_WINDOW_SECONDS must be a positive number (got ${PEER_MESH_WINDOW_SECONDS})`,
+    );
+  }
+  if (
+    !Number.isInteger(POOL_SPAWN_FIXED_AMOUNT_INR) ||
+    POOL_SPAWN_FIXED_AMOUNT_INR <= 0 ||
+    POOL_SPAWN_FIXED_AMOUNT_INR > MAX_POOL_SPAWN_FIXED_AMOUNT_INR
+  ) {
+    throw new RangeError(
+      `[jobs] POOL_SPAWN_FIXED_AMOUNT_INR must be a positive integer <= ${MAX_POOL_SPAWN_FIXED_AMOUNT_INR} (got ${POOL_SPAWN_FIXED_AMOUNT_INR})`,
+    );
+  }
+  if (!Number.isInteger(POOL_SPAWN_CHILD_CONCURRENCY) || POOL_SPAWN_CHILD_CONCURRENCY <= 0) {
+    throw new RangeError(
+      `[jobs] POOL_SPAWN_CHILD_CONCURRENCY must be a positive integer (got ${POOL_SPAWN_CHILD_CONCURRENCY})`,
     );
   }
   if (!/^(\S+\s+){4}\S+$/.test(DATA_EXPORT_VACUUM_CRON.trim())) {
@@ -442,6 +470,17 @@ async function main(): Promise<void> {
           { singletonKey: input.claimCaseId },
         );
       },
+    });
+
+    // ── Pool spawn saga (Story 7.3, Task 5) — Class A (cycle-open burst) ──────────
+    // The parent → N-child atomic spawn. Self-contained: registerCycleSpawnWorkers creates the
+    // CHILD queue before the PARENT so the child queue exists when the parent fans out onto it. The
+    // parent is enqueued by the apps/api post-commit PoolSpawnTrigger (Task 6). v1 uses the empty
+    // assignment seam (Story 7.4 fills the real hash) + a config-backed fixed amount (Story 7.5).
+    await registerCycleSpawnWorkers(boss, {
+      pool,
+      fixedAmount: POOL_SPAWN_FIXED_AMOUNT_INR,
+      childConcurrency: POOL_SPAWN_CHILD_CONCURRENCY,
     });
 
     await new Promise<void>((resolve, reject) => {

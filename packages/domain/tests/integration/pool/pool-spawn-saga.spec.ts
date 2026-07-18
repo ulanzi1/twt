@@ -231,10 +231,20 @@ describe.skipIf(!hasDatabase)('pool spawn saga (PARIWAR_A scope)', () => {
     const pools = await poolsForCycle(tx, cycleId);
     expect(pools).toHaveLength(1);
     const poolEvents = await tx
-      .select({ type: schema.eventsLog.eventType })
+      .select({ type: schema.eventsLog.eventType, payload: schema.eventsLog.payload })
       .from(schema.eventsLog)
       .where(and(eq(schema.eventsLog.streamId, spec.poolId), eq(schema.eventsLog.eventType, 'pool.spawned')));
     expect(poolEvents).toHaveLength(1);
+    // AC5 — the assignment audit-reproducibility fields land on the persisted event. `spawnChildPool`
+    // is called here with no seam argument (the default `emptyAssignmentSeam`), so this pins the
+    // current empty-roster values; the `assignment_roster_wired: false` marker is what future-proofs
+    // an auditor's ability to tell "no roster query wired yet" apart from a later, genuinely-empty
+    // roster once the Story 7.4 roster-wiring follow-up ships.
+    expect(poolEvents[0]!.payload).toMatchObject({
+      member_state_hash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+      assignment_hash_version: 'v1',
+      assignment_roster_wired: false,
+    });
     const snaps = await tx
       .select({ id: schema.poolSnapshots.snapshotId })
       .from(schema.poolSnapshots)

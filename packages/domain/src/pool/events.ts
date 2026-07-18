@@ -99,6 +99,23 @@ export const PoolSpawnedPayloadSchema = z
     cycle_id: z.string().uuid(),
     // The `P-YYYY-MM-###` human-readable identifier (Story 7.2 owns generation).
     pool_canonical_identifier: z.string().min(1),
+    // ── Story 7.4 (AC5) — assignment audit-reproducibility fields ──────────────
+    // `member_state_hash` is the roster fingerprint (SHA-256 over the canonical sorted
+    // assignable member-id list; @twt/domain pool.computeAssignableRosterHash) at freeze, and
+    // `assignment_hash_version` is the whole-algorithm version pin — together they let an auditor
+    // re-derive the exact member→pool assignment for the frozen roster. OPTIONAL under `.strict()`:
+    // pre-7.4 `pool.spawned` events carry neither, and a non-optional field would reject every one
+    // of them on replay (the 7.1-era events must still validate). Story 7.4 writers ALWAYS populate
+    // both.
+    member_state_hash: z.string().optional(),
+    assignment_hash_version: z.string().optional(),
+    // `assignment_roster_wired` disambiguates "no assignable-roster query exists yet" (`false`,
+    // the current D2→B state — every 7.4-era event carries this) from a future, genuinely-empty
+    // roster once the live freeze-time query lands (`true` with `member_state_hash ===
+    // sha256("[]")`). Without this flag the two cases are indistinguishable to an auditor after
+    // the roster-wiring follow-up ships. OPTIONAL under `.strict()` for the same replay reason as
+    // the two fields above.
+    assignment_roster_wired: z.boolean().optional(),
   })
   .strict();
 

@@ -29,3 +29,7 @@ export * from './cycle-events.js';
 // spawn-idempotency-conflict detector, the parent planner + child spawner + the
 // last-child cycle-freeze finalizer (the atomic cycle-freeze invariant).
 export * from './spawn.js';
+// Story 7.4 (Tasks 1/2/3) — the deterministic member-to-pool assignment algorithm: the
+// version-pinned SHA-256 base hash + the balanced (≤1) redistribution pass + the roster
+// fingerprint + the real PoolAssignmentSeam factory (fills Story 7.3's emptyAssignmentSeam).
+export * from './assign.js';

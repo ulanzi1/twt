@@ -67,6 +67,7 @@ import { reserveNames, type PoolNameReservation } from './names.js';
 import type { PoolBenefitMechanism } from './project.js';
 import { projectPoolState } from './project.js';
 import { serializePoolSnapshot, type PoolSnapshotMemberAssignment } from './snapshot.js';
+import { POOL_ASSIGNMENT_HASH_VERSION, computeAssignableRosterHash } from './assign.js';
 
 // ── The v1 spawn defaults (keyed on the enum, never a literal) ────────────────
 
@@ -141,9 +142,10 @@ export function isPoolSpawnIndexConflict(err: unknown): boolean {
 // ── The member-assignment seam (Story 7.4 fills it) ───────────────────────────
 
 /** The deterministic inputs a member-assignment algorithm keys on. `memberSet` is the
- *  freeze-time member roster (member ids) the algorithm hashes into pools; Story 7.4
- *  (BACKLOG) is what wires a real query supplying it — v1 always passes `[]` (no live
- *  query yet), matching `emptyAssignmentSeam`'s no-op output. */
+ *  freeze-time assignable member roster (member ids) the algorithm hashes into pools. Story 7.4
+ *  fills the real seam (assign.ts `createPoolAssignmentSeam`); supplying a LIVE roster here is the
+ *  deferred Story 7.4 follow-up (see the D2 note at the `spawnChildPool` call), so today the caller
+ *  still passes `[]` — on which the real seam and `emptyAssignmentSeam` both return `[]`. */
 export interface PoolAssignmentSeamInput {
   readonly cycleId: string;
   readonly poolIndex: number;
@@ -152,17 +154,19 @@ export interface PoolAssignmentSeamInput {
 }
 
 /**
- * The injected member-assignment seam. Story 7.4 (BACKLOG — after this story) fills the real
- * deterministic `hash(member_id + cycle_id) % N` algorithm + its property/replay test suite
- * behind this seam. The seam MUST be pure/deterministic (no clock, no randomness) so the child
- * stays re-runnable to the identical snapshot. The snapshot serializer already accepts an empty
- * assignment list, so the v1 default is a clean no-op.
+ * The injected member-assignment seam. Story 7.4 fills the real deterministic
+ * `hash(member_id + cycle_id) % N` algorithm + balancing pass behind this type
+ * (assign.ts `createPoolAssignmentSeam`, wired into apps/jobs boot). The seam MUST be
+ * pure/deterministic (no clock, no randomness) so the child stays re-runnable to the identical
+ * snapshot. The snapshot serializer already accepts an empty assignment list, so an empty roster is
+ * a clean no-op on either seam.
  */
 export type PoolAssignmentSeam = (
   input: PoolAssignmentSeamInput,
 ) => readonly PoolSnapshotMemberAssignment[];
 
-/** The v1 default seam — no member assignments yet (Story 7.4 replaces it). */
+/** The no-op fallback seam — no member assignments. Retained as the default when no seam is
+ *  injected (and for tests); production injects the real `createPoolAssignmentSeam` (Story 7.4). */
 export const emptyAssignmentSeam: PoolAssignmentSeam = () => [];
 
 // ── freeze-month derivation (clock-free; replay-stable) ───────────────────────
@@ -354,13 +358,20 @@ export async function spawnChildPool(
     return { poolId: derivedPoolId, poolCanonicalIdentifier: spec.poolCanonicalIdentifier, spawned: false };
   }
 
+  // Story 7.4 (D2 → fallback B): the assignment ALGORITHM + its real seam ship now (the seam is
+  // injected here / wired into apps/jobs boot), but the LIVE freeze-time assignable-roster QUERY is
+  // deferred to a scoped follow-up — @twt/domain cannot import @twt/validity-service (the layering
+  // is validity-service → domain), there is no bulk member-enumeration query yet, and the
+  // validity-payload → "assignable" mapping is an unresolved policy the follow-up owns (D4). Until
+  // then the roster is empty, so the real seam returns [] (identical to the old emptyAssignmentSeam
+  // output). The `member_state_hash` below is the fingerprint of THIS (currently empty) roster —
+  // the same code path records the real fingerprint once the follow-up supplies the roster.
+  const memberSet: readonly string[] = [];
   const memberAssignments = assignmentSeam({
     cycleId: spec.cycleId,
     poolIndex: spec.poolIndex,
     poolCount: spec.poolCount,
-    // v1 has no live "members eligible at freeze" query (Story 7.4 scope) — always empty,
-    // which emptyAssignmentSeam ignores anyway.
-    memberSet: [],
+    memberSet,
   });
 
   const payload = {
@@ -374,6 +385,14 @@ export async function spawnChildPool(
     pool_index: spec.poolIndex,
     cycle_id: spec.cycleId,
     pool_canonical_identifier: spec.poolCanonicalIdentifier,
+    // AC5 audit reproducibility — the frozen-roster fingerprint + the whole-algorithm version pin.
+    member_state_hash: computeAssignableRosterHash(memberSet),
+    assignment_hash_version: POOL_ASSIGNMENT_HASH_VERSION,
+    // `false` today: no live assignable-roster query exists yet (the D2→B deferral above), so this
+    // event's empty `member_state_hash` reflects "unwired," not a genuinely empty roster. The
+    // roster-wiring follow-up MUST flip this to `true` once it threads a real query in — that flag,
+    // not the hash value alone, is what lets an auditor tell the two cases apart after the fact.
+    assignment_roster_wired: false,
   };
 
   let eventVersion: number;

@@ -31,6 +31,7 @@ import http from 'node:http';
 import {
   createDb,
   idempotency,
+  pool as poolDomain,
   resolveConnectionString,
   resolveSecretValue,
   validityCache,
@@ -475,12 +476,16 @@ async function main(): Promise<void> {
     // ── Pool spawn saga (Story 7.3, Task 5) — Class A (cycle-open burst) ──────────
     // The parent → N-child atomic spawn. Self-contained: registerCycleSpawnWorkers creates the
     // CHILD queue before the PARENT so the child queue exists when the parent fans out onto it. The
-    // parent is enqueued by the apps/api post-commit PoolSpawnTrigger (Task 6). v1 uses the empty
-    // assignment seam (Story 7.4 fills the real hash) + a config-backed fixed amount (Story 7.5).
+    // parent is enqueued by the apps/api post-commit PoolSpawnTrigger (Task 6). Story 7.4 injects the
+    // REAL deterministic member-assignment seam (createPoolAssignmentSeam) in place of the empty one;
+    // the live freeze-time roster supply is a separately-deferred 7.4 follow-up (spawnChildPool still
+    // passes an empty memberSet, so the real seam returns [] until then). Independently, the fixed
+    // amount is still config-backed pending Story 7.5.
     await registerCycleSpawnWorkers(boss, {
       pool,
       fixedAmount: POOL_SPAWN_FIXED_AMOUNT_INR,
       childConcurrency: POOL_SPAWN_CHILD_CONCURRENCY,
+      assignmentSeam: poolDomain.createPoolAssignmentSeam(),
     });
 
     await new Promise<void>((resolve, reject) => {

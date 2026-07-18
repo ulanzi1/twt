@@ -335,7 +335,18 @@ export type AuthAuditEventType =
   | 'admin_appeal.stage2_finalize'
   | 'admin_appeal.stage2_cancel'
   | 'admin_appeal.stage3'
-  | 'admin_appeal.rejected';
+  | 'admin_appeal.rejected'
+  // Story 7.5 — the per-Pariwar fixed-amount schedule surface (the FR-15 12-month-notice standard change +
+  // the emergency adjustment override). Post-action SINK lines (the durable records are the
+  // pool_fixed_amount_schedule row + the immutable pool_fixed_amount_emergency_attestations record). Context
+  // is NON-PII: change_type + version + fixed_amount + effective_from, and (emergency) the panel roster ids +
+  // documented_reason (policy/operational ONLY — never member-specific, D3, so it is safe in the audit line).
+  //   schedule  — a standard (12-month-notice) fixed-amount change written.
+  //   emergency — an emergency override written (schedule row + attestation, step-up-gated).
+  //   rejected  — a schedule/emergency attempt rejected by a guard (fail-closed AND audited).
+  | 'admin_pool_fixed_amount.schedule'
+  | 'admin_pool_fixed_amount.emergency'
+  | 'admin_pool_fixed_amount.rejected';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

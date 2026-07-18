@@ -643,3 +643,37 @@ export function usePutTelegramConfig(pariwarId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: telegramConfigKey(pariwarId) }),
   });
 }
+
+// ── Story 7.5 — the fixed-amount schedule surface (FR-15) ──
+// The standard (12-month-notice) + emergency (step-up-gated) fixed-amount write paths + the schedule/
+// effective-amount read view. Both keys are per-Pariwar grants (server permission hook is the real gate).
+
+export const fixedAmountViewKey = (pariwarId: string) => ['pool-fixed-amount', pariwarId] as const;
+
+/** The current fixed-amount schedule + the amount effective now (+ embedded emergency records). */
+export function useFixedAmountView(pariwarId: string) {
+  return useQuery({
+    queryKey: fixedAmountViewKey(pariwarId),
+    queryFn: () => api.getFixedAmountView(pariwarId),
+  });
+}
+
+/** POST a STANDARD (12-month-notice) change; refetches the schedule on success. */
+export function useScheduleFixedAmountChange(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.scheduleFixedAmountChange>[1]) =>
+      api.scheduleFixedAmountChange(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: fixedAmountViewKey(pariwarId) }),
+  });
+}
+
+/** POST an EMERGENCY override (step-up-gated); refetches the schedule on success. */
+export function useApplyFixedAmountEmergency(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.applyFixedAmountEmergency>[1]) =>
+      api.applyFixedAmountEmergency(pariwarId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: fixedAmountViewKey(pariwarId) }),
+  });
+}

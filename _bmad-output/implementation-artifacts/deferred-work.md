@@ -4,6 +4,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-7-5-fixed-amount-snapshot-at-spawn-12-month-notice-workflow-emergency-adjustment-override (2026-07-18)
+
+- **`documented_reason` (the emergency-override policy/operational justification) has no PII-scan or keyword-denylist enforcement beyond a non-empty/1000-char check** — it's stored plaintext on `pool_fixed_amount_emergency_attestations`, an append-only table with no redaction path, on the strength of an unenforced convention that the field is "never member-specific." Deferred: consistent with how other free-text justification fields in the app are handled; a keyword denylist would be unreliable and a real PII scanner is out of scope for this story. **Re-trigger:** if a real instance of member-identifying content is ever found in this field, or as part of a dedicated PII-hygiene pass across free-text audit/attestation fields app-wide.
+
 ## Deferred from: code review of story-6-14-r9-special-case-voting-walkthrough, Group 4 — Tests (2026-07-14)
 
 - **The two-connection concurrency matrix (`r9-voting-concurrency.spec.ts`) covers racing finalizes, concurrent votes-by-different-panelists, open-vs-open, and forced rollback, but not every combination the story's own "18 refinements" list calls out** — specifically vote-during-finalize (a vote landing while a finalize tx holds the advisory lock) and revise-vs-finalize (a panelist revising their live vote concurrently with a finalize) have no dedicated two-connection test; they're only indirectly exercised via lock serialization in the existing tests. **Re-trigger:** if a real race in either combination is ever suspected in production, or as part of a dedicated concurrency-hardening pass on this suite.

@@ -84,7 +84,6 @@ function makeDeps(overrides: Partial<CycleSpawnDeps> = {}): CycleSpawnDeps {
   return {
     // withPariwarScope is mocked — no call ever reaches this pool.
     pool: {} as CycleSpawnDeps['pool'],
-    fixedAmount: 500,
     onAlarm: vi.fn(),
     ...overrides,
   };
@@ -182,14 +181,14 @@ describe('runCycleSpawnParent — successful planning', () => {
     // One shared tx: withPariwarScope opened exactly once for the whole plan+started pair.
     expect(withPariwarScopeMock).toHaveBeenCalledTimes(1);
     expect(planCycleSpawnMock).toHaveBeenCalledTimes(1);
-    // The planner receives the forwarded frozenClaims + fixedAmount (not merely "was called").
+    // The planner receives the forwarded frozenClaims (not merely "was called"). Story 7.5 retired the
+    // fixedAmount dep — the planner resolves the amount internally from the schedule at committed_at.
     expect(planCycleSpawnMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         cycleId,
         pariwarId,
         frozenClaims: envelope.payload.frozenClaims,
-        fixedAmount: 500,
       }),
     );
     expect(appendCycleSpawnStartedMock).toHaveBeenCalledTimes(1);

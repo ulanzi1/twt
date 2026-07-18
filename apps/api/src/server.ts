@@ -46,6 +46,7 @@ import { registerTermsModule } from './modules/terms-and-conditions/index.js';
 import { registerDataExportModule } from './modules/data-export/index.js';
 import { registerRtbfModule } from './modules/rtbf/index.js';
 import { registerWithdrawalModule } from './modules/withdrawal/index.js';
+import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
@@ -206,6 +207,10 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 2.6 — T&C version registry trustee write surface (tenant-scoped;
   // audit-or-throw create + approve, gated on tc.publish / tc.approve).
   registerTermsModule(app, deps);
+  // Story 7.5 — trustee fixed-amount schedule surface (FR-15): GET the schedule + effective amount,
+  // POST a standard (12-month-notice) change (pool.fixed_amount_set), POST an emergency adjustment
+  // override (pool.fixed_amount_emergency, step-up-gated). Fires the member-notification scaffolding seam.
+  registerPoolFixedAmountModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

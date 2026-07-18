@@ -52,6 +52,10 @@ import type {
   NiyamavaliAmendedEvent,
   NiyamavaliAmendedHook,
 } from '../../src/modules/rules/notification-hook.js';
+import type {
+  PoolFixedAmountChangedEvent,
+  PoolFixedAmountChangedHook,
+} from '../../src/modules/pool-fixed-amount/notification-hook.js';
 import type { ToneReviewAuditEvent, ToneReviewAuditSink } from '../../src/modules/tone-review/index.js';
 import { buildServer } from '../../src/server.js';
 
@@ -116,6 +120,17 @@ export class CapturingNiyamavaliHook {
     this.events.push(event);
   };
   public get last(): NiyamavaliAmendedEvent | undefined {
+    return this.events.at(-1);
+  }
+}
+
+/** A fixed-amount-changed notification hook that records every fired event (Story 7.5). */
+export class CapturingPoolFixedAmountHook {
+  public readonly events: PoolFixedAmountChangedEvent[] = [];
+  public readonly hook: PoolFixedAmountChangedHook = (event) => {
+    this.events.push(event);
+  };
+  public get last(): PoolFixedAmountChangedEvent | undefined {
     return this.events.at(-1);
   }
 }
@@ -192,6 +207,7 @@ export interface TestDepsOverrides {
   webauthn?: WebAuthnProvider;
   deployTrigger?: DeployTrigger;
   niyamavaliAmendedHook?: NiyamavaliAmendedHook;
+  poolFixedAmountChangedHook?: PoolFixedAmountChangedHook;
   kycProviders?: KycProviderRegistry;
   dataExportQueue?: DataExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
@@ -211,6 +227,7 @@ export interface TestDeps {
   stepUpDelivery: CapturingStepUpDelivery;
   adminStepUpDelivery: CapturingStepUpDelivery;
   niyamavaliHook: CapturingNiyamavaliHook;
+  poolFixedAmountHook: CapturingPoolFixedAmountHook;
   dataExportQueue: CapturingDataExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
@@ -239,6 +256,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const adminStepUpDelivery =
     (overrides.adminStepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
   const niyamavaliHook = new CapturingNiyamavaliHook();
+  const poolFixedAmountHook = new CapturingPoolFixedAmountHook();
   const dataExportQueue =
     (overrides.dataExportQueue as CapturingDataExportQueue) ?? new CapturingDataExportQueue();
   const claimDocumentStorage =
@@ -286,6 +304,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Member-notification hook (Story 2.4) — capturing fake by default so the publish
     // spec can assert it fired with the right payload (AC3).
     niyamavaliAmendedHook: overrides.niyamavaliAmendedHook ?? niyamavaliHook.hook,
+    // Fixed-amount-changed notification hook (Story 7.5) — capturing fake by default so a spec can
+    // assert the seam fired with the right coordinates + cadence (standard=queued / emergency=immediate).
+    poolFixedAmountChangedHook: overrides.poolFixedAmountChangedHook ?? poolFixedAmountHook.hook,
     // KYC provider registry (Story 3.3a) — the fixture provider by default (the
     // config-absent seam); a spec may override to assert DigiLocker-provider wiring.
     kycProviders:
@@ -324,6 +345,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     stepUpDelivery,
     adminStepUpDelivery,
     niyamavaliHook,
+    poolFixedAmountHook,
     dataExportQueue,
     claimDocumentStorage,
     claimOcrParityQueue,

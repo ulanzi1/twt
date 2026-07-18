@@ -14,3 +14,6 @@ export * from './pool-spawn-trigger.js';
 // snapshot writer + the (deferred) dump job call through; concrete GCS + in-memory
 // adapters live in @twt/platform-adapters (apps cannot depend on apps).
 export * from './snapshot-storage.js';
+// Story 7.5 — the fixed-amount schedule surface (FR-15): the 12-month-notice standard change + the
+// emergency adjustment override request/response DTOs + the schedule/effective-amount read view.
+export * from './fixed-amount.js';

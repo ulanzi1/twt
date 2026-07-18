@@ -118,3 +118,8 @@ export * from './pool-snapshots-rls.js';
 // counter are its own.
 export * from './pool-names-rls.js';
 export * from './pool-canonical-counters-rls.js';
+// Story 7.5 — pool_fixed_amount_schedule + pool_fixed_amount_emergency_attestations
+// tenant-isolation policies (NOT cross-readable; mirror pools-rls). The attestation
+// table is additionally APPEND-ONLY at the grant level (SELECT+INSERT, no UPDATE/DELETE).
+export * from './pool-fixed-amount-schedule-rls.js';
+export * from './pool-fixed-amount-emergency-attestations-rls.js';

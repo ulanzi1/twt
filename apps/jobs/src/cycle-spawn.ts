@@ -34,16 +34,14 @@ export const DEFAULT_PARENT_IDEMPOTENCY_TTL_SECONDS = 300;
 export const DEFAULT_CHILD_LOCAL_CONCURRENCY = 8;
 
 /**
- * The v1 fixed-contribution amount (whole INR) snapshotted at spawn. Story 7.5 (BACKLOG) replaces
- * this single config value with the real "effective at cycle-freeze date" per-Pariwar snapshot;
- * v1 threads one configured positive value through every pool. NOT a magic number inline — sourced
- * from `POOL_SPAWN_FIXED_AMOUNT_INR` in boot.ts.
+ * Story 7.5 retired the config-backed `fixedAmount` dep: `planCycleSpawn` now resolves the amount
+ * INTERNALLY from the per-Pariwar effective-dated schedule at the cycle-freeze `committed_at`
+ * (pool/fixed-amount.ts `getEffectiveFixedAmount`), so the worker no longer threads it. The snapshot
+ * each pool carries is the policy-correct amount at the instant the cycle froze — atomic + replay-safe.
  */
 export interface CycleSpawnDeps {
   /** The domain-table pool. withPariwarScope sets the tenant scope per job. */
   readonly pool: import('pg').Pool;
-  /** v1 fixed-amount source (config-backed; Story 7.5 replaces with the real snapshot). */
-  readonly fixedAmount: number;
   /** The deterministic member-assignment seam. Story 7.4 fills it (createPoolAssignmentSeam, wired
    *  in boot.ts); the default is the no-op emptyAssignmentSeam. */
   readonly assignmentSeam?: poolDomain.PoolAssignmentSeam;
@@ -122,7 +120,6 @@ export async function runCycleSpawnParent(
           pariwarId: brandedPariwarId,
           cycleId: brandedCycleId,
           frozenClaims: p.frozenClaims,
-          fixedAmount: deps.fixedAmount,
         });
         // Durable "parent-job-started" audit marker (AC4) — same tx as the plan, so a planning
         // failure never leaves it behind without the plan it describes.
@@ -143,7 +140,20 @@ export async function runCycleSpawnParent(
       // that canonical-identifier range is orphaned on the next attempt — an accepted gap
       // (identifiers only need to be unique, not contiguous, like an invoice/sequence number),
       // not a correctness bug.
-      alarm(`[jobs] cycle-spawn-parent: planning failed for cycle ${p.cycleId} — ${String(err)}`);
+      //
+      // A PoolFixedAmountNotConfiguredError specifically means the Pariwar has NO fixed-amount
+      // schedule row at all (D5's genesis-seed contract broken — see migration 0076's backfill) —
+      // a terminal trustee CONFIG GAP, not a transient failure. pg-boss still retries it like any
+      // other planning failure (this codebase has no retryable/non-retryable error split — every
+      // worker relies on pg-boss's own retryLimit + DLQ), but the alarm is distinguished so an
+      // operator scanning logs can tell "will keep failing until the schedule is seeded" apart
+      // from a transient planning error.
+      const alarmMessage =
+        err instanceof poolDomain.PoolFixedAmountNotConfiguredError
+          ? `[jobs] cycle-spawn-parent: CONFIG GAP — no fixed_amount schedule for cycle ${p.cycleId} ` +
+            `(PoolFixedAmountNotConfiguredError; see migration 0076 backfill) — operator action required — ${String(err)}`
+          : `[jobs] cycle-spawn-parent: planning failed for cycle ${p.cycleId} — ${String(err)}`;
+      alarm(alarmMessage);
       await store.release(key).catch((releaseErr: unknown) => {
         alarm(
           `[jobs] cycle-spawn-parent: failed to release claim for cycle ${p.cycleId} — ${String(releaseErr)}`,

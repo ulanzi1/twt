@@ -44,7 +44,8 @@ export interface CycleSpawnDeps {
   readonly pool: import('pg').Pool;
   /** v1 fixed-amount source (config-backed; Story 7.5 replaces with the real snapshot). */
   readonly fixedAmount: number;
-  /** The deterministic member-assignment seam. v1 default returns [] (Story 7.4 fills it). */
+  /** The deterministic member-assignment seam. Story 7.4 fills it (createPoolAssignmentSeam, wired
+   *  in boot.ts); the default is the no-op emptyAssignmentSeam. */
   readonly assignmentSeam?: poolDomain.PoolAssignmentSeam;
   /** Parent run-once claim TTL (seconds). */
   readonly parentIdempotencyTtlSeconds?: number;

@@ -31,7 +31,7 @@ import {
   type DeployStatusView,
   type PariwarPassportResponse,
 } from '@twt/contracts';
-import { ids, passport, type schema } from '@twt/domain';
+import { ids, passport, pool as poolDomain, type schema } from '@twt/domain';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -46,6 +46,30 @@ import type { DeployResult } from './deploy-trigger.js';
 
 const PROVISIONING_TAG = 'provisioning';
 const PROVISION_KEY = 'pariwar.provision';
+
+// Story 7.5 (D5) — the GENESIS fixed-amount (whole INR) seeded for a freshly-provisioned Pariwar so
+// its effective-dated schedule always has a version-1 open head (effective_from = now()) and the
+// spawn saga's getEffectiveFixedAmount never throws PoolFixedAmountNotConfiguredError in practice.
+// Mirrors the retired POOL_SPAWN_FIXED_AMOUNT_INR default (500). Overridable via env; the trustee
+// re-sets it thereafter via the standard-change (12-month notice) / emergency-override workflow.
+const GENESIS_FIXED_AMOUNT_INR = Number(process.env['POOL_GENESIS_FIXED_AMOUNT_INR'] ?? 500);
+
+// Module-load-time range validation (review hardening — the retired POOL_SPAWN_FIXED_AMOUNT_INR had
+// an equivalent boot-time RangeError check in apps/jobs/boot.ts; this constant had none). Fails
+// process startup on a misconfigured env var instead of surfacing only the first time a Pariwar is
+// provisioned. Ceiling matches @twt/domain's MAX_POOL_FIXED_AMOUNT_INR (the same bound
+// seedGenesisFixedAmount's assertPositiveAmount enforces at write time — this is the earlier,
+// louder gate).
+if (
+  !Number.isInteger(GENESIS_FIXED_AMOUNT_INR) ||
+  GENESIS_FIXED_AMOUNT_INR <= 0 ||
+  GENESIS_FIXED_AMOUNT_INR > poolDomain.MAX_POOL_FIXED_AMOUNT_INR
+) {
+  throw new RangeError(
+    `[pariwar-provisioning] POOL_GENESIS_FIXED_AMOUNT_INR must be a positive integer <= ` +
+      `${String(poolDomain.MAX_POOL_FIXED_AMOUNT_INR)} (got ${String(GENESIS_FIXED_AMOUNT_INR)})`,
+  );
+}
 
 type PariwarPassportRow = typeof schema.pariwarPassport.$inferSelect;
 
@@ -119,6 +143,14 @@ export function registerPariwarProvisioningModule(app: FastifyInstance, deps: Ap
           trustRegistrationId: body.trustRegistrationId ?? null,
           brandingBundle: body.brandingBundle,
           localeDefault: body.localeDefault,
+        });
+        // Story 7.5 (D5) — seed the genesis fixed-amount row in the SAME self-scoped tx (atomic with
+        // the passport), so a freshly-provisioned Pariwar always has an effective contribution amount
+        // and pool-spawn never fails loud for a missing schedule. Idempotent on (pariwar_id, version=1).
+        await poolDomain.seedGenesisFixedAmount(scopeTx.tx, {
+          pariwarId: newId,
+          fixedAmount: GENESIS_FIXED_AMOUNT_INR,
+          actorId: actorId ?? 'system:provisioning-genesis-seed',
         });
         await closeScopeTx(scopeTx, true); // COMMIT on success
       } catch (err) {

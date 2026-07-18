@@ -77,6 +77,15 @@ import {
   type AppealStage2FinalizeRequest as AppealFinalizePayload,
   type AppealStage2CancelRequest as AppealCancelPayload,
   type AppealStage3DecideRequest as AppealStage3Payload,
+  // Story 7.5 — the fixed-amount schedule surface DTOs (view + standard/emergency writes).
+  PoolFixedAmountView,
+  PoolFixedAmountScheduleResponse,
+  PoolFixedAmountEmergencyResponse,
+  type PoolFixedAmountView as FixedAmountView,
+  type PoolFixedAmountScheduleResponse as FixedAmountScheduleResult,
+  type PoolFixedAmountEmergencyResponse as FixedAmountEmergencyResult,
+  type PoolFixedAmountScheduleRequest as FixedAmountSchedulePayload,
+  type PoolFixedAmountEmergencyRequest as FixedAmountEmergencyPayload,
   StepUpRequestResponse,
   StepUpVerifyResponse,
   ProvisionedPariwar,
@@ -981,4 +990,39 @@ export function getAppealDecisionsByReviewer(
     `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/appeal/decisions-by-reviewer?${qs.toString()}`,
     AppealDecisionsByReviewerResponse,
   );
+}
+
+// ── Story 7.5 — the fixed-amount schedule admin surface ──
+// Tenant-scoped under /p/:pariwarId/admin/pool-fixed-amount. Both keys are per-Pariwar grants, so the REAL
+// boundary is the server permission hook; the EMERGENCY call is step-up-gated ('pool_fixed_amount_emergency')
+// — a 403 'auth.step_up_required' is the signal to elevate, NOT a hard error (the cycle-freeze precedent).
+
+const fixedAmountBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/pool-fixed-amount`;
+
+/** GET the current fixed-amount schedule + the amount effective now (+ embedded emergency records). */
+export function getFixedAmountView(pariwarId: string): Promise<FixedAmountView> {
+  return apiFetch(fixedAmountBase(pariwarId), PoolFixedAmountView);
+}
+
+/** POST a STANDARD (12-month-notice) fixed-amount change (server enforces the +365d floor). */
+export function scheduleFixedAmountChange(
+  pariwarId: string,
+  body: FixedAmountSchedulePayload,
+): Promise<FixedAmountScheduleResult> {
+  return apiFetch(`${fixedAmountBase(pariwarId)}/schedule`, PoolFixedAmountScheduleResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST an EMERGENCY adjustment override (no notice floor; attestation required; step-up-gated). */
+export function applyFixedAmountEmergency(
+  pariwarId: string,
+  body: FixedAmountEmergencyPayload,
+): Promise<FixedAmountEmergencyResult> {
+  return apiFetch(`${fixedAmountBase(pariwarId)}/emergency`, PoolFixedAmountEmergencyResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

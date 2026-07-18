@@ -68,6 +68,7 @@ import type { PoolBenefitMechanism } from './project.js';
 import { projectPoolState } from './project.js';
 import { serializePoolSnapshot, type PoolSnapshotMemberAssignment } from './snapshot.js';
 import { POOL_ASSIGNMENT_HASH_VERSION, computeAssignableRosterHash } from './assign.js';
+import { getEffectiveFixedAmount } from './fixed-amount.js';
 
 // ── The v1 spawn defaults (keyed on the enum, never a literal) ────────────────
 
@@ -197,9 +198,6 @@ export interface PlanCycleSpawnInput {
   readonly cycleId: CycleFreezeCommitId;
   /** The committed claim set — ORDERED; index i becomes the pool at pool_index i. */
   readonly frozenClaims: readonly FrozenClaimEntry[];
-  /** The fixed contribution amount snapshotted at spawn. Story 7.5 (BACKLOG) later sources the
-   *  real "effective at cycle-freeze date" amount; v1 passes a configured positive value. */
-  readonly fixedAmount: number;
   /** v1 defaults to the sole enum category. */
   readonly supportCategory?: PoolSupportCategory;
   /** v1 defaults to 'pool'. */
@@ -258,11 +256,6 @@ export async function planCycleSpawn(
       `[planCycleSpawn] frozenClaims count must be in [1, ${String(MAX_CYCLE_SPAWN_POOLS)}], got ${String(n)}`,
     );
   }
-  if (!Number.isInteger(input.fixedAmount) || input.fixedAmount <= 0) {
-    throw new Error(
-      `[planCycleSpawn] fixedAmount must be a positive integer, got ${String(input.fixedAmount)}`,
-    );
-  }
   const uniqueClaimIds = new Set(input.frozenClaims.map((c) => c.claimCaseId));
   if (uniqueClaimIds.size !== n) {
     throw new Error(
@@ -282,6 +275,21 @@ export async function planCycleSpawn(
     );
   }
   const freezeMonth = deriveFreezeMonth(commit.committedAt);
+
+  // Story 7.5 (D2): resolve the fixed amount effective AT the cycle-freeze `committed_at` — the same
+  // durable instant the name/identifier allocation uses, NEVER the clock. Doing it here (in-tx, from
+  // that same instant) is atomic + replay-safe: a parent retry re-reads the same `committed_at`, and
+  // schedule rows are immutable historical, so the resolved amount is byte-identical on retry. This
+  // is the CONSUMER wiring that retires the boot-time POOL_SPAWN_FIXED_AMOUNT_INR env constant.
+  // Fails loud (PoolFixedAmountNotConfiguredError) if the Pariwar has no effective amount — a P0
+  // trustee-config gap, never a silent default (the PoolNameListExhaustedError philosophy).
+  const fixedAmount = await getEffectiveFixedAmount(tx, input.pariwarId, commit.committedAt);
+  // Post-lookup invariant (the schedule's DB CHECK already guarantees this; belt-and-suspenders).
+  if (!Number.isInteger(fixedAmount) || fixedAmount <= 0) {
+    throw new Error(
+      `[planCycleSpawn] resolved fixedAmount must be a positive integer, got ${String(fixedAmount)}`,
+    );
+  }
 
   // Reserve N display names (opt-out `[]` vs exhaustion throw — the caller decides fallback).
   const names = await reserveNames(tx, { pariwarId: input.pariwarId, count: n });
@@ -305,7 +313,7 @@ export async function planCycleSpawn(
     poolCanonicalIdentifier: identifiers[i]!,
     supportCategory,
     benefitMechanism,
-    fixedAmount: input.fixedAmount,
+    fixedAmount,
     poolCount: n,
   }));
 

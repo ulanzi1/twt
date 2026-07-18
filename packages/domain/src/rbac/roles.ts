@@ -97,6 +97,12 @@ const CLAIM_R9_VOTE = permissionKey('claim.r9_vote');
 const CLAIM_APPEAL_REVIEW = permissionKey('claim.appeal_review');
 const CLAIM_APPEAL_VOTE = permissionKey('claim.appeal_vote');
 const CLAIM_APPEAL_FINAL = permissionKey('claim.appeal_final');
+// Story 7.5 (FR-15) — the fixed-amount schedule keys (both pariwar-dimension; the cycle.freeze / claim.r9_vote
+// pariwar-wide precedent). `pool.fixed_amount_set` = the standard (12-month-notice) change; `…_emergency` =
+// the emergency override (ALSO step-up-gated at the route). Same Trustee-Lite posture — direct state_trustee
+// gating deferred to Epic 3.
+const POOL_FIXED_AMOUNT_SET = permissionKey('pool.fixed_amount_set');
+const POOL_FIXED_AMOUNT_EMERGENCY = permissionKey('pool.fixed_amount_emergency');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -173,6 +179,13 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // credential (openAppealPanel's assertPanelAuthorized). No inert state_trustee grant is seeded.
       CLAIM_APPEAL_VOTE,
       CLAIM_APPEAL_FINAL,
+      // Story 7.5 (FR-15) — the fixed-amount schedule keys. Both PARIWAR-WIDE policy surfaces (checked at
+      // `dimension: 'pariwar'` = scopeTx.pariwarId), the exact cycle.freeze / claim.r9_vote ceiling rationale
+      // (a `pariwar`-ceiling-or-broader role). The emergency route is ADDITIONALLY step-up-gated (governance
+      // posture equivalent to R9 WITHOUT the R9 voting lifecycle). v1 actor = pariwar_admin-as-Trustee-Lite;
+      // direct state_trustee gating DEFERRED to Epic 3. No inert state_trustee grant is seeded.
+      POOL_FIXED_AMOUNT_SET,
+      POOL_FIXED_AMOUNT_EMERGENCY,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.

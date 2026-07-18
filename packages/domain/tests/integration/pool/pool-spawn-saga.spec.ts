@@ -44,6 +44,21 @@ import { PARIWAR_A, enterAppScope } from '../_helpers.js';
 
 const FIXED_AMOUNT = 500;
 
+/** Seed an OPEN-headed fixed-amount schedule row (Story 7.5) effective well before the seeded
+ *  committed_at (2026-07-15), so planCycleSpawn resolves this amount at the cycle-freeze instant.
+ *  Seeded superuser (before app scope) — pariwar_id matches PARIWAR_A so it reads back under RLS. */
+async function seedFixedAmount(tx: Db, pariwarId: string, amount: number): Promise<void> {
+  await tx.insert(schema.poolFixedAmountSchedule).values({
+    pariwarId: toPariwarId(pariwarId),
+    version: 1,
+    fixedAmount: amount,
+    effectiveFrom: new Date('2026-01-01T00:00:00Z'),
+    effectiveUntil: null,
+    changeType: 'standard',
+    createdByActor: 'system:test-seed',
+  });
+}
+
 /** Seed a cycle_freeze_commits row (before entering app scope — superuser, RLS bypassed). */
 async function seedCommit(
   tx: Db,
@@ -90,13 +105,13 @@ describe.skipIf(!hasDatabase)('pool spawn saga (PARIWAR_A scope)', () => {
     const cycleId = randomUUID();
     const claimIds = [randomUUID(), randomUUID(), randomUUID()];
     await seedCommit(tx, PARIWAR_A, cycleId, claimIds);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
     await enterAppScope(client, PARIWAR_A);
 
     const plan = await planCycleSpawn(tx, {
       pariwarId: PARIWAR_A,
       cycleId: toCycleId(cycleId),
       frozenClaims: claimIds.map((c) => ({ claimCaseId: c })),
-      fixedAmount: FIXED_AMOUNT,
     });
     expect(plan.children).toHaveLength(3);
     // Opt-out Pariwar → no reserved names (letter codes).
@@ -152,13 +167,13 @@ describe.skipIf(!hasDatabase)('pool spawn saga (PARIWAR_A scope)', () => {
     const cycleId = randomUUID();
     const claimIds = [randomUUID(), randomUUID(), randomUUID()];
     await seedCommit(tx, PARIWAR_A, cycleId, claimIds);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
     await enterAppScope(client, PARIWAR_A);
 
     const plan = await planCycleSpawn(tx, {
       pariwarId: PARIWAR_A,
       cycleId: toCycleId(cycleId),
       frozenClaims: claimIds.map((c) => ({ claimCaseId: c })),
-      fixedAmount: FIXED_AMOUNT,
     });
 
     // Spawn children 0 and 1 only — child 2 "fails".
@@ -211,13 +226,13 @@ describe.skipIf(!hasDatabase)('pool spawn saga (PARIWAR_A scope)', () => {
     const cycleId = randomUUID();
     const claimIds = [randomUUID()];
     await seedCommit(tx, PARIWAR_A, cycleId, claimIds);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
     await enterAppScope(client, PARIWAR_A);
 
     const plan = await planCycleSpawn(tx, {
       pariwarId: PARIWAR_A,
       cycleId: toCycleId(cycleId),
       frozenClaims: claimIds.map((c) => ({ claimCaseId: c })),
-      fixedAmount: FIXED_AMOUNT,
     });
     const spec = plan.children[0]!;
 
@@ -266,13 +281,13 @@ describe.skipIf(!hasDatabase)('pool spawn saga (PARIWAR_A scope)', () => {
     const cycleId = randomUUID();
     const claimIds = [randomUUID(), randomUUID()];
     await seedCommit(tx, PARIWAR_A, cycleId, claimIds);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
     await enterAppScope(client, PARIWAR_A);
 
     const plan = await planCycleSpawn(tx, {
       pariwarId: PARIWAR_A,
       cycleId: toCycleId(cycleId),
       frozenClaims: claimIds.map((c) => ({ claimCaseId: c })),
-      fixedAmount: FIXED_AMOUNT,
     });
 
     // Two failed attempts, each leaving a breadcrumb — the cycle stays spawnable.
@@ -297,7 +312,6 @@ describe.skipIf(!hasDatabase)('pool spawn saga (PARIWAR_A scope)', () => {
         pariwarId: PARIWAR_A,
         cycleId: toCycleId(cycleId),
         frozenClaims: [{ claimCaseId: randomUUID() }],
-        fixedAmount: FIXED_AMOUNT,
       }),
     ).rejects.toThrow(/cycle_freeze_commits row not found/);
   });

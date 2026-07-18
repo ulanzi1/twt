@@ -33,3 +33,8 @@ export * from './spawn.js';
 // version-pinned SHA-256 base hash + the balanced (≤1) redistribution pass + the roster
 // fingerprint + the real PoolAssignmentSeam factory (fills Story 7.3's emptyAssignmentSeam).
 export * from './assign.js';
+// Story 7.5 (Task 2) — the effective-dated fixed-amount schedule: the change_type-blind window
+// resolver (getEffectiveFixedAmount — the spawn saga's amount source, retiring the env constant) +
+// the standard (12-month-notice) + emergency-override write paths + the immutable Emergency
+// Adjustment Record + the genesis seed. The typed errors ride pool/errors.ts (already exported).
+export * from './fixed-amount.js';

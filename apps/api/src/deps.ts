@@ -45,6 +45,7 @@ import {
 } from '@twt/platform-adapters';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
+import { consolePoolFixedAmountChangedHook } from './modules/pool-fixed-amount/notification-hook.js';
 import { createToneReviewAuditSink } from './modules/tone-review/index.js';
 
 /** Derive a deterministic 32-byte fake key from a label + the pepper (local/CI only). */
@@ -305,6 +306,9 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Member-notification scaffolding hook (Story 2.4, AC3) — console placeholder
     // until Epic 5 wires the real niyamavali.amended push fan-out.
     niyamavaliAmendedHook: consoleNiyamavaliAmendedHook,
+    // Member-notification scaffolding hook (Story 7.5) — console placeholder until Epic 5
+    // wires the real fixed-amount-changed push fan-out.
+    poolFixedAmountChangedHook: consolePoolFixedAmountChangedHook,
     // KYC provider registry + FR-58C swap seam (Story 3.3a) — DigiLocker when configured,
     // else the fixture provider (boots with zero live-govt config).
     kycProviders: await buildKycProviderRegistry(config),

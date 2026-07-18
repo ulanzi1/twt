@@ -209,7 +209,19 @@ export function permissionKey(value: string): PermissionKey {
 // = pariwar_admin-as-Trustee-Lite. NO inert state_trustee grant is seeded. The member-facing INITIATE route
 // needs NO admin key — it is a claimant-or-operator action (member session, or an operator with the helpline
 // capability under AR-61).
-export const PERMISSION_CATALOG_VERSION = 19 as const;
+// Bumped 19 → 21 at Story 7.5 (added TWO keys for the FR-15 fixed-amount schedule surface):
+// `pool.fixed_amount_set` — the STANDARD (12-month-notice) fixed-amount change WRITE key. Gates
+// `GET/POST …/admin/pool-fixed-amount` + `POST …/admin/pool-fixed-amount/schedule`. Checked at
+// `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze / claim.r9_vote pariwar-wide-key
+// precedent; the fixed amount is a PARIWAR-WIDE policy). Granted to `pariwar_admin` (+ super_admin).
+// `pool.fixed_amount_emergency` — the EMERGENCY adjustment override WRITE key. Gates
+// `POST …/admin/pool-fixed-amount/emergency` (ADDITIONALLY step-up-gated at the route — governance posture
+// equivalent to R9: step-up + recorded trustee attestation + auditability, WITHOUT the R9 voting lifecycle).
+// Also `dimension: 'pariwar'`; granted to `pariwar_admin` (+ super_admin). v1 actor = pariwar_admin-as-
+// Trustee-Lite; direct `state_trustee` gating DEFERRED to the Epic-3 geo-tree resolver (the 6.13/6.14
+// Trustee-Lite precedent — a `state`-ceiling grant cannot satisfy a pariwar-dimension check pre-Epic-3). NO
+// inert state_trustee grant is seeded. A DELIBERATE deferral, documented so it never reads as an oversight.
+export const PERMISSION_CATALOG_VERSION = 21 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -350,6 +362,16 @@ export const SEED_PERMISSION_KEYS = [
   // global-scope escalation is a future extension). Granted to `pariwar_admin` (+ super_admin). The route is
   // step-up-gated (`appeal_stage3_decide`). Direct state_trustee gating deferred to Epic 3 (Trustee-Lite).
   'claim.appeal_final',
+  // Story 7.5 (FR-15) — the STANDARD (12-month-notice) fixed-amount change WRITE key. Gates
+  // GET/POST …/admin/pool-fixed-amount + POST …/admin/pool-fixed-amount/schedule. Checked at
+  // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze / claim.r9_vote pariwar-wide-key
+  // precedent; the fixed amount is a Pariwar-wide policy). Granted to `pariwar_admin` (+ super_admin).
+  'pool.fixed_amount_set',
+  // Story 7.5 (FR-15) — the EMERGENCY adjustment override WRITE key. Gates
+  // POST …/admin/pool-fixed-amount/emergency (ADDITIONALLY step-up-gated at the route — governance posture
+  // equivalent to R9 WITHOUT the R9 voting lifecycle). Also `dimension: 'pariwar'`. Granted to `pariwar_admin`
+  // (+ super_admin). Direct state_trustee gating deferred to Epic 3 (Trustee-Lite; see the version-bump note).
+  'pool.fixed_amount_emergency',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

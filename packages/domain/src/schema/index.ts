@@ -251,3 +251,9 @@ export * from './pool_canonical_counters.js';
 // at launch (the UX amendment vetoed the culture-name overlay), so its pools display
 // letter codes; a future tenant may populate it only after the governance review.
 export * from './pool_names.js';
+// Story 7.5 — the per-Pariwar effective-dated fixed-amount schedule (retires the
+// POOL_SPAWN_FIXED_AMOUNT_INR env constant; the terms_and_conditions_versions
+// effective-window precedent) + the append-only immutable Emergency Adjustment Record
+// (the R9-equivalent-posture trustee attestation, its own never-updated table).
+export * from './pool_fixed_amount_schedule.js';
+export * from './pool_fixed_amount_emergency_attestations.js';

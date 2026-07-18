@@ -133,3 +133,155 @@ export function isPoolStreamVersionConflict(err: unknown): boolean {
   })();
   return constraint === STREAM_VERSION_CONSTRAINT;
 }
+
+// ── Fixed-amount schedule + emergency-override errors — Story 7.5 (Task 2) ─────
+// The typed transport seams for the effective-dated fixed-amount schedule (fixed-amount.ts).
+// Each carries a namespaced `code` + `toErrorResponse` so the apps/api error-mapping boundary
+// translates it to the right HTTP status without matching on the class instance (the
+// PoolStateDirectWriteError precedent above). Homed here (pool/errors.ts) so they ride the pool
+// namespace barrel; the module itself lives under pool/ (support-category-token-free, gate-scanned).
+
+/** Base for the fixed-amount typed errors — carries a `code` + a uniform error-response body. */
+abstract class PoolFixedAmountError extends Error {
+  public abstract readonly code: string;
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: {},
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+export const POOL_FIXED_AMOUNT_NOT_CONFIGURED_CODE = 'pool.fixed_amount_not_configured';
+
+/**
+ * No fixed-amount schedule entry is effective at the requested instant — a trustee CONFIG GAP
+ * surfaced LOUDLY (the PoolNameListExhaustedError philosophy), never a silent fallback to a magic
+ * number. Thrown by `getEffectiveFixedAmount` on the spawn path; a correctly-provisioned Pariwar
+ * carries a genesis-seed row (D5) so this never fires in practice.
+ */
+export class PoolFixedAmountNotConfiguredError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountNotConfiguredError';
+  public readonly code = POOL_FIXED_AMOUNT_NOT_CONFIGURED_CODE;
+  public constructor(
+    public readonly pariwarId: string,
+    public readonly asOf: string,
+  ) {
+    super(
+      `no fixed_amount schedule entry effective for pariwar ${pariwarId} at ${asOf} — ` +
+        `the Pariwar has no configured contribution amount (a trustee config gap)`,
+    );
+  }
+}
+
+export const POOL_FIXED_AMOUNT_NOTICE_TOO_SHORT_CODE = 'pool.fixed_amount_notice_too_short';
+
+/**
+ * A STANDARD change whose `effective_from` violates the 12-month (365-day) notice floor,
+ * evaluated against DB-authoritative `now()` (D6 — the hostile-trustee cooling-off control).
+ * An emergency override bypasses this floor (its own path, no floor check).
+ */
+export class PoolFixedAmountNoticeTooShortError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountNoticeTooShortError';
+  public readonly code = POOL_FIXED_AMOUNT_NOTICE_TOO_SHORT_CODE;
+  public constructor(public readonly effectiveFrom: string) {
+    super(
+      `standard fixed_amount change requires effective_from >= now() + 365 days ` +
+        `(the 12-month notice); got ${effectiveFrom}. Use the emergency override to bypass the notice.`,
+    );
+  }
+}
+
+export const POOL_FIXED_AMOUNT_REASON_REQUIRED_CODE = 'pool.fixed_amount_reason_required';
+
+/** An emergency override with no (or blank) `documented_reason` — the reason is MANDATORY (AC3b). */
+export class PoolFixedAmountReasonRequiredError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountReasonRequiredError';
+  public readonly code = POOL_FIXED_AMOUNT_REASON_REQUIRED_CODE;
+  public constructor() {
+    super(
+      `emergency fixed_amount override requires a non-empty documented_reason ` +
+        `(policy/operational justification — never member-specific)`,
+    );
+  }
+}
+
+export const POOL_FIXED_AMOUNT_ATTESTATION_REQUIRED_CODE = 'pool.fixed_amount_attestation_required';
+
+/** An emergency override with an empty panel roster — a State-Trustee panel attestation is MANDATORY (AC3a). */
+export class PoolFixedAmountAttestationRequiredError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountAttestationRequiredError';
+  public readonly code = POOL_FIXED_AMOUNT_ATTESTATION_REQUIRED_CODE;
+  public constructor() {
+    super(`emergency fixed_amount override requires a non-empty State-Trustee panel attestation`);
+  }
+}
+
+export const POOL_FIXED_AMOUNT_PANEL_TOO_SMALL_CODE = 'pool.fixed_amount_panel_too_small';
+
+/**
+ * A non-empty panel roster below the minimum size (review-hardening: a lone-actor "panel" is not a
+ * panel — it lets a single admin be their own sole attester). Distinct from
+ * {@link PoolFixedAmountAttestationRequiredError} (an EMPTY roster) so the two failure modes are
+ * separately diagnosable.
+ */
+export class PoolFixedAmountPanelTooSmallError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountPanelTooSmallError';
+  public readonly code = POOL_FIXED_AMOUNT_PANEL_TOO_SMALL_CODE;
+  public constructor(
+    public readonly received: number,
+    public readonly minimum: number,
+  ) {
+    super(
+      `emergency fixed_amount override requires an attesting panel of at least ${minimum} distinct ` +
+        `State-Trustees; got ${received}`,
+    );
+  }
+}
+
+export const POOL_FIXED_AMOUNT_PANEL_DUPLICATE_ACTOR_CODE = 'pool.fixed_amount_panel_duplicate_actor';
+
+/** An emergency panel roster listing the same actor id more than once — inflates apparent consensus. */
+export class PoolFixedAmountPanelDuplicateActorError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountPanelDuplicateActorError';
+  public readonly code = POOL_FIXED_AMOUNT_PANEL_DUPLICATE_ACTOR_CODE;
+  public constructor() {
+    super(`emergency fixed_amount override panel roster must not list the same actor more than once`);
+  }
+}
+
+export const POOL_FIXED_AMOUNT_INVALID_CODE = 'pool.fixed_amount_invalid';
+
+/** A non-positive / non-integer / over-ceiling amount — INR rupees must be a strictly-positive
+ *  integer within the guard-rail ceiling (the pools.fixed_amount unit; see MAX_POOL_FIXED_AMOUNT_INR). */
+export class PoolFixedAmountInvalidError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountInvalidError';
+  public readonly code = POOL_FIXED_AMOUNT_INVALID_CODE;
+  public constructor(public readonly received: number) {
+    super(`fixed_amount must be a strictly-positive integer (whole INR) within the guard-rail ceiling; got ${String(received)}`);
+  }
+}
+
+export const POOL_FIXED_AMOUNT_VERSION_CONFLICT_CODE = 'pool.fixed_amount_version_conflict';
+
+/**
+ * A concurrent write raced this one on the `(pariwar_id, version)` or the partial-unique
+ * open-head index (23505) — an EXPECTED optimistic-concurrency failure the caller re-reads and
+ * retries (the TcVersionConflictError precedent).
+ */
+export class PoolFixedAmountVersionConflictError extends PoolFixedAmountError {
+  public readonly name = 'PoolFixedAmountVersionConflictError';
+  public readonly code = POOL_FIXED_AMOUNT_VERSION_CONFLICT_CODE;
+  public constructor(public readonly pariwarId: string) {
+    super(`concurrent fixed_amount schedule write conflict for pariwar ${pariwarId} — re-read and retry`);
+  }
+}
+
+/** True iff `err` is a Postgres unique-violation (23505) on the fixed-amount schedule/attestation tables. */
+export function isFixedAmountUniqueViolation(err: unknown): boolean {
+  return extractPgError(err)?.code === '23505';
+}

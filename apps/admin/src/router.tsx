@@ -20,6 +20,7 @@ import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
 import { R9VotingRoute } from './routes/R9VotingRoute.js';
+import { FixedAmountRoute } from './routes/FixedAmountRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
@@ -124,6 +125,13 @@ const r9VotingRoute = createRoute({
   component: R9VotingRoute,
 });
 
+// Story 7.5 — the tenant-scoped trustee fixed-amount schedule surface (FR-15).
+const fixedAmountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/pool-fixed-amount',
+  component: FixedAmountRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -138,6 +146,7 @@ const routeTree = rootRoute.addChildren([
   verifierConsoleRoute,
   cycleFreezeRoute,
   r9VotingRoute,
+  fixedAmountRoute,
 ]);
 
 export const router = createRouter({ routeTree });

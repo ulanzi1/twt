@@ -133,13 +133,10 @@ const VALIDITY_CACHE_GC_MAX_AGE_SECONDS = Number(
 const PEER_MESH_WINDOW_SECONDS = Number(
   process.env['CLAIM_PEER_MESH_WINDOW_SECONDS'] ?? DEFAULT_PEER_MESH_WINDOW_SECONDS,
 );
-// Pool spawn saga v1 fixed-contribution amount, whole INR (Story 7.3, Task 5). ONE named config
-// value snapshotted onto every pool at spawn — Story 7.5 (BACKLOG) replaces this with the real
-// per-Pariwar "effective at cycle-freeze date" snapshot. Overridable; the default is a placeholder.
-const POOL_SPAWN_FIXED_AMOUNT_INR = Number(process.env['POOL_SPAWN_FIXED_AMOUNT_INR'] ?? 500);
-// Guard-rail ceiling for POOL_SPAWN_FIXED_AMOUNT_INR (1 crore INR) — a misconfigured env var (an
-// extra zero) must not silently snapshot an absurd contribution onto every pool in a cycle.
-const MAX_POOL_SPAWN_FIXED_AMOUNT_INR = 10_000_000;
+// Story 7.5 RETIRED the boot-time POOL_SPAWN_FIXED_AMOUNT_INR env constant from the live saga: the
+// spawn planner now resolves the fixed amount from the per-Pariwar effective-dated schedule at the
+// cycle-freeze `committed_at` (pool/fixed-amount.ts). The genesis amount is seeded at Pariwar
+// provisioning (apps/api pariwar-provisioning), NOT threaded from this worker's env.
 // CYCLE_SPAWN_CHILD worker count (Story 7.3, Task 5) — pg-boss `localConcurrency` for the child
 // queue. The natural unit of work is one child job, so scaling is via worker count, not batch
 // size. Named config value (never an inline magic number).
@@ -196,15 +193,6 @@ async function main(): Promise<void> {
   if (!Number.isFinite(PEER_MESH_WINDOW_SECONDS) || PEER_MESH_WINDOW_SECONDS <= 0) {
     throw new RangeError(
       `[jobs] CLAIM_PEER_MESH_WINDOW_SECONDS must be a positive number (got ${PEER_MESH_WINDOW_SECONDS})`,
-    );
-  }
-  if (
-    !Number.isInteger(POOL_SPAWN_FIXED_AMOUNT_INR) ||
-    POOL_SPAWN_FIXED_AMOUNT_INR <= 0 ||
-    POOL_SPAWN_FIXED_AMOUNT_INR > MAX_POOL_SPAWN_FIXED_AMOUNT_INR
-  ) {
-    throw new RangeError(
-      `[jobs] POOL_SPAWN_FIXED_AMOUNT_INR must be a positive integer <= ${MAX_POOL_SPAWN_FIXED_AMOUNT_INR} (got ${POOL_SPAWN_FIXED_AMOUNT_INR})`,
     );
   }
   if (!Number.isInteger(POOL_SPAWN_CHILD_CONCURRENCY) || POOL_SPAWN_CHILD_CONCURRENCY <= 0) {
@@ -479,11 +467,10 @@ async function main(): Promise<void> {
     // parent is enqueued by the apps/api post-commit PoolSpawnTrigger (Task 6). Story 7.4 injects the
     // REAL deterministic member-assignment seam (createPoolAssignmentSeam) in place of the empty one;
     // the live freeze-time roster supply is a separately-deferred 7.4 follow-up (spawnChildPool still
-    // passes an empty memberSet, so the real seam returns [] until then). Independently, the fixed
-    // amount is still config-backed pending Story 7.5.
+    // passes an empty memberSet, so the real seam returns [] until then). Story 7.5 retired the fixed-
+    // amount dep: the planner resolves it from the per-Pariwar schedule at the cycle-freeze committed_at.
     await registerCycleSpawnWorkers(boss, {
       pool,
-      fixedAmount: POOL_SPAWN_FIXED_AMOUNT_INR,
       childConcurrency: POOL_SPAWN_CHILD_CONCURRENCY,
       assignmentSeam: poolDomain.createPoolAssignmentSeam(),
     });

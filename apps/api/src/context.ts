@@ -22,6 +22,7 @@ import type { WebAuthnProvider } from './modules/auth/shared/webauthn.js';
 import type { KycProviderRegistry } from './modules/kyc/index.js';
 import type { DeployTrigger } from './modules/pariwar-provisioning/deploy-trigger.js';
 import type { NiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
+import type { PoolFixedAmountChangedHook } from './modules/pool-fixed-amount/notification-hook.js';
 import type { ToneReviewAuditSink } from './modules/tone-review/index.js';
 
 /**
@@ -341,6 +342,13 @@ export interface AppDeps {
    * injectable-seam pattern as `deployTrigger` / `toneReviewAuditSink`.
    */
   readonly niyamavaliAmendedHook: NiyamavaliAmendedHook;
+  /**
+   * Member-notification scaffolding hook (Story 7.5, AC1/AC3d/AC4) — fired on a successful
+   * fixed-amount change (standard/emergency). A placeholder seam (console in prod/dev, a capturing
+   * fake in tests); Epic 5 wires the real push fan-out. Same injectable-seam pattern as
+   * `niyamavaliAmendedHook`. Carries only change coordinates + a queued/immediate cadence flag.
+   */
+  readonly poolFixedAmountChangedHook: PoolFixedAmountChangedHook;
   /**
    * KYC provider registry + FR-58C swap seam (Story 3.3a, AC2/AC6). The active provider
    * is DigiLocker when its secret-NAMEs are configured, else the `fixtureKycProvider`

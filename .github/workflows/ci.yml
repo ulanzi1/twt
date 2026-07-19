@@ -558,6 +558,33 @@ jobs:
       - run: pnpm pool-support-category:test
       - run: pnpm pool-support-category:check
 
+  pool-bound-payment-invariant:
+    name: pool-bound-payment-invariant (no cross-pool remap surface)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: install
+    # Story 7.6 AC3: the facilitated-recovery invariant. A wrong-pool deposit is NEVER silently
+    # remapped / auto-reassigned / moved (it breaks deterministic assignment + audit lineage). TS-AST
+    # scan of the pool/contribution/reconciliation/helpdesk surface — flags any function that pairs a
+    # (wrong-pool-payment, target-pool) pair AND writes records (the cross-pool remap surface). The
+    # only sanctioned alteration is the >=2-trustee attestable-correction seam. As Epic 8/9/10 land the
+    # contribution/reconciliation/helpdesk consumers, their roots MUST be added to SCAN_DIRS (the
+    # standing per-epic scope-extension convention). Teeth: a known-bad fixture in lib.test.ts. No DB /
+    # network. INVARIANT SCAN -> NO fetch-depth: 0. See scripts/pool-bound-payment-invariant/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pool-bound-payment:test
+      - run: pnpm pool-bound-payment:check
+
   claim-canonical-id-invariant:
     name: claim-canonical-id-invariant (downstream flows key on claim_case_id only)
     runs-on: ubuntu-latest

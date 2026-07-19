@@ -38,3 +38,9 @@ export * from './assign.js';
 // the standard (12-month-notice) + emergency-override write paths + the immutable Emergency
 // Adjustment Record + the genesis seed. The typed errors ride pool/errors.ts (already exported).
 export * from './fixed-amount.js';
+// Story 7.6 (Tasks 1/2) — pool-bound payment enforcement: the member-cycle → assigned-pool +
+// collection-binding resolver (read from the PERSISTED snapshot, never a recompute — D1), the pure
+// wrong-pool classifier + its verdict/reason-code tuples (the contracts .strict() union is lockstep-
+// pinned to these), and the binding-uniqueness / member-assignment-integrity guards (typed errors on
+// pool/errors.ts). Transport-free + decryption-free — Epic 8 builds the pa= VPA, Epic 9 records the verdict.
+export * from './contribution-binding.js';

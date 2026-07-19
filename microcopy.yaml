@@ -58,7 +58,18 @@ tone:
   - label: panic
     pattern: '\bURGENT\b'
   - label: pool-reality-comparison
-    pattern: 'fell\s+short|target\s+missed|\d+\s*%\s+achieved|needed\s+more\s+contributions'
+    # Story 7.8 (D3) STRENGTHENED for the close-of-cycle celebration surface: beyond the
+    # four original phrasings (fell short / target missed / N% achieved / needed more
+    # contributions), add the close-of-cycle-specific variants a naïve celebration author
+    # might reach for (shortfall / short of the target|goal / N% of the target|goal / N%
+    # short / target|goal (was/is) (not) met|achieved / present-and-past-tense couldn't|
+    # didn't|doesn't reach) + one high-signal Hindi phrase (लक्ष्य से कम = "less than
+    # target"). `\b` anchors on `target`/`goal` avoid false-triggering on prefix words
+    # (e.g. "targeted", "goalless") now that copy_globs scope is growing (7.8 code review).
+    # The paraphrased / spelled-out tail is caught by the HUMAN tone-review (tone-guide §5)
+    # — the regex is deliberately NOT exhaustive over natural language. Single valid
+    # case-insensitive regex (assertValidRegex-validated).
+    pattern: 'fell\s+short|shortfall|short\s+of\s+(the\s+)?\b(target|goal)\b|\b(target|goal)\b\s+missed|\d+\s*%\s+achieved|\d+\s*%\s+of\s+(the\s+)?\b(target|goal)\b|\d+\s*%\s+short\b|\b(target|goal)\b\s+(was\s+|is\s+)?(not\s+)?(met|achieved)|needed\s+more\s+contributions|(could|did|does)n.?t\s+reach|(could|did|does)\s+not\s+reach|लक्ष्य\s*से\s*कम'
 
 # (d) Numeral discipline — amendment A2 (UX spec L1119-1127 / L1303). Operational
 # surfaces = Gregorian dates + Latin numerals; Hindi/Devanagari numerals (०-९) are
@@ -104,6 +115,14 @@ scope:
     # Story 2.6 — the `terms` namespace strings (the public /terms surface).
     - packages/i18n/locales/hi/terms.json
     - packages/i18n/locales/en/terms.json
+    # Story 7.8 — the `close-of-cycle` namespace strings (the FR-19 celebration surface
+    # Epic 8's Panchayat Noticeboard + Epic 11b's Sahyog Vivran render). Brings the member
+    # register + the STRENGTHENED pool-reality-comparison tone rule to bite this copy so a
+    # Pool-Reality #2 (comparison-to-target / shortfall) frame fails at PR time. Teeth proven
+    # (planted-violation fixture + revert-sanity), not merely scanned — see
+    # scripts/microcopy/close-of-cycle.test.ts + the Dev Agent Record revert-sanity.
+    - packages/i18n/locales/hi/close-of-cycle.json
+    - packages/i18n/locales/en/close-of-cycle.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

@@ -1,0 +1,8 @@
+{
+  "fully_funded.title": "पूल {poolLabel} बंद हो गया",
+  "fully_funded.body": "{contributorCount} साथियों के योगदान से {familyName} के परिवार को {amount} पहुँचाए गए। हर हाथ इस परिवार के साथ खड़ा रहा।",
+  "under_funded.title": "पूल {poolLabel} बंद हो गया",
+  "under_funded.body": "{contributorCount} सहयोगियों ने साथ मिलकर हाथ बढ़ाया; {familyName} के परिवार को {amount} पहुँचाए गए। इस साथ के लिए हम सबका आभार।",
+  "partial.title": "पूल {poolLabel} बंद हो गया",
+  "partial.body": "{contributorCount} साथियों के सहयोग से {familyName} के परिवार को {amount} पहुँचाए गए। हर योगदान इस परिवार के साथ रहा।"
+}

@@ -39,9 +39,21 @@ L788-793 (FM-14 token governance). ADR: `docs/adr/ADR-0016-design-system-foundat
 | #   | Check                          | Teeth at v1?                                                       | Scope at v1                           |
 | --- | ------------------------------ | ------------------------------------------------------------------ | ------------------------------------- |
 | b   | **Magic-number color literal** | **TEETH NOW** (hex / rgb / hsl in `apps/admin` `.tsx/.ts`)         | `scope.code_globs` (admin slice)      |
-| c   | **Vocabulary register**        | **TEETH NOW** for the 4 nouns; member-address terms forward-compat | code now; full register on copy later |
-| —   | **Tone prohibitions**          | **TEETH NOW** (scarcity / panic / Pool-Reality)                    | `scope.code_globs` (admin slice)      |
+| c   | **Vocabulary register**        | **TEETH NOW** for the 4 nouns; member-address terms bite the live member copy (`copy_globs`) | code + `niyamavali` / `terms` / `close-of-cycle` copy |
+| —   | **Tone prohibitions**          | **TEETH NOW** (scarcity / panic / Pool-Reality comparison-to-target) | `code_globs` + the member `copy_globs` |
 | d   | **Numeral discipline (A2)**    | forward-compat (admin has no Devanagari / inline format)           | code + copy; bites on member surfaces |
+
+**Surface-by-surface growth (no gate code change).** The member register bites `copy_globs`
+one surface at a time as they land: `niyamavali` (Story 2.5), `terms` (Story 2.6), and
+**`close-of-cycle`** (Story 7.8 — the FR-19 celebration surface Epic 8's Noticeboard + Epic
+11b's Sahyog Vivran render). Story 7.8 also **strengthened** the `pool-reality-comparison`
+tone pattern with the close-of-cycle-specific comparison-to-target variants (`shortfall`,
+`short of the target/goal`, `N% of the target/goal`, `goal (not) met`, `couldn't/didn't
+reach`, + one high-signal Hindi phrase `लक्ष्य से कम`) so a Pool-Reality #2 frame fails at
+PR time on this copy. Teeth are proven — a planted-violation fixture + a revert-sanity on the
+real `close-of-cycle.json` (`close-of-cycle.test.ts`), not a bare green scan
+([[feedback_gate_scope_semantic_coverage]]). The paraphrased tail stays the human
+tone-review's job (`docs/tone-guide.md §5`).
 
 **v1 enforcement footprint [Decision 2, LOCKED].** Forward-compat is the primary goal,
 but the gate is **not entirely no-op**: it scans a bounded, allow-listed `apps/admin`

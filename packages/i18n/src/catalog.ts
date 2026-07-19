@@ -16,11 +16,13 @@
 // then enforces Hindi parity on the new domain automatically.
 
 import enClaim from '../locales/en/claim.json';
+import enCloseOfCycle from '../locales/en/close-of-cycle.json';
 import enCommon from '../locales/en/common.json';
 import enContribution from '../locales/en/contribution.json';
 import enNiyamavali from '../locales/en/niyamavali.json';
 import enTerms from '../locales/en/terms.json';
 import hiClaim from '../locales/hi/claim.json';
+import hiCloseOfCycle from '../locales/hi/close-of-cycle.json';
 import hiCommon from '../locales/hi/common.json';
 import hiContribution from '../locales/hi/contribution.json';
 import hiNiyamavali from '../locales/hi/niyamavali.json';
@@ -32,12 +34,12 @@ import type { Locale } from './locale.js';
 export type Catalog = Record<string, string>;
 
 const catalogs: Record<Locale, Record<string, Catalog>> = {
-  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms, claim: enClaim, contribution: enContribution },
-  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms, claim: hiClaim, contribution: hiContribution },
+  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms, claim: enClaim, contribution: enContribution, 'close-of-cycle': enCloseOfCycle },
+  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms, claim: hiClaim, contribution: hiContribution, 'close-of-cycle': hiCloseOfCycle },
 };
 
 /** The domain (namespace) names that have at least one locale catalog. */
-export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms', 'claim', 'contribution'];
+export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms', 'claim', 'contribution', 'close-of-cycle'];
 
 /** Look up a `{locale}/{namespace}` catalog, or `undefined` if it is not registered. */
 export function getCatalog(locale: Locale, namespace: string): Catalog | undefined {

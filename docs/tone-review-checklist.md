@@ -93,6 +93,19 @@ publish):
 | **Terms & Conditions** | the surface's own review permission (added in its owning story) | its owning story |
 | **Push-notification template** | the surface's own review permission (added in its owning story) | its owning story |
 | **Helpdesk macro** | the surface's own review permission (added in its owning story) | its owning story |
+| **Close-of-cycle framing** (Panchayat Noticeboard pinned notice + Sahyog Vivran per-claim page; the FR-19 celebration copy, `close-of-cycle` i18n namespace) | the consumer surface's own review permission (added by **Epic 8** / **Epic 11b** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (Epic 8 Noticeboard / Epic 11b Sahyog Vivran) |
+
+> **Close-of-cycle note (Story 7.8).** The `close-of-cycle` templates carry the FR-19
+> celebration framing that must **never** surface a comparison-to-target / shortfall
+> narrative — the **Pool-Reality #2** prohibited frame already listed in
+> [§3 Prohibited frames](#3-prohibited-frames) (do not restate it here). The automated floor
+> is the Story 1.17 `microcopy` gate, now scoped over the two locale files with a
+> strengthened `pool-reality-comparison` pattern (Story 7.8); this human review owns the
+> paraphrased / spelled-out variants the lint cannot pattern-match. The runtime sign-off
+> enforcement is wired by the **consuming** story (Epic 8 / 11b) via the existing Story 2.2
+> `evaluateToneReviewGate` mechanism — exactly as Story 2.4 did for the Niyamavali. Because
+> under-funded closes correlate with grief, the [§4 grief-context gate](#4-grief-context-gate)
+> also applies to these templates.
 
 **Who may review.** A **non-author** holding the surface's review permission. For the
 Niyamavali clause this is the already-seeded **`niyamavali.review`** key — Story 2.2 does

@@ -182,6 +182,13 @@ export * as payment from './payment/index.js';
 export * as dataExport from './data-export/index.js';
 export * as rbac from './rbac/index.js';
 export * as toneReview from './tone-review/index.js';
+// Story 7.8 — the close-of-cycle template-driven framing policy: the pure
+// `selectCloseOfCycleFraming` (outcome → canonical `close-of-cycle` template keys +
+// required interpolation params; exhaustive `never`; the under_funded branch STRUCTURALLY
+// cannot return a comparison template) + the target-quarantining `classifyCycleOutcome`
+// (expected/delivered totals in → `CycleFundingOutcome` enum out; the numbers never reach
+// the copy path). A [GOVERNANCE] primitive — Epic 8/11b/8.9 render it; no live call site here.
+export * as closeOfCycle from './close-of-cycle/index.js';
 // Story 4.8 — the FR-12A per-cohort validity cache substrate: cheap key resolution + low-level
 // member_validity_cache access + the cohort_invalidation_epochs bump/read + the GC sweep. The
 // cache-aside orchestration (getValidityCached) lives in @twt/validity-service.

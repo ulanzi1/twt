@@ -39,11 +39,13 @@ import {
   measureP95,
   pgServerVersion,
   recordEvidence,
+  type BenchmarkConfig,
+} from '@twt/measured-validation';
+import {
   resolveAdminSearchEncryption,
   seedSearchMembers,
   type AdminSearchEncryption,
-  type BenchmarkConfig,
-} from '../framework/index.js';
+} from '../framework/seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);

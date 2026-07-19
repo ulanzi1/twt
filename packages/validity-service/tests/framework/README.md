@@ -6,12 +6,22 @@ concurrent-load p95, incl. per-row Tier-1 KMS decryption cost) and **AI-4-2** (r
 CR-4.6-D9) and is the tooling **Story 7.9** (Pool Engine Pre-Launch Measured-Validation Gate) reuses with
 **zero new tooling**.
 
-Delivered per **D3** as shared `tests/` test tooling (not a package): `@twt/validity-service` depends on
-`@twt/domain`, so its integration specs drive `projectMemberState` / `searchMembers` / `encryption`
-directly with no import cycle. When the pool engine lands as its own package (Story 7.9 time), the core
-extracts to `packages/measured-validation` unchanged.
+**UPDATE (Story 7.9, 2026-07-19):** the package-agnostic core **has now been extracted** to
+`packages/measured-validation` (RATIFIED Path A) — the "7.9-time move" this section pre-planned. Import
+the core symbols (`measureP95` / `buildRecord` / `recordEvidence` / `assertReplayStable` / `gitCommit` /
+`pgServerVersion` / `envInt` + their types) from **`@twt/measured-validation`**. What remains in this
+`tests/framework/` directory is the **validity/search-specific seeder** (`seed.ts`:
+`seedValidityMembers` / `seedSearchMembers` / `resolveAdminSearchEncryption` / `seedR12Clause`) — import
+those from `../framework/seed.js` directly (the old combined `index.ts` barrel is deleted; the pool
+engine adds its own cohort seeder in `apps/jobs/tests/`). The core moved UNCHANGED; the
+`EVIDENCE_SCHEMA_VERSION` + `metric` guards prove recorded-evidence continuity across the move.
 
-## The core (`tests/framework/`)
+Originally delivered per **D3** as shared `tests/` test tooling (not a package): `@twt/validity-service`
+depends on `@twt/domain`, so its integration specs drive `projectMemberState` / `searchMembers` /
+`encryption` directly with no import cycle. Extraction was correctly DEFERRED until a second consumer
+package existed ([[feedback_no_premature_package]]); Story 7.9's pool engine is that second consumer.
+
+## The core (now `@twt/measured-validation`; seeders stay in `tests/framework/seed.ts`)
 
 | Export | What it does |
 |--------|--------------|

@@ -22,7 +22,7 @@ import {
   recordEvidence,
   type BenchmarkConfig,
   type BenchmarkRecord,
-} from './framework/index.js';
+} from '../src/index.js';
 
 const AT = '2026-07-17T00:00:00.000Z';
 const H1 = 'a'.repeat(64);

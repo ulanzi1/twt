@@ -28,9 +28,9 @@ import {
   measureP95,
   pgServerVersion,
   recordEvidence,
-  seedValidityMembers,
   type BenchmarkConfig,
-} from '../framework/index.js';
+} from '@twt/measured-validation';
+import { seedValidityMembers } from '../framework/seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);

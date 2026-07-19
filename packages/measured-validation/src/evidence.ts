@@ -52,6 +52,9 @@ export interface BenchmarkRecord {
   pass: boolean;
   /** ISO-8601 instant the record was stamped — supplied by the CALLER (scripts have no Date.now()). */
   recordedAt: string;
+  /** Optional co-attestation hash (e.g. an `assertReplayStable` digest) recorded alongside this run's
+   *  capacity number — additive/optional so existing callers/records are unaffected. */
+  attestationHash?: string;
 }
 
 /** Build a fully-formed, schema-stamped record from its parts (the single constructor — no bare literals). */
@@ -62,6 +65,7 @@ export function buildRecord(input: {
   results: Percentiles;
   budgetMs: number;
   recordedAt: string;
+  attestationHash?: string;
 }): BenchmarkRecord {
   return {
     schemaVersion: EVIDENCE_SCHEMA_VERSION,
@@ -72,6 +76,7 @@ export function buildRecord(input: {
     budgetMs: input.budgetMs,
     pass: input.results.p95 < input.budgetMs,
     recordedAt: input.recordedAt,
+    ...(input.attestationHash !== undefined ? { attestationHash: input.attestationHash } : {}),
   };
 }
 

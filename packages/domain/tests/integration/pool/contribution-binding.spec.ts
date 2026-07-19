@@ -24,8 +24,10 @@ import {
   poolId as toPoolId,
 } from '../../../src/ids/index.js';
 import {
+  applyEmergencyOverride,
   assignMembersToPools,
   classifyContributionDestination,
+  getEffectiveFixedAmount,
   resolveAssignedPoolForMember,
   resolveMemberContributionBinding,
   serializePoolSnapshot,
@@ -152,6 +154,8 @@ describe.skipIf(!hasDatabase)('pool-bound payment binding resolution (PARIWAR_A 
     if (binding.assigned) {
       expect(binding.poolId).toBe(pool0);
       expect(binding.claimCaseId).toBe(claim0);
+      // Story 7.7 AC2.5: the amount-lock surfaces the pool's snapshotted fixed_amount on the binding.
+      expect(binding.fixedAmount).toBe(FIXED_AMOUNT);
       expect(binding.collectionAccounts.map((a) => a.accountRank)).toEqual([1, 2]);
       expect(binding.collectionAccounts[0]!.accountNumberCiphertext).toBe('ct-acct-1');
     }
@@ -173,6 +177,46 @@ describe.skipIf(!hasDatabase)('pool-bound payment binding resolution (PARIWAR_A 
         reasonCode: 'assigned_pool_match',
       });
     }
+  });
+
+  it('AC2.5/D2: the amount-lock reads the SNAPSHOTTED pool row, NOT a live getEffectiveFixedAmount recompute', async () => {
+    const { client, tx } = getTx();
+    const cycleId = randomUUID();
+    const member = randomUUID();
+    const claim0 = randomUUID();
+    await seedClaim(tx, PARIWAR_A, { claimCaseId: claim0 });
+    // The pool is spawned locking fixed_amount = 500 (the value in force at freeze).
+    const pool0 = await seedPool(tx, PARIWAR_A, {
+      cycleId,
+      claimCaseId: claim0,
+      poolIndex: 0,
+      poolCanonicalIdentifier: 'P-2026-07-050',
+      fixedAmount: 500,
+    });
+    await seedSnapshot(tx, PARIWAR_A, pool0, cycleId, 0, [member]);
+    await enterAppScope(client, PARIWAR_A);
+
+    // AFTER spawn, an emergency override changes the LIVE effective fixed_amount to 900 (effective now).
+    await applyEmergencyOverride(tx, {
+      pariwarId: PARIWAR_A,
+      fixedAmount: 900,
+      effectiveFrom: new Date(Date.now() - 60_000),
+      documentedReason: 'reserve adequacy — actuarial review',
+      panel: [
+        { actor_id: 'trustee-a', actor_display: 'Trustee A' },
+        { actor_id: 'trustee-b', actor_display: 'Trustee B' },
+      ],
+      attestedByActor: 'trustee-a',
+      attestedDisplay: 'Trustee A',
+    });
+
+    // The LIVE schedule now resolves to 900 …
+    expect(await getEffectiveFixedAmount(tx, PARIWAR_A, new Date())).toBe(900);
+    // … but the member's binding STILL surfaces the pool's spawned 500 — proving it reads the persisted
+    // pool row, never a live recompute (D2: the snapshot is truth for replay).
+    const binding = await resolveMemberContributionBinding(tx, PARIWAR_A, toCycleId(cycleId), toMemberId(member));
+    expect(binding.assigned).toBe(true);
+    if (binding.assigned) expect(binding.fixedAmount).toBe(500);
   });
 
   it('AC1.4: an unassigned member returns the { assigned: false } absence signal (never a throw)', async () => {

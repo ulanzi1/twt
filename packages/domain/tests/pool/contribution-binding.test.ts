@@ -13,6 +13,7 @@ import {
   MemberPoolAssignmentIntegrityError,
   WrongPoolBindingAmbiguousError,
   assertUniquePoolCollectionBindings,
+  classifyContributionAmount,
   classifyContributionDestination,
   resolveAssignedPoolFromCandidates,
   type PoolBindingCandidate,
@@ -27,12 +28,14 @@ function candidate(
   claimSuffix: string,
   poolIndex: number,
   memberIds: readonly string[],
+  fixedAmount = 500,
 ): PoolBindingCandidate {
   return {
     poolId: poolId(`00000000-0000-4000-8000-0000000000${poolSuffix}`),
     claimCaseId: claimId(`00000000-0000-4000-8000-0000000000${claimSuffix}`),
     poolIndex,
     poolCanonicalIdentifier: `P-2026-07-00${poolIndex + 1}`,
+    fixedAmount,
     memberIds,
   };
 }
@@ -85,22 +88,88 @@ describe('classifyContributionDestination — pure wrong-pool classifier (AC2)',
     );
   });
 
-  it('ships EXACTLY the two v1 verdicts (union open by design, but no dead surface now)', () => {
-    expect([...CONTRIBUTION_VALIDITY_VERDICTS]).toEqual(['valid', 'wrong_pool']);
+  it('ships EXACTLY the three verdicts landed through 7.7 (union open by design, no dead surface now)', () => {
+    expect([...CONTRIBUTION_VALIDITY_VERDICTS]).toEqual(['valid', 'wrong_pool', 'amount_mismatch']);
+  });
+});
+
+describe('classifyContributionAmount — pure amount-mismatch classifier (Story 7.7, AC2.6)', () => {
+  it('valid iff the deposited amount equals the locked fixed amount', () => {
+    expect(classifyContributionAmount({ expectedFixedAmount: 500, depositedAmount: 500 })).toEqual({
+      verdict: 'valid',
+      reasonCode: 'assigned_pool_match',
+    });
+  });
+
+  it('amount_mismatch iff the amounts differ (over- OR under-payment)', () => {
+    expect(classifyContributionAmount({ expectedFixedAmount: 500, depositedAmount: 600 })).toEqual({
+      verdict: 'amount_mismatch',
+      reasonCode: 'amount_does_not_match_fixed_amount',
+    });
+    expect(classifyContributionAmount({ expectedFixedAmount: 500, depositedAmount: 400 })).toEqual({
+      verdict: 'amount_mismatch',
+      reasonCode: 'amount_does_not_match_fixed_amount',
+    });
+  });
+
+  it('is PURE + deterministic; the predicate is exactly inequality of the two amounts', () => {
+    fc.assert(
+      fc.property(fc.integer(), fc.integer(), (expectedFixedAmount, depositedAmount) => {
+        const first = classifyContributionAmount({ expectedFixedAmount, depositedAmount });
+        const second = classifyContributionAmount({ expectedFixedAmount, depositedAmount });
+        expect(first).toEqual(second);
+        expect(first.verdict).toBe(expectedFixedAmount === depositedAmount ? 'valid' : 'amount_mismatch');
+        // Verdict + reason code are always members of the shipped tuples (exhaustive, no dead surface).
+        expect(CONTRIBUTION_VALIDITY_VERDICTS).toContain(first.verdict);
+        expect(CONTRIBUTION_VALIDITY_REASON_CODES).toContain(first.reasonCode);
+      }),
+    );
+  });
+
+  it('deliberately exercises the VALID branch across many EQUAL-amount inputs', () => {
+    // Two random ints almost never collide, so the property above hits `valid` only incidentally. Feed the
+    // SAME amount to both params so the valid branch is covered across a broad range (the 7.6 lesson).
+    fc.assert(
+      fc.property(fc.integer(), (amount) => {
+        expect(classifyContributionAmount({ expectedFixedAmount: amount, depositedAmount: amount })).toEqual({
+          verdict: 'valid',
+          reasonCode: 'assigned_pool_match',
+        });
+      }),
+    );
+  });
+
+  it('THROWS on non-integer/NaN/Infinity inputs rather than silently misclassifying corrupt data', () => {
+    // NaN !== NaN is true, so without the guard a NaN would silently classify as an ordinary amount_mismatch.
+    expect(() => classifyContributionAmount({ expectedFixedAmount: NaN, depositedAmount: 500 })).toThrow(/integer/);
+    expect(() => classifyContributionAmount({ expectedFixedAmount: 500, depositedAmount: NaN })).toThrow(/integer/);
+    expect(() => classifyContributionAmount({ expectedFixedAmount: Infinity, depositedAmount: 500 })).toThrow(/integer/);
+    expect(() => classifyContributionAmount({ expectedFixedAmount: 500.5, depositedAmount: 500 })).toThrow(/integer/);
+  });
+
+  it('does NO auto-correction — a mismatch is classified invalid, never rewritten to the fixed amount', () => {
+    // The classifier only ever RETURNS a verdict; it never mutates or "rounds" the deposited amount (AC2.8/D4).
+    const result = classifyContributionAmount({ expectedFixedAmount: 500, depositedAmount: 501 });
+    expect(result.verdict).toBe('amount_mismatch');
   });
 });
 
 describe('resolveAssignedPoolFromCandidates — the resolution core (AC1.1/AC1.4)', () => {
   it('returns the single pool whose latest snapshot contains the member', () => {
+    // Distinct per-pool fixedAmount (500 vs 700) so the assertion below can only pass if the resolved
+    // ref threads through the MATCHED candidate's amount, not e.g. always the first candidate's.
     const candidates = [
-      candidate('a1', 'c1', 0, [MEMBER_A, MEMBER_C]),
-      candidate('a2', 'c2', 1, [MEMBER_B]),
+      candidate('a1', 'c1', 0, [MEMBER_A, MEMBER_C], 500),
+      candidate('a2', 'c2', 1, [MEMBER_B], 700),
     ];
     const r = resolveAssignedPoolFromCandidates(MEMBER_B, candidates, CYCLE);
     expect(r.assigned).toBe(true);
     if (r.assigned) {
       expect(r.poolIndex).toBe(1);
       expect(r.claimCaseId).toBe(candidates[1]!.claimCaseId);
+      // The amount-lock surfaces the ASSIGNED pool's (index 1, 700) snapshotted fixed_amount — not
+      // candidate 0's 500 (Story 7.7, AC2.5).
+      expect(r.fixedAmount).toBe(700);
     }
   });
 

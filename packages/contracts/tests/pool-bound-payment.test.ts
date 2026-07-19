@@ -32,8 +32,15 @@ describe('verdict + reason-code — domain ↔ contracts lockstep', () => {
     );
   });
 
-  it('ships EXACTLY the two v1 verdicts (union open by design, no dead surface now)', () => {
-    expect([...ContributionValidityVerdict.options]).toEqual(['valid', 'wrong_pool']);
+  it('ships EXACTLY the three verdicts landed through 7.7 (union open by design, no dead surface now)', () => {
+    expect([...ContributionValidityVerdict.options]).toEqual(['valid', 'wrong_pool', 'amount_mismatch']);
+  });
+
+  it('the new amount_mismatch value is present in BOTH layers (Story 7.7 lockstep)', () => {
+    expect([...ContributionValidityVerdict.options]).toContain('amount_mismatch');
+    expect([...pool.CONTRIBUTION_VALIDITY_VERDICTS]).toContain('amount_mismatch');
+    expect([...ContributionValidityReasonCode.options]).toContain('amount_does_not_match_fixed_amount');
+    expect([...pool.CONTRIBUTION_VALIDITY_REASON_CODES]).toContain('amount_does_not_match_fixed_amount');
   });
 });
 
@@ -45,9 +52,19 @@ describe('ContributionValidityResult — verdict↔reason_code pairing (enforced
     ).toBe('wrong_pool');
   });
 
+  it('accepts the amount_mismatch pair (Story 7.7)', () => {
+    expect(
+      ContributionValidityResult.parse({ verdict: 'amount_mismatch', reason_code: 'amount_does_not_match_fixed_amount' })
+        .verdict,
+    ).toBe('amount_mismatch');
+  });
+
   it('rejects a mismatched verdict/reason_code pair (a producer bug Epic 9 must never record)', () => {
     expect(ContributionValidityResult.safeParse({ verdict: 'valid', reason_code: 'deposited_to_non_assigned_pool' }).success).toBe(false);
     expect(ContributionValidityResult.safeParse({ verdict: 'wrong_pool', reason_code: 'assigned_pool_match' }).success).toBe(false);
+    // The new value cannot be paired with a foreign reason code either (lockstep refine covers it).
+    expect(ContributionValidityResult.safeParse({ verdict: 'amount_mismatch', reason_code: 'assigned_pool_match' }).success).toBe(false);
+    expect(ContributionValidityResult.safeParse({ verdict: 'valid', reason_code: 'amount_does_not_match_fixed_amount' }).success).toBe(false);
   });
 });
 
@@ -78,6 +95,7 @@ describe('MemberContributionBinding — strict binding DTO', () => {
     claim_case_id: '55555555-5555-4555-8555-555555555555',
     pool_index: 0,
     pool_canonical_identifier: 'P-2026-07-001',
+    fixed_amount: 500,
     collection_accounts: [
       {
         account_rank: 1 as const,
@@ -102,6 +120,16 @@ describe('MemberContributionBinding — strict binding DTO', () => {
 
   it('accepts a well-formed binding (ciphertext as stored)', () => {
     expect(MemberContributionBinding.parse(validBinding).pool_index).toBe(0);
+  });
+
+  it('carries the amount-lock fixed_amount (Story 7.7, AC2.5)', () => {
+    expect(MemberContributionBinding.parse(validBinding).fixed_amount).toBe(500);
+  });
+
+  it('rejects a non-positive or non-integer fixed_amount', () => {
+    expect(MemberContributionBinding.safeParse({ ...validBinding, fixed_amount: 0 }).success).toBe(false);
+    expect(MemberContributionBinding.safeParse({ ...validBinding, fixed_amount: -500 }).success).toBe(false);
+    expect(MemberContributionBinding.safeParse({ ...validBinding, fixed_amount: 500.5 }).success).toBe(false);
   });
 
   it('accepts an empty collection_accounts (not-yet-collected absence signal)', () => {

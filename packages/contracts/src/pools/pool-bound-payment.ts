@@ -10,10 +10,12 @@
 // `CONTRIBUTION_VALIDITY_VERDICTS` / `CONTRIBUTION_VALIDITY_REASON_CODES` tuples; a cross-package LOCKSTEP
 // test (tests/pool-bound-payment.test.ts) pins them. ALL objects `.strict()`.
 //
-// ── The verdict union is OPEN BY DESIGN, but ships ONLY two values ──────────────────────────────────
+// ── The verdict union is OPEN BY DESIGN ──────────────────────────────────────────────────────────────
 // A TS/Zod union — NOT a DB enum (enum-width / no-dead-surface discipline; Epic 9's contribution record
-// maps it to a DB enum when the record lands). Epic 7.7 extends it with `amount_mismatch`; 7.6 ships only
-// `valid | wrong_pool`.
+// maps it to a DB enum when the record lands). Story 7.7 LANDED `amount_mismatch` (+ reason
+// `amount_does_not_match_fixed_amount`), extending 7.6's `valid | wrong_pool`. `wrong_pool` (destination)
+// and `amount_mismatch` (amount) are ORTHOGONAL predicates the domain classifies independently; the
+// composition/precedence (destination FIRST; amount only on a correct-pool deposit) is Epic 9's.
 //
 // ── OpenAPI posture ────────────────────────────────────────────────────────────────────────────────
 // Internal render/consumer seam, NOT a live 7.6 HTTP endpoint → NO `.openapi()` registration (the
@@ -25,25 +27,28 @@ import { UuidString } from '../_common/primitives.js';
 
 // ── verdict + reason-code (value-aligned with @twt/domain; lockstep-pinned) ─────────────────────────
 
-/** The contribution-validity verdict. `wrong_pool` iff a deposit landed in a non-assigned pool. Open by
- *  design (Epic 7.7 adds `amount_mismatch`); ships ONLY these two now. */
-export const ContributionValidityVerdict = z.enum(['valid', 'wrong_pool']);
+/** The contribution-validity verdict. `wrong_pool` iff a deposit landed in a non-assigned pool;
+ *  `amount_mismatch` iff a correct-pool deposit's amount ≠ the locked `fixed_amount`. Open by design;
+ *  Story 7.7 landed `amount_mismatch` (7.6 shipped `valid | wrong_pool`). */
+export const ContributionValidityVerdict = z.enum(['valid', 'wrong_pool', 'amount_mismatch']);
 export type ContributionValidityVerdict = z.output<typeof ContributionValidityVerdict>;
 
 /** The machine reason code accompanying each verdict. */
 export const ContributionValidityReasonCode = z.enum([
   'assigned_pool_match',
   'deposited_to_non_assigned_pool',
+  'amount_does_not_match_fixed_amount',
 ]);
 export type ContributionValidityReasonCode = z.output<typeof ContributionValidityReasonCode>;
 
 /** The 1:1 verdict → reason-code pairing the domain classifier guarantees. A DTO carrying a mismatched
  *  pair (e.g. `valid` + `deposited_to_non_assigned_pool`) is a producer bug; the refine below rejects it
  *  so Epic 9 can never record an inconsistent verdict/reason. EXTEND this map in lockstep with the verdict
- *  union (Epic 7.7's `amount_mismatch` adds its own reason-code entry). */
+ *  union (Story 7.7 added the `amount_mismatch` entry). */
 const VERDICT_REASON_PAIRING: Record<ContributionValidityVerdict, ContributionValidityReasonCode> = {
   valid: 'assigned_pool_match',
   wrong_pool: 'deposited_to_non_assigned_pool',
+  amount_mismatch: 'amount_does_not_match_fixed_amount',
 };
 
 /** The classifier's typed result (Epic 9 records this against the contribution). The verdict and
@@ -55,7 +60,8 @@ export const ContributionValidityResult = z
   })
   .strict()
   .refine((r) => VERDICT_REASON_PAIRING[r.verdict] === r.reason_code, {
-    message: 'reason_code does not match its verdict (valid↔assigned_pool_match, wrong_pool↔deposited_to_non_assigned_pool)',
+    message:
+      'reason_code does not match its verdict (valid↔assigned_pool_match, wrong_pool↔deposited_to_non_assigned_pool, amount_mismatch↔amount_does_not_match_fixed_amount)',
     path: ['reason_code'],
   });
 export type ContributionValidityResult = z.output<typeof ContributionValidityResult>;
@@ -80,7 +86,9 @@ export const PoolCollectionAccount = z
 export type PoolCollectionAccount = z.output<typeof PoolCollectionAccount>;
 
 /** The resolved member-cycle collection binding: the assigned pool + its claim's nominee bank accounts
- *  (#1 → #2, ciphertext AS STORED). `collection_accounts` is `[]` when not yet collected, else EXACTLY TWO. */
+ *  (#1 → #2, ciphertext AS STORED). `collection_accounts` is `[]` when not yet collected, else EXACTLY TWO.
+ *  `fixed_amount` (Story 7.7 amount-lock, AC2.5) is the assigned pool's SNAPSHOTTED per-pool fixed amount —
+ *  the locked `am=` Epic 8's <UPIIntentButton> pre-fills, read-only, a whole-INR positive integer. */
 export const MemberContributionBinding = z
   .object({
     assigned: z.literal(true),
@@ -88,6 +96,7 @@ export const MemberContributionBinding = z
     claim_case_id: UuidString,
     pool_index: z.number().int().nonnegative(),
     pool_canonical_identifier: z.string(),
+    fixed_amount: z.number().int().positive(),
     collection_accounts: z
       .array(PoolCollectionAccount)
       .refine((accounts) => accounts.length === 0 || accounts.length === 2, {

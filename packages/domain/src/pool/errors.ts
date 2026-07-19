@@ -285,3 +285,125 @@ export class PoolFixedAmountVersionConflictError extends PoolFixedAmountError {
 export function isFixedAmountUniqueViolation(err: unknown): boolean {
   return extractPgError(err)?.code === '23505';
 }
+
+// ── Pool-bound-payment binding-resolution errors — Story 7.6 (Task 5) ──────────
+// The typed fail-loud seams for the member-cycle → assigned-pool + collection-binding resolver
+// (contribution-binding.ts, AC1). Both are INTEGRITY violations — states that MUST NOT occur if the
+// spawn saga + assignment engine are correct — so they fail loudly rather than degrade to a guess
+// (a silent pick would misroute real money / make wrong-pool detection ambiguous). Each rides
+// pool/errors.ts so it travels the pool namespace barrel; each carries a namespaced `code` +
+// `toErrorResponse` (the PoolFixedAmountError precedent) so the apps/api boundary maps it without
+// matching on the class instance. NOTE: a member with NO assignment in the cycle is NOT an error —
+// it is a first-class "not assigned" ABSENCE signal the resolver returns (AC1.4), never a throw.
+
+/** Base for the pool-bound-payment binding errors — carries a `code` + a uniform error-response body.
+ *  Restores the `Error` prototype chain explicitly (`instanceof` across subclasses is otherwise
+ *  transpilation-target-dependent) and exposes structured `details` from each subclass's typed public
+ *  fields — these are internal identifiers (UUIDs), not member PII, so surfacing them at the API
+ *  boundary aids debugging (the consent/errors.ts + niyamavali/errors.ts precedent). */
+abstract class PoolContributionBindingError extends Error {
+  public abstract readonly code: string;
+  public constructor(message: string) {
+    super(message);
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+  protected toErrorDetails(): Record<string, unknown> {
+    return {};
+  }
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: this.toErrorDetails(),
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+export const WRONG_POOL_BINDING_AMBIGUOUS_CODE = 'pool.wrong_pool_binding_ambiguous';
+
+/**
+ * Two pools within one cycle share the same `claim_case_id` (hence the same claim-scoped nominee bank
+ * accounts) — so a deposit's destination account maps to more than one pool and wrong-pool detection is
+ * AMBIGUOUS (AC1.3 / D5). Pool→claim is 1:1 (one pool per approved claim), and there is no
+ * `(cycle_id, claim_case_id)` uniqueness constraint on `pools` today, so a spawn bug producing two pools
+ * for ONE claim is the case this claim-keyed guard catches. NOTE the scope: two DIFFERENT claims whose
+ * nominee accounts reuse the same real bank account (e.g. two losses in one family) have DISTINCT
+ * `claim_case_id`s and so do NOT trip this guard — that account-level cross-claim collision is
+ * undetectable at this decryption-free layer (Tier-1 ciphertext) and is Epic 9's reconciliation matcher's
+ * responsibility (deposit → pool by destination account). The resolver FAILS LOUD here rather than
+ * silently picking a pool.
+ */
+export class WrongPoolBindingAmbiguousError extends PoolContributionBindingError {
+  public readonly name = 'WrongPoolBindingAmbiguousError';
+  public readonly code = WRONG_POOL_BINDING_AMBIGUOUS_CODE;
+  public constructor(
+    public readonly cycleId: string,
+    public readonly claimCaseId: string,
+    public readonly poolIds: readonly string[],
+  ) {
+    super(
+      `wrong-pool binding ambiguous in cycle ${cycleId}: pools [${poolIds.join(', ')}] share claim ` +
+        `${claimCaseId} (hence the same collection accounts) — a deposit cannot be attributed to a ` +
+        `unique pool. Distinct claim_case_id per pool is required for well-defined wrong-pool detection.`,
+    );
+  }
+  protected override toErrorDetails(): Record<string, unknown> {
+    return { cycle_id: this.cycleId, claim_case_id: this.claimCaseId, pool_ids: this.poolIds };
+  }
+}
+
+export const MEMBER_POOL_ASSIGNMENT_INTEGRITY_CODE = 'pool.member_pool_assignment_integrity';
+
+/**
+ * A member appears in the LATEST snapshot of MORE THAN ONE pool for the same cycle (AC1.4). The
+ * deterministic assignment places each member in EXACTLY one pool, so ≥2 memberships is an integrity
+ * violation (a corrupt/duplicated snapshot, a spawn bug) — never a legitimate state. Fail loud; the
+ * resolver must not pick one arbitrarily (that would misroute the member's contribution).
+ */
+export class MemberPoolAssignmentIntegrityError extends PoolContributionBindingError {
+  public readonly name = 'MemberPoolAssignmentIntegrityError';
+  public readonly code = MEMBER_POOL_ASSIGNMENT_INTEGRITY_CODE;
+  public constructor(
+    public readonly memberId: string,
+    public readonly poolIds: readonly string[],
+  ) {
+    super(
+      `member ${memberId} is assigned to ${String(poolIds.length)} pools [${poolIds.join(', ')}] in ` +
+        `the same cycle — deterministic assignment places a member in EXACTLY one pool, so this is an ` +
+        `integrity violation (corrupt snapshot / spawn bug), not a resolvable state.`,
+    );
+  }
+  protected override toErrorDetails(): Record<string, unknown> {
+    return { member_id: this.memberId, pool_ids: this.poolIds };
+  }
+}
+
+export const CLAIM_NOMINEE_BANK_ACCOUNTS_COUNT_INTEGRITY_CODE =
+  'pool.claim_nominee_bank_accounts_count_integrity';
+
+/**
+ * A claim's `claim_nominee_bank_accounts` rows number neither 0 (not yet collected) nor 2 (#1 primary /
+ * #2 secondary) — the collection-binding contract (contribution-binding.ts) requires exactly one of
+ * those two counts, never a partial set. A partial write (e.g. only #1 persisted) would silently produce
+ * a binding violating the documented "`[]` or EXACTLY TWO" invariant, so the resolver fails loud instead.
+ */
+export class ClaimNomineeBankAccountsCountIntegrityError extends PoolContributionBindingError {
+  public readonly name = 'ClaimNomineeBankAccountsCountIntegrityError';
+  public readonly code = CLAIM_NOMINEE_BANK_ACCOUNTS_COUNT_INTEGRITY_CODE;
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly accountCount: number,
+  ) {
+    super(
+      `claim ${claimCaseId} has ${String(accountCount)} nominee bank account row(s) — the collection ` +
+        `binding contract requires exactly 0 (not yet collected) or 2 (#1 primary / #2 secondary), never ` +
+        `a partial set. A corrupt/partial write to claim_nominee_bank_accounts, not a resolvable state.`,
+    );
+  }
+  protected override toErrorDetails(): Record<string, unknown> {
+    return { claim_case_id: this.claimCaseId, account_count: this.accountCount };
+  }
+}

@@ -17,3 +17,8 @@ export * from './snapshot-storage.js';
 // Story 7.5 — the fixed-amount schedule surface (FR-15): the 12-month-notice standard change + the
 // emergency adjustment override request/response DTOs + the schedule/effective-amount read view.
 export * from './fixed-amount.js';
+// Story 7.6 — pool-bound payment enforcement (FR-16/17/18): the wrong-pool verdict/reason-code union
+// (lockstep-pinned to @twt/domain), the member-cycle collection-binding response DTO, the CLOSED
+// helpdesk-action set (AC3.10), and the trustee-attestable-correction request seam (AC3.11). No live
+// 7.6 route → no .openapi() (the deep-link.ts posture); consumed by Epic 8/9/10.
+export * from './pool-bound-payment.js';

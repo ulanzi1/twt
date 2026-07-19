@@ -49,21 +49,34 @@ import {
 } from './errors.js';
 import type { PoolSnapshotV1 } from './snapshot.js';
 
-// ── The wrong-pool classification verdict + reason code (Story 7.6, AC2) ───────
+// ── The contribution-validity verdict + reason code (Story 7.6 AC2; Story 7.7 AC2 extension) ───
 // The CANONICAL tuples live here in @twt/domain (the lowest layer); the contracts `.strict()` union in
 // packages/contracts/src/pools/pool-bound-payment.ts is RE-DECLARED value-aligned (contracts cannot
 // import @twt/domain — the turbo cycle) and a cross-package LOCKSTEP test pins the two (the
-// pool_fixed_amount_change_type precedent). The union is OPEN BY DESIGN (Epic 7.7 adds
-// `amount_mismatch`) but ships ONLY these two values now — no dead surface until the consumer inserts it.
+// pool_fixed_amount_change_type precedent). The union is OPEN BY DESIGN; Story 7.7 LANDED `amount_mismatch`
+// (+ reason `amount_does_not_match_fixed_amount`), extending 7.6's `valid | wrong_pool`. Still a TS/Zod
+// union — NOT a DB enum (Epic 9's contribution record maps it to a DB enum when the record lands).
+//
+// ── The two verdicts are ORTHOGONAL, single-responsibility predicates (Story 7.7 AC3.10) ───────
+// `classifyContributionDestination` (WHERE the deposit landed) and `classifyContributionAmount` (HOW MUCH)
+// are independent. The COMPOSITION/precedence is the CONSUMER's (Epic 9): destination is classified FIRST,
+// and the amount check applies ONLY to a deposit that reached the CORRECT (assigned) pool — a `wrong_pool`
+// deposit is `wrong_pool` regardless of amount (you never compare a deposit against a non-assigned pool's
+// `fixed_amount`). So `wrong_pool` takes precedence over `amount_mismatch`; the two predicates stay
+// independently testable here and are never composed in this module.
 
-/** The contribution-validity verdicts. `wrong_pool` iff a deposit landed in a non-assigned pool. */
-export const CONTRIBUTION_VALIDITY_VERDICTS = ['valid', 'wrong_pool'] as const;
+/**
+ * The contribution-validity verdicts. `wrong_pool` iff a deposit landed in a non-assigned pool;
+ * `amount_mismatch` iff a deposit to the CORRECT pool carries an amount ≠ the locked `fixed_amount`.
+ */
+export const CONTRIBUTION_VALIDITY_VERDICTS = ['valid', 'wrong_pool', 'amount_mismatch'] as const;
 export type ContributionValidityVerdict = (typeof CONTRIBUTION_VALIDITY_VERDICTS)[number];
 
 /** The reason code accompanying each verdict — a stable machine token (extensible with the union). */
 export const CONTRIBUTION_VALIDITY_REASON_CODES = [
   'assigned_pool_match',
   'deposited_to_non_assigned_pool',
+  'amount_does_not_match_fixed_amount',
 ] as const;
 export type ContributionValidityReasonCode = (typeof CONTRIBUTION_VALIDITY_REASON_CODES)[number];
 
@@ -89,6 +102,40 @@ export function classifyContributionDestination(input: {
     : { verdict: 'valid', reasonCode: 'assigned_pool_match' };
 }
 
+/**
+ * Classify a deposit's AMOUNT against the assigned pool's locked `fixed_amount` (Story 7.7, AC2.6). PURE
+ * + deterministic — `amount_mismatch` iff `depositedAmount !== expectedFixedAmount`; else `valid`. No
+ * clock, no DB, no I/O. `expectedFixedAmount` is the pool's SNAPSHOTTED `fixed_amount` (surfaced on the
+ * {@link MemberContributionBinding} as `fixedAmount` — never a live recompute, D2); `depositedAmount` is
+ * the reconciled deposit. Both are whole-INR integers (mirroring `pools.fixed_amount`): this classifier
+ * does NO currency/paise arithmetic — Epic 9 normalizes a deposit to whole INR BEFORE calling.
+ *
+ * The `valid` branch reuses the union's single `valid` reason (`assigned_pool_match`): the composition
+ * (AC3.10) only ever runs the amount check on a deposit that already passed destination classification, so
+ * a `valid` amount result is coherent under the umbrella `valid` reason. `amount_mismatch` is NOT
+ * auto-corrected — no auto-topup, no silent amount rewrite (AC2.8, D4); recovery is helpdesk-mediated,
+ * reusing 7.6's CLOSED `HelpdeskWrongPoolAction` set + the `TrusteeAttestableCorrectionRequest` seam.
+ *
+ * Both amounts must be finite integers — `NaN`/`Infinity`/non-integer inputs throw rather than silently
+ * classifying as a mismatch (`NaN !== NaN` would otherwise misclassify corrupt data as an ordinary
+ * `amount_mismatch` instead of surfacing the upstream defect).
+ */
+export function classifyContributionAmount(input: {
+  readonly expectedFixedAmount: number;
+  readonly depositedAmount: number;
+}): ContributionValidityResult {
+  if (!Number.isInteger(input.expectedFixedAmount) || !Number.isInteger(input.depositedAmount)) {
+    throw new Error(
+      `[classifyContributionAmount] expectedFixedAmount and depositedAmount must both be finite integers ` +
+        `(got expectedFixedAmount=${String(input.expectedFixedAmount)}, depositedAmount=${String(input.depositedAmount)})`,
+    );
+  }
+  const isMismatch = input.depositedAmount !== input.expectedFixedAmount;
+  return isMismatch
+    ? { verdict: 'amount_mismatch', reasonCode: 'amount_does_not_match_fixed_amount' }
+    : { verdict: 'valid', reasonCode: 'assigned_pool_match' };
+}
+
 // ── The pure resolution core (DB-free) ────────────────────────────────────────
 
 /** One pool in a cycle + the member ids its LATEST snapshot assigns to it (the resolution input). */
@@ -97,6 +144,8 @@ export interface PoolBindingCandidate {
   readonly claimCaseId: ClaimId;
   readonly poolIndex: number;
   readonly poolCanonicalIdentifier: string;
+  /** The pool's SNAPSHOTTED `fixed_amount` (Story 7.5) — the amount-lock source (Story 7.7, AC2.5). */
+  readonly fixedAmount: number;
   /** The member ids in this pool's latest `pool_snapshots.member_assignments`. */
   readonly memberIds: readonly string[];
 }
@@ -107,6 +156,13 @@ export interface AssignedPoolRef {
   readonly claimCaseId: ClaimId;
   readonly poolIndex: number;
   readonly poolCanonicalIdentifier: string;
+  /**
+   * The assigned pool's SNAPSHOTTED `fixed_amount` (Story 7.7, AC2.5) — the locked `am=` the Epic-8
+   * consumer reads alongside the accounts. The value ALREADY PERSISTED on `pools.fixed_amount` at spawn
+   * (Story 7.5), NEVER a live `getEffectiveFixedAmount` recompute at intent time (the snapshot is truth
+   * for replay, D2). A whole-INR positive integer.
+   */
+  readonly fixedAmount: number;
 }
 
 /**
@@ -169,6 +225,7 @@ export function resolveAssignedPoolFromCandidates(
     claimCaseId: m.claimCaseId,
     poolIndex: m.poolIndex,
     poolCanonicalIdentifier: m.poolCanonicalIdentifier,
+    fixedAmount: m.fixedAmount,
   };
 }
 
@@ -207,6 +264,9 @@ async function loadCycleBindingCandidates(
       claimCaseId: pools.claimCaseId,
       poolIndex: pools.poolIndex,
       poolCanonicalIdentifier: pools.poolCanonicalIdentifier,
+      // The SNAPSHOTTED per-pool fixed_amount (Story 7.7 amount-lock, AC2.5) — read the PERSISTED pool
+      // row, NEVER a live getEffectiveFixedAmount recompute (D2: the snapshot is truth for replay).
+      fixedAmount: pools.fixedAmount,
     })
     .from(pools)
     .where(and(eq(pools.pariwarId, pariwarId), eq(pools.cycleId, cycleId)));
@@ -237,6 +297,7 @@ async function loadCycleBindingCandidates(
     claimCaseId: r.claimCaseId,
     poolIndex: r.poolIndex,
     poolCanonicalIdentifier: r.poolCanonicalIdentifier,
+    fixedAmount: r.fixedAmount,
     memberIds: memberIdsOf(latestByPool.get(r.poolId)),
   }));
 }
@@ -302,6 +363,7 @@ export async function resolveMemberContributionBinding(
     claimCaseId: resolution.claimCaseId,
     poolIndex: resolution.poolIndex,
     poolCanonicalIdentifier: resolution.poolCanonicalIdentifier,
+    fixedAmount: resolution.fixedAmount,
     collectionAccounts,
   };
 }

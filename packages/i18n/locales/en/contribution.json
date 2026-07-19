@@ -1,5 +1,8 @@
 {
   "wrong_pool.title": "Your payment reached us",
   "wrong_pool.body": "We received your payment, but it went to a different pool than your assigned one. We can't move it across automatically. Tap 'Get help' and our helpdesk will sort it out with you.",
-  "wrong_pool.get_help": "Get help"
+  "wrong_pool.get_help": "Get help",
+  "amount_mismatch.title": "Your payment reached us",
+  "amount_mismatch.body": "We received your payment, but the amount didn't match this cycle's fixed contribution. We can't adjust it automatically. Tap 'Get help' and our helpdesk will sort it out with you.",
+  "amount_mismatch.get_help": "Get help"
 }

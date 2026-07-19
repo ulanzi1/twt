@@ -44,3 +44,8 @@ export * from './fixed-amount.js';
 // pinned to these), and the binding-uniqueness / member-assignment-integrity guards (typed errors on
 // pool/errors.ts). Transport-free + decryption-free — Epic 8 builds the pa= VPA, Epic 9 records the verdict.
 export * from './contribution-binding.js';
+// Story 7.7 (Task 1) — the idempotent contribution payment-reference (`tr=`) derivation: a pure,
+// bounded, VERSION-PINNED SHA-256-truncated reference deterministic in (member_id, alert_id), stable
+// across repeats (idempotency by construction). No live call site — Epic 8's <UPIIntentButton> produces
+// it, Epic 9's reconciler dedupes on it. Kept support-category-token-free for the recursive pool/ gate walk.
+export * from './contribution-reference.js';

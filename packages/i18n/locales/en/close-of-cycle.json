@@ -1,0 +1,8 @@
+{
+  "fully_funded.title": "Pool {poolLabel} has closed",
+  "fully_funded.body": "With the contributions of {contributorCount} colleagues, {amount} reached {familyName}'s family. Every hand stood with this family.",
+  "under_funded.title": "Pool {poolLabel} has closed",
+  "under_funded.body": "{contributorCount} colleagues stood together; {amount} reached {familyName}'s family. Our gratitude for standing beside them.",
+  "partial.title": "Pool {poolLabel} has closed",
+  "partial.body": "With the support of {contributorCount} colleagues, {amount} reached {familyName}'s family. Every contribution stood with this family."
+}

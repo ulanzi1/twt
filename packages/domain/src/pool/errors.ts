@@ -134,6 +134,39 @@ export function isPoolStreamVersionConflict(err: unknown): boolean {
   return constraint === STREAM_VERSION_CONSTRAINT;
 }
 
+/**
+ * The deterministic assignment's post-balancing ≤1 invariant was violated (AI-7-2 / Story 7.4 D4). A
+ * TYPED signal (not a bare `Error`) so the spawn-saga worker can recognise this specific CORRUPTION
+ * condition — a logic bug in the capacity/placement math that would persist a silently-unbalanced cycle
+ * — and alarm on it distinctly (P0), rather than treating it as an ordinary transient spawn failure.
+ * Carries the offending `m`/`n` for the alarm. Worker-internal only (never surfaced at an API boundary),
+ * so it needs no `code`/`toErrorResponse`. Unreachable while rosters were empty (`m=0`); AI-7-2 wires a
+ * real roster in, making the throw reachable — hence the explicit handling this class enables.
+ */
+export class PoolAssignmentBalancingError extends Error {
+  public readonly name = 'PoolAssignmentBalancingError';
+  public constructor(
+    public readonly memberCount: number,
+    public readonly poolCount: number,
+    public readonly maxSize: number,
+    public readonly minSize: number,
+  ) {
+    super(
+      `[assignMembersToPools] post-balancing invariant violated: max(${String(maxSize)}) - ` +
+        `min(${String(minSize)}) > 1 (m=${String(memberCount)}, n=${String(poolCount)})`,
+    );
+    // Restores the `Error` prototype chain explicitly (`instanceof` across subclasses is otherwise
+    // transpilation-target-dependent) — the P0 alarm predicate below depends on `instanceof` holding.
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/** True iff `err` is a {@link PoolAssignmentBalancingError} — the assignment-corruption alarm signal.
+ *  A predicate (not just `instanceof` at the call site) so cross-package callers match it robustly. */
+export function isPoolAssignmentBalancingError(err: unknown): err is PoolAssignmentBalancingError {
+  return err instanceof PoolAssignmentBalancingError;
+}
+
 // ── Fixed-amount schedule + emergency-override errors — Story 7.5 (Task 2) ─────
 // The typed transport seams for the effective-dated fixed-amount schedule (fixed-amount.ts).
 // Each carries a namespaced `code` + `toErrorResponse` so the apps/api error-mapping boundary

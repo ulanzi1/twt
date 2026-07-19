@@ -20,6 +20,7 @@ const {
   finalizeCycleIfCompleteMock,
   appendCycleAbortedMock,
   appendCycleSpawnStartedMock,
+  isPoolAlreadySpawnedMock,
   withPariwarScopeMock,
   createKeyedStoreMock,
 } = vi.hoisted(() => ({
@@ -28,6 +29,7 @@ const {
   finalizeCycleIfCompleteMock: vi.fn(),
   appendCycleAbortedMock: vi.fn(),
   appendCycleSpawnStartedMock: vi.fn(),
+  isPoolAlreadySpawnedMock: vi.fn(),
   withPariwarScopeMock: vi.fn(),
   createKeyedStoreMock: vi.fn(),
 }));
@@ -43,6 +45,7 @@ vi.mock('@twt/domain', async (importOriginal) => {
       finalizeCycleIfComplete: finalizeCycleIfCompleteMock,
       appendCycleAborted: appendCycleAbortedMock,
       appendCycleSpawnStarted: appendCycleSpawnStartedMock,
+      isPoolAlreadySpawned: isPoolAlreadySpawnedMock,
     },
     idempotency: {
       ...actual.idempotency,
@@ -155,6 +158,9 @@ beforeEach(() => {
     async (_pool: unknown, _pariwarId: unknown, fn: (db: unknown, client: unknown) => unknown) =>
       fn({}, {}),
   );
+  // Default: not yet spawned (the common case) — tests exercising the already-spawned skip path
+  // override this per-test.
+  isPoolAlreadySpawnedMock.mockResolvedValue(false);
 });
 
 describe('runCycleSpawnParent — successful planning', () => {
@@ -358,7 +364,9 @@ describe('runCycleSpawnChild — finalize success', () => {
     const result = await runCycleSpawnChild(makeDeps(), childEnvelope(spec));
 
     // The returned shape isn't derivable from canned mocks alone — pin that spawn + finalize both ran.
-    expect(spawnChildPoolMock).toHaveBeenCalledWith(expect.anything(), spec, expect.anything());
+    // No resolver injected here → the roster defaults to the empty set, and `rosterWired` is false (not
+    // wired) rather than a hardcoded true — see the AI-7-2 review's decision-needed finding.
+    expect(spawnChildPoolMock).toHaveBeenCalledWith(expect.anything(), spec, expect.anything(), [], false);
     expect(finalizeCycleIfCompleteMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ poolCount: spec.poolCount }),
@@ -387,6 +395,106 @@ describe('runCycleSpawnChild — finalize failure records the breadcrumb', () =>
     expect(appendCycleAbortedMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ cycleId, pariwarId, reason: 'finalize boom' }),
+    );
+  });
+});
+
+describe('runCycleSpawnChild — assignable-roster wiring (AI-7-2)', () => {
+  it('resolves the freeze-time roster and threads the member set into spawnChildPool', async () => {
+    const cycleId = randomUUID();
+    const pariwarId = randomUUID();
+    const spec = childSpec({ cycleId, pariwarId, poolIndex: 0, claimCaseId: randomUUID() });
+    const roster = [randomUUID(), randomUUID()];
+    const resolveAssignableRoster = vi.fn().mockResolvedValue(roster);
+    spawnChildPoolMock.mockResolvedValue({
+      poolId: spec.poolId,
+      poolCanonicalIdentifier: spec.poolCanonicalIdentifier,
+      spawned: true,
+    });
+    finalizeCycleIfCompleteMock.mockResolvedValue({ frozen: true, alreadyFrozen: false, committedCount: 2 });
+
+    await runCycleSpawnChild(makeDeps({ resolveAssignableRoster }), childEnvelope(spec));
+
+    // The resolver is called with THIS child's (pariwarId, cycleId) — the per-child (D2) resolution site.
+    expect(resolveAssignableRoster).toHaveBeenCalledWith({ pariwarId, cycleId });
+    // …and its output is threaded into spawnChildPool as the 4th arg (the real memberSet), with
+    // `rosterWired: true` (5th arg) since a real resolver was actually supplied.
+    expect(spawnChildPoolMock).toHaveBeenCalledWith(expect.anything(), spec, expect.anything(), roster, true);
+  });
+
+  it('SKIPS roster resolution on a retry of an already-spawned pool (AI-7-2 review finding)', async () => {
+    const cycleId = randomUUID();
+    const pariwarId = randomUUID();
+    const spec = childSpec({ cycleId, pariwarId, poolIndex: 0, claimCaseId: randomUUID() });
+    const resolveAssignableRoster = vi.fn().mockResolvedValue([randomUUID()]);
+    isPoolAlreadySpawnedMock.mockResolvedValue(true);
+    spawnChildPoolMock.mockResolvedValue({
+      poolId: spec.poolId,
+      poolCanonicalIdentifier: spec.poolCanonicalIdentifier,
+      spawned: false,
+    });
+    finalizeCycleIfCompleteMock.mockResolvedValue({ frozen: true, alreadyFrozen: true, committedCount: 2 });
+
+    await runCycleSpawnChild(makeDeps({ resolveAssignableRoster }), childEnvelope(spec));
+
+    // The expensive O(M) roster resolution never ran — spawnChildPool's own fast path would have
+    // discarded it anyway. `rosterWired` is still `true` (a real resolver dependency IS present —
+    // it just wasn't called this time); it's moot either way since spawnChildPool's fast path
+    // returns before ever reading memberSet/rosterWired for an already-spawned pool.
+    expect(resolveAssignableRoster).not.toHaveBeenCalled();
+    expect(spawnChildPoolMock).toHaveBeenCalledWith(expect.anything(), spec, expect.anything(), [], true);
+  });
+
+  it('FAILS LOUD on a roster-resolution error: records the breadcrumb, rethrows, never spawns', async () => {
+    const cycleId = randomUUID();
+    const pariwarId = randomUUID();
+    const spec = childSpec({ cycleId, pariwarId, poolIndex: 0, claimCaseId: randomUUID() });
+    const rosterErr = new Error('validity read failed mid-enumeration');
+    const resolveAssignableRoster = vi.fn().mockRejectedValue(rosterErr);
+    appendCycleAbortedMock.mockResolvedValue(undefined);
+
+    await expect(
+      runCycleSpawnChild(makeDeps({ resolveAssignableRoster }), childEnvelope(spec)),
+    ).rejects.toBe(rosterErr);
+
+    // A resolution failure is a cycle failure — breadcrumb recorded, and the spawn never ran (no
+    // partial/empty-roster pool written).
+    expect(appendCycleAbortedMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ cycleId, pariwarId, reason: 'validity read failed mid-enumeration' }),
+    );
+    expect(spawnChildPoolMock).not.toHaveBeenCalled();
+  });
+
+  it('alarms DISTINCTLY (P0) + records the breadcrumb + rethrows on a balancing-invariant throw (deferred-work.md:2099)', async () => {
+    const cycleId = randomUUID();
+    const pariwarId = randomUUID();
+    const spec = childSpec({ cycleId, pariwarId, poolIndex: 1, claimCaseId: randomUUID() });
+    const resolveAssignableRoster = vi.fn().mockResolvedValue([randomUUID(), randomUUID()]);
+    // The now-reachable (m>0) post-balancing corruption signal, thrown by assignMembersToPools via the seam.
+    const balancingErr = new poolDomain.PoolAssignmentBalancingError(10, 3, 5, 2);
+    spawnChildPoolMock.mockRejectedValue(balancingErr);
+    appendCycleAbortedMock.mockResolvedValue(undefined);
+
+    const onAlarm = vi.fn();
+    await expect(
+      runCycleSpawnChild(makeDeps({ onAlarm, resolveAssignableRoster }), childEnvelope(spec)),
+    ).rejects.toBe(balancingErr);
+
+    // The P0 corruption alarm fires (distinct from an ordinary transient spawn failure), pinning the
+    // ACTUAL cycle id, pool index, and the error's own m/max/min values — not just a generic substring,
+    // so a field-swap bug (e.g. poolIndex/cycleId transposed, or the error's own m=/n=/max=/min=
+    // mis-threaded) would fail this test.
+    expect(onAlarm).toHaveBeenCalledWith(
+      `[jobs] cycle-spawn-child: P0 assignment-balancing invariant violated for cycle ${cycleId} pool 1 — ` +
+        `roster corruption, failing loud (NOT spawning a silently-unbalanced pool) — ` +
+        `PoolAssignmentBalancingError: [assignMembersToPools] post-balancing invariant violated: ` +
+        `max(5) - min(2) > 1 (m=10, n=3)`,
+    );
+    // …AND the breadcrumb is still recorded AND the error still rethrows (no silent unbalanced spawn).
+    expect(appendCycleAbortedMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ cycleId, pariwarId }),
     );
   });
 });

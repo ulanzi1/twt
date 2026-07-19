@@ -19,6 +19,8 @@
 import { ids, idempotency, pool as poolDomain, withPariwarScope } from '@twt/domain';
 import { type Job, type JobEnvelope, type QueueClient, QUEUE_NAMES } from '@twt/queue';
 
+import type { AssignableRosterResolver } from './assignable-roster.js';
+
 /** How long the parent's run-once idempotency claim is held. MUST exceed the parent's runtime
  *  (a few DB round-trips), with generous headroom — a claim that expires mid-run could be
  *  reclaimed by a concurrent retry and re-allocate identifiers. 5 min is ample. */
@@ -45,6 +47,10 @@ export interface CycleSpawnDeps {
   /** The deterministic member-assignment seam. Story 7.4 fills it (createPoolAssignmentSeam, wired
    *  in boot.ts); the default is the no-op emptyAssignmentSeam. */
   readonly assignmentSeam?: poolDomain.PoolAssignmentSeam;
+  /** The freeze-time assignable-roster resolver (AI-7-2, createAssignableRosterResolver, wired in
+   *  boot.ts). Resolved per-child (D2), its member-id set threads into spawnChildPool as the real
+   *  `memberSet`. Omitted → an empty roster (the pre-AI-7-2 behaviour; only tests omit it). */
+  readonly resolveAssignableRoster?: AssignableRosterResolver;
   /** Parent run-once claim TTL (seconds). */
   readonly parentIdempotencyTtlSeconds?: number;
   /** CYCLE_SPAWN_CHILD worker count (pg-boss `localConcurrency`) — sourced from
@@ -236,14 +242,58 @@ export async function runCycleSpawnChild(
     }
   };
 
-  // (1) Spawn the pool (its own tx). A real failure records the breadcrumb + rethrows; an
-  // idempotent no-op returns normally.
+  // (0a) Skip the (expensive) roster resolution entirely on a retry of an ALREADY-spawned pool — an
+  // idempotent redelivery only needs finalize to (maybe) re-run, not a full O(M) roster recompute.
+  // `spawnChildPool`'s own fast path would discard that recompute anyway; this cheap advisory check
+  // (never authoritative — spawnChildPool's own check + the DB unique index remain the real guard)
+  // also stops a transient validity-read hiccup on a redelivery from aborting an otherwise-healthy
+  // idempotent retry (AI-7-2 review finding).
+  const alreadySpawned = await withPariwarScope(deps.pool, pariwarId, (db) =>
+    poolDomain.isPoolAlreadySpawned(db, spec.cycleId, spec.poolIndex),
+  );
+
+  // (0b) Resolve the freeze-time assignable roster (AI-7-2) BEFORE the spawn tx. Its own read tx
+  // (validity at the cycle-freeze committed_at, NEVER now()). A resolution failure — e.g. a per-member
+  // validity read error — FAILS THE WHOLE CYCLE: a silently-dropped member would resolve to
+  // { assigned:false } and be told they have no pool (real money misrouted), so we record the breadcrumb
+  // + rethrow exactly like a spawn failure rather than degrade to a partial/empty roster.
+  const resolveRoster = deps.resolveAssignableRoster;
+  // `rosterWired` reflects whether a REAL resolver was supplied, not whether memberSet is non-empty (a
+  // genuine query can legitimately resolve to an empty roster) — threaded straight into the persisted
+  // `assignment_roster_wired` audit flag so a future wiring regression (this dep silently omitted) is
+  // never mistaken for "queried, none assignable."
+  const rosterWired = resolveRoster !== undefined;
+  let memberSet: readonly string[];
+  try {
+    memberSet = alreadySpawned || !resolveRoster ? [] : await resolveRoster({ pariwarId, cycleId: spec.cycleId });
+  } catch (err) {
+    await recordAborted(err);
+    throw err;
+  }
+
+  // (1) Spawn the pool (its own tx), threading the resolved roster in. A real failure records the
+  // breadcrumb + rethrows; an idempotent no-op returns normally.
   let spawnResult: poolDomain.SpawnChildPoolResult;
   try {
     spawnResult = await withPariwarScope(deps.pool, pariwarId, (_db, client) =>
-      poolDomain.spawnChildPool(client, spec, assignmentSeam),
+      poolDomain.spawnChildPool(client, spec, assignmentSeam, memberSet, rosterWired),
     );
   } catch (err) {
+    // deferred-work.md:2099 — with a real (m>0) roster now flowing, `assignMembersToPools`'s
+    // post-balancing invariant throw is reachable in the live worker. It is a CORRUPTION signal (a
+    // capacity/placement logic bug), not a transient failure, so alarm on it DISTINCTLY (P0) before the
+    // breadcrumb — never a silent empty-roster success, never a swallowed corruption. It still rethrows
+    // (pg-boss retries/DLQs); the throw is deterministic for the frozen roster, so it will DLQ loudly
+    // rather than spawn a mis-balanced cycle.
+    if (poolDomain.isPoolAssignmentBalancingError(err)) {
+      // err's own message already carries `m=…, n=…` (PoolAssignmentBalancingError) — don't
+      // re-derive/duplicate those values here, just add the cycle/pool identifiers it doesn't know.
+      alarm(
+        `[jobs] cycle-spawn-child: P0 assignment-balancing invariant violated for cycle ${spec.cycleId} ` +
+          `pool ${String(spec.poolIndex)} — roster corruption, failing loud ` +
+          `(NOT spawning a silently-unbalanced pool) — ${String(err)}`,
+      );
+    }
     await recordAborted(err);
     throw err;
   }

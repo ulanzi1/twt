@@ -41,6 +41,7 @@
 import { createHash } from 'node:crypto';
 
 import { canonicalJsonStringify } from '../canonical-json.js';
+import { PoolAssignmentBalancingError } from './errors.js';
 import { MAX_CYCLE_SPAWN_POOLS } from './spawn.js';
 import type { PoolAssignmentSeam } from './spawn.js';
 import type { PoolSnapshotMemberAssignment } from './snapshot.js';
@@ -177,9 +178,9 @@ export function assignMembersToPools(
   const maxSize = Math.max(...sizes);
   const minSize = Math.min(...sizes);
   if (maxSize - minSize > 1) {
-    throw new Error(
-      `[assignMembersToPools] post-balancing invariant violated: max(${String(maxSize)}) - min(${String(minSize)}) > 1 (m=${String(m)}, n=${String(n)})`,
-    );
+    // A TYPED throw (AI-7-2) so the spawn-saga worker recognises this specific corruption and alarms on
+    // it distinctly. Now reachable in the live worker (m>0) since AI-7-2 wired a real roster in.
+    throw new PoolAssignmentBalancingError(m, n, maxSize, minSize);
   }
 
   return assignment;

@@ -1,5 +1,5 @@
 {
-  "name": "@twt/validity-service",
+  "name": "@twt/measured-validation",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,21 +9,16 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:determinism": "vitest run tests/determinism.test.ts",
     "dev": "tsc --watch --preserveWatchOutput"
   },
   "dependencies": {
-    "@twt/domain": "workspace:*",
-    "@twt/niyamavali-engine": "workspace:*",
-    "drizzle-orm": "^0.45.0"
+    "@twt/domain": "workspace:*"
   },
   "devDependencies": {
     "@twt/eslint-config-twt": "workspace:*",
-    "@twt/measured-validation": "workspace:*",
     "@types/node": "^22.15.3",
     "@types/pg": "^8.11.0",
     "pg": "^8.13.0",
-    "tsx": "^4.19.0",
     "typescript": "~5.9.2",
     "vitest": "^2.1.8"
   }

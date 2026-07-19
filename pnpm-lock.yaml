@@ -275,6 +275,9 @@ importers:
       '@twt/eslint-config-twt':
         specifier: workspace:*
         version: link:../../packages/eslint-config-twt
+      '@twt/measured-validation':
+        specifier: workspace:*
+        version: link:../../packages/measured-validation
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.20
@@ -763,6 +766,31 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
 
+  packages/measured-validation:
+    dependencies:
+      '@twt/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      '@twt/eslint-config-twt':
+        specifier: workspace:*
+        version: link:../eslint-config-twt
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.19.20
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.13.0
+        version: 8.21.0
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0)
+
   packages/niyamavali-engine:
     dependencies:
       '@twt/domain':
@@ -890,6 +918,9 @@ importers:
       '@twt/eslint-config-twt':
         specifier: workspace:*
         version: link:../eslint-config-twt
+      '@twt/measured-validation':
+        specifier: workspace:*
+        version: link:../measured-validation
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.20

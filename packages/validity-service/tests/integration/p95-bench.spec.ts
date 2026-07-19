@@ -27,7 +27,7 @@ import { R12_PAYLOAD } from '../fixtures/r12-clause.js';
 // superseded by `measured-validation-fr12a.spec.ts` (real 4L cached-path + concurrency), but the FILE
 // stays (D3-A budget-establishment record); it now imports the ONE percentile implementation rather than
 // carrying its own duplicate (review fix — a grep for `function percentile` must find exactly one source).
-import { percentile } from '../framework/index.js';
+import { percentile } from '@twt/measured-validation';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);

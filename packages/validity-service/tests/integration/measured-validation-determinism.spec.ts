@@ -17,7 +17,8 @@ import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { getValidity, getValidityCached, getValidityAt, type ValidityServiceDeps } from '../../src/index.js';
-import { assertReplayStable, seedValidityMembers, type ReplaySample } from '../framework/index.js';
+import { assertReplayStable, type ReplaySample } from '@twt/measured-validation';
+import { seedValidityMembers } from '../framework/seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);

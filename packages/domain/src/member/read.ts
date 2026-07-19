@@ -48,6 +48,33 @@ export async function memberExists(
 }
 
 /**
+ * Enumerate EVERY member id in a Pariwar (the bulk set-level read the pool-spawn assignable-roster
+ * resolver keys off — AI-7-2). Tenant-scoped (RLS + the EXPLICIT `pariwar_id` predicate, mirroring
+ * `getPeerMeshCandidateSnapshot`'s multi-row shape), ordered by `member_id` ascending so the roster is
+ * a stable, replay-deterministic input to `assignMembersToPools`.
+ *
+ * DELIBERATELY UNFILTERED by `members.state`: this read returns the WHOLE membership and lets the caller
+ * filter by the Story 4.6 Validity Service verdict at the cycle-freeze instant. Pre-filtering by
+ * lifecycle state here would re-derive member-state policy in the enumeration layer — the exact thing
+ * the assignable-roster invariant forbids (assignability is `getValidityAt(...).is_valid` ONLY). A member
+ * who signed up AFTER the freeze still enumerates, but replays to a non-valid state at `committed_at`, so
+ * the verdict excludes them — determinism is preserved by evaluating validity at the frozen instant, not
+ * by narrowing this enumeration.
+ *
+ * Reads the `members` projection (the id set is a projection concern, not an event replay), selecting
+ * `member_id` only. No user-controlled `.limit()` (the whole membership is the set), so no
+ * domain-invariants clamp is needed.
+ */
+export async function listMemberIdsForPariwar(db: Db, pariwarId: PariwarId): Promise<MemberId[]> {
+  const rows = await db
+    .select({ memberId: members.memberId })
+    .from(members)
+    .where(eq(members.pariwarId, pariwarId))
+    .orderBy(asc(members.memberId));
+  return rows.map((r) => r.memberId);
+}
+
+/**
  * Compute a member's lifecycle state as of `atTimestamp` by replaying its event
  * stream up to (and including) that instant, ordered by `event_version`.
  *

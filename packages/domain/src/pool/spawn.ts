@@ -122,6 +122,21 @@ export function derivePoolId(cycleId: string, poolIndex: number): PoolId {
   return poolId(bytesToUuid(bytes));
 }
 
+/**
+ * Cheap existence check on the deterministic pool id — the SAME fast-path idempotency test
+ * `spawnChildPool` runs internally (AI-7-2 review: exposed so `runCycleSpawnChild` can skip the
+ * expensive freeze-time assignable-roster resolution entirely on a retry of an already-spawned
+ * pool, rather than resolving the whole O(M) roster only to have `spawnChildPool` immediately
+ * discard it via its own no-op fast path). A `false` here is advisory, not authoritative — a
+ * concurrent double-delivery can still race past it; `spawnChildPool`'s own check + the DB unique
+ * index remain the real idempotency guard.
+ */
+export async function isPoolAlreadySpawned(db: Db, cycleId: string, poolIndex: number): Promise<boolean> {
+  const derivedPoolId = derivePoolId(cycleId, poolIndex);
+  const rows = await db.select({ poolId: pools.poolId }).from(pools).where(eq(pools.poolId, derivedPoolId));
+  return rows.length > 0;
+}
+
 // ── The spawn-index conflict detector — Task 1 ────────────────────────────────
 
 /** The UNIQUE index (migration 0074) that keys spawn idempotency on
@@ -320,6 +335,25 @@ export async function planCycleSpawn(
   return { children, names };
 }
 
+// ── freeze-instant read for the assignable-roster resolver (AI-7-2) ───────────
+
+/**
+ * Read a cycle-freeze commit's `committed_at` — the ONE durable instant the assignable-roster resolver
+ * (apps/jobs) evaluates member validity at, so the roster is a deterministic function of the frozen
+ * cycle, never `now()` (§1.11 DB-authoritative time; Story 7.4 D1). Returns `null` when the commit row
+ * is absent (missing scope or unknown cycle) so the caller can fail loud with its own context. Reads the
+ * durable `cycle_freeze_commits` record — the SAME instant `planCycleSpawn` sources the freeze month +
+ * fixed amount from, so a re-spawn re-reads the identical value. RLS-scoped by the caller.
+ */
+export async function getCycleFreezeCommittedAt(db: Db, cycleId: string): Promise<Date | null> {
+  const rows = await db
+    .select({ committedAt: cycleFreezeCommits.committedAt })
+    .from(cycleFreezeCommits)
+    .where(eq(cycleFreezeCommits.commitId, cycleFreezeCommitId(cycleId)))
+    .limit(1);
+  return rows[0]?.committedAt ?? null;
+}
+
 // ── The child spawner — Task 4 (tx1) ──────────────────────────────────────────
 
 export interface SpawnChildPoolResult {
@@ -340,11 +374,26 @@ export interface SpawnChildPoolResult {
  * (2) the DB backstops — the events_log `(stream_id, event_version)` unique index and the pools
  * `(pariwar_id, cycle_id, pool_index)` unique index — either of which resolves a concurrent
  * double-delivery to a no-op.
+ *
+ * `memberSet` is the FREEZE-TIME assignable-member roster (AI-7-2), resolved by the apps/jobs
+ * assignable-roster query (validity-verdict-filtered at the cycle-freeze `committed_at`) and threaded in
+ * by `runCycleSpawnChild`. It feeds BOTH the assignment seam (member→pool placement) AND the
+ * `member_state_hash` roster fingerprint. It defaults to `[]` so the domain's own spawn-mechanics tests
+ * can call this without a roster; production always supplies the resolved (possibly-empty) set.
+ *
+ * `rosterWired` records whether `memberSet` actually came from a real, live assignable-roster query
+ * (threaded straight from `runCycleSpawnChild`'s `deps.resolveAssignableRoster` presence — NOT inferred
+ * from `memberSet` being non-empty, since a genuine query can legitimately resolve to an empty roster).
+ * It becomes the persisted `assignment_roster_wired` flag (AC5's audit-provenance marker). Defaults to
+ * `false` so callers that omit it (domain unit/integration tests, or a future regression that silently
+ * drops the production wiring) get an honest "not wired" audit trail instead of a hardcoded claim.
  */
 export async function spawnChildPool(
   client: pg.PoolClient,
   spec: ChildSpawnSpec,
   assignmentSeam: PoolAssignmentSeam = emptyAssignmentSeam,
+  memberSet: readonly string[] = [],
+  rosterWired = false,
 ): Promise<SpawnChildPoolResult> {
   // Derive the pool_id from the deterministic inputs (child independence) — do NOT trust a
   // payload-supplied id; if one was supplied, it must match.
@@ -361,20 +410,16 @@ export async function spawnChildPool(
   const db = bindScopedDb(client);
 
   // (1) Fast-path idempotency: the pool row already exists → no-op.
-  const already = await db.select({ poolId: pools.poolId }).from(pools).where(eq(pools.poolId, derivedPoolId));
-  if (already.length > 0) {
+  if (await isPoolAlreadySpawned(db, spec.cycleId, spec.poolIndex)) {
     return { poolId: derivedPoolId, poolCanonicalIdentifier: spec.poolCanonicalIdentifier, spawned: false };
   }
 
-  // Story 7.4 (D2 → fallback B): the assignment ALGORITHM + its real seam ship now (the seam is
-  // injected here / wired into apps/jobs boot), but the LIVE freeze-time assignable-roster QUERY is
-  // deferred to a scoped follow-up — @twt/domain cannot import @twt/validity-service (the layering
-  // is validity-service → domain), there is no bulk member-enumeration query yet, and the
-  // validity-payload → "assignable" mapping is an unresolved policy the follow-up owns (D4). Until
-  // then the roster is empty, so the real seam returns [] (identical to the old emptyAssignmentSeam
-  // output). The `member_state_hash` below is the fingerprint of THIS (currently empty) roster —
-  // the same code path records the real fingerprint once the follow-up supplies the roster.
-  const memberSet: readonly string[] = [];
+  // AI-7-2: the LIVE freeze-time assignable-roster is now supplied by the caller (the apps/jobs
+  // resolver evaluates each Pariwar member against the Story 4.6 Validity Service at the cycle-freeze
+  // `committed_at` and keeps `is_valid` members). The real seam (Story 7.4) hashes THIS roster into
+  // pools; `member_state_hash` below fingerprints it. An empty `memberSet` (no assignable members, or a
+  // domain unit test) is a clean no-op on either seam — `rosterWired` (not memberSet-emptiness) is what
+  // records whether this was a genuine query vs. an unwired/defaulted call.
   const memberAssignments = assignmentSeam({
     cycleId: spec.cycleId,
     poolIndex: spec.poolIndex,
@@ -396,11 +441,14 @@ export async function spawnChildPool(
     // AC5 audit reproducibility — the frozen-roster fingerprint + the whole-algorithm version pin.
     member_state_hash: computeAssignableRosterHash(memberSet),
     assignment_hash_version: POOL_ASSIGNMENT_HASH_VERSION,
-    // `false` today: no live assignable-roster query exists yet (the D2→B deferral above), so this
-    // event's empty `member_state_hash` reflects "unwired," not a genuinely empty roster. The
-    // roster-wiring follow-up MUST flip this to `true` once it threads a real query in — that flag,
-    // not the hash value alone, is what lets an auditor tell the two cases apart after the fact.
-    assignment_roster_wired: false,
+    // Reflects the CALLER's `rosterWired` claim, not memberSet-emptiness (AI-7-2 review finding: a
+    // hardcoded `true` here would silently misreport "genuinely queried, none assignable" if the
+    // production `resolveAssignableRoster` wiring in boot.ts ever regressed to the default-omitted
+    // path). `runCycleSpawnChild` passes `true` only when `deps.resolveAssignableRoster` was actually
+    // supplied — so this flag keeps meaning exactly what AC5 needs it to: "was a real roster query used
+    // for this event," distinguishing both the historical pre-AI-7-2 events (`false`) AND any future
+    // wiring regression from a genuine "queried, none assignable" outcome.
+    assignment_roster_wired: rosterWired,
   };
 
   let eventVersion: number;

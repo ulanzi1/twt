@@ -86,6 +86,7 @@ import {
   registerClaimShepherdAssignWorker,
   type ClaimShepherdAssignPayload,
 } from './claim-shepherd-assign.js';
+import { createAssignableRosterResolver } from './assignable-roster.js';
 import { DEFAULT_CHILD_LOCAL_CONCURRENCY, registerCycleSpawnWorkers } from './cycle-spawn.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
@@ -465,14 +466,16 @@ async function main(): Promise<void> {
     // The parent → N-child atomic spawn. Self-contained: registerCycleSpawnWorkers creates the
     // CHILD queue before the PARENT so the child queue exists when the parent fans out onto it. The
     // parent is enqueued by the apps/api post-commit PoolSpawnTrigger (Task 6). Story 7.4 injects the
-    // REAL deterministic member-assignment seam (createPoolAssignmentSeam) in place of the empty one;
-    // the live freeze-time roster supply is a separately-deferred 7.4 follow-up (spawnChildPool still
-    // passes an empty memberSet, so the real seam returns [] until then). Story 7.5 retired the fixed-
+    // REAL deterministic member-assignment seam (createPoolAssignmentSeam); AI-7-2 now also injects the
+    // freeze-time assignable-roster resolver (createAssignableRosterResolver) — the roster SUPPLY the
+    // 7.4 follow-up deferred. `pool` here is the BYPASSRLS service pool the resolver uses as its
+    // withPariwarScope pool + keyed-store pool + validity servicePool. Story 7.5 retired the fixed-
     // amount dep: the planner resolves it from the per-Pariwar schedule at the cycle-freeze committed_at.
     await registerCycleSpawnWorkers(boss, {
       pool,
       childConcurrency: POOL_SPAWN_CHILD_CONCURRENCY,
       assignmentSeam: poolDomain.createPoolAssignmentSeam(),
+      resolveAssignableRoster: createAssignableRosterResolver({ pool }),
     });
 
     await new Promise<void>((resolve, reject) => {

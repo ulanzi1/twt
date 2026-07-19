@@ -20,6 +20,7 @@
     "@twt/domain": "workspace:*",
     "@twt/platform-adapters": "workspace:*",
     "@twt/queue": "workspace:*",
+    "@twt/validity-service": "workspace:*",
     "jszip": "^3.10.1",
     "pg": "^8.13.0",
     "pg-boss": "^12.19.1"

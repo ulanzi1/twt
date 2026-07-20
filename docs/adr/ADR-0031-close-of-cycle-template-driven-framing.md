@@ -1,9 +1,9 @@
 # ADR-0031: Close-of-cycle template-driven framing + Pool-Reality #2 disallowance (Story 7.8)
 
-> **Status:** drafted
-> **Date:** 2026-07-19 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-07-20 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Story 7.8 closure
-> **Ratifying trustees:** — (un-attested-pending; a reviewer convenes the Trustee Panel — no session is fabricated here, per [[feedback_record_unattested_no_backfill]])
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-07-20; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-07-20.md`; logged in `.decision-log.md` Decision 2026-07-20-067. Discharges the un-attested-pending record (author-committed 2026-07-19) — attested by a real quorum, no session fabricated, per [[feedback_record_unattested_no_backfill]].
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -141,6 +141,31 @@ choices:
   + add a template family + a selector branch (the `never` default forces the branch at compile
   time) + a locale key pair (parity-enforced). Reverse via a successor ADR.
 
+## Ratification (2026-07-20)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-07-20 Trustee Panel
+session; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-07-20.md`;
+logged in `.decision-log.md` Decision 2026-07-20-067. This discharges the un-attested-pending
+record carried from the 2026-07-19 author-commit — the ratification is now attested by a real
+quorum, not reconstructed ([[feedback_record_unattested_no_backfill]]).
+
+Presented as **policy-adjacent**: the mechanism (the `close-of-cycle` i18n namespace + the pure
+`selectCloseOfCycleFraming` selector + the target-quarantining `classifyCycleOutcome` + the
+scope+semantic extension of the ADR-0016 microcopy floor and the ADR-0019 tone-review ceiling)
+is engineering substrate, but the FR-19 **Pool-Reality #2 disallowance** it enforces — an
+under-funded close must never surface a comparison-to-target frame on a nominee-family grief
+surface — is a dignity commitment materially the trust's. The panel affirmed the *structural*
+control (the target/shortfall figure is quarantined in the classifier and cannot reach the
+copy-selection path; the `under_funded` branch cannot return a comparison template because the
+namespace carries no shortfall copy, guarded by the microcopy gate over the two locale files)
+over a decay-prone per-consumer convention.
+
+**Deferred to the rendering consumers (NOT discharged by this ratification, by design):** the
+`{familyName}` interpolation param is PII once a surface renders a deceased member's family name
+publicly; this ADR intentionally does not define that policy — display scope, consent posture,
+and publication rules remain Epic 8's (Panchayat Noticeboard) and Epic 11b's (Sahyog Vivran)
+responsibility, tracked in those stories.
+
 ## References
 
 - [Source: epics.md, Story 7.8] — the four ACs (templates per outcome; Pool-Reality #2 disallowance lint-checked; bilingual + Pattern 4; publish blocked on violation; Epic 11b consumer framing)
@@ -159,4 +184,5 @@ choices:
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-07-20 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-07-20 Trustee Panel session (policy-adjacent — the FR-19 grief-surface dignity commitment affirmed; mechanism is substrate). Discharges the un-attested-pending record — attested by a real quorum, no session fabricated. `.decision-log.md` Decision 2026-07-20-067; consent sheet `adr-ratification-consent-sheet-2026-07-20.md`. |
 | 2026-07-19 | (initial draft) | BigDev (Solo Builder) | Authored under Story 7.8 (close-of-cycle template-driven framing) closure. Ratification un-attested-pending — a reviewer convenes the Trustee Panel; no session fabricated. |

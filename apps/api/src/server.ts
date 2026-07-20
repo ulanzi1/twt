@@ -34,6 +34,7 @@ import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
 import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
 import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
 import { registerTelegramOptInModule } from './modules/telegram-opt-in/index.js';
+import { registerPoolOnboardingModule } from './modules/pool-onboarding/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
 import { registerClaimsModule } from './modules/claims/index.js';
@@ -177,6 +178,11 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // tg-webhook-processor worker advances PENDING→ACTIVE on the bot `/start`; this is the member-facing half of
   // the dual gate (config `enabled` AND opt-in ACTIVE).
   registerTelegramOptInModule(app, deps);
+  // Story 7.10 — member pool-engine onboarding-tutorial outcome surface (UX-DR79; AC4): POST record the
+  // completion/skip as a member-level audit line (member.pool_onboarding_tutorial_completed/_skipped) —
+  // member-session-gated, best-effort telemetry (the app's MMKV flag is the authoritative suppressor).
+  // Standalone event (no paired mutation) → plain writeAuditEntry, no compensating chain.
+  registerPoolOnboardingModule(app, deps);
   // Story 3.9 — member Life Events panel surface (FR-5): update nominees / address / transfer-in-out
   // / medical disclosure. Nominee + medical REUSE the 3.4/3.5 declare/submit services behind a member
   // step-up gate ('nominee_change' / 'medical_change'); address + posting are NEW append-only writes

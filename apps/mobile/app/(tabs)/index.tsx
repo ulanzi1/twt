@@ -9,6 +9,7 @@ import {
   TelegramNotificationSettingsEntry,
 } from 'components/notifications/NotificationSettingsEntry'
 import { MembershipStatusEntry } from 'components/member-status/MembershipStatusEntry'
+import { PoolOnboardingSettingsEntry } from 'components/pool-onboarding/PoolOnboardingSettingsEntry'
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
 import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
 import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
@@ -39,6 +40,8 @@ export default function YogdaanTab() {
       <ClaimPointOfContactEntry />
       {/* Story 4.7 — the member-facing MemberStatusPanel entry (own status; Hindi-first, a11y). */}
       <MembershipStatusEntry />
+      {/* Story 7.10 — LIVE re-view entry into the pool-engine onboarding tutorial (re-viewable anytime). */}
+      <PoolOnboardingSettingsEntry />
       <YogdaanBahi />
       {/* Story 5.4 — understated notification-settings (WhatsApp opt-in) entry (a member choice). */}
       <NotificationSettingsEntry />

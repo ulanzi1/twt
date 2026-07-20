@@ -40,6 +40,8 @@ import {
   TelegramOptInRequestResponse,
   TelegramOptInStatusResponse,
   RevokeTelegramOptInResponse,
+  PoolOnboardingOutcomeRequest,
+  type PoolOnboardingOutcomeSchema as PoolOnboardingOutcome,
   type CreateWaOptInResponse as CreateWaOptInResult,
   type WaOptInStatusResponse as WaOptInStatusResult,
   type RevokeWaOptInResponse as RevokeWaOptInResult,
@@ -159,6 +161,7 @@ const WITHDRAWAL_BASE = '/api/v1/member/withdrawal';
 const DATA_EXPORT_BASE = '/api/v1/member/data-export';
 const WA_OPT_IN_BASE = '/api/v1/member/wa-opt-in';
 const TELEGRAM_OPT_IN_BASE = '/api/v1/member/telegram-opt-in';
+const POOL_ONBOARDING_BASE = '/api/v1/member/pool-onboarding-tutorial';
 const RTBF_BASE = '/api/v1/member/rtbf';
 const CLAIMS_BASE = '/api/v1/member/claims';
 
@@ -607,6 +610,17 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Revoke the member's active Telegram opt-in (session; auth). */
     revokeTelegramOptIn(): Promise<RevokeTelegramOptInResult> {
       return call(`${TELEGRAM_OPT_IN_BASE}/revoke`, RevokeTelegramOptInResponse, {}, true);
+    },
+
+    // ── Pool-engine onboarding tutorial (Story 7.10) ──────────────────────────
+    // Record the member-level completion/skip outcome for analytics (server-side audit line). The app
+    // calls this FIRE-AND-FORGET — the MMKV flag is the authoritative first-entry suppressor, so a
+    // failed POST must never block the tutorial's dismissal nor re-show it. The route returns 204 (no
+    // body), so `call` short-circuits before the throwaway schema is ever parsed (the `logout` idiom).
+
+    /** Record the pool-onboarding tutorial outcome (completed | skipped) — best-effort (session; auth). */
+    async recordPoolOnboardingOutcome(outcome: PoolOnboardingOutcome): Promise<void> {
+      await call(POOL_ONBOARDING_BASE, PoolOnboardingOutcomeRequest.optional(), { outcome }, true);
     },
   };
 }

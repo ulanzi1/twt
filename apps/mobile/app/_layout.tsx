@@ -164,6 +164,16 @@ function RootLayoutNav() {
           }}
         />
 
+        {/* Story 7.10 — pool-engine onboarding tutorial route group. Presented modally (no sibling
+            group uses modal presentation today, so it is wired explicitly here). */}
+        <Stack.Screen
+          name="(pool-onboarding)"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+
         <Stack.Screen
           name="modal"
           options={{

@@ -121,7 +121,7 @@ review-submission endpoint (Story 2.4), not by this publish gate.
 (`writeAuditEntry`), carrying the reviewed artifact's resource locator, the non-author
 reviewer's actor id, and a **content hash** of the reviewed copy (never the raw copy
 itself). A publish **attempted without** a recorded non-author sign-off is **blocked** at
-the API layer (HTTP `409 tone-review-required`) and the blocked attempt is itself audited as
+the API layer (HTTP `409 tone_review.required`) and the blocked attempt is itself audited as
 `tone_review.publish_blocked`. **Persistence** of which-artifact-was-reviewed is owned by
 the consuming surface (Story 2.4 records tone-reviewer attribution + `clause_version_id`);
 Story 2.2 ships the gate mechanism, not a speculative store.

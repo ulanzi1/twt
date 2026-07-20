@@ -318,6 +318,68 @@ export async function resolveAssignedPoolForMember(
   return resolveAssignedPoolFromCandidates(memberId, candidates, cycleId);
 }
 
+/** The assigned pool for a member-cycle PLUS its roster size — the My Pool progress meter's denominator. */
+export interface AssignedPoolWithRoster extends AssignedPoolRef {
+  /**
+   * The pool roster size N (Story 8.2 AC4 denominator) — the member count in the pool's LATEST
+   * assignment snapshot (`PoolBindingCandidate.memberIds.length`). NOT on the bare {@link AssignedPoolRef}
+   * (the resolver returns only the binding identity); resolved here off the SAME latest-snapshot
+   * candidates the assignment resolution reads, so there is no second "latest snapshot per pool"
+   * derivation to drift. This is the METER's structural cap on yellow: the read model surfaces the
+   * roster (denominator) + the confirmed count (numerator, Epic 9) — never an attested/pending count.
+   */
+  readonly rosterSize: number;
+}
+
+/** The roster-aware resolution — the assigned pool + roster size, or the `{ assigned: false }` absence signal. */
+export type AssignedPoolWithRosterResolution =
+  | (AssignedPoolWithRoster & { readonly assigned: true })
+  | { readonly assigned: false };
+
+/**
+ * Resolve a member's assigned pool + roster size from the cycle's candidates (PURE core, Story 8.2
+ * AC4). Delegates the assignment identity to {@link resolveAssignedPoolFromCandidates} (so the
+ * absence/≥2-integrity semantics are shared, not reinvented), then reads the roster size N off the
+ * MATCHED candidate's `memberIds` — the meter's denominator. DB-free + unit-testable; the DB shell
+ * below just loads the candidates and delegates here.
+ */
+export function resolveAssignedPoolWithRosterFromCandidates(
+  memberId: string,
+  candidates: readonly PoolBindingCandidate[],
+  cycleIdForError: string,
+): AssignedPoolWithRosterResolution {
+  const resolution = resolveAssignedPoolFromCandidates(memberId, candidates, cycleIdForError);
+  if (!resolution.assigned) return { assigned: false };
+  // The matched pool is guaranteed present in `candidates` — the pure core selected it FROM them.
+  const matched = candidates.find((c) => c.poolId === resolution.poolId)!;
+  return {
+    assigned: true,
+    poolId: resolution.poolId,
+    claimCaseId: resolution.claimCaseId,
+    poolIndex: resolution.poolIndex,
+    poolCanonicalIdentifier: resolution.poolCanonicalIdentifier,
+    fixedAmount: resolution.fixedAmount,
+    rosterSize: matched.memberIds.length,
+  };
+}
+
+/**
+ * Resolve a member's assigned pool for a cycle AND its roster size (Story 8.2 AC4), from the PERSISTED
+ * snapshot — never a recompute. Reuses {@link resolveAssignedPoolForMember}'s exact candidate load (so
+ * the "latest snapshot per pool" tiebreak ordering is shared, not reinvented) and delegates to the pure
+ * {@link resolveAssignedPoolWithRosterFromCandidates} core. Returns `{ assigned: false }` for an
+ * unassigned member. Throws the same integrity errors as the resolver (ambiguous binding / ≥2 pools).
+ */
+export async function resolveAssignedPoolWithRosterForMember(
+  db: Db,
+  pariwarId: PariwarId,
+  cycleId: CycleFreezeCommitId,
+  memberId: MemberId,
+): Promise<AssignedPoolWithRosterResolution> {
+  const candidates = await loadCycleBindingCandidates(db, pariwarId, cycleId);
+  return resolveAssignedPoolWithRosterFromCandidates(memberId, candidates, cycleId);
+}
+
 /** The full member-cycle collection binding — the assigned pool + its claim's nominee bank accounts. */
 export interface MemberContributionBinding extends AssignedPoolRef {
   readonly assigned: true;

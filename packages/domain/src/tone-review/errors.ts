@@ -4,7 +4,7 @@
 // framework-agnostic domain error carrying a structured denial, with a
 // `toErrorResponse(requestId)` projector into the transport `ErrorResponse`
 // envelope. The HTTP adapter (the apps/api error-mapping middleware) catches the
-// throw and maps it to HTTP 409 `tone-review-required` — the symmetric move to the
+// throw and maps it to HTTP 409 `tone_review.required` — the symmetric move to the
 // RBAC guard's 403 `authz.forbidden`.
 //
 // FRAMEWORK-AGNOSTIC. No Fastify/HTTP import (the rbac/check.ts precedent). The
@@ -42,7 +42,7 @@ export interface ToneReviewDenial {
 /**
  * The namespaced error code for a tone-review denial (`<domain>.<action>` per
  * architecture §3.2). Maps to HTTP 409 at the transport boundary (matches Story
- * 2.4's `tone-review-required` publish contract).
+ * 2.4's `tone_review.required` publish contract).
  */
 export const TONE_REVIEW_REQUIRED_CODE = 'tone_review.required';
 

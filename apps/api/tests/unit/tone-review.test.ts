@@ -210,7 +210,7 @@ describe('toneReviewEventToAuditInput (Story 2.2, AC4 — writer-acceptable mapp
   });
 });
 
-describe('error-mapping → 409 tone-review-required (Story 2.2, AC5)', () => {
+describe('error-mapping → 409 tone_review.required (Story 2.2, AC5)', () => {
   it('maps ToneReviewRequiredError to HTTP 409 with the projected envelope', () => {
     const result = toneReview.evaluateToneReviewGate({
       signoff: null,

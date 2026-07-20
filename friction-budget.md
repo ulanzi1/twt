@@ -493,6 +493,26 @@ mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a 
 page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface,
 which this story does not touch.
 
+**Story 8.2 disposition (declaration affirmed, no new row):** the My Pool card
+(`apps/mobile/components/active-contribution/ActiveContributionCard.tsx`,
+`useActiveContributionQuery.ts`, `toneGradient.ts`, and its home-tab mount in
+`apps/mobile/app/(tabs)/index.tsx`) is a **read-only, conditionally-rendered, ambient-status**
+home element — identical in character to the Story 3.7 lock-in clock and Story 3.8 renewal
+widgets already affirmed. It displays a pool shortform + the deceased member's family + the
+snapshotted fixed amount + a day-granular days-remaining countdown + a confirmed-only progress
+meter + a 15-day tone-gradient nudge; for a member who is not `active`-and-assigned-to-a-`live`-pool
+it renders `null` with no visible change (self-suppression), and a loading/error/absent read
+renders nothing (fail-soft). The **one interactive element** is the **contribute CTA** — it is
+**user-initiated, non-blocking**, and navigates to the (Story 8.4) contribution payment flow;
+it adds no forced step, no form, and no gate. The tone gradient is explicitly *calm → factual →
+gently-urgent-never-panicked*: **no urgency theater, no scarcity language, no red countdown, no
+per-second tick** (UX-DR25; enforced by the `microcopy` scarcity/panic gate now scanning the
+`contribution` namespace). Zero gratuitous friction introduced; ledger reviewed, no new row
+warranted. The **page-weight baseline is unchanged**: all new files are in the authenticated
+mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the
+page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which
+this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

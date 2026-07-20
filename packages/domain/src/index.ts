@@ -158,6 +158,11 @@ export * as claim from './claim/index.js';
 // reducer + single-writer projector). The THIRD event-derived-state primitive; twin
 // of `claim` + `member`. Consumed by the Story 7.3 spawn saga + Epic 7/9 downstream.
 export * as pool from './pool/index.js';
+// Story 8.1 — alert lifecycle primitive (alerts table + alert.* state machine + pure
+// reducer + single-writer projector + deterministic alert_id + the cycle-open mint driver).
+// The FOURTH event-derived-state primitive; twin of `pool`/`claim`/`member`. Consumes Epic 7's
+// `cycle.frozen` (the cycle-open trigger, apps/jobs) and is read by Epic 8's contribution surfaces.
+export * as alert from './alert/index.js';
 // Story 7.1 (Task 6) — pool-snapshot migration adapters (§1.6 read-through-adapters).
 // The FIRST real adapter (pool v1); selected by `format_version` via readPoolSnapshot.
 export * as snapshotAdapters from './snapshot-adapters/index.js';

@@ -376,6 +376,58 @@ describe('runCycleSpawnChild — finalize success', () => {
   });
 });
 
+describe('runCycleSpawnChild — cycle-open alert enqueue seam (Story 8.1, D4)', () => {
+  it('fires enqueueCycleOpenAlert with the cycle coordinates when finalize emits cycle.frozen', async () => {
+    const cycleId = randomUUID();
+    const pariwarId = randomUUID();
+    const spec = childSpec({ cycleId, pariwarId, poolIndex: 0, claimCaseId: randomUUID() });
+    spawnChildPoolMock.mockResolvedValue({
+      poolId: spec.poolId,
+      poolCanonicalIdentifier: spec.poolCanonicalIdentifier,
+      spawned: true,
+    });
+    finalizeCycleIfCompleteMock.mockResolvedValue({ frozen: true, alreadyFrozen: false, committedCount: 2 });
+    const enqueueCycleOpenAlert = vi.fn().mockResolvedValue(undefined);
+    const envelope = childEnvelope(spec);
+
+    await runCycleSpawnChild(makeDeps({ enqueueCycleOpenAlert }), envelope);
+
+    expect(enqueueCycleOpenAlert).toHaveBeenCalledTimes(1);
+    expect(enqueueCycleOpenAlert).toHaveBeenCalledWith({
+      cycleId,
+      pariwarId,
+      requestId: envelope.requestId,
+      actorId: envelope.actorId,
+      traceId: envelope.traceId,
+    });
+  });
+
+  it('does NOT enqueue when this child was not the finalizer (frozen: false)', async () => {
+    const spec = childSpec({ cycleId: randomUUID(), pariwarId: randomUUID(), poolIndex: 0, claimCaseId: randomUUID() });
+    spawnChildPoolMock.mockResolvedValue({ poolId: spec.poolId, poolCanonicalIdentifier: spec.poolCanonicalIdentifier, spawned: true });
+    finalizeCycleIfCompleteMock.mockResolvedValue({ frozen: false, alreadyFrozen: false, committedCount: 1 });
+    const enqueueCycleOpenAlert = vi.fn().mockResolvedValue(undefined);
+
+    await runCycleSpawnChild(makeDeps({ enqueueCycleOpenAlert }), childEnvelope(spec));
+
+    expect(enqueueCycleOpenAlert).not.toHaveBeenCalled();
+  });
+
+  it('swallows an enqueue failure (best-effort) — the committed freeze is never failed', async () => {
+    const spec = childSpec({ cycleId: randomUUID(), pariwarId: randomUUID(), poolIndex: 0, claimCaseId: randomUUID() });
+    spawnChildPoolMock.mockResolvedValue({ poolId: spec.poolId, poolCanonicalIdentifier: spec.poolCanonicalIdentifier, spawned: true });
+    finalizeCycleIfCompleteMock.mockResolvedValue({ frozen: true, alreadyFrozen: false, committedCount: 2 });
+    const enqueueCycleOpenAlert = vi.fn().mockRejectedValue(new Error('boss down'));
+    const onAlarm = vi.fn();
+
+    // Resolves normally (does not reject) even though the enqueue threw.
+    const result = await runCycleSpawnChild(makeDeps({ enqueueCycleOpenAlert, onAlarm }), childEnvelope(spec));
+
+    expect(result).toEqual({ poolId: spec.poolId, spawned: true, frozen: true });
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('failed to enqueue cycle-open alert'));
+  });
+});
+
 describe('runCycleSpawnChild — finalize failure records the breadcrumb', () => {
   it('records cycle.spawn.aborted with the finalize error reason, then rethrows', async () => {
     const cycleId = randomUUID();

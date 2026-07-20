@@ -169,6 +169,24 @@ export const QUEUE_NAMES = {
    * in isolation. Job class A (cycle-open burst).
    */
   CYCLE_SPAWN_CHILD: 'cycle.spawn.child',
+  /**
+   * Cycle-open alert trigger — one per cycle-freeze (Story 8.1, Task 8). Enqueued POST-COMMIT
+   * by the cycle-spawn CHILD worker the instant `finalizeCycleIfComplete` emits `cycle.frozen`
+   * (the primary path), and re-enqueued by the self-healing recovery sweep for any cycle that
+   * has a cycle.frozen but no minted alert (D4 — enqueue primary, sweep recovery). singletonKey
+   * = cycle_id (at-least-once; the mint is idempotent by deriveAlertId, so a redelivery no-ops).
+   * The worker loads the cycle.frozen payload, resolves the AR-18 time_critical signal, and mints
+   * the alert draft → frozen → published → live (alert.openCycleAlert). Job class A (cycle-open burst).
+   */
+  CYCLE_OPEN_ALERT: 'cycle.open.alert',
+  /**
+   * Cycle-open alert RECOVERY sweep — the self-healing cron (Story 8.1, Task 8; D4). Scans for
+   * cycle streams that carry a `cycle.frozen` but have no minted alert (a dropped/failed primary
+   * enqueue) and re-enqueues CYCLE_OPEN_ALERT for each. RECOVERY-ONLY — the post-commit enqueue is
+   * the normal route; this exists to heal a lost job, NOT to be the hot path. Cross-tenant scan on
+   * the BYPASSRLS service pool, bounded per run. Job class C (background cron).
+   */
+  CYCLE_OPEN_ALERT_SWEEP: 'cycle.open.alert.sweep',
 } as const;
 
 /** Union of the registered queue names. */

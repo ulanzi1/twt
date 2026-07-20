@@ -447,6 +447,52 @@ route accepts an operator-on-behalf path (the `claim.file` helpline capability, 
 grieving family unable to self-file is covered. Discharged **by reference** to Story 0.7's fallback-handler
 ledger — recorded so the AR-61 line reads as discharged, not omitted.
 
+**Story 7.10 disposition (declaration affirmed, no new row):** the pool-engine
+onboarding tutorial (`apps/mobile/components/pool-onboarding/PoolOnboardingTutorial.tsx`,
+`PoolOnboardingSettingsEntry.tsx`, `pool-onboarding-gate.ts`, `usePoolOnboardingGate.ts`,
+the `apps/mobile/app/(pool-onboarding)/` route group, the home-tab mount in
+`apps/mobile/app/(tabs)/index.tsx`, and the route registration in `apps/mobile/app/_layout.tsx`)
+introduces **zero deliberate friction**:
+
+(1) **The 3-screen tutorial itself — skippable, re-viewable, never gating.** Unlike the
+Story 3.2 forced-OTP row or the 6.8 forced-dual-account row, the tutorial imposes no
+requirement to proceed with anything — it explains pool-bound semantics, the letter
+code, and the out-of-band policy, and a member may tap **Skip** at any point (AC4: "skipping
+is permitted"). It never blocks access to any other feature or flow; it is purely
+educational and calm-register (UX-DR79), the same *ambient, read-only-leaning* character
+as the Story 3.7 lock-in clock widget and Story 4.7 `<MemberStatusPanel>` already affirmed.
+
+(2) **The Skip-confirm dialog — friction-REDUCING, not imposed.** The "Skip for now? You
+can view this anytime from settings" confirm is a single tap-through that exists to prevent
+an *accidental* skip, not to make skipping harder — it is the same class as the
+`<SaveAndResumeAffordance>` (Story 6.2) and `<CallHelplineCTA>` friction-removing affordances
+already affirmed: it reassures the member the tutorial isn't a one-shot gate, lowering the
+perceived cost of skipping rather than raising it. No step-up, no OTP, no payment, no upload.
+
+(3) **`PoolOnboardingSettingsEntry` home-tab entry point — user-initiated, non-blocking.**
+Identical in character to the Story 3.9/3.10/3.11/4.7/6.2/6.12 nav-tile entries already
+affirmed (`<LifeEventsEntry>`, `<WithdrawalEntry>`, `<DataExportEntry>`,
+`<MembershipStatusEntry>`, `<ClaimProxyFlowEntry>`, `<ClaimPointOfContactEntry>`): an
+ambient, chromeless tile that navigates to the tutorial only when the member deliberately
+taps it. No forced step, no form, no gate.
+
+(4) **`pool-onboarding-gate.ts` / `usePoolOnboardingGate.ts` — invisible plumbing, not a
+friction surface.** The MMKV first-entry seen-flag and the forward-compat hook (Epic 8 will
+call it; **not** a live auto-launch call site this story wires — see Dev Notes) are pure
+storage/state logic, the same category as the Story 6.2/6.12 treatment of
+`claim-steps.ts`/`claim-draft.ts`/`filed-claim.ts` — not a member-facing interaction
+themselves.
+
+(5) **Route group + test scaffolding:** `apps/mobile/app/(pool-onboarding)/_layout.tsx` +
+`index.tsx` are plain routing/hosting chrome for item (1); `apps/mobile/tests/unit/pool-onboarding-gate.test.ts`
+is test scaffolding. Neither is a friction surface.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The
+**page-weight baseline is unchanged**: all new and modified files are in the authenticated
+mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op); the
+page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface,
+which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

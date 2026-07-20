@@ -1,0 +1,36 @@
+{
+  "screen1.title": "What is a pool?",
+  "screen1.body": "Each cycle, the system places you in one pool. Your contribution reaches one nominee family and helps them.",
+  "screen1.progress_a11y": "Screen one: what is a pool",
+
+  "screen2.title": "Your pool's letter code",
+  "screen2.body": "Every pool has a letter code — for example, “Pool A”. This code is always there.",
+  "screen2.body2": "A pool may also be given a chosen name later, but the letter code always stays the same. A permanent identifier is kept for the record too.",
+  "screen2.progress_a11y": "Screen two: your pool's letter code",
+
+  "screen3.title": "If you accidentally pay outside the system",
+  "screen3.body": "If you give directly to a family, it is honored with dignity.",
+  "screen3.body2": "And if a payment reaches the wrong pool, the helpdesk works with you to sort it out — your pool assignment stays as it is.",
+  "screen3.progress_a11y": "Screen three: if you accidentally pay outside the system",
+
+  "button.next": "Next",
+  "button.next_a11y": "Next",
+  "button.next_hint": "Go to the next screen",
+  "button.back": "Back",
+  "button.back_a11y": "Back",
+  "button.back_hint": "Return to the previous screen",
+  "button.skip": "Skip for now",
+  "button.skip_a11y": "Skip for now",
+  "button.skip_hint": "Close this intro for now",
+  "button.done": "Done",
+  "button.done_a11y": "Done",
+  "button.done_hint": "Finish the intro and close it",
+
+  "skip_confirm.title": "Skip for now?",
+  "skip_confirm.body": "You can view this anytime from settings.",
+  "skip_confirm.confirm": "Yes, skip",
+  "skip_confirm.cancel": "No, continue",
+
+  "entry_label": "How the pool works",
+  "entry_hint": "View the pool intro again"
+}

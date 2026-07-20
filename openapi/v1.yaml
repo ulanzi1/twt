@@ -2485,6 +2485,17 @@ components:
       required:
         - state
       additionalProperties: false
+    PoolOnboardingOutcomeRequest:
+      type: object
+      properties:
+        outcome:
+          type: string
+          enum:
+            - completed
+            - skipped
+      required:
+        - outcome
+      additionalProperties: false
     WaConfigDto:
       type: object
       properties:
@@ -5074,6 +5085,33 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: No active opt-in to revoke
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/pool-onboarding-tutorial:
+    post:
+      summary: Record the member pool-onboarding tutorial outcome (completed | skipped)
+      description: Records the authenticated member’s onboarding-tutorial outcome as a member-level audit line for analytics (completed and skipped are distinct). The app calls this best-effort / fire-and-forget — the client’s local (MMKV) flag is the authoritative first-entry suppressor, so a failed call never blocks the tutorial’s dismissal nor re-shows it. Returns 204 (no body).
+      tags:
+        - pool-onboarding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PoolOnboardingOutcomeRequest"
+      responses:
+        "204":
+          description: Outcome recorded
+        "400":
+          description: Validation failed (outcome must be completed | skipped)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
           content:
             application/json:
               schema:

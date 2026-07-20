@@ -168,6 +168,9 @@ const { CreateWaOptInResponse, WaOptInStatusResponse, RevokeWaOptInResponse } = 
 // Member-session-gated; the tg-webhook-processor worker advances PENDING → ACTIVE out-of-band.
 const { TelegramOptInRequestResponse, TelegramOptInStatusResponse, RevokeTelegramOptInResponse } =
   await import('../src/telegram-opt-in/index.js');
+// Story 7.10 — the member pool-onboarding-tutorial outcome DTO (record completion/skip). Member-session
+// -gated; recorded server-side as a member-level audit line for analytics (best-effort telemetry).
+const { PoolOnboardingOutcomeRequest } = await import('../src/pool-onboarding/index.js');
 // Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
 const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
   await import('../src/degraded-mode/index.js');
@@ -403,6 +406,14 @@ const telegramOptInComponents = {
   RevokeTelegramOptInResponse: RevokeTelegramOptInResponse.openapi('RevokeTelegramOptInResponse'),
 } as const;
 for (const [name, schema] of Object.entries(telegramOptInComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 7.10 — member pool-onboarding-tutorial outcome component (record completion/skip).
+const poolOnboardingComponents = {
+  PoolOnboardingOutcomeRequest: PoolOnboardingOutcomeRequest.openapi('PoolOnboardingOutcomeRequest'),
+} as const;
+for (const [name, schema] of Object.entries(poolOnboardingComponents)) {
   registry.register(name, schema);
 }
 
@@ -1496,6 +1507,27 @@ registry.registerPath({
     200: { description: 'Opt-in revoked', content: jsonOf(telegramOptInComponents.RevokeTelegramOptInResponse) },
     401: telegramOptInAuth,
     409: errorResponse('No active opt-in to revoke'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 7.10 — member pool-engine onboarding-tutorial outcome (member-session-gated) ──
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/pool-onboarding-tutorial',
+  summary: 'Record the member pool-onboarding tutorial outcome (completed | skipped)',
+  description:
+    'Records the authenticated member’s onboarding-tutorial outcome as a member-level audit line for ' +
+    'analytics (completed and skipped are distinct). The app calls this best-effort / fire-and-forget — ' +
+    'the client’s local (MMKV) flag is the authoritative first-entry suppressor, so a failed call never ' +
+    'blocks the tutorial’s dismissal nor re-shows it. Returns 204 (no body).',
+  tags: ['pool-onboarding'],
+  request: {
+    body: { content: jsonOf(poolOnboardingComponents.PoolOnboardingOutcomeRequest), required: true },
+  },
+  responses: {
+    204: { description: 'Outcome recorded' },
+    400: errorResponse('Validation failed (outcome must be completed | skipped)'),
+    401: errorResponse('Authentication required'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

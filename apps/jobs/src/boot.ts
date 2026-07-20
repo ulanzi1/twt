@@ -88,6 +88,7 @@ import {
 } from './claim-shepherd-assign.js';
 import { createAssignableRosterResolver } from './assignable-roster.js';
 import { DEFAULT_CHILD_LOCAL_CONCURRENCY, registerCycleSpawnWorkers } from './cycle-spawn.js';
+import { enqueueCycleOpenAlert, registerCycleOpenAlertWorkers } from './scheduler/cycle-open-alert.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -476,7 +477,19 @@ async function main(): Promise<void> {
       childConcurrency: POOL_SPAWN_CHILD_CONCURRENCY,
       assignmentSeam: poolDomain.createPoolAssignmentSeam(),
       resolveAssignableRoster: createAssignableRosterResolver({ pool }),
+      // Story 8.1 (Task 8; D4) — the PRIMARY cycle-open-alert enqueue seam: the child worker fires
+      // this POST-COMMIT the instant it emits cycle.frozen. Best-effort (a failed enqueue never
+      // fails the committed freeze); the recovery sweep below heals a dropped job.
+      enqueueCycleOpenAlert: (input) => enqueueCycleOpenAlert(boss, input),
     });
+
+    // ── Cycle-open alert trigger (Story 8.1, Task 8) — Class A (mint) + Class C (sweep) ──
+    // The mint worker consumes CYCLE_OPEN_ALERT (enqueued by the spawn child above + the sweep)
+    // and drives the cycle's alert draft → frozen → published → live (alert.openCycleAlert; AC3),
+    // reading degraded-mode for the AR-18 time_critical signal (AC4). The recovery sweep cron
+    // re-enqueues any cycle with a cycle.frozen but no minted alert (D4 — recovery only). `pool` is
+    // the BYPASSRLS service pool (the withPariwarScope pool + the cross-tenant sweep scan).
+    await registerCycleOpenAlertWorkers(boss, { pool });
 
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);

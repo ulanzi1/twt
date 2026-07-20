@@ -239,6 +239,12 @@ export * from './step_up_otps.js';
 // pool-state-invariant CI gate. `support_category` v1 = death_support ONLY (AC4;
 // _daan reserved for v2). Twin of Story 3.1 members / Story 6.1 claims.
 export * from './pools.js';
+// Story 8.1 — alert lifecycle anchor (alerts table + alert_lifecycle_state pgEnum).
+// `alerts.current_state` is a replay-derived cache, not the source of truth — guarded
+// by the DB trigger (migration 0078) + the alert-state-invariant CI gate. One alert per
+// contribution cycle (alert_id = deriveAlertId(cycle_id), 1:1 with the cycle; UNIQUE on
+// cycle_id). The FOURTH event-derived-state primitive (twin of members/claims/pools).
+export * from './alerts.js';
 // Story 7.1 (Task 6) — the HOT snapshot tier: `pool_snapshots` (one serialized snapshot
 // per row; append-only history for the last 12–18 months, §1.6). A plain append table
 // (NOT a state cache — no write-rejection trigger). Tenant-isolated (mirror pools).

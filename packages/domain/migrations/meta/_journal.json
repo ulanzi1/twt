@@ -1,552 +1,559 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1780909300668,
-			"tag": "0000_init-baseline",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1780980430872,
-			"tag": "0001_events-log",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1781143209744,
-			"tag": "0002_events-log-rls",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1781159182934,
-			"tag": "0003_pariwar-passport",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "7",
-			"when": 1781177450645,
-			"tag": "0004_role-grants",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "7",
-			"when": 1781197905463,
-			"tag": "0005_admin-identity-auth",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "7",
-			"when": 1781263474084,
-			"tag": "0006_audit-log-entries",
-			"breakpoints": true
-		},
-		{
-			"idx": 7,
-			"version": "7",
-			"when": 1781263902951,
-			"tag": "0007_audit-log-entries-rls",
-			"breakpoints": true
-		},
-		{
-			"idx": 8,
-			"version": "7",
-			"when": 1781420996274,
-			"tag": "0008_audit-integrity-checks",
-			"breakpoints": true
-		},
-		{
-			"idx": 9,
-			"version": "7",
-			"when": 1781421052882,
-			"tag": "0009_audit-integrity-checks-rls",
-			"breakpoints": true
-		},
-		{
-			"idx": 10,
-			"version": "7",
-			"when": 1781424852700,
-			"tag": "0010_audit-integrity-checks-invariants",
-			"breakpoints": true
-		},
-		{
-			"idx": 11,
-			"version": "7",
-			"when": 1781429850835,
-			"tag": "0011_audit-integrity-acknowledgements",
-			"breakpoints": true
-		},
-		{
-			"idx": 12,
-			"version": "7",
-			"when": 1781458743733,
-			"tag": "0012_idempotency-keys",
-			"breakpoints": true
-		},
-		{
-			"idx": 13,
-			"version": "7",
-			"when": 1781458903198,
-			"tag": "0013_idempotency-keys-rls",
-			"breakpoints": true
-		},
-		{
-			"idx": 14,
-			"version": "7",
-			"when": 1781985617257,
-			"tag": "0014_wakeful_franklin_storm",
-			"breakpoints": true
-		},
-		{
-			"idx": 15,
-			"version": "7",
-			"when": 1782007329993,
-			"tag": "0015_strong_cerise",
-			"breakpoints": true
-		},
-		{
-			"idx": 16,
-			"version": "7",
-			"when": 1782242967826,
-			"tag": "0016_motionless_stone_men",
-			"breakpoints": true
-		},
-		{
-			"idx": 17,
-			"version": "7",
-			"when": 1782287314442,
-			"tag": "0017_bumpy_norman_osborn",
-			"breakpoints": true
-		},
-		{
-			"idx": 18,
-			"version": "7",
-			"when": 1782316376228,
-			"tag": "0018_ordinary_venom",
-			"breakpoints": true
-		},
-		{
-			"idx": 19,
-			"version": "7",
-			"when": 1782355381470,
-			"tag": "0019_polite_penance",
-			"breakpoints": true
-		},
-		{
-			"idx": 20,
-			"version": "7",
-			"when": 1782356283729,
-			"tag": "0020_lively_doctor_strange",
-			"breakpoints": true
-		},
-		{
-			"idx": 21,
-			"version": "7",
-			"when": 1782531600000,
-			"tag": "0021_otp-rate-buckets",
-			"breakpoints": true
-		},
-		{
-			"idx": 22,
-			"version": "7",
-			"when": 1782618000000,
-			"tag": "0022_member-pariwar-selects",
-			"breakpoints": true
-		},
-		{
-			"idx": 23,
-			"version": "7",
-			"when": 1782704400000,
-			"tag": "0023_kyc-digilocker",
-			"breakpoints": true
-		},
-		{
-			"idx": 24,
-			"version": "7",
-			"when": 1782790800000,
-			"tag": "0024_member-kyc-profiles",
-			"breakpoints": true
-		},
-		{
-			"idx": 25,
-			"version": "7",
-			"when": 1782877200000,
-			"tag": "0025_member-nominees",
-			"breakpoints": true
-		},
-		{
-			"idx": 26,
-			"version": "7",
-			"when": 1782963600000,
-			"tag": "0026_member-medical-disclosures",
-			"breakpoints": true
-		},
-		{
-			"idx": 27,
-			"version": "7",
-			"when": 1783050000000,
-			"tag": "0027_vyawastha-shulk-receipts",
-			"breakpoints": true
-		},
-		{
-			"idx": 28,
-			"version": "7",
-			"when": 1783136400000,
-			"tag": "0028_renewal-valid-through-index",
-			"breakpoints": true
-		},
-		{
-			"idx": 29,
-			"version": "7",
-			"when": 1783222800000,
-			"tag": "0029_receipt-pariwar-utr-unique",
-			"breakpoints": true
-		},
-		{
-			"idx": 30,
-			"version": "7",
-			"when": 1783309200000,
-			"tag": "0030_member-addresses",
-			"breakpoints": true
-		},
-		{
-			"idx": 31,
-			"version": "7",
-			"when": 1783395600000,
-			"tag": "0031_member-postings",
-			"breakpoints": true
-		},
-		{
-			"idx": 32,
-			"version": "7",
-			"when": 1783482000000,
-			"tag": "0032_member-withdrawals",
-			"breakpoints": true
-		},
-		{
-			"idx": 33,
-			"version": "7",
-			"when": 1783568400000,
-			"tag": "0033_data-exports",
-			"breakpoints": true
-		},
-		{
-			"idx": 34,
-			"version": "7",
-			"when": 1783654800000,
-			"tag": "0034_rtbf-anonymization-grants",
-			"breakpoints": true
-		},
-		{
-			"idx": 35,
-			"version": "7",
-			"when": 1783741200000,
-			"tag": "0035_member-search-projection",
-			"breakpoints": true
-		},
-		{
-			"idx": 36,
-			"version": "7",
-			"when": 1783827600000,
-			"tag": "0036_member-validity-cache",
-			"breakpoints": true
-		},
-		{
-			"idx": 37,
-			"version": "7",
-			"when": 1783914000000,
-			"tag": "0037_member-device-tokens",
-			"breakpoints": true
-		},
-		{
-			"idx": 38,
-			"version": "7",
-			"when": 1784000400000,
-			"tag": "0038_pariwar-wa-config",
-			"breakpoints": true
-		},
-		{
-			"idx": 39,
-			"version": "7",
-			"when": 1784086800000,
-			"tag": "0039_whatsapp-send-status",
-			"breakpoints": true
-		},
-		{
-			"idx": 40,
-			"version": "7",
-			"when": 1784173200000,
-			"tag": "0040_consent-type-whatsapp-opt-in",
-			"breakpoints": true
-		},
-		{
-			"idx": 41,
-			"version": "7",
-			"when": 1784259600000,
-			"tag": "0041_pariwar-wa-config-webhook-credentials",
-			"breakpoints": true
-		},
-		{
-			"idx": 42,
-			"version": "7",
-			"when": 1784346000000,
-			"tag": "0042_member-wa-opt-in",
-			"breakpoints": true
-		},
-		{
-			"idx": 43,
-			"version": "7",
-			"when": 1784432400000,
-			"tag": "0043_wa-inbound-webhook-events",
-			"breakpoints": true
-		},
-		{
-			"idx": 44,
-			"version": "7",
-			"when": 1784518800000,
-			"tag": "0044_member-wa-opt-in-pending-member-uq",
-			"breakpoints": true
-		},
-		{
-			"idx": 45,
-			"version": "7",
-			"when": 1784605200000,
-			"tag": "0045_pariwar-telegram-config",
-			"breakpoints": true
-		},
-		{
-			"idx": 46,
-			"version": "7",
-			"when": 1784691600000,
-			"tag": "0046_member-telegram-opt-in",
-			"breakpoints": true
-		},
-		{
-			"idx": 47,
-			"version": "7",
-			"when": 1784778000000,
-			"tag": "0047_telegram-inbound-webhook-events",
-			"breakpoints": true
-		},
-		{
-			"idx": 48,
-			"version": "7",
-			"when": 1784864400000,
-			"tag": "0048_consent-type-telegram-opt-in",
-			"breakpoints": true
-		},
-		{
-			"idx": 49,
-			"version": "7",
-			"when": 1784950800000,
-			"tag": "0049_sms-rate-buckets",
-			"breakpoints": true
-		},
-		{
-			"idx": 50,
-			"version": "7",
-			"when": 1785037200000,
-			"tag": "0050_pariwar-degraded-mode-declarations",
-			"breakpoints": true
-		},
-		{
-			"idx": 51,
-			"version": "7",
-			"when": 1785123600000,
-			"tag": "0051_claims-lifecycle",
-			"breakpoints": true
-		},
-		{
-			"idx": 52,
-			"version": "7",
-			"when": 1785210000000,
-			"tag": "0052_intake-convergence",
-			"breakpoints": true
-		},
-		{
-			"idx": 53,
-			"version": "7",
-			"when": 1785296400000,
-			"tag": "0053_claim-documents",
-			"breakpoints": true
-		},
-		{
-			"idx": 54,
-			"version": "7",
-			"when": 1785382800000,
-			"tag": "0054_claim-peer-mesh",
-			"breakpoints": true
-		},
-		{
-			"idx": 55,
-			"version": "7",
-			"when": 1785469200000,
-			"tag": "0055_claim-ground-inspection",
-			"breakpoints": true
-		},
-		{
-			"idx": 56,
-			"version": "7",
-			"when": 1785555600000,
-			"tag": "0056_claim-nominee-bank",
-			"breakpoints": true
-		},
-		{
-			"idx": 57,
-			"version": "7",
-			"when": 1785642000000,
-			"tag": "0057_claim-nominee-bank-rank-check",
-			"breakpoints": true
-		},
-		{
-			"idx": 58,
-			"version": "7",
-			"when": 1785728400000,
-			"tag": "0058_consent-type-publication",
-			"breakpoints": true
-		},
-		{
-			"idx": 59,
-			"version": "7",
-			"when": 1785814800000,
-			"tag": "0059_claim-verifier-decisions",
-			"breakpoints": true
-		},
-		{
-			"idx": 60,
-			"version": "7",
-			"when": 1785901200000,
-			"tag": "0060_claim-shepherd-assignments",
-			"breakpoints": true
-		},
-		{
-			"idx": 61,
-			"version": "7",
-			"when": 1785987600000,
-			"tag": "0061_shepherd-contact-e164-check",
-			"breakpoints": true
-		},
-		{
-			"idx": 62,
-			"version": "7",
-			"when": 1786074000000,
-			"tag": "0062_state-trustee-cycle-freeze",
-			"breakpoints": true
-		},
-		{
-			"idx": 63,
-			"version": "7",
-			"when": 1786160400000,
-			"tag": "0063_claim-r9-voting",
-			"breakpoints": true
-		},
-		{
-			"idx": 64,
-			"version": "7",
-			"when": 1786246800000,
-			"tag": "0064_r9-outcome-trustee-phase",
-			"breakpoints": true
-		},
-		{
-			"idx": 65,
-			"version": "7",
-			"when": 1786333200000,
-			"tag": "0065_r9-panel-denied-reason-code",
-			"breakpoints": true
-		},
-		{
-			"idx": 66,
-			"version": "7",
-			"when": 1786419600000,
-			"tag": "0066_r9-clause-version-fk",
-			"breakpoints": true
-		},
-		{
-			"idx": 67,
-			"version": "7",
-			"when": 1786506000000,
-			"tag": "0067_r9-session-finalizer-and-tally-checks",
-			"breakpoints": true
-		},
-		{
-			"idx": 68,
-			"version": "7",
-			"when": 1786592400000,
-			"tag": "0068_concealment-assessments-and-trustee-r14-snapshot",
-			"breakpoints": true
-		},
-		{
-			"idx": 69,
-			"version": "7",
-			"when": 1786678800000,
-			"tag": "0069_trustee-concealment-override-reason-code",
-			"breakpoints": true
-		},
-		{
-			"idx": 70,
-			"version": "7",
-			"when": 1786765200000,
-			"tag": "0070_claim-appeal-flow",
-			"breakpoints": true
-		},
-		{
-			"idx": 71,
-			"version": "7",
-			"when": 1786851600000,
-			"tag": "0071_pools-lifecycle",
-			"breakpoints": true
-		},
-		{
-			"idx": 72,
-			"version": "7",
-			"when": 1786938000000,
-			"tag": "0072_pool-snapshots",
-			"breakpoints": true
-		},
-		{
-			"idx": 73,
-			"version": "7",
-			"when": 1787024400000,
-			"tag": "0073_pool-naming",
-			"breakpoints": true
-		},
-		{
-			"idx": 74,
-			"version": "7",
-			"when": 1787110800000,
-			"tag": "0074_pool-spawn-idempotency-key",
-			"breakpoints": true
-		},
-		{
-			"idx": 75,
-			"version": "7",
-			"when": 1787197200000,
-			"tag": "0075_pool-fixed-amount-schedule",
-			"breakpoints": true
-		},
-		{
-			"idx": 76,
-			"version": "7",
-			"when": 1787283600000,
-			"tag": "0076_pool-fixed-amount-genesis-backfill",
-			"breakpoints": true
-		},
-		{
-			"idx": 77,
-			"version": "7",
-			"when": 1787370000000,
-			"tag": "0077_pool-fixed-amount-max-check",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1780909300668,
+      "tag": "0000_init-baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780980430872,
+      "tag": "0001_events-log",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781143209744,
+      "tag": "0002_events-log-rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781159182934,
+      "tag": "0003_pariwar-passport",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781177450645,
+      "tag": "0004_role-grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781197905463,
+      "tag": "0005_admin-identity-auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781263474084,
+      "tag": "0006_audit-log-entries",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781263902951,
+      "tag": "0007_audit-log-entries-rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781420996274,
+      "tag": "0008_audit-integrity-checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781421052882,
+      "tag": "0009_audit-integrity-checks-rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781424852700,
+      "tag": "0010_audit-integrity-checks-invariants",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781429850835,
+      "tag": "0011_audit-integrity-acknowledgements",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781458743733,
+      "tag": "0012_idempotency-keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781458903198,
+      "tag": "0013_idempotency-keys-rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781985617257,
+      "tag": "0014_wakeful_franklin_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1782007329993,
+      "tag": "0015_strong_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1782242967826,
+      "tag": "0016_motionless_stone_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782287314442,
+      "tag": "0017_bumpy_norman_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782316376228,
+      "tag": "0018_ordinary_venom",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782355381470,
+      "tag": "0019_polite_penance",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782356283729,
+      "tag": "0020_lively_doctor_strange",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782531600000,
+      "tag": "0021_otp-rate-buckets",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782618000000,
+      "tag": "0022_member-pariwar-selects",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1782704400000,
+      "tag": "0023_kyc-digilocker",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1782790800000,
+      "tag": "0024_member-kyc-profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782877200000,
+      "tag": "0025_member-nominees",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1782963600000,
+      "tag": "0026_member-medical-disclosures",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1783050000000,
+      "tag": "0027_vyawastha-shulk-receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1783136400000,
+      "tag": "0028_renewal-valid-through-index",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783222800000,
+      "tag": "0029_receipt-pariwar-utr-unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1783309200000,
+      "tag": "0030_member-addresses",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1783395600000,
+      "tag": "0031_member-postings",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783482000000,
+      "tag": "0032_member-withdrawals",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783568400000,
+      "tag": "0033_data-exports",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1783654800000,
+      "tag": "0034_rtbf-anonymization-grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1783741200000,
+      "tag": "0035_member-search-projection",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783827600000,
+      "tag": "0036_member-validity-cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1783914000000,
+      "tag": "0037_member-device-tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1784000400000,
+      "tag": "0038_pariwar-wa-config",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1784086800000,
+      "tag": "0039_whatsapp-send-status",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1784173200000,
+      "tag": "0040_consent-type-whatsapp-opt-in",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1784259600000,
+      "tag": "0041_pariwar-wa-config-webhook-credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1784346000000,
+      "tag": "0042_member-wa-opt-in",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1784432400000,
+      "tag": "0043_wa-inbound-webhook-events",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1784518800000,
+      "tag": "0044_member-wa-opt-in-pending-member-uq",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1784605200000,
+      "tag": "0045_pariwar-telegram-config",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1784691600000,
+      "tag": "0046_member-telegram-opt-in",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1784778000000,
+      "tag": "0047_telegram-inbound-webhook-events",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1784864400000,
+      "tag": "0048_consent-type-telegram-opt-in",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1784950800000,
+      "tag": "0049_sms-rate-buckets",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1785037200000,
+      "tag": "0050_pariwar-degraded-mode-declarations",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1785123600000,
+      "tag": "0051_claims-lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1785210000000,
+      "tag": "0052_intake-convergence",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1785296400000,
+      "tag": "0053_claim-documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1785382800000,
+      "tag": "0054_claim-peer-mesh",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1785469200000,
+      "tag": "0055_claim-ground-inspection",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1785555600000,
+      "tag": "0056_claim-nominee-bank",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1785642000000,
+      "tag": "0057_claim-nominee-bank-rank-check",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1785728400000,
+      "tag": "0058_consent-type-publication",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1785814800000,
+      "tag": "0059_claim-verifier-decisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1785901200000,
+      "tag": "0060_claim-shepherd-assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1785987600000,
+      "tag": "0061_shepherd-contact-e164-check",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1786074000000,
+      "tag": "0062_state-trustee-cycle-freeze",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1786160400000,
+      "tag": "0063_claim-r9-voting",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1786246800000,
+      "tag": "0064_r9-outcome-trustee-phase",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1786333200000,
+      "tag": "0065_r9-panel-denied-reason-code",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1786419600000,
+      "tag": "0066_r9-clause-version-fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1786506000000,
+      "tag": "0067_r9-session-finalizer-and-tally-checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1786592400000,
+      "tag": "0068_concealment-assessments-and-trustee-r14-snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1786678800000,
+      "tag": "0069_trustee-concealment-override-reason-code",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1786765200000,
+      "tag": "0070_claim-appeal-flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1786851600000,
+      "tag": "0071_pools-lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1786938000000,
+      "tag": "0072_pool-snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1787024400000,
+      "tag": "0073_pool-naming",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1787110800000,
+      "tag": "0074_pool-spawn-idempotency-key",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1787197200000,
+      "tag": "0075_pool-fixed-amount-schedule",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1787283600000,
+      "tag": "0076_pool-fixed-amount-genesis-backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1787370000000,
+      "tag": "0077_pool-fixed-amount-max-check",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1787456400000,
+      "tag": "0078_alerts-lifecycle",
+      "breakpoints": true
+    }
+  ]
 }

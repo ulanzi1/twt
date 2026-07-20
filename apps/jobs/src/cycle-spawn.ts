@@ -56,6 +56,21 @@ export interface CycleSpawnDeps {
   /** CYCLE_SPAWN_CHILD worker count (pg-boss `localConcurrency`) — sourced from
    *  `POOL_SPAWN_CHILD_CONCURRENCY` in boot.ts. Defaults to {@link DEFAULT_CHILD_LOCAL_CONCURRENCY}. */
   readonly childConcurrency?: number;
+  /**
+   * Story 8.1 (Task 8; D4) — the PRIMARY cycle-open-alert enqueue seam. Called POST-COMMIT the
+   * instant this child's finalize emits `cycle.frozen` (`fin.frozen === true`), carrying the cycle
+   * coordinates + the originating envelope context. Best-effort: a failed enqueue NEVER fails the
+   * child (the freeze is already committed) — the cycle-open recovery sweep heals a dropped job.
+   * Omitted → no enqueue (the pre-8.1 behaviour; tests omit it). boot.ts wires the real
+   * enqueueCycleOpenAlert (scheduler/cycle-open-alert.ts).
+   */
+  readonly enqueueCycleOpenAlert?: (input: {
+    readonly cycleId: string;
+    readonly pariwarId: string;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }) => Promise<void>;
   /** Failure alarm sink — a console stub by default. */
   readonly onAlarm?: (message: string) => void;
 }
@@ -314,6 +329,28 @@ export async function runCycleSpawnChild(
   } catch (err) {
     await recordAborted(err);
     throw err;
+  }
+
+  // (3) Story 8.1 (D4) — PRIMARY cycle-open-alert enqueue. THIS child was the last to commit and
+  // emitted cycle.frozen, so it is the single point that knows the cycle just froze. Enqueue the
+  // cycle-open alert POST-COMMIT (the freeze tx above already committed). Best-effort: a failed
+  // enqueue never fails the child (the freeze is durable) — the recovery sweep re-enqueues any
+  // cycle left with a cycle.frozen but no alert.
+  if (fin.frozen && deps.enqueueCycleOpenAlert) {
+    try {
+      await deps.enqueueCycleOpenAlert({
+        cycleId: spec.cycleId,
+        pariwarId,
+        requestId: envelope.requestId,
+        actorId: envelope.actorId,
+        traceId: envelope.traceId,
+      });
+    } catch (err) {
+      alarm(
+        `[jobs] cycle-spawn-child: failed to enqueue cycle-open alert for cycle ${spec.cycleId} — ` +
+          `${String(err)} (freeze is committed; the recovery sweep will heal it)`,
+      );
+    }
   }
 
   console.info(

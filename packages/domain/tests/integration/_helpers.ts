@@ -18,6 +18,7 @@ import type pg from 'pg';
 
 import { setPariwarScope, type Db } from '../../src/db.js';
 import {
+  alertId as toAlertId,
   claimId as toClaimId,
   clauseId as toClauseId,
   cycleFreezeCommitId as toCycleFreezeCommitId,
@@ -398,6 +399,54 @@ export async function seedPool(
   } finally {
     try {
       await tx.execute(sql.raw("SET LOCAL app.pool_state_writer = 'off'"));
+    } catch {
+      // tx already aborted (the seed insert itself failed) — nothing to reset.
+    }
+  }
+  return id;
+}
+
+export interface SeedAlertOptions {
+  alertId?: string;
+  cycleId?: string;
+  poolCount?: number;
+  currentState?: schema.AlertLifecycleState;
+  stateEventVersion?: number;
+  createdByActor?: string;
+}
+
+/**
+ * Insert one alerts row (Story 8.1) DIRECTLY (bypassing the projector). Like seedPool, run
+ * this BEFORE entering app scope (as the Docker superuser, RLS bypassed) so rows for BOTH
+ * tenants land regardless of the write-isolation policy; afterEach ROLLBACK reverts it. alerts
+ * is a SCOPED table — cross-Pariwar reads must return 0 rows.
+ *
+ * The alerts.current_state write-rejection trigger (Story 8.1 AC5) fires on BOTH INSERT and
+ * UPDATE (migration 0078 + alert/project.ts), so this helper sets the same session guard the
+ * projector uses for the one INSERT, then resets it immediately — tests that go on to exercise
+ * the trigger's rejection (a raw UPDATE with no guard) depend on the guard being back 'off'
+ * before they run. Returns the alert_id used.
+ */
+export async function seedAlert(
+  tx: Db,
+  pariwarId: string,
+  opts: SeedAlertOptions = {},
+): Promise<string> {
+  const id = opts.alertId ?? randomUUID();
+  await tx.execute(sql.raw("SET LOCAL app.alert_state_writer = 'on'"));
+  try {
+    await tx.insert(schema.alerts).values({
+      alertId: toAlertId(id),
+      cycleId: toCycleFreezeCommitId(opts.cycleId ?? randomUUID()),
+      pariwarId: toPariwarId(pariwarId),
+      poolCount: opts.poolCount ?? 1,
+      currentState: opts.currentState ?? 'live',
+      stateEventVersion: opts.stateEventVersion ?? 3,
+      createdByActor: opts.createdByActor ?? 'trustee-actor-1',
+    });
+  } finally {
+    try {
+      await tx.execute(sql.raw("SET LOCAL app.alert_state_writer = 'off'"));
     } catch {
       // tx already aborted (the seed insert itself failed) — nothing to reset.
     }

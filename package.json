@@ -53,6 +53,8 @@
     "pool-support-category:test": "vitest run scripts/pool-support-category-invariant",
     "pool-bound-payment:check": "tsx scripts/pool-bound-payment-invariant/check.ts",
     "pool-bound-payment:test": "vitest run scripts/pool-bound-payment-invariant",
+    "alert-state:check": "tsx scripts/alert-state-invariant/check.ts",
+    "alert-state:test": "vitest run scripts/alert-state-invariant",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

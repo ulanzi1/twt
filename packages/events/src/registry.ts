@@ -20,7 +20,7 @@
 // @twt/domain, so importing them here is the legal direction (domain must NOT
 // import contracts/events). Each record key equals its `type` string.
 
-import { claim, member, pool } from '@twt/domain';
+import { alert, claim, member, pool } from '@twt/domain';
 import type { z } from 'zod';
 
 export interface EventTypeRegistryEntry {
@@ -346,5 +346,43 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       'A single pool-spawn attempt failed → a RETRYABLE audit/diagnostic breadcrumb, NOT terminal (Story 7.3); a cycle stream may carry multiple aborted events followed by a successful cycle.frozen. Carries a NON-PII reason string. Never a spawn-lock.',
     schema: pool.CycleSpawnAbortedPayloadSchema,
+  },
+  // ── Story 8.1 — alert.* vocabulary (the alert lifecycle's own events_log stream) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/alert/events.ts) — appended on
+  // the ALERT stream (stream_id = alert_id = deriveAlertId(cycle_id); one alert per cycle).
+  // These are DOMAIN LIFECYCLE events (the state-machine transitions), NOT the Story 5.1
+  // AlertCategory notification payloads (contracts/src/alerts/alert.ts) — Story 8.8 dispatches
+  // a notification when it OBSERVES the alert.published lifecycle event (D6). This story emits
+  // only frozen/published/live (the cycle-open path); alert.closed is Story 8.9, alert.settled
+  // is Epic 9's exclusive.
+  'alert.frozen': {
+    type: 'alert.frozen',
+    description:
+      'Cycle-freeze consumed → the alert genesis event (draft → frozen), emitted once when the cycle-open trigger consumes cycle.frozen (Story 8.1); payload copies cycle_id + pariwar_id + pool_count + pool_ids + the trustee attestation from cycle.frozen. First event of the alert stream (stream_id = alert_id).',
+    schema: alert.AlertFrozenPayloadSchema,
+  },
+  'alert.published': {
+    type: 'alert.published',
+    description:
+      'Alert member-visible (frozen → published) (Story 8.1). Carries the AR-18 time_critical signal (true when a cycle_open_sms_bridge degraded-mode declaration is active, AC4). Story 8.8 subscribes to THIS lifecycle event to perform the cycle-open notification fan-out (the FR-23 nudge seam) — it is NOT itself a notification payload.',
+    schema: alert.AlertPublishedPayloadSchema,
+  },
+  'alert.live': {
+    type: 'alert.live',
+    description:
+      'Contribution window open (published → live) (Story 8.1) — the ratified extension of the epic AC (D10); nothing else in Epic 8 fires alert.live, and Story 8.2\'s My Pool card reads a live alert.',
+    schema: alert.AlertLivePayloadSchema,
+  },
+  'alert.closed': {
+    type: 'alert.closed',
+    description:
+      'Contribution window closed (live → closed) — the calendar-aware close-of-cycle transition (Story 8.9 owns the emitter; Story 8.1 authors the reducer arm + registers the type). No more contributions accepted.',
+    schema: alert.AlertClosedPayloadSchema,
+  },
+  'alert.settled': {
+    type: 'alert.settled',
+    description:
+      'Reconciliation complete + disbursed → terminal (closed → settled) — the yellow → green flip (Epic 9 owns the emitter EXCLUSIVELY; Story 8.1 authors the reducer arm + registers the type).',
+    schema: alert.AlertSettledPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

@@ -123,3 +123,7 @@ export * from './pool-canonical-counters-rls.js';
 // table is additionally APPEND-ONLY at the grant level (SELECT+INSERT, no UPDATE/DELETE).
 export * from './pool-fixed-amount-schedule-rls.js';
 export * from './pool-fixed-amount-emergency-attestations-rls.js';
+// Story 8.1 — alerts tenant-isolation policies (NOT cross-readable; mirror pools-rls). The
+// alerts.current_state write-rejection trigger (migration 0078) is ORTHOGONAL — RLS isolates by
+// tenant, the trigger blocks non-projector state writes regardless of tenant; both apply.
+export * from './alerts-rls.js';

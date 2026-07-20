@@ -69,7 +69,7 @@ the consuming surface (persistence deferred to Story 2.4).** The load-bearing ch
    projector mirrors `AuthorizationDeniedError`, surfaced at the `@twt/domain` top level for the
    error-mapping middleware.
 
-3. **HTTP 409 `tone-review-required`.** The error-mapping middleware maps `ToneReviewRequiredError`
+3. **HTTP 409 `tone_review.required`.** The error-mapping middleware maps `ToneReviewRequiredError`
    → 409 via its own projector, alongside the RBAC 403 branch — matching the Story 2.4 publish
    contract (epics.md L1490).
 
@@ -143,7 +143,7 @@ the consuming surface (persistence deferred to Story 2.4).** The load-bearing ch
 ## References
 
 - [Source: epics.md, Story 2.2 (L1424-1440)] — owning Story; ACs; `[GOVERNANCE]` label (L1403)
-- [Source: epics.md L1484-1490] — Story 2.4 consumer contract (409 `tone-review-required`; tone-reviewer attribution + `clause_version_id` on publish)
+- [Source: epics.md L1484-1490] — Story 2.4 consumer contract (409 `tone_review.required`; tone-reviewer attribution + `clause_version_id` on publish)
 - [Source: epics.md L1393] — FR-69 (tone guide enforced via copy review); [Source: epics.md L2782] — Pool-Reality prohibited frames
 - [Source: `docs/tone-guide.md` + `docs/tone-review-checklist.md`] — the human process this gate enforces
 - [Source: packages/domain/src/rbac/check.ts:219-256; packages/domain/src/errors.ts:85-110] — the `AuthorizationDeniedError` projector pattern mirrored here

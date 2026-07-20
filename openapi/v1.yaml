@@ -4216,7 +4216,7 @@ paths:
   /api/v1/p/{pariwarId}/niyamavali/clauses/drafts/{draftId}/publish:
     post:
       summary: Publish a clause draft (audit-logged, tone-review-gated)
-      description: Mints the immutable clause_versions row + a single audit line carrying the diff hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-notification hook (AC3 placeholder). Gated on a recorded non-author, content-current tone-review sign-off — without one, 409 tone-review-required (AC4). Requires niyamavali.amend.
+      description: Mints the immutable clause_versions row + a single audit line carrying the diff hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-notification hook (AC3 placeholder). Gated on a recorded non-author, content-current tone-review sign-off — without one, 409 tone_review.required (AC4). Requires niyamavali.amend.
       tags: *a16
       parameters:
         - schema:
@@ -4257,7 +4257,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: tone-review-required, or the draft is not signed off
+          description: tone_review.required, or the draft is not signed off
           content:
             application/json:
               schema:

@@ -102,7 +102,7 @@ export function errorMappingHandler(
     return;
   }
 
-  // (3a) Tone-review publish gate denial (Story 2.2) → 409 `tone-review-required`
+  // (3a) Tone-review publish gate denial (Story 2.2) → 409 `tone_review.required`
   // (matches Story 2.4 publish contract). Same own-projector pattern as the RBAC 403.
   if (error instanceof ToneReviewRequiredError) {
     void reply.status(409).send(error.toErrorResponse(requestId));

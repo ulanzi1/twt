@@ -193,7 +193,7 @@ export interface RequireToneReviewSignoffOptions {
  * — a missing context is a programming error → fail loud (500), the same contract as
  * `requirePermissionHook`. On deny it (1) emits `tone_review.publish_blocked` via the
  * dedicated audit seam, then (2) throws `ToneReviewRequiredError` → the error-mapping
- * middleware renders the 409 `tone-review-required`. The audit seam never throws, so
+ * middleware renders the 409 `tone_review.required`. The audit seam never throws, so
  * an audit failure cannot change the gate decision or crash the request.
  */
 export function requireToneReviewSignoff(

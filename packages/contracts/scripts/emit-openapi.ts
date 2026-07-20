@@ -759,7 +759,7 @@ registry.registerPath({
 // [requireAdminSession, scopeResolutionHook, requirePermissionHook] chain;
 // reads gate on niyamavali.amend|review, writes on niyamavali.amend (sign-off on
 // niyamavali.review). Publish additionally mounts the tone-review sign-off gate
-// (409 tone-review-required) — Story 2.2's gate, here mounted on its first route.
+// (409 tone_review.required) — Story 2.2's gate, here mounted on its first route.
 const niyTags = ['niyamavali'];
 const niyPariwarParams = z.object({ pariwarId: z.string().uuid() });
 const niyClauseParams = z.object({ pariwarId: z.string().uuid(), clauseId: z.string() });
@@ -1001,7 +1001,7 @@ registry.registerPath({
     'Mints the immutable clause_versions row + a single audit line carrying the diff ' +
     'hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-' +
     'notification hook (AC3 placeholder). Gated on a recorded non-author, content-' +
-    'current tone-review sign-off — without one, 409 tone-review-required (AC4). ' +
+    'current tone-review sign-off — without one, 409 tone_review.required (AC4). ' +
     'Requires niyamavali.amend.',
   tags: niyTags,
   request: { params: niyDraftParams },
@@ -1013,7 +1013,7 @@ registry.registerPath({
     401: niyAuth,
     403: niyForbidden,
     404: niyNotFound,
-    409: errorResponse('tone-review-required, or the draft is not signed off'),
+    409: errorResponse('tone_review.required, or the draft is not signed off'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

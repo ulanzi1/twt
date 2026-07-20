@@ -18,6 +18,7 @@ import {
   MedicalDisclosureStatusResponse,
   MemberFullSession,
   MemberLockInStatusResponse,
+  ActiveContributionCardResponse,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
@@ -60,6 +61,7 @@ import {
   type MedicalDiscloseRequest,
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
   type MemberLockInStatusResponse as MemberLockInStatusResult,
+  type ActiveContributionCardResponse as ActiveContributionCardResult,
   type MemberSignupCreateRequest,
   type MemberTermsResponse as MemberTermsResult,
   type MemberTermsAcceptRequest,
@@ -480,6 +482,24 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     memberLockInStatus(): Promise<MemberLockInStatusResult> {
       return call(`${MEMBER_HOME_BASE}/lock-in-status`, MemberLockInStatusResponse, undefined, true, 'GET');
+    },
+
+    // ── My Pool card (Story 8.2 — the first Epic-8 SURFACE) ──────────────────────
+    /**
+     * Read the server-authoritative My Pool home-card model — the topmost `<ActiveContributionCard>`.
+     * Returns the fully-resolved card (pool shortform + deceased-member family + snapshotted amount +
+     * days-remaining + confirmed-only progress + optional upcoming-amount line) ONLY for an `active`
+     * member assigned to a pool whose cycle alert is `live`; `{ assigned: false }` for every other case
+     * (the widget self-suppresses). Server-authoritative — the client resolves nothing (auth).
+     */
+    memberActiveContribution(): Promise<ActiveContributionCardResult> {
+      return call(
+        `${MEMBER_HOME_BASE}/active-contribution`,
+        ActiveContributionCardResponse,
+        undefined,
+        true,
+        'GET',
+      );
     },
 
     // ── Life Events panel (Story 3.9) ───────────────────────────────────────────

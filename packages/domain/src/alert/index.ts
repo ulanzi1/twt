@@ -18,3 +18,6 @@ export * from './id.js';
 // Story 8.1 (Task 6) — the persisted-state projector (the ONLY legitimate writer of
 // alerts.current_state) + mintAndOpenAlert (the cycle-open driver: frozen → published → live).
 export * from './project.js';
+// Story 8.2 (Task 2) — the alert READ accessors (listLiveAlertsForPariwar) the Epic-8 surfaces
+// consume. Reads the cached current_state projection; never advances it (presentation, not lifecycle).
+export * from './read.js';

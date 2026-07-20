@@ -4,7 +4,9 @@ Transport-layer contracts for the **contribution + UPI Intent + reconciliation**
 
 ## Landing Story
 
-Substantive contracts authored at **Stories 9.1 / 9.2 / 9.4+** — contribution lifecycle + UPI Intent surface + bank-statement intake + UTR matching engine per epics Epic 9. Contribution state machine derives from event replay via the `@twt/events` `StateMachine<S, E>` primitive (Story 1.3 substrate); bank-parser contracts cross-link `packages/bank-parsers/` (Story 9.2).
+**Story 8.2** lands first: a **read-model** response shape (`ActiveContributionCardResponse`) for the My Pool home-screen card — presentation only, no write/intent contracts. It reads existing event-derived state (alerts, pool assignment, confirmed-contribution count); it does not model the contribution lifecycle itself.
+
+Substantive *write/intent* contracts authored at **Stories 9.1 / 9.2 / 9.4+** — contribution lifecycle + UPI Intent surface + bank-statement intake + UTR matching engine per epics Epic 9. Contribution state machine derives from event replay via the `@twt/events` `StateMachine<S, E>` primitive (Story 1.3 substrate); bank-parser contracts cross-link `packages/bank-parsers/` (Story 9.2).
 
 ## Discipline reminders
 

@@ -4,5 +4,21 @@
   "wrong_pool.get_help": "सहायता लें",
   "amount_mismatch.title": "आपका भुगतान हम तक पहुँच गया",
   "amount_mismatch.body": "हमें आपका भुगतान मिल गया, लेकिन राशि इस चक्र के निर्धारित अंशदान से मेल नहीं खाई। हम इसे अपने-आप समायोजित नहीं कर सकते। 'सहायता लें' दबाएँ और हमारी हेल्पडेस्क आपके साथ मिलकर इसे सुलझा देगी।",
-  "amount_mismatch.get_help": "सहायता लें"
+  "amount_mismatch.get_help": "सहायता लें",
+  "active_contribution.title": "मेरा पूल",
+  "active_contribution.family_parichay": "{family} के परिवार के साथ",
+  "active_contribution.amount_label": "इस चक्र का अंशदान",
+  "active_contribution.progress": "{total} में से {confirmed} अंशदान पुष्ट",
+  "active_contribution.progress_a11y": "अब तक {total} में से {confirmed} अंशदान पुष्ट",
+  "active_contribution.days_a11y": "इस चक्र में {days} दिन शेष",
+  "active_contribution.tone.calm": "आपका पूल खुला है — जब सुविधा हो, तब योगदान करें",
+  "active_contribution.tone.calm_a11y": "आपका पूल खुला है। जब आप तैयार हों, तब योगदान कर सकते हैं।",
+  "active_contribution.tone.factual": "{days} दिन शेष",
+  "active_contribution.tone.factual_a11y": "इस चक्र में {days} दिन शेष",
+  "active_contribution.tone.closing": "अंतिम दिन — कृपया {family} के परिवार के सहयोग हेतु योगदान करें",
+  "active_contribution.tone.closing_a11y": "यह अंतिम दिन है। कृपया {family} के परिवार के सहयोग हेतु योगदान करें।",
+  "active_contribution.contribute_cta": "योगदान दें →",
+  "active_contribution.contribute_cta_a11y": "अपने पूल में योगदान करें",
+  "active_contribution.contribute_cta_hint": "अंशदान भुगतान स्क्रीन खोलता है",
+  "active_contribution.upcoming_amount": "{date} से, अंशदान ₹{amount} हो जाएगा"
 }

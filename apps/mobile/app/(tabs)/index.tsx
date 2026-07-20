@@ -1,5 +1,6 @@
 import { YStack } from 'tamagui'
 
+import { ActiveContributionCard } from 'components/active-contribution/ActiveContributionCard'
 import { ClaimProxyFlowEntry } from 'components/claim/ClaimProxyFlowEntry'
 import { ClaimPointOfContactEntry } from 'components/claim/ClaimPointOfContactEntry'
 import { DataExportEntry } from 'components/data-export/DataExportEntry'
@@ -15,7 +16,14 @@ import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
 import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
 import { YogdaanBahi } from 'components/yogdaan-bahi/YogdaanBahi'
 
-// Tab 1 — home. The lock-in clock widget (Story 3.7) is the TOPMOST element: for a member in `lock-in`
+// Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
+// for an `active` member assigned to a pool whose cycle alert is `live` it renders the contribution
+// card (pool + deceased-member family + amount + days-remaining + confirmed progress + tone gradient +
+// ≥56pt contribute CTA); for everyone else it self-suppresses (renders null) and the stack below shows
+// unchanged (fail-soft). It sits ABOVE the lock-in / renewal widgets (they apply to different lifecycle
+// phases and are mutually exclusive with an active-contribution member in practice).
+//
+// Below it, the lock-in clock widget (Story 3.7): for a member in `lock-in`
 // it renders the countdown + clause ref + unlock date; for everyone else it returns null and the home
 // content below shows unchanged (fail-soft — a failed status fetch simply renders nothing).
 //
@@ -29,6 +37,9 @@ import { YogdaanBahi } from 'components/yogdaan-bahi/YogdaanBahi'
 export default function YogdaanTab() {
   return (
     <YStack flex={1}>
+      {/* Story 8.2 — the My Pool card, TOPMOST. Self-suppresses unless the member is active + assigned
+          to a pool whose cycle alert is live. The Epic-8 home anchor of the 90-second contribution loop. */}
+      <ActiveContributionCard />
       <LockInClockWidget />
       <RenewalStatusWidget />
       <LifeEventsEntry />

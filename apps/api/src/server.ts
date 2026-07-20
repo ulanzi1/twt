@@ -28,6 +28,7 @@ import { registerKycModule } from './modules/kyc/index.js';
 import { registerLifeEventsModule } from './modules/life-events/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
+import { registerMemberPoolModule } from './modules/member-pool/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
 import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
@@ -151,6 +152,7 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // read seam over the 3.6b member.lock_in_entered marker — countdown + clause ref + unlock date).
   // Member-session-gated; NO write path / event / schema change.
   registerMemberHomeModule(app, deps);
+  registerMemberPoolModule(app, deps);
   // Story 4.7 — FR-12A member-validity read surfaces: member-self (GET /member/validity; redacted, not
   // audited) + admin (GET /p/:pariwarId/admin/members/:memberId/validity; scope-gated, audited) + the
   // AR-65 admin member-search (POST …/admin/members/search over member_search_projection). Redaction +

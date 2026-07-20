@@ -4,5 +4,21 @@
   "wrong_pool.get_help": "Get help",
   "amount_mismatch.title": "Your payment reached us",
   "amount_mismatch.body": "We received your payment, but the amount didn't match this cycle's fixed contribution. We can't adjust it automatically. Tap 'Get help' and our helpdesk will sort it out with you.",
-  "amount_mismatch.get_help": "Get help"
+  "amount_mismatch.get_help": "Get help",
+  "active_contribution.title": "My Pool",
+  "active_contribution.family_parichay": "Standing with {family}'s family",
+  "active_contribution.amount_label": "This cycle's contribution",
+  "active_contribution.progress": "{confirmed} of {total} contributions confirmed",
+  "active_contribution.progress_a11y": "{confirmed} of {total} contributions confirmed so far",
+  "active_contribution.days_a11y": "{days} days remaining in this cycle",
+  "active_contribution.tone.calm": "Your pool is open — contribute when you can",
+  "active_contribution.tone.calm_a11y": "Your pool is open. You can contribute when you are ready.",
+  "active_contribution.tone.factual": "{days} days remaining",
+  "active_contribution.tone.factual_a11y": "{days} days remaining in this cycle",
+  "active_contribution.tone.closing": "Last day — please contribute to support {family}'s family",
+  "active_contribution.tone.closing_a11y": "This is the last day. Please contribute to support {family}'s family.",
+  "active_contribution.contribute_cta": "Contribute →",
+  "active_contribution.contribute_cta_a11y": "Contribute to your pool",
+  "active_contribution.contribute_cta_hint": "Opens the contribution payment screen",
+  "active_contribution.upcoming_amount": "From {date}, the contribution becomes ₹{amount}"
 }

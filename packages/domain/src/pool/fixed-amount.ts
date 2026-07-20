@@ -188,6 +188,37 @@ export async function getEffectiveFixedAmount(
   return row.fixedAmount;
 }
 
+/**
+ * The NEXT scheduled fixed-amount change that has not yet taken effect at `asOf` — the Story 8.2 AC6
+ * "upcoming transition" source. Returns the earliest-starting row whose `effective_from` is strictly
+ * in the FUTURE (`effective_from > asOf`), ordered `effective_from ASC, version ASC`; `null` when no
+ * future change is scheduled. The My Pool card surfaces it gently ("from [date], contribution becomes
+ * ₹X") — DISPLAY context only; the card's CURRENT amount stays the pool's SNAPSHOTTED `fixed_amount`
+ * (D3), never this future value.
+ *
+ * This is deliberately DISTINCT from {@link resolveEffectiveFixedAmountRow} (the row effective NOW):
+ * a read surface needs to look FORWARD, not resolve the current window. Per-Pariwar (the schedule is
+ * a Pariwar-level record, not per-pool); RLS-scoped by the caller. O(1) rows (`ORDER BY … LIMIT 1`).
+ */
+export async function resolveUpcomingFixedAmountChange(
+  db: Db,
+  pariwarId: PariwarId,
+  asOf: Date,
+): Promise<PoolFixedAmountScheduleRow | null> {
+  const rows = await db
+    .select()
+    .from(poolFixedAmountSchedule)
+    .where(
+      and(
+        eq(poolFixedAmountSchedule.pariwarId, pariwarId),
+        gt(poolFixedAmountSchedule.effectiveFrom, asOf),
+      ),
+    )
+    .orderBy(asc(poolFixedAmountSchedule.effectiveFrom), asc(poolFixedAmountSchedule.version))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 // ── head-read helpers (the T&C latestTcVersion / currentOpenTcVersion precedent) ──
 
 /** The latest row by `version` REGARDLESS of window — the head the write path bumps

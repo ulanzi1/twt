@@ -123,6 +123,15 @@ scope:
     # scripts/microcopy/close-of-cycle.test.ts + the Dev Agent Record revert-sanity.
     - packages/i18n/locales/hi/close-of-cycle.json
     - packages/i18n/locales/en/close-of-cycle.json
+    # Story 8.2 — the `contribution` namespace strings (the My Pool <ActiveContributionCard> home
+    # surface: the 15-day tone-gradient nudge copy). Brings the member register + the scarcity/panic
+    # tone rules + the UX-DR73 numeral discipline to bite this copy so a "only N days left!" / "URGENT"
+    # frame or a Devanagari operational digit fails at PR time. Teeth proven (planted-violation fixture
+    # + revert-sanity), not merely scanned — see scripts/microcopy/contribution.test.ts + the Dev
+    # Agent Record revert-sanity ([[feedback_gate_scope_semantic_coverage]]: a green scan over
+    # unscanned files proves nothing).
+    - packages/i18n/locales/hi/contribution.json
+    - packages/i18n/locales/en/contribution.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

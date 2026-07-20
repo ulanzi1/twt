@@ -117,6 +117,12 @@ export * from './claims/index.js';
 // byte-identical (same posture as notifications/ + alerts/).
 export * from './pools/index.js';
 
+// Story 8.2 — the FIRST contributions contract: the My Pool home-screen card READ-MODEL response
+// shape (ActiveContributionCardResponse). Presentation only — reads existing event-derived state
+// (alerts, pool assignment, confirmed-contribution count); models NO write/intent lifecycle (9.x).
+// A member-session-gated read route → registers in openapi/v1.yaml like the member-home lock-in read.
+export * from './contributions/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

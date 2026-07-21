@@ -249,17 +249,24 @@ async function resolveContributorList(
   };
 }
 
-interface ResolveCtx {
+export interface ResolveCtx {
   readonly memberId: ReturnType<typeof ids.memberId>;
   readonly pariwarId: ReturnType<typeof ids.pariwarId>;
   readonly now: Date;
 }
 
 /** The member's assigned pool in the soonest-closing live cycle (D7) + the window anchor + N. */
-interface ChosenLivePool {
+export interface ChosenLivePool {
   readonly committedAt: Date;
   readonly poolCount: number;
   readonly cycleId: Awaited<ReturnType<typeof alertDomain.listLiveAlertsForPariwar>>[number]['cycleId'];
+  /**
+   * The alert stream id for the chosen live cycle (Story 8.4). The alert is 1:1 with the cycle
+   * (`deriveAlertId(cycle_id)`), and `listLiveAlertsForPariwar` already carries it, so it is surfaced here
+   * rather than re-derived — the UPI-intent path needs it to compute `deriveContributionReference({ memberId,
+   * alertId })` and to append the `contribution.utr-attested` claim on the alert stream.
+   */
+  readonly alertId: Awaited<ReturnType<typeof alertDomain.listLiveAlertsForPariwar>>[number]['alertId'];
   readonly pool: Extract<
     Awaited<ReturnType<typeof poolDomain.resolveAssignedPoolWithRosterForMember>>,
     { assigned: true }
@@ -274,7 +281,7 @@ interface ChosenLivePool {
  * a bad freeze commit / one cycle's binding-integrity error is SKIPPED so it cannot hide a legitimate
  * assignment in another live cycle. Throws only on an unexpected DB error — the caller fail-softs.
  */
-async function resolveMemberLivePool(
+export async function resolveMemberLivePool(
   tx: Db,
   request: FastifyRequest,
   ctx: ResolveCtx,
@@ -328,6 +335,7 @@ async function resolveMemberLivePool(
         committedAt: candidate.committedAt,
         poolCount: candidate.alert.poolCount,
         cycleId: candidate.alert.cycleId,
+        alertId: candidate.alert.alertId,
         pool: resolution,
       };
     }
@@ -374,6 +382,17 @@ async function resolveCard(
   //     the SNAPSHOTTED pool.fixedAmount (D3); this is additive future context.
   const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx, pariwarId, now);
 
+  // (10) The MEMBER'S OWN yellow-pill state (Story 8.4, AC4) — has THIS member self-attested a UTR for this
+  //      cycle? A per-member self-state (via the member's deterministic tr on the alert stream), NOT an
+  //      aggregate: it is DELIBERATELY separate from `progress` (which stays confirmed-only). Yellow never
+  //      pollutes the meter (epics.md:2939-2941).
+  const memberTr = poolDomain.deriveContributionReference({ memberId: ctx.memberId, alertId: chosen.alertId });
+  const attested = await contributionDomain.hasAttestedContribution(tx, {
+    pariwarId,
+    alertId: chosen.alertId,
+    tr: memberTr,
+  });
+
   return {
     assigned: true,
     poolLetterCode,
@@ -389,6 +408,8 @@ async function resolveCard(
     progress: { confirmedCount: 0, rosterSize: pool.rosterSize },
     upcomingAmountChange:
       upcoming === null ? null : { effectiveFrom: upcoming.effectiveFrom.toISOString(), newAmount: upcoming.fixedAmount },
+    // (AC4) The member's OWN yellow-pill state — separate from the confirmed-only meter above.
+    myContribution: attested ? 'attested' : 'none',
   };
 }
 

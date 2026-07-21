@@ -90,11 +90,16 @@ export function ActiveContributionCard() {
       : 0
 
   function onContribute(): void {
-    // TODO(8.4): open the <UPIIntentButton> contribution payment flow (upi://pay?…tr=… engine + UTR
-    // paste + yellow pill). Story 8.2 owns ONLY the ≥56pt CTA shell (role/label/hint); 8.4 builds the
-    // payment route + intent construction. Until 8.4 lands this navigates to the (not-yet-built) route.
+    // Story 8.4 — open the UPI Intent contribution flow (server-authoritative upi://pay build + UTR
+    // self-attestation → the yellow pill). The pay route owns the <UPIIntentButton> + UTR paste + the
+    // no-VPA/failure fail-soft states.
     router.push('/(contribution)/pay')
   }
+
+  // Story 8.4 (AC4) — the MEMBER'S OWN yellow-pill state. `attested` → the pending-reconciliation pill
+  // (told-us-they-paid, still verifying) REPLACES the contribute CTA; `none` → the contribute CTA. A
+  // per-member self-state — NEVER "confirmed/received/success/paid ✓", and it never touches the meter above.
+  const hasAttested = data.myContribution === 'attested'
 
   return (
     <YStack
@@ -194,19 +199,38 @@ export function ActiveContributionCard() {
         <View bg="$color" height={8} width={`${fillPct}%`} />
       </View>
 
-      {/* Contribute CTA — a ≥56pt touch target (AC5/UX-DR26/D10), warm-red accent (§1094: one accent
-          per surface), role=button + label + hint. The UPI payment engine is Story 8.4 (D10). */}
-      <Button
-        height={56}
-        theme="red"
-        justify="flex-start"
-        accessibilityRole="button"
-        accessibilityLabel={t('active_contribution.contribute_cta_a11y', undefined, NS)}
-        accessibilityHint={t('active_contribution.contribute_cta_hint', undefined, NS)}
-        onPress={onContribute}
-      >
-        {t('active_contribution.contribute_cta', undefined, NS)}
-      </Button>
+      {/* Story 8.4 (AC4) — the member's OWN state. Attested → the yellow pending-reconciliation pill
+          (ambient polite status, NEVER "confirmed/success"); otherwise the ≥56pt contribute CTA. */}
+      {hasAttested ? (
+        <View
+          bg="$yellow4"
+          px="$3"
+          py="$3"
+          borderWidth={1}
+          borderColor="$yellow8"
+          accessibilityRole="text"
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={t('active_contribution.yellow_pill_a11y', undefined, NS)}
+        >
+          <Text fontFamily="$body" fontSize="$4" color="$yellow11" accessibilityRole="text">
+            {t('active_contribution.yellow_pill', undefined, NS)}
+          </Text>
+        </View>
+      ) : (
+        // Contribute CTA — a ≥56pt touch target (AC5/UX-DR26), warm-red accent (§1094: one accent per
+        // surface), role=button + label + hint. Opens the Story 8.4 UPI Intent flow.
+        <Button
+          height={56}
+          theme="red"
+          justify="flex-start"
+          accessibilityRole="button"
+          accessibilityLabel={t('active_contribution.contribute_cta_a11y', undefined, NS)}
+          accessibilityHint={t('active_contribution.contribute_cta_hint', undefined, NS)}
+          onPress={onContribute}
+        >
+          {t('active_contribution.contribute_cta', undefined, NS)}
+        </Button>
+      )}
     </YStack>
   )
 }

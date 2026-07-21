@@ -10,7 +10,7 @@
 // defaulting to a placeholder for local dev.
 
 import * as Linking from 'expo-linking'
-import { Button } from 'tamagui'
+import { Button, type ThemeName } from 'tamagui'
 
 import { useClaimT } from '../../lib/claim-i18n'
 
@@ -20,15 +20,29 @@ export interface CallHelplineCTAProps {
   /** Override the default "Call us — we'll help" copy (e.g. nominee-review's "details look
    * wrong? Call us") while reusing the same tappable dial-out behavior. */
   label?: string
+  /** Visual weight — defaults to the standard low-emphasis chromeless treatment. Pass `false` + `theme` +
+   * `height` for a prominent primary-CTA rendering (e.g. contribution/pay.tsx's "not available yet" empty
+   * state) while still reusing the same dial-out logic — review finding: don't re-implement the tel:
+   * Linking call just to get a different button style. */
+  chromeless?: boolean
+  theme?: ThemeName
+  height?: number
 }
 
-export function CallHelplineCTA({ label }: CallHelplineCTAProps = {}): React.ReactElement {
+export function CallHelplineCTA({
+  label,
+  chromeless = true,
+  theme,
+  height,
+}: CallHelplineCTAProps = {}): React.ReactElement {
   const t = useClaimT()
   const text = label ?? t('shell.call_help')
   return (
     <Button
-      chromeless
-      size="$4"
+      chromeless={chromeless}
+      theme={theme}
+      height={height}
+      size={height ? undefined : '$4'}
       accessibilityRole="button"
       accessibilityLabel={text}
       onPress={() => {

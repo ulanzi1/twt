@@ -534,6 +534,24 @@ is a no-op → `member-app-native` stays a no-op); the public Sahyog Vivran rend
 read model is **Epic 11b's** consumer, not this story — the page-weight ceilings the gate has teeth on
 cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 8.4 disposition (declaration affirmed, no new row):** the UPI Intent + UTR self-attestation
+flow (`apps/mobile/app/(contribution)/pay.tsx`, `apps/mobile/components/active-contribution/UPIIntentButton.tsx`,
+the `myContribution` yellow-pill on `ActiveContributionCard.tsx`) is the **first Epic-8 WRITE surface**,
+but the interaction is the PRD's **friction-as-resource happy path** (`prd.md:566`): the 90-second loop is
+a single **user-initiated, non-blocking** tap ("Pay via UPI" → the OS UPI app) + **one** UTR-paste field on
+return — **no screenshot upload, no form, no forced step, no gate**. Everything the member sees is
+server-authoritative (amount + VPA + `tr` are never client-named; R4); the client just launches the intent
+and pastes back a reference. The **absence paths are calm, not coercive**: no VPA collected yet → the
+first-class *"UPI contribution isn't available for this pool yet — tap Get help"* fail-soft (D1), and
+no-UPI-app / invalid-UTR → per-app guidance + the Story 8.5 helpline seam — **no urgency theater, no
+scarcity, no panic** (the yellow-pill copy *reports state honestly* — "we're still checking it against our
+bank records" — it never claims "confirmed/success/paid ✓"; enforced by the `microcopy` gate on the
+`contribution` namespace). The single new payment endpoint pair is member-session-gated and non-blocking.
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is
+unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build is a
+no-op → `member-app-native` stays a no-op) + `apps/api` (excluded from the ledger) — the page-weight
+ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

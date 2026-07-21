@@ -20,6 +20,8 @@ import {
   MemberLockInStatusResponse,
   ActiveContributionCardResponse,
   PoolContributorListResponse,
+  ContributionIntentResponse,
+  ContributionAttestResponse,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
@@ -64,6 +66,10 @@ import {
   type MemberLockInStatusResponse as MemberLockInStatusResult,
   type ActiveContributionCardResponse as ActiveContributionCardResult,
   type PoolContributorListResponse as PoolContributorListResult,
+  type ContributionIntentRequest,
+  type ContributionIntentResponse as ContributionIntentResult,
+  type ContributionAttestRequest,
+  type ContributionAttestResponse as ContributionAttestResult,
   type MemberSignupCreateRequest,
   type MemberTermsResponse as MemberTermsResult,
   type MemberTermsAcceptRequest,
@@ -160,6 +166,7 @@ const MEDICAL_BASE = '/api/v1/member/medical-disclosure';
 const TERMS_BASE = '/api/v1/member/terms';
 const VYAWASTHA_SHULK_BASE = '/api/v1/member/vyawastha-shulk';
 const MEMBER_HOME_BASE = '/api/v1/member';
+const CONTRIBUTION_BASE = '/api/v1/member/contribution';
 const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
 const WITHDRAWAL_BASE = '/api/v1/member/withdrawal';
 const DATA_EXPORT_BASE = '/api/v1/member/data-export';
@@ -521,6 +528,30 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
         true,
         'GET',
       );
+    },
+
+    // ── UPI Intent + UTR self-attestation (Story 8.4 — the FIRST Epic-8 WRITE) ──────────────────────────
+    /**
+     * Build the server-authoritative UPI Intent for a pool contribution (Story 8.4). Resolves the member's
+     * assigned live pool → the nominee VPA (server-side) → the amount-locked `upi://pay` URL with the
+     * DETERMINISTIC `tr`. Returns `{ available: true, upiUrl, tr, amountInr, vpa, account }` to hand off to
+     * the OS UPI app — OR the first-class `{ available: false, reason }` fail-soft (no VPA collected yet /
+     * unassigned; the calm "not available yet — Get help" path, D1). `account` optionally switches to
+     * nominee #2 (FR-27). The client names NOTHING about the payment (R4) (auth).
+     */
+    memberContributionIntent(input?: ContributionIntentRequest): Promise<ContributionIntentResult> {
+      return call(`${CONTRIBUTION_BASE}/intent`, ContributionIntentResponse, input ?? {}, true);
+    },
+
+    /**
+     * Self-attest the UTR after returning from the UPI app (Story 8.4) — records a member CLAIM (the yellow
+     * pill), NOT a confirmed payment. The server recomputes `tr` from (memberId, alertId) and appends an
+     * idempotent `contribution.utr-attested` event; a re-paste for the same (member, alert) records ONE
+     * attestation (`idempotent: true`). Returns the member's OWN `myContribution: 'attested'` state — NO
+     * aggregate/confirmed count. Never flips green (that is Epic 9's exclusive reconciliation) (auth).
+     */
+    memberContributionAttest(input: ContributionAttestRequest): Promise<ContributionAttestResult> {
+      return call(`${CONTRIBUTION_BASE}/attest`, ContributionAttestResponse, input, true);
     },
 
     // ── Life Events panel (Story 3.9) ───────────────────────────────────────────

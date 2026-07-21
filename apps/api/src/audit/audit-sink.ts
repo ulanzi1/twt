@@ -109,6 +109,14 @@ export type AuthAuditEventType =
   | 'member_vyawastha_shulk.intent'
   | 'member_vyawastha_shulk.paid'
   | 'member_vyawastha_shulk.failure'
+  // Epic-8 pool contribution (Story 8.4) — the UPI Intent build + the UTR self-attestation (yellow pill).
+  //   intent  — a server-authoritative upi://pay was built (context: masked/non-PII — amount_inr, account),
+  //             OR the first-class no-VPA/unassigned fail-soft (context: reason). NO payee/UTR in context.
+  //   attested— a contribution.utr-attested claim was recorded (context: MASKED utr last-4 + idempotent flag).
+  //   failure — an intent/attest attempt was rejected (unassigned, not-live, bad-UTR, tr-mismatch).
+  | 'member_contribution.intent'
+  | 'member_contribution.attested'
+  | 'member_contribution.failure'
   // The Reference Code port-seam capture (D2/R5) — attribution_source stored; NO registry validation,
   // NO new lifecycle event (the 14-event member vocabulary is frozen). Context carries no PII.
   | 'member_attribution.captured'

@@ -21,8 +21,12 @@ import {
   computePendingAggregate,
   listConfirmedContributorsForPool,
 } from '../../../src/contribution/read.js';
+import { attestContributionUtr } from '../../../src/contribution/write.js';
+import { deriveContributionReference } from '../../../src/pool/index.js';
 import {
+  alertId as toAlertId,
   cycleFreezeCommitId as toCycleId,
+  memberId as toMemberId,
   poolId as toPoolId,
 } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
@@ -89,13 +93,25 @@ describe.skipIf(!hasDatabase)('listConfirmedContributorsForPool — confirmed-on
     const { cycleId, poolId } = await seedPoolForCycle(tx);
     const confirmedMember = randomUUID();
     const yellowMember = randomUUID();
+    const alertId = randomUUID();
     await seedConfirmed(tx, PARIWAR_A, poolId, confirmedMember);
-    // A hand-crafted yellow/self-attested event (Story 8.4's intent) — same pool, but NOT confirmed money.
-    await seedEvent(tx, PARIWAR_A, {
-      eventType: 'contribution.utr-attested',
-      payload: { poolId, memberId: yellowMember },
-    });
     await enterAppScope(client, PARIWAR_A);
+    // Seed the yellow claim via Story 8.4's REAL producer (attestContributionUtr + the real schema) — the
+    // invariant now bites against the actual producer, not a hand-crafted stub (Story 8.4, AC4). Same pool,
+    // but NOT confirmed money.
+    const tr = deriveContributionReference({
+      memberId: toMemberId(yellowMember),
+      alertId: toAlertId(alertId),
+    });
+    await attestContributionUtr(client, {
+      pariwarId: PARIWAR_A,
+      alertId: toAlertId(alertId),
+      poolId: toPoolId(poolId),
+      memberId: toMemberId(yellowMember),
+      tr,
+      utr: '123456789012',
+      actorId: yellowMember,
+    });
 
     const confirmed = await listConfirmedContributorsForPool(tx, {
       pariwarId: PARIWAR_A,

@@ -41,7 +41,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { CycleFreezeCommitId, MemberId, PariwarId, PoolId } from '../ids/index.js';
+import type { AlertId, CycleFreezeCommitId, MemberId, PariwarId, PoolId } from '../ids/index.js';
 import { eventsLog } from '../schema/events_log.js';
 
 /**
@@ -110,6 +110,34 @@ export async function listConfirmedContributorsForPool(
     if (typeof r.memberId === 'string' && r.memberId.length > 0) distinctIds.add(r.memberId);
   }
   return [...distinctIds].sort().map((memberId) => ({ memberId: memberId as MemberId }));
+}
+
+/**
+ * Whether THIS member has self-attested a contribution (yellow) for the alert (Story 8.4, AC4) — a
+ * MEMBER-SCOPED self-state read, NEVER an aggregate. Checks for a `contribution.utr-attested` event carrying
+ * the member's deterministic `tr` on the alert stream (the caller derives `tr =
+ * deriveContributionReference({ memberId, alertId })`). Transport-free. Tenant-scoped (RLS + the explicit
+ * `pariwar_id` predicate). This drives the card's `myContribution: 'none' | 'attested'` pill — it does NOT
+ * touch the confirmed-only aggregate meter (that stays `contribution.confirmed`-derived).
+ */
+export async function hasAttestedContribution(
+  db: Db,
+  { pariwarId, alertId, tr }: { readonly pariwarId: PariwarId; readonly alertId: AlertId; readonly tr: string },
+): Promise<boolean> {
+  const rows = await db
+    .select({ eventId: eventsLog.eventId })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.pariwarId, pariwarId),
+        eq(eventsLog.streamId, alertId),
+        // Yellow (attestation) ONLY — the exact single WRITE event type. Never widened to include green.
+        eq(eventsLog.eventType, 'contribution.utr-attested'),
+        sql`${eventsLog.payload} ->> 'tr' = ${tr}`,
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 /** The aggregate pending signal (AC2) — a count + an integer percentage, NO member-identifying detail. */

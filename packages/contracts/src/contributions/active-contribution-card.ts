@@ -34,6 +34,7 @@
 import { z } from 'zod';
 
 import { Iso8601Datetime } from '../_common/primitives.js';
+import { MyContributionStatus } from './upi-intent.js';
 
 /**
  * The confirmed-only progress meter data (AC4). `confirmedCount` is the count of
@@ -98,6 +99,11 @@ export const AssignedContributionCard = z
     daysRemaining: z.number().int().nonnegative(),
     progress: ActiveContributionProgress,
     upcomingAmountChange: UpcomingAmountChange.nullable(),
+    // (Story 8.4, AC4) The MEMBER'S OWN contribution state — `none` (contribute CTA) → `attested` (yellow
+    // pill: told-us-they-paid, still verifying). A PER-MEMBER self-state, NOT an aggregate: it is
+    // DELIBERATELY separate from `progress` (which stays confirmed-only — `{ confirmedCount, rosterSize }`).
+    // Never add a yellow/attested count to `progress`; that is the one change this contract exists to forbid.
+    myContribution: MyContributionStatus,
   })
   .strict();
 export type AssignedContributionCard = z.output<typeof AssignedContributionCard>;

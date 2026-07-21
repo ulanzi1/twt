@@ -6,3 +6,10 @@
 // confirms, or promotes contribution state (Epic 9 owns the producer; Story 8.4 owns yellow attestation).
 
 export * from './read.js';
+// Story 8.4 — the FIRST contribution WRITE surface: the `contribution.utr-attested` event vocabulary
+// (yellow pill; attestation_only:true) + the idempotent `attestContributionUtr` write primitive. Green
+// (`contribution.confirmed`) stays Epic 9's exclusive producer — NOT authored here.
+export * from './events.js';
+export * from './write.js';
+// Story 8.4 — the pure UPI Intent builder + the nominee-VPA resolver seam (returns absent today, D1).
+export * from './intent.js';

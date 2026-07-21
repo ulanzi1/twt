@@ -13,6 +13,7 @@
 //   3. Self-suppression discriminator (AC1): the response is a discriminated union on `assigned`;
 //      `{ assigned: false }` is the first-class absence signal the client renders as null.
 
+import { contribution } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -21,6 +22,11 @@ import {
   AssignedContributionCard,
   AssignedPoolContributorList,
   ConfirmedContributorRow,
+  ContributionAttestRequest,
+  ContributionAttestResponse,
+  ContributionIntentRequest,
+  ContributionIntentResponse,
+  ContributionUtr,
   PendingContributorsAggregate,
   PoolContributorListResponse,
 } from '../src/contributions/index.js';
@@ -36,6 +42,8 @@ const VALID_ASSIGNED = {
   daysRemaining: 12,
   progress: { confirmedCount: 0, rosterSize: 48 },
   upcomingAmountChange: null,
+  // Story 8.4 — the member's OWN yellow-pill state (per-member, NOT an aggregate).
+  myContribution: 'none' as const,
 };
 
 describe('AC4 — the progress meter is CONFIRMED-ONLY (no yellow/attested/pending field can exist)', () => {
@@ -203,5 +211,134 @@ describe('AC1 — contributor-list self-suppression discriminated union on `assi
       const leaky = { ...VALID_CONTRIBUTOR_LIST, [field]: 'x' };
       expect(AssignedPoolContributorList.safeParse(leaky).success, `list must reject ${field}`).toBe(false);
     }
+  });
+});
+
+// ── Story 8.4 — the UPI Intent + UTR self-attestation write shapes ──────────────────────────────────
+
+describe('Story 8.4 — the member card carries a per-member yellow state, never an aggregate one (AC4)', () => {
+  it('accepts myContribution `none` and `attested`', () => {
+    expect(AssignedContributionCard.parse({ ...VALID_ASSIGNED, myContribution: 'none' })).toBeTruthy();
+    expect(AssignedContributionCard.parse({ ...VALID_ASSIGNED, myContribution: 'attested' })).toBeTruthy();
+  });
+
+  it('REJECTS an unknown myContribution value (never `confirmed`/`paid`/`green`)', () => {
+    for (const bad of ['confirmed', 'paid', 'green', 'success']) {
+      expect(
+        AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, myContribution: bad }).success,
+        `card must reject myContribution=${bad}`,
+      ).toBe(false);
+    }
+  });
+
+  it('the yellow state does NOT bleed into the confirmed-only progress meter (still strict {confirmedCount,rosterSize})', () => {
+    // Re-assert after 8.4 makes yellow real: a yellow/attested count on `progress` is still rejected.
+    expect(
+      ActiveContributionProgress.safeParse({ confirmedCount: 0, rosterSize: 48, attestedCount: 3 }).success,
+    ).toBe(false);
+  });
+});
+
+describe('Story 8.4 — UPI Intent request/response (AC1/AC2)', () => {
+  it('the intent request is empty or an optional account switch', () => {
+    expect(ContributionIntentRequest.parse({})).toEqual({});
+    expect(ContributionIntentRequest.parse({ account: 2 })).toEqual({ account: 2 });
+  });
+
+  it('REJECTS an account other than 1/2, or the client naming the payee/amount (strict R4)', () => {
+    expect(ContributionIntentRequest.safeParse({ account: 3 }).success).toBe(false);
+    // The client can NEVER name pa/am/tr — those are server-resolved.
+    for (const field of ['vpa', 'amountInr', 'tr', 'pa', 'am']) {
+      expect(
+        ContributionIntentRequest.safeParse({ [field]: 'x' }).success,
+        `intent request must reject client-named ${field}`,
+      ).toBe(false);
+    }
+  });
+
+  it('the available intent carries the server-built URL + tr + amount + vpa + account + myContribution', () => {
+    const ok = ContributionIntentResponse.parse({
+      available: true,
+      upiUrl: 'upi://pay?pa=x@ok&am=310&cu=INR&tn=Pool%20F&tr=contrib-v1-abc',
+      tr: 'contrib-v1-abc',
+      amountInr: 310,
+      vpa: 'nominee@okhdfc',
+      account: 1,
+      myContribution: 'none',
+    });
+    expect(ok).toMatchObject({ available: true, amountInr: 310, myContribution: 'none' });
+    // myContribution is REQUIRED on the available branch (review finding — the field must be carried on
+    // every intent response so a member who already attested can be routed to confirmation, not re-shown
+    // the launch flow).
+    expect(
+      ContributionIntentResponse.safeParse({
+        available: true,
+        upiUrl: 'upi://pay?pa=x@ok&am=310&cu=INR&tn=Pool%20F&tr=contrib-v1-abc',
+        tr: 'contrib-v1-abc',
+        amountInr: 310,
+        vpa: 'nominee@okhdfc',
+        account: 1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('the unavailable intent is a first-class fail-soft on `available:false` with a reason + myContribution (D1)', () => {
+    for (const reason of ['unassigned', 'accounts_not_collected', 'account_not_found', 'vpa_not_collected']) {
+      expect(ContributionIntentResponse.parse({ available: false, reason, myContribution: 'none' })).toEqual({
+        available: false,
+        reason,
+        myContribution: 'none',
+      });
+    }
+    // A member can be unavailable AND already attested (e.g. an out-of-band payer, 8.10).
+    expect(
+      ContributionIntentResponse.parse({ available: false, reason: 'vpa_not_collected', myContribution: 'attested' }),
+    ).toMatchObject({ myContribution: 'attested' });
+    expect(ContributionIntentResponse.safeParse({ available: false, reason: 'boom', myContribution: 'none' }).success).toBe(false);
+    expect(ContributionIntentResponse.safeParse({ available: false, reason: 'unassigned' }).success).toBe(false);
+  });
+});
+
+describe('Story 8.4 — UTR attest request/response (AC3/AC4)', () => {
+  it('the attest request requires a tr + a format-valid UTR (12-digit or 22-alnum)', () => {
+    expect(ContributionAttestRequest.parse({ tr: 'contrib-v1-abc', utr: '123456789012' })).toBeTruthy();
+    expect(ContributionAttestRequest.parse({ tr: 't', utr: 'ABCDefgh1234567890ABCD' })).toBeTruthy();
+    expect(ContributionAttestRequest.safeParse({ tr: 't', utr: '12345' }).success).toBe(false);
+    expect(ContributionAttestRequest.safeParse({ utr: '123456789012' }).success).toBe(false); // tr required
+  });
+
+  it('the attest response is the yellow-pill view — NO confirmed/aggregate count field (the teeth)', () => {
+    const ok = ContributionAttestResponse.parse({ myContribution: 'attested', tr: 'contrib-v1-abc', idempotent: false });
+    expect(ok.myContribution).toBe('attested');
+    // A confirmed/count field can never appear on the yellow response (strict decoy teeth).
+    for (const field of ['confirmedCount', 'confirmed', 'raisedSoFar', 'green', 'count']) {
+      expect(
+        ContributionAttestResponse.safeParse({
+          myContribution: 'attested', tr: 't', idempotent: false, [field]: 1,
+        }).success,
+        `attest response must reject ${field}`,
+      ).toBe(false);
+    }
+  });
+
+  it('the attest response can only be `attested` — never `confirmed`/`none`', () => {
+    expect(ContributionAttestResponse.safeParse({ myContribution: 'none', tr: 't', idempotent: false }).success).toBe(false);
+    expect(ContributionAttestResponse.safeParse({ myContribution: 'confirmed', tr: 't', idempotent: false }).success).toBe(false);
+  });
+});
+
+// Review finding: `ContributionUtr`'s regex is a LOCAL literal, deliberately not imported from
+// `@twt/domain` at the source level (that import would pull `pg` into the mobile Metro bundle via
+// `contribution/write.ts` — see the `upi-intent.ts` header). A test-only cross-package import is safe
+// (tests never ship in a bundle) and gives the "MUST stay in sync" comment real, mechanical teeth: this
+// fails the moment either copy drifts from the other.
+describe('ContributionUtr regex stays byte-for-byte in sync with @twt/domain (review finding, mechanical)', () => {
+  it('the contract pattern source + flags match contribution.CONTRIBUTION_UTR_REGEX exactly', () => {
+    const contractPattern = ContributionUtr._def.checks.find(
+      (c): c is { kind: 'regex'; regex: RegExp } => c.kind === 'regex',
+    )?.regex;
+    expect(contractPattern).toBeInstanceOf(RegExp);
+    expect(contractPattern?.source).toBe(contribution.CONTRIBUTION_UTR_REGEX.source);
+    expect(contractPattern?.flags).toBe(contribution.CONTRIBUTION_UTR_REGEX.flags);
   });
 });

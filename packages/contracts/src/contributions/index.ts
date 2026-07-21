@@ -8,3 +8,7 @@ export * from './active-contribution-card.js';
 // Story 8.3 — the Live Contributor List read model (confirmed rows + aggregate pending). Confirmed-only,
 // PII-shielded, NO yellow/attested/pending-identity field (the load-bearing invariant as a `.strict()` shape).
 export * from './pool-contributor-list.js';
+// Story 8.4 — the FIRST contribution WRITE surface: UPI Intent + UTR self-attestation request/response
+// shapes + the member-scoped `myContribution` (yellow) status. Yellow is a per-member self-state, NEVER an
+// aggregate/confirmed count (the load-bearing invariant as a `.strict()` shape).
+export * from './upi-intent.js';

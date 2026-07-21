@@ -29,6 +29,7 @@ import { registerLifeEventsModule } from './modules/life-events/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
+import { registerPaymentModule } from './modules/payment/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
 import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
@@ -153,6 +154,11 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Member-session-gated; NO write path / event / schema change.
   registerMemberHomeModule(app, deps);
   registerMemberPoolModule(app, deps);
+  // Story 8.4 — the FIRST Epic-8 WRITE surface: pool-contribution UPI Intent + UTR self-attestation
+  // (POST /member/contribution/{intent,attest}). The architecture's reserved modules/payment/ for Epic-8's
+  // contribution (member→nominee) dispatch; reuses the member-pool read seam. Member-session-gated. Emits
+  // the yellow contribution.utr-attested claim — NEVER the Epic-9 green flip.
+  registerPaymentModule(app, deps);
   // Story 4.7 — FR-12A member-validity read surfaces: member-self (GET /member/validity; redacted, not
   // audited) + admin (GET /p/:pariwarId/admin/members/:memberId/validity; scope-gated, audited) + the
   // AR-65 admin member-search (POST …/admin/members/search over member_search_projection). Redaction +

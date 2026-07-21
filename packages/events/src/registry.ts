@@ -20,7 +20,7 @@
 // @twt/domain, so importing them here is the legal direction (domain must NOT
 // import contracts/events). Each record key equals its `type` string.
 
-import { alert, claim, member, pool } from '@twt/domain';
+import { alert, claim, contribution, member, pool } from '@twt/domain';
 import type { z } from 'zod';
 
 export interface EventTypeRegistryEntry {
@@ -384,5 +384,18 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       'Reconciliation complete + disbursed → terminal (closed → settled) — the yellow → green flip (Epic 9 owns the emitter EXCLUSIVELY; Story 8.1 authors the reducer arm + registers the type).',
     schema: alert.AlertSettledPayloadSchema,
+  },
+  // ── Story 8.4 — contribution.* WRITE vocabulary (the FIRST contribution.* event) ──
+  // Payload schema lives in @twt/domain (packages/domain/src/contribution/events.ts) — appended on the
+  // ALERT stream (stream_id = alert_id; the alert is 1:1 with the cycle). This is the YELLOW pill: a
+  // member's self-attested payment CLAIM, carrying attestation_only:true. It is NOT the Epic-9
+  // `contribution.confirmed` (green) flip — green is Epic 9's exclusive producer and is deliberately
+  // NOT registered here (the header's "Story 9.x contribution.*" reservation is now the CONFIRMATION
+  // side only; 8.4 owns the attestation side).
+  'contribution.utr-attested': {
+    type: 'contribution.utr-attested',
+    description:
+      'Member self-attested a UPI payment UTR (the yellow pill) — a member CLAIM only, NOT reconciliation-confirmed (Story 8.4). On the alert stream (stream_id = alert_id); payload carries poolId + memberId + the deterministic tr + the raw utr (Epic 9 primary-matches it) + attestation_only:true (the load-bearing yellow-not-green guard). Idempotent per (member, alert) via the derived tr. NOT the Epic-9 contribution.confirmed flip.',
+    schema: contribution.ContributionUtrAttestedPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

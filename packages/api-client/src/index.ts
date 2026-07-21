@@ -19,6 +19,7 @@ import {
   MemberFullSession,
   MemberLockInStatusResponse,
   ActiveContributionCardResponse,
+  PoolContributorListResponse,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
@@ -62,6 +63,7 @@ import {
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
   type MemberLockInStatusResponse as MemberLockInStatusResult,
   type ActiveContributionCardResponse as ActiveContributionCardResult,
+  type PoolContributorListResponse as PoolContributorListResult,
   type MemberSignupCreateRequest,
   type MemberTermsResponse as MemberTermsResult,
   type MemberTermsAcceptRequest,
@@ -496,6 +498,25 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return call(
         `${MEMBER_HOME_BASE}/active-contribution`,
         ActiveContributionCardResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    // ── Live Contributor List (Story 8.3 — the confirmed-contributor rows + aggregate pending) ─────────
+    /**
+     * Read the server-authoritative Live Contributor List — the `<PoolContributorList>` view the My Pool
+     * card links to. Returns the pool identity + the RECONCILIATION-CONFIRMED contributor rows (first-name
+     * + last-initial, PII-shielded; legitimately empty until Epic 9's producer lands) + the AGGREGATE
+     * pending signal (count + percentage, NO member identity — D3) ONLY for an `active` member assigned to
+     * a pool whose cycle alert is `live`; `{ assigned: false }` for every other case (the view
+     * self-suppresses). Server-authoritative — the client resolves nothing about confirmation status (auth).
+     */
+    memberPoolContributors(): Promise<PoolContributorListResult> {
+      return call(
+        `${MEMBER_HOME_BASE}/pool-contributors`,
+        PoolContributorListResponse,
         undefined,
         true,
         'GET',

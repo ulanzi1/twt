@@ -1,6 +1,7 @@
 import { YStack } from 'tamagui'
 
 import { ActiveContributionCard } from 'components/active-contribution/ActiveContributionCard'
+import { ViewContributorsEntry } from 'components/contributor-list/ViewContributorsEntry'
 import { ClaimProxyFlowEntry } from 'components/claim/ClaimProxyFlowEntry'
 import { ClaimPointOfContactEntry } from 'components/claim/ClaimPointOfContactEntry'
 import { DataExportEntry } from 'components/data-export/DataExportEntry'
@@ -40,6 +41,9 @@ export default function YogdaanTab() {
       {/* Story 8.2 — the My Pool card, TOPMOST. Self-suppresses unless the member is active + assigned
           to a pool whose cycle alert is live. The Epic-8 home anchor of the 90-second contribution loop. */}
       <ActiveContributionCard />
+      {/* Story 8.3 — the "View contributors" affordance (just below the card, NOT inside it — D8). Navigates
+          to the Live Contributor List view; self-suppresses in lock-step with the card. */}
+      <ViewContributorsEntry />
       <LockInClockWidget />
       <RenewalStatusWidget />
       <LifeEventsEntry />

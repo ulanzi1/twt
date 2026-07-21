@@ -5,7 +5,7 @@
 // Session-guarded → automatically covered by the Story 1.14 login-wall CI gate; NOT added to the
 // public allowlist (it is NOT public).
 
-import { ActiveContributionCardResponse } from '@twt/contracts';
+import { ActiveContributionCardResponse, PoolContributorListResponse } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
@@ -27,5 +27,16 @@ export function registerMemberPoolRoutes(app: FastifyInstance, deps: AppDeps): v
       preHandler: [memberSession],
     },
     h.activeContribution,
+  );
+
+  // Story 8.3 — the Live Contributor List read (confirmed rows + aggregate pending). Session-guarded →
+  // auto-covered by the Story 1.14 login-wall CI gate; NOT public (Epic 11b owns the public Sahyog Vivran render).
+  r.get(
+    '/api/v1/member/pool-contributors',
+    {
+      schema: { response: { 200: PoolContributorListResponse }, tags: [MEMBER_POOL_TAG] },
+      preHandler: [memberSession],
+    },
+    h.poolContributors,
   );
 }

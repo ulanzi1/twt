@@ -513,6 +513,27 @@ mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a 
 page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which
 this story does not touch.
 
+**Story 8.3 disposition (declaration affirmed, no new row):** the Live Contributor List
+(`apps/mobile/components/contributor-list/PoolContributorList.tsx`, `usePoolContributorsQuery.ts`,
+`ViewContributorsEntry.tsx`, the `apps/mobile/app/(contribution)/contributors.tsx` route, and the
+home-tab affordance mount in `apps/mobile/app/(tabs)/index.tsx`) is a **read-only,
+conditionally-rendered, virtualized** member surface — the sibling of the 8.2 My Pool card, extended
+from the aggregate meter to the named confirmed-contributor rows. It displays the pool identity + the
+reconciliation-**confirmed** contributor rows (first-name + last-initial; legitimately empty today,
+Epic 9's producer is unbuilt) + an **aggregate** pending count/percentage strip (no per-member
+identity — a deliberate privacy hardening over the PRD's "see who hasn't paid" framing, so **no shame
+list, no coercion signal**). The **one interactive element** is the **"View contributors" affordance**
+— **user-initiated, non-blocking**, ≥44pt; it navigates to a read-only view and self-suppresses in
+lock-step with the card. No forced step, no form, no gate, **no urgency theater / scarcity / panic**
+(the empty-state copy *reports state* — "No confirmed contributions yet." — it never attributes
+responsibility; enforced by the `microcopy` gate on the `contribution` namespace). The list is
+virtualized (`@shopify/flash-list`, UX-DR80) — **no full-set render into the native view**. Zero
+gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is
+unchanged**: all new and modified files are in the authenticated mobile app (`apps/mobile`, EAS build
+is a no-op → `member-app-native` stays a no-op); the public Sahyog Vivran render that would reuse this
+read model is **Epic 11b's** consumer, not this story — the page-weight ceilings the gate has teeth on
+cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

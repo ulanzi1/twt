@@ -5,3 +5,6 @@
 // UPI Intent surface, bank-statement intake, UTR matching) land 9.x — see the directory README.
 
 export * from './active-contribution-card.js';
+// Story 8.3 — the Live Contributor List read model (confirmed rows + aggregate pending). Confirmed-only,
+// PII-shielded, NO yellow/attested/pending-identity field (the load-bearing invariant as a `.strict()` shape).
+export * from './pool-contributor-list.js';

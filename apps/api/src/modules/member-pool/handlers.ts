@@ -38,13 +38,18 @@
 import {
   alert as alertDomain,
   claim as claimDomain,
+  contribution as contributionDomain,
   ids,
   kyc as kycDomain,
   member as memberDomain,
   pool as poolDomain,
   type Db,
 } from '@twt/domain';
-import type { ActiveContributionCardResponse } from '@twt/contracts';
+import type {
+  ActiveContributionCardResponse,
+  ConfirmedContributorRow,
+  PoolContributorListResponse,
+} from '@twt/contracts';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -120,6 +125,127 @@ export function createMemberPoolHandlers(deps: AppDeps) {
         await closeScopeTx(scopeTx, ok);
       }
     },
+
+    /**
+     * GET /api/v1/member/pool-contributors — the Live Contributor List's server-authoritative read (Story
+     * 8.3). Returns the pool identity + the RECONCILIATION-CONFIRMED contributor rows (first-name +
+     * last-initial, PII-shielded; legitimately EMPTY until Epic 9's `contribution.confirmed` producer
+     * lands) + the AGGREGATE pending signal (count + percentage, NO member identity — D3) ONLY for an
+     * `active` member assigned to a pool whose cycle alert is `live`; `{ assigned:false }` (self-suppress)
+     * for every other case, incl. any error (fail-soft — never a 500, the 8.2 posture).
+     */
+    async poolContributors(request: FastifyRequest): Promise<PoolContributorListResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const now = deps.clock();
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const result = await resolveContributorList(deps, scopeTx.tx, request, {
+          memberId,
+          pariwarId,
+          now,
+        });
+        ok = true;
+        return result;
+      } catch (err) {
+        // Fail-soft (AC1): the view self-suppresses on ANY error rather than showing an error wall.
+        request.log.error({ err, memberId: memberIdStr }, 'pool-contributors: fail-soft to unassigned');
+        ok = true; // the scope tx did no writes — a clean close is correct
+        return CONTRIBUTOR_LIST_UNASSIGNED;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+  };
+}
+
+const CONTRIBUTOR_LIST_UNASSIGNED: PoolContributorListResponse = { assigned: false };
+
+/**
+ * The Live Contributor List pipeline (Story 8.3; AC1/AC2/AC5/AC6). Reuses steps (1)-(5) via
+ * {@link resolveMemberLivePool} (shared with the 8.2 card), then:
+ *   (6) `listConfirmedContributorsForPool` → the CONFIRMED member IDs (confirmed-only; empty today — D2),
+ *   (7) decrypt each confirmed member's OWN KYC name (member-session layer, D4) → first+last-initial,
+ *   (8) `computePendingAggregate` (roster − confirmed — the AGGREGATE signal, D3),
+ *   (9) pool identity (letter code + curated name fallback, reused from the 8.2 card).
+ * Throws on any malformed/absent input — the caller fail-softs to `{ assigned:false }`.
+ */
+async function resolveContributorList(
+  deps: AppDeps,
+  tx: Db,
+  request: FastifyRequest,
+  ctx: ResolveCtx,
+): Promise<PoolContributorListResponse> {
+  const { pariwarId } = ctx;
+
+  // Steps (1)-(5): the shared assigned-live-pool resolution.
+  const chosen = await resolveMemberLivePool(tx, request, ctx);
+  if (chosen === null) return CONTRIBUTOR_LIST_UNASSIGNED;
+  const { pool, poolCount, cycleId } = chosen;
+
+  // (6) The CONFIRMED contributors — sources EXCLUSIVELY from `contribution.confirmed` (AC1/AC4). The
+  //     confirmed-only guard is in the domain read (no status/state param). Legitimately `[]` today (D2).
+  const confirmed = await contributionDomain.listConfirmedContributorsForPool(tx, {
+    pariwarId,
+    cycleId,
+    poolId: pool.poolId,
+  });
+
+  // (7) Decrypt each confirmed member's OWN KYC name (member-session layer, D4 — NOT the admin path) →
+  //     PII-shielded first+last-initial. DECRYPT-COST SEAM (D5): today 0 confirmed → 0 decrypts; once Epic 9
+  //     populates this is up to the confirmed-subset size (≪ roster early in a cycle) Tier-1 KMS decrypts
+  //     per read. When confirmation volume grows (the Epic-11b public Sahyog Vivran render is where it bites,
+  //     not member-session-gated), introduce a BATCH-decrypt + short-TTL read-model cache — NEVER a plaintext
+  //     cache at rest ([[project_validity_cache_failopen_pattern]]). Do NOT build the cache here.
+  const rows: ConfirmedContributorRow[] = [];
+  for (const contributor of confirmed) {
+    const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, contributor.memberId);
+    if (!kycProfile || kycProfile.nameCiphertext === null) {
+      // A confirmed contributor whose name is unresolvable is SKIPPED from the visible rows (an integrity
+      // anomaly worth logging), but still counts toward `confirmedCount` for the pending math below (they
+      // ARE confirmed — the aggregate must never understate confirmation). Skip, don't blank the whole list.
+      request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name unresolvable — omitting row');
+      continue;
+    }
+    // A decrypt failure (bad ciphertext, transient KMS error) must degrade the SAME way as an unresolvable
+    // profile — skip this one row (Review fix) — not propagate out and fail-soft the WHOLE response, which
+    // would hide every already-resolved row and understate the pending aggregate far worse than one omission.
+    let fullName: string;
+    try {
+      fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
+    } catch (err) {
+      request.log.warn({ err, memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name decrypt failed — omitting row');
+      continue;
+    }
+    const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
+    if (firstName === '') {
+      request.log.warn({ memberId: contributor.memberId }, 'pool-contributors: confirmed contributor name empty after split — omitting row');
+      continue;
+    }
+    rows.push({ firstName, lastInitial });
+  }
+
+  // (8) AGGREGATE pending (D3) — `rosterSize − confirmedCount`, NOT attested-derived. `confirmedCount` is
+  //     the CONFIRMED-SET size (the truth), independent of how many rows we could decrypt, so the aggregate
+  //     never misstates confirmation. Today: 0 confirmed ⇒ pendingCount == rosterSize, pendingPercentage 100%.
+  const pending = contributionDomain.computePendingAggregate({
+    rosterSize: pool.rosterSize,
+    confirmedCount: confirmed.length,
+  });
+
+  // (9) Pool identity — the member-facing letter code always; the curated Mahabharata name when configured
+  //     (else null → letter-code fallback). Reuses the 8.2 card's `resolveCuratedPoolName`.
+  const letterCode = poolDomain.poolLetterCode(pool.poolIndex);
+  const name = await resolveCuratedPoolName(tx, pariwarId, poolCount, pool.poolIndex, request);
+
+  return {
+    assigned: true,
+    pool: { letterCode, name, canonicalIdentifier: pool.poolCanonicalIdentifier },
+    confirmed: rows,
+    pending: { count: pending.pendingCount, percentage: pending.pendingPercentage },
   };
 }
 
@@ -129,35 +255,51 @@ interface ResolveCtx {
   readonly now: Date;
 }
 
-/** The pipeline body (AC1-AC6). Throws on any malformed/absent input — the caller fail-softs to absence. */
-async function resolveCard(
-  deps: AppDeps,
+/** The member's assigned pool in the soonest-closing live cycle (D7) + the window anchor + N. */
+interface ChosenLivePool {
+  readonly committedAt: Date;
+  readonly poolCount: number;
+  readonly cycleId: Awaited<ReturnType<typeof alertDomain.listLiveAlertsForPariwar>>[number]['cycleId'];
+  readonly pool: Extract<
+    Awaited<ReturnType<typeof poolDomain.resolveAssignedPoolWithRosterForMember>>,
+    { assigned: true }
+  >;
+}
+
+/**
+ * Steps (1)-(5) shared by BOTH member-pool reads (the 8.2 card + the 8.3 contributor list): find the
+ * `active` member's assigned pool in the SOONEST-CLOSING (`D7`) live cycle they are assigned in, with its
+ * roster size. Returns `null` (⇒ the caller returns its own `{ assigned:false }`) when the member is not
+ * `active`, no cycle is `live`, or the member is unassigned in every live cycle. Per-candidate fail-soft:
+ * a bad freeze commit / one cycle's binding-integrity error is SKIPPED so it cannot hide a legitimate
+ * assignment in another live cycle. Throws only on an unexpected DB error — the caller fail-softs.
+ */
+async function resolveMemberLivePool(
   tx: Db,
   request: FastifyRequest,
   ctx: ResolveCtx,
-): Promise<ActiveContributionCardResponse> {
+): Promise<ChosenLivePool | null> {
   const { memberId, pariwarId, now } = ctx;
 
-  // (1) The member must be `active` (Epic 3 lifecycle) — else the card does not apply.
+  // (1) The member must be `active` (Epic 3 lifecycle) — else the surface does not apply.
   const state = await memberDomain.getMemberStateAt(tx, memberId, now);
-  if (state !== 'active') return UNASSIGNED;
+  if (state !== 'active') return null;
 
   // (2) The Pariwar's OPEN contribution cycles — alerts whose cached current_state is `live`.
   const liveAlerts = await alertDomain.listLiveAlertsForPariwar(tx, pariwarId);
-  if (liveAlerts.length === 0) return UNASSIGNED;
+  if (liveAlerts.length === 0) return null;
 
   // (3) Resolve each live cycle's committed_at (the window anchor + the D7 tie-break key), dropping
-  //     any cycle whose freeze commit is unreadable (fail-soft, not a throw for the whole card).
+  //     any cycle whose freeze commit is unreadable (fail-soft, not a throw for the whole surface).
   const candidates: Array<{ readonly alert: (typeof liveAlerts)[number]; readonly committedAt: Date }> = [];
   for (const alert of liveAlerts) {
     const committedAt = await poolDomain.getCycleFreezeCommittedAt(tx, alert.cycleId);
     if (committedAt !== null) candidates.push({ alert, committedAt });
   }
-  if (candidates.length === 0) return UNASSIGNED;
+  if (candidates.length === 0) return null;
 
   // (4) D7 tie-break: prefer the SOONEST-CLOSING cycle. The window length is constant, so earliest
-  //     `committed_at` = earliest `committed_at + CYCLE_WINDOW_DAYS` = soonest close; ties by cycle_id
-  //     ascending. Single-pool is the default; multi-pool is rare (no carousel — render one card).
+  //     `committed_at` = earliest close; ties by cycle_id ascending. Single-pool is the default.
   candidates.sort((a, b) => {
     const byClose = a.committedAt.getTime() - b.committedAt.getTime();
     if (byClose !== 0) return byClose;
@@ -166,16 +308,6 @@ async function resolveCard(
 
   // (5) The member's assigned pool in the soonest-closing cycle they are assigned in. Iterate in
   //     tie-break order and take the FIRST assignment.
-  let chosen:
-    | {
-        readonly committedAt: Date;
-        readonly poolCount: number;
-        readonly pool: Extract<
-          Awaited<ReturnType<typeof poolDomain.resolveAssignedPoolWithRosterForMember>>,
-          { assigned: true }
-        >;
-      }
-    | null = null;
   for (const candidate of candidates) {
     let resolution: Awaited<ReturnType<typeof poolDomain.resolveAssignedPoolWithRosterForMember>>;
     try {
@@ -188,14 +320,32 @@ async function resolveCard(
     } catch (err) {
       // A binding-integrity error on ONE cycle must not hide a legitimate assignment in another
       // live cycle (the same per-candidate fail-soft discipline step 3 applies to a bad freeze commit).
-      request.log.warn({ err, cycleId: candidate.alert.cycleId }, 'active-contribution: cycle binding unresolved — skipping candidate');
+      request.log.warn({ err, cycleId: candidate.alert.cycleId }, 'member-pool: cycle binding unresolved — skipping candidate');
       continue;
     }
     if (resolution.assigned) {
-      chosen = { committedAt: candidate.committedAt, poolCount: candidate.alert.poolCount, pool: resolution };
-      break;
+      return {
+        committedAt: candidate.committedAt,
+        poolCount: candidate.alert.poolCount,
+        cycleId: candidate.alert.cycleId,
+        pool: resolution,
+      };
     }
   }
+  return null;
+}
+
+/** The pipeline body (AC1-AC6). Throws on any malformed/absent input — the caller fail-softs to absence. */
+async function resolveCard(
+  deps: AppDeps,
+  tx: Db,
+  request: FastifyRequest,
+  ctx: ResolveCtx,
+): Promise<ActiveContributionCardResponse> {
+  const { pariwarId, now } = ctx;
+
+  // Steps (1)-(5): the shared assigned-live-pool resolution (member active × live cycle × assigned pool).
+  const chosen = await resolveMemberLivePool(tx, request, ctx);
   if (chosen === null) return UNASSIGNED;
 
   const { pool, committedAt, poolCount } = chosen;

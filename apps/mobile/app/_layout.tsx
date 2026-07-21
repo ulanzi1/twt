@@ -164,6 +164,15 @@ function RootLayoutNav() {
           }}
         />
 
+        {/* Story 8.3 — the Live Contributor List route group (the member-facing live-pool view the My Pool
+            card links to). */}
+        <Stack.Screen
+          name="(contribution)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
         {/* Story 7.10 — pool-engine onboarding tutorial route group. Presented modally (no sibling
             group uses modal presentation today, so it is wired explicitly here). */}
         <Stack.Screen

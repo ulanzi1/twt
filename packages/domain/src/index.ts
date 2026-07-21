@@ -163,6 +163,11 @@ export * as pool from './pool/index.js';
 // The FOURTH event-derived-state primitive; twin of `pool`/`claim`/`member`. Consumes Epic 7's
 // `cycle.frozen` (the cycle-open trigger, apps/jobs) and is read by Epic 8's contribution surfaces.
 export * as alert from './alert/index.js';
+// Story 8.3 — confirmed-contributor read primitive (the Live Contributor List's read model). Sources
+// EXCLUSIVELY from `contribution.confirmed` event-derived state (Epic 9's producer, unbuilt → honestly
+// empty today) + the pure pending-aggregate. A READ, never a producer — it never confirms/promotes/mutates
+// contribution state. Read by Epic 8's <PoolContributorList> surface; the confirmed-only guard is structural.
+export * as contribution from './contribution/index.js';
 // Story 7.1 (Task 6) — pool-snapshot migration adapters (§1.6 read-through-adapters).
 // The FIRST real adapter (pool v1); selected by `format_version` via readPoolSnapshot.
 export * as snapshotAdapters from './snapshot-adapters/index.js';

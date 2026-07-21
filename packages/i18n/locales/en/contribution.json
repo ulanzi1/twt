@@ -20,5 +20,15 @@
   "active_contribution.contribute_cta": "Contribute →",
   "active_contribution.contribute_cta_a11y": "Contribute to your pool",
   "active_contribution.contribute_cta_hint": "Opens the contribution payment screen",
-  "active_contribution.upcoming_amount": "From {date}, the contribution becomes ₹{amount}"
+  "active_contribution.upcoming_amount": "From {date}, the contribution becomes ₹{amount}",
+  "contributor_list.title": "Live pool",
+  "contributor_list.confirmed_header": "Confirmed contributions",
+  "contributor_list.empty": "No confirmed contributions yet.",
+  "contributor_list.no_pool": "You have no live pool right now.",
+  "contributor_list.pending_strip": "{count} pending confirmation ({percentage}%)",
+  "contributor_list.pending_strip_a11y": "{count} contributions pending confirmation, {percentage} percent of the pool",
+  "contributor_list.row_a11y": "{name}, confirmed contributor",
+  "contributor_list.view_cta": "View contributors →",
+  "contributor_list.view_cta_a11y": "View the pool's confirmed contributors",
+  "contributor_list.view_cta_hint": "Opens the live contributor list for your pool"
 }

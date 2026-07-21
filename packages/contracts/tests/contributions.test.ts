@@ -19,6 +19,10 @@ import {
   ActiveContributionCardResponse,
   ActiveContributionProgress,
   AssignedContributionCard,
+  AssignedPoolContributorList,
+  ConfirmedContributorRow,
+  PendingContributorsAggregate,
+  PoolContributorListResponse,
 } from '../src/contributions/index.js';
 
 const VALID_ASSIGNED = {
@@ -111,5 +115,93 @@ describe('AC1 — self-suppression discriminated union on `assigned`', () => {
 
   it('rejects a payload with no `assigned` discriminator', () => {
     expect(ActiveContributionCardResponse.safeParse({ poolLetterCode: 'F' }).success).toBe(false);
+  });
+});
+
+// ── Story 8.3 — the Live Contributor List read-model SHAPE test (Task 5; the AI-6-3-carry decoy teeth) ──
+//
+// Same discipline as the 8.2 card above, generalized to the NAMED confirmed-contributor rows + the
+// aggregate pending signal. The load-bearing invariant (AC1/AC4): the shape carries ONLY confirmed rows
+// (first-name + last-initial) + an aggregate pending count/percentage — there is STRUCTURALLY no
+// status/yellow/attested/utr/pending-identity field, and no ciphertext/full-name/phone/bank field. A future
+// dev physically cannot surface a yellow/pending contribution as confirmed without this test going red.
+
+const VALID_CONTRIBUTOR_LIST = {
+  assigned: true as const,
+  pool: { letterCode: 'F', name: null, canonicalIdentifier: 'P-2026-07-001' },
+  confirmed: [
+    { firstName: 'Rajesh', lastInitial: 'S' },
+    { firstName: 'Meena', lastInitial: '' },
+  ],
+  pending: { count: 46, percentage: 96 },
+};
+
+describe('AC1/AC4 — the confirmed list is CONFIRMED-ONLY (no yellow/attested/pending-identity field can exist)', () => {
+  it('accepts a fully-resolved contributor list (confirmed rows + aggregate pending)', () => {
+    expect(PoolContributorListResponse.safeParse(VALID_CONTRIBUTOR_LIST).success).toBe(true);
+  });
+
+  it('the confirmed numerator is legitimately empty today (Epic 9 producer unbuilt) — [] is valid', () => {
+    const empty = { ...VALID_CONTRIBUTOR_LIST, confirmed: [], pending: { count: 48, percentage: 100 } };
+    expect(PoolContributorListResponse.safeParse(empty).success).toBe(true);
+  });
+
+  it('REJECTS a status/yellow/attested/utr field on a confirmed row (strict — the load-bearing teeth)', () => {
+    for (const field of ['status', 'yellow', 'attested', 'utr', 'pending', 'confirmationState']) {
+      const leakyRow = { firstName: 'Rajesh', lastInitial: 'S', [field]: 'yellow' };
+      expect(ConfirmedContributorRow.safeParse(leakyRow).success, `confirmed row must reject ${field}`).toBe(
+        false,
+      );
+    }
+  });
+
+  it('REJECTS a ciphertext / full-name / phone / bank field on a confirmed row (PII shield, strict)', () => {
+    for (const field of ['nameCiphertext', 'fullName', 'phone', 'bankAccount', 'memberId']) {
+      const leakyRow = { firstName: 'Rajesh', lastInitial: 'S', [field]: 'secret' };
+      expect(ConfirmedContributorRow.safeParse(leakyRow).success, `confirmed row must reject ${field}`).toBe(
+        false,
+      );
+    }
+  });
+
+  it('an empty last-initial is allowed (single-token name — no surname to leak)', () => {
+    expect(ConfirmedContributorRow.safeParse({ firstName: 'Meena', lastInitial: '' }).success).toBe(true);
+  });
+});
+
+describe('AC2/D3 — pending is AGGREGATE ONLY (count + percentage, NO member-identifying detail)', () => {
+  it('accepts a { count, percentage } aggregate and NOTHING else', () => {
+    expect(PendingContributorsAggregate.parse({ count: 46, percentage: 96 })).toEqual({
+      count: 46,
+      percentage: 96,
+    });
+  });
+
+  it('REJECTS any per-member identity field on the pending aggregate (no shame list — strict teeth)', () => {
+    for (const field of ['members', 'names', 'memberIds', 'firstName', 'rows']) {
+      const leaky = { count: 46, percentage: 96, [field]: ['someone'] };
+      expect(PendingContributorsAggregate.safeParse(leaky).success, `pending must reject ${field}`).toBe(
+        false,
+      );
+    }
+  });
+
+  it('percentage is bounded 0–100 (integer)', () => {
+    expect(PendingContributorsAggregate.safeParse({ count: 0, percentage: 101 }).success).toBe(false);
+    expect(PendingContributorsAggregate.safeParse({ count: 0, percentage: -1 }).success).toBe(false);
+    expect(PendingContributorsAggregate.safeParse({ count: 0, percentage: 0 }).success).toBe(true);
+  });
+});
+
+describe('AC1 — contributor-list self-suppression discriminated union on `assigned`', () => {
+  it('{ assigned: false } is a valid first-class absence signal', () => {
+    expect(PoolContributorListResponse.parse({ assigned: false })).toEqual({ assigned: false });
+  });
+
+  it('REJECTS a top-level pending-identity or ciphertext field on the assigned list (strict)', () => {
+    for (const field of ['pendingMembers', 'yellowContributors', 'nameCiphertext']) {
+      const leaky = { ...VALID_CONTRIBUTOR_LIST, [field]: 'x' };
+      expect(AssignedPoolContributorList.safeParse(leaky).success, `list must reject ${field}`).toBe(false);
+    }
   });
 });

@@ -20,5 +20,15 @@
   "active_contribution.contribute_cta": "योगदान दें →",
   "active_contribution.contribute_cta_a11y": "अपने पूल में योगदान करें",
   "active_contribution.contribute_cta_hint": "अंशदान भुगतान स्क्रीन खोलता है",
-  "active_contribution.upcoming_amount": "{date} से, अंशदान ₹{amount} हो जाएगा"
+  "active_contribution.upcoming_amount": "{date} से, अंशदान ₹{amount} हो जाएगा",
+  "contributor_list.title": "सक्रिय पूल",
+  "contributor_list.confirmed_header": "पुष्ट अंशदान",
+  "contributor_list.empty": "अभी तक कोई पुष्ट अंशदान नहीं।",
+  "contributor_list.no_pool": "अभी आपका कोई सक्रिय पूल नहीं है।",
+  "contributor_list.pending_strip": "{count} पुष्टि हेतु शेष ({percentage}%)",
+  "contributor_list.pending_strip_a11y": "{count} अंशदान पुष्टि हेतु शेष, पूल का {percentage} प्रतिशत",
+  "contributor_list.row_a11y": "{name}, पुष्ट अंशदाता",
+  "contributor_list.view_cta": "योगदानकर्ता देखें →",
+  "contributor_list.view_cta_a11y": "पूल के पुष्ट योगदानकर्ता देखें",
+  "contributor_list.view_cta_hint": "आपके पूल की सक्रिय योगदानकर्ता सूची खोलता है"
 }

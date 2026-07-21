@@ -24,11 +24,13 @@ import {
   ConfirmedContributorRow,
   ContributionAttestRequest,
   ContributionAttestResponse,
+  ContributionFailureReportRequest,
   ContributionIntentRequest,
   ContributionIntentResponse,
   ContributionUtr,
   PendingContributorsAggregate,
   PoolContributorListResponse,
+  UpiFailureModeSchema,
 } from '../src/contributions/index.js';
 
 const VALID_ASSIGNED = {
@@ -340,5 +342,51 @@ describe('ContributionUtr regex stays byte-for-byte in sync with @twt/domain (re
     expect(contractPattern).toBeInstanceOf(RegExp);
     expect(contractPattern?.source).toBe(contribution.CONTRIBUTION_UTR_REGEX.source);
     expect(contractPattern?.flags).toBe(contribution.CONTRIBUTION_UTR_REGEX.flags);
+  });
+});
+
+// ── Story 8.5 — the UPI Failure Coach anonymous failure-report shape (Task 1; the AC3 PII decoy teeth) ──
+//
+// The load-bearing invariant (AC3/D2): the request carries the `mode` enum and NOTHING ELSE. "Anonymous"
+// is enforced by the SHAPE — a `.strict()` object with no free-text field — so a future dev physically
+// cannot add a `detail`/`note`/`other_text` box (which would invite a typed UTR / amount / name — PII —
+// into the analytics log) without this test going red.
+
+describe('Story 8.5 — the failure-report mode enum is a bounded self-classification (AC1/D1)', () => {
+  it('accepts each of the five member-declared modes', () => {
+    for (const mode of ['insufficient_balance', 'wrong_pin', 'app_issue', 'network_issue', 'other']) {
+      expect(UpiFailureModeSchema.safeParse(mode).success, `mode ${mode} must be valid`).toBe(true);
+      expect(ContributionFailureReportRequest.parse({ mode })).toEqual({ mode });
+    }
+  });
+
+  it('REJECTS an out-of-set mode value (never a free-form / diagnosed reason)', () => {
+    for (const bad of ['insufficient', 'timeout', 'cancelled', 'unknown', '']) {
+      expect(UpiFailureModeSchema.safeParse(bad).success, `mode ${bad} must be rejected`).toBe(false);
+      expect(ContributionFailureReportRequest.safeParse({ mode: bad }).success).toBe(false);
+    }
+  });
+});
+
+describe('Story 8.5 — the failure-report shape carries NO free-text / PII field (AC3 load-bearing teeth)', () => {
+  it('requires the mode (an empty body is rejected)', () => {
+    expect(ContributionFailureReportRequest.safeParse({}).success).toBe(false);
+  });
+
+  it('REJECTS any free-text / transaction-detail field riding alongside the mode (strict — the PII guard)', () => {
+    // The one change that would break the "anonymous" invariant: a detail/note box, or any UTR / amount /
+    // payee / tr leaking in. `.strict()` forbids every unknown key, so none of these can ever be logged.
+    for (const field of ['detail', 'note', 'other_text', 'otherDetail', 'utr', 'amount', 'amountInr', 'vpa', 'tr', 'message']) {
+      const leaky = { mode: 'other', [field]: 'anything the member typed' };
+      expect(
+        ContributionFailureReportRequest.safeParse(leaky).success,
+        `failure report must reject the free-text/PII field ${field}`,
+      ).toBe(false);
+    }
+  });
+
+  it('the parsed object has exactly one key — `mode` (structural: no free-text field exists in the shape)', () => {
+    const parsed = ContributionFailureReportRequest.parse({ mode: 'network_issue' });
+    expect(Object.keys(parsed)).toEqual(['mode']);
   });
 });

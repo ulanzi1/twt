@@ -33,16 +33,33 @@ import {
 import type {
   ContributionAttestRequest,
   ContributionAttestResponse,
+  ContributionFailureReportRequest,
   ContributionIntentRequest,
   ContributionIntentResponse,
+  UpiFailureModeSchema,
 } from '@twt/contracts';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
+import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { resolveMemberLivePool } from '../member-pool/handlers.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+
+/**
+ * The member's SELF-CLASSIFIED UPI failure `mode` → its audit action name (Story 8.5, D2/AC3). The
+ * diagnostic signal lives ENTIRELY in the action name — mode only, no free-text, no UTR/tr/amount/VPA — so
+ * analytics can count failures by action without ever storing PII. Exhaustive over `UpiFailureModeSchema`
+ * (a `satisfies Record<…>` so a future mode added to the enum without a mapping fails to compile).
+ */
+const FAILURE_ACTION_BY_MODE = {
+  insufficient_balance: 'member_contribution.failure_insufficient_balance',
+  wrong_pin: 'member_contribution.failure_wrong_pin',
+  app_issue: 'member_contribution.failure_app_issue',
+  network_issue: 'member_contribution.failure_network_issue',
+  other: 'member_contribution.failure_other',
+} as const satisfies Record<UpiFailureModeSchema, AuthAuditEventType>;
 
 /** Mask a UTR for audit/logging — last 4 only (never the full self-attested ref; the vyawastha precedent). */
 function maskUtr(utr: string): string {
@@ -246,6 +263,29 @@ export function createPaymentHandlers(deps: AppDeps) {
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
+    },
+
+    /**
+     * POST /api/v1/member/contribution/failure — record the member's SELF-CLASSIFIED UPI failure mode as a
+     * best-effort, member-level audit line for analytics tuning (Story 8.5; AC3). "Anonymous" refers to the
+     * failure DETAIL, not the audit subject: `actorId = memberId` (platform audit convention) but the mode is
+     * carried ENTIRELY in the action name (`member_contribution.failure_<mode>`) — NO context payload, NO
+     * free-text, NO UTR/tr/amount/VPA (D2). Diagnostic only — it appends NO `contribution.utr-attested`
+     * event, touches no state machine, opens no scope-tx (there is no DB write — the single audit line goes
+     * through the shared sink). Returns 204 (fire-and-forget — the pool-onboarding 204 shape). Never blocks
+     * the coach: the client fires it fire-and-forget, so a failure here never strands the member's retry/attest.
+     */
+    async reportFailure(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const { mode } = request.body as ContributionFailureReportRequest;
+
+      // The mode lives in the action name — nothing further to carry, no context payload, no hash required.
+      emitAuthAudit(deps, request, FAILURE_ACTION_BY_MODE[mode], {
+        actorId: memberIdStr,
+        pariwarId: pariwarIdStr,
+      });
+
+      void reply.status(204).send();
     },
   };
 }

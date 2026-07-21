@@ -552,6 +552,21 @@ unchanged**: all new and modified files are in the authenticated mobile app (`ap
 no-op → `member-app-native` stays a no-op) + `apps/api` (excluded from the ledger) — the page-weight
 ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
+**Story 8.5 disposition (declaration affirmed, no new row):** the UPI Failure Coach
+(`apps/mobile/components/active-contribution/UpiFailureCoach.tsx`, wired into the same authenticated
+`(contribution)/pay.tsx`) is a **diagnostic aid on the FAILURE path** — it *reduces* friction, it does not
+add it. When a UPI payment doesn't go through, the coach offers a member-initiated, non-blocking
+self-classification chooser (5 tap options) + calm next-step guidance (retry / switch app / call helpline /
+contact bank); every option is optional and the member can ignore it entirely and still paste a UTR or leave.
+There is **no forced step, no gate, no upload, no urgency/scarcity theater** — the copy is dignified and
+never blames the member ("No problem — this happens"; enforced by the `microcopy` gate on the `contribution`
+namespace). The anonymous failure-report is fire-and-forget telemetry the member never waits on. Zero
+deliberate friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline is
+unchanged**: the coach lives **behind the member session** in the mobile app (`apps/mobile`, EAS build a
+no-op) + one member-session-gated `apps/api` endpoint (excluded from the ledger) — it is **NOT a public
+`apps/public` surface**, so it does not enter the public page-weight budget the gate has teeth on. Do NOT
+ratchet (`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

@@ -117,6 +117,17 @@ export type AuthAuditEventType =
   | 'member_contribution.intent'
   | 'member_contribution.attested'
   | 'member_contribution.failure'
+  // Story 8.5 — the UPI Failure Coach anonymous failure-report. The member's SELF-CLASSIFIED failure mode
+  // is the diagnostic signal, encoded ENTIRELY in the action NAME (one action per mode) — there is NO
+  // context payload, NO free-text, NO UTR/tr/amount/VPA anywhere. `actorId = memberId` is the audit
+  // SUBJECT (per platform audit conventions), NOT PII-in-the-log; "anonymous" refers to the failure detail,
+  // not removal of the audit subject (D2/AC3). The no-free-text contract shape (@twt/contracts
+  // ContributionFailureReportRequest, `.strict()`) is the load-bearing teeth for this decision.
+  | 'member_contribution.failure_insufficient_balance'
+  | 'member_contribution.failure_wrong_pin'
+  | 'member_contribution.failure_app_issue'
+  | 'member_contribution.failure_network_issue'
+  | 'member_contribution.failure_other'
   // The Reference Code port-seam capture (D2/R5) — attribution_source stored; NO registry validation,
   // NO new lifecycle event (the 14-event member vocabulary is frozen). Context carries no PII.
   | 'member_attribution.captured'

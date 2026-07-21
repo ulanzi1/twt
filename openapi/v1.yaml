@@ -2496,6 +2496,20 @@ components:
       required:
         - outcome
       additionalProperties: false
+    ContributionFailureReportRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - insufficient_balance
+            - wrong_pin
+            - app_issue
+            - network_issue
+            - other
+      required:
+        - mode
+      additionalProperties: false
     WaConfigDto:
       type: object
       properties:
@@ -5106,6 +5120,33 @@ paths:
           description: Outcome recorded
         "400":
           description: Validation failed (outcome must be completed | skipped)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/contribution/failure:
+    post:
+      summary: Record the member’s self-classified UPI failure mode (anonymous analytics)
+      description: 'Records the authenticated member’s SELF-CLASSIFIED UPI failure mode as a member-level audit line for analytics tuning. "Anonymous" refers to the failure DETAIL, not the audit subject: the audit action is keyed on the mode alone (no free-text, no UTR / amount / payee / reference). Diagnostic only — it emits no contribution attestation and creates no yellow pill. The app calls this best-effort / fire-and-forget — a failed call never blocks the member’s ability to retry or attest. Returns 204 (no body).'
+      tags:
+        - payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionFailureReportRequest"
+      responses:
+        "204":
+          description: Failure mode recorded
+        "400":
+          description: Validation failed (mode must be one of the five bounded failure modes)
           content:
             application/json:
               schema:

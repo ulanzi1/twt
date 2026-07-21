@@ -12,3 +12,6 @@ export * from './pool-contributor-list.js';
 // shapes + the member-scoped `myContribution` (yellow) status. Yellow is a per-member self-state, NEVER an
 // aggregate/confirmed count (the load-bearing invariant as a `.strict()` shape).
 export * from './upi-intent.js';
+// Story 8.5 — the UPI Failure Coach anonymous failure-report request (mode enum ONLY, NO free-text field —
+// the AC3 PII guard as a `.strict()` shape). Best-effort telemetry for the diagnostic failure coach.
+export * from './upi-failure.js';

@@ -567,6 +567,37 @@ no-op) + one member-session-gated `apps/api` endpoint (excluded from the ledger)
 `apps/public` surface**, so it does not enter the public page-weight budget the gate has teeth on. Do NOT
 ratchet (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 8.13 disposition (declaration affirmed, no new row):** the nominee-VPA
+claim-time collection + FR-27 switch-account affordance
+(`apps/mobile/app/(claim)/nominee-review.tsx`, `apps/mobile/app/(contribution)/pay.tsx`,
+`apps/mobile/lib/nominee-bank-vpa.ts` + its test) introduce **zero new deliberate
+friction**:
+
+(1) **The optional VPA field — never a NEW forced step, unlike the Story 6.8 dual-account row.**
+Story 6.8's disposition above declared the TWO-account requirement itself as the
+forced-friction row (a filer must supply a second full account to protect Epic 9's
+disbursement failover). The VPA this story adds is an **additional optional field on
+that already-declared form** — AC1 makes it explicit that a nominee without a VPA is a
+first-class state and the field **never gates `accountComplete`/submit** (a blank VPA
+is always valid). A non-blank-but-malformed VPA blocks submit (a review-finding fix),
+but that is ordinary client-side input validation on a voluntarily-entered field, not a
+NEW friction the design imposes — identical in category to the Story 3.4/6.9-item-(2)
+precedent of an optional field that adds no forced step when left blank.
+
+(2) **The "Switch account" affordance — user-initiated, non-blocking, self-suppressing.**
+`pay.tsx`'s switch button (FR-27) only renders when a second nominee account already
+carries a VPA (`canSwitchAccount`); it is identical in character to the nav-tile/CTA
+affordances already affirmed across Stories 3.9–8.3 (`<LifeEventsEntry>`,
+`<WithdrawalEntry>`, the 8.2 contribute CTA, etc.) — a deliberate, optional, one-tap
+action the member may simply never use. No form, no gate, no forced step.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The
+**page-weight baseline is unchanged**: all new and modified files are in the
+authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native`
+stays a no-op) + `apps/api`/`packages/contracts`/`packages/domain` (excluded from the
+ledger) — the page-weight ceilings the gate has teeth on cover the PUBLIC
+`apps/public` Astro surface, which this story does not touch.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

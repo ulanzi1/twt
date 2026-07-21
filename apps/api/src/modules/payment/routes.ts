@@ -9,6 +9,7 @@
 import {
   ContributionAttestRequest,
   ContributionAttestResponse,
+  ContributionFailureReportRequest,
   ContributionIntentRequest,
   ContributionIntentResponse,
 } from '@twt/contracts';
@@ -52,5 +53,20 @@ export function registerPaymentRoutes(app: FastifyInstance, deps: AppDeps): void
       preHandler: [memberSession],
     },
     h.attest,
+  );
+
+  // Record the member's self-classified UPI failure mode — a best-effort, member-level, anonymous (mode-
+  // enum-only) audit line for analytics (Story 8.5). Returns 204 (fire-and-forget; the pool-onboarding
+  // 204 shape). Diagnostic only — no state machine, no yellow pill. Session-gated (login-wall CI gate).
+  r.post(
+    '/api/v1/member/contribution/failure',
+    {
+      schema: {
+        body: ContributionFailureReportRequest,
+        tags: [PAYMENT_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    h.reportFailure,
   );
 }

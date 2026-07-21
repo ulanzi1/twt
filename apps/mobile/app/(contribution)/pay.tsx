@@ -29,6 +29,7 @@ import { ScrollView } from 'react-native'
 import { Button, H2, Input, Paragraph, Spinner, Text, View, YStack } from 'tamagui'
 
 import { UPIIntentButton } from '../../components/active-contribution/UPIIntentButton'
+import { UpiFailureCoach } from '../../components/active-contribution/UpiFailureCoach'
 import { CallHelplineCTA } from '../../components/claim/CallHelplineCTA'
 import { memberAuth } from '../../lib/member-api'
 
@@ -76,6 +77,21 @@ export default function ContributionPayScreen() {
   const [busy, setBusy] = useState(false)
   const [attested, setAttested] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Set while a <UpiFailureCoach> instance has a mode selected (guidance showing) — hides this screen's own
+  // outer helpline/retry affordances so the coach's own embedded versions aren't duplicated (review finding).
+  const [coachGuidanceShowing, setCoachGuidanceShowing] = useState(false)
+
+  /** Shared by both coach instances: a successful in-coach retry re-launch clears the stale failure flags
+   * that triggered the coach in the first place, so it doesn't keep rendering alongside the UTR step
+   * (review finding). */
+  function onCoachRetryLaunched(): void {
+    setLaunched(true)
+    setNoApp(false)
+    setLaunchError(false)
+    // The coach instance that triggered this unmounts on the state flip above — its embedded helpline goes
+    // with it, so un-hide this screen's own outer helpline for whatever renders next (review finding).
+    setCoachGuidanceShowing(false)
+  }
 
   useEffect(() => {
     let active = true
@@ -237,22 +253,33 @@ export default function ContributionPayScreen() {
           {formatInr(intent.amountInr)}
         </Text>
 
-        <UPIIntentButton
-          upiUrl={intent.upiUrl}
-          onLaunched={() => setLaunched(true)}
-          onNoUpiApp={() => setNoApp(true)}
-          onLaunchError={() => setLaunchError(true)}
-        />
-
-        {noApp ? (
-          <Paragraph accessibilityRole="alert">{t('upi_intent.no_app_guidance', undefined, NS)}</Paragraph>
+        {/* Hidden while the coach below is showing guidance — its own embedded retry takes over, so the
+            member never sees two "pay again" affordances at once (review finding). */}
+        {!coachGuidanceShowing ? (
+          <UPIIntentButton
+            upiUrl={intent.upiUrl}
+            onLaunched={() => setLaunched(true)}
+            onNoUpiApp={() => setNoApp(true)}
+            onLaunchError={() => setLaunchError(true)}
+          />
         ) : null}
-        {launchError ? (
-          <Paragraph accessibilityRole="alert">{t('upi_intent.launch_error', undefined, NS)}</Paragraph>
+
+        {/* Story 8.5 — the failure coach REPLACES the ad-hoc no-app / launch-error paragraphs. It helps the
+            member name what went wrong + guides a next step (retry / switch app / call helpline / contact
+            bank). A no-app / launch error pre-highlights "app issue" (the member still confirms). Diagnostic
+            ONLY — it never attests / emits an event / creates a yellow pill (AC4). */}
+        {noApp || launchError ? (
+          <UpiFailureCoach
+            upiUrl={intent.upiUrl}
+            onRetryLaunched={onCoachRetryLaunched}
+            onModeSelected={(m) => setCoachGuidanceShowing(m !== null)}
+            suggestedMode="app_issue"
+          />
         ) : null}
 
         {/* The UTR-paste step — shown after a launch (or a no-app / launch-error, so an out-of-band payer
-            can still attest). The server recomputes tr; the client just supplies the UTR it was given. */}
+            can still attest). The server recomputes tr; the client just supplies the UTR it was given. This
+            is the escape hatch the coach must preserve (AC4). */}
         {launched || noApp || launchError ? (
           <YStack gap="$2">
             <Text fontFamily="$body" fontSize="$3" color="$color">
@@ -285,7 +312,22 @@ export default function ContributionPayScreen() {
             >
               {busy ? <Spinner /> : t('upi_intent.confirm_cta', undefined, NS)}
             </Button>
-            <CallHelplineCTA label={t('upi_intent.get_help', undefined, NS)} />
+            {/* Hidden while the coach below is showing guidance — it offers its own helpline CTA (review
+                finding: avoid two "Call us" buttons on screen at once). */}
+            {!coachGuidanceShowing ? (
+              <CallHelplineCTA label={t('upi_intent.get_help', undefined, NS)} />
+            ) : null}
+
+            {/* A member who launched but RETURNED WITHOUT A UTR (the payment failed) or pasted an INVALID
+                one is not stranded — the coach lets them say what happened (AC1). Not rendered for the
+                no-app / launch-error paths, which already show the coach above. */}
+            {launched && !noApp && !launchError ? (
+              <UpiFailureCoach
+                upiUrl={intent.upiUrl}
+                onRetryLaunched={onCoachRetryLaunched}
+                onModeSelected={(m) => setCoachGuidanceShowing(m !== null)}
+              />
+            ) : null}
           </YStack>
         ) : null}
       </YStack>

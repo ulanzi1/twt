@@ -171,6 +171,9 @@ const { TelegramOptInRequestResponse, TelegramOptInStatusResponse, RevokeTelegra
 // Story 7.10 — the member pool-onboarding-tutorial outcome DTO (record completion/skip). Member-session
 // -gated; recorded server-side as a member-level audit line for analytics (best-effort telemetry).
 const { PoolOnboardingOutcomeRequest } = await import('../src/pool-onboarding/index.js');
+// Story 8.5 — the UPI Failure Coach anonymous failure-report DTO (mode enum ONLY, no free-text). Member
+// -session-gated; recorded server-side as a member-level, mode-in-the-action-name audit line (best-effort).
+const { ContributionFailureReportRequest } = await import('../src/contributions/index.js');
 // Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
 const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
   await import('../src/degraded-mode/index.js');
@@ -414,6 +417,14 @@ const poolOnboardingComponents = {
   PoolOnboardingOutcomeRequest: PoolOnboardingOutcomeRequest.openapi('PoolOnboardingOutcomeRequest'),
 } as const;
 for (const [name, schema] of Object.entries(poolOnboardingComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 8.5 — UPI Failure Coach anonymous failure-report component (mode enum only; no free-text — AC3).
+const contributionFailureComponents = {
+  ContributionFailureReportRequest: ContributionFailureReportRequest.openapi('ContributionFailureReportRequest'),
+} as const;
+for (const [name, schema] of Object.entries(contributionFailureComponents)) {
   registry.register(name, schema);
 }
 
@@ -1527,6 +1538,28 @@ registry.registerPath({
   responses: {
     204: { description: 'Outcome recorded' },
     400: errorResponse('Validation failed (outcome must be completed | skipped)'),
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 8.5 — UPI Failure Coach anonymous failure report (member-session-gated) ──
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/contribution/failure',
+  summary: 'Record the member’s self-classified UPI failure mode (anonymous analytics)',
+  description:
+    'Records the authenticated member’s SELF-CLASSIFIED UPI failure mode as a member-level audit line for ' +
+    'analytics tuning. "Anonymous" refers to the failure DETAIL, not the audit subject: the audit action is ' +
+    'keyed on the mode alone (no free-text, no UTR / amount / payee / reference). Diagnostic only — it emits ' +
+    'no contribution attestation and creates no yellow pill. The app calls this best-effort / fire-and-forget ' +
+    '— a failed call never blocks the member’s ability to retry or attest. Returns 204 (no body).',
+  tags: ['payment'],
+  request: {
+    body: { content: jsonOf(contributionFailureComponents.ContributionFailureReportRequest), required: true },
+  },
+  responses: {
+    204: { description: 'Failure mode recorded' },
+    400: errorResponse('Validation failed (mode must be one of the five bounded failure modes)'),
     401: errorResponse('Authentication required'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });

@@ -22,6 +22,7 @@ import {
   PoolContributorListResponse,
   ContributionIntentResponse,
   ContributionAttestResponse,
+  ContributionFailureReportRequest,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
   MemberStepUpRequestResponse,
@@ -70,6 +71,7 @@ import {
   type ContributionIntentResponse as ContributionIntentResult,
   type ContributionAttestRequest,
   type ContributionAttestResponse as ContributionAttestResult,
+  type UpiFailureModeSchema as UpiFailureMode,
   type MemberSignupCreateRequest,
   type MemberTermsResponse as MemberTermsResult,
   type MemberTermsAcceptRequest,
@@ -552,6 +554,18 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     memberContributionAttest(input: ContributionAttestRequest): Promise<ContributionAttestResult> {
       return call(`${CONTRIBUTION_BASE}/attest`, ContributionAttestResponse, input, true);
+    },
+
+    /**
+     * Record the member's self-classified UPI failure mode for analytics tuning (Story 8.5 — the UPI Failure
+     * Coach). Best-effort / FIRE-AND-FORGET: the call site does NOT await/block on it (the coach must never
+     * be gated on telemetry). "Anonymous" is enforced by the contract — the request carries the `mode` enum
+     * and NOTHING ELSE (no free-text, no UTR/tr/amount/VPA), and the server keys the audit action on the mode
+     * alone. The route returns 204 (no body), so `call` short-circuits before the throwaway schema is ever
+     * parsed (the `logout` / pool-onboarding idiom) (session; auth).
+     */
+    async reportUpiFailure(mode: UpiFailureMode): Promise<void> {
+      await call(`${CONTRIBUTION_BASE}/failure`, ContributionFailureReportRequest.optional(), { mode }, true);
     },
 
     // ── Life Events panel (Story 3.9) ───────────────────────────────────────────

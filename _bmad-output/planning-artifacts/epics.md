@@ -267,7 +267,7 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 - **AR-9:** Audit log two-tier — Postgres hot + **GCP Cloud Storage Bucket Lock + Object Retention Lock** (Cohasset-assessed WORM-equivalent) cold tier in `asia-south1` (architecture §1.5). 7-year retention; integrity check job daily; Merkle-root publication `[v1-S]`.
 - **AR-10:** Audit-mirror write role lives in a dedicated GCP project (`twt-audit-mirror`) under IAM Isolation Commitment §2.10a; read role lives in separate GCP project. Sole-engineer prod-DB credentials cannot access either. Quarterly attestation required.
 - **AR-11:** Pool Engine snapshot storage — Postgres hot + Cloud Storage cold with Object Retention Lock (architecture §1.6).
-- **AR-12:** PII encryption tiers (architecture §2.7) — Tier 1 ciphertext (envelope-encrypted, KEK in Cloud KMS HSM-backed, Google Tink library, per-row DEK): mobile, email, Aadhaar, DOB, address, nominee bank, nominee IFSC, medical disclosures. Tier 2 (hashed for lookup): mobile-hash, eHRMS-hash. Tier 3 (clear): first-name, school, district.
+- **AR-12:** PII encryption tiers (architecture §2.7) — Tier 1 ciphertext (envelope-encrypted, KEK in Cloud KMS HSM-backed, Google Tink library, per-row DEK): mobile, email, Aadhaar, DOB, address, nominee bank, nominee IFSC, nominee VPA, medical disclosures. Tier 2 (hashed for lookup): mobile-hash, eHRMS-hash. Tier 3 (clear): first-name, school, district.
 - **AR-13:** Secrets in GCP Secret Manager; rotation policy per architecture Category 5; secrets abstracted behind a provider interface (12-factor).
 
 **Member state primitive (architecture §1.14, per Sprint Change Proposal Item 3)**
@@ -3071,6 +3071,53 @@ So that the SM-1 demo beat B21 commitment (TWT-portion ≤ 60s; total observed �
 **Given** Story 0.15 launch-gate inventory
 **When** this gate is scheduled
 **Then** it appears in the launch-gate inventory with named owner + closure criteria + target date
+
+---
+
+### Story 8.13: Nominee-VPA Claim-Time Collection + Resolver Wiring + UPI Intent Re-enable `[SURFACE+SUBSTRATE]`
+
+> **Added by correct-course 2026-07-21** (discharges Story 8.4 D1's forward commitment). Full rationale + impact analysis: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-21.md`. **Sequencing:** runs **NEXT** in the Epic-8 window (priority override) — it is a **precondition for Story 8.12's on-device SM-1 demo** (§ demoable-closure, `epics.md:2853`), not a blocker to building the other 8.x stories. Labelled 8-13 (deliberately **not** renumbered into 8-6…8-12) because the completed Stories 8.4/8.5 cross-reference 8.5/8.10/8.11 by number.
+
+As the contribution pipeline (fulfilling Story 8.4's deferred payee-VPA seam),
+I want the nominee's UPI VPA collected per bank account at claim-time and resolved into the UPI Intent,
+So that the assigned pool's `<UPIIntentButton>` fires a real `upi://pay` and Epic 8's 90-second loop is demoable to the yellow pill.
+
+**Design anchor:** contributions flow member→nominee **directly** (PMLA posture, `prd.md:1165`), so `pa=` **is** the nominee's own bank-account VPA — the same two accounts Story 6.8 collects, and FR-31's dual-account (RBI-limit) workaround exists for exactly these ~16,000 inbound contributions. VPA is therefore **per-account** (#1 default / #2 switch), **optional**, collected at claim-time. It is distinct from the **sender** (member) VPA read by the Story 9.4 secondary matcher.
+
+**Acceptance Criteria:**
+
+**Given** the confirmed substrate gap (no VPA anywhere; Story 6.8 collects account#+IFSC only) + BigDev decision 2026-07-21 (keep the nominee-VPA rail; collect at claim-time; per-account; optional) + Story 8.4's `resolveNomineeVpa` seam returning `{ available:false, reason:'vpa_not_collected' }`
+**When** claim-time nominee collection runs on the Story 6.8 `<NomineeDetailEditor>` (UX-DR34) surface
+**Then** an **optional** `vpa` field is collected **per nominee bank account** (#1 and #2), **Tier-1 envelope-encrypted** (AR-12, via Story 1.5), UPI-VPA **format-validated** (`handle@psp`)
+**And** a nominee without a VPA is a **first-class state** — the account+IFSC disbursement path is unaffected and VPA is **never** a `frozen`-gate (unlike IFSC + holder-name per FR-31)
+**And** a migration adds a **nullable** Tier-1 `vpa` column to `claim_nominee_bank_accounts`
+
+**Given** the payment-module resolver seam Story 8.4 left (`apps/api/src/modules/payment/`)
+**When** the assigned pool's nominee account #1 (or the switched #2 per FR-27) **has** a VPA
+**Then** `resolveNomineeVpa` returns the real VPA (replacing the hard-`absent`); `POST /api/v1/member/contribution/intent` returns `{ available:true, upiUrl, tr, amountInr, vpa, account }`; the `<UPIIntentButton>` (UX-DR26, ≥ 56pt) renders **enabled**
+**And** when the VPA is **absent**, the existing `{ available:false, reason:'vpa_not_collected' }` fail-soft path is preserved **verbatim** (no regression of Story 8.4's absent state; no fabricated VPA; no derivation from account#+IFSC)
+**And** `buildContributionUpiUrl`, the deterministic `tr=` (Story 7.7), the amount-lock, and the `tn=` grammar are **unchanged** — this story lights only the `pa=` seam
+
+**Given** FR-27's account #1/#2 "Switch account" affordance (deferred in Story 8.4 per D1)
+**When** ≥ 2 nominee accounts carry a VPA
+**Then** the switch affordance is enabled (default #1); when < 2 accounts carry a VPA, no switch is shown (Story 8.4's `account_not_found` resolver state)
+
+**Given** wrong-pool enforcement (Story 7.6)
+**Then** VPA→pool uniqueness holds (each pool resolves its own nominee-account VPA); no cross-pool remap
+
+**Given** the Epic-8 demoable-closure precondition (`epics.md:2853`, SM-1 demo beat B21)
+**Then** with ≥ 1 nominee-account VPA seeded in a test claim, the 90-second loop fires a real `upi://pay` end-to-end to the yellow pill on the canonical validation device
+
+**And** i18n: the new VPA field label / help / validation-error copy added to `locales/{hi,en}` (grade-6, hi+en parity, `pnpm i18n:check`)
+**And** tests: domain unit (resolver present / absent / switch), migration + schema shape, contract `{ available:true }` reachability, integration (intent endpoint returns `available` when a VPA is seeded)
+
+**Dev Notes / guardrails:**
+- The payee (nominee) VPA — money **IN**, this story — is distinct from the **sender** (member) VPA read by the Story 9.4 secondary matcher (money **observed on statement**). Touch only the payee side.
+- Reuse Story 8.4's `resolveNomineeVpa` in `payment/`; wire, do not re-architect. Reuse `resolveMemberLivePool` (member-pool read seam).
+- Per-account VPA aligns FR-27's #1/#2 switch; nullable/optional; do **not** add VPA to the `frozen` gate.
+- **PRD/architecture amended alongside (correct-course 2026-07-21):** FR-37 (collects optional VPA), FR-16/FR-27/FR-31 (source + fail-soft + per-account notes), AR-12 (Tier-1 list += nominee VPA).
+
+**FRs:** FR-16 (pool-bound VPA pre-fill), FR-27 (`pa=` source), FR-37 (claim-time collection), FR-31 (per-account / switch). **Depends on:** Story 6.8 (`<NomineeDetailEditor>`), Story 7.1/7.6 (pool→nominee linkage + enforcement), Story 8.4 (`resolveNomineeVpa` seam + `{available:false}` contract).
 
 ---
 

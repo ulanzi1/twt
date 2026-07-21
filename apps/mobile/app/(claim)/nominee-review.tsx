@@ -24,6 +24,7 @@ import { memberAuth } from '../../lib/member-api'
 import { useClaimT } from '../../lib/claim-i18n'
 import { loadClaimDraft, saveClaimDraft } from '../../lib/claim-draft'
 import { IFSC_RE } from '../../lib/nominee-bank-ifsc'
+import { VPA_RE } from '../../lib/nominee-bank-vpa'
 import { useSession } from '../../lib/session-context'
 
 type NomineeSummary = NomineeStatusResponse['nominees'][number]
@@ -34,11 +35,14 @@ interface AccountFields {
   holder: string
   number: string
   ifsc: string
+  // Story 8.13 — the nominee's UPI ID for this account. OPTIONAL — a BLANK value never gates submit; a
+  // NON-blank value must be format-valid (vpaValid) or submit is blocked (review finding).
+  vpa: string
   bankName: string | null
   ifscState: IfscState
 }
 
-const emptyAccount = (): AccountFields => ({ holder: '', number: '', ifsc: '', bankName: null, ifscState: 'idle' })
+const emptyAccount = (): AccountFields => ({ holder: '', number: '', ifsc: '', vpa: '', bankName: null, ifscState: 'idle' })
 
 type SubmitState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -136,7 +140,17 @@ export default function NomineeReviewScreen(): React.ReactElement {
 
   const accountComplete = (a: AccountFields): boolean =>
     a.holder.trim() !== '' && a.number.trim() !== '' && a.ifscState === 'ok'
-  const canSubmit = Boolean(claimCaseId) && accountComplete(accounts[0]) && accountComplete(accounts[1]) && submit !== 'saving'
+  // The VPA is OPTIONAL (a blank field is always valid — it never gates submit), but a NON-blank value
+  // must be format-valid before submitting (review finding: previously a malformed-but-non-blank VPA
+  // reached the server and 400'd the whole two-account payload with no field-specific feedback).
+  const vpaValid = (a: AccountFields): boolean => a.vpa.trim() === '' || VPA_RE.test(a.vpa.trim())
+  const canSubmit =
+    Boolean(claimCaseId) &&
+    accountComplete(accounts[0]) &&
+    accountComplete(accounts[1]) &&
+    vpaValid(accounts[0]) &&
+    vpaValid(accounts[1]) &&
+    submit !== 'saving'
 
   async function onSubmit(): Promise<void> {
     if (!claimCaseId) return
@@ -144,13 +158,25 @@ export default function NomineeReviewScreen(): React.ReactElement {
       setNotice(t('nominee.bank.incomplete'))
       return
     }
+    if (!vpaValid(accounts[0]) || !vpaValid(accounts[1])) {
+      setNotice(t('nominee.bank.vpa_invalid'))
+      return
+    }
     setNotice(null)
     setSubmit('saving')
+    // The optional VPA rides along only when the filer typed one (trimmed) — a blank field stays absent
+    // (a first-class state; VPA never gates submit). Story 8.13.
+    const buildAccount = (a: AccountFields) => {
+      const vpa = a.vpa.trim()
+      return {
+        accountHolderName: a.holder.trim(),
+        accountNumber: a.number.trim(),
+        ifsc: a.ifsc.trim().toUpperCase(),
+        ...(vpa !== '' ? { vpa } : {}),
+      }
+    }
     const payload: RecordNomineeBankRequest = {
-      accounts: [
-        { accountHolderName: accounts[0].holder.trim(), accountNumber: accounts[0].number.trim(), ifsc: accounts[0].ifsc.trim().toUpperCase() },
-        { accountHolderName: accounts[1].holder.trim(), accountNumber: accounts[1].number.trim(), ifsc: accounts[1].ifsc.trim().toUpperCase() },
-      ],
+      accounts: [buildAccount(accounts[0]), buildAccount(accounts[1])],
     }
     try {
       await claimApi.recordNomineeBank(claimCaseId, payload)
@@ -200,6 +226,22 @@ export default function NomineeReviewScreen(): React.ReactElement {
         {a.ifscState === 'checking' ? <Text color="$colorPress">{t('nominee.bank.ifsc_checking')}</Text> : null}
         {a.ifscState === 'ok' && a.bankName ? <Text color="#1E8E3E">{a.bankName}</Text> : null}
         {a.ifscState === 'error' ? <Text color="#B00020">{t('nominee.bank.ifsc_error')}</Text> : null}
+        {/* Story 8.13 — optional UPI ID. A blank value never gates submit; a non-empty value that fails the
+            client regex both shows an inline error AND blocks submit (review finding — canSubmit checks
+            vpaValid). */}
+        <Input
+          value={a.vpa}
+          onChangeText={(v) => patchAccount(idx, { vpa: v })}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder={t('nominee.bank.vpa')}
+          accessibilityLabel={t('nominee.bank.vpa')}
+          disabled={busy}
+        />
+        <Text color="$colorPress" fontSize="$2">{t('nominee.bank.vpa_help')}</Text>
+        {a.vpa.trim() !== '' && !VPA_RE.test(a.vpa.trim()) ? (
+          <Text color="#B00020">{t('nominee.bank.vpa_invalid')}</Text>
+        ) : null}
         <Separator />
       </YStack>
     )

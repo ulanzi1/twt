@@ -22,6 +22,7 @@
 //     the tier isn't knowable at the route preHandler stage, only after the domain writer's D3 read).
 
 import {
+  NOMINEE_BANK_VPA_REGEX,
   type IfscLookupResponse,
   type NomineeBankStatusResponse,
   type RecordNomineeBankHelplineRequest,
@@ -99,11 +100,16 @@ interface PreparedAccount {
   input: claim.NomineeBankAccountInput;
   bankName: string;
   branch: string | null;
+  /** Whether this account carried a VPA (drives the NON-PII `vpaPresent` presence view). */
+  vpaPresent: boolean;
 }
 
 /**
- * Validate one account's IFSC (format + cached lookup) and encrypt its three Tier-1 fields. A
- * malformed or unrecognized IFSC is a dignified Pattern-4 rejection (the account is not persisted).
+ * Validate one account's IFSC (format + cached lookup) and encrypt its Tier-1 fields. A malformed or
+ * unrecognized IFSC is a dignified Pattern-4 rejection (the account is not persisted). The VPA is
+ * OPTIONAL (Story 8.13): when present it is re-asserted server-side then encrypted (same field class
+ * as the other three → symmetric with the intent-time decrypt); when absent, `vpaCiphertext` is
+ * `null` and the account persists normally (VPA absence NEVER throws).
  */
 async function prepareAccount(
   deps: AppDeps,
@@ -129,11 +135,32 @@ async function prepareAccount(
     );
   }
 
-  const [accountHolderNameCiphertext, accountNumberCiphertext, ifscCiphertext] = await Promise.all([
-    encryptNomineeBankField(entry.accountHolderName, pariwarId, deps.encryption),
-    encryptNomineeBankField(entry.accountNumber, pariwarId, deps.encryption),
-    encryptNomineeBankField(ifsc, pariwarId, deps.encryption),
-  ]);
+  // Optional VPA: re-assert the wire format server-side before encrypting (a bad VPA is a dignified
+  // Pattern-4 rejection, distinct from the IFSC one). Absent → null, never a throw.
+  let vpaTrimmed: string | null = null;
+  if (entry.vpa !== undefined) {
+    const candidate = entry.vpa.trim();
+    if (!NOMINEE_BANK_VPA_REGEX.test(candidate)) {
+      throw new BadRequestError(
+        "We couldn't recognize that UPI ID — please check it and try again.",
+        'nominee_bank.vpa_unrecognized',
+        { rank },
+      );
+    }
+    vpaTrimmed = candidate;
+  }
+
+  const [accountHolderNameCiphertext, accountNumberCiphertext, ifscCiphertext, vpaCiphertext] =
+    await Promise.all([
+      encryptNomineeBankField(entry.accountHolderName, pariwarId, deps.encryption),
+      encryptNomineeBankField(entry.accountNumber, pariwarId, deps.encryption),
+      encryptNomineeBankField(ifsc, pariwarId, deps.encryption),
+      // Preserve null for an absent VPA — do NOT encrypt an empty string (that would resolve to a
+      // truthy plaintext at intent time and fabricate an unusable `pa=`).
+      vpaTrimmed === null
+        ? Promise.resolve<string | null>(null)
+        : encryptNomineeBankField(vpaTrimmed, pariwarId, deps.encryption),
+    ]);
 
   return {
     input: {
@@ -141,12 +168,14 @@ async function prepareAccount(
       accountHolderNameCiphertext,
       accountNumberCiphertext,
       ifscCiphertext,
+      vpaCiphertext,
       bankName: resolved.bankName,
       branch: resolved.branch,
       ifscValidated: true,
     },
     bankName: resolved.bankName,
     branch: resolved.branch,
+    vpaPresent: vpaTrimmed !== null,
   };
 }
 
@@ -241,6 +270,7 @@ async function recordNomineeBank(
       bankName: p.bankName,
       ifscValidated: p.input.ifscValidated,
       holderNamePresent: true,
+      vpaPresent: p.vpaPresent,
     })),
   };
 }
@@ -262,6 +292,8 @@ async function nomineeBankStatus(
       bankName: row.bankName,
       ifscValidated: row.ifscValidated,
       holderNamePresent: true,
+      // NON-PII presence only — never decrypt to build the status view (Story 8.13).
+      vpaPresent: row.vpaCiphertext !== null,
     })),
   };
 }

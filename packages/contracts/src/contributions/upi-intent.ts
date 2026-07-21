@@ -98,6 +98,10 @@ export const ContributionIntentAvailable = z
     vpa: z.string().min(1),
     /** Which nominee account the VPA came from (#1 default / #2 switched). */
     account: ContributionAccount,
+    /** Whether a "Switch account" affordance should be offered (Story 8.13) — `true` iff the OTHER
+     *  nominee account ALSO resolves a VPA (FR-27 #1/#2). `false` when only one account carries a VPA
+     *  (switching would hit `account_not_found`/`vpa_not_collected` — never a silent substitution). */
+    canSwitchAccount: z.boolean(),
     /** The member's OWN attestation state for this alert (AC4; review finding — carried on EVERY intent
      *  response branch, not just the card, so `/pay` can route a member who already attested straight to
      *  confirmation instead of re-running the launch flow). */

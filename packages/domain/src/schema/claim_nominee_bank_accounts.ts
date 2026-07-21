@@ -18,6 +18,11 @@
 //   · account_holder_name / account_number / ifsc → Tier-1 envelope ciphertext
 //     (`piiColumn(1, 'claim_nominee_bank')`). Encrypt-before-insert in the route; the read
 //     accessor returns ciphertext AS STORED (the consumer decrypts). NEVER logged / echoed.
+//   · vpa → Tier-1 envelope ciphertext, per-account, OPTIONAL (Story 8.13, migration 0080). The
+//     nominee's own UPI VPA for the `pa=` payee (money IN, member → nominee — the payee side ONLY,
+//     NOT the Story 9.4 sender/member VPA). NULLABLE by design — a nominee without a VPA is a
+//     first-class state; the account#+IFSC disbursement path is unaffected and VPA is NEVER a
+//     frozen-gate. Same field class as the three fields above → symmetric encrypt/decrypt.
 //   · bank_name / branch → Tier-3 plaintext (public, IFSC-derived, non-identifying).
 //   · account_rank (1/2) + ifsc_validated (bool) → non-PII plain columns.
 //
@@ -54,6 +59,10 @@ export const claimNomineeBankAccounts = pgTable(
     accountHolderNameCiphertext: piiColumn(1, 'claim_nominee_bank')('account_holder_name_ciphertext').notNull(),
     accountNumberCiphertext: piiColumn(1, 'claim_nominee_bank')('account_number_ciphertext').notNull(),
     ifscCiphertext: piiColumn(1, 'claim_nominee_bank')('ifsc_ciphertext').notNull(),
+
+    // The nominee's UPI VPA for the `pa=` payee — Tier-1 ciphertext, OPTIONAL (Story 8.13, migration
+    // 0080). NULLABLE: a nominee without a VPA is a first-class state (do NOT chain `.notNull()`).
+    vpaCiphertext: piiColumn(1, 'claim_nominee_bank')('vpa_ciphertext'),
 
     // ── Tier-3 plaintext — public, IFSC-derived, non-identifying ──
     bankName: text('bank_name').notNull(),

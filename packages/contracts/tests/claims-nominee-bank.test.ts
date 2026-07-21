@@ -10,6 +10,7 @@ import { assertStrict } from '../src/_common/strict.js';
 import {
   IfscLookupResponse,
   NOMINEE_BANK_IFSC_REGEX,
+  NOMINEE_BANK_VPA_REGEX,
   NomineeBankAccountEntry,
   NomineeBankStatusResponse,
   RecordNomineeBankHelplineRequest,
@@ -58,6 +59,34 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
     ).toThrow();
   });
 
+  it('the VPA wire regex matches the NPCI handle@psp shape (pinned wire constant, Story 8.13)', () => {
+    // Pinned .source — the mobile hand-copy (apps/mobile/lib/nominee-bank-vpa.ts's VPA_RE) pins the
+    // identical literal string on its own side; if either drifts, its own test breaks (review finding,
+    // the nominee-bank-ifsc.ts precedent).
+    expect(NOMINEE_BANK_VPA_REGEX.source).toBe('^[A-Za-z0-9.\\-_]{2,256}@[A-Za-z][A-Za-z0-9.\\-_]{1,63}$');
+    expect(NOMINEE_BANK_VPA_REGEX.test('nominee@okhdfc')).toBe(true);
+    expect(NOMINEE_BANK_VPA_REGEX.test('ravi.kumar-1@oksbi')).toBe(true);
+    expect(NOMINEE_BANK_VPA_REGEX.test('9876543210@ybl')).toBe(true);
+    expect(NOMINEE_BANK_VPA_REGEX.test('noatsign')).toBe(false); // no @
+    expect(NOMINEE_BANK_VPA_REGEX.test('a@1bank')).toBe(false); // PSP must start with a letter
+    expect(NOMINEE_BANK_VPA_REGEX.test('@okhdfc')).toBe(false); // empty handle
+    expect(NOMINEE_BANK_VPA_REGEX.test('x @okhdfc')).toBe(false); // whitespace not allowed
+  });
+
+  it('the entry accepts an OPTIONAL, format-valid vpa; absence is first-class; a bad vpa is rejected (Story 8.13)', () => {
+    // Absent VPA is valid (optional, first-class).
+    expect(NomineeBankAccountEntry.parse(validAccount).vpa).toBeUndefined();
+    // A well-formed VPA is accepted + carried through.
+    expect(NomineeBankAccountEntry.parse({ ...validAccount, vpa: 'nominee@okhdfc' }).vpa).toBe('nominee@okhdfc');
+    // A malformed VPA is rejected (format-validated at the wire).
+    expect(() => NomineeBankAccountEntry.parse({ ...validAccount, vpa: 'not-a-vpa' })).toThrow();
+    expect(() => NomineeBankAccountEntry.parse({ ...validAccount, vpa: '' })).toThrow();
+    // Incidental whitespace is trimmed before validation — consistent with accountHolderName (review finding).
+    expect(NomineeBankAccountEntry.parse({ ...validAccount, vpa: '  nominee@okhdfc  ' }).vpa).toBe('nominee@okhdfc');
+    // Whitespace-only collapses to empty and is still rejected, not silently accepted as "absent".
+    expect(() => NomineeBankAccountEntry.parse({ ...validAccount, vpa: '   ' })).toThrow();
+  });
+
   it('RecordNomineeBankRequest requires EXACTLY two accounts', () => {
     expect(() => RecordNomineeBankRequest.parse({ accounts: [validAccount, validAccount2] })).not.toThrow();
     expect(() => RecordNomineeBankRequest.parse({ accounts: [validAccount] })).toThrow();
@@ -104,17 +133,28 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
   it('RecordNomineeBankResponse is a NON-PII presence view (no account number / holder name / raw IFSC)', () => {
     const parsed = RecordNomineeBankResponse.parse({
       accounts: [
-        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true },
-        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true },
+        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: true },
+        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
       ],
     });
     expect(parsed.accounts).toHaveLength(2);
-    // A response carrying an account number / holder name / raw IFSC is rejected (.strict()).
+    // The presence view carries a NON-PII vpaPresent boolean (never the VPA itself) — Story 8.13.
+    expect(parsed.accounts[0]?.vpaPresent).toBe(true);
+    expect(parsed.accounts[1]?.vpaPresent).toBe(false);
+    // A response carrying an account number / holder name / raw IFSC / raw VPA is rejected (.strict()).
     expect(() =>
       RecordNomineeBankResponse.parse({
         accounts: [
-          { rank: 1, bankName: 'X', ifscValidated: true, holderNamePresent: true, accountNumber: '123' },
-          { rank: 2, bankName: 'Y', ifscValidated: true, holderNamePresent: true },
+          { rank: 1, bankName: 'X', ifscValidated: true, holderNamePresent: true, vpaPresent: false, accountNumber: '123' },
+          { rank: 2, bankName: 'Y', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      RecordNomineeBankResponse.parse({
+        accounts: [
+          { rank: 1, bankName: 'X', ifscValidated: true, holderNamePresent: true, vpaPresent: true, vpa: 'nominee@okhdfc' },
+          { rank: 2, bankName: 'Y', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
         ],
       }),
     ).toThrow();
@@ -137,15 +177,15 @@ describe('nominee-bank DTOs (strict + shapes)', () => {
     expect(NomineeBankStatusResponse.parse({ accounts: [] }).accounts).toEqual([]);
     const parsed = NomineeBankStatusResponse.parse({
       accounts: [
-        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true },
-        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true },
+        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: true },
+        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
       ],
     });
     expect(parsed.accounts).toHaveLength(2);
     // Same NON-PII presence view as RecordNomineeBankResponse — no account number / holder name / raw IFSC.
     expect(() =>
       NomineeBankStatusResponse.parse({
-        accounts: [{ rank: 1, bankName: 'X', ifscValidated: true, holderNamePresent: true, accountNumber: '123' }],
+        accounts: [{ rank: 1, bankName: 'X', ifscValidated: true, holderNamePresent: true, vpaPresent: false, accountNumber: '123' }],
       }),
     ).toThrow();
   });

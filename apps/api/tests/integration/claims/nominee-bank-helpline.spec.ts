@@ -212,10 +212,10 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — helpline E2E (:5433)'
 
     const after = await client.inject({ method: 'GET', url: statusUrl(pariwarId, claimCaseId) });
     expect(after.statusCode).toBe(200);
-    const body = after.json<{ accounts: Array<{ rank: number; bankName: string; ifscValidated: boolean; holderNamePresent: boolean }> }>();
+    const body = after.json<{ accounts: Array<{ rank: number; bankName: string; ifscValidated: boolean; holderNamePresent: boolean; vpaPresent: boolean }> }>();
     expect(body.accounts).toEqual([
-      { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true },
-      { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true },
+      { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
+      { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
     ]);
     const afterStr = JSON.stringify(body);
     expect(afterStr).not.toContain('123456789012');

@@ -467,7 +467,7 @@ Trustee sets the per-pool fixed amount; effective for 12+ months; changes announ
 
 #### FR-16: Pool-bound payment enforcement (Pool-Sys #2)
 
-UPI Intent pre-fills the assigned pool's nominee VPA. Member paying to a non-assigned pool's VPA is reconciled as **wrong-pool / invalid**; no refund.
+UPI Intent pre-fills the assigned pool's nominee VPA. Member paying to a non-assigned pool's VPA is reconciled as **wrong-pool / invalid**; no refund. The pre-filled VPA is the assigned pool's nominee-account VPA collected at claim-time (FR-37 / Story 8.13); when absent, UPI Intent is unavailable (first-class fail-soft) — never a fabricated or `undefined` VPA.
 
 **Consequences (testable):**
 - The UTR matcher (FR-28) flags wrong-pool deposits; member sees "wrong-pool, contact helpdesk."
@@ -567,7 +567,7 @@ UPI Intent is the only payment rail member → nominee. No payment gateway anywh
 
 #### FR-27: UPI Intent payment flow (UPI-Track #1)
 
-Member tap → UPI Intent launched with VPA, amount, and `tr=` pre-filled. Member completes in their UPI app. Returns to TWT.
+Member tap → UPI Intent launched with VPA, amount, and `tr=` pre-filled. Member completes in their UPI app. Returns to TWT. When the assigned pool's nominee VPA is not collected (FR-37 / Story 8.13), the Intent is unavailable (fail-soft "not available yet — Get help") and the FR-28 UTR self-attest path still supports out-of-band payment.
 
 **Consequences (testable):**
 - Pre-fill includes `pa=` (VPA), `am=` (amount), `cu=INR`, `tr=` (unique per member × alert), `tn=` (transaction note: "Pool Karna — Sahyog Alert #78"), `mc=` (optional).
@@ -602,7 +602,7 @@ Cron job runs N times per day (frequency configurable; v1 default 6×/day during
 
 #### FR-31: Dual nominee bank accounts (RBI UPI limit workaround)
 
-Every approved claim records two nominee bank accounts at claim-time. Members can pay to either.
+Every approved claim records two nominee bank accounts at claim-time. Members can pay to either. Each account may carry an **optional** UPI VPA (FR-37 / Story 8.13) — the `pa=` destination for member→nominee contributions; the "Switch account" affordance (below) is enabled only when ≥ 2 accounts carry a VPA.
 
 **Consequences (testable):**
 - UPI Intent (FR-27) defaults to account #1 with a "Switch account" link to account #2.
@@ -651,9 +651,10 @@ A claim begins when a nominee (often the bereaved family member, possibly not a 
 
 #### FR-37: Claim filing with nominee bank entered at claim-time
 
-Claim filing is open to the nominee (regardless of TWT membership). Nominee enters bank account #1, IFSC #1, account holder name #1; bank account #2, IFSC #2, account holder name #2 (RBI/UPI workaround per FR-31). Death certificate uploaded.
+Claim filing is open to the nominee (regardless of TWT membership). Nominee enters bank account #1, IFSC #1, account holder name #1; bank account #2, IFSC #2, account holder name #2 (RBI/UPI workaround per FR-31); optionally a UPI VPA per account (the `pa=` destination for member→nominee contributions per FR-16/FR-27). Death certificate uploaded.
 
 **Consequences (testable):**
+- Nominee VPA is **optional** per account and format-validated (`handle@psp`); its absence is a first-class state and does **not** block `frozen` (unlike IFSC + holder-name). Added by Story 8.13 (correct-course 2026-07-21).
 - Nominee identity does not require KYC (matches bank norms, R5(E) compatibility).
 - Account holder name fields are validated against bank IFSC lookup (penny-drop verification deferred to v1-S).
 - Claim enters `under_verification` state on submit.

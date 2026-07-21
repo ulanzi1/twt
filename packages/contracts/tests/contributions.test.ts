@@ -258,7 +258,7 @@ describe('Story 8.4 — UPI Intent request/response (AC1/AC2)', () => {
     }
   });
 
-  it('the available intent carries the server-built URL + tr + amount + vpa + account + myContribution', () => {
+  it('the available intent carries the server-built URL + tr + amount + vpa + account + canSwitchAccount + myContribution', () => {
     const ok = ContributionIntentResponse.parse({
       available: true,
       upiUrl: 'upi://pay?pa=x@ok&am=310&cu=INR&tn=Pool%20F&tr=contrib-v1-abc',
@@ -266,9 +266,10 @@ describe('Story 8.4 — UPI Intent request/response (AC1/AC2)', () => {
       amountInr: 310,
       vpa: 'nominee@okhdfc',
       account: 1,
+      canSwitchAccount: false,
       myContribution: 'none',
     });
-    expect(ok).toMatchObject({ available: true, amountInr: 310, myContribution: 'none' });
+    expect(ok).toMatchObject({ available: true, amountInr: 310, canSwitchAccount: false, myContribution: 'none' });
     // myContribution is REQUIRED on the available branch (review finding — the field must be carried on
     // every intent response so a member who already attested can be routed to confirmation, not re-shown
     // the launch flow).
@@ -280,7 +281,21 @@ describe('Story 8.4 — UPI Intent request/response (AC1/AC2)', () => {
         amountInr: 310,
         vpa: 'nominee@okhdfc',
         account: 1,
+        canSwitchAccount: false,
       }).success,
+    ).toBe(false);
+    // canSwitchAccount is REQUIRED on the available branch (Story 8.13 — the FR-27 switch affordance).
+    expect(
+      ContributionIntentResponse.safeParse({
+        available: true,
+        upiUrl: 'upi://pay?pa=x@ok&am=310&cu=INR&tn=Pool%20F&tr=contrib-v1-abc',
+        tr: 'contrib-v1-abc',
+        amountInr: 310,
+        vpa: 'nominee@okhdfc',
+        account: 1,
+        myContribution: 'none',
+      }).success,
+      'available intent must require canSwitchAccount',
     ).toBe(false);
   });
 

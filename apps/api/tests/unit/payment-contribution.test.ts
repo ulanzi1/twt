@@ -52,6 +52,12 @@ const openScopeTx = vi.fn();
 const closeScopeTx = vi.fn();
 vi.mock('../../src/modules/multi-tenant/scope-tx.js', () => ({ openScopeTx, closeScopeTx }));
 
+// The Story 8.13 load-bearing decrypt-in-handler call site — mocked here (not left un-exercised, review
+// finding) so the handler's own wiring (which ciphertext it passes, what it does with a decrypt failure)
+// is actually under test, distinct from the domain-level `resolveNomineeVpa` unit coverage.
+const decryptNomineeBankField = vi.fn();
+vi.mock('../../src/modules/claims/nominee-bank-crypto.js', () => ({ decryptNomineeBankField }));
+
 const { createPaymentHandlers } = await import('../../src/modules/payment/handlers.js');
 
 const PARIWAR_ID = '11111111-1111-1111-1111-111111111111';
@@ -137,7 +143,11 @@ describe('payment intent — the nominee-VPA fail-soft + the lit-up path (AC1/AC
     wireScopeTx();
     wireAssignedLivePool();
     getClaimNomineeBankAccountsCiphertext.mockResolvedValue([{ accountRank: 1 }]);
-    resolveNomineeVpa.mockReturnValue({ available: true, vpa: 'nominee@okhdfc', account: 1 });
+    // First call = the preferred account resolves; second call (the canSwitchAccount probe on the OTHER
+    // account) is absent → canSwitchAccount:false (only one account carries a VPA).
+    resolveNomineeVpa
+      .mockReturnValueOnce({ available: true, vpa: 'nominee@okhdfc', account: 1 })
+      .mockReturnValueOnce({ available: false, reason: 'account_not_found' });
     buildContributionUpiUrl.mockReturnValue('upi://pay?pa=nominee%40okhdfc&am=310&cu=INR&tn=Pool%20F&tr=' + SERVER_TR);
 
     const h = createPaymentHandlers(deps());
@@ -149,11 +159,101 @@ describe('payment intent — the nominee-VPA fail-soft + the lit-up path (AC1/AC
       amountInr: 310, // the amount-lock = the snapshotted fixed_amount
       vpa: 'nominee@okhdfc',
       account: 1,
+      canSwitchAccount: false,
       myContribution: 'none',
     });
     // The amount was NOT client-named — it came from the pool snapshot (R4 / amount-lock).
     expect(buildContributionUpiUrl).toHaveBeenCalledWith(
       expect.objectContaining({ vpa: 'nominee@okhdfc', amountInr: 310, tr: SERVER_TR }),
+    );
+  });
+
+  it('Story 8.13: canSwitchAccount is true when the OTHER account also resolves a VPA (FR-27 switch)', async () => {
+    vi.clearAllMocks();
+    wireScopeTx();
+    wireAssignedLivePool();
+    getClaimNomineeBankAccountsCiphertext.mockResolvedValue([{ accountRank: 1 }, { accountRank: 2 }]);
+    // Preferred (#1) resolves; the switch-probe (#2) also resolves → canSwitchAccount:true.
+    resolveNomineeVpa
+      .mockReturnValueOnce({ available: true, vpa: 'nominee@okhdfc', account: 1 })
+      .mockReturnValueOnce({ available: true, vpa: 'nominee2@okaxis', account: 2 });
+    buildContributionUpiUrl.mockReturnValue('upi://pay?pa=x&am=310&cu=INR&tn=t&tr=' + SERVER_TR);
+
+    const h = createPaymentHandlers(deps());
+    const res = await h.intent(fakeRequest({}));
+    expect(res).toMatchObject({ available: true, account: 1, canSwitchAccount: true });
+    // The switch probe asked the OTHER account (rank 2).
+    expect(resolveNomineeVpa).toHaveBeenLastCalledWith(
+      expect.objectContaining({ preferredAccount: 2 }),
+    );
+  });
+
+  it('Story 8.13 review finding — the handler actually DECRYPTS a stored vpaCiphertext and feeds the plaintext to resolveNomineeVpa (the load-bearing wiring, previously untested end-to-end)', async () => {
+    vi.clearAllMocks();
+    wireScopeTx();
+    wireAssignedLivePool();
+    getClaimNomineeBankAccountsCiphertext.mockResolvedValue([
+      { accountRank: 1, vpaCiphertext: 'CIPHERTEXT_ACCOUNT_1' },
+      { accountRank: 2, vpaCiphertext: null },
+    ]);
+    decryptNomineeBankField.mockResolvedValue('nominee@okhdfc');
+    resolveNomineeVpa
+      .mockReturnValueOnce({ available: true, vpa: 'nominee@okhdfc', account: 1 })
+      .mockReturnValueOnce({ available: false, reason: 'vpa_not_collected' });
+    buildContributionUpiUrl.mockReturnValue('upi://pay?pa=nominee%40okhdfc&am=310&cu=INR&tn=Pool%20F&tr=' + SERVER_TR);
+
+    const h = createPaymentHandlers(deps());
+    const res = await h.intent(fakeRequest({}));
+
+    expect(res).toMatchObject({ available: true, vpa: 'nominee@okhdfc', canSwitchAccount: false });
+    // The ciphertext row, the pariwarId, and the encryption deps — the exact args the handler must pass.
+    expect(decryptNomineeBankField).toHaveBeenCalledWith('CIPHERTEXT_ACCOUNT_1', PARIWAR_ID, expect.anything());
+    // Account #2 has NO ciphertext — decrypt is never called for it (the null short-circuit).
+    expect(decryptNomineeBankField).toHaveBeenCalledTimes(1);
+    // The resolver received the DECRYPTED plaintext, never the ciphertext or an `undefined` vpa.
+    expect(resolveNomineeVpa).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectionAccounts: [
+          expect.objectContaining({ accountRank: 1, vpa: 'nominee@okhdfc' }),
+          expect.objectContaining({ accountRank: 2, vpa: null }),
+        ],
+      }),
+    );
+    // The augmented row never carries the LIVE ciphertext alongside the decrypted plaintext — it's zeroed
+    // to null once decrypted, limiting this Tier-1 field's in-memory exposure window (review finding).
+    const [{ collectionAccounts }] = resolveNomineeVpa.mock.calls[0] as [
+      { collectionAccounts: Array<{ vpaCiphertext: unknown }> },
+    ];
+    for (const acc of collectionAccounts) {
+      expect(acc.vpaCiphertext).toBeNull();
+    }
+  });
+
+  it('Story 8.13 review finding — a VPA decrypt failure degrades that account to fail-soft vpa:null instead of 500ing the endpoint', async () => {
+    vi.clearAllMocks();
+    wireScopeTx();
+    wireAssignedLivePool();
+    getClaimNomineeBankAccountsCiphertext.mockResolvedValue([
+      { accountRank: 1, vpaCiphertext: 'CORRUPT_CIPHERTEXT' },
+      { accountRank: 2, vpaCiphertext: null },
+    ]);
+    decryptNomineeBankField.mockRejectedValue(new Error('KMS unavailable'));
+    resolveNomineeVpa.mockReturnValue({ available: false, reason: 'vpa_not_collected' });
+
+    const h = createPaymentHandlers(deps());
+    const request = fakeRequest({});
+    const res = await h.intent(request);
+
+    // Fail-soft, never a thrown error / 500 — the endpoint's central guarantee.
+    expect(res).toEqual({ available: false, reason: 'vpa_not_collected', myContribution: 'none' });
+    expect(resolveNomineeVpa).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectionAccounts: expect.arrayContaining([expect.objectContaining({ accountRank: 1, vpa: null })]),
+      }),
+    );
+    expect(request.log.error).toHaveBeenCalledWith(
+      expect.objectContaining({ account_rank: 1 }),
+      expect.stringContaining('decrypt failed'),
     );
   });
 
@@ -180,7 +280,9 @@ describe('payment intent — the nominee-VPA fail-soft + the lit-up path (AC1/AC
     wireAssignedLivePool();
     hasAttestedContribution.mockResolvedValue(true);
     getClaimNomineeBankAccountsCiphertext.mockResolvedValue([{ accountRank: 1 }]);
-    resolveNomineeVpa.mockReturnValue({ available: true, vpa: 'nominee@okhdfc', account: 1 });
+    resolveNomineeVpa
+      .mockReturnValueOnce({ available: true, vpa: 'nominee@okhdfc', account: 1 })
+      .mockReturnValueOnce({ available: false, reason: 'account_not_found' });
     buildContributionUpiUrl.mockReturnValue('upi://pay?pa=nominee%40okhdfc&am=310&cu=INR&tn=Pool%20F&tr=' + SERVER_TR);
 
     const h = createPaymentHandlers(deps());

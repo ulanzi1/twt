@@ -44,6 +44,7 @@ import type { AppDeps } from '../../context.js';
 import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
+import { decryptNomineeBankField } from '../claims/nominee-bank-crypto.js';
 import { resolveMemberLivePool } from '../member-pool/handlers.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 
@@ -123,12 +124,42 @@ export function createPaymentHandlers(deps: AppDeps) {
         });
         const myContribution = attested ? ('attested' as const) : ('none' as const);
 
-        // (2) The nominee bank accounts for the pool's claim → the VPA resolver (server-side). Absence is a
-        //     first-class state today (D1): no VPA column exists → { available:false, reason:'vpa_not_collected' }.
-        const collectionAccounts = await claimDomain.getClaimNomineeBankAccountsCiphertext(
+        // (2) The nominee bank accounts for the pool's claim → the VPA resolver (server-side). Story 8.13
+        //     lights this seam up: each account's OPTIONAL `vpa_ciphertext` is DECRYPTED here at the API
+        //     boundary (the domain never decrypts — KMS is app-layer) and fed to `resolveNomineeVpa` as a
+        //     plaintext `vpa`. Passing the raw ciphertext rows would make the resolver read `undefined` →
+        //     always `vpa_not_collected` → the feature silently never lights up (the load-bearing wiring).
+        //     ⚠ PERF GUARDRAIL: `decryptTier1` is a real KMS round-trip per ciphertext; both accounts are
+        //     decrypted (canSwitchAccount inspects the non-preferred one) in PARALLEL to protect the
+        //     endpoint's <1s p95 UPI-intent-launch budget (Story 8.12's SM-1 demo measures this path).
+        //     A decrypt failure (KMS hiccup / corrupt ciphertext) on either account degrades that ONE
+        //     account to fail-soft `vpa: null` (never a 500) — the appeal-crypto precedent
+        //     (`claims.appeal.handlers.ts`) for a Tier-1 decrypt on a fail-soft read path.
+        const ciphertextRows = await claimDomain.getClaimNomineeBankAccountsCiphertext(
           scopeTx.tx,
           pariwarId,
           chosen.pool.claimCaseId,
+        );
+        const collectionAccounts = await Promise.all(
+          ciphertextRows.map(async (row) => {
+            const vpaCiphertext = row.vpaCiphertext ?? null;
+            // The ciphertext is zeroed out to `null` once decrypted (or if there was none) — the augmented
+            // row never carries BOTH the plaintext `vpa` and its own still-live ciphertext at once, limiting
+            // this Tier-1 field's in-memory exposure window (review finding).
+            if (vpaCiphertext === null) {
+              return { ...row, vpaCiphertext: null, vpa: null };
+            }
+            try {
+              const vpa = await decryptNomineeBankField(vpaCiphertext, pariwarIdStr, deps.encryption);
+              return { ...row, vpaCiphertext: null, vpa };
+            } catch (err) {
+              request.log.error(
+                { err, account_rank: row.accountRank },
+                'nominee VPA decrypt failed — degrading to vpa_not_collected',
+              );
+              return { ...row, vpaCiphertext: null, vpa: null };
+            }
+          }),
         );
         const vpaResolution = contributionDomain.resolveNomineeVpa({ collectionAccounts, preferredAccount });
         if (!vpaResolution.available) {
@@ -153,6 +184,15 @@ export function createPaymentHandlers(deps: AppDeps) {
           tn,
         });
 
+        // FR-27 "Switch account" (AC3): the affordance is offered only when the OTHER account also
+        // resolves a VPA (≥2 accounts carry one). A missing other account resolves to
+        // account_not_found/vpa_not_collected → canSwitchAccount:false (never a silent substitution).
+        const otherAccount = vpaResolution.account === 1 ? (2 as const) : (1 as const);
+        const canSwitchAccount = contributionDomain.resolveNomineeVpa({
+          collectionAccounts,
+          preferredAccount: otherAccount,
+        }).available;
+
         emitAuthAudit(deps, request, 'member_contribution.intent', {
           actorId: memberIdStr,
           pariwarId: pariwarIdStr,
@@ -166,6 +206,7 @@ export function createPaymentHandlers(deps: AppDeps) {
           amountInr,
           vpa: vpaResolution.vpa,
           account: vpaResolution.account,
+          canSwitchAccount,
           myContribution,
         };
       } catch (err) {

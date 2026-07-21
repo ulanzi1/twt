@@ -30,20 +30,33 @@ import { z } from 'zod';
  */
 export const NOMINEE_BANK_IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
+/**
+ * The NPCI UPI VPA (`handle@psp`) shape RE-DECLARED as a wire constant (Story 8.13 — the
+ * `NOMINEE_BANK_IFSC_REGEX` precedent: contracts MUST NOT import `@twt/domain` /
+ * `@twt/platform-adapters`, the browser-bundle rule). A handle of allowed chars, a literal `@`, and
+ * a PSP token starting with a letter. Mirrored client-side (`apps/mobile/lib/nominee-bank-vpa.ts`)
+ * and re-asserted server-side before encryption (never trust the client). This is the PAYEE
+ * (nominee) VPA — the `pa=` money-in destination — NOT the Story 9.4 sender (member) VPA.
+ */
+export const NOMINEE_BANK_VPA_REGEX = /^[A-Za-z0-9.\-_]{2,256}@[A-Za-z][A-Za-z0-9.\-_]{1,63}$/;
+
 /** An Indian bank account number: 9–18 digits (the RBI CBS range; digits only). */
 const ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/;
 
 /**
  * One disbursement account the filer types. NO `nomineeRank` / nominee linkage (D1 APPROVED — the
  * two accounts are a claim-scoped dual-account disbursement channel, not one-per-nominee). The
- * three fields are PII (encrypted server-side); the bank name/branch is resolved server-side from
- * the IFSC (not carried on the request — the client only supplies what the filer types).
+ * PII fields are encrypted server-side; the bank name/branch is resolved server-side from the IFSC
+ * (not carried on the request — the client only supplies what the filer types). `vpa` is OPTIONAL
+ * (Story 8.13) — the nominee's own UPI VPA for the `pa=` payee; a missing VPA is a first-class
+ * state (the account#+IFSC disbursement path is unaffected and VPA never gates the claim lifecycle).
  */
 export const NomineeBankAccountEntry = z
   .object({
     accountHolderName: z.string().trim().min(1).max(200),
     accountNumber: z.string().regex(ACCOUNT_NUMBER_REGEX, 'account number must be 9–18 digits'),
     ifsc: z.string().regex(NOMINEE_BANK_IFSC_REGEX, 'IFSC must match the RBI format (e.g. SBIN0000001)'),
+    vpa: z.string().trim().regex(NOMINEE_BANK_VPA_REGEX, 'UPI ID must look like name@bank').optional(),
   })
   .strict();
 export type NomineeBankAccountEntry = z.output<typeof NomineeBankAccountEntry>;
@@ -102,6 +115,9 @@ const NomineeBankAccountView = z
     bankName: z.string(),
     ifscValidated: z.boolean(),
     holderNamePresent: z.boolean(),
+    /** Whether THIS account carries a UPI VPA (Story 8.13) — a NON-PII presence boolean (never the
+     *  VPA itself), so the editor + status view can show which accounts can drive a UPI intent. */
+    vpaPresent: z.boolean(),
   })
   .strict();
 

@@ -17,13 +17,14 @@ import { claim, ids, member as memberDomain } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { decryptNomineeBankField } from '../../../src/modules/claims/nominee-bank-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 type Json = Record<string, unknown>;
 
-const account = (over: Partial<{ accountHolderName: string; accountNumber: string; ifsc: string }> = {}) => ({
+const account = (over: Partial<{ accountHolderName: string; accountNumber: string; ifsc: string; vpa: string }> = {}) => ({
   accountHolderName: 'Ravi Kumar',
   accountNumber: '123456789012',
   ifsc: 'SBIN0000001',
@@ -118,10 +119,11 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — member-app E2E (:5433
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(201);
-      // NON-PII presence view — rank + public bank name + validated flag + holder-name-present.
+      // NON-PII presence view — rank + public bank name + validated flag + holder-name-present + vpa-present.
+      // No VPA supplied → vpaPresent:false on both accounts (Story 8.13).
       expect(res.body.accounts).toEqual([
-        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true },
-        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true },
+        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
+        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
       ]);
 
       // Two encrypted rows persisted; the ciphertext is NOT the plaintext.
@@ -162,6 +164,67 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — member-app E2E (:5433
     }
   });
 
+  it('Story 8.13: an optional VPA round-trips — vpa_ciphertext persisted (not plaintext), vpaPresent reflects it', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId, claimCaseId } = await setupClaim(t);
+      const tok = token(t, memberId, pariwarId);
+
+      // Record #1 WITH a VPA, #2 WITHOUT.
+      const res = await inject(t, 'POST', `/api/v1/member/claims/${claimCaseId}/nominee-bank`, {
+        payload: {
+          accounts: [
+            account({ ifsc: 'SBIN0000001', vpa: 'nominee@okhdfc' }),
+            account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' }),
+          ],
+        },
+        token: tok,
+      });
+      expect(res.status).toBe(201);
+      // vpaPresent reflects which account carried a VPA (NON-PII presence view — the VPA itself is never echoed).
+      expect(res.body.accounts).toEqual([
+        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: true },
+        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
+      ]);
+      // The VPA is stored as ciphertext (NOT the plaintext); #2 has a NULL vpa_ciphertext.
+      const rows = await t.pool.query<{ account_rank: number; vpa_ciphertext: string | null }>(
+        `SELECT account_rank, vpa_ciphertext FROM claim_nominee_bank_accounts WHERE claim_case_id = $1 ORDER BY account_rank`,
+        [claimCaseId],
+      );
+      expect(rows.rows[0]?.vpa_ciphertext).not.toBeNull();
+      expect(rows.rows[0]?.vpa_ciphertext).not.toContain('nominee@okhdfc');
+      expect(rows.rows[1]?.vpa_ciphertext).toBeNull();
+
+      // decrypt-at-intent round-trip (Task 7): the payment intent handler decrypts this exact stored
+      // ciphertext via decryptNomineeBankField (its FIRST caller in the repo) under the same
+      // CLAIM_NOMINEE_BANK_FIELD_CLASS — assert it yields back the original plaintext VPA.
+      const decrypted = await decryptNomineeBankField(rows.rows[0]!.vpa_ciphertext!, pariwarId, t.deps.encryption);
+      expect(decrypted).toBe('nominee@okhdfc');
+
+      // Neither the response nor the identity event leaks the VPA plaintext.
+      expect(JSON.stringify(res.body)).not.toContain('nominee@okhdfc');
+      const events = await t.pool.query<{ payload: Json }>(
+        `SELECT payload FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_bank_recorded'`,
+        [claimCaseId],
+      );
+      expect(JSON.stringify(events.rows[0]?.payload)).not.toContain('nominee@okhdfc');
+      expect(JSON.stringify(t.auditSink.events)).not.toContain('nominee@okhdfc');
+
+      // A malformed VPA is rejected at the wire (the contract's NOMINEE_BANK_VPA_REGEX gates the body
+      // before the handler; prepareAccount re-asserts as defense-in-depth). The account is not persisted.
+      const bad = await inject(t, 'POST', `/api/v1/member/claims/${claimCaseId}/nominee-bank`, {
+        payload: {
+          accounts: [account({ ifsc: 'SBIN0000001', vpa: 'not-a-vpa' }), account({ accountNumber: '987654321098', ifsc: 'HDFC0000001' })],
+        },
+        token: tok,
+      });
+      expect(bad.status).toBe(400);
+      expect((bad.body.error as { code: string }).code).toBe('request.validation');
+    } finally {
+      await teardown(t);
+    }
+  });
+
   it('review finding (2026-07-11): GET status is [] before recording, the presence view after', async () => {
     const t = await createTestApp();
     try {
@@ -182,8 +245,8 @@ describe.skipIf(!hasDatabase)('Claim-time nominee bank — member-app E2E (:5433
       expect(after.status).toBe(200);
       // Same NON-PII presence view as the POST response — no account number / holder name / raw IFSC.
       expect(after.body.accounts).toEqual([
-        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true },
-        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true },
+        { rank: 1, bankName: 'State Bank of India', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
+        { rank: 2, bankName: 'HDFC Bank', ifscValidated: true, holderNamePresent: true, vpaPresent: false },
       ]);
       const afterStr = JSON.stringify(after.body);
       expect(afterStr).not.toContain('123456789012');

@@ -1,0 +1,23 @@
+-- Migration 0080 — claim-time nominee-bank UPI VPA (Story 8.13, Task 1).
+--
+-- Discharges Story 8.4's deferred payee-VPA seam: adds an OPTIONAL, per-account UPI VPA to the
+-- claim-time dual disbursement accounts so the pool's `<UPIIntentButton>` can fire a real `upi://pay`.
+-- The VPA is the NOMINEE's own bank-account VPA (money IN, member → nominee — the PMLA posture), the
+-- payee side ONLY — NOT the sender (member) VPA the Story 9.4 secondary matcher observes.
+--
+-- ── Tier-1 PII, NULLABLE (never a frozen-gate) ──────────────────────────────────────────────────────
+-- `vpa_ciphertext` is a Tier-1 envelope-ciphertext column (`piiColumn(1, 'claim_nominee_bank')`,
+-- same field class as holder-name / account# / IFSC — encrypt at the app layer, ciphertext AS STORED).
+-- It is NULLABLE by design: a nominee WITHOUT a VPA is a first-class state — the account#+IFSC
+-- disbursement path is unaffected, and the write MUST succeed with a null VPA. The absence resolves to
+-- Story 8.4's `{ available: false, reason: 'vpa_not_collected' }` fail-soft, never a fabricated `pa=`.
+--
+-- ⚠ DO NOT REGENERATE THIS FILE with `db:generate` (same discipline as 0021–0079). The drizzle snapshot
+-- baseline is frozen at 0020; a regenerate emits a bloated catch-up migration and drizzle-kit skips an
+-- already-applied migration by journal `when` (NOT by SQL hash), so a regenerate-after-apply silently
+-- drops hand-supplements and can raise 42P07. This file is HAND-AUTHORED: it carries ONLY the one column.
+--
+-- No new GRANT (the table's existing grants from its create migration cover the new column) and no
+-- snapshot file (baseline frozen at 0020; mirror 0021–0079).
+
+ALTER TABLE "claim_nominee_bank_accounts" ADD COLUMN "vpa_ciphertext" text;

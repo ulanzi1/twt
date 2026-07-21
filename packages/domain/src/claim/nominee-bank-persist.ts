@@ -75,6 +75,10 @@ export interface NomineeBankAccountInput {
   accountHolderNameCiphertext: string;
   accountNumberCiphertext: string;
   ifscCiphertext: string;
+  /** The nominee's UPI VPA ciphertext for the `pa=` payee — OPTIONAL (Story 8.13); `null` when the
+   *  filer did not supply a VPA. ALREADY encrypted by the caller (same field class as the three
+   *  fields above). A null VPA is a first-class state — it never blocks the write. */
+  vpaCiphertext: string | null;
   /** Public, IFSC-derived (Tier-3 plaintext). */
   bankName: string;
   branch: string | null;
@@ -188,6 +192,7 @@ export async function recordClaimNomineeBankAccounts(
         accountHolderNameCiphertext: a.accountHolderNameCiphertext,
         accountNumberCiphertext: a.accountNumberCiphertext,
         ifscCiphertext: a.ifscCiphertext,
+        vpaCiphertext: a.vpaCiphertext,
         bankName: a.bankName,
         branch: a.branch,
         ifscValidated: a.ifscValidated,

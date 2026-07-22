@@ -44,6 +44,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   async function signIn(full: MemberFullSession): Promise<void> {
     const s: StoredSession = {
       accessToken: full.accessToken,
+      accessTokenExpiresAt: full.accessTokenExpiresAt,
       refreshToken: full.refreshToken,
       memberId: full.memberId,
       pariwarId: full.pariwarId,

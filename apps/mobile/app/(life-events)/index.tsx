@@ -7,7 +7,7 @@
 // Accessibility: cards are role=button with label + hint; the status line is announced.
 
 import { useT } from '@twt/i18n/react'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import { ScrollView } from 'react-native'
 import { Button, H2, Paragraph, Text, YStack } from 'tamagui'
 
@@ -21,7 +21,7 @@ export default function LifeEventsIndexScreen() {
   const status = (recorded: boolean | undefined): string =>
     recorded ? t('lifeEvents.recorded') : t('lifeEvents.not_recorded')
 
-  const cards: { key: string; label: string; desc: string; recorded: boolean | undefined; to: string }[] = [
+  const cards: { key: string; label: string; desc: string; recorded: boolean | undefined; to: Href }[] = [
     {
       key: 'nominees',
       label: t('lifeEvents.nominees_label'),

@@ -51,6 +51,11 @@ export interface SeedOptions {
   eventVersion?: number;
   eventType?: string;
   payload?: unknown;
+  /** Explicit `occurred_at` — REQUIRED when a test asserts inter-event ordering: `now()`/`defaultNow()`
+   *  is transaction-stable, so events seeded in the same per-test tx otherwise share one instant. */
+  occurredAt?: Date;
+  /** Explicit `actor_id` (defaults null). */
+  actorId?: string | null;
 }
 
 /** Insert one events_log row. Returns the streamId used (random by default). */
@@ -65,8 +70,9 @@ export async function seedEvent(
     eventType: opts.eventType ?? 'test.created',
     payload: opts.payload ?? {},
     eventVersion: opts.eventVersion ?? 1,
-    actorId: null,
+    actorId: opts.actorId ?? null,
     pariwarId,
+    ...(opts.occurredAt !== undefined ? { occurredAt: opts.occurredAt } : {}),
   });
   return streamId;
 }

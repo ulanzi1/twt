@@ -598,6 +598,27 @@ stays a no-op) + `apps/api`/`packages/contracts`/`packages/domain` (excluded fro
 ledger) — the page-weight ceilings the gate has teeth on cover the PUBLIC
 `apps/public` Astro surface, which this story does not touch.
 
+**Story 8.6 disposition (declaration affirmed, no new row):** the Yogdaan Bahi
+contribution passbook (`apps/mobile/components/yogdaan-bahi/*`, its dedicated screen
+`apps/mobile/app/(contribution)/yogdaan.tsx`, and the home-stack `<YogdaanBahiEntry>`)
+is a **read-only member self-view** (FR-12A) — it lists the member's own attested
+contributions with a derived status. It introduces **zero deliberate friction**: no
+form, no upload, no gate, no forced step, no member-initiated action that the member
+must complete. The two interactive affordances are both optional and non-blocking —
+the home entry that navigates into the passbook (a nav-tile identical in character to
+`<ViewContributorsEntry>`/`<LifeEventsEntry>` already affirmed across Stories 3.9–8.5)
+and the per-row Contribution-Note link (an inert seam until Story 8.7 — it renders but
+does not gate or force anything). The copy is dignified and never frames contributions
+as dues/obligations (enforced by the `microcopy` gate on the `contribution` namespace;
+the empty state is "आपका पहला योगदान यहाँ दिखेगा", never "no dues"). Zero deliberate
+friction introduced; ledger reviewed, no new row warranted. The **page-weight baseline
+is unchanged**: every new/modified file is in the authenticated mobile app (`apps/mobile`,
+EAS build a no-op → `member-app-native` stays a no-op) + one member-session-gated
+`apps/api` read endpoint + `packages/contracts`/`packages/domain`/`packages/api-client`
+(all excluded from the ledger) — it is **NOT a public `apps/public` surface**, so it
+does not enter the public page-weight budget the gate has teeth on. Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

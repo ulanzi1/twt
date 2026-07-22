@@ -1,44 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
-import {
-  SAMPLE_YOGDAAN_ROWS,
-  SAMPLE_YOGDAAN_TOTAL_INR,
-  type YogdaanRow,
-} from './sample-data'
 
-// P4 offline-cache measurement support: the query simulates a remote fetch
-// (300ms delay) and returns the data + a `fetchedAt` timestamp. Cached via
-// MMKV-backed PersistQueryClientProvider per `lib/query-client.ts`.
+import { memberAuth } from '../../lib/member-api'
+
+// Yogdaan Bahi read hook — Story 8.6 (Task 4). Fetches the member's OWN contribution history via the
+// member-auth SDK (memberContributionHistory → GET /api/v1/member/contribution-history), Zod-validated
+// inside the SDK. Replaces the P0-5 prototype's 300ms simulated sample-data fetch — this IS "the ledger
+// summary endpoint production will hit" the prototype flagged.
 //
-// Cache validation flow at P0-5 Task 10:
-//   1. Open app online → query fires; fetchedAt = NOW; data renders
-//   2. Toggle airplane mode + cold-restart app
-//   3. Open app offline → cached query returns; fetchedAt = previous timestamp
-//      → cached data renders without network
-//   4. Toggle online + pull-to-refresh → query refires; new fetchedAt
-//
-// Per architecture §4.5 MMKV-as-substrate + TanStack Query persistQueryClient.
-
-export type YogdaanQueryResult = {
-  rows: YogdaanRow[]
-  totalInr: number
-  fetchedAt: number  // unix ms
-}
-
-async function fetchYogdaanRows(): Promise<YogdaanQueryResult> {
-  // Simulated async fetch — 300ms latency models the "ledger summary" endpoint
-  // that production will hit per architecture §3.7 + PRD FR-XX (member contribution
-  // history). Returns the sample data + a fresh timestamp.
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  return {
-    rows: SAMPLE_YOGDAAN_ROWS,
-    totalInr: SAMPLE_YOGDAAN_TOTAL_INR,
-    fetchedAt: Date.now(),
-  }
-}
-
+// The ['yogdaan-bahi','summary'] query key is PRESERVED from the prototype (offline-cache continuity):
+// the app's PersistQueryClientProvider (lib/query-client.ts) auto-persists it to MMKV, so the passbook
+// renders offline read-only AND survives a Contribution-Note round-trip without a refetch flash — the
+// save-and-resume posture (UX-DR50, D8). Day-granular + calm — no polling (the history moves in days).
 export function useYogdaanQuery() {
   return useQuery({
     queryKey: ['yogdaan-bahi', 'summary'],
-    queryFn: fetchYogdaanRows,
+    queryFn: () => memberAuth.memberContributionHistory(),
   })
 }

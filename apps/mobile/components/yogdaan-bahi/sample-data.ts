@@ -1,95 +1,66 @@
-// Sample Yogdaan Bahi (contribution book) data — 60 rows for P0-5 prototype
-// measurement validity. Devanagari names include common conjuncts + ligatures
-// to stress-test P1 rendering on substitute devices (Redmi 10 Mali GPU vs
-// Snapdragon Adreno baseline per FM-2 disposition).
+// Yogdaan Bahi — the ₹ formatter + a Devanagari conjunct stress-set TEST FIXTURE.
 //
-// Hindi-numerals discipline per UX spec line 1127: Yogdaan Bahi rows render
-// Gregorian + Latin numerals ONLY (dates, pool codes, amounts). Sahyog
-// (beneficiary name) column carries Devanagari per Bihar Hindi context.
+// Story 8.6 PRODUCTIONIZED the passbook: the runtime data source is now the real
+// GET /api/v1/member/contribution-history read (see useYogdaanQuery.ts). This module no longer feeds
+// the runtime path — it provides (1) `formatInr` (the shared ₹ formatter used by the row + footer) and
+// (2) `SAMPLE_YOGDAAN_ROWS`, a Devanagari conjunct/ligature stress-set retained for P1 render validation
+// (a test/prototype fixture only), now shaped to the REAL `ContributionHistoryRow` contract so it stays
+// type-valid. Hindi-numerals discipline (UX line 1127): operational columns render Gregorian + Latin
+// numerals ONLY; the `deceasedFirstName`/`deceasedLastInitial` (family) column carries Devanagari.
 
-export type YogdaanRow = {
-  id: string
-  date: string  // ISO format, Gregorian
-  sahyog: string  // Hindi beneficiary name
-  pool: string  // Latin pool/cycle code
-  amountInr: number  // raw rupees, formatted at render time
-}
+import type { ContributionHistoryRow } from '@twt/contracts'
 
-// Hindi name pool — mix of common Bihar names + names with challenging
-// Devanagari conjuncts/ligatures (कृष्ण क्ष; ज्ञानेश्वर ज्ञ; हृदय हृ; etc.)
-const sahyogNames = [
-  'रमेश कुमार',
-  'सुनीता देवी',
-  'अनिल यादव',
-  'कमला सिंह',
-  'विक्रम चौधरी',
-  'रीना शर्मा',
-  'शंकर पासवान',
-  'दीपिका कुमारी',
-  'राम प्रसाद',
-  'सीता राम',
-  'मनोज महतो',
-  'गीता देवी',
-  'संजय कुमार',
-  'पूजा सिंह',
-  'अमित मंडल',
-  'रंजना देवी',
-  'राकेश राय',
-  'सुषमा कुमारी',
-  'दीपक भारती',
-  'रेखा सिन्हा',
+/** The passbook row shape — the real read-model contract (Story 8.6 replaced the prototype's fake type). */
+export type YogdaanRow = ContributionHistoryRow
+
+// Hindi name pool — common Bihar names + names with challenging Devanagari conjuncts/ligatures
+// (कृष्ण क्ष; ज्ञानेश्वर ज्ञ; हृदय हृ; etc.) to stress-test P1 rendering on substitute devices.
+const sahyogNames: ReadonlyArray<readonly [first: string, lastInitial: string]> = [
+  ['रमेश', 'कु'],
+  ['सुनीता', 'दे'],
+  ['अनिल', 'या'],
+  ['कमला', 'सिं'],
+  ['विक्रम', 'चौ'],
+  ['रीना', 'श'],
+  ['शंकर', 'पा'],
+  ['दीपिका', 'कु'],
   // Conjunct/ligature stress-test names:
-  'अंजली श्रीवास्तव',   // anusvara ं + conjunct श्र
-  'कृष्ण मोहन',          // conjunct क्ष
-  'विद्यानंद',          // conjunct द्या + nasalization
-  'त्रिवेणी प्रसाद',     // conjunct त्रि
-  'ज्ञानेश्वर पंडित',   // conjunct ज्ञ — challenging
-  'हृदय नारायण',         // conjunct हृ — challenging
-  'द्विवेदी प्रसाद',     // conjunct द्वि
-  'श्रद्धा सिंह',        // conjunct द्ध
-  'दुष्यंत झा',          // conjunct ष्य
-  'पुष्पा देवी',         // conjunct ष्प
-  'विश्वनाथ पासवान',    // conjunct श्व
-  'प्रत्यूष कुमार',      // conjunct त्यू
-  'अक्षय भारती',         // conjunct क्ष
-  'चन्द्रकांत यादव',     // chandrabindu-style nasalization + conjunct
-  'महेन्द्र प्रसाद',     // half-form न + conjunct न्द्र
-  // Female teacher names common in Bihar:
-  'मंजू कुमारी',
-  'सरिता देवी',
-  'मीना सिंह',
-  'अनिता शर्मा',
-  'विद्या कुमारी',
+  ['कृष्ण', 'मो'], // conjunct क्ष
+  ['ज्ञानेश्वर', 'पं'], // conjunct ज्ञ — challenging
+  ['हृदय', 'ना'], // conjunct हृ — challenging
+  ['श्रद्धा', 'सिं'], // conjunct द्ध
+  ['विश्वनाथ', 'पा'], // conjunct श्व
+  ['प्रत्यूष', 'कु'], // conjunct त्यू
+  ['चन्द्रकांत', 'या'], // half-form न + conjunct न्द्र
+  ['महेन्द्र', 'प्र'], // half-form न + conjunct न्द्र
 ]
 
-const poolCodes = ['C-12', 'C-13', 'C-14', 'C-15', 'C-16']
+const poolLetters = ['A', 'B', 'C', 'D', 'E']
+const statuses: YogdaanRow['status'][] = ['yellow', 'green', 'red', 'grey']
 
-// Generate 60 rows with deterministic-but-varied data
+// Generate stress-set rows in the REAL contract shape (fixture only — never the runtime path).
 function generateRows(): YogdaanRow[] {
   const rows: YogdaanRow[] = []
-  // Date range: last 60 days from 2026-06-05
   const baseDate = new Date('2026-06-05T00:00:00Z')
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < sahyogNames.length; i++) {
     const date = new Date(baseDate)
     date.setUTCDate(baseDate.getUTCDate() - i)
-    const dateStr = date.toISOString().slice(0, 10)  // YYYY-MM-DD
-
-    // Non-null asserted: modulo-indexed access on non-empty arrays — `i %
-    // arr.length` always yields a valid index. noUncheckedIndexedAccess
-    // surfacing per Story 1.1 AC-3 strict-mode triage.
-    const name = sahyogNames[i % sahyogNames.length]!
-    const pool = poolCodes[Math.floor(i / 12) % poolCodes.length]!
-
-    // Amounts: realistic Bihar-teacher contribution range
-    // (₹100–₹2000), in ₹50 increments
+    const [first, lastInitial] = sahyogNames[i]!
+    const letter = poolLetters[Math.floor(i / 4) % poolLetters.length]!
+    const month = ((i % 6) + 1).toString().padStart(2, '0')
     const amountInr = 100 + ((i * 137) % 39) * 50
-
     rows.push({
-      id: `row-${i.toString().padStart(3, '0')}`,
-      date: dateStr,
-      sahyog: name,
-      pool,
+      contributionId: `fixture-${i.toString().padStart(3, '0')}`,
+      date: date.toISOString(),
+      deceasedFirstName: first,
+      deceasedLastInitial: lastInitial,
+      poolLetterCode: letter,
+      poolName: null,
+      poolCanonicalIdentifier: `P-2026-${month}-001`,
+      cycleRef: `2026-${month}`,
       amountInr,
+      status: statuses[i % statuses.length]!,
+      noteAvailable: false,
     })
   }
   return rows
@@ -102,8 +73,7 @@ export const SAMPLE_YOGDAAN_TOTAL_INR: number = SAMPLE_YOGDAAN_ROWS.reduce(
   0,
 )
 
-// Format amount as ₹X,XXX (Latin numerals, Indian grouping — no Hindi numerals
-// per UX spec line 1127 Yogdaan Bahi discipline)
+// Format amount as ₹X,XXX (Latin numerals, Indian grouping — no Hindi numerals per UX line 1127).
 export function formatInr(amountInr: number): string {
   return `₹${amountInr.toLocaleString('en-IN')}`
 }

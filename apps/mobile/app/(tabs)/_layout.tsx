@@ -20,10 +20,13 @@ export default function TabLayout() {
         headerTintColor: theme.color.val,
       }}
     >
+      {/* Home tab — the "My Pool" home surface (the My Pool card is its topmost element). Story 8.6 moved
+          the Yogdaan Bahi passbook to its OWN screen (app/(contribution)/yogdaan), so this tab is retitled
+          from "Yogdaan Bahi" to "My Pool" to stay coherent — the passbook is reached via its home entry. */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Yogdaan Bahi',
+          title: 'My Pool',
           tabBarIcon: ({ color }) => <Book color={color as any} />,
         }}
       />

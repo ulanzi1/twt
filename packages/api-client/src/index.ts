@@ -67,6 +67,8 @@ import {
   type MemberLockInStatusResponse as MemberLockInStatusResult,
   type ActiveContributionCardResponse as ActiveContributionCardResult,
   type PoolContributorListResponse as PoolContributorListResult,
+  ContributionHistoryResponse,
+  type ContributionHistoryResponse as ContributionHistoryResult,
   type ContributionIntentRequest,
   type ContributionIntentResponse as ContributionIntentResult,
   type ContributionAttestRequest,
@@ -526,6 +528,26 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return call(
         `${MEMBER_HOME_BASE}/pool-contributors`,
         PoolContributorListResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    // ── Yogdaan Bahi contribution history (Story 8.6 — the member's OWN contribution passbook) ───────────
+    /**
+     * Read the server-authoritative Yogdaan Bahi — the member's OWN contribution history (FR-12A
+     * self-view). Returns `{ rows, totalInr }`: one row per the member's attested contribution (date,
+     * deceased-family first-name + last-initial, pool letter/name, canonical id, cycle ref, snapshotted
+     * amount, the honestly-derived four-state `status`, and the Contribution-Note availability flag),
+     * newest-first; legitimately `{ rows: [], totalInr: 0 }` for a member who has attested nothing.
+     * Member-scoped + PII-shielded — the client resolves nothing. The 5th `'GET'` arg is REQUIRED (`call`
+     * defaults to POST, which would misfire against the `r.get(...)`-registered route) (auth).
+     */
+    memberContributionHistory(): Promise<ContributionHistoryResult> {
+      return call(
+        `${MEMBER_HOME_BASE}/contribution-history`,
+        ContributionHistoryResponse,
         undefined,
         true,
         'GET',

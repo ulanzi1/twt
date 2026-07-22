@@ -34,7 +34,7 @@
 // are PURE (no clock, no DB, no randomness) — the DB accessors below are thin shells that load the
 // candidates and delegate to the core, so the guards are DB-free unit-testable (contribution-binding.test.ts).
 
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, CycleFreezeCommitId, MemberId, PariwarId, PoolId } from '../ids/index.js';
@@ -427,5 +427,68 @@ export async function resolveMemberContributionBinding(
     poolCanonicalIdentifier: resolution.poolCanonicalIdentifier,
     fixedAmount: resolution.fixedAmount,
     collectionAccounts,
+  };
+}
+
+/**
+ * The per-pool IDENTITY context the Yogdaan Bahi history handler resolves each row against (Story 8.6,
+ * D6). Unlike {@link resolveAssignedPoolWithRosterForMember} (which finds a member's assigned pool in a
+ * LIVE cycle), the passbook lists contributions to pools in possibly-CLOSED cycles, so this loads the
+ * identity fields for a pool BY its id: the originating claim (→ deceased family name at the boundary),
+ * the letter-code index, the canonical identifier, the snapshotted amount, the cycle (→ member-facing
+ * cycle ref), and the cycle's pool count N (the curated-name reservation input — matches the alert's
+ * cached `poolCount`). Tenant-scoped (`pariwar_id` + RLS). `null` when the pool does not exist in this
+ * Pariwar (⇒ the boundary omits that history row, never a blank).
+ */
+export interface PoolContributionContext {
+  readonly cycleId: CycleFreezeCommitId;
+  readonly claimCaseId: ClaimId;
+  readonly poolIndex: number;
+  readonly poolCanonicalIdentifier: string;
+  /** The SNAPSHOTTED `pools.fixed_amount` (whole INR; D2 — never a live recompute). */
+  readonly fixedAmount: number;
+  /** N — the number of pools in this pool's cycle (the curated-name `reserveNames` count). */
+  readonly poolCount: number;
+}
+
+/**
+ * Load a pool's identity context by id (Story 8.6, D6) — the input the shared per-pool identity resolver
+ * (apps/api) needs to render a history row identically to the My Pool card. Two point reads: the pool row
+ * (identity + snapshotted amount + its cycle) and the cycle's pool count. Returns `null` when the pool is
+ * absent in this Pariwar (the boundary drops the row). Transport-free + decryption-free (the boundary
+ * decrypts the claim's deceased-member name).
+ */
+export async function getPoolContributionContext(
+  db: Db,
+  pariwarId: PariwarId,
+  poolId: PoolId,
+): Promise<PoolContributionContext | null> {
+  const poolRows = await db
+    .select({
+      cycleId: pools.cycleId,
+      claimCaseId: pools.claimCaseId,
+      poolIndex: pools.poolIndex,
+      poolCanonicalIdentifier: pools.poolCanonicalIdentifier,
+      fixedAmount: pools.fixedAmount,
+    })
+    .from(pools)
+    .where(and(eq(pools.pariwarId, pariwarId), eq(pools.poolId, poolId)))
+    .limit(1);
+  const pool = poolRows[0];
+  if (!pool) return null;
+
+  // N = the number of pools in the cycle (the `reserveNames` count — matches the alert's cached poolCount).
+  const countRows = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(pools)
+    .where(and(eq(pools.pariwarId, pariwarId), eq(pools.cycleId, pool.cycleId)));
+
+  return {
+    cycleId: pool.cycleId,
+    claimCaseId: pool.claimCaseId,
+    poolIndex: pool.poolIndex,
+    poolCanonicalIdentifier: pool.poolCanonicalIdentifier,
+    fixedAmount: pool.fixedAmount,
+    poolCount: countRows[0]?.n ?? 0,
   };
 }

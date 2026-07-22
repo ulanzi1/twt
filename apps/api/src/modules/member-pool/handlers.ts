@@ -48,6 +48,8 @@ import {
 import type {
   ActiveContributionCardResponse,
   ConfirmedContributorRow,
+  ContributionHistoryResponse,
+  ContributionHistoryRow,
   PoolContributorListResponse,
 } from '@twt/contracts';
 import type { FastifyRequest } from 'fastify';
@@ -155,6 +157,35 @@ export function createMemberPoolHandlers(deps: AppDeps) {
         request.log.error({ err, memberId: memberIdStr }, 'pool-contributors: fail-soft to unassigned');
         ok = true; // the scope tx did no writes — a clean close is correct
         return CONTRIBUTOR_LIST_UNASSIGNED;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * GET /api/v1/member/contribution-history — the Yogdaan Bahi's server-authoritative read (Story 8.6).
+     * A member's OWN self-view (FR-12A): the member's attested contributions, newest-first, each fully
+     * resolved server-side (date, deceased-family identity, pool letter/name/canonical, cycle ref,
+     * snapshotted amount, the honestly-derived four-state status, the Contribution-Note seam) + the
+     * running-tally `totalInr`. Member-session-gated + PII-shielded. Fail-soft: an unresolvable row is
+     * OMITTED (never a blank), and a whole-read failure degrades to `{ rows: [], totalInr: 0 }` (the empty
+     * passbook — the `active-contribution` fail-soft posture; never a 500).
+     */
+    async contributionHistory(request: FastifyRequest): Promise<ContributionHistoryResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const result = await resolveHistory(deps, scopeTx.tx, request, { memberId, pariwarId });
+        ok = true;
+        return result;
+      } catch (err) {
+        request.log.error({ err, memberId: memberIdStr }, 'contribution-history: fail-soft to empty passbook');
+        ok = true; // the scope tx did no writes — a clean close is correct
+        return HISTORY_EMPTY;
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
@@ -362,21 +393,19 @@ async function resolveCard(
   //     — the client never re-derives the window.
   const daysRemaining = computeDaysRemaining(committedAt, now);
 
-  // (7) The deceased member whose family is supported (AC2 — NOT the nominee). claim → deceased_member_id
-  //     → KYC name ciphertext → decrypt (member-session layer, D11) → PII-shielded first-name+last-initial.
-  const claimCase = await claimDomain.getClaimCase(tx, pariwarId, pool.claimCaseId);
-  if (!claimCase) return UNASSIGNED;
-  const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, claimCase.deceasedMemberId);
-  if (!kycProfile || kycProfile.nameCiphertext === null) return UNASSIGNED;
-  // A branded PariwarId IS a string (brand is compile-time only) — the KYC decrypt context keys on it.
-  const fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
-  const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
-  if (firstName === '') return UNASSIGNED; // an unresolvable name — fail-soft (no undignified blank card)
-
-  // (8) Pool identity — the member-facing letter code always; the curated Mahabharata name when the
-  //     Pariwar has configured its registry (else null → the letter-code fallback, TWT-Bihar launch).
-  const poolLetterCode = poolDomain.poolLetterCode(pool.poolIndex);
-  const poolName = await resolveCuratedPoolName(tx, pariwarId, poolCount, pool.poolIndex, request);
+  // (7)-(8) The per-pool IDENTITY — the deceased family name (PII-shielded first-name+last-initial, AC2 —
+  //     NOT the nominee) + the letter code + the curated Mahabharata name (else null → letter-code fallback).
+  //     Resolved by the SHARED resolver reused by the Yogdaan Bahi history handler (D6), so a pool renders
+  //     card-identical family/letter/name in the card and the passbook. `null` (unresolvable claim/KYC/name)
+  //     → fail-soft to `{ assigned:false }` (no undignified blank card).
+  const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, {
+    claimCaseId: pool.claimCaseId,
+    poolIndex: pool.poolIndex,
+    poolCanonicalIdentifier: pool.poolCanonicalIdentifier,
+    fixedAmount: pool.fixedAmount,
+    poolCount,
+  });
+  if (identity === null) return UNASSIGNED;
 
   // (9) AC6 — the NEXT scheduled fixed-amount change, surfaced gently. The card's CURRENT amount stays
   //     the SNAPSHOTTED pool.fixedAmount (D3); this is additive future context.
@@ -395,12 +424,12 @@ async function resolveCard(
 
   return {
     assigned: true,
-    poolLetterCode,
-    poolName,
-    poolCanonicalIdentifier: pool.poolCanonicalIdentifier,
-    deceasedFirstName: firstName,
-    deceasedLastInitial: lastInitial,
-    fixedAmount: pool.fixedAmount,
+    poolLetterCode: identity.poolLetterCode,
+    poolName: identity.poolName,
+    poolCanonicalIdentifier: identity.poolCanonicalIdentifier,
+    deceasedFirstName: identity.deceasedFirstName,
+    deceasedLastInitial: identity.deceasedLastInitial,
+    fixedAmount: identity.fixedAmount,
     daysRemaining,
     // (AC4) confirmed-only meter: numerator is `contribution.confirmed`-derived — legitimately 0 until
     // Epic 9's producer lands (render `0 of N`). There is NO attested/pending field: yellow (Story 8.4)
@@ -411,6 +440,178 @@ async function resolveCard(
     // (AC4) The member's OWN yellow-pill state — separate from the confirmed-only meter above.
     myContribution: attested ? 'attested' : 'none',
   };
+}
+
+// ── Shared per-pool identity resolver (D6) — reused by the My Pool card AND the Yogdaan Bahi history ─────
+
+/** The per-pool identity INPUT the shared resolver needs (from the card's chosen pool, or a history row's
+ *  pool context) — everything EXCEPT the deceased-family name, which the resolver decrypts here. Excludes
+ *  the card's member-specific self-state (`attested`/`myContribution`): that is per-member, not per-pool. */
+export interface PoolIdentityInput {
+  readonly claimCaseId: ReturnType<typeof ids.claimId>;
+  readonly poolIndex: number;
+  readonly poolCanonicalIdentifier: string;
+  /** The SNAPSHOTTED `pools.fixed_amount` (whole INR; echoed through unchanged — never recomputed). */
+  readonly fixedAmount: number;
+  /** N — the number of pools in the cycle (the curated-name `reserveNames` count). */
+  readonly poolCount: number;
+}
+
+/** The resolved per-pool identity — card-identical family/letter/name for a pool (D6). */
+export interface ResolvedPoolIdentity {
+  readonly deceasedFirstName: string;
+  readonly deceasedLastInitial: string;
+  readonly poolLetterCode: string;
+  readonly poolName: string | null;
+  readonly poolCanonicalIdentifier: string;
+  readonly fixedAmount: number;
+}
+
+/**
+ * Resolve a pool's member-facing IDENTITY (D6) — the deceased family's first-name + last-initial
+ * (PII-shielded, AC2 — the family the pool supports, NOT the nominee) + the letter code + the curated
+ * Mahabharata name (else null → letter-code fallback). The ONE place this join lives, consumed by BOTH
+ * the My Pool card (`resolveCard`) and the Yogdaan Bahi history handler, so a pool renders card-identical
+ * in the card and the passbook. Decrypts the claim's deceased-member KYC name at the member-session layer
+ * (D11 — NOT the admin path). Returns `null` when the claim / KYC profile / name is unresolvable (the
+ * caller omits the row — never an undignified blank). It resolves NO member-specific self-state (that is
+ * `resolveCard`'s own `attested`/`myContribution` block, deliberately excluded).
+ */
+async function resolvePoolIdentity(
+  deps: AppDeps,
+  tx: Db,
+  request: FastifyRequest,
+  pariwarId: ReturnType<typeof ids.pariwarId>,
+  input: PoolIdentityInput,
+): Promise<ResolvedPoolIdentity | null> {
+  const claimCase = await claimDomain.getClaimCase(tx, pariwarId, input.claimCaseId);
+  if (!claimCase) return null;
+  const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, claimCase.deceasedMemberId);
+  if (!kycProfile || kycProfile.nameCiphertext === null) return null;
+  // A branded PariwarId IS a string (brand is compile-time only) — the KYC decrypt context keys on it.
+  // A decrypt failure (bad ciphertext, transient KMS error) must degrade the SAME way as an unresolvable
+  // profile — skip THIS pool's identity, not propagate out (the `resolveContributorList` precedent):
+  // for the history handler, letting this throw would blank the ENTIRE passbook via the outer fail-soft
+  // catch instead of omitting just the rows for this one pool.
+  let fullName: string;
+  try {
+    fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
+  } catch (err) {
+    request.log.warn({ err, claimCaseId: input.claimCaseId }, 'pool-identity: deceased name decrypt failed — omitting');
+    return null;
+  }
+  const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
+  if (firstName === '') return null; // an unresolvable name — fail-soft (no undignified blank)
+
+  const poolLetterCode = poolDomain.poolLetterCode(input.poolIndex);
+  const poolName = await resolveCuratedPoolName(tx, pariwarId, input.poolCount, input.poolIndex, request);
+
+  return {
+    deceasedFirstName: firstName,
+    deceasedLastInitial: lastInitial,
+    poolLetterCode,
+    poolName,
+    poolCanonicalIdentifier: input.poolCanonicalIdentifier,
+    fixedAmount: input.fixedAmount,
+  };
+}
+
+// ── Yogdaan Bahi contribution-history pipeline (Story 8.6) ──────────────────────────────────────────────
+
+/** The empty passbook — a member who has attested nothing, or a whole-read fail-soft (AC5-adjacent). */
+const HISTORY_EMPTY: ContributionHistoryResponse = { rows: [], totalInr: 0 };
+
+/**
+ * The member-facing cycle reference (AC1) — the cycle's freeze MONTH, `YYYY-MM` (Gregorian + Latin, the
+ * operational-numeral discipline, AC6). Letter codes repeat across cycles ("every cycle has a Pool A"), so
+ * this disambiguates which cycle a passbook row belongs to. UTC so it is deterministic (no viewer-tz drift).
+ */
+function cycleRefFromCommittedAt(committedAt: Date): string {
+  const year = committedAt.getUTCFullYear().toString().padStart(4, '0');
+  const month = (committedAt.getUTCMonth() + 1).toString().padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * The Yogdaan Bahi pipeline (Story 8.6; AC1/AC2/AC3/AC6). Lists the member's OWN attested contributions
+ * (domain read, with the derived status), then resolves each row's identity IDENTICALLY to the My Pool
+ * card (D6 shared resolver) + the cycle ref, per-pool memoized (ONE deceased-name decrypt per DISTINCT
+ * pool — the D5 decrypt-cost note; NO cache built). An unresolvable row (missing pool/claim/KYC/name) is
+ * OMITTED (never a blank/error row); `totalInr` sums the rendered rows. Throws only on an unexpected DB
+ * error — the caller fail-softs to the empty passbook.
+ */
+async function resolveHistory(
+  deps: AppDeps,
+  tx: Db,
+  request: FastifyRequest,
+  ctx: { readonly memberId: ReturnType<typeof ids.memberId>; readonly pariwarId: ReturnType<typeof ids.pariwarId> },
+): Promise<ContributionHistoryResponse> {
+  const { memberId, pariwarId } = ctx;
+
+  const entries = await contributionDomain.listMemberContributionHistory(tx, { pariwarId, memberId });
+  if (entries.length === 0) return HISTORY_EMPTY;
+
+  // Per-DISTINCT-pool memo: one identity decrypt + one pool-context load per pool (D5/D6). `null` marks a
+  // pool whose identity is unresolvable (its rows are omitted) — cached so we do not re-attempt per row.
+  const identityByPool = new Map<string, (ResolvedPoolIdentity & { cycleRef: string }) | null>();
+
+  async function resolveRowIdentity(poolId: ReturnType<typeof ids.poolId>): Promise<(ResolvedPoolIdentity & { cycleRef: string }) | null> {
+    const cached = identityByPool.get(poolId);
+    if (cached !== undefined) return cached;
+
+    const poolCtx = await poolDomain.getPoolContributionContext(tx, pariwarId, poolId);
+    if (poolCtx === null) {
+      identityByPool.set(poolId, null);
+      return null;
+    }
+    const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, {
+      claimCaseId: poolCtx.claimCaseId,
+      poolIndex: poolCtx.poolIndex,
+      poolCanonicalIdentifier: poolCtx.poolCanonicalIdentifier,
+      fixedAmount: poolCtx.fixedAmount,
+      poolCount: poolCtx.poolCount,
+    });
+    if (identity === null) {
+      identityByPool.set(poolId, null);
+      return null;
+    }
+    // The cycle ref (freeze month) — its own point read, memoized under the pool (pools in one cycle share it).
+    const committedAt = await poolDomain.getCycleFreezeCommittedAt(tx, poolCtx.cycleId);
+    const cycleRef = committedAt === null ? poolCtx.poolCanonicalIdentifier : cycleRefFromCommittedAt(committedAt);
+    const resolved = { ...identity, cycleRef };
+    identityByPool.set(poolId, resolved);
+    return resolved;
+  }
+
+  const rows: ContributionHistoryRow[] = [];
+  let totalInr = 0;
+  for (const entry of entries) {
+    const identity = await resolveRowIdentity(entry.poolId);
+    if (identity === null) {
+      // An unresolvable pool/claim/KYC/name — OMIT the row (never an undignified blank), log the anomaly.
+      request.log.warn({ poolId: entry.poolId, contributionId: entry.contributionId }, 'contribution-history: row identity unresolvable — omitting');
+      continue;
+    }
+    rows.push({
+      contributionId: entry.contributionId,
+      date: entry.attestedAt.toISOString(),
+      deceasedFirstName: identity.deceasedFirstName,
+      deceasedLastInitial: identity.deceasedLastInitial,
+      poolLetterCode: identity.poolLetterCode,
+      poolName: identity.poolName,
+      poolCanonicalIdentifier: identity.poolCanonicalIdentifier,
+      cycleRef: identity.cycleRef,
+      amountInr: identity.fixedAmount,
+      status: entry.status,
+      // (AC3/D4) The Contribution-Note PDF is Story 8.7 (unbuilt) — no Note is generatable yet, so this is
+      // `false` for every row today; the mobile link affordance still renders (reserved-route placeholder).
+      // 8.7 flips this (a green/confirmed row is the natural first target) — no shape change here.
+      noteAvailable: false,
+    });
+    totalInr += identity.fixedAmount;
+  }
+
+  return { rows, totalInr };
 }
 
 /**

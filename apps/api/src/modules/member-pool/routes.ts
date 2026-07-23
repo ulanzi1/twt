@@ -5,7 +5,11 @@
 // Session-guarded → automatically covered by the Story 1.14 login-wall CI gate; NOT added to the
 // public allowlist (it is NOT public).
 
-import { ActiveContributionCardResponse, PoolContributorListResponse } from '@twt/contracts';
+import {
+  ActiveContributionCardResponse,
+  ContributionHistoryResponse,
+  PoolContributorListResponse,
+} from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
@@ -38,5 +42,16 @@ export function registerMemberPoolRoutes(app: FastifyInstance, deps: AppDeps): v
       preHandler: [memberSession],
     },
     h.poolContributors,
+  );
+
+  // Story 8.6 — the Yogdaan Bahi contribution-history read (the member's OWN self-view, FR-12A). Session-
+  // guarded → auto-covered by the Story 1.14 login-wall CI gate; NOT public (it is a member self-view).
+  r.get(
+    '/api/v1/member/contribution-history',
+    {
+      schema: { response: { 200: ContributionHistoryResponse }, tags: [MEMBER_POOL_TAG] },
+      preHandler: [memberSession],
+    },
+    h.contributionHistory,
   );
 }

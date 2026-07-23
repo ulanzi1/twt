@@ -25,8 +25,11 @@ import {
   ContributionAttestRequest,
   ContributionAttestResponse,
   ContributionFailureReportRequest,
+  ContributionHistoryResponse,
+  ContributionHistoryRow,
   ContributionIntentRequest,
   ContributionIntentResponse,
+  ContributionStatus,
   ContributionUtr,
   PendingContributorsAggregate,
   PoolContributorListResponse,
@@ -403,5 +406,87 @@ describe('Story 8.5 — the failure-report shape carries NO free-text / PII fiel
   it('the parsed object has exactly one key — `mode` (structural: no free-text field exists in the shape)', () => {
     const parsed = ContributionFailureReportRequest.parse({ mode: 'network_issue' });
     expect(Object.keys(parsed)).toEqual(['mode']);
+  });
+});
+
+const VALID_HISTORY_ROW = {
+  contributionId: '11111111-1111-1111-1111-111111111111',
+  date: '2026-06-20T10:15:00.000Z',
+  deceasedFirstName: 'Rajesh',
+  deceasedLastInitial: 'S',
+  poolLetterCode: 'F',
+  poolName: null,
+  poolCanonicalIdentifier: 'P-2026-06-001',
+  cycleRef: '2026-06',
+  amountInr: 500,
+  status: 'yellow' as const,
+  noteAvailable: false,
+};
+
+describe('Story 8.6 — the Yogdaan Bahi contribution-history read model (AC1/AC2/AC3/AC6)', () => {
+  it('accepts a fully-resolved row + an empty passbook (the dignified empty state)', () => {
+    expect(ContributionHistoryRow.safeParse(VALID_HISTORY_ROW).success).toBe(true);
+    expect(ContributionHistoryResponse.safeParse({ rows: [], totalInr: 0 }).success).toBe(true);
+    expect(
+      ContributionHistoryResponse.safeParse({ rows: [VALID_HISTORY_ROW], totalInr: 500 }).success,
+    ).toBe(true);
+  });
+
+  it('the status enum is EXACTLY the four tones (bounds — no fifth tone leaks in)', () => {
+    for (const tone of ['yellow', 'green', 'red', 'grey']) {
+      expect(ContributionStatus.safeParse(tone).success, `${tone} valid`).toBe(true);
+    }
+    for (const bad of ['orange', 'confirmed', 'pending', 'YELLOW', '']) {
+      expect(ContributionStatus.safeParse(bad).success, `${bad} rejected`).toBe(false);
+    }
+  });
+
+  it('the status enum is value-aligned with @twt/domain’s CONTRIBUTION_STATUSES (lockstep guard)', () => {
+    // Contracts cannot import @twt/domain at SOURCE (browser-bundle rule), but a TEST-only import is safe
+    // ([[project_contracts_domain_bundle_boundary]]) — pin the two enums together so a domain change that
+    // adds/renames a tone without updating the contract goes red.
+    expect([...ContributionStatus.options].sort()).toEqual([...contribution.CONTRIBUTION_STATUSES].sort());
+  });
+
+  it('THE PII GUARD (load-bearing teeth): the row shape carries NO UTR / tr / full-name / other-member field', () => {
+    // The one change that would break the PII discipline (AC6): a UTR, the tr, a full name, or ANY other
+    // member's data riding on the row. `.strict()` forbids every unknown key, so none can ever cross the wire.
+    for (const field of [
+      'utr',
+      'tr',
+      'fullName',
+      'deceasedFullName',
+      'memberId',
+      'memberFullName',
+      'contributorName',
+      'nomineeName',
+      'bankAccount',
+      'vpa',
+      'phone',
+      'mobile',
+    ]) {
+      const leaky = { ...VALID_HISTORY_ROW, [field]: 'leaked' };
+      expect(
+        ContributionHistoryRow.safeParse(leaky).success,
+        `history row must reject the extra-PII field ${field}`,
+      ).toBe(false);
+    }
+  });
+
+  it('is strict end-to-end: an unknown key on the response envelope is rejected too', () => {
+    expect(
+      ContributionHistoryResponse.safeParse({ rows: [], totalInr: 0, cursor: 'x' }).success,
+    ).toBe(false);
+  });
+
+  it('amountInr is a positive whole-INR integer; totalInr is a non-negative integer', () => {
+    expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, amountInr: 0 }).success).toBe(false);
+    expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, amountInr: 12.5 }).success).toBe(false);
+    expect(ContributionHistoryResponse.safeParse({ rows: [], totalInr: -1 }).success).toBe(false);
+  });
+
+  it('poolName is nullable (curated name absent at launch → letter-code fallback) but never an empty string', () => {
+    expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, poolName: 'भीष्म' }).success).toBe(true);
+    expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, poolName: '' }).success).toBe(false);
   });
 });

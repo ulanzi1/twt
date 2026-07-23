@@ -174,6 +174,8 @@ const { PoolOnboardingOutcomeRequest } = await import('../src/pool-onboarding/in
 // Story 8.5 — the UPI Failure Coach anonymous failure-report DTO (mode enum ONLY, no free-text). Member
 // -session-gated; recorded server-side as a member-level, mode-in-the-action-name audit line (best-effort).
 const { ContributionFailureReportRequest } = await import('../src/contributions/index.js');
+// Story 8.6 — the Yogdaan Bahi contribution-history read model (a member's OWN self-view).
+const { ContributionHistoryResponse } = await import('../src/contributions/index.js');
 // Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
 const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
   await import('../src/degraded-mode/index.js');
@@ -425,6 +427,16 @@ const contributionFailureComponents = {
   ContributionFailureReportRequest: ContributionFailureReportRequest.openapi('ContributionFailureReportRequest'),
 } as const;
 for (const [name, schema] of Object.entries(contributionFailureComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 8.6 — Yogdaan Bahi contribution-history read component (a member's OWN self-view: rows with the
+// four-state status + PII-shielded deceased-family identity + the Contribution-Note seam; NO other-member
+// field, NO UTR/tr, NO nominee/bank data).
+const contributionHistoryComponents = {
+  ContributionHistoryResponse: ContributionHistoryResponse.openapi('ContributionHistoryResponse'),
+} as const;
+for (const [name, schema] of Object.entries(contributionHistoryComponents)) {
   registry.register(name, schema);
 }
 
@@ -1560,6 +1572,27 @@ registry.registerPath({
   responses: {
     204: { description: 'Failure mode recorded' },
     400: errorResponse('Validation failed (mode must be one of the five bounded failure modes)'),
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 8.6 — Yogdaan Bahi contribution history (member-session-gated, the member's OWN self-view) ──
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/contribution-history',
+  summary: 'The member’s Yogdaan Bahi — their own contribution history (FR-12A self-view)',
+  description:
+    'Returns the authenticated member’s OWN attested contributions, newest-first, each fully resolved ' +
+    'server-side: date, the deceased family’s first-name + last-initial (PII-shielded — the family the ' +
+    'pool supports, NOT the nominee), pool letter code + curated name + canonical identifier, the cycle ' +
+    'reference, the snapshotted amount, the honestly-derived four-state status (yellow attested / green ' +
+    'confirmed / red mismatch / grey on-record; green + red are Epic 9’s producers, legitimately empty ' +
+    'today), and whether a Contribution Note PDF is generatable yet (Story 8.7 — false today). Plus the ' +
+    'running-tally totalInr. Member-scoped + PII-shielded — the client resolves nothing; a member who has ' +
+    'attested nothing gets an empty passbook. Requires a member session.',
+  tags: ['member-pool'],
+  responses: {
+    200: { description: 'The member’s contribution history', content: jsonOf(contributionHistoryComponents.ContributionHistoryResponse) },
     401: errorResponse('Authentication required'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });

@@ -2510,6 +2510,72 @@ components:
       required:
         - mode
       additionalProperties: false
+    ContributionHistoryResponse:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              contributionId:
+                type: string
+                minLength: 1
+              date:
+                type: string
+                format: date-time
+              deceasedFirstName:
+                type: string
+                minLength: 1
+              deceasedLastInitial:
+                type: string
+                maxLength: 16
+              poolLetterCode:
+                type: string
+                minLength: 1
+              poolName:
+                type:
+                  - string
+                  - "null"
+                minLength: 1
+              poolCanonicalIdentifier:
+                type: string
+                minLength: 1
+              cycleRef:
+                type: string
+                minLength: 1
+              amountInr:
+                type: integer
+                exclusiveMinimum: 0
+              status:
+                type: string
+                enum:
+                  - yellow
+                  - green
+                  - red
+                  - grey
+              noteAvailable:
+                type: boolean
+            required:
+              - contributionId
+              - date
+              - deceasedFirstName
+              - deceasedLastInitial
+              - poolLetterCode
+              - poolName
+              - poolCanonicalIdentifier
+              - cycleRef
+              - amountInr
+              - status
+              - noteAvailable
+            additionalProperties: false
+        totalInr:
+          type: integer
+          minimum: 0
+      required:
+        - rows
+        - totalInr
+      additionalProperties: false
     WaConfigDto:
       type: object
       properties:
@@ -5151,6 +5217,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/contribution-history:
+    get:
+      summary: The member’s Yogdaan Bahi — their own contribution history (FR-12A self-view)
+      description: "Returns the authenticated member’s OWN attested contributions, newest-first, each fully resolved server-side: date, the deceased family’s first-name + last-initial (PII-shielded — the family the pool supports, NOT the nominee), pool letter code + curated name + canonical identifier, the cycle reference, the snapshotted amount, the honestly-derived four-state status (yellow attested / green confirmed / red mismatch / grey on-record; green + red are Epic 9’s producers, legitimately empty today), and whether a Contribution Note PDF is generatable yet (Story 8.7 — false today). Plus the running-tally totalInr. Member-scoped + PII-shielded — the client resolves nothing; a member who has attested nothing gets an empty passbook. Requires a member session."
+      tags:
+        - member-pool
+      responses:
+        "200":
+          description: The member’s contribution history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionHistoryResponse"
         "401":
           description: Authentication required
           content:

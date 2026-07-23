@@ -15,3 +15,7 @@ export * from './upi-intent.js';
 // Story 8.5 — the UPI Failure Coach anonymous failure-report request (mode enum ONLY, NO free-text field —
 // the AC3 PII guard as a `.strict()` shape). Best-effort telemetry for the diagnostic failure coach.
 export * from './upi-failure.js';
+// Story 8.6 — the Yogdaan Bahi contribution-history READ model (a member's OWN self-view): rows with the
+// four-state `status` + PII-shielded deceased-family identity + the Contribution-Note seam. NO other-member
+// field, NO UTR/tr, NO nominee/bank data (the PII discipline as a `.strict()` shape + a no-extra-PII test).
+export * from './contribution-history.js';

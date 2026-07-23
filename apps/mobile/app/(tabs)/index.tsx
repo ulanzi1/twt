@@ -15,7 +15,7 @@ import { PoolOnboardingSettingsEntry } from 'components/pool-onboarding/PoolOnbo
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
 import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
 import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
-import { YogdaanBahi } from 'components/yogdaan-bahi/YogdaanBahi'
+import { YogdaanBahiEntry } from 'components/yogdaan-bahi/YogdaanBahiEntry'
 
 // Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
 // for an `active` member assigned to a pool whose cycle alert is `live` it renders the contribution
@@ -57,7 +57,10 @@ export default function YogdaanTab() {
       <MembershipStatusEntry />
       {/* Story 7.10 — LIVE re-view entry into the pool-engine onboarding tutorial (re-viewable anytime). */}
       <PoolOnboardingSettingsEntry />
-      <YogdaanBahi />
+      {/* Story 8.6 — the Yogdaan Bahi (contribution passbook) now lives on its OWN full-height screen
+          (app/(contribution)/yogdaan) so its FlatList owns the scroll (AC4/D5). This understated entry
+          navigates in; the inline home mount (the P0-5 measurement scaffold) is retired. */}
+      <YogdaanBahiEntry />
       {/* Story 5.4 — understated notification-settings (WhatsApp opt-in) entry (a member choice). */}
       <NotificationSettingsEntry />
       {/* Story 5.5 — understated Telegram opt-in entry (a member choice; the mirror side-channel). */}

@@ -13,12 +13,13 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
-    "@twt/contracts": "workspace:*"
+    "@twt/contracts": "workspace:*",
+    "puppeteer-core": "^25.3.0"
   },
   "devDependencies": {
     "@twt/eslint-config-twt": "workspace:*",
+    "@types/node": "^22.15.3",
     "typescript": "~5.9.2",
-    "vitest": "^2.1.8",
-    "@types/node": "^22.15.3"
+    "vitest": "^2.1.8"
   }
 }

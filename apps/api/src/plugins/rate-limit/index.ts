@@ -42,10 +42,24 @@ export type RouteRateLimit = Exclude<FastifyContextConfig['rateLimit'], false | 
 /**
  * Per-session keyGenerator: the session actor when authenticated, else the IP. The
  * rate-limit hook runs AFTER @fastify/session (server.ts order), so `request.session`
- * is loaded — same ordering the step-up per-actor keyGen relies on.
+ * is loaded — same ordering the step-up per-actor keyGen relies on. Admin routes only:
+ * members are token-bearer and never populate `request.session` (see `perMemberKey`).
  */
 export function perSessionKey(request: FastifyRequest): string {
   return request.session?.userId ?? request.ip;
+}
+
+/**
+ * Per-member keyGenerator: the JWT-bearer member actor when authenticated, else the
+ * IP. Members have no `@fastify/session` (token-bearer auth, `member-session-guard.ts`),
+ * so `perSessionKey` always falls through to `request.ip` on a member route — this is
+ * the member-route equivalent. `request.requestContext.actorId` is populated by
+ * `requireMemberSession`'s `preHandler`, so a route using this generator MUST set
+ * `config: { rateLimit: { ..., hook: 'preHandler' } }` (the default `onRequest` hook
+ * fires before any preHandler runs, so `actorId` would not be set yet).
+ */
+export function perMemberKey(request: FastifyRequest): string {
+  return request.requestContext.actorId ?? request.ip;
 }
 
 /** The named per-endpoint thresholds (read/search/write), all per-session-keyed. */

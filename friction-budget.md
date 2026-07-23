@@ -619,6 +619,31 @@ EAS build a no-op → `member-app-native` stays a no-op) + one member-session-ga
 does not enter the public page-weight budget the gate has teeth on. Do NOT ratchet
 (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 8.7 disposition (declaration affirmed, no new row):** the Yogdaan Pratigya
+(Contribution Note) PDF — its `apps/mobile/app/(contribution)/note/[id].tsx` screen,
+the `lib/save-note.ts` OS handoff, the member-session-gated render endpoint, and the
+server-side template — introduces **zero deliberate friction**. The screen is a single
+optional CTA that fetches an artifact ABOUT the member and hands it to the OS share
+sheet: no form, no upload, no gate, no forced step, and nothing the member must complete
+to proceed anywhere else. The Note is generated on demand and persisted nowhere, so
+there is no waiting-for-preparation state to pay for either (contrast the Story 3.11
+data-export prepare→poll→step-up flow, which IS a declared cost and is stepped-up
+deliberately — this endpoint is session-only). The one deliberate constraint is a
+per-member RATE LIMIT on the render, which is a cost bound on the server, not friction
+on the member: it is unreachable in ordinary use (a member opens a handful of Notes,
+not dozens a minute) and it forces nothing when it is not reached. Zero deliberate
+friction introduced; ledger reviewed, no new row warranted.
+
+The **page-weight baseline is unchanged**. Every new/modified file lands in the
+authenticated mobile app (`apps/mobile`, EAS build a no-op → `member-app-native` stays
+a no-op), in `apps/api` behind a member session, or in
+`packages/contracts`/`packages/platform-adapters`/`packages/api-client` (all excluded
+from the ledger). Note specifically that the ~440 KB of vendored Devanagari font faces
+inlined into the rendered PDF are a SERVER-SIDE artifact asset (`apps/api/assets/fonts/`)
+that never enters any client bundle or public page. This is **NOT a public `apps/public`
+surface**, so it does not enter the public page-weight budget the gate has teeth on. Do
+NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

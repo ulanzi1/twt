@@ -10,12 +10,14 @@
 // DB-touching specs guard with `describe.skipIf(!hasDatabase)` so the suite passes
 // without Docker; the live-DB CI job sets DATABASE_URL (Story 1.6 substrate).
 
-import type { ClaimDocumentStorage } from '@twt/contracts';
+import type { ClaimDocumentStorage, ContributionNotePdfRenderer } from '@twt/contracts';
 import { createDb } from '@twt/domain';
 import {
   type BankIfscLookup,
+  createFakeContributionNotePdfRenderer,
   createInMemoryBankIfscLookup,
   createInMemoryClaimDocumentStorage,
+  type FakeContributionNotePdfRenderer,
   type InMemoryBankIfscLookup,
   type InMemoryClaimDocumentStorage,
 } from '@twt/platform-adapters';
@@ -211,6 +213,7 @@ export interface TestDepsOverrides {
   kycProviders?: KycProviderRegistry;
   dataExportQueue?: DataExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
+  contributionNotePdfRenderer?: ContributionNotePdfRenderer;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
   poolSpawnQueue?: PoolSpawnTriggerEnqueuer;
   bankIfscLookup?: BankIfscLookup;
@@ -230,6 +233,7 @@ export interface TestDeps {
   poolFixedAmountHook: CapturingPoolFixedAmountHook;
   dataExportQueue: CapturingDataExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
+  contributionNotePdfRenderer: FakeContributionNotePdfRenderer;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
   poolSpawnQueue: CapturingPoolSpawnQueue;
   bankIfscLookup: InMemoryBankIfscLookup;
@@ -269,6 +273,12 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     (overrides.poolSpawnQueue as CapturingPoolSpawnQueue) ?? new CapturingPoolSpawnQueue();
   const bankIfscLookup =
     (overrides.bankIfscLookup as InMemoryBankIfscLookup) ?? createInMemoryBankIfscLookup();
+  // Contribution-Note renderer (Story 8.7) — the deterministic FAKE, never the real engine: an
+  // integration suite must not launch a browser. The real-engine assertions (Devanagari embed +
+  // structure tree) live in the single, clearly-marked platform-adapters render suite.
+  const contributionNotePdfRenderer =
+    (overrides.contributionNotePdfRenderer as FakeContributionNotePdfRenderer) ??
+    createFakeContributionNotePdfRenderer();
 
   // Build fake-KMS encryption deps with the test pepper (KMS_TEST_MODE defaults to fake).
   const enc = buildEncryptionDeps(TEST_PEPPER);
@@ -321,6 +331,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Claim-document object store (Story 6.5) — in-memory fake so the upload spec can assert the
     // bytes were `put` (and that a rejected upload never reaches storage).
     claimDocumentStorage,
+    contributionNotePdfRenderer,
     // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
     // enqueued on a 202, and NOT enqueued on a 409 lifecycle-guard rejection.
     claimOcrParityQueue,
@@ -348,6 +359,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     poolFixedAmountHook,
     dataExportQueue,
     claimDocumentStorage,
+    contributionNotePdfRenderer,
     claimOcrParityQueue,
     poolSpawnQueue,
     bankIfscLookup,

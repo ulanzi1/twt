@@ -416,9 +416,29 @@ These rows track the cross-Story deferred-scope inventory from `review-scope-cha
 
 ---
 
+### Row 21: `contribution-note-copy-fr33-v1`
+
+| Field | Value |
+|---|---|
+| `artifact_id` | `contribution-note-copy-fr33-v1` |
+| `artifact_type` | comms-template |
+| `source_artifact_path` | `packages/i18n/locales/{hi,en}/contribution.json` (`note.*` keys — the full authored Contribution Note copy in both locales) + `apps/api/src/modules/member-pool/note-template.ts` (the artifact's structure, headings and status blocks) |
+| `owning_story + epic` | Story 8.7 Contribution Note PDF (FR-33) + Epic 8 contribution loop |
+| `submission_priority` | 6 |
+| `target_submission_date` | `<computed at Task 9: per Counsel + Trustee Panel scheduling>` |
+| `actual_submission_date` | `<PENDING-TASK-10>` |
+| `sla_target_return_date` | `<PENDING-TASK-10: actual_submission_date + 5-10 biz days per engagement-letter-template.md §4>` |
+| `actual_return_date` | `<PENDING-TASK-11>` |
+| `return_summary_link` | `per-artifact-return-roster.md#contribution-note-copy-fr33-v1` |
+| `integration_target_story_or_section` | Story 8.7 `note.*` copy keys + the Note template; a counsel-required wording change is a copy-only edit (the artifact's structure, status derivation and PII shape are unaffected) |
+| `integration_status` | `pending-submission` |
+| `notes` | Cross-references `review-scope-charter.md:26`, which already names "Contribution Note PDF copy per FR-33" as in-scope. The copy ships **authored-but-not-counsel-reviewed** — engagement Tasks 7-11 are `_AWAITING EXTERNAL ACTION_` and Story 8.7 does not and cannot close them. Two review-relevant characteristics of the artifact: (a) it is deliberately NOT a receipt/invoice — the document is framed as a record of a trust relationship between colleagues, and both locales state explicitly that it is not a transactional document (FR-33 / the `microcopy.yaml` vocabulary register, CI-enforced); (b) the status copy is legally load-bearing because the artifact is SHAREABLE — a pending (non-green) Note must state that verification is still outstanding and must carry neither the UTR nor the सत्यापित verification stamp, so that a forwarded copy cannot be read as proof of a settled payment. Per Story 8.7 AC6/D8 the pending-review status is tracked HERE (internally) and is deliberately NOT stamped on the member's artifact — unlike the Story 2.6 T&C surface, which marks itself publicly because it IS the legal instrument under review; a "pending legal review" marker on a trust artifact would corrode the trust the artifact exists to build. |
+
+---
+
 ## Roster total + subsequent submissions
 
-**Row count at author-commit:** 20 priority-ordered rows.
+**Row count at author-commit:** 21 priority-ordered rows (20 at Story 0.13 author-commit; Row 21 appended by Story 8.7 per the ongoing-concurrent-review append rule below).
 
 **Subsequent submissions:** Per `engagement-letter-template.md` §9 ongoing-concurrent-review nature, additional artifacts submitted during the term are appended as new rows to this roster per the same schema. The 2-week-of-signing AC-1 deadline applies to the priority-1 row only.
 

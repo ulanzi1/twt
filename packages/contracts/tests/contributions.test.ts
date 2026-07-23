@@ -29,6 +29,7 @@ import {
   ContributionHistoryRow,
   ContributionIntentRequest,
   ContributionIntentResponse,
+  ContributionNoteFacts,
   ContributionStatus,
   ContributionUtr,
   PendingContributorsAggregate,
@@ -488,5 +489,137 @@ describe('Story 8.6 — the Yogdaan Bahi contribution-history read model (AC1/AC
   it('poolName is nullable (curated name absent at launch → letter-code fallback) but never an empty string', () => {
     expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, poolName: 'भीष्म' }).success).toBe(true);
     expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, poolName: '' }).success).toBe(false);
+  });
+});
+
+// ── Story 8.7 — the Yogdaan Pratigya (Contribution Note) facts shape (Task 1) ──────────────────────
+//
+// Three load-bearing guards, all structural (a shareable artifact leaves the app — the honesty cannot
+// live in the surface it was fetched from, D3):
+//   1. `.strict()` — no unknown key may ride onto the artifact's facts.
+//   2. THE PII GUARD — no phone / address / Aadhaar / bank / nominee / full-name / ciphertext field
+//      exists on the shape AT ALL (structurally impossible, not merely unused — AC5).
+//   3. THE OVER-CLAIM GUARD (AC3) — `utr` cannot be set unless `status === 'green'`. A non-green Note
+//      that carried a UTR would assert a settled payment the reconciliation pipeline has not
+//      established. This is the single most important assertion in this file.
+
+const VALID_NOTE_FACTS = {
+  contributionId: 'evt-1',
+  status: 'yellow',
+  attestedAt: '2026-06-20T10:15:00.000Z',
+  generatedAt: '2026-07-23T09:00:00.000Z',
+  cycleRef: '2026-06',
+  deceasedFirstName: 'Rajesh',
+  deceasedLastInitial: 'S',
+  memberFirstName: 'Sushil',
+  memberLastInitial: 'K',
+  memberRef: 'TWT-4F2A9C1B',
+  poolLetterCode: 'A',
+  poolName: null,
+  poolCanonicalIdentifier: 'P-2026-06-001',
+  amountInr: 500,
+  paymentReference: 'TWT7QX4M2K',
+  niyamavali: null,
+  branding: {
+    displayNameHi: 'टीचर्स वेलफेयर ट्रस्ट',
+    displayNameEn: 'Teachers Welfare Trust',
+    logoUrl: null,
+    primaryColor: '#1F4E5F',
+    secondaryColor: '#C9A227',
+  },
+} as const;
+
+describe('Story 8.7 — ContributionNoteFacts: the over-claim guard (AC3, load-bearing)', () => {
+  it('accepts a green Note carrying the UTR (epics.md:2990 — "UTR (when confirmed)")', () => {
+    const green = { ...VALID_NOTE_FACTS, status: 'green', utr: '123456789012' };
+    expect(ContributionNoteFacts.safeParse(green).success).toBe(true);
+  });
+
+  it('REJECTS a UTR on a yellow / red / grey Note — the artifact may never imply a settled payment', () => {
+    for (const status of ['yellow', 'red', 'grey']) {
+      const overClaiming = { ...VALID_NOTE_FACTS, status, utr: '123456789012' };
+      const parsed = ContributionNoteFacts.safeParse(overClaiming);
+      expect(parsed.success, `a ${status} Note must not be constructible with a UTR`).toBe(false);
+      if (!parsed.success) {
+        expect(parsed.error.issues.some((i) => i.path.join('.') === 'utr')).toBe(true);
+      }
+    }
+  });
+
+  it('accepts every status WITHOUT a UTR (a non-green Note is still a real, generatable artifact — D3(a))', () => {
+    for (const status of ['yellow', 'green', 'red', 'grey']) {
+      expect(
+        ContributionNoteFacts.safeParse({ ...VALID_NOTE_FACTS, status }).success,
+        `a ${status} Note must be generatable`,
+      ).toBe(true);
+    }
+  });
+});
+
+describe('Story 8.7 — ContributionNoteFacts: PII discipline + strictness (AC5)', () => {
+  it('THE PII GUARD: no phone / address / Aadhaar / bank / nominee / full-name field can ride the artifact', () => {
+    for (const field of [
+      'phone',
+      'mobile',
+      'address',
+      'aadhaar',
+      'aadhaarNumber',
+      'bankAccount',
+      'ifsc',
+      'vpa',
+      'nomineeName',
+      'memberFullName',
+      'deceasedFullName',
+      'nameCiphertext',
+      'memberId',
+      'memberNumber',
+      'membershipNumber',
+    ]) {
+      const leaky = { ...VALID_NOTE_FACTS, [field]: 'leaked' };
+      expect(
+        ContributionNoteFacts.safeParse(leaky).success,
+        `the Note facts must reject the extra-PII field ${field}`,
+      ).toBe(false);
+    }
+  });
+
+  it('the member identifier is a bounded derived watermark, never a long/absent identity string', () => {
+    expect(ContributionNoteFacts.safeParse({ ...VALID_NOTE_FACTS, memberRef: '' }).success).toBe(false);
+    expect(
+      ContributionNoteFacts.safeParse({ ...VALID_NOTE_FACTS, memberRef: 'x'.repeat(33) }).success,
+    ).toBe(false);
+  });
+
+  it('the Niyamavali reference is nullable — the HONEST ABSENCE is first-class (AC4)', () => {
+    expect(ContributionNoteFacts.safeParse({ ...VALID_NOTE_FACTS, niyamavali: null }).success).toBe(true);
+    expect(
+      ContributionNoteFacts.safeParse({
+        ...VALID_NOTE_FACTS,
+        niyamavali: {
+          clauseId: 'niy.contribution-discipline.r7-a',
+          clauseVersionId: '11111111-1111-1111-1111-111111111111',
+          version: 2,
+        },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('branding is strict + colour-validated, and the nested objects reject unknown keys too', () => {
+    expect(
+      ContributionNoteFacts.safeParse({
+        ...VALID_NOTE_FACTS,
+        branding: { ...VALID_NOTE_FACTS.branding, primaryColor: 'teal' },
+      }).success,
+    ).toBe(false);
+    expect(
+      ContributionNoteFacts.safeParse({
+        ...VALID_NOTE_FACTS,
+        branding: { ...VALID_NOTE_FACTS.branding, trackingPixel: 'x' },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('the status enum on the Note is the SAME four tones (one derivation, D3(b))', () => {
+    expect(ContributionNoteFacts.safeParse({ ...VALID_NOTE_FACTS, status: 'confirmed' }).success).toBe(false);
   });
 });

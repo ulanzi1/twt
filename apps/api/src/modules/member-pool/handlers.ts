@@ -37,7 +37,6 @@
 
 import {
   alert as alertDomain,
-  claim as claimDomain,
   contribution as contributionDomain,
   ids,
   kyc as kycDomain,
@@ -50,15 +49,25 @@ import type {
   ConfirmedContributorRow,
   ContributionHistoryResponse,
   ContributionHistoryRow,
+  ContributionNoteFacts,
   PoolContributorListResponse,
 } from '@twt/contracts';
-import type { FastifyRequest } from 'fastify';
+import { t } from '@twt/i18n';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { UnauthorizedError } from '../../http-errors.js';
+import { NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { contributionNoteFilename, resolveContributionNoteFacts } from './contribution-note.js';
 import { splitFirstNameLastInitial } from './name.js';
+import { NOTE_I18N_NAMESPACE, renderContributionNoteHtml } from './note-template.js';
+import {
+  cycleRefFromCommittedAt,
+  resolveCuratedPoolName,
+  resolvePoolIdentity,
+  type ResolvedPoolIdentity,
+} from './pool-identity.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -189,6 +198,67 @@ export function createMemberPoolHandlers(deps: AppDeps) {
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
+    },
+
+    /**
+     * GET /api/v1/member/contribution-note/:contributionId — the Yogdaan Pratigya PDF (Story 8.7).
+     * Renders the member's OWN Contribution Note for ONE contribution, server-authoritatively, and
+     * returns the PDF BYTES. Generated on demand and persisted NOWHERE (D2/AC7): every input is
+     * event-derived, so there is no stale artifact, no object-key lifecycle, and no divergence between
+     * a stored copy and the truth.
+     *
+     * DELIBERATELY NOT FAIL-SOFT (unlike every sibling read in this module). An unresolvable Note is a
+     * 404 (unknown contribution / not the caller's / unresolvable pool identity) and a render failure
+     * propagates as a 5xx — never a blank or partially-rendered PDF. A defective artifact is worse than
+     * no artifact: the member would forward it believing it says something.
+     */
+    async contributionNote(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const { contributionId } = request.params as { contributionId: string };
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let facts: ContributionNoteFacts | null;
+      let ok = false;
+      try {
+        facts = await resolveContributionNoteFacts(deps, scopeTx.tx, request, {
+          memberId,
+          pariwarId,
+          contributionId,
+          now: deps.clock(),
+        });
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      // 404 covers BOTH "no such contribution" and "not yours" — indistinguishable to the caller by
+      // design (D9): a distinguishable response would confirm the existence of another member's
+      // contribution id. Note that STATUS is not part of this decision (D3(a)) — a yellow/red/grey Note
+      // is just as generatable as a green one; what varies is what the artifact SAYS, never whether it
+      // exists.
+      if (facts === null) {
+        throw new NotFoundError('Contribution Note not found', 'contribution_note.not_found');
+      }
+
+      // The render is OUTSIDE the scope tx: it is the expensive step and holds no DB resources.
+      const html = renderContributionNoteHtml(facts);
+      // The SAME `note.title` i18n key the template's own <title> tag and <h1> render (AC1) — not a
+      // second, hardcoded copy of the string, which would (a) drift out of sync with the real title and
+      // (b) sit outside microcopy.yaml's `code_globs` vocabulary-gate coverage of the template source.
+      const bytes = await deps.contributionNotePdfRenderer.render(html, {
+        title: `${t('note.title', undefined, { namespace: NOTE_I18N_NAMESPACE, locale: 'hi' })} — ${t('note.title', undefined, { namespace: NOTE_I18N_NAMESPACE, locale: 'en' })}`,
+      });
+
+      // The filename carries no prohibited transactional term (AC1 — the vocabulary register binds the
+      // `Content-Disposition` too, not only the visible copy).
+      await reply
+        .type('application/pdf')
+        .header('content-disposition', `attachment; filename="${contributionNoteFilename(facts.contributionId)}"`)
+        // A Note reflects live reconciliation state and must never be served from an intermediary cache.
+        .header('cache-control', 'no-store')
+        .send(Buffer.from(bytes));
     },
   };
 }
@@ -442,95 +512,14 @@ async function resolveCard(
   };
 }
 
-// ── Shared per-pool identity resolver (D6) — reused by the My Pool card AND the Yogdaan Bahi history ─────
-
-/** The per-pool identity INPUT the shared resolver needs (from the card's chosen pool, or a history row's
- *  pool context) — everything EXCEPT the deceased-family name, which the resolver decrypts here. Excludes
- *  the card's member-specific self-state (`attested`/`myContribution`): that is per-member, not per-pool. */
-export interface PoolIdentityInput {
-  readonly claimCaseId: ReturnType<typeof ids.claimId>;
-  readonly poolIndex: number;
-  readonly poolCanonicalIdentifier: string;
-  /** The SNAPSHOTTED `pools.fixed_amount` (whole INR; echoed through unchanged — never recomputed). */
-  readonly fixedAmount: number;
-  /** N — the number of pools in the cycle (the curated-name `reserveNames` count). */
-  readonly poolCount: number;
-}
-
-/** The resolved per-pool identity — card-identical family/letter/name for a pool (D6). */
-export interface ResolvedPoolIdentity {
-  readonly deceasedFirstName: string;
-  readonly deceasedLastInitial: string;
-  readonly poolLetterCode: string;
-  readonly poolName: string | null;
-  readonly poolCanonicalIdentifier: string;
-  readonly fixedAmount: number;
-}
-
-/**
- * Resolve a pool's member-facing IDENTITY (D6) — the deceased family's first-name + last-initial
- * (PII-shielded, AC2 — the family the pool supports, NOT the nominee) + the letter code + the curated
- * Mahabharata name (else null → letter-code fallback). The ONE place this join lives, consumed by BOTH
- * the My Pool card (`resolveCard`) and the Yogdaan Bahi history handler, so a pool renders card-identical
- * in the card and the passbook. Decrypts the claim's deceased-member KYC name at the member-session layer
- * (D11 — NOT the admin path). Returns `null` when the claim / KYC profile / name is unresolvable (the
- * caller omits the row — never an undignified blank). It resolves NO member-specific self-state (that is
- * `resolveCard`'s own `attested`/`myContribution` block, deliberately excluded).
- */
-async function resolvePoolIdentity(
-  deps: AppDeps,
-  tx: Db,
-  request: FastifyRequest,
-  pariwarId: ReturnType<typeof ids.pariwarId>,
-  input: PoolIdentityInput,
-): Promise<ResolvedPoolIdentity | null> {
-  const claimCase = await claimDomain.getClaimCase(tx, pariwarId, input.claimCaseId);
-  if (!claimCase) return null;
-  const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, claimCase.deceasedMemberId);
-  if (!kycProfile || kycProfile.nameCiphertext === null) return null;
-  // A branded PariwarId IS a string (brand is compile-time only) — the KYC decrypt context keys on it.
-  // A decrypt failure (bad ciphertext, transient KMS error) must degrade the SAME way as an unresolvable
-  // profile — skip THIS pool's identity, not propagate out (the `resolveContributorList` precedent):
-  // for the history handler, letting this throw would blank the ENTIRE passbook via the outer fail-soft
-  // catch instead of omitting just the rows for this one pool.
-  let fullName: string;
-  try {
-    fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
-  } catch (err) {
-    request.log.warn({ err, claimCaseId: input.claimCaseId }, 'pool-identity: deceased name decrypt failed — omitting');
-    return null;
-  }
-  const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
-  if (firstName === '') return null; // an unresolvable name — fail-soft (no undignified blank)
-
-  const poolLetterCode = poolDomain.poolLetterCode(input.poolIndex);
-  const poolName = await resolveCuratedPoolName(tx, pariwarId, input.poolCount, input.poolIndex, request);
-
-  return {
-    deceasedFirstName: firstName,
-    deceasedLastInitial: lastInitial,
-    poolLetterCode,
-    poolName,
-    poolCanonicalIdentifier: input.poolCanonicalIdentifier,
-    fixedAmount: input.fixedAmount,
-  };
-}
-
 // ── Yogdaan Bahi contribution-history pipeline (Story 8.6) ──────────────────────────────────────────────
+//
+// The shared per-pool identity resolver (D6) + the cycle-ref helper moved to `pool-identity.ts` when
+// Story 8.7 added the Contribution Note as their THIRD consumer — same implementation, one home, no
+// circular import between the handler and the Note resolver.
 
 /** The empty passbook — a member who has attested nothing, or a whole-read fail-soft (AC5-adjacent). */
 const HISTORY_EMPTY: ContributionHistoryResponse = { rows: [], totalInr: 0 };
-
-/**
- * The member-facing cycle reference (AC1) — the cycle's freeze MONTH, `YYYY-MM` (Gregorian + Latin, the
- * operational-numeral discipline, AC6). Letter codes repeat across cycles ("every cycle has a Pool A"), so
- * this disambiguates which cycle a passbook row belongs to. UTC so it is deterministic (no viewer-tz drift).
- */
-function cycleRefFromCommittedAt(committedAt: Date): string {
-  const year = committedAt.getUTCFullYear().toString().padStart(4, '0');
-  const month = (committedAt.getUTCMonth() + 1).toString().padStart(2, '0');
-  return `${year}-${month}`;
-}
 
 /**
  * The Yogdaan Bahi pipeline (Story 8.6; AC1/AC2/AC3/AC6). Lists the member's OWN attested contributions
@@ -603,51 +592,21 @@ async function resolveHistory(
       cycleRef: identity.cycleRef,
       amountInr: identity.fixedAmount,
       status: entry.status,
-      // (AC3/D4) The Contribution-Note PDF is Story 8.7 (unbuilt) — no Note is generatable yet, so this is
-      // `false` for every row today; the mobile link affordance still renders (reserved-route placeholder).
-      // 8.7 flips this (a green/confirmed row is the natural first target) — no shape change here.
-      noteAvailable: false,
+      // (Story 8.7 D3(a), RATIFIED) `noteAvailable` is a RESOLVABILITY predicate, NOT a status
+      // predicate. A Note exists iff the row resolves to a real artifact — the contribution is the
+      // caller's own AND `resolvePoolIdentity` succeeded (claim → deceased member → KYC name decrypt).
+      // At THIS point in the loop that is exactly true: the `identity === null` omission above has
+      // already dropped every unresolvable row. Hence the literal `true`.
+      //
+      // NO STATUS TERM BELONGS IN THIS EXPRESSION. A yellow/red/grey row with resolvable identity gets
+      // a Note; a green row whose identity is unresolvable does not. Status and availability are
+      // ORTHOGONAL: availability decides WHETHER a Note exists, `deriveContributionStatus` decides what
+      // it SAYS (and gates the UTR + the सत्यापित stamp inside the artifact). Letting status narrow
+      // availability would ship the feature dark — green is unreachable until Epic 9's producer lands.
+      noteAvailable: true,
     });
     totalInr += identity.fixedAmount;
   }
 
   return { rows, totalInr };
-}
-
-/**
- * The curated Mahabharata-rooted pool name for THIS pool, or `null` (→ the letter-code fallback). The
- * name is NOT stored per pool (Story 7.2 `names.ts`: `pools` has no name column); it is re-derived by
- * reserving the cycle's N names in position order and indexing by the pool's ordering. Returns:
- *   · `null`   — the Pariwar opted OUT (empty registry — TWT-Bihar launch → letter code everywhere), or
- *                the registry is under-configured (exhaustion) / any read error → letter-code fallback.
- *   · a name   — the position-ordered curated name for `poolIndex`.
- *
- * Locale note (documented seam): the reservation carries both locales, but this read layer has no
- * viewer locale (requestContext exposes none), so it returns the Hindi-primary name (Hindi-first
- * product). Full bilingual name-by-locale resolution is deferred until a tenant actually configures
- * the registry — a seam, not a launch gap (the launch value is `null`). Its own try/catch so a config
- * gap degrades to the letter code WITHOUT suppressing the whole card.
- */
-async function resolveCuratedPoolName(
-  tx: Db,
-  pariwarId: ReturnType<typeof ids.pariwarId>,
-  poolCount: number,
-  poolIndex: number,
-  request: FastifyRequest,
-): Promise<string | null> {
-  try {
-    const names = await poolDomain.reserveNames(tx, { pariwarId, count: poolCount });
-    if (names.length === 0) return null; // opted out — letter code (the committed launch behavior)
-    const reserved = names[poolIndex];
-    return reserved ? reserved.displayNameHi : null;
-  } catch (err) {
-    if (err instanceof poolDomain.PoolNameListExhaustedError) {
-      // A trustee CONFIGURATION GAP (names.ts), not a benign opt-out — surface it loudly so it can be
-      // acted on, while still degrading THIS card to the letter code rather than suppressing it.
-      request.log.error({ err }, 'active-contribution: pool-name registry exhausted — trustee must extend the curated list');
-      return null;
-    }
-    request.log.warn({ err }, 'active-contribution: pool-name registry unresolved — letter-code fallback');
-    return null;
-  }
 }

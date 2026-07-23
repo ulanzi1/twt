@@ -1597,6 +1597,49 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 8.7 — the Yogdaan Pratigya (Contribution Note) PDF (member-session-gated) ──
+//
+// Hand-authored because the response is BINARY (`application/pdf` bytes), not a Zod-generated JSON
+// shape — there is nothing to `jsonOf`. The response body is declared as `type: string, format: binary`,
+// the OpenAPI 3.1 spelling for an opaque byte stream.
+//
+// The naming discipline binds THIS declaration too (AC1): the path, the summary and the description
+// name the artifact as a Contribution Note / Yogdaan Pratigya and never as a transactional document —
+// the `microcopy.yaml` vocabulary register governs the OpenAPI surface, not only member-visible copy.
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/contribution-note/{contributionId}',
+  summary: 'The member’s Yogdaan Pratigya (Contribution Note) PDF for one of their own contributions',
+  description:
+    'Renders and returns the authenticated member’s OWN Contribution Note as a tagged, Hindi-first PDF ' +
+    '(FR-33). The artifact carries the contribution’s facts, the TWT + member-identifier watermarks, the ' +
+    'Pariwar’s branding, and the Niyamavali version in force AT THE CONTRIBUTION INSTANT (or an honest ' +
+    '"not yet published" when the Pariwar has published no governing clause — never a fabricated ' +
+    'version). It is a record of a trust relationship, NOT a transactional document.\n\n' +
+    'A Note is generatable for any RESOLVABLE attested contribution in any of the four statuses; the ' +
+    'status governs what the artifact SAYS, never whether it exists. The UTR and the सत्यापित ' +
+    'verification stamp are reserved for reconciliation-CONFIRMED (green) contributions only — a ' +
+    'pending Note states that verification is still pending, so it remains honest if the member ' +
+    'forwards the file onward.\n\n' +
+    'Generated on demand and persisted nowhere: the same contribution regenerates an equivalent Note. ' +
+    'Hard-scoped to the caller’s own contributions — another member’s contributionId returns the same ' +
+    '404 as an unknown one. Deliberately NOT fail-soft: an unresolvable Note 404s and a render failure ' +
+    '5xxs, never a blank or partial PDF. Rate-limited per member (this is the only member endpoint that ' +
+    'spawns a browser render). Requires a member session.',
+  tags: ['member-pool'],
+  request: { params: z.object({ contributionId: z.string().min(1) }) },
+  responses: {
+    200: {
+      description: 'The Contribution Note PDF bytes (attachment; Content-Disposition filename)',
+      content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } },
+    },
+    401: errorResponse('Authentication required'),
+    404: errorResponse('No Contribution Note for this contribution id and caller (unknown, or not theirs)'),
+    429: errorResponse('Rate limit exceeded (per-member render limit)'),
+    500: errorResponse('Render failed — never a blank or partial PDF'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 // ── Story 5.3 — trustee WhatsApp Business config (per-Pariwar; the [SURFACE] half) ──
 // GET/PUT the WA config singleton + GET/PUT the per-category UTILITY template mapping. Scoped admin chain
 // [requireAdminSession, scopeResolutionHook, requirePermissionHook(pariwar.configure_channels)] — 401 no

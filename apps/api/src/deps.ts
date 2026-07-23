@@ -42,6 +42,7 @@ import {
   createGcsClaimDocumentStorage,
   createInMemoryBankIfscLookup,
   createLocalFsClaimDocumentStorage,
+  createChromiumContributionNotePdfRenderer,
 } from '@twt/platform-adapters';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
@@ -331,6 +332,16 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
             : {}),
         })
       : createLocalFsClaimDocumentStorage(),
+    // Contribution-Note PDF renderer (Story 8.7, D1) — headless Chromium behind the
+    // `ContributionNotePdfRenderer` port. `puppeteer-core` brings NO bundled binary: the deployable
+    // image installs the distro `chromium` package, and CHROMIUM_EXECUTABLE_PATH points at it (a local
+    // Chrome/Chromium in dev). The browser is created LAZILY on the first Note render, so an instance
+    // that never serves one never pays for it.
+    contributionNotePdfRenderer: createChromiumContributionNotePdfRenderer(
+      process.env['CHROMIUM_EXECUTABLE_PATH']
+        ? { executablePath: process.env['CHROMIUM_EXECUTABLE_PATH'] }
+        : {},
+    ),
     // Claim OCR + parity job producer (Story 6.5) — send-only, same DB connection string as the
     // app pool (pgboss schema; apps/jobs already created it).
     claimOcrParityQueue: await createPgBossClaimOcrParityEnqueuer(connectionString),

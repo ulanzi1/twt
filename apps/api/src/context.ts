@@ -9,7 +9,11 @@
 
 import type pg from 'pg';
 
-import type { ClaimDocumentStorage, PoolSpawnTriggerPayload } from '@twt/contracts';
+import type {
+  ClaimDocumentStorage,
+  ContributionNotePdfRenderer,
+  PoolSpawnTriggerPayload,
+} from '@twt/contracts';
 import type { BankIfscLookup } from '@twt/platform-adapters';
 import type { Db, encryption } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
@@ -369,6 +373,15 @@ export interface AppDeps {
    * (`asia-south1`) when `CLAIM_DOCUMENT_BUCKET` is set; an in-memory fake in dev/CI + tests.
    */
   readonly claimDocumentStorage: ClaimDocumentStorage;
+  /**
+   * Contribution-Note PDF renderer (Story 8.7, D1) — the Yogdaan Pratigya render port. The
+   * headless-Chromium adapter in prod/dev (the ONLY engine satisfying both AC2 legs: Devanagari
+   * shaping via HarfBuzz AND a tagged-PDF structure tree); a deterministic fake in tests, so every
+   * API/template test runs WITHOUT a browser. Same injectable-seam pattern as `claimDocumentStorage`
+   * — the engine dependency lives in exactly one adapter file and can move to a jobs-side render
+   * service without touching the module, the route, or the template.
+   */
+  readonly contributionNotePdfRenderer: ContributionNotePdfRenderer;
   /**
    * Claim-document OCR + parity job producer (Story 6.5) — the upload endpoint enqueues a
    * `CLAIM_OCR_PARITY` job here after storing the bytes. A pg-boss-backed enqueuer in prod/dev;

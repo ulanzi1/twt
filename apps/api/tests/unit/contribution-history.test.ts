@@ -139,7 +139,9 @@ describe('contributionHistory — wiring (AC1/AC2/AC3)', () => {
       cycleRef: '2026-06',
       amountInr: 500,
       status: 'yellow',
-      noteAvailable: false,
+      // Story 8.7 D3(a) flipped this from the 8.6 placeholder `false`: `noteAvailable` is a
+      // RESOLVABILITY predicate (own contribution + resolvable pool identity), NOT a status one.
+      noteAvailable: true,
     });
     expect(result.rows[1]?.status).toBe('green');
     expect(result.totalInr).toBe(1000);
@@ -228,5 +230,53 @@ describe('D6 — the passbook and the My Pool card render a pool IDENTICALLY (sh
     expect(card.poolName).toBe(historyRow.poolName);
     expect(card.poolCanonicalIdentifier).toBe(historyRow.poolCanonicalIdentifier);
     expect(card.fixedAmount).toBe(historyRow.amountInr);
+  });
+});
+
+// ── Story 8.7 D3(a) — `noteAvailable` is a RESOLVABILITY predicate, with NO status term ────────────
+//
+// The specific mistake this ratification forecloses is conflating availability with status. Gating on
+// `green` would ship 8.7 dark (green is unreachable until Epic 9's producer lands), so a yellow / red /
+// grey row with resolvable identity gets `noteAvailable: true`, while an unresolvable row gets no row
+// at all. Availability decides WHETHER a Note exists; `deriveContributionStatus` decides what it SAYS.
+
+describe('Story 8.7 D3(a) — noteAvailable is resolvability, not status', () => {
+  it('every one of the four statuses gets noteAvailable: true when its identity resolves', async () => {
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    listMemberContributionHistory.mockResolvedValue(
+      (['yellow', 'green', 'red', 'grey'] as const).map((status, i) => ({
+        contributionId: `evt-${status}`,
+        alertId: ALERT_ID,
+        poolId: POOL_ID,
+        attestedAt: new Date(`2026-06-${10 + i}T10:15:00.000Z`),
+        utr: '123456789012',
+        status,
+      })),
+    );
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.rows).toHaveLength(4);
+    for (const row of result.rows) {
+      expect(row.noteAvailable, `${row.status} row must be Note-generatable`).toBe(true);
+    }
+  });
+
+  it('an UNRESOLVABLE row is omitted entirely — so no row ever carries noteAvailable for a Note that would 404', async () => {
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    const UNKNOWN_POOL = '88888888-8888-8888-8888-888888888888';
+    listMemberContributionHistory.mockResolvedValue([
+      { contributionId: 'evt-ok', alertId: ALERT_ID, poolId: POOL_ID, attestedAt: new Date('2026-06-20T10:15:00.000Z'), utr: '123456789012', status: 'green' },
+      { contributionId: 'evt-bad', alertId: ALERT_ID, poolId: UNKNOWN_POOL, attestedAt: new Date('2026-06-19T10:15:00.000Z'), utr: '123456789013', status: 'green' },
+    ]);
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+    // Both rows are GREEN — the difference is purely resolvability, which is exactly the point.
+    expect(result.rows.map((r) => r.contributionId)).toEqual(['evt-ok']);
+    expect(result.rows[0]?.noteAvailable).toBe(true);
   });
 });

@@ -554,6 +554,23 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       );
     },
 
+    /**
+     * Download the Yogdaan Pratigya (Contribution Note) PDF for ONE of the member's OWN contributions
+     * (Story 8.7). Returns the raw `ArrayBuffer` — the body is `application/pdf` bytes, NOT JSON, so it
+     * must not be `.json()`-parsed (the Story 3.11 data-export `callBinary` precedent; the caller writes
+     * it to a cache file and hands it to the OS share sheet).
+     *
+     * Generated on demand, server-side, and persisted nowhere — the same contribution regenerates an
+     * equivalent Note whenever it is opened. Hard-scoped to the caller's own contributions: another
+     * member's `contributionId` throws `ApiError` with `error.code === 'contribution_note.not_found'`
+     * (a 404), which is also what an unknown id gives — the two are deliberately indistinguishable.
+     * Rate-limited per member (a PDF render is far more expensive than any other member read), so a
+     * burst surfaces as `rate_limit.exceeded` (auth).
+     */
+    memberContributionNote(contributionId: string): Promise<ArrayBuffer> {
+      return callBinary(`${MEMBER_HOME_BASE}/contribution-note/${encodeURIComponent(contributionId)}`);
+    },
+
     // ── UPI Intent + UTR self-attestation (Story 8.4 — the FIRST Epic-8 WRITE) ──────────────────────────
     /**
      * Build the server-authoritative UPI Intent for a pool contribution (Story 8.4). Resolves the member's

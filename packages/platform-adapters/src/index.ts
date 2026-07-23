@@ -28,3 +28,18 @@ export { createGcsSnapshotStorage } from './snapshot-storage/gcs.js';
 export type { GcsSnapshotStorageOpts } from './snapshot-storage/gcs.js';
 export { createInMemorySnapshotStorage } from './snapshot-storage/in-memory.js';
 export type { InMemorySnapshotStorage } from './snapshot-storage/in-memory.js';
+
+// Story 8.7 — the `ContributionNotePdfRenderer` adapters (Yogdaan Pratigya PDF, D1). The PORT lives in
+// `@twt/contracts`; these are its headless-Chromium (live) + deterministic-fake (test) implementations.
+// `puppeteer-core` is imported LAZILY inside the Chromium adapter, so importing this barrel — which
+// every apps/api test does — never loads the engine.
+export { createChromiumContributionNotePdfRenderer } from './contribution-note-pdf/chromium.js';
+export type {
+  ChromiumContributionNotePdfRenderer,
+  ChromiumContributionNotePdfRendererOpts,
+} from './contribution-note-pdf/chromium.js';
+export { createFakeContributionNotePdfRenderer } from './contribution-note-pdf/fake.js';
+export type {
+  FakeContributionNotePdfRenderer,
+  RecordedContributionNoteRender,
+} from './contribution-note-pdf/fake.js';

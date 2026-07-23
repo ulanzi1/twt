@@ -127,40 +127,46 @@ export function YogdaanBahi() {
 
   const ListHeader = useMemo(() => <ColumnHeader />, [])
 
-  // The dignified empty passbook (a member who has attested nothing) — never "no dues". A genuine load
-  // failure (isError, no cached rows to fall back on) must NEVER render as this same "nothing yet" state
-  // — that would misrepresent a member's real contributions as absent (AC1/AC6) — so it gets its own
-  // branch with a retry action instead.
-  const ListEmpty = useMemo(
-    () => (
-      <YStack flex={1} items="center" justify="center" px="$5" py="$8" gap="$3">
-        <Text
-          fontFamily="$body"
-          fontSize="$4"
-          color="$colorPress"
-          text="center"
-          accessibilityRole="text"
-          accessibilityLabel={isError ? t('yogdaan.load_failed', undefined, NS) : t('yogdaan.empty_a11y', undefined, NS)}
-        >
-          {isLoading
-            ? t('yogdaan.loading', undefined, NS)
-            : isError
-              ? t('yogdaan.load_failed', undefined, NS)
-              : t('yogdaan.empty', undefined, NS)}
-        </Text>
-        {isError && (
-          <Button size="$3" onPress={() => { void refetch() }} accessibilityRole="button">
-            {t('yogdaan.retry', undefined, NS)}
-          </Button>
-        )}
-      </YStack>
-    ),
-    [t, isLoading, isError, refetch],
-  )
-
   // React 19 + RN 0.83 + new arch: FlatList prop typing wrinkle on ListHeaderComponent +
   // stickyHeaderIndices. Widen props to bypass scaffold-noise — runtime is documented FlatList behavior.
   const FlatListAny = FlatList as unknown as ComponentType<Record<string, unknown>>
+
+  // Empty / loading / error render as their OWN branch, OUTSIDE the FlatList — so the list is mounted
+  // ONLY when it has data. On the new architecture (Fabric) letting a single FlatList cross the
+  // empty→populated transition (data []→N, stickyHeaderIndices []→[0], contentContainerStyle swap, all
+  // while maintainVisibleContentPosition anchors) desynced the mounting layer and crashed the surface
+  // ("addViewAt: failed to insert view … index=15 count=0" — 15 = initialNumToRender). Gating the mount
+  // removes that transition entirely; the list always mounts fresh with rows and a STABLE stickyHeaderIndices.
+  // The dignified empty passbook (a member who has attested nothing) is never "no dues"; a genuine load
+  // failure (isError) gets its OWN retry branch, never the same "nothing yet" copy (AC1/AC6).
+  if (rows.length === 0) {
+    return (
+      <YStack flex={1} bg="$background">
+        <YStack flex={1} items="center" justify="center" px="$5" py="$8" gap="$3">
+          <Text
+            fontFamily="$body"
+            fontSize="$4"
+            color="$colorPress"
+            text="center"
+            accessibilityRole="text"
+            accessibilityLabel={isError ? t('yogdaan.load_failed', undefined, NS) : t('yogdaan.empty_a11y', undefined, NS)}
+          >
+            {isLoading
+              ? t('yogdaan.loading', undefined, NS)
+              : isError
+                ? t('yogdaan.load_failed', undefined, NS)
+                : t('yogdaan.empty', undefined, NS)}
+          </Text>
+          {isError && (
+            <Button size="$3" onPress={() => { void refetch() }} accessibilityRole="button">
+              {t('yogdaan.retry', undefined, NS)}
+            </Button>
+          )}
+        </YStack>
+        <StickyFooter totalInr={0} rowCount={0} />
+      </YStack>
+    )
+  }
 
   return (
     <YStack flex={1} bg="$background">
@@ -170,9 +176,9 @@ export function YogdaanBahi() {
         keyExtractor={keyExtractor}
         getItemLayout={getItemLayout}
         ListHeaderComponent={ListHeader}
-        ListEmptyComponent={ListEmpty}
-        stickyHeaderIndices={rows.length > 0 ? [0] : []}
-        contentContainerStyle={rows.length === 0 ? styles.emptyContent : undefined}
+        // Stable now — the list is only mounted when populated (see the empty-branch note above), so this
+        // never toggles []↔[0] under Fabric.
+        stickyHeaderIndices={[0]}
         // Architecture §4.6 — tuned virtualization for entry-level Android (the 50–500-row contract).
         windowSize={10}
         maxToRenderPerBatch={10}
@@ -190,8 +196,5 @@ export function YogdaanBahi() {
 const styles = StyleSheet.create({
   tabularNums: {
     fontVariant: ['tabular-nums'],
-  },
-  emptyContent: {
-    flexGrow: 1,
   },
 })

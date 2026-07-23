@@ -60,7 +60,9 @@ function generateRows(): YogdaanRow[] {
       cycleRef: `2026-${month}`,
       amountInr,
       status: statuses[i % statuses.length]!,
-      noteAvailable: false,
+      // Story 8.7: a resolvable row is Note-generatable in EVERY status (`noteAvailable` is a
+      // resolvability predicate, not a status one), so the fixture matches the runtime shape.
+      noteAvailable: true,
     })
   }
   return rows

@@ -57,10 +57,15 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
     NS,
   )
 
-  // The Contribution-Note PDF is Story 8.7 (unbuilt): the affordance renders and navigates on EVERY row
-  // (AC3), always to the reserved `/(contribution)/note/[id]` route. Pre-8.7 that route is a placeholder
-  // screen (AC3's "resolves to the reserved Note route/placeholder"); 8.7 replaces the screen body with
-  // the real Note — the route + this press handler are unchanged when it lands.
+  // The Contribution-Note PDF affordance (8.6 AC3) — the route and this press handler are unchanged
+  // from 8.6; Story 8.7 filled the screen behind them with the real Yogdaan Pratigya.
+  //
+  // Gated on the server's `noteAvailable`, which 8.7 made a RESOLVABILITY predicate (own contribution +
+  // resolvable pool identity), NOT a status one: a yellow/red/grey row is just as Note-generatable as a
+  // green one. In practice every RENDERED row carries `true` (an unresolvable row is omitted upstream),
+  // so this hides nothing today — it exists so the affordance can never offer a Note that would 404.
+  const noteAvailable = row.noteAvailable
+
   const onNotePress = () => {
     router.push(`/(contribution)/note/${row.contributionId}` as never)
   }
@@ -120,6 +125,7 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
           </Text>
         </Text>
         <XStack flex={1} />
+        {noteAvailable ? (
         <Button
           size="$1"
           chromeless
@@ -133,6 +139,7 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
             {t('yogdaan.note.link', undefined, NS)}
           </Text>
         </Button>
+        ) : null}
       </XStack>
     </YStack>
   )

@@ -19,3 +19,7 @@ export * from './upi-failure.js';
 // four-state `status` + PII-shielded deceased-family identity + the Contribution-Note seam. NO other-member
 // field, NO UTR/tr, NO nominee/bank data (the PII discipline as a `.strict()` shape + a no-extra-PII test).
 export * from './contribution-history.js';
+// Story 8.7 — the Yogdaan Pratigya (Contribution Note) PDF: the render-ready `ContributionNoteFacts`
+// (`.strict()`, `utr` structurally impossible on a non-green Note — the AC3 over-claim guard) + the
+// `ContributionNotePdfRenderer` port (the 6.5 `ClaimDocumentStorage` precedent). NEVER a "receipt".
+export * from './contribution-note.js';

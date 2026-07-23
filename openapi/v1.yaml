@@ -5242,6 +5242,56 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/contribution-note/{contributionId}:
+    get:
+      summary: The member’s Yogdaan Pratigya (Contribution Note) PDF for one of their own contributions
+      description: |-
+        Renders and returns the authenticated member’s OWN Contribution Note as a tagged, Hindi-first PDF (FR-33). The artifact carries the contribution’s facts, the TWT + member-identifier watermarks, the Pariwar’s branding, and the Niyamavali version in force AT THE CONTRIBUTION INSTANT (or an honest "not yet published" when the Pariwar has published no governing clause — never a fabricated version). It is a record of a trust relationship, NOT a transactional document.
+
+        A Note is generatable for any RESOLVABLE attested contribution in any of the four statuses; the status governs what the artifact SAYS, never whether it exists. The UTR and the सत्यापित verification stamp are reserved for reconciliation-CONFIRMED (green) contributions only — a pending Note states that verification is still pending, so it remains honest if the member forwards the file onward.
+
+        Generated on demand and persisted nowhere: the same contribution regenerates an equivalent Note. Hard-scoped to the caller’s own contributions — another member’s contributionId returns the same 404 as an unknown one. Deliberately NOT fail-soft: an unresolvable Note 404s and a render failure 5xxs, never a blank or partial PDF. Rate-limited per member (this is the only member endpoint that spawns a browser render). Requires a member session.
+      tags:
+        - member-pool
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: contributionId
+          in: path
+      responses:
+        "200":
+          description: The Contribution Note PDF bytes (attachment; Content-Disposition filename)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No Contribution Note for this contribution id and caller (unknown, or not theirs)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded (per-member render limit)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Render failed — never a blank or partial PDF
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/p/{pariwarId}/admin/channel-config/whatsapp:
     get:
       summary: Read the per-Pariwar WhatsApp Business config (toggle, number, credential NAME, graph version)

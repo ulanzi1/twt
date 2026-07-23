@@ -101,6 +101,21 @@ scope:
   code_globs:
     - apps/admin/src/**/*.tsx
     - apps/admin/src/**/*.ts
+    # Story 8.7 — the Yogdaan Pratigya (Contribution Note) PDF TEMPLATE + its facts resolver. These are
+    # the first non-admin files in code_globs, and they are here for a specific reason: the Contribution
+    # Note's whole identity is that it is NOT a transactional document (FR-33), and the vocabulary
+    # register's prohibition binds the artifact's TEMPLATE SOURCE — its headings, its document title,
+    # its filename and its Content-Disposition — not only the locale strings it interpolates. The
+    # `contribution` copy globs below already cover the strings; without this entry the one file that
+    # could hardcode a prohibited noun into the document was unscanned.
+    #
+    # These files also carry the sheet's CSS, so the FM-14 #2 magic-number-colour check bites them: the
+    # template takes every non-tenant colour from `@twt/tokens` semantic roles rather than hex literals
+    # (a genuine fix, NOT an allow-list entry). Teeth proven — planted-violation fixture + revert-sanity
+    # — in scripts/microcopy/contribution-note.test.ts + the Dev Agent Record
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
+    - apps/api/src/modules/member-pool/note-template.ts
+    - apps/api/src/modules/member-pool/contribution-note.ts
   # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
   # member surface: the public Niyamavali (apps/public). These globs scan the PURE
   # member copy (the `niyamavali` i18n namespace strings), so the member-register

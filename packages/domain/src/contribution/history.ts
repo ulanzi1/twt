@@ -147,6 +147,77 @@ interface RawAttestedRow {
 }
 
 /**
+ * Resolve ONE of the member's OWN attested contributions by id, with its derived status — the Story 8.7
+ * Contribution Note's ownership+status read. Deliberately a TARGETED equality lookup on `eventId` (the
+ * primary key), not a slice of {@link listMemberContributionHistory}'s `.limit(500)` list: a member with
+ * more than 500 attested contributions must still be able to regenerate a Note for an older one (AC7 —
+ * "regenerable for any past contribution"), which the capped list read cannot guarantee. Reuses the SAME
+ * status-derivation steps (D3) — never a second derivation — just scoped to one row instead of many.
+ * `null` when no such attested contribution exists FOR THIS MEMBER (unknown id or another member's — the
+ * `memberId` payload-key scope in the query makes the two indistinguishable by construction, D9).
+ */
+export async function getMemberAttestedContribution(
+  db: Db,
+  { pariwarId, memberId, contributionId }: { readonly pariwarId: PariwarId; readonly memberId: MemberId; readonly contributionId: string },
+): Promise<MemberContributionHistoryEntry | null> {
+  // (1) The ONE attested contribution, matched on its primary key (`event_id`) — at most one row can ever
+  //     satisfy this, so no `.limit()` is needed. Hard-scoped to `memberId` (D1) + tenant, same as the list read.
+  const [row] = await db
+    .select({
+      contributionId: eventsLog.eventId,
+      alertId: eventsLog.streamId,
+      attestedAt: eventsLog.occurredAt,
+      poolId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY}`,
+      utr: sql<string | null>`${eventsLog.payload} ->> 'utr'`,
+    })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.pariwarId, pariwarId),
+        eq(eventsLog.eventType, CONTRIBUTION_UTR_ATTESTED_EVENT_TYPE),
+        eq(eventsLog.eventId, contributionId),
+        sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY} = ${memberId}`,
+      ),
+    );
+  if (row === undefined || typeof row.poolId !== 'string' || row.poolId.length === 0) return null;
+  if (typeof row.utr !== 'string' || row.utr.length === 0) return null;
+
+  // (2) The SAME confirmed/mismatch verdict check as the list read, scoped to this one pool.
+  const verdictRows = await db
+    .select({ eventType: eventsLog.eventType })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.pariwarId, pariwarId),
+        inArray(eventsLog.eventType, [CONFIRMED_EVENT_TYPE, CONTRIBUTION_MISMATCH_EVENT_TYPE]),
+        sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY} = ${memberId}`,
+        sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${row.poolId}`,
+      ),
+    )
+    .limit(500);
+  const confirmed = verdictRows.some((v) => v.eventType === CONFIRMED_EVENT_TYPE);
+  const mismatch = verdictRows.some((v) => v.eventType === CONTRIBUTION_MISMATCH_EVENT_TYPE);
+
+  // (3) The alert's cached lifecycle state (grey/yellow boundary) — same rule as the list read: no
+  //     projection row is treated as NOT closed (yellow), never grey without proof of closure.
+  const [alertRow] = await db
+    .select({ currentState: alerts.currentState })
+    .from(alerts)
+    .where(and(eq(alerts.pariwarId, pariwarId), eq(alerts.alertId, row.alertId as AlertId)));
+  const alertClosed = alertRow !== undefined && isAlertClosedState(alertRow.currentState);
+
+  const status = deriveContributionStatus({ confirmed, mismatch, alertClosed });
+  return {
+    contributionId: row.contributionId,
+    alertId: row.alertId as AlertId,
+    poolId: row.poolId as PoolId,
+    attestedAt: row.attestedAt,
+    utr: row.utr,
+    status,
+  };
+}
+
+/**
  * List the member's OWN attested contributions, newest-first, each with its derived status (AC1/AC2).
  * Hard-scoped to the caller's `memberId` (D1) + tenant (`pariwar_id` + RLS). Sources the member's
  * `contribution.utr-attested` events (D2), then resolves each row's status structurally:

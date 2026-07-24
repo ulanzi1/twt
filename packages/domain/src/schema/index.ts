@@ -263,3 +263,9 @@ export * from './pool_names.js';
 // (the R9-equivalent-posture trustee attestation, its own never-updated table).
 export * from './pool_fixed_amount_schedule.js';
 export * from './pool_fixed_amount_emergency_attestations.js';
+// Story 8.9 — the per-Pariwar, trustee-curated holiday-window registry (the DATA half of
+// UX-DR77). Effective-dated by YEAR (a SET of windows per curation year, unlike the 0075
+// instant-window schedule); IST calendar-date bounds, both INCLUSIVE. Read by the pure
+// `cycleCalendar` resolver to compute the calendar-aware RECONCILIATION TAIL — it never
+// moves FR-22's hard Day-15 contribution close.
+export * from './pariwar_holiday_calendar.js';

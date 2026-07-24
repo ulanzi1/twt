@@ -10,3 +10,8 @@ export * from './alert.js';
 // resolution only; the Epic 5 renderers stay pure functions of the frozen payload. Same posture as
 // alert.ts — internal queue seam, NO `.openapi()` registration.
 export * from './contribution-loop-templates.js';
+// Story 8.9 — the reconciliation-tail-window SEAM (UX-DR77): the POST-CLOSE matching window shape
+// Epic 9's matcher-tail scheduler and Epic 11b Story 11b.3's Sahyog Vivran auto-publish gate consume.
+// NO live caller yet (the declared-seam convention). Strictly distinct from the D5 CONTRIBUTION window
+// above — the Day-15 close stays hard (FR-22). Same posture as alert.ts: NO `.openapi()` registration.
+export * from './reconciliation-tail.js';

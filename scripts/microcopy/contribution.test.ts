@@ -163,3 +163,61 @@ describe('AC3 — the real contribution tone-gradient copy carries no prohibited
     });
   }
 });
+
+// ─── (b3) Story 8.9 — the teeth bite the NEW close-of-cycle holiday-aware copy ────────────
+//
+// Same reasoning as the 8.8 block above, one surface further along: the `contribution` namespace was
+// already in `microcopy.yaml` copy_globs, so these keys inherit the scan — and inheriting a scan proves
+// nothing ([[feedback_gate_scope_semantic_coverage]]). No gate-scope extension was needed or wanted;
+// what was needed is a planted violation on an actual `close_of_cycle.*` key.
+//
+// This surface carries a SPECIFIC risk the earlier ones do not. It is the copy a member reads when
+// their contribution has NOT yet been confirmed because a holiday delayed bank matching — precisely
+// the moment a careless author reaches for "your contribution didn't reach the target" or "only 2 days
+// left to confirm". UX-DR77 exists to make that moment read as the calendar being honored. So the
+// pool-reality-comparison rule is asserted here alongside scarcity/panic, and the Hindi arm is checked
+// for Devanagari operational digits: a holiday-delayed date is exactly where a Hindi author would
+// naturally type "१८ नवंबर".
+
+describe('Story 8.9 — the tone/numeral teeth bite the close-of-cycle holiday-aware copy', () => {
+  it('a scarcity frame planted on the holiday-aware body → checkTone finds it', () => {
+    const dirty =
+      '{ "close_of_cycle.holiday_aware.body": "{holiday} is being observed — only 2 days left to confirm!" }';
+    const findings = checkTone(EN_FILE, dirty, config);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0].kind).toBe('tone');
+  });
+
+  it('a panic frame planted on the holiday-aware title → checkTone finds it', () => {
+    const dirty = '{ "close_of_cycle.holiday_aware.title": "URGENT: matching is delayed" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('a pool-reality comparison planted on the settling body → checkTone finds it', () => {
+    const dirty =
+      '{ "close_of_cycle.settling.body": "This cycle closed. The pool fell short of the target." }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('a shortfall frame planted on the holiday-aware a11y line → checkTone finds it', () => {
+    const dirty =
+      '{ "close_of_cycle.holiday_aware.body_a11y": "Matching continues; the shortfall will be confirmed later." }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('the SAME holiday-aware body phrased with dignity → no finding (revert-sanity in-test)', () => {
+    const clean =
+      '{ "close_of_cycle.holiday_aware.body": "{holiday} is being observed, so matching is taking a few more days. Nothing is pending from you." }';
+    expect(checkTone(EN_FILE, clean, config)).toEqual([]);
+  });
+
+  it('a Devanagari operational digit planted in the Hindi holiday-aware body → checkNumerals finds it (UX-DR73)', () => {
+    const dirty = '{ "close_of_cycle.holiday_aware.body": "१८ नवंबर तक पुष्टि हो जाएगी।" }';
+    expect(checkNumerals(HI_FILE, dirty, config, { isCeremonial: false }).length).toBeGreaterThan(0);
+  });
+
+  it('a pool-reality comparison planted on the Hindi settling body → checkTone finds it', () => {
+    const dirty = '{ "close_of_cycle.settling.body": "इस चक्र में लक्ष्य से कम योगदान मिला।" }';
+    expect(checkTone(HI_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+});

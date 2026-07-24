@@ -807,8 +807,11 @@ export async function runContributionNotifyRecoverySweep(
  * `computeDaysRemaining` gives the My Pool card, so the reminder and the card can never disagree about
  * where in the window a member is — and enqueues per-pool children ONLY on cycle-days 5 / 10 / 13 / 14.
  *
- * NO holiday / close-of-cycle policy is encoded here. Story 8.9 owns the authoritative close date and
- * replaces the window for BOTH consumers at once.
+ * NO holiday / close-of-cycle policy is encoded here, and none belongs here. Story 8.9 adds a
+ * reconciliation-TAIL window; the contribution close stays a hard Day-15 close (FR-22) — the tail is
+ * post-close reconciliation timing only (@twt/domain `cycleCalendar` + the @twt/contracts
+ * `ReconciliationTailWindow` seam), consumed by Epic 9's matcher-tail scheduler, never by this sweep.
+ * The reminder cadence is deliberately calendar-BLIND: a member's deadline does not move for a holiday.
  */
 export async function runDeadlineReminderSweep(
   deps: ContributionNotifyTriggerDeps,

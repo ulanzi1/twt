@@ -3014,6 +3014,8 @@ As a member during a cycle whose default close date falls on a major Bihar holid
 I want close-of-cycle timing to be calendar-aware — extending the close date past holiday windows when the default close lands during them,
 So that I'm not pressured to contribute during Chhath Puja, Holi, or other locally-significant holidays.
 
+> **Correction note (BigDev, 2026-07-24 — see `sprint-change-proposal-2026-07-24.md`):** The AC prose below reads as if the Day-15 close date itself moves. It does not — that would contradict FR-22 (`live → closed` hard at Day 15, `prd.md:524,531`) and this story's own UX-DR77 anchor (`epics.md:477`, "Day 15 mechanical close; reconciliation tail... on Bihar holiday windows"). Story 8.9 is scoped to the **reconciliation-tail substrate** (holiday-calendar registry + pure resolver + declared contract seam for Epic 9/11b + empathy copy seam), not a window extension. The AC3 sentence below ("only the time-window when contributions are accepted") is superseded. Original prose preserved for history.
+
 **Acceptance Criteria:**
 
 **Given** UX-DR77 (calendar-aware close-of-cycle timing — Bihar holiday windows)

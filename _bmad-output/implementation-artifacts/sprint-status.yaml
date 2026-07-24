@@ -1,4 +1,73 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-24 (story 8-9 review -> done via bmad-code-review. Three parallel layers (Blind
+#   Hunter, Edge Case Hunter, Acceptance Auditor) ran against the ~2,490-line diff; every non-trivial claim
+#   was verified against the actual source/DB before acting on it, which caught the review's own overclaim:
+#   a flagged "no uniqueness constraint" gap on holidayWindowFor's tie-break was retracted after tracing that
+#   day-membership is a true per-window union regardless of tie-break (the schema's own rejection note for
+#   that constraint was already correct). One decision-needed item — AC2's "clears the window" text vs. the
+#   implemented policy-bound-wins-over-clearing behavior at the maxTailDays ceiling — was ratified as
+#   intentional (banner added to AC2, same treatment as the AC3 drafting-error correction) rather than
+#   changed. Six real findings were fixed: (1) extendedByHoliday/holidayLabel now derive from whether a
+#   holiday was hit, not an offset>normalTailDays comparison that silently failed at the
+#   maxTailDays===normalTailDays boundary (a caller-tuning-dependent gap, unreachable at today's 2/7
+#   defaults); (2) calendarDateToUtcMs now rejects day-of-month overflow (2026-02-30, 2026-04-31) instead of
+#   silently rolling over via Date.parse — reproduced the rollover in Node before fixing; (3) the misleading
+#   holidayLabel doc comment contradicting its own "holiday consumes no day" rule; (4) an independent
+#   reference-implementation test proving nextNonHolidayDate-composed and the production tail algorithm agree
+#   (two previously uncross-checked day-walks); (5) an effective_year <= 2100 ceiling CHECK added to the
+#   schema, the migration file, AND the already-applied twt-test-pg constraint (ALTER TABLE, verified via
+#   psql); (6) the fence test's regex-based comment stripper replaced with a string/template-literal-aware
+#   character walk. Full domain+contracts unit suites (930+ tests), the live-DB cycle-calendar integration
+#   spec, typecheck, and lint all green after the fixes.)
+# last_updated: 2026-07-24 (story 8-9 ready-for-dev -> in-progress -> review. THE RATIFIED SCOPE HELD: FR-22's
+#   hard Day-15 contribution close is BYTE-UNCHANGED and now MECHANICALLY FENCED, not merely asserted in prose —
+#   packages/contracts/tests/contribution-window-fence.test.ts pins CYCLE_WINDOW_DAYS===15, pins
+#   computeDaysRemaining's ARITY at 2 (a holiday-aware variant would have to accept the windows, so arity is the
+#   cheapest structural proof the tail's inputs never reached it), walks the {0,15} boundaries incl. a cycle whose
+#   window ends inside Chhath Puja, and scans the D5 seam + BOTH live consumers (member-pool/handlers.ts,
+#   contribution-notify-triggers.ts) for tail vocabulary in EXECUTABLE code with comments stripped (those files now
+#   legitimately DISCUSS the tail per the AC3 correction). Teeth PROVEN by planted violation: injecting
+#   `const planted = { tailDeadline: 1 }` into contribution-loop-templates.ts turned the fence red; reverted -> 11/11.
+#   WHAT LANDED (four seams, ZERO live callers): (1) migration 0082 pariwar_holiday_calendar — per-Pariwar,
+#   RLS ENABLE+FORCE, hand-authored on the 0075 pattern, journal appended by hand (idx 82, additive-only). TWO
+#   deliberate divergences from 0075: the GRANT includes DELETE (the calendar is RE-CURATED ANNUALLY — replaceable
+#   curated data, not an append-only attestation record) and the bounds are `date` columns (drizzle mode:'string'),
+#   because a holiday window is a run of IST CALENDAR days and storing instants would invite a timezone-shifted
+#   comparison. Region-NEUTRAL name confirmed (a calendar is owned by a Pariwar, not a geography; Bihar is the seed).
+#   (2) the PURE @twt/domain `cycleCalendar` namespace (outside pool/ so the support-category gate's recursive pool/
+#   walk does not FALSE-SCAN it — the state gate is unaffected either way, no pools.current_state write). IST via the
+#   fixed +19_800_000ms offset (exact — India has no DST), never setDate/getDate/Intl. THE TAIL RULE IS
+#   WORK-DAY-COUNTING, not window-dodging: the tail is normalTailDays of ACTUAL reconciliation days after the close
+#   and a holiday consumes none, bounded by maxTailDays calendar days — so UX-DR77's "5-7 days on Bihar holiday
+#   windows" FALLS OUT OF THE DATA instead of being hardcoded (close on day 1 of the 4-day Chhath window -> a 5-day
+#   tail). tail_deadline_at is an EXCLUSIVE bound (the effective_until precedent), and listHolidayWindowsForTail reads
+#   the close year AND THE NEXT (a late-December close tails into January, whose observances live in the next
+#   curation year — dropping them would be the exact mechanical-clock failure UX-DR77 exists to prevent).
+#   (3) the ReconciliationTailWindow seam in @twt/contracts — NO .openapi() (v1.yaml byte-identical), NO live caller,
+#   both future consumers named in-file (Epic 9 9.x matcher tail; Epic 11b 11b.3 Sahyog Vivran publish gate);
+#   contracts does NOT import domain at source level, the two tail-band constants are a deliberate duplication
+#   guarded by a TEST-ONLY cross-package assertion. (4) six copy keys per locale under contribution.close_of_cycle.*
+#   (en+hi, Latin numerals, no scarcity/panic/shortfall) — a NEUTRAL settling arm was added alongside the holiday arm
+#   because the contract carries a boolean and a one-armed copy seam would force Epic 9 to invent the other half.
+#   NO gate-scope extension (the contribution namespace was already in copy_globs since 8.2 — extending it would be
+#   the vacuous move); the honest deliverable is SEVEN new planted-violation teeth over real close_of_cycle.* keys.
+#   OPEN FOR BigDev: the six seeded 2026 dates are INDICATIVE — the lunar observances shift annually and their
+#   locally-observed span is a Pariwar decision, so they need trustee verification against the published Bihar
+#   holiday list; and seedHolidayCalendarYear is deliberately NOT wired into Pariwar provisioning (one line beside
+#   seedGenesisFixedAmount) until that dataset is signed off. pnpm ci:local with DATABASE_URL on :5433 = 28/28 green;
+#   an earlier run's `test (unit)` red was the known concurrency-contention flake — the identical job re-run
+#   standalone and the whole gate re-run both passed clean.)
+# last_updated: 2026-07-24 (story 8-9 backlog -> ready-for-dev via bmad-create-story. RATIFIED SCOPE
+#   CORRECTION (BigDev): the epics AC prose (epics.md:3022, "extend the contribution close past holiday
+#   windows") is a DRAFTING ERROR — it contradicts FR-22 (live->closed HARD at Day 15), the UX-DR77 anchor
+#   (epics.md:477, "Day 15 mechanical close"), and the UX spec Journey ("mechanically hard per FR-22"). 8.9
+#   is scoped to the SUBSTRATE: per-Pariwar effective-dated pariwar_holiday_calendar registry (migration 0082,
+#   modeled on 7.5's pool_fixed_amount_schedule) + a PURE IST holiday resolver in a NEW @twt/domain/cycle-calendar
+#   namespace (outside pool/ to dodge the pool-invariant gate) + a reconciliation-tail-window SEAM contract in
+#   @twt/contracts (NO live caller — Epic 9 9.x is first) + member empathy COPY seam in the contribution i18n
+#   namespace (en+hi, Latin numerals per §8 v4). The Day-15 close, alert lifecycle (8.1), and D5 contribution-window
+#   seam are UNCHANGED (revert-sanity fenced); the story only corrects the now-stale "8.9 replaces the window"
+#   comments to "8.9 adds a reconciliation TAIL window.")
 # last_updated: 2026-07-24 (story 8-8 review->done via bmad-code-review: the ~6,860-line diff exceeded the
 #   3,000-line chunking threshold, so the review ran as 4 sequential groups (trigger core / copy+templates /
 #   domain notifications+encryption refactor / apps/api call-sites), each its own 3-layer adversarial pass
@@ -601,7 +670,7 @@ development_status:
   8-6-yogdaan-bahi-contribution-timeline-list-virtualization: done
   8-7-contribution-note-pdf-never-receipt-legal-reviewed-watermark-niyamavali-version: done
   8-8-contribution-loop-notification-triggers: done
-  8-9-calendar-aware-close-of-cycle-timing: backlog
+  8-9-calendar-aware-close-of-cycle-timing: done
   8-10-out-of-band-contribution-policy: backlog
   8-11-call-helpline-cta-cross-cutting-affordance: backlog
   8-12-90-second-twt-portion-loop-measurement-instrumentation: backlog

@@ -166,5 +166,11 @@
   "notify.deadline.day_13.display": "{date} ({days} दिन शेष)",
   "notify.deadline.day_14.subject": "{pool} — आज इस चक्र का अंतिम दिन है; आपका योगदान {family} के परिवार के सहयोग हेतु अपेक्षित है",
   "notify.deadline.day_14.display": "आज, {date}",
-  "notify.confirmed.period_label": "{cycleRef} चक्र"
+  "notify.confirmed.period_label": "{cycleRef} चक्र",
+  "close_of_cycle.settling.title": "मिलान जारी है",
+  "close_of_cycle.settling.body": "यह चक्र {date} को पूर्ण हुआ। हम अभी योगदानों का मिलान अपने बैंक विवरण से कर रहे हैं, और मिलान होते ही आपके योगदान की पुष्टि कर देंगे।",
+  "close_of_cycle.settling.body_a11y": "यह चक्र {date} को पूर्ण हुआ। हम अभी योगदानों का मिलान अपने बैंक विवरण से कर रहे हैं। मिलान पूर्ण होते ही आपके योगदान की पुष्टि हो जाएगी।",
+  "close_of_cycle.holiday_aware.title": "{holiday} के दौरान मिलान जारी है",
+  "close_of_cycle.holiday_aware.body": "यह चक्र {date} को पूर्ण हुआ। {holiday} का पर्व मनाया जा रहा है, इसलिए बैंक विवरण से मिलान में कुछ दिन और लगेंगे। यह अपेक्षित है, और आपकी ओर से कुछ भी शेष नहीं है। {expected} तक हम आपके योगदान की पुष्टि कर देंगे।",
+  "close_of_cycle.holiday_aware.body_a11y": "यह चक्र {date} को पूर्ण हुआ। {holiday} का पर्व मनाए जाने के कारण बैंक विवरण से मिलान में कुछ दिन और लगेंगे। यह अपेक्षित है और आपकी ओर से कुछ भी शेष नहीं है। {expected} तक आपके योगदान की पुष्टि हो जाएगी।"
 }

@@ -31,10 +31,14 @@ import { z } from 'zod';
 // ── The 15-day contribution window + cycle-day arithmetic (D5 SEAM) ─────────────────────────────────
 
 /**
- * The bounded contribution-window length in days (D5 SEAM). Story 8.9 (calendar-aware close-of-cycle —
- * Bihar holiday windows) OWNS the authoritative close date and will REPLACE this fixed window with the
- * real deadline, for the card and the reminder cadence AT ONCE. Do NOT encode any holiday /
- * close-of-cycle policy against this constant — it is a placeholder, not the deadline authority.
+ * The bounded contribution-window length in days (D5 SEAM) — and it is the REAL deadline, not a
+ * placeholder. FR-22 makes the alert's `live → closed` transition a HARD, mechanical Day-15 close.
+ *
+ * Story 8.9 (calendar-aware close-of-cycle — UX-DR77) adds a reconciliation-TAIL window; the
+ * contribution close stays a hard Day-15 close (FR-22) — the tail is POST-CLOSE reconciliation timing
+ * only (see alerts/reconciliation-tail.ts). Nothing about a holiday calendar may move this constant:
+ * the epics AC prose at L3022 describing an extended contribution window is a RATIFIED drafting error
+ * (BigDev, 2026-07-24). Holiday-awareness belongs to the tail, never to the member's deadline.
  */
 export const CYCLE_WINDOW_DAYS = 15;
 
@@ -45,8 +49,9 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * CYCLE_WINDOW_DAYS` using UTC-safe fixed-ms arithmetic (UTC has no DST/leap-seconds, so adding whole
  * days in milliseconds is calendar-equivalent to a calendar-day add — unlike local-timezone
  * `setDate`/`getDate`, which would silently disagree with a server not running in UTC), then
- * `ceil((windowEnd − now)/day)`, clamped to `[0, CYCLE_WINDOW_DAYS]`. Story 8.9 replaces this fixed
- * window with the authoritative close.
+ * `ceil((windowEnd − now)/day)`, clamped to `[0, CYCLE_WINDOW_DAYS]`. Story 8.9 adds a
+ * reconciliation-TAIL window; the contribution close stays a hard Day-15 close (FR-22) — this helper is
+ * byte-unchanged by it and remains the ONE authority for "where in the window is this member".
  *
  * Moved here from `apps/api/src/modules/member-pool/handlers.ts` by Story 8.8 (Task 6) so the My Pool
  * card and the deadline-reminder sweep compute the cycle position from ONE helper and cannot drift —

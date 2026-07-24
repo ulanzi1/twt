@@ -575,6 +575,13 @@
       "when": 1787715600000,
       "tag": "0081_contribution-history-member-index",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1787802000000,
+      "tag": "0082_pariwar-holiday-calendar",
+      "breakpoints": true
     }
   ]
 }

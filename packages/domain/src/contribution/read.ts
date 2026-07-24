@@ -38,11 +38,21 @@
 // seam (NEVER a plaintext cache at rest — [[project_validity_cache_failopen_pattern]]); the Sahyog Vivran
 // public render (Epic 11b) is where it actually bites (not member-session-gated). Do NOT build the cache here.
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { AlertId, CycleFreezeCommitId, MemberId, PariwarId, PoolId } from '../ids/index.js';
 import { eventsLog } from '../schema/events_log.js';
+/**
+ * The SELF-ATTESTED (yellow) event type — Story 8.4's own constant, imported rather than re-spelled so
+ * the two can never drift. (`write.ts` does NOT import this module, so this edge introduces no cycle.)
+ *
+ * Its presence in a READ module changes nothing about the confirmed-only invariant: it is used ONLY by
+ * {@link listActedMemberIdsForPool}, whose `attested` set feeds a nudge-suppression courtesy decision
+ * and is structurally separate from every confirmed surface. `listConfirmedContributorsForPool` still
+ * hard-filters `CONFIRMED_EVENT_TYPE` alone, with no parameter that could admit a yellow row.
+ */
+import { CONTRIBUTION_UTR_ATTESTED_EVENT_TYPE as ATTESTED_EVENT_TYPE } from './write.js';
 
 /**
  * The ONLY event type that confers confirmed-contributor visibility (AC1/AC4, load-bearing). The read
@@ -168,4 +178,77 @@ export function computePendingAggregate({
   const pendingCount = Math.max(0, rosterSize - confirmedCount);
   const pendingPercentage = rosterSize > 0 ? Math.round((pendingCount / rosterSize) * 100) : 0;
   return { pendingCount, pendingPercentage };
+}
+
+// ── Reminder-suppression read — Story 8.8 (Task 6; AC2 / D3) ─────────────────────────────────────────
+
+/**
+ * The two ways a member can have ALREADY ACTED on a pool, kept as DISTINCT sets. Story 8.8's ratified
+ * Decision 2 is explicit that `already_confirmed` (a `contribution.confirmed` exists) and
+ * `already_attested` (a `contribution.utr-attested` exists) are separate machine-readable reasons and
+ * must NEVER be conflated in analytics or any read model.
+ */
+export interface ActedMemberIdsForPool {
+  /** Members with a RECONCILIATION-CONFIRMED contribution (green). Epic 9's producer — empty today. */
+  readonly confirmed: readonly string[];
+  /** Members with a SELF-ATTESTED payment claim (yellow, Story 8.4). A claim, never confirmed money. */
+  readonly attested: readonly string[];
+}
+
+/**
+ * List, per pool, the members who have already acted — the input to Story 8.8's deadline-reminder
+ * SUPPRESSION decision (AC2 / D3). ONE batched read per pool; at 4L scale a per-member round-trip is
+ * not viable.
+ *
+ * ── This read is a COURTESY signal, never a promotion (the load-bearing invariant) ──────────────────
+ * Suppressing a *reminder* for an attested member is a decision about whether to interrupt them. It is
+ * NOT a claim that their payment is confirmed. Nothing that consumes this may count, display, or imply
+ * confirmation from the `attested` set: `progress.confirmedCount`, the confirmed contributor list, and
+ * every "raised so far" figure stay sourced EXCLUSIVELY from {@link listConfirmedContributorsForPool}
+ * (epics.md:2912, :2935-2941). The two sets are returned separately precisely so a caller cannot merge
+ * them by accident — there is deliberately no combined "acted" set on this shape.
+ *
+ * Green is scoped by the forward Epic-9 payload contract (`poolId`); yellow is scoped by the Story 8.4
+ * payload's `poolId` on the ALERT stream. Both are EXACT event-type matches — never a widened set.
+ * Tenant-scoped (RLS + the explicit `pariwar_id` predicate). No user-controlled `.limit()` (both sets
+ * are bounded by the pool roster), so no domain-invariants clamp.
+ */
+export async function listActedMemberIdsForPool(
+  db: Db,
+  {
+    pariwarId,
+    alertId,
+    poolId,
+  }: { readonly pariwarId: PariwarId; readonly alertId: AlertId; readonly poolId: PoolId },
+): Promise<ActedMemberIdsForPool> {
+  const rows = await db
+    .select({
+      eventType: eventsLog.eventType,
+      memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`,
+    })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.pariwarId, pariwarId),
+        sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${poolId}`,
+        or(
+          // Green — the pool-scoped confirmed event (Epic 9's exclusive producer; empty today).
+          eq(eventsLog.eventType, CONFIRMED_EVENT_TYPE),
+          // Yellow — the member's own attestation, which rides the ALERT stream (Story 8.4).
+          and(
+            eq(eventsLog.eventType, ATTESTED_EVENT_TYPE),
+            eq(eventsLog.streamId, alertId),
+          ),
+        ),
+      ),
+    );
+
+  const confirmed = new Set<string>();
+  const attested = new Set<string>();
+  for (const row of rows) {
+    if (typeof row.memberId !== 'string' || row.memberId.length === 0) continue;
+    if (row.eventType === CONFIRMED_EVENT_TYPE) confirmed.add(row.memberId);
+    else attested.add(row.memberId);
+  }
+  return { confirmed: [...confirmed].sort(), attested: [...attested].sort() };
 }

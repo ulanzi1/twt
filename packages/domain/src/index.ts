@@ -235,4 +235,11 @@ export * as smsRateLimit from './sms-rate-limit/index.js';
 // effective_from<=at AND (expires_at IS NULL OR expires_at>at)). Tenant-scoped; audit linkage is the
 // consumer route's obligation. Backs the AR-20 cycle-open SMS bridge.
 export * as degradedMode from './degraded-mode/index.js';
+// Story 8.8 (Task 1; D4) — the notification COMPOSITION substrate: the four per-member delivery-target
+// resolvers (push/WA/SMS/Telegram), the shared per-pool member-facing identity join, and the isolated
+// push-token invalidation write. Relocated from apps/api so the live fan-out in apps/jobs (the stack's
+// first `dispatch()` caller) reaches them without an app→app dependency; apps/api re-exports each from
+// its original module, so no apps/api call site changed. Holds NO policy and NO transport — the frozen
+// @twt/channels primitives stay untouched and the composition that sequences them lives in apps/jobs.
+export * as notifications from './notifications/index.js';
 export { UUID_REGEX } from './db.js';

@@ -12,18 +12,15 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const getMemberMobileCiphertext = vi.fn();
+const domainResolveSmsTarget = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   return {
     ...actual,
-    waOptIn: { ...actual.waOptIn, getMemberMobileCiphertext },
+    notifications: { ...actual.notifications, resolveSmsTarget: domainResolveSmsTarget },
   };
 });
-
-const decryptMobile = vi.fn();
-vi.mock('../../src/modules/auth/shared/mobile-index.js', () => ({ decryptMobile }));
 
 const { resolveSmsTarget, resolveSmsProvider, resolveSmsProviderDeps } = await import(
   '../../src/modules/channel-config/composition.js'
@@ -32,30 +29,40 @@ const { ids } = await import('@twt/domain');
 
 const PARIWAR = ids.pariwarId('11111111-1111-1111-1111-111111111111');
 const MEMBER = ids.memberId('22222222-2222-2222-2222-222222222222');
-const TARGET_DEPS = { db: {} as never, encryption: {} as never };
+const TARGET_DB = { marker: 'db' } as never;
+const TARGET_ENCRYPTION = { marker: 'enc' } as never;
+const TARGET_DEPS = { db: TARGET_DB, encryption: TARGET_ENCRYPTION };
 
 /** A fake global SMS gateway client — its messaging handle is never actually driven in these tests. */
 const fakeAppClient = { isConfigured: () => true, messaging: () => ({ send: () => Promise.resolve('gw-id') }) };
 
-describe('resolveSmsTarget — no opt-in gate (AC4)', () => {
+// ── The TARGET read moved to @twt/domain (Story 8.8, Task 1; D4) ─────────────────────────────────────
+// The no-opt-in-gate behavioural assertions (resolves from the KYC mobile; null with no decryption
+// attempted when there is no mobile on file) moved with the implementation and now live in
+// `packages/domain/tests/notifications/delivery-targets.test.ts`. What stays apps/api's own concern is
+// the ADAPTER — same path, same signature, forwarding to the ONE domain implementation. The PROVIDER
+// selection below did NOT move (it is Fastify-app composition over the global gateway client).
+describe('resolveSmsTarget — the apps/api adapter over the relocated domain read (AC4)', () => {
   beforeEach(() => {
-    getMemberMobileCiphertext.mockReset();
-    decryptMobile.mockReset();
+    domainResolveSmsTarget.mockReset();
   });
 
-  it('resolves an sms SendTarget from the KYC mobile (no opt-in / no admin toggle consulted)', async () => {
-    getMemberMobileCiphertext.mockResolvedValue('enc:v1:xyz');
-    decryptMobile.mockResolvedValue('+919876543210');
+  it('forwards db + encryption + scope to the ONE domain implementation', async () => {
+    domainResolveSmsTarget.mockResolvedValue({ channel: 'sms', address: '+919876543210' });
 
     const target = await resolveSmsTarget(TARGET_DEPS, PARIWAR, MEMBER);
     expect(target).toEqual({ channel: 'sms', address: '+919876543210' });
-    expect(getMemberMobileCiphertext).toHaveBeenCalledWith(TARGET_DEPS.db, { pariwarId: PARIWAR, memberId: MEMBER });
+    expect(domainResolveSmsTarget).toHaveBeenCalledWith(
+      TARGET_DB,
+      TARGET_ENCRYPTION,
+      PARIWAR,
+      MEMBER,
+    );
   });
 
-  it('member with no mobile on file → null (no decryption attempted)', async () => {
-    getMemberMobileCiphertext.mockResolvedValue(null);
+  it('passes the null (no-delivery) resolution straight through — the adapter adds no policy', async () => {
+    domainResolveSmsTarget.mockResolvedValue(null);
     expect(await resolveSmsTarget(TARGET_DEPS, PARIWAR, MEMBER)).toBeNull();
-    expect(decryptMobile).not.toHaveBeenCalled();
   });
 });
 

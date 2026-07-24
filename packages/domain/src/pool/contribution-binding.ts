@@ -253,7 +253,7 @@ function memberIdsOf(snapshot: PoolSnapshotV1 | undefined): readonly string[] {
  * significance — it only guarantees a total order so "latest" never depends on DB row-return order).
  * Tenant-scoped by the explicit `pariwar_id` predicate + RLS.
  */
-async function loadCycleBindingCandidates(
+export async function listCycleBindingCandidates(
   db: Db,
   pariwarId: PariwarId,
   cycleId: CycleFreezeCommitId,
@@ -314,7 +314,7 @@ export async function resolveAssignedPoolForMember(
   cycleId: CycleFreezeCommitId,
   memberId: MemberId,
 ): Promise<AssignedPoolResolution> {
-  const candidates = await loadCycleBindingCandidates(db, pariwarId, cycleId);
+  const candidates = await listCycleBindingCandidates(db, pariwarId, cycleId);
   return resolveAssignedPoolFromCandidates(memberId, candidates, cycleId);
 }
 
@@ -376,7 +376,7 @@ export async function resolveAssignedPoolWithRosterForMember(
   cycleId: CycleFreezeCommitId,
   memberId: MemberId,
 ): Promise<AssignedPoolWithRosterResolution> {
-  const candidates = await loadCycleBindingCandidates(db, pariwarId, cycleId);
+  const candidates = await listCycleBindingCandidates(db, pariwarId, cycleId);
   return resolveAssignedPoolWithRosterFromCandidates(memberId, candidates, cycleId);
 }
 

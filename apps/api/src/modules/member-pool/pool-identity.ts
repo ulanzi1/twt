@@ -3,40 +3,45 @@
 // "The ONE place this join lives" — the deceased family's first-name + last-initial (PII-shielded; the
 // family the pool supports, NOT the nominee) + the member-facing letter code + the curated Mahabharata
 // name, so a pool renders IDENTICALLY everywhere it appears. Story 8.6 introduced it with two
-// consumers (the My Pool card + the Yogdaan Bahi passbook); Story 8.7 adds the third (the Contribution
-// Note PDF), and a divergence between a passbook row and its own Note would read to Sushil as a
-// forgery — so the resolver moved out of `handlers.ts` into its own module rather than being reached
-// through a circular import. The implementation is UNCHANGED from 8.6; only its home moved.
+// consumers (the My Pool card + the Yogdaan Bahi passbook); Story 8.7 added the third (the Contribution
+// Note PDF), and a divergence between a passbook row and its own Note would read to Sushil as a forgery.
+//
+// ── RELOCATED to @twt/domain by Story 8.8 (Task 1) — this is now a thin adapter ─────────────────────────
+// Story 8.8 adds the FOURTH consumer: the cycle-open push/WA/SMS copy, whose payload AC1 requires to
+// carry the letter code + curated name + deceased first-name/last-initial + fixed amount. That fan-out
+// runs in `apps/jobs`, which cannot import `apps/api` (apps/api already depends on `@twt/jobs`, so the
+// reverse edge is a turbo cycle). A push naming a DIFFERENT family than the card would be the same
+// forgery-shaped divergence 8.7 moved this file to prevent — so the join moved down to
+// `packages/domain/src/notifications/pool-identity.ts` rather than being duplicated by value.
+//
+// The implementation is UNCHANGED; only its home moved again. These wrappers keep the exact apps/api
+// signatures (`AppDeps` + `FastifyRequest`) so no apps/api call site changed — they bind the Fastify
+// logger into the domain resolver's injected diagnostic sink (the domain layer owns no Fastify types).
 
-import { claim as claimDomain, ids, kyc as kycDomain, pool as poolDomain, type Db } from '@twt/domain';
+import { ids, notifications, type Db } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { decryptKycField } from '../kyc/kyc-crypto.js';
-import { splitFirstNameLastInitial } from './name.js';
 
 /** The per-pool identity INPUT the shared resolver needs (from the card's chosen pool, or a history
- *  row's pool context) — everything EXCEPT the deceased-family name, which the resolver decrypts here.
+ *  row's pool context) — everything EXCEPT the deceased-family name, which the resolver decrypts.
  *  Excludes the card's member-specific self-state (`attested`/`myContribution`): that is per-member,
  *  not per-pool. */
-export interface PoolIdentityInput {
-  readonly claimCaseId: ReturnType<typeof ids.claimId>;
-  readonly poolIndex: number;
-  readonly poolCanonicalIdentifier: string;
-  /** The SNAPSHOTTED `pools.fixed_amount` (whole INR; echoed through unchanged — never recomputed). */
-  readonly fixedAmount: number;
-  /** N — the number of pools in the cycle (the curated-name `reserveNames` count). */
-  readonly poolCount: number;
-}
+export type PoolIdentityInput = notifications.PoolIdentityInput;
 
 /** The resolved per-pool identity — card-identical family/letter/name for a pool (D6). */
-export interface ResolvedPoolIdentity {
-  readonly deceasedFirstName: string;
-  readonly deceasedLastInitial: string;
-  readonly poolLetterCode: string;
-  readonly poolName: string | null;
-  readonly poolCanonicalIdentifier: string;
-  readonly fixedAmount: number;
+export type ResolvedPoolIdentity = notifications.ResolvedPoolIdentity;
+
+/** Bind the request logger into the domain resolver's diagnostic sink. Never carries a decrypted name. */
+function requestLogSink(request: FastifyRequest): notifications.PoolIdentityLogSink {
+  return {
+    warn: (message, err, claimCaseId) => {
+      request.log.warn({ err, claimCaseId }, `pool-identity: ${message}`);
+    },
+    error: (message, err, claimCaseId) => {
+      request.log.error({ err, claimCaseId }, `pool-identity: ${message}`);
+    },
+  };
 }
 
 /**
@@ -59,36 +64,13 @@ export async function resolvePoolIdentity(
   pariwarId: ReturnType<typeof ids.pariwarId>,
   input: PoolIdentityInput,
 ): Promise<ResolvedPoolIdentity | null> {
-  const claimCase = await claimDomain.getClaimCase(tx, pariwarId, input.claimCaseId);
-  if (!claimCase) return null;
-  const kycProfile = await kycDomain.getMemberKycProfile(tx, pariwarId, claimCase.deceasedMemberId);
-  if (!kycProfile || kycProfile.nameCiphertext === null) return null;
-  // A branded PariwarId IS a string (brand is compile-time only) — the KYC decrypt context keys on it.
-  // A decrypt failure (bad ciphertext, transient KMS error) must degrade the SAME way as an unresolvable
-  // profile — skip THIS pool's identity, not propagate out (the `resolveContributorList` precedent):
-  // for the history handler, letting this throw would blank the ENTIRE passbook via the outer fail-soft
-  // catch instead of omitting just the rows for this one pool.
-  let fullName: string;
-  try {
-    fullName = await decryptKycField(kycProfile.nameCiphertext, pariwarId, deps.encryption);
-  } catch (err) {
-    request.log.warn({ err, claimCaseId: input.claimCaseId }, 'pool-identity: deceased name decrypt failed — omitting');
-    return null;
-  }
-  const { firstName, lastInitial } = splitFirstNameLastInitial(fullName);
-  if (firstName === '') return null; // an unresolvable name — fail-soft (no undignified blank)
-
-  const poolLetterCode = poolDomain.poolLetterCode(input.poolIndex);
-  const poolName = await resolveCuratedPoolName(tx, pariwarId, input.poolCount, input.poolIndex, request);
-
-  return {
-    deceasedFirstName: firstName,
-    deceasedLastInitial: lastInitial,
-    poolLetterCode,
-    poolName,
-    poolCanonicalIdentifier: input.poolCanonicalIdentifier,
-    fixedAmount: input.fixedAmount,
-  };
+  return notifications.resolvePoolIdentity(
+    tx,
+    deps.encryption,
+    pariwarId,
+    input,
+    requestLogSink(request),
+  );
 }
 
 /**
@@ -102,8 +84,7 @@ export async function resolvePoolIdentity(
  * Locale note (documented seam): the reservation carries both locales, but this read layer has no
  * viewer locale (requestContext exposes none), so it returns the Hindi-primary name (Hindi-first
  * product). Full bilingual name-by-locale resolution is deferred until a tenant actually configures
- * the registry — a seam, not a launch gap (the launch value is `null`). Its own try/catch so a config
- * gap degrades to the letter code WITHOUT suppressing the whole card.
+ * the registry — a seam, not a launch gap (the launch value is `null`).
  */
 export async function resolveCuratedPoolName(
   tx: Db,
@@ -112,21 +93,13 @@ export async function resolveCuratedPoolName(
   poolIndex: number,
   request: FastifyRequest,
 ): Promise<string | null> {
-  try {
-    const names = await poolDomain.reserveNames(tx, { pariwarId, count: poolCount });
-    if (names.length === 0) return null; // opted out — letter code (the committed launch behavior)
-    const reserved = names[poolIndex];
-    return reserved ? reserved.displayNameHi : null;
-  } catch (err) {
-    if (err instanceof poolDomain.PoolNameListExhaustedError) {
-      // A trustee CONFIGURATION GAP (names.ts), not a benign opt-out — surface it loudly so it can be
-      // acted on, while still degrading THIS card to the letter code rather than suppressing it.
-      request.log.error({ err }, 'active-contribution: pool-name registry exhausted — trustee must extend the curated list');
-      return null;
-    }
-    request.log.warn({ err }, 'active-contribution: pool-name registry unresolved — letter-code fallback');
-    return null;
-  }
+  return notifications.resolveCuratedPoolName(
+    tx,
+    pariwarId,
+    poolCount,
+    poolIndex,
+    requestLogSink(request),
+  );
 }
 
 /**

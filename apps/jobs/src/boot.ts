@@ -89,6 +89,10 @@ import {
 import { createAssignableRosterResolver } from './assignable-roster.js';
 import { DEFAULT_CHILD_LOCAL_CONCURRENCY, registerCycleSpawnWorkers } from './cycle-spawn.js';
 import { enqueueCycleOpenAlert, registerCycleOpenAlertWorkers } from './scheduler/cycle-open-alert.js';
+import {
+  enqueueContributionNotifyCycleOpen,
+  registerContributionNotifyWorkers,
+} from './scheduler/contribution-notify-triggers.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -96,6 +100,8 @@ import {
   createGcsClaimDocumentStorage,
   createLocalFsClaimDocumentStorage,
 } from '@twt/platform-adapters';
+// Story 8.8 — the audit sink + the PII-safe rendered-message HMAC the live fan-out dispatches through.
+import { createAuditPort, createRenderedMessageHash } from '@twt/channels';
 
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
@@ -489,7 +495,53 @@ async function main(): Promise<void> {
     // reading degraded-mode for the AR-18 time_critical signal (AC4). The recovery sweep cron
     // re-enqueues any cycle with a cycle.frozen but no minted alert (D4 — recovery only). `pool` is
     // the BYPASSRLS service pool (the withPariwarScope pool + the cross-tenant sweep scan).
-    await registerCycleOpenAlertWorkers(boss, { pool });
+    // ── Contribution-loop notification fan-out (Story 8.8) — THE FIRST LIVE dispatch() CALLER ─────
+    // Register BEFORE the cycle-open alert workers so the CONTRIBUTION_NOTIFY_CYCLE_OPEN queue exists
+    // when the alert worker's post-commit callback enqueues onto it (the OCR→SELECT ordering
+    // precedent). `pool`/`db` are the BYPASSRLS service handles: `pool` is the withPariwarScope pool,
+    // the keyed-store pool and the audit writer's own-committing pool; `db` backs ONLY the isolated
+    // push-token invalidation write. The rendered-message hash is the PII-safe keyed HMAC
+    // (AI-4-3(c)) — never a raw sha256 of member-facing content.
+    //
+    // PROVIDERS: `resolveProviders` is left unwired, so `dispatch` resolves the shipped
+    // DEFAULT_PROVIDER_REGISTRY — the log-only fixtures. That is Epic 5's committed opt-in-real
+    // posture (the stack boots with zero Firebase/Meta/DLT config), and it means this deployment
+    // composes and audits the full ladder without sending real bytes. Wiring the REAL per-Pariwar
+    // providers into apps/jobs is an explicit forward commitment recorded in the Story 8.8 Dev Agent
+    // Record + deferred-work.md — it needs the apps/api provider-composition seams (WA app cache,
+    // Telegram app cache, the global SMS gateway client), which are Fastify-app wiring today.
+    const contributionNotifyDeps = {
+      pool,
+      serviceDb: db,
+      encryption: jobsEncryption,
+      audit: createAuditPort(pool),
+      hashRendered: createRenderedMessageHash({
+        kms: jobsEncryption.kms,
+        hmacKeyRef: jobsEncryption.hmacKeyRef,
+      }),
+    };
+    await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
+
+    await registerCycleOpenAlertWorkers(boss, {
+      pool,
+      // Story 8.8 (Task 5) — the PRIMARY contribution-notify enqueue: fired POST-COMMIT the instant
+      // the alert reaches `live`, threading the alert.published `time_critical` signal VERBATIM.
+      enqueueContributionNotify: (input) =>
+        enqueueContributionNotifyCycleOpen(
+          boss,
+          {
+            pariwarId: input.pariwarId,
+            requestId: input.requestId,
+            actorId: input.actorId,
+            traceId: input.traceId,
+          },
+          {
+            alertId: input.alertId,
+            cycleId: input.cycleId,
+            timeCritical: input.timeCritical,
+          },
+        ),
+    });
 
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);

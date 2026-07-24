@@ -259,6 +259,9 @@ importers:
       '@twt/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@twt/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@twt/platform-adapters':
         specifier: workspace:*
         version: link:../../packages/platform-adapters

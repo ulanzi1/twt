@@ -16,6 +16,9 @@ import type {
 } from '@twt/contracts';
 import type { BankIfscLookup } from '@twt/platform-adapters';
 import type { Db, encryption } from '@twt/domain';
+// Value import (Story 8.8, Task 1): the member PII field-class constants relocated to @twt/domain are
+// RE-EXPORTED from here so every existing apps/api importer keeps working unchanged.
+import { encryption as encryptionRuntime } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 
 import type { AuthAuditSink } from './audit/audit-sink.js';
@@ -37,7 +40,7 @@ import type { ToneReviewAuditSink } from './modules/tone-review/index.js';
  * admin family to the nil-UUID sentinel so admin blind indexes are stable + never
  * collide with a real tenant's. Recorded in ADR-0009.
  */
-export const ADMIN_GLOBAL_NAMESPACE = '00000000-0000-0000-0000-000000000000';
+export const ADMIN_GLOBAL_NAMESPACE = encryptionRuntime.ADMIN_GLOBAL_NAMESPACE;
 
 /** Field-class namespace for the admin email blind index (HMAC input prefix). */
 export const ADMIN_EMAIL_FIELD_CLASS = 'admin_email';
@@ -51,10 +54,10 @@ export const ADMIN_EMAIL_FIELD_CLASS = 'admin_email';
  * It MUST be distinct from `ADMIN_GLOBAL_NAMESPACE` (…000) so a numeric admin email
  * and a mobile can never collide on the same blind index. Recorded in Completion Notes.
  */
-export const MEMBER_IDENTITY_NAMESPACE = '00000000-0000-0000-0000-000000000001';
+export const MEMBER_IDENTITY_NAMESPACE = encryptionRuntime.MEMBER_IDENTITY_NAMESPACE;
 
 /** Field-class namespace for the member mobile blind index (HMAC input prefix). */
-export const MEMBER_MOBILE_FIELD_CLASS = 'member_mobile';
+export const MEMBER_MOBILE_FIELD_CLASS = encryptionRuntime.MEMBER_MOBILE_FIELD_CLASS;
 
 /**
  * Field-class namespace for the member KYC-profile Tier-1 envelope (Story 3.3b). Unlike
@@ -63,7 +66,7 @@ export const MEMBER_MOBILE_FIELD_CLASS = 'member_mobile';
  * keys on the member's REAL `pariwarId`. Matches the `piiColumn(…, 'member_kyc')` field-class
  * annotation on the `member_kyc_profiles` Tier-1 columns.
  */
-export const MEMBER_KYC_FIELD_CLASS = 'member_kyc';
+export const MEMBER_KYC_FIELD_CLASS = encryptionRuntime.MEMBER_KYC_FIELD_CLASS;
 
 /**
  * Field-class namespace for the member NOMINEE Tier-1 envelope (Story 3.4). Like the KYC
@@ -125,7 +128,7 @@ export const MEMBER_DATA_EXPORT_FIELD_CLASS = 'data_export';
  * throws at decrypt time rather than silently succeeding. Matches the `piiColumn(1, 'member_device_token')`
  * annotation on the `token_ciphertext` column + the `blindIndex('member_device_token', …)` on the token.
  */
-export const MEMBER_DEVICE_TOKEN_FIELD_CLASS = 'member_device_token';
+export const MEMBER_DEVICE_TOKEN_FIELD_CLASS = encryptionRuntime.MEMBER_DEVICE_TOKEN_FIELD_CLASS;
 
 /**
  * The ground-inspection Tier-1 field class (Story 6.7). The admin route encrypts the assignment's

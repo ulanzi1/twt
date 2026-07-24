@@ -52,6 +52,9 @@ import type {
   ContributionNoteFacts,
   PoolContributorListResponse,
 } from '@twt/contracts';
+// Story 8.8 (Task 6; D5) — the cycle-window arithmetic now lives beside the tone gradient in
+// @twt/contracts so the card and the deadline-reminder sweep cannot drift. Re-exported below.
+import { computeDaysRemaining as contributionLoopComputeDaysRemaining } from '@twt/contracts';
 import { t } from '@twt/i18n';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -69,16 +72,6 @@ import {
   type ResolvedPoolIdentity,
 } from './pool-identity.js';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-/**
- * The bounded contribution-window length in days (D5 SEAM). Story 8.9 (calendar-aware close-of-cycle
- * — Bihar holiday windows) OWNS the authoritative close date and will REPLACE this fixed window with
- * the real deadline. Until then, days-remaining = `committed_at + CYCLE_WINDOW_DAYS`. Do NOT encode
- * any holiday/close-of-cycle policy against this constant — it is a placeholder, not the deadline authority.
- */
-const CYCLE_WINDOW_DAYS = 15;
-
 const UNASSIGNED: ActiveContributionCardResponse = { assigned: false };
 
 /**
@@ -86,12 +79,16 @@ const UNASSIGNED: ActiveContributionCardResponse = { assigned: false };
  * CYCLE_WINDOW_DAYS` using LEAP-SAFE `setDate` arithmetic (handles month/year rollover — the
  * member-home clock precedent; a fixed-ms add does NOT), then `ceil((windowEnd − now)/day)`, clamped
  * ≥0. Story 8.9 (calendar-aware close-of-cycle) replaces this fixed window with the authoritative close.
+ *
+ * ── RELOCATED to @twt/contracts by Story 8.8 (Task 6; D5) — this is now a re-export ────────────────
+ * The deadline-reminder sweep must compute the member's position in the cycle from the SAME arithmetic
+ * this card uses, or the push a member gets on day D could disagree with the card they open on day D
+ * (the coherence invariant). `apps/jobs` cannot import `apps/api`, so `CYCLE_WINDOW_DAYS` +
+ * `computeDaysRemaining` moved to `packages/contracts/src/alerts/contribution-loop-templates.ts`
+ * alongside `selectToneGradientKey`. Behaviour is identical and this name is unchanged, so the existing
+ * handler tests still bind to it. Story 8.9 replaces the window for BOTH consumers at once.
  */
-export function computeDaysRemaining(committedAt: Date, now: Date): number {
-  const windowEnd = new Date(committedAt);
-  windowEnd.setDate(windowEnd.getDate() + CYCLE_WINDOW_DAYS);
-  return Math.max(0, Math.ceil((windowEnd.getTime() - now.getTime()) / MS_PER_DAY));
-}
+export const computeDaysRemaining = contributionLoopComputeDaysRemaining;
 
 export function createMemberPoolHandlers(deps: AppDeps) {
   /** Read the authenticated member's (memberId, pariwarId) or fail 401. */

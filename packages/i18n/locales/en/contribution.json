@@ -155,5 +155,16 @@
   "note.saved_no_share": "Your Contribution Note has been saved on this phone. Sharing is not available on this device.",
   "note.load_failed": "We couldn't prepare your Contribution Note just now. Please try again.",
   "note.not_found": "We couldn't find this contribution in your records.",
-  "note.retry": "Try again"
+  "note.retry": "Try again",
+  "notify.cycle_open.title": "Your pool is open — {pool}",
+  "notify.cycle_open.body": "In support of {family}'s family. This cycle's contribution is {amount}. Contribute when you can.",
+  "notify.deadline.day_5.subject": "{pool} — your pool is open; contribute when you can",
+  "notify.deadline.day_5.display": "{date}",
+  "notify.deadline.day_10.subject": "{pool} — your contribution is not recorded yet",
+  "notify.deadline.day_10.display": "{date}",
+  "notify.deadline.day_13.subject": "{pool} — {days} days remaining in this cycle",
+  "notify.deadline.day_13.display": "{date} ({days} days remaining)",
+  "notify.deadline.day_14.subject": "{pool} — today is the final day of this cycle; if you're able, please contribute to support {family}'s family",
+  "notify.deadline.day_14.display": "Today, {date}",
+  "notify.confirmed.period_label": "{cycleRef} cycle"
 }

@@ -41,3 +41,28 @@ export {
 
 export { createCloudKmsProvider, type CloudKmsProviderOpts } from './cloud-kms-provider.js';
 export { createFakeKmsProvider } from './fake-kms-provider.js';
+
+// Story 8.8 (Task 1) — the member PII field-class constants + the field crypto helpers, relocated
+// from apps/api so apps/jobs' live notification fan-out can resolve delivery targets under the SAME
+// encryption context the apps/api write path used (apps cannot import apps). apps/api re-exports
+// every symbol below from its original module, so no apps/api call site changed.
+export {
+  ADMIN_GLOBAL_NAMESPACE,
+  MEMBER_IDENTITY_NAMESPACE,
+  MEMBER_MOBILE_FIELD_CLASS,
+  MEMBER_KYC_FIELD_CLASS,
+  MEMBER_DEVICE_TOKEN_FIELD_CLASS,
+  type FieldCryptoDeps,
+} from './field-classes.js';
+export {
+  encryptDeviceToken,
+  decryptDeviceToken,
+  deviceTokenBlindIndex,
+  normalizeMobile,
+  maskMobile,
+  mobileBlindIndex,
+  encryptMobile,
+  decryptMobile,
+  encryptKycField,
+  decryptKycField,
+} from './member-fields.js';

@@ -20,7 +20,12 @@
 // ── AC4 degraded-mode ─────────────────────────────────────────────────────────
 // openCycleAlert (domain) reads the Pariwar's degraded-mode state at the cycle-freeze
 // committed_at and sets `time_critical: true` on the emitted alert.published when a
-// `cycle_open_sms_bridge` declaration is active. This module does NOT send SMS (Story 5.8/8.8).
+// `cycle_open_sms_bridge` declaration is active. This module still does NOT send bytes —
+// Story 8.8 owns the fan-out. What 8.8 adds here is the POST-COMMIT ENQUEUE seam (below):
+// the instant this worker drives the alert to `live`, it hands the alert id + the
+// `time_critical` signal to the contribution-notify parent. `time_critical` is threaded
+// VERBATIM and never re-derived — the AR-18 signal was resolved at the cycle-freeze
+// instant, so re-reading degraded mode at notify time would break replay determinism.
 
 import { alert as alertDomain, withPariwarScope } from '@twt/domain';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
@@ -41,6 +46,22 @@ export interface CycleOpenAlertDeps {
   readonly pool: pg.Pool;
   /** Recovery-sweep batch bound. Defaults to {@link DEFAULT_CYCLE_OPEN_ALERT_SWEEP_LIMIT}. */
   readonly sweepLimit?: number;
+  /**
+   * Story 8.8 (Task 5) — the PRIMARY contribution-notify enqueue seam. Called POST-COMMIT the instant
+   * this worker mints/opens the alert, carrying the alert id + the `time_critical` signal read off the
+   * `alert.published` payload. Best-effort: a failed enqueue NEVER fails the mint (the alert is already
+   * committed and members can see the cycle in-app) — the notify recovery sweep heals a dropped job.
+   * Omitted ⇒ no notification (the pre-8.8 behaviour; tests omit it).
+   */
+  readonly enqueueContributionNotify?: (input: {
+    readonly alertId: string;
+    readonly cycleId: string;
+    readonly pariwarId: string;
+    readonly timeCritical: boolean;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }) => Promise<void>;
   /** Failure alarm sink — a console stub by default. */
   readonly onAlarm?: (message: string) => void;
 }
@@ -118,6 +139,32 @@ export async function runCycleOpenAlert(
   const result = await withPariwarScope(deps.pool, pariwarId, (_db, client) =>
     alertDomain.openCycleAlert(client, { cycleId }),
   );
+
+  // Story 8.8 (Task 5) — the PRIMARY contribution-notify enqueue, POST-COMMIT (the scoped tx above has
+  // already committed). Fired on the idempotent no-op path too: `minted: false` means a redelivery
+  // found the alert already open, and the NOTIFICATION for that alert may still never have been
+  // enqueued (a job dropped between mint and notify). The parent is singleton-keyed on alert_id and
+  // every member send is idempotent, so a duplicate enqueue costs nothing while a missed one costs a
+  // member their notification. Best-effort — a failure here never fails the committed mint.
+  if (deps.enqueueContributionNotify) {
+    try {
+      await deps.enqueueContributionNotify({
+        alertId: result.alertId,
+        cycleId,
+        pariwarId,
+        // VERBATIM from the alert.published payload (AC1 / invariant 6) — never re-derived here.
+        timeCritical: result.timeCritical,
+        requestId: envelope.requestId,
+        actorId: envelope.actorId,
+        traceId: envelope.traceId,
+      });
+    } catch (err) {
+      alarm(
+        `[jobs] cycle-open-alert: failed to enqueue the contribution-notify fan-out for cycle ${cycleId} — ` +
+          `${String(err)} (the alert is committed; the notify recovery sweep will heal it)`,
+      );
+    }
+  }
 
   console.info(
     '[jobs] cycle-open-alert',

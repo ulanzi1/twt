@@ -155,5 +155,16 @@
   "note.saved_no_share": "आपकी योगदान प्रतिज्ञा इस फ़ोन पर सहेज दी गई है। इस डिवाइस पर साझा करने की सुविधा उपलब्ध नहीं है।",
   "note.load_failed": "हम आपकी योगदान प्रतिज्ञा अभी तैयार नहीं कर सके। कृपया फिर से कोशिश करें।",
   "note.not_found": "यह योगदान आपके अभिलेख में नहीं मिला।",
-  "note.retry": "फिर से कोशिश करें"
+  "note.retry": "फिर से कोशिश करें",
+  "notify.cycle_open.title": "आपका पूल खुल गया — {pool}",
+  "notify.cycle_open.body": "{family} के परिवार के सहयोग हेतु। इस चक्र का अंशदान {amount} है। जब सुविधा हो, तब योगदान करें।",
+  "notify.deadline.day_5.subject": "{pool} — आपका पूल खुला है; जब सुविधा हो, तब योगदान करें",
+  "notify.deadline.day_5.display": "{date}",
+  "notify.deadline.day_10.subject": "{pool} — आपका योगदान अभी दर्ज नहीं हुआ है",
+  "notify.deadline.day_10.display": "{date}",
+  "notify.deadline.day_13.subject": "{pool} — इस चक्र में {days} दिन शेष",
+  "notify.deadline.day_13.display": "{date} ({days} दिन शेष)",
+  "notify.deadline.day_14.subject": "{pool} — आज इस चक्र का अंतिम दिन है; आपका योगदान {family} के परिवार के सहयोग हेतु अपेक्षित है",
+  "notify.deadline.day_14.display": "आज, {date}",
+  "notify.confirmed.period_label": "{cycleRef} चक्र"
 }

@@ -15,3 +15,7 @@ export * from './profile-write.js';
 // cron) reuses it without a package cycle. Gate-safe — node:crypto X.509 only, never the
 // DigiLocker transport. `kyc.refreshDigiLockerCerts(db, fetcher, { now })`.
 export * from './cert-refresh.js';
+// Story 8.2's PII-shielding name split, RELOCATED here in 8.8 (Task 1) so the apps/jobs cycle-open
+// notification payload can shield the deceased family's name exactly as the apps/api surfaces do
+// (apps cannot import apps). apps/api's member-pool/name.ts re-exports it. Pure string work.
+export * from './name.js';

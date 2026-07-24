@@ -70,6 +70,68 @@ tone:
     # — the regex is deliberately NOT exhaustive over natural language. Single valid
     # case-insensitive regex (assertValidRegex-validated).
     pattern: 'fell\s+short|shortfall|short\s+of\s+(the\s+)?\b(target|goal)\b|\b(target|goal)\b\s+missed|\d+\s*%\s+achieved|\d+\s*%\s+of\s+(the\s+)?\b(target|goal)\b|\d+\s*%\s+short\b|\b(target|goal)\b\s+(was\s+|is\s+)?(not\s+)?(met|achieved)|needed\s+more\s+contributions|(could|did|does)n.?t\s+reach|(could|did|does)\s+not\s+reach|लक्ष्य\s*से\s*कम'
+  - label: out-of-band-blame
+    # Story 8.10 (AC4) — the UX-DR76 out-of-band contribution policy, mechanized.
+    # A member who sends money directly to a bereaved family (the cadre's chanda
+    # tradition) did something HONOURABLE that the Pool Engine structurally cannot
+    # capture. epics.md:3038 forbids any "you should have gone through the app"
+    # framing; UX spec L1046-1058: "The trust does not characterize it as wrong,
+    # failure, or rule-violation." This rule catches the four blame families a
+    # well-meaning author reaches for:
+    #   (1) RETROSPECTIVE CORRECTION — "you should have gone/paid/sent/given …
+    #       through the app", Hindi "…करना चाहिए था". Narrowed to should-have + an
+    #       ACTION verb on purpose: bare "should have" also carries innocent uses
+    #       ("you should have received an SMS"), which are not this frame.
+    #   (2) MISTAKE FRAMING — accidental(ly) / by mistake / mistakenly / गलती से.
+    #       Note: bare गलत is NOT matched — a wrong UPI PIN and a wrong-pool
+    #       payment ARE genuine mistakes and are correctly framed as such
+    #       (contribution.json upi_failure.body.wrong_pin / wrong_pool.body).
+    #       Only the "by mistake" construction, which names an intentional gift an
+    #       error, is prohibited. NARROWED on introduction (recorded reason): bare
+    #       `accidental(ly)` also fires on ordinary DEVELOPER COMMENTS in the
+    #       code_globs slice ("an accidental double-click" —
+    #       ConcealmentAssessmentControl.tsx:52), which is not this frame at all, so
+    #       the arm is bound to a giving/paying verb or noun. That is where the
+    #       prohibited frame actually lives ("you accidentally PAID"), and it keeps
+    #       the teeth on the real pre-8.10 string while avoiding a standing
+    #       false-positive tax on 76 admin files. Narrowing the PATTERN, not an
+    #       `allow` entry over a live surface (AC4).
+    #       The Hindi गलती से / चाहिए था arms are bound the SAME way, but via
+    #       PROXIMITY rather than adjacency — Hindi's flexible (often SOV) word
+    #       order means the giving/payment word is rarely immediately next to the
+    #       adverb (the real pre-8.10 string is "गलती से सिस्टम के बाहर भुगतान", with
+    #       "सिस्टम के बाहर" sitting between them), so an adjacency bind would miss
+    #       the very fixture this rule exists to catch. Instead both arms require a
+    #       भुगतान/पैसे/राशि/योगदान/दान/उपहार word within 60 chars on either side
+    #       (lookahead OR lookbehind). Narrowed on code-review (2026-07-24, recorded
+    #       reason): bare गलती से / चाहिए था would otherwise fire on unrelated
+    #       Hindi sentences with no giving/payment context at all (e.g. "आपको एक
+    #       SMS मिलना चाहिए था" — the Hindi analogue of the already-permitted "you
+    #       should have received an SMS"). Verified against every existing +
+    #       new fixture in scripts/microcopy/out-of-band.test.ts.
+    #   (3) DEFINED-BY-THE-CHANNEL — "outside the system / our app", "सिस्टम के
+    #       बाहर". A member's personal act of mutual aid is not defined by its
+    #       relation to TWT's software.
+    #   (4) DOESN'T-COUNT / IRREGULAR / INCOMPLETE (epics.md:3039(c)) — the
+    #       counting arm is matched outright; irregular/incomplete are matched only
+    #       when they QUALIFY a contribution/gift/payment noun, since both words
+    #       have innocent uses elsewhere in member copy. Deliberate narrowing. The
+    #       Hindi doesn't-count arm matches BOTH word orders — negation-before-verb
+    #       (नहीं गिन…, e.g. "नहीं गिनी जाएगी") AND the more natural Hindi SOV order
+    #       verb-before-negation (गिन…नहीं, e.g. "गिनी नहीं जाएगी") — added on
+    #       code-review (2026-07-24): the original only covered the first, which
+    #       under-served Hindi-first parity (tone-guide §3) by missing the more
+    #       natural construction.
+    # Green on introduction is NOT the deliverable: this pattern FIRES on the
+    # pre-8.10 committed Screen-3 strings (7.10 shipped "If you accidentally pay
+    # outside the system" / "अगर आप गलती से सिस्टम के बाहर भुगतान कर दें"), which is
+    # what proves it has teeth ([[feedback_gate_scope_semantic_coverage]] — a green
+    # scan over newly-scanned files proves nothing). See
+    # scripts/microcopy/out-of-band.test.ts + docs/policies/out-of-band-contributions.md.
+    # The paraphrased / spelled-out tail remains the HUMAN tone-review's job
+    # (tone-guide §5) — the regex is deliberately NOT exhaustive over natural
+    # language. Single valid case-insensitive regex (assertValidRegex-validated).
+    pattern: 'should\s*(have|[''’]ve)\s+(gone|paid|sent|used|routed|done|contributed|given)|\baccidental(ly)?\s+(pay|pays|paid|paying|send|sends|sent|sending|give|gives|gave|giving|make|makes|made|making|transfer\w*|contribut\w*|donat\w*)\b|\baccidental\s+(payment|gift|contribution|transfer|donation)\b|\bby\s+mistake\b|\bmistakenly\b|outside\s+(the|our)\s+(system|app|platform)|(does|did|will|would)\s+not\s+count\b|(does|do|did|will|wo|would)\s?n.?t\s+count\b|not\s+counted\b|\b(irregular|incomplete)\s+(contribution|gift|payment|donation)|\b(contribution|gift|payment|donation)\s+(is|was|are|were)\s+(irregular|incomplete)\b|(?:(?<=(?:भुगतान|पैसे|राशि|योगदान|दान|उपहार).{0,60})|(?=.{0,60}(?:भुगतान|पैसे|राशि|योगदान|दान|उपहार)))(?:गलती\s*से|चाहिए\s*था)|(सिस्टम|ऐप|एप)\s*के\s*बाहर|नहीं\s*गिन|गिन[ऀ-ॿ]{0,4}\s*नहीं|(योगदान|भुगतान|दान|उपहार)\s*(अधूरा|अधूरी|अनियमित)|(अधूरा|अधूरी|अनियमित)\s*(योगदान|भुगतान|दान|उपहार)'
 
 # (d) Numeral discipline — amendment A2 (UX spec L1119-1127 / L1303). Operational
 # surfaces = Gregorian dates + Latin numerals; Hindi/Devanagari numerals (०-९) are
@@ -147,6 +209,17 @@ scope:
     # unscanned files proves nothing).
     - packages/i18n/locales/hi/contribution.json
     - packages/i18n/locales/en/contribution.json
+    # Story 8.10 — the `pool-onboarding` namespace strings (the 7.10 3-screen tutorial;
+    # Screen 3 is the first live UX-DR76 out-of-band surface). This entry is NOT a
+    # forward-compat widening: the `out-of-band-blame` tone rule added above FAILED on
+    # these very files as committed by 7.10 ("If you accidentally pay outside the system"
+    # / "अगर आप गलती से सिस्टम के बाहर भुगतान कर दें"), and Story 8.10 re-authored the copy to
+    # make the gate green. Teeth proven (real pre-8.10 strings as fixtures + planted
+    # violations in BOTH locales + revert-sanity), not merely scanned — see
+    # scripts/microcopy/out-of-band.test.ts + the Dev Agent Record
+    # ([[feedback_gate_scope_semantic_coverage]]).
+    - packages/i18n/locales/hi/pool-onboarding.json
+    - packages/i18n/locales/en/pool-onboarding.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

@@ -6,9 +6,16 @@
 //              live assignment fetch, which is Epic 8's My Pool card; explains the dual-identifier
 //              CONCEPT — a curated name may additionally apply once assigned — WITHOUT naming an example,
 //              since Story 7.2 ships TWT-Bihar's naming registry empty at launch).
-//   Screen 3 — "If you accidentally pay outside the system" (UX-DR76 out-of-band policy: direct-to-family
-//              gifts honored dignifiedly; a wrong-pool payment is recovered by the helpdesk WITHOUT
-//              breaking the assignment — Story 7.6 facilitated-recovery invariant, no-blame framing).
+//   Screen 3 — "If you help a family directly" (UX-DR76 out-of-band policy: a direct-to-family gift is
+//              honored as the member's own act of support and the trust keeps no record of it; SEPARATELY,
+//              a wrong-pool payment is recovered by the helpdesk WITHOUT breaking the assignment — Story
+//              7.6 facilitated-recovery invariant. Story 8.10 re-authored this screen's copy: 7.10 had
+//              framed the gift as a mistake ("accidentally", "outside the system") and conflated it with
+//              the wrong-pool payment, which is the "you should have gone through the app" framing
+//              epics.md:3038 forbids. The two events are now distinct — the gift is honored, the
+//              wrong-pool payment is the recoverable mistake it genuinely is. The four screen3.* KEYS are
+//              unchanged (values-only rewrite); the copy is gated by the `out-of-band-blame` microcopy
+//              rule. Policy of record: docs/policies/out-of-band-contributions.md).
 //
 // ── Accessibility discipline (Story 0.10 / P0-2c — AC3/AC5 load-bearing) ────────────────────────────
 // Mirrors LockInClockWidget.tsx:22-25 across the 3 steps:

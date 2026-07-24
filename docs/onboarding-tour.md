@@ -26,6 +26,7 @@ Per architecture §Onboarding artifacts (architecture lines 4046-4057), this fil
 - `docs/legal-counsel-engagement/` — Legal counsel concurrent-review engagement (Story 0.13 authored).
 - `docs/native-stack-validation/` — Native-stack experiment + ratify-or-pivot framework (Story 0.14 authored).
 - `docs/launch-gate-inventory/` — Architectural launch-gate inventory + monthly cadence (Story 0.15 authored).
+- `docs/policies/` — Standing product/member policies (Story 8.10 authored). Currently: the UX-DR76 out-of-band contribution policy, which is load-bearing for anyone touching contribution ingest — it commits the trust to having **no** data path for direct-to-family gifts, and names the fences that keep it that way.
 
 ## When to update this file
 

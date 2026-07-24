@@ -665,6 +665,27 @@ Zero deliberate friction introduced; ledger reviewed, no new row warranted. The
 does not enter the public page-weight budget the gate has teeth on. Do NOT ratchet
 (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 8.10 disposition (declaration affirmed, no new row):** this is a `[GOVERNANCE]`
+story — a committed policy document, re-authored locale strings, a microcopy tone rule,
+and a fence test. It ships **no** migration, schema, endpoint, screen, or data model.
+The `apps/mobile` diff is a **single header comment** in
+`apps/mobile/components/pool-onboarding/PoolOnboardingTutorial.tsx`, updated because it
+quoted the very Screen-3 title this story removed ("If you accidentally pay outside the
+system") — a documentation correction with **zero** rendered or behavioural effect. The
+member-facing change is entirely **values-only inside an already-affirmed surface**: the
+Story 7.10 pool-onboarding tutorial is skippable, non-gating, and member-dismissed, and
+its four `screen3.*` i18n **keys are unchanged**, so the tutorial renders the same three
+screens with the same controls in the same order — no new step, form, gate, field,
+upload, tap target, or interactive affordance, and nothing new a member must complete.
+Re-authoring copy to REMOVE a blame frame does not add friction; it removes a cost the
+member was already paying. Zero deliberate friction introduced; ledger reviewed, no new
+row warranted. The **page-weight baseline is unchanged and must not be touched**: every
+other new/modified file lands in `docs/`, `packages/i18n`, `packages/domain` tests,
+`scripts/microcopy`, or `microcopy.yaml` (all excluded from the ledger), and
+`apps/public` is **not** touched at all — there is no public surface in this diff, so it
+does not enter the public page-weight budget the gate has teeth on. Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

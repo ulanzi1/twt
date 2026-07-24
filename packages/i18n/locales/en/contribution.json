@@ -172,5 +172,11 @@
   "close_of_cycle.settling.body_a11y": "This cycle closed on {date}. We are matching contributions against our bank records now. Your contribution will be confirmed once matching settles.",
   "close_of_cycle.holiday_aware.title": "Matching continues through {holiday}",
   "close_of_cycle.holiday_aware.body": "This cycle closed on {date}. {holiday} is being observed, so matching against our bank records is taking a few more days. That is expected, and nothing is pending from you. We will confirm your contribution by {expected}.",
-  "close_of_cycle.holiday_aware.body_a11y": "This cycle closed on {date}. Because {holiday} is being observed, matching against our bank records is taking a few more days. This is expected and nothing is pending from you. Your contribution will be confirmed by {expected}."
+  "close_of_cycle.holiday_aware.body_a11y": "This cycle closed on {date}. Because {holiday} is being observed, matching against our bank records is taking a few more days. This is expected and nothing is pending from you. Your contribution will be confirmed by {expected}.",
+  "out_of_band.helpline.acknowledge.title": "Acknowledge the gift — say this first",
+  "out_of_band.helpline.acknowledge.script": "Thank you for telling me. What you did for that family was your own act of support, and your standing with the trust is not diminished by it in any way.",
+  "out_of_band.helpline.clarify.title": "Clarify what is still expected — factual, never corrective",
+  "out_of_band.helpline.clarify.script": "One separate thing to keep in mind: your assigned pool's contribution for this cycle is still expected on its own, under the Niyamavali's contribution-discipline rules (R7). The two stand apart; one does not stand in for the other.",
+  "out_of_band.helpline.boundary.title": "Operator boundary — do not voice this to the member",
+  "out_of_band.helpline.boundary.instruction": "Do not contact the receiving family to reconcile or verify this gift. That family's relationship with the giver is theirs to hold, and the trust does not mediate it. Do not ask the member to re-send the payment, route it another way, or repeat it through the app."
 }

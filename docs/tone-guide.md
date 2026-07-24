@@ -111,6 +111,18 @@ cannot (template-literal and spelled-out forms — see
   Hindi subtitles → violates Hindi-first parity" (UX L548). (Bilingual parity is enforced
   structurally by the Story 2.1 `i18n-parity` gate; the reviewer judges register and
   naturalness, not key-presence.)
+- **Out-of-band blame (UX-DR76).** A member who sends money **directly to a bereaved family**
+  did something honourable that the Pool Engine is structurally too narrow to capture. "The
+  trust does not characterize it as wrong, failure, or rule-violation" (UX L1046-1058); no
+  *"you should have gone through the app"* framing (epics L3038). Forbidden: the mistake frame
+  (*accidentally paid*, *by mistake*, *गलती से*), the defined-by-the-channel frame (*outside the
+  system / our app*, *सिस्टम के बाहर*), the retrospective correction (*should have paid/sent*,
+  *…करना चाहिए था*), and the dismissal family (*doesn't count*, *irregular*, *incomplete*,
+  *नहीं गिना जाएगा*). Note the distinction the reviewer must hold: a **wrong-pool payment** or a
+  mistyped UPI PIN genuinely **is** a recoverable mistake and is correctly framed as one — the
+  gift is not, and must never inherit that frame. Stances of record, the four operator steps,
+  and the fences: [`docs/policies/out-of-band-contributions.md`](policies/out-of-band-contributions.md).
+  Automatable subset: the `out-of-band-blame` tone rule (Story 8.10).
 
 ---
 

@@ -4,7 +4,9 @@ Transport-layer contracts for the **alert lifecycle** surface — alert creation
 
 ## Landing Story
 
-Substantive contracts authored at **Stories 8.1 / 8.2 / 8.3+** — alert creation + dispatcher + per-channel render contracts per epics Epic 8. Alert state machine derives from event replay via the `@twt/events` `StateMachine<S, E>` primitive (Story 1.3 substrate); per-channel render contracts cross-link `docs/degradation-policy/comms-templates/`.
+Substantive contracts authored at **Stories 8.1 / 8.2 / 8.3 / 8.8+** — alert creation + dispatcher + per-channel render contracts per epics Epic 8. Alert state machine derives from event replay via the `@twt/events` `StateMachine<S, E>` primitive (Story 1.3 substrate); per-channel render contracts cross-link `docs/degradation-policy/comms-templates/`.
+
+**Story 8.8** adds `contribution-loop-templates.ts` — the contribution-loop COPY contract behind the stack's first live `dispatch()` fan-out: the D5 cycle-window arithmetic, Story 8.2's tone-gradient authority (moved here from `apps/mobile`, which the server cannot import — D1; mobile now re-exports it), the four-send-day deadline-reminder template registry, and the pure `payload_data` builders. It is producer-side copy resolution only: the Epic 5 renderers stay pure functions of the frozen payload, so every string that varies by locale, clock or tone band is resolved here and carried IN the payload. The localized strings themselves live in the `contribution` i18n namespace under a `notify.*` prefix (already inside `microcopy.yaml` scope). Same OpenAPI posture as the rest of this directory — internal queue seam, no `.openapi()` registration.
 
 ## Discipline reminders
 

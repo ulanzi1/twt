@@ -44,6 +44,21 @@ vi.mock('@twt/domain', async (importActual) => {
     claim: { ...actual.claim, getClaimCase },
     kyc: { ...actual.kyc, getMemberKycProfile },
     contribution: { ...actual.contribution, hasAttestedContribution },
+    // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
+    // its collaborators through domain-internal paths this barrel mock cannot intercept. The double
+    // re-composes the join over the SAME mocked collaborators configured above, so every assertion
+    // below keeps its original meaning. See tests/unit/_pool-identity-fake.ts.
+    notifications: {
+      ...actual.notifications,
+      resolvePoolIdentity: (await import('./_pool-identity-fake.js')).createResolvePoolIdentityFake({
+        getClaimCase,
+        getMemberKycProfile,
+        decryptKycField,
+        reserveNames,
+        poolLetterCode,
+        splitFirstNameLastInitial: actual.kyc.splitFirstNameLastInitial,
+      }),
+    },
   };
 });
 

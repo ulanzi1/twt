@@ -90,6 +90,64 @@ describe('runCycleOpenAlert — the mint worker body', () => {
   });
 });
 
+// ── Story 8.8 (Task 5) — the POST-COMMIT contribution-notify enqueue seam ────────────────────────────
+// This worker still sends no bytes; what 8.8 adds is the hand-off that makes the fan-out fire. Three
+// properties matter and are asserted individually, because getting any of them wrong is silent:
+//   · `time_critical` is threaded VERBATIM (never re-derived — the AR-18 signal was resolved at the
+//     cycle-freeze instant, so re-reading degraded mode at notify time would break replay);
+//   · the seam fires on the IDEMPOTENT no-op path too (an alert can be already-minted while its
+//     NOTIFICATION was never enqueued — a job dropped between the two);
+//   · a failed enqueue NEVER fails the committed mint (the recovery sweep heals it).
+
+describe('runCycleOpenAlert — the Story 8.8 contribution-notify enqueue seam', () => {
+  it('fires POST-COMMIT with the alert id and `time_critical` copied VERBATIM', async () => {
+    const cycleId = randomUUID();
+    const pariwarId = randomUUID();
+    const enqueueContributionNotify = vi.fn().mockResolvedValue(undefined);
+    openCycleAlertMock.mockResolvedValue({ alertId: 'a-1', minted: true, state: 'live', timeCritical: true });
+
+    await runCycleOpenAlert(makeDeps({ enqueueContributionNotify }), envelope(cycleId, pariwarId));
+
+    expect(enqueueContributionNotify).toHaveBeenCalledTimes(1);
+    expect(enqueueContributionNotify.mock.calls[0]![0]).toMatchObject({
+      alertId: 'a-1',
+      cycleId,
+      pariwarId,
+      timeCritical: true,
+    });
+  });
+
+  it('fires on the IDEMPOTENT no-op path too — an already-minted alert may still be un-notified', async () => {
+    const enqueueContributionNotify = vi.fn().mockResolvedValue(undefined);
+    openCycleAlertMock.mockResolvedValue({ alertId: 'a-2', minted: false, state: 'live', timeCritical: false });
+
+    await runCycleOpenAlert(makeDeps({ enqueueContributionNotify }), envelope(randomUUID(), randomUUID()));
+
+    expect(enqueueContributionNotify).toHaveBeenCalledTimes(1);
+  });
+
+  it('a FAILED enqueue never fails the committed mint — it alarms and the sweep heals it', async () => {
+    const onAlarm = vi.fn();
+    const enqueueContributionNotify = vi.fn().mockRejectedValue(new Error('queue down'));
+    openCycleAlertMock.mockResolvedValue({ alertId: 'a-3', minted: true, state: 'live', timeCritical: false });
+
+    const result = await runCycleOpenAlert(
+      makeDeps({ onAlarm, enqueueContributionNotify }),
+      envelope(randomUUID(), randomUUID()),
+    );
+
+    expect(result.alertId).toBe('a-3'); // the mint result is returned unchanged
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('contribution-notify'));
+  });
+
+  it('omitting the seam is the pre-8.8 behaviour — no notification, no error', async () => {
+    openCycleAlertMock.mockResolvedValue({ alertId: 'a-4', minted: true, state: 'live', timeCritical: false });
+    await expect(runCycleOpenAlert(makeDeps(), envelope(randomUUID(), randomUUID()))).resolves.toMatchObject({
+      alertId: 'a-4',
+    });
+  });
+});
+
 describe('enqueueCycleOpenAlert — envelope + singletonKey construction', () => {
   it('sends onto CYCLE_OPEN_ALERT with cycle_id as the singletonKey (at-least-once dedup)', async () => {
     const boss = makeFakeBoss();

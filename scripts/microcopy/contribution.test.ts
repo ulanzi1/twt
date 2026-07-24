@@ -70,6 +70,77 @@ describe('planted-violation fixture fails, clean fixture passes (revert-sanity i
   });
 });
 
+// ─── (b2) Story 8.8 — the teeth bite the NEW `notify.*` push/WA/SMS copy specifically ─────
+//
+// The `contribution` namespace was already in `microcopy.yaml` copy_globs (Story 8.2), so Story 8.8's
+// notification copy inherits the scan for free — and inheriting a scan proves NOTHING on its own
+// ([[feedback_gate_scope_semantic_coverage]]: a green scan over new keys is not coverage). No gate-scope
+// extension was needed or wanted; what WAS needed is a planted violation on an actual `notify.*` key, so
+// the scarcity / panic / numeral rules are demonstrated to bite THIS surface, not merely to have run
+// over it. A notification is the highest-pressure surface in the product — it arrives uninvited — so the
+// tone rules matter more here than on the card.
+
+describe('Story 8.8 — the tone/numeral teeth bite the notify.* contribution-loop copy', () => {
+  it('a scarcity frame planted on the day-14 reminder subject → checkTone finds it', () => {
+    const dirty =
+      '{ "notify.deadline.day_14.subject": "{pool} — only 1 day left to contribute!" }';
+    const findings = checkTone(EN_FILE, dirty, config);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0].kind).toBe('tone');
+  });
+
+  it('a panic frame planted on the cycle-open push title → checkTone finds it', () => {
+    const dirty = '{ "notify.cycle_open.title": "URGENT: your pool is open" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('a pool-reality comparison planted on the day-13 reminder → checkTone finds it', () => {
+    const dirty =
+      '{ "notify.deadline.day_13.subject": "{pool} — the pool needed more contributions" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('the SAME reminder phrased without the prohibited frame → no finding', () => {
+    const clean = '{ "notify.deadline.day_14.subject": "{pool} — today is the final day of this cycle" }';
+    expect(checkTone(EN_FILE, clean, config)).toEqual([]);
+  });
+
+  it('a Devanagari operational digit planted in the Hindi reminder display → checkNumerals finds it (UX-DR73)', () => {
+    const dirty = '{ "notify.deadline.day_13.display": "१२ दिन शेष" }';
+    expect(checkNumerals(HI_FILE, dirty, config, { isCeremonial: false }).length).toBeGreaterThan(0);
+  });
+
+  it('a scarcity frame planted on the day-5 reminder subject → checkTone finds it', () => {
+    const dirty = '{ "notify.deadline.day_5.subject": "{pool} — hurry, only 2 days left!" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('a panic frame planted on the day-10 reminder subject → checkTone finds it', () => {
+    const dirty = '{ "notify.deadline.day_10.subject": "URGENT: {pool} contribution not recorded" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('a pool-reality comparison planted on the cycle-open push body → checkTone finds it', () => {
+    const dirty =
+      '{ "notify.cycle_open.body": "In support of {family}\'s family. The pool needed more contributions." }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('a scarcity frame planted on the confirmed period label → checkTone finds it', () => {
+    const dirty = '{ "notify.confirmed.period_label": "{cycleRef} cycle — only 1 day left to confirm" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('a pool-reality comparison planted on the Hindi day-13 reminder → checkTone finds it (the one Hindi-matching pattern)', () => {
+    // The gate's tone patterns are almost entirely English-language regexes (scarcity/panic), so most
+    // English-side planted violations above have no Hindi equivalent to test — EXCEPT
+    // pool-reality-comparison, which carries one explicit Hindi phrase ("लक्ष्य से कम" = "less than
+    // target", microcopy.yaml). This asserts that ONE Hindi-matching rule actually bites a `notify.*` key.
+    const dirty = '{ "notify.deadline.day_13.subject": "{pool} — लक्ष्य से कम अंशदान" }';
+    expect(checkTone(HI_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+});
+
 // ─── (c) the load-bearing invariant — the REAL authored copy is clean ─────────────────────
 
 describe('AC3 — the real contribution tone-gradient copy carries no prohibited frame or digit', () => {

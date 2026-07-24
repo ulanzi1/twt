@@ -187,6 +187,53 @@ export const QUEUE_NAMES = {
    * the BYPASSRLS service pool, bounded per run. Job class C (background cron).
    */
   CYCLE_OPEN_ALERT_SWEEP: 'cycle.open.alert.sweep',
+  /**
+   * Contribution-loop cycle-open notification — the PARENT fan-out job (Story 8.8, Task 5). Enqueued
+   * POST-COMMIT by the CYCLE_OPEN_ALERT worker the instant the alert reaches `live` (the primary
+   * path), and re-enqueued by the contribution-notify recovery sweep for any live alert whose
+   * fan-out never ran (the 8.1 D4 enqueue-primary/sweep-recovery pattern, reused). singletonKey =
+   * alert_id. The parent pages the cycle's pools from the latest persisted assignment snapshot and
+   * fans out ONE child job per pool — a cycle-open at TWT-Bihar scale (N≈50 pools × M≈4L members) is
+   * never one job and never one unbounded query. Job class A (cycle-open burst).
+   */
+  CONTRIBUTION_NOTIFY_CYCLE_OPEN: 'contribution.notify.cycle_open',
+  /**
+   * Contribution-loop notification — the per-pool CHILD fan-out job (Story 8.8, Tasks 5/6). One per
+   * pool, dispatched concurrently; the child chunks its pool's roster and runs the live
+   * `dispatch()` cascade per member. singletonKey = `${alert_id}:${pool_id}` (cycle-open) or
+   * `${alert_id}:${pool_id}:${cycle_day}` (deadline reminder). Serves BOTH triggers so there is ONE
+   * fan-out definition, not two: the payload's `kind` selects the copy + the idempotency scope. Every
+   * member send is idempotent on `(alert_id, member_id, scope)` via the Story 1.12 keyed store, so a
+   * redelivered job / retried batch / recovery sweep never produces a second send. Job class A.
+   */
+  CONTRIBUTION_NOTIFY_POOL_BATCH: 'contribution.notify.pool_batch',
+  /**
+   * Contribution-loop cycle-open notification RECOVERY sweep — the self-healing cron (Story 8.8, Task
+   * 5; the 8.1 D4 enqueue-primary/sweep-recovery pattern reused). Scans `live` alerts whose fan-out
+   * left NO idempotency-key trace (a dropped/failed primary enqueue) and re-enqueues the parent.
+   * RECOVERY-ONLY — the post-commit enqueue in `cycle-open-alert.ts` is the hot path; this exists to
+   * heal a lost job, NOT to be the normal route. Cross-tenant scan on the BYPASSRLS service pool,
+   * bounded per run with a non-silent cap alarm. Job class C (background cron).
+   */
+  CONTRIBUTION_NOTIFY_CYCLE_OPEN_SWEEP: 'contribution.notify.cycle_open.sweep',
+  /**
+   * Contribution-loop deadline-reminder cadence — the daily scheduled sweep (Story 8.8, Task 6). Runs
+   * once per IST day, scans `live` alerts cross-tenant on the BYPASSRLS service pool, computes each
+   * cycle's day from the cycle-freeze `committed_at` + `CYCLE_WINDOW_DAYS` (the SAME D5 seam the My
+   * Pool card uses), and enqueues per-pool CHILD jobs only on cycle-days 5 / 10 / 13 / 14. Bounded per
+   * run with a non-silent cap alarm. Job class C (background cron).
+   */
+  CONTRIBUTION_DEADLINE_REMINDER_SWEEP: 'contribution.deadline_reminder.sweep',
+  /**
+   * Contribution-confirmed notification (Story 8.8, Task 7) — the EPIC-9 SEAM. Enqueued by Epic 9
+   * post-commit when it emits `contribution.confirmed`; the worker builds the
+   * `contribution_confirmed` alert and runs the same live fan-out. There is DELIBERATELY no cron and
+   * no recovery sweep on this queue: `contribution.confirmed` is Epic 9's exclusive producer and is
+   * unbuilt, and a producer-less scheduled worker is the anti-pattern Story 5.6 named. When Epic 9
+   * lands its producer the notification fires with ZERO changes to Story 8.8's code. Job class B
+   * (request/event-triggered).
+   */
+  CONTRIBUTION_NOTIFY_CONFIRMED: 'contribution.notify.confirmed',
 } as const;
 
 /** Union of the registered queue names. */

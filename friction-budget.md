@@ -644,6 +644,27 @@ that never enters any client bundle or public page. This is **NOT a public `apps
 surface**, so it does not enter the public page-weight budget the gate has teeth on. Do
 NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 8.8 disposition (declaration affirmed, no new row):** the only `apps/mobile`
+file this story touches is `apps/mobile/components/active-contribution/toneGradient.ts`,
+and it is a **pure, byte-identical relocation** — the tone-gradient selector (Story
+8.2) moved to `packages/contracts/src/alerts/contribution-loop-templates.ts` so the
+server-side deadline-reminder sweep (`apps/jobs`) can share the SAME authority the
+`<ActiveContributionCard>` uses, and this file became a thin re-export so every
+existing mobile call site is unchanged. No new screen, no new form, no new gate, no
+new interactive affordance, and no behavioral change to any surface a member sees —
+the coherence-invariant test asserts the reminder push a member receives renders in
+the identical tone band the card already shows on that day. The story's actual member-
+facing deliverable (the cycle-open/deadline-reminder/contribution-confirmed push,
+WhatsApp, SMS and Telegram notifications) is a **server-driven OS-level notification**,
+not an in-app member-facing form/interaction surface this ledger governs — there is no
+new screen, tap target, or step a member completes inside `apps/mobile`/`apps/public`.
+Zero deliberate friction introduced; ledger reviewed, no new row warranted. The
+**page-weight baseline is unchanged**: every other new/modified file lands in
+`apps/jobs`, `apps/api`, `packages/domain`, `packages/contracts`, or `packages/i18n`
+(all excluded from the ledger) — it is **NOT a public `apps/public` surface**, so it
+does not enter the public page-weight budget the gate has teeth on. Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

@@ -46,6 +46,21 @@ vi.mock('@twt/domain', async (importActual) => {
     contribution: { ...actual.contribution, listMemberContributionHistory, hasAttestedContribution },
     claim: { ...actual.claim, getClaimCase },
     kyc: { ...actual.kyc, getMemberKycProfile },
+    // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
+    // its collaborators through domain-internal paths this barrel mock cannot intercept. The double
+    // re-composes the join over the SAME mocked collaborators configured above, so check (5) below
+    // (card-identical identity, D6) still compares two surfaces driven by ONE shared resolver.
+    notifications: {
+      ...actual.notifications,
+      resolvePoolIdentity: (await import('./_pool-identity-fake.js')).createResolvePoolIdentityFake({
+        getClaimCase,
+        getMemberKycProfile,
+        decryptKycField,
+        reserveNames,
+        poolLetterCode: actual.pool.poolLetterCode,
+        splitFirstNameLastInitial: actual.kyc.splitFirstNameLastInitial,
+      }),
+    },
   };
 });
 

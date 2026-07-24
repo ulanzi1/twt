@@ -18,6 +18,7 @@
     "@twt/channels": "workspace:*",
     "@twt/contracts": "workspace:*",
     "@twt/domain": "workspace:*",
+    "@twt/i18n": "workspace:*",
     "@twt/platform-adapters": "workspace:*",
     "@twt/queue": "workspace:*",
     "@twt/validity-service": "workspace:*",

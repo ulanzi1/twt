@@ -28,7 +28,7 @@
 // no-op send (dishonest, the opposite of this story's "no fabricated success" discipline). Whoever wires the
 // live dispatch call site (5.4+) is responsible for deciding how a rejection here is surfaced/retried.
 
-import { channelConfig, deviceToken, ids, telegramOptIn, waOptIn, type Db } from '@twt/domain';
+import { channelConfig, deviceToken, ids, notifications, type Db } from '@twt/domain';
 import {
   createSmsProvider,
   createTelegramProvider,
@@ -43,7 +43,6 @@ import {
 } from '@twt/channels';
 
 import type { EncryptionDeps } from '../../context.js';
-import { decryptMobile } from '../auth/shared/mobile-index.js';
 
 type PariwarId = ids.PariwarId;
 type MemberId = ids.MemberId;
@@ -131,10 +130,12 @@ export interface WaTargetDeps {
  * decrypted HERE (the composition layer — never inside `dispatch` / the provider; mirrors resolvePushTargets)
  * to the recipient number the WA provider's `toMsisdn` addresses.
  *
- * ── Frozen-shape discipline ([[project_channels_no_live_dispatch_yet]]) ──────────────────────────────────
- * This is a reusable composition READ — it does NOT modify `DeliveryResolver` / `dispatch` / `ChannelProvider`
- * / `CANONICAL_CHANNEL_LADDER`, and there is still NO live `dispatch` call site (5.2/5.3 posture). Whoever
- * wires the live fan-out consumes this read.
+ * ── RELOCATED to @twt/domain by Story 8.8 (Task 1; D4) — this is now a thin adapter ─────────────────────
+ * The read moved VERBATIM to `packages/domain/src/notifications/delivery.ts` so `apps/jobs` (the stack's
+ * FIRST live `dispatch()` fan-out) can call it — apps/jobs cannot import apps/api. This wrapper keeps the
+ * apps/api `{ db, encryption }` deps shape so no apps/api call site changed. `DeliveryTarget` is the
+ * structural twin of `SendTarget` (domain cannot import `@twt/channels` — that edge would be a cycle).
+ * The frozen `DeliveryResolver` / `dispatch` / `ChannelProvider` / `CANONICAL_CHANNEL_LADDER` are unchanged.
  */
 export async function resolveWaTarget(
   deps: WaTargetDeps,
@@ -142,20 +143,7 @@ export async function resolveWaTarget(
   memberId: MemberId,
   at?: Date,
 ): Promise<SendTarget | null> {
-  // Gate 1 — the admin toggle (Story 5.3).
-  const config = await channelConfig.getWaConfig(deps.db, pariwarId);
-  if (!config || !config.enabled) return null;
-
-  // Gate 2 — the member opt-in ACTIVE + within the 24h window (this story).
-  const active = await waOptIn.isOptInActive(deps.db, { pariwarId, memberId, at });
-  if (!active) return null;
-
-  // Both gates pass — resolve the member's WhatsApp recipient number (their registered mobile). Decrypt in
-  // the composition layer; a member with no identity row (⇒ no number) resolves to null.
-  const ciphertext = await waOptIn.getMemberMobileCiphertext(deps.db, { pariwarId, memberId });
-  if (!ciphertext) return null;
-  const address = await decryptMobile(ciphertext, deps.encryption);
-  return { channel: 'whatsapp', address };
+  return notifications.resolveWaTarget(deps.db, deps.encryption, pariwarId, memberId, at);
 }
 
 // ── Telegram composition seam — Story 5.5 (Task 8; AC1, AC5) ─────────────────────────────────────────────
@@ -232,27 +220,16 @@ export interface TelegramTargetDeps {
  * the consent record are minted/revoked TOGETHER in one tx (the worker's audit-or-throw), so operational-ACTIVE
  * ⟺ valid consent — but the delivery source of truth is the operational state, never `consentExists`.
  *
- * ── Frozen-shape discipline ([[project_channels_no_live_dispatch_yet]]) ──────────────────────────────────
- * A reusable composition READ — it does NOT modify `DeliveryResolver` / `dispatch` / `ChannelProvider` /
- * `CANONICAL_CHANNEL_LADDER`, and there is still NO live `dispatch` call site.
+ * ── RELOCATED to @twt/domain by Story 8.8 (Task 1; D4) — this is now a thin adapter ─────────────────────
+ * The read moved VERBATIM to `packages/domain/src/notifications/delivery.ts` (see `resolveWaTarget`
+ * above for the full rationale). The apps/api deps shape + signature are unchanged.
  */
 export async function resolveTelegramTarget(
   deps: TelegramTargetDeps,
   pariwarId: PariwarId,
   memberId: MemberId,
 ): Promise<SendTarget | null> {
-  // Gate 1 — the admin toggle (the FR-58C v1 flag).
-  const config = await channelConfig.getTelegramConfig(deps.db, pariwarId);
-  if (!config || !config.enabled) return null;
-
-  // Gate 2 — the member opt-in ACTIVE (operational state; no window).
-  const active = await telegramOptIn.isOptInActive(deps.db, { pariwarId, memberId });
-  if (!active) return null;
-
-  // Both gates pass — the captured chat_id is the delivery address (no decryption).
-  const chatId = await telegramOptIn.getChatIdForMember(deps.db, { pariwarId, memberId });
-  if (!chatId) return null;
-  return { channel: 'telegram', address: chatId };
+  return notifications.resolveTelegramTarget(deps.db, pariwarId, memberId);
 }
 
 // ── SMS composition seam — Story 5.6 (Task 6; AC1, AC2, AC4) ─────────────────────────────────────────────
@@ -352,21 +329,16 @@ export interface SmsTargetDeps {
  * identity row (⇒ no number). Reuses `waOptIn.getMemberMobileCiphertext` — a NEUTRAL member-mobile ciphertext
  * read that merely lives in that module — so SMS is NOT coupled to WA opt-in state.
  *
- * ── Frozen-shape discipline ([[project_channels_no_live_dispatch_yet]]) ──────────────────────────────────
- * A reusable composition READ — it does NOT modify `DeliveryResolver` / `dispatch` / `ChannelProvider` /
- * `CANONICAL_CHANNEL_LADDER`, and there is still NO live `dispatch` call site.
+ * ── RELOCATED to @twt/domain by Story 8.8 (Task 1; D4) — this is now a thin adapter ─────────────────────
+ * The read moved VERBATIM to `packages/domain/src/notifications/delivery.ts` (see `resolveWaTarget`
+ * above for the full rationale). The apps/api deps shape + signature are unchanged.
  */
 export async function resolveSmsTarget(
   deps: SmsTargetDeps,
   pariwarId: PariwarId,
   memberId: MemberId,
 ): Promise<SendTarget | null> {
-  // No opt-in gate (SMS is transactional). Resolve the member's registered mobile; a member with no identity
-  // row (⇒ no number) resolves to null.
-  const ciphertext = await waOptIn.getMemberMobileCiphertext(deps.db, { pariwarId, memberId });
-  if (!ciphertext) return null;
-  const address = await decryptMobile(ciphertext, deps.encryption);
-  return { channel: 'sms', address };
+  return notifications.resolveSmsTarget(deps.db, deps.encryption, pariwarId, memberId);
 }
 
 // ── Cost-optimization composition seams — Story 5.7 (Task 3; AC4) ────────────────────────────────────────

@@ -43,6 +43,21 @@ vi.mock('@twt/domain', async (importActual) => {
     kyc: { ...actual.kyc, getMemberKycProfile },
     niyamavali: { ...actual.niyamavali, resolveByClauseId },
     passport: { ...actual.passport, getPariwarPassport },
+    // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
+    // its collaborators through domain-internal paths this barrel mock cannot intercept. The double
+    // re-composes the join over the SAME mocked collaborators configured above, so the AC1/AC5 PII
+    // assertions (first-name + last-initial only) keep their original meaning.
+    notifications: {
+      ...actual.notifications,
+      resolvePoolIdentity: (await import('./_pool-identity-fake.js')).createResolvePoolIdentityFake({
+        getClaimCase,
+        getMemberKycProfile,
+        decryptKycField,
+        reserveNames,
+        poolLetterCode: actual.pool.poolLetterCode,
+        splitFirstNameLastInitial: actual.kyc.splitFirstNameLastInitial,
+      }),
+    },
   };
 });
 

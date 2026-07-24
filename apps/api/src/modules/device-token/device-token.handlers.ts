@@ -28,7 +28,7 @@ import type {
   DeviceTokenRegisterResponse,
 } from '@twt/contracts';
 import type { SendTarget } from '@twt/channels';
-import { audit, deviceToken, ids, schema } from '@twt/domain';
+import { audit, deviceToken, ids, notifications, schema } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 /** The owning-principal kinds — re-exported from `@twt/domain`'s schema, the single source of truth. */
@@ -38,7 +38,7 @@ import { ADMIN_GLOBAL_NAMESPACE, type AppDeps } from '../../context.js';
 import { UnauthorizedError } from '../../http-errors.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
-import { decryptDeviceToken, deviceTokenBlindIndex, encryptDeviceToken } from './device-token-crypto.js';
+import { deviceTokenBlindIndex, encryptDeviceToken } from './device-token-crypto.js';
 
 interface RegisterParams {
   readonly pariwarIdStr: string;
@@ -136,14 +136,21 @@ export function createDeviceTokenHandlers(deps: AppDeps) {
 /**
  * Resolve a principal's active push `SendTarget`s (the delivery seam). Reads the active tokens, decrypts
  * each under the SAME (pariwarId, field-class) context they were written under, and sets `platform` so
- * `selectProvider` routes fcm-vs-apns. Decryption happens HERE (the composition layer), never inside
+ * `selectProvider` routes fcm-vs-apns. Decryption happens at the composition layer, never inside
  * `dispatch` / the provider.
  *
- * ── v1 seam note (recorded in the Story 5.2 Dev Agent Record) ──────────────────────────────────────────
- * A member can have MANY active tokens (multiple devices) — this returns them all. The 5.1 `DeliveryResolver`
- * type returns ONE `SendTarget` per channel, so fanning multiple push targets through the (frozen) seam is
- * a composition concern for whichever story wires the LIVE dispatch (there is no live dispatch call site in
- * 5.2). This function is the reusable building block; it does NOT change the frozen `DeliveryResolver`/`dispatch`.
+ * ── RELOCATED to @twt/domain by Story 8.8 (Task 1) — this is now a thin adapter ────────────────────────
+ * The read moved VERBATIM to `packages/domain/src/notifications/delivery.ts` so `apps/jobs` (the stack's
+ * FIRST live `dispatch()` fan-out) can call it — apps/jobs cannot import apps/api. This wrapper keeps the
+ * apps/api signature (`AppDeps` + `ScopeTx`) so no apps/api call site changed; it only unwraps the bundle.
+ * `DeliveryTarget` is the structural twin of `SendTarget` (domain cannot import `@twt/channels` — that
+ * edge would be a cycle), so the return value satisfies `SendTarget[]` by structural typing.
+ *
+ * ── v1 seam note (recorded in the Story 5.2 Dev Agent Record; RESOLVED by Story 8.8) ──────────────────
+ * A member can have MANY active tokens (multiple devices) — this returns them all, while the frozen 5.1
+ * `DeliveryResolver` returns ONE `SendTarget` per channel. Story 8.8 resolves that in the COMPOSITION
+ * (`apps/jobs/src/scheduler/contribution-notify.ts` iterates the device targets on the push rung and
+ * treats the rung as `sent` if ANY device accepted) — the frozen `DeliveryResolver`/`dispatch` are unchanged.
  */
 export async function resolvePushTargets(
   deps: AppDeps,
@@ -152,37 +159,13 @@ export async function resolvePushTargets(
   principalType: DeviceTokenPrincipalType,
   principalId: string,
 ): Promise<SendTarget[]> {
-  const rows = await deviceToken.listActiveTokens(
+  return notifications.resolvePushTargets(
     scopeTx.tx,
-    ids.pariwarId(pariwarIdStr),
+    deps.encryption,
+    pariwarIdStr,
     principalType,
     principalId,
   );
-  // Promise.allSettled, not Promise.all: one row's decrypt throwing (a context mismatch or corrupt
-  // ciphertext) must not sink every OTHER valid device's target — a bad row is dropped + logged, not fatal.
-  const settled = await Promise.allSettled(
-    rows.map(async (row) => ({
-      channel: 'push' as const,
-      address: await decryptDeviceToken(row.tokenCiphertext, pariwarIdStr, deps.encryption),
-      platform: row.platform as DeviceTokenPlatform,
-      // Carried so the invalidation seam can scope `markInvalid` to the EXACT ownership tuple (code-review
-      // fix) — never invalidate-by-blind-index alone, which two principals could collide on.
-      principalType,
-      principalId,
-    })),
-  );
-  const targets: SendTarget[] = [];
-  for (const outcome of settled) {
-    if (outcome.status === 'fulfilled') {
-      targets.push(outcome.value);
-    } else {
-      console.error(
-        `[device-token] resolvePushTargets: decrypt failed for a device token (principal=${principalType}) — dropping this row, other targets unaffected:`,
-        outcome.reason,
-      );
-    }
-  }
-  return targets;
 }
 
 interface RegistrationAuditFields {

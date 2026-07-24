@@ -127,3 +127,8 @@ export * from './pool-fixed-amount-emergency-attestations-rls.js';
 // alerts.current_state write-rejection trigger (migration 0078) is ORTHOGONAL — RLS isolates by
 // tenant, the trigger blocks non-projector state writes regardless of tenant; both apply.
 export * from './alerts-rls.js';
+// Story 8.9 — pariwar_holiday_calendar tenant-isolation policies (NOT cross-readable;
+// mirror pool-fixed-amount-schedule-rls). A Pariwar's curated holiday windows are its own
+// (UX-DR77). Fail-closed on an unset scope → 0 rows → the resolver's EMPTY-calendar path →
+// the NORMAL reconciliation tail (an unresolvable calendar never EXTENDS a deadline).
+export * from './pariwar-holiday-calendar-rls.js';

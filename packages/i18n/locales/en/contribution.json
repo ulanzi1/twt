@@ -166,5 +166,11 @@
   "notify.deadline.day_13.display": "{date} ({days} days remaining)",
   "notify.deadline.day_14.subject": "{pool} — today is the final day of this cycle; if you're able, please contribute to support {family}'s family",
   "notify.deadline.day_14.display": "Today, {date}",
-  "notify.confirmed.period_label": "{cycleRef} cycle"
+  "notify.confirmed.period_label": "{cycleRef} cycle",
+  "close_of_cycle.settling.title": "Matching is underway",
+  "close_of_cycle.settling.body": "This cycle closed on {date}. We are matching contributions against our bank records now, and will confirm yours as soon as it settles.",
+  "close_of_cycle.settling.body_a11y": "This cycle closed on {date}. We are matching contributions against our bank records now. Your contribution will be confirmed once matching settles.",
+  "close_of_cycle.holiday_aware.title": "Matching continues through {holiday}",
+  "close_of_cycle.holiday_aware.body": "This cycle closed on {date}. {holiday} is being observed, so matching against our bank records is taking a few more days. That is expected, and nothing is pending from you. We will confirm your contribution by {expected}.",
+  "close_of_cycle.holiday_aware.body_a11y": "This cycle closed on {date}. Because {holiday} is being observed, matching against our bank records is taking a few more days. This is expected and nothing is pending from you. Your contribution will be confirmed by {expected}."
 }

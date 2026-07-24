@@ -199,6 +199,14 @@ export * as toneReview from './tone-review/index.js';
 // (expected/delivered totals in → `CycleFundingOutcome` enum out; the numbers never reach
 // the copy path). A [GOVERNANCE] primitive — Epic 8/11b/8.9 render it; no live call site here.
 export * as closeOfCycle from './close-of-cycle/index.js';
+// Story 8.9 — the calendar-aware close-of-cycle SUBSTRATE (UX-DR77): the per-Pariwar
+// `pariwar_holiday_calendar` accessors + the PURE, IST-fixed-offset holiday resolver
+// (`isHolidayDate` / `nextNonHolidayDate` / `reconciliationTailDeadline`). Governs the
+// post-close RECONCILIATION TAIL only — FR-22's hard Day-15 contribution close is
+// untouched (epics.md:3022's window-extension prose is a ratified drafting error). No
+// live caller: Epic 9's matcher-tail scheduler + Epic 11b Story 11b.3's Sahyog Vivran
+// publish gate are the first consumers.
+export * as cycleCalendar from './cycle-calendar/index.js';
 // Story 4.8 — the FR-12A per-cohort validity cache substrate: cheap key resolution + low-level
 // member_validity_cache access + the cohort_invalidation_epochs bump/read + the GC sweep. The
 // cache-aside orchestration (getValidityCached) lives in @twt/validity-service.

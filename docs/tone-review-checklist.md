@@ -58,6 +58,15 @@
       it does not process them.
 - [ ] **Hindi is first-class**, not a translation layer — natural Devanagari register, not
       transliteration or English-with-Hindi-subtitles.
+- [ ] **No out-of-band blame** (UX-DR76) — a direct-to-family gift is never framed as a
+      mistake (*accidentally paid*, *गलती से*), never defined by its relation to the app
+      (*outside the system*, *सिस्टम के बाहर*), never retrospectively corrected (*you should
+      have gone through the app*, *…करना चाहिए था*), and never dismissed (*doesn't count*,
+      *irregular*, *incomplete*) — *including* the paraphrased and spelled-out variants the
+      lint cannot pattern-match. Check the separation too: a **wrong-pool payment** is a
+      genuine, recoverable mistake and stays framed as one; the gift must not inherit that
+      frame, nor the recovery copy the honouring frame. Policy of record:
+      [`docs/policies/out-of-band-contributions.md`](./policies/out-of-band-contributions.md).
 
 ### 4. Grief-context gate · ([guide §4](./tone-guide.md#4-grief-context-modulation))
 
@@ -94,6 +103,8 @@ publish):
 | **Push-notification template** | the surface's own review permission (added in its owning story) | its owning story |
 | **Helpdesk macro** | the surface's own review permission (added in its owning story) | its owning story |
 | **Close-of-cycle framing** (Panchayat Noticeboard pinned notice + Sahyog Vivran per-claim page; the FR-19 celebration copy, `close-of-cycle` i18n namespace) | the consumer surface's own review permission (added by **Epic 8** / **Epic 11b** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (Epic 8 Noticeboard / Epic 11b Sahyog Vivran) |
+| **Pool-onboarding tutorial Screen 3** (the UX-DR76 out-of-band framing; `pool-onboarding` i18n namespace, en + hi) | the consumer surface's own review permission (added by **Epic 7** / **Epic 8** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (Story 7.10 tutorial; copy re-authored by Story 8.10) |
+| **Helpline out-of-band script** (operator-voiced member-register copy; `contribution` i18n namespace `out_of_band.helpline.*`, en + hi) | the consumer surface's own review permission (added by **Epic 10** when the helpdesk console lands — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (**Epic 10** helpdesk console; text authored by Story 8.10) |
 
 > **Close-of-cycle note (Story 7.8).** The `close-of-cycle` templates carry the FR-19
 > celebration framing that must **never** surface a comparison-to-target / shortfall
@@ -106,6 +117,21 @@ publish):
 > `evaluateToneReviewGate` mechanism — exactly as Story 2.4 did for the Niyamavali. Because
 > under-funded closes correlate with grief, the [§4 grief-context gate](#4-grief-context-gate)
 > also applies to these templates.
+
+> **Out-of-band note (Story 8.10).** The two surfaces above carry the UX-DR76 framing of a
+> **direct-to-family gift** — the **out-of-band blame** prohibited frame already listed in
+> [§3 Prohibited frames](#3-prohibited-frames) (do not restate it here). The automated floor is
+> the Story 1.17 `microcopy` gate's `out-of-band-blame` rule, now scoped over the
+> `pool-onboarding` locale files (Story 8.10); this human review owns the paraphrased /
+> spelled-out variants the lint cannot pattern-match, and — the part no regex reaches — the
+> judgement that the honouring frame and the wrong-pool **recovery** frame stay distinct.
+> The helpline script is **operator-voiced member-register copy** (the Story 6.3 read-back
+> precedent), so it is reviewed as member copy even though no member reads it on a screen;
+> note that `out_of_band.helpline.boundary.instruction` is an **operator instruction that must
+> never be voiced to a member** and is keyed `.instruction`, not `.script`, for that reason.
+> Because these conversations happen after a colleague's death, the
+> [§4 grief-context gate](#4-grief-context-gate) also applies. Stances of record:
+> [`docs/policies/out-of-band-contributions.md`](./policies/out-of-band-contributions.md).
 
 **Who may review.** A **non-author** holding the surface's review permission. For the
 Niyamavali clause this is the already-seeded **`niyamavali.review`** key — Story 2.2 does

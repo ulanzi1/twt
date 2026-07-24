@@ -8,10 +8,10 @@
   "screen2.body2": "A pool may also be given a chosen name later, but the letter code always stays the same. A permanent identifier is kept for the record too.",
   "screen2.progress_a11y": "Screen two: your pool's letter code",
 
-  "screen3.title": "If you accidentally pay outside the system",
-  "screen3.body": "If you give directly to a family, it is honored with dignity.",
-  "screen3.body2": "And if a payment reaches the wrong pool, the helpdesk works with you to sort it out — your pool assignment stays as it is.",
-  "screen3.progress_a11y": "Screen three: if you accidentally pay outside the system",
+  "screen3.title": "If you help a family directly",
+  "screen3.body": "Sometimes you hear of a colleague's passing yourself and help the family directly. That is your own act of support, and the trust holds it in respect. It stays between you and that family; the trust keeps no record of it. Your assigned pool's contribution for this cycle still stands separately.",
+  "screen3.body2": "Separately: if a payment reaches a different pool than the one you were assigned, the helpdesk works with you to sort it out — your pool assignment stays as it is.",
+  "screen3.progress_a11y": "Screen three: if you help a family directly",
 
   "button.next": "Next",
   "button.next_a11y": "Next",

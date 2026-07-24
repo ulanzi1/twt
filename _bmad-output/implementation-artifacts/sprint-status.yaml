@@ -1,4 +1,63 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-24 (story 8-10 review -> done via bmad-code-review. 3-layer adversarial review
+#   (Blind Hunter, Edge Case Hunter, Acceptance Auditor) against the ~832-line diff; the Acceptance Auditor
+#   independently re-derived both new regexes and re-ran every recon claim, confirming zero AC violations.
+#   2 decision-needed items resolved by BigDev: (1) the unbound Hindi गलती से/चाहिए था tone-rule arms ->
+#   narrow now (adjacency-binding doesn't work in Hindi's SOV order — bound via a 60-char bidirectional
+#   proximity lookaround to a payment/giving word instead, verified against every existing + 2 new
+#   fixtures); (2) the unmechanized `out_of_band.helpline.boundary.instruction` key -> recorded as a
+#   forward risk in deferred-work.md binding Epic 10 (no live consumer yet). 7 patches applied to the two
+#   new fence files: FORBIDDEN_IDENTIFIERS gained case-insensitivity + snake/camel/Pascal/SCREAMING_SNAKE
+#   coverage (kebab-case attempted then REVERTED — real false positives on the ordinary English idiom
+#   "out-of-band" in unrelated comments, e.g. member_search_projection.ts:39); the fourth-event-type scan
+#   gained double-quote support (backtick attempted then REVERTED — false-positived on events_log.ts's own
+#   backtick-quoted illustrative comment); `packages/events/src/registry.ts` widened to the containing
+#   directory; the file-type filter widened to .mts/.cts/.sql + `packages/domain/migrations` added as a
+#   scan root; the English "should have" verb list gained `given`; the Hindi doesn't-count arm gained the
+#   reverse (more natural) SOV word order. 3 items deferred, none blocking (recorded in deferred-work.md):
+#   a latent `e.parentPath` Node-portability fallback, the policy doc's §4(a) fence-coverage overclaim vs.
+#   apps/api/apps/mobile/packages/contracts, and several narrower tone-rule paraphrase gaps explicitly
+#   covered by AC4's own "regex is a floor, human catches the rest" design intent. Post-patch: no-ingest-
+#   path fence 7/7, full microcopy suite 148/148, `microcopy:check` green (76 code + 10 copy files),
+#   i18n:check-parity green. Story file Status: done.)
+# last_updated: 2026-07-24 (story 8-10 ready-for-dev -> in-progress -> review via bmad-dev-story. `[GOVERNANCE]`,
+#   the 7.9 shape: policy doc + copy + mechanized fences + registrations; no migration/schema/endpoint/screen,
+#   openapi/v1.yaml byte-identical. The headline was a CORRECTION: 7.10's shipped Screen 3 carried the exact
+#   frame this story's own AC forbids. Sequencing was the point — the `out-of-band-blame` tone rule + the
+#   pool-onboarding copy_globs entry landed BEFORE the copy fix, so `pnpm microcopy:check` went RED with 8
+#   findings on the real committed strings (both locales, title + a11y, both blame arms) and green only after
+#   the rewrite; those 8 strings are pinned as fixtures so the proof outlives the copy it removed. One false
+#   positive (a developer comment "an accidental double-click" in admin code) was fixed by NARROWING the
+#   pattern with a recorded reason, not by an allow entry. AC2 separated the two conflated events: the gift is
+#   honoured (and the cycle's contribution stated as still separately expected — R7 cited, never softened),
+#   the wrong-pool payment stays the recoverable mistake it genuinely is with 7.6 recovery framing intact.
+#   AC5's fence turns "the trust does not track out-of-band gifts" into an executable negative — 3 admitted
+#   contribution.* event types pinned by IMPORT + a source scan that names any fourth, plus zero
+#   out_of_band/direct_gift/outside_payment/gift_* identifiers; revert-sanity proven, and its own anti-vacuity
+#   self-check caught a real bug (a trailing \b cannot match after `out_of_band` since _ is a word char, so a
+#   table named out_of_band_gifts would have slipped a permanently-green assertion). D4 held: NO member-profile
+#   private-note surface exists, so the operator is not scripted to offer it — [PENDING CAPABILITY - Epic 10],
+#   recorded un-built with a re-trigger, and the four-step Madad path is honestly three steps today. Sahyog
+#   Vivran no-credit declared as a forward constraint on Epic 11b Story 11b.3. D6 honoured: no new CI job, no
+#   new scanner. gate-inventory.md deliberately NOT updated (scope extension, not a status flip — the 7.8/8.2
+#   precedent), call recorded. One apps/mobile file in the diff: a header COMMENT that quoted the removed blame
+#   title, flagged explicitly. ci:local green 28/28 (a first-run @twt/channels failure was confirmed innocent in
+#   isolation — the known concurrency-oversubscription class). Non-author human tone-review still OWED.)
+# last_updated: 2026-07-24 (story 8-10 backlog -> ready-for-dev via bmad-create-story. `[GOVERNANCE]` story,
+#   the 7.9 shape: a committed policy doc + copy + mechanized fences, no migration/endpoint/screen. The
+#   context pass surfaced a live violation of the story's own AC — Story 7.10 shipped Screen 3 as
+#   "If you accidentally pay outside the system" / "अगर आप गलती से सिस्टम के बाहर भुगतान कर दें", which frames an
+#   honoured direct-to-family gift as a mistake and defines it by the app, exactly the "you should have gone
+#   through the app" framing epics.md:3038 forbids; that screen also conflates the gift with a genuinely-
+#   mistaken wrong-pool payment. So AC2 is a re-authoring of committed copy, and AC4's new `out-of-band-blame`
+#   microcopy tone rule (+ pool-onboarding.json into copy_globs, config-only per the 7.8/8.2 pattern) has its
+#   teeth PROVEN by firing on the pre-8.10 strings rather than by a green scan. AC5 turns "the trust does not
+#   track out-of-band gifts" into an executable negative: the contribution readers admit exactly three event
+#   types (utr-attested / confirmed / reconciliation-mismatch) and no out_of_band-shaped table/column/event
+#   exists — revert-sanity proven. Helpline script ships as bilingual i18n keys (the 6.3 readback precedent),
+#   NOT doc prose; the UX spec's "privately-visible note" operator step has no surface today, so it is recorded
+#   un-built with an Epic-10 re-trigger rather than scripted as if it works. Sahyog Vivran no-credit is a
+#   declared forward constraint on Epic 11b Story 11b.3. D6: no new CI job, no new scanner.)
 # last_updated: 2026-07-24 (story 8-9 review -> done via bmad-code-review. Three parallel layers (Blind
 #   Hunter, Edge Case Hunter, Acceptance Auditor) ran against the ~2,490-line diff; every non-trivial claim
 #   was verified against the actual source/DB before acting on it, which caught the review's own overclaim:
@@ -671,7 +730,7 @@ development_status:
   8-7-contribution-note-pdf-never-receipt-legal-reviewed-watermark-niyamavali-version: done
   8-8-contribution-loop-notification-triggers: done
   8-9-calendar-aware-close-of-cycle-timing: done
-  8-10-out-of-band-contribution-policy: backlog
+  8-10-out-of-band-contribution-policy: done
   8-11-call-helpline-cta-cross-cutting-affordance: backlog
   8-12-90-second-twt-portion-loop-measurement-instrumentation: backlog
   8-13-nominee-vpa-claim-time-collection-resolver-wiring-upi-intent-re-enable: done

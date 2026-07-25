@@ -29,6 +29,7 @@ import { registerLifeEventsModule } from './modules/life-events/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
+import { registerNomineeConsoleModule } from './modules/nominee-console/index.js';
 import { registerPaymentModule } from './modules/payment/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
@@ -154,6 +155,11 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Member-session-gated; NO write path / event / schema change.
   registerMemberHomeModule(app, deps);
   registerMemberPoolModule(app, deps);
+  // Story 9.1 — the FIRST Epic-9 SURFACE: the Nominee Console read (GET /member/nominee-console). Resolves
+  // the validated-nominee-with-active-pool gate (extending the Ravi-mode session-as-deceased identity) +
+  // the server-computed staff-takeover-by-day-N verdict. Member-session-gated; NO write path / event /
+  // schema change. Composes the built 8.3/8.11 surfaces client-side; the 9.3 upload + 9.6 pill are seams.
+  registerNomineeConsoleModule(app, deps);
   // Story 8.4 — the FIRST Epic-8 WRITE surface: pool-contribution UPI Intent + UTR self-attestation
   // (POST /member/contribution/{intent,attest}). The architecture's reserved modules/payment/ for Epic-8's
   // contribution (member→nominee) dispatch; reuses the member-pool read seam. Member-session-gated. Emits

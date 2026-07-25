@@ -20,6 +20,7 @@ import {
   MemberLockInStatusResponse,
   ActiveContributionCardResponse,
   PoolContributorListResponse,
+  NomineeConsoleResponse,
   ContributionIntentResponse,
   ContributionAttestResponse,
   ContributionFailureReportRequest,
@@ -67,6 +68,7 @@ import {
   type MemberLockInStatusResponse as MemberLockInStatusResult,
   type ActiveContributionCardResponse as ActiveContributionCardResult,
   type PoolContributorListResponse as PoolContributorListResult,
+  type NomineeConsoleResponse as NomineeConsoleResult,
   ContributionHistoryResponse,
   type ContributionHistoryResponse as ContributionHistoryResult,
   type ContributionIntentRequest,
@@ -528,6 +530,25 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return call(
         `${MEMBER_HOME_BASE}/pool-contributors`,
         PoolContributorListResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    // ── Nominee Console (Story 9.1 — the FIRST Epic-9 surface: the gate + pool identity + takeover verdict) ─
+    /**
+     * Read the server-authoritative Nominee Console model — Sunita's `<NomineeConsole>` surface. Returns the
+     * fully-resolved console (pool identity + the staff-takeover-by-day-N verdict + poolOpen/lastUpdated
+     * timestamps) ONLY for a validated nominee with an ACTIVE (`live`) pool; `{ isNominee: false }` for every
+     * other case (the console self-suppresses to null). Server-authoritative — the client resolves nothing
+     * about nominee-hood or takeover eligibility. The confirmed-contributor rows are read SEPARATELY via
+     * `memberPoolContributors` (the composed 8.3 surface), never duplicated here (auth).
+     */
+    memberNomineeConsole(): Promise<NomineeConsoleResult> {
+      return call(
+        `${MEMBER_HOME_BASE}/nominee-console`,
+        NomineeConsoleResponse,
         undefined,
         true,
         'GET',

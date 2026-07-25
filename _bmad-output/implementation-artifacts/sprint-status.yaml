@@ -1,4 +1,53 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-25 (story 9-1 review -> done via bmad-code-review, 3-layer parallel review (Blind
+#   Hunter, Edge Case Hunter, Acceptance Auditor). Independently re-verified the DB-free portion of the
+#   story's own "green" ledger claim (microcopy gate + 66 nominee-console unit tests, all green) before
+#   triaging findings. 3 decision-needed items resolved by BigDev — all deferred: (1) <PoolContributorList>
+#   composes the member's OWN pool, not the nominee's death-linked pool (AC1(c)) — defer to 9.2/9.4/9.5;
+#   (2) UX-DR50 resume state is write-only (nothing reads introAcknowledged/lastVisitedIso) — defer as
+#   forward scaffolding for the unbuilt 9.3 multi-step flow; (3) the tone-review gate "wired" scope-table
+#   claim actually defers runtime wiring to a later Epic-9 story — matches existing table precedent, defer.
+#   8 patches applied + verified (typecheck/lint/tests green across domain/api/mobile/i18n): missing
+#   `(nominee)` route registration (root Stack), <PoolContributorList>'s FlashList nested inside the
+#   console's own ScrollView ([[project_fabric_flatlist_empty_populated_crash]] class), `openScopeTx`
+#   called outside the handler's try/catch (escaped the documented fail-soft "never a 500" contract),
+#   silent multi-live-pool drop with no log, `formatLastUpdated` using device-local time instead of fixed
+#   IST, missing NaN/Invalid-Date guard in `computeStaffTakeover`, the periodic fursat-review "not left as
+#   prose" AC2 requirement delivered as prose, missing `accessibilityHint` on the new static regions. 1
+#   patch finding corrected on verification (not applied): the "threshold not validated at config load"
+#   claim was a false positive — `intEnv` already throws at boot on a bad `NOMINEE_TAKEOVER_THRESHOLD_DAYS`.
+#   4 additional findings deferred as pre-existing/low-risk (fail-soft masks errors with no alerting hook;
+#   `resolvePoolOpenAt`'s duplicate-event tie-break untested; the DB-gated domain/api suite counts remain
+#   self-reported/unverified by this review; AC1(b) "across pools" is structurally single-pool). All
+#   deferred items logged to deferred-work.md under a dedicated 9-1 heading. Status -> done.)
+# last_updated: 2026-07-25 (story 9-1 in-progress -> review via bmad-dev-story. Nominee Console shell DONE:
+#   fursat-pressure microcopy tone rule (green-with-teeth) + staff-takeover-by-day-N pure derivation (config
+#   default 7, clock-from-pool-open, 9.8-flag + 9.3-writer reserved seams) + <NomineeConsole> shell composing
+#   built 8.3/8.11 with first-class {available:false} seams for 9.3/9.6 + server gate GET /member/nominee-console
+#   extending the Ravi-mode session identity + UX-DR50 save-and-resume (MMKV) + a11y + Hindi-first grief copy.
+#   ci:local static gates green + DB-gated domain(1578)/api(640) suites green. Open risk A-grief-fursat-cadence
+#   (pending-interview) surfaced, not treated as confirmed.)
+# last_updated: 2026-07-25 (story 9-1 ready-for-dev -> in-progress via bmad-dev-story. Nominee Console shell:
+#   fursat tone-invariant + staff-takeover-by-day-N pure derivation + console shell composing 8.3/8.11 with
+#   first-class {available:false} seams for 9.3 upload + 9.6 StatusPill. baseline 4cd150b.)
+# last_updated: 2026-07-25 (story 9-1 backlog -> ready-for-dev via bmad-create-story. FIRST epic-9 story ⇒
+#   epic-9 backlog -> in-progress (this story). Nominee Console — Sunita's Surface + "fursat" Cadence +
+#   Staff-Takeover by Day N [SURFACE]. FIRST-IN-EPIC SHELL: composes the ALREADY-BUILT 8.3 PoolContributorList
+#   (confirmed contributors-so-far, honestly-empty until 9.5) + 8.11 CallHelplineCTA, and leaves FIRST-CLASS
+#   {available:false} SEAMS for the unbuilt-and-later-numbered 9.3 <BankStatementUpload> (upload queue) + 9.6
+#   <StatusPill> 5-state (per-pool reconciliation status) — mirrors the [[project_nominee_vpa_deferred_seam]]
+#   absent-resolver pattern. THREE load-bearing NEW deliverables owned here: (1) the "fursat" operational-
+#   posture INVARIANT — mechanized as a new microcopy.yaml `tone:` label (fursat-pressure: gamification/
+#   streaks/badges/completion-% + "you're behind" urgency + pre-threshold auto-escalation) scoped to the new
+#   nominee-console copy globs, proven with a teeth fixture ([[feedback_gate_scope_semantic_coverage]]) +
+#   tone-guide documentation + Story 2.2 tone-review gate; (2) the STAFF-TAKEOVER-BY-DAY-N derivation — a PURE
+#   fn(effectiveLastEngagedAt = last_engaged_at ?? pool_open_at, threshold=default-7-configurable, now) ->
+#   takeover-eligible, the day-N clock running from pool-open when no engagement writer exists yet (correct for
+#   a fully-disengaged nominee); the engagement-heartbeat WRITER (reset-on-upload) is a 9.3 seam, the admin
+#   upload-completion surface a 9.3/9.8 seam; (3) the console shell/route in apps/mobile + save-and-resume
+#   (UX-DR50) + accessibility (0.10) + grief copy validated vs 0.9. Carries the mismatch-name teeth handoff
+#   [[project_contribution_event_name_contract]] forward to 9.4/9.5. SEQUENCING TENSION flagged for BigDev:
+#   9.1 references 9.3/9.6 which are later-numbered — build-order question saved in the story.)
 # last_updated: 2026-07-25 (AI-8-3 review→done via bmad-code-review, 3-layer parallel review (Blind Hunter,
 #   Edge Case Hunter, Acceptance Auditor). Not a development_status key (retro action item; tracks in this
 #   ledger + the standalone story file). FOUND + FIXED the highest-severity gap: `resolveConfig` was aliased
@@ -989,8 +1038,8 @@ development_status:
   # ==========================================================================
   # Epic 9: Reconciliation Engine
   # ==========================================================================
-  epic-9: backlog
-  9-1-nominee-console-sunitas-surface-fursat-cadence-staff-takeover-by-day-n: backlog
+  epic-9: in-progress
+  9-1-nominee-console-sunitas-surface-fursat-cadence-staff-takeover-by-day-n: done
   9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema: backlog
   9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: backlog
   9-4-utr-matching-engine-matcher-mechanism: backlog

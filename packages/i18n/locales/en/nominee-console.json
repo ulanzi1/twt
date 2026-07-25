@@ -1,0 +1,22 @@
+{
+  "title": "Your family's support",
+  "intro": "Take your time here. Look whenever you feel ready — there is no hurry, and nothing here is due.",
+  "pool_label": "Support pool {code}",
+  "last_updated": "Last updated {time}",
+  "last_updated_a11y": "This page was last refreshed at {time}",
+  "contributors_heading": "People who have helped so far",
+  "upload_slot.title": "Reading your bank statement",
+  "upload_slot.body": "Soon you will be able to share your bank statement here, and we will read it for you. This part is being prepared.",
+  "upload_slot.a11y": "Bank statement sharing — being prepared, not yet available",
+  "upload_slot.hint": "This section will become available in a future update.",
+  "status_slot.title": "Where each pool stands",
+  "status_slot.body": "A clear view of each pool's progress is being prepared. For now, the people who have helped are listed below.",
+  "status_slot.a11y": "Per-pool status view — being prepared, not yet available",
+  "status_slot.hint": "This section will become available in a future update.",
+  "takeover.title": "We are helping with today's work",
+  "takeover.body": "Someone from our team is looking after today's reconciliation for you, so nothing waits on you. Whenever you feel ready to return, everything will be here.",
+  "takeover.a11y": "Our team is currently helping with the reconciliation on your behalf",
+  "takeover.hint": "No action is needed from you.",
+  "helpline_intro": "If anything looks unfamiliar, we are here.",
+  "loading_a11y": "Loading your support space"
+}

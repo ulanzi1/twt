@@ -20,6 +20,7 @@ import enCloseOfCycle from '../locales/en/close-of-cycle.json';
 import enCommon from '../locales/en/common.json';
 import enContribution from '../locales/en/contribution.json';
 import enNiyamavali from '../locales/en/niyamavali.json';
+import enNomineeConsole from '../locales/en/nominee-console.json';
 import enPoolOnboarding from '../locales/en/pool-onboarding.json';
 import enTerms from '../locales/en/terms.json';
 import hiClaim from '../locales/hi/claim.json';
@@ -27,6 +28,7 @@ import hiCloseOfCycle from '../locales/hi/close-of-cycle.json';
 import hiCommon from '../locales/hi/common.json';
 import hiContribution from '../locales/hi/contribution.json';
 import hiNiyamavali from '../locales/hi/niyamavali.json';
+import hiNomineeConsole from '../locales/hi/nominee-console.json';
 import hiPoolOnboarding from '../locales/hi/pool-onboarding.json';
 import hiTerms from '../locales/hi/terms.json';
 
@@ -36,12 +38,12 @@ import type { Locale } from './locale.js';
 export type Catalog = Record<string, string>;
 
 const catalogs: Record<Locale, Record<string, Catalog>> = {
-  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms, claim: enClaim, contribution: enContribution, 'close-of-cycle': enCloseOfCycle, 'pool-onboarding': enPoolOnboarding },
-  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms, claim: hiClaim, contribution: hiContribution, 'close-of-cycle': hiCloseOfCycle, 'pool-onboarding': hiPoolOnboarding },
+  en: { common: enCommon, niyamavali: enNiyamavali, terms: enTerms, claim: enClaim, contribution: enContribution, 'close-of-cycle': enCloseOfCycle, 'pool-onboarding': enPoolOnboarding, 'nominee-console': enNomineeConsole },
+  hi: { common: hiCommon, niyamavali: hiNiyamavali, terms: hiTerms, claim: hiClaim, contribution: hiContribution, 'close-of-cycle': hiCloseOfCycle, 'pool-onboarding': hiPoolOnboarding, 'nominee-console': hiNomineeConsole },
 };
 
 /** The domain (namespace) names that have at least one locale catalog. */
-export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms', 'claim', 'contribution', 'close-of-cycle', 'pool-onboarding'];
+export const KNOWN_NAMESPACES: readonly string[] = ['common', 'niyamavali', 'terms', 'claim', 'contribution', 'close-of-cycle', 'pool-onboarding', 'nominee-console'];
 
 /** Look up a `{locale}/{namespace}` catalog, or `undefined` if it is not registered. */
 export function getCatalog(locale: Locale, namespace: string): Catalog | undefined {

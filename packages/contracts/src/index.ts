@@ -123,6 +123,12 @@ export * from './pools/index.js';
 // A member-session-gated read route → registers in openapi/v1.yaml like the member-home lock-in read.
 export * from './contributions/index.js';
 
+// Story 9.1 — the FIRST Epic-9 surface: the Nominee Console READ-MODEL response shape
+// (NomineeConsoleResponse). A member-session-gated read (`/api/v1/member/nominee-console`) that resolves
+// the validated-nominee gate + pool identity + the server-computed staff-takeover verdict. Presentation
+// only — NO statement/matcher/pill data (those land 9.2/9.4/9.6). Member-read openapi posture (no `.openapi()`).
+export * from './nominee-console/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

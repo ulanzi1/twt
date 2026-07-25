@@ -67,6 +67,15 @@
       genuine, recoverable mistake and stays framed as one; the gift must not inherit that
       frame, nor the recovery copy the honouring frame. Policy of record:
       [`docs/policies/out-of-band-contributions.md`](./policies/out-of-band-contributions.md).
+- [ ] **No "fursat"-pressure framing on the Nominee Console** (Story 9.1) — the console copy
+      carries **no gamification** (streaks / badges / achievements / points / leaderboards /
+      *"N% complete"*), **no urgency or falling-behind** framing (*"you're behind," "act now,"
+      "hurry up," "don't delay," आप पीछे हैं, जल्दी कीजिए*), and **no pre-threshold escalation
+      pressure** (*"last chance," "final reminder"* before the staff-takeover threshold) —
+      *including* the paraphrased variants the lint cannot pattern-match. Confirm the reassuring
+      negations (*"there is no hurry" / "कोई जल्दी नहीं है"*) read as reassurance, and that any
+      optimization is friction-reducing (less typing / better OCR / save-and-resume / prefilling),
+      **never** throughput-over-pace. Automatable subset: the `fursat-pressure` tone rule.
 
 ### 4. Grief-context gate · ([guide §4](./tone-guide.md#4-grief-context-modulation))
 
@@ -105,6 +114,7 @@ publish):
 | **Close-of-cycle framing** (Panchayat Noticeboard pinned notice + Sahyog Vivran per-claim page; the FR-19 celebration copy, `close-of-cycle` i18n namespace) | the consumer surface's own review permission (added by **Epic 8** / **Epic 11b** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (Epic 8 Noticeboard / Epic 11b Sahyog Vivran) |
 | **Pool-onboarding tutorial Screen 3** (the UX-DR76 out-of-band framing; `pool-onboarding` i18n namespace, en + hi) | the consumer surface's own review permission (added by **Epic 7** / **Epic 8** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (Story 7.10 tutorial; copy re-authored by Story 8.10) |
 | **Helpline out-of-band script** (operator-voiced member-register copy; `contribution` i18n namespace `out_of_band.helpline.*`, en + hi) | the consumer surface's own review permission (added by **Epic 10** when the helpdesk console lands — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (**Epic 10** helpdesk console; text authored by Story 8.10) |
+| **Nominee Console copy** (Sunita's reconciliation surface; the *fursat* register; `nominee-console` i18n namespace, en + hi) | the consumer surface's own review permission (added by **Epic 9** — no generic `copy.review` key is manufactured, per the Story 2.2 posture) | its owning consumer story (**Story 9.1** shell; later Epic-9 stories that add console copy) |
 
 > **Close-of-cycle note (Story 7.8).** The `close-of-cycle` templates carry the FR-19
 > celebration framing that must **never** surface a comparison-to-target / shortfall
@@ -132,6 +142,39 @@ publish):
 > Because these conversations happen after a colleague's death, the
 > [§4 grief-context gate](#4-grief-context-gate) also applies. Stances of record:
 > [`docs/policies/out-of-band-contributions.md`](./policies/out-of-band-contributions.md).
+
+> **Nominee Console note (Story 9.1).** The `nominee-console` copy carries the **"fursat"
+> cadence** invariant — the **fursat-pressure** prohibited frame already listed in
+> [§3 Prohibited frames](#3-prohibited-frames) (do not restate it here). Console copy must pass
+> tone review **before any change ships**. The automated floor is the Story 1.17 `microcopy`
+> gate's `fursat-pressure` rule, scoped over the `nominee-console` locale files (Story 9.1); this
+> human review owns the paraphrased variants the lint cannot reach (a subtly gamified *"keep it
+> up!"*, an implicit throughput-over-pace optimization). Because the console is a grief-context
+> surface (a bereaved nominee mid-reconciliation), the [§4 grief-context gate](#4-grief-context-gate)
+> also applies. The runtime sign-off enforcement is wired by the consuming Epic-9 story via the
+> existing Story 2.2 `evaluateToneReviewGate` mechanism — as Story 2.4 did for the Niyamavali.
+
+### Periodic fursat review (Nominee Console)
+
+**Standing item (Story 9.1, AC2).** Beyond the per-change publish gate above, the Nominee
+Console's copy **and** its interaction patterns are revisited for *fursat* preservation **at
+least once per release cycle**, with **designer sign-off**. This is a proactive audit (not
+triggered by a copy change) that asks: has any accumulated optimization drifted the console
+toward throughput-over-pace, or introduced a subtly gamified / urgency affordance the
+per-change review did not catch in isolation? The permitted friction-reducers (less typing,
+better OCR, save-and-resume, field prefilling) are in scope as *good* changes to confirm are
+still friction-reducing, not rushing.
+
+- [ ] **Next periodic fursat review due:** before the following release cycle ships (first due
+      date to be set when Epic 9's release-cycle cadence is fixed).
+
+**Periodic review log** (Review fix, Story 9.1 — the tracked entry the standing item requires;
+the paragraph above is no longer the sole record). One row per review — do not delete prior
+rows:
+
+| Date | Reviewer (non-author) | Designer sign-off | Outcome |
+|---|---|---|---|
+| _(none yet — first review pending)_ | — | — | — |
 
 **Who may review.** A **non-author** holding the surface's review permission. For the
 Niyamavali clause this is the already-seeded **`niyamavali.review`** key — Story 2.2 does

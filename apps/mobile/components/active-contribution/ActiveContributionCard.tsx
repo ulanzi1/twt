@@ -28,10 +28,12 @@
 
 import { useLocale, useT } from '@twt/i18n/react'
 import { useRouter } from 'expo-router'
+import { useEffect } from 'react'
 import { StyleSheet } from 'react-native'
 import { Button, Paragraph, Text, View, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../common/CallHelplineCTA'
+import { markCtaTap, markLoopPhase } from '../../lib/loop-timing-session'
 import { cycleDayFromDaysRemaining, selectToneGradientKey } from './toneGradient'
 import { useActiveContributionQuery } from './useActiveContributionQuery'
 
@@ -64,6 +66,15 @@ export function ActiveContributionCard() {
   const { data } = useActiveContributionQuery()
   const router = useRouter()
 
+  // Story 8.12 — the `card_render` mark for the 90-second-loop measurement (AC1). Fires exactly ONCE per
+  // session, only when the assigned live pool paints (dep is `data?.assigned` + `once` — never on the
+  // loading/suppressed states, never on a re-render of the resolved data). Debug-gated → inert in prod.
+  useEffect(() => {
+    if (data?.assigned) {
+      markLoopPhase('card_render', { once: true })
+    }
+  }, [data?.assigned])
+
   // Self-suppress on absence / loading / error (AC1). Fail-soft — render nothing, leave the home below.
   if (!data || !data.assigned) {
     return null
@@ -91,6 +102,11 @@ export function ActiveContributionCard() {
       : 0
 
   function onContribute(): void {
+    // Story 8.12 — the `cta_tap` mark (AC1): the member decided to pay. Segment (b) = intent_fire − cta_tap
+    // starts here (the /pay nav + intent fetch is inside the TWT-portion). Debug-gated → inert in prod.
+    // markCtaTap (not the generic markLoopPhase) re-arms a stale session on a genuine retry and ignores a
+    // rapid double-press of the same attempt (Review finding, 2026-07-25 code review).
+    markCtaTap()
     // Story 8.4 — open the UPI Intent contribution flow (server-authoritative upi://pay build + UTR
     // self-attestation → the yellow pill). The pay route owns the <UPIIntentButton> + UTR paste + the
     // no-VPA/failure fail-soft states.

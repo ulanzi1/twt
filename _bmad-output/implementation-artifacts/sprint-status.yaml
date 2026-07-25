@@ -1,4 +1,46 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-25 (story 8-12 review -> done via bmad-code-review. Three parallel review layers
+#   (Blind Hunter/diff-only, Edge Case Hunter/full-repo-read, Acceptance Auditor/spec-verified) against the
+#   uncommitted diff (~1668 lines incl. 11 new files) — 19 triaged findings: 3 decision-needed (all resolved
+#   by BigDev: markCtaTap() re-arms app_open/card_render on a genuine retry + ignores a same-attempt
+#   double-press; markUpiReturn noise-transition + field-run build-divergence both documented as accepted
+#   measurement limitations in the validation doc §2), 7 patch (all applied: the markCtaTap fix doubles as
+#   the cta_tap once-guard fix; ≥10-sample floor now enforced in aggregateLoopSessions; CLI entrypoint
+#   error-handled; the pay.tsx AppState subscription itself now gated behind loopTimingEnabled(); the
+#   duplicated utr_confirm call sites extracted into markAttestedAndRefresh(); loop-timing.test.ts now
+#   walks all 6 adjacent-mark out-of-order pairs; this ledger's own prior entry corrected from a fabricated
+#   ready-for-dev step to the actual backlog->review transition), 4 defer (pre-existing/low-severity —
+#   see deferred-work.md), 5 dismissed as noise. 6 new/updated test files, all green; typecheck + lint
+#   clean on apps/mobile + apps/jobs. Status -> done.)
+# last_updated: 2026-07-25 (story 8-12 backlog -> review via bmad-dev-story — no separate ready-for-dev
+#   ledger step was recorded for this story (review finding, 2026-07-25 code review) —
+#   90-Second TWT-Portion Loop Measurement Instrumentation [GOVERNANCE], SM-1 demo beat B21. OBSERVES the
+#   already-shipped 8.2→8.4→8.13 loop; changes it in ZERO ways (no member-facing friction, no behavior
+#   change, no PII, no measurable hot-path latency — a mark is a performance.now() read). Seven tasks:
+#   (1) PURE per-session breakdown apps/mobile/lib/loop-timing.ts — the mark vocabulary (app_open,
+#   card_render, cta_tap, intent_fire, upi_return, utr_confirm, yellow_pill) + computeLoopBreakdown deriving
+#   the THREE DISJOINT buckets: TWT-portion = (a app_open→card_render) + (b cta_tap→intent_fire) +
+#   (c-ui upi_return→utr_confirm) + (d utr_confirm→yellow_pill); the UPI-app round-trip (intent_fire→
+#   upi_return) captured SEPARATELY + EXCLUDED; member think-time (card_render→cta_tap) its OWN third
+#   bucket (never folded in — the total−round-trip trap); complete gate = all 7 marks present + monotonic,
+#   else excluded (null never NaN). (2) MMKV debug-gated store loop-timing-store.ts (namespace twt-loop-90s;
+#   record/list/clear/exportJson; __DEV__||EXPO_PUBLIC_LOOP_TIMING gate; ZERO PII — numeric durations only)
+#   + in-flight orchestrator loop-timing-session.ts (mark-once app_open/card_render, markUpiReturn only-
+#   first-after-intent_fire, finalize→record→reset) + a debug-only inspection/Share-JSON screen. (3) Four
+#   boundary marks wired additively into _layout.tsx (app_open) / ActiveContributionCard.tsx (card_render,
+#   cta_tap) / UPIIntentButton.tsx (intent_fire) / (contribution)/pay.tsx (the FIRST scoped AppState
+#   listener → upi_return; utr_confirm; yellow_pill; finalize) — NOT a focusManager refetch bridge (D2).
+#   (4) OFF-device p95 aggregation apps/jobs/tests/loop-90s-aggregate.ts reusing @twt/measured-validation
+#   percentile() (floor-indexed nearest-rank; NOT the measureP95/runPool synthetic driver — no op to pool)
+#   — mobile never imports the pg-touching package (bundle boundary D3). (5) Validation artifact scaffold
+#   _bmad-output/research/contribution-loop-90s-validation.md (protocol + mark/segment defs + p95 method +
+#   ≥10-session table all _PENDING-MEASUREMENT_ + verdict _PENDING-FIELD-RUN_) — the ≥10-session field run
+#   is a LAUNCH GATE (owner BigDev, before Phase-1) carried un-attested-pending, NEVER fabricated. (6)
+#   launch-gate roster Row 16 sm1-90s-twt-portion-loop-measurement (open; first-ever append below Row 15;
+#   architecture_source_line N/A epics-authored) + Decision 2026-07-25-068. (7) friction-budget 8.12
+#   disposition (no new row, no ratchet) + this ledger flip. New tests: loop-timing (8) + loop-timing-store
+#   (7) + loop-timing-session (5) + loop-90s-aggregate (6). Merge gate: pnpm ci:local PASSED — 28 jobs green
+#   incl. integration-tests on :5433.)
 # last_updated: 2026-07-25 (story 8-11 review -> done via bmad-code-review. Three parallel review
 #   layers (Blind Hunter/diff-only, Edge Case Hunter/full-repo-read, Acceptance Auditor/spec-verified)
 #   against the full uncommitted diff (699 lines incl. 3 new files) — 21 raw findings triaged to 4
@@ -795,7 +837,7 @@ development_status:
   8-9-calendar-aware-close-of-cycle-timing: done
   8-10-out-of-band-contribution-policy: done
   8-11-call-helpline-cta-cross-cutting-affordance: done
-  8-12-90-second-twt-portion-loop-measurement-instrumentation: backlog
+  8-12-90-second-twt-portion-loop-measurement-instrumentation: done
   8-13-nominee-vpa-claim-time-collection-resolver-wiring-upi-intent-re-enable: done
   epic-8-retrospective: optional
 

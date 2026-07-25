@@ -9,6 +9,8 @@ import { useT } from '@twt/i18n/react'
 import { Linking } from 'react-native'
 import { Button } from 'tamagui'
 
+import { markLoopPhase } from '../../lib/loop-timing-session'
+
 const NS = { namespace: 'contribution' } as const
 
 export interface UPIIntentButtonProps {
@@ -46,6 +48,9 @@ export function UPIIntentButton({
     }
     try {
       await Linking.openURL(upiUrl)
+      // Story 8.12 — the `intent_fire` mark (AC1): the last TWT-controlled instant before the UPI app takes
+      // over. Segment (b) ends here; the EXCLUDED round-trip starts here. Debug-gated → inert in prod.
+      markLoopPhase('intent_fire')
       onLaunched()
     } catch {
       // canOpenURL said yes but the open itself failed — a genuine launch error, never silently relabeled

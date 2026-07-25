@@ -25,14 +25,16 @@ import { ContributionUtr } from '@twt/contracts'
 import { useT } from '@twt/i18n/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { ScrollView } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { AppState, ScrollView } from 'react-native'
 import { Button, H2, Input, Paragraph, Spinner, Text, View, YStack } from 'tamagui'
 
 import { UPIIntentButton } from '../../components/active-contribution/UPIIntentButton'
 import { UpiFailureCoach } from '../../components/active-contribution/UpiFailureCoach'
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
 import { memberAuth } from '../../lib/member-api'
+import { finalizeLoopSession, markLoopPhase, markUpiReturn } from '../../lib/loop-timing-session'
+import { loopTimingEnabled } from '../../lib/loop-timing-store'
 
 const NS = { namespace: 'contribution' } as const
 
@@ -107,6 +109,37 @@ export default function ContributionPayScreen() {
     }
   }, [retryCount])
 
+  // Story 8.12 — the FIRST scoped AppState listener in the app (D2): timestamps the background→active
+  // return from the UPI app as `upi_return` (AC1). markUpiReturn stamps ONLY the first transition AFTER
+  // intent_fire, so a pre-launch alt-tab or a later resume is ignored. Scoped to + cleaned up by this
+  // screen. This is NOT a focusManager refetch bridge (usePoolContributorsQuery.ts:18 keeps that un-wired);
+  // it only reads a clock. The subscription itself (not just markUpiReturn) is debug-gated — a production
+  // build never registers the listener at all (Review finding, 2026-07-25: "zero measurable hot-path
+  // latency" must hold for the subscription/teardown too, not just the mark call).
+  const appStateRef = useRef(AppState.currentState)
+  useEffect(() => {
+    if (!loopTimingEnabled()) return
+    const sub = AppState.addEventListener('change', (next) => {
+      const wasBackground = appStateRef.current === 'background' || appStateRef.current === 'inactive'
+      if (wasBackground && next === 'active') {
+        markUpiReturn()
+      }
+      appStateRef.current = next
+    })
+    return () => sub.remove()
+  }, [])
+
+  // Story 8.12 — the `yellow_pill` mark + loop finalize (AC1). Fires when the attested confirmation renders
+  // (via onConfirm, the already-attested mount shortcut, or an attested switch-account). An incomplete
+  // already-attested-shortcut session (no cta_tap / utr_confirm) is recorded but excluded by the `complete`
+  // gate (D1a). Debug-gated → inert in production.
+  useEffect(() => {
+    if (attested) {
+      markLoopPhase('yellow_pill')
+      finalizeLoopSession()
+    }
+  }, [attested])
+
   const utrValid = ContributionUtr.safeParse(utr.trim()).success
 
   /** FR-27 "Switch account" (Story 8.13): re-request the intent for the OTHER nominee account. The
@@ -146,15 +179,24 @@ export default function ContributionPayScreen() {
     }
   }
 
+  // Story 8.12 — the `utr_confirm` mark (AC1) + post-attest bookkeeping, shared by the main attest call
+  // and the stale-pool retry branch (Review finding, 2026-07-25: the two call sites had drifted into
+  // hand-duplicated copies of the same three steps — a single helper means a future edit can't miss one).
+  // Segment (c-ui) ends at `utr_confirm`; segment (d) = yellow_pill − utr_confirm follows.
+  async function markAttestedAndRefresh(): Promise<void> {
+    markLoopPhase('utr_confirm')
+    setAttested(true)
+    // Refresh the My Pool card so its yellow pill renders on return (AC4).
+    await queryClient.invalidateQueries({ queryKey: ['member', 'active-contribution'] })
+  }
+
   async function onConfirm(): Promise<void> {
     if (!intent || !intent.available || !utrValid) return
     setBusy(true)
     setError(null)
     try {
       await memberAuth.memberContributionAttest({ tr: intent.tr, utr: utr.trim() })
-      setAttested(true)
-      // Refresh the My Pool card so its yellow pill renders on return (AC4).
-      await queryClient.invalidateQueries({ queryKey: ['member', 'active-contribution'] })
+      await markAttestedAndRefresh()
     } catch (e) {
       console.error('[pay] attest failed', e)
       if (isStalePoolError(e)) {
@@ -165,8 +207,7 @@ export default function ContributionPayScreen() {
           if (fresh.available) {
             setIntent(fresh)
             await memberAuth.memberContributionAttest({ tr: fresh.tr, utr: utr.trim() })
-            setAttested(true)
-            await queryClient.invalidateQueries({ queryKey: ['member', 'active-contribution'] })
+            await markAttestedAndRefresh()
             return
           }
           setError(t('upi_intent.pool_changed_error', undefined, NS))

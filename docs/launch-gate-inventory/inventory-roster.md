@@ -233,3 +233,23 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** `<TO-BE-AUTHORED-ON-ELEVATION>`
 - **notes:** Reserved slot for post-author-commit conditional-escalation elevation (e.g., new architecture §Gap Analysis observation surfacing during Phase-0 monthly reviews + architecture amendment per ADR + Trustee Panel ratification of elevation). Per append-only discipline, additional reserved slots (Row 16+) append below this row if a sixteenth conditional-escalation candidate elevates before Phase 1 launch.
+
+---
+
+## Row 16 — Story-15-supersession append (epics/PRD-authored SM-1 measurement gate)
+
+> **First row ever appended below Row 15.** Not an architecture-verbatim Row 1-11; an epics/PRD-authored SM-1 measurement gate registered per the append-below-Row-15 / Story-15-supersession convention (Row 15 notes + Lifecycle discipline §9). Per [[feedback_architecture_vs_prd_boundary]] the `architecture_source_line` is `N/A` and the source is cited to epics.md.
+
+### Row 16 — `sm1-90s-twt-portion-loop-measurement`
+
+- **gate_name:** SM-1 B21 90-second-loop TWT-portion measurement
+- **architecture_source_line:** N/A — PRD/epics-authored (epics.md:3055-3076; SM-1 B21 "Measurement fence" epics.md:2853); not an architecture-verbatim row
+- **owner:** BigDev
+- **support:** N/A
+- **closure_criteria:** Substantive: **p95 TWT-portion ≤ 60s** across **≥ 10** canonical-device sessions (3GB-class mid-range Android per architecture.md:34 / Story 0.14 P0-5 roster Device 1) under **throttled cellular** with **cold cache**, **AND** total observed loop ≤ 90s (UPI-app round-trip included), recorded in `_bmad-output/research/contribution-loop-90s-validation.md` (§5 results table populated — no `_PENDING-MEASUREMENT_` cells — + §7 verdict = PASS). Testable signal: the validation doc's §5 aggregates + §7 verdict are substantively populated; the exported raw `sessions.json` is archived per §6; p95 computed by `apps/jobs/tests/loop-90s-aggregate.ts` (the shared `@twt/measured-validation` floor-indexed nearest-rank convention).
+- **target_date:** before Phase-1 launch (relative-to-fact: the SM-1 demo / Phase-1 transition gate per AR-49; the field run is scheduled ahead of the Phase-1 readiness review).
+- **current_status:** `open` — the measurement **instrument** shipped in Story 8.12 (on-device timing harness + off-device p95 aggregation, both unit-tested); the ≥ 10-session **field run** is pending (owner BigDev), so the row is `open`, not `closed`.
+- **closure_evidence_link:** `_bmad-output/research/contribution-loop-90s-validation.md` (the scaffolded validation artifact — protocol + mark/segment definitions + the p95 method + the `_PENDING-*` results/verdict) + [Decision 2026-07-25-068](../../.decision-log.md#decision-2026-07-25-068) (Story 8.12 author-commit: instrument landed + this row added). NOTE (mirrors Row 13's `closed`-ready-PENDING pattern): this link records the **instrument-landed** seam; the `closed` flip itself remains gated on the operator-run ≥ 10-session field run landing **PASS** in the validation doc — the p95 number is carried **un-attested**, never back-filled/faked ([[feedback_record_unattested_no_backfill]]).
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** **Story-discharged (instrument leg) by Story 8.12** — the on-device capture harness (`apps/mobile/lib/loop-timing*.ts` + the four boundary marks), the off-device aggregation (`apps/jobs/tests/loop-90s-aggregate.ts`), the validation-doc scaffold, and this row + Decision 2026-07-25-068 are committed. Remaining discharge depends on (a) the operator-run ≥ 10-session field run → **PASS** → row flips to `closed` w/ evidence-link to the populated validation doc, OR **FAIL** (p95 TWT-portion > 60s) → remediation before Phase-1 launch (segment (b) offender ⇒ 8.13 KMS-on-hot-path per the doc §3/D5) then re-measure; OR (b) Phase 1 launch with the field run not yet executed → Trustee Panel disposition `accepted-risk` / `deferred-per-named-criteria`.
+- **notes:** Epics/PRD-authored SM-1 measurement gate appended per the Story-15-supersession convention (Row 15 notes anticipate "additional reserved slots (Row 16+) append below this row") — **not** an architecture-verbatim Row 1-11, so `architecture_source_line: N/A` and the source is cited to epics.md per [[feedback_architecture_vs_prd_boundary]]. Story 8.12 is `[GOVERNANCE]`: it observes the already-shipped 8.2→8.4→8.13 loop, adds ZERO member-facing friction / behavior change / PII / hot-path latency. The instrument's TWT-portion excludes the member's UPI-app round-trip (outside TWT's control) and reports member think-time as its own bucket, so the ≤ 60s budget is judged only on TWT-controlled work.

@@ -93,6 +93,7 @@ import {
   enqueueContributionNotifyCycleOpen,
   registerContributionNotifyWorkers,
 } from './scheduler/contribution-notify-triggers.js';
+import { buildContributionProviderResolver } from './scheduler/contribution-providers.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
@@ -252,6 +253,10 @@ async function main(): Promise<void> {
 
   let shuttingDown = false;
   let ready = false;
+  // AI-8-3 — the contribution-loop provider registry teardown (the per-Pariwar Firebase App cache holds the
+  // only channel-client resources; the fetch-based WA/Telegram/SMS clients hold nothing). Assigned once the
+  // wiring is built inside the startup try-block; drained on SIGTERM alongside pool.end().
+  let contributionProvidersTeardown: (() => Promise<void>) | null = null;
 
   // Health-check endpoint (architecture §5.9): 200 once started and not draining,
   // 503 otherwise. A container restart key + load-balancer readiness probe.
@@ -281,6 +286,9 @@ async function main(): Promise<void> {
       process.exitCode = 1;
     }
     await new Promise<void>((resolve) => healthServer.close(() => resolve()));
+    if (contributionProvidersTeardown) {
+      await contributionProvidersTeardown().catch((err: unknown) => logError('channel-providers-teardown', err));
+    }
     await pool.end().catch((err: unknown) => logError('pool-end', err));
     console.info('[jobs] shutdown complete');
     process.exit(process.exitCode ?? 0);
@@ -503,13 +511,17 @@ async function main(): Promise<void> {
     // push-token invalidation write. The rendered-message hash is the PII-safe keyed HMAC
     // (AI-4-3(c)) — never a raw sha256 of member-facing content.
     //
-    // PROVIDERS: `resolveProviders` is left unwired, so `dispatch` resolves the shipped
-    // DEFAULT_PROVIDER_REGISTRY — the log-only fixtures. That is Epic 5's committed opt-in-real
-    // posture (the stack boots with zero Firebase/Meta/DLT config), and it means this deployment
-    // composes and audits the full ladder without sending real bytes. Wiring the REAL per-Pariwar
-    // providers into apps/jobs is an explicit forward commitment recorded in the Story 8.8 Dev Agent
-    // Record + deferred-work.md — it needs the apps/api provider-composition seams (WA app cache,
-    // Telegram app cache, the global SMS gateway client), which are Fastify-app wiring today.
+    // PROVIDERS (AI-8-3 — H-1 CLOSED): `resolveProviders` is now WIRED. buildContributionProviderResolver
+    // constructs the per-process app caches (Firebase / WhatsApp / Telegram) + the global SMS gateway client
+    // (resolved once) + the per-(Pariwar,category) provider resolver — all env-gated (opt-in-real: an
+    // unprovisioned channel degrades to its log-only fixture, so the worker still boots with ZERO channel
+    // config in dev/CI). A deployed worker with the secrets/config provisioned now delivers REAL bytes: real
+    // push (D1 global Firebase SA) as the cascade's first rung, real WA/SMS/Telegram per per-Pariwar config.
+    // The composition now lives in @twt/channels (relocated from apps/api; §2) — apps/jobs never imports
+    // apps/api, so the package graph gains no new edge. The 5-state honesty invariant (config-absent/disabled/
+    // secret-missing ⇒ fixture; DB/Secret-Manager OUTAGE ⇒ reject → pg-boss retry) lives inside the resolver.
+    const contributionProviders = await buildContributionProviderResolver({ pool });
+    contributionProvidersTeardown = contributionProviders.teardown;
     const contributionNotifyDeps = {
       pool,
       serviceDb: db,
@@ -519,6 +531,7 @@ async function main(): Promise<void> {
         kms: jobsEncryption.kms,
         hmacKeyRef: jobsEncryption.hmacKeyRef,
       }),
+      resolveProviders: contributionProviders.resolveProviders,
     };
     await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
 

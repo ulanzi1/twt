@@ -1,116 +1,45 @@
-// WhatsApp provider composition seam — Story 5.3 (Task 6; AC1, AC2).
+// Channel composition seams — apps/api view.
 //
-// The reusable building block the (future) live dispatch resolves the `whatsapp` provider through — mirrors
-// Story 5.2's `resolvePushTargets` (a composition seam exported for a live fan-out that does NOT exist
-// yet: through 5.4 `dispatch()` is a primitive with NO live call site — [[project_channels_no_live_dispatch_yet]]).
-// This is app-composition wiring, NOT a change to `dispatch` / the frozen `ChannelProvider` port.
+// ── RELOCATED to @twt/channels by AI-8-3 (D2) — the PROVIDER composition now lives there ─────────────────────
+// The per-channel PROVIDER-selection functions (resolveWhatsappProvider / resolveTelegramProvider /
+// resolveSmsProvider + their `*Deps` + the `*CompositionDeps` interfaces) moved VERBATIM into
+// `packages/channels/src/composition/provider-composition.ts` so apps/jobs (the stack's first live dispatch()
+// fan-out) can compose the provider registry — apps/jobs cannot import apps/api. They call the @twt/channels
+// provider factories + return `ChannelProvider`, and @twt/channels already reads @twt/domain's channelConfig,
+// so @twt/channels is the lowest shared layer that can host them (§2; @twt/domain can't — it can't import
+// channels). This file re-exports them so the `channel-config/index.ts` barrel + the apps/api composition unit
+// tests keep working with ZERO call-site change (the Story 8.8 target-resolver re-export precedent, one layer up).
 //
-// ── What this seam does (AC1, AC2) ─────────────────────────────────────────────────────────────────────
-// Given a Pariwar + an alert category, it resolves the per-Pariwar WA config + the approved UTILITY
-// template + the resolved access token, builds a per-Pariwar WA client (cached by pariwar_id), and returns
-// a `ChannelProvider` — the REAL Meta provider when fully provisioned, else the log-only FIXTURE (the
-// opt-in-real convention: an absent config row / `enabled=false` / a blank credential NAME / no approved
-// template ⇒ fixture, so the stack boots with ZERO Meta config in dev/CI). `createWhatsappProvider(null)`
-// makes the real-vs-fixture selection — it never leaks into `dispatch` (the dispatcher stays policy-agnostic).
-//
-// ── What this seam does NOT do (the boundaries) ────────────────────────────────────────────────────────
-//   · It does NOT enforce the DUAL GATE (admin toggle AND member opt-in). Whether to ATTEMPT WA delivery to
-//     a member is the DeliveryResolver's job (member opt-in ACTIVE is Story 5.4; the config `enabled` toggle
-//     is this story's admin gate). The provider selection here only decides real-vs-fixture TRANSPORT.
-//   · It does NOT run a live fan-out — there is no live `dispatch` call site yet. This is a building block.
-//   · It never logs/audits the resolved token value (only the NAME pointer is safe — AI-4-3(c)).
-//
-// ── Infra failure vs. "not provisioned" (deliberate — do NOT swallow) ─────────────────────────────────────
-// `getWaConfig` / `resolveApprovedTemplate` / `resolveSecret` are NOT wrapped in try/catch. Only the
-// explicit "not provisioned" states above (no config row, toggle off, blank credential/phone-number-id, no
-// approved template) resolve to `null` ⇒ fixture. A DB or Secret Manager OUTAGE must propagate as a
-// rejection, not silently degrade to the fixture — swallowing it would mask a real outage behind a log-only
-// no-op send (dishonest, the opposite of this story's "no fabricated success" discipline). Whoever wires the
-// live dispatch call site (5.4+) is responsible for deciding how a rejection here is surfaced/retried.
+// What STAYS here: the delivery-*target* adapters (resolveWaTarget / resolveTelegramTarget / resolveSmsTarget)
+// and the cost-optimization read seams — they carry the apps/api `{ db, encryption }` deps shape and are
+// unrelated to provider selection (the target reads themselves were relocated to @twt/domain by Story 8.8; these
+// are the thin apps/api adapters over that ONE domain implementation).
 
-import { channelConfig, deviceToken, ids, notifications, type Db } from '@twt/domain';
-import {
-  createSmsProvider,
-  createTelegramProvider,
-  createWhatsappProvider,
-  resolveDltTemplate,
-  type ChannelProvider,
-  type SendTarget,
-  type SmsAppClient,
-  type SmsProviderDeps,
-  type TelegramAppCache,
-  type WhatsappAppCache,
-} from '@twt/channels';
+import { deviceToken, ids, notifications, type Db } from '@twt/domain';
+import type { SendTarget } from '@twt/channels';
 
 import type { EncryptionDeps } from '../../context.js';
 
 type PariwarId = ids.PariwarId;
 type MemberId = ids.MemberId;
 
-/** What the composition seam needs: a scoped Db, the process WA client cache, and a secret resolver. */
-export interface WhatsappCompositionDeps {
-  /** RLS-scoped Db (the caller's tenant tx) for the config/template reads. */
-  readonly db: Db;
-  /** The per-process WA client cache (whatsapp-app.ts) — one client per pariwar_id, built lazily. */
-  readonly appCache: WhatsappAppCache;
-  /**
-   * Resolve a Secret-Manager NAME → the token VALUE (production: `resolveSecretValue(name, { envFallback })`
-   * from @twt/domain; local dev: an env fallback). Injected so the seam is testable without Secret Manager.
-   */
-  readonly resolveSecret: (secretName: string) => Promise<string>;
-}
+// ── WhatsApp / Telegram / SMS provider composition — RE-EXPORTED from @twt/channels (AI-8-3, D2) ─────────────
+// The reusable building blocks the live dispatch resolves each channel's provider through (real-vs-fixture
+// selection). apps/api's two composition unit tests + the barrel import these names; the re-export keeps them
+// unchanged. The implementation + its own honesty-discipline head-comment now live in @twt/channels.
+export {
+  resolveWhatsappProvider,
+  resolveWhatsappProviderDeps,
+  resolveTelegramProvider,
+  resolveTelegramProviderDeps,
+  resolveSmsProvider,
+  resolveSmsProviderDeps,
+  type WhatsappCompositionDeps,
+  type TelegramCompositionDeps,
+  type SmsCompositionDeps,
+} from '@twt/channels';
 
-/**
- * Resolve the REAL WA provider deps for a (Pariwar, category), or `null` when the channel is not fully
- * provisioned for a live Meta send (⇒ the caller falls back to the fixture). Returns null when: no config
- * row, the admin toggle is off, the credential NAME / phone_number_id is blank, or the category has no
- * `approved` UTILITY template (not WA-eligible). The token is resolved LAST (only once every gate passes)
- * and never logged.
- */
-export async function resolveWhatsappProviderDeps(
-  deps: WhatsappCompositionDeps,
-  pariwarId: PariwarId,
-  alertCategory: string,
-): Promise<{ messaging: ReturnType<WhatsappAppCache['messagingFor']>; template: { name: string; languageCode: string } } | null> {
-  const config = await channelConfig.getWaConfig(deps.db, pariwarId);
-  if (
-    !config ||
-    !config.enabled ||
-    !config.accessTokenSecretName ||
-    config.accessTokenSecretName.trim() === '' ||
-    !config.phoneNumberId ||
-    config.phoneNumberId.trim() === ''
-  ) {
-    return null;
-  }
-
-  // A category with no `approved` template is NOT WA-eligible — the real send cannot be built (Meta requires
-  // a registered template). Fall back to the fixture (the caller passes null → createWhatsappProvider).
-  const template = await channelConfig.resolveApprovedTemplate(deps.db, pariwarId, alertCategory);
-  if (!template) return null;
-
-  const accessToken = await deps.resolveSecret(config.accessTokenSecretName);
-  const messaging = deps.appCache.messagingFor(pariwarId, {
-    phoneNumberId: config.phoneNumberId,
-    accessToken,
-    graphApiVersion: config.graphApiVersion,
-  });
-  return { messaging, template: { name: template.templateName, languageCode: template.languageCode } };
-}
-
-/**
- * Resolve the `whatsapp` `ChannelProvider` for a (Pariwar, category): the REAL Meta provider when fully
- * provisioned, else the log-only fixture. Always returns a provider (fixture on the null path) — the
- * real-vs-fixture selection is `createWhatsappProvider`'s (kept OUT of `dispatch`).
- */
-export async function resolveWhatsappProvider(
-  deps: WhatsappCompositionDeps,
-  pariwarId: PariwarId,
-  alertCategory: string,
-): Promise<ChannelProvider> {
-  const providerDeps = await resolveWhatsappProviderDeps(deps, pariwarId, alertCategory);
-  return createWhatsappProvider(providerDeps);
-}
+// ── WhatsApp delivery-target adapter — Story 5.4 (Task 7 / AC6); RELOCATED read to @twt/domain by 8.8 ────────
 
 /** What the WA delivery-resolver read needs: a scoped Db + the member-mobile decryption material. */
 export interface WaTargetDeps {
@@ -121,21 +50,11 @@ export interface WaTargetDeps {
 }
 
 /**
- * The AC6 dual-gated WA delivery-resolver read (Story 5.4) — closes the Story 5.3 seam that "resolved no
- * member target until 5.4 lands its ACTIVE-state read". Resolves a WhatsApp `SendTarget` for a member ONLY
- * when BOTH gates pass:
- *   1. the per-Pariwar admin toggle (`pariwar_wa_config.enabled`, Story 5.3), AND
- *   2. the member opt-in is ACTIVE and within the 24h Meta window (`isOptInActive`, this story).
- * Otherwise returns `null` (no WA delivery for this member). When both pass, the member's Tier-1 mobile is
- * decrypted HERE (the composition layer — never inside `dispatch` / the provider; mirrors resolvePushTargets)
- * to the recipient number the WA provider's `toMsisdn` addresses.
- *
- * ── RELOCATED to @twt/domain by Story 8.8 (Task 1; D4) — this is now a thin adapter ─────────────────────
- * The read moved VERBATIM to `packages/domain/src/notifications/delivery.ts` so `apps/jobs` (the stack's
- * FIRST live `dispatch()` fan-out) can call it — apps/jobs cannot import apps/api. This wrapper keeps the
- * apps/api `{ db, encryption }` deps shape so no apps/api call site changed. `DeliveryTarget` is the
- * structural twin of `SendTarget` (domain cannot import `@twt/channels` — that edge would be a cycle).
- * The frozen `DeliveryResolver` / `dispatch` / `ChannelProvider` / `CANONICAL_CHANNEL_LADDER` are unchanged.
+ * The AC6 dual-gated WA delivery-resolver read (Story 5.4) — a thin apps/api adapter over the ONE domain
+ * implementation (`notifications.resolveWaTarget`, relocated by Story 8.8 so apps/jobs can call it). Keeps the
+ * apps/api `{ db, encryption }` deps shape so no apps/api call site changed. Resolves a WhatsApp `SendTarget`
+ * for a member ONLY when both the per-Pariwar admin toggle AND the member opt-in (ACTIVE, within window) pass;
+ * otherwise null. The member's Tier-1 mobile is decrypted inside the domain read (never in dispatch/the provider).
  */
 export async function resolveWaTarget(
   deps: WaTargetDeps,
@@ -146,60 +65,7 @@ export async function resolveWaTarget(
   return notifications.resolveWaTarget(deps.db, deps.encryption, pariwarId, memberId, at);
 }
 
-// ── Telegram composition seam — Story 5.5 (Task 8; AC1, AC5) ─────────────────────────────────────────────
-// The Telegram twin of the WhatsApp seam above: a reusable building block the (future) live dispatch resolves
-// the `telegram` MIRROR side-channel through. This is app-composition wiring, NOT a change to `dispatch` / the
-// frozen `ChannelProvider` port ([[project_channels_no_live_dispatch_yet]]) — there is still NO live dispatch
-// call site. Telegram is a fire-and-forget side-channel: no fallback ladder fires on a failure.
-
-/** What the Telegram composition seam needs: a scoped Db, the process Telegram client cache, + a secret resolver. */
-export interface TelegramCompositionDeps {
-  /** RLS-scoped Db (the caller's tenant tx) for the config read. */
-  readonly db: Db;
-  /** The per-process Telegram client cache (telegram-app.ts) — one client per pariwar_id, built lazily. */
-  readonly appCache: TelegramAppCache;
-  /** Resolve a Secret-Manager NAME → the bot-token VALUE. Injected so the seam is testable without Secret Manager. */
-  readonly resolveSecret: (secretName: string) => Promise<string>;
-}
-
-/**
- * Resolve the REAL Telegram provider deps for a Pariwar, or `null` when the channel is not fully provisioned
- * for a live send (⇒ the caller falls back to the fixture). Returns null when: no config row, the admin toggle
- * is off, or the bot-token NAME is blank. The token is resolved LAST (only once every gate passes) and never
- * logged. Note: unlike WhatsApp there is NO per-category template gate (Telegram sends free text) — the
- * announcements-only eligibility already lives in dispatch.ts, not here.
- */
-export async function resolveTelegramProviderDeps(
-  deps: TelegramCompositionDeps,
-  pariwarId: PariwarId,
-): Promise<{ messaging: ReturnType<TelegramAppCache['messagingFor']> } | null> {
-  const config = await channelConfig.getTelegramConfig(deps.db, pariwarId);
-  if (
-    !config ||
-    !config.enabled ||
-    !config.botTokenSecretName ||
-    config.botTokenSecretName.trim() === ''
-  ) {
-    return null;
-  }
-
-  const botToken = await deps.resolveSecret(config.botTokenSecretName);
-  const messaging = deps.appCache.messagingFor(pariwarId, { botToken });
-  return { messaging };
-}
-
-/**
- * Resolve the `telegram` `ChannelProvider` for a Pariwar: the REAL Telegram provider when fully provisioned,
- * else the log-only fixture. Always returns a provider (fixture on the null path) — the real-vs-fixture
- * selection is `createTelegramProvider`'s (kept OUT of `dispatch`).
- */
-export async function resolveTelegramProvider(
-  deps: TelegramCompositionDeps,
-  pariwarId: PariwarId,
-): Promise<ChannelProvider> {
-  const providerDeps = await resolveTelegramProviderDeps(deps, pariwarId);
-  return createTelegramProvider(providerDeps);
-}
+// ── Telegram delivery-target adapter — Story 5.5 (AC5); RELOCATED read to @twt/domain by 8.8 ─────────────────
 
 /** What the Telegram delivery-resolver read needs: a scoped Db (no decryption — the chat_id is the address). */
 export interface TelegramTargetDeps {
@@ -208,21 +74,10 @@ export interface TelegramTargetDeps {
 }
 
 /**
- * The dual-gated Telegram delivery-resolver read (Story 5.5, AC5). Resolves a Telegram `SendTarget` for a
- * member ONLY when BOTH gates pass:
- *   1. the per-Pariwar admin toggle (`pariwar_telegram_config.enabled`, the FR-58C v1 flag), AND
- *   2. the member opt-in is ACTIVE (`isOptInActive` — just `state === 'ACTIVE'`, NO window check).
- * Otherwise returns `null` (no Telegram delivery for this member). When both pass, the captured `chat_id` IS
- * the `SendTarget.address` (no decryption — Telegram carries no PII envelope).
- *
- * ── Consent vs. operational delivery state (the load-bearing invariant) ──────────────────────────────────
- * Gate 2 reads the OPERATIONAL state (`isOptInActive`), NEVER a consent-registry read. Operational-ACTIVE and
- * the consent record are minted/revoked TOGETHER in one tx (the worker's audit-or-throw), so operational-ACTIVE
- * ⟺ valid consent — but the delivery source of truth is the operational state, never `consentExists`.
- *
- * ── RELOCATED to @twt/domain by Story 8.8 (Task 1; D4) — this is now a thin adapter ─────────────────────
- * The read moved VERBATIM to `packages/domain/src/notifications/delivery.ts` (see `resolveWaTarget`
- * above for the full rationale). The apps/api deps shape + signature are unchanged.
+ * The dual-gated Telegram delivery-resolver read (Story 5.5, AC5) — a thin apps/api adapter over the ONE domain
+ * implementation (`notifications.resolveTelegramTarget`, relocated by Story 8.8). Resolves a Telegram
+ * `SendTarget` for a member ONLY when both the per-Pariwar admin toggle AND the member opt-in (ACTIVE) pass;
+ * otherwise null. The captured `chat_id` IS the address (Telegram carries no PII envelope — no decryption).
  */
 export async function resolveTelegramTarget(
   deps: TelegramTargetDeps,
@@ -232,86 +87,7 @@ export async function resolveTelegramTarget(
   return notifications.resolveTelegramTarget(deps.db, pariwarId, memberId);
 }
 
-// ── SMS composition seam — Story 5.6 (Task 6; AC1, AC2, AC4) ─────────────────────────────────────────────
-// The SMS twin of the WhatsApp seam above: a reusable building block the (future) live SMS cascade resolves
-// the `sms` TERMINAL rung through. This is app-composition wiring, NOT a change to `dispatch` / the frozen
-// `ChannelProvider` port ([[project_channels_no_live_dispatch_yet]]) — there is still NO live dispatch call
-// site.
-//
-// SMS ≠ WhatsApp (the deliberate differences): NO opt-in gate (the member's KYC mobile IS the address — SMS
-// is a transactional fallback, not a consented channel), NO per-Pariwar config table (DLT registration is
-// PLATFORM-GLOBAL — one gateway, one PE/OE sender), and eligibility is decided by the STATIC DLT template
-// registry (resolveDltTemplate), not a per-Pariwar approved-template row. The eligibility POLICY (§3.4:
-// fallback SMS fires per-message only for members whose higher-tier channel failed after the retry window)
-// is NOT wired here — this seam builds the MECHANISM; the live cascade / cost-opt wrapper (5.7) enforces the
-// policy (see the story's "§3.4 vs AR-19(c) eligibility tension" — architecture §3.4 is the default).
-//
-// ── "Not configured" vs. "configured but failing" (mirrors WA exactly) ────────────────────────────────────
-// `resolveWhatsappProviderDeps` treats a blank/missing OWN config field (accessTokenSecretName,
-// phoneNumberId on the per-Pariwar config row) as "not provisioned" ⇒ `null` ⇒ fixture — a `resolveSecret`
-// FAILURE (Secret Manager outage) is the separate thing that propagates. `resolveSmsProviderDeps` mirrors
-// this exactly: `deps.appClient.isConfigured()` is the SMS twin of that own-config blank check (the global
-// gateway credential NAME/value is absent) ⇒ `null` ⇒ fixture. A `resolveConfig` FAILURE (the DLT template
-// id NAME lookup outage) still propagates, same as WA's `resolveSecret`.
-
-/** What the SMS provider composition seam needs: the global gateway client + a global config/NAME resolver. */
-export interface SmsCompositionDeps {
-  /**
-   * The single GLOBAL SMS gateway client (sms-app.ts), built ONCE at boot with the resolved platform gateway
-   * credential + PE/OE sender header (restart-required-on-rotation). There is no per-Pariwar dimension.
-   */
-  readonly appClient: SmsAppClient;
-  /**
-   * Resolve a global config / Secret-Manager NAME → its value (e.g. the TRAI-assigned DLT template id for a
-   * category's `dltTemplateIdConfigKey`). Returns `null` for an explicit "not provisioned" state (⇒ the
-   * caller falls back to the fixture). A DB / Secret-Manager OUTAGE must THROW (propagate) — never silently
-   * degrade to the fixture (mirror the composition.ts head-comment discipline).
-   */
-  readonly resolveConfig: (configKey: string) => Promise<string | null>;
-}
-
-/**
- * Resolve the REAL SMS provider deps for an alert category, or `null` when SMS is not provisioned for it
- * (⇒ the caller falls back to the fixture). Returns null when: the global gateway credential is NOT
- * configured (`appClient.isConfigured()` — mirrors WA's own-config blank check), the category has NO
- * registered DLT template (not SMS-eligible — mirrors WA's "no approved template ⇒ not WA-eligible"), or the
- * resolved DLT template id NAME is absent/blank (not provisioned). The template id is resolved from a global
- * NAME pointer and never logged (AI-4-3(c)). Infra failures in `resolveConfig` PROPAGATE (not caught) — only
- * the explicit not-provisioned states resolve to `null`.
- */
-export async function resolveSmsProviderDeps(
-  deps: SmsCompositionDeps,
-  alertCategory: string,
-): Promise<SmsProviderDeps | null> {
-  // The global SMS gateway credential is NOT configured — same "not provisioned" treatment as WA's blank
-  // accessTokenSecretName/phoneNumberId check. Fall back to the fixture (never a thrown error for this).
-  if (!deps.appClient.isConfigured()) return null;
-
-  // A category absent from the DLT registry is NOT SMS-eligible — no real send can be built (the gateway
-  // requires a registered template). Fall back to the fixture (the caller passes null → createSmsProvider).
-  const template = resolveDltTemplate(alertCategory);
-  if (!template) return null;
-
-  // Resolve the TRAI-assigned DLT template id from its global NAME pointer at send time (never hardcoded).
-  const dltTemplateId = await deps.resolveConfig(template.dltTemplateIdConfigKey);
-  if (!dltTemplateId || dltTemplateId.trim() === '') return null;
-
-  const messaging = deps.appClient.messaging();
-  return { messaging, dltTemplateId };
-}
-
-/**
- * Resolve the `sms` `ChannelProvider` for an alert category: the REAL DLT provider when provisioned, else
- * the log-only fixture. Always returns a provider (fixture on the null path) — the real-vs-fixture selection
- * is `createSmsProvider`'s (kept OUT of `dispatch`). Building block only — still NO live dispatch call site.
- */
-export async function resolveSmsProvider(
-  deps: SmsCompositionDeps,
-  alertCategory: string,
-): Promise<ChannelProvider> {
-  const providerDeps = await resolveSmsProviderDeps(deps, alertCategory);
-  return createSmsProvider(providerDeps);
-}
+// ── SMS delivery-target adapter — Story 5.6 (AC4); RELOCATED read to @twt/domain by 8.8 ──────────────────────
 
 /** What the SMS delivery-resolver read needs: a scoped Db + the member-mobile decryption material. */
 export interface SmsTargetDeps {
@@ -322,16 +98,10 @@ export interface SmsTargetDeps {
 }
 
 /**
- * The SMS delivery-resolver read (Story 5.6, AC4) — mirrors `resolveWaTarget` MINUS the opt-in gate: SMS has
- * NO opt-in (the member's registered KYC mobile IS the address). Resolves an `sms` `SendTarget` by reading
- * the member's Tier-1 mobile ciphertext and decrypting it HERE (the composition layer — never inside
- * `dispatch` / the provider; mirrors resolvePushTargets / resolveWaTarget), or `null` when the member has no
- * identity row (⇒ no number). Reuses `waOptIn.getMemberMobileCiphertext` — a NEUTRAL member-mobile ciphertext
- * read that merely lives in that module — so SMS is NOT coupled to WA opt-in state.
- *
- * ── RELOCATED to @twt/domain by Story 8.8 (Task 1; D4) — this is now a thin adapter ─────────────────────
- * The read moved VERBATIM to `packages/domain/src/notifications/delivery.ts` (see `resolveWaTarget`
- * above for the full rationale). The apps/api deps shape + signature are unchanged.
+ * The SMS delivery-resolver read (Story 5.6, AC4) — a thin apps/api adapter over the ONE domain implementation
+ * (`notifications.resolveSmsTarget`, relocated by Story 8.8). SMS has NO opt-in gate (the member's registered
+ * KYC mobile IS the address). Resolves an `sms` `SendTarget` by reading + decrypting the member's Tier-1 mobile
+ * inside the domain read, or null when the member has no identity row (⇒ no number).
  */
 export async function resolveSmsTarget(
   deps: SmsTargetDeps,
@@ -341,14 +111,10 @@ export async function resolveSmsTarget(
   return notifications.resolveSmsTarget(deps.db, deps.encryption, pariwarId, memberId);
 }
 
-// ── Cost-optimization composition seams — Story 5.7 (Task 3; AC4) ────────────────────────────────────────
-// The two thin READ-seams the (future) live cost-optimization wrapper resolves its policy inputs through: the
-// member's last in-app-engagement instant + the per-Pariwar cost-optimization toggle. These are BUILDING
-// BLOCKS ONLY — there is still NO live `dispatch` call site ([[project_channels_no_live_dispatch_yet]]), and
-// this does NOT construct a live fan-out that calls `evaluateCostOptimization` + `dispatch` together. Whoever
-// wires the live fan-out (the story that first drives a real dispatch, when Epic 10's FR-58C flag makes the
-// toggle meaningful) consumes these reads. This is app-composition wiring, NOT a change to `dispatch` / the
-// frozen `ChannelProvider` port / `CANONICAL_CHANNEL_LADDER` / `DeliveryResolver`.
+// ── Cost-optimization composition read-seams — Story 5.7 (Task 3; AC4) ───────────────────────────────────────
+// The two thin READ-seams the live cost-optimization wrapper resolves its policy inputs through: the member's
+// last in-app-engagement instant + the per-Pariwar cost-optimization toggle. app-composition wiring over
+// @twt/domain reads (NOT a change to `dispatch` / the frozen `ChannelProvider` port / `CANONICAL_CHANNEL_LADDER`).
 
 /** What the cost-optimization read-seams need: a scoped Db (the engagement + toggle reads run under RLS). */
 export interface CostOptimizationCompositionDeps {
@@ -359,21 +125,15 @@ export interface CostOptimizationCompositionDeps {
 /**
  * Resolve a member's last in-app-engagement instant (Story 5.7 AC4) — a thin wrapper over the pure-domain
  * `getMemberLastEngagementAt` accessor (`MAX(last_seen_at)` over the member's ACTIVE device tokens, the
- * app-open proxy). RLS scopes the read to the Pariwar (the `pariwarId` arg documents the tenant boundary the
- * caller has already entered via `SET LOCAL app.pariwar_id`). Returns `null` when there is no engagement
- * signal (⇒ the policy fails toward reach and does not suppress). Reads only the timestamp — no decrypt.
- *
- * ── Frozen-shape discipline ([[project_channels_no_live_dispatch_yet]]) ──────────────────────────────────
- * A reusable composition READ — it does NOT modify `DeliveryResolver` / `dispatch` / `ChannelProvider` /
- * `CANONICAL_CHANNEL_LADDER`, and there is still NO live `dispatch` call site.
+ * app-open proxy). RLS scopes the read to the Pariwar. Returns `null` when there is no engagement signal (⇒ the
+ * policy fails toward reach and does not suppress). Reads only the timestamp — no decrypt.
  */
 export async function resolveMemberLastEngagement(
   deps: CostOptimizationCompositionDeps,
   pariwarId: PariwarId,
   memberId: MemberId,
 ): Promise<Date | null> {
-  // `pariwarId` documents the RLS tenant boundary; the domain accessor is RLS-scoped + member_id-keyed
-  // (globally unique), mirroring getMemberStateAt's RLS-only convention.
+  // `pariwarId` documents the RLS tenant boundary; the domain accessor is RLS-scoped + member_id-keyed.
   void pariwarId;
   return deviceToken.getMemberLastEngagementAt(deps.db, memberId);
 }
@@ -381,21 +141,15 @@ export async function resolveMemberLastEngagement(
 /**
  * Resolve the per-Pariwar cost-optimization toggle (Story 5.7 AC4) — currently ALWAYS `false` (OFF).
  *
- * The real per-Pariwar FR-58C flag read + its admin surface + its persistence land at EPIC 10 (contracts
- * `feature-flags/README.md` — "substantive contracts authored at Stories 10.x"); there is no flag subsystem
- * and no live dispatch site yet, so this seam returns the FAIL-SAFE default. OFF ⇒ the policy suppresses
- * NOTHING ⇒ full delivery, zero risk of a missed alert — cost-optimization can only ever REDUCE sends once
- * explicitly enabled, never regress reach silently. This toggle is SEPARATE from the WA admin toggle (FR-72).
- *
- * Do NOT add a per-Pariwar toggle DB column / migration / admin form here — that persistence + UI belongs to
- * the FR-58C subsystem at Epic 10 (adding a producer-less toggle column now repeats the anti-pattern 5.6
- * called out for a producer-less pg-boss worker). The args are bound for the Epic 10 signature; unused today.
+ * The real per-Pariwar FR-58C flag read + its admin surface + its persistence land at EPIC 10; there is no flag
+ * subsystem yet, so this seam returns the FAIL-SAFE default. OFF ⇒ the policy suppresses NOTHING ⇒ full
+ * delivery, zero risk of a missed alert. Do NOT add a per-Pariwar toggle DB column/migration/admin form here —
+ * that persistence + UI belongs to the FR-58C subsystem at Epic 10. The args are bound for the Epic 10 signature.
  */
 export async function resolveCostOptimizationToggle(
   deps: CostOptimizationCompositionDeps,
   pariwarId: PariwarId,
 ): Promise<boolean> {
-  // `void` — bound for the Epic 10 FR-58C flag read; the fail-safe default is OFF until then.
   void deps;
   void pariwarId;
   return false;

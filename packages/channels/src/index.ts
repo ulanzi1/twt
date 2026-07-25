@@ -185,3 +185,23 @@ export {
   type LifecycleSuppressionHook,
   type LifecycleSuppressionDecision,
 } from './dispatch.js';
+// AI-8-3 — the per-channel provider composition (relocated from apps/api; apps/api now re-exports these) +
+// the push composition seam + the contribution-loop registry assembly the live fan-out injects. These call
+// the @twt/channels provider factories + read @twt/domain's channelConfig, so @twt/channels (which already
+// depends on @twt/domain) is the lowest shared layer that can host them — no new package, no new edge (§2).
+export {
+  resolveWhatsappProvider,
+  resolveWhatsappProviderDeps,
+  resolveTelegramProvider,
+  resolveTelegramProviderDeps,
+  resolveSmsProvider,
+  resolveSmsProviderDeps,
+  resolvePushProviders,
+  createContributionProviderResolver,
+  type WhatsappCompositionDeps,
+  type TelegramCompositionDeps,
+  type SmsCompositionDeps,
+  type PushCompositionDeps,
+  type ContributionProviderResolverDeps,
+  type ProviderRegistry,
+} from './composition/provider-composition.js';

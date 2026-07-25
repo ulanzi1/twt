@@ -28,6 +28,7 @@ import { useT } from '@twt/i18n/react'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { Button, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
+import { CallHelplineCTA } from '../../../components/common/CallHelplineCTA'
 import { memberAuth } from '../../../lib/member-api'
 import { saveAndShareContributionNote } from '../../../lib/save-note'
 
@@ -126,6 +127,13 @@ export default function ContributionNoteScreen() {
               : t('note.download_cta', undefined, NS)}
           </Text>
         </Button>
+
+        {/* Cross-cutting helpline fallback (Story 8.11; UX-DR49 + AR-61). Rendered in ALL phases —
+            especially the `error` / `not_found` branches, which must never be dead ends. Chromeless +
+            ≥56pt: the subordinate third tier of the recovery ladder (UX-DR62), below the download/retry
+            primary. The tappable CTA lives HERE, on the screen; the PDF artifact itself carries a
+            printed (non-tappable) helpline line in its footer (AC4). */}
+        <CallHelplineCTA height={56} />
       </YStack>
     </>
   )

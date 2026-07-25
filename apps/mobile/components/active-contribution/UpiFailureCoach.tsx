@@ -27,7 +27,7 @@ import { useRef, useState } from 'react'
 import { Button, Paragraph, Text, View, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
-import { CallHelplineCTA } from '../claim/CallHelplineCTA'
+import { CallHelplineCTA } from '../common/CallHelplineCTA'
 import { UPIIntentButton } from './UPIIntentButton'
 
 type UpiFailureMode = UpiFailureModeSchema

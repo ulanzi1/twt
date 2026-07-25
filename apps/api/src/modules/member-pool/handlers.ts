@@ -240,6 +240,13 @@ export function createMemberPoolHandlers(deps: AppDeps) {
       }
 
       // The render is OUTSIDE the scope tx: it is the expensive step and holds no DB resources.
+      // Story 8.11 (AC4): the Pariwar helpline number printed on the PDF footer is threaded as a plain
+      // arg — no ContributionNoteFacts/contract change. Review finding (2026-07-25): no clean
+      // server-side source is provisioned anywhere (no env-var/config entry), so — per AC4's own
+      // fallback — `renderContributionNoteHtml` is called with no helpline arg and prints the
+      // AC4-mandated `[PENDING — Epic 10 …]` token rather than a fabricated number. Per-Pariwar
+      // resolution via the Story-10.x helpdesk routing registry is a declared forward seam
+      // (deferred-work.md) — that story provisions a real source and passes it here.
       const html = renderContributionNoteHtml(facts);
       // The SAME `note.title` i18n key the template's own <title> tag and <h1> render (AC1) — not a
       // second, hardcoded copy of the string, which would (a) drift out of sync with the real title and

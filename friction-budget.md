@@ -686,6 +686,25 @@ other new/modified file lands in `docs/`, `packages/i18n`, `packages/domain` tes
 does not enter the public page-weight budget the gate has teeth on. Do NOT ratchet
 (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 8.11 disposition (declaration affirmed, no new row):** this is a `[SURFACE]`
+story whose deliverable is *presence + a home + teeth*, not a new member step. It adds
+an **escape-hatch** affordance — the already-shipped `<CallHelplineCTA>` — to three
+existing `apps/mobile` surfaces (My Pool card, Yogdaan Bahi, Contribution Note screen)
+and a printed bilingual helpline line to the Contribution Note **PDF footer**. A
+one-tap-to-`tel:` fallback that a member may *ignore* is the definitional opposite of
+imposed friction: it introduces **zero** new member step, form, gate, field, upload, or
+required interaction — nothing new a member must complete to progress. The component was
+also **relocated** (`components/claim/` → `components/common/`) behind a re-export shim,
+a pure code-organisation move with zero rendered/behavioural effect (the default label is
+byte-identical to the former `claim shell.call_help` string, verified). The **page-weight
+baseline is unchanged and must not be touched**: every new/modified file lands in
+`apps/mobile`, `apps/api` (the reserved PDF footer + its copy keys only), `packages/i18n`,
+`scripts/microcopy`, `microcopy.yaml`, or the governance docs — all excluded from the
+ledger — and `apps/public` is **not** touched at all, so nothing enters the public
+page-weight budget the gate has teeth on. Zero deliberate friction introduced; ledger
+reviewed, no new row warranted. Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

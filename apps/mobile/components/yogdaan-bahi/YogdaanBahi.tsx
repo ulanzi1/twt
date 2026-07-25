@@ -3,6 +3,7 @@ import { FlatList, RefreshControl, StyleSheet } from 'react-native'
 import { useT } from '@twt/i18n/react'
 import { Button, Text, XStack, YStack } from 'tamagui'
 
+import { CallHelplineCTA } from '../common/CallHelplineCTA'
 import { YogdaanBahiRow } from './YogdaanBahiRow'
 import { useYogdaanQuery } from './useYogdaanQuery'
 import { formatInr, type YogdaanRow } from './sample-data'
@@ -164,6 +165,12 @@ export function YogdaanBahi() {
           )}
         </YStack>
         <StickyFooter totalInr={0} rowCount={0} />
+        {/* Cross-cutting helpline fallback (Story 8.11; UX-DR49 + AR-61), rendered OUTSIDE the list in
+            this empty/loading/isError branch — never a FlatList item/header/footer, which would
+            reintroduce the empty→populated Fabric remount crash ([[project_fabric_flatlist_empty_populated_crash]]).
+            On the isError branch it sits BELOW the Retry button above (self-recovery first, UX-DR62);
+            chromeless + ≥56pt keeps it the subordinate third tier, never a second competing primary. */}
+        <CallHelplineCTA height={56} />
       </YStack>
     )
   }
@@ -189,6 +196,11 @@ export function YogdaanBahi() {
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={() => { void refetch() }} />}
       />
       <StickyFooter totalInr={totalInr} rowCount={rows.length} />
+      {/* Cross-cutting helpline fallback (Story 8.11; UX-DR49 + AR-61) — OUTSIDE the FlatList, in the
+          populated-list branch. Same stable region as the empty branch above so the affordance is
+          present in all three states (populated / empty-loading / isError). Chromeless + ≥56pt: the
+          subordinate third tier of the recovery ladder (UX-DR62), never the surface's primary. */}
+      <CallHelplineCTA height={56} />
     </YStack>
   )
 }

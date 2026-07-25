@@ -110,7 +110,27 @@ function factRow(labelKey: string, value: string, opts?: { readonly operational?
  * the one field that legitimately differs between renders). No I/O beyond the cached font read, no
  * clock read, no DB access — the resolver has already established every fact.
  */
-export function renderContributionNoteHtml(facts: ContributionNoteFacts): string {
+/**
+ * The literal placeholder token AC4 mandates when no clean server-side helpline-number source exists
+ * (never a fabricated number). Review finding (2026-07-25): no provisioned `HELPLINE_TEL` source
+ * actually exists anywhere in this repo (no `.env.example` entry, no deploy config, no validation) —
+ * printing a hardcoded default would have shipped exactly the fabrication AC4 forbids. Per-Pariwar
+ * resolution via the Story-10.x helpdesk routing registry is a declared forward seam (deferred-work.md).
+ */
+const HELPLINE_PENDING_TOKEN = '[PENDING — Epic 10 per-Pariwar helpline resolution]';
+
+/**
+ * The Pariwar helpline number printed on the artifact's footer (Story 8.11, AC4), threaded in as a
+ * plain string rather than added to `ContributionNoteFacts` (so no contract/schema change). No clean
+ * server-side source exists today, so the caller (handlers.ts) passes `undefined` and the footer prints
+ * the AC4-mandated `HELPLINE_PENDING_TOKEN` instead of a number. A PDF is not tappable — the footer
+ * carries the printed NUMBER (or the pending token), and the tappable `<CallHelplineCTA>` lives on the
+ * Contribution Note screen (mobile), which resolves its own number from `EXPO_PUBLIC_HELPLINE_TEL`.
+ */
+export function renderContributionNoteHtml(
+  facts: ContributionNoteFacts,
+  helpline?: string,
+): string {
   const fonts = devanagariFontDataUris();
   const isGreen = facts.status === 'green';
   const statusInk = STATUS_INK[facts.status];
@@ -225,6 +245,8 @@ export function renderContributionNoteHtml(facts: ContributionNoteFacts): string
   .tagline { text-align: center; font-size: 12pt; font-family: '${NOTE_FONT_FAMILY}', ${font['display-parichay']}; margin: 6mm 0 2mm; }
   .tagline .gloss { display: block; font-size: 8.5pt; color: ${color['status-grey-takeover']}; letter-spacing: 0.06em; }
   footer { border-top: 2px solid ${color['rule-heavy']}; margin-top: 5mm; padding-top: 3mm; font-size: 8.5pt; color: ${color['status-grey-takeover']}; text-align: center; }
+  footer .footer-helpline { margin-top: 2mm; }
+  footer .footer-helpline .tel { direction: ltr; unicode-bidi: embed; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -313,10 +335,19 @@ export function renderContributionNoteHtml(facts: ContributionNoteFacts): string
       <span class="gloss">${esc(en('note.tagline'))}</span>
     </div>
 
-    <!-- Footer slot RESERVED for Story 8.11's <CallHelplineCTA>, which explicitly lists this artifact
-         among its surfaces (epics.md:3049). 8.7 leaves the slot and does NOT build the CTA. -->
+    <!-- Footer helpline line — Story 8.11 (AC4) filled the slot 8.7 reserved by name. A PDF escapes the
+         self-view boundary the moment it is forwarded, so a bereaved member needs the number ON the
+         artifact. It is PRINTED bilingual text (not a tel: link — a PDF is static) and dignified
+         help-access — it asserts no status and is not a transactional acknowledgement (UX-DR55; the
+         8.7 honesty rules hold). No clean server-side number source exists today (review finding,
+         2026-07-25) — the helpline argument is undefined, so the AC4-mandated PENDING token prints
+         instead of a fabricated number; Epic 10's per-Pariwar resolution replaces the token. -->
     <footer>
       <span>${esc(facts.branding.displayNameHi)} · ${esc(facts.branding.displayNameEn)}</span>
+      <p class="footer-helpline">
+        ${esc(hi('note.helpline'))} · <span class="gloss">${esc(en('note.helpline'))}</span>
+        <span class="tel">${esc(helpline ?? HELPLINE_PENDING_TOKEN)}</span>
+      </p>
     </footer>
   </div>
 </main>

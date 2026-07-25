@@ -314,5 +314,6 @@
   "telegramNotifications.retry_cta": "Enable again",
   "telegramNotifications.error": "Something went wrong. Please try again.",
   "telegramNotifications.entry_label": "Telegram notifications",
-  "telegramNotifications.entry_hint": "Choose whether to receive TWT notifications on Telegram"
+  "telegramNotifications.entry_hint": "Choose whether to receive TWT notifications on Telegram",
+  "call_helpline.label": "Call us — we'll help"
 }

@@ -1,55 +1,8 @@
-// CallHelplineCTA — "Call us — we'll help" (Story 6.2, Task 5; AC5 / AR-61).
+// CallHelplineCTA — re-export shim (Story 8.11, AC5).
 //
-// The cross-cutting staff-fallback affordance: a one-tap-to-live-help CTA present at EVERY node of
-// the claim flow (AR-61). The helpline-mediated path (Story 6.3) can complete the claim on Ravi's
-// behalf; the two intakes converge at ICP (Story 6.4). Story 0.7's fallback-handler ledger is
-// REFERENCED, not re-implemented here (epic cross-cutting note) — this is only the entry affordance.
-//
-// Tenant-agnostic internal name (`CallHelplineCTA`, per UX §component-naming); the UX label lives in
-// the bilingual copy. The helpline number resolves from EXPO_PUBLIC_HELPLINE_TEL (per build profile),
-// defaulting to a placeholder for local dev.
+// The component RELOCATED to `components/common/CallHelplineCTA.tsx` to match its cross-cutting role
+// (UX-DR49: it serves the contribution loop as well as the claim loop). This thin re-export keeps the
+// old `components/claim/` import path working so every shipped claim call site stays byte-identical —
+// the 8.8 relocation-with-re-export precedent. New callers should import from `../common/CallHelplineCTA`.
 
-import * as Linking from 'expo-linking'
-import { Button, type ThemeName } from 'tamagui'
-
-import { useClaimT } from '../../lib/claim-i18n'
-
-const HELPLINE_TEL = process.env.EXPO_PUBLIC_HELPLINE_TEL ?? '+911800000000'
-
-export interface CallHelplineCTAProps {
-  /** Override the default "Call us — we'll help" copy (e.g. nominee-review's "details look
-   * wrong? Call us") while reusing the same tappable dial-out behavior. */
-  label?: string
-  /** Visual weight — defaults to the standard low-emphasis chromeless treatment. Pass `false` + `theme` +
-   * `height` for a prominent primary-CTA rendering (e.g. contribution/pay.tsx's "not available yet" empty
-   * state) while still reusing the same dial-out logic — review finding: don't re-implement the tel:
-   * Linking call just to get a different button style. */
-  chromeless?: boolean
-  theme?: ThemeName
-  height?: number
-}
-
-export function CallHelplineCTA({
-  label,
-  chromeless = true,
-  theme,
-  height,
-}: CallHelplineCTAProps = {}): React.ReactElement {
-  const t = useClaimT()
-  const text = label ?? t('shell.call_help')
-  return (
-    <Button
-      chromeless={chromeless}
-      theme={theme}
-      height={height}
-      size={height ? undefined : '$4'}
-      accessibilityRole="button"
-      accessibilityLabel={text}
-      onPress={() => {
-        void Linking.openURL(`tel:${HELPLINE_TEL}`)
-      }}
-    >
-      {text}
-    </Button>
-  )
-}
+export { CallHelplineCTA, type CallHelplineCTAProps } from '../common/CallHelplineCTA'

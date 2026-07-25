@@ -31,6 +31,7 @@ import { useRouter } from 'expo-router'
 import { StyleSheet } from 'react-native'
 import { Button, Paragraph, Text, View, YStack } from 'tamagui'
 
+import { CallHelplineCTA } from '../common/CallHelplineCTA'
 import { cycleDayFromDaysRemaining, selectToneGradientKey } from './toneGradient'
 import { useActiveContributionQuery } from './useActiveContributionQuery'
 
@@ -231,6 +232,14 @@ export function ActiveContributionCard() {
           {t('active_contribution.contribute_cta', undefined, NS)}
         </Button>
       )}
+
+      {/* Cross-cutting helpline fallback (Story 8.11; UX-DR49 + AR-61). Present in BOTH the attested
+          and contribute branches — human help is one tap away whether or not the member has paid. It
+          is the THIRD tier of the recovery ladder (UX-DR62: self-recovery → in-flow help → helpline),
+          so it renders ≥56pt for touch (AC3) but visually SUBORDINATE — chromeless, no warm-red accent
+          (that accent is spent on the Contribute CTA above). It is a `button`, not a live region, so
+          the card's single polite live region (the tone-gradient Paragraph) is unbroken. */}
+      <CallHelplineCTA height={56} />
     </YStack>
   )
 }

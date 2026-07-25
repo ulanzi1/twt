@@ -705,6 +705,25 @@ page-weight budget the gate has teeth on. Zero deliberate friction introduced; l
 reviewed, no new row warranted. Do NOT ratchet
 (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 8.12 disposition (declaration affirmed, no new row):** the 90-second-loop
+measurement instrument (`apps/mobile/lib/loop-timing.ts` + `loop-timing-session.ts` +
+`loop-timing-store.ts` + the debug screen `(contribution)/loop-timing-debug.tsx` + the
+four additive boundary marks in `_layout.tsx` / `ActiveContributionCard.tsx` /
+`UPIIntentButton.tsx` / `(contribution)/pay.tsx`, plus the off-device aggregation in
+`apps/jobs/tests/`) is a **`[GOVERNANCE]` debug-gated measurement instrument**. It
+introduces **zero member-facing friction** — every mark is an additive `performance.now()`
+read on an existing code path, gated behind `__DEV__` / `EXPO_PUBLIC_LOOP_TIMING` so a
+production member build captures nothing and Sushil never sees a stopwatch; the loop's
+behavior (intent construction, attest write, switch-account, failure coach, yellow pill) is
+byte-for-byte unchanged — nothing new a member must complete to progress. It carries **zero
+PII** (numeric durations only). The **page-weight baseline is unchanged and must not be
+touched**: all new/modified files land in `apps/mobile` (EAS build is a no-op →
+`member-app-native` stays a no-op), `apps/jobs` (tests only), the governance docs, or the
+launch-gate roster — all excluded from the ledger — and `apps/public` is **not** touched at
+all, so nothing enters the public page-weight budget the gate has teeth on. Zero deliberate
+friction introduced; ledger reviewed, no new row warranted. Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

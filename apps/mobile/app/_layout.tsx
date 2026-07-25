@@ -10,6 +10,7 @@ import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router'
 import { Provider } from 'components/Provider'
 import { useTheme } from 'tamagui'
 import { SessionProvider, useSession } from '../lib/session-context'
+import { markLoopPhase } from '../lib/loop-timing-session'
 
 // Devanagari font roles per UX spec lines 712-714 + 1108-1114
 // Display (Tiro Devanagari Hindi): memorial names, claim titles, ceremonial copy
@@ -65,6 +66,12 @@ export default function RootLayout() {
       SplashScreen.hideAsync()
     }
   }, [fontsLoaded, fontError])
+
+  // Story 8.12 — the cold-start `app_open` mark for the 90-second-loop measurement (AC1). Mount-once
+  // (empty deps + `once`) so no re-render can re-stamp it. Debug-gated → inert in production member builds.
+  useEffect(() => {
+    markLoopPhase('app_open', { once: true })
+  }, [])
 
   if (!fontsLoaded && !fontError) {
     return null

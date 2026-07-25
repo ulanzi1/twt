@@ -315,5 +315,5 @@
   "telegramNotifications.error": "कुछ गड़बड़ हुई। कृपया फिर से प्रयास करें।",
   "telegramNotifications.entry_label": "टेलीग्राम सूचनाएँ",
   "telegramNotifications.entry_hint": "चुनें कि TWT सूचनाएँ टेलीग्राम पर लेनी हैं या नहीं",
-  "call_helpline.label": "हमें कॉल करें — हम मदद करेंगे"
+  "call_helpline.label": "सहायता के लिए कॉल करें"
 }

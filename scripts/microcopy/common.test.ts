@@ -97,6 +97,6 @@ describe('planted violations on common copy bite (the scope has teeth)', () => {
     // The real, warm-neighbour affordance copy stays usable — the plants above fail for their frame,
     // not merely for containing "call".
     expect(checkTone(EN_COMMON, "Call us — we'll help", config)).toEqual([]);
-    expect(checkTone(HI_COMMON, 'हमें कॉल करें — हम मदद करेंगे', config)).toEqual([]);
+    expect(checkTone(HI_COMMON, 'सहायता के लिए कॉल करें', config)).toEqual([]);
   });
 });

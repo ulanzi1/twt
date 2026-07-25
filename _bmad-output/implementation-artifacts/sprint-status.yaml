@@ -1,4 +1,102 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-25 (AI-8-3 review→done via bmad-code-review, 3-layer parallel review (Blind Hunter,
+#   Edge Case Hunter, Acceptance Auditor). Not a development_status key (retro action item; tracks in this
+#   ledger + the standalone story file). FOUND + FIXED the highest-severity gap: `resolveConfig` was aliased
+#   to the SAME throw-only `resolveSecret` used for WA/Telegram tokens, so a not-yet-provisioned per-category
+#   SMS DLT template secret (a normal §9a-i state-3 "secret missing by design" case) threw instead of
+#   returning null — and because the throw propagated before the memo was set, it rejected the WHOLE 4-channel
+#   registry (push+WA+SMS+Telegram) for that (pariwarId,category), not just SMS, with pg-boss retrying a
+#   permanent misconfiguration forever. FIX: a new `resolveSmsDltConfig` in contribution-providers.ts
+#   duck-types the Secret-Manager `GoogleError`'s gRPC `.code` (NOT_FOUND=5) + the local-dev "no context/no
+#   fallback" throw as not-provisioned⇒null, re-throwing every other failure (outage) unchanged. Also applied
+#   3 patch findings: (1) zero test coverage on contribution-providers.ts — new 17-test file added; (2) no
+#   in-flight dedup on createContributionProviderResolver's memo Map (thundering herd risk at cycle-open
+#   concurrency) — memo now caches the in-flight Promise, not just the settled value, deleting on rejection;
+#   (3) the global Firebase SA secret was re-resolved from Secret Manager once per (pariwarId,category) key
+#   instead of once per process — new `withGlobalSecretCache` helper, name-keyed, intercepts only the SA name.
+#   Also fixed a genuine source-file defect the Edge Case Hunter caught at the byte level: the memo key
+#   template literal contained a literal NUL byte instead of a space. 1 low-severity finding deferred
+#   (env-fallback name-collision risk, pre-existing pattern from apps/api/deps.ts, no evidence of an actual
+#   collision) — recorded in deferred-work.md. Verified: `pnpm --filter @twt/channels test` 200 passed
+#   (unchanged), `pnpm --filter @twt/jobs test` 151 passed + the new 17 (166 total, 63 skipped incl. the 6
+#   live-DB armor tests without DATABASE_URL), `pnpm --filter @twt/api test` 237 passed (unchanged); typecheck
+#   + lint clean on all three packages. Story status: done.)
+# last_updated: 2026-07-25 (AI-8-3 ready-for-dev→in-progress→review via bmad-dev-story — the real per-Pariwar
+#   delivery providers are WIRED; H-1 (the Epic-8 retro headline) CLOSED. Not a development_status key (retro
+#   action item; tracks in this ledger + the standalone story file, per the AI-5-x/6-x/7-x convention).
+#   SHIPPED: (D2) RELOCATED the WA/Telegram/SMS provider composition from apps/api into @twt/channels
+#   (packages/channels/src/composition/provider-composition.ts) — the true blocker was that the composition
+#   returns ChannelProvider + calls the channels factories so @twt/domain can't host it (domain can't import
+#   channels), and apps/jobs can't import apps/api; @twt/channels already reads @twt/domain ⇒ it's the lowest
+#   shared layer ⇒ ZERO new package, ZERO new edge, apps/api green via re-exports. (Task 2 / D1) BUILT the
+#   MISSING push seam resolvePushProviders against a GLOBAL Firebase SA secret (PUSH_FIREBASE_SA_SECRET_NAME;
+#   absent⇒fixture; no migration) — the §4 push-trap crux: the fixture push ALWAYS accepts, so leaving push on
+#   the fixture short-circuits the whole cascade and sends zero real bytes. (Task 3) BUILT
+#   createContributionProviderResolver (4-channel assembly under its OWN per-Pariwar withPariwarScope, D3
+#   process-lifetime memoization per (pariwarId,category)) with the §9a-i 5-STATE matrix proven as teeth
+#   (config-absent/disabled/secret-missing⇒fixture; Secret-Manager/DB OUTAGE⇒reject→pg-boss retry, never a
+#   silent fixture). (Task 4) WIRED boot.ts (buildContributionProviderResolver, env-gated opt-in-real, teardown
+#   in shutdown). (Task 5) §9a-ii live-DB armor suite (6 tests): push→WA→SMS advance-on-reject + a fixture-push
+#   short-circuit NEGATIVE control (goes RED the day push is left on the fixture) + SMS-terminal + independent
+#   Telegram mirror (fires for alert_published, silent for contribution_confirmed) + outage-propagation. ZERO
+#   frozen-primitive change (dispatch/cascade/provider/render/audit/CANONICAL_CHANNEL_LADDER/
+#   DEFAULT_PROVIDER_REGISTRY), ZERO fanOutAlert signature change, no new migration. VERIFY: @twt/channels 200,
+#   @twt/jobs 197 (incl the new 6), @twt/api unit green; pnpm ci:local (:5433) green EXCEPT a pre-existing
+#   @twt/domain concurrency-timeout flake — innocent by isolation (domain runs 1563/1563 alone,
+#   [[project_ci_local_concurrency_oversubscription]]). deferred-work.md: H-1 Closed by AI-8-3; per-Pariwar
+#   Firebase project Resolved via explicit deferral (re-trigger: first Pariwar needing its own FCM project).
+#   NEXT: code-review AI-8-3 (recommend a different LLM), then Epic 9 — 9.5's contribution.confirmed push now
+#   delivers live bytes during Epic 9 dev.)
+# last_updated: 2026-07-25 (AI-8-3 decisions RATIFIED by BigDev — still ready-for-dev. D1 GLOBAL Firebase
+#   service-account v1 (fixture-on-absent, NO migration; per-Pariwar Firebase = separate story w/ re-trigger);
+#   D2 RELOCATE the composition into @twt/channels (no new package/edge); D3 MEMOIZE per (pariwarId,category)
+#   inside the resolver (never touch frozen fanOutAlert). PLUS two BINDING hardening asks baked into Tasks 3+5:
+#   (i) the 5-STATE outage/fixture matrix as explicit teeth — config-absent/disabled/secret-missing-by-design
+#   ⇒ fixture, but Secret-Manager OUTAGE and DB OUTAGE ⇒ the resolver REJECTS (fail job→retry), because
+#   "infra down" ≠ "not configured" and collapsing them rots honest delivery reporting; (ii) an end-to-end
+#   full-ladder-advances-on-reject test driving the 8.8 fanOutAlert with provider doubles only — real push
+#   rejected→WA→SMS (SMS terminal) — permanent armor for the fixture-push-short-circuits-the-ladder regression.
+#   LADDER-SHAPE RECONCILIATION recorded [[feedback_closure_language_precision]]: the cascade is push→whatsapp→sms
+#   (CANONICAL_CHANNEL_LADDER, SMS terminal); Telegram is an INDEPENDENT fire-and-forget mirror (cascade.ts:29-31),
+#   NOT the 4th rung, and it is category-eligible only for alert_published (silent for the deadline/confirmed
+#   contribution-loop categories). Story file §4/§6/§7/§9/§10 + Tasks 3+5 + Change Log updated. NEXT: dev-story
+#   ai-8-3 (recommend a different LLM than review).)
+# last_updated: 2026-07-25 (AI-8-3 create-story via bmad-create-story: Epic-8 retro action-item →
+#   ready-for-dev. Story file ai-8-3-wire-real-per-pariwar-delivery-providers.md, baseline 5237b89. NOT a
+#   development_status key (retro action items track in THIS ledger + standalone files, per the AI-5-x/6-x/7-x
+#   convention). SCOPE: close H-1 (the retro headline) — 8.8 shipped the first live dispatch() fan-out but
+#   resolveProviders is UNWIRED in boot.ts (:506-523) → dispatch resolves DEFAULT_PROVIDER_REGISTRY = the
+#   log-only fixtures → a deployed worker composes+audits the full ladder but sends ZERO real bytes. Wire the
+#   real per-Pariwar providers so 9.5's contribution.confirmed push delivers live bytes DURING Epic 9 dev
+#   (elevated pre-Epic-9 critical path). KEY RECONCILIATION (corrects the retro's "apps/api↔@twt/channels
+#   cycle" shorthand): the real blocker is that the provider composition must call createWhatsappProvider/etc.
+#   + return ChannelProvider (all @twt/channels symbols) so @twt/domain CANNOT host it (domain can't import
+#   channels — the 8.8 target-resolvers only went to domain because they're SendTarget-structural); and
+#   apps/jobs can't import apps/api (apps/api→@twt/jobs already exists). RESOLUTION: the composition's only
+#   deps are @twt/domain (channelConfig reads) + @twt/channels's OWN factories, and @twt/channels ALREADY
+#   depends on @twt/domain → RELOCATE the composition INTO @twt/channels (both apps consume it; ZERO new
+#   package, ZERO new edge), apps/api re-exports so its call sites/tests are unchanged (the 8.8 relocation
+#   twin, one layer up). TWO build halves: (A) relocate resolveWhatsappProvider/resolveTelegramProvider/
+#   resolveSmsProvider (verified: consumed ONLY by apps/api unit tests, NO prod call site; they don't need
+#   EncryptionDeps — only the target adapters do); (B) BUILD the missing registry assembly
+#   createContributionProviderResolver → the ProviderRegistryResolver (contribution-notify.ts:89), composing
+#   all 4 channels + wired in boot.ts with app caches/gateway/secret-resolver built once. THE PUSH TRAP
+#   (crux): the cascade is push→WA→SMS stop-at-first-sent and the FIXTURE push ALWAYS accepts → leaving push
+#   on the fixture short-circuits the ladder → NOTHING real ever sends. So "wire providers" REALLY means
+#   "wire real PUSH". No per-Pariwar push-config table exists → D3 recommends a GLOBAL Firebase SA secret
+#   (fixture-on-absent, NO migration, mirrors SMS's global posture); per-Pariwar Firebase = separate story.
+#   Scoping subtlety: resolveProviders is called per-member inside frozen fanOutAlert with only
+#   {pariwarId,category} (NOT a pre-scoped db) → it must open its OWN withPariwarScope for the RLS config
+#   reads (else silent all-fixture) + should memoize per (pariwarId,category) (D4 — ~400k redundant reads at
+#   4L otherwise; memoize INSIDE the resolver, never touch frozen fanOutAlert). HONESTY INVARIANT (verbatim
+#   from composition.ts head-comment): not-provisioned⇒fixture, but a Secret-Manager/DB OUTAGE must PROPAGATE
+#   (fail job→pg-boss retry), never silently degrade to a fixture (faking delivery). ZERO frozen-primitive
+#   change (dispatch/cascade/provider/render/audit/CANONICAL_CHANNEL_LADDER/DEFAULT_PROVIDER_REGISTRY), ZERO
+#   fanOutAlert signature change, NO migration. 3 decisions saved for BigDev: D1 global-Firebase-SA-v1 [rec]
+#   vs per-Pariwar-push-config-now; D2 relocate-into-@twt/channels [rec] vs new @twt/channel-composition pkg;
+#   D3 memoize-per-(pariwar,category) [rec] vs accept per-member reads. Merge gate: pnpm ci:local :5433. Story
+#   file Status: ready-for-dev. NEXT: dev-story ai-8-3 (recommend a different LLM than review); this is the
+#   single pre-Epic-9 build blocker.)
 # last_updated: 2026-07-25 (epic-8-retrospective: optional -> done via bmad-retrospective — Epic 8
 #   (Sushil's Contribution Loop), 13/13 stories done (8.1-8.13 incl. the correct-course 8.13). Saved
 #   epic-8-retro-2026-07-25.md. HEADLINE (extending the epic thesis): Epic 8 is THE INTEGRATION EPIC —

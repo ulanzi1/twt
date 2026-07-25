@@ -3272,7 +3272,8 @@ So that I have a path out of yellow-stuck states without depending purely on aut
 
 **Given** FR-32 (screenshot upload mandatory only on mismatch — hidden in happy path) + UX-DR28
 **When** the mismatch detection + recovery flow is implemented
-**Then** the matcher (Story 9.4) emits a `contribution.mismatch-detected` event when: (a) UTR match fails despite attestation; (b) amount mismatch; (c) sender VPA mismatch; (d) no bank statement entry found within the expected window
+**Then** the matcher (Story 9.4) emits a `contribution.reconciliation-mismatch` event when: (a) UTR match fails despite attestation; (b) amount mismatch; (c) sender VPA mismatch; (d) no bank statement entry found within the expected window
+> **Event-name reconciliation (BigDev, Epic 8 retro 2026-07-25):** the canonical mismatch event type is `contribution.reconciliation-mismatch` — the name Epic 8 already froze in the red-pill readers (`packages/domain/src/contribution/history.ts:67 CONTRIBUTION_MISMATCH_EVENT_TYPE`) and admitted in Story 8.10's executable-negative fence (exactly three `contribution.*` types). The earlier `contribution.mismatch-detected` prose was a drafting drift; corrected here so the pre-built red-pill surface populates with zero code change and the 8.10 fence does not flag a forbidden fourth type. Story 9.4/9.7 MUST emit this exact string; AI-8-1 adds name-assertion teeth.
 **And** mismatch event triggers a push notification (via Story 8.8) + flips the member's pill from yellow to red/umber (Story 9.6); member is shown `<SelfVerifySurface>` with empathy copy explaining the mismatch
 **And** screenshot upload is **mandatory only here** — hidden in happy path (per FR-32); member uploads PhonePe/GPay/PayTM screenshot showing the transaction; upload routes to reconciliation review queue (Story 9.8)
 **And** Story 7.6 facilitated-recovery invariant applies: screenshot upload does NOT auto-confirm or silently remap; trustee review in Story 9.8 must resolve

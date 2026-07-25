@@ -1,4 +1,67 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-25 (story 8-11 review -> done via bmad-code-review. Three parallel review
+#   layers (Blind Hunter/diff-only, Edge Case Hunter/full-repo-read, Acceptance Auditor/spec-verified)
+#   against the full uncommitted diff (699 lines incl. 3 new files) — 21 raw findings triaged to 4
+#   survivors (9 dismissed as noise/false-positive-on-verification, e.g. the note/[id].tsx "all phases"
+#   claim was independently confirmed TRUE by reading the actual file). 1 decision-needed (BigDev,
+#   2026-07-25): the PDF footer's server-side helpline number was a hardcoded placeholder resolved from
+#   an env var (`HELPLINE_TEL`) that is genuinely unprovisioned anywhere in the repo (no `.env.example`
+#   entry, no deploy config) — AC4 explicitly mandates a `[PENDING — Epic 10]` placeholder token in
+#   exactly this case, never a fabricated number. Decided: switch to the PENDING-token path. 3 patches
+#   applied: (1) `note-template.ts` gained `HELPLINE_PENDING_TOKEN`; `renderContributionNoteHtml`'s
+#   `helpline` param is now optional and the footer prints the token when absent; `handlers.ts` no
+#   longer resolves the fabricated `HELPLINE_TEL ?? '+911800000000'` default; the deferred-work.md
+#   routing-registry entry updated to match. (2) The AC7 presence fence (`helpline-cta-presence.test.ts`)
+#   could be defeated by a comment containing the literal `<CallHelplineCTA`/`hi('note.helpline')`
+#   substring — added a `stripComments()` helper applied before every `includes` check in both
+#   `describe` blocks (the file-level-vs-per-branch coverage limitation is left as documented, per D6's
+#   source-scan-not-AST choice). (3) Deleted the now-dead `shell.call_help` key from `claim.json`
+#   (en+hi), orphaned since the default label moved to `common.call_helpline.label`. 1 deferred, pre-
+#   existing: `ActiveContributionCard`'s Story-8.2 `if (!data || !data.assigned) return null` early
+#   return means the new helpline CTA doesn't render in that card's loading/unassigned/error state —
+#   out of AC1's explicit branch list, logged in deferred-work.md, re-trigger = BigDev call on whether
+#   the My Pool card's absence state needs its own fallback. VERIFICATION post-fix: `@twt/api`
+#   typecheck + lint green, `contribution-note-render.test.ts` green; `@twt/mobile` typecheck + lint +
+#   full unit suite 48/48 green (incl. the 7-test presence fence); `pnpm --filter @twt/i18n
+#   i18n:check-parity` green; `pnpm microcopy:check` green (incl. `common.test.ts` 9/9). Story file
+#   Status: done.)
+# last_updated: 2026-07-25 (story 8-11 ready-for-dev -> in-progress -> review via bmad-dev-story.
+#   `[SURFACE]` story — presence + a home + teeth, not a new feature. (1) RELOCATED the shipped
+#   <CallHelplineCTA> components/claim/ -> components/common/ behind a one-line re-export shim (8.8
+#   precedent) so all 6 claim call sites stay byte-identical; DECOUPLED the default label claim.shell.
+#   call_help -> common.call_helpline.label, authored BYTE-IDENTICAL so the 7 bare claim usages have
+#   zero copy drift (Q1 resolved at recon). (2) WIRED the CTA (chromeless, height=56, third-tier per
+#   UX-DR62) onto the 3 missing contribution surfaces: ActiveContributionCard (both attested/contribute
+#   branches), YogdaanBahi (OUTSIDE the Fabric FlatList, in BOTH return blocks, rows.length===0 gate
+#   preserved per the 8.6 crash), the Note screen (all phases). (3) FILLED the PDF footer slot 8.7
+#   reserved by name: renderContributionNoteHtml gained an OPTIONAL helpline param; handlers.ts resolves
+#   process.env.HELPLINE_TEL ?? '+911800000000' (the mobile-seam mirror) server-side — no contract/facts
+#   change, template stays pure (Q2 resolved). (4) TEETH: common.json added to microcopy copy_globs +
+#   scripts/microcopy/common.test.ts (9 tests); apps/mobile/tests/unit/helpline-cta-presence.test.ts (7
+#   tests) source-scans all 5 contribution surfaces for a RENDERED <CallHelplineCTA, REVERT-SANITY
+#   proven (drop from one surface -> red naming it -> restore -> green). Q3: amount-mismatch RED surface
+#   confirmed Epic-9 out-of-scope. Two Epic-10 forward seams recorded in deferred-work.md (routing-policy
+#   registry + per-Pariwar number resolution; out-of-hours callback bottom-sheet). friction-budget
+#   disposition affirmed, no new row, baseline untouched. openapi/v1.yaml byte-identical, no migration/
+#   schema/route/contract change. ci:local 28/28 green (a first run's test/crypto/integration failures
+#   were a malformed-DATABASE_URL cascade; both non-DB jobs green in isolation, then whole gate green
+#   with sslmode=disable). ONE un-attested DoD item recorded openly (not faked): the live Android-
+#   emulator eyeball of the 3 surfaces was deferred by BigDev decision — static coverage (typecheck/lint/
+#   presence-fence/byte-identical-default/Fabric-risk-handled) substitutes; a device eyeball is owed.)
+# last_updated: 2026-07-24 (story 8-11 backlog -> ready-for-dev via bmad-create-story. `[SURFACE]` story:
+#   `<CallHelplineCTA>` is NOT new — it shipped in 6.2 and already rides 8 surfaces (5 claim + pay.tsx +
+#   UpiFailureCoach). 8.11 = (1) RELOCATE it components/claim/ -> components/common/ with a re-export shim
+#   so all 6 claim call sites stay byte-identical (the 8.8 relocation precedent); (2) add it to the 3
+#   contribution surfaces still missing it — ActiveContributionCard (8.2), YogdaanBahi (8.6, OUTSIDE the
+#   Fabric FlatList per the 8.6 crash), the Note screen note/[id].tsx (8.7); (3) fill the PDF footer slot
+#   8.7 reserved BY NAME at note-template.ts:316 with a printed bilingual helpline line (a PDF isn't
+#   tappable — it carries the number); (4) mechanize via a source-scan presence fence (8.10 no-ingest-path
+#   pattern; the mobile harness is pure-Vitest, no RTL). Ratified defaults: env-var number seam kept, the
+#   Story-10.x routing-registry + per-Pariwar resolution + out-of-hours callback bottom-sheet DECLARED as
+#   Epic-10 forward seams (not faked); ≥56pt touch but chromeless/third-tier per UX-DR62; default label
+#   decoupled from the claim namespace -> common. Amount-/reconciliation-mismatch RED surface is Epic 9,
+#   out of scope. Zero contract/schema/migration; only apps/api edit is the reserved footer. 3 open
+#   questions saved for dev (claim copy-drift check, PDF number source, Epic-9 scope boundary).
 # last_updated: 2026-07-24 (story 8-10 review -> done via bmad-code-review. 3-layer adversarial review
 #   (Blind Hunter, Edge Case Hunter, Acceptance Auditor) against the ~832-line diff; the Acceptance Auditor
 #   independently re-derived both new regexes and re-ran every recon claim, confirming zero AC violations.
@@ -731,7 +794,7 @@ development_status:
   8-8-contribution-loop-notification-triggers: done
   8-9-calendar-aware-close-of-cycle-timing: done
   8-10-out-of-band-contribution-policy: done
-  8-11-call-helpline-cta-cross-cutting-affordance: backlog
+  8-11-call-helpline-cta-cross-cutting-affordance: done
   8-12-90-second-twt-portion-loop-measurement-instrumentation: backlog
   8-13-nominee-vpa-claim-time-collection-resolver-wiring-upi-intent-re-enable: done
   epic-8-retrospective: optional

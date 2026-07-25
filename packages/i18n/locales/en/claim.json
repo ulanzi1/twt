@@ -6,7 +6,6 @@
   "shell.banner": "Filing on behalf of {name}",
   "shell.save_resume": "Save & continue later",
   "shell.saved": "Saved. You can return anytime — there's no rush.",
-  "shell.call_help": "Call us — we'll help",
   "otp.title": "Let's verify it's you",
   "otp.help": "We've sent a one-time code to the nominee's phone {mobile} — not this phone. Please enter it below.",
   "otp.no_nominee": "We couldn't reach a nominee's phone. Please call us and we'll help you file.",

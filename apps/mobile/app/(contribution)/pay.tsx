@@ -31,7 +31,7 @@ import { Button, H2, Input, Paragraph, Spinner, Text, View, YStack } from 'tamag
 
 import { UPIIntentButton } from '../../components/active-contribution/UPIIntentButton'
 import { UpiFailureCoach } from '../../components/active-contribution/UpiFailureCoach'
-import { CallHelplineCTA } from '../../components/claim/CallHelplineCTA'
+import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
 import { memberAuth } from '../../lib/member-api'
 
 const NS = { namespace: 'contribution' } as const

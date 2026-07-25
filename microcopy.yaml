@@ -220,6 +220,15 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]).
     - packages/i18n/locales/hi/pool-onboarding.json
     - packages/i18n/locales/en/pool-onboarding.json
+    # Story 8.11 — the `common` namespace strings. This is the FIRST story to land real member copy
+    # in `common.json` (the cross-cutting <CallHelplineCTA> default label `call_helpline.label` — the
+    # affordance's warm-neighbour register), so the member vocabulary + the scarcity/panic/blame tone
+    # rules must now bite this file too: a "Call now or lose your spot!" framing on the helpline
+    # fallback must fail at PR time. Teeth proven (real-fixture pass + planted tone violation + revert-
+    # sanity), not merely scanned — see scripts/microcopy/common.test.ts + the Dev Agent Record
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over an unscanned file proves nothing).
+    - packages/i18n/locales/hi/common.json
+    - packages/i18n/locales/en/common.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

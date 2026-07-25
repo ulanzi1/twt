@@ -132,6 +132,38 @@ tone:
     # (tone-guide §5) — the regex is deliberately NOT exhaustive over natural
     # language. Single valid case-insensitive regex (assertValidRegex-validated).
     pattern: 'should\s*(have|[''’]ve)\s+(gone|paid|sent|used|routed|done|contributed|given)|\baccidental(ly)?\s+(pay|pays|paid|paying|send|sends|sent|sending|give|gives|gave|giving|make|makes|made|making|transfer\w*|contribut\w*|donat\w*)\b|\baccidental\s+(payment|gift|contribution|transfer|donation)\b|\bby\s+mistake\b|\bmistakenly\b|outside\s+(the|our)\s+(system|app|platform)|(does|did|will|would)\s+not\s+count\b|(does|do|did|will|wo|would)\s?n.?t\s+count\b|not\s+counted\b|\b(irregular|incomplete)\s+(contribution|gift|payment|donation)|\b(contribution|gift|payment|donation)\s+(is|was|are|were)\s+(irregular|incomplete)\b|(?:(?<=(?:भुगतान|पैसे|राशि|योगदान|दान|उपहार).{0,60})|(?=.{0,60}(?:भुगतान|पैसे|राशि|योगदान|दान|उपहार)))(?:गलती\s*से|चाहिए\s*था)|(सिस्टम|ऐप|एप)\s*के\s*बाहर|नहीं\s*गिन|गिन[ऀ-ॿ]{0,4}\s*नहीं|(योगदान|भुगतान|दान|उपहार)\s*(अधूरा|अधूरी|अनियमित)|(अधूरा|अधूरी|अनियमित)\s*(योगदान|भुगतान|दान|उपहार)'
+  - label: fursat-pressure
+    # Story 9.1 (AC2) — the "fursat" cadence operational-posture invariant, mechanized.
+    # Sunita reconciles bank statements while grieving; the Nominee Console must respect
+    # "fursat" (grief-paced, unhurried) cadence. epics.md:3156-3162 + UX spec L121/L129:
+    # throughput optimization must NEVER erode nominee dignity or grief-paced pacing.
+    # This rule catches the pressure families a well-meaning "engagement"-minded author
+    # reaches for — the register the console must NOT adopt:
+    #   (1) GAMIFICATION — streaks, badges, achievements, points, leaderboards, "N%
+    #       complete" completion-percentage framing. A grief task is not a game.
+    #   (2) URGENCY / FALLING-BEHIND — "you're behind", "falling behind", "act now",
+    #       "please act", "hurry up", "don't delay", "last chance", "final reminder/
+    #       notice". Note: bare "hurry" is NOT matched — the fursat register's OWN
+    #       reassurance is "there is no hurry" (the shipped intro), so the arm binds to
+    #       the imperative "hurry up" construction, never the negated reassurance. Same
+    #       for Hindi जल्दी: bound to जल्दी कर/कीजिए (the imperative), so "कोई जल्दी नहीं
+    #       है" (no hurry — the shipped copy) is correctly NOT flagged.
+    #   (3) PRE-THRESHOLD ESCALATION PRESSURE — "last chance"/"final notice"-style
+    #       pressure BEFORE the staff-takeover threshold (the takeover is neutral "on
+    #       record", never a countdown the nominee is racing).
+    # The Hindi arms mirror (2)/(3) with high-signal phrases: आप पीछे / पीछे रह (you're
+    # behind), जल्दी कर/कीज (hurry-imperative), तुरंत कर / अभी कर (do it now), देर न कर
+    # (don't delay). Bound to imperatives so the reassuring negations the console ships
+    # ("कोई जल्दी नहीं") stay usable.
+    # Green on introduction is NOT the deliverable: the teeth are proven by
+    # scripts/microcopy/fursat.test.ts, which plants prohibited frames in BOTH locales
+    # and asserts this rule FIRES on them ([[feedback_gate_scope_semantic_coverage]] — a
+    # green scan over the newly-scanned nominee-console files proves nothing). The
+    # regex is DELIBERATELY non-exhaustive — the paraphrased / spelled-out tail (e.g. a
+    # subtly gamified "keep it up!" or an implicit throughput-over-pace optimization) is
+    # the HUMAN Story 2.2 tone-review's job (tone-guide §5 + tone-review-checklist.md).
+    # Single valid case-insensitive regex (assertValidRegex-validated).
+    pattern: '(earn(ed|ing)?|unlock\w*|keep|kept|los[et]|win|won|your|another)\s+(a\s+|an\s+|the\s+|your\s+)?(streaks?|badges?|achievements?)\b|\b(streaks?|badges?|achievements?)\s+(earned|unlocked|awarded|complete)\b|\d+[- ]?day\s+streaks?|\bleaderboards?\b|\d+\s*%\s+complete\b|completion\s+percentage|you\s*[''’]?re\s+behind|falling\s+behind|fall\s+behind|\bact\s+now\b|please\s+act\b|hurry\s+up|don\s*[''’]?t\s+delay|last\s+chance|final\s+(reminder|notice)|आप\s*पीछे|पीछे\s*रह|जल्दी\s*(कर|कीज)|तुरंत\s*कर|अभी\s*कर|देर\s*न\s*कर'
 
 # (d) Numeral discipline — amendment A2 (UX spec L1119-1127 / L1303). Operational
 # surfaces = Gregorian dates + Latin numerals; Hindi/Devanagari numerals (०-९) are
@@ -229,6 +261,15 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over an unscanned file proves nothing).
     - packages/i18n/locales/hi/common.json
     - packages/i18n/locales/en/common.json
+    # Story 9.1 — the `nominee-console` namespace strings (Sunita's reconciliation surface, the FIRST
+    # Epic-9 surface). This entry gives the NEW `fursat-pressure` tone rule a surface to bite: the console
+    # copy must respect "fursat" (grief-paced, unhurried) cadence — no gamification / urgency / falling-
+    # behind / pre-threshold escalation framing (epics.md:3156-3162). The register + numeral discipline
+    # bite here too. Teeth proven (planted prohibited frames in BOTH locales that the rule FIRES on +
+    # the shipped copy clean) — see scripts/microcopy/fursat.test.ts + the Dev Agent Record
+    # ([[feedback_gate_scope_semantic_coverage]]: a green scan over a newly-scanned file proves nothing).
+    - packages/i18n/locales/hi/nominee-console.json
+    - packages/i18n/locales/en/nominee-console.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

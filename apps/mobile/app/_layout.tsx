@@ -180,6 +180,14 @@ function RootLayoutNav() {
           }}
         />
 
+        {/* Story 9.1 — the Nominee Console route group (Sunita's reconciliation surface). */}
+        <Stack.Screen
+          name="(nominee)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
         {/* Story 7.10 — pool-engine onboarding tutorial route group. Presented modally (no sibling
             group uses modal presentation today, so it is wired explicitly here). */}
         <Stack.Screen

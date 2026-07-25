@@ -250,4 +250,12 @@ export * as degradedMode from './degraded-mode/index.js';
 // its original module, so no apps/api call site changed. Holds NO policy and NO transport — the frozen
 // @twt/channels primitives stay untouched and the composition that sequences them lives in apps/jobs.
 export * as notifications from './notifications/index.js';
+// Story 9.1 (the FIRST Epic-9 story) — the nominee-console domain module. Homes ONLY the PURE
+// staff-takeover-by-day-N derivation (`computeStaffTakeover` + `DEFAULT_STAFF_TAKEOVER_THRESHOLD_DAYS`):
+// a total, replay-deterministic `fn({ lastEngagedAt, poolOpenAt, thresholdDays, now }) -> verdict` with
+// no wall-clock read inside. The clock runs from `poolOpenAt` while the Story 9.3 engagement writer is
+// unbuilt (`lastEngagedAt ?? poolOpenAt`), and the `takeoverEligible` verdict IS the reserved-seam shape
+// the Story 9.8 reconciliation review queue consumes (no event emitted, no live consumer today). Consumed
+// by the apps/api nominee-console read seam, which resolves `poolOpenAt` off events_log.
+export * as nomineeConsole from './nominee-console/index.js';
 export { UUID_REGEX } from './db.js';

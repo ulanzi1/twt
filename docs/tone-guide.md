@@ -123,6 +123,22 @@ cannot (template-literal and spelled-out forms — see
   gift is not, and must never inherit that frame. Stances of record, the four operator steps,
   and the fences: [`docs/policies/out-of-band-contributions.md`](policies/out-of-band-contributions.md).
   Automatable subset: the `out-of-band-blame` tone rule (Story 8.10).
+- **"fursat"-pressure framing on the Nominee Console (Story 9.1).** Sunita reconciles bank
+  statements **while grieving**; the console must respect *fursat* (grief-paced, unhurried)
+  cadence — "throughput optimization must never erode nominee dignity or grief-paced workflow
+  pacing" (epics L3156-3162). **Explicitly prohibited:** (a) **gamification** — streaks,
+  badges, achievements, points, leaderboards, *"N% complete"* completion framing (a grief task
+  is not a game); (b) **urgency / falling-behind** — *"you're behind on uploads,"* *"act now,"*
+  *"hurry up,"* *"don't delay,"* *आप पीछे हैं*, *जल्दी कीजिए*; (c) **pre-threshold escalation
+  pressure** — *"last chance,"* *"final reminder"*-style pressure **before** the staff-takeover
+  threshold (the takeover is neutral *"on record,"* never a countdown the nominee is racing);
+  (d) optimizations that prioritize matcher **throughput** over the nominee's emotional pace.
+  **Explicitly permitted** (friction-reducing without rushing): **less typing, better OCR,
+  save-and-resume preservation, field prefilling on return.** Note the reassurance the register
+  legitimately ships — *"there is no hurry"* / *"कोई जल्दी नहीं है"* — the bare urgency words in
+  their **negated** form are correct, not prohibited. Automatable subset: the `fursat-pressure`
+  tone rule (Story 9.1); the paraphrased tail (a subtly gamified *"keep it up!"* or an implicit
+  throughput-over-pace optimization) is this review's job.
 
 ---
 
@@ -134,7 +150,15 @@ operator — is "designed for *being held*, not *being managed*" (UX L401). The 
 family "reaches TWT … grief-paced (~1 month after death)" (UX L60).
 
 - **"fursat" cadence.** "When you have leisure" — never "complete your task" or "your task
-  is pending" (UX L67, L295, L401). Sunita's console uses fursat cadence (UX L67).
+  is pending" (UX L67, L295, L401). Sunita's console uses fursat cadence (UX L67). The
+  prohibited pressure frames (gamification / urgency / falling-behind / pre-threshold
+  escalation) and the **permitted** friction-reducers (less typing, better OCR, save-and-resume,
+  field prefilling) are enumerated in [§3](#3-prohibited-frames); the automatable subset is the
+  `fursat-pressure` tone rule (Story 9.1). **Standing item (Story 9.1, AC2):** the Nominee
+  Console copy + interaction patterns are revisited for *fursat* preservation **at least once
+  per release cycle**, with **designer sign-off** — recorded on the
+  [tone-review checklist](./tone-review-checklist.md#periodic-fursat-review-nominee-console),
+  not left as prose.
 - **Witness-not-bailiff stance.** The nominee surface uses witness-not-bailiff cadence
   (architecture §4.15 L2890; UX L295). The system "absorbs the burden the family cannot,"
   it does not pursue them.

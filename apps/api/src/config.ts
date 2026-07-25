@@ -8,6 +8,8 @@
 // resolved through `resolveSecretValue` (packages/domain/src/secrets.ts), never an
 // env literal in prod (AC-1).
 
+import { nomineeConsole } from '@twt/domain';
+
 const MIN_SESSION_SECRET_LEN = 32;
 
 /**
@@ -125,6 +127,13 @@ export interface ApiConfig {
   readonly otpPerPhoneWindowMs: number;
   /** Max trusted devices per member (Story 3.2, §2.2 line 1337 — 2; a 3rd drops the oldest). */
   readonly memberMaxTrustedDevices: number;
+  /**
+   * Story 9.1 — the staff-takeover-by-day-N threshold: whole days of nominee disengagement before the
+   * Nominee Console case is flagged for District-Admin takeover (AC3). CONFIGURABLE, not a magic literal;
+   * the default is the single-source domain constant `DEFAULT_STAFF_TAKEOVER_THRESHOLD_DAYS` (7), overridable
+   * via `NOMINEE_TAKEOVER_THRESHOLD_DAYS` for ops tuning (respects the FM-14 magic-number governance).
+   */
+  readonly nomineeTakeoverThresholdDays: number;
   /**
    * Member-JWT signing key (Story 3.2, §2.4). The private key NAME (never the value)
    * for Secret Manager + a local-dev env fallback var name (mirror the argon2 pepper).
@@ -362,6 +371,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     otpPerPhoneMax: intEnv(env, 'OTP_PER_PHONE_MAX', 5),
     otpPerPhoneWindowMs: intEnv(env, 'OTP_PER_PHONE_WINDOW_MS', 15 * MINUTE),
     memberMaxTrustedDevices: intEnv(env, 'MEMBER_MAX_TRUSTED_DEVICES', 2),
+    // Story 9.1 — staff-takeover-by-day-N threshold (default = the single-source domain constant, 7).
+    nomineeTakeoverThresholdDays: intEnv(
+      env,
+      'NOMINEE_TAKEOVER_THRESHOLD_DAYS',
+      nomineeConsole.DEFAULT_STAFF_TAKEOVER_THRESHOLD_DAYS,
+    ),
     memberJwt: {
       algorithm: 'ES256',
       privateKeySecretName: env['MEMBER_JWT_PRIVATE_KEY_SECRET_NAME'] ?? 'twt-dev-member-jwt-private-key',

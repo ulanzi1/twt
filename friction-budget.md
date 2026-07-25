@@ -724,6 +724,30 @@ all, so nothing enters the public page-weight budget the gate has teeth on. Zero
 friction introduced; ledger reviewed, no new row warranted. Do NOT ratchet
 (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 9.1 disposition (declaration affirmed, no new row):** the Nominee Console shell
+(`apps/mobile/app/(nominee)/_layout.tsx` + `index.tsx`, `apps/mobile/components/nominee-console/*`,
+and the route registration in `apps/mobile/app/_layout.tsx`) — the first Epic-9 surface —
+introduces **zero deliberate friction**. It is a **read-only composition**: the console
+self-suppresses to `null` unless the signed-in member is already a validated nominee with an
+active pool (the 8.3 `ViewContributorsEntry` self-suppress discipline), then renders the
+already-affirmed **Story 8.3** `<PoolContributorList>` and **Story 8.11** `<CallHelplineCTA>`
+verbatim (no new interaction added to either), plus two `<ComingSoonCard>` placeholders (the
+Story 9.3 upload-queue and Story 9.6 `<StatusPill>` seams) and a grey staff-takeover banner —
+all three are **non-interactive, no-tap-target `accessibilityRole="summary"` regions**: no
+form, no upload, no button, no gate, nothing a member completes. The staff-takeover state is a
+server-computed, strictly-neutral "on record" notice (never a countdown or blame frame,
+[[project_yogdaan_status_derivation_convention]]) — informational, not friction. The `fursat`
+tone invariant (AC2) this story mechanizes exists specifically to keep future changes to this
+surface from *acquiring* deliberate friction (gamification, urgency) without a declaration —
+consistent with, not contrary to, this disposition. Zero deliberate friction introduced;
+ledger reviewed, no new row warranted. The **page-weight baseline is unchanged**: every
+new/modified file lands in the authenticated mobile app (`apps/mobile`, EAS build is a no-op →
+`member-app-native` stays a no-op), `apps/api` (member-session-gated read only), or
+`packages/domain`/`packages/contracts`/`packages/api-client`/`packages/i18n` (all excluded
+from the ledger) — it is **NOT a public `apps/public` surface**, so it does not enter the
+public page-weight budget the gate has teeth on. Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

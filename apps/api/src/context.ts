@@ -222,6 +222,23 @@ export interface DataExportEnqueuer {
 }
 
 /**
+ * The reconciliation UTR-matcher enqueue seam (Story 9.4, Decision D7) — send-only. `enqueueMatch` posts a
+ * RECONCILIATION_MATCH job for the given cycle (singletonKey = cycle_id — the worker collapses duplicates and
+ * every verdict is idempotent). Best-effort at the call site; a pg-boss-backed enqueuer in prod/dev, absent
+ * in tests. `close` drains the send-only client on shutdown.
+ */
+export interface ReconciliationMatchEnqueuer {
+  enqueueMatch(input: {
+    readonly cycleId: string;
+    readonly pariwarId: string;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }): Promise<void>;
+  close?(): Promise<void>;
+}
+
+/**
  * The claim-document OCR + parity job producer seam (Story 6.5). The upload endpoint stores
  * the bytes in `claimDocumentStorage` and enqueues a `CLAIM_OCR_PARITY` job here (send-only —
  * the API produces, apps/jobs consumes; NEVER `boss.work()`). Injectable like `dataExportQueue`:
@@ -393,6 +410,16 @@ export interface AppDeps {
    * posture). Same injectable-seam pattern as `claimDocumentStorage`.
    */
   readonly statementScanner: StatementScanner;
+  /**
+   * Reconciliation UTR-matcher job producer (Story 9.4, Decision D7) — the OPTIONAL enqueue-primary latency
+   * optimizer. After a bank-statement upload commits, the route enqueues a `RECONCILIATION_MATCH` job for the
+   * pool's cycle (a new statement is the only thing that changes match outcomes), so the matcher confirms in
+   * near-real-time instead of waiting up to 4h for the recovery-sweep cron. Best-effort: a failed enqueue
+   * NEVER fails the upload (the sweep heals a dropped job). Send-only (the API produces; apps/jobs consumes;
+   * NEVER `boss.work()`). OPTIONAL — omitted in tests + wherever the pg-boss client is not wired; the cron
+   * sweep is the contracted mechanism regardless.
+   */
+  readonly reconciliationMatchQueue?: ReconciliationMatchEnqueuer;
   /**
    * Contribution-Note PDF renderer (Story 8.7, D1) — the Yogdaan Pratigya render port. The
    * headless-Chromium adapter in prod/dev (the ONLY engine satisfying both AC2 legs: Devanagari

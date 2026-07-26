@@ -132,3 +132,5 @@ export * from './alerts-rls.js';
 // (UX-DR77). Fail-closed on an unset scope → 0 rows → the resolver's EMPTY-calendar path →
 // the NORMAL reconciliation tail (an unresolvable calendar never EXTENDS a deadline).
 export * from './pariwar-holiday-calendar-rls.js';
+// Story 9.4 — the persisted bank-statement-entries tenant-isolation policies (matcher read/persist).
+export * from './bank-statement-entries-rls.js';

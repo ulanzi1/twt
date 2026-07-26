@@ -256,6 +256,9 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.21.0
         version: 7.21.0
+      '@twt/bank-parsers':
+        specifier: workspace:*
+        version: link:../../packages/bank-parsers
       '@twt/channels':
         specifier: workspace:*
         version: link:../../packages/channels

@@ -14,3 +14,6 @@ import { registerReconciliationRoutes } from './routes.js';
 export function registerReconciliationModule(app: FastifyInstance, deps: AppDeps): void {
   registerReconciliationRoutes(app, deps);
 }
+
+// Story 9.4 (Decision D7) — the send-only reconciliation-match job producer (the enqueue-primary seam).
+export { createPgBossReconciliationMatchEnqueuer } from './queue.js';

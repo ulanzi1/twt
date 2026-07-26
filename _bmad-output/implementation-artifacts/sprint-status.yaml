@@ -1,4 +1,42 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-26 (story 9-4 review -> done via bmad-code-review. 3-layer adversarial review
+#   (Blind Hunter + Edge Case Hunter + Acceptance Auditor) found 3 decision-needed + 6 patch findings;
+#   BigDev resolved all 3 decisions (entry-exclusivity -> a new entry_already_claimed mismatch reason;
+#   AC2 timestamp window -> wired from the alert's own alert.live/alert.closed lifecycle events via a new
+#   resolveAlertLiveWindow read; mismatch dedup -> widened to (pool,member,reason)) and all 9 resulting
+#   patches were applied: entry_type credit-only filter (a debit/reversal row could confirm), the staff
+#   upload route's enqueue-primary was firing pre-commit (now genuinely post-commit via a route-level
+#   onResponse hook, matching D6/D7), a fragile `body!` non-null assertion, store.claim() now isolated
+#   per-verdict (try/catch), and a new reconciliation-match-resilience.test.ts (8 cases) closing the AR-45
+#   retry/breaker test-coverage gap. 5 items deferred (sweep fairness, claim-TTL headroom risk, unbounded
+#   per-tick reads, D2's single-stream serialization, pg-boss batch-loop isolation) to deferred-work.md;
+#   1 dismissed as noise (sender-VPA dead-weight matches locked Decision D3). ADR-0035 addendum records
+#   the 3 fixes as forward contracts. Domain(161 files/1666 tests)/jobs(25/236)/api(86/657) + lint +
+#   typecheck all green post-fix (live DB, :5433).
+# last_updated: 2026-07-26 (story 9-4 ready-for-dev -> in-progress -> review via bmad-dev-story. UTR
+#   matching engine IMPLEMENTED [PRIMITIVE] — the FIRST live producer of contribution.confirmed (green),
+#   closing the Epic-8 + Story-9.3 forward contracts. Pure matchPool engine (primary UTR + destination-first
+#   secondary + units-reconciled amount + D3 sender-VPA {available:false}); new bank_statement_entries table
+#   (migration 0083, RLS, minimal Tier-1-adjacent footprint, D4); apps/jobs/src/matcher/ cron worker (MATCHER_CRON
+#   0 */4 * * * IST 6x/day sweep + apps/api enqueue-primary, D7); confirmed/mismatch verdicts on the alert
+#   stream (D2) via matcher-write.ts; reconciliation.confirmation-reversed registered-not-emitted (D1, AC5b
+#   structural); AR-45 jobs-side ResilientCall port; 3-layer monotonic invariant (keyed store + pre-read +
+#   append-only, all tested live). Headline live-DB proof: a real run flips a member yellow->green at the 8.3
+#   contributor list AND 8.6 Yogdaan Bahi with zero read changes. Verdict schemas STANDALONE (not the write
+#   map) so the 8.10 fence stays green verbatim (AC7). no_statement_entry NOT emitted live (pending stays
+#   yellow). ADR-0035 authored (adr-index row 104 slot-reserved-pre-write -> drafted). Per-package
+#   lint/typecheck/test green; ci:local 26/27 (lone test-unit non-pass = known CPU-oversubscription flake in
+#   unrelated api/jobs specs, each green in isolation). Awaiting code-review.)
+# last_updated: 2026-07-26 (story 9-4 backlog -> ready-for-dev via bmad-create-story. UTR matching engine
+#   [PRIMITIVE]: pure per-pool matcher (primary UTR match + secondary amount/timestamp/sender-VPA verification),
+#   apps/jobs/src/matcher/ cron 6x/day + enqueue-on-upload, (member,alert,entry) idempotency via the 1.12 keyed
+#   store, monotonic-confirmation invariant (3-layer: keyed store + event pre-read + append-only immutability),
+#   emits contribution.confirmed (exact camelCase poolId/memberId forward-contract keys) + reconciliation-mismatch.
+#   Decisions D1-D7 LOCKED (all recommended): D1 reversal event = reconciliation.confirmation-reversed (off the 8.10
+#   contribution.* fence, 9.3 D6 precedent); D2 verdicts on the alert stream; D3 sender-VPA {available:false}; D4 new
+#   bank_statement_entries table keyed on entry_id; D5 matcher emits reconciliation-mismatch; D6 matcher enqueues
+#   CONTRIBUTION_NOTIFY_CONFIRMED post-commit; D7 build both enqueue-on-upload + 4h cron sweep. Units trap flagged:
+#   pools.fixed_amount whole-INR vs entry.amount paise. Ready for dev-story.)
 # last_updated: 2026-07-26 (story 9-3 review -> done via bmad-code-review. 3-layer adversarial review (Blind
 #   Hunter/Edge Case Hunter/Acceptance Auditor) against baseline 43eda58: 4 decision-needed (all resolved by
 #   BigDev) folded into 18 patches (17 fixed, 1 investigated to no-change-needed — the audit-await finding was
@@ -1135,7 +1173,7 @@ development_status:
   9-1-nominee-console-sunitas-surface-fursat-cadence-staff-takeover-by-day-n: done
   9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema: done
   9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: done
-  9-4-utr-matching-engine-matcher-mechanism: backlog
+  9-4-utr-matching-engine-matcher-mechanism: done
   9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: backlog
   9-6-status-pill-5-state-design-system-component: backlog
   9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: backlog

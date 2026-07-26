@@ -269,3 +269,8 @@ export * from './pool_fixed_amount_emergency_attestations.js';
 // `cycleCalendar` resolver to compute the calendar-aware RECONCILIATION TAIL — it never
 // moves FR-22's hard Day-15 contribution close.
 export * from './pariwar_holiday_calendar.js';
+// Story 9.4 — the persisted normalized bank-statement rows the UTR matcher reads (Decision D4). The
+// matcher re-parses the Story 9.3 blob (byte-identical replay) and idempotently upserts entries keyed on
+// the deterministic entry_id; pool_id is the denormalized provenance the wrong-pool check reads. Tier-1-
+// adjacent (RLS-isolated, never logged); a minimal matcher-read column set (ADR-0034).
+export * from './bank_statement_entries.js';

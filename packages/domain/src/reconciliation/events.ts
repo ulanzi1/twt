@@ -102,15 +102,52 @@ export type ReconciliationManualTranscriptionRequestedPayload = z.infer<
   typeof ReconciliationManualTranscriptionRequestedPayloadSchema
 >;
 
+/**
+ * `reconciliation.confirmation-reversed` payload (Story 9.4, Decision D1) — the ONLY un-confirm path. The
+ * COMPENSATING event a trustee-attested review-and-reverse (Story 9.8: step-up OTP via 5.9 + reason-code +
+ * State-Trustee attestation à la 6.14) emits to explicitly walk back a prior `contribution.confirmed`. It
+ * lives in the `reconciliation.*` namespace DELIBERATELY (NOT `contribution.confirmation.reversed`): the
+ * `contribution.*` vocabulary is fenced at exactly three by Story 8.10, and a fourth `contribution.*` type
+ * would trip it — the 9.3 D6 precedent that opened this namespace exactly to stay off the fence (AC7).
+ *
+ * Story 9.4 REGISTERS this type + its schema and PROVES the matcher never emits it (the monotonic-
+ * confirmation invariant, AC5); Story 9.8 is the PRODUCER. The `reversedConfirmedEventId` links the exact
+ * confirmation being reversed; `attestedByActorIds` is the trustee attestation (≥1, NON-PII actor ids);
+ * `reasonCode` is a machine token (no free-text PII). Cross-story name contract: Story 9.5's reversal-
+ * consumer read + Story 9.6's held-pill MUST key on this exact string. `.strict()`.
+ */
+export const ReconciliationConfirmationReversedPayloadSchema = z
+  .object({
+    poolId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    /** The alert stream the reversed confirmation rode (verdicts are alert-stream events, Decision D2). */
+    alertId: z.string().uuid(),
+    /** The `contribution.confirmed` event id this compensating event reverses (the monotonic link). */
+    reversedConfirmedEventId: z.string().uuid(),
+    /** A machine reason token for the reversal (no free-text PII). */
+    reasonCode: z.string().min(1),
+    /** The attesting State-Trustee actor id(s) — ≥1, NON-PII controlled-staff attribution (à la 6.14). */
+    attestedByActorIds: z.array(z.string().min(1)).min(1),
+    reversedAt: z.string().datetime(),
+  })
+  .strict();
+export type ReconciliationConfirmationReversedPayload = z.infer<
+  typeof ReconciliationConfirmationReversedPayloadSchema
+>;
+
 // ── The reconciliation-event vocabulary + the type→schema map (single source) ─────────────────────────
 
 export const RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE = 'reconciliation.statement-uploaded' as const;
 export const RECONCILIATION_MANUAL_TRANSCRIPTION_REQUESTED_EVENT_TYPE =
   'reconciliation.manual_transcription_requested' as const;
+/** Story 9.4 (Decision D1) — the compensating reversal event type (the ONLY un-confirm path; 9.8 produces it). */
+export const RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE =
+  'reconciliation.confirmation-reversed' as const;
 
 export const RECONCILIATION_EVENT_TYPES = [
   RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE,
   RECONCILIATION_MANUAL_TRANSCRIPTION_REQUESTED_EVENT_TYPE,
+  RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
 ] as const;
 
 /** The dotted `reconciliation.*` event-type literal union (Story 9.3 lands the first two). */
@@ -125,4 +162,5 @@ export const RECONCILIATION_EVENT_PAYLOAD_SCHEMAS = {
   [RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE]: ReconciliationStatementUploadedPayloadSchema,
   [RECONCILIATION_MANUAL_TRANSCRIPTION_REQUESTED_EVENT_TYPE]:
     ReconciliationManualTranscriptionRequestedPayloadSchema,
+  [RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE]: ReconciliationConfirmationReversedPayloadSchema,
 } as const satisfies Record<ReconciliationEventType, z.ZodTypeAny>;

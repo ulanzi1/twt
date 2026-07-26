@@ -1,0 +1,2 @@
+Transaction Date,Particulars,Instrument ID,Amount,Dr/Cr,Balance
+2026-09-01,"=HYPERLINK(""http://evil"")",700000000010,500.00,Cr,7000.00

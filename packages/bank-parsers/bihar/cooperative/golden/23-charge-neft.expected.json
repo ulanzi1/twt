@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "3bb8f30c-0004-59c7-9940-1df633af8fe7",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-05-04",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 2000,
+      "description": "NEFT CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 892500,
+      "source_account": null,
+      "raw_row": [
+        "04/05/26",
+        "NEFT CHARGES GST",
+        "",
+        "20.00",
+        "",
+        "8925.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

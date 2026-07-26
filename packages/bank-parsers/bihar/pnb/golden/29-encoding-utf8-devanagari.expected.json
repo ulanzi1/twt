@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "b15fe590-d090-59a8-bf6c-5a7197b2a99e",
+      "bank_code": "pnb",
+      "transaction_date": "2026-07-01",
+      "transaction_id_utr": "500000000011",
+      "sender_vpa": "ram@oksbi",
+      "sender_name": "राम कुमार",
+      "amount": 50000,
+      "description": "UPI/CR/500000000011/राम कुमार/ram@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 500000,
+      "source_account": null,
+      "raw_row": [
+        "01-07-2026",
+        "UPI/CR/500000000011/राम कुमार/ram@oksbi/Contribution",
+        "500000000011",
+        "",
+        "500.00",
+        "5000.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

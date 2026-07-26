@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "9daf5a4f-f5c6-5e0f-8f05-6198aaae73b1",
+      "bank_code": "boi",
+      "transaction_date": "2026-05-03",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 1500,
+      "description": "AMC CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 895000,
+      "source_account": null,
+      "raw_row": [
+        "2026-05-03",
+        "AMC CHARGES GST",
+        "",
+        "15.00",
+        "Dr",
+        "8950.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

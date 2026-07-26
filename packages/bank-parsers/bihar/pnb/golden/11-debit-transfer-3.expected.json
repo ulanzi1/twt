@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "20a02a4b-37a8-56aa-8acb-31b9f49567b1",
+      "bank_code": "pnb",
+      "transaction_date": "2026-03-03",
+      "transaction_id_utr": "200000000012",
+      "sender_vpa": "payee3@okaxis",
+      "sender_name": "PAYEE 3",
+      "amount": 75000,
+      "description": "UPI/DR/200000000012/PAYEE 3/payee3@okaxis/Transfer",
+      "entry_type": "debit",
+      "running_balance": 850000,
+      "source_account": null,
+      "raw_row": [
+        "03-03-2026",
+        "UPI/DR/200000000012/PAYEE 3/payee3@okaxis/Transfer",
+        "200000000012",
+        "750.00",
+        "",
+        "8500.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "d1a0f514-ab97-502e-94c2-02e78c0afaa7",
+      "bank_code": "boi",
+      "transaction_date": "2026-12-02",
+      "transaction_id_utr": "910000000012",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "2026-12-02",
+        "",
+        "910000000012",
+        "500.00",
+        "Cr",
+        "5500.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

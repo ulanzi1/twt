@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "4fd102f0-e734-5713-8461-66e8311b7f61",
+      "bank_code": "boi",
+      "transaction_date": "2026-05-01",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 500,
+      "description": "SMS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 900000,
+      "source_account": null,
+      "raw_row": [
+        "2026-05-01",
+        "SMS CHARGES GST",
+        "",
+        "5.00",
+        "Dr",
+        "9000.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

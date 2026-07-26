@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "6ac1f703-b7dc-5daa-abb5-e466964abf7a",
+      "bank_code": "pnb",
+      "transaction_date": "2026-09-01",
+      "transaction_id_utr": "700000000010",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "=HYPERLINK(\"http://evil\")",
+      "entry_type": "credit",
+      "running_balance": 700000,
+      "source_account": null,
+      "raw_row": [
+        "01-09-2026",
+        "=HYPERLINK(\"http://evil\")",
+        "700000000010",
+        "",
+        "500.00",
+        "7000.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

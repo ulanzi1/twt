@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "d1e29367-3492-5e50-a3fc-e8fda30a3fa5",
+      "bank_code": "boi",
+      "transaction_date": "2026-02-01",
+      "transaction_id_utr": "100000000010",
+      "sender_vpa": "ram@oksbi",
+      "sender_name": "RAM KUMAR",
+      "amount": 50000,
+      "description": "UPI/CR/100000000010/RAM KUMAR/ram@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 50000,
+      "source_account": null,
+      "raw_row": [
+        "2026-02-01",
+        "UPI/CR/100000000010/RAM KUMAR/ram@oksbi/Contribution",
+        "100000000010",
+        "500.00",
+        "Cr",
+        "500.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

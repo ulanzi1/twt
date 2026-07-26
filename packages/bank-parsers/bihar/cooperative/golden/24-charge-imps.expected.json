@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "e5c293de-6c67-5d27-adc0-b9da1033d7a5",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-05-05",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 2500,
+      "description": "IMPS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 890000,
+      "source_account": null,
+      "raw_row": [
+        "05/05/26",
+        "IMPS CHARGES GST",
+        "",
+        "25.00",
+        "",
+        "8900.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

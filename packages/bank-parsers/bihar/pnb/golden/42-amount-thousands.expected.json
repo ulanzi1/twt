@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "f69b2119-f3ad-5d25-87f3-a6857f22fd87",
+      "bank_code": "pnb",
+      "transaction_date": "2026-10-01",
+      "transaction_id_utr": "800000000010",
+      "sender_vpa": "fmt@oksbi",
+      "sender_name": "FORMAT PAYER",
+      "amount": 100000,
+      "description": "UPI/CR/800000000010/FORMAT PAYER/fmt@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 9999900,
+      "source_account": null,
+      "raw_row": [
+        "01-10-2026",
+        "UPI/CR/800000000010/FORMAT PAYER/fmt@oksbi/Contribution",
+        "800000000010",
+        "",
+        "1,000.00",
+        "99999.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

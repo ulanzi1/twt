@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "3555253e-92f2-5d12-8f15-1e6ae945e8ab",
+      "bank_code": "sbi",
+      "transaction_date": "2026-02-02",
+      "transaction_id_utr": "100000000011",
+      "sender_vpa": "sita@okhdfcbank",
+      "sender_name": "SITA DEVI",
+      "amount": 50000,
+      "description": "UPI/CR/100000000011/SITA DEVI/sita@okhdfcbank/Contribution",
+      "entry_type": "credit",
+      "running_balance": 100000,
+      "source_account": null,
+      "raw_row": [
+        "02/02/2026",
+        "02/02/2026",
+        "UPI/CR/100000000011/SITA DEVI/sita@okhdfcbank/Contribution",
+        "100000000011",
+        "",
+        "500.00",
+        "1000.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

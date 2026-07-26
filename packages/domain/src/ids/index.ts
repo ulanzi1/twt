@@ -535,3 +535,19 @@ export const appealPanelVoteId = uuidBrand('AppealPanelVoteId');
 export type PoolNameId = Brand<'PoolNameId'>;
 /** Smart constructor: validates UUID shape, returns a branded `PoolNameId`. */
 export const poolNameId = uuidBrand('PoolNameId');
+
+// ── Story 9.2 — bank-statement normalized-row id ──────────────────────────────
+// NEW branded id per the §Naming "branding mandatory on a new ID's first PR" discipline
+// (L3700-3708): `BankStatementEntryId` is the per-row address of a normalized bank-statement
+// entry (`BankStatementEntry.entry_id`) — the [P0] canonical row shape every bank parser emits
+// and the Story 9.4 UTR matcher replays. It IS a UUID (so it reuses the shared `uuidBrand`
+// validator), but UNLIKE most row ids it is NOT DB-defaulted or random: the parser is
+// replay-critical (golden-file identity + auditable re-parse), so the id is DERIVED
+// DETERMINISTICALLY as a UUIDv5 over the entry's identifying content — see
+// `deriveBankStatementEntryId` in ../bank-statement/schema.ts (mirrors the pool-spawn
+// deterministic-pool_id pattern). The brand is minted here; the derivation lives with the schema.
+
+/** Per-row address of a normalized bank-statement entry (`BankStatementEntry.entry_id`). */
+export type BankStatementEntryId = Brand<'BankStatementEntryId'>;
+/** Smart constructor: validates UUID shape, returns a branded `BankStatementEntryId`. */
+export const bankStatementEntryId = uuidBrand('BankStatementEntryId');

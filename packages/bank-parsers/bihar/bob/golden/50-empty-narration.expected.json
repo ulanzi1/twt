@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "67d9f0d4-c8f3-50ad-b71b-a4e851cc230d",
+      "bank_code": "bob",
+      "transaction_date": "2026-12-02",
+      "transaction_id_utr": "910000000012",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02-Dec-2026",
+        "",
+        "910000000012",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "bob@1"
+    }
+  ],
+  "rejected": []
+}

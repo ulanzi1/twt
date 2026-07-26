@@ -1,0 +1,71 @@
+{
+  "entries": [
+    {
+      "entry_id": "1b45f7ec-a27c-5f0f-801c-52787b82dc74",
+      "bank_code": "pnb",
+      "transaction_date": "2026-06-13",
+      "transaction_id_utr": "400000000013",
+      "sender_vpa": null,
+      "sender_name": "BATCH PAYER A",
+      "amount": 50000,
+      "description": "UPI/CR/400000000013/BATCH PAYER A/a@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "13-06-2026",
+        "UPI/CR/400000000013/BATCH PAYER A/a@oksbi/Contribution",
+        "400000000013",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "pnb@1"
+    },
+    {
+      "entry_id": "dc411af8-ff52-5194-9ce0-fea6fd30f79f",
+      "bank_code": "pnb",
+      "transaction_date": "2026-06-14",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 500,
+      "description": "SMS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 549500,
+      "source_account": null,
+      "raw_row": [
+        "14-06-2026",
+        "SMS CHARGES GST",
+        "",
+        "5.00",
+        "",
+        "5495.00"
+      ],
+      "parser_version": "pnb@1"
+    },
+    {
+      "entry_id": "d586d237-29a6-5dbf-9f02-5c3a15bc360f",
+      "bank_code": "pnb",
+      "transaction_date": "2026-06-15",
+      "transaction_id_utr": "400000000015",
+      "sender_vpa": null,
+      "sender_name": "BATCH PAYER B",
+      "amount": 50000,
+      "description": "UPI/CR/400000000015/BATCH PAYER B/b@okaxis/Contribution",
+      "entry_type": "credit",
+      "running_balance": 599500,
+      "source_account": null,
+      "raw_row": [
+        "15-06-2026",
+        "UPI/CR/400000000015/BATCH PAYER B/b@okaxis/Contribution",
+        "400000000015",
+        "",
+        "500.00",
+        "5995.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

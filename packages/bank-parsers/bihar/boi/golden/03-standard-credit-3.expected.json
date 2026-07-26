@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "50440af2-70fe-5853-b846-14b0bbdb5739",
+      "bank_code": "boi",
+      "transaction_date": "2026-02-03",
+      "transaction_id_utr": "100000000012",
+      "sender_vpa": "mohan@okicici",
+      "sender_name": "MOHAN LAL",
+      "amount": 50000,
+      "description": "UPI/CR/100000000012/MOHAN LAL/mohan@okicici/Contribution",
+      "entry_type": "credit",
+      "running_balance": 150000,
+      "source_account": null,
+      "raw_row": [
+        "2026-02-03",
+        "UPI/CR/100000000012/MOHAN LAL/mohan@okicici/Contribution",
+        "100000000012",
+        "500.00",
+        "Cr",
+        "1500.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

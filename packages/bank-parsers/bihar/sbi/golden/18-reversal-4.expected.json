@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "7e26a674-3080-5d88-aec1-770aff268c78",
+      "bank_code": "sbi",
+      "transaction_date": "2026-04-04",
+      "transaction_id_utr": "300000000013",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "UPI/REVERSAL/300000000013/Failed txn refund",
+      "entry_type": "reversal",
+      "running_balance": 650000,
+      "source_account": null,
+      "raw_row": [
+        "04/04/2026",
+        "04/04/2026",
+        "UPI/REVERSAL/300000000013/Failed txn refund",
+        "300000000013",
+        "",
+        "500.00",
+        "6500.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

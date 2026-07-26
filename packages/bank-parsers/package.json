@@ -9,12 +9,19 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "golden:regen": "tsx scripts/regen-golden.ts",
     "dev": "tsc --watch --preserveWatchOutput"
+  },
+  "dependencies": {
+    "@twt/domain": "workspace:*",
+    "csv-parse": "5.6.0",
+    "yaml": "^2.6.1"
   },
   "devDependencies": {
     "@twt/eslint-config-twt": "workspace:*",
     "typescript": "~5.9.2",
     "vitest": "^2.1.8",
+    "tsx": "^4.19.0",
     "@types/node": "^22.15.3"
   }
 }

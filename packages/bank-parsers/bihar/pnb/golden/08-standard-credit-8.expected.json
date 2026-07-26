@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "6373d390-7169-5428-988e-24d0dcea1d3c",
+      "bank_code": "pnb",
+      "transaction_date": "2026-02-08",
+      "transaction_id_utr": "100000000017",
+      "sender_vpa": "neha@okaxis",
+      "sender_name": "NEHA YADAV",
+      "amount": 50000,
+      "description": "UPI/CR/100000000017/NEHA YADAV/neha@okaxis/Contribution",
+      "entry_type": "credit",
+      "running_balance": 400000,
+      "source_account": null,
+      "raw_row": [
+        "08-02-2026",
+        "UPI/CR/100000000017/NEHA YADAV/neha@okaxis/Contribution",
+        "100000000017",
+        "",
+        "500.00",
+        "4000.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

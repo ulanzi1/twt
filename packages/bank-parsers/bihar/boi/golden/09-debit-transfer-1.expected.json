@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "2015b1e0-f91a-57e1-ac72-c6553014b03d",
+      "bank_code": "boi",
+      "transaction_date": "2026-03-01",
+      "transaction_id_utr": "200000000010",
+      "sender_vpa": "payee1@okaxis",
+      "sender_name": "PAYEE 1",
+      "amount": 75000,
+      "description": "UPI/DR/200000000010/PAYEE 1/payee1@okaxis/Transfer",
+      "entry_type": "debit",
+      "running_balance": 1000000,
+      "source_account": null,
+      "raw_row": [
+        "2026-03-01",
+        "UPI/DR/200000000010/PAYEE 1/payee1@okaxis/Transfer",
+        "200000000010",
+        "750.00",
+        "Dr",
+        "10000.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

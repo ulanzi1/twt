@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "1b850c91-ed82-56b5-acdf-d05ee7e8d94a",
+      "bank_code": "sbi",
+      "transaction_date": "2026-07-02",
+      "transaction_id_utr": "500000000012",
+      "sender_vpa": "bom@oksbi",
+      "sender_name": "BOM PAYER",
+      "amount": 50000,
+      "description": "UPI/CR/500000000012/BOM PAYER/bom@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02/07/2026",
+        "02/07/2026",
+        "UPI/CR/500000000012/BOM PAYER/bom@oksbi/Contribution",
+        "500000000012",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

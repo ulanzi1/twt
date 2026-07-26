@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "e1d54e54-d2df-56e6-a7d7-f565564f7e35",
+      "bank_code": "boi",
+      "transaction_date": "2026-02-07",
+      "transaction_id_utr": "100000000016",
+      "sender_vpa": "vikas@okicici",
+      "sender_name": "VIKAS GUPTA",
+      "amount": 50000,
+      "description": "UPI/CR/100000000016/VIKAS GUPTA/vikas@okicici/Contribution",
+      "entry_type": "credit",
+      "running_balance": 350000,
+      "source_account": null,
+      "raw_row": [
+        "2026-02-07",
+        "UPI/CR/100000000016/VIKAS GUPTA/vikas@okicici/Contribution",
+        "100000000016",
+        "500.00",
+        "Cr",
+        "3500.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

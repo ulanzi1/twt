@@ -4,6 +4,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema (2026-07-26)
+
+- **Deterministic `entry_id` bakes in CSV row position, so the same real-world transaction gets a different id across two overlapping-date statement re-exports** (`packages/domain/src/bank-statement/schema.ts:225-240`, `deriveBankStatementEntryId` hashes `(bankCode, parserVersion, rowIndex, rawRow)`). Deferred: byte-identical replay is the stated 9.2 design goal, and `transaction_id_utr` is already documented in the schema as "the matcher's primary key" — so this is likely fine as long as Story 9.4 dedups on UTR, not `entry_id`, but that dependency isn't written down anywhere yet. **Re-trigger:** when Story 9.4's matcher/idempotency design is authored — confirm it keys dedup on `transaction_id_utr` (or another content-only identity), not `entry_id`.
+
 ## Deferred from: code review of story-8-11-call-helpline-cta-cross-cutting-affordance (2026-07-25)
 
 - **`ActiveContributionCard`'s pre-existing `if (!data || !data.assigned) return null` early return (Story 8.2, unchanged by this diff) means the newly-added helpline CTA never renders in the loading/unassigned/error state** (`apps/mobile/components/active-contribution/ActiveContributionCard.tsx:68-70,242`). Deferred: AC1 explicitly enumerates which branches on which surfaces need the fallback (note screen's error/not_found, Yogdaan Bahi's isError, pay's loadFailed) and does not list this self-suppression case, so it reads as out of Story 8.11's stated scope rather than a regression it introduced. **Re-trigger:** if BigDev decides the My Pool card's absent/loading/error state should also carry a helpline fallback (would need a home-screen-level affordance, since the card itself renders nothing in that state).

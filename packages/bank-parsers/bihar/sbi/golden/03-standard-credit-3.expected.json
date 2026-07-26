@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "b7307b23-3567-5f92-b52c-d643583f8219",
+      "bank_code": "sbi",
+      "transaction_date": "2026-02-03",
+      "transaction_id_utr": "100000000012",
+      "sender_vpa": "mohan@okicici",
+      "sender_name": "MOHAN LAL",
+      "amount": 50000,
+      "description": "UPI/CR/100000000012/MOHAN LAL/mohan@okicici/Contribution",
+      "entry_type": "credit",
+      "running_balance": 150000,
+      "source_account": null,
+      "raw_row": [
+        "03/02/2026",
+        "03/02/2026",
+        "UPI/CR/100000000012/MOHAN LAL/mohan@okicici/Contribution",
+        "100000000012",
+        "",
+        "500.00",
+        "1500.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

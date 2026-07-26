@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "1bb99f08-10c9-541a-b5a9-5263642e14c0",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-07-01",
+      "transaction_id_utr": "500000000011",
+      "sender_vpa": "ram@oksbi",
+      "sender_name": "राम कुमार",
+      "amount": 50000,
+      "description": "UPI/CR/500000000011/राम कुमार/ram@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 500000,
+      "source_account": null,
+      "raw_row": [
+        "01/07/26",
+        "UPI/CR/500000000011/राम कुमार/ram@oksbi/Contribution",
+        "500000000011",
+        "",
+        "500.00",
+        "5000.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

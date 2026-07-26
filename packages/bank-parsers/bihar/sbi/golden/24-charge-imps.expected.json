@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "6003655a-7198-5d32-a3f1-dd18b9da78d1",
+      "bank_code": "sbi",
+      "transaction_date": "2026-05-05",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 2500,
+      "description": "IMPS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 890000,
+      "source_account": null,
+      "raw_row": [
+        "05/05/2026",
+        "05/05/2026",
+        "IMPS CHARGES GST",
+        "",
+        "25.00",
+        "",
+        "8900.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

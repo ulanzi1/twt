@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "72c682a3-634e-5863-9caf-aeb3c2715462",
+      "bank_code": "bob",
+      "transaction_date": "2026-08-02",
+      "transaction_id_utr": "600000000011",
+      "sender_vpa": null,
+      "sender_name": "RAM KUMAR",
+      "amount": 50000,
+      "description": "NEFT/600000000011/RAM KUMAR",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02-Aug-2026",
+        "NEFT/600000000011/RAM KUMAR",
+        "600000000011",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "bob@1"
+    }
+  ],
+  "rejected": []
+}

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "8c23277b-406e-5a7d-9654-6689fa457087",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-05-03",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 1500,
+      "description": "AMC CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 895000,
+      "source_account": null,
+      "raw_row": [
+        "03/05/26",
+        "AMC CHARGES GST",
+        "",
+        "15.00",
+        "",
+        "8950.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

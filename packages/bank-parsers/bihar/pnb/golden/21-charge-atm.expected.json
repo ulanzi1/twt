@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "e402754c-86a2-5d29-af15-4884931668ce",
+      "bank_code": "pnb",
+      "transaction_date": "2026-05-02",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 1000,
+      "description": "ATM CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 897500,
+      "source_account": null,
+      "raw_row": [
+        "02-05-2026",
+        "ATM CHARGES GST",
+        "",
+        "10.00",
+        "",
+        "8975.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

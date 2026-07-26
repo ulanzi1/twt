@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "409d76f1-1c96-597d-ae10-c10cf4b037b4",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-09-02",
+      "transaction_id_utr": "700000000020",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "+HYPERLINK(\"http://evil\")",
+      "entry_type": "credit",
+      "running_balance": 750000,
+      "source_account": null,
+      "raw_row": [
+        "02/09/26",
+        "+HYPERLINK(\"http://evil\")",
+        "700000000020",
+        "",
+        "500.00",
+        "7500.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

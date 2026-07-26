@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "ad4f2309-6263-5c05-932b-efb3adf62bbb",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-02-06",
+      "transaction_id_utr": "100000000015",
+      "sender_vpa": "priya@okhdfcbank",
+      "sender_name": "PRIYA SHARMA",
+      "amount": 50000,
+      "description": "UPI/CR/100000000015/PRIYA SHARMA/priya@okhdfcbank/Contribution",
+      "entry_type": "credit",
+      "running_balance": 300000,
+      "source_account": null,
+      "raw_row": [
+        "06/02/26",
+        "UPI/CR/100000000015/PRIYA SHARMA/priya@okhdfcbank/Contribution",
+        "100000000015",
+        "",
+        "500.00",
+        "3000.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

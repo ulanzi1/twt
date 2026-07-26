@@ -1,0 +1,52 @@
+version: 1
+# ─────────────────────────────────────────────────────────────────────────────
+# Bank-statement parser allowlist — Story 9.2 (FR-29, AR-41, threat-model L1316).
+#
+# The GOVERNANCE registry enumerating the EXACTLY-5 permitted (pariwar, bank_code)
+# pairs the reconciliation parser will dispatch to. It is the closed set (AC1): a
+# bank NOT listed here has no registered parser, so an upload for it is rejected
+# with a clear helpdesk-routed message (UnsupportedBankError) — never a silent drop,
+# never a crash. This file mirrors benefit-mechanism.yaml (the versioned-config +
+# conformance-gate precedent).
+#
+# ── PARIWAR DIMENSION = the pariwar SLUG, not the UUID ────────────────────────
+# Parsers are scoped `packages/bank-parsers/<pariwar>/<bank>/` (architecture layout
+# L4402-4410). v1 has exactly one Pariwar slug: `bihar` (TWT-Bihar). The runtime
+# tenant `pariwar_id` (a provisioned UUID) resolves to this slug at the Story 9.3
+# transport boundary — the pure parser + registry key on the stable slug so the
+# allowlist is not coupled to a per-environment provisioned UUID. A future
+# Rail-Parivar would add a `rail` slug + its own per-bank parsers (its SBI ≠
+# TWT-Bihar's SBI parser).
+#
+# ── ADMISSION WORKFLOW (Story 7.5-style trustee attestation) — AC4 ────────────
+# Adding a 6th bank is a SINGLE reviewed change that MUST carry ALL of:
+#   1. Trustee attestation (recorded in .decision-log.md) — the capability-bar bump.
+#   2. A new per-bank parser under `<pariwar>/<bank>/parse.ts`.
+#   3. 50 golden files under `<pariwar>/<bank>/golden/` (the coverage matrix, AC2).
+#   4. A new `BankCode` enum value in @twt/domain (the shared code authority).
+#   5. A bump of this allowlist (a new `banks:` entry + `count` if changed).
+# The package-local conformance test (registry ⊆ allowlist, exactly-5) has TEETH:
+# a rogue registry entry OR an allowlist edit that breaks the invariant fails CI
+# (D5 — package-local test, NOT a repo-global gate; escalate only on a 2nd consumer).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# The exact number of permitted pairs. The conformance test asserts the registry
+# and this list both equal this count (revert-sanity teeth — flipping it fails).
+count: 5
+
+pairs:
+  - pariwar: bihar
+    bank_code: sbi
+    bank_name: State Bank of India
+  - pariwar: bihar
+    bank_code: pnb
+    bank_name: Punjab National Bank
+  - pariwar: bihar
+    bank_code: bob
+    bank_name: Bank of Baroda
+  - pariwar: bihar
+    bank_code: boi
+    bank_name: Bank of India
+  - pariwar: bihar
+    bank_code: cooperative
+    bank_name: Bihar State Cooperative Bank

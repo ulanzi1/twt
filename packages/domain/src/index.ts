@@ -168,6 +168,11 @@ export * as alert from './alert/index.js';
 // empty today) + the pure pending-aggregate. A READ, never a producer — it never confirms/promotes/mutates
 // contribution state. Read by Epic 8's <PoolContributorList> surface; the confirmed-only guard is structural.
 export * as contribution from './contribution/index.js';
+// Story 9.2 — the [P0] canonical normalized bank-statement row schema (BankStatementEntry) + the
+// BankCode authority + the money/deterministic-id helpers every bank parser shares. The single shape
+// every `@twt/bank-parsers` parser emits and the Story 9.4 UTR matcher replays. Pure, DB-free, no
+// producer here — the parsers (bank-parsers) fill it; the matcher (9.4) consumes it.
+export * as bankStatement from './bank-statement/index.js';
 // Story 7.1 (Task 6) — pool-snapshot migration adapters (§1.6 read-through-adapters).
 // The FIRST real adapter (pool v1); selected by `format_version` via readPoolSnapshot.
 export * as snapshotAdapters from './snapshot-adapters/index.js';

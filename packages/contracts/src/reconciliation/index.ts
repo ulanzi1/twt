@@ -6,3 +6,6 @@
 // top barrel (there is no subpath `exports` map): `import { ParseResultSummary } from '@twt/contracts'`.
 
 export * from './parse-result.js';
+// Story 9.3 — the upload-transport shapes + the two injectable ports (BankStatementStorage +
+// StatementScanner) the `<BankStatementUpload>` surface rides on (Decisions D1/D3/D4).
+export * from './statement-storage.js';

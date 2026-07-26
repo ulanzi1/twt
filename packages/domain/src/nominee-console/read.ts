@@ -23,10 +23,11 @@
 // Tenant-scoped (every query leads with `pariwar_id`, RLS-aware). DB-touching, so it lives in @twt/domain
 // (NEVER imported by @twt/contracts — the bundle boundary, [[project_contracts_domain_bundle_boundary]]).
 
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId, PoolId } from '../ids/index.js';
+import { RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE } from '../reconciliation/events.js';
 import { claims } from '../schema/claims.js';
 import { eventsLog } from '../schema/events_log.js';
 import { pools, type PoolRow } from '../schema/pools.js';
@@ -126,6 +127,44 @@ export async function resolvePoolOpenAt(
       ),
     )
     .orderBy(asc(eventsLog.occurredAt))
+    .limit(1);
+  return row?.occurredAt ?? null;
+}
+
+/**
+ * Resolve the nominee's LAST engagement instant for a pool (Story 9.3, Task 5 — closes the Story 9.1
+ * reserved seam). "Engagement" is specifically the NOMINEE's own daily statement upload: the `occurred_at`
+ * of the LATEST `reconciliation.statement-uploaded` event on the pool stream (stream_id = pool_id) whose
+ * payload `uploadedByRole` is `'nominee'`, or `null` if the nominee has never uploaded. A staff-initiated
+ * upload (District-Admin takeover/fallback-resolution) is filtered OUT — it must NOT reset this clock, or
+ * a staff intervention would read as "the nominee re-engaged," masking continued nominee disengagement and
+ * defeating the point of the day-N takeover trigger this heartbeat feeds. Reads `events_log` directly — the
+ * SAME events_log-direct pattern as `resolvePoolOpenAt` (no new `last_engaged_at` column, Decision D6,
+ * [[project_member_lifecycle_domain_substrate]]).
+ *
+ * Fed straight into `computeStaffTakeover({ lastEngagedAt })`: a nominee who uploads resets the day-N
+ * clock (`effectiveLastEngagedAt = lastEngagedAt`); a nominee who never uploads stays `null` and the
+ * derivation correctly falls through to `poolOpenAt` (the pre-9.3 behaviour is preserved as the null
+ * fall-through). LATEST-first (`desc(occurred_at)`) — the most recent upload is the engagement instant
+ * (contrast `resolvePoolOpenAt`'s earliest-first: the pool opens once, but a nominee uploads daily).
+ * Tenant-scoped.
+ */
+export async function resolveLastEngagedAt(
+  db: Db,
+  { pariwarId, poolId }: { readonly pariwarId: PariwarId; readonly poolId: PoolId },
+): Promise<Date | null> {
+  const [row] = await db
+    .select({ occurredAt: eventsLog.occurredAt })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.pariwarId, pariwarId),
+        eq(eventsLog.streamId, poolId),
+        eq(eventsLog.eventType, RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE),
+        sql`${eventsLog.payload} ->> 'uploadedByRole' = 'nominee'`,
+      ),
+    )
+    .orderBy(desc(eventsLog.occurredAt))
     .limit(1);
   return row?.occurredAt ?? null;
 }

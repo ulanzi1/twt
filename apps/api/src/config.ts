@@ -135,6 +135,15 @@ export interface ApiConfig {
    */
   readonly nomineeTakeoverThresholdDays: number;
   /**
+   * Story 9.3 — the parser-namespace pariwar SLUG the bank-statement transport resolves a runtime
+   * `pariwar_id` (UUID) to before calling `parseStatement(slug, bank_code, …)`. The `@twt/bank-parsers`
+   * registry keys on the stable SLUG (`bihar`), never a per-environment provisioned UUID (ADR-0033 /
+   * bank-allowlist.yaml). v1 is single-slug (TWT-Bihar), so this is one configurable value
+   * (`RECONCILIATION_PARIWAR_SLUG`, default `bihar`); a per-Pariwar slug MAP is the forward seam that
+   * lands with the second Pariwar (a `rail` slug + its own parsers).
+   */
+  readonly reconciliationPariwarSlug: string;
+  /**
    * Member-JWT signing key (Story 3.2, §2.4). The private key NAME (never the value)
    * for Secret Manager + a local-dev env fallback var name (mirror the argon2 pepper).
    * Asymmetric algorithm pinned (ES256/RS256). When neither the secret nor the env
@@ -377,6 +386,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
       'NOMINEE_TAKEOVER_THRESHOLD_DAYS',
       nomineeConsole.DEFAULT_STAFF_TAKEOVER_THRESHOLD_DAYS,
     ),
+    // Story 9.3 — v1 single-slug (TWT-Bihar); the bank-parsers registry keys on the slug, not the UUID.
+    reconciliationPariwarSlug: env['RECONCILIATION_PARIWAR_SLUG'] ?? 'bihar',
     memberJwt: {
       algorithm: 'ES256',
       privateKeySecretName: env['MEMBER_JWT_PRIVATE_KEY_SECRET_NAME'] ?? 'twt-dev-member-jwt-private-key',

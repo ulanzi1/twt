@@ -1,4 +1,53 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-26 (story 9-3 review -> done via bmad-code-review. 3-layer adversarial review (Blind
+#   Hunter/Edge Case Hunter/Acceptance Auditor) against baseline 43eda58: 4 decision-needed (all resolved by
+#   BigDev) folded into 18 patches (17 fixed, 1 investigated to no-change-needed — the audit-await finding was
+#   a false premise against the synchronous AuthAuditSink.emit(): void contract) + 2 defers (idempotency-on-
+#   double-submit; the resume-link SMS/email dispatch — both recorded in deferred-work.md). Fixed: orphaned-
+#   blob cleanup on downstream failure, exhaustive rejected-row-breakdown typing (was a silent-undercount
+#   risk), ResilientCall permanent-vs-transient retry + tightened budget (~15s->~6s worst-case per the AC1
+#   ~5s promise) + no-unhandled-rejection on timeout, append-retry backoff + dignified 503 on exhaustion
+#   (was a bare Error), staff-path missing claim_case_id 404->400, resolveLastEngagedAt now NOMINEE-ONLY
+#   (a staff/takeover upload no longer resets the day-N clock — 2 new live-DB tests), per-error-code mobile
+#   copy (was one generic message for quarantine/oversize/outage alike), no-fabricated-file-extension,
+#   resume-failed state now REACHABLE ('corrupt' sentinel distinct from null), guarded DocumentPicker call,
+#   real EN translation for the fallback title (was left as untranslated Hindi) + removed the dead
+#   title_parity key, corrected ADR-0034's signed-URL overclaim (implemented, no live caller in 9.3) +
+#   adr-index.md row 129 to match, removed dead 'requested' fallback-reason code + unreachable
+#   resolveLatestUploadedStatementRef, collapsed the false "continue sharing vs start again" choice (both
+#   did the same thing), hid the unwired resume-link affordance (Task 6 sub-item honestly re-opened).
+#   Full suite green: typecheck/lint/unit/integration across @twt/api, @twt/mobile, @twt/domain,
+#   @twt/contracts, @twt/platform-adapters, @twt/i18n.)
+# last_updated: 2026-07-26 (story 9-3 in-progress -> review via bmad-dev-story. SURFACE + transport LANDED:
+#   NEW BankStatementStorage port + adapters (D3) + StatementScanner virus-scan seam + AR-45 ResilientCall;
+#   the FIRST apps/api reconciliation module (dual member/staff upload core, inline parseStatement -> ~5s
+#   ParseResultSummary, "Hum aapke liye padh lenge" fallback AUTO-raised on any unparseable upload w/ the
+#   stored blob attached); the reconciliation.* event vocabulary (D6 — statement-uploaded serves metadata+
+#   provenance+engagement in ONE events_log write, NO new table/migration; 8.10 contribution.* fence VERIFIED
+#   still green); resolveLastEngagedAt closes the Story 9.1 engagement seam (nominee-console handler now reads
+#   real engagement, resets the takeover day-N clock); <BankStatementUpload> mobile surface + pure upload-view
+#   resolver + UX-DR50 save-and-resume draft + Hindi/English copy incl. the exact "Hum aapke liye padh lenge".
+#   ADR-0034 retention window CLOSED (180d GCS lifecycle) + storage-wiring deferral DISCHARGED; ADR-0033
+#   virus-scan/AR-45 wiring noted. CARRIED UN-ATTESTED (no backfill): D7 real-file reconciliation (no real
+#   bank export obtainable this cycle -> golden files NOT regenerated; named trigger = first real upload per
+#   bank lands in the fallback queue) + the Story 2.2 tone-review sign-off. ci:local: 26 gate jobs + integration
+#   green; unit suite 37/37 in isolation (the concurrent test-job flake is the known oversubscription class,
+#   confirmed innocent per-package). Regression fixed: nominee-console unit mock now stubs resolveLastEngagedAt.)
+# last_updated: 2026-07-26 (story 9-3 ready-for-dev -> in-progress via bmad-dev-story. Building the SURFACE +
+#   transport: BankStatementStorage port + adapters, reconciliation API module w/ dual upload endpoints,
+#   StatementScanner + AR-45 seam, inline parseStatement -> ParseResultSummary, "padh lenge" fallback task,
+#   engagement-heartbeat writer closing the 9.1 seam, <BankStatementUpload> mobile surface. D1-D7 LOCKED.)
+# last_updated: 2026-07-26 (story 9-3 backlog -> ready-for-dev via bmad-create-story. `<BankStatementUpload>`
+#   + "Hum aapke liye padh lenge" fallback — the SURFACE + transport Story 9.2 explicitly deferred (ADR-0034
+#   storage WIRING; 9.2 D1/D2/D3). Owns: reconciliation API module + dual upload endpoints (member Ravi-mode +
+#   admin claim.file, 6.5 dual-surface precedent), NEW BankStatementStorage port (6.5 pattern, Tier-1),
+#   virus-scan StatementScanner seam, AR-45 resilience at storage boundary, inline parseStatement -> ~5s
+#   ParseResultSummary, the staff "padh lenge" fallback (audit-logged District-Admin task + 9.8/Epic-10
+#   reserved-seam event), and CLOSES the two Story 9.1 seams (engagement-heartbeat writer -> last_engaged_at;
+#   the {available:false} upload-queue slot). 6 open decisions D1-D6 surfaced for BigDev to lock (D1 PDF->fallback
+#   not OCR; D2 blob-in-9.3/rows-in-9.4; D3 new storage port; D4 dual-caller+reuse claim.file; D5 reserved-seam
+#   fallback task; D6 events_log-direct engagement read + event-name-vs-8.10-fence). Reserved: matcher (9.4),
+#   pill flip (9.5), StatusPill (9.6), screenshot/self-verify (9.7), review-queue render (9.8).)
 # last_updated: 2026-07-26 (story 9-2 review -> done via bmad-code-review, 3-layer parallel review (Blind
 #   Hunter, Edge Case Hunter, Acceptance Auditor). Acceptance Auditor returned clean; Blind Hunter's claim
 #   that the raw per-bank parser exports bypass the allowlist/registry gate (AC1/AC4) was independently
@@ -1085,7 +1134,7 @@ development_status:
   epic-9: in-progress
   9-1-nominee-console-sunitas-surface-fursat-cadence-staff-takeover-by-day-n: done
   9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema: done
-  9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: backlog
+  9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: done
   9-4-utr-matching-engine-matcher-mechanism: backlog
   9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: backlog
   9-6-status-pill-5-state-design-system-component: backlog

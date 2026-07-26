@@ -43,6 +43,9 @@ import {
   createInMemoryBankIfscLookup,
   createLocalFsClaimDocumentStorage,
   createChromiumContributionNotePdfRenderer,
+  createGcsBankStatementStorage,
+  createLocalFsBankStatementStorage,
+  createNoOpStatementScanner,
 } from '@twt/platform-adapters';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
@@ -332,6 +335,24 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
             : {}),
         })
       : createLocalFsClaimDocumentStorage(),
+    // Bank-statement object store (Story 9.3, Decision D3) — a NEW port instance (the 6.5 PATTERN, not a
+    // claim-document reuse): the live GCS adapter when BANK_STATEMENT_BUCKET is set (private bucket,
+    // asia-south1, Tier-1 encrypted at rest — ADR-0034), else a shared local-disk fake (dev/CI). The raw
+    // statement bytes live in the blob store; only the object key + provenance metadata persist (as the
+    // reconciliation.statement-uploaded event — no PII rows, Decision D2). Same shared-filesystem-fake
+    // reasoning as claimDocumentStorage (a future apps/jobs matcher re-reads the blob by key, D2).
+    bankStatementStorage: process.env['BANK_STATEMENT_BUCKET']
+      ? createGcsBankStatementStorage({
+          bucketName: process.env['BANK_STATEMENT_BUCKET'],
+          ...(process.env['GOOGLE_CLOUD_PROJECT']
+            ? { projectId: process.env['GOOGLE_CLOUD_PROJECT'] }
+            : {}),
+        })
+      : createLocalFsBankStatementStorage(),
+    // Bank-statement virus-scan seam (Story 9.3, Task 4 / architecture §3.6 "quarantine") — abstraction-
+    // first: a no-op/allow-all fake in v1 (no real ClamAV vendor exists yet — the 6.5 `OcrProvider`
+    // "no boundary gate until a real vendor" posture). The scan runs BEFORE store+parse in the upload core.
+    statementScanner: createNoOpStatementScanner(),
     // Contribution-Note PDF renderer (Story 8.7, D1) — headless Chromium behind the
     // `ContributionNotePdfRenderer` port. `puppeteer-core` brings NO bundled binary: the deployable
     // image installs the distro `chromium` package, and CHROMIUM_EXECUTABLE_PATH points at it (a local

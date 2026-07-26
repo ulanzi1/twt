@@ -240,3 +240,46 @@ describe('computeStaffTakeover — config guarding (fail loud, never flag-everyo
     ).toThrow(/lastEngagedAt/);
   });
 });
+
+// ── Story 9.3 — the engagement writer resets the clock (the seam 9.1 reserved is now closed) ──────────
+// The Story 9.3 upload writer supplies a REAL `lastEngagedAt` (the latest reconciliation.statement-uploaded
+// event's occurred_at, resolved by `resolveLastEngagedAt`). These frozen vectors prove the derivation
+// consumes it with ZERO change: a nominee who uploaded recently is NOT flagged even long after pool-open,
+// while a nominee who never uploaded (null) still falls through to poolOpenAt (the pre-9.3 behaviour).
+describe('computeStaffTakeover — a real lastEngagedAt RESETS the day-N clock (Story 9.3 engagement writer)', () => {
+  it('a nominee who engaged is NOT flagged even far past pool-open (the clock runs from the upload, not pool-open)', () => {
+    // Pool opened 30 days ago (far past the 7-day threshold) — but the nominee uploaded 2 days ago.
+    const v = computeStaffTakeover({
+      lastEngagedAt: nowAfterDays(28), // engaged at pool-open + 28 days
+      poolOpenAt: POOL_OPEN,
+      thresholdDays: 7,
+      now: nowAfterDays(30), // 2 days after the last upload
+    });
+    expect(v.effectiveLastEngagedAt).toEqual(nowAfterDays(28));
+    expect(v.daysSinceEngagement).toBe(2);
+    expect(v.takeoverEligible).toBe(false);
+  });
+
+  it('the SAME pool WITHOUT the upload (null lastEngagedAt) IS flagged — proving the reset is what saves it', () => {
+    const v = computeStaffTakeover({
+      lastEngagedAt: null, // never uploaded ⇒ falls through to poolOpenAt
+      poolOpenAt: POOL_OPEN,
+      thresholdDays: 7,
+      now: nowAfterDays(30),
+    });
+    expect(v.effectiveLastEngagedAt).toEqual(POOL_OPEN);
+    expect(v.daysSinceEngagement).toBe(30);
+    expect(v.takeoverEligible).toBe(true);
+  });
+
+  it('a nominee who engaged but then went quiet for ≥ N days is flagged from the LAST upload', () => {
+    const v = computeStaffTakeover({
+      lastEngagedAt: nowAfterDays(10), // last uploaded at pool-open + 10 days
+      poolOpenAt: POOL_OPEN,
+      thresholdDays: 7,
+      now: nowAfterDays(17), // exactly 7 days of silence since
+    });
+    expect(v.daysSinceEngagement).toBe(7);
+    expect(v.takeoverEligible).toBe(true);
+  });
+});

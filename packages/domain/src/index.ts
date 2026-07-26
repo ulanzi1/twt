@@ -173,6 +173,11 @@ export * as contribution from './contribution/index.js';
 // every `@twt/bank-parsers` parser emits and the Story 9.4 UTR matcher replays. Pure, DB-free, no
 // producer here — the parsers (bank-parsers) fill it; the matcher (9.4) consumes it.
 export * as bankStatement from './bank-statement/index.js';
+// Story 9.3 — the FIRST `reconciliation.*` event vocabulary (Decision D6): the statement-upload
+// heartbeat/provenance event + the "padh lenge" manual-transcription-request fallback event. A NEW
+// namespace, deliberately NOT `contribution.*` (Story 8.10's exactly-three-types fence). The Story 9.4
+// matcher reads land here later.
+export * as reconciliation from './reconciliation/index.js';
 // Story 7.1 (Task 6) — pool-snapshot migration adapters (§1.6 read-through-adapters).
 // The FIRST real adapter (pool v1); selected by `format_version` via readPoolSnapshot.
 export * as snapshotAdapters from './snapshot-adapters/index.js';

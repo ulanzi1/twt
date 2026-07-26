@@ -20,7 +20,7 @@
 // @twt/domain, so importing them here is the legal direction (domain must NOT
 // import contracts/events). Each record key equals its `type` string.
 
-import { alert, claim, contribution, member, pool } from '@twt/domain';
+import { alert, claim, contribution, member, pool, reconciliation } from '@twt/domain';
 import type { z } from 'zod';
 
 export interface EventTypeRegistryEntry {
@@ -397,5 +397,25 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       'Member self-attested a UPI payment UTR (the yellow pill) — a member CLAIM only, NOT reconciliation-confirmed (Story 8.4). On the alert stream (stream_id = alert_id); payload carries poolId + memberId + the deterministic tr + the raw utr (Epic 9 primary-matches it) + attestation_only:true (the load-bearing yellow-not-green guard). Idempotent per (member, alert) via the derived tr. NOT the Epic-9 contribution.confirmed flip.',
     schema: contribution.ContributionUtrAttestedPayloadSchema,
+  },
+  // ── Story 9.3 — reconciliation.* vocabulary (the FIRST two; the bank-statement upload transport) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/reconciliation/events.ts) — appended on the
+  // POOL stream (stream_id = pool_id, the same stream pool.opened_for_contributions lands on, so the
+  // engagement read mirrors resolvePoolOpenAt). A NEW namespace, deliberately NOT contribution.* — a
+  // contribution.statement-uploaded would be a fourth contribution.* type and trip Story 8.10's
+  // exactly-three-types fence (Decision D6). statement-uploaded is BOTH the audit provenance / metadata
+  // row (Decision D2 — object key + counts, never the entries) AND the engagement heartbeat the
+  // nominee-console staff-takeover clock resets on.
+  'reconciliation.statement-uploaded': {
+    type: 'reconciliation.statement-uploaded',
+    description:
+      'A raw bank statement landed (nominee/staff upload → stored blob) (Story 9.3). Carries poolId + claimCaseId + bankCode + the object key + parsed?/parserVersion + row counts (NOT the entries — Decision D2; the 9.4 matcher re-reads the blob). Serves as the metadata row + audit provenance + the engagement heartbeat (resolveLastEngagedAt resets the staff-takeover day-N clock off its occurred_at).',
+    schema: reconciliation.ReconciliationStatementUploadedPayloadSchema,
+  },
+  'reconciliation.manual_transcription_requested': {
+    type: 'reconciliation.manual_transcription_requested',
+    description:
+      'The "Hum aapke liye padh lenge" fallback (Story 9.3, AC2/AC3): a staff-mediated manual-entry request (24–48h SLA) raised on an unparseable upload or an explicit nominee ask. Carries poolId + claimCaseId + bankCode? + the stored object key? + reason + slaHours + the attribution role — a RESERVED SEAM shaped for the Story 9.8 review queue / Epic-10 helpdesk (no queue render in 9.3, the 9.1 takeover-flag discipline).',
+    schema: reconciliation.ReconciliationManualTranscriptionRequestedPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

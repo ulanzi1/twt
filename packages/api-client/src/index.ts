@@ -21,6 +21,7 @@ import {
   ActiveContributionCardResponse,
   PoolContributorListResponse,
   NomineeConsoleResponse,
+  BankStatementUploadResponse,
   ContributionIntentResponse,
   ContributionAttestResponse,
   ContributionFailureReportRequest,
@@ -69,6 +70,7 @@ import {
   type ActiveContributionCardResponse as ActiveContributionCardResult,
   type PoolContributorListResponse as PoolContributorListResult,
   type NomineeConsoleResponse as NomineeConsoleResult,
+  type BankStatementUploadResponse as BankStatementUploadResult,
   ContributionHistoryResponse,
   type ContributionHistoryResponse as ContributionHistoryResult,
   type ContributionIntentRequest,
@@ -302,7 +304,7 @@ function createApiCallers(opts: MemberAuthClientOptions) {
 }
 
 export function createMemberAuthClient(opts: MemberAuthClientOptions) {
-  const { call, callBinary } = createApiCallers(opts);
+  const { call, callBinary, callMultipart } = createApiCallers(opts);
 
   return {
     /** Request a login OTP for a mobile (enumeration-safe — always resolves). */
@@ -552,6 +554,27 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
         undefined,
         true,
         'GET',
+      );
+    },
+
+    /**
+     * Upload a bank statement for reconciliation (Story 9.3; session + `claim_handover` step-up). The
+     * nominee's Ravi-mode session resolves the pool server-side. The caller builds the `FormData` with the
+     * picked file (RN: `{ uri, name, type }` appended as `file`); `bankCode` rides the querystring. Returns
+     * the discriminated `{ outcome: 'parsed', summary }` (an allowlisted-bank CSV normalized inline) OR
+     * `{ outcome: 'fallback', fallback }` (a PDF/image/unparseable file routed to "Hum aapke liye padh
+     * lenge" — the human path is engaged, NOT an error). A 413/400/503 surfaces as `ApiError` (key on
+     * `error.code` for Pattern-4 copy). No OCR path in v1 (Decision D1).
+     */
+    memberUploadBankStatement(
+      form: FormData,
+      bankCode: 'sbi' | 'pnb' | 'bob' | 'boi' | 'cooperative',
+    ): Promise<BankStatementUploadResult> {
+      const qs = `?bank_code=${encodeURIComponent(bankCode)}`;
+      return callMultipart(
+        `${MEMBER_HOME_BASE}/reconciliation/statements${qs}`,
+        BankStatementUploadResponse,
+        form,
       );
     },
 

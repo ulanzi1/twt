@@ -10,15 +10,23 @@
 // DB-touching specs guard with `describe.skipIf(!hasDatabase)` so the suite passes
 // without Docker; the live-DB CI job sets DATABASE_URL (Story 1.6 substrate).
 
-import type { ClaimDocumentStorage, ContributionNotePdfRenderer } from '@twt/contracts';
+import type {
+  BankStatementStorage,
+  ClaimDocumentStorage,
+  ContributionNotePdfRenderer,
+  StatementScanner,
+} from '@twt/contracts';
 import { createDb } from '@twt/domain';
 import {
   type BankIfscLookup,
   createFakeContributionNotePdfRenderer,
   createInMemoryBankIfscLookup,
+  createInMemoryBankStatementStorage,
   createInMemoryClaimDocumentStorage,
+  createNoOpStatementScanner,
   type FakeContributionNotePdfRenderer,
   type InMemoryBankIfscLookup,
+  type InMemoryBankStatementStorage,
   type InMemoryClaimDocumentStorage,
 } from '@twt/platform-adapters';
 import type pg from 'pg';
@@ -213,6 +221,8 @@ export interface TestDepsOverrides {
   kycProviders?: KycProviderRegistry;
   dataExportQueue?: DataExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
+  bankStatementStorage?: BankStatementStorage;
+  statementScanner?: StatementScanner;
   contributionNotePdfRenderer?: ContributionNotePdfRenderer;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
   poolSpawnQueue?: PoolSpawnTriggerEnqueuer;
@@ -233,6 +243,8 @@ export interface TestDeps {
   poolFixedAmountHook: CapturingPoolFixedAmountHook;
   dataExportQueue: CapturingDataExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
+  bankStatementStorage: InMemoryBankStatementStorage;
+  statementScanner: StatementScanner;
   contributionNotePdfRenderer: FakeContributionNotePdfRenderer;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
   poolSpawnQueue: CapturingPoolSpawnQueue;
@@ -266,6 +278,10 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const claimDocumentStorage =
     (overrides.claimDocumentStorage as InMemoryClaimDocumentStorage) ??
     createInMemoryClaimDocumentStorage();
+  const bankStatementStorage =
+    (overrides.bankStatementStorage as InMemoryBankStatementStorage) ??
+    createInMemoryBankStatementStorage();
+  const statementScanner = overrides.statementScanner ?? createNoOpStatementScanner();
   const claimOcrParityQueue =
     (overrides.claimOcrParityQueue as CapturingClaimOcrParityQueue) ??
     new CapturingClaimOcrParityQueue();
@@ -331,6 +347,11 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Claim-document object store (Story 6.5) — in-memory fake so the upload spec can assert the
     // bytes were `put` (and that a rejected upload never reaches storage).
     claimDocumentStorage,
+    // Bank-statement object store + virus-scan seam (Story 9.3) — in-memory store so the reconciliation
+    // upload spec asserts the raw bytes were `put`; no-op scanner by default (a spec overrides it with a
+    // rejecting scanner to exercise the quarantine path).
+    bankStatementStorage,
+    statementScanner,
     contributionNotePdfRenderer,
     // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
     // enqueued on a 202, and NOT enqueued on a 409 lifecycle-guard rejection.
@@ -359,6 +380,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     poolFixedAmountHook,
     dataExportQueue,
     claimDocumentStorage,
+    bankStatementStorage,
+    statementScanner,
     contributionNotePdfRenderer,
     claimOcrParityQueue,
     poolSpawnQueue,

@@ -177,6 +177,9 @@ importers:
       '@simplewebauthn/server':
         specifier: ^13.3.0
         version: 13.3.1
+      '@twt/bank-parsers':
+        specifier: workspace:*
+        version: link:../../packages/bank-parsers
       '@twt/channels':
         specifier: workspace:*
         version: link:../../packages/channels
@@ -189,6 +192,9 @@ importers:
       '@twt/edge':
         specifier: workspace:*
         version: link:../../packages/edge
+      '@twt/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       '@twt/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n

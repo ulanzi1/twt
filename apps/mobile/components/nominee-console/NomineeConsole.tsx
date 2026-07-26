@@ -26,6 +26,7 @@ import { StyleSheet } from 'react-native'
 import { ScrollView } from 'react-native'
 import { Paragraph, Text, View, YStack } from 'tamagui'
 
+import { BankStatementUpload } from './BankStatementUpload'
 import { CallHelplineCTA } from '../common/CallHelplineCTA'
 import { PoolContributorList } from '../contributor-list/PoolContributorList'
 import { recordNomineeConsoleVisit } from './console-resume'
@@ -172,14 +173,11 @@ export function NomineeConsole() {
             </YStack>
           ) : null}
 
-          {/* Story 9.3 upload-queue slot — a first-class {available:false} placeholder, NEVER a faked uploader. */}
+          {/* Story 9.3 upload-queue slot — the REAL <BankStatementUpload> transport (fills the 9.1
+              {available:false} placeholder). Rendered here in the static ScrollView region, OUTSIDE the
+              FlashList below, so it never nests inside a virtualized list ([[project_fabric_flatlist_empty_populated_crash]]). */}
           <View px="$5">
-            <ComingSoonCard
-              title={t('upload_slot.title', undefined, NS)}
-              body={t('upload_slot.body', undefined, NS)}
-              a11y={t('upload_slot.a11y', undefined, NS)}
-              hint={t('upload_slot.hint', undefined, NS)}
-            />
+            <BankStatementUpload poolCanonicalIdentifier={view.pool.canonicalIdentifier} />
           </View>
 
           {/* Story 9.6 <StatusPill> slot — a neutral text placeholder, NOT the unbuilt DS component. */}

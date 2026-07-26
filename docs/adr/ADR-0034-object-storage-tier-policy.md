@@ -41,14 +41,35 @@ collapsed.
   the blob; the normalized rows persist separately (Story 9.4).
 - **Lifecycle:** the raw uploaded statement is retained for the reconciliation audit window
   and then subject to the standard PII retention/erasure policy (DPDPA); it is NOT
-  indefinitely retained (contrast the ₹110 signup-fee receipt, AR-67). The exact retention
-  window is set with the 9.3 storage wiring.
+  indefinitely retained (contrast the ₹110 signup-fee receipt, AR-67). **The exact retention
+  window is set here at the 9.3 storage wiring: 180 days (6 months).** Rationale: the
+  reconciliation cycle is a 15-day contribution window (FR-22) whose matcher (9.4) may re-read
+  the blob during that window; the statement then supports the disbursement + close-of-cycle
+  audit and any short appeal/dispute follow-up. 180 days comfortably covers one full cycle +
+  its audit/appeal tail while bounding storage cost and DPDPA exposure (the raw statement is
+  Tier-1 PII, so the window is deliberately short — an order of magnitude below the multi-year
+  fee-receipt retention). Enforcement is a GCS Object Lifecycle Management delete rule on the
+  `BANK_STATEMENT_BUCKET` (age > 180d), the same lifecycle-rule mechanism as the pool-snapshot
+  cold-tier; provisioning the bucket + the lifecycle rule is deployment infra (the daily-dump /
+  bucket-provisioning pattern), NOT application code — 9.3 SETS the value + the runbook, the
+  bucket rule is applied at deploy time.
 
-**Storage WIRING for bank statements — resolved via explicit deferral to Story 9.3.** The
-upload endpoint, the quarantine/virus-scan step, the object-storage promotion, the
-signed-URL issuance, the AR-45 external-call resilience at the storage-fetch boundary, and
-the concrete retention-window value are all owned by the Story 9.3 transport. This is a
-deliberate deferral with a named owner, **not** an unaddressed gap.
+**Storage WIRING for bank statements — WIRED by Story 9.3 (this closes the deferral).** The
+upload endpoint (the dual member/staff `reconciliation` module), the quarantine/virus-scan step
+(the injectable `StatementScanner` seam — no-op v1, the 6.5 `OcrProvider` posture), the
+object-storage promotion (the NEW `BankStatementStorage` port + GCS/local-fs/in-memory adapters,
+Decision D3 — a separate port instance + `BANK_STATEMENT_BUCKET`, not a `ClaimDocumentStorage`
+reuse), and the AR-45 external-call resilience at the storage-fetch/scanner boundary (the
+`ResilientCall` retry+timeout+breaker) are all now BUILT in the Story 9.3 transport, along with the
+concrete retention-window value (180d, above). **The signed-URL issuance (`signedReadUrl`,
+short-lived, staff-transcriber read) is implemented on the port and all three adapters and is
+unit-tested, but has NO live caller in 9.3** — the staff-transcription surface that would call it
+(the admin-side manual-entry UI) is out of 9.3's scope (see the 9.3 story's scope table); it is a
+reserved seam for that future surface, not a wired path today (corrected at code review, 2026-07-26
+— the prior wording overstated this as built end-to-end). The metadata persists as the
+`reconciliation.statement-uploaded` events_log event (object key + provenance + counts — never the
+entries; the 9.1 events_log-direct precedent, minimizing new schema), NOT a new table. The parsed
+rows still persist separately (Story 9.4, unchanged).
 
 ## Alternatives considered
 
@@ -89,3 +110,5 @@ deliberate deferral with a named owner, **not** an unaddressed gap.
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-07-26 | (initial draft) | BigDev (Solo Builder) | Bank-statement tier POLICY authored under Story 9.2; storage WIRING resolved via explicit deferral to Story 9.3 |
+| 2026-07-26 | drafted → wired (bank-statement portion closed) | BigDev (Claude) | Story 9.3 WIRED the storage: `BankStatementStorage` port + adapters (Decision D3, own `BANK_STATEMENT_BUCKET`), the `StatementScanner` virus-scan seam, the AR-45 `ResilientCall` at the storage/scanner boundary, `signedReadUrl` on the port/adapters, the dual member/staff upload endpoints. **The retention window is set: 180 days** (one 15-day cycle + audit/appeal tail; GCS lifecycle delete rule; bounds Tier-1 PII exposure). Metadata persists as the `reconciliation.statement-uploaded` events_log event (object key + counts, never the entries — the 9.1 events_log-direct precedent), NOT a new table. The "partial: bank-statement portion" caveat on adr-index row 129 is discharged. |
+| 2026-07-26 | correction (code review) | Claude (bmad-code-review) | Corrected an overclaim in the row above: `signedReadUrl` is implemented + unit-tested but has **no live caller in 9.3** (the staff-transcription surface that would call it is out of scope). Reworded the body text accordingly — the wiring is a reserved seam, not an end-to-end path, today. |

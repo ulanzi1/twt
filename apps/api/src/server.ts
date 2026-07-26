@@ -30,6 +30,7 @@ import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
 import { registerNomineeConsoleModule } from './modules/nominee-console/index.js';
+import { registerReconciliationModule } from './modules/reconciliation/index.js';
 import { registerPaymentModule } from './modules/payment/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
@@ -160,6 +161,12 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // the server-computed staff-takeover-by-day-N verdict. Member-session-gated; NO write path / event /
   // schema change. Composes the built 8.3/8.11 surfaces client-side; the 9.3 upload + 9.6 pill are seams.
   registerNomineeConsoleModule(app, deps);
+  // Story 9.3 — the FIRST reconciliation SURFACE + transport (the transport Story 9.2 deferred): the
+  // <BankStatementUpload> dual upload endpoints (member Ravi-mode + staff claim.file) that run
+  // parseStatement inline over the uploaded buffer, store the raw blob (Tier-1, AR-45-wrapped), virus-scan,
+  // emit the reconciliation.statement-uploaded provenance/engagement event + the "padh lenge" fallback task,
+  // and return the ParseResultSummary. Closes the Story 9.1 engagement-writer seam (resolveLastEngagedAt).
+  registerReconciliationModule(app, deps);
   // Story 8.4 — the FIRST Epic-8 WRITE surface: pool-contribution UPI Intent + UTR self-attestation
   // (POST /member/contribution/{intent,attest}). The architecture's reserved modules/payment/ for Epic-8's
   // contribution (member→nominee) dispatch; reuses the member-pool read seam. Member-session-gated. Emits

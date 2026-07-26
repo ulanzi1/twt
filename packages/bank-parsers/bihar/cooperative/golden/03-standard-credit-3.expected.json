@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "56c4dc9d-34e3-51dd-a664-0c403794d761",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-02-03",
+      "transaction_id_utr": "100000000012",
+      "sender_vpa": "mohan@okicici",
+      "sender_name": "MOHAN LAL",
+      "amount": 50000,
+      "description": "UPI/CR/100000000012/MOHAN LAL/mohan@okicici/Contribution",
+      "entry_type": "credit",
+      "running_balance": 150000,
+      "source_account": null,
+      "raw_row": [
+        "03/02/26",
+        "UPI/CR/100000000012/MOHAN LAL/mohan@okicici/Contribution",
+        "100000000012",
+        "",
+        "500.00",
+        "1500.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

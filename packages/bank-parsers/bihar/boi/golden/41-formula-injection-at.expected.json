@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "795bc5ac-41cc-5366-8c88-24e90a2510fe",
+      "bank_code": "boi",
+      "transaction_date": "2026-09-04",
+      "transaction_id_utr": "700000000040",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "@HYPERLINK(\"http://evil\")",
+      "entry_type": "credit",
+      "running_balance": 850000,
+      "source_account": null,
+      "raw_row": [
+        "2026-09-04",
+        "@HYPERLINK(\"http://evil\")",
+        "700000000040",
+        "500.00",
+        "Cr",
+        "8500.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

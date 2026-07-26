@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "eb376dd1-06f9-5db4-b908-0ea427849376",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-03-01",
+      "transaction_id_utr": "200000000010",
+      "sender_vpa": "payee1@okaxis",
+      "sender_name": "PAYEE 1",
+      "amount": 75000,
+      "description": "UPI/DR/200000000010/PAYEE 1/payee1@okaxis/Transfer",
+      "entry_type": "debit",
+      "running_balance": 1000000,
+      "source_account": null,
+      "raw_row": [
+        "01/03/26",
+        "UPI/DR/200000000010/PAYEE 1/payee1@okaxis/Transfer",
+        "200000000010",
+        "750.00",
+        "",
+        "10000.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

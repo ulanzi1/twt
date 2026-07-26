@@ -1,0 +1,17 @@
+{
+  "entries": [],
+  "rejected": [
+    {
+      "rowIndex": 0,
+      "rawRow": [
+        "NOTADATE",
+        "UPI/CR/600000000012/BAD DATE",
+        "600000000012",
+        "500.00",
+        "Cr",
+        "6000.00"
+      ],
+      "reason": "unparseable-date"
+    }
+  ]
+}

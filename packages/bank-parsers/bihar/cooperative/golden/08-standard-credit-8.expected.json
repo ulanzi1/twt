@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "dbccb092-6602-51b0-8147-5624723a52e8",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-02-08",
+      "transaction_id_utr": "100000000017",
+      "sender_vpa": "neha@okaxis",
+      "sender_name": "NEHA YADAV",
+      "amount": 50000,
+      "description": "UPI/CR/100000000017/NEHA YADAV/neha@okaxis/Contribution",
+      "entry_type": "credit",
+      "running_balance": 400000,
+      "source_account": null,
+      "raw_row": [
+        "08/02/26",
+        "UPI/CR/100000000017/NEHA YADAV/neha@okaxis/Contribution",
+        "100000000017",
+        "",
+        "500.00",
+        "4000.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "db5c8dcb-af6e-5d99-82e0-072376dd9f75",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-02-05",
+      "transaction_id_utr": "100000000014",
+      "sender_vpa": "ajay@oksbi",
+      "sender_name": "AJAY VERMA",
+      "amount": 50000,
+      "description": "UPI/CR/100000000014/AJAY VERMA/ajay@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 250000,
+      "source_account": null,
+      "raw_row": [
+        "05/02/26",
+        "UPI/CR/100000000014/AJAY VERMA/ajay@oksbi/Contribution",
+        "100000000014",
+        "",
+        "500.00",
+        "2500.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "3ff37c36-86e9-5da6-be08-79f5484f8c4a",
+      "bank_code": "sbi",
+      "transaction_date": "2026-09-04",
+      "transaction_id_utr": "700000000040",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "@HYPERLINK(\"http://evil\")",
+      "entry_type": "credit",
+      "running_balance": 850000,
+      "source_account": null,
+      "raw_row": [
+        "04/09/2026",
+        "04/09/2026",
+        "@HYPERLINK(\"http://evil\")",
+        "700000000040",
+        "",
+        "500.00",
+        "8500.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

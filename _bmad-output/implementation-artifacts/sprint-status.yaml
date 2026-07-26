@@ -1,4 +1,48 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-26 (story 9-2 review -> done via bmad-code-review, 3-layer parallel review (Blind
+#   Hunter, Edge Case Hunter, Acceptance Auditor). Acceptance Auditor returned clean; Blind Hunter's claim
+#   that the raw per-bank parser exports bypass the allowlist/registry gate (AC1/AC4) was independently
+#   verified against the actual files and survived — the Auditor's clean bill was wrong on this point.
+#   Independently re-ran the ledger's own green-test claim (bank-parsers 283/contracts 561/domain 986) —
+#   all matched exactly. 8 patch findings fixed, 0 decision-needed, 1 deferred: (1) index.ts no longer
+#   re-exports raw parseSbi/etc., parseStatement is the sole entry point; (2) parseInrToPaise no longer
+#   strips a bare leading `.` as a currency symbol (was silently turning .50 into 5000 paise — 100x error);
+#   (3) unrecognized/blank Dr-Cr indicator now skip-with-records as 'ambiguous-direction' instead of
+#   silently booking a debit; (4) a row with both debit+credit cells populated now skip-with-records as
+#   'ambiguous-amount' instead of silently discarding the debit (both new reasons added to the
+#   RejectedRowBreakdown contract); (5) normalizeDate now validates real calendar days-in-month
+#   (leap-year aware) across all 3 date-format branches, was accepting e.g. 2026-02-30; (6) the
+#   string-input decode path now enforces MAX_INPUT_BYTES with a typed RangeError instead of a silent
+#   mid-row truncation; (7) csv-parse pinned to an exact 5.6.0 (was a floating ^5.5.0 despite ADR-0033
+#   claiming "pinned"); (8) VPA_RE's PSP segment now requires lowercase, matching its own doc comment
+#   (verified against all 250 golden fixtures — no regression, every real VPA is already lowercase).
+#   Deferred: deterministic entry_id bakes in CSV row position (forward risk for 9.4's dedup key, not
+#   a 9.2 defect — recorded in deferred-work.md). 4 regression tests added (bank-parsers 283->287,
+#   domain 986->987); bank-parsers/domain/contracts typecheck+lint+test all green post-fix. baseline
+#   c79adec.)
+# last_updated: 2026-07-26 (story 9-2 in-progress -> review via bmad-dev-story. Reconciliation PRIMITIVE landed:
+#   [P0] BankStatementEntry canonical schema (@twt/domain, D4 union + integer-paise + deterministic UUIDv5 entry_id),
+#   5 CSV-first parsers + RE6-6 registry (@twt/bank-parsers), 250 golden files (semantic matrix), bank-allowlist.yaml
+#   governance (repo-root, exactly-5 teeth, D5 package-local), ParseResultSummary contract (no domain-shadow, bundle-
+#   boundary lockstep), 3 AR-69 ADRs drafted (0032/0033/0034 — 0034 storage-wiring deferred to 9.3 per D1). Reserved
+#   seams honest (no upload/storage/DB/matcher/PDF-OCR; AR-45 = documented 9.3 seam, D3). bank-parsers 283 + contracts
+#   561 + domain 986 green; ci:local 26 static/invariant gates + unit + crypto green; integration 17/17 green (isolated
+#   re-run — one bundled-run flake of the known live-DB concurrency class, innocence confirmed). baseline c79adec.)
+# last_updated: 2026-07-26 (story 9-2 ready-for-dev -> in-progress via bmad-dev-story.)
+# last_updated: 2026-07-26 (story 9-2 backlog -> ready-for-dev via bmad-create-story. Bank Statement Intake
+#   Transport + 5-Bank Parser Allowlist + 50 Golden Files/Bank + Normalization Schema [PRIMITIVE]. Epic-9
+#   already in-progress (9.1 done) — no epic flip. This is the reconciliation-engine PRIMITIVE: authors the
+#   canonical BankStatementEntry normalized-row schema (packages/domain/src/bank-statement/, the [P0] shape
+#   the 9.4 matcher replays), FILLS the packages/bank-parsers PR-1 placeholder with 5 CSV-first per-bank
+#   parsers under bihar/{sbi,pnb,bob,boi,cooperative}/ + src/registry.ts dispatch (RE6-6) + 50 co-located
+#   golden files/bank (250 total, semantic coverage matrix NOT padding), bank-allowlist.yaml governance
+#   registry (repo-root, mirrors benefit-mechanism.yaml) with registry-subset-of-allowlist teeth + trustee-
+#   attested admission workflow, and the parser-normalization-output contract in contracts/src/reconciliation.
+#   Closes 3 AR-69 deferred ADRs (rows 97 normalization-schema, 130 intake-pipeline, 129-partial object-
+#   storage-tier). Reserved seams (NOT built, NOT faked): multipart upload endpoint + quarantine + storage
+#   (9.3 transport), PDF/OCR (Phase-2), the matcher (9.4). AR-45 = pure parser + documented seam, no retry
+#   wrapper around pure code. 5 open decisions surfaced for BigDev (D1 scope boundary / D2 CSV-only / D3
+#   AR-45 seam / D4 schema union / D5 allowlist gate weight). baseline c79adec.)
 # last_updated: 2026-07-25 (story 9-1 review -> done via bmad-code-review, 3-layer parallel review (Blind
 #   Hunter, Edge Case Hunter, Acceptance Auditor). Independently re-verified the DB-free portion of the
 #   story's own "green" ledger claim (microcopy gate + 66 nominee-console unit tests, all green) before
@@ -1040,7 +1084,7 @@ development_status:
   # ==========================================================================
   epic-9: in-progress
   9-1-nominee-console-sunitas-surface-fursat-cadence-staff-takeover-by-day-n: done
-  9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema: backlog
+  9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema: done
   9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: backlog
   9-4-utr-matching-engine-matcher-mechanism: backlog
   9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: backlog

@@ -1,0 +1,71 @@
+{
+  "entries": [
+    {
+      "entry_id": "ed3b056b-1f0c-5b73-a1f4-d30b5fa9c3e5",
+      "bank_code": "boi",
+      "transaction_date": "2026-06-13",
+      "transaction_id_utr": "400000000013",
+      "sender_vpa": null,
+      "sender_name": "BATCH PAYER A",
+      "amount": 50000,
+      "description": "UPI/CR/400000000013/BATCH PAYER A/a@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "2026-06-13",
+        "UPI/CR/400000000013/BATCH PAYER A/a@oksbi/Contribution",
+        "400000000013",
+        "500.00",
+        "Cr",
+        "5500.00"
+      ],
+      "parser_version": "boi@1"
+    },
+    {
+      "entry_id": "f21f4992-f27b-5809-b6ca-c801ac29967e",
+      "bank_code": "boi",
+      "transaction_date": "2026-06-14",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 500,
+      "description": "SMS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 549500,
+      "source_account": null,
+      "raw_row": [
+        "2026-06-14",
+        "SMS CHARGES GST",
+        "",
+        "5.00",
+        "Dr",
+        "5495.00"
+      ],
+      "parser_version": "boi@1"
+    },
+    {
+      "entry_id": "d38e8ccd-dd46-5125-8e25-1a0ac13b00d4",
+      "bank_code": "boi",
+      "transaction_date": "2026-06-15",
+      "transaction_id_utr": "400000000015",
+      "sender_vpa": null,
+      "sender_name": "BATCH PAYER B",
+      "amount": 50000,
+      "description": "UPI/CR/400000000015/BATCH PAYER B/b@okaxis/Contribution",
+      "entry_type": "credit",
+      "running_balance": 599500,
+      "source_account": null,
+      "raw_row": [
+        "2026-06-15",
+        "UPI/CR/400000000015/BATCH PAYER B/b@okaxis/Contribution",
+        "400000000015",
+        "500.00",
+        "Cr",
+        "5995.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

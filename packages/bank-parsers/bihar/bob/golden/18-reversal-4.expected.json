@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "e9be1a59-bdd2-54b9-bda3-6b7c8ca65c73",
+      "bank_code": "bob",
+      "transaction_date": "2026-04-04",
+      "transaction_id_utr": "300000000013",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "UPI/REVERSAL/300000000013/Failed txn refund",
+      "entry_type": "reversal",
+      "running_balance": 650000,
+      "source_account": null,
+      "raw_row": [
+        "04-Apr-2026",
+        "UPI/REVERSAL/300000000013/Failed txn refund",
+        "300000000013",
+        "",
+        "500.00",
+        "6500.00"
+      ],
+      "parser_version": "bob@1"
+    }
+  ],
+  "rejected": []
+}

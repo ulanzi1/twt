@@ -1,0 +1,91 @@
+# ADR-0034: Object-storage tier + lifecycle policy (bank statements) — wiring deferred to Story 9.3
+
+> **Status:** drafted
+> **Date:** 2026-07-26 (date entered current status)
+> **Author:** BigDev (Solo Builder), at Story 9.2 closure
+> **Ratifying trustees:** — (Trustee ratification is Story 14.7's AR-69 backlog closure, epics.md L4408; author-drafted/ratify-later split, precedent ADR-0026)
+> **Supersedes:** —
+> **Superseded by:** —
+
+## Context
+
+adr-index row 129 (`ADR-NNNN-object-storage-tier-policy`, "Story 1.5 + Story 9.2 closure")
+reserves the object-storage tier + lifecycle policy for KYC docs, death certificates,
+Contribution Note PDFs, and **bank statements**. Story 1.5 committed the PII tier model
+(Cloud KMS HSM + Tink envelope encryption); Story 6.5 landed the first blob store
+(`ClaimDocumentStorage` port + GCS adapter, object-key-in-Postgres, signed-URL access —
+[[project_claim_document_storage_port]]).
+
+Story 9.2 is a **pure parser** (Decision D1): it never fetches, never touches storage,
+never touches the DB — it operates on an in-hand buffer/stream. The multipart upload +
+virus-scan quarantine + object-storage promotion are the **Story 9.3
+`<BankStatementUpload>` transport**. So 9.2 can cheaply record the *tier + lifecycle
+policy* bank statements will get, but the *storage wiring* is not 9.2's to build.
+
+Per [[feedback_closure_language_precision]], this ADR distinguishes what is **authored** (the
+policy) from what is **resolved via explicit deferral** (the wiring) — the two are never
+collapsed.
+
+## Decision
+
+**Bank-statement tier + lifecycle POLICY (authored now):**
+
+- **PII tier:** bank statements are **Tier-1 PII** (they contain member/nominee financial
+  identifiers — UTR, VPA, sender name, account). They are stored encrypted at rest under
+  the Story 1.5 envelope-encryption model (Cloud KMS + Tink), consistent with claim
+  documents (ADR / [[project_claim_document_storage_port]]).
+- **Storage abstraction:** reuse the Story 6.5 `ClaimDocumentStorage`-style port pattern —
+  object bytes in the blob store (GCS), object-key + PII metadata in Postgres (never the
+  raw bytes in a column), signed-URL access. The parsed `BankStatementEntry` rows are
+  **derived data** (the matcher's input), NOT the raw file — the raw uploaded statement is
+  the blob; the normalized rows persist separately (Story 9.4).
+- **Lifecycle:** the raw uploaded statement is retained for the reconciliation audit window
+  and then subject to the standard PII retention/erasure policy (DPDPA); it is NOT
+  indefinitely retained (contrast the ₹110 signup-fee receipt, AR-67). The exact retention
+  window is set with the 9.3 storage wiring.
+
+**Storage WIRING for bank statements — resolved via explicit deferral to Story 9.3.** The
+upload endpoint, the quarantine/virus-scan step, the object-storage promotion, the
+signed-URL issuance, the AR-45 external-call resilience at the storage-fetch boundary, and
+the concrete retention-window value are all owned by the Story 9.3 transport. This is a
+deliberate deferral with a named owner, **not** an unaddressed gap.
+
+## Alternatives considered
+
+- **Author the full storage wiring now.** Rejected — it is out of 9.2's `[PRIMITIVE]`
+  scope (D1); a pure parser must not grow a storage dependency.
+- **Store parsed rows only, discard the raw file.** Rejected — the raw statement is the
+  audit anchor for a ₹50L-flow reconciliation; it must be retained for the audit window.
+- **Store raw bytes in a Postgres column (base64).** Rejected — the Story 6.5 precedent is
+  object-key-in-Postgres + bytes-in-blob-store; base64-in-column is the documented
+  anti-pattern.
+
+## Consequences
+
+- **Operational** — 9.3 inherits a documented tier + lifecycle policy to wire against; it
+  owns the retention-window value + the quarantine runbook.
+- **Security** — Tier-1 encryption + signed-URL access + verbatim-`raw_row` (no
+  interpretation) bound the untrusted-statement threat surface (architecture L1316).
+- **Cost** — Blob storage per statement per Pariwar per cycle; bounded by the retention
+  window (set at 9.3).
+- **Failure modes accepted** — Until 9.3 wires storage, there is no persisted raw
+  statement; 9.2's parser is exercised over in-hand buffers (golden corpus + 9.3 uploads).
+- **Migration / pivot path** — If bank statements later need a different tier/retention,
+  this ADR is superseded; the storage port keeps the change to one adapter.
+
+## References
+
+- [Source: architecture.md §Deferred Decisions, L235-236; §1.5 + §5.2, L2940-2994] — object-storage tier property
+- [Source: epics.md, Story 9.2 + Story 9.3] — the pure-parser vs transport split
+- [Source: docs/adr/ADR-0033-bank-statement-intake-pipeline.md] — the intake pipeline + AR-45 seam
+- [Source: docs/knowledge-transfer/adr-index.md, row 129] — the live index row (partial: bank-statement portion)
+- Memory: [[project_claim_document_storage_port]] — the blob-store port precedent (Story 6.5)
+- Memory: [[feedback_closure_language_precision]] — authored-vs-deferred discipline
+
+---
+
+## Changelog
+
+| Date | Status flip | Author | Notes |
+|---|---|---|---|
+| 2026-07-26 | (initial draft) | BigDev (Solo Builder) | Bank-statement tier POLICY authored under Story 9.2; storage WIRING resolved via explicit deferral to Story 9.3 |

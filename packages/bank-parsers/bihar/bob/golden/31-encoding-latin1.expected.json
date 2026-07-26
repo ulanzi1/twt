@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "2df78658-dae3-5be3-944d-ca8df810d957",
+      "bank_code": "bob",
+      "transaction_date": "2026-07-03",
+      "transaction_id_utr": "500000000013",
+      "sender_vpa": "jose@oksbi",
+      "sender_name": "JOSÉ FERNANDES",
+      "amount": 50000,
+      "description": "UPI/CR/500000000013/JOSÉ FERNANDES/jose@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 600000,
+      "source_account": null,
+      "raw_row": [
+        "03-Jul-2026",
+        "UPI/CR/500000000013/JOSÉ FERNANDES/jose@oksbi/Contribution",
+        "500000000013",
+        "",
+        "500.00",
+        "6000.00"
+      ],
+      "parser_version": "bob@1"
+    }
+  ],
+  "rejected": []
+}

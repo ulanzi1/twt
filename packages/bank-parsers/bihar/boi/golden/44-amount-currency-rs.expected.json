@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "37fd244b-291d-5368-9802-c582890d9b4a",
+      "bank_code": "boi",
+      "transaction_date": "2026-10-03",
+      "transaction_id_utr": "800000000030",
+      "sender_vpa": "fmt@oksbi",
+      "sender_name": "FORMAT PAYER",
+      "amount": 200050,
+      "description": "UPI/CR/800000000030/FORMAT PAYER/fmt@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 9999900,
+      "source_account": null,
+      "raw_row": [
+        "2026-10-03",
+        "UPI/CR/800000000030/FORMAT PAYER/fmt@oksbi/Contribution",
+        "800000000030",
+        "Rs. 2000.50",
+        "Cr",
+        "99999.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

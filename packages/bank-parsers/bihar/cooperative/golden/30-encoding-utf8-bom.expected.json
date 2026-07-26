@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "2a617072-1ff7-5946-a2c4-8895f2513c54",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-07-02",
+      "transaction_id_utr": "500000000012",
+      "sender_vpa": "bom@oksbi",
+      "sender_name": "BOM PAYER",
+      "amount": 50000,
+      "description": "UPI/CR/500000000012/BOM PAYER/bom@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02/07/26",
+        "UPI/CR/500000000012/BOM PAYER/bom@oksbi/Contribution",
+        "500000000012",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

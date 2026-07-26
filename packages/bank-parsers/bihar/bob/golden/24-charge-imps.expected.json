@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "319574aa-292a-59cf-b028-69267bcb613c",
+      "bank_code": "bob",
+      "transaction_date": "2026-05-05",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 2500,
+      "description": "IMPS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 890000,
+      "source_account": null,
+      "raw_row": [
+        "05-May-2026",
+        "IMPS CHARGES GST",
+        "",
+        "25.00",
+        "",
+        "8900.00"
+      ],
+      "parser_version": "bob@1"
+    }
+  ],
+  "rejected": []
+}

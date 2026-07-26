@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "052c5230-e0f5-587a-a0bc-841e76615eba",
+      "bank_code": "sbi",
+      "transaction_date": "2026-08-01",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": "no reference",
+      "amount": 50000,
+      "description": "UPI/CR/CASH DEPOSIT/no reference",
+      "entry_type": "credit",
+      "running_balance": 500000,
+      "source_account": null,
+      "raw_row": [
+        "01/08/2026",
+        "01/08/2026",
+        "UPI/CR/CASH DEPOSIT/no reference",
+        "",
+        "",
+        "500.00",
+        "5000.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

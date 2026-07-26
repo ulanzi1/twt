@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "e4e711f2-3fef-5e19-80ac-66827fdf9828",
+      "bank_code": "sbi",
+      "transaction_date": "2026-12-02",
+      "transaction_id_utr": "910000000012",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02/12/2026",
+        "02/12/2026",
+        "",
+        "910000000012",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

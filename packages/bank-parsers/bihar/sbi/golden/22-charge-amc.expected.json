@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "d0e469e0-9adf-5a2a-a168-b28e9a9128b6",
+      "bank_code": "sbi",
+      "transaction_date": "2026-05-03",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 1500,
+      "description": "AMC CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 895000,
+      "source_account": null,
+      "raw_row": [
+        "03/05/2026",
+        "03/05/2026",
+        "AMC CHARGES GST",
+        "",
+        "15.00",
+        "",
+        "8950.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

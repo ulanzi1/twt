@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "fa32e8f8-ecf4-520d-a0a3-6549ef6c468e",
+      "bank_code": "pnb",
+      "transaction_date": "2026-02-04",
+      "transaction_id_utr": "100000000013",
+      "sender_vpa": "geeta@okaxis",
+      "sender_name": "GEETA SINGH",
+      "amount": 50000,
+      "description": "UPI/CR/100000000013/GEETA SINGH/geeta@okaxis/Contribution",
+      "entry_type": "credit",
+      "running_balance": 200000,
+      "source_account": null,
+      "raw_row": [
+        "04-02-2026",
+        "UPI/CR/100000000013/GEETA SINGH/geeta@okaxis/Contribution",
+        "100000000013",
+        "",
+        "500.00",
+        "2000.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

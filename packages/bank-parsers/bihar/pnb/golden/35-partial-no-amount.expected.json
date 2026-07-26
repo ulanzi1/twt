@@ -1,0 +1,17 @@
+{
+  "entries": [],
+  "rejected": [
+    {
+      "rowIndex": 0,
+      "rawRow": [
+        "04-08-2026",
+        "INFO ROW NO AMOUNT",
+        "",
+        "",
+        "",
+        "6000.00"
+      ],
+      "reason": "missing-amount"
+    }
+  ]
+}

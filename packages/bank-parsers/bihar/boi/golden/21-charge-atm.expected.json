@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "7c62bbc1-662e-577a-944e-c9a2169ab2ba",
+      "bank_code": "boi",
+      "transaction_date": "2026-05-02",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 1000,
+      "description": "ATM CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 897500,
+      "source_account": null,
+      "raw_row": [
+        "2026-05-02",
+        "ATM CHARGES GST",
+        "",
+        "10.00",
+        "Dr",
+        "8975.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

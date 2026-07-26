@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "9ac03e90-d408-51df-8363-0f1f9db89d93",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-10-01",
+      "transaction_id_utr": "800000000010",
+      "sender_vpa": "fmt@oksbi",
+      "sender_name": "FORMAT PAYER",
+      "amount": 100000,
+      "description": "UPI/CR/800000000010/FORMAT PAYER/fmt@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 9999900,
+      "source_account": null,
+      "raw_row": [
+        "01/10/26",
+        "UPI/CR/800000000010/FORMAT PAYER/fmt@oksbi/Contribution",
+        "800000000010",
+        "",
+        "1,000.00",
+        "99999.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

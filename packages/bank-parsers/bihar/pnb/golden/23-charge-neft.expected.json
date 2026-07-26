@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "7928115e-a6fe-57f8-a4ef-39de32d1ce6d",
+      "bank_code": "pnb",
+      "transaction_date": "2026-05-04",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 2000,
+      "description": "NEFT CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 892500,
+      "source_account": null,
+      "raw_row": [
+        "04-05-2026",
+        "NEFT CHARGES GST",
+        "",
+        "20.00",
+        "",
+        "8925.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

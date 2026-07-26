@@ -1,0 +1,71 @@
+{
+  "entries": [
+    {
+      "entry_id": "45b152a1-d333-5650-8383-241b81c1e516",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-06-10",
+      "transaction_id_utr": "400000000010",
+      "sender_vpa": null,
+      "sender_name": "BATCH PAYER A",
+      "amount": 50000,
+      "description": "UPI/CR/400000000010/BATCH PAYER A/a@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "10/06/26",
+        "UPI/CR/400000000010/BATCH PAYER A/a@oksbi/Contribution",
+        "400000000010",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "cooperative@1"
+    },
+    {
+      "entry_id": "c3daa270-db80-595e-9e77-28ecdb3b6934",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-06-11",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 500,
+      "description": "SMS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 549500,
+      "source_account": null,
+      "raw_row": [
+        "11/06/26",
+        "SMS CHARGES GST",
+        "",
+        "5.00",
+        "",
+        "5495.00"
+      ],
+      "parser_version": "cooperative@1"
+    },
+    {
+      "entry_id": "d9617a9e-d0ec-566d-9587-bfe149ce964c",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-06-12",
+      "transaction_id_utr": "400000000012",
+      "sender_vpa": null,
+      "sender_name": "BATCH PAYER B",
+      "amount": 50000,
+      "description": "UPI/CR/400000000012/BATCH PAYER B/b@okaxis/Contribution",
+      "entry_type": "credit",
+      "running_balance": 599500,
+      "source_account": null,
+      "raw_row": [
+        "12/06/26",
+        "UPI/CR/400000000012/BATCH PAYER B/b@okaxis/Contribution",
+        "400000000012",
+        "",
+        "500.00",
+        "5995.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

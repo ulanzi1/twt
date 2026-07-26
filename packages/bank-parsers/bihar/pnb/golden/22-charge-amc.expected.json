@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "2e623b49-25fa-5c5f-b290-ef3a89a23600",
+      "bank_code": "pnb",
+      "transaction_date": "2026-05-03",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 1500,
+      "description": "AMC CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 895000,
+      "source_account": null,
+      "raw_row": [
+        "03-05-2026",
+        "AMC CHARGES GST",
+        "",
+        "15.00",
+        "",
+        "8950.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

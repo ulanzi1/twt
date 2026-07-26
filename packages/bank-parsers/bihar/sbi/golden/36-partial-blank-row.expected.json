@@ -1,0 +1,18 @@
+{
+  "entries": [],
+  "rejected": [
+    {
+      "rowIndex": 0,
+      "rawRow": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "reason": "empty-row"
+    }
+  ]
+}

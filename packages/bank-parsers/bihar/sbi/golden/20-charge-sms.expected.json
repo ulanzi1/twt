@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "4269b35f-187d-5eab-9c8b-2e5e57d0eadf",
+      "bank_code": "sbi",
+      "transaction_date": "2026-05-01",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 500,
+      "description": "SMS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 900000,
+      "source_account": null,
+      "raw_row": [
+        "01/05/2026",
+        "01/05/2026",
+        "SMS CHARGES GST",
+        "",
+        "5.00",
+        "",
+        "9000.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

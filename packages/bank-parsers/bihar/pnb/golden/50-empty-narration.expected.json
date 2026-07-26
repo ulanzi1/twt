@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "cde17149-f4d8-52af-a4b0-cd189f7a45f1",
+      "bank_code": "pnb",
+      "transaction_date": "2026-12-02",
+      "transaction_id_utr": "910000000012",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02-12-2026",
+        "",
+        "910000000012",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

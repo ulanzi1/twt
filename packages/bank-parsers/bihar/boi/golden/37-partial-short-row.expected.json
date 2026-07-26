@@ -1,0 +1,13 @@
+{
+  "entries": [],
+  "rejected": [
+    {
+      "rowIndex": 0,
+      "rawRow": [
+        "2026-08-06",
+        "TRUNCATED ROW"
+      ],
+      "reason": "missing-amount"
+    }
+  ]
+}

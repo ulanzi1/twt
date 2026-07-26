@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "dff5f17d-253d-57cf-a610-95affe65559a",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-12-02",
+      "transaction_id_utr": "910000000012",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02/12/26",
+        "",
+        "910000000012",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

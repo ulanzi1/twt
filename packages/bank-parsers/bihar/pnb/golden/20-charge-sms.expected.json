@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "91659f53-9c74-5cfd-b863-90711be2ca89",
+      "bank_code": "pnb",
+      "transaction_date": "2026-05-01",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 500,
+      "description": "SMS CHARGES GST",
+      "entry_type": "charge",
+      "running_balance": 900000,
+      "source_account": null,
+      "raw_row": [
+        "01-05-2026",
+        "SMS CHARGES GST",
+        "",
+        "5.00",
+        "",
+        "9000.00"
+      ],
+      "parser_version": "pnb@1"
+    }
+  ],
+  "rejected": []
+}

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "df308e02-9819-50d3-ba04-61e055fb5fd2",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-08-01",
+      "transaction_id_utr": null,
+      "sender_vpa": null,
+      "sender_name": "no reference",
+      "amount": 50000,
+      "description": "UPI/CR/CASH DEPOSIT/no reference",
+      "entry_type": "credit",
+      "running_balance": 500000,
+      "source_account": null,
+      "raw_row": [
+        "01/08/26",
+        "UPI/CR/CASH DEPOSIT/no reference",
+        "",
+        "",
+        "500.00",
+        "5000.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

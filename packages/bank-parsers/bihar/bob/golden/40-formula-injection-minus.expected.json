@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "73806d1b-82ef-5041-9a8b-b854725bd545",
+      "bank_code": "bob",
+      "transaction_date": "2026-09-03",
+      "transaction_id_utr": "700000000030",
+      "sender_vpa": null,
+      "sender_name": null,
+      "amount": 50000,
+      "description": "-HYPERLINK(\"http://evil\")",
+      "entry_type": "credit",
+      "running_balance": 800000,
+      "source_account": null,
+      "raw_row": [
+        "03-Sep-2026",
+        "-HYPERLINK(\"http://evil\")",
+        "700000000030",
+        "",
+        "500.00",
+        "8000.00"
+      ],
+      "parser_version": "bob@1"
+    }
+  ],
+  "rejected": []
+}

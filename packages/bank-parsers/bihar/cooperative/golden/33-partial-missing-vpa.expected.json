@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "2a9e51b2-bc3e-5fca-9d17-cc75f1b3724b",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-08-02",
+      "transaction_id_utr": "600000000011",
+      "sender_vpa": null,
+      "sender_name": "RAM KUMAR",
+      "amount": 50000,
+      "description": "NEFT/600000000011/RAM KUMAR",
+      "entry_type": "credit",
+      "running_balance": 550000,
+      "source_account": null,
+      "raw_row": [
+        "02/08/26",
+        "NEFT/600000000011/RAM KUMAR",
+        "600000000011",
+        "",
+        "500.00",
+        "5500.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

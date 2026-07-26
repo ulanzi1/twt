@@ -1,0 +1,49 @@
+{
+  "entries": [
+    {
+      "entry_id": "4eb6b4f7-51f4-5d2b-ae1d-c56538d212aa",
+      "bank_code": "boi",
+      "transaction_date": "2026-11-02",
+      "transaction_id_utr": null,
+      "sender_vpa": "dup@oksbi",
+      "sender_name": "DUP PAYER",
+      "amount": 50000,
+      "description": "UPI/CR/90000000011/DUP PAYER/dup@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 500000,
+      "source_account": null,
+      "raw_row": [
+        "2026-11-02",
+        "UPI/CR/90000000011/DUP PAYER/dup@oksbi/Contribution",
+        "90000000011",
+        "500.00",
+        "Cr",
+        "5000.00"
+      ],
+      "parser_version": "boi@1"
+    },
+    {
+      "entry_id": "7e9253a0-fac0-539e-88af-a967376fe7ac",
+      "bank_code": "boi",
+      "transaction_date": "2026-11-02",
+      "transaction_id_utr": null,
+      "sender_vpa": "dup@oksbi",
+      "sender_name": "DUP PAYER",
+      "amount": 50000,
+      "description": "UPI/CR/90000000011/DUP PAYER/dup@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 500000,
+      "source_account": null,
+      "raw_row": [
+        "2026-11-02",
+        "UPI/CR/90000000011/DUP PAYER/dup@oksbi/Contribution",
+        "90000000011",
+        "500.00",
+        "Cr",
+        "5000.00"
+      ],
+      "parser_version": "boi@1"
+    }
+  ],
+  "rejected": []
+}

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "entry_id": "9a7191b0-d7c3-5809-9e9a-da216807cd31",
+      "bank_code": "cooperative",
+      "transaction_date": "2026-02-04",
+      "transaction_id_utr": "100000000013",
+      "sender_vpa": "geeta@okaxis",
+      "sender_name": "GEETA SINGH",
+      "amount": 50000,
+      "description": "UPI/CR/100000000013/GEETA SINGH/geeta@okaxis/Contribution",
+      "entry_type": "credit",
+      "running_balance": 200000,
+      "source_account": null,
+      "raw_row": [
+        "04/02/26",
+        "UPI/CR/100000000013/GEETA SINGH/geeta@okaxis/Contribution",
+        "100000000013",
+        "",
+        "500.00",
+        "2000.00"
+      ],
+      "parser_version": "cooperative@1"
+    }
+  ],
+  "rejected": []
+}

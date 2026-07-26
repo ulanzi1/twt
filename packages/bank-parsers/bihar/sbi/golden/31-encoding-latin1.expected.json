@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "entry_id": "96e83cbb-9bbe-5b67-825c-7d6fa413e5f2",
+      "bank_code": "sbi",
+      "transaction_date": "2026-07-03",
+      "transaction_id_utr": "500000000013",
+      "sender_vpa": "jose@oksbi",
+      "sender_name": "JOSÉ FERNANDES",
+      "amount": 50000,
+      "description": "UPI/CR/500000000013/JOSÉ FERNANDES/jose@oksbi/Contribution",
+      "entry_type": "credit",
+      "running_balance": 600000,
+      "source_account": null,
+      "raw_row": [
+        "03/07/2026",
+        "03/07/2026",
+        "UPI/CR/500000000013/JOSÉ FERNANDES/jose@oksbi/Contribution",
+        "500000000013",
+        "",
+        "500.00",
+        "6000.00"
+      ],
+      "parser_version": "sbi@1"
+    }
+  ],
+  "rejected": []
+}

@@ -129,6 +129,14 @@ export * from './contributions/index.js';
 // only — NO statement/matcher/pill data (those land 9.2/9.4/9.6). Member-read openapi posture (no `.openapi()`).
 export * from './nominee-console/index.js';
 
+// Story 9.2 — the FIRST reconciliation contract: the parser normalization-output SUMMARY
+// (ParseResultSummary) the 9.3 <BankStatementUpload> surface renders (counts + provenance,
+// never the entries — the canonical BankStatementEntry is owned by @twt/domain, not shadowed
+// here). BankCodeSchema is a local enum kept in lockstep with @twt/domain by a test-only
+// guard (bundle boundary). No route/`.openapi()` in 9.2 — the tenant-scoped upload endpoint
+// is Story 9.3's transport (openapi/v1.yaml stays byte-identical).
+export * from './reconciliation/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

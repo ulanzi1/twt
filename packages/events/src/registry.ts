@@ -418,4 +418,29 @@ export const EVENT_TYPE_REGISTRY = {
       'The "Hum aapke liye padh lenge" fallback (Story 9.3, AC2/AC3): a staff-mediated manual-entry request (24–48h SLA) raised on an unparseable upload or an explicit nominee ask. Carries poolId + claimCaseId + bankCode? + the stored object key? + reason + slaHours + the attribution role — a RESERVED SEAM shaped for the Story 9.8 review queue / Epic-10 helpdesk (no queue render in 9.3, the 9.1 takeover-flag discipline).',
     schema: reconciliation.ReconciliationManualTranscriptionRequestedPayloadSchema,
   },
+  // ── Story 9.4 — the reconciliation matcher's verdict + reversal vocabulary ──────────────────────────
+  // `contribution.confirmed` (green) + `contribution.reconciliation-mismatch` (red) are the matcher's
+  // producers, appended on the ALERT stream (Decision D2). They register their @twt/domain payload schemas
+  // HERE directly — the schemas ship STANDALONE (not in CONTRIBUTION_EVENT_PAYLOAD_SCHEMAS), so the Story
+  // 8.10 no-ingest fence + 8.4 write-map fence stay green verbatim (AC7). `reconciliation.confirmation-
+  // reversed` is the ONLY un-confirm path (Decision D1 — off the contribution.* fence); 9.4 registers it +
+  // proves the matcher never emits it, Story 9.8 is the producer.
+  'contribution.confirmed': {
+    type: 'contribution.confirmed',
+    description:
+      'The GREEN reconciliation verdict (Story 9.4) — the matcher confirmed a member UTR attestation against an uploaded bank-statement entry. On the ALERT stream (stream_id = alert_id, Decision D2); camelCase payload poolId + memberId (the load-bearing Story 8.3 forward-contract keys) + alertId + utr + confirmedAt + matchProvenance. The sole authority the green pill / contributor list / Yogdaan Bahi green arm read. Monotonic: once fired, only a trustee-attested reconciliation.confirmation-reversed can un-confirm.',
+    schema: contribution.ContributionConfirmedPayloadSchema,
+  },
+  'contribution.reconciliation-mismatch': {
+    type: 'contribution.reconciliation-mismatch',
+    description:
+      'The RED reconciliation verdict (Story 9.4, Decision D5) — a member UTR attestation failed to reconcile (no in-window statement entry / wrong pool / amount mismatch). On the ALERT stream (Decision D2); payload poolId + memberId + alertId + utr + reason-code + the offending bankStatementEntryId (null for no_statement_entry) + detectedAt + matcherRun. Populates the pre-built red passbook arm; Story 9.7/9.8 build the member-facing recovery surface + review queue on top.',
+    schema: contribution.ContributionReconciliationMismatchPayloadSchema,
+  },
+  'reconciliation.confirmation-reversed': {
+    type: 'reconciliation.confirmation-reversed',
+    description:
+      'The compensating REVERSAL event (Story 9.4 registers; Story 9.8 produces) — the ONLY un-confirm path for a prior contribution.confirmed (the monotonic-confirmation invariant, AC5). In the reconciliation.* namespace DELIBERATELY (NOT contribution.*), to stay off the Story 8.10 exactly-three-contribution.*-types fence (Decision D1, the 9.3 D6 precedent). Payload poolId + memberId + alertId + reversedConfirmedEventId + reasonCode + attestedByActorIds (≥1 State-Trustee attestation) + reversedAt. The matcher NEVER emits it (proven structurally in 9.4).',
+    schema: reconciliation.ReconciliationConfirmationReversedPayloadSchema,
+  },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

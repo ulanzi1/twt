@@ -90,15 +90,23 @@ import { createAssignableRosterResolver } from './assignable-roster.js';
 import { DEFAULT_CHILD_LOCAL_CONCURRENCY, registerCycleSpawnWorkers } from './cycle-spawn.js';
 import { enqueueCycleOpenAlert, registerCycleOpenAlertWorkers } from './scheduler/cycle-open-alert.js';
 import {
+  enqueueContributionConfirmedNotification,
   enqueueContributionNotifyCycleOpen,
   registerContributionNotifyWorkers,
 } from './scheduler/contribution-notify-triggers.js';
+import {
+  DEFAULT_MATCHER_CRON,
+  DEFAULT_MATCHER_PARSER_SLUG,
+  registerReconciliationMatchWorkers,
+} from './matcher/matcher-worker.js';
 import { buildContributionProviderResolver } from './scheduler/contribution-providers.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
 import { createDeterministicOcrProvider } from './ocr/index.js';
 import {
+  createGcsBankStatementStorage,
   createGcsClaimDocumentStorage,
+  createLocalFsBankStatementStorage,
   createLocalFsClaimDocumentStorage,
 } from '@twt/platform-adapters';
 // Story 8.8 — the audit sink + the PII-safe rendered-message HMAC the live fan-out dispatches through.
@@ -132,6 +140,11 @@ const TELEGRAM_WEBHOOK_PROCESSOR_CRON =
   process.env['TELEGRAM_WEBHOOK_PROCESSOR_CRON'] ?? DEFAULT_TELEGRAM_WEBHOOK_PROCESSOR_CRON;
 // Validity-cache GC sweep (Story 4.8, Task 4). Every 15 min by default (IST). Storage hygiene ONLY.
 const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * * * *';
+// Reconciliation UTR matcher recovery sweep (Story 9.4, AC1/D7) — the contracted "cron 6×/day" (every 4h,
+// IST). Cadence is operations policy; overridable.
+const MATCHER_CRON = process.env['MATCHER_CRON'] ?? DEFAULT_MATCHER_CRON;
+// The bank-statement parser slug the matcher re-parses under (mirrors apps/api's RECONCILIATION_PARIWAR_SLUG).
+const RECONCILIATION_PARIWAR_SLUG = process.env['RECONCILIATION_PARIWAR_SLUG'] ?? DEFAULT_MATCHER_PARSER_SLUG;
 // Rows older than this (default the 10× TTL constant) are reclaimed. Overridable like the cron cadences.
 const VALIDITY_CACHE_GC_MAX_AGE_SECONDS = Number(
   process.env['VALIDITY_CACHE_GC_MAX_AGE_SECONDS'] ?? validityCache.VALIDITY_CACHE_GC_MAX_AGE_SECONDS,
@@ -227,6 +240,11 @@ async function main(): Promise<void> {
   if (!/^(\S+\s+){4}\S+$/.test(TELEGRAM_WEBHOOK_PROCESSOR_CRON.trim())) {
     throw new RangeError(
       `[jobs] TELEGRAM_WEBHOOK_PROCESSOR_CRON must be a 5-field cron expression (got "${TELEGRAM_WEBHOOK_PROCESSOR_CRON}")`,
+    );
+  }
+  if (!/^(\S+\s+){4}\S+$/.test(MATCHER_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] MATCHER_CRON must be a 5-field cron expression (got "${MATCHER_CRON}")`,
     );
   }
 
@@ -555,6 +573,51 @@ async function main(): Promise<void> {
           },
         ),
     });
+
+    // ── Reconciliation UTR matcher (Story 9.4) — Class B (operational SLA) + Class C (sweep) ──────────
+    // The FIRST live producer of contribution.confirmed (green) — closes the Epic-8 + Story-9.3 forward
+    // contracts. The RECONCILIATION_MATCH worker re-parses each live cycle's uploaded statements (AR-45 blob
+    // fetch), runs the pure matchPool per pool, and appends the green/red verdicts on the alert stream,
+    // idempotently + monotonically. The recovery cron sweep (MATCHER_CRON, every 4h IST — D7's contracted
+    // "6×/day") re-enqueues per live cycle; the apps/api post-commit upload enqueue is the latency optimizer.
+    // Storage is env-gated exactly like claimDocumentStorage: the live GCS adapter when BANK_STATEMENT_BUCKET
+    // is set, else the shared local-disk fake (dev/CI). D6 — the confirmed-notify push is wired best-effort
+    // POST-COMMIT to the Story 8.8 CONTRIBUTION_NOTIFY_CONFIRMED seam (a failed enqueue never fails a confirm).
+    const bankStatementBucket = process.env['BANK_STATEMENT_BUCKET'];
+    const bankStatementStorage = bankStatementBucket
+      ? createGcsBankStatementStorage({
+          bucketName: bankStatementBucket,
+          ...(process.env['GOOGLE_CLOUD_PROJECT']
+            ? { projectId: process.env['GOOGLE_CLOUD_PROJECT'] }
+            : {}),
+        })
+      : createLocalFsBankStatementStorage();
+    await registerReconciliationMatchWorkers(
+      boss,
+      {
+        pool,
+        bankStatementStorage,
+        parserSlug: RECONCILIATION_PARIWAR_SLUG,
+        enqueueConfirmedNotify: (input) =>
+          enqueueContributionConfirmedNotification(
+            boss,
+            {
+              pariwarId: input.pariwarId,
+              requestId: input.requestId,
+              actorId: null,
+              traceId: input.traceId,
+            },
+            {
+              alertId: input.alertId,
+              poolId: input.poolId,
+              memberId: input.memberId,
+              amountPaise: input.amountPaise,
+              periodLabel: input.periodLabel,
+            },
+          ),
+      },
+      { sweepCron: MATCHER_CRON },
+    );
 
     await new Promise<void>((resolve, reject) => {
       healthServer.once('error', reject);

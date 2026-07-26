@@ -36,6 +36,7 @@ import {
   type KycProviderRegistry,
 } from './modules/kyc/index.js';
 import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
+import { createPgBossReconciliationMatchEnqueuer } from './modules/reconciliation/index.js';
 import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
 import { createPgBossCycleSpawnEnqueuer } from './modules/claims/cycle-spawn-queue.js';
 import {
@@ -319,6 +320,10 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Data-export build-job producer (Story 3.11) — the FIRST api-side queue producer (send-only). Uses
     // the same DB connection string as the app pool (pgboss schema; apps/jobs already created it).
     dataExportQueue: await createPgBossDataExportEnqueuer(connectionString),
+    // Reconciliation UTR-matcher job producer (Story 9.4, Decision D7 — the enqueue-primary latency
+    // optimizer). Send-only; the reconciliation upload route enqueues a RECONCILIATION_MATCH job for the
+    // pool's cycle POST-COMMIT (best-effort). Same connection string as the app pool (pgboss schema).
+    reconciliationMatchQueue: await createPgBossReconciliationMatchEnqueuer(connectionString),
     // Claim-document object store (Story 6.5, Decision D1) — the live GCS adapter when
     // CLAIM_DOCUMENT_BUCKET is set (private bucket, asia-south1), else a shared local-disk
     // fake (dev/CI — no live bucket). The bytes never touch Postgres; only the object key +

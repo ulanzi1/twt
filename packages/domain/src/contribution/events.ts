@@ -96,3 +96,101 @@ export type ContributionEventType = (typeof CONTRIBUTION_EVENT_TYPES)[number];
 export const CONTRIBUTION_EVENT_PAYLOAD_SCHEMAS = {
   'contribution.utr-attested': ContributionUtrAttestedPayloadSchema,
 } as const satisfies Record<ContributionEventType, z.ZodTypeAny>;
+
+// ── Story 9.4 — the reconciliation VERDICT payload schemas (the matcher's GREEN + RED producers) ──────
+//
+// These are DELIBERATELY registered as STANDALONE schemas, NOT added to `CONTRIBUTION_EVENT_PAYLOAD_SCHEMAS`
+// / `CONTRIBUTION_EVENT_TYPES` above. The write map + Story 8.10's `no-ingest-path` fence + Story 8.4's
+// events.test pin the member-facing DIRECT write vocabulary at exactly `contribution.utr-attested` (the
+// "green + red are Epic 9's exclusive producers and are deliberately absent from the write map" invariant).
+// The confirmed/mismatch verdicts are produced by the RECONCILIATION MATCHER (apps/jobs, Story 9.4) — a
+// distinct, non-member producer — which registers these schemas in the `@twt/events` registry directly and
+// passes them explicitly to `appendEvent` (the 9.3 `reconciliation.*` append precedent). Keeping them off
+// the write map is what lets both fences stay GREEN verbatim (AC7). The three contribution.* types are still
+// exactly three; nothing here is a fourth ingest door.
+
+/**
+ * The sender-VPA secondary-match arm result carried on a confirmation's provenance — Decision D3. In v1 it
+ * is ALWAYS `{ available: false, reason: 'member_vpa_not_collected' }`: no member/sender VPA is collected
+ * anywhere in the substrate, so the arm never blocks a confirmation (the UTR + amount + window are the live
+ * signals). A `.strict()` literal — a future `available: true` shape is an explicit, reviewed schema change.
+ */
+export const ContributionConfirmedSenderVpaCheckSchema = z
+  .object({
+    available: z.literal(false),
+    reason: z.literal('member_vpa_not_collected'),
+  })
+  .strict();
+
+/**
+ * The `contribution.confirmed` match provenance (AC3): which bank-statement entry the confirmation matched,
+ * the idempotency key that guarded it, the matcher run that produced it, and the Decision-D3 sender-VPA arm
+ * result — so a confirmation is always traceable back to the exact deposit row it reconciled. `.strict()`.
+ */
+export const ContributionConfirmedMatchProvenanceSchema = z
+  .object({
+    bankStatementEntryId: z.string().uuid(),
+    idempotencyKey: z.string().min(1),
+    matcherRun: z.string().min(1),
+    senderVpaCheck: ContributionConfirmedSenderVpaCheckSchema,
+  })
+  .strict();
+
+/**
+ * `contribution.confirmed` payload (AC3) — the GREEN verdict, Story 9.4's headline producer. camelCase keys
+ * (the SHIPPED read contract wins over the epics prose's snake_case — see the story's "confirmed-event key
+ * reconciliation"): `poolId` + `memberId` are the load-bearing forward-contract keys the Story 8.3
+ * contributor list + 8.6 Yogdaan Bahi green arm + `contribution/history.ts` grep on
+ * (`CONFIRMED_PAYLOAD_POOL_KEY` / `CONFIRMED_PAYLOAD_MEMBER_KEY`). Appended on the ALERT stream (Decision
+ * D2 — co-located with the `contribution.utr-attested` claim it resolves). `.strict()`.
+ */
+export const ContributionConfirmedPayloadSchema = z
+  .object({
+    poolId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    alertId: z.string().uuid(),
+    utr: z.string().regex(CONTRIBUTION_UTR_REGEX, 'UTR must be 12 digits or 22 alphanumerics'),
+    confirmedAt: z.string().datetime(),
+    matchProvenance: ContributionConfirmedMatchProvenanceSchema,
+  })
+  .strict();
+export type ContributionConfirmedPayload = z.infer<typeof ContributionConfirmedPayloadSchema>;
+
+/**
+ * The reconciliation-mismatch reason vocabulary (the RED verdict). Value-aligned with the matcher's
+ * `MATCH_MISMATCH_REASONS` (reconciliation/matcher.ts) — a drift-guard test pins the two identical.
+ * `sender_vpa_mismatch` is a FORWARD seam (the D3 arm is off in v1, so the matcher never actually emits it).
+ */
+export const CONTRIBUTION_MISMATCH_REASONS = [
+  'no_statement_entry',
+  'wrong_pool',
+  'amount_mismatch',
+  'sender_vpa_mismatch',
+  'entry_already_claimed',
+] as const;
+export const ContributionMismatchReasonSchema = z.enum(CONTRIBUTION_MISMATCH_REASONS);
+export type ContributionMismatchReason = z.output<typeof ContributionMismatchReasonSchema>;
+
+/**
+ * `contribution.reconciliation-mismatch` payload (AC6, Decision D5) — the RED verdict the matcher emits when
+ * a UTR attestation fails to reconcile (no in-window statement entry / wrong pool / amount mismatch). Carries
+ * the EXACT `CONTRIBUTION_MISMATCH_EVENT_TYPE` string (history.ts) so the pre-built red passbook arm
+ * populates with zero read changes. Shaped for the Story 9.7 `<SelfVerifySurface>` + 9.8 review queue: a
+ * machine reason-code + the offending entry (null for `no_statement_entry` — there was no entry to point at).
+ * Appended on the ALERT stream (D2). `.strict()`.
+ */
+export const ContributionReconciliationMismatchPayloadSchema = z
+  .object({
+    poolId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    alertId: z.string().uuid(),
+    utr: z.string().regex(CONTRIBUTION_UTR_REGEX, 'UTR must be 12 digits or 22 alphanumerics'),
+    reason: ContributionMismatchReasonSchema,
+    bankStatementEntryId: z.string().uuid().nullable(),
+    detectedAt: z.string().datetime(),
+    matcherRun: z.string().min(1),
+  })
+  .strict();
+export type ContributionReconciliationMismatchPayload = z.infer<
+  typeof ContributionReconciliationMismatchPayloadSchema
+>;

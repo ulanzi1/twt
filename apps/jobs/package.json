@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
+    "@twt/bank-parsers": "workspace:*",
     "@twt/channels": "workspace:*",
     "@twt/contracts": "workspace:*",
     "@twt/domain": "workspace:*",

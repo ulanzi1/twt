@@ -234,6 +234,25 @@ export const QUEUE_NAMES = {
    * (request/event-triggered).
    */
   CONTRIBUTION_NOTIFY_CONFIRMED: 'contribution.notify.confirmed',
+  /**
+   * Reconciliation UTR matcher — one job per cycle (Story 9.4, Task 3). Enqueued POST-COMMIT by the apps/api
+   * bank-statement upload (the D7 enqueue-primary latency optimizer — a new statement is the only thing that
+   * changes match outcomes) AND re-enqueued by the recovery cron sweep (the contracted "cron 6×/day"). The
+   * worker resolves the cycle's LIVE alert, re-parses + persists each pool's uploaded statements (AR-45 blob
+   * fetch), runs the pure `matchPool` per pool, and appends `contribution.confirmed` (green) /
+   * `contribution.reconciliation-mismatch` (red) on the alert stream. Every verdict is idempotent on the
+   * (member, alert, entry) keyed-store claim + the monotonic pre-read, so at-least-once delivery from either
+   * path is safe. singletonKey = cycle_id. Job class B (operational SLA — architecture §matcher cron).
+   */
+  RECONCILIATION_MATCH: 'reconciliation.match',
+  /**
+   * Reconciliation matcher RECOVERY sweep — the contracted "cron 6×/day" (every 4h IST) (Story 9.4, Task 3;
+   * Decision D7). Scans LIVE alerts cross-tenant on the BYPASSRLS service pool and re-enqueues
+   * RECONCILIATION_MATCH per cycle — the primary "cron 6×/day" mechanism that heals a dropped post-commit
+   * enqueue + catches any live pool with unmatched attestations (the 8.1 D4 enqueue-primary/sweep-recovery
+   * pattern). Bounded per run with a non-silent cap alarm. Job class C (background cron).
+   */
+  RECONCILIATION_MATCH_SWEEP: 'reconciliation.match.sweep',
 } as const;
 
 /** Union of the registered queue names. */

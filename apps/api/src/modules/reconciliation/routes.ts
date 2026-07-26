@@ -48,6 +48,16 @@ const MemberUploadQuery = BankStatementUploadRequest.pick({ bank_code: true }).s
 const StaffUploadQuery = BankStatementUploadRequest; // bank_code + claim_case_id
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 
+/**
+ * Per-request post-commit enqueue handoff (Decision D6/D7 — the enqueue-primary MUST fire after the scope-tx
+ * commits, never before). The handler stashes what the enqueue needs; the route's `onResponse` hook — which
+ * Fastify guarantees runs strictly AFTER `onSend` (where the multi-tenant lifecycle hook commits the scope tx,
+ * `apps/api/src/modules/multi-tenant/index.ts`) — reads it back and fires the enqueue. This is what makes the
+ * enqueue genuinely post-commit for the STAFF route, which rides the shared scope-resolution middleware's
+ * request-scoped tx rather than opening/closing its own.
+ */
+const pendingMatchEnqueue = new WeakMap<FastifyRequest, { readonly cycleId: string; readonly pariwarId: string }>();
+
 export function registerReconciliationRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createReconciliationHandlers(deps);
   const r = app.withTypeProvider<ZodTypeProvider>();
@@ -56,6 +66,13 @@ export function registerReconciliationRoutes(app: FastifyInstance, deps: AppDeps
   const scope = scopeResolutionHook(deps);
   const canFileClaim = requirePermissionHook(deps, CLAIM_FILE_KEY);
   const stepUp = requireStepUp(deps, CLAIM_FILE_STEP_UP_CONTEXT);
+  /** Fires strictly after the response is sent (after `onSend`'s commit) — the post-commit enqueue seam. */
+  const firePendingMatchEnqueue = async (request: FastifyRequest): Promise<void> => {
+    const pending = pendingMatchEnqueue.get(request);
+    if (!pending) return;
+    pendingMatchEnqueue.delete(request);
+    await enqueueMatchBestEffort(deps, request, pending.cycleId, pending.pariwarId);
+  };
 
   // ── Nominee (member Ravi-mode) upload ──────────────────────────────────────────────────────────────
   r.post(
@@ -68,6 +85,7 @@ export function registerReconciliationRoutes(app: FastifyInstance, deps: AppDeps
         consumes: ['multipart/form-data'],
       },
       preHandler: [memberSession, requireMemberStepUp(deps, CLAIM_HANDOVER_ACTION_CONTEXT)],
+      onResponse: [firePendingMatchEnqueue],
     },
     async (request: FastifyRequest): Promise<BankStatementUploadResponse> => {
       const memberIdStr = request.requestContext.actorId;
@@ -97,6 +115,9 @@ export function registerReconciliationRoutes(app: FastifyInstance, deps: AppDeps
         };
         const body = await h.uploadBankStatement(request, scopeTx, target);
         ok = true;
+        // Decision D7 — the enqueue-primary latency optimizer. Handed off to the route's `onResponse` hook
+        // (fires strictly after this scope tx commits, never before — see `pendingMatchEnqueue`'s header).
+        pendingMatchEnqueue.set(request, { cycleId: active.pool.cycleId, pariwarId: pariwarIdStr });
         return body;
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -116,6 +137,7 @@ export function registerReconciliationRoutes(app: FastifyInstance, deps: AppDeps
         consumes: ['multipart/form-data'],
       },
       preHandler: [adminSession, scope, canFileClaim, stepUp],
+      onResponse: [firePendingMatchEnqueue],
     },
     async (request: FastifyRequest): Promise<BankStatementUploadResponse> => {
       const scopeTx = request.scopeTx as ScopeTx | undefined;
@@ -148,7 +170,41 @@ export function registerReconciliationRoutes(app: FastifyInstance, deps: AppDeps
       };
       // The staff route rides the middleware's scope tx (committed/rolled-back by the scope-resolution
       // wrapper), so this handler does not open/close its own — the 6.5 helpline-document precedent.
-      return h.uploadBankStatement(request, scopeTx, target);
+      const body = await h.uploadBankStatement(request, scopeTx, target);
+      // Decision D7 — the enqueue-primary latency optimizer. Genuinely POST-COMMIT: handed off to the
+      // route's `onResponse` hook, which Fastify guarantees runs strictly after `onSend` — the hook where the
+      // multi-tenant lifecycle commits THIS scope tx (see `pendingMatchEnqueue`'s header comment).
+      pendingMatchEnqueue.set(request, { cycleId: pool.cycleId, pariwarId });
+      return body;
     },
   );
+}
+
+/**
+ * Best-effort RECONCILIATION_MATCH enqueue (Decision D7). No-ops when the queue seam is unwired (tests) or the
+ * cycle is unknown; swallows any enqueue error (the 4h recovery sweep is the safety net — a dropped job never
+ * strands a member). NEVER throws into the request path.
+ */
+async function enqueueMatchBestEffort(
+  deps: AppDeps,
+  request: FastifyRequest,
+  cycleId: string | undefined,
+  pariwarId: string,
+): Promise<void> {
+  if (!deps.reconciliationMatchQueue || !cycleId) return;
+  try {
+    const traceId = request.requestContext.traceId || `reconciliation.upload:${cycleId}`;
+    await deps.reconciliationMatchQueue.enqueueMatch({
+      cycleId,
+      pariwarId,
+      requestId: traceId,
+      actorId: request.requestContext.actorId ?? null,
+      traceId,
+    });
+  } catch (err) {
+    request.log?.warn?.(
+      { err, cycleId },
+      '[reconciliation] match-enqueue failed post-upload (best-effort; the 4h sweep will heal)',
+    );
+  }
 }

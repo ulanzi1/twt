@@ -748,6 +748,26 @@ from the ledger) — it is **NOT a public `apps/public` surface**, so it does no
 public page-weight budget the gate has teeth on. Do NOT ratchet
 (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 9.3 disposition (existing row REALIZED — no new row):** `<BankStatementUpload>`
+(`apps/mobile/components/nominee-console/BankStatementUpload.tsx` + `upload-view.ts`) fills
+the Story 9.1 upload-queue `<ComingSoonCard>` seam named in the disposition above, plus
+touches the sibling `NomineeConsole.tsx` (wiring the real surface in) and `console-resume.ts`
+(extending the existing MMKV save-and-resume store with a paused-upload draft, UX-DR50). This
+is the SURFACE that realizes the friction **already declared** at ledger row 30: *"Sunita
+(nominee bank-statement upload) | facilitator-not-intermediary trust posture | forced"* —
+seeded from the UX spec at Story 1.16a, before this surface was built. The upload flow (pick a
+bank + a file → parse feedback) is the minimum interaction that row's forced friction already
+covers; the "Hum aapke liye padh lenge" staff fallback and the retry path are the friction's
+grief-paced *mitigation*, not additional friction (Pattern-4 dignified copy, never a hard
+error). Save-and-resume across app restarts (extending the 9.1 `console-resume.ts` shape) is
+also friction-*reducing*, not friction-adding: a paused upload survives a restart instead of
+forcing the nominee to redo it. No NEW gate, no NEW required field, no urgency theater beyond
+what row 30 already named. Zero gratuitous friction introduced; ledger reviewed, no new row
+warranted. The **page-weight baseline is unchanged** for the same reason as Story 9.1's
+disposition above (authenticated mobile app + `apps/api`/`packages/domain`/`packages/contracts`,
+none of which enter the public page-weight budget). Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

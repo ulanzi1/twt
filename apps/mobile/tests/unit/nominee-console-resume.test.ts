@@ -23,10 +23,13 @@ vi.mock('react-native-mmkv', () => {
 import { mmkvStorage } from '../../lib/mmkv'
 import {
   acknowledgeNomineeConsoleIntro,
+  clearNomineeConsoleUploadDraft,
   loadNomineeConsoleResume,
+  loadNomineeConsoleUploadDraft,
   nomineeConsoleResumeKey,
   recordNomineeConsoleVisit,
   saveNomineeConsoleResume,
+  saveNomineeConsoleUploadDraft,
 } from '../../components/nominee-console/console-resume'
 
 const POOL = 'P-2026-07-001'
@@ -37,7 +40,7 @@ describe('nominee-console save-and-resume', () => {
   })
 
   it('fresh state → never-visited default (introAcknowledged false, lastVisitedIso null)', () => {
-    expect(loadNomineeConsoleResume(POOL)).toEqual({ introAcknowledged: false, lastVisitedIso: null })
+    expect(loadNomineeConsoleResume(POOL)).toEqual({ introAcknowledged: false, lastVisitedIso: null, uploadDraft: null })
   })
 
   it('recording a visit persists lastVisitedIso and returns the PRIOR state (welcome-back seam)', () => {
@@ -62,21 +65,73 @@ describe('nominee-console save-and-resume', () => {
 
   it('is per-pool — resuming one pool does not leak into another', () => {
     recordNomineeConsoleVisit(POOL, '2026-07-03T09:00:00.000Z')
-    expect(loadNomineeConsoleResume('P-2026-07-002')).toEqual({ introAcknowledged: false, lastVisitedIso: null })
+    expect(loadNomineeConsoleResume('P-2026-07-002')).toEqual({ introAcknowledged: false, lastVisitedIso: null, uploadDraft: null })
   })
 
   it('the key is versioned (v1) + pool-scoped', () => {
     expect(nomineeConsoleResumeKey(POOL)).toBe('nominee-console.resume.v1.P-2026-07-001')
   })
 
-  it('a corrupt stored value fails soft to the default (never an error wall for a bereaved nominee)', () => {
+  it('a corrupt stored value never throws — intro/visit state falls soft to default, but uploadDraft is flagged corrupt (not silently null)', () => {
     mmkvStorage.setItem(nomineeConsoleResumeKey(POOL), '{ not valid json')
-    expect(loadNomineeConsoleResume(POOL)).toEqual({ introAcknowledged: false, lastVisitedIso: null })
+    expect(loadNomineeConsoleResume(POOL)).toEqual({ introAcknowledged: false, lastVisitedIso: null, uploadDraft: 'corrupt' })
   })
 
   it('a partial stored value coerces missing fields to the default', () => {
-    saveNomineeConsoleResume(POOL, { introAcknowledged: true, lastVisitedIso: null })
+    saveNomineeConsoleResume(POOL, { introAcknowledged: true, lastVisitedIso: null, uploadDraft: null })
     mmkvStorage.setItem(nomineeConsoleResumeKey(POOL), JSON.stringify({ introAcknowledged: true }))
-    expect(loadNomineeConsoleResume(POOL)).toEqual({ introAcknowledged: true, lastVisitedIso: null })
+    expect(loadNomineeConsoleResume(POOL)).toEqual({ introAcknowledged: true, lastVisitedIso: null, uploadDraft: null })
+  })
+})
+
+// ── Story 9.3 — the paused bank-statement upload draft (UX-DR50) ──────────────────────────────────────
+describe('nominee-console upload draft (Story 9.3, UX-DR50)', () => {
+  beforeEach(() => {
+    mmkvStorage.removeItem(nomineeConsoleResumeKey(POOL))
+  })
+
+  const DRAFT = {
+    pickedFileName: 'july-statement.csv',
+    pickedFileType: 'text/csv',
+    bankCode: 'sbi',
+    stage: 'upload-in-progress',
+    savedIso: '2026-07-11T09:00:00.000Z',
+  } as const
+
+  it('saves + restores a paused upload draft, preserving the rest of the resume state', () => {
+    acknowledgeNomineeConsoleIntro(POOL)
+    saveNomineeConsoleUploadDraft(POOL, DRAFT)
+    expect(loadNomineeConsoleUploadDraft(POOL)).toEqual(DRAFT)
+    // The intro-ack (the rest of the state) survived the draft save.
+    expect(loadNomineeConsoleResume(POOL).introAcknowledged).toBe(true)
+  })
+
+  it('clearing the draft on a completed upload leaves the rest of the state intact', () => {
+    recordNomineeConsoleVisit(POOL, '2026-07-11T08:00:00.000Z')
+    saveNomineeConsoleUploadDraft(POOL, DRAFT)
+    clearNomineeConsoleUploadDraft(POOL)
+    expect(loadNomineeConsoleUploadDraft(POOL)).toBeNull()
+    expect(loadNomineeConsoleResume(POOL).lastVisitedIso).toBe('2026-07-11T08:00:00.000Z')
+  })
+
+  it('a corrupt/partial stored draft is flagged corrupt, not silently treated as never-started (routes to resume-failed)', () => {
+    mmkvStorage.setItem(
+      nomineeConsoleResumeKey(POOL),
+      JSON.stringify({ introAcknowledged: false, lastVisitedIso: null, uploadDraft: { pickedFileName: 'x' } }),
+    )
+    // Missing the required `stage`/`savedIso` ⇒ the draft is unreadable — 'corrupt', never a silent null.
+    expect(loadNomineeConsoleUploadDraft(POOL)).toBe('corrupt')
+    // The rest of the state still loads fine.
+    expect(loadNomineeConsoleResume(POOL).introAcknowledged).toBe(false)
+  })
+
+  it('no draft was ever saved ⇒ null (genuinely nothing to resume, distinct from corrupt)', () => {
+    expect(loadNomineeConsoleUploadDraft(POOL)).toBeNull()
+  })
+
+  it('a cleared draft ⇒ null, not corrupt (an explicit empty state)', () => {
+    saveNomineeConsoleUploadDraft(POOL, DRAFT)
+    clearNomineeConsoleUploadDraft(POOL)
+    expect(loadNomineeConsoleUploadDraft(POOL)).toBeNull()
   })
 })

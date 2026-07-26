@@ -207,6 +207,23 @@ export type AuthAuditEventType =
   // parity job enqueued. NON-PII context: claim_case_id + claim_document_id + document_type +
   // intake_channel + the acting actor. NEVER the extracted identity fields (Tier-1).
   | 'member_claim.document_uploaded'
+  // ── Bank-statement reconciliation upload surface (Story 9.3, FR-29 / Epic 9) ──
+  // The nominee (member Ravi-mode) + staff (District-Admin takeover/fallback) upload lines for the
+  // <BankStatementUpload> transport. NON-PII context throughout: pool_id + claim_case_id + bank_code +
+  // outcome (parsed|fallback) + reason? + the acting actor + role. NEVER a raw statement row / UTR / any
+  // Tier-1 field (those stay in the blob store; only the object key + counts persist as the event).
+  //   statement_uploaded          — a raw statement landed + was stored (parsed or routed to fallback).
+  //   fallback_requested          — the "Hum aapke liye padh lenge" manual-transcription task was raised.
+  //   upload_rejected             — a dignified reject (too large / empty / bad bank / virus-quarantined).
+  //   storage_unavailable         — an AR-45 storage/scanner outage degraded to retry-or-defer (never 500).
+  | 'member_reconciliation.statement_uploaded'
+  | 'member_reconciliation.fallback_requested'
+  | 'member_reconciliation.upload_rejected'
+  | 'member_reconciliation.storage_unavailable'
+  | 'staff_reconciliation.statement_uploaded'
+  | 'staff_reconciliation.fallback_requested'
+  | 'staff_reconciliation.upload_rejected'
+  | 'staff_reconciliation.storage_unavailable'
   // ── Helpline-mediated claim filing surface (Story 6.3, FR-37 / Epic 6) ────────
   // The operator-console (Priya-path) intake — the TWIN of the member-app lines above.
   // Context is NON-PII throughout: the intake lines carry claim_case_id + deceased_member_id

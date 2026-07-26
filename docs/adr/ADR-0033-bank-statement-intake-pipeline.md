@@ -69,6 +69,20 @@ assumption**, not attested against real files — Story 9.3's real-file testing 
 reconcile the actual bank exports against this baseline and regenerate golden files as
 needed.
 
+**Story 9.3 status of the assumption — STILL UN-ATTESTED, carried forward (not backfilled).**
+Decision D7 put real-file reconciliation in 9.3's scope, but **no real per-bank export was
+obtainable in this build cycle** (the TWT-Bihar launch cohort has not yet supplied member
+statements; procuring genuine SBI/PNB/BoB/BoI/Bihar-cooperative exports needs a real account
+holder per bank). Per [[feedback_record_unattested_no_backfill]], the assumption is recorded
+as **still un-attested** rather than reconstructed to fake a validation: the 9.2 golden files
+were NOT regenerated (regenerating them against the same synthetic assumption would only launder
+the assumption as attestation). The gate is explicit — **the first real statement upload per bank
+(the 9.3 fallback path stores every unparseable upload, so a real export that the assumed parser
+mis-reads lands in the staff-transcription queue with its raw blob) is the attestation trigger**:
+when a real export arrives, diff it against the assumed columns, regenerate the affected golden
+files, and flip this note. This does NOT decay silently — it is carried as an OPEN RISK with a
+named trigger, not a closed item.
+
 ## Alternatives considered
 
 - **PDF + OCR path in v1.** Deferred (Decision D2, not rejected) — all 5 v1 banks are
@@ -118,3 +132,4 @@ needed.
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-07-26 | (initial draft) | BigDev (Solo Builder) | Authored under Story 9.2 (5-bank CSV-first allowlist + 50-golden-file regime + parser sandbox) |
+| 2026-07-26 | drafted (transport seams WIRED by Story 9.3) | BigDev (Claude) | Story 9.3 wired the AR-45 external-call resilience at the storage/scanner boundary (the `ResilientCall` retry-with-backoff-3× + per-attempt timeout + circuit-breaker around `BankStatementStorage.put` + `StatementScanner.scan`; a storage/scanner outage → dignified 503, never 500, audit-logged) and the virus-scan quarantine step (the injectable `StatementScanner` seam — no-op/allow-all v1, no real ClamAV vendor yet, the 6.5 `OcrProvider` "no boundary gate until a real vendor" posture; scan runs BEFORE store+parse, an unclean verdict rejects + audit-logs + never stores). The CSV-first / PDF-OCR-deferred posture is UNCHANGED — a non-CSV upload routes to the human "padh lenge" fallback, not an OCR engine (Decision D1). **Baseline-format assumption remains UN-ATTESTED (Decision D7) — carried forward with a named trigger, not backfilled** (see the Baseline-format-assumption section). |

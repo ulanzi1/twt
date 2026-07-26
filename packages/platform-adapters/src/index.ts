@@ -11,6 +11,20 @@ export type { InMemoryClaimDocumentStorage } from './claim-document-storage/in-m
 export { createLocalFsClaimDocumentStorage } from './claim-document-storage/local-fs.js';
 export type { LocalFsClaimDocumentStorageOpts } from './claim-document-storage/local-fs.js';
 
+// Story 9.3 — the NEW `BankStatementStorage` object-store adapters (Decision D3 — the 6.5 PATTERN, a
+// separate port instance + bucket, NOT a claim-document reuse) + the abstraction-first `StatementScanner`
+// virus-scan seam (Task 4; no-op v1, the 6.5 `OcrProvider` posture). The PORTS live in `@twt/contracts`.
+export { createGcsBankStatementStorage } from './bank-statement-storage/gcs.js';
+export type { GcsBankStatementStorageOpts } from './bank-statement-storage/gcs.js';
+export { createInMemoryBankStatementStorage } from './bank-statement-storage/in-memory.js';
+export type { InMemoryBankStatementStorage } from './bank-statement-storage/in-memory.js';
+export { createLocalFsBankStatementStorage } from './bank-statement-storage/local-fs.js';
+export type { LocalFsBankStatementStorageOpts } from './bank-statement-storage/local-fs.js';
+export {
+  createNoOpStatementScanner,
+  createRejectingStatementScanner,
+} from './statement-scanner/no-op.js';
+
 // Story 6.8 — the abstraction-first `BankIfscLookup` port (interface + adapters bundled) for
 // claim-time IFSC pre-validation (D4). apps/api (member + helpline nominee-bank routes) imports
 // the port type + the in-memory stub. NO real-vendor adapter / CI boundary gate yet (the 6.5

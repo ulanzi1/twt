@@ -13,14 +13,20 @@ import type { AppDeps } from '../../src/context.js';
 
 const resolveActiveNomineePool = vi.fn();
 const resolvePoolOpenAt = vi.fn();
+const resolveLastEngagedAt = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   return {
     ...actual,
     // Keep computeStaffTakeover + DEFAULT_STAFF_TAKEOVER_THRESHOLD_DAYS ACTUAL (the pure derivation under
-    // real test); mock only the two DB-touching reads.
-    nomineeConsole: { ...actual.nomineeConsole, resolveActiveNomineePool, resolvePoolOpenAt },
+    // real test); mock only the DB-touching reads (incl. the Story 9.3 engagement read).
+    nomineeConsole: {
+      ...actual.nomineeConsole,
+      resolveActiveNomineePool,
+      resolvePoolOpenAt,
+      resolveLastEngagedAt,
+    },
   };
 });
 
@@ -73,6 +79,9 @@ function resetMocks() {
   openScopeTx.mockResolvedValue({ tx: {}, client: {} });
   closeScopeTx.mockResolvedValue(undefined);
   resolveCuratedPoolName.mockResolvedValue(null);
+  // Story 9.3: the engagement read defaults to null (never uploaded ⇒ the clock runs from poolOpenAt, the
+  // pre-9.3 behaviour these vectors assert). A test that exercises a reset can override it.
+  resolveLastEngagedAt.mockResolvedValue(null);
 }
 
 describe('nomineeConsole handler — the validated-nominee gate + takeover verdict', () => {

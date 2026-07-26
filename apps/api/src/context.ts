@@ -10,9 +10,11 @@
 import type pg from 'pg';
 
 import type {
+  BankStatementStorage,
   ClaimDocumentStorage,
   ContributionNotePdfRenderer,
   PoolSpawnTriggerPayload,
+  StatementScanner,
 } from '@twt/contracts';
 import type { BankIfscLookup } from '@twt/platform-adapters';
 import type { Db, encryption } from '@twt/domain';
@@ -376,6 +378,21 @@ export interface AppDeps {
    * (`asia-south1`) when `CLAIM_DOCUMENT_BUCKET` is set; an in-memory fake in dev/CI + tests.
    */
   readonly claimDocumentStorage: ClaimDocumentStorage;
+  /**
+   * Bank-statement object store (Story 9.3, Decision D3) — the reconciliation upload endpoint `put`s the
+   * raw statement bytes here; the Story 9.4 matcher re-reads the blob by key (Decision D2). A NEW port
+   * instance mirroring `claimDocumentStorage`'s SHAPE, NOT a reuse (own `BANK_STATEMENT_BUCKET` + key
+   * namespace). The live GCS adapter (`asia-south1`, Tier-1 encrypted) when the bucket env is set; a
+   * shared local-fs fake in dev/CI + tests.
+   */
+  readonly bankStatementStorage: BankStatementStorage;
+  /**
+   * Bank-statement virus-scan seam (Story 9.3, Task 4 / architecture §3.6 "quarantine") — the upload core
+   * scans the bytes BEFORE store+parse; an unclean verdict quarantines (dignified reject + audit line).
+   * Abstraction-first: a no-op/allow-all fake in v1 (no real ClamAV vendor yet — the 6.5 `OcrProvider`
+   * posture). Same injectable-seam pattern as `claimDocumentStorage`.
+   */
+  readonly statementScanner: StatementScanner;
   /**
    * Contribution-Note PDF renderer (Story 8.7, D1) — the Yogdaan Pratigya render port. The
    * headless-Chromium adapter in prod/dev (the ONLY engine satisfying both AC2 legs: Devanagari

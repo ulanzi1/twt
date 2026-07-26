@@ -102,11 +102,18 @@ export function createNomineeConsoleHandlers(deps: AppDeps) {
           return NON_NOMINEE;
         }
 
-        // (3) The staff-takeover verdict — the PURE derivation, run server-side. `lastEngagedAt=null`
-        //     (the Story 9.3 engagement writer is unbuilt ⇒ the clock runs from pool-open). Threshold is
+        // (3) The staff-takeover verdict — the PURE derivation, run server-side. `lastEngagedAt` is the
+        //     nominee's LAST statement-upload instant (Story 9.3 closed the 9.1 seam: the latest
+        //     `reconciliation.statement-uploaded` event's occurred_at, read off events_log). A nominee who
+        //     uploads resets the day-N clock; one who never uploads resolves `null` and the derivation
+        //     correctly falls through to `poolOpenAt` (the pre-9.3 behaviour preserved). Threshold is
         //     config-driven (default 7 — not a magic literal).
+        const lastEngagedAt = await nomineeConsole.resolveLastEngagedAt(scopeTx.tx, {
+          pariwarId,
+          poolId: pool.poolId,
+        });
         const takeover = nomineeConsole.computeStaffTakeover({
-          lastEngagedAt: null,
+          lastEngagedAt,
           poolOpenAt,
           thresholdDays: deps.config.nomineeTakeoverThresholdDays,
           now,

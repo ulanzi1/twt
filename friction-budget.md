@@ -781,6 +781,28 @@ reviewed, no new row warranted. Page-weight baseline unchanged for the same reas
 Story 9.1/9.3's dispositions above (authenticated mobile app, not the public bundle).
 Do NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 9.6 disposition (declaration affirmed, no new row):** the `<StatusPill>` 5-state
+design-system component (`packages/ui/src/status-pill/*` — pure presenter, no
+`apps/mobile` friction of its own — plus its mobile render `apps/mobile/components/status-pill/StatusPill.tsx`
+and the consumer refactors `apps/mobile/components/yogdaan-bahi/YogdaanBahiRow.tsx` +
+`sample-data.ts`, `apps/mobile/components/active-contribution/ActiveContributionCard.tsx`,
+and `apps/mobile/app/(contribution)/pay.tsx`) is a **pure visual/tone consolidation of
+already-affirmed read-only surfaces — it introduces zero NEW interaction**. Every
+consumer this story touches already carries its own zero-new-friction disposition above
+(`YogdaanBahiRow` — Story 8.6/9.5; `ActiveContributionCard` — Story 8.2/8.4;
+`pay.tsx`'s attested confirmation — Story 8.4): this story swaps each surface's
+hand-rolled status pill for the one shared `<StatusPill>` component with **no change to
+what the member must do to progress** — no new tap, no new field, no new gate, no new
+step-up. The `live` announcement prop is a straight carry-forward of the pre-existing
+`accessibilityLiveRegion="polite"` behavior on the two attested-confirmation call sites
+(`ActiveContributionCard`, `pay.tsx`), not a new interaction. Zero deliberate friction
+introduced; ledger reviewed, no new row warranted. The **page-weight baseline is
+unchanged**: every new/modified file lands in `packages/ui` (a pure logic package, not
+a page-weight-gated build target) or the authenticated mobile app (`apps/mobile`, EAS
+build is a no-op → `member-app-native` stays a no-op); `apps/public` is **not** touched
+at all, so nothing enters the public page-weight budget the gate has teeth on. Do NOT
+ratchet (`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

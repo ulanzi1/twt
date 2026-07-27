@@ -25,9 +25,16 @@ describe('color tokens (AC1 (i))', () => {
       'status-confirmed',
       'status-mismatch',
       'status-grey-takeover',
+      'status-held',
     ]) {
       expect(color, `missing semantic color alias ${name}`).toHaveProperty(name);
     }
+  });
+
+  it('status-held is a NEW role distinct from status-grey-takeover (Story 9.6 D3)', () => {
+    // grey = "on record / unreconciled"; held = "trustee-frozen / under review" — two meanings must not
+    // share one colour (the pre-9.6 bug). Distinctness is the load-bearing property, not the exact hex.
+    expect(color['status-held']).not.toBe(color['status-grey-takeover']);
   });
 
   it('exports the general aliases', () => {

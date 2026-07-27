@@ -1,4 +1,49 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-27 (story 9-6 review -> done via bmad-code-review. 3-layer adversarial review (Blind
+#   Hunter + Edge Case Hunter + Acceptance Auditor) found 2 decision-needed + 4 patch + 1 defer + ~18
+#   dismissed-as-noise. Several Blind Hunter findings were VERIFIED FALSE against the actual codebase before
+#   triage (the "@tamagui/lucide-icons-2 unresolvable dependency" claim — it's a pre-existing dep already
+#   used in apps/(tabs)/_layout.tsx; the "namespace-handling inconsistency" claim — packages/i18n's resolver
+#   defaults `namespace` to 'common', exactly where statusPill.* lives). Both decisions were BigDev calls:
+#   (1) `held`'s mobile color renders via Tamagui's `$purple` (no slate-indigo scale exists) while the PDF
+#   resolves the literal `status-held` hex `#4b4f66` — D3's "one authority" is not literally met; ACCEPTED
+#   as a documented approximation (consistent with how yellow/green/red/grey already split mobile-scale vs.
+#   PDF-hex), the overclaiming note-template.ts comment + deferred-work.md closure wording corrected instead
+#   of adding an exact-match mobile token. (2) a FOURTH hand-rolled attested/yellow pill was found un-
+#   refactored in apps/mobile/app/(contribution)/pay.tsx (missed in the original dev pass, same pattern as
+#   ActiveContributionCard) — PATCHED IN NOW: swapped for <StatusPill status="yellow" size="default" live>,
+#   upi_intent.yellow_pill* keys (both locales) retired after confirming no other consumer. The other 2
+#   patches: corrected the copy-downgrade silence on ActiveContributionCard's attested state (documented as
+#   a deliberate trade-off, not reverted — re-adding bespoke copy would recreate the drift 9.6 removes); and
+#   closed a real test-coverage gap — the PDF side of the held≠grey distinctness guarantee had ZERO test
+#   coverage (mobile/token side had it twice) — added to contribution-note.test.ts (19/19 pass). 1 defer:
+#   no runtime guard across the StatusPill/presenter/i18n chain if ContributionStatus ever carries a value
+#   outside the 5-key union — pre-existing gap (the deleted inline code had the identical pattern), now
+#   centralized across more call sites; logged in deferred-work.md. All re-verified green post-patch:
+#   @twt/api (19/19), @twt/mobile typecheck+lint, @twt/i18n (57/57 parity intact), @twt/ui (25/25), @twt/tokens
+#   (21/21). Status -> done.)
+# last_updated: 2026-07-27 (story 9-6 in-progress -> review via bmad-dev-story. `<StatusPill>` 5-state DS
+#   consolidation COMPLETE: @twt/ui pure presenter (member-status D4-A) keyed on @twt/contracts
+#   ContributionStatus via `satisfies Record<...>` (compile-half of the un-extendable gate) + the pure gate
+#   test (lockstep + tone/icon/label distinctness + dangling-token); new `status-held` token (#4b4f66 slate-
+#   indigo, AA 7.76:1, distinct from grey) + theme.css regen; statusPill.* copy in common.json verbatim from
+#   yogdaan.status.* (orphaned yogdaan.status.* + active_contribution.yellow_pill* removed); Tamagui
+#   <StatusPill> render in apps/mobile (held->$purple, no more stopgap-blue); YogdaanBahiRow +
+#   ActiveContributionCard (live-region parity preserved) + PDF note-template held ink all refactored onto
+#   the one component; 9.5 held-inconsistency deferral CLOSED (deferred-work.md:12). All gates green:
+#   ci:local 28 jobs (incl. tokens-theme-check, i18n-parity, friction-budget no-raise, 8.10 no-ingest fence,
+#   pii-scrape). On-device emulator build+launch verified; live pill-visual eyeball left to reviewer (auth-
+#   gated + producer-less held/green). No new contribution.* type; no ADR. baseline_commit f5f7e93.)
+# last_updated: 2026-07-27 (story 9-6 backlog -> ready-for-dev via bmad-create-story. `<StatusPill>` 5-state
+#   DS component [PRIMITIVE]. Taxonomy/derivation/wire/copy are FROZEN (8.6 + 9.5, DONE) — 9.6 is a
+#   PRESENTATION consolidation: a pure @twt/ui presenter (member-status D4-A pattern) keyed on @twt/contracts
+#   ContributionStatus with a `satisfies Record<...>` un-extendable gate, a Tamagui render in apps/mobile, one
+#   new `status-held` token, and a refactor of every inline pill (YogdaanBahiRow STATUS_TONE + stopgap-blue
+#   held, ActiveContributionCard yellow pill, PDF note-template held ink) onto the component. Closes the 9.5
+#   held-inconsistency deferral (deferred-work.md:12). Copy -> statusPill.* in common.json (memberStatus.*
+#   precedent), verbatim from yogdaan.status.*. No new contribution.* type (8.10 fence stays green); no ADR.
+#   5 D-locks (D1 contract-keyed spec, D2 common-namespace copy, D3 distinct status-held, D4 mobile-only
+#   render, D5 icon set) LOCKED by BigDev 2026-07-27.)
 # last_updated: 2026-07-27 (story 9-5 review -> done via bmad-code-review. 3-layer adversarial review
 #   (Blind Hunter + Edge Case Hunter + Acceptance Auditor, incl. the AI-6-5 load-bearing-invariant checklist
 #   lens) found 1 decision-needed + 2 patch + 7 defer + 9 dismissed-as-noise. The decision-needed finding was
@@ -1228,7 +1273,7 @@ development_status:
   9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: done
   9-4-utr-matching-engine-matcher-mechanism: done
   9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: done
-  9-6-status-pill-5-state-design-system-component: backlog
+  9-6-status-pill-5-state-design-system-component: done
   9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: backlog
   9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: backlog
   9-9-dual-nominee-bank-accounts-rbi-upi-limit-workaround: backlog

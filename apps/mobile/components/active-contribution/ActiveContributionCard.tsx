@@ -33,6 +33,7 @@ import { StyleSheet } from 'react-native'
 import { Button, Paragraph, Text, View, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../common/CallHelplineCTA'
+import { StatusPill } from '../status-pill/StatusPill'
 import { markCtaTap, markLoopPhase } from '../../lib/loop-timing-session'
 import { cycleDayFromDaysRemaining, selectToneGradientKey } from './toneGradient'
 import { useActiveContributionQuery } from './useActiveContributionQuery'
@@ -217,22 +218,15 @@ export function ActiveContributionCard() {
       </View>
 
       {/* Story 8.4 (AC4) — the member's OWN state. Attested → the yellow pending-reconciliation pill
-          (ambient polite status, NEVER "confirmed/success"); otherwise the ≥56pt contribute CTA. */}
+          (ambient polite status, NEVER "confirmed/success"); otherwise the ≥56pt contribute CTA.
+          Story 9.6: the hand-rolled yellow pill is replaced by the DS <StatusPill status="yellow">. The
+          pre-9.6 pill set `accessibilityLiveRegion="polite"` on its View (a SECOND live region alongside
+          the tone-gradient paragraph, contradicting the file header's "single live region" claim). We
+          PRESERVE that behavior deliberately via the pill's `live` prop rather than silently drop it —
+          the attested confirmation is a genuine state change worth announcing; the tone-gradient nudge
+          and this attested-status announcement carry different content (Story 9.6 Completion Notes). */}
       {hasAttested ? (
-        <View
-          bg="$yellow4"
-          px="$3"
-          py="$3"
-          borderWidth={1}
-          borderColor="$yellow8"
-          accessibilityRole="text"
-          accessibilityLiveRegion="polite"
-          accessibilityLabel={t('active_contribution.yellow_pill_a11y', undefined, NS)}
-        >
-          <Text fontFamily="$body" fontSize="$4" color="$yellow11" accessibilityRole="text">
-            {t('active_contribution.yellow_pill', undefined, NS)}
-          </Text>
-        </View>
+        <StatusPill status="yellow" size="default" live />
       ) : (
         // Contribute CTA — a ≥56pt touch target (AC5/UX-DR26), warm-red accent (§1094: one accent per
         // surface), role=button + label + hint. Opens the Story 8.4 UPI Intent flow.

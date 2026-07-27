@@ -36,7 +36,9 @@ const sahyogNames: ReadonlyArray<readonly [first: string, lastInitial: string]> 
 ]
 
 const poolLetters = ['A', 'B', 'C', 'D', 'E']
-const statuses: YogdaanRow['status'][] = ['yellow', 'green', 'red', 'grey']
+// All FIVE tones (Story 9.6 added `held`) so the dev-time passbook exercises every <StatusPill> state on
+// the emulator — the only way to eyeball the polished `held` tone (its live producer is Story 9.8).
+const statuses: YogdaanRow['status'][] = ['yellow', 'green', 'red', 'grey', 'held']
 
 // Generate stress-set rows in the REAL contract shape (fixture only — never the runtime path).
 function generateRows(): YogdaanRow[] {

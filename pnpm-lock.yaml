@@ -927,6 +927,9 @@ importers:
       '@twt/eslint-config-twt':
         specifier: workspace:*
         version: link:../eslint-config-twt
+      '@twt/tokens':
+        specifier: workspace:*
+        version: link:../tokens
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.20

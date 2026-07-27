@@ -1,9 +1,11 @@
 import { memo } from 'react'
 import { StyleSheet } from 'react-native'
 import { useT } from '@twt/i18n/react'
+import { statusPillLabelKey } from '@twt/ui'
 import { useRouter } from 'expo-router'
 import { Button, Text, XStack, YStack } from 'tamagui'
 
+import { StatusPill } from '../status-pill/StatusPill'
 import { formatInr, type YogdaanRow } from './sample-data'
 
 // Yogdaan Bahi passbook row — Story 8.6 (Task 4; productionized from the P0-5 prototype).
@@ -21,17 +23,6 @@ import { formatInr, type YogdaanRow } from './sample-data'
 
 const NS = { namespace: 'contribution' } as const
 
-/** Status → design-system tone tokens (theme-aware light/dark). Mismatch = warm-umber, NOT warm-red. */
-const STATUS_TONE = {
-  yellow: { bg: '$yellow4', border: '$yellow8', color: '$yellow11' }, // attested / verifying
-  green: { bg: '$green4', border: '$green8', color: '$green11' }, // confirmed (पुष्ट)
-  red: { bg: '$orange4', border: '$orange8', color: '$orange11' }, // mismatch — warm-umber (UX :1087-1094)
-  grey: { bg: '$gray4', border: '$gray8', color: '$gray11' }, // on record, unreconciled (neutral)
-  // held — a confirmation trustee-walked-back (Story 9.5). MINIMAL neutral-blue stopgap purely to keep the
-  // exhaustive `satisfies` compiling; the polished 5-state tone/copy/icon/ARIA system is Story 9.6.
-  held: { bg: '$blue4', border: '$blue8', color: '$blue11' },
-} as const satisfies Record<YogdaanRow['status'], { bg: string; border: string; color: string }>
-
 type Props = {
   row: YogdaanRow
   /** 1-indexed row number across the list, used for "every 5th row" heavier rule. */
@@ -44,13 +35,14 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
 
   // Every 5th row (1-indexed) gets a heavier bottom rule per UX spec (0-indexed: rowIndex % 5 === 4).
   const isFifthRow = (rowIndex + 1) % 5 === 0
-  const tone = STATUS_TONE[row.status]
 
   const family = row.deceasedLastInitial ? `${row.deceasedFirstName} ${row.deceasedLastInitial}` : row.deceasedFirstName
   const poolDisplay = row.poolName ?? row.poolLetterCode
   const dateDisplay = row.date.slice(0, 10) // YYYY-MM-DD (Gregorian, Latin)
-  const statusLabel = t(`yogdaan.status.${row.status}`, undefined, NS)
-  const statusA11y = t(`yogdaan.status.${row.status}_a11y`, undefined, NS)
+  // The status LABEL is still needed for the composite line-1 row announcement (the pill itself is line-2
+  // and carries its own a11y). Resolved from the DS-owned `statusPill.*` copy (common namespace) — the
+  // same strings the pill renders, so the row and the pill can never drift (Story 9.6).
+  const statusLabel = t(statusPillLabelKey(row.status))
 
   // The whole row is ONE screen-reader unit (date + family + pool + amount + status announced by TONE
   // NAME, not colour). The Note link is a SEPARATE focusable action beneath it.
@@ -102,23 +94,10 @@ function YogdaanBahiRowComponent({ row, rowIndex }: Props) {
         </Text>
       </XStack>
 
-      {/* Line 2 — status tone pill + pool·cycle ref + the Contribution-Note link (AC2/AC3). */}
+      {/* Line 2 — the DS <StatusPill> (Story 9.6, tiny variant) + pool·cycle ref + the Contribution-Note
+          link (AC2/AC3). The pill is its own a11y unit (text + icon + ARIA label — not color-only). */}
       <XStack items="center" gap={6} mt={2}>
-        <XStack
-          bg={tone.bg}
-          borderColor={tone.border}
-          borderWidth={StyleSheet.hairlineWidth}
-          rounded="$2"
-          px={6}
-          py={1}
-          accessible
-          accessibilityRole="text"
-          accessibilityLabel={statusA11y}
-        >
-          <Text fontFamily="$body" fontSize="$1" color={tone.color}>
-            {statusLabel}
-          </Text>
-        </XStack>
+        <StatusPill status={row.status} size="tiny" />
         {/* poolDisplay may be a curated Devanagari name (D7: NOT a Latin-numeral run) or the Latin letter
             fallback — either way it renders in `$body`; only `cycleRef` (Gregorian YYYY-MM) is `$tabular`. */}
         <Text fontFamily="$body" fontSize="$1" color="$colorPress">

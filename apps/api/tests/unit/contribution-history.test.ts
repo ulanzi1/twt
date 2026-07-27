@@ -28,6 +28,7 @@ const listLiveAlertsForPariwar = vi.fn();
 const resolveAssignedPoolWithRosterForMember = vi.fn();
 const resolveUpcomingFixedAmountChange = vi.fn();
 const hasAttestedContribution = vi.fn();
+const listConfirmedContributorsForPool = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
@@ -43,7 +44,12 @@ vi.mock('@twt/domain', async (importActual) => {
       resolveAssignedPoolWithRosterForMember,
       resolveUpcomingFixedAmountChange,
     },
-    contribution: { ...actual.contribution, listMemberContributionHistory, hasAttestedContribution },
+    contribution: {
+      ...actual.contribution,
+      listMemberContributionHistory,
+      hasAttestedContribution,
+      listConfirmedContributorsForPool,
+    },
     claim: { ...actual.claim, getClaimCase },
     kyc: { ...actual.kyc, getMemberKycProfile },
     // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
@@ -235,6 +241,9 @@ describe('D6 — the passbook and the My Pool card render a pool IDENTICALLY (sh
     });
     resolveUpcomingFixedAmountChange.mockResolvedValue(null);
     hasAttestedContribution.mockResolvedValue(false);
+    // resolveCard now sources the confirmed-count meter from this read (Story 9.5 Task 1a); the D6
+    // identity comparison does not depend on the count, so an empty confirmed list keeps the card assigned.
+    listConfirmedContributorsForPool.mockResolvedValue([]);
 
     const card = await handlers.activeContribution(fakeRequest());
     if (!card.assigned) throw new Error('expected an assigned card');

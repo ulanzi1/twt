@@ -38,10 +38,11 @@
 // seam (NEVER a plaintext cache at rest — [[project_validity_cache_failopen_pattern]]); the Sahyog Vivran
 // public render (Epic 11b) is where it actually bites (not member-session-gated). Do NOT build the cache here.
 
-import { and, eq, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { AlertId, CycleFreezeCommitId, MemberId, PariwarId, PoolId } from '../ids/index.js';
+import { RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE } from '../reconciliation/events.js';
 import { eventsLog } from '../schema/events_log.js';
 /**
  * The SELF-ATTESTED (yellow) event type — Story 8.4's own constant, imported rather than re-spelled so
@@ -66,6 +67,34 @@ export const CONFIRMED_PAYLOAD_POOL_KEY = 'poolId' as const;
 /** The `contribution.confirmed` payload key carrying the contributing member (the forward Epic-9 contract). */
 export const CONFIRMED_PAYLOAD_MEMBER_KEY = 'memberId' as const;
 
+/**
+ * The `reconciliation.confirmation-reversed` payload key (Story 9.4 Decision D1) carrying the EXACT
+ * `contribution.confirmed` event id being walked back — the monotonic link that makes the per-confirmation
+ * event-id chain possible (Story 9.5 AC3; imported, never re-spelled). A reversal un-confirms exactly the
+ * confirmation it names, never a whole (member, pool) — so a fresh confirmation always re-greens.
+ */
+export const REVERSED_CONFIRMED_EVENT_ID_KEY = 'reversedConfirmedEventId' as const;
+
+/**
+ * The per-confirmation-event-id chain predicate (Story 9.5 AC3, D2/D4) — PURE, DB-free, the SINGLE shared
+ * derivation every confirmed-reading surface routes through so the reversal backing-out is never
+ * re-implemented twice. A subject (a member in a pool) is LIVE-confirmed iff it holds ≥1
+ * `contribution.confirmed` event id that is NOT named by any `reconciliation.confirmation-reversed`'s
+ * `reversedConfirmedEventId`. This keeps the confirmation monotonic on the read side: a reversal walks back
+ * exactly the confirmation it names, a later fresh confirmation (a new event id) re-greens, and a reversal
+ * naming an id the subject never held cannot un-confirm anything. Callers derive `held` as
+ * `confirmedEventIds.length > 0 && !hasLiveConfirmation(...)` (confirmations exist, all reversed).
+ */
+export function hasLiveConfirmation(
+  confirmedEventIds: Iterable<string>,
+  reversedConfirmedEventIds: ReadonlySet<string>,
+): boolean {
+  for (const eventId of confirmedEventIds) {
+    if (!reversedConfirmedEventIds.has(eventId)) return true;
+  }
+  return false;
+}
+
 /** The scope tuple for a pool's confirmed-contributor read. */
 export interface ListConfirmedContributorsParams {
   readonly pariwarId: PariwarId;
@@ -85,13 +114,20 @@ export interface ConfirmedContributor {
 }
 
 /**
- * List the pool's RECONCILIATION-CONFIRMED contributors (AC1) — the members carried by a
- * `contribution.confirmed` event scoped to the pool, returned as bare `{ memberId }` (identities only;
- * the boundary decrypts). Sources EXCLUSIVELY from `contribution.confirmed` (the structural confirmed-only
- * guard — there is no status/state parameter). DISTINCT by member (a re-confirmed/duplicate event does not
- * double-list). Ordered by member id ASC for a stable, replay-deterministic list. Legitimately `[]` today
- * (Epic 9's producer is unbuilt — D2). Tenant-scoped (RLS + the explicit `pariwar_id` predicate). No
- * user-controlled `.limit()` (the set is bounded by the pool roster), so no domain-invariants clamp.
+ * List the pool's LIVE reconciliation-confirmed contributors (AC1/AC3) — the members carried by a
+ * `contribution.confirmed` event scoped to the pool WHOSE confirmation has not been walked back, returned
+ * as bare `{ memberId }` (identities only; the boundary decrypts). Sources EXCLUSIVELY from
+ * `contribution.confirmed` for confirmation truth (the structural confirmed-only guard — there is no
+ * status/state parameter), then SUBTRACTS any confirmation named by a `reconciliation.confirmation-reversed`
+ * compensating event (Story 9.4 Decision D1; Story 9.8 is the producer, so this subtraction is a no-op
+ * until 9.8 emits). A member lists iff ≥1 of their confirmed event ids is NOT reversed (the per-event-id
+ * chain, {@link hasLiveConfirmation}) — a re-confirmed member (a fresh event id after a reversal) re-lists;
+ * a member all of whose confirmations are reversed drops off. DISTINCT by member (a re-confirmed/duplicate
+ * event does not double-list). Ordered by member id ASC for a stable, replay-deterministic list.
+ * Legitimately `[]` today for confirmations (Epic 9's producer landed at 9.4; the reversal producer is 9.8).
+ * ONE batched read (the confirmed + reversal types in a single `inArray`, reconciled in JS by event id —
+ * the set is bounded by the pool roster). Tenant-scoped (RLS + the explicit `pariwar_id` predicate). No
+ * user-controlled `.limit()`, so no domain-invariants clamp.
  */
 export async function listConfirmedContributorsForPool(
   db: Db,
@@ -99,27 +135,52 @@ export async function listConfirmedContributorsForPool(
 ): Promise<ConfirmedContributor[]> {
   const rows = await db
     .select({
+      eventType: eventsLog.eventType,
+      eventId: eventsLog.eventId,
       memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`,
+      reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
     })
     .from(eventsLog)
     .where(
       and(
         eq(eventsLog.pariwarId, pariwarId),
-        // The load-bearing confirmed-only filter — an EXACT match on the single confirmed event type.
-        // Yellow / attested / pending event types cannot satisfy this, structurally (AC1/AC4).
-        eq(eventsLog.eventType, CONFIRMED_EVENT_TYPE),
-        // Scope to the pool via the forward Epic-9 payload contract (poolId is 1:1 with the cycle).
+        // Confirmations (green) + their compensating reversals — the ONLY two event types that bear on
+        // live-confirmed truth. Yellow / attested / pending cannot satisfy this, structurally (AC1/AC4);
+        // the reversal is `reconciliation.*`, off the 8.10 contribution.* fence (Story 9.4 D1).
+        inArray(eventsLog.eventType, [
+          CONFIRMED_EVENT_TYPE,
+          RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
+        ]),
+        // Scope both types to the pool via the forward payload contract (poolId is 1:1 with the cycle;
+        // the reversal payload carries the same `poolId` key — Story 9.4 events.ts).
         sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${poolId}`,
       ),
     );
-  // De-duplicate (a re-confirmed member does not double-list) + sort ascending for a stable, replay-
-  // deterministic list — in JS, since the set is bounded by the pool roster (≤ pool size). A malformed
-  // event missing the member key yields SQL NULL → filtered out (never a blank contributor).
-  const distinctIds = new Set<string>();
+
+  // Reconcile by the per-confirmation event-id chain (AC3), in JS — the set is bounded by the pool roster.
+  // A malformed confirmed event missing the member key yields SQL NULL → filtered out (never a blank
+  // contributor); a reversal missing its `reversedConfirmedEventId` cannot walk anything back.
+  const confirmedEventIdsByMember = new Map<string, string[]>();
+  const reversedConfirmedEventIds = new Set<string>();
   for (const r of rows) {
-    if (typeof r.memberId === 'string' && r.memberId.length > 0) distinctIds.add(r.memberId);
+    if (r.eventType === RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE) {
+      if (typeof r.reversedConfirmedEventId === 'string' && r.reversedConfirmedEventId.length > 0) {
+        reversedConfirmedEventIds.add(r.reversedConfirmedEventId);
+      }
+      continue;
+    }
+    if (typeof r.memberId !== 'string' || r.memberId.length === 0) continue;
+    const ids = confirmedEventIdsByMember.get(r.memberId);
+    if (ids) ids.push(r.eventId);
+    else confirmedEventIdsByMember.set(r.memberId, [r.eventId]);
   }
-  return [...distinctIds].sort().map((memberId) => ({ memberId: memberId as MemberId }));
+
+  const liveMemberIds: string[] = [];
+  for (const [memberId, eventIds] of confirmedEventIdsByMember) {
+    if (hasLiveConfirmation(eventIds, reversedConfirmedEventIds)) liveMemberIds.push(memberId);
+  }
+  // Sort ascending for a stable, replay-deterministic list.
+  return liveMemberIds.sort().map((memberId) => ({ memberId: memberId as MemberId }));
 }
 
 /**
@@ -224,7 +285,9 @@ export async function listActedMemberIdsForPool(
   const rows = await db
     .select({
       eventType: eventsLog.eventType,
+      eventId: eventsLog.eventId,
       memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`,
+      reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
     })
     .from(eventsLog)
     .where(
@@ -232,8 +295,12 @@ export async function listActedMemberIdsForPool(
         eq(eventsLog.pariwarId, pariwarId),
         sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${poolId}`,
         or(
-          // Green — the pool-scoped confirmed event (Epic 9's exclusive producer; empty today).
+          // Green — the pool-scoped confirmed event (Epic 9's exclusive producer).
           eq(eventsLog.eventType, CONFIRMED_EVENT_TYPE),
+          // The compensating reversal that walks a confirmation back (Story 9.4 D1; 9.8 produces it). Its
+          // payload carries the same pool key, so the outer poolId filter scopes it too. The `confirmed`
+          // set below subtracts it by the per-event-id chain — never the `attested` set (D2 discipline).
+          eq(eventsLog.eventType, RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE),
           // Yellow — the member's own attestation, which rides the ALERT stream (Story 8.4).
           and(
             eq(eventsLog.eventType, ATTESTED_EVENT_TYPE),
@@ -243,12 +310,32 @@ export async function listActedMemberIdsForPool(
       ),
     );
 
-  const confirmed = new Set<string>();
+  // The `confirmed` set honors the SAME reversal backing-out as the contributor list (one shared
+  // {@link hasLiveConfirmation} chain — never a second derivation); the `attested` set is untouched by
+  // reversals (a reversal walks back a CONFIRMATION, not a member's own yellow claim — the D2 two-sets rule).
+  const confirmedEventIdsByMember = new Map<string, string[]>();
+  const reversedConfirmedEventIds = new Set<string>();
   const attested = new Set<string>();
   for (const row of rows) {
+    if (row.eventType === RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE) {
+      if (typeof row.reversedConfirmedEventId === 'string' && row.reversedConfirmedEventId.length > 0) {
+        reversedConfirmedEventIds.add(row.reversedConfirmedEventId);
+      }
+      continue;
+    }
     if (typeof row.memberId !== 'string' || row.memberId.length === 0) continue;
-    if (row.eventType === CONFIRMED_EVENT_TYPE) confirmed.add(row.memberId);
-    else attested.add(row.memberId);
+    if (row.eventType === CONFIRMED_EVENT_TYPE) {
+      const ids = confirmedEventIdsByMember.get(row.memberId);
+      if (ids) ids.push(row.eventId);
+      else confirmedEventIdsByMember.set(row.memberId, [row.eventId]);
+    } else {
+      attested.add(row.memberId);
+    }
+  }
+
+  const confirmed = new Set<string>();
+  for (const [memberId, eventIds] of confirmedEventIdsByMember) {
+    if (hasLiveConfirmation(eventIds, reversedConfirmedEventIds)) confirmed.add(memberId);
   }
   return { confirmed: [...confirmed].sort(), attested: [...attested].sort() };
 }

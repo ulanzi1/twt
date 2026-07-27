@@ -433,11 +433,11 @@ describe('Story 8.6 — the Yogdaan Bahi contribution-history read model (AC1/AC
     ).toBe(true);
   });
 
-  it('the status enum is EXACTLY the four tones (bounds — no fifth tone leaks in)', () => {
-    for (const tone of ['yellow', 'green', 'red', 'grey']) {
+  it('the status enum is EXACTLY the five tones (bounds — no sixth tone leaks in)', () => {
+    for (const tone of ['yellow', 'green', 'red', 'grey', 'held']) {
       expect(ContributionStatus.safeParse(tone).success, `${tone} valid`).toBe(true);
     }
-    for (const bad of ['orange', 'confirmed', 'pending', 'YELLOW', '']) {
+    for (const bad of ['orange', 'confirmed', 'pending', 'reversed', 'YELLOW', '']) {
       expect(ContributionStatus.safeParse(bad).success, `${bad} rejected`).toBe(false);
     }
   });
@@ -619,7 +619,7 @@ describe('Story 8.7 — ContributionNoteFacts: PII discipline + strictness (AC5)
     ).toBe(false);
   });
 
-  it('the status enum on the Note is the SAME four tones (one derivation, D3(b))', () => {
+  it('the status enum on the Note is the SAME five tones (one derivation, D3(b))', () => {
     expect(ContributionNoteFacts.safeParse({ ...VALID_NOTE_FACTS, status: 'confirmed' }).success).toBe(false);
   });
 });

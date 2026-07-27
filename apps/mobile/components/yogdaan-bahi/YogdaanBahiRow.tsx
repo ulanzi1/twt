@@ -10,7 +10,7 @@ import { formatInr, type YogdaanRow } from './sample-data'
 //
 // The row keeps the passbook grammar (fixed 56pt height so `getItemLayout` stays cheap — D5; tabular
 // numerics + Latin/Gregorian operational columns + Devanagari family names; heavier every-5th-row rule)
-// but now carries the REAL read-model row + THREE additions the prototype lacked: the four-state STATUS
+// but now carries the REAL read-model row + THREE additions the prototype lacked: the five-state STATUS
 // tone (AC2), the CYCLE ref + pool letter/name, and the Contribution-Note LINK seam (AC3). There is no
 // room for 3 more fixed columns at 56pt on a 360px viewport, so a SECOND compact line sits below the
 // date/family/amount line (status pill + pool·cycle + Note link) — the 56pt height is unchanged (D5).
@@ -27,6 +27,9 @@ const STATUS_TONE = {
   green: { bg: '$green4', border: '$green8', color: '$green11' }, // confirmed (पुष्ट)
   red: { bg: '$orange4', border: '$orange8', color: '$orange11' }, // mismatch — warm-umber (UX :1087-1094)
   grey: { bg: '$gray4', border: '$gray8', color: '$gray11' }, // on record, unreconciled (neutral)
+  // held — a confirmation trustee-walked-back (Story 9.5). MINIMAL neutral-blue stopgap purely to keep the
+  // exhaustive `satisfies` compiling; the polished 5-state tone/copy/icon/ARIA system is Story 9.6.
+  held: { bg: '$blue4', border: '$blue8', color: '$blue11' },
 } as const satisfies Record<YogdaanRow['status'], { bg: string; border: string; color: string }>
 
 type Props = {

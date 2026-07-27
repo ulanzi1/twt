@@ -768,6 +768,19 @@ disposition above (authenticated mobile app + `apps/api`/`packages/domain`/`pack
 none of which enter the public page-weight budget). Do NOT ratchet
 (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 9.5 disposition (declaration affirmed, no new row):** the touched surfaces
+(`apps/mobile/components/yogdaan-bahi/YogdaanBahi.tsx` + `YogdaanBahiRow.tsx`) add a
+**5th passive status tone** (`held` — a trustee-walked-back confirmation, Story 9.4 D1 /
+Story 9.8 producer) to the existing 4-tone `STATUS_TONE` map so the exhaustive
+`satisfies Record<...>` keeps compiling. This is a **read-only display change**: no new
+form, no new required field, no new gate, no new tap/step the member must complete —
+the row already renders; it can now additionally render `held` instead of failing to
+compile. The polished 5-state `<StatusPill>` copy/icon/ARIA system is Story 9.6, also
+not a friction surface (still read-only). Zero deliberate friction introduced; ledger
+reviewed, no new row warranted. Page-weight baseline unchanged for the same reason as
+Story 9.1/9.3's dispositions above (authenticated mobile app, not the public bundle).
+Do NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

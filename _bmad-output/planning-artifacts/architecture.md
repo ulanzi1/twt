@@ -285,6 +285,11 @@ under Deferred Decisions where not.
    admin operations.
 4. **Determinism & replay** — Pool Engine assignment reproducible from snapshotted
    membership-at-freeze; rule-registry evaluations carry full provenance for replay.
+   *Canonical financial truth (§3.6):* confirmed-contribution truth derives EXCLUSIVELY
+   from the `contribution.confirmed` event-derived state (never reconstructed from
+   inputs); the only un-confirm path is the trustee-attested
+   `reconciliation.confirmation-reversed` compensating event — enforced by the executable
+   fence in `packages/domain/tests/contribution/` (Story 9.5).
 5. **i18n at the core** — centralized formatting utility; CI lint against inline
    formatting; Devanagari display / body / numeric typeface separation; Hindi numerals
    reserved for ceremonial Devanagari prose (v4 amendment).
@@ -2269,6 +2274,26 @@ committed (specific value in Category 5); statements exceeding the budget surfac
 P1 to ops. PDF + OCR is a Phase-2 commitment (first non-CSV bank arrives); the *pacing
 property* — OCR has its own stage with its own throughput sizing — is committed now so
 the reconciliation latency budget (FR-30 p95 < 4h) is preserved as OCR enters scope.
+
+**Load-bearing invariant — canonical financial truth (Cross-Cutting #4; Story 9.4
+producer / Story 9.5 fence).** Confirmed-contribution truth derives **EXCLUSIVELY** from
+the `contribution.confirmed` event-derived state — the matcher's single reconciliation
+verdict. No surface may independently claim a contribution is "confirmed" by inferring it
+from a yellow self-attestation (`contribution.utr-attested`), a member-pasted UTR, a
+pending state, or any other proxy; every consumer — the My Pool progress meter (Story
+8.2), the live contributor list (8.3), the Yogdaan Bahi (8.6), the reminder-suppression
+set (8.8), the future PoolProgressCard (9.12), Sahyog Drive (Epic 11b), the public stat
+strip (Epic 11a), and every Epic-10 analytics / audit / regulatory export — **MUST read
+that event-derived state, never reconstruct "confirmed" from inputs.** The **ONLY**
+un-confirm path is the trustee-attested `reconciliation.confirmation-reversed` compensating
+event (Story 9.8 producer): confirmation only ever moves forward except by that explicit,
+attested walk-back, which backs the confirmation out of every consumer by a per-confirmation
+event-id chain (a re-confirmation re-greens; the derived intermediate state is `held`).
+The enforcement artifact is the executable fence
+`packages/domain/tests/contribution/canonical-financial-truth.test.ts` (Story 9.5) — a
+single-authority-constant scan + the live-DB reversal-consumer proof; a future consumer
+that re-spells the confirmed event type or mixes yellow into a confirmed aggregate fails it
+at PR time. A new consumer author points here and reads the event-derived state.
 
 #### 3.7 Module Marketplace lead-handoff transport
 

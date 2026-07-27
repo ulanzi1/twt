@@ -25,6 +25,7 @@ const poolLetterCode = vi.fn();
 const getClaimCase = vi.fn();
 const getMemberKycProfile = vi.fn();
 const hasAttestedContribution = vi.fn();
+const listConfirmedContributorsForPool = vi.fn();
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
@@ -43,7 +44,7 @@ vi.mock('@twt/domain', async (importActual) => {
     },
     claim: { ...actual.claim, getClaimCase },
     kyc: { ...actual.kyc, getMemberKycProfile },
-    contribution: { ...actual.contribution, hasAttestedContribution },
+    contribution: { ...actual.contribution, hasAttestedContribution, listConfirmedContributorsForPool },
     // Story 8.8 (Task 1) relocated the shared pool-identity join into @twt/domain, where it reaches
     // its collaborators through domain-internal paths this barrel mock cannot intercept. The double
     // re-composes the join over the SAME mocked collaborators configured above, so every assertion
@@ -115,6 +116,9 @@ function wireAssignedLivePoolWithName(): void {
   getClaimCase.mockResolvedValue({ deceasedMemberId: DECEASED_MEMBER_ID });
   getMemberKycProfile.mockResolvedValue({ nameCiphertext: 'ct' });
   decryptKycField.mockResolvedValue('Rajesh Sharma');
+  // Default: no confirmed contributions yet (the pre-9.4 baseline). Individual tests override to prove
+  // the meter now REFLECTS the live confirmed count rather than a hardcoded zero (Story 9.5 Task 1a).
+  listConfirmedContributorsForPool.mockResolvedValue([]);
 }
 
 function wireScopeTx(): void {
@@ -149,11 +153,36 @@ describe('activeContribution card — myContribution wiring from hasAttestedCont
     expect(res).toMatchObject({ assigned: true, myContribution: 'attested' });
   });
 
-  it('the confirmed-only meter stays untouched regardless of myContribution — yellow never pollutes it', async () => {
+  it('the confirmed-only meter REFLECTS the live confirmed count — wired to listConfirmedContributorsForPool (Story 9.5 Task 1a)', async () => {
+    // The pre-9.5 bug: resolveCard hardcoded `confirmedCount: 0` and never called the confirmed read, so
+    // the home-screen meter read "0 of N" forever even as contributions confirmed. Mock a NON-EMPTY
+    // confirmed list and assert the meter reflects it — a hardcoded zero can no longer pass.
     vi.clearAllMocks();
     wireScopeTx();
     wireAssignedLivePoolWithName();
     hasAttestedContribution.mockResolvedValue(true);
+    listConfirmedContributorsForPool.mockResolvedValue([
+      { memberId: MEMBER_ID },
+      { memberId: DECEASED_MEMBER_ID },
+      { memberId: '88888888-8888-8888-8888-888888888888' },
+    ]);
+
+    const h = createMemberPoolHandlers(deps());
+    const res = await h.activeContribution(fakeRequest());
+    expect(res).toMatchObject({ progress: { confirmedCount: 3, rosterSize: 48 } });
+    // It sourced the count from the confirmed read (confirmed-only + reversal backing-out), scoped to the pool.
+    expect(listConfirmedContributorsForPool).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ pariwarId: PARIWAR_ID, cycleId: CYCLE_ID, poolId: POOL_ID }),
+    );
+  });
+
+  it('the meter is a HONEST zero when nothing is confirmed yet — and yellow never pollutes it (regression)', async () => {
+    vi.clearAllMocks();
+    wireScopeTx();
+    wireAssignedLivePoolWithName();
+    hasAttestedContribution.mockResolvedValue(true); // the member self-attested (yellow)…
+    listConfirmedContributorsForPool.mockResolvedValue([]); // …but nothing is confirmed → meter stays 0.
 
     const h = createMemberPoolHandlers(deps());
     const res = await h.activeContribution(fakeRequest());

@@ -1,4 +1,57 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-27 (story 9-5 review -> done via bmad-code-review. 3-layer adversarial review
+#   (Blind Hunter + Edge Case Hunter + Acceptance Auditor, incl. the AI-6-5 load-bearing-invariant checklist
+#   lens) found 1 decision-needed + 2 patch + 7 defer + 9 dismissed-as-noise. The decision-needed finding was
+#   the exact re-trigger of a pre-existing 8.3-deferred gap (no roster cross-check on `contribution.confirmed`
+#   consumers) whose condition ("when Epic 9's producer is built") fired at 9.4 — BigDev chose to add a
+#   defensive `Math.min(confirmed.length, rosterSize)` clamp + a `request.log.warn` anomaly log in `resolveCard`
+#   rather than dismiss or re-defer again. Both patch findings (stale doc comments contradicting the Task 1a
+#   fix, a stale "four tones" test docstring never updated to five + missing an explicit `held` round-trip
+#   assertion) were applied and verified green (`@twt/contracts` 53/53, `active-contribution-card.test.ts`
+#   4/4, `@twt/api` typecheck clean). The 7 deferred findings (shared `.limit(500)` budget across 3 event
+#   types once reversal volume grows; two unbounded batched reads; `held`-tone visual inconsistency between
+#   the PDF note and the mobile row; a new bidirectional contribution<->reconciliation import direction;
+#   fence-test brittleness to cosmetic reformatting; no explicit cross-tenant reversal test) are logged in
+#   deferred-work.md, each tied to a concrete re-trigger (mostly Story 9.6/9.8 landing). Acceptance Auditor
+#   independently re-ran the fence revert-sanity + the live-DB reversal-consumer proof rather than trusting
+#   the Dev Agent Record, and both held up. Status -> done.)
+# last_updated: 2026-07-26 (story 9-5 ready-for-dev -> in-progress -> review via bmad-dev-story [Opus 4.8].
+#   Yellow->Green pill flip / canonical-financial-truth [CONSUMER + INVARIANT] — 9.4 already shipped the flip,
+#   so 9.5 built the three deferred things: (1) the AC-Fence `canonical-financial-truth.test.ts` (single-
+#   authority-constant scan + no-yellow-in-confirmed + no-status-param; revert-sanity RED->GREEN proven); (2)
+#   the architecture.md §3.6 + Cross-Cutting #4 load-bearing-invariant doc + ADR-0035 reversal-consumer
+#   addendum; (3) the reversal-CONSUMER reads — listConfirmedContributorsForPool + listActedMemberIdsForPool +
+#   deriveContributionStatus(`held`) + listMemberContributionHistory + getMemberAttestedContribution back a
+#   confirmation out by the per-confirmation event-id chain (shared hasLiveConfirmation; complete-but-empty,
+#   9.8 is the producer). `held` threaded domain->@twt/contracts enum->mobile STATUS_TONE/note STATUS_INK->
+#   i18n (en+hi), precedence green>held>red>yellow>grey (D4). Task 1a fixed a pre-existing member-facing bug:
+#   resolveCard hardcoded progress.confirmedCount:0 (never wired to the confirmed read) + its tautological
+#   test. openapi/v1.yaml regenerated for the `held` enum. No schema/migration (truth stays event-derived).
+#   Live-DB proof reversal-consumer.spec.ts green (green->held->re-green + contributor drop/re-add); 8.10 fence
+#   green verbatim. ci:local: real jobs green (contracts-determinism fixed); test(unit)/integration-tests
+#   red-flakes confirmed innocent in isolation [[project_ci_local_concurrency_oversubscription]]. Awaiting review.)
+# last_updated: 2026-07-26 (story 9-5 decisions D1-D4 LOCKED by BigDev — all four to the recommended
+#   option. D1: focused domain fence + semantic tests (not a repo-wide CI gate). D2: build the reversal
+#   consumer now, complete-but-empty (9.8 producer). D3: `held` in domain + @twt/contracts now, visual
+#   <StatusPill> deferred to 9.6. D4: precedence green>held>red>yellow>grey. Ready for dev-story.)
+# last_updated: 2026-07-26 (story 9-5 backlog -> ready-for-dev via bmad-create-story. Yellow->Green pill
+#   flip / canonical financial truth [CONSUMER + INVARIANT]. KEY FRAMING: 9.4 (done) ALREADY ships the
+#   flip mechanics — the pre-built 8.3/8.6 reads populate from `contribution.confirmed` (proven live) + the
+#   D6 confirmed-push is enqueued — so 9.5 does NOT re-build the flip, re-emit, or touch the matcher. 9.5
+#   owns exactly the three things 9.4 deferred: (1) the canonical-truth FENCE (executable "sole authority"
+#   assertion — `contribution.confirmed` is the only confirmed source, no re-spelled literal, no yellow in a
+#   confirmed/raised aggregate; 8.10 `no-ingest-path` sibling, semantic teeth not a vacuous scan); (2) the
+#   `architecture.md` load-bearing-invariant DOC (near S3.6 + Cross-Cutting); (3) the reversal-CONSUMER read
+#   arms that back a confirmation OUT everywhere when `reconciliation.confirmation-reversed` (9.4 D1-locked
+#   name, 9.8 producer, registered-not-emitted) lands — `listConfirmedContributorsForPool` removes the member,
+#   `deriveContributionStatus` gains a 5th `held` tone (green->held), keyed on the per-confirmation event-id
+#   chain (reversal names `reversedConfirmedEventId`; a NEW confirmed event re-greens = monotonic forward).
+#   `held` threaded domain union -> @twt/contracts enum -> mobile YogdaanBahiRow STATUS_TONE + i18n stopgap
+#   (the polished 5-state <StatusPill> is 9.6). Two name reconciliations flagged (camelCase payload; reversal
+#   is `reconciliation.*` not `contribution.confirmation.reversed`). 4 proposed decisions surfaced for BigDev
+#   to LOCK: D1 fence-form (RECOMMENDED focused domain fence over a repo-wide CI gate), D2 build-consumer-now,
+#   D3 `held` wire-surfacing vs 9.6, D4 precedence green>held>red>yellow>grey. No schema/migration (read+test+
+#   doc only). Ready for dev-story.)
 # last_updated: 2026-07-26 (story 9-4 review -> done via bmad-code-review. 3-layer adversarial review
 #   (Blind Hunter + Edge Case Hunter + Acceptance Auditor) found 3 decision-needed + 6 patch findings;
 #   BigDev resolved all 3 decisions (entry-exclusivity -> a new entry_already_claimed mismatch reason;
@@ -1174,7 +1227,7 @@ development_status:
   9-2-bank-statement-intake-transport-5-bank-parser-allowlist-50-golden-files-bank-normalization-schema: done
   9-3-bank-statement-upload-hum-aapke-liye-padh-lenge-fallback: done
   9-4-utr-matching-engine-matcher-mechanism: done
-  9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: backlog
+  9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: done
   9-6-status-pill-5-state-design-system-component: backlog
   9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: backlog
   9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: backlog

@@ -2554,6 +2554,7 @@ components:
                   - green
                   - red
                   - grey
+                  - held
               noteAvailable:
                 type: boolean
             required:

@@ -10,7 +10,7 @@ import { formatInr, type YogdaanRow } from './sample-data'
 
 // Yogdaan Bahi (contribution passbook) — Story 8.6 (Task 4). Productionized from the P0-5 prototype: the
 // data source is the real member contribution-history read (useYogdaanQuery), and the row carries the
-// four-state status + cycle + Contribution-Note seam. This surface OWNS its full-height scroll (it is the
+// five-state status + cycle + Contribution-Note seam. This surface OWNS its full-height scroll (it is the
 // dedicated Yogdaan Bahi screen, NOT nested in the home YStack) so the FlatList is the scroll owner and
 // virtualization stays active (AC4/D5 — a FlatList inside a parent ScrollView silently loses it).
 //

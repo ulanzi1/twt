@@ -25,8 +25,9 @@
 // NOT the nominee, NOT the beneficiary). NO Tier-1 ciphertext, NO full names, NO nominee/bank data.
 //
 // ── Confirmed-only progress (AC4, load-bearing) ─────────────────────────────────────────────────────
-// `progress` carries `confirmedCount` (reconciliation-confirmed contributions — legitimately 0 today,
-// Epic 9's `contribution.confirmed` producer is unbuilt) and `rosterSize` (the pool roster N). There
+// `progress` carries `confirmedCount` (reconciliation-confirmed contributions — Story 9.4 shipped the
+// `contribution.confirmed` producer; Story 9.5 wired this card's count to the live read) and
+// `rosterSize` (the pool roster N). There
 // is DELIBERATELY NO attested/pending/yellow count field: yellow (Story 8.4) is intent, not confirmed
 // money, and must be STRUCTURALLY unable to reach the meter (epics.md:2912,2939-2941). Adding such a
 // field here is the one change this contract exists to forbid.
@@ -37,8 +38,8 @@ import { Iso8601Datetime } from '../_common/primitives.js';
 import { MyContributionStatus } from './upi-intent.js';
 
 /**
- * The confirmed-only progress meter data (AC4). `confirmedCount` is the count of
- * reconciliation-confirmed contributions for the pool (0 until Epic 9's producer lands);
+ * The confirmed-only progress meter data (AC4). `confirmedCount` is the count of LIVE (non-reversed)
+ * reconciliation-confirmed contributions for the pool (Story 9.4 producer, Story 9.5 reversal-aware);
  * `rosterSize` is the pool's latest-snapshot member count (the denominator N). Both non-negative
  * integers. NO yellow/attested/pending field exists — by design (the load-bearing invariant).
  */

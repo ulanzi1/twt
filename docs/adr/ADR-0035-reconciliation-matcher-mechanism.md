@@ -167,6 +167,31 @@ consumer now exists, so extraction of `ResilientCall` to a shared `@twt/*` util 
 ([[feedback_no_premature_package]] — real cross-package reuse now exists); the port keeps the seam wired
 until then.
 
+### Addendum (Story 9.5 — the reversal-CONSUMER semantics + the `held` state)
+
+Story 9.4 registered `reconciliation.confirmation-reversed` and proved the matcher never emits it; Story 9.5
+builds the first CONSUMER of it (Story 9.8 remains the producer). Two consumer-side refinements of the
+decision this ADR already owns (recorded here rather than in a new ADR — they are a read-side refinement, not
+a new decision):
+
+- **The per-confirmation event-id chain (not per-(member, pool)).** A reversal walks back EXACTLY the
+  `contribution.confirmed` event id its `reversedConfirmedEventId` names. A member is live-confirmed iff they
+  hold ≥1 confirmed event id NOT named by any reversal; if all their confirmations for a (member, pool) are
+  reversed they are `held`; a subsequent FRESH `contribution.confirmed` (new event id) re-greens them. This
+  keeps confirmation monotonic on the read side ("only ever moves forward except by an explicit compensating
+  event") and makes re-confirmation possible — a reversal must never permanently poison a re-confirmed member.
+  Collapsing to "any reversal for (member, pool) ⇒ held forever" would break re-green and is explicitly wrong.
+  One shared `hasLiveConfirmation` predicate (`packages/domain/src/contribution/read.ts`) is routed through by
+  every confirmed-reading surface (contributor list, Yogdaan Bahi, `getMemberAttestedContribution`, the 8.8
+  reminder-suppression `confirmed` set) — never a second derivation.
+- **Status precedence green ≻ held ≻ red ≻ yellow ≻ grey (Story 9.5 D4).** A LIVE confirmation outranks a
+  stale reversal (the re-confirmed member is green, not held). A reversal (`held`) outranks a mismatch
+  (`red`): a trustee-attested walk-back is a stronger, more deliberate signal than an auto-detected mismatch.
+  `held` is a STATUS tone (dignified/neutral — "held under review", never "reversed"/"failed"), NOT a fourth
+  `contribution.*` event type — so the Story 8.10 vocabulary fence stays green verbatim. The canonical-truth
+  invariant is made executable by the Story 9.5 fence `packages/domain/tests/contribution/canonical-financial-truth.test.ts`
+  (single-authority-constant scan + the live-DB reversal-consumer proof) and documented in architecture.md §3.6.
+
 ## Consequences
 
 - The green pill / contributor list / Yogdaan Bahi green arm now POPULATE from a real producer with zero read

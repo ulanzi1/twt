@@ -1,7 +1,7 @@
 // Member contribution-history read + pure status derivation — Story 8.6 (Task 1; AC1/AC2).
 //
 // The Yogdaan Bahi (contribution passbook) is a member's OWN self-view (FR-12A self-visibility): it
-// lists the member's own attested contributions and, per row, the honestly-derived four-state status.
+// lists the member's own attested contributions and, per row, the honestly-derived five-state status.
 // `listMemberContributionHistory` is the load-bearing read: "which contributions has THIS member
 // attested, and what is each one's status right now?" — every row derived from a
 // `contribution.utr-attested` event the member authored (Story 8.4). A transport-free PRIMITIVE: NO
@@ -27,13 +27,18 @@
 // `@twt/events` — the turbo cycle; the member/read.ts precedent).
 //
 // ── Status derivation: honest now, populates later with ZERO code changes (D3) ────────────────────────
-// `deriveContributionStatus` precedence (highest wins): green ≻ red ≻ yellow-while-open ≻ grey-when-closed.
-//   · green — a `contribution.confirmed` event exists for (member, pool). Epic 9's producer — EMPTY today.
-//   · red   — a `contribution.reconciliation-mismatch` event exists for (member, pool). Epic 9 — EMPTY today.
+// `deriveContributionStatus` precedence (highest wins, Story 9.5 D4): green ≻ held ≻ red ≻ yellow-while-open
+//   ≻ grey-when-closed.
+//   · green — a LIVE (non-reversed) `contribution.confirmed` exists for (member, pool). Story 9.4 producer.
+//   · held  — confirmations exist for (member, pool) but ALL are reversed by a
+//             `reconciliation.confirmation-reversed` (Story 9.4 D1 / Story 9.8 producer — EMPTY today). A
+//             trustee-walked-back confirmation; a subsequent fresh confirmation re-greens (the per-event-id
+//             chain, {@link hasLiveConfirmation}). Neutral/dignified copy ("Held under review"), never "failed".
+//   · red   — a `contribution.reconciliation-mismatch` event exists for (member, pool). Story 9.4 producer.
 //   · yellow— attested, while the alert is NOT closed ("told us they paid, still verifying").
 //   · grey  — the cycle closed with NO reconciliation verdict — a NEUTRAL "on record, unreconciled", NEVER a
 //             "you missed"/shame state (the dignified register, AC6). `alert.closed` is Story 8.9's exclusive
-//             emitter (backlog), so grey is UNREACHABLE today, exactly like green/red.
+//             emitter (backlog), so grey is UNREACHABLE today.
 // The green/red arms + `CONTRIBUTION_MISMATCH_EVENT_TYPE` are the FORWARD CONTRACT OF RECORD for Epic 9's
 // reconciliation producer (like read.ts's `CONFIRMED_*` constants). The confirmed/mismatch lookups are an
 // EXACT event-type + member+pool scope match — never a widened set a yellow event could satisfy.
@@ -42,12 +47,15 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { AlertId, MemberId, PariwarId, PoolId } from '../ids/index.js';
+import { RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE } from '../reconciliation/events.js';
 import { alerts, type AlertLifecycleState } from '../schema/alerts.js';
 import { eventsLog } from '../schema/events_log.js';
 import {
   CONFIRMED_EVENT_TYPE,
   CONFIRMED_PAYLOAD_MEMBER_KEY,
   CONFIRMED_PAYLOAD_POOL_KEY,
+  hasLiveConfirmation,
+  REVERSED_CONFIRMED_EVENT_ID_KEY,
 } from './read.js';
 import { CONTRIBUTION_UTR_ATTESTED_EVENT_TYPE } from './write.js';
 
@@ -66,8 +74,13 @@ import { CONTRIBUTION_UTR_ATTESTED_EVENT_TYPE } from './write.js';
  */
 export const CONTRIBUTION_MISMATCH_EVENT_TYPE = 'contribution.reconciliation-mismatch' as const;
 
-/** The four passbook status tones (AC2). Green/red are Epic-9-derived (empty today); grey needs Story 8.9. */
-export const CONTRIBUTION_STATUSES = ['yellow', 'green', 'red', 'grey'] as const;
+/**
+ * The FIVE passbook status tones (Story 9.5 AC4 added `held`). Green/red are Epic-9-derived; grey needs
+ * Story 8.9; `held` is the reversal state — a confirmation that was trustee-walked-back
+ * (`reconciliation.confirmation-reversed`, Story 9.4 D1 / Story 9.8 producer). The polished 5-state
+ * `<StatusPill>` DS component is Story 9.6; 9.5 only carries the tone through the derivation + the wire.
+ */
+export const CONTRIBUTION_STATUSES = ['yellow', 'green', 'red', 'grey', 'held'] as const;
 
 /** A contribution's honestly-derived status tone (AC2). Mirrors the contract's `ContributionStatus`. */
 export type ContributionStatus = (typeof CONTRIBUTION_STATUSES)[number];
@@ -84,23 +97,32 @@ export function isAlertClosedState(state: AlertLifecycleState): boolean {
 }
 
 /**
- * Derive a contribution's status tone (AC2) — PURE, DB-free, exhaustively unit-testable. Precedence
- * (highest wins): green ≻ red ≻ yellow-while-open ≻ grey-when-closed. `confirmed`/`mismatch` are the
- * results of the EXACT event-type + member+pool lookups (a yellow event can never set either true, so a
- * yellow/attested row can never render green/red). `alertClosed` is {@link isAlertClosedState} over the
- * alert's cached `current_state`. Today green/red/grey are all legitimately unreachable (Epic 9 + Story
- * 8.9 unbuilt) — the function ships complete so those states need NO code change when their producers land.
+ * Derive a contribution's status tone (AC2 / Story 9.5 AC4) — PURE, DB-free, exhaustively unit-testable.
+ * Precedence (highest wins, Story 9.5 D4): **green ≻ held ≻ red ≻ yellow-while-open ≻ grey-when-closed**.
+ *   · `confirmed` — the member holds a LIVE (non-reversed) `contribution.confirmed` for (member, pool),
+ *                   per the {@link hasLiveConfirmation} event-id chain. A live confirmation outranks a stale
+ *                   reversal (a re-confirmed member is green, not held — the monotonic re-confirm).
+ *   · `held`      — confirmations exist for (member, pool) but ALL are reversed
+ *                   (`reconciliation.confirmation-reversed`, Story 9.8 producer). A trustee-attested
+ *                   walk-back outranks an auto-detected mismatch (`red`): it is the more deliberate signal.
+ * `confirmed`/`held`/`mismatch` are the results of EXACT event-type + member+pool lookups (a yellow event
+ * can never set any of them, so a yellow/attested row can never render green/held/red). `alertClosed` is
+ * {@link isAlertClosedState} over the alert's cached `current_state`. `confirmed` and `held` are mutually
+ * exclusive by construction; the precedence is defensive if both ever arrive true.
  */
 export function deriveContributionStatus({
   confirmed,
+  held,
   mismatch,
   alertClosed,
 }: {
   readonly confirmed: boolean;
+  readonly held: boolean;
   readonly mismatch: boolean;
   readonly alertClosed: boolean;
 }): ContributionStatus {
   if (confirmed) return 'green';
+  if (held) return 'held';
   if (mismatch) return 'red';
   if (!alertClosed) return 'yellow';
   return 'grey';
@@ -182,21 +204,42 @@ export async function getMemberAttestedContribution(
   if (row === undefined || typeof row.poolId !== 'string' || row.poolId.length === 0) return null;
   if (typeof row.utr !== 'string' || row.utr.length === 0) return null;
 
-  // (2) The SAME confirmed/mismatch verdict check as the list read, scoped to this one pool.
+  // (2) The SAME confirmed/mismatch/reversal verdict check as the list read, scoped to this one pool.
+  //     The reversal type (Story 9.4 D1; 9.8 producer) rides the same batched read so a walked-back
+  //     confirmation resolves to `held` here identically to the list — one shared derivation (D2).
   const verdictRows = await db
-    .select({ eventType: eventsLog.eventType })
+    .select({
+      eventType: eventsLog.eventType,
+      eventId: eventsLog.eventId,
+      reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
+    })
     .from(eventsLog)
     .where(
       and(
         eq(eventsLog.pariwarId, pariwarId),
-        inArray(eventsLog.eventType, [CONFIRMED_EVENT_TYPE, CONTRIBUTION_MISMATCH_EVENT_TYPE]),
+        inArray(eventsLog.eventType, [
+          CONFIRMED_EVENT_TYPE,
+          CONTRIBUTION_MISMATCH_EVENT_TYPE,
+          RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
+        ]),
         sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY} = ${memberId}`,
         sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${row.poolId}`,
       ),
     )
     .limit(500);
-  const confirmed = verdictRows.some((v) => v.eventType === CONFIRMED_EVENT_TYPE);
-  const mismatch = verdictRows.some((v) => v.eventType === CONTRIBUTION_MISMATCH_EVENT_TYPE);
+  const confirmedEventIds: string[] = [];
+  const reversedConfirmedEventIds = new Set<string>();
+  let mismatch = false;
+  for (const v of verdictRows) {
+    if (v.eventType === CONFIRMED_EVENT_TYPE) confirmedEventIds.push(v.eventId);
+    else if (v.eventType === CONTRIBUTION_MISMATCH_EVENT_TYPE) mismatch = true;
+    else if (typeof v.reversedConfirmedEventId === 'string' && v.reversedConfirmedEventId.length > 0) {
+      reversedConfirmedEventIds.add(v.reversedConfirmedEventId);
+    }
+  }
+  // Live-confirmed iff ≥1 confirmation is not reversed; held iff confirmations exist but all reversed (AC3).
+  const confirmed = hasLiveConfirmation(confirmedEventIds, reversedConfirmedEventIds);
+  const held = confirmedEventIds.length > 0 && !confirmed;
 
   // (3) The alert's cached lifecycle state (grey/yellow boundary) — same rule as the list read: no
   //     projection row is treated as NOT closed (yellow), never grey without proof of closure.
@@ -206,7 +249,7 @@ export async function getMemberAttestedContribution(
     .where(and(eq(alerts.pariwarId, pariwarId), eq(alerts.alertId, row.alertId as AlertId)));
   const alertClosed = alertRow !== undefined && isAlertClosedState(alertRow.currentState);
 
-  const status = deriveContributionStatus({ confirmed, mismatch, alertClosed });
+  const status = deriveContributionStatus({ confirmed, held, mismatch, alertClosed });
   return {
     contributionId: row.contributionId,
     alertId: row.alertId as AlertId,
@@ -273,31 +316,51 @@ export async function listMemberContributionHistory(
   }
   if (raw.length === 0) return [];
 
-  // (2) The member's reconciliation VERDICTS (green/red), batched — the EXACT confirmed/mismatch event
-  //     types, scoped to THIS member (D1) + tenant. Build per-pool sets so a yellow event (a different
-  //     event type) can NEVER satisfy either. Empty today (Epic 9 unbuilt, D3).
-  const confirmedPoolIds = new Set<string>();
+  // (2) The member's reconciliation VERDICTS (green/red) + reversals, batched — the EXACT confirmed /
+  //     mismatch / reversal event types, scoped to THIS member (D1) + tenant. Build per-pool structures so
+  //     a yellow event (a different event type) can NEVER satisfy any of them. The reversal type (Story
+  //     9.4 D1; 9.8 producer) subtracts a walked-back confirmation by the per-event-id chain (AC3), so a
+  //     re-confirmed member re-greens and a fully-reversed one goes `held` — never permanently poisoned.
+  const confirmedEventIdsByPool = new Map<string, string[]>();
+  const reversedConfirmedEventIds = new Set<string>();
   const mismatchPoolIds = new Set<string>();
   const verdictRows = await db
     .select({
       eventType: eventsLog.eventType,
+      eventId: eventsLog.eventId,
       poolId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY}`,
+      reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
     })
     .from(eventsLog)
     .where(
       and(
         eq(eventsLog.pariwarId, pariwarId),
-        inArray(eventsLog.eventType, [CONFIRMED_EVENT_TYPE, CONTRIBUTION_MISMATCH_EVENT_TYPE]),
+        inArray(eventsLog.eventType, [
+          CONFIRMED_EVENT_TYPE,
+          CONTRIBUTION_MISMATCH_EVENT_TYPE,
+          RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
+        ]),
         sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY} = ${memberId}`,
       ),
     )
     // Same defensive bound as query (1) — a pathological/corrupt event log must not produce an unbounded
-    // verdict set. Empty today (Epic 9 unbuilt); the cap only matters once that producer ships.
+    // verdict set. The reversedConfirmedEventId is globally unique, so the reversal set needs no pool key.
     .limit(500);
   for (const v of verdictRows) {
+    if (v.eventType === RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE) {
+      if (typeof v.reversedConfirmedEventId === 'string' && v.reversedConfirmedEventId.length > 0) {
+        reversedConfirmedEventIds.add(v.reversedConfirmedEventId);
+      }
+      continue;
+    }
     if (typeof v.poolId !== 'string' || v.poolId.length === 0) continue;
-    if (v.eventType === CONFIRMED_EVENT_TYPE) confirmedPoolIds.add(v.poolId);
-    else if (v.eventType === CONTRIBUTION_MISMATCH_EVENT_TYPE) mismatchPoolIds.add(v.poolId);
+    if (v.eventType === CONFIRMED_EVENT_TYPE) {
+      const ids = confirmedEventIdsByPool.get(v.poolId);
+      if (ids) ids.push(v.eventId);
+      else confirmedEventIdsByPool.set(v.poolId, [v.eventId]);
+    } else if (v.eventType === CONTRIBUTION_MISMATCH_EVENT_TYPE) {
+      mismatchPoolIds.add(v.poolId);
+    }
   }
 
   // (3) The alerts' cached lifecycle states (for the grey/yellow boundary), batched over the distinct
@@ -317,8 +380,14 @@ export async function listMemberContributionHistory(
   return raw.map((r) => {
     const state = alertStateById.get(r.alertId);
     const alertClosed = state !== undefined && isAlertClosedState(state);
+    // Live-confirmed iff ≥1 of this pool's confirmations is not reversed; held iff confirmations exist but
+    // all reversed (AC3) — the SAME {@link hasLiveConfirmation} chain the contributor list uses.
+    const poolConfirmedEventIds = confirmedEventIdsByPool.get(r.poolId) ?? [];
+    const confirmed = hasLiveConfirmation(poolConfirmedEventIds, reversedConfirmedEventIds);
+    const held = poolConfirmedEventIds.length > 0 && !confirmed;
     const status = deriveContributionStatus({
-      confirmed: confirmedPoolIds.has(r.poolId),
+      confirmed,
+      held,
       mismatch: mismatchPoolIds.has(r.poolId),
       alertClosed,
     });

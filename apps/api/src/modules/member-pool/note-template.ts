@@ -89,6 +89,10 @@ const STATUS_INK: Record<ContributionNoteFacts['status'], string> = {
   yellow: color['status-pending'],
   red: color['status-mismatch'],
   grey: color['status-grey-takeover'],
+  // held (Story 9.5) — a trustee-walked-back confirmation renders in the neutral/subdued ink (dignified, not
+  // alarming — the tone discipline of [[project_yogdaan_status_derivation_convention]]); the polished 5-state
+  // visual system is Story 9.6.
+  held: color['status-grey-takeover'],
 };
 
 /** One labelled row of the artifact's fact table: Hindi label + English gloss + the value. */

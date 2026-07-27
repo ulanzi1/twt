@@ -1,10 +1,14 @@
-// Contribution-history status derivation — DB-free units (Story 8.6, Task 1; AC2).
+// Contribution-history status derivation — DB-free units (Story 8.6 Task 1; Story 9.5 Task 4, AC2/AC4).
 //
-// The pure four-state derivation, exhaustively: green ≻ red ≻ yellow-while-open ≻ grey-when-closed. The
-// load-bearing property is that a YELLOW/attested row (confirmed=false, mismatch=false) can NEVER render
-// green or red — green derives EXCLUSIVELY from a confirmed verdict, red from a mismatch verdict (the
-// structural guard behind the self-view-vs-public boundary, D1). Green/red/grey are all unreachable in
-// production today (Epic 9 + Story 8.9 unbuilt) — the function ships complete so they need no code change.
+// The pure FIVE-state derivation, exhaustively: green ≻ held ≻ red ≻ yellow-while-open ≻ grey-when-closed
+// (Story 9.5 D4). Two load-bearing properties:
+//   (1) a YELLOW/attested row (confirmed=false, held=false, mismatch=false) can NEVER render green / held /
+//       red — green/held derive EXCLUSIVELY from confirmed-and-reversal verdicts, red from a mismatch (the
+//       structural guard behind the self-view-vs-public boundary, D1);
+//   (2) the monotonic re-confirm: a LIVE confirmation (green) outranks a stale reversal (held), and a
+//       trustee-attested walk-back (held) outranks an auto-detected mismatch (red).
+// held is unreachable in production until Story 9.8 emits `reconciliation.confirmation-reversed`; the
+// function ships complete so it needs no code change when that producer lands.
 
 import { describe, expect, it } from 'vitest';
 
@@ -17,42 +21,54 @@ import {
 import { CONFIRMED_EVENT_TYPE } from '../../src/contribution/read.js';
 import { ALERT_LIFECYCLE_STATES } from '../../src/schema/alerts.js';
 
-describe('deriveContributionStatus — the four-state precedence (AC2)', () => {
-  it('green iff a confirmed verdict exists — even over a mismatch and a closed cycle (highest precedence)', () => {
-    expect(deriveContributionStatus({ confirmed: true, mismatch: false, alertClosed: false })).toBe('green');
-    expect(deriveContributionStatus({ confirmed: true, mismatch: true, alertClosed: true })).toBe('green');
+describe('deriveContributionStatus — the five-state precedence green ≻ held ≻ red ≻ yellow ≻ grey (AC2/AC4/D4)', () => {
+  it('green iff a LIVE confirmation exists — over held, mismatch, and a closed cycle (highest precedence)', () => {
+    expect(deriveContributionStatus({ confirmed: true, held: false, mismatch: false, alertClosed: false })).toBe('green');
+    expect(deriveContributionStatus({ confirmed: true, held: true, mismatch: true, alertClosed: true })).toBe('green');
   });
 
-  it('red iff a mismatch verdict exists and no confirmed — over open OR closed', () => {
-    expect(deriveContributionStatus({ confirmed: false, mismatch: true, alertClosed: false })).toBe('red');
-    expect(deriveContributionStatus({ confirmed: false, mismatch: true, alertClosed: true })).toBe('red');
+  it('held iff confirmations exist but all reversed (no live) — over red and a closed cycle (D4)', () => {
+    // A trustee-attested walk-back outranks an auto-detected mismatch; a re-confirm would flip this to green.
+    expect(deriveContributionStatus({ confirmed: false, held: true, mismatch: false, alertClosed: false })).toBe('held');
+    expect(deriveContributionStatus({ confirmed: false, held: true, mismatch: true, alertClosed: true })).toBe('held');
+  });
+
+  it('red iff a mismatch verdict exists and no confirmed/held — over open OR closed', () => {
+    expect(deriveContributionStatus({ confirmed: false, held: false, mismatch: true, alertClosed: false })).toBe('red');
+    expect(deriveContributionStatus({ confirmed: false, held: false, mismatch: true, alertClosed: true })).toBe('red');
   });
 
   it('yellow when no verdict and the alert is still open (attested, verifying)', () => {
-    expect(deriveContributionStatus({ confirmed: false, mismatch: false, alertClosed: false })).toBe('yellow');
+    expect(deriveContributionStatus({ confirmed: false, held: false, mismatch: false, alertClosed: false })).toBe('yellow');
   });
 
   it('grey when no verdict and the cycle has closed (on record, unreconciled — never a shame state)', () => {
-    expect(deriveContributionStatus({ confirmed: false, mismatch: false, alertClosed: true })).toBe('grey');
+    expect(deriveContributionStatus({ confirmed: false, held: false, mismatch: false, alertClosed: true })).toBe('grey');
   });
 
-  it('THE LOAD-BEARING GUARD: a yellow/attested row (no verdicts) can NEVER render green or red', () => {
-    // No confirmed + no mismatch → only yellow (open) or grey (closed) are reachable, whatever the alert state.
+  it('THE LOAD-BEARING GUARD: a yellow/attested row (no verdicts) can NEVER render green / held / red', () => {
+    // No confirmed + no held + no mismatch → only yellow (open) or grey (closed), whatever the alert state.
     for (const alertClosed of [true, false]) {
-      const status = deriveContributionStatus({ confirmed: false, mismatch: false, alertClosed });
+      const status = deriveContributionStatus({ confirmed: false, held: false, mismatch: false, alertClosed });
       expect(status).not.toBe('green');
+      expect(status).not.toBe('held');
       expect(status).not.toBe('red');
     }
   });
 
   it('every output is a member of the ContributionStatus union', () => {
     const outputs = [
-      deriveContributionStatus({ confirmed: true, mismatch: false, alertClosed: false }),
-      deriveContributionStatus({ confirmed: false, mismatch: true, alertClosed: false }),
-      deriveContributionStatus({ confirmed: false, mismatch: false, alertClosed: false }),
-      deriveContributionStatus({ confirmed: false, mismatch: false, alertClosed: true }),
+      deriveContributionStatus({ confirmed: true, held: false, mismatch: false, alertClosed: false }),
+      deriveContributionStatus({ confirmed: false, held: true, mismatch: false, alertClosed: false }),
+      deriveContributionStatus({ confirmed: false, held: false, mismatch: true, alertClosed: false }),
+      deriveContributionStatus({ confirmed: false, held: false, mismatch: false, alertClosed: false }),
+      deriveContributionStatus({ confirmed: false, held: false, mismatch: false, alertClosed: true }),
     ];
     for (const o of outputs) expect(CONTRIBUTION_STATUSES).toContain(o);
+  });
+
+  it('CONTRIBUTION_STATUSES carries exactly the five tones (held added by Story 9.5)', () => {
+    expect([...CONTRIBUTION_STATUSES].sort()).toEqual(['green', 'grey', 'held', 'red', 'yellow']);
   });
 });
 

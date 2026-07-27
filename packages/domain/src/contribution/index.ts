@@ -13,7 +13,7 @@ export * from './events.js';
 export * from './write.js';
 // Story 8.4 — the pure UPI Intent builder + the nominee-VPA resolver seam (returns absent today, D1).
 export * from './intent.js';
-// Story 8.6 — the member's OWN contribution-history read (Yogdaan Bahi self-view) + the pure four-state
+// Story 8.6 — the member's OWN contribution-history read (Yogdaan Bahi self-view) + the pure five-state
 // status derivation (green≻red≻yellow-open≻grey-closed). Member-scoped (D1); green/red are Epic 9's
 // forward contract (empty today). Reads `contribution.utr-attested` (D2) + the 8.1 alert projection.
 export * from './history.js';

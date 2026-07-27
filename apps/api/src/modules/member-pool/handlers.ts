@@ -172,7 +172,7 @@ export function createMemberPoolHandlers(deps: AppDeps) {
      * GET /api/v1/member/contribution-history — the Yogdaan Bahi's server-authoritative read (Story 8.6).
      * A member's OWN self-view (FR-12A): the member's attested contributions, newest-first, each fully
      * resolved server-side (date, deceased-family identity, pool letter/name/canonical, cycle ref,
-     * snapshotted amount, the honestly-derived four-state status, the Contribution-Note seam) + the
+     * snapshotted amount, the honestly-derived five-state status, the Contribution-Note seam) + the
      * running-tally `totalInr`. Member-session-gated + PII-shielded. Fail-soft: an unresolvable row is
      * OMITTED (never a blank), and a whole-read failure degrades to `{ rows: [], totalInr: 0 }` (the empty
      * passbook — the `active-contribution` fail-soft posture; never a 500).
@@ -461,11 +461,30 @@ async function resolveCard(
   const chosen = await resolveMemberLivePool(tx, request, ctx);
   if (chosen === null) return UNASSIGNED;
 
-  const { pool, committedAt, poolCount } = chosen;
+  const { pool, committedAt, poolCount, cycleId } = chosen;
 
   // (6) Days-remaining — the D5 SEAM (pure, leap-safe; see computeDaysRemaining). Server-authoritative
   //     — the client never re-derives the window.
   const daysRemaining = computeDaysRemaining(committedAt, now);
+
+  // (6a) The CONFIRMED-count for the progress meter (Story 9.5 Task 1a — AC2 audit fix). Sources the SAME
+  //      `listConfirmedContributorsForPool` the 8.3 contributor list uses (confirmed-only + reversal
+  //      backing-out, D2/AC3), so the card's `confirmedCount` and the contributor list can never disagree.
+  //      This was hardcoded `0` before Story 9.4 shipped the producer; without this the home-screen meter
+  //      would read "0 of N confirmed" forever even as real contributions confirm. Yellow never reaches
+  //      this count (the domain read hard-filters `contribution.confirmed` — epics.md:2912,2939-2941).
+  const confirmed = await contributionDomain.listConfirmedContributorsForPool(tx, {
+    pariwarId,
+    cycleId,
+    poolId: pool.poolId,
+  });
+  if (confirmed.length > pool.rosterSize) {
+    request.log.warn(
+      { poolId: pool.poolId, confirmedCount: confirmed.length, rosterSize: pool.rosterSize },
+      'active-contribution: confirmed count exceeds roster size — clamping',
+    );
+  }
+  const clampedConfirmedCount = Math.min(confirmed.length, pool.rosterSize);
 
   // (7)-(8) The per-pool IDENTITY — the deceased family name (PII-shielded first-name+last-initial, AC2 —
   //     NOT the nominee) + the letter code + the curated Mahabharata name (else null → letter-code fallback).
@@ -505,10 +524,14 @@ async function resolveCard(
     deceasedLastInitial: identity.deceasedLastInitial,
     fixedAmount: identity.fixedAmount,
     daysRemaining,
-    // (AC4) confirmed-only meter: numerator is `contribution.confirmed`-derived — legitimately 0 until
-    // Epic 9's producer lands (render `0 of N`). There is NO attested/pending field: yellow (Story 8.4)
-    // is intent, not confirmed money, and is STRUCTURALLY unable to reach the meter (epics.md:2912,2939-2941).
-    progress: { confirmedCount: 0, rosterSize: pool.rosterSize },
+    // (AC4) confirmed-only meter: numerator is `contribution.confirmed`-derived (live confirmations, minus
+    // any trustee-reversed ones — Story 9.5 Task 1a wired this to the real read). There is NO attested/
+    // pending field: yellow (Story 8.4) is intent, not confirmed money, and is STRUCTURALLY unable to reach
+    // the meter (epics.md:2912,2939-2941).
+    // Clamped to rosterSize (Review fix): the frozen-roster invariant means this should never fire, but a
+    // confirmed count exceeding the roster is an integrity anomaly worth logging rather than rendering
+    // a nonsensical "X of Y" with X>Y.
+    progress: { confirmedCount: clampedConfirmedCount, rosterSize: pool.rosterSize },
     upcomingAmountChange:
       upcoming === null ? null : { effectiveFrom: upcoming.effectiveFrom.toISOString(), newAmount: upcoming.fixedAmount },
     // (AC4) The member's OWN yellow-pill state — separate from the confirmed-only meter above.

@@ -3,7 +3,7 @@
 // The Yogdaan Bahi (contribution passbook) read DTO (Story 8.6, Task 3). The response shape for
 // `GET /api/v1/member/contribution-history` — the read seam that drives the `<ContributionTimeline>`
 // member-facing contribution passbook (UX-DR27). A member's OWN self-view (FR-12A self-visibility):
-// it lists the member's own attested contributions, each with an honestly-derived four-state status.
+// it lists the member's own attested contributions, each with an honestly-derived five-state status.
 // Presentation only — it reads event-derived state (the member's `contribution.utr-attested` claims +
 // Epic 9's reconciliation verdicts, unbuilt → green/red honestly empty today); it mutates nothing.
 //
@@ -30,15 +30,21 @@ import { z } from 'zod';
 import { Iso8601Datetime } from '../_common/primitives.js';
 
 /**
- * The four passbook status tones (AC2), value-aligned with @twt/domain's `ContributionStatus` union
- * (`deriveContributionStatus`). Re-declared here (contracts cannot import @twt/domain — the browser-bundle
- * rule); the domain is the derivation authority and the two share the same four members:
+ * The FIVE passbook status tones (AC2; Story 9.5 AC4 added `held`), value-aligned with @twt/domain's
+ * `ContributionStatus` union + `CONTRIBUTION_STATUSES` (`deriveContributionStatus`). Re-declared here
+ * (contracts cannot import @twt/domain — the browser-bundle rule, [[project_contracts_domain_bundle_boundary]]);
+ * the domain is the derivation authority and the two MUST stay in lockstep (the contracts lockstep-guard
+ * test asserts the value sets match). The five members:
  *   · `yellow` — attested; told-us-they-paid, still verifying (the only tone that occurs today).
- *   · `green`  — reconciliation-confirmed (`पुष्ट`). Epic 9's producer — legitimately empty today.
- *   · `red`    — reconciliation mismatch. Epic 9's producer — legitimately empty today.
+ *   · `green`  — reconciliation-confirmed (`पुष्ट`). Story 9.4 producer.
+ *   · `red`    — reconciliation mismatch. Story 9.4 producer.
  *   · `grey`   — on record, cycle closed with no verdict (a NEUTRAL "unreconciled", never a shame state).
+ *   · `held`   — a prior confirmation was trustee-walked-back (`reconciliation.confirmation-reversed`,
+ *                Story 9.4 D1 / Story 9.8 producer — legitimately empty until 9.8 emits). Dignified/neutral
+ *                ("held under review"), NEVER "reversed"/"failed"; a fresh confirmation re-greens it. The
+ *                polished 5-state `<StatusPill>` DS component is Story 9.6; this contract only carries the tone.
  */
-export const ContributionStatus = z.enum(['yellow', 'green', 'red', 'grey']);
+export const ContributionStatus = z.enum(['yellow', 'green', 'red', 'grey', 'held']);
 export type ContributionStatus = z.output<typeof ContributionStatus>;
 
 /**
@@ -54,7 +60,7 @@ export type ContributionStatus = z.output<typeof ContributionStatus>;
  *   · `cycleRef`               — the member-facing cycle reference (the cycle's freeze month, Gregorian).
  *                                 Letter codes repeat across cycles, so this disambiguates which cycle a row is.
  *   · `amountInr`              — the SNAPSHOTTED pool `fixedAmount` (whole INR positive integer).
- *   · `status`                 — the honestly-derived four-state tone (AC2).
+ *   · `status`                 — the honestly-derived five-state tone (AC2).
  *   · `noteAvailable`          — whether a Contribution Note PDF is generatable for this row yet (AC3/D4).
  *                                 The PDF generator is Story 8.7 (unbuilt) → `false` for every row today; the
  *                                 mobile link affordance still renders on every row (navigating to the reserved

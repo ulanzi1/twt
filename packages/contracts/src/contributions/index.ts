@@ -16,7 +16,7 @@ export * from './upi-intent.js';
 // the AC3 PII guard as a `.strict()` shape). Best-effort telemetry for the diagnostic failure coach.
 export * from './upi-failure.js';
 // Story 8.6 — the Yogdaan Bahi contribution-history READ model (a member's OWN self-view): rows with the
-// four-state `status` + PII-shielded deceased-family identity + the Contribution-Note seam. NO other-member
+// five-state `status` + PII-shielded deceased-family identity + the Contribution-Note seam. NO other-member
 // field, NO UTR/tr, NO nominee/bank data (the PII discipline as a `.strict()` shape + a no-extra-PII test).
 export * from './contribution-history.js';
 // Story 8.7 — the Yogdaan Pratigya (Contribution Note) PDF: the render-ready `ContributionNoteFacts`

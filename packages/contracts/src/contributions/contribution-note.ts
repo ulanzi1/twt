@@ -105,7 +105,7 @@ export const ContributionNoteFacts = z
   .object({
     /** The `contribution.utr-attested` event id — the Note's subject and its stable identity. */
     contributionId: z.string().min(1),
-    /** The honestly-derived four-state tone (D3(b)) — governs the status block, the UTR, the stamp. */
+    /** The honestly-derived five-state tone (D3(b)) — governs the status block, the UTR, the stamp. */
     status: ContributionStatus,
     /** The contribution instant (the attestation's `occurred_at`; Gregorian + Latin on the artifact). */
     attestedAt: Iso8601Datetime,

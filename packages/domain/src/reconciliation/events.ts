@@ -33,6 +33,7 @@ import { z } from 'zod';
 
 import { BankCode } from '../bank-statement/schema.js';
 import { ContributionMismatchReasonSchema } from '../contribution/events.js';
+import { ReconciliationReviewReasonCode } from './review-reason-codes.js';
 
 /** Who performed the upload / raised the fallback — the attribution ROLE (the actor id is the events_log
  *  column). `nominee` = Sunita's Ravi-mode session; `staff` = a District-Admin takeover / fallback operator.
@@ -176,6 +177,51 @@ export type ReconciliationSelfVerifyScreenshotUploadedPayload = z.infer<
   typeof ReconciliationSelfVerifyScreenshotUploadedPayloadSchema
 >;
 
+/**
+ * `reconciliation.contribution-rejected` payload (Story 9.8, Decision D1) — the trustee REJECT verdict: a
+ * reviewer determined an open reconciliation case (a red mismatch / self-verify / manual-transcription
+ * case) is invalid and could not be confirmed. Appended on the ALERT stream (Decision D2 — co-located
+ * with the `contribution.reconciliation-mismatch` verdict + the `reconciliation.confirmation-reversed`
+ * reversal it parallels).
+ *
+ * ── Why `reconciliation.*`, NOT `contribution.invalid` (Decision D1 — LOAD-BEARING) ──────────────────
+ * FR-50 / the epics AC say "reject → `contribution.invalid`". A `contribution.invalid` event type would
+ * be a FOURTH `contribution.*` literal and trip Story 8.10's exactly-three-types fence
+ * (`packages/domain/tests/contribution/no-ingest-path.test.ts`, revert-sanity proven). `invalid` is the
+ * OUTCOME word, not an event type — the event rides the `reconciliation.*` namespace (the 9.3 D6 / 9.7 D2
+ * precedent). `history.ts:69-73` already draws this line: FR-50's `invalid` is the human-triage REJECT
+ * verdict, distinct from the auto-detected red MISMATCH.
+ *
+ * ── What this event does (and does NOT) ──────────────────────────────────────────────────────────────
+ * It (1) marks the case CLOSED for the open-vs-resolved computation (the Story 9.8 queue read drops a
+ * case with a live reject marker), (2) carries the machine `reasonCode` for audit, (3) triggers the
+ * best-effort "member notified" push (FR-50). It changes NO derivation arm: the member's pill stays RED
+ * (red already conveys mismatch/invalid — there is no separate `invalid` arm in `deriveContributionStatus`
+ * and none is needed). It never confirms, never remaps, never un-confirms a prior confirmation.
+ *
+ *   · `poolId` / `memberId` / `alertId` — the scope the reject verdict is filed against (the same keys the
+ *       mismatch verdict + the self-verify upload carry, so the queue read joins them without a mismatch).
+ *   · `reasonCode`         — a bounded reject-family machine token (NON-PII; the review reason-code vocab).
+ *   · `attestedByActorIds` — the deciding trustee actor id(s) — ≥1, NON-PII controlled-staff attribution.
+ *   · `rejectedAt`         — the reject instant.
+ */
+export const ReconciliationContributionRejectedPayloadSchema = z
+  .object({
+    poolId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    /** The alert stream the rejected case rode (verdicts are alert-stream events, Decision D2). */
+    alertId: z.string().uuid(),
+    /** A bounded reject-family machine reason token (no free-text PII). */
+    reasonCode: ReconciliationReviewReasonCode,
+    /** The deciding trustee actor id(s) — ≥1, NON-PII controlled-staff attribution (à la the reversal). */
+    attestedByActorIds: z.array(z.string().min(1)).min(1),
+    rejectedAt: z.string().datetime(),
+  })
+  .strict();
+export type ReconciliationContributionRejectedPayload = z.infer<
+  typeof ReconciliationContributionRejectedPayloadSchema
+>;
+
 // ── The reconciliation-event vocabulary + the type→schema map (single source) ─────────────────────────
 
 export const RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE = 'reconciliation.statement-uploaded' as const;
@@ -187,12 +233,16 @@ export const RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE =
 /** Story 9.7 (Decision D2) — the member self-verify screenshot-upload evidence event (9.8 review-queue input). */
 export const RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE =
   'reconciliation.self-verify-screenshot-uploaded' as const;
+/** Story 9.8 (Decision D1) — the trustee REJECT verdict (NOT `contribution.invalid`; the case-closed marker). */
+export const RECONCILIATION_CONTRIBUTION_REJECTED_EVENT_TYPE =
+  'reconciliation.contribution-rejected' as const;
 
 export const RECONCILIATION_EVENT_TYPES = [
   RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE,
   RECONCILIATION_MANUAL_TRANSCRIPTION_REQUESTED_EVENT_TYPE,
   RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
   RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE,
+  RECONCILIATION_CONTRIBUTION_REJECTED_EVENT_TYPE,
 ] as const;
 
 /** The dotted `reconciliation.*` event-type literal union (Story 9.3 lands the first two). */
@@ -210,4 +260,5 @@ export const RECONCILIATION_EVENT_PAYLOAD_SCHEMAS = {
   [RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE]: ReconciliationConfirmationReversedPayloadSchema,
   [RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE]:
     ReconciliationSelfVerifyScreenshotUploadedPayloadSchema,
+  [RECONCILIATION_CONTRIBUTION_REJECTED_EVENT_TYPE]: ReconciliationContributionRejectedPayloadSchema,
 } as const satisfies Record<ReconciliationEventType, z.ZodTypeAny>;

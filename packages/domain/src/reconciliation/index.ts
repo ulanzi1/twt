@@ -9,6 +9,10 @@
 // UTR matcher + triage-queue reads land in this module later.
 
 export * from './events.js';
+// Story 9.8 (Task 2) — the reconciliation-review outcomes + reason codes + outcome↔reason compat map
+// (confirm/reject/recover/reverse). Plain z.enum (no pgEnum) — the reason code rides the event payload +
+// the audit context only, never a relational column (Decision D5). Mirrored in @twt/contracts.
+export * from './review-reason-codes.js';
 // Story 9.3 (Task 2) — the DB-scoped read the upload transport needs: the STAFF-path pool resolver
 // (resolveLivePoolByClaim).
 export * from './read.js';
@@ -30,3 +34,11 @@ export * from './matcher-write.js';
 // no verdict, remaps nothing, and triggers no matcher run. Kept out of matcher-write.ts so the 9.4
 // monotonic-invariant fence (matcher-write exports exactly the two verdict emitters) stays green.
 export * from './self-verify-write.js';
+// Story 9.8 (Task 3) — the cross-member review-queue READ (listOpenReconciliationCases) + the per-case
+// detail assembler (getReconciliationCaseDetail). The FIRST cross-member reconciliation read; deadline-
+// ordered, open-vs-resolved deduped via hasLiveConfirmation + the reject marker (D4/D5).
+export * from './reconciliation-review-read.js';
+// Story 9.8 (Task 5) — the trustee action WRITE primitives: the reject verdict + the confirmation reversal,
+// kept OUT of matcher-write.ts so the 9.4 monotonic-invariant fence (matcher-write exports exactly the two
+// forward verdict emitters) stays green. Confirm reuses appendConfirmedContribution (matcher-write, D2).
+export * from './reconciliation-review-write.js';

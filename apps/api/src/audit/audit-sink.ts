@@ -389,7 +389,26 @@ export type AuthAuditEventType =
   //   rejected  — a schedule/emergency attempt rejected by a guard (fail-closed AND audited).
   | 'admin_pool_fixed_amount.schedule'
   | 'admin_pool_fixed_amount.emergency'
-  | 'admin_pool_fixed_amount.rejected';
+  | 'admin_pool_fixed_amount.rejected'
+  // ── Reconciliation review queue surface (Story 9.8, FR-50 / Epic 9) ────────────
+  // The trustee ADJUDICATION surface (v1 actor = pariwar_admin-as-Trustee-Lite / finance_officer). Each
+  // action is step-up-gated + attributed (server-resolved display_name, fail-closed). Post-commit SINK
+  // lines (the durable records are the contribution.confirmed / reconciliation.contribution-rejected /
+  // reconciliation.confirmation-reversed events). Context is NON-PII: case_key + pool_id + member_id +
+  // reason_code — NEVER the rationale / UTR-in-the-clear (D-G).
+  //   read                 — an audited read of the queue / a case detail (the 6.10 audited-read precedent).
+  //   confirmed            — the trustee confirmed a case (contribution.confirmed; the member greens).
+  //   rejected             — the trustee rejected a case (reconciliation.contribution-rejected; case closed).
+  //   recovery_facilitated — facilitate-recovery: an audited action only, NO outcome event (D7 — the case
+  //     stays OPEN; the Story 7.6 no-silent-remap invariant).
+  //   confirmation_reversed — review-and-reverse (reconciliation.confirmation-reversed; green→held, D3).
+  //   action_rejected      — an action attempt rejected by a guard / step-up / display-name (fail-closed AND audited).
+  | 'admin_reconciliation.read'
+  | 'admin_reconciliation.confirmed'
+  | 'admin_reconciliation.rejected'
+  | 'admin_reconciliation.recovery_facilitated'
+  | 'admin_reconciliation.confirmation_reversed'
+  | 'admin_reconciliation.action_rejected';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

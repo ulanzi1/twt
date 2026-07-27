@@ -32,6 +32,7 @@ deliberately accepted.
 | member (opting in to WhatsApp notifications; sends a pre-filled "Send Hello" WhatsApp message to confirm) | Explicit, member-initiated consent provenance (AC4 — no inferred/passive consent for a new communication channel) | optional |
 | member (opting in to Telegram notifications; taps a t.me deep-link to /start the bot) | Explicit member-initiated consent for a new channel | optional |
 | member/nominee (claim-time dual bank-account entry — a SECOND full account, not just one) | Disbursement resilience (Epic 9 RBI per-payee-per-day-cap failover) | forced |
+| trustee / reconciliation reviewer (step-up OTP + reason-code on every confirm/reject/facilitate-recovery/reverse) | Canonical financial truth (`contribution.confirmed`) + reconciliation integrity (no silent remap) | forced |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -827,6 +828,27 @@ baseline is unchanged**: every new/modified file lands in the authenticated mobi
 (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op),
 `apps/api`/`packages/*` (not page-weight-gated build targets); `apps/public` is **not**
 touched at all. Do NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
+
+**Story 9.8 disposition (NEW row — the trustee reconciliation-review decision gate):** the
+reconciliation review queue (`apps/admin/src/routes/ReconciliationReviewRoute.tsx` +
+`apps/api/src/modules/reconciliation-review/*`) imposes **deliberate forced friction on the
+TRUSTEE / reconciliation reviewer**: every confirm / reject / facilitate-recovery / reverse
+requires a **step-up OTP** (bound to its own action context — an elevation for confirm never
+satisfies reject) **plus a structured reason-code** (bounded machine tokens, rationale
+required on `other` / reject / reverse). This protects the two load-bearing invariants —
+**canonical financial truth** (`contribution.confirmed` stays the sole green authority; the
+manual confirm names the reconciled deposit, so green = confirmed money, Story 9.5) and
+**reconciliation integrity** (facilitate-recovery is outcome-inert — no silent remap, Story
+7.6) — so it is declared as the new `forced` row above (distinct from row 29's over-payment
+_judgment_: this is the per-case adjudication step-up gate). The friction earns its place: it
+is the deliberate speed-bump before an irreversible-feeling financial verdict, mirroring the
+6.11 verifier-decision + R9 step-up governance posture. **The page-weight baseline is
+unchanged** — this is a **Tier-2 admin surface** (`apps/admin`, not a page-weight-gated build
+target) + `apps/api`/`packages/*`; `apps/public`/`apps/mobile` are **not** touched. Do NOT
+ratchet (`[[project_friction_budget_baseline_ratchet]]`). **PII discipline:** no PII in the
+event payloads (ids + machine reason-code + attesting actor ids + a timestamp), the audit
+context (case_key + pool_id + member_id + reason_code — never rationale/UTR-in-the-clear), or
+the object keys.
 
 ## How to declare (attribution-on-change — AC-4)
 

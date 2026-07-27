@@ -221,7 +221,18 @@ export function permissionKey(value: string): PermissionKey {
 // Trustee-Lite; direct `state_trustee` gating DEFERRED to the Epic-3 geo-tree resolver (the 6.13/6.14
 // Trustee-Lite precedent — a `state`-ceiling grant cannot satisfy a pariwar-dimension check pre-Epic-3). NO
 // inert state_trustee grant is seeded. A DELIBERATE deferral, documented so it never reads as an oversight.
-export const PERMISSION_CATALOG_VERSION = 21 as const;
+// Bumped 21 → 22 at Story 9.8 (added ONE key for the reconciliation review queue — the trustee
+// ADJUDICATION surface): `reconciliation.review` — the READ + four action WRITEs (confirm/reject/
+// facilitate-recovery/review-and-reverse) gate. Gates `GET/POST …/admin/reconciliation-review/*`. Checked
+// at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze / claim.r9_vote pariwar-wide-key
+// precedent; a reconciliation review queue is PARIWAR-WIDE, not district-derived — unlike the 6.10 verifier
+// console, there is NO server-derived district). Granted to `pariwar_admin` (Trustee-Lite) + `super_admin`
+// (auto-derived) + `finance_officer` (the FR-50 "designated reconciliation reviewer"). Direct
+// `state_trustee` authorization is DEFERRED to the Epic-3 geo-tree resolver (a `state`-ceiling grant cannot
+// satisfy a pariwar-dimension check pre-Epic-3; the 6.13/6.14 Trustee-Lite precedent). NO inert
+// state_trustee grant is seeded. A DELIBERATE deferral, documented so it never reads as an oversight. Each
+// action is ADDITIONALLY step-up-gated at the route (distinct action contexts) — a route concern, not a key.
+export const PERMISSION_CATALOG_VERSION = 22 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -372,6 +383,14 @@ export const SEED_PERMISSION_KEYS = [
   // equivalent to R9 WITHOUT the R9 voting lifecycle). Also `dimension: 'pariwar'`. Granted to `pariwar_admin`
   // (+ super_admin). Direct state_trustee gating deferred to Epic 3 (Trustee-Lite; see the version-bump note).
   'pool.fixed_amount_emergency',
+  // Story 9.8 (FR-50) — the reconciliation review-queue READ + four action WRITEs (confirm/reject/
+  // facilitate-recovery/review-and-reverse) gate. Gates GET/POST …/admin/reconciliation-review/* (the queue,
+  // the case detail, and the four action routes). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId
+  // — the cycle.freeze / claim.r9_vote pariwar-wide-key precedent; the review queue is Pariwar-wide, NOT
+  // district-derived). Granted to `pariwar_admin` (Trustee-Lite) + `finance_officer` (the "designated
+  // reconciliation reviewer") + super_admin (auto-derived). Direct `state_trustee` gating deferred to Epic 3
+  // (Trustee-Lite; see the version-bump note). Each action is ADDITIONALLY step-up-gated (a route concern).
+  'reconciliation.review',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

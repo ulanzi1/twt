@@ -454,4 +454,16 @@ export const EVENT_TYPE_REGISTRY = {
       'A member uploaded a payment screenshot from the Story 9.7 <SelfVerifySurface> recovery path. On the ALERT stream (Decision D2); payload poolId + memberId + alertId + objectKey + mismatchReason (nullable — a "Trouble with UTR?" fallback has no live mismatch) + contentType + uploadedAt. PURE EVIDENCE INTAKE (AC4): the Story 9.8 review-queue input; it changes no reconciliation outcome (no auto-confirm, no remap, no matcher re-run). The member stays red/mismatch until the 9.4 matcher or the 9.8 trustee confirms.',
     schema: reconciliation.ReconciliationSelfVerifyScreenshotUploadedPayloadSchema,
   },
+  // ── Story 9.8 (Decision D1) — the trustee REJECT verdict ─────────────────────────────────────────────
+  // The human-triage reject outcome, appended on the ALERT stream (Decision D2). A NEW reconciliation.*
+  // type DELIBERATELY (NOT contribution.invalid): a fourth contribution.* type would trip Story 8.10's
+  // exactly-three-types fence (the 9.3 D6 / 9.7 D2 precedent). `invalid` is the outcome word, not an event
+  // type. Serves as the case-CLOSED marker for the 9.8 open-vs-resolved queue read + the member-notify
+  // trigger; changes no derivation arm (the member stays red — red already conveys mismatch/invalid).
+  'reconciliation.contribution-rejected': {
+    type: 'reconciliation.contribution-rejected',
+    description:
+      'The trustee REJECT verdict (Story 9.8) — a reviewer determined an open reconciliation case is invalid and could not be confirmed. On the ALERT stream (Decision D2); payload poolId + memberId + alertId + reasonCode (a bounded reject-family machine token) + attestedByActorIds (≥1 trustee attestation) + rejectedAt. The case-closed marker for the review queue + the FR-50 member-notify trigger. Member stays red (no new derivation arm). NOT contribution.invalid — off Story 8.10\'s contribution.* fence (Decision D1).',
+    schema: reconciliation.ReconciliationContributionRejectedPayloadSchema,
+  },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

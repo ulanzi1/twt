@@ -14,3 +14,7 @@ export * from './statement-storage.js';
 // `StatementScanner` virus-scan seam (no new scanner port). The `SelfVerifyScreenshotStorage` adapters
 // live in `@twt/platform-adapters`.
 export * from './self-verify-screenshot-storage.js';
+// Story 9.8 — the reconciliation review-queue transport: outcome/reason-code enums + compat map (mirrored
+// value-aligned from @twt/domain, kept in lockstep by reconciliation-review.test.ts) + the queue/case
+// read responses + the four action requests (confirm/reject/recover/reverse).
+export * from './reconciliation-review.js';

@@ -51,9 +51,9 @@ describe('permissionKey smart constructor', () => {
 
 describe('PERMISSION_CATALOG', () => {
   it('is versioned and seeded with exactly the grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(21); // Story 7.5 bump +2 (pool.fixed_amount_set/…_emergency; 19 at 6.16, 16 at 6.14, 15 at 6.13, 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+    expect(PERMISSION_CATALOG_VERSION).toBe(22); // Story 9.8 bump +1 (reconciliation.review; 21 at 7.5 +2 pool.fixed_amount_set/…_emergency, 19 at 6.16, 16 at 6.14, 15 at 6.13, 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(30);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(31);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -70,6 +70,10 @@ describe('PERMISSION_CATALOG', () => {
   it('includes the Story 7.5 fixed-amount WRITE keys (pool.fixed_amount_set, pool.fixed_amount_emergency)', () => {
     expect(isCatalogKey('pool.fixed_amount_set')).toBe(true);
     expect(isCatalogKey('pool.fixed_amount_emergency')).toBe(true);
+  });
+
+  it('includes the Story 9.8 reconciliation review-queue key (reconciliation.review)', () => {
+    expect(isCatalogKey('reconciliation.review')).toBe(true);
   });
 
   it('includes the Story 2.6 T&C keys (tc.publish, tc.approve)', () => {

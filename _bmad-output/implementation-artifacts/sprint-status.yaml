@@ -1,4 +1,76 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-27 (story 9-8 review -> done via bmad-code-review. Adversarial review (Blind Hunter +
+#   Edge Case Hunter + Acceptance Auditor) surfaced 16 findings; 15 PATCHED in this pass, 1 deferred (below).
+#   Patched: postReverse/postConfirm cross-case id validation gaps (reversed_confirmed_event_id +
+#   bank_statement_entry_id now checked against the loaded case); a cross-member data leak on pool-level
+#   cases (belongsToMember no longer folds another member's mismatch/screenshot/confirmed/rejected events
+#   when memberId is null — also fixes a false confirmed/rejected status on takeover/transcription cases);
+#   missing case-status guards before confirm/reject/recover(open)/reverse(confirmed); the pool-bound-
+#   payment-invariant gate's SCAN_DIRS extended to the new reconciliation-review surface (was vacuous-green,
+#   [[feedback_gate_scope_semantic_coverage]]); a fabricated new Date(0) raised_at sentinel replaced with a
+#   real nullable wire field; precondition-throw paths now audited (admin_reconciliation.action_rejected)
+#   before throwing; the queue truncated flag now also reflects the upstream alerts-query .limit(500) cap
+#   (not just the display-limit clamp); isReasonCodeValidForOutcome now actually called handler-side
+#   (defense-in-depth, matching its own docstring); dead actorDisplay:'' read-path audit param removed;
+#   admin <CaseActions> now keyed on case_key (stale bank-entry-id/rationale no longer survives a case
+#   switch); requestStepUp.mutate onError added; inline rationale-required validation added; the
+#   useReconciliationCase caseKey-as-string cast replaced with a runtime-narrowed guard; the AC5
+#   outcome-inert test's fragile indexOf handler-body extraction replaced with brace-balanced parsing.
+#   Deferred (decision-needed, investigated mid-triage): actor_display stays a v1 HTTP-response-only
+#   snapshot for reject/reverse — the cited pool-fixed-amount precedent persists attestedDisplay to a
+#   DEDICATED table (poolFixedAmountEmergencyAttestations), not an event payload; adding it to the
+#   reconciliation.* event payloads was tried then reverted (would leak a display name into events_log).
+#   Re-trigger: a future story needing a durable attributed-decision record should design a dedicated
+#   attestations table, not grow the event payload. Full verification: pnpm turbo run typecheck/lint/test
+#   green across all 40 packages (37 test suites incl. live-DB :5433 integration, 658+ domain integration
+#   tests); pool-bound-payment-invariant + domain-accessor-invariants gates both green. See the story
+#   file's Review Findings section + deferred-work.md for the complete record.)
+# last_updated: 2026-07-27 (story 9-8 in-progress -> review via bmad-dev-story [Opus 4.8]. Reconciliation
+#   review queue LANDED: reconciliation.contribution-rejected event (D1, string BigDev-confirmed) + reason-code
+#   vocab (domain z.enum + contracts mirror — NO pgEnum/migration: reason code rides the JSONB payload+audit
+#   only, the sibling ReconciliationActorRole precedent); the cross-member deadline-ordered events_log queue
+#   read + case-detail assembler (D4/D5 — bounded reconciling-stream scan, NO projection; member cases MERGE
+#   mismatch+self-verify per (pool,member); per-logical-case dedup closes the 9.3+9.7 duplicate-upload
+#   re-triggers); reject+reversal domain writers (outside matcher-write so the 9.4 monotonic fence stays
+#   green); reconciliation.review RBAC key (catalog 21->22, D6; pariwar_admin+finance_officer+super_admin,
+#   state_trustee deferred to Epic 3 — NO seed migration, grants are code-resolved via defaultRoleBundles);
+#   reconciliation-review API module (read + 4 step-up-gated actions, distinct contexts; confirm names the
+#   reconciled deposit = confirmed-money invariant; recover outcome-inert D7); best-effort member-notify seam
+#   (D9, log-only until providers wired). D3 review-and-reverse IN scope (green->held->re-green proven
+#   live-DB). Admin surface (route+hooks+client, queue+case panel+4-action step-up loop). ci:local GREEN (all
+#   27 jobs incl. 8.10 fence + pool-bound-payment + PII-scrape + friction-budget + i18n + all state invariants
+#   + integration-tests + lint/typecheck). Four reserved seams CONSUMED (9.1 takeover, 9.3 transcription, 9.7
+#   screenshot, 9.5 reversal-producer). Deferred (recorded w/ re-triggers): in_recovery flag, notify provider
+#   dispatch, D5 index, API integration harness, WCAG-AA Hindi admin labels. Story file has the full record.)
+# last_updated: 2026-07-27 (story 9-8 backlog -> ready-for-dev via bmad-create-story. Reconciliation Review
+#   Queue — Ordered by Alert-Deadline Proximity [SURFACE], the trustee ADJUDICATION surface + the first
+#   CROSS-MEMBER queue read + the PRODUCER that closes four reserved seams (9.1 takeover derivation, 9.3
+#   manual_transcription, 9.7 self-verify-screenshot, 9.5 reversal). THREE parallel research agents mapped the
+#   substrate (event/reconciliation vocab + 8.10 fence; admin/auth/RBAC/queue precedents; case-card data +
+#   the cross-member read crux). KEY FINDINGS baked into ACs/Decisions: (D1, LOAD-BEARING) the epics/FR-50
+#   "reject -> contribution.invalid" WOULD TRIP the shipped Story 8.10 no-ingest fence (exactly-three
+#   contribution.* types, source-scan + revert-sanity proven) — reject must ride a NEW reconciliation.*
+#   event ('invalid' is the outcome word, not a contribution.* type; the 9.3 D6 namespace precedent + the
+#   history.ts:69-73 invalid-vs-mismatch distinction); the member stays red (no new derivation arm). (D2)
+#   confirm reuses the EXISTING appendConfirmedContribution emitter as a new SECOND caller (the ONLY manual
+#   confirm path; zero 9.5-read changes). (D3, flagged for BigDev) the epics AC lists only confirm/reject/
+#   facilitate, but the substrate names 9.8 as the reversal PRODUCER in >=4 shipped places (reconciliation/
+#   events.ts:116-117, history.ts:34-36, the 9.5 story, deferred-work "no held row until 9.8's reversal
+#   producer ships") — RECOMMEND including review-and-reverse (reconciliation.confirmation-reversed -> held)
+#   as a 4th action, else the held state stays permanently unreachable. (D4) alert_deadline_proximity has NO
+#   persisted field — derive per-case from resolveAlertLiveWindow + the calendar-aware reconciliationTail-
+#   Deadline, in-memory, ordered ascending. (D5, THE CRUX) NO cross-member reconciliation read exists (every
+#   read is single alertId/cycleId/memberId; no projection table) — build a bounded pariwar-scoped events_log
+#   scan across alert AND pool streams, deduped open-vs-resolved via the existing hasLiveConfirmation chain,
+#   bounded to reconciling cycles; a targeted (pariwar_id,event_type) index only if 4L perf demands, projection
+#   deferred. (D6) new reconciliation.review permission key (catalog 21->22), dimension:'pariwar', seed
+#   pariwar_admin+super_admin+finance_officer, state_trustee deferred to Epic 3 (asymmetric geo containment,
+#   the 6.13/6.14 precedent). (D7) facilitate-recovery emits NO outcome event (Story 7.6 invariant; pool-
+#   bound-payment CI gate = the teeth) — audited action + Epic-10 helpdesk routing seam, case stays OPEN.
+#   Each action step-up-OTP-gated (distinct action contexts) + reason-code + attributed NON-PII audit
+#   (display-name fail-closed), mirroring the 6.11 verification-decision + FixedAmountPage step-up loop.
+#   8.10 fence + pool-bound-payment gate stay GREEN verbatim. 8 tasks AC-mapped (AC1-AC7). epic-9 in-progress
+#   (9.1-9.7 done). Story file: 9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity.md.)
 # last_updated: 2026-07-27 (story 9-7 review -> done via bmad-code-review. 4-layer review (Blind Hunter x2,
 #   Edge Case Hunter, Acceptance Auditor) vs. baseline 925874c: 1 decision-needed (speculative dead
 #   expected_paise/actual_paise notify-trigger plumbing with zero producer — BigDev: removed, alert.ts's own
@@ -1323,7 +1395,7 @@ development_status:
   9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: done
   9-6-status-pill-5-state-design-system-component: done
   9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: done
-  9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: backlog
+  9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: done
   9-9-dual-nominee-bank-accounts-rbi-upi-limit-workaround: backlog
   9-10-4-hour-retry-reminders: backlog
   9-11-over-payment-facilitated-recovery: backlog

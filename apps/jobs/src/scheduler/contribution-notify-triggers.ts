@@ -35,10 +35,12 @@ import {
   CONTRIBUTION_CONFIRMED_TEMPLATE_KEYS,
   CONTRIBUTION_LOOP_I18N_NAMESPACE,
   CONTRIBUTION_LOOP_TEMPLATE_KEYS,
+  CONTRIBUTION_MISMATCH_TEMPLATE_KEYS,
   CYCLE_OPEN_TEMPLATE_KEYS,
   CYCLE_WINDOW_DAYS,
   DEADLINE_REMINDER_SEND_DAYS,
   buildContributionConfirmedPayloadData,
+  buildContributionMismatchPayloadData,
   buildCycleOpenPayloadData,
   buildDeadlineReminderPayloadData,
   computeDaysRemaining,
@@ -142,6 +144,17 @@ export interface ContributionConfirmedNotifyPayload {
   readonly memberId: string;
   readonly amountPaise: number;
   readonly periodLabel: string;
+}
+
+/** CONTRIBUTION_NOTIFY_MISMATCH payload (Story 9.7, FR-30/FR-32) — the matcher's mismatch-branch seam. NON-PII:
+ *  ids + the machine reason-code. NEVER a UTR / name / free text. No amount-comparison fields — the
+ *  `contribution.reconciliation-mismatch` verdict never carries one (`wrong_pool` has no amounts at all). */
+export interface ContributionMismatchNotifyPayload {
+  readonly alertId: string;
+  readonly poolId: string;
+  readonly memberId: string;
+  /** The machine reason-code (`wrong_pool` / `amount_mismatch` / …) — mapped to dignified copy, never rendered raw. */
+  readonly reason: string;
 }
 
 /** Result of one child run (stored in the pg-boss job `output`). NON-PII — counts + channel tokens. */
@@ -329,6 +342,38 @@ export function buildContributionConfirmedAlert(input: {
   });
 }
 
+/**
+ * Build the contribution-MISMATCH notification (Story 9.7, FR-30/FR-32 "member notified"). Resolves the
+ * DIGNIFIED, locale-correct body from the machine reason-code (never the raw enum — the tone register, Story
+ * 2.2), populates the reserved `contribution_mismatch` alert (`time_critical: false`), and lets
+ * `deepLinkTargetForAlert` map it to `contributions/:pool_id`. Never alarming: "we couldn't match your
+ * payment yet — here's how to fix it".
+ */
+export function buildContributionMismatchAlert(input: {
+  readonly alertId: string;
+  readonly pariwarId: string;
+  readonly memberId: string;
+  readonly poolId: string;
+  readonly reason: string;
+  readonly locale: Locale;
+  readonly now: Date;
+}): Alert {
+  const bodyKey =
+    input.reason === 'wrong_pool'
+      ? CONTRIBUTION_MISMATCH_TEMPLATE_KEYS.wrong_pool
+      : input.reason === 'amount_mismatch'
+        ? CONTRIBUTION_MISMATCH_TEMPLATE_KEYS.amount_mismatch
+        : CONTRIBUTION_MISMATCH_TEMPLATE_KEYS.generic;
+  return Alert.parse({
+    ...envelope({ ...input, timeCritical: false }),
+    alert_category: 'contribution_mismatch',
+    payload_data: buildContributionMismatchPayloadData({
+      poolId: input.poolId,
+      body: t(bodyKey, undefined, { locale: input.locale, ...NS }),
+    }),
+  });
+}
+
 // ── Enqueue seams ───────────────────────────────────────────────────────────────────────────────────
 
 /** The envelope context every contribution-notify enqueue carries. */
@@ -381,6 +426,35 @@ export async function enqueueContributionConfirmedNotification(
       // uses the identical "throw when undelivered so pg-boss retries" pattern, and without an explicit
       // policy pg-boss defaults to NO retry, silently dropping a failed confirmed-notify send forever
       // (AC3 deliberately has no recovery sweep to heal it).
+      retryLimit: CHILD_RETRY_LIMIT,
+      retryDelay: CHILD_RETRY_DELAY_SECONDS,
+      retryBackoff: true,
+    },
+  );
+}
+
+/**
+ * Enqueue the contribution-MISMATCH notification (Story 9.7, FR-30/FR-32) — **the call the Story 9.4 matcher
+ * worker makes POST-COMMIT, best-effort, when it emits `contribution.reconciliation-mismatch`**. Exported
+ * from the `@twt/jobs` barrel so the matcher wires it without reaching into this module's internals
+ * (the 8.8 confirmed-seam export precedent).
+ *
+ * Like the confirmed seam there is DELIBERATELY no cron and no recovery sweep behind this queue: the
+ * matcher's own 4h recovery sweep re-runs the mismatch path, so a dropped notify heals on the next tick.
+ * singletonKey includes the REASON so a NEW reason on a later verdict (wrong_pool → amount_mismatch)
+ * re-notifies instead of collapsing into the stale prior send (mirrors the matcher's (pool,member,reason)
+ * dedup). An explicit retry policy — pg-boss defaults to NO retry, which would silently drop a failed send.
+ */
+export async function enqueueContributionMismatchNotification(
+  boss: Pick<QueueClient, 'send'>,
+  ctx: NotifyEnqueueContext,
+  payload: ContributionMismatchNotifyPayload,
+): Promise<void> {
+  await boss.send(
+    QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH,
+    { ...ctx, payload } satisfies JobEnvelope<ContributionMismatchNotifyPayload>,
+    {
+      singletonKey: `${payload.alertId}:${payload.memberId}:mismatch:${payload.reason}`,
       retryLimit: CHILD_RETRY_LIMIT,
       retryDelay: CHILD_RETRY_DELAY_SECONDS,
       retryBackoff: true,
@@ -984,6 +1058,64 @@ export async function runContributionConfirmedNotify(
   return { alertId: p.alertId, memberId: p.memberId, delivered: true, alreadySent: false };
 }
 
+/**
+ * The CONTRIBUTION_NOTIFY_MISMATCH worker (Story 9.7, FR-30/FR-32). Builds the `contribution_mismatch` alert
+ * (`time_critical: false`) and runs the SAME live fan-out as the confirmed notify. Idempotent per
+ * `(alert_id, member_id, 'mismatch:<reason>')` — a re-flag with a NEW reason re-notifies; a redelivery of
+ * the same reason does not.
+ *
+ * The deep-link consequence: `deepLinkTargetForAlert` maps `contribution_mismatch` to `contributions/:pool_id`
+ * (deep-link.ts:93-98), so the push lands on the member's own contribution surface (which routes to the
+ * `<SelfVerifySurface>` when the pill is red) — no contracts change needed and none made.
+ */
+export async function runContributionMismatchNotify(
+  deps: ContributionNotifyTriggerDeps,
+  envelopeIn: JobEnvelope<ContributionMismatchNotifyPayload>,
+): Promise<{ alertId: string; memberId: string; delivered: boolean; alreadySent: boolean }> {
+  const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
+  const { pariwarId } = envelopeIn;
+  const p = envelopeIn.payload;
+  if (!pariwarId) {
+    alarm(`[jobs] contribution-mismatch-notify: missing pariwarId for alert ${p.alertId}`);
+    throw new Error(`[jobs] contribution-mismatch-notify: missing pariwarId for alert ${p.alertId}`);
+  }
+
+  const now = deps.now?.() ?? new Date();
+  const locale = deps.locale ?? DEFAULT_LOCALE;
+  const store = idempotency.createKeyedStore(deps.pool);
+  const ttl = deps.memberIdempotencyTtlSeconds ?? DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS;
+  const key = memberKey(p.alertId, p.memberId, `mismatch:${p.reason}`);
+
+  if ((await store.claim(key, ttl)) !== 'acquired') {
+    return { alertId: p.alertId, memberId: p.memberId, delivered: false, alreadySent: true };
+  }
+
+  const alert = buildContributionMismatchAlert({
+    alertId: p.alertId,
+    pariwarId,
+    memberId: p.memberId,
+    poolId: p.poolId,
+    reason: p.reason,
+    locale,
+    now,
+  });
+
+  const { results, undelivered } = await fanOutAlertToMembers(deps, () => alert, [p.memberId], pariwarId, now);
+
+  if (undelivered.length > 0) {
+    await store.release(key).catch((err: unknown) => {
+      alarm(`[jobs] contribution-mismatch-notify: failed to release the member claim — ${String(err)}`);
+    });
+    throw new Error(
+      `[jobs] contribution-mismatch-notify: undelivered for alert ${p.alertId} — throwing so pg-boss retries`,
+    );
+  }
+  await store.recordResult(key, nonPiiRecord(results[0])).catch((err: unknown) => {
+    alarm(`[jobs] contribution-mismatch-notify: failed to record the member result — ${String(err)}`);
+  });
+  return { alertId: p.alertId, memberId: p.memberId, delivered: true, alreadySent: false };
+}
+
 // ── Registration ────────────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -1040,6 +1172,19 @@ export async function registerContributionNotifyWorkers(
           deps,
           job.data as JobEnvelope<ContributionConfirmedNotifyPayload>,
         ),
+      );
+    }
+    return { processed: results.length, results };
+  });
+
+  // The Story 9.7 mismatch seam: a queue + a worker, with NO cron and NO recovery sweep (FR-30/FR-32).
+  // The Story 9.4 matcher's own 4h recovery sweep re-runs the mismatch path, so a dropped notify heals.
+  await boss.createQueue(QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH);
+  await boss.work(QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH, async (jobs: Job[]) => {
+    const results = [];
+    for (const job of jobs) {
+      results.push(
+        await runContributionMismatchNotify(deps, job.data as JobEnvelope<ContributionMismatchNotifyPayload>),
       );
     }
     return { processed: results.length, results };

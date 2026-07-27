@@ -1,3 +1,4 @@
+import { ScrollView } from 'react-native'
 import { YStack } from 'tamagui'
 
 import { ActiveContributionCard } from 'components/active-contribution/ActiveContributionCard'
@@ -37,38 +38,46 @@ import { YogdaanBahiEntry } from 'components/yogdaan-bahi/YogdaanBahiEntry'
 // stack eventually owns this surface (AC3 forward-compat).
 export default function YogdaanTab() {
   return (
-    <YStack flex={1}>
-      {/* Story 8.2 — the My Pool card, TOPMOST. Self-suppresses unless the member is active + assigned
-          to a pool whose cycle alert is live. The Epic-8 home anchor of the 90-second contribution loop. */}
-      <ActiveContributionCard />
-      {/* Story 8.3 — the "View contributors" affordance (just below the card, NOT inside it — D8). Navigates
-          to the Live Contributor List view; self-suppresses in lock-step with the card. */}
-      <ViewContributorsEntry />
-      <LockInClockWidget />
-      <RenewalStatusWidget />
-      <LifeEventsEntry />
-      {/* Story 6.2 — Ravi-mode claim-filing entry (understated; opens the (claim) proxy flow). The
-          ONLY entry surface in 6.2 (the helpline deep-link handover is Story 6.3). */}
-      <ClaimProxyFlowEntry />
-      {/* Story 6.12 — the persistent post-filing point-of-contact entry (self-suppresses when the member
-          has no filed claim on record). Re-opens the named-human shepherd view (R3). */}
-      <ClaimPointOfContactEntry />
-      {/* Story 4.7 — the member-facing MemberStatusPanel entry (own status; Hindi-first, a11y). */}
-      <MembershipStatusEntry />
-      {/* Story 7.10 — LIVE re-view entry into the pool-engine onboarding tutorial (re-viewable anytime). */}
-      <PoolOnboardingSettingsEntry />
-      {/* Story 8.6 — the Yogdaan Bahi (contribution passbook) now lives on its OWN full-height screen
-          (app/(contribution)/yogdaan) so its FlatList owns the scroll (AC4/D5). This understated entry
-          navigates in; the inline home mount (the P0-5 measurement scaffold) is retired. */}
-      <YogdaanBahiEntry />
-      {/* Story 5.4 — understated notification-settings (WhatsApp opt-in) entry (a member choice). */}
-      <NotificationSettingsEntry />
-      {/* Story 5.5 — understated Telegram opt-in entry (a member choice; the mirror side-channel). */}
-      <TelegramNotificationSettingsEntry />
-      {/* Story 3.11 — understated DPDPA data-export entry (a member right, framed neutrally). */}
-      <DataExportEntry />
-      {/* Story 3.10 — understated voluntary-withdrawal entry at the very bottom (deliberate, not encouraged). */}
-      <WithdrawalEntry />
-    </YStack>
+    // Code review (2026-07-27, Story 9.7 emulator spot-check) — this stack had no ScrollView. It never
+    // mattered while every entry self-suppressed to a short row, but Story 9.7's inline <SelfVerifySurface>
+    // (pill + explanation + two upload buttons + <CallHelplineCTA>) can push total content past one screen;
+    // on the bare `flex={1}` YStack that was observed COMPRESSING the tail entries to near-zero height
+    // (a live-emulator-only finding — an unreachable ≥56pt button + a vanished "always-reachable" helpline
+    // CTA, invisible to the source-scan test harness). A ScrollView is the correct fix regardless of cause.
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <YStack flex={1}>
+        {/* Story 8.2 — the My Pool card, TOPMOST. Self-suppresses unless the member is active + assigned
+            to a pool whose cycle alert is live. The Epic-8 home anchor of the 90-second contribution loop. */}
+        <ActiveContributionCard />
+        {/* Story 8.3 — the "View contributors" affordance (just below the card, NOT inside it — D8). Navigates
+            to the Live Contributor List view; self-suppresses in lock-step with the card. */}
+        <ViewContributorsEntry />
+        <LockInClockWidget />
+        <RenewalStatusWidget />
+        <LifeEventsEntry />
+        {/* Story 6.2 — Ravi-mode claim-filing entry (understated; opens the (claim) proxy flow). The
+            ONLY entry surface in 6.2 (the helpline deep-link handover is Story 6.3). */}
+        <ClaimProxyFlowEntry />
+        {/* Story 6.12 — the persistent post-filing point-of-contact entry (self-suppresses when the member
+            has no filed claim on record). Re-opens the named-human shepherd view (R3). */}
+        <ClaimPointOfContactEntry />
+        {/* Story 4.7 — the member-facing MemberStatusPanel entry (own status; Hindi-first, a11y). */}
+        <MembershipStatusEntry />
+        {/* Story 7.10 — LIVE re-view entry into the pool-engine onboarding tutorial (re-viewable anytime). */}
+        <PoolOnboardingSettingsEntry />
+        {/* Story 8.6 — the Yogdaan Bahi (contribution passbook) now lives on its OWN full-height screen
+            (app/(contribution)/yogdaan) so its FlatList owns the scroll (AC4/D5). This understated entry
+            navigates in; the inline home mount (the P0-5 measurement scaffold) is retired. */}
+        <YogdaanBahiEntry />
+        {/* Story 5.4 — understated notification-settings (WhatsApp opt-in) entry (a member choice). */}
+        <NotificationSettingsEntry />
+        {/* Story 5.5 — understated Telegram opt-in entry (a member choice; the mirror side-channel). */}
+        <TelegramNotificationSettingsEntry />
+        {/* Story 3.11 — understated DPDPA data-export entry (a member right, framed neutrally). */}
+        <DataExportEntry />
+        {/* Story 3.10 — understated voluntary-withdrawal entry at the very bottom (deliberate, not encouraged). */}
+        <WithdrawalEntry />
+      </YStack>
+    </ScrollView>
   )
 }

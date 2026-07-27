@@ -31,6 +31,7 @@ import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
 import { registerNomineeConsoleModule } from './modules/nominee-console/index.js';
 import { registerReconciliationModule } from './modules/reconciliation/index.js';
+import { registerSelfVerifyModule } from './modules/self-verify/index.js';
 import { registerPaymentModule } from './modules/payment/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
@@ -167,6 +168,12 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // emit the reconciliation.statement-uploaded provenance/engagement event + the "padh lenge" fallback task,
   // and return the ParseResultSummary. Closes the Story 9.1 engagement-writer seam (resolveLastEngagedAt).
   registerReconciliationModule(app, deps);
+  // Story 9.7 — the member-facing RECOVERY surface's server half: the FR-32 self-verify screenshot-upload
+  // transport (POST /member/self-verify/screenshot — the ONE budgeted friction surface, mandatory-only-on-
+  // mismatch) + the <SelfVerifySurface> detail read (GET /member/self-verify/:poolId). PURE EVIDENCE INTAKE
+  // (AC4): the upload records a blob + the reconciliation.self-verify-screenshot-uploaded event and feeds the
+  // Story 9.8 review queue — it never confirms, remaps, or re-runs the matcher. Member-session-gated.
+  registerSelfVerifyModule(app, deps);
   // Story 8.4 — the FIRST Epic-8 WRITE surface: pool-contribution UPI Intent + UTR self-attestation
   // (POST /member/contribution/{intent,attest}). The architecture's reserved modules/payment/ for Epic-8's
   // contribution (member→nominee) dispatch; reuses the member-pool read seam. Member-session-gated. Emits

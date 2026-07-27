@@ -443,4 +443,15 @@ export const EVENT_TYPE_REGISTRY = {
       'The compensating REVERSAL event (Story 9.4 registers; Story 9.8 produces) — the ONLY un-confirm path for a prior contribution.confirmed (the monotonic-confirmation invariant, AC5). In the reconciliation.* namespace DELIBERATELY (NOT contribution.*), to stay off the Story 8.10 exactly-three-contribution.*-types fence (Decision D1, the 9.3 D6 precedent). Payload poolId + memberId + alertId + reversedConfirmedEventId + reasonCode + attestedByActorIds (≥1 State-Trustee attestation) + reversedAt. The matcher NEVER emits it (proven structurally in 9.4).',
     schema: reconciliation.ReconciliationConfirmationReversedPayloadSchema,
   },
+  // ── Story 9.7 (Decision D2) — the member self-verify screenshot-upload evidence event ────────────────
+  // Appended on the ALERT stream (co-located with the mismatch verdict it responds to). A NEW
+  // reconciliation.* type (the 9.3 D6 precedent), so Story 8.10's exactly-three-contribution.*-types fence
+  // stays green verbatim. PURE EVIDENCE INTAKE (AC4): it records a blob key + the mismatch reference and
+  // feeds the Story 9.8 review queue — it NEVER auto-confirms, remaps, un-confirms, or re-runs the matcher.
+  'reconciliation.self-verify-screenshot-uploaded': {
+    type: 'reconciliation.self-verify-screenshot-uploaded',
+    description:
+      'A member uploaded a payment screenshot from the Story 9.7 <SelfVerifySurface> recovery path. On the ALERT stream (Decision D2); payload poolId + memberId + alertId + objectKey + mismatchReason (nullable — a "Trouble with UTR?" fallback has no live mismatch) + contentType + uploadedAt. PURE EVIDENCE INTAKE (AC4): the Story 9.8 review-queue input; it changes no reconciliation outcome (no auto-confirm, no remap, no matcher re-run). The member stays red/mismatch until the 9.4 matcher or the 9.8 trustee confirms.',
+    schema: reconciliation.ReconciliationSelfVerifyScreenshotUploadedPayloadSchema,
+  },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

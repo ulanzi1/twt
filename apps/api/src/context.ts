@@ -14,6 +14,7 @@ import type {
   ClaimDocumentStorage,
   ContributionNotePdfRenderer,
   PoolSpawnTriggerPayload,
+  SelfVerifyScreenshotStorage,
   StatementScanner,
 } from '@twt/contracts';
 import type { BankIfscLookup } from '@twt/platform-adapters';
@@ -403,6 +404,14 @@ export interface AppDeps {
    * shared local-fs fake in dev/CI + tests.
    */
   readonly bankStatementStorage: BankStatementStorage;
+  /**
+   * Self-verify screenshot object store (Story 9.7, Decision D1) — the member `<SelfVerifySurface>` upload
+   * endpoint `put`s the raw screenshot bytes here; the Story 9.8 reviewer reads the blob by key (Decision
+   * D2). A NEW port instance mirroring the 6.5/9.3 storage SHAPE, NOT a reuse (own
+   * `SELF_VERIFY_SCREENSHOT_BUCKET` + key namespace). The live GCS adapter (`asia-south1`, Tier-1 encrypted)
+   * when the bucket env is set; a shared local-fs fake in dev/CI + tests.
+   */
+  readonly selfVerifyScreenshotStorage: SelfVerifyScreenshotStorage;
   /**
    * Bank-statement virus-scan seam (Story 9.3, Task 4 / architecture §3.6 "quarantine") — the upload core
    * scans the bytes BEFORE store+parse; an unclean verdict quarantines (dignified reject + audit line).

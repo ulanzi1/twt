@@ -30,15 +30,19 @@ import {
   ContributionIntentRequest,
   ContributionIntentResponse,
   ContributionNoteFacts,
+  ContributionMismatchReasonCode,
   ContributionStatus,
   ContributionUtr,
+  MyContributionStatus,
   PendingContributorsAggregate,
   PoolContributorListResponse,
+  SelfVerifyStateResponse,
   UpiFailureModeSchema,
 } from '../src/contributions/index.js';
 
 const VALID_ASSIGNED = {
   assigned: true as const,
+  poolId: '11111111-1111-1111-1111-111111111111',
   poolLetterCode: 'F',
   poolName: null,
   poolCanonicalIdentifier: 'P-2026-07-001',
@@ -50,6 +54,8 @@ const VALID_ASSIGNED = {
   upcomingAmountChange: null,
   // Story 8.4 — the member's OWN yellow-pill state (per-member, NOT an aggregate).
   myContribution: 'none' as const,
+  // Story 9.7 — the mismatch reason-code (null unless myContribution === 'mismatch').
+  mismatchReason: null,
 };
 
 describe('AC4 — the progress meter is CONFIRMED-ONLY (no yellow/attested/pending field can exist)', () => {
@@ -621,5 +627,54 @@ describe('Story 8.7 — ContributionNoteFacts: PII discipline + strictness (AC5)
 
   it('the status enum on the Note is the SAME five tones (one derivation, D3(b))', () => {
     expect(ContributionNoteFacts.safeParse({ ...VALID_NOTE_FACTS, status: 'confirmed' }).success).toBe(false);
+  });
+});
+
+// ── Story 9.7 — the member self-verify recovery contracts ─────────────────────────────────────────────
+
+describe('Story 9.7 — the mismatch reason-code vocabulary is in lockstep with @twt/domain', () => {
+  it('ContributionMismatchReasonCode matches the domain CONTRIBUTION_MISMATCH_REASONS exactly', () => {
+    // A test-only cross-package import (never bundled) — the ContributionUtr sync-guard precedent. If Epic 9
+    // re-tunes the domain reason set, this fails until the contract is updated in lockstep.
+    expect([...ContributionMismatchReasonCode.options].sort()).toEqual(
+      [...contribution.CONTRIBUTION_MISMATCH_REASONS].sort(),
+    );
+  });
+});
+
+describe('Story 9.7 — myContribution carries the red mismatch state (AC1)', () => {
+  it('admits none / attested / mismatch — and nothing else', () => {
+    expect([...MyContributionStatus.options].sort()).toEqual(['attested', 'mismatch', 'none']);
+  });
+
+  it('the assigned card accepts a mismatch state with a reason and rejects an unknown reason', () => {
+    expect(
+      AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, myContribution: 'mismatch', mismatchReason: 'wrong_pool' }).success,
+    ).toBe(true);
+    expect(
+      AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, myContribution: 'mismatch', mismatchReason: 'made_up' }).success,
+    ).toBe(false);
+  });
+
+  it('the confirmed-only meter still rejects any yellow/red count leaking into progress (AC4 unchanged)', () => {
+    expect(
+      AssignedContributionCard.safeParse({
+        ...VALID_ASSIGNED,
+        progress: { confirmedCount: 0, rosterSize: 48, mismatchCount: 1 },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('Story 9.7 — the SelfVerifySurface read DTO (AC2, evidence-only)', () => {
+  it('accepts the three lifecycle states + a nullable reason, and is .strict()', () => {
+    expect(SelfVerifyStateResponse.safeParse({ mismatch: true, reason: 'amount_mismatch', screenshotUploaded: false, status: 'default' }).success).toBe(true);
+    expect(SelfVerifyStateResponse.safeParse({ mismatch: false, reason: null, screenshotUploaded: true, status: 'uploaded' }).success).toBe(true);
+    expect(SelfVerifyStateResponse.safeParse({ mismatch: false, reason: null, screenshotUploaded: false, status: 'resolved' }).success).toBe(true);
+  });
+
+  it('carries NO reconciliation-outcome field (a screenshot never confirms — AC4)', () => {
+    // A `confirmed`/`verdict`/`amount` field must be impossible on this evidence-only read.
+    expect(SelfVerifyStateResponse.safeParse({ mismatch: true, reason: 'wrong_pool', screenshotUploaded: true, status: 'uploaded', confirmed: true }).success).toBe(false);
   });
 });

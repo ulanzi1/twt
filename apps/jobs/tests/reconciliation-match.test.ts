@@ -230,6 +230,38 @@ describe('runReconciliationMatch — control flow', () => {
     expect(onAlarm).toHaveBeenCalledWith(expect.stringMatching(/confirmed-notify enqueue failed/));
   });
 
+  it('Story 9.7 — enqueues the MISMATCH-notify seam best-effort; a failed enqueue never fails the verdict', async () => {
+    // A wrong-pool mismatch (the emittable red path), plus a rejecting mismatch-notify enqueue.
+    listAlertAttestationsMock.mockResolvedValue([
+      { attestationEventId: 'att-w', memberId: 'mw', poolId: POOL_ID, alertId: ALERT_ID, tr: 'trw', utr: '100000000002' },
+    ]);
+    listEntriesForPoolsMock.mockResolvedValue([
+      { entryId: 'ew', poolId: '00000000-0000-4000-8000-0000000000b2', transactionIdUtr: '100000000002', amount: 100_000, transactionDate: '2026-07-10', senderVpa: null, entryType: 'credit' },
+    ]);
+    const enqueueMismatchNotify = vi.fn().mockRejectedValue(new Error('queue down'));
+    const onAlarm = vi.fn();
+
+    const result = await runReconciliationMatch(baseDeps({ enqueueMismatchNotify, onAlarm }), envelope());
+
+    // The push fired post-commit with the machine reason-code — and the mismatch verdict still succeeded.
+    expect(enqueueMismatchNotify).toHaveBeenCalledWith(
+      expect.objectContaining({ memberId: 'mw', poolId: POOL_ID, reason: 'wrong_pool' }),
+    );
+    expect(result.mismatched).toBe(1);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringMatching(/mismatch-notify enqueue failed/));
+  });
+
+  it('Story 9.7 — omitting enqueueMismatchNotify simply skips the push (tests/observers)', async () => {
+    listAlertAttestationsMock.mockResolvedValue([
+      { attestationEventId: 'att-w', memberId: 'mw', poolId: POOL_ID, alertId: ALERT_ID, tr: 'trw', utr: '100000000002' },
+    ]);
+    listEntriesForPoolsMock.mockResolvedValue([
+      { entryId: 'ew', poolId: '00000000-0000-4000-8000-0000000000b2', transactionIdUtr: '100000000002', amount: 100_000, transactionDate: '2026-07-10', senderVpa: null, entryType: 'credit' },
+    ]);
+    const result = await runReconciliationMatch(baseDeps(), envelope());
+    expect(result.mismatched).toBe(1); // no push wired ⇒ no throw, verdict still emitted.
+  });
+
   it('Patch (code review) — an entry already bound to a PRIOR tick\'s confirmation never backs a second member', async () => {
     // A different member now attests the SAME utr as a prior tick's already-confirmed entry.
     listAlertAttestationsMock.mockResolvedValue([

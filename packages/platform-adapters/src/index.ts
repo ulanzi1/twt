@@ -25,6 +25,17 @@ export {
   createRejectingStatementScanner,
 } from './statement-scanner/no-op.js';
 
+// Story 9.7 — the NEW `SelfVerifyScreenshotStorage` object-store adapters (Decision D1 — the 6.5/9.3
+// PATTERN, a separate port instance + bucket, NOT a reuse) for the member self-verify screenshot-upload
+// transport. Reuses the 9.3 `StatementScanner` virus-scan seam (no new scanner). The PORT lives in
+// `@twt/contracts`.
+export { createGcsSelfVerifyScreenshotStorage } from './self-verify-screenshot-storage/gcs.js';
+export type { GcsSelfVerifyScreenshotStorageOpts } from './self-verify-screenshot-storage/gcs.js';
+export { createInMemorySelfVerifyScreenshotStorage } from './self-verify-screenshot-storage/in-memory.js';
+export type { InMemorySelfVerifyScreenshotStorage } from './self-verify-screenshot-storage/in-memory.js';
+export { createLocalFsSelfVerifyScreenshotStorage } from './self-verify-screenshot-storage/local-fs.js';
+export type { LocalFsSelfVerifyScreenshotStorageOpts } from './self-verify-screenshot-storage/local-fs.js';
+
 // Story 6.8 — the abstraction-first `BankIfscLookup` port (interface + adapters bundled) for
 // claim-time IFSC pre-validation (D4). apps/api (member + helpline nominee-bank routes) imports
 // the port type + the in-memory stub. NO real-vendor adapter / CI boundary gate yet (the 6.5

@@ -23,3 +23,7 @@ export * from './contribution-history.js';
 // (`.strict()`, `utr` structurally impossible on a non-green Note — the AC3 over-claim guard) + the
 // `ContributionNotePdfRenderer` port (the 6.5 `ClaimDocumentStorage` precedent). NEVER a "receipt".
 export * from './contribution-note.js';
+// Story 9.7 — the member self-verify RECOVERY contracts: the mismatch reason-code vocabulary (lockstep
+// with @twt/domain), the `<SelfVerifySurface>` read DTO (default/uploaded/resolved), and the
+// screenshot-upload request/response shapes. Evidence-intake only — no reconciliation-outcome field (AC4).
+export * from './self-verify.js';

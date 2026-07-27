@@ -97,6 +97,23 @@ export interface ReconciliationMatchDeps {
     readonly requestId: string;
     readonly traceId: string;
   }) => Promise<void>;
+  /**
+   * Story 9.7 (FR-30/FR-32) — the MISMATCH-push seam (best-effort), the symmetric twin of
+   * `enqueueConfirmedNotify`. Fired POST-COMMIT of a `contribution.reconciliation-mismatch` append; a failed
+   * enqueue NEVER fails the committed mismatch verdict (the sweep/next-tick heals a dropped job — the 8.8
+   * confirmed-seam D6 posture). Omitted ⇒ no push (tests omit). `reason` is the machine reason-code; the
+   * amounts ride ONLY when derivable (the matcher's mismatch payload carries no amount comparison today, so
+   * they are omitted — never fabricated).
+   */
+  readonly enqueueMismatchNotify?: (input: {
+    readonly pariwarId: string;
+    readonly alertId: string;
+    readonly poolId: string;
+    readonly memberId: string;
+    readonly reason: string;
+    readonly requestId: string;
+    readonly traceId: string;
+  }) => Promise<void>;
   /** Failure alarm sink — a console stub by default. */
   readonly onAlarm?: (message: string) => void;
 }
@@ -401,6 +418,26 @@ export async function runReconciliationMatch(
         await store.recordResult(key, { mismatch: m.reason }).catch(() => undefined);
         (ctx.existing.mismatched as Set<string>).add(mismatchVkey);
         mismatched += 1;
+
+        // Story 9.7 (FR-30/FR-32) — best-effort MISMATCH-push seam (POST-COMMIT). Symmetric to the
+        // confirmed seam above: a failed enqueue NEVER fails the committed mismatch verdict (the 4h
+        // recovery sweep re-runs the mismatch path and heals a dropped job). The push deep-links to
+        // contributions/:pool_id (→ the red card → the <SelfVerifySurface> recovery entry).
+        if (deps.enqueueMismatchNotify) {
+          try {
+            await deps.enqueueMismatchNotify({
+              pariwarId: pariwarIdStr,
+              alertId: ctx.alertId,
+              poolId: m.poolId,
+              memberId: m.memberId,
+              reason: m.reason,
+              requestId: envelope.requestId,
+              traceId: matcherRun,
+            });
+          } catch (err) {
+            alarm(`[jobs] reconciliation-match: mismatch-notify enqueue failed for member ${m.memberId} — ${String(err)} (best-effort; will heal)`);
+          }
+        }
       } catch (err) {
         await store.release(key).catch(() => undefined);
         alarm(`[jobs] reconciliation-match: mismatch append failed for member ${m.memberId} pool ${m.poolId} — ${String(err)}`);

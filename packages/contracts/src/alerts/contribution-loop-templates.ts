@@ -201,6 +201,18 @@ export const CONTRIBUTION_CONFIRMED_TEMPLATE_KEYS = {
   periodLabelKey: 'notify.confirmed.period_label',
 } as const;
 
+/**
+ * The i18n keys the contribution-MISMATCH notification body resolves through (Story 9.7). Per reason-code
+ * (dignified, actionable, NON-alarming — "we couldn't match your payment yet — here's how to fix it"), with
+ * a generic fallback for any reason without dedicated copy. The producer resolves the locale + reason to a
+ * single `body` string it puts on the alert payload (render stays a pure function of the payload).
+ */
+export const CONTRIBUTION_MISMATCH_TEMPLATE_KEYS = {
+  wrong_pool: 'notify.mismatch.wrong_pool',
+  amount_mismatch: 'notify.mismatch.amount_mismatch',
+  generic: 'notify.mismatch.generic',
+} as const;
+
 /** The i18n namespace every `notify.*` key above lives in (already inside `microcopy.yaml` scope). */
 export const CONTRIBUTION_LOOP_I18N_NAMESPACE = 'contribution';
 
@@ -297,5 +309,36 @@ export function buildContributionConfirmedPayloadData(input: {
     pool_id: input.poolId,
     amount_paise: input.amountPaise,
     period_label: input.periodLabel,
+  });
+}
+
+/** `contribution_mismatch` payload_data — Story 9.7 (FR-30/FR-32 "member notified"). `pool_id` drives the
+ *  `contributions/:pool_id` deep-link; `body` is the producer-resolved dignified line. No amount-comparison
+ *  fields — the `contribution.reconciliation-mismatch` verdict carries a reason-code, not an amount
+ *  comparison (`wrong_pool` has no amounts to report at all), so this builder never had a real producer to
+ *  populate them (code review, 2026-07-27 — removed per [[feedback_no_premature_package]] rather than kept
+ *  as an unpopulated forward seam; the underlying `Alert` `contribution_mismatch` variant's OWN
+ *  `expected_paise`/`actual_paise` fields predate this story as a Story 5.1 reservation and are untouched).
+ *  Parsed through the `.strict()` schema so a wrong-shaped payload fails at the producer. */
+export const ContributionMismatchPayloadData = z
+  .object({
+    pool_id: z.string().uuid(),
+    body: z.string().min(1).optional(),
+  })
+  .strict();
+export type ContributionMismatchPayloadData = z.output<typeof ContributionMismatchPayloadData>;
+
+/**
+ * Build the contribution-mismatch `payload_data` (Story 9.7). `body` is the FULLY RESOLVED, locale-correct,
+ * dignified line (mapped from the reason-code — never the raw enum). `pool_id` resolves the
+ * `contributions/:pool_id` deep-link.
+ */
+export function buildContributionMismatchPayloadData(input: {
+  readonly poolId: string;
+  readonly body: string;
+}): ContributionMismatchPayloadData {
+  return ContributionMismatchPayloadData.parse({
+    pool_id: input.poolId,
+    body: input.body,
   });
 }

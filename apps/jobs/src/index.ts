@@ -64,3 +64,13 @@ export {
   type ContributionConfirmedNotifyPayload,
   type NotifyEnqueueContext,
 } from './scheduler/contribution-notify-triggers.js';
+
+// Story 9.7 (Task 5; FR-30/FR-32 "member notified") — the contribution-MISMATCH notification enqueue seam.
+// Exported from this barrel (pure enqueue; no pg-boss client, no GCS pulled in) so **the Story 9.4 matcher
+// worker calls it POST-COMMIT, best-effort, when it emits `contribution.reconciliation-mismatch`** — the
+// symmetric counterpart of the 8.8 confirmed seam (8.8 shipped only confirmed; 9.7 owns mismatch). No cron,
+// no recovery sweep — the matcher's own 4h sweep heals a dropped notify. A failed enqueue never fails the verdict.
+export {
+  enqueueContributionMismatchNotification,
+  type ContributionMismatchNotifyPayload,
+} from './scheduler/contribution-notify-triggers.js';

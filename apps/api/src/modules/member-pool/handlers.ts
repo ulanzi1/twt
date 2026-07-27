@@ -515,8 +515,41 @@ async function resolveCard(
     tr: memberTr,
   });
 
+  // (10a) Story 9.7 (AC1) — the member's OWN unresolved-mismatch state (red). Reuses the self-verify read
+  //       (member-scoped, D1), so the card flips to <StatusPill status="red"> + links the recovery entry
+  //       when the Story 9.4 matcher rejected a found deposit. A mismatch OUTRANKS attested (red is the more
+  //       specific, actionable signal); a confirmed member is never `mismatch` (the read supersedes a stale
+  //       mismatch with a live confirmation). Like `attested`, this is a per-member self-state that NEVER
+  //       reaches the confirmed-only meter (epics.md:2939-2941).
+  // Resilient: a self-verify read failure degrades to "no mismatch shown" (the card still renders its
+  // yellow/none state) rather than fail-softing the WHOLE card to `{ assigned:false }` — a transient
+  // recovery-read hiccup must not blank the member's My Pool card.
+  let selfVerify: Awaited<ReturnType<typeof contributionDomain.resolveMemberSelfVerifyState>> = {
+    mismatch: false,
+    reason: null,
+    screenshotUploaded: false,
+    status: 'default',
+  };
+  try {
+    selfVerify = await contributionDomain.resolveMemberSelfVerifyState(tx, {
+      pariwarId,
+      memberId: ctx.memberId,
+      poolId: ids.poolId(pool.poolId),
+    });
+  } catch (err) {
+    request.log.warn({ err, poolId: pool.poolId }, 'active-contribution: self-verify read failed — showing no mismatch');
+  }
+  const myContribution: 'none' | 'attested' | 'mismatch' = selfVerify.mismatch
+    ? 'mismatch'
+    : attested
+      ? 'attested'
+      : 'none';
+
   return {
     assigned: true,
+    // (Story 9.7) The member's own live pool id — carried so the red-card "Fix this" + yellow "Trouble with
+    // UTR?" entries can reach the <SelfVerifySurface> read/upload (GET/POST /member/self-verify/:poolId).
+    poolId: pool.poolId,
     poolLetterCode: identity.poolLetterCode,
     poolName: identity.poolName,
     poolCanonicalIdentifier: identity.poolCanonicalIdentifier,
@@ -534,8 +567,11 @@ async function resolveCard(
     progress: { confirmedCount: clampedConfirmedCount, rosterSize: pool.rosterSize },
     upcomingAmountChange:
       upcoming === null ? null : { effectiveFrom: upcoming.effectiveFrom.toISOString(), newAmount: upcoming.fixedAmount },
-    // (AC4) The member's OWN yellow-pill state — separate from the confirmed-only meter above.
-    myContribution: attested ? 'attested' : 'none',
+    // (AC4 / Story 9.7 AC1) The member's OWN self-state — yellow (attested) or RED (mismatch) — separate
+    // from the confirmed-only meter above. `mismatchReason` carries the machine reason-code ONLY when the
+    // state is `mismatch` (the surface maps it to dignified empathy copy for the Journey-1 entry), else null.
+    myContribution,
+    mismatchReason: myContribution === 'mismatch' ? selfVerify.reason : null,
   };
 }
 

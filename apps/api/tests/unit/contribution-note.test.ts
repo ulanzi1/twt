@@ -19,10 +19,16 @@
 //   7. D3(a): `noteAvailable` on the passbook is a RESOLVABILITY predicate with no status term.
 
 import { createFakeContributionNotePdfRenderer } from '@twt/platform-adapters';
+import { color } from '@twt/tokens';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppDeps } from '../../src/context.js';
+
+// STATUS_INK is private to note-template.ts — resolve the same two roles it maps `held`/`grey` to,
+// so the held≠grey ink test (Story 9.6 code-review follow-up) doesn't hardcode a hex literal.
+const STATUS_HELD_INK = color['status-held'];
+const STATUS_GREY_INK = color['status-grey-takeover'];
 
 const getMemberAttestedContribution = vi.fn();
 const getPoolContributionContext = vi.fn();
@@ -191,7 +197,7 @@ beforeEach(() => {
  * `CONTRIBUTION_ID` — any other id (e.g. `OTHER_MEMBERS_CONTRIBUTION_ID`) resolves `null`, exactly like
  * the real member-scoped equality lookup, so the scope-guard test below stays honest.
  */
-function wireOwnHistory(status: 'yellow' | 'green' | 'red' | 'grey'): void {
+function wireOwnHistory(status: 'yellow' | 'green' | 'red' | 'grey' | 'held'): void {
   getMemberAttestedContribution.mockImplementation(
     async (_tx: unknown, args: { readonly contributionId: string }) =>
       args.contributionId === CONTRIBUTION_ID
@@ -265,6 +271,29 @@ describe('AC3 — a shareable artifact never over-claims (the load-bearing invar
         }
       }
     }
+  });
+
+  it('a HELD Note renders in its OWN status-held ink, distinct from grey (Story 9.6 D3/AC4 — code review follow-up)', async () => {
+    // Before 9.6, `held` shared the exact same ink as `grey` in this template (the stopgap this story
+    // closed — deferred-work.md). This is the PDF half of the distinctness guarantee the mobile/token
+    // side already gets twice (tokens.test.ts + presenter.test.ts); the PDF side had zero coverage.
+    wireOwnHistory('held');
+    const { rawHtml } = await generateNote();
+    // `.status-title` is the ONE rule STATUS_INK governs — `.status-title .gloss` is a separate,
+    // status-independent neutral gloss color that happens to reuse the same grey hex, so match the
+    // specific rule rather than any occurrence of either hex in the document.
+    expect(rawHtml).toContain(`.status-title { font-size: 13pt; font-weight: 700; color: ${STATUS_HELD_INK}; }`);
+    expect(rawHtml).not.toContain(
+      `.status-title { font-size: 13pt; font-weight: 700; color: ${STATUS_GREY_INK}; }`,
+    );
+    expect(STATUS_HELD_INK).not.toBe(STATUS_GREY_INK);
+
+    // No UTR/stamp, dignified framing (not a shame state), mirroring the red/grey neutral-framing discipline.
+    for (const forbidden of CONFIRMATION_IMPLYING) {
+      expect(rawHtml.includes(forbidden), `a held Note must not contain "${forbidden}"`).toBe(false);
+    }
+    expect(rawHtml).toContain('पुनरीक्षण हेतु रोका गया');
+    expect(rawHtml).toContain('Held under review');
   });
 
   it('the three status-varying elements track the SAME status the domain derived (no second derivation)', async () => {

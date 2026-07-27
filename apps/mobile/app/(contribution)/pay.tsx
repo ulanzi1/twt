@@ -27,11 +27,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { AppState, ScrollView } from 'react-native'
-import { Button, H2, Input, Paragraph, Spinner, Text, View, YStack } from 'tamagui'
+import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { UPIIntentButton } from '../../components/active-contribution/UPIIntentButton'
 import { UpiFailureCoach } from '../../components/active-contribution/UpiFailureCoach'
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
+import { StatusPill } from '../../components/status-pill/StatusPill'
 import { memberAuth } from '../../lib/member-api'
 import { finalizeLoopSession, markLoopPhase, markUpiReturn } from '../../lib/loop-timing-session'
 import { loopTimingEnabled } from '../../lib/loop-timing-store'
@@ -226,24 +227,14 @@ export default function ContributionPayScreen() {
   }
 
   // ── The attested (yellow-pill) confirmation ───────────────────────────────────────────────────────
+  // Story 9.6: the hand-rolled yellow pill is replaced by the DS <StatusPill status="yellow">, matching
+  // the ActiveContributionCard refactor. `live` preserves the pre-9.6 `accessibilityLiveRegion="polite"`
+  // announcement (a genuine state change worth announcing on this confirmation screen).
   if (attested) {
     return (
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <YStack gap="$3">
-          <View
-            bg="$yellow4"
-            px="$4"
-            py="$4"
-            borderWidth={1}
-            borderColor="$yellow8"
-            accessibilityRole="text"
-            accessibilityLiveRegion="polite"
-            accessibilityLabel={t('upi_intent.yellow_pill_a11y', undefined, NS)}
-          >
-            <Text fontFamily="$body" fontSize="$5" color="$yellow11">
-              {t('upi_intent.yellow_pill', undefined, NS)}
-            </Text>
-          </View>
+          <StatusPill status="yellow" size="default" live />
           <Button
             height={56}
             onPress={() => router.back()}

@@ -42,6 +42,9 @@ export const color = {
   'status-confirmed': '#0f5132', // confirmed (green family, AA on paper)
   'status-mismatch': '#8a4b1f', // mismatch (warm-umber family, AA on paper)
   'status-grey-takeover': '#6b6b6b', // grey takeover / disabled-authority state
+  'status-held': '#4b4f66', // held — trustee-frozen / under-review (Story 9.6): a subdued slate-indigo
+  //                            neutral, distinct from status-grey-takeover (grey = "on record", held =
+  //                            "under review"); dignified not alarming; AA 7.76:1 on surface-base.
 
   // General aliases (semantic shorthands re-using the role palette above).
   bg: '#fbfbf8', // app background

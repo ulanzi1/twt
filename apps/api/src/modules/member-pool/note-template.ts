@@ -89,10 +89,13 @@ const STATUS_INK: Record<ContributionNoteFacts['status'], string> = {
   yellow: color['status-pending'],
   red: color['status-mismatch'],
   grey: color['status-grey-takeover'],
-  // held (Story 9.5) — a trustee-walked-back confirmation renders in the neutral/subdued ink (dignified, not
-  // alarming — the tone discipline of [[project_yogdaan_status_derivation_convention]]); the polished 5-state
-  // visual system is Story 9.6.
-  held: color['status-grey-takeover'],
+  // held (Story 9.5) — a trustee-walked-back confirmation renders in its OWN subdued slate-indigo ink
+  // (dignified, not alarming — the tone discipline of [[project_yogdaan_status_derivation_convention]]).
+  // Story 9.6 gave `held` a dedicated `status-held` token, distinct from grey (grey = "on record", held =
+  // "under review"). This PDF resolves the token's literal hex; the mobile <StatusPill> renders `held` via
+  // Tamagui's `$purple` scale (no slate-indigo scale exists there) as a documented visual approximation of
+  // the same intent — the two surfaces are aligned in MEANING, not backed by one literal color value.
+  held: color['status-held'],
 };
 
 /** One labelled row of the artifact's fact table: Hindi label + English gloss + the value. */

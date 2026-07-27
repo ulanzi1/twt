@@ -91,6 +91,7 @@ import { DEFAULT_CHILD_LOCAL_CONCURRENCY, registerCycleSpawnWorkers } from './cy
 import { enqueueCycleOpenAlert, registerCycleOpenAlertWorkers } from './scheduler/cycle-open-alert.js';
 import {
   enqueueContributionConfirmedNotification,
+  enqueueContributionMismatchNotification,
   enqueueContributionNotifyCycleOpen,
   registerContributionNotifyWorkers,
 } from './scheduler/contribution-notify-triggers.js';
@@ -613,6 +614,24 @@ async function main(): Promise<void> {
               memberId: input.memberId,
               amountPaise: input.amountPaise,
               periodLabel: input.periodLabel,
+            },
+          ),
+        // Story 9.7 (FR-30/FR-32) — the symmetric MISMATCH-push seam. Best-effort, post-commit; a failed
+        // enqueue never fails the committed mismatch verdict (the matcher's 4h sweep heals it).
+        enqueueMismatchNotify: (input) =>
+          enqueueContributionMismatchNotification(
+            boss,
+            {
+              pariwarId: input.pariwarId,
+              requestId: input.requestId,
+              actorId: null,
+              traceId: input.traceId,
+            },
+            {
+              alertId: input.alertId,
+              poolId: input.poolId,
+              memberId: input.memberId,
+              reason: input.reason,
             },
           ),
       },

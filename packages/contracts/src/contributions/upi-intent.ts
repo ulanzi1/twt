@@ -25,11 +25,14 @@
 import { z } from 'zod';
 
 /**
- * The member's OWN contribution state for the current cycle (AC4) — `none` (has not self-attested) →
- * `attested` (yellow pill: told-us-they-paid, still verifying). This is a PER-MEMBER self-state, NEVER an
- * aggregate/pool count. Green (confirmed) is Epic 9's exclusive flip and is deliberately NOT a value here.
+ * The member's OWN contribution state for the current cycle — `none` (has not self-attested) → `attested`
+ * (yellow pill: told-us-they-paid, still verifying) → `mismatch` (RED: the Story 9.4 matcher found a
+ * deposit but rejected it — wrong pool / amount — the member has a recovery path via `<SelfVerifySurface>`,
+ * Story 9.7). A PER-MEMBER self-state, NEVER an aggregate/pool count. Green (confirmed) is still deliberately
+ * NOT a value here — the confirmed-only progress meter is where confirmation shows, never this self-state
+ * field (the load-bearing yellow/red-never-pollute-the-meter invariant, epics.md:2939-2941).
  */
-export const MyContributionStatus = z.enum(['none', 'attested']);
+export const MyContributionStatus = z.enum(['none', 'attested', 'mismatch']);
 export type MyContributionStatus = z.output<typeof MyContributionStatus>;
 
 /**

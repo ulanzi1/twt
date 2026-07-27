@@ -803,6 +803,31 @@ build is a no-op → `member-app-native` stays a no-op); `apps/public` is **not*
 at all, so nothing enters the public page-weight budget the gate has teeth on. Do NOT
 ratchet (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 9.7 disposition (existing SEED row REALIZED — no new row):** the very FIRST seed
+row of this ledger — **"Sushil (member, UTR-mismatch screenshot upload) → Reconciliation
+integrity → forced"** — is EXACTLY the friction Story 9.7 now realizes with the real
+transport (`<SelfVerifySurface>` + `POST /api/v1/member/self-verify/screenshot`). This is
+the same "existing row REALIZED" pattern as Story 6.5 (death-cert upload) and Story 9.3
+(bank-statement upload): the surface named at declaration time gets its real backing, and
+every friction-earning-its-place property the seed row implies is preserved. The upload is
+**mandatory ONLY on an unresolved mismatch** (or the explicit FR-32 "Trouble with UTR?"
+fallback) — there is **no happy-path screenshot door** (the endpoint 4xxs a no-mismatch,
+no-fallback upload), so the friction lands exactly where it protects Reconciliation
+integrity and nowhere else. The `payer` (Sushil, the yellow/red-stuck member) and the
+`protects` subsystem (Reconciliation integrity) match the seed row verbatim; the
+`event_type` stays `forced` (a stuck member must act to recover). Everything else on the
+surface **removes** friction: dignified Pattern-4 empathy copy (never "Error/Failed"), a
+one-tap photo-or-PDF picker, an always-reachable helpline, and a fail-soft upload (a
+storage outage is a dignified 503-retry, never a hard error). **PII discipline:** no PII in
+the object key (opaque `pariwar/<id>/pool/<id>/<uuid>`), the event payload (ids + a machine
+reason-code + contentType + a timestamp — never the bytes, a UTR, or free text), or the
+audit context (a machine reason token only). Zero gratuitous friction introduced; ledger
+reviewed, **the existing seed row covers it — no new row warranted**. The **page-weight
+baseline is unchanged**: every new/modified file lands in the authenticated mobile app
+(`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op),
+`apps/api`/`packages/*` (not page-weight-gated build targets); `apps/public` is **not**
+touched at all. Do NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

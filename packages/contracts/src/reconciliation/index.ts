@@ -9,3 +9,8 @@ export * from './parse-result.js';
 // Story 9.3 — the upload-transport shapes + the two injectable ports (BankStatementStorage +
 // StatementScanner) the `<BankStatementUpload>` surface rides on (Decisions D1/D3/D4).
 export * from './statement-storage.js';
+// Story 9.7 — the member self-verify SCREENSHOT-upload transport port + its accepted-MIME/byte-cap
+// constants (Decision D1: a NEW port instance + bucket, the 9.3 D3 precedent). Reuses the 9.3
+// `StatementScanner` virus-scan seam (no new scanner port). The `SelfVerifyScreenshotStorage` adapters
+// live in `@twt/platform-adapters`.
+export * from './self-verify-screenshot-storage.js';

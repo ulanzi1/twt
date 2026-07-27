@@ -224,6 +224,13 @@ export type AuthAuditEventType =
   | 'staff_reconciliation.fallback_requested'
   | 'staff_reconciliation.upload_rejected'
   | 'staff_reconciliation.storage_unavailable'
+  // ── Member self-verify recovery screenshot upload (Story 9.7, FR-32 / Epic 9) ──
+  // The member RECOVERY surface's upload. Context is NON-PII: pool_id + a machine reason token
+  // (the mismatch reason, or `trouble_with_utr` for the FR-32 fallback) + the content_type —
+  // NEVER the screenshot bytes, NEVER a UTR, NEVER free text ([[project_anonymous_diagnostic_log_convention]]).
+  | 'member_self_verify.screenshot_uploaded'
+  | 'member_self_verify.upload_rejected'
+  | 'member_self_verify.storage_unavailable'
   // ── Helpline-mediated claim filing surface (Story 6.3, FR-37 / Epic 6) ────────
   // The operator-console (Priya-path) intake — the TWIN of the member-app lines above.
   // Context is NON-PII throughout: the intake lines carry claim_case_id + deceased_member_id

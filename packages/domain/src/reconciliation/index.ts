@@ -25,3 +25,8 @@ export * from './matcher-reads.js';
 // appendReconciliationMismatch (red), on the alert stream (D2). NO reversal emitter exists (AC5b — the
 // monotonic invariant is structural; the only un-confirm path is the Story 9.8 trustee compensating event).
 export * from './matcher-write.js';
+// Story 9.7 (Task 3) — the self-verify screenshot-upload evidence WRITE primitive
+// (appendSelfVerifyScreenshotUploaded), on the alert stream (D2). PURE EVIDENCE INTAKE (AC4): it emits
+// no verdict, remaps nothing, and triggers no matcher run. Kept out of matcher-write.ts so the 9.4
+// monotonic-invariant fence (matcher-write exports exactly the two verdict emitters) stays green.
+export * from './self-verify-write.js';

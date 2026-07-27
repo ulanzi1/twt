@@ -1,4 +1,52 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-27 (story 9-7 review -> done via bmad-code-review. 4-layer review (Blind Hunter x2,
+#   Edge Case Hunter, Acceptance Auditor) vs. baseline 925874c: 1 decision-needed (speculative dead
+#   expected_paise/actual_paise notify-trigger plumbing with zero producer — BigDev: removed, alert.ts's own
+#   pre-existing reserved fields left untouched) + 20 patch findings, all applied. Highlights: a live AC3
+#   bypass (fallback=false query param coerced true via z.coerce.boolean(), defeating the "no happy-path
+#   door" guard — fixed with a strict enum), a confirmed test-coverage gap (the claimed member-scope guard
+#   test never exercised the cross-pool-id branch — added + DB-verified), indistinguishable photo/PDF upload
+#   buttons (AC5), a live-region-proliferation regression in the card's inline surface embed, MIME/error-
+#   mapping hardening (case/parameter brittleness, catch-all 503s replacing raw-500 risk on 2 paths), and a
+#   differentiated upload-error-copy gap. Also fixed en-route: my own test's seed script committed rows
+#   under the shared PARIWAR_A id into the local twt-test-pg DB (events_log is append-only, no DELETE) —
+#   recreated the container + re-migrated at the user's direction. Full re-verification green: domain
+#   (165 files/1693 tests), api (87/667), jobs (16/181), mobile (17/139), contracts (38/571), lint clean
+#   across all touched packages, 8.10 fence / i18n-parity / friction-budget gates all green. -> done.)
+# last_updated: 2026-07-27 (story 9-7 ready-for-dev -> in-progress -> review via bmad-dev-story [Opus 4.8].
+#   Mismatch Detection + Screenshot Upload + <SelfVerifySurface> yellow-stuck recovery. Four consumer seams
+#   closed (9.7 is the RECOVERY CONSUMER + transport, NOT the 9.4 mismatch producer): (1) the FR-32 mismatch
+#   push — wired the RESERVED contribution_mismatch alert_category best-effort post-commit from the matcher's
+#   mismatch branch (CONTRIBUTION_NOTIFY_MISMATCH queue + builder/enqueue/worker mirroring the 8.8 confirmed
+#   D6 seam; a failed enqueue never fails the verdict; alert payload_data expected/actual made optional +
+#   producer-resolved dignified `body`, channels render arm de-alarmed); (2) the My Pool card red 'mismatch'
+#   state (myContribution +'mismatch', +mismatchReason +poolId; resilient — a self-verify read failure shows
+#   no-mismatch, never blanks the card); (3) a NEW screenshot transport — SelfVerifyScreenshotStorage port +
+#   bucket + adapters (D1, the 9.3 D3 precedent; image+PDF, 10MiB, reuses the 9.3 StatementScanner) + the
+#   reconciliation.self-verify-screenshot-uploaded event (reconciliation.* dodges the 8.10 fence; alert-stream
+#   D2) + POST /member/self-verify/screenshot (guard->scan->store->emit, AR-45, mandatory-only-on-mismatch or
+#   the FR-32 "Trouble with UTR?" fallback) + GET /member/self-verify/:poolId; (4) the <SelfVerifySurface>
+#   mobile component (empathy Pattern-4 copy + image/PDF picker + 8.11 CallHelplineCTA; default/uploaded/
+#   resolved; two entries: red-card "Fix this" per D7 + yellow "Trouble with UTR?"). AC4 (pure evidence
+#   intake — a screenshot NEVER confirms/remaps) proven with DB teeth; 8.10 fence green verbatim. BigDev
+#   confirmed D7 (direct red entry) + Q2 (9.7 owns the push) at kickoff. pnpm ci:local 28/28 green
+#   (DATABASE_URL :5433). -> review.)
+# last_updated: 2026-07-27 (story 9-7 backlog -> ready-for-dev via bmad-create-story. Mismatch Detection +
+#   Screenshot Upload + <SelfVerifySurface> yellow-stuck recovery. KEY REFRAME: 9.7 is the member-facing
+#   RECOVERY CONSUMER + a new upload transport, NOT the mismatch producer — the matcher (9.4) already emits
+#   `contribution.reconciliation-mismatch` LIVE (wrong_pool/amount_mismatch; no_statement_entry is an 8.9-tail
+#   concern, deliberately NOT red today), the red-pill read model (history.ts) + <StatusPill status="red"> (9.6)
+#   are DONE. Four consumer seams to close: (1) the missing FR-32 push — wire the ALREADY-RESERVED
+#   contribution_mismatch alert_category + deep-link target, best-effort post-commit from the matcher worker's
+#   mismatch branch (mirror the 8.8 confirmed-notify D6 seam; 8.8 shipped only confirmed); (2) extend the My Pool
+#   card's binary myContribution ('attested'|'none') to carry a red 'mismatch' state; (3) a NEW screenshot
+#   transport — SelfVerifyScreenshotStorage port (6.5 ClaimDocumentStorage shape / 9.3 D3 new-port precedent) +
+#   a `reconciliation.self-verify-screenshot-uploaded` event (reconciliation.* dodges the 8.10 fence; alert-stream
+#   co-located; the 9.8 review-queue seam) + a member upload endpoint (9.3 scan->store->emit / AR-45 core);
+#   (4) the <SelfVerifySurface> mobile component (empathy Pattern-4 copy + screenshot picker + 8.11 CallHelplineCTA,
+#   two entries: red-card "Fix this" + FR-32 hidden "Trouble with UTR?" in yellow). Load-bearing AC4: the
+#   screenshot NEVER auto-confirms/remaps (Story 7.6 facilitated-recovery). 6 LOCKED decisions D1-D6 + Q2 flagged
+#   (mismatch-push as 9.7 vs 8.8-backfill). ready-for-dev.)
 # last_updated: 2026-07-27 (story 9-6 review -> done via bmad-code-review. 3-layer adversarial review (Blind
 #   Hunter + Edge Case Hunter + Acceptance Auditor) found 2 decision-needed + 4 patch + 1 defer + ~18
 #   dismissed-as-noise. Several Blind Hunter findings were VERIFIED FALSE against the actual codebase before
@@ -1274,7 +1322,7 @@ development_status:
   9-4-utr-matching-engine-matcher-mechanism: done
   9-5-yellow-green-pill-flip-contribution-confirmed-as-canonical-financial-truth: done
   9-6-status-pill-5-state-design-system-component: done
-  9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: backlog
+  9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: done
   9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: backlog
   9-9-dual-nominee-bank-accounts-rbi-upi-limit-workaround: backlog
   9-10-4-hour-retry-reminders: backlog

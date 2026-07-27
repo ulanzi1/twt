@@ -40,11 +40,14 @@ vi.mock('../src/scheduler/contribution-notify.js', () => ({ fanOutAlertToMembers
 
 const {
   buildContributionConfirmedAlert,
+  buildContributionMismatchAlert,
   buildCycleOpenAlert,
   buildDeadlineReminderAlert,
   enqueueContributionConfirmedNotification,
+  enqueueContributionMismatchNotification,
   enqueueContributionNotifyCycleOpen,
   runContributionConfirmedNotify,
+  runContributionMismatchNotify,
   runContributionNotifyChild,
   runContributionNotifyParent,
   runContributionNotifyRecoverySweep,
@@ -573,6 +576,87 @@ describe('AC3 — the contribution-confirmed seam Epic 9 calls', () => {
         amountPaise: 110000,
         periodLabel: '2026-07',
       }) as never,
+    );
+    expect(result).toMatchObject({ alreadySent: true, delivered: false });
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+  });
+});
+
+describe('Story 9.7 (FR-30/FR-32) — the contribution-MISMATCH seam the matcher calls', () => {
+  it('the exported enqueue targets the mismatch queue, singleton per (alert, member, reason)', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    await enqueueContributionMismatchNotification(
+      { send },
+      { pariwarId: PARIWAR, requestId: 'r', actorId: null, traceId: 't' },
+      { alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' },
+    );
+    expect(send.mock.calls[0]![0]).toBe('contribution.notify.mismatch');
+    // The reason is in the key so a NEW reason re-notifies (mirrors the matcher's (pool,member,reason) dedup).
+    expect(send.mock.calls[0]![2]).toMatchObject({ singletonKey: `${ALERT}:${M1}:mismatch:wrong_pool` });
+  });
+
+  it('the worker builds a `contribution_mismatch` alert (time_critical:false) and fans it out', async () => {
+    const result = await runContributionMismatchNotify(
+      deps(),
+      envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never,
+    );
+    expect(result).toMatchObject({ delivered: true, alreadySent: false });
+    const alert = fanOutAlertToMembers.mock.calls[0]![1]() as Alert;
+    expect(alert.alert_category).toBe('contribution_mismatch');
+    expect(alert.time_critical).toBe(false);
+    expect(() => Alert.parse(alert)).not.toThrow();
+  });
+
+  it('the mismatch body is DIGNIFIED, resolved from the reason-code — never the raw enum, never alarming', () => {
+    const alert = buildContributionMismatchAlert({
+      alertId: ALERT,
+      pariwarId: PARIWAR,
+      memberId: M1,
+      poolId: POOL_A,
+      reason: 'wrong_pool',
+      locale: 'en',
+      now: NOW,
+    });
+    const body = (alert.payload_data as { body?: string }).body ?? '';
+    expect(body.length).toBeGreaterThan(0);
+    // Pattern-4: no raw enum, no alarming vocabulary.
+    expect(body).not.toContain('wrong_pool');
+    expect(body).not.toMatch(/error|failed|invalid|mismatch/i);
+  });
+
+  it('the mismatch push deep-links to the member`s own contribution surface (contributions/:pool_id)', () => {
+    const alert = buildContributionMismatchAlert({
+      alertId: ALERT,
+      pariwarId: PARIWAR,
+      memberId: M1,
+      poolId: POOL_A,
+      reason: 'amount_mismatch',
+      locale: 'hi',
+      now: NOW,
+    });
+    const target = deepLinkTargetForAlert(alert);
+    expect(target).toEqual({ pariwarId: PARIWAR, resource: 'contributions', resourceId: POOL_A });
+    expect(formatDeepLink(target!)).toBe(`twt://p/${PARIWAR}/contributions/${POOL_A}`);
+  });
+
+  it('an unknown reason falls back to the generic dignified body (never a blank push)', () => {
+    const alert = buildContributionMismatchAlert({
+      alertId: ALERT,
+      pariwarId: PARIWAR,
+      memberId: M1,
+      poolId: POOL_A,
+      reason: 'some_future_reason',
+      locale: 'en',
+      now: NOW,
+    });
+    expect(((alert.payload_data as { body?: string }).body ?? '').length).toBeGreaterThan(0);
+  });
+
+  it('a redelivery of the same reason no-ops (idempotent per (alert, member, mismatch:<reason>))', async () => {
+    claim.mockResolvedValue('already_claimed');
+    const result = await runContributionMismatchNotify(
+      deps(),
+      envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never,
     );
     expect(result).toMatchObject({ alreadySent: true, delivered: false });
     expect(fanOutAlertToMembers).not.toHaveBeenCalled();

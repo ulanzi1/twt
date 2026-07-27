@@ -14,6 +14,7 @@ import type {
   BankStatementStorage,
   ClaimDocumentStorage,
   ContributionNotePdfRenderer,
+  SelfVerifyScreenshotStorage,
   StatementScanner,
 } from '@twt/contracts';
 import { createDb } from '@twt/domain';
@@ -23,11 +24,13 @@ import {
   createInMemoryBankIfscLookup,
   createInMemoryBankStatementStorage,
   createInMemoryClaimDocumentStorage,
+  createInMemorySelfVerifyScreenshotStorage,
   createNoOpStatementScanner,
   type FakeContributionNotePdfRenderer,
   type InMemoryBankIfscLookup,
   type InMemoryBankStatementStorage,
   type InMemoryClaimDocumentStorage,
+  type InMemorySelfVerifyScreenshotStorage,
 } from '@twt/platform-adapters';
 import type pg from 'pg';
 
@@ -222,6 +225,7 @@ export interface TestDepsOverrides {
   dataExportQueue?: DataExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
   bankStatementStorage?: BankStatementStorage;
+  selfVerifyScreenshotStorage?: SelfVerifyScreenshotStorage;
   statementScanner?: StatementScanner;
   contributionNotePdfRenderer?: ContributionNotePdfRenderer;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
@@ -244,6 +248,7 @@ export interface TestDeps {
   dataExportQueue: CapturingDataExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
   bankStatementStorage: InMemoryBankStatementStorage;
+  selfVerifyScreenshotStorage: InMemorySelfVerifyScreenshotStorage;
   statementScanner: StatementScanner;
   contributionNotePdfRenderer: FakeContributionNotePdfRenderer;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
@@ -281,6 +286,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const bankStatementStorage =
     (overrides.bankStatementStorage as InMemoryBankStatementStorage) ??
     createInMemoryBankStatementStorage();
+  const selfVerifyScreenshotStorage =
+    (overrides.selfVerifyScreenshotStorage as InMemorySelfVerifyScreenshotStorage) ??
+    createInMemorySelfVerifyScreenshotStorage();
   const statementScanner = overrides.statementScanner ?? createNoOpStatementScanner();
   const claimOcrParityQueue =
     (overrides.claimOcrParityQueue as CapturingClaimOcrParityQueue) ??
@@ -351,6 +359,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // upload spec asserts the raw bytes were `put`; no-op scanner by default (a spec overrides it with a
     // rejecting scanner to exercise the quarantine path).
     bankStatementStorage,
+    // Self-verify screenshot object store (Story 9.7) — in-memory store so the self-verify upload spec
+    // asserts the screenshot bytes were `put` (and that a rejected/no-mismatch upload never reaches storage).
+    selfVerifyScreenshotStorage,
     statementScanner,
     contributionNotePdfRenderer,
     // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
@@ -381,6 +392,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     dataExportQueue,
     claimDocumentStorage,
     bankStatementStorage,
+    selfVerifyScreenshotStorage,
     statementScanner,
     contributionNotePdfRenderer,
     claimOcrParityQueue,

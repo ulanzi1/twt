@@ -32,6 +32,7 @@
 import { z } from 'zod';
 
 import { BankCode } from '../bank-statement/schema.js';
+import { ContributionMismatchReasonSchema } from '../contribution/events.js';
 
 /** Who performed the upload / raised the fallback — the attribution ROLE (the actor id is the events_log
  *  column). `nominee` = Sunita's Ravi-mode session; `staff` = a District-Admin takeover / fallback operator.
@@ -135,6 +136,46 @@ export type ReconciliationConfirmationReversedPayload = z.infer<
   typeof ReconciliationConfirmationReversedPayloadSchema
 >;
 
+/**
+ * `reconciliation.self-verify-screenshot-uploaded` payload (Story 9.7, Decision D2) — a member uploaded a
+ * PhonePe/GPay/Paytm payment screenshot from the `<SelfVerifySurface>` recovery path. Appended on the ALERT
+ * stream (Decision D2 — co-located with the `contribution.reconciliation-mismatch` verdict it responds to),
+ * NOT the pool stream: a self-verify upload is a member RESPONSE to a per-cycle verdict, so it belongs on
+ * the same 1:1-with-the-cycle alert stream the mismatch rode. A NEW `reconciliation.*` type (the 9.3 D6
+ * precedent) — a screenshot is NOT a `contribution.*` verdict, so it stays clear of Story 8.10's
+ * exactly-three-`contribution.*`-types fence.
+ *
+ * ── PURE EVIDENCE INTAKE (AC4, load-bearing) ─────────────────────────────────────────────────────────
+ * This event RECORDS evidence; it changes NO reconciliation outcome. It never auto-confirms, never
+ * remaps a wrong-pool payment, never un-confirms, never re-runs the matcher — the member stays `red`/
+ * `mismatch` until the Story 9.4 matcher or the Story 9.8 trustee flow confirms. It is the Story 9.8
+ * review-queue INPUT (a reserved seam — no live consumer in 9.7).
+ *
+ *   · `poolId` / `memberId` / `alertId` — the scope the screenshot is filed against (the same keys the
+ *       mismatch verdict carries, so a 9.8 consumer joins them without a schema mismatch).
+ *   · `objectKey`     — the opaque, non-PII blob key in `SelfVerifyScreenshotStorage`.
+ *   · `mismatchReason`— the machine reason-code of the live mismatch this responds to; NULLABLE — an
+ *       explicit FR-32 "Trouble with UTR?" fallback upload on a still-verifying (yellow) pool has no live
+ *       mismatch to name.
+ *   · `contentType`   — the stored blob's MIME (image/jpeg | image/png | application/pdf per UX §11).
+ *   · `uploadedAt`    — the upload instant.
+ */
+export const ReconciliationSelfVerifyScreenshotUploadedPayloadSchema = z
+  .object({
+    poolId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    alertId: z.string().uuid(),
+    objectKey: z.string().min(1),
+    /** Nullable — a "Trouble with UTR?" fallback upload may have no live mismatch (see the header). */
+    mismatchReason: ContributionMismatchReasonSchema.nullable(),
+    contentType: z.string().min(1),
+    uploadedAt: z.string().datetime(),
+  })
+  .strict();
+export type ReconciliationSelfVerifyScreenshotUploadedPayload = z.infer<
+  typeof ReconciliationSelfVerifyScreenshotUploadedPayloadSchema
+>;
+
 // ── The reconciliation-event vocabulary + the type→schema map (single source) ─────────────────────────
 
 export const RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE = 'reconciliation.statement-uploaded' as const;
@@ -143,11 +184,15 @@ export const RECONCILIATION_MANUAL_TRANSCRIPTION_REQUESTED_EVENT_TYPE =
 /** Story 9.4 (Decision D1) — the compensating reversal event type (the ONLY un-confirm path; 9.8 produces it). */
 export const RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE =
   'reconciliation.confirmation-reversed' as const;
+/** Story 9.7 (Decision D2) — the member self-verify screenshot-upload evidence event (9.8 review-queue input). */
+export const RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE =
+  'reconciliation.self-verify-screenshot-uploaded' as const;
 
 export const RECONCILIATION_EVENT_TYPES = [
   RECONCILIATION_STATEMENT_UPLOADED_EVENT_TYPE,
   RECONCILIATION_MANUAL_TRANSCRIPTION_REQUESTED_EVENT_TYPE,
   RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
+  RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE,
 ] as const;
 
 /** The dotted `reconciliation.*` event-type literal union (Story 9.3 lands the first two). */
@@ -163,4 +208,6 @@ export const RECONCILIATION_EVENT_PAYLOAD_SCHEMAS = {
   [RECONCILIATION_MANUAL_TRANSCRIPTION_REQUESTED_EVENT_TYPE]:
     ReconciliationManualTranscriptionRequestedPayloadSchema,
   [RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE]: ReconciliationConfirmationReversedPayloadSchema,
+  [RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE]:
+    ReconciliationSelfVerifyScreenshotUploadedPayloadSchema,
 } as const satisfies Record<ReconciliationEventType, z.ZodTypeAny>;

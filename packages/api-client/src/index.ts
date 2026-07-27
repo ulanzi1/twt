@@ -22,6 +22,8 @@ import {
   PoolContributorListResponse,
   NomineeConsoleResponse,
   BankStatementUploadResponse,
+  SelfVerifyStateResponse,
+  SelfVerifyScreenshotUploadResponse,
   ContributionIntentResponse,
   ContributionAttestResponse,
   ContributionFailureReportRequest,
@@ -71,6 +73,8 @@ import {
   type PoolContributorListResponse as PoolContributorListResult,
   type NomineeConsoleResponse as NomineeConsoleResult,
   type BankStatementUploadResponse as BankStatementUploadResult,
+  type SelfVerifyStateResponse as SelfVerifyStateResult,
+  type SelfVerifyScreenshotUploadResponse as SelfVerifyScreenshotUploadResult,
   ContributionHistoryResponse,
   type ContributionHistoryResponse as ContributionHistoryResult,
   type ContributionIntentRequest,
@@ -574,6 +578,43 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return callMultipart(
         `${MEMBER_HOME_BASE}/reconciliation/statements${qs}`,
         BankStatementUploadResponse,
+        form,
+      );
+    },
+
+    // ── Self-verify recovery (Story 9.7 — the FR-32 screenshot upload + the <SelfVerifySurface> read) ────
+    /**
+     * Read the member's OWN self-verify recovery state for a pool (Story 9.7). Returns `{ mismatch, reason,
+     * screenshotUploaded, status }` (default / uploaded / resolved) — the state the `<SelfVerifySurface>`
+     * renders. Member-scoped (FR-12A). Fail-soft to the neutral default server-side (never a 500). The 5th
+     * `'GET'` arg is REQUIRED (`call` defaults to POST) (auth).
+     */
+    memberSelfVerifyState(poolId: string): Promise<SelfVerifyStateResult> {
+      return call(
+        `${MEMBER_HOME_BASE}/self-verify/${encodeURIComponent(poolId)}`,
+        SelfVerifyStateResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+    /**
+     * Upload a self-verify payment screenshot (Story 9.7; FR-32 — the ONE budgeted friction surface).
+     * Accepted ONLY for a pool where the member has an unresolved mismatch, OR the explicit "Trouble with
+     * UTR?" fallback (`fallback: true`). The caller builds the `FormData` with the picked file (RN:
+     * `{ uri, name, type }` appended as `file`); `poolId` (+ optional `fallback`) ride the querystring.
+     * Returns `{ status: 'uploaded' }` on success (PURE EVIDENCE INTAKE — a screenshot NEVER confirms/remaps,
+     * AC4). A 413/400/503 surfaces as `ApiError` (key on `error.code` for Pattern-4 copy) (auth).
+     */
+    memberUploadSelfVerifyScreenshot(
+      form: FormData,
+      poolId: string,
+      opts: { fallback?: boolean } = {},
+    ): Promise<SelfVerifyScreenshotUploadResult> {
+      const qs = `?pool_id=${encodeURIComponent(poolId)}${opts.fallback ? '&fallback=true' : ''}`;
+      return callMultipart(
+        `${MEMBER_HOME_BASE}/self-verify/screenshot${qs}`,
+        SelfVerifyScreenshotUploadResponse,
         form,
       );
     },

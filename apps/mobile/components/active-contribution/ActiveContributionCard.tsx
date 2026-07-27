@@ -28,11 +28,12 @@
 
 import { useLocale, useT } from '@twt/i18n/react'
 import { useRouter } from 'expo-router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Button, Paragraph, Text, View, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../common/CallHelplineCTA'
+import { SelfVerifySurface } from '../self-verify/SelfVerifySurface'
 import { StatusPill } from '../status-pill/StatusPill'
 import { markCtaTap, markLoopPhase } from '../../lib/loop-timing-session'
 import { cycleDayFromDaysRemaining, selectToneGradientKey } from './toneGradient'
@@ -66,6 +67,9 @@ export function ActiveContributionCard() {
   const { locale } = useLocale()
   const { data } = useActiveContributionQuery()
   const router = useRouter()
+  // Story 9.7 — the inline <SelfVerifySurface> disclosure (opened by the red "Fix this" affordance or the
+  // yellow "Trouble with UTR?" disclosure). Kept local so the card stays the single Journey-1 entry.
+  const [showSelfVerify, setShowSelfVerify] = useState(false)
 
   // Story 8.12 — the `card_render` mark for the 90-second-loop measurement (AC1). Fires exactly ONCE per
   // session, only when the assigned live pool paints (dep is `data?.assigned` + `once` — never on the
@@ -118,6 +122,10 @@ export function ActiveContributionCard() {
   // (told-us-they-paid, still verifying) REPLACES the contribute CTA; `none` → the contribute CTA. A
   // per-member self-state — NEVER "confirmed/received/success/paid ✓", and it never touches the meter above.
   const hasAttested = data.myContribution === 'attested'
+  // Story 9.7 (AC1) — the member's OWN unresolved-mismatch (red) state. The card flips to the red pill and
+  // offers a DIRECT "Fix this" → <SelfVerifySurface> entry (Decision D7, confirmed by BigDev), never the
+  // alarming "expected X" line. A per-member self-state — it never touches the confirmed-only meter above.
+  const isMismatch = data.myContribution === 'mismatch'
 
   return (
     <YStack
@@ -225,8 +233,47 @@ export function ActiveContributionCard() {
           PRESERVE that behavior deliberately via the pill's `live` prop rather than silently drop it —
           the attested confirmation is a genuine state change worth announcing; the tone-gradient nudge
           and this attested-status announcement carry different content (Story 9.6 Completion Notes). */}
-      {hasAttested ? (
-        <StatusPill status="yellow" size="default" live />
+      {isMismatch ? (
+        // Story 9.7 (AC1/D7) — the RED mismatch state: the red pill + a DIRECT "Fix this" self-serve entry
+        // to the recovery surface (revealed inline). NEVER the alarming "expected X, recorded Y" line.
+        <YStack gap="$2">
+          {/* `live` only while the surface is COLLAPSED — once expanded, <SelfVerifySurface>'s own
+              accessibilityLiveRegion takes over announcing this state, so the pill doesn't double up as a
+              second concurrent live region alongside it (preserving the single-ambient-region discipline
+              this file documents above; code review, 2026-07-27). */}
+          <StatusPill status="red" size="default" live={!showSelfVerify} />
+          <Button
+            height={56}
+            theme="red"
+            justify="flex-start"
+            accessibilityRole="button"
+            accessibilityLabel={t('selfVerify.fix_this_a11y', undefined, NS)}
+            accessibilityState={{ expanded: showSelfVerify }}
+            onPress={() => setShowSelfVerify((v) => !v)}
+          >
+            {t('selfVerify.fix_this', undefined, NS)}
+          </Button>
+          {showSelfVerify ? <SelfVerifySurface poolId={data.poolId} /> : null}
+        </YStack>
+      ) : hasAttested ? (
+        // Yellow (still-verifying). The pill + the FR-32 HIDDEN "Trouble with UTR?" disclosure — a member
+        // who paid but sees no confirmation can self-serve (fallback=true) without waiting for a red flip.
+        <YStack gap="$2">
+          {/* Same "surface owns the live announcement once expanded" rule as the red pill above. */}
+          <StatusPill status="yellow" size="default" live={!showSelfVerify} />
+          <Button
+            height={56}
+            chromeless
+            justify="flex-start"
+            accessibilityRole="button"
+            accessibilityLabel={t('selfVerify.trouble_with_utr_a11y', undefined, NS)}
+            accessibilityState={{ expanded: showSelfVerify }}
+            onPress={() => setShowSelfVerify((v) => !v)}
+          >
+            {t('selfVerify.trouble_with_utr', undefined, NS)}
+          </Button>
+          {showSelfVerify ? <SelfVerifySurface poolId={data.poolId} fallback /> : null}
+        </YStack>
       ) : (
         // Contribute CTA — a ≥56pt touch target (AC5/UX-DR26), warm-red accent (§1094: one accent per
         // surface), role=button + label + hint. Opens the Story 8.4 UPI Intent flow.

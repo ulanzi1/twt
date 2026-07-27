@@ -125,11 +125,18 @@ export const Alert = z.discriminatedUnion('alert_category', [
     amount_paise: Paise,
     period_label: z.string().min(1),
   }),
-  // Epic 8 — declared vs recorded contribution mismatch.
+  // Epic 8 (reserved) / Story 9.7 (wired) — a reconciliation mismatch the member is notified about.
+  // `expected_paise`/`actual_paise` are OPTIONAL (Story 9.7): the `contribution.reconciliation-mismatch`
+  // verdict carries a reason-code, NOT an amount comparison, and the `wrong_pool` reason has no amounts to
+  // report at all — the producer fills them only when derivable and omits them otherwise (never fabricated).
+  // `body` is the producer-resolved, locale-correct, DIGNIFIED line the push renders (mapped from the machine
+  // reason-code, never the raw enum, never "Error/Failed") — the same producer-owns-the-copy pattern as the
+  // confirmed alert's `period_label` (render stays a pure function of the payload).
   alertVariant('contribution_mismatch', {
     pool_id: UuidString,
-    expected_paise: Paise,
-    actual_paise: Paise,
+    expected_paise: Paise.optional(),
+    actual_paise: Paise.optional(),
+    body: z.string().min(1).optional(),
   }),
   // Epic 6 — claim moved to a new lifecycle state.
   alertVariant('claim_status_change', { claim_id: UuidString, new_status: z.string().min(1) }),

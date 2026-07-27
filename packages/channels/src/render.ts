@@ -97,9 +97,14 @@ function content(alert: RenderableAlert, esc: (value: string) => string): { head
         line: `${rupees(alert.payload_data.amount_paise)} for ${esc(alert.payload_data.period_label)}`,
       };
     case 'contribution_mismatch':
+      // Story 9.7 (FR-32) — DIGNIFIED, never alarming: the producer resolves a locale-correct `body` from
+      // the reason-code (mapped to Pattern-4 copy, never the raw enum / "Error/Failed"). The pre-9.7
+      // "expected X, recorded Y" line was both alarming AND impossible (the verdict carries no amount
+      // comparison, and `wrong_pool` has no amounts) — so render drives off `body`, with a dignified generic
+      // fallback for a hand-built payload that omits it (the producer always sets it).
       return {
-        heading: 'Contribution mismatch',
-        line: `expected ${rupees(alert.payload_data.expected_paise)}, recorded ${rupees(alert.payload_data.actual_paise)}`,
+        heading: 'Payment update',
+        line: esc(alert.payload_data.body ?? 'We could not match your payment yet — tap to fix it.'),
       };
     case 'claim_status_change':
       return {

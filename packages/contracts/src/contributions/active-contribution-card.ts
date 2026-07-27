@@ -35,6 +35,7 @@
 import { z } from 'zod';
 
 import { Iso8601Datetime } from '../_common/primitives.js';
+import { ContributionMismatchReasonCode } from './self-verify.js';
 import { MyContributionStatus } from './upi-intent.js';
 
 /**
@@ -86,6 +87,10 @@ export type UpcomingAmountChange = z.output<typeof UpcomingAmountChange>;
 export const AssignedContributionCard = z
   .object({
     assigned: z.literal(true),
+    // (Story 9.7) The member's own live pool id — the key the `<SelfVerifySurface>` recovery entry carries
+    // to `GET/POST /member/self-verify/:poolId`. Not PII (the same pool id already rides the
+    // `contributions/:pool_id` push deep-link grammar); the member's own pool, member-scoped.
+    poolId: z.string().uuid(),
     poolLetterCode: z.string().min(1),
     poolName: z.string().min(1).nullable(),
     poolCanonicalIdentifier: z.string().min(1),
@@ -100,11 +105,19 @@ export const AssignedContributionCard = z
     daysRemaining: z.number().int().nonnegative(),
     progress: ActiveContributionProgress,
     upcomingAmountChange: UpcomingAmountChange.nullable(),
-    // (Story 8.4, AC4) The MEMBER'S OWN contribution state — `none` (contribute CTA) → `attested` (yellow
-    // pill: told-us-they-paid, still verifying). A PER-MEMBER self-state, NOT an aggregate: it is
-    // DELIBERATELY separate from `progress` (which stays confirmed-only — `{ confirmedCount, rosterSize }`).
-    // Never add a yellow/attested count to `progress`; that is the one change this contract exists to forbid.
+    // (Story 8.4, AC4 / Story 9.7 AC1) The MEMBER'S OWN contribution state — `none` (contribute CTA) →
+    // `attested` (yellow pill: told-us-they-paid, still verifying) → `mismatch` (RED: the 9.4 matcher
+    // rejected a found deposit; the card flips to <StatusPill status="red"> and links the <SelfVerifySurface>
+    // recovery entry). A PER-MEMBER self-state, NOT an aggregate: it is DELIBERATELY separate from `progress`
+    // (which stays confirmed-only — `{ confirmedCount, rosterSize }`). Never add a yellow/red/attested count
+    // to `progress`; that is the one change this contract exists to forbid.
     myContribution: MyContributionStatus,
+    // (Story 9.7 AC1) The machine reason-code when `myContribution === 'mismatch'` — the surface maps it to
+    // dignified empathy copy for the Journey-1 entry; `null` in every non-mismatch state. Carrying ONLY the
+    // tone + reason here (not the whole surface state) keeps the card the single entry without a second
+    // round-trip (Decision D5); the `<SelfVerifySurface>` reads its full default/uploaded/resolved state from
+    // its own `GET /api/v1/member/self-verify/:poolId`.
+    mismatchReason: ContributionMismatchReasonCode.nullable(),
   })
   .strict();
 export type AssignedContributionCard = z.output<typeof AssignedContributionCard>;

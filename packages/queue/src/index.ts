@@ -235,6 +235,17 @@ export const QUEUE_NAMES = {
    */
   CONTRIBUTION_NOTIFY_CONFIRMED: 'contribution.notify.confirmed',
   /**
+   * Contribution-MISMATCH notification (Story 9.7, Task 5; FR-30/FR-32 "member notified") — the reconciles-
+   * an-8.8-gap seam. 8.8 shipped only the CONFIRMED seam; 9.7 owns the mismatch seam. Enqueued POST-COMMIT,
+   * best-effort, from the Story 9.4 matcher worker's mismatch branch when it emits
+   * `contribution.reconciliation-mismatch`; the worker builds the RESERVED `contribution_mismatch` alert
+   * (deep-linking to `contributions/:pool_id`) and runs the same live fan-out. Like CONTRIBUTION_NOTIFY_
+   * CONFIRMED there is DELIBERATELY no cron and no recovery sweep: the matcher's own 4h recovery sweep
+   * re-runs the mismatch path, so a dropped notify heals on the next verdict tick. A failed enqueue NEVER
+   * fails the committed mismatch verdict (the 8.8 confirmed-seam D6 posture). Job class B (event-triggered).
+   */
+  CONTRIBUTION_NOTIFY_MISMATCH: 'contribution.notify.mismatch',
+  /**
    * Reconciliation UTR matcher — one job per cycle (Story 9.4, Task 3). Enqueued POST-COMMIT by the apps/api
    * bank-statement upload (the D7 enqueue-primary latency optimizer — a new statement is the only thing that
    * changes match outcomes) AND re-enqueued by the recovery cron sweep (the contracted "cron 6×/day"). The

@@ -103,6 +103,11 @@ const CLAIM_APPEAL_FINAL = permissionKey('claim.appeal_final');
 // gating deferred to Epic 3.
 const POOL_FIXED_AMOUNT_SET = permissionKey('pool.fixed_amount_set');
 const POOL_FIXED_AMOUNT_EMERGENCY = permissionKey('pool.fixed_amount_emergency');
+// Story 9.8 (FR-50) — the reconciliation review-queue READ + four action WRITEs gate (pariwar-dimension;
+// the cycle.freeze / claim.r9_vote pariwar-wide precedent). Each action is ALSO step-up-gated at the route.
+// Granted to pariwar_admin (Trustee-Lite) + finance_officer (the "designated reconciliation reviewer");
+// super_admin auto-derives. Direct state_trustee gating deferred to Epic 3.
+const RECONCILIATION_REVIEW = permissionKey('reconciliation.review');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -186,6 +191,12 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // direct state_trustee gating DEFERRED to Epic 3. No inert state_trustee grant is seeded.
       POOL_FIXED_AMOUNT_SET,
       POOL_FIXED_AMOUNT_EMERGENCY,
+      // Story 9.8 (FR-50) — the reconciliation review-queue key. A PARIWAR-WIDE adjudication surface
+      // (checked at `dimension: 'pariwar'` = scopeTx.pariwarId), the exact cycle.freeze / claim.r9_vote
+      // ceiling rationale (a `pariwar`-ceiling-or-broader role). Each action is ADDITIONALLY step-up-gated.
+      // v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating DEFERRED to Epic 3. No inert
+      // state_trustee grant is seeded.
+      RECONCILIATION_REVIEW,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -249,9 +260,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   },
   {
     role: 'finance_officer',
-    // Finance keys land Epic 7/9 — seed empty at v1 (refine vs claim.approve per
-    // Trustee at OQ-3). An empty bundle is correct, not a gap.
-    permissions: [],
+    // Story 9.8 (FR-50) — the "designated reconciliation reviewer". The reconciliation review-queue key
+    // (pariwar-dimension; the `pariwar` scopeCeiling satisfies it), the first grant this role carries.
+    // Other finance keys land later; this is the FR-50 reviewer capability, not an adjudication grant.
+    permissions: [RECONCILIATION_REVIEW],
     scopeCeiling: 'pariwar',
   },
   {

@@ -31,6 +31,7 @@ import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
 import { registerNomineeConsoleModule } from './modules/nominee-console/index.js';
 import { registerReconciliationModule } from './modules/reconciliation/index.js';
+import { registerReconciliationReviewModule } from './modules/reconciliation-review/index.js';
 import { registerSelfVerifyModule } from './modules/self-verify/index.js';
 import { registerPaymentModule } from './modules/payment/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
@@ -168,6 +169,13 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // emit the reconciliation.statement-uploaded provenance/engagement event + the "padh lenge" fallback task,
   // and return the ParseResultSummary. Closes the Story 9.1 engagement-writer seam (resolveLastEngagedAt).
   registerReconciliationModule(app, deps);
+  // Story 9.8 — the trustee ADJUDICATION surface (a NEW module; the reconciliation module above is upload
+  // transport only): the deadline-ordered cross-member open-case queue read + the per-case detail read
+  // (identity decrypted + screenshot signed-URL minted here) + the four step-up-gated actions (confirm →
+  // the ONLY manual contribution.confirmed path; reject → reconciliation.contribution-rejected; facilitate-
+  // recovery → audited-only, no outcome event; review-and-reverse → reconciliation.confirmation-reversed →
+  // held). Gated by the new reconciliation.review pariwar-dimension key + per-action step-up.
+  registerReconciliationReviewModule(app, deps);
   // Story 9.7 — the member-facing RECOVERY surface's server half: the FR-32 self-verify screenshot-upload
   // transport (POST /member/self-verify/screenshot — the ONE budgeted friction surface, mandatory-only-on-
   // mismatch) + the <SelfVerifySurface> detail read (GET /member/self-verify/:poolId). PURE EVIDENCE INTAKE

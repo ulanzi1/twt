@@ -136,6 +136,13 @@ import {
   type ProvisionedPariwar as Provisioned,
   type ProvisioningStatusList as StatusList,
   type PublishClauseResponse as Published,
+  ReconciliationActionResponse,
+  ReconciliationCaseDetail,
+  ReconciliationQueueResponse,
+  type ReconciliationConfirmRequest,
+  type ReconciliationRecoverRequest,
+  type ReconciliationRejectRequest,
+  type ReconciliationReverseRequest,
   type SessionResponse as Session,
   type UpdateClauseDraftRequest,
 } from '@twt/contracts';
@@ -1022,6 +1029,75 @@ export function applyFixedAmountEmergency(
   body: FixedAmountEmergencyPayload,
 ): Promise<FixedAmountEmergencyResult> {
   return apiFetch(`${fixedAmountBase(pariwarId)}/emergency`, PoolFixedAmountEmergencyResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Reconciliation review-queue surface (Story 9.8) ───────────────────────────
+// The trustee adjudication surface. The reads are cache-disabled (strong consistency);
+// each action is step-up-gated server-side (a 403 auth.step_up_required drives the elevation loop).
+
+const reconReviewBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/reconciliation-review`;
+
+/** GET the deadline-ordered open-case queue. */
+export function getReconciliationQueue(
+  pariwarId: string,
+  limit?: number,
+): Promise<ReconciliationQueueResponse> {
+  const q = limit !== undefined ? `?limit=${limit}` : '';
+  return apiFetch(`${reconReviewBase(pariwarId)}/queue${q}`, ReconciliationQueueResponse);
+}
+
+/** GET one case's full review context (identity decrypted + screenshot URL minted server-side). */
+export function getReconciliationCase(pariwarId: string, caseKey: string): Promise<ReconciliationCaseDetail> {
+  return apiFetch(`${reconReviewBase(pariwarId)}/cases/${encodeURIComponent(caseKey)}`, ReconciliationCaseDetail);
+}
+
+/** POST confirm — the ONLY manual confirm path (names the reconciled deposit). Step-up-gated. */
+export function reconciliationConfirm(
+  pariwarId: string,
+  caseKey: string,
+  body: ReconciliationConfirmRequest,
+): Promise<ReconciliationActionResponse> {
+  return apiFetch(`${reconReviewBase(pariwarId)}/cases/${encodeURIComponent(caseKey)}/confirm`, ReconciliationActionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST reject — a reconciliation.* verdict; member stays red, case closes. Step-up-gated. */
+export function reconciliationReject(
+  pariwarId: string,
+  caseKey: string,
+  body: ReconciliationRejectRequest,
+): Promise<ReconciliationActionResponse> {
+  return apiFetch(`${reconReviewBase(pariwarId)}/cases/${encodeURIComponent(caseKey)}/reject`, ReconciliationActionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST facilitate-recovery — audited action only, NO outcome event; case stays OPEN. Step-up-gated. */
+export function reconciliationRecover(
+  pariwarId: string,
+  caseKey: string,
+  body: ReconciliationRecoverRequest,
+): Promise<ReconciliationActionResponse> {
+  return apiFetch(`${reconReviewBase(pariwarId)}/cases/${encodeURIComponent(caseKey)}/recover`, ReconciliationActionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST review-and-reverse — walk a confirmed contribution back to held. Step-up-gated. */
+export function reconciliationReverse(
+  pariwarId: string,
+  caseKey: string,
+  body: ReconciliationReverseRequest,
+): Promise<ReconciliationActionResponse> {
+  return apiFetch(`${reconReviewBase(pariwarId)}/cases/${encodeURIComponent(caseKey)}/reverse`, ReconciliationActionResponse, {
     method: 'POST',
     body: JSON.stringify(body),
   });

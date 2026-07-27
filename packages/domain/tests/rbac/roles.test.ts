@@ -65,12 +65,19 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(bundleForRole('block_admin')?.scopeCeiling).toBe('block');
   });
 
-  it('sparse/empty bundles are allowed (finance_officer, media_comms, field_worker)', () => {
-    // helpline_operator gained member.view_validity at Story 4.6 (it reads a caller's validity),
-    // so it is no longer empty; the remaining three keep empty bundles at v1.
-    for (const role of ['finance_officer', 'media_comms', 'field_worker'] as const) {
+  it('sparse/empty bundles are allowed (media_comms, field_worker)', () => {
+    // helpline_operator gained member.view_validity at Story 4.6; finance_officer gained
+    // reconciliation.review at Story 9.8 (the FR-50 "designated reconciliation reviewer"); the
+    // remaining two keep empty bundles at v1.
+    for (const role of ['media_comms', 'field_worker'] as const) {
       expect(bundleForRole(role)?.permissions).toEqual([]);
     }
+  });
+
+  it('finance_officer carries the Story 9.8 reconciliation review key at pariwar ceiling (FR-50)', () => {
+    const bundle = bundleForRole('finance_officer');
+    expect(bundle?.permissions.map((p) => String(p))).toContain('reconciliation.review');
+    expect(bundle?.scopeCeiling).toBe('pariwar');
   });
 
   it('bundleForRole returns undefined for an unknown role (fail-closed at the lookup)', () => {

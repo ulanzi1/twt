@@ -13,4 +13,11 @@ describe('@twt/events', () => {
     expect(entry.type).toBe('reconciliation.self-verify-screenshot-uploaded');
     expect(entry.schema).toBeDefined();
   });
+
+  it('registers the Story 9.8 trustee reject verdict event with its schema', () => {
+    const entry = EVENT_TYPE_REGISTRY['reconciliation.contribution-rejected'];
+    expect(entry).toBeDefined();
+    expect(entry.type).toBe('reconciliation.contribution-rejected');
+    expect(entry.schema).toBeDefined();
+  });
 });

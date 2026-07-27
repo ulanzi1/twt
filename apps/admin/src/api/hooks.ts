@@ -677,3 +677,61 @@ export function useApplyFixedAmountEmergency(pariwarId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: fixedAmountViewKey(pariwarId) }),
   });
 }
+
+// ── Reconciliation review-queue hooks (Story 9.8) — cache-disabled reads + step-up-gated actions ──
+
+export const reconciliationQueueKey = (pariwarId: string) => ['reconciliation-queue', pariwarId] as const;
+export const reconciliationCaseKey = (pariwarId: string, caseKey: string) =>
+  ['reconciliation-case', pariwarId, caseKey] as const;
+
+/** The deadline-ordered open-case queue (cache-disabled — a strong-consistency adjudication surface). */
+export function useReconciliationQueue(pariwarId: string, limit?: number) {
+  return useQuery({
+    queryKey: reconciliationQueueKey(pariwarId),
+    queryFn: () => api.getReconciliationQueue(pariwarId, limit),
+    enabled: pariwarId.length > 0,
+  });
+}
+
+/** One case's full review context (cache-disabled). */
+export function useReconciliationCase(pariwarId: string, caseKey: string | null) {
+  return useQuery({
+    queryKey: reconciliationCaseKey(pariwarId, caseKey ?? ''),
+    queryFn: () => {
+      if (caseKey === null) throw new Error('useReconciliationCase queryFn invoked with a null caseKey');
+      return api.getReconciliationCase(pariwarId, caseKey);
+    },
+    enabled: pariwarId.length > 0 && caseKey !== null && caseKey.length > 0,
+  });
+}
+
+/** The four step-up-gated actions — each invalidates the queue + the case on success. */
+export function useReconciliationActions(pariwarId: string) {
+  const qc = useQueryClient();
+  const invalidate = (caseKey: string) => {
+    void qc.invalidateQueries({ queryKey: reconciliationQueueKey(pariwarId) });
+    void qc.invalidateQueries({ queryKey: reconciliationCaseKey(pariwarId, caseKey) });
+  };
+  return {
+    confirm: useMutation({
+      mutationFn: (v: { caseKey: string; body: import('@twt/contracts').ReconciliationConfirmRequest }) =>
+        api.reconciliationConfirm(pariwarId, v.caseKey, v.body),
+      onSuccess: (_r, v) => invalidate(v.caseKey),
+    }),
+    reject: useMutation({
+      mutationFn: (v: { caseKey: string; body: import('@twt/contracts').ReconciliationRejectRequest }) =>
+        api.reconciliationReject(pariwarId, v.caseKey, v.body),
+      onSuccess: (_r, v) => invalidate(v.caseKey),
+    }),
+    recover: useMutation({
+      mutationFn: (v: { caseKey: string; body: import('@twt/contracts').ReconciliationRecoverRequest }) =>
+        api.reconciliationRecover(pariwarId, v.caseKey, v.body),
+      onSuccess: (_r, v) => invalidate(v.caseKey),
+    }),
+    reverse: useMutation({
+      mutationFn: (v: { caseKey: string; body: import('@twt/contracts').ReconciliationReverseRequest }) =>
+        api.reconciliationReverse(pariwarId, v.caseKey, v.body),
+      onSuccess: (_r, v) => invalidate(v.caseKey),
+    }),
+  };
+}

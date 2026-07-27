@@ -28,16 +28,27 @@ const repoRoot = path.resolve(here, '../..');
 
 // The surface in scope TODAY (relative to repoRoot), walked recursively. contribution-binding.ts is
 // covered by the pool/ walk. ADD each new consumer root here as Epic 8/9/10 land it.
-const SCAN_DIRS = ['packages/domain/src/pool', 'packages/contracts/src/pools'];
+// Story 9.8 (code review) ADDED the reconciliation-review surface: the trustee facilitate-recovery action
+// (D7) is exactly the kind of "leaves the case open, touches no record" handler this gate must prove never
+// grows a remap primitive — the prior scan-scope gap made the story's own "gate stays GREEN" claim vacuous
+// ([[feedback_gate_scope_semantic_coverage]]).
+const SCAN_DIRS = [
+  'packages/domain/src/pool',
+  'packages/contracts/src/pools',
+  'packages/domain/src/reconciliation',
+  'packages/contracts/src/reconciliation',
+  'apps/api/src/modules/reconciliation-review',
+];
 
 // The DEFERRED roots the per-epic scope-extension convention requires future stories to ADD to SCAN_DIRS
 // as they land (documented so it is not forgotten — the standing convention, not dead config):
 //   · Epic 8  — apps/mobile <UPIIntentButton> + apps/api contribution-intent handlers
-//   · Epic 9  — packages/*/reconciliation + the contributions record writer (the wrong-pool RECORD)
+//   · Epic 9  — the contributions record writer (packages/domain/src/contribution — the wrong-pool RECORD
+//     itself; the reconciliation matcher + review-queue surface are now in SCAN_DIRS above, Story 9.8)
 //   · Epic 10 — the helpdesk console handlers + ticket model
 const DEFERRED_SCOPE = [
   'Epic 8: apps/api contribution-intent handlers + apps/mobile UPIIntentButton',
-  'Epic 9: reconciliation matcher + contributions record writer',
+  'Epic 9: contributions record writer (packages/domain/src/contribution)',
   'Epic 10: helpdesk console handlers + ticket model',
 ];
 

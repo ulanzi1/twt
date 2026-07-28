@@ -113,8 +113,13 @@ export function classifyContributionDestination(input: {
  * The `valid` branch reuses the union's single `valid` reason (`assigned_pool_match`): the composition
  * (AC3.10) only ever runs the amount check on a deposit that already passed destination classification, so
  * a `valid` amount result is coherent under the umbrella `valid` reason. `amount_mismatch` is NOT
- * auto-corrected — no auto-topup, no silent amount rewrite (AC2.8, D4); recovery is helpdesk-mediated,
- * reusing 7.6's CLOSED `HelpdeskWrongPoolAction` set + the `TrusteeAttestableCorrectionRequest` seam.
+ * auto-corrected — no auto-topup, no silent amount rewrite (AC2.8, D4); recovery is helpdesk-mediated.
+ *
+ * NOTE (Story 9.11): the original 7.6/7.7 `HelpdeskWrongPoolAction` / `TrusteeAttestableCorrectionRequest`
+ * correction mechanism this docstring once cited was SUPERSEDED — Story 9.8 replaced it wholesale with the
+ * `confirm`/`reject`/`recover`/`reverse` reconciliation review queue, and that queue is the live recovery
+ * mechanism today. Do NOT reach for those 7.6/7.7 types; an over-payment (`amount_mismatch` where
+ * `deposited > expected`) is facilitated via the 9.8 `recover` outcome (Story 9.11), never a 7.6/7.7 action.
  *
  * Both amounts must be finite integers — `NaN`/`Infinity`/non-integer inputs throw rather than silently
  * classifying as a mismatch (`NaN !== NaN` would otherwise misclassify corrupt data as an ordinary
@@ -134,6 +139,65 @@ export function classifyContributionAmount(input: {
   return isMismatch
     ? { verdict: 'amount_mismatch', reasonCode: 'amount_does_not_match_fixed_amount' }
     : { verdict: 'valid', reasonCode: 'assigned_pool_match' };
+}
+
+// ── The over/under direction of an amount mismatch — the SINGLE source of truth (Story 9.11, AC2) ──────
+
+/** The direction of an amount mismatch: an over-payment (`deposited > expected`), an under-payment, or an
+ *  exact match (`exact` — an over-payment story never surfaces it, but the total function is complete). */
+export const AMOUNT_MISMATCH_DIRECTIONS = ['over', 'under', 'exact'] as const;
+export type AmountMismatchDirection = (typeof AMOUNT_MISMATCH_DIRECTIONS)[number];
+
+/**
+ * The over/under DIRECTION of an amount mismatch — the CANONICAL, only-place-in-the-codebase definition of
+ * what "over-payment" and "under-payment" MEAN (Story 9.11, AC2). PURE + deterministic — `over` iff
+ * `depositedPaise > expectedPaise`; `under` iff `<`; `exact` otherwise. Both amounts are integer PAISE (the
+ * matcher carries them so no consumer re-does the whole-INR × 100 or mixes units).
+ *
+ * **EVERY consumer (review-queue read, member self-view, and any future admin/reporting/analytics/helpdesk
+ * surface) MUST derive direction by calling THIS — no component may independently compare
+ * `depositedAmountPaise` and `expectedAmountPaise` (no inline `deposited > expected`).** A grep-guard test
+ * (AC8) fails the build if a second comparison appears anywhere else, so the meaning of "over" can never
+ * silently fork across surfaces (one surface using `>`, another `>=`; one INR, another paise) — a forked
+ * "over" would misdirect a human's off-band recovery decision. This is the amount-analog of the
+ * "re-tune the DATA, never add engine logic" discipline: one definition, mechanically enforced.
+ *
+ * Non-integer / non-finite inputs THROW (the {@link classifyContributionAmount} posture — a corrupt amount
+ * surfaces as a defect, never silently classifies). A caller reading amounts off a JSONB `->>` extraction
+ * (TEXT) MUST cast to integer + guard `NULL` BEFORE calling — never pass a raw string / `null` / `NaN` in.
+ */
+export function classifyAmountMismatchDirection(input: {
+  readonly expectedPaise: number;
+  readonly depositedPaise: number;
+}): AmountMismatchDirection {
+  if (!Number.isInteger(input.expectedPaise) || !Number.isInteger(input.depositedPaise)) {
+    throw new Error(
+      `[classifyAmountMismatchDirection] expectedPaise and depositedPaise must both be finite integers ` +
+        `(got expectedPaise=${String(input.expectedPaise)}, depositedPaise=${String(input.depositedPaise)})`,
+    );
+  }
+  if (input.depositedPaise > input.expectedPaise) return 'over';
+  if (input.depositedPaise < input.expectedPaise) return 'under';
+  return 'exact';
+}
+
+/**
+ * The signed excess in PAISE at the canonical call site (`deposited − expected`; positive for an
+ * over-payment) — the amount FR-36 records. Computed HERE (beside {@link classifyAmountMismatchDirection})
+ * so a consumer never re-subtracts by hand next to a re-comparison (AC2). Integer-guarded like the direction
+ * helper. Convert to INR only at the display boundary.
+ */
+export function amountMismatchExcessPaise(input: {
+  readonly expectedPaise: number;
+  readonly depositedPaise: number;
+}): number {
+  if (!Number.isInteger(input.expectedPaise) || !Number.isInteger(input.depositedPaise)) {
+    throw new Error(
+      `[amountMismatchExcessPaise] expectedPaise and depositedPaise must both be finite integers ` +
+        `(got expectedPaise=${String(input.expectedPaise)}, depositedPaise=${String(input.depositedPaise)})`,
+    );
+  }
+  return input.depositedPaise - input.expectedPaise;
 }
 
 // ── The pure resolution core (DB-free) ────────────────────────────────────────

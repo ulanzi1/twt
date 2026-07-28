@@ -19,6 +19,7 @@ import {
 } from '../../../src/reconciliation/events.js';
 import {
   buildCaseKey,
+  getReconciliationCaseDetail,
   listOpenReconciliationCases,
 } from '../../../src/reconciliation/reconciliation-review-read.js';
 import { pariwarId as toPariwarId } from '../../../src/ids/index.js';
@@ -225,5 +226,122 @@ describe.skipIf(!hasDatabase)('listOpenReconciliationCases — live-DB (Story 9.
 
     const res = await listOpenReconciliationCases(tx, { pariwarId: toPariwarId(PARIWAR_A), now: NOW });
     expect(res.rows.find((r) => r.poolId === poolId)).toBeUndefined();
+  });
+
+  // ── Story 9.11 (AC3/AC8) — the over/under direction + excess surfaces on the queue row + case detail ────
+  describe('Story 9.11 — over-payment surfacing', () => {
+    // seedPool's default fixedAmount is 500 INR ⇒ expected 50,000 paise.
+    const EXPECTED_PAISE = 50_000;
+
+    it('an OVER-payment mismatch surfaces `over` + the correct excess (list row flag + detail)', async () => {
+      const { client, tx } = getTx();
+      const { alertId, poolId } = await seedReconcilingCycle(tx, PARIWAR_A);
+      const memberId = randomUUID();
+      await seedEvent(tx, PARIWAR_A, {
+        streamId: alertId,
+        eventType: CONTRIBUTION_MISMATCH_EVENT_TYPE,
+        payload: {
+          poolId,
+          memberId,
+          alertId,
+          reason: 'amount_mismatch',
+          depositedAmountPaise: 60_000, // > 50,000 ⇒ over by ₹100
+          expectedAmountPaise: EXPECTED_PAISE,
+        },
+      });
+      await enterAppScope(client, PARIWAR_A);
+
+      const key = buildCaseKey('mismatch', poolId, memberId);
+      const list = await listOpenReconciliationCases(tx, { pariwarId: toPariwarId(PARIWAR_A), now: NOW });
+      const row = list.rows.find((r) => r.caseKey === key);
+      expect(row?.overpaymentExcessPaise).toBe(10_000); // 60,000 − 50,000
+
+      const detail = await getReconciliationCaseDetail(tx, { pariwarId: toPariwarId(PARIWAR_A), caseKey: key });
+      expect(detail?.amountMismatch).toEqual({ direction: 'over', excessPaise: 10_000 });
+    });
+
+    it('an UNDER-payment mismatch surfaces `under`; the list row does NOT flag it (over-only)', async () => {
+      const { client, tx } = getTx();
+      const { alertId, poolId } = await seedReconcilingCycle(tx, PARIWAR_A);
+      const memberId = randomUUID();
+      await seedEvent(tx, PARIWAR_A, {
+        streamId: alertId,
+        eventType: CONTRIBUTION_MISMATCH_EVENT_TYPE,
+        payload: {
+          poolId,
+          memberId,
+          alertId,
+          reason: 'amount_mismatch',
+          depositedAmountPaise: 40_000, // < 50,000 ⇒ under by ₹100
+          expectedAmountPaise: EXPECTED_PAISE,
+        },
+      });
+      await enterAppScope(client, PARIWAR_A);
+
+      const key = buildCaseKey('mismatch', poolId, memberId);
+      const list = await listOpenReconciliationCases(tx, { pariwarId: toPariwarId(PARIWAR_A), now: NOW });
+      expect(list.rows.find((r) => r.caseKey === key)?.overpaymentExcessPaise).toBeNull();
+
+      const detail = await getReconciliationCaseDetail(tx, { pariwarId: toPariwarId(PARIWAR_A), caseKey: key });
+      expect(detail?.amountMismatch).toEqual({ direction: 'under', excessPaise: -10_000 });
+    });
+
+    it('a wrong_pool mismatch surfaces NEITHER (no amount fact — the amounts were never compared)', async () => {
+      const { client, tx } = getTx();
+      const { alertId, poolId } = await seedReconcilingCycle(tx, PARIWAR_A);
+      const memberId = randomUUID();
+      await seedEvent(tx, PARIWAR_A, {
+        streamId: alertId,
+        eventType: CONTRIBUTION_MISMATCH_EVENT_TYPE,
+        payload: { poolId, memberId, alertId, reason: 'wrong_pool' },
+      });
+      await enterAppScope(client, PARIWAR_A);
+
+      const key = buildCaseKey('mismatch', poolId, memberId);
+      const list = await listOpenReconciliationCases(tx, { pariwarId: toPariwarId(PARIWAR_A), now: NOW });
+      expect(list.rows.find((r) => r.caseKey === key)?.overpaymentExcessPaise).toBeNull();
+
+      const detail = await getReconciliationCaseDetail(tx, { pariwarId: toPariwarId(PARIWAR_A), caseKey: key });
+      expect(detail?.amountMismatch).toBeNull();
+    });
+  });
+
+  // ── Review fix (Story 9.11 code review) — getReconciliationCaseDetail's mismatch selection is
+  // order-independent (picks the row with the max occurredAt, not whichever row Postgres returns last). The
+  // underlying query has no ORDER BY, so a naive "last row wins" reducer would silently pick the WRONG
+  // mismatch reason whenever the DB's return order didn't match chronological order. Seed the chronologically
+  // LATER event FIRST and the chronologically EARLIER event SECOND (reversing insertion vs. occurredAt order)
+  // to prove the selection tracks occurredAt, not insertion/return order. Applies to every mismatch reason —
+  // not just amount_mismatch — so a non-amount reason pair is used deliberately.
+  describe('Review fix — getReconciliationCaseDetail latest-mismatch selection is order-independent', () => {
+    it('a later-occurredAt mismatch reason wins even when it is inserted BEFORE an earlier-occurredAt one', async () => {
+      const { client, tx } = getTx();
+      const { alertId, poolId } = await seedReconcilingCycle(tx, PARIWAR_A);
+      const memberId = randomUUID();
+      const laterAt = new Date('2026-07-08T00:00:00.000Z');
+      const earlierAt = new Date('2026-07-05T00:00:00.000Z');
+
+      // Inserted FIRST, but chronologically the LATEST mismatch — must be the one that wins.
+      await seedEvent(tx, PARIWAR_A, {
+        streamId: alertId,
+        eventType: CONTRIBUTION_MISMATCH_EVENT_TYPE,
+        payload: { poolId, memberId, alertId, reason: 'wrong_pool' },
+        occurredAt: laterAt,
+      });
+      // Inserted SECOND, but chronologically EARLIER — a naive "last row wins" reducer would pick this one.
+      await seedEvent(tx, PARIWAR_A, {
+        streamId: alertId,
+        eventType: CONTRIBUTION_MISMATCH_EVENT_TYPE,
+        payload: { poolId, memberId, alertId, reason: 'entry_already_claimed' },
+        occurredAt: earlierAt,
+      });
+      await enterAppScope(client, PARIWAR_A);
+
+      const key = buildCaseKey('mismatch', poolId, memberId);
+      const detail = await getReconciliationCaseDetail(tx, { pariwarId: toPariwarId(PARIWAR_A), caseKey: key });
+      expect(detail?.mismatchReason).toBe('wrong_pool');
+      expect(detail?.raisedAt?.toISOString()).toBe(laterAt.toISOString());
+      expect(detail?.amountMismatch).toBeNull(); // neither reason is amount_mismatch
+    });
   });
 });

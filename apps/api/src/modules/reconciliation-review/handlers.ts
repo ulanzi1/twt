@@ -138,6 +138,8 @@ export function createReconciliationReviewHandlers(deps: AppDeps) {
           // the v1 audit sink is not queryable, so it defaults false (tracked forward gap; the load-bearing
           // AC5 property — recover changes NO outcome — is unaffected).
           in_recovery: false,
+          // Story 9.11 (AC3) — flag an over-payment in the list (non-null only when direction is `over`).
+          overpayment_excess_paise: r.overpaymentExcessPaise,
         })),
         truncated: result.truncated,
       };
@@ -229,6 +231,11 @@ export function createReconciliationReviewHandlers(deps: AppDeps) {
         screenshot_url: screenshotUrl,
         notes: detail.notes.map((n) => ({ kind: n.kind, at: n.at.toISOString(), detail: n.detail })),
         confirmed_event_id: detail.confirmedEventId,
+        // Story 9.11 (AC3) — the derived over/under direction + signed excess (paise) for an amount_mismatch
+        // case; null otherwise. "over by ₹X" / "under by ₹X" on the one-screen review context.
+        amount_mismatch: detail.amountMismatch
+          ? { direction: detail.amountMismatch.direction, excess_paise: detail.amountMismatch.excessPaise }
+          : null,
       };
     },
 

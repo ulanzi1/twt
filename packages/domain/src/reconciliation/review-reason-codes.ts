@@ -51,6 +51,13 @@ export const RECONCILIATION_REVIEW_REASON_CODES = [
   // recover family — the case needs off-band human resolution; it stays OPEN (D7).
   'member_contacted', // the member has been reached to resolve the discrepancy
   'awaiting_correction', // waiting on a corrected payment / statement before the case can close
+  // recover family, Story 9.11 — the three named over-payment resolutions (FR-36). Each RECORDS a human
+  // trustee decision taken off-band under trust policy; recover stays audit-only, NO outcome event (D7). In
+  // particular `applied_next_cycle_credit` is a RECORDED decision — there is NO code that creates a
+  // next-cycle contribution/credit from it (that would be a payout/ledger engine; §1.13, AC7).
+  'refund_difference', // the trust facilitates returning the excess to the member/nominee (off-band)
+  'applied_next_cycle_credit', // a trustee, under explicit policy, records the excess as a future-cycle credit
+  'left_as_donation', // the member/nominee chose to leave the excess with the trust as a donation
   // reverse family — walk back an already-confirmed contribution (the rare monotonic exception, D3).
   'confirmed_in_error', // the prior confirmation was made in error
   'duplicate', // the confirmation double-counts a payment already confirmed elsewhere
@@ -78,6 +85,10 @@ export const REASON_CODE_OUTCOME_COMPAT: Readonly<
   statement_matched_manually: ['confirm'],
   member_contacted: ['recover'],
   awaiting_correction: ['recover'],
+  // Story 9.11 — the three named over-payment resolutions, all recover-only (audit-only, no outcome event).
+  refund_difference: ['recover'],
+  applied_next_cycle_credit: ['recover'],
+  left_as_donation: ['recover'],
   confirmed_in_error: ['reverse'],
   duplicate: ['reverse'],
   other: ['confirm', 'reject', 'recover', 'reverse'],

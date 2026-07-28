@@ -85,6 +85,17 @@ describe('<SelfVerifySurface> anatomy (UX §11 / AC2)', () => {
     expect(src).toContain('selfVerify.generic.title')
   })
 
+  it('Story 9.11 (AC4): an over-payment renders the amount_mismatch_over variant with the excess interpolated', () => {
+    // The over-variant copy keys are wired (the generic amount_mismatch.* stays for under/unknown).
+    expect(src).toContain('amount_mismatch_over.title')
+    expect(src).toContain('amount_mismatch_over.body')
+    // The discriminator drives it (server-set, over-only) + the excess is interpolated as { amount }.
+    expect(src).toContain('data?.overpayment')
+    expect(src).toMatch(/overpayment\s*!==\s*null/)
+    expect(src).toContain('excessPaise')
+    expect(src).toContain('{ amount:')
+  })
+
   it('the scan actually reached real source', () => {
     expect(read(SURFACE).length).toBeGreaterThan(0)
   })

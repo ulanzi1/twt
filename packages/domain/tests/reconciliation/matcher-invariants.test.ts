@@ -148,6 +148,33 @@ describe('AC6 — contribution.reconciliation-mismatch payload schema', () => {
   it('rejects an unknown reason', () => {
     expect(() => ContributionReconciliationMismatchPayloadSchema.parse({ ...valid, reason: 'made_up' })).toThrow();
   });
+
+  // Story 9.11 (AC1/AC8) — the carried over/under amounts are additive-optional.
+  it('accepts the amount_mismatch carried amounts (deposited/expected paise)', () => {
+    expect(() =>
+      ContributionReconciliationMismatchPayloadSchema.parse({
+        ...valid,
+        reason: 'amount_mismatch',
+        depositedAmountPaise: 110_000,
+        expectedAmountPaise: 100_000,
+      }),
+    ).not.toThrow();
+  });
+
+  it('a legacy no-amounts mismatch still validates (additive-optional, backward-compatible)', () => {
+    const parsed = ContributionReconciliationMismatchPayloadSchema.parse(valid);
+    expect(parsed.depositedAmountPaise).toBeUndefined();
+    expect(parsed.expectedAmountPaise).toBeUndefined();
+  });
+
+  it('rejects a negative or non-integer carried amount', () => {
+    expect(() =>
+      ContributionReconciliationMismatchPayloadSchema.parse({ ...valid, reason: 'amount_mismatch', depositedAmountPaise: -1 }),
+    ).toThrow();
+    expect(() =>
+      ContributionReconciliationMismatchPayloadSchema.parse({ ...valid, reason: 'amount_mismatch', expectedAmountPaise: 1.5 }),
+    ).toThrow();
+  });
 });
 
 // ── Task 2 — the parsed-entry → row map (minimal Tier-1-adjacent footprint) ───────────────────────────

@@ -529,6 +529,7 @@ async function resolveCard(
     reason: null,
     screenshotUploaded: false,
     status: 'default',
+    overpayment: null,
   };
   try {
     selfVerify = await contributionDomain.resolveMemberSelfVerifyState(tx, {

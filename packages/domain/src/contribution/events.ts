@@ -189,6 +189,14 @@ export const ContributionReconciliationMismatchPayloadSchema = z
     bankStatementEntryId: z.string().uuid().nullable(),
     detectedAt: z.string().datetime(),
     matcherRun: z.string().min(1),
+    // Story 9.11 (AC1) — the durable over/under fact. The deposited + expected amounts in INTEGER PAISE,
+    // carried ONLY for `reason: 'amount_mismatch'` (populated by the matcher's amount-mismatch branch);
+    // ABSENT for `no_statement_entry` / `wrong_pool` / `entry_already_claimed` / `sender_vpa_mismatch` (those
+    // never made an amount comparison — a carried amount there would be fabricated). Additive-optional: a
+    // previously-emitted mismatch event with no amounts still validates. The over/under direction is DERIVED
+    // from these two by the canonical `classifyAmountMismatchDirection` — never a new mismatch reason code.
+    depositedAmountPaise: z.number().int().nonnegative().optional(),
+    expectedAmountPaise: z.number().int().nonnegative().optional(),
   })
   .strict();
 export type ContributionReconciliationMismatchPayload = z.infer<

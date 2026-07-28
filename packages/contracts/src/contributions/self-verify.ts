@@ -55,6 +55,14 @@ export const SelfVerifyStateResponse = z
     reason: ContributionMismatchReasonCode.nullable(),
     screenshotUploaded: z.boolean(),
     status: SelfVerifyStatus,
+    /**
+     * Story 9.11 (AC4) — the OVER-payment discriminator. Non-null ONLY when there is a live mismatch whose
+     * reason is `amount_mismatch` AND the canonical direction is `over`; the `<SelfVerifySurface>` then
+     * renders the `amount_mismatch_over.*` empathy variant. `excessPaise` is the over-payment in PAISE
+     * (deposited − expected, positive); the surface converts to ₹ at the display boundary. Null for an
+     * under-payment / non-amount_mismatch → the generic `amount_mismatch.*` copy stays. Additive-optional.
+     */
+    overpayment: z.object({ excessPaise: z.number().int() }).strict().nullable().optional(),
   })
   .strict();
 export type SelfVerifyStateResponse = z.output<typeof SelfVerifyStateResponse>;

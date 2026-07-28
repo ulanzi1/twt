@@ -37,6 +37,10 @@ export const RECONCILIATION_REVIEW_REASON_CODES = [
   'statement_matched_manually',
   'member_contacted',
   'awaiting_correction',
+  // Story 9.11 — the three named over-payment resolutions (recover-only; value-aligned with the domain).
+  'refund_difference',
+  'applied_next_cycle_credit',
+  'left_as_donation',
   'confirmed_in_error',
   'duplicate',
   'other',
@@ -63,6 +67,10 @@ export const RECONCILIATION_REASON_CODE_OUTCOME_COMPAT: Readonly<
   statement_matched_manually: ['confirm'],
   member_contacted: ['recover'],
   awaiting_correction: ['recover'],
+  // Story 9.11 — the three named over-payment resolutions, all recover-only.
+  refund_difference: ['recover'],
+  applied_next_cycle_credit: ['recover'],
+  left_as_donation: ['recover'],
   confirmed_in_error: ['reverse'],
   duplicate: ['reverse'],
   other: ['confirm', 'reject', 'recover', 'reverse'],
@@ -134,6 +142,13 @@ export const ReconciliationQueueRow = z
     raised_at: z.string().datetime(),
     /** Best-effort marker that a facilitate-recovery action has been logged for this case (D7). */
     in_recovery: z.boolean(),
+    /**
+     * Story 9.11 (AC3) — the over-payment excess in paise, so operators recognise an over-payment in the
+     * list WITHOUT opening the case. Non-null ONLY for an `amount_mismatch` case whose derived direction is
+     * `over`; null/absent for an under-payment, a non-amount_mismatch case, or a non-derivable one.
+     * Additive-optional (a queue built before 9.11 omits it).
+     */
+    overpayment_excess_paise: z.number().int().nullable().optional(),
   })
   .strict();
 export type ReconciliationQueueRow = z.output<typeof ReconciliationQueueRow>;
@@ -208,6 +223,21 @@ export const ReconciliationCaseDetail = z
     notes: z.array(ReconciliationCaseNote),
     /** The confirmed event id (reverse target) — non-null only for a `confirmed` case (AC6). */
     confirmed_event_id: z.string().uuid().nullable(),
+    /**
+     * Story 9.11 (AC3) — the derived over/under direction + signed excess for an `amount_mismatch` case, so
+     * a helpdesk operator sees "over by ₹X" (or "under by ₹X") on the one-screen review context. `null` for
+     * a non-`amount_mismatch` case or a non-derivable one. `excess_paise` = deposited − expected (positive
+     * over-payment, negative under). Direction is the CANONICAL over/under (domain `classifyAmountMismatchDirection`);
+     * NO surface re-compares the amounts. Additive-optional (a detail built before 9.11 omits it).
+     */
+    amount_mismatch: z
+      .object({
+        direction: z.enum(['over', 'under', 'exact']),
+        excess_paise: z.number().int(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
   })
   .strict();
 export type ReconciliationCaseDetail = z.output<typeof ReconciliationCaseDetail>;

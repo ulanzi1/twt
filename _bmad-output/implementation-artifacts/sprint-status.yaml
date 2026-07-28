@@ -1,4 +1,90 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-28h (story 9-11 review -> done via bmad-code-review: 3-layer adversarial review
+#   (Blind Hunter + Edge Case Hunter + Acceptance Auditor). 2 decisions resolved with BigDev: (1)
+#   getReconciliationCaseDetail's unscoped mismatch-selection fix (the underlying query has no ORDER BY, so
+#   the pre-9.11 code picked whichever mismatch row Postgres returned last, not the latest by time; the 9.11
+#   diff incidentally fixes this for ALL 4 mismatch reasons, not just amount_mismatch) — accepted as-is +
+#   regression test added (review-queue-read.spec.ts, proves selection is occurredAt-order-independent); (2)
+#   the member-facing rupee conversion's fractional-paise display ambiguity — exact paise-precision display
+#   accepted, no code change. 3 patches applied: the decision-1 regression test above; a legacy-fallback
+#   over/under UTR-match ambiguity in deriveAmountMismatchDirection (now matches by the mismatch event's own
+#   bankStatementEntryId first, UTR only as a further fallback); this file's own last_updated label lost on
+#   2026-07-28d, restored. Plus a pre-existing (not review-flagged) no-irregular-whitespace lint failure in
+#   over-under-single-source.test.ts fixed (a zero-width-space JSDoc-closing-sequence workaround replaced with
+#   prose). 2 items deferred to deferred-work.md (AC2/AC8 grep-guard regex brittleness; ::int/int4 overflow
+#   risk on the carried paise fields across 3 read-paths — both low-probability, not blocking). Full domain
+#   suite green (incl. new tests + the AC2/AC8 fence + the governance fence); domain typecheck + lint clean.
+#   development_status[9-11-over-payment-facilitated-recovery]: done.)
+# last_updated: 2026-07-28g (story 9-11 ready-for-dev -> in-progress -> review via bmad-dev-story [Opus 4.8].
+#   Story 9.11 "Over-Payment Facilitated Recovery" implemented end-to-end on branch
+#   story/9-11-over-payment-facilitated-recovery off HEAD 257aa3b. A [GOVERNANCE + classification] delta on
+#   shipped 9.4/9.7/9.8 substrate — NOT a payout/refund/credit feature. The over-payment (amount-mismatch
+#   over) is now a first-class, distinguishable, audited, facilitated-never-enforced case: (1) the matcher's
+#   amount_mismatch verdict + its event payload carry deposited/expected paise (additive-optional, populated
+#   ONLY on that branch — reason vocabulary UNCHANGED, so the 8.10 fourth-type fence + matcher↔events
+#   drift-guard + contracts mirror stay green verbatim); (2) classifyAmountMismatchDirection is the SOLE
+#   over/under definition, enforced by a grep-guard test; (3) the 9.8 review queue surfaces direction+excess
+#   (detail) + an over-payment flag (list row), the 9.7 member self-view surfaces an over-only discriminator
+#   + new amount_mismatch_over.* dignified copy (hi+en); (4) three recover-family reason codes added
+#   (refund_difference/applied_next_cycle_credit/left_as_donation, domain+contracts lockstep). Governance
+#   negatives PROVEN (never auto-corrected/confirmed/remapped; applied_next_cycle_credit is a recorded
+#   decision with no money path). Two Epic-10 forward commitments logged in deferred-work.md (FR-36
+#   nominee-note seam; sharpened in_recovery queue-flag gap). ci:local: all 26 static/invariant gates +
+#   lint/typecheck/build GREEN; only the 4 known pre-existing baseline flakes remain (confirmed innocent via
+#   git-stash reproduction on 257aa3b). Story file Status: review; development_status[9-11]: review. Next:
+#   bmad-code-review.)
+# last_updated: 2026-07-28f (story 9-11 validated via bmad-create-story validate pass: independent
+#   epics/PRD-citation + code-level + prior-story-continuity re-verification of the 2026-07-28e story file,
+#   all findings applied in-place (development_status unchanged, stays ready-for-dev). 4 CRITICAL fixes
+#   (would have misdirected dev-story): (1) AC-3/Task-3/References corrected — the domain
+#   `reconciliation-review-read.ts` `ReconciliationCaseDetail` interface is camelCase (`bankEntries[].amountPaise`,
+#   `attestation.expectedAmountInr`); the story had cited the contracts DTO's snake_case names against the
+#   domain file, which would not compile; (2) added the missing JSONB TEXT→integer cast + NULL-guard before
+#   feeding `payload ->> 'depositedAmountPaise'`/`->> 'expectedAmountPaise'` into the throwing
+#   `classifyAmountMismatchDirection` (Tasks 3+4) — would have thrown on every legitimate over-payment case;
+#   (3) Task 5's `<ReasonCodeDropdown>` reference corrected to the reconciliation-review admin UI's own
+#   `ReconReasonDropdown` (`ReconciliationReviewRoute.tsx` + contracts' `reconciliationReasonCodesForOutcome`) —
+#   `<ReasonCodeDropdown>` belongs to claim-verification, a different module; (4) Task 3's "do not change"
+#   guardrail corrected — `RECONCILIATION_QUEUE_MAX_LIMIT`/`RECONCILIATION_CASE_TYPES` live in contracts, not
+#   the domain file (which has its own internal `QUEUE_MAX_LIMIT` + inline `ReconciliationCaseType` alias).
+#   5 substantive additions: traceability note that epics.md's Story-9.11 dependency line cites Story 7.6
+#   (wrong-pool-only; the amount-mismatch analog is actually 7.7) and that both are superseded by Story 9.8's
+#   review-queue mechanism this story actually extends; flagged a stale docstring in
+#   `contribution-binding.ts` (immediately beside Task 2's edit) citing a `HelpdeskWrongPoolAction`/
+#   `TrusteeAttestableCorrectionRequest` mechanism that is not wired into 9.8 anywhere — superseded, do not
+#   resurrect; disambiguated a reason-code namespace collision (`RECONCILIATION_REVIEW_REASON_CODES` already
+#   has an unrelated `amount_mismatch` REJECT-decision code, distinct from the case-reason `amount_mismatch`
+#   AC-1/AC-2 derive direction from); logged the Story 9.8 `in_recovery` queue-flag gap (D7, hardcoded false)
+#   as SHARPENED — not fixed — by this story's three new terminal `recover` codes (a resolved over-payment
+#   case will keep reappearing in the open queue indistinguishable from untouched) with a Task 6
+#   `deferred-work.md` entry required (previously only in-story prose, breaking the 9.8/9.10 ledger
+#   convention). Minor: trimmed a citation (review-adversarial.md:174 didn't actually support the "no legal
+#   lever" quote, only :39 does). Verification method: 3 parallel adversarial research passes (epics/PRD
+#   cross-check, line-by-line code-claim re-verification against HEAD 257aa3b, prior-story/ledger continuity
+#   check) — see [[feedback_gate_scope_semantic_coverage]] discipline applied to story-authoring itself, not
+#   just code gates. Next: bmad-dev-story.)
+# last_updated: 2026-07-28e (story 9-11 backlog -> ready-for-dev via bmad-create-story: comprehensive Story
+#   9-11-over-payment-facilitated-recovery.md off HEAD 257aa3b. THE central authoring finding: 9.11 is a
+#   [GOVERNANCE] story whose substrate is LARGELY already built — the matcher (9.4) already detects the
+#   amount mismatch + routes it to the review queue; Story 9.8 already ships the `recover` (facilitate-
+#   recovery) outcome (audit-only, no outcome event, D7); Story 9.7 already surfaces the red mismatch to the
+#   member. Four scope decisions LOCKED with BigDev before authoring: (1) distinguish over/under by CARRYING
+#   deposited+expected paise on the mismatch payload + a pure classifyAmountMismatchDirection derivation —
+#   reason STAYS `amount_mismatch` (NO new matcher/events reason code; the "(over)" is a derived label), so
+#   the 8.10 fence + matcher↔events + contracts self-verify mirrors stay green; (2) FR-36's nominee "polite
+#   note" is a DECLARED DEFERRED SEAM (no channel exists; no legal lever per the PRD's own adversarial
+#   review) owned by Epic-10 helpdesk (human-drafted+sent), no v1 code; (3) member surfacing REUSES the 9.7
+#   red <SelfVerifySurface> with an over-payment copy variant (new amount_mismatch_over.* i18n keys), NO new
+#   screen; (4) the three named resolutions (refund/next-cycle-credit/donation) become audited recover-family
+#   reason codes in the domain source + contracts mirror (lockstep). Load-bearing negative invariant (AC-7):
+#   applied_next_cycle_credit is a RECORDED trustee decision, NOT automation — NO code creates a next-cycle
+#   credit; over-payment stays RED (never auto-confirmed/corrected/remapped/credited), preserving 9.5
+#   canonical financial-truth + §4.14 facilitated-never-enforced posture. classifyAmountMismatchDirection is
+#   made the SINGLE canonical source of truth for over/under meaning: every consumer (mobile/admin/reporting/
+#   analytics/helpdesk/review-queue/self-view) MUST call it — no inline `deposited > expected` — enforced by
+#   an AC-2 grep-guard test that fails the build if the two amount fields are compared anywhere but the
+#   canonical helper's own file. 7 tasks AC-mapped (AC1-AC8).
+#   development_status[9-11-over-payment-facilitated-recovery]: ready-for-dev. Next: bmad-dev-story.)
 # last_updated: 2026-07-28d (story 9-10 review -> done via bmad-code-review: 3-layer adversarial review
 #   (Blind Hunter + Edge Case Hunter + Acceptance Auditor) — all 8 ACs PASS, no invariant-checklist gaps;
 #   the load-bearing AC-3 once-ever TTL is correct and live-DB-proven. 1 decision accepted as-is (escalated
@@ -1528,7 +1614,7 @@ development_status:
   9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: done
   9-9-dual-nominee-bank-accounts-donor-choice: done
   9-10-4-hour-retry-reminders: done
-  9-11-over-payment-facilitated-recovery: backlog
+  9-11-over-payment-facilitated-recovery: done
   9-12-pool-progress-card-public-member-surface: backlog
   epic-9-retrospective: optional
 

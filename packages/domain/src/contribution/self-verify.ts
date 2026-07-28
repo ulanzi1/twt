@@ -21,6 +21,10 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId, PoolId } from '../ids/index.js';
 import {
+  amountMismatchExcessPaise,
+  classifyAmountMismatchDirection,
+} from '../pool/contribution-binding.js';
+import {
   RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
   RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE,
 } from '../reconciliation/events.js';
@@ -57,6 +61,16 @@ export interface MemberSelfVerifyState {
   readonly screenshotUploaded: boolean;
   /** The recovery lifecycle state driving the surface (default / uploaded / resolved). */
   readonly status: SelfVerifyStatus;
+  /**
+   * Story 9.11 (AC4) — the OVER-payment discriminator. Non-null ONLY when there is a live mismatch whose
+   * reason is `amount_mismatch` AND the derived direction is `over` (deposited > expected); the surface then
+   * renders the over-payment empathy-copy variant ("you paid ₹X more…"). `null` for an under-payment /
+   * unknown-direction / any non-amount_mismatch mismatch → the generic `amount_mismatch.*` copy stays.
+   * `excessPaise` is the over-payment amount in PAISE (deposited − expected, always positive here); the
+   * surface converts to ₹ at the display boundary. Direction is derived by the canonical
+   * {@link classifyAmountMismatchDirection} — never an inline compare.
+   */
+  readonly overpayment: { readonly excessPaise: number } | null;
 }
 
 /** A member with nothing on record for the pool — no mismatch, no upload, not resolved. */
@@ -65,6 +79,7 @@ const NEUTRAL: MemberSelfVerifyState = {
   reason: null,
   screenshotUploaded: false,
   status: 'default',
+  overpayment: null,
 };
 
 /** Defensive upper bound on verdict/upload rows for one (member, pool) — a fixed guard, never a
@@ -93,6 +108,11 @@ export async function resolveMemberSelfVerifyState(
       occurredAt: eventsLog.occurredAt,
       reason: sql<string | null>`${eventsLog.payload} ->> 'reason'`,
       reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
+      // Story 9.11 (AC1/AC4) — the carried over/under amounts on an amount_mismatch payload. `::int` casts
+      // the JSONB TEXT to a real integer (or NULL for legacy / non-amount_mismatch) — never a raw string /
+      // NaN into the throwing direction helper.
+      depositedAmountPaise: sql<number | null>`(${eventsLog.payload} ->> 'depositedAmountPaise')::int`,
+      expectedAmountPaise: sql<number | null>`(${eventsLog.payload} ->> 'expectedAmountPaise')::int`,
     })
     .from(eventsLog)
     .where(
@@ -121,6 +141,9 @@ export async function resolveMemberSelfVerifyState(
   let mismatchExists = false;
   let latestReason: ContributionMismatchReason | null = null;
   let screenshotUploaded = false;
+  // The carried amounts off the LATEST mismatch event (the one that sets latestReason); null legacy.
+  let latestDepositedPaise: number | null = null;
+  let latestExpectedPaise: number | null = null;
 
   // Rows are newest-first, so the FIRST mismatch reason we see is the latest (occurred_at DESC).
   for (const r of rows) {
@@ -138,6 +161,9 @@ export async function resolveMemberSelfVerifyState(
         if (latestReason === null) {
           const parsed = ContributionMismatchReasonSchema.safeParse(r.reason);
           if (parsed.success) latestReason = parsed.data;
+          // Capture the amounts from the SAME latest mismatch event (Story 9.11 AC4).
+          latestDepositedPaise = r.depositedAmountPaise ?? null;
+          latestExpectedPaise = r.expectedAmountPaise ?? null;
         }
         break;
       }
@@ -155,10 +181,29 @@ export async function resolveMemberSelfVerifyState(
 
   const status: SelfVerifyStatus = confirmed ? 'resolved' : screenshotUploaded ? 'uploaded' : 'default';
 
+  // Story 9.11 (AC4) — the over-payment discriminator: ONLY for a live `amount_mismatch` mismatch whose
+  // canonical direction is `over`. An under-payment / non-amount_mismatch / no-amounts case yields null (the
+  // generic amount_mismatch copy stays). Direction via the canonical helper — never an inline compare.
+  let overpayment: { excessPaise: number } | null = null;
+  if (
+    mismatch &&
+    latestReason === 'amount_mismatch' &&
+    latestDepositedPaise !== null &&
+    latestExpectedPaise !== null &&
+    Number.isInteger(latestDepositedPaise) &&
+    Number.isInteger(latestExpectedPaise) &&
+    classifyAmountMismatchDirection({ expectedPaise: latestExpectedPaise, depositedPaise: latestDepositedPaise }) === 'over'
+  ) {
+    overpayment = {
+      excessPaise: amountMismatchExcessPaise({ expectedPaise: latestExpectedPaise, depositedPaise: latestDepositedPaise }),
+    };
+  }
+
   return {
     mismatch,
     reason: mismatch ? latestReason : null,
     screenshotUploaded,
     status,
+    overpayment,
   };
 }

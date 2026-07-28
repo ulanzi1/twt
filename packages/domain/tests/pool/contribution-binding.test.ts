@@ -13,6 +13,8 @@ import {
   MemberPoolAssignmentIntegrityError,
   WrongPoolBindingAmbiguousError,
   assertUniquePoolCollectionBindings,
+  amountMismatchExcessPaise,
+  classifyAmountMismatchDirection,
   classifyContributionAmount,
   classifyContributionDestination,
   resolveAssignedPoolFromCandidates,
@@ -151,6 +153,33 @@ describe('classifyContributionAmount — pure amount-mismatch classifier (Story 
     // The classifier only ever RETURNS a verdict; it never mutates or "rounds" the deposited amount (AC2.8/D4).
     const result = classifyContributionAmount({ expectedFixedAmount: 500, depositedAmount: 501 });
     expect(result.verdict).toBe('amount_mismatch');
+  });
+});
+
+describe('classifyAmountMismatchDirection — the SINGLE source of truth for over/under (Story 9.11, AC2)', () => {
+  it('deposited > expected → over', () => {
+    expect(classifyAmountMismatchDirection({ expectedPaise: 100_000, depositedPaise: 110_000 })).toBe('over');
+  });
+
+  it('deposited < expected → under', () => {
+    expect(classifyAmountMismatchDirection({ expectedPaise: 100_000, depositedPaise: 90_000 })).toBe('under');
+  });
+
+  it('deposited === expected → exact', () => {
+    expect(classifyAmountMismatchDirection({ expectedPaise: 100_000, depositedPaise: 100_000 })).toBe('exact');
+  });
+
+  it('non-integer / non-finite inputs throw (the classifyContributionAmount posture — never silently classify)', () => {
+    expect(() => classifyAmountMismatchDirection({ expectedPaise: NaN, depositedPaise: 100_000 })).toThrow(/integer/);
+    expect(() => classifyAmountMismatchDirection({ expectedPaise: 100_000, depositedPaise: NaN })).toThrow(/integer/);
+    expect(() => classifyAmountMismatchDirection({ expectedPaise: Infinity, depositedPaise: 100_000 })).toThrow(/integer/);
+    expect(() => classifyAmountMismatchDirection({ expectedPaise: 100_000, depositedPaise: 100.5 })).toThrow(/integer/);
+  });
+
+  it('the excess = deposited − expected is the amount FR-36 records (positive for an over-payment)', () => {
+    expect(amountMismatchExcessPaise({ expectedPaise: 100_000, depositedPaise: 110_000 })).toBe(10_000);
+    expect(amountMismatchExcessPaise({ expectedPaise: 100_000, depositedPaise: 90_000 })).toBe(-10_000);
+    expect(() => amountMismatchExcessPaise({ expectedPaise: 100_000, depositedPaise: NaN })).toThrow(/integer/);
   });
 });
 

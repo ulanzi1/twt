@@ -26,6 +26,7 @@ import {
   SelfVerifyScreenshotUploadResponse,
   ContributionIntentResponse,
   ContributionAttestResponse,
+  NomineeAccountsResponse,
   ContributionFailureReportRequest,
   MemberOtpRequestResponse,
   MemberOtpVerifyResponse,
@@ -81,6 +82,7 @@ import {
   type ContributionIntentResponse as ContributionIntentResult,
   type ContributionAttestRequest,
   type ContributionAttestResponse as ContributionAttestResult,
+  type NomineeAccountsResponse as NomineeAccountsResult,
   type UpiFailureModeSchema as UpiFailureMode,
   type MemberSignupCreateRequest,
   type MemberTermsResponse as MemberTermsResult,
@@ -667,6 +669,18 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     memberContributionIntent(input?: ContributionIntentRequest): Promise<ContributionIntentResult> {
       return call(`${CONTRIBUTION_BASE}/intent`, ContributionIntentResponse, input ?? {}, true);
+    },
+
+    /**
+     * Read the donor-facing nominee payment destinations for the member's assigned live pool (Story 9.9).
+     * Returns `{ available: true, accounts, myContribution }` — up to two EQUAL bank accounts (bank-name
+     * label + nominee name + full account#/IFSC + `vpaPresent`), stable order by `rank` (identity, NOT a
+     * priority; the donor chooses) — OR the first-class `{ available: false, reason }` absence (unassigned /
+     * accounts_not_collected). Member-scoped; the client resolves nothing. The 5th `'GET'` arg is REQUIRED
+     * (`call` defaults to POST, which would misfire against the `r.get(...)`-registered route) (auth).
+     */
+    memberNomineeAccounts(): Promise<NomineeAccountsResult> {
+      return call(`${CONTRIBUTION_BASE}/nominee-accounts`, NomineeAccountsResponse, undefined, true, 'GET');
     },
 
     /**

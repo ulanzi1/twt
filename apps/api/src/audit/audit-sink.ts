@@ -117,6 +117,9 @@ export type AuthAuditEventType =
   | 'member_contribution.intent'
   | 'member_contribution.attested'
   | 'member_contribution.failure'
+  // Story 9.9 — the donor-facing nominee-accounts read occurred. Context: the account COUNT only,
+  // NEVER the decrypted holder-name/account#/IFSC (AC6).
+  | 'member_contribution.nominee_accounts_viewed'
   // Story 8.5 — the UPI Failure Coach anonymous failure-report. The member's SELF-CLASSIFIED failure mode
   // is the diagnostic signal, encoded ENTIRELY in the action NAME (one action per mode) — there is NO
   // context payload, NO free-text, NO UTR/tr/amount/VPA anywhere. `actorId = memberId` is the audit

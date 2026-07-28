@@ -4,6 +4,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 9-9-dual-nominee-bank-accounts-donor-choice (2026-07-28)
+
+- **Decrypt-failure sentinel is hardcoded English (`NOMINEE_BANK_DECRYPT_FAILED_SENTINEL = '[unavailable — could not be shown]'`), not routed through i18n** — on a Hindi-locale device with an otherwise fully translated pay screen, a decrypt failure will surface raw English text mid-screen (`apps/api/src/modules/claims/nominee-bank-crypto.ts:17`). Deferred: matches the pre-existing `APPEAL_RATIONALE_DECRYPT_FAILED_SENTINEL` precedent this story explicitly reused (`apps/api/src/modules/claims/appeal-crypto.ts:20`) — a systemic pattern this story correctly followed, not a regression it introduced. **Re-trigger:** if/when server-generated fail-soft sentinels are given a general localization mechanism (e.g. a machine-readable reason code the client maps through its own i18n table instead of raw server text), apply it to both the appeal-crypto and nominee-bank-crypto sentinels together.
+
 ## Seams CONSUMED / re-deferred by: implementation of story 9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity (2026-07-27)
 
 _Story 9.8 is the ADJUDICATION surface + the first CROSS-MEMBER queue read + the PRODUCER that closes four reserved seams. This records what 9.8 CONSUMED, and the small set of forward seams it deliberately RESERVES._

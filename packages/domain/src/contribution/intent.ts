@@ -48,13 +48,16 @@ function accountVpa(account: ClaimNomineeBankAccountRow): string | null {
 export interface ResolveNomineeVpaInput {
   /** The assigned pool's claim's nominee bank accounts (the Story 7.6 binding's `collectionAccounts`). */
   readonly collectionAccounts: readonly ClaimNomineeBankAccountRow[];
-  /** Which account's VPA to prefer — default #1, switchable to #2 per FR-27 ("Switch account"). */
+  /** Which account's VPA to resolve — the DONOR'S CHOSEN rank (Story 9.9: both accounts are EQUAL payment
+   *  destinations, the donor picks; NOT a primary/secondary priority). Defaults to #1 PURELY DEFENSIVELY for a
+   *  legacy/single-account caller that names nothing — never a surfaced "primary." */
   readonly preferredAccount?: 1 | 2;
 }
 
 /**
  * Resolve the assigned pool's nominee VPA for the UPI `pa=` (AC2) — PURE. Reads the `preferredAccount`
- * rank's VPA (default #1, switchable to #2) and returns `{ available: true, vpa, account }` — OR a
+ * rank's VPA (the DONOR'S CHOSEN rank — both accounts equal, Story 9.9; defaults to #1 only defensively for a
+ * caller that names nothing) and returns `{ available: true, vpa, account }` — OR a
  * first-class absence (`accounts_not_collected` / `account_not_found` / `vpa_not_collected`). Absence is
  * the EXPECTED shipped v1 state (D1): today `accountVpa` always returns null, so a claim WITH collected
  * bank accounts resolves to `{ available: false, reason: 'vpa_not_collected' }`. Never fabricates a VPA,

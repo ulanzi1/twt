@@ -60,7 +60,7 @@ Vikram is a 28-year-old who sells LIC policies part-time. Recruited as a paid TW
 
 ### 2.5 Quaternary Persona — *Bereaved Family Nominee (claim-time only)*
 
-Often Sushil's wife, mother, or adult son. May not be a TWT member. May not be smartphone-fluent. Files a claim ~1 month after death (grief eases the rush). Enters bank account + IFSC at claim-time — these are **not** pre-validated at member signup. Receives payouts to two nominee bank accounts (RBI UPI limit workaround) over a 15-day window. **The trust assigns a human shepherd per claim** — Anita-class — to walk them through.
+Often Sushil's wife, mother, or adult son. May not be a TWT member. May not be smartphone-fluent. Files a claim ~1 month after death (grief eases the rush). Enters bank account + IFSC at claim-time — these are **not** pre-validated at member signup. Receives contributions to two equal nominee bank accounts (donor's choice, FR-31) over a 15-day window. **The trust assigns a human shepherd per claim** — Anita-class — to walk them through.
 
 ### 2.6 Quinary Persona — *Trustee Panel + Trust Staff*
 
@@ -600,12 +600,14 @@ Cron job runs N times per day (frequency configurable; v1 default 6×/day during
 - Match by amount + sender VPA + timestamp tolerance is a secondary path (when UTRs don't reach the statement).
 - Failure path: 48h after self-attestation without match → status flips to `mismatch`; member notified; **screenshot upload becomes mandatory** (FR-32).
 
-#### FR-31: Dual nominee bank accounts (RBI UPI limit workaround)
+#### FR-31: Dual nominee bank accounts (donor choice — equal payment destinations)
 
-Every approved claim records two nominee bank accounts at claim-time. Members can pay to either. Each account may carry an **optional** UPI VPA (FR-37 / Story 8.13) — the `pa=` destination for member→nominee contributions; the "Switch account" affordance (below) is enabled only when ≥ 2 accounts carry a VPA.
+> **Re-scoped 2026-07-27 (BigDev, Story 9.9).** The earlier "RBI UPI per-payee daily limit workaround" framing is superseded — there is no v1 requirement to route on a regulatory receiving cap. The two accounts are **equal** payment destinations; the donor picks which to pay.
+
+Every approved claim records two nominee bank accounts at claim-time. Members can pay to **either** — both are equal, with no primary/secondary/default account and no server-side routing. Each account may carry an **optional** UPI VPA (FR-37 / Story 8.13) — the `pa=` destination for member→nominee contributions; the "choose the other account" affordance (below) is enabled only when ≥ 2 accounts carry a VPA.
 
 **Consequences (testable):**
-- UPI Intent (FR-27) defaults to account #1 with a "Switch account" link to account #2.
+- UPI Intent (FR-27) presents both accounts as an equal choice by bank name (Story 9.9) — no preselected/"primary" account; the donor's selection determines the account, never a server default.
 - Reconciliation matches against both accounts' statements.
 - Approval workflow refuses to advance a claim to `frozen` unless both accounts have valid IFSC + verified account-holder name match the declared nominee.
 
@@ -651,7 +653,7 @@ A claim begins when a nominee (often the bereaved family member, possibly not a 
 
 #### FR-37: Claim filing with nominee bank entered at claim-time
 
-Claim filing is open to the nominee (regardless of TWT membership). Nominee enters bank account #1, IFSC #1, account holder name #1; bank account #2, IFSC #2, account holder name #2 (RBI/UPI workaround per FR-31); optionally a UPI VPA per account (the `pa=` destination for member→nominee contributions per FR-16/FR-27). Death certificate uploaded.
+Claim filing is open to the nominee (regardless of TWT membership). Nominee enters bank account #1, IFSC #1, account holder name #1; bank account #2, IFSC #2, account holder name #2 (two equal payment destinations per FR-31); optionally a UPI VPA per account (the `pa=` destination for member→nominee contributions per FR-16/FR-27). Death certificate uploaded.
 
 **Consequences (testable):**
 - Nominee VPA is **optional** per account and format-validated (`handle@psp`); its absence is a first-class state and does **not** block `frozen` (unlike IFSC + holder-name). Added by Story 8.13 (correct-course 2026-07-21).

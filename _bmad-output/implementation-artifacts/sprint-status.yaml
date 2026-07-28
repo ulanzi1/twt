@@ -1,4 +1,74 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-28k (story 9-12 review -> done via bmad-code-review: three parallel layers — Blind
+#   Hunter, Edge Case Hunter, Acceptance Auditor — converged independently on the same top finding: the new
+#   derivePoolProgressCardViewModel(...) call in ActiveContributionCard.tsx was unguarded (no try/catch),
+#   contradicting the card's own documented AC1 fail-soft/self-suppression posture, since the Story 8.2 wire
+#   contract validates confirmedCount/rosterSize independently but not their cross-field relationship. User
+#   resolved: wrap in try/catch, render null on throw (matches every other bad-data case in the file). Also
+#   fixed: most of the view-model's fields (meterFillTokenRole, progressLabelKey, progressA11yKey,
+#   daysLabelKey) were computed + unit-tested but never consumed by the mobile wiring — added a
+#   METER_FILL_TOKENS mobile-palette bridge (the StatusPill TONE_TOKENS precedent) and wired the three i18n
+#   keys through, so AC4/AC6's "single source, cannot drift" claim now actually holds in the one live
+#   consumer; assertNonNegativeInteger swapped Number.isInteger -> Number.isSafeInteger (precision-loss
+#   guard); dropped a redundant accessibilityLabel duplicate of its own Text children. 5 findings dismissed
+#   as noise (a tautological identity test, fixedAmount=0/pool-identity validation gaps out of AC scope, a
+#   precedented test regex, a Dev-Agent-Record arithmetic slip). Re-verified green after patches: @twt/ui
+#   typecheck+build+lint+31 tests; mobile typecheck + the 3 source-scan suites (31); ci:local --concurrency=4
+#   all static+invariant/determinism jobs green; integration-tests re-confirmed the SAME pre-existing
+#   accumulated-rows count-assertion flake (cross-pariwar-leak/policy-regression/active-contribution-read) —
+#   innocence re-proven via a fresh twt-test-pg + re-migrate + one forced re-run = 37/37 turbo tasks green,
+#   0 real failures, none touching packages/ui/mobile/i18n. Story Status: done;
+#   development_status[9-12-pool-progress-card-public-member-surface]: done.)
+# last_updated: 2026-07-28j (story 9-12 ready-for-dev -> in-progress -> review via bmad-dev-story: Solo Builder
+#   BigDev completed <PoolProgressCard> Public/Member Surface [SURFACE], Tasks 1-5. LANDINGS: (T1-2, AC1/2/3/4)
+#   NEW pure presenter packages/ui/src/pool-progress/ (the frozen 9.6 status-pill sibling — zero react, emits
+#   @twt/tokens role NAMES + i18n KEYS): view-model.ts (PoolProgressCardInput = the confirmed-only EXACT
+#   five-key shape {pool,confirmedCount,rosterSize,fixedAmount,daysRemaining} — NO yellow/pending/attested/
+#   projected/status/utr operand can enter, Decision 2; PoolProgressCardViewModel), presenter.ts
+#   (derivePoolProgressCardViewModel: integer-guards every operand + THROWS on confirmedCount>rosterSize — the
+#   impossible over-count SURFACES, the min(100,%) clamp is rounding-safety only, never a silent false-100%
+#   repair; amountRaisedInr = confirmedCount x fixedAmount, Decision 3 structurally yellow-proof — no per-event
+#   sum), constants.ts (COLOR_TOKEN_STATUS_CONFIRMED, never a red/danger tone for a low meter), i18n-keys.ts
+#   (reuses active_contribution.* for meter/a11y/days; ONE new pool_progress.amount_raised), index barrel +
+#   root re-export. packages/ui/package.json gained NO runtime dep; build stays react-free. (T3) 31 pure teeth
+#   tests/pool-progress/presenter.test.ts: matrix (0/N->Rs0 0%, partial, full->100% isComplete), amount matrix,
+#   rounding + empty-roster 0%, non-integer/negative/non-finite throw, over-count throw + legitimate boundary,
+#   ANTI-WIDENING exhaustive Record<keyof,true> key maps (a yellow/pending/attested/projected/status field
+#   breaks compile — the pool-contributor-list decoy-teeth analog), CONFIRMED-ONLY attested-changes-nothing
+#   identity, token-role existence. (T4, AC6) mobile <ActiveContributionCard> meter + NEW amount-raised line
+#   now derived via the presenter (inline Math.round % math GONE); data.progress.confirmedCount preserved
+#   verbatim; the member's OWN <StatusPill> self-state untouched + NOT routed through the presenter (8.2
+#   separation); 4 new self-verify-surface-render assertions; new key hi-primary+en parity. (T5, AC7) Epic-11b
+#   public Sahyog Vivran consumer declared a reserved seam in deferred-work.md (presenter public-safe by
+#   construction); contribution.* stays exactly three (8.10 fence), channels/src untouched, no new
+#   read/endpoint/event. GATES: @twt/ui typecheck+31 tests+build(react-free)+lint green; mobile typecheck +
+#   3 source-scan suites (31) green; i18n-parity green; 8.10 + channels-freeze fences green. ci:local
+#   --concurrency=4: all static + invariant/determinism jobs GREEN; integration-tests' 4 initial failures were
+#   PRE-EXISTING accumulated-rows count-assertion pollution (events_log length 1 vs 21) — innocence proven by a
+#   fresh twt-test-pg + re-migrate + re-run = 22/22 turbo tasks green, the 3 named specs pass (cross-pariwar-
+#   leak/policy-regression/active-contribution-read). Story Status: review;
+#   development_status[9-12-pool-progress-card-public-member-surface]: review. Next: bmad-code-review.)
+# last_updated: 2026-07-28i (story 9-12 backlog -> ready-for-dev via bmad-create-story: comprehensive Story
+#   9-12-pool-progress-card-public-member-surface.md off HEAD 00921a1. THE central authoring finding: 9.12 is
+#   NOT a new read/endpoint/event — the Story 8.2 `active-contribution` compound read already resolves pool
+#   identity + fixedAmount + daysRemaining + confirmed-only progress{confirmedCount,rosterSize}, and Story 9.6
+#   already froze the packages/ui HEADLESS-PRESENTER pattern (<StatusPill>: pure (input)->view-model, zero
+#   react, emits @twt/tokens role names + i18n keys). So <PoolProgressCard> = a sibling pure presenter in
+#   packages/ui/src/pool-progress/, confirmed-only BY SHAPE (no yellow/pending/projected operand can enter —
+#   the 8.3 pool-contributor-list decoy-teeth discipline; the 9.5 canonical-truth invariant this story
+#   carries), with amount-raised DERIVED as confirmedCount x fixedAmount (structurally yellow-proof: every
+#   confirmed contribution is exactly fixedAmount, over/under stays RED per 9.11). 5 LOCKED scope decisions:
+#   (1) headless presenter not a .tsx; (2) confirmed-only enforced structurally at the input boundary +
+#   anti-widening test teeth; (3) raised = count x fixed, not a per-event sum; (4) reuse the 8.2 read, public
+#   Sahyog read is an Epic-11b seam; (5) BUILD THE EPIC'S member/public card, NOT the UX-doc's nominee-console
+#   daily-delta widget (§2011 — a shared-name collision: last-updated/mismatch-flag/drill-down is a different
+#   surface). Wires the existing mobile <ActiveContributionCard> meter through the presenter (first live
+#   consumer; hoists the inline percentage math) + declares the public consumer seam. Guard sharpened
+#   post-authoring (BigDev): confirmedCount > rosterSize THROWS (surfaces) — the min(100,%) clamp is
+#   rounding-safety only, never a silent repair of the impossible over-count into a false-100% meter. Story
+#   file Status:
+#   ready-for-dev; development_status[9-12-pool-progress-card-public-member-surface]: ready-for-dev. Next:
+#   bmad-dev-story.)
 # last_updated: 2026-07-28h (story 9-11 review -> done via bmad-code-review: 3-layer adversarial review
 #   (Blind Hunter + Edge Case Hunter + Acceptance Auditor). 2 decisions resolved with BigDev: (1)
 #   getReconciliationCaseDetail's unscoped mismatch-selection fix (the underlying query has no ORDER BY, so
@@ -1615,7 +1685,7 @@ development_status:
   9-9-dual-nominee-bank-accounts-donor-choice: done
   9-10-4-hour-retry-reminders: done
   9-11-over-payment-facilitated-recovery: done
-  9-12-pool-progress-card-public-member-surface: backlog
+  9-12-pool-progress-card-public-member-surface: done
   epic-9-retrospective: optional
 
   # ==========================================================================

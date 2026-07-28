@@ -104,6 +104,7 @@
   "out_of_band.helpline.boundary.title": "Operator boundary — do not voice this to the member",
   "out_of_band.helpline.clarify.script": "One separate thing to keep in mind: your assigned pool's contribution for this cycle is still expected on its own, under the Niyamavali's contribution-discipline rules (R7). The two stand apart; one does not stand in for the other.",
   "out_of_band.helpline.clarify.title": "Clarify what is still expected — factual, never corrective",
+  "pool_progress.amount_raised": "Raised so far",
   "selfVerify.fix_this": "Fix this",
   "selfVerify.fix_this_a11y": "Open payment check and get help sorting this out",
   "selfVerify.generic.body": "We couldn't match your payment yet. Tap 'Send a screenshot of your payment', or talk to our helpdesk — we'll sort it out together.",

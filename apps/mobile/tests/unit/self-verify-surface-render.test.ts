@@ -122,4 +122,30 @@ describe('<ActiveContributionCard> — the two Story 9.7 entry points (AC1 / D7)
     expect(src).toContain('data.progress.confirmedCount')
     expect(src).not.toContain('progress.mismatchCount')
   })
+
+  it('Story 9.12: the meter is derived by the shared @twt/ui presenter, not inline percentage math', () => {
+    // The single source of the confirmed-only meter math is derivePoolProgressCardViewModel (packages/ui) —
+    // the mobile card no longer computes the percentage inline, so it cannot drift from the public meter.
+    expect(src).toContain('derivePoolProgressCardViewModel')
+    expect(src).toContain('confirmedPercentage')
+    // The old inline `Math.round((confirmedCount / rosterSize) * 100)` computation is GONE (hoisted).
+    expect(src).not.toMatch(/Math\.round\(\(?\s*data\.progress\.confirmedCount\s*\//)
+  })
+
+  it('Story 9.12: renders the amount-raised line from the presenter (confirmedCount × fixedAmount)', () => {
+    // The additive amount-raised line reads the presenter's derived amountRaisedInr (structurally yellow-proof)
+    // and formats it via formatInr at the boundary — never a per-event sum, never an inline yellow operand.
+    expect(src).toContain('amountRaisedInr')
+    expect(src).toContain('amountRaisedLabelKey')
+    expect(src).toContain('formatInr(poolProgress.amountRaisedInr)')
+  })
+
+  it('Story 9.12: the member OWN self-state is NOT fed into the pool-progress presenter (the 8.2 separation)', () => {
+    // The presenter input is confirmed-only by shape; myContribution (yellow/red) must never enter it.
+    expect(src).toMatch(/derivePoolProgressCardViewModel\(\{[\s\S]*?\}\)/)
+    const presenterCall = src.match(/derivePoolProgressCardViewModel\(\{[\s\S]*?\}\)/)?.[0] ?? ''
+    expect(presenterCall).not.toContain('myContribution')
+    expect(presenterCall).not.toContain('mismatch')
+    expect(presenterCall).not.toContain('attested')
+  })
 })

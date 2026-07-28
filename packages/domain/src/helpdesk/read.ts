@@ -9,6 +9,7 @@ import { and, desc, eq } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { HelpdeskTicketId, PariwarId } from '../ids/index.js';
+import { clampLimit } from '../pagination.js';
 import { helpdeskTickets, type HelpdeskTicketRow } from '../schema/helpdesk_tickets.js';
 
 /** Load a single ticket by id (tenant-scoped by RLS + the explicit pariwar predicate). Null if absent
@@ -40,5 +41,5 @@ export async function listTicketsForPariwar(db: Db, pariwarId: PariwarId): Promi
     .from(helpdeskTickets)
     .where(eq(helpdeskTickets.pariwarId, pariwarId))
     .orderBy(desc(helpdeskTickets.createdAt))
-    .limit(LIST_TICKETS_FOR_PARIWAR_LIMIT);
+    .limit(clampLimit(LIST_TICKETS_FOR_PARIWAR_LIMIT, { default: LIST_TICKETS_FOR_PARIWAR_LIMIT, cap: LIST_TICKETS_FOR_PARIWAR_LIMIT }));
 }

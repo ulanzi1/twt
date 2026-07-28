@@ -137,6 +137,14 @@ export * from './nominee-console/index.js';
 // is Story 9.3's transport (openapi/v1.yaml stays byte-identical).
 export * from './reconciliation/index.js';
 
+// Story 10.1 — the Helpdesk first-class subsystem transport contracts (FR-52 / AR-47): the
+// category + lifecycle-state enums (the member/operator/admin single source), the deterministic
+// routing types (member-scope inputs + versioned policy document + decision), the ticket DTO, and
+// the tenant-scoped create-ticket request/response. Pure Zod (no @twt/domain import in shipped
+// files — the RN bundle boundary); tuples are drift-guarded against @twt/domain by a test-only
+// sync-guard (tests/helpdesk.test.ts).
+export * from './helpdesk/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

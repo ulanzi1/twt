@@ -55,6 +55,8 @@
     "pool-bound-payment:test": "vitest run scripts/pool-bound-payment-invariant",
     "alert-state:check": "tsx scripts/alert-state-invariant/check.ts",
     "alert-state:test": "vitest run scripts/alert-state-invariant",
+    "helpdesk-state:check": "tsx scripts/helpdesk-state-invariant/check.ts",
+    "helpdesk-state:test": "vitest run scripts/helpdesk-state-invariant",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

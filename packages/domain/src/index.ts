@@ -268,4 +268,11 @@ export * as notifications from './notifications/index.js';
 // the Story 9.8 reconciliation review queue consumes (no event emitted, no live consumer today). Consumed
 // by the apps/api nominee-console read seam, which resolves `poolOpenAt` off events_log.
 export * as nomineeConsole from './nominee-console/index.js';
+// Story 10.1 (the FIRST Epic-10 story) — the Helpdesk primitive: the FIFTH event-derived-state
+// primitive (helpdesk_tickets + the complete ticket-state reducer + projector-only current_state) +
+// the PURE deterministic routing resolver (resolveRoute — the Story 4.6 rule-order determinism analog)
+// + the versioned per-Pariwar routing-policy registry (default v1 code seed + create/amend + in-force
+// resolve, the clause_versions immutability posture). Consumed by the apps/api create-ticket route;
+// the member/operator/admin surfaces are Stories 10.2/10.3/10.4.
+export * as helpdesk from './helpdesk/index.js';
 export { UUID_REGEX } from './db.js';

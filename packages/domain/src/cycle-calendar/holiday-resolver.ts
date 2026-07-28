@@ -369,3 +369,93 @@ export function reconciliationTailDeadline(
     clampedToMaxTail,
   };
 }
+
+// ── Business-day deadline (the helpdesk SLA resolution due) — Story 10.1 (Task 4) ─────────────────────
+//
+// The SLA-resolution half of the helpdesk routing decision reuses the SAME calendar this module owns
+// (do NOT inline a second calendar — [[project_calendar_aware_tail_not_window_extension]]). A helpdesk
+// "business day" is a non-holiday day per the Pariwar's curated windows — the exact working-day notion
+// `reconciliationTailDeadline` counts (there is no separate weekend concept in the substrate; introducing
+// one would invent a rule the ACs never asked for). This is a due-BY point counted forward from creation.
+
+/** The resolved business-day deadline for a helpdesk ticket's SLA. `dueAt` is an EXCLUSIVE end (IST
+ *  midnight opening the day AFTER `dueDate`), so a consumer asks `now < dueAt` ("still within SLA"). */
+export interface BusinessDaysDeadline {
+  /** The start instant exactly as supplied (the ticket's created_at). */
+  readonly startAt: Date;
+  /** The IST calendar date `startAt` falls on. */
+  readonly startDate: CalendarDateString;
+  /** The IST calendar date the budget is spent on (the last business day, INCLUSIVE). */
+  readonly dueDate: CalendarDateString;
+  /** The instant the SLA deadline ENDS — IST midnight OPENING the day after {@link dueDate} (EXCLUSIVE). */
+  readonly dueAt: Date;
+  /** The business-day budget requested (the rule's `sla_resolution_business_days`). */
+  readonly businessDays: number;
+  /** Whole calendar days walked from {@link startDate} to {@link dueDate} (≥ businessDays iff holidays hit). */
+  readonly calendarDaysSpanned: number;
+  /** `true` when a holiday window was encountered inside the SLA window (checked via first-hit, not a
+   *  day-count comparison — the `reconciliationTailDeadline` boundary lesson). */
+  readonly extendedByHoliday: boolean;
+  /** The FIRST holiday window encountered while walking, or `null`. */
+  readonly holidayLabel: string | null;
+}
+
+/**
+ * The calendar-aware SLA-resolution deadline for a ticket created at `startInstant` (Story 10.1 AC).
+ *
+ * Counts `businessDays` NON-HOLIDAY days forward from the creation day (the creation day itself is not
+ * counted — the first accrued day is the next calendar day, mirroring `reconciliationTailDeadline`). A
+ * holiday day inside the window consumes NO business day, so the deadline slides past it.
+ *
+ * @param windows The Pariwar's curated windows. EMPTY (incl. an RLS-fail-closed empty read) → a plain
+ *                `businessDays`-calendar-days deadline (no extension) — an unresolvable calendar never
+ *                extends an SLA.
+ * @throws on a non-finite instant, a non-integer/non-positive `businessDays`, a malformed/inverted
+ *         window, OR a calendar so pathological the budget cannot be spent within {@link MAX_SCAN_DAYS}
+ *         (checked on the cursor each step, so it throws rather than hanging).
+ */
+export function businessDaysDeadline(
+  startInstant: Date,
+  businessDays: number,
+  windows: readonly HolidayWindow[],
+): BusinessDaysDeadline {
+  if (!Number.isInteger(businessDays) || businessDays < 1) {
+    throw new Error(`[cycle-calendar] businessDays must be an integer >= 1, got ${String(businessDays)}`);
+  }
+  const startDate = istDateOf(startInstant);
+  for (const window of windows) assertWindow(window);
+
+  let workDaysAccrued = 0;
+  let offset = 0;
+  let firstHolidayHit: HolidayWindow | null = null;
+  let cursor = startDate;
+
+  while (workDaysAccrued < businessDays) {
+    offset += 1;
+    if (offset > MAX_SCAN_DAYS) {
+      throw new Error(
+        `[cycle-calendar] businessDaysDeadline could not accrue ${String(businessDays)} business day(s) within ` +
+          `${String(MAX_SCAN_DAYS)} days of ${startDate} — the Pariwar's holiday calendar is mis-curated`,
+      );
+    }
+    cursor = addCalendarDays(cursor, 1);
+    const window = holidayWindowFor(cursor, windows);
+    if (window === null) {
+      workDaysAccrued += 1;
+    } else if (firstHolidayHit === null) {
+      firstHolidayHit = window;
+    }
+  }
+
+  return {
+    startAt: startInstant,
+    startDate,
+    dueDate: cursor,
+    // EXCLUSIVE end: IST midnight opening the day AFTER the deadline day.
+    dueAt: istMidnightAt(addCalendarDays(cursor, 1)),
+    businessDays,
+    calendarDaysSpanned: offset,
+    extendedByHoliday: firstHolidayHit !== null,
+    holidayLabel: firstHolidayHit?.label ?? null,
+  };
+}

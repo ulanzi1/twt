@@ -274,3 +274,10 @@ export * from './pariwar_holiday_calendar.js';
 // the deterministic entry_id; pool_id is the denormalized provenance the wrong-pool check reads. Tier-1-
 // adjacent (RLS-isolated, never logged); a minimal matcher-read column set (ADR-0034).
 export * from './bank_statement_entries.js';
+// Story 10.1 — the Helpdesk primitive substrate: `helpdesk_tickets` (the FIFTH event-derived-state
+// primitive — projector-only current_state, guarded by the DB trigger (migration 0084) + the
+// helpdesk-state-invariant CI gate; helpdesk_category + helpdesk_ticket_state + helpdesk_created_via
+// pgEnums) + `helpdesk_routing_policy_versions` (the versioned per-Pariwar routing-policy registry —
+// clause_versions immutability posture; per-Pariwar overrides only, the default v1 is code data).
+export * from './helpdesk_tickets.js';
+export * from './helpdesk_routing_policy_versions.js';

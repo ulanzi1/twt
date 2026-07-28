@@ -1,4 +1,51 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-29a (10-1-helpdesk-subsystem-data-model-routing-policy-registry: review -> done
+#   via bmad-code-review — 6-chunk adversarial review (domain source, domain tests, contracts, API route,
+#   migration + CI gate, peripheral/generated), 3 parallel layers (Blind Hunter / Edge Case Hunter /
+#   Acceptance Auditor) per chunk. Totals: 74 patches applied, 9 items deferred with a tracked gate in
+#   deferred-work.md (2 already-acknowledged Dev Agent Record gaps now formally gated: no RBAC permission
+#   hook on the create-ticket route, no create-ticket idempotency key), 15 dismissed (several "corrected"
+#   false positives caught by verifying against the surrounding codebase before accepting a finding).
+#   Confirmed live bugs fixed: a `sub_category`/`subcategory` wire-shape drift already reaching the API
+#   handler; an `ERR_HTTP_HEADERS_SENT` double-send on every successful create-ticket request (the
+#   `void reply.status(N).send(...)`-inside-an-async-handler anti-pattern racing the async scope-tx-close
+#   onSend hook — surfaced by writing the route's first-ever integration test; see
+#   [[project_fastify_onsend_doublesend]]); an audit-attribution bug (an admin submitting
+#   `created_via:'member_app'` through this admin-only route misattributed the event to a phantom member
+#   actor under the admin's own id); `operator_attribution` moved from client-supplied to server-resolved
+#   (Story 6.11 `users.display_name` attribution convention); a `helpdesk_routing_policy_versions`
+#   append-only invariant that lived only in a comment now has a DB trigger backing it, plus a composite
+#   self-referential FK closing the supersession-chain integrity gap. Full verification: domain (179
+#   files/1826 tests), contracts (41/647), api (92/692), events (clean) — all green.)
+# last_updated: 2026-07-28n (10-1-helpdesk-subsystem-data-model-routing-policy-registry: ready-for-dev ->
+#   in-progress -> review via bmad-dev-story — Epic 10's opener SHIPPED. The FIFTH event-derived-state
+#   primitive (helpdesk_tickets, projector-only current_state guarded by DB trigger migration 0084 +
+#   the new helpdesk-state-invariant CI gate) + the versioned per-Pariwar routing-policy registry
+#   (helpdesk_routing_policy_versions, clause_versions immutability posture; default v1 as CODE DATA per
+#   the defaultRoleBundles precedent, overrides start at v2 for unambiguous replay) + a PURE first-match
+#   routing resolver (resolveRoute, the Story 4.6 rule-order determinism analog — revert-sanity-tested) +
+#   calendar-aware SLA (businessDaysDeadline added to cycle-calendar) + the tenant-scoped create-ticket
+#   API primitive (POST /p/:pariwarId/helpdesk/tickets, withCompensatingAudit). Ratified state UNION
+#   open->in_progress->awaiting_member->resolved->closed->reopened recorded. RECONCILIATIONS: (a) pgEnum
+#   tuples live in DOMAIN not contracts (import-direction: contracts depends on domain) with a test-only
+#   sync-guard; (b) migration 0084 hand-authored not db:generate (baseline frozen at 0020). Contracts +
+#   member/operator/admin surfaces = 10.2/10.3/10.4. ci:local: 26/28 jobs green (incl. helpdesk-state-
+#   invariant, db-check, schema-diff); the 2 test-job failures are PRE-EXISTING flakes proven independent
+#   of this change — RLS exact-count-on-events_log (accumulated own-committing rows, all pre-existing
+#   types; pass on a clean DB) + validity-service concurrent-load timeouts (pass in 2.4s isolated).)
+# last_updated: 2026-07-28m (epic-10: backlog -> in-progress + 10-1-helpdesk-subsystem-data-model-routing-policy-registry:
+#   backlog -> ready-for-dev via bmad-create-story — Epic 10 (Admin Operations Console) opens. Story 10.1 is the
+#   Helpdesk `[PRIMITIVE]`: the 5th event-derived-state primitive (helpdesk_tickets, twin of alert/claim/pool/member —
+#   projector-only current_state, stream_id=ticket_id) + a versioned/audit-logged per-Pariwar routing-policy registry
+#   (clause_versions immutability + lock_in_days_at_join non-retroactivity snapshot) + a PURE first-match routing
+#   resolver pinned by routing_policy_version (Story 4.6 rule-order determinism analog; CI determinism test = the
+#   load-bearing commitment). Scope = substrate only (contracts + domain + migration 0084 + API create-ticket
+#   primitive + default policy v1 seed); member UI=10.2, operator=10.3, admin console/SLA-breach/cross-link nav=10.4.
+#   FLAGGED FOR BIGDEV RATIFICATION (Q1, AI-9-2 drift class): PRD FR-52 state set (open|in_progress|awaiting_member|
+#   resolved|reopened) vs epics 10.1 (…|resolved|closed) each omit a state the other's own prose requires — story
+#   encodes the UNION (…|resolved|closed|reopened) per the rbac/scope.ts ADR-0008 precedent, pending confirm before
+#   merge. Also flagged: epics prose names apps/member/modules/helpdesk (no such app — member surface is apps/mobile,
+#   and it is Story 10.2). Saved 10-1-*.md.)
 # last_updated: 2026-07-28l (epic-9-retrospective: optional -> done via bmad-retrospective — Epic 9
 #   (Reconciliation Engine — the yellow→green flip), 12/12 stories done (9.1-9.12). Saved
 #   epic-9-retro-2026-07-28.md. HEADLINE (extending the epic thesis): Epic 9 is THE PAYOFF EPIC — the
@@ -1709,8 +1756,8 @@ development_status:
   # ==========================================================================
   # Epic 10: Admin Operations Console
   # ==========================================================================
-  epic-10: backlog
-  10-1-helpdesk-subsystem-data-model-routing-policy-registry: backlog
+  epic-10: in-progress
+  10-1-helpdesk-subsystem-data-model-routing-policy-registry: done
   10-2-member-facing-helpdesk-ticket-filing: backlog
   10-3-helpline-call-to-ticket-operator-surface: backlog
   10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: backlog

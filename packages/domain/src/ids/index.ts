@@ -551,3 +551,20 @@ export const poolNameId = uuidBrand('PoolNameId');
 export type BankStatementEntryId = Brand<'BankStatementEntryId'>;
 /** Smart constructor: validates UUID shape, returns a branded `BankStatementEntryId`. */
 export const bankStatementEntryId = uuidBrand('BankStatementEntryId');
+
+// ── Story 10.1 — Helpdesk primitive ids (§Naming "branding mandatory on a new ID's first PR") ──
+// `HelpdeskTicketId` is the ticket's canonical id AND its events_log stream_id (the FIFTH
+// event-derived-state primitive, twin of alert/claim/pool/member). UNLIKE `alert_id`, a ticket
+// has NO natural key to derive from (there is no `deriveTicketId`) — it is a plain DB-defaulted
+// `gen_random_uuid()`. `HelpdeskRoutingPolicyVersionId` is the per-row address of a routing-policy
+// version row (the versioned registry's `clause_version_id` twin).
+
+/** The helpdesk ticket's canonical id == its events_log stream_id. Plain random UUID (no derive). */
+export type HelpdeskTicketId = Brand<'HelpdeskTicketId'>;
+/** Smart constructor: validates UUID shape, returns a branded `HelpdeskTicketId`. */
+export const helpdeskTicketId = uuidBrand('HelpdeskTicketId');
+
+/** Per-row address of a routing-policy version (`helpdesk_routing_policy_versions.id`). */
+export type HelpdeskRoutingPolicyVersionId = Brand<'HelpdeskRoutingPolicyVersionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `HelpdeskRoutingPolicyVersionId`. */
+export const helpdeskRoutingPolicyVersionId = uuidBrand('HelpdeskRoutingPolicyVersionId');

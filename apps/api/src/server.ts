@@ -54,6 +54,7 @@ import { registerDataExportModule } from './modules/data-export/index.js';
 import { registerRtbfModule } from './modules/rtbf/index.js';
 import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index.js';
+import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
@@ -253,6 +254,12 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // POST a standard (12-month-notice) change (pool.fixed_amount_set), POST an emergency adjustment
   // override (pool.fixed_amount_emergency, step-up-gated). Fires the member-notification scaffolding seam.
   registerPoolFixedAmountModule(app, deps);
+  // Story 10.1 — the Helpdesk create-ticket primitive (the FIRST Epic-10 surface): POST
+  // /api/v1/p/:pariwarId/helpdesk/tickets resolves member_scope_context, snapshots the in-force
+  // routing-policy version, deterministically routes (category × scope), persists the ticket + genesis
+  // event + projected state in one tx, and audits the routing decision via withCompensatingAudit. The
+  // member/operator/admin surfaces are Stories 10.2/10.3/10.4.
+  registerHelpdeskModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

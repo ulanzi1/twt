@@ -2063,6 +2063,43 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.1 — the Helpdesk create-ticket primitive (tenant-scoped) ─────────
+// The FIRST Epic-10 route: POST /api/v1/p/{pariwarId}/helpdesk/tickets. The member/operator/admin
+// surfaces (10.2/10.3/10.4) add their own routes on this substrate.
+const { CreateTicketRequest: CreateTicketRequestSchema, CreateTicketResponse: CreateTicketResponseSchema } =
+  await import('../src/helpdesk/index.js');
+const CreateTicketRequestComponent = CreateTicketRequestSchema.openapi('CreateTicketRequest');
+const HelpdeskTicketComponent = CreateTicketResponseSchema.openapi('HelpdeskTicket');
+const helpdeskPariwarParams = z.object({ pariwarId: z.string().uuid() });
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/helpdesk/tickets',
+  summary: 'Create + route a helpdesk ticket (the Epic-10 primitive)',
+  description:
+    'Resolves member_scope_context from the subject, snapshots the in-force per-Pariwar routing-policy ' +
+    'version, deterministically routes the ticket (category × scope → target role + scope + SLA budgets), ' +
+    'persists the ticket + genesis event + projected state in one transaction, and audits the routing ' +
+    'decision (withCompensatingAudit). Tenant-scoped; today only an authenticated admin/operator session ' +
+    'may call this route (the FR-88 protected-surface write rate-limit applies) — the request shape also ' +
+    'supports created_via: member_app for forward-compatibility with Story 10.2, which reuses this same ' +
+    'schema for the member-authenticated route. Returns the created, routed ticket.',
+  tags: ['helpdesk'],
+  request: {
+    params: helpdeskPariwarParams,
+    body: { content: jsonOf(CreateTicketRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'Ticket created + routed', content: jsonOf(HelpdeskTicketComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized for this Pariwar'),
+    404: errorResponse('Pariwar not found'),
+    409: errorResponse('Acting operator has no display name configured (helpline_call only)'),
+    429: errorResponse('Rate limit exceeded (FR-88 protected-surface write limit)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

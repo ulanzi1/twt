@@ -134,3 +134,8 @@ export * from './alerts-rls.js';
 export * from './pariwar-holiday-calendar-rls.js';
 // Story 9.4 — the persisted bank-statement-entries tenant-isolation policies (matcher read/persist).
 export * from './bank-statement-entries-rls.js';
+// Story 10.1 — helpdesk_tickets tenant-isolation policies (NOT cross-readable; mirror alerts-rls). The
+// helpdesk_tickets.current_state write-rejection trigger (migration 0084) is ORTHOGONAL. And the
+// helpdesk_routing_policy_versions tenant-isolation policies (overrides only; the default v1 is code data).
+export * from './helpdesk-tickets-rls.js';
+export * from './helpdesk-routing-policy-versions-rls.js';

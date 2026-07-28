@@ -20,7 +20,7 @@
 // @twt/domain, so importing them here is the legal direction (domain must NOT
 // import contracts/events). Each record key equals its `type` string.
 
-import { alert, claim, contribution, member, pool, reconciliation } from '@twt/domain';
+import { alert, claim, contribution, helpdesk, member, pool, reconciliation } from '@twt/domain';
 import type { z } from 'zod';
 
 export interface EventTypeRegistryEntry {
@@ -465,5 +465,17 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       'The trustee REJECT verdict (Story 9.8) — a reviewer determined an open reconciliation case is invalid and could not be confirmed. On the ALERT stream (Decision D2); payload poolId + memberId + alertId + reasonCode (a bounded reject-family machine token) + attestedByActorIds (≥1 trustee attestation) + rejectedAt. The case-closed marker for the review queue + the FR-50 member-notify trigger. Member stays red (no new derivation arm). NOT contribution.invalid — off Story 8.10\'s contribution.* fence (Decision D1).',
     schema: reconciliation.ReconciliationContributionRejectedPayloadSchema,
+  },
+  // ── Story 10.1 — helpdesk.* vocabulary (the FIFTH event-derived-state primitive's own stream) ──
+  // Payload schema lives in @twt/domain (packages/domain/src/helpdesk/events.ts) — appended on the
+  // TICKET stream (stream_id = ticket_id; a plain random UUID, no deriveTicketId). This story emits +
+  // registers ONLY the genesis `helpdesk.ticket_created` (→ open); the pick-up/awaiting/resolve/close/
+  // reopen transition types register with their emitting surface (Story 10.2/10.4 + the auto-close job),
+  // exactly the alert.* "author-all-arms, emit-genesis" precedent.
+  'helpdesk.ticket_created': {
+    type: 'helpdesk.ticket_created',
+    description:
+      'A helpdesk ticket was created + routed → the ticket genesis event ((none) → open), emitted once by the Story 10.1 create-ticket route (stream_id = ticket_id). Carries the FULL audit-replayable routing snapshot: category/sub_category, the member_scope_context, the routing_policy_version in force at creation, the resolved target_role + target_scope, matched_rule_index, the two SLA due instants, created_via + operator_attribution, the subject (exactly one of member/actor), attachments, and the nullable cross-link refs.',
+    schema: helpdesk.HelpdeskTicketCreatedPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

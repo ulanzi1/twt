@@ -27,10 +27,11 @@
 // with role=button + label + hint. Devanagari uses the $heading serif for the deceased name.
 
 import { useLocale, useT } from '@twt/i18n/react'
+import { derivePoolProgressCardViewModel, type PoolProgressCardViewModel } from '@twt/ui'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Button, Paragraph, Text, View, YStack } from 'tamagui'
+import { Button, Paragraph, Text, View, YStack, type ColorTokens } from 'tamagui'
 
 import { CallHelplineCTA } from '../common/CallHelplineCTA'
 import { SelfVerifySurface } from '../self-verify/SelfVerifySurface'
@@ -41,6 +42,16 @@ import { useActiveContributionQuery } from './useActiveContributionQuery'
 
 /** The contribution i18n namespace (the `contribution` catalog). */
 const NS = { namespace: 'contribution' } as const
+
+/**
+ * The mobile-palette bridge for the pool-progress meter fill — the ONLY place `meterFillTokenRole` →
+ * Tamagui theme token lives (the `StatusPill` `TONE_TOKENS` precedent). `status-confirmed` is the sole
+ * role the presenter emits today (Decision 2/AC5 — never a red/danger tone for a low meter); the `??`
+ * fallback in the lookup below is defensive only, not a second source of truth.
+ */
+const METER_FILL_TOKENS: Record<string, ColorTokens> = {
+  'status-confirmed': '$green9',
+}
 
 /** Format a whole-INR amount as ₹X,XX,XXX — Latin numerals, Indian grouping (amendment-A2 / D6). */
 function formatInr(amountInr: number): string {
@@ -97,14 +108,40 @@ export function ActiveContributionCard() {
   const statusLine = t(`active_contribution.tone.${toneKey}`, toneParams, NS)
   const statusA11y = t(`active_contribution.tone.${toneKey}_a11y`, toneParams, NS)
 
-  const confirmed = String(data.progress.confirmedCount)
-  const total = String(data.progress.rosterSize)
-  // Confirmed-only meter fill (AC4) — confirmed / roster. NEVER a "danger" red; a low meter is not an
-  // error. 0 today (Epic 9's producer is unbuilt) → an empty bar, honestly (0 of N).
-  const fillPct =
-    data.progress.rosterSize > 0
-      ? Math.min(100, Math.round((data.progress.confirmedCount / data.progress.rosterSize) * 100))
-      : 0
+  // Story 9.12 — the confirmed-only meter + the amount-raised line are now derived by the shared
+  // `<PoolProgressCard>` presenter (packages/ui), so the mobile meter and the future Epic-11b public meter
+  // cannot drift on how the percentage / amount-raised are computed. The presenter is confirmed-only BY SHAPE
+  // (no yellow/pending operand can enter) and throws on a corrupt/impossible figure (AC2). We feed it ONLY
+  // the confirmed-only progress figures — the member's OWN yellow/red self-state (myContribution, below) is
+  // DELIBERATELY never routed through it (the 8.2 separation).
+  //
+  // The presenter's throw is a real developer-visible defect (an impossible confirmedCount > rosterSize read,
+  // or a corrupt numeric field) — the Story 8.2 wire contract validates each field independently but not their
+  // cross-field relationship, so a stale/racy read can still trigger it. Catch it here rather than let it
+  // propagate: this card's own AC1 contract is self-suppression (render null) on any bad/loading/error read,
+  // and a thrown presenter is exactly that case (Review finding, 2026-07-28).
+  let poolProgress: PoolProgressCardViewModel
+  try {
+    poolProgress = derivePoolProgressCardViewModel({
+      pool: {
+        letterCode: data.poolLetterCode,
+        name: data.poolName,
+        canonicalIdentifier: data.poolCanonicalIdentifier,
+      },
+      confirmedCount: data.progress.confirmedCount,
+      rosterSize: data.progress.rosterSize,
+      fixedAmount: data.fixedAmount,
+      daysRemaining: data.daysRemaining,
+    })
+  } catch {
+    return null
+  }
+  const confirmed = String(poolProgress.confirmedCount)
+  const total = String(poolProgress.rosterSize)
+  // Confirmed-only meter fill (AC4) — NEVER a "danger" red; a low meter is not an error. 0 today (a
+  // low-or-zero meter is honest) → an empty bar (0 of N). `confirmedPercentage` is the presenter's single
+  // source (never re-computed inline).
+  const fillPct = poolProgress.confirmedPercentage
 
   function onContribute(): void {
     // Story 8.12 — the `cta_tap` mark (AC1): the member decided to pay. Segment (b) = intent_fire − cta_tap
@@ -194,9 +231,9 @@ export function ActiveContributionCard() {
         color="$colorPress"
         style={styles.tabularNums}
         accessibilityRole="text"
-        accessibilityLabel={t('active_contribution.days_a11y', { days: String(data.daysRemaining) }, NS)}
+        accessibilityLabel={t(poolProgress.daysLabelKey, { days: String(data.daysRemaining) }, NS)}
       >
-        {t('active_contribution.days_a11y', { days: String(data.daysRemaining) }, NS)}
+        {t(poolProgress.daysLabelKey, { days: String(data.daysRemaining) }, NS)}
       </Text>
 
       {/* Tone-gradient nudge (calm → factual → gently-closing). Polite ambient status. */}
@@ -211,19 +248,38 @@ export function ActiveContributionCard() {
         {statusLine}
       </Paragraph>
 
-      {/* Progress meter — confirmed-only (AC4). NO red "danger" styling; a low meter is not an error. */}
+      {/* Progress meter — confirmed-only (AC4). NO red "danger" styling; a low meter is not an error. The
+          fill colour resolves `poolProgress.meterFillTokenRole` through the mobile-palette bridge above
+          (the `StatusPill` `TONE_TOKENS` precedent) rather than a hardcoded token, so the presenter's
+          token-role NAME is the single source the render layer honours (AC4/Decision 1). */}
       <Text fontFamily="$body" fontSize="$2" color="$colorPress" accessibilityRole="text">
-        {t('active_contribution.progress', { confirmed, total }, NS)}
+        {t(poolProgress.progressLabelKey, { confirmed, total }, NS)}
       </Text>
       <View
         bg="$borderColor"
         height={8}
         overflow="hidden"
         accessibilityRole="progressbar"
-        accessibilityLabel={t('active_contribution.progress_a11y', { confirmed, total }, NS)}
+        accessibilityLabel={t(poolProgress.progressA11yKey, { confirmed, total }, NS)}
       >
-        <View bg="$color" height={8} width={`${fillPct}%`} />
+        <View bg={METER_FILL_TOKENS[poolProgress.meterFillTokenRole] ?? '$color'} height={8} width={`${fillPct}%`} />
       </View>
+
+      {/* Story 9.12 — amount raised (confirmed amounts only). `amountRaisedInr = confirmedCount × fixedAmount`
+          from the shared presenter — structurally yellow-proof (no attested/pending operand). ₹0 today is
+          honest, never inflated by intent. `formatInr` (Latin numerals, Indian grouping) at the boundary. */}
+      <Text fontFamily="$body" fontSize="$2" color="$colorPress" accessibilityRole="text">
+        {t(poolProgress.amountRaisedLabelKey, undefined, NS)}
+      </Text>
+      <Text
+        fontFamily="$tabular"
+        fontSize="$5"
+        color="$color"
+        style={styles.tabularNums}
+        accessibilityRole="text"
+      >
+        {formatInr(poolProgress.amountRaisedInr)}
+      </Text>
 
       {/* Story 8.4 (AC4) — the member's OWN state. Attested → the yellow pending-reconciliation pill
           (ambient polite status, NEVER "confirmed/success"); otherwise the ≥56pt contribute CTA.

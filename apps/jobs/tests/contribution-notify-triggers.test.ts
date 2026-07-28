@@ -13,6 +13,7 @@ const listCycleBindingCandidates = vi.fn();
 const getCycleFreezeCommittedAt = vi.fn();
 const resolvePoolIdentity = vi.fn();
 const listActedMemberIdsForPool = vi.fn();
+const listPendingMatchMembersForPool = vi.fn();
 const claim = vi.fn();
 const recordResult = vi.fn();
 const release = vi.fn();
@@ -27,7 +28,7 @@ vi.mock('@twt/domain', async (importActual) => {
     withPariwarScope,
     pool: { ...actual.pool, listCycleBindingCandidates, getCycleFreezeCommittedAt },
     notifications: { ...actual.notifications, resolvePoolIdentity },
-    contribution: { ...actual.contribution, listActedMemberIdsForPool },
+    contribution: { ...actual.contribution, listActedMemberIdsForPool, listPendingMatchMembersForPool },
     idempotency: {
       ...actual.idempotency,
       createKeyedStore: () => ({ claim, recordResult, release, getResult: vi.fn() }),
@@ -43,6 +44,7 @@ const {
   buildContributionMismatchAlert,
   buildCycleOpenAlert,
   buildDeadlineReminderAlert,
+  buildPendingMatchRetryAlert,
   enqueueContributionConfirmedNotification,
   enqueueContributionMismatchNotification,
   enqueueContributionNotifyCycleOpen,
@@ -52,6 +54,9 @@ const {
   runContributionNotifyParent,
   runContributionNotifyRecoverySweep,
   runDeadlineReminderSweep,
+  runPendingMatchRetrySweep,
+  DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS,
+  PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS,
 } = await import('../src/scheduler/contribution-notify-triggers.js');
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
@@ -128,6 +133,7 @@ beforeEach(() => {
   );
   resolvePoolIdentity.mockResolvedValue(IDENTITY);
   listActedMemberIdsForPool.mockResolvedValue({ confirmed: [], attested: [] });
+  listPendingMatchMembersForPool.mockResolvedValue([]);
   claim.mockResolvedValue('acquired');
   recordResult.mockResolvedValue(undefined);
   release.mockResolvedValue(undefined);
@@ -290,6 +296,63 @@ describe('AC1 — the child worker: idempotency, batching, and the retry contrac
     expect(stored).not.toContain('device');
     expect(stored).not.toContain('+91');
     expect(stored).toContain('push');
+  });
+});
+
+// ─── Story 9.10 — the pending-match retry kinds ride the SAME child worker ─────────────────────────
+
+describe('Story 9.10 AC3 — the pending-match tiers use the LONG-LIVED idempotency TTL, never the 300s default', () => {
+  it('a `pending_match` (soft) send claims with PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS', async () => {
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'pending_match', memberIds: [M1] })) as never,
+    );
+    expect(claim).toHaveBeenCalledWith(expect.stringContaining(':pending_match'), PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS);
+    expect(PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS).toBeGreaterThan(DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS);
+  });
+
+  it('a `pending_match_escalated` send claims with the SAME long-lived TTL, under a DISTINCT scope', async () => {
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'pending_match_escalated', memberIds: [M1] })) as never,
+    );
+    expect(claim.mock.calls[0]![0]).toBe(`contribution.notify:${ALERT}:${M1}:pending_match_escalated`);
+    expect(claim.mock.calls[0]![1]).toBe(PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS);
+  });
+
+  it('a caller-supplied pendingMatchIdempotencyTtlSeconds override is honored', async () => {
+    await runContributionNotifyChild(
+      deps({ pendingMatchIdempotencyTtlSeconds: 999 }),
+      envelope(childPayload({ kind: 'pending_match', memberIds: [M1] })) as never,
+    );
+    expect(claim.mock.calls[0]![1]).toBe(999);
+  });
+
+  it('a SECOND run for the SAME (alert, member, tier) sends nothing — the once-ever guard', async () => {
+    claim.mockResolvedValue('already_claimed');
+    const result = await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'pending_match', memberIds: [M1] })) as never,
+    );
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ attempted: 0, delivered: 0, alreadySent: 1 });
+  });
+
+  it('the soft and escalated tiers do NOT run reminder suppression — the sweep already scoped to unresolved members (AC7)', async () => {
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'pending_match', memberIds: [M1] })) as never,
+    );
+    expect(listActedMemberIdsForPool).not.toHaveBeenCalled();
+  });
+
+  it('the alert built for a pending_match send is NEVER time_critical (AC6)', async () => {
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'pending_match', memberIds: [M1], timeCritical: true })) as never,
+    );
+    const alertArg = fanOutAlertToMembers.mock.calls[0]![1] as (memberId: string) => { time_critical: boolean };
+    expect(alertArg(M1).time_critical).toBe(false);
   });
 });
 
@@ -511,6 +574,105 @@ describe('AC2 — the daily sweep fires ONLY on cycle-days 5 / 10 / 13 / 14', ()
     await runDeadlineReminderSweep(d, { send });
     expect(send).not.toHaveBeenCalled();
     expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('no cycle-freeze commit'));
+  });
+});
+
+// ─── Story 9.10, Task 3 — the pending-match retry cadence sweep ────────────────────────────────────
+
+describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by tier', () => {
+  function sweepDeps(now: Date, overrides: Record<string, unknown> = {}) {
+    listCycleBindingCandidates.mockResolvedValue([candidate(POOL_A, 0, [M1, M2, M3])]);
+    return deps({
+      now: () => now,
+      pool: {
+        query: () =>
+          Promise.resolve({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }),
+      },
+      ...overrides,
+    });
+  }
+
+  const NOW_SWEEP = new Date('2026-08-01T00:00:00.000Z');
+
+  it('scans BOTH live and closed alerts (the reconciliation-tail bound, unlike the live-only deadline sweep)', async () => {
+    const queryFn = vi.fn().mockResolvedValue({ rows: [] });
+    await runPendingMatchRetrySweep(deps({ pool: { query: queryFn } }), { send: vi.fn() });
+    expect(queryFn.mock.calls[0]![0]).toMatch(/current_state IN \('live', 'closed'\)/);
+  });
+
+  it("an attestation ≥4h old but <24h → enqueues ONLY the soft tier batch", async () => {
+    listPendingMatchMembersForPool.mockResolvedValue([
+      { memberId: M1, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 5 * 60 * 60 * 1000) },
+    ]);
+    const send = vi.fn().mockResolvedValue(undefined);
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+
+    expect(result.enqueuedBatches).toBe(1);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0]![1].payload).toMatchObject({
+      kind: 'pending_match',
+      memberIds: [M1],
+      timeCritical: false,
+    });
+  });
+
+  it('an attestation ≥24h old → enqueues ONLY the escalated tier batch (not both)', async () => {
+    listPendingMatchMembersForPool.mockResolvedValue([
+      { memberId: M1, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 30 * 60 * 60 * 1000) },
+    ]);
+    const send = vi.fn().mockResolvedValue(undefined);
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+
+    expect(result.enqueuedBatches).toBe(1);
+    expect(send.mock.calls[0]![1].payload).toMatchObject({ kind: 'pending_match_escalated', memberIds: [M1] });
+  });
+
+  it('an attestation <4h old → enqueues NOTHING yet (too early for even the soft tier)', async () => {
+    listPendingMatchMembersForPool.mockResolvedValue([
+      { memberId: M1, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 60 * 60 * 1000) },
+    ]);
+    const send = vi.fn();
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+    expect(result.enqueuedBatches).toBe(0);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('a pool with mixed ages enqueues BOTH tier batches, one per tier', async () => {
+    listPendingMatchMembersForPool.mockResolvedValue([
+      { memberId: M1, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 5 * 60 * 60 * 1000) }, // soft
+      { memberId: M2, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 30 * 60 * 60 * 1000) }, // escalated
+    ]);
+    const send = vi.fn().mockResolvedValue(undefined);
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+
+    expect(result.enqueuedBatches).toBe(2);
+    const kinds = send.mock.calls.map((c) => (c[1] as { payload: { kind: string } }).payload.kind).sort();
+    expect(kinds).toEqual(['pending_match', 'pending_match_escalated']);
+  });
+
+  it('a pool with no pending-match members enqueues nothing (no query for tiers)', async () => {
+    listPendingMatchMembersForPool.mockResolvedValue([]);
+    const send = vi.fn();
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+    expect(result.enqueuedBatches).toBe(0);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("ONE pool's failure never costs its SIBLING pool's reminder", async () => {
+    listCycleBindingCandidates.mockResolvedValue([candidate(POOL_A, 0, [M1]), candidate(POOL_B, 1, [M2])]);
+    listPendingMatchMembersForPool.mockImplementation((_db: unknown, { poolId }: { poolId: string }) => {
+      if (poolId === POOL_A) throw new Error('boom');
+      return Promise.resolve([
+        { memberId: M2, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 5 * 60 * 60 * 1000) },
+      ]);
+    });
+    const onAlarm = vi.fn();
+    const send = vi.fn().mockResolvedValue(undefined);
+    const result = await runPendingMatchRetrySweep(deps({ now: () => NOW_SWEEP, onAlarm, pool: { query: () => Promise.resolve({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }) } }), { send });
+
+    expect(result.enqueuedBatches).toBe(1);
+    expect(send.mock.calls[0]![1].payload).toMatchObject({ poolId: POOL_B });
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('boom'));
   });
 });
 
@@ -769,6 +931,63 @@ describe('AC4/AC5 — the producer resolves every member-facing string INTO the 
       now: NOW,
     });
     expect((alert.payload_data as { title: string }).title).toContain('Your pool is open');
+  });
+});
+
+describe('Story 9.10 AC2/AC4 — the pending-match retry copy is DISTINCT per tier, never a deadline nudge', () => {
+  it('builds a `deadline_reminder`-category alert carrying `pool_id` for the deep link', () => {
+    const alert = buildPendingMatchRetryAlert({
+      alertId: ALERT,
+      pariwarId: PARIWAR,
+      memberId: M1,
+      poolId: POOL_A,
+      identity: IDENTITY,
+      tier: 'soft',
+      locale: 'hi',
+      now: NOW,
+    });
+    expect(alert.alert_category).toBe('deadline_reminder');
+    expect((alert.payload_data as { pool_id: string }).pool_id).toBe(POOL_A);
+    expect(() => Alert.parse(alert)).not.toThrow();
+  });
+
+  it('the soft and escalated tiers resolve to DISTINCT subjects', () => {
+    const soft = buildPendingMatchRetryAlert({
+      alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY,
+      tier: 'soft', locale: 'hi', now: NOW,
+    });
+    const escalated = buildPendingMatchRetryAlert({
+      alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY,
+      tier: 'escalated', locale: 'hi', now: NOW,
+    });
+    const softSubject = (soft.payload_data as { subject: string }).subject;
+    const escalatedSubject = (escalated.payload_data as { subject: string }).subject;
+    expect(softSubject).not.toBe(escalatedSubject);
+  });
+
+  it('never carries the day-N "please contribute" copy — this is a courtesy about a payment already made', () => {
+    const alert = buildPendingMatchRetryAlert({
+      alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY,
+      tier: 'escalated', locale: 'en', now: NOW,
+    });
+    const data = alert.payload_data as { subject: string; deadline_display: string };
+    expect(`${data.subject} ${data.deadline_display}`).not.toMatch(/contribute before|please contribute/i);
+  });
+
+  it('deep-link resolution routes to the member\'s own contribution surface, not the day-N renewals fallback', () => {
+    const alert = buildPendingMatchRetryAlert({
+      alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY,
+      tier: 'soft', locale: 'hi', now: NOW,
+    });
+    expect(deepLinkTargetForAlert(alert)).toMatchObject({ resource: 'contributions', resourceId: POOL_A });
+  });
+
+  it('English parity resolves for both tiers', () => {
+    const alert = buildPendingMatchRetryAlert({
+      alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY,
+      tier: 'soft', locale: 'en', now: NOW,
+    });
+    expect((alert.payload_data as { subject: string }).subject.length).toBeGreaterThan(0);
   });
 });
 

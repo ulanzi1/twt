@@ -17,6 +17,7 @@ import {
   CONTRIBUTION_STATUSES,
   deriveContributionStatus,
   isAlertClosedState,
+  type ListPendingMatchMembersParams,
 } from '../../src/contribution/history.js';
 import { CONFIRMED_EVENT_TYPE } from '../../src/contribution/read.js';
 import { ALERT_LIFECYCLE_STATES } from '../../src/schema/alerts.js';
@@ -100,5 +101,19 @@ describe('the Epic-9 forward event-type contract (green/red)', () => {
     expect(CONTRIBUTION_MISMATCH_EVENT_TYPE).toBe('contribution.reconciliation-mismatch');
     // The two verdict types are DISTINCT — a confirmed can never be read as a mismatch or vice-versa.
     expect(CONFIRMED_EVENT_TYPE).not.toBe(CONTRIBUTION_MISMATCH_EVENT_TYPE);
+  });
+});
+
+describe('listPendingMatchMembersForPool — structural guard (Story 9.10 AC1 — the decoy teeth)', () => {
+  it('the params type admits ONLY the scope tuple — NO status/state field that could admit a resolved row', () => {
+    const params: ListPendingMatchMembersParams = {
+      pariwarId: 'p' as ListPendingMatchMembersParams['pariwarId'],
+      alertId: 'a' as ListPendingMatchMembersParams['alertId'],
+      poolId: 'pool' as ListPendingMatchMembersParams['poolId'],
+    };
+    expect(Object.keys(params).sort()).toEqual(['alertId', 'pariwarId', 'poolId']);
+    // @ts-expect-error — a status/state field is NOT part of the pending-match scope tuple (the guard).
+    const leaky: ListPendingMatchMembersParams = { ...params, status: 'resolved' };
+    expect(leaky).toBeDefined();
   });
 });

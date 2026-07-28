@@ -213,6 +213,26 @@ export const CONTRIBUTION_MISMATCH_TEMPLATE_KEYS = {
   generic: 'notify.mismatch.generic',
 } as const;
 
+/**
+ * The two pending-match RETRY tiers (Story 9.10, AC2/AC3) — `soft` (>4h unresolved) and `escalated`
+ * (>24h unresolved). Each fires AT MOST ONCE EVER per `(alert, member)` (the long-lived idempotency TTL
+ * lives in the jobs-layer sweep, not here). Distinct copy per tier: `soft` is a gentle "still checking",
+ * `escalated` is firmer but never accusatory (Story 2.2's dignified register — never "you missed…").
+ */
+export const PENDING_MATCH_RETRY_TEMPLATE_KEYS = {
+  soft: {
+    subjectKey: 'notify.pending_match.soft.subject',
+    displayKey: 'notify.pending_match.soft.display',
+  },
+  escalated: {
+    subjectKey: 'notify.pending_match.escalated.subject',
+    displayKey: 'notify.pending_match.escalated.display',
+  },
+} as const;
+
+/** Which pending-match retry tier a reminder is for. */
+export type PendingMatchRetryTier = keyof typeof PENDING_MATCH_RETRY_TEMPLATE_KEYS;
+
 /** The i18n namespace every `notify.*` key above lives in (already inside `microcopy.yaml` scope). */
 export const CONTRIBUTION_LOOP_I18N_NAMESPACE = 'contribution';
 
@@ -252,6 +272,47 @@ export const DeadlineReminderPayloadData = z
   })
   .strict();
 export type DeadlineReminderPayloadData = z.output<typeof DeadlineReminderPayloadData>;
+
+/**
+ * `deadline_reminder` payload_data for a PENDING-MATCH RETRY (Story 9.10) — a SIBLING shape to
+ * {@link DeadlineReminderPayloadData}, deliberately NOT reused: that builder's `deadline_at` means a real
+ * cycle-close instant and the frozen `packages/channels` renderer prints "— due {deadline_display}",
+ * which is the wrong frame for a retry nudge (there is no deadline, only a payment being checked). This
+ * shape still satisfies the SAME `deadline_reminder` `Alert` variant (`deadline_at`/`deadline_display`
+ * stay structurally required — the frozen renderer is never touched), but `deadline_at` carries the
+ * send instant (a machine placeholder never rendered — only `deadline_display` reaches the copy) and
+ * `deadline_display` is written as a short call-to-action continuation rather than a date, and adds the
+ * member's own `pool_id` so `deepLinkTargetForAlert` can route to `contributions/:pool_id` (AC4) instead
+ * of the day-N reminders' generic `renewals` fallback.
+ */
+export const PendingMatchRetryPayloadData = z
+  .object({
+    subject: z.string().min(1),
+    deadline_at: z.string().datetime(),
+    deadline_display: z.string().min(1),
+    pool_id: z.string().uuid(),
+  })
+  .strict();
+export type PendingMatchRetryPayloadData = z.output<typeof PendingMatchRetryPayloadData>;
+
+/**
+ * Build the pending-match RETRY `payload_data` (Story 9.10, AC2/AC3/AC4). `subject` + `display` are the
+ * FULLY RESOLVED, locale-correct strings for the tier (never reused day-N deadline copy). `now` is the
+ * sweep's send instant — carried only to satisfy the shared `deadline_at` field; never rendered.
+ */
+export function buildPendingMatchRetryPayloadData(input: {
+  readonly subject: string;
+  readonly display: string;
+  readonly poolId: string;
+  readonly now: Date;
+}): PendingMatchRetryPayloadData {
+  return PendingMatchRetryPayloadData.parse({
+    subject: input.subject,
+    deadline_at: input.now.toISOString(),
+    deadline_display: input.display,
+    pool_id: input.poolId,
+  });
+}
 
 /** `contribution_confirmed` payload_data — Epic 9's producer seam (alert.ts:123-127). `amount_paise` is
  *  `.positive()`, never `.nonnegative()` — a ₹0.00 "confirmed contribution" push doesn't correspond to a

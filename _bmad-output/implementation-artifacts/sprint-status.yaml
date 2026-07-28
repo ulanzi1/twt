@@ -1,4 +1,80 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-28d (story 9-10 review -> done via bmad-code-review: 3-layer adversarial review
+#   (Blind Hunter + Edge Case Hunter + Acceptance Auditor) — all 8 ACs PASS, no invariant-checklist gaps;
+#   the load-bearing AC-3 once-ever TTL is correct and live-DB-proven. 1 decision accepted as-is (escalated
+#   tier may fire without soft on a first-sighting ≥24h — benign, not an AC violation), 1 item deferred
+#   (pending-match sweep 500-alert cap does not advance — inherited verbatim from runDeadlineReminderSweep,
+#   amplified by the live+closed scan; codebase-wide keyset-cursor fix), 5 dismissed as noise.)
+# 2026-07-28c (story 9-10 ready-for-dev -> in-progress -> review via bmad-dev-story: Story 9.10
+#   "4-Hour Retry Reminders" implemented end-to-end on branch story/9-10-4-hour-retry-reminders off HEAD
+#   939d674. Task 1: listPendingMatchMembersForPool landed in packages/domain/src/contribution/history.ts
+#   (not read.ts — it needs CONTRIBUTION_MISMATCH_EVENT_TYPE, which lives in history.ts and imports FROM
+#   read.ts; the reverse import would cycle). Two batched queries (attested rows on the alert stream scoped
+#   by the pool payload key; confirmed/mismatch/reversal verdicts scoped by pool), structural no-status-param
+#   guard mirroring ListConfirmedContributorsParams; 8 live-DB tests green (attested-only / +confirmed /
+#   +mismatch / +confirmed-then-reversed / +re-confirmed-after-reversal / pool-scope / cross-tenant / empty).
+#   Task 2: Alert's deadline_reminder variant (packages/contracts/src/alerts/alert.ts) gained an OPTIONAL
+#   pool_id (not a new category); a SIBLING payload builder buildPendingMatchRetryPayloadData/
+#   PendingMatchRetryPayloadData was added rather than reusing buildDeadlineReminderPayloadData — the shared
+#   deadline_at/deadline_display fields stay structurally required because the FROZEN packages/channels/src/
+#   render.ts renderer always prints "{subject} — due {deadline_display}" and is never touched, so
+#   deadline_display is deliberately a short call-to-action continuation rather than a date, and deadline_at
+#   carries the send instant as a never-rendered machine placeholder; deepLinkTargetForAlert's
+#   deadline_reminder case now routes to contributions/:pool_id when pool_id is present, with an explicit
+#   regression test proving the day-5/10/13/14 reminders (no pool_id) are unchanged; new hi+en copy added.
+#   Task 3: ContributionNotifyKind gained pending_match/pending_match_escalated riding the EXISTING
+#   CONTRIBUTION_NOTIFY_POOL_BATCH child queue (one new queue only for the sweep cron itself,
+#   CONTRIBUTION_PENDING_MATCH_RETRY_SWEEP, hourly at :50 IST); runContributionNotifyChild's idempotency TTL
+#   is now selected BY KIND — the two new kinds claim with PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS (30 days),
+#   never the day-N reminders' 300s default; runPendingMatchRetrySweep scans live+closed alerts (the 9.8
+#   reconciliation-tail bound, unlike the deadline sweep's live-only), buckets each pool's pending-match
+#   members by tier off the OLDEST unresolved attestation, and enqueues per-(pool,tier) batches. Task 4: boot
+#   needed no code change (registerContributionNotifyWorkers already wired); added a dedicated live-DB test
+#   (apps/jobs/tests/pending-match-idempotency-live.test.ts) proving the once-ever TTL mechanism end-to-end —
+#   a completed row survives past the point the 300s default would have lapsed; a short-TTL row does not (and
+#   is vacuumed, and a THIRD tick then genuinely re-sends) — the revert-sanity teeth the Dev Notes required.
+#   Full pnpm ci:local --concurrency=4: lint/typecheck/build/all 25 static gates/test(unit) green for every
+#   file this story touches. KNOWN PRE-EXISTING GAP (not a regression of this story, verified via git-stash
+#   isolation against baseline 939d674): 4 live-DB tests fail identically on both baseline and this branch —
+#   cross-pariwar-leak.spec.ts (x2), active-contribution-read.spec.ts (x1), rls/policy-regression.spec.ts
+#   (x1) — all exact-row-COUNT assertions defeated by rows accumulated across many prior sessions' committed
+#   test data in the shared persistent twt-test-pg Docker container ([[project_live_db_test_gotchas]]); no
+#   fix attempted (resetting the shared container is an environment-hygiene concern outside this story's
+#   scope). Story 9.10 file Status: review; development_status[9-10-4-hour-retry-reminders]: review. Next:
+#   code-review, then merge.)
+# last_updated: 2026-07-28b (story 9-10 backlog -> ready-for-dev via bmad-create-story: comprehensive Story
+#   9.10 "4-Hour Retry Reminders (pending_match nudge)" authored at _bmad-output/implementation-artifacts/
+#   9-10-4-hour-retry-reminders.md. THE central authoring decision: the two source docs contradict on the
+#   trigger precondition, resolved with BigDev (3 locked decisions). Decision 1 — precondition = PRD FR-35
+#   `pending_match > 4h` (a member who HAS self-attested a UTR/yellow that the matcher has NOT yet
+#   resolved), NOT the epics.md:3320-3323 "UPI intent fired but no attestation" prose. The epic prose is a
+#   ratified drafting divergence from FR-35 (class of epics.md:3022 / :3275): it is BOTH non-authoritative
+#   AND un-buildable today — there is no durable/queryable "intent fired" signal (the intent endpoint writes
+#   only a PII-shielded member_contribution.intent audit line carrying NO alert_id), and the UPI-intent flow
+#   is dark (resolveNomineeVpa returns {available:false} until the deferred nominee-VPA story per
+#   [[project_nominee_vpa_deferred_seam]]). The pending_match reading is fully LIVE now: contribution.utr-
+#   attested is a first-class event (occurred_at + poolId/member), and the 9.4/9.5 matcher emits the
+#   confirmed/reconciliation-mismatch resolving verdicts, so "attested & unresolved & older than N" is
+#   directly derivable. Decision 2 — ship BOTH FR-35 tiers (>4h soft + >24h escalated), not just the epic's
+#   single 4h push. Decision 3 — "escalated" = a firmer SECOND member-facing push (distinct idempotency
+#   scope pending_match_escalated + distinct tone), NOT a new staff surface (staff already see open cases via
+#   the Story 9.8 reconciliation review queue, which 9.10 does NOT touch). Design: a FIFTH trigger in the
+#   Story 8.8 contribution-notify family — a new @twt/domain read listPendingMatchMembersForPool (reuses
+#   hasLiveConfirmation + CONTRIBUTION_MISMATCH_EVENT_TYPE + the utr-attested select from
+#   listMemberContributionHistory; batched, structural no-status-param guard), a new hourly-IST cadence
+#   sweep runPendingMatchRetrySweep modeled on runDeadlineReminderSweep (scans live+closed reconciling
+#   alerts per the 9.8 bound, buckets by attestation age via named 4h/24h thresholds), two new
+#   ContributionNotifyKind values riding the ONE existing POOL_BATCH child + the frozen live fanOutAlert
+#   composition (packages/channels/src/** untouched, [[project_channels_no_live_dispatch_yet]]), new
+#   deadline_reminder-category retry copy (hi+en), and a new CONTRIBUTION_PENDING_MATCH_RETRY_SWEEP queue
+#   registered inside the existing registerContributionNotifyWorkers. THE once-ever nuance flagged for the
+#   dev: unlike 8.8's day_<n> (5-min-TTL claim OK because the cron fires once/day), the hourly pending_match
+#   sweep must gate exactly-once-per-tier on the keyed store's PERMANENT getResult record, NOT the transient
+#   TTL claim (else re-nudge every hour). Adds NO contribution.* event type (contribution.* stays exactly 3,
+#   8.10 fourth-type fence), NO new alert category, NO staff-surface change, and never promotes yellow to
+#   green (progress.confirmedCount / confirmed-contributor list untouched, epics.md:2939-2941). Backend
+#   scheduler story: no mobile/apps-api/apps-admin change. baseline_commit 939d674. Story Status:
+#   ready-for-dev; development_status[9-10-4-hour-retry-reminders]: ready-for-dev. Next: bmad-dev-story.)
 # last_updated: 2026-07-28 (story 9-9 review -> done via bmad-code-review. Adversarial review (Blind Hunter +
 #   Edge Case Hunter + Acceptance Auditor) surfaced 17 findings after dedup: 2 decision-needed (both resolved
 #   by the user to patch-now), 10 further patches, 1 deferred, 4 dismissed as noise. All 12 patches applied:
@@ -1451,7 +1527,7 @@ development_status:
   9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: done
   9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: done
   9-9-dual-nominee-bank-accounts-donor-choice: done
-  9-10-4-hour-retry-reminders: backlog
+  9-10-4-hour-retry-reminders: done
   9-11-over-payment-facilitated-recovery: backlog
   9-12-pool-progress-card-public-member-surface: backlog
   epic-9-retrospective: optional

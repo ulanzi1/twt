@@ -264,6 +264,17 @@ export const QUEUE_NAMES = {
    * pattern). Bounded per run with a non-silent cap alarm. Job class C (background cron).
    */
   RECONCILIATION_MATCH_SWEEP: 'reconciliation.match.sweep',
+  /**
+   * Pending-match RETRY reminder cadence — the hourly scheduled sweep (Story 9.10, Task 3). The FIFTH
+   * contribution-notify trigger, riding the SAME `CONTRIBUTION_NOTIFY_POOL_BATCH` child queue as
+   * cycle-open/deadline-reminder (the `ContributionNotifyKind` union gains `pending_match` /
+   * `pending_match_escalated`). Scans reconciling (`live`/`closed`) alerts cross-tenant on the BYPASSRLS
+   * service pool, resolves each pool's pending-match members, buckets by tier (>4h soft / >24h escalated),
+   * and enqueues per-(pool,tier) batches. Each member is nudged AT MOST ONCE EVER per tier — enforced by a
+   * long-lived (weeks-scale) idempotency claim, not by this sweep's own cadence. Job class C (background
+   * cron).
+   */
+  CONTRIBUTION_PENDING_MATCH_RETRY_SWEEP: 'contribution.pending_match_retry.sweep',
 } as const;
 
 /** Union of the registered queue names. */

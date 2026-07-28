@@ -88,7 +88,13 @@ export function deepLinkTargetForAlert(alert: Alert): DeepLinkTarget | null {
       // No content-specific id in the payload → the announcement/feed entry is the target.
       return { pariwarId, resource: 'announcements', resourceId: alert.alert_id };
     case 'deadline_reminder':
-      // Renewal/lock-in cadence — no content id; the renewals landing is the target.
+      // Story 9.10: the pending-match RETRY reminder rides this SAME category but carries the member's
+      // own `pool_id` — route it to the member's own contribution surface, not a fresh pay prompt. The
+      // day-5/10/13/14 cadence reminders carry no `pool_id` and fall through to the renewals landing,
+      // UNCHANGED.
+      if (alert.payload_data.pool_id) {
+        return { pariwarId, resource: 'contributions', resourceId: alert.payload_data.pool_id };
+      }
       return { pariwarId, resource: 'renewals', resourceId: null };
     case 'contribution_confirmed':
     case 'contribution_mismatch':

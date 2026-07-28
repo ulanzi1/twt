@@ -71,6 +71,27 @@ describe('deepLinkTargetForAlert (AC4 — derived from payload_data)', () => {
   it('step_up_otp has no push deep-link (SMS transport, Story 5.9)', () => {
     expect(deepLinkTargetForAlert(alert('step_up_otp', { purpose: 'p', ttl_seconds: 60 }))).toBeNull();
   });
+
+  it('Story 9.10: a deadline_reminder payload carrying pool_id routes to contributions/:pool_id', () => {
+    expect(
+      deepLinkTargetForAlert(
+        alert('deadline_reminder', {
+          subject: 'S',
+          deadline_at: '2026-07-05T10:00:00.000Z',
+          deadline_display: 'soon',
+          pool_id: POOL_ID,
+        }),
+      ),
+    ).toEqual({ pariwarId: PARIWAR_ID, resource: 'contributions', resourceId: POOL_ID });
+  });
+
+  it('Story 9.10 regression: the day-5/10/13/14 reminders (no pool_id) still resolve to renewals unchanged', () => {
+    expect(
+      deepLinkTargetForAlert(
+        alert('deadline_reminder', { subject: 'S', deadline_at: '2026-07-05T10:00:00.000Z', deadline_display: 'soon' }),
+      ),
+    ).toEqual({ pariwarId: PARIWAR_ID, resource: 'renewals', resourceId: null });
+  });
 });
 
 describe('formatDeepLink / parseDeepLink round-trip', () => {

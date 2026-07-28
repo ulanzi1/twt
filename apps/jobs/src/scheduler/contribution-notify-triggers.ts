@@ -39,15 +39,18 @@ import {
   CYCLE_OPEN_TEMPLATE_KEYS,
   CYCLE_WINDOW_DAYS,
   DEADLINE_REMINDER_SEND_DAYS,
+  PENDING_MATCH_RETRY_TEMPLATE_KEYS,
   buildContributionConfirmedPayloadData,
   buildContributionMismatchPayloadData,
   buildCycleOpenPayloadData,
   buildDeadlineReminderPayloadData,
+  buildPendingMatchRetryPayloadData,
   computeDaysRemaining,
   cycleDayFromCommittedAt,
   isDeadlineReminderSendDay,
   Alert,
   type DeadlineReminderSendDay,
+  type PendingMatchRetryTier,
 } from '@twt/contracts';
 import {
   contribution as contributionDomain,
@@ -104,11 +107,39 @@ export const DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS = 300;
 export const CHILD_RETRY_LIMIT = 4;
 export const CHILD_RETRY_DELAY_SECONDS = 60;
 
+/** Pending-match retry cadence sweep (IST) — Story 9.10 AC2. Hourly so the 4h/24h tier boundaries are
+ *  always caught within the hour; offset from the cycle-open recovery sweep (`:40`) and the deadline-
+ *  reminder sweep (09:30 daily) so the three crons don't all fire on the same minute. */
+export const DEFAULT_PENDING_MATCH_RETRY_SWEEP_CRON = '50 * * * *'; // hourly at :50 IST
+
+/** Max reconciling (`live`/`closed`) alerts one pending-match sweep run considers (Story 9.10). Mirrors
+ *  the deadline sweep's bound shape, tuned independently — a full batch is ALARMED, never silently capped. */
+export const DEFAULT_PENDING_MATCH_SWEEP_ALERT_LIMIT = 500;
+
+/** Soft-tier threshold (Story 9.10 AC2 / PRD FR-35): an unresolved `contribution.utr-attested` older than
+ *  this gets ONE gentle "still checking" push. */
+export const PENDING_MATCH_SOFT_REMINDER_AGE_MS = 4 * 60 * 60 * 1000;
+
+/** Escalated-tier threshold (Story 9.10 AC2 / PRD FR-35): an unresolved attestation older than this gets
+ *  ONE additional, firmer push — in addition to the soft tier it will already have received. */
+export const PENDING_MATCH_ESCALATION_AGE_MS = 24 * 60 * 60 * 1000;
+
+/** The once-ever idempotency TTL for the two pending-match tiers (Story 9.10 AC3 — "the once-ever
+ *  nuance"). MUST be weeks-scale, NEVER {@link DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS} (300s): the sweep
+ *  re-checks HOURLY across the whole ~20-day reconciliation window, and durability comes from the CLAIM's
+ *  TTL length, not from `recordResult` alone — a completed row still expires (and gets vacuumed) at its
+ *  ORIGINAL `expires_at`, `status` notwithstanding. Sized to outlive the reconciliation window with
+ *  generous headroom. */
+export const PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
 // ── Job payloads (NON-PII: ids, counts and enum tokens only — never a name, mobile or token) ────────
 
 /** What kind of contribution-loop notification a child batch is sending. Selects the copy + the
- *  idempotency scope, so ONE child worker serves both scheduled triggers. */
-export type ContributionNotifyKind = 'cycle_open' | 'deadline_reminder';
+ *  idempotency scope, so ONE child worker serves every POOL_BATCH trigger. `pending_match` /
+ *  `pending_match_escalated` (Story 9.10) ride this SAME pool-batch path (the 8.8 D6 "one fan-out path to
+ *  reason about" principle) — the sweep pre-splits a pool's pending-match members by tier BEFORE
+ *  enqueueing, so a child batch is always a single kind/tier, never mixed. */
+export type ContributionNotifyKind = 'cycle_open' | 'deadline_reminder' | 'pending_match' | 'pending_match_escalated';
 
 /** CYCLE_OPEN parent payload. `timeCritical` rides the payload because it is Story 8.1's to set — it is
  *  copied verbatim from the `alert.published` event and NEVER re-derived here (invariant 6). */
@@ -184,6 +215,11 @@ export interface ContributionNotifyTriggerDeps extends ContributionNotifyDeps {
   readonly recoverySweepAlertLimit?: number;
   /** Deadline-sweep batch bound (alerts scanned per tick). */
   readonly deadlineSweepAlertLimit?: number;
+  /** Pending-match sweep batch bound (reconciling alerts scanned per tick, Story 9.10). */
+  readonly pendingMatchSweepAlertLimit?: number;
+  /** Per-kind idempotency TTL override for the two pending-match tiers (Story 9.10 AC3). Defaults to
+   *  {@link PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS} — weeks-scale, NOT the day-N reminders' 300s default. */
+  readonly pendingMatchIdempotencyTtlSeconds?: number;
   /** How many CONTRIBUTION_NOTIFY_POOL_BATCH child jobs run concurrently in this process — the same
    *  `localConcurrency` mechanism `registerCycleSpawnWorkers` uses (cycle-spawn.ts:58/381). A cycle-open
    *  fan-out pages N pools (~50 at the Story 7.9 gate shape); processing them one pool at a time is what
@@ -312,6 +348,39 @@ export function buildDeadlineReminderAlert(input: {
       subject: t(keys.subjectKey, params, { locale, ...NS }),
       deadlineAt: input.deadlineAt,
       deadlineDisplay: t(keys.displayKey, params, { locale, ...NS }),
+    }),
+  });
+}
+
+/**
+ * Build ONE pending-match RETRY notification for ONE member on ONE tier (Story 9.10, AC2/AC3/AC4). Rides
+ * the SAME `deadline_reminder` dispatch category as the day-N cadence (mechanics reuse — non-time-
+ * critical, the push→WA→SMS ladder, the 30-min cost-optimization window, never Telegram-mirror-eligible),
+ * but with DISTINCT, non-deadline copy (never "please contribute before day X" — a pending-match member
+ * has already paid/attested) and a `pool_id` on the payload so the deep link routes to the member's own
+ * contribution surface (`deep-link.ts`'s `deadline_reminder` case), not the generic renewals landing.
+ */
+export function buildPendingMatchRetryAlert(input: {
+  readonly alertId: string;
+  readonly pariwarId: string;
+  readonly memberId: string;
+  readonly poolId: string;
+  readonly identity: notifications.ResolvedPoolIdentity;
+  readonly tier: PendingMatchRetryTier;
+  readonly locale: Locale;
+  readonly now: Date;
+}): Alert {
+  const { locale, tier } = input;
+  const keys = PENDING_MATCH_RETRY_TEMPLATE_KEYS[tier];
+  const params = { pool: poolLabel(input.identity) };
+  return Alert.parse({
+    ...envelope({ ...input, timeCritical: false }),
+    alert_category: 'deadline_reminder',
+    payload_data: buildPendingMatchRetryPayloadData({
+      subject: t(keys.subjectKey, params, { locale, ...NS }),
+      display: t(keys.displayKey, params, { locale, ...NS }),
+      poolId: input.poolId,
+      now: input.now,
     }),
   });
 }
@@ -467,7 +536,12 @@ async function enqueuePoolBatch(
   ctx: NotifyEnqueueContext,
   payload: ContributionNotifyChildPayload,
 ): Promise<void> {
-  const scope = payload.kind === 'deadline_reminder' ? `:d${String(payload.cycleDay)}` : '';
+  const scope =
+    payload.kind === 'deadline_reminder'
+      ? `:d${String(payload.cycleDay)}`
+      : payload.kind === 'pending_match' || payload.kind === 'pending_match_escalated'
+        ? `:${payload.kind}`
+        : '';
   await boss.send(
     QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH,
     { ...ctx, payload } satisfies JobEnvelope<ContributionNotifyChildPayload>,
@@ -547,9 +621,12 @@ export async function runContributionNotifyParent(
 
 // ── The shared child worker (both scheduled triggers) ────────────────────────────────────────────────
 
-/** The idempotency scope token for one member send. */
+/** The idempotency scope token for one member send. `pending_match` / `pending_match_escalated` are the
+ *  AC3 tier tokens — each fires at most once EVER per `(alert_id, member_id, tier)`. */
 function idempotencyScope(payload: ContributionNotifyChildPayload): string {
-  return payload.kind === 'deadline_reminder' ? `day_${String(payload.cycleDay)}` : 'cycle_open';
+  if (payload.kind === 'deadline_reminder') return `day_${String(payload.cycleDay)}`;
+  if (payload.kind === 'pending_match' || payload.kind === 'pending_match_escalated') return payload.kind;
+  return 'cycle_open';
 }
 
 function memberKey(alertId: string, memberId: string, scope: string): string {
@@ -589,7 +666,13 @@ export async function runContributionNotifyChild(
   const now = deps.now?.() ?? new Date();
   const locale = deps.locale ?? DEFAULT_LOCALE;
   const chunkSize = Math.max(1, deps.memberChunkSize ?? DEFAULT_MEMBER_CHUNK_SIZE);
-  const ttl = deps.memberIdempotencyTtlSeconds ?? DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS;
+  // Per-kind TTL (Story 9.10 AC3 — "the once-ever nuance"): the two pending-match tiers durability-need a
+  // weeks-scale claim, never the day-N reminders' 300s default (which would lapse — and get vacuumed —
+  // well before the next HOURLY sweep tick, re-nudging the member every hour).
+  const ttl =
+    p.kind === 'pending_match' || p.kind === 'pending_match_escalated'
+      ? deps.pendingMatchIdempotencyTtlSeconds ?? PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS
+      : deps.memberIdempotencyTtlSeconds ?? DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS;
   const store = idempotency.createKeyedStore(deps.pool);
   const scope = idempotencyScope(p);
 
@@ -638,30 +721,44 @@ export async function runContributionNotifyChild(
     }
     return parsed;
   })();
-  const alertFor = (memberId: string): Alert =>
-    p.kind === 'deadline_reminder'
-      ? buildDeadlineReminderAlert({
-          alertId: p.alertId,
-          pariwarId,
-          memberId,
-          poolId: p.poolId,
-          identity,
-          cycleDay: p.cycleDay ?? DEADLINE_REMINDER_SEND_DAYS[0],
-          deadlineAt,
-          timeCritical: p.timeCritical,
-          locale,
-          now,
-        })
-      : buildCycleOpenAlert({
-          alertId: p.alertId,
-          pariwarId,
-          memberId,
-          poolId: p.poolId,
-          identity,
-          timeCritical: p.timeCritical,
-          locale,
-          now,
-        });
+  const alertFor = (memberId: string): Alert => {
+    if (p.kind === 'deadline_reminder') {
+      return buildDeadlineReminderAlert({
+        alertId: p.alertId,
+        pariwarId,
+        memberId,
+        poolId: p.poolId,
+        identity,
+        cycleDay: p.cycleDay ?? DEADLINE_REMINDER_SEND_DAYS[0],
+        deadlineAt,
+        timeCritical: p.timeCritical,
+        locale,
+        now,
+      });
+    }
+    if (p.kind === 'pending_match' || p.kind === 'pending_match_escalated') {
+      return buildPendingMatchRetryAlert({
+        alertId: p.alertId,
+        pariwarId,
+        memberId,
+        poolId: p.poolId,
+        identity,
+        tier: p.kind === 'pending_match' ? 'soft' : 'escalated',
+        locale,
+        now,
+      });
+    }
+    return buildCycleOpenAlert({
+      alertId: p.alertId,
+      pariwarId,
+      memberId,
+      poolId: p.poolId,
+      identity,
+      timeCritical: p.timeCritical,
+      locale,
+      now,
+    });
+  };
 
   let attempted = 0;
   let delivered = 0;
@@ -992,6 +1089,137 @@ export async function runDeadlineReminderSweep(
   return { scanned: rows.length, enqueuedPools };
 }
 
+// ── Task 3 (Story 9.10): the pending-match retry cadence sweep ──────────────────────────────────────
+
+/**
+ * The pending-match RETRY cadence sweep (Story 9.10, AC2/AC3/AC4/AC5/AC6) — the FIFTH contribution-notify
+ * trigger, riding the SAME `runDeadlineReminderSweep`-shaped template: cross-tenant BYPASSRLS scan,
+ * `ORDER BY cycle_id`, bounded + alarmed batch, per-pool try/catch so one pool's failure never costs its
+ * siblings.
+ *
+ * ── Why `live` AND `closed` (unlike the deadline sweep's `live`-only) ─────────────────────────────────
+ * A payment attested near the Day-15 close can still be pending-match INTO the reconciliation TAIL
+ * (Story 8.9 + the Story 9.4/9.5 matcher runs on live+closed cycles). This mirrors the Story 9.8
+ * review-read bound (`live`/`closed`, excluding `settled` done + pre-live) — intentionally duplicated as
+ * a literal here rather than extracted to a shared const (each read owns its own tenant/state predicate
+ * by convention; see Dev Notes "Reconciliation window").
+ *
+ * Per pool: resolve AC-1's pending-match members ({@link contributionDomain.listPendingMatchMembersForPool}),
+ * bucket each by tier off `now − oldestUnresolvedAttestedAt` (AC2's thresholds), and `enqueuePoolBatch`
+ * PER (pool, tier) — never a single mixed batch — so the child worker's `kind` selects exactly one tier's
+ * copy + idempotency scope. A member ≥24h is ONLY escalated (they will already hold the soft-tier claim
+ * from an earlier tick); the child's per-member idempotency claim is what actually enforces "at most once
+ * ever" (AC3) — this sweep is free to re-submit the same member every tick and the claim absorbs it.
+ */
+export async function runPendingMatchRetrySweep(
+  deps: ContributionNotifyTriggerDeps,
+  boss: Pick<QueueClient, 'send'>,
+): Promise<{ scanned: number; enqueuedBatches: number }> {
+  const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
+  const now = deps.now?.() ?? new Date();
+  const limit = Math.max(1, deps.pendingMatchSweepAlertLimit ?? DEFAULT_PENDING_MATCH_SWEEP_ALERT_LIMIT);
+
+  const { rows } = await deps.pool.query<{ alert_id: string; cycle_id: string; pariwar_id: string }>(
+    `SELECT a.alert_id, a.cycle_id, a.pariwar_id
+       FROM alerts a
+      WHERE a.current_state IN ('live', 'closed')
+      ORDER BY a.cycle_id ASC
+      LIMIT $1`,
+    [limit],
+  );
+
+  let enqueuedBatches = 0;
+  for (const row of rows) {
+    try {
+      const candidates = await withPariwarScope(deps.pool, row.pariwar_id, (db: Db) =>
+        poolDomain.listCycleBindingCandidates(
+          db,
+          ids.pariwarId(row.pariwar_id),
+          ids.cycleFreezeCommitId(row.cycle_id),
+        ),
+      );
+
+      const ctx: NotifyEnqueueContext = {
+        pariwarId: row.pariwar_id,
+        // Per-tick component so every hourly retry for the same reconciling alert is distinguishable in
+        // logs/tracing — a static id makes N ticks indistinguishable (the recovery-sweep precedent).
+        requestId: `contribution.pending_match_retry:${row.alert_id}:${String(now.getTime())}`,
+        actorId: null,
+        traceId: `contribution.pending_match_retry:${row.alert_id}:${String(now.getTime())}`,
+      };
+
+      for (const candidate of candidates) {
+        try {
+          const pending = await withPariwarScope(deps.pool, row.pariwar_id, (db: Db) =>
+            contributionDomain.listPendingMatchMembersForPool(db, {
+              pariwarId: ids.pariwarId(row.pariwar_id),
+              alertId: ids.alertId(row.alert_id),
+              poolId: ids.poolId(candidate.poolId),
+            }),
+          );
+          if (pending.length === 0) continue;
+
+          // Bucket by tier off the OLDEST unresolved attestation (AC1/AC2) — a member ≥24h is ONLY
+          // escalated, never double-enqueued into the soft tier too.
+          const softMemberIds: string[] = [];
+          const escalatedMemberIds: string[] = [];
+          for (const member of pending) {
+            const ageMs = now.getTime() - member.oldestUnresolvedAttestedAt.getTime();
+            if (ageMs >= PENDING_MATCH_ESCALATION_AGE_MS) escalatedMemberIds.push(member.memberId);
+            else if (ageMs >= PENDING_MATCH_SOFT_REMINDER_AGE_MS) softMemberIds.push(member.memberId);
+          }
+
+          const tierBatches: ReadonlyArray<{ kind: ContributionNotifyKind; memberIds: readonly string[] }> = [
+            { kind: 'pending_match', memberIds: softMemberIds },
+            { kind: 'pending_match_escalated', memberIds: escalatedMemberIds },
+          ];
+          for (const batch of tierBatches) {
+            if (batch.memberIds.length === 0) continue;
+            await enqueuePoolBatch(boss, ctx, {
+              kind: batch.kind,
+              alertId: row.alert_id,
+              cycleId: row.cycle_id,
+              poolId: candidate.poolId,
+              poolIndex: candidate.poolIndex,
+              poolCanonicalIdentifier: candidate.poolCanonicalIdentifier,
+              claimCaseId: candidate.claimCaseId,
+              fixedAmount: candidate.fixedAmount,
+              poolCount: candidates.length,
+              memberIds: batch.memberIds,
+              // NEVER time-critical (AC6) — a retry nudge must never trip the AR-20 degraded-mode bridge.
+              timeCritical: false,
+            });
+            enqueuedBatches += 1;
+          }
+        } catch (err) {
+          // ONE pool's enqueue failing must never cost its SIBLING pools this tick's reminder.
+          alarm(
+            `[jobs] pending-match-retry-sweep: failed to enqueue reminders for alert ${row.alert_id} pool ` +
+              `${candidate.poolId} — ${String(err)}`,
+          );
+        }
+      }
+    } catch (err) {
+      // The alert's DB reads failing must never abort the sweep — the next tick retries it.
+      alarm(
+        `[jobs] pending-match-retry-sweep: failed to compute/enqueue reminders for alert ${row.alert_id} — ${String(err)}`,
+      );
+    }
+  }
+
+  if (rows.length >= limit) {
+    alarm(
+      `[jobs] pending-match-retry-sweep: hit the ${String(limit)}-alert batch cap — more reconciling ` +
+        `alerts remain; the next tick will pick them up (raise pendingMatchSweepAlertLimit if this recurs)`,
+    );
+  }
+  console.info(
+    '[jobs] pending-match-retry-sweep',
+    JSON.stringify({ scanned: rows.length, enqueuedBatches, limit }),
+  );
+  return { scanned: rows.length, enqueuedBatches };
+}
+
 // ── Task 7: the contribution-confirmed worker (the Epic-9 seam) ─────────────────────────────────────
 
 /**
@@ -1126,7 +1354,12 @@ export async function runContributionMismatchNotify(
 export async function registerContributionNotifyWorkers(
   boss: QueueClient,
   deps: ContributionNotifyTriggerDeps,
-  opts: { sweepCron?: string; recoverySweepCron?: string; sweepTz?: string } = {},
+  opts: {
+    sweepCron?: string;
+    recoverySweepCron?: string;
+    pendingMatchSweepCron?: string;
+    sweepTz?: string;
+  } = {},
 ): Promise<void> {
   await boss.createQueue(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH);
   // localConcurrency — the same `registerCycleSpawnWorkers` precedent (cycle-spawn.ts:36/381): N pool
@@ -1225,6 +1458,26 @@ export async function registerContributionNotifyWorkers(
   await boss.schedule(
     QUEUE_NAMES.CONTRIBUTION_DEADLINE_REMINDER_SWEEP,
     opts.sweepCron ?? DEFAULT_DEADLINE_REMINDER_SWEEP_CRON,
+    {},
+    { tz: opts.sweepTz ?? CONTRIBUTION_NOTIFY_TZ },
+  );
+
+  // The pending-match RETRY cadence cron (IST) — Story 9.10. Hourly so the 4h/24h tier boundaries are
+  // always caught within the hour.
+  await boss.createQueue(QUEUE_NAMES.CONTRIBUTION_PENDING_MATCH_RETRY_SWEEP);
+  await boss.work(QUEUE_NAMES.CONTRIBUTION_PENDING_MATCH_RETRY_SWEEP, async (jobs: Job[]) => {
+    try {
+      const swept = await runPendingMatchRetrySweep(deps, boss);
+      console.info('[jobs] pending-match-retry-sweep tick', JSON.stringify({ jobs: jobs.length, ...swept }));
+      return swept;
+    } catch (err) {
+      console.error('[jobs] pending-match-retry-sweep tick failed', err);
+      throw err;
+    }
+  });
+  await boss.schedule(
+    QUEUE_NAMES.CONTRIBUTION_PENDING_MATCH_RETRY_SWEEP,
+    opts.pendingMatchSweepCron ?? DEFAULT_PENDING_MATCH_RETRY_SWEEP_CRON,
     {},
     { tz: opts.sweepTz ?? CONTRIBUTION_NOTIFY_TZ },
   );

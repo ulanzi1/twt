@@ -401,3 +401,144 @@ export async function listMemberContributionHistory(
     };
   });
 }
+
+// ── Pending-match members read — Story 9.10 (Task 1; AC1/AC7) ──────────────────────────────────────
+//
+// The honest data source for the 4-hour/24-hour retry-reminder sweep: "which members of THIS pool have
+// self-attested (yellow) but the matcher has not yet resolved them either way?" Reuses the SAME
+// resolution predicates as the rest of this module (D3) rather than re-deriving them — a second
+// definition of "resolved" is exactly the drift class [[project_epic6_drizzle_correlated_subquery_bug]]
+// warns about. `listActedMemberIdsForPool` (read.ts) is deliberately NOT extended for this: it lacks the
+// mismatch verdict and the per-member `attested_at` the sweep needs to bucket by tier, and widening a
+// load-bearing confirmed/attested-suppression primitive for an unrelated caller is the wrong move.
+
+/** One pool member with an unresolved (pending-match) attestation — Story 9.10 AC1. */
+export interface PendingMatchMember {
+  /** The member holding ≥1 unresolved `contribution.utr-attested` for this pool. */
+  readonly memberId: MemberId;
+  /** The OLDEST unresolved attestation's `occurred_at` — the sweep buckets tiers off this instant, never
+   *  a newer attestation (AC1: a later attestation never resets an earlier one's cadence). */
+  readonly oldestUnresolvedAttestedAt: Date;
+}
+
+/**
+ * List the pool's PENDING-MATCH members (AC1) — a member with ≥1 `contribution.utr-attested` (yellow) for
+ * the pool that is resolved by NEITHER a live `contribution.confirmed` (the {@link hasLiveConfirmation}
+ * chain, honoring a `reconciliation.confirmation-reversed` walk-back) NOR a
+ * `contribution.reconciliation-mismatch`. A member with no attestation, or whose attestation is already
+ * confirmed/mismatched, is STRUCTURALLY absent — there is no `status`/`state` parameter that could admit
+ * a resolved row.
+ *
+ * TWO batched queries regardless of roster size (never per-member): (1) the pool's attested rows on the
+ * ALERT stream, scoped by the payload's `poolId` key (Story 8.4 — multiple pools' attestations share one
+ * alert stream, distinguished only by this payload key); (2) the pool's confirmed / mismatch / reversal
+ * verdicts, the same three-event-type batch {@link listMemberContributionHistory} already runs, scoped by
+ * `poolId` instead of `memberId` (this is the pool-wide-multi-member shape; that one is member-scoped).
+ *
+ * A member can hold more than one unresolved attestation only in a defensive/edge case (idempotency
+ * collapses a re-attest into the SAME event per (member, alert) — see write.ts's `tr` unique constraint);
+ * when it happens, this returns the OLDEST unresolved `occurred_at` so the sweep's tier thresholds evaluate
+ * against the attestation that first crossed them, never a later one that would reset the cadence.
+ *
+ * Malformed attested rows (missing `poolId`/`memberId`) are dropped, mirroring {@link listMemberContributionHistory}.
+ * Tenant-scoped (RLS + the explicit `pariwar_id` predicate). Ordered by `memberId` ASC for a stable,
+ * deterministic result.
+ */
+/** The scope tuple for a pool's pending-match read — exactly `{ pariwarId, alertId, poolId }`, mirroring
+ *  the confirmed-only read's structural guard (no `status`/`state` field that could admit a resolved row). */
+export interface ListPendingMatchMembersParams {
+  readonly pariwarId: PariwarId;
+  readonly alertId: AlertId;
+  readonly poolId: PoolId;
+}
+
+export async function listPendingMatchMembersForPool(
+  db: Db,
+  { pariwarId, alertId, poolId }: ListPendingMatchMembersParams,
+): Promise<PendingMatchMember[]> {
+  // (1) The pool's attested rows (the honest pending-match data source) — scoped to THIS alert stream +
+  //     THIS pool's payload key (Story 8.4: multiple pools' attestations ride the same alert stream).
+  const attestedRows = await db
+    .select({
+      memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`,
+      attestedAt: eventsLog.occurredAt,
+    })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.pariwarId, pariwarId),
+        eq(eventsLog.eventType, CONTRIBUTION_UTR_ATTESTED_EVENT_TYPE),
+        eq(eventsLog.streamId, alertId),
+        sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${poolId}`,
+      ),
+    )
+    // Same defensive bound as the other batched reads in this module — a pathological/corrupt event log
+    // must not produce an unbounded result set. Not user-controlled (no caller-supplied limit).
+    .limit(500);
+
+  const oldestAttestedAtByMember = new Map<string, Date>();
+  for (const r of attestedRows) {
+    if (typeof r.memberId !== 'string' || r.memberId.length === 0) continue;
+    const existing = oldestAttestedAtByMember.get(r.memberId);
+    if (!existing || r.attestedAt.getTime() < existing.getTime()) {
+      oldestAttestedAtByMember.set(r.memberId, r.attestedAt);
+    }
+  }
+  if (oldestAttestedAtByMember.size === 0) return [];
+
+  // (2) The pool's resolution verdicts — confirmed / mismatch / reversal, batched (the SAME three-event-
+  //     type shape query (2) of {@link listMemberContributionHistory} runs, scoped by `poolId` here
+  //     instead of `memberId` — the pool-wide-multi-member shape).
+  const verdictRows = await db
+    .select({
+      eventType: eventsLog.eventType,
+      eventId: eventsLog.eventId,
+      memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`,
+      reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
+    })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.pariwarId, pariwarId),
+        inArray(eventsLog.eventType, [
+          CONFIRMED_EVENT_TYPE,
+          CONTRIBUTION_MISMATCH_EVENT_TYPE,
+          RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE,
+        ]),
+        sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${poolId}`,
+      ),
+    )
+    .limit(500);
+
+  const confirmedEventIdsByMember = new Map<string, string[]>();
+  const reversedConfirmedEventIds = new Set<string>();
+  const mismatchMemberIds = new Set<string>();
+  for (const v of verdictRows) {
+    if (v.eventType === RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE) {
+      if (typeof v.reversedConfirmedEventId === 'string' && v.reversedConfirmedEventId.length > 0) {
+        reversedConfirmedEventIds.add(v.reversedConfirmedEventId);
+      }
+      continue;
+    }
+    if (typeof v.memberId !== 'string' || v.memberId.length === 0) continue;
+    if (v.eventType === CONFIRMED_EVENT_TYPE) {
+      const ids = confirmedEventIdsByMember.get(v.memberId);
+      if (ids) ids.push(v.eventId);
+      else confirmedEventIdsByMember.set(v.memberId, [v.eventId]);
+    } else {
+      mismatchMemberIds.add(v.memberId);
+    }
+  }
+
+  // (3) A member is pending-match iff NEITHER resolution verdict applies (structural — never a status
+  //     parameter). Confirmed honors the reversal chain (a fully-reversed confirmation returns the member
+  //     to pending); mismatch is an exact-event-type match.
+  const pending: PendingMatchMember[] = [];
+  for (const [memberId, oldestUnresolvedAttestedAt] of oldestAttestedAtByMember) {
+    const confirmed = hasLiveConfirmation(confirmedEventIdsByMember.get(memberId) ?? [], reversedConfirmedEventIds);
+    if (confirmed) continue;
+    if (mismatchMemberIds.has(memberId)) continue;
+    pending.push({ memberId: memberId as MemberId, oldestUnresolvedAttestedAt });
+  }
+  return pending.sort((a, b) => (a.memberId < b.memberId ? -1 : a.memberId > b.memberId ? 1 : 0));
+}

@@ -113,11 +113,16 @@ export const Alert = z.discriminatedUnion('alert_category', [
   // Per-member deadline reminder (renewal/lock-in cadence, Epic 3 consumer). `deadline_at` is the machine
   // timestamp (provenance/scheduling); `deadline_display` is the PRODUCER-formatted human-readable string
   // the renderers substitute — render stays a pure function of the payload (AC5: no locale/clock formatting
-  // at render time), so the producer owns timezone + wording.
+  // at render time), so the producer owns timezone + wording. `pool_id` is OPTIONAL (Story 9.10): the day-5/
+  // 10/13/14 cadence reminders carry no pool identity (their `deepLinkTargetForAlert` case falls through to
+  // the generic `renewals` landing, unchanged), but the pending-match RETRY reminder (a DISTINCT, non-
+  // deadline copy the same category dispatches, AC4) carries the member's own pool so the deep link can
+  // route to `contributions/:pool_id` instead.
   alertVariant('deadline_reminder', {
     subject: z.string().min(1),
     deadline_at: Iso8601Datetime,
     deadline_display: z.string().min(1),
+    pool_id: UuidString.optional(),
   }),
   // Epic 8 — contribution recorded.
   alertVariant('contribution_confirmed', {

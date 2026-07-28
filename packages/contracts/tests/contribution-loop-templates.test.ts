@@ -32,9 +32,12 @@ import {
   CycleOpenPayloadData,
   DEADLINE_REMINDER_SEND_DAYS,
   DeadlineReminderPayloadData,
+  PENDING_MATCH_RETRY_TEMPLATE_KEYS,
+  PendingMatchRetryPayloadData,
   buildContributionConfirmedPayloadData,
   buildCycleOpenPayloadData,
   buildDeadlineReminderPayloadData,
+  buildPendingMatchRetryPayloadData,
   computeDaysRemaining,
   cycleDayFromCommittedAt,
   cycleDayFromDaysRemaining,
@@ -302,6 +305,76 @@ describe('AC5 — the builders produce payloads Alert.parse accepts for THEIR ca
   });
 });
 
+// ─── (6) the pending-match RETRY payload (Story 9.10, AC2/AC3/AC4) ─────────────────────────────────
+
+describe('Story 9.10 — the pending-match retry payload is a SIBLING deadline_reminder shape', () => {
+  const now = new Date('2026-08-01T10:00:00.000Z');
+
+  it('builds a payload `Alert.parse` accepts as `deadline_reminder`, carrying `pool_id`', () => {
+    const payload_data = buildPendingMatchRetryPayloadData({
+      subject: 'Pool A — we\'re still confirming your payment',
+      display: 'Check status or retry',
+      poolId: POOL,
+      now,
+    });
+    expect(payload_data.pool_id).toBe(POOL);
+    expect(payload_data.deadline_at).toBe(now.toISOString());
+    expect(() =>
+      Alert.parse({ ...envelope(), alert_category: 'deadline_reminder', payload_data }),
+    ).not.toThrow();
+  });
+
+  it('a day-N deadline_reminder payload (no pool_id) still parses — the field is optional, not required', () => {
+    const dayN = buildDeadlineReminderPayloadData({
+      subject: 's',
+      deadlineAt: now,
+      deadlineDisplay: 'd',
+    });
+    expect(dayN).not.toHaveProperty('pool_id');
+    expect(() =>
+      Alert.parse({ ...envelope(), alert_category: 'deadline_reminder', payload_data: dayN }),
+    ).not.toThrow();
+  });
+
+  it('the exported schema is `.strict()` and requires a UUID pool_id', () => {
+    expect(() =>
+      PendingMatchRetryPayloadData.parse({
+        subject: 's',
+        deadline_at: now.toISOString(),
+        deadline_display: 'd',
+        pool_id: 'not-a-uuid',
+      }),
+    ).toThrow();
+    expect(() =>
+      PendingMatchRetryPayloadData.parse({
+        subject: 's',
+        deadline_at: now.toISOString(),
+        deadline_display: 'd',
+        pool_id: POOL,
+        extra: 'x',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects an empty subject/display rather than sending a blank push', () => {
+    expect(() =>
+      buildPendingMatchRetryPayloadData({ subject: '', display: 'd', poolId: POOL, now }),
+    ).toThrow();
+    expect(() =>
+      buildPendingMatchRetryPayloadData({ subject: 's', display: '', poolId: POOL, now }),
+    ).toThrow();
+  });
+
+  it('the two tiers have DISTINCT template keys', () => {
+    expect(PENDING_MATCH_RETRY_TEMPLATE_KEYS.soft.subjectKey).not.toBe(
+      PENDING_MATCH_RETRY_TEMPLATE_KEYS.escalated.subjectKey,
+    );
+    expect(PENDING_MATCH_RETRY_TEMPLATE_KEYS.soft.displayKey).not.toBe(
+      PENDING_MATCH_RETRY_TEMPLATE_KEYS.escalated.displayKey,
+    );
+  });
+});
+
 // ─── (5) every referenced notify.* key exists in BOTH locale files ────────────────────────────────────
 //
 // `t()` throws loudly on a missing key at RENDER time — but "loud in production" is still a landmine
@@ -326,6 +399,10 @@ describe('every registry-referenced notify.* key exists in both locale JSON file
     CYCLE_OPEN_TEMPLATE_KEYS.titleKey,
     CYCLE_OPEN_TEMPLATE_KEYS.bodyKey,
     CONTRIBUTION_CONFIRMED_TEMPLATE_KEYS.periodLabelKey,
+    PENDING_MATCH_RETRY_TEMPLATE_KEYS.soft.subjectKey,
+    PENDING_MATCH_RETRY_TEMPLATE_KEYS.soft.displayKey,
+    PENDING_MATCH_RETRY_TEMPLATE_KEYS.escalated.subjectKey,
+    PENDING_MATCH_RETRY_TEMPLATE_KEYS.escalated.displayKey,
   ];
 
   for (const key of allKeys) {

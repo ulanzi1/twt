@@ -43,7 +43,12 @@ import {
 } from '../contribution/read.js';
 import { CONTRIBUTION_MISMATCH_EVENT_TYPE } from '../contribution/history.js';
 import { CONTRIBUTION_UTR_ATTESTED_EVENT_TYPE } from '../contribution/write.js';
-import { getPoolContributionContext } from '../pool/contribution-binding.js';
+import {
+  amountMismatchExcessPaise,
+  classifyAmountMismatchDirection,
+  getPoolContributionContext,
+  type AmountMismatchDirection,
+} from '../pool/contribution-binding.js';
 import { DEFAULT_STAFF_TAKEOVER_THRESHOLD_DAYS, computeStaffTakeover } from '../nominee-console/takeover.js';
 import { POOL_OPENED_FOR_CONTRIBUTIONS_EVENT_TYPE } from '../nominee-console/read.js';
 import { listEntriesForPools } from './entries.js';
@@ -118,6 +123,12 @@ export interface ReconciliationCaseRow {
   readonly raisedAt: Date;
   /** The latest self-verify screenshot object key for this case (null if none) — the detail mints the URL. */
   readonly screenshotObjectKey: string | null;
+  /**
+   * Story 9.11 (AC3) — the over-payment excess in paise, so operators recognise an over-payment in the LIST
+   * WITHOUT opening the case. Non-null ONLY for an `amount_mismatch` case whose derived direction is `over`
+   * (deposited > expected); null for an under-payment, any non-amount_mismatch case, or a non-derivable one.
+   */
+  readonly overpaymentExcessPaise: number | null;
 }
 
 export interface ListOpenReconciliationCasesResult {
@@ -220,6 +231,9 @@ export async function listOpenReconciliationCases(
       objectKey: sql<string | null>`${eventsLog.payload} ->> 'objectKey'`,
       uploadedByRole: sql<string | null>`${eventsLog.payload} ->> 'uploadedByRole'`,
       reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
+      // Story 9.11 — the carried over/under amounts (TEXT→int); NULL for legacy / non-amount_mismatch rows.
+      depositedAmountPaise: sql<number | null>`(${eventsLog.payload} ->> 'depositedAmountPaise')::int`,
+      expectedAmountPaise: sql<number | null>`(${eventsLog.payload} ->> 'expectedAmountPaise')::int`,
     })
     .from(eventsLog)
     .where(
@@ -255,6 +269,9 @@ export async function listOpenReconciliationCases(
     raisedAt: Date;
     screenshotObjectKey: string | null;
     screenshotAt: Date | null;
+    // Story 9.11 — the carried amounts off the latest amount_mismatch mismatch event (paise, or null legacy).
+    depositedAmountPaise: number | null;
+    expectedAmountPaise: number | null;
   }
   const memberCases = new Map<string, MemberCaseAccum>();
 
@@ -301,12 +318,17 @@ export async function listOpenReconciliationCases(
             raisedAt: r.occurredAt,
             screenshotObjectKey: null,
             screenshotAt: null,
+            depositedAmountPaise: r.depositedAmountPaise ?? null,
+            expectedAmountPaise: r.expectedAmountPaise ?? null,
           });
         } else {
           acc.hasMismatch = true;
           if (r.occurredAt >= acc.raisedAt) {
             acc.raisedAt = r.occurredAt;
             acc.mismatchReason = r.reason ?? acc.mismatchReason;
+            // Capture the carried amounts from the SAME latest mismatch event (Story 9.11).
+            acc.depositedAmountPaise = r.depositedAmountPaise ?? null;
+            acc.expectedAmountPaise = r.expectedAmountPaise ?? null;
           }
         }
         break;
@@ -324,6 +346,9 @@ export async function listOpenReconciliationCases(
             raisedAt: r.occurredAt,
             screenshotObjectKey: r.objectKey ?? null,
             screenshotAt: r.occurredAt,
+            // A self-verify event carries no amounts (the mismatch event does); a later mismatch fills these.
+            depositedAmountPaise: null,
+            expectedAmountPaise: null,
           });
         } else {
           if (r.occurredAt >= acc.raisedAt) acc.raisedAt = r.occurredAt;
@@ -399,6 +424,7 @@ export async function listOpenReconciliationCases(
       deadlineAt: alertId ? (deadlineByAlert.get(alertId) ?? null) : null,
       raisedAt: acc.raisedAt,
       screenshotObjectKey: acc.screenshotObjectKey,
+      overpaymentExcessPaise: deriveOverpaymentExcessPaise(acc.mismatchReason, acc.depositedAmountPaise, acc.expectedAmountPaise),
     });
   }
 
@@ -414,6 +440,7 @@ export async function listOpenReconciliationCases(
       deadlineAt: alertId ? (deadlineByAlert.get(alertId) ?? null) : null,
       raisedAt: acc.raisedAt,
       screenshotObjectKey: null,
+      overpaymentExcessPaise: null, // a pool-level transcription case has no amount fact
     });
   }
 
@@ -439,6 +466,7 @@ export async function listOpenReconciliationCases(
       deadlineAt: alertId ? (deadlineByAlert.get(alertId) ?? null) : null,
       raisedAt: verdict.effectiveLastEngagedAt,
       screenshotObjectKey: null,
+      overpaymentExcessPaise: null, // a takeover case has no amount fact
     });
   }
 
@@ -456,6 +484,25 @@ export async function listOpenReconciliationCases(
   const effectiveLimit = clampLimit(limit, { default: QUEUE_DEFAULT_LIMIT, cap: QUEUE_MAX_LIMIT });
   const truncated = alertScanCapped || rows.length > effectiveLimit;
   return { rows: rows.slice(0, effectiveLimit), truncated };
+}
+
+/**
+ * The over-payment excess in paise for a LIST row (Story 9.11, AC3) — non-null ONLY when the case is an
+ * `amount_mismatch` whose canonical direction is `over`. Direction is derived by {@link classifyAmountMismatchDirection}
+ * (never an inline compare); an under-payment / non-amount_mismatch / non-derivable case yields null so the
+ * list flag lights up strictly for over-payments. The list scan carries no per-entry fallback (only the
+ * detail read does), so a legacy no-amounts row simply does not flag — the operator still sees it on open.
+ */
+function deriveOverpaymentExcessPaise(
+  mismatchReason: string | null,
+  depositedPaise: number | null,
+  expectedPaise: number | null,
+): number | null {
+  if (mismatchReason !== 'amount_mismatch') return null;
+  if (depositedPaise === null || expectedPaise === null) return null;
+  if (!Number.isInteger(depositedPaise) || !Number.isInteger(expectedPaise)) return null;
+  if (classifyAmountMismatchDirection({ expectedPaise, depositedPaise }) !== 'over') return null;
+  return amountMismatchExcessPaise({ expectedPaise, depositedPaise });
 }
 
 /** Derive a cycle's reconciliation deadline (D4). Closed → calendar-aware tail; live → expected Day-15 close. */
@@ -512,6 +559,14 @@ export interface ReconciliationCaseDetail {
   readonly notes: CaseNote[];
   /** The live confirmed event id — the reverse target (AC6). Non-null only for a `confirmed` case. */
   readonly confirmedEventId: string | null;
+  /**
+   * Story 9.11 (AC3) — the derived over/under direction + signed excess for an `amount_mismatch` case, so a
+   * helpdesk operator sees "over by ₹X" (or "under by ₹X") on the one-screen review context. `null` for any
+   * non-`amount_mismatch` case (wrong_pool / no_statement_entry / self_verify / takeover / …), or when the
+   * amounts are not derivable. Direction is derived by the CANONICAL {@link classifyAmountMismatchDirection}
+   * (never an inline compare); `excessPaise` = deposited − expected (positive over-payment, negative under).
+   */
+  readonly amountMismatch: { readonly direction: AmountMismatchDirection; readonly excessPaise: number } | null;
 }
 
 /**
@@ -566,6 +621,15 @@ export async function getReconciliationCaseDetail(
       mismatchReason: sql<string | null>`${eventsLog.payload} ->> 'mismatchReason'`,
       objectKey: sql<string | null>`${eventsLog.payload} ->> 'objectKey'`,
       reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
+      // Story 9.11 (AC1/AC3) — the carried over/under amounts on an `amount_mismatch` payload. The JSONB
+      // `->>` returns TEXT; the `::int` cast makes pg return a real integer (or NULL for a legacy no-amounts
+      // event / a non-amount_mismatch reason) — never a raw string / NaN into the throwing direction helper.
+      depositedAmountPaise: sql<number | null>`(${eventsLog.payload} ->> 'depositedAmountPaise')::int`,
+      expectedAmountPaise: sql<number | null>`(${eventsLog.payload} ->> 'expectedAmountPaise')::int`,
+      // Review fix (Story 9.11) — the exact bank entry the matcher compared against, so the legacy-amount
+      // fallback below can match UNAMBIGUOUSLY even when two statement entries share a UTR (a re-uploaded
+      // statement). Present on every mismatch event (schema: nullable, not optional).
+      bankStatementEntryId: sql<string | null>`${eventsLog.payload} ->> 'bankStatementEntryId'`,
     })
     .from(eventsLog)
     .where(
@@ -591,6 +655,12 @@ export async function getReconciliationCaseDetail(
   let attestationAt: Date | null = null;
   let mismatchReason: string | null = null;
   let raisedAt: Date | null = null;
+  // Story 9.11 — the carried amounts off the LATEST amount_mismatch mismatch event (paise, or null legacy).
+  let carriedDepositedPaise: number | null = null;
+  let carriedExpectedPaise: number | null = null;
+  // Review fix (Story 9.11) — the SAME latest mismatch event's own bank entry id, for an unambiguous
+  // legacy-fallback match (see deriveAmountMismatchDirection).
+  let carriedBankStatementEntryId: string | null = null;
   let screenshotObjectKey: string | null = null;
   let screenshotAt: Date | null = null;
   let rejected = false;
@@ -618,8 +688,17 @@ export async function getReconciliationCaseDetail(
         break;
       case CONTRIBUTION_MISMATCH_EVENT_TYPE:
         if (belongsToMember(r.pMemberId)) {
-          mismatchReason = r.reason ?? mismatchReason;
-          if (raisedAt === null || r.occurredAt >= raisedAt) raisedAt = r.occurredAt;
+          if (raisedAt === null || r.occurredAt >= raisedAt) {
+            raisedAt = r.occurredAt;
+            mismatchReason = r.reason ?? mismatchReason;
+            // Capture the carried amounts from the SAME (latest) mismatch event that set the reason, so the
+            // over/under derivation reflects the current mismatch — not a stale earlier one (Story 9.11).
+            carriedDepositedPaise = r.depositedAmountPaise ?? null;
+            carriedExpectedPaise = r.expectedAmountPaise ?? null;
+            carriedBankStatementEntryId = r.bankStatementEntryId ?? null;
+          } else {
+            mismatchReason = mismatchReason ?? r.reason ?? null;
+          }
         }
         break;
       case RECONCILIATION_SELF_VERIFY_SCREENSHOT_UPLOADED_EVENT_TYPE:
@@ -682,6 +761,20 @@ export async function getReconciliationCaseDetail(
       ? null
       : { utr: attestationUtr, attestedAt: attestationAt, expectedAmountInr: poolCtx.fixedAmount };
 
+  // Story 9.11 (AC3) — the derived over/under direction + signed excess for an amount_mismatch case. Prefer
+  // the AC1 carried amounts; fall back to the matched bank entry (by UTR) vs the pool's expected amount for a
+  // legacy no-amounts event. NEVER pass a null/NaN into classifyAmountMismatchDirection (it throws) — every
+  // branch below either has two integer paise values or yields null.
+  const amountMismatch = deriveAmountMismatchDirection({
+    mismatchReason,
+    carriedDepositedPaise,
+    carriedExpectedPaise,
+    carriedBankStatementEntryId,
+    attestationUtr,
+    expectedAmountInr: poolCtx.fixedAmount,
+    bankEntries,
+  });
+
   return {
     caseKey,
     caseType,
@@ -697,5 +790,60 @@ export async function getReconciliationCaseDetail(
     screenshotObjectKey,
     notes: notes.sort((a, b) => a.at.getTime() - b.at.getTime()),
     confirmedEventId: confirmed ? (confirmedLiveIds[0] ?? null) : null,
+    amountMismatch,
+  };
+}
+
+/**
+ * Derive the over/under direction + signed excess of an `amount_mismatch` case (Story 9.11, AC3). The over/
+ * under meaning is derived by the CANONICAL {@link classifyAmountMismatchDirection} — this function only
+ * chooses which two amounts to feed it (the AC1 carried amounts, else the legacy fallback), never re-defines
+ * "over". Returns `null` for a non-`amount_mismatch` reason or when no two integer paise amounts are derivable.
+ */
+function deriveAmountMismatchDirection(input: {
+  readonly mismatchReason: string | null;
+  readonly carriedDepositedPaise: number | null;
+  readonly carriedExpectedPaise: number | null;
+  readonly carriedBankStatementEntryId: string | null;
+  readonly attestationUtr: string | null;
+  readonly expectedAmountInr: number | null;
+  readonly bankEntries: readonly CaseBankEntry[];
+}): { direction: AmountMismatchDirection; excessPaise: number } | null {
+  if (input.mismatchReason !== 'amount_mismatch') return null;
+
+  // (1) Preferred — the AC1 carried amounts (both must be present integers; the `::int` cast guarantees it).
+  let depositedPaise: number | null = null;
+  let expectedPaise: number | null = null;
+  if (
+    input.carriedDepositedPaise !== null &&
+    input.carriedExpectedPaise !== null &&
+    Number.isInteger(input.carriedDepositedPaise) &&
+    Number.isInteger(input.carriedExpectedPaise)
+  ) {
+    depositedPaise = input.carriedDepositedPaise;
+    expectedPaise = input.carriedExpectedPaise;
+  } else if (input.expectedAmountInr !== null) {
+    // (2) Legacy fallback (a pre-9.11 no-amounts event) vs the pool's whole-INR expected amount (× 100 to
+    //     paise). Match the bank entry by the mismatch event's OWN `bankStatementEntryId` first — the exact
+    //     entry the matcher compared against, unambiguous even when two statement entries share a UTR (e.g.
+    //     a re-uploaded statement). Only fall back to a UTR match when the entry id isn't carried (an even
+    //     older event, pre-dating that field) — no second over/under definition either way (the camelCase
+    //     domain interface fields, NOT the contracts snake_case DTO).
+    const matched =
+      input.carriedBankStatementEntryId !== null
+        ? input.bankEntries.find((e) => e.entryId === input.carriedBankStatementEntryId)
+        : input.attestationUtr !== null
+          ? input.bankEntries.find((e) => e.transactionIdUtr === input.attestationUtr)
+          : undefined;
+    if (matched !== undefined && Number.isInteger(matched.amountPaise) && Number.isInteger(input.expectedAmountInr)) {
+      depositedPaise = matched.amountPaise;
+      expectedPaise = input.expectedAmountInr * 100;
+    }
+  }
+
+  if (depositedPaise === null || expectedPaise === null) return null;
+  return {
+    direction: classifyAmountMismatchDirection({ expectedPaise, depositedPaise }),
+    excessPaise: amountMismatchExcessPaise({ expectedPaise, depositedPaise }),
   };
 }

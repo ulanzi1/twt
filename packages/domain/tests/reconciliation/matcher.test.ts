@@ -77,7 +77,57 @@ describe('AC2 — the paise/whole-INR units reconciliation', () => {
     });
     expect(result.confirmations).toHaveLength(0);
     expect(result.mismatches).toHaveLength(1);
-    expect(result.mismatches[0]).toMatchObject({ reason: 'amount_mismatch', entryId: 'e1' });
+    // Story 9.11 (AC1) — an UNDER deposit carries both amounts (the durable over/under fact).
+    expect(result.mismatches[0]).toMatchObject({
+      reason: 'amount_mismatch',
+      entryId: 'e1',
+      depositedAmountPaise: 90_000,
+      expectedAmountPaise: 100_000,
+    });
+  });
+
+  it('Story 9.11 (AC1) — an OVER deposit (₹1,000 pool, ₹1,100 deposit) carries deposited+expected paise', () => {
+    const result = matchPool({
+      poolId: POOL_A,
+      fixedAmount: 1000,
+      attestations: [att({ attestationEventId: 'a1', utr: '111111111111' })],
+      entries: [entry({ entryId: 'e1', transactionIdUtr: '111111111111', amount: 110_000 })],
+    });
+    expect(result.confirmations).toHaveLength(0);
+    expect(result.mismatches[0]).toMatchObject({
+      reason: 'amount_mismatch',
+      entryId: 'e1',
+      depositedAmountPaise: 110_000, // > expected ⇒ the over fact
+      expectedAmountPaise: 100_000,
+    });
+  });
+
+  it('Story 9.11 (AC1) — a wrong_pool mismatch carries NEITHER amount (no comparison was made)', () => {
+    const result = matchPool({
+      poolId: POOL_A,
+      fixedAmount: 1000,
+      attestations: [att({ attestationEventId: 'a1', utr: '111111111111', poolId: POOL_A })],
+      entries: [entry({ entryId: 'e1', transactionIdUtr: '111111111111', amount: 110_000, poolId: POOL_B })],
+    });
+    expect(result.mismatches[0]?.reason).toBe('wrong_pool');
+    expect(result.mismatches[0]?.depositedAmountPaise).toBeUndefined();
+    expect(result.mismatches[0]?.expectedAmountPaise).toBeUndefined();
+  });
+
+  it('Story 9.11 (AC1) — an entry_already_claimed mismatch carries NEITHER amount', () => {
+    const result = matchPool({
+      poolId: POOL_A,
+      fixedAmount: 1000,
+      attestations: [
+        att({ attestationEventId: 'a1', utr: '111111111111', memberId: 'm1' }),
+        att({ attestationEventId: 'a2', utr: '111111111111', memberId: 'm2' }),
+      ],
+      entries: [entry({ entryId: 'e1', transactionIdUtr: '111111111111', amount: 100_000 })],
+    });
+    const claimed = result.mismatches.find((m) => m.reason === 'entry_already_claimed');
+    expect(claimed).toBeDefined();
+    expect(claimed?.depositedAmountPaise).toBeUndefined();
+    expect(claimed?.expectedAmountPaise).toBeUndefined();
   });
 });
 
@@ -287,18 +337,31 @@ const FROZEN_INPUT: MatchPoolInput = {
   ],
 };
 
-/** Normalize a result to a comparable, order-independent shape. */
+/** Normalize a result to a comparable, order-independent shape. Story 9.11: the carried over/under amounts
+ *  ride the normalized mismatch key ONLY when present (the `amount_mismatch` branch), so the frozen replay
+ *  includes them byte-for-byte while the wrong_pool / no_statement_entry rows stay byte-identical (no amounts
+ *  appended when absent). */
 function normalize(r: ReturnType<typeof matchPool>) {
   return {
     confirmed: r.confirmations.map((c) => `${c.memberId}:${c.entryId}`).sort(),
-    mismatched: r.mismatches.map((m) => `${m.memberId}:${m.reason}:${m.entryId ?? 'none'}`).sort(),
+    mismatched: r.mismatches
+      .map((m) => {
+        const amounts =
+          m.depositedAmountPaise !== undefined && m.expectedAmountPaise !== undefined
+            ? `:${m.depositedAmountPaise}/${m.expectedAmountPaise}`
+            : '';
+        return `${m.memberId}:${m.reason}:${m.entryId ?? 'none'}${amounts}`;
+      })
+      .sort(),
   };
 }
 
 const FROZEN_OUTCOME = {
   confirmed: ['m1:ent-1'],
   mismatched: [
-    'm2:amount_mismatch:ent-2',
+    // Story 9.11: the amount_mismatch row now carries deposited/expected paise (ent-2 is an UNDER deposit:
+    // 55000 < 100000); every other reason carries neither, so those rows are byte-unchanged.
+    'm2:amount_mismatch:ent-2:55000/100000',
     'm3:wrong_pool:ent-3',
     'm4:no_statement_entry:none',
     'm5:no_statement_entry:none',

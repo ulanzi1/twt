@@ -42,6 +42,21 @@ describe('outcome↔reason-code compatibility (AC7)', () => {
     expect(isReconciliationReasonCodeValidForOutcome('reject', 'bogus')).toBe(false);
   });
 
+  it('Story 9.11 — the three over-payment resolutions are recover-only, never confirm/reject/reverse', () => {
+    for (const code of ['refund_difference', 'applied_next_cycle_credit', 'left_as_donation']) {
+      expect(isReconciliationReasonCodeValidForOutcome('recover', code)).toBe(true);
+      for (const outcome of ['confirm', 'reject', 'reverse']) {
+        expect(isReconciliationReasonCodeValidForOutcome(outcome, code)).toBe(false);
+      }
+      // recover stays audit-only, no rationale forced (not a member-consequential deny — Story 9.8 D7).
+      expect(isReconciliationRationaleRequired('recover', code)).toBe(false);
+    }
+    // The recover dropdown now offers all five recover codes.
+    expect(reconciliationReasonCodesForOutcome('recover').sort()).toEqual(
+      ['applied_next_cycle_credit', 'awaiting_correction', 'left_as_donation', 'member_contacted', 'other', 'refund_difference'].sort(),
+    );
+  });
+
   it('reconciliationReasonCodesForOutcome offers only compatible codes (drives the dropdown)', () => {
     expect(reconciliationReasonCodesForOutcome('reject').sort()).toEqual(
       ['amount_mismatch', 'no_evidence', 'no_statement_entry', 'other', 'wrong_pool'].sort(),

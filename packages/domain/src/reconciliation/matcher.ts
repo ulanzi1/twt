@@ -166,6 +166,18 @@ export interface MatchMismatch {
   readonly reason: MatchMismatchReason;
   /** The offending entry (a `wrong_pool` / `amount_mismatch` carries it; `no_statement_entry` is `null`). */
   readonly entryId: string | null;
+  /**
+   * The deposited amount in INTEGER PAISE — the durable over/under fact (Story 9.11, AC1). Populated ONLY on
+   * the `amount_mismatch` branch (where `entry.amount` is in scope); ABSENT (`undefined`) on every other
+   * branch (`no_statement_entry` has no entry; `wrong_pool` deliberately never checked amount;
+   * `entry_already_claimed` is an exclusivity reject). Populating it elsewhere would fabricate a comparison
+   * that was never made (matcher-worker.ts's "never fabricated" posture). The over/under DIRECTION is derived
+   * from this + `expectedAmountPaise` by the canonical `classifyAmountMismatchDirection` — never inline.
+   */
+  readonly depositedAmountPaise?: number;
+  /** The expected amount in INTEGER PAISE (`fixedAmount × 100`) — carried alongside `depositedAmountPaise` on
+   *  the `amount_mismatch` branch ONLY (Story 9.11, AC1); absent everywhere else. */
+  readonly expectedAmountPaise?: number;
 }
 
 /** The pure matcher's verdict set. */
@@ -273,7 +285,17 @@ export function matchPool(input: MatchPoolInput): MatchPoolResult {
       depositedAmount: entry.amount,
     });
     if (amount.verdict === 'amount_mismatch') {
-      mismatches.push({ ...base, reason: 'amount_mismatch', entryId: entry.entryId });
+      // Carry both sides in PAISE (Story 9.11, AC1) — the durable over/under fact. `entry.amount` is already
+      // integer paise; `expectedPaise` is the same `fixedAmount × 100` the amount comparison used. The
+      // over/under DIRECTION is a pure derivation of these two (classifyAmountMismatchDirection) — never
+      // computed here (the matcher stays a detector, not a labeller).
+      mismatches.push({
+        ...base,
+        reason: 'amount_mismatch',
+        entryId: entry.entryId,
+        depositedAmountPaise: entry.amount,
+        expectedAmountPaise: expectedPaise,
+      });
       continue;
     }
 

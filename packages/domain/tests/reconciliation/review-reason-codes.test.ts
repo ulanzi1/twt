@@ -47,6 +47,20 @@ describe('reconciliation-review reason-code compatibility (Story 9.8, AC7)', () 
       ['other', 'screenshot_verified', 'statement_matched_manually'].sort(),
     );
     expect(reasonCodesForOutcome('reverse').sort()).toEqual(['confirmed_in_error', 'duplicate', 'other'].sort());
+    // Story 9.11 — recover now carries the two 9.8 codes + the three named over-payment resolutions + other.
+    expect(reasonCodesForOutcome('recover').sort()).toEqual(
+      ['applied_next_cycle_credit', 'awaiting_correction', 'left_as_donation', 'member_contacted', 'other', 'refund_difference'].sort(),
+    );
+  });
+
+  it('Story 9.11 — the three over-payment resolutions are recover-only + rationale-free (audit-only, D7)', () => {
+    for (const code of ['refund_difference', 'applied_next_cycle_credit', 'left_as_donation']) {
+      expect(reasonCodesForOutcome('recover')).toContain(code);
+      for (const outcome of ['confirm', 'reject', 'reverse']) {
+        expect(reasonCodesForOutcome(outcome)).not.toContain(code);
+      }
+      expect(isRationaleRequired('recover', code)).toBe(false);
+    }
   });
 
   it('isRationaleRequired forces a rationale on `other` and on reject/reverse (not confirm/recover)', () => {

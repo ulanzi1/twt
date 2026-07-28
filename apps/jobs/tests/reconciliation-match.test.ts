@@ -182,6 +182,45 @@ describe('runReconciliationMatch — control flow', () => {
     expect(appendConfirmedMock).not.toHaveBeenCalled();
   });
 
+  it('Story 9.11 (AC1/AC7) — an OVER deposit is a red amount_mismatch, ZERO confirmations, carrying the amounts', async () => {
+    listAlertAttestationsMock.mockResolvedValue([
+      { attestationEventId: 'att-o', memberId: 'mo', poolId: POOL_ID, alertId: ALERT_ID, tr: 'tro', utr: '100000000003' },
+    ]);
+    listEntriesForPoolsMock.mockResolvedValue([
+      // correct pool, but ₹1,100 (110,000 paise) against the ₹1,000 (100,000 paise) fixed amount ⇒ over.
+      { entryId: 'eo', poolId: POOL_ID, transactionIdUtr: '100000000003', amount: 110_000, transactionDate: '2026-07-10', senderVpa: null, entryType: 'credit' },
+    ]);
+
+    const result = await runReconciliationMatch(baseDeps(), envelope());
+
+    // Never green — the amount branch short-circuits before the confirmation append (the 9.5 invariant).
+    expect(appendConfirmedMock).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ confirmed: 0, mismatched: 1 });
+    expect(appendMismatchMock).toHaveBeenCalledTimes(1);
+    // The committed mismatch payload carries the durable over/under fact (deposited > expected ⇒ over).
+    const payload = appendMismatchMock.mock.calls[0]![1].payload;
+    expect(payload).toMatchObject({
+      reason: 'amount_mismatch',
+      depositedAmountPaise: 110_000,
+      expectedAmountPaise: 100_000,
+    });
+  });
+
+  it('Story 9.11 (AC1) — a wrong-pool mismatch payload carries NEITHER amount (no comparison was made)', async () => {
+    listAlertAttestationsMock.mockResolvedValue([
+      { attestationEventId: 'att-w', memberId: 'mw', poolId: POOL_ID, alertId: ALERT_ID, tr: 'trw', utr: '100000000004' },
+    ]);
+    listEntriesForPoolsMock.mockResolvedValue([
+      { entryId: 'ew', poolId: '00000000-0000-4000-8000-0000000000b2', transactionIdUtr: '100000000004', amount: 110_000, transactionDate: '2026-07-10', senderVpa: null, entryType: 'credit' },
+    ]);
+
+    await runReconciliationMatch(baseDeps(), envelope());
+    const payload = appendMismatchMock.mock.calls[0]![1].payload;
+    expect(payload.reason).toBe('wrong_pool');
+    expect(payload.depositedAmountPaise).toBeUndefined();
+    expect(payload.expectedAmountPaise).toBeUndefined();
+  });
+
   it('AC5a — an already-confirmed member is a monotonic no-op (no re-emit)', async () => {
     listAlertAttestationsMock.mockResolvedValue([
       { attestationEventId: 'att-1', memberId: 'm1', poolId: POOL_ID, alertId: ALERT_ID, tr: 'tr1', utr: '100000000001' },

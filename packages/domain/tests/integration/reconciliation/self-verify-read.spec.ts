@@ -66,6 +66,7 @@ describe.skipIf(!hasDatabase)('member self-verify recovery read (PARIWAR_A scope
       reason: null,
       screenshotUploaded: false,
       status: 'default',
+      overpayment: null,
     });
 
     // A wrong_pool mismatch lands (the 9.4 matcher's red verdict) — now red, default lifecycle, reason set.
@@ -88,6 +89,7 @@ describe.skipIf(!hasDatabase)('member self-verify recovery read (PARIWAR_A scope
       reason: 'wrong_pool',
       screenshotUploaded: false,
       status: 'default',
+      overpayment: null,
     });
 
     // The member uploads a self-verify screenshot — lifecycle advances to `uploaded`; STILL red (AC4).
@@ -110,6 +112,7 @@ describe.skipIf(!hasDatabase)('member self-verify recovery read (PARIWAR_A scope
       reason: 'wrong_pool',
       screenshotUploaded: true,
       status: 'uploaded',
+      overpayment: null,
     });
   });
 
@@ -204,6 +207,65 @@ describe.skipIf(!hasDatabase)('member self-verify recovery read (PARIWAR_A scope
       reason: null,
       screenshotUploaded: false,
       status: 'default',
+      overpayment: null,
+    });
+  });
+
+  // ── Story 9.11 (AC4) — the over-payment discriminator surfaces ONLY for an amount_mismatch (over) ──────
+  it('Story 9.11 — an OVER-payment amount_mismatch exposes the overpayment discriminator (excess in paise)', async () => {
+    const { client, tx } = getTx();
+    const cycleId = randomUUID();
+    const poolId = await seedPool(tx, PARIWAR_A, { cycleId, fixedAmount: FIXED_INR, currentState: 'live' });
+    const alertId = await seedAlert(tx, PARIWAR_A, { cycleId, currentState: 'live' });
+    const member = randomUUID();
+    const utr = '100000000010';
+    await seedAttestation(client, { alertId, poolId, memberId: member, utr });
+    // FIXED_INR = ₹1,000 ⇒ expected 100,000 paise; a ₹1,100 deposit ⇒ over by 10,000 paise.
+    await appendReconciliationMismatch(client, {
+      pariwarId: PARIWAR_A,
+      alertId: toAlertId(alertId),
+      payload: {
+        poolId, memberId: member, alertId, utr, reason: 'amount_mismatch',
+        bankStatementEntryId: randomUUID(), detectedAt: '2026-07-11T09:00:00.000Z', matcherRun: 'test-run',
+        depositedAmountPaise: 110_000, expectedAmountPaise: 100_000,
+      },
+    });
+    await enterAppScope(client, PARIWAR_A);
+    const scope = { pariwarId: PARIWAR_A, memberId: toMemberId(member), poolId: toPoolId(poolId) };
+
+    expect(await resolveMemberSelfVerifyState(tx, scope)).toEqual({
+      mismatch: true,
+      reason: 'amount_mismatch',
+      screenshotUploaded: false,
+      status: 'default',
+      overpayment: { excessPaise: 10_000 },
+    });
+  });
+
+  it('Story 9.11 — an UNDER-payment amount_mismatch leaves the discriminator null (generic copy stays)', async () => {
+    const { client, tx } = getTx();
+    const cycleId = randomUUID();
+    const poolId = await seedPool(tx, PARIWAR_A, { cycleId, fixedAmount: FIXED_INR, currentState: 'live' });
+    const alertId = await seedAlert(tx, PARIWAR_A, { cycleId, currentState: 'live' });
+    const member = randomUUID();
+    const utr = '100000000011';
+    await seedAttestation(client, { alertId, poolId, memberId: member, utr });
+    await appendReconciliationMismatch(client, {
+      pariwarId: PARIWAR_A,
+      alertId: toAlertId(alertId),
+      payload: {
+        poolId, memberId: member, alertId, utr, reason: 'amount_mismatch',
+        bankStatementEntryId: randomUUID(), detectedAt: '2026-07-11T09:00:00.000Z', matcherRun: 'test-run',
+        depositedAmountPaise: 90_000, expectedAmountPaise: 100_000, // under ⇒ no discriminator
+      },
+    });
+    await enterAppScope(client, PARIWAR_A);
+    const scope = { pariwarId: PARIWAR_A, memberId: toMemberId(member), poolId: toPoolId(poolId) };
+
+    expect(await resolveMemberSelfVerifyState(tx, scope)).toMatchObject({
+      mismatch: true,
+      reason: 'amount_mismatch',
+      overpayment: null,
     });
   });
 });

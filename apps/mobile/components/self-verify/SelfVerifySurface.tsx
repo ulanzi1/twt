@@ -54,14 +54,21 @@ interface PickedFile {
  * Map the machine reason-code → the dignified explanation copy keys (Pattern-4). The reason bodies
  * (`wrong_pool.*` / `amount_mismatch.*` / `no_statement_entry.*`) pre-exist in the `contribution` catalog;
  * an unrecognised reason (or none — the "Trouble with UTR?" fallback) falls back to the generic copy, never
- * the raw enum.
+ * the raw enum. Story 9.11 (AC4): an `amount_mismatch` whose derived direction is `over` (the server sets
+ * `overpayment`) renders the `amount_mismatch_over.*` variant ("you paid ₹X more…"); the generic
+ * `amount_mismatch.*` copy stays for an under-payment / unknown-direction.
  */
-function reasonCopyKeys(reason: ContributionMismatchReasonCode | null): { title: string; body: string } {
+function reasonCopyKeys(
+  reason: ContributionMismatchReasonCode | null,
+  isOverpayment: boolean,
+): { title: string; body: string } {
   switch (reason) {
     case 'wrong_pool':
       return { title: 'wrong_pool.title', body: 'wrong_pool.body' }
     case 'amount_mismatch':
-      return { title: 'amount_mismatch.title', body: 'amount_mismatch.body' }
+      return isOverpayment
+        ? { title: 'amount_mismatch_over.title', body: 'amount_mismatch_over.body' }
+        : { title: 'amount_mismatch.title', body: 'amount_mismatch.body' }
     case 'no_statement_entry':
       return { title: 'no_statement_entry.title', body: 'no_statement_entry.body' }
     default:
@@ -165,6 +172,11 @@ export function SelfVerifySurface({
 
   const status = data?.status ?? 'default'
   const reason = data?.reason ?? null
+  // Story 9.11 (AC4) — the over-payment variant. The server sets `overpayment` ONLY for an amount_mismatch
+  // whose canonical direction is `over`; render the empathy variant with the excess (paise → ₹) interpolated.
+  const overpayment = data?.overpayment ?? null
+  const copyKeys = reasonCopyKeys(reason, overpayment !== null)
+  const overExcessInr = overpayment ? (overpayment.excessPaise / 100).toLocaleString('en-IN') : undefined
 
   return (
     <YStack
@@ -206,14 +218,14 @@ export function SelfVerifySurface({
       ) : (
         /* DEFAULT — the mismatch explanation (or the fallback prompt) + the screenshot-upload affordance. */
         <YStack gap="$3">
-          <YStack gap="$2" accessible accessibilityRole="summary" accessibilityLiveRegion="polite" accessibilityLabel={t(reasonCopyKeys(reason).body, undefined, NS)}>
+          <YStack gap="$2" accessible accessibilityRole="summary" accessibilityLiveRegion="polite" accessibilityLabel={t(copyKeys.body, overExcessInr ? { amount: overExcessInr } : undefined, NS)}>
             {/* The red pill conveys state via text + icon + ARIA (not colour alone) when there's a live mismatch. */}
             {data?.mismatch ? <StatusPill status="red" size="default" /> : null}
             <Text fontFamily="$body" fontSize="$4" color="$color" accessibilityRole="header">
-              {t(reasonCopyKeys(reason).title, undefined, NS)}
+              {t(copyKeys.title, undefined, NS)}
             </Text>
             <Paragraph fontFamily="$body" fontSize="$3" color="$colorPress">
-              {t(reasonCopyKeys(reason).body, undefined, NS)}
+              {t(copyKeys.body, overExcessInr ? { amount: overExcessInr } : undefined, NS)}
             </Paragraph>
           </YStack>
 

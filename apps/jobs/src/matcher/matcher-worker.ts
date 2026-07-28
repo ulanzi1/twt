@@ -101,9 +101,10 @@ export interface ReconciliationMatchDeps {
    * Story 9.7 (FR-30/FR-32) — the MISMATCH-push seam (best-effort), the symmetric twin of
    * `enqueueConfirmedNotify`. Fired POST-COMMIT of a `contribution.reconciliation-mismatch` append; a failed
    * enqueue NEVER fails the committed mismatch verdict (the sweep/next-tick heals a dropped job — the 8.8
-   * confirmed-seam D6 posture). Omitted ⇒ no push (tests omit). `reason` is the machine reason-code; the
-   * amounts ride ONLY when derivable (the matcher's mismatch payload carries no amount comparison today, so
-   * they are omitted — never fabricated).
+   * confirmed-seam D6 posture). Omitted ⇒ no push (tests omit). `reason` is the machine reason-code. As of
+   * Story 9.11 the committed mismatch payload DOES carry `depositedAmountPaise`/`expectedAmountPaise` for an
+   * `amount_mismatch` (the over/under fact) — this notify seam MAY thread the excess for an over-payment push
+   * later (optional, not wired in 9.11); for every other reason no amount comparison was made, so none rides.
    */
   readonly enqueueMismatchNotify?: (input: {
     readonly pariwarId: string;
@@ -412,6 +413,18 @@ export async function runReconciliationMatch(
               bankStatementEntryId: entryId,
               detectedAt: nowIso(),
               matcherRun,
+              // Story 9.11 (AC1) — the durable over/under fact. Carry the two amounts ONLY for an
+              // `amount_mismatch` (where the pure matcher populated them); NEVER fabricated for a
+              // wrong_pool / entry_already_claimed reject (which made no amount comparison). The
+              // over/under direction is DERIVED downstream by classifyAmountMismatchDirection.
+              ...(m.reason === 'amount_mismatch' &&
+              m.depositedAmountPaise !== undefined &&
+              m.expectedAmountPaise !== undefined
+                ? {
+                    depositedAmountPaise: m.depositedAmountPaise,
+                    expectedAmountPaise: m.expectedAmountPaise,
+                  }
+                : {}),
             },
           }),
         );

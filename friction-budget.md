@@ -31,8 +31,9 @@ deliberately accepted.
 | member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |
 | member (opting in to WhatsApp notifications; sends a pre-filled "Send Hello" WhatsApp message to confirm) | Explicit, member-initiated consent provenance (AC4 — no inferred/passive consent for a new communication channel) | optional |
 | member (opting in to Telegram notifications; taps a t.me deep-link to /start the bot) | Explicit member-initiated consent for a new channel | optional |
-| member/nominee (claim-time dual bank-account entry — a SECOND full account, not just one) | Disbursement resilience (Epic 9 RBI per-payee-per-day-cap failover) | forced |
+| member/nominee (claim-time dual bank-account entry — a SECOND full account, not just one) | Multi-channel payment resilience (a second bank channel if one fails or the donor prefers it — Story 9.9 reframed this row's rationale from an RBI per-payee-cap failover to donor CHOICE; the friction itself is unchanged) | forced |
 | trustee / reconciliation reviewer (step-up OTP + reason-code on every confirm/reject/facilitate-recovery/reverse) | Canonical financial truth (`contribution.confirmed`) + reconciliation integrity (no silent remap) | forced |
+| member/donor (choosing which nominee bank account to pay, when the claim has two) | Paying-to-the-correct-nominee confidence — no opaque server-side default; the donor actively confirms via the bank-name choice + the nominee-name-match banking-info panel (Story 9.9) | forced |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -849,6 +850,16 @@ ratchet (`[[project_friction_budget_baseline_ratchet]]`). **PII discipline:** no
 event payloads (ids + machine reason-code + attesting actor ids + a timestamp), the audit
 context (case_key + pool_id + member_id + reason_code — never rationale/UTR-in-the-clear), or
 the object keys.
+
+**Story 9.9 disposition (NEW row — the equal-choice account-selection step; existing 6.8 row rationale REFRAMED):** the donor-facing nominee-accounts read + pay-screen rework (`apps/api/src/modules/payment/handlers.ts` `nomineeAccounts`; `apps/mobile/app/(contribution)/pay.tsx`) evolves Story 8.13's "default account #1 + optional Switch account" into "two EQUAL choices, no default." Friction analysis:
+
+(1) **The account-choice list — NEW forced friction when a claim has two accounts.** Story 8.13 auto-picked account #1 and offered switching as a purely *optional*, self-suppressing affordance (already declared zero-new-friction in that story's disposition). Story 9.9 removes the default: when a claim has two nominee accounts, the donor now MUST tap a bank-name option before a payment intent is even built — there is no auto-selected happy path. This is genuinely new, deliberate friction, so it is declared as the NEW `forced` row above. It earns its place: an opaque server-side "#1" pick risked a donor paying an account they didn't consciously choose (with no correctness signal at stake — see item (2)); an explicit choice + a nominee-NAME-match confirmation panel closes that gap. When the claim has only ONE account, the choice is auto-selected and this friction is entirely absent (zero-friction happy path preserved for the common case).
+
+(2) **The banking-info confirmation panel + choose-other/retry-same on failure — friction-REDUCING, not imposed.** Showing the chosen account's nominee name + bank + account#/IFSC before paying is a *correctness* affordance (name-match confidence), not an added step — the donor was always going to see SOME confirmation before the UPI hand-off (Story 8.4's amount display, unchanged). The choose-other/retry-same failure paths *replace* Story 8.13's "Switch account" button with equivalent affordances — no new interaction class, same one-tap character already affirmed.
+
+(3) **The Story 6.8 row's rationale is REFRAMED, not the friction itself.** This story's own scope-lock explicitly DISCARDS the "RBI ₹1 lakh per-payee-per-day receiving cap" rationale that originally justified the claim-time SECOND bank account (Story 6.8's disposition above). The nominee still provides two accounts (that forced friction is unchanged) but the reason has moved from regulatory-cap-workaround to donor-choice/multi-channel-resilience — the existing ledger row's `protects` column is updated above so no ledger artifact contradicts the equal-choice framing (the same consistency-pass discipline this story applied to `packages/domain/src/schema/claim_nominee_bank_accounts.ts` / `nominee-bank-read.ts`).
+
+The **page-weight baseline is unchanged**: all touched files are in the authenticated mobile app (`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op) + `apps/api`/`packages/*` (excluded from the ledger); the page-weight ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this story does not touch.
 
 ## How to declare (attribution-on-change — AC-4)
 

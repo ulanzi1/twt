@@ -12,6 +12,7 @@ import {
   ContributionFailureReportRequest,
   ContributionIntentRequest,
   ContributionIntentResponse,
+  NomineeAccountsResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -39,6 +40,21 @@ export function registerPaymentRoutes(app: FastifyInstance, deps: AppDeps): void
       preHandler: [memberSession],
     },
     h.intent,
+  );
+
+  // Story 9.9 — the donor-facing nominee payment destinations (up to two EQUAL accounts). A member-scoped
+  // READ; the `'GET'` (no body) mirrors the member-pool read. Session-gated (login-wall CI gate). Decrypts
+  // Tier-1 display fields at the API boundary, fail-soft to a distinct sentinel (never a 500).
+  r.get(
+    '/api/v1/member/contribution/nominee-accounts',
+    {
+      schema: {
+        response: { 200: NomineeAccountsResponse },
+        tags: [PAYMENT_TAG],
+      },
+      preHandler: [memberSession],
+    },
+    h.nomineeAccounts,
   );
 
   // Self-attest the UTR → the yellow pill (a member CLAIM; never the Epic-9 green flip).

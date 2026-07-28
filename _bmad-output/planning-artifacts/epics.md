@@ -3293,19 +3293,21 @@ So that I work the most time-sensitive cases first while preserving canonical fi
 **And** trustee actions: (a) confirm — emits `contribution.confirmed` event per Story 9.5 (the only confirmation path outside automated matcher); (b) reject — emits `contribution.invalid` event with reason-code; (c) facilitate-recovery — leaves case open with helpdesk routing per Story 7.6 (does NOT auto-remap or auto-confirm)
 **And** all actions require step-up OTP (Story 5.9) + audit log line + reason-code
 
-### Story 9.9: Dual Nominee Bank Accounts — RBI UPI Limit Workaround `[CONSUMER]`
+### Story 9.9: Dual Nominee Bank Accounts — Donor Choice `[CONSUMER]`
 
-As the disbursement layer (consumer of pool settlement),
-I want dual nominee bank account support per the RBI UPI per-payee daily limit workaround,
-So that disbursement isn't blocked when a single account hits the daily limit.
+> **Re-scoped 2026-07-27 (BigDev).** The earlier "RBI UPI per-payee daily limit workaround / disbursement split" framing is **superseded** — there is no v1 requirement to route on a regulatory receiving cap, and no v1 trust-side payout (that is the `reserve` mechanism, v2/v3; arch §1.13 non-add). The real requirement is **operational member-choice**: the two nominee accounts are **equal** payment destinations and the **donor picks** which one to pay.
+
+As a contributing member (donor) paying into a live pool,
+I want to see the nominee's (up to) two bank accounts — labeled by bank name, with the nominee's name and banking details — and choose which one to pay,
+So that if one banking channel fails or I prefer a different bank, I can pick the other account and complete my contribution to the correct nominee.
 
 **Acceptance Criteria:**
 
-**Given** FR-31 + Story 6.8 (claim-time dual nominee bank collection)
-**When** disbursement is computed for a settled pool
-**Then** if amount exceeds RBI UPI daily-per-payee limit, disbursement splits: first portion to nominee bank #1 up to limit; remainder to nominee bank #2; both linked to the same `pool_id + disbursement_id` audit chain
-**And** if a single transaction fails, retry on the other nominee account; both accounts pre-validated at claim time per Story 6.8
-**And** disbursement audit log records the full split + retry history
+**Given** FR-31 + Story 6.8 (claim-time dual nominee bank collection) — the two accounts are **equal** (no primary/secondary, no server routing)
+**When** the donor opens the payment screen for a claim with two nominee accounts
+**Then** both accounts are presented as an equal choice by **bank name**; selecting one shows that account's **nominee name + full banking info** (name-match confidence + manual/NEFT fallback) and builds the UPI Intent for the chosen account
+**And** on payment failure the donor can **choose the other account** or **retry the same** — purely donor-driven, no server-side routing/inference/cap logic
+**And** the server never chooses the account, maintains no cap counters, and implements no RBI-limit or payout logic (no `pool.settled`, no payout-destination add)
 
 ### Story 9.10: 4-Hour Retry Reminders `[CONSUMER]`
 

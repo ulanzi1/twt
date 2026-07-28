@@ -12,6 +12,10 @@ export * from './pool-contributor-list.js';
 // shapes + the member-scoped `myContribution` (yellow) status. Yellow is a per-member self-state, NEVER an
 // aggregate/confirmed count (the load-bearing invariant as a `.strict()` shape).
 export * from './upi-intent.js';
+// Story 9.9 — the donor-facing nominee-payment-destinations READ model: up to two EQUAL accounts (bank-name
+// label + nominee name + full account#/IFSC + `vpaPresent`), stable order by `rank` (identity, NOT a
+// priority). NO primary/secondary/default field (the equal-choice invariant as a `.strict()` shape).
+export * from './nominee-accounts.js';
 // Story 8.5 — the UPI Failure Coach anonymous failure-report request (mode enum ONLY, NO free-text field —
 // the AC3 PII guard as a `.strict()` shape). Best-effort telemetry for the diagnostic failure coach.
 export * from './upi-failure.js';

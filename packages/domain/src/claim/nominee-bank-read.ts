@@ -1,7 +1,7 @@
 // Claim-time nominee-bank read accessor — Story 6.8 (Task 4; AC3). Transport-free.
 //
 // `getClaimNomineeBankAccountsCiphertext` is the surface the Epic 7 pool spawn (Story 7.4
-// nominee_bank_accounts refs) and the Epic 9 dual-account disbursement (Story 9.5) consume. It
+// nominee_bank_accounts refs) and the Epic 9 dual-account donor-choice read (Story 9.9) consume. It
 // returns the claim's account rows (empty when not yet collected, EXACTLY TWO when collected —
 // never a single-account partial, per Task 5), ordered by account_rank (#1 then #2). Ciphertext is
 // returned AS STORED — the ROUTE/consumer decrypts under its OWN encryption context at

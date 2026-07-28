@@ -50,14 +50,16 @@ export const ContributionUtr = z
   .regex(/^\d{12}$|^[A-Za-z0-9]{22}$/, 'UTR must be 12 digits or 22 alphanumerics');
 export type ContributionUtr = z.output<typeof ContributionUtr>;
 
-/** Which nominee account's VPA to prefer — default #1, "Switch account" to #2 (FR-27). */
+/** The nominee bank account identity (#1/#2, Story 6.8 row identity) whose VPA to resolve — NOT a
+ *  priority. Story 9.9 reframed this from "default #1 / Switch account" (FR-27) to donor CHOICE: both
+ *  accounts are EQUAL payment destinations and the donor's selection names which one via this field. */
 export const ContributionAccount = z.union([z.literal(1), z.literal(2)]);
 export type ContributionAccount = z.output<typeof ContributionAccount>;
 
 /**
- * `POST /api/v1/member/contribution/intent` request. Empty by default; `account` optionally switches the
- * `pa=` to nominee account #2 (FR-27's "Switch account"). The client names NOTHING about the payment
- * itself (payee/amount/tr) — those are server-resolved (R4).
+ * `POST /api/v1/member/contribution/intent` request. `account` carries the donor's chosen nominee account
+ * (Story 9.9 — both accounts are equal; there is no server-side default). The client names NOTHING about
+ * the payment itself (payee/amount/tr) — those are server-resolved (R4).
  */
 export const ContributionIntentRequest = z
   .object({
@@ -72,7 +74,7 @@ export type ContributionIntentRequest = z.output<typeof ContributionIntentReques
  *   · `unassigned`            — not an `active` member assigned to a `live`-cycle pool (the card would
  *                               already self-suppress; defensive).
  *   · `accounts_not_collected`— the claim's nominee bank accounts are not collected yet.
- *   · `account_not_found`     — the requested "Switch account" rank was never collected for this claim
+ *   · `account_not_found`     — the donor's chosen account rank was never collected for this claim
  *                               (review finding: the domain resolver used to silently fall back to a
  *                               different account instead of surfacing this distinctly).
  *   · `vpa_not_collected`     — the SHIPPED v1 state (D1): accounts exist but no UPI VPA is stored. The
@@ -99,11 +101,12 @@ export const ContributionIntentAvailable = z
     amountInr: z.number().int().positive(),
     /** The resolved nominee VPA (the `pa=` payee) — surfaced for the confirmation UI. */
     vpa: z.string().min(1),
-    /** Which nominee account the VPA came from (#1 default / #2 switched). */
+    /** Which nominee account (#1/#2 — an identity, not a priority) the VPA came from: the donor's choice. */
     account: ContributionAccount,
-    /** Whether a "Switch account" affordance should be offered (Story 8.13) — `true` iff the OTHER
-     *  nominee account ALSO resolves a VPA (FR-27 #1/#2). `false` when only one account carries a VPA
-     *  (switching would hit `account_not_found`/`vpa_not_collected` — never a silent substitution). */
+    /** Whether the OTHER nominee account is also a viable payment destination — `true` iff it ALSO
+     *  resolves a VPA (Story 9.9: both accounts are equal; this only says "the other one works too,"
+     *  never "switch back to a primary"). `false` when only the chosen account carries a VPA (choosing
+     *  the other would hit `account_not_found`/`vpa_not_collected` — never a silent substitution). */
     canSwitchAccount: z.boolean(),
     /** The member's OWN attestation state for this alert (AC4; review finding — carried on EVERY intent
      *  response branch, not just the card, so `/pay` can route a member who already attested straight to

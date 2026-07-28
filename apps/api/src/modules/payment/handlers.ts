@@ -36,6 +36,8 @@ import type {
   ContributionFailureReportRequest,
   ContributionIntentRequest,
   ContributionIntentResponse,
+  NomineeAccountsResponse,
+  NomineeBankAccountView,
   UpiFailureModeSchema,
 } from '@twt/contracts';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -44,7 +46,11 @@ import type { AppDeps } from '../../context.js';
 import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
-import { decryptNomineeBankField } from '../claims/nominee-bank-crypto.js';
+import {
+  decryptNomineeBankField,
+  decryptNomineeBankFieldSoft,
+  NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
+} from '../claims/nominee-bank-crypto.js';
 import { resolveMemberLivePool } from '../member-pool/handlers.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 
@@ -94,7 +100,11 @@ export function createPaymentHandlers(deps: AppDeps) {
       const memberId = ids.memberId(memberIdStr);
       const pariwarId = ids.pariwarId(pariwarIdStr);
       const now = deps.clock();
-      const preferredAccount = body.account ?? 1;
+      // Story 9.9 (AC5): the donor's EXPLICIT chosen account (no UX-visible `?? 1` "primary" default — both
+      // accounts are equal, the client names the choice). Passed through as-is; `resolveNomineeVpa`'s own
+      // `preferredAccount = 1` fallback stays PURELY DEFENSIVE (a legacy/single-account caller that names
+      // nothing), never a surfaced default.
+      const preferredAccount = body.account;
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
@@ -222,6 +232,115 @@ export function createPaymentHandlers(deps: AppDeps) {
           },
         });
         throw err;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * GET /api/v1/member/contribution/nominee-accounts — the donor-facing nominee payment destinations
+     * (Story 9.9; AC1/AC6). Resolves the member's assigned LIVE pool → its originating claim → ALL collected
+     * nominee accounts (0, 1, or 2), decrypts each account's Tier-1 holder-name / account# / IFSC at the API
+     * boundary (FAIL-SOFT to a distinct sentinel — never a 500, never a blank), and returns them as a STABLE
+     * list ordered by `rank` (identity, NOT a priority — both accounts are EQUAL, the donor chooses). Absence
+     * (no live pool / no accounts collected) is a first-class `{ available: false, reason }` — never a 404.
+     * `bankName` is Tier-3 plaintext (passed through, no decrypt); `vpaPresent` is computed from the presence
+     * of the VPA ciphertext WITHOUT decrypting it. The decrypted values are NEVER logged / emitted / audited.
+     */
+    async nomineeAccounts(request: FastifyRequest): Promise<NomineeAccountsResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const now = deps.clock();
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const chosen = await resolveMemberLivePool(scopeTx.tx, request, { memberId, pariwarId, now });
+        if (chosen === null) {
+          ok = true;
+          return { available: false, reason: 'unassigned', myContribution: 'none' };
+        }
+
+        // The member's OWN yellow-pill state (mirrors intent) — so `/pay` can route an already-attested
+        // member (even an out-of-band payer, 8.10) straight to confirmation without a needless account choice.
+        const memberTr = poolDomain.deriveContributionReference({ memberId, alertId: chosen.alertId });
+        const attested = await contributionDomain.hasAttestedContribution(scopeTx.tx, {
+          pariwarId,
+          alertId: chosen.alertId,
+          tr: memberTr,
+        });
+        const myContribution = attested ? ('attested' as const) : ('none' as const);
+
+        // The claim's nominee bank accounts (ciphertext AS STORED; tenant-scoped — a cross-tenant claim
+        // resolves to []). `[]` ⇒ the first-class "not collected yet" absence, never a throw.
+        const ciphertextRows = await claimDomain.getClaimNomineeBankAccountsCiphertext(
+          scopeTx.tx,
+          pariwarId,
+          chosen.pool.claimCaseId,
+        );
+        if (ciphertextRows.length === 0) {
+          ok = true;
+          return { available: false, reason: 'accounts_not_collected', myContribution };
+        }
+
+        // Decrypt each account's Tier-1 display fields at the API boundary — FAIL-SOFT to a distinct sentinel
+        // per field (never a 500, never a blank). `bankName` is Tier-3 (no decrypt); `vpaPresent` reads the
+        // ciphertext PRESENCE only (the VPA plaintext is never decrypted here, never sent). Rows already come
+        // ordered by account_rank (#1 → #2) — a STABLE list; the position carries no priority.
+        //
+        // `account_rank` is a smallint(1|2) at the schema level (Story 6.8), but a row outside that domain
+        // would otherwise get silently coerced to rank 1 by a `?? 1`-style fallback — risking two accounts
+        // both claiming identity `1`. Refuse instead: this is a data-corruption signal, not a donor-facing
+        // degrade, so it surfaces as a 500 rather than a fail-soft sentinel.
+        const fieldLog = (rank: number, field: string) => (err: unknown) =>
+          request.log.error({ err, account_rank: rank, field }, 'nominee-account field decrypt failed — sentinel');
+        const accounts: NomineeBankAccountView[] = await Promise.all(
+          ciphertextRows.map(async (row): Promise<NomineeBankAccountView> => {
+            if (row.accountRank !== 1 && row.accountRank !== 2) {
+              throw new Error(`Unexpected nominee bank account_rank: ${String(row.accountRank)}`);
+            }
+            const [accountHolderName, accountNumber, ifsc] = await Promise.all([
+              decryptNomineeBankFieldSoft(
+                row.accountHolderNameCiphertext,
+                pariwarIdStr,
+                deps.encryption,
+                fieldLog(row.accountRank, 'accountHolderName'),
+              ),
+              decryptNomineeBankFieldSoft(
+                row.accountNumberCiphertext,
+                pariwarIdStr,
+                deps.encryption,
+                fieldLog(row.accountRank, 'accountNumber'),
+              ),
+              decryptNomineeBankFieldSoft(
+                row.ifscCiphertext,
+                pariwarIdStr,
+                deps.encryption,
+                fieldLog(row.accountRank, 'ifsc'),
+              ),
+            ]);
+            return {
+              rank: row.accountRank,
+              // `bank_name` is a NOT NULL Tier-3 column, but an empty string is not schema-impossible —
+              // degrade it through the same distinct sentinel rather than ship a blank bank label.
+              bankName: row.bankName.length > 0 ? row.bankName : NOMINEE_BANK_DECRYPT_FAILED_SENTINEL,
+              accountHolderName,
+              accountNumber,
+              ifsc,
+              vpaPresent: row.vpaCiphertext != null,
+            };
+          }),
+        );
+
+        // Audit the READ occurred — the account COUNT only, NEVER the decrypted PII (AC6).
+        emitAuthAudit(deps, request, 'member_contribution.nominee_accounts_viewed', {
+          actorId: memberIdStr,
+          pariwarId: pariwarIdStr,
+          context: { nominee_accounts: accounts.length },
+        });
+        ok = true;
+        return { available: true, accounts, myContribution };
       } finally {
         await closeScopeTx(scopeTx, ok);
       }

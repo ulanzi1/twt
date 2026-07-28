@@ -1,4 +1,58 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-28 (story 9-9 review -> done via bmad-code-review. Adversarial review (Blind Hunter +
+#   Edge Case Hunter + Acceptance Auditor) surfaced 17 findings after dedup: 2 decision-needed (both resolved
+#   by the user to patch-now), 10 further patches, 1 deferred, 4 dismissed as noise. All 12 patches applied:
+#   an unexpected account_rank is now REFUSED (throws) instead of silently coerced to rank 1 (duplicate-
+#   identity risk); a distinct member_contribution.nominee_accounts_viewed audit type replaces the reused
+#   .intent type; the "Retry this account" button's missing accessibilityLabel wired; decryptNomineeBankFieldSoft
+#   hardened (log made required + self-guarded against throwing, a successfully-decrypted-but-EMPTY plaintext
+#   now also degrades to the sentinel, the dead console.error fallback removed); an empty bank_name now
+#   degrades to the sentinel too; decrypt-failure logs now carry the failing field name; NOMINEE_BANK_DECRYPT_
+#   FAILED_SENTINEL moved to @twt/contracts (shared by server + mobile) with .max() bounds added to the
+#   decrypted response fields; stale "default #1 / Switch account" doc-comment language in the UNTOUCHED
+#   packages/contracts/src/contributions/upi-intent.ts (missed by the story's own pre-dev reframe pass) rewritten
+#   to donor-choice/equal language + that file added to Task 4's revert-sanity guard scan scope; a NEW live-DB
+#   integration test (apps/api/tests/integration/payment/nominee-accounts.spec.ts) closes the Testing-Standards
+#   gap the Dev Agent Record had honestly disclosed (real fake-KMS encrypt round-trip + one genuinely corrupted
+#   ciphertext field, asserting the sentinel + no 500); a mobile total-decrypt-failure warning banner (distinct
+#   from the normal banking-info card) + its i18n key (en+hi) added. Deferred: the hardcoded-English decrypt-
+#   failure sentinel — matches the pre-existing appeal-crypto precedent this story explicitly reused, not a
+#   regression it introduced (deferred-work.md). Dismissed: the resolveNomineeVpa ??1 fallback (spec-permitted
+#   defensive-only), a provably-unreachable null-selectedRank branch, the guard not flagging the intentionally-
+#   retained `preferredAccount` identifier, and a JSX formatting nit. All typecheck/lint/unit/integration suites
+#   green post-patch. Story file: 9-9-dual-nominee-bank-accounts-donor-choice.md.)
+# last_updated: 2026-07-28 (story 9-9 ready-for-dev -> in-progress -> review via bmad-dev-story [Opus 4.8].
+#   Dual Nominee Bank Accounts - Donor Choice. Added donor-facing GET .../nominee-accounts read (resolves
+#   member live pool -> claim -> Tier-1 fail-soft-sentinel decrypt of holder/acct#/IFSC at the API boundary,
+#   bank_name Tier-3 passthrough, vpaPresent from ciphertext presence WITHOUT decrypting the VPA) + .strict()
+#   bundle-safe contract (no .openapi(); openapi/v1.yaml untouched) + memberNomineeAccounts() api-client. Pay
+#   screen reworked to EQUAL-choice UX: bank-name choice list (no preselect@2, auto-select@1) -> banking-info
+#   panel (nominee name + bank + full acct# + IFSC) -> intent built for the chosen account; choose-other/
+#   retry-same failure paths; removed the 8.13 'Switch account' + 4 switch_account* i18n keys, added 13
+#   choice/banking-info keys (en+hi parity-clean). Intent handler '?? 1' primary default REMOVED (donor's
+#   explicit account; resolveNomineeVpa's own =1 stays defensive). NO cap/routing/primary machinery
+#   (mechanized revert-sanity grep guard over 6 surfaces). NO new event type (8.10 fence green), NO
+#   pool.settled, NO payout_destinations (arch 1.13). New: contract-shape + handler(7) + mobile-fence +
+#   no-cap-guard tests; regression (pool-bound-payment, contributions, fourth-type fence) green. ci:local
+#   --concurrency=4 green on all 26 jobs touching this story; the lone integration-tests failure was 6
+#   load-contention flakes in the UNRELATED @twt/validity-service p95/cache suite — confirmed innocent by an
+#   isolated re-run (all 80 pass; search-kms p95 195ms vs 5172ms under load). DB-free unit coverage per the
+#   8.4 payment-endpoint precedent; endpoint takes no client claimCaseId so cross-tenant is structurally
+#   impossible (tenant-scoping already 6.8-integration-covered). Story file:
+#   9-9-dual-nominee-bank-accounts-donor-choice.md.)
+# last_updated: 2026-07-27 (story 9-9 RE-SCOPED + RENAMED via bmad-create-story -> "Dual Nominee Bank
+#   Accounts - Donor Choice" (was "RBI UPI Limit Workaround"). BigDev DISCARDED the RBI per-payee cap
+#   rationale: there is NO v1 requirement to route on a regulatory receiving cap. The real requirement is
+#   OPERATIONAL member-choice: a nominee provides up to two EQUAL bank accounts; the donor picks which one
+#   to pay (bank-name labels), sees the chosen account's nominee NAME + full banking info (name-match
+#   confidence + manual/NEFT fallback), and on failure can choose the other account OR retry the same. NO
+#   primary/secondary, NO server routing/inference, NO cap counters, NO RBI logic, NO payout engine. Evolves
+#   Story 8.13's "default #1 + Switch" into "two equal choices" + ADDS a member-facing decrypted
+#   nominee-accounts read (holder name/acct#/IFSC Tier-1 decrypt at API boundary, fail-soft sentinel;
+#   bank_name Tier-3 label). LIVE now (choice + banking info from Story 6.8 fields); UPI pa= path still DARK
+#   (VPA deferred). NO new event type (8.10 fence), NO pool.settled, NO payout-destination add (arch §1.13).
+#   Old story file (…-rbi-upi-limit-workaround.md) deleted; key renamed to …-donor-choice. Story file:
+#   9-9-dual-nominee-bank-accounts-donor-choice.md.)
 # last_updated: 2026-07-27 (story 9-8 review -> done via bmad-code-review. Adversarial review (Blind Hunter +
 #   Edge Case Hunter + Acceptance Auditor) surfaced 16 findings; 15 PATCHED in this pass, 1 deferred (below).
 #   Patched: postReverse/postConfirm cross-case id validation gaps (reversed_confirmed_event_id +
@@ -1396,7 +1450,7 @@ development_status:
   9-6-status-pill-5-state-design-system-component: done
   9-7-mismatch-detection-screenshot-upload-self-verify-surface-yellow-stuck-recovery: done
   9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity: done
-  9-9-dual-nominee-bank-accounts-rbi-upi-limit-workaround: backlog
+  9-9-dual-nominee-bank-accounts-donor-choice: done
   9-10-4-hour-retry-reminders: backlog
   9-11-over-payment-facilitated-recovery: backlog
   9-12-pool-progress-card-public-member-surface: backlog

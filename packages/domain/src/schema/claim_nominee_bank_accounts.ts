@@ -1,13 +1,14 @@
 // `claim_nominee_bank_accounts` — the claim-time dual disbursement accounts (Story 6.8, Task 3).
 //
-// ONE row per account, ranked #1 (primary) / #2 (secondary), keyed on the COMPOSITE PK
-// `(claim_case_id, account_rank)` (the `member_nominees` `(member_id, rank)` precedent — a claim
-// has at most one #1 and one #2). The two accounts are a CLAIM-SCOPED dual-account DISBURSEMENT
-// CHANNEL — a RBI-UPI-per-payee-per-day-limit workaround + failover (D1 APPROVED) — NOT one row
-// per declared nominee and NOT the 75/25 nominee split (that lives on `member_nominees.split_pct`,
-// Story 3.4, an entirely separate concept). So there is deliberately NO `nominee_rank` column, NO
-// FK to `member_nominees`, and NO holder-name-must-match-nominee linkage of any kind: the filer
-// types a holder name per account, full stop.
+// ONE row per account, ranked #1 / #2 as a row IDENTITY (NOT a primary/secondary priority — Story
+// 9.9 re-scope, 2026-07-27: both accounts are EQUAL payment destinations, donor's choice, no
+// server routing), keyed on the COMPOSITE PK `(claim_case_id, account_rank)` (the `member_nominees`
+// `(member_id, rank)` precedent — a claim has at most one #1 and one #2). The two accounts are a
+// CLAIM-SCOPED dual-account payment-destination CHANNEL — NOT one row per declared nominee and NOT
+// the 75/25 nominee split (that lives on `member_nominees.split_pct`, Story 3.4, an entirely
+// separate concept). So there is deliberately NO `nominee_rank` column, NO FK to `member_nominees`,
+// and NO holder-name-must-match-nominee linkage of any kind: the filer types a holder name per
+// account, full stop.
 //
 // Bank collection is an ANNOTATION (D2) — it does NOT advance the claim's lifecycle state. This
 // table has NO state trigger; `account_rank` / `ifsc_validated` / `bank_name` / `branch` are
@@ -51,8 +52,9 @@ export const claimNomineeBankAccounts = pgTable(
     // Multi-tenant scope (RLS predicate column; branded).
     pariwarId: uuid('pariwar_id').notNull().$type<PariwarId>(),
 
-    // Disbursement account rank: 1 = primary (#1), 2 = secondary (#2). Part of the composite PK
-    // (a claim holds at most one #1 and one #2). NOT a nominee rank — D1 APPROVED (no nominee linkage).
+    // Account row identity: #1 / #2, part of the composite PK (a claim holds at most one #1 and one
+    // #2) — NOT a priority (both are equal payment destinations, Story 9.9) and NOT a nominee rank
+    // — D1 APPROVED (no nominee linkage).
     accountRank: smallint('account_rank').notNull(),
 
     // ── PII — Tier-1 envelope ciphertext (encrypt-before-insert; ciphertext AS STORED) ──

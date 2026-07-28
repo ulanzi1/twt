@@ -1,4 +1,22 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-28l (epic-9-retrospective: optional -> done via bmad-retrospective — Epic 9
+#   (Reconciliation Engine — the yellow→green flip), 12/12 stories done (9.1-9.12). Saved
+#   epic-9-retro-2026-07-28.md. HEADLINE (extending the epic thesis): Epic 9 is THE PAYOFF EPIC — the
+#   read-model-before-producer + exact-frozen-name discipline of Epics 8-9 CASHED OUT: a single
+#   contribution.confirmed producer (9.4 matcher) lit up four pre-built reads (8.3 contributor list, 8.6
+#   Yogdaan green arm, 9.5, 9.12) with ZERO read changes, and AI-8-1's name-teeth were the enforcement.
+#   The corollary: the worst bugs cluster where a human actor touches money across member boundaries
+#   (Story 9.8 — cross-member PII leak via null-memberId, unvalidated resource-id ownership, no
+#   case-status guard — all caught in 3-layer review, none catchable by DB-free tests). PRIOR-RETRO
+#   FOLLOW-THROUGH: 3rd consecutive epic where every DUE item cleared — AI-8-3 (real providers) CLOSED
+#   pre-Epic-9, AI-8-1 (mismatch-name teeth) DISCHARGED in 9.4/9.5, AI-6-3-carry-2 (decoy-teeth) applied
+#   9.1/9.12. NEW ACTION ITEMS (BigDev confirmed 2026-07-28): AI-9-1 cross-member-scope+resource-ownership
+#   test class for money-touching admin surfaces; AI-9-2 epics.md reconciliation pass before Epic-10
+#   authoring (pervasive code-contract-wins-over-prose drift); AI-9-3 durable trustee-attestation table
+#   (9.8 actor_display is response-only). CARRIED: AI-8-2 un-attested-gate-class ledger, AI-6-4 migration
+#   drift ~0083, AI-7-3 4L+90s P0 launch-blocker set, AI-7-5 cold-tier dump, AI-4-4/AI-5-5. Significant
+#   discoveries needing an epic-update session: 0 — engine solid, Epic 10 (Admin Ops Console, 15 stories)
+#   plan stands. NEXT: AI-9-2 then Story 10.1 (Helpdesk data model + routing-policy registry).)
 # last_updated: 2026-07-28k (story 9-12 review -> done via bmad-code-review: three parallel layers — Blind
 #   Hunter, Edge Case Hunter, Acceptance Auditor — converged independently on the same top finding: the new
 #   derivePoolProgressCardViewModel(...) call in ActiveContributionCard.tsx was unguarded (no try/catch),
@@ -1686,7 +1704,7 @@ development_status:
   9-10-4-hour-retry-reminders: done
   9-11-over-payment-facilitated-recovery: done
   9-12-pool-progress-card-public-member-surface: done
-  epic-9-retrospective: optional
+  epic-9-retrospective: done
 
   # ==========================================================================
   # Epic 10: Admin Operations Console

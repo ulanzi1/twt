@@ -154,6 +154,12 @@ describe.skipIf(!hasDatabase)('pool stream — two-connection concurrency (own-c
         return;
       }
       lastOutcome = `attempt ${attemptNum}: ${fulfilled.length} fulfilled / ${rejected.length} rejected`;
+      for (const r of rejected) {
+        const reason = (r as PromiseRejectedResult).reason as { name?: string; message?: string; cause?: unknown };
+        console.error(
+          `[DEBUG attempt ${attemptNum}] rejected: ${reason?.name}: ${reason?.message} cause=${JSON.stringify(reason?.cause)}`,
+        );
+      }
     }
 
     throw new Error(

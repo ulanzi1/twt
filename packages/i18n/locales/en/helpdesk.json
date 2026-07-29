@@ -40,6 +40,8 @@
   "detail.not_found_title": "Request not found",
   "detail.not_found_body": "This request may have been removed, or the link may be out of date.",
   "detail.filed_on": "Asked on {date}",
+  "detail.filed_for_you": "We filed this for you — Operator {name}",
+  "detail.filed_for_you_badge": "Filed for you",
   "detail.thread_title": "Conversation",
   "detail.no_replies": "No replies yet. We'll respond here — we'll also notify you.",
   "detail.you": "You",

@@ -2184,6 +2184,24 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// Story 10.3 (AC5) — the OPERATOR (admin-session) category picker read. The same in-force
+// routing-policy category set as the member categories route, adapted to the admin session and gated
+// by the `helpdesk.create` permission (a caller who may file may read the category set). Reuses the
+// HelpdeskCategoryList component.
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/helpdesk/categories',
+  summary: 'The in-force routing-policy category set for the operator picker (registry-driven)',
+  tags: ['helpdesk'],
+  request: { params: helpdeskPariwarParams },
+  responses: {
+    200: { description: 'Categories + subcategories from the in-force policy', content: jsonOf(HelpdeskCategoryListComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (helpdesk.create) for this Pariwar'),
+    404: errorResponse('Pariwar not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 registry.registerPath({
   method: 'get',
   path: '/api/v1/p/{pariwarId}/member/helpdesk/tickets/{ticketId}',

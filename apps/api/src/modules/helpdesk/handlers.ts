@@ -17,7 +17,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { audit, canonicalJsonStringify, cycleCalendar, helpdesk, ids } from '@twt/domain';
-import type { CreateTicketRequest, HelpdeskTicketDto } from '@twt/contracts';
+import type { CreateTicketRequest, HelpdeskCategoryListResponse, HelpdeskTicketDto } from '@twt/contracts';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -234,6 +234,24 @@ export function createHelpdeskHandlers(deps: AppDeps) {
       // established pattern every other 201-returning route in this codebase already follows.
       void reply.status(201);
       return dto;
+    },
+
+    /**
+     * GET — the in-force routing policy's category set for the operator picker (Story 10.3, AC5).
+     * Reuses the domain `categoriesForPariwar` (the SAME read the 10.2 member categories route uses),
+     * adapted to the admin session: it runs on the scope-resolved request tx and is gated by the same
+     * `helpdesk.create` grant as the create route (a caller who may file may read the category set).
+     * Registry-driven — the UI never hardcodes the v1 category list.
+     */
+    async categories(request: FastifyRequest): Promise<HelpdeskCategoryListResponse> {
+      const { scopeTx } = context(request);
+      const pariwarId = ids.pariwarId(scopeTx.pariwarId);
+      const now = deps.clock();
+      const result = await helpdesk.categoriesForPariwar(scopeTx.tx, pariwarId, now);
+      return {
+        policy_version: result.policyVersion,
+        categories: result.categories.map((c) => ({ category: c.category, sub_categories: c.subCategories })),
+      };
     },
   };
 }

@@ -108,6 +108,12 @@ const POOL_FIXED_AMOUNT_EMERGENCY = permissionKey('pool.fixed_amount_emergency')
 // Granted to pariwar_admin (Trustee-Lite) + finance_officer (the "designated reconciliation reviewer");
 // super_admin auto-derives. Direct state_trustee gating deferred to Epic 3.
 const RECONCILIATION_REVIEW = permissionKey('reconciliation.review');
+// Story 10.3 (SM-1 C3) — the helpdesk ticket-create WRITE key (pariwar-dimension; the reconciliation.review /
+// cycle.freeze pariwar-wide precedent — the tenant IS the target, resolvable TODAY with no geo-tree). The
+// FIRST helpdesk key. Gates the EXISTING 10.1 create route (the operator call-to-ticket surface). Granted to
+// helpline_operator (the SM-1 C3 actor) + district_admin + pariwar_admin; super_admin auto-derives. NOT
+// step-up-gated (helpdesk create isn't freeze-firing / not in AR-24 — unlike the 6.3 claim intake).
+const HELPDESK_CREATE = permissionKey('helpdesk.create');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -197,6 +203,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating DEFERRED to Epic 3. No inert
       // state_trustee grant is seeded.
       RECONCILIATION_REVIEW,
+      // Story 10.3 (SM-1 C3) — the helpdesk ticket-create key (pariwar-dimension; the reconciliation.review /
+      // cycle.freeze pariwar-wide precedent). pariwar_admin is the tenant's administrative authority and can
+      // file a helpdesk ticket on a member's behalf; a `pariwar` scopeCeiling satisfies the pariwar check.
+      HELPDESK_CREATE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -301,6 +311,24 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   },
   {
     role: 'helpline_operator',
+    // Story 10.3 (SM-1 C3) — HELPDESK_CREATE lands here: the FIRST helpdesk key, closing the gap
+    // 10.1/10.2 re-deferred. The helpline operator IS the SM-1 C3 call-to-ticket actor — they file a
+    // helpdesk ticket on a caller's behalf via the existing 10.1 create route. A `pariwar` scopeCeiling
+    // satisfies the pariwar-dimension gate. (This makes the "Helpdesk keys land Epic 10" note below true.)
+    // NOT step-up-gated (helpdesk create isn't freeze-firing / not in AR-24 — unlike the 6.3 claim intake).
+    // ── district_admin DEFERRED (the state_trustee-at-pariwar precedent) ──────────────────────────────
+    // Story 10.3 grants HELPDESK_CREATE to pariwar_admin + helpline_operator (both `pariwar` ceiling) +
+    // super_admin (auto). district_admin is DELIBERATELY NOT granted: HELPDESK_CREATE is checked at
+    // `dimension: 'pariwar'` (there is no server-derived district for a helpdesk ticket, so a district gate
+    // is impossible), and a `district`-ceiling grant can NEVER satisfy a pariwar-dimension check
+    // (scopeContains denies a target broader than the grant; a district_admin also cannot hold a
+    // pariwar-scoped grant — the ceiling check rejects it). Granting it would seed an INERT/false capability
+    // — the exact [[project_rbac_geo_scope_containment]] asymmetry the state_trustee-at-pariwar deferrals
+    // (cycle.freeze/claim.r9_vote/reconciliation.review) already encode. NO inert district_admin grant is
+    // seeded. ACCEPTANCE CONDITION: district_admin helpdesk-create may be enabled only if a helpdesk ticket
+    // gains a server-derived district AND the gate moves to `dimension: 'district'` — not by widening a
+    // pariwar gate to a role that cannot satisfy it.
+    //
     // Helpdesk keys land Epic 10 — but the helpline reads a caller's member validity to
     // assist them (Story 4.6, FR-12A "consistent across admin and member apps") AND, from
     // Story 6.3, FILES a claim on a bereaved caller's behalf (the freeze-firing helpline
@@ -321,6 +349,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_MANAGE_NOMINEE_BANK,
       CLAIM_CORRECT_NOMINEE_BANK,
       CLAIM_MANAGE_DPDPA_CONSENT,
+      // Story 10.3 (SM-1 C3) — the helpdesk ticket-create key (the operator files on a caller's behalf).
+      HELPDESK_CREATE,
     ],
     scopeCeiling: 'pariwar',
   },

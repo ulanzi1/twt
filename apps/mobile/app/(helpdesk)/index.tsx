@@ -21,6 +21,7 @@ interface TicketRow {
   current_state: string
   routed_to_role: string
   sla_first_response_due: string
+  created_via: string
   created_at: string
 }
 
@@ -56,6 +57,15 @@ function InboxRow({ row, onPress }: { row: TicketRow; onPress: () => void }): Re
         <Text fontSize="$4" fontWeight="500" color="$color" numberOfLines={1}>
           {row.subject}
         </Text>
+        {/* Story 10.3 (AC3) — badge an operator-filed (helpline_call) ticket so the member recognizes
+            it in their own inbox; absent for a self-filed (member_app) ticket. */}
+        {row.created_via === 'helpline_call' && (
+          <XStack bg="$backgroundPress" px="$2" py="$1" rounded="$3" self="flex-start">
+            <Text fontSize="$1" color="$colorPress">
+              {t('detail.filed_for_you_badge')}
+            </Text>
+          </XStack>
+        )}
         <XStack items="center" justify="space-between">
           <StatusPill state={row.current_state} />
           <Text fontSize="$1" color="$colorPress">

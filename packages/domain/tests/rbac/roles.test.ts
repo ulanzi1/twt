@@ -131,6 +131,22 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.3 — helpdesk.create is granted to helpline_operator + pariwar_admin (+ super_admin); district_admin DEFERRED', () => {
+    const KEY = 'helpdesk.create';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // helpline_operator (the SM-1 C3 actor) + pariwar_admin (both `pariwar` ceiling) + super_admin (full catalog).
+    expect(holders).toEqual(['helpline_operator', 'pariwar_admin', 'super_admin']);
+    // district_admin is DELIBERATELY NOT granted: helpdesk.create is a pariwar-dimension key, and a
+    // `district`-ceiling grant can never satisfy a pariwar check (the state_trustee-at-pariwar asymmetry) —
+    // seeding it would be an inert/false capability. The check.test.ts scope proof pins WHY it can't work.
+    for (const role of ['district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 5.3 — pariwar.configure_channels is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'pariwar.configure_channels';
     const holders = defaultRoleBundles

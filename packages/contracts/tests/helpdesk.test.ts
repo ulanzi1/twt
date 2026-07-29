@@ -25,6 +25,7 @@ import {
   MemberCreateTicketRequest,
   MemberScopeContext,
   MemberTicketDetailResponse,
+  MemberTicketListItem,
   RoutingDecision,
   RoutingPolicyDocument,
   RoutingRule,
@@ -152,10 +153,12 @@ describe('MemberTicketDetailResponse — attachments cap (Task 1 consistency)', 
     sla_first_response_due: '2026-08-04T06:00:00.000Z',
     sla_resolution_due: '2026-08-08T18:30:00.000Z',
     attachment_count: 0,
+    created_via: 'member_app' as const,
     created_at: '2026-08-03T06:00:00.000Z',
     updated_at: '2026-08-03T06:00:00.000Z',
     body: 'help',
     thread: [],
+    operator_attribution: null,
   };
   const attachment = { filename: 'f.png', content_type: 'image/png' as const, size_bytes: 1024 };
 
@@ -172,6 +175,66 @@ describe('MemberTicketDetailResponse — attachments cap (Task 1 consistency)', 
         attachments: Array(HELPDESK_ATTACHMENT_MAX_COUNT + 1).fill(attachment),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('Member DTOs — Story 10.3 operator-surfacing fields (AC3)', () => {
+  const baseListItem = {
+    ticket_id: '55555555-5555-5555-5555-555555555555',
+    category: 'kyc-trouble' as const,
+    sub_category: null,
+    subject: 'My KYC photo keeps failing',
+    current_state: 'open' as const,
+    routed_to_role: 'helpline_operator',
+    routed_to_scope: { dimension: 'pariwar' as const, value: PARIWAR },
+    sla_first_response_due: '2026-08-04T06:00:00.000Z',
+    sla_resolution_due: '2026-08-08T18:30:00.000Z',
+    attachment_count: 0,
+    created_via: 'member_app' as const,
+    created_at: '2026-08-03T06:00:00.000Z',
+    updated_at: '2026-08-03T06:00:00.000Z',
+  };
+  const baseDetail = { ...baseListItem, body: 'help', attachments: [], thread: [], operator_attribution: null };
+
+  it('MemberTicketListItem accepts created_via on both channels', () => {
+    expect(MemberTicketListItem.safeParse({ ...baseListItem, created_via: 'member_app' }).success).toBe(true);
+    expect(MemberTicketListItem.safeParse({ ...baseListItem, created_via: 'helpline_call' }).success).toBe(true);
+  });
+
+  it('MemberTicketListItem rejects a missing / invalid created_via', () => {
+    const noCreatedVia: Record<string, unknown> = { ...baseListItem };
+    delete noCreatedVia['created_via'];
+    expect(MemberTicketListItem.safeParse(noCreatedVia).success).toBe(false);
+    expect(MemberTicketListItem.safeParse({ ...baseListItem, created_via: 'sms' }).success).toBe(false);
+  });
+
+  it('MemberTicketDetailResponse accepts a nullable operator_attribution (null for member_app, a name for helpline_call)', () => {
+    expect(MemberTicketDetailResponse.safeParse({ ...baseDetail, operator_attribution: null }).success).toBe(true);
+    expect(
+      MemberTicketDetailResponse.safeParse({
+        ...baseDetail,
+        created_via: 'helpline_call',
+        operator_attribution: 'Operator Priya',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('MemberTicketDetailResponse rejects a missing operator_attribution (the field is required, value nullable)', () => {
+    const noAttribution: Record<string, unknown> = { ...baseDetail };
+    delete noAttribution['operator_attribution'];
+    expect(MemberTicketDetailResponse.safeParse(noAttribution).success).toBe(false);
+  });
+
+  it('MemberTicketDetailResponse caps operator_attribution at 128 chars (matches HelpdeskTicketDto)', () => {
+    expect(MemberTicketDetailResponse.safeParse({ ...baseDetail, operator_attribution: 'a'.repeat(128) }).success).toBe(true);
+    expect(MemberTicketDetailResponse.safeParse({ ...baseDetail, operator_attribution: 'a'.repeat(129) }).success).toBe(false);
+    // Empty string is not a valid name (min(1)); null is the "no operator" sentinel.
+    expect(MemberTicketDetailResponse.safeParse({ ...baseDetail, operator_attribution: '' }).success).toBe(false);
+  });
+
+  it('.strict() still rejects an unknown key on both member DTOs', () => {
+    expect(MemberTicketListItem.safeParse({ ...baseListItem, sneaky: 1 }).success).toBe(false);
+    expect(MemberTicketDetailResponse.safeParse({ ...baseDetail, sneaky: 1 }).success).toBe(false);
   });
 });
 

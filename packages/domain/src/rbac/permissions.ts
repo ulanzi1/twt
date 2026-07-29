@@ -232,7 +232,21 @@ export function permissionKey(value: string): PermissionKey {
 // satisfy a pariwar-dimension check pre-Epic-3; the 6.13/6.14 Trustee-Lite precedent). NO inert
 // state_trustee grant is seeded. A DELIBERATE deferral, documented so it never reads as an oversight. Each
 // action is ADDITIONALLY step-up-gated at the route (distinct action contexts) — a route concern, not a key.
-export const PERMISSION_CATALOG_VERSION = 22 as const;
+// Bumped 22 → 23 at Story 10.3 (added ONE key): `helpdesk.create` — the helpdesk ticket-create WRITE key
+// gating the EXISTING 10.1 create route (POST …/p/:pariwarId/helpdesk/tickets, the operator call-to-ticket
+// surface). Closes the RBAC gap 10.1's chunk-4 review and 10.2's Dev Notes explicitly re-deferred to
+// "Story 10.3/10.4 — whichever touches that route next" (10.3 touches it). Checked at `dimension: 'pariwar'`
+// (value = scopeTx.pariwarId — the reconciliation.review / cycle.freeze pariwar-wide-key precedent; a
+// helpdesk ticket is Pariwar-scoped and the tenant IS the target, resolvable TODAY with no geo-tree, unlike
+// the district-derived claim.verify). Granted to `helpline_operator` (the SM-1 C3 actor) + `pariwar_admin`
+// (both `pariwar` ceiling); `super_admin` auto-derives. `district_admin` is DEFERRED — a `district`-ceiling
+// grant can NEVER satisfy a pariwar-dimension check (scopeContains denies a target broader than the grant;
+// the ceiling check also forbids a district_admin from holding a pariwar-scoped grant), so granting it would
+// seed an INERT/false capability — the exact [[project_rbac_geo_scope_containment]] asymmetry the
+// state_trustee-at-pariwar deferrals already encode (cycle.freeze/reconciliation.review). NOT step-up-gated —
+// helpdesk create is NOT a freeze-firing action and is NOT in the AR-24 step-up list (unlike the 6.3 claim
+// intake). This is the FIRST helpdesk key (the roles.ts "Helpdesk keys land Epic 10" comment made true).
+export const PERMISSION_CATALOG_VERSION = 23 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -391,6 +405,15 @@ export const SEED_PERMISSION_KEYS = [
   // reconciliation reviewer") + super_admin (auto-derived). Direct `state_trustee` gating deferred to Epic 3
   // (Trustee-Lite; see the version-bump note). Each action is ADDITIONALLY step-up-gated (a route concern).
   'reconciliation.review',
+  // Story 10.3 (SM-1 C3) — the helpdesk ticket-create WRITE key. Gates the EXISTING 10.1 create route
+  // (POST …/p/:pariwarId/helpdesk/tickets — the operator call-to-ticket surface), closing the RBAC gap
+  // 10.1's chunk-4 review and 10.2's Dev Notes re-deferred here. Checked at `dimension: 'pariwar'` (value =
+  // scopeTx.pariwarId — the reconciliation.review / cycle.freeze pariwar-wide-key precedent; the helpdesk
+  // ticket is Pariwar-scoped, the tenant IS the target, resolvable TODAY with no geo-tree). Granted to
+  // `helpline_operator` (the SM-1 C3 actor) + `pariwar_admin` (both `pariwar` ceiling); super_admin
+  // auto-derives. `district_admin` is DEFERRED (a district-ceiling grant can't satisfy a pariwar check —
+  // an inert grant; see the version-bump note + roles.ts). The FIRST helpdesk key. NOT step-up-gated.
+  'helpdesk.create',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

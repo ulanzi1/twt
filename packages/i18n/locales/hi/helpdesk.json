@@ -40,6 +40,8 @@
   "detail.not_found_title": "अनुरोध नहीं मिला",
   "detail.not_found_body": "यह अनुरोध हटाया जा चुका हो सकता है, या लिंक पुराना हो सकता है।",
   "detail.filed_on": "{date} को पूछा गया",
+  "detail.filed_for_you": "हमने आपके लिए यह दर्ज किया — ऑपरेटर {name}",
+  "detail.filed_for_you_badge": "हमारी ओर से दर्ज",
   "detail.thread_title": "बातचीत",
   "detail.no_replies": "अभी कोई जवाब नहीं। हम यहीं जवाब देंगे — हम आपको सूचित भी करेंगे।",
   "detail.you": "आप",

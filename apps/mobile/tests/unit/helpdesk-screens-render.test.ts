@@ -97,6 +97,37 @@ describe('helpdesk screens render fence (AC3)', () => {
   })
 })
 
+describe('Story 10.3 — "We filed this for you" operator header (AC3)', () => {
+  const inbox = read('apps/mobile/app/(helpdesk)/index.tsx')
+  const detail = read('apps/mobile/app/(helpdesk)/[ticketId].tsx')
+
+  it('has the two new header/badge i18n keys in BOTH locales (en/hi parity)', () => {
+    for (const key of ['detail.filed_for_you', 'detail.filed_for_you_badge']) {
+      expect(en[key], `en ${key}`).toBeTruthy()
+      expect(hi[key], `hi ${key}`).toBeTruthy()
+    }
+    // The header templates the FILING operator's name (a controlled staff display name, not a leak).
+    expect(en['detail.filed_for_you']).toContain('{name}')
+    expect(hi['detail.filed_for_you']).toContain('{name}')
+  })
+
+  it('the detail renders the header ONLY for a helpline_call ticket that carries an operator name (present for helpline_call, absent for member_app)', () => {
+    // The guard is a two-part AND on created_via === 'helpline_call' AND a present operator_attribution
+    // — so a member_app ticket (created_via !== 'helpline_call') never renders the header, and a
+    // helpline_call ticket with a null name (impossible per the contract, but belt-and-suspenders)
+    // is also skipped.
+    expect(detail).toMatch(/data\.created_via === 'helpline_call' && data\.operator_attribution/)
+    expect(detail).toContain('detail.filed_for_you')
+    // The name is interpolated from the server-snapshotted attribution, never a client value.
+    expect(detail).toMatch(/detail\.filed_for_you',\s*\{\s*name: data\.operator_attribution\s*\}/)
+  })
+
+  it('the inbox badges an operator-filed ticket (created_via === helpline_call), not a self-filed one', () => {
+    expect(inbox).toMatch(/row\.created_via === 'helpline_call'/)
+    expect(inbox).toContain('detail.filed_for_you_badge')
+  })
+})
+
 describe('helpdesk filing form (new.tsx) — AC1/AC4/AC6/AC7 (review-hardening)', () => {
   const form = read('apps/mobile/app/(helpdesk)/new.tsx')
 

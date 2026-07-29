@@ -1,4 +1,63 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-29g (10-3-helpline-call-to-ticket-operator-surface: review -> done via
+#   bmad-code-review — 3-layer adversarial review (Blind Hunter / Edge Case Hunter / Acceptance
+#   Auditor) over the diff (~1800 lines incl. new files). Every finding VERIFIED against the actual
+#   handler/route/component code before triage (not taken at face value): confirmed pre-existing gaps
+#   (no idempotency guard, no member lifecycle-state check on ticket-subject lookup, no client-side
+#   pre-flight permission check) predate 10.3 and were correctly left untouched; confirmed 2 apparent
+#   "defects" (duplicate contract-type import in client.ts, source-scan-style mobile test) actually
+#   MATCH established codebase conventions on closer inspection, so were reversed rather than "fixed".
+#   2 decisions resolved: AC4's prose was corrected to drop district_admin from the granted-roles list
+#   (the implementation was always right per project_rbac_geo_scope_containment — only the AC text was
+#   stale); the operator-console lookup-step shell-only test coverage was accepted as matching the
+#   helpline-claims precedent. 4 patches applied + verified (tsc --noEmit clean on @twt/admin + @twt/api;
+#   helpdesk-operator-console.test.tsx 13/13, operator-helpdesk/helpdesk/member-helpdesk specs 19/19 on
+#   the live :5433 DB, helpdesk-screens-render.test.ts 18/18): GET .../helpdesk/categories now carries
+#   the standard limits.read rate-limit (was missing it, unlike every other GET route); the operator
+#   console's canSubmit gate now re-validates category/subcategory against the current in-force policy
+#   (closes a stale-selection-on-refetch gap); HelpdeskFiledResult.routedToScope now reuses the
+#   HelpdeskGrantScope contract type instead of a hand-rolled widened shape; createHelplineTicket's
+#   created_via:'helpline_call' is now forced at the TYPE level (client.ts + hooks.ts narrowed, the
+#   HelpdeskOperatorPage payload uses `satisfies` instead of a widening annotation so the literal
+#   survives). 7 items deferred to deferred-work.md (all verified pre-existing, none introduced by
+#   10.3). development_status[10-3]: done.)
+# last_updated: 2026-07-29f (10-3-helpline-call-to-ticket-operator-surface: ready-for-dev -> in-progress ->
+#   review via bmad-dev-story. Confirmed 10.1's create() ALREADY implements the helpline_call path, so 10.3
+#   added NO new handler/event/migration. RBAC (catalog v22->23): minted helpdesk.create + gated the existing
+#   POST .../helpdesk/tickets route with requirePermissionHook @ dimension:'pariwar'; NO step-up (not
+#   freeze-firing / not AR-24). THE load-bearing deviation (BigDev-confirmed): AC4's district_admin grant was
+#   CORRECTED to a documented DEFERRAL — a district-ceiling grant can NEVER satisfy a pariwar-dimension check
+#   (scopeContains denies a target broader than the grant + the ceiling check forbids a district_admin holding
+#   a pariwar grant), so granting it would seed an INERT/false capability (the state_trustee-at-pariwar
+#   asymmetry; project_rbac_geo_scope_containment). Granted to helpline_operator (SM-1 C3 actor) + pariwar_admin;
+#   super_admin auto-derives. Pinned by check.test.ts (synthetic district-ceiling holder DENIED) + roles.test.ts
+#   (holders exact set). Contracts: created_via on MemberTicketListItem + operator_attribution on
+#   MemberTicketDetailResponse (the AC3 exception to 10.2's 'member never sees operator identity' — FILING
+#   operator surfaced, RESPONDER still role-only). API: member-read surfacing (no new query) + admin
+#   GET .../helpdesk/categories (registry-driven picker). Admin: NEW modules/helpdesk operator console (reuses
+#   4.7 <MemberLookupForm> + 6.3 two-pane lookupSlot pattern) + /p/$pariwarId/helpdesk route. Mobile: 'We filed
+#   this for you — Operator [Name]' header + inbox badge (en/hi parity). OpenAPI regenerated. RBAC revert-sanity
+#   403/201 pair + cross-surface member read-back proven in operator-helpdesk.spec (5 tests). pnpm ci:local 29
+#   jobs GREEN (after a data-only reset of the shared test DB to clear pre-existing pristine-DB-only count-test
+#   accumulation — cross-pariwar-leak/events_log-RLS/pool reads, all UNTOUCHED by 10.3; CI's fresh container
+#   never sees this). File 10-3 Status: review; development_status[10-3]: review. Next: bmad-code-review.)
+# last_updated: 2026-07-29e (10-3-helpline-call-to-ticket-operator-surface: backlog -> ready-for-dev
+#   via bmad-create-story. THE key reconnaissance finding: the create-ticket API is ALREADY BUILT for
+#   the helpline path — 10.1's handlers.ts create() already sets actor='operator', resolves
+#   operator_attribution from getDisplayName() (fail-closed AdminDisplayNameMissingError), and persists
+#   via projectTicketGenesis; routes.ts already names 10.3 as "the live tenant-scoped caller". So 10.3
+#   is NOT a new backend — it's (1) closing the helpdesk.create RBAC gap 10.1/10.2 explicitly
+#   re-deferred here (mint the key, catalog v22->23, grant helpline_operator/district_admin/
+#   pariwar_admin, gate the existing route with requirePermissionHook @ dimension:'pariwar'); (2) the
+#   apps/admin operator console (NEW modules/helpdesk/ — reuse the 4.7 <MemberLookupForm> + the 6.3
+#   two-pane HelplineConsoleShell pattern via lookupSlot); (3) surfacing created_via +
+#   operator_attribution to the 10.2 member reads for the "We filed this for you — Operator [Name]"
+#   header (a DELIBERATE, AC-mandated narrowing of 10.2's "member never sees operator identity" rule —
+#   the FILING operator's name is surfaced, the RESPONDER's is still role/scope-only). No new create
+#   handler, no new event, no migration. NO step-up (helpdesk create isn't freeze-firing / not AR-24 —
+#   unlike 6.3 claim intake). Reply round-trip is "identical" for free (10.2's replayTicketThread is
+#   already forward-compatible; the reply WRITE + helpdesk_reply EMITTER stay 10.4). RBAC revert-sanity
+#   (403-without-key / 201-with-key pair) is the load-bearing test. Saved 10-3-*.md.)
 # last_updated: 2026-07-29d (10-2-member-facing-helpdesk-ticket-filing: review -> done via
 #   bmad-code-review — 3-layer adversarial review (Blind Hunter / Edge Case Hunter / Acceptance
 #   Auditor) over the full diff (~3477 lines, ~40 files, generated openapi/v1.yaml excluded). 3
@@ -1826,7 +1885,7 @@ development_status:
   epic-10: in-progress
   10-1-helpdesk-subsystem-data-model-routing-policy-registry: done
   10-2-member-facing-helpdesk-ticket-filing: done
-  10-3-helpline-call-to-ticket-operator-surface: backlog
+  10-3-helpline-call-to-ticket-operator-surface: done
   10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: backlog
   10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: backlog
   10-6-bulk-operations-framework: backlog

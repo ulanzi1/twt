@@ -18,6 +18,7 @@ import { ChannelConfigRoute } from './routes/ChannelConfigRoute.js';
 import { CycleFreezeRoute } from './routes/CycleFreezeRoute.js';
 import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
+import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
 import { R9VotingRoute } from './routes/R9VotingRoute.js';
 import { FixedAmountRoute } from './routes/FixedAmountRoute.js';
@@ -98,6 +99,13 @@ const helplineRoute = createRoute({
   component: HelplineClaimRoute,
 });
 
+// Story 10.3 — the tenant-scoped helpdesk operator console (call-to-ticket on a member's behalf, SM-1 C3).
+const helpdeskRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/helpdesk',
+  component: HelpdeskOperatorRoute,
+});
+
 // Story 6.7 — the tenant-scoped ground-inspection console (schedule/notes/photos/complete/refusal).
 const groundInspectionRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -150,6 +158,7 @@ const routeTree = rootRoute.addChildren([
   channelConfigRoute,
   degradedModeRoute,
   helplineRoute,
+  helpdeskRoute,
   groundInspectionRoute,
   verifierConsoleRoute,
   cycleFreezeRoute,

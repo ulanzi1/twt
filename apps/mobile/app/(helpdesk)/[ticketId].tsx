@@ -111,6 +111,26 @@ export default function HelpdeskDetailScreen(): React.ReactElement {
           </Text>
         </YStack>
 
+        {/* Story 10.3 (AC3) — the dignified "We filed this for you — Operator [Name]" header, shown ONLY
+            for an operator-filed (helpline_call) ticket that carries an operator name. Absent for a
+            self-filed (member_app) ticket. Surfaces the FILING operator's controlled display name (the
+            caller consented to the operator filing on their behalf); the routing/responder target stays
+            role-only (below). */}
+        {data.created_via === 'helpline_call' && data.operator_attribution && (
+          <YStack
+            gap="$1"
+            bg="$backgroundPress"
+            p="$3"
+            rounded="$4"
+            accessibilityRole="header"
+            data-testid="helpdesk-filed-for-you"
+          >
+            <Text fontWeight="600">
+              {t('detail.filed_for_you', { name: data.operator_attribution })}
+            </Text>
+          </YStack>
+        )}
+
         {/* Status + routing target + SLA */}
         <YStack gap="$2" bg="$backgroundPress" p="$3" rounded="$4">
           <XStack items="center" justify="space-between">

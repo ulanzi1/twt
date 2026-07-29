@@ -11,6 +11,7 @@ import type {
   AddPariwarRequest,
   ConvergenceMergeRequest,
   ConvergenceOverrideRequest,
+  CreateTicketRequest,
   HelplineClaimIntakeRequest,
   HelplineOperatorEventRequest,
   MemberSearchRequest,
@@ -734,4 +735,28 @@ export function useReconciliationActions(pariwarId: string) {
       onSuccess: (_r, v) => invalidate(v.caseKey),
     }),
   };
+}
+
+// ── Helpdesk operator call-to-ticket surface (Story 10.3) ─────────────────────
+// The operator files a helpdesk ticket on a caller's behalf via the EXISTING 10.1 create route (now
+// permission-gated). The create is a POST modelled as a mutation whose result (ticket_id + routing
+// target + SLA) the page holds for the "filed" confirmation (the useHelplineClaimIntake precedent).
+// `helpdesk.create` is a per-Pariwar grant, so the client gate is only "is there a live session"; the
+// REAL boundary is the server permission hook. NO step-up (helpdesk create isn't freeze-firing).
+
+/** The in-force routing-policy category set for the operator picker (registry-driven, AC5). */
+export function useHelpdeskCategories(pariwarId: string) {
+  return useQuery({
+    queryKey: ['helpdesk-categories', pariwarId] as const,
+    queryFn: () => api.getHelpdeskCategories(pariwarId),
+  });
+}
+
+/** The operator call-to-ticket create mutation. On success the page surfaces the routed ticket
+ *  (ticket_id + routing target + SLA) in the "filed" confirmation panel. */
+export function useCreateHelplineTicket(pariwarId: string) {
+  return useMutation({
+    mutationFn: (body: Omit<CreateTicketRequest, 'created_via'> & { created_via: 'helpline_call' }) =>
+      api.createHelplineTicket(pariwarId, body),
+  });
 }

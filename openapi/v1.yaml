@@ -3548,6 +3548,9 @@ components:
         attachment_count:
           type: integer
           minimum: 0
+        created_via:
+          type: string
+          enum: *a18
         created_at:
           type: string
           format: date-time
@@ -3607,6 +3610,12 @@ components:
               - body
               - occurred_at
             additionalProperties: false
+        operator_attribution:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 128
       required:
         - ticket_id
         - category
@@ -3618,11 +3627,13 @@ components:
         - sla_first_response_due
         - sla_resolution_due
         - attachment_count
+        - created_via
         - created_at
         - updated_at
         - body
         - attachments
         - thread
+        - operator_attribution
       additionalProperties: false
     MemberCreateTicketFields:
       type: object
@@ -3703,6 +3714,9 @@ components:
               attachment_count:
                 type: integer
                 minimum: 0
+              created_via:
+                type: string
+                enum: *a18
               created_at:
                 type: string
                 format: date-time
@@ -3720,6 +3734,7 @@ components:
               - sla_first_response_due
               - sla_resolution_due
               - attachment_count
+              - created_via
               - created_at
               - updated_at
             additionalProperties: false
@@ -6673,6 +6688,43 @@ paths:
                 $ref: "#/components/schemas/HelpdeskCategoryList"
         "401":
           description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/helpdesk/categories:
+    get:
+      summary: The in-force routing-policy category set for the operator picker (registry-driven)
+      tags:
+        - helpdesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      responses:
+        "200":
+          description: Categories + subcategories from the in-force policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskCategoryList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (helpdesk.create) for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Pariwar not found
           content:
             application/json:
               schema:

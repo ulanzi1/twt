@@ -1,11 +1,23 @@
 // Member-facing helpdesk transport DTOs -- Story 10.2 (Task 1; AC1/AC2/AC3/AC5).
 //
 // The member app's helpdesk surface reads/writes a DELIBERATELY NARROWER shape than the full
-// `HelpdeskTicketDto` (10.1): a member never sees another party's audit anchor, operator identity,
-// matched-rule index, or the internal cross-link refs. These DTOs expose only what a member's own
-// inbox + detail screen render -- status, routing target (role/scope, never a NAMED individual --
-// AC2 / [[project_admin_display_name_attribution]]), SLA due instants, attachment metadata, and the
+// `HelpdeskTicketDto` (10.1): a member never sees another party's audit anchor, matched-rule index,
+// or the internal cross-link refs. These DTOs expose only what a member's own inbox + detail screen
+// render -- status, routing target (role/scope, never a NAMED individual -- AC2 /
+// [[project_admin_display_name_attribution]]), SLA due instants, attachment metadata, and the
 // replay-derived read-only thread. `.strict()` throughout.
+//
+// -- Story 10.3 EXCEPTION: the FILING operator's name IS surfaced -------------------------------
+// 10.2 hard-coded "a member never sees ... operator identity" here. Story 10.3 AC3 DELIBERATELY
+// NARROWS that for ONE field: an operator-filed (`helpline_call`) ticket surfaces the FILING
+// operator's display name via `operator_attribution` on the detail response, so the member app can
+// render the "We filed this for you -- Operator [Name]" header (the caller consented to the operator
+// filing on their behalf -- that transparency is the whole point of the call-to-ticket surface). This
+// is NOT a leak: `operator_attribution` is the operator's CONTROLLED staff `display_name`, snapshotted
+// server-side at create time ([[project_admin_display_name_attribution]]). The distinction preserved:
+// the FILING operator's name is surfaced (they acted FOR the member); the RESPONDER/routing target is
+// STILL role/scope-only, never a named individual (the 10.2 `routed_to_role` rule stands). `created_via`
+// rides the list item so the inbox can badge helpline-filed tickets; `null`/`member_app` for self-filed.
 //
 // -- "subject" without a schema column (no migration -- ratified) -------------------------------
 // The 10.1 substrate has ONLY `body` (no `subject` column) and 10.2 adds no migration. The member
@@ -21,6 +33,7 @@ import { HELPDESK_ATTACHMENT_MAX_BYTES, HELPDESK_ATTACHMENT_MAX_COUNT, HelpdeskA
 import { HelpdeskCategory, HelpdeskSubcategory } from './category.js';
 import { HelpdeskGrantScope } from './routing.js';
 import { HelpdeskTicketState } from './status.js';
+import { HelpdeskCreatedVia } from './ticket.js';
 
 /** The subject bound the member form + the create route enforce (kept well under the 5000-char
  *  body cap so `subject + "\n\n" + body` always fits the persisted `body` column). */
@@ -116,6 +129,9 @@ export const MemberTicketListItem = z
     sla_first_response_due: Iso8601Datetime,
     sla_resolution_due: Iso8601Datetime,
     attachment_count: z.number().int().nonnegative(),
+    // Story 10.3 (AC3) — how the ticket was created. `helpline_call` lets the inbox badge an
+    // operator-filed ticket; `member_app` for a self-filed one. The FILING channel, not a leak.
+    created_via: HelpdeskCreatedVia,
     created_at: Iso8601Datetime,
     updated_at: Iso8601Datetime,
   })
@@ -136,6 +152,11 @@ export const MemberTicketDetailResponse = MemberTicketListItem.extend({
   // is derived from is already capped, so this is a wire-shape consistency fix, not a new limit.
   attachments: z.array(MemberTicketAttachment).max(HELPDESK_ATTACHMENT_MAX_COUNT),
   thread: z.array(HelpdeskThreadEntry),
+  // Story 10.3 (AC3) -- the FILING operator's display name for a `helpline_call` ticket (drives the
+  // "We filed this for you -- Operator [Name]" header); `null` for a self-filed `member_app` ticket.
+  // Server-resolved, never client-supplied (snapshotted at create time). The `128` bound MATCHES
+  // `HelpdeskTicketDto.operator_attribution` (ticket.ts) -- the same underlying value; do not widen it.
+  operator_attribution: z.string().min(1).max(128).nullable(),
 }).strict();
 export type MemberTicketDetailResponse = z.output<typeof MemberTicketDetailResponse>;
 

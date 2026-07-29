@@ -143,6 +143,12 @@ import {
   type ReconciliationRecoverRequest,
   type ReconciliationRejectRequest,
   type ReconciliationReverseRequest,
+  // Story 10.3 — the helpdesk operator call-to-ticket surface (create + registry-driven categories).
+  CreateTicketResponse,
+  HelpdeskCategoryListResponse,
+  type CreateTicketRequest,
+  type CreateTicketResponse as HelpdeskTicket,
+  type HelpdeskCategoryListResponse as HelpdeskCategoryList,
   type SessionResponse as Session,
   type UpdateClauseDraftRequest,
 } from '@twt/contracts';
@@ -1101,4 +1107,32 @@ export function reconciliationReverse(
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+// ── Helpdesk operator call-to-ticket surface (Story 10.3) ─────────────────────
+// Tenant-scoped under /p/:pariwarId/helpdesk. The operator (SM-1 C3 path) files a helpdesk ticket on
+// a caller's behalf via the EXISTING 10.1 create route, now gated server-side by [adminSession, scope,
+// requirePermissionHook(helpdesk.create @ dimension:'pariwar')]. Unlike the 6.3 claim intake this is
+// NOT step-up-gated (helpdesk create is not freeze-firing / not in AR-24). The category picker reads
+// the in-force routing policy so the UI is registry-driven (never hardcodes the v1 category set).
+
+const helpdeskBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/helpdesk`;
+
+/** POST the operator call-to-ticket create → the routed ticket (201). `created_via: 'helpline_call'`
+ *  is forced by the TYPE (not just the caller's convention); `operator_attribution` is server-resolved
+ *  (never sent). */
+export function createHelplineTicket(
+  pariwarId: string,
+  body: Omit<CreateTicketRequest, 'created_via'> & { created_via: 'helpline_call' },
+): Promise<HelpdeskTicket> {
+  return apiFetch(`${helpdeskBase(pariwarId)}/tickets`, CreateTicketResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET the in-force routing-policy category set for the operator picker (registry-driven, AC5). */
+export function getHelpdeskCategories(pariwarId: string): Promise<HelpdeskCategoryList> {
+  return apiFetch(`${helpdeskBase(pariwarId)}/categories`, HelpdeskCategoryListResponse);
 }

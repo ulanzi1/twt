@@ -410,3 +410,44 @@ describe('hasPermission — Story 6.9 code review: claim.file does not imply cla
     expect(hasPermission(grants, 'claim.manage_dpdpa_consent', pariwarResource)).toBe(true);
   });
 });
+
+// ── Story 10.3 — helpdesk.create is a pariwar-dimension gate; district ceiling CANNOT satisfy it ────
+//
+// The FIRST helpdesk key gates the operator call-to-ticket route at `dimension: 'pariwar'` (no
+// server-derived district for a helpdesk ticket). This pins BOTH halves of the AC4 grant decision:
+// (1) helpline_operator (the SM-1 C3 actor, `pariwar` ceiling) satisfies it; (2) a `district`-ceiling
+// holder can NEVER satisfy the pariwar check — the reason district_admin is DEFERRED, not granted (an
+// inert grant would read as a capability that does not exist). Uses a synthetic district-ceiling bundle
+// carrying helpdesk.create so the proof is catalog-independent (no seeded role holds this shape).
+describe('hasPermission — Story 10.3: helpdesk.create pariwar gate + district-ceiling deferral', () => {
+  const pariwarResource = resource({ dimension: 'pariwar', value: PARIWAR_A });
+
+  it('helpline_operator (pariwar ceiling) IS allowed helpdesk.create at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'helpline_operator', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'helpdesk.create', pariwarResource)).toBe(true);
+  });
+
+  it('pariwar_admin IS allowed helpdesk.create at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'helpdesk.create', pariwarResource)).toBe(true);
+  });
+
+  it('DEFERRAL PIN: a district-ceiling holder of helpdesk.create is DENIED the pariwar check (inert grant)', () => {
+    // A synthetic role with helpdesk.create at a `district` ceiling, granted at district scope — the
+    // exact shape a district_admin grant would take. It is denied because the pariwar target is broader
+    // than the district grant (scopeContains: target broader than grant → deny).
+    const districtCeilingCtx: Partial<AuthzContext> = {
+      bundles: [
+        { role: 'test_helpdesk_district', permissions: ['helpdesk.create'], scopeCeiling: 'district' },
+      ] as unknown as AuthzContext['bundles'],
+    };
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'test_helpdesk_district', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'helpdesk.create', pariwarResource, districtCeilingCtx)).toBe(false);
+  });
+});

@@ -108,6 +108,8 @@ function toMemberListItem(row: HelpdeskTicketRow): MemberTicketListItem {
     sla_first_response_due: row.slaFirstResponseDue.toISOString(),
     sla_resolution_due: row.slaResolutionDue.toISOString(),
     attachment_count: row.attachments.length,
+    // Story 10.3 (AC3) — the FILING channel (the inbox badges `helpline_call`). Already on the row.
+    created_via: row.createdVia,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };
@@ -135,6 +137,11 @@ function toMemberDetail(
       body: e.body,
       occurred_at: e.occurredAt.toISOString(),
     })),
+    // Story 10.3 (AC3) — the FILING operator's display name for a helpline_call ticket (drives the
+    // "We filed this for you — Operator [Name]" header); null for a self-filed member_app ticket.
+    // Server-snapshotted at create time (the 10.1 handler resolves it via getDisplayName); already on
+    // the row — no new query. The RESPONDER stays role/scope-only (member.ts header exception note).
+    operator_attribution: row.operatorAttribution,
   };
 }
 

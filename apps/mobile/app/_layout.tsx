@@ -198,6 +198,15 @@ function RootLayoutNav() {
           }}
         />
 
+        {/* Story 10.2 — the member helpdesk route group (file + view support tickets). The
+            tickets/:ticketId deep-link destination (the pre-wired helpdesk_reply target). */}
+        <Stack.Screen
+          name="(helpdesk)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
         <Stack.Screen
           name="modal"
           options={{

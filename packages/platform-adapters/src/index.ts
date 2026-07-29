@@ -36,6 +36,17 @@ export type { InMemorySelfVerifyScreenshotStorage } from './self-verify-screensh
 export { createLocalFsSelfVerifyScreenshotStorage } from './self-verify-screenshot-storage/local-fs.js';
 export type { LocalFsSelfVerifyScreenshotStorageOpts } from './self-verify-screenshot-storage/local-fs.js';
 
+// Story 10.2 — helpdesk-attachment object store (a NEW port instance, the 6.5 PATTERN, not a
+// claim-document reuse): the member ticket-filing surface stores photos/PDFs by object key + the
+// signed-URL read is the member's OWN-attachment access. The `HelpdeskAttachmentStorage` PORT lives
+// in `@twt/contracts` (no `getBytes` — no server-side re-fetch consumer).
+export { createGcsHelpdeskAttachmentStorage } from './helpdesk-attachment-storage/gcs.js';
+export type { GcsHelpdeskAttachmentStorageOpts } from './helpdesk-attachment-storage/gcs.js';
+export { createInMemoryHelpdeskAttachmentStorage } from './helpdesk-attachment-storage/in-memory.js';
+export type { InMemoryHelpdeskAttachmentStorage } from './helpdesk-attachment-storage/in-memory.js';
+export { createLocalFsHelpdeskAttachmentStorage } from './helpdesk-attachment-storage/local-fs.js';
+export type { LocalFsHelpdeskAttachmentStorageOpts } from './helpdesk-attachment-storage/local-fs.js';
+
 // Story 6.8 — the abstraction-first `BankIfscLookup` port (interface + adapters bundled) for
 // claim-time IFSC pre-validation (D4). apps/api (member + helpline nominee-bank routes) imports
 // the port type + the in-memory stub. NO real-vendor adapter / CI boundary gate yet (the 6.5

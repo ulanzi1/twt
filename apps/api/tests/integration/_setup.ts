@@ -14,6 +14,7 @@ import type {
   BankStatementStorage,
   ClaimDocumentStorage,
   ContributionNotePdfRenderer,
+  HelpdeskAttachmentStorage,
   SelfVerifyScreenshotStorage,
   StatementScanner,
 } from '@twt/contracts';
@@ -24,12 +25,14 @@ import {
   createInMemoryBankIfscLookup,
   createInMemoryBankStatementStorage,
   createInMemoryClaimDocumentStorage,
+  createInMemoryHelpdeskAttachmentStorage,
   createInMemorySelfVerifyScreenshotStorage,
   createNoOpStatementScanner,
   type FakeContributionNotePdfRenderer,
   type InMemoryBankIfscLookup,
   type InMemoryBankStatementStorage,
   type InMemoryClaimDocumentStorage,
+  type InMemoryHelpdeskAttachmentStorage,
   type InMemorySelfVerifyScreenshotStorage,
 } from '@twt/platform-adapters';
 import type pg from 'pg';
@@ -226,6 +229,7 @@ export interface TestDepsOverrides {
   claimDocumentStorage?: ClaimDocumentStorage;
   bankStatementStorage?: BankStatementStorage;
   selfVerifyScreenshotStorage?: SelfVerifyScreenshotStorage;
+  helpdeskAttachmentStorage?: HelpdeskAttachmentStorage;
   statementScanner?: StatementScanner;
   contributionNotePdfRenderer?: ContributionNotePdfRenderer;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
@@ -249,6 +253,7 @@ export interface TestDeps {
   claimDocumentStorage: InMemoryClaimDocumentStorage;
   bankStatementStorage: InMemoryBankStatementStorage;
   selfVerifyScreenshotStorage: InMemorySelfVerifyScreenshotStorage;
+  helpdeskAttachmentStorage: InMemoryHelpdeskAttachmentStorage;
   statementScanner: StatementScanner;
   contributionNotePdfRenderer: FakeContributionNotePdfRenderer;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
@@ -289,6 +294,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const selfVerifyScreenshotStorage =
     (overrides.selfVerifyScreenshotStorage as InMemorySelfVerifyScreenshotStorage) ??
     createInMemorySelfVerifyScreenshotStorage();
+  const helpdeskAttachmentStorage =
+    (overrides.helpdeskAttachmentStorage as InMemoryHelpdeskAttachmentStorage) ??
+    createInMemoryHelpdeskAttachmentStorage();
   const statementScanner = overrides.statementScanner ?? createNoOpStatementScanner();
   const claimOcrParityQueue =
     (overrides.claimOcrParityQueue as CapturingClaimOcrParityQueue) ??
@@ -362,6 +370,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Self-verify screenshot object store (Story 9.7) — in-memory store so the self-verify upload spec
     // asserts the screenshot bytes were `put` (and that a rejected/no-mismatch upload never reaches storage).
     selfVerifyScreenshotStorage,
+    // Helpdesk-attachment object store (Story 10.2) — in-memory store so the member ticket-filing spec
+    // asserts the uploaded bytes were `put` (and that a rejected upload never reaches storage).
+    helpdeskAttachmentStorage,
     statementScanner,
     contributionNotePdfRenderer,
     // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
@@ -393,6 +404,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     claimDocumentStorage,
     bankStatementStorage,
     selfVerifyScreenshotStorage,
+    helpdeskAttachmentStorage,
     statementScanner,
     contributionNotePdfRenderer,
     claimOcrParityQueue,

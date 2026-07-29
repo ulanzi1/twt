@@ -88,11 +88,26 @@ export interface MemberScopeContextSnapshot {
   subject_member_id: string | null;
 }
 
-/** One attachment reference (object-store key, never bytes). Mirrors the contract shape. */
+/**
+ * The attachment MIME allowlist + count cap (Story 10.2, AC6) -- the DOMAIN mirror of the
+ * `@twt/contracts` `HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES` / `HELPDESK_ATTACHMENT_MAX_COUNT`
+ * (contracts is the authoritative source; contracts cannot import domain -- the RN bundle boundary
+ * -- so it is re-declared here for the event-payload schema, and the tests/helpdesk.test.ts
+ * sync-guard asserts the two never drift, exactly as it does for the category/state tuples).
+ */
+export const HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const;
+export const HELPDESK_ATTACHMENT_MAX_COUNT = 5;
+export type HelpdeskAttachmentMimeType = (typeof HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES)[number];
+
+/**
+ * One attachment reference (object-store key, never bytes). Mirrors the hardened contract shape:
+ * `size_bytes` was ADDED and `content_type` narrowed to the allowlist in Story 10.2 (AC6).
+ */
 export interface HelpdeskAttachmentRef {
   object_key: string;
-  content_type: string;
+  content_type: HelpdeskAttachmentMimeType;
   filename: string;
+  size_bytes: number;
 }
 
 export const helpdeskTickets = pgTable(

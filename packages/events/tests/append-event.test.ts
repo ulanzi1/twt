@@ -170,56 +170,93 @@ describe.skipIf(!hasDatabase)('appendEvent true concurrency (two connections)', 
   });
   afterAll(() => pool.end());
 
-  it('two parallel appendEvent calls — one wins, one throws ConcurrencyError', async () => {
-    const stream = randomUUID();
+  it(
+    'two parallel appendEvent calls — one wins, one throws ConcurrencyError',
+    async () => {
+      // Same mitigation as packages/domain's pool-stream-concurrency.spec.ts (see
+      // [[project_known_livedb_test_failures]] #11): forcing the two connections'
+      // INSERTs to genuinely collide depends on their setup round-trips overlapping,
+      // which was observed NOT happening reliably on GitHub Actions' service-container
+      // Postgres. A same-tick readiness barrier plus a bounded retry on a fresh stream
+      // absorbs environment-specific latency skew without touching production code; if
+      // the unique-index backstop were actually broken, no retry count would ever
+      // produce a collision, so this still fails loud rather than masking a real gap.
+      const MAX_ATTEMPTS = 5;
+      let lastOutcome = '';
 
-    async function attempt(client: pg.PoolClient): Promise<number> {
-      await client.query('BEGIN');
-      await setPariwarScope(client, PARIWAR);
-      const db = drizzle(client, { schema }) as unknown as Db;
-      try {
-        const res = await appendEvent(db, {
-          streamId: stream,
-          eventType: 'test.created',
-          payload: {},
-          expectedVersion: 0,
-          actorId: null,
-          pariwarId: PARIWAR,
+      for (let attemptNum = 1; attemptNum <= MAX_ATTEMPTS; attemptNum++) {
+        const stream = randomUUID();
+
+        let arrivals = 0;
+        let releaseBarrier!: () => void;
+        const barrier = new Promise<void>((resolve) => {
+          releaseBarrier = resolve;
         });
-        await client.query('COMMIT');
-        return res.eventVersion;
-      } catch (e) {
-        await client.query('ROLLBACK').catch(() => undefined);
-        throw e;
+        async function arriveAtBarrier(): Promise<void> {
+          arrivals += 1;
+          if (arrivals === 2) releaseBarrier();
+          await barrier;
+        }
+
+        async function attempt(client: pg.PoolClient): Promise<number> {
+          await client.query('BEGIN');
+          await setPariwarScope(client, PARIWAR);
+          const db = drizzle(client, { schema }) as unknown as Db;
+          await arriveAtBarrier();
+          try {
+            const res = await appendEvent(db, {
+              streamId: stream,
+              eventType: 'test.created',
+              payload: {},
+              expectedVersion: 0,
+              actorId: null,
+              pariwarId: PARIWAR,
+            });
+            await client.query('COMMIT');
+            return res.eventVersion;
+          } catch (e) {
+            await client.query('ROLLBACK').catch(() => undefined);
+            throw e;
+          }
+        }
+
+        const c1 = await pool.connect();
+        const c2 = await pool.connect();
+        let fulfilled: PromiseSettledResult<number>[];
+        let rejected: PromiseSettledResult<number>[];
+        try {
+          const [r1, r2] = await Promise.allSettled([attempt(c1), attempt(c2)]);
+          fulfilled = [r1, r2].filter((r) => r.status === 'fulfilled');
+          rejected = [r1, r2].filter((r) => r.status === 'rejected');
+        } finally {
+          c1.release();
+          c2.release();
+        }
+
+        if (fulfilled.length === 1 && rejected.length === 1) {
+          expect((fulfilled[0] as PromiseFulfilledResult<number>).value).toBe(1);
+
+          const reason = (rejected[0] as PromiseRejectedResult).reason;
+          expect(reason).toBeInstanceOf(ConcurrencyError);
+          expect(reason).toMatchObject({
+            name: 'ConcurrencyError',
+            streamId: stream,
+            expectedVersion: 0,
+          });
+          // Decision 2026-06-09-039 §6: currentVersion is intentionally absent from
+          // ConcurrencyError (callers must not branch on the current version to avoid
+          // TOCTOU races; they must retry from scratch).
+          expect(reason).not.toHaveProperty('currentVersion');
+          return;
+        }
+        lastOutcome = `attempt ${attemptNum}: ${fulfilled.length} fulfilled / ${rejected.length} rejected`;
       }
-    }
 
-    const c1 = await pool.connect();
-    const c2 = await pool.connect();
-    try {
-      const [r1, r2] = await Promise.allSettled([attempt(c1), attempt(c2)]);
-
-      const fulfilled = [r1, r2].filter((r) => r.status === 'fulfilled');
-      const rejected = [r1, r2].filter((r) => r.status === 'rejected');
-
-      expect(fulfilled).toHaveLength(1);
-      expect(rejected).toHaveLength(1);
-      expect((fulfilled[0] as PromiseFulfilledResult<number>).value).toBe(1);
-
-      const reason = (rejected[0] as PromiseRejectedResult).reason;
-      expect(reason).toBeInstanceOf(ConcurrencyError);
-      expect(reason).toMatchObject({
-        name: 'ConcurrencyError',
-        streamId: stream,
-        expectedVersion: 0,
-      });
-      // Decision 2026-06-09-039 §6: currentVersion is intentionally absent from
-      // ConcurrencyError (callers must not branch on the current version to avoid
-      // TOCTOU races; they must retry from scratch).
-      expect(reason).not.toHaveProperty('currentVersion');
-    } finally {
-      c1.release();
-      c2.release();
-    }
-  });
+      throw new Error(
+        `appendEvent true concurrency: no collision observed across ${MAX_ATTEMPTS} attempts (${lastOutcome}) — ` +
+          `either the unique-index backstop is broken, or the two connections never overlapped.`,
+      );
+    },
+    60_000,
+  );
 });

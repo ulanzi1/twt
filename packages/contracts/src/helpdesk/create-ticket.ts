@@ -8,6 +8,7 @@
 import { z } from 'zod';
 
 import { UuidString } from '../_common/primitives.js';
+import { HELPDESK_ATTACHMENT_MAX_COUNT } from './attachment.js';
 import { HelpdeskCategory, HelpdeskSubcategory } from './category.js';
 import { HelpdeskAttachment, HelpdeskCreatedVia, HelpdeskTicketDto } from './ticket.js';
 
@@ -29,7 +30,7 @@ export const CreateTicketRequest = z
     category: HelpdeskCategory,
     sub_category: HelpdeskSubcategory.nullable().optional(),
     body: z.string().min(1).max(5000),
-    attachments: z.array(HelpdeskAttachment).max(10).optional(),
+    attachments: z.array(HelpdeskAttachment).max(HELPDESK_ATTACHMENT_MAX_COUNT).optional(),
     created_via: HelpdeskCreatedVia,
     claim_case_id: UuidString.optional(),
     pool_id: UuidString.optional(),

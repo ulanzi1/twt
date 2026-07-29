@@ -49,6 +49,8 @@ import {
   createNoOpStatementScanner,
   createGcsSelfVerifyScreenshotStorage,
   createLocalFsSelfVerifyScreenshotStorage,
+  createGcsHelpdeskAttachmentStorage,
+  createLocalFsHelpdeskAttachmentStorage,
 } from '@twt/platform-adapters';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
@@ -369,6 +371,19 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
             : {}),
         })
       : createLocalFsSelfVerifyScreenshotStorage(),
+    // Helpdesk-attachment object store (Story 10.2, AC6) — a NEW port instance (the 6.5/9.3 PATTERN,
+    // not a reuse): the live GCS adapter when HELPDESK_ATTACHMENT_BUCKET is set (private bucket,
+    // asia-south1), else a shared local-disk fake (dev/CI). The bytes never touch Postgres; only the
+    // object key + PII-safe metadata (filename/content_type/size) persist on the ticket's JSONB
+    // attachments[]. Same shared-filesystem-fake reasoning as the sibling stores.
+    helpdeskAttachmentStorage: process.env['HELPDESK_ATTACHMENT_BUCKET']
+      ? createGcsHelpdeskAttachmentStorage({
+          bucketName: process.env['HELPDESK_ATTACHMENT_BUCKET'],
+          ...(process.env['GOOGLE_CLOUD_PROJECT']
+            ? { projectId: process.env['GOOGLE_CLOUD_PROJECT'] }
+            : {}),
+        })
+      : createLocalFsHelpdeskAttachmentStorage(),
     // Bank-statement virus-scan seam (Story 9.3, Task 4 / architecture §3.6 "quarantine") — abstraction-
     // first: a no-op/allow-all fake in v1 (no real ClamAV vendor exists yet — the 6.5 `OcrProvider`
     // "no boundary gate until a real vendor" posture). The scan runs BEFORE store+parse in the upload core.

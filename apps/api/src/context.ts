@@ -13,6 +13,7 @@ import type {
   BankStatementStorage,
   ClaimDocumentStorage,
   ContributionNotePdfRenderer,
+  HelpdeskAttachmentStorage,
   PoolSpawnTriggerPayload,
   SelfVerifyScreenshotStorage,
   StatementScanner,
@@ -412,6 +413,14 @@ export interface AppDeps {
    * when the bucket env is set; a shared local-fs fake in dev/CI + tests.
    */
   readonly selfVerifyScreenshotStorage: SelfVerifyScreenshotStorage;
+  /**
+   * Helpdesk-attachment object store (Story 10.2, AC6) — the member ticket-filing route `put`s the
+   * uploaded photo/PDF bytes here; the owning member's ticket-detail screen mints signed read URLs.
+   * A NEW port instance mirroring the 6.5/9.3 storage SHAPE, NOT a reuse (own
+   * `HELPDESK_ATTACHMENT_BUCKET` + key namespace). The live GCS adapter (`asia-south1`) when the
+   * bucket env is set; a shared local-fs fake in dev/CI + tests. No `getBytes` (no re-fetch consumer).
+   */
+  readonly helpdeskAttachmentStorage: HelpdeskAttachmentStorage;
   /**
    * Bank-statement virus-scan seam (Story 9.3, Task 4 / architecture §3.6 "quarantine") — the upload core
    * scans the bytes BEFORE store+parse; an unclean verdict quarantines (dignified reject + audit line).

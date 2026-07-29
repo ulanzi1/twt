@@ -2100,6 +2100,116 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.2 — the member-facing Helpdesk surface (member-session-gated) ─────
+// The member app's ticket-filing surface on the 10.1 substrate: a single-shot multipart create
+// (Turnstile-gated) + ownership-scoped reads + the registry-driven category picker + signed-URL
+// attachment access. `/api/v1/p/{pariwarId}/member/helpdesk/...`; the member JWT is the tenancy
+// authority (the path pariwarId is validated against it).
+const {
+  MemberCreateTicketRequest: MemberCreateTicketRequestSchema,
+  MemberTicketDetailResponse: MemberTicketDetailResponseSchema,
+  MemberTicketListResponse: MemberTicketListResponseSchema,
+  HelpdeskCategoryListResponse: HelpdeskCategoryListResponseSchema,
+  HelpdeskAttachmentUrlResponse: HelpdeskAttachmentUrlResponseSchema,
+} = await import('../src/helpdesk/index.js');
+const MemberCreateTicketFieldsComponent = MemberCreateTicketRequestSchema.openapi('MemberCreateTicketFields');
+const MemberTicketDetailComponent = MemberTicketDetailResponseSchema.openapi('MemberTicketDetail');
+const MemberTicketListComponent = MemberTicketListResponseSchema.openapi('MemberTicketList');
+const HelpdeskCategoryListComponent = HelpdeskCategoryListResponseSchema.openapi('HelpdeskCategoryList');
+const HelpdeskAttachmentUrlComponent = HelpdeskAttachmentUrlResponseSchema.openapi('HelpdeskAttachmentUrl');
+
+const helpdeskTicketParams = z.object({ pariwarId: z.string().uuid(), ticketId: z.string().uuid() });
+const helpdeskAttachmentParams = z.object({
+  pariwarId: z.string().uuid(),
+  ticketId: z.string().uuid(),
+  attachmentIndex: z.string(),
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member/helpdesk/tickets',
+  summary: 'File a helpdesk ticket from the member app (single-shot multipart)',
+  description:
+    'Member-session-gated + Turnstile-gated (FR-88) + Idempotency-Key-gated (review-hardening). ' +
+    'Requires the `x-turnstile-token` and `Idempotency-Key` HEADERS (verified/claimed before the ' +
+    'multipart body is parsed at all — never multipart fields). Accepts multipart/form-data: the ' +
+    'non-file fields (category, sub_category, subject, body) plus up to 5 attachment files ' +
+    '(JPEG/PNG/PDF, 10 MiB each, 25 MiB combined). Forces created_via=member_app and ' +
+    'subject_member_id=the session member; reuses the 10.1 domain routing + genesis orchestration ' +
+    'verbatim. Returns the created ticket detail (status + routing target + SLA + the read-only ' +
+    'opening thread entry) — 201 on a fresh create, or 200 if the Idempotency-Key replays an ' +
+    'already-completed create (the ORIGINAL ticket, never a duplicate).',
+  tags: ['helpdesk'],
+  request: {
+    params: helpdeskPariwarParams,
+    body: {
+      content: { 'multipart/form-data': { schema: MemberCreateTicketFieldsComponent } },
+      required: true,
+    },
+  },
+  responses: {
+    200: { description: 'Replayed — an identical create with this Idempotency-Key already succeeded', content: jsonOf(MemberTicketDetailComponent) },
+    201: { description: 'Ticket created + routed', content: jsonOf(MemberTicketDetailComponent) },
+    400: errorResponse('Request validation failed, or a required header is missing'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Turnstile verification failed'),
+    409: errorResponse('Routing policy misconfigured / create conflict / a matching Idempotency-Key claim is still in progress'),
+    413: errorResponse('An attachment (or the combined attachment set) exceeds the size limit'),
+    415: errorResponse('Unsupported attachment media type'),
+    429: errorResponse('Rate limit exceeded (FR-88 protected-surface write limit)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member/helpdesk/tickets',
+  summary: "The member's own helpdesk tickets (newest-first)",
+  tags: ['helpdesk'],
+  request: { params: helpdeskPariwarParams },
+  responses: {
+    200: { description: "The member's own tickets", content: jsonOf(MemberTicketListComponent) },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member/helpdesk/categories',
+  summary: 'The in-force routing-policy category set (registry-driven)',
+  tags: ['helpdesk'],
+  request: { params: helpdeskPariwarParams },
+  responses: {
+    200: { description: 'Categories + subcategories from the in-force policy', content: jsonOf(HelpdeskCategoryListComponent) },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member/helpdesk/tickets/{ticketId}',
+  summary: "One of the member's own tickets (status + routing + SLA + read-only thread)",
+  tags: ['helpdesk'],
+  request: { params: helpdeskTicketParams },
+  responses: {
+    200: { description: 'The owned ticket detail', content: jsonOf(MemberTicketDetailComponent) },
+    401: errorResponse('Authentication required'),
+    404: errorResponse('Ticket not found (or not owned — no enumeration oracle)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member/helpdesk/tickets/{ticketId}/attachments/{attachmentIndex}/url',
+  summary: "A short-lived signed URL for one of the member's own attachments",
+  tags: ['helpdesk'],
+  request: { params: helpdeskAttachmentParams },
+  responses: {
+    200: { description: 'A short-lived signed read URL', content: jsonOf(HelpdeskAttachmentUrlComponent) },
+    401: errorResponse('Authentication required'),
+    404: errorResponse('Attachment not found (or not owned)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

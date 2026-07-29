@@ -9,6 +9,10 @@
 // The full OpenAPI→client codegen stays deferred (DD-7).
 
 import {
+  HelpdeskAttachmentUrlResponse,
+  HelpdeskCategoryListResponse,
+  MemberTicketDetailResponse,
+  MemberTicketListResponse,
   KycInitiateResponse,
   KycProfileSummaryResponse,
   ImaListResponse,
@@ -276,14 +280,18 @@ function createApiCallers(opts: MemberAuthClientOptions) {
    * Multipart variant of `call` (Story 6.5) — POSTs a `FormData` body (a file upload). Does NOT set
    * `content-type` (the fetch impl derives the multipart boundary from the FormData). Same
    * auth-bearer + error-envelope handling as `call`, so a 409/415/413 surfaces as an `ApiError` the
-   * caller keys on by `error.code`. Parses a JSON response against `schema`.
+   * caller keys on by `error.code`. Parses a JSON response against `schema`. `extraHeaders` (Story
+   * 10.2 review-hardening) merges additional request headers — e.g. `x-turnstile-token` /
+   * `idempotency-key`, sent as headers rather than form fields so the server can gate on them
+   * before it ever parses the multipart body.
    */
   async function callMultipart<T>(
     path: string,
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
     form: FormData,
+    extraHeaders?: Record<string, string>,
   ): Promise<T> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...extraHeaders };
     if (opts.getAccessToken) {
       const token = await opts.getAccessToken();
       if (token) headers['authorization'] = `Bearer ${token}`;
@@ -1008,3 +1016,69 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberClaimClient = ReturnType<typeof createMemberClaimClient>;
+
+/**
+ * The member-app helpdesk client (Story 10.2) — a focused, STANDALONE client over the member
+ * helpdesk surface, sharing only the `call`/`callMultipart` fetch/error/validation machinery with
+ * `createMemberAuthClient` (via `createApiCallers`). The mobile app wires one instance in
+ * `lib/helpdesk-api.ts`.
+ *
+ * The routes are Pariwar-scoped in the PATH (`/api/v1/p/:pariwarId/member/helpdesk/...`), even though
+ * the member JWT is the tenancy authority — so every method takes `pariwarId` (the app reads it from
+ * the stored session). A 403 `helpdesk.turnstile_failed` on create surfaces as `ApiError` (key on
+ * `error.code`); a 413/415/400 attachment error likewise (key on the code for dignified copy).
+ */
+export function createMemberHelpdeskClient(opts: MemberAuthClientOptions) {
+  const { call, callMultipart } = createApiCallers(opts);
+
+  const base = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/member/helpdesk`;
+
+  return {
+    /** The in-force routing-policy category set for the picker (session; auth). */
+    categories(pariwarId: string): Promise<HelpdeskCategoryListResponse> {
+      return call(`${base(pariwarId)}/categories`, HelpdeskCategoryListResponse, undefined, true, 'GET');
+    },
+
+    /** The member's OWN tickets, newest-first (session; auth). */
+    listTickets(pariwarId: string): Promise<MemberTicketListResponse> {
+      return call(`${base(pariwarId)}/tickets`, MemberTicketListResponse, undefined, true, 'GET');
+    },
+
+    /** One owned ticket (status + routing + SLA + read-only thread), or `ApiError` 404 (session; auth). */
+    getTicket(pariwarId: string, ticketId: string): Promise<MemberTicketDetailResponse> {
+      return call(`${base(pariwarId)}/tickets/${encodeURIComponent(ticketId)}`, MemberTicketDetailResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * File a ticket (session; auth) — single-shot multipart. The caller builds the `FormData` with the
+     * fields (category, sub_category?, subject, body) + up to 5 `attachment` files (RN:
+     * `{ uri, name, type }`). `turnstileToken` and `idempotencyKey` ride HEADERS, not form fields
+     * (review-hardening) — `x-turnstile-token` and `Idempotency-Key` respectively, so the server can
+     * gate on them before parsing the multipart body. Returns the created ticket detail (201), or
+     * the ORIGINAL detail (200) if `idempotencyKey` replays a request already completed.
+     */
+    createTicket(
+      pariwarId: string,
+      form: FormData,
+      opts: { turnstileToken: string; idempotencyKey: string },
+    ): Promise<MemberTicketDetailResponse> {
+      return callMultipart(`${base(pariwarId)}/tickets`, MemberTicketDetailResponse, form, {
+        'x-turnstile-token': opts.turnstileToken,
+        'idempotency-key': opts.idempotencyKey,
+      });
+    },
+
+    /** A short-lived signed URL for one of the member's OWN attachments, by array index (session; auth). */
+    attachmentUrl(pariwarId: string, ticketId: string, attachmentIndex: number): Promise<HelpdeskAttachmentUrlResponse> {
+      return call(
+        `${base(pariwarId)}/tickets/${encodeURIComponent(ticketId)}/attachments/${attachmentIndex}/url`,
+        HelpdeskAttachmentUrlResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+  };
+}
+
+export type MemberHelpdeskClient = ReturnType<typeof createMemberHelpdeskClient>;

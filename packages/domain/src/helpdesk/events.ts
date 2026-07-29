@@ -24,6 +24,8 @@ import { z } from 'zod';
 
 import { SCOPE_DIMENSIONS } from '../rbac/scope.js';
 import {
+  HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES,
+  HELPDESK_ATTACHMENT_MAX_COUNT,
   HELPDESK_CATEGORIES,
   HELPDESK_CREATED_VIA_VALUES,
   HELPDESK_TICKET_STATES,
@@ -77,12 +79,15 @@ export const TargetScopePayloadSchema = z
   })
   .strict();
 
-/** One attachment reference embedded in the genesis (object key, never bytes). */
+/** One attachment reference embedded in the genesis (object key, never bytes). Hardened in Story
+ *  10.2 (AC6): `content_type` is the MIME allowlist and `size_bytes` was added -- kept in lockstep
+ *  with the `@twt/contracts` `HelpdeskAttachment` by the sync-guard test. */
 export const HelpdeskAttachmentPayloadSchema = z
   .object({
     object_key: z.string().min(1).max(1024),
-    content_type: z.string().min(1).max(255),
+    content_type: z.enum(HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES),
     filename: z.string().min(1).max(255),
+    size_bytes: z.number().int().positive(),
   })
   .strict();
 
@@ -101,7 +106,7 @@ export const HelpdeskTicketCreatedPayloadSchema = z
     category: helpdeskCategorySchema,
     sub_category: z.string().min(1).max(64).nullable(),
     body: z.string().min(1).max(5000),
-    attachments: z.array(HelpdeskAttachmentPayloadSchema).max(10),
+    attachments: z.array(HelpdeskAttachmentPayloadSchema).max(HELPDESK_ATTACHMENT_MAX_COUNT),
     member_scope_context: MemberScopeContextPayloadSchema,
     routing_policy_version: z.number().int().positive(),
     target_role: z.string().min(1).max(64),

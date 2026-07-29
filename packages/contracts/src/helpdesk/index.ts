@@ -8,5 +8,7 @@
 export * from './category.js';
 export * from './status.js';
 export * from './routing.js';
+export * from './attachment.js';
 export * from './ticket.js';
 export * from './create-ticket.js';
+export * from './member.js';

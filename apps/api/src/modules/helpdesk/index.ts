@@ -8,8 +8,11 @@
 import type { FastifyInstance } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
+import { registerMemberHelpdeskRoutes } from './member-routes.js';
 import { registerHelpdeskRoutes } from './routes.js';
 
 export function registerHelpdeskModule(app: FastifyInstance, deps: AppDeps): void {
   registerHelpdeskRoutes(app, deps);
+  // Story 10.2 — the member-app ticket-filing surface (member-session-gated) on the same substrate.
+  registerMemberHelpdeskRoutes(app, deps);
 }

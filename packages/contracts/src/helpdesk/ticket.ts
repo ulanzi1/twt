@@ -8,6 +8,11 @@
 import { z } from 'zod';
 
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
+import {
+  HELPDESK_ATTACHMENT_MAX_BYTES,
+  HELPDESK_ATTACHMENT_MAX_COUNT,
+  HelpdeskAttachmentContentType,
+} from './attachment.js';
 import { HelpdeskCategory, HelpdeskSubcategory } from './category.js';
 import { HelpdeskGrantScope, MemberScopeContext } from './routing.js';
 import { HelpdeskTicketState } from './status.js';
@@ -19,14 +24,18 @@ export type HelpdeskCreatedVia = z.output<typeof HelpdeskCreatedVia>;
 
 /**
  * One attachment reference. A ticket carries object-store REFERENCES, never bytes (the
- * claim-document storage posture) — 10.1 defines the reference shape; the upload transport +
- * signed-URL access are the member/admin surfaces (10.2/10.4). Minimal + forward-compatible.
+ * claim-document storage posture). Story 10.2 HARDENED this (AC6, the chunk-3 deferred finding):
+ * `content_type` is now the MIME allowlist (was a free `.max(255)` string), `size_bytes` is a
+ * bounded positive int (was ABSENT), and `filename` is sanitized upstream (server-side, via
+ * `sanitizeAttachmentFilename`) before it ever reaches this shape. Kept in lockstep with the
+ * domain `HelpdeskAttachmentRef` / `HelpdeskAttachmentPayloadSchema` (the sync-guard test).
  */
 export const HelpdeskAttachment = z
   .object({
     object_key: z.string().min(1).max(1024),
-    content_type: z.string().min(1).max(255),
+    content_type: HelpdeskAttachmentContentType,
     filename: z.string().min(1).max(255),
+    size_bytes: z.number().int().positive().max(HELPDESK_ATTACHMENT_MAX_BYTES),
   })
   .strict();
 export type HelpdeskAttachment = z.output<typeof HelpdeskAttachment>;
@@ -50,7 +59,8 @@ export const HelpdeskTicketDto = z
     // spelled differently in the 201 response).
     sub_category: HelpdeskSubcategory.nullable(),
     body: z.string().min(1),
-    attachments: z.array(HelpdeskAttachment),
+    // Capped consistently with the create request (AC6) — 10.1 left the persisted array uncapped.
+    attachments: z.array(HelpdeskAttachment).max(HELPDESK_ATTACHMENT_MAX_COUNT),
     /** Projector-derived (AC4). Read-only on the wire. */
     current_state: HelpdeskTicketState,
     routed_to_scope: HelpdeskGrantScope,

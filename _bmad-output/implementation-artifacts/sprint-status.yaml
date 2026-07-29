@@ -1,4 +1,71 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-29d (10-2-member-facing-helpdesk-ticket-filing: review -> done via
+#   bmad-code-review — 3-layer adversarial review (Blind Hunter / Edge Case Hunter / Acceptance
+#   Auditor) over the full diff (~3477 lines, ~40 files, generated openapi/v1.yaml excluded). 3
+#   decisions resolved + 13 direct patches = 16 patches applied: Turnstile token moved to an
+#   x-turnstile-token HEADER (verified before any multipart parsing, closing the
+#   buffer-before-verify gap the file's own comment claimed didn't exist); an Idempotency-Key HEADER
+#   + a keyed-store claim/replay on create (closes the item 10.1's own review explicitly deferred to
+#   this story); a subcategory picker added to new.tsx (categoriesForPariwar already returned
+#   sub_categories, the UI never used them); an aggregate attachment-size cap (25 MiB combined, was
+#   per-file-only, ~50 MiB worst case); the subject/body join delimiter now newline-collapsed at the
+#   contract layer (no more \n\n corruption on a pasted multi-line subject); a literal NUL byte in
+#   helpdesk.test.ts (which made git/GitHub treat the whole file as binary, hiding its diff) escaped
+#   to \u0000; MemberTicketDetailResponse.attachments capped consistently with HelpdeskTicketDto;
+#   new.tsx now imports its limits from @twt/contracts instead of local magic numbers (+ i18n copy
+#   parameterized); the SLA line is now a real relative-time countdown (hour/day buckets, en/hi) not
+#   an absolute date; readCreateMultipart drains ALL remaining multipart parts on an early violation,
+#   not just the first; an empty-string sub_category no longer 400s the whole request; a misleading
+#   route-ordering comment + dead getPariwarId() removed; the category picker gets an empty-state. 1
+#   item deferred (attachment content-type trusted from the client, no magic-byte sniffing — matches
+#   the pre-existing claim-document-storage posture, a systemic gap not introduced here). 8 findings
+#   dismissed as noise/already-resolved (see the story's Review Findings section for the full list +
+#   reasoning). openapi/v1.yaml regenerated + determinism-checked. Validated: typecheck + lint clean
+#   across contracts/domain/api/api-client/mobile; full @twt/domain (1834 tests, 180 files) + full
+#   @twt/api integration (446 tests, 59 files) green on a freshly-migrated twt_dev (3 first-seen
+#   flakes — cross-pariwar-leak / rls-policy-regression / active-contribution-read — were
+#   own-committing accumulation from repeated local runs against the long-lived shared test DB, the
+#   same class 10.2's own dev pass hit; proven environmental by a DB reset + re-run going fully
+#   green). [[project_live_db_test_gotchas]], [[project_known_livedb_test_failures]].
+# last_updated: 2026-07-29c (10-2-member-facing-helpdesk-ticket-filing: ready-for-dev -> in-progress ->
+#   review via bmad-dev-story [Opus 4.8]. The member-app helpdesk file+view SURFACE on 10.1's substrate,
+#   all 8 tasks + 8 ACs. Contracts: hardened HelpdeskAttachment (size_bytes + MIME allowlist + filename
+#   sanitize + .max(5) both places, the deferred chunk-3 finding) + member DTOs + HelpdeskAttachmentStorage
+#   port; domain re-declares the allowlist/cap (sync-guard). Storage: in-memory/local-fs/gcs adapter trio
+#   wired via deps/context (new HELPDESK_ATTACHMENT_BUCKET). API: /p/:pariwarId/member/helpdesk/{tickets(POST
+#   single-shot multipart, Turnstile-gated + per-member FR-88 write limit + openScopeTx RLS, reuses 10.1
+#   projectTicketGenesis, created_via=member_app + subject_member_id forced),tickets(GET list),tickets/:id
+#   (GET detail 404-not-403),categories(GET),tickets/:id/attachments/:index/url(GET signed, ownership
+#   re-checked)}. Domain reads: listTicketsForMember/getTicketForMember (ownership in WHERE) + ONE
+#   forward-compatible replayTicketThread (proven vs a seeded reply event, path (b), zero change for 10.4) +
+#   categoriesForPariwar + join/split subject-body (no migration; subject encoded in body). i18n: helpdesk
+#   namespace en/hi (parity gate green, no jargon/no "SLA"/role-only routing). api-client
+#   createMemberHelpdeskClient + apps/mobile/app/(helpdesk)/ (inbox/new/detail, Tamagui + TanStack Query,
+#   FlatList empty-crash guard, expo picker multipart, [ticketId]=helpdesk_reply deep-link dest). Tests:
+#   member-helpdesk live-DB E2E (create/ownership-404/attachment-413-415-400-sanitize/category/turnstile-403/
+#   401) + domain thread-reader + contracts hardening + mobile draft/render. pnpm ci:local GREEN (29 jobs) on
+#   a fresh DB (the 4 first-seen count flakes were own-committing accumulation, proven env not regression via
+#   the alerts test 10.2 never touches). FORWARD COMMITMENT: RN Turnstile widget owed before prod behind a
+#   live verifier (mobile sends a placeholder token; no-op verifier accepts in dev/CI). Reply-WRITE + reply
+#   push EMITTER remain 10.4. Saved 10-2-*.md.)
+# last_updated: 2026-07-29b (10-2-member-facing-helpdesk-ticket-filing: backlog -> ready-for-dev via
+#   bmad-create-story — the member-app helpdesk SURFACE on 10.1's substrate. Scope = file + view (NO
+#   admin side, NO reply round-trip): member-session create route (/p/:pariwarId/member/helpdesk/tickets,
+#   requireMemberSession + openScopeTx for RLS + FR-88 write rate-limit, reuses 10.1's projectTicketGenesis
+#   verbatim, subject_member_id forced to the session member, created_via=member_app becomes legal here) +
+#   ownership-scoped reads (list/detail, not-owned -> 404 no enumeration oracle, detail renders a read-only
+#   reply thread from event replay) + registry-driven category read + attachment upload transport (reuse the
+#   Story 6.5 object-store PORT: HelpdeskAttachmentStorage in-memory/local-fs/gcs + signed-URL, hardens the
+#   deferred chunk-3 HelpdeskAttachment finding: adds size_bytes + MIME allowlist + array cap + filename
+#   sanitization; NO migration — JSONB attachments[] on the 0084 row) + apps/mobile/app/(helpdesk)/ UI
+#   (category picker/filing form/inbox/detail with routing target + SLA countdown, Hindi-first helpdesk i18n
+#   namespace, UX-DR55 dignified copy) + createMemberHelpdeskClient. RATIFIED BY BIGDEV (Q1, 2026-07-29):
+#   member reply-APPEND write (helpdesk.member_replied) + the helpdesk_reply push EMITTER both defer to 10.4
+#   so the reply round-trip lands + tests as one unit (10.2 only CONSUMES the pre-wired helpdesk_reply
+#   deep-link -> tickets/:ticketId). Turnstile has no reusable primitive -> FR-88 rate-limit is the concrete
+#   bot-gate, recorded as explicit deferral not silent omission. Reality-checked vs code: member routes DO
+#   open their own openScopeTx (RLS still applies; only the admin RBAC hook is absent) + HelpdeskAttachment
+#   had no size field / no array cap today. Saved 10-2-*.md.)
 # last_updated: 2026-07-29a (10-1-helpdesk-subsystem-data-model-routing-policy-registry: review -> done
 #   via bmad-code-review — 6-chunk adversarial review (domain source, domain tests, contracts, API route,
 #   migration + CI gate, peripheral/generated), 3 parallel layers (Blind Hunter / Edge Case Hunter /
@@ -1758,7 +1825,7 @@ development_status:
   # ==========================================================================
   epic-10: in-progress
   10-1-helpdesk-subsystem-data-model-routing-policy-registry: done
-  10-2-member-facing-helpdesk-ticket-filing: backlog
+  10-2-member-facing-helpdesk-ticket-filing: done
   10-3-helpline-call-to-ticket-operator-surface: backlog
   10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: backlog
   10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: backlog

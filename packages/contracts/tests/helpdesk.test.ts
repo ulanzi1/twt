@@ -12,6 +12,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CreateTicketRequest,
+  HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES,
+  HELPDESK_ATTACHMENT_MAX_BYTES,
+  HELPDESK_ATTACHMENT_MAX_COUNT,
   HELPDESK_CATEGORIES,
   HELPDESK_CREATED_VIA,
   HELPDESK_SCOPE_DIMENSIONS,
@@ -19,10 +22,13 @@ import {
   HelpdeskAttachment,
   HelpdeskGrantScope,
   HelpdeskTicketDto,
+  MemberCreateTicketRequest,
   MemberScopeContext,
+  MemberTicketDetailResponse,
   RoutingDecision,
   RoutingPolicyDocument,
   RoutingRule,
+  sanitizeAttachmentFilename,
 } from '../src/helpdesk/index.js';
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
@@ -44,6 +50,128 @@ describe('helpdesk contracts ↔ @twt/domain tuple sync-guard', () => {
 
   it('HELPDESK_SCOPE_DIMENSIONS matches the domain rbac SCOPE_DIMENSIONS', () => {
     expect([...HELPDESK_SCOPE_DIMENSIONS]).toEqual([...rbac.SCOPE_DIMENSIONS]);
+  });
+
+  // Story 10.2 (AC6) — the attachment allowlist + count cap are the authoritative source in
+  // contracts and re-declared in @twt/domain (for the event-payload schema). Guard the drift the
+  // same way the category/state tuples are guarded.
+  it('HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES matches the domain re-declaration', () => {
+    expect([...HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES]).toEqual([...schema.HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES]);
+  });
+
+  it('HELPDESK_ATTACHMENT_MAX_COUNT matches the domain re-declaration', () => {
+    expect(HELPDESK_ATTACHMENT_MAX_COUNT).toBe(schema.HELPDESK_ATTACHMENT_MAX_COUNT);
+  });
+});
+
+describe('HelpdeskAttachment — Story 10.2 hardening (AC6)', () => {
+  const good = { object_key: 'pariwar/p/helpdesk/t/a', content_type: 'application/pdf', filename: 'proof.pdf', size_bytes: 2048 };
+
+  it('accepts a well-formed hardened attachment', () => {
+    expect(HelpdeskAttachment.safeParse(good).success).toBe(true);
+  });
+
+  it('rejects a content_type outside the MIME allowlist', () => {
+    expect(HelpdeskAttachment.safeParse({ ...good, content_type: 'application/zip' }).success).toBe(false);
+    expect(HelpdeskAttachment.safeParse({ ...good, content_type: 'text/html' }).success).toBe(false);
+  });
+
+  it('accepts every allowlisted MIME type', () => {
+    for (const mime of HELPDESK_ATTACHMENT_ALLOWED_MIME_TYPES) {
+      expect(HelpdeskAttachment.safeParse({ ...good, content_type: mime }).success).toBe(true);
+    }
+  });
+
+  it('requires size_bytes and rejects non-positive / oversize values', () => {
+    const noSize = { object_key: good.object_key, content_type: good.content_type, filename: good.filename };
+    expect(HelpdeskAttachment.safeParse(noSize).success).toBe(false);
+    expect(HelpdeskAttachment.safeParse({ ...good, size_bytes: 0 }).success).toBe(false);
+    expect(HelpdeskAttachment.safeParse({ ...good, size_bytes: -1 }).success).toBe(false);
+    expect(HelpdeskAttachment.safeParse({ ...good, size_bytes: HELPDESK_ATTACHMENT_MAX_BYTES + 1 }).success).toBe(false);
+    expect(HelpdeskAttachment.safeParse({ ...good, size_bytes: HELPDESK_ATTACHMENT_MAX_BYTES }).success).toBe(true);
+  });
+
+  it('rejects an unknown key (.strict())', () => {
+    expect(HelpdeskAttachment.safeParse({ ...good, extra: 1 }).success).toBe(false);
+  });
+});
+
+describe('sanitizeAttachmentFilename — path/control-char stripping (AC6)', () => {
+  it('strips path traversal + directory components to the basename', () => {
+    expect(sanitizeAttachmentFilename('../../etc/passwd')).toBe('passwd');
+    expect(sanitizeAttachmentFilename('/abs/path/to/file.png')).toBe('file.png');
+    expect(sanitizeAttachmentFilename('a\\b\\c.pdf')).toBe('c.pdf');
+  });
+
+  it('removes control characters (incl. NUL, newline, tab)', () => {
+    expect(sanitizeAttachmentFilename('good\u0000name.png')).toBe('goodname.png');
+    expect(sanitizeAttachmentFilename('my  photo.png')).toBe('my photo.png');
+  });
+
+  it('falls back to a safe default when the name sanitizes to empty', () => {
+    expect(sanitizeAttachmentFilename('////')).toBe('attachment');
+    expect(sanitizeAttachmentFilename('')).toBe('attachment');
+  });
+
+  it('bounds the length to 255 chars', () => {
+    expect(sanitizeAttachmentFilename('x'.repeat(400)).length).toBe(255);
+  });
+});
+
+describe('MemberCreateTicketRequest — Story 10.2 review-hardening', () => {
+  const base = { category: 'kyc-trouble' as const, subject: 'My KYC photo keeps failing', body: 'help' };
+
+  it('accepts a well-formed member request', () => {
+    expect(MemberCreateTicketRequest.safeParse(base).success).toBe(true);
+  });
+
+  it('rejects `turnstileToken` — it rides the x-turnstile-token HEADER, never a body/form field', () => {
+    expect(MemberCreateTicketRequest.safeParse({ ...base, turnstileToken: 'x' }).success).toBe(false);
+  });
+
+  it('collapses an embedded blank line in `subject` to a single space (never throws, never corrupts the join delimiter)', () => {
+    const r = MemberCreateTicketRequest.safeParse({ ...base, subject: 'Line one\n\nLine two' });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.subject).toBe('Line one Line two');
+  });
+
+  it('collapses a subject that is ONLY blank lines to empty and rejects it (min(1) re-checked post-transform)', () => {
+    expect(MemberCreateTicketRequest.safeParse({ ...base, subject: '\n\n' }).success).toBe(false);
+  });
+});
+
+describe('MemberTicketDetailResponse — attachments cap (Task 1 consistency)', () => {
+  const baseDetail = {
+    ticket_id: '44444444-4444-4444-4444-444444444444',
+    category: 'kyc-trouble' as const,
+    sub_category: null,
+    subject: 'My KYC photo keeps failing',
+    current_state: 'open' as const,
+    routed_to_role: 'helpline_operator',
+    routed_to_scope: { dimension: 'pariwar' as const, value: PARIWAR },
+    sla_first_response_due: '2026-08-04T06:00:00.000Z',
+    sla_resolution_due: '2026-08-08T18:30:00.000Z',
+    attachment_count: 0,
+    created_at: '2026-08-03T06:00:00.000Z',
+    updated_at: '2026-08-03T06:00:00.000Z',
+    body: 'help',
+    thread: [],
+  };
+  const attachment = { filename: 'f.png', content_type: 'image/png' as const, size_bytes: 1024 };
+
+  it('boundary: exactly HELPDESK_ATTACHMENT_MAX_COUNT attachments accepted, +1 rejected — consistent with HelpdeskTicketDto', () => {
+    expect(
+      MemberTicketDetailResponse.safeParse({
+        ...baseDetail,
+        attachments: Array(HELPDESK_ATTACHMENT_MAX_COUNT).fill(attachment),
+      }).success,
+    ).toBe(true);
+    expect(
+      MemberTicketDetailResponse.safeParse({
+        ...baseDetail,
+        attachments: Array(HELPDESK_ATTACHMENT_MAX_COUNT + 1).fill(attachment),
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -118,10 +246,19 @@ describe('CreateTicketRequest — .strict() + superRefine', () => {
     expect(CreateTicketRequest.safeParse({ ...base, body: 'x'.repeat(5001) }).success).toBe(false);
   });
 
-  it('boundary: exactly 10 attachments accepted, 11 rejected', () => {
-    const attachment = { object_key: 'k', content_type: 'image/png', filename: 'f.png' };
-    expect(CreateTicketRequest.safeParse({ ...base, attachments: Array(10).fill(attachment) }).success).toBe(true);
-    expect(CreateTicketRequest.safeParse({ ...base, attachments: Array(11).fill(attachment) }).success).toBe(false);
+  // Story 10.2 (AC6) LOWERED the cap from 10 to HELPDESK_ATTACHMENT_MAX_COUNT (5) and hardened the
+  // attachment shape (size_bytes + MIME allowlist). The boundary numbers move with the constant so a
+  // future cap change updates one place; the assertion is expressed against the constant, not a magic 5.
+  it('boundary: exactly HELPDESK_ATTACHMENT_MAX_COUNT attachments accepted, +1 rejected', () => {
+    const attachment = { object_key: 'k', content_type: 'image/png', filename: 'f.png', size_bytes: 1024 };
+    expect(
+      CreateTicketRequest.safeParse({ ...base, attachments: Array(HELPDESK_ATTACHMENT_MAX_COUNT).fill(attachment) })
+        .success,
+    ).toBe(true);
+    expect(
+      CreateTicketRequest.safeParse({ ...base, attachments: Array(HELPDESK_ATTACHMENT_MAX_COUNT + 1).fill(attachment) })
+        .success,
+    ).toBe(false);
   });
 
   it('rejects an empty-string sub_category', () => {
@@ -202,7 +339,7 @@ describe('RoutingDecision / MemberScopeContext / HelpdeskAttachment — basic pa
   });
 
   it('HelpdeskAttachment parses a well-formed reference', () => {
-    const attachment = { object_key: 'k', content_type: 'image/png', filename: 'f.png' };
+    const attachment = { object_key: 'k', content_type: 'image/png', filename: 'f.png', size_bytes: 4096 };
     expect(HelpdeskAttachment.safeParse(attachment).success).toBe(true);
   });
 });

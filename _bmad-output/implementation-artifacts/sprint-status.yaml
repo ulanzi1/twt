@@ -1,4 +1,40 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-30h (10-6-bulk-operations-framework: review -> done via bmad-code-review (3 parallel
+#   layers: Blind Hunter diff-only, Edge Case Hunter diff+project-access, Acceptance Auditor diff+spec, cross-
+#   verified against the real checkPermission/writeAuditEntry implementations). 14 patch findings applied (4
+#   originally decision-needed, resolved by product owner): itemRef/scope-locator collision fix via new
+#   optional BulkOperation.itemId contract method (undermined AC4 audit-line distinctness + AC7 divergence
+#   keying, proven against shipped fixtures); auditItem required in execute mode (BulkAuditItemRequiredError);
+#   per-item fault isolation extended to targetLocatorOf/evaluate/csvRow (was apply-only); checkPermission now
+#   uses per-item locator.dimension not the static op.scopeDimension; registry-lookup-before-cap-check
+#   ordering; requestPayloadHash now hashes the item not the outcome; out-of-scope audit responseStatus 200
+#   -> 403; contracts reason field tightened to z.discriminatedUnion (openapi/v1.yaml regenerated,
+#   deterministic); registry duplicate-registration guard; CSV formula-injection neutralization (OWASP);
+#   error-message truncation; the AC8-mandated real-5001-item cap test added; AC1 signature text + a
+#   misleading Dev Agent Record claim corrected. Domain unit tests 32->57, contracts tests 16->20, all green;
+#   pnpm ci:local 28/28 static gates + live-DB isolation run independently re-verified post-patch. 7
+#   lower-priority findings deferred to deferred-work.md.)
+# last_updated: 2026-07-30g (10-6-bulk-operations-framework: ready-for-dev -> in-progress -> review via
+#   bmad-dev-story. Implemented packages/domain/src/bulk-operations/{types,registry,errors,execute,csv,
+#   index}.ts: single bulkExecute(dryRun flag) parity spine (one evaluator code path, dryRun gates only
+#   apply+audit), per-item checkPermission scope-skip (deny-deeper geo pin honoured), 5k harness-enforced
+#   cap fail-closed both modes, per-item-failure-does-not-roll-back, injected auditItem seam (batch_id ->
+#   traceId), pure RFC-4180 toCsv, AC7b Open/Closed proof (two divergent fixture ops + a structural
+#   no-operationType-branch regex check). Registry seeded empty; no real operation, no apps/api route, no
+#   migration, no new RBAC key. packages/contracts/src/bulk-operations/ DTOs + emit-openapi.ts component-
+#   only registration (no paths, the 1.7/1.8 precedent) + openapi/v1.yaml regen (deterministic). Domain
+#   unit (32) + contracts (16) + live-DB traceId-membership integration test all green; pnpm ci:local 28/28
+#   static gates green (isolated live-DB spec run separately per the known ci_local_double_run_pollution
+#   memory — unrelated pre-existing flake observed on other specs during an exploratory full run, not
+#   touched by this story).
+# last_updated: 2026-07-30f (10-6-bulk-operations-framework: backlog -> ready-for-dev via bmad-create-story.
+#   [PRIMITIVE] — pure domain harness (packages/domain/src/bulk-operations/) consumed by later surfaces
+#   (10.10 moderation / 10.12 custom fields / notifications); NO admin UI, NO apps/api route, NO real
+#   operation (registry seeded empty + test-only fixture op). Load-bearing = dry-run parity invariant:
+#   ONE bulkExecute(dryRun flag), same scope-check + evaluate path both modes, CI byte-identical test +
+#   silent-divergence mutation proof. Reuses checkPermission (per-item scope skip) + writeAuditEntry via
+#   INJECTED seam (batch_id -> traceId, Decision 3). 5k cap fail-closed in harness. NO migration, NO new
+#   RBAC key (catalog stays v25), NO events. CSV content-only; durable/async download -> 10.7. Saved 10-6-*.md.)
 # last_updated: 2026-07-30e (10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post:
 #   review -> done via bmad-code-review (3 parallel layers: Blind Hunter diff-only, Edge Case Hunter
 #   diff+project-access, Acceptance Auditor diff+spec). 27 raw findings deduped to 4 decision-needed +
@@ -2015,7 +2051,7 @@ development_status:
   10-3-helpline-call-to-ticket-operator-surface: done
   10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: done
   10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: done
-  10-6-bulk-operations-framework: backlog
+  10-6-bulk-operations-framework: done
   10-7-reports-exports-library-async-generation-scope-respecting: backlog
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: backlog
   10-9-banner-popup-manager-valid-from-until-dismiss: backlog

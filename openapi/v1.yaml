@@ -3208,6 +3208,472 @@ components:
         - receipt
         - renewed
       additionalProperties: false
+    BulkExecuteRequest:
+      type: object
+      properties:
+        operation_type:
+          type: string
+          minLength: 1
+          maxLength: 128
+        target_set:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          maxItems: 5000
+        dry_run:
+          type: boolean
+      required:
+        - operation_type
+        - target_set
+        - dry_run
+      additionalProperties: false
+    BulkPreviewResponse:
+      type: object
+      properties:
+        batch_id:
+          type: string
+          minLength: 1
+          maxLength: 256
+        counts:
+          type: object
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            would_succeed:
+              type: integer
+              minimum: 0
+            would_fail:
+              type: integer
+              minimum: 0
+            skipped:
+              type: integer
+              minimum: 0
+            succeeded:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+          required:
+            - total
+            - would_succeed
+            - would_fail
+            - skipped
+            - succeeded
+            - failed
+          additionalProperties: false
+        items:
+          type: array
+          items:
+            oneOf:
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - would_succeed
+                required:
+                  - item_ref
+                  - status
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - succeeded
+                required:
+                  - item_ref
+                  - status
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - would_fail
+                  reason:
+                    type: string
+                    maxLength: 512
+                required:
+                  - item_ref
+                  - status
+                  - reason
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - skipped
+                  reason:
+                    type: string
+                    maxLength: 512
+                required:
+                  - item_ref
+                  - status
+                  - reason
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - failed
+                  reason:
+                    type: string
+                    maxLength: 512
+                required:
+                  - item_ref
+                  - status
+                  - reason
+                additionalProperties: false
+        preview_csv:
+          type: string
+        divergences:
+          type: array
+          items:
+            type: object
+            properties:
+              item_ref:
+                type: string
+                minLength: 1
+                maxLength: 256
+              expected:
+                oneOf:
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_succeed
+                    required:
+                      - outcome
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_fail
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - skipped
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+              actual:
+                oneOf:
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_succeed
+                    required:
+                      - outcome
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_fail
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - skipped
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+              reason:
+                type: string
+                maxLength: 512
+            required:
+              - item_ref
+              - expected
+              - actual
+              - reason
+            additionalProperties: false
+      required:
+        - batch_id
+        - counts
+        - items
+        - preview_csv
+        - divergences
+      additionalProperties: false
+    BulkResultResponse:
+      type: object
+      properties:
+        batch_id:
+          type: string
+          minLength: 1
+          maxLength: 256
+        counts:
+          type: object
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            would_succeed:
+              type: integer
+              minimum: 0
+            would_fail:
+              type: integer
+              minimum: 0
+            skipped:
+              type: integer
+              minimum: 0
+            succeeded:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+          required:
+            - total
+            - would_succeed
+            - would_fail
+            - skipped
+            - succeeded
+            - failed
+          additionalProperties: false
+        items:
+          type: array
+          items:
+            oneOf:
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - would_succeed
+                required:
+                  - item_ref
+                  - status
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - succeeded
+                required:
+                  - item_ref
+                  - status
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - would_fail
+                  reason:
+                    type: string
+                    maxLength: 512
+                required:
+                  - item_ref
+                  - status
+                  - reason
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - skipped
+                  reason:
+                    type: string
+                    maxLength: 512
+                required:
+                  - item_ref
+                  - status
+                  - reason
+                additionalProperties: false
+              - type: object
+                properties:
+                  item_ref:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  status:
+                    type: string
+                    enum:
+                      - failed
+                  reason:
+                    type: string
+                    maxLength: 512
+                required:
+                  - item_ref
+                  - status
+                  - reason
+                additionalProperties: false
+        error_csv:
+          type: string
+        divergences:
+          type: array
+          items:
+            type: object
+            properties:
+              item_ref:
+                type: string
+                minLength: 1
+                maxLength: 256
+              expected:
+                oneOf:
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_succeed
+                    required:
+                      - outcome
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_fail
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - skipped
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+              actual:
+                oneOf:
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_succeed
+                    required:
+                      - outcome
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - would_fail
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      outcome:
+                        type: string
+                        enum:
+                          - skipped
+                      reason:
+                        type: string
+                        maxLength: 512
+                    required:
+                      - outcome
+                      - reason
+                    additionalProperties: false
+              reason:
+                type: string
+                maxLength: 512
+            required:
+              - item_ref
+              - expected
+              - actual
+              - reason
+            additionalProperties: false
+      required:
+        - batch_id
+        - counts
+        - items
+        - error_csv
+        - divergences
+      additionalProperties: false
     HelpdeskTicket:
       type: object
       properties:

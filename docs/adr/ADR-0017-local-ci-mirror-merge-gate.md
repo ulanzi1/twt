@@ -1,11 +1,11 @@
 # ADR-0017: Local CI mirror (`pnpm ci:local` + pre-push hook) as sanctioned merge gate during GitHub Actions suspension
 
-> **Status:** superseded
-> **Date:** 2026-07-30 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-06-21 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Epic 1 retrospective AI-4 closure
 > **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session). Ratified as **interim policy** until GitHub Actions is restored — a successor ADR is required on restoration (Decision 2026-06-20-052). Logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
-> **Superseded by:** ADR-0036-github-actions-reinstatement
+> **Superseded by:** —
 
 ## Context
 
@@ -94,6 +94,5 @@ When GitHub Actions is restored, this ADR is superseded by a successor entry tha
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
-| 2026-07-30 | ratified → superseded | BigDev (Solo Builder) | GitHub Actions account suspension lifted; superseded by `ADR-0036-github-actions-reinstatement` per this ADR's own §5 transition plan. `ci:local` + `.githooks/pre-push` retained as a secondary pre-push developer check, not deleted — see ADR-0036 Decision item 3. |
 | 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session as **interim policy** — discharges the "formal trustee ratification pending" caveat from the initial draft. **Sunset:** a successor ADR is required when GitHub Actions is restored (Decision 2026-06-20-052). `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-20 | (initial draft) | BigDev (Solo Builder) | Authored at Epic 1 retrospective AI-4 closure — adopts `ci:local` + pre-push as sanctioned merge gate (formal trustee ratification pending); back-attests 1.11–1.17 reconciliation green 2026-06-17; records AI-5 hardening gaps as open follow-ups |

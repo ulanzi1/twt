@@ -147,6 +147,21 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.4 — helpdesk.respond is granted to the default-policy target roles (+ super_admin); district_admin DEFERRED', () => {
+    const KEY = 'helpdesk.respond';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // The four DEFAULT_ROUTING_POLICY target roles (all `pariwar` ceiling) + super_admin (full catalog).
+    expect(holders).toEqual(['finance_officer', 'helpline_operator', 'it_cell', 'pariwar_admin', 'super_admin']);
+    // district_admin is DELIBERATELY NOT granted — same pariwar-dimension asymmetry as helpdesk.create
+    // (a `district`-ceiling grant can never satisfy a pariwar check). check.test.ts pins WHY.
+    for (const role of ['district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 5.3 — pariwar.configure_channels is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'pariwar.configure_channels';
     const holders = defaultRoleBundles

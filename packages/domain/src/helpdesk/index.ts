@@ -20,5 +20,7 @@ export * from './registry.js';
 export * from './project.js';
 // Task 5 — the ticket READ accessors the create-ticket route + the 10.2/10.4 surfaces consume.
 export * from './read.js';
+// Story 10.4 — the pure SLA-timer / breach / severity presentation derivations (DB-free).
+export * from './sla.js';
 // The typed domain errors (routing-unresolved / scope-unresolved / version-conflict — the 409 seam).
 export * from './errors.js';

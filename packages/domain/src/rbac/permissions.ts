@@ -246,7 +246,24 @@ export function permissionKey(value: string): PermissionKey {
 // state_trustee-at-pariwar deferrals already encode (cycle.freeze/reconciliation.review). NOT step-up-gated —
 // helpdesk create is NOT a freeze-firing action and is NOT in the AR-24 step-up list (unlike the 6.3 claim
 // intake). This is the FIRST helpdesk key (the roles.ts "Helpdesk keys land Epic 10" comment made true).
-export const PERMISSION_CATALOG_VERSION = 23 as const;
+// Bumped 23 → 24 at Story 10.4 (added ONE key): `helpdesk.respond` — the helpdesk responder-console
+// READ + all transition/reply route gate (the queue read, the admin detail, pick-up/reply/resolve).
+// Gates `GET/POST …/p/:pariwarId/helpdesk/{queue,tickets/:ticketId,tickets/:ticketId/{pick-up,reply,resolve}}`.
+// DISTINCT from 10.3's `helpdesk.create` (filing ≠ responding — a role that may file a ticket on a caller's
+// behalf is not necessarily one that RESPONDS to the Pariwar's queue; the 6.10/6.11 read/write key-separation
+// lesson). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the helpdesk.create /
+// reconciliation.review / cycle.freeze pariwar-wide-key precedent; a helpdesk ticket is Pariwar-scoped, the
+// tenant IS the target, resolvable TODAY with no geo-tree). Granted to the roles the DEFAULT routing policy
+// routes tickets to (registry.ts DEFAULT_ROUTING_POLICY): `helpline_operator`, `finance_officer`, `it_cell`,
+// `pariwar_admin` (all `pariwar` ceiling); `super_admin` auto-derives. `district_admin` is DEFERRED — a
+// `district`-ceiling grant can NEVER satisfy a pariwar-dimension check (scopeContains denies a target broader
+// than the grant; the ceiling check also forbids a district_admin from holding a pariwar-scoped grant), so
+// granting it would seed an INERT/false capability — the EXACT [[project_rbac_geo_scope_containment]] asymmetry
+// 10.3's `helpdesk.create` deferral already encodes. NO inert district_admin grant is seeded. NOT step-up-gated
+// (helpdesk responding is NOT freeze-firing / not in AR-24 — the 10.3 helpdesk.create rule stands). The SECOND
+// helpdesk key. ACCEPTANCE CONDITION: district_admin helpdesk-respond may be enabled only if a helpdesk ticket
+// gains a server-derived district AND the gate moves to `dimension: 'district'` — not by widening a pariwar gate.
+export const PERMISSION_CATALOG_VERSION = 24 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -414,6 +431,14 @@ export const SEED_PERMISSION_KEYS = [
   // auto-derives. `district_admin` is DEFERRED (a district-ceiling grant can't satisfy a pariwar check —
   // an inert grant; see the version-bump note + roles.ts). The FIRST helpdesk key. NOT step-up-gated.
   'helpdesk.create',
+  // Story 10.4 — the helpdesk RESPONDER-console READ + transition/reply gate (the queue, the admin detail,
+  // pick-up/reply/resolve). Gates GET/POST …/p/:pariwarId/helpdesk/{queue,tickets/:ticketId,…}. Checked at
+  // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the helpdesk.create precedent). DISTINCT from
+  // helpdesk.create (filing ≠ responding). Granted to the default-policy target roles: helpline_operator +
+  // finance_officer + it_cell + pariwar_admin (all `pariwar` ceiling); super_admin auto-derives.
+  // district_admin DEFERRED (a district-ceiling grant can't satisfy a pariwar check — an inert grant; see the
+  // version-bump note + roles.ts). The SECOND helpdesk key. NOT step-up-gated.
+  'helpdesk.respond',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

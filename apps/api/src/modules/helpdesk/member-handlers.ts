@@ -560,6 +560,90 @@ export function createMemberHelpdeskHandlers(deps: AppDeps) {
       }
     },
 
+    /**
+     * POST /api/v1/p/:pariwarId/member/helpdesk/tickets/:ticketId/reply — the member replies to their
+     * OWN ticket (AC3, the member→staff half of the round-trip). Loads the owned ticket (404 if absent
+     * or not owned — no enumeration oracle), guards `awaiting_member → in_progress` legality BEFORE the
+     * write (a reply to a ticket not awaiting the member is a typed 409, not a silent no-op), then
+     * appends `helpdesk.member_replied` (carrying the member's message) via `projectTicketTransition`
+     * under a compensating audit line. The reply surfaces in the responder thread + returns the ticket
+     * to the active queue. NO admin RBAC — the ticket owner acting on their own ticket (the member
+     * session is the authority).
+     */
+    async reply(request: FastifyRequest): Promise<MemberTicketDetailResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const memberId = ids.memberId(memberIdStr);
+      const ticketId = ids.helpdeskTicketId((request.params as { ticketId: string }).ticketId);
+      const { message } = request.body as { message: string };
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const existing = await helpdesk.getTicketForMember(scopeTx.tx, pariwarId, memberId, ticketId);
+        if (!existing) throw new NotFoundError('Ticket not found', 'helpdesk.not_found');
+        // member_replied applies only from awaiting_member — guard BEFORE the write.
+        if (helpdesk.nextTicketState(existing.currentState, 'helpdesk.member_replied') === existing.currentState) {
+          throw new ConflictError(
+            `This ticket is not awaiting your reply (state: ${existing.currentState})`,
+            'helpdesk.illegal_transition',
+          );
+        }
+
+        const requestPayloadHash = sha256Hex(
+          canonicalJsonStringify({
+            ticket_id: ticketId,
+            event_type: 'helpdesk.member_replied',
+            from_state: existing.currentState,
+          }),
+        );
+
+        await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: {
+            pariwarId,
+            actorId: memberIdStr,
+            actorRole: null,
+            action: 'helpdesk.member_replied',
+            resourceLocator: `ticket/${ticketId}`,
+            requestPayloadHash,
+            traceId: request.requestContext.traceId ?? null,
+          },
+          mutate: async () => {
+            try {
+              await helpdesk.projectTicketTransition(scopeTx.client, {
+                ticketId,
+                pariwarId,
+                eventType: 'helpdesk.member_replied',
+                trigger: 'helpdesk.transition:member_reply',
+                actor: 'member',
+                actorId: memberIdStr,
+                message,
+              });
+            } catch (err) {
+              if (
+                err instanceof helpdesk.HelpdeskIllegalTransitionError ||
+                err instanceof helpdesk.HelpdeskStreamConcurrencyError ||
+                err instanceof helpdesk.HelpdeskGenesisMissingError
+              ) {
+                throw new ConflictError(err.message, 'helpdesk.transition_conflict');
+              }
+              throw err;
+            }
+            return null;
+          },
+        });
+
+        const row = await helpdesk.getTicketForMember(scopeTx.tx, pariwarId, memberId, ticketId);
+        if (!row) throw new Error('[helpdesk.member.reply] ticket row missing after transition');
+        const events = await helpdesk.listTicketEvents(scopeTx.tx, ticketId);
+        const thread = helpdesk.replayTicketThread(events);
+        ok = true;
+        return toMemberDetail(row, thread);
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
     /** GET /api/v1/p/:pariwarId/member/helpdesk/categories — the in-force policy's category set (AC5). */
     async categories(request: FastifyRequest): Promise<HelpdeskCategoryListResponse> {
       const { pariwarIdStr } = memberCtx(request);

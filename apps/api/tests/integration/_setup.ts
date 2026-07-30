@@ -38,6 +38,11 @@ import {
 import type pg from 'pg';
 
 import type { JobEnvelope } from '@twt/queue';
+import {
+  createCapturingHelpdeskReplyNotifier,
+  type CapturingHelpdeskReplyNotifier,
+  type HelpdeskReplyNotifier,
+} from '@twt/jobs';
 
 import type { AuthAuditEvent, AuthAuditSink } from '../../src/audit/audit-sink.js';
 import { loadConfig, type ApiConfig } from '../../src/config.js';
@@ -224,6 +229,7 @@ export interface TestDepsOverrides {
   deployTrigger?: DeployTrigger;
   niyamavaliAmendedHook?: NiyamavaliAmendedHook;
   poolFixedAmountChangedHook?: PoolFixedAmountChangedHook;
+  helpdeskReplyNotifier?: HelpdeskReplyNotifier;
   kycProviders?: KycProviderRegistry;
   dataExportQueue?: DataExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
@@ -249,6 +255,7 @@ export interface TestDeps {
   adminStepUpDelivery: CapturingStepUpDelivery;
   niyamavaliHook: CapturingNiyamavaliHook;
   poolFixedAmountHook: CapturingPoolFixedAmountHook;
+  helpdeskReplyNotifier: CapturingHelpdeskReplyNotifier;
   dataExportQueue: CapturingDataExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
   bankStatementStorage: InMemoryBankStatementStorage;
@@ -283,6 +290,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     (overrides.adminStepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
   const niyamavaliHook = new CapturingNiyamavaliHook();
   const poolFixedAmountHook = new CapturingPoolFixedAmountHook();
+  const helpdeskReplyNotifier = createCapturingHelpdeskReplyNotifier();
   const dataExportQueue =
     (overrides.dataExportQueue as CapturingDataExportQueue) ?? new CapturingDataExportQueue();
   const claimDocumentStorage =
@@ -349,6 +357,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Fixed-amount-changed notification hook (Story 7.5) — capturing fake by default so a spec can
     // assert the seam fired with the right coordinates + cadence (standard=queued / emergency=immediate).
     poolFixedAmountChangedHook: overrides.poolFixedAmountChangedHook ?? poolFixedAmountHook.hook,
+    // Helpdesk reply notifier (Story 10.4) — a capturing fake by default so a spec can assert the
+    // helpdesk_reply emit fired (fixture-level) on a staff reply/resolve.
+    helpdeskReplyNotifier: overrides.helpdeskReplyNotifier ?? helpdeskReplyNotifier.notifier,
     // KYC provider registry (Story 3.3a) — the fixture provider by default (the
     // config-absent seam); a spec may override to assert DigiLocker-provider wiring.
     kycProviders:
@@ -400,6 +411,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     adminStepUpDelivery,
     niyamavaliHook,
     poolFixedAmountHook,
+    helpdeskReplyNotifier,
     dataExportQueue,
     claimDocumentStorage,
     bankStatementStorage,

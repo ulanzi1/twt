@@ -24,6 +24,7 @@ import type { Db, encryption } from '@twt/domain';
 // RE-EXPORTED from here so every existing apps/api importer keeps working unchanged.
 import { encryption as encryptionRuntime } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
+import type { HelpdeskReplyNotifier } from '@twt/jobs';
 
 import type { AuthAuditSink } from './audit/audit-sink.js';
 import type { ApiConfig } from './config.js';
@@ -377,6 +378,16 @@ export interface AppDeps {
    * `niyamavaliAmendedHook`. Carries only change coordinates + a queued/immediate cadence flag.
    */
   readonly poolFixedAmountChangedHook: PoolFixedAmountChangedHook;
+  /**
+   * Helpdesk reply member-notification seam (Story 10.4, AC3) — fired inline POST-COMMIT when a
+   * responder replies to a member ticket (awaiting_member / resolved). Builds the `helpdesk_reply`
+   * Alert + dispatches it; v1 delivery is a log-only fixture (`consoleHelpdeskReplyNotifier` in
+   * prod/dev — the fan-out needs MEMBER field crypto, which the request path lacks; the
+   * `createHelpdeskReplyFanOutNotifier` upgrade is the documented forward seam). Tests inject a
+   * capturing fake. Best-effort — a throw never fails the committed reply. Same injectable-seam
+   * pattern as `poolFixedAmountChangedHook`.
+   */
+  readonly helpdeskReplyNotifier: HelpdeskReplyNotifier;
   /**
    * KYC provider registry + FR-58C swap seam (Story 3.3a, AC2/AC6). The active provider
    * is DigiLocker when its secret-NAMEs are configured, else the `fixtureKycProvider`

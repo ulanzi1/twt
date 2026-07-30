@@ -26,13 +26,18 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../..');
 const SCAN_ROOT = 'packages/domain/src';
 
-// The ONLY legitimate writer to the cache pair (current_state + state_event_version): the event-replay
-// projector's `projectTicketGenesis`. Allowlisted by FILE + FUNCTION NAME (not the whole file) so a
-// future addition to project.ts that writes the cache from a DIFFERENT function is still flagged. A new
-// legitimate writer (e.g. a transition projector for 10.2/10.4) must be a deliberate addition HERE AND
-// must set the app.helpdesk_state_writer trigger guard.
+// The legitimate writers to the cache pair (current_state + state_event_version): the event-replay
+// projector's `projectTicketGenesis` (Story 10.1, the genesis) + `projectTicketTransition` (Story 10.4,
+// every non-genesis lifecycle transition). Allowlisted by FILE + FUNCTION NAME (not the whole file) so a
+// future addition to project.ts that writes the cache from a DIFFERENT function is still flagged. Each
+// new legitimate writer must be a deliberate addition HERE AND must set the app.helpdesk_state_writer
+// trigger guard (the runtime DB trigger of migration 0084 is independent of this static gate — setting
+// the guard is necessary for the trigger but NOT sufficient for this allowlist).
 const ALLOWLIST: readonly AllowlistEntry[] = [
-  { file: 'packages/domain/src/helpdesk/project.ts', functions: new Set(['projectTicketGenesis']) },
+  {
+    file: 'packages/domain/src/helpdesk/project.ts',
+    functions: new Set(['projectTicketGenesis', 'projectTicketTransition']),
+  },
 ];
 
 function collectTsFiles(absDir: string, acc: string[]): void {

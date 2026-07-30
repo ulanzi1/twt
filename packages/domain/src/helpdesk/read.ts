@@ -5,13 +5,18 @@
 // PRIMITIVES: NO HTTP, NO decryption — the apps/api boundary maps rows → wire DTOs. Reads the cached
 // `current_state` projection (the "presentation, not lifecycle" rule); never advances it.
 
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, type SQL } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { HelpdeskTicketId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { eventsLog } from '../schema/events_log.js';
-import { HELPDESK_CATEGORIES, helpdeskTickets, type HelpdeskTicketRow } from '../schema/helpdesk_tickets.js';
+import {
+  HELPDESK_CATEGORIES,
+  helpdeskTickets,
+  type HelpdeskTicketRow,
+  type HelpdeskTicketState,
+} from '../schema/helpdesk_tickets.js';
 import { routingPolicyVersionInForce } from './registry.js';
 
 /** Load a single ticket by id (tenant-scoped by RLS + the explicit pariwar predicate). Null if absent
@@ -44,6 +49,58 @@ export async function listTicketsForPariwar(db: Db, pariwarId: PariwarId): Promi
     .where(eq(helpdeskTickets.pariwarId, pariwarId))
     .orderBy(desc(helpdeskTickets.createdAt))
     .limit(clampLimit(LIST_TICKETS_FOR_PARIWAR_LIMIT, { default: LIST_TICKETS_FOR_PARIWAR_LIMIT, cap: LIST_TICKETS_FOR_PARIWAR_LIMIT }));
+}
+
+// ── Story 10.4 — the paginated admin responder queue (AC1) ──────────────────────────────────────
+//
+// The REAL paginated queue Story 10.1 named this story as the owner of (its `listTicketsForPariwar`
+// header: "the paginated admin queue with state/scope filters is Story 10.4"). Newest-first,
+// state-filterable, with an optional role-match ("my queue") filter over `routed_to_role`, offset
+// pagination, and a `clampLimit`-forced page size ([[project_domain_limit_clamp_and_savepoint_retry]]).
+// Backed by the `helpdesk_tickets_pariwar_state_idx` composite (pariwar_id, current_state). Tenant-
+// scoped by RLS + the explicit pariwar predicate. This is NOT the capped-200 diagnostic above.
+
+/** The admin-queue default + max page size (forced-pagination bounds). */
+const TICKET_QUEUE_DEFAULT_LIMIT = 50;
+const TICKET_QUEUE_MAX_LIMIT = 200;
+
+/** The admin-queue filter (all optional). `state` filters lifecycle state; `routedToRole` is the
+ *  "my queue" role-match filter; `limit`/`offset` are the forced-pagination window. */
+export interface TicketQueueFilter {
+  state?: HelpdeskTicketState;
+  routedToRole?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * The paginated admin responder queue for a Pariwar (AC1). Newest-first; optional lifecycle-state +
+ * `routed_to_role` filters; `clampLimit`-bounded page size; non-negative offset. Tenant-scoped
+ * (RLS + the explicit pariwar predicate). The SLA/severity presentation flags are DERIVED at the API
+ * boundary from `current_state` + the two due columns ({@link import('./sla.js').deriveSlaStatus}) —
+ * this read returns the raw rows only (no read-side state write).
+ */
+export async function listTicketQueueForPariwar(
+  db: Db,
+  pariwarId: PariwarId,
+  filter: TicketQueueFilter = {},
+): Promise<HelpdeskTicketRow[]> {
+  const predicates: SQL[] = [eq(helpdeskTickets.pariwarId, pariwarId)];
+  if (filter.state !== undefined) predicates.push(eq(helpdeskTickets.currentState, filter.state));
+  if (filter.routedToRole !== undefined) predicates.push(eq(helpdeskTickets.routedToRole, filter.routedToRole));
+
+  // A negative/NaN offset must never reach Postgres (the clampLimit lower-bound lesson applied to offset).
+  const offset = Number.isInteger(filter.offset) && (filter.offset as number) > 0 ? (filter.offset as number) : 0;
+
+  return db
+    .select()
+    .from(helpdeskTickets)
+    .where(and(...predicates))
+    .orderBy(desc(helpdeskTickets.createdAt), desc(helpdeskTickets.ticketId))
+    // The `domain-accessor-invariants` gate requires the clampLimit(...) call INLINE in .limit()
+    // (a pre-computed variable reads as an unclamped dynamic limit to the static scan).
+    .limit(clampLimit(filter.limit, { default: TICKET_QUEUE_DEFAULT_LIMIT, cap: TICKET_QUEUE_MAX_LIMIT }))
+    .offset(offset);
 }
 
 // ── Story 10.2 — member-scoped reads (AC3) ──────────────────────────────────────────────────────

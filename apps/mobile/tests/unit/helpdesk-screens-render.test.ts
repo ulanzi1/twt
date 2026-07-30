@@ -189,3 +189,40 @@ describe('helpdesk filing form (new.tsx) — AC1/AC4/AC6/AC7 (review-hardening)'
     }
   })
 })
+
+// ── Story 10.4 — the member reply-append composer (AC3, the member→staff round-trip) ──────────────
+describe('Story 10.4 — member reply composer (AC3)', () => {
+  const detail = read('apps/mobile/app/(helpdesk)/[ticketId].tsx')
+  const queries = read('apps/mobile/components/helpdesk/useHelpdeskQueries.ts')
+  const sdk = read('packages/api-client/src/index.ts')
+
+  it('the composer is shown ONLY when the ticket awaits the member (awaiting_member)', () => {
+    expect(detail).toContain("data.current_state === 'awaiting_member'")
+    expect(detail).toContain('helpdesk-reply-composer')
+  })
+
+  it('the composer wires the reply mutation + bounds the message length + clears on success', () => {
+    expect(detail).toContain('useHelpdeskReplyMutation')
+    expect(detail).toContain('submitReply')
+    expect(detail).toContain('HELPDESK_REPLY_MAX')
+    expect(detail).toMatch(/slice\(0, HELPDESK_REPLY_MAX\)/)
+  })
+
+  it('the reply mutation hook invalidates the ticket + inbox queries on success', () => {
+    expect(queries).toContain('export function useHelpdeskReplyMutation')
+    expect(queries).toContain("helpdeskApi.reply(")
+    expect(queries).toMatch(/invalidateQueries[\s\S]*'ticket'/)
+  })
+
+  it('the member-helpdesk SDK exposes a POST reply method to the member reply route', () => {
+    expect(sdk).toMatch(/reply\(pariwarId: string, ticketId: string, message: string\)/)
+    expect(sdk).toContain('/reply')
+  })
+
+  it('the composer copy keys exist in BOTH en and hi (parity)', () => {
+    for (const key of ['detail.reply_hint', 'detail.reply_label', 'detail.reply_placeholder', 'detail.reply_submit', 'detail.reply_pending', 'detail.reply_error']) {
+      expect(en[key], `en ${key}`).toBeTruthy()
+      expect(hi[key], `hi ${key}`).toBeTruthy()
+    }
+  })
+})

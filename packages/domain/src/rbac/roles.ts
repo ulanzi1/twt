@@ -114,6 +114,14 @@ const RECONCILIATION_REVIEW = permissionKey('reconciliation.review');
 // helpline_operator (the SM-1 C3 actor) + district_admin + pariwar_admin; super_admin auto-derives. NOT
 // step-up-gated (helpdesk create isn't freeze-firing / not in AR-24 — unlike the 6.3 claim intake).
 const HELPDESK_CREATE = permissionKey('helpdesk.create');
+// Story 10.4 — the helpdesk RESPONDER-console READ + transition/reply key (pariwar-dimension; the
+// helpdesk.create / reconciliation.review pariwar-wide precedent). The SECOND helpdesk key. Gates the queue
+// read + the admin detail + pick-up/reply/resolve. DISTINCT from HELPDESK_CREATE (filing ≠ responding).
+// Granted to the roles the DEFAULT routing policy routes tickets to — helpline_operator + finance_officer +
+// it_cell + pariwar_admin (all `pariwar` ceiling); super_admin auto-derives. district_admin DEFERRED (a
+// district-ceiling grant can't satisfy a pariwar check — the HELPDESK_CREATE / state_trustee-at-pariwar
+// precedent). NOT step-up-gated (helpdesk responding isn't freeze-firing / not in AR-24).
+const HELPDESK_RESPOND = permissionKey('helpdesk.respond');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -207,6 +215,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // cycle.freeze pariwar-wide precedent). pariwar_admin is the tenant's administrative authority and can
       // file a helpdesk ticket on a member's behalf; a `pariwar` scopeCeiling satisfies the pariwar check.
       HELPDESK_CREATE,
+      // Story 10.4 — the helpdesk responder-console key (pariwar-dimension). pariwar_admin is the default
+      // routing target for `niyamavali-question` + `complaint` and the tenant's administrative authority; it
+      // responds to the queue. The `pariwar` scopeCeiling satisfies the pariwar check.
+      HELPDESK_RESPOND,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
@@ -273,12 +285,16 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // Story 9.8 (FR-50) — the "designated reconciliation reviewer". The reconciliation review-queue key
     // (pariwar-dimension; the `pariwar` scopeCeiling satisfies it), the first grant this role carries.
     // Other finance keys land later; this is the FR-50 reviewer capability, not an adjudication grant.
-    permissions: [RECONCILIATION_REVIEW],
+    // Story 10.4 — HELPDESK_RESPOND: the default routing target for `utr-mismatch` tickets is
+    // finance_officer, so it responds to the helpdesk queue (pariwar-dimension; the `pariwar` ceiling satisfies it).
+    permissions: [RECONCILIATION_REVIEW, HELPDESK_RESPOND],
     scopeCeiling: 'pariwar',
   },
   {
     role: 'it_cell',
-    permissions: [PARIWAR_PROVISION],
+    // Story 10.4 — HELPDESK_RESPOND: the default routing target for `partner-module-issue` tickets is
+    // it_cell, so it responds to the helpdesk queue (pariwar-dimension; the `pariwar` ceiling satisfies it).
+    permissions: [PARIWAR_PROVISION, HELPDESK_RESPOND],
     scopeCeiling: 'pariwar',
   },
   {
@@ -351,6 +367,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_MANAGE_DPDPA_CONSENT,
       // Story 10.3 (SM-1 C3) — the helpdesk ticket-create key (the operator files on a caller's behalf).
       HELPDESK_CREATE,
+      // Story 10.4 — the helpdesk responder-console key. helpline_operator is the default routing target for
+      // MOST v1 categories (kyc-trouble/payment-failed/claim-status/profile-update/other), so it is the primary
+      // responder; a `pariwar` scopeCeiling satisfies the pariwar-dimension check. Filing (HELPDESK_CREATE) +
+      // responding (HELPDESK_RESPOND) are distinct keys — the operator holds both.
+      HELPDESK_RESPOND,
     ],
     scopeCeiling: 'pariwar',
   },

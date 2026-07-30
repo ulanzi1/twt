@@ -451,3 +451,40 @@ describe('hasPermission — Story 10.3: helpdesk.create pariwar gate + district-
     expect(hasPermission(grants, 'helpdesk.create', pariwarResource, districtCeilingCtx)).toBe(false);
   });
 });
+
+// ── Story 10.4 — helpdesk.respond is a pariwar-dimension gate; district ceiling CANNOT satisfy it ───
+//
+// The SECOND helpdesk key gates the responder console at `dimension: 'pariwar'`. Same asymmetry as
+// helpdesk.create: (1) a `pariwar`-ceiling default-routing-target role (finance_officer / it_cell)
+// satisfies it; (2) a `district`-ceiling holder can NEVER satisfy the pariwar check — the reason
+// district_admin is DEFERRED, not granted. Synthetic district-ceiling bundle so the proof is
+// catalog-independent (a revert-sanity pair with the roles.test.ts holder assertion).
+describe('hasPermission — Story 10.4: helpdesk.respond pariwar gate + district-ceiling deferral', () => {
+  const pariwarResource = resource({ dimension: 'pariwar', value: PARIWAR_A });
+
+  it('finance_officer (pariwar ceiling) IS allowed helpdesk.respond at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'finance_officer', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'helpdesk.respond', pariwarResource)).toBe(true);
+  });
+
+  it('it_cell (pariwar ceiling) IS allowed helpdesk.respond at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'it_cell', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'helpdesk.respond', pariwarResource)).toBe(true);
+  });
+
+  it('DEFERRAL PIN: a district-ceiling holder of helpdesk.respond is DENIED the pariwar check (inert grant)', () => {
+    const districtCeilingCtx: Partial<AuthzContext> = {
+      bundles: [
+        { role: 'test_helpdesk_respond_district', permissions: ['helpdesk.respond'], scopeCeiling: 'district' },
+      ] as unknown as AuthzContext['bundles'],
+    };
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'test_helpdesk_respond_district', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'helpdesk.respond', pariwarResource, districtCeilingCtx)).toBe(false);
+  });
+});

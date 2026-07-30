@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 import { createDb, resolveConnectionString, resolveSecretValue, type Db } from '@twt/domain';
 import { encryption } from '@twt/domain';
 import { createSmsAppClient, resolveOtpTemplate } from '@twt/channels';
+import { consoleHelpdeskReplyNotifier } from '@twt/jobs';
 import { createCloudflareTurnstileVerifier } from '@twt/edge';
 
 import { createAuditLogSink, createKmsAuditHook } from './audit/audit-log-sink.js';
@@ -318,6 +319,11 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Member-notification scaffolding hook (Story 7.5) — console placeholder until Epic 5
     // wires the real fixed-amount-changed push fan-out.
     poolFixedAmountChangedHook: consolePoolFixedAmountChangedHook,
+    // Helpdesk reply member-notification seam (Story 10.4, AC3) — the log-only fixture default (builds
+    // the helpdesk_reply Alert + resolves the deep-link + logs it). The member-targeting fan-out
+    // (createHelpdeskReplyFanOutNotifier) needs MEMBER field crypto, which this admin-request path lacks
+    // — that upgrade is the documented forward seam.
+    helpdeskReplyNotifier: consoleHelpdeskReplyNotifier,
     // KYC provider registry + FR-58C swap seam (Story 3.3a) — DigiLocker when configured,
     // else the fixture provider (boots with zero live-govt config).
     kycProviders: await buildKycProviderRegistry(config),

@@ -12,6 +12,7 @@ import {
   type HelpdeskEventInput,
   type HelpdeskTicketState,
   helpdeskTicketStateMachine,
+  nextTicketState,
 } from '../../src/helpdesk/state.js';
 
 const ev = (type: string, payload: unknown = {}): HelpdeskEventInput => ({ type, payload });
@@ -109,6 +110,23 @@ describe('helpdesk ticket reducer — identity on inapplicable events (TOTAL)', 
     for (const s of HELPDESK_TICKET_STATES) {
       if (s !== 'resolved' && s !== 'closed') expect(step(s, ev('helpdesk.reopened'))).toBe(s);
     }
+  });
+});
+
+describe('nextTicketState — the transition projector helper (Story 10.4)', () => {
+  it('derives the target state from (state, eventType) alone — no payload needed', () => {
+    expect(nextTicketState('open', 'helpdesk.picked_up')).toBe('in_progress');
+    expect(nextTicketState('in_progress', 'helpdesk.awaiting_member')).toBe('awaiting_member');
+    expect(nextTicketState('awaiting_member', 'helpdesk.member_replied')).toBe('in_progress');
+    expect(nextTicketState('in_progress', 'helpdesk.resolved')).toBe('resolved');
+    expect(nextTicketState('reopened', 'helpdesk.picked_up')).toBe('in_progress');
+  });
+
+  it('returns the state UNCHANGED (identity) for an illegal transition — the projector reads this as illegal', () => {
+    // resolve a closed ticket → no-op (illegal); pick up an in_progress ticket → no-op.
+    expect(nextTicketState('closed', 'helpdesk.resolved')).toBe('closed');
+    expect(nextTicketState('in_progress', 'helpdesk.picked_up')).toBe('in_progress');
+    expect(nextTicketState('open', 'helpdesk.member_replied')).toBe('open');
   });
 });
 

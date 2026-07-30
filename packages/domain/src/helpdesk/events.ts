@@ -173,18 +173,30 @@ export const HelpdeskTicketCreatedPayloadSchema = z
   });
 export type HelpdeskTicketCreatedPayload = z.infer<typeof HelpdeskTicketCreatedPayloadSchema>;
 
-// ── Transition payload shapes (AUTHORED, not registered by this story) ─────────
-// Each transition carries only the audit shape (no load-bearing extra fields in v1). The emitting
-// surface (10.2/10.4 + the auto-close job) registers its own type in packages/events/src/registry.ts.
+// ── Transition payload shapes ──────────────────────────────────────────────────
+// The pure lifecycle transitions (picked_up/closed/reopened) carry only the audit shape. The three
+// MESSAGE-BEARING transitions (awaiting_member/resolved/member_replied) additionally carry a bounded
+// `message` — the reply round-trip (Story 10.4, Decision 1): a staff reply rides awaiting_member
+// ("we need X") / resolved (a closing note); a member reply rides member_replied. The reader
+// (`replayTicketThread`, read.ts) already surfaces any non-genesis event's `message`/`body` as a
+// thread entry, so adding this field lights the thread up with ZERO reader change. `message` matches
+// the genesis `body` bound (min 1, max 5000). `.strict()` everywhere — an unknown key is a defect.
 
-/** `helpdesk.picked_up` → `in_progress` (assignee picks up). Owner: Story 10.4. */
+/** The bounded reply message a message-bearing transition carries (Story 10.4, Decision 1). Same
+ *  bound as the genesis `body`. */
+const helpdeskReplyMessage = z.string().min(1).max(5000);
+
+/** `helpdesk.picked_up` → `in_progress` (assignee picks up). Owner: Story 10.4. Message-free. */
 export const HelpdeskPickedUpPayloadSchema = z.object({ ...auditShape }).strict();
-/** `helpdesk.awaiting_member` → `awaiting_member` (needs member input; resolution SLA pauses). Owner: 10.4. */
-export const HelpdeskAwaitingMemberPayloadSchema = z.object({ ...auditShape }).strict();
-/** `helpdesk.member_replied` → `in_progress` (member replied). Owner: Story 10.2. */
-export const HelpdeskMemberRepliedPayloadSchema = z.object({ ...auditShape }).strict();
-/** `helpdesk.resolved` → `resolved` (assignee resolves). Owner: Story 10.4. */
-export const HelpdeskResolvedPayloadSchema = z.object({ ...auditShape }).strict();
+/** `helpdesk.awaiting_member` → `awaiting_member` (a staff reply asking the member for info; the
+ *  resolution SLA pauses). Owner: 10.4. Carries the staff `message` (Decision 1). */
+export const HelpdeskAwaitingMemberPayloadSchema = z.object({ ...auditShape, message: helpdeskReplyMessage }).strict();
+/** `helpdesk.member_replied` → `in_progress` (the member replied). Owner: Story 10.4. Carries the
+ *  member's `message` (Decision 1). */
+export const HelpdeskMemberRepliedPayloadSchema = z.object({ ...auditShape, message: helpdeskReplyMessage }).strict();
+/** `helpdesk.resolved` → `resolved` (a staff reply that closes the ticket). Owner: Story 10.4.
+ *  Carries the staff closing `message` (Decision 1). */
+export const HelpdeskResolvedPayloadSchema = z.object({ ...auditShape, message: helpdeskReplyMessage }).strict();
 /** `helpdesk.closed` → `closed` (auto, 7 days no reply). Owner: the auto-close job. */
 export const HelpdeskClosedPayloadSchema = z.object({ ...auditShape }).strict();
 /** `helpdesk.reopened` → `reopened` (member reopens within 30 days post-close). Owner: Story 10.2. */

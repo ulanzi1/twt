@@ -1,4 +1,77 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-30b (10-4-helpdesk-admin-console-sla-tracking-cross-link-integration:
+#   review -> done via bmad-story-automator-review (adversarial review by codex, independent model).
+#   Git vs File List: no discrepancies. 0 CRITICAL findings (no task falsely marked done). 4 findings:
+#   2 HIGH real AC gaps FIXED — AC1's paginated queue + "my queue" routed_to_role filter and AC4's
+#   severity sort were server-ready but never surfaced in the admin console; added offset pagination +
+#   a role-match filter + a client-side severity-first sort to HelpdeskQueuePage/HelpdeskQueueShell
+#   (kept the sla.ts pure-derivation discipline — sort is client-side on the fetched page, no new SQL
+#   ORDER BY CASE). 1 HIGH left OPEN as a documented PM-confirmation-needed gap — AC3/Decision 3 say the
+#   helpdesk_reply notifier dispatches via the shipped fan-out, but apps/api/src/deps.ts production
+#   wiring is the log-only console notifier, a deliberate (and already-disclosed) crypto-boundary call
+#   that was never taken back for sign-off against the literal AC text. 1 LOW noted (RBAC revert-sanity
+#   E2E pair uses two actors not one toggled grant; the real asymmetry is still proven at the domain
+#   unit level). Admin typecheck + lint + the touched suite (16/16) green. development_status[10-4]: done.)
+# last_updated: 2026-07-30a (10-4-helpdesk-admin-console-sla-tracking-cross-link-integration:
+#   ready-for-dev -> in-progress -> review via bmad-dev-story. Closed the helpdesk lifecycle by emitting
+#   into 10.1's frozen substrate. Task 1: projectTicketTransition (the append+re-project sibling of the
+#   genesis — the 2nd legitimate current_state writer, added to BOTH the app.helpdesk_state_writer DB
+#   guard AND the helpdesk-state-invariant static-gate allowlist-by-function-name) + `message` added to
+#   the awaiting_member/member_replied/resolved payloads (the thread lit up with ZERO reader change) + 4
+#   transition types registered in @twt/events + HelpdeskIllegalTransitionError/GenesisMissingError
+#   defense-in-depth. Task 2: pure sla.ts (slaTimerRunning/slaBreached/ticketSeverity/deriveSlaStatus —
+#   no column; timer stops on awaiting_member/resolved/closed; breach SWEEP job PM-deferred) + the real
+#   paginated listTicketQueueForPariwar (NOT the capped-200 diagnostic). Task 3: helpdesk_reply notifier
+#   seam (apps/jobs/scheduler/helpdesk-reply-notify.ts, @twt/jobs barrel export, shepherd-hook precedent)
+#   — createHelpdeskReplyFanOutNotifier REUSES fanOutAlertToMembers; the PRODUCTION default is the
+#   log-only consoleHelpdeskReplyNotifier because the fan-out needs MEMBER Tier-1 crypto and apps/api's
+#   request path carries ADMIN-identity keys (crypto-boundary — the load-bearing decision). Task 4: admin
+#   queue/detail/pick-up/reply/resolve routes (gated by the new helpdesk.respond) + the member reply-append
+#   route (the member->staff round-trip) + helpdeskReplyNotifier wired into AppDeps/deps.ts/_setup;
+#   legality guarded at the handler pre-write (typed 409, never a silent 200). Task 5: admin DTOs
+#   (queue/detail/severity/sla-timer/cross-links/reply) + OpenAPI regen. Task 6: minted helpdesk.respond
+#   (catalog v23->24, dimension:'pariwar') granted to the 4 default-routing-target roles (helpline_operator/
+#   finance_officer/it_cell/pariwar_admin; super_admin auto); district_admin DEFERRED again (a
+#   district-ceiling grant can't satisfy a pariwar check — revert-sanity pin in check.test.ts +
+#   roles.test.ts). Task 7: admin responder console (queue+detail shells + SLA/severity/cross-link badges,
+#   pick-up/reply/resolve, defensive cross-link nav — partner-module disabled seam). Task 8: mobile member
+#   reply composer (shown only at awaiting_member) + en/hi copy (parity). Task 9: ci:local — ALL 26 static
+#   gates green; 2 real failures fixed (inline-clampLimit gate + an sla test-fixture bug); the 3 remaining
+#   @twt/domain integration failures are PRE-EXISTING shared-DB accumulation flakes (evidenced: 20
+#   non-helpdesk committed rows + 2 live alerts under the shared PARIWAR_A fixture), PROVEN by a clean-DB
+#   re-run where the full domain suite is green (1883 pass, 0 fail). NO migration. development_status[10-4]:
+#   review.)
+# last_updated: 2026-07-29h (10-4-helpdesk-admin-console-sla-tracking-cross-link-integration:
+#   backlog -> ready-for-dev via bmad-create-story. THE story 10.3's scope table + 10.2's Dev Notes
+#   explicitly deferred here — the two deferred rows read verbatim "admin console / queue / SLA-tracking
+#   / SLA-breach alerts / cross-link navigation -> 10.4" and "member/staff reply-append WRITE +
+#   helpdesk_reply push EMITTER -> 10.4". Substrate is almost entirely pre-built: 10.1 authored the
+#   COMPLETE 6-state reducer + all transition payload shapes but emitted ONLY the genesis, so 10.4 (1)
+#   writes projectTicketTransition (the append+re-project sibling of projectTicketGenesis, same
+#   app.helpdesk_state_writer guard + (stream_id,event_version) concurrency), (2) adds a bounded
+#   `message` field to the awaiting_member/resolved/member_replied payloads (replayTicketThread already
+#   reads message/body — zero reader change; read.ts:142 literally says "10.4 has not yet fixed the
+#   reply payload's field name"), (3) registers the 4 transition event types in packages/events (10.1
+#   registered only the genesis), (4) emits the helpdesk_reply 5.1 NOTIFICATION (Alert variant +
+#   deep-link tickets/:ticket_id already wired; NOT the cycle-keyed alerts-table primitive) via the
+#   shipped contribution-notify dispatch fan-out (project_channels_no_live_dispatch_yet retired;
+#   log-only fixture delivery), (5) paginated admin queue read (10.1 left listTicketsForPariwar as a
+#   capped-200 diagnostic naming 10.4 as the paginated-queue owner; helpdesk_tickets_pariwar_state_idx
+#   exists), (6) mints helpdesk.respond (catalog v23->24, dimension:'pariwar') gating the responder
+#   console — district_admin DEFERRED again (a district-ceiling grant can't satisfy a pariwar-dim check,
+#   project_rbac_geo_scope_containment), granted to the default-policy target roles (helpline_operator/
+#   finance_officer/it_cell/pariwar_admin), (7) admin responder console extending the 10.3 helpdesk
+#   module (queue+detail+reply+transition+cross-link nav to VerifierConsoleRoute/ReconciliationReviewRoute/
+#   member-status; partner-module nav = seam, Epic 12 unbuilt). SLA = pure derivation off current_state
+#   (timer runs iff open/in_progress/reopened; stops on awaiting_member/resolved/closed; breach=due<now;
+#   severity derived) — NO migration, NO new column. Two load-bearing decisions flagged for the PM: the
+#   reply-representation model (recommend riding awaiting_member/resolved/member_replied, no new event
+#   type) and whether a proactive SLA-breach notification SWEEP job is in-scope (recommend defer;
+#   console-surfaced breach is mandatory). No producer sets cross-link refs in v1 -> nav built
+#   defensively + synthetic-row-tested. Two load-bearing decisions PM-CONFIRMED: reply model = ride
+#   awaiting_member/resolved/member_replied (NO new event type; standalone in-progress note = seam); the
+#   proactive SLA-breach SWEEP job = DEFERRED to a follow-up (console-surfaced breach only in 10.4).
+#   development_status[10-4]: ready-for-dev.)
 # last_updated: 2026-07-29g (10-3-helpline-call-to-ticket-operator-surface: review -> done via
 #   bmad-code-review — 3-layer adversarial review (Blind Hunter / Edge Case Hunter / Acceptance
 #   Auditor) over the diff (~1800 lines incl. new files). Every finding VERIFIED against the actual
@@ -1886,7 +1959,7 @@ development_status:
   10-1-helpdesk-subsystem-data-model-routing-policy-registry: done
   10-2-member-facing-helpdesk-ticket-filing: done
   10-3-helpline-call-to-ticket-operator-surface: done
-  10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: backlog
+  10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: done
   10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: backlog
   10-6-bulk-operations-framework: backlog
   10-7-reports-exports-library-async-generation-scope-respecting: backlog

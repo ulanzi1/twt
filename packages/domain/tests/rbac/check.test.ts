@@ -488,3 +488,32 @@ describe('hasPermission — Story 10.4: helpdesk.respond pariwar gate + district
     expect(hasPermission(grants, 'helpdesk.respond', pariwarResource, districtCeilingCtx)).toBe(false);
   });
 });
+
+// ── Story 10.5 — news.manage is a pariwar-dimension gate; district ceiling CANNOT satisfy it ────────
+//
+// The News/Blog admin key gates every admin news route at `dimension: 'pariwar'`. Same asymmetry as the
+// helpdesk keys: (1) pariwar_admin (pariwar ceiling) satisfies it; (2) a `district`-ceiling holder can
+// NEVER satisfy the pariwar check — the reason district_admin is DEFERRED, not granted. A revert-sanity
+// pair with the roles.test.ts holder assertion (pariwar_admin granted; district_admin denied here).
+describe('hasPermission — Story 10.5: news.manage pariwar gate + district-ceiling deferral', () => {
+  const pariwarResource = resource({ dimension: 'pariwar', value: PARIWAR_A });
+
+  it('pariwar_admin (pariwar ceiling) IS allowed news.manage at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'news.manage', pariwarResource)).toBe(true);
+  });
+
+  it('DEFERRAL PIN: a district-ceiling holder of news.manage is DENIED the pariwar check (inert grant)', () => {
+    const districtCeilingCtx: Partial<AuthzContext> = {
+      bundles: [
+        { role: 'test_news_manage_district', permissions: ['news.manage'], scopeCeiling: 'district' },
+      ] as unknown as AuthzContext['bundles'],
+    };
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'test_news_manage_district', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'news.manage', pariwarResource, districtCeilingCtx)).toBe(false);
+  });
+});

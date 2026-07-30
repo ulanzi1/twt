@@ -122,6 +122,13 @@ const HELPDESK_CREATE = permissionKey('helpdesk.create');
 // district-ceiling grant can't satisfy a pariwar check — the HELPDESK_CREATE / state_trustee-at-pariwar
 // precedent). NOT step-up-gated (helpdesk responding isn't freeze-firing / not in AR-24).
 const HELPDESK_RESPOND = permissionKey('helpdesk.respond');
+// Story 10.5 (FR-51) — the News/Blog admin key (pariwar-dimension; the helpdesk.create / reconciliation.review
+// pariwar-wide precedent). ONE key (Decision 2): both author and reviewer hold it; author≠reviewer is an
+// IDENTITY check at the API, not a capability split. Gates every admin news route. Granted to pariwar_admin
+// (the tenant's content-authoring authority) + super_admin (auto). media_comms NOT granted in v1 (PO-confirmed
+// pariwar_admin-only; media_comms stays dormant). district_admin DEFERRED (a district-ceiling grant can't
+// satisfy a pariwar check — the HELPDESK_* / state_trustee-at-pariwar precedent). NOT step-up-gated.
+const NEWS_MANAGE = permissionKey('news.manage');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -219,6 +226,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // routing target for `niyamavali-question` + `complaint` and the tenant's administrative authority; it
       // responds to the queue. The `pariwar` scopeCeiling satisfies the pariwar check.
       HELPDESK_RESPOND,
+      // Story 10.5 (FR-51) — the News/Blog admin key (pariwar-dimension). pariwar_admin is the tenant's
+      // content-authoring authority; a `pariwar` scopeCeiling satisfies the pariwar check. ONE key: this role's
+      // members author AND review posts, and the author≠reviewer identity check (not a capability tier) forbids
+      // the SAME person doing both (Decision 2). media_comms is NOT granted in v1 (PO-confirmed pariwar_admin-only).
+      NEWS_MANAGE,
       NIYAMAVALI_AMEND,
       NIYAMAVALI_REVIEW,
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.

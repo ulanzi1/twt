@@ -95,6 +95,7 @@ import {
   enqueueContributionNotifyCycleOpen,
   registerContributionNotifyWorkers,
 } from './scheduler/contribution-notify-triggers.js';
+import { registerNewsPublishWorker } from './scheduler/news-publish.js';
 import {
   DEFAULT_MATCHER_CRON,
   DEFAULT_MATCHER_PARSER_SLUG,
@@ -553,6 +554,12 @@ async function main(): Promise<void> {
       resolveProviders: contributionProviders.resolveProviders,
     };
     await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
+
+    // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME
+    // contribution-notify deps (BYPASSRLS pool + member Tier-1 crypto) for the shipped
+    // `fanOutAlertToMembers` dispatch — the fan-out lives HERE, never in the admin-identity apps/api
+    // path (the 10.4 crypto-boundary lesson). Delayed jobs (scheduled) fire via pg-boss `startAfter`.
+    await registerNewsPublishWorker(boss, { notify: contributionNotifyDeps });
 
     await registerCycleOpenAlertWorkers(boss, {
       pool,

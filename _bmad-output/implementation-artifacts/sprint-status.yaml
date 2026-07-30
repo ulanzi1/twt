@@ -1,4 +1,58 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-30e (10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post:
+#   review -> done via bmad-code-review (3 parallel layers: Blind Hunter diff-only, Edge Case Hunter
+#   diff+project-access, Acceptance Auditor diff+spec). 27 raw findings deduped to 4 decision-needed +
+#   11 patch + 2 defer. Decisions resolved: (1) enforce reviewer-lock at approve — approve() now checks
+#   approverActorId===post.reviewerActorId (not just !==author), submit validates reviewer_id holds
+#   news.manage via loadActorGrants+rbac.checkPermission; (2) per-post channels now actually restrict
+#   dispatch (restrictTargetsToChannels before the shared fanOutAlert per-member core — batch wrapper
+#   signature untouched); (3) raw members.state audience scan DEFERRED (no bulk validity-cache resolver
+#   exists anywhere yet — a real infra project, not a patch); (4) misleading cancel/reschedule comments
+#   fixed (no reverse transition exists). All 14 patches applied: the queue.ts singletonKey collision
+#   (mode-scoped keys), the transition-vs-notification idempotency gate rebuilt on a per-(alertId,
+#   memberId) Story-1.12 keyed-store claim (the runContributionNotifyChild precedent — fan-out always
+#   attempted once published, never lost or duplicated on redelivery), the admin Schedule-button
+#   RangeError crash, the dead Location header on the public 404, a new NewsPostScheduleInPastError
+#   (422 news.schedule_in_past) rejecting a past scheduled_publish_at, branded-id validation in the
+#   worker (was `as`-cast), admin onSave() now refreshes from the server response, the limit=200
+#   pagination off-by-one, UTF-16-surrogate-safe push-body truncation, and a new live-DB AC8 test
+#   proving the fan-out against a REAL non-empty members-all audience (every prior case used an empty
+#   audience by construction). recordToneReviewSignoff "unhandled promise" finding verified NOT an
+#   issue (the function is sync + internally self-protecting) — no code change. 2 findings deferred as
+#   pre-existing/PO-ratified (single-admin-Pariwar dead end, public blog list's 50-post cap) — both
+#   logged in deferred-work.md. Added 4 new tests (2 API reviewer-lock/RBAC + 1 API schedule-in-past +
+#   1 jobs AC8 real-audience) — all touched suites green (domain news-blog 14, domain rbac 125, domain
+#   integration news-blog 13, contracts news-blog 11, api integration news-blog 10, jobs news-publish 9,
+#   admin news-page 3), typecheck+lint clean across domain/api/jobs/admin/public, domain-invariants +
+#   schema-diff + pii-scrape gates green, full 18-task turbo build green. development_status[10-5]: done.)
+# last_updated: 2026-07-30d (10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post:
+#   ready-for-dev -> in-progress -> review via bmad-dev-story. Composed the News/Blog [SURFACE] over shipped
+#   substrates. Domain: news_posts MUTABLE-status model + migration 0085 (NO state-writer trigger, D1); news-blog
+#   module (write/read/audience) wiring the tone-review gate at approve (content-hash-bound sign-off, D3);
+#   author!=reviewer IDENTITY 403 in the write path (D2); audience members-all(active/in-grace)+public wired,
+#   state/role/cohort seam'd (D4). Contracts DTOs + enum sync-guard + openapi regen (public read served by
+#   apps/public, NOT registered on the apps/api surface). API: 8 admin routes gated on news.manage (v24->25,
+#   pariwar_admin ONLY per PO — media_comms + district_admin deferred), legality 409 / identity 403 / bilingual
+#   422 / tone-gate; error-mapping for the 4 typed errors. Jobs: NEWS_PUBLISH worker (scheduled+immediate publish
+#   + fanOutAlertToMembers reuse; fan-out in jobs NOT apps/api — 10.4 crypto boundary; deterministic UUIDv5
+#   alert_id; idempotent status re-check). Admin authoring console (list/editor/actions) + apps/public Astro blog
+#   list+detail via getDb/withPublicScope. PO: pariwar_admin-only grant + announcements landing (no mobile feed
+#   screen, D5). Tests: domain 14 unit+13 live-DB, contracts 11(+687), rbac 125, api 7 E2E, jobs 8, admin 3 —
+#   ALL green; 18 static gates green (no invariant gate flags news_posts — D1 holds). ci:local residual failures
+#   proven pre-existing infra (double-run count-pollution + concurrency-4 claim-E2E timeout flakes; both green on
+#   fresh-DB single-pass / in isolation; zero news.* events). File 10-5 Status: review. Next: bmad-code-review.)
+# last_updated: 2026-07-30c (10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post:
+#   backlog -> ready-for-dev via bmad-create-story. First non-helpdesk Epic-10 story: NEW news_posts
+#   subsystem composed over shipped substrates (alert_published + fanOutAlertToMembers dispatch,
+#   tone-review gate, RBAC, 1.10 audit). Four load-bearing decisions CONFIRMED by product owner 2026-07-30:
+#   (1) mutable status column + audit-logged transitions, NOT event-derived-state (posts are mutable
+#   content, [SURFACE] not [PRIMITIVE]); (2) one news.manage key + identity-based author!=reviewer at
+#   the API, not split author/review keys; (3) tone-review sign-off persisted by this consumer at
+#   approve, contentHash-bound to reviewed copy; (4) only members-all + public audiences fully wired
+#   (members table has no district/designation/cohort attr) — state/role/cohort stored+rendered, dispatch
+#   selector seam'd until Epic-3 geo. Corrected epics drift: channels = push|whatsapp|sms|telegram (no
+#   email; telegram exists), public surface = apps/public (Astro, no apps/web), member landing =
+#   announcements deep-link (no new feed screen). New migration 0085. RBAC v24->25. Saved 10-5-*.md.)
 # last_updated: 2026-07-30b (10-4-helpdesk-admin-console-sla-tracking-cross-link-integration:
 #   review -> done via bmad-story-automator-review (adversarial review by codex, independent model).
 #   Git vs File List: no discrepancies. 0 CRITICAL findings (no task falsely marked done). 4 findings:
@@ -1960,7 +2014,7 @@ development_status:
   10-2-member-facing-helpdesk-ticket-filing: done
   10-3-helpline-call-to-ticket-operator-surface: done
   10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: done
-  10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: backlog
+  10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: done
   10-6-bulk-operations-framework: backlog
   10-7-reports-exports-library-async-generation-scope-respecting: backlog
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: backlog

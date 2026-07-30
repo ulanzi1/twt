@@ -38,6 +38,7 @@ import {
 } from './modules/kyc/index.js';
 import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
 import { createPgBossReconciliationMatchEnqueuer } from './modules/reconciliation/index.js';
+import { createPgBossNewsPublishEnqueuer } from './modules/news-blog/queue.js';
 import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
 import { createPgBossCycleSpawnEnqueuer } from './modules/claims/cycle-spawn-queue.js';
 import {
@@ -334,6 +335,10 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // optimizer). Send-only; the reconciliation upload route enqueues a RECONCILIATION_MATCH job for the
     // pool's cycle POST-COMMIT (best-effort). Same connection string as the app pool (pgboss schema).
     reconciliationMatchQueue: await createPgBossReconciliationMatchEnqueuer(connectionString),
+    // News/Blog publish job producer (Story 10.5, Task 5) — send-only. The schedule route enqueues a
+    // DELAYED NEWS_PUBLISH job; the immediate publish route enqueues a zero-delay one. The apps/jobs
+    // worker owns the audience fan-out (crypto boundary). Same connection string as the app pool.
+    newsPublishQueue: await createPgBossNewsPublishEnqueuer(connectionString),
     // Claim-document object store (Story 6.5, Decision D1) — the live GCS adapter when
     // CLAIM_DOCUMENT_BUCKET is set (private bucket, asia-south1), else a shared local-disk
     // fake (dev/CI — no live bucket). The bytes never touch Postgres; only the object key +

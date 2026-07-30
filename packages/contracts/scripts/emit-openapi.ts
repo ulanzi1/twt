@@ -2360,6 +2360,178 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.5 — the News/Blog admin surface + the public read (FR-51) ─────────
+// Admin routes are `news.manage`-gated at `dimension: 'pariwar'` (403 on a missing/inert grant);
+// the public list/detail is UNAUTHENTICATED (FR-74 public matrix). The status transitions guard
+// legality (409) + author≠reviewer identity (403) + the bilingual requirement (422).
+const {
+  CreateDraftRequest: NewsCreateDraftRequest,
+  UpdateDraftRequest: NewsUpdateDraftRequest,
+  SubmitRequest: NewsSubmitRequest,
+  ApproveRequest: NewsApproveRequest,
+  ScheduleRequest: NewsScheduleRequest,
+  PublishRequest: NewsPublishRequest,
+  NewsPostResponse: NewsPostResponseSchema,
+  NewsPostListResponse: NewsPostListResponseSchema,
+} = await import('../src/news-blog/index.js');
+
+const NewsCreateDraftRequestComponent = NewsCreateDraftRequest.openapi('NewsCreateDraftRequest');
+const NewsUpdateDraftRequestComponent = NewsUpdateDraftRequest.openapi('NewsUpdateDraftRequest');
+const NewsSubmitRequestComponent = NewsSubmitRequest.openapi('NewsSubmitRequest');
+const NewsApproveRequestComponent = NewsApproveRequest.openapi('NewsApproveRequest');
+const NewsScheduleRequestComponent = NewsScheduleRequest.openapi('NewsScheduleRequest');
+const NewsPublishRequestComponent = NewsPublishRequest.openapi('NewsPublishRequest');
+const NewsPostComponent = NewsPostResponseSchema.openapi('NewsPost');
+const NewsPostListComponent = NewsPostListResponseSchema.openapi('NewsPostList');
+
+const newsPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const newsPostParams = z.object({ pariwarId: z.string().uuid(), postId: z.string().uuid() });
+const newsForbidden = errorResponse('Not authorized (news.manage) for this Pariwar');
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/news',
+  summary: 'List the Pariwar\'s News/Blog posts (newest-first, paginated, status-filterable)',
+  tags: ['news'],
+  request: { params: newsPariwarParams },
+  responses: {
+    200: { description: 'The paginated post list', content: jsonOf(NewsPostListComponent) },
+    401: errorResponse('Authentication required'),
+    403: newsForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/news',
+  summary: 'Create a News/Blog draft',
+  tags: ['news'],
+  request: {
+    params: newsPariwarParams,
+    body: { content: jsonOf(NewsCreateDraftRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'The created draft', content: jsonOf(NewsPostComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: newsForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/news/{postId}',
+  summary: 'Read a single News/Blog post (admin)',
+  tags: ['news'],
+  request: { params: newsPostParams },
+  responses: {
+    200: { description: 'The post', content: jsonOf(NewsPostComponent) },
+    401: errorResponse('Authentication required'),
+    403: newsForbidden,
+    404: errorResponse('Post not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/p/{pariwarId}/news/{postId}',
+  summary: 'Edit a draft (draft-only; edit-locked once submitted)',
+  tags: ['news'],
+  request: {
+    params: newsPostParams,
+    body: { content: jsonOf(NewsUpdateDraftRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The updated draft', content: jsonOf(NewsPostComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: newsForbidden,
+    404: errorResponse('Post not found'),
+    409: errorResponse('The post is not a draft (edit-locked)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/news/{postId}/submit',
+  summary: 'Submit a draft for review (draft → submitted; reviewer_id ≠ author)',
+  tags: ['news'],
+  request: {
+    params: newsPostParams,
+    body: { content: jsonOf(NewsSubmitRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The submitted post', content: jsonOf(NewsPostComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized, or reviewer_id == author (author ≠ reviewer)'),
+    404: errorResponse('Post not found'),
+    409: errorResponse('Illegal transition for the post\'s current state'),
+    422: errorResponse('Missing Hindi copy for a public/members-all post'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/news/{postId}/approve',
+  summary: 'Approve a submitted post + record the non-author tone-review sign-off (submitted → approved)',
+  tags: ['news'],
+  request: {
+    params: newsPostParams,
+    body: { content: jsonOf(NewsApproveRequestComponent), required: false },
+  },
+  responses: {
+    200: { description: 'The approved post', content: jsonOf(NewsPostComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized, or the approver is the author (author ≠ approver)'),
+    404: errorResponse('Post not found'),
+    409: errorResponse('Illegal transition, or the tone-review gate denied'),
+    422: errorResponse('Missing Hindi copy for a public/members-all post'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/news/{postId}/schedule',
+  summary: 'Schedule an approved post for publish (approved → scheduled)',
+  tags: ['news'],
+  request: {
+    params: newsPostParams,
+    body: { content: jsonOf(NewsScheduleRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The scheduled post', content: jsonOf(NewsPostComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: newsForbidden,
+    404: errorResponse('Post not found'),
+    409: errorResponse('Illegal transition for the post\'s current state'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/news/{postId}/publish',
+  summary: 'Publish an approved post immediately (approved → published) + fan out to the audience',
+  tags: ['news'],
+  request: {
+    params: newsPostParams,
+    body: { content: jsonOf(NewsPublishRequestComponent), required: false },
+  },
+  responses: {
+    200: { description: 'The published post', content: jsonOf(NewsPostComponent) },
+    401: errorResponse('Authentication required'),
+    403: newsForbidden,
+    404: errorResponse('Post not found'),
+    409: errorResponse('Illegal transition for the post\'s current state'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// NOTE: the PUBLIC blog read (list + detail) is served by apps/public (Astro, unauthenticated) via
+// the `getDb`/`withPublicScope` RLS-scoped read pattern (Story 2.5) — NOT an apps/api route — so it is
+// deliberately NOT registered on this apps/api OpenAPI surface. The `PublicPostResponse` /
+// `PublicPostListResponse` contract DTOs still exist (apps/public types its render against them).
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

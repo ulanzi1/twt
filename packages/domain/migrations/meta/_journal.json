@@ -596,6 +596,13 @@
       "when": 1787974800000,
       "tag": "0084_helpdesk-tickets-and-routing-policy",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1788061200000,
+      "tag": "0085_news-blog-posts",
+      "breakpoints": true
     }
   ]
 }

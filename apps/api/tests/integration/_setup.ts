@@ -51,6 +51,7 @@ import type {
   ClaimOcrParityEnqueuer,
   ClaimOcrParityJobPayload,
   DataExportEnqueuer,
+  NewsPublishEnqueuer,
   PoolSpawnTriggerEnqueuer,
 } from '../../src/context.js';
 import type { PoolSpawnTriggerPayload } from '@twt/contracts';
@@ -219,6 +220,28 @@ export class CapturingPoolSpawnQueue implements PoolSpawnTriggerEnqueuer {
   }
 }
 
+/**
+ * A capturing News/Blog publish-job queue (Story 10.5). Records every enqueued publish trigger so the
+ * news E2E spec can assert `schedule` enqueued a DELAYED job and `publish` enqueued an immediate one.
+ */
+export class CapturingNewsPublishQueue implements NewsPublishEnqueuer {
+  public readonly enqueued: Array<{ postId: string; pariwarId: string; mode: 'immediate' | 'scheduled'; at?: Date }> = [];
+  public async enqueuePublish(input: {
+    readonly postId: string;
+    readonly pariwarId: string;
+    readonly mode: 'immediate' | 'scheduled';
+    readonly at?: Date;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }): Promise<void> {
+    this.enqueued.push({ postId: input.postId, pariwarId: input.pariwarId, mode: input.mode, ...(input.at ? { at: input.at } : {}) });
+  }
+  public get last(): { postId: string; mode: 'immediate' | 'scheduled'; at?: Date } | undefined {
+    return this.enqueued.at(-1);
+  }
+}
+
 export interface TestDepsOverrides {
   auditSink?: AuthAuditSink;
   toneReviewAuditSink?: ToneReviewAuditSink;
@@ -240,6 +263,7 @@ export interface TestDepsOverrides {
   contributionNotePdfRenderer?: ContributionNotePdfRenderer;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
   poolSpawnQueue?: PoolSpawnTriggerEnqueuer;
+  newsPublishQueue?: NewsPublishEnqueuer;
   bankIfscLookup?: BankIfscLookup;
   resolveChannelSecret?: (secretName: string) => Promise<string>;
   clock?: () => Date;
@@ -265,6 +289,7 @@ export interface TestDeps {
   contributionNotePdfRenderer: FakeContributionNotePdfRenderer;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
   poolSpawnQueue: CapturingPoolSpawnQueue;
+  newsPublishQueue: CapturingNewsPublishQueue;
   bankIfscLookup: InMemoryBankIfscLookup;
 }
 
@@ -311,6 +336,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     new CapturingClaimOcrParityQueue();
   const poolSpawnQueue =
     (overrides.poolSpawnQueue as CapturingPoolSpawnQueue) ?? new CapturingPoolSpawnQueue();
+  const newsPublishQueue =
+    (overrides.newsPublishQueue as CapturingNewsPublishQueue) ?? new CapturingNewsPublishQueue();
   const bankIfscLookup =
     (overrides.bankIfscLookup as InMemoryBankIfscLookup) ?? createInMemoryBankIfscLookup();
   // Contribution-Note renderer (Story 8.7) — the deterministic FAKE, never the real engine: an
@@ -392,6 +419,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Pool-spawn parent-job queue (Story 7.3) — capturing fake so the cycle-freeze commit spec asserts
     // the CYCLE_SPAWN_PARENT job was enqueued post-commit (and not on a rejected commit).
     poolSpawnQueue,
+    // News/Blog publish-job queue (Story 10.5) — capturing fake so the news E2E spec asserts `schedule`
+    // enqueued a DELAYED job and `publish` an immediate one (the worker owns the actual fan-out).
+    newsPublishQueue,
     // IFSC bank-lookup port (Story 6.8) — in-memory stub so the nominee-bank spec resolves fixture
     // IFSCs and asserts a dignified rejection on an unknown one. A spec may seed extra branches.
     bankIfscLookup,
@@ -421,6 +451,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     contributionNotePdfRenderer,
     claimOcrParityQueue,
     poolSpawnQueue,
+    newsPublishQueue,
     bankIfscLookup,
   };
 }

@@ -156,6 +156,13 @@ import {
   type HelpdeskAdminTicketDetailResponse as HelpdeskAdminTicketDetail,
   type SessionResponse as Session,
   type UpdateClauseDraftRequest,
+  // Story 10.5 — the News/Blog admin authoring surface DTOs.
+  NewsPostResponse,
+  NewsPostListResponse,
+  type NewsPostResponse as NewsPost,
+  type NewsPostListResponse as NewsPostList,
+  type CreateDraftRequest as NewsCreateDraftBody,
+  type UpdateDraftRequest as NewsUpdateDraftBody,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1189,5 +1196,65 @@ export function resolveHelpdeskTicket(pariwarId: string, ticketId: string, messa
   return apiFetch(`${helpdeskBase(pariwarId)}/tickets/${encodeURIComponent(ticketId)}/resolve`, HelpdeskAdminTicketDetailResponse, {
     method: 'POST',
     body: JSON.stringify({ message }),
+  });
+}
+
+// ── News/Blog admin authoring surface (Story 10.5) ────────────────────────────
+const newsBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/news`;
+
+/** GET the Pariwar's News/Blog posts (newest-first, paginated, status-filterable). */
+export function listNewsPosts(pariwarId: string, status?: string, limit = 50, offset = 0): Promise<NewsPostList> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (status) q.set('status', status);
+  return apiFetch(`${newsBase(pariwarId)}?${q.toString()}`, NewsPostListResponse);
+}
+
+/** GET a single post. */
+export function getNewsPost(pariwarId: string, postId: string): Promise<NewsPost> {
+  return apiFetch(`${newsBase(pariwarId)}/${encodeURIComponent(postId)}`, NewsPostResponse);
+}
+
+/** POST create a draft. */
+export function createNewsDraft(pariwarId: string, body: NewsCreateDraftBody): Promise<NewsPost> {
+  return apiFetch(newsBase(pariwarId), NewsPostResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/** PATCH edit a draft (draft-only). */
+export function updateNewsDraft(pariwarId: string, postId: string, patch: NewsUpdateDraftBody): Promise<NewsPost> {
+  return apiFetch(`${newsBase(pariwarId)}/${encodeURIComponent(postId)}`, NewsPostResponse, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+/** POST submit-for-review (draft → submitted; reviewer_id ≠ author). */
+export function submitNewsPost(pariwarId: string, postId: string, reviewerId: string): Promise<NewsPost> {
+  return apiFetch(`${newsBase(pariwarId)}/${encodeURIComponent(postId)}/submit`, NewsPostResponse, {
+    method: 'POST',
+    body: JSON.stringify({ reviewer_id: reviewerId }),
+  });
+}
+
+/** POST approve (submitted → approved; records the non-author tone-review sign-off). */
+export function approveNewsPost(pariwarId: string, postId: string): Promise<NewsPost> {
+  return apiFetch(`${newsBase(pariwarId)}/${encodeURIComponent(postId)}/approve`, NewsPostResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/** POST schedule (approved → scheduled). */
+export function scheduleNewsPost(pariwarId: string, postId: string, scheduledPublishAt: string): Promise<NewsPost> {
+  return apiFetch(`${newsBase(pariwarId)}/${encodeURIComponent(postId)}/schedule`, NewsPostResponse, {
+    method: 'POST',
+    body: JSON.stringify({ scheduled_publish_at: scheduledPublishAt }),
+  });
+}
+
+/** POST publish immediately (approved → published). */
+export function publishNewsPost(pariwarId: string, postId: string): Promise<NewsPost> {
+  return apiFetch(`${newsBase(pariwarId)}/${encodeURIComponent(postId)}/publish`, NewsPostResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
   });
 }

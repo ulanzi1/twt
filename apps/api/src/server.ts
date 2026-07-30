@@ -55,6 +55,7 @@ import { registerRtbfModule } from './modules/rtbf/index.js';
 import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index.js';
 import { registerHelpdeskModule } from './modules/helpdesk/index.js';
+import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
@@ -260,6 +261,12 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // event + projected state in one tx, and audits the routing decision via withCompensatingAudit. The
   // member/operator/admin surfaces are Stories 10.2/10.3/10.4.
   registerHelpdeskModule(app, deps);
+  // Story 10.5 — the News/Blog admin authoring surface (the FIRST non-helpdesk Epic-10 surface):
+  // list/create/read/edit + submit/approve(+tone-review sign-off)/schedule/publish, gated on the NEW
+  // `news.manage` key (pariwar-dimension). The domain owns author≠reviewer + the tone gate; the
+  // apps/jobs NEWS_PUBLISH worker owns the audience fan-out (crypto boundary). The PUBLIC blog read is
+  // served by apps/public (unauthenticated), not here.
+  registerNewsBlogModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

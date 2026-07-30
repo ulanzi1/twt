@@ -263,7 +263,23 @@ export function permissionKey(value: string): PermissionKey {
 // (helpdesk responding is NOT freeze-firing / not in AR-24 — the 10.3 helpdesk.create rule stands). The SECOND
 // helpdesk key. ACCEPTANCE CONDITION: district_admin helpdesk-respond may be enabled only if a helpdesk ticket
 // gains a server-derived district AND the gate moves to `dimension: 'district'` — not by widening a pariwar gate.
-export const PERMISSION_CATALOG_VERSION = 24 as const;
+// Bumped 24 → 25 at Story 10.5 (added ONE key): `news.manage` — the News/Blog admin WRITE + READ gate. Gates
+// every admin news route (GET/POST/PATCH …/p/:pariwarId/news[/…] — list/create/update/submit/approve/schedule/
+// publish + detail). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the helpdesk.create /
+// reconciliation.review / cycle.freeze pariwar-wide-key precedent; a News/Blog post is Pariwar-scoped and the
+// tenant IS the target, resolvable TODAY with no geo-tree). ONE key (not a split author/review pair): BOTH the
+// author and the reviewer hold it, and the author≠reviewer fairness rule is an IDENTITY check at the API layer
+// (Decision 2), NOT a capability tier. Granted to `pariwar_admin` (the tenant's content-authoring authority) +
+// `super_admin` (auto-derived). `media_comms` is NOT granted in v1 (PO-confirmed 2026-07-30: pariwar_admin only;
+// media_comms stays dormant until a follow-up grant). `district_admin` is DEFERRED — a `district`-ceiling grant
+// can NEVER satisfy a pariwar-dimension check (scopeContains denies a target broader than the grant; the ceiling
+// check also forbids a district_admin from holding a pariwar-scoped grant), so granting it would seed an
+// INERT/false capability — the EXACT [[project_rbac_geo_scope_containment]] asymmetry 10.3/10.4's helpdesk keys
+// already encode. NO inert district_admin grant is seeded. NOT step-up-gated (news publish is NOT freeze-firing /
+// not in AR-24). The public read surface (apps/public) is UNAUTHENTICATED (FR-74) and never touches this key.
+// ACCEPTANCE CONDITION: district_admin news-manage may be enabled only if a post gains a server-derived district
+// AND the gate moves to `dimension: 'district'` — not by widening a pariwar gate to a role that cannot satisfy it.
+export const PERMISSION_CATALOG_VERSION = 25 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -439,6 +455,14 @@ export const SEED_PERMISSION_KEYS = [
   // district_admin DEFERRED (a district-ceiling grant can't satisfy a pariwar check — an inert grant; see the
   // version-bump note + roles.ts). The SECOND helpdesk key. NOT step-up-gated.
   'helpdesk.respond',
+  // Story 10.5 (FR-51) — the News/Blog admin WRITE + READ gate (list/create/update/submit/approve/schedule/
+  // publish + detail). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the helpdesk.create /
+  // reconciliation.review pariwar-wide-key precedent). ONE key (Decision 2): both author and reviewer hold it;
+  // the author≠reviewer rule is an IDENTITY check at the API, not a capability split. Granted to `pariwar_admin`
+  // (+ super_admin auto). media_comms NOT granted in v1 (PO-confirmed pariwar_admin-only). district_admin DEFERRED
+  // (a district-ceiling grant can't satisfy a pariwar check — inert; see the version-bump note + roles.ts). NOT
+  // step-up-gated. The public read (apps/public) is unauthenticated and never touches this key.
+  'news.manage',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

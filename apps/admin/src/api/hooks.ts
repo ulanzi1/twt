@@ -792,3 +792,87 @@ export function useHelpdeskTransitions(pariwarId: string, ticketId: string) {
   const resolve = useMutation({ mutationFn: (message: string) => api.resolveHelpdeskTicket(pariwarId, ticketId, message), onSettled });
   return { pickUp, reply, resolve };
 }
+
+// ── News/Blog admin authoring hooks (Story 10.5) ──────────────────────────────
+export const newsPostsKey = (pariwarId: string) => ['news-posts', pariwarId] as const;
+export const newsPostKey = (pariwarId: string, postId: string) => ['news-post', pariwarId, postId] as const;
+
+/** GET the Pariwar's posts, optionally filtered by status. */
+export function useNewsPosts(pariwarId: string, status?: string) {
+  return useQuery({
+    queryKey: [...newsPostsKey(pariwarId), status ?? 'all'],
+    queryFn: () => api.listNewsPosts(pariwarId, status),
+  });
+}
+
+/** GET a single post (the editor loads the exact content). */
+export function useNewsPost(pariwarId: string, postId: string | null) {
+  return useQuery({
+    queryKey: newsPostKey(pariwarId, postId ?? 'none'),
+    queryFn: () => api.getNewsPost(pariwarId, postId!),
+    enabled: postId != null,
+  });
+}
+
+function useInvalidateNews(pariwarId: string) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: newsPostsKey(pariwarId) });
+  };
+}
+
+/** Create a draft, then refresh the list. */
+export function useCreateNewsDraft(pariwarId: string) {
+  const invalidate = useInvalidateNews(pariwarId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createNewsDraft>[1]) => api.createNewsDraft(pariwarId, body),
+    onSuccess: invalidate,
+  });
+}
+
+/** Edit a draft (draft-only). */
+export function useUpdateNewsDraft(pariwarId: string) {
+  const invalidate = useInvalidateNews(pariwarId);
+  return useMutation({
+    mutationFn: (args: { postId: string; patch: Parameters<typeof api.updateNewsDraft>[2] }) =>
+      api.updateNewsDraft(pariwarId, args.postId, args.patch),
+    onSuccess: invalidate,
+  });
+}
+
+/** Submit for review (reviewer_id ≠ author). */
+export function useSubmitNewsPost(pariwarId: string) {
+  const invalidate = useInvalidateNews(pariwarId);
+  return useMutation({
+    mutationFn: (args: { postId: string; reviewerId: string }) => api.submitNewsPost(pariwarId, args.postId, args.reviewerId),
+    onSuccess: invalidate,
+  });
+}
+
+/** Approve (records the non-author tone-review sign-off). */
+export function useApproveNewsPost(pariwarId: string) {
+  const invalidate = useInvalidateNews(pariwarId);
+  return useMutation({
+    mutationFn: (postId: string) => api.approveNewsPost(pariwarId, postId),
+    onSuccess: invalidate,
+  });
+}
+
+/** Schedule an approved post. */
+export function useScheduleNewsPost(pariwarId: string) {
+  const invalidate = useInvalidateNews(pariwarId);
+  return useMutation({
+    mutationFn: (args: { postId: string; scheduledPublishAt: string }) =>
+      api.scheduleNewsPost(pariwarId, args.postId, args.scheduledPublishAt),
+    onSuccess: invalidate,
+  });
+}
+
+/** Publish an approved post immediately. */
+export function usePublishNewsPost(pariwarId: string) {
+  const invalidate = useInvalidateNews(pariwarId);
+  return useMutation({
+    mutationFn: (postId: string) => api.publishNewsPost(pariwarId, postId),
+    onSuccess: invalidate,
+  });
+}

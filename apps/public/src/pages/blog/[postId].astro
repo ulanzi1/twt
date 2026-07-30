@@ -1,0 +1,68 @@
+---
+// The public News/Blog detail (Story 10.5, AC7). Fully server-rendered. Reads ONE published,
+// `public`-audience post under `withPublicScope` (twt_app + RLS). A malformed id, a non-public post,
+// or a non-published post → 404 (no enumeration oracle). Bilingual: English then Hindi copy. The body
+// is rendered as ESCAPED pre-wrapped text (Astro auto-escapes `{...}` expressions) — no raw HTML from
+// the markdown reaches the page, so an authored post can never inject markup (a full markdown→HTML
+// renderer with sanitisation is a documented follow-on).
+import { getLocale, isLocale } from '@twt/i18n';
+import type { Locale } from '@twt/i18n';
+import { ids, newsBlog, passport } from '@twt/domain';
+import type { schema } from '@twt/domain';
+
+import PublicShell from '../../layouts/PublicShell.astro';
+import { getDb, withPublicScope } from '../../lib/db.server.js';
+import { ACTIVE_PARIWAR_ID } from '../../lib/pariwar.server.js';
+
+type PostRow = schema.NewsPostRow;
+
+const { postId: postIdParam } = Astro.params;
+
+const langParam = Astro.url.searchParams.get('lang');
+const acceptLanguage = Astro.request.headers.get('accept-language') ?? undefined;
+const db = getDb().db;
+const passportRow = await passport.getPariwarPassportCached(db, ACTIVE_PARIWAR_ID);
+const locale: Locale = isLocale(langParam)
+  ? langParam
+  : getLocale({ pariwarPassportLocale: passportRow?.localeDefault, acceptLanguage });
+const branding = passportRow?.brandingBundle ?? null;
+const trustName =
+  (locale === 'hi'
+    ? (passportRow?.displayNameHi ?? passportRow?.displayNameEn)
+    : (passportRow?.displayNameEn ?? passportRow?.displayNameHi)) ?? 'News';
+
+let post: PostRow | null = null;
+try {
+  const postId = ids.newsPostId(postIdParam ?? '');
+  post = await withPublicScope((scoped) => newsBlog.getPublishedPublicPost(scoped, ACTIVE_PARIWAR_ID, postId));
+} catch {
+  post = null; // malformed id → 404
+}
+
+if (!post) {
+  // A plain 404 (no enumeration oracle) — NOT a redirect. A `Location` header has no effect on a
+  // non-3xx response, so a prior version's header here was dead weight masquerading as a redirect.
+  return new Response(null, { status: 404 });
+}
+
+function fmtDate(d: Date | null): string {
+  return d ? d.toISOString().slice(0, 10) : '';
+}
+---
+
+<PublicShell title={post.title} trustName={trustName} branding={branding} locale={locale}>
+  <main class="mx-auto max-w-2xl px-4 py-8">
+    <p class="mb-4"><a href="/blog" class="text-sm text-blue-600 hover:underline">← News</a></p>
+    <article class="space-y-6">
+      <header>
+        <h1 class="text-2xl font-semibold">{post.title}</h1>
+        {post.titleHi && <p class="mt-1 text-xl text-gray-700">{post.titleHi}</p>}
+        <p class="mt-1 text-xs text-gray-500">{fmtDate(post.publishedAt)}</p>
+      </header>
+      <section class="whitespace-pre-wrap leading-relaxed">{post.bodyMarkdown}</section>
+      {post.bodyMarkdownHi && (
+        <section class="whitespace-pre-wrap border-t pt-4 leading-relaxed text-gray-800">{post.bodyMarkdownHi}</section>
+      )}
+    </article>
+  </main>
+</PublicShell>

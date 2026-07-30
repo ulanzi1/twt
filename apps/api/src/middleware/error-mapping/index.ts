@@ -24,6 +24,11 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
+  NewsPostAuthorReviewerError,
+  NewsPostBilingualRequiredError,
+  NewsPostNotFoundError,
+  NewsPostScheduleInPastError,
+  NewsPostStateError,
   PariwarScopeMissingError,
   TcPinnedClauseNotFoundError,
   TcStateError,
@@ -145,6 +150,33 @@ export function errorMappingHandler(
   }
   if (error instanceof DraftSelfReviewError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3b′) News/Blog typed errors (Story 10.5). Each owns its code + projector.
+  //   NewsPostNotFoundError         → 404 news.post_not_found
+  //   NewsPostStateError            → 409 news.post_invalid_state (illegal transition / edit-locked)
+  //   NewsPostAuthorReviewerError   → 403 news.author_is_reviewer (author == reviewer/approver, AC2)
+  //   NewsPostBilingualRequiredError→ 422 news.bilingual_required (missing hi copy for public/members-all, AC7)
+  //   NewsPostScheduleInPastError   → 422 news.schedule_in_past (scheduled_publish_at at/before now)
+  if (error instanceof NewsPostNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof NewsPostStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof NewsPostAuthorReviewerError) {
+    void reply.status(403).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof NewsPostBilingualRequiredError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof NewsPostScheduleInPastError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }
 

@@ -890,6 +890,26 @@ The **page-weight baseline is unchanged**: every touched file is in the authenti
 
 Zero new gratuitous friction introduced; ledger reviewed, no new row warranted — the existing Story 10.2 `optional` row covers the reply composer as the natural continuation of the same member-initiated support conversation. The **page-weight baseline is unchanged**: the touched `apps/mobile` files (EAS build is a no-op → `member-app-native` stays a no-op) plus `packages/i18n`/`packages/contracts`/`packages/domain`/`apps/api`/`apps/jobs`/`packages/events` (not page-weight-gated build targets); `apps/public` is **not** touched. Do NOT ratchet (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 10.5 disposition (declaration affirmed, no new row):** the News/Blog admin authoring console
+(`apps/admin/src/modules/news-blog/*`, `apps/admin/src/routes/NewsRoute.tsx`) is entirely out of this
+ledger's scope, per the Story 6.13/6.14/10.3/10.4 precedent (admin is not a member-facing or
+page-weight-gated surface). The one member-facing surface this story touches is the **public** blog
+render (`apps/public/src/pages/blog.astro` + `apps/public/src/pages/blog/[postId].astro`) — a
+bilingual, **unauthenticated, read-only** list + detail page reading `listPublishedPublicPosts` /
+`getPublishedPublicPost` via the established `getDb`/`withPublicScope` RLS-scoped read pattern
+(`apps/public/src/lib/db.server.ts`, Story 2.5) already used by `terms.astro`/`niyamavali.astro`. This
+is the exact category the **Story 2.5 disposition** above already affirmed zero-friction for ("the
+`apps/public` Astro SSR shell... is read-only — no forms, no upload, no member-initiated action... zero
+deliberate friction"): there is no form, no upload, no login, no consent gate, and no member-initiated
+action beyond ordinary page navigation (the "← News" back-link is a plain in-page anchor, the same
+character as the Story 2.5 lang-toggle already affirmed as a non-friction server roundtrip). Zero
+gratuitous friction introduced; ledger reviewed, no new row warranted. **Unlike most prior admin/mobile
+dispositions above, this story DOES touch the page-weight-gated `apps/public` Astro surface** — but
+adds two new, lightweight, server-rendered pages (no client JS bundle: `apps/public`'s build output
+`page-weight.json` still reports `js_bundle_bytes: 0`) well under any existing ceiling, so the
+**best-ever baseline is left put** (`[[project_friction_budget_baseline_ratchet]]`: an in-PR baseline
+only ever *decreases*; a new surface that stays under the ceiling does not raise it).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

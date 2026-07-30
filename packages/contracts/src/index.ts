@@ -145,6 +145,13 @@ export * from './reconciliation/index.js';
 // sync-guard (tests/helpdesk.test.ts).
 export * from './helpdesk/index.js';
 
+// Story 10.5 — the News/Blog `[SURFACE]` transport contracts (FR-51): the audience/status/channel
+// enums (sync-guarded against the @twt/domain pgEnum tuples), the create/update/submit/approve/
+// schedule/publish requests, and the admin + UNAUTHENTICATED-public response DTOs. Pure Zod (no
+// @twt/domain import in shipped files — the RN bundle boundary); tuples are drift-guarded by a
+// test-only sync-guard (tests/news-blog.test.ts).
+export * from './news-blog/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

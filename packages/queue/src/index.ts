@@ -275,6 +275,17 @@ export const QUEUE_NAMES = {
    * cron).
    */
   CONTRIBUTION_PENDING_MATCH_RETRY_SWEEP: 'contribution.pending_match_retry.sweep',
+  /**
+   * News/Blog scheduled + immediate publish + audience fan-out (Story 10.5, Task 5). The apps/api
+   * `schedule` route enqueues this DELAYED (`startAfter = scheduled_publish_at`, `mode:'scheduled'`);
+   * the immediate `publish` route enqueues it zero-delay (`mode:'immediate'`) AFTER transitioning the
+   * post to `published`. singletonKey = post_id (dedups re-enqueues). The worker re-checks the post's
+   * status (idempotent no-op if the transition already happened or the post moved on), builds one
+   * `alert_published` Alert per resolved audience member, and runs the shipped `fanOutAlertToMembers`
+   * dispatch on the post's selected channels — the fan-out lives HERE (member Tier-1 crypto), never in
+   * the admin-identity apps/api path (the 10.4 crypto-boundary lesson). Job class B (request/event).
+   */
+  NEWS_PUBLISH: 'news.publish',
 } as const;
 
 /** Union of the registered queue names. */

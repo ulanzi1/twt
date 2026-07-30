@@ -281,3 +281,8 @@ export * from './bank_statement_entries.js';
 // clause_versions immutability posture; per-Pariwar overrides only, the default v1 is code data).
 export * from './helpdesk_tickets.js';
 export * from './helpdesk_routing_policy_versions.js';
+// Story 10.5 — the News/Blog `[SURFACE]` data model: `news_posts`. UNLIKE the event-derived-state
+// primitives above, a News/Blog post is MUTABLE content with a PLAIN `status` column (Decision 1) —
+// NO projector, NO state-writer trigger, NO CI state-invariant gate, NO events_log stream. Two
+// pgEnums (news_audience_scope + news_post_status) + a `channels` text[] on the real delivery set.
+export * from './news_posts.js';

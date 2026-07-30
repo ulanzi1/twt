@@ -162,6 +162,21 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.5 — news.manage is granted ONLY to pariwar_admin (+ super_admin); media_comms + district_admin NOT granted', () => {
+    const KEY = 'news.manage';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // PO-confirmed 2026-07-30: pariwar_admin only (+ super_admin, full catalog). media_comms stays dormant.
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // media_comms is NOT granted in v1 (its bundle stays empty); district_admin is DEFERRED (a `district`-
+    // ceiling grant can never satisfy the pariwar-dimension check — check.test.ts pins WHY).
+    for (const role of ['media_comms', 'district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 5.3 — pariwar.configure_channels is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'pariwar.configure_channels';
     const holders = defaultRoleBundles

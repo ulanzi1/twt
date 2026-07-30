@@ -20,6 +20,7 @@ import { DegradedModeRoute } from './routes/DegradedModeRoute.js';
 import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
+import { NewsRoute } from './routes/NewsRoute.js';
 import { HelpdeskTicketRoute } from './routes/HelpdeskTicketRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
 import { R9VotingRoute } from './routes/R9VotingRoute.js';
@@ -120,6 +121,13 @@ const helpdeskTicketRoute = createRoute({
   component: HelpdeskTicketRoute,
 });
 
+// Story 10.5 — the tenant-scoped News/Blog authoring console (list + editor + submit/approve/schedule/publish).
+const newsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/news',
+  component: NewsRoute,
+});
+
 // Story 6.7 — the tenant-scoped ground-inspection console (schedule/notes/photos/complete/refusal).
 const groundInspectionRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -175,6 +183,7 @@ const routeTree = rootRoute.addChildren([
   helpdeskRoute,
   helpdeskQueueRoute,
   helpdeskTicketRoute,
+  newsRoute,
   groundInspectionRoute,
   verifierConsoleRoute,
   cycleFreezeRoute,

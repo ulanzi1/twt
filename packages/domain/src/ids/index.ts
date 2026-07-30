@@ -568,3 +568,14 @@ export const helpdeskTicketId = uuidBrand('HelpdeskTicketId');
 export type HelpdeskRoutingPolicyVersionId = Brand<'HelpdeskRoutingPolicyVersionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `HelpdeskRoutingPolicyVersionId`. */
 export const helpdeskRoutingPolicyVersionId = uuidBrand('HelpdeskRoutingPolicyVersionId');
+
+// ── Story 10.5 — News/Blog post id (§Naming "branding mandatory on a new ID's first PR") ──
+// `NewsPostId` is the per-row address of a `news_posts` row (`news_posts.post_id`). UNLIKE the
+// event-derived-state primitives (member/claim/pool/alert/helpdesk_ticket), a News/Blog post is
+// mutable content with a plain `status` column — NOT event-sourced (Story 10.5 Decision 1), so
+// `post_id` is a plain DB-defaulted `gen_random_uuid()` and is NOT any event stream's stream_id.
+
+/** Per-row address of a News/Blog post (`news_posts.post_id`). Plain random UUID (not a stream id). */
+export type NewsPostId = Brand<'NewsPostId'>;
+/** Smart constructor: validates UUID shape, returns a branded `NewsPostId`. */
+export const newsPostId = uuidBrand('NewsPostId');

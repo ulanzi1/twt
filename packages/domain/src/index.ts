@@ -275,4 +275,23 @@ export * as nomineeConsole from './nominee-console/index.js';
 // resolve, the clause_versions immutability posture). Consumed by the apps/api create-ticket route;
 // the member/operator/admin surfaces are Stories 10.2/10.3/10.4.
 export * as helpdesk from './helpdesk/index.js';
+// Story 10.5 — the News/Blog `[SURFACE]` workflow module: a mutable-`status` post lifecycle
+// (Decision 1 — NOT event-derived-state) wired to the shipped tone-review gate (approve), the
+// Story 1.10 audit, and the `alert_published` dispatch fan-out (publish). Full module under the
+// `newsBlog` namespace.
+export * as newsBlog from './news-blog/index.js';
+// News/Blog typed errors surfaced at the top level — mirroring the niyamavali/T&C errors — so the
+// apps/api error-mapping middleware imports the class + code constant from `@twt/domain` directly.
+export {
+  NewsPostNotFoundError,
+  NEWS_POST_NOT_FOUND_CODE,
+  NewsPostStateError,
+  NEWS_POST_INVALID_STATE_CODE,
+  NewsPostAuthorReviewerError,
+  NEWS_POST_AUTHOR_REVIEWER_CODE,
+  NewsPostBilingualRequiredError,
+  NEWS_POST_BILINGUAL_REQUIRED_CODE,
+  NewsPostScheduleInPastError,
+  NEWS_POST_SCHEDULE_IN_PAST_CODE,
+} from './news-blog/errors.js';
 export { UUID_REGEX } from './db.js';

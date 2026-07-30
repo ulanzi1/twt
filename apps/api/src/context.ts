@@ -278,6 +278,34 @@ export interface PoolSpawnTriggerEnqueuer {
   close?(): Promise<void>;
 }
 
+/**
+ * The News/Blog publish job producer seam (Story 10.5, Task 5) — send-only. The API produces a
+ * `NEWS_PUBLISH` job; the apps/jobs worker consumes it (NEVER `boss.work()` here). The fan-out is
+ * deliberately in apps/jobs, NOT inline in apps/api — `fanOutAlertToMembers` resolves MEMBER Tier-1
+ * field crypto, but the apps/api request path carries ADMIN-identity keys (the 10.4 crypto-boundary
+ * lesson; [[project_helpdesk_responder_surface_104]]). `mode` distinguishes the two triggers:
+ *   · `immediate` — apps/api ALREADY transitioned the post to `published`; the worker only fans out
+ *     (no-op unless the post is `published`).
+ *   · `scheduled` — enqueued DELAYED (`startAfter`); at fire time the worker transitions
+ *     `scheduled → published` then fans out (no-op unless the post is still `scheduled` — the
+ *     idempotency spine: a re-scheduled/immediate-published/otherwise-changed post is a clean no-op).
+ * `singletonKey = post_id` dedups re-enqueues. Best-effort at the call site; a pg-boss-backed enqueuer
+ * in prod/dev, an OPTIONAL capturing fake in tests. `close` drains the send-only client on shutdown.
+ */
+export interface NewsPublishEnqueuer {
+  enqueuePublish(input: {
+    readonly postId: string;
+    readonly pariwarId: string;
+    readonly mode: 'immediate' | 'scheduled';
+    /** Only for `scheduled` — the pg-boss `startAfter` instant. */
+    readonly at?: Date;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }): Promise<void>;
+  close?(): Promise<void>;
+}
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;
@@ -449,6 +477,14 @@ export interface AppDeps {
    * sweep is the contracted mechanism regardless.
    */
   readonly reconciliationMatchQueue?: ReconciliationMatchEnqueuer;
+  /**
+   * News/Blog publish job producer (Story 10.5, Task 5) — send-only. The `schedule` route enqueues a
+   * DELAYED `NEWS_PUBLISH` job (`startAfter`, `mode:'scheduled'`); the immediate `publish` route
+   * enqueues a zero-delay job (`mode:'immediate'`) AFTER transitioning the post to `published`. The
+   * worker owns the audience fan-out (the crypto-boundary — see `NewsPublishEnqueuer`). Best-effort;
+   * OPTIONAL — omitted in tests + wherever the pg-boss client is not wired.
+   */
+  readonly newsPublishQueue?: NewsPublishEnqueuer;
   /**
    * Contribution-Note PDF renderer (Story 8.7, D1) — the Yogdaan Pratigya render port. The
    * headless-Chromium adapter in prod/dev (the ONLY engine satisfying both AC2 legs: Devanagari

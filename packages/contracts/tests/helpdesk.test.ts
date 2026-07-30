@@ -7,7 +7,7 @@
 // CreateTicketRequest and the four sync-guard tuples were exercised — this is how a live wire-shape
 // drift, `sub_category` vs `subcategory`, went uncaught); (3) boundary-value coverage.
 
-import { schema, rbac } from '@twt/domain';
+import { schema, rbac, helpdesk } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -18,9 +18,15 @@ import {
   HELPDESK_CATEGORIES,
   HELPDESK_CREATED_VIA,
   HELPDESK_SCOPE_DIMENSIONS,
+  HELPDESK_SEVERITIES,
   HELPDESK_TICKET_STATES,
+  HelpdeskAdminTicketDetailResponse,
   HelpdeskAttachment,
   HelpdeskGrantScope,
+  HelpdeskQueueItem,
+  HelpdeskQueueResponse,
+  HelpdeskReplyRequest,
+  HelpdeskSlaTimer,
   HelpdeskTicketDto,
   MemberCreateTicketRequest,
   MemberScopeContext,
@@ -51,6 +57,11 @@ describe('helpdesk contracts ↔ @twt/domain tuple sync-guard', () => {
 
   it('HELPDESK_SCOPE_DIMENSIONS matches the domain rbac SCOPE_DIMENSIONS', () => {
     expect([...HELPDESK_SCOPE_DIMENSIONS]).toEqual([...rbac.SCOPE_DIMENSIONS]);
+  });
+
+  // Story 10.4 — the derived-severity band (contracts) mirrors the domain sla.ts derivation order.
+  it('HELPDESK_SEVERITIES matches the domain HELPDESK_SEVERITY_ORDER (breached ≻ due_soon ≻ on_track)', () => {
+    expect([...HELPDESK_SEVERITIES]).toEqual([...helpdesk.HELPDESK_SEVERITY_ORDER]);
   });
 
   // Story 10.2 (AC6) — the attachment allowlist + count cap are the authoritative source in
@@ -495,5 +506,82 @@ describe('HelpdeskTicketDto — .strict() + superRefine', () => {
       }),
     );
     expect(r.success).toBe(true);
+  });
+});
+
+// ── Story 10.4 — the admin responder-console DTOs ─────────────────────────────────────────────────
+describe('Story 10.4 admin DTOs — queue item / detail / reply request', () => {
+  const timer = (overrides: Record<string, unknown> = {}) => ({
+    due_at: '2026-08-04T06:00:00.000Z',
+    running: true,
+    breached: false,
+    ms_remaining: 3_600_000,
+    ...overrides,
+  });
+  const crossLinks = {
+    claim_case_id: null,
+    pool_id: null,
+    module_id: null,
+    validity_lookup_id: null,
+  };
+  const queueItem = (overrides: Record<string, unknown> = {}) => ({
+    ticket_id: PARIWAR,
+    category: 'kyc-trouble',
+    sub_category: null,
+    subject: 'KYC failing',
+    current_state: 'open',
+    created_via: 'member_app',
+    routed_to_role: 'helpline_operator',
+    routed_to_scope: { dimension: 'pariwar', value: PARIWAR },
+    sla_first_response: timer(),
+    sla_resolution: timer({ ms_remaining: 400_000_000 }),
+    severity: 'on_track',
+    cross_links: crossLinks,
+    created_at: '2026-08-03T06:00:00.000Z',
+    updated_at: '2026-08-03T06:00:00.000Z',
+    ...overrides,
+  });
+
+  it('a well-formed queue item parses; an unknown key is rejected (.strict())', () => {
+    expect(HelpdeskQueueItem.safeParse(queueItem()).success).toBe(true);
+    expect(HelpdeskQueueItem.safeParse(queueItem({ surprise: 1 })).success).toBe(false);
+  });
+
+  it('HelpdeskSlaTimer accepts a NEGATIVE ms_remaining (past due) and rejects a non-integer', () => {
+    expect(HelpdeskSlaTimer.safeParse(timer({ ms_remaining: -5000, breached: true })).success).toBe(true);
+    expect(HelpdeskSlaTimer.safeParse(timer({ ms_remaining: 1.5 })).success).toBe(false);
+  });
+
+  it('severity only accepts breached / due_soon / on_track', () => {
+    expect(HelpdeskQueueItem.safeParse(queueItem({ severity: 'due_soon' })).success).toBe(true);
+    expect(HelpdeskQueueItem.safeParse(queueItem({ severity: 'urgent' })).success).toBe(false);
+  });
+
+  it('the queue response pages with a nullable next_offset', () => {
+    expect(HelpdeskQueueResponse.safeParse({ tickets: [queueItem()], next_offset: 50 }).success).toBe(true);
+    expect(HelpdeskQueueResponse.safeParse({ tickets: [], next_offset: null }).success).toBe(true);
+  });
+
+  it('the admin detail extends the queue item with body + thread + routing snapshot', () => {
+    const detail = {
+      ...queueItem(),
+      subject_member_id: MEMBER,
+      subject_actor_id: null,
+      body: 'My KYC upload keeps failing.',
+      attachments: [],
+      thread: [{ kind: 'opening', author: 'member', body: 'My KYC upload keeps failing.', occurred_at: '2026-08-03T06:00:00.000Z' }],
+      operator_attribution: null,
+      routing_policy_version: 1,
+      assigned_at: '2026-08-03T06:00:00.000Z',
+      member_scope_context: { pariwar_id: PARIWAR, state: null, district: null, block: null, subject_member_id: MEMBER },
+    };
+    expect(HelpdeskAdminTicketDetailResponse.safeParse(detail).success).toBe(true);
+  });
+
+  it('the reply request bounds the message (1..5000) and stays strict', () => {
+    expect(HelpdeskReplyRequest.safeParse({ message: 'Could you share your UTR?' }).success).toBe(true);
+    expect(HelpdeskReplyRequest.safeParse({ message: '' }).success).toBe(false);
+    expect(HelpdeskReplyRequest.safeParse({ message: 'x'.repeat(5001) }).success).toBe(false);
+    expect(HelpdeskReplyRequest.safeParse({ message: 'ok', extra: 1 }).success).toBe(false);
   });
 });

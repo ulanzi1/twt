@@ -149,6 +149,11 @@ import {
   type CreateTicketRequest,
   type CreateTicketResponse as HelpdeskTicket,
   type HelpdeskCategoryListResponse as HelpdeskCategoryList,
+  // Story 10.4 — the helpdesk responder console (queue + detail + transitions).
+  HelpdeskQueueResponse,
+  HelpdeskAdminTicketDetailResponse,
+  type HelpdeskQueueResponse as HelpdeskQueue,
+  type HelpdeskAdminTicketDetailResponse as HelpdeskAdminTicketDetail,
   type SessionResponse as Session,
   type UpdateClauseDraftRequest,
 } from '@twt/contracts';
@@ -1135,4 +1140,54 @@ export function createHelplineTicket(
 /** GET the in-force routing-policy category set for the operator picker (registry-driven, AC5). */
 export function getHelpdeskCategories(pariwarId: string): Promise<HelpdeskCategoryList> {
   return apiFetch(`${helpdeskBase(pariwarId)}/categories`, HelpdeskCategoryListResponse);
+}
+
+// ── Helpdesk responder console (Story 10.4) — the queue + detail + transitions ─────────────────────
+// Gated server-side by [adminSession, scope, requirePermissionHook(helpdesk.respond @ pariwar)].
+
+/** The responder queue filters (all optional). */
+export interface HelpdeskQueueFilters {
+  state?: string;
+  routedToRole?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** GET the paginated responder queue (scope-respecting; derived SLA + severity). */
+export function getHelpdeskQueue(pariwarId: string, filters: HelpdeskQueueFilters = {}): Promise<HelpdeskQueue> {
+  const q = new URLSearchParams();
+  if (filters.state) q.set('state', filters.state);
+  if (filters.routedToRole) q.set('routed_to_role', filters.routedToRole);
+  if (filters.limit !== undefined) q.set('limit', String(filters.limit));
+  if (filters.offset !== undefined) q.set('offset', String(filters.offset));
+  const qs = q.toString();
+  return apiFetch(`${helpdeskBase(pariwarId)}/queue${qs ? `?${qs}` : ''}`, HelpdeskQueueResponse);
+}
+
+/** GET one ticket's admin detail (full row + thread + SLA/severity + cross-links). */
+export function getHelpdeskTicket(pariwarId: string, ticketId: string): Promise<HelpdeskAdminTicketDetail> {
+  return apiFetch(`${helpdeskBase(pariwarId)}/tickets/${encodeURIComponent(ticketId)}`, HelpdeskAdminTicketDetailResponse);
+}
+
+/** POST pick-up (open/reopened → in_progress). */
+export function pickUpHelpdeskTicket(pariwarId: string, ticketId: string): Promise<HelpdeskAdminTicketDetail> {
+  return apiFetch(`${helpdeskBase(pariwarId)}/tickets/${encodeURIComponent(ticketId)}/pick-up`, HelpdeskAdminTicketDetailResponse, {
+    method: 'POST',
+  });
+}
+
+/** POST a staff reply asking the member for info (→ awaiting_member; notifies the member). */
+export function replyHelpdeskTicket(pariwarId: string, ticketId: string, message: string): Promise<HelpdeskAdminTicketDetail> {
+  return apiFetch(`${helpdeskBase(pariwarId)}/tickets/${encodeURIComponent(ticketId)}/reply`, HelpdeskAdminTicketDetailResponse, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+/** POST a closing reply (→ resolved; notifies the member). */
+export function resolveHelpdeskTicket(pariwarId: string, ticketId: string, message: string): Promise<HelpdeskAdminTicketDetail> {
+  return apiFetch(`${helpdeskBase(pariwarId)}/tickets/${encodeURIComponent(ticketId)}/resolve`, HelpdeskAdminTicketDetailResponse, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
 }

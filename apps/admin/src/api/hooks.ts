@@ -760,3 +760,35 @@ export function useCreateHelplineTicket(pariwarId: string) {
       api.createHelplineTicket(pariwarId, body),
   });
 }
+
+// ── Helpdesk responder console (Story 10.4) — queue + detail + transitions ─────────────────────────
+
+/** The paginated responder queue (scope-respecting; derived SLA + severity). Refetched on filter change. */
+export function useHelpdeskQueue(pariwarId: string, filters: api.HelpdeskQueueFilters = {}) {
+  return useQuery({
+    queryKey: ['helpdesk-queue', pariwarId, filters] as const,
+    queryFn: () => api.getHelpdeskQueue(pariwarId, filters),
+  });
+}
+
+/** One ticket's admin detail (row + thread + SLA/severity + cross-links). */
+export function useHelpdeskTicket(pariwarId: string, ticketId: string) {
+  return useQuery({
+    queryKey: ['helpdesk-ticket', pariwarId, ticketId] as const,
+    queryFn: () => api.getHelpdeskTicket(pariwarId, ticketId),
+  });
+}
+
+/** The three responder transition mutations. Each returns the updated detail; the caller invalidates
+ *  the ticket + queue queries so the console re-renders the new state + thread. */
+export function useHelpdeskTransitions(pariwarId: string, ticketId: string) {
+  const qc = useQueryClient();
+  const onSettled = (): void => {
+    void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
+    void qc.invalidateQueries({ queryKey: ['helpdesk-queue', pariwarId] });
+  };
+  const pickUp = useMutation({ mutationFn: () => api.pickUpHelpdeskTicket(pariwarId, ticketId), onSettled });
+  const reply = useMutation({ mutationFn: (message: string) => api.replyHelpdeskTicket(pariwarId, ticketId, message), onSettled });
+  const resolve = useMutation({ mutationFn: (message: string) => api.resolveHelpdeskTicket(pariwarId, ticketId, message), onSettled });
+  return { pickUp, reply, resolve };
+}

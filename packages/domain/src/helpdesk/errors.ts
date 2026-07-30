@@ -203,6 +203,46 @@ export class HelpdeskGenesisAlreadyExistsError extends Error {
 }
 
 /**
+ * Thrown by `projectTicketTransition` when the requested transition is inapplicable to the ticket's
+ * current state — the reducer would return the state unchanged (identity). Because the reducer is
+ * TOTAL (an illegal transition is a silent no-op, state.ts), the projector must NOT append a no-op
+ * event (it would corrupt the audit trail + return a misleading success). This is the projector's
+ * defense-in-depth twin of the API-layer legality guard (Story 10.4 AC2): even if a caller skips the
+ * pre-write check, the projector refuses the write. Carries the ticket + the (from_state, event_type)
+ * that did not advance.
+ */
+export class HelpdeskIllegalTransitionError extends Error {
+  public readonly name = 'HelpdeskIllegalTransitionError';
+  public constructor(
+    public readonly ticketId: string,
+    public readonly fromState: string,
+    public readonly eventType: string,
+  ) {
+    super(
+      `[projectTicketTransition] event '${eventType}' does not apply to ticket ${ticketId} in state ` +
+        `'${fromState}' — the transition is illegal (the reducer would no-op); refusing to append a ` +
+        `no-op event`,
+    );
+  }
+}
+
+/**
+ * Thrown by `projectTicketTransition` when a ticket's `events_log` stream is EMPTY (no genesis) —
+ * a transition was requested against a ticket that was never created. The genesis is always the
+ * first event (projectTicketGenesis), so an empty stream at transition time is an impossible state
+ * (a caller bug or a lost genesis), surfaced as a typed error rather than a silent no-op.
+ */
+export class HelpdeskGenesisMissingError extends Error {
+  public readonly name = 'HelpdeskGenesisMissingError';
+  public constructor(public readonly ticketId: string) {
+    super(
+      `[projectTicketTransition] ticket stream ${ticketId} has no events — a transition was requested ` +
+        `against a ticket with no genesis (impossible: the genesis is always the first event)`,
+    );
+  }
+}
+
+/**
  * Thrown when the `helpdesk_tickets` row insert itself fails (e.g. the `helpdesk_tickets_subject_xor`
  * CHECK, 23514, or a PK collision) — a typed wrapper so this failure mode is distinguishable from
  * an arbitrary internal error, mirroring how the sibling `events_log` insert a few lines above it

@@ -12,3 +12,4 @@ export * from './attachment.js';
 export * from './ticket.js';
 export * from './create-ticket.js';
 export * from './member.js';
+export * from './admin.js';

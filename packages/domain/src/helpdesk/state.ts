@@ -133,3 +133,15 @@ function toHelpdeskEvent(row: EventRow): HelpdeskEventInput {
 export function replayTicketState(rows: readonly EventRow[]): HelpdeskTicketState {
   return helpdeskTicketStateMachine.fold(rows.map(toHelpdeskEvent));
 }
+
+/**
+ * Reduce a single transition from a known current state (PURE). The ticket machine reads NO payload
+ * content (state derives from `(current_state, event.type)` alone — see {@link reduce}), so a `null`
+ * payload is sufficient. Used by the transition projector to derive the `to_state` it stamps on the
+ * event BEFORE the append (and the `current_state` it re-projects). An inapplicable transition
+ * returns `state` unchanged (the total/identity contract) — the projector treats that identity as an
+ * illegal-transition signal and refuses to append a no-op event.
+ */
+export function nextTicketState(state: HelpdeskTicketState, eventType: string): HelpdeskTicketState {
+  return reduce(state, { type: eventType, payload: null });
+}

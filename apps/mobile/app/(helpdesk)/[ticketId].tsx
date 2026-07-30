@@ -8,14 +8,17 @@
 import { useState } from 'react'
 import { Linking, ScrollView } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
-import { Button, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
+import { Button, Separator, Spinner, Text, TextArea, XStack, YStack } from 'tamagui'
 
 import { ApiError } from '@twt/api-client'
 
 import { helpdeskApi } from '../../lib/helpdesk-api'
 import { useHelpdeskT } from '../../lib/helpdesk-i18n'
 import { useSession } from '../../lib/session-context'
-import { useHelpdeskTicketQuery } from '../../components/helpdesk/useHelpdeskQueries'
+import { useHelpdeskReplyMutation, useHelpdeskTicketQuery } from '../../components/helpdesk/useHelpdeskQueries'
+
+/** The bounded reply message length (matches the server's message-bearing payload cap). */
+const HELPDESK_REPLY_MAX = 5000
 
 /** Resolve the member-friendly routing copy from the raw role (never a named individual — AC2). */
 const KNOWN_ROLES = new Set(['pariwar_admin', 'helpline_operator', 'finance_officer', 'it_cell'])
@@ -51,6 +54,14 @@ export default function HelpdeskDetailScreen(): React.ReactElement {
 
   const [openingIndex, setOpeningIndex] = useState<number | null>(null)
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
+  const replyMutation = useHelpdeskReplyMutation(pariwarId, ticketId)
+
+  function submitReply(): void {
+    const trimmed = replyText.trim()
+    if (trimmed.length === 0) return
+    replyMutation.mutate(trimmed, { onSuccess: () => setReplyText('') })
+  }
 
   async function openAttachment(index: number): Promise<void> {
     if (!pariwarId || !ticketId) return
@@ -193,6 +204,35 @@ export default function HelpdeskDetailScreen(): React.ReactElement {
             </YStack>
           ))}
         </YStack>
+
+        {/* Story 10.4 — the member reply composer. Shown ONLY when the ticket awaits the member
+            (current_state === 'awaiting_member'): the team asked for something, so the member can
+            reply, which advances awaiting_member → in_progress and returns the ticket to the queue. */}
+        {data.current_state === 'awaiting_member' && (
+          <YStack gap="$2" data-testid="helpdesk-reply-composer">
+            <Text fontWeight="500">{t('detail.reply_hint')}</Text>
+            <TextArea
+              accessibilityLabel={t('detail.reply_label')}
+              placeholder={t('detail.reply_placeholder')}
+              value={replyText}
+              onChangeText={(v: string) => setReplyText(v.slice(0, HELPDESK_REPLY_MAX))}
+              disabled={replyMutation.isPending}
+              height={80}
+            />
+            {replyMutation.isError && (
+              <Text color="$red10" accessibilityRole="alert">
+                {t('detail.reply_error')}
+              </Text>
+            )}
+            <Button
+              onPress={submitReply}
+              disabled={replyText.trim().length === 0 || replyMutation.isPending}
+              accessibilityLabel={t('detail.reply_submit')}
+            >
+              {replyMutation.isPending ? t('detail.reply_pending') : t('detail.reply_submit')}
+            </Button>
+          </YStack>
+        )}
       </ScrollView>
     </YStack>
   )

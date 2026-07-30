@@ -10,7 +10,13 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { HelpdeskTicketCreatedPayloadSchema } from '../../src/helpdesk/events.js';
+import {
+  HelpdeskAwaitingMemberPayloadSchema,
+  HelpdeskMemberRepliedPayloadSchema,
+  HelpdeskPickedUpPayloadSchema,
+  HelpdeskResolvedPayloadSchema,
+  HelpdeskTicketCreatedPayloadSchema,
+} from '../../src/helpdesk/events.js';
 
 const PARIWAR = randomUUID();
 const MEMBER = randomUUID();
@@ -98,5 +104,93 @@ describe('HelpdeskTicketCreatedPayloadSchema — created_via/operator_attributio
   it('rejects created_via: member_app with a non-null operator_attribution', () => {
     const result = HelpdeskTicketCreatedPayloadSchema.safeParse(basePayload({ operator_attribution: 'should not be here' }));
     expect(result.success).toBe(false);
+  });
+});
+
+// ── Story 10.4 — the message-bearing transition payload schemas (Decision 1) ──────────────────────
+//
+// awaiting_member / member_replied / resolved carry a bounded `message` (the reply round-trip); the
+// message-free transitions (picked_up / closed / reopened) do NOT. `.strict()` rejects any unknown key.
+
+const auditBase = {
+  from_state: 'in_progress' as const,
+  to_state: 'awaiting_member' as const,
+  trigger: 'helpdesk.transition:reply',
+  actor: 'staff' as const,
+};
+
+describe('Story 10.4 — message-bearing transition schemas accept a bounded message', () => {
+  it('HelpdeskAwaitingMemberPayloadSchema accepts a staff message', () => {
+    const result = HelpdeskAwaitingMemberPayloadSchema.safeParse({ ...auditBase, message: 'Could you share your UTR?' });
+    expect(result.success).toBe(true);
+  });
+
+  it('HelpdeskResolvedPayloadSchema accepts a closing message', () => {
+    const result = HelpdeskResolvedPayloadSchema.safeParse({
+      ...auditBase,
+      to_state: 'resolved',
+      message: 'Fixed — your KYC is verified now.',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('HelpdeskMemberRepliedPayloadSchema accepts a member message', () => {
+    const result = HelpdeskMemberRepliedPayloadSchema.safeParse({
+      ...auditBase,
+      from_state: 'awaiting_member',
+      to_state: 'in_progress',
+      actor: 'member',
+      message: 'Here is my UTR: 1234567890',
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('Story 10.4 — message-bearing transition schemas REQUIRE the message + stay .strict()', () => {
+  it('HelpdeskAwaitingMemberPayloadSchema rejects a MISSING message', () => {
+    expect(HelpdeskAwaitingMemberPayloadSchema.safeParse(auditBase).success).toBe(false);
+  });
+
+  it('HelpdeskResolvedPayloadSchema rejects an EMPTY message', () => {
+    expect(
+      HelpdeskResolvedPayloadSchema.safeParse({ ...auditBase, to_state: 'resolved', message: '' }).success,
+    ).toBe(false);
+  });
+
+  it('HelpdeskAwaitingMemberPayloadSchema rejects a message over the 5000-char bound', () => {
+    expect(
+      HelpdeskAwaitingMemberPayloadSchema.safeParse({ ...auditBase, message: 'x'.repeat(5001) }).success,
+    ).toBe(false);
+  });
+
+  it('a message-bearing schema rejects an unknown key (.strict())', () => {
+    expect(
+      HelpdeskAwaitingMemberPayloadSchema.safeParse({ ...auditBase, message: 'ok', surprise: 1 }).success,
+    ).toBe(false);
+  });
+});
+
+describe('Story 10.4 — the message-FREE transitions reject a message (.strict())', () => {
+  it('HelpdeskPickedUpPayloadSchema accepts the bare audit shape', () => {
+    expect(
+      HelpdeskPickedUpPayloadSchema.safeParse({
+        from_state: 'open',
+        to_state: 'in_progress',
+        trigger: 'helpdesk.transition:pick_up',
+        actor: 'staff',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('HelpdeskPickedUpPayloadSchema REJECTS an added message (.strict())', () => {
+    expect(
+      HelpdeskPickedUpPayloadSchema.safeParse({
+        from_state: 'open',
+        to_state: 'in_progress',
+        trigger: 'helpdesk.transition:pick_up',
+        actor: 'staff',
+        message: 'pick-ups carry no message',
+      }).success,
+    ).toBe(false);
   });
 });

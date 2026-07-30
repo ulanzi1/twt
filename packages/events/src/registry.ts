@@ -478,4 +478,35 @@ export const EVENT_TYPE_REGISTRY = {
       'A helpdesk ticket was created + routed → the ticket genesis event ((none) → open), emitted once by the Story 10.1 create-ticket route (stream_id = ticket_id). Carries the FULL audit-replayable routing snapshot: category/sub_category, the member_scope_context, the routing_policy_version in force at creation, the resolved target_role + target_scope, matched_rule_index, the two SLA due instants, created_via + operator_attribution, the subject (exactly one of member/actor), attachments, and the nullable cross-link refs.',
     schema: helpdesk.HelpdeskTicketCreatedPayloadSchema,
   },
+  // ── Story 10.4 — the four helpdesk lifecycle TRANSITION types (the responder round-trip) ──
+  // Story 10.1 authored the complete 6-state reducer + all transition payload shapes but registered
+  // ONLY the genesis. Story 10.4 wires the emitting surfaces (the admin responder console + the member
+  // reply-append route) via `projectTicketTransition`, so it registers the four types those surfaces
+  // emit. `helpdesk.closed` (the 7-day auto-close sweep) + `helpdesk.reopened` (a member reopen) remain
+  // AUTHORED-but-UNREGISTERED — documented seams owned by their future emitting surfaces (the alert.*
+  // "author-all-arms, register-with-the-emitter" precedent).
+  'helpdesk.picked_up': {
+    type: 'helpdesk.picked_up',
+    description:
+      'A responder picked up a ticket → in_progress (open/reopened → in_progress), emitted by the Story 10.4 admin pick-up route via projectTicketTransition (stream_id = ticket_id). Message-free lifecycle transition (auditShape only).',
+    schema: helpdesk.HelpdeskPickedUpPayloadSchema,
+  },
+  'helpdesk.awaiting_member': {
+    type: 'helpdesk.awaiting_member',
+    description:
+      'A responder replied asking the member for info → awaiting_member (open/in_progress → awaiting_member; the resolution SLA pauses), emitted by the Story 10.4 admin reply route. Carries the staff `message` (the reply round-trip; replayTicketThread surfaces it) — the first message-bearing helpdesk transition.',
+    schema: helpdesk.HelpdeskAwaitingMemberPayloadSchema,
+  },
+  'helpdesk.member_replied': {
+    type: 'helpdesk.member_replied',
+    description:
+      'The member replied from their app → in_progress (awaiting_member → in_progress; the ticket returns to the responder queue), emitted by the Story 10.4 member reply-append route. Carries the member `message`.',
+    schema: helpdesk.HelpdeskMemberRepliedPayloadSchema,
+  },
+  'helpdesk.resolved': {
+    type: 'helpdesk.resolved',
+    description:
+      'A responder resolved a ticket → resolved (in_progress/awaiting_member → resolved), emitted by the Story 10.4 admin resolve route. Carries the staff closing `message` (fires the helpdesk_reply member notification).',
+    schema: helpdesk.HelpdeskResolvedPayloadSchema,
+  },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

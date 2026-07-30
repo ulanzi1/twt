@@ -10,10 +10,14 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { ids } from '../../../src/index.js';
-import { HelpdeskGenesisAlreadyExistsError } from '../../../src/helpdesk/errors.js';
+import {
+  HelpdeskGenesisAlreadyExistsError,
+  HelpdeskGenesisMissingError,
+  HelpdeskIllegalTransitionError,
+} from '../../../src/helpdesk/errors.js';
 import type { ProjectTicketGenesisInput } from '../../../src/helpdesk/project.js';
-import { projectTicketGenesis } from '../../../src/helpdesk/project.js';
-import { getTicketById } from '../../../src/helpdesk/read.js';
+import { projectTicketGenesis, projectTicketTransition } from '../../../src/helpdesk/project.js';
+import { getTicketById, listTicketEvents, replayTicketThread } from '../../../src/helpdesk/read.js';
 import { eventsLog } from '../../../src/schema/events_log.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
@@ -233,5 +237,180 @@ describe.skipIf(!hasDatabase)('helpdesk projector + trigger (AC4)', () => {
       .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(Error);
     expect((err as { code?: string }).code).toBe('23514'); // check_violation
+  });
+});
+
+// ── Story 10.4 — projectTicketTransition (the append + re-project sibling of the genesis) ─────────
+describe.skipIf(!hasDatabase)('helpdesk transition projector (Story 10.4, AC2)', () => {
+  setupLiveDb();
+
+  async function seedTicket(ticketId: string): Promise<string> {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const memberId = randomUUID();
+    await projectTicketGenesis(client, genesisInput(ticketId, PARIWAR_A, { subjectMemberId: ids.memberId(memberId), actorId: memberId }));
+    return memberId;
+  }
+
+  it('pick-up advances open → in_progress, bumps state_event_version, appends the event (v2)', async () => {
+    const { client, tx } = getTx();
+    const ticketId = randomUUID();
+    const staffId = randomUUID();
+    await seedTicket(ticketId);
+
+    const result = await projectTicketTransition(client, {
+      ticketId: ids.helpdeskTicketId(ticketId),
+      pariwarId: ids.pariwarId(PARIWAR_A),
+      eventType: 'helpdesk.picked_up',
+      trigger: 'helpdesk.transition:pick_up',
+      actor: 'staff',
+      actorId: staffId,
+    });
+    expect(result.fromState).toBe('open');
+    expect(result.state).toBe('in_progress');
+    expect(result.eventVersion).toBe(2);
+
+    const row = await getTicketById(tx, ids.pariwarId(PARIWAR_A), ids.helpdeskTicketId(ticketId));
+    expect(row!.currentState).toBe('in_progress');
+    expect(row!.stateEventVersion).toBe(2);
+  });
+
+  it('a staff reply (awaiting_member) stores the message; replayTicketThread surfaces it as a staff reply', async () => {
+    const { client, tx } = getTx();
+    const ticketId = randomUUID();
+    const staffId = randomUUID();
+    await seedTicket(ticketId);
+    await projectTicketTransition(client, {
+      ticketId: ids.helpdeskTicketId(ticketId),
+      pariwarId: ids.pariwarId(PARIWAR_A),
+      eventType: 'helpdesk.picked_up',
+      trigger: 'helpdesk.transition:pick_up',
+      actor: 'staff',
+      actorId: staffId,
+    });
+    await projectTicketTransition(client, {
+      ticketId: ids.helpdeskTicketId(ticketId),
+      pariwarId: ids.pariwarId(PARIWAR_A),
+      eventType: 'helpdesk.awaiting_member',
+      trigger: 'helpdesk.transition:reply',
+      actor: 'staff',
+      actorId: staffId,
+      message: 'Could you share your UTR number?',
+    });
+
+    const row = await getTicketById(tx, ids.pariwarId(PARIWAR_A), ids.helpdeskTicketId(ticketId));
+    expect(row!.currentState).toBe('awaiting_member');
+    const thread = replayTicketThread(await listTicketEvents(tx, ids.helpdeskTicketId(ticketId)));
+    // opening (member) + staff reply.
+    expect(thread.map((e) => e.kind)).toEqual(['opening', 'staff_reply']);
+    expect(thread[1]).toMatchObject({ author: 'staff', body: 'Could you share your UTR number?' });
+  });
+
+  it('a member reply (member_replied) returns awaiting_member → in_progress and surfaces as a member reply', async () => {
+    const { client, tx } = getTx();
+    const ticketId = randomUUID();
+    const staffId = randomUUID();
+    const memberId = await seedTicket(ticketId);
+    await projectTicketTransition(client, {
+      ticketId: ids.helpdeskTicketId(ticketId),
+      pariwarId: ids.pariwarId(PARIWAR_A),
+      eventType: 'helpdesk.awaiting_member',
+      trigger: 'helpdesk.transition:reply',
+      actor: 'staff',
+      actorId: staffId,
+      message: 'What is your UTR?',
+    });
+    const result = await projectTicketTransition(client, {
+      ticketId: ids.helpdeskTicketId(ticketId),
+      pariwarId: ids.pariwarId(PARIWAR_A),
+      eventType: 'helpdesk.member_replied',
+      trigger: 'helpdesk.transition:member_reply',
+      actor: 'member',
+      actorId: memberId,
+      message: 'It is 1234567890.',
+    });
+    expect(result.fromState).toBe('awaiting_member');
+    expect(result.state).toBe('in_progress');
+
+    const thread = replayTicketThread(await listTicketEvents(tx, ids.helpdeskTicketId(ticketId)));
+    expect(thread.map((e) => e.kind)).toEqual(['opening', 'staff_reply', 'member_reply']);
+  });
+
+  it('an ILLEGAL transition (resolve an open ticket) throws HelpdeskIllegalTransitionError and appends NO event', async () => {
+    const { client, tx } = getTx();
+    const ticketId = randomUUID();
+    await seedTicket(ticketId);
+    // open --(resolved)--> identity (illegal: resolve applies only from in_progress|awaiting_member).
+    await expect(
+      projectTicketTransition(client, {
+        ticketId: ids.helpdeskTicketId(ticketId),
+        pariwarId: ids.pariwarId(PARIWAR_A),
+        eventType: 'helpdesk.resolved',
+        trigger: 'helpdesk.transition:resolve',
+        actor: 'staff',
+        actorId: randomUUID(),
+        message: 'done',
+      }),
+    ).rejects.toThrow(HelpdeskIllegalTransitionError);
+
+    // No no-op event was appended — the stream still holds only the genesis (v1).
+    const events = await listTicketEvents(tx, ids.helpdeskTicketId(ticketId));
+    expect(events).toHaveLength(1);
+    const row = await getTicketById(tx, ids.pariwarId(PARIWAR_A), ids.helpdeskTicketId(ticketId));
+    expect(row!.currentState).toBe('open');
+  });
+
+  it('a message-bearing schema violation (awaiting_member with NO message) is rejected pre-write (ZodError)', async () => {
+    const { client, tx } = getTx();
+    const ticketId = randomUUID();
+    await seedTicket(ticketId);
+    await expect(
+      projectTicketTransition(client, {
+        ticketId: ids.helpdeskTicketId(ticketId),
+        pariwarId: ids.pariwarId(PARIWAR_A),
+        eventType: 'helpdesk.awaiting_member',
+        trigger: 'helpdesk.transition:reply',
+        actor: 'staff',
+        actorId: randomUUID(),
+        // message omitted — the strict schema requires it.
+      }),
+    ).rejects.toThrow();
+    const events = await listTicketEvents(tx, ids.helpdeskTicketId(ticketId));
+    expect(events).toHaveLength(1);
+  });
+
+  it('a transition against a non-existent ticket stream throws HelpdeskGenesisMissingError', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    await expect(
+      projectTicketTransition(client, {
+        ticketId: ids.helpdeskTicketId(randomUUID()),
+        pariwarId: ids.pariwarId(PARIWAR_A),
+        eventType: 'helpdesk.picked_up',
+        trigger: 'helpdesk.transition:pick_up',
+        actor: 'staff',
+        actorId: randomUUID(),
+      }),
+    ).rejects.toThrow(HelpdeskGenesisMissingError);
+  });
+
+  it('the re-projected current_state write goes THROUGH the guard — a concurrent raw UPDATE is still rejected (P0001)', async () => {
+    const { client } = getTx();
+    const ticketId = randomUUID();
+    await seedTicket(ticketId);
+    await projectTicketTransition(client, {
+      ticketId: ids.helpdeskTicketId(ticketId),
+      pariwarId: ids.pariwarId(PARIWAR_A),
+      eventType: 'helpdesk.picked_up',
+      trigger: 'helpdesk.transition:pick_up',
+      actor: 'staff',
+      actorId: randomUUID(),
+    });
+    // The guard is tx-scoped SET LOCAL, reset after the projector's UPDATE — a subsequent raw write is rejected.
+    const err = await client
+      .query("UPDATE helpdesk_tickets SET current_state = 'resolved' WHERE ticket_id = $1", [ticketId])
+      .then(() => null)
+      .catch((e: unknown) => e);
+    expect((err as { code?: string }).code).toBe('P0001');
   });
 });

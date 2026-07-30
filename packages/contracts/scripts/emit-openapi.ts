@@ -2228,6 +2228,138 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.4 — the admin responder console + the member reply-append (round-trip) ─────────────
+// The responder surface (`/api/v1/p/{pariwarId}/helpdesk/...`, gated by the new `helpdesk.respond`
+// permission): the paginated queue with derived SLA/severity, the admin ticket detail, and the
+// pick-up / reply / resolve transitions. PLUS the member-side reply-append (member-session-gated) that
+// closes AC3's member→staff round-trip.
+const {
+  HelpdeskQueueResponse: HelpdeskQueueResponseSchema,
+  HelpdeskAdminTicketDetailResponse: HelpdeskAdminTicketDetailResponseSchema,
+  HelpdeskReplyRequest: HelpdeskReplyRequestSchema,
+} = await import('../src/helpdesk/index.js');
+const HelpdeskQueueComponent = HelpdeskQueueResponseSchema.openapi('HelpdeskQueue');
+const HelpdeskAdminTicketDetailComponent = HelpdeskAdminTicketDetailResponseSchema.openapi('HelpdeskAdminTicketDetail');
+const HelpdeskReplyRequestComponent = HelpdeskReplyRequestSchema.openapi('HelpdeskReplyRequest');
+
+const helpdeskQueueQuery = z.object({
+  state: z
+    .enum(['open', 'in_progress', 'awaiting_member', 'resolved', 'closed', 'reopened'])
+    .optional()
+    .openapi({ description: 'Filter by lifecycle state' }),
+  routed_to_role: z.string().optional().openapi({ description: '"My queue" — filter by the routed-to role' }),
+  limit: z.coerce.number().int().positive().optional().openapi({ description: 'Page size (clamped to [1,200], default 50)' }),
+  offset: z.coerce.number().int().nonnegative().optional().openapi({ description: 'Page offset (default 0)' }),
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/helpdesk/queue',
+  summary: 'The paginated responder queue (scope-respecting, with derived SLA + severity)',
+  description:
+    'Admin-session-gated + `helpdesk.respond` (pariwar-dimension). The Pariwar\'s tickets newest-first, ' +
+    'filterable by lifecycle state + routed-to role ("my queue"), paginated (clampLimit-bounded). Each ' +
+    'row carries the two derived SLA timers (running/breached/ms_remaining), the derived severity ' +
+    '(breached ≻ due_soon ≻ on_track), and the cross-link ref presence.',
+  tags: ['helpdesk'],
+  request: { params: helpdeskPariwarParams, query: helpdeskQueueQuery },
+  responses: {
+    200: { description: 'The paginated responder queue', content: jsonOf(HelpdeskQueueComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (helpdesk.respond) for this Pariwar'),
+    404: errorResponse('Pariwar not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}',
+  summary: 'The admin ticket detail (full row + thread + SLA/severity + cross-links)',
+  tags: ['helpdesk'],
+  request: { params: helpdeskTicketParams },
+  responses: {
+    200: { description: 'The ticket detail', content: jsonOf(HelpdeskAdminTicketDetailComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (helpdesk.respond) for this Pariwar'),
+    404: errorResponse('Ticket not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}/pick-up',
+  summary: 'Pick up a ticket (open/reopened → in_progress)',
+  tags: ['helpdesk'],
+  request: { params: helpdeskTicketParams },
+  responses: {
+    200: { description: 'The updated ticket detail', content: jsonOf(HelpdeskAdminTicketDetailComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (helpdesk.respond) for this Pariwar'),
+    404: errorResponse('Ticket not found'),
+    409: errorResponse('Illegal transition for the ticket\'s current state'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}/reply',
+  summary: 'Reply asking the member for info (→ awaiting_member; notifies the member)',
+  tags: ['helpdesk'],
+  request: {
+    params: helpdeskTicketParams,
+    body: { content: jsonOf(HelpdeskReplyRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The updated ticket detail', content: jsonOf(HelpdeskAdminTicketDetailComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (helpdesk.respond) for this Pariwar'),
+    404: errorResponse('Ticket not found'),
+    409: errorResponse('Illegal transition for the ticket\'s current state'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}/resolve',
+  summary: 'Resolve a ticket with a closing message (→ resolved; notifies the member)',
+  tags: ['helpdesk'],
+  request: {
+    params: helpdeskTicketParams,
+    body: { content: jsonOf(HelpdeskReplyRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The updated ticket detail', content: jsonOf(HelpdeskAdminTicketDetailComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (helpdesk.respond) for this Pariwar'),
+    404: errorResponse('Ticket not found'),
+    409: errorResponse('Illegal transition for the ticket\'s current state'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member/helpdesk/tickets/{ticketId}/reply',
+  summary: 'Member replies to their own ticket (awaiting_member → in_progress)',
+  description:
+    'Member-session-gated (the ticket owner acting on their own ticket — no admin RBAC). Appends a ' +
+    'helpdesk.member_replied event carrying the member\'s message and returns the updated member ticket ' +
+    'detail. The reply surfaces in the responder thread and returns the ticket to the active queue.',
+  tags: ['helpdesk'],
+  request: {
+    params: helpdeskTicketParams,
+    body: { content: jsonOf(HelpdeskReplyRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The updated member ticket detail', content: jsonOf(MemberTicketDetailComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    404: errorResponse('Ticket not found (or not owned — no enumeration oracle)'),
+    409: errorResponse('Illegal transition (the ticket is not awaiting a member reply)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

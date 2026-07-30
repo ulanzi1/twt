@@ -21,7 +21,15 @@
 // do NOT copy `requireStepUp` from claims.helpline.routes.ts). A member-app turnstile/idempotency binding
 // lives on the separate 10.2 member route, not here.
 
-import { CreateTicketRequest, CreateTicketResponse, HelpdeskCategoryListResponse } from '@twt/contracts';
+import {
+  CreateTicketRequest,
+  CreateTicketResponse,
+  HelpdeskAdminTicketDetailResponse,
+  HelpdeskCategoryListResponse,
+  HelpdeskQueueResponse,
+  HelpdeskReplyRequest,
+  HelpdeskTicketState,
+} from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -37,8 +45,23 @@ const HELPDESK_TAG = 'helpdesk';
 
 /** The Story-10.3 pariwar-dimension helpdesk ticket-create key (catalog v23). */
 const HELPDESK_CREATE_KEY = 'helpdesk.create';
+/** The Story-10.4 pariwar-dimension helpdesk responder key (catalog v24). Gates the queue read +
+ *  the admin detail + every transition route. */
+const HELPDESK_RESPOND_KEY = 'helpdesk.respond';
 
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
+const TicketParam = z.object({ pariwarId: z.string().uuid(), ticketId: z.string().uuid() }).strict();
+/** The responder-queue query filters (AC1). `limit`/`offset` are coerced from the query string; the
+ *  domain read clamps the page size to [1,200]. `state` is the lifecycle-state filter; `routed_to_role`
+ *  is the "my queue" role-match filter. */
+const QueueQuery = z
+  .object({
+    state: HelpdeskTicketState.optional(),
+    routed_to_role: z.string().min(1).max(64).optional(),
+    limit: z.coerce.number().int().positive().optional(),
+    offset: z.coerce.number().int().nonnegative().optional(),
+  })
+  .strict();
 
 export function registerHelpdeskRoutes(app: FastifyInstance, deps: AppDeps): void {
   const h = createHelpdeskHandlers(deps);
@@ -49,6 +72,9 @@ export function registerHelpdeskRoutes(app: FastifyInstance, deps: AppDeps): voi
   // helpdesk.create at dimension:'pariwar' (EXPLICIT — the target IS the tenant; resolveValue defaults to
   // scopeTx.pariwarId, the reconciliation.review / cycle.freeze pariwar-wide precedent; no district).
   const requireCreate = requirePermissionHook(deps, HELPDESK_CREATE_KEY, { dimension: 'pariwar' });
+  // helpdesk.respond at dimension:'pariwar' (the responder console + all transition/reply routes). No
+  // step-up (helpdesk responding is NOT freeze-firing / not AR-24 — the 10.3 helpdesk.create rule stands).
+  const requireRespond = requirePermissionHook(deps, HELPDESK_RESPOND_KEY, { dimension: 'pariwar' });
 
   r.post(
     '/api/v1/p/:pariwarId/helpdesk/tickets',
@@ -83,5 +109,80 @@ export function registerHelpdeskRoutes(app: FastifyInstance, deps: AppDeps): voi
       preHandler: [adminSession, scope, requireCreate],
     },
     h.categories,
+  );
+
+  // ── Story 10.4 — the responder console (queue + detail + transitions), gated by helpdesk.respond ──
+
+  r.get(
+    '/api/v1/p/:pariwarId/helpdesk/queue',
+    {
+      schema: {
+        params: PariwarParam,
+        querystring: QueueQuery,
+        response: { 200: HelpdeskQueueResponse },
+        tags: [HELPDESK_TAG],
+      },
+      config: { rateLimit: limits.read },
+      preHandler: [adminSession, scope, requireRespond],
+    },
+    h.queue,
+  );
+
+  r.get(
+    '/api/v1/p/:pariwarId/helpdesk/tickets/:ticketId',
+    {
+      schema: {
+        params: TicketParam,
+        response: { 200: HelpdeskAdminTicketDetailResponse },
+        tags: [HELPDESK_TAG],
+      },
+      config: { rateLimit: limits.read },
+      preHandler: [adminSession, scope, requireRespond],
+    },
+    h.detail,
+  );
+
+  r.post(
+    '/api/v1/p/:pariwarId/helpdesk/tickets/:ticketId/pick-up',
+    {
+      schema: {
+        params: TicketParam,
+        response: { 200: HelpdeskAdminTicketDetailResponse },
+        tags: [HELPDESK_TAG],
+      },
+      config: { rateLimit: limits.write },
+      preHandler: [adminSession, scope, requireRespond],
+    },
+    h.pickUp,
+  );
+
+  r.post(
+    '/api/v1/p/:pariwarId/helpdesk/tickets/:ticketId/reply',
+    {
+      schema: {
+        params: TicketParam,
+        body: HelpdeskReplyRequest,
+        response: { 200: HelpdeskAdminTicketDetailResponse },
+        tags: [HELPDESK_TAG],
+      },
+      config: { rateLimit: limits.write },
+      preHandler: [adminSession, scope, requireRespond],
+    },
+    h.reply,
+  );
+
+  r.post(
+    '/api/v1/p/:pariwarId/helpdesk/tickets/:ticketId/resolve',
+    {
+      schema: {
+        params: TicketParam,
+        body: HelpdeskReplyRequest,
+        response: { 200: HelpdeskAdminTicketDetailResponse },
+        tags: [HELPDESK_TAG],
+      },
+      config: { rateLimit: limits.write },
+      preHandler: [adminSession, scope, requireRespond],
+    },
+    h.resolve,
   );
 }

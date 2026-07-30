@@ -16,14 +16,88 @@
 
 import { createHash, randomUUID } from 'node:crypto';
 
+import { randomUUID as nodeRandomUUID } from 'node:crypto';
+
 import { audit, canonicalJsonStringify, cycleCalendar, helpdesk, ids } from '@twt/domain';
-import type { CreateTicketRequest, HelpdeskCategoryListResponse, HelpdeskTicketDto } from '@twt/contracts';
+import type {
+  CreateTicketRequest,
+  HelpdeskAdminTicketDetailResponse,
+  HelpdeskCategoryListResponse,
+  HelpdeskQueueItem,
+  HelpdeskQueueResponse,
+  HelpdeskReplyRequest,
+  HelpdeskTicketDto,
+} from '@twt/contracts';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { AdminDisplayNameMissingError, BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
+import { AdminDisplayNameMissingError, BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import type { ScopeTx } from '../../types.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
+
+/** The admin-queue page-size bounds — MIRROR the domain `listTicketQueueForPariwar` clamp
+ *  (TICKET_QUEUE_DEFAULT_LIMIT / TICKET_QUEUE_MAX_LIMIT); kept in lockstep so `next_offset` reflects
+ *  the SAME page size the read actually applied. */
+const HELPDESK_QUEUE_DEFAULT_LIMIT = 50;
+const HELPDESK_QUEUE_MAX_LIMIT = 200;
+
+type HelpdeskRow = NonNullable<Awaited<ReturnType<typeof helpdesk.getTicketById>>>;
+
+/** Map a domain SLA-timer status → the wire DTO. */
+function toSlaTimerDto(t: helpdesk.HelpdeskSlaTimer): HelpdeskQueueItem['sla_first_response'] {
+  return { due_at: t.dueAt.toISOString(), running: t.running, breached: t.breached, ms_remaining: t.msRemaining };
+}
+
+/** Map a persisted ticket row → the admin queue item (row + derived SLA/severity + cross-links). */
+function toQueueItem(row: HelpdeskRow, now: Date): HelpdeskQueueItem {
+  const sla = helpdesk.deriveSlaStatus(
+    { currentState: row.currentState, slaFirstResponseDue: row.slaFirstResponseDue, slaResolutionDue: row.slaResolutionDue },
+    now,
+  );
+  const { subject } = helpdesk.splitMemberTicketSubjectBody(row.body);
+  return {
+    ticket_id: row.ticketId,
+    category: row.category,
+    sub_category: row.subcategory,
+    subject,
+    current_state: row.currentState,
+    created_via: row.createdVia,
+    routed_to_role: row.routedToRole,
+    routed_to_scope: { dimension: row.routedToScopeDimension, value: row.routedToScopeValue },
+    sla_first_response: toSlaTimerDto(sla.firstResponse),
+    sla_resolution: toSlaTimerDto(sla.resolution),
+    severity: sla.severity,
+    cross_links: {
+      claim_case_id: row.claimCaseId,
+      pool_id: row.poolId,
+      module_id: row.moduleId,
+      validity_lookup_id: row.validityLookupId,
+    },
+    created_at: row.createdAt.toISOString(),
+    updated_at: row.updatedAt.toISOString(),
+  };
+}
+
+/** Map a persisted ticket row + its replayed thread → the admin ticket detail. */
+function toAdminDetail(
+  row: HelpdeskRow,
+  thread: ReturnType<typeof helpdesk.replayTicketThread>,
+  now: Date,
+): HelpdeskAdminTicketDetailResponse {
+  const { body } = helpdesk.splitMemberTicketSubjectBody(row.body);
+  return {
+    ...toQueueItem(row, now),
+    subject_member_id: row.subjectMemberId,
+    subject_actor_id: row.subjectActorId,
+    body,
+    attachments: row.attachments.map((a) => ({ filename: a.filename, content_type: a.content_type, size_bytes: a.size_bytes })),
+    thread: thread.map((e) => ({ kind: e.kind, author: e.author, body: e.body, occurred_at: e.occurredAt.toISOString() })),
+    operator_attribution: row.operatorAttribution,
+    routing_policy_version: row.routingPolicyVersion,
+    assigned_at: row.assignedAt.toISOString(),
+    member_scope_context: row.memberScopeContext,
+  };
+}
 
 /** The dotted audit action for a ticket create+route (AC5). */
 const HELPDESK_TICKET_CREATED_ACTION = 'helpdesk.ticket_created';
@@ -253,5 +327,169 @@ export function createHelpdeskHandlers(deps: AppDeps) {
         categories: result.categories.map((c) => ({ category: c.category, sub_categories: c.subCategories })),
       };
     },
+
+    // ── Story 10.4 — the responder console (queue + detail + transitions) ─────────────────────────
+
+    /** GET /helpdesk/queue — the paginated responder queue (scope-respecting; derived SLA + severity). */
+    async queue(request: FastifyRequest): Promise<HelpdeskQueueResponse> {
+      const { scopeTx } = context(request);
+      const pariwarId = ids.pariwarId(scopeTx.pariwarId);
+      const now = deps.clock();
+      const q = request.query as { state?: HelpdeskRow['currentState']; routed_to_role?: string; limit?: number; offset?: number };
+
+      // Clamp the page size IDENTICALLY to the domain read so `next_offset` reflects the applied size.
+      const pageSize = Math.max(1, Math.min(q.limit ?? HELPDESK_QUEUE_DEFAULT_LIMIT, HELPDESK_QUEUE_MAX_LIMIT));
+      const offset = typeof q.offset === 'number' && Number.isInteger(q.offset) && q.offset > 0 ? q.offset : 0;
+
+      const rows = await helpdesk.listTicketQueueForPariwar(scopeTx.tx, pariwarId, {
+        state: q.state,
+        routedToRole: q.routed_to_role,
+        limit: pageSize,
+        offset,
+      });
+      const tickets = rows.map((r) => toQueueItem(r, now));
+      // A full page implies there MAY be more — hand back the next offset; a short page is the last one.
+      const nextOffset = tickets.length === pageSize ? offset + pageSize : null;
+      return { tickets, next_offset: nextOffset };
+    },
+
+    /** GET /helpdesk/tickets/:ticketId — the admin ticket detail (full row + thread + SLA/severity). */
+    async detail(request: FastifyRequest): Promise<HelpdeskAdminTicketDetailResponse> {
+      const { scopeTx } = context(request);
+      const pariwarId = ids.pariwarId(scopeTx.pariwarId);
+      const now = deps.clock();
+      const ticketId = ids.helpdeskTicketId((request.params as { ticketId: string }).ticketId);
+
+      const row = await helpdesk.getTicketById(scopeTx.tx, pariwarId, ticketId);
+      if (!row) throw new NotFoundError('Ticket not found', 'helpdesk.not_found');
+      const events = await helpdesk.listTicketEvents(scopeTx.tx, ticketId);
+      const thread = helpdesk.replayTicketThread(events);
+      return toAdminDetail(row, thread, now);
+    },
+
+    /** POST /helpdesk/tickets/:ticketId/pick-up — open/reopened → in_progress (no message). */
+    async pickUp(request: FastifyRequest): Promise<HelpdeskAdminTicketDetailResponse> {
+      return runTransition(request, 'helpdesk.picked_up', undefined);
+    },
+
+    /** POST /helpdesk/tickets/:ticketId/reply — a staff reply asking for info → awaiting_member. */
+    async reply(request: FastifyRequest): Promise<HelpdeskAdminTicketDetailResponse> {
+      const { message } = request.body as HelpdeskReplyRequest;
+      return runTransition(request, 'helpdesk.awaiting_member', message);
+    },
+
+    /** POST /helpdesk/tickets/:ticketId/resolve — a staff closing reply → resolved. */
+    async resolve(request: FastifyRequest): Promise<HelpdeskAdminTicketDetailResponse> {
+      const { message } = request.body as HelpdeskReplyRequest;
+      return runTransition(request, 'helpdesk.resolved', message);
+    },
   };
+
+  /**
+   * The shared transition runner (AC2/AC3): load the ticket (404), guard legality at the handler
+   * BEFORE the write (an illegal `(current_state, action)` is a typed 409 — the reducer's total/
+   * identity contract must not become a silent 200), then append + re-project via
+   * `projectTicketTransition` under a compensating audit line. A message-bearing transition
+   * (awaiting_member / resolved) additionally fires the `helpdesk_reply` member notification
+   * (best-effort). Returns the updated admin detail.
+   */
+  async function runTransition(
+    request: FastifyRequest,
+    eventType: 'helpdesk.picked_up' | 'helpdesk.awaiting_member' | 'helpdesk.resolved',
+    message: string | undefined,
+  ): Promise<HelpdeskAdminTicketDetailResponse> {
+    const { scopeTx, actorId } = context(request);
+    const pariwarId = ids.pariwarId(scopeTx.pariwarId);
+    const now = deps.clock();
+    const ticketIdStr = (request.params as { ticketId: string }).ticketId;
+    const ticketId = ids.helpdeskTicketId(ticketIdStr);
+
+    // (1) Load the ticket (tenant-scoped) — 404 if absent.
+    const existing = await helpdesk.getTicketById(scopeTx.tx, pariwarId, ticketId);
+    if (!existing) throw new NotFoundError('Ticket not found', 'helpdesk.not_found');
+
+    // (2) Guard legality BEFORE the write — an inapplicable transition is a typed 409, never a silent
+    // no-op 200 (the reducer is total/identity; the API owns whether a transition SHOULD fire).
+    if (helpdesk.nextTicketState(existing.currentState, eventType) === existing.currentState) {
+      throw new ConflictError(
+        `Cannot apply '${eventType}' to a ticket in state '${existing.currentState}'`,
+        'helpdesk.illegal_transition',
+      );
+    }
+
+    // (3) The audit DIGEST — the transition inputs (never PII/message text; the create-handler idiom).
+    const requestPayloadHash = sha256Hex(
+      canonicalJsonStringify({
+        ticket_id: ticketId,
+        event_type: eventType,
+        from_state: existing.currentState,
+        has_message: message !== undefined,
+      }),
+    );
+
+    // (4) Append + re-project under a compensating audit line (ADR-0030; the create-handler pattern).
+    await audit.withCompensatingAudit(deps.servicePool, {
+      auditIntent: {
+        pariwarId,
+        actorId,
+        actorRole: null,
+        action: eventType,
+        resourceLocator: `ticket/${ticketId}`,
+        requestPayloadHash,
+        traceId: request.requestContext.traceId ?? null,
+      },
+      mutate: async () => {
+        try {
+          await helpdesk.projectTicketTransition(scopeTx.client, {
+            ticketId,
+            pariwarId,
+            eventType,
+            trigger: `helpdesk.transition:${eventType}`,
+            actor: 'staff',
+            actorId,
+            ...(message !== undefined ? { message } : {}),
+          });
+        } catch (err) {
+          // Typed transition conflicts (a lost race, or an illegal transition that slipped past the
+          // handler guard on a concurrent state change) → 409, distinguishable from an opaque 500.
+          if (
+            err instanceof helpdesk.HelpdeskIllegalTransitionError ||
+            err instanceof helpdesk.HelpdeskStreamConcurrencyError ||
+            err instanceof helpdesk.HelpdeskGenesisMissingError
+          ) {
+            throw new ConflictError(err.message, 'helpdesk.transition_conflict');
+          }
+          throw err;
+        }
+        return null;
+      },
+    });
+
+    // (5) Re-read the updated row + thread for the response.
+    const row = await helpdesk.getTicketById(scopeTx.tx, pariwarId, ticketId);
+    if (!row) throw new Error('[helpdesk.transition] ticket row missing after transition');
+    const events = await helpdesk.listTicketEvents(scopeTx.tx, ticketId);
+    const thread = helpdesk.replayTicketThread(events);
+    const detail = toAdminDetail(row, thread, now);
+
+    // (6) A staff reply (awaiting_member / resolved) notifies the member (best-effort, log-only v1).
+    // pick-up carries no message and never notifies. An actor-only ticket (null subject member) is
+    // skipped inside the notifier.
+    if (message !== undefined) {
+      try {
+        await deps.helpdeskReplyNotifier({
+          pariwarId: scopeTx.pariwarId,
+          ticketId: ticketIdStr,
+          subjectMemberId: row.subjectMemberId,
+          alertId: nodeRandomUUID(),
+          createdByActor: actorId,
+          occurredAt: now.toISOString(),
+        });
+      } catch {
+        // Best-effort — a notification failure never fails the committed reply.
+      }
+    }
+
+    return detail;
+  }
 }

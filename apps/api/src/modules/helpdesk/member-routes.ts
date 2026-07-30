@@ -17,6 +17,7 @@
 import {
   HelpdeskAttachmentUrlResponse,
   HelpdeskCategoryListResponse,
+  HelpdeskReplyRequest,
   MemberTicketDetailResponse,
   MemberTicketListResponse,
 } from '@twt/contracts';
@@ -92,6 +93,24 @@ export function registerMemberHelpdeskRoutes(app: FastifyInstance, deps: AppDeps
       preHandler: [memberSession],
     },
     h.detail,
+  );
+
+  // POST — the member replies to their OWN ticket (awaiting_member → in_progress). The member→staff
+  // half of the round-trip (Story 10.4, AC3). Member-session-gated (no admin RBAC — the ticket owner
+  // acting on their own ticket); carries the FR-88 per-member write budget.
+  r.post(
+    '/api/v1/p/:pariwarId/member/helpdesk/tickets/:ticketId/reply',
+    {
+      schema: {
+        params: TicketParam,
+        body: HelpdeskReplyRequest,
+        response: { 200: MemberTicketDetailResponse },
+        tags: [HELPDESK_TAG],
+      },
+      config: { rateLimit: memberWrite },
+      preHandler: [memberSession],
+    },
+    h.reply,
   );
 
   // GET — a short-lived signed URL for one of the member's OWN attachments (ownership re-checked).

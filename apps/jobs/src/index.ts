@@ -41,6 +41,21 @@ export {
   type CapturingShepherdAssignedHook,
 } from './shepherd-notification-hook.js';
 
+// Story 10.4 (Task 3; AC3) — the helpdesk_reply member-notification emitter seam. Exported here (the
+// apps/api-facing barrel; pure, no pg-boss/GCS pulled in) so the admin reply/resolve handlers fire it
+// inline POST-COMMIT — the shepherd-hook precedent. `createHelpdeskReplyFanOutNotifier` REUSES the
+// shipped `fanOutAlertToMembers` dispatch composition (never re-implements it); `consoleHelpdeskReplyNotifier`
+// is the log-only production default (see the module header's crypto-boundary note).
+export {
+  buildHelpdeskReplyAlert,
+  consoleHelpdeskReplyNotifier,
+  createHelpdeskReplyFanOutNotifier,
+  createCapturingHelpdeskReplyNotifier,
+  type HelpdeskReplyEvent,
+  type HelpdeskReplyNotifier,
+  type CapturingHelpdeskReplyNotifier,
+} from './scheduler/helpdesk-reply-notify.js';
+
 // Story 6.13 — the pool-spawn TRIGGER seam (AC6). Exported here (the apps/api-facing barrel; pure, no
 // pg-boss/GCS pulled in) so the cycle-freeze commit handler fires it POST-COMMIT — the FIRST live emitter
 // of the Epic-7 pool-spawn trigger, with NO live Pool Engine consumer yet (the dispatch()/shepherd-hook

@@ -1068,6 +1068,22 @@ export function createMemberHelpdeskClient(opts: MemberAuthClientOptions) {
       });
     },
 
+    /**
+     * Reply to one of the member's OWN tickets (Story 10.4; session; auth). Appends
+     * `helpdesk.member_replied` carrying the member's message, advancing awaiting_member →
+     * in_progress. Returns the updated ticket detail; `ApiError` 404 (not owned/absent) or 409 (the
+     * ticket is not awaiting a member reply). The member→staff half of the round-trip.
+     */
+    reply(pariwarId: string, ticketId: string, message: string): Promise<MemberTicketDetailResponse> {
+      return call(
+        `${base(pariwarId)}/tickets/${encodeURIComponent(ticketId)}/reply`,
+        MemberTicketDetailResponse,
+        { message },
+        true,
+        'POST',
+      );
+    },
+
     /** A short-lived signed URL for one of the member's OWN attachments, by array index (session; auth). */
     attachmentUrl(pariwarId: string, ticketId: string, attachmentIndex: number): Promise<HelpdeskAttachmentUrlResponse> {
       return call(

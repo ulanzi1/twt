@@ -1164,7 +1164,7 @@ components:
             - type: "null"
         status:
           type: string
-          enum: &a22
+          enum: &a25
             - draft
             - in_review
             - signed_off
@@ -3589,13 +3589,13 @@ components:
             properties:
               kind:
                 type: string
-                enum:
+                enum: &a22
                   - opening
                   - member_reply
                   - staff_reply
               author:
                 type: string
-                enum:
+                enum: &a23
                   - member
                   - staff
               body:
@@ -3781,6 +3781,411 @@ components:
       required:
         - url
         - expires_at
+      additionalProperties: false
+    HelpdeskQueue:
+      type: object
+      properties:
+        tickets:
+          type: array
+          items:
+            type: object
+            properties:
+              ticket_id:
+                type: string
+                format: uuid
+              category:
+                type: string
+                enum: *a16
+              sub_category:
+                type:
+                  - string
+                  - "null"
+                minLength: 1
+                maxLength: 64
+              subject:
+                type: string
+                minLength: 1
+              current_state:
+                type: string
+                enum: *a19
+              created_via:
+                type: string
+                enum: *a18
+              routed_to_role:
+                type: string
+                minLength: 1
+                maxLength: 64
+              routed_to_scope:
+                type: object
+                properties:
+                  dimension:
+                    type: string
+                    enum: *a20
+                  value:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                required:
+                  - dimension
+                  - value
+                additionalProperties: false
+              sla_first_response:
+                type: object
+                properties:
+                  due_at:
+                    type: string
+                    format: date-time
+                  running:
+                    type: boolean
+                  breached:
+                    type: boolean
+                  ms_remaining:
+                    type: integer
+                required:
+                  - due_at
+                  - running
+                  - breached
+                  - ms_remaining
+                additionalProperties: false
+              sla_resolution:
+                type: object
+                properties:
+                  due_at:
+                    type: string
+                    format: date-time
+                  running:
+                    type: boolean
+                  breached:
+                    type: boolean
+                  ms_remaining:
+                    type: integer
+                required:
+                  - due_at
+                  - running
+                  - breached
+                  - ms_remaining
+                additionalProperties: false
+              severity:
+                type: string
+                enum: &a21
+                  - breached
+                  - due_soon
+                  - on_track
+              cross_links:
+                type: object
+                properties:
+                  claim_case_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  pool_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  module_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                  validity_lookup_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                required:
+                  - claim_case_id
+                  - pool_id
+                  - module_id
+                  - validity_lookup_id
+                additionalProperties: false
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+            required:
+              - ticket_id
+              - category
+              - sub_category
+              - subject
+              - current_state
+              - created_via
+              - routed_to_role
+              - routed_to_scope
+              - sla_first_response
+              - sla_resolution
+              - severity
+              - cross_links
+              - created_at
+              - updated_at
+            additionalProperties: false
+        next_offset:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+      required:
+        - tickets
+        - next_offset
+      additionalProperties: false
+    HelpdeskAdminTicketDetail:
+      type: object
+      properties:
+        ticket_id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: *a16
+        sub_category:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 64
+        subject:
+          type: string
+          minLength: 1
+        current_state:
+          type: string
+          enum: *a19
+        created_via:
+          type: string
+          enum: *a18
+        routed_to_role:
+          type: string
+          minLength: 1
+          maxLength: 64
+        routed_to_scope:
+          type: object
+          properties:
+            dimension:
+              type: string
+              enum: *a20
+            value:
+              type:
+                - string
+                - "null"
+              minLength: 1
+          required:
+            - dimension
+            - value
+          additionalProperties: false
+        sla_first_response:
+          type: object
+          properties:
+            due_at:
+              type: string
+              format: date-time
+            running:
+              type: boolean
+            breached:
+              type: boolean
+            ms_remaining:
+              type: integer
+          required:
+            - due_at
+            - running
+            - breached
+            - ms_remaining
+          additionalProperties: false
+        sla_resolution:
+          type: object
+          properties:
+            due_at:
+              type: string
+              format: date-time
+            running:
+              type: boolean
+            breached:
+              type: boolean
+            ms_remaining:
+              type: integer
+          required:
+            - due_at
+            - running
+            - breached
+            - ms_remaining
+          additionalProperties: false
+        severity:
+          type: string
+          enum: *a21
+        cross_links:
+          type: object
+          properties:
+            claim_case_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+            pool_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+            module_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+            validity_lookup_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+          required:
+            - claim_case_id
+            - pool_id
+            - module_id
+            - validity_lookup_id
+          additionalProperties: false
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        subject_member_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        subject_actor_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        body:
+          type: string
+          minLength: 1
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+                minLength: 1
+                maxLength: 255
+              content_type:
+                type: string
+                enum: *a17
+              size_bytes:
+                type: integer
+                exclusiveMinimum: 0
+                maximum: 10485760
+            required:
+              - filename
+              - content_type
+              - size_bytes
+            additionalProperties: false
+          maxItems: 5
+        thread:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum: *a22
+              author:
+                type: string
+                enum: *a23
+              body:
+                type: string
+                minLength: 1
+              occurred_at:
+                type: string
+                format: date-time
+            required:
+              - kind
+              - author
+              - body
+              - occurred_at
+            additionalProperties: false
+        operator_attribution:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 128
+        routing_policy_version:
+          type: integer
+          exclusiveMinimum: 0
+        assigned_at:
+          type: string
+          format: date-time
+        member_scope_context:
+          type: object
+          properties:
+            pariwar_id:
+              type: string
+              format: uuid
+            state:
+              type:
+                - string
+                - "null"
+              minLength: 1
+            district:
+              type:
+                - string
+                - "null"
+              minLength: 1
+            block:
+              type:
+                - string
+                - "null"
+              minLength: 1
+            subject_member_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+          required:
+            - pariwar_id
+            - state
+            - district
+            - block
+            - subject_member_id
+          additionalProperties: false
+      required:
+        - ticket_id
+        - category
+        - sub_category
+        - subject
+        - current_state
+        - created_via
+        - routed_to_role
+        - routed_to_scope
+        - sla_first_response
+        - sla_resolution
+        - severity
+        - cross_links
+        - created_at
+        - updated_at
+        - subject_member_id
+        - subject_actor_id
+        - body
+        - attachments
+        - thread
+        - operator_attribution
+        - routing_policy_version
+        - assigned_at
+        - member_scope_context
+      additionalProperties: false
+    HelpdeskReplyRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 5000
+      required:
+        - message
       additionalProperties: false
   parameters: {}
 paths:
@@ -4390,7 +4795,7 @@ paths:
     get:
       summary: List the Niyamavali registry (latest version per clause)
       description: Returns the chain-head (latest version) of every clause in the Pariwar, newest-first (forced-paginated). Requires niyamavali.amend at pariwar scope.
-      tags: &a21
+      tags: &a24
         - niyamavali
       parameters:
         - schema:
@@ -4431,7 +4836,7 @@ paths:
     get:
       summary: Version history of a clause (oldest → newest)
       description: Returns the most-recent `limit` version rows of a clause_id (forced-paginated, Story 1.14). Requires niyamavali.amend at pariwar scope.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4482,7 +4887,7 @@ paths:
     get:
       summary: List the amendment ledger (time-ordered)
       description: Returns the niyamavali_amendments ledger newest-first (the De4 (pariwar_id, created_at) index). Requires niyamavali.amend at pariwar scope.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4522,7 +4927,7 @@ paths:
     get:
       summary: List clause drafts (optionally by lifecycle state)
       description: Returns drafts for the Pariwar, newest-first, optionally filtered by status (e.g. in_review to find drafts awaiting sign-off). Requires niyamavali.amend.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4539,7 +4944,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a22
+            enum: *a25
           required: false
           name: status
           in: query
@@ -4567,7 +4972,7 @@ paths:
     post:
       summary: Create a clause draft (create or amend)
       description: Creates a server-persisted draft (the non-author reviewer loads the exact pending content). Body is a discriminated union on operation. Requires niyamavali.amend.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4616,7 +5021,7 @@ paths:
     get:
       summary: Load a single clause draft
       description: Returns the draft (incl. the pending payload) — the mechanism by which a NON-AUTHOR reviewer loads the exact content to review (AC1d). Requires niyamavali.amend or niyamavali.review.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4658,7 +5063,7 @@ paths:
     put:
       summary: Edit a clause draft (resets the tone-review sign-off)
       description: Patches a non-published draft. ANY edit resets the draft to `draft` and clears a prior tone-review sign-off (content-bound, AC1d). Requires niyamavali.amend.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4719,7 +5124,7 @@ paths:
     get:
       summary: Preview the draft diff (structured + rendered)
       description: Returns BOTH the structured-payload diff (computePayloadDiff vs the current published version, or {} for a create) AND a rendered display-field diff (AC1c). Requires niyamavali.amend or niyamavali.review.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4762,7 +5167,7 @@ paths:
     post:
       summary: Submit a draft for tone-review
       description: Transitions a draft → in_review, routing it to a non-author reviewer. Requires niyamavali.amend.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4811,7 +5216,7 @@ paths:
     post:
       summary: Record a non-author tone-review sign-off
       description: A reviewer (niyamavali.review) records a sign-off bound to the exact reviewed payload. Rejects a self-review (author === reviewer) with 409. Emits the Story 2.2 tone_review.signoff audit line.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4872,7 +5277,7 @@ paths:
     post:
       summary: Publish a clause draft (audit-logged, tone-review-gated)
       description: Mints the immutable clause_versions row + a single audit line carrying the diff hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-notification hook (AC3 placeholder). Gated on a recorded non-author, content-current tone-review sign-off — without one, 409 tone_review.required (AC4). Requires niyamavali.amend.
-      tags: *a21
+      tags: *a24
       parameters:
         - schema:
             type: string
@@ -4921,7 +5326,7 @@ paths:
     post:
       summary: Create a T&C version (audit-logged)
       description: "Creates a version-pinned T&C: renders body_html_rendered from bodyMarkdown at write time (sanitized), pins the supplied clause versions (each validated to exist in the Pariwar), defaults legal_review_status → pending, and writes a single audit line first (audit-or-throw). Requires tc.publish at pariwar scope."
-      tags: &a23
+      tags: &a26
         - terms-and-conditions
       parameters:
         - schema:
@@ -4977,7 +5382,7 @@ paths:
     post:
       summary: Approve a T&C version (audit-logged)
       description: "Marks a T&C approved: sets legal_reviewer_actor_id = the acting trustee, flips legal_review_status → approved, and supersedes the prior currently-effective version (set effective_until + status → superseded). Audit-or-throw. The superseded version stays queryable by tc_version_id. Requires tc.approve."
-      tags: *a23
+      tags: *a26
       parameters:
         - schema:
             type: string
@@ -5037,7 +5442,7 @@ paths:
   /api/v1/member/auth/otp/request:
     post:
       summary: Member login — request a mobile OTP (enumeration-safe, per-phone throttled)
-      tags: &a24
+      tags: &a27
         - member-auth
       requestBody:
         required: true
@@ -5067,7 +5472,7 @@ paths:
   /api/v1/member/auth/otp/verify:
     post:
       summary: Member login — verify OTP → full session / pariwar-select / signup-continuation
-      tags: *a24
+      tags: *a27
       requestBody:
         required: true
         content:
@@ -5108,7 +5513,7 @@ paths:
   /api/v1/member/auth/otp/select-pariwar:
     post:
       summary: Member login — pick a Pariwar scope (multi-membership) → full session
-      tags: *a24
+      tags: *a27
       requestBody:
         required: true
         content:
@@ -5137,7 +5542,7 @@ paths:
   /api/v1/member/auth/token/refresh:
     post:
       summary: Member session — rotate the refresh token (reuse detection)
-      tags: *a24
+      tags: *a27
       requestBody:
         required: true
         content:
@@ -5166,7 +5571,7 @@ paths:
   /api/v1/member/auth/step-up/request:
     post:
       summary: Member step-up — request an OTP for a gated action
-      tags: *a24
+      tags: *a27
       requestBody:
         required: true
         content:
@@ -5195,7 +5600,7 @@ paths:
   /api/v1/member/auth/step-up/verify:
     post:
       summary: Member step-up — verify the OTP → elevate for the action_context
-      tags: *a24
+      tags: *a27
       requestBody:
         required: true
         content:
@@ -5224,7 +5629,7 @@ paths:
   /api/v1/member/auth/signup/create:
     post:
       summary: First signup — create the member from the signup-continuation seam → full session
-      tags: *a24
+      tags: *a27
       requestBody:
         required: true
         content:
@@ -5266,7 +5671,7 @@ paths:
     post:
       summary: Signup KYC — begin a DigiLocker pull (returns the authorization redirect)
       description: Resolves the active KYC provider and begins a DigiLocker authorization-code flow for the authenticated member (must be pending-kyc), returning the authorizationUrl the client opens + the transactionId the callback correlates. Requires a member session.
-      tags: &a25
+      tags: &a28
         - member-kyc
       responses:
         "200":
@@ -5297,7 +5702,7 @@ paths:
     post:
       summary: DigiLocker OAuth callback (PUBLIC; state-correlated) — verify + pull the profile
       description: The OAuth redirect target DigiLocker sends the browser to with ?state&code. PUBLIC (no member JWT) — correlated by the unguessable state, which resolves the kyc_transaction (member_id + pariwar_id). Verifies the eAadhaar signature, pulls the profile, and persists it awaiting member confirmation. On provider failure returns the normalized KYC error so the client can branch to the manual fallback (AC2).
-      tags: *a25
+      tags: *a28
       requestBody:
         required: true
         content:
@@ -5339,7 +5744,7 @@ paths:
     post:
       summary: Signup KYC — confirm the verified DigiLocker profile (emits member.kyc_completed)
       description: "Confirms a verified DigiLocker profile: emits member.kyc_completed via the projector (pending-kyc → pending-fee) + an audit line. Idempotent (a re-confirm emits no second event). Requires a member session."
-      tags: *a25
+      tags: *a28
       requestBody:
         required: true
         content:
@@ -5381,7 +5786,7 @@ paths:
     post:
       summary: Signup KYC — manual fallback (emits member.kyc_manual_fallback)
       description: Stores a self-declared KYC record (name/dob/optional photo, Tier-1 encrypted; verification_strength=self_declared, trustee_verified=false) and emits member.kyc_manual_fallback (pending-kyc → pending-fee). The AC2 fallback target. Requires a member session.
-      tags: *a25
+      tags: *a28
       requestBody:
         required: true
         content:
@@ -5417,7 +5822,7 @@ paths:
     get:
       summary: Signup KYC — decrypt and return the stored KYC profile for member confirmation
       description: "Returns the decrypted stored KYC profile for the authenticated member: name, dob, masked-Aadhaar (last-4 only), verificationStrength, and photoPresent flag (never the raw photo bytes — Tier-1 discipline). Called by the mobile confirm screen after the DigiLocker callback has persisted the profile. Requires a member session."
-      tags: *a25
+      tags: *a28
       responses:
         "200":
           description: KYC profile summary
@@ -5441,7 +5846,7 @@ paths:
     get:
       summary: Signup KYC — the step entry/poll read (transaction + member KYC + manual-enabled seam)
       description: Returns the current DigiLocker transaction status (when a flow is in flight), the member's KYC standing, the lifecycle state, and the FR-58C manualFallbackEnabled seam flag (false → the UI hides the manual CTA + shows the hard-mandatory copy block). Requires a member session.
-      tags: *a25
+      tags: *a28
       responses:
         "200":
           description: KYC status
@@ -5459,7 +5864,7 @@ paths:
     post:
       summary: Signup nominees — declare 1–2 nominees (emits member.nominees_declared)
       description: Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot override the split. Replaces any prior declaration (latest-wins) and emits member.nominees_declared (a non-PII audit marker; count + split only) on the member stream. NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, Epic 6). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
-      tags: &a26
+      tags: &a29
         - member-nominee
       requestBody:
         required: true
@@ -5495,7 +5900,7 @@ paths:
     get:
       summary: Signup nominees — the current effective declaration (NO PII echo-back)
       description: "Returns the member's current nominee declaration as NON-PII summaries: rank, relationship, the server-stamped splitPct, and presence flags for the encrypted fields. NEVER the raw name/mobile/address bytes (Tier-1 echo-back discipline). Requires a member session."
-      tags: *a26
+      tags: *a29
       responses:
         "200":
           description: Current nominee declaration
@@ -5513,7 +5918,7 @@ paths:
     post:
       summary: Register the member device push token (FCM/APNs) on app open
       description: Registers the current device's FCM (Android) / APNs (iOS) push token for the authenticated member (the Story 3.2 app-open consumer). The token is Tier-1-encrypted at rest + blind-indexed; the upsert is idempotent and marks the member’s OTHER same-platform tokens stale (app-open rebuild). Requires a member session. The token is NEVER echoed back (Tier-1 discipline).
-      tags: &a27
+      tags: &a30
         - device-token
       requestBody:
         required: true
@@ -5544,7 +5949,7 @@ paths:
     post:
       summary: Register the admin device push token (FCM/APNs) on admin auth
       description: Registers the current device's FCM (Android) / APNs (iOS) push token for the authenticated admin (the Story 1.9 admin-auth consumer). Admin identity is global — the token keys on the admin-global namespace. Same idempotent upsert + app-open rebuild as the member endpoint. Requires an admin session. The token is NEVER echoed back (Tier-1 discipline).
-      tags: *a27
+      tags: *a30
       requestBody:
         required: true
         content:
@@ -5574,7 +5979,7 @@ paths:
     post:
       summary: Mint (or re-use) a PENDING WhatsApp opt-in → Send-Hello deep-link + verification phrase
       description: Mints a PENDING opt-in for the authenticated member with a unique verification phrase, and returns the Pariwar’s WA Business number + a wa.me Send-Hello deep-link pre-filled with that phrase. A re-tap re-uses the outstanding PENDING. 409 when the Pariwar has WA disabled / no number. The member sends the message; the inbound-webhook worker advances the opt-in to ACTIVE.
-      tags: &a28
+      tags: &a31
         - wa-opt-in
       responses:
         "200":
@@ -5598,7 +6003,7 @@ paths:
     get:
       summary: Read the member’s current WhatsApp opt-in status
       description: Returns the member’s current opt-in state (null when never opted in) + whether the toggle is available (WA enabled + number) + the deep-link/phrase (PENDING) or window expiry (ACTIVE).
-      tags: *a28
+      tags: *a31
       responses:
         "200":
           description: Opt-in status
@@ -5615,7 +6020,7 @@ paths:
     delete:
       summary: Revoke the member’s active WhatsApp opt-in (independently revocable)
       description: Member-initiated revocation of an ACTIVE opt-in — disables WA delivery immediately, touching ONLY the whatsapp_opt_in consent. 409 when there is no ACTIVE opt-in. Re-opt-in requires a new WhatsApp message (no inferred re-consent).
-      tags: *a28
+      tags: *a31
       responses:
         "200":
           description: Opt-in revoked
@@ -5639,7 +6044,7 @@ paths:
     post:
       summary: Trustee force opt-out of a member’s WhatsApp opt-in (admin_action)
       description: Scoped-admin force opt-out of a member’s ACTIVE WhatsApp opt-in (trustee defensibility). Gated by the existing member.moderate permission [requireAdminSession, scopeResolutionHook, requirePermissionHook(member.moderate)] — 401 no session, 403 no permission. 409 when the member has no ACTIVE opt-in.
-      tags: *a28
+      tags: *a31
       parameters:
         - schema:
             type: string
@@ -5682,7 +6087,7 @@ paths:
     post:
       summary: Mint (or re-use) a PENDING Telegram opt-in → t.me `/start` deep-link
       description: Mints a PENDING opt-in for the authenticated member with a unique verification code, and returns a https://t.me/<bot>?start=<code> deep-link. Tapping it opens the bot and sends `/start <code>`. A re-tap re-uses the outstanding PENDING. 409 when the Pariwar has Telegram disabled / no bot. The bot `/start` is matched by the tg-webhook-processor worker, which advances the opt-in to ACTIVE.
-      tags: &a29
+      tags: &a32
         - telegram-opt-in
       responses:
         "200":
@@ -5706,7 +6111,7 @@ paths:
     get:
       summary: Read the member’s current Telegram opt-in status
       description: Returns the member’s current opt-in state (null when never opted in) + whether the toggle is available (Telegram enabled + bot) + the `/start` deep-link (PENDING only).
-      tags: *a29
+      tags: *a32
       responses:
         "200":
           description: Opt-in status
@@ -5724,7 +6129,7 @@ paths:
     post:
       summary: Revoke the member’s active Telegram opt-in (independently revocable)
       description: Member-initiated revocation of an ACTIVE opt-in — disables Telegram delivery immediately, touching ONLY the telegram_opt_in consent. 409 when there is no ACTIVE opt-in. Re-opt-in requires a new bot `/start` interaction (no inferred re-consent).
-      tags: *a29
+      tags: *a32
       responses:
         "200":
           description: Opt-in revoked
@@ -5871,7 +6276,7 @@ paths:
     get:
       summary: Read the per-Pariwar WhatsApp Business config (toggle, number, credential NAME, graph version)
       description: Returns the Pariwar's WA Business config singleton (zero-config defaults when none exists yet). The access-token field is a Secret-Manager NAME (a pointer), never the token value. Requires pariwar.configure_channels at pariwar scope.
-      tags: &a30
+      tags: &a33
         - channel-config
       parameters:
         - schema:
@@ -5902,7 +6307,7 @@ paths:
     put:
       summary: Upsert the per-Pariwar WhatsApp Business config (audited)
       description: Upserts the Pariwar's WA Business config singleton (the FR-72 admin toggle + number + credential NAME + graph version). Audited via the hash-chain writer; the resolved token value never appears. Requires pariwar.configure_channels at pariwar scope.
-      tags: *a30
+      tags: *a33
       parameters:
         - schema:
             type: string
@@ -5945,7 +6350,7 @@ paths:
     get:
       summary: List the per-category WhatsApp UTILITY template mapping
       description: Returns the Pariwar's per-(alert_category) UTILITY template mapping (name, language, approval status). A category with no `approved` row is not WA-eligible. Requires pariwar.configure_channels.
-      tags: *a30
+      tags: *a33
       parameters:
         - schema:
             type: string
@@ -5975,7 +6380,7 @@ paths:
     put:
       summary: Upsert one category’s WhatsApp UTILITY template mapping (audited)
       description: Upserts one (alert_category) → UTILITY template mapping (Meta-registered name + language + approval status). Audited. Requires pariwar.configure_channels at pariwar scope.
-      tags: *a30
+      tags: *a33
       parameters:
         - schema:
             type: string
@@ -6024,7 +6429,7 @@ paths:
     get:
       summary: Read the per-Pariwar Telegram Bot config (zero-config defaults when unprovisioned)
       description: Returns the Telegram config singleton (the FR-58C v1 `enabled` flag, bot username, + the bot-token / webhook-secret-token Secret-Manager NAME pointers — never the values). Requires pariwar.configure_channels.
-      tags: *a30
+      tags: *a33
       parameters:
         - schema:
             type: string
@@ -6054,7 +6459,7 @@ paths:
     put:
       summary: Upsert the per-Pariwar Telegram Bot config (audited)
       description: Upserts the Telegram config singleton (the FR-58C v1 `enabled` flag, bot username, + the two Secret-Manager NAME pointers — the resolved token values NEVER appear here or in the audit). Audited. Requires pariwar.configure_channels at pariwar scope.
-      tags: *a30
+      tags: *a33
       parameters:
         - schema:
             type: string
@@ -6097,7 +6502,7 @@ paths:
     post:
       summary: Declare degraded mode (the AR-20 cycle-open SMS bridge; audited)
       description: Declares degraded mode for the Pariwar so the cycle-open SMS bridge can force SMS for cycle-open (alert_published) alerts, bypassing cost-optimization. Auto-revokes any currently-active declaration (single-active-per-Pariwar). effectiveFrom cannot be backdated (NO BACKDATING). Audited. Requires pariwar.declare_degraded_mode at pariwar scope.
-      tags: &a31
+      tags: &a34
         - degraded-mode
       parameters:
         - schema:
@@ -6141,7 +6546,7 @@ paths:
     post:
       summary: Manually revoke a degraded-mode declaration (idempotent; audited)
       description: Revokes the identified declaration (a state transition, not a delete). Idempotent — revoking an already-revoked/expired row is a no-op. Audited. Requires pariwar.declare_degraded_mode at pariwar scope.
-      tags: *a31
+      tags: *a34
       parameters:
         - schema:
             type: string
@@ -6178,7 +6583,7 @@ paths:
     get:
       summary: Read the currently-active degraded-mode declaration (the banner read)
       description: Returns the currently-active degraded-mode declaration for the Pariwar, or null when none is active. "Active" is computed (revoked_at IS NULL AND effective_from<=now AND (expires_at IS NULL OR expires_at>now)). Requires pariwar.declare_degraded_mode at pariwar scope.
-      tags: *a31
+      tags: *a34
       parameters:
         - schema:
             type: string
@@ -6209,7 +6614,7 @@ paths:
     post:
       summary: Signup medical disclosure — submit IMA disclosures + concealment-denial ack
       description: Submits 0..N IMA-listed conditions (zero is valid — most members disclose nothing) + the optional free-text additional context (both Tier-1 encrypted) with a MANDATORY concealment-denial acknowledgment (server rejects acknowledged !== true). Records a consent (medical_disclosure_ack, referencing niy.concealment.r14) via the audit-or-throw chain, APPENDS a disclosure row (append-only history — Epic 4 walks the full history), and emits member.medical_disclosed (a non-PII marker; count + ima_list_version + ack only). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
-      tags: &a32
+      tags: &a35
         - member-medical
       requestBody:
         required: true
@@ -6245,7 +6650,7 @@ paths:
     get:
       summary: Signup medical disclosure — the latest disclosure status (NO PII echo-back)
       description: Returns the member's latest medical disclosure as a NON-PII summary (disclosedAt, imaListVersion, conditionCount, a presence flag for the free-text, ackLocale) + the total history count. NEVER the raw condition codes / free-text bytes (Tier-1 echo-back discipline). Requires a member session.
-      tags: *a32
+      tags: *a35
       responses:
         "200":
           description: Latest disclosure + history count
@@ -6263,7 +6668,7 @@ paths:
     get:
       summary: Signup medical disclosure — the IMA catalog + concealment-ack copy
       description: Returns the resolved IMA condition catalog (version = the niy.medical.ima-list clause_version_id + bilingual conditions) plus the concealment-ack copy (ackText.en / ackText.hi from niy.concealment.r14) the screen renders. Returns 503 when the registry is unprovisioned for the Pariwar (either clause absent). Requires a member session.
-      tags: *a32
+      tags: *a35
       responses:
         "200":
           description: IMA catalog + ack copy
@@ -6287,7 +6692,7 @@ paths:
     get:
       summary: Signup T&C — the current effective Terms & Conditions for the member’s Pariwar
       description: "Returns the current effective T&C version for the member’s Pariwar: the tcVersionId, the effective-from instant, the PRECOMPUTED sanitized HTML body (rendered once at write time — the screen emits it verbatim, no markdown render at read), and the echoed locale. Returns 503 when no effective T&C is provisioned for the Pariwar (a server-side gap, not a client error — the screen renders a graceful unavailable state). Requires a member session."
-      tags: &a33
+      tags: &a36
         - member-terms
       responses:
         "200":
@@ -6312,7 +6717,7 @@ paths:
     post:
       summary: Signup T&C — accept the current effective T&C (records a tc_acceptance consent)
       description: Records a tc_acceptance consent_records entry (consent_artifact_ref = the resolved tcVersionId, granted_via_actor = member_self) via the audit-or-throw chain (write the audit line FIRST, thread its id into recordConsent, all inside one member scope-tx; a compensating audit line is emitted on rollback). The effective version is resolved SERVER-SIDE (the client tcVersionId is an advisory staleness signal); if no effective T&C is resolvable the accept fails atomically (409, no orphan consent/audit). Requires a member session.
-      tags: *a33
+      tags: *a36
       requestBody:
         required: true
         content:
@@ -6348,7 +6753,7 @@ paths:
     post:
       summary: Signup fee — build the ₹110 Vyawastha Shulk UPI Intent URL
       description: Returns a SERVER-constructed UPI Intent URL (upi://pay?pa={trust VPA}&am={110}&cu=INR&tn=signup-shulk-{memberId}&tr=signup-{memberId}-{nonce}) — the VPA + amount are resolved server-side from config (never client-supplied). Echoes the `tr` idempotency nonce for the confirm step. 503 when the trust VPA is unconfigured (a server gap). Requires a member session.
-      tags: &a34
+      tags: &a37
         - member-vyawastha-shulk
       responses:
         "200":
@@ -6373,7 +6778,7 @@ paths:
     post:
       summary: Signup fee — self-attest the UTR → persist the receipt + the GATED lock-in transition
       description: Persists a vyawastha_shulk_receipts row ALWAYS (AR-67 indefinite retention; idempotent on the `tr` — a re-confirm returns the existing receipt without a second insert or re-emit). Captures the optional 6-digit Reference Code (D2 port seam — stored, NOT validated). Then evaluates the 5-condition lock-in gate (KYC + nominees + medical + T&C + the receipt); emits member.vyawastha_shulk_paid (pending-fee → lock-in) + member.lock_in_entered (with the FR-8 lock_in_days_at_join snapshot) ONLY when all five hold — otherwise the receipt persists, no event fires, and `outstanding` names the incomplete step(s). 503 lock_in.policy_unavailable when the gate passes but niy.lock-in.policy is unprovisioned (receipt kept; idempotent re-confirm completes once provisioned). Requires a member session.
-      tags: *a34
+      tags: *a37
       requestBody:
         required: true
         content:
@@ -6415,7 +6820,7 @@ paths:
     get:
       summary: Signup fee — the member’s paid / lock-in status
       description: Returns whether the member has paid (a receipt exists), the latest receipt’s validThrough, whether lock-in has been entered, and any still-outstanding pre-payment steps. Requires a member session.
-      tags: *a34
+      tags: *a37
       responses:
         "200":
           description: Paid / lock-in status
@@ -6433,7 +6838,7 @@ paths:
     get:
       summary: Renewal — the canonical FR-12A vyawastha_shulk_status payload
       description: "Returns the renewal/validity status Epic 4’s Validity Service (FR-12A) consumes: paid_through (latest receipt valid_through), days_until_lapse (ceil-clamped days to the valid_through + 91d grace-end/lapse boundary), in_renewal_grace (true iff the member’s state is active-in-grace), and grace_remaining_days. Computed live per request → within the ≤60s freshness invariant. Requires a member session."
-      tags: *a34
+      tags: *a37
       responses:
         "200":
           description: Renewal/validity status
@@ -6451,7 +6856,7 @@ paths:
     post:
       summary: Renewal — build the annual ₹ Vyawastha Shulk UPI Intent URL
       description: Identical to the signup intent (server-authoritative VPA + amount from config; `tr` idempotency nonce) but with a renewal `tn` grammar (renewal-shulk-{memberId}-{year}). Requires a member session. 503 when the trust VPA is unconfigured.
-      tags: *a34
+      tags: *a37
       responses:
         "200":
           description: UPI Intent URL + tr
@@ -6475,7 +6880,7 @@ paths:
     post:
       summary: Renewal — self-attest the UTR → persist the receipt + emit the renewal event
       description: "Persists a vyawastha_shulk_receipts row (server-stamped valid_through = now + 365d; idempotent on the `tr`) and emits member.vyawastha_shulk_paid (kind: renewal) in the same scope-tx. A renewing member is already post-lock-in, so there is NO lock-in gate and renewal NEVER re-applies lock-in (the reducer routes active-in-grace/lapsed-unpaid → active, and is identity from active). 409 when the member is in a terminal/pre-active state (renewal requires a post-lock-in member). Requires a member session."
-      tags: *a34
+      tags: *a37
       requestBody:
         required: true
         content:
@@ -6804,6 +7209,349 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Attachment not found (or not owned)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/helpdesk/queue:
+    get:
+      summary: The paginated responder queue (scope-respecting, with derived SLA + severity)
+      description: Admin-session-gated + `helpdesk.respond` (pariwar-dimension). The Pariwar's tickets newest-first, filterable by lifecycle state + routed-to role ("my queue"), paginated (clampLimit-bounded). Each row carries the two derived SLA timers (running/breached/ms_remaining), the derived severity (breached ≻ due_soon ≻ on_track), and the cross-link ref presence.
+      tags:
+        - helpdesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            enum:
+              - open
+              - in_progress
+              - awaiting_member
+              - resolved
+              - closed
+              - reopened
+            description: Filter by lifecycle state
+          required: false
+          name: state
+          in: query
+        - schema:
+            type: string
+            description: '"My queue" — filter by the routed-to role'
+          required: false
+          name: routed_to_role
+          in: query
+        - schema:
+            type: integer
+            exclusiveMinimum: 0
+            description: Page size (clamped to [1,200], default 50)
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type:
+              - integer
+              - "null"
+            minimum: 0
+            description: Page offset (default 0)
+          required: false
+          name: offset
+          in: query
+      responses:
+        "200":
+          description: The paginated responder queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskQueue"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (helpdesk.respond) for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Pariwar not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}:
+    get:
+      summary: The admin ticket detail (full row + thread + SLA/severity + cross-links)
+      tags:
+        - helpdesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: ticketId
+          in: path
+      responses:
+        "200":
+          description: The ticket detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskAdminTicketDetail"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (helpdesk.respond) for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}/pick-up:
+    post:
+      summary: Pick up a ticket (open/reopened → in_progress)
+      tags:
+        - helpdesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: ticketId
+          in: path
+      responses:
+        "200":
+          description: The updated ticket detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskAdminTicketDetail"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (helpdesk.respond) for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Illegal transition for the ticket's current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}/reply:
+    post:
+      summary: Reply asking the member for info (→ awaiting_member; notifies the member)
+      tags:
+        - helpdesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: ticketId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HelpdeskReplyRequest"
+      responses:
+        "200":
+          description: The updated ticket detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskAdminTicketDetail"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (helpdesk.respond) for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Illegal transition for the ticket's current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/helpdesk/tickets/{ticketId}/resolve:
+    post:
+      summary: Resolve a ticket with a closing message (→ resolved; notifies the member)
+      tags:
+        - helpdesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: ticketId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HelpdeskReplyRequest"
+      responses:
+        "200":
+          description: The updated ticket detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpdeskAdminTicketDetail"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (helpdesk.respond) for this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Illegal transition for the ticket's current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/member/helpdesk/tickets/{ticketId}/reply:
+    post:
+      summary: Member replies to their own ticket (awaiting_member → in_progress)
+      description: Member-session-gated (the ticket owner acting on their own ticket — no admin RBAC). Appends a helpdesk.member_replied event carrying the member's message and returns the updated member ticket detail. The reply surfaces in the responder thread and returns the ticket to the active queue.
+      tags:
+        - helpdesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: ticketId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HelpdeskReplyRequest"
+      responses:
+        "200":
+          description: The updated member ticket detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberTicketDetail"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket not found (or not owned — no enumeration oracle)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Illegal transition (the ticket is not awaiting a member reply)
           content:
             application/json:
               schema:

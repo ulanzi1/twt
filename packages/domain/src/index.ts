@@ -294,4 +294,11 @@ export {
   NewsPostScheduleInPastError,
   NEWS_POST_SCHEDULE_IN_PAST_CODE,
 } from './news-blog/errors.js';
+// Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
+// the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the
+// notification family register their own), the 5k-item-per-batch cap, per-item RBAC scope-check
+// reuse (`checkPermission`), an injected audit seam, and the dry-run parity invariant: preview and
+// execute share ONE evaluator code path, so "looked fine in preview, silently failed in execute" is
+// structurally impossible. No new RBAC key, no events, no migration — see the Scope Boundary.
+export * as bulkOperations from './bulk-operations/index.js';
 export { UUID_REGEX } from './db.js';

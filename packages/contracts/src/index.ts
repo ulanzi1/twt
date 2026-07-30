@@ -152,6 +152,14 @@ export * from './helpdesk/index.js';
 // test-only sync-guard (tests/news-blog.test.ts).
 export * from './news-blog/index.js';
 
+// Story 10.6 — the bulk-operations `[PRIMITIVE]` transport contracts (FR-49): the shared-evaluator
+// outcome + final-status enums (sync-guarded against the @twt/domain tuples), the bulk-execute
+// request, and the preview/result response DTOs (counts + per-item outcomes + CSV content +
+// divergences). No `apps/api` route ships this story — a future consuming surface's route uses
+// these. Pure Zod (no @twt/domain import in shipped files); tuples + the batch cap are drift-
+// guarded by a test-only sync-guard (tests/bulk-operations/bulk-operations.test.ts).
+export * from './bulk-operations/index.js';
+
 export const CONTRACTS_API_VERSION = 'v1';
 
 /**

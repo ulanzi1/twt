@@ -2532,6 +2532,18 @@ registry.registerPath({
 // deliberately NOT registered on this apps/api OpenAPI surface. The `PublicPostResponse` /
 // `PublicPostListResponse` contract DTOs still exist (apps/public types its render against them).
 
+// ── Story 10.6 — the bulk-operations `[PRIMITIVE]` transport contracts (FR-49) ─────────────────
+// Register components/schemas only (no paths): this story ships NO apps/api route at all (the
+// Scope Boundary — a bigger deviation from the 10.1 precedent than Story 1.7/1.8, which registered
+// components ahead of their own Story 1.9+ routes). A future consuming surface (10.10/10.12/the
+// notification family) registers its own `path` against these DTOs when it lands.
+const { BulkExecuteRequest, BulkPreviewResponse, BulkResultResponse } = await import(
+  '../src/bulk-operations/index.js'
+);
+registry.register('BulkExecuteRequest', BulkExecuteRequest.openapi('BulkExecuteRequest'));
+registry.register('BulkPreviewResponse', BulkPreviewResponse.openapi('BulkPreviewResponse'));
+registry.register('BulkResultResponse', BulkResultResponse.openapi('BulkResultResponse'));
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

@@ -163,6 +163,14 @@ import {
   type NewsPostListResponse as NewsPostList,
   type CreateDraftRequest as NewsCreateDraftBody,
   type UpdateDraftRequest as NewsUpdateDraftBody,
+  // Story 10.7 — the reports-&-exports library DTOs.
+  ReportExportListResponse,
+  ReportRequestResponse,
+  ReportStatusResponse,
+  type ReportRequest as ReportRequestBody,
+  type ReportRequestResponse as ReportRequestResult,
+  type ReportStatusResponse as ReportStatus,
+  type ReportExportListResponse as ReportExportList,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1257,4 +1265,63 @@ export function publishNewsPost(pariwarId: string, postId: string): Promise<News
     method: 'POST',
     body: JSON.stringify({}),
   });
+}
+
+// ── Reports & Exports library (Story 10.7) ────────────────────────────────────
+const reportsBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/reports`;
+
+/** POST request a report export (enqueues the async build; returns the handle + status). */
+export function requestReport(pariwarId: string, body: ReportRequestBody): Promise<ReportRequestResult> {
+  return apiFetch(reportsBase(pariwarId), ReportRequestResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET the actor's own export history, newest-first (review finding: backs a page-refresh-safe list). */
+export function listReports(pariwarId: string): Promise<ReportExportList> {
+  return apiFetch(reportsBase(pariwarId), ReportExportListResponse);
+}
+
+/** GET poll a report export's status (pending → ready|failed). */
+export function getReportStatus(pariwarId: string, reportExportId: string): Promise<ReportStatus> {
+  return apiFetch(
+    `${reportsBase(pariwarId)}/${encodeURIComponent(reportExportId)}`,
+    ReportStatusResponse,
+  );
+}
+
+/**
+ * GET download a ready report export (one-time, 24h, authenticated). Streams text/csv | application/json
+ * — fetched as a Blob (NOT apiFetch, which parses JSON), then handed to the browser as a file download.
+ * A non-2xx parses the same `{error:{code,message}}` envelope as `apiFetch` and throws `ApiError`
+ * (review finding: a plain `Error` with only the HTTP status left the caller unable to distinguish a
+ * transient `reports.not_ready` 409 from a permanent `reports.build_failed` 409).
+ */
+export async function downloadReport(
+  pariwarId: string,
+  reportExportId: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(
+    `${reportsBase(pariwarId)}/${encodeURIComponent(reportExportId)}/download`,
+    { credentials: 'include' },
+  );
+  if (!res.ok) {
+    let code = `http.${res.status}`;
+    let message = res.statusText || 'Download failed';
+    try {
+      const body = (await res.json()) as ErrorEnvelope;
+      if (body.error?.code) code = body.error.code;
+      if (body.error?.message) message = body.error.message;
+    } catch {
+      // Non-JSON error body (or an already-consumed stream) — keep the status-derived defaults.
+    }
+    throw new ApiError(res.status, code, message);
+  }
+  const blob = await res.blob();
+  const cd = res.headers.get('content-disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `report-${reportExportId}`;
+  return { blob, filename };
 }

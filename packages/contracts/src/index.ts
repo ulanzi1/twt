@@ -159,6 +159,12 @@ export * from './news-blog/index.js';
 // these. Pure Zod (no @twt/domain import in shipped files); tuples + the batch cap are drift-
 // guarded by a test-only sync-guard (tests/bulk-operations/bulk-operations.test.ts).
 export * from './bulk-operations/index.js';
+// Story 10.7 — the reports-&-exports library [SURFACE] transport contracts (FR-58A): the report request
+// (report_type + format + bounded params), the request/poll-status responses, and the format/status/
+// failure enums. The download route streams the artifact bytes (NO artifact field crosses the contract
+// — the 3.11 R1 rule). Pure Zod (no @twt/domain import); the status + format enums are drift-guarded
+// against the @twt/domain tuples by a test-only sync-guard (tests/reports.test.ts).
+export * from './reports/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';
 

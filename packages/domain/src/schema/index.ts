@@ -95,6 +95,11 @@ export * from './member_withdrawals.js';
 // non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum zeroing). FK cascade to
 // members for RTBF (Story 3.12).
 export * from './data_exports.js';
+// Story 10.7 — report_exports (tenant-isolated; one row per ADMIN/trustee report-export request). The
+// serialized CSV/JSON artifact Tier-1 envelope-encrypted at rest (artifact_ciphertext); status/
+// failed_reason/params_hash non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum
+// zeroing). ⚠ ACTOR-scoped (requested_by_actor_id) — NO member FK (the admin analog of data_exports).
+export * from './report_exports.js';
 // Story 4.7 — member_search_projection: the AR-65 admin member-search compound read model (a
 // denormalized NON-PII read store: lifecycle state + nominee summary + D2 producer_unavailable
 // sentinels). Write-owned EXCLUSIVELY by the member projector (member/project.ts); guarded by a

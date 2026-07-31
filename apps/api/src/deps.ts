@@ -37,6 +37,7 @@ import {
   type KycProviderRegistry,
 } from './modules/kyc/index.js';
 import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
+import { createPgBossReportExportEnqueuer } from './modules/reports/index.js';
 import { createPgBossReconciliationMatchEnqueuer } from './modules/reconciliation/index.js';
 import { createPgBossNewsPublishEnqueuer } from './modules/news-blog/queue.js';
 import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
@@ -331,6 +332,10 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Data-export build-job producer (Story 3.11) — the FIRST api-side queue producer (send-only). Uses
     // the same DB connection string as the app pool (pgboss schema; apps/jobs already created it).
     dataExportQueue: await createPgBossDataExportEnqueuer(connectionString),
+    // Reports-&-exports library build-job producer (Story 10.7) — send-only. The POST …/admin/reports
+    // route enqueues a REPORT_EXPORT_BUILD job after inserting the pending row. Same connection string
+    // as the app pool (pgboss schema; apps/jobs already created it).
+    reportExportQueue: await createPgBossReportExportEnqueuer(connectionString),
     // Reconciliation UTR-matcher job producer (Story 9.4, Decision D7 — the enqueue-primary latency
     // optimizer). Send-only; the reconciliation upload route enqueues a RECONCILIATION_MATCH job for the
     // pool's cycle POST-COMMIT (best-effort). Same connection string as the app pool (pgboss schema).

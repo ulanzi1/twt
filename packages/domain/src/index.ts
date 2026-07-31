@@ -301,4 +301,11 @@ export {
 // execute share ONE evaluator code path, so "looked fine in preview, silently failed in execute" is
 // structurally impossible. No new RBAC key, no events, no migration — see the Scope Boundary.
 export * as bulkOperations from './bulk-operations/index.js';
+// Story 10.7 — the Reports & Exports library [SURFACE]: the report-template registry + Open/Closed
+// assembly harness (never branches on reportType), scope-as-predicate queries (Decision 3), mask-by-
+// default PII posture (Decision 2, Tier-1 NEVER decrypted in v1), per-template RBAC (Decision 6), the
+// report_exports lifecycle accessors, and the CSV(reused toCsv)/JSON serializer. The admin analog of
+// 3.11 (dataExport) — scope-respecting + PII-masked because the requestor is an admin reading OTHER
+// members' rows. No events, no projector (reports read state) — see the Scope Boundary.
+export * as reports from './reports/index.js';
 export { UUID_REGEX } from './db.js';

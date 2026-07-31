@@ -51,6 +51,7 @@ import type {
   ClaimOcrParityEnqueuer,
   ClaimOcrParityJobPayload,
   DataExportEnqueuer,
+  ReportExportEnqueuer,
   NewsPublishEnqueuer,
   PoolSpawnTriggerEnqueuer,
 } from '../../src/context.js';
@@ -191,6 +192,26 @@ export class CapturingDataExportQueue implements DataExportEnqueuer {
 }
 
 /**
+ * A capturing report-export queue (Story 10.7). Records every enqueued build envelope so the reports
+ * request spec can assert the request path enqueued the job WITHOUT a live pg-boss. Throw-on-enqueue via
+ * `failNext = true` exercises the compensating-write (mark `failed` + 503) path. `close` is a no-op.
+ */
+export class CapturingReportExportQueue implements ReportExportEnqueuer {
+  public readonly enqueued: JobEnvelope<{ reportExportId: string }>[] = [];
+  public failNext = false;
+  public async enqueueBuild(envelope: JobEnvelope<{ reportExportId: string }>): Promise<void> {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error('simulated enqueue failure');
+    }
+    this.enqueued.push(envelope);
+  }
+  public get last(): JobEnvelope<{ reportExportId: string }> | undefined {
+    return this.enqueued.at(-1);
+  }
+}
+
+/**
  * A capturing claim OCR + parity queue (Story 6.5). Records every enqueued envelope so the upload
  * spec can assert the request path enqueued the job — and, critically, that a REJECTED upload
  * (409 lifecycle guard) enqueues NOTHING. `close` is a no-op.
@@ -255,6 +276,7 @@ export interface TestDepsOverrides {
   helpdeskReplyNotifier?: HelpdeskReplyNotifier;
   kycProviders?: KycProviderRegistry;
   dataExportQueue?: DataExportEnqueuer;
+  reportExportQueue?: ReportExportEnqueuer;
   claimDocumentStorage?: ClaimDocumentStorage;
   bankStatementStorage?: BankStatementStorage;
   selfVerifyScreenshotStorage?: SelfVerifyScreenshotStorage;
@@ -281,6 +303,7 @@ export interface TestDeps {
   poolFixedAmountHook: CapturingPoolFixedAmountHook;
   helpdeskReplyNotifier: CapturingHelpdeskReplyNotifier;
   dataExportQueue: CapturingDataExportQueue;
+  reportExportQueue: CapturingReportExportQueue;
   claimDocumentStorage: InMemoryClaimDocumentStorage;
   bankStatementStorage: InMemoryBankStatementStorage;
   selfVerifyScreenshotStorage: InMemorySelfVerifyScreenshotStorage;
@@ -318,6 +341,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const helpdeskReplyNotifier = createCapturingHelpdeskReplyNotifier();
   const dataExportQueue =
     (overrides.dataExportQueue as CapturingDataExportQueue) ?? new CapturingDataExportQueue();
+  const reportExportQueue =
+    (overrides.reportExportQueue as CapturingReportExportQueue) ?? new CapturingReportExportQueue();
   const claimDocumentStorage =
     (overrides.claimDocumentStorage as InMemoryClaimDocumentStorage) ??
     createInMemoryClaimDocumentStorage();
@@ -398,6 +423,9 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Data-export queue producer (Story 3.11) — a capturing fake by default so the request spec can
     // assert the build job was enqueued without a live pg-boss.
     dataExportQueue,
+    // Report-export queue producer (Story 10.7) — capturing fake so the reports request spec asserts the
+    // REPORT_EXPORT_BUILD job was enqueued (and the compensating-write path on a simulated failure).
+    reportExportQueue,
     // Claim-document object store (Story 6.5) — in-memory fake so the upload spec can assert the
     // bytes were `put` (and that a rejected upload never reaches storage).
     claimDocumentStorage,
@@ -443,6 +471,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     poolFixedAmountHook,
     helpdeskReplyNotifier,
     dataExportQueue,
+    reportExportQueue,
     claimDocumentStorage,
     bankStatementStorage,
     selfVerifyScreenshotStorage,

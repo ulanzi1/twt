@@ -2544,6 +2544,107 @@ registry.register('BulkExecuteRequest', BulkExecuteRequest.openapi('BulkExecuteR
 registry.register('BulkPreviewResponse', BulkPreviewResponse.openapi('BulkPreviewResponse'));
 registry.register('BulkResultResponse', BulkResultResponse.openapi('BulkResultResponse'));
 
+// ── Story 10.7 — reports-&-exports library (TENANT-SCOPED admin surface; apps/api serves these) ──────
+// The request/poll-status/list DTOs register as components + FOUR real `paths`: request (enqueue), list
+// (the actor's own export history — review finding, closes the console's page-refresh gap), poll status,
+// and the one-time authenticated download (which streams text/csv | application/json — NO response
+// schema, the artifact bytes are streamed, never JSON-embedded; the 3.11 R1 rule).
+const { ReportRequest, ReportRequestResponse, ReportStatusResponse, ReportExportListResponse } =
+  await import('../src/reports/index.js');
+const ReportRequestComponent = ReportRequest.openapi('ReportRequest');
+const ReportRequestResponseComponent = ReportRequestResponse.openapi('ReportRequestResponse');
+const ReportStatusResponseComponent = ReportStatusResponse.openapi('ReportStatusResponse');
+const ReportExportListResponseComponent = ReportExportListResponse.openapi('ReportExportListResponse');
+registry.register('ReportRequest', ReportRequestComponent);
+registry.register('ReportRequestResponse', ReportRequestResponseComponent);
+registry.register('ReportStatusResponse', ReportStatusResponseComponent);
+registry.register('ReportExportListResponse', ReportExportListResponseComponent);
+
+const reportsTags = ['reports'];
+const reportsPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const reportsExportParams = z.object({ pariwarId: z.string().uuid(), id: z.string().uuid() });
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/admin/reports',
+  summary: 'Request a report export (scope-respecting, PII-masked; enqueues an async build)',
+  description:
+    'Authorizes the actor against the report template\'s own permission key at their resolved scope, ' +
+    'inserts a pending report_exports row (idempotent per (actor, report_type, params_hash)), and ' +
+    'enqueues a REPORT_EXPORT_BUILD job. The build runs off the request path; poll GET :id for status. ' +
+    'Requires the template\'s permission key at the actor\'s scope (e.g. member.export_roster).',
+  tags: reportsTags,
+  request: {
+    params: reportsPariwarParams,
+    body: { content: { 'application/json': { schema: ReportRequestComponent } }, required: true },
+  },
+  responses: {
+    200: { description: 'Report export requested', content: { 'application/json': { schema: ReportRequestResponseComponent } } },
+    400: errorResponse('Request validation failed / unknown report type'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden — the report\'s permission key at this scope is required'),
+    503: errorResponse('Report could not be queued — please try again'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/reports',
+  summary: 'List the actor\'s own report exports (newest-first, bounded)',
+  description:
+    'Returns the requestor\'s OWN report_exports rows only (actor-scoped, not tenant-wide), newest-' +
+    'first. Backs the admin console\'s export list so a page refresh does not lose knowledge of ' +
+    'in-flight/ready exports.',
+  tags: reportsTags,
+  request: { params: reportsPariwarParams },
+  responses: {
+    200: { description: 'The actor\'s report exports', content: { 'application/json': { schema: ReportExportListResponseComponent } } },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/reports/{id}',
+  summary: 'Poll a report export\'s status (pending → ready|failed)',
+  description:
+    'Returns the export\'s lifecycle metadata (status + timestamps + row count + a NON-PII failure ' +
+    'code). NO artifact field — the bytes are streamed by the download route. 404 when not the ' +
+    'requestor\'s export.',
+  tags: reportsTags,
+  request: { params: reportsExportParams },
+  responses: {
+    200: { description: 'Report export status', content: { 'application/json': { schema: ReportStatusResponseComponent } } },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden'),
+    404: errorResponse('Report export not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/reports/{id}/download',
+  summary: 'Download a ready report export (one-time, 24h, authenticated stream)',
+  description:
+    'Streams the envelope-decrypted artifact as text/csv or application/json (the format is the ' +
+    'export\'s own). One-time: guards in order owned → not-consumed (410) → not-expired-status (410) → ' +
+    'failed (409 `reports.build_failed`) → ready (409 `reports.not_ready`) → not-expired-window (410); ' +
+    'consumed_at is stamped before streaming (a concurrent double-download loses → 410). The two 409 ' +
+    'cases carry DISTINCT error codes so a client can tell a permanent build failure from a transient ' +
+    'still-building state. NO response schema — the artifact bytes are streamed, never JSON-embedded ' +
+    '(the R1 rule).',
+  tags: reportsTags,
+  request: { params: reportsExportParams },
+  responses: {
+    200: { description: 'The report artifact (text/csv | application/json)' },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden'),
+    404: errorResponse('Report export not found'),
+    409: errorResponse('Report export is not ready (reports.not_ready) or failed to generate (reports.build_failed)'),
+    410: errorResponse('Report export already downloaded or expired'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

@@ -177,6 +177,23 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.7 — member.export_roster is granted to district_admin + pariwar_admin (+ super_admin); NOT deferred', () => {
+    const KEY = 'member.export_roster';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // The FIRST truly district-capable read key that is NOT deferred: district_admin holds it at its
+    // `district` ceiling (an exact-node self-district match needs no geo-tree), pariwar_admin at pariwar
+    // (sees the whole tenant); super_admin auto-derives (full catalog).
+    expect(holders).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+    // Distinct from member.view_validity — a roster EXPORT is its own read authority; roles that read a
+    // single member's validity but should not export a roster do not inherit it.
+    for (const role of ['state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 5.3 — pariwar.configure_channels is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'pariwar.configure_channels';
     const holders = defaultRoleBundles

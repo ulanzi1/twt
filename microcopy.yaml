@@ -290,3 +290,27 @@ allow:
     reason: >-
       Documentation gloss "Yogdaan Bahi (passbook)" pairing the canonical term with its
       English referent — not member-visible copy that uses the prohibited word.
+  # Story 10.7 reports-&-exports library — the FIRST admin surface to contain the word
+  # "report". The `report → Sahyog Vivran` vocabulary term is the MEMBER-visible register
+  # (UX-DR71; it "bites Epic 2+ member surfaces, NOT admin code" — see the vocabulary
+  # header). apps/admin is the STAFF/admin console (the member app is apps/mobile), and
+  # "report"/"Report" here is the FR-58A "Reports & Exports Library" feature name plus code
+  # identifiers (report_type, the report-export(s) query keys, the report- filename prefix)
+  # and JSDoc — not member-facing copy. Scoped per-file (teeth preserved everywhere else).
+  - file: apps/admin/src/modules/reports/ReportsPage.tsx
+    pattern: '\breport'
+    reason: >-
+      Story 10.7 reports console (staff/admin surface, apps/admin). "report"/"Report" is
+      the FR-58A feature name + code identifiers, not the member-visible register
+      (Sahyog Vivran governs apps/mobile / Epic 2+ member copy).
+  - file: apps/admin/src/routes/ReportsRoute.tsx
+    pattern: '\breport'
+    reason: >-
+      Story 10.7 reports console route (staff/admin surface). "report" is the FR-58A
+      feature name, not member-visible copy.
+  - file: apps/admin/src/api/client.ts
+    pattern: '\breport'
+    reason: >-
+      Story 10.7 admin API client reports methods (request/poll/download a report export).
+      "report" is the FR-58A feature name + JSDoc/identifiers on a staff/admin surface,
+      not the member-visible register.

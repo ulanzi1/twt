@@ -124,6 +124,14 @@ export const MEMBER_WITHDRAWAL_FIELD_CLASS = 'member_withdrawal';
 export const MEMBER_DATA_EXPORT_FIELD_CLASS = 'data_export';
 
 /**
+ * Field-class for the reports-&-exports library artifact Tier-1 envelope (Story 10.7). Matches the
+ * `piiColumn(1, 'report_export')` schema annotation + the apps/jobs build worker's encrypt field-class
+ * (`REPORT_EXPORT_FIELD_CLASS`, duplicated by value — apps cannot depend on apps). The download handler
+ * decrypts with this literal.
+ */
+export const REPORT_EXPORT_FIELD_CLASS = 'report_export';
+
+/**
  * Field-class namespace for the push DEVICE-TOKEN Tier-1 envelope + blind index (Story 5.2). Device tokens
  * are Tier-1 PII (architecture §3.4 L1937). Unlike the admin-email / member-mobile families (fixed global
  * sentinel because their lookup runs pre-scope), `member_device_tokens` is a TENANT table — its encryption
@@ -221,6 +229,17 @@ export const CLAIM_DOCUMENT_FIELD_CLASS = 'claim_document';
  */
 export interface DataExportEnqueuer {
   enqueueBuild(envelope: JobEnvelope<{ exportId: string }>): Promise<void>;
+  close?(): Promise<void>;
+}
+
+/**
+ * The reports-&-exports library build-job producer seam (Story 10.7) — send-only. The admin analog of
+ * `DataExportEnqueuer`: the `POST …/admin/reports` route enqueues a `REPORT_EXPORT_BUILD` job after
+ * inserting the `pending` report_exports row (the API produces; apps/jobs consumes; NEVER `boss.work()`).
+ * A pg-boss-backed enqueuer in prod/dev; a capturing fake in tests. `close` drains the client on shutdown.
+ */
+export interface ReportExportEnqueuer {
+  enqueueBuild(envelope: JobEnvelope<{ reportExportId: string }>): Promise<void>;
   close?(): Promise<void>;
 }
 
@@ -430,6 +449,12 @@ export interface AppDeps {
    * `DATA_EXPORT_BUILD` job here after inserting the `pending` row.
    */
   readonly dataExportQueue: DataExportEnqueuer;
+  /**
+   * Reports-&-exports library build-job producer (Story 10.7) — send-only. A pg-boss-backed enqueuer in
+   * prod/dev; a capturing fake in tests. The `POST …/admin/reports` handler enqueues a
+   * `REPORT_EXPORT_BUILD` job here after inserting the `pending` row.
+   */
+  readonly reportExportQueue: ReportExportEnqueuer;
   /**
    * Claim-document object store (Story 6.5, Decision D1) — the upload endpoint `put`s the
    * death-cert bytes here and `<DocumentPreview>` mints signed read URLs. The live GCS adapter

@@ -286,6 +286,23 @@ export const QUEUE_NAMES = {
    * the admin-identity apps/api path (the 10.4 crypto-boundary lesson). Job class B (request/event).
    */
   NEWS_PUBLISH: 'news.publish',
+  /**
+   * Reports-&-exports library — the report BUILD job (Story 10.7, Task 5). The admin analog of
+   * DATA_EXPORT_BUILD: the apps/api `POST …/admin/reports` route enqueues this on an admin's report
+   * request; the apps/jobs worker assembles the report OFF the request path — SCOPE-RESPECTING (the
+   * template pushes the actor's resolved scope into the SQL) and PII-MASKED (Tier-1 is NEVER decrypted
+   * into a v1 report) — serializes it (CSV via the reused `toCsv` / canonical JSON) + stores it envelope-
+   * encrypted at rest. Idempotency-keyed by the report_exports pending-status guard (a pg-boss retry on a
+   * terminal-state row no-ops). Job class B (request-triggered) per architecture §1.4.
+   */
+  REPORT_EXPORT_BUILD: 'report.export.build',
+  /**
+   * Reports-&-exports library — the report TTL/consume hygiene vacuum (Story 10.7, Task 5). The admin
+   * analog of DATA_EXPORT_VACUUM: zeroes `artifact_ciphertext` for consumed/expired report exports (the
+   * artifact holds scope-restricted admin data — and the DEFERRED Tier-1 path will put real PII here) and
+   * flips past-window rows → `expired`. Mirrors DATA_EXPORT_VACUUM. Job class C (background).
+   */
+  REPORT_EXPORT_VACUUM: 'report.export.vacuum',
 } as const;
 
 /** Union of the registered queue names. */

@@ -1,4 +1,59 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-31c (10-7-reports-exports-library-async-generation-scope-respecting: stays done — SECOND
+#   bmad-code-review pass (3-layer) on the still-uncommitted diff. 17 raw findings -> 11 after dedup (3 dismissed).
+#   2 decision-needed resolved (roster = all-members via LEFT JOIN + '—' fallback; multi-district-grant collapse
+#   accepted+documented as an Epic-3 deferral). 7 patches applied: reconciled the idempotency 500/lockout (a stale
+#   past-window `ready` row the vacuum hadn't reaped 500'd the re-request + locked the actor out -> expireStaleReady
+#   ReportExport on the 23505 retry); added `format` to the idempotency key + unique index (CSV-then-JSON returned
+#   the wrong artifact); worker `flipped`-guard on the status='pending' UPDATE rowcount (a concurrent vacuum stale-
+#   flip / redelivery wrote a FALSE report.generated audit + returned ready); tenant-scoped the current_posting CTE
+#   (was full cross-tenant scan on BYPASSRLS); NEW report-exports-policy-regression RLS spec (the missing repo-wide
+#   pos/neg invariant); deferred blob-URL revoke. PLUS a gate fix verify-before-committing surfaced: the list
+#   accessor's named-const .limit tripped domain-accessor-invariants (was RED despite the Dev Record claim) ->
+#   clampLimit. Verified green: domain unit 20 + integration 8 + new RLS 6, jobs 5, api 10; schema-diff + domain-
+#   invariants gates pass; typecheck + lint clean across domain/api/jobs/admin. Test-DB index re-created w/ format.)
+# last_updated: 2026-07-31b (10-7-reports-exports-library-async-generation-scope-respecting: review -> done via
+#   bmad-code-review. Blind Hunter + Edge Case Hunter + Acceptance Auditor in parallel; 2 decision-needed (1
+#   deferred - the build/download audit traceId mismatch, an inherited 3.11 gap needing a cross-story schema
+#   change; 1 converted to a patch - added GET .../admin/reports actor-scoped list endpoint + wired the console
+#   to it) + 14 patches applied + 2 deferred (paramsDigest nested-params footgun; contribution-rate denominator
+#   lifecycle filter, both currently inert). Patches: fixed the cross-tenant idempotency unique index (added
+#   pariwar_id - an admin holding grants in >=2 Pariwars could 500 + cross-tenant existence-leak without it);
+#   precise download-audit actorRole resolution (was "first matching grant", now mirrors the build worker's
+#   resolvedScope match); wired the dead ReportTemplate.auditAction field; split worker return status into
+#   ready/failed/skipped (a pg-boss retry no-op was mislabeled failed); isolated the post-success audit write
+#   from the build catch; added a stale-pending vacuum sweep (frees the idempotency index on an orphaned
+#   INSERT-then-enqueue crash) + per-tenant vacuum try/catch; distinct 409 code for a failed vs still-building
+#   download; a field-class cross-app sync-guard test; narrowed markReportExportFailed's reason to a closed
+#   union; replaced the deny-deeper test's query-only bypass with a real assembleReport+checkPermission+state_
+#   trustee end-to-end proof. Verified: domain/jobs/api reports live-DB suites green in isolation post-fix,
+#   contracts 10/10 green, full typecheck + lint clean across domain/api/jobs/admin/contracts, openapi regen.)
+# last_updated: 2026-07-31a (10-7-reports-exports-library-async-generation-scope-respecting: ready-for-dev ->
+#   in-progress -> review via bmad-dev-story. Shipped the admin [SURFACE]: report_exports lifecycle (migration
+#   0086, actor-scoped NO member FK, partial-unique idempotency index) + RLS; report-template registry + Open/
+#   Closed assembleReport (never branches on reportType) + 3 v1 seed templates (member_roster, contribution_rate_
+#   by_district honest-empty numerator, audit_log_query); minted member.export_roster (catalog v25->v26, the FIRST
+#   non-deferred district-capable read key; roster REUSES nothing, aggregate REUSES reconciliation.review, audit-log
+#   REUSES audit.export - no umbrella key); pg-boss REPORT_EXPORT_BUILD worker (re-loads grants + re-resolves scope
+#   at build time, column-free; masks - Tier-1 NEVER decrypted; explicit pariwar_id predicate since the worker's
+#   BYPASSRLS pool bypasses RLS) + REPORT_EXPORT_VACUUM; apps/api request(per-template RBAC in-handler)/poll/one-time-
+#   24h-download routes; minimal apps/admin console; contracts DTOs + openapi regen (deterministic). Unit + live-DB
+#   (domain scope-narrowing 7/7 + jobs build/vacuum 3/3 + api RBAC/idempotency/410-replay 6/6) + contracts 8/8 green
+#   in isolation; openapi-determinism/pii-scrape/schema-diff/domain-invariants gates pass. Full fresh-DB ci:local
+#   owed before merge - the shared-dev-DB integration run has known count-pollution flakes in unrelated specs.
+#   decryptIfPermitted + reports.view_pii + admin-push "ready" nudge + remaining ~7 FR-58A reports = recorded seams.)
+# last_updated: 2026-07-30i (10-7-reports-exports-library-async-generation-scope-respecting: backlog ->
+#   ready-for-dev via bmad-create-story. [SURFACE] cloning the Story 3.11 async-export machinery (data_exports
+#   lifecycle + envelope-encrypt-at-rest + one-time 24h authenticated download + hygiene vacuum + pg-boss build
+#   worker) for an ADMIN/trustee-scoped report_exports analog. Load-bearing semantic difference from 3.11: the
+#   requestor is an admin reading OTHER members' rows -> scope-respecting (scope-as-query-predicate, deny-deeper
+#   geo until Epic 3) + PII-MASKED (Tier-1 NEVER decrypted in v1; decrypt-if-permitted is a first-class deferred
+#   seam). Inherits 10.6's Open/Closed registry invariant (assembleReport never branches on reportType) + reuses
+#   10.6's toCsv (durable download was 10.6's explicit deferral to here). All 7 load-bearing decisions PO-CONFIRMED
+#   2026-07-30: 3-template representative seed set NOT all ~10 FR-58A reports; mask-only PII posture; scope-as-
+#   predicate; DB-artifact over GCS signed URLs; async-always (epic-vs-PRD reconciliation); per-template keys
+#   (audit-log reuses audit.export, catalog v25->v26 only if a new template key is genuinely needed); poll-status
+#   mandatory + push best-effort. Saved 10-7-*.md.)
 # last_updated: 2026-07-30h (10-6-bulk-operations-framework: review -> done via bmad-code-review (3 parallel
 #   layers: Blind Hunter diff-only, Edge Case Hunter diff+project-access, Acceptance Auditor diff+spec, cross-
 #   verified against the real checkPermission/writeAuditEntry implementations). 14 patch findings applied (4
@@ -2052,7 +2107,7 @@ development_status:
   10-4-helpdesk-admin-console-sla-tracking-cross-link-integration: done
   10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: done
   10-6-bulk-operations-framework: done
-  10-7-reports-exports-library-async-generation-scope-respecting: backlog
+  10-7-reports-exports-library-async-generation-scope-respecting: done
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: backlog
   10-9-banner-popup-manager-valid-from-until-dismiss: backlog
   10-10-member-moderation-suspend-terminate-restore-reason-codes: backlog

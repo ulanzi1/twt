@@ -265,6 +265,18 @@ export type DataExportId = Brand<'DataExportId'>;
 /** Smart constructor: validates UUID shape, returns a branded `DataExportId`. */
 export const dataExportId = uuidBrand('DataExportId');
 
+// ── Report-export id (Story 10.7, Task 1) ────────────────────────────────────
+// NEW branded id per the §Naming "branding mandatory on a new ID's first PR"
+// discipline (L3700-3708): `ReportExportId` is the per-row address of an ADMIN/
+// trustee report-export request (`report_exports.report_export_id`) — the handle
+// the request/status/download API routes key on. The admin analog of `DataExportId`
+// (Story 3.11): a UUID row address, so it reuses the shared `uuidBrand` validator.
+
+/** Per-row address of an admin report-export request (`report_exports.report_export_id`). */
+export type ReportExportId = Brand<'ReportExportId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ReportExportId`. */
+export const reportExportId = uuidBrand('ReportExportId');
+
 /** Per-row address of a member attribution capture (`member_attribution.attribution_id`). */
 export type MemberAttributionId = Brand<'MemberAttributionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `MemberAttributionId`. */

@@ -279,7 +279,18 @@ export function permissionKey(value: string): PermissionKey {
 // not in AR-24). The public read surface (apps/public) is UNAUTHENTICATED (FR-74) and never touches this key.
 // ACCEPTANCE CONDITION: district_admin news-manage may be enabled only if a post gains a server-derived district
 // AND the gate moves to `dimension: 'district'` — not by widening a pariwar gate to a role that cannot satisfy it.
-export const PERMISSION_CATALOG_VERSION = 25 as const;
+// Bumped 25 → 26 at Story 10.7 (added ONE key): `member.export_roster` — the reports-library member-roster-EXPORT
+// READ key (Decision 6). Gates the member-roster report template (a Tier-3-clear + masked-Aadhaar CSV/JSON export).
+// DISTINCT from the single-member `member.view_validity` view (exporting a district's-worth of masked roster rows is
+// a distinct read authority from viewing one member's validity — the 4.6 read-key-separation precedent). This is a
+// district-CAPABLE key: granted to `district_admin` (checked at `dimension: 'district'` against the actor's OWN
+// district — an exact-node match the `district` scopeCeiling makes meaningful; NO geo-tree needed, so NOT DEFERRED
+// unlike the pariwar-dimension helpdesk/news keys) + `pariwar_admin` (a pariwar grant sees the whole tenant) +
+// `super_admin` (auto). This is what makes the reports library's district scope-narrowing (Decision 3) demonstrable.
+// The other two v1 seed templates REUSE existing keys (audit_log_query → `audit.export`; contribution_rate_by_district
+// → `reconciliation.review`) — no umbrella `reports.generate` key (Decision 6). The DEFERRED `reports.view_pii`-class
+// decrypt-if-permitted capability (Decision 2 seam) is NOT minted here — v1 masks, so no PII-decrypt key exists yet.
+export const PERMISSION_CATALOG_VERSION = 26 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -463,6 +474,16 @@ export const SEED_PERMISSION_KEYS = [
   // (a district-ceiling grant can't satisfy a pariwar check — inert; see the version-bump note + roles.ts). NOT
   // step-up-gated. The public read (apps/public) is unauthenticated and never touches this key.
   'news.manage',
+  // Story 10.7 (FR-58A) — the reports-library member-roster-EXPORT READ key. Gates the member_roster report
+  // template (a Tier-3-clear + masked-Aadhaar roster CSV/JSON). Checked at `dimension: 'district'` against the
+  // actor's OWN resolved scope (an exact-node match — the `district` scopeCeiling makes it meaningful with NO
+  // geo-tree). DISTINCT from `member.view_validity` (exporting a district roster ≠ viewing one member's validity;
+  // the 4.6 read-key-separation precedent). Granted to `district_admin` (district scope → sees their district) +
+  // `pariwar_admin` (pariwar scope → sees the whole tenant); super_admin auto-derives. The FIRST truly district-
+  // capable read key that is NOT deferred (contrast the pariwar-dimension helpdesk/news keys whose district_admin
+  // grant would be inert). The other two v1 templates REUSE `audit.export` (audit-log) + `reconciliation.review`
+  // (contribution-rate) — no umbrella key (Decision 6).
+  'member.export_roster',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

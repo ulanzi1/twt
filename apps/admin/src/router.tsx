@@ -21,6 +21,7 @@ import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
+import { ReportsRoute } from './routes/ReportsRoute.js';
 import { HelpdeskTicketRoute } from './routes/HelpdeskTicketRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
 import { R9VotingRoute } from './routes/R9VotingRoute.js';
@@ -128,6 +129,13 @@ const newsRoute = createRoute({
   component: NewsRoute,
 });
 
+// Story 10.7 — the tenant-scoped reports-&-exports console (request/poll/one-time-download).
+const reportsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/reports',
+  component: ReportsRoute,
+});
+
 // Story 6.7 — the tenant-scoped ground-inspection console (schedule/notes/photos/complete/refusal).
 const groundInspectionRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -184,6 +192,7 @@ const routeTree = rootRoute.addChildren([
   helpdeskQueueRoute,
   helpdeskTicketRoute,
   newsRoute,
+  reportsRoute,
   groundInspectionRoute,
   verifierConsoleRoute,
   cycleFreezeRoute,

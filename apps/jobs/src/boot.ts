@@ -55,6 +55,7 @@ import {
   DEFAULT_DATA_EXPORT_VACUUM_CRON,
   registerDataExportWorkers,
 } from './data-export.js';
+import { registerReportExportWorkers } from './reports-export.js';
 import { buildJobsEncryptionDeps } from './deps.js';
 import {
   DEFAULT_RENEWAL_LIFECYCLE_CRON,
@@ -387,6 +388,17 @@ async function main(): Promise<void> {
       { pool, kms: jobsEncryption.kms, kekRef: jobsEncryption.kekRef },
       { vacuumCron: DATA_EXPORT_VACUUM_CRON, vacuumTz: DATA_EXPORT_VACUUM_TZ },
     );
+
+    // ── Reports-&-exports library build worker + hygiene vacuum (Story 10.7, AC2/AC5) ──────────
+    // The admin analog of the data-export workers: the API enqueues REPORT_EXPORT_BUILD on an admin's
+    // report request; the build worker re-authorizes + assembles scope-respectingly + masks + envelope-
+    // encrypts the artifact on `pool`; the vacuum runs cross-tenant on `pool`. Uses the v1 report-template
+    // seed registry by default. IST cron.
+    await registerReportExportWorkers(boss, {
+      pool,
+      kms: jobsEncryption.kms,
+      kekRef: jobsEncryption.kekRef,
+    });
 
     // ── Push device-token stale/invalid cleanup cron (Story 5.2, AC5) ──────────
     // Prunes member_device_tokens that are stale past 7d / invalid past 30d (provisional defaults) on

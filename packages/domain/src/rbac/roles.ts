@@ -129,6 +129,14 @@ const HELPDESK_RESPOND = permissionKey('helpdesk.respond');
 // pariwar_admin-only; media_comms stays dormant). district_admin DEFERRED (a district-ceiling grant can't
 // satisfy a pariwar check — the HELPDESK_* / state_trustee-at-pariwar precedent). NOT step-up-gated.
 const NEWS_MANAGE = permissionKey('news.manage');
+// Story 10.7 (FR-58A) — the reports-library member-roster-EXPORT READ key (district-CAPABLE; the FIRST
+// non-deferred district-dimension read key). Gates the member_roster report template. Granted to
+// district_admin (checked at `dimension: 'district'` against the actor's OWN district — an exact-node
+// match the `district` scopeCeiling makes meaningful, NO geo-tree needed) + pariwar_admin (pariwar scope
+// sees the whole tenant); super_admin auto-derives. DISTINCT from member.view_validity (roster export ≠
+// single-member validity view — the 4.6 read-key-separation precedent). The other two v1 report templates
+// REUSE audit.export (audit-log) + reconciliation.review (contribution-rate) — no umbrella key (Decision 6).
+const MEMBER_EXPORT_ROSTER = permissionKey('member.export_roster');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -236,6 +244,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 2.6 — the Pariwar admin authors + approves T&C versions.
       TC_PUBLISH,
       TC_APPROVE,
+      // Story 10.7 — the reports-library member-roster-EXPORT key (district-CAPABLE, held here at pariwar
+      // scope). A `pariwar` grant resolves to pariwar-wide scope, so the roster report sees the whole tenant
+      // (no district narrowing — RLS tenant-isolates underneath). The tenant's administrative read authority.
+      MEMBER_EXPORT_ROSTER,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -272,6 +284,12 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // `district` scopeCeiling makes that exact-node gate meaningful. The D-D reviewer-conflict (reviewer ≠
       // original decider) is enforced in the domain write-path + handler, ORTHOGONAL to this route gate.
       CLAIM_APPEAL_REVIEW,
+      // Story 10.7 — the reports-library member-roster-EXPORT key. Checked at `dimension: 'district'`
+      // against the actor's OWN resolved district (an exact-node match the `district` scopeCeiling makes
+      // meaningful); the report query narrows `WHERE district = <actor.district>` (Decision 3). This is
+      // the first district-narrowable read key that is NOT deferred — no geo-tree resolver is needed for
+      // an exact-node self-district match.
+      MEMBER_EXPORT_ROSTER,
     ],
     scopeCeiling: 'district',
   },

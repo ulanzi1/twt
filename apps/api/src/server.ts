@@ -56,6 +56,7 @@ import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index.js';
 import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
+import { registerReportsModule } from './modules/reports/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
 import { registerRateLimit } from './plugins/rate-limit/index.js';
@@ -267,6 +268,12 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // apps/jobs NEWS_PUBLISH worker owns the audience fan-out (crypto boundary). The PUBLIC blog read is
   // served by apps/public (unauthenticated), not here.
   registerNewsBlogModule(app, deps);
+  // Story 10.7 — the reports-&-exports library (FR-58A): request/poll/one-time-24h-download of standard
+  // report templates (member roster, contribution-rate-by-district, audit-log query), scope-respecting +
+  // PII-masked. The admin analog of the 3.11 member data-export: the async assembly + masking run in the
+  // apps/jobs REPORT_EXPORT_BUILD worker (crypto boundary); this request path only authorizes (per-template
+  // key, Decision 6), enqueues, and streams the finished artifact.
+  registerReportsModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

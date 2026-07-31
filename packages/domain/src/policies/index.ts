@@ -49,6 +49,9 @@ export * from './member-postings-rls.js';
 export * from './member-withdrawals-rls.js';
 // Story 3.11 — data_exports tenant-isolation (mirror member-withdrawals-rls; GRANTs UPDATE too).
 export * from './data-exports-rls.js';
+// Story 10.7 — report_exports tenant-isolation (mirror data-exports-rls; GRANTs UPDATE too). The admin
+// analog of data_exports; ACTOR-scoped (no member FK).
+export * from './report-exports-rls.js';
 // Story 4.7 — member_search_projection tenant-isolation (mirror members-rls; the AR-65 admin-search
 // compound read model, projector-exclusive write + a write-rejection trigger like members.state).
 export * from './member-search-projection-rls.js';

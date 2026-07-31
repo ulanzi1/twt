@@ -8,6 +8,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { KycManualSubmitRequest } from '@twt/contracts';
+import type { ids } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../src/context.js';
@@ -42,13 +43,42 @@ describe('KYC Tier-1 field encryption (member field-class)', () => {
   });
 });
 
-describe('FR-58C manual-fallback seam (AC3)', () => {
+describe('FR-58C manual-fallback seam (AC3; flag-wired at Story 10.8)', () => {
+  const PARIWAR = '11111111-1111-1111-1111-111111111111' as ids.PariwarId;
   const depsWith = (manualFallbackEnabled: boolean): AppDeps =>
-    ({ config: { digilocker: { manualFallbackEnabled } } }) as unknown as AppDeps;
+    ({
+      config: { digilocker: { manualFallbackEnabled } },
+      clock: () => new Date('2026-07-31T00:00:00.000Z'),
+    }) as unknown as AppDeps;
 
-  it('reads the documented config seam (defaults true today)', () => {
-    expect(isManualFallbackEnabled(depsWith(true))).toBe(true);
-    expect(isManualFallbackEnabled(depsWith(false))).toBe(false);
+  /** A Db whose flag lookup finds NO rows — the "no version in force" path. */
+  const emptyDb = (): never => {
+    const chain = {
+      from: () => chain,
+      where: () => chain,
+      orderBy: () => chain,
+      limit: () => Promise.resolve([]),
+    };
+    return { select: () => chain } as never;
+  };
+
+  /** A Db that throws on any read — the flag-subsystem-failure path. */
+  const brokenDb = (): never =>
+    ({
+      select: () => {
+        throw new Error('flag store unavailable');
+      },
+    }) as never;
+
+  it('falls back to the documented config seam when no flag version is in force', async () => {
+    await expect(isManualFallbackEnabled(depsWith(true), emptyDb(), { pariwarId: PARIWAR })).resolves.toBe(true);
+    await expect(isManualFallbackEnabled(depsWith(false), emptyDb(), { pariwarId: PARIWAR })).resolves.toBe(false);
+  });
+
+  it('⚠ FAIL-SAFE: a flag-subsystem failure degrades to the config default, never to "mandatory"', async () => {
+    // The load-bearing polarity check. A flag outage must never silently make KYC hard-mandatory and
+    // lock members out of joining; the worst case is that manual stays available longer than intended.
+    await expect(isManualFallbackEnabled(depsWith(true), brokenDb(), { pariwarId: PARIWAR })).resolves.toBe(true);
   });
 });
 

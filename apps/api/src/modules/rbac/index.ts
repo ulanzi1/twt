@@ -9,7 +9,7 @@
 //
 // Discharges D3-1.8 (the HTTP-middleware adapter for the framework-agnostic guard).
 
-import { rbac } from '@twt/domain';
+import { AuthorizationDeniedError, rbac } from '@twt/domain';
 import type { FastifyRequest, preHandlerHookHandler } from 'fastify';
 import type pg from 'pg';
 
@@ -189,5 +189,49 @@ export function requireGlobalPermission(deps: AppDeps, key: string): preHandlerH
         onAuthorizationDenied: auditAuthorizationDenied(deps, request, actorId, null),
       },
     );
+  };
+}
+
+/**
+ * Build a Fastify pre-handler enforcing `key` at GLOBAL scope OR at `pariwar` scope for ANY of the
+ * actor's own tenants — for a global route whose DATA does not vary by tenant (e.g. the feature-flag
+ * global catalog: the cross-tenant tier resolved with no per-Pariwar override), so a Pariwar Admin
+ * viewing it is not a scope violation the way it would be for a genuinely tenant-scoped resource.
+ *
+ * ⚠ `requireGlobalPermission` alone cannot express this: `dimension: 'global'` is satisfied ONLY by
+ * a `global`-scoped grant (super_admin), by the RBAC model's containment rule (a narrower grant never
+ * satisfies a broader-dimension check — [[project_rbac_geo_scope_containment]]). This does NOT widen
+ * that rule or touch `packages/domain/src/rbac` (freeze row 9) — it composes the existing PURE
+ * `rbac.hasPermission` predicate twice at the HTTP-adapter layer: once at `global` (unchanged), and
+ * once per grant at THAT GRANT'S OWN `pariwar` scope (a grant only ever legitimately answers for its
+ * own tenant — the same containment rule, just evaluated per-tenant instead of at `global`).
+ */
+export function requireGlobalOrAnyPariwarPermission(deps: AppDeps, key: string): preHandlerHookHandler {
+  return async function preHandler(request: FastifyRequest): Promise<void> {
+    const actorId = request.requestContext.actorId;
+    if (!actorId) {
+      throw new Error('[rbac] requireGlobalOrAnyPariwarPermission ran without an admin session');
+    }
+    const grants = await loadGlobalActorGrants(deps.servicePool, actorId);
+
+    const holdsGlobally = rbac.hasPermission(grants, key, {
+      dimension: 'global',
+      value: null,
+      pariwarId: ADMIN_GLOBAL_NAMESPACE,
+    });
+    const holdsInAnyPariwar = grants.some((g) =>
+      rbac.hasPermission([g], key, { dimension: 'pariwar', value: g.pariwarId, pariwarId: g.pariwarId }),
+    );
+
+    if (holdsGlobally || holdsInAnyPariwar) return;
+
+    const denial: rbac.AuthorizationDenial = {
+      actorId,
+      permissionKey: key,
+      requiredScope: 'global',
+      targetLocator: { dimension: 'global', value: null },
+    };
+    auditAuthorizationDenied(deps, request, actorId, null)(denial);
+    throw new AuthorizationDeniedError(denial);
   };
 }

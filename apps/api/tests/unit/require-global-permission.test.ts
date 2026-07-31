@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { AuthAuditEvent, AuthAuditSink } from '../../src/audit/audit-sink.js';
 import type { AppDeps } from '../../src/context.js';
-import { requireGlobalPermission } from '../../src/modules/rbac/index.js';
+import { requireGlobalOrAnyPariwarPermission, requireGlobalPermission } from '../../src/modules/rbac/index.js';
 
 const ACTOR = '22222222-2222-2222-2222-222222222222';
 const A_PARIWAR = '11111111-1111-1111-1111-111111111111';
@@ -128,5 +128,75 @@ describe('requireGlobalPermission (Story 1.15, AC-1a)', () => {
     await expect(
       run(requireGlobalPermission(deny.deps, 'audit.verify'), fakeRequest(ACTOR)),
     ).rejects.toThrow();
+  });
+});
+
+describe('requireGlobalOrAnyPariwarPermission (Story 10.8 — the feature-flag global-catalog READ boundary)', () => {
+  const OTHER_PARIWAR = '33333333-3333-3333-3333-333333333333';
+
+  it('ALLOWS a super_admin holding the key at global scope (same as requireGlobalPermission)', async () => {
+    const sink = new CapturingSink();
+    const { deps } = fakeDeps(
+      [{ pariwar_id: A_PARIWAR, role: 'super_admin', scope_dimension: 'global', scope_value: null }],
+      sink,
+    );
+    const hook = requireGlobalOrAnyPariwarPermission(deps, 'feature_flag.view');
+    await expect(run(hook, fakeRequest(ACTOR))).resolves.toBeUndefined();
+    expect(sink.events).toHaveLength(0);
+  });
+
+  it('ALLOWS a pariwar_admin holding the key in their OWN Pariwar — the loosening this hook exists for', async () => {
+    const sink = new CapturingSink();
+    const { deps } = fakeDeps(
+      [{ pariwar_id: A_PARIWAR, role: 'pariwar_admin', scope_dimension: 'pariwar', scope_value: A_PARIWAR }],
+      sink,
+    );
+    const hook = requireGlobalOrAnyPariwarPermission(deps, 'feature_flag.view');
+    await expect(run(hook, fakeRequest(ACTOR))).resolves.toBeUndefined();
+    expect(sink.events).toHaveLength(0);
+  });
+
+  it('ALLOWS via ANY ONE of several pariwar-scoped grants — a multi-Pariwar admin needs only one', async () => {
+    const sink = new CapturingSink();
+    const { deps } = fakeDeps(
+      [
+        { pariwar_id: A_PARIWAR, role: 'auditor', scope_dimension: 'pariwar', scope_value: A_PARIWAR },
+        { pariwar_id: OTHER_PARIWAR, role: 'pariwar_admin', scope_dimension: 'pariwar', scope_value: OTHER_PARIWAR },
+      ],
+      sink,
+    );
+    const hook = requireGlobalOrAnyPariwarPermission(deps, 'feature_flag.view');
+    await expect(run(hook, fakeRequest(ACTOR))).resolves.toBeUndefined();
+  });
+
+  it('DENIES an actor with NO grant anywhere that carries the key — the loosening is bounded, not open', async () => {
+    const sink = new CapturingSink();
+    const { deps } = fakeDeps(
+      [{ pariwar_id: A_PARIWAR, role: 'auditor', scope_dimension: 'pariwar', scope_value: A_PARIWAR }],
+      sink,
+    );
+    // `auditor` does not hold `feature_flag.flip` — reuse the same shape to prove the checked KEY
+    // still matters, not just "has some grant somewhere".
+    const hook = requireGlobalOrAnyPariwarPermission(deps, 'feature_flag.flip');
+    await expect(run(hook, fakeRequest(ACTOR))).rejects.toThrow();
+    expect(sink.events).toHaveLength(1);
+    expect(sink.events[0]!.type).toBe('authz.denied');
+    expect(sink.events[0]!.pariwarId).toBeNull();
+  });
+
+  it('DENIES an actor with zero grants', async () => {
+    const sink = new CapturingSink();
+    const { deps } = fakeDeps([], sink);
+    const hook = requireGlobalOrAnyPariwarPermission(deps, 'feature_flag.view');
+    await expect(run(hook, fakeRequest(ACTOR))).rejects.toThrow();
+  });
+
+  it('FAILS LOUD when actorId is absent — programming error, same contract as requireGlobalPermission', async () => {
+    const sink = new CapturingSink();
+    const { deps, poolCalls } = fakeDeps([], sink);
+    const hook = requireGlobalOrAnyPariwarPermission(deps, 'feature_flag.view');
+    await expect(run(hook, fakeRequest(undefined))).rejects.toThrow(/without an admin session/);
+    expect(poolCalls()).toBe(0);
+    expect(sink.events).toHaveLength(0);
   });
 });

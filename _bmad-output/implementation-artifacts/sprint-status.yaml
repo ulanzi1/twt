@@ -1,4 +1,106 @@
 # generated: 2026-05-29
+# last_updated: 2026-07-31f (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
+#   review -> done via bmad-code-review (3-layer: Blind Hunter diff-only, Edge Case Hunter with project
+#   access, Acceptance Auditor against the spec). Auditor called the implementation "exceptionally well-
+#   executed" against every AC; the other two layers still surfaced real gaps, including one (AC5c's audit-
+#   on-error) that cuts against the exact invariant the Auditor praised. 16 unique findings after dedup ->
+#   6 decision-needed (all resolved with the user) + 9 immediate patch + 1 defer. Decisions: add the global
+#   flag-authoring route now (5), wire minimal version-history UI (6), wire REAL runtime capability-bar
+#   enforcement for FlagKeyNotAllowlistedError (7), loosen the global-catalog READ from super_admin-only to
+#   pariwar_admin-in-any-tenant via a NEW `requireGlobalOrAnyPariwarPermission` HTTP-adapter composition
+#   (built from the existing pure `rbac.hasPermission` — does NOT touch frozen packages/domain/src/rbac;
+#   the global FLIP stays super_admin-only), add owner/dead_by edit fields + de-duplicate the seeded
+#   FLAG_DEFAULTS dead_by placeholder dates (8) -> all 5 became patches; the 6th (governance_boundary.yaml's
+#   6-root list has no drift-detection mechanism) -> DEFERRED (no exhaustive taxonomy exists), recorded in
+#   deferred-work.md. 14 patches applied: (1) cache.ts's cacheKey() carried a LITERAL RAW NUL BYTE — the
+#   file rendered as BINARY to git, invisible to diff/blame/PR review, on the exact file implementing AC5c;
+#   fixed to `::`. (2) resolveFlagAudited's onAccess (the "fires on every resolution" AC5c guarantee) was
+#   skipped entirely on a lookup THROW — added a `lookup_error` FlagDecisionReason + fire-before-rethrow.
+#   (3) the governance-boundary AST scanner missed dynamic import()/require() with a non-literal specifier
+#   and bracket/computed property access (`obj['featureFlags']`) — closed both routes + 6 new revert-sanity
+#   tests; re-ran the LIVE gate against the real tree post-change (still green, no false positives). (4)
+#   registry.ts's effective_until-vs-effective_from ordering check ran BEFORE effectiveFrom defaulted to
+#   dbNow(), so an omitted effectiveFrom could accept an already-inert window — check moved after
+#   resolution. (5) dead_by never validated as a real calendar date end-to-end (contract layer was length-
+#   only; handler's isNaN check missed silent rollover e.g. 2027-02-30) — contract regex + handler day/
+#   month/year round-trip added. (6) KYC flag-lookup failures were swallowed with ZERO logging in both
+#   wired consumers — added an optional onError hook on ManualFallbackContext/KycProviderContext, wired to
+#   request.log at the 7 real call sites (threading `request` through providerFor/buildStatus). (7) admin
+#   flip form: added a lost-update guard (useEffect closes the form if the held snapshot's flag_version
+#   goes stale) + a cancelledRef so a late response after Cancel can't surface a stale success/error
+#   banner. (8) capability-bar.ts's prohibited[].root gained a path-traversal/absolute-path rejection at
+#   PARSE time (before check.ts's filesystem join) — shared by both the runtime loader and the CI gate.
+#   Global-authoring-route decision required MORE than "add a route": the audit chain's pariwarId column
+#   is non-nullable, so the global flip's audit line uses the EXISTING ADMIN_GLOBAL_NAMESPACE nil-UUID
+#   sentinel (already used by requireGlobalPermission/member_device_tokens for admin-identity attribution)
+#   — not a new convention. New POST /api/v1/global/feature-flags/{flagKey}/versions (super_admin only) +
+#   an admin client function (no console UI yet — the shipped console is Pariwar-scoped; recorded as the
+#   natural next seam, not built here). openapi/v1.yaml regenerated + determinism-checked. Full regression:
+#   domain unit 102 files/1323 tests, domain rbac+feature-flags+RLS integration 154 tests (2x isolated run
+#   to confirm no pollution), api unit+feature-flags+kyc integration 285 tests, contracts 728 tests,
+#   governance-boundary gate 24 tests + live check (both legs green) — ALL GREEN; per-package lint + tsc
+#   --noEmit clean on domain/api/admin/contracts. Caught + fixed a self-inflicted test-isolation bug along
+#   the way: the new global-flip integration test's write (pariwar_id IS NULL) is invisible to the
+#   existing per-Pariwar afterAll cleanup and would have permanently shadowed kyc_manual_fallback's code
+#   default for every other test in the file/suite — used a distinct flag key (wa_cost_optimization) +
+#   added an unconditional afterAll delete for it (verified: a first attempt that only cleaned up on the
+#   happy path left one row behind after an earlier failing assertion; manually purged before the fix).)
+# last_updated: 2026-07-31e (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
+#   ready-for-dev -> in-progress -> review via bmad-dev-story. All 11 tasks complete. Shipped: migration 0087
+#   feature_flag_versions (immutable versioned rows; nullable pariwar_id GLOBAL tier => an ASYMMETRIC RLS
+#   carve-out — SELECT has `OR pariwar_id IS NULL`, INSERT/UPDATE deliberately do NOT; NULLS NOT DISTINCT on
+#   the uniqueness guard, without which the global half of the table is unconstrained; append-only trigger
+#   instead of a composite self-FK, which MATCH SIMPLE would make vacuous for global rows). NOT a 6th
+#   event-derived-state primitive (Decision 3) — state is an authored column, no projector/trigger/state-gate.
+#   Domain: 3-tier registry (override > global > code default), PURE first-match evaluator (no clock/IO/async,
+#   never throws, fails closed to fallback_default), Story-4.8-POSTURE cache with the audit OUTSIDE the cached
+#   core (AC5c), declared-absent FlagHealthSignal. NEW Category-A gate `governance-boundary` + governance_
+#   boundary.yaml: leg (a) registry≡allowlist + count cross-check; leg (b) THE LOAD-BEARING AST source scan
+#   (3 routes — specifier, named symbol incl. aliases, featureFlags.* property access) proving no flag read
+#   reaches inside audit/rbac/consent/contribution/validity-service/scripts. BOTH legs PROVEN TO FAIL on live
+#   planted violations (exit 1). RBAC v26->v27: feature_flag.view (pariwar_admin + auditor) + the NARROWER
+#   feature_flag.flip (pariwar_admin only) — the asymmetry IS the no-secret-flags property; district_admin
+#   deferred (inert pariwar-dim grant). Contracts + OpenAPI + apps/api module + apps/admin inventory console.
+#   ONE consumer wired end-to-end (FR-2 DigiLocker); the other two left at fail-safe defaults. ADR-0036
+#   authored (in-house Postgres-backed; all 7 Item-9 properties demonstrated vs shipped code); adr-index slot
+#   -> `drafted`; launch-gate Row 12 -> `predicate-foreclosed-pending-trustee-disposition` (NOT closed — ADR is
+#   drafted, not ratified). AR-64 automatic rollback = KNOWING partial delivery, recorded w/ AR-31 re-trigger.
+#   Tests: domain unit 55/55, gate 19/19, contracts 12/12, RLS regression 10/10, domain integration 16/16, API
+#   integration 11/11. ci:local 29/30 jobs GREEN incl. the new gate; the 1 red job (integration-tests, 4 domain
+#   count-assertion specs) VERIFIED PRE-EXISTING by reproducing it at baseline 52e6f7d in a git worktree on a
+#   pristine DB — recorded in deferred-work.md. Also recorded: a discovered latent crash in helpdesk/registry.ts
+#   (db.execute returns now() as a STRING; the <{now: Date}> annotation typechecks then fails at runtime on the
+#   default-effectiveAt path) — fixed in feature-flags, left untouched in helpdesk as out-of-scope.)
+# last_updated: 2026-07-31d (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: backlog ->
+#   ready-for-dev via bmad-create-story. [PRIMITIVE] with real state (NOT 10.6's pure-domain-only shape): a flag
+#   is a durable, versioned, tenant-scoped, audit-anchored record, and two ACs are visibility properties ("inventory
+#   visible to Pariwar Admin and above", "no secret flags") that a headless module can't satisfy. Scope = domain
+#   module + migration (feature_flag_versions, immutable versioned rows — the 10.1 routing-policy shape, NOT a 6th
+#   event-derived-state primitive; pariwar_id nullable for global flags with an explicit OR pariwar_id IS NULL RLS
+#   leg) + contracts + a NEW repo-global CI gate (governance-boundary: registry-vs-allowlist conformance + the
+#   load-bearing source-scan proving no flag read reaches inside a governance module) + apps/api routes + a minimal
+#   apps/admin inventory console + ONE real consumer wired end-to-end (FR-2 DigiLocker manual-fallback seam; the
+#   other two pre-committed seams — cost-optimization toggle, Telegram mirror — recorded as deferred-work re-
+#   triggers, not wired). Three previously-open decisions CONFIRMED by product owner 2026-07-31: D2 in-house
+#   Postgres-backed flag tool (new ADR-0036 demonstrates the Item-9 seven-property capability bar against shipped
+#   code, closing ADR slot row 24 + launch-gate Row 12); D4 "cached per Story 4.8 pattern" means 4.8's INVARIANTS
+#   (cache-optional/correctness-mandatory, audit stays outside the cached core) not its table+cohort-epoch
+#   machinery — start with per-request memoization, record the full cache substrate as a seam if <5ms is ever at
+#   risk; D6 AR-64 automatic error-spike rollback ships as a recorded absent seam (no metrics substrate exists
+#   repo-wide) behind a manual audited rollback + declared FlagHealthSignal port — a KNOWING partial delivery,
+#   carried as risk via a deferred-work.md AR-31 re-trigger, never quietly closed. Other load-bearing decisions:
+#   D3 versioned-rows-not-projector (twin of 10.1's ticket-vs-routing-policy split); D5 cohort_definition is a
+#   bounded declarative predicate (fixed dimension enum, first-match array, fail-closed on unknown dimension/op) —
+#   NOT an expression language/JSONLogic/eval; D7 two RBAC keys feature_flag.view/flip (catalog v26->v27), no
+#   umbrella key, NEITHER granted to district_admin (a pariwar-dimension check an inert district-ceiling grant
+#   can't satisfy — the 10.3/10.4 trap); D9 drops the epic's unsourced "beta_ux_patterns" seed entry from the
+#   capability bar (zero supporting FR/AR/UX-spec citations anywhere in the corpus) in favor of kyc_manual_fallback
+#   + kyc_provider_selection (both wired-or-seamed) + wa_cost_optimization/telegram_mirror (recorded, unwired).
+#   Tasks 1-11 scoped (migration/schema, versioned registry, pure evaluator + capability-bar loader, the new gate,
+#   RBAC, contracts, API, admin console, the FR-2 wiring, ADR + governance-artifact updates, tests/gates). Baseline
+#   commit 52e6f7d (post PR #155/10.7 merge). Saved 10-8-feature-flags-per-cohort-capability-bar-governance-
+#   boundary-invariant.md. development_status[10-8-feature-flags-per-cohort-capability-bar-governance-boundary-
+#   invariant]: ready-for-dev. Next: bmad-dev-story.)
 # last_updated: 2026-07-31c (10-7-reports-exports-library-async-generation-scope-respecting: stays done — SECOND
 #   bmad-code-review pass (3-layer) on the still-uncommitted diff. 17 raw findings -> 11 after dedup (3 dismissed).
 #   2 decision-needed resolved (roster = all-members via LEFT JOIN + '—' fallback; multi-district-grant collapse
@@ -2108,7 +2210,7 @@ development_status:
   10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post: done
   10-6-bulk-operations-framework: done
   10-7-reports-exports-library-async-generation-scope-respecting: done
-  10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: backlog
+  10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: done
   10-9-banner-popup-manager-valid-from-until-dismiss: backlog
   10-10-member-moderation-suspend-terminate-restore-reason-codes: backlog
   10-11-trustee-lite-list-signals: backlog

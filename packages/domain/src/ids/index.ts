@@ -581,6 +581,19 @@ export type HelpdeskRoutingPolicyVersionId = Brand<'HelpdeskRoutingPolicyVersion
 /** Smart constructor: validates UUID shape, returns a branded `HelpdeskRoutingPolicyVersionId`. */
 export const helpdeskRoutingPolicyVersionId = uuidBrand('HelpdeskRoutingPolicyVersionId');
 
+// ── Story 10.8 — Feature-flag version id (§Naming "branding mandatory on a new ID's first PR") ──
+// `FeatureFlagVersionId` is the per-row address of a `feature_flag_versions` row — the versioned
+// registry's `clause_version_id` / `HelpdeskRoutingPolicyVersionId` twin. UNLIKE the five
+// event-derived-state primitives it is NOT any event stream's stream_id (Story 10.8 Decision 3:
+// flags are versioned-immutable-rows, not event-derived-state), and there is no `deriveFlagId` —
+// it is a plain DB-defaulted `gen_random_uuid()`. Note the REPLAY PIN is not this id but the
+// `(pariwar_id, flag_key, version)` triple, since version 1 is owned by a code constant.
+
+/** Per-row address of a feature-flag version (`feature_flag_versions.id`). */
+export type FeatureFlagVersionId = Brand<'FeatureFlagVersionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `FeatureFlagVersionId`. */
+export const featureFlagVersionId = uuidBrand('FeatureFlagVersionId');
+
 // ── Story 10.5 — News/Blog post id (§Naming "branding mandatory on a new ID's first PR") ──
 // `NewsPostId` is the per-row address of a `news_posts` row (`news_posts.post_id`). UNLIKE the
 // event-derived-state primitives (member/claim/pool/alert/helpdesk_ticket), a News/Blog post is

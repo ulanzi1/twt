@@ -171,6 +171,15 @@ import {
   type ReportRequestResponse as ReportRequestResult,
   type ReportStatusResponse as ReportStatus,
   type ReportExportListResponse as ReportExportList,
+  // Story 10.8 — the feature-flag inventory + flip DTOs.
+  FeatureFlagInventoryResponse,
+  FeatureFlagFlipResponse,
+  FeatureFlagVersionsResponse,
+  type FeatureFlagInventoryResponse as FeatureFlagInventory,
+  type FeatureFlagInventoryEntry as FeatureFlagEntry,
+  type FeatureFlagFlipRequest as FeatureFlagFlipBody,
+  type FeatureFlagFlipResponse as FeatureFlagFlipResult,
+  type FeatureFlagVersionsResponse as FeatureFlagVersions,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1324,4 +1333,72 @@ export async function downloadReport(
   const match = /filename="?([^"]+)"?/.exec(cd);
   const filename = match?.[1] ?? `report-${reportExportId}`;
   return { blob, filename };
+}
+
+// ── Feature flags (Story 10.8) ────────────────────────────────────────────────
+const featureFlagsBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/feature-flags`;
+
+/** Re-exported so the console can type its rows without importing @twt/contracts directly. */
+export type { FeatureFlagEntry, FeatureFlagFlipBody, FeatureFlagVersions };
+
+/**
+ * GET the GLOBAL flag catalog — every registered flag resolved against the global tier.
+ * Requires feature_flag.view (pariwar_admin+, any tenant, or super_admin).
+ */
+export function listGlobalFeatureFlags(): Promise<FeatureFlagInventory> {
+  return apiFetch('/api/v1/global/feature-flags', FeatureFlagInventoryResponse);
+}
+
+/**
+ * POST the GLOBAL flip — publishes a cross-tenant version (`pariwar_id: null`) governing every
+ * Pariwar at once. `super_admin`-only. No console currently calls this (the shipped admin surface
+ * is Pariwar-scoped); it exists so the route is a real, consumable seam rather than a dead endpoint.
+ */
+export function flipGlobalFeatureFlag(
+  flagKey: string,
+  body: FeatureFlagFlipBody,
+): Promise<FeatureFlagFlipResult> {
+  return apiFetch(
+    `/api/v1/global/feature-flags/${encodeURIComponent(flagKey)}/versions`,
+    FeatureFlagFlipResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+/**
+ * GET this Pariwar's EFFECTIVE flag inventory — override ≻ global ≻ code default per flag, each
+ * entry carrying `source` provenance. COMPLETE by construction: the server iterates the code
+ * registry, so a never-flipped flag still appears ("no secret flags", prd.md:892).
+ */
+export function listPariwarFeatureFlags(pariwarId: string): Promise<FeatureFlagInventory> {
+  return apiFetch(featureFlagsBase(pariwarId), FeatureFlagInventoryResponse);
+}
+
+/** GET a flag's persisted version history, newest-first (version 1 is code data and is never listed). */
+export function listFeatureFlagVersions(
+  pariwarId: string,
+  flagKey: string,
+): Promise<FeatureFlagVersions> {
+  return apiFetch(
+    `${featureFlagsBase(pariwarId)}/${encodeURIComponent(flagKey)}/versions`,
+    FeatureFlagVersionsResponse,
+  );
+}
+
+/**
+ * POST the FLIP — creates a new immutable version row + the §1.5 hash-chain audit line.
+ * Requires feature_flag.flip (narrower than feature_flag.view by design). 409 when a concurrent
+ * flip won the race — the caller must re-read and decide again, not blind-retry.
+ */
+export function flipFeatureFlag(
+  pariwarId: string,
+  flagKey: string,
+  body: FeatureFlagFlipBody,
+): Promise<FeatureFlagFlipResult> {
+  return apiFetch(
+    `${featureFlagsBase(pariwarId)}/${encodeURIComponent(flagKey)}/versions`,
+    FeatureFlagFlipResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
 }

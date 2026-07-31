@@ -1,0 +1,142 @@
+version: 1
+# ─────────────────────────────────────────────────────────────────────────────
+# THE CAPABILITY BAR — feature-flag governance boundary (Story 10.8, FR-58C).
+#
+# The closed allowlist of behaviours a feature flag is permitted to toggle, plus
+# the prohibitions that make the governance boundary structurally enforceable.
+# Read by the repo-global `governance-boundary` CI gate (scripts/governance-boundary/).
+# Mirrors fr-100-non-add.yaml + bank-allowlist.yaml (the versioned-config +
+# conformance-gate precedent).
+#
+# ── WHY THIS FILE EXISTS ─────────────────────────────────────────────────────
+# A feature flag is, by construction, a mechanism for changing production
+# behaviour without a code review. That is exactly what makes it useful for the
+# FR-2 DigiLocker cutover — and exactly what makes it the most attractive
+# available route around every governance control this system has. The bar's job
+# is to make "what a flag may change" a CLOSED, attested set, so that route does
+# not exist. A flag key that is not listed below cannot be created (the domain
+# registry and the gate both reject it).
+#
+# ── THE TWO GATE LEGS, AND WHICH ONE IS LOAD-BEARING ─────────────────────────
+# Leg (a) CONFORMANCE — every key in the domain flag registry resolves to exactly
+#   one `allow` entry here, and `count` agrees with the entry total. This is
+#   BOOKKEEPING. It is green the moment it lands and stays green while someone
+#   adds a flag read inside the RBAC module.
+# Leg (b) SOURCE SCAN — no feature-flag import reaches inside a governance module
+#   (see `prohibited` below). THIS is the invariant. It is what makes the
+#   prohibitions structurally impossible rather than merely documented.
+# A green leg (a) proves nothing on its own. If you are ever tempted to weaken
+# leg (b) to make a build pass, you are removing the only load-bearing half.
+#
+# ── ADMISSION WORKFLOW (Story 7.5-style trustee attestation) — AC6 ───────────
+# Adding a flag-toggleable behaviour is a SINGLE reviewed change that MUST carry
+# ALL of:
+#   1. Trustee attestation (recorded in .decision-log.md) — the capability-bar bump.
+#   2. A new `allow` entry below: { kind, artifact, rationale, adr }. The
+#      `rationale` states what the flag toggles AND why that behaviour is safe to
+#      toggle without a code review; `adr` cites the attesting ADR.
+#   3. A bump of `count` in the SAME commit (revert-sanity teeth: silently
+#      dropping an entry, or adding one without attesting it, fails the gate).
+#   4. A matching key in `FLAG_DEFAULTS` (packages/domain/src/feature-flags/
+#      registry.ts) with a named owner + a dead-by date.
+# The bar cannot be silently expanded: the gate asserts registry ≡ allowlist in
+# BOTH directions, so neither half can move alone.
+#
+# ── WHAT MAY NEVER BE ADMITTED ───────────────────────────────────────────────
+# An entry naming a behaviour frozen by the Architectural Freeze Boundaries table
+# (epics.md:510-543) is REJECTED BY THE PARSER, with the freeze row cited. A
+# frozen architectural property is not a feature-flag-toggleable behaviour; it
+# changes by ADR or trustee-ratified Sprint Change Proposal, never by a flip.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# The exact number of allowlisted behaviours. The gate asserts the registry and
+# this list both equal this count (revert-sanity teeth — flipping it fails CI).
+count: 4
+
+# The permitted behaviour kinds. A new kind is itself a bar expansion and needs
+# the same attestation as a new entry (the parser rejects an unknown kind).
+kinds:
+  - member_flow # changes a member-facing flow's shape (a CTA appears/disappears)
+  - provider_selection # picks between already-abstracted, already-reviewed providers
+  - channel_routing # changes which delivery channel/route a notification takes
+
+allow:
+  - kind: member_flow
+    artifact: kyc_manual_fallback
+    rationale: >-
+      Toggles the FR-2 DigiLocker hard-mandatory cutover per cohort: when enabled the
+      manual-fallback CTA is hidden and the hard-mandatory copy block is shown. Safe to
+      toggle without a code review because BOTH branches are fully-reviewed shipped code
+      paths — the flag selects between them, it does not introduce behaviour. The
+      fallback default is `true` (fallback AVAILABLE), so a flag subsystem that says
+      nothing can never silently make KYC mandatory for anyone.
+    adr: ADR-0036
+  - kind: provider_selection
+    artifact: kyc_provider_selection
+    rationale: >-
+      Selects the active KYC provider per cohort from the AR-43 provider-interface
+      abstraction. Safe to toggle because the abstraction ITSELF is frozen (freeze row
+      13) — the flag may only choose among registered providers behind it, never alter
+      the interface. Freeze row 13 explicitly contemplates this: "provider implementation
+      is fluid via feature flag (FR-2 + FR-58C); abstraction itself is frozen."
+    adr: ADR-0036
+  - kind: channel_routing
+    artifact: wa_cost_optimization
+    rationale: >-
+      Enables WhatsApp cost-optimization routing per cohort (AR-18). Safe to toggle
+      because it selects among delivery routes WITHIN the frozen three-tier hierarchy
+      (freeze row 4) and cannot reorder or remove a tier. NOT WIRED as of Story 10.8 —
+      admitted here so the behaviour is attested before its consumer story lands; the
+      consumer still returns its fail-safe default.
+    adr: ADR-0036
+  - kind: channel_routing
+    artifact: telegram_mirror
+    rationale: >-
+      Enables the FR-73 Telegram mirror per cohort. Safe to toggle because the mirror is
+      fire-and-forget by architectural definition (freeze row 4) — no member-facing
+      guarantee depends on it, so neither state can degrade a delivery commitment. NOT
+      WIRED as of Story 10.8; the consumer still returns its fail-safe default.
+    adr: ADR-0036
+
+# ── PROHIBITED: the governance modules a flag read may never reach inside ────
+# Leg (b) scans these roots for any import of the feature-flags namespace or of
+# `evaluateFlag`. A hit is a gate FAILURE. Each entry names the prohibition from
+# epics.md:3516-3522 that it makes structurally impossible.
+#
+# ⚠ These are the ENFORCEMENT ROOTS — the production modules that actually decide
+# things — never the test files that assert about them. Scanning a test file would
+# be a vacuous gate: a test has no enforcement logic to bypass. (The 9.5
+# canonical-financial-truth fence is enforced by the contribution module's
+# confirmed-truth reads, so `packages/domain/src/contribution/` is the root, not
+# `tests/contribution/canonical-financial-truth.test.ts`.)
+prohibited:
+  - root: packages/domain/src/audit
+    prohibition: >-
+      (a) A flag must never disable or condition audit logging. The §1.5 hash chain is
+      tamper-evident precisely because it is unconditional; a flag-conditioned audit line
+      is an audit line an attacker can turn off.
+  - root: packages/domain/src/rbac
+    prohibition: >-
+      (d) A flag must never escalate RBAC. Permission keys, scope dimensions, and grant
+      containment are freeze row 9; a flag-conditioned permission check is a privilege
+      escalation with a config-shaped switch on it.
+  - root: packages/domain/src/consent
+    prohibition: >-
+      (b) A flag must never bypass Story 2.7 / DPDPA consent. Consent is a legal
+      obligation, not a product behaviour, and cannot be subject to a rollout cohort.
+  - root: packages/validity-service/src
+    prohibition: >-
+      (c) A flag must never override Validity Service eligibility. The ≤60s freshness
+      invariant is freeze row 11 and validity is the single eligibility authority; a
+      flag-conditioned validity answer forks that authority.
+  - root: packages/domain/src/contribution
+    prohibition: >-
+      (g) A flag must never bypass the canonical-financial-truth fence (Story 9.5). Money
+      facts have exactly one source; a flag that could re-route which reads count as
+      confirmed truth would make the ledger conditional on config.
+  - root: scripts
+    prohibition: >-
+      (f) A flag must never disable a CI gate (Story 1.16a-d and every gate since). A gate
+      that a flag can switch off is not a gate. This root also covers (e) — the gates are
+      what enforce the Architectural Freeze Boundaries table (epics.md:510-543), and an
+      `allow` entry naming a frozen-table behaviour is additionally rejected by the parser.

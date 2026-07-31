@@ -238,33 +238,57 @@ describe('HTTP transport error normalization (AC5)', () => {
 });
 
 // ── AC2/AC6: registry swap seam + fixture provider ────────────────────────────
+// ASYNC since Story 10.8: `getActiveKycProvider` now resolves the FR-58C `kyc_provider_selection`
+// flag before choosing a builder. With NO `alternateProviderKey` configured (the v1 state) the flag
+// has nothing to switch to, so the lookup is skipped entirely and the config default always wins —
+// which is why `dummyCtx.db` is never touched in the first three cases below.
 describe('KYC provider registry — FR-58C swap seam (AC2/AC6)', () => {
   const dummyCtx = { db: {}, pariwarId: 'p' } as never;
 
-  it('returns the single active provider (today: fixture)', () => {
+  it('returns the single active provider (today: fixture)', async () => {
     const registry = createKycProviderRegistry({
       activeProviderKey: 'fixture',
       builders: { fixture: () => fixtureKycProvider },
     });
-    expect(registry.getActiveKycProvider(dummyCtx)).toBe(fixtureKycProvider);
+    await expect(registry.getActiveKycProvider(dummyCtx)).resolves.toBe(fixtureKycProvider);
     expect(registry.activeProviderKey).toBe('fixture');
   });
 
-  it('selecting a different active key swaps the provider with NO consumer change (AC6)', () => {
+  it('selecting a different active key swaps the provider with NO consumer change (AC6)', async () => {
     const providerA = fixtureKycProvider;
     const providerB = { ...fixtureKycProvider };
     const builders = { a: () => providerA, b: () => providerB };
-    expect(createKycProviderRegistry({ activeProviderKey: 'a', builders }).getActiveKycProvider(dummyCtx)).toBe(
-      providerA,
-    );
-    expect(createKycProviderRegistry({ activeProviderKey: 'b', builders }).getActiveKycProvider(dummyCtx)).toBe(
-      providerB,
-    );
+    await expect(
+      createKycProviderRegistry({ activeProviderKey: 'a', builders }).getActiveKycProvider(dummyCtx),
+    ).resolves.toBe(providerA);
+    await expect(
+      createKycProviderRegistry({ activeProviderKey: 'b', builders }).getActiveKycProvider(dummyCtx),
+    ).resolves.toBe(providerB);
   });
 
-  it('throws when the active key has no registered builder', () => {
+  it('throws when the active key has no registered builder', async () => {
     const registry = createKycProviderRegistry({ activeProviderKey: 'ghost', builders: {} });
-    expect(() => registry.getActiveKycProvider(dummyCtx)).toThrow(/no KYC provider registered/);
+    await expect(registry.getActiveKycProvider(dummyCtx)).rejects.toThrow(/no KYC provider registered/);
+  });
+
+  it('Story 10.8: with an alternate configured, a flag-subsystem failure keeps the DEFAULT provider', async () => {
+    // Fail-safe posture: a broken flag lookup must never fail KYC nor silently swap the provider.
+    const providerA = fixtureKycProvider;
+    const providerB = { ...fixtureKycProvider };
+    const registry = createKycProviderRegistry({
+      activeProviderKey: 'a',
+      alternateProviderKey: 'b',
+      builders: { a: () => providerA, b: () => providerB },
+    });
+    const brokenCtx = {
+      db: {
+        select: () => {
+          throw new Error('flag store unavailable');
+        },
+      },
+      pariwarId: '11111111-1111-1111-1111-111111111111',
+    } as never;
+    await expect(registry.getActiveKycProvider(brokenCtx)).resolves.toBe(providerA);
   });
 });
 

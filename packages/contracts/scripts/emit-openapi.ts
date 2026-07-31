@@ -2645,6 +2645,135 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.8 — feature flags (FR-58C; the GLOBAL catalog + the TENANT-SCOPED override surface) ─────
+// Three real `paths`: the global catalog read, the per-Pariwar effective-inventory read (each entry
+// carrying global-vs-override provenance), and the FLIP write. Both reads return the COMPLETE flag set
+// for the scope — there is no filter parameter and no `hidden` field anywhere in these DTOs, which is
+// how prd.md:892's "no secret flags" is expressed at the transport layer.
+const {
+  FeatureFlagInventoryResponse,
+  FeatureFlagVersionsResponse,
+  FeatureFlagFlipRequest,
+  FeatureFlagFlipResponse,
+} = await import('../src/feature-flags/index.js');
+const FeatureFlagInventoryResponseComponent = FeatureFlagInventoryResponse.openapi('FeatureFlagInventoryResponse');
+const FeatureFlagVersionsResponseComponent = FeatureFlagVersionsResponse.openapi('FeatureFlagVersionsResponse');
+const FeatureFlagFlipRequestComponent = FeatureFlagFlipRequest.openapi('FeatureFlagFlipRequest');
+const FeatureFlagFlipResponseComponent = FeatureFlagFlipResponse.openapi('FeatureFlagFlipResponse');
+registry.register('FeatureFlagInventoryResponse', FeatureFlagInventoryResponseComponent);
+registry.register('FeatureFlagVersionsResponse', FeatureFlagVersionsResponseComponent);
+registry.register('FeatureFlagFlipRequest', FeatureFlagFlipRequestComponent);
+registry.register('FeatureFlagFlipResponse', FeatureFlagFlipResponseComponent);
+
+const featureFlagTags = ['feature-flags'];
+const featureFlagPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const featureFlagKeyParams = z.object({ pariwarId: z.string().uuid(), flagKey: z.string() });
+const featureFlagGlobalKeyParams = z.object({ flagKey: z.string() });
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/global/feature-flags',
+  summary: 'The cross-tenant feature-flag catalog (complete; no secret flags) — pariwar_admin+ or super_admin',
+  description:
+    'Returns EVERY registered flag resolved against the CROSS-TENANT tier — the global row if one is ' +
+    'in force, else the code default. The listing is registry-driven, not row-driven, so a flag that ' +
+    'has never been flipped still appears. Requires feature_flag.view, satisfied by holding it in ANY ' +
+    'of the actor\'s own Pariwars (pariwar_admin+) or by a global grant (super_admin) — the catalog\'s ' +
+    'data does not vary by tenant, so this is prd.md:892\'s "visible to Pariwar Admin role and above" ' +
+    'read literally. GET /api/v1/p/{pariwarId}/feature-flags additionally shows each flag\'s effective ' +
+    'resolution for one specific tenant, including any governing global row.',
+  tags: featureFlagTags,
+  responses: {
+    200: { description: 'The complete global flag catalog', content: { 'application/json': { schema: FeatureFlagInventoryResponseComponent } } },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden — feature_flag.view is required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/global/feature-flags/{flagKey}/versions',
+  summary: 'Flip a feature flag GLOBALLY (creates a new cross-tenant immutable version) — super_admin only',
+  description:
+    'Publishes the next version row for this flag with `pariwar_id: null` — the cross-tenant tier that ' +
+    'governs every Pariwar without its own override at once. Strictly higher-privilege than the ' +
+    'catalog read (Decision 7\'s read/write key split), so this is super_admin-only regardless of who ' +
+    'can view the catalog. Same immutability, rationale, and 409-on-race semantics as the per-Pariwar ' +
+    'flip. Requires feature_flag.flip at `dimension: global`.',
+  tags: featureFlagTags,
+  request: {
+    params: featureFlagGlobalKeyParams,
+    body: { content: { 'application/json': { schema: FeatureFlagFlipRequestComponent } }, required: true },
+  },
+  responses: {
+    200: { description: 'The new GLOBAL flag version', content: { 'application/json': { schema: FeatureFlagFlipResponseComponent } } },
+    400: errorResponse('Request validation failed / unknown flag key / malformed cohort definition'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden — feature_flag.flip at dimension: global is required (super_admin only)'),
+    409: errorResponse('A concurrent flip won the race — re-read the latest version and retry'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/feature-flags',
+  summary: 'This Pariwar\'s effective feature flags (complete, with global-vs-override provenance)',
+  description:
+    'Returns EVERY registered flag resolved for this tenant: its own override if one is in force, else ' +
+    'the global row, else the code default — with `source` naming which tier answered. Requires ' +
+    'feature_flag.view at the pariwar dimension.',
+  tags: featureFlagTags,
+  request: { params: featureFlagPariwarParams },
+  responses: {
+    200: { description: 'The complete effective flag inventory for this Pariwar', content: { 'application/json': { schema: FeatureFlagInventoryResponseComponent } } },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden — feature_flag.view is required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/feature-flags/{flagKey}/versions',
+  summary: 'A flag\'s version history (newest first)',
+  description:
+    'The persisted immutable version rows governing this flag for this tenant (its own overrides plus ' +
+    'the global rows). Version 1 is never listed — it is the code default, not a row. Requires ' +
+    'feature_flag.view.',
+  tags: featureFlagTags,
+  request: { params: featureFlagKeyParams },
+  responses: {
+    200: { description: 'The flag\'s version history', content: { 'application/json': { schema: FeatureFlagVersionsResponseComponent } } },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden — feature_flag.view is required'),
+    404: errorResponse('Unknown flag key'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/feature-flags/{flagKey}/versions',
+  summary: 'Flip a feature flag for this Pariwar (creates a new immutable version)',
+  description:
+    'Publishes the next version row for this flag in this tenant\'s scope. Prior rows are NEVER ' +
+    'mutated (only their superseded_by_version forward-pointer), so historical flag states stay ' +
+    'queryable for replay. `rationale` is REQUIRED and non-empty — FR-58C requires every flag change ' +
+    'be audit-logged with actor + rationale, and a §1.5 hash-chain audit line is written on every ' +
+    'flip. A concurrent double-flip loses the unique-constraint race and gets 409. Requires ' +
+    'feature_flag.flip (narrower than feature_flag.view by design).',
+  tags: featureFlagTags,
+  request: {
+    params: featureFlagKeyParams,
+    body: { content: { 'application/json': { schema: FeatureFlagFlipRequestComponent } }, required: true },
+  },
+  responses: {
+    200: { description: 'The new flag version', content: { 'application/json': { schema: FeatureFlagFlipResponseComponent } } },
+    400: errorResponse('Request validation failed / unknown flag key / malformed cohort definition'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Forbidden — feature_flag.flip is required'),
+    409: errorResponse('A concurrent flip won the race — re-read the latest version and retry'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

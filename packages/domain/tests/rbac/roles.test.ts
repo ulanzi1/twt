@@ -194,6 +194,42 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.8 — feature_flag.view is granted to pariwar_admin + auditor (+ super_admin); district_admin DEFERRED', () => {
+    const KEY = 'feature_flag.view';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // prd.md:892 — "flag inventory is visible to Pariwar Admin role and above". auditor holds it because
+    // a flag flip changes production behaviour: an auditor who cannot see which flags are live cannot
+    // audit a flag-gated behaviour change.
+    expect(holders).toEqual(['auditor', 'pariwar_admin', 'super_admin']);
+    // district_admin DEFERRED: the gate is `dimension: 'pariwar'`, and a district-ceiling grant can never
+    // satisfy a pariwar-dimension check — granting it would seed an INERT capability (the 10.3/10.4/10.5
+    // asymmetry). Contrast 10.7's member.export_roster, which is district-DIMENSION and genuinely capable.
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
+  it('Story 10.8 — feature_flag.flip is NARROWER than .view: pariwar_admin only (+ super_admin), NOT auditor', () => {
+    const KEY = 'feature_flag.flip';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // ⚠ THE ASYMMETRY IS THE PROPERTY (Decision 7). FR-58C makes inventory visibility deliberately
+    // BROADER than flip authority — "no secret flags" is transparency, flipping is governance. A single
+    // umbrella `feature_flag.manage` key would collapse the two and destroy exactly what FR-58C names.
+    // So auditor MUST hold .view and MUST NOT hold .flip; if this ever equalises, the split has been lost.
+    expect((bundleForRole('auditor')?.permissions as readonly string[]).includes('feature_flag.view')).toBe(true);
+    expect((bundleForRole('auditor')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 5.3 — pariwar.configure_channels is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'pariwar.configure_channels';
     const holders = defaultRoleBundles

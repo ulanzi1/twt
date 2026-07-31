@@ -291,3 +291,10 @@ export * from './helpdesk_routing_policy_versions.js';
 // NO projector, NO state-writer trigger, NO CI state-invariant gate, NO events_log stream. Two
 // pgEnums (news_audience_scope + news_post_status) + a `channels` text[] on the real delivery set.
 export * from './news_posts.js';
+// Story 10.8 — the feature-flag `[PRIMITIVE]`: `feature_flag_versions` (immutable, versioned,
+// tenant-scoped, audit-anchored rows + the feature_flag_state pgEnum). Like the routing-policy
+// registry above and UNLIKE the five event-derived-state primitives, `state` is an AUTHORED column
+// on a version row — NO projector, NO state-writer trigger, NO state-invariant gate (Decision 3).
+// ⚠ `pariwar_id` is NULLABLE here (NULL = the cross-readable GLOBAL row) — the one deliberate
+// deviation from the sibling tenant tables; see the schema header for its three forced carve-outs.
+export * from './feature_flag_versions.js';

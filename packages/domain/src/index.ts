@@ -308,4 +308,13 @@ export * as bulkOperations from './bulk-operations/index.js';
 // 3.11 (dataExport) — scope-respecting + PII-masked because the requestor is an admin reading OTHER
 // members' rows. No events, no projector (reports read state) — see the Scope Boundary.
 export * as reports from './reports/index.js';
+// Story 10.8 — the feature-flag `[PRIMITIVE]`: the versioned registry (code-default v1 + three-tier
+// override ≻ global ≻ default resolution + the immutable flip write), the PURE first-match cohort
+// evaluator (no clock/IO/async, never throws — fails closed to the flag's fallbackDefault), the
+// capability-bar loader (governance_boundary.yaml), the Story 4.8-posture lookup cache with the
+// audit/access layer OUTSIDE the cached core, and the declared-absent FlagHealthSignal port.
+// ⚠ The `governance-boundary` CI gate FAILS the build on any import of this namespace inside
+// packages/domain/src/{audit,rbac,consent,contribution}, packages/validity-service/src, or scripts/.
+// That is the mechanized governance boundary — see governance_boundary.yaml.
+export * as featureFlags from './feature-flags/index.js';
 export { UUID_REGEX } from './db.js';

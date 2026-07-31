@@ -17,4 +17,11 @@ export interface KycProviderContext {
   readonly db: Db;
   /** The request's Pariwar (the explicit cross-tenant-defense predicate). */
   readonly pariwarId: ids.PariwarId;
+  /**
+   * Best-effort observability for a flag-subsystem failure during provider selection — the
+   * request degrades to the configured default provider either way (Story 4.8 posture), but a
+   * silent catch left an outage with zero operational signal. Optional so existing construction
+   * sites and tests are unaffected.
+   */
+  readonly onError?: (err: unknown) => void;
 }

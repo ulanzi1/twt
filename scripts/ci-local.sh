@@ -65,6 +65,7 @@ run "pool-support-category-invariant" "pnpm pool-support-category:test && pnpm p
 run "pool-bound-payment-invariant" "pnpm pool-bound-payment:test && pnpm pool-bound-payment:check"
 run "alert-state-invariant"  "pnpm alert-state:test && pnpm alert-state:check"
 run "helpdesk-state-invariant"  "pnpm helpdesk-state:test && pnpm helpdesk-state:check"
+run "governance-boundary"  "pnpm governance-boundary:test && pnpm governance-boundary:check"
 run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"
 run "channels-determinism"  "pnpm --filter @twt/channels test:determinism"
 

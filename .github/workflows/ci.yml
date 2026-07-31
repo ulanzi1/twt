@@ -555,6 +555,29 @@ jobs:
       - run: pnpm alert-state:test
       - run: pnpm alert-state:check
 
+  helpdesk-state-invariant:
+    name: helpdesk-state-invariant (helpdesk_tickets.current_state is projector-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 10.1 AC4: helpdesk_tickets.current_state is a replay-derived cache writable ONLY by
+    # the event-replay projector (packages/domain/src/helpdesk/project.ts). Static TS-AST scan of
+    # packages/domain/src — flags any write outside the projector allowlist. No DB / network. See
+    # scripts/helpdesk-state-invariant/. Twin of alert-state-invariant / pool-state-invariant.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm helpdesk-state:test
+      - run: pnpm helpdesk-state:check
+
   pool-support-category-invariant:
     name: pool-support-category-invariant (pool engine has no death branches)
     runs-on: ubuntu-latest

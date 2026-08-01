@@ -1,4 +1,204 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-01d (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
+#   FIFTH and FINAL bmad-code-review pass, Group 4 of 4 (ADR-0036 + adr-index + launch-gate Row 12 +
+#   gate-inventory + .decision-log; 314 lines of GOVERNANCE PROSE). Status stays `done`. Layers adapted
+#   to a docs chunk: Blind Hunter (internal consistency/overclaiming, document-only), a claim-TRACER
+#   variant of the Edge Case Hunter (every assertion verdicted BACKED/STALE/FALSE/UNVERIFIABLE against
+#   current code), Acceptance Auditor (AC6 vendor half + the seven Item-9 properties). 36 raw -> 21
+#   after dedup -> 3 decision-needed + 18 patch + 5 dismissed. ALL 21 applied.
+#   ⚠ THE HEADLINE IS AGAIN MY OWN EARLIER PATCH. Pass 2 retracted the gate's "structurally impossible"
+#   guarantee as overstated. That retraction reached README.md and ONE spot in governance_boundary.yaml
+#   and left the claim standing in FOUR others: scripts/governance-boundary/lib.ts (the gate's OWN
+#   SOURCE), gate-inventory.md (the canonical registry a reader consults for what a green run means),
+#   governance_boundary.yaml:131 (same file, self-contradicting at :45), and ADR-0036. Four descriptions
+#   of one gate, disagreeing. THIRD instance this session of the same shape — fix the layer under the
+#   cursor, miss its siblings (Pass2->Pass4 API E2E; Pass2->Pass4 admin console; Pass2->Pass5 this).
+#   Recorded as Completion Note 17 with the generalisable lesson: a claim appearing in N places must be
+#   changed in N places, and the sweep is PART OF the patch — for prose as much as for code.
+#   ADR STALENESS WAS THE PREDICTED AND CONFIRMED RISK: ADR-0036 demonstrated Item 9's seven properties
+#   against a system FOUR PASSES out of date. Replay safety described the superseded resolution rule
+#   (and omitted that scheduling was dropped); determinism omitted the cohort_empty arm that was
+#   inverted twice; the detection-route count said three (now five); the consumer it called "wired"
+#   (provider-registry) was established INERT in Pass 4; migrations 0088/0089, the AC7 ladder,
+#   Idempotency-Key and actor_display were absent entirely; and — most tellingly — the ATTESTING ADR
+#   never attested the fallback_default polarity correction that .decision-log.md records as a fix to a
+#   FALSE attestation. All corrected. DECISIONS: (1) offline resilience DEMONSTRATED properly as a
+#   degradation ladder (the material existed) incl. an explicit answer to why a config FLOOR read when
+#   the flag says nothing differs from the un-audited config EDIT the ADR's own Context condemns;
+#   (2) launch-gate Row 12 REVERTED to the Row 15 precedent — prior status preserved + supersession
+#   annotation, because a per-Story author-commit never flips a launch-gate row, and the invented token
+#   `predicate-foreclosed-pending-trustee-disposition` was absent from both the row's own
+#   closure_criteria and the rubric; (3) the `< 5 ms` NFR claim RESTATED as un-measured with the
+#   AI-4-1/AI-4-2 family named as re-trigger (it was the one property with no citable evidence in a
+#   ratification-bound doc). Also fixed: adr-index's breakdown now RECONCILES (113+5+0+29+1=148 — the
+#   Story-10.8 flip edited the row and left the ledger stale); Row 12's architecture anchor was a FALSE
+#   cross-reference (4823-4828 is the re-baselining paragraph; the predicate is at 4852); the freeze
+#   marker heuristic is now stated as the non-exhaustive substring filter it is (no marker for freeze
+#   rows 13 or 4 — the two all four entries cite); "no concealed flags" now states its open INVERSE;
+#   Cross-Cutting #15's canary/auto-rollback excluded from the 7/7 table so the score is not misread.
+#   VERIFIED POSITIVES: ratification hygiene genuinely clean (nothing treats the draft as ratified);
+#   tenant isolation, lifecycle accountability and DPDPA posture properly DEMONSTRATED (no network call
+#   anywhere in the evaluation path — which is what actually carries the vendor rejection).
+#   ⚠ REVIEW COMPLETE — ALL FOUR GROUPS. Across five passes: 193 raw -> 118 deduped -> 18 decisions +
+#   74 patches + 4 deferred + 22 dismissed; two migrations added BY review (0088, 0089). OPEN and NOT
+#   closed by this review: ADR-0036 `drafted` not ratified; the bar's four seed entries author-committed
+#   pending trustee ratification; NFR-FR58C un-measured; AR-64 auto-rollback knowingly unbuilt; four
+#   deferred-work items with named re-triggers. NOTHING IS COMMITTED — the working tree holds all five
+#   passes.)
+# last_updated: 2026-08-01c (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
+#   FOURTH bmad-code-review pass, Group 3 of 4 (admin console + KYC consumer wiring + the deliberately
+#   unwired channel-config seam; 11 files, ~1105 lines). Status stays `done`. The Edge Case Hunter DIED
+#   mid-run on an API error and was RELAUNCHED with the confirmed findings pre-supplied so it hunted new
+#   ground — it then produced the pass's most severe finding, so proceeding on two layers would have
+#   missed it. 3 layers -> 39 raw -> 24 after dedup -> 4 decision-needed + 17 patch + 7 dismissed. ALL 21
+#   applied.
+#   ⚠ HEADLINE: A SECOND REGRESSION FROM MY OWN GROUP-1 PATCHES. The AC7 ladder + staged-cohort rule
+#   landed without apps/admin in scope, and the console has ZERO tests (vs 24 elsewhere in that app), so
+#   NOTHING caught that the console could no longer perform a legal FIRST flip of any flag — its entire
+#   purpose and AC8's operator path. From `off`: canary->400, rollout/full/rolled_back->409, only off->off
+#   succeeded. Same failure mode as the Pass-2 API regression: the changed layer was verified, its
+#   consumers were not. RESOLVED by partially REVERSING a Pass-2 decision: the staged-cohort WRITE
+#   REJECTION is removed and the safety moved into the EVALUATOR — an empty cohort on canary/rollout now
+#   resolves to enabled:false (serving NOBODY) instead of true. That fixes the original Pass-2 fail-open
+#   more directly (an untargeted canary should not be live) AND restores the console without a cohort
+#   editor, since `full` ignores cohorts so off->canary->rollout->full is reachable. The console now also
+#   derives its state <select> from the ladder so it cannot construct an illegal transition.
+#   OTHER FINDINGS THAT MATTERED: (1) a provider flip STRANDED every in-flight KYC transaction — the
+#   callback re-resolved the provider live instead of pinning it, while kyc_transactions.provider (which
+#   exists for exactly this, per its own schema comment) was written and never read; provider B got
+#   provider A's OAuth state, verification threw, member got member_kyc.failure with no recovery. Now
+#   pinned on both callback+confirm legs, with a typed KycProviderUnavailableError -> 409
+#   kyc.provider_unavailable for a row naming a deregistered provider (falling back would reproduce the
+#   stranding). (2) alternateProviderKey was never validated against `builders` and the throw sat OUTSIDE
+#   the try/catch — a data-only flip to an unregistered key 500-ed every KYC request for the cohort with
+#   onError never firing; now validated at CONSTRUCTION. (3) AC8's SECOND seam is DEAD in every real
+#   config — alternateProviderKey is set nowhere, so the provider flag lookup never executes; the header
+#   claimed flipping was "the WHOLE change; NO consumer code changes", which is false. Decision: do NOT
+#   wire it (the only other registered builder is the FIXTURE — pointing a production flip at a test
+#   double is worse than an honestly-inert seam); claims corrected + deferred-work entry naming the real
+#   AR-43 vendor story as re-trigger. (4) /status and the manual gate DID disagree within one request
+#   (the gate resolved pre-transition, buildStatus re-resolved post-transition), so a member_state clause
+#   could make the response confirming a SUCCESSFUL manual submission report manual_fallback_enabled
+#   false; now pinned. (5) AC5c had NO production observer at either wired consumer — wired to
+#   request.log at both. (6) the stale fallback_default:true prose in manual-fallback-seam.ts (Pass 2
+#   fixed the constant + the YAML attestation and missed this third site; it stated the OLD value AND
+#   drew the conclusion that only holds under the NEW one). (7) console: raw UUID instead of the 0089
+#   display-name snapshot, has_more ignored, no Idempotency-Key, a cancelledRef shared across flags that
+#   also suppressed cache invalidation, a lost-update guard blind to the global-vs-override counter
+#   collision, and NO error-code branching (a 403 on the READ was indistinguishable from an outage).
+#   (8) both new KYC unit tests were satisfied by the ERROR path — the inversion the seam header calls
+#   "the whole point" had zero coverage; deleting the `!` left the suite green.
+#   ⚠ THREE DEFECTS WERE FOUND BY THE PATCHES THEMSELVES: the flag cache made the seam tests
+#   order-dependent (same key + same 1s bucket) so every case after the first read the previous case's
+#   decision; kyc_transactions.provider never matched the registered builder key (invisible until the
+#   callback pinned to it); and putting read-tolerance in the CONTRACT broke contracts:emit-openapi
+#   outright (ZodCatch has no OpenAPI representation) — right problem, wrong layer, moved to a
+#   `safeCohort` projection in apps/api so the wire contract stays honest.
+#   VERIFICATION: lint+tsc clean on domain/contracts/api/admin/jobs; apps/api 772 passed, apps/admin 189
+#   (25 files incl. the console's FIRST spec, 13 cases), apps/jobs 211, contracts 730, domain 2113 with
+#   only the 4 documented pre-existing count-assertion specs red. ci:local: all 28 gates green; beyond
+#   those 4, five @twt/validity-service p95/cache-timing specs fail under --concurrency=4 and pass 80/80
+#   in ISOLATION (verified, not assumed) — the documented oversubscription family. Group 4 (ADR-0036 +
+#   governance docs; AC6's vendor half) remains UNREVIEWED.)
+# last_updated: 2026-08-01b (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
+#   THIRD bmad-code-review pass, Group 2 of 4 (apps/api feature-flags module + the new
+#   requireGlobalOrAnyPariwarPermission composition + packages/contracts/src/feature-flags; 12 files,
+#   ~1718 lines, diffed WORKING TREE vs origin/main so Pass-2 edits were in scope). Status stays `done`.
+#   3 layers -> 36 raw findings -> 22 after dedup -> 4 decision-needed + 11 patch + 2 defer + 8 dismissed.
+#   ALL 15 applied.
+#   ⚠ THE HEADLINE IS A CORRECTION TO PASS 2, NOT A NEW FINDING: Pass 2 reported the tree green and it
+#   was NOT. Pass-2's AC7 ladder + staged-cohort rule broke 5 of 12 tests in apps/api's feature-flag E2E
+#   spec, and the "29/29 green" claim came from a run with DATABASE_URL UNSET (which SKIPS integration
+#   tests) while the red integration-tests job was diagnosed by running the DOMAIN package only. The API
+#   suite was never executed before the claim was written. Retracted in Completion Note 13 rather than
+#   quietly amended — second time in this story a green-gate claim outran its evidence, which is exactly
+#   what AC9's closing sentence and [[feedback_verify_before_committing_governance_claims]] warn about.
+#   Root cause of the 5: flipBody() hard-coded state:'full' (now an illegal FIRST transition) and the
+#   history test flipped canary with an empty cohort; both now surfaced as 500 rather than 4xx because
+#   FlagStateTransitionError had NO mapping arm. Fixed: fixture is a legal canary+cohort first flip, the
+#   history test graduates canary->rollout, AC8 climbs the full ladder. 12/12 -> 17/17 with new tests.
+#   ⚠ THE PASS-1 DEFERRED 23505/SAVEPOINT ITEM IS RESOLVED AS INNOCENT — traced independently by two
+#   layers and reproduced live (RACE1 200 / RACE2 409 feature_flag.version_conflict). Nothing touches the
+#   aborted tx after the throw; the compensating audit runs on a different connection; closeScopeTx
+#   ROLLBACKs on statusCode>=400. No SAVEPOINT needed or added; deferred-work entry closed as cleared.
+#   FINDINGS THAT MATTERED: (1) the §1.5 audit digest OMITTED `rationale` while the file header AND
+#   Completion Note 4(a) both asserted it was included — and that assertion was the stated reason AC3's
+#   literal audit-context requirement could be waived. Of AC3's six context items the chain carried ONE.
+#   Fixed: rationale added to the digest + switched to canonicalJsonStringify (it was bespoke
+#   JSON.stringify over a client-supplied nested object); the resourceLocator-carries-the-version claim
+#   is CORRECTED rather than implemented, because under ADR-0030 the intent line commits before the
+#   insert so the version does not exist at hash time. (2) the GLOBAL flip ran createFlagVersion's four
+#   statements on a POOL (deps.serviceDb), not a transaction — a failure between the INSERT and the
+#   supersession UPDATE left the prior global row un-superseded permanently (append-only trigger blocks
+#   repair, no DELETE grant). Wrapped in serviceDb.transaction(). (3) FOUR typed domain errors had no
+#   mapping arm anywhere and returned opaque 500s, incl. FlagStateTransitionError (the AC7 ladder — the
+#   most likely 4xx on the route) and FlagKeyNotAllowlistedError (the AC5 runtime capability-bar
+#   backstop). All mapped; FlagVersionDuplicateIdError deliberately left unmapped as unreachable over
+#   HTTP. (4) getDisplayName was fetched, null-gated, then DISCARDED — the fail-closed gate blocked
+#   flips while storing only a UUID. Migration 0089 adds actor_display (snapshot at action time, never
+#   backfilled, nullable for pre-0089 rows) AND EXTENDS 0087's immutability trigger, which enumerates
+#   its columns EXPLICITLY so a new column is outside the append-only guarantee until added there —
+#   caught by verifying the trigger body instead of assuming. (5) Idempotency-Key (opt-in) on both flip
+#   routes via Story 1.12's keyed store: a sequential retry used to create a second identical version.
+#   Also: OpenAPI declared 400-for-unknown-key when the code returns 404 and omitted 404/503 entirely;
+#   three surviving doc claims said the global catalog is super_admin-gated after Pass 1 loosened it
+#   (one INSIDE the block justifying the BYPASSRLS read); the AC4 HTTP test was a one-key spot check
+#   against a header claiming set-equality; DELIBERATE bypass blocks had rationale but no
+#   re-examination trigger. requireGlobalOrAnyPariwarPermission: VERIFIED that its pariwar arm derives
+#   the target from the grant under test (containment can never fail on scope) and that grants are
+#   loaded with no liveness filter — but ALSO verified no Pariwar deactivation concept and no grant
+#   revocation path exist in the repo, so it is documented + tied to a re-trigger rather than narrowed.
+#   ⚠ A TEST WAS MEASURED FLAKY AND REPLACED, NOT SHIPPED: the first 409-seam test raced two concurrent
+#   HTTP flips and failed 1 run in 3 (injects serialize); a version collision cannot be forced
+#   deterministically over HTTP. Replaced with a unit test pinning all 7 mapping arms + an
+#   exhaustiveness guard; the live 23505 half stays covered by the domain two-connection spec.
+#   A 5th pre-existing-class flake was also found and fixed in this story's OWN domain spec (an
+#   every(source==='default') assertion coupled to global DB state, broken by apps/api's parallel
+#   global-row write). VERIFICATION THIS TIME: ci:local 28/30 with DATABASE_URL, every failing spec
+#   listed BY NAME (only the 4 documented pre-existing domain count-assertion specs); apps/api 100
+#   files/769 tests 0 failures; domain FF+RBAC 244; contracts 728; lint+tsc clean on 4 packages.
+#   Groups 3-4 (admin console + KYC wiring; generated + governance docs) remain UNREVIEWED.)
+# last_updated: 2026-08-01a (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
+#   SECOND bmad-code-review pass over the same commit (91e66b0), run BLIND to Pass 1's findings, scoped to
+#   Group 1 of 4 (the 35-file / ~4400-line load-bearing half: domain module + migration 0087 + RBAC + the
+#   governance-boundary gate + their tests). Status stays `done`. 3 layers → 41 raw findings → 26 after
+#   dedup → 7 decision-needed + 17 patch + 2 defer + 8 dismissed. ALL 24 applied. The Auditor independently
+#   re-ran the RLS spec (10/10) and the gate suite, and planted a real import into packages/domain/src/
+#   consent/ to confirm leg (b) fails and recovers — so leg (b) DOES have semantic coverage against DIRECT
+#   imports; every Pass-2 gate finding concerns INDIRECT routes. THE THREE THAT MATTERED: (1) an INVERTED
+#   FAIL-SAFE — `kyc_manual_fallback.fallbackDefault: true` traced through evaluateFlag → the seam's
+#   `!decision.enabled` to the manual-fallback CTA being HIDDEN, i.e. an unevaluable cohort rule made KYC
+#   HARD-MANDATORY; the registry comment, the seam header AND the trustee-attested YAML rationale all
+#   asserted the opposite, so the attestation itself was false. Corrected to `false` + all three prose
+#   sites rewritten + recorded as .decision-log.md Decision 2026-08-01-069 (which ALSO supplies the
+#   attestation record the bar's own admission workflow required for its four seed entries and never had).
+#   (2) a ROLLBACK DEADLOCK — a future-dated version made every later flip throw the effective-from order
+#   guard until that date arrived, including the audited `rolled_back` flip that Decision 6 names as the
+#   ENTIRE shipped rollback mechanism, and the pending row could be neither amended (append-only trigger)
+#   nor deleted (no DELETE grant). Scheduling DROPPED, recorded as a deliberate narrowing. (3) four
+#   confirmed gate-evasion routes; the two cheap AST holes closed (destructured bindings out of a literal-
+#   specifier dynamic import; NamespaceExport re-exports) with revert-sanity controls, and the
+#   "structurally impossible" wording RETRACTED to what a per-file scanner actually delivers — transitive
+#   reachability is now documented as out of reach instead of implied covered. ⚠ ONE APPROVED FIX WAS
+#   WRONG AND WAS CHANGED MID-IMPLEMENTATION: the user-approved `isNull(supersededByVersion)` predicate
+#   kills the resurrection bug and POINT-IN-TIME REPLAY together (every historical row is superseded by
+#   definition), which would have destroyed AC1's "historical flag states are queryable" — caught because
+#   the existing immutability spec asserts exactly that replay. Replaced with "newest row whose
+#   effective_from <= at, then check THAT row's window"; an expired head now means nothing persisted
+#   governs rather than "try the previous version". Both properties asserted together. Also: AC7's
+#   legal-transition map was never built (grep-confirmed) — shipped as a forward ladder with identity
+#   transitions legal (the cohort-edit path); a staged state now requires a cohort (canary was
+#   behaviourally identical to full); migration 0088 adds the six CHECK constraints 0087 left app-only
+#   (checklist family 5); the 409-seam test that never called createFlagVersion replaced by a real
+#   own-committing two-connection race; the golden hash now covers `rationale` prose and a NEW
+#   FLAG_DEFAULTS pin exists (AC2 required both, only the bar was pinned); `listFlagVersions` no longer
+#   truncates silently (`has_more`, contracts + openapi regenerated); observability callbacks can no
+#   longer replace a typed error. Verification: 29/29 ci:local green WITHOUT DATABASE_URL; gate 30 unit
+#   tests + live run over 12 roots / 153 files (was 6 / 87); domain feature-flag units 88 (was 61);
+#   live-DB RLS 10/10, domain integration 17/17, concurrency 1/1. The DB-enabled ci:local run reproduces
+#   ONLY the 4 documented pre-existing count-assertion specs — confirmed pre-existing by querying the
+#   polluting rows (all dated 2026-07-31, predating this pass) rather than assuming. Groups 2-4 (API +
+#   contracts; admin + KYC wiring; generated + governance docs) NOT reviewed in this pass.)
 # last_updated: 2026-07-31f (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
 #   review -> done via bmad-code-review (3-layer: Blind Hunter diff-only, Edge Case Hunter with project
 #   access, Acceptance Auditor against the spec). Auditor called the implementation "exceptionally well-

@@ -18,12 +18,14 @@ Status summary as of Story 0.5 Task 2 author-commit (2026-05-30); Section I appe
 
 | Status | Row count |
 |---|---|
-| `slot-reserved-pre-write` | 114 |
-| `drafted` | 4 |
+| `slot-reserved-pre-write` | 113 |
+| `drafted` | 5 |
 | `under-trustee-review` | 0 |
 | `ratified` | 29 |
 | `superseded` | 1 |
 | **Total** | **148** |
+
+_`ADR-0036-feature-flag-tool-selection` Section row flipped `slot-reserved-pre-write` → `drafted` 2026-07-31 per Story 10.8 (FR-58C feature-flag tool selection: in-house Postgres-backed, demonstrated against Item 9's seven capability-bar properties). Breakdown updated (`slot-reserved-pre-write` 114→113, `drafted` 4→5; Total unchanged at 148). ⚠ Ledger note added in Review Pass 5 — the Story 10.8 flip edited the ROW only and left this reconciliation stale, which is the omission `README.md` §7 exists to prevent; the ADR remains `drafted`, NOT ratified._
 
 _Section H added 2026-05-30 per Story 0.6 Decision 2026-05-30-006 — 8 backup-engineer-framework deferred-ADR slots._
 _Section I added 2026-05-30 per Story 0.7 Decision 2026-05-30-007 — 30 fallback-handler-ledger-framework deferred-ADR slots._

@@ -22,7 +22,7 @@
 // window and never reads a clock — the `resolveRoute` / `computeTicketSlaDueDates` time-split. Move
 // the window into the evaluator and replay determinism is gone.
 
-import { and, desc, eq, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { FeatureFlagVersionId, PariwarId, UserId } from '../ids/index.js';
@@ -40,13 +40,43 @@ import { allowlistedFlagKeys, loadCapabilityBar } from './capability-bar.js';
 import {
   FlagEffectiveFromOutOfOrderError,
   FlagKeyNotAllowlistedError,
+  FlagStateTransitionError,
   FlagVersionConflictError,
+  FlagVersionDuplicateIdError,
   FlagVersionInvalidError,
 } from './errors.js';
 import type { FlagDocument } from './types.js';
 
 /** The code default's version number. Persisted rows start at this + 1 (see the header). */
 export const DEFAULT_FLAG_VERSION = 1;
+
+/**
+ * The AC7 legal-transition map — the staged-rollout ladder, ENFORCED (Review Pass 2).
+ *
+ * AC7 requires the five-state set to ship "with its legal-transition map". Shipping the states
+ * without the map made the staging discipline purely advisory: `off → full` in one flip skipped the
+ * canary stage the whole mechanism exists to provide, `rolled_back → full` re-enabled a flag that had
+ * been rolled back without re-canarying it, and `rolled_back` was accepted on a flag that had never
+ * launched.
+ *
+ * ⚠ IDENTITY TRANSITIONS ARE LEGAL IN EVERY STATE, deliberately: re-publishing the SAME state is how
+ * an operator edits a cohort (narrowing a canary is a new version at `canary`). Remove the identity
+ * arms and cohort editing breaks entirely.
+ *
+ * Rollback is always reachable from any state that ever served — but NOT from `off`, because
+ * "rolled back" must mean something happened. A `rolled_back` flag re-enters only at `off` or
+ * `canary`, never straight to `rollout`/`full`: whatever caused the rollback has to re-earn its way
+ * up the ladder.
+ */
+export const LEGAL_FLAG_STATE_TRANSITIONS: Readonly<
+  Record<FeatureFlagState, readonly FeatureFlagState[]>
+> = Object.freeze({
+  off: Object.freeze(['off', 'canary']),
+  canary: Object.freeze(['canary', 'rollout', 'rolled_back']),
+  rollout: Object.freeze(['rollout', 'full', 'rolled_back']),
+  full: Object.freeze(['full', 'rolled_back']),
+  rolled_back: Object.freeze(['rolled_back', 'off', 'canary']),
+}) as Readonly<Record<FeatureFlagState, readonly FeatureFlagState[]>>;
 
 /** A registered flag's code-constant default — the v1 document plus its lifecycle metadata. */
 export interface FlagDefault {
@@ -79,12 +109,28 @@ export interface FlagDefault {
  */
 export const FLAG_DEFAULTS: Readonly<Record<string, FlagDefault>> = {
   // FR-2 — the DigiLocker hard-mandatory cutover. THE canonical use case, wired end-to-end in Task 9.
-  // fallbackDefault TRUE = the manual fallback stays AVAILABLE when the flag says nothing: the
-  // hard-mandatory cutover must be an explicit, audited, per-cohort act, never a silent default.
+  //
+  // ⚠ READ THE POLARITY CAREFULLY — it was inverted until Review Pass 2. This flag is named for the
+  // CUTOVER, not for the fallback, so `fallbackDefault` answers "is the hard-mandatory cutover
+  // active?" — NOT "is the manual fallback available?". The two are opposites, and conflating them is
+  // exactly the mistake that shipped:
+  //
+  //   fallbackDefault: false  →  evaluateFlag returns enabled=false  ("cutover NOT active")
+  //                           →  manual-fallback-seam.ts returns !enabled = TRUE
+  //                           →  the manual fallback CTA stays AVAILABLE.   ← the safe degraded path
+  //
+  // With `true` the same trace ends at `!true` = false = CTA HIDDEN = KYC hard-mandatory, i.e. an
+  // unevaluable cohort rule on a persisted row would LOCK MEMBERS OUT OF JOINING — the precise
+  // outcome this comment, the seam's header, and the capability-bar attestation all claim is
+  // impossible. `false` is what makes those three claims true.
+  //
+  // (The no-row path is separately safe: the seam short-circuits to `config.digilocker
+  // .manualFallbackEnabled` when the resolution source is `null`/`default`, so this constant governs
+  // only the malformed-rule path on a row that actually exists.)
   kyc_manual_fallback: {
     state: 'off',
     cohortDefinition: { clauses: [] },
-    fallbackDefault: true,
+    fallbackDefault: false,
     owner: 'kyc-desk',
     // The FR-2 cutover is a near-term Epic 10 priority — a shorter horizon than the other three
     // flags below, reviewed at year-end regardless of cutover status. Each flag's date reflects its
@@ -140,6 +186,16 @@ export function isRegisteredFlag(flagKey: string): boolean {
 }
 
 /**
+ * A registered flag's code-default STATE — the state a scope's FIRST persisted version transitions
+ * FROM under {@link LEGAL_FLAG_STATE_TRANSITIONS}. Every seeded default is `off` (a flag's arrival
+ * must never itself change behaviour), so in practice the first flip may only go to `off` or
+ * `canary`. Falls back to `off` for an unregistered key; the caller has already rejected those.
+ */
+function defaultState(flagKey: string): FeatureFlagState {
+  return FLAG_DEFAULTS[flagKey]?.state ?? 'off';
+}
+
+/**
  * A fresh COPY of a flag's code-default document (never the shared module constant), so a caller
  * that mutates it before persisting — an admin cloning-then-editing the default — cannot corrupt
  * the seed. The `defaultRoutingPolicy()` / `seedRoles()` return-a-copy discipline. Returns `null`
@@ -172,6 +228,8 @@ export interface FlagInForce {
   deadBy: string | null;
   rationale: string | null;
   actorWhoFlipped: string | null;
+  /** The flipping admin's display name, snapshot at flip time. Null on pre-0089 rows and defaults. */
+  actorDisplay: string | null;
 }
 
 /** The single-row lookup bound — a fixed, non-caller-supplied limit, still routed through
@@ -202,14 +260,34 @@ export async function flagVersionInForce(
   const def = FLAG_DEFAULTS[flagKey];
   if (!def) return null;
 
-  const inWindow = and(
+  // ── HOW A VERSION IS SELECTED, AND WHY THE WINDOW IS NOT IN THE PREDICATE (Review Pass 2) ────────
+  //
+  // Select the NEWEST version whose `effective_from <= at` — the chain head as of `at` — and then
+  // decide on THAT row's window. Deliberately NOT "the newest row still inside its window", which is
+  // what this used to be, because that let a superseded version RESURRECT: v2 `{from: Jan 1, until:
+  // NULL, state: 'full'}` superseded by v3 `{from: Jun 1, until: Jul 1, state: 'rolled_back'}`
+  // silently reverted to `full` on Jul 1 — the pre-rollback state — because v3 dropped out of its
+  // window and v2 was still technically "in window". An expired head means NOTHING PERSISTED
+  // GOVERNS, not "try the previous version": whatever caused a bounded rollback must not silently
+  // undo itself, and falling through to the code default is the safe answer.
+  //
+  // ⚠ And NOT `isNull(superseded_by_version)` either, which was the obvious-looking fix and is wrong:
+  // it would break point-in-time REPLAY outright. Every historical row is superseded by definition,
+  // so excluding them makes `flagVersionInForce(at = some past instant)` return the code default
+  // instead of the version that actually decided — destroying AC1's "historical flag states are
+  // queryable for past evaluations", which is the whole reason these rows are immutable.
+  //
+  // Versions are published forward in time (`effectiveFrom` may not precede the prior version's, and
+  // may not be in the future), so ordering by `version` desc and by `effective_from` desc agree; the
+  // chain is linear and "highest version with effective_from <= at" is unambiguous.
+  const atOrBefore = and(
     eq(featureFlagVersions.flagKey, flagKey),
     lte(featureFlagVersions.effectiveFrom, at),
-    or(
-      isNull(featureFlagVersions.effectiveUntil),
-      sql`${featureFlagVersions.effectiveUntil} > ${at}`,
-    ),
   );
+
+  /** True iff this row's own window has CLOSED by `at` (half-open: `effective_until` is exclusive). */
+  const windowClosed = (row: FeatureFlagVersionRow): boolean =>
+    row.effectiveUntil !== null && row.effectiveUntil.getTime() <= at.getTime();
 
   const toInForce = (row: FeatureFlagVersionRow, source: 'override' | 'global'): FlagInForce => ({
     document: {
@@ -227,29 +305,31 @@ export async function flagVersionInForce(
     deadBy: row.deadBy.toISOString().slice(0, 10),
     rationale: row.rationale,
     actorWhoFlipped: row.actorWhoFlipped,
+    actorDisplay: row.actorDisplay,
   });
 
-  // Tier 1 — this Pariwar's own override.
+  // Tier 1 — this Pariwar's own override. An override whose window has CLOSED does not fall back to
+  // an older override; it falls through to the global tier, exactly as "no override" would.
   if (pariwarId !== null) {
     const overrideRows = await db
       .select()
       .from(featureFlagVersions)
-      .where(and(inWindow, eq(featureFlagVersions.pariwarId, pariwarId)))
-      .orderBy(desc(featureFlagVersions.effectiveFrom), desc(featureFlagVersions.version))
+      .where(and(atOrBefore, eq(featureFlagVersions.pariwarId, pariwarId)))
+      .orderBy(desc(featureFlagVersions.version))
       .limit(clampLimit(FLAG_LOOKUP_LIMIT, { default: FLAG_LOOKUP_LIMIT, cap: FLAG_LOOKUP_LIMIT }));
     const row = overrideRows[0];
-    if (row) return toInForce(row, 'override');
+    if (row && !windowClosed(row)) return toInForce(row, 'override');
   }
 
   // Tier 2 — the cross-tenant GLOBAL row.
   const globalRows = await db
     .select()
     .from(featureFlagVersions)
-    .where(and(inWindow, isNull(featureFlagVersions.pariwarId)))
-    .orderBy(desc(featureFlagVersions.effectiveFrom), desc(featureFlagVersions.version))
+    .where(and(atOrBefore, isNull(featureFlagVersions.pariwarId)))
+    .orderBy(desc(featureFlagVersions.version))
     .limit(clampLimit(FLAG_LOOKUP_LIMIT, { default: FLAG_LOOKUP_LIMIT, cap: FLAG_LOOKUP_LIMIT }));
   const globalRow = globalRows[0];
-  if (globalRow) return toInForce(globalRow, 'global');
+  if (globalRow && !windowClosed(globalRow)) return toInForce(globalRow, 'global');
 
   // Tier 3 — the code default. A registered flag ALWAYS resolves.
   return {
@@ -261,6 +341,7 @@ export async function flagVersionInForce(
     deadBy: def.deadBy,
     rationale: null,
     actorWhoFlipped: null,
+    actorDisplay: null,
   };
 }
 
@@ -277,6 +358,13 @@ export async function flagVersionForVersion(
   version: number,
 ): Promise<FlagDocument | null> {
   if (!isRegisteredFlag(flagKey)) return null;
+  // ⚠ The short-circuit below returns the code default WITHOUT querying, so a persisted row at
+  // version 1 (or 0, or negative) would make this replay path disagree with `flagVersionInForce` —
+  // which filters on window and scope only and would happily return such a row as the governing one.
+  // The `(pariwar_id, flag_key, version)` replay pin would then resolve to a different document than
+  // the one that actually decided. Migration 0088's `CHECK (version >= 2)` makes those rows
+  // impossible at the DB level; this guard keeps the function honest for anything below the default.
+  if (version < DEFAULT_FLAG_VERSION) return null;
   if (version === DEFAULT_FLAG_VERSION) return defaultFlagDocument(flagKey);
 
   const rows = await db
@@ -320,11 +408,29 @@ export interface CreateFlagVersionInput {
   effectiveFrom?: Date;
   /** Optional window end; null = open-ended (superseded by the next version instead). */
   effectiveUntil?: Date | null;
-  /** WHO flipped it, or null for system/seed. */
-  actorWhoFlipped?: UserId | null;
+  /**
+   * WHO flipped it. `null` means a system/seed write and must be passed EXPLICITLY.
+   *
+   * ⚠ REQUIRED, not optional (Review Pass 2). FR-58C is "flag changes audit-logged with actor +
+   * rationale"; `rationale` was required and validated while the actor could simply be forgotten,
+   * landing `actor_who_flipped = NULL` on a real admin flip — unfixable afterwards, because the 0087
+   * append-only trigger makes the row immutable. Making it a required property turns that omission
+   * into a COMPILE error at every call site, which is the only guard that costs nothing at runtime
+   * and cannot be skipped. A deliberate system write still says so, in writing.
+   */
+  actorWhoFlipped: UserId | null;
+  /**
+   * The flipping admin's `users.display_name`, SNAPSHOT at flip time (Review Pass 3). Required and
+   * explicit for the same reason as `actorWhoFlipped`: the caller must state it, including stating
+   * `null` for a system/seed write. The API layer already resolves this value and already blocks the
+   * flip when it is missing — it simply used to discard it, leaving the permanent record as a bare
+   * UUID that stops resolving once the account is renamed or removed.
+   */
+  actorDisplay: string | null;
   /** The audit anchor for the write (the Story 2.4 pre-generate pattern). The audit LINE itself is
-   *  the CALLER's obligation (the Task 7 admin route) — the narrow-write posture. */
-  auditId?: string | null;
+   *  the CALLER's obligation (the Task 7 admin route) — the narrow-write posture. Required for the
+   *  same reason as `actorWhoFlipped`: pass `null` explicitly for a write with no audit anchor. */
+  auditId: string | null;
   /** Optional caller-supplied row id (defaults to DB gen_random_uuid()). */
   id?: FeatureFlagVersionId;
 }
@@ -342,6 +448,28 @@ function isUniqueViolation(err: unknown): boolean {
   const direct = (err as { code?: string }).code;
   const cause = (err as { cause?: { code?: string } }).cause?.code;
   return direct === '23505' || cause === '23505';
+}
+
+/**
+ * WHICH unique constraint a 23505 violated. Read from `constraint` first (Postgres sets it), falling
+ * back to sniffing `detail`, which names the colliding columns when the constraint name is absent.
+ *
+ * ⚠ Why this matters (Review Pass 2): every 23505 used to be reported as a VERSION conflict, so a
+ * caller-supplied `id` colliding on the primary key produced a `FlagVersionConflictError` whose
+ * advice — "re-read the latest version and retry" — re-sends the same `id` and reproduces the
+ * identical 409 forever. An idempotency replay was being misdiagnosed as a concurrency loss.
+ */
+function uniqueViolationTarget(err: unknown): 'id' | 'version' | 'unknown' {
+  const e = err as { constraint?: string; detail?: string; cause?: { constraint?: string; detail?: string } };
+  const constraint = e.constraint ?? e.cause?.constraint ?? '';
+  const detail = e.detail ?? e.cause?.detail ?? '';
+  if (constraint.endsWith('_pkey') || /\(id\)/.test(detail)) return 'id';
+  if (constraint.includes('scope_key_version') || /\(pariwar_id, flag_key, version\)/.test(detail)) {
+    return 'version';
+  }
+  // An unrecognised constraint must NOT be silently reported as a version race — the caller would
+  // retry forever. Fall through to rethrowing the raw error instead.
+  return 'unknown';
 }
 
 /**
@@ -373,16 +501,34 @@ export function validateFlagVersionInput(input: CreateFlagVersionInput): void {
     reasons.push(`owner must be at most ${String(MAX_OWNER_LENGTH)} characters`);
   }
 
-  const clauses = input.cohortDefinition.clauses;
+  const rawClauses: unknown = input.cohortDefinition?.clauses;
+  if (!Array.isArray(rawClauses)) {
+    // Mirrors the evaluator's shape guard. Without this the validator itself threw a bare TypeError
+    // on `clauses.length`, so a structurally-broken document produced an untyped 500 at the write
+    // boundary instead of the 400 every other malformed input gets.
+    reasons.push('cohort_definition.clauses must be an array');
+    throw new FlagVersionInvalidError(reasons);
+  }
+  const clauses = rawClauses as CohortDefinitionJson['clauses'];
   if (clauses.length > MAX_COHORT_CLAUSES) {
     reasons.push(`cohort_definition.clauses must have at most ${String(MAX_COHORT_CLAUSES)} clauses`);
   }
+  // ⚠ NO STAGED-COHORT REJECTION HERE (removed in Review Pass 4 — it was added in Pass 2).
+  // An empty clause list on `canary`/`rollout` is LEGAL and means "serving nobody yet"; the safety
+  // property lives in `evaluateFlag`, which resolves an empty cohort to `enabled: false`. Rejecting
+  // it at write time made the state unreachable from the admin console (which forwards the existing
+  // empty cohort and has no cohort editor), so no flag could be flipped from the console at all.
+  // Do NOT reinstate the rejection without first giving the console a cohort editor.
   for (const [i, clause] of clauses.entries()) {
     if (!(COHORT_DIMENSIONS as readonly string[]).includes(clause.dimension)) {
       reasons.push(`clause[${String(i)}].dimension '${clause.dimension}' is not a valid cohort dimension`);
     }
     if (!(COHORT_OPERATORS as readonly string[]).includes(clause.op)) {
       reasons.push(`clause[${String(i)}].op '${clause.op}' is not a valid cohort operator`);
+    }
+    if (clause === null || typeof clause !== 'object' || !Array.isArray(clause.values)) {
+      reasons.push(`clause[${String(i)}].values must be an array of strings`);
+      continue;
     }
     if (clause.values.length === 0) {
       reasons.push(`clause[${String(i)}].values must be non-empty`);
@@ -443,6 +589,7 @@ export async function createFlagVersion(
     .select({
       version: featureFlagVersions.version,
       effectiveFrom: featureFlagVersions.effectiveFrom,
+      state: featureFlagVersions.state,
     })
     .from(featureFlagVersions)
     .where(and(eq(featureFlagVersions.flagKey, input.flagKey), scopePredicate))
@@ -475,10 +622,43 @@ export async function createFlagVersion(
     throw new FlagVersionInvalidError(['effective_until must be strictly after the resolved effective_from']);
   }
 
+  // ⚠ A FLIP TAKES EFFECT IMMEDIATELY — no future-dating (Review Pass 2, and the twin of the
+  // `isNull(supersededByVersion)` predicate in `flagVersionInForce`).
+  //
+  // Future-dated versions deadlocked the rollback path outright: the order guard below compares
+  // against the HIGHEST-VERSION row, so a version scheduled for next year made every subsequent flip
+  // throw `FlagEffectiveFromOutOfOrderError` until that date arrived — including the audited
+  // `rolled_back` flip that Decision 6 names as the ENTIRE shipped rollback mechanism. The scheduled
+  // row could not be amended (the 0087 append-only trigger) or deleted (no DELETE grant), so the only
+  // exit was a superuser write against production.
+  //
+  // Scheduling is dropped rather than repaired: no AC commits to it, nothing in the repo authors it,
+  // and keeping it would require a cancel path for pending versions plus a supersession rule that
+  // distinguishes "superseded by a row already in force" from "superseded by a row that has not
+  // started yet". Recorded as a deliberate narrowing in the Dev Agent Record.
+  if (effectiveFrom.getTime() > dbNow.getTime()) {
+    throw new FlagVersionInvalidError([
+      'effective_from cannot be in the future — a flip takes effect immediately (scheduled flips are ' +
+        'not supported; publish the version at the moment it should take effect)',
+    ]);
+  }
+
   // Reject a flip whose effectiveFrom precedes the scope's latest version — keeps the creation-order
-  // supersession chain consistent with window-based resolution.
+  // supersession chain consistent with window-based resolution. (With future-dating rejected above
+  // this is now trivially satisfiable by any caller that omits `effectiveFrom`, but an explicitly
+  // back-dated `effectiveFrom` is still a real input and still has to be refused.)
   if (priorRow && effectiveFrom.getTime() < priorRow.effectiveFrom.getTime()) {
     throw new FlagEffectiveFromOutOfOrderError(input.flagKey, effectiveFrom, priorRow.effectiveFrom);
+  }
+
+  // The AC7 staged-rollout ladder (Review Pass 2). The prior row's state was already being read one
+  // query above and simply never compared. The FIRST version for a scope transitions from the code
+  // default's state, which is `off` for every registered flag — so `rolled_back` as a flag's
+  // first-ever version is refused here too ("rolled back" has to mean something happened).
+  const priorState: FeatureFlagState = priorRow?.state ?? defaultState(input.flagKey);
+  const permitted = LEGAL_FLAG_STATE_TRANSITIONS[priorState];
+  if (!permitted.includes(input.state)) {
+    throw new FlagStateTransitionError(input.flagKey, priorState, input.state, permitted);
   }
 
   let inserted: FeatureFlagVersionRow | undefined;
@@ -499,13 +679,22 @@ export async function createFlagVersion(
         effectiveFrom,
         effectiveUntil: input.effectiveUntil ?? null,
         actorWhoFlipped: input.actorWhoFlipped ?? null,
+        actorDisplay: input.actorDisplay ?? null,
         rationale: input.rationale,
       })
       .returning();
     inserted = rows[0];
   } catch (err) {
     if (isUniqueViolation(err)) {
-      throw new FlagVersionConflictError(input.flagKey, input.pariwarId, nextVersion);
+      // Distinguish WHICH uniqueness was violated — the two have different recoveries and the
+      // version-conflict advice actively misleads on an id collision (Review Pass 2).
+      const target = uniqueViolationTarget(err);
+      if (target === 'version') {
+        throw new FlagVersionConflictError(input.flagKey, input.pariwarId, nextVersion);
+      }
+      if (target === 'id' && input.id) {
+        throw new FlagVersionDuplicateIdError(input.flagKey, input.id);
+      }
     }
     throw err;
   }

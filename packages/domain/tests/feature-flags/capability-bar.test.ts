@@ -4,6 +4,9 @@
 // changed without attestation must not pass unnoticed. Both properties are tested here.
 
 import { createHash } from 'node:crypto';
+import { existsSync, statSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
@@ -14,7 +17,7 @@ import {
   parseCapabilityBar,
 } from '../../src/feature-flags/capability-bar.js';
 import { CapabilityBarInvalidError } from '../../src/feature-flags/errors.js';
-import { FLAG_KEYS } from '../../src/feature-flags/registry.js';
+import { FLAG_DEFAULTS, FLAG_KEYS } from '../../src/feature-flags/registry.js';
 
 /** A minimal well-formed bar the negative cases mutate one field at a time. */
 const VALID = `
@@ -137,9 +140,16 @@ describe('the SHIPPED governance_boundary.yaml', () => {
     expect(allowlistedFlagKeys(loadCapabilityBar())).toEqual([...FLAG_KEYS]);
   });
 
-  it('every prohibited root names a real governance module path', () => {
+  it('⚠ every prohibited root RESOLVES TO A REAL DIRECTORY on disk', () => {
+    // This assertion used to be `expect(p.root).toMatch(/^(packages|scripts)/)`, which is satisfied
+    // by `packages/typo/nowhere` — i.e. it certified nothing about whether the load-bearing leg
+    // actually scans anything. A stale root (a module rename, a moved package, a typo) made leg (b)
+    // silently scan ZERO files for that root while printing a green checkmark. Check the filesystem.
+    const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
     for (const p of loadCapabilityBar().prohibited) {
-      expect(p.root).toMatch(/^(packages|scripts)/);
+      const abs = join(repoRoot, p.root);
+      expect(existsSync(abs), `prohibited root does not exist: ${p.root}`).toBe(true);
+      expect(statSync(abs).isDirectory(), `prohibited root is not a directory: ${p.root}`).toBe(true);
       expect(p.prohibition.trim().length).toBeGreaterThan(0);
     }
   });
@@ -154,7 +164,7 @@ describe('the SHIPPED governance_boundary.yaml', () => {
 // If you are INTENTIONALLY changing the bar: complete the admission workflow in the YAML header
 // (trustee attestation + rationale + ADR + `count` bump), then update EXPECTED_BAR_HASH below to the
 // hash this test reports on failure.
-const EXPECTED_BAR_HASH = '1710dfee1a17ffbf39b8004521a7c2652c0cd1ab5688e30043e170bdc96efbf2';
+const EXPECTED_BAR_HASH = '8326706def9e1820d640642f022c0fa3a14a5e32ce84d93d4cc9d9346b9db3b0';
 
 describe('governance_boundary.yaml golden hash', () => {
   it('matches the frozen hash — a bar change requires deliberate attestation', () => {
@@ -164,17 +174,82 @@ describe('governance_boundary.yaml golden hash', () => {
     // content (which behaviours are toggleable, under what attestation, and which roots are
     // prohibited) is what needs pinning. canonicalJsonStringify (RFC 8785) so key order cannot
     // false-flip the guard.
+    //
+    // ⚠ `rationale` and `prohibition` ARE hashed (Review Pass 2). They were excluded, which left the
+    // pin blind to the one field that IS the governance artifact: AC6 makes an entry's rationale the
+    // substance of the trustee attestation ("additions … require trustee-attested PRs with explicit
+    // rationale"), and the parser only checks that it is non-empty. So a rationale could be replaced
+    // with a false one — or with "x" — and this guard, whose stated job is to catch exactly that,
+    // stayed green. Whitespace is normalised because YAML folded scalars re-wrap on edit and a
+    // reflow is not a semantic change.
+    const norm = (s: string): string => s.trim().replace(/\s+/g, ' ');
     const hash = createHash('sha256')
       .update(
         canonicalJsonStringify({
           version: bar.version,
           count: bar.count,
-          allow: bar.allow.map((e) => ({ kind: e.kind, artifact: e.artifact, adr: e.adr })),
-          prohibited: bar.prohibited.map((p) => p.root),
+          kinds: [...bar.kinds].sort(),
+          allow: bar.allow.map((e) => ({
+            kind: e.kind,
+            artifact: e.artifact,
+            adr: e.adr,
+            rationale: norm(e.rationale),
+          })),
+          prohibited: bar.prohibited.map((p) => ({
+            root: p.root,
+            prohibition: norm(p.prohibition),
+          })),
         } as never),
         'utf8',
       )
       .digest('hex');
     expect(hash).toBe(EXPECTED_BAR_HASH);
+  });
+});
+
+// ── The FLAG_DEFAULTS pin (AC2's other half) ────────────────────────────────────────────────────
+// AC2 requires "a fixture-pinned hash test pins the seeded capability bar + THE DEFAULT FLAG
+// DOCUMENTS". Only the bar was pinned (Review Pass 2). The gap mattered most for exactly the field
+// that was found inverted: `kyc_manual_fallback.fallbackDefault` flipping true↔false silently
+// changes what happens to every member when a cohort rule cannot be evaluated — DigiLocker becoming
+// hard-mandatory by default, with zero flips and zero audit lines — and every existing assertion
+// about FLAG_DEFAULTS was per-field, so nothing caught a change to a field nobody thought to assert.
+//
+// If you are INTENTIONALLY changing a flag default: that is a governance change (the bar's admission
+// workflow applies to the paired `allow` entry), so update this hash deliberately.
+const EXPECTED_FLAG_DEFAULTS_HASH = 'beba074249660bbae2c07db6aa19536f4845f95c275e844e25fcfeca6d1c4e5c';
+
+describe('FLAG_DEFAULTS golden hash', () => {
+  it('matches the frozen hash — a seeded flag default cannot change unnoticed', () => {
+    const hash = createHash('sha256')
+      .update(
+        canonicalJsonStringify(
+          Object.fromEntries(
+            Object.entries(FLAG_DEFAULTS).map(([key, d]) => [
+              key,
+              {
+                state: d.state,
+                fallbackDefault: d.fallbackDefault,
+                owner: d.owner,
+                deadBy: d.deadBy,
+                cohortDefinition: d.cohortDefinition,
+                description: d.description.trim().replace(/\s+/g, ' '),
+              },
+            ]),
+          ) as never,
+        ),
+        'utf8',
+      )
+      .digest('hex');
+    expect(hash).toBe(EXPECTED_FLAG_DEFAULTS_HASH);
+  });
+
+  it('⚠ kyc_manual_fallback.fallbackDefault is FALSE — the degraded path keeps members able to join', () => {
+    // Named explicitly, not just covered by the hash, because the hash tells a future reader THAT
+    // something changed and this tells them WHY it must not. The flag is named for the CUTOVER, so
+    // `fallbackDefault: false` means "cutover not active" → the seam's `!enabled` → the manual
+    // fallback stays AVAILABLE. `true` traces to the CTA being hidden, i.e. KYC hard-mandatory on an
+    // unevaluable rule — the exact outcome the capability-bar attestation says is impossible.
+    expect(FLAG_DEFAULTS['kyc_manual_fallback']?.fallbackDefault).toBe(false);
   });
 });

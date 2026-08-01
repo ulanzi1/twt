@@ -49,12 +49,35 @@ describe('evaluateFlag — state arms', () => {
     expect(d.reason).toBe('state_full');
   });
 
-  it('`canary`/`rollout` with an EMPTY clause list is enabled (no narrowing authored)', () => {
+  it('⚠ `canary`/`rollout` with an EMPTY clause list serves NOBODY (not everybody)', () => {
+    // Review Pass 4. This asserted `true` — the reading under which an un-narrowed canary is
+    // behaviourally identical to `full`. On `kyc_manual_fallback` that made the natural two-step
+    // "flip to canary now, narrow it next" run DigiLocker hard-mandatory tenant-wide in the gap.
+    // Serving nobody is the only reading under which "not yet narrowed" ≠ "narrowed to everyone".
     for (const state of ['canary', 'rollout'] as const) {
       const d = evaluateFlag(doc({ state }), CTX);
-      expect(d.enabled).toBe(true);
+      expect(d.enabled).toBe(false);
       expect(d.reason).toBe('cohort_empty');
     }
+  });
+
+  it('⚠ an empty cohort is NOT the same as fallbackDefault — it is a decided "nobody"', () => {
+    // Guards against a future "simplification" that routes the empty case through fallbackDefault:
+    // an empty cohort is a COMPLETE, evaluable rule that matches no one, not an unevaluable one.
+    // The distinct `cohort_empty` reason is what lets an operator tell the two apart in the audit.
+    const d = evaluateFlag(doc({ state: 'canary', fallbackDefault: true }), CTX);
+    expect(d.enabled).toBe(false);
+    expect(d.reason).toBe('cohort_empty');
+  });
+
+  it('a staged state WITH a matching clause still serves that member', () => {
+    // The counterweight: the change above must not have broken ordinary canary targeting.
+    const d = evaluateFlag(
+      doc({ state: 'canary', cohortDefinition: { clauses: [{ dimension: 'district', op: 'in', values: ['patna'] }] } }),
+      { ...CTX, district: 'patna' },
+    );
+    expect(d.enabled).toBe(true);
+    expect(d.reason).toBe('cohort_matched');
   });
 });
 
@@ -185,6 +208,54 @@ describe('evaluateFlag — fail CLOSED, never throw (AC2)', () => {
     });
     expect(() => evaluateFlag(hostile, CTX)).not.toThrow();
     expect(() => evaluateFlag(hostile, {})).not.toThrow();
+  });
+
+  // ── Review Pass 2: documents that are STRUCTURALLY INCOMPLETE, not merely semantically wrong ─────
+  //
+  // The case above passes well-TYPED clauses with empty values — a document that is still
+  // structurally complete. It never omits a key, so it never exercised the dereferences that
+  // actually threw. Every document below was verified to throw a TypeError before the fix:
+  //
+  //   {clauses:[{dimension:'district',op:'in'}]}  → Cannot read properties of undefined ('includes')
+  //   {}                                          → Cannot read properties of undefined ('length')
+  //
+  // These are REACHABLE, not theoretical: `cohort_definition` is opaque jsonb, `flagVersionInForce`
+  // casts the row straight to `CohortDefinitionJson` with no read-time guard, and the migration's own
+  // header establishes that GLOBAL rows are authored by a service-pool/seed path that never calls
+  // `validateFlagVersionInput`. A throw here lands on the member request path — the exact failure the
+  // module's "NEVER throws" contract exists to prevent, on the surface the flag was meant to gate.
+  //
+  // ⚠ Each asserts the FALLBACK VALUE too, not just the absence of a throw: returning `enabled: true`
+  // without throwing would technically satisfy "never throws" while still being the wrong answer.
+  it.each([
+    ['a clause missing `values` entirely', { clauses: [{ dimension: 'district', op: 'in' }] }],
+    ['a clause missing `dimension`', { clauses: [{ op: 'in', values: ['patna'] }] }],
+    ['a null clause', { clauses: [null] }],
+    ['a non-object clause', { clauses: ['district=patna'] }],
+    ['`values` that is not an array', { clauses: [{ dimension: 'district', op: 'in', values: 'patna' }] }],
+    ['an empty cohort_definition object', {}],
+    ['`clauses` that is null', { clauses: null }],
+    ['`clauses` that is not an array', { clauses: { district: 'patna' } }],
+  ])('does not throw on %s — it falls back to fallbackDefault', (_label, cohortDefinition) => {
+    const broken = doc({
+      state: 'canary',
+      cohortDefinition: cohortDefinition as never,
+      fallbackDefault: false,
+    });
+    expect(() => evaluateFlag(broken, CTX)).not.toThrow();
+    const d = evaluateFlag(broken, CTX);
+    expect(d.reason).toBe('malformed_clause_fallback');
+    expect(d.enabled).toBe(false); // the document's own fallbackDefault, not a hard-coded value
+  });
+
+  it('a broken document with fallbackDefault TRUE falls back to true (the value is read, not assumed)', () => {
+    const broken = doc({ state: 'canary', cohortDefinition: {} as never, fallbackDefault: true });
+    expect(evaluateFlag(broken, CTX).enabled).toBe(true);
+  });
+
+  it('a structurally broken document on an `off` flag is still simply off (state decides first)', () => {
+    const broken = doc({ state: 'off', cohortDefinition: {} as never });
+    expect(evaluateFlag(broken, CTX).reason).toBe('state_off');
   });
 
   it('an unknown STATE (a row from another deploy) falls back rather than throwing', () => {

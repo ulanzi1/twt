@@ -33,6 +33,70 @@ export class FlagVersionConflictError extends Error {
 }
 
 /**
+ * Thrown when a caller-supplied row `id` collides with an EXISTING row's primary key — distinct from
+ * {@link FlagVersionConflictError}, which is a `(pariwar_id, flag_key, version)` race. Separating the
+ * two matters because the recovery differs and the conflict error's advice actively misleads here:
+ * "re-read the latest version and retry" re-sends the same `id` and reproduces the identical failure
+ * forever. A duplicate `id` means the caller replayed a request whose row already landed.
+ */
+export class FlagVersionDuplicateIdError extends Error {
+  public readonly name = 'FlagVersionDuplicateIdError';
+  public constructor(
+    public readonly flagKey: string,
+    public readonly id: string,
+  ) {
+    super(
+      `feature flag '${flagKey}': a version row with id ${id} already exists — this is an ` +
+        'idempotency replay of a write that already succeeded, not a concurrent-flip race; ' +
+        're-read the existing row rather than retrying with the same id',
+    );
+  }
+}
+
+/**
+ * Thrown when a flip asks for a state transition the AC7 ladder does not permit. The staged-rollout
+ * discipline (`off → canary → rollout → full`, rollback always available) is only real if it is
+ * ENFORCED — without this, `off → full` in one flip skips the canary stage the whole mechanism exists
+ * to provide. Identity transitions are always legal: re-publishing the same state is how an operator
+ * edits a cohort.
+ */
+export class FlagStateTransitionError extends Error {
+  public readonly name = 'FlagStateTransitionError';
+  public constructor(
+    public readonly flagKey: string,
+    public readonly from: string,
+    public readonly to: string,
+    public readonly allowed: readonly string[],
+  ) {
+    super(
+      `feature flag '${flagKey}': '${from}' → '${to}' is not a legal state transition — ` +
+        `from '${from}' the permitted next states are ${allowed.map((s) => `'${s}'`).join(', ')}`,
+    );
+  }
+}
+
+/**
+ * Thrown when `governance_boundary.yaml` cannot be READ at all (missing, unreadable, wrong deploy
+ * layout) — distinct from {@link CapabilityBarInvalidError}, which means the file was read and its
+ * CONTENT failed validation. Separated because the remediation is completely different: this one is a
+ * packaging/deploy fault, not a governance-content fault, and the app boundary should not report a
+ * missing artifact as an invalid one. Without it, the raw `ENOENT` escapes the write path untyped.
+ */
+export class CapabilityBarUnavailableError extends Error {
+  public readonly name = 'CapabilityBarUnavailableError';
+  public constructor(
+    public readonly path: string,
+    public readonly cause: unknown,
+  ) {
+    super(
+      `governance_boundary.yaml could not be read at ${path} — the capability bar is a RUNTIME ` +
+        'dependency of the flag write path, so a deploy that ships the domain package without the ' +
+        'repo-root governance artifact cannot flip any flag',
+    );
+  }
+}
+
+/**
  * Thrown when a caller-supplied flag version document is malformed — BEFORE it is persisted. The
  * routing-policy `RoutingPolicyDocumentInvalidError` posture: validate at write time so a bad
  * cohort rule surfaces to the admin who authored it, not to a member whose request it silently

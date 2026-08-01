@@ -143,6 +143,16 @@ const MEMBER_EXPORT_ROSTER = permissionKey('member.export_roster');
 // audit a flag-gated behaviour change); super_admin auto-derives. district_admin DEFERRED (a district-ceiling
 // grant can't satisfy a pariwar check — the HELPDESK_* / NEWS_MANAGE precedent). DELIBERATELY BROADER than
 // FEATURE_FLAG_FLIP — that asymmetry IS the FR-58C "no secret flags" transparency property.
+//
+// ⚠ state_trustee is ALSO deliberately excluded, for the SAME structural reason as district_admin and not
+// as an oversight (Review Pass 2 — the exclusion was tested but undocumented, which reads as an accident on
+// the one role whose name most obviously satisfies "Pariwar Admin AND ABOVE"). Its `scopeCeiling` is
+// 'state', which is BROADER than 'pariwar' — and geo-scope containment is asymmetric: a grant at a
+// different ceiling than the gate's dimension never satisfies it, in EITHER direction. A state-ceiling
+// grant on a pariwar-dimension key is an INERT capability — the role would appear authorised in the
+// catalog and be silently denied at every call site, which is the trap 10.3/10.4/10.7 documented.
+// ACCEPTANCE CONDITION for granting it: a geo-tree scope RESOLVER able to expand a state ceiling into the
+// set of pariwars beneath it (the same resolver the district_admin deferral waits on).
 const FEATURE_FLAG_VIEW = permissionKey('feature_flag.view');
 // Story 10.8 (FR-58C) — the feature-flag FLIP WRITE key (pariwar-dimension). Granted to pariwar_admin ONLY
 // (+ super_admin auto) — NOT auditor: read-only oversight must never carry a production-behaviour-changing

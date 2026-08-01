@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parse as parseYaml } from 'yaml';
 
-import { CapabilityBarInvalidError } from './errors.js';
+import { CapabilityBarInvalidError, CapabilityBarUnavailableError } from './errors.js';
 
 /** The behaviour kinds an `allow` entry may declare. Mirrors the YAML's own `kinds` list, which the
  *  parser cross-checks — the tuple here is the code authority, the YAML list is the documented one. */
@@ -228,9 +228,44 @@ export function capabilityBarPath(): string {
   return join(here, '..', '..', '..', '..', 'governance_boundary.yaml');
 }
 
-/** Load + parse the repo-root capability bar. Throws `CapabilityBarInvalidError` on any problem. */
+/**
+ * The parsed bar, memoized per process (Review Pass 2).
+ *
+ * `loadCapabilityBar()` is called on EVERY `createFlagVersion`, and each call was a blocking
+ * `readFileSync` plus a full YAML parse plus the whole structural validation above — for a
+ * repo-root file that cannot change without a redeploy. The cache module goes to real trouble to keep
+ * a sub-millisecond READ off the hot path; the write path re-read a file from disk every time.
+ */
+let cachedBar: CapabilityBar | null = null;
+
+/** Drop the memoized bar. For tests that write a fixture bar and re-read it. */
+export function clearCapabilityBarCache(): void {
+  cachedBar = null;
+}
+
+/**
+ * Load + parse the repo-root capability bar, memoized.
+ *
+ * @throws CapabilityBarUnavailableError if the file cannot be READ (missing/unreadable/wrong deploy
+ *   layout) — a packaging fault, distinct from a governance-content fault.
+ * @throws CapabilityBarInvalidError if it parses but fails validation.
+ */
 export function loadCapabilityBar(): CapabilityBar {
-  return parseCapabilityBar(readFileSync(capabilityBarPath(), 'utf8'));
+  if (cachedBar) return cachedBar;
+  const path = capabilityBarPath();
+  let source: string;
+  try {
+    source = readFileSync(path, 'utf8');
+  } catch (err) {
+    // ⚠ Previously a raw ENOENT escaped straight out of `createFlagVersion`. The app boundary has no
+    // arm for it, so a deploy shipping `packages/domain/dist` WITHOUT the repo-root governance
+    // artifact turned every flag flip into an untyped 500 with nothing pointing at the real cause.
+    // `capabilityBarPath()` resolves four `..` hops from `import.meta.url`, so this is a real
+    // packaging hazard, not a hypothetical one.
+    throw new CapabilityBarUnavailableError(path, err);
+  }
+  cachedBar = parseCapabilityBar(source);
+  return cachedBar;
 }
 
 /** The set of flag keys the bar admits. */

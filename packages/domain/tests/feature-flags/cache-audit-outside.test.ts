@@ -159,3 +159,102 @@ describe('AC5c — the audit fires on a cache HIT exactly as on a miss', () => {
     expect(accesses).toEqual([{ reason: 'no_version_in_force', source: null }]);
   });
 });
+
+// ── Review Pass 2 regressions ───────────────────────────────────────────────────────────────────
+
+describe('the cache key includes `at` — a replay read cannot poison live traffic', () => {
+  it('⚠ two lookups at DIFFERENT instants are different questions and both hit the DB', async () => {
+    // The bug: `cacheKey` was `(flagKey, pariwarId)` while the memoized function is
+    // `flagVersionInForce(db, flagKey, pariwarId, AT)` — whose entire job is resolving
+    // `effective_from <= at < effective_until`. So the cached value was NOT a function of its key.
+    // A replay/audit read at a past instant poisoned the entry for the whole TTL of live member
+    // traffic (real requests served a HISTORICAL version, mis-recorded in the access observation),
+    // and the reverse ordering reported today's state as history. Every pre-existing test in this
+    // file used the same `AT` constant, so the dimension was never exercised.
+    const db = fakeDb();
+    const historical = new Date('2026-06-01T00:00:00.000Z');
+
+    await flagVersionInForceCached(db, 'kyc_manual_fallback', PARIWAR, AT);
+    const afterFirst = dbSelectCount;
+    await flagVersionInForceCached(db, 'kyc_manual_fallback', PARIWAR, historical);
+    expect(dbSelectCount).toBeGreaterThan(afterFirst);
+  });
+
+  it('the SAME instant still memoizes (the fix must not disable caching outright)', async () => {
+    // The counterweight: `at` is bucketed to whole seconds, so ordinary now-path traffic — whose
+    // millisecond timestamps differ on every request — still shares a key. An unbucketed raw
+    // timestamp in the key would make the hit rate 0% and turn the cache into a memory leak.
+    const db = fakeDb();
+    await flagVersionInForceCached(db, 'kyc_manual_fallback', PARIWAR, new Date(AT.getTime()));
+    const afterMiss = dbSelectCount;
+    await flagVersionInForceCached(db, 'kyc_manual_fallback', PARIWAR, new Date(AT.getTime() + 200));
+    expect(dbSelectCount).toBe(afterMiss);
+  });
+});
+
+describe('AC5c on the ERROR path', () => {
+  /** A Db whose lookup always rejects — the `backend_error` branch. */
+  function throwingDb(): Db {
+    const chain = {
+      from: () => chain,
+      where: () => chain,
+      orderBy: () => chain,
+      limit: () => Promise.reject(new Error('connection reset')),
+    };
+    return { select: () => chain } as unknown as Db;
+  }
+
+  it('⚠ onAccess FIRES when the lookup throws, with reason `lookup_error`', async () => {
+    // The arm Pass 1 added and Pass 2 found untested: the 7 pre-existing tests never made the
+    // lookup throw, so the fix was one refactor away from silent reintroduction with everything
+    // still green. AC5c's guarantee is that the access observation fires on EVERY resolution — a
+    // backend failure is a resolution attempt, and it must not be the one case that goes unrecorded.
+    const seen: { reason: string; source: string | null }[] = [];
+    await expect(
+      resolveFlagAudited(
+        throwingDb(),
+        'kyc_manual_fallback',
+        PARIWAR,
+        {},
+        AT,
+        true,
+        { onAccess: (d, s) => void seen.push({ reason: d.reason, source: s }) },
+      ),
+    ).rejects.toThrow('connection reset');
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.reason).toBe('lookup_error');
+    expect(seen[0]?.source).toBeNull();
+  });
+
+  it('⚠ a THROWING onAccess does not replace the original error (the discriminant survives)', async () => {
+    // `onAccess` fires immediately before `throw err`. Unwrapped, an observer that threw replaced
+    // the original typed backend error with its own, destroying what the caller's catch branches on.
+    // `FlagLookupOptions.observe` is documented "Never throws into the caller"; now it is enforced.
+    await expect(
+      resolveFlagAudited(throwingDb(), 'kyc_manual_fallback', PARIWAR, {}, AT, true, {
+        onAccess: () => {
+          throw new Error('the observability sink is down');
+        },
+      }),
+    ).rejects.toThrow('connection reset');
+  });
+
+  it('⚠ a THROWING onAccess cannot fail a SUCCESSFUL resolution either', async () => {
+    const d = await resolveFlagAudited(fakeDb(), 'kyc_manual_fallback', PARIWAR, {}, AT, false, {
+      onAccess: () => {
+        throw new Error('the observability sink is down');
+      },
+    });
+    expect(d.reason).toBe('cohort_empty'); // the decision is unaffected
+  });
+
+  it('⚠ a THROWING observe cannot fail a lookup either', async () => {
+    const v = await flagVersionInForceCached(fakeDb(), 'kyc_manual_fallback', PARIWAR, AT, {
+      observe: () => {
+        throw new Error('metrics sink down');
+      },
+    });
+    expect(v).not.toBeNull();
+  });
+});

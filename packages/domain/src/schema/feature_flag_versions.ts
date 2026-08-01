@@ -129,6 +129,22 @@ export const featureFlagVersions = pgTable(
     // WHO flipped it (NON-PII controlled-staff attribution); null = system/seed.
     actorWhoFlipped: uuid('actor_who_flipped').$type<UserId>(),
 
+    // The flipping admin's `users.display_name`, SNAPSHOT at flip time (migration 0089, Review
+    // Pass 3). Controlled staff data, never member PII, never email-derived — the API handler blocks
+    // the flip outright when the name is missing rather than falling back
+    // ([[project_admin_display_name_attribution]]).
+    //
+    // ⚠ A SNAPSHOT, NOT A JOIN. Frozen at the instant of the flip and never refreshed: a later
+    // rename must not rewrite the displayed history of past flips, and a deleted admin account must
+    // not blank the record of what they did. Protected by 0089's extended immutability trigger —
+    // note that trigger enumerates its columns EXPLICITLY, so any column added later is outside the
+    // append-only guarantee until it is added there too.
+    //
+    // NULL means "written before attribution was snapshotted" (pre-0089 rows), NOT "unknown actor".
+    // Deliberately not backfilled: filling it from `users` today would fabricate a CURRENT name as
+    // though it were historical, which is the precise falsification the snapshot rule prevents.
+    actorDisplay: text('actor_display'),
+
     // WHY — FR-58C (`prd.md:890`) requires "flag changes audit-logged with actor + rationale". Stored
     // on the ROW (not only in the audit line) because AC4's inventory renders the last flip's
     // rationale, and a transparency surface must not depend on a hash-chain join. Bounded non-PII

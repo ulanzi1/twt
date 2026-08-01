@@ -62,10 +62,28 @@ export async function listEffectiveFlags(
 /** Max version rows returned for a single flag's history view. */
 const FLAG_HISTORY_LIMIT = 100;
 
+/** One flag's version history plus whether the page exhausted it. */
+export interface FlagVersionHistory {
+  rows: FeatureFlagVersionRow[];
+  /**
+   * True when more rows exist beyond {@link FLAG_HISTORY_LIMIT}. ⚠ Without this the history view
+   * TRUNCATED SILENTLY (Review Pass 2): the read behind AC1's "historical flag states are queryable"
+   * dropped everything past row 100 with no signal, so an incomplete history was indistinguishable
+   * from a complete one. A consumer that renders provenance must be able to say "there is more".
+   */
+  hasMore: boolean;
+}
+
 /**
  * The persisted version history for one flag within a scope, newest first (AC1's "historical flag
  * states are queryable for past evaluations"). Includes the scope's own rows AND — when reading as
  * a tenant — the global rows, since both tiers are part of what actually governed that tenant.
+ *
+ * ⚠ A TENANT READ INTERLEAVES TWO INDEPENDENT VERSION SEQUENCES. The tenant's own overrides and the
+ * global rows are separate `version` counters that both start at 2, ordered here by `effective_from`.
+ * That is correct for "what governed this tenant, in time order", but it means a busy GLOBAL catalog
+ * can crowd a tenant's own overrides out of a single page. `hasMore` at least makes the truncation
+ * visible; a cursor over the two sequences is the real fix if this ever gets deep.
  *
  * Note version 1 is NEVER in this list: it is the code default, not a row (see the registry header).
  */
@@ -73,16 +91,21 @@ export async function listFlagVersions(
   db: Db,
   flagKey: string,
   pariwarId: PariwarId | null,
-): Promise<FeatureFlagVersionRow[]> {
+): Promise<FlagVersionHistory> {
   const scopePredicate =
     pariwarId === null
       ? isNull(featureFlagVersions.pariwarId)
       : or(eq(featureFlagVersions.pariwarId, pariwarId), isNull(featureFlagVersions.pariwarId));
 
-  return db
+  // Fetch one MORE than the limit: if it comes back, the history is deeper than this page. Cheaper
+  // and race-free compared with a separate COUNT, which could disagree with the page it describes.
+  const probeLimit = FLAG_HISTORY_LIMIT + 1;
+  const rows = await db
     .select()
     .from(featureFlagVersions)
     .where(and(eq(featureFlagVersions.flagKey, flagKey), scopePredicate))
     .orderBy(desc(featureFlagVersions.effectiveFrom), desc(featureFlagVersions.version))
-    .limit(clampLimit(FLAG_HISTORY_LIMIT, { default: FLAG_HISTORY_LIMIT, cap: FLAG_HISTORY_LIMIT }));
+    .limit(clampLimit(probeLimit, { default: probeLimit, cap: probeLimit }));
+
+  return { rows: rows.slice(0, FLAG_HISTORY_LIMIT), hasMore: rows.length > FLAG_HISTORY_LIMIT };
 }

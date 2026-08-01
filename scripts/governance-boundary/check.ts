@@ -61,19 +61,42 @@ function isAllowlisted(rel: string): boolean {
   return rel.startsWith(ALLOWLIST_DIR);
 }
 
+/**
+ * Extensions the scanner parses. ⚠ `.ts`/`.tsx` alone was not enough (Review Pass 2): `scripts/` is a
+ * prohibited root and prohibition (f) is "a flag must never disable a CI gate" — but a gate written
+ * as `.mjs`/`.cjs`/`.mts`/`.cts` was never opened, so the file could import the evaluator and the
+ * root would still report clean. TypeScript's parser handles all of these.
+ */
+const SCANNED_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs', '.jsx'];
+
+function isScannableFile(name: string): boolean {
+  if (name.endsWith('.d.ts')) return false;
+  return SCANNED_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
 function collectTsFiles(absDir: string, acc: string[]): void {
-  if (!fs.existsSync(absDir)) return;
   for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
     if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) continue;
     const abs = path.join(absDir, entry.name);
-    if (entry.isDirectory()) collectTsFiles(abs, acc);
-    else if (
-      entry.isFile() &&
-      (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) &&
-      !entry.name.endsWith('.d.ts')
-    ) {
-      acc.push(abs);
+    // ⚠ `Dirent.isDirectory()` and `.isFile()` are BOTH false for a symlink, because `readdirSync`
+    // with `withFileTypes` does not follow links — so a symlinked file or directory inside a
+    // prohibited root used to be skipped silently, with no diagnostic. `statSync` follows the link.
+    let isDir: boolean;
+    let isFile: boolean;
+    if (entry.isSymbolicLink()) {
+      try {
+        const st = fs.statSync(abs);
+        isDir = st.isDirectory();
+        isFile = st.isFile();
+      } catch {
+        continue; // A broken symlink has nothing to scan.
+      }
+    } else {
+      isDir = entry.isDirectory();
+      isFile = entry.isFile();
     }
+    if (isDir) collectTsFiles(abs, acc);
+    else if (isFile && isScannableFile(entry.name)) acc.push(abs);
   }
 }
 
@@ -121,8 +144,29 @@ function runSourceScanLeg(bar: CapabilityBar): boolean {
   let failed = false;
 
   for (const { root, prohibition } of bar.prohibited) {
+    const absRoot = path.join(repoRoot, root);
+
+    // ⚠ A ROOT THAT DOES NOT EXIST IS A GATE FAILURE, NOT A CLEAN SCAN (Review Pass 2).
+    // `collectTsFiles` used to `return` silently for a missing directory, after which the loop below
+    // printed "✓ <root> — clean (0 file(s))" and passed. So a module rename, a moved package, or a
+    // typo in the YAML silently disabled the load-bearing leg for that root — forever, with a green
+    // checkmark reporting it. The bar's parser validates that a root is repo-relative and
+    // traversal-free but never that it RESOLVES, and the unit test asserting "every prohibited root
+    // names a real governance module path" only matched a `/^(packages|scripts)/` regex, which any
+    // stale path satisfies. This is the AI-5-1 vacuous-gate shape and it belongs on the failure path.
+    if (!fs.existsSync(absRoot) || !fs.statSync(absRoot).isDirectory()) {
+      failed = true;
+      console.error(
+        `  ✗ ${root} — prohibited root does not resolve to a directory.\n` +
+          '      A stale root silently scans NOTHING while reporting clean. Either the module moved\n' +
+          '      (update the `root` in governance_boundary.yaml) or the entry is obsolete (remove it,\n' +
+          '      with the same attestation any other bar edit needs).',
+      );
+      continue;
+    }
+
     const files: string[] = [];
-    collectTsFiles(path.join(repoRoot, root), files);
+    collectTsFiles(absRoot, files);
     files.sort();
 
     const findings: BoundaryFinding[] = [];
@@ -142,7 +186,20 @@ function runSourceScanLeg(bar: CapabilityBar): boolean {
     for (const f of findings) console.error(`      ${formatBoundaryFinding(f, prohibition)}`);
   }
 
-  console.log(`  · ${String(scannedFiles)} TypeScript file(s) scanned\n`);
+  // ⚠ A COVERAGE FLOOR. Even with the per-root existence check above, a gate that scans zero files
+  // overall has proven nothing while exiting 0 — the single most dangerous state for a governance
+  // gate to be in, because it looks identical to success. Assert the leg actually did work.
+  const MIN_SCANNED_FILES = 1;
+  if (scannedFiles < MIN_SCANNED_FILES) {
+    failed = true;
+    console.error(
+      '  ✗ leg (b) scanned 0 files — the source-scan leg proved NOTHING.\n' +
+        '      This is a vacuous pass, not a clean one. Check that governance_boundary.yaml\'s\n' +
+        '      `prohibited` roots still point at real source trees.',
+    );
+  }
+
+  console.log(`  · ${String(scannedFiles)} source file(s) scanned\n`);
   return !failed;
 }
 
@@ -179,6 +236,25 @@ function main(): void {
 try {
   main();
 } catch (err: unknown) {
-  console.error(`\n✗ governance-boundary gate ERRORED: ${err instanceof Error ? err.message : String(err)}`);
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(`\n✗ governance-boundary gate ERRORED: ${message}`);
+  // ⚠ The `count` cross-check fails HERE, not in leg (a) (Review Pass 2). `loadCapabilityBar()`
+  // throws on `count !== allow.length` during parsing, so `runConformanceLeg`'s bespoke
+  // `countMismatch` branch is unreachable in situ and its actionable remediation never printed —
+  // the operator got a generic "gate ERRORED" instead. Restore the guidance at the level that
+  // actually catches it, rather than leaving a documented gate leg exercised only by its own test.
+  if (/count \(\d+\) !== allow\.length/.test(message)) {
+    console.error(
+      '\n  The capability bar\'s `count` disagrees with its entry total. This is the revert-sanity\n' +
+        '  cross-check: it fires when an `allow` entry is added or silently dropped without the\n' +
+        '  `count` being bumped in the SAME commit. Fix the count, do not delete the check.',
+    );
+  }
+  if (/could not be read/.test(message)) {
+    console.error(
+      '\n  governance_boundary.yaml was not found. The gate reads it from the repo root; if you are\n' +
+        '  running from a build output or a partial checkout, run the gate from the repo root.',
+    );
+  }
   process.exit(1);
 }

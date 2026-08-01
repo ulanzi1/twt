@@ -23,10 +23,32 @@ version: 1
 #   BOOKKEEPING. It is green the moment it lands and stays green while someone
 #   adds a flag read inside the RBAC module.
 # Leg (b) SOURCE SCAN — no feature-flag import reaches inside a governance module
-#   (see `prohibited` below). THIS is the invariant. It is what makes the
-#   prohibitions structurally impossible rather than merely documented.
-# A green leg (a) proves nothing on its own. If you are ever tempted to weaken
-# leg (b) to make a build pass, you are removing the only load-bearing half.
+#   (see `prohibited` below). THIS is the invariant, and the only load-bearing
+#   half. A green leg (a) proves nothing on its own. If you are ever tempted to
+#   weaken leg (b) to make a build pass, you are removing the whole point.
+#
+# ── WHAT LEG (b) ACTUALLY GUARANTEES — stated honestly (Review Pass 2) ────────
+# Leg (b) is a PER-FILE AST scan. It parses each file under a prohibited root and
+# reports any import, re-export, destructuring, or namespace access that names
+# the feature-flags module or its evaluation symbols. What that gives you:
+#
+#   GUARANTEED: no DIRECT flag read inside a governance module, and no
+#   single-hop NAMED one — including aliased imports, namespace imports and
+#   re-exports, dynamic import()/require() (literal or non-literal specifier),
+#   destructured bindings, and computed/bracket property access.
+#
+#   NOT GUARANTEED: TRANSITIVE reachability. The scanner resolves no module
+#   specifiers and follows no edges, so a governance module importing an
+#   innocent-looking helper that itself imports the evaluator is not detected.
+#   Catching that needs full module-graph resolution, which this gate does not do.
+#
+# This file previously described the prohibitions as "structurally impossible".
+# That overstated a per-file scanner. The accurate claim is that the DIRECT and
+# NAMED routes are mechanically closed and a violation cannot be committed by
+# accident or by a casual edit — a determined author with an indirection file can
+# still get around it, and no static per-file check changes that. Documented
+# rather than papered over: a gate whose advertised guarantee exceeds its real
+# coverage is how a green run comes to mean less than a reader assumes.
 #
 # ── ADMISSION WORKFLOW (Story 7.5-style trustee attestation) — AC6 ───────────
 # Adding a flag-toggleable behaviour is a SINGLE reviewed change that MUST carry
@@ -67,9 +89,14 @@ allow:
       Toggles the FR-2 DigiLocker hard-mandatory cutover per cohort: when enabled the
       manual-fallback CTA is hidden and the hard-mandatory copy block is shown. Safe to
       toggle without a code review because BOTH branches are fully-reviewed shipped code
-      paths — the flag selects between them, it does not introduce behaviour. The
-      fallback default is `true` (fallback AVAILABLE), so a flag subsystem that says
-      nothing can never silently make KYC mandatory for anyone.
+      paths — the flag selects between them, it does not introduce behaviour. The flag's
+      `fallback_default` is `false`, meaning "the CUTOVER is not active" — the seam then
+      inverts that into "the manual fallback IS available", so an unevaluable cohort rule
+      degrades toward members still being able to join, never toward locking them out.
+      (Corrected in Review Pass 2: this rationale previously read `true` as "fallback
+      AVAILABLE" and the registry constant was `true`, which traced through
+      `!decision.enabled` to the CTA being HIDDEN — the exact opposite of what this
+      attestation claimed. The flag is named for the cutover, not for the fallback.)
     adr: ADR-0036
   - kind: provider_selection
     artifact: kyc_provider_selection
@@ -101,7 +128,12 @@ allow:
 # ── PROHIBITED: the governance modules a flag read may never reach inside ────
 # Leg (b) scans these roots for any import of the feature-flags namespace or of
 # `evaluateFlag`. A hit is a gate FAILURE. Each entry names the prohibition from
-# epics.md:3516-3522 that it makes structurally impossible.
+# epics.md:3516-3522 that it mechanically closes against DIRECT and single-hop
+# NAMED reads — see the "WHAT LEG (b) ACTUALLY GUARANTEES" block above for the
+# precise claim, and note that transitive reachability is NOT covered.
+# (This line said "structurally impossible" until Review Pass 4 caught that the
+# Pass-2 retraction had corrected the header and left this sentence standing —
+# one file asserting both the honest and the overstated claim.)
 #
 # ⚠ These are the ENFORCEMENT ROOTS — the production modules that actually decide
 # things — never the test files that assert about them. Scanning a test file would
@@ -140,3 +172,42 @@ prohibited:
       that a flag can switch off is not a gate. This root also covers (e) — the gates are
       what enforce the Architectural Freeze Boundaries table (epics.md:510-543), and an
       `allow` entry naming a frozen-table behaviour is additionally rejected by the parser.
+  # ── Added in Review Pass 2 ──────────────────────────────────────────────────
+  # The original six roots left two classes of governance surface unscanned: the
+  # deterministic-assignment and money modules inside the domain, and the request
+  # path in apps/api where RBAC is actually ENFORCED (prohibition (d) is about
+  # escalation, which happens at the check site, not in the key catalog).
+  #
+  # ⚠ NOT `apps/` wholesale — that would fail immediately and correctly: the
+  # LEGITIMATE flag consumers live there (kyc/manual-fallback-seam.ts,
+  # kyc/provider-registry.ts, channel-config/composition.ts, and the
+  # feature-flags module itself). Only the enforcement subtrees are prohibited.
+  - root: packages/domain/src/pool
+    prohibition: >-
+      (e) A flag must never alter pool assignment. The deterministic assignment model is
+      freeze row 1 and its version pin covers the WHOLE algorithm (hash + truncation +
+      delimiter + balancing); a flag-conditioned branch anywhere inside it breaks replay
+      identity, which is the property the snapshot-is-truth design rests on.
+  - root: packages/domain/src/claim
+    prohibition: >-
+      (e/g) A flag must never condition claim lifecycle or disbursement routing. Claim
+      state transitions and the nominee-account model are frozen; money movement that
+      depends on a rollout cohort cannot be reconciled or replayed.
+  - root: apps/api/src/middleware
+    prohibition: >-
+      (d) A flag must never condition request-path authorization. This is where RBAC is
+      actually ENFORCED — the domain rbac module only defines the catalog — so it is the
+      site where a flag-conditioned check would be a real privilege escalation.
+  - root: apps/api/src/modules/rbac
+    prohibition: >-
+      (d) A flag must never condition the permission-gate composition. The
+      require*Permission wrappers are the enforcement seam every admin route depends on.
+  - root: apps/api/src/audit
+    prohibition: >-
+      (a) A flag must never condition audit writing at the app boundary — the same
+      prohibition as the domain audit module, at the layer that actually calls it.
+  - root: apps/api/src/plugins
+    prohibition: >-
+      (a/d) A flag must never condition a server-wide plugin (auth, scope, audit context).
+      A plugin runs before every route, so a flag-conditioned one silently re-shapes the
+      guarantees every downstream handler assumes.

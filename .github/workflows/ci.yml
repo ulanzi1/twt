@@ -585,9 +585,12 @@ jobs:
     needs: install
     # Story 10.8 AC5 (FR-58C). TWO legs: (a) the domain flag registry and the capability bar
     # (governance_boundary.yaml) admit exactly the same keys, count cross-checked; (b) THE
-    # LOAD-BEARING ONE — a static TS-AST scan proving no feature-flag evaluation reaches inside a
-    # governance module (audit / rbac / consent / validity-service / contribution / scripts, roots
-    # read from the bar's own `prohibited` list). Leg (a) alone is bookkeeping and proves nothing:
+    # LOAD-BEARING ONE — a static TS-AST scan over TWELVE roots proving no feature-flag evaluation is
+    # NAMED inside a governance module (domain/src/{audit,rbac,consent,contribution,pool,claim},
+    # validity-service/src, scripts, apps/api/src/{middleware,modules/rbac,audit,plugins}) — roots
+    # read from the bar's own `prohibited` list, so scan scope and documented prohibitions cannot
+    # drift. Closes DIRECT and single-hop NAMED routes; transitive reachability is explicitly NOT
+    # covered (see README). Leg (a) alone is bookkeeping and proves nothing:
     # it stays green while someone adds a flag read inside the RBAC module. No DB / network.
     # INVARIANT SCAN → NO fetch-depth: 0 (mirror kyc-provider-boundary / helpdesk-state-invariant).
     # See scripts/governance-boundary/README.md.

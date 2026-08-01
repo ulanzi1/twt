@@ -10,13 +10,22 @@
 // ⚠ LEG (b) IS THE LOAD-BEARING ONE, AND IT IS WORTH BEING BLUNT ABOUT WHY. Leg (a) is bookkeeping:
 // it is green the moment it lands and it stays green while somebody adds a flag read inside the RBAC
 // module. It proves that the list of flags matches the list of flags. Leg (b) is the actual
-// invariant — it is what makes the seven prohibitions at epics.md:3516-3522 STRUCTURALLY IMPOSSIBLE
-// rather than merely documented. If a future change makes leg (b) inconvenient, the correct response
-// is to stop putting flag reads in governance modules, not to narrow the scan.
+// invariant — it is what mechanically CLOSES the seven prohibitions at epics.md:3516-3522 against
+// direct and single-hop NAMED reads, rather than leaving them merely documented. If a future change
+// makes leg (b) inconvenient, the correct response is to stop putting flag reads in governance
+// modules, not to narrow the scan.
+//
+// ⚠ SAY WHAT THIS DOES AND DOES NOT GUARANTEE. This comment read "STRUCTURALLY IMPOSSIBLE" until
+// Review Pass 5. That overstates a PER-FILE scanner: it resolves no module specifiers and follows no
+// import edges, so a governance module importing an innocent helper that itself imports the
+// evaluator is NOT detected. What is closed is every syntactic route by which a file can NAME the
+// evaluation surface — so a violation cannot be committed by accident or by a casual edit, and CI
+// fails loudly when one is. See scripts/governance-boundary/README.md's "What leg (b) guarantees".
 //
 // AST-detected (mirror kyc-provider-boundary / member-state-invariant), so a symbol name appearing
-// in a comment or a string literal never matches. THREE detection routes, because a single one is
-// trivially side-stepped:
+// in a comment or a string literal never matches. FIVE detection routes, because a single one is
+// trivially side-stepped — and routes 4 and 5 exist because routes 1-3 were each independently
+// defeated in review (see the negative controls in lib.test.ts):
 //   1. MODULE SPECIFIER — any import whose specifier names the feature-flags module
 //      (`../feature-flags/evaluate.js`, `@twt/domain/feature-flags`, …).
 //   2. NAMED SYMBOL — a named import of the evaluation surface (`import { evaluateFlag } from …`)
@@ -25,7 +34,13 @@
 //   3. PROPERTY ACCESS — any `featureFlags.<member>` expression, which catches
 //      `import * as domain from '@twt/domain'; domain.featureFlags.evaluateFlag(...)` — a route
 //      that names neither a banned specifier nor a banned import binding anywhere in the file.
-// Routes 2 and 3 are the reason this gate has semantic coverage rather than being a specifier
+//   4. NAMESPACE RE-EXPORT — `export * as featureFlags from '…'`, a `NamespaceExport` clause that
+//      route 2's named-exports arm does not match, under a fully innocent specifier.
+//   5. DESTRUCTURING — a banned symbol pulled out of ANY expression by an object binding pattern,
+//      including the aliased form. `const { evaluateFlag } = await import('@twt/domain')` defeated
+//      routes 1, 2 AND 3 simultaneously: literal innocent specifier, a VariableStatement rather than
+//      an import declaration, and a bare call rather than a property access.
+// Routes 2-5 are the reason this gate has semantic coverage rather than being a specifier
 // blacklist that any `import * as` defeats.
 
 import * as ts from 'typescript';
@@ -150,6 +165,43 @@ export function scanGovernanceBoundaryViolations(file: string, source: string): 
         const original = el.propertyName?.text ?? el.name.text;
         if (isBannedSymbol(original)) {
           push(el, 'named_symbol', `re-exports '${original}'`);
+        }
+      }
+    }
+    // `export * as featureFlags from '…'` — a NamespaceExport, which `isNamedExports` above does not
+    // match. Placed in a prohibited root this re-publishes the entire banned namespace from INSIDE
+    // the governance module, and the specifier can be entirely innocent ('@twt/domain'). (Review
+    // Pass 2 — route 1 cleared it on the specifier and route 2 never looked at this clause shape.)
+    if (
+      ts.isExportDeclaration(node) &&
+      node.exportClause &&
+      ts.isNamespaceExport(node.exportClause) &&
+      isBannedSymbol(node.exportClause.name.text)
+    ) {
+      push(node, 'named_symbol', `namespace re-exports as '${node.exportClause.name.text}'`);
+    }
+
+    // ── Route 2b: a banned symbol destructured out of ANY expression ───────────────────────────────
+    // The hole this closes (Review Pass 2): routes 1–3 inspect import/export DECLARATIONS and
+    // property ACCESSES, so a binding pattern slipped past all three at once —
+    //
+    //   const { evaluateFlag } = await import('@twt/domain');   // literal, innocent specifier
+    //   const { featureFlags: ff } = domainNamespace;            // rename defeats the name checks
+    //
+    // Route 1 cleared the specifier, route 2 never visited a VariableStatement, and route 3 saw a
+    // bare CallExpression rather than a PropertyAccessExpression. One line, fully green. Checking the
+    // BINDING PATTERN itself catches every variant regardless of what is on the right-hand side,
+    // including the aliased form, because `propertyName` preserves the original name.
+    if (ts.isObjectBindingPattern(node)) {
+      for (const el of node.elements) {
+        const original =
+          el.propertyName && ts.isIdentifier(el.propertyName)
+            ? el.propertyName.text
+            : ts.isIdentifier(el.name)
+              ? el.name.text
+              : undefined;
+        if (original !== undefined && isBannedSymbol(original)) {
+          push(el, 'named_symbol', `destructures '${original}'`);
         }
       }
     }

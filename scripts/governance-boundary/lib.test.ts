@@ -170,6 +170,69 @@ describe('⚠ leg (b) REVERT-SANITY: a planted violation MUST be caught — all 
     const findings = scanGovernanceBoundaryViolations('packages/domain/src/rbac/roles.ts', src);
     expect(findings[0]?.line).toBe(3);
   });
+
+  // ── Review Pass 2: routes 4 and 5, each a confirmed bypass of ALL THREE original routes ──────────
+  //
+  // These are not hypothetical hardening. Each source below was verified to produce ZERO findings
+  // before the fix, i.e. it was a one-line, fully-green route to a flag read inside a governance
+  // module — the exact thing the gate exists to prevent. Keep a negative control per route: a fix
+  // that silently drops one while leaving the others would otherwise look identical to a real pass.
+
+  it('DESTRUCTURING out of a dynamic import with an INNOCENT literal specifier is caught', () => {
+    // The full bypass: route 1 clears '@twt/domain' (not a feature-flags specifier, and the
+    // non-literal branch is not reached); route 2 only visits import/export DECLARATIONS, and this
+    // is a VariableStatement; route 3 sees a bare CallExpression, not a property access.
+    const src = `
+      export async function decide(doc: unknown, ctx: unknown) {
+        const { evaluateFlag } = await import('@twt/domain');
+        return evaluateFlag(doc as never, ctx as never);
+      }
+    `;
+    const findings = scanGovernanceBoundaryViolations('packages/domain/src/rbac/permissions.ts', src);
+    expect(findings.some((f) => f.route === 'named_symbol')).toBe(true);
+  });
+
+  it('DESTRUCTURING with a rename is caught (the original name is what matters)', () => {
+    const src = `
+      import * as domain from '@twt/domain';
+      const { featureFlags: ff } = domain;
+      export const x = ff;
+    `;
+    const findings = scanGovernanceBoundaryViolations('packages/domain/src/consent/read.ts', src);
+    expect(findings.some((f) => f.route === 'named_symbol')).toBe(true);
+  });
+
+  it('DESTRUCTURING out of a `require()` with an innocent specifier is caught', () => {
+    const src = `const { resolveFlagAudited } = require('@twt/domain'); module.exports = resolveFlagAudited;`;
+    const findings = scanGovernanceBoundaryViolations('scripts/some-gate/check.ts', src);
+    expect(findings.some((f) => f.route === 'named_symbol')).toBe(true);
+  });
+
+  it('NAMESPACE RE-EXPORT is caught (`export * as featureFlags from`)', () => {
+    // `NamespaceExport` is not a `NamedExports`, so route 2's re-export arm never saw this clause
+    // shape — and the specifier is innocent, so route 1 cleared it too.
+    const src = `export * as featureFlags from '@twt/domain';`;
+    const findings = scanGovernanceBoundaryViolations('packages/domain/src/consent/index.ts', src);
+    expect(findings.some((f) => f.route === 'named_symbol')).toBe(true);
+  });
+
+  it('a bare namespace re-export of an UNRELATED namespace is still clean (no false positive)', () => {
+    const src = `export * as audit from './write.js';`;
+    expect(scanGovernanceBoundaryViolations('packages/domain/src/audit/index.ts', src)).toEqual([]);
+  });
+
+  it('ordinary destructuring of unrelated names is still clean (no false positive)', () => {
+    // The route 5 check must key on the BANNED symbol list, not on destructuring per se — otherwise
+    // it would fire on essentially every file in the repo and get switched off.
+    const src = `
+      import { and, eq } from 'drizzle-orm';
+      export function f(row: { id: string; name: string }) {
+        const { id, name } = row;
+        return [and, eq, id, name];
+      }
+    `;
+    expect(scanGovernanceBoundaryViolations('packages/domain/src/rbac/roles.ts', src)).toEqual([]);
+  });
 });
 
 describe('isFeatureFlagModuleSpecifier', () => {

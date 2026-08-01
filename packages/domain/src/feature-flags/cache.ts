@@ -35,6 +35,9 @@ import type { FlagDecision, MemberFlagContext } from './types.js';
 /** Snapshot lifetime. Short by design — it is the upper bound on how long a flip takes to be seen. */
 export const FLAG_CACHE_TTL_MS = 5_000;
 
+/** Size above which a miss sweeps expired entries. See the prune comment in `flagVersionInForceCached`. */
+const MAX_SNAPSHOT_ENTRIES = 512;
+
 interface CacheEntry {
   value: FlagInForce | null;
   expiresAt: number;
@@ -44,8 +47,25 @@ interface CacheEntry {
  *  is deliberately NOT reachable from `evaluateFlag` — the evaluator stays pure (AC2). */
 const snapshot = new Map<string, CacheEntry>();
 
-function cacheKey(flagKey: string, pariwarId: PariwarId | null): string {
-  return `${flagKey}::${pariwarId ?? '__global__'}`;
+/**
+ * ⚠ `at` IS PART OF THE KEY (Review Pass 2). The memoized function is
+ * `flagVersionInForce(db, flagKey, pariwarId, at)`, whose entire job is to resolve
+ * `effective_from <= at < effective_until` — so two lookups for the same `(flagKey, pariwarId)` at
+ * DIFFERENT instants are different questions with different correct answers. Keying on the scope
+ * alone made the cached value not a function of its key: a replay/audit read at a past instant
+ * poisoned the entry for up to TTL_MS of live member traffic (real requests served a HISTORICAL flag
+ * version, and `flagVersion` was mis-recorded in the access observation), while the reverse ordering
+ * reported today's state as history. `resolveFlagAudited` exposes `at` as a first-class parameter, so
+ * this is an invited call pattern, not a hypothetical.
+ *
+ * `at` is bucketed to whole seconds rather than used raw: an unbucketed millisecond timestamp from
+ * `clock()` would make every now-path request a distinct key, turning the cache into a pure memory
+ * leak with a 0% hit rate. Bucketing keeps the now-path hit rate high while bounding staleness to
+ * one second — strictly tighter than the TTL that already bounds it.
+ */
+function cacheKey(flagKey: string, pariwarId: PariwarId | null, at: Date): string {
+  const bucket = Math.floor(at.getTime() / 1000);
+  return `${flagKey}::${pariwarId ?? '__global__'}::${String(bucket)}`;
 }
 
 /** Drop every cached entry. For tests and for an operator-triggered refresh after a flip. */
@@ -78,19 +98,32 @@ export async function flagVersionInForceCached(
   at: Date,
   options: FlagLookupOptions = {},
 ): Promise<FlagInForce | null> {
-  const observe = options.observe ?? (() => undefined);
+  // Wrapped, not called directly: `observe` is documented "Never throws into the caller" and that is
+  // now enforced rather than assumed (Review Pass 2).
+  const observe = (outcome: FlagCacheOutcome, key_: string): void => {
+    safelyObserve(() => options.observe?.(outcome, key_));
+  };
 
   if (options.bypassCache === true) {
     observe('bypass', flagKey);
     return flagVersionInForce(db, flagKey, pariwarId, at);
   }
 
-  const key = cacheKey(flagKey, pariwarId);
+  const key = cacheKey(flagKey, pariwarId, at);
   const now = Date.now();
   const cached = snapshot.get(key);
   if (cached && cached.expiresAt > now) {
     observe('hit', flagKey);
     return cached.value;
+  }
+  // Bucketing `at` into the key means keys retire every second instead of being reused forever, so
+  // expired entries must actually be reclaimed or the Map grows without bound. Pruning on the MISS
+  // path only keeps the hit path allocation-free, and the snapshot is tiny (tens of flags × active
+  // scopes × one live bucket) so a full sweep is cheaper than maintaining a second index.
+  if (snapshot.size > MAX_SNAPSHOT_ENTRIES) {
+    for (const [k, entry] of snapshot) {
+      if (entry.expiresAt <= now) snapshot.delete(k);
+    }
   }
 
   let resolved: FlagInForce | null;
@@ -115,6 +148,24 @@ export async function flagVersionInForceCached(
 
 /** A per-read observation the CALLER performs — the "access layer" in D5-A terms. */
 export type FlagAccessObserver = (decision: FlagDecision, source: FlagInForce['source'] | null) => void;
+
+/**
+ * Invoke an observability callback so it can NEVER affect the caller's outcome (Review Pass 2).
+ *
+ * `FlagLookupOptions.observe` is documented "Never throws into the caller" and `onAccess` carries the
+ * same contract, but neither was enforced. On the error path that was actively harmful: `onAccess`
+ * fired immediately before `throw err`, so an observer that threw replaced the ORIGINAL typed backend
+ * error with its own — destroying the discriminant the caller's catch branches on. A best-effort sink
+ * must be exactly that; correctness never depends on it, so it never gets to break correctness.
+ */
+function safelyObserve(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    // Intentionally swallowed: an observability sink cannot be allowed to change a flag decision or
+    // mask the error that produced it.
+  }
+}
 
 export interface ResolveFlagOptions extends FlagLookupOptions {
   /**
@@ -155,10 +206,18 @@ export async function resolveFlagAudited(
     // that swallowed it would (the exact failure mode AC5c/epics.md:3522 exists to prevent). The
     // caller's own catch (Task 9's seams) still decides the fail-safe behaviour; this only ensures
     // the access layer sees the attempt.
-    options.onAccess?.(
-      { flagKey, flagVersion: null, enabled: callerDefault, matchedClauseIndex: null, reason: 'lookup_error' },
-      null,
-    );
+    //
+    // ⚠ `enabled` here is NOT a decision that was taken — no evaluation happened. It reports the
+    // value the caller said it would fall back to, and `reason: 'lookup_error'` is the discriminant
+    // that says so. An observer must key on the REASON, never read `enabled` from a `lookup_error`
+    // record as if it were served: the caller's own catch may return something else entirely, and
+    // treating this as a served decision puts a contradiction in the audit trail.
+    safelyObserve(() => {
+      options.onAccess?.(
+        { flagKey, flagVersion: null, enabled: callerDefault, matchedClauseIndex: null, reason: 'lookup_error' },
+        null,
+      );
+    });
     throw err;
   }
 
@@ -172,6 +231,10 @@ export async function resolveFlagAudited(
         reason: 'no_version_in_force',
       };
 
-  options.onAccess?.(decision, inForce?.source ?? null);
+  // Wrapped for the same reason as the error path: the decision is already fixed above, so a
+  // throwing observer must not be able to turn a successful resolution into a failed request.
+  safelyObserve(() => {
+    options.onAccess?.(decision, inForce?.source ?? null);
+  });
   return decision;
 }

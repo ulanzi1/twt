@@ -164,7 +164,7 @@ describe('the SHIPPED governance_boundary.yaml', () => {
 // If you are INTENTIONALLY changing the bar: complete the admission workflow in the YAML header
 // (trustee attestation + rationale + ADR + `count` bump), then update EXPECTED_BAR_HASH below to the
 // hash this test reports on failure.
-const EXPECTED_BAR_HASH = '8326706def9e1820d640642f022c0fa3a14a5e32ce84d93d4cc9d9346b9db3b0';
+const EXPECTED_BAR_HASH = 'cbd837f2c2be2095d8dfe10848d13e8e45d84f2a321859cae24cbe7c9332d9c6';
 
 describe('governance_boundary.yaml golden hash', () => {
   it('matches the frozen hash — a bar change requires deliberate attestation', () => {

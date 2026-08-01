@@ -1,9 +1,9 @@
 # ADR-0032: Canonical bank-statement normalization schema (`BankStatementEntry`) [P0]
 
-> **Status:** drafted
-> **Date:** 2026-07-26 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-08-01 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Story 9.2 closure
-> **Ratifying trustees:** — (Trustee ratification is Story 14.7's AR-69 backlog closure, epics.md L4408; author-drafted/ratify-later split, precedent ADR-0026)
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-08-01; logged in `.decision-log.md` Decision 2026-08-01-071
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -96,6 +96,23 @@ Two load-bearing representation decisions the code commits:
 - [Source: docs/knowledge-transfer/adr-index.md, row 97] — the live index row for this ADR
 - Memory: [[feedback_architecture_vs_adr_boundary]] — discipline anchor
 - Memory: [[project_pool_spawn_saga_atomicity]] — deterministic-UUID precedent
+- **Note on `entry_type: 'reversal'` (D column, above):** this classifies a line the BANK itself
+  recorded as a reversal on the source statement (e.g., a bank-side reversed transfer) — it is
+  input-data classification, not a TWT system action. See ADR-0035's "Governance principles ›
+  Recovery, not automatic reversal" section for how "reversal" is used elsewhere in this ADR
+  family when it DOES refer to a TWT-side action (a ledger correction, never a fund movement).
+
+## Ratification (2026-08-01)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-08-01 Trustee Panel session,
+as part of the ADR-0032/0033/0034/0035 batch; logged in `.decision-log.md` Decision
+`2026-08-01-071`. Consent sheet:
+`docs/knowledge-transfer/adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`.
+
+Ratified as authored, no amendments to this ADR's own content (the batch's pre-presentation
+revisions landed in ADR-0034 and ADR-0035; this ADR gained only the cross-reference note above).
+No accepted failure modes beyond normal engineering — the canonical `BankStatementEntry` schema,
+integer-paise money, and deterministic UUIDv5 `entry_id` stand as shipped.
 
 ---
 
@@ -103,4 +120,6 @@ Two load-bearing representation decisions the code commits:
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-08-01 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-08-01 Trustee Panel session as part of the ADR-0032/0033/0034/0035 batch, alongside ADR-0036 ratified earlier the same day. `.decision-log.md` Decision `2026-08-01-071`; consent sheet `adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`. |
+| 2026-08-01 | Pre-ratification revision | BigDev (Solo Builder) | Added the cross-reference note distinguishing bank-recorded "reversal" line items from the TWT-side ledger-correction meaning of "reversal" defined in ADR-0035, requested ahead of presentation. |
 | 2026-07-26 | (initial draft) | BigDev (Solo Builder) | Authored under Story 9.2 (bank-statement intake transport + normalization schema) |

@@ -1,9 +1,9 @@
 # ADR-0035: Reconciliation UTR-matcher mechanism (OQ-2)
 
-> **Status:** drafted
-> **Date:** 2026-07-26 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-08-01 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Story 9.4 closure
-> **Ratifying trustees:** — (Trustee ratification is Story 14.7's AR-69 backlog closure, epics.md L4408; author-drafted/ratify-later split, precedent ADR-0026/0032/0033/0034)
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-08-01; logged in `.decision-log.md` Decision 2026-08-01-071
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -192,6 +192,79 @@ a new decision):
   invariant is made executable by the Story 9.5 fence `packages/domain/tests/contribution/canonical-financial-truth.test.ts`
   (single-authority-constant scan + the live-DB reversal-consumer proof) and documented in architecture.md §3.6.
 
+## Governance principles
+
+### Decision-support scope: what is automated, and what is never auto-resolved
+
+**Governance posture.** TWT uses deterministic, rule-based automatic confirmation only where the
+reconciliation result is mathematically unambiguous (matching pool, UTR, and expected amount all
+exact). Any ambiguity or anomaly exits the automatic path and requires explicit human adjudication
+through the governed reconciliation workflow (Story 9.8). Regardless of confirmation method, the
+system has no authority to move funds, reverse payments, or recover money automatically; all
+recovery actions remain human-governed facilitation processes (see the next section).
+
+> **Trustee note.** Trustees may, by future governance decision, require manual confirmation even
+> for deterministic exact matches if operational or regulatory requirements change. That would
+> constitute a **change to the reconciliation operating model**, not a clarification of the current
+> one — tracked here as an option the panel can invoke, not a claim about what ships today.
+
+The mechanism behind that posture, precisely, because "the matcher decides" is true for exactly
+one shape of case and false for every other:
+
+- **The one automated path — exact match.** When a `contribution.utr-attested` event's UTR, the
+  correct destination pool, and the correct amount ALL match a persisted `BankStatementEntry`
+  exactly, the matcher commits `contribution.confirmed` with no human step. This is **not**
+  "parser confidence" in a probabilistic sense — there is no confidence score anywhere in this
+  design. It is a binary, deterministic, replayable equality check: either all three facts match
+  exactly, or they do not. The Governance-boundary and canonical-financial-truth CI gates treat
+  this path as the sole live producer of confirmed status specifically because it is exact, not
+  because it is trusted to judge an ambiguous case.
+- **Every other case is routed to a human, never auto-resolved.** A wrong-pool deposit, an
+  amount mismatch, a missing deposit, a self-verify screenshot, or a staff-transcription request
+  all land in the Story 9.8 review queue, where a trustee/reviewer takes one of four sanctioned,
+  step-up-OTP-gated, reason-coded, audited actions (confirm / reject / facilitate-recovery /
+  review-and-reverse). **The matcher itself has no code path that resolves an anomaly** — it can
+  only classify one and hand it to a human. This is where "decision-support, not financial
+  authority" is exactly true: the system supports the human's decision (surfacing the case with
+  full context, ordered by deadline proximity) and never substitutes for it. Every non-exact case
+  requires a human trustee/reviewer action before anything is finalized — the Story 7.6
+  pool-bound-payment invariant (next section) is what makes that structural rather than
+  conventional.
+
+### Recovery, not automatic reversal
+
+**TWT is a facilitator. It cannot automatically debit or recover funds from a nominee, or from any
+party. Any actual recovery of misdirected or disputed money requires human action taken outside
+this system.** This is not aspirational — it is structurally enforced today by the **Story 7.6
+pool-bound-payment invariant** (`scripts/pool-bound-payment-invariant/` CI gate, LOAD-BEARING): no
+code path anywhere in reconciliation — the 9.4 matcher, the 9.5 reads, or any of the Story 9.8
+review-queue actions — can reassign a pool, move funds, or edit the original payment record. The
+Story 9.8 **facilitate-recovery** action (the queue's sanctioned response to a case that needs real
+money movement) is proven **outcome-inert** by a dedicated test: it writes only an attributed audit
+line and routes the case to a human via a helpdesk seam; it emits no `contribution.confirmed`, no
+reject/reverse event, and triggers no matcher re-run.
+
+**Terminology, used precisely in this document and its siblings (ADR-0032/0033/0034):**
+
+- **"Recovery" / "facilitated recovery"** — the human, out-of-system process that resolves a
+  misdirected or disputed deposit. This is always a human action taken outside the reconciliation
+  system (helpdesk escalation, direct contact, bank-level correction); the system's role is limited
+  to flagging the case and routing it, never performing the recovery itself.
+- **"Reversal" (`reconciliation.confirmation-reversed`, the Story 9.8 review-and-reverse action) is
+  a LEDGER correction, not a financial transaction.** It changes which `contribution.confirmed`
+  event a member's pool-membership status counts (the member's status flips green → held) because a
+  trustee determined the original match was wrong. **No money moves as a result of this event, and
+  no code path treats it as though money moved.** It is the audit-trail analog of un-marking a
+  mis-filed record, not a payment reversal. Where "reversal" risks being read as a financial action,
+  prefer **"confirmation under review"** for the member-facing consequence — mirroring the existing
+  convention that the member-facing status tone is "held," never "reversed" or "failed" (see the
+  Story 9.5 addendum above).
+- **The system never had the capacity to move money in the first place.** A member's deposit
+  already lands in a real nominee bank account, by a real bank transfer, before the matcher ever
+  runs. Everything in this ADR — matching, confirming, reversing, recovering — operates on the
+  LEDGER record of that already-completed transfer. "The system moving money" is not a risk this
+  ADR accepts and mitigates; it is a capability the system does not have, by construction.
+
 ## Consequences
 
 - The green pill / contributor list / Yogdaan Bahi green arm now POPULATE from a real producer with zero read
@@ -202,6 +275,29 @@ a new decision):
 - The `no_statement_entry`-not-emitted-live policy means a post-close reconciliation-tail story must own the
   "attested but never reconciled" final determination.
 
+## Forward-looking (planned, not built): Donation Contribution Statement
+
+**Not authored or scheduled to a story as of this ADR — recorded here as a named future direction,
+per [[feedback_closure_language_precision]] (this is a plan, not a deferred-but-authored decision).**
+A per-member, per-cycle **Donation Contribution Statement** export is planned, giving contributors
+and the people who administer a cycle a documented, auditable record of what a `contribution.confirmed`
+event actually represents.
+
+- **Availability, stated as governance intent:** the Donation Contribution Statement **shall be
+  available** both to (a) **the nominee**, for transparency over the contributions received into
+  their pool, and (b) **authorized administrators** responsible for reconciliation and contribution
+  confirmation. Trustees additionally retain **read-only** access where appropriate to their
+  oversight role, consistent with the rest of this ADR family's trustee-visibility posture.
+- **Intended contents:** contributor name, contribution amount, contribution date, UTR/reference,
+  cycle, nominee, pool.
+- **Intentionally EXCLUDED:** bank account numbers, IFSC codes, phone numbers, internal system
+  identifiers, audit IDs, and any other field not needed to evidence a contribution. This is a
+  member-readable statement, not an internal audit export — the two must not be conflated.
+- **Likely home:** the Story 10.7 Reports & Exports library (`report_exports`,
+  actor-scoped, mask-only-PII precedent — [[project_reports_exports_surface_substrate]]) is the
+  natural substrate for this export when a story is scheduled to build it, rather than a bespoke
+  mechanism. Not yet scoped to a story; no code exists for this today.
+
 ## References
 
 - [Source: `_bmad-output/implementation-artifacts/9-4-utr-matching-engine-matcher-mechanism.md`] — the story + Decisions D1–D7
@@ -210,4 +306,34 @@ a new decision):
 - [Source: `apps/jobs/src/matcher/matcher-worker.ts`] — the cron worker + enqueue + sweep (D6/D7)
 - [Source: `packages/domain/src/contribution/read.ts` + `history.ts`] — the forward read contracts populated
 - ADR-0032 (normalization schema), ADR-0033 (intake pipeline), ADR-0034 (object-storage tier) — the 9.2/9.3 substrate
-- Memory: [[project_contribution_event_name_contract]], [[project_reconciliation_transport_substrate]], [[project_domain_limit_clamp_and_savepoint_retry]]
+- [Source: `_bmad-output/implementation-artifacts/7-6-pool-bound-payment-enforcement.md` + `scripts/pool-bound-payment-invariant/`] — the LOAD-BEARING no-remap/no-fund-movement invariant + its CI gate (the Governance principle section's teeth)
+- [Source: `_bmad-output/implementation-artifacts/9-8-reconciliation-review-queue-ordered-by-alert-deadline-proximity.md`] — the confirm/reject/facilitate-recovery/review-and-reverse human review-queue mechanism + the facilitate-recovery outcome-inertness test
+- [Source: `_bmad-output/implementation-artifacts/9-11-over-payment-facilitated-recovery.md`] — the established "facilitated recovery" terminology this ADR's Governance principle section reuses rather than reinvents
+- Memory: [[project_contribution_event_name_contract]], [[project_reconciliation_transport_substrate]], [[project_domain_limit_clamp_and_savepoint_retry]], [[project_reports_exports_surface_substrate]], [[feedback_closure_language_precision]]
+
+## Ratification (2026-08-01)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-08-01 Trustee Panel session,
+as part of the ADR-0032/0033/0034/0035 batch (the highest-stakes item in it); logged in
+`.decision-log.md` Decision `2026-08-01-071`. Consent sheet:
+`docs/knowledge-transfer/adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`.
+
+**Ratified as revised, no amendments beyond the two pre-presentation revision passes already
+folded into the body:** the "Governance principles" section (Decision-support scope; Recovery, not
+automatic reversal) and the "Forward-looking: Donation Contribution Statement" section, both
+requested and reviewed by the panel ahead of signing — see the Changelog below for the exact
+wording history. The panel noted, without objection, that the initial draft had three real bugs
+caught and fixed at code review before this presentation (entry-exclusivity, an inert timestamp
+window, a pre-commit enqueue-ordering bug — see the Addendum above). The `matchPool` engine, the
+monotonic three-layer confirmation invariant, the mismatch-emission policy, and the AR-45
+resilience port are ratified as shipped.
+
+---
+
+## Changelog
+
+| Date | Change | Author | Notes |
+|---|---|---|---|
+| 2026-08-01 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-08-01 Trustee Panel session as part of the ADR-0032/0033/0034/0035 batch, alongside ADR-0036 ratified earlier the same day. `.decision-log.md` Decision `2026-08-01-071`; consent sheet `adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`. |
+| 2026-08-01 | Pre-ratification revision | BigDev (Solo Builder) | Trustee-requested revisions ahead of presentation: added a "## Governance principles" section with two subsections — "Decision-support scope" (the deterministic-exact-match-only automation posture; every anomaly requires human adjudication via Story 9.8; a stricter human-gate-on-every-confirmation posture is named as a future, trustee-invocable operating-model change, not today's shipped behavior — verified against `apps/jobs/src/matcher/matcher-worker.ts` before writing this, since an earlier draft of the request would have misdescribed the shipped system) and "Recovery, not automatic reversal" (making the existing Story 7.6 pool-bound-payment invariant + Story 9.8 facilitate-recovery outcome-inertness explicit, and distinguishing "reversal" as a ledger correction from a financial transaction). Also added the "Forward-looking: Donation Contribution Statement" section (planned, not built, not yet scoped to a story). Refined per a second trustee pass: availability restated as an explicit governance-intent "shall be available" clause naming the nominee and authorized administrators as the two primary audiences (trustee read-only access retained as an additional line); contents list tightened to contributor name / contribution amount / contribution date / UTR-reference / cycle / nominee / pool. |
+| 2026-07-26 | (initial draft) | BigDev (Solo Builder) | Authored under Story 9.4 (UTR matching engine) closure. |

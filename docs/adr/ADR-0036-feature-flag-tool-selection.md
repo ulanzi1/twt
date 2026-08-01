@@ -1,9 +1,9 @@
-# ADR-0036: Feature-flag tool selection — in-house, Postgres-backed, no third-party flag vendor
+# ADR-0036: Feature-flag tool selection — an in-house subsystem on TWT's primary transactional platform, no external flag service for v1
 
-> **Status:** drafted
-> **Date:** 2026-07-31
+> **Status:** ratified
+> **Date:** 2026-08-01 (date entered current status)
 > **Author:** Solo Builder
-> **Ratifying trustees:** _(populated at `ratified` status)_
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-08-01; logged in `.decision-log.md` Decision 2026-08-01-070
 
 ## Context
 
@@ -41,11 +41,24 @@ canonical-financial-truth fence, and the CI gates themselves.
 
 ## Decision
 
-**Feature flags are implemented in-house, backed by PostgreSQL, evaluated in-process. No third-party
-feature-flag vendor is adopted for v1.**
+**An in-house feature-flag subsystem, integrated into TWT's primary transactional platform (Google
+Cloud SQL for PostgreSQL) and evaluated in-process, is the appropriate solution for TWT's current
+scale and governance requirements — avoiding an additional external feature-flag service for v1.**
+This is a scale/governance-fit judgment, not a permanent rejection of external services as a
+category, and not a decision that PostgreSQL itself is the defining technology: the subsystem lives
+on the platform TWT already runs on, rather than introducing a new one.
 
 This is a **selection**, not a deferral: the mechanism is built, shipped, and wired to a real consumer
 at Story 10.8.
+
+**Revisit trigger (Trustee Panel amendment, 2026-08-01):** this decision should be revisited if
+future requirements materially exceed the in-house implementation's capabilities — named examples:
+experimentation (multi-variate testing, statistical-significance tooling), multi-region operation,
+large-scale percentage-based rollouts, or advanced analytics on flag exposure/outcome correlation.
+None of these needs exists today; this is a forward-looking bound the Trustee Panel wants recorded
+explicitly, not a current gap. (See also the engineering-level pivot triggers under `Consequences >
+Migration / pivot path` below — that list names measured-scale/latency and multi-product-line
+triggers; this one is the trustee-level policy criterion and supersedes neither.)
 
 Load-bearing details:
 
@@ -73,7 +86,13 @@ Load-bearing details:
   admitted behaviours, ONE has a live consumer and THREE do not (`kyc_provider_selection` inert;
   `wa_cost_optimization` and `telegram_mirror` registered but deliberately unwired per Decision 8).
   Re-trigger for the provider seam: the story that registers a real AR-43 second vendor must set
-  `alternateProviderKey` and add the enabled-path test.
+  `alternateProviderKey` and add the enabled-path test. **Trustee condition (2026-08-01, on
+  Decision `2026-08-01-069`'s ratification):** `kyc_provider_selection`, `wa_cost_optimization`,
+  and `telegram_mirror` remain explicitly marked **declared, not production-active** — in
+  `governance_boundary.yaml`'s own rationale text, not only in this ADR — until each ships its
+  first real consumer, and every future review (the quarterly flag-inventory audit, this ADR, the
+  admission entries themselves) must keep distinguishing admitted capability from live production
+  behaviour rather than letting the two blur.
 
 ### The capability bar (architecture L208-227), demonstrated against shipped code
 
@@ -301,3 +320,59 @@ registry ≡ allowlist both ways, so neither half can move alone.
   escalation this ADR dispositions
 - [Source: `docs/knowledge-transfer/adr-index.md`] — the live index row for this ADR
 - [Source: `scripts/governance-boundary/README.md`] — the gate this ADR's governance section describes
+
+## Ratification (2026-08-01)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-08-01 Trustee Panel session;
+logged in `.decision-log.md` Decision `2026-08-01-070`. Consent sheet:
+`docs/knowledge-transfer/adr-ratification-consent-sheet-2026-08-01.md`.
+
+**Scope of what is ratified, stated explicitly per the panel's own framing:** the Trustee Panel
+affirms the architectural decision to implement feature flags in-house using the governance
+controls described in this ADR. **Ratification does not certify that every admitted capability
+is currently active in production, nor does it waive any of the accepted limitations listed
+under Consequences ("Failure modes accepted") or surfaced in the consent sheet's Read-first
+priority section.** Those stand as recorded — ratifying the control does not retroactively
+resolve them.
+
+**Three amendments adopted in-session and applied to this ADR:**
+
+1. **Decision framing softened from a vendor rejection to a scale/governance-fit judgment with
+   named revisit triggers.** The Decision section previously opened with "No third-party
+   feature-flag vendor is adopted for v1" as the headline framing. The panel asked for this
+   reframed as: *"An in-house implementation is the appropriate solution for the current scale
+   and governance requirements of TWT. The decision should be revisited if future requirements
+   (e.g. experimentation, multi-region operation, large-scale percentage rollouts, or advanced
+   analytics) materially exceed the capabilities of the in-house implementation."* Applied verbatim
+   in substance — see the `## Decision` section above, which now leads with the scale/governance-fit
+   framing and names the four trustee revisit triggers explicitly, alongside (not replacing) the
+   pre-existing engineering-level pivot triggers under `Consequences > Migration / pivot path`.
+2. **"Postgres-backed" reframed as "integrated into TWT's primary transactional platform" so the
+   decision does not read as a PostgreSQL selection.** The panel's concern: "in-house,
+   Postgres-backed feature-flag system" can sound like PostgreSQL was chosen as the defining
+   technology, when the substance is that the subsystem lives on the platform TWT already runs
+   (Google Cloud SQL for PostgreSQL) rather than introducing a new external service. Applied to the
+   title, the `## Decision` section, and mirrored in `docs/knowledge-transfer/adr-index.md`'s
+   Section A row for this ADR.
+3. **"Declared, not production-active" is now the explicit standing label for the three
+   no-live-consumer admissions.** This was the Trustee Panel's ratification condition on the
+   coupled Decision `2026-08-01-069` (the capability-bar admission batch), carried into this ADR
+   because the distinction matters wherever the four admitted behaviours are described. Applied to
+   the `Consumer wired` bullet in `## Decision` above, and — the durable enforcement point — to
+   `governance_boundary.yaml`'s own `rationale` text for `kyc_provider_selection`,
+   `wa_cost_optimization`, and `telegram_mirror` (golden-hash-pinned in
+   `packages/domain/tests/feature-flags/capability-bar.test.ts`, updated in the same change so the
+   label cannot silently drift out of the attested artifact). The condition binds going forward:
+   each label lifts only when that flag's first real consumer ships, and every future review
+   (quarterly flag-inventory audit, this ADR, the admission entries themselves) must keep
+   distinguishing admitted capability from live production behaviour.
+
+No other amendments; the seven-property capability-bar demonstration, the governance-boundary
+invariant, and the eight accepted failure modes are ratified as shipped and documented.
+
+## Changelog
+
+| Date | Status flip | Author | Notes |
+|---|---|---|---|
+| 2026-08-01 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-08-01 Trustee Panel session, with three in-session amendments applied (Decision framing softened to a scale/governance-fit judgment with named revisit triggers; "Postgres-backed" reframed as "integrated into TWT's primary transactional platform" to avoid reading as a PostgreSQL selection; "declared, not production-active" made the explicit standing label for the three no-live-consumer admissions, mirrored into `governance_boundary.yaml`'s rationale text). Ratification is scoped explicitly — does not certify every admitted capability is production-active, does not waive the accepted failure modes. `.decision-log.md` Decision `2026-08-01-070`; consent sheet `adr-ratification-consent-sheet-2026-08-01.md`. |
+| 2026-07-31 | (initial draft) | Solo Builder | Authored under Story 10.8 (feature flags per cohort + capability bar + governance-boundary invariant) closure. |

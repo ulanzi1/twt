@@ -106,6 +106,10 @@ allow:
       13) — the flag may only choose among registered providers behind it, never alter
       the interface. Freeze row 13 explicitly contemplates this: "provider implementation
       is fluid via feature flag (FR-2 + FR-58C); abstraction itself is frozen."
+      DECLARED, NOT PRODUCTION-ACTIVE (Trustee condition, 2026-08-01): the read is gated
+      behind `alternateProviderKey`, which no construction site sets today — the only
+      other registered builder is the FIXTURE provider, so this admission has no live
+      consumer. Re-trigger: the story that registers a real second AR-43 vendor.
     adr: ADR-0036
   - kind: channel_routing
     artifact: wa_cost_optimization
@@ -115,6 +119,9 @@ allow:
       (freeze row 4) and cannot reorder or remove a tier. NOT WIRED as of Story 10.8 —
       admitted here so the behaviour is attested before its consumer story lands; the
       consumer still returns its fail-safe default.
+      DECLARED, NOT PRODUCTION-ACTIVE (Trustee condition, 2026-08-01): admitted capability,
+      not live production behaviour, until the per-Pariwar cost-optimization admin surface
+      ships and the consumer read replaces the hardcoded fail-safe.
     adr: ADR-0036
   - kind: channel_routing
     artifact: telegram_mirror
@@ -123,6 +130,9 @@ allow:
       fire-and-forget by architectural definition (freeze row 4) — no member-facing
       guarantee depends on it, so neither state can degrade a delivery commitment. NOT
       WIRED as of Story 10.8; the consumer still returns its fail-safe default.
+      DECLARED, NOT PRODUCTION-ACTIVE (Trustee condition, 2026-08-01): admitted capability,
+      not live production behaviour, until the first live Telegram mirror dispatch story
+      reads this flag.
     adr: ADR-0036
 
 # ── PROHIBITED: the governance modules a flag read may never reach inside ────

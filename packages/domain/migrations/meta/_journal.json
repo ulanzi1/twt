@@ -610,6 +610,27 @@
       "when": 1788147600000,
       "tag": "0086_report-exports",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1788234000000,
+      "tag": "0087_feature-flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1788320400000,
+      "tag": "0088_feature-flag-version-checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1788406800000,
+      "tag": "0089_feature-flag-actor-display",
+      "breakpoints": true
     }
   ]
 }

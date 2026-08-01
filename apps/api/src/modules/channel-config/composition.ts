@@ -139,12 +139,22 @@ export async function resolveMemberLastEngagement(
 }
 
 /**
- * Resolve the per-Pariwar cost-optimization toggle (Story 5.7 AC4) — currently ALWAYS `false` (OFF).
+ * Resolve the per-Pariwar cost-optimization toggle (Story 5.7 AC4) — STILL ALWAYS `false` (OFF).
  *
- * The real per-Pariwar FR-58C flag read + its admin surface + its persistence land at EPIC 10; there is no flag
- * subsystem yet, so this seam returns the FAIL-SAFE default. OFF ⇒ the policy suppresses NOTHING ⇒ full
- * delivery, zero risk of a missed alert. Do NOT add a per-Pariwar toggle DB column/migration/admin form here —
- * that persistence + UI belongs to the FR-58C subsystem at Epic 10. The args are bound for the Epic 10 signature.
+ * ⚠ STATUS UPDATE (Story 10.8): the FR-58C flag subsystem NOW EXISTS
+ * (`packages/domain/src/feature-flags/`), and the `wa_cost_optimization` flag key is registered and
+ * admitted to the capability bar (`governance_boundary.yaml`) — so the BEHAVIOUR is attested. This
+ * seam is nonetheless left unwired ON PURPOSE (Story 10.8 Decision 8): the toggle also needs its own
+ * per-Pariwar admin form (`architecture.md:2082-2095`), which is a separate surface, and wiring the
+ * read without it would half-ship the feature. Story 10.8 wired exactly ONE consumer end-to-end (the
+ * FR-2 DigiLocker cutover) rather than three partially.
+ *
+ * OFF ⇒ the policy suppresses NOTHING ⇒ full delivery, zero risk of a missed alert — the fail-safe.
+ * Do NOT add a per-Pariwar toggle DB column/migration here: the flag store IS the persistence now.
+ *
+ * To wire it, follow `apps/api/src/modules/kyc/manual-fallback-seam.ts` — `featureFlags
+ * .resolveFlagAudited(db, 'wa_cost_optimization', pariwarId, ctx, now, false)`, degrading to `false`
+ * on any flag-subsystem failure. Recorded in `deferred-work.md` under Story 10.8.
  */
 export async function resolveCostOptimizationToggle(
   deps: CostOptimizationCompositionDeps,

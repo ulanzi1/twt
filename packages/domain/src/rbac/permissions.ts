@@ -290,7 +290,27 @@ export function permissionKey(value: string): PermissionKey {
 // The other two v1 seed templates REUSE existing keys (audit_log_query → `audit.export`; contribution_rate_by_district
 // → `reconciliation.review`) — no umbrella `reports.generate` key (Decision 6). The DEFERRED `reports.view_pii`-class
 // decrypt-if-permitted capability (Decision 2 seam) is NOT minted here — v1 masks, so no PII-decrypt key exists yet.
-export const PERMISSION_CATALOG_VERSION = 26 as const;
+// Bumped 26 → 27 at Story 10.8 (added TWO keys): `feature_flag.view` + `feature_flag.flip` — the FR-58C
+// feature-flag inventory READ and the flag-FLIP WRITE (Decision 7). TWO keys, deliberately NOT one
+// `feature_flag.manage` umbrella: prd.md:892 requires the inventory be visible to "Pariwar Admin role and
+// above" — a TRANSPARENCY property ("no secret flags") — while flipping a flag is a GOVERNANCE AUTHORITY.
+// The visibility requirement is deliberately BROADER than the write requirement, and a single umbrella key
+// would collapse "everyone who can see" into "everyone who can flip", destroying exactly the property
+// FR-58C names. So: `feature_flag.view` → pariwar_admin + auditor (read-only oversight is the auditor's whole
+// role, and an auditor who cannot see which flags are live cannot audit a flag-gated behaviour change);
+// `feature_flag.flip` → pariwar_admin only. super_admin auto-derives both.
+// BOTH are `dimension: 'pariwar'` (value = scopeTx.pariwarId — the helpdesk.create / news.manage precedent):
+// a flag override is a per-TENANT record, and the global catalog rows are a service-pool/seed path that no
+// tenant-scoped grant reaches at all. district_admin DEFERRED for BOTH — a district-ceiling grant can never
+// satisfy a pariwar-dimension check, so granting it would seed an INERT/false capability (the
+// [[project_rbac_geo_scope_containment]] asymmetry that 10.3 / 10.4 / 10.5's pariwar-dimension keys already
+// encode; contrast 10.7's `member.export_roster`, which is district-DIMENSION and therefore genuinely
+// district-capable). ACCEPTANCE CONDITION: district_admin feature-flag access may be enabled only if a flag
+// override gains a server-derived district scope AND the gate moves to `dimension: 'district'` — never by
+// widening a pariwar gate to a role that cannot satisfy it. NOT step-up-gated (a flag flip is not
+// freeze-firing / not in AR-24); its accountability comes from the mandatory `rationale` + the §1.5
+// hash-chain audit line on every flip (AC3), not from re-authentication.
+export const PERMISSION_CATALOG_VERSION = 27 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -484,6 +504,22 @@ export const SEED_PERMISSION_KEYS = [
   // grant would be inert). The other two v1 templates REUSE `audit.export` (audit-log) + `reconciliation.review`
   // (contribution-rate) — no umbrella key (Decision 6).
   'member.export_roster',
+  // Story 10.8 (FR-58C) — the feature-flag INVENTORY READ key. Gates GET /api/v1/global/feature-flags
+  // (catalog) + GET /api/v1/p/:pariwarId/feature-flags (this tenant's effective flags with global-vs-override
+  // provenance) + the flag version history. Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the
+  // helpdesk.create / news.manage precedent). Granted to `pariwar_admin` (prd.md:892: "flag inventory is
+  // visible to Pariwar Admin role and above") + `auditor` (read-only oversight — an auditor who cannot see
+  // which flags are live cannot audit a flag-gated behaviour change); super_admin auto-derives. district_admin
+  // DEFERRED (a district-ceiling grant can't satisfy a pariwar check — inert; see the version-bump note +
+  // roles.ts). DELIBERATELY BROADER than feature_flag.flip — that asymmetry IS the "no secret flags" property.
+  'feature_flag.view',
+  // Story 10.8 (FR-58C) — the feature-flag FLIP WRITE key. Gates POST …/p/:pariwarId/feature-flags/:flagKey/
+  // versions (create a new immutable version row: state change / cohort change / rollback). Checked at
+  // `dimension: 'pariwar'`. Granted to `pariwar_admin` ONLY (+ super_admin auto) — NOT auditor: read-only
+  // oversight must not carry a production-behaviour-changing authority. NARROWER than feature_flag.view by
+  // design (Decision 7). Every flip carries a REQUIRED bounded `rationale` + a §1.5 hash-chain audit line
+  // (AC3). NOT step-up-gated. district_admin DEFERRED for the same inert-grant reason.
+  'feature_flag.flip',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

@@ -325,6 +325,16 @@ export async function fanOutAlert(
   // Eligible for `alert_published` only among this story's three categories (dispatch.ts:44-52), so a
   // deadline reminder / contribution confirmation is never mirrored to a group channel. A failure here
   // changes neither `delivered` nor `deliveredChannel` — it is not a rung.
+  //
+  // ⚠ FR-73 / Story 10.8: the `telegram_mirror` FEATURE FLAG IS REGISTERED BUT NOT READ HERE.
+  // The flag exists in `FLAG_DEFAULTS` and is admitted to the capability bar (`governance_boundary
+  // .yaml`), so the behaviour is attested — but Story 10.8 Decision 8 deliberately wired exactly ONE
+  // consumer (the FR-2 DigiLocker seam) and left this one at its fail-safe default: category
+  // eligibility alone decides, exactly as before the flag subsystem existed. Do NOT assume flipping
+  // `telegram_mirror` changes anything today; it does not reach this code.
+  // Re-trigger: the story that first drives a live Telegram mirror dispatch — read the flag here
+  // following the `kyc/manual-fallback-seam.ts` pattern (source-keyed, NOT a naive
+  // `decision.enabled`), keeping this fail-safe default. Recorded in `deferred-work.md`.
   let telegramMirrored = false;
   const telegramTarget = ctx.targets.telegram;
   if (telegramTarget && isCategoryEligible('telegram', category)) {

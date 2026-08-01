@@ -21,6 +21,7 @@ import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
+import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
 import { ReportsRoute } from './routes/ReportsRoute.js';
 import { HelpdeskTicketRoute } from './routes/HelpdeskTicketRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
@@ -136,6 +137,13 @@ const reportsRoute = createRoute({
   component: ReportsRoute,
 });
 
+// Story 10.8 — the tenant-scoped feature-flag inventory console (the "no secret flags" surface + the flip).
+const featureFlagsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/feature-flags',
+  component: FeatureFlagsRoute,
+});
+
 // Story 6.7 — the tenant-scoped ground-inspection console (schedule/notes/photos/complete/refusal).
 const groundInspectionRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -193,6 +201,7 @@ const routeTree = rootRoute.addChildren([
   helpdeskTicketRoute,
   newsRoute,
   reportsRoute,
+  featureFlagsRoute,
   groundInspectionRoute,
   verifierConsoleRoute,
   cycleFreezeRoute,

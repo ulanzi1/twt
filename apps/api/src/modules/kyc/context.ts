@@ -17,4 +17,27 @@ export interface KycProviderContext {
   readonly db: Db;
   /** The request's Pariwar (the explicit cross-tenant-defense predicate). */
   readonly pariwarId: ids.PariwarId;
+  /**
+   * Best-effort observability for a flag-subsystem failure during provider selection — the
+   * request degrades to the configured default provider either way (Story 4.8 posture), but a
+   * silent catch left an outage with zero operational signal. Optional so existing construction
+   * sites and tests are unaffected.
+   */
+  readonly onError?: (err: unknown) => void;
+  /**
+   * The request's resolution instant. Optional (defaults to `new Date()` at the call site) so
+   * existing construction sites are unaffected, but callers that have an injected clock MUST pass
+   * it: flag versions carry `effective_from`/`effective_until` windows, and resolving one read of a
+   * request against wall time while every other read uses `deps.clock()` makes the request
+   * internally inconsistent and un-replayable under a frozen clock (Review Pass 4).
+   */
+  readonly now?: Date;
+  /**
+   * The member's lifecycle state, when the caller knows it — so a `member_state` cohort clause
+   * resolves IDENTICALLY here and in the manual-fallback seam. Omitting it made such a clause apply
+   * to one KYC flag and silently never match on the other (Review Pass 4).
+   */
+  readonly memberState?: string;
+  /** Best-effort per-resolution access observation (AC5c) — see the seam's sink. */
+  readonly onAccess?: (decision: { reason: string; enabled: boolean }, source: string | null) => void;
 }

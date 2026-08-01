@@ -142,3 +142,8 @@ export * from './bank-statement-entries-rls.js';
 // helpdesk_routing_policy_versions tenant-isolation policies (overrides only; the default v1 is code data).
 export * from './helpdesk-tickets-rls.js';
 export * from './helpdesk-routing-policy-versions-rls.js';
+// Story 10.8 — feature_flag_versions tenant-isolation policies. ⚠ ASYMMETRIC by design: the SELECT
+// leg carries `OR pariwar_id IS NULL` (the cross-readable GLOBAL catalog rows — Decision 3), while
+// INSERT/UPDATE deliberately do NOT, so a tenant-scoped caller can publish its own override but can
+// never author or supersede a global row. Do not "normalize" the read leg away.
+export * from './feature-flag-versions-rls.js';

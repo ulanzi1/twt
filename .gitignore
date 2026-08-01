@@ -36,6 +36,10 @@ out/
 # Test output
 coverage/
 
+# Vite/Vitest TS-config transpile shims — left behind when a test run is
+# killed mid-load; normally self-deleted, harmless build output otherwise
+*.timestamp-*.mjs
+
 # Environment
 .env
 .env.local

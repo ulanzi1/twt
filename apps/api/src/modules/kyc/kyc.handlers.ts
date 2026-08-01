@@ -39,6 +39,7 @@ import type { ScopeTx } from '../../types.js';
 import { decryptKycField, encryptKycField } from './kyc-crypto.js';
 import { isManualFallbackEnabled } from './manual-fallback-seam.js';
 import { resolveKycTransactionByState } from './kyc.repo.js';
+import { KycProviderUnavailableError } from './provider-registry.js';
 import type { KycProviderContext } from './context.js';
 
 const TX_STATES = new Set(['pending', 'verified', 'failed', 'expired']);
@@ -46,11 +47,27 @@ const TX_STATES = new Set(['pending', 'verified', 'failed', 'expired']);
 export function createKycHandlers(deps: AppDeps) {
   const enc = deps.encryption;
 
-  /** Bind the active provider to a scoped ctx (the 3.3a registry seam). */
-  function providerFor(scopeTx: ScopeTx, pariwarIdStr: string): ReturnType<
-    AppDeps['kycProviders']['getActiveKycProvider']
-  > {
-    const ctx: KycProviderContext = { db: scopeTx.tx, pariwarId: ids.pariwarId(pariwarIdStr) };
+  /** Bind the active provider to a scoped ctx (the 3.3a registry seam). ASYNC since Story 10.8 —
+   *  the provider selection now resolves through the feature-flag evaluator on `ctx.db`. */
+  function providerFor(
+    scopeTx: ScopeTx,
+    pariwarIdStr: string,
+    request: FastifyRequest,
+  ): ReturnType<AppDeps['kycProviders']['getActiveKycProvider']> {
+    const ctx: KycProviderContext = {
+      db: scopeTx.tx,
+      pariwarId: ids.pariwarId(pariwarIdStr),
+      now: deps.clock(),
+      onError: (err) => request.log.warn({ err }, 'kyc: provider-selection flag lookup failed, using default provider'),
+      // AC5c: the per-resolution access observation, OUTSIDE the memoized lookup — so it fires on a
+      // cache HIT exactly as on a miss. Wired in Review Pass 4; until then neither wired consumer
+      // registered an observer, leaving the property with no production sink at all.
+      onAccess: (d, source) =>
+        request.log.debug(
+          { flag: 'kyc_provider_selection', reason: d.reason, enabled: d.enabled, source },
+          'kyc: provider-selection flag resolved',
+        ),
+    };
     return deps.kycProviders.getActiveKycProvider(ctx);
   }
 
@@ -67,9 +84,24 @@ export function createKycHandlers(deps: AppDeps) {
     scopeTx: ScopeTx,
     pariwarId: ids.PariwarId,
     memberId: ids.MemberId,
+    request: FastifyRequest,
+    /**
+     * The member state to resolve the manual-fallback cohort against. Pass the PRE-TRANSITION state
+     * when the caller has just moved the member (Review Pass 4).
+     *
+     * ⚠ Without this, `/manual` gated on `pending-kyc`, then `projectMemberState` moved the member
+     * to `pending-fee`, and this function re-read the state and re-resolved the flag against the NEW
+     * one — so a `member_state` cohort clause could make the very response confirming a successful
+     * manual submission report `manual_fallback_enabled: false`. One request, two different answers
+     * to the same question.
+     */
+    memberStateOverride?: string,
   ): Promise<KycStatusResponse> {
     const profile = await kyc.getMemberKycProfile(scopeTx.tx, pariwarId, memberId);
     const lifecycleState = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, deps.clock());
+    // The cohort context is pinned to the caller's instant-of-decision when supplied — see the
+    // `memberStateOverride` note above.
+    const cohortMemberState = memberStateOverride ?? lifecycleState;
     const txn = await kyc.getLatestKycTransactionForMember(scopeTx.tx, pariwarId, memberId);
     return {
       ...(txn && TX_STATES.has(txn.status)
@@ -77,7 +109,19 @@ export function createKycHandlers(deps: AppDeps) {
         : {}),
       memberKycState: memberKycStateOf(profile),
       lifecycleState,
-      manualFallbackEnabled: isManualFallbackEnabled(deps),
+      // Story 10.8 — resolves through the feature-flag evaluator on the caller's scope tx (the flag
+      // rows are tenant-scoped, so RLS is what picks this Pariwar's override). `lifecycleState` is
+      // already in hand, so it is supplied as the `member_state` cohort dimension for free.
+      manualFallbackEnabled: await isManualFallbackEnabled(deps, scopeTx.tx, {
+        pariwarId,
+        memberState: cohortMemberState,
+        onAccess: (d, source) =>
+          request.log.debug(
+            { flag: 'kyc_manual_fallback', reason: d.reason, enabled: d.enabled, source },
+            'kyc: manual-fallback flag resolved',
+          ),
+        onError: (err) => request.log.warn({ err }, 'kyc: manual-fallback flag lookup failed, using config default'),
+      }),
     };
   }
 
@@ -106,7 +150,7 @@ export function createKycHandlers(deps: AppDeps) {
             'kyc.not_pending',
           );
         }
-        const provider = providerFor(scopeTx, pariwarIdStr);
+        const provider = await providerFor(scopeTx, pariwarIdStr, request);
         const initiation = await provider.initiate(memberIdStr, 'signup');
         emitAuthAudit(deps, request, 'member_kyc.initiate', {
           actorId: memberIdStr,
@@ -155,7 +199,31 @@ export function createKycHandlers(deps: AppDeps) {
       try {
         const pariwarId = ids.pariwarId(txn.pariwarId);
         const memberId = ids.memberId(txn.memberId);
-        const provider = providerFor(scopeTx, txn.pariwarId);
+        // ⚠ PINNED to the provider that OWNS this transaction — never re-resolved (Review Pass 4).
+        // `initiate` minted provider-specific OAuth state; handing it to a different provider
+        // because the flag moved in between (a flip, a window closing, a cohort re-tag, or just the
+        // flag cache bucket rolling) made `verifyAndPullProfile` throw and stranded the member with
+        // `member_kyc.failure` and no recovery. `kyc_transactions.provider` was written for exactly
+        // this and was never read.
+        let provider;
+        try {
+          provider = deps.kycProviders.builderFor(txn.provider, {
+            db: scopeTx.tx,
+            pariwarId,
+            now: deps.clock(),
+          });
+        } catch (err) {
+          if (err instanceof KycProviderUnavailableError) {
+            // Only the originating provider can verify its own OAuth state, so this transaction is
+            // dead — tell the member to start again rather than returning an anonymous 500.
+            request.log.warn({ err, provider: txn.provider }, 'kyc: transaction names an unregistered provider');
+            throw new ConflictError(
+              'This KYC attempt can no longer be completed — please start KYC again.',
+              'kyc.provider_unavailable',
+            );
+          }
+          throw err;
+        }
 
         let profile: KycProfile;
         try {
@@ -220,7 +288,24 @@ export function createKycHandlers(deps: AppDeps) {
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
-        const provider = providerFor(scopeTx, pariwarIdStr);
+        // Pinned for the same reason as the callback leg: this reads the status of an EXISTING
+        // transaction, so it must ask the provider that created it.
+        const confirmTxn = await kyc.getKycTransaction(scopeTx.tx, pariwarId, body.transactionId);
+        let provider;
+        try {
+          provider = confirmTxn
+            ? deps.kycProviders.builderFor(confirmTxn.provider, { db: scopeTx.tx, pariwarId, now: deps.clock() })
+            : await providerFor(scopeTx, pariwarIdStr, request);
+        } catch (err) {
+          if (err instanceof KycProviderUnavailableError) {
+            request.log.warn({ err, provider: confirmTxn?.provider }, 'kyc: transaction names an unregistered provider');
+            throw new ConflictError(
+              'This KYC attempt can no longer be completed — please start KYC again.',
+              'kyc.provider_unavailable',
+            );
+          }
+          throw err;
+        }
 
         const status = await provider.getStatus(body.transactionId);
         if (status.status !== 'verified') {
@@ -261,7 +346,7 @@ export function createKycHandlers(deps: AppDeps) {
             context: { transaction_id: body.transactionId },
           });
         }
-        const result = await buildStatus(scopeTx, pariwarId, memberId);
+        const result = await buildStatus(scopeTx, pariwarId, memberId, request);
         ok = true;
         return result;
       } finally {
@@ -279,16 +364,32 @@ export function createKycHandlers(deps: AppDeps) {
     async manual(request: FastifyRequest): Promise<KycStatusResponse> {
       const body = request.body as KycManualSubmitRequest;
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
-      // FR-58C server-side gate — reject before opening a scope tx when the seam is off.
-      if (!isManualFallbackEnabled(deps)) {
-        throw new ConflictError('Manual KYC fallback is not available', 'kyc.manual_fallback_disabled');
-      }
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
         const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, deps.clock());
+        // FR-58C server-side gate (Story 10.8: now flag-resolved per cohort). Moved INSIDE the scope
+        // tx because the flag rows are tenant-scoped — RLS is what selects this Pariwar's override.
+        // Placed AFTER the state read but BEFORE the not-pending check so the observable error
+        // precedence is unchanged (`manual_fallback_disabled` still wins over `not_pending`), while
+        // `state` is now available as the `member_state` cohort dimension — the same context the
+        // /status handler supplies, so a cohort rule cannot resolve differently between the two.
+        if (
+          !(await isManualFallbackEnabled(deps, scopeTx.tx, {
+            pariwarId,
+            memberState: state,
+            onAccess: (d, source) =>
+              request.log.debug(
+                { flag: 'kyc_manual_fallback', reason: d.reason, enabled: d.enabled, source },
+                'kyc: manual-fallback flag resolved',
+              ),
+            onError: (err) => request.log.warn({ err }, 'kyc: manual-fallback flag lookup failed, using config default'),
+          }))
+        ) {
+          throw new ConflictError('Manual KYC fallback is not available', 'kyc.manual_fallback_disabled');
+        }
         if (state !== 'pending-kyc') {
           throw new ConflictError('Member is not pending-kyc', 'kyc.not_pending');
         }
@@ -333,7 +434,11 @@ export function createKycHandlers(deps: AppDeps) {
           pariwarId: pariwarIdStr,
           context: { source: 'manual' },
         });
-        const result = await buildStatus(scopeTx, pariwarId, memberId);
+        // ⚠ Pin the PRE-TRANSITION state (`state`, read before `projectMemberState` above). Without
+        // it this response re-resolves the flag against `pending-fee` while the gate a few lines up
+        // resolved against `pending-kyc`, so a `member_state` cohort clause could make the response
+        // confirming a SUCCESSFUL manual submission report `manual_fallback_enabled: false`.
+        const result = await buildStatus(scopeTx, pariwarId, memberId, request, state);
         ok = true;
         return result;
       } finally {
@@ -385,6 +490,7 @@ export function createKycHandlers(deps: AppDeps) {
           scopeTx,
           ids.pariwarId(pariwarIdStr),
           ids.memberId(memberIdStr),
+          request,
         );
         ok = true;
         return result;

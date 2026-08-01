@@ -165,6 +165,14 @@ export * from './bulk-operations/index.js';
 // — the 3.11 R1 rule). Pure Zod (no @twt/domain import); the status + format enums are drift-guarded
 // against the @twt/domain tuples by a test-only sync-guard (tests/reports.test.ts).
 export * from './reports/index.js';
+// Story 10.8 — the feature-flag `[PRIMITIVE]` transport contracts (FR-58C): the COMPLETE inventory
+// entry (state + provenance + cohort + owner/dead-by + last flip actor & rationale), the version-history
+// entry, and the FLIP request/response. Pure Zod (no @twt/domain import); the state/dimension/operator
+// enums are drift-guarded against the @twt/domain tuples by a test-only sync-guard
+// (tests/feature-flags/feature-flags.test.ts). ⚠ There is deliberately NO `hidden`/`internal` field and
+// no inventory filter parameter — a contract that could express "omit this one" would invite a code
+// path to do so, and prd.md:892's "no secret flags" requires the inventory be COMPLETE.
+export * from './feature-flags/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';
 

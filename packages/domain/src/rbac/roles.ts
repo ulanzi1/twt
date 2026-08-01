@@ -137,6 +137,29 @@ const NEWS_MANAGE = permissionKey('news.manage');
 // single-member validity view — the 4.6 read-key-separation precedent). The other two v1 report templates
 // REUSE audit.export (audit-log) + reconciliation.review (contribution-rate) — no umbrella key (Decision 6).
 const MEMBER_EXPORT_ROSTER = permissionKey('member.export_roster');
+// Story 10.8 (FR-58C) — the feature-flag INVENTORY READ key (pariwar-dimension; the helpdesk.create /
+// news.manage precedent). Granted to pariwar_admin (prd.md:892: "flag inventory is visible to Pariwar Admin
+// role and above") + auditor (read-only oversight — an auditor who cannot see which flags are live cannot
+// audit a flag-gated behaviour change); super_admin auto-derives. district_admin DEFERRED (a district-ceiling
+// grant can't satisfy a pariwar check — the HELPDESK_* / NEWS_MANAGE precedent). DELIBERATELY BROADER than
+// FEATURE_FLAG_FLIP — that asymmetry IS the FR-58C "no secret flags" transparency property.
+//
+// ⚠ state_trustee is ALSO deliberately excluded, for the SAME structural reason as district_admin and not
+// as an oversight (Review Pass 2 — the exclusion was tested but undocumented, which reads as an accident on
+// the one role whose name most obviously satisfies "Pariwar Admin AND ABOVE"). Its `scopeCeiling` is
+// 'state', which is BROADER than 'pariwar' — and geo-scope containment is asymmetric: a grant at a
+// different ceiling than the gate's dimension never satisfies it, in EITHER direction. A state-ceiling
+// grant on a pariwar-dimension key is an INERT capability — the role would appear authorised in the
+// catalog and be silently denied at every call site, which is the trap 10.3/10.4/10.7 documented.
+// ACCEPTANCE CONDITION for granting it: a geo-tree scope RESOLVER able to expand a state ceiling into the
+// set of pariwars beneath it (the same resolver the district_admin deferral waits on).
+const FEATURE_FLAG_VIEW = permissionKey('feature_flag.view');
+// Story 10.8 (FR-58C) — the feature-flag FLIP WRITE key (pariwar-dimension). Granted to pariwar_admin ONLY
+// (+ super_admin auto) — NOT auditor: read-only oversight must never carry a production-behaviour-changing
+// authority. NARROWER than FEATURE_FLAG_VIEW by design (Decision 7 — one umbrella `feature_flag.manage` key
+// would collapse "everyone who can see" into "everyone who can flip"). Every flip carries a REQUIRED bounded
+// rationale + a §1.5 hash-chain audit line. NOT step-up-gated. district_admin DEFERRED (same inert-grant reason).
+const FEATURE_FLAG_FLIP = permissionKey('feature_flag.flip');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -248,6 +271,12 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // scope). A `pariwar` grant resolves to pariwar-wide scope, so the roster report sees the whole tenant
       // (no district narrowing — RLS tenant-isolates underneath). The tenant's administrative read authority.
       MEMBER_EXPORT_ROSTER,
+      // Story 10.8 (FR-58C) — the feature-flag inventory READ + the FLIP write (pariwar-dimension).
+      // pariwar_admin is the "Pariwar Admin role and above" prd.md:892 names for inventory visibility, and
+      // the tenant's governance authority for staged rollout. A `pariwar` scopeCeiling satisfies both checks.
+      // Holding BOTH here is correct; the view/flip split matters at auditor, which holds only the former.
+      FEATURE_FLAG_VIEW,
+      FEATURE_FLAG_FLIP,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -352,7 +381,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     role: 'auditor',
     // The cross-cutting read role (FR-47 / Story 1.11b gates the verify UI on
     // audit.verify). Story 4.6 — reads FR-12A validity as part of the audit read surface.
-    permissions: [AUDIT_EXPORT, AUDIT_VERIFY, MEMBER_VIEW_VALIDITY],
+    // Story 10.8 — FEATURE_FLAG_VIEW (read-only) joins the audit read surface: a flag flip changes
+    // production behaviour, so an auditor who cannot see which flags are live cannot audit a
+    // flag-gated behaviour change. FEATURE_FLAG_FLIP is deliberately NOT here — read-only oversight
+    // must not carry a production-behaviour-changing authority (Decision 7's view/flip split).
+    permissions: [AUDIT_EXPORT, AUDIT_VERIFY, MEMBER_VIEW_VALIDITY, FEATURE_FLAG_VIEW],
     scopeCeiling: 'pariwar',
   },
   {

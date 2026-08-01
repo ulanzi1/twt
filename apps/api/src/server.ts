@@ -56,6 +56,7 @@ import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index.js';
 import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
+import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
 import { registerReportsModule } from './modules/reports/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
@@ -274,6 +275,9 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // apps/jobs REPORT_EXPORT_BUILD worker (crypto boundary); this request path only authorizes (per-template
   // key, Decision 6), enqueues, and streams the finished artifact.
   registerReportsModule(app, deps);
+  // Story 10.8 — the FR-58C feature-flag admin surface (catalog + effective inventory + versions +
+  // the flip). The inventory routes are what make "no secret flags" real.
+  registerFeatureFlagsModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

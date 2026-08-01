@@ -186,7 +186,11 @@ async function buildKycProviderRegistry(config: ApiConfig): Promise<KycProviderR
                 '(within budget; refresh job degraded — see ADR-0026)',
             ),
         }),
-      // The fixture stays registered so an FR-58C flip can select it without a code change.
+      // The fixture stays registered as the second builder. ⚠ It is NOT flag-selectable today:
+      // `alternateProviderKey` is unset, so `kyc_provider_selection` has nothing to switch to and
+      // the flag read never executes (Review Pass 4 corrected this comment, which used to claim a
+      // flip could select it "without a code change"). Deliberate — pointing a production provider
+      // flip at a test double would be worse than an inert seam. See provider-registry.ts's header.
       fixture: () => fixtureKycProvider,
     },
   });

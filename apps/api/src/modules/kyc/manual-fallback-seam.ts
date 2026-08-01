@@ -16,9 +16,15 @@
 //
 // It is written this way deliberately. A flag should be named for the change it introduces, so the
 // SAFE state is the one where the flag says nothing — and here that matters twice over:
-//   · The flag's own `fallback_default` is `true` in the registry, so an unevaluable cohort rule
-//     resolves to "cutover active = true"… which is why THIS function inverts it into "manual
-//     available", making the degraded outcome the permissive one.
+//   · The flag's own `fallback_default` is `false` in the registry, so an unevaluable cohort rule
+//     resolves to "cutover NOT active" → this function's inversion yields "manual AVAILABLE",
+//     making the degraded outcome the permissive one.
+//     ⚠ CORRECTED IN REVIEW PASS 4. This paragraph previously stated `true` and then drew the
+//     conclusion that only holds for `false` — wrong twice, on the one path whose failure mode is
+//     locking members out of joining. Pass 2 corrected the constant and the capability-bar
+//     attestation and missed this third prose site. With `true`, an unevaluable rule traced to
+//     `!true` = manual HIDDEN = KYC hard-mandatory, i.e. the exact outcome the next bullet says is
+//     impossible. If you are ever tempted to "restore" `true`, re-read that trace first.
 //   · A flag-subsystem failure, an unregistered key, or a malformed cohort rule can therefore never
 //     silently make KYC mandatory for anyone. The failure mode is "more members can still complete
 //     KYC than intended", never "members are locked out of joining."
@@ -54,6 +60,13 @@ export interface ManualFallbackContext {
    * operational signal. Optional so existing call sites and tests are unaffected.
    */
   onError?: (err: unknown) => void;
+  /**
+   * AC5c's per-resolution access observation. Fires on a cache HIT exactly as on a miss, because
+   * `resolveFlagAudited` invokes it OUTSIDE the memoized lookup. Optional so existing call sites
+   * and tests are unaffected; wired to `request.log` at the real call sites (Review Pass 4 — before
+   * that, neither wired consumer registered an observer and the property had no production sink).
+   */
+  onAccess?: (decision: { reason: string; enabled: boolean }, source: string | null) => void;
 }
 
 /**
@@ -100,7 +113,16 @@ export async function isManualFallbackEnabled(
       // The caller default if the key were ever unregistered. Expressed as "cutover active?", hence
       // the negation: `configDefault: true` ("manual available") means "cutover not active".
       !configDefault,
-      { onAccess: (_d, s) => { source = s; } },
+      {
+        // AC5c: this fires on EVERY resolution — cache hit and miss alike — because it is invoked
+        // outside the memoized lookup. It captures the tier for the branch below AND emits the
+        // observation, which until Review Pass 4 it did not: the callback existed solely to write
+        // into `source` and the property had no production sink at either wired consumer.
+        onAccess: (d, s) => {
+          source = s;
+          ctx.onAccess?.({ reason: d.reason, enabled: d.enabled }, s);
+        },
+      },
     );
 
     // Nothing has been authored for this flag anywhere — config still governs.

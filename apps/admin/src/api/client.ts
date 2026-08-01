@@ -1346,6 +1346,13 @@ export type { FeatureFlagEntry, FeatureFlagFlipBody, FeatureFlagVersions };
  * GET the GLOBAL flag catalog — every registered flag resolved against the global tier.
  * Requires feature_flag.view (pariwar_admin+, any tenant, or super_admin).
  */
+/**
+ * ⚠ NO CALLER TODAY (Review Pass 4). Kept deliberately, not by accident: Story 10.8 Pass 1 loosened
+ * `GET /api/v1/global/feature-flags` from `super_admin`-only to `pariwar_admin`+ specifically to
+ * satisfy AC4/PRD's literal "flag inventory is visible to Pariwar Admin role and above", and no
+ * admin surface renders the cross-tenant catalog yet. Re-trigger: the story that adds a global
+ * catalog view. If that story never comes, delete this rather than leaving it to rot.
+ */
 export function listGlobalFeatureFlags(): Promise<FeatureFlagInventory> {
   return apiFetch('/api/v1/global/feature-flags', FeatureFlagInventoryResponse);
 }
@@ -1395,10 +1402,19 @@ export function flipFeatureFlag(
   pariwarId: string,
   flagKey: string,
   body: FeatureFlagFlipBody,
+  /**
+   * Idempotency key for the flip (Review Pass 4). The server's `(pariwar_id, flag_key, version)`
+   * unique constraint only catches a CONCURRENT double-flip; a SEQUENTIAL replay — a request the
+   * client timed out on and retried, or a proxy retry — simply claims the next version and produces
+   * two identical versions with two audit lines, misrepresenting one operator decision as two. The
+   * console is this route's only caller, so if it does not send a key, nothing does.
+   * Follows the `scheduleGroundInspection` precedent above.
+   */
+  idempotencyKey: string,
 ): Promise<FeatureFlagFlipResult> {
   return apiFetch(
     `${featureFlagsBase(pariwarId)}/${encodeURIComponent(flagKey)}/versions`,
     FeatureFlagFlipResponse,
-    { method: 'POST', body: JSON.stringify(body) },
+    { method: 'POST', headers: { 'idempotency-key': idempotencyKey }, body: JSON.stringify(body) },
   );
 }

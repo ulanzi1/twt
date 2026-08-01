@@ -18,6 +18,13 @@ export interface ResolvedKycTransaction {
   pariwarId: string;
   status: string;
   expiresAt: Date;
+  /**
+   * The provider that OWNS this transaction. Selected so the callback can PIN its provider rather
+   * than re-resolving the selection flag (Review Pass 4): `initiate` minted provider-specific OAuth
+   * state, and handing it to a different provider because the flag moved in between strands the
+   * member on a verification failure with no recovery path.
+   */
+  provider: string;
 }
 
 /**
@@ -35,8 +42,9 @@ export async function resolveKycTransactionByState(
     pariwar_id: string;
     status: string;
     expires_at: Date;
+    provider: string;
   }>(
-    `SELECT transaction_id, member_id, pariwar_id, status, expires_at
+    `SELECT transaction_id, member_id, pariwar_id, status, expires_at, provider
        FROM kyc_transactions WHERE state = $1 LIMIT 1`,
     [state],
   );
@@ -48,5 +56,6 @@ export async function resolveKycTransactionByState(
     pariwarId: row.pariwar_id,
     status: row.status,
     expiresAt: row.expires_at,
+    provider: row.provider,
   };
 }

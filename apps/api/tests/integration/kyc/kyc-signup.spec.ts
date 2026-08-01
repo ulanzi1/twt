@@ -46,13 +46,22 @@ async function seedPendingKycMember(t: TestApp): Promise<{ memberId: string; par
   return { memberId, pariwarId };
 }
 
-/** Seed a pending kyc_transaction (the DigiLocker-callback correlation row). */
+/**
+ * Seed a pending kyc_transaction (the callback-correlation row).
+ *
+ * ⚠ `provider` is 'fixture' — the key this suite actually REGISTERS (see `_setup.ts`). It used to
+ * seed 'digilocker' while registering only `fixture`, a mismatch that was invisible because the
+ * callback ignored the recorded provider and re-resolved the active one. Now that the callback PINS
+ * to the transaction's own provider (Review Pass 4 — so a provider flip mid-flow cannot strand a
+ * member holding provider A's OAuth state), a seed naming an unregistered provider is correctly
+ * refused with `kyc.provider_unavailable`.
+ */
 async function seedTransaction(t: TestApp, memberId: string, pariwarId: string): Promise<{ transactionId: string; state: string }> {
   const state = `state-${randomUUID()}`;
   const res = await t.pool.query<{ transaction_id: string }>(
     `INSERT INTO kyc_transactions
        (member_id, pariwar_id, provider, intent, state, code_verifier, redirect_uri, status, expires_at)
-       VALUES ($1, $2, 'digilocker', 'signup', $3, 'verifier', 'https://app.twt.local/kyc/callback', 'pending', now() + interval '15 min')
+       VALUES ($1, $2, 'fixture', 'signup', $3, 'verifier', 'https://app.twt.local/kyc/callback', 'pending', now() + interval '15 min')
        RETURNING transaction_id`,
     [memberId, pariwarId, state],
   );

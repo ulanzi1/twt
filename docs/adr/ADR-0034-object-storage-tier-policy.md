@@ -1,9 +1,9 @@
 # ADR-0034: Object-storage tier + lifecycle policy (bank statements) — wiring deferred to Story 9.3
 
-> **Status:** drafted
-> **Date:** 2026-07-26 (date entered current status)
+> **Status:** ratified (bank-statement portion ONLY — see Ratification below)
+> **Date:** 2026-08-01 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Story 9.2 closure
-> **Ratifying trustees:** — (Trustee ratification is Story 14.7's AR-69 backlog closure, epics.md L4408; author-drafted/ratify-later split, precedent ADR-0026)
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-08-01; logged in `.decision-log.md` Decision 2026-08-01-071
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -71,6 +71,41 @@ reserved seam for that future surface, not a wired path today (corrected at code
 entries; the 9.1 events_log-direct precedent, minimizing new schema), NOT a new table. The parsed
 rows still persist separately (Story 9.4, unchanged).
 
+### Retention scope, stated precisely (so trustees know exactly what is being retained)
+
+The 180-day window governs **exactly two things, and nothing else**:
+
+1. **The uploaded raw bank-statement file/object itself** — the bytes in the
+   `BANK_STATEMENT_BUCKET` blob store, enforced by a GCS Object Lifecycle Management delete rule
+   (age > 180 days).
+2. **That object's own storage-layer metadata** — the object's key, size, content-type, and
+   upload timestamp as tracked by the storage system alongside the blob; this is deleted with the
+   object because it cannot outlive it.
+
+**The 180-day window does NOT apply to, and never deletes:**
+
+- **Reconciliation events** — the `reconciliation.statement-uploaded` events_log event (object
+  key + provenance + counts) is an ordinary events_log row, governed by the Story 1.3 append-only
+  immutability trigger, not the object-lifecycle rule. It is retained under the system's standard
+  permanent-audit-trail posture.
+- **Contribution history** — `contribution.confirmed` / `contribution.reconciliation-mismatch` /
+  `reconciliation.confirmation-reversed` events, and every derived read (contributor list, Yogdaan
+  Bahi, status pill) built on them.
+- **Audit history** — every `admin_reconciliation.*` / `audit.withCompensatingAudit` line the
+  reconciliation flow emits.
+- **Normalized transactional records** — the persisted `bank_statement_entries` rows (ADR-0035
+  Decision D4). These records form part of the trust's reconciliation ledger and therefore follow
+  the trust's financial-record retention policy, rather than the raw bank-statement lifecycle this
+  ADR defines. They are deliberately minimal and re-derivable (a matcher-read cache of the raw
+  statement, not a replacement for it), but once persisted they are ledger data, not disposable
+  intake artifacts — this ADR's 180-day window has no authority over them.
+
+The distinction matters because the raw statement (Tier-1 PII: verbatim sender names, narration,
+account-adjacent detail) is deliberately short-lived, while the reconciliation *decision* it
+produced — the fact that a contribution was confirmed, against which pool, on what evidence — is
+part of the permanent, append-only financial and audit record and is never subject to this or any
+other deletion rule.
+
 ## Alternatives considered
 
 - **Author the full storage wiring now.** Rejected — it is out of 9.2's `[PRIMITIVE]`
@@ -103,12 +138,35 @@ rows still persist separately (Story 9.4, unchanged).
 - Memory: [[project_claim_document_storage_port]] — the blob-store port precedent (Story 6.5)
 - Memory: [[feedback_closure_language_precision]] — authored-vs-deferred discipline
 
+## Ratification (2026-08-01)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-08-01 Trustee Panel session,
+as part of the ADR-0032/0033/0034/0035 batch; logged in `.decision-log.md` Decision
+`2026-08-01-071`. Consent sheet:
+`docs/knowledge-transfer/adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`.
+
+**Scope of what is ratified, stated explicitly:** this ratification covers the **bank-statement
+portion of this ADR ONLY** — Tier-1 PII classification, the `BankStatementStorage` port, and the
+180-day retention window (now precisely scoped, see the amendment below). The KYC-document,
+death-certificate, and Contribution-Note-PDF portions of this same reserved ADR slot remain
+**unauthored and unratified** — this ratification does not extend to them; they stay owned by
+their own future stories.
+
+**One amendment adopted ahead of presentation and applied to this ADR:** the "Retention scope,
+stated precisely" subsection was added, and the `bank_statement_entries` exclusion within it was
+reworded, on trustee request, to: *"these records form part of the trust's reconciliation ledger
+and therefore follow the trust's financial-record retention policy rather than the raw
+bank-statement lifecycle this ADR defines"* — replacing an earlier, vaguer "ordinary
+data-retention posture" phrasing that the panel found insufficiently legible.
+
 ---
 
 ## Changelog
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-08-01 | drafted → ratified (bank-statement portion) | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-08-01 Trustee Panel session as part of the ADR-0032/0033/0034/0035 batch, alongside ADR-0036 ratified earlier the same day. Scope explicitly limited to the bank-statement portion — the KYC/death-cert/Note-PDF portions remain unauthored and unratified. `.decision-log.md` Decision `2026-08-01-071`; consent sheet `adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`. |
 | 2026-07-26 | (initial draft) | BigDev (Solo Builder) | Bank-statement tier POLICY authored under Story 9.2; storage WIRING resolved via explicit deferral to Story 9.3 |
 | 2026-07-26 | drafted → wired (bank-statement portion closed) | BigDev (Claude) | Story 9.3 WIRED the storage: `BankStatementStorage` port + adapters (Decision D3, own `BANK_STATEMENT_BUCKET`), the `StatementScanner` virus-scan seam, the AR-45 `ResilientCall` at the storage/scanner boundary, `signedReadUrl` on the port/adapters, the dual member/staff upload endpoints. **The retention window is set: 180 days** (one 15-day cycle + audit/appeal tail; GCS lifecycle delete rule; bounds Tier-1 PII exposure). Metadata persists as the `reconciliation.statement-uploaded` events_log event (object key + counts, never the entries — the 9.1 events_log-direct precedent), NOT a new table. The "partial: bank-statement portion" caveat on adr-index row 129 is discharged. |
 | 2026-07-26 | correction (code review) | Claude (bmad-code-review) | Corrected an overclaim in the row above: `signedReadUrl` is implemented + unit-tested but has **no live caller in 9.3** (the staff-transcription surface that would call it is out of scope). Reworded the body text accordingly — the wiring is a reserved seam, not an end-to-end path, today. |
+| 2026-08-01 | Pre-ratification revision | BigDev (Solo Builder) | Trustee-requested revision ahead of presentation: added the "Retention scope, stated precisely" subsection, making explicit that the 180-day window covers ONLY the raw uploaded object + its storage-layer metadata, and explicitly does NOT cover reconciliation events, contribution history, audit history, or the normalized `bank_statement_entries` rows (ADR-0035 D4). Refined per a second trustee pass: the `bank_statement_entries` exclusion is now framed as "these records form part of the trust's reconciliation ledger and therefore follow the trust's financial-record retention policy rather than the raw bank-statement lifecycle this ADR defines" — trustee-legible language replacing the earlier vaguer "ordinary data-retention posture" phrasing. |

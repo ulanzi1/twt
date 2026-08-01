@@ -1,9 +1,9 @@
 # ADR-0033: Bank-statement intake pipeline — 5-bank CSV-first parser allowlist
 
-> **Status:** drafted
-> **Date:** 2026-07-26 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-08-01 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Story 9.2 closure
-> **Ratifying trustees:** — (Trustee ratification is Story 14.7's AR-69 backlog closure, epics.md L4408; author-drafted/ratify-later split, precedent ADR-0026)
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-08-01; logged in `.decision-log.md` Decision 2026-08-01-071
 > **Supersedes:** —
 > **Superseded by:** —
 
@@ -124,6 +124,26 @@ named trigger, not a closed item.
 - [Source: packages/bank-parsers/README.md] — the admission workflow + AR-45 seam
 - [Source: docs/knowledge-transfer/adr-index.md, row 130] — the live index row for this ADR
 - Memory: [[feedback_gate_scope_semantic_coverage]], [[feedback_mechanization_split_commitment]], [[feedback_closure_language_precision]]
+- **Note on "reversals" in the golden-file matrix (above):** these are bank-recorded reversal
+  transactions in test data (a bank-side reversed transfer appearing on a statement) — input-data
+  coverage, not a TWT system action. See ADR-0035's "Governance principles › Recovery, not automatic
+  reversal" section for how this ADR family uses "reversal" when it DOES refer to a TWT-side action.
+
+## Ratification (2026-08-01)
+
+Ratified by ≥2 trustees (Dhiraj Rahul + Kalpana Bharti) at the 2026-08-01 Trustee Panel session,
+as part of the ADR-0032/0033/0034/0035 batch; logged in `.decision-log.md` Decision
+`2026-08-01-071`. Consent sheet:
+`docs/knowledge-transfer/adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`.
+
+**Ratified with its baseline-format-assumption risk explicitly carried, not resolved.** The
+5-bank CSV-first parser allowlist ships as designed; the panel affirmed the pipeline's honest
+fallback (an unparseable real file routes to staff transcription, never a silent mis-parse) as
+sufficient to ship behind an unverified assumption — this ratification does NOT assert the
+assumption has been checked against any real bank export. The named re-trigger stands: the first
+real statement upload per bank, at which point the assumption is diffed against reality and golden
+files regenerated if needed. No amendments to this ADR's own content beyond the cross-reference
+note above.
 
 ---
 
@@ -131,5 +151,7 @@ named trigger, not a closed item.
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-08-01 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-08-01 Trustee Panel session as part of the ADR-0032/0033/0034/0035 batch, alongside ADR-0036 ratified earlier the same day, with the baseline-format-assumption risk explicitly carried forward, not resolved. `.decision-log.md` Decision `2026-08-01-071`; consent sheet `adr-ratification-consent-sheet-2026-08-01-bank-statement-batch.md`. |
+| 2026-08-01 | Pre-ratification revision | BigDev (Solo Builder) | Added the cross-reference note distinguishing bank-recorded "reversal" line items from the TWT-side ledger-correction meaning of "reversal" defined in ADR-0035, requested ahead of presentation. |
 | 2026-07-26 | (initial draft) | BigDev (Solo Builder) | Authored under Story 9.2 (5-bank CSV-first allowlist + 50-golden-file regime + parser sandbox) |
 | 2026-07-26 | drafted (transport seams WIRED by Story 9.3) | BigDev (Claude) | Story 9.3 wired the AR-45 external-call resilience at the storage/scanner boundary (the `ResilientCall` retry-with-backoff-3× + per-attempt timeout + circuit-breaker around `BankStatementStorage.put` + `StatementScanner.scan`; a storage/scanner outage → dignified 503, never 500, audit-logged) and the virus-scan quarantine step (the injectable `StatementScanner` seam — no-op/allow-all v1, no real ClamAV vendor yet, the 6.5 `OcrProvider` "no boundary gate until a real vendor" posture; scan runs BEFORE store+parse, an unclean verdict rejects + audit-logs + never stores). The CSV-first / PDF-OCR-deferred posture is UNCHANGED — a non-CSV upload routes to the human "padh lenge" fallback, not an OCR engine (Decision D1). **Baseline-format assumption remains UN-ATTESTED (Decision D7) — carried forward with a named trigger, not backfilled** (see the Baseline-format-assumption section). |

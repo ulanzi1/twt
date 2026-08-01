@@ -157,14 +157,18 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
 describe.skipIf(!hasDatabase)('reports — report_exports lifecycle accessors (AC5)', () => {
   setupLiveDb();
 
-  async function insertPending(tx: Parameters<typeof seedMember>[0], paramsHash = 'hash-1'): Promise<string> {
+  async function insertPending(
+    tx: Parameters<typeof seedMember>[0],
+    paramsHash = 'hash-1',
+    requestedAt = new Date(),
+  ): Promise<string> {
     const row = await reports.insertReportExport(tx, {
       pariwarId: PARIWAR_A,
       requestedByActorId: ACTOR,
       reportType: 'member_roster',
       format: 'csv',
       paramsHash,
-      requestedAt: new Date(),
+      requestedAt,
     });
     return row.reportExportId;
   }
@@ -198,8 +202,13 @@ describe.skipIf(!hasDatabase)('reports — report_exports lifecycle accessors (A
   it('listReportExportsForActor returns the actor own exports, newest-first (review finding: backs the admin console list endpoint)', async () => {
     const { tx, client } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const firstId = await insertPending(tx, 'hash-list-1');
-    const secondId = await insertPending(tx, 'hash-list-2');
+    // Explicit, distinct requestedAt values — ordering is asserted on `requestedAt`, so the test must
+    // not rely on two back-to-back `new Date()` calls landing in different milliseconds. On a fast
+    // local Postgres they can tie, and `ORDER BY requested_at DESC` has no defined tie-break, making
+    // this assertion flaky for a reason that has nothing to do with the code under test.
+    const now = new Date();
+    const firstId = await insertPending(tx, 'hash-list-1', new Date(now.getTime() - 1000));
+    const secondId = await insertPending(tx, 'hash-list-2', now);
 
     const list = await reports.listReportExportsForActor(tx, ACTOR);
     const ids = list.map((r) => String(r.reportExportId));

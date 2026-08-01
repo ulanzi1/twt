@@ -206,6 +206,30 @@ export function requireGlobalPermission(deps: AppDeps, key: string): preHandlerH
  * once per grant at THAT GRANT'S OWN `pariwar` scope (a grant only ever legitimately answers for its
  * own tenant — the same containment rule, just evaluated per-tenant instead of at `global`).
  */
+/**
+ * ⚠ RE-EXAMINATION TRIGGER + THE EXACT GUARANTEE (Review Pass 3).
+ *
+ * WHAT THIS GATE ACTUALLY CHECKS, stated without euphemism: "does this actor hold `key` in ANY
+ * tenant, according to `role_grants`". The pariwar arm derives the TARGET scope from the grant being
+ * tested (`value: g.pariwarId, pariwarId: g.pariwarId`), so the containment comparison can never
+ * fail on scope — only the KEY can reject a grant. And `loadGlobalActorGrants` is a bare
+ * `SELECT … FROM role_grants WHERE user_id = $1`: there is NO tenant-membership check, NO
+ * tenant-liveness check, and no `scopeResolutionHook` on the routes that use this (they have no
+ * `:pariwarId` to resolve).
+ *
+ * WHY THAT IS ACCEPTABLE TODAY — and it is a fact about the repo, not an argument:
+ * there is currently NO Pariwar deactivation or suspension concept anywhere in the codebase, and NO
+ * `role_grants` revocation path at all. So "a stale grant in a dead tenant" is not a reachable state;
+ * a grant exists iff someone deliberately created it. The data this gates is also the CROSS-TENANT
+ * catalog only — pinned to `pariwar_id IS NULL`, identical for every reader, containing no tenant
+ * data — and the corresponding WRITE stays strictly `super_admin` via `requireGlobalPermission`.
+ *
+ * ⚠ RE-EXAMINE THIS GATE BEFORE SHIPPING EITHER OF THESE:
+ *   1. Pariwar deactivation / suspension — a surviving grant in a dead tenant would then silently
+ *      retain cross-tenant catalog access.
+ *   2. A `role_grants` revocation path, or any flow that leaves grants behind on offboarding.
+ * In either case this gate needs a liveness/membership predicate before the feature ships, not after.
+ */
 export function requireGlobalOrAnyPariwarPermission(deps: AppDeps, key: string): preHandlerHookHandler {
   return async function preHandler(request: FastifyRequest): Promise<void> {
     const actorId = request.requestContext.actorId;

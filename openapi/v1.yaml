@@ -3891,6 +3891,11 @@ components:
                 type:
                   - string
                   - "null"
+              last_flip_actor_display:
+                type:
+                  - string
+                  - "null"
+                maxLength: 128
               rationale:
                 type:
                   - string
@@ -3909,6 +3914,7 @@ components:
               - effective_from
               - effective_until
               - last_flip_actor
+              - last_flip_actor_display
               - rationale
             additionalProperties: false
       required:
@@ -3919,6 +3925,8 @@ components:
       properties:
         flag_key:
           type: string
+        has_more:
+          type: boolean
         versions:
           type: array
           items:
@@ -3989,6 +3997,11 @@ components:
                 type:
                   - string
                   - "null"
+              actor_display:
+                type:
+                  - string
+                  - "null"
+                maxLength: 128
               rationale:
                 type: string
                 maxLength: 500
@@ -4012,12 +4025,14 @@ components:
               - effective_from
               - effective_until
               - actor_who_flipped
+              - actor_display
               - rationale
               - superseded_by_version
               - created_at
             additionalProperties: false
       required:
         - flag_key
+        - has_more
         - versions
       additionalProperties: false
     FeatureFlagFlipRequest:
@@ -9423,7 +9438,7 @@ paths:
   /api/v1/global/feature-flags/{flagKey}/versions:
     post:
       summary: Flip a feature flag GLOBALLY (creates a new cross-tenant immutable version) — super_admin only
-      description: "Publishes the next version row for this flag with `pariwar_id: null` — the cross-tenant tier that governs every Pariwar without its own override at once. Strictly higher-privilege than the catalog read (Decision 7's read/write key split), so this is super_admin-only regardless of who can view the catalog. Same immutability, rationale, and 409-on-race semantics as the per-Pariwar flip. Requires feature_flag.flip at `dimension: global`."
+      description: "Publishes the next version row for this flag with `pariwar_id: null` — the cross-tenant tier that governs every Pariwar without its own override at once. Strictly higher-privilege than the catalog read (Decision 7's read/write key split), so this is super_admin-only regardless of who can view the catalog. Same immutability, rationale, and 409-on-race semantics as the per-Pariwar flip. Send an optional `Idempotency-Key` header to make a retried flip safe. NOTE: `effective_from` may not be in the future — scheduled flips are not supported."
       tags: *a48
       parameters:
         - schema:
@@ -9445,7 +9460,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/FeatureFlagFlipResponse"
         "400":
-          description: Request validation failed / unknown flag key / malformed cohort definition
+          description: Request validation failed / malformed cohort definition / invalid dead_by / a staged state (canary|rollout) with no cohort clause / a future effective_from (scheduled flips are not supported)
           content:
             application/json:
               schema:
@@ -9462,8 +9477,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Unknown feature flag key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: A concurrent flip won the race — re-read the latest version and retry
+          description: A concurrent flip won the race; OR an illegal state transition under the staged-rollout ladder (off → canary → rollout → full, rollback from any serving state); OR a flag key not admitted to the capability bar; OR the acting admin has no display_name recorded; OR a flip with this Idempotency-Key is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The governance capability bar (governance_boundary.yaml) is unavailable or invalid on this deploy — no flip can be published until it is fixed
           content:
             application/json:
               schema:
@@ -9543,7 +9570,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
     post:
       summary: Flip a feature flag for this Pariwar (creates a new immutable version)
-      description: Publishes the next version row for this flag in this tenant's scope. Prior rows are NEVER mutated (only their superseded_by_version forward-pointer), so historical flag states stay queryable for replay. `rationale` is REQUIRED and non-empty — FR-58C requires every flag change be audit-logged with actor + rationale, and a §1.5 hash-chain audit line is written on every flip. A concurrent double-flip loses the unique-constraint race and gets 409. Requires feature_flag.flip (narrower than feature_flag.view by design).
+      description: "Publishes the next version row for this flag in this tenant's scope. Prior rows are NEVER mutated (only their superseded_by_version forward-pointer), so historical flag states stay queryable for replay. `rationale` is REQUIRED and non-empty — FR-58C requires every flag change be audit-logged with actor + rationale, and a §1.5 hash-chain audit line is written on every flip. A concurrent double-flip loses the unique-constraint race and gets 409. Requires feature_flag.flip (narrower than feature_flag.view by design). Send an optional `Idempotency-Key` header to make a retried flip safe: a replay with the same key returns the original response instead of creating a second identical version. NOTE: `effective_from` may not be in the future — a flip takes effect immediately and scheduled flips are not supported."
       tags: *a48
       parameters:
         - schema:
@@ -9571,7 +9598,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/FeatureFlagFlipResponse"
         "400":
-          description: Request validation failed / unknown flag key / malformed cohort definition
+          description: Request validation failed / malformed cohort definition / invalid dead_by / a staged state (canary|rollout) with no cohort clause / a future effective_from (scheduled flips are not supported)
           content:
             application/json:
               schema:
@@ -9588,8 +9615,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Unknown feature flag key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: A concurrent flip won the race — re-read the latest version and retry
+          description: A concurrent flip won the race; OR an illegal state transition under the staged-rollout ladder (off → canary → rollout → full, rollback from any serving state); OR a flag key not admitted to the capability bar; OR the acting admin has no display_name recorded; OR a flip with this Idempotency-Key is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The governance capability bar (governance_boundary.yaml) is unavailable or invalid on this deploy — no flip can be published until it is fixed
           content:
             application/json:
               schema:

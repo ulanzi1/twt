@@ -137,3 +137,47 @@ describe('FeatureFlagFlipRequest strictness + wire shape', () => {
     expect(() => FeatureFlagFlipRequest.parse({ ...valid, rationale: 'x'.repeat(501) })).toThrow();
   });
 });
+
+describe('the cohort schema is STRICT in BOTH directions (Review Pass 4)', () => {
+  it('a malformed cohort is rejected on the WRITE path, before it can persist', () => {
+    const bad = FeatureFlagFlipRequest.safeParse({
+      state: 'canary',
+      cohort_definition: { clauses: [{ dimension: 'zodiac', op: 'in', values: ['leo'] }] },
+      fallback_default: false,
+      owner: 'kyc-desk',
+      dead_by: '2027-06-30',
+      rationale: 'x',
+    });
+    expect(bad.success).toBe(false);
+  });
+
+  it('⚠ the READ schema is ALSO strict — resilience belongs in the API projection, not the contract', () => {
+    // An earlier Pass-4 fix made this tolerant via `.catch()` so one malformed persisted row could
+    // not blank the whole admin inventory. Right problem, wrong layer: `ZodCatch` cannot be
+    // expressed in OpenAPI (the generator throws), and a published contract should describe the
+    // shape the API actually emits — not admit that it sometimes emits garbage. `apps/api`'s
+    // `safeCohort` now coerces a degenerate cohort on the way out, so the response is ALWAYS
+    // contract-valid and this schema can stay honest.
+    const parsed = FeatureFlagInventoryResponse.safeParse({
+      flags: [
+        {
+          flag_key: 'kyc_manual_fallback',
+          description: 'x',
+          state: 'off',
+          source: 'default',
+          flag_version: 1,
+          cohort_definition: { clauses: null },
+          fallback_default: false,
+          owner: 'kyc-desk',
+          dead_by: '2026-12-31',
+          effective_from: null,
+          effective_until: null,
+          last_flip_actor: null,
+          last_flip_actor_display: null,
+          rationale: null,
+        },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+});

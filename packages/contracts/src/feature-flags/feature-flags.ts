@@ -69,6 +69,20 @@ export const CohortDefinition = z
 export type CohortDefinition = z.output<typeof CohortDefinition>;
 
 /**
+ * ⚠ The READ side uses this SAME strict shape, deliberately (Review Pass 4).
+ *
+ * An earlier fix made the read schema tolerant (`.catch`) so that one malformed persisted row could
+ * not fail `parse` for a whole inventory response and blank the admin console. That was the right
+ * PROBLEM and the wrong LAYER: a wire contract should describe the shape the API actually emits, and
+ * `ZodCatch` cannot be expressed in OpenAPI at all — the generator throws on it, which is a fair
+ * signal that "sometimes this field is garbage" does not belong in a published contract.
+ *
+ * The resilience now lives where the malformed row actually is: `apps/api`'s projection coerces a
+ * degenerate `cohort_definition` to `{ clauses: [] }` on the way out, so the response is ALWAYS
+ * contract-valid and no consumer has to defend against it.
+ */
+
+/**
  * One inventory entry — a flag's effective resolution for the requested scope, plus the lifecycle
  * metadata the console renders. `flag_version` is the replay pin's version component; together with
  * the scope and `flag_key` it identifies the exact document that decided.
@@ -93,6 +107,12 @@ export const FeatureFlagInventoryEntry = z
     /** The last flip's actor + why (FR-58C: "flag changes audit-logged with actor + rationale"). Both
      *  null on the `default` tier, which is code data and was never flipped by anyone. */
     last_flip_actor: z.string().nullable(),
+    /**
+     * The flipping admin's display name, SNAPSHOT at flip time — the human-readable half of AC4's
+     * "last flip actor". Null means the row predates migration 0089 (attribution snapshotting), NOT
+     * "unknown actor"; render it as "not recorded" rather than substituting the UUID.
+     */
+    last_flip_actor_display: z.string().max(128).nullable(),
     rationale: z.string().max(500).nullable(),
   })
   .strict();
@@ -124,6 +144,8 @@ export const FeatureFlagVersionEntry = z
     effective_from: Iso8601Datetime,
     effective_until: Iso8601Datetime.nullable(),
     actor_who_flipped: z.string().nullable(),
+    /** Display-name snapshot at flip time; null on rows predating migration 0089. */
+    actor_display: z.string().max(128).nullable(),
     rationale: z.string().max(500),
     /** The immutability forward-pointer; null = this is the latest version for its scope. */
     superseded_by_version: z.number().int().positive().nullable(),
@@ -136,6 +158,12 @@ export type FeatureFlagVersionEntry = z.output<typeof FeatureFlagVersionEntry>;
 export const FeatureFlagVersionsResponse = z
   .object({
     flag_key: z.string(),
+    /**
+     * True when the history is deeper than the page returned. Surfaced because the read is bounded
+     * at 100 rows and used to truncate SILENTLY (Review Pass 2) — a consumer rendering provenance
+     * could not tell a complete history from a clipped one.
+     */
+    has_more: z.boolean(),
     versions: z.array(FeatureFlagVersionEntry),
   })
   .strict();
@@ -160,7 +188,17 @@ export const FeatureFlagFlipRequest = z
      *  checked here (the calendar-validity check, e.g. rejecting `2027-02-30`, is server-side). */
     dead_by: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dead_by must be an ISO date (YYYY-MM-DD)'),
     rationale: z.string().min(1).max(500),
-    /** Optional window start; defaults to the DB's now(). */
+    /**
+     * Optional window start; defaults to the DB's `now()`.
+     *
+     * ⚠ MAY NOT BE IN THE FUTURE. Scheduled flips are not supported — a flip takes effect
+     * immediately (Review Pass 2 dropped scheduling: a future-dated version deadlocked the rollback
+     * path, because the effective-from ordering guard then rejected every later flip, including the
+     * audited rollback, until that date arrived). A future value is rejected with
+     * `400 feature_flag.invalid_version`. Not expressed as a `.refine()` here deliberately: "the
+     * future" is server-clock-relative, and a wire-level check against the CLIENT's clock would
+     * reject legitimately-now values under ordinary skew.
+     */
     effective_from: Iso8601Datetime.optional(),
     /** Optional window end; null/absent = open-ended (superseded by the next version instead). */
     effective_until: Iso8601Datetime.optional(),

@@ -2699,7 +2699,8 @@ registry.registerPath({
     'governs every Pariwar without its own override at once. Strictly higher-privilege than the ' +
     'catalog read (Decision 7\'s read/write key split), so this is super_admin-only regardless of who ' +
     'can view the catalog. Same immutability, rationale, and 409-on-race semantics as the per-Pariwar ' +
-    'flip. Requires feature_flag.flip at `dimension: global`.',
+    'flip. Send an optional `Idempotency-Key` header to make a retried flip safe. NOTE: ' +
+    '`effective_from` may not be in the future — scheduled flips are not supported.',
   tags: featureFlagTags,
   request: {
     params: featureFlagGlobalKeyParams,
@@ -2707,10 +2708,12 @@ registry.registerPath({
   },
   responses: {
     200: { description: 'The new GLOBAL flag version', content: { 'application/json': { schema: FeatureFlagFlipResponseComponent } } },
-    400: errorResponse('Request validation failed / unknown flag key / malformed cohort definition'),
+    400: errorResponse('Request validation failed / malformed cohort definition / invalid dead_by / a staged state (canary|rollout) with no cohort clause / a future effective_from (scheduled flips are not supported)'),
     401: errorResponse('Authentication required'),
     403: errorResponse('Forbidden — feature_flag.flip at dimension: global is required (super_admin only)'),
-    409: errorResponse('A concurrent flip won the race — re-read the latest version and retry'),
+    404: errorResponse('Unknown feature flag key'),
+    409: errorResponse('A concurrent flip won the race; OR an illegal state transition under the staged-rollout ladder (off → canary → rollout → full, rollback from any serving state); OR a flag key not admitted to the capability bar; OR the acting admin has no display_name recorded; OR a flip with this Idempotency-Key is already in progress'),
+    503: errorResponse('The governance capability bar (governance_boundary.yaml) is unavailable or invalid on this deploy — no flip can be published until it is fixed'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -2759,7 +2762,10 @@ registry.registerPath({
     'queryable for replay. `rationale` is REQUIRED and non-empty — FR-58C requires every flag change ' +
     'be audit-logged with actor + rationale, and a §1.5 hash-chain audit line is written on every ' +
     'flip. A concurrent double-flip loses the unique-constraint race and gets 409. Requires ' +
-    'feature_flag.flip (narrower than feature_flag.view by design).',
+    'feature_flag.flip (narrower than feature_flag.view by design). Send an optional ' +
+    '`Idempotency-Key` header to make a retried flip safe: a replay with the same key returns the ' +
+    'original response instead of creating a second identical version. NOTE: `effective_from` may ' +
+    'not be in the future — a flip takes effect immediately and scheduled flips are not supported.',
   tags: featureFlagTags,
   request: {
     params: featureFlagKeyParams,
@@ -2767,10 +2773,12 @@ registry.registerPath({
   },
   responses: {
     200: { description: 'The new flag version', content: { 'application/json': { schema: FeatureFlagFlipResponseComponent } } },
-    400: errorResponse('Request validation failed / unknown flag key / malformed cohort definition'),
+    400: errorResponse('Request validation failed / malformed cohort definition / invalid dead_by / a staged state (canary|rollout) with no cohort clause / a future effective_from (scheduled flips are not supported)'),
     401: errorResponse('Authentication required'),
     403: errorResponse('Forbidden — feature_flag.flip is required'),
-    409: errorResponse('A concurrent flip won the race — re-read the latest version and retry'),
+    404: errorResponse('Unknown feature flag key'),
+    409: errorResponse('A concurrent flip won the race; OR an illegal state transition under the staged-rollout ladder (off → canary → rollout → full, rollback from any serving state); OR a flag key not admitted to the capability bar; OR the acting admin has no display_name recorded; OR a flip with this Idempotency-Key is already in progress'),
+    503: errorResponse('The governance capability bar (governance_boundary.yaml) is unavailable or invalid on this deploy — no flip can be published until it is fixed'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

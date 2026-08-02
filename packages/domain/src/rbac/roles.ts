@@ -160,6 +160,26 @@ const FEATURE_FLAG_VIEW = permissionKey('feature_flag.view');
 // would collapse "everyone who can see" into "everyone who can flip"). Every flip carries a REQUIRED bounded
 // rationale + a §1.5 hash-chain audit line. NOT step-up-gated. district_admin DEFERRED (same inert-grant reason).
 const FEATURE_FLAG_FLIP = permissionKey('feature_flag.flip');
+// Story 10.9 (FR-58B) — the Banner/Popup admin key (pariwar-dimension; the helpdesk.create / news.manage /
+// feature_flag.* pariwar-wide precedent — a banner is Pariwar-scoped and the tenant IS the target,
+// resolvable TODAY with no geo-tree). ONE key, not a view/manage split: unlike FEATURE_FLAG_VIEW/FLIP there
+// is no transparency property forcing the read to be broader than the write, so a split would be capability
+// surface with no requirement behind it (the NEWS_MANAGE one-key posture). Gates every admin banner route:
+// list / create / update / publish / retract / detail. Granted to pariwar_admin (the same content-authoring
+// authority that holds NEWS_MANAGE) + super_admin (auto). district_admin DEFERRED (a district-ceiling grant
+// can't satisfy a pariwar check — the HELPDESK_* / NEWS_MANAGE / FEATURE_FLAG_* precedent; granting it would
+// seed an INERT capability). state_trustee excluded for the SAME structural reason (its 'state' ceiling is
+// BROADER than 'pariwar', and containment is asymmetric in EITHER direction — see the FEATURE_FLAG_VIEW note).
+// NOT step-up-gated (a banner publish is not freeze-firing / not in AR-24).
+//
+// ⚠ KNOWN, PO-RATIFIED CONSEQUENCE of the single grant: publishing is tone-review-gated and the gate is
+// default-deny on reviewedBy === authoredBy, so a SINGLE-ADMIN Pariwar cannot publish a banner (nobody else
+// can be the non-author reviewer). This is the identical consequence 10.5's review recorded and the PO
+// deferred on 2026-07-30 (media_comms deliberately kept dormant). It is a deferral with precedent, not a bug
+// — do NOT "fix" it by weakening the gate or minting a second role grant.
+// ACCEPTANCE CONDITION for district_admin: a banner gains a server-derived district AND the gate moves to
+// `dimension: 'district'` — never by widening a pariwar gate to a role that cannot satisfy it.
+const BANNER_MANAGE = permissionKey('banner.manage');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -277,6 +297,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Holding BOTH here is correct; the view/flip split matters at auditor, which holds only the former.
       FEATURE_FLAG_VIEW,
       FEATURE_FLAG_FLIP,
+      // Story 10.9 (FR-58B) — the Banner/Popup admin key (pariwar-dimension). The SOLE non-super_admin
+      // holder: the tenant's content-authoring authority, exactly as for NEWS_MANAGE. A `pariwar`
+      // scopeCeiling satisfies the pariwar-dimension check; district_admin/state_trustee cannot (inert).
+      BANNER_MANAGE,
     ],
     scopeCeiling: 'pariwar',
   },

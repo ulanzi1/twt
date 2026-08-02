@@ -56,6 +56,7 @@ import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index.js';
 import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
+import { registerBannerModule } from './modules/banners/index.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
 import { registerReportsModule } from './modules/reports/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
@@ -278,6 +279,13 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 10.8 — the FR-58C feature-flag admin surface (catalog + effective inventory + versions +
   // the flip). The inventory routes are what make "no secret flags" real.
   registerFeatureFlagsModule(app, deps);
+  // Story 10.9 — the FR-58B banner/popup manager. The ADMIN authoring surface (list/create/edit +
+  // publish/retract) is gated on the NEW `banner.manage` key (pariwar-dimension); the MEMBER surface
+  // (the server-RESOLVED at-most-one-banner + one-popup read, and the idempotent per-member dismiss)
+  // is member-session-gated with no RBAC key and its own openScopeTx. Visibility is a pure READ-TIME
+  // window — nothing is enqueued, no worker activates or archives a banner, and nothing fans out
+  // (banners are in-app, NOT channel-dispatched).
+  registerBannerModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

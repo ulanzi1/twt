@@ -51,9 +51,9 @@ describe('permissionKey smart constructor', () => {
 
 describe('PERMISSION_CATALOG', () => {
   it('is versioned and seeded with exactly the grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(27); // Story 10.8 bump +2 (feature_flag.view/…flip; 26 at 10.7 member.export_roster, 25 at 10.5 news.manage, 24 at 10.4 helpdesk.respond, 23 at 10.3 helpdesk.create, 22 at 9.8 reconciliation.review, 21 at 7.5 +2 pool.fixed_amount_set/…_emergency, 19 at 6.16, 16 at 6.14, 15 at 6.13, 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+    expect(PERMISSION_CATALOG_VERSION).toBe(28); // Story 10.9 bump +1 (banner.manage; 27 at 10.8 +2 feature_flag.view/…flip, 26 at 10.7 member.export_roster, 25 at 10.5 news.manage, 24 at 10.4 helpdesk.respond, 23 at 10.3 helpdesk.create, 22 at 9.8 reconciliation.review, 21 at 7.5 +2 pool.fixed_amount_set/…_emergency, 19 at 6.16, 16 at 6.14, 15 at 6.13, 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(37);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(38);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );
@@ -82,6 +82,14 @@ describe('PERMISSION_CATALOG', () => {
 
   it('includes the Story 10.4 helpdesk responder-console key (helpdesk.respond — the second helpdesk key)', () => {
     expect(isCatalogKey('helpdesk.respond')).toBe(true);
+  });
+
+  it('includes the Story 10.9 Banner/Popup admin key (banner.manage — ONE key, no view/manage split)', () => {
+    expect(isCatalogKey('banner.manage')).toBe(true);
+    // Deliberately NOT split the way 10.8's flags are: there is no transparency property forcing the
+    // banner READ to be broader than the WRITE, so no `banner.view` exists (Decision 6).
+    expect(isCatalogKey('banner.view')).toBe(false);
+    expect(permissionKey('banner.manage')).toBe('banner.manage');
   });
 
   it('includes the Story 2.6 T&C keys (tc.publish, tc.approve)', () => {

@@ -2782,6 +2782,207 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.9 — banners/popups (FR-58B; the admin authoring surface + the MEMBER surface) ──────
+// Six admin routes are `banner.manage`-gated at `dimension: 'pariwar'` (403 on a missing/inert
+// grant). The two MEMBER routes carry NO RBAC key at all — they are member-session-gated, the member
+// JWT is the tenancy authority, and a `:pariwarId` mismatch is a 404 (never a 403, which would leak
+// that the resource exists). Visibility is a pure READ-TIME window: there is no scheduler and no
+// activation/expiry transition, so no route "activates" or "archives" a banner.
+const {
+  CreateBannerRequest,
+  UpdateBannerRequest,
+  PublishBannerRequest,
+  RetractBannerRequest,
+  DismissBannerRequest,
+  BannerResponse,
+  BannerListResponse,
+  MemberBannerListResponse,
+  DismissBannerResponse,
+} = await import('../src/banners/index.js');
+
+const CreateBannerRequestComponent = CreateBannerRequest.openapi('CreateBannerRequest');
+const UpdateBannerRequestComponent = UpdateBannerRequest.openapi('UpdateBannerRequest');
+const PublishBannerRequestComponent = PublishBannerRequest.openapi('PublishBannerRequest');
+const RetractBannerRequestComponent = RetractBannerRequest.openapi('RetractBannerRequest');
+const DismissBannerRequestComponent = DismissBannerRequest.openapi('DismissBannerRequest');
+const BannerComponent = BannerResponse.openapi('Banner');
+const BannerListComponent = BannerListResponse.openapi('BannerList');
+const MemberBannerListComponent = MemberBannerListResponse.openapi('MemberBannerList');
+const DismissBannerResponseComponent = DismissBannerResponse.openapi('DismissBannerResponse');
+
+const bannerPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const bannerIdParams = z.object({ pariwarId: z.string().uuid(), bannerId: z.string().uuid() });
+const bannerForbidden = errorResponse('Not authorized (banner.manage) for this Pariwar');
+const bannerTags = ['banners'];
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/banners',
+  summary: 'List the Pariwar\'s banners (newest-first, paginated, derived-display-state filterable)',
+  description:
+    'The `display_state` filter is a DERIVED state (draft | scheduled | live | expired | retracted) ' +
+    'computed from the stored status plus the valid_from/valid_until window against the server\'s ' +
+    'clock — it is never a stored column. `valid_from` is inclusive and `valid_until` exclusive.',
+  tags: bannerTags,
+  request: { params: bannerPariwarParams },
+  responses: {
+    200: { description: 'The paginated banner list', content: jsonOf(BannerListComponent) },
+    401: errorResponse('Authentication required'),
+    403: bannerForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/banners',
+  summary: 'Create a banner draft',
+  description:
+    'Copy may be incomplete on a draft; all four copy fields become mandatory at publish. A popup ' +
+    'MUST be dismissible (422 otherwise — enforced again by a DB CHECK), and the window must be ' +
+    'non-empty (422 otherwise — likewise). A non-dismissible `banner` IS permitted.',
+  tags: bannerTags,
+  request: {
+    params: bannerPariwarParams,
+    body: { content: jsonOf(CreateBannerRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'The created draft', content: jsonOf(BannerComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: bannerForbidden,
+    422: errorResponse('An undismissable popup, or a window whose valid_until is not after valid_from'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/banners/{bannerId}',
+  summary: 'Read a single banner (admin)',
+  tags: bannerTags,
+  request: { params: bannerIdParams },
+  responses: {
+    200: { description: 'The banner', content: jsonOf(BannerComponent) },
+    401: errorResponse('Authentication required'),
+    403: bannerForbidden,
+    404: errorResponse('Banner not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/p/{pariwarId}/banners/{bannerId}',
+  summary: 'Edit a banner (one unified edit; the server content hash decides whether a re-review is required)',
+  description:
+    'The server recomputes a content hash over the four member-visible copy fields. If the hash is ' +
+    'UNCHANGED (e.g. extending valid_until, flipping display_once_per_member) the edit applies with ' +
+    'no re-review and no revision bump, and every existing member dismissal stands. If the hash ' +
+    'CHANGED on a PUBLISHED banner, a fresh NON-AUTHOR tone-review sign-off is required (409 ' +
+    'otherwise), `revision` is bumped, and every prior dismissal stops suppressing — so the banner ' +
+    're-appears for members who had dismissed the earlier copy. On a draft, copy edits are free. A ' +
+    'retracted banner is terminal and rejects every edit (409).',
+  tags: bannerTags,
+  request: {
+    params: bannerIdParams,
+    body: { content: jsonOf(UpdateBannerRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The updated banner', content: jsonOf(BannerComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: bannerForbidden,
+    404: errorResponse('Banner not found'),
+    409: errorResponse('The banner is retracted (terminal); OR a copy revision on a published banner without a fresh non-author tone-review sign-off; OR the banner\'s status changed concurrently before this edit could be applied'),
+    422: errorResponse('The merged row would be an undismissable popup, an empty window, or a published banner missing a required copy field'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/banners/{bannerId}/publish',
+  summary: 'Publish a banner draft (draft → published)',
+  description:
+    'Publishing does NOT make the banner visible by itself — visibility is the read-time window. A ' +
+    'published banner whose valid_from is in the future reads as `scheduled` and becomes visible ' +
+    'when the clock passes it, with nothing running. Requires all four copy fields (422 otherwise) ' +
+    'and a NON-AUTHOR tone-review sign-off: the publishing actor becomes the reviewer, so the ' +
+    'banner\'s own author cannot publish it (409).',
+  tags: bannerTags,
+  request: {
+    params: bannerIdParams,
+    body: { content: jsonOf(PublishBannerRequestComponent), required: false },
+  },
+  responses: {
+    200: { description: 'The published banner', content: jsonOf(BannerComponent) },
+    401: errorResponse('Authentication required'),
+    403: bannerForbidden,
+    404: errorResponse('Banner not found'),
+    409: errorResponse('Illegal transition for the banner\'s current status; OR the tone-review gate denied (author is the publisher / no sign-off); OR the banner\'s status changed concurrently before publish could be applied'),
+    422: errorResponse('A copy field (title, body, title_hi, body_hi) is missing — Hindi and English are both required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/banners/{bannerId}/retract',
+  summary: 'Retract a banner (draft → retracted as a discard, or published → retracted to pull it down)',
+  description: 'Terminal — a retracted banner is never member-visible again regardless of its window, and there is no un-retract.',
+  tags: bannerTags,
+  request: {
+    params: bannerIdParams,
+    body: { content: jsonOf(RetractBannerRequestComponent), required: false },
+  },
+  responses: {
+    200: { description: 'The retracted banner', content: jsonOf(BannerComponent) },
+    401: errorResponse('Authentication required'),
+    403: bannerForbidden,
+    404: errorResponse('Banner not found'),
+    409: errorResponse('Illegal transition for the banner\'s current status; OR the banner\'s status changed concurrently before retract could be applied'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member/banners',
+  summary: 'The member\'s currently visible banner + popup (RESOLVED server-side)',
+  description:
+    'Returns AT MOST ONE banner and AT MOST ONE popup. Both may be present at once — the two ' +
+    'display modes are independent lanes, so a popup never suppresses the strip. When several ' +
+    'banners of one mode are simultaneously visible, the winner is chosen by a total, replayable ' +
+    'order: severity (critical > warning > info), then valid_from descending, then banner_id ' +
+    'ascending. Resolution happens on the server so every client agrees. Member-session-gated (no ' +
+    'RBAC key); a `pariwarId` that does not match the member\'s own JWT is a 404, not a 403.',
+  tags: bannerTags,
+  request: { params: bannerPariwarParams },
+  responses: {
+    200: { description: 'The resolved banner/popup pair (either or both may be null)', content: jsonOf(MemberBannerListComponent) },
+    401: errorResponse('Authentication required (member session)'),
+    404: errorResponse('The pariwarId does not match the member session'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member/banners/{bannerId}/dismiss',
+  summary: 'Record the member\'s acknowledgement of a banner (dismissed, or an automatic display-once `shown`)',
+  description:
+    'Persists server-side so a reinstall or a second device cannot resurrect a dismissed banner. ' +
+    'The acted-on revision is read from the banner row, never client-supplied. IDEMPOTENT: a ' +
+    'replayed dismiss is a clean no-op returning success, and the recorded revision only ever ' +
+    'advances, so a stale replay cannot un-suppress a banner. A later copy revision re-surfaces the ' +
+    'banner for members who had dismissed the earlier one.',
+  tags: bannerTags,
+  request: {
+    params: bannerIdParams,
+    body: { content: jsonOf(DismissBannerRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The recorded acknowledgement', content: jsonOf(DismissBannerResponseComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required (member session)'),
+    404: errorResponse('The pariwarId does not match the member session, or no such banner in this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

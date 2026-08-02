@@ -294,6 +294,27 @@ export {
   NewsPostScheduleInPastError,
   NEWS_POST_SCHEDULE_IN_PAST_CODE,
 } from './news-blog/errors.js';
+// Story 10.9 — the Banner/Popup `[SURFACE]` module: a mutable-`status` banner lifecycle (Decision 1
+// — NOT event-derived-state) with a pure read-time visibility window (Decision 2 — no scheduler, no
+// worker, no queue), a pure total-order collision resolver (Decision 3), a read-time audience
+// predicate (Decision 4), and one unified edit whose CONTENT HASH decides re-review + the
+// dismissal-invalidating `revision` bump (Decision 5). Full module under the `banners` namespace.
+export * as banners from './banners/index.js';
+// Banner typed errors surfaced at the top level — mirroring the news-blog/niyamavali errors — so the
+// apps/api error-mapping middleware imports the class + code constant from `@twt/domain` directly.
+// ⚠ Every one of these MUST have an arm in the middleware; an unmapped domain error becomes a 500.
+export {
+  BannerNotFoundError,
+  BANNER_NOT_FOUND_CODE,
+  BannerStateError,
+  BANNER_INVALID_STATE_CODE,
+  BannerPopupMustBeDismissibleError,
+  BANNER_POPUP_MUST_BE_DISMISSIBLE_CODE,
+  BannerBilingualRequiredError,
+  BANNER_BILINGUAL_REQUIRED_CODE,
+  BannerWindowInvalidError,
+  BANNER_WINDOW_INVALID_CODE,
+} from './banners/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the
 // notification family register their own), the 5k-item-per-batch cap, per-item RBAC scope-check

@@ -17,6 +17,11 @@
 import { KycProviderError } from '@twt/contracts';
 import {
   AuthorizationDeniedError,
+  BannerBilingualRequiredError,
+  BannerNotFoundError,
+  BannerPopupMustBeDismissibleError,
+  BannerStateError,
+  BannerWindowInvalidError,
   ClaimStateDirectWriteError,
   ClauseIdConflictError,
   ClauseNotFoundError,
@@ -176,6 +181,40 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof NewsPostScheduleInPastError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3b″) Banner/Popup typed errors (Story 10.9). Each owns its code + projector.
+  //   BannerNotFoundError                → 404 banner.not_found (absent, cross-tenant, or a member
+  //                                        `:pariwarId` mismatch — one shape, no existence oracle)
+  //   BannerStateError                   → 409 banner.invalid_state (illegal transition / edit on a
+  //                                        retracted banner / a concurrent state change)
+  //   BannerPopupMustBeDismissibleError  → 422 banner.popup_must_be_dismissible (AC4 "no member
+  //                                        trapped" — the domain half of the DB CHECK)
+  //   BannerBilingualRequiredError       → 422 banner.bilingual_required (all four copy fields are
+  //                                        required at publish, FR-58B/FR-68)
+  //   BannerWindowInvalidError           → 422 banner.window_invalid (valid_until <= valid_from)
+  // ⚠ The tone-review DENY path (publish by the author, or a copy revision without a fresh
+  // non-author sign-off) is NOT here: it reuses the shipped ToneReviewRequiredError → 409, mapped
+  // below, so the gate's structured denial reaches the client unchanged.
+  if (error instanceof BannerNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof BannerStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof BannerPopupMustBeDismissibleError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof BannerBilingualRequiredError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof BannerWindowInvalidError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }

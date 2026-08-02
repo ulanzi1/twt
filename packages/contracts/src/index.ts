@@ -152,6 +152,15 @@ export * from './helpdesk/index.js';
 // test-only sync-guard (tests/news-blog.test.ts).
 export * from './news-blog/index.js';
 
+// Story 10.9 — the Banner/Popup `[SURFACE]` transport contracts (FR-58B): the display-mode /
+// severity / status / DERIVED-display-state / audience / dismissal-kind enums (sync-guarded against
+// the @twt/domain tuples), the create/update/publish/retract/dismiss requests, and the admin +
+// MEMBER response DTOs (the member shape carries no actor ids, no tone-signoff fields and no
+// audience selector; its list is the server-RESOLVED at-most-one-banner + at-most-one-popup pair).
+// Pure Zod (no @twt/domain import in shipped files — the RN bundle boundary); tuples are
+// drift-guarded by a test-only sync-guard (tests/banners.test.ts).
+export * from './banners/index.js';
+
 // Story 10.6 — the bulk-operations `[PRIMITIVE]` transport contracts (FR-49): the shared-evaluator
 // outcome + final-status enums (sync-guarded against the @twt/domain tuples), the bulk-execute
 // request, and the preview/result response DTOs (counts + per-item outcomes + CSV content +

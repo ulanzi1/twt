@@ -310,7 +310,31 @@ export function permissionKey(value: string): PermissionKey {
 // widening a pariwar gate to a role that cannot satisfy it. NOT step-up-gated (a flag flip is not
 // freeze-firing / not in AR-24); its accountability comes from the mandatory `rationale` + the §1.5
 // hash-chain audit line on every flip (AC3), not from re-authentication.
-export const PERMISSION_CATALOG_VERSION = 27 as const;
+// Bumped 27 → 28 at Story 10.9 (added ONE key): `banner.manage` — the FR-58B Banner/Popup admin WRITE +
+// READ gate. Gates every admin banner route (GET/POST/PATCH …/p/:pariwarId/banners[/…] — list/create/
+// update/publish/retract + detail). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the
+// helpdesk.create / news.manage / feature_flag.* pariwar-wide-key precedent; a banner is Pariwar-scoped
+// and the tenant IS the target, resolvable TODAY with no geo-tree). ONE key, not a `banner.view`/
+// `banner.manage` split: UNLIKE 10.8's flags there is no transparency property forcing the read to be
+// broader than the write (nothing in FR-58B says a banner inventory must be visible to a role that may
+// not author one), so a split would be capability surface with no requirement behind it — the 10.5
+// one-key posture, not the 10.8 two-key one. Granted to `pariwar_admin` (the tenant's content-authoring
+// authority, the same holder as `news.manage`) + `super_admin` (auto-derived). `district_admin` is
+// DEFERRED — a `district`-ceiling grant can NEVER satisfy a pariwar-dimension check (scopeContains
+// denies a target broader than the grant; the ceiling check also forbids a district_admin from holding
+// a pariwar-scoped grant), so granting it would seed an INERT/false capability — the EXACT
+// [[project_rbac_geo_scope_containment]] asymmetry 10.3 / 10.4 / 10.5 / 10.8's pariwar-dimension keys
+// already encode (contrast 10.7's `member.export_roster`, which is district-DIMENSION and therefore
+// genuinely district-capable). NO inert district_admin grant is seeded. NOT step-up-gated (publishing a
+// banner is NOT freeze-firing and is NOT in the AR-24 step-up list; its accountability is the mandatory
+// non-author tone-review sign-off + the §1.5 audit line on every create/edit/publish/retract).
+// The MEMBER routes (`GET/POST …/p/:pariwarId/member/banners[…]`) deliberately touch NO key at all —
+// they are `requireMemberSession`-gated with the member JWT as the tenancy authority (the 10.2
+// member-helpdesk precedent), so a member never needs, and can never hold, an RBAC grant.
+// ACCEPTANCE CONDITION: district_admin banner-manage may be enabled only if a banner gains a
+// server-derived district AND the gate moves to `dimension: 'district'` — never by widening a pariwar
+// gate to a role that cannot satisfy it.
+export const PERMISSION_CATALOG_VERSION = 28 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -520,6 +544,16 @@ export const SEED_PERMISSION_KEYS = [
   // design (Decision 7). Every flip carries a REQUIRED bounded `rationale` + a §1.5 hash-chain audit line
   // (AC3). NOT step-up-gated. district_admin DEFERRED for the same inert-grant reason.
   'feature_flag.flip',
+  // Story 10.9 (FR-58B) — the Banner/Popup admin WRITE + READ key. Gates every admin banner route
+  // (GET/POST/PATCH …/p/:pariwarId/banners[/…] — list/create/update/publish/retract + detail). Checked at
+  // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the helpdesk.create / news.manage / feature_flag.*
+  // precedent). ONE key, not a view/manage split: unlike 10.8's flags there is no transparency property
+  // forcing the read broader than the write (the 10.5 one-key posture). Granted to `pariwar_admin` (the same
+  // content-authoring authority that holds news.manage); super_admin auto-derives. district_admin DEFERRED (a
+  // district-ceiling grant can't satisfy a pariwar check — inert; see the version-bump note + roles.ts). NOT
+  // step-up-gated; accountability is the non-author tone-review sign-off + the §1.5 audit line. The MEMBER
+  // banner routes touch NO key — they are member-session-gated (the 10.2 precedent).
+  'banner.manage',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

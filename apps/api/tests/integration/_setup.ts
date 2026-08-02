@@ -511,7 +511,10 @@ export interface InjectResult {
 /** A cookie-threading HTTP client over fastify.inject (no supertest). */
 export function makeClient(app: TestApp['app']): {
   inject(opts: {
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    // PATCH added at Story 10.9: the banner console's ONE unified edit is a PATCH, and this
+    // cookie-jar client is the only way an E2E spec can exercise an admin-session route. The
+    // omission was a helper gap, not a policy — Fastify's `inject` has always accepted PATCH.
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     url: string;
     payload?: object | string;
     headers?: Record<string, string>;

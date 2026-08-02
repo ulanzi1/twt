@@ -163,6 +163,13 @@ import {
   type NewsPostListResponse as NewsPostList,
   type CreateDraftRequest as NewsCreateDraftBody,
   type UpdateDraftRequest as NewsUpdateDraftBody,
+  // Story 10.9 — the Banner/Popup admin authoring surface DTOs.
+  BannerResponse,
+  BannerListResponse,
+  type BannerResponse as Banner,
+  type BannerListResponse as BannerList,
+  type CreateBannerRequest as CreateBannerBody,
+  type UpdateBannerRequest as UpdateBannerBody,
   // Story 10.7 — the reports-&-exports library DTOs.
   ReportExportListResponse,
   ReportRequestResponse,
@@ -1417,4 +1424,62 @@ export function flipFeatureFlag(
     FeatureFlagFlipResponse,
     { method: 'POST', headers: { 'idempotency-key': idempotencyKey }, body: JSON.stringify(body) },
   );
+}
+
+// ── Banner/Popup admin authoring surface (Story 10.9) ─────────────────────────
+const bannersBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/banners`;
+
+/**
+ * GET the Pariwar's banners (newest-first, paginated, filterable by the DERIVED display state).
+ * `displayState` is one of `draft | scheduled | live | expired | retracted` — a derivation over the
+ * stored status plus the window against the SERVER's clock, never a stored column.
+ */
+export function listBanners(
+  pariwarId: string,
+  displayState?: string,
+  limit = 50,
+  offset = 0,
+): Promise<BannerList> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (displayState) q.set('display_state', displayState);
+  return apiFetch(`${bannersBase(pariwarId)}?${q.toString()}`, BannerListResponse);
+}
+
+/** GET a single banner. */
+export function getBanner(pariwarId: string, bannerId: string): Promise<Banner> {
+  return apiFetch(`${bannersBase(pariwarId)}/${encodeURIComponent(bannerId)}`, BannerResponse);
+}
+
+/** POST create a draft. */
+export function createBanner(pariwarId: string, body: CreateBannerBody): Promise<Banner> {
+  return apiFetch(bannersBase(pariwarId), BannerResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+/**
+ * PATCH the ONE unified edit. The SERVER's content hash decides whether this was a copy REVISION: on
+ * a published banner a copy change requires a fresh non-author tone-review sign-off (409 without
+ * one) and bumps `revision`, re-surfacing the banner for every member who had dismissed it. There is
+ * deliberately no client-side "this is a copy change" flag to send.
+ */
+export function updateBanner(pariwarId: string, bannerId: string, patch: UpdateBannerBody): Promise<Banner> {
+  return apiFetch(`${bannersBase(pariwarId)}/${encodeURIComponent(bannerId)}`, BannerResponse, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+/** POST publish (draft → published). Tone-gated: the banner's own author cannot publish it. */
+export function publishBanner(pariwarId: string, bannerId: string): Promise<Banner> {
+  return apiFetch(`${bannersBase(pariwarId)}/${encodeURIComponent(bannerId)}/publish`, BannerResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/** POST retract (draft → retracted as a discard, or published → retracted). Terminal. */
+export function retractBanner(pariwarId: string, bannerId: string): Promise<Banner> {
+  return apiFetch(`${bannersBase(pariwarId)}/${encodeURIComponent(bannerId)}/retract`, BannerResponse, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }

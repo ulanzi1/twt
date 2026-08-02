@@ -230,6 +230,25 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.9 — banner.manage is granted ONLY to pariwar_admin (+ super_admin); district_admin DEFERRED', () => {
+    const KEY = 'banner.manage';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // The same holder set as news.manage: the tenant's content-authoring authority. ONE key — unlike
+    // 10.8's flags there is no transparency property forcing the read broader than the write, so there
+    // is deliberately no `banner.view` to hold separately.
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // district_admin DEFERRED: the gate is `dimension: 'pariwar'`, and a district-ceiling grant can never
+    // satisfy a pariwar-dimension check — granting it would seed an INERT capability (the 10.3/10.4/10.5/
+    // 10.8 asymmetry). check.test.ts pins WHY. state_trustee excluded for the mirror-image reason (its
+    // 'state' ceiling is BROADER than 'pariwar', and containment is asymmetric in either direction).
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 5.3 — pariwar.configure_channels is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'pariwar.configure_channels';
     const holders = defaultRoleBundles

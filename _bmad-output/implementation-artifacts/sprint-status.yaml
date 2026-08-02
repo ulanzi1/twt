@@ -1,4 +1,126 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-02b (10-9-banner-popup-manager-valid-from-until-dismiss: in-progress -> done
+#   via bmad-code-review chunk 2 (apps/api + apps/admin + apps/mobile), completing the two-chunk run
+#   the 2026-08-02a entry below started. 27 raw findings deduped to 25: 11 patch (all applied +
+#   verified), 3 defer (idempotency-key protection on admin banner writes — verified as inheriting
+#   news-blog's identical pattern; Android hardware-back handling for the <BannerHost> popup overlay —
+#   real UX gap outside any AC, needs device testing; admin-vs-mobile severity colour-token mismatch —
+#   cross-platform design-token reconciliation, not a code defect), 11 dismissed as false positives
+#   after verification against precedent (actorRole:null matches the already-tracked 10.8 repo-wide
+#   gap; the fire-and-forget tone-review signoff calls need no .catch — the function returns void and
+#   the sink is documented fire-and-forget/never-throw by the Story 2.2 module; admin route rate limits
+#   + the untested 429 path match the exact helpdesk precedent this route copies; several more —
+#   see the story file's chunk-2 Review Findings section for the full list). The standout finding: the
+#   admin AC5 visibility-verdict's competitor filter checked display_mode only, never audience
+#   targetability, so a state/role/cohort-scoped (invisible-to-everyone) banner could show as the
+#   "Current winner" hiding a real draft — fixed by filtering competitors through isTargetableAudience.
+#   Other applied patches: list isError handling, a real Cancel-abort guard (a `generation` ref, since
+#   TanStack's mutation.reset() doesn't cancel an in-flight promise), stale-error-banner-across-
+#   selection fix, audience_scope_value clearing on scope change, admin pagination controls (AC1 was
+#   explicit that the list must be "paginated" and none existed), onError rollback for both the
+#   optimistic dismiss and the display-once 'shown' report in <BannerHost>, an empty-string-safe
+#   Hindi-first copy fallback, removal of a redundant/risky visually-hidden a11y Text node, and an
+#   admin/server page-size default alignment. Verified post-patch: @twt/admin (223 tests, incl. new
+#   banners-derive.test.ts audience-competitor cases), @twt/mobile (200 tests), @twt/api (798 tests
+#   incl. all 26 banners.spec.ts E2E cases) all green on the live test DB; all three apps typecheck +
+#   lint clean. Both review chunks now fully resolved — no unresolved patch/decision items remain.
+#   development_status[10-9]: done.)
+# last_updated: 2026-08-02a (10-9-banner-popup-manager-valid-from-until-dismiss: review -> in-progress
+#   via bmad-code-review, domain+contracts chunk only (~10,600-line total diff chunked by architectural
+#   layer; the apps/api/apps/admin/apps/mobile chunk is a separate follow-up review run, not yet
+#   started). Three parallel layers (Blind Hunter / Edge Case Hunter / Acceptance Auditor) raised 24
+#   raw findings, deduped to 17: 1 decision-needed (resolved — kept DismissBannerResponse.dismissed_at
+#   as-is), 11 patch (all applied + verified — see below), 1 defer (the updateBanner/publish/retract
+#   lost-update race; verified as a faithful, deliberate inheritance of Story 10.5's own
+#   news-blog/write.ts status-only WHERE-guard pattern, not a 10.9 regression — recorded in
+#   deferred-work.md rather than patched in isolation), 3 dismissed as false positives after
+#   cross-checking against live codebase precedent (nextBannerStatus's Record-typed lookup matches
+#   news-blog's nextPostStatus exactly; the untyped `throw new Error(...)` on empty `.returning()` is
+#   the established 15+-occurrence codebase idiom; the copy-completeness re-check holds by construction
+#   within updateBanner, not by cross-function reliance). Applied patches: recordDismissal status guard
+#   (published-only), display-state.ts exhaustiveness switch (audience.ts parity), severity-rank-first
+#   ordering before clampLimit in read.ts, banners_revision_positive DB CHECK (+ live-DB revert-sanity
+#   test), the BANNER_TARGETABLE_AUDIENCE_SCOPES sync-guard (the enums.ts comment's claim is now true),
+#   audience_scope_value<->audience_scope coupling validation in dto.ts, a bannerSeverityRank fail-soft
+#   test, three OpenAPI 409-cause doc additions (+ v1.yaml regen), a migration privilege-reasoning
+#   comment, the new Date()->injected now() fix across all three write.ts transitions, and the
+#   dismissal_kind/dismissed_at monotonic-ordering fix. Verified post-patch: @twt/contracts (797 tests)
+#   + @twt/domain (2192 tests, incl. all 33 banners integration tests) green on a live test DB — the
+#   only 4 failures are the pre-existing documented cross-pariwar double-run artifact (see the
+#   2026-08-01f entry below), reproduced identically and unrelated to banners; domain-invariants,
+#   schema-diff, and openapi-determinism gates all green; both packages typecheck + lint clean.
+#   development_status[10-9]: in-progress — pending the second review chunk before `done`.)
+# last_updated: 2026-08-01f (10-9-banner-popup-manager-valid-from-until-dismiss: ready-for-dev ->
+#   in-progress -> review via bmad-dev-story. All 8 tasks complete; 207 tests added. ci:local: all 28
+#   static jobs + test(unit) GREEN; the live-DB attestation is a FRESH-DB SINGLE-PASS integration run
+#   (exit 0, 3738 tests, 0 failures). ⚠ The in-ci:local `integration-tests` job reports 4 failures that
+#   are the KNOWN DOUBLE-RUN ARTIFACT, not a regression: ci:local exports DATABASE_URL globally, so
+#   test(unit)'s `turbo run test` ALREADY runs @twt/domain's integration specs (shared vitest include)
+#   and COMMITS rows; integration-tests re-runs them and the exact-count specs see two passes' worth.
+#   Proven three ways: (1) the SAME 4 specs fail identically at baseline 509477e in a throwaway
+#   worktree on UNCHANGED code; (2) they still fail on a FRESH db under full ci:local; (3) they PASS
+#   on a fresh db single-pass. None touch a banner and this story writes NO events_log rows at all
+#   (Decision 1), so it cannot be their cause. TWO CARRIES: (a) twt_dev holds 61 committed events_log
+#   rows from prior sessions (dated 07-31..08-01 06:24) and keeps those specs red until recreated —
+#   deliberately NOT done, recreating a shared local container is the owner's call; (b) the double-run
+#   is a REAL ci:local defect worth fixing at the harness level (scope test(unit) away from the
+#   integration globs, or give the two jobs separate databases) — as it stands the merge gate cannot
+#   report green on an unmodified tree. Migration 0090 = `banners` + `banner_dismissals`
+#   (4 pgEnums; the TWO load-bearing CHECKs — `valid_until > valid_from` and
+#   `display_mode <> 'popup' OR dismissible`; RLS SELECT/INSERT/UPDATE on both tables; NO
+#   state-writer trigger). Decision 1 held: mutable `status` column, no projector / no CI
+#   state-invariant gate / no events_log / no packages/events entry. Decision 2 held: apps/jobs,
+#   packages/queue and packages/channels are UNTOUCHED — visibility is a pure read-time window and
+#   nothing activates or archives a banner. RBAC v27->28, ONE key `banner.manage`, pariwar-dim,
+#   district_admin DEFERRED for the 5th time with the acceptance condition + a revert-sanity pair.
+#   ⚠ THE ONE ARCHITECTURE DEVIATION, and it was forced: AC5 requires the admin editor to call "the
+#   SAME pure resolveVisibleBanners the server uses — never a second, re-implemented comparison",
+#   but Task 1 placed that function in packages/domain, and apps/admin CANNOT import @twt/domain (a
+#   browser bundle; domain drags pg + drizzle + @google-cloud/kms — the same boundary class
+#   [[project_contracts_domain_bundle_boundary]] enforces for the RN bundle), while domain CANNOT
+#   import contracts either (contracts already depends on domain for its sync-guards => a hard
+#   cycle). So `precedence.ts` + `display-state.ts` moved to packages/contracts/src/banners/ — the
+#   only package apps/api AND apps/admin can both reach. Domain keeps the DATA + WRITE invariants;
+#   contracts keeps the READ-TIME PRESENTATION policy; `BANNER_DISPLAY_STATES` stays in
+#   schema/banners.ts as the sync-guard's domain-side target. `resolveMemberBanners` is therefore
+#   GONE from the domain — read.ts exposes `listMemberBannerCandidates` (SQL ∧ audience) and
+#   apps/api composes it with the shared resolver. Net effect: AC5's property is now LITERALLY true
+#   (one implementation, three consumers) instead of nominally true with a duplicate.
+#   Other findings worth carrying: (a) `status-warn-*` / `status-info-*` are NOT in @twt/tokens, so
+#   the sibling admin modules referencing them render UNSTYLED — this module uses only real registry
+#   names and a test pins that, but the pre-existing breakage is un-fixed and owed a follow-up;
+#   (b) the E2E cookie-jar client `makeClient(...).inject` had no PATCH in its method union — a
+#   helper gap that only `tsc` caught (the specs passed at runtime), now widened;
+#   (c) DB-CHECK tests must assert the constraint NAME off `err.cause`, not `err.message` — drizzle
+#   wraps the pg error — which is what gives them revert-sanity teeth;
+#   (d) a copy revision on a PUBLISHED banner needs a NON-AUTHOR, so an author cannot fix their own
+#   typo — the same PO-ratified consequence 10.5 recorded on 2026-07-30, not a bug.
+#   <BannerHost> mounts in app/(tabs)/_layout.tsx, NOT the root _layout.tsx architecture.md:4215
+#   names (the root also wraps the unauthenticated (auth) group); substitution recorded + pinned by
+#   a test on both halves. development_status[10-9]: review.)
+# last_updated: 2026-08-01e (10-9-banner-popup-manager-valid-from-until-dismiss: backlog -> ready-for-dev
+#   via bmad-create-story, baseline commit 509477e (post PR #158/10.8 merge). Saved
+#   10-9-banner-popup-manager-valid-from-until-dismiss.md. Second `[SURFACE]` in the Epic-10
+#   authored-copy family — 10.5's five-layer shape MINUS the scheduler and MINUS dispatch: valid_from/
+#   valid_until is a pure READ-TIME window (no pg-boss, no worker, no QUEUE_NAMES; "auto-archive" is the
+#   clock passing valid_until), and the epic AC is explicit that banners are in-app / NOT
+#   channel-dispatched (no alert_published, no fanOutAlertToMembers, no crypto-boundary concern; apps/jobs
+#   untouched). apps/public is 11a.5's <NoticeboardStrip>, not this story. NEW migration 0090: `banners`
+#   (mutable `status` column per 10.5 Decision 1 — no projector/trigger/state-invariant gate/events_log)
+#   + `banner_dismissals` (the FIRST durable per-member acknowledgement table; pool-onboarding's outcome
+#   is audit-only + client-local). RBAC v27->28, ONE key `banner.manage`, dimension:'pariwar',
+#   district_admin DEFERRED again. TWO NEW load-bearing calls: (D3) a PURE total-order collision resolver
+#   — severity DESC, valid_from DESC, banner_id ASC — closing the gap review-adversarial.md:238 flagged
+#   as unspecified ("one at a time per surface" never said WHICH one), shuffled-input determinism test;
+#   (D5) ONE updateBanner where the CONTENT HASH decides re-review + `revision` bump, which is what makes
+#   AC's "don't re-appear unless updated" mechanical (dismissal suppression = dismissed_revision >=
+#   revision, an integer not a timestamp — dodges the 10.8 DB-clock-vs-app-clock skew finding). "No member
+#   trapped" (popup => dismissible) enforced BOTH as a domain 422 and a DB CHECK. Tone-review gates
+#   publish; its own non-author invariant IS the author!=reviewer rule (no second identity check — 10.5
+#   needed one only because it had a reviewer-assignment step). Member routes: session-gated, own
+#   openScopeTx, 404-not-403. <BannerHost> mounts in (tabs)/_layout.tsx, NOT the root _layout.tsx that
+#   architecture.md:4215 names — the root also wraps (auth) where no session exists; substitution to be
+#   noted in the Dev Agent Record. development_status[10-9]: ready-for-dev.)
 # last_updated: 2026-08-01d (10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant:
 #   FIFTH and FINAL bmad-code-review pass, Group 4 of 4 (ADR-0036 + adr-index + launch-gate Row 12 +
 #   gate-inventory + .decision-log; 314 lines of GOVERNANCE PROSE). Status stays `done`. Layers adapted
@@ -2411,7 +2533,7 @@ development_status:
   10-6-bulk-operations-framework: done
   10-7-reports-exports-library-async-generation-scope-respecting: done
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: done
-  10-9-banner-popup-manager-valid-from-until-dismiss: backlog
+  10-9-banner-popup-manager-valid-from-until-dismiss: done
   10-10-member-moderation-suspend-terminate-restore-reason-codes: backlog
   10-11-trustee-lite-list-signals: backlog
   10-12-per-pariwar-custom-fields-jsonb: backlog

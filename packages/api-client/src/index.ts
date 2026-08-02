@@ -13,6 +13,8 @@ import {
   HelpdeskCategoryListResponse,
   MemberTicketDetailResponse,
   MemberTicketListResponse,
+  MemberBannerListResponse,
+  DismissBannerResponse,
   KycInitiateResponse,
   KycProfileSummaryResponse,
   ImaListResponse,
@@ -1098,3 +1100,56 @@ export function createMemberHelpdeskClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberHelpdeskClient = ReturnType<typeof createMemberHelpdeskClient>;
+
+// ── Member banner/popup client (Story 10.9) ────────────────────────────────────
+
+/**
+ * The member-facing banner surface: the server-RESOLVED at-most-one-banner + at-most-one-popup read,
+ * and the idempotent per-member dismissal write.
+ *
+ * Both routes are member-session-gated with NO RBAC key and NO scope-resolution hook — the member
+ * JWT is the tenancy authority, and a `pariwarId` that is not the member's own answers 404 (never
+ * 403, which would leak that the tenant exists). Resolution happens SERVER-side so every client
+ * agrees on which banner wins; the client renders what it is given and never re-implements the
+ * precedence rules.
+ */
+export function createMemberBannerClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+
+  const base = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/member/banners`;
+
+  return {
+    /**
+     * The member's currently visible banner + popup (session; auth). Either field may be null — that
+     * means "nothing of that mode is visible to you right now", not an error. Both may be non-null
+     * at once: the two display modes are independent lanes.
+     */
+    list(pariwarId: string): Promise<MemberBannerListResponse> {
+      return call(base(pariwarId), MemberBannerListResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Record an acknowledgement (session; auth). `kind: 'dismissed'` is the member acting;
+     * `kind: 'shown'` is the automatic display-once acknowledgement written on first render.
+     *
+     * The acted-on revision is resolved SERVER-side from the banner row and is deliberately not a
+     * parameter — a client must not be able to suppress a revision it has never seen. IDEMPOTENT: a
+     * replay returns 200 with the same (or a higher) revision, never an error.
+     */
+    dismiss(
+      pariwarId: string,
+      bannerId: string,
+      kind: 'dismissed' | 'shown',
+    ): Promise<DismissBannerResponse> {
+      return call(
+        `${base(pariwarId)}/${encodeURIComponent(bannerId)}/dismiss`,
+        DismissBannerResponse,
+        { kind },
+        true,
+        'POST',
+      );
+    },
+  };
+}
+
+export type MemberBannerClient = ReturnType<typeof createMemberBannerClient>;

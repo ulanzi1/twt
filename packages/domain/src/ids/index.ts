@@ -604,3 +604,16 @@ export const featureFlagVersionId = uuidBrand('FeatureFlagVersionId');
 export type NewsPostId = Brand<'NewsPostId'>;
 /** Smart constructor: validates UUID shape, returns a branded `NewsPostId`. */
 export const newsPostId = uuidBrand('NewsPostId');
+
+// ── Story 10.9 — Banner id (§Naming "branding mandatory on a new ID's first PR") ──
+// `BannerId` is the per-row address of a `banners` row (`banners.banner_id`). Like `NewsPostId` and
+// UNLIKE the five event-derived-state primitives (member/claim/pool/alert/helpdesk_ticket), a banner
+// is MUTABLE authored content with a plain `status` column — NOT event-sourced (Story 10.9 Decision
+// 1), so `banner_id` is a plain DB-defaulted `gen_random_uuid()`, has no natural key, and is NOT any
+// event stream's stream_id. It IS load-bearing as the FINAL tiebreak of the Decision 3 collision
+// comparator (severity → valid_from DESC → banner_id ASC), which is what makes that order TOTAL.
+
+/** Per-row address of a banner (`banners.banner_id`). Plain random UUID (not a stream id). */
+export type BannerId = Brand<'BannerId'>;
+/** Smart constructor: validates UUID shape, returns a branded `BannerId`. */
+export const bannerId = uuidBrand('BannerId');

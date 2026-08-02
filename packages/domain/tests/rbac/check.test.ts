@@ -517,3 +517,41 @@ describe('hasPermission — Story 10.5: news.manage pariwar gate + district-ceil
     expect(hasPermission(grants, 'news.manage', pariwarResource, districtCeilingCtx)).toBe(false);
   });
 });
+
+// ── Story 10.9 — banner.manage is a pariwar-dimension gate; district ceiling CANNOT satisfy it ─────
+//
+// The Banner/Popup admin key gates every admin banner route at `dimension: 'pariwar'`. The same
+// asymmetry as the helpdesk / news / feature-flag keys: (1) pariwar_admin (pariwar ceiling) satisfies
+// it; (2) a `district`-ceiling holder can NEVER satisfy the pariwar check — which is exactly why
+// district_admin is DEFERRED rather than granted (granting it would seed an inert capability that reads
+// as authorised in the catalog and is silently denied at every call site). A revert-sanity pair with the
+// roles.test.ts holder assertion (pariwar_admin granted there; district_admin denied here).
+describe('hasPermission — Story 10.9: banner.manage pariwar gate + district-ceiling deferral', () => {
+  const pariwarResource = resource({ dimension: 'pariwar', value: PARIWAR_A });
+
+  it('pariwar_admin (pariwar ceiling) IS allowed banner.manage at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'banner.manage', pariwarResource)).toBe(true);
+  });
+
+  it('DEFERRAL PIN: a district-ceiling holder of banner.manage is DENIED the pariwar check (inert grant)', () => {
+    const districtCeilingCtx: Partial<AuthzContext> = {
+      bundles: [
+        { role: 'test_banner_manage_district', permissions: ['banner.manage'], scopeCeiling: 'district' },
+      ] as unknown as AuthzContext['bundles'],
+    };
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'test_banner_manage_district', scopeDimension: 'district', scopeValue: 'Patna' },
+    ];
+    expect(hasPermission(grants, 'banner.manage', pariwarResource, districtCeilingCtx)).toBe(false);
+  });
+
+  it('an actor with NO banner.manage grant is fail-closed at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'auditor', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'banner.manage', pariwarResource)).toBe(false);
+  });
+});

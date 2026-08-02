@@ -21,6 +21,7 @@ import { GroundInspectionRoute } from './routes/GroundInspectionRoute.js';
 import { HelpdeskOperatorRoute } from './routes/HelpdeskOperatorRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
+import { BannersRoute } from './routes/BannersRoute.js';
 import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
 import { ReportsRoute } from './routes/ReportsRoute.js';
 import { HelpdeskTicketRoute } from './routes/HelpdeskTicketRoute.js';
@@ -130,6 +131,15 @@ const newsRoute = createRoute({
   component: NewsRoute,
 });
 
+// Story 10.9 — the tenant-scoped banner/popup console (list + editor + live preview + the AC5
+// visibility verdict + publish/retract). Distinct from the News/Blog console above: banners are
+// time-bounded in-app chrome, not dispatched announcements.
+const bannersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/banners',
+  component: BannersRoute,
+});
+
 // Story 10.7 — the tenant-scoped reports-&-exports console (request/poll/one-time-download).
 const reportsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -200,6 +210,7 @@ const routeTree = rootRoute.addChildren([
   helpdeskQueueRoute,
   helpdeskTicketRoute,
   newsRoute,
+  bannersRoute,
   reportsRoute,
   featureFlagsRoute,
   groundInspectionRoute,

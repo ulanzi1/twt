@@ -291,6 +291,13 @@ export * from './helpdesk_routing_policy_versions.js';
 // NO projector, NO state-writer trigger, NO CI state-invariant gate, NO events_log stream. Two
 // pgEnums (news_audience_scope + news_post_status) + a `channels` text[] on the real delivery set.
 export * from './news_posts.js';
+// Story 10.9 — the Banner/Popup `[SURFACE]` data model: `banners` (MUTABLE `status` column, the
+// direct 10.5 Decision 1 inheritance — NO projector, NO state-writer trigger, NO CI state-invariant
+// gate, NO events_log stream; four pgEnums: banner_display_mode / banner_severity / banner_status /
+// banner_audience_scope) + `banner_dismissals` (the FIRST durable per-member acknowledgement table).
+// ⚠ `valid_from`/`valid_until` are a pure READ-TIME window (Decision 2): nothing flips a status at
+// activation or expiry, and `scheduled`/`live`/`expired` are DERIVED, never stored.
+export * from './banners.js';
 // Story 10.8 — the feature-flag `[PRIMITIVE]`: `feature_flag_versions` (immutable, versioned,
 // tenant-scoped, audit-anchored rows + the feature_flag_state pgEnum). Like the routing-policy
 // registry above and UNLIKE the five event-derived-state primitives, `state` is an AUTHORED column

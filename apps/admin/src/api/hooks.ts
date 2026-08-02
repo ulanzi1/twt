@@ -876,3 +876,68 @@ export function usePublishNewsPost(pariwarId: string) {
     onSuccess: invalidate,
   });
 }
+
+// ── Banner/Popup admin authoring surface (Story 10.9) ─────────────────────────
+export const bannersKey = (pariwarId: string) => ['banners', pariwarId] as const;
+export const bannerKey = (pariwarId: string, bannerId: string) => ['banner', pariwarId, bannerId] as const;
+
+/** GET the Pariwar's banners, optionally filtered by the DERIVED display state (AC1: paginated). */
+export function useBanners(pariwarId: string, displayState?: string, offset = 0) {
+  return useQuery({
+    queryKey: [...bannersKey(pariwarId), displayState ?? 'all', offset],
+    queryFn: () => api.listBanners(pariwarId, displayState, undefined, offset),
+  });
+}
+
+/** GET a single banner (the editor loads the exact stored row). */
+export function useBanner(pariwarId: string, bannerId: string | null) {
+  return useQuery({
+    queryKey: bannerKey(pariwarId, bannerId ?? 'none'),
+    queryFn: () => api.getBanner(pariwarId, bannerId!),
+    enabled: bannerId != null,
+  });
+}
+
+function useInvalidateBanners(pariwarId: string) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: bannersKey(pariwarId) });
+  };
+}
+
+/** Create a draft, then refresh the list. */
+export function useCreateBanner(pariwarId: string) {
+  const invalidate = useInvalidateBanners(pariwarId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createBanner>[1]) => api.createBanner(pariwarId, body),
+    onSuccess: invalidate,
+  });
+}
+
+/** The ONE unified edit — the server hash decides whether it was a re-reviewed copy revision. */
+export function useUpdateBanner(pariwarId: string) {
+  const invalidate = useInvalidateBanners(pariwarId);
+  return useMutation({
+    mutationFn: (args: { bannerId: string; patch: Parameters<typeof api.updateBanner>[2] }) =>
+      api.updateBanner(pariwarId, args.bannerId, args.patch),
+    onSuccess: invalidate,
+  });
+}
+
+/** Publish (tone-gated — the banner's own author cannot publish it). */
+export function usePublishBanner(pariwarId: string) {
+  const invalidate = useInvalidateBanners(pariwarId);
+  return useMutation({
+    mutationFn: (bannerId: string) => api.publishBanner(pariwarId, bannerId),
+    onSuccess: invalidate,
+  });
+}
+
+/** Retract (terminal). */
+export function useRetractBanner(pariwarId: string) {
+  const invalidate = useInvalidateBanners(pariwarId);
+  return useMutation({
+    mutationFn: (bannerId: string) => api.retractBanner(pariwarId, bannerId),
+    onSuccess: invalidate,
+  });
+}

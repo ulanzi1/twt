@@ -910,6 +910,33 @@ adds two new, lightweight, server-rendered pages (no client JS bundle: `apps/pub
 **best-ever baseline is left put** (`[[project_friction_budget_baseline_ratchet]]`: an in-PR baseline
 only ever *decreases*; a new surface that stays under the ceiling does not raise it).
 
+**Story 10.9 disposition (declaration affirmed, no new row):** the Banner/Popup member surface
+(`apps/mobile/components/banners/{BannerHost.tsx,copy.ts,useMemberBannersQuery.ts}`,
+`apps/mobile/lib/banner-api.ts`, its mount in `apps/mobile/app/(tabs)/_layout.tsx`) introduces
+**zero deliberate friction**:
+
+(1) **The banner strip + popup content itself — admin-authored, read-only, self-suppressing.**
+`<BannerHost>` renders on no session, a loading/failed read, or nothing visible (fail-soft, the
+Story 8.2/8.3 posture); it never blocks navigation or any other feature. The "no member trapped"
+invariant (AC4, enforced by BOTH a domain 422 and a DB CHECK) makes this structural, not just a
+design intent: a popup is ALWAYS dismissible, and a non-dismissible `banner` strip never covers or
+gates the rest of the surface underneath it (Pattern 9 — a blocking *system state* notice, not a
+blocking *interaction*). The member is never asked to decide, upload, or pay anything.
+
+(2) **The dismiss tap — friction-REDUCING, not imposed, the same class as the Story 7.10
+Skip-confirm / `<SaveAndResumeAffordance>`/`<CallHelplineCTA>` affordances already affirmed.** A
+single, optional, ≥44pt tap removes the banner/popup and durably suppresses it (server-side,
+AC3) — it exists so the member need not see the same notice again, which *lowers* the friction of
+subsequent app use rather than raising the cost of the current one. `display_once_per_member`'s
+automatic `shown` report is invisible plumbing, not a member interaction at all.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The **page-weight
+baseline is unchanged**: all touched files are in the authenticated mobile app (`apps/mobile`, EAS
+build is a no-op → `member-app-native` stays a no-op); the page-weight ceilings the gate has teeth
+on cover the PUBLIC `apps/public` Astro surface, which this story does not touch (the
+`<NoticeboardStrip>` public consumer of this same data is Story 11a.5's job, per the epic AC — not
+built here).
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

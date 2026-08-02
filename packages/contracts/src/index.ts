@@ -161,6 +161,16 @@ export * from './news-blog/index.js';
 // drift-guarded by a test-only sync-guard (tests/banners.test.ts).
 export * from './banners/index.js';
 
+// Story 10.10 — the member-moderation `[SURFACE]` transport contracts (FR-56): the action /
+// DERIVED-status / two-family reason-code enums (sync-guarded against the @twt/domain tuples), the
+// suspend/terminate/restore request, and the action / history / moderated-members-list response
+// DTOs. The action is carried by the ROUTE, not the body, so a step-up elevation minted for a
+// restore can never be spent on a termination. ⚠ The free-text rationale is INBOUND-ONLY — it is
+// Tier-1 encrypted at rest and never appears on any response shape. Pure Zod (no @twt/domain import
+// in shipped files — the RN bundle boundary); tuples are drift-guarded by a test-only sync-guard
+// (tests/member-moderation.test.ts).
+export * from './member-moderation/index.js';
+
 // Story 10.6 — the bulk-operations `[PRIMITIVE]` transport contracts (FR-49): the shared-evaluator
 // outcome + final-status enums (sync-guarded against the @twt/domain tuples), the bulk-execute
 // request, and the preview/result response DTOs (counts + per-item outcomes + CSV content +

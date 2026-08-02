@@ -29,6 +29,10 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
+  ModerationActorDisplayMissingError,
+  ModerationRationaleRequiredError,
+  ModerationReasonCodeInvalidError,
+  ModerationStateError,
   NewsPostAuthorReviewerError,
   NewsPostBilingualRequiredError,
   NewsPostNotFoundError,
@@ -215,6 +219,37 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof BannerWindowInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3b‴) Member-moderation typed errors (Story 10.10). Each owns its code + projector.
+  //   ModerationStateError                → 409 member_moderation.invalid_state (the action is illegal
+  //                                         from the CURRENT overlay status — including the
+  //                                         Decision-2 `none --terminate-->` and a re-suspend; raised
+  //                                         BEFORE any write, so a no-op never returns 200)
+  //   ModerationReasonCodeInvalidError    → 422 member_moderation.reason_code_invalid (the code is
+  //                                         undeclared, or its `appliesTo` excludes this action — e.g.
+  //                                         a restore code offered to justify a termination)
+  //   ModerationRationaleRequiredError    → 422 member_moderation.rationale_required (the rationale is
+  //                                         mandatory on EVERY action, not only on an "other" code)
+  //   ModerationActorDisplayMissingError  → 422 member_moderation.actor_display_missing (the domain's
+  //                                         own guard; the apps/api request path fails earlier and
+  //                                         louder via AdminDisplayNameMissingError, but a non-HTTP
+  //                                         caller must still get a typed error, never a 500)
+  if (error instanceof ModerationStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationReasonCodeInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationRationaleRequiredError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationActorDisplayMissingError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }

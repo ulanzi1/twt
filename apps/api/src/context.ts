@@ -111,6 +111,21 @@ export const MEMBER_ADDRESS_FIELD_CLASS = 'member_address';
 export const MEMBER_WITHDRAWAL_FIELD_CLASS = 'member_withdrawal';
 
 /**
+ * Field-class namespace for the member-MODERATION rationale Tier-1 envelope (Story 10.10). Like the
+ * KYC / nominee / medical / address / withdrawal families (and unlike the admin-email / member-mobile
+ * families that key on a fixed global sentinel because their lookup runs pre-scope),
+ * `member_moderation_actions` is a TENANT table — its encryption context keys on the moderated
+ * member's REAL `pariwarId`. Matches the `piiColumn(1, 'member_moderation')` field-class annotation
+ * on the rationale_ciphertext column.
+ *
+ * ⚠ DEDICATED, not shared with `member_withdrawal`: a withdrawal reason is written BY the member
+ * about themselves; a moderation rationale is written ABOUT the member by an admin. Distinct field
+ * classes keep the two decryptable independently, which is what a future differential-retention or
+ * key-rotation policy needs.
+ */
+export const MEMBER_MODERATION_FIELD_CLASS = 'member_moderation';
+
+/**
  * Field-class namespace for the member DATA-EXPORT artifact Tier-1 envelope (Story 3.11). Like the
  * KYC / nominee / medical / address / withdrawal families (and unlike the admin-email / member-mobile
  * families that key on a fixed global sentinel because their lookup runs pre-scope), `data_exports` is
@@ -325,6 +340,24 @@ export interface NewsPublishEnqueuer {
   close?(): Promise<void>;
 }
 
+/**
+ * The Story 10.10 moderation-notice producer contract (AC8). Send-only — apps/api produces, apps/jobs
+ * consumes; NEVER `boss.work()` here.
+ */
+export interface ModerationNotifyEnqueuer {
+  enqueueModerationNotice(input: {
+    readonly moderationActionId: string;
+    readonly memberId: string;
+    readonly pariwarId: string;
+    readonly action: 'suspend' | 'terminate' | 'restore';
+    readonly reasonCode: string;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }): Promise<void>;
+  close?(): Promise<void>;
+}
+
 /** Envelope-encryption + blind-index key material for the admin-identity family. */
 export interface EncryptionDeps {
   readonly kms: encryption.KmsProvider;
@@ -510,6 +543,15 @@ export interface AppDeps {
    * OPTIONAL — omitted in tests + wherever the pg-boss client is not wired.
    */
   readonly newsPublishQueue?: NewsPublishEnqueuer;
+  /**
+   * Member-moderation notice job producer (Story 10.10, Task 5 / AC8) — send-only. After a
+   * suspend/terminate/restore commits, the route enqueues a `MEMBER_MODERATION_NOTIFY` job and the
+   * apps/jobs worker owns the member fan-out. apps/api NEVER calls `fanOutAlertToMembers` itself:
+   * the fan-out needs MEMBER Tier-1 crypto and apps/api's request path carries ADMIN-identity keys
+   * (the 10.4 crypto boundary). Best-effort — a failed enqueue NEVER fails or rolls back the
+   * committed moderation action. OPTIONAL — omitted in tests + wherever pg-boss is not wired.
+   */
+  readonly moderationNotifyQueue?: ModerationNotifyEnqueuer;
   /**
    * Contribution-Note PDF renderer (Story 8.7, D1) — the Yogdaan Pratigya render port. The
    * headless-Chromium adapter in prod/dev (the ONLY engine satisfying both AC2 legs: Devanagari

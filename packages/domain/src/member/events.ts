@@ -18,31 +18,18 @@
 
 import { z } from 'zod';
 
-import { MEMBER_LIFECYCLE_STATES } from '../schema/members.js';
+import { auditShape } from './audit-shape.js';
+import { MODERATION_EVENT_PAYLOAD_SCHEMAS } from './moderation/events.js';
 
-/** Who caused the transition (architecture §1.14 line 1262-1268). `system` = SIE. */
-export const memberActorSchema = z.enum(['member', 'system', 'trustee']);
-export type MemberEventActor = z.infer<typeof memberActorSchema>;
-
-/** A lifecycle-state literal, derived from the one tuple in schema/members.ts. */
-export const memberLifecycleStateSchema = z.enum(MEMBER_LIFECYCLE_STATES);
-
-/**
- * The audit shape every member.* payload carries. `from_state` is nullable — the
- * initial `signup_initiated` event has no prior state. For non-transition markers
- * (`nominees_declared`, `medical_disclosed`, …) `from_state` === `to_state`.
- *
- * NOTE: these are AUDIT metadata. The reducer (member/state.ts) is the runtime
- * authority for the transition — it derives the next state from the CURRENT state
- * + the event TYPE, never from `to_state` in the payload (so a mislabelled payload
- * can never corrupt replay).
- */
-const auditShape = {
-  from_state: memberLifecycleStateSchema.nullable(),
-  to_state: memberLifecycleStateSchema,
-  trigger: z.string().min(1),
-  actor: memberActorSchema,
-};
+// The audit shape + the two literal schemas are DECLARED in `./audit-shape.ts` (Story 10.10) so
+// that `moderation/events.ts` can share them without an import cycle — this module imports the
+// moderation payload schemas below, so the dependency must run one way only. Re-exported here so
+// this module's public API is unchanged.
+export {
+  memberActorSchema,
+  memberLifecycleStateSchema,
+  type MemberEventActor,
+} from './audit-shape.js';
 
 // ── Transition events ─────────────────────────────────────────────────────────
 
@@ -203,7 +190,14 @@ export const PostingUpdatedPayloadSchema = z
   })
   .strict();
 
-// ── The 16-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 19-event vocabulary + the type→schema map (single source) ─────────────
+//
+// Story 10.10 adds the THREE `member.moderation.*` events. They are declared in
+// `moderation/events.ts` (with the moderation overlay they belong to) and folded in here so this
+// map stays the ONE place a `member.*` event binds to its schema. They are lifecycle
+// NON-TRANSITIONS: the reducer's `default: return state` arm makes all three IDENTITY on
+// `members.state` by construction (Decision 1 — moderation is an event-derived OVERLAY, not a
+// `member_lifecycle_state` label; no ALTER TYPE, no reducer arm, no projector edit).
 
 export const MEMBER_EVENT_TYPES = [
   'member.signup_initiated',
@@ -223,6 +217,11 @@ export const MEMBER_EVENT_TYPES = [
   // Story 3.9 — Life Events panel: two NON-TRANSITION markers (address + posting change).
   'member.address_updated',
   'member.posting_updated',
+  // Story 10.10 — moderation OVERLAY: three NON-TRANSITION events on the member's own stream.
+  // They move the ORTHOGONAL moderation status machine (moderation/status.ts), never `members.state`.
+  'member.moderation.suspended',
+  'member.moderation.terminated',
+  'member.moderation.restored',
 ] as const;
 
 /** The dotted `member.*` event-type literal union (the 16 AC1 events). */
@@ -252,4 +251,6 @@ export const MEMBER_EVENT_PAYLOAD_SCHEMAS = {
   // Story 3.9 — Life Events markers (both non-transition; reducer treats them as identity).
   'member.address_updated': AddressUpdatedPayloadSchema,
   'member.posting_updated': PostingUpdatedPayloadSchema,
+  // Story 10.10 — moderation overlay (all three non-transition; reducer treats them as identity).
+  ...MODERATION_EVENT_PAYLOAD_SCHEMAS,
 } as const satisfies Record<MemberEventType, z.ZodTypeAny>;

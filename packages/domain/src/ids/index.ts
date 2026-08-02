@@ -617,3 +617,17 @@ export const newsPostId = uuidBrand('NewsPostId');
 export type BannerId = Brand<'BannerId'>;
 /** Smart constructor: validates UUID shape, returns a branded `BannerId`. */
 export const bannerId = uuidBrand('BannerId');
+
+// ── Story 10.10 — Moderation-action id (§Naming "branding mandatory on a new ID's first PR") ──
+// `ModerationActionId` is the per-row address of a `member_moderation_actions` row. It addresses an
+// APPEND-ONLY DECISION RECORD, not a state object: the member's moderation STATUS is derived by
+// folding the `member.moderation.*` events on the member's own stream (Decision 1), and this table
+// holds only what a plaintext-JSONB event payload may not carry (the Tier-1 rationale ciphertext,
+// the actor display snapshot, the rejoin-lock instant). So — like `NewsPostId`/`BannerId` and unlike
+// the five event-derived-state primitives — it is a plain DB-defaulted `gen_random_uuid()` and is
+// NOT any event stream's stream_id (that is the `member_id`).
+
+/** Per-row address of a moderation decision record (`member_moderation_actions.moderation_action_id`). */
+export type ModerationActionId = Brand<'ModerationActionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ModerationActionId`. */
+export const moderationActionId = uuidBrand('ModerationActionId');

@@ -305,3 +305,12 @@ export * from './banners.js';
 // ⚠ `pariwar_id` is NULLABLE here (NULL = the cross-readable GLOBAL row) — the one deliberate
 // deviation from the sibling tenant tables; see the schema header for its three forced carve-outs.
 export * from './feature_flag_versions.js';
+// Story 10.10 — the member-moderation `[SURFACE]` data model: `member_moderation_actions`, the
+// APPEND-ONLY moderation DECISION RECORD (+ the moderation_action / moderation_reason_code pgEnums,
+// both generated FROM the domain tuples so DB and TS vocabulary cannot drift).
+// ⚠ This is NOT the moderation status. The status is DERIVED by folding the `member.moderation.*`
+// events on the member's own stream (Decision 1) — there is deliberately no mutable status column,
+// no projector, no state-writer trigger, and `MEMBER_LIFECYCLE_STATES` is UNCHANGED. This table
+// carries only what a plaintext-JSONB event payload may not: the Tier-1 rationale ciphertext, the
+// actor display snapshot, and the FR-6 rejoin-lock instant.
+export * from './member_moderation_actions.js';

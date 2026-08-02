@@ -26,6 +26,8 @@ import {
   DETAIL_KEYS,
   HEADLINE_KEYS,
   SECTION_TITLE_KEYS,
+  moderationReasonLabelKey,
+  parseModerationFlag,
   ruleExplanationKey,
 } from './i18n-keys.js';
 import type {
@@ -43,25 +45,45 @@ export interface PresenterOptions {
 /**
  * Derive the headline state from the canonical payload. Ordered most-severe-first so the surfaced label
  * is the strongest applicable standing:
+ *   0. terminated        — (Story 10.10) a moderation TERMINATION. The most severe standing there is:
+ *                          it outranks every other signal, because nothing else the payload says
+ *                          changes the fact that the membership has ended.
  *   1. active            — isValid && isActive (covered + narrowly active).
- *   2. suspended         — a State-Trustee concealment-review flag survived redaction (standing withheld).
+ *   2. suspended         — a State-Trustee concealment-review flag survived redaction, OR (Story
+ *                          10.10) an active moderation SUSPENSION. Both mean "standing withheld,
+ *                          under review", which is why they share one headline state.
  *   3. expired-not-renew — not valid AND still in lock-in (a lock-in violation is terminal, not renewable).
  *   4. expired-renewable — not valid (or valid-but-inactive) with a renewal path: paid before + in grace
  *                          or lapsed-unpaid (renewal restores to active).
  *   5. pending-onboarding — the residual: never paid / mid-signup (no renewal path because never active).
+ *
+ * ── Story 10.10: moderation is the SECOND producer of `suspended-with-reason` ────────────────────
+ * Until now that state was derived from `concealmentFlagged` ALONE — an orphan producer the story
+ * file called out. Moderation now feeds it too, read from the `specialFlags` moderation entry
+ * (`suspended_per_<code>` / `terminated_per_<code>`) that `@twt/validity-service` emits. The
+ * presenter takes NO new input and still computes NO second validity answer: it reads the ONE
+ * canonical payload, exactly as it does for every other signal.
  */
 export function deriveHeadlineState(payload: MemberValidityPayloadDto): HeadlineState {
   const { isValid, isActive, lockInStatus, vyawasthaShulkStatus, medicalDisclosureFlags, specialFlags } =
     payload;
 
+  // Moderation first — a terminated membership is the strongest standing the panel can report, and
+  // no downstream branch (renewal path, lock-in window, grace) is meaningful once it applies.
+  const moderation = parseModerationFlag(specialFlags);
+  if (moderation?.status === 'terminated') return 'terminated-with-reason';
+
   const concealmentFlagged =
     medicalDisclosureFlags.pendingConcealmentFlag || specialFlags.includes(CONCEALMENT_REVIEW_FLAG);
+  const standingWithheld = concealmentFlagged || moderation?.status === 'suspended';
 
   if (isValid && isActive) {
-    // Active, but a surviving concealment-review flag withholds standing pending verifier review.
-    return concealmentFlagged ? 'suspended-with-reason' : 'active';
+    // Active, but a surviving concealment-review flag or a moderation suspension withholds standing.
+    // (`is_valid` already folds moderation in, so a suspended member cannot actually reach this
+    // branch today — the check stays for the concealment producer and as defence in depth.)
+    return standingWithheld ? 'suspended-with-reason' : 'active';
   }
-  if (concealmentFlagged) return 'suspended-with-reason';
+  if (standingWithheld) return 'suspended-with-reason';
 
   const everPaid = vyawasthaShulkStatus.paidThrough !== null;
 
@@ -217,12 +239,23 @@ function specialFlagsSection(payload: MemberValidityPayloadDto): PanelSection {
   const hasConcealment =
     flags.includes(CONCEALMENT_REVIEW_FLAG) || payload.medicalDisclosureFlags.pendingConcealmentFlag;
   const detailKeys = hasConcealment ? [DETAIL_KEYS.concealmentReviewRequired] : [];
+  // Story 10.10 — the moderation flag is surfaced STRUCTURALLY here so a render layer never has to
+  // print the raw `suspended_per_<code>` string. The member-facing PROSE lives on the headline
+  // section (where it explains the headline the member actually reads); duplicating it here would
+  // mean two copies of the same sentence drifting apart.
+  const moderation = parseModerationFlag(flags);
   return {
     id: 'special-flags',
     titleKey: SECTION_TITLE_KEYS['special-flags'],
-    status: hasConcealment ? 'fail' : 'ok',
+    status: hasConcealment || moderation !== null ? 'fail' : 'ok',
     detailKeys,
-    data: { flags, concealmentReviewRequired: hasConcealment },
+    data: {
+      flags,
+      concealmentReviewRequired: hasConcealment,
+      moderationStatus: moderation?.status ?? null,
+      // The LABEL key, never the raw code — the render layer resolves it (UX a11y `:1896`).
+      moderationReasonLabelKey: moderation ? moderationReasonLabelKey(moderation.reasonCode) : null,
+    },
     // Only render when there is a flag to surface (prominent for the Epic 6 verifier console — AC1g).
     visible: flags.length > 0 || hasConcealment,
   };
@@ -239,8 +272,16 @@ function buildRuleExplanations(payload: MemberValidityPayloadDto): RuleExplanati
   }));
 }
 
+/**
+ * Every state from which the APPEAL CTA must be reachable (UX + a11y: "from every failure state").
+ * `terminated-with-reason` belongs here for a reason that is easy to get wrong: FR-56 makes
+ * `restore` a trustee-reachable action from `terminated`, so a terminated member has a genuine
+ * remedy to ask for. Omitting it would leave the one member with the most at stake with no way to
+ * ask anyone to look again.
+ */
 const FAILURE_STATES: ReadonlySet<HeadlineState> = new Set<HeadlineState>([
   'suspended-with-reason',
+  'terminated-with-reason',
   'expired-renewable',
   'expired-not-renewable',
 ]);
@@ -255,6 +296,18 @@ export function buildMemberStatusViewModel(
 ): MemberStatusViewModel {
   const headlineState = deriveHeadlineState(payload);
   const isMember = opts.variant === 'member';
+  const moderation = parseModerationFlag(payload.specialFlags);
+
+  // Story 10.10 (AC9) — the member is owed FULL PROSE explaining the standing, not an error code
+  // (`ux-design-specification.md:1891`), naming the reason as a resolved LABEL. It rides the headline
+  // section because that is where the member reads the standing itself; the `{reason}` param is
+  // resolved by the render layer from `moderationReasonLabelKey`.
+  const moderationDetailKey =
+    moderation === null
+      ? null
+      : moderation.status === 'terminated'
+        ? DETAIL_KEYS.moderationTerminated
+        : DETAIL_KEYS.moderationSuspended;
 
   const headlineSection: PanelSection = {
     id: 'headline',
@@ -265,8 +318,17 @@ export function buildMemberStatusViewModel(
         : headlineState === 'pending-onboarding'
           ? 'info'
           : 'fail',
-    detailKeys: [HEADLINE_KEYS[headlineState]],
-    data: { headlineState, isValid: payload.isValid, isActive: payload.isActive },
+    detailKeys:
+      moderationDetailKey === null
+        ? [HEADLINE_KEYS[headlineState]]
+        : [HEADLINE_KEYS[headlineState], moderationDetailKey],
+    data: {
+      headlineState,
+      isValid: payload.isValid,
+      isActive: payload.isActive,
+      moderationStatus: moderation?.status ?? null,
+      moderationReasonLabelKey: moderation ? moderationReasonLabelKey(moderation.reasonCode) : null,
+    },
     visible: true,
   };
 

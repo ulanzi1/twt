@@ -5,18 +5,29 @@
 // status?" so the two panels cannot drift on eligibility (the most-disputed surface — D4).
 
 /**
- * The five UX headline states (`ux-design-specification.md:1894`), each derived from the canonical
- * `MemberValidityPayload` — never a second source of truth:
+ * The headline states, each derived from the canonical `MemberValidityPayload` — never a second
+ * source of truth:
  *   · active                 — covered + narrowly active (isValid && isActive).
  *   · pending-onboarding      — not yet fully onboarded (never paid / mid-signup).
- *   · suspended-with-reason   — flagged for review (e.g. concealment-review), standing withheld.
+ *   · suspended-with-reason   — standing withheld: a concealment-review flag, or (Story 10.10) an
+ *                               active moderation SUSPENSION.
+ *   · terminated-with-reason  — (Story 10.10) membership ENDED by a moderation decision.
  *   · expired-renewable       — Vyawastha Shulk lapsed but still renewable (grace / lapsed-unpaid).
  *   · expired-not-renewable   — a lock-in violation / terminal standing (not restorable by renewal).
+ *
+ * ⚠ `terminated-with-reason` is a DELIBERATE EXTENSION of the UX spec's FIVE listed panel states
+ * (`ux-design-specification.md:1894`), which never modelled termination — FR-56 postdates that list.
+ * Collapsing it into `suspended-with-reason` was rejected: the two standings differ in what the
+ * member can do next (a suspension is under review; a termination has ended and carries a 12-month
+ * rejoin lock), and telling someone their membership is "under review" when it has ended would be
+ * exactly the kind of soft misinformation UX Stance #5's dignity requirement forbids. Recorded in
+ * the Dev Agent Record.
  */
 export type HeadlineState =
   | 'active'
   | 'pending-onboarding'
   | 'suspended-with-reason'
+  | 'terminated-with-reason'
   | 'expired-renewable'
   | 'expired-not-renewable';
 

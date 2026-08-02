@@ -5,7 +5,9 @@
 // `validityPayloadHash`. Kept DB-free so the 100×-thread determinism gate exercises the exact
 // composition path (AC2) and the field mapping is unit-testable without Postgres.
 
-import { canonicalJsonStringify, type CanonicalJsonValue, type ids, type member } from '@twt/domain';
+// `member` is a VALUE import (not `import type`) since Story 10.10: the assembly reads
+// `member.moderation.NO_MODERATION` as the not-moderated default for callers that omit the overlay.
+import { canonicalJsonStringify, member, type CanonicalJsonValue, type ids } from '@twt/domain';
 import {
   niyamavaliVersionHash,
   R12_GRANTED_YEARS_KEY,
@@ -32,10 +34,23 @@ import type {
 //
 // PRD FR-12A names top-level `is_valid` ("covered for support if death today") + `is_active` ("valid
 // AND past lock-in AND not suspended"). Neither is a Niyamavali clause — they are a composition of the
-// member's lifecycle state. These constants are the SINGLE source of that mapping: refining which
-// states count is a one-line edit here, ZERO engine/rule change. (Recorded as a variance in the Dev
-// Agent Record — the epic AC does not enumerate the exact state set; this is the service's honest
-// composition of the Story 3.1 lifecycle states, not an invented policy.)
+// member's lifecycle state AND (Story 10.10) their moderation standing. These constants + the two
+// derive functions are the SINGLE source of that mapping: refining what counts is a one-line edit
+// here, ZERO engine/rule change. (Recorded as a variance in the Dev Agent Record — the epic AC does
+// not enumerate the exact state set; this is the service's honest composition of the Story 3.1
+// lifecycle states, not an invented policy.)
+//
+// ── Story 10.10, Decision 8: this ONE edit is the ENTIRE moderation enforcement surface ──────────
+// Moderation (suspend / terminate) is an event-derived OVERLAY orthogonal to the lifecycle machine —
+// `members.state` never moves (Decision 1). Enforcement arrives through `is_valid` and NOTHING else.
+// Because `apps/jobs/src/assignable-roster.ts` reads `payload.isValid` and nothing else (the FROZEN
+// AI-7-2 invariant — [[project_assignability_predicate_is_isvalid_only]]), pool assignability, claim
+// eligibility and the rules engine ALL inherit suspension with NO code change of their own.
+//
+// ⚠ DO NOT add a moderation predicate to `assignable-roster.ts`, `peer-mesh-read.ts`, the niyamavali
+// `member_state_in` operator, or any of the five `TERMINAL_STATES` Sets. Forking the check into N
+// places is exactly what the AI-7-2 invariant was frozen to prevent, and a reviewer is instructed to
+// treat any other subfield read on that path as a finding.
 
 /** States where the member is covered for death-benefit support ("valid"): paid + not lapsed/withdrawn. */
 export const VALID_STATES: readonly member.MemberLifecycleState[] = [
@@ -47,12 +62,54 @@ export const VALID_STATES: readonly member.MemberLifecycleState[] = [
 /** States where the member is narrowly ACTIVE (valid, past lock-in, not in grace/lapsed/withdrawn). */
 export const ACTIVE_STATES: readonly member.MemberLifecycleState[] = ['active'];
 
-export function deriveIsValid(state: member.MemberLifecycleState): boolean {
-  return VALID_STATES.includes(state);
+/**
+ * `is_valid` = a covered lifecycle state AND not under moderation (Story 10.10, AC5).
+ *
+ * `moderationStatus` defaults to `'none'` so the ~dozen DB-free unit-test call sites that predate
+ * Story 10.10 keep their meaning. The SERVICE always passes a real, DB-resolved status — see
+ * `service.ts`, where the overlay is resolved alongside `getMemberStateAt` at the same pinned
+ * instant, so the two halves of this composition can never be read from different moments.
+ */
+export function deriveIsValid(
+  state: member.MemberLifecycleState,
+  moderationStatus: member.moderation.ModerationStatus = 'none',
+): boolean {
+  return VALID_STATES.includes(state) && moderationStatus === 'none';
 }
 
-export function deriveIsActive(state: member.MemberLifecycleState): boolean {
-  return ACTIVE_STATES.includes(state);
+/**
+ * `is_active` = a narrowly-active lifecycle state AND not under moderation.
+ *
+ * ⚠ DELIBERATE EXTENSION of Story 10.10 AC5, which names only `deriveIsValid`. PRD FR-12A's OWN
+ * definition of `is_active` is "valid AND past lock-in AND **not suspended**" — so leaving
+ * `is_active: true` for a suspended member would contradict the PRD line this function implements,
+ * and would render the member panel's "active" headline for someone who is suspended. Recorded in
+ * the Dev Agent Record rather than made silently.
+ */
+export function deriveIsActive(
+  state: member.MemberLifecycleState,
+  moderationStatus: member.moderation.ModerationStatus = 'none',
+): boolean {
+  return ACTIVE_STATES.includes(state) && moderationStatus === 'none';
+}
+
+// ── The `special_flags` moderation entries (PRD `prd.md:411` form) ────────────────────────────────
+//
+// `prd.md:411` models suspension as a validity FLAG — `special_flags[], // e.g. "suspended_per_R7E"`
+// — which is itself part of why Decision 1 models moderation as an overlay rather than a lifecycle
+// label. These flags are MEMBER-VISIBLE: they are deliberately NOT added to
+// `STATE_TRUSTEE_ONLY_FLAGS` in redaction.ts, because the member must be told WHY
+// (`ux-design-specification.md:1890-1896`). The Tier-1 free-text rationale stays out of the payload
+// ENTIRELY — only the bounded, non-PII reason CODE ever reaches a member-readable surface.
+
+/** `suspended_per_<reason_code>` / `terminated_per_<reason_code>`, or `null` when unmoderated. */
+export function moderationSpecialFlag(
+  moderationStatus: member.moderation.ModerationStatus,
+  reasonCode: string | null,
+): string | null {
+  if (moderationStatus === 'none') return null;
+  const prefix = moderationStatus === 'suspended' ? 'suspended_per' : 'terminated_per';
+  return `${prefix}_${reasonCode ?? 'unspecified'}`;
 }
 
 // ── Lock-in projection (Story 3.6 snapshot → the payload sub-object) ──────────────────────────────
@@ -197,6 +254,11 @@ export interface AssembleInput {
   memberId: ids.MemberId;
   evaluatedAt: Date;
   memberState: member.MemberLifecycleState;
+  /**
+   * The member's moderation overlay at the SAME pinned instant as `memberState` (Story 10.10).
+   * Optional so DB-free unit tests that predate 10.10 keep compiling; absent ≡ not moderated.
+   */
+  moderationOverlay?: member.moderation.ModerationOverlay;
   lockInStatus: LockInStatusPayload;
   vyawasthaShulkStatus: VyawasthaShulkStatusPayload;
   medicalDisclosureFlags: MedicalDisclosureFlagsPayload;
@@ -214,18 +276,25 @@ export function assemblePayload(input: AssembleInput): MemberValidityPayload {
   const { applicableNiyamavaliClauses, provenanceTrace, specialFlags, ruleRegistryVersion } =
     assembleClauses(input.slots);
 
+  const moderation = input.moderationOverlay ?? member.moderation.NO_MODERATION;
+  // The moderation flag is APPENDED after the clause-order flags so the array stays deterministic
+  // (clause flags in declared clause order, then at most one moderation flag) — the payload hash is
+  // order-sensitive, and a non-deterministic position here would break replay-identity.
+  const moderationFlag = moderationSpecialFlag(moderation.status, moderation.reasonCode);
+  const allSpecialFlags = moderationFlag === null ? specialFlags : [...specialFlags, moderationFlag];
+
   const withoutHash: Omit<MemberValidityPayload, 'validityPayloadHash'> = {
     memberId: input.memberId,
     evaluatedAt: input.evaluatedAt.toISOString(),
     ruleRegistryVersion,
-    isValid: deriveIsValid(input.memberState),
-    isActive: deriveIsActive(input.memberState),
+    isValid: deriveIsValid(input.memberState, moderation.status),
+    isActive: deriveIsActive(input.memberState, moderation.status),
     lockInStatus: input.lockInStatus,
     vyawasthaShulkStatus: input.vyawasthaShulkStatus,
     contributionHistorySummary: CONTRIBUTION_UNAVAILABLE,
     medicalDisclosureFlags: input.medicalDisclosureFlags,
     retirementCoverage: input.retirementCoverage,
-    specialFlags,
+    specialFlags: allSpecialFlags,
     applicableNiyamavaliClauses,
     provenanceTrace,
   };

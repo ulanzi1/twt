@@ -40,6 +40,7 @@ import { createPgBossDataExportEnqueuer } from './modules/data-export/index.js';
 import { createPgBossReportExportEnqueuer } from './modules/reports/index.js';
 import { createPgBossReconciliationMatchEnqueuer } from './modules/reconciliation/index.js';
 import { createPgBossNewsPublishEnqueuer } from './modules/news-blog/queue.js';
+import { createPgBossModerationNotifyEnqueuer } from './modules/member-moderation/queue.js';
 import { createPgBossClaimOcrParityEnqueuer } from './modules/claims/ocr-parity-queue.js';
 import { createPgBossCycleSpawnEnqueuer } from './modules/claims/cycle-spawn-queue.js';
 import {
@@ -348,6 +349,8 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // DELAYED NEWS_PUBLISH job; the immediate publish route enqueues a zero-delay one. The apps/jobs
     // worker owns the audience fan-out (crypto boundary). Same connection string as the app pool.
     newsPublishQueue: await createPgBossNewsPublishEnqueuer(connectionString),
+    // Story 10.10 (AC8) — the moderation-notice producer. Send-only; apps/jobs owns the fan-out.
+    moderationNotifyQueue: await createPgBossModerationNotifyEnqueuer(connectionString),
     // Claim-document object store (Story 6.5, Decision D1) — the live GCS adapter when
     // CLAIM_DOCUMENT_BUCKET is set (private bucket, asia-south1), else a shared local-disk
     // fake (dev/CI — no live bucket). The bytes never touch Postgres; only the object key +

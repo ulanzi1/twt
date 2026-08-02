@@ -31,8 +31,12 @@ const TO_ACTIVE: MemberEventInput[] = [
 ];
 
 describe('Story 3.9 — event vocabulary wiring', () => {
-  it('extends the vocabulary to 16 types including the two Life Events markers', () => {
-    expect(MEMBER_EVENT_TYPES).toHaveLength(16);
+  it('extends the vocabulary to 19 types including the two Life Events markers', () => {
+    // 14 (Story 3.1) + 2 (Story 3.9 Life Events markers, this story) + 3 (Story 10.10 moderation).
+    // ⚠ Story 10.10's three `member.moderation.*` events are ALSO non-transition markers — they move
+    // an ORTHOGONAL moderation overlay, never `members.state` — so they belong to the same identity
+    // family this file exercises, and the count moved 16 → 19 with them.
+    expect(MEMBER_EVENT_TYPES).toHaveLength(19);
     expect(MEMBER_EVENT_TYPES).toContain('member.address_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.posting_updated');
   });

@@ -15,6 +15,8 @@ import type {
   HelplineClaimIntakeRequest,
   HelplineOperatorEventRequest,
   MemberSearchRequest,
+  ModerateMemberRequest,
+  ModerationAction,
 } from '@twt/contracts';
 
 import * as api from './client.js';
@@ -218,6 +220,43 @@ export function useMemberValidity(pariwarId: string, memberId: string | null) {
     queryKey: memberValidityKey(pariwarId, memberId ?? ''),
     queryFn: () => api.getMemberValidity(pariwarId, memberId as string),
     enabled: Boolean(memberId),
+  });
+}
+
+// ── Member moderation (Story 10.10) ───────────────────────────────────────────
+// The three writes share ONE mutation hook parameterized by action, mirroring the server's single
+// `performAction` path — so the console cannot drift from the server on which action it just ran.
+// On success the member's moderation query AND their validity query are BOTH invalidated: a
+// suspension changes `is_valid`, so leaving the validity panel stale would show a suspended member
+// as still covered (the exact contradiction Decision 8 exists to prevent).
+
+/** Query key for a member's moderation standing + history. */
+export function moderationKey(pariwarId: string, memberId: string): readonly unknown[] {
+  return ['moderation', pariwarId, memberId];
+}
+
+/** A member's current moderation standing + history (server-derived `legal_actions`). */
+export function useModerationHistory(pariwarId: string, memberId: string | null) {
+  return useQuery({
+    queryKey: moderationKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getModerationHistory(pariwarId, memberId as string),
+    enabled: Boolean(memberId),
+  });
+}
+
+/** Suspend / terminate / restore a member. A 403 `auth.step_up_required` is the elevation SIGNAL. */
+export function useModerateMember(pariwarId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { action: ModerationAction; body: ModerateMemberRequest }) =>
+      api.moderateMember(pariwarId, memberId as string, input.action, input.body),
+    onSuccess: () => {
+      if (!memberId) return;
+      void qc.invalidateQueries({ queryKey: moderationKey(pariwarId, memberId) });
+      // Moderation folds into `is_valid` — the validity panel MUST refetch or it will contradict
+      // the standing the console just set.
+      void qc.invalidateQueries({ queryKey: memberValidityKey(pariwarId, memberId) });
+    },
   });
 }
 

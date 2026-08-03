@@ -225,7 +225,16 @@ export async function registerModerationNotifyWorker(
   await boss.work(QUEUE_NAMES.MEMBER_MODERATION_NOTIFY, async (jobs: Job[]) => {
     for (const job of jobs) {
       const env = job.data as JobEnvelope<ModerationNotifyPayload>;
-      if (!env?.pariwarId || !env.payload?.memberId || !env.payload?.moderationActionId) {
+      if (
+        !env?.pariwarId ||
+        !env.payload?.memberId ||
+        !env.payload?.moderationActionId ||
+        !env.payload?.action ||
+        !(env.payload.action in NOTICE_KEYS)
+      ) {
+        // `action` is checked structurally here (not just presence) — a missing or unrecognized
+        // value would otherwise make `NOTICE_KEYS[input.action]` resolve to `undefined` deep inside
+        // `buildModerationAlert`, throwing unguarded and aborting every OTHER job in this batch too.
         console.error(
           '[jobs] moderation-notify: malformed job envelope — skipping',
           JSON.stringify({ id: job.id }),

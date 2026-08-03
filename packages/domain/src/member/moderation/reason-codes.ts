@@ -159,6 +159,16 @@ export function reasonCodesForAction(action: ModerationAction): readonly ReasonC
   return ALL_REASON_CODES.filter((c) => REASON_CODE_REGISTRY[c].appliesTo.includes(action));
 }
 
+/**
+ * The full registry as a list, in declared order — what the reason-codes read serves (review
+ * follow-up). The admin console fetches THIS instead of hand-duplicating `appliesTo` + `label` by
+ * value ([[project_story_validate_footguns]] drift risk: the codebase's own convention is ONE
+ * source of truth per registry, not a client-side mirror the server re-checks after the fact).
+ */
+export function listReasonCodeMeta(): readonly ReasonCodeMeta[] {
+  return ALL_REASON_CODES.map((c) => REASON_CODE_REGISTRY[c]);
+}
+
 // EXHAUSTIVENESS: the `satisfies Record<ReasonCode, ReasonCodeMeta>` above makes a declared code
 // without metadata a COMPILE error, and `ReasonCode` is derived from the two tuples — so the tuples
 // and the registry can never drift. The complementary property "every ACTION has at least one code

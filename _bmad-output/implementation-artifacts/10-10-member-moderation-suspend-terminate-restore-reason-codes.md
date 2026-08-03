@@ -4,7 +4,7 @@ baseline_commit: c35571c3c7480c7545b9f0f7509681f945ed5bd3
 
 # Story 10.10: Member Moderation — Suspend / Terminate / Restore + Reason Codes `[SURFACE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -204,6 +204,26 @@ Decisions 4, 5, 6 and 7 follow shipped precedent or an explicit artifact instruc
 
 - [x] **Task 10 — Tests + gates** (AC10)
   - [x] All suites per AC10 including both revert-sanity pairs. Run full `pnpm ci:local` (`--concurrency=4`, `DATABASE_URL` on :5433). **Assert membership, not counts** on every shared-DB read ([[project_live_db_test_gotchas]]). Confirm the static gates (domain-invariants / **member-state-invariant** / schema-diff / pii-scrape / determinism / journal) are green with migration `0091` present, and that `PERMISSION_CATALOG_VERSION` is still 28.
+
+### Review Findings
+
+_Code review of story-10-10 (2026-08-03), diff = `origin/main..HEAD` (66 files, +7323/-139). Three parallel layers: Blind Hunter (diff only), Edge Case Hunter (diff + repo read access), Acceptance Auditor (diff + this spec + repo read access)._
+
+- [x] [Review][Patch] Rationale is permanently unreadable — wire the missing admin decrypt-on-demand read path. **Decision (resolved 2026-08-03): build it.** Task 5's checked-off subtask claims "Reads decrypt through the mirror helper with the established error callback," but `decryptModerationRationale` (`apps/api/src/modules/member-moderation/moderation-crypto.ts`) is never called by any route/handler/UI hook. Add a "view rationale" endpoint + admin trigger using the existing helper (route through `safeDecrypt(...)` per the `claims.verifier-console.handlers.ts:443` precedent), so Task 5's claim becomes true rather than corrected away. [apps/api/src/modules/member-moderation/{routes,handlers,moderation-crypto}.ts]
+- [x] [Review][Patch] Reason-code `appliesTo` metadata is hand-duplicated in the admin UI with no server source. **Decision (resolved 2026-08-03): build it.** Wire a "list reason codes" endpoint returning `ReasonCodeMetaDto` (already defined in contracts, currently unused) and refactor `apps/admin/src/modules/member-status/i18n-en.ts` to consume it instead of its hardcoded, comment-flagged "DUPLICATED BY VALUE" `REASON_CODE_APPLIES_TO` map — removes the drift risk between server enforcement and the admin dropdown entirely. [apps/api/src/modules/member-moderation/{routes,handlers}.ts; packages/contracts/src/member-moderation/dto.ts; apps/admin/src/modules/member-status/i18n-en.ts]
+- [x] [Review][Patch] Concurrent double-moderation on the same member surfaces as an unhandled 500, not the intended 409 [packages/domain/src/member/moderation/write.ts, apps/api/src/middleware/error-mapping/index.ts]
+- [x] [Review][Patch] No member-existence check on moderation write routes — a syntactically valid but nonexistent memberId fabricates a members row [packages/domain/src/member/moderation/write.ts, apps/api/src/modules/member-moderation/handlers.ts]
+- [x] [Review][Patch] Leap-day rejoin-lock date drifts by a day (`setUTCMonth` overflow) [apps/api/src/modules/member-moderation/handlers.ts]
+- [x] [Review][Patch] OTP-send failure is invisible in the moderation step-up UI (missing `requestStepUp.isError` render) [apps/admin/src/modules/member-status/ModerationSection.tsx]
+- [x] [Review][Patch] moderation-notify worker's envelope guard omits `action`, letting one malformed job abort the whole batch [apps/jobs/src/scheduler/moderation-notify.ts]
+- [x] [Review][Patch] Dead `ModerationActorDisplayMissingError` class and its error-mapping branch are never exercised [packages/domain/src/member/moderation/errors.ts, apps/api/src/middleware/error-mapping/index.ts]
+- [x] [Review][Patch] Stale doc comment: `MemberEventType` still says "16 AC1 events" after this diff bumped it to 19 [packages/domain/src/member/events.ts]
+- [x] [Review][Patch] Undocumented, untested precedence between the 422 reason-code check and the 409 transition-legality check [packages/domain/src/member/moderation/write.ts]
+- [x] [Review][Patch] Moderation-driven rejoin block reuses the withdrawal family's audit action name (`member_withdrawal.rejoin_blocked`), contradicting AC7's "must not masquerade as withdrawal" [apps/api/src/modules/auth/member/signup.handlers.ts]
+- [x] [Review][Defer] Reason-code pagination hand-repeats the fetch-limit+1-capped-at-199 trick with no shared helper (2nd instance after Story 10.5) [packages/domain/src/member/moderation/read.ts] — deferred, pre-existing pattern from 10.5, not introduced fresh by this story
+- [x] [Review][Defer] `listModeratedMembersForPariwar`'s raw-SQL DISTINCT ON scans the full per-tenant history before LIMIT/OFFSET [packages/domain/src/member/moderation/read.ts] — deferred, a covering index exists per Task 2 which likely mitigates this; unproven at current scale, revisit if profiling shows a bottleneck
+
+Dismissed as noise / already-recorded decisions (3): `state_trustee`/`district_admin` inert-grant (Decision 4, self-escalated + pinned by 403 tests); no enforced continuity between a suspend's and later terminate's reason code (explicitly rejected in the Dev Agent Record as "inventing policy the PRD does not state"); notification deep-link lands on the announcement feed not the status panel (recorded Known Limitation + forward commitment, Decision 7).
 
 ## Dev Notes
 

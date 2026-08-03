@@ -27,6 +27,8 @@ import {
   type ModeratedMembersListResponse,
   type ModerationActionResponse,
   type ModerationHistoryResponse,
+  type ModerationRationaleResponse,
+  type ReasonCodesListResponse,
 } from '@twt/contracts';
 import { audit, ids, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
@@ -36,7 +38,7 @@ import { AdminDisplayNameMissingError, NotFoundError, UnauthorizedError } from '
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { revokeAllMemberSessions } from '../auth/member/member-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
-import { encryptModerationRationale } from './moderation-crypto.js';
+import { decryptModerationRationale, encryptModerationRationale } from './moderation-crypto.js';
 
 type ModerationAction = memberDomain.moderation.ModerationAction;
 
@@ -47,10 +49,20 @@ const AUDIT_ACTIONS = {
   restore: 'member_moderation.restored',
 } as const satisfies Record<ModerationAction, string>;
 
-/** FR-56 → FR-6: the rejoin lock lifts 12 months after a termination. */
-function addTwelveMonths(from: Date): Date {
+/**
+ * FR-56 → FR-6: the rejoin lock lifts 12 months after a termination.
+ *
+ * `setUTCMonth` does not clamp the day-of-month, so adding 12 months to a Feb-29 termination
+ * (a leap day) can overflow into March of a non-leap target year. Set the day to 1 before
+ * shifting the month, then clamp back to the last valid day of the resulting month.
+ */
+export function addTwelveMonths(from: Date): Date {
+  const day = from.getUTCDate();
   const at = new Date(from.getTime());
+  at.setUTCDate(1);
   at.setUTCMonth(at.getUTCMonth() + 12);
+  const lastDayOfTargetMonth = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 0)).getUTCDate();
+  at.setUTCDate(Math.min(day, lastDayOfTargetMonth));
   return at;
 }
 
@@ -156,6 +168,17 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     action: ModerationAction,
   ): Promise<ModerationActionResponse> {
     const ctx = await writeContextOf(request);
+
+    // (0) A member that does not exist in this Pariwar is a 404 — never a silently-fabricated
+    //     `members` row. `moderateMember`'s overlay read answers `NO_MODERATION` for ANY memberId
+    //     with zero events (it cannot distinguish "unmoderated" from "never existed"), and the
+    //     projector's `onConflictDoUpdate` would otherwise INSERT a fresh `members` row for a
+    //     syntactically-valid but nonexistent UUID. Same existence discipline as `history()` /
+    //     `listModerated` below, and checked BEFORE the rationale guard / KMS encryption so a
+    //     doomed request never spends either.
+    const exists = await memberDomain.memberExists(request.scopeTx!.tx, ctx.pariwarId, ctx.memberId);
+    if (!exists) throw new NotFoundError('Member not found', 'member.not_found');
+
     const body = request.body as ModerateMemberRequest;
     const now = deps.clock();
 
@@ -293,6 +316,44 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     },
 
     /**
+     * GET …/moderation/:moderationActionId/rationale — decrypt ONE rationale on demand.
+     *
+     * The single exception to "the ciphertext never leaves the DB" (AC3): a gated, per-action read,
+     * never a list. Fail-soft on a corrupt/rotated envelope (the `claims.verifier-console.handlers.
+     * ts:115` `safeDecrypt` discipline verbatim) — a single bad envelope answers `null`, never a 500.
+     */
+    async rationale(request: FastifyRequest): Promise<ModerationRationaleResponse> {
+      const ctx = readContextOf(request);
+      const tx = request.scopeTx!.tx;
+      const params = request.params as { moderationActionId: string };
+      const moderationActionId = ids.moderationActionId(params.moderationActionId);
+
+      const row = await memberDomain.moderation.getModerationActionRationale(
+        tx,
+        ctx.pariwarId,
+        ctx.memberId,
+        moderationActionId,
+      );
+      // 404-not-403 on a cross-tenant / cross-member / nonexistent id — RLS plus the explicit
+      // pariwarId+memberId predicate in the accessor means a mismatched combination simply has no
+      // row, never an existence oracle for another Pariwar's data.
+      if (!row) throw new NotFoundError('Moderation action not found', 'member_moderation.action_not_found');
+
+      let rationale: string | null;
+      try {
+        rationale = await decryptModerationRationale(row.rationaleCiphertext, ctx.pariwarId, deps.encryption);
+      } catch (err) {
+        request.log.warn(
+          { err, moderationActionId },
+          'member-moderation: rationale decrypt failed; returning null',
+        );
+        rationale = null;
+      }
+
+      return { moderation_action_id: moderationActionId, rationale };
+    },
+
+    /**
      * GET …/moderation/members — the Pariwar's currently-moderated members (Decision 9).
      * The read Story 10.11's Trustee-Lite view consumes. ⚠ Carries no rationale, ever.
      */
@@ -325,6 +386,24 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           rejoin_permitted_at: r.rejoinPermittedAt ? r.rejoinPermittedAt.toISOString() : null,
         })),
         has_more: hasMore,
+      };
+    },
+
+    /**
+     * GET …/moderation/reason-codes — the full frozen registry (review follow-up).
+     *
+     * The ONE source both the server's `appliesTo` 422 and the admin dropdown now read — no DB, no
+     * pagination (Decision 3: code-level and frozen, not a per-Pariwar-growing list). Gated the
+     * same as every other read on this surface; there is no separate "view reason codes" capability.
+     */
+    async reasonCodes(): Promise<ReasonCodesListResponse> {
+      return {
+        items: memberDomain.moderation.listReasonCodeMeta().map((m) => ({
+          code: m.code,
+          applies_to: [...m.appliesTo] as ReasonCodesListResponse['items'][number]['applies_to'],
+          niyamavali_ref: m.niyamavaliRef,
+          label: m.label,
+        })),
       };
     },
   };

@@ -6,12 +6,14 @@
 // `moderation_action_id`/`moderationActionId`). NO `@twt/domain` import (the RN Metro bundle
 // boundary).
 //
-// ── ⚠ `rationale` is INBOUND-ONLY. It NEVER appears on a response ────────────────────────────────
+// ── ⚠ `rationale` is INBOUND-ONLY on every LIST/ACTION shape; the ciphertext NEVER appears ────────
 // The free-text rationale is Tier-1 encrypted at rest (`member_moderation_actions.
 // rationale_ciphertext`) and the ciphertext is NEVER projected into a DTO — not into the history
-// list, not into the action response, not anywhere. The admin console decrypts a SINGLE rationale on
-// demand through a dedicated read; everything else carries only the bounded, non-PII reason CODE.
-// If you are adding a `rationale` field to a response shape below, stop and re-read AC3.
+// list, not into the action response, not anywhere. The ONE exception is
+// `ModerationRationaleResponse`: a single-item, decrypt-on-demand read (behind the same
+// `member.moderate` gate) that carries the PLAINTEXT rationale for exactly one action, never the
+// ciphertext and never a list. If you are adding a `rationale` field to any OTHER response shape
+// below, stop and re-read AC3.
 
 import { z } from 'zod';
 
@@ -129,6 +131,20 @@ export const ModeratedMembersListResponse = z
   .strict();
 export type ModeratedMembersListResponse = z.output<typeof ModeratedMembersListResponse>;
 
+/**
+ * ONE decrypted rationale, on demand (review follow-up — the read this file's header always
+ * claimed existed). `rationale` is nullable ONLY as the fail-soft outcome of a corrupt/rotated
+ * envelope (the `claims.verifier-console.handlers.ts` `safeDecrypt` discipline) — never because the
+ * rationale was optional to write (AC3 makes it mandatory on every action).
+ */
+export const ModerationRationaleResponse = z
+  .object({
+    moderation_action_id: UuidString,
+    rationale: z.string().nullable(),
+  })
+  .strict();
+export type ModerationRationaleResponse = z.output<typeof ModerationRationaleResponse>;
+
 /** Registry metadata for one reason code — what the admin dropdown renders + filters on (AC9). */
 export const ReasonCodeMetaDto = z
   .object({
@@ -139,3 +155,12 @@ export const ReasonCodeMetaDto = z
   })
   .strict();
 export type ReasonCodeMetaDto = z.output<typeof ReasonCodeMetaDto>;
+
+/**
+ * The full reason-code registry (review follow-up — `ReasonCodeMetaDto` above had no endpoint
+ * that ever returned it, so the admin console hand-duplicated `appliesTo` + `label` by value
+ * instead of reading the ONE frozen source). All 10 codes, always — this is not paginated: the
+ * registry is code-level and frozen (Decision 3), never a per-Pariwar-growing list.
+ */
+export const ReasonCodesListResponse = z.object({ items: z.array(ReasonCodeMetaDto) }).strict();
+export type ReasonCodesListResponse = z.output<typeof ReasonCodesListResponse>;

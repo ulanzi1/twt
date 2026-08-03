@@ -16,7 +16,13 @@ import type { ModerationAction } from '@twt/contracts';
 import { useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { useModerateMember, useModerationHistory, useRequestStepUp, useVerifyStepUp } from '../../api/hooks.js';
+import {
+  useModerateMember,
+  useModerationHistory,
+  useModerationReasonCodes,
+  useRequestStepUp,
+  useVerifyStepUp,
+} from '../../api/hooks.js';
 import { moderationEn as t } from './i18n-en.js';
 import { ModerationHistory, ModerationStrip, type ModerationSubmit } from './ModerationStrip.js';
 
@@ -40,6 +46,7 @@ export interface ModerationSectionProps {
 
 export function ModerationSection({ pariwarId, memberId }: ModerationSectionProps): ReactElement {
   const history = useModerationHistory(pariwarId, memberId);
+  const reasonCodes = useModerationReasonCodes(pariwarId);
   const moderate = useModerateMember(pariwarId, memberId);
   const requestStepUp = useRequestStepUp();
   const verifyStepUp = useVerifyStepUp();
@@ -128,6 +135,11 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
             {messageOf(verifyStepUp.error)}
           </p>
         )}
+        {requestStepUp.isError && (
+          <p role="alert" className="text-xs text-status-fail-fg" data-testid="moderation-otp-request-error">
+            {messageOf(requestStepUp.error)}
+          </p>
+        )}
       </div>
     );
 
@@ -142,6 +154,7 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
     <div className="flex flex-col gap-4">
       <ModerationStrip
         moderation={history.data}
+        reasonCodes={reasonCodes.data?.items ?? []}
         onSubmit={submit}
         processing={moderate.isPending}
         error={submitError}
@@ -151,7 +164,7 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-60">
           {t.historyHeading}
         </h3>
-        <ModerationHistory entries={history.data.entries} />
+        <ModerationHistory entries={history.data.entries} reasonCodes={reasonCodes.data?.items ?? []} />
       </section>
     </div>
   );

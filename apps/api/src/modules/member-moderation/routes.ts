@@ -1,11 +1,13 @@
 // Member-moderation admin routes — Story 10.10 (Task 5; AC2, AC4, AC9).
 //
-// FIVE scope-gated admin routes — the trustee moderation surface:
+// SEVEN scope-gated admin routes — the trustee moderation surface:
 //   · POST …/p/:pariwarId/members/:memberId/moderation/suspend    → none → suspended
 //   · POST …/p/:pariwarId/members/:memberId/moderation/terminate  → suspended → terminated ONLY
 //   · POST …/p/:pariwarId/members/:memberId/moderation/restore    → suspended|terminated → none
 //   · GET  …/p/:pariwarId/members/:memberId/moderation            → standing + history (AC9)
+//   · GET  …/p/:pariwarId/members/:memberId/moderation/:id/rationale → decrypt ONE rationale (review follow-up)
 //   · GET  …/p/:pariwarId/moderation/members                      → the moderated list (Decision 9)
+//   · GET  …/p/:pariwarId/moderation/reason-codes                 → the frozen registry (review follow-up)
 //
 // ── RBAC: the EXISTING `member.moderate` key. NO new key, NO catalog bump ────────────────────────
 // `member.moderate` is already in the v1 seed catalog (`permissions.ts:368`) and already granted to
@@ -46,6 +48,8 @@ import {
   ModeratedMembersListResponse,
   ModerationActionResponse,
   ModerationHistoryResponse,
+  ModerationRationaleResponse,
+  ReasonCodesListResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -75,6 +79,9 @@ const STEP_UP_RESTORE = 'member_moderation_restore';
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 const MemberParam = z
   .object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() })
+  .strict();
+const RationaleParam = z
+  .object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() })
   .strict();
 const ListQuery = z
   .object({
@@ -153,6 +160,19 @@ export function registerMemberModerationRoutes(app: FastifyInstance, deps: AppDe
     h.history,
   );
 
+  // Review follow-up — decrypt ONE rationale on demand. A READ, same posture as `history` above: no
+  // step-up (AR-24 gates consequential WRITES, not looking at one already-committed decision's
+  // reasoning). Gated on the SAME `member.moderate` key — there is no separate "view rationale"
+  // capability, matching every other field on this surface.
+  r.get(
+    '/api/v1/p/:pariwarId/members/:memberId/moderation/:moderationActionId/rationale',
+    {
+      schema: { params: RationaleParam, response: { 200: ModerationRationaleResponse }, tags: [TAG] },
+      preHandler: [adminSession, scope, requireModerate],
+    },
+    h.rationale,
+  );
+
   // Decision 9 — the Pariwar-wide moderated-members list (what Story 10.11 consumes).
   r.get(
     '/api/v1/p/:pariwarId/moderation/members',
@@ -166,5 +186,17 @@ export function registerMemberModerationRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, requireModerate],
     },
     h.listModerated,
+  );
+
+  // Review follow-up — the full frozen reason-code registry (`appliesTo` + `label`), so the admin
+  // dropdown reads the SAME source the server's 422 enforces instead of hand-duplicating it by
+  // value. No DB, no pagination (Decision 3).
+  r.get(
+    '/api/v1/p/:pariwarId/moderation/reason-codes',
+    {
+      schema: { params: PariwarParam, response: { 200: ReasonCodesListResponse }, tags: [TAG] },
+      preHandler: [adminSession, scope, requireModerate],
+    },
+    h.reasonCodes,
   );
 }

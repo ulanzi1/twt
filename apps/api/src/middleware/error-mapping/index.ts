@@ -29,7 +29,6 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
-  ModerationActorDisplayMissingError,
   ModerationRationaleRequiredError,
   ModerationReasonCodeInvalidError,
   ModerationStateError,
@@ -51,6 +50,7 @@ import {
   WaOptInPendingExistsError,
   WaOptInStateError,
   ids,
+  member as memberDomain,
   type ErrorResponseShape,
 } from '@twt/domain';
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
@@ -233,10 +233,9 @@ export function errorMappingHandler(
   //                                         a restore code offered to justify a termination)
   //   ModerationRationaleRequiredError    → 422 member_moderation.rationale_required (the rationale is
   //                                         mandatory on EVERY action, not only on an "other" code)
-  //   ModerationActorDisplayMissingError  → 422 member_moderation.actor_display_missing (the domain's
-  //                                         own guard; the apps/api request path fails earlier and
-  //                                         louder via AdminDisplayNameMissingError, but a non-HTTP
-  //                                         caller must still get a typed error, never a 500)
+  //   (Actor-display attribution is resolved and validated entirely at the apps/api layer via
+  //   AdminDisplayNameMissingError, mapped below — `moderateMember`'s `actorDisplay` is a required
+  //   `string`, so the domain has no code path that can raise a "missing" error of its own.)
   if (error instanceof ModerationStateError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
     return;
@@ -246,10 +245,6 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof ModerationRationaleRequiredError) {
-    void reply.status(422).send(error.toErrorResponse(requestId));
-    return;
-  }
-  if (error instanceof ModerationActorDisplayMissingError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }
@@ -322,6 +317,26 @@ export function errorMappingHandler(
   }
 
   // (4) Known domain errors.
+  //
+  // MemberStreamConcurrencyError: two concurrent writers raced the SAME member's event stream
+  // (any `member.*` event append — moderation suspend/terminate/restore, medical disclosure,
+  // RTBF, life-events, …) and the loser lost the `events_log` `(stream_id, event_version)`
+  // unique-index race (`packages/domain/src/member/project.ts`). This is an EXPECTED, retriable
+  // condition, not a server bug — the caller re-reads the member's current standing and retries.
+  // Mapped centrally here (rather than per-module) so every `projectMemberState` caller gets a
+  // clean 409 instead of falling through to the generic 500 (Story 10.10 review finding).
+  if (error instanceof memberDomain.MemberStreamConcurrencyError) {
+    void reply
+      .status(409)
+      .send(
+        envelope(
+          'member.stream_concurrency_conflict',
+          'A concurrent update to this member was already applied — please retry',
+          requestId,
+        ),
+      );
+    return;
+  }
   if (error instanceof InvalidPariwarScopeError) {
     void reply.status(400).send(envelope('scope.invalid', 'Invalid Pariwar scope', requestId));
     return;

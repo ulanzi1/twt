@@ -101,6 +101,33 @@ export async function listModerationHistoryForMember(
 }
 
 /**
+ * ONE moderation action's ciphertext, tenant + member scoped. The ONLY accessor that ever selects
+ * `rationale_ciphertext` for a single row (review follow-up — wires the "decrypts a SINGLE
+ * rationale on demand" read this header always claimed existed). The route decrypts; a list DTO
+ * never carries this field, and this accessor is never called for a list.
+ */
+export async function getModerationActionRationale(
+  db: Db,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+  moderationActionId: ModerationActionId,
+): Promise<{ rationaleCiphertext: string } | null> {
+  const rows = await db
+    .select({ rationaleCiphertext: memberModerationActions.rationaleCiphertext })
+    .from(memberModerationActions)
+    .where(
+      and(
+        eq(memberModerationActions.pariwarId, pariwarId),
+        eq(memberModerationActions.memberId, memberId),
+        eq(memberModerationActions.moderationActionId, moderationActionId),
+      ),
+    )
+    .limit(1);
+  const row = rows[0];
+  return row ? { rationaleCiphertext: row.rationaleCiphertext } : null;
+}
+
+/**
  * The Pariwar's currently-moderated members (Decision 9), newest-action-first. Tenant-scoped.
  *
  * ── Why the LATEST ACTION ROW, and why that is not a second source of truth ─────────────────────

@@ -27,6 +27,7 @@ import {
   ModerationActionResponse,
   ModerationHistoryResponse,
   ModeratedMembersListResponse,
+  ReasonCodesListResponse,
   VerifierConsoleResponse,
   type VerifierConsoleResponse as VerifierConsole,
   VerifierDecisionResponse,
@@ -130,6 +131,7 @@ import {
   type ModerationActionResponse as ModerationActionResult,
   type ModerationHistoryResponse as ModerationHistoryResult,
   type ModeratedMembersListResponse as ModeratedMembersListResult,
+  type ReasonCodesListResponse as ReasonCodesListResult,
   type StepUpRequestResponse as StepUpRequestResult,
   type StepUpVerifyResponse as StepUpVerifyResult,
   type AddPariwarRequest as AddPariwarPayload,
@@ -465,6 +467,17 @@ export function listModeratedMembers(
   return apiFetch(
     `/api/v1/p/${encodeURIComponent(pariwarId)}/moderation/members?limit=${limit}`,
     ModeratedMembersListResponse,
+  );
+}
+
+/**
+ * GET the full frozen moderation reason-code registry (review follow-up) — the ONE source both
+ * the server's `appliesTo` 422 and the moderation strip's dropdown/labels read. Not paginated.
+ */
+export function getModerationReasonCodes(pariwarId: string): Promise<ReasonCodesListResult> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/moderation/reason-codes`,
+    ReasonCodesListResponse,
   );
 }
 

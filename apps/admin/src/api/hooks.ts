@@ -244,6 +244,20 @@ export function useModerationHistory(pariwarId: string, memberId: string | null)
   });
 }
 
+/**
+ * The frozen reason-code registry (review follow-up) — `appliesTo` + `label` per code, read from
+ * the SAME source the server's 422 enforces. Frozen at the CODE level (Decision 3: no per-Pariwar
+ * registry), so a long `staleTime` is correct, not a cache-hygiene shortcut — this cannot change
+ * without a deploy.
+ */
+export function useModerationReasonCodes(pariwarId: string) {
+  return useQuery({
+    queryKey: ['moderation-reason-codes', pariwarId],
+    queryFn: () => api.getModerationReasonCodes(pariwarId),
+    staleTime: Infinity,
+  });
+}
+
 /** Suspend / terminate / restore a member. A 403 `auth.step_up_required` is the elevation SIGNAL. */
 export function useModerateMember(pariwarId: string, memberId: string | null) {
   const qc = useQueryClient();

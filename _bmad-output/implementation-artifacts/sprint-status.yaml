@@ -1,4 +1,34 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-03 (10-10-member-moderation-suspend-terminate-restore-reason-codes:
+#   review -> done via bmad-code-review. Three parallel layers (Blind Hunter/diff-only, Edge Case
+#   Hunter/diff+repo, Acceptance Auditor/diff+spec+repo) over the full origin/main..HEAD diff (66
+#   files, +7323/-139). 16 unique findings after dedup: 2 decision-needed (both resolved to "build
+#   it"), 11 patch, 2 defer (logged to deferred-work.md), 3 dismissed as already-recorded story
+#   decisions (the state_trustee/district_admin inert-grant finding, the no-cross-code-continuity
+#   observation, the announcement-feed deep-link limitation — all three explicitly recorded in the
+#   Dev Agent Record already). All 13 decision+patch items FIXED and covered by new/extended tests
+#   (apps/api integration + unit, apps/admin, apps/jobs, packages/domain), not merely logged:
+#   (1) wired the missing admin rationale decrypt-on-demand read (`GET .../moderation/:id/rationale`,
+#   fail-soft on a corrupt envelope) — Task 5's checklist had overclaimed this; (2) wired a
+#   reason-codes registry read (`GET .../moderation/reason-codes`) and refactored the admin UI to
+#   consume it, deleting the hand-duplicated `appliesTo`/label maps in i18n-en.ts; (3) mapped the
+#   domain's `MemberStreamConcurrencyError` to a clean 409 (was an unmapped 500) — a general fix in
+#   error-mapping/index.ts covering every `member.*` event-stream writer, not just moderation; (4)
+#   added a member-existence 404 guard to the write routes (a nonexistent memberId no longer
+#   fabricates a `members` row via onConflictDoUpdate); (5) fixed a leap-day off-by-one in the
+#   12-month rejoin-lock date (`setUTCMonth` day-of-month overflow); (6) rendered the
+#   `requestStepUp.isError` slot in the admin step-up panel (an OTP-send failure was previously
+#   invisible); (7) widened the moderation-notify worker's malformed-envelope guard to validate
+#   `action`, preventing one bad job from aborting its whole pg-boss batch; (8) removed the dead
+#   `ModerationActorDisplayMissingError` class + its unreachable error-mapping arm (actor-display
+#   resolution is entirely an apps/api-layer concern via the existing `AdminDisplayNameMissingError`);
+#   (9) fixed a stale doc comment (16 -> 19 events); (10) added a test pinning the 422-before-409
+#   check order in `moderateMember` so a future reordering is deliberate, not silent; (11) renamed the
+#   moderation-termination rejoin-block audit action from `member_withdrawal.rejoin_blocked` to a new
+#   `member_moderation.rejoin_blocked`, closing a real reporting-miscount risk the story's own
+#   "must not masquerade as withdrawal" principle (AC7) had already flagged for the write path but
+#   missed on this one audit line. `openapi/v1.yaml` regenerated (+186 lines, purely additive: 3 new
+#   routes). development_status[10-10]: done.)
 # last_updated: 2026-08-02d (10-10-member-moderation-suspend-terminate-restore-reason-codes:
 #   ready-for-dev -> in-progress -> review via bmad-dev-story. All 10 tasks complete; 27/27 static
 #   gates green; PERMISSION_CATALOG_VERSION stays 28 (the first Epic-10 story minting NO key) and it
@@ -2605,7 +2635,7 @@ development_status:
   10-7-reports-exports-library-async-generation-scope-respecting: done
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: done
   10-9-banner-popup-manager-valid-from-until-dismiss: done
-  10-10-member-moderation-suspend-terminate-restore-reason-codes: review
+  10-10-member-moderation-suspend-terminate-restore-reason-codes: done
   10-11-trustee-lite-list-signals: backlog
   10-12-per-pariwar-custom-fields-jsonb: backlog
   10-13-fixed-amount-setter-admin-ui: backlog

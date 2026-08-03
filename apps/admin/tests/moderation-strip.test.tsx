@@ -9,7 +9,7 @@
 //   4. the confirmation modal obeys UX Pattern 2 — first focus on Cancel, ESC dismisses, and an
 //      EXPLICIT consequence statement.
 
-import type { ModerationHistoryResponse } from '@twt/contracts';
+import type { ModerationHistoryResponse, ReasonCodeMetaDto } from '@twt/contracts';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -31,12 +31,30 @@ function moderation(over: Partial<ModerationHistoryResponse> = {}): ModerationHi
   };
 }
 
+/**
+ * A test-fixture mirror of the server's frozen registry (`GET …/moderation/reason-codes`) — the
+ * presentational `<ModerationStrip>`/`<ModerationHistory>` take it as a prop now (review follow-up:
+ * they used to read a hand-duplicated `i18n-en.ts` map instead of a server source).
+ */
+const REASON_CODES: ReasonCodeMetaDto[] = [
+  { code: 'r7-contribution-discipline', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R7', label: 'Contribution discipline (R7)' },
+  { code: 'r14-forgery', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R14', label: 'Forgery or falsified documents (R14)' },
+  { code: 'r10a-parallel-org-office', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R10(A)', label: 'Office held in a parallel organisation (R10(A))' },
+  { code: 'concealment-confirmed', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-11', label: 'Concealment confirmed by State Trustee (FR-11)' },
+  { code: 'helpdesk-escalated-abuse', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Abuse escalated from the helpdesk' },
+  { code: 'regulator-action', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Regulatory or statutory action' },
+  { code: 'voluntary-pending-review', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Voluntary pause pending review' },
+  { code: 'rule-clearance', applies_to: ['restore'], niyamavali_ref: 'R7(A)', label: 'Rule cleared — three consecutive contributions (R7(A))' },
+  { code: 'trustee-discretion', applies_to: ['restore'], niyamavali_ref: 'R5(D)/R10(D)', label: 'Trustee discretion (R5(D)/R10(D))' },
+  { code: 'moderation-error', applies_to: ['restore'], niyamavali_ref: 'FR-56', label: 'Moderation recorded in error' },
+];
+
 const noop = async (): Promise<void> => undefined;
 
 describe('reasonCodesFor — the appliesTo filter (AC3/AC9)', () => {
   it('offers only MODERATION codes for suspend and terminate', () => {
     for (const action of ['suspend', 'terminate'] as const) {
-      const codes = reasonCodesFor(action);
+      const codes = reasonCodesFor(action, REASON_CODES);
       expect(codes).toContain('r14-forgery');
       expect(codes).not.toContain('moderation-error');
       expect(codes).not.toContain('rule-clearance');
@@ -44,14 +62,14 @@ describe('reasonCodesFor — the appliesTo filter (AC3/AC9)', () => {
   });
 
   it('offers only RESTORE codes for restore', () => {
-    const codes = reasonCodesFor('restore');
+    const codes = reasonCodesFor('restore', REASON_CODES);
     expect(codes).toEqual(['rule-clearance', 'trustee-discretion', 'moderation-error']);
   });
 });
 
 describe('button enablement is SERVER-driven (Decision 2)', () => {
   it('an UNMODERATED member: suspend enabled, terminate + restore DISABLED', () => {
-    render(<ModerationStrip moderation={moderation()} onSubmit={noop} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={noop} />);
     expect(screen.getByTestId('moderation-action-suspend')).toBeEnabled();
     // The load-bearing one: FR-56 routes termination THROUGH suspension, so the harshest action can
     // never be a single click.
@@ -68,6 +86,7 @@ describe('button enablement is SERVER-driven (Decision 2)', () => {
           since: '2026-08-01T00:00:00.000Z',
           legal_actions: ['terminate', 'restore'],
         })}
+        reasonCodes={REASON_CODES}
         onSubmit={noop}
       />,
     );
@@ -84,6 +103,7 @@ describe('button enablement is SERVER-driven (Decision 2)', () => {
           current_reason_code: 'r14-forgery',
           legal_actions: ['restore'],
         })}
+        reasonCodes={REASON_CODES}
         onSubmit={noop}
       />,
     );
@@ -100,6 +120,7 @@ describe('button enablement is SERVER-driven (Decision 2)', () => {
           current_reason_code: 'r14-forgery',
           legal_actions: ['terminate', 'restore'],
         })}
+        reasonCodes={REASON_CODES}
         onSubmit={noop}
       />,
     );
@@ -111,7 +132,7 @@ describe('button enablement is SERVER-driven (Decision 2)', () => {
 
 describe('the form: filtered dropdown + a MANDATORY rationale (AC3)', () => {
   it('the dropdown offers only codes valid for the chosen action', () => {
-    render(<ModerationStrip moderation={moderation()} onSubmit={noop} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={noop} />);
     fireEvent.click(screen.getByTestId('moderation-action-suspend'));
     const select = screen.getByTestId('moderation-reason-code');
     const values = within(select)
@@ -124,7 +145,7 @@ describe('the form: filtered dropdown + a MANDATORY rationale (AC3)', () => {
 
   it('blocks submit with NO reason code', () => {
     const onSubmit = vi.fn(noop);
-    render(<ModerationStrip moderation={moderation()} onSubmit={onSubmit} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByTestId('moderation-action-suspend'));
     fireEvent.click(screen.getByTestId('moderation-submit'));
     expect(screen.getByTestId('moderation-reason-error')).toBeInTheDocument();
@@ -134,7 +155,7 @@ describe('the form: filtered dropdown + a MANDATORY rationale (AC3)', () => {
 
   it('blocks submit with a code but NO rationale — required on EVERY action, not only "other"', () => {
     const onSubmit = vi.fn(noop);
-    render(<ModerationStrip moderation={moderation()} onSubmit={onSubmit} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByTestId('moderation-action-suspend'));
     fireEvent.change(screen.getByTestId('moderation-reason-code'), {
       target: { value: 'r14-forgery' },
@@ -146,7 +167,7 @@ describe('the form: filtered dropdown + a MANDATORY rationale (AC3)', () => {
 
   it('blocks submit on a WHITESPACE-ONLY rationale', () => {
     const onSubmit = vi.fn(noop);
-    render(<ModerationStrip moderation={moderation()} onSubmit={onSubmit} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByTestId('moderation-action-suspend'));
     fireEvent.change(screen.getByTestId('moderation-reason-code'), {
       target: { value: 'r14-forgery' },
@@ -164,6 +185,7 @@ describe('the form: filtered dropdown + a MANDATORY rationale (AC3)', () => {
           current_status: 'suspended',
           legal_actions: ['terminate', 'restore'],
         })}
+        reasonCodes={REASON_CODES}
         onSubmit={noop}
       />,
     );
@@ -192,21 +214,21 @@ describe('the confirmation modal — UX Pattern 2', () => {
 
   it('opens on a VALID submit and does not write until Confirm', () => {
     const onSubmit = vi.fn(noop);
-    render(<ModerationStrip moderation={moderation()} onSubmit={onSubmit} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={onSubmit} />);
     openModal();
     expect(screen.getByTestId('moderation-confirm-modal')).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('puts FIRST FOCUS on Cancel — a reflexive Enter must land on the harmless choice', () => {
-    render(<ModerationStrip moderation={moderation()} onSubmit={noop} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={noop} />);
     openModal();
     expect(document.activeElement).toBe(screen.getByTestId('moderation-confirm-cancel'));
   });
 
   it('dismisses on ESC without writing', () => {
     const onSubmit = vi.fn(noop);
-    render(<ModerationStrip moderation={moderation()} onSubmit={onSubmit} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={onSubmit} />);
     openModal();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('moderation-confirm-modal')).not.toBeInTheDocument();
@@ -215,7 +237,7 @@ describe('the confirmation modal — UX Pattern 2', () => {
 
   it('dismisses on Cancel without writing', () => {
     const onSubmit = vi.fn(noop);
-    render(<ModerationStrip moderation={moderation()} onSubmit={onSubmit} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={onSubmit} />);
     openModal();
     fireEvent.click(screen.getByTestId('moderation-confirm-cancel'));
     expect(screen.queryByTestId('moderation-confirm-modal')).not.toBeInTheDocument();
@@ -223,7 +245,7 @@ describe('the confirmation modal — UX Pattern 2', () => {
   });
 
   it('states the EXPLICIT consequence, not a generic "are you sure?"', () => {
-    render(<ModerationStrip moderation={moderation()} onSubmit={noop} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={noop} />);
     openModal();
     const consequence = screen.getByTestId('moderation-confirm-consequence').textContent ?? '';
     expect(consequence).toMatch(/signed out/i);
@@ -235,6 +257,7 @@ describe('the confirmation modal — UX Pattern 2', () => {
     render(
       <ModerationStrip
         moderation={moderation({ current_status: 'suspended', legal_actions: ['terminate', 'restore'] })}
+        reasonCodes={REASON_CODES}
         onSubmit={noop}
       />,
     );
@@ -249,7 +272,7 @@ describe('the confirmation modal — UX Pattern 2', () => {
 
   it('Confirm submits the action, code and TRIMMED rationale', async () => {
     const onSubmit = vi.fn(noop);
-    render(<ModerationStrip moderation={moderation()} onSubmit={onSubmit} />);
+    render(<ModerationStrip moderation={moderation()} reasonCodes={REASON_CODES} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByTestId('moderation-action-suspend'));
     fireEvent.change(screen.getByTestId('moderation-reason-code'), {
       target: { value: 'r14-forgery' },
@@ -282,7 +305,7 @@ describe('<ModerationHistory> — the read-only audit trail (AC9)', () => {
   };
 
   it('renders action · reason LABEL · actor_display', () => {
-    render(<ModerationHistory entries={[entry]} />);
+    render(<ModerationHistory entries={[entry]} reasonCodes={REASON_CODES} />);
     const list = screen.getByTestId('moderation-history');
     expect(list.textContent).toContain('Suspended');
     expect(list.textContent).toContain('Forgery or falsified documents (R14)');
@@ -290,7 +313,7 @@ describe('<ModerationHistory> — the read-only audit trail (AC9)', () => {
   });
 
   it('NEVER renders a rationale or ciphertext — the DTO does not even carry it', () => {
-    render(<ModerationHistory entries={[entry]} />);
+    render(<ModerationHistory entries={[entry]} reasonCodes={REASON_CODES} />);
     const text = screen.getByTestId('moderation-history').textContent ?? '';
     expect(text).not.toMatch(/rationale/i);
     expect(text).not.toMatch(/enc:v1/);
@@ -306,13 +329,14 @@ describe('<ModerationHistory> — the read-only audit trail (AC9)', () => {
             rejoin_permitted_at: '2027-08-02T00:00:00.000Z',
           },
         ]}
+        reasonCodes={REASON_CODES}
       />,
     );
     expect(screen.getByTestId('moderation-history').textContent).toMatch(/rejoin permitted/i);
   });
 
   it('renders an explicit empty state, never a blank list', () => {
-    render(<ModerationHistory entries={[]} />);
+    render(<ModerationHistory entries={[]} reasonCodes={REASON_CODES} />);
     expect(screen.getByTestId('moderation-history-empty')).toBeInTheDocument();
   });
 });

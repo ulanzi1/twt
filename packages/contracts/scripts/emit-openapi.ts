@@ -2989,20 +2989,25 @@ registry.registerPath({
 // (`member_moderation_{suspend|terminate|restore}`) so an elevation minted for one action can never
 // be spent on another. It gates on the EXISTING `member.moderate` key — no new key, no catalog bump.
 //
-// ⚠ The free-text rationale is INBOUND-ONLY: it is Tier-1 encrypted at rest and appears on NO
-// response schema below.
+// ⚠ The free-text rationale is INBOUND-ONLY on every LIST/ACTION response schema below. The one
+// exception — `ModerationRationaleResponse` — is a single-item decrypt-on-demand read behind the
+// SAME `member.moderate` gate (review follow-up), never a list.
 
 const {
   ModerateMemberRequest,
   ModerationActionResponse,
   ModerationHistoryResponse,
   ModeratedMembersListResponse,
+  ModerationRationaleResponse,
+  ReasonCodesListResponse,
 } = await import('../src/member-moderation/index.js');
 
 const ModerateMemberRequestComponent = ModerateMemberRequest.openapi('ModerateMemberRequest');
 const ModerationActionComponent = ModerationActionResponse.openapi('ModerationAction');
 const ModerationHistoryComponent = ModerationHistoryResponse.openapi('ModerationHistory');
 const ModeratedMembersListComponent = ModeratedMembersListResponse.openapi('ModeratedMembersList');
+const ModerationRationaleComponent = ModerationRationaleResponse.openapi('ModerationRationale');
+const ReasonCodesListComponent = ReasonCodesListResponse.openapi('ReasonCodesList');
 
 const moderationMemberParams = z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() });
 const moderationPariwarParams = z.object({ pariwarId: z.string().uuid() });
@@ -3110,6 +3115,25 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation/{moderationActionId}/rationale',
+  summary: 'Decrypt ONE moderation action\'s free-text rationale',
+  description:
+    'The single exception to "the rationale never leaves the DB": a per-action, decrypt-on-demand ' +
+    'read behind the same `member.moderate` gate as every other field on this surface — never a ' +
+    'list, and no separate capability. Fail-soft on a corrupt/rotated envelope: `rationale` is ' +
+    '`null` rather than a 500.',
+  tags: moderationTags,
+  request: { params: z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() }) },
+  responses: {
+    200: { description: 'The decrypted rationale (or null on a decrypt failure)', content: jsonOf(ModerationRationaleComponent) },
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+    404: errorResponse('No moderation action with that id for this member in this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/api/v1/p/{pariwarId}/moderation/members',
   summary: 'The Pariwar\'s currently-moderated members',
   description:
@@ -3121,6 +3145,23 @@ registry.registerPath({
   request: { params: moderationPariwarParams },
   responses: {
     200: { description: 'The moderated-members page', content: jsonOf(ModeratedMembersListComponent) },
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/moderation/reason-codes',
+  summary: 'The full frozen moderation reason-code registry',
+  description:
+    'All 10 codes (7 moderation grounds + 3 restore grounds), always — not paginated (Decision 3: ' +
+    'the registry is code-level and frozen, never a per-Pariwar-growing list). The ONE source both ' +
+    'the server\'s `appliesTo` 422 and the admin dropdown read.',
+  tags: moderationTags,
+  request: { params: moderationPariwarParams },
+  responses: {
+    200: { description: 'The registry', content: jsonOf(ReasonCodesListComponent) },
     401: errorResponse('Authentication required'),
     403: moderationForbidden,
   } as Parameters<typeof registry.registerPath>[0]['responses'],

@@ -6161,6 +6161,20 @@ components:
         - legal_actions
         - entries
       additionalProperties: false
+    ModerationRationale:
+      type: object
+      properties:
+        moderation_action_id:
+          type: string
+          format: uuid
+        rationale:
+          type:
+            - string
+            - "null"
+      required:
+        - moderation_action_id
+        - rationale
+      additionalProperties: false
     ModeratedMembersList:
       type: object
       properties:
@@ -6207,6 +6221,35 @@ components:
       required:
         - items
         - has_more
+      additionalProperties: false
+    ReasonCodesList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                enum: *a40
+              applies_to:
+                type: array
+                items:
+                  type: string
+                  enum: *a41
+              niyamavali_ref:
+                type: string
+              label:
+                type: string
+            required:
+              - code
+              - applies_to
+              - niyamavali_ref
+              - label
+            additionalProperties: false
+      required:
+        - items
       additionalProperties: false
   parameters: {}
 paths:
@@ -10999,6 +11042,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/members/{memberId}/moderation/{moderationActionId}/rationale:
+    get:
+      summary: Decrypt ONE moderation action's free-text rationale
+      description: 'The single exception to "the rationale never leaves the DB": a per-action, decrypt-on-demand read behind the same `member.moderate` gate as every other field on this surface — never a list, and no separate capability. Fail-soft on a corrupt/rotated envelope: `rationale` is `null` rather than a 500.'
+      tags: *a59
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: memberId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: moderationActionId
+          in: path
+      responses:
+        "200":
+          description: The decrypted rationale (or null on a decrypt failure)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationRationale"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (member.moderate) for this Pariwar; OR step-up required / the elevation was minted for a DIFFERENT moderation action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No moderation action with that id for this member in this Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/p/{pariwarId}/moderation/members:
     get:
       summary: The Pariwar's currently-moderated members
@@ -11018,6 +11110,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ModeratedMembersList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (member.moderate) for this Pariwar; OR step-up required / the elevation was minted for a DIFFERENT moderation action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/moderation/reason-codes:
+    get:
+      summary: The full frozen moderation reason-code registry
+      description: "All 10 codes (7 moderation grounds + 3 restore grounds), always — not paginated (Decision 3: the registry is code-level and frozen, never a per-Pariwar-growing list). The ONE source both the server's `appliesTo` 422 and the admin dropdown read."
+      tags: *a59
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      responses:
+        "200":
+          description: The registry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReasonCodesList"
         "401":
           description: Authentication required
           content:

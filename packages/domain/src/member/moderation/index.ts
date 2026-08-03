@@ -45,6 +45,7 @@ export {
   reasonCodeMeta,
   reasonCodeAppliesTo,
   reasonCodesForAction,
+  listReasonCodeMeta,
 } from './reason-codes.js';
 
 export {
@@ -83,15 +84,14 @@ export {
   type ListModeratedMembersOptions,
   listModerationHistoryForMember,
   listModeratedMembersForPariwar,
+  getModerationActionRationale,
 } from './read.js';
 
 export {
   MODERATION_INVALID_STATE_CODE,
   MODERATION_REASON_CODE_INVALID_CODE,
   MODERATION_RATIONALE_REQUIRED_CODE,
-  MODERATION_ACTOR_DISPLAY_MISSING_CODE,
   ModerationStateError,
   ModerationReasonCodeInvalidError,
   ModerationRationaleRequiredError,
-  ModerationActorDisplayMissingError,
 } from './errors.js';

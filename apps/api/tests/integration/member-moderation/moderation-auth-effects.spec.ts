@@ -260,6 +260,13 @@ describe.skipIf(!hasDatabase)('moderation → auth effects (live DB) (:5433)', (
       // The block is audited with the MASKED mobile only — never plaintext.
       expect(JSON.stringify(t.auditSink.events)).not.toContain(normalizeMobile(mobile) as string);
 
+      // ⚠ Audited under its OWN `member_moderation.rejoin_blocked` action — never
+      // `member_withdrawal.rejoin_blocked` (that name is reserved for the genuine Story 3.10
+      // voluntary-withdrawal lock). A moderation termination is not voluntary and must not
+      // masquerade as a withdrawal in any audit/reporting query keyed on the action name.
+      expect(t.auditSink.ofType('member_moderation.rejoin_blocked')).toHaveLength(1);
+      expect(t.auditSink.ofType('member_withdrawal.rejoin_blocked')).toHaveLength(0);
+
       // ⚠ No fake withdrawal row was written: termination is not voluntary and must not masquerade
       // as withdrawal (which would also corrupt the FR-6 withdrawal reporting).
       const w = await t.pool.query(`SELECT 1 FROM member_withdrawals WHERE member_id = $1`, [memberId]);

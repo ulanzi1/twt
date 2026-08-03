@@ -360,6 +360,21 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(await eventTypes(memberId)).not.toContain('member.moderation.terminated');
   });
 
+  it('a request invalid on BOTH axes (illegal transition AND inapplicable reason code) → 422, never 409 — pins the check ORDER (code-review follow-up)', async () => {
+    // `none --terminate-->` is illegal (AC2 → 409) AND `moderation-error` is a RESTORE-only code
+    // (AC3 → 422). `moderateMember` (packages/domain/src/member/moderation/write.ts) checks the
+    // reason-code `appliesTo` guard BEFORE the transition-legality guard, so 422 always wins. This
+    // was previously an unpinned, undocumented behavioural contract — pinning it here means a future
+    // reordering of those two checks is a deliberate, reviewed change, not a silent flip.
+    const { p, memberId, client } = await scenario();
+    const res = await act(client, p, memberId, 'terminate', 'moderation-error');
+    expect(res.statusCode).toBe(422);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'member_moderation.reason_code_invalid',
+    );
+    expect(await moderationRows(memberId)).toHaveLength(0);
+  });
+
   it('AC2: re-suspending an already-suspended member is 409, not a silent second event', async () => {
     const { p, memberId, client } = await scenario();
     expect((await act(client, p, memberId, 'suspend', 'r7-contribution-discipline')).statusCode).toBe(200);
@@ -372,6 +387,27 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     const { p, memberId, client } = await scenario();
     const res = await act(client, p, memberId, 'restore', 'moderation-error');
     expect(res.statusCode).toBe(409);
+  });
+
+  // ── Member existence (code-review follow-up) ──────────────────────────────────────────────────
+  // A syntactically-valid but NEVER-SEEDED memberId must 404, not silently fabricate a `members`
+  // row via the projector's `onConflictDoUpdate` — the same discipline `history()` already had.
+
+  it('a moderation action against a memberId that was never seeded → 404, and NOTHING is written', async () => {
+    const p = randomUUID();
+    createdPariwars.push(p);
+    const client = await pariwarAdmin(p);
+    const neverSeededMemberId = randomUUID();
+
+    const res = await act(client, p, neverSeededMemberId, 'suspend', 'r7-contribution-discipline');
+    expect(res.statusCode).toBe(404);
+    expect((res.json() as { error: { code: string } }).error.code).toBe('member.not_found');
+
+    expect(await moderationRows(neverSeededMemberId)).toHaveLength(0);
+    expect(await eventTypes(neverSeededMemberId)).toHaveLength(0);
+    // ⚠ THE regression this pins: no phantom `members` row was fabricated for an identity that
+    // never signed up.
+    expect(await memberState(neverSeededMemberId)).toBeNull();
   });
 
   // ── AC3 — the reason-code registry + the mandatory rationale ──────────────────────────────────
@@ -429,6 +465,54 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(rows[0]?.action).toBe('suspend');
     expect(rows[0]?.actor_display).toBe('Trustee One');
     expect(String(rows[0]?.rationale_ciphertext)).not.toContain('Recorded after review');
+  });
+
+  // ── Rationale decrypt-on-demand (code-review follow-up) ───────────────────────────────────────
+  // The single exception to "the ciphertext never leaves the DB": a per-action, gated read.
+
+  it('the admin console can decrypt ONE rationale on demand, and only that route ever returns it', async () => {
+    const { p, memberId, client } = await scenario();
+    const secret = 'A specific, identifying account of what this member did.';
+    const res = await act(client, p, memberId, 'suspend', 'r14-forgery', { rationale: secret });
+    expect(res.statusCode).toBe(200);
+    const moderationActionId = (res.json() as Json).moderation_action_id as string;
+
+    const rationaleRes = await client.inject({
+      method: 'GET',
+      url: `/api/v1/p/${p}/members/${memberId}/moderation/${moderationActionId}/rationale`,
+    });
+    expect(rationaleRes.statusCode).toBe(200);
+    const body = rationaleRes.json() as { moderation_action_id: string; rationale: string | null };
+    expect(body.moderation_action_id).toBe(moderationActionId);
+    expect(body.rationale).toBe(secret);
+
+    // The two LIST/history reads never carry it, ciphertext or plaintext.
+    const hist = await client.inject({ method: 'GET', url: historyUrl(p, memberId) });
+    expect(JSON.stringify(hist.json())).not.toContain(secret);
+    expect(JSON.stringify(hist.json())).not.toContain('rationale');
+  });
+
+  it('a rationale lookup for a WRONG member (cross-member) or a nonexistent action id → 404, never leaks', async () => {
+    const { p, memberId, client } = await scenario();
+    const res = await act(client, p, memberId, 'suspend', 'r14-forgery', {
+      rationale: 'Only readable via this member and this action id.',
+    });
+    const moderationActionId = (res.json() as Json).moderation_action_id as string;
+
+    // A different member in the SAME Pariwar, same action id → 404 (not the other member's text).
+    const otherMemberId = await seedActiveMember(p);
+    const wrongMember = await client.inject({
+      method: 'GET',
+      url: `/api/v1/p/${p}/members/${otherMemberId}/moderation/${moderationActionId}/rationale`,
+    });
+    expect(wrongMember.statusCode).toBe(404);
+
+    // A syntactically-valid but nonexistent action id on the RIGHT member → 404.
+    const bogus = await client.inject({
+      method: 'GET',
+      url: `/api/v1/p/${p}/members/${memberId}/moderation/${randomUUID()}/rationale`,
+    });
+    expect(bogus.statusCode).toBe(404);
   });
 
   it('AC4: an audit line is written per action, and the RATIONALE is never in it', async () => {
@@ -511,5 +595,23 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(await idsIn()).not.toContain(memberId);
     await act(client, p, memberId, 'suspend', 'regulator-action');
     expect(await idsIn()).toContain(memberId);
+  });
+
+  // ── Reason-codes registry read (code-review follow-up) ───────────────────────────────────────
+
+  it('the reason-codes registry read returns all 10 codes with appliesTo + label, matching the write-path 422', async () => {
+    const { p, client } = await scenario();
+    const res = await client.inject({ method: 'GET', url: `/api/v1/p/${p}/moderation/reason-codes` });
+    expect(res.statusCode).toBe(200);
+    const items = (res.json() as { items: Array<Record<string, unknown>> }).items;
+    expect(items).toHaveLength(10);
+
+    const restoreOnly = items.find((i) => i.code === 'moderation-error');
+    expect(restoreOnly?.applies_to).toEqual(['restore']);
+    expect(restoreOnly?.label).toBe('Moderation recorded in error');
+
+    const both = items.find((i) => i.code === 'r14-forgery');
+    expect(both?.applies_to).toEqual(['suspend', 'terminate']);
+    expect(both?.niyamavali_ref).toBe('R14');
   });
 });

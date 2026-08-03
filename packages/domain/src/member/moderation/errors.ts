@@ -101,32 +101,13 @@ export class ModerationRationaleRequiredError extends Error {
   }
 }
 
-/** Namespaced error code for an actor with no resolvable display name (HTTP 422). */
-export const MODERATION_ACTOR_DISPLAY_MISSING_CODE = 'member_moderation.actor_display_missing';
-
-/**
- * Thrown when the acting admin has no `users.display_name` to snapshot into
- * `member_moderation_actions.actor_display`. The action is BLOCKED — there is NO email-derived
- * fallback ([[project_admin_display_name_attribution]], Story 6.11 R5): an unattributable
- * suspension is worse than a refused one, and the member is entitled to know who acted.
- */
-export class ModerationActorDisplayMissingError extends Error {
-  public readonly name = 'ModerationActorDisplayMissingError';
-  public readonly code = MODERATION_ACTOR_DISPLAY_MISSING_CODE;
-  public constructor(public readonly actorId: string) {
-    super(
-      `actor '${actorId}' has no display name on record — a moderation action cannot be attributed`,
-    );
-  }
-
-  public toErrorResponse(requestId: string): ErrorResponseShape {
-    return {
-      error: {
-        code: this.code,
-        message: this.message,
-        details: { actor_id: this.actorId },
-        request_id: requestId,
-      },
-    };
-  }
-}
+// NOTE: actor-display resolution (AC4's "missing display name BLOCKS the action" requirement,
+// [[project_admin_display_name_attribution]]) happens entirely at the API layer, BEFORE the
+// domain is ever called — `moderateMember`'s `actorDisplay` parameter is a required, non-nullable
+// `string`. `apps/api/src/modules/member-moderation/handlers.ts` resolves it via
+// `getDisplayName(deps.pool, actorId)` and throws the shared `AdminDisplayNameMissingError`
+// (`apps/api/src/http-errors.js`) — the same class every other admin-attribution surface uses —
+// if it's null. A domain-level `ModerationActorDisplayMissingError` was previously declared here
+// to mirror that check, but the domain has no code path that can ever raise it, so it was removed
+// as dead code (Story 10.10 review). Do not re-add it unless the domain itself starts resolving
+// or validating the display name.

@@ -329,8 +329,6 @@ export {
   MODERATION_REASON_CODE_INVALID_CODE,
   ModerationRationaleRequiredError,
   MODERATION_RATIONALE_REQUIRED_CODE,
-  ModerationActorDisplayMissingError,
-  MODERATION_ACTOR_DISPLAY_MISSING_CODE,
 } from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the

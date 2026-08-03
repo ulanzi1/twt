@@ -224,7 +224,7 @@ export const MEMBER_EVENT_TYPES = [
   'member.moderation.restored',
 ] as const;
 
-/** The dotted `member.*` event-type literal union (the 16 AC1 events). */
+/** The dotted `member.*` event-type literal union (the 16 AC1 events + the 3 Story 10.10 moderation events = 19). */
 export type MemberEventType = (typeof MEMBER_EVENT_TYPES)[number];
 
 /**

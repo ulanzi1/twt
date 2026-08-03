@@ -21,14 +21,14 @@
 // (sessions revoked, rejoin locked 12 months) — never a generic "are you sure?".
 
 import {
-  ALL_REASON_CODES,
   type ModerationAction,
   type ModerationHistoryResponse,
   type ReasonCode,
+  type ReasonCodeMetaDto,
 } from '@twt/contracts';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 
-import { moderationEn as t, reasonCodeLabel, REASON_CODE_APPLIES_TO } from './i18n-en.js';
+import { moderationEn as t } from './i18n-en.js';
 
 /** Max rationale length — mirrors the contracts DTO's `.max(4_000)`. */
 export const MODERATION_RATIONALE_MAX_CHARS = 4_000;
@@ -42,6 +42,12 @@ export interface ModerationSubmit {
 export interface ModerationStripProps {
   /** The member's current standing + server-derived `legal_actions`. */
   moderation: ModerationHistoryResponse;
+  /**
+   * The frozen reason-code registry (review follow-up — was previously hand-duplicated by value in
+   * `i18n-en.ts`, with no server source; now read from `GET …/moderation/reason-codes`, the SAME
+   * source the server's `appliesTo` 422 enforces). May be `[]` while the query is loading.
+   */
+  reasonCodes: readonly ReasonCodeMetaDto[];
   onSubmit: (input: ModerationSubmit) => Promise<void>;
   processing?: boolean;
   error?: string | null;
@@ -49,13 +55,22 @@ export interface ModerationStripProps {
   stepUpSlot?: ReactElement | null;
 }
 
-/** Reason codes valid for an action (the `appliesTo` filter — AC3/AC9). */
-export function reasonCodesFor(action: ModerationAction): readonly ReasonCode[] {
-  return ALL_REASON_CODES.filter((c) => (REASON_CODE_APPLIES_TO[c] ?? []).includes(action));
+/** Reason codes valid for an action (the `appliesTo` filter — AC3/AC9), from server metadata. */
+export function reasonCodesFor(
+  action: ModerationAction,
+  reasonCodes: readonly ReasonCodeMetaDto[],
+): readonly ReasonCode[] {
+  return reasonCodes.filter((m) => m.applies_to.includes(action)).map((m) => m.code);
+}
+
+/** Resolve a code's label from server metadata; a readable fallback (never a raw slug) pre-fetch. */
+export function reasonCodeLabel(code: string, reasonCodes: readonly ReasonCodeMetaDto[]): string {
+  return reasonCodes.find((m) => m.code === code)?.label ?? code.replace(/-/g, ' ');
 }
 
 export function ModerationStrip({
   moderation,
+  reasonCodes,
   onSubmit,
   processing,
   error,
@@ -71,13 +86,17 @@ export function ModerationStrip({
   const legal = new Set<ModerationAction>(moderation.legal_actions);
 
   /** Choose an action — reset a reason code the new action's `appliesTo` does not admit. */
-  const chooseAction = useCallback((next: ModerationAction): void => {
-    setAction(next);
-    setValidationError(null);
-    setReasonCode((current) =>
-      current !== '' && !(REASON_CODE_APPLIES_TO[current] ?? []).includes(next) ? '' : current,
-    );
-  }, []);
+  const chooseAction = useCallback(
+    (next: ModerationAction): void => {
+      setAction(next);
+      setValidationError(null);
+      setReasonCode((current) => {
+        const meta = reasonCodes.find((m) => m.code === current);
+        return current !== '' && !(meta?.applies_to ?? []).includes(next) ? '' : current;
+      });
+    },
+    [reasonCodes],
+  );
 
   // UX Pattern 2: FIRST FOCUS ON CANCEL, and ESC dismisses. Both are what make a destructive modal
   // safe — a reflexive Enter or a mis-aimed click must land on the harmless choice.
@@ -149,7 +168,7 @@ export function ModerationStrip({
         >
           {t.status[moderation.current_status]}
           {moderation.current_reason_code
-            ? ` — ${reasonCodeLabel(moderation.current_reason_code)}`
+            ? ` — ${reasonCodeLabel(moderation.current_reason_code, reasonCodes)}`
             : ''}
         </span>
       </header>
@@ -198,9 +217,9 @@ export function ModerationStrip({
             >
               <option value="">{t.reasonPlaceholder}</option>
               {/* Filtered by `appliesTo` — a restore code is never offered for a suspension. */}
-              {reasonCodesFor(action).map((c) => (
+              {reasonCodesFor(action, reasonCodes).map((c) => (
                 <option key={c} value={c}>
-                  {reasonCodeLabel(c)}
+                  {reasonCodeLabel(c, reasonCodes)}
                 </option>
               ))}
             </select>
@@ -312,8 +331,10 @@ export function ModerationStrip({
  */
 export function ModerationHistory({
   entries,
+  reasonCodes,
 }: {
   entries: ModerationHistoryResponse['entries'];
+  reasonCodes: readonly ReasonCodeMetaDto[];
 }): ReactElement {
   if (entries.length === 0) {
     return (
@@ -331,7 +352,7 @@ export function ModerationHistory({
       {entries.map((e) => (
         <li key={e.moderation_action_id} className="rounded border p-2">
           <span className="font-semibold">{t.status[actionToStatus(e.action)]}</span>{' '}
-          <span className="opacity-70">— {reasonCodeLabel(e.reason_code)}</span>
+          <span className="opacity-70">— {reasonCodeLabel(e.reason_code, reasonCodes)}</span>
           <div className="text-xs opacity-60">
             {e.actor_display} · {new Date(e.acted_at).toLocaleString()}
             {e.rejoin_permitted_at

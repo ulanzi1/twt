@@ -121,7 +121,7 @@ export function createSignupHandlers(deps: AppDeps) {
           moderationRejoinAt &&
           now < new Date(moderationRejoinAt)
         ) {
-          emitAuthAudit(deps, request, 'member_withdrawal.rejoin_blocked', {
+          emitAuthAudit(deps, request, 'member_moderation.rejoin_blocked', {
             context: { masked_mobile: masked, rejoin_permitted_at: moderationRejoinAt },
           });
           // The SAME dignified 403 shape as the withdrawal lock (AC7) — the member does not need to

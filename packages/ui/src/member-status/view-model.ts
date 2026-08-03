@@ -5,18 +5,29 @@
 // status?" so the two panels cannot drift on eligibility (the most-disputed surface — D4).
 
 /**
- * The five UX headline states (`ux-design-specification.md:1894`), each derived from the canonical
- * `MemberValidityPayload` — never a second source of truth:
+ * The headline states, each derived from the canonical `MemberValidityPayload` — never a second
+ * source of truth:
  *   · active                 — covered + narrowly active (isValid && isActive).
  *   · pending-onboarding      — not yet fully onboarded (never paid / mid-signup).
- *   · suspended-with-reason   — flagged for review (e.g. concealment-review), standing withheld.
+ *   · suspended-with-reason   — standing withheld: a concealment-review flag, or (Story 10.10) an
+ *                               active moderation SUSPENSION.
+ *   · terminated-with-reason  — (Story 10.10) membership ENDED by a moderation decision.
  *   · expired-renewable       — Vyawastha Shulk lapsed but still renewable (grace / lapsed-unpaid).
  *   · expired-not-renewable   — a lock-in violation / terminal standing (not restorable by renewal).
+ *
+ * ⚠ `terminated-with-reason` is a DELIBERATE EXTENSION of the UX spec's FIVE listed panel states
+ * (`ux-design-specification.md:1894`), which never modelled termination — FR-56 postdates that list.
+ * Collapsing it into `suspended-with-reason` was rejected: the two standings differ in what the
+ * member can do next (a suspension is under review; a termination has ended and carries a 12-month
+ * rejoin lock), and telling someone their membership is "under review" when it has ended would be
+ * exactly the kind of soft misinformation UX Stance #5's dignity requirement forbids. Recorded in
+ * the Dev Agent Record.
  */
 export type HeadlineState =
   | 'active'
   | 'pending-onboarding'
   | 'suspended-with-reason'
+  | 'terminated-with-reason'
   | 'expired-renewable'
   | 'expired-not-renewable';
 
@@ -64,10 +75,38 @@ export interface ValidityWindow {
   validThrough: string | null;
 }
 
+/**
+ * The member's moderation EXPLANATION — the full prose AC9 owes them, as a top-level view-model
+ * field rather than a detail line buried in the headline section.
+ *
+ * ── Why it is here and not in `sections` (review follow-up) ──────────────────────────────────────
+ * It WAS a `detailKey` on the `headline` section. Both render layers filter that section out
+ * (`.filter((s) => s.id !== 'headline')`) and render only `headlineKey` — so the prose, its two
+ * catalog entries in en+hi, and the whole `{reason}` plumbing were unreachable. A suspended member
+ * saw "Under review" and an appeal button, and was NEVER TOLD WHY: the exact outcome the flag is
+ * member-visible to prevent, and the dignity commitment that justifies Decision 6 keeping login
+ * open at all.
+ *
+ * Two keys, not one resolved string, because the view-model carries no copy (it is
+ * render-agnostic): the render layer resolves `detailKey` with `{ reason: t(reasonLabelKey) }`.
+ * `t()` throws on a missing interpolation param, so a renderer MUST pass `reason` — which is why
+ * this is a distinct, obviously-parameterized field instead of another bare `detailKeys` entry a
+ * renderer would resolve with `t(k)` and crash on.
+ */
+export interface ModerationNotice {
+  status: 'suspended' | 'terminated';
+  /** i18n KEY for the full prose. REQUIRES a `{ reason }` interpolation param. */
+  detailKey: string;
+  /** i18n KEY for the reason-code LABEL — never the raw code (`ux-design-specification.md:1896`). */
+  reasonLabelKey: string;
+}
+
 export interface MemberStatusViewModel {
   headlineState: HeadlineState;
   /** i18n KEY for the headline label. */
   headlineKey: string;
+  /** Present ONLY when a moderation standing is in force; null otherwise. */
+  moderationNotice: ModerationNotice | null;
   sections: PanelSection[];
   ruleExplanations: RuleExplanation[];
   validityWindow: ValidityWindow;

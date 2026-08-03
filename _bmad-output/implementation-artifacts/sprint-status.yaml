@@ -1,4 +1,141 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-03b (10-10-member-moderation-suspend-terminate-restore-reason-codes:
+#   SECOND bmad-code-review pass, run against the base PLUS the 13-fix commit 6ad0516, with the
+#   prior Review Findings deliberately WITHHELD from the finder layers (fresh eyes). Three parallel
+#   layers over 69 files / 7,885 lines (generated openapi + bookkeeping excluded). 30 findings after
+#   dedup: 4 decision-needed, 22 patch, 4 defer (logged to deferred-work.md with re-triggers), 3
+#   dismissed (fire-and-forget audit — AC4 MANDATES that pattern; the second scope tx — house
+#   pattern in 10+ modules; a flag-prefix collision with no producer anywhere in the repo).
+#   Prior-pass reconciliation: 12 of 13 fixes confirmed, 1 PARTIAL (the rationale decrypt endpoint
+#   shipped without the admin trigger it was explicitly built for — now wired).
+#   Decisions resolved by BigDev: D1 escalate, D2 fix, D3 fix, D4 correct-the-copy. All 22 patches
+#   APPLIED, not logged. The three that mattered: (a) the member was never told WHY — the
+#   moderation prose rode the `headline` section and BOTH renderers filter that section out, so
+#   AC9's "full prose, not an error code" reached nobody; moved to a top-level `vm.moderationNotice`
+#   both renderers resolve with {reason}. UI tests were green because they asserted the view-model,
+#   never the render. (b) the Tier-1 rationale was outside the RTBF scrub set AND structurally
+#   un-erasable (0091 granted SELECT+INSERT only; an RTBF is a SOFT delete so the FK cascade never
+#   fires) — migration 0092 grants a COLUMN-scoped UPDATE + tenant policy, anonymizeMember scrubs
+#   it, decision fields stay immutable; subject-access EXPORT deliberately NOT wired and recorded
+#   as an open PM/legal question rather than decided silently. (c) the new table had NO test at any
+#   level for its RLS/FORCE/CHECK/FK/append-only posture — added a 9-test policy-regression spec,
+#   plus the missing cross-Pariwar denial and admin.display_name_missing tests.
+#   Also: the appliesTo revert-sanity gained DB-free teeth (PROVEN by probe — removing the call
+#   site flips 3 unit tests); the AC6 cascade is finally tested at the role it runs under
+#   (scopeTx.client under twt_app, not the admin pool) and end-to-end through the real route; an
+#   undelivered notice alarms+throws instead of completing the job; history paginates with
+#   has_more; the KMS-outage path returns 503 instead of masquerading as a null rationale.
+#   FIXED A PRE-EXISTING RED GATE: forced-pagination.spec.ts was already failing on this branch
+#   (the first pass's /moderation/reason-codes route) — verified red on the baseline with all
+#   changes stashed, which means the earlier "30/30 green" claim did not hold when written.
+#   ESCALATION 3 recorded (NOT patched, AC5 forbids it): a moderation-terminated member retains
+#   full write access to nominees/medical/T&C/Life-Events, because all five TERMINAL_STATES Sets
+#   key on members.state — the exact harm Decision 1 named for the design it REJECTED, inherited by
+#   the overlay and never noticed. Routed to PM with ESCALATIONS 1 and 2.
+#   pnpm ci:local GREEN 30/30 on a freshly recreated + migrated twt-test-pg (:5433) incl. 0092.
+#   Suite deltas: domain 2233->2247, api 827->831, jobs 292->302, contracts 813->815, ui 73->77.
+#   PERMISSION_CATALOG_VERSION still 28. development_status[10-10] stays: done.)
+# last_updated: 2026-08-03 (10-10-member-moderation-suspend-terminate-restore-reason-codes:
+#   review -> done via bmad-code-review. Three parallel layers (Blind Hunter/diff-only, Edge Case
+#   Hunter/diff+repo, Acceptance Auditor/diff+spec+repo) over the full origin/main..HEAD diff (66
+#   files, +7323/-139). 16 unique findings after dedup: 2 decision-needed (both resolved to "build
+#   it"), 11 patch, 2 defer (logged to deferred-work.md), 3 dismissed as already-recorded story
+#   decisions (the state_trustee/district_admin inert-grant finding, the no-cross-code-continuity
+#   observation, the announcement-feed deep-link limitation — all three explicitly recorded in the
+#   Dev Agent Record already). All 13 decision+patch items FIXED and covered by new/extended tests
+#   (apps/api integration + unit, apps/admin, apps/jobs, packages/domain), not merely logged:
+#   (1) wired the missing admin rationale decrypt-on-demand read (`GET .../moderation/:id/rationale`,
+#   fail-soft on a corrupt envelope) — Task 5's checklist had overclaimed this; (2) wired a
+#   reason-codes registry read (`GET .../moderation/reason-codes`) and refactored the admin UI to
+#   consume it, deleting the hand-duplicated `appliesTo`/label maps in i18n-en.ts; (3) mapped the
+#   domain's `MemberStreamConcurrencyError` to a clean 409 (was an unmapped 500) — a general fix in
+#   error-mapping/index.ts covering every `member.*` event-stream writer, not just moderation; (4)
+#   added a member-existence 404 guard to the write routes (a nonexistent memberId no longer
+#   fabricates a `members` row via onConflictDoUpdate); (5) fixed a leap-day off-by-one in the
+#   12-month rejoin-lock date (`setUTCMonth` day-of-month overflow); (6) rendered the
+#   `requestStepUp.isError` slot in the admin step-up panel (an OTP-send failure was previously
+#   invisible); (7) widened the moderation-notify worker's malformed-envelope guard to validate
+#   `action`, preventing one bad job from aborting its whole pg-boss batch; (8) removed the dead
+#   `ModerationActorDisplayMissingError` class + its unreachable error-mapping arm (actor-display
+#   resolution is entirely an apps/api-layer concern via the existing `AdminDisplayNameMissingError`);
+#   (9) fixed a stale doc comment (16 -> 19 events); (10) added a test pinning the 422-before-409
+#   check order in `moderateMember` so a future reordering is deliberate, not silent; (11) renamed the
+#   moderation-termination rejoin-block audit action from `member_withdrawal.rejoin_blocked` to a new
+#   `member_moderation.rejoin_blocked`, closing a real reporting-miscount risk the story's own
+#   "must not masquerade as withdrawal" principle (AC7) had already flagged for the write path but
+#   missed on this one audit line. `openapi/v1.yaml` regenerated (+186 lines, purely additive: 3 new
+#   routes). development_status[10-10]: done.)
+# last_updated: 2026-08-02d (10-10-member-moderation-suspend-terminate-restore-reason-codes:
+#   ready-for-dev -> in-progress -> review via bmad-dev-story. All 10 tasks complete; 27/27 static
+#   gates green; PERMISSION_CATALOG_VERSION stays 28 (the first Epic-10 story minting NO key) and it
+#   is the first that IS step-up-gated (three distinct action contexts, so a restore elevation can
+#   never be spent on a termination). Decision 1 HELD: moderation ships as an event-derived OVERLAY
+#   on the member's own stream, NOT two new member_lifecycle_state labels — `members.state`, the
+#   projector, the state-writer trigger and the member-state-invariant CI-gate allowlist are all
+#   untouched, pinned three ways (a domain unit test folding all three member.moderation.* events
+#   through every lifecycle state as identity; the API E2E driving the real projector through
+#   suspend->terminate->restore and reading members.state back as `active`; and a validity test
+#   asserting every lifecycle-derived payload sub-object is byte-identical before/after a
+#   suspension). Flagged for PO confirmation since it deviates from a literal reading of the epic AC.
+#   Decision 8's one-line `is_valid` conjunction is the ENTIRE enforcement surface: apps/jobs,
+#   peer-mesh-read, the niyamavali member_state_in operator and all five TERMINAL_STATES Sets are
+#   untouched. THE AC5 RISK CLOSED: migration 0036's cache-invalidation trigger already fires
+#   `WHEN (NEW.event_type LIKE 'member.%')`, which member.moderation.* matches by prefix — so NO new
+#   wiring was needed, and a live-DB test now warms the cache, suspends, and proves the next cached
+#   read answers is_valid:false (a stale true would have handed a suspended member to a pool spawn).
+#   Story 3.2's named-but-unwired revokeAllMemberSessions seam is now wired, running INSIDE the
+#   moderation scope tx so a rolled-back action can never leave a member logged out; login is
+#   deliberately NOT blocked (Decision 6 — a moderated member must be able to sign in to read the
+#   dignified explanation and reach the appeal CTA), pinned by a test a reviewer is most likely to
+#   "fix" by mistake. TWO ESCALATIONS RECORDED, not papered over: (a) the epic casts a State Trustee
+#   as this story's actor, but state_trustee's 'state' scopeCeiling can NEVER satisfy a
+#   pariwar-dimension check — granting member.moderate would seed an INERT capability, so
+#   state_trustee AND district_admin are DEFERRED, each pinned by a 403 test so a future grant cannot
+#   land silently; (b) Story 10.11 expects "moderation pending items" sorted by deadline-proximity +
+#   severity, which 10.10's AC never defines — shipped listModeratedMembersForPariwar instead and
+#   routed the deadline/severity gap to PM rather than fabricating a field to make the sort work.
+#   One KNOWN LIMITATION: no 10th AlertCategory was minted (that would redefine FR-71 from 7 push
+#   categories to 8, which Story 5.2 froze in terms), so the notice ships on alert_published and its
+#   deep link lands on the announcement feed, not <MemberStatusPanel> — forward commitment owed once
+#   PM amends FR-71. 10.4's log-only console-notifier stopgap was NOT repeated; the notice uses the
+#   10.5 news-publish enqueue+worker pattern. Deliberate extensions recorded: deriveIsActive also
+#   folds moderation (PRD FR-12A's own definition of is_active says "not suspended"), and
+#   `terminated-with-reason` is a SIXTH <MemberStatusPanel> headline state (the UX spec lists five
+#   and never modelled termination) with the appeal CTA reachable from both moderation states.
+#   Three real defects were caught by tests, not review: db.execute raw rows return timestamptz as
+#   STRINGS not Dates (fixed in the accessor, not the handler — the raw-SQL escape hatch must not
+#   leak its representation past the domain boundary); audit_log_entries has no `id` column (it is
+#   audit_id + seq); and Node/Postgres clock skew can push a just-written event outside a
+#   getValidityAt window. `pnpm ci:local` is GREEN at 30/30 jobs on a freshly recreated + migrated
+#   twt-test-pg. Two LOCAL-HARNESS artifacts diagnosed to environment (not code) and recorded because
+#   both will recur: (a) four domain count-assertion specs fail against a twt_dev carrying committed
+#   residue from repeated runs — reproduced IDENTICALLY on the baseline with all 10.10 changes
+#   stashed, and green on a fresh DB (2233/2234 this branch, 2191/2192 baseline); (b) recreating the
+#   DB immediately before ci:local breaks `test (unit)` with `relation "users" does not exist`,
+#   because that job runs BEFORE the integration-tests job's own db:migrate — always db:migrate after
+#   recreating the DB and before invoking ci:local. development_status[10-10]: review.)
+# last_updated: 2026-08-02c (10-10-member-moderation-suspend-terminate-restore-reason-codes:
+#   backlog -> ready-for-dev via bmad-create-story. The story's central finding: the naive reading of
+#   the epic AC ("member state machine transitions accordingly") — adding `suspended`/`terminated` to
+#   MEMBER_LIFECYCLE_STATES — is not implementable and would be silently harmful. `restore` has no
+#   answer under the pure (state, event) => state reducer (it cannot know the pre-suspension state, and
+#   reading a restore_to label from the payload violates the reducer's own stated invariant), and
+#   because NO `never` guard exists over MemberLifecycleState anywhere, two new labels produce ZERO
+#   compile errors while mis-classifying five TERMINAL_STATES Sets, the news audience filter, peer-mesh
+#   selection, every seeded niyamavali member_state_in clause, and the renewal grace clock. Decision 1
+#   therefore models moderation as an event-derived OVERLAY orthogonal to the lifecycle machine (the
+#   shipped member/overlay.ts account-frozen shape), leaving members.state, the projector, the
+#   state-writer trigger and the member-state-invariant CI gate untouched — flagged for PO confirmation
+#   since it deviates from a literal reading of the AC. Four forward commitments already in the code
+#   are what this story discharges: assignable-roster.ts's "suspension is already folded into is_valid",
+#   member-auth.service.ts's named-but-unwired revokeAllMemberSessions cascade, the orphan
+#   suspended-with-reason headline state in packages/ui, and prd.md:411's special_flags form. Two
+#   escalations recorded rather than papered over: (a) the epic casts a State Trustee as the actor, but
+#   state_trustee's 'state' scopeCeiling can NEVER satisfy a pariwar-dimension check, so the story ships
+#   with its own protagonist deferred as an inert-grant risk; (b) Story 10.11 depends on "moderation
+#   pending items" that 10.10's AC never defines — 10.10 ships a moderated-members read and routes the
+#   deadline/severity mismatch to PM. Notable: first Epic-10 story that mints NO permission key
+#   (PERMISSION_CATALOG_VERSION stays 28) and the first that IS step-up-gated.
 # last_updated: 2026-08-02b (10-9-banner-popup-manager-valid-from-until-dismiss: in-progress -> done
 #   via bmad-code-review chunk 2 (apps/api + apps/admin + apps/mobile), completing the two-chunk run
 #   the 2026-08-02a entry below started. 27 raw findings deduped to 25: 11 patch (all applied +
@@ -2534,7 +2671,7 @@ development_status:
   10-7-reports-exports-library-async-generation-scope-respecting: done
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: done
   10-9-banner-popup-manager-valid-from-until-dismiss: done
-  10-10-member-moderation-suspend-terminate-restore-reason-codes: backlog
+  10-10-member-moderation-suspend-terminate-restore-reason-codes: done
   10-11-trustee-lite-list-signals: backlog
   10-12-per-pariwar-custom-fields-jsonb: backlog
   10-13-fixed-amount-setter-admin-ui: backlog

@@ -22,6 +22,7 @@ import {
   memberIdentities,
   memberKycProfiles,
   memberMedicalDisclosures,
+  memberModerationActions,
   memberNominees,
   memberWithdrawals,
 } from '../../src/schema/index.js';
@@ -84,9 +85,12 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the six member-PII tables, once each', async () => {
+  it('updates exactly the seven member-PII tables, once each', async () => {
+    // Seven since Story 10.10's review pass added `member_moderation_actions`. This count is the
+    // completeness check for the RTBF surface — a new Tier-1 column landing in a table absent from
+    // this list is exactly how the moderation rationale came to survive an erasure request.
     const { captured } = await run();
-    expect(captured).toHaveLength(6);
+    expect(captured).toHaveLength(7);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -95,8 +99,31 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memberNominees,
       memberMedicalDisclosures,
       memberWithdrawals,
+      memberModerationActions,
     ]) {
       expect(tables).toContain(t);
+    }
+  });
+
+  it('member_moderation_actions: the admin-authored rationale → sentinel, decision fields untouched', async () => {
+    // The rationale is free text NAMING WHAT THE MEMBER ALLEGEDLY DID — the most sensitive free
+    // text on their record. The governance FACTS (action, reason_code, actor, timestamps,
+    // rejoin_permitted_at) are RETAINED deliberately: FR-6's rejoin lock and the audit trail both
+    // depend on the row, and they are bounded non-PII vocabulary. Only the prose goes.
+    const { captured, pariwar } = await run();
+    const set = setFor(captured, memberModerationActions);
+    expect(await dec(set['rationaleCiphertext'], pariwar, 'member_moderation')).toBe(
+      ANONYMIZED_SENTINEL,
+    );
+    for (const retained of [
+      'action',
+      'reasonCode',
+      'actorId',
+      'actorDisplay',
+      'rejoinPermittedAt',
+      'actedAt',
+    ]) {
+      expect(set).not.toHaveProperty(retained);
     }
   });
 

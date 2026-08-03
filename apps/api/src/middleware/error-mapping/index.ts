@@ -29,6 +29,9 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
+  ModerationRationaleRequiredError,
+  ModerationReasonCodeInvalidError,
+  ModerationStateError,
   NewsPostAuthorReviewerError,
   NewsPostBilingualRequiredError,
   NewsPostNotFoundError,
@@ -47,6 +50,7 @@ import {
   WaOptInPendingExistsError,
   WaOptInStateError,
   ids,
+  member as memberDomain,
   type ErrorResponseShape,
 } from '@twt/domain';
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
@@ -219,6 +223,32 @@ export function errorMappingHandler(
     return;
   }
 
+  // (3b‴) Member-moderation typed errors (Story 10.10). Each owns its code + projector.
+  //   ModerationStateError                → 409 member_moderation.invalid_state (the action is illegal
+  //                                         from the CURRENT overlay status — including the
+  //                                         Decision-2 `none --terminate-->` and a re-suspend; raised
+  //                                         BEFORE any write, so a no-op never returns 200)
+  //   ModerationReasonCodeInvalidError    → 422 member_moderation.reason_code_invalid (the code is
+  //                                         undeclared, or its `appliesTo` excludes this action — e.g.
+  //                                         a restore code offered to justify a termination)
+  //   ModerationRationaleRequiredError    → 422 member_moderation.rationale_required (the rationale is
+  //                                         mandatory on EVERY action, not only on an "other" code)
+  //   (Actor-display attribution is resolved and validated entirely at the apps/api layer via
+  //   AdminDisplayNameMissingError, mapped below — `moderateMember`'s `actorDisplay` is a required
+  //   `string`, so the domain has no code path that can raise a "missing" error of its own.)
+  if (error instanceof ModerationStateError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationReasonCodeInvalidError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationRationaleRequiredError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+
   // (3c) T&C registry typed errors (Story 2.6, AC6/AC7). Each owns its code + projector.
   //   TcVersionConflictError      → 409 terms_and_conditions.version_conflict (concurrent create race)
   //   TcVersionNotFoundError      → 404 terms_and_conditions.version_not_found
@@ -287,6 +317,26 @@ export function errorMappingHandler(
   }
 
   // (4) Known domain errors.
+  //
+  // MemberStreamConcurrencyError: two concurrent writers raced the SAME member's event stream
+  // (any `member.*` event append — moderation suspend/terminate/restore, medical disclosure,
+  // RTBF, life-events, …) and the loser lost the `events_log` `(stream_id, event_version)`
+  // unique-index race (`packages/domain/src/member/project.ts`). This is an EXPECTED, retriable
+  // condition, not a server bug — the caller re-reads the member's current standing and retries.
+  // Mapped centrally here (rather than per-module) so every `projectMemberState` caller gets a
+  // clean 409 instead of falling through to the generic 500 (Story 10.10 review finding).
+  if (error instanceof memberDomain.MemberStreamConcurrencyError) {
+    void reply
+      .status(409)
+      .send(
+        envelope(
+          'member.stream_concurrency_conflict',
+          'A concurrent update to this member was already applied — please retry',
+          requestId,
+        ),
+      );
+    return;
+  }
   if (error instanceof InvalidPariwarScopeError) {
     void reply.status(400).send(envelope('scope.invalid', 'Invalid Pariwar scope', requestId));
     return;

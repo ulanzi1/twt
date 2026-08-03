@@ -147,3 +147,8 @@ export * from './helpdesk-routing-policy-versions-rls.js';
 // INSERT/UPDATE deliberately do NOT, so a tenant-scoped caller can publish its own override but can
 // never author or supersede a global row. Do not "normalize" the read leg away.
 export * from './feature-flag-versions-rls.js';
+// Story 10.10 — member_moderation_actions tenant-isolation policies. APPEND-ONLY: SELECT + INSERT
+// only, no update/delete leg (a recorded moderation decision is immutable). The signup rejoin-lock
+// read is NOT served here — it runs pre-scope on the BYPASSRLS servicePool, exactly as the
+// member_withdrawals rejoin read already does.
+export * from './member-moderation-actions-rls.js';

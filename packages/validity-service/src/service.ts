@@ -80,11 +80,23 @@ export async function getValidityAt(
 
   const { db } = deps;
 
-  // (1) Six independent reads — none depends on another's result — run concurrently (p95 budget).
-  const [memberState, signupAt, retiredAt, lockInClock, renewal, medicalDisclosureFlags] =
-    await Promise.all([
+  // (1) Seven independent reads — none depends on another's result — run concurrently (p95 budget).
+  const [
+    memberState,
+    moderationOverlay,
+    signupAt,
+    retiredAt,
+    lockInClock,
+    renewal,
+    medicalDisclosureFlags,
+  ] = await Promise.all([
       // Member lifecycle state at the pinned instant (the is_valid/is_active + grace authority).
       member.getMemberStateAt(db, memberCtx.memberId, at),
+      // Story 10.10 — the moderation OVERLAY at the SAME pinned instant. Resolved right alongside
+      // the lifecycle state because `is_valid` is now a composition of BOTH: reading them at two
+      // different moments could produce a payload claiming a member is valid at an instant when
+      // they were suspended. This is Decision 8's entire enforcement surface.
+      member.moderation.getMemberModerationOverlay(db, memberCtx.memberId, at),
       // Tenure/retirement anchors (Task 2) — read ONCE so the R12 fact derivation AND the coverage
       // date projection share the same `retiredAt`.
       member.getMemberSignupInstantAt(db, memberCtx.memberId, at),
@@ -117,6 +129,7 @@ export async function getValidityAt(
     memberId: memberCtx.memberId,
     evaluatedAt: at,
     memberState,
+    moderationOverlay,
     lockInStatus: projectLockInStatus(lockInClock, at),
     vyawasthaShulkStatus: toRenewalPayload(renewal),
     medicalDisclosureFlags,

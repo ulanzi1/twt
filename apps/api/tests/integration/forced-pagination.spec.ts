@@ -19,9 +19,24 @@ import { createTestApp, teardown } from './_setup.js';
 const AUDIT_LIST = '/api/v1/audit/integrity-checks';
 
 // Single-object GETs that legitimately embed an array but are NOT list endpoints
-// (e.g. a future /me with a grants[]). None exist at Epic 1; the detector only flags
-// top-level arrays / paginatedResponse `{ items[] }` shapes, so this stays empty.
-const NON_LIST_GET_ALLOWLIST = new Set<string>([]);
+// (e.g. a future /me with a grants[]). The detector flags top-level arrays and
+// paginatedResponse `{ items[] }` shapes, so anything here needs a stated reason.
+const NON_LIST_GET_ALLOWLIST = new Set<string>([
+  // Story 10.10 — the frozen moderation reason-code registry. It returns `{ items }`, so the
+  // detector sees a collection, but it is NOT a DB-backed list: the registry is a code-level
+  // `as const` tuple of exactly 10 governance codes (Decision 3 — deliberately NOT a per-Pariwar
+  // table, so a tenant cannot invent its own grounds for terminating a member). Its size is fixed
+  // at compile time and cannot grow with tenant data, which is the entire hazard this gate exists
+  // to prevent — an unbounded read that drains a connection as a table fills up.
+  //
+  // Paginating it would be actively worse: the admin dropdown needs every code that could apply to
+  // an action, and a paged registry could silently omit one, producing a reason the operator can
+  // see the server accept but cannot select.
+  //
+  // ⚠ Re-examine if the registry ever becomes data-driven. The moment these codes come from a
+  // table, this entry is wrong and the route needs a real bounded `limit`.
+  '/api/v1/p/{pariwarId}/moderation/reason-codes',
+]);
 
 interface OpenApiParam {
   readonly name?: string;

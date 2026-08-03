@@ -303,6 +303,18 @@ export const QUEUE_NAMES = {
    * flips past-window rows → `expired`. Mirrors DATA_EXPORT_VACUUM. Job class C (background).
    */
   REPORT_EXPORT_VACUUM: 'report.export.vacuum',
+  /**
+   * Member-moderation notice fan-out (Story 10.10, Task 6 / AC8). The apps/api moderation route
+   * enqueues this AFTER a suspend/terminate/restore has COMMITTED; the apps/jobs worker builds one
+   * `alert_published` Alert (no 10th AlertCategory is minted — Decision 7) and runs the shipped
+   * `fanOutAlertToMembers` dispatch for the ONE moderated member. The fan-out lives HERE, never in
+   * apps/api: it needs MEMBER Tier-1 field crypto and the admin request path carries ADMIN-identity
+   * keys (the 10.4 crypto-boundary lesson). singletonKey = moderation_action_id — one notice per
+   * DECISION, so a pg-boss redelivery cannot double-notify and two legitimate actions on the same
+   * member (suspend then terminate) each get their own notice. Best-effort at the producer: a failed
+   * enqueue never fails the committed action. Job class B (request/event).
+   */
+  MEMBER_MODERATION_NOTIFY: 'member.moderation.notify',
 } as const;
 
 /** Union of the registered queue names. */

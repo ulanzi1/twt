@@ -39,6 +39,21 @@ export interface ResolvedMembership {
    * on {rejoin_permitted_at}" (AC3).
    */
   withdrawnAt?: string | null;
+  /**
+   * The member's CURRENT moderation standing (Story 10.10) — `'suspended'`, `'terminated'`, or null
+   * when they have never been moderated. Derived from their LATEST `member_moderation_actions` row
+   * (a `restore` maps to null: the standing is cleared, not merely historical).
+   */
+  moderationStatus?: 'suspended' | 'terminated' | null;
+  /**
+   * The FR-56 → FR-6 rejoin-lock lift instant from the member's latest moderation action, ISO-8601,
+   * or null. Set only on a `terminate` (the DB CHECK enforces `NOT NULL` iff terminate). This is a
+   * SECOND, independent rejoin lock alongside the Story 3.10 withdrawal lock — a terminated identity
+   * is blocked even though it never withdrew, and NO fake `member_withdrawals` row is ever written.
+   */
+  moderationRejoinPermittedAt?: string | null;
+  /** When the latest moderation action was taken, ISO-8601, or null. Rendered in the block copy. */
+  moderatedAt?: string | null;
 }
 
 /**
@@ -52,6 +67,16 @@ export interface ResolvedMembership {
  * so the signup handler's rejoin-lock guard can, PRE-scope, distinguish a withdrawn-in-window identity
  * (→ 403 auth.rejoin_locked) from a live duplicate (→ 409). Both joins read cross-tenant safely on the
  * BYPASSRLS servicePool (there is no `app.pariwar_id` set yet on the signup path).
+ *
+ * Story 10.10: additionally LATERAL-joins the member's LATEST `member_moderation_actions` row, so the
+ * same guard can treat a CURRENTLY-terminated identity as terminal (FR-56 → FR-6). "Currently" is
+ * load-bearing: the join takes the latest action and maps `restore` → not-moderated, so a RESTORE
+ * CLEARS the block. A guard keyed on the mere EXISTENCE of a historical `terminate` row would leave a
+ * restored member permanently locked out — the exact bug AC7's restore→permitted test pins against.
+ *
+ * ⚠ `member_moderation_actions` is TENANT-ISOLATED, but like `member_identities` and
+ * `member_withdrawals` above it is read here on the BYPASSRLS `servicePool` because signup has no
+ * scope yet. That is why migration 0091 GRANTs SELECT on it to `twt_service`.
  */
 export async function resolveMembersByMobile(
   servicePool: pg.Pool,
@@ -64,13 +89,31 @@ export async function resolveMembersByMobile(
     state: string | null;
     rejoin_permitted_at: Date | null;
     withdrawn_at: Date | null;
+    moderation_action: string | null;
+    moderation_rejoin_permitted_at: Date | null;
+    moderated_at: Date | null;
   }>(
     `SELECT mi.member_id, mi.pariwar_id, pp.display_name_en, m.state,
-            mw.rejoin_permitted_at, mw.withdrawn_at
+            mw.rejoin_permitted_at, mw.withdrawn_at,
+            mma.action        AS moderation_action,
+            mma.rejoin_permitted_at AS moderation_rejoin_permitted_at,
+            mma.acted_at      AS moderated_at
        FROM member_identities mi
        LEFT JOIN pariwar_passport pp ON pp.pariwar_id = mi.pariwar_id
        LEFT JOIN members m ON m.member_id = mi.member_id
        LEFT JOIN member_withdrawals mw ON mw.member_id = mi.member_id
+       LEFT JOIN LATERAL (
+              SELECT action, rejoin_permitted_at, acted_at
+                FROM member_moderation_actions
+               WHERE member_id = mi.member_id
+               -- Tiebreak on created_at (the DB clock, DEFAULT now(), assigned in the same tx as
+               -- the event append) BEFORE the PK. acted_at is the injected app clock and can tie;
+               -- the PK is gen_random_uuid(), so using it as the tiebreak would resolve a
+               -- suspend/terminate pair by coin flip -- and picking the suspend here silently SKIPS
+               -- the FR-6 12-month rejoin lock, since the guard below keys on terminate.
+               ORDER BY acted_at DESC, created_at DESC, moderation_action_id DESC
+               LIMIT 1
+            ) mma ON true
       WHERE mi.mobile_blind_index = $1
       ORDER BY mi.created_at ASC`,
     [mobileBlindIndex],
@@ -82,6 +125,17 @@ export async function resolveMembersByMobile(
     state: r.state,
     rejoinPermittedAt: r.rejoin_permitted_at ? r.rejoin_permitted_at.toISOString() : null,
     withdrawnAt: r.withdrawn_at ? r.withdrawn_at.toISOString() : null,
+    // A `restore` (or no action at all) maps to null — the CURRENT standing, not the history.
+    moderationStatus:
+      r.moderation_action === 'terminate'
+        ? 'terminated'
+        : r.moderation_action === 'suspend'
+          ? 'suspended'
+          : null,
+    moderationRejoinPermittedAt: r.moderation_rejoin_permitted_at
+      ? r.moderation_rejoin_permitted_at.toISOString()
+      : null,
+    moderatedAt: r.moderated_at ? r.moderated_at.toISOString() : null,
   }));
 }
 
@@ -351,14 +405,42 @@ export async function revokeDeviceChain(
 }
 
 /**
- * Suspension cascade seam (§2.4 line 1428 / FR-56): delete ALL of a member's
- * refresh tokens (revoking every session) + their trusted-device bindings. Exposed
- * now so the later suspension/force-re-OTP signal handler can call it. Returns the
+ * The suspension cascade (§2.4 line 1428 / architecture.md:1433-1434 / FR-56): delete ALL of a
+ * member's refresh tokens (revoking every session) + their trusted-device bindings. Returns the
  * number of refresh-token rows removed (for the audit context).
+ *
+ * ── Story 10.10 WIRED this seam ─────────────────────────────────────────────────────────────────
+ * It shipped in Story 3.2 as a named-but-uncalled seam ("a later epic wires" —
+ * member-auth.service.ts). Story 10.10 is that epic: `suspend` AND `terminate` both call it.
+ *
+ * `executor` is widened to `pg.Pool | pg.PoolClient` so the moderation route can run the cascade
+ * INSIDE its scope transaction, alongside the event append and the decision-record insert. That
+ * matters: if the moderation write rolls back, the member must NOT be left logged out. Both tables
+ * are Story 1.6 GLOBAL carve-outs (`USING (true)` for twt_app, with DELETE granted in migration
+ * 0019), so they are writable from a `SET LOCAL ROLE twt_app` scope tx exactly as from the pool.
+ *
+ * ── Why trusted devices are cleared too (a DELIBERATE call, not an inherited default) ───────────
+ * A refresh chain and a trusted-device binding are different objects: the chain is the live
+ * session, the binding is the max-2 device slot. Clearing only the chain would force
+ * re-authentication while leaving the moderated member's device slots occupied — so a suspension
+ * would silently consume their device budget, and the FR-56 intent ("every device re-authenticates
+ * and observes the new standing") would be half-met. architecture.md:1433-1434 says the cascade
+ * deletes "all sessions + refresh tokens"; the binding is what makes a device a session-bearer, so
+ * it goes. This is also the behaviour this function has had since 3.2 — Story 10.10 wires the seam,
+ * it does not redefine it.
+ *
+ * ⚠ This is NOT a login block. A suspended or terminated member MUST still be able to sign in, to
+ * read the dignified explanation and reach the appeal CTA (Decision 6). Enforcement is `is_valid`,
+ * not a locked door — see the pinning test in the moderation integration spec.
  */
-export async function revokeAllMemberSessions(pool: pg.Pool, memberId: string): Promise<number> {
-  const res = await pool.query(`DELETE FROM member_refresh_tokens WHERE member_id = $1`, [memberId]);
-  await pool.query(`DELETE FROM member_trusted_devices WHERE member_id = $1`, [memberId]);
+export async function revokeAllMemberSessions(
+  executor: pg.Pool | pg.PoolClient,
+  memberId: string,
+): Promise<number> {
+  const res = await executor.query(`DELETE FROM member_refresh_tokens WHERE member_id = $1`, [
+    memberId,
+  ]);
+  await executor.query(`DELETE FROM member_trusted_devices WHERE member_id = $1`, [memberId]);
   return res.rowCount ?? 0;
 }
 

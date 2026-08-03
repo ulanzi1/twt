@@ -23,6 +23,12 @@ import {
   PendingIntakeAttemptsResponse,
   MemberSearchResponse,
   MemberValidityResponse,
+  // Story 10.10 — member moderation (suspend / terminate / restore).
+  ModerationActionResponse,
+  ModerationHistoryResponse,
+  ModeratedMembersListResponse,
+  ModerationRationaleResponse,
+  ReasonCodesListResponse,
   VerifierConsoleResponse,
   type VerifierConsoleResponse as VerifierConsole,
   VerifierDecisionResponse,
@@ -121,6 +127,13 @@ import {
   type MemberSearchRequest,
   type MemberSearchResponse as MemberSearchResult,
   type MemberValidityResponse as MemberValidityResult,
+  type ModerateMemberRequest,
+  type ModerationAction,
+  type ModerationActionResponse as ModerationActionResult,
+  type ModerationHistoryResponse as ModerationHistoryResult,
+  type ModeratedMembersListResponse as ModeratedMembersListResult,
+  type ModerationRationaleResponse as ModerationRationaleResult,
+  type ReasonCodesListResponse as ReasonCodesListResult,
   type StepUpRequestResponse as StepUpRequestResult,
   type StepUpVerifyResponse as StepUpVerifyResult,
   type AddPariwarRequest as AddPariwarPayload,
@@ -410,6 +423,84 @@ export function getMemberValidity(
   return apiFetch(
     `${adminMemberBase(pariwarId)}/${encodeURIComponent(memberId)}/validity`,
     MemberValidityResponse,
+  );
+}
+
+// ── Member moderation (Story 10.10) ───────────────────────────────────────────
+// Suspend / terminate / restore + the two reads. Every write is gated server-side on the EXISTING
+// `member.moderate` key AND on step-up with a PER-ACTION context — so a 403 `auth.step_up_required`
+// from one of these is the SIGNAL to elevate for THAT action, and an elevation minted for a restore
+// will not satisfy a termination (the helpline-intake elevation flow, applied per action).
+//
+// ⚠ These routes are NOT under `adminMemberBase`: they live at `/p/:pariwarId/members/:memberId/
+// moderation/*`, matching the server's route registration. Do not "tidy" them onto the admin base.
+
+/** The moderation base for one member. */
+function moderationBase(pariwarId: string, memberId: string): string {
+  return `/api/v1/p/${encodeURIComponent(pariwarId)}/members/${encodeURIComponent(memberId)}/moderation`;
+}
+
+/** POST a moderation action. `action` selects the route — it is never carried in the body. */
+export function moderateMember(
+  pariwarId: string,
+  memberId: string,
+  action: ModerationAction,
+  body: ModerateMemberRequest,
+): Promise<ModerationActionResult> {
+  return apiFetch(`${moderationBase(pariwarId, memberId)}/${action}`, ModerationActionResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET a member's current moderation standing + history (server-derived `legal_actions`). */
+export function getModerationHistory(
+  pariwarId: string,
+  memberId: string,
+): Promise<ModerationHistoryResult> {
+  return apiFetch(moderationBase(pariwarId, memberId), ModerationHistoryResponse);
+}
+
+/**
+ * GET ONE moderation action's decrypted free-text rationale (review follow-up — this is the admin
+ * TRIGGER the decrypt endpoint was built for; without it the endpoint existed and nothing could
+ * reach it, so a recorded rationale was write-only in practice).
+ *
+ * Deliberately NOT folded into `getModerationHistory`: the rationale is Tier-1 PII and is fetched
+ * ONE action at a time, on an explicit operator action, so a routine history render never decrypts
+ * a whole page of it. `rationale` comes back `null` when the stored envelope is unreadable; a KMS
+ * outage is a 503, not a null.
+ */
+export function getModerationRationale(
+  pariwarId: string,
+  memberId: string,
+  moderationActionId: string,
+): Promise<ModerationRationaleResult> {
+  return apiFetch(
+    `${moderationBase(pariwarId, memberId)}/${encodeURIComponent(moderationActionId)}/rationale`,
+    ModerationRationaleResponse,
+  );
+}
+
+/** GET the Pariwar's currently-moderated members (Decision 9 — the Story 10.11 read). */
+export function listModeratedMembers(
+  pariwarId: string,
+  limit = 50,
+): Promise<ModeratedMembersListResult> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/moderation/members?limit=${limit}`,
+    ModeratedMembersListResponse,
+  );
+}
+
+/**
+ * GET the full frozen moderation reason-code registry (review follow-up) — the ONE source both
+ * the server's `appliesTo` 422 and the moderation strip's dropdown/labels read. Not paginated.
+ */
+export function getModerationReasonCodes(pariwarId: string): Promise<ReasonCodesListResult> {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/moderation/reason-codes`,
+    ReasonCodesListResponse,
   );
 }
 

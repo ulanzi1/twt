@@ -2983,6 +2983,200 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.10 — member moderation (FR-56; suspend / terminate / restore) ──────────────────────
+//
+// The FIRST Epic-10 surface that is STEP-UP gated, on THREE distinct action contexts
+// (`member_moderation_{suspend|terminate|restore}`) so an elevation minted for one action can never
+// be spent on another. It gates on the EXISTING `member.moderate` key — no new key, no catalog bump.
+//
+// ⚠ The free-text rationale is INBOUND-ONLY on every LIST/ACTION response schema below. The one
+// exception — `ModerationRationaleResponse` — is a single-item decrypt-on-demand read behind the
+// SAME `member.moderate` gate (review follow-up), never a list.
+
+const {
+  ModerateMemberRequest,
+  ModerationActionResponse,
+  ModerationHistoryResponse,
+  ModeratedMembersListResponse,
+  ModerationRationaleResponse,
+  ReasonCodesListResponse,
+} = await import('../src/member-moderation/index.js');
+
+const ModerateMemberRequestComponent = ModerateMemberRequest.openapi('ModerateMemberRequest');
+const ModerationActionComponent = ModerationActionResponse.openapi('ModerationAction');
+const ModerationHistoryComponent = ModerationHistoryResponse.openapi('ModerationHistory');
+const ModeratedMembersListComponent = ModeratedMembersListResponse.openapi('ModeratedMembersList');
+const ModerationRationaleComponent = ModerationRationaleResponse.openapi('ModerationRationale');
+const ReasonCodesListComponent = ReasonCodesListResponse.openapi('ReasonCodesList');
+
+const moderationMemberParams = z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() });
+const moderationPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const moderationForbidden = errorResponse(
+  'Not authorized (member.moderate) for this Pariwar; OR step-up required / the elevation was minted for a DIFFERENT moderation action',
+);
+const moderationTags = ['member-moderation'];
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation/suspend',
+  summary: 'Suspend a member (moderation overlay: none → suspended)',
+  description:
+    'Records a suspension against the member with a registry reason code and a MANDATORY free-text ' +
+    'rationale (stored Tier-1 encrypted; it never appears on any response, event payload or audit ' +
+    'line). Moderation is an event-derived OVERLAY orthogonal to the member lifecycle — `members.state` ' +
+    'is NOT touched. The member stops being covered for support (`is_valid` becomes false, which is ' +
+    'the entire enforcement surface: pool assignment and claim eligibility inherit it), every session ' +
+    'is revoked, and the member is notified. The member can STILL sign in — deliberately, so they can ' +
+    'read the explanation and reach the appeal path. Step-up required (`member_moderation_suspend`).',
+  tags: moderationTags,
+  request: {
+    params: moderationMemberParams,
+    body: { content: jsonOf(ModerateMemberRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The recorded moderation action', content: jsonOf(ModerationActionComponent) },
+    400: errorResponse('Request validation failed (e.g. an empty or whitespace-only rationale)'),
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+    409: errorResponse('Illegal from the member\'s current standing (e.g. already suspended) — rejected BEFORE any write; OR the acting admin has no display name on record (`admin.display_name_missing`)'),
+    422: errorResponse('The reason code is undeclared, or cannot justify a suspension'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation/terminate',
+  summary: 'Terminate a member (moderation overlay: suspended → terminated)',
+  description:
+    'Legal ONLY from `suspended` — FR-56 routes termination THROUGH suspension, so the harshest, ' +
+    'rejoin-locking action can never be a single click; terminating an unmoderated member is a 409. ' +
+    'Sets a 12-month rejoin lock (FR-6): a signup under the same identity is refused until ' +
+    '`rejoin_permitted_at`. Revokes every session and notifies the member, who can still sign in. ' +
+    'Step-up required (`member_moderation_terminate`) — an elevation minted for suspend or restore ' +
+    'does NOT satisfy it.',
+  tags: moderationTags,
+  request: {
+    params: moderationMemberParams,
+    body: { content: jsonOf(ModerateMemberRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The recorded termination (carries rejoin_permitted_at)', content: jsonOf(ModerationActionComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+    409: errorResponse('The member is not currently suspended — termination is legal only from `suspended`; OR the acting admin has no display name on record (`admin.display_name_missing`)'),
+    422: errorResponse('The reason code cannot justify a termination'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation/restore',
+  summary: 'Restore a member (moderation overlay: suspended | terminated → none)',
+  description:
+    'Clears the moderation standing. The member is covered for support again (`is_valid` returns to ' +
+    'true) and any 12-month rejoin lock is lifted — the signup guard reads the CURRENT standing, not ' +
+    'the presence of a historical termination. Restore does NOT re-mint sessions; the member simply ' +
+    'signs in normally. Uses the RESTORE reason-code family (a moderation code is a 422 here). ' +
+    'Step-up required (`member_moderation_restore`).',
+  tags: moderationTags,
+  request: {
+    params: moderationMemberParams,
+    body: { content: jsonOf(ModerateMemberRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The recorded restoration', content: jsonOf(ModerationActionComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+    409: errorResponse('The member is not currently moderated — a no-op never returns 200; OR the acting admin has no display name on record (`admin.display_name_missing`)'),
+    422: errorResponse('The reason code cannot justify a restore'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// Shared by BOTH moderation reads. The history read is paginated too (review follow-up): it used to
+// take no querystring and silently return only the newest 50 entries with no truncation signal.
+const moderationListQuery = z.object({
+  limit: z.number().int().min(1).max(199).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation',
+  summary: 'A member\'s current moderation standing + paginated history',
+  description:
+    'The standing is DERIVED by folding the member\'s moderation events — it is never a stored ' +
+    'column. `legal_actions` is computed server-side from the same legality reducer the write path ' +
+    'uses, so a console can drive button enablement without re-implementing any rule. ' +
+    '⚠ Neither the standing nor any history entry carries the rationale or its ciphertext.',
+  tags: moderationTags,
+  request: { params: moderationMemberParams, query: moderationListQuery },
+  responses: {
+    200: { description: 'The standing, the legal next actions, and one PAGE of history (`has_more` flags truncation — an audit trail must never read as complete when it is not)', content: jsonOf(ModerationHistoryComponent) },
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+    404: errorResponse('Member not found in this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation/{moderationActionId}/rationale',
+  summary: 'Decrypt ONE moderation action\'s free-text rationale',
+  description:
+    'The single exception to "the rationale never leaves the DB": a per-action, decrypt-on-demand ' +
+    'read behind the same `member.moderate` gate as every other field on this surface — never a ' +
+    'list, and no separate capability. Fail-soft on a CORRUPT/ROTATED STORED ENVELOPE: `rationale` ' +
+    'is `null` rather than a 500. A KMS/key-service outage is deliberately NOT collapsed into that ' +
+    'null — it returns 503, so an auditor can never mistake "temporarily undecryptable" for ' +
+    '"no rationale was ever recorded".',
+  tags: moderationTags,
+  request: { params: z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() }) },
+  responses: {
+    200: { description: 'The decrypted rationale (or null when the STORED envelope is unreadable)', content: jsonOf(ModerationRationaleComponent) },
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+    404: errorResponse('No moderation action with that id for this member in this Pariwar'),
+    503: errorResponse('The key service is unavailable — the rationale exists but cannot be decrypted right now (`member_moderation.rationale_unavailable`)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/moderation/members',
+  summary: 'The Pariwar\'s currently-moderated members',
+  description:
+    'Members whose CURRENT standing is `suspended` or `terminated`, newest-action-first, paginated. ' +
+    'Restored members drop out. Carries no rationale. ' +
+    'NOTE: moderation items carry NO deadline and NO severity — a consumer cannot sort them by ' +
+    'deadline-proximity.',
+  tags: moderationTags,
+  request: { params: moderationPariwarParams, query: moderationListQuery },
+  responses: {
+    200: { description: 'The moderated-members page', content: jsonOf(ModeratedMembersListComponent) },
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/moderation/reason-codes',
+  summary: 'The full frozen moderation reason-code registry',
+  description:
+    'All 10 codes (7 moderation grounds + 3 restore grounds), always — not paginated (Decision 3: ' +
+    'the registry is code-level and frozen, never a per-Pariwar-growing list). The ONE source both ' +
+    'the server\'s `appliesTo` 422 and the admin dropdown read.',
+  tags: moderationTags,
+  request: { params: moderationPariwarParams },
+  responses: {
+    200: { description: 'The registry', content: jsonOf(ReasonCodesListComponent) },
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

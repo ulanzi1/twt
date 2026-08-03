@@ -315,6 +315,21 @@ export {
   BannerWindowInvalidError,
   BANNER_WINDOW_INVALID_CODE,
 } from './banners/errors.js';
+// Story 10.10 — member-moderation typed errors surfaced at the top level (the banners/news-blog
+// pattern) so the apps/api error-mapping middleware imports the class + code constant from
+// `@twt/domain` directly. The MODULE itself is namespaced under `member.moderation` (not a top-level
+// namespace) because it is a second, ORTHOGONAL state machine on the member's own stream — keeping
+// it under `member.` makes that relationship visible at every call site.
+// ⚠ Every one of these MUST have an arm in the middleware; an unmapped domain error becomes a 500
+// (the Story 10.8 Pass-3 finding).
+export {
+  ModerationStateError,
+  MODERATION_INVALID_STATE_CODE,
+  ModerationReasonCodeInvalidError,
+  MODERATION_REASON_CODE_INVALID_CODE,
+  ModerationRationaleRequiredError,
+  MODERATION_RATIONALE_REQUIRED_CODE,
+} from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the
 // notification family register their own), the 5k-item-per-batch cap, per-item RBAC scope-check

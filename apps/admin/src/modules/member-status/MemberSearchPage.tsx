@@ -14,6 +14,7 @@ import { useMemberSearch, useMemberValidity } from '../../api/hooks.js';
 import { MemberLookupForm } from './MemberLookupForm.js';
 import { MemberSearchResults } from './MemberSearchResults.js';
 import { MemberStatusPanel } from './MemberStatusPanel.js';
+import { ModerationSection } from './ModerationSection.js';
 
 function messageOf(err: unknown): string | undefined {
   if (err instanceof ApiError) return err.message;
@@ -71,6 +72,15 @@ export function MemberSearchPage({ pariwarId }: MemberSearchPageProps): ReactEle
           )}
           {validity.data && (
             <MemberStatusPanel payload={validity.data.validity} identity={selectedItem} />
+          )}
+          {/* Story 10.10 (AC9) — the moderation action strip + history, on the EXISTING member
+              record. Rendered independently of the validity query: a failed validity read must not
+              take the moderation surface down with it (a trustee may need to suspend precisely
+              because something about the member's record is misbehaving). */}
+          {selectedId && (
+            <div className="mt-6">
+              <ModerationSection pariwarId={pariwarId} memberId={selectedId} />
+            </div>
           )}
         </section>
       </div>

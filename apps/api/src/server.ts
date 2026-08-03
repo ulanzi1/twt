@@ -57,6 +57,7 @@ import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index
 import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
+import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
 import { registerReportsModule } from './modules/reports/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
@@ -286,6 +287,13 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // window — nothing is enqueued, no worker activates or archives a banner, and nothing fans out
   // (banners are in-app, NOT channel-dispatched).
   registerBannerModule(app, deps);
+  // Story 10.10 — the FR-56 member-moderation surface: suspend / terminate / restore with
+  // registry-driven reason codes, a MANDATORY Tier-1-encrypted rationale, full attribution and —
+  // uniquely in Epic 10 — STEP-UP gating on three distinct action contexts. It gates on the EXISTING
+  // `member.moderate` key (no new key; PERMISSION_CATALOG_VERSION stays 28). Moderation is an
+  // event-derived OVERLAY on the member's own stream: `members.state` is never touched, and the
+  // ENTIRE enforcement surface is the `is_valid` conjunction in @twt/validity-service (Decision 8).
+  registerMemberModerationRoutes(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

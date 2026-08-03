@@ -105,6 +105,39 @@ export function createSignupHandlers(deps: AppDeps) {
       const existing = await repo.resolveMembersByMobile(deps.servicePool, blindIndex);
       const priorInThisPariwar = existing.find((m) => m.pariwarId === pariwarIdStr);
       if (priorInThisPariwar) {
+        // Story 10.10 (AC7) — the SECOND 12-month rejoin lock: a CURRENTLY-terminated identity
+        // (FR-56 → FR-6). Checked BEFORE the withdrawal lock because termination is involuntary and
+        // is the stronger signal; the two are independent locks over the same identity and either
+        // one blocks. ⚠ NO fake `member_withdrawals` row is ever written on termination —
+        // termination is not voluntary and must not masquerade as withdrawal.
+        //
+        // `moderationStatus` is the CURRENT standing derived from the LATEST moderation action, so a
+        // RESTORE clears this block automatically (the repo maps `restore` → null). Do NOT "harden"
+        // this by checking for the existence of a historical terminate row — that would lock a
+        // restored member out permanently.
+        const moderationRejoinAt = priorInThisPariwar.moderationRejoinPermittedAt;
+        if (
+          priorInThisPariwar.moderationStatus === 'terminated' &&
+          moderationRejoinAt &&
+          now < new Date(moderationRejoinAt)
+        ) {
+          emitAuthAudit(deps, request, 'member_moderation.rejoin_blocked', {
+            context: { masked_mobile: masked, rejoin_permitted_at: moderationRejoinAt },
+          });
+          // The SAME dignified 403 shape as the withdrawal lock (AC7) — the member does not need to
+          // learn a new error code to be told when they may return.
+          throw new ForbiddenError(
+            'This identity was terminated and rejoin is not yet permitted',
+            'auth.rejoin_locked',
+            {
+              ...(priorInThisPariwar.moderatedAt
+                ? { terminated_at: priorInThisPariwar.moderatedAt }
+                : {}),
+              rejoin_permitted_at: moderationRejoinAt,
+            },
+          );
+        }
+
         // Story 3.10 — 12-month rejoin lock. A WITHDRAWN/ANONYMIZED identity within its rejoin window
         // is blocked with the dignified 403 auth.rejoin_locked (carrying the dates the client renders).
         // A non-withdrawn duplicate is the UNCHANGED 409. A withdrawn identity PAST its window is v1

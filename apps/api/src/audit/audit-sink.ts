@@ -154,6 +154,16 @@ export type AuthAuditEventType =
   //   rejoin_blocked — a same-identity signup was blocked inside the 12-month rejoin-lock window.
   | 'member_withdrawal.completed'
   | 'member_withdrawal.rejoin_blocked'
+  // ── Member moderation surface, signup-guard half (Story 10.10, FR-56 → FR-6) ─
+  // The rejoin-lock block for a CURRENTLY-terminated identity. Distinct from `member_withdrawal.
+  // rejoin_blocked` above on purpose — a moderation termination is not voluntary and must not
+  // masquerade as a withdrawal in any audit/reporting query keyed on the action name (Story 10.10
+  // review). The three `member_moderation.{suspended,terminated,restored}` action-write lines live
+  // in the separate Story 1.10 hash-chain sink (`audit.writeAuditEntry`), not here. Context is
+  // NON-PII: masked mobile (last-4) + rejoin_permitted_at only, same shape as the withdrawal line.
+  //   rejoin_blocked — a same-identity signup was blocked inside the moderation-termination 12-month
+  //                    rejoin-lock window.
+  | 'member_moderation.rejoin_blocked'
   // ── Member data-export surface (Story 3.11, FR-95 / DPDPA data-portability) ───
   // The export request + the one-time gated download. Context is NON-PII: export_id, member_id (the
   // actorId), status, byte size — NEVER any exported field value, NEVER the plaintext. The `.generated`

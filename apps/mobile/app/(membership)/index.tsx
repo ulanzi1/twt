@@ -59,6 +59,26 @@ export default function MembershipStatusScreen() {
               {new Date(vm.validityWindow.validThrough).toLocaleDateString()}
             </Text>
           ) : null}
+          {/*
+            Story 10.10 (AC9) — the member is owed FULL PROSE, not an error code, and it must sit
+            with the headline it explains. Without this the panel said "Under review" / "Membership
+            ended" and offered an appeal button while never saying WHY, which is the whole reason
+            the moderation flag is member-visible in the first place.
+            `{reason}` is REQUIRED: `t()` throws on a missing interpolation param.
+          */}
+          {vm.moderationNotice ? (
+            <Text
+              accessibilityRole="text"
+              color="$red11"
+              fontSize="$3"
+              mt="$2"
+              testID="member-status-moderation-notice"
+            >
+              {t(vm.moderationNotice.detailKey, {
+                reason: t(vm.moderationNotice.reasonLabelKey),
+              })}
+            </Text>
+          ) : null}
         </YStack>
 
         {/* Sections (b)–(g) — simplified "what applies to you" (AC2b): prose only, no clause-id trace. */}

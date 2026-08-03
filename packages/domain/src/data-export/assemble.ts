@@ -23,6 +23,26 @@
 // when Epics 8/6 land is a one-line change. This is honest completeness, not a lie of omission.
 //
 // Every read runs under the caller's RLS scope (tenant-isolated). Naming: DB snake_case, TS camelCase.
+//
+// ── ⚠ DELIBERATELY NOT EXPORTED: the Story 10.10 moderation rationale ────────────────────────────
+// `member_moderation_actions.rationale_ciphertext` is Tier-1 member-related PII, and this module's
+// own header calls itself "the authoritative checklist" for the PII surface — so its absence here
+// is recorded rather than left to read as an oversight.
+//
+// The ERASURE half IS wired: `member/anonymize.ts` scrubs the rationale on RTBF, and migration 0092
+// grants the column-level UPDATE that makes the scrub possible at all (0091 was SELECT+INSERT-only,
+// which made the column structurally un-erasable). That was a defect and it is fixed.
+//
+// The DISCLOSURE half is a genuinely different question and is NOT decided here: the rationale is
+// ADMIN-AUTHORED DELIBERATIVE TEXT about the member, written by a trustee under governance
+// authority. Exporting it to the data principal would disclose internal moderation reasoning
+// verbatim — plausibly owed under DPDPA's access right, plausibly exempt as deliberative material,
+// and consequential either way (it changes what a trustee can safely write in that field). The
+// member already learns the moderation OUTCOME and its reason-code LABEL through the status panel
+// and the notification, so nothing about their standing is hidden from them today.
+// → OPEN QUESTION for PM/legal, recorded per [[feedback_record_unattested_no_backfill]]. Whoever
+// answers it should also decide whether `actor_display` rides along, since naming the acting
+// trustee to a terminated member is its own decision.
 
 import { and, asc, desc, eq } from 'drizzle-orm';
 

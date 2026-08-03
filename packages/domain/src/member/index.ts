@@ -33,3 +33,9 @@ export * from './withdrawal.js';
 export * from './anonymize.js';
 export * from './display-name.js';
 export * from './errors.js';
+// Story 10.10 — member moderation (suspend / terminate / restore). A NESTED namespace
+// (`member.moderation.*`), not a flat re-export: it is a SECOND, orthogonal event-derived state
+// machine on the member's own stream (Decision 1), and keeping it namespaced makes that separation
+// visible at every call site — `member.getMemberStateAt` (lifecycle) vs
+// `member.moderation.getMemberModerationOverlay` (overlay) can never be mistaken for each other.
+export * as moderation from './moderation/index.js';

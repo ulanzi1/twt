@@ -12,14 +12,17 @@ import {
   computeValidityPayloadHash,
   deriveIsActive,
   deriveIsValid,
+  moderationSpecialFlag,
   projectLockInStatus,
   projectRetirementCoverage,
   type AssembleInput,
 } from '../src/payload.js';
+import { redactForCaller } from '../src/redaction.js';
 import { ids } from '@twt/domain';
 import { r12Result, r12Slot } from './fixtures/eval-results.js';
 
 const MEMBER = ids.memberId('22222222-2222-2222-2222-222222222222');
+const PARIWAR = ids.pariwarId('33333333-3333-3333-3333-333333333333');
 const AT = new Date('2025-06-01T00:00:00Z');
 
 function baseInput(over: Partial<AssembleInput> = {}): AssembleInput {
@@ -113,6 +116,121 @@ describe('is_valid / is_active mapping (documented state composition)', () => {
       expect(deriveIsActive(c.state)).toBe(c.active);
     });
   }
+});
+
+// ── Story 10.10 (AC5) — the MODERATION dimension of the truth table ─────────────────────────────
+//
+// ⚠ This table has NO completeness check: a missing row loses coverage SILENTLY. The moderation
+// dimension is therefore enumerated as a full cross-product (every lifecycle state × all three
+// moderation statuses) rather than sampled, so a future lifecycle state cannot be added without
+// this loop covering it too.
+describe('is_valid / is_active × moderation status (Story 10.10, AC5 — Decision 8)', () => {
+  const LIFECYCLE_STATES: readonly member.MemberLifecycleState[] = [
+    'pending-kyc',
+    'pending-fee',
+    'pending-valid',
+    'lock-in',
+    'active',
+    'active-in-grace',
+    'lapsed-unpaid',
+    'withdrawn',
+    'anonymized',
+  ];
+  const VALID_WITHOUT_MODERATION = new Set<string>(['lock-in', 'active', 'active-in-grace']);
+
+  for (const state of LIFECYCLE_STATES) {
+    const baseValid = VALID_WITHOUT_MODERATION.has(state);
+    const baseActive = state === 'active';
+
+    it(`${state} + moderation 'none' → unchanged (valid=${baseValid}, active=${baseActive})`, () => {
+      expect(deriveIsValid(state, 'none')).toBe(baseValid);
+      expect(deriveIsActive(state, 'none')).toBe(baseActive);
+    });
+
+    for (const moderated of ['suspended', 'terminated'] as const) {
+      it(`${state} + moderation '${moderated}' → valid=false, active=false`, () => {
+        // Moderation is a HARD conjunction: it can only ever take validity away, never grant it.
+        expect(deriveIsValid(state, moderated)).toBe(false);
+        expect(deriveIsActive(state, moderated)).toBe(false);
+      });
+    }
+  }
+
+  it('the DEFAULT argument is `none` — pre-10.10 single-arg callers keep their meaning', () => {
+    expect(deriveIsValid('active')).toBe(deriveIsValid('active', 'none'));
+    expect(deriveIsActive('active')).toBe(deriveIsActive('active', 'none'));
+  });
+
+  it('REVERT-SANITY: removing the `moderationStatus === "none"` conjunction flips this', () => {
+    // The single most consequential line in Story 10.10. `is_valid` is the ENTIRE enforcement
+    // surface (Decision 8) — with the conjunction gone, an `active` suspended member reads
+    // `is_valid: true` and `assignable-roster.ts` would hand them a pool slot.
+    expect(deriveIsValid('active', 'suspended')).toBe(false);
+    expect(VALID_WITHOUT_MODERATION.has('active')).toBe(true); // …the state alone WOULD be valid
+  });
+});
+
+describe('moderation special flags (prd.md:411 form) — AC5', () => {
+  it('emits suspended_per_<code> / terminated_per_<code>', () => {
+    expect(moderationSpecialFlag('suspended', 'r7-contribution-discipline')).toBe(
+      'suspended_per_r7-contribution-discipline',
+    );
+    expect(moderationSpecialFlag('terminated', 'r14-forgery')).toBe('terminated_per_r14-forgery');
+  });
+
+  it('emits NOTHING when the member is not moderated', () => {
+    expect(moderationSpecialFlag('none', null)).toBeNull();
+    expect(moderationSpecialFlag('none', 'r14-forgery')).toBeNull();
+  });
+
+  it('degrades to `_unspecified` rather than emitting a broken flag on a missing code', () => {
+    expect(moderationSpecialFlag('suspended', null)).toBe('suspended_per_unspecified');
+  });
+
+  it('assemblePayload appends the flag AFTER the clause-order flags (hash determinism)', () => {
+    const p = assemblePayload(
+      baseInput({
+        slots: [r12Slot(r12Result({ grantedYears: 0, isRetired: false, specialFlags: ['some_flag'] }))],
+        moderationOverlay: {
+          status: 'suspended',
+          reasonCode: 'r14-forgery',
+          since: AT,
+          lastActionAt: AT,
+        },
+      }),
+    );
+    expect(p.specialFlags).toEqual(['some_flag', 'suspended_per_r14-forgery']);
+    expect(p.isValid).toBe(false);
+    expect(p.isActive).toBe(false);
+  });
+
+  it('an absent overlay is treated as NOT moderated (pre-10.10 call sites unaffected)', () => {
+    const p = assemblePayload(baseInput());
+    expect(p.specialFlags).toEqual([]);
+    expect(p.isValid).toBe(true);
+  });
+
+  it('the moderation flag is MEMBER-VISIBLE — it is not a State-Trustee-only flag', () => {
+    // The member must be told WHY (`ux-design-specification.md:1890-1896`). Only the Tier-1
+    // rationale is withheld; the bounded reason CODE reaches the member's own panel.
+    const p = assemblePayload(
+      baseInput({
+        moderationOverlay: {
+          status: 'terminated',
+          reasonCode: 'r14-forgery',
+          since: AT,
+          lastActionAt: AT,
+        },
+      }),
+    );
+    const memberView = redactForCaller(p, {
+      actorId: 'self',
+      grants: [],
+      resource: { dimension: 'self', value: String(MEMBER), pariwarId: PARIWAR },
+      isSelf: true,
+    });
+    expect(memberView.specialFlags).toContain('terminated_per_r14-forgery');
+  });
 });
 
 describe('projectRetirementCoverage — engine granted_years → FR-12A shape ([[CR-4.5-D3]])', () => {

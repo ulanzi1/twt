@@ -115,6 +115,31 @@ export const EVENT_TYPE_REGISTRY = {
       'Posting / transfer-in-out changed via the Life Events panel (Story 3.9) — non-transition marker; carries non-PII district + optional pariwar_ref + is_retirement (Epic 4 Story 4.5 retirement anchor).',
     schema: member.PostingUpdatedPayloadSchema,
   },
+  // ── Story 10.10 — member.moderation.* (the moderation OVERLAY, not the lifecycle) ──
+  // Three-segment dotted names, legal by the cycle.spawn.started precedent below. They live on the
+  // MEMBER's own stream (stream_id = member_id) and move a SECOND, orthogonal state machine
+  // (moderation/status.ts) — `members.state` is NEVER touched and all three fold through
+  // memberStateMachine as IDENTITY (Decision 1). The payload carries the bounded reason CODE only:
+  // the mandatory free-text rationale is Tier-1 encrypted in `member_moderation_actions` and MUST
+  // NEVER reach this plaintext-JSONB payload (R1).
+  'member.moderation.suspended': {
+    type: 'member.moderation.suspended',
+    description:
+      'Member suspended by a member.moderate holder (Story 10.10, FR-56) — moderation OVERLAY none → suspended; lifecycle-identity. Carries the registry reason_code only (no rationale, no name).',
+    schema: member.moderation.ModerationSuspendedPayloadSchema,
+  },
+  'member.moderation.terminated': {
+    type: 'member.moderation.terminated',
+    description:
+      'Member terminated (Story 10.10, FR-56 → FR-6) — moderation OVERLAY suspended → terminated, NEVER from none (Decision 2); lifecycle-identity. The 12-month rejoin lock instant lives on member_moderation_actions, not here.',
+    schema: member.moderation.ModerationTerminatedPayloadSchema,
+  },
+  'member.moderation.restored': {
+    type: 'member.moderation.restored',
+    description:
+      'Member restored (Story 10.10, FR-56) — moderation OVERLAY suspended|terminated → none; lifecycle-identity. Clears the rejoin lock by making the CURRENT overlay status unmoderated.',
+    schema: member.moderation.ModerationRestoredPayloadSchema,
+  },
   // ── Story 6.1 — claim.* lifecycle vocabulary (the claim-case state machine) ──
   // Payload schemas live in @twt/domain (packages/domain/src/claim/events.ts). Names
   // are single-dot snake_case — PINNED by the merged Story 3.1 account-frozen overlay

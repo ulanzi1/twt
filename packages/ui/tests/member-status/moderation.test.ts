@@ -157,31 +157,64 @@ describe('deriveHeadlineState — moderation as a headline producer', () => {
 });
 
 describe('the view-model: prose explanation + the appeal CTA (AC9)', () => {
+  // ⚠ The prose lives on `vm.moderationNotice`, NOT on the headline section's `detailKeys`
+  // (review follow-up). These tests previously asserted the detail-key location — which BOTH render
+  // layers filter out (`.filter((s) => s.id !== 'headline')`), so they were green while the member
+  // was never actually told why. Asserting the reachable carrier is the point.
   it('a SUSPENDED member gets prose + the resolved reason LABEL key, never the raw code', () => {
     const vm = buildMemberStatusViewModel(suspendedPayload('r14-forgery'), { variant: 'member' });
     const headline = vm.sections.find((s) => s.id === 'headline')!;
 
     expect(vm.headlineKey).toBe(HEADLINE_KEYS['suspended-with-reason']);
-    expect(headline.detailKeys).toContain(DETAIL_KEYS.moderationSuspended);
-    expect(headline.data.moderationStatus).toBe('suspended');
-    expect(headline.data.moderationReasonLabelKey).toBe(moderationReasonLabelKey('r14-forgery'));
-    // A raw registry code must never reach a member-facing detail key (a11y `:1896`).
-    expect(headline.detailKeys.join(' ')).not.toContain('r14-forgery');
+    expect(vm.moderationNotice).not.toBeNull();
+    expect(vm.moderationNotice?.status).toBe('suspended');
+    expect(vm.moderationNotice?.detailKey).toBe(DETAIL_KEYS.moderationSuspended);
+    expect(vm.moderationNotice?.reasonLabelKey).toBe(moderationReasonLabelKey('r14-forgery'));
+    // A raw registry code must never reach a member-facing key (a11y `:1896`).
+    expect(vm.moderationNotice?.detailKey).not.toContain('r14-forgery');
     expect(headline.status).toBe('fail');
+  });
+
+  it('an UNMODERATED member has no moderation notice at all', () => {
+    // The negative half — without it, a presenter that emitted a notice unconditionally would pass
+    // every other test in this block.
+    const vm = buildMemberStatusViewModel(basePayload({}), { variant: 'member' });
+    expect(vm.moderationNotice).toBeNull();
   });
 
   it('a TERMINATED member gets the terminated prose + label key', () => {
     const vm = buildMemberStatusViewModel(terminatedPayload('regulator-action'), {
       variant: 'member',
     });
-    const headline = vm.sections.find((s) => s.id === 'headline')!;
 
     expect(vm.headlineKey).toBe(HEADLINE_KEYS['terminated-with-reason']);
-    expect(headline.detailKeys).toContain(DETAIL_KEYS.moderationTerminated);
-    expect(headline.data.moderationStatus).toBe('terminated');
-    expect(headline.data.moderationReasonLabelKey).toBe(
+    expect(vm.moderationNotice?.status).toBe('terminated');
+    expect(vm.moderationNotice?.detailKey).toBe(DETAIL_KEYS.moderationTerminated);
+    expect(vm.moderationNotice?.reasonLabelKey).toBe(
       moderationReasonLabelKey('regulator-action'),
     );
+  });
+
+  it('the prose is REACHABLE: it is not parked on a section the render layers drop', () => {
+    // The defect this fix exists for, pinned directly. Both renderers drop the `headline` section
+    // and render only `vm.headlineKey`, so anything the member must READ has to live outside it.
+    const vm = buildMemberStatusViewModel(suspendedPayload('r14-forgery'), { variant: 'member' });
+    const rendered = vm.sections.filter((s) => s.id !== 'headline' && s.visible);
+    const reachableDetailKeys = rendered.flatMap((s) => s.detailKeys);
+    // The old location is genuinely unreachable — which is exactly why the notice is top-level.
+    expect(reachableDetailKeys).not.toContain(DETAIL_KEYS.moderationSuspended);
+    expect(vm.moderationNotice?.detailKey).toBe(DETAIL_KEYS.moderationSuspended);
+  });
+
+  it('a moderation-only flag set does NOT open an empty red Special flags section', () => {
+    // It used to: `visible` keyed on `flags.length > 0` while moderation contributes no detail
+    // lines, so a moderated member got a titled, red, contentless box — "something is wrong that we
+    // won't tell you about", the opposite of the dignity requirement.
+    const vm = buildMemberStatusViewModel(suspendedPayload('r14-forgery'), { variant: 'member' });
+    const flagsSection = vm.sections.find((s) => s.id === 'special-flags')!;
+    expect(flagsSection.visible).toBe(false);
+    // The structured data is still carried for consoles that want it — only the empty render goes.
+    expect(flagsSection.data.moderationStatus).toBe('suspended');
   });
 
   it('the APPEAL CTA renders from BOTH moderation states (FR-56 restore is trustee-reachable)', () => {
@@ -204,10 +237,26 @@ describe('the view-model: prose explanation + the appeal CTA (AC9)', () => {
   it('the special-flags section surfaces moderation STRUCTURALLY, never as a raw string to print', () => {
     const vm = buildMemberStatusViewModel(terminatedPayload('r14-forgery'), { variant: 'member' });
     const flagsSection = vm.sections.find((s) => s.id === 'special-flags')!;
-    expect(flagsSection.visible).toBe(true);
+    // `visible` is now false for a moderation-ONLY flag set (see the empty-section test above) —
+    // the structural data is what a console reads, and the member reads `moderationNotice`.
+    // What this test still guards is that neither carrier ever hands a render layer the raw
+    // `terminated_per_<code>` string to print.
     expect(flagsSection.status).toBe('fail');
     expect(flagsSection.data.moderationStatus).toBe('terminated');
     expect(flagsSection.data.moderationReasonLabelKey).toBe(moderationReasonLabelKey('r14-forgery'));
+    expect(String(flagsSection.data.moderationReasonLabelKey)).not.toContain('terminated_per_');
+  });
+
+  it('a CONCEALMENT flag still opens the special-flags section — the narrowing is moderation-only', () => {
+    // Guards the `visible` change from over-reaching: concealment contributes a real detail line
+    // and must keep rendering exactly as it did before Story 10.10.
+    const vm = buildMemberStatusViewModel(
+      basePayload({ specialFlags: [CONCEALMENT_REVIEW_FLAG] }),
+      { variant: 'member' },
+    );
+    const flagsSection = vm.sections.find((s) => s.id === 'special-flags')!;
+    expect(flagsSection.visible).toBe(true);
+    expect(flagsSection.detailKeys.length).toBeGreaterThan(0);
   });
 
   it('BOTH variants derive the SAME moderation headline (admin and member cannot drift)', () => {

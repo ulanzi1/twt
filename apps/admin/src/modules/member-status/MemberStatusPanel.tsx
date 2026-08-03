@@ -74,6 +74,22 @@ export function MemberStatusPanel({ payload, identity }: MemberStatusPanelProps)
         )}
       </header>
 
+      {/*
+        Story 10.10 (AC9) — the moderation explanation in FULL PROSE, next to the headline it
+        explains. It previously rode the headline section's `detailKeys`, which this panel filters
+        out entirely, so the standing showed with no reason attached.
+      */}
+      {vm.moderationNotice && (
+        <p
+          data-testid="moderation-notice"
+          className="rounded border border-status-fail-border bg-status-fail-bg p-2 text-sm text-status-fail-fg"
+        >
+          {resolveEn(vm.moderationNotice.detailKey, {
+            reason: resolveEn(vm.moderationNotice.reasonLabelKey),
+          })}
+        </p>
+      )}
+
       {/* Sections (a)–(g) as an ordered, labelled list (AC1 + AC3). */}
       <ol aria-label="Status sections" className="flex flex-col gap-3">
         {vm.sections

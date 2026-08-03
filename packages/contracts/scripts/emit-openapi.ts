@@ -3038,8 +3038,8 @@ registry.registerPath({
     400: errorResponse('Request validation failed (e.g. an empty or whitespace-only rationale)'),
     401: errorResponse('Authentication required'),
     403: moderationForbidden,
-    409: errorResponse('Illegal from the member\'s current standing (e.g. already suspended) — rejected BEFORE any write'),
-    422: errorResponse('The reason code is undeclared, or cannot justify a suspension; OR the acting admin has no display name on record'),
+    409: errorResponse('Illegal from the member\'s current standing (e.g. already suspended) — rejected BEFORE any write; OR the acting admin has no display name on record (`admin.display_name_missing`)'),
+    422: errorResponse('The reason code is undeclared, or cannot justify a suspension'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -3064,8 +3064,8 @@ registry.registerPath({
     400: errorResponse('Request validation failed'),
     401: errorResponse('Authentication required'),
     403: moderationForbidden,
-    409: errorResponse('The member is not currently suspended — termination is legal only from `suspended`'),
-    422: errorResponse('The reason code cannot justify a termination; OR the acting admin has no display name on record'),
+    409: errorResponse('The member is not currently suspended — termination is legal only from `suspended`; OR the acting admin has no display name on record (`admin.display_name_missing`)'),
+    422: errorResponse('The reason code cannot justify a termination'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -3089,24 +3089,31 @@ registry.registerPath({
     400: errorResponse('Request validation failed'),
     401: errorResponse('Authentication required'),
     403: moderationForbidden,
-    409: errorResponse('The member is not currently moderated — a no-op never returns 200'),
-    422: errorResponse('The reason code cannot justify a restore; OR the acting admin has no display name on record'),
+    409: errorResponse('The member is not currently moderated — a no-op never returns 200; OR the acting admin has no display name on record (`admin.display_name_missing`)'),
+    422: errorResponse('The reason code cannot justify a restore'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// Shared by BOTH moderation reads. The history read is paginated too (review follow-up): it used to
+// take no querystring and silently return only the newest 50 entries with no truncation signal.
+const moderationListQuery = z.object({
+  limit: z.number().int().min(1).max(199).optional(),
+  offset: z.number().int().min(0).optional(),
 });
 
 registry.registerPath({
   method: 'get',
   path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation',
-  summary: 'A member\'s current moderation standing + full history',
+  summary: 'A member\'s current moderation standing + paginated history',
   description:
     'The standing is DERIVED by folding the member\'s moderation events — it is never a stored ' +
     'column. `legal_actions` is computed server-side from the same legality reducer the write path ' +
     'uses, so a console can drive button enablement without re-implementing any rule. ' +
     '⚠ Neither the standing nor any history entry carries the rationale or its ciphertext.',
   tags: moderationTags,
-  request: { params: moderationMemberParams },
+  request: { params: moderationMemberParams, query: moderationListQuery },
   responses: {
-    200: { description: 'The standing, the legal next actions, and the history', content: jsonOf(ModerationHistoryComponent) },
+    200: { description: 'The standing, the legal next actions, and one PAGE of history (`has_more` flags truncation — an audit trail must never read as complete when it is not)', content: jsonOf(ModerationHistoryComponent) },
     401: errorResponse('Authentication required'),
     403: moderationForbidden,
     404: errorResponse('Member not found in this Pariwar'),
@@ -3120,15 +3127,18 @@ registry.registerPath({
   description:
     'The single exception to "the rationale never leaves the DB": a per-action, decrypt-on-demand ' +
     'read behind the same `member.moderate` gate as every other field on this surface — never a ' +
-    'list, and no separate capability. Fail-soft on a corrupt/rotated envelope: `rationale` is ' +
-    '`null` rather than a 500.',
+    'list, and no separate capability. Fail-soft on a CORRUPT/ROTATED STORED ENVELOPE: `rationale` ' +
+    'is `null` rather than a 500. A KMS/key-service outage is deliberately NOT collapsed into that ' +
+    'null — it returns 503, so an auditor can never mistake "temporarily undecryptable" for ' +
+    '"no rationale was ever recorded".',
   tags: moderationTags,
   request: { params: z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() }) },
   responses: {
-    200: { description: 'The decrypted rationale (or null on a decrypt failure)', content: jsonOf(ModerationRationaleComponent) },
+    200: { description: 'The decrypted rationale (or null when the STORED envelope is unreadable)', content: jsonOf(ModerationRationaleComponent) },
     401: errorResponse('Authentication required'),
     403: moderationForbidden,
     404: errorResponse('No moderation action with that id for this member in this Pariwar'),
+    503: errorResponse('The key service is unavailable — the rationale exists but cannot be decrypted right now (`member_moderation.rationale_unavailable`)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -3142,7 +3152,7 @@ registry.registerPath({
     'NOTE: moderation items carry NO deadline and NO severity — a consumer cannot sort them by ' +
     'deadline-proximity.',
   tags: moderationTags,
-  request: { params: moderationPariwarParams },
+  request: { params: moderationPariwarParams, query: moderationListQuery },
   responses: {
     200: { description: 'The moderated-members page', content: jsonOf(ModeratedMembersListComponent) },
     401: errorResponse('Authentication required'),

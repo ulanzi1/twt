@@ -87,14 +87,27 @@ export const moderationEn = {
   consequence: {
     suspend:
       'The member stops being covered for support immediately and is dropped from pool assignment. All their sessions are signed out. They are notified, can still sign in, and can ask for a review.',
+    // \u26a0 "in this Pariwar" is load-bearing, not hedging (review follow-up). The FR-6 rejoin guard
+    // (`signup.handlers.ts`) only consults the terminating Pariwar's own row \u2014 a member terminated
+    // here can sign up in a DIFFERENT Pariwar the same day. The previous wording promised an
+    // identity-wide block, in the one statement whose entire job is making a destructive action
+    // informed. Whether the lock SHOULD be identity-wide is an open FR-6 question for PM; until it
+    // is answered the copy states what the system actually does.
     terminate:
-      'The member\u2019s membership ends. They stop being covered for support, all their sessions are signed out, and they cannot rejoin under the same identity for 12 months. They are notified and can ask for a review.',
+      'The member\u2019s membership in this Pariwar ends. They stop being covered for support, all their sessions are signed out, and they cannot rejoin this Pariwar under the same identity for 12 months. They are notified and can ask for a review.',
     restore:
       'The member\u2019s standing returns to normal. They are covered for support again, any rejoin block is lifted, and they are notified.',
   } as Record<string, string>,
   historyHeading: 'Moderation history',
   historyEmpty: 'No moderation actions on record.',
+  historyTruncated:
+    'Showing the most recent actions only — this member has more moderation history than is shown here.',
   rejoinPermitted: 'rejoin permitted',
+  revealRationale: 'Show rationale',
+  rationaleUnreadable:
+    'This rationale cannot be read. The stored record is unreadable — it was recorded, but it can no longer be decrypted.',
+  reasonCodesUnavailable:
+    'Reason codes could not be loaded, so no moderation action can be taken right now.',
 } as const;
 
 /**
@@ -102,15 +115,28 @@ export const moderationEn = {
  * are dynamic — the full prose catalogue is Epic-wide, so absent an entry we surface a readable form of
  * the reason code rather than the raw key (never an error code verbatim — UX a11y).
  */
-export function resolveEn(key: string): string {
+export function resolveEn(key: string, params?: Record<string, string>): string {
   const hit = EN[key];
-  if (hit !== undefined) return hit;
+  if (hit !== undefined) return interpolate(hit, params);
   if (key.startsWith('memberStatus.rule.')) {
     const reason = key.slice('memberStatus.rule.'.length);
     // e.g. `rule.retirement_coverage_computed` → "retirement coverage computed"
     return reason.replace(/^rule\./, '').replace(/_/g, ' ');
   }
   return key;
+}
+
+/**
+ * Fill `{token}` placeholders. Needed since Story 10.10's moderation prose is parameterized on
+ * `{reason}` (the reason-code LABEL, never the raw code).
+ *
+ * Unlike `packages/i18n`'s loud-by-default `t()`, a missing param leaves the token in place rather
+ * than throwing: this is the ADMIN console, and a trustee reading a slightly-degraded sentence is
+ * strictly better than a blank panel where a member's standing should be.
+ */
+function interpolate(template: string, params?: Record<string, string>): string {
+  if (params === undefined) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => params[name] ?? match);
 }
 
 /** Map a presenter section status to the admin status-token colour family. */

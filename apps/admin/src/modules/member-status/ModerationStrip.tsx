@@ -21,6 +21,7 @@
 // (sessions revoked, rejoin locked 12 months) — never a generic "are you sure?".
 
 import {
+  MODERATION_RATIONALE_MAX_CHARS,
   type ModerationAction,
   type ModerationHistoryResponse,
   type ReasonCode,
@@ -30,8 +31,12 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 
 import { moderationEn as t } from './i18n-en.js';
 
-/** Max rationale length — mirrors the contracts DTO's `.max(4_000)`. */
-export const MODERATION_RATIONALE_MAX_CHARS = 4_000;
+// Re-exported, NOT re-declared (review follow-up). This was a hand-copied `4_000` under a comment
+// saying it "mirrors the contracts DTO" — a duplication-by-value with no sync-guard, in the very
+// component whose earlier review fix was deleting exactly that pattern from the reason-code map.
+// It now comes from the contracts DTO itself, so the textarea's cap and the server's `.max()` are
+// one number and cannot drift.
+export { MODERATION_RATIONALE_MAX_CHARS };
 
 export interface ModerationSubmit {
   action: ModerationAction;
@@ -53,6 +58,19 @@ export interface ModerationStripProps {
   error?: string | null;
   /** Rendered when the server answered 403 `auth.step_up_required` — the OTP challenge slot. */
   stepUpSlot?: ReactElement | null;
+  /**
+   * Increments on EVERY committed action, including one that only landed after a step-up retry
+   * (review follow-up).
+   *
+   * `confirm()` clears the form when its own `onSubmit` resolves, which covers the direct path. It
+   * does NOT cover the step-up path: there `onSubmit` THROWS with a 403, and the retry is fired by
+   * the parent from the OTP panel's `onSuccess` — so the write commits while this component still
+   * shows a fully-populated form, an `aria-pressed` action button and no confirmation. An operator
+   * reading that as "not submitted yet" clicks Confirm again; on a restore→suspend sequence the
+   * second action is legal and lands. The parent owns the knowledge that a write succeeded, so the
+   * parent signals it.
+   */
+  clearSignal?: number;
 }
 
 /** Reason codes valid for an action (the `appliesTo` filter — AC3/AC9), from server metadata. */
@@ -75,6 +93,7 @@ export function ModerationStrip({
   processing,
   error,
   stepUpSlot,
+  clearSignal = 0,
 }: ModerationStripProps): ReactElement {
   const [action, setAction] = useState<ModerationAction | null>(null);
   const [reasonCode, setReasonCode] = useState<ReasonCode | ''>('');
@@ -82,6 +101,24 @@ export function ModerationStrip({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [pending, setPending] = useState<ModerationAction | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+
+  const clearForm = useCallback((): void => {
+    setAction(null);
+    setReasonCode('');
+    setRationale('');
+    setValidationError(null);
+    setPending(null);
+  }, []);
+
+  // Clear on a parent-signalled commit. `seenClearSignal` starts at the INITIAL value so the first
+  // render never fires a spurious clear (which would wipe a form the operator is mid-way through if
+  // the component ever remounts with a non-zero signal).
+  const seenClearSignal = useRef(clearSignal);
+  useEffect(() => {
+    if (clearSignal === seenClearSignal.current) return;
+    seenClearSignal.current = clearSignal;
+    clearForm();
+  }, [clearSignal, clearForm]);
 
   const legal = new Set<ModerationAction>(moderation.legal_actions);
 
@@ -133,10 +170,9 @@ export function ModerationStrip({
     if (pending === null || reasonCode === '') return;
     try {
       await onSubmit({ action: pending, reasonCode, rationale: rationale.trim() });
-      // Cleared only on success — a failed submit keeps the operator's typed rationale.
-      setAction(null);
-      setReasonCode('');
-      setRationale('');
+      // Cleared on the DIRECT success path. The step-up path throws here and is cleared by
+      // `clearSignal` once the parent's retry commits — see the prop's note.
+      clearForm();
     } catch {
       // Swallowed: the caller's mutation hook tracks the failure and feeds it back via `error`.
     } finally {
@@ -332,9 +368,22 @@ export function ModerationStrip({
 export function ModerationHistory({
   entries,
   reasonCodes,
+  hasMore = false,
+  onRevealRationale,
+  revealedRationales = {},
+  revealingId = null,
+  revealError = null,
 }: {
   entries: ModerationHistoryResponse['entries'];
   reasonCodes: readonly ReasonCodeMetaDto[];
+  /** True when older actions exist beyond this page — an audit trail must say so. */
+  hasMore?: boolean;
+  /** Decrypt ONE action's rationale on demand. Absent ⇒ the reveal affordance is not rendered. */
+  onRevealRationale?: (moderationActionId: string) => void;
+  /** Already-revealed rationales by action id. A `null` value means "envelope unreadable". */
+  revealedRationales?: Record<string, string | null>;
+  revealingId?: string | null;
+  revealError?: string | null;
 }): ReactElement {
   if (entries.length === 0) {
     return (
@@ -344,24 +393,73 @@ export function ModerationHistory({
     );
   }
   return (
-    <ol
-      aria-label={t.historyHeading}
-      data-testid="moderation-history"
-      className="flex flex-col gap-1 text-sm"
-    >
-      {entries.map((e) => (
-        <li key={e.moderation_action_id} className="rounded border p-2">
-          <span className="font-semibold">{t.status[actionToStatus(e.action)]}</span>{' '}
-          <span className="opacity-70">— {reasonCodeLabel(e.reason_code, reasonCodes)}</span>
-          <div className="text-xs opacity-60">
-            {e.actor_display} · {new Date(e.acted_at).toLocaleString()}
-            {e.rejoin_permitted_at
-              ? ` · ${t.rejoinPermitted} ${new Date(e.rejoin_permitted_at).toLocaleDateString()}`
-              : ''}
-          </div>
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol
+        aria-label={t.historyHeading}
+        data-testid="moderation-history"
+        className="flex flex-col gap-1 text-sm"
+      >
+        {entries.map((e) => {
+          const isRevealed = e.moderation_action_id in revealedRationales;
+          const rationale = revealedRationales[e.moderation_action_id];
+          return (
+            <li key={e.moderation_action_id} className="rounded border p-2">
+              <span className="font-semibold">{t.status[actionToStatus(e.action)]}</span>{' '}
+              <span className="opacity-70">— {reasonCodeLabel(e.reason_code, reasonCodes)}</span>
+              <div className="text-xs opacity-60">
+                {e.actor_display} · {new Date(e.acted_at).toLocaleString()}
+                {e.rejoin_permitted_at
+                  ? ` · ${t.rejoinPermitted} ${new Date(e.rejoin_permitted_at).toLocaleDateString()}`
+                  : ''}
+              </div>
+              {/*
+                The rationale is NOT rendered with the row — it is Tier-1 PII and is decrypted only
+                when an operator explicitly asks. What is shown is the DECRYPTED plaintext; the
+                ciphertext never reaches this component at all (the list DTO has no such field).
+              */}
+              {onRevealRationale !== undefined &&
+                (isRevealed ? (
+                  <p
+                    className="mt-1 whitespace-pre-wrap rounded bg-black/5 p-2 text-xs"
+                    data-testid={`moderation-rationale-${e.moderation_action_id}`}
+                  >
+                    {rationale === null || rationale === undefined
+                      ? t.rationaleUnreadable
+                      : rationale}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    className="mt-1 text-xs underline opacity-80"
+                    data-testid={`moderation-reveal-${e.moderation_action_id}`}
+                    disabled={revealingId === e.moderation_action_id}
+                    onClick={() => onRevealRationale(e.moderation_action_id)}
+                  >
+                    {revealingId === e.moderation_action_id
+                      ? t.processing
+                      : t.revealRationale}
+                  </button>
+                ))}
+            </li>
+          );
+        })}
+      </ol>
+      {revealError !== null && (
+        <p role="alert" className="mt-2 text-xs text-status-fail-fg" data-testid="moderation-reveal-error">
+          {revealError}
+        </p>
+      )}
+      {/*
+        An audit trail that is cut MUST say it is cut. Silently showing the newest page as if it
+        were the whole record hides exactly the oldest entry — typically the ORIGINAL decision a
+        dispute is about.
+      */}
+      {hasMore && (
+        <p className="mt-2 text-xs opacity-70" data-testid="moderation-history-truncated">
+          {t.historyTruncated}
+        </p>
+      )}
+    </>
   );
 }
 

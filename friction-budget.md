@@ -937,6 +937,39 @@ on cover the PUBLIC `apps/public` Astro surface, which this story does not touch
 `<NoticeboardStrip>` public consumer of this same data is Story 11a.5's job, per the epic AC — not
 built here).
 
+**Story 10.10 second-review disposition (declaration affirmed, no new row):** the member
+moderation-notice surface (`apps/mobile/app/(membership)/index.tsx`, plus its presenter carrier
+`packages/ui/src/member-status/{presenter,view-model}.ts`) introduces **zero deliberate friction**
+— and the change is friction-REDUCING in the sense that matters most on this surface.
+
+(1) **The moderation notice is read-only prose, not an interaction.** The membership-status screen
+gains one `<Text>` line rendering `vm.moderationNotice` — the reason a suspension or termination is
+in force, in full prose, naming the reason-code LABEL (never the raw code, per
+`ux-design-specification.md:1896`). The member is not asked to decide, confirm, upload, pay, or
+acknowledge anything. Nothing is gated behind it and nothing blocks navigation. The appeal CTA
+alongside it already existed and is unchanged.
+
+(2) **This REMOVES friction rather than adding it — it is the fix for a surface that was
+withholding the one fact the member needed.** Before this change the panel showed a bare "Under
+review" / "Membership ended" headline plus an appeal button, and never said WHY: the explanation
+was attached to a panel section both render layers filter out, so it reached nobody. A member who
+must work out their own standing by contacting the helpline is paying the highest friction this
+system can impose on them (UX Stance #5 — dignified, non-punitive, no soft misinformation). Telling
+them plainly, in place, is the removal of that cost. This is the same class as the Story 10.9
+dismiss tap and the Story 7.10 Skip-confirm affordance: member-serving, not member-taxing.
+
+(3) **An empty red "Special flags" section was also removed.** A moderation-only flag set used to
+open a titled, red, contentless box — a visible alarm with no information in it, which reads as
+"something is wrong that we won't tell you about". `visible` now keys on whether there is a detail
+line to show, so the box no longer appears. Strictly less noise for the member.
+
+Zero gratuitous friction introduced; ledger reviewed, **no new row warranted**. The **page-weight
+baseline is unchanged**: the touched member surface is in the authenticated mobile app
+(`apps/mobile`, EAS build is a no-op → `member-app-native` stays a no-op), and the page-weight
+ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, which this change does
+not touch. The admin-side files in the same commit (`apps/admin/**`) are a STAFF surface and are
+outside the member friction budget by construction.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

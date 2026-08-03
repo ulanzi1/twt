@@ -17,7 +17,9 @@ import {
   reasonCodeMeta,
   reasonCodesForAction,
 } from '../../src/member/moderation/reason-codes.js';
+import { ModerationReasonCodeInvalidError } from '../../src/member/moderation/errors.js';
 import { MODERATION_ACTIONS } from '../../src/member/moderation/status.js';
+import { moderateMember } from '../../src/member/moderation/write.js';
 
 describe('the frozen vocabulary', () => {
   it('declares the seven PRD/epic-anchored moderation grounds, in order', () => {
@@ -96,5 +98,87 @@ describe('reasonCodesForAction — what the admin dropdown filters on (AC9)', ()
     expect(reasonCodesForAction('suspend')).toEqual([...MODERATION_REASON_CODES]);
     expect(reasonCodesForAction('terminate')).toEqual([...MODERATION_REASON_CODES]);
     expect(reasonCodesForAction('restore')).toEqual([...RESTORE_REASON_CODES]);
+  });
+});
+
+// ── REVERT-SANITY: the write path's USE of the guard, with DB-free teeth (AC10) ──────────────────
+//
+// The suite above gives the PREDICATE teeth: gut `reasonCodeAppliesTo` and these tests go red.
+// It gives the CALL SITE none. Deleting the `assertReasonCodeAppliesTo(...)` line from
+// `moderateMember` left every DB-free test green — the pgEnum spans both code families, so an
+// unguarded write persists cleanly and only the live-DB integration cases would have caught it.
+// AC10 asks for teeth on this guard, and a guard whose removal is invisible without a database is
+// not meaningfully guarded.
+//
+// These tests drive the real `moderateMember` with a client that THROWS on any query. That makes
+// two properties provable without Postgres:
+//   (1) an inapplicable reason code raises the typed 422, and
+//   (2) it raises it BEFORE touching the database at all (AC3's "rejected before any write").
+// Remove the call from `write.ts` and both flip: the client's sentinel error surfaces instead.
+describe('moderateMember — the appliesTo guard fires before any DB access (revert-sanity)', () => {
+  const NO_DB_SENTINEL = 'DB_TOUCHED — the guard did not run first';
+
+  /** A pg.PoolClient stand-in whose every query is a test failure. */
+  function refusingClient(): never_touched {
+    return {
+      query: () => {
+        throw new Error(NO_DB_SENTINEL);
+      },
+    } as unknown as never_touched;
+  }
+  type never_touched = Parameters<typeof moderateMember>[0];
+
+  const BASE = {
+    memberId: '11111111-1111-4111-8111-111111111111' as never,
+    pariwarId: '22222222-2222-4222-8222-222222222222' as never,
+    rationaleCiphertext: 'enc:v1:not-a-real-envelope',
+    actorId: '33333333-3333-4333-8333-333333333333',
+    actorDisplay: 'Trustee Name',
+    now: new Date('2026-08-03T00:00:00.000Z'),
+  };
+
+  it('a RESTORE code offered to justify a TERMINATION is a typed 422, with no query issued', async () => {
+    await expect(
+      moderateMember(refusingClient(), {
+        ...BASE,
+        action: 'terminate',
+        reasonCode: 'moderation-error', // a restore-family code
+      }),
+    ).rejects.toBeInstanceOf(ModerationReasonCodeInvalidError);
+  });
+
+  it('a MODERATION code offered to justify a RESTORE is a typed 422, with no query issued', async () => {
+    await expect(
+      moderateMember(refusingClient(), {
+        ...BASE,
+        action: 'restore',
+        reasonCode: 'r14-forgery', // a moderation-family code
+      }),
+    ).rejects.toBeInstanceOf(ModerationReasonCodeInvalidError);
+  });
+
+  it('an UNDECLARED code is a typed 422 for every action, with no query issued', async () => {
+    for (const action of MODERATION_ACTIONS) {
+      await expect(
+        moderateMember(refusingClient(), { ...BASE, action, reasonCode: 'invented-ground' }),
+      ).rejects.toBeInstanceOf(ModerationReasonCodeInvalidError);
+    }
+  });
+
+  it('a VALID pair gets PAST the guard and reaches the DB — the teeth are not vacuous', async () => {
+    // Without this, the three tests above would all still pass if `moderateMember` simply threw
+    // ModerationReasonCodeInvalidError unconditionally. A valid (code, action) pair must therefore
+    // fail DIFFERENTLY: it gets to the database, where the refusing client makes it blow up.
+    //
+    // The assertion is "not the 422", not a specific message: Drizzle wraps the client rather than
+    // calling `query` directly, so the surfaced error is its own. What matters is that the guard
+    // let this pair through — which is exactly what a deleted guard could not fake.
+    await expect(
+      moderateMember(refusingClient(), {
+        ...BASE,
+        action: 'suspend',
+        reasonCode: 'r14-forgery',
+      }),
+    ).rejects.not.toBeInstanceOf(ModerationReasonCodeInvalidError);
   });
 });

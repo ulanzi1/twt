@@ -258,6 +258,21 @@ export function useModerationReasonCodes(pariwarId: string) {
   });
 }
 
+/**
+ * Decrypt ONE moderation action's rationale, on an explicit operator action (review follow-up).
+ *
+ * A MUTATION, not a query, despite being a GET — deliberately. Tier-1 PII must be fetched only when
+ * an operator asks for it, and a query would prefetch/refetch/cache it on render, background focus
+ * and reconnect. `useMutation` gives exactly one decrypt per click, holds the result outside the
+ * shared query cache, and drops it when the component unmounts.
+ */
+export function useModerationRationale(pariwarId: string, memberId: string | null) {
+  return useMutation({
+    mutationFn: (moderationActionId: string) =>
+      api.getModerationRationale(pariwarId, memberId as string, moderationActionId),
+  });
+}
+
 /** Suspend / terminate / restore a member. A 403 `auth.step_up_required` is the elevation SIGNAL. */
 export function useModerateMember(pariwarId: string, memberId: string | null) {
   const qc = useQueryClient();

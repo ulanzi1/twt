@@ -8,6 +8,7 @@ export { buildMemberStatusViewModel, deriveHeadlineState, type PresenterOptions 
 export type {
   HeadlineState,
   MemberStatusViewModel,
+  ModerationNotice,
   PanelSection,
   RuleExplanation,
   SectionId,

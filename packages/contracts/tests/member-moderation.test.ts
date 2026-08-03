@@ -140,9 +140,26 @@ describe('response DTOs — the rationale never leaves the database', () => {
           acted_at: ACTION.acted_at,
         },
       ],
+      has_more: false,
     });
     expect(parsed.legal_actions).toEqual(['terminate', 'restore']);
     expect(parsed.entries[0]).not.toHaveProperty('rationale');
+    expect(parsed.has_more).toBe(false);
+  });
+
+  it('ModerationHistoryResponse REQUIRES has_more — an audit trail cannot omit its truncation flag', () => {
+    // The field is deliberately non-optional: a page that silently drops the oldest entries would
+    // present a cut audit trail as the whole record, and on a contested member the oldest entry is
+    // typically the ORIGINAL decision under dispute.
+    const withoutFlag = {
+      member_id: ACTION.member_id,
+      current_status: 'none',
+      current_reason_code: null,
+      since: null,
+      legal_actions: ['suspend'],
+      entries: [],
+    };
+    expect(() => ModerationHistoryResponse.parse(withoutFlag)).toThrow();
   });
 
   it('ModerationHistoryEntry REJECTS a rationale field (.strict())', () => {

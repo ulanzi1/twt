@@ -186,9 +186,27 @@ describe.skipIf(!hasDatabase)('moderation → auth effects (live DB) (:5433)', (
       expect(await liveTokens()).toBeGreaterThan(0);
       expect(await devices()).toBeGreaterThan(0);
 
-      // The cascade, exactly as the moderation handler invokes it.
+      // The cascade, exactly as the moderation handler invokes it — which means on a SCOPE-TX
+      // CLIENT under `SET LOCAL ROLE twt_app` with RLS forced, NOT on the admin pool.
+      //
+      // ⚠ This distinction is the whole point of Task 4's change (review follow-up). The story's
+      // actual edit was widening the executor to `pg.Pool | pg.PoolClient` so the revocation runs
+      // INSIDE the moderation transaction; `handlers.ts` calls it with `scopeTx.client`. Passing
+      // `t.deps.pool` here exercised the superuser path and proved nothing about the one that
+      // ships: `member_refresh_tokens` / `member_trusted_devices` are Story 1.6 GLOBAL carve-outs
+      // (`USING (true)` for twt_app, DELETE granted in migration 0019), and if that ever stopped
+      // being true the DELETE would match ZERO rows, return cleanly with no error, and leave a
+      // suspended member holding every live session — with the suite still green.
       const { revokeAllMemberSessions } = await import('../../../src/modules/auth/member/member-auth.repo.js');
-      await revokeAllMemberSessions(t.deps.pool, memberId);
+      const { openScopeTx, closeScopeTx } = await import('../../../src/modules/multi-tenant/scope-tx.js');
+      const scopeTx = await openScopeTx(t.deps, DEFAULT_PARIWAR);
+      try {
+        await revokeAllMemberSessions(scopeTx.client, memberId);
+        await closeScopeTx(scopeTx, true);
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
 
       expect(await liveTokens()).toBe(0);
       // Trusted-device bindings go too — a DELIBERATE call, not an inherited default: leaving them

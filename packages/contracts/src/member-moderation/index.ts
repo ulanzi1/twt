@@ -22,6 +22,7 @@ export {
 } from './enums.js';
 
 export {
+  MODERATION_RATIONALE_MAX_CHARS,
   ModerateMemberRequest,
   ModerationActionResponse,
   ModerationHistoryEntryDto,

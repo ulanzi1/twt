@@ -225,6 +225,40 @@ _Code review of story-10-10 (2026-08-03), diff = `origin/main..HEAD` (66 files, 
 
 Dismissed as noise / already-recorded decisions (3): `state_trustee`/`district_admin` inert-grant (Decision 4, self-escalated + pinned by 403 tests); no enforced continuity between a suspend's and later terminate's reason code (explicitly rejected in the Dev Agent Record as "inventing policy the PRD does not state"); notification deep-link lands on the announcement feed not the status panel (recorded Known Limitation + forward commitment, Decision 7).
 
+### Review Findings — second pass (2026-08-03)
+
+_Second code review of story-10-10, diff = `origin/main...HEAD` (72 files, +8175/−140; 69 files / 7,885 lines reviewed, generated `openapi/v1.yaml` + bookkeeping excluded). Run against the base **plus** the 13-fix commit `6ad0516`, with the prior Review Findings withheld from the finder layers (fresh eyes). Three parallel layers: Blind Hunter (diff only), Edge Case Hunter (diff + repo read), Acceptance Auditor (diff + this spec + repo read + the AI-6-5 load-bearing-invariant checklist). Prior-pass reconciliation: 12 of 13 fixes confirmed, 1 partial (see the first Patch item)._
+
+- [x] [Review][Decision→Record] **A moderation-`terminated` member retains full write access to their own record.** **Decision (resolved 2026-08-03): escalate as a spec gap, record as a known residual — do NOT patch.** Every member-write gate keys on the lifecycle column, not on `is_valid`: `TERMINAL_STATES = new Set(['withdrawn','anonymized'])` in `nominee.handlers.ts:40`, `member-terms.handlers.ts:39`, `medical.handlers.ts:62`, `life-events/handlers.ts:42`, `vyawastha-shulk/handlers.ts:43`. Moderation never moves `members.state` (Decision 1) and login stays open (Decision 6), so a terminated member logs in and can still declare nominees, file medical disclosures, accept T&C and record Life Events. Decision 1 lists this exact outcome as the *harm* of the rejected enum-label design (spec `:127`); the overlay design reproduces it by another route and nothing recorded it. AC5 forbids touching those Sets, so the patch is not this story's to make — this is ESCALATION 3, routed to PM alongside the `state_trustee` inert-grant and the 10.11 phantom queue.
+- [x] [Review][Patch] **The member is never told WHY — AC9's "full prose, not an error code" is not delivered.** **Decision (resolved 2026-08-03): render the headline section's `detailKeys` with `{reason}` resolved from `data.moderationReasonLabelKey`** — the presenter's own comment already commits to exactly this ("the `{reason}` param is resolved by the render layer"), so the fix makes the shipped plumbing true rather than redesigning it. `presenter.ts:305-333` attaches `moderationDetailKey` to the `headline` section, but both render layers discard that section wholesale: `apps/mobile/app/(membership)/index.tsx:44` and `apps/admin/src/modules/member-status/MemberStatusPanel.tsx:80` both `.filter((s) => s.id !== 'headline' && s.visible)`. Two complications ride along and must be fixed with it: `t()` throws on a missing interpolation param (`packages/i18n/src/resolver.ts:35-43`) and both strings carry `{reason}`, which the mobile loop's bare `t(k)` does not supply; and a moderated member additionally gets an empty red "Special flags" section (`flags.length > 0`, `detailKeys: []`). [packages/ui/src/member-status/presenter.ts, apps/mobile/app/(membership)/index.tsx, apps/admin/src/modules/member-status/MemberStatusPanel.tsx]
+- [x] [Review][Patch] **`rationale_ciphertext` is a new Tier-1 PII column with no RTBF erasure path — and it is structurally un-erasable.** **Decision (resolved 2026-08-03): fix in-story — new migration granting UPDATE on the rationale column + register the table in `anonymize.ts`.** The column is introduced by this diff, so the gap is created here rather than inherited, and every release it ships un-erasable makes the eventual backfill harder. Declared `piiColumn(1, 'member_moderation')` (`schema/member_moderation_actions.ts`), but `anonymize.ts:37-43` scrubs exactly six tables and this is not one; likewise absent from `data-export/assemble.ts:29-44`, which `anonymize.ts` calls "the authoritative checklist". Migration `0091` grants `twt_app` SELECT + INSERT only. RTBF is a soft delete, so the `ON DELETE cascade` FK is not a mitigation. Append-only semantics must stay intact for every other column. [packages/domain/migrations/, packages/domain/src/member/anonymize.ts, packages/domain/src/data-export/assemble.ts]
+- [x] [Review][Patch] **The terminate confirmation modal promises an identity-wide 12-month rejoin lock; the guard is per-Pariwar.** **Decision (resolved 2026-08-03): correct the modal copy to scope it to this Pariwar** — the per-Pariwar scope matches the shipped withdrawal lock and is very likely inherited-by-design; the defect is the copy overstating it in the very modal built to make destructive actions informed. `i18n-en.ts:812-816` states "they cannot rejoin under the same identity for 12 months", but `signup.handlers.ts:1606-1639` nests the check inside `if (priorInThisPariwar)`, and `resolveMembersByMobile` returns rows across all tenants while only the same-Pariwar row is consulted. A member terminated in Pariwar A can sign up in Pariwar B the same day. Note: whether FR-6's lock *should* be identity-wide remains an open PM question; this patch only makes the copy honest about today's behaviour. [apps/admin/src/modules/member-status/i18n-en.ts]
+- [x] [Review][Patch] Prior finding #1 is half-shipped — the rationale decrypt endpoint exists, the admin trigger it was written for does not; `apps/admin/src/api/client.ts` added `moderateMember`/`getModerationHistory`/`listModeratedMembers`/`getModerationReasonCodes` and no rationale read, and no hook or UI affordance exists [apps/admin/src/api/client.ts, apps/admin/src/api/hooks.ts, apps/admin/src/modules/member-status/ModerationSection.tsx]
+- [x] [Review][Patch] AC6's session cascade is never exercised at the role it now runs under — the test calls `revokeAllMemberSessions(t.deps.pool, memberId)` under a comment claiming "exactly as the moderation handler invokes it", while production passes `scopeTx.client` under `SET LOCAL ROLE twt_app`; the E2E spec never asserts a refresh chain or device binding was removed after an API suspend [apps/api/tests/integration/member-moderation/moderation-auth-effects.spec.ts:189-191, apps/api/tests/integration/member-moderation/member-moderation.spec.ts]
+- [x] [Review][Patch] An undelivered moderation notice is silently dropped — the branch returns `{ notified: false, reason: 'undelivered' }` under a comment claiming "pg-boss's retry has a reason to exist", but the worker discards the result and returning normally completes the job; unlike the sibling `member-not-found` arm it does not even `alarm()`, and the sibling notifier (`contribution-notify-triggers.ts:1331-1339`) alarms + throws [apps/jobs/src/scheduler/moderation-notify.ts:211-216,244]
+- [x] [Review][Patch] The uncatalogued-reason-code fallback is unreachable dead code — `t()` throws on a missing key (`packages/i18n/src/resolver.ts:62-65`) rather than returning it, so `resolvedReason === reasonKey` never holds; the throw escapes `buildModerationAlert` into the unguarded batch loop, which is the exact failure the envelope guard ten lines above was added to prevent [apps/jobs/src/scheduler/moderation-notify.ts:132-137]
+- [x] [Review][Patch] `buildModerationAlert`, `deriveModerationAlertId` and `runModerationNotify` have zero tests — the hand-rolled `uuidV5` bit-twiddling, the pinned namespace, locale resolution and every arm of the runner are uncovered; the one "proceeds past the guard" test asserts only that a particular `console.error` string was absent, which would pass identically if the handler threw before reaching the guard [apps/jobs/tests/moderation-notify.test.ts]
+- [x] [Review][Patch] The `AdminDisplayNameMissingError` block has zero test coverage, breaking a convention five comparable surfaces follow (`helpdesk.spec.ts:182`, `operator-helpdesk.spec.ts:173`, `verifier-decision.spec.ts:715`, `r9-voting.spec.ts:218`, `shepherd.spec.ts:377` all assert `admin.display_name_missing`); the fixture even types the hole — `authenticate(opts: { displayName?: string | null } = {})` and `null` is never passed [apps/api/tests/integration/member-moderation/member-moderation.spec.ts:85]
+- [x] [Review][Patch] No cross-Pariwar denial test on any moderation route and no DB-level policy-regression spec for `member_moderation_actions` — the RLS SELECT/INSERT policies, `FORCE ROW LEVEL SECURITY`, the append-only GRANT posture, the FK, the tenant index and the load-bearing `member_moderation_actions_rejoin_iff_terminate` CHECK are asserted by no test at any level; `packages/domain/tests/integration/rls/` carries a per-table spec for `alerts`, `pools`, `claims`, `consent_records`, `feature_flag_versions`, `report_exports`, `role_grants` and not this one (AI-6-5 families 3 + 5) [packages/domain/migrations/0091_member-moderation.sql, apps/api/tests/integration/member-moderation/]
+- [x] [Review][Patch] Two "current standing" resolvers tiebreak on a random UUID — `ORDER BY acted_at DESC, moderation_action_id DESC` where `moderation_action_id` is `gen_random_uuid()`, while the authoritative fold orders by `event_version`; the monotonic `created_at DEFAULT now()` column exists and is unused. On an `acted_at` tie the rejoin guard can resolve terminate-vs-restore backwards and skip the FR-6 lock. The "the two AGREE by construction" claim in `read.ts` is sound for the set, not the tiebreak [apps/api/src/modules/auth/member/member-auth.repo.ts:105-111, packages/domain/src/member/moderation/read.ts:168]
+- [x] [Review][Patch] The legality overlay is upper-bounded by the Node clock while `occurred_at` is DB-generated — `getMemberModerationOverlay(db, memberId, input.now)` filters `lte(eventsLog.occurredAt, atTimestamp)` comparing an app instant against `.defaultNow()` values; under host-lags-DB skew a second `suspend` inside the window folds `status: 'none'` and is accepted where a 409 was required, and `projectMemberState` computes `nextVersion` from the unbounded stream head so the unique index does not catch it. The story's own Debug Log records this skew as an observed fact [packages/domain/src/member/moderation/write.ts:146, packages/domain/src/member/moderation/overlay.ts:140]
+- [x] [Review][Patch] The moderation history read silently truncates at 50 with no `has_more` and no pagination — the handler passes no `opts` so `clampLimit(undefined, { default: 50, cap: 200 })` applies, `ModerationHistoryResponse` carries no paging field and the route declares no querystring; the sibling list read does the `limit + 1` / `has_more` dance. AC9's "read-only moderation history" renders a partial audit trail as complete [apps/api/src/modules/member-moderation/handlers.ts:289-293, packages/domain/src/member/moderation/read.ts:87, packages/contracts/src/member-moderation/dto.ts:82-100]
+- [x] [Review][Patch] `listModerationHistoryForMember` spreads the row instead of field-picking, pulling Tier-1 ciphertext for up to 50 rows into process memory on the common path — contradicting the file's own header ("NEITHER read ever selects `rationale_ciphertext`"); the single-row accessor `getModerationActionRationale` field-picks correctly (AI-6-5 family 6) [packages/domain/src/member/moderation/read.ts:87]
+- [x] [Review][Patch] The `appliesTo` revert-sanity pair has DB-free teeth for the predicate but not for its call site — deleting `assertReasonCodeAppliesTo(...)` from the write path flips only DB-gated cases, since the pgEnum spans both families and an unguarded write persists cleanly; contrast the `deriveIsValid` half, which has an explicitly labelled REVERT-SANITY unit test that genuinely flips. AC10 requires teeth on both [packages/domain/src/member/moderation/write.ts, packages/domain/tests/member/moderation-reason-codes.test.ts]
+- [x] [Review][Patch] `routes.ts` claims CI-gate coverage that does not exist — "the human-actor CI gate scans the preHandler array statically"; `scripts/claim-adjudication-human-actor-invariant/check.ts:37-112` has a hard-coded `COVERAGE_SET` of six Epic-6 claims files and this file is absent [apps/api/src/modules/member-moderation/routes.ts:2262-2263]
+- [x] [Review][Patch] OpenAPI documents 422 for the display-name-missing condition, which returns 409 — all three action routes say "422 … OR the acting admin has no display name on record" while `AdminDisplayNameMissingError` is `super(409, 'admin.display_name_missing', …)` [packages/contracts/scripts/emit-openapi.ts:3042,3068,3093; apps/api/src/http-errors.ts:82-91]
+- [x] [Review][Patch] The step-up retry path never clears the moderation form, enabling a double-submit — `confirm()` clears state only on success, but the 403 path throws and the retry fires from `ModerationSection`'s `onSuccess` outside `<ModerationStrip>`, which is never told it succeeded; the form stays populated with no success confirmation, and the Submit button is gated on `processing`, not on legality [apps/admin/src/modules/member-status/ModerationStrip.tsx:136, apps/admin/src/modules/member-status/ModerationSection.tsx:279-294]
+- [x] [Review][Patch] The reason-code registry query has no error surface — `reasonCodes.isError`/`.error` are never read (the history query gets a full `role="alert"` branch), so on failure the dropdown renders only its placeholder and the operator cannot submit at all, while the standing badge falls through to `code.replace(/-/g,' ')` and prints `r14 forgery` — the exact raw-slug render this component's own test asserts must never happen [apps/admin/src/modules/member-status/ModerationSection.tsx:355-365,442-444]
+- [x] [Review][Patch] The rationale decrypt catch is unconditional, so a KMS outage is indistinguishable from the corrupt envelope the contract documents — every rationale read across the tenant returns `200 {rationale: null}` with only a `warn` line, and an auditor reviewing a disputed termination concludes the rationale was lost when it is intact [apps/api/src/modules/member-moderation/handlers.ts:1991-2000, packages/contracts/src/member-moderation/dto.ts:4251-4256]
+- [x] [Review][Patch] `MODERATION_RATIONALE_MAX_CHARS = 4_000` is hand-duplicated from the contracts DTO's `.max(4_000)` with no sync-guard, in the same directory whose headline prior-review fix was removing a hand-duplicated registry; the contracts↔domain enum drift *is* guarded by a dedicated test [apps/admin/src/modules/member-status/ModerationStrip.tsx:33, packages/contracts/src/member-moderation/dto.ts:4146]
+- [x] [Review][Patch] Dev Agent Record counts are stale after the prior review pass — it claims "`openapi/v1.yaml` regenerated: 100 → 105 paths (exactly the 5 new routes)" but the surface now registers seven routes and the file carries 107 paths; the File List omits `apps/admin/tests/moderation-section.test.tsx`, `apps/api/tests/unit/moderation-error-mapping.test.ts`, `apps/api/tests/unit/moderation-rejoin-lock.test.ts`, `apps/jobs/tests/moderation-notify.test.ts` and `apps/api/src/audit/audit-sink.ts` [this file]
+- [x] [Review][Defer] The notify worker's batch loop has no `try/catch`, so any throw from `runModerationNotify` fails every other job in the batch [apps/jobs/src/scheduler/moderation-notify.ts:226] — deferred, pre-existing: `news-publish.ts:263-269` (the precedent this worker was told to follow end-to-end) has the identical unguarded loop, as does every sibling scheduler
+- [x] [Review][Defer] The drizzle schema omits the `member_moderation_actions_rejoin_iff_terminate` CHECK the migration declares, and `schema-diff` is the FR-100 payout gate, not a drizzle↔SQL parity gate [packages/domain/src/schema/member_moderation_actions.ts] — deferred, benign while `0091` is never regenerated, which its own header forbids
+- [x] [Review][Defer] A doomed 409/422 request still spends a KMS round-trip — the rationale guard runs before encryption, but the `appliesTo` 422 and the transition 409 both live inside `moderateMember`, after it [apps/api/src/modules/member-moderation/handlers.ts:1834-1861] — deferred, cost-only; the comment implying doomed requests are cheap is the inaccurate part
+- [x] [Review][Defer] `readContextOf` fabricates a well-formed sentinel `memberId` (`'00000000-0000-4000-8000-000000000000'`) for routes that have none, asserting a caller-side invariant enforced nowhere [apps/api/src/modules/member-moderation/handlers.ts:1737-1741] — deferred, inert today; both current callers read `pariwarId` only
+
+Dismissed as noise (3): the audit line being fire-and-forget post-commit on `deps.servicePool` (AC4 mandates exactly this — the `banners/handlers.ts:104-120` pattern verbatim); `performAction` opening a second scope tx while the request's own is open (house pattern in 10+ `apps/api` modules); `parseModerationFlag`'s prefix match colliding with a clause-emitted `suspended_per_*` flag (no producer emits one anywhere in the repo — the prefix namespace is moderation-owned).
+
 ## Dev Notes
 
 ### Why this story is different from the rest of Epic 10
@@ -357,6 +391,25 @@ action. Inventing one would be building an unauthorized feature. Shipped instead
 items carry NO deadline and NO severity, so 10.11 cannot sort them as written.** Routed to PM before
 10.11 is drafted, rather than fabricating a deadline field to make the sort work.
 
+#### ⚠ ESCALATION 3 — a moderation-`terminated` member keeps full write access to their own record
+_Raised by the second code-review pass (2026-08-03); resolved as a SPEC GAP to escalate, not patched._
+
+Every member-write gate keys on the LIFECYCLE column, never on `is_valid`:
+`TERMINAL_STATES = new Set(['withdrawn','anonymized'])` in `nominee.handlers.ts:40`,
+`member-terms.handlers.ts:39`, `medical.handlers.ts:62`, `life-events/handlers.ts:42`,
+`vyawastha-shulk/handlers.ts:43`. Moderation never moves `members.state` (Decision 1) and login
+stays deliberately open (Decision 6) — so a terminated member logs in and can still declare
+nominees, file medical disclosures, accept T&C and record Life Events. Their "membership has ended"
+standing has no effect on any member-initiated mutation.
+
+**Why this is a spec gap and not a defect to fix here.** Decision 1 names this EXACT outcome as the
+harm of the *rejected* two-enum-label design (`:127` — "a terminated member would keep full write
+access to nominees, medical disclosures, T&C and Life Events"). The overlay design reproduces it by
+another route, and nothing in the story noticed. AC5 then explicitly forbids the fix: "all five
+`TERMINAL_STATES` Sets are UNTOUCHED". Closing it means either extending those five gates to consult
+the overlay (an AC5 deviation needing PO sign-off) or deciding the residual is intended — both are
+PO calls, not review patches. **Routed to PM with ESCALATION 1 and 2.**
+
 #### ⚠ KNOWN LIMITATION — the notification deep-link (Decision 7)
 No 10th `AlertCategory` was minted: that would redefine FR-71 from 7 push categories to 8, which
 Story 5.2 froze in terms. The notice ships on `alert_published`, so its deep link lands on the
@@ -386,8 +439,9 @@ resolved form of the same crypto-boundary constraint.
 - All **27 static gates** green, including `member-state-invariant`, `domain-invariants`,
   `schema-diff`, `pii-scrape`, `i18n-parity`, `microcopy`, `determinism-replay`.
 - Migration `0091` applied cleanly; hand-journalled; `PERMISSION_CATALOG_VERSION` verified still 28.
-- `openapi/v1.yaml` regenerated: 100 → 105 paths (exactly the 5 new routes); the 76 deleted lines are
-  YAML anchor renumbering, not lost content (path count verified before/after).
+- `openapi/v1.yaml` regenerated: 100 → **107** paths — 7 moderation routes, not 5 (the first review
+  pass added `…/{moderationActionId}/rationale` and `…/moderation/reason-codes`); the deleted lines
+  are YAML anchor renumbering, not lost content (path count verified before/after).
 - **`pnpm ci:local` is GREEN: 30/30 jobs**, on a freshly recreated + migrated `twt-test-pg` (:5433).
 - One test updated for a real behaviour change: `life-events-markers.test.ts` vocabulary count
   16 → 19 (the three `member.moderation.*` events join the same non-transition-marker family).
@@ -403,6 +457,65 @@ resolved form of the same crypto-boundary constraint.
   the `integration-tests` job's `pnpm db:migrate`, so apps/api integration specs meet an unmigrated
   schema and fail with `relation "users" does not exist`. **Always `db:migrate` after recreating the
   DB and before invoking `ci:local`** — the final green run above did exactly that.
+
+### Second review pass — applied changes (2026-08-03)
+
+A second adversarial review (three parallel layers, prior findings withheld from the finders) raised
+4 decision-needed + 22 patch + 4 defer findings. All 22 patches are applied; the four decisions were
+resolved by BigDev as: escalate (D1, now ESCALATION 3), fix (D2, D3), correct-the-copy (D4).
+
+**What actually changed, and why it mattered**
+- **The member is now TOLD WHY.** `presenter.ts` attached the moderation prose to the `headline`
+  section, and BOTH render layers drop that section (`.filter((s) => s.id !== 'headline')`) — so
+  AC9's "full prose, not an error code" reached nobody: a suspended member saw "Under review" and an
+  appeal button, with no reason. The prose moved to a top-level `vm.moderationNotice` that both
+  renderers resolve with `{reason}`. This defeats the whole dignity rationale behind Decision 6, and
+  the UI tests were green because they asserted the view-model, never the render.
+- **The rationale became RTBF-erasable.** `rationale_ciphertext` is Tier-1 PII and was absent from
+  `anonymize.ts`'s table set — and *un-addable*, because 0091 granted SELECT+INSERT only and an RTBF
+  is a soft delete (the FK cascade never fires). **Migration `0092`** grants UPDATE on that column
+  ONLY (a Postgres column-level privilege, so the decision record stays immutable) plus a
+  tenant-scoped UPDATE policy; `anonymizeMember` now scrubs it to the sentinel. Subject-access
+  EXPORT is deliberately NOT wired — see the recorded open question in `data-export/assemble.ts`.
+- **The DB backstops are now asserted.** New `member-moderation-actions-policy-regression.spec.ts`
+  (9 tests) covers RLS positive/negative/fail-closed/FORCE, the append-only DELETE refusal, the one
+  permitted UPDATE, the `rejoin_iff_terminate` CHECK in both directions, and the FK — none of which
+  had any test at any level. Plus a cross-Pariwar denial test and the `admin.display_name_missing`
+  test the surface was missing while five sibling surfaces all had one.
+- **The `appliesTo` revert-sanity now has DB-free teeth.** Deleting the guard's CALL SITE previously
+  flipped only DB-gated tests. Verified by probe: removing the call flips 3 unit tests, restored green.
+- **The AC6 cascade is finally tested at the role it runs under.** The old test passed
+  `t.deps.pool` under a comment claiming "exactly as the moderation handler invokes it"; production
+  passes `scopeTx.client` under `SET LOCAL ROLE twt_app`. Now both the direct call and the REAL
+  suspend route are asserted to clear the refresh chain and device bindings.
+- **The notice can no longer be silently lost.** An undelivered notice returned normally (completing
+  the pg-boss job) under a comment claiming a retry it could not perform; it now alarms + throws.
+  The uncatalogued-reason-code fallback was unreachable dead code — `t()` THROWS on a missing key
+  rather than returning it — and that throw escaped into the batch loop.
+- Also: history pagination + `has_more` (the audit trail silently truncated at 50); the admin
+  rationale-reveal trigger the decrypt endpoint was built for and never got; row-authority reads
+  tiebreak on `created_at` (DB clock) instead of a random UUID; the legality overlay reads UNBOUNDED
+  (it was upper-bounded by the Node clock while `occurred_at` is DB-generated); a KMS outage now
+  returns 503 instead of masquerading as `rationale: null`; `MODERATION_RATIONALE_MAX_CHARS` comes
+  from contracts instead of being hand-copied; and the false "the human-actor CI gate scans this
+  file" comment in `routes.ts` is corrected (that gate's `COVERAGE_SET` does not include it).
+
+**A pre-existing red gate, fixed.** `apps/api/tests/integration/forced-pagination.spec.ts` was
+FAILING on the branch before this pass — the first pass's `…/moderation/reason-codes` route returns
+`{ items }` and declared no bounded `limit`. Verified red on the baseline with the changes stashed.
+Allow-listed with a stated reason + a re-examination trigger: the registry is a frozen code-level
+tuple of 10 codes (Decision 3), fixed at compile time, so it cannot grow with tenant data — which is
+the hazard that gate exists to prevent. This means the Dev Agent Record's earlier "30/30 green"
+claim did not hold at the time it was written.
+
+**Verification (honest).** `pnpm ci:local` is **GREEN: 30/30 jobs** on a freshly recreated +
+migrated `twt-test-pg` (:5433), including migration `0092`. Suite deltas: domain 2233 → **2247**,
+api 827 → **831**, jobs 292 → **302**, contracts 813 → **815**, ui 73 → **77**, admin 246.
+`PERMISSION_CATALOG_VERSION` still 28. Two flake classes observed and diagnosed to environment, not
+code: (a) four domain count-assertion specs fail against a DB with accumulated rows and pass on a
+fresh one — confirmed by stashing every change and reproducing identically on the baseline; (b) one
+`verifyAuditChain` chunk-boundary spec failed once under concurrency and passed on a clean re-run
+and in isolation ([[project_ci_local_concurrency_oversubscription]]).
 
 ### File List
 
@@ -425,6 +538,30 @@ resolved form of the same crypto-boundary constraint.
 - `packages/validity-service/tests/integration/moderation-validity.spec.ts`
 - `packages/ui/tests/member-status/moderation.test.ts`
 
+**New — second review pass (2026-08-03)**
+- `packages/domain/migrations/0092_member-moderation-rtbf.sql`
+- `packages/domain/tests/integration/rls/member-moderation-actions-policy-regression.spec.ts`
+
+**Modified — second review pass (2026-08-03)**
+- `packages/domain/src/member/moderation/{read,write,overlay,index}.ts`
+- `packages/domain/src/member/anonymize.ts`, `src/data-export/assemble.ts`
+- `packages/domain/src/policies/member-moderation-actions-rls.ts`, `migrations/meta/_journal.json`
+- `packages/domain/tests/member/{moderation-reason-codes,rtbf-anonymize}.test.ts`
+- `packages/contracts/src/member-moderation/{dto,index}.ts`, `scripts/emit-openapi.ts`,
+  `tests/member-moderation.test.ts`, `openapi/v1.yaml`
+- `packages/ui/src/member-status/{view-model,presenter,index}.ts`,
+  `tests/member-status/moderation.test.ts`
+- `apps/api/src/modules/member-moderation/{handlers,routes,moderation-crypto}.ts`
+- `apps/api/src/modules/auth/member/member-auth.repo.ts`
+- `apps/api/tests/integration/member-moderation/{member-moderation,moderation-auth-effects}.spec.ts`
+- `apps/api/tests/integration/forced-pagination.spec.ts` (pre-existing red gate)
+- `apps/jobs/src/scheduler/moderation-notify.ts`, `tests/moderation-notify.test.ts`
+- `apps/admin/src/api/{client,hooks}.ts`,
+  `apps/admin/src/modules/member-status/{ModerationStrip,ModerationSection,MemberStatusPanel}.tsx`,
+  `apps/admin/src/modules/member-status/i18n-en.ts`,
+  `apps/admin/tests/{moderation-strip,moderation-section}.test.tsx`
+- `apps/mobile/app/(membership)/index.tsx`
+
 **Modified**
 - `packages/domain/src/member/{events,index}.ts`, `src/{index,ids/index}.ts`,
   `src/{schema,policies}/index.ts`, `migrations/meta/_journal.json`
@@ -446,4 +583,5 @@ resolved form of the same crypto-boundary constraint.
 
 | Date | Change |
 |---|---|
+| 2026-08-03 | **Second code-review pass**: 22 patches applied, 4 deferred, 1 escalated. Headline fixes — the member-facing moderation prose was unreachable (both renderers drop the section it rode, so AC9's explanation reached nobody); the Tier-1 rationale was outside RTBF *and* structurally un-erasable (migration `0092` grants a column-scoped UPDATE; `anonymizeMember` now scrubs it); the new table gained its missing DB policy-regression spec (RLS/FORCE/CHECK/FK/append-only), a cross-Pariwar denial test and the `admin.display_name_missing` test; the `appliesTo` revert-sanity gained DB-free teeth (verified by probe); the AC6 cascade is now tested at the role it actually runs under and end-to-end through the route; an undelivered notice alarms + throws instead of vanishing; history reads paginate with `has_more`; the admin rationale-reveal trigger was built. Also fixed a PRE-EXISTING red gate (`forced-pagination`) that the first pass shipped. ESCALATION 3 recorded: a terminated member retains full write access to their own record — Decision 1 named that harm for the rejected design and the overlay inherited it. `ci:local` 30/30 green on a fresh DB. |
 | 2026-08-02 | Story 10.10 implemented across 10 tasks: the `member.moderation.*` event-derived overlay (Decision 1 — `members.state` untouched), migration `0091` + `member_moderation_actions`, the frozen reason-code registry, the `is_valid` fold (Decision 8 — the whole enforcement surface), the wired suspension cascade, the FR-6 rejoin lock + its restore-clears path, five step-up-gated admin routes on the existing `member.moderate` key (catalog stays v28), the apps/jobs notice worker on `alert_published`, the admin moderation strip, and the member `terminated-with-reason` panel state. Two escalations recorded (the `state_trustee` inert-grant finding; the 10.11 pending-items gap) + one known limitation (the announcement-feed deep link). |

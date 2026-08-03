@@ -29,6 +29,7 @@ function history(over: Partial<ModerationHistoryResponse> = {}): ModerationHisto
     since: null,
     legal_actions: ['suspend'],
     entries: [],
+    has_more: false,
     ...over,
   };
 }

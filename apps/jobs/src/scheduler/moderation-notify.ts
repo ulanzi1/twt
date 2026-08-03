@@ -129,12 +129,13 @@ export function buildModerationAlert(input: {
   // A code with no catalog entry resolves through the `unspecified` label rather than leaking the
   // raw slug into member-facing prose (a new registry code shipped ahead of its copy must degrade
   // gracefully, not read as machine output).
-  const reasonKey = moderationReasonLabelKey(input.reasonCode);
-  const resolvedReason = t(reasonKey, {}, { locale, ...NS });
-  const reason =
-    resolvedReason === reasonKey
-      ? t(moderationReasonLabelKey('unspecified'), {}, { locale, ...NS })
-      : resolvedReason;
+  //
+  // ⚠ This MUST be a try/catch, not a `resolved === key` comparison (review follow-up). `t()` is
+  // loud-by-default: `packages/i18n/src/resolver.ts:62-65` THROWS on an unknown key and never
+  // returns it, so the equality form was unreachable dead code — and the throw escaped into the
+  // worker's batch loop, failing every OTHER member's notice in the same batch. Exactly the failure
+  // the envelope guard in `registerModerationNotifyWorker` was added to prevent.
+  const reason = resolveReasonLabel(input.reasonCode, locale);
 
   return Alert.parse({
     alert_id: deriveModerationAlertId(input.moderationActionId),
@@ -154,9 +155,35 @@ export function buildModerationAlert(input: {
   });
 }
 
+/**
+ * Resolve a reason code to its member-facing LABEL, degrading to `unspecified` when the catalog has
+ * no entry for it (a registry code shipped ahead of its copy). PURE apart from the catalog read.
+ *
+ * Both lookups are guarded: if even `unspecified` is missing, the member still gets a coherent
+ * notice rather than a thrown worker — the reason simply goes unnamed. A moderation notice that
+ * arrives without a label is a degraded notice; one that never arrives, and takes its batch-mates
+ * down with it, is a silent governance failure.
+ */
+export function resolveReasonLabel(reasonCode: string, locale: Locale): string {
+  try {
+    return t(moderationReasonLabelKey(reasonCode), {}, { locale, ...NS });
+  } catch {
+    try {
+      return t(moderationReasonLabelKey('unspecified'), {}, { locale, ...NS });
+    } catch {
+      return '';
+    }
+  }
+}
+
 export interface ModerationNotifyResult {
   readonly notified: boolean;
-  readonly reason?: 'member-not-found' | 'undelivered';
+  /**
+   * Only `member-not-found` is a RETURNED outcome — it is genuinely terminal (an RTBF cascade
+   * between commit and delivery), so retrying could never help. An UNDELIVERED notice throws
+   * instead, because that one is retryable and must not complete the job.
+   */
+  readonly reason?: 'member-not-found';
   readonly alertId: string;
 }
 
@@ -209,9 +236,23 @@ export async function runModerationNotify(
   );
 
   if (undelivered.length > 0) {
-    // Surfaced so pg-boss's retry has a reason to exist; the moderation ACTION itself is long since
-    // committed and is never affected by a delivery outcome (AC8: best-effort).
-    return { notified: false, reason: 'undelivered', alertId };
+    // ⚠ ALARM + THROW, not a quiet return (review follow-up). Returning normally COMPLETES the
+    // pg-boss job, so the previous version's own comment — "surfaced so pg-boss's retry has a
+    // reason to exist" — described a retry the code structurally could not perform: the notice was
+    // lost permanently and invisibly, with no alarm on this arm at all.
+    //
+    // Throwing is what `fanOutAlertToMembers` documents as its contract ("the caller still throws
+    // and pg-boss still retries this member") and what the sibling single-member notifier
+    // (`contribution-notify-triggers.ts`) already does. It does NOT violate AC8's "best-effort":
+    // AC8 says a dispatch failure must never fail or roll back the moderation ACTION — and it
+    // cannot, because the action committed in apps/api long before this worker ran. Best-effort
+    // means the action survives a failed notice, not that a failed notice goes unrecorded.
+    alarm(
+      `[jobs] moderation-notify: notice UNDELIVERED for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) — retrying`,
+    );
+    throw new Error(
+      `[jobs] moderation-notify: undelivered notice for moderation action ${payload.moderationActionId}`,
+    );
   }
   return { notified: true, alertId };
 }

@@ -26,7 +26,17 @@ import { ModerationAction, ModerationStatus, ReasonCode } from './enums.js';
  * `.trim()` runs BEFORE the length check, so a whitespace-only string is a schema failure here and
  * the domain's `ModerationRationaleRequiredError` is the defence-in-depth backstop behind it.
  */
-const Rationale = z.string().trim().min(1).max(4_000);
+/**
+ * The rationale's max length, EXPORTED so the admin textarea's `maxLength` reads the same number
+ * the server validates against (review follow-up). It was previously hand-copied into
+ * `ModerationStrip.tsx` with a "mirrors the contracts DTO" comment and no sync-guard — the exact
+ * duplication-by-value shape this surface's earlier review pass removed from the reason-code
+ * registry. Raising it here alone would silently truncate the operator's text at the old value;
+ * lowering it would let the client accept text the server then 400s.
+ */
+export const MODERATION_RATIONALE_MAX_CHARS = 4_000;
+
+const Rationale = z.string().trim().min(1).max(MODERATION_RATIONALE_MAX_CHARS);
 
 /**
  * The body of a suspend / terminate / restore request. The ACTION itself is carried by the ROUTE
@@ -95,6 +105,12 @@ export const ModerationHistoryResponse = z
      */
     legal_actions: z.array(ModerationAction),
     entries: z.array(ModerationHistoryEntryDto),
+    /**
+     * True when moderation actions exist beyond this page. An AUDIT TRAIL must never present a
+     * truncated page as the whole record: without this the console silently dropped everything past
+     * the newest 50, which on a contested member is typically the ORIGINAL decision under dispute.
+     */
+    has_more: z.boolean(),
   })
   .strict();
 export type ModerationHistoryResponse = z.output<typeof ModerationHistoryResponse>;

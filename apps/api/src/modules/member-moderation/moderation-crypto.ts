@@ -64,3 +64,38 @@ export async function decryptModerationRationale(
   const bytes = await encryption.decryptTier1(ct, encContext(pariwarId), enc.kms, enc.kekRef);
   return Buffer.from(bytes).toString('utf-8');
 }
+
+/**
+ * The rationale read's two genuinely different failure modes, kept apart (review follow-up).
+ *
+ * The DTO documents `rationale: null` as "the fail-soft outcome of a corrupt/rotated envelope" — a
+ * per-ROW fact. A blanket `catch` collapsed that together with a KMS outage, so an unreachable key
+ * service answered `200 {rationale: null}` for every action in the tenant, and an auditor reviewing
+ * a disputed termination would conclude the rationale was never written when it is intact and
+ * merely undecryptable right now.
+ *
+ * The split is at the envelope boundary, which is where the two modes actually separate:
+ *   · `parseEnvelope` is LOCAL and synchronous — it fails only on a structurally bad stored value,
+ *     which is exactly the documented per-row case → `{ kind: 'corrupt' }` → `null`.
+ *   · `decryptTier1` reaches the KMS — a failure there is operational and tenant-wide, so it
+ *     PROPAGATES to a typed 503 rather than masquerading as an absent rationale.
+ */
+export type RationaleDecryptOutcome =
+  | { kind: 'ok'; rationale: string }
+  | { kind: 'corrupt'; error: unknown };
+
+export async function decryptModerationRationaleSafe(
+  serialized: string,
+  pariwarId: string,
+  enc: EncryptionDeps,
+): Promise<RationaleDecryptOutcome> {
+  let ct: ReturnType<typeof encryption.parseEnvelope>;
+  try {
+    ct = encryption.parseEnvelope(serialized);
+  } catch (error) {
+    return { kind: 'corrupt', error };
+  }
+  // Deliberately NOT wrapped: a KMS/transport failure must reach the caller, which maps it to 503.
+  const bytes = await encryption.decryptTier1(ct, encContext(pariwarId), enc.kms, enc.kekRef);
+  return { kind: 'ok', rationale: Buffer.from(bytes).toString('utf-8') };
+}

@@ -33,6 +33,7 @@ import {
 import type {
   HeadlineState,
   MemberStatusViewModel,
+  ModerationNotice,
   PanelSection,
   RuleExplanation,
 } from './view-model.js';
@@ -256,8 +257,13 @@ function specialFlagsSection(payload: MemberValidityPayloadDto): PanelSection {
       // The LABEL key, never the raw code — the render layer resolves it (UX a11y `:1896`).
       moderationReasonLabelKey: moderation ? moderationReasonLabelKey(moderation.reasonCode) : null,
     },
-    // Only render when there is a flag to surface (prominent for the Epic 6 verifier console — AC1g).
-    visible: flags.length > 0 || hasConcealment,
+    // Only render when there is a DETAIL LINE to show (review follow-up). Previously keyed on
+    // `flags.length > 0`, which made a moderated member's panel sprout an empty red "Special flags"
+    // box: moderation contributes structural `data` but no `detailKeys`, and the flag it adds is
+    // already explained in full prose by `moderationNotice`. A titled, red, contentless section
+    // reads as "something is wrong that we won't tell you about" — the opposite of the dignity
+    // requirement. A moderation-only flag set therefore does NOT open this section.
+    visible: detailKeys.length > 0 || hasConcealment,
   };
 }
 
@@ -299,15 +305,23 @@ export function buildMemberStatusViewModel(
   const moderation = parseModerationFlag(payload.specialFlags);
 
   // Story 10.10 (AC9) — the member is owed FULL PROSE explaining the standing, not an error code
-  // (`ux-design-specification.md:1891`), naming the reason as a resolved LABEL. It rides the headline
-  // section because that is where the member reads the standing itself; the `{reason}` param is
-  // resolved by the render layer from `moderationReasonLabelKey`.
-  const moderationDetailKey =
+  // (`ux-design-specification.md:1891`), naming the reason as a resolved LABEL.
+  //
+  // ⚠ This is a TOP-LEVEL view-model field, NOT a `detailKey` on the headline section (review
+  // follow-up). Both render layers drop the headline section wholesale and render only
+  // `headlineKey`, so as a detail key the explanation was unreachable and the member was told
+  // "Under review" with no reason at all. See `ModerationNotice` in view-model.ts.
+  const moderationNotice: ModerationNotice | null =
     moderation === null
       ? null
-      : moderation.status === 'terminated'
-        ? DETAIL_KEYS.moderationTerminated
-        : DETAIL_KEYS.moderationSuspended;
+      : {
+          status: moderation.status,
+          detailKey:
+            moderation.status === 'terminated'
+              ? DETAIL_KEYS.moderationTerminated
+              : DETAIL_KEYS.moderationSuspended,
+          reasonLabelKey: moderationReasonLabelKey(moderation.reasonCode),
+        };
 
   const headlineSection: PanelSection = {
     id: 'headline',
@@ -318,10 +332,9 @@ export function buildMemberStatusViewModel(
         : headlineState === 'pending-onboarding'
           ? 'info'
           : 'fail',
-    detailKeys:
-      moderationDetailKey === null
-        ? [HEADLINE_KEYS[headlineState]]
-        : [HEADLINE_KEYS[headlineState], moderationDetailKey],
+    // The moderation prose is deliberately NOT duplicated here: `moderationNotice` is the one
+    // carrier, so the two can never drift into different sentences.
+    detailKeys: [HEADLINE_KEYS[headlineState]],
     data: {
       headlineState,
       isValid: payload.isValid,
@@ -345,6 +358,7 @@ export function buildMemberStatusViewModel(
   return {
     headlineState,
     headlineKey: HEADLINE_KEYS[headlineState],
+    moderationNotice,
     sections,
     ruleExplanations: buildRuleExplanations(payload),
     validityWindow: {

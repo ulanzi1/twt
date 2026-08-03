@@ -645,6 +645,13 @@
       "when": 1788579600000,
       "tag": "0091_member-moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1788666000000,
+      "tag": "0092_member-moderation-rtbf",
+      "breakpoints": true
     }
   ]
 }

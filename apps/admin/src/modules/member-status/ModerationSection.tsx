@@ -19,6 +19,7 @@ import { ApiError } from '../../api/client.js';
 import {
   useModerateMember,
   useModerationHistory,
+  useModerationRationale,
   useModerationReasonCodes,
   useRequestStepUp,
   useVerifyStepUp,
@@ -48,6 +49,7 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
   const history = useModerationHistory(pariwarId, memberId);
   const reasonCodes = useModerationReasonCodes(pariwarId);
   const moderate = useModerateMember(pariwarId, memberId);
+  const rationaleQuery = useModerationRationale(pariwarId, memberId);
   const requestStepUp = useRequestStepUp();
   const verifyStepUp = useVerifyStepUp();
 
@@ -58,6 +60,12 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
   );
   const [otp, setOtp] = useState('');
 
+  // Bumped on EVERY committed action. `<ModerationStrip>` clears its own form when its `onSubmit`
+  // resolves, but on the step-up path `onSubmit` throws and the retry fires from `verify()` below —
+  // so without this the write lands while the strip still shows a populated, apparently-unsubmitted
+  // form, and a second Confirm is one click away.
+  const [clearSignal, setClearSignal] = useState(0);
+
   const submit = async (input: ModerationSubmit): Promise<void> => {
     setStepUpFor(null);
     try {
@@ -66,6 +74,7 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
         body: { reason_code: input.reasonCode, rationale: input.rationale },
       });
       setOtp('');
+      setClearSignal((n) => n + 1);
     } catch (err) {
       // A step-up-required 403 is the SIGNAL to elevate — not a hard error.
       if (err instanceof ApiError && err.code === 'auth.step_up_required') {
@@ -76,6 +85,27 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
       }
       throw err;
     }
+  };
+
+  // ── The rationale reveal (review follow-up) ───────────────────────────────────────────────────
+  // The decrypt endpoint shipped with no way to reach it, so a recorded rationale was write-only in
+  // practice — the operator could see THAT a decision was made and never WHY. Decrypt is per-action
+  // and on demand: a history render never pulls a page of Tier-1 plaintext, and what is revealed
+  // lives in local state only, so it is gone on unmount and never enters the shared query cache.
+  const [revealed, setRevealed] = useState<Record<string, string | null>>({});
+  const [revealingId, setRevealingId] = useState<string | null>(null);
+
+  const revealRationale = (moderationActionId: string): void => {
+    if (moderationActionId in revealed) return;
+    setRevealingId(moderationActionId);
+    rationaleQuery.mutate(moderationActionId, {
+      onSuccess: (res) => {
+        // `null` is a real answer, not a miss: the stored envelope is unreadable. It is cached as
+        // null so a second click does not re-spend a decrypt on a row that can never resolve.
+        setRevealed((prev) => ({ ...prev, [moderationActionId]: res.rationale }));
+      },
+      onSettled: () => setRevealingId(null),
+    });
   };
 
   const verify = (): void => {
@@ -152,6 +182,21 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        The registry query gets its OWN error surface. Without it a failed fetch degraded silently
+        into an un-submittable form: the dropdown rendered only its placeholder, so the operator
+        could not pick a reason code at all and was told nothing about why — on the one surface
+        whose whole purpose is taking a governance action.
+      */}
+      {reasonCodes.isError && (
+        <p
+          role="alert"
+          data-testid="moderation-reason-codes-error"
+          className="rounded border border-status-fail-fg/40 p-2 text-sm text-status-fail-fg"
+        >
+          {t.reasonCodesUnavailable} {messageOf(reasonCodes.error) ?? 'unknown error'}
+        </p>
+      )}
       <ModerationStrip
         moderation={history.data}
         reasonCodes={reasonCodes.data?.items ?? []}
@@ -159,12 +204,21 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
         processing={moderate.isPending}
         error={submitError}
         stepUpSlot={stepUpSlot}
+        clearSignal={clearSignal}
       />
       <section aria-label={t.historyHeading} className="rounded border p-3">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-60">
           {t.historyHeading}
         </h3>
-        <ModerationHistory entries={history.data.entries} reasonCodes={reasonCodes.data?.items ?? []} />
+        <ModerationHistory
+          entries={history.data.entries}
+          reasonCodes={reasonCodes.data?.items ?? []}
+          hasMore={history.data.has_more}
+          onRevealRationale={revealRationale}
+          revealedRationales={revealed}
+          revealingId={rationaleQuery.isPending ? revealingId : null}
+          revealError={messageOf(rationaleQuery.error) ?? null}
+        />
       </section>
     </div>
   );

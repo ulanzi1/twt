@@ -34,7 +34,7 @@ import {
   ModerationReasonCodeInvalidError,
   ModerationStateError,
 } from './errors.js';
-import { getMemberModerationOverlay } from './overlay.js';
+import { getCurrentMemberModerationOverlay } from './overlay.js';
 import { reasonCodeAppliesTo, type ReasonCode } from './reason-codes.js';
 import {
   MODERATION_ACTION_EVENT_TYPES,
@@ -143,7 +143,10 @@ export async function moderateMember(
 
   // (2) Legality, against the CURRENT derived overlay status — read inside the tx so a concurrent
   //     moderation of the same member is serialized by the row/stream contention below.
-  const overlay = await getMemberModerationOverlay(db, input.memberId, input.now);
+  //     ⚠ UNBOUNDED deliberately: `input.now` is the injected APP clock while `occurred_at` is
+  //     DB-generated, so bounding the legality read by it would let app-clock lag hide the previous
+  //     action's event and accept a duplicate suspend. See `getCurrentMemberModerationOverlay`.
+  const overlay = await getCurrentMemberModerationOverlay(db, input.memberId);
   const toStatus = nextModerationStatus(overlay.status, input.action);
   if (toStatus === null) {
     // Rejected BEFORE any write (AC2): a no-op never returns 200, and a re-suspend is a 409.

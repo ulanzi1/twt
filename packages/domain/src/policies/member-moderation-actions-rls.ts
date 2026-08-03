@@ -2,8 +2,17 @@
 //
 // TENANT-ISOLATED read + APPEND-ONLY write — mirrors `member-addresses-rls.ts` /
 // `member-postings-rls.ts` (the append-only history posture), NOT the `member_withdrawals`
-// single-row-per-member posture. There is deliberately NO update/delete policy and the migration
-// GRANTs only SELECT + INSERT: a recorded moderation decision is immutable.
+// single-row-per-member posture. There is deliberately NO DELETE policy: a recorded moderation
+// decision is immutable.
+//
+// ── The ONE UPDATE leg, and why it does not break that (migration 0092, review follow-up) ────────
+// `rationale_ciphertext` is Tier-1 PII, and 0091's SELECT+INSERT-only posture made it structurally
+// UN-ERASABLE: an RTBF is a SOFT delete, so the `ON DELETE cascade` FK never fires, and with no
+// UPDATE privilege the DPDPA scrub could not be written at all. 0092 therefore grants UPDATE on the
+// RATIONALE COLUMN ONLY (a Postgres column-level privilege) plus the tenant-scoped policy below.
+// The decision itself — `action`, `reason_code`, `actor_id`, `actor_display`, `rejoin_permitted_at`,
+// `acted_at` — remains un-writable by the app role, so immutability holds exactly where it is
+// load-bearing and is relaxed only where it collided with the member's erasure right.
 //
 // ── The signup rejoin-lock READ is NOT served by these policies ─────────────────────────────────
 // The FR-56 → FR-6 rejoin check at signup runs PRE-scope on the BYPASSRLS `servicePool`
@@ -36,6 +45,22 @@ export const memberModerationActionsTenantIsolationInsert = pgPolicy(
     as: 'permissive',
     for: 'insert',
     to: appRole,
+    withCheck: sql`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`,
+  },
+).link(memberModerationActions);
+
+/**
+ * The DPDPA-RTBF rationale scrub ONLY (migration 0092). Tenant-scoped on BOTH legs, so an RTBF in
+ * one Pariwar can never reach another's rows — and the column-level GRANT is what keeps this from
+ * being a general edit capability over the decision record. See the header.
+ */
+export const memberModerationActionsTenantIsolationUpdate = pgPolicy(
+  'member_moderation_actions_tenant_isolation_update',
+  {
+    as: 'permissive',
+    for: 'update',
+    to: appRole,
+    using: sql`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`,
     withCheck: sql`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`,
   },
 ).link(memberModerationActions);

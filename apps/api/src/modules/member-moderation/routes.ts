@@ -40,8 +40,18 @@
 // precedent). The hook is placed AFTER the permission hook — "so an unauthorized actor never
 // reaches step-up" (the stated invariant in `claims.cycle-freeze.routes.ts:17`).
 //
-// Each route inlines the human-actor chain explicitly (the human-actor CI gate scans the preHandler
-// array statically — a shared/spread variable is opaque to it; the 6.13/6.14/9.8 pattern).
+// Each route inlines the human-actor chain explicitly — the literal-array style the 6.13/6.14/9.8
+// routes use, so a reader (and any future static scan) sees the full chain at the call site rather
+// than behind a shared/spread variable.
+//
+// ⚠ CORRECTION (review follow-up): this file is NOT scanned by the human-actor CI gate today.
+// `scripts/claim-adjudication-human-actor-invariant/check.ts` carries a HARD-CODED `COVERAGE_SET`
+// of six Epic-6 claims route files, and neither this file nor the 9.8 file cited above is in it.
+// The inline style is therefore a convention held by review, not by a gate — do not read it as
+// enforced. Extending that gate's scope is a deliberate act with its own cost ([[project_access_
+// wrapper_gate_pending_scope]]: a scan-scope extension is only complete when an invariant gains
+// MEANINGFUL semantic coverage of the new surface, not when the scan merely runs green over it),
+// so it is left to a story that can carry the revert-sanity proof rather than bolted on here.
 
 import {
   ModerateMemberRequest,
@@ -154,7 +164,15 @@ export function registerMemberModerationRoutes(app: FastifyInstance, deps: AppDe
   r.get(
     '/api/v1/p/:pariwarId/members/:memberId/moderation',
     {
-      schema: { params: MemberParam, response: { 200: ModerationHistoryResponse }, tags: [TAG] },
+      schema: {
+        params: MemberParam,
+        // The audit trail is PAGINATED (review follow-up). It previously took no querystring and
+        // silently returned the newest 50 with no `has_more`, so a contested member's ORIGINAL
+        // decision — the one most likely under dispute — simply vanished off the end.
+        querystring: ListQuery,
+        response: { 200: ModerationHistoryResponse },
+        tags: [TAG],
+      },
       preHandler: [adminSession, scope, requireModerate],
     },
     h.history,

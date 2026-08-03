@@ -27,6 +27,7 @@ import {
   ModerationActionResponse,
   ModerationHistoryResponse,
   ModeratedMembersListResponse,
+  ModerationRationaleResponse,
   ReasonCodesListResponse,
   VerifierConsoleResponse,
   type VerifierConsoleResponse as VerifierConsole,
@@ -131,6 +132,7 @@ import {
   type ModerationActionResponse as ModerationActionResult,
   type ModerationHistoryResponse as ModerationHistoryResult,
   type ModeratedMembersListResponse as ModeratedMembersListResult,
+  type ModerationRationaleResponse as ModerationRationaleResult,
   type ReasonCodesListResponse as ReasonCodesListResult,
   type StepUpRequestResponse as StepUpRequestResult,
   type StepUpVerifyResponse as StepUpVerifyResult,
@@ -457,6 +459,27 @@ export function getModerationHistory(
   memberId: string,
 ): Promise<ModerationHistoryResult> {
   return apiFetch(moderationBase(pariwarId, memberId), ModerationHistoryResponse);
+}
+
+/**
+ * GET ONE moderation action's decrypted free-text rationale (review follow-up — this is the admin
+ * TRIGGER the decrypt endpoint was built for; without it the endpoint existed and nothing could
+ * reach it, so a recorded rationale was write-only in practice).
+ *
+ * Deliberately NOT folded into `getModerationHistory`: the rationale is Tier-1 PII and is fetched
+ * ONE action at a time, on an explicit operator action, so a routine history render never decrypts
+ * a whole page of it. `rationale` comes back `null` when the stored envelope is unreadable; a KMS
+ * outage is a 503, not a null.
+ */
+export function getModerationRationale(
+  pariwarId: string,
+  memberId: string,
+  moderationActionId: string,
+): Promise<ModerationRationaleResult> {
+  return apiFetch(
+    `${moderationBase(pariwarId, memberId)}/${encodeURIComponent(moderationActionId)}/rationale`,
+    ModerationRationaleResponse,
+  );
 }
 
 /** GET the Pariwar's currently-moderated members (Decision 9 — the Story 10.11 read). */

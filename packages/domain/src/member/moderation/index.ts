@@ -62,6 +62,7 @@ export {
   NO_MODERATION,
   evaluateModerationOverlay,
   getMemberModerationOverlay,
+  getCurrentMemberModerationOverlay,
 } from './overlay.js';
 
 export {
@@ -80,6 +81,7 @@ export {
 // Adding a tenant-scoped mirror of it here would be a second implementation of one rule.
 export {
   type ModerationHistoryEntry,
+  type ModerationHistoryPage,
   type ModeratedMemberEntry,
   type ListModeratedMembersOptions,
   listModerationHistoryForMember,

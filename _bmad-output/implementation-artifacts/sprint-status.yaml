@@ -1,4 +1,40 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-03b (10-10-member-moderation-suspend-terminate-restore-reason-codes:
+#   SECOND bmad-code-review pass, run against the base PLUS the 13-fix commit 6ad0516, with the
+#   prior Review Findings deliberately WITHHELD from the finder layers (fresh eyes). Three parallel
+#   layers over 69 files / 7,885 lines (generated openapi + bookkeeping excluded). 30 findings after
+#   dedup: 4 decision-needed, 22 patch, 4 defer (logged to deferred-work.md with re-triggers), 3
+#   dismissed (fire-and-forget audit — AC4 MANDATES that pattern; the second scope tx — house
+#   pattern in 10+ modules; a flag-prefix collision with no producer anywhere in the repo).
+#   Prior-pass reconciliation: 12 of 13 fixes confirmed, 1 PARTIAL (the rationale decrypt endpoint
+#   shipped without the admin trigger it was explicitly built for — now wired).
+#   Decisions resolved by BigDev: D1 escalate, D2 fix, D3 fix, D4 correct-the-copy. All 22 patches
+#   APPLIED, not logged. The three that mattered: (a) the member was never told WHY — the
+#   moderation prose rode the `headline` section and BOTH renderers filter that section out, so
+#   AC9's "full prose, not an error code" reached nobody; moved to a top-level `vm.moderationNotice`
+#   both renderers resolve with {reason}. UI tests were green because they asserted the view-model,
+#   never the render. (b) the Tier-1 rationale was outside the RTBF scrub set AND structurally
+#   un-erasable (0091 granted SELECT+INSERT only; an RTBF is a SOFT delete so the FK cascade never
+#   fires) — migration 0092 grants a COLUMN-scoped UPDATE + tenant policy, anonymizeMember scrubs
+#   it, decision fields stay immutable; subject-access EXPORT deliberately NOT wired and recorded
+#   as an open PM/legal question rather than decided silently. (c) the new table had NO test at any
+#   level for its RLS/FORCE/CHECK/FK/append-only posture — added a 9-test policy-regression spec,
+#   plus the missing cross-Pariwar denial and admin.display_name_missing tests.
+#   Also: the appliesTo revert-sanity gained DB-free teeth (PROVEN by probe — removing the call
+#   site flips 3 unit tests); the AC6 cascade is finally tested at the role it runs under
+#   (scopeTx.client under twt_app, not the admin pool) and end-to-end through the real route; an
+#   undelivered notice alarms+throws instead of completing the job; history paginates with
+#   has_more; the KMS-outage path returns 503 instead of masquerading as a null rationale.
+#   FIXED A PRE-EXISTING RED GATE: forced-pagination.spec.ts was already failing on this branch
+#   (the first pass's /moderation/reason-codes route) — verified red on the baseline with all
+#   changes stashed, which means the earlier "30/30 green" claim did not hold when written.
+#   ESCALATION 3 recorded (NOT patched, AC5 forbids it): a moderation-terminated member retains
+#   full write access to nominees/medical/T&C/Life-Events, because all five TERMINAL_STATES Sets
+#   key on members.state — the exact harm Decision 1 named for the design it REJECTED, inherited by
+#   the overlay and never noticed. Routed to PM with ESCALATIONS 1 and 2.
+#   pnpm ci:local GREEN 30/30 on a freshly recreated + migrated twt-test-pg (:5433) incl. 0092.
+#   Suite deltas: domain 2233->2247, api 827->831, jobs 292->302, contracts 813->815, ui 73->77.
+#   PERMISSION_CATALOG_VERSION still 28. development_status[10-10] stays: done.)
 # last_updated: 2026-08-03 (10-10-member-moderation-suspend-terminate-restore-reason-codes:
 #   review -> done via bmad-code-review. Three parallel layers (Blind Hunter/diff-only, Edge Case
 #   Hunter/diff+repo, Acceptance Auditor/diff+spec+repo) over the full origin/main..HEAD diff (66

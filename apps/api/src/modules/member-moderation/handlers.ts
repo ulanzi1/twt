@@ -34,11 +34,19 @@ import { audit, ids, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { AdminDisplayNameMissingError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
+import {
+  AdminDisplayNameMissingError,
+  NotFoundError,
+  ServiceUnavailableError,
+  UnauthorizedError,
+} from '../../http-errors.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { revokeAllMemberSessions } from '../auth/member/member-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
-import { decryptModerationRationale, encryptModerationRationale } from './moderation-crypto.js';
+import {
+  decryptModerationRationaleSafe,
+  encryptModerationRationale,
+} from './moderation-crypto.js';
 
 type ModerationAction = memberDomain.moderation.ModerationAction;
 
@@ -278,18 +286,30 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     async history(request: FastifyRequest): Promise<ModerationHistoryResponse> {
       const ctx = readContextOf(request);
       const tx = request.scopeTx!.tx;
-      const now = deps.clock();
+      const q = request.query as { limit?: number; offset?: number };
 
       // A member that does not exist in this Pariwar is a 404 — NOT an empty history (which would
       // be an existence oracle answering "no moderation" for a member of another tenant).
       const exists = await memberDomain.memberExists(tx, ctx.pariwarId, ctx.memberId);
       if (!exists) throw new NotFoundError('Member not found', 'member.not_found');
 
-      const overlay = await memberDomain.moderation.getMemberModerationOverlay(tx, ctx.memberId, now);
-      const entries = await memberDomain.moderation.listModerationHistoryForMember(
+      // The CURRENT standing drives `legal_actions`, so it must not be bounded by the app clock —
+      // same reason the write path uses the unbounded read (see `getCurrentMemberModerationOverlay`).
+      // A stale-by-skew standing here would grey out a legal button, or offer an illegal one.
+      const overlay = await memberDomain.moderation.getCurrentMemberModerationOverlay(
+        tx,
+        ctx.memberId,
+      );
+
+      // Capped at 199 for the same reason as `listModerated` below: the accessor fetches `limit + 1`
+      // to compute `has_more`, and a request at 200 would be re-clamped, pinning `has_more` false.
+      const limit = Math.min(Math.max(1, Number(q.limit ?? 50) || 50), 199);
+      const offset = Math.max(0, Number(q.offset ?? 0) || 0);
+      const page = await memberDomain.moderation.listModerationHistoryForMember(
         tx,
         ctx.pariwarId,
         ctx.memberId,
+        { limit, offset },
       );
 
       const legalActions = memberDomain.moderation.MODERATION_ACTIONS.filter((a) =>
@@ -303,7 +323,7 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           overlay.reasonCode as ModerationHistoryResponse['current_reason_code'],
         since: overlay.since ? overlay.since.toISOString() : null,
         legal_actions: [...legalActions],
-        entries: entries.map((e) => ({
+        entries: page.entries.map((e) => ({
           moderation_action_id: e.moderationActionId,
           action: e.action as ModerationAction,
           reason_code: e.reasonCode as ModerationHistoryResponse['entries'][number]['reason_code'],
@@ -312,6 +332,10 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           rejoin_permitted_at: e.rejoinPermittedAt ? e.rejoinPermittedAt.toISOString() : null,
           acted_at: e.actedAt.toISOString(),
         })),
+        // ⚠ An audit trail MUST NOT present a truncated page as the whole record (AC9). Without
+        // this the console silently dropped everything past the newest 50 — typically the ORIGINAL
+        // decision under dispute.
+        has_more: page.hasMore,
       };
     },
 
@@ -339,18 +363,36 @@ export function createMemberModerationHandlers(deps: AppDeps) {
       // row, never an existence oracle for another Pariwar's data.
       if (!row) throw new NotFoundError('Moderation action not found', 'member_moderation.action_not_found');
 
-      let rationale: string | null;
+      // ⚠ A corrupt STORED envelope and an unreachable KMS are different facts and must not both
+      // answer `null` — see `decryptModerationRationaleSafe`. Only the first is the documented
+      // fail-soft case; the second is an operational incident and becomes a 503.
+      let outcome;
       try {
-        rationale = await decryptModerationRationale(row.rationaleCiphertext, ctx.pariwarId, deps.encryption);
-      } catch (err) {
-        request.log.warn(
-          { err, moderationActionId },
-          'member-moderation: rationale decrypt failed; returning null',
+        outcome = await decryptModerationRationaleSafe(
+          row.rationaleCiphertext,
+          ctx.pariwarId,
+          deps.encryption,
         );
-        rationale = null;
+      } catch (err) {
+        request.log.error(
+          { err, moderationActionId },
+          'member-moderation: rationale decrypt failed at the KMS; surfacing 503 (NOT a null rationale)',
+        );
+        throw new ServiceUnavailableError(
+          'The rationale cannot be decrypted right now. This is a key-service problem, not a missing rationale — retry shortly.',
+          'member_moderation.rationale_unavailable',
+        );
       }
 
-      return { moderation_action_id: moderationActionId, rationale };
+      if (outcome.kind === 'corrupt') {
+        request.log.warn(
+          { err: outcome.error, moderationActionId },
+          'member-moderation: stored rationale envelope is unreadable; returning null (fail-soft, per-row)',
+        );
+        return { moderation_action_id: moderationActionId, rationale: null };
+      }
+
+      return { moderation_action_id: moderationActionId, rationale: outcome.rationale };
     },
 
     /**

@@ -75,10 +75,38 @@ export interface ValidityWindow {
   validThrough: string | null;
 }
 
+/**
+ * The member's moderation EXPLANATION — the full prose AC9 owes them, as a top-level view-model
+ * field rather than a detail line buried in the headline section.
+ *
+ * ── Why it is here and not in `sections` (review follow-up) ──────────────────────────────────────
+ * It WAS a `detailKey` on the `headline` section. Both render layers filter that section out
+ * (`.filter((s) => s.id !== 'headline')`) and render only `headlineKey` — so the prose, its two
+ * catalog entries in en+hi, and the whole `{reason}` plumbing were unreachable. A suspended member
+ * saw "Under review" and an appeal button, and was NEVER TOLD WHY: the exact outcome the flag is
+ * member-visible to prevent, and the dignity commitment that justifies Decision 6 keeping login
+ * open at all.
+ *
+ * Two keys, not one resolved string, because the view-model carries no copy (it is
+ * render-agnostic): the render layer resolves `detailKey` with `{ reason: t(reasonLabelKey) }`.
+ * `t()` throws on a missing interpolation param, so a renderer MUST pass `reason` — which is why
+ * this is a distinct, obviously-parameterized field instead of another bare `detailKeys` entry a
+ * renderer would resolve with `t(k)` and crash on.
+ */
+export interface ModerationNotice {
+  status: 'suspended' | 'terminated';
+  /** i18n KEY for the full prose. REQUIRES a `{ reason }` interpolation param. */
+  detailKey: string;
+  /** i18n KEY for the reason-code LABEL — never the raw code (`ux-design-specification.md:1896`). */
+  reasonLabelKey: string;
+}
+
 export interface MemberStatusViewModel {
   headlineState: HeadlineState;
   /** i18n KEY for the headline label. */
   headlineKey: string;
+  /** Present ONLY when a moderation standing is in force; null otherwise. */
+  moderationNotice: ModerationNotice | null;
   sections: PanelSection[];
   ruleExplanations: RuleExplanation[];
   validityWindow: ValidityWindow;

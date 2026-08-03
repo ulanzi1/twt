@@ -287,6 +287,79 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(denied.statusCode).toBe(403);
   });
 
+  it('AC4: an acting admin with NO display name is BLOCKED — 409, no fallback, nothing written', async () => {
+    // [[project_admin_display_name_attribution]] — `actor_display` is a controlled-staff snapshot
+    // and there is deliberately NO email-derived fallback: a missing name blocks the action.
+    // This was the ONLY attribution guard on the surface with no test, while five comparable
+    // surfaces (helpdesk, operator-helpdesk, verifier-decision, r9-voting, shepherd) all pin it —
+    // so a future refactor reintroducing a fallback would have shipped green here.
+    const { p, memberId } = await scenario();
+    const nameless = await authenticate(); // no displayName ⇒ users.display_name stays NULL
+    await grant(nameless.userId, p, 'pariwar_admin');
+    await elevate(nameless.client, STEP_UP_SUSPEND);
+
+    const res = await nameless.client.inject({
+      method: 'POST',
+      url: modUrl(p, memberId, 'suspend'),
+      payload: body('r14-forgery'),
+    });
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe('admin.display_name_missing');
+
+    // Fail-CLOSED, not fail-partial: no decision row and no event may exist.
+    const c = await td.pool.connect();
+    try {
+      const rows = await c.query(
+        `SELECT 1 FROM member_moderation_actions WHERE member_id = $1`, [memberId]);
+      expect(rows.rowCount).toBe(0);
+      const evs = await c.query(
+        `SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type LIKE 'member.moderation.%'`,
+        [memberId]);
+      expect(evs.rowCount).toBe(0);
+    } finally {
+      c.release();
+    }
+  });
+
+  it('tenant boundary: an admin elevated in Pariwar A cannot moderate, read or list in Pariwar B', async () => {
+    // AI-6-5 family 3 — cross-PARIWAR denial, not merely same-tenant-non-owner. The suite pinned
+    // several role-based 403s but never once crossed a tenant line, so an RLS policy typo, a
+    // dropped FORCE, or a missing explicit predicate would have shipped green.
+    const a = await scenario();
+    const b = await scenario();
+
+    // ⚠ 404, NOT 403 — and that is the correct answer, not a weaker one. `scopeResolutionHook`
+    // resolves the actor's grants for the URL's Pariwar and returns `pariwar.not_found` on zero
+    // rows precisely so the response is not an enumeration oracle: a 403 would confirm that the
+    // Pariwar exists to an actor with no business knowing it. The tenant boundary is what is under
+    // test here; the SHAPE of the denial is the deliberate non-disclosure posture.
+    const DENIED = 404;
+
+    // `a.client` is elevated and granted in Pariwar A only.
+    const write = await a.client.inject({
+      method: 'POST',
+      url: modUrl(b.p, b.memberId, 'suspend'),
+      payload: body('r14-forgery'),
+    });
+    expect(write.statusCode).toBe(DENIED);
+
+    const read = await a.client.inject({ method: 'GET', url: historyUrl(b.p, b.memberId) });
+    expect(read.statusCode).toBe(DENIED);
+
+    const list = await a.client.inject({ method: 'GET', url: `/api/v1/p/${b.p}/moderation/members` });
+    expect(list.statusCode).toBe(DENIED);
+
+    // And nothing leaked the other way: B's member is untouched.
+    const c = await td.pool.connect();
+    try {
+      const rows = await c.query(
+        `SELECT 1 FROM member_moderation_actions WHERE member_id = $1`, [b.memberId]);
+      expect(rows.rowCount).toBe(0);
+    } finally {
+      c.release();
+    }
+  });
+
   it('AC4/Decision 4: state_trustee is DENIED — its `state` ceiling can never satisfy a pariwar check', async () => {
     // ⚠ THE FINDING. `epics.md:3540` casts a State Trustee as this story's actor, but `state_trustee`
     // holds `member.suspend` (not `member.moderate`) and its `scopeCeiling: 'state'` fails
@@ -465,6 +538,49 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(rows[0]?.action).toBe('suspend');
     expect(rows[0]?.actor_display).toBe('Trustee One');
     expect(String(rows[0]?.rationale_ciphertext)).not.toContain('Recorded after review');
+  });
+
+  it('AC6: the REAL suspend route revokes the member\'s sessions and device bindings', async () => {
+    // The cascade had no end-to-end assertion at all: the only test that checked rows disappear
+    // called `revokeAllMemberSessions` directly, so nothing proved the moderation HANDLER actually
+    // invokes it. A dropped call would have left every test green while a suspended member kept
+    // every live session — AC6 silently doing nothing.
+    const { p, memberId, client } = await scenario();
+
+    const c = await td.pool.connect();
+    try {
+      // Seed a live refresh chain + a device binding for the member (the shapes the cascade clears).
+      const deviceId = `device-${randomUUID()}`;
+      await c.query(
+        `INSERT INTO member_refresh_tokens (member_id, pariwar_id, device_id, token_hash, expires_at)
+         VALUES ($1, $2, $3, $4, now() + interval '30 days')`,
+        [memberId, p, deviceId, `hash-${randomUUID()}`],
+      );
+      await c.query(
+        `INSERT INTO member_trusted_devices (member_id, pariwar_id, device_id, last_seen_at)
+         VALUES ($1, $2, $3, now())`,
+        [memberId, p, deviceId],
+      );
+
+      const live = async (): Promise<number> =>
+        (await c.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM member_refresh_tokens
+            WHERE member_id = $1 AND revoked_at IS NULL`, [memberId])).rows[0]?.n ?? 0;
+      const devices = async (): Promise<number> =>
+        (await c.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM member_trusted_devices WHERE member_id = $1`,
+          [memberId])).rows[0]?.n ?? 0;
+
+      expect(await live()).toBeGreaterThan(0);
+      expect(await devices()).toBeGreaterThan(0);
+
+      expect((await act(client, p, memberId, 'suspend', 'r14-forgery')).statusCode).toBe(200);
+
+      expect(await live()).toBe(0);
+      expect(await devices()).toBe(0);
+    } finally {
+      c.release();
+    }
   });
 
   // ── Rationale decrypt-on-demand (code-review follow-up) ───────────────────────────────────────

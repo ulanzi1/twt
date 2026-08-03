@@ -63,19 +63,60 @@ export interface ListModeratedMembersOptions {
   offset?: number;
 }
 
+/** One page of a member's moderation history, with the truncation signal the audit trail needs. */
+export interface ModerationHistoryPage {
+  entries: ModerationHistoryEntry[];
+  /** True when more rows exist beyond this page — the console MUST NOT present a cut trail as whole. */
+  hasMore: boolean;
+}
+
+// ── Why `created_at` is the tiebreak, not `moderation_action_id` (review follow-up) ───────────────
+// `acted_at` is the INJECTED APP clock (`deps.clock()` at the handler), so two actions can share an
+// instant — a fixed/frozen clock in a fixture, or a future bulk-moderation path stamping one `now`
+// across a batch. The PK is `gen_random_uuid()`: as a tiebreak it is a coin flip, and a coin flip
+// here can invert a suspend/terminate pair, which would make the signup rejoin guard skip the FR-6
+// lock (it keys on the latest row's `action === 'terminate'`). `created_at` is `DEFAULT now()` —
+// the DB clock, assigned at INSERT, in the same transaction that appends the event — so it orders
+// by actual write order and is immune to app-clock skew across pods. The PK stays as the final
+// arm purely for total determinism.
+const HISTORY_ORDER = [
+  desc(memberModerationActions.actedAt),
+  desc(memberModerationActions.createdAt),
+  desc(memberModerationActions.moderationActionId),
+] as const;
+
 /**
- * A member's full moderation history, newest-first. Tenant-scoped (RLS + the explicit predicates).
+ * A member's moderation history page, newest-first. Tenant-scoped (RLS + the explicit predicates).
  * Returns the ciphertext as stored — the route decrypts a single rationale on demand and the list
  * DTO drops the field entirely (AC9: the ciphertext is NEVER rendered).
+ *
+ * Field-picked explicitly, never `select()`-spread: the ciphertext is pulled deliberately (this is
+ * the one read whose caller may decrypt a row on demand), and every other column is named so a
+ * later schema addition can never widen this projection silently.
  */
 export async function listModerationHistoryForMember(
   db: Db,
   pariwarId: PariwarId,
   memberId: MemberId,
   opts: { limit?: number; offset?: number } = {},
-): Promise<ModerationHistoryEntry[]> {
+): Promise<ModerationHistoryPage> {
+  // Capped at 199, one below the 200 ceiling the fetch-one-extra clamp below uses. A request that
+  // itself asked for 200 would otherwise ask for 201, be re-clamped back to 200, and pin `has_more`
+  // false at exactly the boundary where it matters (the 10.5 news-list finding, applied not
+  // repeated).
+  const limit = clampLimit(opts.limit, { default: 50, cap: 199 });
   const rows = await db
-    .select()
+    .select({
+      moderationActionId: memberModerationActions.moderationActionId,
+      memberId: memberModerationActions.memberId,
+      action: memberModerationActions.action,
+      reasonCode: memberModerationActions.reasonCode,
+      actorId: memberModerationActions.actorId,
+      actorDisplay: memberModerationActions.actorDisplay,
+      rejoinPermittedAt: memberModerationActions.rejoinPermittedAt,
+      actedAt: memberModerationActions.actedAt,
+      rationaleCiphertext: memberModerationActions.rationaleCiphertext,
+    })
     .from(memberModerationActions)
     .where(
       and(
@@ -83,21 +124,30 @@ export async function listModerationHistoryForMember(
         eq(memberModerationActions.memberId, memberId),
       ),
     )
-    .orderBy(desc(memberModerationActions.actedAt), desc(memberModerationActions.moderationActionId))
-    .limit(clampLimit(opts.limit, { default: 50, cap: 200 }))
+    .orderBy(...HISTORY_ORDER)
+    // Fetch one MORE than asked, to detect truncation without a second COUNT round-trip. The +1
+    // goes THROUGH `clampLimit` rather than being a bare `limit + 1`: the forced-pagination gate
+    // requires every dynamic `.limit()` to be a clamp call, and rightly so — an unclamped computed
+    // bound is exactly how a pagination bypass gets reintroduced
+    // ([[project_domain_limit_clamp_and_savepoint_retry]]).
+    .limit(clampLimit(limit + 1, { default: 51, cap: 200 }))
     .offset(Math.max(0, opts.offset ?? 0));
 
-  return rows.map((r) => ({
-    moderationActionId: r.moderationActionId,
-    memberId: r.memberId,
-    action: r.action,
-    reasonCode: r.reasonCode,
-    actorId: r.actorId,
-    actorDisplay: r.actorDisplay,
-    rejoinPermittedAt: r.rejoinPermittedAt,
-    actedAt: r.actedAt,
-    rationaleCiphertext: r.rationaleCiphertext,
-  }));
+  const hasMore = rows.length > limit;
+  return {
+    entries: rows.slice(0, limit).map((r) => ({
+      moderationActionId: r.moderationActionId,
+      memberId: r.memberId,
+      action: r.action,
+      reasonCode: r.reasonCode,
+      actorId: r.actorId,
+      actorDisplay: r.actorDisplay,
+      rejoinPermittedAt: r.rejoinPermittedAt,
+      actedAt: r.actedAt,
+      rationaleCiphertext: r.rationaleCiphertext,
+    })),
+    hasMore,
+  };
 }
 
 /**
@@ -141,6 +191,12 @@ export async function getModerationActionRationale(
  * not assumed: a live-DB test drives a member through all four legal arms
  * (suspend → terminate → restore → suspend) and asserts this read agrees with
  * `getMemberModerationOverlay` at every step.
+ *
+ * ⚠ That argument covers WHICH ROWS exist, not which of two rows sharing an `acted_at` is "latest".
+ * `acted_at` is the injected app clock and can tie; the ORDER BY therefore breaks ties on
+ * `created_at` (the DB clock, `DEFAULT now()`, assigned in the same tx as the event append) rather
+ * than on the random-UUID PK — see the `HISTORY_ORDER` note above. The overlay's own authority is
+ * `event_version`, which no clock can perturb.
  */
 export async function listModeratedMembersForPariwar(
   db: Db,
@@ -162,13 +218,13 @@ export async function listModeratedMembersForPariwar(
     SELECT * FROM (
       SELECT DISTINCT ON (member_id)
              member_id, action, reason_code, actor_id, actor_display,
-             rejoin_permitted_at, acted_at, moderation_action_id
+             rejoin_permitted_at, acted_at, created_at, moderation_action_id
         FROM member_moderation_actions
        WHERE pariwar_id = ${pariwarId}
-       ORDER BY member_id, acted_at DESC, moderation_action_id DESC
+       ORDER BY member_id, acted_at DESC, created_at DESC, moderation_action_id DESC
     ) AS latest
      WHERE latest.action <> 'restore'
-     ORDER BY latest.acted_at DESC, latest.member_id DESC
+     ORDER BY latest.acted_at DESC, latest.created_at DESC, latest.member_id DESC
      LIMIT ${limit} OFFSET ${offset}
   `);
 
@@ -209,5 +265,6 @@ interface ModeratedLatestRow extends Record<string, unknown> {
   // parsing — the mapping above normalizes both to `Date`.
   rejoin_permitted_at: string | Date | null;
   acted_at: string | Date;
+  created_at: string | Date;
   moderation_action_id: string;
 }

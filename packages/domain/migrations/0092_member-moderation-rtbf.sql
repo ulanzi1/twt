@@ -1,0 +1,33 @@
+-- 0092 — make the moderation rationale ERASABLE under DPDPA RTBF (Story 10.10, review follow-up).
+--
+-- ── Why this migration exists ───────────────────────────────────────────────────────────────────
+-- `member_moderation_actions.rationale_ciphertext` is Tier-1 PII by declaration
+-- (`piiColumn(1, 'member_moderation')`) — admin-authored free text naming what a member allegedly
+-- did. Migration 0091 shipped the table APPEND-ONLY: `GRANT SELECT, INSERT` and RLS policies FOR
+-- SELECT + INSERT only, with no UPDATE leg anywhere.
+--
+-- That posture is right for the DECISION (a recorded moderation decision must be immutable), but it
+-- also made the rationale STRUCTURALLY UN-ERASABLE. An RTBF is a SOFT delete: `anonymizeMember`
+-- retains the `members` row, so the table's `ON DELETE cascade` FK never fires, and with no UPDATE
+-- privilege there was no other path. The free text would have survived a member's Right-To-Be-
+-- Forgotten with no code able to remove it — a stronger failure than merely being forgotten in
+-- `anonymize.ts`'s table set (which this change also fixes, on the app side).
+--
+-- ── The narrowest grant that closes it ──────────────────────────────────────────────────────────
+-- UPDATE is granted on the RATIONALE COLUMN ONLY. Postgres column-level privileges mean the app
+-- role still cannot rewrite `action`, `reason_code`, `actor_id`, `actor_display`,
+-- `rejoin_permitted_at` or `acted_at` — so the governance record stays immutable and the FR-6
+-- rejoin lock cannot be edited away, while the PII inside it becomes scrubbable. Append-only is
+-- preserved where it is load-bearing; it is relaxed exactly where it collided with DPDPA.
+--
+-- The matching RLS policy is tenant-scoped on both legs (USING + WITH CHECK), so the scrub can only
+-- ever touch the acting Pariwar's own rows — an RTBF in one tenant can never reach another's.
+--
+-- NOT granted to `twt_service`: the pre-scope signup rejoin guard READS this table on the BYPASSRLS
+-- service pool and has no business writing to it. RTBF runs under a normal member scope tx.
+--
+-- ⚠ 0091 is NOT regenerated. It is applied and journalled; drizzle skips by journal `when`, so a
+-- regen would 42P07 ([[project_live_db_test_gotchas]]). This is a forward migration, as it must be.
+
+GRANT UPDATE ("rationale_ciphertext") ON "member_moderation_actions" TO twt_app;--> statement-breakpoint
+CREATE POLICY "member_moderation_actions_tenant_isolation_update" ON "member_moderation_actions" AS PERMISSIVE FOR UPDATE TO "twt_app" USING (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid) WITH CHECK (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid);

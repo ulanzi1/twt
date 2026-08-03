@@ -106,7 +106,12 @@ export async function resolveMembersByMobile(
               SELECT action, rejoin_permitted_at, acted_at
                 FROM member_moderation_actions
                WHERE member_id = mi.member_id
-               ORDER BY acted_at DESC, moderation_action_id DESC
+               -- Tiebreak on created_at (the DB clock, DEFAULT now(), assigned in the same tx as
+               -- the event append) BEFORE the PK. acted_at is the injected app clock and can tie;
+               -- the PK is gen_random_uuid(), so using it as the tiebreak would resolve a
+               -- suspend/terminate pair by coin flip -- and picking the suspend here silently SKIPS
+               -- the FR-6 12-month rejoin lock, since the guard below keys on terminate.
+               ORDER BY acted_at DESC, created_at DESC, moderation_action_id DESC
                LIMIT 1
             ) mma ON true
       WHERE mi.mobile_blind_index = $1

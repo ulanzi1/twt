@@ -39,6 +39,7 @@ import { memberAddresses } from '../schema/member_addresses.js';
 import { memberIdentities } from '../schema/member_identities.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { memberMedicalDisclosures } from '../schema/member_medical_disclosures.js';
+import { memberModerationActions } from '../schema/member_moderation_actions.js';
 import { memberNominees } from '../schema/member_nominees.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 
@@ -69,6 +70,8 @@ const FIELD_CLASS_NOMINEE = 'member_nominee';
 const FIELD_CLASS_MEDICAL = 'member_medical';
 const FIELD_CLASS_ADDRESS = 'member_address';
 const FIELD_CLASS_MOBILE = 'member_mobile';
+// Story 10.10 — mirrors `piiColumn(1, 'member_moderation')` on member_moderation_actions.
+const FIELD_CLASS_MODERATION = 'member_moderation';
 
 // The member mobile Tier-1 envelope keys on this fixed sentinel namespace (login runs pre-scope — see
 // apps/api context.ts MEMBER_IDENTITY_NAMESPACE + assemble.ts), NOT the member's real pariwarId.
@@ -98,7 +101,8 @@ async function encSentinel(
  * Field-level anonymize EVERY member-PII column for a `withdrawn` member (RTBF soft-delete). Overwrites
  * each NOT-NULL Tier-1 ciphertext with the anonymized sentinel and NULLs each nullable PII column,
  * across `member_identities` / `member_kyc_profiles` / `member_addresses` / `member_nominees` /
- * `member_medical_disclosures` / `member_withdrawals`. RETAINS `mobile_blind_index` (AC4 rejoin key),
+ * `member_medical_disclosures` / `member_withdrawals` / `member_moderation_actions`. RETAINS
+ * `mobile_blind_index` (AC4 rejoin key),
  * the `member_withdrawals` rejoin columns + `reason_code` (non-PII), and every non-PII / history row
  * (`member_postings.district`, `member_attribution`, payments, consents, events).
  *
@@ -159,4 +163,24 @@ export async function anonymizeMember(
     .update(memberWithdrawals)
     .set({ reasonTextCiphertext: null })
     .where(eq(memberWithdrawals.memberId, memberId));
+
+  // ── member_moderation_actions (Story 10.10, review follow-up) ────────────────────────────────────
+  // The moderation RATIONALE is admin-authored free text NAMING WHAT THE MEMBER ALLEGEDLY DID — the
+  // most sensitive free text on the member's record, and Tier-1 by declaration
+  // (`piiColumn(1, 'member_moderation')`). It shipped absent from this set, so it survived RTBF
+  // outright: an RTBF is a SOFT delete (the `members` row is retained), so the table's
+  // `ON DELETE cascade` FK never fires and nothing else could remove it.
+  //
+  // The SENTINEL, not NULL: the column is NOT NULL and the append-only posture forbids deleting the
+  // row. Governance history — that an action was taken, on what ground, by whom, when — is retained
+  // deliberately: FR-6's rejoin lock and the audit trail both depend on the row existing, and
+  // `action` / `reason_code` are bounded non-PII vocabulary. Only the free text goes.
+  //
+  // ⚠ This UPDATE is why migration 0092 exists. `0091` granted `twt_app` SELECT + INSERT only, so
+  // before it this scrub could not have been written at all — the column was structurally
+  // un-erasable, which is a stronger failure than merely being forgotten.
+  await client
+    .update(memberModerationActions)
+    .set({ rationaleCiphertext: await encSentinel(pariwarId, FIELD_CLASS_MODERATION, enc) })
+    .where(eq(memberModerationActions.memberId, memberId));
 }

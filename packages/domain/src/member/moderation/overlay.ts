@@ -126,6 +126,45 @@ export async function getMemberModerationOverlay(
   memberId: MemberId,
   atTimestamp: Date,
 ): Promise<ModerationOverlay> {
+  return loadOverlay(db, memberId, atTimestamp);
+}
+
+/**
+ * The member's overlay standing RIGHT NOW — the whole stream, with NO upper time bound.
+ *
+ * ── Why the legality check must NOT use the `at`-bounded read (review follow-up) ──────────────────
+ * `occurred_at` is DB-generated (`events_log.occurred_at` is `.defaultNow()`; `projectMemberState`
+ * never passes one), while every `atTimestamp` a caller has is the INJECTED APP clock. Those are
+ * different clock domains, and this story's own Debug Log records the skew as an OBSERVED fact
+ * ("the Node clock can run a few ms AHEAD of Postgres … an event can land outside the window and be
+ * silently skipped"). Under the opposite skew — app clock BEHIND the DB — a second moderation
+ * request bounded at `deps.clock()` would exclude the first action's event, fold `status: 'none'`,
+ * and accept a duplicate suspend where AC2 requires a 409. The `(stream_id, event_version)` unique
+ * index does not save this: `projectMemberState` claims `head_version + 1` from an UNBOUNDED read,
+ * so the append succeeds.
+ *
+ * The `at`-bounded variant above remains correct — and required — for POINT-IN-TIME replay
+ * (`@twt/validity-service` resolving a payload as of an instant). It is the LEGALITY check that
+ * must see the present, and the present has no clock in it.
+ */
+export async function getCurrentMemberModerationOverlay(
+  db: Db,
+  memberId: MemberId,
+): Promise<ModerationOverlay> {
+  return loadOverlay(db, memberId, null);
+}
+
+async function loadOverlay(
+  db: Db,
+  memberId: MemberId,
+  atTimestamp: Date | null,
+): Promise<ModerationOverlay> {
+  const predicates = [
+    eq(eventsLog.streamId, memberId),
+    inArray(eventsLog.eventType, [...MODERATION_EVENT_TYPES]),
+  ];
+  if (atTimestamp !== null) predicates.push(lte(eventsLog.occurredAt, atTimestamp));
+
   const rows = await db
     .select({
       eventType: eventsLog.eventType,
@@ -133,13 +172,7 @@ export async function getMemberModerationOverlay(
       payload: eventsLog.payload,
     })
     .from(eventsLog)
-    .where(
-      and(
-        eq(eventsLog.streamId, memberId),
-        inArray(eventsLog.eventType, [...MODERATION_EVENT_TYPES]),
-        lte(eventsLog.occurredAt, atTimestamp),
-      ),
-    )
+    .where(and(...predicates))
     .orderBy(asc(eventsLog.eventVersion));
 
   return evaluateModerationOverlay(

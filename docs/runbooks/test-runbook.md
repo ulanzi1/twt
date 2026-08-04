@@ -229,6 +229,64 @@ per-file-patching it first.
 
 ---
 
+## Rule 8 — A Race Test Must ESTABLISH Its Race, Not Hope For One (added 2026-08-04)
+
+**Problem:** Two-connection concurrency specs assert "exactly one winner, N−1 typed losers". On an
+idle laptop `Promise.allSettled` reliably interleaves them. On a loaded CI runner it does not:
+connection A can complete end-to-end before B even reads, at which point the loser takes a
+*different* code path and throws a *different* (still correct) error. The test then fails through no
+fault of the production code — green locally, red in CI, and easily mistaken for a real regression.
+
+**First identify which idiom the spec uses — they need opposite treatment.**
+
+**Idiom A — `ON CONFLICT` + re-read. Inherently robust; DO NOT add a barrier.** The loser's write
+conflicts regardless of ordering, then re-reads the winner's row. This depends on **READ COMMITTED**
+giving each statement a fresh snapshot. `claim/ground-inspection-concurrency.spec.ts` pins that
+isolation level deliberately (*"Under REPEATABLE READ / SERIALIZABLE that guarantee would break"*).
+Imposing the Idiom-B fix here would **break a working test**.
+
+**Idiom B — read, compute, then write.** The race is only reachable when BOTH connections read
+before EITHER commits, because the outcome is derived from what was read (`max(version) + 1`, a
+projected state machine, a `rotated_at` flag). This is the fragile one. Pin it:
+
+```ts
+let releaseBarrier!: () => void;
+const barrier = new Promise<void>((resolve) => { releaseBarrier = resolve; });
+let arrived = 0;
+const arriveAndWait = (): Promise<void> => {
+  if (++arrived === 2) releaseBarrier();
+  return barrier;
+};
+
+async function attempt(client: pg.PoolClient) {
+  await client.query('BEGIN');
+  await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+  // …role + scope…
+  await client.query('SELECT …');   // a REAL query — `SET` is a utility statement and takes NO snapshot
+  await arriveAndWait();            // both have read; neither has written
+  // …the racing write…
+}
+```
+
+REPEATABLE READ pins each transaction's snapshot at its **first real query**, so both compute the
+same next value and the loser must lose on the constraint under test. Every assertion stays
+unchanged — only the precondition becomes structural.
+
+**When the race is inside HTTP handlers** and no connection seam is exposed (e.g.
+`apps/api` `TestDepsOverrides` has no pool hook), a barrier is not available. Retry until a genuine
+overlap occurs, then assert strictly — and fail on the last attempt with a diagnostic saying the
+branch may be unreachable. This is weaker (probabilistic, not structural); prefer a barrier wherever
+you own both connections.
+
+**Applied:** `feature-flags/flag-flip-concurrency.spec.ts`, `alert/alert-stream-concurrency.spec.ts`
+(barrier); `apps/api/tests/integration/member-auth.spec.ts` (retry). Specs matching the exactly-one-
+winner shape that have NOT been converted, because they have not failed and may be Idiom A —
+verify the idiom before touching: `claims/verifier-decision.spec.ts`, `claim/appeal-concurrency`,
+`claim/r9-voting-concurrency`, `claim/shepherd-assign-concurrency`,
+`claim/state-trustee-cycle-freeze-concurrency`, `contribution/utr-attestation-concurrency`.
+
+---
+
 ## References
 
 - `packages/domain/migrations/meta/_journal.json` — Drizzle migration journal

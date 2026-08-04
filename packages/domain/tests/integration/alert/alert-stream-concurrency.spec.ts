@@ -82,10 +82,39 @@ describe.skipIf(!hasDatabase)('alert stream — two-connection concurrency (own-
       },
     };
 
+    // ⚠ A DETERMINISTIC RENDEZVOUS, not a hoped-for interleave (2026-08-04). Same fix, same reason as
+    // feature-flags/flag-flip-concurrency.spec.ts. The genesis race is only reachable when BOTH
+    // connections read the stream before EITHER commits: if connection A commits first, B's
+    // `projectAlertState` reads an ALREADY-FROZEN alert and the state machine rejects the transition
+    // with its own error — so the loser throws `[projectAlertState] 'alert.frozen'…` instead of
+    // `PoolStreamConcurrencyError`, and the assertion below fails through no fault of the code.
+    // Observed in Actions 2026-08-04 (run 30894481332) even under `--concurrency=1`; passes on an
+    // idle laptop, which is exactly the profile of a load-sensitive precondition.
+    //
+    // REPEATABLE READ pins each transaction's snapshot at its first real query (a `SET` is a utility
+    // statement and takes none — hence the explicit SELECT against the stream the projector reads).
+    // With both snapshots taken pre-commit, both attempt version 1 and the loser MUST lose on the
+    // stream's version uniqueness, which is the invariant under test.
+    let releaseBarrier!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+    let arrived = 0;
+    const arriveAndWait = (): Promise<void> => {
+      if (++arrived === 2) releaseBarrier();
+      return barrier;
+    };
+
     async function attempt(client: pg.PoolClient): Promise<number> {
       await client.query('BEGIN');
+      await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
       await client.query('SET LOCAL ROLE twt_app');
       await setPariwarScope(client, PARIWAR_A);
+      // Force the snapshot before the barrier — this is the "read" half of the race.
+      await client.query('SELECT max(event_version) FROM events_log WHERE stream_id = $1', [
+        alertId,
+      ]);
+      await arriveAndWait();
       try {
         const res = await projectAlertState(client, {
           alertId,

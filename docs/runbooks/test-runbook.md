@@ -78,6 +78,32 @@ fail when another parallel run has committed a row into the same table.
 - Prefer `UPSERT` + idempotency keys (the `@twt/queue` pattern) over raw inserts where
   the test needs to be re-runnable.
 
+**⚠ A SHARED FIXTURE TENANT IS NOT "THE TEST'S OWN DATA SCOPE" (added 2026-08-04).** The bullet
+above is necessary but not sufficient, and four specs satisfied it while still breaking:
+`multi-tenant/cross-pariwar-leak.spec.ts` (×2), `rls/policy-regression.spec.ts` and
+`pool/active-contribution-read.spec.ts` all scoped to `PARIWAR_A` — a constant from `_helpers.ts`
+that **every** suite shares. Scoping to it narrows nothing. `setupLiveDb()`'s per-test rollback does
+not save you either: it rolls back *your* transaction, while own-committing suites elsewhere leave
+`PARIWAR_A` rows committed forever.
+
+Symptom: green on a fresh CI service container, red on any reused local DB — so `pnpm ci:local`
+with `DATABASE_URL` set silently stops being trustworthy as rows accumulate.
+
+For an RLS/isolation probe, the property is **isolation**, never cardinality. Assert:
+
+```ts
+expect(rows.every((r) => r.pariwarId === PARIWAR_A)).toBe(true);  // nothing foreign leaked
+expect(rows.some((r) => r.pariwarId === PARIWAR_B)).toBe(false);  // the adversary row specifically
+expect(rows.map((r) => r.streamId)).toContain(mySeededId);        // and the read wasn't vacuous
+```
+
+That third line matters — `every()` over an empty array is `true`, so without a presence check a
+totally broken read passes (Rule 6). For an aggregate, assert the aggregate agrees with the
+RLS-filtered `SELECT` rather than an absolute number: a `COUNT` that bypassed RLS would exceed it.
+
+An absolute count is only safe when the row's scope key is **minted inside the test**
+(`randomUUID()`), never when it comes from a shared fixture.
+
 ---
 
 ## Rule 4 — Every Integration Spec Must Be in the CI Filter
@@ -200,6 +226,64 @@ list. `apps/api/vitest.config.ts` and `apps/jobs/vitest.config.ts` both carry a 
 individual files are now redundant but left in place as documentation of which suites are known-slow.
 If a THIRD package starts showing this pattern, add the same global bump there rather than
 per-file-patching it first.
+
+---
+
+## Rule 8 — A Race Test Must ESTABLISH Its Race, Not Hope For One (added 2026-08-04)
+
+**Problem:** Two-connection concurrency specs assert "exactly one winner, N−1 typed losers". On an
+idle laptop `Promise.allSettled` reliably interleaves them. On a loaded CI runner it does not:
+connection A can complete end-to-end before B even reads, at which point the loser takes a
+*different* code path and throws a *different* (still correct) error. The test then fails through no
+fault of the production code — green locally, red in CI, and easily mistaken for a real regression.
+
+**First identify which idiom the spec uses — they need opposite treatment.**
+
+**Idiom A — `ON CONFLICT` + re-read. Inherently robust; DO NOT add a barrier.** The loser's write
+conflicts regardless of ordering, then re-reads the winner's row. This depends on **READ COMMITTED**
+giving each statement a fresh snapshot. `claim/ground-inspection-concurrency.spec.ts` pins that
+isolation level deliberately (*"Under REPEATABLE READ / SERIALIZABLE that guarantee would break"*).
+Imposing the Idiom-B fix here would **break a working test**.
+
+**Idiom B — read, compute, then write.** The race is only reachable when BOTH connections read
+before EITHER commits, because the outcome is derived from what was read (`max(version) + 1`, a
+projected state machine, a `rotated_at` flag). This is the fragile one. Pin it:
+
+```ts
+let releaseBarrier!: () => void;
+const barrier = new Promise<void>((resolve) => { releaseBarrier = resolve; });
+let arrived = 0;
+const arriveAndWait = (): Promise<void> => {
+  if (++arrived === 2) releaseBarrier();
+  return barrier;
+};
+
+async function attempt(client: pg.PoolClient) {
+  await client.query('BEGIN');
+  await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+  // …role + scope…
+  await client.query('SELECT …');   // a REAL query — `SET` is a utility statement and takes NO snapshot
+  await arriveAndWait();            // both have read; neither has written
+  // …the racing write…
+}
+```
+
+REPEATABLE READ pins each transaction's snapshot at its **first real query**, so both compute the
+same next value and the loser must lose on the constraint under test. Every assertion stays
+unchanged — only the precondition becomes structural.
+
+**When the race is inside HTTP handlers** and no connection seam is exposed (e.g.
+`apps/api` `TestDepsOverrides` has no pool hook), a barrier is not available. Retry until a genuine
+overlap occurs, then assert strictly — and fail on the last attempt with a diagnostic saying the
+branch may be unreachable. This is weaker (probabilistic, not structural); prefer a barrier wherever
+you own both connections.
+
+**Applied:** `feature-flags/flag-flip-concurrency.spec.ts`, `alert/alert-stream-concurrency.spec.ts`
+(barrier); `apps/api/tests/integration/member-auth.spec.ts` (retry). Specs matching the exactly-one-
+winner shape that have NOT been converted, because they have not failed and may be Idiom A —
+verify the idiom before touching: `claims/verifier-decision.spec.ts`, `claim/appeal-concurrency`,
+`claim/r9-voting-concurrency`, `claim/shepherd-assign-concurrency`,
+`claim/state-trustee-cycle-freeze-concurrency`, `contribution/utr-attestation-concurrency`.
 
 ---
 

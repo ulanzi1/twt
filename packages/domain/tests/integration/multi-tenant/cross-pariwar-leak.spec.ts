@@ -53,19 +53,30 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
   setupLiveDb();
 
   // Seed A + B as superuser, then enter app scope A — used by every shape probe.
-  async function seedAndScopeA(): Promise<void> {
+  // Returns the seeded stream ids so probes can assert PRESENCE of their own row rather than an
+  // absolute row count (see the note on accumulation below).
+  async function seedAndScopeA(): Promise<{ aStreamId: string; bStreamId: string }> {
     const { tx, client } = getTx();
-    await seedEvent(tx, PARIWAR_A);
-    await seedEvent(tx, PARIWAR_B);
+    const aStreamId = await seedEvent(tx, PARIWAR_A);
+    const bStreamId = await seedEvent(tx, PARIWAR_B);
     await enterAppScope(client, PARIWAR_A);
+    return { aStreamId, bStreamId };
   }
 
   it('basic SELECT — A scope sees only A rows', async () => {
-    await seedAndScopeA();
+    const { aStreamId } = await seedAndScopeA();
     const { tx } = getTx();
     const rows = await tx.select().from(schema.eventsLog);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.pariwarId).toBe(PARIWAR_A);
+    // ⚠ NOT `toHaveLength(1)` (2026-08-04). `setupLiveDb()` rolls THIS test's transaction back, but
+    // own-committing suites elsewhere in the repo leave A-scoped rows behind, so an absolute count
+    // encodes "this database has only ever run this one test" — true on a fresh CI container, false
+    // on any reused local DB, and never the property under test. The leak-invariant is that NO B row
+    // is visible and EVERY visible row is A's — which is also strictly stronger than checking
+    // `rows[0]` alone. Mirrors the sibling negative probes and
+    // rls/policy-regression.spec.ts ([[project_live_db_test_gotchas]]: assert membership, not counts).
+    expect(rows.every((r) => r.pariwarId === PARIWAR_A)).toBe(true);
+    expect(rows.some((r) => r.pariwarId === PARIWAR_B)).toBe(false);
+    expect(rows.map((r) => r.streamId)).toContain(aStreamId);
   });
 
   it('explicit WHERE pariwarId = B — A scope sees zero rows', async () => {
@@ -91,8 +102,15 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
   it('COUNT aggregate — A scope counts only A rows', async () => {
     await seedAndScopeA();
     const { tx } = getTx();
+    const visible = await tx.select().from(schema.eventsLog);
     const rows = await tx.select({ n: count() }).from(schema.eventsLog);
-    expect(Number(rows[0]?.n)).toBe(1);
+    // ⚠ NOT `toBe(1)` — see the note on the basic-SELECT probe. The failure mode this test exists to
+    // catch is COUNT() bypassing RLS and tallying B's rows too; that is caught exactly by requiring
+    // the aggregate to agree with the RLS-filtered SELECT, since B rows DO exist in the table (both
+    // are seeded above). A leaking COUNT would exceed `visible.length`. This is not a tautology: the
+    // two go through different planner paths, which is why the probe exists at all.
+    expect(Number(rows[0]?.n)).toBe(visible.length);
+    expect(visible.every((r) => r.pariwarId === PARIWAR_A)).toBe(true);
   });
 
   it('self-join on differing pariwar_id — A scope sees zero cross-tenant pairs', async () => {

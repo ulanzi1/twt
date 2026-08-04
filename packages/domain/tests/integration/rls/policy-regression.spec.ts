@@ -35,13 +35,18 @@ describe.skipIf(!hasDatabase)('events_log RLS policy regression', () => {
 
   it('positive: SELECT under app scope A returns only A rows', async () => {
     const { tx, client } = getTx();
-    await seedEvent(tx, PARIWAR_A);
+    const aStreamId = await seedEvent(tx, PARIWAR_A);
     await seedEvent(tx, PARIWAR_B);
     await enterAppScope(client, PARIWAR_A);
 
     const rows = await tx.select().from(schema.eventsLog);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.pariwarId).toBe(PARIWAR_A);
+    // ⚠ NOT `toHaveLength(1)` (2026-08-04). Own-committing suites elsewhere leave A-scoped rows
+    // behind, so an absolute count asserts "this DB has only ever run this test" — true on a fresh
+    // CI container, false on any reused local DB. Assert the isolation property instead, exactly as
+    // the negative probe below already does ([[project_live_db_test_gotchas]]).
+    expect(rows.every((r) => r.pariwarId === PARIWAR_A)).toBe(true);
+    expect(rows.some((r) => r.pariwarId === PARIWAR_B)).toBe(false);
+    expect(rows.map((r) => r.streamId)).toContain(aStreamId);
   });
 
   it('negative: SELECT under app scope B does NOT see A rows', async () => {

@@ -448,21 +448,58 @@ describe.skipIf(!hasDatabase)('member mobile+OTP auth (AC-1/AC-2, DB)', () => {
     try {
       const mobile = randomMobile();
       await seedMember(t, { mobile });
-      const code = await requestAndGetCode(t, mobile);
-      const login = await post(t.app, `${BASE}/otp/verify`, { mobile, otp: code, deviceId: 'd1' });
-      const refresh = login.body.refreshToken as string;
 
-      // Two refreshes of the SAME token fired together (double-tap on flaky network).
-      const [a, b] = await Promise.all([
-        post(t.app, `${BASE}/token/refresh`, { refreshToken: refresh }),
-        post(t.app, `${BASE}/token/refresh`, { refreshToken: refresh }),
-      ]);
-      expect([a.status, b.status].sort()).toEqual([200, 401]);
-      // The benign concurrent loser must NOT have revoked the chain.
-      expect(t.auditSink.ofType('member_session.reuse_revoke').length).toBe(0);
-      // The winner's freshly-issued token still works (chain intact).
-      const winner = a.status === 200 ? a : b;
-      const again = await post(t.app, `${BASE}/token/refresh`, { refreshToken: winner.body.refreshToken as string });
+      // ⚠ THE RACE MUST ACTUALLY HAPPEN, so establish it rather than assume it (2026-08-04).
+      // `rotateRefresh` classifies by what it READ: a request whose SELECT already sees `rotated_at`
+      // set is a sequential replay-after-rotation and CORRECTLY revokes the chain
+      // (member-auth.service.ts:174-186). The benign-concurrent branch is only reached when BOTH
+      // requests read BEFORE either commits its rotation. On a loaded CI runner `Promise.all` does
+      // not guarantee that — request A can complete end-to-end before B's SELECT, at which point the
+      // revoke is the RIGHT behaviour and the assertion below fails through no fault of the code.
+      // Observed twice in Actions as `expected 1 to be +0` (runs 30876911014, 30893199390),
+      // including under `--concurrency=1`.
+      //
+      // The sibling flag-flip-concurrency.spec.ts pins its race with a barrier because it owns both
+      // connections; here the race is inside the HTTP handlers and `TestDepsOverrides` exposes no
+      // pool seam to wrap, so instead: retry until a genuine overlap occurs, then assert strictly.
+      // This does NOT weaken the test — a real regression (benign concurrency always revoking) never
+      // produces an overlap and fails on the last attempt with the diagnostic below.
+      const MAX_ATTEMPTS = 5;
+      let raced: { winner: Awaited<ReturnType<typeof post>>; attempt: number } | null = null;
+
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS && raced === null; attempt++) {
+        const code = await requestAndGetCode(t, mobile);
+        const login = await post(t.app, `${BASE}/otp/verify`, { mobile, otp: code, deviceId: 'd1' });
+        const refresh = login.body.refreshToken as string;
+        const revokesBefore = t.auditSink.ofType('member_session.reuse_revoke').length;
+
+        // Two refreshes of the SAME token fired together (double-tap on flaky network).
+        const [a, b] = await Promise.all([
+          post(t.app, `${BASE}/token/refresh`, { refreshToken: refresh }),
+          post(t.app, `${BASE}/token/refresh`, { refreshToken: refresh }),
+        ]);
+        // Exactly one winner either way — this half is scheduling-independent and always asserted.
+        expect([a.status, b.status].sort()).toEqual([200, 401]);
+
+        if (t.auditSink.ofType('member_session.reuse_revoke').length === revokesBefore) {
+          // No revoke ⇒ the reads genuinely interleaved ⇒ this is the case under test.
+          raced = { winner: a.status === 200 ? a : b, attempt };
+        }
+        // Otherwise the requests serialized; the revoke was correct. Re-login and try again.
+      }
+
+      expect(
+        raced,
+        `no genuine concurrent interleave in ${MAX_ATTEMPTS} attempts — every double-tap serialized, ` +
+          `so the benign-concurrent branch was never exercised. If this persists, the PR-Patch-11 ` +
+          `grace-window branch may be unreachable (a real regression), not merely a slow runner.`,
+      ).not.toBeNull();
+
+      // The benign concurrent loser must NOT have revoked the chain — the winner's freshly-issued
+      // token still works, proving the chain survived the double-tap intact.
+      const again = await post(t.app, `${BASE}/token/refresh`, {
+        refreshToken: raced!.winner.body.refreshToken as string,
+      });
       expect(again.status).toBe(200);
     } finally {
       await teardown(t);

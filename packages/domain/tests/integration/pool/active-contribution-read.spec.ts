@@ -41,12 +41,18 @@ describe.skipIf(!hasDatabase)('My Pool card read accessors (Story 8.2)', () => {
       expect(found?.poolCount).toBe(3);
     });
 
-    it('returns [] when the Pariwar has no live alert (⇒ the card self-suppresses)', async () => {
+    it('excludes a non-live (published) alert (⇒ with none live, the card self-suppresses)', async () => {
       const { client, tx } = getTx();
-      await seedAlert(tx, PARIWAR_A, { currentState: 'published' });
+      const publishedId = await seedAlert(tx, PARIWAR_A, { currentState: 'published' });
       await enterAppScope(client, PARIWAR_A);
       const live = await alertDomain.listLiveAlertsForPariwar(tx, ids.pariwarId(PARIWAR_A));
-      expect(live).toEqual([]);
+      // ⚠ NOT `toEqual([])` (2026-08-04). Own-committing suites elsewhere leave live alerts on
+      // PARIWAR_A, so asserting global emptiness encodes "no other suite has ever run against this
+      // database" — true on a fresh CI container, false on any reused local DB, and not the property
+      // under test. The behaviour that matters is that a `published` (non-live) alert is EXCLUDED
+      // from the live list; when no alert is live that list is empty and the card self-suppresses.
+      // Renamed to say what it actually proves ([[project_live_db_test_gotchas]]).
+      expect(live.map((a) => a.alertId)).not.toContain(publishedId);
     });
   });
 

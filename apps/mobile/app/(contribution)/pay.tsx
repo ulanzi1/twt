@@ -19,6 +19,15 @@
 // No-UPI-app / returned-without-UTR / invalid-UTR → the Story 8.5 failure-coach seam; an out-of-band payer
 // can still attest.
 //
+// ── Story 10.16: the contribution-during-suspension disclosure ──────────────────────────────────────
+// A member under a suspension that still permits contribution is told, ON THIS SURFACE and before they
+// can act, what the payment does (restores standing), what it does not buy (no beneficiary entitlement
+// for a death during the suspension period), and how many contributions remain in the restoration
+// package (a first-class "not yet knowable" today — the fact producer is Story 10.24). Sourced from the
+// member's own validity read, fail-soft: it never gates the pay flow, and an un-suspended member sees no
+// change. `[GATE]` — Story 10.17 (the roster unblock that makes this state reachable) must not deploy
+// without it.
+//
 // ── Accessibility (AC6 / Story 0.10 P0-2c) ──────────────────────────────────────────────────────────
 // Every control carries accessibilityLabel + hint (action-named — WCAG 2.5.3); the yellow-pill status is
 // announced polite; errors are role=alert; the account-choice options are radio-semantic; amount + UTR +
@@ -28,6 +37,7 @@
 import { ApiError } from '@twt/api-client'
 import type { ContributionIntentResponse, NomineeAccountsResponse, NomineeBankAccountView } from '@twt/contracts'
 import { ContributionUtr, NOMINEE_BANK_DECRYPT_FAILED_SENTINEL } from '@twt/contracts'
+import { deriveContributionDisclosure } from '@twt/ui'
 import { useT } from '@twt/i18n/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
@@ -35,9 +45,11 @@ import { useEffect, useRef, useState } from 'react'
 import { AppState, ScrollView } from 'react-native'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
+import { SuspensionDisclosure } from '../../components/active-contribution/SuspensionDisclosure'
 import { UPIIntentButton } from '../../components/active-contribution/UPIIntentButton'
 import { UpiFailureCoach } from '../../components/active-contribution/UpiFailureCoach'
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
+import { useMemberValidityQuery } from '../../components/member-status/useMemberValidityQuery'
 import { StatusPill } from '../../components/status-pill/StatusPill'
 import { memberAuth } from '../../lib/member-api'
 import { finalizeLoopSession, markLoopPhase, markUpiReturn } from '../../lib/loop-timing-session'
@@ -89,6 +101,24 @@ export default function ContributionPayScreen() {
   const t = useT()
   const router = useRouter()
   const queryClient = useQueryClient()
+
+  // ── Story 10.16 — the contribution-during-suspension disclosure ────────────────────────────────────
+  // A member under a suspension that still permits contribution is being asked for money while their
+  // contribution buys them NO beneficiary entitlement for a death during the suspension period. They are
+  // owed that disclosure BEFORE they can act (AC1).
+  //
+  // The moderation standing already crosses the wire on the member's OWN validity read — the moderation
+  // special flags are deliberately NOT in `STATE_TRUSTEE_ONLY_FLAGS` "because the member must be told
+  // WHY" (validity-service `payload.ts:96-103`). So this reuses the SHIPPED `useMemberValidityQuery`
+  // (TanStack key ['member','validity'], usually already warm from the membership screen) — no new field
+  // on the intent/accounts contracts, no new endpoint.
+  //
+  // FAIL-SOFT, deliberately: this read NEVER gates the pay flow. While it is loading or if it errored,
+  // `disclosure` is null and the screen renders exactly as it does today — an un-suspended member sees
+  // ZERO change, and a member whose validity read is down is never blocked from paying. A half-rendered
+  // disclosure is worse than none, so there is no partial state.
+  const { data: validity, isError: validityError } = useMemberValidityQuery()
+  const disclosure = validity ? deriveContributionDisclosure(validity.validity) : null
 
   // Story 9.9 — the nominee-accounts read (the donor's choice list) drives the screen.
   const [accounts, setAccounts] = useState<Accounts | null>(null)
@@ -205,6 +235,15 @@ export default function ContributionPayScreen() {
     })
     return () => sub.remove()
   }, [])
+
+  // Story 10.16 — surface a failed validity read the way this screen already reports its other two
+  // reads: to the console, once per transition. In an effect (not the render body) so a re-render does
+  // not re-log. It stays diagnostic ONLY — the pay flow is deliberately unaffected.
+  useEffect(() => {
+    if (validityError) {
+      console.error('[pay] member-validity load failed — disclosure suppressed, pay flow unaffected')
+    }
+  }, [validityError])
 
   // Story 8.12 — the `yellow_pill` mark + loop finalize (AC1). Debug-gated → inert in production.
   useEffect(() => {
@@ -360,6 +399,9 @@ export default function ContributionPayScreen() {
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <YStack gap="$3">
           <H2>{t('upi_intent.choose_account_title', undefined, NS)}</H2>
+          {/* Story 10.16 (AC1) — ABOVE the account options: this is the first branch the member can act
+              from, and a disclosure read after paying is not a disclosure. */}
+          {disclosure ? <SuspensionDisclosure vm={disclosure} t={t} /> : null}
           <Paragraph accessibilityRole="text" color="$colorPress">
             {t('upi_intent.choose_account_hint', undefined, NS)}
           </Paragraph>
@@ -392,6 +434,11 @@ export default function ContributionPayScreen() {
     <ScrollView contentContainerStyle={{ padding: 20 }}>
       <YStack gap="$3">
         <H2>{t('upi_intent.title', undefined, NS)}</H2>
+
+        {/* Story 10.16 (AC1) — ABOVE the banking-info panel and the <UPIIntentButton>, on the chosen-account
+            branch. It sits OUTSIDE the `intent.available` sub-branch on purpose: a member in the manual /
+            NEFT fallback is still being asked for money and is owed the same disclosure. */}
+        {disclosure ? <SuspensionDisclosure vm={disclosure} t={t} /> : null}
 
         {/* AC3 — the chosen account's nominee NAME + bank + full account# + IFSC, so the donor can confirm the
             payment is going to the correct nominee (name match) and can transfer manually/NEFT if UPI is dark.

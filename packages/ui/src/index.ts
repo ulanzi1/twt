@@ -12,3 +12,10 @@ export * from './status-pill/index.js';
 // render later. The single source of the confirmed-only meter math + the `confirmedCount × fixedAmount`
 // amount-raised derivation. Confirmed-only by SHAPE (no yellow/pending operand can enter). Pure logic only.
 export * from './pool-progress/index.js';
+
+// Story 10.16 — the framework-agnostic contribution-during-suspension disclosure presenter (pure
+// view-model builder): what a contribution made WITHOUT coverage does (restores standing) and does not
+// buy (no beneficiary entitlement for a death during the suspension period). Consumed by the mobile
+// payment surface today; shareable by any later contribution surface so the two cannot tell a member
+// different things about their own coverage. Pure logic only.
+export * from './contribution-disclosure/index.js';

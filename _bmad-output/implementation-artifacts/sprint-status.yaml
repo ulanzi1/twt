@@ -1,4 +1,196 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-04f (10-16-contribution-during-suspension-disclosure: review -> done via
+#   bmad-code-review, off main @ e357ac1 on branch feat/10-16-contribution-during-suspension-disclosure.
+#   Three parallel layers (Blind Hunter diff-only, Edge Case Hunter diff+project-trace, Acceptance
+#   Auditor diff+full-spec) surfaced 16 raw findings; after dedup and code-verification, 2
+#   decision-needed + 5 patch + 1 pre-existing defer survived (5 dismissed as noise or already
+#   addressed by design/existing gates). Acceptance Auditor found ZERO AC violations — independently
+#   verified the scope boundary, AC3's byte-unchanged pin, D1/D3 discipline, and i18n parity directly
+#   against source, not just the Dev Agent Record's narrative.
+#   BOTH DECISIONS RESOLVED AS ACCEPTED, DEFERRED TRADE-OFFS (not code changes): (1) the fail-soft
+#   validity read races against AC1's "before they can act" wording on a slow network — Task 3
+#   explicitly mandates fail-soft, so the race is inherent to that instruction, not an oversight; (2)
+#   the en/hi register mismatch on `suspension_disclosure.reason_line` (full sentence vs colon
+#   fragment) is left for the already-pending, not-yet-signed-off Story 2.2 tone review rather than
+#   patched ad hoc.
+#   FIVE PATCHES APPLIED, ALL VERIFIED (tests + typecheck + lint green, and revert-sanity probed):
+#   (a) `isUnderRestorationDisciplineLockIn` now excludes `terminated` independently of the suspension
+#   predicate — closes a real landmine for Story 10.23 (a payload carrying both `terminated_per_*` and
+#   `restoration_lock_in` would have fallen through to the lock-in arm instead of returning null);
+#   pinned by a new presenter test. (b) added `accessible` to the disclosure's outer `YStack` — the
+#   component's own comment claimed a single full-prose announcement but `accessibilityLabel` alone
+#   doesn't suppress child nodes without it. (c) the render fence now verifies the `NS` (i18n
+#   namespace) argument survives on every `t(` call via a new paren-balancing helper (handles the
+#   nested reason-label lookup that deliberately has no NS, D5). (d) broadened the "no literal string"
+#   fence beyond its narrow three-word-cadence regex. (e) added render-fence coverage for the
+#   previously-untested `ok` restoration-package arm (String() coercion + $tabular face) so it isn't
+#   shipped-but-unverified ahead of Story 10.24's activation. All four fence-touching patches were
+#   revert-sanity probed and confirmed to go red on the regression they guard against.
+#   ONE FINDING DEFERRED AS PRE-EXISTING, NOT THIS DIFF'S FAULT: a reason code with no matching
+#   `memberStatus.moderationReason.<code>` locale entry would crash the pay screen at render — but this
+#   is the shipped Story 10.10 lookup pattern (`app/(membership)/index.tsx:72-77`), reused exactly as
+#   D5 instructs, not introduced here.
+#   Findings + resolutions written into the story's `### Review Findings` section; the two accepted
+#   defers and the one pre-existing defer also appended to deferred-work.md. `[GATE]` for Story 10.17
+#   remains discharged. NEXT: 10.17.)
+# last_updated: 2026-08-04e (10-16-contribution-during-suspension-disclosure:
+#   ready-for-dev -> in-progress -> review via bmad-dev-story, off main @ e357ac1 on branch
+#   feat/10-16-contribution-during-suspension-disclosure.
+#   ⭐ THE [GATE] IS DISCHARGED: Story 10.17's `[GATE]` precondition (epics.md:3681 — "10.17 MUST NOT
+#   deploy without 10.16") IS NOW SATISFIED. 10.17 is the next story and its reviewer must be able to
+#   see that without archaeology. Note what "satisfied" means precisely: the disclosure is BUILT and
+#   TEST-PROVEN, it has NEVER RENDERED ON A LIVE PATH, and it cannot until 10.17 itself lands
+#   (is_valid:false keeps a suspended member off the roster, so /pay returns
+#   {available:false, reason:'unassigned'} — the disclosure's branches are unreachable BY DESIGN).
+#   10.17's dev agent MUST be told to confirm it renders live; that is the first real-path validation
+#   [[feedback_record_unattested_no_backfill]].
+#   WHAT SHIPPED — exactly the six files the story scoped, no more. OWNS NO STATE, as specified: no
+#   table, no migration, no event, no route, no contract change, no OpenAPI regen,
+#   PERMISSION_CATALOG_VERSION stays 28. NEW packages/ui/src/contribution-disclosure/
+#   (view-model/i18n-keys/presenter/barrel) + tests; NEW apps/mobile/components/active-contribution/
+#   SuspensionDisclosure.tsx + apps/mobile/tests/unit/pay-screen-disclosure-render.test.ts; MODIFIED
+#   packages/ui/src/index.ts, apps/mobile/app/(contribution)/pay.tsx, and +12 bilingual
+#   suspension_disclosure.* keys in packages/i18n/locales/{en,hi}/contribution.json.
+#   THE THREE CALLS THE STORY ASKED FOR, AND HOW THEY LANDED:
+#   (D1/AC4) restorationPackage is ALWAYS {status:'package_unavailable', producer:'story-10-24'},
+#   asserted as a LITERAL so a future `0` fabrication fails. The `ok` arm + its copy key are DECLARED
+#   AND UNREACHABLE — that is what makes 10.24 a zero-change activation. D1-C (deriving the count from
+#   listMemberContributionHistory / an events_log scan) was NOT attempted.
+#   (D3/AC2) the restoration_lock_in arm reads a Story-10.23 overlay signal on specialFlags — the
+#   substrate's established extension point for a member-visible standing with no DTO field (exactly
+#   how 10.10's moderation flag arrived on this .strict() payload). Nothing emits it, so the arm is
+#   genuinely dark. 10.23 OWNS the wire name: if it ships a different one, the single
+#   RESTORATION_LOCK_IN_FLAG constant is the ONLY line that changes — copy keys, view-model shape and
+#   pay.tsx do not. payload.lockInStatus is NOT read; two specs pin that shortcut shut.
+#   (AC1) the predicate is named for the RULE (isUnderContributionPermittingSuspension) with the flag
+#   parsing INSIDE it, so `terminated` correctly returns null.
+#   ⚠ TWO THINGS CARRIED FORWARD, NEITHER BACKFILLED:
+#   (1) THE STORY 2.2 TONE REVIEW IS SUBMITTED, NOT SIGNED OFF. This surface has no runtime tone-review
+#   gate (catalog copy, the 10.10 precedent), so there is no endpoint to record a sign-off against. The
+#   automatable floor passes (pnpm microcopy:check) and the copy was authored against tone-guide §3/§4
+#   and read against EVERY reason code incl. the procedural ones (voluntary-pending-review,
+#   regulator-action) — but a NON-AUTHOR HUMAN has not signed off and the dev agent cannot self-attest.
+#   OWED BEFORE MERGE. Member-facing money copy addressed to someone under sanction => §4 binds.
+#   (2) the D3 open question is RECORDED, NOT RESOLVED (Escalation 1): FR-8 calls the join lock-in a
+#   general-death lock-in while VALID_STATES (payload.ts:56-60) treats 'lock-in' as COVERED. Resolving
+#   it changes deriveIsValid -> every validity payload hash -> 4.8 cache epochs + the 7.4 assignment
+#   version pin. VALID_STATES was NOT touched. Route to bmad-correct-course if it is a real defect.
+#   EVIDENCE: 20 pure @twt/ui specs + an 18-spec render fence (the 7th comment-stripped source scan;
+#   apps/mobile still has NO mount harness — Escalation 2 stands, unresolved and owed its own story).
+#   REVERT-SANITY PROBE RUN AND IT PAID FOR ITSELF [[feedback_gate_scope_semantic_coverage]]: deleting
+#   both render sites turned the fence red (3), BUT revealed three lastIndexOf placement assertions
+#   passing VACUOUSLY (-1 < anchor is trivially true) — the exact 10.10 failure mode reproduced inside
+#   the fence meant to prevent it. Hardened with >-1 guards; the probe now yields 5 failures.
+#   AC3 VERIFIED BY DIFF, not assumed: packages/ui/src/member-status/presenter.ts and
+#   apps/mobile/app/(membership)/index.tsx are both UNCHANGED.
+#   CI: ci:local was ALREADY RED at baseline BEFORE any edit — @twt/domain tests/db.test.ts timed out
+#   at 5000ms under concurrent load; confirmed innocent in isolation (3 tests, 477ms), the documented
+#   [[project_ci_local_concurrency_oversubscription]] flake class. FINAL RUNS: ci:local WITHOUT
+#   DATABASE_URL PASSED 29/29 green. ci:local WITH DATABASE_URL on :5433 failed 2 jobs, BOTH confirmed
+#   innocent in isolation and neither in a file this story touches: (1) @twt/admin
+#   moderation-section.test.tsx timed out at 5000ms under load but passes in 175ms alone; (2) @twt/api
+#   member-moderation.spec.ts AC4 got `expected [] to include member_moderation.suspended` but passes
+#   22/22 alone — the spec's own comment names the mechanism ("the audit write is fire-and-forget …
+#   give it a turn") followed by a FIXED setTimeout(200), and under load the spec ran 6463ms vs 1929ms
+#   isolated, so 200ms was not enough for the write to land. NOTE FOR THE NEXT AGENT: this was NOT
+#   [[project_ci_local_double_run_pollution]] — that hypothesis was CHECKED AND REJECTED (integration
+#   specs ran in the integration-tests job only: 68 collected there, 0 in the unit job). The cause is
+#   concurrent-load timing, and the api spec's fixed-sleep-vs-fire-and-forget-write pattern is a
+#   standing flake risk worth a timeout/poll fix in its owning story. This story touches no DB/route/
+#   migration/audit path. NEXT: 10.17 (gate discharged), then 10.11, then 10.24+.)
+# last_updated: 2026-08-04d (10-16-contribution-during-suspension-disclosure: backlog -> ready-for-dev
+#   via bmad-create-story, off main @ e357ac1. Saved 10-16-contribution-during-suspension-disclosure.md.
+#   Epic 10's TWELFTH authored story and the FIRST of the eight-story moderation model (10.16-10.23).
+#   Taken out of numeric order ON PURPOSE per the 2026-08-04b sequencing decision — 10.12-10.15 stay
+#   `backlog`; the order is 10.16 -> 10.17 -> 10.11. Pass the id explicitly; the default "next" still
+#   resolves to 10.12.
+#   WHAT IT IS: the disclosure that makes the roster unblock honest. `[GATE]` — 10.17 MUST NOT deploy
+#   without it (epics.md:3681). A pure `@twt/ui` derivation + a render on the mobile PAYMENT surface.
+#   OWNS NO STATE: no table, no migration, no event, no route, no contract change, no OpenAPI regen,
+#   PERMISSION_CATALOG_VERSION stays 28. Six files: NEW packages/ui/src/contribution-disclosure/
+#   (presenter/view-model/i18n-keys/barrel, the status-pill + pool-progress sibling shape), NEW
+#   apps/mobile/components/active-contribution/SuspensionDisclosure.tsx, MODIFIED
+#   apps/mobile/app/(contribution)/pay.tsx + packages/ui/src/index.ts +
+#   packages/i18n/locales/{en,hi}/contribution.json.
+#   THE STORY SHIPS AGAINST AN UNREACHABLE STATE, deliberately: `is_valid:false` keeps a suspended
+#   member off the roster today, so /pay returns {available:false, reason:'unassigned'} and there is NO
+#   live path to exercise until 10.17. That is what `[GATE]` MEANS — build the cure before the surface
+#   that advertises it. Evidence is therefore entirely test-level and is recorded as such (Escalation 3),
+#   NOT implied as validated behaviour [[feedback_record_unattested_no_backfill]]; the first real-path
+#   validation happens during 10.17, whose dev agent must be told to confirm it renders live.
+#   SUBSTRATE VERIFIED AGAINST LIVE SOURCE (three findings the epic text does not carry):
+#   (a) THE DATA IS ALREADY THERE — redaction.ts:29 is STATE_TRUSTEE_ONLY_FLAGS = {CONCEALMENT_REVIEW_FLAG}
+#   ONLY, and payload.ts:96-103 records the moderation flags as MEMBER-VISIBLE BY DESIGN ("the member must
+#   be told WHY"). So `suspended_per_<code>` survives the member self-read and GET /api/v1/member/validity
+#   already carries it. The surface reuses the SHIPPED useMemberValidityQuery hook (TanStack key
+#   ['member','validity'], usually a cache hit from the membership screen) — NO new field on
+#   ContributionIntentResponse/NomineeAccountsResponse, NO new endpoint. That is D4.
+#   (b) ⭐ THE AC2 LOCK-IN ARM IS A FORWARD CONTRACT AND THE OBVIOUS SHORTCUT IS FALSE. AC2 names the
+#   RESTORATION-DISCIPLINE lock-in = Story 10.23's overlay, which does not exist. The tempting fallback —
+#   reading payload.lockInStatus.state === 'in-lock-in' — is wrong IN THE DANGEROUS DIRECTION: VALID_STATES
+#   (payload.ts:56-60) is ['lock-in','active','active-in-grace'], so a JOIN-locked member is isValid:TRUE
+#   and IS covered. Telling them "your contribution does not create beneficiary entitlement" would be a
+#   FALSE STATEMENT TO A MEMBER ABOUT THEIR OWN COVERAGE — the exact harm the story exists to prevent,
+#   inflicted on a different member. 10.23 forbids the reuse by name (epics.md:3885) and points back here
+#   (:3890). D3: ship the arm structurally, detect it honestly, leave it dark; a pin-test proves 10.23
+#   lights it up with zero copy/render change. A dedicated unit test pins the WRONG shortcut shut.
+#   (c) 10.16 HITS THE SAME FACT-PRODUCER GAP AS 10.11 AND TAKES THE SAME RATIFIED ANSWER. AC1's "how many
+#   contributions remain in the restoration package" is R7 restoration data (consecutive_required /
+#   lock_in_months) living ONLY in niyamavali-v1-clauses.sql:232-281 + the engine test fixtures with NO
+#   production consumer, and the count needs `contribution.*` facts assemblePayload has no input for
+#   (CONTRIBUTION_UNAVAILABLE pinned at payload.ts:294) [[project_r7_fact_producer_unbuilt]]. D1 CITES
+#   D1-B, does not re-litigate it: a first-class `package_unavailable` naming Story 10.24 — never 0, never
+#   a blank, never derived outside the rule engine (D1-C rejected: listMemberContributionHistory anchors on
+#   `utr-attested` not confirmation and caps at 500 rows). CRUCIALLY the count's absence NEVER suppresses
+#   the what-it-does / what-it-does-not-buy halves — those are the load-bearing ones.
+#   TWO AC REFINEMENTS FROM BigDev AT AUTHORING TIME, both about keeping the CONSTITUTIONAL rule above the
+#   implementation: (i) AC1's triggering condition is stated as the RULE — "the disclosure is shown whenever
+#   the member is under a suspension that STILL PERMITS CONTRIBUTION" — with the `suspended_per_<code>` flag
+#   demoted to "the current detection mechanism". The predicate must be NAMED for the condition
+#   (isUnderContributionPermittingSuspension) with flag-parsing behind it, so a transport change (10.17 adds
+#   is_assignable to this same payload; 10.20 may add more) changes the detector and not the AC. The
+#   qualifier earns its keep immediately: `terminated` HAS a moderation flag and is NOT permitted to
+#   contribute, so flag-shaped detection gets it wrong and rule-shaped detection gets it right. (ii) AC5
+#   gained a POSITIVE requirement alongside its prohibitions: the copy explains the member's position
+#   FACTUALLY and attributes cause ONLY through the trustee-recorded reason label — no accusatory
+#   construction of its own ("because you violated...", "due to your failure to..."). Recorded reasons are
+#   often procedural (`voluntary-pending-review`, `regulator-action`), so the sentence must read correctly
+#   for EVERY code in the registry; a unit pin asserts the view-model is code-agnostic apart from the one
+#   label key, which is what stops "special copy for serious codes" drift.
+#   THE OTHER LOAD-BEARING CALL (D2) — "a render test, not only a view-model test" (AC3) in a harness with
+#   NO MOUNT CAPABILITY: apps/mobile/vitest.config.ts is environment:'node', include tests/unit/**/*.test.ts
+#   (`.ts` ONLY — a .tsx mount test is not even COLLECTED), and there is no @testing-library/react-native
+#   or react-test-renderer dependency. Six shipped tests use a comment-stripped SOURCE SCAN of the render
+#   file instead. RECOMMENDED + specified: the source-scan fence — and the argument matters, because 10.10's
+#   failure was the render layer DROPPING the section (.filter(s => s.id !== 'headline')) while view-model
+#   tests stayed green, which is EXACTLY what a scan of the render file catches and a view-model test
+#   structurally cannot. Its one real limit (cannot prove visual placement/reachability) is answered by
+#   scanning for ANATOMY: >=2 render sites, disclosure JSX BEFORE <UPIIntentButton in source order, no
+#   literal member-facing string, and the pay CTA not gated on the validity query. Plus a REVERT-SANITY
+#   PROBE (delete the render, fence must go red) recorded in the Dev Agent Record
+#   [[feedback_gate_scope_semantic_coverage]]. Standing up the RN mount harness is REJECTED for this story
+#   and raised as Escalation 2 — six stories have now reached for it, which is a converging signal that
+#   deserves its own story, not an untested harness riding in on a [SURFACE] PR.
+#   PINNED UNCHANGED + ASSERTED SO: packages/ui/src/member-status/presenter.ts (AC3 requires
+#   deriveHeadlineState BYTE-UNCHANGED — a diff there is a review finding) and
+#   apps/mobile/app/(membership)/index.tsx (AC1: the disclosure is NOT a status-panel concern; the panel
+#   keeps its own 10.10 moderation notice).
+#   ESCALATION 1 RAISED, NOT RESOLVED: FR-8 calls the join lock-in a GENERAL-DEATH lock-in, yet VALID_STATES
+#   treats 'lock-in' as covered — either isValid's docstring ("covered for support if death today") or
+#   VALID_STATES is imprecise. Resolving it changes deriveIsValid => EVERY validity payload hash => Story
+#   4.8 cache epochs + the 7.4 assignment version pin. Never a side-quest inside a [SURFACE] story; route
+#   to bmad-correct-course if it is a real defect rather than a docstring slip.
+#   GATES: i18n-parity (ci.yml:214) — hi is AUTHORED, not transliterated; microcopy (ci.yml:389) + a Story
+#   2.2 tone review before merge (member-facing MONEY copy addressed to someone under sanction => tone-guide
+#   §3 prohibited frames + §4 grief modulation both bind). t() THROWS on a missing key AND a missing
+#   interpolation param (resolver.ts:35-43) — the 10.10 trap that turned a fallback into dead code that
+#   crashed a job loop; prefer zero-param keys. Merge gate `pnpm ci:local` on :5433
+#   [[project_ci_actions_suspension_local_mirror]]; this story touches no DB/route/migration, so a live-DB
+#   failure is almost certainly a documented-innocent flake [[project_known_livedb_test_failures]] — confirm
+#   by running the suspect spec in isolation. Branch off main; commit manually
+#   [[project_story_automator_ops]]. Story file:
+#   10-16-contribution-during-suspension-disclosure.md. NEXT: 10.17 (its [GATE] precondition is discharged
+#   the moment this story lands), then 10.11, then 10.24+.)
 # last_updated: 2026-08-04c (CORRECT COURSE — `sprint-change-proposal-2026-08-04-R2.md` via
 #   bmad-correct-course. THREE new stories enter Epic 10 as `backlog`: 10-24 (contribution-fact producer
 #   projection + R7(C)-(F) activation), 10-25 (R7(A) restoration accounting), 10-26 (R7(G) personal-event
@@ -2922,7 +3114,7 @@ development_status:
   10-13-fixed-amount-setter-admin-ui: backlog
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog
-  10-16-contribution-during-suspension-disclosure: backlog
+  10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: backlog
   10-18-constituting-the-trustee-panel-sanctioning-authority: backlog
   10-19-termination-ends-membership-privileges: backlog

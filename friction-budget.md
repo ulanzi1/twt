@@ -970,6 +970,48 @@ ceilings the gate has teeth on cover the PUBLIC `apps/public` Astro surface, whi
 not touch. The admin-side files in the same commit (`apps/admin/**`) are a STAFF surface and are
 outside the member friction budget by construction.
 
+**Story 10.16 disposition (declaration affirmed, no new row):** the
+contribution-during-suspension disclosure (`apps/mobile/app/(contribution)/pay.tsx`,
+`apps/mobile/components/active-contribution/SuspensionDisclosure.tsx`, the pure
+`@twt/ui` derivation in `packages/ui/src/contribution-disclosure/`, and the
+`apps/mobile/tests/unit/pay-screen-disclosure-render.test.ts` render fence)
+introduces **zero deliberate friction** — and, like the Story 10.10 moderation
+notice, the change is friction-REDUCING in the sense that matters most here.
+
+(1) **The disclosure is read-only prose, not an interaction.** It renders above the
+already-declared pay affordances (the Story 8.4 UPI Intent / manual-transfer flow)
+on the account-choice and chosen-account branches, saying what the payment DOES
+(counts toward restoring standing), what it does NOT buy (no beneficiary
+entitlement for a death during the suspension period), and the honest state of the
+restoration count (AC4's `package_unavailable`, never a fabricated number). The
+member is not asked to decide, confirm, tap through, upload, or acknowledge
+anything to proceed — the existing pay flow underneath is entirely unchanged and
+un-gated by this read (fail-soft: a loading or errored validity read renders the
+screen exactly as it does today, per Task 3). No new step, no new tap, no new form.
+
+(2) **This is the fix for a surface that was about to withhold the one fact a
+suspended member needs before paying** — the same class of correction as the Story
+10.10 disposition: before this story, Story 10.17 would put a suspended member back
+on the donor roster with no explanation of what their payment does and does not
+buy. A member asked for money under a misapprehension about their own coverage is
+paying the highest-cost, least-visible friction this system can impose (UX Stance
+#5 — dignified, non-punitive, no soft misinformation). Telling them plainly, before
+they act, is friction removed, not added — this is precisely why the story is a
+`[GATE]` on 10.17 rather than an optional follow-up.
+
+(3) **`<CallHelplineCTA>` on the honest-absence arm — reuse of an existing
+friction-REMOVING affordance**, the same one-tap escape-to-live-help already
+affirmed under the Story 6.2/6.12 dispositions, not a new friction surface.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. The
+**page-weight baseline is unchanged**: all touched/new files are in the
+authenticated mobile app (`apps/mobile`, EAS build is a no-op →
+`member-app-native` stays a no-op); the page-weight ceilings the gate has teeth on
+cover the PUBLIC `apps/public` Astro surface, which this story does not touch. This
+story owns no state (no table, no migration, no event, no route, no contract
+change, no OpenAPI regen, `PERMISSION_CATALOG_VERSION` stays 28) — the friction
+budget's declaration facet is the only ledger this change touches.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

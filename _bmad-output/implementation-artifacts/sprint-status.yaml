@@ -1,4 +1,126 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-04b (SEQUENCING DECISION — no status flip, no code, no catalog change.
+#   `10-11-trustee-lite-list-signals` STAYS `ready-for-dev` and is deliberately NOT next; Epic 10
+#   proceeds 10.16 -> 10.17 -> 10.11 instead. Recorded because a story sitting authored-but-unstarted
+#   is indistinguishable, months later, from a story that stalled. NOTE the status value is unchanged
+#   ON PURPOSE: `development_status` uses only backlog/ready-for-dev/in-progress/review/done/optional,
+#   and a one-off `blocked`/`deferred` value would fork the enum for a scheduling fact that belongs in
+#   this ledger [[project_sprint_status_ledger]]. The reason lives in a `## Sequencing note` block at
+#   the top of the story file; escalation 3 there is annotated SUPERSEDED in place, not rewritten.
+#   WHY: 10.11's own escalation 3 flagged that it surfaces suspension candidates while 10-16/10-17 sit
+#   `backlog` — the moderation rows point at a cure that is not yet reachable. The story concluded "do
+#   not block 10.11 on 10.16/10.17"; that instruction is now SUPERSEDED. Its analysis stands (10.11 has
+#   NO technical dependency on either), so this is a change of ORDERING, not a defect found in the
+#   story: ship the cure before the surface that advertises it. 10.11 waits on 10.17 SPECIFICALLY —
+#   NOT on the contribution-fact producer, because D1-B was ratified precisely so 10.11 ships degraded
+#   and lights up with zero file changes when the producer lands. Ordering the producer ahead of 10.11
+#   would MOOT D1-B rather than honour it; if ever chosen, take it as a fresh recorded decision.
+#   10.17 IS INDEPENDENT OF THE PRODUCER — verified: `epics.md:3695` derives
+#   `is_assignable = VALID_STATES.includes(state) && moderationStatus !== 'terminated'`, pure lifecycle
+#   state + moderation status, zero `contribution.*` facts. So the producer does NOT gate the cure; it
+#   only makes the cure OBSERVABLE (restoration itself already works — 10.10 shipped restore). That is
+#   the whole argument for not putting an unsized producer build ahead of two small gated stories.
+#   NEW FINDING (sharpens 10.11 escalation 1, folded into the story file): the R7 fact producer was
+#   missed because THE EVENT PRODUCER WAS BUILT AND THE FACT PRODUCER WAS NOT, and the deferral note
+#   does not distinguish them. `contribution.confirmed` has two LIVE emitters
+#   (`apps/jobs/src/matcher/matcher-worker.ts:325`, `apps/api/src/modules/reconciliation-review/
+#   handlers.ts:308`), so "did Epic 9 produce contribution facts?" reads YES for events and NO for the
+#   seven `contribution.*` keys the engine reads — nothing maps one to the other, and `assemblePayload`
+#   has no contribution input at all. Compounding it: `validity-service/types.ts:56-65` defers to an
+#   EPIC (`producer: 'epic-8-9'`), and epics carry no acceptance criteria. Epic 8's 13 stories and Epic
+#   9's 12 were each checked — NONE is the fact producer — so both closed `done` WITH retrospectives
+#   and the pointer expired unowned [[project_r7_fact_producer_unbuilt]].
+#   10.16 HITS THE SAME GAP: its AC1 "how many contributions remain in the restoration package" is R7
+#   restoration data (`consecutive_required`/`lock_in_months`), which lives ONLY in
+#   `packages/domain/seed/niyamavali-v1-clauses.sql` and `niyamavali-engine/tests/fixtures/r7-clauses.ts`
+#   with no production consumer. Same fork, same D1-B answer — 10.16 must CITE D1, not re-litigate it.
+#   Its AC2 lock-in arm is a forward contract too: `LockInStatusPayload` (validity-service/types.ts:26-33)
+#   is join-scoped (`daysAtJoin`/`unlockDate`); the restoration-discipline lock-in is Story 10.23, which
+#   explicitly forbids reusing `lock_in_days_at_join` (`epics.md:3885`) and points back at 10.16 (`:3890`).
+#   NEXT: `bmad-correct-course` to scope + assign the unowned producer (expect a SPLIT —
+#   `listMemberContributionHistory` at `domain/src/contribution/history.ts:276` plausibly sources ~4 of
+#   7 facts; `skips_current_year`, `r7a_restorations_used`, `personal_event_excuse_claimed` have no
+#   substrate and the last needs a member-facing flow that exists nowhere). CC emits a change PROPOSAL,
+#   not a story — the new story still needs `epics.md` + `development_status` entries before
+#   `bmad-create-story` can pick it up. Then 10.16 (pass the id explicitly — the default "next" resolves
+#   to 10.12). Housekeeping for whoever takes the producer: `contracts/src/contributions/
+#   pool-contributor-list.ts:7` and `domain/src/index.ts:167` still say "Epic 9's producer, unbuilt ->
+#   honestly EMPTY today" — written at Story 8.3, predating the 9.4 matcher, now stale and actively
+#   reinforcing the wrong mental model. No code changed; no story status flipped;
+#   PERMISSION_CATALOG_VERSION still 28.)
+# last_updated: 2026-08-04a (10-11-trustee-lite-list-signals: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ 49ad0ca (post PR #162 / the moderation correct-course merge).
+#   Saved 10-11-trustee-lite-list-signals.md. Epic 10's ELEVENTH story and the first one authored
+#   AFTER the 2026-08-04 Sprint Change Proposal, which amended its scope (§4b(iii)). An
+#   AGGREGATOR `[SURFACE]`: NO table, NO migration, NO event, NO permission key, catalog stays 28 —
+#   every row is a read-time lens over a source another story already ships.
+#   THE LOAD-BEARING FINDING (D1 — RATIFIED BY BIGDEV 2026-08-04 as D1-B, verbatim: "Trustee-Lite
+#   will ship structurally complete, but the R7 violator section shall explicitly render
+#   detection_unavailable until the contribution-fact producer exists. The story shall not derive
+#   R7 violations outside the rule engine." Task 0's confirmation step is CLOSED; D1-A and D1-C are
+#   rejected and must not be re-opened mid-story): the amended AC requires violator
+#   flags — "members in R7 violation, detected automatically" — and THERE IS NO FACT SOURCE.
+#   Verified live: `validity-service/src/payload.ts:294` hardcodes `contributionHistorySummary:
+#   CONTRIBUTION_UNAVAILABLE` and `types.ts:56-65` states R7/R8 are OMITTED from
+#   `applicableNiyamavaliClauses[]` until the Epic 8/9 `contribution.*` producer lands. Epics 8 and
+#   9 are `done` and THE PRODUCER WAS NEVER BUILT, so R7 is structurally un-evaluated in
+#   production. Neither the decision brief nor the change proposal noticed this; both assumed R7
+#   evaluation worked (the brief's §2.2 diagnosed the ROSTER blockage → 10.17, not this).
+#   → D1-B RATIFIED: ship the arm structurally complete and EXPLICITLY DEGRADED
+#   (`detection_unavailable` naming the missing producer — NEVER an empty list, which on a
+#   governance surface is a false all-clear); `deriveViolatorFlags` reads
+#   `applicableNiyamavaliClauses ∩ R7_CLAUSE_IDS` so flags light up with ZERO changes in 10.11's
+#   files the day the producer lands (the `CONTRIBUTION_MISMATCH_EVENT_TYPE` /
+#   `CONTRIBUTION_UNAVAILABLE` forward-contract-of-record discipline).
+#   REJECTED D1-A (build the producer here): 3 of its 7 facts have no source at all
+#   (`skips_current_year` needs per-cycle assignment history, `r7a_restorations_used` needs
+#   restoration accounting, `personal_event_excuse_claimed` has NO event anywhere), and wiring it
+#   into `assemblePayload` changes EVERY validity payload hash → 4.8 cache epochs + the 7.4
+#   assignment version pin. REJECTED D1-C (derive R7 ad-hoc in 10.11): hardcodes eligibility
+#   outside the registry (`prd.md:425`, architecture) and forks
+#   [[project_engine_never_infers_contribution_facts]] — a partially-derived fact producing a WRONG
+#   flag on a real member's record, on the surface feeding a suspension decision, is the worst
+#   outcome available.
+#   SECOND FINDING (D2): `epics.md:3579` requires a deadline-proximity sort and `:3587` carves out
+#   moderation ALONE — but FOUR of six sources are undated. `CycleFreezePendingCase`
+#   (cycle-freeze-read.ts:50-63) has no temporal field, `R9QueueItem` (r9-voting-read.ts:38-48) has
+#   none, and concealment is a FLAG on a cycle-freeze row. Only reconciliation ships `deadlineAt`;
+#   only appeals can derive one (`DEFAULT_APPEAL_STAGE_SLA_DAYS` 14/21/14, appeal.ts:180).
+#   → two-tier order (dated ascending, then undated by age DESC, ties on (category, resourceId) for
+#   totality); the epic's moderation carve-out GENERALIZED, never a fabricated deadline
+#   ([[feedback_record_unattested_no_backfill]]).
+#   OTHER CALLS: D4 no new key — per-SECTION capability filtering on the caller's real grants via
+#   pure `rbac.hasPermission` (the Story 10.7 `resolveActorReportScope` dynamic-key precedent,
+#   reports/handlers.ts:100-108); a section the caller lacks is OMITTED, not rendered empty (an
+#   empty array is an existence oracle); zero-keys → 403. NOT step-up-gated (returns to the
+#   10.3/10.4/10.5/10.8/10.9 chain that 10.10 broke). D5 ONE new domain read
+#   (`listOpenAppealCasesForPariwar` in the EXISTING claim/appeal-read.ts — the only source of six
+#   with no Pariwar-wide list). D6 concealment is a FILTER over `getCycleFreezePending`'s
+#   `concealmentFlags`, NOT a fifth query (the most likely wheel-reinvention here); a claim
+#   legitimately appears in BOTH sections — lenses, not a partition, do not dedupe. D7 the
+#   detection-only "CI assertion" = ONE data-only `tone` entry in microcopy.yaml (label
+#   `moderation-advice`) — `apps/admin/src/**` is ALREADY in `scope.code_globs:195-197`, so zero
+#   gate-code change and teeth over every future admin surface — PLUS a contracts frozen-key test
+#   and an admin render test; NO new gate script ([[project_access_wrapper_gate_pending_scope]]
+#   "know when NOT to extend"; teeth proven by planted violation + revert-sanity per
+#   [[feedback_gate_scope_semantic_coverage]]). D8 NEW `apps/admin/src/modules/trustee-lite/`
+#   (Page/Shell/crossLinks/i18n-en, the 10.4 shape) + route `/p/$pariwarId/trustee`, NOT an
+#   extension of `member-status` ([[project_story_validate_footguns]]). D9 pure derivations in a new
+#   DB-free `packages/domain/src/trustee-lite/` (the helpdesk/sla.ts shape); apps/api composes.
+#   D10 records that FR-42's "one indexed query; no N+1" binds the Story 4.7 PER-MEMBER panel, not
+#   FR-57's list — six bounded reads is O(1) queries. D11 NO decryption, NO step-up, NO writes:
+#   ids + non-PII codes only, so the module stays outside the 10.4 crypto boundary.
+#   THREE ESCALATIONS OWED: (1) the R7 contribution-fact producer is UNOWNED and unwritten — route
+#   to PM as a new story; even after 10.17 unblocks the roster, NOTHING evaluates whether a member
+#   cleared their R7 package; (2) `epics.md:3578` mis-attributes the violator mechanism to Story
+#   10.17, which as authored is entirely about `is_assignable` — the brief (`:795-797`) assigns it
+#   to 10.11; flag an epics.md correction; (3) standing hazard unchanged by this story — 10.11
+#   surfaces suspension candidates while 10.16/10.17 are still `backlog`, so a suspension taken
+#   today is still the de-facto permanent ban; 10.11 adds no new suspension path so it does not
+#   worsen it, but do not imply the cure is reachable.
+#   Merge gate `pnpm ci:local --concurrency=4` on :5433 [[project_ci_actions_suspension_local_mirror]]
+#   [[project_ci_local_concurrency_oversubscription]]. Branch off main; commit manual
+#   [[project_story_automator_ops]]. Next: bmad-dev-story.)
 # last_updated: 2026-08-04 (SPRINT CHANGE PROPOSAL — the moderation model. bmad-correct-course
 #   consumed moderation-model-decision-brief.md (867 lines) and produced
 #   planning-artifacts/sprint-change-proposal-2026-08-04.md. Scope: MAJOR — PRD amendment + 11
@@ -2728,7 +2850,7 @@ development_status:
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: done
   10-9-banner-popup-manager-valid-from-until-dismiss: done
   10-10-member-moderation-suspend-terminate-restore-reason-codes: done
-  10-11-trustee-lite-list-signals: backlog
+  10-11-trustee-lite-list-signals: ready-for-dev
   10-12-per-pariwar-custom-fields-jsonb: backlog
   10-13-fixed-amount-setter-admin-ui: backlog
   10-14-permission-delegation: backlog

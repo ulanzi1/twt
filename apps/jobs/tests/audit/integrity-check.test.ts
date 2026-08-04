@@ -335,9 +335,27 @@ describe.skipIf(!hasDatabase)('verifyAuditChain (live DB)', () => {
       });
 
       expect(verdict.chainValid).toBe(false);
-      // The row AFTER the deleted boundary row is where the stitch fails.
-      expect(verdict.firstBrokenSeq).toBe(rows[2]!.seq);
-      expect(verdict.firstBrokenAuditId).toBe(rows[2]!.auditId);
+      // The row AFTER the deleted boundary row is where the stitch fails. Resolve that row FROM THE
+      // DB rather than assuming it is `rows[2]`.
+      //
+      // ⚠ WHY (2026-08-04): `verifyAuditChain` walks the ONE GLOBAL chain, and `writeRows` commits its
+      // rows one at a time on a shared pool — so any concurrently-running suite that appends an audit
+      // row lands BETWEEN our rows and legitimately becomes the first-broken row once the victim is
+      // deleted. Asserting `rows[2]` silently encodes "nothing else in the repo wrote an audit row
+      // while I ran", which is not a property this test controls. apps/jobs' `fileParallelism: false`
+      // guarantees it only WITHIN this package; a sibling package running in parallel defeats it from
+      // outside (fixed at the CI level by `--concurrency=1`, but the assertion should not depend on
+      // that). Assert the invariant — "the break is reported at the first surviving row after the
+      // gap" — not an absolute seq ([[project_live_db_test_gotchas]]: assert membership, not counts).
+      const { rows: afterGap } = await client.query<{ seq: string; audit_id: string }>(
+        'SELECT seq, audit_id FROM audit_log_entries WHERE seq > $1 ORDER BY seq LIMIT 1',
+        [victim.seq],
+      );
+      const firstAfterGap = afterGap[0];
+      expect(firstAfterGap).toBeDefined();
+      // `seq` is bigint → node-postgres returns it as a string; the drizzle mapping is `mode: 'number'`.
+      expect(verdict.firstBrokenSeq).toBe(Number(firstAfterGap!.seq));
+      expect(verdict.firstBrokenAuditId).toBe(firstAfterGap!.audit_id);
       expect(alerter.alerts).toHaveLength(1);
       expect(sink.published).toHaveLength(1);
 

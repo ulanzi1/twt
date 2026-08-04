@@ -78,6 +78,32 @@ fail when another parallel run has committed a row into the same table.
 - Prefer `UPSERT` + idempotency keys (the `@twt/queue` pattern) over raw inserts where
   the test needs to be re-runnable.
 
+**⚠ A SHARED FIXTURE TENANT IS NOT "THE TEST'S OWN DATA SCOPE" (added 2026-08-04).** The bullet
+above is necessary but not sufficient, and four specs satisfied it while still breaking:
+`multi-tenant/cross-pariwar-leak.spec.ts` (×2), `rls/policy-regression.spec.ts` and
+`pool/active-contribution-read.spec.ts` all scoped to `PARIWAR_A` — a constant from `_helpers.ts`
+that **every** suite shares. Scoping to it narrows nothing. `setupLiveDb()`'s per-test rollback does
+not save you either: it rolls back *your* transaction, while own-committing suites elsewhere leave
+`PARIWAR_A` rows committed forever.
+
+Symptom: green on a fresh CI service container, red on any reused local DB — so `pnpm ci:local`
+with `DATABASE_URL` set silently stops being trustworthy as rows accumulate.
+
+For an RLS/isolation probe, the property is **isolation**, never cardinality. Assert:
+
+```ts
+expect(rows.every((r) => r.pariwarId === PARIWAR_A)).toBe(true);  // nothing foreign leaked
+expect(rows.some((r) => r.pariwarId === PARIWAR_B)).toBe(false);  // the adversary row specifically
+expect(rows.map((r) => r.streamId)).toContain(mySeededId);        // and the read wasn't vacuous
+```
+
+That third line matters — `every()` over an empty array is `true`, so without a presence check a
+totally broken read passes (Rule 6). For an aggregate, assert the aggregate agrees with the
+RLS-filtered `SELECT` rather than an absolute number: a `COUNT` that bypassed RLS would exceed it.
+
+An absolute count is only safe when the row's scope key is **minted inside the test**
+(`randomUUID()`), never when it comes from a shared fixture.
+
 ---
 
 ## Rule 4 — Every Integration Spec Must Be in the CI Filter

@@ -3575,7 +3575,7 @@ So that I can see at a glance what needs my attention without juggling multiple 
 
 **Given** FR-57 + Story 4.7 MemberStatusPanel pattern (compound read model)
 **When** the Trustee-Lite list + signals view is implemented
-**Then** the view aggregates: pending State Trustee cycle-freeze approvals (Story 6.13), R9 voting queues (Story 6.14), 3-stage appeal cases at the trustee's scope (Story 6.16), concealment-flagged claims (Story 6.15), reconciliation review queue items (Story 9.8) at trustee's scope, and **moderation violator flags (Story 10.17's D1 surfacing mechanism)**
+**Then** the view aggregates: pending State Trustee cycle-freeze approvals (Story 6.13), R9 voting queues (Story 6.14), 3-stage appeal cases at the trustee's scope (Story 6.16), concealment-flagged claims (Story 6.15), reconciliation review queue items (Story 9.8) at trustee's scope, and **moderation violator flags — the surfacing mechanism is implemented by this story (10.11); the contribution-governance fact source is Story 10.24. Until Story 10.24 lands, this section renders `detection_unavailable` per D1-B rather than implying no violations exist**
 **And** items are sorted by deadline-proximity; per-item signals show category + age + severity + cross-link to the canonical surface for the item
 **And** the surface is scope-respecting via Story 1.8
 
@@ -3889,6 +3889,83 @@ So that §3.1's prescribed restoration packages are more than seeded data.
 
 **Given** Story 10.16
 **Then** the disclosure applies to locked-in members too
+
+> **Stories 10.24–10.26 — the contribution-governance fact producer.** Added 2026-08-04 by Sprint Change
+> Proposal (`sprint-change-proposal-2026-08-04-R2.md`), which addressed a gap found while authoring Story
+> 10.11: the `contribution.*` fact producer Story 4.2 deferred to "Epic 8/9" was never built, and both
+> epics closed `done` with retrospectives. The deferral named an **epic**, and epics carry no acceptance
+> criteria — so no story owned it. The `contribution.confirmed` **event** producer *was* built (Story 9.4's
+> matcher); the **fact** producer that supplies the seven `contribution.*` keys to the validity payload was
+> not. Conflating the two is what let it survive two rounds of governance review.
+> **This decomposition follows governance ownership rather than implementation convenience: projection
+> facts, restoration accounting, and member assertions evolve independently and therefore remain
+> independently story-owned.** Each R7 sub-clause activates as its facts land — a clause whose facts are
+> absent stays **omitted** from `applicable_niyamavali_clauses[]`, never silently evaluated.
+
+### Story 10.24: Contribution-Fact Producer — Projection + R7(C)–(F) Activation `[PRIMITIVE]`
+
+As the Niyamavali engine evaluating contribution discipline,
+I want the seven `contribution.*` facts supplied from real event history,
+So that R7 stops being structurally un-evaluated in production.
+
+**Boundary.** This story produces governance facts only. It does not define governance policy, restoration accounting, or member assertions.
+
+**Acceptance Criteria:**
+
+**Given** FR-12A's p95 < 200ms at 4L scale and freshness ≤ 60s
+**When** the facts are supplied
+**Then** they come from a **projection**, not a per-evaluation `events_log` scan — no existing read is a viable source (`listMemberContributionHistory`, `domain/src/contribution/history.ts:276`, caps **both** queries at 500 rows and anchors on `contribution.utr-attested`, not confirmation; the pool-scoped reads are the wrong axis)
+
+**Given** AI-3-1 (calendar-correct derivation is the PRODUCER's job, never fixed-ms spans)
+**Then** `months_since_last` uses `date_trunc`/`interval`
+
+**Given** the 2026-08-04 FR-9 amendment disclaiming `total_count < 10` / `ever_contributed == false` as **implementation proxies, not constitutional definitions**
+**Then** this story supplies `total_count`, `ever_contributed`, `months_since_last`, `skips_current_year`, `in_lapse` and activates **R7(C), (D), (E), (F) only**
+**And** R7(A)/(B) remain **omitted** from `applicableNiyamavaliClauses[]` with an explicit hold naming `member.joining_discipline_state` (Story 10.23) — supplying the proxies would make them *confidently wrong*, which is worse than dark
+
+**Given** `skips_current_year` needs per-cycle assignment history
+**Then** it derives from pool snapshots' `member_assignments` (`packages/domain/src/pool/snapshot.ts:105`) ∩ confirmed-minus-reversed verdicts; "missed" means assigned-at-freeze with no live confirmation at close
+
+**Given** wiring into `assemblePayload` changes **every** validity payload hash
+**Then** the story explicitly discharges the Story 4.8 cache-epoch bump and the Story 7.4 assignment version pin
+**And** a test pins byte-identical re-spawn from a frozen `committed_at`
+
+**Depends on:** none. **Blocks:** R7(A)/(B) activation.
+
+### Story 10.25: R7(A) Restoration Accounting `[PRIMITIVE]`
+
+As the Trust enforcing R7(A)'s lifetime restoration cap,
+I want consumed restorations to be counted,
+So that the two-lifetime-restoration limit is more than seeded data.
+
+**Acceptance Criteria:**
+
+**Given** nothing in the system records an R7(A) restoration as **consumed**
+**Then** this story defines that instrument and supplies `contribution.r7a_restorations_used` (int, lifetime, cap 2)
+
+**Given** the non-subsumption principle (Story 10.23) — joining discipline and restoration discipline are independent instruments
+**Then** the accounting couples to Story 10.23's restoration-discipline overlay with **separate expiry**; one clock never absorbs or shortens the other
+
+**Given** R7(A) also gates on joining-discipline state
+**Then** R7(A) activates **jointly with** Story 10.23's `member.joining_discipline_state` — this story alone does not light it
+
+**Depends on:** Story 10.23, Story 10.24.
+
+### Story 10.26: R7(G) Personal-Event Excuse Assertion `[SURFACE]`
+
+As a member asserting that a personal event caused a missed contribution,
+I want the assertion recorded on my own record,
+So that R7(G) can explain, in my record, how the Niyamavali treats it.
+
+**Acceptance Criteria:**
+
+**Given** FR-9 states **"R7(G): personal events do not excuse skips"** — the rule is declarative and never excuses
+**Then** this is **NOT** an excuse-granting flow, carries no waiver path, and no surface may imply that asserting an excuse changes an outcome
+
+**Given** the fact `contribution.personal_event_excuse_claimed` (bool) has no assertion path today
+**Then** this story supplies it by recording that an excuse **was asserted**, so R7(G) fires and explains why it does not apply — detection-and-explanation, never a waiver
+
+**Depends on:** Story 10.24.
 
 ---
 

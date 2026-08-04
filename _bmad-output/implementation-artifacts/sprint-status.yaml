@@ -1,4 +1,71 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-04c (CORRECT COURSE — `sprint-change-proposal-2026-08-04-R2.md` via
+#   bmad-correct-course. THREE new stories enter Epic 10 as `backlog`: 10-24 (contribution-fact producer
+#   projection + R7(C)-(F) activation), 10-25 (R7(A) restoration accounting), 10-26 (R7(G) personal-event
+#   excuse assertion). No existing key flipped; no code changed; PERMISSION_CATALOG_VERSION still 28.
+#   Scope: MODERATE (backlog reorganization + one NORMATIVE PRD amendment). Path selected: Direct
+#   Adjustment; rollback rejected (nothing to roll back — the gap is an ABSENCE, not a defect) and MVP
+#   review rejected (R7(A)-(G) is FR-9 core, carried verbatim from TSCT, not available to cut).
+#   THE ISSUE — the contribution-governance fact producer gap and why it survived: Story 4.2 deferred the
+#   `contribution.*` facts to "Epic 8/9"; both epics closed `done` WITH retrospectives and no story ever
+#   owned it. TWO causes, both structural. (1) THE DEFERRAL NAMED AN EPIC, and epics carry no acceptance
+#   criteria — all 13 Epic 8 stories and all 12 Epic 9 stories were checked and NONE is the fact producer.
+#   (2) TWO DISTINCT PRODUCERS WERE CONFLATED: the `contribution.confirmed` EVENT producer WAS built
+#   (Story 9.4's matcher — live emitters at apps/jobs/src/matcher/matcher-worker.ts:325 and
+#   apps/api/src/modules/reconciliation-review/handlers.ts:308), while the FACT producer that supplies the
+#   seven `contribution.*` keys to the validity payload was not. `assemblePayload` has no contribution
+#   input at all. So "did Epic 9 produce contribution facts?" reads YES for events and NO for facts
+#   [[project_r7_fact_producer_unbuilt]].
+#   THE DECOMPOSITION PRINCIPLE (why three stories, not one): this decomposition follows GOVERNANCE
+#   OWNERSHIP rather than implementation convenience — projection facts, restoration accounting, and
+#   member assertions evolve independently and therefore remain independently story-owned. Restoration
+#   accounting shares a data source with the projection facts but answers to a different governance
+#   instrument (10.23's restoration discipline); a member assertion is a member-facing ACT, not a derived
+#   fact. Collapsing them would couple three independently-amendable governance surfaces to one release.
+#   PER-CLAUSE ACTIVATION: R7(C)/(D)/(E)/(F) ← 10.24. R7(A)/(B) ← 10.23 + 10.25 JOINTLY. R7(G) ← 10.26.
+#   A clause whose facts are absent stays OMITTED from `applicable_niyamavali_clauses[]`, never silently
+#   evaluated.
+#   THE LOAD-BEARING FINDING (PRD conflict, now bound): `prd.md:339` FR-9 was amended 2026-08-04 to
+#   disclaim `total_count < 10` and `ever_contributed == false` as "implementation proxies, NOT the
+#   constitutional definitions" — R7(A)/(B) apply only while joining discipline is incomplete. The seeded
+#   payloads still encode the proxies (niyamavali-v1-clauses.sql:38,236, both already flagged
+#   `provisional`/`policy_review_required`). So supplying those two facts would NOT make R7(A)/(B)
+#   correct — it would make them CONFIDENTLY WRONG, which is worse than dark. The amendment stated the
+#   position in prose and bound NO testable consequence; FR-9 now carries a NORMATIVE first bullet: no
+#   implementation may substitute alternative proxy populations without a Part 11 amendment. R7(A)/(B)
+#   activation therefore holds on `member.joining_discipline_state` (Story 10.23), NOT on 10.24.
+#   SUBSTRATE ASSESSMENT, corrected against live source (the first pass was wrong twice):
+#   (a) `listMemberContributionHistory` (domain/src/contribution/history.ts:276) is NOT a viable source —
+#   it anchors on `contribution.utr-attested` (yellow) not confirmation, joins verdicts only for per-row
+#   status, and caps BOTH queries at 500 rows; a lifetime `total_count` off it is wrong for a high-count
+#   member and blind to any confirmation without a member attestation. The pool-scoped reads
+#   (`listConfirmedContributorsForPool`, `hasConfirmedContribution`) are the wrong axis.
+#   (b) `skips_current_year` is NOT substrate-less — pool snapshots carry `member_assignments`
+#   (domain/src/pool/snapshot.ts:105), so "assigned at freeze, no live confirmation at close" is
+#   derivable. Expensive, not absent.
+#   (c) Genuinely absent: `r7a_restorations_used` (nothing records a restoration as CONSUMED → 10.25) and
+#   `personal_event_excuse_claimed` (no assertion path → 10.26).
+#   ⇒ THE PRODUCER IS A PROJECTION, NOT A READ: FR-12A commits p95 < 200ms at 4L scale with <=60s
+#   freshness, which a per-evaluation lifetime `events_log` scan cannot hold. Materially larger than "map
+#   events to facts". BLAST RADIUS: wiring into `assemblePayload` changes EVERY validity payload hash →
+#   Story 4.8 cache epochs + the Story 7.4 assignment version pin. Never a side-quest.
+#   ALSO LANDED: `epics.md:3578` mis-attribution corrected — it credited the violator mechanism to "Story
+#   10.17's D1 surfacing mechanism", but 10.17 is entirely about `is_assignable` and the decision brief
+#   (:795-797) assigns the mechanism to 10.11. The correction also moves the fact-source pointer + the
+#   D1-B degraded-state requirement INTO the epic, so the decision no longer lives only in a story file —
+#   the exact failure mode this proposal exists to close. Plus two stale code comments retired
+#   (contracts/src/contributions/pool-contributor-list.ts:7, domain/src/index.ts:166) — both said "Epic
+#   9's producer, unbuilt -> honestly EMPTY today", written at Story 8.3 before the 9.4 matcher existed;
+#   the domain barrel now carries the event-vs-fact producer disambiguation.
+#   NO architecture/UX change (architecture.md:1150 references R7 only to tag it `pool`; no invariant,
+#   boundary, data model or contract touched). MVP UNAFFECTED — FR-9 stays in scope and unreduced; what
+#   changed is that its implementation dependency is now explicit and OWNED rather than implicit and
+#   unowned.
+#   STANDING RISK, recorded not resolved: until 10.24 lands R7 remains un-evaluated — trustees cannot
+#   detect contribution-discipline violations and a member who completes a restoration package has no
+#   system-observable path to recognition. Stories 10.11 and 10.16 intentionally degrade under ratified
+#   decision D1-B rather than presenting incomplete governance information as complete.
+#   SEQUENCE unchanged from 2026-08-04b: 10.16 -> 10.17 -> 10.11, then 10.24+.)
 # last_updated: 2026-08-04b (SEQUENCING DECISION — no status flip, no code, no catalog change.
 #   `10-11-trustee-lite-list-signals` STAYS `ready-for-dev` and is deliberately NOT next; Epic 10
 #   proceeds 10.16 -> 10.17 -> 10.11 instead. Recorded because a story sitting authored-but-unstarted
@@ -2863,6 +2930,9 @@ development_status:
   10-21-off-portal-dpdpa-access: backlog
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: backlog
+  10-24-contribution-fact-producer-projection-r7-cf-activation: backlog
+  10-25-r7a-restoration-accounting: backlog
+  10-26-r7g-personal-event-excuse-assertion: backlog
   epic-10-retrospective: optional
 
   # ==========================================================================

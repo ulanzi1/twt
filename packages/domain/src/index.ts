@@ -164,9 +164,12 @@ export * as pool from './pool/index.js';
 // `cycle.frozen` (the cycle-open trigger, apps/jobs) and is read by Epic 8's contribution surfaces.
 export * as alert from './alert/index.js';
 // Story 8.3 — confirmed-contributor read primitive (the Live Contributor List's read model). Sources
-// EXCLUSIVELY from `contribution.confirmed` event-derived state (Epic 9's producer, unbuilt → honestly
-// empty today) + the pure pending-aggregate. A READ, never a producer — it never confirms/promotes/mutates
-// contribution state. Read by Epic 8's <PoolContributorList> surface; the confirmed-only guard is structural.
+// EXCLUSIVELY from `contribution.confirmed` event-derived state (live since Story 9.4's matcher) + the pure
+// pending-aggregate. NOTE THE TWO DISTINCT PRODUCERS: the `contribution.confirmed` EVENT producer exists;
+// the contribution-FACT producer that supplies `contribution.*` keys to the validity payload does not —
+// that is Story 10.24, which is why R7 contribution-discipline clauses remain only partially evaluable
+// despite Epic 9's completed contribution matcher. A READ, never a producer — it never confirms/promotes/
+// mutates contribution state. Read by Epic 8's <PoolContributorList> surface; the confirmed-only guard is structural.
 export * as contribution from './contribution/index.js';
 // Story 9.2 — the [P0] canonical normalized bank-statement row schema (BankStatementEntry) + the
 // BankCode authority + the money/deterministic-id helpers every bank parser shares. The single shape

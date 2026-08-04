@@ -4,8 +4,9 @@
 // `GET /api/v1/member/pool-contributors` — the read seam that drives the `<PoolContributorList>`
 // member-facing live-pool view (the sibling of 8.2's `<ActiveContributionCard>`, extended from the
 // aggregate progress meter to the NAMED confirmed-contributor rows). Presentation only: it reads
-// `contribution.confirmed` event-derived state (Epic 9's producer, unbuilt → honestly EMPTY today) and
-// renders it; it NEVER confirms, promotes, or mutates contribution state (those land Epic 9 — see README).
+// `contribution.confirmed` event-derived state (produced by the Epic 9 matcher since Story 9.4 — this list
+// is live, not structurally empty) and renders it; it NEVER confirms, promotes, or mutates contribution
+// state (those land Epic 9 — see README).
 //
 // ── Contracts discipline ──────────────────────────────────────────────────────────────────────────────
 // A contracts SOURCE file MUST NOT import `@twt/domain` (the browser-bundle rule). Plain `string`/`number`

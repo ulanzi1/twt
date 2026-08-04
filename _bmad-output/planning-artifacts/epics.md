@@ -3360,7 +3360,7 @@ Trust staff and trustees do their daily ops work without WhatsApp chaos: publish
 
 **User Outcome:** Staff/trustees author News/Blog with audience scoping + scheduled publishing + per-post channel selection; helpdesk tickets route by category × scope with SLA tracking (24h first-response; 5/10 biz-day resolution); bulk ops support dry-run preview + per-item audit + scope-respecting + 5k-item-per-batch; reports render scope-respecting async exports; banners/popups manage with valid-from/until; feature flags gate per-cohort with audit + no-secret-flags + capability bar; member moderation audit-logged with reason codes.
 
-**FRs:** FR-48 (permission delegation `[v1-S]`), FR-49 (bulk ops everywhere — dry-run + scope-respecting + audit per-item + 5k cap), FR-51 (News/Blog dual surface + author≠reviewer + scheduled publish + channel-per-post), **FR-52 (Helpdesk first-class subsystem)**, FR-54 (per-Pariwar custom fields JSONB), FR-55 (fixed-amount setter + 12mo announcement), FR-56 (member moderation), FR-57 (Trustee-Lite list + signals), FR-58 (survey/poll `[v1-S]`), FR-58A (reports & exports library), FR-58B (banner/popup manager), FR-58C (feature flags per cohort + capability bar).
+**FRs:** FR-48 (permission delegation `[v1-S]`), FR-49 (bulk ops everywhere — dry-run + scope-respecting + audit per-item + 5k cap), FR-51 (News/Blog dual surface + author≠reviewer + scheduled publish + channel-per-post), **FR-52 (Helpdesk first-class subsystem)**, FR-54 (per-Pariwar custom fields JSONB), FR-55 (fixed-amount setter + 12mo announcement), FR-56 (member moderation), **FR-56A (moderation model: termination grounds, record model, appeal, restoration discipline)**, FR-57 (Trustee-Lite list + signals), FR-58 (survey/poll `[v1-S]`), FR-58A (reports & exports library), FR-58B (banner/popup manager), FR-58C (feature flags per cohort + capability bar).
 
 **Anchoring ARs:** AR-31 (observability), AR-35 (operations runbook inventory), AR-46 (per-Pariwar configurability), **AR-47 (Helpdesk subsystem architecture §3.5a)**, AR-64 (feature-flag staged rollout).
 
@@ -3537,9 +3537,14 @@ So that timely messages reach members without permanent UI clutter.
 
 ### Story 10.10: Member Moderation — Suspend / Terminate / Restore + Reason Codes `[SURFACE]`
 
-As a State Trustee with `member.moderate` permission,
+As a member of the Trustee Panel with `member.moderate` permission,
 I want to suspend, terminate, or restore members with structured reason codes + audit log,
 So that abuse / fraud / regulatory issues can be addressed with full traceability.
+
+> **Actor corrected 2026-08-04.** This story previously read *"As a State Trustee."* `state_trustee`'s
+> `state` ceiling can never satisfy a `pariwar`-dimension check — `scope.ts:56-61` ranks `pariwar`
+> broader than `state`, so no geo-tree resolver would fix it. The actor was the drafting error.
+> Story 10.18 constitutes the Trustee Panel and makes it grantable.
 
 **Acceptance Criteria:**
 
@@ -3549,6 +3554,16 @@ So that abuse / fraud / regulatory issues can be addressed with full traceabilit
 **And** structured reason codes are registry-driven (`fraud`, `concealment`, `regulator-action`, `voluntary-pending-review`, etc.); free-text rationale required + audit-logged
 **And** step-up OTP required (Story 5.9); member receives notification per Story 5.1
 **And** moderation actions respect the §1.14 event-derivation invariant — state changes flow through events, not direct UPDATEs
+
+> **Retro-note (2026-08-04, Sprint Change Proposal).** This story's suspension enforcement
+> (`is_valid: false`) made the Niyamavali's primary restoration path unreachable — `is_valid` is also
+> the sole pool-assignability predicate, and pool assignment is the only contribution path (fenced by
+> Story 8.10). Every suspension was therefore a de-facto permanent ban, contradicting §3.3.
+> Corrected by **Story 10.17**. The enforcement-scope claim at `payload.ts:46-48` is also wrong in
+> both directions: claim eligibility and the niyamavali engine do **not** read `is_valid`.
+> Stories 10.16–10.23 carry the full model. **ESCALATION 1 → 10.18 · ESCALATION 2 → 10.11 ·
+> ESCALATION 3 → 10.19.** Story 10.10 is **not reopened** — its audit, event, notice, RTBF-scrub and
+> RLS work stands; one derivation line was wrong.
 
 ### Story 10.11: Trustee-Lite List + Signals `[SURFACE]`
 
@@ -3560,9 +3575,20 @@ So that I can see at a glance what needs my attention without juggling multiple 
 
 **Given** FR-57 + Story 4.7 MemberStatusPanel pattern (compound read model)
 **When** the Trustee-Lite list + signals view is implemented
-**Then** the view aggregates: pending State Trustee cycle-freeze approvals (Story 6.13), R9 voting queues (Story 6.14), 3-stage appeal cases at the trustee's scope (Story 6.16), concealment-flagged claims (Story 6.15), reconciliation review queue items (Story 9.8) at trustee's scope, moderation pending items (Story 10.10)
+**Then** the view aggregates: pending State Trustee cycle-freeze approvals (Story 6.13), R9 voting queues (Story 6.14), 3-stage appeal cases at the trustee's scope (Story 6.16), concealment-flagged claims (Story 6.15), reconciliation review queue items (Story 9.8) at trustee's scope, and **moderation violator flags (Story 10.17's D1 surfacing mechanism)**
 **And** items are sorted by deadline-proximity; per-item signals show category + age + severity + cross-link to the canonical surface for the item
 **And** the surface is scope-respecting via Story 1.8
+
+**Given** D1 — the human gate stands and nothing auto-suspends, but nothing surfaces suspension **candidates** either
+**When** the signals view aggregates moderation items
+**Then** it renders **violator flags** — members in R7 violation, detected automatically and presented for trustee action. **The system detects and presents; the trustee decides and acts.**
+**And** a violator flag is **DETECTION ONLY — NEVER A RECOMMENDATION.** It states a fact that is true of the member's record and stops there. It MUST NOT: propose or name a sanction; carry a `recommended_action`, `suggested_outcome` or equivalently-named field; rank, score or sort members by inferred severity or urgency-of-action; pre-select an action in any downstream moderation form; or use verbs of advice (*"should be suspended"*, *"action required"*, *"overdue for review"*) in its copy. The permitted content is the **clause in violation, the facts establishing it, and the date from which it has held**
+**And** a CI assertion pins this: the flag's payload contract carries no recommendation-shaped field, and the moderation form's action selector is never pre-populated from a flag
+**And** Story 10.10 defines no pending/queue concept and none is invented here — moderation items carry no deadline and no severity, so the `deadline-proximity` sort and the `severity` signal above **do not apply to the moderation rows** and must degrade explicitly rather than render empty. This is reinforced by the detection-only rule: **a severity score on a moderation row would itself be a recommendation**
+
+*Rationale for detection-only: a flag that recommends is a soft auto-suspend — it relocates the decision from the trustee to the detector while preserving the appearance of a human gate. The four standing no-auto-suspend prohibitions (`ux-design-specification.md:123,203,1066`; `docs/fallback-handler-ledger/README.md:67`; `epics.md` partner-driven clause) prohibit the **decision moving**, not merely the API call firing automatically.*
+
+*ESCALATION 2 resolved: the gap was never "a queue we forgot to build" but "discretionary suspension needs a candidate-surfacing mechanism, and that mechanism is what 10.11 should aggregate." This reframes 10.11's scope rather than blocking it.*
 
 ### Story 10.12: Per-Pariwar Custom Fields JSONB `[PRIMITIVE]`
 
@@ -3619,6 +3645,250 @@ So that member feedback flows into product / policy decisions structurally.
 **Then** the admin authors a survey with: title, questions (multiple choice / free text), audience scope, valid-from/until; member receives notification via Story 5.1 + answers in-app
 **And** responses are scope-respecting; aggregate analytics surface in admin UI; raw PII-shielded
 **And** simple v1; full analytics deferred to v2
+
+---
+
+> **Stories 10.16–10.23 — the moderation model.** Added 2026-08-04 by Sprint Change Proposal
+> (`sprint-change-proposal-2026-08-04.md`), which consumed the Story 10.10 decision brief. They are
+> numbered in **execution order**, not appended arbitrarily. Two sequencing constraints are
+> load-bearing: **10.16 gates 10.17** (a suspended member must never be asked to contribute before
+> the no-entitlement disclosure exists), and **10.18 gates 10.20** (the Trustee Panel must be
+> constituted in the Niyamavali and grantable in the capability model before it can be named as the
+> body that determines sanctions). The constitutional frame for all eight:
+> **Termination is an exceptional governance act, not a stronger suspension.**
+
+### Story 10.16: Contribution-During-Suspension Disclosure `[SURFACE]`
+
+As a member who is suspended and being asked to contribute,
+I want the payment surface to tell me plainly what this payment does and does not buy,
+So that I am never asked for money under a misapprehension about my own coverage.
+
+**Acceptance Criteria:**
+
+**Given** D4-a + `docs/tone-guide.md` + §4.5 no-shortfall-framing discipline
+**When** a member with `moderationStatus === 'suspended'` (or an active restoration-discipline lock-in) is rendered a contribution request
+**Then** the surface renders, on the payment surface itself and not in a status panel: *"Contributions made during suspension restore standing but do not create beneficiary entitlement for deaths occurring during the suspension period."*
+**And** it states what the payment does, what it does not buy, and how many contributions remain in the restoration package
+
+**Given** the disclosure applies to **both** instruments
+**When** a member is in a discipline lock-in rather than suspension
+**Then** the equivalent disclosure renders — a locked-in member contributes without coverage and is equally entitled to know
+
+**Given** `packages/ui/src/member-status/presenter.ts:81-91`
+**When** the suspended-and-contributing combination renders
+**Then** the headline logic is unchanged (it reads `specialFlags`) and the new *combination* is covered by a **render** test, not only a view-model test — Story 10.10's second review pass found AC9's prose reached nobody because tests asserted the view-model and never the render
+
+**Dependency:** `[GATE]` — Story 10.17 MUST NOT deploy without this story.
+
+### Story 10.17: Moderation Roster Unblock — Suspension Keeps the Donor Roster `[SURFACE]`
+
+As a suspended member with an available restoration path,
+I want to remain on the donor roster so I can make the contributions that restore me,
+So that the Niyamavali's primary restoration path is actually reachable.
+
+**Principle (the *why*, recorded explicitly):** A suspension removes a member's **entitlement to receive support**, not their **obligation to contribute** toward the Pariwar while completing an available restoration path.
+
+**Acceptance Criteria:**
+
+**Given** D3 + Niyamavali §3.3
+**When** the assignability predicate is derived
+**Then** `is_assignable = VALID_STATES.includes(state) && moderationStatus !== 'terminated'` — a **single predicate, no reason-code branching**
+**And** `is_valid` keeps its current meaning (coverage; suspended → false); only the roster switches fields
+
+**Given** the AI-7-2 frozen invariant
+**When** `apps/jobs/src/assignable-roster.ts:52` reads the new field
+**Then** the roster still reads **one pre-derived field** — no eligibility logic enters `apps/jobs`, which is what AI-7-2 exists to protect
+**And** the frozen-invariant doc block at `:43-48` is rewritten, and this is recorded as an **amendment to AI-7-2, not a violation**
+
+**Given** Tier 1 (5 files)
+**Then** `payload.ts:77` adds `deriveIsAssignable` wired at `:290`; `types.ts:167` and `contracts/src/members/validity.ts:111` add the field; OpenAPI regenerates with corrected prose
+
+**Given** Tier 3 replay determinism
+**When** the predicate changes
+**Then** a test **pins** byte-identical re-spawn from a frozen `committed_at`. Nothing diverges today (no moderation event predates any frozen cycle) — the pin exists so that stays true
+
+**Given** Tier 2
+**Then** pool-spawn comments, Story 8.6 yogdaan status and Story 8.8 alert copy are reconciled: a suspended member receiving a contribution alert **is the cure working**, and the copy must say so
+
+**Depends on:** Story 10.16 `[GATE]`.
+
+### Story 10.18: Constituting the Trustee Panel as a Sanctioning Authority `[GOVERNANCE]`
+
+As the Trustee Panel named by the Niyamavali as the body that determines moderation sanctions,
+I want the Trust's governing instruments to constitute me as an authority the system can recognise,
+So that the governance document does not describe an authority the system cannot express.
+
+**Framing — this is not an RBAC task.** Its subject is *who holds the authority to sanction a member*; the permission key is the last and smallest step in expressing that. The governance work — defining the body in Part 8, establishing its composition and scope, and settling that it is a **Pariwar-level governing body rather than a geographic office** — is the substance. A role bundle preceding that definition would be a capability without a constituted holder.
+
+**Acceptance Criteria:**
+
+**Given** Niyamavali Part 8 names *"a State Trustee"* (§8.2) and *"Trustee discretion"* (§8.3) and never defines a **Trustee Panel**
+**When** the capability work begins
+**Then** the **Part 8 amendment constituting the Trustee Panel lands FIRST** — the body is defined in governance before it is granted in code
+
+**Given** `packages/domain/src/rbac/scope.ts:56-61` ranks `pariwar`(1) **broader than** `state`(2), so a state-ceiling grant can never contain a pariwar target under **any** resolver
+**When** the role is modelled
+**Then** a **pariwar-ceiling** role (`trustee_panel`, `scopeCeiling: 'pariwar'`) is introduced holding `member.moderate`
+**And** the story records explicitly that supplying a geo-tree resolver would **not** have solved this — the constraint is the rank ordering, not the missing resolver
+
+**Given** `denyDeeperGeoResolver` (`scope.ts:133-135`) is the only implementation, no org-hierarchy table exists, and ~14 sites defer geo containment "to Epic 3" — which is `done`
+**Then** this story **does NOT build the geo-tree resolver**. It re-points the stale markers to a named successor item and leaves the resolver deferred
+**And** the marker sites in `rbac/roles.ts` and `permissions.ts` are updated so the deferral is honestly addressed
+
+**Given** `PERMISSION_CATALOG_VERSION = 28`
+**Then** the catalog bumps 28 → 29 with the seeded role
+
+**Given** `member.suspend` is superseded by `member.moderate`
+**Then** it is marked **`deprecated`, NOT removed**, for the duration of the migration: the key stays in the catalog and stays enforceable; **existing grants continue to be honoured**; **no new grants** are issued; every declaration site names `member.moderate` as its successor; and a CI assertion fails if a new grant appears
+**And** removal is a **separate, later catalog bump**, taken only once no live grant references it — never bundled into this story
+
+**Gates:** Story 10.20.
+
+### Story 10.19: Termination Ends Membership Privileges `[SURFACE]`
+
+As the Trust,
+I want termination to end authenticated member access rather than leave an expelled person with a live portal account,
+So that ESCALATION 3's write access closes at its root instead of being patched at five gates.
+
+**Acceptance Criteria:**
+
+**Given** D5's ratified principles
+**When** a member is terminated
+**Then** login is blocked. Moderation is an **overlay, not a lifecycle state**, so this adds an **overlay read to the auth path** at `member-auth.handlers.ts:71` — not a string added to a set
+**And** the block is **timing-equalised** exactly like the existing withdrawn block (P6, `:77`), or the response-time difference becomes a membership-enumeration oracle
+
+**Given** ESCALATION 3
+**Then** the five `TERMINAL_STATES` sets are **untouched** — with no authenticated session there is no write path to gate; no AC5 deviation is required
+
+**Given** `revokeAllMemberSessions` already runs on suspend and terminate
+**Then** this closes the half where revocation did not block re-login
+
+**Given** the notice **is** the explanation once the portal is closed
+**Then** the termination notice is **self-contained**: Decision · Ground · Summary · Effective date · Further communication. No portal dependency, no deep link
+**And** the Summary is member-facing prose **derived from** the Decision Note — never the Tier-1 Decision Note verbatim, which may carry detail that must not ride SMS or WhatsApp
+
+**Given** D5 requirement 3
+**Then** **suspension is unaffected** — a suspended member retains login; they are curing, they need the contribution surface, and Story 10.16's disclosure lives there
+
+**Given** Story 10.10's Decision 6 justified open login by the member reaching an appeal CTA that does not exist
+**Then** Decision 6 is recorded as superseded
+
+### Story 10.20: Moderation Record Model `[PRIMITIVE]`
+
+As a Trustee Panel recording a moderation decision,
+I want the record to separate the ground, the facts, and the proportionality reasoning,
+So that a decision can be reconstructed, tested against the principles, and enriched without being rewritten.
+
+**Six labelled workstreams.** WS-B is the only one that touches the schema; WS-A/C/D/E/F build on it; WS-F is data and copy only. If capacity requires splitting, split along these lines rather than re-cutting the scope.
+
+**Acceptance Criteria:**
+
+**WS-A — Record structure**
+**Given** the three separable parts
+**Then** the record carries **(1)** reason code(s) — structured, exactly one **primary**, any number of supporting; **(2)** **Decision Note** — prose, governance-grade, always required; **(3)** **evidence** — *references only, never free text* (complaint #, investigation #, helpdesk ticket, document IDs, external order number)
+
+**WS-B — Schema migration**
+**Given** one migration
+**Then** it adds `escalation_justification` + `evidence_refs` + primary/supporting grounds **and renames `rationale` → `decision_note`**
+**And** the rename is **bundled here, not taken standalone** — `rationale` ships with Tier-1 encryption, a decrypt endpoint and an RTBF scrub (migration 0092), all four of which a standalone rename would re-do for no functional gain
+**And** the migration is authored fresh, never a regeneration of an applied migration
+
+**WS-C — Proportionality safeguards**
+**Given** principles 3 and 5
+**Then** an **escalation justification is mandatory when `action === 'terminate'`**, structured as a **two-part test where both parts are required**:
+  **(a) Why suspension is inadequate** — what suspension would fail to protect, what risk would persist through it, or why the restoration path it preserves is unavailable or futile
+  **(b) Why termination is proportionate** — why the chosen sanction fits the conduct
+**And** part (a) is **NOT satisfied** by asserting the seriousness of the conduct, by citing the reason code, or by restating (b); the form and copy must make the two parts separately answerable, and neither may be pre-filled from the other
+**And** terminating on a ground with an available restoration path requires a recorded justification — `contribution.r7a_restorations_used >= 2` already evidences genuine exhaustion, so this is checkable from data rather than assertion
+
+**WS-D — Due-process preconditions**
+**Given** principles 6–7
+**Then** a dwell/notice precondition is added in `nextModerationStatus`'s **caller** — a new precondition, **not a new state**
+**And** the story records what it corrects: `nextModerationStatus('suspended','terminate')` returns `'terminated'` unconditionally, so two API calls seconds apart terminate a member — and because the suspension notice is a best-effort post-commit job, termination can precede its own notice
+
+**WS-E — Append-only grounds**
+**Given** the operational act of appending a finding
+**Then** `member_moderation_grounds` is keyed to `moderation_action_id`, carrying code · primary flag · added_by · added_at · note · evidence refs
+**And** codes may be **added, superseded, or corrected by a further append-only record** — never edited or removed; a later finding **attaches to** the original action and does not alter it
+
+**WS-F — Vocabulary boundary**
+**Given** principle 2
+**Then** **do not hard-narrow `appliesTo`** — it stays `['suspend','terminate']`; add **guidance** metadata (`ordinarilyResultsIn: 'suspend'`) the admin UI surfaces. If the Trustee Panel determines the sanction, the registry must not pre-empt it
+**And** `reason-codes.ts`'s frozen code-level vocabulary **stays as shipped**; creating a **new** reason code remains a Part 11 amendment → registry version → trustee approval → audit → publication, **never a runtime mint path**
+**And** the record model is built **moderation-only**, with columns kept subject-agnostic so it *could* generalise, named in the story as a recognised future extraction point — extracted only when a second discipline surface actually exists
+
+**Depends on:** Story 10.18.
+
+### Story 10.21: Off-Portal DPDPA Access `[SURFACE]`
+
+As a terminated member with no portal account,
+I want an identity-verified route to my statutory data rights,
+So that ending membership does not silently end rights the DPDPA guarantees.
+
+**Acceptance Criteria:**
+
+**Given** Niyamavali Part 10 guarantees access, correction, portability and erasure, and Story 3.11's export is a **member-portal** feature
+**When** a terminated member exercises a statutory right
+**Then** an **identity-verified helpline/helpdesk route** delivers access, correction, portability and erasure without a standing authenticated surface
+
+**Given** the D5 principle promises a **process, not a portal**
+**Then** the route is administrative and identity-verified; it does not reinstate authenticated access
+
+**Given** Epic 10's helpdesk subsystem
+**Then** the route reuses the Story 10.1 substrate rather than inventing a parallel intake
+**And** subject-scoped reads are **member-scoped**, not artifact-scoped
+
+**Release gate:** must land before the first termination is permitted.
+
+### Story 10.22: Moderation Appeal Mechanism `[SURFACE]`
+
+As a member who has been suspended or terminated,
+I want a route to challenge the decision,
+So that the appealability the system already claims is actually true.
+
+**Acceptance Criteria:**
+
+**Given** `packages/domain/src/member/moderation/status.ts:17` already asserts suspension is *"notified, audited and appealable"* and `handlers.ts:228` cites reaching an appeal CTA
+**When** this story ships
+**Then** that claim becomes true, and the unbacked comments are corrected
+
+**Given** `appeal-eligibility.ts` is entirely claim-scoped (*"exactly one journey per claim, ever"*) and Part 8 never references Part 9
+**Then** the moderation appeal is a **distinct journey** — Epic 6's machinery is a pattern reference, not a reusable path
+
+**Given** Deed Clause 26 natural justice and Part 9's Stage-1 discipline
+**Then** the appeal is heard by a **different individual** from the original decision-maker, with notice, a fair hearing and a reasoned outcome
+
+**Given** `ux-design-specification.md:1893`'s existing "Appeal this decision" CTA
+**Then** the CTA acquires a real moderation destination
+
+**Given** Story 10.19
+**Then** the appeal is reachable **off-portal** for a terminated member (reusing Story 10.21's route) — the appeal must not depend on the access termination removes
+
+### Story 10.23: Restoration Discipline Lock-In `[PRIMITIVE]`
+
+As the Trust enforcing R7(B)–(F),
+I want the 3- and 5-month restoration lock-ins to exist in the system,
+So that §3.1's prescribed restoration packages are more than seeded data.
+
+**Acceptance Criteria:**
+
+**Given** `lock_in_months` appears **only** in test fixtures and no production code consumes it
+**When** the instrument is built
+**Then** **D2-a: a second overlay**, mirroring the shipped moderation overlay — the `lock-in` *lifecycle state* stays join-only; the overlay carries `imposed_at` + duration + policy version, folds into `is_valid` (coverage), and is **ignored by the roster**
+**And** D2-b (an `active → lock-in` lifecycle transition) is rejected — it carries the Decision-1 defect: expiry cannot know which state to return to, so a member locked from `active-in-grace` cannot be routed back
+
+**Given** the non-subsumption principle — joining and restoration discipline are **independent instruments that run concurrently**
+**Then** the overlay tracks them **separately, with separate expiry**; one clock must never absorb or shorten the other. Design the overlay to hold **both**, not one
+
+**Given** the FR-8 pattern
+**Then** duration comes from a **new restoration-discipline policy clause** in the registry, resolved and **version-pinned at imposition**
+**And** `lock_in_days_at_join` is **NOT** reused — it is join-scoped by name and semantics
+
+**Given** the engine consumes facts and never derives them
+**Then** a new fact `member.joining_discipline_state` is **sourced from the validity payload**, never computed inside the rule engine — the payload already carries `lockInStatus.state`, so the producer side is a projection
+
+**Given** Story 10.16
+**Then** the disclosure applies to locked-in members too
 
 ---
 

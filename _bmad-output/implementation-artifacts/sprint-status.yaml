@@ -1,4 +1,60 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-04 (SPRINT CHANGE PROPOSAL — the moderation model. bmad-correct-course
+#   consumed moderation-model-decision-brief.md (867 lines) and produced
+#   planning-artifacts/sprint-change-proposal-2026-08-04.md. Scope: MAJOR — PRD amendment + 11
+#   Niyamavali Part 11 amendments (NOT applied; routed to PM/Trustee Panel/legal counsel) + a
+#   frozen-invariant amendment + 8 new stories + 2 story-scope amendments.
+#   THE FINDING: Story 10.10 enforced suspension via `is_valid: false`, which is ALSO the sole
+#   pool-assignability predicate; pool assignment is the only contribution path (fenced by 8.10);
+#   R7(A) restoration requires 3 consecutive contributions. So every suspension was a de-facto
+#   PERMANENT BAN and Niyamavali §3.3 was contradicted — the codebase already honours §3.3 for
+#   lock-in (VALID_STATES keeps a locked-in member on the roster) and 10.10 did the opposite for
+#   suspension. Six of seven R7 clauses can only be cleared by contributing; all six unreachable.
+#   10.10 is NOT reopened (its audit/event/notice/RTBF-scrub/RLS work stands; one derivation line
+#   was wrong) — corrected by 10.17. Rollback rejected: it would discard ~7,885 reviewed lines.
+#   THREE VERIFICATION CORRECTIONS to the brief, checked against live source, all making D6 CHEAPER:
+#   (V1) the brief blames the missing geo-tree resolver for `state_trustee` failing a pariwar check
+#   — actually scope.ts:56-61 ranks pariwar(1) BROADER than state(2), so a state node can never
+#   contain a pariwar target under ANY resolver; "build the resolver" was never a route, and a
+#   pariwar-ceiling role is the only one. (V2) denyDeeperGeoResolver (contains: () => false) is the
+#   sole implementation, no org-hierarchy table exists, and ~14 sites defer geo containment "to
+#   Epic 3" — which has been done since 3.12; the marker is STALE. Deliberately scoped OUT of 10.18
+#   (re-pointed, not discharged) so a cheap early unblock doesn't become a long one. (V3) the
+#   Niyamavali never defines a "Trustee Panel" — Part 8 says "a State Trustee"/"Trustee discretion",
+#   and there is no trustee_panel among the 12 seeded roles; so the Part 8 amendment CONSTITUTING
+#   the body blocks 10.18, which blocks 10.20. That is the critical path, and it is legal-counsel
+#   work, not code. (V4) moderation/status.ts:17 already asserts suspension is "notified, audited
+#   and APPEALABLE" — it is not; appeal-eligibility.ts is entirely claim-scoped and Part 8 never
+#   references Part 9. The D10-p8 gap is a live UNBACKED CLAIM in shipped rationale, not an absence.
+#   ONE SEQUENCING CHANGE against the brief: the brief puts D4 (disclosure) at position 5, after D2.
+#   Moved to position 1 as a HARD GATE on the roster unblock — the moment 10.17 lands, suspended
+#   members receive contribution requests with no coverage and no explanation, which is exactly the
+#   harm D4 exists to prevent, for a bereaved family. 10.16 `[GATE]` 10.17.
+#   Approved by BigDev subject to SEVEN CONDITIONS, all applied: (1) 10.18 renamed to
+#   "Constituting the Trustee Panel as a Sanctioning Authority" + framing note that it is NOT an
+#   RBAC task; (2) 10.20 split into six labelled workstreams WS-A record structure / WS-B schema
+#   migration / WS-C proportionality safeguards / WS-D due-process preconditions / WS-E append-only
+#   grounds / WS-F vocabulary boundary; (3) the constitutional sentence "Termination is an
+#   exceptional governance act, not a stronger suspension." added verbatim to Niyamavali §8.6 p1 +
+#   PRD FR-56; (4) a 12-dimension suspension-vs-termination comparison table added as new Niyamavali
+#   §8.4a; (5) violator flags stated DETECTION ONLY, NEVER RECOMMENDATIONS — with a prohibited-field
+#   list (no recommended_action, no severity ranking, no pre-selected action, no verbs of advice)
+#   and a CI assertion, because a flag that recommends is a soft auto-suspend that moves the
+#   DECISION off the trustee while preserving the appearance of a human gate; (6) member.suspend
+#   kept DEPRECATED during migration (stays enforceable, existing grants honoured, no new grants,
+#   CI fails on a new one) with removal as a separate later catalog bump — retiring it while grants
+#   may still reference it would turn a governance migration into an access outage; (7) the
+#   escalation justification strengthened to a TWO-PART test requiring (a) why SUSPENSION IS
+#   INADEQUATE and (b) why termination is proportionate, with (a) explicitly NOT satisfied by
+#   asserting the seriousness of the ground, not pre-fillable from (b), and separately answerable.
+#   Applied: epics.md (8 new stories 10.16-10.23 in EXECUTION order + 10.10 retro-note + 10.10 actor
+#   correction + 10.11 detection-only scope amendment + FR-56A in the Epic 10 header); prd.md (FR-56
+#   amended, FR-8 scope fence, FR-9 non-subsumption, FR-95/96 off-portal carve-out, FR-57
+#   detection-only); this file. NOT applied, routed out: the 11 Niyamavali Part 11 amendments
+#   (legal-counsel review per docs/legal-counsel-engagement/ §1(a)/(c)), the architecture edits, the
+#   docs/ governance reference, .decision-log.md entries, and the two §3.3 MVP calls (moderation
+#   appeal + off-portal DPDPA as conditions on ENABLING TERMINATION, not calendar dates).
+#   No code changed; no story status flipped. 10-16..10-23 enter as backlog.)
 # last_updated: 2026-08-03b (10-10-member-moderation-suspend-terminate-restore-reason-codes:
 #   SECOND bmad-code-review pass, run against the base PLUS the 13-fix commit 6ad0516, with the
 #   prior Review Findings deliberately WITHHELD from the finder layers (fresh eyes). Three parallel
@@ -2677,6 +2733,14 @@ development_status:
   10-13-fixed-amount-setter-admin-ui: backlog
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog
+  10-16-contribution-during-suspension-disclosure: backlog
+  10-17-moderation-roster-unblock: backlog
+  10-18-constituting-the-trustee-panel-sanctioning-authority: backlog
+  10-19-termination-ends-membership-privileges: backlog
+  10-20-moderation-record-model: backlog
+  10-21-off-portal-dpdpa-access: backlog
+  10-22-moderation-appeal-mechanism: backlog
+  10-23-restoration-discipline-lock-in: backlog
   epic-10-retrospective: optional
 
   # ==========================================================================

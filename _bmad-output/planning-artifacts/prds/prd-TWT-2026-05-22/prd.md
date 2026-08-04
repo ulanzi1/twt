@@ -332,6 +332,7 @@ Serious-illness lock-in: not applicable to v1 (no illness category). Reserved fo
 - Lock-in duration is a Niyamavali clause keyed `general_death_lock_in.days`, not a code constant. (FR-7 registry.)
 - Trustee amendment to `general_death_lock_in.days` requires role `Pariwar Admin` or higher and produces a diff document (per FR-7), an announcement notification to affected members, and an audit-log entry (FR-47).
 - Each member carries `lock_in_days_at_join` snapshot — the registry value at their join time. The validity service (FR-12A) computes their unlock date from that snapshot, not the current registry value.
+- **Scope fence (added 2026-08-04).** `lock_in_days_at_join` is **join-scoped** by name and semantics. Restoration discipline (R7(B)–(F)'s 3- and 5-month lock-ins) uses a **separate** registry policy clause, resolved and version-pinned at imposition. The two clocks run **concurrently and independently** — neither absorbs, shortens nor completes the other.
 - A new joiner after a graduation gets the new (longer) value; existing members are unaffected.
 - `[ASSUMPTION: Graduation triggers — member-count thresholds + trustee judgment — are set by the Trustee Panel pre-launch. PRD captures the principle; the schedule is operational policy, not software config.]`
 
@@ -340,6 +341,8 @@ Serious-illness lock-in: not applicable to v1 (no illness category). Reserved fo
 Carry TSCT's R7(A–G) restoration rules as v1 baseline. Tag the registry entries `policy_review_required` to flag that thresholds may need re-tuning under the phased lock-in ramp.
 
 **Consequences (testable):**
+**Restoration never substitutes for joining discipline (added 2026-08-04).** Restoration obligations and joining discipline are **independent governance instruments**. A member may simultaneously owe both; completion, expiry or satisfaction of one never shortens, waives or completes the other unless the Niyamavali expressly provides otherwise. R7(A) and R7(B) therefore apply only while the original joining discipline remains incomplete — the v1 populations below (`total_count < 10`; `ever_contributed == false`) are **implementation proxies, not the constitutional definitions**: a lifetime contribution count is not a joining-discipline state, and `ever_contributed == false` cannot distinguish a new member still completing joining discipline from a long-standing member who never contributed. Superseded by the Niyamavali §3.1 amendment. *(Without this, a member can shorten a 12-month joining discipline to roughly 8 months by lapsing deliberately — inverting its purpose and creating the exact adverse-selection risk that "level playing field / fair opportunity" exists to prevent.)*
+
 - R7(A): break before 10 contributions → 3-consecutive-contribution restore; one-time-only; max 2 lifetime → after that R7(B) applies.
 - R7(B): registered but never contributed → 5-consecutive + 3-month lock-in; core-team recommendation.
 - R7(C): long gap → treated as new registration; 5-consecutive + lock-in.
@@ -853,9 +856,27 @@ State transitions: `active ↔ suspended → terminated`. Restoration paths are 
 - A suspended member can be restored on either rule-clearance (e.g., R7(A) restoration via 3 consecutive contributions) or trustee discretion (R5(D), R10(D)).
 - Termination is recoverable only via trustee-explicit reinstatement; rejoin under same identity blocked for 12 months (FR-6).
 
+**Amended 2026-08-04 (Sprint Change Proposal — moderation model).**
+
+**Suspension preserves the obligation to contribute.** A suspension removes a member's entitlement to *receive* support, not their obligation to *contribute* while completing an available restoration path. Suspended members remain on the donor roster; only termination removes them. (Niyamavali §3.3 — a member under discipline remains a member and may continue to contribute; the restoration path requires ongoing contribution, so removing them from the roster makes rule-clearance restoration unreachable.)
+
+**Contributions during suspension do not create entitlement.** Disclosed on the payment surface itself, not in a status panel: contributions made during suspension restore standing but do not create beneficiary entitlement for deaths occurring during the suspension period. This applies equally to a member serving a restoration-discipline lock-in.
+
+**Termination is an exceptional governance act, not a stronger suspension.** It carries its own threshold, its own reasoning and its own record. Grounds, principles and the record model are governed by Niyamavali Part 8 as amended — including the suspension-vs-termination comparison at §8.4a. Termination ends authenticated member access; statutory rights survive through an identity-verified administrative process (see FR-95/FR-96).
+
+**Termination requires a two-part escalation justification.** The decision-maker must record BOTH (a) why suspension is inadequate to the case — what it would fail to protect, what risk would persist through it, or why the restoration path it preserves is unavailable or futile — AND (b) why termination is proportionate. Part (a) is not satisfied by asserting the seriousness of the ground.
+
+**Consequences (testable):**
+- Grounds for termination are enumerated separately from grounds for suspension; the two sets are not interchangeable.
+- No termination is recordable without a two-part escalation justification whose parts are separately answerable and not pre-fillable from one another.
+- Moderation carries a member-facing appeal route distinct from the claim-denial appeal flow (Niyamavali Part 9 is claim-scoped and Part 8 does not reference it).
+- Violator detection surfaces candidates for trustee action but never recommends a sanction (FR-57).
+
 #### FR-57: Trustee-Lite list + signals (v1 alternative to full Kanban)
 
 Pragmatic v1 claim board: a list view sorted by stage and deadline + the FR-42 signals panel on hover/tap. Full Kanban deferred to v2.
+
+**Violator flags are detection only (added 2026-08-04).** The list surfaces members in R7 violation so a trustee can act — the system detects and presents; the trustee decides and acts. A violator flag **never recommends a sanction**: no proposed action, no `recommended_action`-shaped field, no severity ranking, no pre-selected action in a downstream moderation form, no verbs of advice in its copy. Permitted content is the clause in violation, the facts establishing it, and the date from which it has held. A flag that recommends is a soft auto-suspend — it relocates the decision from the trustee to the detector while preserving the appearance of a human gate, which the standing no-auto-suspend prohibitions forbid.
 
 #### FR-58: Survey/poll authoring + results dashboard `[v1-S]`
 
@@ -1218,6 +1239,8 @@ Soft-delete member profile; contributions anonymized to "an anonymous member." N
 - RTBF action audit-logged with timestamp + member acknowledgement.
 - Audit log itself is not anonymized (regulatory necessity).
 - Post-RTBF, member cannot rejoin under same Aadhaar for 12 months (FR-6 rejoin lock).
+
+**Terminated members (added 2026-08-04).** FR-95's export and FR-96's RTBF are **member-portal** features. Termination ends authenticated member access, so for terminated members these rights are exercised through an **identity-verified administrative route** designated by the Trust (Niyamavali Part 10; Epic 10 Story 10.21). The route delivers access, correction, portability and erasure without reinstating a standing authenticated surface. Absent it, termination would silently extinguish rights the DPDPA guarantees — a compliance gap by omission.
 
 #### FR-97: Consent registry (DPDPA #3)
 

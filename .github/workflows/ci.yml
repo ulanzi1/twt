@@ -891,4 +891,17 @@ jobs:
         # producer + audit-on-admin-call + idempotent replay + the p95 benchmark
         # harness). @twt/channels joined at Story 5.1 (the dispatch audit-lines spec:
         # real writeAuditEntry dispatch + per-channel HMAC-not-raw-PII hash).
-        run: pnpm turbo run test --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels
+        #
+        # ⚠ `--concurrency=1` IS LOAD-BEARING, NOT A PERFORMANCE KNOB. All eight filtered packages
+        # share ONE Postgres service container. Turbo's default (10) runs them simultaneously, and
+        # several of them (@twt/domain, @twt/api, @twt/channels, @twt/validity-service, @twt/jobs)
+        # write to the ONE global `audit_log_entries` chain via writeAuditEntry. That defeats
+        # apps/jobs/vitest.config.ts's `fileParallelism: false` from OUTSIDE the package: it
+        # serializes jobs' own files, then another package interleaves a row into the global seq
+        # anyway, and the chunk-walk tests' "the rows I wrote are consecutive" assumption breaks.
+        # Observed 2026-08-04 on three consecutive main runs, a different count-assertion spec each
+        # time (member-auth, audit/integrity-check, feature-flags/flag-flip-concurrency).
+        # `scripts/ci-local.sh:74` has carried this cap since the Epic-7 oversubscription fix; it was
+        # never mirrored here, so the local pre-push mirror could not reproduce the failure. Keep the
+        # two invocations in sync — a cap of 4 is NOT equivalent, it merely lowers the failure rate.
+        run: pnpm turbo run test --concurrency=1 --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels

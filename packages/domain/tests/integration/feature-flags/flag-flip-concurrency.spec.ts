@@ -73,11 +73,38 @@ describe.skipIf(!hasDatabase)('createFlagVersion — two-connection version race
   }, 20_000);
 
   it('⚠ two parallel first-flips: exactly ONE wins, the loser gets FlagVersionConflictError (409 seam)', async () => {
+    // ⚠ A DETERMINISTIC RENDEZVOUS, not a hoped-for interleave (2026-08-04). The race this file
+    // exists to prove is only reachable when BOTH connections have read `max(version)` before
+    // EITHER commits. Left to chance that is load-sensitive: under a starved CI runner connection A
+    // can complete end-to-end before B reads, B then sees the higher max, claims a free number, and
+    // BOTH succeed — observed in Actions as `expected [ …(2) ] to have a length of 1`. The barrier
+    // below makes the precondition structural, so the test proves the same invariant on a busy
+    // runner as on an idle laptop.
+    //
+    // REPEATABLE READ pins each transaction's snapshot at its first real query (a `SET` is a utility
+    // statement and takes none — hence the explicit SELECT). With both snapshots taken pre-commit,
+    // both calls compute the same next version and the loser MUST hit the unique constraint.
+    let releaseBarrier!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+    let arrived = 0;
+    const arriveAndWait = (): Promise<void> => {
+      if (++arrived === 2) releaseBarrier();
+      return barrier;
+    };
+
     async function attempt(client: pg.PoolClient, rationale: string): Promise<number> {
       await client.query('BEGIN');
+      await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
       await client.query('SET LOCAL ROLE twt_app');
       await setPariwarScope(client, PARIWAR_A);
       const db = drizzle(client) as unknown as Db;
+      // Force the snapshot before the barrier — this is the "read" half of the race.
+      await client.query('SELECT max(version) FROM feature_flag_versions WHERE flag_key = $1', [
+        KEY,
+      ]);
+      await arriveAndWait();
       try {
         const row = await createFlagVersion(db, {
           flagKey: KEY,

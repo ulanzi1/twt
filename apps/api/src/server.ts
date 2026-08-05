@@ -59,6 +59,7 @@ import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
+import { registerTrusteeLiteModule } from './modules/trustee-lite/index.js';
 import { registerReportsModule } from './modules/reports/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
 import { registerCsrf, originCheckHook } from './plugins/csrf-protection/index.js';
@@ -296,6 +297,15 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // by Story 10.17: `is_valid` = COVERAGE, and the separate `is_assignable` = DONOR ROSTER, on which
   // a SUSPENDED member stays TRUE — only termination removes them).
   registerMemberModerationRoutes(app, deps);
+  // Story 10.11 — the FR-57 Trustee-Lite list + signals surface: ONE read-only GET aggregating six
+  // trustee-attention sources (cycle freeze / R9 voting / concealment / appeals / reconciliation /
+  // moderation) plus the DETECTION-ONLY R7 violator arm. An AGGREGATOR — it owns no table, no
+  // migration, no event type and no permission key (`PERMISSION_CATALOG_VERSION` stays 28), and every
+  // row is a read-time lens over a row another story already ships. Per-SECTION authorization runs in
+  // the handler over six existing keys (the 10.7 dynamic-key precedent); a section the caller cannot
+  // act on is ABSENT, never present-and-empty. NOT step-up-gated — it writes nothing and decrypts
+  // nothing (back to the 10.3/10.4/10.5/10.8/10.9 chain).
+  registerTrusteeLiteModule(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);
 

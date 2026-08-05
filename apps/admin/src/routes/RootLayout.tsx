@@ -4,7 +4,7 @@
 // route-level error boundary (§4.9) wraps the outlet so a thrown render error
 // degrades to a recoverable message instead of a blank screen.
 
-import { Link, Outlet, useNavigate, useRouter } from '@tanstack/react-router';
+import { Link, Outlet, useNavigate, useParams, useRouter } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
@@ -19,6 +19,13 @@ function TopBar(): ReactElement {
   const authed = Boolean(session.data);
   const canVerify = hasAuditVerify(session.data?.nationalGrants);
   const canProvision = hasPariwarProvision(session.data?.nationalGrants);
+  // Story 10.11 — the Trustee-Lite nav entry. The two entries above are gated on NATIONAL grants and
+  // link to un-scoped routes; the worklist is per-Pariwar, so it can only be linked from inside a
+  // Pariwar context. `strict: false` reads the CURRENT match's params without pinning this shared
+  // layout to one route, so the link appears on any `/p/$pariwarId/...` surface and is absent
+  // elsewhere. No client-side grant gate: the six section keys are checked per-section on the server,
+  // and a trustee holding even one of them has a worklist worth opening.
+  const { pariwarId } = useParams({ strict: false }) as { pariwarId?: string };
   const [logoutError, setLogoutError] = useState(false);
 
   async function onLogout(): Promise<void> {
@@ -47,6 +54,16 @@ function TopBar(): ReactElement {
           {canProvision && (
             <Link to="/provisioning" className="text-sm underline" data-testid="nav-provisioning">
               Provisioning
+            </Link>
+          )}
+          {pariwarId && (
+            <Link
+              to="/p/$pariwarId/trustee"
+              params={{ pariwarId }}
+              className="text-sm underline"
+              data-testid="nav-trustee"
+            >
+              Trustee worklist
             </Link>
           )}
         </nav>

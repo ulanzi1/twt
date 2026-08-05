@@ -1009,3 +1009,13 @@ export function useRetractBanner(pariwarId: string) {
     onSuccess: invalidate,
   });
 }
+
+// ── Trustee-Lite list + signals (Story 10.11) ──────────────────────────────────────────────────────
+
+/** The aggregated trustee worklist. Read-only; no filters and no pagination — it is an index. */
+export function useTrusteeLite(pariwarId: string) {
+  return useQuery({
+    queryKey: ['trustee-lite', pariwarId] as const,
+    queryFn: () => api.getTrusteeLite(pariwarId),
+  });
+}

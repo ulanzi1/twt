@@ -29,6 +29,7 @@ import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
 import { R9VotingRoute } from './routes/R9VotingRoute.js';
 import { FixedAmountRoute } from './routes/FixedAmountRoute.js';
 import { ReconciliationReviewRoute } from './routes/ReconciliationReviewRoute.js';
+import { TrusteeLiteRoute } from './routes/TrusteeLiteRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
@@ -196,6 +197,14 @@ const reconciliationReviewRoute = createRoute({
   component: ReconciliationReviewRoute,
 });
 
+// Story 10.11 — the Trustee-Lite worklist: every trustee-attention item across six sources, in one
+// list, each row cross-linking to the surface where the trustee actually acts.
+const trusteeLiteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/trustee',
+  component: TrusteeLiteRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -219,6 +228,7 @@ const routeTree = rootRoute.addChildren([
   r9VotingRoute,
   fixedAmountRoute,
   reconciliationReviewRoute,
+  trusteeLiteRoute,
 ]);
 
 export const router = createRouter({ routeTree });

@@ -3177,6 +3177,55 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.11 — Trustee-Lite list + signals (FR-57) ───────────────────────────────────────────
+//
+// ONE read-only GET aggregating six trustee-attention sources plus the DETECTION-ONLY R7 violator
+// arm. An AGGREGATOR: no new permission key (`PERMISSION_CATALOG_VERSION` stays 28), no table, no
+// event. Two contract properties are load-bearing and are documented on the path below because a
+// consumer cannot infer them from the schema alone:
+//
+//   · EVERY section key is OPTIONAL, and ABSENT ≠ EMPTY. Absent means the caller does not hold that
+//     section's permission key; present-and-empty means "you may see this and there is nothing in
+//     it". An empty array for a section the caller cannot see would be an existence oracle.
+//   · `deadline_at` / `raised_at` / `age_ms` are NULLABLE BY DESIGN. Only reconciliation ships a
+//     deadline and only appeals derive one; cycle-freeze, R9 voting and concealment carry no temporal
+//     field at all. A consumer must render the null as an explicit "no deadline", never as "due now".
+
+const { TrusteeLiteResponse } = await import('../src/trustee-lite/index.js');
+
+const TrusteeLiteComponent = TrusteeLiteResponse.openapi('TrusteeLite');
+const trusteeLiteParams = z.object({ pariwarId: z.string().uuid() });
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/trustee-lite',
+  summary: 'The trustee worklist: every trustee-attention item across six sources, in one shape',
+  description:
+    'Aggregates cycle-freeze (6.13), R9 voting (6.14), concealment (6.15), appeals (6.16), ' +
+    'reconciliation (9.8) and moderation (10.10) into ONE normalized row shape, plus the R7 ' +
+    'violator arm. Read-only: nothing is written, no step-up is required, and NOTHING is decrypted ' +
+    '(rows carry identifiers, machine codes and controlled non-PII display snapshots only — each ' +
+    'row cross-links to a canonical surface that authorizes and decrypts on its own). ' +
+    'AUTHORIZATION IS PER SECTION over six EXISTING keys (cycle.freeze · claim.r9_vote · ' +
+    'claim.verify · claim.appeal_review OR claim.appeal_vote · reconciliation.review · ' +
+    'member.moderate); a section the caller cannot act on is ABSENT from the response, never ' +
+    'present-and-empty. ORDERING within a section is two-tier: rows with a deadline first ' +
+    '(ascending), then undated rows by age descending — four of the six sources define no deadline ' +
+    'at all, and none is fabricated to make the sort look uniform. SEVERITY is present only on the ' +
+    'two dated categories and is structurally null on moderation and violator rows (a severity score ' +
+    'on a moderation row would itself be a recommendation). The `violator_flags` section is a ' +
+    'DISCRIMINATED union, never a bare list: it renders `detection_unavailable` (naming the missing ' +
+    'producer) until the contribution-fact producer lands, because an empty violator list on a ' +
+    'governance surface reads as a false all-clear.',
+  tags: ['trustee-lite'],
+  request: { params: trusteeLiteParams },
+  responses: {
+    200: { description: 'The trustee worklist (only the sections this caller may act on)', content: jsonOf(TrusteeLiteComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('The caller holds NONE of the six section keys for this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

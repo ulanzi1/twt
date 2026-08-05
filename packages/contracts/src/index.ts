@@ -192,6 +192,14 @@ export * from './reports/index.js';
 // no inventory filter parameter — a contract that could express "omit this one" would invite a code
 // path to do so, and prd.md:892's "no secret flags" requires the inventory be COMPLETE.
 export * from './feature-flags/index.js';
+// Story 10.11 — the Trustee-Lite `[SURFACE]` transport contracts (FR-57): the normalized signal row
+// (nullable deadline/age by design — four of the six sources are undated), the FROZEN-key R7 violator
+// flag, and the aggregate response whose per-section keys are all OPTIONAL (absent ≡ the caller lacks
+// that section's permission key; present-and-empty ≡ genuinely nothing there — the two are never
+// collapsed). Pure Zod (no @twt/domain import); the category/severity/cross-link enums are drift-
+// guarded against the @twt/domain tuples by a test-only sync-guard (tests/trustee-lite.test.ts), which
+// ALSO pins the violator flag's key set and rejects any recommendation-shaped key name.
+export * from './trustee-lite/index.js';
 
 export const CONTRACTS_API_VERSION = 'v1';
 

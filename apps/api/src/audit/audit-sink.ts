@@ -421,7 +421,13 @@ export type AuthAuditEventType =
   | 'admin_reconciliation.rejected'
   | 'admin_reconciliation.recovery_facilitated'
   | 'admin_reconciliation.confirmation_reversed'
-  | 'admin_reconciliation.action_rejected';
+  | 'admin_reconciliation.action_rejected'
+  // ── Trustee-Lite list + signals surface (Story 10.11, FR-57 / Epic 10) ─────────
+  // The read-only trustee worklist that aggregates six existing sources. ONE line, on the ONE route.
+  // Context is NON-PII and deliberately COARSE: which sections resolved for this caller, the total
+  // row count, and whether R7 violator detection was available — never a row's label, never a member
+  // or claim id. The surface writes nothing, so there is no action/rejection line to pair with it.
+  | 'admin_trustee_lite.read';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

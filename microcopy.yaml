@@ -164,6 +164,81 @@ tone:
     # the HUMAN Story 2.2 tone-review's job (tone-guide §5 + tone-review-checklist.md).
     # Single valid case-insensitive regex (assertValidRegex-validated).
     pattern: '(earn(ed|ing)?|unlock\w*|keep|kept|los[et]|win|won|your|another)\s+(a\s+|an\s+|the\s+|your\s+)?(streaks?|badges?|achievements?)\b|\b(streaks?|badges?|achievements?)\s+(earned|unlocked|awarded|complete)\b|\d+[- ]?day\s+streaks?|\bleaderboards?\b|\d+\s*%\s+complete\b|completion\s+percentage|you\s*[''’]?re\s+behind|falling\s+behind|fall\s+behind|\bact\s+now\b|please\s+act\b|hurry\s+up|don\s*[''’]?t\s+delay|last\s+chance|final\s+(reminder|notice)|आप\s*पीछे|पीछे\s*रह|जल्दी\s*(कर|कीज)|तुरंत\s*कर|अभी\s*कर|देर\s*न\s*कर'
+  - label: moderation-advice
+    # Story 10.11 (AC5) — the detection-only governance invariant, mechanized.
+    # epics.md:3582-3587 + prd.md:879: the Trustee-Lite worklist surfaces members for whom
+    # a contribution-discipline (R7) clause applies, and the trustee decides what — if
+    # anything — follows. The system must NEVER make, imply, or nudge toward that decision.
+    # The epic names the prohibition exactly: no "should be suspended", no "action
+    # required", no "overdue for review", and equivalents. It also gives the reason a
+    # SEVERITY is forbidden on a moderation row: "a severity score on a moderation row
+    # would itself be a recommendation."
+    #
+    # Copy is where this erodes SILENTLY. The structural half (a frozen DTO key set that
+    # rejects any recommend/suggest/severity-shaped key name, plus a null-pinned severity)
+    # is enforced by tests, which catch a shape change loudly. But an author softening
+    # "Members with an R7 clause on record" into "Members who should be suspended" changes
+    # no type and breaks no test — so THAT is the family worth mechanizing here
+    # ([[feedback_mechanization_split_commitment]]: mechanize the cheapest and most
+    # corrosive family, test the rest).
+    #
+    # NO new gate script is written: `apps/admin/src/**/*.{ts,tsx}` is ALREADY in
+    # scope.code_globs below, so this one entry binds the Trustee-Lite module AND every
+    # future admin surface with zero gate-code change. Writing a per-story AST gate here
+    # would be a standing tax for a surface two tests already cover better
+    # ([[project_access_wrapper_gate_pending_scope]] — know when NOT to extend).
+    #
+    # The six arms, each a phrasing a well-meaning author actually reaches for:
+    #   (1) VERDICT-BY-COPY — "should be suspended/terminated/removed/expelled", and the
+    #       stronger "must be …". Bound to the moderation OUTCOME verbs on purpose: a bare
+    #       "should be" has innocent uses ("the deadline should be visible in the row").
+    #   (2) IMPERATIVE DEMAND — "action required", "requires/needs your action", "needs
+    #       action". NARROWED on introduction to exclude the NEGATED form, in both
+    #       languages, and the reason is a real finding rather than a hypothetical: this
+    #       rule as first written fired on the SHIPPED Story 9.1 nominee-console string
+    #       "आपकी ओर से कोई कार्रवाई ज़रूरी नहीं है।" ("No action is needed from you.") —
+    #       which is the fursat register's own reassurance to a grieving nominee, not a
+    #       demand. That is the identical narrowing the `fursat-pressure` rule above
+    #       already applies to जल्दी (bound to the imperative so "कोई जल्दी नहीं है" stays
+    #       usable). The English arm is guarded symmetrically (`no action required` does
+    #       not fire) so the same sentence cannot pass in one language and fail in the
+    #       other — a parity bug the original asymmetric pattern would have introduced.
+    #       An INVERTED verdict ("no action required" about a MEMBER) is still a
+    #       conclusion this surface should not reach, but catching it needs the context a
+    #       regex does not have; it is left to the HUMAN tone-review (tone-guide §5).
+    #   (3) LATENESS AS JUDGEMENT — "overdue for review", "overdue for action". Note the
+    #       narrow bind: a reconciliation row genuinely PAST a real deadline is a fact and
+    #       the shipped copy says "Past deadline"; it is the "overdue FOR <a decision>"
+    #       construction that smuggles in a verdict.
+    #   (4) EXPLICIT RECOMMENDATION — "recommend(ed/s) suspension/termination/removal",
+    #       and the noun form "recommended action".
+    #   (5) CANDIDACY FRAMING — "candidate(s) for suspension/termination/removal",
+    #       "eligible for suspension". Naming a member a candidate IS the recommendation.
+    #   (6) HINDI mirrors of (1)/(2)/(4) — निलंबित/समाप्त/निष्कासित followed by चाहिए
+    #       ("should be suspended / terminated"), कार्रवाई आवश्यक/ज़रूरी ("action required"),
+    #       and सिफारिश ("recommend") within 40 chars of a moderation noun so ordinary uses
+    #       elsewhere do not fire. The चाहिए arm binds by PROXIMITY (≤20 Devanagari chars)
+    #       rather than adjacency — Hindi's flexible, often SOV order puts a case marker or
+    #       auxiliary between the verb and चाहिए ("समाप्त की जाना चाहिए"), so an adjacency
+    #       bind would miss the very construction the arm exists to catch. Same technique the
+    #       `out-of-band-blame` rule uses for its गलती से / चाहिए था arms.
+    #
+    # Green on introduction is NOT the deliverable ([[feedback_gate_scope_semantic_coverage]]
+    # — a green scan over a newly-scanned surface proves nothing). The teeth are proven by
+    # scripts/microcopy/moderation-advice.test.ts: it plants each prohibited frame in a
+    # Trustee-Lite-shaped fixture and asserts this rule FIRES, asserts the REAL authored
+    # module is clean, and records the revert-sanity (delete this entry → the planted
+    # fixtures go unflagged). The paraphrased tail stays the HUMAN tone-review's job
+    # (tone-guide §5) — the regex is deliberately NOT exhaustive over natural language.
+    # Single valid case-insensitive regex (assertValidRegex-validated).
+    # ── Negation-guard widening (review finding, 2026-08-05) ──────────────────────────────────
+    # The (2) IMPERATIVE DEMAND negation guards above originally checked only IMMEDIATELY
+    # adjacent "no" ((?<!\bno\s) / (?!\s*नहीं)), so a legitimate reassurance with one intervening
+    # qualifier — "No further action is required from you.", "कार्रवाई ज़रूरी बिलकुल नहीं है" —
+    # still tripped the rule as a false positive; the only test guarding this arm exercised the
+    # bare adjacent case. Both guards now tolerate up to 3 intervening words/tokens between "no"/
+    # "नहीं" and the trigger, same reassurance-stays-usable intent, wider berth.
+    pattern: '\b(should|must|ought\s+to)\s+be\s+(suspend|terminat|remov|expel|ban)\w*|(?<!\bno\b(?:\s+\S+){0,3}\s)\baction\s+(is\s+)?required\b|(?<!\bno\b(?:\s+\S+){0,3}\s)\b(requires?|needs?|need)\s+(your\s+|immediate\s+|trustee\s+)?action\b|\boverdue\s+for\s+(review|action|a\s+decision|moderation)\b|\brecommend(ed|s|ing)?\s+(a\s+|the\s+)?(suspension|termination|removal|expulsion|moderation)\b|\brecommended\s+action\b|\bcandidates?\s+for\s+(suspension|termination|removal|expulsion)\b|\beligible\s+for\s+(suspension|termination|expulsion)\b|(निलंबित|समाप्त|निष्कासित)(?=[ऀ-ॿ\s]{0,20}चाहिए)|कार्रवाई\s*(आवश्यक|ज़रूरी|जरूरी)(?!(?:\s+\S+){0,3}\s*नहीं)|(?:(?<=(?:निलंबन|समाप्ति|निष्कासन|कार्रवाई).{0,40})|(?=.{0,40}(?:निलंबन|समाप्ति|निष्कासन|कार्रवाई)))सिफारिश'
 
 # (d) Numeral discipline — amendment A2 (UX spec L1119-1127 / L1303). Operational
 # surfaces = Gregorian dates + Latin numerals; Hindi/Devanagari numerals (०-९) are

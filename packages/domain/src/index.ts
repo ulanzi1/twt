@@ -356,4 +356,13 @@ export * as reports from './reports/index.js';
 // packages/domain/src/{audit,rbac,consent,contribution}, packages/validity-service/src, or scripts/.
 // That is the mechanized governance boundary — see governance_boundary.yaml.
 export * as featureFlags from './feature-flags/index.js';
+// Story 10.11 — the Trustee-Lite `[SURFACE]` aggregator's PURE core. Owns NO state: no table, no
+// migration, no event type, no projector, no permission key. Normalizes six heterogeneous
+// trustee-attention sources into ONE `TrusteeSignalRow`, applies the two-tier deadline/age order
+// (four of the six sources carry no deadline at all — the order generalizes the epic's moderation
+// carve-out rather than special-casing it), derives severity ONLY where a source defines one (and
+// structurally NEVER on a moderation or violator row), and derives the DETECTION-ONLY R7 violator
+// flags off the Story 4.6 validity payload. Every accessor is DB-free and clock-injected; the six
+// reads themselves live in `apps/api/src/modules/trustee-lite/`.
+export * as trusteeLite from './trustee-lite/index.js';
 export { UUID_REGEX } from './db.js';

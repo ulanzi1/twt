@@ -200,6 +200,8 @@ import {
   type FeatureFlagFlipRequest as FeatureFlagFlipBody,
   type FeatureFlagFlipResponse as FeatureFlagFlipResult,
   type FeatureFlagVersionsResponse as FeatureFlagVersions,
+  TrusteeLiteResponse,
+  type TrusteeLiteResponse as TrusteeLite,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1573,4 +1575,19 @@ export function retractBanner(pariwarId: string, bannerId: string): Promise<Bann
     method: 'POST',
     body: JSON.stringify({}),
   });
+}
+
+// ── Trustee-Lite list + signals (Story 10.11) ──────────────────────────────────────────────────────
+// One read-only GET aggregating six trustee-attention sources. Gated server-side by
+// [adminSession, scope] plus a PER-SECTION grant check in the handler — deliberately NOT a single
+// route-level permission hook, because the six sections carry six different keys.
+
+/**
+ * GET the trustee worklist. ⚠ Sections the caller cannot act on are ABSENT from the response, not
+ * present-and-empty — so consumers MUST distinguish `data.r9_voting === undefined` ("not permitted")
+ * from `data.r9_voting.length === 0` ("nothing there"). A 403 means the caller holds none of the six
+ * section keys.
+ */
+export function getTrusteeLite(pariwarId: string): Promise<TrusteeLite> {
+  return apiFetch(`/api/v1/p/${encodeURIComponent(pariwarId)}/admin/trustee-lite`, TrusteeLiteResponse);
 }

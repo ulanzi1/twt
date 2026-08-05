@@ -1,4 +1,112 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-05d (10-11-trustee-lite-list-signals: review -> done via bmad-code-review, off
+#   main @ 5394717 on branch feat/10-11-trustee-lite-list-signals. Three parallel layers (Blind Hunter,
+#   Edge Case Hunter, Acceptance Auditor) over the uncommitted diff; 13 unique findings after dedup: 2
+#   decision-needed, 8 patch (1 promoted from a decision), 2 defer, 2 dismissed as noise (the
+#   concealment district-dimension narrowing and the D1-B partial-scan short-circuit both matched
+#   documented, precedented decisions already in the story file). BOTH decisions resolved: the appeal
+#   section's cross-key OR-gate visibility is CORRECT (matches claims.appeal.routes.ts:106-121's
+#   cross-stage-by-design precedent) -> narrowed to adding the missing third key, claim.appeal_final;
+#   AC1's reconciliation two-query count satisfies the O(1)/bounded-reads INTENT, not the literal text
+#   -> dismissed. Of 8 patches, 7 fixed and 1 (client.ts's "duplicate" import) verified DURING
+#   application to be the file's own established convention across ~15 sibling DTOs -> left unchanged
+#   rather than made inconsistent. FIXES: permissionKey on the composite zero-grant 403 now names all
+#   seven candidate keys instead of hardcoding cycle.freeze; mayAppeal gains claim.appeal_final;
+#   crossLinks.ts's switch gained a default branch (+ test) so an unrecognized cross_link_kind returns
+#   href:null per its own "never throws" contract instead of falling through to undefined; both
+#   moderation-advice tone-gate negation guards (en+hi) widened from adjacent-only to tolerate up to 3
+#   intervening words (+ regression tests) so "No further action is required" stops false-positiving;
+#   NEW packages/validity-service/tests/trustee-lite-sentinel-lockstep.test.ts pins
+#   CONTRIBUTION_PRODUCER_UNAVAILABLE_STATUS against the real CONTRIBUTION_UNAVAILABLE.status (domain
+#   can't import validity-service — same cycle as R7_CLAUSE_IDS — so the pin lives where the legal
+#   import direction allows it, mirroring the shipped r7-clause-ids-lockstep.test.ts); TrusteeLiteRoute
+#   now owns its own local TrusteeLiteGateView instead of cross-importing HelpdeskGateView from an
+#   unrelated feature's route file (verified 12+ sibling routes each hand-roll their own gate view —
+#   that IS the dominant convention here, not shared extraction). DEFERRED to deferred-work.md: the
+#   zero-grant 403's missing audit call (matches the 10.7 reports/handlers.ts precedent, pre-existing
+#   across admin modules) and orderTrusteeSignals's untested categoryRank tie-break (no current caller
+#   exercises mixed-category ordering). All touched suites re-run green: domain 48, engine lockstep 3,
+#   validity-service lockstep 2 (NEW), admin 23, microcopy 47 + gate clean, live-DB
+#   trustee-lite.spec.ts 18/18. tsc --noEmit + eslint clean on every touched package. Story file:
+#   10-11-trustee-lite-list-signals.md.)
+# last_updated: 2026-08-05c (10-11-trustee-lite-list-signals: ready-for-dev -> in-progress -> review
+#   via bmad-dev-story, off main @ 5394717 on branch feat/10-11-trustee-lite-list-signals. FR-57's
+#   Trustee-Lite `[SURFACE]` — an AGGREGATOR that owns NO state: no table, no migration, no event type,
+#   no projector, NO new permission key (PERMISSION_CATALOG_VERSION stays 28). LANDED: (T1) NEW
+#   packages/domain/src/trustee-lite/ pure core — DB-free + clock-injected (the helpdesk/sla.ts
+#   discipline): 7-category TrusteeSignalRow, the AC2 two-tier order (dated-ascending, then undated by
+#   age-descending, unknown-age LAST, ties on (category,resourceId,sourceKey) — sourceKey load-bearing
+#   for TOTALITY since two reconciliation cases on one pool share the first two), per-source-optional
+#   severity reusing the 10.4 band vocabulary with a STRUCTURAL null-pin on moderation+violator, and
+#   the detection-only deriveViolatorFlags/summarizeViolatorFlags. (T2) ONE new domain read
+#   listOpenAppealCasesForPariwar in the EXISTING claim/appeal-read.ts (D5); stage-entry instant =
+#   updated_at, exact because both stage-advance write-paths set current_stage + updated_at in the same
+#   statement. (T3) contracts trustee-lite/ with a FROZEN 4-key ViolatorFlag + a forbidden-key-pattern
+#   guard + ALL-OPTIONAL sections (absent != empty) + a category/severity/cross-link sync-guard;
+#   openapi/v1.yaml regenerated + deterministic. (T4) NEW apps/api/src/modules/trustee-lite/ — one GET,
+#   six reads in ONE scope-tx, per-SECTION grant filter over six EXISTING keys (the 10.7 dynamic-key
+#   precedent), zero deps.encryption calls, NOT step-up-gated (back to the 10.3/10.4/10.5/10.8/10.9
+#   chain that 10.10 broke). (T5) NEW apps/admin/src/modules/trustee-lite/ 4-file module +
+#   /p/$pariwarId/trustee + a pariwar-context-gated nav-trustee entry; FOUR distinguishable section
+#   states, empty NEVER collapsed into not-permitted or detection-unavailable. (T6) a moderation-advice
+#   microcopy tone rule — data-only, NO new gate script (D7).
+#   THREE DECISIONS the ACs did not settle (all in the Dev Agent Record): (a) claim.verify +
+#   claim.appeal_review are DISTRICT-dimension and a pariwar-wide aggregator has no district, so every
+#   section is checked at dimension:'pariwar' — fail-closed, which narrows `concealment` to super_admin
+#   until the Epic-3 geo-resolver lands (7th replay of the district-ceiling deferral, pinned by a
+#   district_admin->403 test); `appeal` is unaffected because AC6 already reads appeal_review OR
+#   appeal_vote and the latter IS pariwar-dimension. (b) R7_CLAUSE_IDS could NOT be imported —
+#   @twt/niyamavali-engine DEPENDS ON @twt/domain, so domain->engine is a package cycle
+#   (concealment-review.ts:10-13 documents the identical constraint); re-declared in domain with the
+#   LOCKSTEP pin in the ENGINE package, the shipped 6.14 r9-voting pattern. (c) AC4's
+#   facts_establishing has no source in provenanceTrace (it carries payloadHash/evaluatedAt/mechanism
+#   only) and holding_since has none anywhere — both are honestly empty/null, NEVER back-filled from
+#   evaluatedAt.
+#   FLAGGED as the Dev Notes required: validity-service/types.ts:65's producer:'epic-8-9' sentinel is
+#   stale vs 10.16's sibling 'story-10-24'; not this story's to fix, so the admin surface MAPS known
+#   sentinels to admin-facing copy (falling through to the raw value for anything unrecognized) rather
+#   than echoing internal jargon. Story 10.24 should rename it; the mapping can then be deleted.
+#   TEETH PROVEN, not assumed — three revert-sanity probes RUN: deleting the microcopy rule left 26/45
+#   tests failing while microcopy:check stayed green; neutralizing the AC6 section filter flipped 4/18
+#   live-DB tests; the severity null-pin flips 2. The new tone rule also caught a REAL false positive
+#   on introduction (the shipped 9.1 nominee-console reassurance "कोई कार्रवाई ज़रूरी नहीं है") -> both
+#   language arms narrowed to exclude the negated form, symmetrically.
+#   A PERFORMANCE REGRESSION this story introduced was measured and fixed BEFORE merge: per-test auth +
+#   seeding in the integration spec took the @twt/api suite from ~44s (stashed baseline) to ~220s and
+#   timed out 3 unrelated specs; one shared read-only fixture returns it to 43.45s with 18 MORE tests.
+#   VALIDATION: pnpm ci:local = 29/30 jobs green. The one failure (integration-tests ->
+#   banners.spec.ts) is PRE-EXISTING and reproduces on the clean baseline via git stash — a different
+#   banners test fails each run, it passes 26/26 in isolation, and the cause is Story 10.9's own
+#   per-test twoAdmins() argon2 load under turbo --concurrency=4 (the same root cause fixed here).
+#   Everything 10.11 touched is green: domain 2296, contracts 837, admin 268, engine 122, api 852,
+#   microcopy 228. NO migration; catalog still 28. Branch off main; commit manually
+#   [[project_story_automator_ops]]. Story file: 10-11-trustee-lite-list-signals.md.
+#   NEXT: code-review by a DIFFERENT LLM recommended.)
+# last_updated: 2026-08-05b (10-11-trustee-lite-list-signals validated via bmad-create-story validate
+#   pass, off main @ 5394717 — 12 commits past the story's own baseline_commit (49ad0ca), including the
+#   exact three steps its own Sequencing note was waiting on. development_status unchanged, stays
+#   ready-for-dev; no AC/Task/Decision re-scoped — every edit is a provenance/status correction against
+#   drift that accrued while the story sat authored-but-not-started. FIVE fixes applied in-place:
+#   (1) the top Sequencing note's hold is discharged — Story 10.16 (done, 7e59f3d/PR#167), Story 10.17
+#   (done, 5394717/PR#168) and the `bmad-correct-course` step it was queued behind all completed; 10.11
+#   is next-in-queue, not parked, and the baseline_commit re-verification the note itself demanded
+#   confirmed 10.17's payload addition (`deriveIsAssignable`) is purely additive and does not touch the
+#   two fields `violator-flags.ts` reads. (2) D1's quoted `epics.md:3578` text was corrected upstream in
+#   the SAME 2026-08-04 correct-course pass (commit c359eb8) that the story's own Escalation 2 asked
+#   for — it now credits 10.11 (not 10.17) with the surfacing mechanism and names Story 10.24 as the
+#   fact source; the escalation is resolved, not owed. (3) Escalation 1 (R7 contribution-fact producer
+#   "UNOWNED") is routed, not unowned — the same correct-course pass scoped it into Stories 10.24
+#   (projection + R7(C)-(F)), 10.25 (R7(A) accounting), 10.26 (R7(G) assertion), all entered `backlog`;
+#   D1-B's `detection_unavailable` rendering is unaffected since none of the three is `done`.
+#   (4) NEW Dev Note added: `validity-service/types.ts:65`'s `ContributionHistoryUnavailable.producer`
+#   sentinel is still hardcoded `'epic-8-9'`, stale next to Story 10.16's sibling gap-sentinel
+#   (`producer: 'story-10-24'`) — not 10.11's to fix, but AC4 literally "names the missing producer" in
+#   its UI, so flagged as a decision to make explicitly (map the sentinel to admin-facing copy, or wait
+#   for Story 10.24 to rename it) rather than silently echoing a stale internal label. (5) `prd.md`
+#   FR-12A/FR-42/FR-57 line citations renumbered +1 (an unrelated 2026-08-04 PRD insertion shifted
+#   them; re-verified live). Applied via Edit to the story file's Sequencing note, D1, the Escalations
+#   block, the Known-artifact-conflicts table, the References section and a new Change Log row. NEXT:
+#   10.11 is unblocked and ready to pick up with `bmad-dev-story`.)
 # last_updated: 2026-08-05a (10-17-moderation-roster-unblock: review -> done via bmad-code-review, off
 #   main @ 7e59f3d on branch feat/10-17-moderation-roster-unblock. Three parallel layers (Blind Hunter
 #   diff-only, Edge Case Hunter diff+project-trace, Acceptance Auditor diff+spec+live verification)
@@ -3304,7 +3412,7 @@ development_status:
   10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant: done
   10-9-banner-popup-manager-valid-from-until-dismiss: done
   10-10-member-moderation-suspend-terminate-restore-reason-codes: done
-  10-11-trustee-lite-list-signals: ready-for-dev
+  10-11-trustee-lite-list-signals: done
   10-12-per-pariwar-custom-fields-jsonb: backlog
   10-13-fixed-amount-setter-admin-ui: backlog
   10-14-permission-delegation: backlog

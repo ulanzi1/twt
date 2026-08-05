@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@twt/eslint-config-twt": "workspace:*",
+    "@twt/ui": "workspace:*",
     "@types/node": "^22.15.3",
     "@types/pg": "^8.11.0",
     "tsx": "^4.19.0",

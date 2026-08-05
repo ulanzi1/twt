@@ -21,6 +21,9 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
     ruleRegistryVersion: 'rrv-1',
     isValid: true,
     isActive: true,
+    // Story 10.17 — the ROSTER predicate. The status headline answers COVERAGE and never reads this
+    // field; each override below that models a NON-moderated failure state sets it `false` truthfully.
+    isAssignable: true,
     lockInStatus: { daysAtJoin: 90, unlockDate: '2026-01-01T00:00:00.000Z', state: 'unlocked' },
     vyawasthaShulkStatus: {
       paidThrough: '2027-01-01T00:00:00.000Z',
@@ -73,6 +76,7 @@ describe('deriveHeadlineState', () => {
         basePayload({
           isValid: false,
           isActive: false,
+          isAssignable: false,
           lockInStatus: { daysAtJoin: 90, unlockDate: '2027-01-01T00:00:00.000Z', state: 'in-lock-in' },
         }),
       ),
@@ -85,6 +89,7 @@ describe('deriveHeadlineState', () => {
         basePayload({
           isValid: false,
           isActive: false,
+          isAssignable: false,
           lockInStatus: { daysAtJoin: 90, unlockDate: '2026-01-01T00:00:00.000Z', state: 'unlocked' },
           vyawasthaShulkStatus: {
             paidThrough: '2026-01-01T00:00:00.000Z',
@@ -119,6 +124,7 @@ describe('deriveHeadlineState', () => {
         basePayload({
           isValid: false,
           isActive: false,
+          isAssignable: false,
           lockInStatus: { daysAtJoin: null, unlockDate: null, state: 'never-entered' },
           vyawasthaShulkStatus: {
             paidThrough: null,
@@ -182,6 +188,7 @@ describe('buildMemberStatusViewModel', () => {
       basePayload({
         isValid: false,
         isActive: false,
+        isAssignable: false,
         lockInStatus: { daysAtJoin: 90, unlockDate: '2027-01-01T00:00:00.000Z', state: 'in-lock-in' },
       }),
       { variant: 'member' },

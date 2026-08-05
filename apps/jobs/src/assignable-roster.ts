@@ -39,17 +39,38 @@ import type pg from 'pg';
 type MemberId = ids.MemberId;
 
 /**
- * D1 (ratified 2026-07-19): a member is ASSIGNABLE iff their Validity Service verdict at the cycle-freeze
- * instant has `is_valid === true` — INCLUDING active-in-grace members (grace does not clear `is_valid`).
+ * ── AI-7-2, AS AMENDED BY STORY 10.17 — an AMENDMENT, NOT A VIOLATION ────────────────────────────
  *
- * This is a THIN read of ONE payload field, sourced from the Story 4.6 verdict — never a reimplementation
- * of the eligibility logic behind it, and never an inspection of `is_active` / lock-in / grace /
- * suspension / renewal or any other subfield (the frozen assignability invariant; every one of those is
- * already folded into `is_valid`). A reviewer seeing any other subfield read on this path treats it as a
- * finding. [[project_assignability_predicate_is_isvalid_only]] / [[project_engine_never_infers_contribution_facts]].
+ * A member is ASSIGNABLE iff their Validity Service verdict at the cycle-freeze instant has
+ * `is_assignable === true` — INCLUDING active-in-grace members (grace does not clear it).
+ *
+ * **What CHANGED (2026-08-04, Story 10.17):** the single field read is now `is_assignable`, not
+ * `is_valid`. D1 (ratified 2026-07-19) named `is_valid`; that is superseded here.
+ *
+ * **What did NOT change — the invariant itself, intact:** this is still a THIN read of exactly ONE
+ * pre-derived payload field, sourced from the Story 4.6 verdict. It is still never a reimplementation
+ * of the eligibility logic behind it, and still never an inspection of `is_valid` / `is_active` /
+ * lock-in / grace / suspension / renewal or any other subfield. **A reviewer seeing any other subfield
+ * read on this path still treats it as a finding.** The invariant SURVIVES precisely because the new
+ * field is pre-derived in `@twt/validity-service` (`deriveIsAssignable`) — putting a moderation
+ * predicate HERE instead is the actual AI-7-2 violation, and is the alternative Story 10.17 D1(b)
+ * rejected by name.
+ *
+ * **WHY it changed:** a suspension removes a member's entitlement to RECEIVE support, never their
+ * obligation to CONTRIBUTE toward the Pariwar while completing an available restoration path
+ * (Niyamavali §3.3). `is_valid` remains the COVERAGE answer ("covered for support if death today") and
+ * is deliberately no longer the ROSTER answer, so the two are free to diverge: a suspended member is
+ * `is_valid: false, is_assignable: true`. Before this, `is_valid` was the sole assignability
+ * predicate and pool assignment is the only contribution path (fenced by Story 8.10), so every
+ * suspension was a de-facto permanent ban and the Niyamavali's own restoration path was unreachable.
+ *
+ * Recorded as an **amendment to AI-7-2, not a violation** — Sprint Change Proposal 2026-08-04 §2.1,
+ * §4f; Decision 2026-08-04-072 makes THIS doc block (with `payload.ts`) the canonical architectural
+ * record, not `architecture.md`.
+ * [[project_assignability_predicate_is_isvalid_only]] / [[project_engine_never_infers_contribution_facts]].
  */
 export function isMemberAssignable(payload: MemberValidityPayload): boolean {
-  return payload.isValid;
+  return payload.isAssignable;
 }
 
 /** The injected roster supplier — resolves the freeze-time assignable member-id set for a cycle. Async +
@@ -77,8 +98,9 @@ export interface AssignableRosterResolverDeps {
  *   2. evaluates each member via ITS OWN short-lived scoped connection + `getValidityAt(...,
  *      committedAt, { internal: true })` — a system actor with no caller/RBAC context needs
  *      `internal: true`; it also returns the FULL unredacted payload the D1 predicate reads (`caller`
- *      could route through `redactForCaller` and strip `is_valid`),
- *   3. keeps the `is_valid` members (D1), returning them in the enumerated (member_id-ascending) order.
+ *      could route through `redactForCaller` and strip payload fields),
+ *   3. keeps the `is_assignable` members (AI-7-2 as amended by Story 10.17 — see
+ *      {@link isMemberAssignable}), returning them in the enumerated (member_id-ascending) order.
  *
  * Deliberately NOT one long-held connection across the whole loop: `getValidityAt`'s engine internally
  * issues its own `pool.connect()` calls (the per-clause keyed-store memo), so a single connection held for

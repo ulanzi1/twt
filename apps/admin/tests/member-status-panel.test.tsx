@@ -16,6 +16,8 @@ function payload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidityPa
     ruleRegistryVersion: 'rrv-1',
     isValid: true,
     isActive: true,
+    // Story 10.17 — the ROSTER predicate (this panel renders COVERAGE and never reads it).
+    isAssignable: true,
     lockInStatus: { daysAtJoin: 90, unlockDate: '2026-01-01T00:00:00.000Z', state: 'unlocked' },
     vyawasthaShulkStatus: {
       paidThrough: '2027-01-01T00:00:00.000Z',

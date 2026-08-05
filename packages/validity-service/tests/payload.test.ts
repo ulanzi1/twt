@@ -11,6 +11,7 @@ import {
   assemblePayload,
   computeValidityPayloadHash,
   deriveIsActive,
+  deriveIsAssignable,
   deriveIsValid,
   moderationSpecialFlag,
   projectLockInStatus,
@@ -155,6 +156,80 @@ describe('is_valid / is_active × moderation status (Story 10.10, AC5 — Decisi
       });
     }
   }
+
+  // ── Story 10.17 — the SAME cross-product for the ROSTER predicate ──────────────────────────────
+  //
+  // Enumerated identically (never sampled) for the same reason: a future lifecycle state must be
+  // covered here automatically. The shape of the answer is DIFFERENT from `is_valid` above, and that
+  // difference is the whole story — `suspended` no longer takes the roster away.
+  for (const state of LIFECYCLE_STATES) {
+    const assignableBase = VALID_WITHOUT_MODERATION.has(state);
+
+    it(`${state} + moderation 'none' → assignable=${assignableBase}`, () => {
+      expect(deriveIsAssignable(state, 'none')).toBe(assignableBase);
+    });
+
+    it(`${state} + 'suspended' → assignable=${assignableBase} (UNCHANGED — suspension keeps the roster)`, () => {
+      // THE line. A suspension removes the entitlement to RECEIVE support, never the obligation to
+      // CONTRIBUTE while completing a restoration path (Niyamavali §3.3). `is_valid` still drops.
+      expect(deriveIsAssignable(state, 'suspended')).toBe(assignableBase);
+      expect(deriveIsValid(state, 'suspended')).toBe(false);
+    });
+
+    it(`${state} + 'terminated' → assignable=false (termination DOES remove the roster)`, () => {
+      expect(deriveIsAssignable(state, 'terminated')).toBe(false);
+    });
+  }
+
+  it('a NON-VALID_STATES lifecycle state is unassignable regardless of moderation status', () => {
+    // The lifecycle gate is the first conjunct, so it dominates every moderation status. A lapsed or
+    // withdrawn member is not on the roster just because they are unmoderated.
+    for (const state of ['withdrawn', 'lapsed-unpaid', 'pending-kyc'] as const) {
+      for (const status of ['none', 'suspended', 'terminated'] as const) {
+        expect(deriveIsAssignable(state, status)).toBe(false);
+      }
+    }
+  });
+
+  it('AC1 REASON-CODE BLINDNESS: assignability never branches on WHICH reason code was recorded', () => {
+    // `deriveIsAssignable` takes no reason code AT ALL — the structural proof that no per-code roster
+    // rule can exist. The seven codes establish the GROUND for a sanction, never its roster
+    // consequence; a per-code rule would relocate a governance decision into a derivation.
+    //
+    // `.length` only counts params BEFORE the first one with a default value, so it reports 1 here
+    // (`state`) — `moderationStatus = 'none'` is invisible to it and this can't detect a 3rd param
+    // either. It's a weak arity sanity check only; the real reason-code-blindness proof is behavioural,
+    // below.
+    expect(deriveIsAssignable.length).toBe(1);
+
+    // …and behaviourally, via the payload, where the reason code IS present and reaches specialFlags.
+    const codes = ['r7-contribution-discipline', 'r14-forgery', 'regulator-action', 'moderation-error'];
+    const results = codes.map((reasonCode) =>
+      assemblePayload(
+        baseInput({
+          moderationOverlay: { status: 'suspended', reasonCode, since: AT, lastActionAt: AT },
+        }),
+      ),
+    );
+    expect(results.map((p) => p.isAssignable)).toEqual([true, true, true, true]);
+    // The code DID reach the payload — so the invariance above is a real blindness, not a dead input.
+    expect(results.map((p) => p.specialFlags)).toEqual(codes.map((c) => [`suspended_per_${c}`]));
+  });
+
+  it('the DEFAULT argument is `none` for the roster predicate too', () => {
+    expect(deriveIsAssignable('active')).toBe(deriveIsAssignable('active', 'none'));
+  });
+
+  it('REVERT-SANITY: the roster predicate is NOT a copy of `deriveIsValid` — they diverge on suspension', () => {
+    // If someone "simplifies" the two booleans back into one, this fails. `is_valid` is COVERAGE,
+    // `is_assignable` is the ROSTER, and a suspended member is the payload where they differ.
+    expect(deriveIsValid('active', 'suspended')).toBe(false);
+    expect(deriveIsAssignable('active', 'suspended')).toBe(true);
+    // They agree everywhere else — the divergence is EXACTLY the suspended arm.
+    expect(deriveIsAssignable('active', 'none')).toBe(deriveIsValid('active', 'none'));
+    expect(deriveIsAssignable('active', 'terminated')).toBe(deriveIsValid('active', 'terminated'));
+    expect(deriveIsAssignable('withdrawn', 'none')).toBe(deriveIsValid('withdrawn', 'none'));
+  });
 
   it('the DEFAULT argument is `none` — pre-10.10 single-arg callers keep their meaning', () => {
     expect(deriveIsValid('active')).toBe(deriveIsValid('active', 'none'));

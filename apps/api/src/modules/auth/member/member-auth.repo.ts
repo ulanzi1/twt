@@ -430,8 +430,10 @@ export async function revokeDeviceChain(
  * it does not redefine it.
  *
  * ⚠ This is NOT a login block. A suspended or terminated member MUST still be able to sign in, to
- * read the dignified explanation and reach the appeal CTA (Decision 6). Enforcement is `is_valid`,
- * not a locked door — see the pinning test in the moderation integration spec.
+ * read the dignified explanation and reach the appeal CTA (Decision 6). Enforcement is the validity
+ * payload's moderation conjunction — `is_valid` (COVERAGE) since 10.10, and since Story 10.17 the
+ * separate `is_assignable` (DONOR ROSTER), on which a suspended member stays TRUE so they can
+ * contribute their way back — never a locked door. See the pinning test in the moderation spec.
  */
 export async function revokeAllMemberSessions(
   executor: pg.Pool | pg.PoolClient,

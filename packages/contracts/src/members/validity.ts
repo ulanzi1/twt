@@ -102,6 +102,14 @@ export const ProvenanceEntryDto = z
  * `@twt/validity-service` `MemberValidityPayload`. The panel renders this WITHOUT any additional query
  * (Story 4.6 AC3). The `validityPayloadHash` is over the FULL pre-redaction payload, so a redacted
  * payload still carries the canonical hash for audit correlation.
+ *
+ * ⚠ `isValid` and `isAssignable` answer DIFFERENT questions and are free to diverge (Story 10.17).
+ * A consumer must know which one it means before reading either:
+ *   · `isValid`      — COVERAGE: "is this member covered for support if death today?"
+ *   · `isAssignable` — ROSTER:   "should this member be assigned to a contribution pool?"
+ * A SUSPENDED member is `isValid: false, isAssignable: true` — a suspension removes the entitlement
+ * to RECEIVE support, never the obligation to CONTRIBUTE while completing a restoration path
+ * (Niyamavali §3.3). A TERMINATED member is false on both.
  */
 export const MemberValidityPayloadDto = z
   .object({
@@ -110,6 +118,8 @@ export const MemberValidityPayloadDto = z
     ruleRegistryVersion: z.string(),
     isValid: z.boolean(),
     isActive: z.boolean(),
+    /** ROSTER eligibility (Story 10.17) — NOT coverage. A suspended member is `true` here, `false` on `isValid`. */
+    isAssignable: z.boolean(),
     lockInStatus: LockInStatusDto,
     vyawasthaShulkStatus: VyawasthaShulkStatusDto,
     contributionHistorySummary: ContributionHistoryUnavailableDto,

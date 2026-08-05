@@ -292,7 +292,9 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // uniquely in Epic 10 — STEP-UP gating on three distinct action contexts. It gates on the EXISTING
   // `member.moderate` key (no new key; PERMISSION_CATALOG_VERSION stays 28). Moderation is an
   // event-derived OVERLAY on the member's own stream: `members.state` is never touched, and the
-  // ENTIRE enforcement surface is the `is_valid` conjunction in @twt/validity-service (Decision 8).
+  // enforcement surface is the moderation conjunction in @twt/validity-service (Decision 8, AMENDED
+  // by Story 10.17: `is_valid` = COVERAGE, and the separate `is_assignable` = DONOR ROSTER, on which
+  // a SUSPENDED member stays TRUE — only termination removes them).
   registerMemberModerationRoutes(app, deps);
   // Story 1.14 — honeypot trap routes (emit abuse.honeypot on a hit; hidden).
   registerHoneypot(app, deps);

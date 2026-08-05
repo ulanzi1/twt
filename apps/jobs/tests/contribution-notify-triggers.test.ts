@@ -825,6 +825,72 @@ describe('Story 9.7 (FR-30/FR-32) — the contribution-MISMATCH seam the matcher
   });
 });
 
+// ─── Story 10.17 D4 — the alert builders stay MODERATION-BLIND ─────────────────────────────────────
+
+describe('Story 10.17 D4 — a suspended member receives the SAME contribution alert, byte for byte', () => {
+  // ── The epic line this answers ────────────────────────────────────────────────────────────────
+  // `epics.md:3705` says *"a suspended member receiving a contribution alert is the cure working, and
+  // the copy must say so."* Read literally that could mean branching the alert copy on moderation
+  // status. Story 10.17 D4 RATIFIES NOT DOING THAT, for three reasons, and this test is where the
+  // decision is recorded executably rather than left as an unanswered epic line:
+  //
+  //   1. PRIVACY. A push notification renders on a LOCK SCREEN, in front of whoever is holding the
+  //      phone. A sanction reaching a member-AUTHENTICATED surface (the 10.10/10.16 precedent) is not
+  //      a licence to put it on a lock screen.
+  //   2. ARCHITECTURE. These builders take pool identity, locale and clock — nothing member-status-
+  //      shaped. Threading a moderation read in would add a per-member validity read to a 4L-scale
+  //      fan-out hot path, for a copy variant.
+  //   3. IT IS ALREADY SAID, IN THE RIGHT PLACE. The member-facing explanation of "why am I being
+  //      asked to contribute while suspended" is the Story 10.16 disclosure, rendered ON THE PAYMENT
+  //      SURFACE, before they can act (10.16 AC1). Not the push.
+  //
+  // So "reconciled" here means: the builders take no moderation input, and this pins that they can't
+  // acquire one silently. If suspension-aware alert copy is ever wanted, it is a separate, deliberate
+  // decision — flag it, do not build it.
+
+  it('takes NO moderation input — the input shape has no member-standing-shaped slot', () => {
+    // The structural half. Two members differing ONLY in moderation standing are indistinguishable to
+    // these builders because there is nowhere to express the difference: the input carries member
+    // IDENTITY (`memberId`) but never member STANDING.
+    const input = {
+      alertId: ALERT,
+      pariwarId: PARIWAR,
+      memberId: M1,
+      poolId: POOL_A,
+      identity: IDENTITY,
+      timeCritical: false,
+      locale: 'hi' as const,
+      now: NOW,
+    };
+    expect(Object.keys(input).sort()).toEqual([
+      'alertId', 'identity', 'locale', 'memberId', 'now', 'pariwarId', 'poolId', 'timeCritical',
+    ]);
+  });
+
+  it('produces byte-identical cycle-open + deadline alerts for two arbitrary member ids', () => {
+    // The behavioural half. M1 and M2 are just two distinct member ids here — the test above already
+    // proves the input shape has no member-standing slot, so no payload value COULD encode "suspended"
+    // vs "unmoderated" either way. What this test adds is the empirical confirmation that varying only
+    // `memberId` never leaks into `payload_data`, closing the gap a lookup keyed by memberId could open.
+    const openFor = (memberId: string) =>
+      buildCycleOpenAlert({
+        alertId: ALERT, pariwarId: PARIWAR, memberId, poolId: POOL_A,
+        identity: IDENTITY, timeCritical: false, locale: 'hi', now: NOW,
+      });
+    const deadlineFor = (memberId: string) =>
+      buildDeadlineReminderAlert({
+        alertId: ALERT, pariwarId: PARIWAR, memberId, poolId: POOL_A,
+        identity: IDENTITY, cycleDay: 10, deadlineAt: new Date('2026-08-05T00:00:00.000Z'),
+        timeCritical: true, locale: 'hi', now: NOW,
+      });
+
+    // `payload_data` is the entire member-facing surface — if moderation ever leaked into the copy,
+    // it would leak HERE.
+    expect(openFor(M2).payload_data).toEqual(openFor(M1).payload_data);
+    expect(deadlineFor(M2).payload_data).toEqual(deadlineFor(M1).payload_data);
+  });
+});
+
 // ─── Copy assembly (AC4, AC5) ──────────────────────────────────────────────────────────────────────
 
 describe('AC4/AC5 — the producer resolves every member-facing string INTO the payload', () => {

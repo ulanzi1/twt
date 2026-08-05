@@ -30,27 +30,37 @@ import type {
   VyawasthaShulkStatusPayload,
 } from './types.js';
 
-// ── The state → is_valid / is_active mapping (a DOCUMENTED composition, not a new rule) ───────────
+// ── The state → is_valid / is_active / is_assignable mapping (a DOCUMENTED composition) ───────────
 //
 // PRD FR-12A names top-level `is_valid` ("covered for support if death today") + `is_active` ("valid
 // AND past lock-in AND not suspended"). Neither is a Niyamavali clause — they are a composition of the
-// member's lifecycle state AND (Story 10.10) their moderation standing. These constants + the two
-// derive functions are the SINGLE source of that mapping: refining what counts is a one-line edit
-// here, ZERO engine/rule change. (Recorded as a variance in the Dev Agent Record — the epic AC does
-// not enumerate the exact state set; this is the service's honest composition of the Story 3.1
-// lifecycle states, not an invented policy.)
+// member's lifecycle state AND (Story 10.10) their moderation standing. Story 10.17 adds a THIRD,
+// `is_assignable` (the donor-roster predicate). These constants + the three derive functions are the
+// SINGLE source of that mapping: refining what counts is a one-line edit here, ZERO engine/rule
+// change. (Recorded as a variance in the Dev Agent Record — the epic AC does not enumerate the exact
+// state set; this is the service's honest composition of the Story 3.1 lifecycle states, not an
+// invented policy.)
 //
-// ── Story 10.10, Decision 8: this ONE edit is the ENTIRE moderation enforcement surface ──────────
+// ── Story 10.17: the moderation enforcement surface, stated CORRECTLY ────────────────────────────
 // Moderation (suspend / terminate) is an event-derived OVERLAY orthogonal to the lifecycle machine —
-// `members.state` never moves (Decision 1). Enforcement arrives through `is_valid` and NOTHING else.
-// Because `apps/jobs/src/assignable-roster.ts` reads `payload.isValid` and nothing else (the FROZEN
-// AI-7-2 invariant — [[project_assignability_predicate_is_isvalid_only]]), pool assignability, claim
-// eligibility and the rules engine ALL inherit suspension with NO code change of their own.
+// `members.state` never moves (Story 10.10, Decision 1). Story 10.10's Decision-8 comment claimed here
+// that "pool assignability, claim eligibility and the rules engine ALL inherit suspension" through
+// `is_valid`. ⚠ ONLY THE FIRST OF THOSE THREE WAS EVER TRUE, and after Story 10.17 it is true through
+// `is_assignable` instead. The accurate statement:
+//
+//   · `is_valid`      — COVERAGE ("covered for support if death today"). Suspended ⇒ false. Its ONE
+//                       moderation consumer was the pool roster, which no longer reads it.
+//   · `is_assignable` — the DONOR ROSTER ("may be assigned to a contribution pool"). Suspended ⇒
+//                       TRUE; terminated ⇒ false. `apps/jobs/src/assignable-roster.ts` reads THIS
+//                       field and nothing else (AI-7-2, as amended by Story 10.17).
+//   · Claim eligibility runs the HUMAN R5/R8 ladder and never reads `is_valid`.
+//   · The niyamavali engine PRODUCES inputs to this payload; it never reads `is_valid` either.
 //
 // ⚠ DO NOT add a moderation predicate to `assignable-roster.ts`, `peer-mesh-read.ts`, the niyamavali
 // `member_state_in` operator, or any of the five `TERMINAL_STATES` Sets. Forking the check into N
 // places is exactly what the AI-7-2 invariant was frozen to prevent, and a reviewer is instructed to
-// treat any other subfield read on that path as a finding.
+// treat any subfield read OTHER THAN `is_assignable` on the roster path as a finding.
+// [[project_assignability_predicate_is_isvalid_only]]
 
 /** States where the member is covered for death-benefit support ("valid"): paid + not lapsed/withdrawn. */
 export const VALID_STATES: readonly member.MemberLifecycleState[] = [
@@ -75,6 +85,34 @@ export function deriveIsValid(
   moderationStatus: member.moderation.ModerationStatus = 'none',
 ): boolean {
   return VALID_STATES.includes(state) && moderationStatus === 'none';
+}
+
+/**
+ * `is_assignable` = the DONOR-ROSTER predicate (Story 10.17). A covered lifecycle state AND not
+ * TERMINATED — a suspended member stays on the roster because suspension removes the entitlement to
+ * RECEIVE support, never the obligation to CONTRIBUTE while completing a restoration path
+ * (Niyamavali §3.3: *"a member in lock-in remains a member and may continue to contribute"*).
+ *
+ * Deliberately NOT `is_valid`: the two answer different questions and must be free to diverge.
+ *   · is_valid      — "covered for support if death today"      (coverage)
+ *   · is_assignable — "may be assigned to a contribution pool"  (roster)
+ * A suspended member is `is_valid: false, is_assignable: true`. That divergence IS the story: before
+ * it, `is_valid` was the sole assignability predicate, pool assignment is the ONLY contribution path
+ * (fenced by Story 8.10), and R7(A) restoration requires three CONSECUTIVE contributions — so every
+ * suspension was a de-facto permanent ban and six of the seven R7 restoration clauses were
+ * unreachable. This predicate is the one line that reopens them.
+ *
+ * `VALID_STATES` is REUSED rather than re-derived (Story 10.17 Escalation 3): the join-`lock-in`
+ * coverage question is unresolved, and whatever it resolves to, both predicates should move together.
+ *
+ * No reason-code branching, ever: the seven codes establish the GROUND for the sanction, never the
+ * roster consequence. A per-code roster rule would relocate a governance decision into a derivation.
+ */
+export function deriveIsAssignable(
+  state: member.MemberLifecycleState,
+  moderationStatus: member.moderation.ModerationStatus = 'none',
+): boolean {
+  return VALID_STATES.includes(state) && moderationStatus !== 'terminated';
 }
 
 /**
@@ -289,6 +327,10 @@ export function assemblePayload(input: AssembleInput): MemberValidityPayload {
     ruleRegistryVersion,
     isValid: deriveIsValid(input.memberState, moderation.status),
     isActive: deriveIsActive(input.memberState, moderation.status),
+    // Story 10.17 — the ROSTER predicate, resolved from the SAME moderation status as the two above
+    // (one overlay read, one instant). Placed immediately after `isActive` so the object literal, the
+    // `MemberValidityPayload` type and `MemberValidityPayloadDto` stay in one declared order.
+    isAssignable: deriveIsAssignable(input.memberState, moderation.status),
     lockInStatus: input.lockInStatus,
     vyawasthaShulkStatus: input.vyawasthaShulkStatus,
     contributionHistorySummary: CONTRIBUTION_UNAVAILABLE,

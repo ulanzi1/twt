@@ -71,6 +71,35 @@ describe('deriveContributionStatus — the five-state precedence green ≻ held 
   it('CONTRIBUTION_STATUSES carries exactly the five tones (held added by Story 9.5)', () => {
     expect([...CONTRIBUTION_STATUSES].sort()).toEqual(['green', 'grey', 'held', 'red', 'yellow']);
   });
+
+  // ── Story 10.17 D6 — THE MODERATION-BLINDNESS PIN ──────────────────────────────────────────────
+
+  it('D6: the derivation is MODERATION-BLIND — a suspended member\'s confirmed contribution is still GREEN', () => {
+    // Story 10.17 puts suspended members back on the donor roster, so for the first time a SUSPENDED
+    // member can have a confirmed contribution and a Yogdaan Bahi row. The green stays green, and
+    // that is CORRECT and must not be "fixed": the tone states a fact about the CONTRIBUTION (it was
+    // matched to bank records), not an endorsement of the member's standing. Colouring it differently
+    // for a suspended member would be the passbook editorialising about a sanction — and would make
+    // the restoration path invisible to the very member completing it (R7(A) is cleared BY these
+    // contributions). AC5 asks for a pin here, not a change.
+    //
+    // ── Asserted STRUCTURALLY, not just behaviourally ────────────────────────────────────────────
+    // A behavioural assertion alone would be vacuous: you cannot "pass a suspended member" to a
+    // function that has no parameter for one. The real pin is on the INPUT SHAPE — the derivation
+    // accepts exactly four contribution-scoped booleans and there is no member-standing-shaped slot
+    // to thread moderation through. If someone adds one, this fails and forces a conscious decision.
+    const input = { confirmed: true, held: false, mismatch: false, alertClosed: false };
+    expect(Object.keys(input).sort()).toEqual(['alertClosed', 'confirmed', 'held', 'mismatch']);
+    expect(deriveContributionStatus.length).toBe(1); // one destructured object, no second "member" arg
+
+    // Behaviourally: the ONLY inputs are the four above, so the output cannot vary with standing.
+    expect(deriveContributionStatus(input)).toBe('green');
+
+    // …and adding a moderation-shaped key changes NOTHING — it is not read (excess-property-safe via
+    // an explicit widening, which is exactly what a future careless caller would do).
+    const withStanding = { ...input, moderationStatus: 'suspended', isValid: false, isAssignable: true };
+    expect(deriveContributionStatus(withStanding)).toBe('green');
+  });
 });
 
 describe('isAlertClosedState — the grey/yellow boundary', () => {

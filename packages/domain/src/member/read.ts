@@ -56,7 +56,8 @@ export async function memberExists(
  * DELIBERATELY UNFILTERED by `members.state`: this read returns the WHOLE membership and lets the caller
  * filter by the Story 4.6 Validity Service verdict at the cycle-freeze instant. Pre-filtering by
  * lifecycle state here would re-derive member-state policy in the enumeration layer — the exact thing
- * the assignable-roster invariant forbids (assignability is `getValidityAt(...).is_valid` ONLY). A member
+ * the assignable-roster invariant forbids (assignability is `getValidityAt(...).is_assignable` ONLY —
+ * AI-7-2 as amended by Story 10.17; it was `is_valid` until 2026-08-04). A member
  * who signed up AFTER the freeze still enumerates, but replays to a non-valid state at `committed_at`, so
  * the verdict excludes them — determinism is preserved by evaluating validity at the frozen instant, not
  * by narrowing this enumeration.

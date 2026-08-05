@@ -55,6 +55,8 @@ export {
   projectLockInStatus,
   deriveIsValid,
   deriveIsActive,
+  // Story 10.17 — the DONOR-ROSTER predicate (`is_assignable`), distinct from `is_valid` (coverage).
+  deriveIsAssignable,
   // Story 10.10 — the `suspended_per_<code>` / `terminated_per_<code>` special-flag builder.
   moderationSpecialFlag,
   VALID_STATES,

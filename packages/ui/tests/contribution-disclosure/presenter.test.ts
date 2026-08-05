@@ -30,6 +30,9 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
     ruleRegistryVersion: 'rrv-1',
     isValid: true,
     isActive: true,
+    // Story 10.17 — the ROSTER predicate (`isValid` is COVERAGE). An unmoderated active member is
+    // both. Each fixture below sets it TRUTHFULLY for the member it models, never blanket-`true`.
+    isAssignable: true,
     lockInStatus: { daysAtJoin: 90, unlockDate: '2026-01-01T00:00:00.000Z', state: 'unlocked' },
     vyawasthaShulkStatus: {
       paidThrough: '2027-01-01T00:00:00.000Z',
@@ -53,14 +56,30 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
   };
 }
 
-/** A SUSPENDED member as the validity service actually emits them: isValid + isActive both false. */
+/**
+ * A SUSPENDED member as the validity service actually emits them: `isValid` + `isActive` both false —
+ * and, since Story 10.17, `isAssignable: TRUE`. That divergence is not incidental to this file: it is
+ * exactly the payload that makes this disclosure REACHABLE. Before 10.17, `isAssignable` did not exist,
+ * `isValid: false` kept the member off the donor roster, and `/pay` answered
+ * `{ available: false, reason: 'unassigned' }` — so every branch below was proven only at test level.
+ */
 function suspendedPayload(code = 'r7-contribution-discipline'): MemberValidityPayloadDto {
-  return basePayload({ isValid: false, isActive: false, specialFlags: [`suspended_per_${code}`] });
+  return basePayload({
+    isValid: false,
+    isActive: false,
+    isAssignable: true,
+    specialFlags: [`suspended_per_${code}`],
+  });
 }
 
-/** A TERMINATED member as the validity service actually emits them. */
+/** A TERMINATED member as the validity service actually emits them — off the roster too (10.17). */
 function terminatedPayload(code = 'r14-forgery'): MemberValidityPayloadDto {
-  return basePayload({ isValid: false, isActive: false, specialFlags: [`terminated_per_${code}`] });
+  return basePayload({
+    isValid: false,
+    isActive: false,
+    isAssignable: false,
+    specialFlags: [`terminated_per_${code}`],
+  });
 }
 
 describe('the RULE the disclosure fires on (AC1) — a suspension that still permits contribution', () => {
@@ -154,6 +173,8 @@ describe('THE D3 PIN — the join lock-in is NOT the restoration lock-in', () =>
     const violating = basePayload({
       isValid: false,
       isActive: false,
+      // Not a moderation case: a non-VALID_STATES lifecycle member is off the roster too (10.17).
+      isAssignable: false,
       lockInStatus: { daysAtJoin: 90, unlockDate: '2027-01-01T00:00:00.000Z', state: 'in-lock-in' },
     });
     expect(deriveContributionDisclosure(violating)).toBeNull();
@@ -195,6 +216,7 @@ describe('THE AC2 PIN — Story 10.23 lights the lock-in arm up with ZERO copy/r
     const both = basePayload({
       isValid: false,
       isActive: false,
+      isAssignable: true, // suspended, not terminated ⇒ still on the roster (10.17)
       specialFlags: ['suspended_per_r7-contribution-discipline', 'restoration_lock_in'],
     });
     expect(deriveContributionDisclosure(both)!.instrument).toBe('suspension');
@@ -208,6 +230,7 @@ describe('THE AC2 PIN — Story 10.23 lights the lock-in arm up with ZERO copy/r
     const terminatedAndLockedIn = basePayload({
       isValid: false,
       isActive: false,
+      isAssignable: false, // terminated ⇒ off the roster (10.17)
       specialFlags: ['terminated_per_fraud', 'restoration_lock_in'],
     });
     expect(isUnderRestorationDisciplineLockIn(terminatedAndLockedIn)).toBe(false);

@@ -163,10 +163,17 @@ export interface MemberValidityPayload {
    * version changes — so a registry amendment is observable in the payload.
    */
   ruleRegistryVersion: string;
-  /** "covered for support if death today" — composed from member state (VALID_STATES; see payload.ts). */
+  /** COVERAGE — "covered for support if death today" (VALID_STATES; see payload.ts). Suspended ⇒ false. */
   isValid: boolean;
   /** "valid AND past lock-in AND not suspended" — the narrowly-active answer (ACTIVE_STATES). */
   isActive: boolean;
+  /**
+   * ROSTER — "may be assigned to a contribution pool" (Story 10.17). NOT the same question as
+   * `isValid`: a SUSPENDED member is `isValid: false, isAssignable: true`, because a suspension
+   * removes the entitlement to RECEIVE support, never the obligation to CONTRIBUTE while completing a
+   * restoration path (Niyamavali §3.3). A TERMINATED member is `isAssignable: false`.
+   */
+  isAssignable: boolean;
   lockInStatus: LockInStatusPayload;
   vyawasthaShulkStatus: VyawasthaShulkStatusPayload;
   contributionHistorySummary: ContributionHistoryUnavailable;

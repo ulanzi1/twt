@@ -13,7 +13,13 @@
 //   · AC1/AC4 — each action writes its event + its `member_moderation_actions` row + its audit line,
 //     and `members.state` NEVER moves.
 //   · AC5 — `is_valid` flips false on suspend and true again on restore, INCLUDING validity-cache
-//     invalidation, and a suspended member drops out of the assignable roster with NO roster change.
+//     invalidation. ⚠ AMENDED BY STORY 10.17: the original line here also claimed "a suspended member
+//     drops out of the assignable roster with NO roster change". That is NO LONGER TRUE and was
+//     deliberately reversed — a suspension removes the entitlement to RECEIVE support (`is_valid`),
+//     never the obligation to CONTRIBUTE while completing a restoration path (Niyamavali §3.3). The
+//     roster now reads the separate `is_assignable` predicate, on which a SUSPENDED member is TRUE and
+//     only a TERMINATED member is false. See `packages/validity-service/tests/integration/
+//     moderation-validity.spec.ts` for the amended proof.
 //   · AC6 — the session cascade revokes the refresh chain, and the member can STILL log in.
 //   · AC7 — the 12-month rejoin lock on terminate, CLEARED by restore.
 //

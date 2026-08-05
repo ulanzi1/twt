@@ -235,6 +235,9 @@ importers:
       '@twt/eslint-config-twt':
         specifier: workspace:*
         version: link:../../packages/eslint-config-twt
+      '@twt/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.20

@@ -1,4 +1,199 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-05a (10-17-moderation-roster-unblock: review -> done via bmad-code-review, off
+#   main @ 7e59f3d on branch feat/10-17-moderation-roster-unblock. Three parallel layers (Blind Hunter
+#   diff-only, Edge Case Hunter diff+project-trace, Acceptance Auditor diff+spec+live verification)
+#   surfaced 14 raw findings; after dedup and code-verification, 0 decision-needed + 6 patch + 3
+#   pre-existing defer survived (5 dismissed as noise or verified-fine on inspection). Acceptance
+#   Auditor found exactly ONE AC violation — AC3's OpenAPI clause, already self-disclosed by the story
+#   as Escalation 5 — and confirmed AC1/AC2/AC4/AC5/AC6a/AC6b/AC7 + D1/D3/D4/D5/D6 all satisfied by
+#   independently re-checking against live source, not the Dev Agent Record's word.
+#   SIX PATCHES APPLIED, ALL VERIFIED (payload.test.ts 91/91, contribution-notify-triggers.test.ts
+#   66/66, @twt/domain typecheck green): (a)+(b) the story doc's own File List miscounted itself —
+#   "Tests (11)" actually listed 14, "Source, prose-only corrections (4)" actually listed 5 — both
+#   header counts corrected. (c) the Escalations section was authored out of order (3, then 5, then 4);
+#   physically reordered to 1->2->3->4->5, numbers preserved since other artifacts reference
+#   "Escalation 5" by number. (d) the D4 moderation-blindness test's title/comment overclaimed what it
+#   proves — M1/M2 are opaque memberIds with no moderation-status semantics, so the assertion only
+#   re-proves memberId-invariance (already established by the structural test beside it); rewritten to
+#   claim only that. (e) `deriveIsAssignable.length` was asserted `<=2` to prove "no 3rd arg", but a
+#   default-valued 2nd param makes `.length` read 1 regardless of a genuine 3rd arg — tightened to
+#   `toBe(1)` with an accurate comment, real reason-code-blindness proof stays the behavioural
+#   assertion below it. (f) `moderation/index.ts`'s corrected comment re-duplicated `payload.ts`'s
+#   enforcement-scope prose near-verbatim — the exact copy-paste pattern that caused the stale comment
+#   this story fixed; trimmed to point at `assignable-roster.ts`'s doc block as the sole canonical
+#   record instead of a second full copy.
+#   THREE FINDINGS DEFERRED, ALL PRE-EXISTING / OUT OF SCOPE, NOT THIS DIFF'S FAULT: AC3's OpenAPI gap
+#   (root cause is `emit-openapi.ts` never importing `validity.ts`, independently reconfirmed live);
+#   the "wider gap" that other DTOs are likely also unregistered there, with zero mechanized detector
+#   yet (the story itself already scopes that audit to a future owning story); and new live-DB test
+#   coverage for restoring a member from `terminated` via bare `trustee-discretion` running ahead of
+#   Story 10.18's not-yet-built trustee-panel sanctioning authority (the transition itself predates this
+#   story — Story 10.10's state machine — only newly exercised here).
+#   Findings + resolutions written into the story's `### Review Findings` section; all three defers
+#   also appended to deferred-work.md. NEXT: 10.11, then 10.18 -> 10.19 -> 10.20+.)
+# last_updated: 2026-08-04h (10-17-moderation-roster-unblock: ready-for-dev -> in-progress -> review
+#   via bmad-dev-story, off main @ 7e59f3d on branch feat/10-17-moderation-roster-unblock. THE
+#   CONSTITUTIONAL CORRECTION LANDED, and the logic really is ~1 line: deriveIsAssignable(state,
+#   moderationStatus) = VALID_STATES.includes(state) && moderationStatus !== 'terminated', sitting
+#   beside deriveIsValid in validity-service/payload.ts, wired into assemblePayload, and
+#   assignable-roster.ts:52 switched from payload.isValid to payload.isAssignable. A suspended member
+#   is now is_valid:false, is_assignable:true — they contribute, they are not covered. deriveIsValid /
+#   deriveIsActive / VALID_STATES / ACTIVE_STATES are BYTE-UNCHANGED; PERMISSION_CATALOG_VERSION stays
+#   28; no migration, no event, no route, no key.
+#   AC1/AC2/AC4/AC5/AC6a/AC6b/AC7 SATISFIED. AC3 is PARTIAL and that is the story's one real surprise:
+#   the OpenAPI clause was UNDISCHARGEABLE. `pnpm contracts:emit-openapi` produced a BYTE-IDENTICAL
+#   file, not because the emission was stale but because emit-openapi.ts is a HAND-CURATED registry
+#   that has never imported ../src/members/validity.js — `grep -c isValid openapi/v1.yaml` returns 0,
+#   so the ENTIRE Story 4.6 validity payload has never been in the published contract and isAssignable
+#   could not appear there either. The two-boolean prose went into the MemberValidityPayloadDto doc
+#   comment instead. Registering the payload was deliberately NOT done: it would publish a whole
+#   previously-undocumented wire surface into a byte-identity-gated artifact as a side effect of a
+#   story that explicitly owns no new state. Carried as ESCALATION 5 + deferred-work + a decision-log
+#   sub-bullet, never backfilled [[feedback_record_unattested_no_backfill]]. Likely a WIDER gap —
+#   other shipped DTOs may be unregistered too; the owning story should audit, not spot-fix.
+#   D2 HONOURED IN FULL: every red 10.10 assertion was REWRITTEN, none deleted/.skipped/weakened.
+#   moderation-validity.spec.ts:243 kept its file/position/name-shape ('drops out of assignability
+#   through is_valid ALONE' -> 'STAYS assignable through is_assignable, while is_valid still drops')
+#   with its COMMENT BLOCK rewritten, plus terminated + restore arms. The byte-identical test gained
+#   isAssignable to its MUST-NOT-MOVE set under suspension AND a new mirrored test putting it in the
+#   ALLOWED-TO-MOVE set under termination — the pair is what makes either meaningful. Net test count
+#   went UP in every touched suite (validity-service integration 6->7, jobs roster units 6->8).
+#   AC6 PROVEN IN TWO HALVES joining at pool_snapshots.member_assignments (a package/app cannot import
+#   another app, so the split is forced and is stated in both files): the ROSTER half in
+#   assignable-roster-live.test.ts drives the REAL resolver + REAL spawnChildPool and reads the
+#   snapshot back; the SURFACE half in a NEW apps/api spec proves GET /member/validity returns
+#   is_valid:false + is_assignable:true + suspended_per_<code> and nominee-accounts returns
+#   available:true instead of {available:false, reason:'unassigned'}. AC6b then feeds that REAL
+#   payload into @twt/ui deriveContributionDisclosure -> non-null, instrument:'suspension' — THE FIRST
+#   TIME THE 10.16 DISCLOSURE HAS FIRED ON A LIVE PATH, discharging 10.16 Escalation 3. 10.16's
+#   presenter is UNTOUCHED. AC6 DEVICE RUN IS UN-ATTESTED AND SAID SO PLAINLY: the data path is
+#   proven, pixels are not; 10.16 Escalation 2 (no RN mount harness) is NOT discharged.
+#   REVERT-SANITY: reverting the predicate to payload.isValid fails 6 tests. Recorded honestly that
+#   two api-side specs are NOT predicate-sensitive in isolation BY DESIGN — the nominee-accounts test
+#   seeds the snapshot directly (snapshot->surface half only), and AC6b is specialFlags-driven
+#   (isUnderContributionPermittingSuspension reads parseModerationFlag, never isAssignable), which is
+#   exactly why AC6b is scoped as a CONFIRMATION of reachability rather than a proof of the predicate.
+#   THREE TRAPS COST A RED RUN EACH, all now documented in the test helpers: (1) `none --terminate-->`
+#   is ILLEGAL and evaluateModerationOverlay skips illegal steps as SILENT IDENTITY, so a lone
+#   member.moderation.terminated event folds to status:'none' and the member comes back FULLY
+#   UNMODERATED — terminate must always be seeded as the two-event chain suspend->terminate; (2)
+#   recordClaimNomineeBankAccounts requires EXACTLY two accounts atomically (Story 6.8); (3)
+#   resolveMemberLivePool gates on getMemberStateAt === 'active', verified NOT a second blocker
+#   because moderation is an overlay and members.state never moves (10.10 Decision 1).
+#   FOUR STALE-PROSE SITES FOUND BEYOND THE STORY'S LIST and corrected: member/moderation/index.ts
+#   (a verbatim duplicate of the wrong enforcement-scope claim), member/read.ts:59,
+#   news-blog/audience.ts:6, and three 'Enforcement is is_valid' comments (server.ts,
+#   member-moderation/handlers.ts, member-auth.repo.ts). The two-question test was applied to the
+#   whole diff: the only surviving is_valid readers (SignalsPanel.tsx:106, member-status
+#   presenter.ts:340) both answer COVERAGE and are correct + unchanged; NO third 'both, I suppose'
+#   site exists in production code.
+#   ONE VARIANCE: @twt/ui added as an apps/api devDependency (workspace, TEST-ONLY) because AC6b
+#   mandates calling deriveContributionDisclosure; @twt/ui is pure logic depending only on
+#   @twt/contracts, so no cycle and nothing ships [[project_contracts_domain_bundle_boundary]].
+#   D5 DEPLOY NOTE CARRIED: a <=60s post-deploy 500 window on GET /member/validity for warm
+#   pre-deploy validity-cache rows (cache key has no payload-shape component; TTL 60s). ACCEPTED and
+#   self-healing; zero-window lever is admin/validity-cache/invalidate-all per Pariwar post-rollout.
+#   A payload-version cache key and an optional DTO field were both CONSIDERED AND REJECTED in-story.
+#   Pool spawn is immune (getValidityAt, never getValidityCached). Decision 2026-08-04-072's open
+#   follow-up RESOLVED in .decision-log.md; NO architecture.md amendment (per that decision);
+#   [[project_assignability_predicate_is_isvalid_only]] flipped to SHIPPED.
+#   NEXT: code-review this story (use a DIFFERENT LLM), then 10.11 / 10.18 -> 10.19 -> 10.20+.)
+# last_updated: 2026-08-04g (10-17-moderation-roster-unblock: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ 7e59f3d. Saved 10-17-moderation-roster-unblock.md. Epic 10's
+#   THIRTEENTH authored story and the SECOND of the eight-story moderation model. The `[GATE]` from
+#   epics.md:3681 is DISCHARGED — 10.16 merged at 7e59f3d (PR #167) — so 10.17 is cleared to deploy.
+#   WHAT IT IS: the constitutional correction. Story 10.10 enforced suspension through `is_valid`,
+#   which is ALSO the sole pool-assignability predicate, and pool assignment is the only contribution
+#   path (fenced by Story 8.10) — so every suspension was a de-facto permanent ban and six of the
+#   seven R7 restoration clauses became unreachable. The fix is ~1 real logic line: a NEW pre-derived
+#   `is_assignable` field on the validity payload, and ONE read switched to it.
+#   OWNS NO NEW STATE: no table, no migration, no event, no route, no permission key;
+#   PERMISSION_CATALOG_VERSION stays 28. Tier 1 = payload.ts (deriveIsAssignable + the assemblePayload
+#   wire) + types.ts + contracts/src/members/validity.ts + a REGENERATED-AND-COMMITTED openapi/v1.yaml
+#   + assignable-roster.ts:52. `is_valid` is byte-unchanged and keeps meaning COVERAGE; only the
+#   ROSTER switches fields. A suspended member becomes `is_valid:false, is_assignable:true` — they
+#   contribute, they are not covered. That divergence IS the story.
+#   SIX DECISIONS RECORDED. (D1) deriveIsAssignable sits beside deriveIsValid in payload.ts; three
+#   alternatives rejected by name, the two dangerous ones being (a) widening VALID_STATES — which
+#   would tell a suspended member they are COVERED, the exact 10.16 harm — and (b) putting the
+#   moderation check inside apps/jobs, which is the actual AI-7-2 violation. The invariant survives
+#   BECAUSE the field is pre-derived: the roster still reads ONE field, so this is recorded as an
+#   AMENDMENT to AI-7-2, not a violation. (D2) ⭐ THE MOST IMPORTANT DECISION IN THE STORY — THE
+#   SHIPPED 10.10 TESTS ASSERT THE OLD BEHAVIOUR AND WILL GO RED, and that failing test IS the record
+#   of the constitutional change. The instinct it exists to override is real: a dev seeing red after a
+#   one-line change reaches for delete/.skip/weaken, and a green suite reached by deletion is
+#   indistinguishable from one reached by correctness. Required treatment is spelled out per test —
+#   keep the file+position, keep the NAME'S SHAPE (same question, newly answered), rewrite the COMMENT
+#   BLOCK not just the expect, and preserve the intent (a rewrite that asserts nothing has lost the
+#   test even though the file still contains it). `moderation-validity.spec.ts:243` is the AI-7-2
+#   statement in test form; a diff showing it DELETED rather than REWRITTEN is on its own grounds to
+#   reject the PR. AC7 exists solely to make that visible. (D3) DO NOT bump POOL_ASSIGNMENT_HASH_VERSION — assign.ts:131's bump rule is "the
+#   algorithm changes members' pools for the SAME roster"; this changes WHICH MEMBERS ARE IN the
+#   roster, an INPUT. A bump would break replay of every already-frozen cycle. (D4) the Story 8.8
+#   alert copy stays MODERATION-BLIND despite epics.md:3705's "the copy must say so" — a push renders
+#   on a lock screen (sanction status), and threading a validity read into a 4L fan-out for a copy
+#   variant is the wrong hot path; the member-facing explanation is already the 10.16 disclosure ON
+#   THE PAYMENT SURFACE, before they can act. Reconciliation = comments + a pin that the alert
+#   builders take no moderation input, NOT new copy. (D5) AN ACCEPTED DEPLOYMENT-COMPATIBILITY WINDOW,
+#   NOT A FUNCTIONAL DEFECT — and it is written as a DEPLOY NOTE, not just an implementation note:
+#   member_validity_cache stores the full payload JSONB and its key has NO payload-shape component,
+#   while fastify's zod serializer PARSES the response, so a cached pre-deploy row missing
+#   `isAssignable` 500s the member validity read for up to VALIDITY_CACHE_TTL_SECONDS = 60. Bounded and
+#   self-healing. A payload-version cache key is EXPLICITLY REJECTED IN-STORY (a real change to a
+#   frozen 4.8 mechanism for a 60-second transient) and so is making the DTO field optional (a
+#   correctness hole outliving the deploy by years) — both named so a future engineer doesn't re-open
+#   the window as a bug. Zero-window is available OPERATIONALLY if wanted: validity-cache/invalidate-all
+#   per Pariwar post-rollout, no code. The spawn path is IMMUNE (assignable-roster.ts uses
+#   getValidityAt, never the cache). (D6)
+#   Story 8.6's yogdaan status is ALREADY moderation-blind — a suspended member's confirmed
+#   contribution renders GREEN and must not be "fixed": the green is a fact about the CONTRIBUTION,
+#   and recolouring it would make the restoration path invisible to the member completing it. Pin it.
+#   AC6 IS THE FIRST REAL-PATH VALIDATION OF STORY 10.16, discharging its Escalation 3: the disclosure
+#   is built and test-proven but has NEVER RENDERED LIVE (is_valid:false kept suspended members off
+#   the roster, so /pay returned {available:false, reason:'unassigned'}). It is deliberately SPLIT so
+#   ownership stays clear: AC6a (PRIMARY, what 10.17 owes) = REACHABILITY — suspended member ->
+#   is_assignable:true -> in member_assignments -> nominee accounts available:true. AC6b (SECONDARY,
+#   confirmation only) = that REAL payload drives deriveContributionDisclosure to a non-null
+#   'suspension' view-model. 10.16's presenter correctness is NOT re-opened; if AC6b returns null the
+#   working hypothesis is "10.17 didn't deliver the payload 10.16 was built against", and editing
+#   10.16's shipped derivation to make it pass is Anti-pattern 7. Both are provable WITHOUT a device;
+#   whether an emulator run of /pay happened is recorded as attested or UN-ATTESTED
+#   [[feedback_record_unattested_no_backfill]].
+#   AC4 pins Tier-3 replay determinism: a moderation event AFTER a frozen committed_at must not change
+#   the roster resolved AT it (identical id-list AND computeAssignableRosterHash). Nothing diverges
+#   today, so the pin exists so that stays true; it passes because getValidityAt resolves the
+#   moderation overlay at the PINNED INSTANT alongside getMemberStateAt (service.ts:93-99) — say so in
+#   the test, so a future move to now() fails loudly. Revert-sanity is required on the new pins.
+#   ALSO CORRECTED BY AC2: payload.ts:44-52's enforcement-scope claim ("pool assignability, claim
+#   eligibility and the rules engine ALL inherit suspension") — only the FIRST was ever true; claim
+#   eligibility runs the human R5/R8 ladder and the engine produces INPUTS to the payload.
+#   NEW SECTION — THE REVIEWER CHECKPOINT (added at BigDev's direction, and the most reusable thing
+#   here): this story creates THE FIRST DIVERGENCE between two previously-fused booleans, so every read
+#   now carries a claim about which question it answers. The permanent test: every consumer of
+#   `is_valid` must be able to answer "am I talking about COVERAGE?"; every consumer of `is_assignable`
+#   must be able to answer "am I talking about DONOR-ROSTER ELIGIBILITY?"; if neither is obviously true
+#   at the call site, the wrong boolean is probably being used. The tell-tale is a site whose honest
+#   answer is "both" — written when the two were fused, now needing an owner. Wired into Task 9 as a
+#   self-applied check over the diff.
+#   FOUR ESCALATIONS: (1) the two remaining `is_valid` consumers SHOULD BE REVIEWED TO CONFIRM THEY
+#   DISPLAY COVERAGE RATHER THAN ROSTER ELIGIBILITY — deliberately NOT phrased as "reading the wrong
+#   boolean", because nothing proves either is wrong; until now the concepts were fused so no consumer
+#   ever had to state which it meant. The verifier-console SignalsPanel is a LABELLING question (a
+#   verifier may now see "invalid" beside a member legitimately contributing); the member-status
+#   headline is coverage and correct, pinned byte-unchanged by 10.16 AC3, with any roster
+#   acknowledgement being a §4e UX question. Raised for Epic 6 / UX, not resolved. (2) the 60s
+#   500-window (D5). (3) CARRIED FORWARD UNRESOLVED from 10.16: FR-8 calls the join lock-in a
+#   general-death lock-in while VALID_STATES treats 'lock-in' as covered — deriveIsAssignable
+#   deliberately REUSES VALID_STATES rather than re-deriving a state list, so both predicates move
+#   together whenever that resolves. (4) the RN mount harness, now reached for by SEVEN stories, still
+#   owed its own story; AC6 proves the DATA PATH, not pixels.
+#   GATES: contracts-check-openapi-determinism (ci.yml:136) fails if openapi/v1.yaml is regenerated
+#   but not COMMITTED — the most likely unrelated-looking red. determinism-replay (:790) asserts ONE
+#   distinct hash across 100 threads, a VARIANCE check with no golden value, so a new field keeps it
+#   green. Unlike 10.16, this story changes a payload shape read by live-DB specs, so a live-DB
+#   failure is NOT presumptively an innocent flake — check each in isolation. Branch off main; commit
+#   manually [[project_story_automator_ops]]. Story file: 10-17-moderation-roster-unblock.md.
+#   NEXT: 10.11, then 10.18 -> 10.19 -> 10.20+, with 10.24+ per the 2026-08-04c decomposition.)
 # last_updated: 2026-08-04f (10-16-contribution-during-suspension-disclosure: review -> done via
 #   bmad-code-review, off main @ e357ac1 on branch feat/10-16-contribution-during-suspension-disclosure.
 #   Three parallel layers (Blind Hunter diff-only, Edge Case Hunter diff+project-trace, Acceptance
@@ -3115,7 +3310,7 @@ development_status:
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done
-  10-17-moderation-roster-unblock: backlog
+  10-17-moderation-roster-unblock: done
   10-18-constituting-the-trustee-panel-sanctioning-authority: backlog
   10-19-termination-ends-membership-privileges: backlog
   10-20-moderation-record-model: backlog

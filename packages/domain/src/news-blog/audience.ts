@@ -3,8 +3,11 @@
 // Resolves which MEMBERS a published post dispatches to, per its `audience_scope`. Only two scopes
 // are fully wireable today:
 //   · `members-all` → every active/in-grace member in the Pariwar (the states that count as
-//     "reachable/valid" — the [[project_assignability_predicate_is_isvalid_only]] "is_valid incl.
-//     active-in-grace" authority). NOT a single-state scan (that would silently drop grace members).
+//     "reachable/valid" — the [[project_assignability_predicate_is_isvalid_only]] "incl.
+//     active-in-grace" authority, i.e. `VALID_STATES`). NOT a single-state scan (that would silently
+//     drop grace members). NOTE: this is a LIFECYCLE-state scan and is deliberately moderation-blind —
+//     it is neither `is_valid` (coverage) nor `is_assignable` (roster), which Story 10.17 split apart;
+//     a suspended member still receives Pariwar news, which is the intended reach.
 //   · `public`      → the EMPTY member set: a public post renders on apps/public (web), no push.
 //
 // `state` / `role` / `cohort` are STORED + rendered + they DRIVE the bilingual requirement, but the

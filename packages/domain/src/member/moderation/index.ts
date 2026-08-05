@@ -10,13 +10,19 @@
 // `app.member_state_writer` trigger change, and no addition to the `member-state-invariant` CI-gate
 // allowlist. All three `member.moderation.*` events are IDENTITY through `memberStateMachine`.
 //
-// ── The enforcement surface is `is_valid`, and ONLY `is_valid` (Decision 8) ──────────────────────
-// `packages/validity-service/src/payload.ts` folds `moderationStatus` into `deriveIsValid`. That
-// ONE edit is the whole enforcement surface: pool assignability, claim eligibility and the rules
-// engine inherit suspension with NO change of their own. Do NOT add a moderation predicate to
-// `assignable-roster.ts`, `peer-mesh-read.ts`, the niyamavali `member_state_in` operator, or any
-// `TERMINAL_STATES` Set — that would fork the frozen AI-7-2 invariant
-// ([[project_assignability_predicate_is_isvalid_only]]) into N places.
+// ── The enforcement surface: TWO pre-derived predicates (Decision 8, AMENDED by Story 10.17) ─────
+// `packages/validity-service/src/payload.ts` folds `moderationStatus` into the payload derivations —
+// `deriveIsValid` (COVERAGE, suspended ⇒ false) and `deriveIsAssignable` (ROSTER, suspended ⇒ TRUE;
+// only termination removes it). Story 10.10's Decision 8 claimed `is_valid` alone was the whole
+// enforcement surface; that was only ever true for pool assignability (claim eligibility runs the
+// human R5/R8 ladder and the niyamavali engine produces INPUTS to the payload — neither read
+// `is_valid`). **Canonical amendment record:** `apps/jobs/src/assignable-roster.ts`'s doc block on
+// `isMemberAssignable` — read that, not a second copy of the rationale, here.
+//
+// Do NOT add a moderation predicate to `assignable-roster.ts`, `peer-mesh-read.ts`, the niyamavali
+// `member_state_in` operator, or any `TERMINAL_STATES` Set — that would fork the AI-7-2 invariant
+// ([[project_assignability_predicate_is_isvalid_only]]) into N places. The invariant survives Story
+// 10.17 precisely BECAUSE the new field is pre-derived here and read as ONE field there.
 
 export {
   MODERATION_STATUSES,

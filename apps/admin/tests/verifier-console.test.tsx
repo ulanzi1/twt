@@ -39,6 +39,9 @@ const PRESENT_PACKET: VerifierConsolePacket = {
       ruleRegistryVersion: 'rrv-1',
       isValid: true,
       isActive: true,
+      // Story 10.17 — the ROSTER predicate. The verifier console renders COVERAGE (`isValid`) and
+      // never reads this field; see Story 10.17 Escalation 1 for the open labelling question there.
+      isAssignable: true,
       lockInStatus: { daysAtJoin: 0, unlockDate: null, state: 'unlocked' },
       vyawasthaShulkStatus: { paidThrough: null, daysUntilLapse: null, inRenewalGrace: false, graceRemainingDays: null },
       contributionHistorySummary: { status: 'producer_unavailable', producer: 'epic-8-9' },

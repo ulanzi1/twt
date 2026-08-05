@@ -4,8 +4,9 @@
 // event streams, and the REAL Story 4.6 Validity Service — the thing the fakes suites and the domain
 // integration spec each prove only one half of:
 //   1. seed active + pending members + a cycle-freeze commit,
-//   2. run the REAL createAssignableRosterResolver → the assignable roster (is_valid members ONLY,
-//      evaluated at committed_at) — active members in, pending member out, and DETERMINISTIC on re-run,
+//   2. run the REAL createAssignableRosterResolver → the assignable roster (is_assignable members
+//      ONLY — AI-7-2 as amended by Story 10.17; NOT is_valid, which is the COVERAGE answer), evaluated
+//      at committed_at — active members in, pending member out, and DETERMINISTIC on re-run,
 //   3. spawn N pools threading that roster through the real spawnChildPool + createPoolAssignmentSeam,
 //   4. resolveAssignedPoolForMember (Story 7.6) returns { assigned: true } for the EXACT pool the
 //      assignment engine placed a real member in — and { assigned: false } for the non-assignable member.
@@ -105,7 +106,7 @@ describe.skipIf(!hasDatabase)('assignable-roster → spawn → resolve — end-t
     );
   }
 
-  /** Seed a member whose event stream replays to `active` (is_valid = true) at/BEFORE `committedAt`. */
+  /** Seed a member whose event stream replays to `active` (is_assignable = true) at/BEFORE `committedAt`. */
   async function seedActiveMember(pariwarId: string, joinedAt: Date): Promise<string> {
     const memberId = randomUUID();
     memberIds.push(memberId);
@@ -122,7 +123,7 @@ describe.skipIf(!hasDatabase)('assignable-roster → spawn → resolve — end-t
     return memberId;
   }
 
-  /** Seed a member who replays only to `pending-kyc` (is_valid = false — NOT assignable). */
+  /** Seed a member who replays only to `pending-kyc` (outside VALID_STATES ⇒ is_assignable = false). */
   async function seedPendingMember(pariwarId: string, joinedAt: Date): Promise<string> {
     const memberId = randomUUID();
     memberIds.push(memberId);
@@ -133,6 +134,53 @@ describe.skipIf(!hasDatabase)('assignable-roster → spawn → resolve — end-t
       [memberId, pariwarId],
     );
     return memberId;
+  }
+
+  /**
+   * Append the `member.moderation.*` chain that folds an ALREADY-SEEDED member to `target` (Story
+   * 10.17), every event landing at/before `occurredAt`.
+   *
+   * ⚠ TERMINATION IS A TWO-EVENT CHAIN, NOT A ONE-EVENT SHORTCUT. `evaluateModerationOverlay` folds
+   * via `nextModerationStatus(status, action)` and IGNORES the payload's `moderation_from`/`_to`
+   * fields — an illegal transition is skipped as IDENTITY, silently. `none --terminate-->` is
+   * illegal by Story 10.10's Decision 2 (the API answers 409), so seeding a lone
+   * `member.moderation.terminated` folds to `status: 'none'` and the member stays FULLY UNMODERATED
+   * — a green-looking test asserting nothing. It must go through `suspended` first.
+   *
+   * Lifecycle-identity by construction: `from_state`/`to_state` are both `active`, because moderation
+   * is an OVERLAY and `members.state` never moves (Story 10.10, Decision 1). `occurredAt` is an
+   * explicit argument — the whole point of the replay pin below is WHERE these land relative to a
+   * frozen `committed_at`.
+   */
+  async function moderateMember(
+    pariwarId: string,
+    memberId: string,
+    firstVersion: number,
+    target: 'suspended' | 'terminated',
+    occurredAt: Date,
+    reasonCode = 'r7-contribution-discipline',
+  ): Promise<void> {
+    const base = {
+      from_state: 'active',
+      to_state: 'active',
+      trigger: 'test',
+      actor: 'trustee',
+      reason_code: reasonCode,
+    };
+    // The suspension leg is required for BOTH targets (it is the only legal predecessor of a
+    // termination). Stamped 1s earlier so both legs sit inside a pre-freeze window.
+    await seedEvent(pariwarId, memberId, firstVersion, 'member.moderation.suspended', new Date(occurredAt.getTime() - 1000), {
+      ...base,
+      moderation_from: 'none',
+      moderation_to: 'suspended',
+    });
+    if (target === 'terminated') {
+      await seedEvent(pariwarId, memberId, firstVersion + 1, 'member.moderation.terminated', occurredAt, {
+        ...base,
+        moderation_from: 'suspended',
+        moderation_to: 'terminated',
+      });
+    }
   }
 
   /** Seed the cycle-freeze commit whose `committed_at` validity is evaluated at. */
@@ -173,7 +221,7 @@ describe.skipIf(!hasDatabase)('assignable-roster → spawn → resolve — end-t
     }
   }
 
-  it('resolves is_valid members only, deterministically, and 7.6 resolves each to the engine-placed pool', async () => {
+  it('resolves is_assignable members only, deterministically, and 7.6 resolves each to the engine-placed pool', async () => {
     const pariwarId = randomUUID();
     const committedAt = new Date('2026-05-01T00:00:00.000Z');
     const joinedAt = new Date('2025-01-01T00:00:00.000Z');
@@ -227,6 +275,124 @@ describe.skipIf(!hasDatabase)('assignable-roster → spawn → resolve — end-t
         ids.memberId(pending),
       );
       expect(pendingRes.assigned).toBe(false);
+    });
+  });
+
+  // ── Story 10.17 AC4 — THE REPLAY-DETERMINISM PIN ───────────────────────────────────────────────
+
+  it('AC4: a moderation event AFTER a frozen committed_at does not change the roster resolved AT it', async () => {
+    // WHY THIS PIN EXISTS. Nothing diverges today: Story 10.10 shipped 2026-08-03, so no moderation
+    // event predates any frozen cycle, and this test would pass even if the mechanism were wrong.
+    // ⇒ THE PIN EXISTS SO THAT STAYS TRUE.
+    //
+    // THE MECHANISM IT GUARDS: `getValidityAt` resolves the moderation overlay AT the pinned instant,
+    // alongside `getMemberStateAt` (`validity-service/src/service.ts` — the overlay read takes the
+    // same `at`, never `now()`). If a future refactor ever moved that read to `now()`, a suspension
+    // today would RETROACTIVELY change a past cycle's roster — re-spawning a frozen cycle would
+    // produce different `member_assignments` than the ones already stamped into its `pool.spawned`
+    // event, and the audit trail's `member_state_hash` would no longer reproduce. This test is the
+    // tripwire for exactly that, and it is why the assertion below is on the HASH, not just the list.
+    const pariwarId = randomUUID();
+    const committedAt = new Date('2026-05-01T00:00:00.000Z');
+    const joinedAt = new Date('2025-01-01T00:00:00.000Z');
+
+    const members: string[] = [];
+    for (let i = 0; i < 3; i++) members.push(await seedActiveMember(pariwarId, joinedAt));
+    const cycleId = await seedCycle(pariwarId, committedAt);
+
+    const resolver = createAssignableRosterResolver({ pool });
+
+    // (1)+(2) Resolve at T; fingerprint the roster exactly as spawn does.
+    const rosterBefore = await resolver({ pariwarId, cycleId });
+    const hashBefore = poolDomain.computeAssignableRosterHash(rosterBefore);
+    expect(rosterBefore).toHaveLength(3);
+
+    // (3) A moderation write landing STRICTLY AFTER the frozen instant.
+    const afterFreeze = new Date(committedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    await moderateMember(pariwarId, members[0]!, 5, 'suspended', afterFreeze);
+    await moderateMember(pariwarId, members[1]!, 5, 'terminated', afterFreeze);
+
+    // (4) Re-resolve at the SAME frozen instant → byte-identical list AND byte-identical hash.
+    const rosterAfter = await resolver({ pariwarId, cycleId });
+    expect(rosterAfter).toEqual(rosterBefore);
+    expect(poolDomain.computeAssignableRosterHash(rosterAfter)).toBe(hashBefore);
+  });
+
+  it('AC4: at the frozen instant, a member suspended BEFORE the freeze is ON the roster and one terminated before it is NOT', async () => {
+    // The at-instant half of the pin — the NEW behaviour, resolved historically. Together with the
+    // test above this says: moderation is honoured exactly as of `committed_at`, no earlier and no
+    // later. A pre-freeze SUSPENSION keeps the member on the roster (Story 10.17's whole point,
+    // resolved through the historical path, not just the live one); a pre-freeze TERMINATION removes
+    // them. If the predicate were reverted to `payload.isValid`, the suspended member would vanish
+    // from this roster and this test goes red (the revert-sanity claim in the Dev Agent Record).
+    const pariwarId = randomUUID();
+    const committedAt = new Date('2026-05-01T00:00:00.000Z');
+    const joinedAt = new Date('2025-01-01T00:00:00.000Z');
+    const beforeFreeze = new Date(committedAt.getTime() - 24 * 60 * 60 * 1000);
+
+    const unmoderated = await seedActiveMember(pariwarId, joinedAt);
+    const suspended = await seedActiveMember(pariwarId, joinedAt);
+    const terminated = await seedActiveMember(pariwarId, joinedAt);
+    await moderateMember(pariwarId, suspended, 5, 'suspended', beforeFreeze);
+    await moderateMember(pariwarId, terminated, 5, 'terminated', beforeFreeze);
+    const cycleId = await seedCycle(pariwarId, committedAt);
+
+    const roster = await createAssignableRosterResolver({ pool })({ pariwarId, cycleId });
+
+    expect([...roster].sort()).toEqual([unmoderated, suspended].sort());
+    expect(roster).toContain(suspended); // ← the constitutional correction, at a frozen instant
+    expect(roster).not.toContain(terminated);
+  });
+
+  // ── Story 10.17 AC6a — REACHABILITY, the roster half ───────────────────────────────────────────
+
+  it('AC6a: a SUSPENDED member reaches pool_snapshots.member_assignments through the real spawn path', async () => {
+    // THE PRIMARY PROOF this story owes, roster half: not "the predicate returns true" (that is
+    // Task 1's unit test) but "a suspended member actually lands in the artifact the payment surface
+    // reads". The chain here is entirely real — real events, the REAL createAssignableRosterResolver,
+    // the REAL spawnChildPool + assignment seam, and the snapshot read back out of Postgres.
+    //
+    // The surface half (GET /api/v1/member/validity → nominee-accounts `available: true`) is proven
+    // in `apps/api/tests/integration/payment/suspended-member-reachability.spec.ts`; the two halves
+    // join at `pool_snapshots.member_assignments`, which this test produces and that one consumes.
+    const pariwarId = randomUUID();
+    const committedAt = new Date('2026-05-01T00:00:00.000Z');
+    const joinedAt = new Date('2025-01-01T00:00:00.000Z');
+    const beforeFreeze = new Date(committedAt.getTime() - 24 * 60 * 60 * 1000);
+
+    const suspended = await seedActiveMember(pariwarId, joinedAt);
+    const terminated = await seedActiveMember(pariwarId, joinedAt);
+    await moderateMember(pariwarId, suspended, 5, 'suspended', beforeFreeze);
+    await moderateMember(pariwarId, terminated, 5, 'terminated', beforeFreeze);
+    const cycleId = await seedCycle(pariwarId, committedAt);
+
+    const roster = await createAssignableRosterResolver({ pool })({ pariwarId, cycleId });
+    expect(roster).toContain(suspended);
+    await spawnPools(pariwarId, cycleId, roster);
+
+    // Read the member ids back out of the SPAWNED snapshots — the durable artifact, not the in-memory
+    // roster. Assert MEMBERSHIP, never counts ([[project_live_db_test_gotchas]]).
+    const assignedMemberIds = new Set<string>();
+    for (let i = 0; i < POOL_COUNT; i++) {
+      const res = await pool.query<{ snapshot: { member_assignments: Array<{ member_id: string }> } }>(
+        'SELECT snapshot FROM pool_snapshots WHERE pool_id = $1',
+        [poolDomain.derivePoolId(cycleId, i)],
+      );
+      for (const a of res.rows[0]?.snapshot.member_assignments ?? []) assignedMemberIds.add(a.member_id);
+    }
+
+    expect(assignedMemberIds.has(suspended)).toBe(true); // ← the unblock, in the durable artifact
+    expect(assignedMemberIds.has(terminated)).toBe(false);
+
+    // …and 7.6 resolves the suspended member to a real pool, which is what `/pay` ultimately calls.
+    await withPariwarScope(pool, pariwarId, async (db) => {
+      const res = await poolDomain.resolveAssignedPoolForMember(
+        db,
+        ids.pariwarId(pariwarId),
+        ids.cycleFreezeCommitId(cycleId),
+        ids.memberId(suspended),
+      );
+      expect(res.assigned).toBe(true);
     });
   });
 

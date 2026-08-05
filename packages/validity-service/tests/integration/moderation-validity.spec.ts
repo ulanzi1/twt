@@ -1,16 +1,30 @@
-// Moderation → `is_valid` — live-DB integration (Story 10.10, Task 3; AC5; :5433).
+// Moderation → `is_valid` / `is_assignable` — live-DB integration (Story 10.10 Task 3 AC5; AMENDED by
+// Story 10.17 AC7; :5433).
 //
-// Decision 8 makes the `deriveIsValid` conjunction the ENTIRE enforcement surface for moderation:
-// pool assignability, claim eligibility and the rules engine all inherit a suspension through
-// `payload.isValid` with no code change of their own. That concentration buys enormous simplicity
-// and creates exactly ONE catastrophic failure mode, which this spec exists to close:
+// ── ⚠ AMENDED BY STORY 10.17 — read this before trusting any comment below ────────────────────────
+// Story 10.10's Decision 8 claimed the `deriveIsValid` conjunction was the ENTIRE enforcement surface
+// for moderation, with pool assignability, claim eligibility and the rules engine all inheriting a
+// suspension through `payload.isValid`. Only the FIRST of those three was ever true, and Story 10.17
+// deliberately REVERSED it: a suspension must not remove a member from the DONOR ROSTER, because that
+// made the Niyamavali's own restoration path (R7(A): three consecutive contributions) unreachable and
+// turned every suspension into a de-facto permanent ban (Niyamavali §3.3).
 //
-//   ⚠ A STALE VALIDITY CACHE WOULD HAND A SUSPENDED MEMBER TO A POOL SPAWN.
+// The two booleans now answer DIFFERENT questions and are free to diverge:
+//   · `is_valid`      — COVERAGE: "covered for support if death today". Suspended ⇒ FALSE (unchanged).
+//   · `is_assignable` — ROSTER:   "may be assigned to a contribution pool". Suspended ⇒ TRUE (NEW).
+// `apps/jobs/src/assignable-roster.ts` reads `payload.isAssignable` and NOTHING else — still exactly
+// ONE pre-derived field, so AI-7-2 is AMENDED, not violated.
 //
-// `apps/jobs/src/assignable-roster.ts` reads `payload.isValid` and NOTHING else (the frozen AI-7-2
-// invariant). If the Story 4.8 cache did not invalidate on a `member.moderation.*` append, a warm
-// pre-suspension entry would keep answering `is_valid: true` for the whole TTL, and the roster would
-// assign a suspended member. So the cache test below is an AC, not a nicety.
+// The catastrophic failure mode this spec was written to close still exists and still matters, but its
+// statement changes with the predicate:
+//
+//   ⚠ A STALE VALIDITY CACHE WOULD MISREPORT A MEMBER'S STANDING TO EVERY DOWNSTREAM READER.
+//
+// If the Story 4.8 cache did not invalidate on a `member.moderation.*` append, a warm pre-suspension
+// entry would keep answering `is_valid: true` for the whole TTL — telling a suspended member they are
+// COVERED, which is precisely the falsehood Story 10.16's disclosure exists to prevent. (A stale entry
+// would ALSO keep `is_assignable: true`, but that is now the correct answer for a suspension, so the
+// roster is no longer the sharp edge here — coverage is.) So the cache test below is an AC, not a nicety.
 //
 // FINDING (recorded in the Dev Agent Record): NO new wiring was needed. Migration 0036's
 // `member_validity_cache_invalidate_on_member_event` trigger fires
@@ -186,6 +200,12 @@ describe.skipIf(!hasDatabase)('moderation folds into is_valid (live DB) (:5433)'
     expect(before.isValid).toBe(true);
     expect(after.isValid).toBe(false);
 
+    // Story 10.17 — `isAssignable` is in the MUST-NOT-MOVE set under a SUSPENSION. It is not merely
+    // "lifecycle-derived and therefore untouched": it is the one field whose deliberate REFUSAL to
+    // move here is the story. A diff that makes this line fail has re-broken the restoration path.
+    expect(after.isAssignable).toBe(true);
+    expect(after.isAssignable).toBe(before.isAssignable);
+
     // Everything lifecycle-derived is untouched.
     expect(after.lockInStatus).toEqual(before.lockInStatus);
     expect(after.vyawasthaShulkStatus).toEqual(before.vyawasthaShulkStatus);
@@ -194,6 +214,37 @@ describe.skipIf(!hasDatabase)('moderation folds into is_valid (live DB) (:5433)'
     expect(after.applicableNiyamavaliClauses).toEqual(before.applicableNiyamavaliClauses);
     // The ONLY special-flag delta is the moderation entry.
     expect(after.specialFlags.filter((f) => !f.startsWith('suspended_per_'))).toEqual(before.specialFlags);
+  });
+
+  it('AC5/10.17-AC7: under TERMINATION, `isAssignable` IS explicitly allowed to move — the mirror of the suspension case', async () => {
+    // The mirror of the test above, and the reason that one is a real assertion rather than a
+    // tautology. `isAssignable` sits in the MUST-NOT-MOVE set for a suspension and in the
+    // EXPLICITLY-ALLOWED-TO-MOVE set for a termination. Pinning both directions is what makes the
+    // pair meaningful: a predicate hardcoded to `true` would pass the suspension test and fail here;
+    // a predicate that still read `is_valid` would fail the suspension test and pass here.
+    const { pariwarId, memberId } = await scenario();
+    const ctx = { pariwarId, memberId };
+
+    const before = await getValidity(deps, ctx, { internal: true });
+    expect(before.isAssignable).toBe(true);
+
+    await moderate(pariwarId, memberId, 5, 'member.moderation.suspended', 'r14-forgery', 'none', 'suspended');
+    await moderate(pariwarId, memberId, 6, 'member.moderation.terminated', 'r14-forgery', 'suspended', 'terminated');
+    const after = await getValidity(deps, ctx, { internal: true });
+
+    // The allowed movers under termination.
+    expect(after.isAssignable).toBe(false);
+    expect(after.isValid).toBe(false);
+    expect(after.isActive).toBe(false);
+    expect(after.specialFlags).toContain('terminated_per_r14-forgery');
+
+    // …and everything lifecycle-derived is STILL untouched (Decision 1 orthogonality holds for
+    // termination exactly as it does for suspension — `members.state` never moves for either).
+    expect(after.lockInStatus).toEqual(before.lockInStatus);
+    expect(after.vyawasthaShulkStatus).toEqual(before.vyawasthaShulkStatus);
+    expect(after.retirementCoverage).toEqual(before.retirementCoverage);
+    expect(after.medicalDisclosureFlags).toEqual(before.medicalDisclosureFlags);
+    expect(after.applicableNiyamavaliClauses).toEqual(before.applicableNiyamavaliClauses);
   });
 
   // ── ⚠ THE WORST FAILURE MODE — the stale-cache test (AC5) ────────────────────────────────────
@@ -214,10 +265,17 @@ describe.skipIf(!hasDatabase)('moderation folds into is_valid (live DB) (:5433)'
     await moderate(pariwarId, memberId, 5, 'member.moderation.suspended', 'r7-contribution-discipline', 'none', 'suspended');
     expect(await cacheRowCount(memberId)).toBe(0);
 
-    // (3) The next CACHED read must recompute and answer FALSE. If this ever returns true, the
-    //     assignable roster would hand a suspended member a pool slot.
+    // (3) The next CACHED read must recompute and answer FALSE on COVERAGE. If this ever returns
+    //     true, a suspended member is told they are covered for support — the exact falsehood the
+    //     Story 10.16 disclosure exists to prevent. (Pre-10.17 the stated harm was "the roster would
+    //     hand them a pool slot"; that is now the CORRECT outcome, so the sharp edge moved to
+    //     coverage. The recompute is what protects both.)
     const afterSuspend = await getValidityCached(deps, ctx, { internal: true });
     expect(afterSuspend.isValid).toBe(false);
+    // Story 10.17 — the recompute must also carry the ROSTER answer, and for a suspension it is TRUE.
+    // Extending the worst-failure-mode test to the new field means a cache-shape regression cannot
+    // quietly drop it: an absent/false `isAssignable` here would silently un-do the unblock.
+    expect(afterSuspend.isAssignable).toBe(true);
     expect(afterSuspend.specialFlags).toContain('suspended_per_r7-contribution-discipline');
 
     // (4) …and a restore invalidates again, so the member is not stuck invalid either.
@@ -240,24 +298,54 @@ describe.skipIf(!hasDatabase)('moderation folds into is_valid (live DB) (:5433)'
 
   // ── AC5: the no-downstream-change property ───────────────────────────────────────────────────
 
-  it('AC5: a suspended member drops out of assignability through `is_valid` ALONE', async () => {
-    // `apps/jobs/src/assignable-roster.ts` computes assignability as EXACTLY
-    // `payload.isValid` — never `is_active`, never a lock-in/grace/suspension subfield (the frozen
-    // AI-7-2 invariant, [[project_assignability_predicate_is_isvalid_only]]). This test replicates
-    // that ONE predicate here rather than importing apps/jobs (a package cannot depend on an app),
-    // proving the exclusion needs NO roster-side change — `apps/jobs` is untouched by this story.
-    const assignable = (p: { isValid: boolean }): boolean => p.isValid;
+  it('AC5/10.17-AC7: a suspended member STAYS assignable through `is_assignable`, while `is_valid` still drops', async () => {
+    // ── THE AI-7-2 AMENDMENT, IN TEST FORM (Story 10.17 D2) ──────────────────────────────────────
+    //
+    // This test previously read: "a suspended member drops out of assignability through `is_valid`
+    // ALONE". That was Story 10.10's deliberate behaviour, and it was WRONG — not as an
+    // implementation bug, but as a constitutional one. `is_valid` was the sole assignability
+    // predicate; pool assignment is the ONLY contribution path (fenced by Story 8.10); and six of the
+    // seven R7 restoration clauses can only be cleared BY CONTRIBUTING. So a suspension silently
+    // became a permanent ban, and the Niyamavali's own primary restoration path was unreachable.
+    //
+    // Story 10.17 reverses it: a suspension removes the entitlement to RECEIVE support, never the
+    // obligation to CONTRIBUTE while completing an available restoration path (Niyamavali §3.3).
+    // This test is REWRITTEN rather than deleted precisely because that history is the point — a
+    // green suite reached by deletion is indistinguishable from one reached by correctness.
+    //
+    // `apps/jobs/src/assignable-roster.ts` computes assignability as EXACTLY `payload.isAssignable`
+    // — never `is_valid`, never `is_active`, never a lock-in/grace/suspension subfield (AI-7-2 as
+    // amended, [[project_assignability_predicate_is_isvalid_only]]). This test replicates that ONE
+    // predicate here rather than importing apps/jobs (a package cannot depend on an app).
+    const assignable = (p: { isAssignable: boolean }): boolean => p.isAssignable;
 
     const { pariwarId, memberId } = await scenario();
     const ctx = { pariwarId, memberId };
 
-    expect(assignable(await getValidity(deps, ctx, { internal: true }))).toBe(true);
+    // (1) Baseline: an unmoderated active member is both covered and on the roster.
+    const before = await getValidity(deps, ctx, { internal: true });
+    expect(assignable(before)).toBe(true);
+    expect(before.isValid).toBe(true);
 
+    // (2) SUSPEND — the divergence. Coverage drops; the roster does NOT. They contribute; they are
+    //     not covered. That single line is the entire story.
     await moderate(pariwarId, memberId, 5, 'member.moderation.suspended', 'r14-forgery', 'none', 'suspended');
-    expect(assignable(await getValidity(deps, ctx, { internal: true }))).toBe(false);
+    const suspended = await getValidity(deps, ctx, { internal: true });
+    expect(assignable(suspended)).toBe(true); // ← REVERSED from Story 10.10, deliberately
+    expect(suspended.isValid).toBe(false); // ← UNCHANGED: coverage is still withdrawn
 
-    await moderate(pariwarId, memberId, 6, 'member.moderation.restored', 'trustee-discretion', 'suspended', 'none');
-    expect(assignable(await getValidity(deps, ctx, { internal: true }))).toBe(true);
+    // (3) TERMINATE — the mirror image, and why the predicate is not simply `true`. Termination is an
+    //     exceptional governance act, not a stronger suspension: it DOES remove the roster.
+    await moderate(pariwarId, memberId, 6, 'member.moderation.terminated', 'r14-forgery', 'suspended', 'terminated');
+    const terminated = await getValidity(deps, ctx, { internal: true });
+    expect(assignable(terminated)).toBe(false);
+    expect(terminated.isValid).toBe(false);
+
+    // (4) RESTORE — both come back together.
+    await moderate(pariwarId, memberId, 7, 'member.moderation.restored', 'trustee-discretion', 'terminated', 'none');
+    const restored = await getValidity(deps, ctx, { internal: true });
+    expect(assignable(restored)).toBe(true);
+    expect(restored.isValid).toBe(true);
   });
 
   void R12_PAYLOAD; // the R12 clause is not seeded here — validity resolves without it (clause_unavailable).

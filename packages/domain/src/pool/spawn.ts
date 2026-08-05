@@ -414,9 +414,11 @@ export async function spawnChildPool(
     return { poolId: derivedPoolId, poolCanonicalIdentifier: spec.poolCanonicalIdentifier, spawned: false };
   }
 
-  // AI-7-2: the LIVE freeze-time assignable-roster is now supplied by the caller (the apps/jobs
-  // resolver evaluates each Pariwar member against the Story 4.6 Validity Service at the cycle-freeze
-  // `committed_at` and keeps `is_valid` members). The real seam (Story 7.4) hashes THIS roster into
+  // AI-7-2 (as amended by Story 10.17): the LIVE freeze-time assignable-roster is supplied by the
+  // caller (the apps/jobs resolver evaluates each Pariwar member against the Story 4.6 Validity
+  // Service at the cycle-freeze `committed_at` and keeps `is_assignable` members — NOT `is_valid`,
+  // which is the COVERAGE answer; a SUSPENDED member is deliberately on this roster while remaining
+  // uncovered). The real seam (Story 7.4) hashes THIS roster into
   // pools; `member_state_hash` below fingerprints it. An empty `memberSet` (no assignable members, or a
   // domain unit test) is a clean no-op on either seam — `rosterWired` (not memberSet-emptiness) is what
   // records whether this was a genuine query vs. an unwired/defaulted call.

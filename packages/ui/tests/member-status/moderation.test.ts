@@ -32,6 +32,9 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
     ruleRegistryVersion: 'rrv-1',
     isValid: true,
     isActive: true,
+    // Story 10.17 — the ROSTER predicate. `deriveHeadlineState` answers COVERAGE and does NOT read
+    // this field (AC3 of 10.16 pinned it byte-unchanged); it is present because the DTO is `.strict()`.
+    isAssignable: true,
     lockInStatus: { daysAtJoin: 90, unlockDate: '2026-01-01T00:00:00.000Z', state: 'unlocked' },
     vyawasthaShulkStatus: {
       paidThrough: '2027-01-01T00:00:00.000Z',
@@ -55,14 +58,28 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
   };
 }
 
-/** A SUSPENDED member as the validity service actually emits them: isValid + isActive both false. */
+/**
+ * A SUSPENDED member as the validity service actually emits them: `isValid` + `isActive` both false,
+ * and `isAssignable: TRUE` since Story 10.17 (they stay on the donor roster). The headline below is
+ * still derived from COVERAGE alone — a suspended member reads `suspended-with-reason` regardless.
+ */
 function suspendedPayload(code = 'r7-contribution-discipline'): MemberValidityPayloadDto {
-  return basePayload({ isValid: false, isActive: false, specialFlags: [`suspended_per_${code}`] });
+  return basePayload({
+    isValid: false,
+    isActive: false,
+    isAssignable: true,
+    specialFlags: [`suspended_per_${code}`],
+  });
 }
 
-/** A TERMINATED member as the validity service actually emits them. */
+/** A TERMINATED member as the validity service actually emits them — off the roster too (10.17). */
 function terminatedPayload(code = 'r14-forgery'): MemberValidityPayloadDto {
-  return basePayload({ isValid: false, isActive: false, specialFlags: [`terminated_per_${code}`] });
+  return basePayload({
+    isValid: false,
+    isActive: false,
+    isAssignable: false,
+    specialFlags: [`terminated_per_${code}`],
+  });
 }
 
 describe('parseModerationFlag — the specialFlags protocol', () => {
@@ -150,9 +167,11 @@ describe('deriveHeadlineState — moderation as a headline producer', () => {
 
   it('an unmoderated member is unaffected in every direction', () => {
     expect(deriveHeadlineState(basePayload())).toBe('active');
-    expect(deriveHeadlineState(basePayload({ isValid: false, isActive: false }))).toBe(
-      'expired-renewable',
-    );
+    // A LAPSED member (not moderated): off the roster too, because the lifecycle state itself is
+    // outside VALID_STATES. `isAssignable` only diverges from `isValid` under SUSPENSION.
+    expect(
+      deriveHeadlineState(basePayload({ isValid: false, isActive: false, isAssignable: false })),
+    ).toBe('expired-renewable');
   });
 });
 

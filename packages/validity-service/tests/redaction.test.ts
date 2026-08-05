@@ -182,6 +182,28 @@ describe('redactForCaller — field redaction (hash unchanged)', () => {
     expect(out.specialFlags).not.toContain(CONCEALMENT_REVIEW_FLAG);
   });
 
+  it('Story 10.17: `isAssignable` SURVIVES redaction for a narrow caller and for the member themselves', () => {
+    // AC3 — the roster predicate is member-visible BY DESIGN and is deliberately NOT in
+    // `STATE_TRUSTEE_ONLY_FLAGS`. A member is entitled to know they are on the donor roster: the whole
+    // point of Story 10.17 is that a suspended member can still contribute their way back, and the
+    // Story 10.16 disclosure on `/pay` is derived from this same payload. Redacting it would hide the
+    // restoration path from the one person completing it.
+    const full = payloadWithConcealment();
+    const narrow: ValidityCaller = {
+      actorId: ACTOR,
+      grants: [{ pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }],
+      resource: districtResource(),
+      isSelf: false,
+    };
+    const selfCall: ValidityCaller = { actorId: ACTOR, grants: [], resource: districtResource(), isSelf: true };
+
+    for (const caller of [narrow, selfCall]) {
+      const out = redactForCaller(full, caller);
+      expect(out.isAssignable).toBe(full.isAssignable);
+      expect(out).toHaveProperty('isAssignable'); // present, not merely equal-by-undefined
+    }
+  });
+
   it('the validity_payload_hash is UNCHANGED by redaction (canonical full-payload hash)', () => {
     const full = payloadWithConcealment();
     const caller: ValidityCaller = {

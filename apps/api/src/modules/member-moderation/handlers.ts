@@ -225,7 +225,9 @@ export function createMemberModerationHandlers(deps: AppDeps) {
       //     the member simply logs in normally.
       //     ⚠ This is NOT a login block. `member-auth.handlers.ts`'s gate stays `withdrawn ||
       //     anonymized` — a moderated member MUST be able to sign back in to read the dignified
-      //     explanation and reach the appeal CTA (Decision 6). Enforcement is `is_valid`.
+      //     explanation and reach the appeal CTA (Decision 6). Enforcement is the validity payload's
+      //     moderation conjunction — `is_valid` (coverage) since 10.10, plus `is_assignable` (roster)
+      //     since Story 10.17 — never a locked door.
       if (action === 'suspend' || action === 'terminate') {
         await revokeAllMemberSessions(scopeTx.client, ctx.memberId);
       }

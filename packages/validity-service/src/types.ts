@@ -81,8 +81,15 @@ export interface VyawasthaShulkStatusPayload {
  */
 export interface ContributionHistoryUnavailable {
   status: 'producer_unavailable';
-  /** The story that owns the `contribution.*` facts (audit trail for the gap). */
-  producer: 'story-10-24';
+  /**
+   * The story that owns the `contribution.*` facts (audit trail for the gap), OR
+   * `'niyamavali-registry'` (2026-08-06 finding) when the gap is not the FACTS but the RULES: no
+   * activated R7(C)–(F) clause version is effective for this Pariwar at the evaluated instant. A
+   * different subsystem is at fault in each case, so the literal tells an operator where to look —
+   * see `R7_REGISTRY_UNPROVISIONED_PRODUCER` (rules.ts) and `CONTRIBUTION_R7_REGISTRY_UNAVAILABLE`
+   * (payload.ts).
+   */
+  producer: 'story-10-24' | 'niyamavali-registry';
 }
 
 /**

@@ -158,3 +158,45 @@ exactly 2). Measuring the fully-provisioned p95 needs a seeded-R7 bench fixture 
 `deferred-work.md` rather than backfilled with a number nobody ran.
 
 The 100×-thread determinism gate (`test:determinism`) stays at **exactly one hash** — re-run green.
+
+---
+
+## Round-2 code review (2026-08-05) — a SECOND un-attested cost, and what changed underneath
+
+**⚠ UN-ATTESTED: the Trustee-Lite Pariwar-wide scan (`scanR7ViolatorCandidates`) has never been
+measured.** ⚖ BigDev, 2026-08-05: *"AC7 currently bounds query count, not computational cost. The
+implementation satisfies the accepted story scope. Scaling strategy should be selected from production
+evidence rather than predicted in advance."* Recorded here rather than mitigated speculatively.
+
+What is and is not known:
+
+- **Bounded, and that part IS asserted.** The scan issues a FIXED number of queries regardless of
+  member count — `listMemberStatesForPariwar` + the two bulk fact aggregates + one coverage read + four
+  member-independent `resolveByClauseId` calls. AC7's binding structural criterion (no query inside a
+  loop over members, pools or clauses) genuinely holds.
+- **Unbounded in WORK, and that part is not measured.** "Fixed query count" says nothing about
+  result-set size or CPU. The scan materialises one row per member from the membership read, one
+  aggregate row per member, then runs four pure clause interpretations and allocates one candidate
+  payload per member in a single un-yielded tick, after which `summarizeViolatorFlags` re-iterates the
+  same collection. There is no cap, page, budget or cache, and it recomputes per request.
+- **The shape of the risk at 4L**, stated so a future measurement has something to falsify: ~400k rows
+  across three collections plus ~1.6M pure clause evaluations on one event-loop tick, on an admin GET.
+  The response body is sized by the number of FLAGGED members, not the membership.
+- **Explicitly NOT done, and why:** capping or paginating the violator section would pick a
+  governance-visible cutoff (which candidates get dropped from a suspension list?) with no data behind
+  it; a second cache would need its own invalidation story; pre-emptive read chunking would add
+  complexity for an unmeasured problem.
+
+**Counter-pressure worth noting when this IS measured:** two round-2 rulings shrink the FLAGGED
+population substantially — `months_since_last` now counts opportunities rather than elapsed time, and
+the activated R7 clauses carry a `member_state_in` lifecycle gate. Neither reduces the O(M) scan work,
+which is the thing at issue here; both reduce the response size. Do not read a smaller flag list as
+evidence that the scan cost improved.
+
+**Also changed underneath these numbers, so the table above is no longer comparable like-for-like:**
+`months_since_last` is derived from the missed-cycle aggregate instead of in-JS calendar arithmetic
+(the aggregate now carries a `last_conf` CTE and two `FILTER` clauses over one scan — still ONE query),
+and a coverage-watermark read was added (folded into the existing ledger query as a scalar subquery on
+the single-member path, so it remains exactly TWO queries there; a third Pariwar-scoped read on the
+bulk path, which cannot fold it). The p95/p50 figures above were taken BEFORE those changes and have
+**not** been re-run. Re-measuring is the same seeded-R7 bench fixture already owed above.

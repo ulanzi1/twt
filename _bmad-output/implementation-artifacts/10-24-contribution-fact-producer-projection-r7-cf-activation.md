@@ -183,7 +183,16 @@ must fail the totality test **and** at least one behavioural test. A green scan 
 **Given** `skips_current_year` needs per-cycle assignment history
 **Then** it derives from pool snapshots' `member_assignments`
 (`packages/domain/src/pool/snapshot.ts:66-68`, `:105`) **∩** confirmed-minus-reversed verdicts
-**And** *"missed"* means **assigned at freeze with no live confirmation at close**.
+**And** *"missed"* means **assigned at freeze with no live confirmation as of the evaluation instant `at`**.
+
+> **⚖ CORRECTED 2026-08-05 (round-2 code review).** This clause previously read *"no live confirmation
+> **at close**"*, which contradicted **D1**'s own formula (*"minus those with a live confirmation at
+> `at`"*) and the shipped code. D1 and the code are right; this prose was wrong. Ruling as given:
+> *"Contribution discipline evaluates member conduct, not administrative processing latency. Late
+> reconciliation should clear the skip once it becomes part of the historical record being evaluated."*
+> A member who paid in-window but whose payment was reconciled after the cycle closed **took the
+> opportunity** — the delay belongs to the reconciliation pipeline, not to them. Do not "restore" the
+> at-close reading; it would penalise members for the tail that Story 8.9 exists to provide.
 
 Precisely:
 - **Assigned** — the member id appears in the pool's snapshot `member_assignments` (the persisted
@@ -835,7 +844,174 @@ _Code review run 2026-08-05 — full diff (~7017 lines) vs. this spec, three par
 
 **Dismissed as noise (4):** the p95 benchmark's known coverage gap (already honestly disclosed per the story's own un-attested convention — [[feedback_record_unattested_no_backfill]]); the BigDev escalation/ratification process observation (organizational critique, not a code defect); `listMemberStatesForPariwar`'s membership-sized read (satisfies AC7's "bounded reads over the Pariwar" literally, mirrors the 10.11-established scan shape, not new to this diff); and a general comment-density/tone observation (style opinion, not actionable).
 
-**Post-patch validation (2026-08-05):** `pnpm --filter @twt/domain typecheck/lint`, `pnpm --filter @twt/validity-service typecheck/lint`, `pnpm --filter @twt/niyamavali-engine typecheck`, `pnpm --filter @twt/i18n typecheck`, `pnpm domain-invariants:check`, `pnpm contracts:check-openapi-determinism` all green. Live-DB (`DATABASE_URL` → `twt-test-pg:5433`): `@twt/domain` 32 files/261 tests, `@twt/validity-service` 17 files/192 tests (incl. the 100×-thread determinism gate at exactly one hash), `apps/api` trustee-lite E2E 19/19, `@twt/ui` 98/98, `@twt/admin` 271/271, `@twt/contracts` 837/837 — all pass. One live fallout caught and fixed by this pass: the totality test's owner-string regex hardcoded the pre-patch dotted format and had to be updated alongside the rules.ts fix (see above). Migration 0093's trigger function was re-applied to `twt-test-pg` directly (`CREATE OR REPLACE FUNCTION`) since the DB had the pre-patch version from the story's original implementation.
+**Post-patch validation (2026-08-05) — round 1:** `pnpm --filter @twt/domain typecheck/lint`, `pnpm --filter @twt/validity-service typecheck/lint`, `pnpm --filter @twt/niyamavali-engine typecheck`, `pnpm --filter @twt/i18n typecheck`, `pnpm domain-invariants:check`, `pnpm contracts:check-openapi-determinism` all green. Live-DB (`DATABASE_URL` → `twt-test-pg:5433`): `@twt/domain` 32 files/261 tests, `@twt/validity-service` 17 files/192 tests (incl. the 100×-thread determinism gate at exactly one hash), `apps/api` trustee-lite E2E 19/19, `@twt/ui` 98/98, `@twt/admin` 271/271, `@twt/contracts` 837/837 — all pass. One live fallout caught and fixed by this pass: the totality test's owner-string regex hardcoded the pre-patch dotted format and had to be updated alongside the rules.ts fix (see above). Migration 0093's trigger function was re-applied to `twt-test-pg` directly (`CREATE OR REPLACE FUNCTION`) since the DB had the pre-patch version from the story's original implementation.
+
+### Review Findings — round 2 (2026-08-05)
+
+_Second code-review run over the POST-PATCH state at `82ccbbf` — full diff (63 files, +6349/−148) vs. this spec, three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor), no failed layers. Round 1's 11 patches were verified present; this round found defects round 1 did not reach, including two that round 1's own patches created the appearance of having closed._
+
+**Decision-needed (6)**
+
+- [x] [Review][Decision] **RESOLVED 2026-08-05 by BigDev — the clause semantics are CORRECT; the PRODUCER is wrong. R7(C)/(F) are NOT held; `months_since_last` becomes opportunity-aware.** Ruling as given: *"Do not hold R7(C)/(F). The clause semantics are correct. The producer must derive an opportunity-aware gap rather than a pure wall-clock gap. Members are evaluated only against periods where contribution opportunities existed."* This rejects both the hold and the cheap `in_lapse` clause-data gate: the fix belongs in the producer, where the fact is derived, not in the clause that reads it. Note the direction — this makes `months_since_last` a **payload-contract change** on the D5 pattern (every `validityPayloadHash` moves, every cached row re-shapes), which is affordable only because nothing is in production yet (`origin/main` at `55aa1cc`). Converted to a patch below. **Original finding:** R7(C)/(F) fire on a pure wall-clock gap with no contribution-OPPORTUNITY gate — a quiet Pariwar flags its entire membership. Production seed data (`packages/domain/seed/niyamavali-v1-clauses.sql:245`, `:272`) gates R7(C)/R7(F) on `contribution.months_since_last >= 12 / >= 6` and **nothing else** — no `member_state_in`, no "a cycle actually occurred" condition. Contribution is only possible when a pool spawns, which only happens on a frozen death claim. A Pariwar with no death for 6 months makes **every member who ever contributed** cross `>= 6`, so R7(F) **genuinely applies** — D2's applied-only filter cannot help, because the clause really did apply — and `summarizeViolatorFlags` renders the whole membership as R7 violator candidates on the suspension surface. This is the "recommend suspending everyone" catastrophe D2 was built to prevent, arriving through the fact-derivation door instead of the clause-filtering door. Note the asymmetry inside this story that makes it visible: `skips_current_year` **is** correctly gated on assignment ∩ closed cycle (`facts.ts:119-145`), while the gap facts are ungated wall-clock. Reachable today in any small or low-mortality Pariwar; not a scale-only concern. Options: gate `months_since_last` on elapsed contribution opportunities; amend the R7(C)/(F) clause DATA (a Trustee Panel instrument, not a code change — [[project_niyamavali_precedence_is_provenance]]); or hold R7(C)/(F) alongside R7(A)/(B)/(G) until the gate exists.
+- [x] [Review][Decision] **RESOLVED 2026-08-05 by BigDev — build a PROJECTION COVERAGE WATERMARK.** Ruling as given: *"Projection coverage watermark. Unknown projection state must never fabricate a clean member."* `deriveContributionFacts` returns `null` (→ the sentinel) when `at` precedes the watermark or when no watermark exists, so the sentinel becomes genuinely reachable for all three gap cases D6 names. Note the pairing with the backfill patch below: the watermark is written BY the backfill, which makes an un-run backfill yield the honest sentinel instead of a fabricated clean record — the two findings close each other, and the backfill stops being an optional repair path and becomes a precondition for supplying facts at all. Converted to a patch below. **Original finding:** the sentinel is structurally unreachable on the production path — D6's "zero ≠ unknown" is declared but not implemented. `deriveContributionFacts` returns `null` on four conditions (`packages/validity-service/src/producer.ts:295-298`); every one is impossible from the only production input, `readContributionFactInputs`: `totalCount`/`skipsCurrentYear` come from `count(*)::int` (never negative/fractional), `lastConfirmedAt` from `max(confirmed_at)` under `confirmed_at <= at` (never future), and a positive skip count always has a non-null `min(closed_at)` because the LATERAL is joined `ON closed.closed_at IS NOT NULL`. So all three gap cases D6 names by name — a historical `at` before the projection's coverage, an un-run or incomplete backfill, no member-stream events — return `{status:'ok', total_count: 0, ever_contributed: false, in_lapse: false}`: an affirmative **clean-record governance fact**, which is exactly what D6 says must never happen. `summarizeViolatorFlags`'s whole-section darkening can therefore never fire. Needs a coverage watermark (or an explicit projection-horizon check) to distinguish "no rows because nothing happened" from "no rows because nothing was projected".
+- [x] [Review][Decision] **RESOLVED 2026-08-05 by BigDev — clause-data `member_state_in`. Lifecycle eligibility lives in the REGISTRY; no scan-level governance.** Ruling as given: *"Clause-data member_state_in. Keep lifecycle eligibility in the registry. No scan-level governance."* The `member_state_in` operator already ships (`packages/niyamavali-engine/src/interpret.ts:93`), so this is a seed-data amendment with zero engine, producer or scan code change — and it explicitly rejects filtering inside `scanR7ViolatorCandidates`, which would re-derive member-state policy in the enumeration layer (the same thing `member/read.ts:56-60` documents as forbidden for the sibling roster read). Converted to a patch below. **Original finding:** the candidate scan has no lifecycle filter — withdrawn, deceased and anonymized members become permanent suspension candidates. `listMemberStatesForPariwar` (`packages/domain/src/member/read.ts:104-114`) is deliberately unfiltered by `members.state` (correct for its original roster caller), and `scanR7ViolatorCandidates` (`r7-candidate-scan.ts:114`) iterates every row. `memberState` reaches the ladder but the activated R7 payloads carry no state operator, so it gates nothing, and `R7ViolatorCandidate` (`:63-71`) carries no state field, so nothing downstream can filter either — and `violator-flags.ts` is frozen by AC5. A member who withdrew in 2024 after contributing has `months_since_last = 20` and appears forever. The set grows monotonically with churn. Which lifecycle states are eligible for R7 moderation is a governance call, not an obvious default.
+- [x] [Review][Decision] **RESOLVED 2026-08-05 by BigDev — signal `detection_unavailable`.** Ruling as given: *"Unknown rules and unknown facts are the same constitutional state: evaluation unavailable."* The scan returns a discriminated result and the handler passes `{status:'unavailable'}` when no R7 clause version resolves at `at`, reusing 10.11's existing sentinel arm so `violator-flags.ts` stays frozen. This generalises the finding-2 ruling from unknown PROJECTION state to unknown REGISTRY state — one principle, two surfaces. The handler's comment was the correct one; `r7-candidate-scan.ts:105-108`'s comment and the E2E assertion both invert. Converted to a patch below. **Original finding:** an unprovisioned R7 registry renders as "detection ran, nobody flagged" — the false all-clear, and the diff documents both positions. `r7-candidate-scan.ts:108` returns `[]` when no R7 clause version resolves at `at`, and its comment argues this is right ("an unprovisioned registry is a 'no clause applies' answer"). The handler comment 130 lines away states the opposite as an invariant: *"Passing an empty candidate list would still be WRONG (it renders as 'detection ran, nobody is flagged' — the false all-clear D1-B forbids)"* (`apps/api/src/modules/trustee-lite/handlers.ts:237-239`). The E2E test at `apps/api/tests/integration/trustee-lite/trustee-lite.spec.ts` seeds no R7 clauses and asserts `status: 'ok'`, `members: []` — regression-protecting the behaviour the handler forbids. One of the two comments is wrong; pick which.
+- [x] [Review][Decision] **RESOLVED 2026-08-05 by BigDev — KEEP `confirmed_at <= at`; the shipped code and D1 are right, AC4's prose is wrong.** Ruling as given: *"Contribution discipline evaluates member conduct, not administrative processing latency. Late reconciliation should clear the skip once it becomes part of the historical record being evaluated."* So a member who paid in-window but was reconciled after close took the opportunity, and the recorded skip clears. No behavioural change; the patch is to correct AC4's *"no live confirmation at close"* prose and the `missedCycleAggregateSql` doc comment to match D1's formula and the code, and to add the confirm-after-close test arm that no test currently covers in either direction. Converted to a patch below. **Original finding:** `skips_current_year` evaluates live confirmation at `at`, not at close — and the spec contradicts itself. `facts.ts:141` applies `NOT liveConfirmationExistsSql('mpa', at)` where the predicate is `confirmed_at <= at AND (reversed_at IS NULL OR reversed_at > at)`; the close instant decides only *whether the cycle is closed*, never the confirmation cutoff. AC4's binding prose says *"no live confirmation **at close**"* and the function's own doc comment (`facts.ts:101`) repeats it — but **D1's formula** ("minus those with a live confirmation at `at`") matches the code. Consequence: a tail-reconciled confirmation landing after close retroactively erases an already-recorded skip, moving `in_lapse` and `lapseSince`/`holdingSince`. Replay at a fixed `at` stays reproducible, so AC1 is not violated — but the two readings give different governance answers and **no test pins either** (the AC4 arm list covers confirm-before-close, reversal, open cycle, not-assigned, prior year, closed-after-`at` — never confirm-after-close). Worth noting the tail exists precisely to reconcile in-window payments late, which argues *for* the shipped behaviour; either way it must become a recorded decision, not an unremarked reading.
+- [x] [Review][Decision] **RESOLVED 2026-08-05 by BigDev — record as un-attested; do NOT mitigate speculatively.** Ruling as given: *"AC7 currently bounds query count, not computational cost. The implementation satisfies the accepted story scope. Scaling strategy should be selected from production evidence rather than predicted in advance."* So the scan ships as built and the gap is closed by DISCLOSURE, not by code — the [[feedback_record_unattested_no_backfill]] discipline applied to a cost rather than to evidence. Explicitly NOT chosen: capping/paginating the violator section (would pick a governance-visible cutoff with no data behind it), a second cache, and pre-emptive read chunking. Converted to a documentation patch below. **Original finding:** the trustee-lite GET does unbounded work per request; AC7's "7 queries" bounds queries, not work — and the cost is not recorded as un-attested. `scanR7ViolatorCandidates` materialises every member row, one aggregate row per member, then runs 4 clause interpretations and allocates one candidate payload per member in a single un-yielded tick, then `summarizeViolatorFlags` re-iterates — with no cap, page, budget or cache, recomputed per request (`handlers.ts:243`, `r7-candidate-scan.ts:91-167`). At 4L that is ~400k rows × 3 collections plus ~1.6M pure evaluations blocking the Fastify event loop for the whole process. The AC7 structural gate genuinely passes (no query in a loop) and the counted-query test covers `readContributionFactInputs` only — the scan's own latency is unmeasured and, unlike the story's other honest gaps, is **not** listed among the un-attested items in `deferred-work.md` or `p95-budget.md` (AC7 + checklist family 10). At minimum record it un-attested; the mitigation (cap/page/cache) is a design choice.
+
+**Patch (19)**
+
+_The first six are the resolved decisions above, converted. They are ordered first because three of them change behaviour the remaining patches' tests assert._
+
+- [x] [Review][Patch] **[from Decision 1]** Derive `contribution.months_since_last` as an OPPORTUNITY-aware gap — count only periods in which an assigned cycle actually closed for the member, mirroring how `skips_current_year` is already gated (assignment ∩ closed cycle). Payload-contract change on the D5 pattern: carry the versioned-policy framing into the doc comment, and expect every `validityPayloadHash` to move [packages/validity-service/src/producer.ts:304; packages/domain/src/contribution/facts.ts:119-145]
+- [x] [Review][Patch] **[from Decision 2]** Add a projection COVERAGE WATERMARK; `deriveContributionFacts` returns `null` when `at` precedes it or when none exists, making `producer_unavailable` genuinely reachable. Written by the backfill, so an un-run backfill yields the sentinel rather than a fabricated clean record [packages/validity-service/src/producer.ts:295-298]
+- [x] [Review][Patch] **[from Decision 3]** Add `{op: member_state_in, ...}` to the R7(C)/(F) `all_of` in the clause seed so lifecycle eligibility lives in the registry. No scan-, producer- or engine-side filtering [packages/domain/seed/niyamavali-v1-clauses.sql:245,272]
+- [x] [Review][Patch] **[from Decision 4]** Return a discriminated result from `scanR7ViolatorCandidates` and pass `{status:'unavailable'}` when no R7 clause resolves at `at`; invert the E2E assertion and correct the scan's contradicting comment. `violator-flags.ts` stays frozen [packages/validity-service/src/r7-candidate-scan.ts:105-108; apps/api/tests/integration/trustee-lite/trustee-lite.spec.ts]
+- [x] [Review][Patch] **[from Decision 5]** Correct AC4's "no live confirmation **at close**" prose and the `missedCycleAggregateSql` doc comment to match D1's formula and the shipped code, and add the confirm-after-close test arm that no test covers in either direction [packages/domain/src/contribution/facts.ts:101; this file's AC4]
+- [x] [Review][Patch] **[from Decision 6]** Record the trustee-lite scan's unmeasured per-request cost as un-attested in `deferred-work.md` and `p95-budget.md`, naming what was and was not measured [packages/validity-service/tests/bench/p95-budget.md]
+
+- [x] [Review][Patch] Cache-invalidation trigger casts `payload->>'memberId'` to `::uuid` with no shape guard, over a WIDER event scope than its guarded sibling — one malformed event aborts the whole append [packages/domain/migrations/0093_contribution-fact-projection.sql:199-202]
+- [x] [Review][Patch] `insertMemberPoolAssignments` sends 5 bind parameters per member in one statement — a roster above ~13,107 members exceeds Postgres' 65,535-parameter limit and aborts the spawn transaction on the money path [packages/domain/src/contribution/projection-write.ts:70-83]
+- [x] [Review][Patch] No RLS policy-regression spec for either new tenant table, against a 20-file convention — the `SECURITY INVOKER` trigger's `withCheck` is called "load-bearing, not decorative" and is untested (checklist families 3 + 5, REAL GAP) [packages/domain/src/policies/contribution-projection-rls.ts:47-52]
+- [x] [Review][Patch] AC8 table row 2 was never done — the file that now defines `deriveContributionFacts` still says "NOT produced (Epic 8/9): `contribution.*` … No contribution source exists" [packages/validity-service/src/producer.ts:15-16]
+- [x] [Review][Patch] Neither backfill has any invocation path — no migration statement, job, CLI or boot caller; both are referenced only from tests, so D3's repair path does not exist operationally [packages/domain/src/contribution/projection-write.ts:114,184]
+- [x] [Review][Patch] `backfillMemberPoolAssignments` omits the `UUID_SHAPE_SQL` guard its sibling backfill applies (and the shared comment claims for "both"), plus no array-shape check on `jsonb_array_elements` — one bad historical row aborts the entire tenant's rebuild [packages/domain/src/contribution/projection-write.ts:189,201]
+- [x] [Review][Patch] Timezone convention splits within one fact family: `skips_current_year` uses the IST calendar year, `months_since_last` uses pure UTC month arithmetic — R7(C)/(F) fire up to 5.5h off the IST boundary the sibling fact uses [packages/validity-service/src/calendar.ts:88-96 vs packages/domain/src/contribution/facts.ts:147-150]
+- [x] [Review][Patch] `getCycleFreezeCommittedAt` runs once per CHILD POOL inside the spawn transaction for a cycle-level constant — AC7 names "a query inside a loop over pools" by category; hoistable to `planCycleSpawn` [packages/domain/src/pool/spawn.ts:522]
+- [x] [Review][Patch] Ordering-independence is claimed to hold identically for BOTH mechanisms, but the trigger alone never converges a reversal-before-confirmation — the shared test runs `rebuild` in both arms, so it proves "apply + backfill converges", not the trigger [packages/domain/tests/integration/contribution/projection-equivalence.spec.ts:317-327]
+- [x] [Review][Patch] The IDEMPOTENCY arm is vacuous for the trigger mechanism — the re-apply is absorbed by `events_log`'s own PK so the trigger never re-fires; the ledger's `ON CONFLICT (confirmed_event_id) DO NOTHING` is never exercised and could be deleted with the test still green [packages/domain/tests/integration/contribution/projection-equivalence.spec.ts:274-285]
+- [x] [Review][Patch] Test titled "assigned + a MISMATCH (red, never confirmed) → IS a skip" asserts nothing about mismatches — the derivation never reads `contribution.reconciliation-mismatch`; deleting the mismatch insert leaves it green [packages/validity-service/tests/integration/contribution-facts.spec.ts:293]
+- [x] [Review][Patch] Revert-probe #2 is mechanized in-code only for `evaluateAppliedR7ClauseSlots`, not for the SECOND applied-filter this story added — the one that directly feeds the Trustee-Lite surface D2 exists to protect [packages/validity-service/src/r7-candidate-scan.ts:157]
+- [x] [Review][Patch] The retained `epic-8-9` admin producer label rests on a deploy-window rationale the strict DTO contradicts — a cached pre-deploy payload fails `z.literal('story-10-24')` validation and 500s rather than rendering the old copy [apps/admin/src/modules/trustee-lite/i18n-en.ts:1774-1778]
+
+**Deferred (1)**
+
+- [x] [Review][Defer] D2's applied-only filter keeps non-applied R7 clause versions out of the assembled slots, so amending an R7 clause does not move `rule_registry_version` for members it does not currently apply to — a newly-qualifying member serves a stale cached payload until the 60s TTL expires [packages/validity-service/src/rules.ts] — deferred: bounded by `VALIDITY_CACHE_TTL_SECONDS = 60`, and a genuine consequence of D2 rather than a defect in its implementation; revisit if the TTL ever lengthens.
+
+**Round-2 patches APPLIED (2026-08-05) — all 19, plus the six resolved decisions.**
+
+Three notes where the outcome differs from the bullet as written:
+
+- **P7 (IST/UTC convention split) was superseded, not patched as described.** Decision 1 moved
+  `months_since_last` off calendar arithmetic entirely — it is now an aggregate over the projection — so
+  `calendarMonthsBetween` no longer sits on the R7 path and the UTC-vs-IST split cannot reach a fact.
+  The helper is retained as the AI-3-1 calendar primitive (still unit-pinned at the leap/month-end
+  boundaries) and its doc comment was corrected: it previously claimed to BE the derivation of
+  `contribution.months_since_last`, which would have become a fresh instance of the same stale-claim
+  class as P4.
+- **P12's revert probe was RUN, not asserted by comment.** Removing `.filter((entry) => entry.applied)`
+  from `r7-candidate-scan.ts` turned the flagged member's clause list from the expected TWO (`r7-c`,
+  `r7-f`) into FOUR, and the clean member's from `[]` into four — D2's predicted catastrophe on the live
+  scan path. Restored; recorded in-code above the filter, matching probe #1's discipline.
+- **D3 (`member_state_in`) was applied to ALL FOUR activated clauses, not just R7(C)/(F).** Gating only
+  the two gap clauses would have left R7(D)/(E) able to flag a withdrawn member with ≥10 lifetime
+  contributions — the same defect, half-closed. The fixture mirror (`tests/fixtures/r7-clauses.ts`) moved
+  with the seed, since a fixture that no longer mirrors production data makes the gate untestable.
+
+**Validation (2026-08-05, round 2).** `pnpm turbo run typecheck` **20/20**, `lint` **20/20**,
+`pnpm domain-invariants:check`, `contracts:check-openapi-determinism` (byte-identical) — all green.
+Live DB (`twt-test-pg` :5433, migration 0094 applied + 0093's trigger function re-applied via
+`CREATE OR REPLACE`): `@twt/domain` **218 files / 2347 tests**, `@twt/validity-service` **17 files /
+198 tests** (including the 100×-thread determinism gate at exactly ONE hash), `apps/api` **107 files /
+853 tests** with trustee-lite E2E **19/19**, `@twt/admin` **271/271**, `@twt/ui` **98/98**,
+`@twt/contracts` **837/837**, `@twt/jobs` **309/309**, `@twt/niyamavali-engine` **144/144**.
+
+One run showed five RED in `@twt/validity-service` — the determinism gate and the four measured-
+validation/bench specs — after being launched while the previous package runs were still releasing pool
+connections. **Chased, not assumed:** all five pass in isolation, and a clean full re-run is 198/198.
+That is the [[project_ci_local_concurrency_oversubscription]] signature (thread/pool-heavy specs, a
+different victim each time), not a regression from this work.
+
+**Test-fixture changes forced by the behaviour changes, listed because they are the diff's real
+surface area:** every fixture asserting derivable facts now seeds a coverage row (without one the
+producer correctly returns the sentinel — that IS the new behaviour); the two `months_since_last = 13`
+fixtures now seed 13 real missed opportunities instead of relying on a 13-month-old confirmation with
+no intervening cycles; and the trustee-lite E2E assertion INVERTED from `{status:'ok', members:[]}` to
+`detection_unavailable` + `producer: 'niyamavali-registry'`, which is the whole point of Decision 4.
+
+**Dismissed as noise (4):** `twt_service` RLS deadlock on the new tables (refuted — migration `0036:49` states BYPASSRLS waives RLS evaluation but not GRANT checks, and 0093 follows that exact pattern); AC6(c)'s replay test not re-resolving the roster (the property is true by construction — `deriveIsAssignable` reads lifecycle + moderation only — and the round-1 patch does exercise the real `spawnChildPool`); `AvailableFacts.contribution` declared and never read (spec-mandated by Task 5, dead surface not defect); the "TWO queries" comment scope (already corrected in round 1).
+
+### Review Findings — round 3 (2026-08-06)
+
+_Third code-review pass, requested explicitly against replay correctness, projection correctness and
+governance correctness (not a generic re-scan). Run by Claude directly against the code (both an
+independent codex pass and a gemini pass were attempted first and failed for unrelated
+infrastructure reasons — codex hit a month-long usage lockout mid-run, gemini's free-tier API quota was
+already exhausted — so this round has no cross-model independence, unlike rounds 1/2's internal
+adversarial-layer structure). Verified clean: every as-of predicate in `facts.ts` is consistently gated
+on `at` (never `now()`); trigger/backfill parity (UUID-shape guards) is symmetric statement-for-statement;
+`member_state_in` (round-2 Decision 3) is applied identically to all four activated clauses; D2's
+`.filter(applied)` is correctly wired on both consuming paths._
+
+**Patch (2)**
+
+- [x] [Review][Patch] **Individual-member `getValidityAt` gave a false all-clear when the R7 registry
+  was unprovisioned — the exact bug round-2 Decision 4 fixed, but only on the bulk Trustee-Lite scan
+  path.** `r7-candidate-scan.ts`'s `resolvedClauses.length === 0` check (Decision 4) correctly degrades
+  the WHOLE scan to `{status:'unavailable', producer:'niyamavali-registry'}` when no R7(C)-(F) clause
+  version is provisioned for a Pariwar. `evaluateAppliedR7ClauseSlots` (`rules.ts`, the function the
+  single-member path uses via `service.ts`) had no equivalent: when no clause resolves,
+  `evaluateLadderAt` returns empty `perClauseResults`, `.filter(applied)` yields `[]`, and
+  `service.ts` still set `contributionHistory` to the `ok` arm whenever the projection itself was
+  derivable — a payload byte-identical to a genuinely clean, compliant member. Reachable in the normal
+  case of any Pariwar whose R7 registry isn't yet published (clause registry is per-tenant,
+  `niyamavali/read.ts:26-52`), not a hypothetical: the individual lookup would read clean while the
+  Trustee-Lite list for the SAME Pariwar correctly read `detection_unavailable`. **Fixed**:
+  `evaluateAppliedR7ClauseSlots` now returns `{ slots, registryUnavailable }` (`registryUnavailable` =
+  `missingClauseIds.length === R7_ACTIVATED_CLAUSE_IDS.length`, mirroring the scan's identical check);
+  `service.ts` overrides `contributionHistory` to the new
+  `CONTRIBUTION_R7_REGISTRY_UNAVAILABLE` sentinel (`payload.ts`, `producer: 'niyamavali-registry'`)
+  when true — reusing the SAME `producer_unavailable` status `violator-flags.ts` and
+  `member-status/presenter.ts` already short-circuit on (neither inspects `producer`), so both degrade
+  correctly without their frozen code changing. `ContributionHistoryUnavailable.producer` (types.ts) and
+  the wire DTO (`contracts/src/members/validity.ts`) widened from the `'story-10-24'` literal to
+  `'story-10-24' | 'niyamavali-registry'`. New live-DB test:
+  `contribution-facts.spec.ts` — "R7 registry unprovisioned for the Pariwar → contributionHistorySummary
+  reports the registry gap, never a fabricated clean record". One pre-existing test's fixture
+  (`validity-service.spec.ts`) was asserting the OLD, buggy behavior by construction (its own comment
+  said "this Pariwar seeds no R7 clause versions" while asserting `status: 'ok'`) — fixed to provision
+  R7 clauses so it tests what it always claimed to.
+  [packages/validity-service/src/rules.ts; packages/validity-service/src/service.ts;
+  packages/validity-service/src/payload.ts; packages/validity-service/src/types.ts;
+  packages/contracts/src/members/validity.ts]
+
+- [x] [Review][Patch] **The projection-coverage backfill — the story's own "precondition for supplying
+  facts" — has no deploy or onboarding trigger anywhere.** `apps/jobs/src/contribution-projection-backfill.ts`
+  (round-2) is a manual CLI nobody calls automatically: no migration post-step, no boot check, no
+  onboarding hook (this repo has no coded Pariwar-creation flow — tenants are provisioned out-of-band),
+  no deploy-workflow reference. Without the coverage row it writes, `deriveContributionFacts` returns
+  the sentinel for every member, so this story's stated goal does not happen automatically on deploy.
+  Not a code defect in the CLI itself (it is well-built: per-Pariwar transactions, idempotent,
+  non-zero exit on partial failure) — the gap is purely operational and was undocumented. **Fixed
+  by disclosure, not by inventing deploy automation this review cannot own**: recorded explicitly in
+  `deferred-work.md` under a new "Deploy note" naming the gap, why it isn't silently patched (a coverage
+  row not backed by an actual backfill would be a fabrication), and the three options for whoever owns
+  the deploy runbook (manual runbook step / scheduled sweep / onboarding-time seed if an onboarding flow
+  is ever built) — none built here, per [[feedback_record_unattested_no_backfill]].
+  [apps/jobs/src/contribution-projection-backfill.ts; deferred-work.md]
+
+**Validation (2026-08-06, round 3).** `pnpm --filter @twt/validity-service typecheck/lint`,
+`pnpm --filter @twt/contracts typecheck/lint`, `pnpm contracts:check-openapi-determinism`
+(byte-identical — the DTO is still unregistered in the hand-curated emitter, per the existing round-1
+finding) all green. Live DB (`twt-test-pg` :5433): `@twt/validity-service` **199/199** (including the
+100×-thread determinism gate at exactly ONE hash and the new registry-unavailable test),
+`apps/jobs` assignable-roster suites **13/13** (unaffected — the roster reads `isAssignable` only, per
+AI-7-2/10.17, never `contributionHistorySummary`), `apps/api` trustee-lite E2E **19/19**, `@twt/ui`
+member-status + contribution-disclosure **57/57**, `@twt/admin` the six affected suites **87/87**.
+
+**Full AC10 gate, both modes.** `pnpm ci:local` WITHOUT `DATABASE_URL` — **29/29 jobs green**, including
+`determinism-replay` and `channels-determinism`. WITH `DATABASE_URL` — 2 jobs (`test (unit)`,
+`integration-tests`) showed failures in **three specs, none touching contribution/validity/R7**:
+`apps/api/tests/integration/banners/banners.spec.ts` (500 instead of 201 on banner create — the SAME
+spec this story's own ORIGINAL baseline already recorded as an inherited pre-existing flake),
+`apps/api/tests/integration/login-wall.spec.ts` (fetch timeout calling an unrelated
+`pool-fixed-amount/notification-hook.ts`), and `apps/api/tests/unit/contribution-note-render.test.ts`
+(a 90s PDF-rendering timeout — "contribution NOTE" is the PDF receipt feature, unrelated to this
+story's contribution FACT producer). **Chased, not assumed:** all three pass cleanly in isolation
+(banners 26/26, login-wall 3/3, contribution-note-render 2/2) — the
+[[project_ci_local_concurrency_oversubscription]] / [[project_ci_local_double_run_pollution]]
+signature (a different victim each run, always timing-shaped), not a regression from this round's
+changes.
 
 ---
 

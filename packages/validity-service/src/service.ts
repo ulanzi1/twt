@@ -20,7 +20,12 @@
 import { audit, member, type ids } from '@twt/domain';
 import { R12_CLAUSE_ID, selectDbNow, type EvaluateDeps } from '@twt/niyamavali-engine';
 
-import { assemblePayload, projectLockInStatus, projectRetirementCoverage } from './payload.js';
+import {
+  assemblePayload,
+  CONTRIBUTION_R7_REGISTRY_UNAVAILABLE,
+  projectLockInStatus,
+  projectRetirementCoverage,
+} from './payload.js';
 import {
   contributionFactsToBag,
   contributionFactsToSummary,
@@ -136,11 +141,11 @@ export async function getValidityAt(
     retirement: retirementFacts ? retirementFactsToBag(retirementFacts) : null,
     contribution: contributionBag,
   });
-  const [orderedSlots, r7Slots] = await Promise.all([
+  const [orderedSlots, r7Evaluation] = await Promise.all([
     evaluateOrderedClauses(deps, memberCtx, descriptors, at),
     evaluateAppliedR7ClauseSlots(deps, memberCtx, contributionBag, at),
   ]);
-  const slots = [...orderedSlots, ...r7Slots];
+  const slots = [...orderedSlots, ...r7Evaluation.slots];
 
   // (3) Retirement date projection ([[CR-4.5-D3]]) from the R12 slot.
   const r12Slot = slots.find((s) => String(s.clauseId) === R12_CLAUSE_ID);
@@ -158,7 +163,18 @@ export async function getValidityAt(
     retirementCoverage,
     // The produced `ok` arm, or ABSENT so `assemblePayload` falls back to the honest sentinel (D6).
     // NEVER a fabricated `{ total_count: 0 }` — zero and unknown are different claims.
-    ...(contributionFacts ? { contributionHistory: contributionFactsToSummary(contributionFacts) } : {}),
+    //
+    // `registryUnavailable` (2026-08-06 finding) OVERRIDES the `ok` arm even though the FACTS were
+    // derivable: when no activated R7 clause version is provisioned for this Pariwar, the family was
+    // never evaluated at all, so an `ok` summary + zero R7 entries in `applicableNiyamavaliClauses[]`
+    // is indistinguishable from a genuinely clean member — the exact false all-clear the bulk
+    // Trustee-Lite scan already guards against (`r7-candidate-scan.ts`'s `resolvedClauses.length === 0`
+    // check). This is the individual-lookup analogue of that same guard.
+    ...(r7Evaluation.registryUnavailable
+      ? { contributionHistory: CONTRIBUTION_R7_REGISTRY_UNAVAILABLE }
+      : contributionFacts
+        ? { contributionHistory: contributionFactsToSummary(contributionFacts) }
+        : {}),
     slots,
   });
 

@@ -53,9 +53,18 @@ export const VyawasthaShulkStatusDto = z
  *
  * The sentinel remains REACHABLE after 10.24 (D6): a per-member gap can still be genuine (no projected
  * history; a historical `at` before the projection's coverage; an incomplete backfill).
+ *
+ * ── `producer` widened to add `'niyamavali-registry'` (2026-08-06 finding) ────────────────────────
+ * A SECOND, distinct gap reuses this same sentinel: no activated R7(C)–(F) clause version is
+ * provisioned for the Pariwar at the evaluated instant (the RULES, not the FACTS, are missing). The
+ * literal tells an operator which subsystem to debug — see `CONTRIBUTION_R7_REGISTRY_UNAVAILABLE`
+ * (`@twt/validity-service/payload.ts`).
  */
 export const ContributionHistoryUnavailableDto = z
-  .object({ status: z.literal('producer_unavailable'), producer: z.literal('story-10-24') })
+  .object({
+    status: z.literal('producer_unavailable'),
+    producer: z.enum(['story-10-24', 'niyamavali-registry']),
+  })
   .strict();
 
 /**

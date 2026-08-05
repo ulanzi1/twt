@@ -12,15 +12,25 @@
 // ── What is / isn't produced here (D2 / D2m) ─────────────────────────────────────────────────────
 //   · PRODUCED now: `member.valid_membership_years` + `member.is_retired` (R12 / Story 4.5), the
 //     member-standing medical-disclosure summary (D2m-A, NON-PII).
-//   · NOT produced (Epic 8/9): `contribution.*` / `claim.*` (R7/R8). No contribution source exists;
-//     the service surfaces `contribution_history_summary: producer_unavailable` and OMITS R7/R8.
+//   · PRODUCED since Story 10.24: FIVE of the seven `contribution.*` facts — `total_count`,
+//     `ever_contributed`, `months_since_last`, `skips_current_year`, `in_lapse` — derived from the
+//     migration-0093 projections (see {@link deriveContributionFacts}), which ACTIVATES R7(C)–(F).
+//     `contribution_history_summary` now carries a real `ok` arm; the `producer_unavailable` sentinel
+//     remains reachable for a genuine per-member or per-Pariwar coverage gap (D6), never as a blanket
+//     "no producer exists" statement.
+//   · STILL NOT produced: `contribution.r7a_restorations_used` (Story 10.25) and
+//     `contribution.personal_event_excuse_claimed` (Story 10.26) — so R7(A)/(B)/(G) stay HELD; and
+//     `claim.*` + `contribution.compliance_percent`, so R8 is NOT activated by any of the above.
+//     ⚠ Supplying facts does NOT activate R8: it additionally needs a CLAIM-TIME fact
+//     (`claim.death_classification`, absent at member standing) and `compliance_percent`, which this
+//     producer does not supply. `VALIDITY_RULE_ORDER` must never gain an R8 clause id.
 //   · NOT produced here (Epic 6): the R14 claim-time concealment fact (`claim.concealed_ima_...`) —
 //     that is death-linked (the true C7 beat) and stays in claim filing.
 
 import { contribution, medical, member, type Db, type ids } from '@twt/domain';
 import { R7_CONTRIBUTION_FACT_KEYS, R12_MEMBER_FACT_KEYS, type Facts } from '@twt/niyamavali-engine';
 
-import { calendarMonthsBetween, calendarYearsBetween } from './calendar.js';
+import { calendarYearsBetween } from './calendar.js';
 import type { ContributionHistoryAvailable, MedicalDisclosureFlagsPayload } from './types.js';
 
 /**
@@ -244,7 +254,29 @@ export interface ContributionFacts {
   /** `contribution.ever_contributed` — `totalCount > 0`, explicit for clarity. */
   everContributed: boolean;
   /**
-   * `contribution.months_since_last` — CALENDAR months since the last live confirmation.
+   * `contribution.months_since_last` — elapsed contribution OPPORTUNITIES since the last live
+   * confirmation, NOT wall-clock calendar months.
+   *
+   * ── ⚖ RATIFIED 2026-08-05 by BigDev, during the Story 10.24 round-2 code review ─────────────────
+   * "Contribution discipline must always be evaluated against contribution opportunities, never
+   * against elapsed time alone." One opportunity = one assigned cycle that reached a closed state and
+   * resolved without a live confirmation. The UNIT is still months — pool cycles are single-
+   * calendar-month instruments (Decision 2026-08-05-075) — so R7(C)'s `>= 12` and R7(F)'s `>= 6` keep
+   * their meaning, and in a fully active Pariwar this equals the wall-clock count.
+   *
+   * WHY, because the wall-clock reading looks obviously right and is catastrophically wrong:
+   * contribution is only possible when a death claim freezes a cycle and a pool assigns the member.
+   * A Pariwar with no death for six months creates NO opportunity, so a wall-clock derivation trips
+   * R7(F) for EVERY member who ever contributed — and the clause GENUINELY applies, so D2's
+   * applied-only filter cannot catch it. The entire membership lands on the surface that feeds
+   * suspension decisions. Most acute in small or low-mortality Pariwars, i.e. exactly where the
+   * product starts. The fix belongs HERE, in the producer, not in the clause that reads the fact:
+   * holding R7(C)/(F) and gating the clause data were both considered and rejected.
+   *
+   * ⚠ This is a PAYLOAD-CONTRACT element on the {@link ContributionLapsePolicy} pattern — hashed into
+   * `validityPayloadHash` and read by the trustee-lite surface. Re-deriving it is a versioned contract
+   * change, never a retune, and reverting it to elapsed time would re-open the whole-membership
+   * flagging above.
    *
    * `null` when the member has NEVER contributed, and the fact is then OMITTED from the bag rather
    * than sent as some large number. That is not fastidiousness: a never-contributed member is
@@ -272,16 +304,42 @@ export interface ContributionFactsInput {
   skipsCurrentYear: number;
   /** The close instant of the EARLIEST missed cycle; null when `skipsCurrentYear === 0`. */
   earliestSkipClosedAt: Date | null;
+  /** Missed assigned-and-closed cycles since the last live confirmation — the OPPORTUNITY-aware gap
+   *  that becomes `months_since_last`. Ignored when `lastConfirmedAt` is null. */
+  opportunitiesSinceLast: number;
+  /** The instant this Pariwar's projection is authoritative from; `null` when the backfill has never
+   *  run. THE reachability condition for the sentinel — see {@link deriveContributionFacts}. */
+  coveredFrom: Date | null;
 }
 
 /**
  * PURE: derive the five `contribution.*` facts from the read projection anchors at the pinned instant.
  *
- * Returns `null` ONLY when the inputs are structurally incoherent — a negative count, or a
- * `lastConfirmedAt` in the future of the evaluation instant, or a positive skip count with no onset
- * instant. Those are data-integrity impossibilities, and for them the service supplies NO facts and the
- * payload carries the `producer_unavailable` sentinel, exactly as `deriveRetirementFacts` returns
- * `null` for `retiredAt < signupAt` (D6, [[CR-4.4-D3]] / [[CR-4.5-D1]]).
+ * Returns `null` — meaning the service supplies NO facts and the payload carries the
+ * `producer_unavailable` sentinel — in TWO distinct families of case.
+ *
+ * ── 1. NO PROJECTION COVERAGE (the reachable one; round-2 review, Decision 2) ────────────────────
+ * `coveredFrom === null` (the backfill has never run for this Pariwar) or `at` precedes it. This is
+ * the case that matters in practice, and it exists because the original implementation had ONLY
+ * family 2 below — every branch of which is structurally impossible given the SQL that feeds it (a
+ * `count(*)` is never negative; a `max(confirmed_at)` filtered by `confirmed_at <= at` is never in
+ * the future; a positive skip count always has a non-null `min(closed_at)` because the LATERAL is
+ * joined `ON closed.closed_at IS NOT NULL`). The sentinel was therefore DEAD CODE, and an un-run or
+ * partial backfill rendered as an affirmative CLEAN RECORD for every member in the Pariwar, on the
+ * surface that feeds suspension decisions — precisely what D6 forbids.
+ *
+ *   ⚖ "Unknown projection state must never fabricate a clean member" — BigDev, 2026-08-05.
+ *
+ * The consequence is deliberate and worth stating: the backfill is a PRECONDITION for supplying
+ * contribution facts, not an optional repair path. Forgetting it darkens the whole trustee section
+ * (10.11's deliberate strictness — a partial scan is a false all-clear for the members it skipped)
+ * rather than reporting a clean membership.
+ *
+ * ── 2. STRUCTURALLY INCOHERENT INPUTS (the defensive one) ────────────────────────────────────────
+ * A negative or non-integer count, a `lastConfirmedAt` in the future of the evaluation instant, or a
+ * positive skip count with no onset instant. Data-integrity impossibilities, kept as a backstop in the
+ * same spirit as `deriveRetirementFacts` returning `null` for `retiredAt < signupAt`
+ * (D6, [[CR-4.4-D3]] / [[CR-4.5-D1]]).
  *
  * ⚠ It NEVER returns a fabricated zero for an un-derivable member. A member with a readable history
  * and no contributions genuinely has `totalCount: 0` — that is DATA. An un-derivable member gets the
@@ -292,8 +350,15 @@ export function deriveContributionFacts(
   input: ContributionFactsInput,
   at: Date,
 ): ContributionFacts | null {
+  // ── 1. Coverage. Checked FIRST: with no projection there is nothing to reason about, and every
+  // check below would otherwise "pass" over an empty ledger and manufacture a clean record.
+  if (input.coveredFrom === null) return null;
+  if (at.getTime() < input.coveredFrom.getTime()) return null;
+
+  // ── 2. Structural coherence (defensive backstop).
   if (!Number.isInteger(input.totalCount) || input.totalCount < 0) return null;
   if (!Number.isInteger(input.skipsCurrentYear) || input.skipsCurrentYear < 0) return null;
+  if (!Number.isInteger(input.opportunitiesSinceLast) || input.opportunitiesSinceLast < 0) return null;
   if (input.lastConfirmedAt !== null && input.lastConfirmedAt.getTime() > at.getTime()) return null;
   if (input.skipsCurrentYear > 0 && input.earliestSkipClosedAt === null) return null;
 
@@ -301,8 +366,10 @@ export function deriveContributionFacts(
   return {
     totalCount: input.totalCount,
     everContributed: input.totalCount > 0,
-    monthsSinceLast:
-      input.lastConfirmedAt === null ? null : calendarMonthsBetween(input.lastConfirmedAt, at),
+    // ⚖ OPPORTUNITIES, never elapsed time — see {@link ContributionFacts.monthsSinceLast}. This is
+    // deliberately NOT `calendarMonthsBetween(lastConfirmedAt, at)`; that reading flags an entire
+    // quiet Pariwar. Do not "simplify" it back to date arithmetic.
+    monthsSinceLast: input.lastConfirmedAt === null ? null : input.opportunitiesSinceLast,
     skipsCurrentYear: input.skipsCurrentYear,
     inLapse,
     lapseSince: inLapse ? (input.earliestSkipClosedAt?.toISOString() ?? null) : null,

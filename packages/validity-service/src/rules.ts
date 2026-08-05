@@ -214,22 +214,50 @@ export function buildRuleDescriptors(available: AvailableFacts): RuleDescriptor[
 //     calls the GENERIC `evaluateLadderAt` with `R7_ACTIVATED_CLAUSE_IDS`.
 
 /**
+ * The producer literal reported when R7 detection could not run because the Pariwar's Niyamavali
+ * registry has no ACTIVATED R7(C)–(F) clause version effective at the evaluated instant.
+ *
+ * NOT `'story-10-24'`: the fact producer is working fine in that case — what is missing is the RULES.
+ * Labelling it as a producer gap would send an operator to debug the wrong subsystem. Shared by both
+ * R7 consumers so the string is defined once: the bulk Trustee-Lite scan (`r7-candidate-scan.ts`) and
+ * the individual-member path (`evaluateAppliedR7ClauseSlots` below, via `service.ts`).
+ */
+export const R7_REGISTRY_UNPROVISIONED_PRODUCER = 'niyamavali-registry' as const;
+
+/** {@link evaluateAppliedR7ClauseSlots}'s result: the applied slots, plus the registry-gap signal. */
+export interface R7ClauseEvaluation {
+  /** The APPLIED R7 clause slots only (D2), clause-id ascending. */
+  slots: ClauseEvalSlot[];
+  /**
+   * True when NONE of `R7_ACTIVATED_CLAUSE_IDS` resolves to a clause version at `at` for this
+   * Pariwar — the registry is unprovisioned, a DIFFERENT gap from `facts === null` (the fact
+   * producer's own gap). Mirrors `r7-candidate-scan.ts`'s identical `resolvedClauses.length === 0`
+   * check (2026-08-06 finding): without this, a Pariwar whose R7 rules were never published reads as
+   * "evaluated, this member is clean" instead of "R7 detection did not run" — a false all-clear on
+   * exactly the surface `getValidityAt`'s own Dev Agent Record calls "the authoritative R7 verdict".
+   * Always `false` when `facts === null`, since that case already yields the FACTS-gap sentinel.
+   */
+  registryUnavailable: boolean;
+}
+
+/**
  * Evaluate the ACTIVATED R7 sub-clauses at the pinned instant and return ONLY THE APPLIED ones as
  * ordered slots (D2). Clause-id ascending — the ladder already sorts, which matches these ids'
  * positions in `VALIDITY_RULE_ORDER`, so the payload's serialization order stays declared-order stable.
  *
- * Returns `[]` when `facts` is `null` (this member's contribution history is not derivable): the family
- * is then not evaluated AT ALL — no descriptor, no memo, no audit line, no clause in the payload — and
- * the caller supplies the `producer_unavailable` sentinel instead (D6). That is strictly stronger than
- * evaluating-then-filtering, and it is also the cheaper path.
+ * Returns `{ slots: [], registryUnavailable: false }` when `facts` is `null` (this member's
+ * contribution history is not derivable): the family is then not evaluated AT ALL — no descriptor, no
+ * memo, no audit line, no clause in the payload — and the caller supplies the `producer_unavailable`
+ * sentinel instead (D6). That is strictly stronger than evaluating-then-filtering, and it is also the
+ * cheaper path.
  */
 export async function evaluateAppliedR7ClauseSlots(
   deps: EvaluateDeps,
   baseContext: { pariwarId: ids.PariwarId; memberId: ids.MemberId },
   facts: Facts | null,
   at: Date,
-): Promise<ClauseEvalSlot[]> {
-  if (facts === null) return [];
+): Promise<R7ClauseEvaluation> {
+  if (facts === null) return { slots: [], registryUnavailable: false };
   const ladder = await evaluateLadderAt(
     deps,
     { pariwarId: baseContext.pariwarId, memberId: baseContext.memberId, facts },
@@ -237,9 +265,12 @@ export async function evaluateAppliedR7ClauseSlots(
     R7_ACTIVATED_CLAUSE_IDS,
     R7_NOT_APPLICABLE,
   );
-  return ladder.perClauseResults
-    .filter((entry) => entry.applied)
-    .map((entry) => ({ clauseId: ids.clauseId(entry.clauseId), result: entry.result }));
+  return {
+    slots: ladder.perClauseResults
+      .filter((entry) => entry.applied)
+      .map((entry) => ({ clauseId: ids.clauseId(entry.clauseId), result: entry.result })),
+    registryUnavailable: ladder.missingClauseIds.length === R7_ACTIVATED_CLAUSE_IDS.length,
+  };
 }
 
 /** One ordered evaluation slot: the descriptor + its engine result (`null` when the clause isn't resolvable). */

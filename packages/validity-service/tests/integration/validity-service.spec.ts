@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { getValidity, getValidityAt, type ValidityCaller, type ValidityServiceDeps } from '../../src/index.js';
 import { R12_PAYLOAD } from '../fixtures/r12-clause.js';
+import { R7_PAYLOADS } from '../fixtures/r7-clauses.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -45,6 +46,32 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
       benefitMechanism: 'pool',
     });
     return clauseVersionId;
+  }
+
+  /**
+   * Seed the four ACTIVATED R7 clauses (mirrors `contribution-facts.spec.ts`'s `seedActivatedR7`).
+   * Required since the 2026-08-06 fix: a Pariwar with NO R7 clause versions provisioned now correctly
+   * degrades `contributionHistorySummary` to `producer_unavailable`/`niyamavali-registry` (the registry
+   * gap is a different claim from "R7 provisioned but none applies") — so a test asserting the `ok`
+   * arm must actually provision the registry, not merely provision R12.
+   */
+  async function seedActivatedR7(pariwarId: ids.PariwarId): Promise<void> {
+    for (const clauseId of [
+      'niy.contribution-discipline.r7-c',
+      'niy.contribution-discipline.r7-d',
+      'niy.contribution-discipline.r7-e',
+      'niy.contribution-discipline.r7-f',
+    ]) {
+      await db.insert(schema.clauseVersions).values({
+        clauseVersionId: ids.clauseVersionId(randomUUID()),
+        clauseId: ids.clauseId(clauseId),
+        pariwarId,
+        version: 1,
+        effectiveDate: new Date('2000-01-01T00:00:00Z'),
+        payload: { ...R7_PAYLOADS[clauseId] },
+        benefitMechanism: 'pool',
+      });
+    }
   }
 
   async function seedEvent(
@@ -77,6 +104,15 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
     await seedEvent(pariwarId, memberId, 2, 'member.kyc_completed', at(2), {});
     await seedEvent(pariwarId, memberId, 3, 'member.vyawastha_shulk_paid', at(3), {});
     await seedEvent(pariwarId, memberId, 4, 'member.lock_in_expired', at(4), { kyc_verified: true });
+    // Story 10.24 (round-2 review): record the Pariwar's projection COVERAGE WATERMARK. Without it
+    // `deriveContributionFacts` returns the `producer_unavailable` sentinel — correctly, because an
+    // un-backfilled tenant's ledger is empty and "no rows" would otherwise read as a clean record
+    // (⚖ "Unknown projection state must never fabricate a clean member"). A member seeded as genuinely
+    // having NO contributions needs coverage present, so the zero it derives is DATA rather than a gap.
+    await db
+      .insert(schema.contributionProjectionCoverage)
+      .values({ pariwarId, coveredFrom: new Date('2000-01-01T00:00:00Z') })
+      .onConflictDoNothing();
   }
 
   /** Insert the members row (FK target for postings) + a retirement posting anchor. */
@@ -149,6 +185,8 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
     track(pariwarId, memberId);
     await seedActiveMember(pariwarId, memberId, new Date('2010-06-01T00:00:00Z'));
     const versionId = await seedR12(pariwarId);
+    // 2026-08-06: the registry-unprovisioned guard now requires this — see seedActivatedR7's doc.
+    await seedActivatedR7(pariwarId);
 
     const at = new Date('2025-06-01T00:00:00Z'); // 15 years of tenure → +3 earned
     const p = await getValidityAt(deps, { pariwarId, memberId }, at, { internal: true });
@@ -182,9 +220,9 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
         'story-10-26',
       ]);
     }
-    // R12 is still the ONLY applicable clause here: this Pariwar seeds no R7 clause versions, and even
-    // if it did, none of R7(C)–(F) would APPLY to a member with no contribution history (D2 —
-    // only clauses whose `on_pass` fired reach this list). R8 is not activated at all.
+    // R12 is still the ONLY applicable clause here: this Pariwar DOES provision R7(C)–(F) (seeded
+    // above), but none of them APPLY to a member with no contribution history (D2 — only clauses
+    // whose `on_pass` fired reach this list). R8 is not activated at all.
     expect(p.applicableNiyamavaliClauses.map((c) => String(c.clauseId))).toEqual(['niy.retirement-coverage.r12']);
     expect(p.provenanceTrace[0]?.clauseVersionId).toBe(versionId);
     expect(p.ruleRegistryVersion).toBe(versionId);

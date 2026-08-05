@@ -409,18 +409,22 @@ describe.skipIf(!hasDatabase)('trustee-lite list + signals — E2E (:5433)', () 
       }
     });
 
-    it('10.24 — the flip is LIVE: the candidate scan actually ran (never the hardcoded sentinel)', async () => {
-      // The specific regression this guards: reverting the handler to
-      // `{ status: 'unavailable', producer: CONTRIBUTION_UNAVAILABLE.producer }` would make the arm
-      // permanently `detection_unavailable` with a producer literal, which is indistinguishable from
-      // a real per-member gap unless something asserts the scan ran. With no R7 clause versions seeded
-      // for this Pariwar the scan resolves zero clauses and returns zero candidates, which
-      // `summarizeViolatorFlags` reports as an EVALUATED empty list — a status the hardcoded sentinel
-      // could never produce.
+    it('10.24 — an UNPROVISIONED R7 registry reports detection_unavailable, never a clean all-clear', async () => {
+      // ⚖ ASSERTION INVERTED 2026-08-05 (round-2 code review). This previously asserted
+      // `status: 'ok'` with `members: []` for this fixture — which seeds NO R7 clause versions — and
+      // in doing so regression-protected the exact false all-clear the handler's own comment forbids:
+      // an empty evaluated list renders as "detection ran, nobody is flagged", indistinguishable from
+      // a genuinely clean Pariwar, when in fact R7 detection never ran at all.
+      //
+      // Ruling: "Unknown rules and unknown facts are the same constitutional state: evaluation
+      // unavailable." So a Pariwar with no R7 clause in effect reports `detection_unavailable`, naming
+      // the REGISTRY (not the fact producer) as the source — the facts derived fine; there was no rule
+      // to apply, and pointing at the producer would send an operator to debug the wrong subsystem.
       const { body } = await fetchAs(superAdmin, shared.p);
       const violator = body.violator_flags as Json;
-      expect(violator.status).toBe('ok');
-      expect(violator.members).toEqual([]);
+      expect(violator.status).toBe('detection_unavailable');
+      expect(violator.producer).toBe('niyamavali-registry');
+      expect(violator).not.toHaveProperty('members');
     });
   });
 

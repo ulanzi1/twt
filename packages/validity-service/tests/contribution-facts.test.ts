@@ -3,9 +3,13 @@
 // The Epic-4 determinism spine applies: the derivation is a pure function of (read anchors, pinned
 // instant), so it is unit-tested exhaustively and without a database. Three families of assertion:
 //
-//   · AC2 — `months_since_last` is CALENDAR-correct (AI-3-1), pinned at the leap/month boundaries
-//     where fixed-ms arithmetic actually breaks.
-//   · D6  — un-derivable ≠ zero. The single most dangerous confusion in this file.
+//   · AC2 — the calendar primitives are correct (AI-3-1), pinned at the leap/month boundaries where
+//     fixed-ms arithmetic actually breaks. ⚠ These pin `calendar.ts`'s PRIMITIVES; they are no longer
+//     the derivation of `months_since_last` — see the OPPORTUNITY block below.
+//   · ⚖ OPPORTUNITY — `months_since_last` counts elapsed contribution OPPORTUNITIES, never wall-clock
+//     time (ratified 2026-08-05). The block that stops a quiet Pariwar flagging its whole membership.
+//   · D6  — un-derivable ≠ zero. The single most dangerous confusion in this file, and (since the
+//     round-2 review) the one with a REACHABLE sentinel: no projection coverage ⇒ no facts.
 //   · D5  — `missed-closed-cycle-v1` behaves as its documented policy says, including `lapseSince`.
 
 import { describe, expect, it } from 'vitest';
@@ -20,13 +24,18 @@ import {
 
 const AT = new Date('2026-08-05T00:00:00.000Z');
 
-/** Anchors for a member with a readable, ordinary history. */
+/** A coverage watermark old enough that `at` is always inside it — the "projection is complete" case. */
+const COVERED_FROM = new Date('2020-01-01T00:00:00.000Z');
+
+/** Anchors for a member with a readable, ordinary history in a fully-backfilled Pariwar. */
 function inputs(over: Partial<Parameters<typeof deriveContributionFacts>[0]> = {}) {
   return {
     totalCount: 12,
     lastConfirmedAt: new Date('2026-07-05T00:00:00.000Z'),
     skipsCurrentYear: 0,
     earliestSkipClosedAt: null,
+    opportunitiesSinceLast: 0,
+    coveredFrom: COVERED_FROM,
     ...over,
   };
 }
@@ -67,18 +76,58 @@ describe('AC2 — months_since_last is CALENDAR-correct (AI-3-1), never a fixed-
     );
   });
 
-  it('never goes negative, and is 0 when the last confirmation is at the evaluation instant', () => {
+  it('never goes negative', () => {
     expect(calendarMonthsBetween(AT, new Date('2020-01-01T00:00:00Z'))).toBe(0);
-    expect(deriveContributionFacts(inputs({ lastConfirmedAt: AT }), AT)?.monthsSinceLast).toBe(0);
+  });
+});
+
+describe('⚖ months_since_last counts OPPORTUNITIES, never elapsed time (ratified 2026-08-05)', () => {
+  // ⚠ THE most important block in this file. Ratified by BigDev during the Story 10.24 round-2 code
+  // review: "Contribution discipline must always be evaluated against contribution opportunities,
+  // never against elapsed time alone."
+  //
+  // The defect this prevents: contribution is only possible when a death claim freezes a cycle and a
+  // pool assigns the member. A Pariwar with no death for six months offers NO opportunity — so a
+  // wall-clock derivation trips R7(F) (`>= 6`) for EVERY member who ever contributed, and the clause
+  // GENUINELY applies, which means D2's applied-only filter cannot catch it. The entire membership
+  // lands on the surface that feeds suspension decisions. Most acute in small or low-mortality
+  // Pariwars — i.e. exactly where the product starts.
+
+  it('a member who missed NO opportunity has a ZERO gap, no matter how long ago they last paid', () => {
+    // The quiet-Pariwar case, stated as bluntly as it can be: five years since the last confirmation,
+    // and not one cycle closed on them in the meantime. They have not drifted; the Pariwar was quiet.
+    const facts = deriveContributionFacts(
+      inputs({
+        lastConfirmedAt: new Date('2021-01-01T00:00:00.000Z'),
+        opportunitiesSinceLast: 0,
+      }),
+      AT,
+    );
+    expect(facts?.monthsSinceLast).toBe(0);
   });
 
-  it('crosses a 12-month gap exactly at the anniversary — the R7(C) boundary', () => {
-    const anchor = new Date('2025-08-05T00:00:00.000Z');
-    expect(deriveContributionFacts(inputs({ lastConfirmedAt: anchor }), AT)?.monthsSinceLast).toBe(12);
-    const dayEarly = new Date('2026-08-04T23:59:59.000Z');
-    expect(
-      deriveContributionFacts(inputs({ lastConfirmedAt: anchor }), dayEarly)?.monthsSinceLast,
-    ).toBe(11);
+  it('the gap is the OPPORTUNITY count, not the calendar distance, when the two disagree', () => {
+    // 13 wall-clock months elapsed, but only 2 cycles actually closed on this member. A calendar
+    // derivation would report 13 and fire R7(C) (`>= 12`); the ratified one reports 2 and fires
+    // nothing. The literal 2 is the whole point of the ruling — do not "fix" it to a date span.
+    const facts = deriveContributionFacts(
+      inputs({ lastConfirmedAt: new Date('2025-07-05T00:00:00.000Z'), opportunitiesSinceLast: 2 }),
+      AT,
+    );
+    expect(facts?.monthsSinceLast).toBe(2);
+  });
+
+  it('still crosses the R7(C) boundary when the opportunities genuinely elapsed', () => {
+    // The clause is NOT weakened: a member who was assigned to 12 closed cycles and paid none of them
+    // reaches 12 and R7(C) applies exactly as before. Opportunity-awareness changes WHICH members
+    // qualify, never the threshold.
+    expect(deriveContributionFacts(inputs({ opportunitiesSinceLast: 12 }), AT)?.monthsSinceLast).toBe(12);
+    expect(deriveContributionFacts(inputs({ opportunitiesSinceLast: 11 }), AT)?.monthsSinceLast).toBe(11);
+  });
+
+  it('rejects a structurally impossible opportunity count rather than reporting it', () => {
+    expect(deriveContributionFacts(inputs({ opportunitiesSinceLast: -1 }), AT)).toBeNull();
+    expect(deriveContributionFacts(inputs({ opportunitiesSinceLast: 2.5 }), AT)).toBeNull();
   });
 });
 
@@ -100,6 +149,38 @@ describe('D6 — un-derivable is NOT zero (the never-fabricate rule)', () => {
     const facts = deriveContributionFacts(inputs({ totalCount: 0, lastConfirmedAt: null }), AT);
     expect(facts?.monthsSinceLast).toBeNull();
     expect(contributionFactsToBag(facts!)).not.toHaveProperty('contribution.months_since_last');
+  });
+
+  it('returns null (→ the sentinel) when the Pariwar has NO projection coverage', () => {
+    // ⚖ Ratified 2026-08-05: "Unknown projection state must never fabricate a clean member."
+    //
+    // This is the case the original implementation could not express. Every other `null` branch is a
+    // structural impossibility given the SQL feeding it (a count(*) is never negative; a
+    // max(confirmed_at) filtered by `confirmed_at <= at` is never in the future), so the sentinel was
+    // DEAD CODE — and an un-run backfill rendered as an affirmative clean record for every member in
+    // the Pariwar, on the surface that feeds suspension decisions.
+    //
+    // Note what the un-covered member looks like WITHOUT this guard: totalCount 0, everContributed
+    // false, inLapse false — indistinguishable from a genuinely spotless member.
+    const unprojected = inputs({ totalCount: 0, lastConfirmedAt: null, coveredFrom: null });
+    expect(deriveContributionFacts(unprojected, AT)).toBeNull();
+  });
+
+  it('returns null for an `at` BEFORE the coverage watermark — the projection makes no claim there', () => {
+    const coveredFrom = new Date('2026-01-01T00:00:00.000Z');
+    // `lastConfirmedAt` is pinned BEFORE `coveredFrom` so the only thing separating the two assertions
+    // is the coverage boundary itself — with the fixture default (a 2026-07 confirmation) both sides
+    // would return null via the future-confirmation check and the test would pass vacuously.
+    const atBoundary = inputs({
+      coveredFrom,
+      lastConfirmedAt: new Date('2025-12-01T00:00:00.000Z'),
+    });
+    // Exactly ON the watermark derives; one millisecond before it does not. Asserted on both sides so
+    // an off-by-one cannot pass.
+    expect(deriveContributionFacts(atBoundary, coveredFrom)).not.toBeNull();
+    expect(
+      deriveContributionFacts(atBoundary, new Date(coveredFrom.getTime() - 1)),
+    ).toBeNull();
   });
 
   it('returns null (→ the sentinel) for STRUCTURALLY INCOHERENT inputs, never a clean-looking zero', () => {

@@ -326,3 +326,9 @@ export * from './member_moderation_actions.js';
 // and the two are held OBSERVATIONALLY EQUIVALENT by one shared invariant test.
 export * from './member_contribution_ledger.js';
 export * from './member_pool_assignments.js';
+// Story 10.24 round-2 review (Decision 2) — the COVERAGE WATERMARK for the two projections above.
+// One row per Pariwar, written by the backfill; its existence is what makes `producer_unavailable`
+// reachable at all. Without it the producer cannot tell "no rows because nothing happened" from "no
+// rows because nothing was projected", and an un-run backfill fabricates a clean record for every
+// member. ⚖ "Unknown projection state must never fabricate a clean member" (2026-08-05).
+export * from './contribution_projection_coverage.js';

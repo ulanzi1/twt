@@ -193,13 +193,27 @@ CREATE TRIGGER member_contribution_ledger_project_on_event
 --
 -- ⚠ EXPLICITLY REJECTED, do not re-open: adding a payload-shape/version component to the frozen 4.8
 -- cache key. Story 10.17 D5 rejected exactly that, by name, for exactly this transient.
+-- ⚠ The UUID-SHAPE GUARD is as load-bearing here as in the ledger trigger above, and this arm is the
+-- WIDER of the two: its WHEN clause covers FOUR event types, including `contribution.utr-attested` and
+-- `contribution.reconciliation-mismatch`, whose payload contracts belong to Stories 8.4 and 9.4 rather
+-- than to this one. A present-but-malformed `memberId` (an empty string after a trim, a masked id, a
+-- future payload revision) would raise 22P02 INSIDE this AFTER-INSERT trigger and abort the entire
+-- event append — turning one malformed event into a hard outage for every writer on four event
+-- families, including the attestation path. Skip loudly, never throw (code review 2026-08-05, round 2:
+-- the round-1 patch added this guard to the ledger trigger's two arms and left this sibling unguarded).
 CREATE FUNCTION member_validity_cache_invalidate_contribution()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.payload ->> 'memberId' IS NOT NULL THEN
+  IF NEW.payload ->> 'memberId' IS NOT NULL
+     AND (NEW.payload ->> 'memberId') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  THEN
     DELETE FROM member_validity_cache
      WHERE member_id = (NEW.payload ->> 'memberId')::uuid
        AND pariwar_id = NEW.pariwar_id;
+  ELSIF NEW.payload ->> 'memberId' IS NOT NULL THEN
+    -- Present but malformed. The cache row (if any) survives and expires on the 60s TTL, so freshness
+    -- degrades to the FR-12A bound rather than breaking; the append succeeds either way.
+    RAISE WARNING 'member_validity_cache_invalidate_contribution: skipped % event_id=% (pariwar_id=%) — memberId present but not UUID-shaped', NEW.event_type, NEW.event_id, NEW.pariwar_id;
   END IF;
   RETURN NULL; -- AFTER trigger: return value ignored.
 END;

@@ -14,6 +14,26 @@
 // These pin the fact-key names/types/semantics R7 depends on. They are NOT a mock of the contribution
 // subsystem — the facts under test are produced by the real projection.
 
+/**
+ * The LIFECYCLE-ELIGIBILITY gate every activated R7 clause carries (round-2 review, Decision 3).
+ *
+ * ⚖ Ratified 2026-08-05 by BigDev: "Keep lifecycle eligibility in the registry. No scan-level
+ * governance." Without it the Pariwar-wide candidate scan evaluates EVERY member row — including
+ * `withdrawn` and `anonymized` — so a member who left in 2024 after contributing surfaces forever as a
+ * suspension candidate, and the set grows monotonically with churn. The scan cannot filter this itself
+ * without re-deriving member-state policy in the enumeration layer (what `member/read.ts` documents as
+ * forbidden for the sibling roster read), and `violator-flags.ts` is frozen — so the gate belongs in
+ * the clause DATA, which is also where a trustee can amend it.
+ *
+ * The three `pending-*` states are excluded as pre-membership; they have never contributed, so
+ * `months_since_last` is omitted for them and the gap clauses would not fire anyway — the gate simply
+ * makes that explicit rather than incidental.
+ */
+const R7_ELIGIBLE_MEMBER_STATES = {
+  op: 'member_state_in',
+  states: ['lock-in', 'active', 'active-in-grace', 'lapsed-unpaid'],
+} as const;
+
 /** The four ACTIVATED R7 payloads keyed by clause_id (mirrors the seed rows 0e1c0008–0e1c000b). */
 export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
   'niy.contribution-discipline.r7-c': {
@@ -24,7 +44,10 @@ export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
     precedence: 70,
     on_pass: 'treat_as_new_registration',
     on_fail: 'r7_not_applicable',
-    all_of: [{ op: 'fact_gte', fact: 'contribution.months_since_last', min: 12 }],
+    all_of: [
+      R7_ELIGIBLE_MEMBER_STATES,
+      { op: 'fact_gte', fact: 'contribution.months_since_last', min: 12 },
+    ],
     restoration: { consecutive_required: 5, lock_in_months: 3 },
     policy_review_required: true,
     provisional: true,
@@ -38,6 +61,7 @@ export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
     on_pass: 'lockin_3mo_plus_catchup',
     on_fail: 'r7_not_applicable',
     all_of: [
+      R7_ELIGIBLE_MEMBER_STATES,
       { op: 'fact_gte', fact: 'contribution.total_count', min: 10 },
       { op: 'fact_equals', fact: 'contribution.skips_current_year', value: 1 },
     ],
@@ -54,6 +78,7 @@ export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
     on_pass: 'lockin_5mo_complete_all',
     on_fail: 'r7_not_applicable',
     all_of: [
+      R7_ELIGIBLE_MEMBER_STATES,
       { op: 'fact_gte', fact: 'contribution.total_count', min: 10 },
       { op: 'fact_gte', fact: 'contribution.skips_current_year', min: 2 },
     ],
@@ -69,7 +94,10 @@ export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
     precedence: 45,
     on_pass: 'lockin_5mo_complete_all',
     on_fail: 'r7_not_applicable',
-    all_of: [{ op: 'fact_gte', fact: 'contribution.months_since_last', min: 6 }],
+    all_of: [
+      R7_ELIGIBLE_MEMBER_STATES,
+      { op: 'fact_gte', fact: 'contribution.months_since_last', min: 6 },
+    ],
     restoration: { lock_in_months: 5, complete_all: true },
     policy_review_required: true,
     provisional: true,

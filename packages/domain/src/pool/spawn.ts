@@ -237,6 +237,16 @@ export interface ChildSpawnSpec {
   readonly fixedAmount: number;
   /** N — the cycle's total pool count, so the child can detect `count == N` and finalize. */
   readonly poolCount: number;
+  /**
+   * The cycle-freeze `committed_at`, ISO-8601 (this spec is JSON — no `Date`).
+   *
+   * Carried rather than re-read: it is a CYCLE-level constant, so `spawnChildPool` fetching it per
+   * child was one round-trip per pool inside Story 7.9's <60s spawn envelope — a query in a loop over
+   * pools, which is the shape AC7 names by category (code review 2026-08-05, round 2). `planCycleSpawn`
+   * already reads this exact value to derive the freeze month and the fixed amount, so threading it
+   * through costs nothing and keeps every child on the SAME instant by construction.
+   */
+  readonly committedAtIso: string;
 }
 
 export interface PlanCycleSpawnResult {
@@ -331,6 +341,7 @@ export async function planCycleSpawn(
     benefitMechanism,
     fixedAmount,
     poolCount: n,
+    committedAtIso: commit.committedAt.toISOString(),
   }));
 
   return { children, names };
@@ -519,10 +530,14 @@ export async function spawnChildPool(
   //
   // `committed_at` (NOT the spawn wall-clock) is the assignment instant: it is the durable, re-readable
   // value a re-spawn resolves identically, which is what keeps the current-year window replay-correct.
-  const committedAt = await getCycleFreezeCommittedAt(db, spec.cycleId);
-  if (committedAt === null) {
+  // Taken from the SPEC, never re-read per child: `committed_at` is a cycle-level constant, and a read
+  // here would be one round-trip PER POOL inside Story 7.9's <60s envelope — a query in a loop over
+  // pools (AC7 names that shape by category). `planCycleSpawn` already read it to derive the freeze
+  // month and the fixed amount, so every child now shares that one instant by construction.
+  const committedAt = new Date(spec.committedAtIso);
+  if (Number.isNaN(committedAt.getTime())) {
     throw new Error(
-      `[spawnChildPool] cycle_freeze_commits row missing for ${spec.cycleId} — cannot project member assignments`,
+      `[spawnChildPool] spec.committedAtIso is not a valid instant (${spec.committedAtIso}) — cannot project member assignments`,
     );
   }
   await insertMemberPoolAssignments(db, {

@@ -78,6 +78,22 @@ describe.skipIf(!hasDatabase)(
       }
     }
 
+    /**
+     * Record the Pariwar's projection COVERAGE WATERMARK — i.e. "this tenant has been backfilled".
+     *
+     * Required by every test that expects facts to DERIVE at all. Since the round-2 review,
+     * `deriveContributionFacts` returns the `producer_unavailable` sentinel for a Pariwar with no
+     * coverage row (⚖ "Unknown projection state must never fabricate a clean member"), so a fixture
+     * that seeds events but no coverage is asserting the un-derivable case whether it means to or not.
+     * `covered_from` is set far in the past so no test instant falls before it.
+     */
+    async function seedCoverage(pariwarId: ids.PariwarId): Promise<void> {
+      await db
+        .insert(schema.contributionProjectionCoverage)
+        .values({ pariwarId, coveredFrom: new Date('2000-01-01T00:00:00Z') })
+        .onConflictDoNothing();
+    }
+
     /** A member row + the event chain that replays to `active`. */
     async function seedMember(pariwarId: ids.PariwarId, memberId: ids.MemberId): Promise<void> {
       const joinedAt = new Date('2020-01-01T00:00:00Z');
@@ -290,7 +306,16 @@ describe.skipIf(!hasDatabase)(
         ).toBe(0);
       });
 
-      it('assigned + a MISMATCH (red, never confirmed) → IS a skip', async () => {
+      // ⚠ NAME CORRECTED (code review 2026-08-05, round 2). This was titled "assigned + a MISMATCH
+      // (red, never confirmed) → IS a skip", which implied the derivation reads
+      // `contribution.reconciliation-mismatch`. It does not — nothing in `facts.ts` references that
+      // event type. Deleting the mismatch insert below left the test green, because the skip comes
+      // entirely from "assigned + closed + no live confirmation". It was a duplicate of the
+      // not-confirmed case wearing a name that advertised coverage of the red-verdict path.
+      //
+      // Kept (rather than deleted) because the assertion it ACTUALLY makes is worth having: a mismatch
+      // event must not accidentally satisfy the confirmation predicate. The name now says that.
+      it('a MISMATCH event does NOT count as a confirmation — assigned + closed + mismatch IS a skip', async () => {
         expect(
           await skipCountFor(async (pariwarId, memberId) => {
             const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
@@ -309,6 +334,30 @@ describe.skipIf(!hasDatabase)(
             );
           }),
         ).toBe(1);
+      });
+
+      it('⚖ assigned + confirmed AFTER the cycle CLOSED but before `at` → NOT a skip', async () => {
+        // ⚖ Ratified 2026-08-05 (round-2 code review): "Contribution discipline evaluates member
+        // CONDUCT, not administrative processing latency. Late reconciliation should clear the skip
+        // once it becomes part of the historical record being evaluated."
+        //
+        // The member paid in-window; the reconciliation tail (Story 8.9's whole purpose) confirmed it
+        // AFTER the cycle closed. The confirmation predicate is therefore evaluated at `at`, NOT at the
+        // close instant — matching D1's formula and the shipped SQL.
+        //
+        // ⚠ NEITHER direction of this case was covered before: the arms below pin confirm-BEFORE-close
+        // and close-after-`at`, and the AC4 prose said "at close" while D1 and the code said "at `at`".
+        // A change to either semantics was invisible. It is not any more.
+        expect(
+          await skipCountFor(async (pariwarId, memberId) => {
+            const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
+              assignedAt,
+              closedAt, // 2026-03-01
+            });
+            // Confirmed a month AFTER the cycle closed, still well before the pinned AT.
+            await confirm(pariwarId, alertId, memberId, poolId, 1, new Date('2026-04-05T00:00:00Z'));
+          }),
+        ).toBe(0);
       });
 
       it('a cycle closed AFTER `at` is not yet a skip — as-of correctness (AC1)', async () => {
@@ -439,6 +488,7 @@ describe.skipIf(!hasDatabase)(
       const pariwarId = ids.pariwarId(randomUUID());
       const memberId = randomUUID();
       const scope = { pariwarId, memberId: ids.memberId(memberId) };
+      await seedCoverage(pariwarId);
 
       // A fixture exercising confirmations, a reversal, an open cycle and a closed cycle.
       const closedCycle = await seedCycleFixture(pariwarId, [memberId], {
@@ -531,6 +581,7 @@ describe.skipIf(!hasDatabase)(
         const pariwarId = ids.pariwarId(randomUUID());
         const memberId = ids.memberId(randomUUID());
         await seedActivatedR7(pariwarId);
+        await seedCoverage(pariwarId);
         await seedMember(pariwarId, memberId);
         // A recent confirmation ⇒ months_since_last = 0, skips = 0, total = 1: nothing fires.
         const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
@@ -560,12 +611,12 @@ describe.skipIf(!hasDatabase)(
         const pariwarId = ids.pariwarId(randomUUID());
         const memberId = ids.memberId(randomUUID());
         await seedActivatedR7(pariwarId);
+        await seedCoverage(pariwarId);
         await seedMember(pariwarId, memberId);
         const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
           assignedAt: new Date('2025-06-01T00:00:00Z'),
           closedAt: new Date('2025-07-01T00:00:00Z'),
         });
-        // Confirmed 13 calendar months before AT (2026-08-05) ⇒ r7-c (>=12) and r7-f (>=6) both fire.
         await confirm(
           pariwarId,
           alertId,
@@ -574,6 +625,27 @@ describe.skipIf(!hasDatabase)(
           1,
           new Date('2025-07-05T00:00:00Z'),
         );
+
+        // ⚖ 13 ELAPSED OPPORTUNITIES, not 13 elapsed months. `months_since_last` counts assigned cycles
+        // that CLOSED without a live confirmation since the member's last one — so the gap only exists
+        // if the Pariwar actually gave them 13 chances to pay and they took none.
+        //
+        // This fixture previously seeded ONLY the 13-month-old confirmation and relied on wall-clock
+        // arithmetic, which is precisely the derivation ratified away on 2026-08-05: it flagged a
+        // member the Pariwar had never asked for anything. Seeding the missed cycles explicitly is what
+        // makes the R7(C)/(F) assertion below mean "this member ignored 13 requests" rather than
+        // "13 months passed".
+        //
+        // 2025-07 → 2026-07, one per month, each assigned + closed + unconfirmed, every close landing
+        // BEFORE the pinned AT (2026-08-05) so all 13 count. r7-d/r7-e stay dark for the reason they
+        // always did — both require `total_count >= 10` and this member has exactly 1 — not because of
+        // the year window, so the assertion still isolates the gap clauses.
+        for (let i = 0; i < 13; i++) {
+          await seedCycleFixture(pariwarId, [memberId], {
+            assignedAt: new Date(Date.UTC(2025, 6 + i, 1)),
+            closedAt: new Date(Date.UTC(2025, 6 + i, 20)),
+          });
+        }
 
         const payload = await getValidityAt(deps, { pariwarId, memberId }, AT, internalCall());
         const r7Ids = payload.applicableNiyamavaliClauses
@@ -590,6 +662,43 @@ describe.skipIf(!hasDatabase)(
         expect(r7Ids).not.toContain('niy.contribution-discipline.r7-b');
         expect(r7Ids).not.toContain('niy.contribution-discipline.r7-g');
       });
+
+      // ── 2026-08-06 finding: the individual-member path gave a false all-clear when the Pariwar's
+      // R7 registry was unprovisioned — the exact failure `scanR7ViolatorCandidates` already guards
+      // against (`resolvedClauses.length === 0` → `{status:'unavailable'}`), but `getValidityAt` had
+      // no equivalent check: zero clauses resolving looked IDENTICAL to zero clauses applying, so a
+      // member with derivable contribution facts in an R7-unprovisioned Pariwar read as `status: 'ok'`
+      // with zero R7 entries — byte-identical to a genuinely clean, compliant member.
+      it('R7 registry unprovisioned for the Pariwar → contributionHistorySummary reports the registry gap, never a fabricated clean record', async () => {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const memberId = ids.memberId(randomUUID());
+        // Deliberately NOT seedActivatedR7(pariwarId) — this Pariwar has no R7(C)-(F) clause versions.
+        await seedCoverage(pariwarId);
+        await seedMember(pariwarId, memberId);
+        const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
+          assignedAt: new Date('2026-07-01T00:00:00Z'),
+          closedAt: new Date('2026-08-01T00:00:00Z'),
+        });
+        await confirm(
+          pariwarId,
+          alertId,
+          memberId,
+          poolId,
+          1,
+          new Date('2026-07-10T00:00:00Z'),
+        );
+
+        const payload = await getValidityAt(deps, { pariwarId, memberId }, AT, internalCall());
+        const r7 = payload.applicableNiyamavaliClauses.filter((c) =>
+          String(c.clauseId).startsWith('niy.contribution-discipline.'),
+        );
+        expect(r7).toEqual([]);
+        // THE assertion: NOT `status: 'ok'` (that would be indistinguishable from a clean member).
+        expect(payload.contributionHistorySummary).toEqual({
+          status: 'producer_unavailable',
+          producer: 'niyamavali-registry',
+        });
+      });
     });
 
     // ── The Trustee-Lite candidate scan (AC5/AC7) ─────────────────────────────────────────────────
@@ -598,16 +707,28 @@ describe.skipIf(!hasDatabase)(
       const flagged = ids.memberId(randomUUID());
       const clean = ids.memberId(randomUUID());
       await seedActivatedR7(pariwarId);
+      await seedCoverage(pariwarId);
       await seedMember(pariwarId, flagged);
       await seedMember(pariwarId, clean);
 
-      // `flagged`: assigned to a closed cycle with no confirmation ⇒ a skip ⇒ in lapse; and a
-      // 13-month-old confirmation ⇒ r7-c + r7-f fire.
+      // `flagged`: a confirmation, then a run of assigned-and-closed cycles they ignored. The gap fact
+      // counts those OPPORTUNITIES (⚖ 2026-08-05), so the run is what makes r7-c (>=12) and r7-f (>=6)
+      // fire — not the calendar distance from the last confirmation.
       const old = await seedCycleFixture(pariwarId, [flagged], {
-        assignedAt: new Date('2025-06-01T00:00:00Z'),
-        closedAt: new Date('2025-07-01T00:00:00Z'),
+        assignedAt: new Date('2023-12-01T00:00:00Z'),
+        closedAt: new Date('2024-01-01T00:00:00Z'),
       });
-      await confirm(pariwarId, old.alertId, flagged, old.poolId, 1, new Date('2025-07-05T00:00:00Z'));
+      await confirm(pariwarId, old.alertId, flagged, old.poolId, 1, new Date('2024-01-05T00:00:00Z'));
+      // 12 missed opportunities, ALL closing before 2026 so they do not disturb the current-year
+      // window below. Together with the 2026 miss that follows, the gap reaches 13.
+      for (let i = 0; i < 12; i++) {
+        await seedCycleFixture(pariwarId, [flagged], {
+          assignedAt: new Date(Date.UTC(2024, 1 + i, 1)),
+          closedAt: new Date(Date.UTC(2024, 1 + i, 20)),
+        });
+      }
+      // Exactly ONE missed cycle in the CURRENT IST year, so `in_lapse` is true and `lapseSince` is
+      // unambiguously this cycle's close — which is what the holdingSince assertion below reads.
       await seedCycleFixture(pariwarId, [flagged], {
         assignedAt: new Date('2026-03-01T00:00:00Z'),
         closedAt: new Date('2026-04-01T00:00:00Z'),
@@ -627,8 +748,12 @@ describe.skipIf(!hasDatabase)(
         new Date('2026-07-10T00:00:00Z'),
       );
 
-      const candidates = await scanR7ViolatorCandidates(db, pariwarId, AT);
-      const byId = new Map(candidates.map((c) => [c.memberId, c]));
+      const scan = await scanR7ViolatorCandidates(db, pariwarId, AT);
+      // The scan reports its own discriminant: a Pariwar whose registry HAS R7 clauses in effect (this
+      // fixture seeds them) is `available`. The `unavailable` arm is asserted separately below.
+      expect(scan.status).toBe('available');
+      if (scan.status !== 'available') throw new Error('unreachable — asserted above');
+      const byId = new Map(scan.candidates.map((c) => [c.memberId, c]));
 
       const flaggedCandidate = byId.get(String(flagged));
       expect(flaggedCandidate).toBeDefined();

@@ -38,12 +38,23 @@
 // `deriveViolatorFlags` maps EVERY R7 clause id it finds in `applicableNiyamavaliClauses[]` into a
 // flag, with no `applied` check. Contributing non-applied clauses here would flag every member in the
 // Pariwar — the single worst outcome available in this story.
+//
+// ── Revert-sanity probe, RUN AND RECORDED (2026-08-05, round-2 code review) ─────────────────────
+// A green scan proves nothing ([[feedback_gate_scope_semantic_coverage]]). Story 10.24 recorded a
+// probe for the OTHER applied-filter (`evaluateAppliedR7ClauseSlots` in rules.ts) but never probed
+// THIS one — the filter that feeds the Trustee-Lite surface D2 exists to protect. Probe RUN: removing
+// `.filter((entry) => entry.applied)` below made
+// `tests/integration/contribution-facts.spec.ts` → "the Pariwar scan surfaces the flagged member…"
+// go RED, the flagged member's clause list going from the expected TWO (`r7-c`, `r7-f`) to FOUR — the
+// two non-applied clauses (`r7-d`, `r7-e`, each `r7_not_applicable`) riding along as violator flags.
+// The same run turns the CLEAN member's list from `[]` into four. That is D2's predicted catastrophe
+// on the live scan path. Restored immediately; suite green.
 
 import { contribution, member, niyamavali, ids, type Db } from '@twt/domain';
 import { evaluateLadder, R7_NOT_APPLICABLE, type ResolvedClause } from '@twt/niyamavali-engine';
 
 import { contributionFactsToBag, contributionFactsToSummary, deriveContributionFacts } from './producer.js';
-import { R7_ACTIVATED_CLAUSE_IDS } from './rules.js';
+import { R7_ACTIVATED_CLAUSE_IDS, R7_REGISTRY_UNPROVISIONED_PRODUCER } from './rules.js';
 import { CONTRIBUTION_UNAVAILABLE } from './payload.js';
 import type { ContributionHistorySummary } from './types.js';
 
@@ -71,6 +82,17 @@ export interface R7ViolatorCandidate {
 }
 
 /**
+ * What the scan reports, shaped to feed `summarizeViolatorFlags` directly (structurally — `@twt/domain`
+ * cannot import this package, so the two sides meet on a declared shape).
+ *
+ * ⚖ Ratified 2026-08-05: "Unknown rules and unknown facts are the same constitutional state:
+ * evaluation unavailable." An unprovisioned registry is the RULES half of that statement.
+ */
+export type R7ViolatorScan =
+  | { readonly status: 'unavailable'; readonly producer: string }
+  | { readonly status: 'available'; readonly candidates: readonly R7ViolatorCandidate[] };
+
+/**
  * Scan a Pariwar for R7 violator candidates at the pinned instant `at`.
  *
  * Every member of the Pariwar is returned — including members with no applied clause, whose payload
@@ -92,7 +114,7 @@ export async function scanR7ViolatorCandidates(
   db: Db,
   pariwarId: ids.PariwarId,
   at: Date,
-): Promise<R7ViolatorCandidate[]> {
+): Promise<R7ViolatorScan> {
   const evaluatedAt = at.toISOString();
 
   // ── Bounded reads (AC7): membership + facts + clause payloads, none of them per-member ─────────
@@ -102,21 +124,37 @@ export async function scanR7ViolatorCandidates(
     resolveActivatedR7Clauses(db, pariwarId, at),
   ]);
 
-  // The registry is unprovisioned for this Pariwar (no R7 clause resolves at `at`) — there is nothing
-  // to evaluate. Return an empty candidate list rather than a list of empty payloads: an unprovisioned
-  // registry is a "no clause applies" answer, not a per-member data gap.
-  if (resolvedClauses.length === 0) return [];
+  // ── The registry is unprovisioned for this Pariwar: no R7 clause version resolves at `at` ────────
+  //
+  // ⚖ Ratified 2026-08-05 by BigDev: "Unknown rules and unknown facts are the same constitutional
+  // state: evaluation unavailable." So this reports `unavailable`, NOT an empty candidate list.
+  //
+  // An earlier revision returned `[]` here on the reasoning that an unprovisioned registry is a "no
+  // clause applies" answer. That is wrong in the way that matters: `summarizeViolatorFlags` turns an
+  // empty candidate list into `{ status: 'ok', members: [] }`, which renders as "detection ran, nobody
+  // is flagged" — indistinguishable from a genuinely clean Pariwar, on the surface that feeds
+  // suspension decisions. R7 detection did not run at all. That is the false all-clear D1-B forbids,
+  // and it is the same failure shape as fabricating a clean member from an unprojected ledger.
+  if (resolvedClauses.length === 0) {
+    return { status: 'unavailable', producer: R7_REGISTRY_UNPROVISIONED_PRODUCER };
+  }
 
-  const inputsByMember = new Map(factInputs.map((row) => [String(row.memberId), row]));
+  const inputsByMember = new Map(factInputs.members.map((row) => [String(row.memberId), row]));
   const resolvedClauseVersionIds = resolvedClauses.map((c) => c.clauseVersionId);
 
   const candidates: R7ViolatorCandidate[] = [];
   for (const { memberId, state } of memberStates) {
+    // A member absent from the bulk read has no ledger rows and no assignments — which the single-member
+    // aggregate would report identically (`count(*) = 0`, `max(...) = NULL`). Carrying the Pariwar's
+    // coverage onto the synthesized row is what keeps the two paths in agreement: whether that member is
+    // CLEAN or UN-DERIVABLE is decided by coverage, never by row presence.
     const inputs = inputsByMember.get(String(memberId)) ?? {
       totalCount: 0,
       lastConfirmedAt: null,
       skipsCurrentYear: 0,
       earliestSkipClosedAt: null,
+      opportunitiesSinceLast: 0,
+      coveredFrom: factInputs.coveredFrom,
     };
     const facts = deriveContributionFacts(inputs, at);
     if (facts === null) {
@@ -164,7 +202,7 @@ export async function scanR7ViolatorCandidates(
       },
     });
   }
-  return candidates;
+  return { status: 'available', candidates };
 }
 
 /**

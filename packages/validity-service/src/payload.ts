@@ -17,7 +17,7 @@ import {
 
 import { addCalendarYears, ceilDaysBetween } from './calendar.js';
 import { sha256Hex } from './hash.js';
-import type { ClauseEvalSlot } from './rules.js';
+import { R7_REGISTRY_UNPROVISIONED_PRODUCER, type ClauseEvalSlot } from './rules.js';
 import type {
   ApplicableClause,
   ContributionHistorySummary,
@@ -301,6 +301,23 @@ export const EMPTY_REGISTRY_VERSION = 'no-clauses';
 export const CONTRIBUTION_UNAVAILABLE: ContributionHistoryUnavailable = {
   status: 'producer_unavailable',
   producer: 'story-10-24',
+};
+
+/**
+ * The R7-registry-unprovisioned sentinel (2026-08-06 finding) — the individual-member analogue of
+ * `r7-candidate-scan.ts`'s `R7ViolatorScan.status === 'unavailable'`. When NO activated R7(C)–(F)
+ * clause version is effective for this Pariwar at the evaluated instant, the RULES are unprovisioned —
+ * a DIFFERENT gap from `CONTRIBUTION_UNAVAILABLE` above, which means the FACTS could not be derived.
+ *
+ * Reusing `contributionHistorySummary`'s `producer_unavailable` STATUS (not a new status literal) is
+ * deliberate: both `violator-flags.ts`'s short-circuit and `member-status/presenter.ts` already branch
+ * on that status alone, never inspecting `producer` — so this correctly degrades the member to
+ * "detection unavailable" instead of silently reading as "evaluated, this member is clean", matching
+ * what the bulk Trustee-Lite scan already does for the identical registry gap.
+ */
+export const CONTRIBUTION_R7_REGISTRY_UNAVAILABLE: ContributionHistoryUnavailable = {
+  status: 'producer_unavailable',
+  producer: R7_REGISTRY_UNPROVISIONED_PRODUCER,
 };
 
 // ── Full payload assembly + the replay-stable hash ────────────────────────────────────────────────

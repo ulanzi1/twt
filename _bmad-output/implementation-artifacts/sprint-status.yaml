@@ -1,4 +1,41 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-05i (10-24-contribution-fact-producer-projection-r7-cf-activation:
+#   SECOND bmad-code-review pass over the POST-PATCH state at 82ccbbf. Stays `done`; all findings
+#   resolved in-pass. Three parallel layers again, no failed layers; 6 decision-needed + 13 patch +
+#   1 defer + 4 dismissed. Round 1's 11 patches were verified present — but TWO of this round's
+#   findings are places a round-1 patch created the APPEARANCE of closure: the UUID guard was added to
+#   the ledger trigger's two arms and NOT to the sibling cache-invalidation trigger in the same
+#   migration (whose WHEN clause is WIDER — four event families), and AC8's "every row corrected" claim
+#   was false for producer.ts:15-16, which still asserted "No contribution source exists" inside the
+#   file that defines the producer.
+#   BIGDEV DECISIONS (all six): (1) R7(C)/(F) fire on a pure wall-clock gap, so a Pariwar with no death
+#   for 6 months flags its ENTIRE membership and D2's applied-only filter cannot help (the clause
+#   genuinely applies) — ruled: clause semantics are correct, the PRODUCER is wrong;
+#   `contribution.months_since_last` now counts elapsed OPPORTUNITIES (assigned cycles that closed
+#   unconfirmed), never elapsed time. NOT held, NOT gated in clause data. (2) The
+#   `producer_unavailable` sentinel was structurally UNREACHABLE — every null branch impossible given
+#   the feeding SQL — so an un-run backfill rendered as a clean record for every member; ruled: build a
+#   projection COVERAGE WATERMARK (migration 0094), "unknown projection state must never fabricate a
+#   clean member". The backfill is now a PRECONDITION for facts, not an optional repair path.
+#   (3) Terminal-state members surfaced as permanent suspension candidates; ruled: clause-data
+#   `member_state_in`, lifecycle eligibility stays in the REGISTRY, no scan-level governance (applied
+#   to all four activated clauses). (4) An unprovisioned R7 registry rendered as a clean all-clear;
+#   ruled: report `detection_unavailable` — "unknown rules and unknown facts are the same
+#   constitutional state". (5) `skips_current_year` evaluates confirmation at `at`, not at close —
+#   ruled: KEEP; discipline evaluates member conduct, not administrative processing latency; AC4's
+#   prose was the wrong half and was corrected. (6) The trustee scan's per-request cost is unmeasured;
+#   ruled: record UN-ATTESTED, select a scaling strategy from production evidence rather than predict.
+#   ALSO: bulk assignment insert chunked (5 cols x 65535-param ceiling => a >13,107-member roster
+#   aborted the SPAWN tx at 4L); the backfill gained a real invocation path
+#   (`pnpm --filter @twt/jobs contribution:backfill`) — it had none outside tests; a
+#   contribution-projection RLS policy-regression spec was added against a 20-file convention it was
+#   missing from; `getCycleFreezeCommittedAt` hoisted out of the per-pool spawn onto ChildSpawnSpec.
+#   Revert probe RUN for the scan's applied-filter (2 clauses -> 4) and recorded in-code.
+#   Validation: typecheck 20/20, lint 20/20, domain-invariants + openapi-determinism green; live DB
+#   domain 2347, validity-service 198 (determinism gate at exactly ONE hash), api 853 w/ trustee-lite
+#   E2E 19/19, admin 271, ui 98, contracts 837, jobs 309, engine 144. Five validity-service specs went
+#   RED on one run under pool contention and ALL pass in isolation — the known concurrency
+#   oversubscription signature, chased rather than assumed.)
 # last_updated: 2026-08-05h (10-24-contribution-fact-producer-projection-r7-cf-activation:
 #   review -> done via bmad-code-review. Full diff (~7017 lines) reviewed across three parallel layers
 #   (Blind Hunter, Edge Case Hunter, Acceptance Auditor); 18 unique findings after dedup, 2

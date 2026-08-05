@@ -21,6 +21,7 @@
 import { sql } from 'drizzle-orm';
 import { pgPolicy } from 'drizzle-orm/pg-core';
 
+import { contributionProjectionCoverage } from '../schema/contribution_projection_coverage.js';
 import { memberContributionLedger } from '../schema/member_contribution_ledger.js';
 import { memberPoolAssignments } from '../schema/member_pool_assignments.js';
 import { appRole } from './_roles.js';
@@ -70,3 +71,27 @@ export const memberPoolAssignmentsTenantIsolationWrite = pgPolicy(
     withCheck: sql`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`,
   },
 ).link(memberPoolAssignments);
+
+/** SELECT isolation for the coverage watermark (round-2 review, Decision 2). */
+export const contributionProjectionCoverageTenantIsolationSelect = pgPolicy(
+  'contribution_projection_coverage_tenant_isolation_select',
+  {
+    as: 'permissive',
+    for: 'select',
+    to: appRole,
+    using: sql`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`,
+  },
+).link(contributionProjectionCoverage);
+
+/** Write isolation for the backfill's idempotent upsert (SELECT/INSERT/UPDATE granted; no DELETE —
+ *  a coverage claim is advanced or refreshed, never retracted by the app). */
+export const contributionProjectionCoverageTenantIsolationWrite = pgPolicy(
+  'contribution_projection_coverage_tenant_isolation_write',
+  {
+    as: 'permissive',
+    for: 'all',
+    to: appRole,
+    using: sql`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`,
+    withCheck: sql`pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`,
+  },
+).link(contributionProjectionCoverage);

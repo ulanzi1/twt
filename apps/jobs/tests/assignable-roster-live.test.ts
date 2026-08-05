@@ -205,6 +205,8 @@ describe.skipIf(!hasDatabase)('assignable-roster → spawn → resolve — end-t
         pariwarId,
         poolIndex: i,
         poolId: poolDomain.derivePoolId(cycleId, i),
+        // Cycle-level constant, carried on the spec so spawnChildPool does not re-read it per pool.
+        committedAtIso: new Date('2026-07-01T00:00:00.000Z').toISOString(),
         claimCaseId: randomUUID(), // DISTINCT per pool (WrongPoolBindingAmbiguousError guards shared claims)
         poolCanonicalIdentifier: `P-2026-05-00${String(i + 1)}`,
         supportCategory: poolDomain.V1_SPAWN_SUPPORT_CATEGORY,

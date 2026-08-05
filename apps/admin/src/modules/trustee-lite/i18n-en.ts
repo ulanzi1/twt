@@ -86,16 +86,32 @@ const EN: Record<string, string> = {
   // showing a partial list (10.11's strictness — a partial scan is a false all-clear for exactly the
   // members it skipped, and a trustee reading three flagged members cannot know a fourth was missed).
   //
-  // The `epic-8-9` key is RETAINED: a `member_validity_cache` row written before the rollout can still
-  // carry the old literal for up to the 60s TTL (10.24 AC6b), and a payload from an un-migrated
-  // replica would too. Dropping it would fall back to raw internal jargon on a trustee-facing surface
-  // for exactly that window. `producerLabel` falls back to the raw value for anything unrecognized —
-  // never swallowing it.
+  // The `epic-8-9` key is RETAINED, but NOT for the reason originally written here. The old rationale
+  // claimed a pre-rollout `member_validity_cache` row could still render the old literal for up to the
+  // 60s TTL — it cannot. `ContributionHistoryUnavailableDto` types the producer as
+  // `z.literal('story-10-24')` inside a `.strict()` object, so a cached payload carrying `epic-8-9`
+  // fails response validation and 500s; it never reaches this map. The real deploy-window failure mode
+  // is that 500, mitigated by the AC6(b) `invalidate-all` lever, not by a fallback label
+  // (code review 2026-08-05, round 2).
+  //
+  // It stays because the key costs nothing and `producerLabel` is a pure lookup used by more than the
+  // validity path — a stored/exported/log-derived value carrying the historical literal still renders
+  // as prose rather than jargon. `producerLabel` falls back to the raw value for anything unrecognized,
+  // so this is a nicety, not a safety net.
   'trustee.violator.unavailable.title': 'Contribution-discipline observation could not be completed.',
+  // Deliberately NOT specific to "a member's history could not be derived" any more: the section also
+  // withholds when the Niyamavali registry has no R7 clause in effect, in which case detection did not
+  // run at all and no member history was involved. The one sentence has to be true of BOTH, so it names
+  // the failure as "did not complete" and defers the specifics to {producer}.
   'trustee.violator.unavailable.body':
-    "At least one member's contribution history could not be derived, so the whole section is withheld — this is blank because the check could not complete for everyone, NOT because every member is clear. Source: {producer}.",
+    'Contribution-discipline detection did not complete, so the whole section is withheld — this is blank because the check could not run to completion, NOT because every member is clear. Source: {producer}.',
   'trustee.violator.producer.epic-8-9': 'the contribution-fact producer (Story 10.24)',
   'trustee.violator.producer.story-10-24': 'the contribution-fact producer (Story 10.24)',
+  // Not a producer fault: the facts derived fine, but the Pariwar has no R7 clause version in effect at
+  // the evaluated instant, so there was no rule to apply. Points the operator at the registry, not at
+  // the projection.
+  'trustee.violator.producer.niyamavali-registry':
+    'the Niyamavali rule registry (no R7 clause is in effect for this Pariwar)',
   'trustee.violator.producer.unknown': 'the contribution-fact producer',
 };
 

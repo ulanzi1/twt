@@ -11,7 +11,8 @@
     "test": "vitest run --passWithNoTests",
     "dev": "tsc --watch --preserveWatchOutput",
     "audit:mirror": "tsx src/audit/cli.ts",
-    "audit:verify-integrity": "tsx src/audit/integrity-cli.ts"
+    "audit:verify-integrity": "tsx src/audit/integrity-cli.ts",
+    "contribution:backfill": "tsx src/contribution-projection-backfill.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",

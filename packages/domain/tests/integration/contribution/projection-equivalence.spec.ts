@@ -284,6 +284,33 @@ function runProjectionInvariants(mechanism: MechanismUnderTest): void {
       expect(twice).toEqual(once);
     });
 
+    it('IDEMPOTENCY (the PROJECTION’s own guard): a backfill over ALREADY-projected rows is a no-op', async () => {
+      // ⚠ Why this exists as a SEPARATE arm from the one above. That test re-calls `apply`, and for the
+      // ledger `apply` re-inserts into `events_log` with `ON CONFLICT DO NOTHING` — so the SOURCE
+      // dedupes the retry, the trigger never fires a second time, and the ledger's own
+      // `ON CONFLICT (confirmed_event_id) DO NOTHING` is never exercised at all. Deleting that clause
+      // from migration 0093 would leave the test above green: it proves events_log has a primary key
+      // (code review 2026-08-05, round 2).
+      //
+      // This arm hits the collision path that genuinely occurs in production: the trigger has already
+      // projected an event, and then the backfill runs over the same source WITHOUT a prior wipe —
+      // exactly what `contribution:backfill` does on a re-run, or on a Pariwar that was already live.
+      // Here the projection's own conflict guard is the only thing preventing a duplicate.
+      const { tx, client } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const memberId = randomUUID();
+
+      await mechanism.apply(tx, memberId, 'forward');
+      const incremental = await mechanism.read(tx, memberId);
+      expect(incremental).not.toEqual([]);
+
+      // NO `clear()` — rebuild straight over the live rows, twice for good measure.
+      await mechanism.rebuild(tx);
+      await mechanism.rebuild(tx);
+
+      expect(await mechanism.read(tx, memberId)).toEqual(incremental);
+    });
+
     it('REPLAY EQUIVALENCE: a from-scratch backfill reproduces the incrementally-maintained state byte-for-byte', async () => {
       const { tx, client } = getTx();
       await enterAppScope(client, PARIWAR_A);
@@ -302,7 +329,16 @@ function runProjectionInvariants(mechanism: MechanismUnderTest): void {
       expect(await mechanism.read(tx, memberId)).toEqual(incremental);
     });
 
-    it('ORDERING-INDEPENDENCE: the projected state is a function of the source SET, not arrival order', async () => {
+    it('ORDERING-INDEPENDENCE (of APPLY + BACKFILL, not of the incremental mechanism alone)', async () => {
+      // ⚠ READ THE NAME LITERALLY. This test calls `rebuild` in BOTH arms, so it proves that
+      // apply-then-backfill converges regardless of arrival order — NOT that the trigger converges by
+      // itself. It does not: a reversal arriving before its confirmation updates zero rows in the
+      // trigger, and only the backfill's set-based pass resolves it. The property is real and is the
+      // right one to depend on, but it belongs to the PAIR, and it is only meaningful in production
+      // because the backfill now HAS a production caller
+      // (`apps/jobs/src/contribution-projection-backfill.ts`). An earlier revision of this file named
+      // the property as if the mechanisms held it identically and individually; they do not
+      // (code review 2026-08-05, round 2).
       const { tx, client } = getTx();
       await enterAppScope(client, PARIWAR_A);
       // ONE member, ONE deterministic id set (derived from the member id inside `apply`), applied twice

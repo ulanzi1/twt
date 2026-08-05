@@ -89,6 +89,38 @@ function liveConfirmationExistsSql(assignmentsAlias: AssignmentsAlias, at: Date)
   )`;
 }
 
+/**
+ * The ONE spelling of "what instant is this Pariwar's projection authoritative from?" (round-2 review,
+ * Decision 2). A scalar subquery, so the single-member path can fold it into an existing statement and
+ * stay within AC7's fixed two-query budget; {@link readContributionProjectionCoverage} runs the same
+ * fragment standalone for the bulk path, which cannot fold it (its `GROUP BY` returns zero rows for a
+ * Pariwar with no ledger entries — exactly the case where the coverage answer matters most).
+ *
+ * NULL means NO COVERAGE ROW: the backfill has never run for this Pariwar, and the honest answer for
+ * every member is the `producer_unavailable` sentinel, never a fabricated clean record.
+ */
+function coveredFromSql(pariwar: PariwarId): SQL {
+  return sql`(SELECT c.covered_from FROM contribution_projection_coverage c
+               WHERE c.pariwar_id = ${pariwar})`;
+}
+
+/**
+ * Read a Pariwar's projection coverage watermark. `null` when the backfill has never run.
+ *
+ * ⚖ "Unknown projection state must never fabricate a clean member" (2026-08-05). This read is what
+ * makes the sentinel reachable: without it every `null` branch in `deriveContributionFacts` is a
+ * structural impossibility, and an empty ledger renders as an affirmative clean record for the whole
+ * Pariwar on the surface that feeds suspension decisions.
+ */
+export async function readContributionProjectionCoverage(
+  db: Db,
+  pariwarId: PariwarId,
+): Promise<Date | null> {
+  const result = await db.execute(sql`SELECT ${coveredFromSql(pariwarId)} AS covered_from`);
+  const row = resultRows<{ covered_from: Date | string | null }>(result)[0];
+  return toDate(row?.covered_from);
+}
+
 /** The as-of live-confirmation predicate for the ledger aggregate (same rule, un-correlated form). */
 function liveAtInstant(at: Date): SQL {
   return sql`${memberContributionLedger.confirmedAt} <= ${at}
@@ -96,33 +128,75 @@ function liveAtInstant(at: Date): SQL {
 }
 
 /**
- * The MISSED-CYCLE aggregate (AC4), as one statement.
+ * The MISSED-CYCLE aggregate (AC4), as ONE statement serving TWO windows.
  *
- * "Missed" = **assigned at freeze, with no live confirmation at close**:
+ * "Missed" = **assigned at freeze, with no live confirmation**:
  *   · ASSIGNED — a `member_pool_assignments` row, sourced from the pool's persisted snapshot
  *     `member_assignments` (never a recompute of `assignMembersToPools`).
- *   · AT CLOSE — the cycle's alert reached `alert.closed`/`alert.settled` at/before `at`. An OPEN cycle
- *     is never a skip.
- *   · NO LIVE CONFIRMATION — the shared predicate above, reversals honoured.
- *   · CURRENT YEAR — the IST calendar year of `at` (Story 8.9's convention), never `getFullYear()` on a
- *     UTC `Date`.
+ *   · CLOSED — the cycle's alert reached `alert.closed`/`alert.settled` at/before `at`. An OPEN cycle
+ *     is never a skip and never an elapsed opportunity: a member mid-window has missed nothing.
+ *   · NO LIVE CONFIRMATION — the shared predicate above, reversals honoured, evaluated AT `at`.
+ *     ⚖ Ratified 2026-08-05: contribution discipline evaluates member CONDUCT, not administrative
+ *     processing latency, so a tail-reconciled confirmation landing after the cycle closed DOES clear
+ *     the skip once it is part of the record being evaluated. Hence `at`, never the close instant.
  *
- * `groupByMember` switches between the single-member and the whole-Pariwar (bulk) shapes; both are ONE
- * query either way (AC7).
+ * ── ⚖ THE TWO WINDOWS (ratified 2026-08-05: opportunities, never elapsed time) ────────────────────
+ * Both aggregates count the SAME missed cycles; they differ only in the window, expressed as `FILTER`
+ * clauses over one scan so this stays ONE query (AC7):
  *
- * Bucketing by `mpa.assigned_at` (rather than the close instant) relies on Decision 2026-08-05-075's
- * operational invariant: pool cycles are single-calendar-month instruments, so assignment-year and
- * close-year are identical by construction. A cycle that legitimately straddled a year boundary would
- * need this bucketing re-derived — but that first requires a Trustee Panel emergency resolution; it is
- * not a case this function is expected to handle today.
+ *   · `skips_current_year`        — missed cycles in the IST calendar year of `at` (Story 8.9's
+ *     convention, never `getFullYear()` on a UTC `Date`). Feeds R7(D)/(E) and `in_lapse`.
+ *   · `opportunities_since_last`  — missed cycles that closed AFTER the member's last live
+ *     confirmation. This is `contribution.months_since_last`: an OPPORTUNITY-aware gap, not a
+ *     wall-clock one. Feeds R7(C) (`>= 12`) and R7(F) (`>= 6`).
+ *
+ * Why the gap fact is counted this way rather than as elapsed calendar months: contribution is only
+ * possible when a death claim freezes a cycle and a pool assigns the member. A Pariwar with no death
+ * for six months creates NO opportunity — so a purely wall-clock `months_since_last` would trip R7(F)
+ * for EVERY member who ever contributed, and the clause would GENUINELY apply, putting the whole
+ * membership on the suspension surface (the failure D2's applied-only filter cannot catch, because the
+ * clause really did apply). Counting opportunities makes the fact measure member conduct instead.
+ * The UNIT is still months: pool cycles are single-calendar-month instruments by Decision
+ * 2026-08-05-075, so one elapsed opportunity is one month and R7(C)/(F)'s thresholds keep their
+ * meaning — in a fully active Pariwar this degenerates to the wall-clock count.
+ *
+ * ASSIGNMENT-GATED, deliberately: an opportunity requires the member to have been ASSIGNED to the
+ * cycle, mirroring `skips_current_year`. A member not on a pool's roster had nothing to take.
+ *
+ * `groupByMember` switches between the single-member and whole-Pariwar (bulk) shapes; ONE query either
+ * way. `ledgerScope` bounds the per-member last-confirmation CTE to the same tenant/member as `scope`.
+ *
+ * Bucketing `skips_current_year` by `mpa.assigned_at` (rather than the close instant) relies on the
+ * same Decision 2026-08-05-075 invariant: assignment-year and close-year are identical by construction.
+ * A cycle that legitimately straddled a year boundary would need this bucketing re-derived — but that
+ * first requires a Trustee Panel emergency resolution; it is not a case this function handles today.
  */
-function missedCycleAggregateSql(at: Date, scope: SQL, groupByMember: boolean): SQL {
+function missedCycleAggregateSql(
+  at: Date,
+  scope: SQL,
+  ledgerScope: SQL,
+  groupByMember: boolean,
+): SQL {
   const selectMember = groupByMember ? sql`mpa.member_id AS member_id,` : sql``;
   const groupBy = groupByMember ? sql`GROUP BY mpa.member_id` : sql``;
+  // The current-IST-year window, applied as a FILTER so one scan serves both aggregates.
+  const inCurrentYear = sql`mpa.assigned_at >= ${istYearStartUtc(at)}`;
   return sql`
+    WITH last_conf AS (
+      SELECT l.member_id, max(l.confirmed_at) AS last_confirmed_at
+        FROM member_contribution_ledger l
+       WHERE ${ledgerScope}
+         AND l.confirmed_at <= ${at}
+         AND (l.reversed_at IS NULL OR l.reversed_at > ${at})
+       GROUP BY l.member_id
+    )
     SELECT ${selectMember}
-           count(*)::int        AS skips_current_year,
-           min(closed.closed_at) AS earliest_skip_closed_at
+           count(*) FILTER (WHERE ${inCurrentYear})::int      AS skips_current_year,
+           min(closed.closed_at) FILTER (WHERE ${inCurrentYear}) AS earliest_skip_closed_at,
+           count(*) FILTER (
+             WHERE lc.last_confirmed_at IS NOT NULL
+               AND closed.closed_at > lc.last_confirmed_at
+           )::int                                             AS opportunities_since_last
       FROM member_pool_assignments mpa
       JOIN alerts al
         ON al.cycle_id = mpa.cycle_id
@@ -135,8 +209,8 @@ function missedCycleAggregateSql(at: Date, scope: SQL, groupByMember: boolean): 
            AND e.event_type IN (${ALERT_CLOSED_EVENT_TYPES_SQL})
            AND e.occurred_at <= ${at}
       ) closed ON closed.closed_at IS NOT NULL
+      LEFT JOIN last_conf lc ON lc.member_id = mpa.member_id
      WHERE ${scope}
-       AND mpa.assigned_at >= ${istYearStartUtc(at)}
        AND mpa.assigned_at <= ${at}
        AND NOT ${liveConfirmationExistsSql('mpa', at)}
      ${groupBy}
@@ -161,6 +235,20 @@ export interface ContributionFactInputs {
   /** The CLOSE instant of the EARLIEST such missed cycle — `lapseSince` (D5's
    *  `missed-closed-cycle-v1`). null when `skipsCurrentYear === 0`. */
   readonly earliestSkipClosedAt: Date | null;
+  /**
+   * Missed assigned-and-closed cycles that closed AFTER the member's last live confirmation — the
+   * OPPORTUNITY-aware gap that becomes `contribution.months_since_last` (⚖ 2026-08-05: contribution
+   * discipline is evaluated against opportunities, never elapsed time). `0` for a member who is
+   * current; meaningless (and ignored by the derivation) when `lastConfirmedAt` is null, since a
+   * never-contributed member has no "since last" window and the fact is OMITTED for them.
+   */
+  readonly opportunitiesSinceLast: number;
+  /**
+   * The instant this Pariwar's projection is authoritative from, or `null` when the backfill has never
+   * run (round-2 review, Decision 2). `null`, or an `at` earlier than it, makes the facts UN-DERIVABLE
+   * — `deriveContributionFacts` returns the sentinel rather than a fabricated clean record.
+   */
+  readonly coveredFrom: Date | null;
 }
 
 /** The `(pariwarId, memberId)` scope tuple for a single-member read. */
@@ -174,6 +262,7 @@ interface RawSkipRow {
   member_id?: string;
   skips_current_year: number | string | null;
   earliest_skip_closed_at: Date | string | null;
+  opportunities_since_last: number | string | null;
 }
 
 /** The driver may surface `execute` results as `{rows}` or as a bare array; both are handled. */
@@ -219,6 +308,11 @@ export async function readContributionFactInputs(
       // `lastConfirmedAt.getTime is not a function` at runtime, on the live path. Normalised via
       // `toDate` below, exactly as the raw aggregate rows are.
       lastConfirmedAt: sql<Date | string | null>`max(${memberContributionLedger.confirmedAt})`,
+      // Folded in as a scalar subquery rather than read separately, so this path keeps AC7's fixed
+      // TWO-query budget. Safe here precisely because this aggregate has no GROUP BY: it always
+      // returns exactly one row, even for a member with no ledger entries at all — which is the case
+      // where the coverage answer decides between "clean" and "un-derivable".
+      coveredFrom: sql<Date | string | null>`${coveredFromSql(scope.pariwarId)}`,
     })
     .from(memberContributionLedger)
     .where(
@@ -233,6 +327,7 @@ export async function readContributionFactInputs(
     missedCycleAggregateSql(
       at,
       sql`mpa.pariwar_id = ${scope.pariwarId} AND mpa.member_id = ${scope.memberId}`,
+      sql`l.pariwar_id = ${scope.pariwarId} AND l.member_id = ${scope.memberId}`,
       false,
     ),
   );
@@ -243,12 +338,27 @@ export async function readContributionFactInputs(
     lastConfirmedAt: toDate(ledger?.lastConfirmedAt),
     skipsCurrentYear: toCount(skip?.skips_current_year),
     earliestSkipClosedAt: toDate(skip?.earliest_skip_closed_at),
+    opportunitiesSinceLast: toCount(skip?.opportunities_since_last),
+    coveredFrom: toDate(ledger?.coveredFrom),
   };
 }
 
 /** One member's fact inputs, as the bulk Pariwar read returns them. */
 export interface MemberContributionFactInputs extends ContributionFactInputs {
   readonly memberId: MemberId;
+}
+
+/**
+ * The bulk read's result: the Pariwar-level coverage watermark PLUS the per-member rows.
+ *
+ * Coverage is hoisted out of the rows deliberately. A member with no ledger entries and no assignments
+ * has NO row here, but the caller still has to decide whether that member is CLEAN or UN-DERIVABLE —
+ * and that answer is coverage, not row presence. Returning it beside the rows means the caller cannot
+ * accidentally default it, and means there is exactly ONE coverage read per scan.
+ */
+export interface PariwarContributionFactInputs {
+  readonly coveredFrom: Date | null;
+  readonly members: readonly MemberContributionFactInputs[];
 }
 
 /**
@@ -267,7 +377,7 @@ export async function readContributionFactInputsForPariwar(
   db: Db,
   pariwarId: PariwarId,
   at: Date,
-): Promise<MemberContributionFactInputs[]> {
+): Promise<PariwarContributionFactInputs> {
   const ledgerRows = await db
     .select({
       memberId: memberContributionLedger.memberId,
@@ -280,8 +390,19 @@ export async function readContributionFactInputsForPariwar(
     .groupBy(memberContributionLedger.memberId);
 
   const skipResult = await db.execute(
-    missedCycleAggregateSql(at, sql`mpa.pariwar_id = ${pariwarId}`, true),
+    missedCycleAggregateSql(
+      at,
+      sql`mpa.pariwar_id = ${pariwarId}`,
+      sql`l.pariwar_id = ${pariwarId}`,
+      true,
+    ),
   );
+
+  // The bulk path CANNOT fold coverage into its ledger query the way the single-member path does: that
+  // query GROUPs BY member, so a Pariwar whose ledger is empty returns zero rows — and an empty ledger
+  // is exactly when coverage decides between "everyone is clean" and "nothing was projected". One
+  // extra Pariwar-scoped read, still member-count-independent (AC7).
+  const coveredFrom = await readContributionProjectionCoverage(db, pariwarId);
 
   const byMember = new Map<string, MemberContributionFactInputs>();
   for (const row of ledgerRows) {
@@ -291,6 +412,8 @@ export async function readContributionFactInputsForPariwar(
       lastConfirmedAt: toDate(row.lastConfirmedAt),
       skipsCurrentYear: 0,
       earliestSkipClosedAt: null,
+      opportunitiesSinceLast: 0,
+      coveredFrom,
     });
   }
   for (const row of resultRows<RawSkipRow>(skipResult)) {
@@ -302,10 +425,13 @@ export async function readContributionFactInputsForPariwar(
       lastConfirmedAt: existing?.lastConfirmedAt ?? null,
       skipsCurrentYear: toCount(row.skips_current_year),
       earliestSkipClosedAt: toDate(row.earliest_skip_closed_at),
+      opportunitiesSinceLast: toCount(row.opportunities_since_last),
+      coveredFrom,
     });
   }
   // Deterministic order — by member id, the projection-wide ordering discipline.
-  return [...byMember.values()].sort((a, b) =>
+  const members = [...byMember.values()].sort((a, b) =>
     a.memberId < b.memberId ? -1 : a.memberId > b.memberId ? 1 : 0,
   );
+  return { coveredFrom, members };
 }

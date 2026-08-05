@@ -76,13 +76,21 @@ export function addCalendarMonths(date: Date, months: number): Date {
 
 /**
  * Count WHOLE calendar months elapsed from `from` to `to` (>= 0; 0 when `to` precedes `from`) — the
- * AI-3-1 discipline applied to `contribution.months_since_last` (Story 10.24 AC2).
+ * AI-3-1 calendar-correct month primitive.
+ *
+ * ⚠ NOT the derivation of `contribution.months_since_last`, despite the name matching. That fact was
+ * ratified on 2026-08-05 as an OPPORTUNITY count (missed assigned-and-closed cycles since the last
+ * live confirmation), NOT elapsed wall-clock months — "contribution discipline must always be
+ * evaluated against contribution opportunities, never against elapsed time alone", because a quiet
+ * Pariwar offers no opportunity and a wall-clock reading would trip R7(F) for its entire membership.
+ * See `producer.ts`'s `ContributionFacts.monthsSinceLast`. This helper has NO production caller on the
+ * R7 path today; it remains exported as the calendar primitive (and is unit-pinned for month-end and
+ * leap boundaries) for any future fact that genuinely IS elapsed-time-shaped.
  *
  * ⚠ NEVER `elapsed_ms / (30 × 86_400_000)` or any fixed-ms span. A "month" is not a fixed duration:
- * fixed-ms arithmetic drifts by up to 3 days per quarter and would make R7(C) (`>= 12`) and R7(F)
- * (`>= 6`) fire early or late depending on which months a member's gap happened to span — on the
- * surface that feeds a SUSPENSION decision. Calendar-correct derivation is the PRODUCER's job; the
- * engine stays date-math-free and reads the pre-derived integer (`r7-ladder.ts:57-58` unchanged).
+ * fixed-ms arithmetic drifts by up to 3 days per quarter. Calendar-correct derivation is the
+ * PRODUCER's job; the engine stays date-math-free and reads pre-derived integers
+ * (`r7-ladder.ts:57-58` unchanged).
  *
  * Month-boundary behaviour, pinned by unit tests: 2024-01-31 → 2024-02-29 is **1** month (not 0, not
  * 2), and a Feb-29 anchor evaluated on Feb-28 of a common year is exactly 12 months (no off-by-one).

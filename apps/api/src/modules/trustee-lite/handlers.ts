@@ -237,11 +237,13 @@ export function createTrusteeLiteHandlers(deps: AppDeps) {
       // Passing an empty candidate list would still be WRONG (it renders as "detection ran, nobody is
       // flagged" — the false all-clear D1-B forbids); the honest degradations remain the sentinel
       // arms, which `summarizeViolatorFlags` derives from the candidates' own payloads.
+      // The scan reports its OWN discriminant: `available` with candidates, or `unavailable` when the
+      // Pariwar's Niyamavali registry has no R7 clause effective at `now`. Passing a blanket
+      // `{ status: 'available' }` here is what previously turned an unprovisioned registry into the
+      // false all-clear this block warns about — the handler asserted the invariant while the call
+      // site broke it (⚖ 2026-08-05: unknown rules and unknown facts are the same constitutional state).
       const violatorFlags = mayModeration
-        ? trusteeLite.summarizeViolatorFlags({
-            status: 'available',
-            candidates: await scanR7ViolatorCandidates(scopeTx.tx, pariwarId, now),
-          })
+        ? trusteeLite.summarizeViolatorFlags(await scanR7ViolatorCandidates(scopeTx.tx, pariwarId, now))
         : undefined;
 
       const response: TrusteeLiteResponse = {

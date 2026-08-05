@@ -77,6 +77,37 @@ mechanism for that.
 **⚠ EXPLICITLY REJECTED, do not re-open:** adding a payload-shape/version component to the frozen Story
 4.8 cache key. Story 10.17 D5 rejected exactly that, by name, for exactly this bounded transient.
 
+### Deploy note — the projection-coverage backfill has NO automatic trigger (round-3 review, 2026-08-06)
+
+`apps/jobs/src/contribution-projection-backfill.ts` (round-2 review) is a manual CLI —
+`pnpm --filter @twt/jobs contribution:backfill -- <pariwarId> […]` or `--all`. Nothing in this
+codebase calls it automatically: no migration post-step, no boot-time check, no Pariwar-onboarding
+hook (this repo has no coded Pariwar-creation flow at all — tenants are provisioned out-of-band), and
+no CI/deploy workflow reference (`deploy-staging.yml` / `deploy-prod.yml` run no migration or
+one-off-job step of any kind today — migrations are applied out-of-band too, matching the existing
+convention).
+
+Per the CLI's own header comment, the coverage watermark it writes (migration 0094) is now a
+PRECONDITION, not merely a repair path: `deriveContributionFacts` returns the `producer_unavailable`
+sentinel for any Pariwar without one, so **this story's stated goal does not happen automatically on
+deploy.** Every existing Pariwar needs one manual `--all` run after migration 0094 lands, and per the
+absence of an onboarding hook, so does every Pariwar provisioned afterward — with nothing today
+prompting an operator to do either. This is intentionally NOT mitigated by fabricating a coverage row
+early (e.g. seeding one at some other trigger point with `coveredFrom = now()`): a coverage row that
+was not backed by an actual ledger backfill would be lying about what has been projected.
+
+**Not mitigated here — recorded rather than silently left for the next reader to discover
+([[feedback_record_unattested_no_backfill]]).** Options, NOT built (a design choice for whoever owns
+the deploy runbook, not a code change this review makes unilaterally): (a) a manual runbook step
+appended to whatever process currently applies migrations, since that process already exists
+out-of-band; (b) a scheduled sweep (`--all`, idempotent, safe to re-run) on a cron cadence, catching
+both the initial rollout and any Pariwar provisioned since; (c) if a Pariwar-onboarding flow is ever
+built, a coverage-row seed at creation time (safe there specifically because a BRAND NEW Pariwar has
+no pre-existing history to backfill — an empty ledger + `coveredFrom = now()` is not a fabrication for
+a tenant with nothing before that instant). **Re-trigger:** before this story's changes are relied on
+in production — until then, every Pariwar reads `detection_unavailable` (honest, but not "the lights
+are on").
+
 ### Recorded, not deferred
 
 - **The OpenAPI regen was BYTE-IDENTICAL.** `pnpm contracts:emit-openapi` produced no diff despite the
@@ -2667,3 +2698,10 @@ _Pass 2 (second adversarial review of the same commit, Group 1 = domain + migrat
 
 - **Zero-grant 403 denial path never calls `emitAuthAudit`.** `apps/api/src/modules/trustee-lite/handlers.ts`'s success path audits `admin_trustee_lite.read` (which sections resolved, row counts, violator-detection status), but the zero-grant `AuthorizationDeniedError` throw happens before that call, so an actor probing the route with no grants at all leaves no `admin_trustee_lite.*` audit trail. **Reason for deferring:** verified this is a faithful inheritance, not a 10.11-specific regression — the 10.7 `reports/handlers.ts` precedent this story explicitly followed (Decision 4) has the identical unaudited-denial shape, and the central `apps/api/src/middleware/error-mapping/index.ts` `AuthorizationDeniedError` → 403 mapping doesn't audit denials for any module either. Fixing it only here would diverge Trustee-Lite from the pattern it was built to mirror. **Re-trigger:** the first cross-cutting hardening pass over admin RBAC denial paths, or a real probing/reconnaissance incident — audit all denial paths together, not one module at a time. [apps/api/src/modules/trustee-lite/handlers.ts; apps/api/src/modules/reports/handlers.ts; apps/api/src/middleware/error-mapping/index.ts]
 - **`orderTrusteeSignals`'s `categoryRank` tie-break branch has zero test coverage.** The comparator's documented tie-break is `(categoryRank, resourceId, sourceKey)`, but every call site (`normalizeTrusteeSignals`) sorts a single-category array at a time, so `categoryRank` is always 0 in every exercised path — the cross-category total-ordering guarantee is unverified by any test with genuinely mixed-category input. **Reason for deferring:** harmless today (no caller merges sections before sorting), and adding synthetic mixed-category test fixtures for a branch nothing currently exercises is speculative coverage, not a fix for an observed defect. **Re-trigger:** the first caller that merges rows across categories before calling `orderTrusteeSignals` — add the mixed-category ordering test at that point, not before. [packages/domain/src/trustee-lite/signals.ts]
+
+## Deferred from: code review of 10-24-contribution-fact-producer-projection-r7-cf-activation (2026-08-05)
+
+- **D2's applied-only filter keeps non-applied R7 clause versions out of the assembled slots, so amending an R7 clause does not move `rule_registry_version` for the members it does not currently apply to.** `evaluateAppliedR7ClauseSlots` contributes only `perClauseResults.filter(e => e.applied)`, so a clause the member does not currently trip never reaches `assembleClauses` and therefore never contributes to the registry-version component of the Story 4.8 cache key. Amending R7(F) from `>= 6` to `>= 3` would leave every newly-qualifying member serving a stale cached payload rather than being invalidated by the amendment. **Reason for deferring:** bounded by `VALIDITY_CACHE_TTL_SECONDS = 60`, so the staleness window is the same transient 10.17 D5 already accepted by name, and this is a genuine structural consequence of D2's applied-only contribution rather than a defect in how D2 was implemented — closing it would mean contributing non-applied clauses to the fingerprint, which is exactly what D2 forbids. **Re-trigger:** any lengthening of the validity-cache TTL, or the first governance amendment to a live R7 clause version where a 60s propagation delay on eligibility is not acceptable. [packages/validity-service/src/rules.ts]
+
+- **UN-ATTESTED: the Trustee-Lite Pariwar-wide R7 scan's per-request computational cost has never been measured.** ⚖ BigDev, 2026-08-05: *"AC7 currently bounds query count, not computational cost. The implementation satisfies the accepted story scope. Scaling strategy should be selected from production evidence rather than predicted in advance."* `scanR7ViolatorCandidates` is genuinely BOUNDED in queries (a fixed count regardless of member count — AC7's binding structural criterion holds), but not in work: it materialises one row per member from `listMemberStatesForPariwar`, one aggregate row per member, four pure clause interpretations per member and one candidate payload per member, all on a single un-yielded tick, with no cap, page, budget or cache, recomputed per request. At 4L that shape is ~400k rows across three collections plus ~1.6M pure evaluations on an admin GET. **Reason for deferring:** ratified as an explicit scope decision, not an oversight — mitigation options (capping/paginating the violator section, a second cache, pre-emptive read chunking) each carry a real cost, and the first of them would pick a governance-visible cutoff on a suspension list with no data behind it. Recorded rather than mitigated, per [[feedback_record_unattested_no_backfill]]. **Re-trigger:** the first production or staging Pariwar large enough to produce a real latency signal on the trustee-lite GET — measure THEN choose. Note when measuring that the round-2 opportunity-aware `months_since_last` and the `member_state_in` clause gate shrink the FLAGGED population but NOT the O(M) scan work; a shorter flag list is not evidence the scan got cheaper. [packages/validity-service/src/r7-candidate-scan.ts; packages/validity-service/tests/bench/p95-budget.md]
+- **UN-ATTESTED: the p95/p50 figures recorded for Story 10.24 predate the round-2 changes and were not re-run.** `months_since_last` moved from in-JS calendar arithmetic to the missed-cycle SQL aggregate (which gained a `last_conf` CTE and two `FILTER` clauses over one scan — still one query), and a coverage-watermark read was added (folded as a scalar subquery into the existing ledger query on the single-member path, so that path is still exactly two queries; one extra Pariwar-scoped read on the bulk path). **Reason for deferring:** the same seeded-R7 bench fixture already owed for the fully-provisioned delta is the prerequisite for a meaningful re-measurement, and re-running the old fixture would produce a number that is not comparable like-for-like. **Re-trigger:** whoever builds the seeded-R7 bench fixture re-runs both at once. [packages/validity-service/tests/bench/p95-budget.md]

@@ -33,18 +33,24 @@ import type {
 } from './view-model.js';
 
 /**
- * AC4 / D1-B — the ONLY `restorationPackage` value reachable today. The `contribution.*` fact producer
- * does not exist, so there is no honest source for "how many contributions remain in the restoration
- * package". Deriving one HERE from `listMemberContributionHistory` or an ad-hoc `events_log` scan is
- * the explicitly REJECTED branch D1-C: that read anchors on `contribution.utr-attested` (a member
- * CLAIM, not a confirmation) and caps at 500 rows, and it would derive R7 facts outside the rule
- * engine ([[project_engine_never_infers_contribution_facts]]). Named-producer degradation is this
- * codebase's own repeated discipline (`CONTRIBUTION_UNAVAILABLE`, `ContributionHistoryUnavailable`,
- * the Story 10.11 violator-flag arm).
+ * AC4 / D1-B — the ONLY `restorationPackage` value reachable today.
+ *
+ * Story 10.24 shipped the `contribution.*` fact producer, but NOT restoration accounting: this arm
+ * needs the count of CONSECUTIVE contributions completed against the clause's
+ * `restoration.consecutive_required`, which 10.24's boundary excludes by name and which couples to
+ * Story 10.23's separately-expiring overlay. The label is therefore re-pointed to **Story 10.25**
+ * (10.24 AC9) — leaving it naming a story that shipped without closing the gap would turn an honest
+ * sentinel into a lie. ⚖ Ownership CONFIRMED by BigDev, Decision 2026-08-05-074.
+ *
+ * Deriving a count HERE from `listMemberContributionHistory` or an ad-hoc `events_log` scan remains the
+ * explicitly REJECTED branch D1-C: that read anchors on `contribution.utr-attested` (a member CLAIM,
+ * not a confirmation) and caps at 500 rows, and it would derive R7 facts outside the rule engine
+ * ([[project_engine_never_infers_contribution_facts]]). Named-producer degradation is this codebase's
+ * own repeated discipline.
  */
 const RESTORATION_PACKAGE_UNAVAILABLE: RestorationPackageState = {
   status: 'package_unavailable',
-  producer: 'story-10-24',
+  producer: 'story-10-25',
 };
 
 /**

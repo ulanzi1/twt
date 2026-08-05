@@ -31,7 +31,7 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
       inRenewalGrace: false,
       graceRemainingDays: null,
     },
-    contributionHistorySummary: { status: 'producer_unavailable', producer: 'epic-8-9' },
+    contributionHistorySummary: { status: 'producer_unavailable', producer: 'story-10-24' },
     medicalDisclosureFlags: {
       hasDisclosureOnRecord: false,
       declaredConditionCount: null,
@@ -145,7 +145,7 @@ describe('buildMemberStatusViewModel', () => {
     expect(contribution.status).toBe('unavailable');
     expect(contribution.detailKeys).toHaveLength(1);
     expect(contribution.detailKeys[0]).toContain('contributionUnavailable');
-    expect(contribution.data['producer']).toBe('epic-8-9');
+    expect(contribution.data['producer']).toBe('story-10-24');
   });
 
   it('admin vs member divergence: identity suppressed + redaction applied only for the member variant', () => {

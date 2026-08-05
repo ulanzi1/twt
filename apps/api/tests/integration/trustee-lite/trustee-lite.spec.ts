@@ -382,13 +382,45 @@ describe.skipIf(!hasDatabase)('trustee-lite list + signals — E2E (:5433)', () 
       expect(row.severity).toBeNull();
     });
 
-    it('AC4 — the violator arm renders detection_unavailable naming the producer, NOT an empty list', async () => {
+    // ── THE 10.24 SEAM FLIP (Story 10.24, Task 6; AC5) ────────────────────────────────────────
+    //
+    // 10.11 shipped this arm as `detection_unavailable` and NAMED the one call site that would change
+    // when the contribution-fact producer landed. It landed; this is the assertion that moved with it.
+    //
+    // ⚠ `detection_unavailable` is NOT gone and NOT dead — it is now reachable for a genuine
+    // PER-MEMBER gap rather than as a deployment-wide statement (10.24 D6), and
+    // `summarizeViolatorFlags` still degrades the WHOLE section rather than showing a partial list.
+    // The AC4 invariant this test has always protected is unchanged: the section NEVER renders as a
+    // bare empty array whose meaning is ambiguous — it is always a DISCRIMINATED status.
+    it('AC4/10.24 — the violator arm now runs detection, and reports a DISCRIMINATED status either way', async () => {
       const { body } = await fetchAs(superAdmin, shared.p);
 
       const violator = body.violator_flags as Json;
-      expect(violator.status).toBe('detection_unavailable');
-      expect(typeof violator.producer).toBe('string');
-      expect(violator).not.toHaveProperty('members');
+      expect(['ok', 'detection_unavailable']).toContain(violator.status);
+      if (violator.status === 'ok') {
+        // Detection RAN. `members` carries only members holding >=1 applied R7 clause; this Pariwar
+        // seeds no R7 clause versions, so the honest answer is an evaluated-and-empty list.
+        expect(Array.isArray(violator.members)).toBe(true);
+        expect(violator).not.toHaveProperty('producer');
+      } else {
+        // The gap arm still NAMES what is missing rather than showing a bare hole.
+        expect(typeof violator.producer).toBe('string');
+        expect(violator).not.toHaveProperty('members');
+      }
+    });
+
+    it('10.24 — the flip is LIVE: the candidate scan actually ran (never the hardcoded sentinel)', async () => {
+      // The specific regression this guards: reverting the handler to
+      // `{ status: 'unavailable', producer: CONTRIBUTION_UNAVAILABLE.producer }` would make the arm
+      // permanently `detection_unavailable` with a producer literal, which is indistinguishable from
+      // a real per-member gap unless something asserts the scan ran. With no R7 clause versions seeded
+      // for this Pariwar the scan resolves zero clauses and returns zero candidates, which
+      // `summarizeViolatorFlags` reports as an EVALUATED empty list — a status the hardcoded sentinel
+      // could never produce.
+      const { body } = await fetchAs(superAdmin, shared.p);
+      const violator = body.violator_flags as Json;
+      expect(violator.status).toBe('ok');
+      expect(violator.members).toEqual([]);
     });
   });
 

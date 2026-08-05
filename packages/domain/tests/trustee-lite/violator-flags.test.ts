@@ -28,7 +28,7 @@ function producerUnavailablePayload(overrides: Partial<ViolatorFlagPayloadInput>
   return {
     memberId: 'm-1',
     evaluatedAt: '2026-08-05T12:00:00.000Z',
-    contributionHistorySummary: { status: CONTRIBUTION_PRODUCER_UNAVAILABLE_STATUS, producer: 'epic-8-9' },
+    contributionHistorySummary: { status: CONTRIBUTION_PRODUCER_UNAVAILABLE_STATUS, producer: 'story-10-24' },
     applicableNiyamavaliClauses: [],
     ...overrides,
   };
@@ -72,7 +72,7 @@ describe('deriveViolatorFlags — the producer sentinel short-circuits (AC4, D1-
   it('returns detection_unavailable NAMING the producer, never an empty flag list', () => {
     const result = deriveViolatorFlags(producerUnavailablePayload());
     expect(result.status).toBe('detection_unavailable');
-    expect(result).toEqual({ status: 'detection_unavailable', producer: 'epic-8-9' });
+    expect(result).toEqual({ status: 'detection_unavailable', producer: 'story-10-24' });
     expect(result).not.toHaveProperty('flags');
   });
 
@@ -207,9 +207,9 @@ describe('the violator flag carries no recommendation, in any form (AC4)', () =>
 
 describe('summarizeViolatorFlags — the section (AC4)', () => {
   it('an UNAVAILABLE candidate source is detection_unavailable, not an empty member list', () => {
-    expect(summarizeViolatorFlags({ status: 'unavailable', producer: 'epic-8-9' })).toEqual({
+    expect(summarizeViolatorFlags({ status: 'unavailable', producer: 'story-10-24' })).toEqual({
       status: 'detection_unavailable',
-      producer: 'epic-8-9',
+      producer: 'story-10-24',
     });
   });
 

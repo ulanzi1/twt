@@ -50,8 +50,10 @@ import type {
 // INVARIANT: the engine NEVER infers contribution facts. It only READS pre-derived
 // `contribution.*` facts handed in via `EvaluationContext.facts`; it never counts
 // contributions, computes skips/gaps, or reaches for a source to synthesize them.
-// Deriving these is exclusively the fact PRODUCER's job (Epic 8/9, assembled by the
-// Story 4.6 Validity Service) — contribution events do NOT exist yet (Story 9.x). 4.2
+// Deriving these is exclusively the fact PRODUCER's job — Story 10.24, assembled by the
+// Story 4.6 Validity Service, supplies `total_count` / `ever_contributed` /
+// `months_since_last` / `skips_current_year` / `in_lapse` from real event history as of
+// Story 9.4 (the `contribution.confirmed` event producer has existed since then). 4.2
 // defines the CONTRACT and tests against injected synthetic facts.
 //
 // Calendar-correct derivation (AI-3-1: `date_trunc`/`interval`, never fixed-ms spans) is

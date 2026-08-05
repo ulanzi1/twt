@@ -111,14 +111,14 @@ describe('ViolatorFlag — the FROZEN key set (AC4)', () => {
 
 describe('ViolatorFlagsSection — a discriminated union, never a bare list (AC4)', () => {
   it('detection_unavailable carries the producer and has NO members field', () => {
-    const parsed = ViolatorFlagsSection.parse({ status: 'detection_unavailable', producer: 'epic-8-9' });
-    expect(parsed).toEqual({ status: 'detection_unavailable', producer: 'epic-8-9' });
+    const parsed = ViolatorFlagsSection.parse({ status: 'detection_unavailable', producer: 'story-10-24' });
+    expect(parsed).toEqual({ status: 'detection_unavailable', producer: 'story-10-24' });
     expect(parsed).not.toHaveProperty('members');
   });
 
   it('rejects a detection_unavailable that tries to also carry members (the two states cannot blur)', () => {
     expect(() =>
-      ViolatorFlagsSection.parse({ status: 'detection_unavailable', producer: 'epic-8-9', members: [] }),
+      ViolatorFlagsSection.parse({ status: 'detection_unavailable', producer: 'story-10-24', members: [] }),
     ).toThrow();
   });
 
@@ -210,7 +210,7 @@ describe('TrusteeLiteResponse — ABSENT ≠ EMPTY (AC6)', () => {
     }
     const withViolator = TrusteeLiteResponse.parse({
       evaluated_at: '2026-08-05T12:00:00.000Z',
-      violator_flags: { status: 'detection_unavailable', producer: 'epic-8-9' },
+      violator_flags: { status: 'detection_unavailable', producer: 'story-10-24' },
     });
     expect(withViolator.violator_flags?.status).toBe('detection_unavailable');
   });

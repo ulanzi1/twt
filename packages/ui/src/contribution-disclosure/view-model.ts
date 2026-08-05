@@ -34,23 +34,34 @@ export type ContributionDisclosureInstrument = 'suspension' | 'restoration_lock_
  * AC1(c)'s "how many contributions remain in the restoration package" — a FIRST-CLASS degraded state,
  * never a fabricated number (AC4 / the ratified D1-B).
  *
- *   · `package_unavailable` — the ONLY reachable arm today. The `contribution.*` fact producer does not
- *                             exist ([[project_r7_fact_producer_unbuilt]]; `assemblePayload` pins
- *                             `CONTRIBUTION_UNAVAILABLE` at validity-service `payload.ts:294`), and the
- *                             R7 restoration params (`consecutive_required` / `lock_in_months`) have no
- *                             production consumer. `producer` NAMES the story that will close it, in the
- *                             `ContributionHistoryUnavailable` / `RetirementCoverageUnavailable` house
- *                             style — an honest gap, not a silent zero.
- *   · `ok`                  — DECLARED AND UNREACHABLE TODAY. Declaring it is what makes Story 10.24 a
- *                             ZERO-CHANGE activation: the producer lands, the presenter returns this
- *                             arm, and neither the copy keys for (a)/(b) nor `pay.tsx` change (AC4).
+ *   · `package_unavailable` — the ONLY reachable arm today. `producer` NAMES the story that will close
+ *                             it, in the `ContributionHistoryUnavailable` / `RetirementCoverageUnavailable`
+ *                             house style — an honest gap, not a silent zero.
+ *   · `ok`                  — DECLARED AND UNREACHABLE TODAY.
+ *
+ * ── ⚠ Re-pointed `story-10-24` → `story-10-25` by Story 10.24 (its AC9) ────────────────────────────
+ * Story 10.24 DID land, and it DID build the `contribution.*` fact producer — but this arm needs
+ * `{ remaining, required }`: the count of CONSECUTIVE contributions completed against the clause's
+ * `restoration.consecutive_required`. That is RESTORATION ACCOUNTING, which 10.24's boundary
+ * explicitly excludes ("this story produces governance FACTS only") and which couples to Story 10.23's
+ * restoration-discipline overlay with SEPARATE expiry — the non-subsumption principle
+ * ([[project_moderation_model_correct_course]]). Building it inside 10.24 would have collapsed two
+ * independently amendable governance instruments into one release.
+ *
+ * So the label moves to Story 10.25 (R7(A) Restoration Accounting). Leaving it at `story-10-24` after
+ * that story shipped would have made an honest sentinel quietly into a LIE: it would name a story that
+ * has already shipped and did not close the gap.
+ *
+ * ⚖ CONFIRMED 2026-08-05 by BigDev (Decision 2026-08-05-074), closing Story 10.24's Escalation 3:
+ * Story 10.25 is the correct owner and the count stays there. This is no longer an open scope question
+ * — a future author moving it needs a superseding decision, not a judgement call.
  *
  * `package_unavailable` is NOT `0` and NOT absent. On a disclosure surface a silent omission reads as
  * "there is nothing more to know", and a `0` would tell a member they have completed a restoration
  * package they may not have started.
  */
 export type RestorationPackageState =
-  | { readonly status: 'package_unavailable'; readonly producer: 'story-10-24' }
+  | { readonly status: 'package_unavailable'; readonly producer: 'story-10-25' }
   | { readonly status: 'ok'; readonly remaining: number; readonly required: number };
 
 /**

@@ -21,3 +21,9 @@ export * from './history.js';
 // pool; what reason; has a screenshot been uploaded; the default/uploaded/resolved lifecycle). Member-
 // scoped (D1); pure observation over events_log — it adjudicates nothing (AC4).
 export * from './self-verify.js';
+// Story 10.24 — the contribution-fact PROJECTION: the as-of fact-input reads (`facts.ts`) and the
+// projection writers (`projection-write.ts`). The DB half of the producer Story 4.2 deferred to
+// "Epic 8/9" and neither epic built. The PURE derivation lives in `@twt/validity-service`'s
+// `producer.ts` (domain cannot import validity-service — the reverse dependency is a turbo cycle).
+export * from './facts.js';
+export * from './projection-write.js';

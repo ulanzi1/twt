@@ -55,6 +55,47 @@ export function ceilDaysBetween(from: Date, to: Date): number {
   return Math.max(0, Math.ceil(ms / MS_PER_DAY));
 }
 
+/**
+ * Add `months` calendar months to `date`, leap-safe and month-END-safe. A Jan-31 anchor + 1 month
+ * lands on Feb-29 (leap) / Feb-28 (common) — clamped to the last day of the target month rather than
+ * overflowing into March, exactly as {@link addCalendarYears} clamps a Feb-29 anniversary. Non-mutating.
+ */
+export function addCalendarMonths(date: Date, months: number): Date {
+  const result = new Date(date.getTime());
+  const day = result.getUTCDate();
+  // Move to day 1 FIRST so the month shift can never overflow (Jan-31 + 1mo would otherwise become
+  // Mar-2/Mar-3 before we ever get to clamp it) — the classic month-arithmetic off-by-one.
+  result.setUTCDate(1);
+  result.setUTCMonth(result.getUTCMonth() + months);
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  result.setUTCDate(Math.min(day, lastDayOfTargetMonth));
+  return result;
+}
+
+/**
+ * Count WHOLE calendar months elapsed from `from` to `to` (>= 0; 0 when `to` precedes `from`) — the
+ * AI-3-1 discipline applied to `contribution.months_since_last` (Story 10.24 AC2).
+ *
+ * ⚠ NEVER `elapsed_ms / (30 × 86_400_000)` or any fixed-ms span. A "month" is not a fixed duration:
+ * fixed-ms arithmetic drifts by up to 3 days per quarter and would make R7(C) (`>= 12`) and R7(F)
+ * (`>= 6`) fire early or late depending on which months a member's gap happened to span — on the
+ * surface that feeds a SUSPENSION decision. Calendar-correct derivation is the PRODUCER's job; the
+ * engine stays date-math-free and reads the pre-derived integer (`r7-ladder.ts:57-58` unchanged).
+ *
+ * Month-boundary behaviour, pinned by unit tests: 2024-01-31 → 2024-02-29 is **1** month (not 0, not
+ * 2), and a Feb-29 anchor evaluated on Feb-28 of a common year is exactly 12 months (no off-by-one).
+ */
+export function calendarMonthsBetween(from: Date, to: Date): number {
+  if (to.getTime() <= from.getTime()) return 0;
+  let months =
+    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
+  // If the day-of-month anniversary has not been reached in the final month, that month is not whole.
+  if (addCalendarMonths(from, months).getTime() > to.getTime()) months -= 1;
+  return Math.max(0, months);
+}
+
 /** Add `days` calendar days, leap-safe (`setUTCDate`, NOT fixed-ms). Non-mutating. */
 export function addCalendarDays(date: Date, days: number): Date {
   const result = new Date(date.getTime());

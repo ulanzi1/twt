@@ -166,16 +166,54 @@ function lockInSection(payload: MemberValidityPayloadDto): PanelSection {
   };
 }
 
-/** Build the contribution-discipline section (d) — D2: producer_unavailable → "not yet available". */
+/**
+ * Build the contribution-discipline section (d).
+ *
+ * ── Story 10.24: this now BRANCHES on the discriminant ────────────────────────────────────────────
+ * Before 10.24 the FR-12A payload always carried the typed `producer_unavailable` sentinel, so this
+ * function rendered it unconditionally. The fact producer now exists, so the `ok` arm is reachable and
+ * carries real facts.
+ *
+ * The sentinel arm is NOT dead code and must not be removed (10.24 D6): a per-member gap can still be
+ * genuine (no projected history; a historical `at` before the projection's coverage; an incomplete
+ * backfill), and it stays an explicit "not yet available" affordance — NEVER an empty grid, and NEVER
+ * a fabricated zero (the never-placeholder rule; zero and unknown are different claims).
+ *
+ * On the `ok` arm the section reports the derived facts. `status` is `'info'` when the member is in a
+ * discipline lapse and `'ok'` otherwise — deliberately NOT `'fail'`: this panel OBSERVES standing, and
+ * a lapse is a fact about contribution history, not a verdict on the member. `lapseSince` is passed
+ * through verbatim (never back-filled from `evaluatedAt`).
+ */
 function contributionSection(payload: MemberValidityPayloadDto): PanelSection {
-  // The FR-12A payload always carries the typed `producer_unavailable` sentinel today (Epic 8/9). Render
-  // it as an explicit "not yet available" affordance — NEVER an empty grid (the never-placeholder rule).
+  const summary = payload.contributionHistorySummary;
+  if (summary.status === 'producer_unavailable') {
+    return {
+      id: 'contribution',
+      titleKey: SECTION_TITLE_KEYS.contribution,
+      status: 'unavailable',
+      detailKeys: [DETAIL_KEYS.contributionUnavailable],
+      data: { producer: summary.producer },
+      visible: true,
+    };
+  }
+  const inLapse = summary.facts['contribution.in_lapse'] === true;
   return {
     id: 'contribution',
     titleKey: SECTION_TITLE_KEYS.contribution,
-    status: 'unavailable',
-    detailKeys: [DETAIL_KEYS.contributionUnavailable],
-    data: { producer: payload.contributionHistorySummary.producer },
+    status: inLapse ? 'info' : 'ok',
+    detailKeys: [inLapse ? DETAIL_KEYS.contributionInLapse : DETAIL_KEYS.contributionOnRecord],
+    data: {
+      totalCount: summary.facts['contribution.total_count'] ?? null,
+      everContributed: summary.facts['contribution.ever_contributed'] ?? null,
+      monthsSinceLast: summary.facts['contribution.months_since_last'] ?? null,
+      skipsCurrentYear: summary.facts['contribution.skips_current_year'] ?? null,
+      inLapse,
+      lapseSince: summary.lapseSince,
+      // The honest hold, surfaced: WHICH facts are still missing. `PanelSection.data` carries scalars
+      // and string arrays only, so the keys ride here and the full `{key, producer}` pairs stay on the
+      // wire DTO for clients that want to name the owning story.
+      heldFacts: summary.heldFacts.map((f) => f.key),
+    },
     visible: true,
   };
 }

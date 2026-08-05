@@ -314,3 +314,15 @@ export * from './feature_flag_versions.js';
 // carries only what a plaintext-JSONB event payload may not: the Tier-1 rationale ciphertext, the
 // actor display snapshot, and the FR-6 rejoin-lock instant.
 export * from './member_moderation_actions.js';
+// Story 10.24 — the contribution-fact PROJECTION substrate (D1): `member_contribution_ledger` (one row
+// per `contribution.confirmed` event, its reversal folded into a NULLABLE, TIME-BEARING `reversed_at`)
+// + `member_pool_assignments` (one row per (member, pool) at freeze). Together they make the five
+// `contribution.*` facts answerable AT ANY INSTANT as bounded aggregates, closing the producer gap
+// Story 4.2 deferred to "Epic 8/9" ([[project_r7_fact_producer_unbuilt]]).
+// ⚠ Both are PLAIN append projections — NOT event-derived state caches. No `current_state`, no
+// projector-exclusivity trigger, no state-invariant gate (mirror `pool_snapshots`). They are
+// maintained by TWO DIFFERENT mechanisms on purpose (D3 — an events_log trigger for the ledger, an
+// explicit writer in `pool/spawn.ts` for the assignments); the mechanism is an implementation detail
+// and the two are held OBSERVATIONALLY EQUIVALENT by one shared invariant test.
+export * from './member_contribution_ledger.js';
+export * from './member_pool_assignments.js';

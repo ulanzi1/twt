@@ -1,4 +1,205 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-05h (10-24-contribution-fact-producer-projection-r7-cf-activation:
+#   review -> done via bmad-code-review. Full diff (~7017 lines) reviewed across three parallel layers
+#   (Blind Hunter, Edge Case Hunter, Acceptance Auditor); 18 unique findings after dedup, 2
+#   decision-needed + 12 patch + 4 dismissed as noise.
+#   DECISIONS: (1) facts.ts's SQL-level `liveConfirmationExistsSql` accepted as an intentional dual
+#   EXECUTION STRATEGY for the same "confirmed" definition `hasLiveConfirmation` owns (not a second
+#   definition) — the parity spec is the governing contract, obligation strengthened in the doc comment.
+#   (2) The skips_current_year Dec->Jan windowing "gap" dismissed and codified as a NEW operational
+#   invariant (Decision 2026-08-05-075): contribution pools are single-calendar-month instruments by
+#   governance model, so assignment-year and close-year are identical in normal operation; a cross-
+#   month/year cycle needs a Trustee Panel emergency resolution, not an alternative derivation.
+#   PATCHES (12/12 applied, all live-verified): the AC8-mandated r7-ladder.ts comment correction that
+#   was claimed done but never made; a VACUOUS AC6(c) replay test rebuilt to call the REAL spawnChildPool
+#   (via planCycleSpawn + createPoolAssignmentSeam) and assert byte-identical pool_snapshots +
+#   member_pool_assignments (not just the pure functions); the IST-year lockstep test that couldn't
+#   actually catch a drift in facts.ts's private constant (now exported + compared directly); revert-
+#   sanity probe #2 recorded in-code (was prose-only); a migration-0093 trigger/backfill hardening so a
+#   malformed-but-present (non-null, non-UUID) payload value is skipped with a RAISE WARNING instead of
+#   throwing and aborting the whole event append; R7_HELD_CLAUSES owner-string format aligned to the
+#   hyphenated story-id convention (surfaced a genuine test/code contradiction — the totality test's own
+#   regex hardcoded the pre-patch dotted form); an sql.raw() alias narrowed to a literal-type union; an
+#   unchecked producer.ts cast replaced with a runtime-verifying assertion; a misleading "TWO queries,
+#   always" doc comment scoped; and the en/Hindi i18n contributionUnavailable copy brought into line with
+#   the admin surface's updated per-member derivation-failure wording.
+#   POST-PATCH VALIDATION: typecheck/lint clean on @twt/domain, @twt/validity-service,
+#   @twt/niyamavali-engine, @twt/i18n; domain-invariants:check + contracts:check-openapi-determinism
+#   green. Live-DB (twt-test-pg:5433): @twt/domain 261/261, @twt/validity-service 192/192 (100x-thread
+#   determinism gate at exactly one hash), apps/api trustee-lite E2E 19/19, @twt/ui 98/98, @twt/admin
+#   271/271, @twt/contracts 837/837 — zero regressions.)
+# last_updated: 2026-08-05g (GOVERNANCE RATIFICATION — no status flip, no behaviour change. BigDev
+#   resolved the two escalations Story 10.24 raised; recorded as Decision 2026-08-05-074, a NEW entry
+#   referencing 073 rather than an in-place edit (ratified decisions are never edited in place).
+#   ESCALATION 1 RESOLVED BY RATIFICATION, not deferral: `missed-closed-cycle-v1` is CONFIRMED as the
+#   versioned implementation policy for `contribution.in_lapse`. Ratified at the lowest-cost moment —
+#   the fact is already part of the validity payload contract, and no ACTIVATED clause depends on it yet
+#   (only the held R7(A)). The consequence runs OPPOSITE to how a "v1" label usually reads: the
+#   cheap-re-pin window is now CLOSED and the bar for change went UP — once consumed by member
+#   eligibility rules, a re-pin is a GOVERNANCE change requiring a superseding decision, never an
+#   implementation refinement. Recorded at the definition site (validity-service/producer.ts,
+#   ContributionLapsePolicy) and pinned by a test that states why the literal is not free to move, so
+#   the ratification cannot decay into a comment nobody reads.
+#   ESCALATION 3 RESOLVED AS PROPOSED: Story 10.25 CONFIRMED as owner of the 10.16 restoration-package
+#   count; the 'story-10-24' -> 'story-10-25' re-point stands, recorded at both label sites. No longer a
+#   scope question — moving it again needs a superseding decision, not a judgement call.
+#   Escalations 2/4/5 unaffected and stay recorded (un-attested fully-provisioned p95 delta; FR-12A
+#   shape variance with missed_count_lifetime NOT invented; stale change-proposal anchors, all
+#   re-verified live before use). 10-24 stays `review`.)
+# last_updated: 2026-08-05f (10-24-contribution-fact-producer-projection-r7-cf-activation:
+#   ready-for-dev -> in-progress -> review via bmad-dev-story, off main @ 55aa1cc. THE PRODUCER STORY
+#   4.2 DEFERRED TO "EPIC 8/9" AND NEITHER EPIC BUILT IS NOW BUILT. R7(C)/(D)/(E)/(F) evaluate in
+#   production; the Trustee-Lite violator section is LIVE.
+#
+#   THE FINDING THE STORY PREDICTED, CONFIRMED BY PROBE: wiring the four R7 clauses as ordinary
+#   RuleDescriptors would have flagged EVERY member in the Pariwar four times over on the surface that
+#   feeds suspension decisions. The mandated revert probe was RUN — removing `.filter(e => e.applied)`
+#   turned a clean member's payload from ZERO R7 entries into FOUR — and restored. The D2 mechanism is
+#   `evaluateLadderAt` + `R7_ACTIVATED_CLAUSE_IDS` + applied-only contribution; `applied` comes from the
+#   ladder's own `isApplied` (payload `on_pass` DATA + swap-guard), never re-derived.
+#
+#   A REAL PRODUCTION BUG THE TESTS CAUGHT, worth recording because it was invisible to typecheck:
+#   `max(<timestamptz>)` comes back from node-postgres as a STRING, not a Date. The read was annotated
+#   `sql<Date|null>` — a lie the compiler happily believed — and `deriveContributionFacts` threw
+#   `lastConfirmedAt.getTime is not a function` on the LIVE path. Now typed as the raw driver shape and
+#   normalised through `toDate`, with the reason recorded at the call site.
+#
+#   SUBSTRATE: migration 0093 adds TWO projections — `member_contribution_ledger` (one row per
+#   contribution.confirmed, its reversal folded into a NULLABLE TIME-BEARING `reversed_at` so a reversal
+#   after `at` does not apply AT `at`) and `member_pool_assignments` (one row per member/pool at freeze,
+#   from the PERSISTED snapshot, never a recompute of assignMembersToPools). Row-level + indexed
+#   aggregate rather than one aggregate row per member, because an aggregate can only answer "now" and
+#   `assignable-roster.ts` calls getValidityAt(committedAt) for every member of every spawning cycle.
+#
+#   TWO MAINTENANCE MECHANISMS ON PURPOSE (D3) — a trigger for the ledger, an explicit writer for the
+#   assignments (a trigger on pool_snapshots would expand a JSONB member array inside Story 7.9's <60s
+#   spawn envelope). The hazard is drift, so the equivalence obligation is ATTACHED: ONE SHARED TEST
+#   BODY run against BOTH paths over atomicity / idempotency / replay-equivalence / ordering-
+#   independence, plus the fact-level check that incrementally-maintained and freshly-backfilled state
+#   yield identical facts. A future third projection inherits the obligation, not just the precedent.
+#
+#   TWO DESIGN DECISIONS THE TESTS FORCED INTO THE OPEN, both kept: neither projection grants DELETE to
+#   twt_app (append projections; repair = idempotent backfill) — pinned by a 42501 probe so the test
+#   helper's role-switch can never read as a workaround; and the 0093 migration must arm
+#   `app.member_search_projection_writer` for its label UPDATE, because migration 0035's write-rejection
+#   trigger admits only the projector (correct — the guard was not weakened).
+#
+#   AC6(a) DISCHARGED — the obligation migration 0036:88-90 wrote down in its own comment. It could NOT
+#   be discharged by widening 0036's WHEN clause: that trigger keys on `member_id = NEW.stream_id`, and
+#   contribution.confirmed rides the ALERT stream. A SECOND trigger keyed on payload->>'memberId' is the
+#   only correct form; widening the WHEN would have looked discharged and deleted nothing.
+#
+#   AC6(c) — POOL_ASSIGNMENT_HASH_VERSION stays 'v1', PROVEN not asserted: a re-spawn after confirmation
+#   + reversal events yields a byte-identical roster hash AND byte-identical assignments. A bump would
+#   have broken replay of every already-frozen cycle (10.17 D3).
+#
+#   10.11's SEAM CLAIM HELD, and was verified mechanically: `violator-flags.ts` is BYTE-UNCHANGED below
+#   its header (comment-stripped diff = empty). The whole production change was ONE call site in
+#   apps/api trustee-lite/handlers.ts. The candidate scan is BOUNDED — 7 queries for the whole Pariwar
+#   regardless of member count, then a PURE per-member ladder evaluation — because one getValidityAt per
+#   member is exactly the N+1 AC7 names as its binding gate (10.11's own spec went 44s -> 220s on that
+#   shape). Counted-query assertion: 1 vs 25 contributions -> IDENTICAL count, exactly 2.
+#
+#   HELD, DELIBERATELY: R7(A)/(B)/(G) stay omitted under mechanized `R7_HELD_CLAUSES` — and (A)/(B) are
+#   held even though total_count/ever_contributed ARE supplied, because prd.md:346 makes proxy
+#   evaluation NORMATIVELY forbidden. R8 is NOT activated (needs claim.death_classification +
+#   compliance_percent, neither supplied); types.ts's "R7/R8 omitted until the Epic 8/9 producer" wording
+#   read literally implied otherwise and is corrected in place. `months_since_last` is OMITTED (not
+#   zero, not large) for a never-contributed member — supplying it would fire R7(C)/(F) on exactly
+#   R7(B)'s population, i.e. proxy evaluation by the back door.
+#
+#   SENTINEL RENAME (10.11's owed-forward commitment) 'epic-8-9' -> 'story-10-24' across
+#   validity-service, contracts, the member_search_projection column DEFAULT + existing rows, the admin
+#   i18n map and ~14 test fixtures; the STATUS literal 'producer_unavailable' is unchanged (the lockstep
+#   test depends on it) and the sentinel STAYS REACHABLE for a genuine per-member gap (D6 — zero and
+#   unknown are different claims). 10.16's restorationPackage label re-pointed 'story-10-24' ->
+#   'story-10-25': 10.24 shipped and did NOT close that gap, so leaving it would have made an honest
+#   sentinel into a lie. That one is Escalation 3 — a scope call for BigDev, revertible in one literal.
+#
+#   Escalation 1 OPEN and TIME-SENSITIVE: `missed-closed-cycle-v1` is a VERSIONED payload-contract
+#   element, not a placeholder. No ACTIVATED clause reads `in_lapse` today (only the held R7(A)), so a
+#   re-pin is cheap NOW and becomes a governance change the moment a clause reads it.
+#
+#   OpenAPI regen was BYTE-IDENTICAL — expected, per 10.17's finding that the 4.6 payload was never
+#   registered in the hand-curated emitter; recorded, deliberately not "fixed" here. Decision
+#   2026-08-05-073 records D2/D3/D5/D7 + the version-pin proof; deferred-work.md records the
+#   search-projection fact population, missed_count_lifetime, the un-attested fully-provisioned p95, and
+#   the <=60s deploy window + its rejected cache-key alternative.
+#
+#   Validation: typecheck/lint/build green; determinism gate at exactly ONE hash; contracts-determinism,
+#   domain-invariants and all 26 other static gates green. Story surface: validity-service 192/192,
+#   domain contribution+pool+trustee-lite 251/251, apps/api trustee-lite E2E 19/19.
+#   AC10 chase — ONE real find, FIXED not waived: a stale Story 4.6 assertion in validity-service.spec.ts
+#   expected the contribution sentinel; the producer now correctly returns real facts for a member with a
+#   readable history and zero contributions (total_count 0 is DATA; the sentinel is reserved for
+#   un-derivable). It escaped the earlier turbo test run because that runs WITHOUT DATABASE_URL so the
+#   spec skipped, and surfaced in BOTH ci:local jobs via the DATABASE_URL-global double-run.
+#   The remaining ci:local reds are INHERITED: a different victim each run (jobs audit-chain 8.5s, then
+#   banners.spec.ts 9.3s), always timing-shaped, all passing in isolation, none touching
+#   contribution/validity/R7 — and banners.spec.ts was already failing in the PRE-EDIT baseline.)
+# last_updated: 2026-08-05e (10-24-contribution-fact-producer-projection-r7-cf-activation: backlog ->
+#   ready-for-dev via bmad-create-story, off main @ 55aa1cc. Saved
+#   10-24-contribution-fact-producer-projection-r7-cf-activation.md. Epic 10's TWELFTH authored story
+#   and the first of the three appended by sprint-change-proposal-2026-08-04-R2 (the contribution-
+#   governance fact producer Story 4.2 deferred to "Epic 8/9" and nobody ever built).
+#   THE FINDING, and the reason this story could have shipped a governance disaster: `assembleClauses`
+#   (validity-service/payload.ts:246-277) pushes EVERY non-null clause slot into
+#   applicableNiyamavaliClauses[], and the SHIPPED `deriveViolatorFlags` (domain/trustee-lite/
+#   violator-flags.ts) maps EVERY R7 clause id it finds there into a violator flag with NO `applied`
+#   check. Wire R7(C)-(F) as four ordinary descriptors and every member in the Pariwar acquires four
+#   flags carrying outcome `r7_not_applicable` — on the surface that feeds suspension decisions. D2
+#   resolves it: evaluate the family through `evaluateLadderAt` (ladder.ts:197, already exported) with
+#   R7_ACTIVATED_CLAUSE_IDS + R7_NOT_APPLICABLE, and contribute ONLY `perClauseResults.filter(applied)`
+#   — reusing the ladder's DATA-derived `isApplied` + its swapped-payload guard rather than
+#   re-deriving `decision !== 'r7_not_applicable'` (a second definition of "applied" is exactly the
+#   drift class [[project_epic6_drizzle_correlated_subquery_bug]] warns about).
+#   SECOND load-bearing decision (D1): the projection must be AS-OF CORRECT, not a per-member
+#   aggregate row. apps/jobs/src/assignable-roster.ts calls getValidityAt(committedAt) for every
+#   member of every spawning cycle and FR-12A commits replayability, so a now-only producer would make
+#   every R7 finding non-reproducible on a suspension surface. Two narrow row-level tables:
+#   member_contribution_ledger (PK = the contribution.confirmed event_id; nullable time-bearing
+#   reversed_at so a reversal after `at` does not apply at `at`) + member_pool_assignments (from
+#   pool_snapshots.member_assignments, the persisted truth 7.6 already reads — never a naive
+#   assignMembersToPools recompute). Ledger maintained by an events_log AFTER-INSERT trigger (D3:
+#   emitter-agnostic and atomic — there are THREE confirmed/reversal writers today and the failure
+#   mode this whole story exists to fix is "a producer nobody owned"); assignments by an explicit
+#   writer beside the existing db.insert(poolSnapshots) in pool/spawn.ts:484-495 (a trigger there
+#   would expand up to 4L/N member ids inside Story 7.9's <60s spawn envelope, un-instrumented).
+#   R7(A)/(B)/(G) stay OMITTED via absence from VALIDITY_RULE_ORDER (D4 — stronger than
+#   evaluate-then-filter), recorded in a mechanized `R7_HELD_CLAUSES` with a totality test pinning
+#   activated ∪ held === R7_CLAUSE_IDS and an empty intersection, plus a revert-sanity probe. This is
+#   the mechanized form of prd.md:346's NORMATIVE "MUST NOT substitute proxy populations"
+#   [[feedback_mechanization_split_commitment]] / [[feedback_gate_scope_semantic_coverage]].
+#   THE R8 TRAP, named in-story: validity-service/types.ts:56-65 reads "R7/R8 are OMITTED until the
+#   Epic 8/9 producer supplies real contribution.* facts" — supplying them does NOT activate R8, which
+#   needs claim.death_classification (claim-time, Epic 6) AND contribution.compliance_percent (not one
+#   of the five). VALIDITY_RULE_ORDER must not gain R8.
+#   Blast radius discharged explicitly: (a) migration 0036:88-90's own comment mandates extending the
+#   validity-cache invalidation trigger to contribution.*/reconciliation.* — that obligation lands
+#   HERE, and it needs a SECOND trigger keyed on payload->>'memberId' because those events ride the
+#   ALERT stream, so the existing `member_id = NEW.stream_id` body is wrong for them (and the 4.8 cache
+#   key's member_state_hash therefore never shifts on a confirmation); (b) 10.17's D5 60s cache-shape
+#   deploy window recurs verbatim, with the invalidate-all route as the zero-window lever and the
+#   payload-version cache key re-REJECTED; (c) POOL_ASSIGNMENT_HASH_VERSION does NOT bump — the roster
+#   reads is_assignable only, which contribution facts cannot move (10.17 D3) — proven by a
+#   byte-identical re-spawn test from a frozen committed_at.
+#   Five escalations owed: the un-pinned `in_lapse` policy (ships as a named `missed-closed-cycle-v1`
+#   constant on the CR-4.5-D2 LapseNettingPolicy precedent — it has NO live clause consumer since
+#   R7(A) is held, so a later re-pin is free); the measured p95 cost of four extra clause evaluations
+#   (~8 extra queries/member, O(N·M) on the roster path) re-run through the EXISTING
+#   @twt/measured-validation harness, never new tooling; who owns 10.16's restoration-package count
+#   (this story re-points its `producer: 'story-10-24'` label to 'story-10-25' — after 10.24 ships,
+#   the label would otherwise name a story that landed and did not close the gap); FR-12A's documented
+#   contribution_history shape (prd.md:404-406) vs what ships, with no missed_count_lifetime; and the
+#   change proposal's STALE anchors (payload.ts:294 is :283-286 + :336 at HEAD — 10.17 inserted
+#   deriveIsAssignable above) [[feedback_verify_before_committing_governance_claims]].
+#   Also discharges 10.11's owed-forward sentinel rename (producer 'epic-8-9' -> 'story-10-24'; the
+#   STATUS literal 'producer_unavailable' stays, or the violator-flags short-circuit + the
+#   trustee-lite-sentinel-lockstep test lose their teeth) and flips the ONE named 10.11 seam call site
+#   (trustee-lite/handlers.ts:237) to {status:'available'} with violator-flags.ts byte-unchanged.
+#   No new permission key; PERMISSION_CATALOG_VERSION stays 28. Migration is HAND-AUTHORED (never
+#   db:generate — snapshot baseline frozen at 0020) [[project_live_db_test_gotchas]]. Story file:
+#   10-24-contribution-fact-producer-projection-r7-cf-activation.md.)
 # last_updated: 2026-08-05d (10-11-trustee-lite-list-signals: review -> done via bmad-code-review, off
 #   main @ 5394717 on branch feat/10-11-trustee-lite-list-signals. Three parallel layers (Blind Hunter,
 #   Edge Case Hunter, Acceptance Auditor) over the uncommitted diff; 13 unique findings after dedup: 2
@@ -3425,7 +3626,7 @@ development_status:
   10-21-off-portal-dpdpa-access: backlog
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: backlog
-  10-24-contribution-fact-producer-projection-r7-cf-activation: backlog
+  10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: backlog
   10-26-r7g-personal-event-excuse-assertion: backlog
   epic-10-retrospective: optional

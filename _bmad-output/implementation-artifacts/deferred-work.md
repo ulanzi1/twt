@@ -4,6 +4,93 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: implementation of story 10-24-contribution-fact-producer-projection-r7-cf-activation (2026-08-05)
+
+_Story 10.24 is the `contribution.*` FACT producer Story 4.2 deferred to "Epic 8/9" and that neither
+epic built. It supplies FIVE of the engine's seven fact keys and activates R7(C)/(D)/(E)/(F). What it
+deliberately does NOT do is recorded here rather than left for a future reader to re-derive._
+
+### Escalation outcomes (recorded 2026-08-05)
+
+- **Escalation 1 — RESOLVED by ratification, not deferral.** `missed-closed-cycle-v1` is the RATIFIED
+  versioned implementation policy for `contribution.in_lapse` (Decision 2026-08-05-074). Ratified at the
+  lowest-cost moment — already on the payload contract, no activated clause depending on it yet. **The
+  bar for changing it is now HIGHER, not lower:** once consumed by member eligibility rules, changes are
+  GOVERNANCE changes, requiring a superseding decision rather than a refactor. Nothing is deferred here;
+  this line exists so a future reader does not mistake a ratified `v1` for a pending question.
+- **Escalation 3 — RESOLVED as proposed.** Story 10.25 is CONFIRMED as the owner of Story 10.16's
+  restoration-package count; the `story-10-24` → `story-10-25` label re-point stands.
+- **Escalations 2 / 4 / 5 remain as recorded below** (the un-attested fully-provisioned p95 delta, the
+  FR-12A shape variance, the stale change-proposal anchors).
+
+### Deferred, with an owner
+
+- **`member_search_projection.contribution_section` still carries the SENTINEL** — this story re-points
+  its LABEL only (`epic-8-9` → `story-10-24`: the column DEFAULT plus an UPDATE of existing rows,
+  migration 0093), it does not populate it with real facts. Deferred: the AR-65 admin member-search
+  compound read model is projector-maintained behind a write-rejection trigger (migration 0035), so
+  filling it is a projector change plus its own backfill — a separate unit of work, not a label edit
+  this diff can absorb. **Re-trigger:** when admin member-search needs to FILTER or SORT on contribution
+  standing (today it only displays the section).
+
+- **`contribution.r7a_restorations_used` → Story 10.25; `contribution.personal_event_excuse_claimed` →
+  Story 10.26.** The two of the engine's seven fact keys this producer does NOT supply. Mechanized, not
+  merely noted: `R7_HELD_CLAUSES` names each blocking fact + owner, and the totality test asserts every
+  `blockedBy` key is genuinely absent from `R7_SUPPLIED_FACT_KEYS` — so a hold cannot silently outlive
+  its reason. **Re-trigger:** 10.25 / 10.26 landing; the test will then fail until the hold is lifted.
+
+- **`contribution.compliance_percent` (R8) is UNOWNED.** R8 needs it plus a claim-time
+  `claim.death_classification`, and it is not one of the seven `R7_CONTRIBUTION_FACT_KEYS` at all. R8 is
+  NOT activated by this story and must not enter `VALIDITY_RULE_ORDER`. No story owns this fact today —
+  recorded so the next reader does not assume the R7 producer covered it. **Re-trigger:** any attempt to
+  activate R8 at member standing.
+
+- **The FULLY-PROVISIONED p95 delta is UN-ATTESTED.** The p95 bench Pariwar seeds R12 only, so the
+  recorded numbers include the four extra `evaluateAt` calls but NOT the four extra `resolveByClauseId`
+  payload resolutions (nor the memo/audit writes) a Pariwar with R7 clause versions incurs. Measuring it
+  needs a seeded-R7 bench fixture. Recorded rather than backfilled with a number nobody ran
+  ([[feedback_record_unattested_no_backfill]]). The BINDING AC7 gate — no new N+1 query path — is
+  asserted directly and passes (counted-query test: 1 vs. 25 contributions → identical count, exactly 2).
+  **Re-trigger:** before the pre-launch 4L measurement pass.
+
+- **`missed_count_lifetime` is NOT supplied** (Escalation 4). `prd.md:404-406` documents the FR-12A
+  `contribution_history` sub-object as `{total_contributions, missed_count_lifetime, rolling_year_skips,
+  R7_subclause_state, R8_subclause_state}`. The SHIPPED sub-object is `contributionHistorySummary`
+  (Story 4.6 already diverged on the name) and now carries engine-fact-keyed values. A LIFETIME miss
+  count needs assignment history predating the projection's backfill horizon, which does not exist —
+  inventing one would be a fabricated governance fact on a suspension surface. Recorded as a VARIANCE
+  against the PRD. **Re-trigger:** a PRD amendment, or a surface that genuinely needs lifetime misses.
+
+### Deploy note — the ≤60s payload-shape window (AC6b)
+
+Wiring the producer into `assemblePayload` changes the SHAPE of `contributionHistorySummary`. For up to
+`VALIDITY_CACHE_TTL_SECONDS = 60` after rollout, a warm pre-deploy `member_validity_cache` row holds the
+OLD-shaped JSONB, and `fastify-type-provider-zod` parses the response against a `.strict()` DTO — so a
+read served from such a row can 500.
+
+**The zero-window lever, if wanted:** `POST /api/v1/p/:pariwarId/admin/validity-cache/invalidate-all`
+(`apps/api/src/modules/member-validity/routes.ts` → `validityCache.invalidateAllForPariwar`), run per
+Pariwar immediately after deploy. Note migration 0093's new trigger only invalidates rows for members
+who receive a contribution event — it does not clear the pre-deploy population, so the lever is the
+mechanism for that.
+
+**⚠ EXPLICITLY REJECTED, do not re-open:** adding a payload-shape/version component to the frozen Story
+4.8 cache key. Story 10.17 D5 rejected exactly that, by name, for exactly this bounded transient.
+
+### Recorded, not deferred
+
+- **The OpenAPI regen was BYTE-IDENTICAL.** `pnpm contracts:emit-openapi` produced no diff despite the
+  `contributionHistorySummary` DTO becoming a union. That is the EXPECTED outcome, not a miss: Story
+  10.17 already found the Story 4.6 validity payload has never been registered in the hand-curated
+  emitter. Recorded here; deliberately NOT "fixed" in this story (registering it is its own change with
+  its own review surface).
+
+- **The backfills were NOT exercised against production data, because there is none.** Both
+  `backfillContributionLedger` and `backfillMemberPoolAssignments` are exercised against the
+  `twt-test-pg` fixture only, where they are asserted BYTE-IDENTICAL to the incrementally-maintained
+  state (the D3 replay-equivalence property). Stated plainly rather than implying a production backfill
+  was run.
+
 ## Deferred from: code review of story-10-5-news-blog-dual-surface-author-reviewer-scheduled-publish-channel-per-post (2026-07-30)
 
 - **`members-all` audience resolution uses a raw `members.state` scan instead of the validity-cache/`is_valid` predicate the story's own Dev Notes name as canonical** (`packages/domain/src/news-blog/audience.ts`). Deferred: no ready-made *bulk* "list valid members" resolver exists anywhere in the codebase — the validity cache is per-member/cache-aside, not built for a bulk audience query — so building one is a real infrastructure project, not a local patch this diff can absorb. **Re-trigger:** when a bulk validity-cache resolver lands for another consumer, or if a correctness gap between raw-state and true validity is observed in practice (e.g. a member mid-grace-period edge case).

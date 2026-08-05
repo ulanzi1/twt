@@ -115,3 +115,46 @@ headline is a pre-launch operator run with `KMS_TEST_MODE=live`).
 > against the frozen "warm + cold-miss mix" requirement) and its admin-search run neither decrypted the
 > KYC-name field nor wrote the per-search audit entry (both real per-request costs); both gaps are fixed
 > in this revision, and these numbers reflect the corrected, more faithful measured path.
+
+---
+
+## Story 10.24 — contribution-fact producer + R7(C)–(F) activation (2026-08-05)
+
+Re-measured through the EXISTING harness (AI-6-2's one shared tooling — no new benchmarking code was
+built; [[project_measured_validation_framework]], [[feedback_no_premature_package]]).
+
+**Why an A/B and not just an "after":** the story's AC7 predicted ~8 additional queries per validity
+evaluation (four extra `evaluateAt` calls, each with its own `getMemberStateAt` replay and keyed-store
+round-trip, plus the ladder shell's `resolveByClauseId`). That is a claim about a DELTA, so a delta is
+what was measured. Both arms were run **in isolation on the same machine, back-to-back**; the "before"
+arm was produced by temporarily stubbing the two `service.ts` call sites (`produceContributionFacts` →
+`null`, `evaluateAppliedR7ClauseSlots` → `[]`) and nothing else, then restoring.
+
+| metric | before | after (run 1) | after (run 2) |
+|---|---|---|---|
+| uncached `getValidityAt` p50 | 5.50 ms | 6.05 ms | 6.31 ms |
+| uncached `getValidityAt` **p95** | **15.55 ms** | **18.73 ms** | **15.98 ms** |
+| uncached `getValidityAt` p99 | 38.81 ms | 24.90 ms | 24.66 ms |
+| cached-path (AI-4-1) p50 | 3.55 ms | 2.66 ms | 2.44 ms |
+| cached-path (AI-4-1) **p95** | **115.03 ms** | **34.85 ms** | **38.96 ms** |
+
+**Reading, honestly.** The p95 columns straddle each other across runs and are NOT a clean signal at
+this sample size — the cached-path p95 in particular is dominated by cold-miss/warmup placement, which
+is why the "before" number there is the *largest* in the table despite being the *smaller* workload. The
+one figure that moves consistently and in the expected direction is the uncached **p50: +0.6–0.8 ms**,
+which is the cost of the producer's two aggregate queries. Nothing here approaches the FR-12A budget
+(p95 < 200 ms @ 4L, delivered by the Story 4.8 cache).
+
+**⚠ UN-ATTESTED, and it matters ([[feedback_record_unattested_no_backfill]]):** the bench Pariwar seeds
+**R12 only**. With no R7 clause version effective at the pinned instant, `evaluateLadderAt` takes its
+`missingClauseIds` path per sub-clause — so these numbers include the four extra `evaluateAt` calls but
+**NOT** the four extra `resolveByClauseId` payload resolutions, nor the memo/audit writes, that a
+FULLY-PROVISIONED Pariwar incurs. The fully-provisioned delta is therefore **larger than measured here
+and has not been measured**. It is bounded and predictable rather than open-ended (a FIXED four extra
+clause resolutions per evaluation, member-count-independent), and the binding AC7 gate is the
+structural one — no new N+1 query path — which is asserted directly by the counted-query test
+(`tests/integration/contribution-facts.spec.ts`: 1 vs. 25 contributions → **identical** query count,
+exactly 2). Measuring the fully-provisioned p95 needs a seeded-R7 bench fixture and is recorded in
+`deferred-work.md` rather than backfilled with a number nobody ran.
+
+The 100×-thread determinism gate (`test:determinism`) stays at **exactly one hash** — re-run green.

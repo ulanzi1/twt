@@ -43,10 +43,46 @@ export const VyawasthaShulkStatusDto = z
   })
   .strict();
 
-/** D2 typed sentinel — the contribution producer is Epic 8/9; NEVER an empty array. */
+/**
+ * D2 typed sentinel — an honest per-member contribution-history gap; NEVER a fabricated zero.
+ *
+ * Story 10.24 re-pointed `producer` from `'epic-8-9'` to `'story-10-24'` (the rename Story 10.11 owed
+ * forward): `epic-8-9` named a producer that was never a unit of work, which is exactly how the gap
+ * survived two epic retrospectives unowned. The status LITERAL is unchanged — `violator-flags.ts`'s
+ * short-circuit and the sentinel-lockstep test both depend on `'producer_unavailable'`.
+ *
+ * The sentinel remains REACHABLE after 10.24 (D6): a per-member gap can still be genuine (no projected
+ * history; a historical `at` before the projection's coverage; an incomplete backfill).
+ */
 export const ContributionHistoryUnavailableDto = z
-  .object({ status: z.literal('producer_unavailable'), producer: z.literal('epic-8-9') })
+  .object({ status: z.literal('producer_unavailable'), producer: z.literal('story-10-24') })
   .strict();
+
+/**
+ * Story 10.24 — the PRODUCED contribution history.
+ *
+ * `facts` is an open record keyed by the DOTTED `contribution.*` fact keys (`contribution.total_count`,
+ * …). It is deliberately NOT `.strict()`-enumerated: the key set grows as Stories 10.25/10.26 supply
+ * the two held facts, and the consumer (`deriveViolatorFlags`) filters by `startsWith('contribution.')`
+ * rather than by a fixed field list. `heldFacts` puts the omission ON THE WIRE, so a client can say
+ * WHAT is missing and WHO owns it instead of silently rendering a partial picture.
+ */
+export const ContributionHistoryAvailableDto = z
+  .object({
+    status: z.literal('ok'),
+    facts: z.record(z.string(), z.union([z.number(), z.boolean()])),
+    lapseSince: Iso8601Datetime.nullable(),
+    // `.readonly()` mirrors the service type's `readonly [...]`, so the apps/api boundary stays a pure
+    // pass-through with no defensive copy (the DTO IS the service payload's shape, not a re-modelling).
+    heldFacts: z.array(z.object({ key: z.string(), producer: z.string() }).strict()).readonly(),
+  })
+  .strict();
+
+/** The contribution-history sub-object: produced, or the honest typed gap. */
+export const ContributionHistorySummaryDto = z.union([
+  ContributionHistoryAvailableDto,
+  ContributionHistoryUnavailableDto,
+]);
 
 export const MedicalDisclosureFlagsDto = z
   .object({
@@ -122,7 +158,7 @@ export const MemberValidityPayloadDto = z
     isAssignable: z.boolean(),
     lockInStatus: LockInStatusDto,
     vyawasthaShulkStatus: VyawasthaShulkStatusDto,
-    contributionHistorySummary: ContributionHistoryUnavailableDto,
+    contributionHistorySummary: ContributionHistorySummaryDto,
     medicalDisclosureFlags: MedicalDisclosureFlagsDto,
     retirementCoverage: RetirementCoverageUnionDto,
     specialFlags: z.array(z.string()),
@@ -143,7 +179,10 @@ export type MemberValidityResponse = z.output<typeof MemberValidityResponse>;
 export const ProducerUnavailableSectionDto = z
   .object({
     status: z.literal('producer_unavailable'),
-    producer: z.enum(['epic-6', 'epic-8-9']),
+    // Story 10.24 (AC8): 'epic-8-9' → 'story-10-24'. The admin member-search projection keeps its
+    // SENTINEL — populating `contribution_section` with real facts is DEFERRED (deferred-work.md);
+    // this only re-points the label so it names a story that exists rather than an unowned epic pair.
+    producer: z.enum(['epic-6', 'story-10-24']),
   })
   .strict();
 

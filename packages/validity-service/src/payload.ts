@@ -20,6 +20,7 @@ import { sha256Hex } from './hash.js';
 import type { ClauseEvalSlot } from './rules.js';
 import type {
   ApplicableClause,
+  ContributionHistorySummary,
   ContributionHistoryUnavailable,
   LockInStatusPayload,
   MedicalDisclosureFlagsPayload,
@@ -279,10 +280,27 @@ export function assembleClauses(slots: readonly ClauseEvalSlot[]): AssembledClau
 /** The registry-version sentinel when NO clause resolved (e.g. an unprovisioned Pariwar). */
 export const EMPTY_REGISTRY_VERSION = 'no-clauses';
 
-/** The single contribution-unavailable sentinel (D2-A) — one value, so every payload is byte-identical here. */
+/**
+ * The single contribution-unavailable sentinel (D2-A) — one value, so every payload that carries it is
+ * byte-identical here.
+ *
+ * ── Story 10.24 (AC8): `producer` re-pointed `'epic-8-9'` → `'story-10-24'` ──────────────────────
+ * The rename Story 10.11 owed forward ([[feedback_closure_language_precision]]). `epic-8-9` named a
+ * producer that was never a unit of work — which is exactly how the gap survived two epic
+ * retrospectives unowned. `story-10-24` names the story that built it.
+ *
+ * ⚠ The status LITERAL `'producer_unavailable'` does NOT change: `violator-flags.ts`'s short-circuit
+ * and `tests/trustee-lite-sentinel-lockstep.test.ts` both depend on it, and that lockstep test is the
+ * pin that keeps the two constants honest.
+ *
+ * ⚠ This sentinel STAYS REACHABLE after 10.24 (D6). It is now the honest answer for a genuine
+ * PER-MEMBER gap (no projected history; a historical `at` before the projection's coverage; an
+ * incomplete backfill) rather than a deployment-wide "no producer exists" statement. It is never
+ * replaced by a fabricated `{ total_count: 0 }`.
+ */
 export const CONTRIBUTION_UNAVAILABLE: ContributionHistoryUnavailable = {
   status: 'producer_unavailable',
-  producer: 'epic-8-9',
+  producer: 'story-10-24',
 };
 
 // ── Full payload assembly + the replay-stable hash ────────────────────────────────────────────────
@@ -301,6 +319,12 @@ export interface AssembleInput {
   vyawasthaShulkStatus: VyawasthaShulkStatusPayload;
   medicalDisclosureFlags: MedicalDisclosureFlagsPayload;
   retirementCoverage: RetirementCoveragePayload | RetirementCoverageUnavailable;
+  /**
+   * Story 10.24 — the produced contribution history, or ABSENT when this member's facts could not be
+   * derived (the service then falls back to `CONTRIBUTION_UNAVAILABLE`, D6). Optional so DB-free unit
+   * tests that predate 10.24 keep compiling; absent ≡ the honest gap, never a fabricated zero.
+   */
+  contributionHistory?: ContributionHistorySummary;
   slots: readonly ClauseEvalSlot[];
 }
 
@@ -333,7 +357,7 @@ export function assemblePayload(input: AssembleInput): MemberValidityPayload {
     isAssignable: deriveIsAssignable(input.memberState, moderation.status),
     lockInStatus: input.lockInStatus,
     vyawasthaShulkStatus: input.vyawasthaShulkStatus,
-    contributionHistorySummary: CONTRIBUTION_UNAVAILABLE,
+    contributionHistorySummary: input.contributionHistory ?? CONTRIBUTION_UNAVAILABLE,
     medicalDisclosureFlags: input.medicalDisclosureFlags,
     retirementCoverage: input.retirementCoverage,
     specialFlags: allSpecialFlags,

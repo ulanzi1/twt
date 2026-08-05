@@ -152,3 +152,9 @@ export * from './feature-flag-versions-rls.js';
 // read is NOT served here — it runs pre-scope on the BYPASSRLS servicePool, exactly as the
 // member_withdrawals rejoin read already does.
 export * from './member-moderation-actions-rls.js';
+// Story 10.24 — the contribution-fact projection tenant-isolation policies (NOT cross-readable; mirror
+// member-validity-cache-rls). `member_contribution_ledger` is TRIGGER-written under the appending
+// session's own scope (SECURITY INVOKER, migration 0093), which is why its `withCheck` is load-bearing
+// rather than decorative. Neither table grants DELETE — append projections, repaired by an idempotent
+// backfill. No write-rejection trigger: they hold projected facts, not lifecycle state.
+export * from './contribution-projection-rls.js';

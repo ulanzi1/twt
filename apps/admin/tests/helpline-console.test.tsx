@@ -27,7 +27,7 @@ const MEMBER: MemberSearchResultItem = {
   aadhaarMasked: 'XXXX1234',
   verificationStrength: 'aadhaar_kyc',
   nomineeSummary: [],
-  contributionSection: { status: 'producer_unavailable', producer: 'epic-8-9' },
+  contributionSection: { status: 'producer_unavailable', producer: 'story-10-24' },
   claimSection: { status: 'producer_unavailable', producer: 'epic-6' },
 };
 

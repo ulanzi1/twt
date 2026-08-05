@@ -156,8 +156,35 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
     expect(p.memberId).toBe(memberId);
     expect(p.isValid).toBe(true); // active
     expect(p.isActive).toBe(true);
-    expect(p.contributionHistorySummary).toEqual({ status: 'producer_unavailable', producer: 'epic-8-9' });
-    // R12 is the single applicable clause at member standing (R7/R8 omitted; D2-A).
+    // ── Story 10.24: the producer EXISTS, so this member gets real facts, not the sentinel ────────
+    // This member has a readable history and NO contributions, which genuinely derives
+    // `total_count: 0` / `ever_contributed: false`. That is DATA, not a gap — and the distinction is
+    // load-bearing (D6): the `producer_unavailable` sentinel is reserved for a member whose history
+    // could not be derived AT ALL, so collapsing the two would make an un-assessed member
+    // indistinguishable from a clean-record one on the surface that feeds a suspension decision.
+    //
+    // `months_since_last` is ABSENT (not 0, not large): a never-contributed member is exactly
+    // R7(B)'s population, R7(B) is HELD, and supplying "months since signup" would fire R7(C)/(F) on
+    // them — proxy evaluation, which `prd.md:346` forbids normatively.
+    expect(p.contributionHistorySummary.status).toBe('ok');
+    if (p.contributionHistorySummary.status === 'ok') {
+      expect(p.contributionHistorySummary.facts).toEqual({
+        'contribution.total_count': 0,
+        'contribution.ever_contributed': false,
+        'contribution.skips_current_year': 0,
+        'contribution.in_lapse': false,
+      });
+      expect(p.contributionHistorySummary.facts).not.toHaveProperty('contribution.months_since_last');
+      expect(p.contributionHistorySummary.lapseSince).toBeNull();
+      // The honest hold, on the wire: what is missing and who owns it.
+      expect(p.contributionHistorySummary.heldFacts.map((f) => f.producer).sort()).toEqual([
+        'story-10-25',
+        'story-10-26',
+      ]);
+    }
+    // R12 is still the ONLY applicable clause here: this Pariwar seeds no R7 clause versions, and even
+    // if it did, none of R7(C)–(F) would APPLY to a member with no contribution history (D2 —
+    // only clauses whose `on_pass` fired reach this list). R8 is not activated at all.
     expect(p.applicableNiyamavaliClauses.map((c) => String(c.clauseId))).toEqual(['niy.retirement-coverage.r12']);
     expect(p.provenanceTrace[0]?.clauseVersionId).toBe(versionId);
     expect(p.ruleRegistryVersion).toBe(versionId);

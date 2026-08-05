@@ -69,13 +69,21 @@ export interface NomineeSummaryEntry {
 export interface ProducerUnavailableSection {
   status: 'producer_unavailable';
   /** The story family that will supply the real events (audit trail for the gap). */
-  producer: 'epic-6' | 'epic-8-9';
+  producer: 'epic-6' | 'story-10-24';
 }
 
-/** The contribution-section sentinel constant (producer is Epic 8/9). */
+/**
+ * The contribution-section sentinel constant.
+ *
+ * ⚠ Story 10.24 re-pointed the LABEL only (`epic-8-9` → `story-10-24`, migration 0093 does the column
+ * DEFAULT + the existing rows). Populating this section with REAL facts is DEFERRED and recorded in
+ * `deferred-work.md`: the admin member-search compound read model keeps its sentinel even though the
+ * `contribution.*` producer now exists, because filling it is a projector change with its own
+ * backfill, not a label change.
+ */
 export const CONTRIBUTION_SECTION_UNAVAILABLE: ProducerUnavailableSection = {
   status: 'producer_unavailable',
-  producer: 'epic-8-9',
+  producer: 'story-10-24',
 };
 
 /** The claim-section sentinel constant (producer is Epic 6). */

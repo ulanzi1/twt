@@ -17,11 +17,11 @@
 //   · NOT produced here (Epic 6): the R14 claim-time concealment fact (`claim.concealed_ima_...`) —
 //     that is death-linked (the true C7 beat) and stays in claim filing.
 
-import { medical, member, type Db, type ids } from '@twt/domain';
-import { R12_MEMBER_FACT_KEYS, type Facts } from '@twt/niyamavali-engine';
+import { contribution, medical, member, type Db, type ids } from '@twt/domain';
+import { R7_CONTRIBUTION_FACT_KEYS, R12_MEMBER_FACT_KEYS, type Facts } from '@twt/niyamavali-engine';
 
-import { calendarYearsBetween } from './calendar.js';
-import type { MedicalDisclosureFlagsPayload } from './types.js';
+import { calendarMonthsBetween, calendarYearsBetween } from './calendar.js';
+import type { ContributionHistoryAvailable, MedicalDisclosureFlagsPayload } from './types.js';
 
 /**
  * Lapse-netting policy for `valid_membership_years` ([[CR-4.5-D2]] — the D4 `policy_review_required`
@@ -162,4 +162,221 @@ export async function produceMedicalDisclosureFlags(
 ): Promise<MedicalDisclosureFlagsPayload> {
   const disclosures = await medical.getMedicalDisclosures(db, ctx.pariwarId, ctx.memberId, atTimestamp);
   return deriveMedicalDisclosureFlags(disclosures, assessment);
+}
+
+// ── Contribution facts — Story 10.24 (the producer Story 4.2 deferred to "Epic 8/9") ──────────────
+
+/**
+ * The `contribution.*` fact keys Story 10.24's producer supplies — EXACTLY five of the engine's seven
+ * (`R7_CONTRIBUTION_FACT_KEYS`). This is the producer's output CONTRACT, and it is what makes the
+ * `R7_HELD_CLAUSES` hold falsifiable: the totality test asserts every held clause's `blockedBy` names
+ * a key that is genuinely NOT in this list, so a hold cannot silently outlive its reason (add the
+ * missing producer, and the test tells you the hold is now unjustified).
+ *
+ * The two omitted keys and their owners:
+ *   · `contribution.r7a_restorations_used`         → Story 10.25 (R7(A) restoration accounting)
+ *   · `contribution.personal_event_excuse_claimed` → Story 10.26 (the member-assertion path)
+ *
+ * `contribution.compliance_percent` (R8) is not an `R7_CONTRIBUTION_FACT_KEYS` member at all and is
+ * unowned — recorded in `deferred-work.md`, not silently implied by this list.
+ */
+export const R7_SUPPLIED_FACT_KEYS = [
+  R7_CONTRIBUTION_FACT_KEYS.TOTAL_COUNT,
+  R7_CONTRIBUTION_FACT_KEYS.EVER_CONTRIBUTED,
+  R7_CONTRIBUTION_FACT_KEYS.MONTHS_SINCE_LAST,
+  R7_CONTRIBUTION_FACT_KEYS.SKIPS_CURRENT_YEAR,
+  R7_CONTRIBUTION_FACT_KEYS.IN_LAPSE,
+] as const;
+
+/** The facts this producer does NOT supply, each naming its owner — the honest hold, ON THE WIRE. */
+export const R7_HELD_FACTS = [
+  { key: R7_CONTRIBUTION_FACT_KEYS.R7A_RESTORATIONS_USED, producer: 'story-10-25' },
+  { key: R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED, producer: 'story-10-26' },
+] as const;
+
+/**
+ * The v1 contribution-lapse derivation policy. A DOCUMENTED, VERSIONED implementation policy — a
+ * genuine derivation under an explicit stated rule, NOT a placeholder and NOT provisional.
+ *
+ * ⚠ READ "v1" AS A VERSION, NOT AN EXPIRY DATE. The moment it ships it is part of the
+ * `contributionHistorySummary` PAYLOAD CONTRACT: it is hashed into `validityPayloadHash`, read by the
+ * trustee-lite `factsEstablishing[]`, and its `lapseSince` is rendered as `holdingSince` on a surface
+ * that feeds SUSPENSION decisions. Changing it later is a CONTRACT CHANGE with a migration-shaped blast
+ * radius (every payload hash moves, every cached row is re-shaped, every recorded flag's onset can
+ * shift) — reviewed and versioned like any other, NEVER an "it was only v1, so I retuned it" edit.
+ *
+ * This is precisely the {@link LapseNettingPolicy} posture, in the same terms and for the same reason:
+ * "Lapse" has no Niyamavali-pinned definition in the registry, and Story 10.24's boundary forbids
+ * defining governance policy — but the epic AC names `in_lapse` among the five facts, so it ships under
+ * a named, documented derivation rather than being fabricated or omitted.
+ *
+ * `missed-closed-cycle-v1`: IN LAPSE iff ≥1 assigned-and-closed cycle in the current IST calendar year
+ * resolved without a live confirmation — i.e. `skips_current_year > 0`. `lapseSince` = the CLOSE
+ * instant of the EARLIEST such cycle. Derived entirely from data already in the projection; no new
+ * source.
+ *
+ * ── ⚖ RATIFIED 2026-08-05 by BigDev (Decision 2026-08-05-074). The window is CLOSED. ─────────────
+ * Story 10.24 raised this as Escalation 1 and it was resolved, not deferred: `missed-closed-cycle-v1`
+ * is the ratified versioned implementation policy for `contribution.in_lapse`. The ratifying rationale,
+ * verbatim in substance:
+ *
+ *   `contribution.in_lapse` is now part of the validity payload contract. No activated clause currently
+ *   depends on it, which made this the LOWEST-COST point to ratify. Future changes, once consumed by
+ *   member eligibility rules, are to be treated as GOVERNANCE changes rather than implementation
+ *   refinements.
+ *
+ * So the cheap-re-pin window that existed while this was un-ratified no longer exists, and the standard
+ * for changing this rule is now higher, not lower. A future author must NOT read "v1" as an invitation:
+ * re-pinning it is a trustee-level governance change requiring a new decision-log entry that supersedes
+ * 2026-08-05-074 — never a refactor, never a "the derivation was only provisional" edit. The blast
+ * radius is unchanged and remains migration-shaped: every payload hash moves, every cached row is
+ * re-shaped, and every recorded flag's onset can shift.
+ */
+export type ContributionLapsePolicy = 'missed-closed-cycle-v1';
+
+/** The one shipped lapse policy (see {@link ContributionLapsePolicy}). */
+export const CONTRIBUTION_LAPSE_POLICY: ContributionLapsePolicy = 'missed-closed-cycle-v1';
+
+/** The five `contribution.*` facts this producer derives, in domain (camelCase) form. */
+export interface ContributionFacts {
+  /** `contribution.total_count` — lifetime LIVE confirmations at the pinned instant. */
+  totalCount: number;
+  /** `contribution.ever_contributed` — `totalCount > 0`, explicit for clarity. */
+  everContributed: boolean;
+  /**
+   * `contribution.months_since_last` — CALENDAR months since the last live confirmation.
+   *
+   * `null` when the member has NEVER contributed, and the fact is then OMITTED from the bag rather
+   * than sent as some large number. That is not fastidiousness: a never-contributed member is
+   * precisely R7(B)'s population, R7(B) is HELD, and supplying "months since signup" here would fire
+   * R7(C)/(F) on them — evaluating R7(B)'s case through a proxy, which `prd.md:346` forbids
+   * NORMATIVELY. The engine's `hasFact` guard resolves an absent fact to a failed condition, so the
+   * omission is exactly the honest outcome.
+   */
+  monthsSinceLast: number | null;
+  /** `contribution.skips_current_year` — missed assigned-and-closed cycles this IST calendar year. */
+  skipsCurrentYear: number;
+  /** `contribution.in_lapse` — per {@link ContributionLapsePolicy}. */
+  inLapse: boolean;
+  /** ISO-8601 onset of the current lapse (`lapseSince`); null when not in lapse. */
+  lapseSince: string | null;
+}
+
+/** The already-read projection anchors the PURE derivation consumes (mirrors the domain read). */
+export interface ContributionFactsInput {
+  /** LIVE confirmations at the pinned instant. */
+  totalCount: number;
+  /** The most recent live confirmation's instant; null when there is none. */
+  lastConfirmedAt: Date | null;
+  /** Missed assigned-and-closed cycles in the IST calendar year of the pinned instant. */
+  skipsCurrentYear: number;
+  /** The close instant of the EARLIEST missed cycle; null when `skipsCurrentYear === 0`. */
+  earliestSkipClosedAt: Date | null;
+}
+
+/**
+ * PURE: derive the five `contribution.*` facts from the read projection anchors at the pinned instant.
+ *
+ * Returns `null` ONLY when the inputs are structurally incoherent — a negative count, or a
+ * `lastConfirmedAt` in the future of the evaluation instant, or a positive skip count with no onset
+ * instant. Those are data-integrity impossibilities, and for them the service supplies NO facts and the
+ * payload carries the `producer_unavailable` sentinel, exactly as `deriveRetirementFacts` returns
+ * `null` for `retiredAt < signupAt` (D6, [[CR-4.4-D3]] / [[CR-4.5-D1]]).
+ *
+ * ⚠ It NEVER returns a fabricated zero for an un-derivable member. A member with a readable history
+ * and no contributions genuinely has `totalCount: 0` — that is DATA. An un-derivable member gets the
+ * sentinel. Zero and unknown are different claims, and collapsing them would make an un-assessed member
+ * indistinguishable from a clean-record one on the surface that feeds a suspension decision.
+ */
+export function deriveContributionFacts(
+  input: ContributionFactsInput,
+  at: Date,
+): ContributionFacts | null {
+  if (!Number.isInteger(input.totalCount) || input.totalCount < 0) return null;
+  if (!Number.isInteger(input.skipsCurrentYear) || input.skipsCurrentYear < 0) return null;
+  if (input.lastConfirmedAt !== null && input.lastConfirmedAt.getTime() > at.getTime()) return null;
+  if (input.skipsCurrentYear > 0 && input.earliestSkipClosedAt === null) return null;
+
+  const inLapse = input.skipsCurrentYear > 0; // `missed-closed-cycle-v1`
+  return {
+    totalCount: input.totalCount,
+    everContributed: input.totalCount > 0,
+    monthsSinceLast:
+      input.lastConfirmedAt === null ? null : calendarMonthsBetween(input.lastConfirmedAt, at),
+    skipsCurrentYear: input.skipsCurrentYear,
+    inLapse,
+    lapseSince: inLapse ? (input.earliestSkipClosedAt?.toISOString() ?? null) : null,
+  };
+}
+
+/**
+ * Map the derived facts to the engine fact-bag the R7 ladder reads. Keys come from
+ * `R7_CONTRIBUTION_FACT_KEYS` — never re-spelled string literals, so a key rename in the engine breaks
+ * the build here rather than silently un-gating a clause.
+ *
+ * `months_since_last` is OMITTED when null (see {@link ContributionFacts.monthsSinceLast}) — the one
+ * conditional key, and deliberately so.
+ */
+export function contributionFactsToBag(facts: ContributionFacts): Facts {
+  const bag: Facts = {
+    [R7_CONTRIBUTION_FACT_KEYS.TOTAL_COUNT]: facts.totalCount,
+    [R7_CONTRIBUTION_FACT_KEYS.EVER_CONTRIBUTED]: facts.everContributed,
+    [R7_CONTRIBUTION_FACT_KEYS.SKIPS_CURRENT_YEAR]: facts.skipsCurrentYear,
+    [R7_CONTRIBUTION_FACT_KEYS.IN_LAPSE]: facts.inLapse,
+  };
+  if (facts.monthsSinceLast !== null) {
+    bag[R7_CONTRIBUTION_FACT_KEYS.MONTHS_SINCE_LAST] = facts.monthsSinceLast;
+  }
+  return bag;
+}
+
+/**
+ * Narrow the engine's `Facts` bag (`Record<string, CanonicalJsonValue>`) to the wire DTO's
+ * `Record<string, number | boolean>` — RUNTIME-VERIFIED, not blindly cast. `contributionFactsToBag`
+ * only ever populates number/boolean values today, but `Facts`'s value type is far wider; a future
+ * contribution fact key with a non-number/boolean value would silently violate the DTO contract under
+ * a plain `as` cast. This throws instead, so the divergence fails loudly at the seam rather than being
+ * hidden by the type system.
+ */
+function assertNumberOrBooleanFacts(bag: Facts): Readonly<Record<string, number | boolean>> {
+  for (const [key, value] of Object.entries(bag)) {
+    if (typeof value !== 'number' && typeof value !== 'boolean') {
+      throw new Error(
+        `contributionFactsToSummary: fact "${key}" is ${typeof value}, not number|boolean — the ` +
+          `ContributionHistoryAvailable DTO requires every fact value to be number|boolean.`,
+      );
+    }
+  }
+  return bag as Readonly<Record<string, number | boolean>>;
+}
+
+/**
+ * Build the `contributionHistorySummary` `ok` arm from the derived facts.
+ *
+ * The fact map is keyed by the DOTTED `R7_CONTRIBUTION_FACT_KEYS` values, because that is the shape
+ * `deriveViolatorFlags` already filters on (`startsWith('contribution.')`) — the trustee-lite
+ * `factsEstablishing[]` reads it directly, with ZERO changes to `violator-flags.ts`.
+ */
+export function contributionFactsToSummary(facts: ContributionFacts): ContributionHistoryAvailable {
+  return {
+    status: 'ok',
+    facts: assertNumberOrBooleanFacts(contributionFactsToBag(facts)),
+    lapseSince: facts.lapseSince,
+    heldFacts: R7_HELD_FACTS,
+  };
+}
+
+/**
+ * Read + derive the contribution facts for one member at the PINNED instant (the service seam).
+ *
+ * TWO queries, independent of the member's contribution/assignment/cycle count (AC7) — the aggregate
+ * shape is the domain read's contract, pinned by a counted-query test.
+ */
+export async function produceContributionFacts(
+  db: Db,
+  ctx: { pariwarId: ids.PariwarId; memberId: ids.MemberId },
+  atTimestamp: Date,
+): Promise<ContributionFacts | null> {
+  const inputs = await contribution.readContributionFactInputs(db, ctx, atTimestamp);
+  return deriveContributionFacts(inputs, atTimestamp);
 }

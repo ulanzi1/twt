@@ -30,8 +30,14 @@ const EN: Record<string, string> = {
   'memberStatus.detail.lockInActive': 'Lock-in period is active.',
   'memberStatus.detail.lockInUnlocked': 'Lock-in period has elapsed.',
   'memberStatus.detail.lockInNeverEntered': 'Never entered lock-in.',
+  // Story 10.24 — the producer now exists, so this copy no longer promises a future epic. It is the
+  // honest PER-MEMBER gap: this member's history could not be derived (no projected history, a
+  // historical instant before the projection's coverage, or an incomplete backfill).
   'memberStatus.detail.contributionUnavailable':
-    'Contribution history is not yet available (producer lands in Epic 8/9).',
+    'Contribution history could not be derived for this member.',
+  'memberStatus.detail.contributionOnRecord': 'Contribution history is on record.',
+  'memberStatus.detail.contributionInLapse':
+    'Contribution history shows a missed cycle this year.',
   'memberStatus.detail.medicalHasDisclosure': 'Has a medical disclosure on record.',
   'memberStatus.detail.medicalNoDisclosure': 'No medical disclosure on record.',
   'memberStatus.detail.medicalConcealmentFlag': 'Concealment review flag is set.',

@@ -40,7 +40,7 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
       inRenewalGrace: false,
       graceRemainingDays: null,
     },
-    contributionHistorySummary: { status: 'producer_unavailable', producer: 'epic-8-9' },
+    contributionHistorySummary: { status: 'producer_unavailable', producer: 'story-10-24' },
     medicalDisclosureFlags: {
       hasDisclosureOnRecord: false,
       declaredConditionCount: null,
@@ -129,11 +129,17 @@ describe('deriveContributionDisclosure — the suspension arm (AC1)', () => {
 describe('the restoration count is honest, never fabricated (AC4 / D1-B)', () => {
   // Asserted as the LITERAL, so a future `remaining: 0` fabrication fails this spec rather than
   // quietly telling a member they have completed a restoration package they may never have started.
+  //
+  // ⚠ `producer` re-pointed 'story-10-24' → 'story-10-25' (Story 10.24 AC9). 10.24 shipped the
+  // `contribution.*` FACT producer but explicitly NOT restoration accounting — this arm needs the
+  // count of CONSECUTIVE contributions against `restoration.consecutive_required`, which belongs to
+  // Story 10.25 and couples to 10.23's separately-expiring overlay. Leaving the label naming a story
+  // that has already shipped without closing the gap would turn an honest sentinel into a lie.
   const expectUnavailable = (payload: MemberValidityPayloadDto): void => {
     const vm = deriveContributionDisclosure(payload);
     expect(vm!.restorationPackage).toEqual({
       status: 'package_unavailable',
-      producer: 'story-10-24',
+      producer: 'story-10-25',
     });
   };
 
@@ -196,7 +202,7 @@ describe('THE AC2 PIN — Story 10.23 lights the lock-in arm up with ZERO copy/r
       titleKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.title,
       whatItDoesKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.whatItDoes,
       whatItDoesNotBuyKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.whatItDoesNotBuy,
-      restorationPackage: { status: 'package_unavailable', producer: 'story-10-24' },
+      restorationPackage: { status: 'package_unavailable', producer: 'story-10-25' },
       reasonLabelKey: null,
       a11yLabelKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.a11yLabel,
     });

@@ -80,7 +80,7 @@ describe.skipIf(!hasDatabase)('member-search projection (PARIWAR_A scope)', () =
     expect(rows[0]?.state).toBe('pending-kyc');
     expect(rows[0]?.stateEventVersion).toBe(1);
     // D2: the contribution + claim sections are the typed producer_unavailable sentinel, NEVER [].
-    expect(rows[0]?.contributionSection).toEqual({ status: 'producer_unavailable', producer: 'epic-8-9' });
+    expect(rows[0]?.contributionSection).toEqual({ status: 'producer_unavailable', producer: 'story-10-24' });
     expect(rows[0]?.claimSection).toEqual({ status: 'producer_unavailable', producer: 'epic-6' });
     expect(rows[0]?.nomineeSummary).toEqual([]);
 

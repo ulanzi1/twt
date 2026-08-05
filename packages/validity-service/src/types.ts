@@ -53,17 +53,74 @@ export interface VyawasthaShulkStatusPayload {
 // ── Sub-object: contribution history (D2-A — producer is Epic 8/9, NOT produced here) ─
 
 /**
- * The contribution/R7/R8 producer is Epic 8/9 ([[project_engine_never_infers_contribution_facts]]).
- * There is NO contribution event source in the codebase, so this is a DISTINCT, TYPED sentinel —
- * NEVER a fabricated `{ months: 0 }`-style default (an absent fact must be distinguishable from a
- * clean-record member; [[CR-4.4-D3]] / [[CR-4.5-D1]]). R7/R8 are OMITTED from
- * `applicableNiyamavaliClauses[]` until the Epic 8/9 producer supplies real `contribution.*` facts.
+ * The contribution-history gap sentinel ([[project_engine_never_infers_contribution_facts]]).
+ *
+ * ── CORRECTED 2026-08-05 by Story 10.24 (AC8) ────────────────────────────────────────────────────
+ * This block used to say "there is NO contribution event source in the codebase" and "R7/R8 are
+ * OMITTED … until the Epic 8/9 producer supplies real `contribution.*` facts". Both statements have
+ * stopped being true, and each was wrong in a different way:
+ *
+ *   · A contribution event source HAS existed since Story 9.4 (`contribution.confirmed`, two live
+ *     emitters). What never existed was the FACT producer mapping those events onto the engine's seven
+ *     `contribution.*` keys — the conflation that let the gap survive two epic retrospectives
+ *     ([[project_r7_fact_producer_unbuilt]]). Story 10.24 built it.
+ *   · ⚠ "R7/R8 are omitted until the producer lands" read literally implies that supplying the facts
+ *     activates BOTH. IT DOES NOT. R7(C)–(F) now evaluate. R8 (`niy.ninety-percent-rule.r8`) is NOT
+ *     activated by these facts: its `all_of` additionally requires `claim.death_classification` (a
+ *     CLAIM-time fact — Epic 6, absent at member standing) and `contribution.compliance_percent`, which
+ *     is NOT one of the five keys 10.24 supplies. R8 must NOT enter `VALIDITY_RULE_ORDER`; the
+ *     `R7_ACTIVATED_CLAUSE_IDS` totality test asserts exactly that.
+ *   · R7(A)/(B)/(G) remain OMITTED — deliberately, under `R7_HELD_CLAUSES`, each naming its blocking
+ *     fact and owning story. R7(A)/(B) are held even though `total_count`/`ever_contributed` ARE now
+ *     supplied: `prd.md:346` NORMATIVELY forbids evaluating them from those proxies.
+ *
+ * The sentinel itself STAYS REACHABLE and is not a legacy artifact (D6): a per-member gap can still be
+ * genuine (no projected history, a historical `at` before the projection's coverage, an incomplete
+ * backfill). It is NEVER a fabricated `{ total_count: 0 }` — an absent fact must stay distinguishable
+ * from a clean-record member ([[CR-4.4-D3]] / [[CR-4.5-D1]]). Zero and unknown are different claims.
  */
 export interface ContributionHistoryUnavailable {
   status: 'producer_unavailable';
-  /** The story that will supply the `contribution.*`/`claim.*` facts (audit trail for the gap). */
-  producer: 'epic-8-9';
+  /**
+   * The story that owns the `contribution.*` facts (audit trail for the gap), OR
+   * `'niyamavali-registry'` (2026-08-06 finding) when the gap is not the FACTS but the RULES: no
+   * activated R7(C)–(F) clause version is effective for this Pariwar at the evaluated instant. A
+   * different subsystem is at fault in each case, so the literal tells an operator where to look —
+   * see `R7_REGISTRY_UNPROVISIONED_PRODUCER` (rules.ts) and `CONTRIBUTION_R7_REGISTRY_UNAVAILABLE`
+   * (payload.ts).
+   */
+  producer: 'story-10-24' | 'niyamavali-registry';
 }
+
+/**
+ * The contribution history, PRODUCED (Story 10.24 AC5) — the arm that turns on the R7 surfaces.
+ *
+ * `facts` is keyed by the DOTTED `R7_CONTRIBUTION_FACT_KEYS` values (`contribution.total_count`, …)
+ * rather than camelCase, because that is the shape `deriveViolatorFlags` already filters on
+ * (`startsWith('contribution.')`). Matching it is what makes Story 10.11's seam a ZERO-CHANGE
+ * activation: `packages/domain/src/trustee-lite/violator-flags.ts` needs no edit at all.
+ */
+export interface ContributionHistoryAvailable {
+  status: 'ok';
+  /** Dotted `contribution.*` keys → values. Read by trustee-lite `factsEstablishing[]`. */
+  facts: Readonly<Record<string, number | boolean>>;
+  /**
+   * ISO-8601 onset of the current discipline lapse; null when not in lapse. Feeds `holdingSince`.
+   *
+   * ⚠ It is asserted ≠ `evaluatedAt`, deliberately: "the clause applies as of this evaluation" and
+   * "the member has been in violation since this date" are DIFFERENT CLAIMS, and printing the former
+   * as the latter on the surface that feeds a suspension decision is the exact fabrication Story
+   * 10.11 refused when it shipped `holdingSince: null`.
+   */
+  lapseSince: string | null;
+  /** Facts this producer does NOT supply, each naming its owner — the honest hold, on the wire. */
+  heldFacts: readonly { readonly key: string; readonly producer: string }[];
+}
+
+/** The contribution-history sub-object: produced, or an honest typed gap (never a fabricated zero). */
+export type ContributionHistorySummary =
+  | ContributionHistoryAvailable
+  | ContributionHistoryUnavailable;
 
 // ── Sub-object: medical disclosure flags (D2m-A — member-standing, NON-PII) ───────────
 
@@ -176,7 +233,7 @@ export interface MemberValidityPayload {
   isAssignable: boolean;
   lockInStatus: LockInStatusPayload;
   vyawasthaShulkStatus: VyawasthaShulkStatusPayload;
-  contributionHistorySummary: ContributionHistoryUnavailable;
+  contributionHistorySummary: ContributionHistorySummary;
   medicalDisclosureFlags: MedicalDisclosureFlagsPayload;
   retirementCoverage: RetirementCoveragePayload | RetirementCoverageUnavailable;
   /** Ordered special flags (e.g. `concealment_review_required`) — assembled from fired rules. */

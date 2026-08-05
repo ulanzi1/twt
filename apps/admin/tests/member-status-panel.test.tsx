@@ -25,7 +25,7 @@ function payload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidityPa
       inRenewalGrace: false,
       graceRemainingDays: null,
     },
-    contributionHistorySummary: { status: 'producer_unavailable', producer: 'epic-8-9' },
+    contributionHistorySummary: { status: 'producer_unavailable', producer: 'story-10-24' },
     medicalDisclosureFlags: {
       hasDisclosureOnRecord: false,
       declaredConditionCount: null,
@@ -49,7 +49,7 @@ const identity: MemberSearchResultItem = {
   aadhaarMasked: 'XXXX1234',
   verificationStrength: 'aadhaar_kyc',
   nomineeSummary: [],
-  contributionSection: { status: 'producer_unavailable', producer: 'epic-8-9' },
+  contributionSection: { status: 'producer_unavailable', producer: 'story-10-24' },
   claimSection: { status: 'producer_unavailable', producer: 'epic-6' },
 };
 
@@ -64,10 +64,67 @@ describe('<MemberStatusPanel> (admin variant)', () => {
     expect(within(header).getByText('+91·····4210')).toBeInTheDocument();
   });
 
-  it('renders the contribution section as "not yet available" prose, never an empty grid (D2)', () => {
+  it('renders the contribution GAP as explicit prose, never an empty grid (D2)', () => {
+    // Story 10.24 changed this copy: the producer now EXISTS, so the sentinel no longer promises a
+    // future epic — reaching it means THIS member's history could not be derived. The invariant under
+    // test is unchanged and is the one that matters: an honest gap renders as words, never as blank.
     render(<MemberStatusPanel payload={payload()} identity={identity} />);
     const section = screen.getByTestId('section-contribution');
-    expect(section).toHaveTextContent(/not yet available/i);
+    expect(section).toHaveTextContent(/could not be derived/i);
+    expect(section.textContent?.trim().length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('renders the PRODUCED contribution facts on the ok arm (Story 10.24 AC5/AC8)', () => {
+    // The arm that was unreachable before 10.24. `in_lapse: false` ⇒ the neutral "on record" copy —
+    // this panel OBSERVES standing, so a contribution history is never rendered as a verdict.
+    render(
+      <MemberStatusPanel
+        payload={payload({
+          contributionHistorySummary: {
+            status: 'ok',
+            facts: {
+              'contribution.total_count': 12,
+              'contribution.ever_contributed': true,
+              'contribution.months_since_last': 2,
+              'contribution.skips_current_year': 0,
+              'contribution.in_lapse': false,
+            },
+            lapseSince: null,
+            heldFacts: [
+              { key: 'contribution.r7a_restorations_used', producer: 'story-10-25' },
+              { key: 'contribution.personal_event_excuse_claimed', producer: 'story-10-26' },
+            ],
+          },
+        })}
+        identity={identity}
+      />,
+    );
+    const section = screen.getByTestId('section-contribution');
+    expect(section).toHaveTextContent(/on record/i);
+    expect(section).not.toHaveTextContent(/could not be derived/i);
+  });
+
+  it('renders the LAPSE copy when the produced facts show a missed cycle (Story 10.24)', () => {
+    render(
+      <MemberStatusPanel
+        payload={payload({
+          contributionHistorySummary: {
+            status: 'ok',
+            facts: {
+              'contribution.total_count': 11,
+              'contribution.ever_contributed': true,
+              'contribution.months_since_last': 7,
+              'contribution.skips_current_year': 2,
+              'contribution.in_lapse': true,
+            },
+            lapseSince: '2026-03-15T00:00:00.000Z',
+            heldFacts: [],
+          },
+        })}
+        identity={identity}
+      />,
+    );
+    expect(screen.getByTestId('section-contribution')).toHaveTextContent(/missed a cycle|missed cycle/i);
   });
 
   it('shows the concealment special-flags section + appeal CTA when the flag is set', () => {

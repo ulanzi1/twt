@@ -13,25 +13,39 @@
 // to the registry-driven engine, this module does not compute them. It reads the Story 4.6 validity
 // payload's already-evaluated clause list and filters it. Nothing else.
 //
-// ── Why the section is dark today, verified against live source ───────────────────────────────
-// `packages/validity-service/src/payload.ts:294` hardcodes
-// `contributionHistorySummary: CONTRIBUTION_UNAVAILABLE`, and `types.ts:56-65` states plainly that
-// R7/R8 are OMITTED from `applicableNiyamavaliClauses[]` until a producer supplies real
-// `contribution.*` facts. Epics 8 and 9 closed `done` and the FACT producer was never built (the
-// EVENT producer was — `contribution.confirmed` has two live emitters — which is why the gap
-// survived two rounds of governance review; nothing maps events to the seven fact keys the engine
-// reads). It is now owned: Stories 10.24 (projection + R7(C)–(F)), 10.25 (R7(A) restoration
-// accounting) and 10.26 (R7(G) excuse assertion), all `backlog` at the time of writing.
+// ── The section is LIVE (Story 10.24, 2026-08-05) — this block records what changed ───────────
+// It was dark from 10.11 until 10.24, because `assemblePayload` hardcoded
+// `contributionHistorySummary: CONTRIBUTION_UNAVAILABLE` and R7 was OMITTED from
+// `applicableNiyamavaliClauses[]` for want of a `contribution.*` fact producer. Epics 8 and 9 both
+// closed `done` without building it: the EVENT producer shipped (`contribution.confirmed`, two live
+// emitters since Story 9.4), but nothing ever mapped those events onto the seven fact keys the engine
+// reads — the conflation that let the gap survive two rounds of governance review
+// ([[project_r7_fact_producer_unbuilt]]).
 //
-// So today the R7 ∩ applicable-clauses intersection is empty BY CONSTRUCTION, which is exactly why
-// it must not be rendered as an empty result. The producer-unavailable sentinel is checked FIRST and
-// short-circuits to `detection_unavailable`.
+// Story 10.24 built the projection + producer and ACTIVATED R7(C)/(D)/(E)/(F). R7(A)/(B)/(G) remain
+// omitted under an explicit mechanized hold (`R7_HELD_CLAUSES`), each naming its blocking fact and
+// owner — 10.25 (R7(A) restoration accounting) and 10.26 (R7(G) excuse assertion). So the R7 ∩
+// applicable-clauses intersection is no longer empty by construction, and an empty `flags` array now
+// legitimately means "no R7 clause applied to this member".
 //
-// ── Producer-shaped, not story-shaped ─────────────────────────────────────────────────────────
-// When 10.24 lands, flags appear here with ZERO changes to this file: the sentinel stops saying
-// `producer_unavailable`, the engine starts emitting R7 clauses into `applicableNiyamavaliClauses`,
-// and the filter below starts matching. A unit test feeds a synthetic payload carrying real applied
-// R7 clauses and asserts flags render — the seam is proven now, not promised.
+// The producer-unavailable sentinel is STILL checked FIRST and still short-circuits to
+// `detection_unavailable` — it did not become dead code. It is now the honest answer for a genuine
+// PER-MEMBER gap (no projected history; a historical instant before the projection's coverage; an
+// incomplete backfill) rather than a deployment-wide "no producer exists" statement (10.24 D6).
+//
+// ── Producer-shaped, not story-shaped — and it HELD ───────────────────────────────────────────
+// 10.11 claimed flags would appear here with ZERO changes to this file. That claim was tested by
+// 10.24 and it held: the only production change was ONE call site in
+// `apps/api/src/modules/trustee-lite/handlers.ts`, flipping the candidate source from `unavailable`
+// to `available`. Everything below this header is byte-unchanged from 10.11. The unit test that fed a
+// synthetic payload carrying applied R7 clauses proved the seam before the producer existed.
+//
+// ⚠ The `applied` filtering happens UPSTREAM, and this file's contract is why. `deriveViolatorFlags`
+// maps EVERY R7 clause id it finds into a flag, with no `applied` check — so a producer that
+// contributed non-applied clauses would flag every member in the Pariwar four times over on the
+// surface that feeds suspension decisions. 10.24 D2 is that obligation, discharged in the producer:
+// only clauses whose `on_pass` fired reach `applicableNiyamavaliClauses[]`. Read this module as a
+// SPECIFICATION of what a producer must supply, not as code to relax.
 //
 // ── Why the payload arrives structurally typed ────────────────────────────────────────────────
 // `@twt/validity-service` DEPENDS ON `@twt/domain`, so this module cannot import its types (the
@@ -84,10 +98,11 @@ export interface ViolatorFlagClauseInput {
 }
 
 /**
- * The contribution-history sub-object. Today it is ALWAYS
- * `{ status: 'producer_unavailable', producer: 'epic-8-9' }` (`payload.ts:294`). The optional
- * members below are the shape a real producer will supply; they are read only when `status` is NOT
- * `producer_unavailable`, so this module needs no change when the producer lands.
+ * The contribution-history sub-object. Since Story 10.24 it is normally the produced `ok` arm; the
+ * `{ status: 'producer_unavailable', producer: 'story-10-24' }` sentinel remains reachable for a
+ * genuine per-member gap (10.24 D6). The optional members below are the shape the producer supplies;
+ * they are read only when `status` is NOT `producer_unavailable` — which is why this module needed no
+ * change when the producer landed.
  */
 export interface ViolatorFlagContributionSummaryInput {
   readonly status: string;
@@ -150,7 +165,7 @@ export interface ViolatorFlag {
  */
 export interface ViolatorFlagsUnavailable {
   readonly status: 'detection_unavailable';
-  /** The raw sentinel from the payload (e.g. `epic-8-9`) — the UI maps it to admin-facing copy. */
+  /** The raw sentinel from the payload (e.g. `story-10-24`) — the UI maps it to admin-facing copy. */
   readonly producer: string;
 }
 
@@ -216,11 +231,11 @@ export interface ViolatorFlagMember {
  * no flagged members" and "nothing can tell us who is flagged" are different facts and an array
  * cannot distinguish them.
  *
- * Today the caller always passes `unavailable`: the R7 candidate set is a PROJECTION Story 10.24
- * owns and it does not exist, so scanning every member would only rediscover an intersection
- * `payload.ts:294` already guarantees is empty. When 10.24 lands, the API call site switches to
- * `available` and flags render — with no change to this file (proven by the unit test that feeds a
- * synthetic payload carrying applied R7 clauses).
+ * From 10.11 until 10.24 the caller always passed `unavailable`, because the R7 candidate set is a
+ * PROJECTION Story 10.24 owns and it did not exist. Story 10.24 built it and flipped the call site to
+ * `available` — with no change to this file, exactly as the discriminated shape was designed to
+ * allow. The `unavailable` arm is retained, not vestigial: it is the correct answer for any future
+ * caller that cannot supply a candidate set at all.
  */
 export type ViolatorCandidateSource =
   | { readonly status: 'unavailable'; readonly producer: string }

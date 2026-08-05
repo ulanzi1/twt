@@ -20,16 +20,24 @@
 import { audit, member, type ids } from '@twt/domain';
 import { R12_CLAUSE_ID, selectDbNow, type EvaluateDeps } from '@twt/niyamavali-engine';
 
-import { assemblePayload, projectLockInStatus, projectRetirementCoverage } from './payload.js';
 import {
+  assemblePayload,
+  CONTRIBUTION_R7_REGISTRY_UNAVAILABLE,
+  projectLockInStatus,
+  projectRetirementCoverage,
+} from './payload.js';
+import {
+  contributionFactsToBag,
+  contributionFactsToSummary,
   deriveRetirementFacts,
+  produceContributionFacts,
   produceMedicalDisclosureFlags,
   retirementFactsToBag,
   type ConcealmentAssessment,
   type LapseNettingPolicy,
 } from './producer.js';
 import { assertCanReadValidity, redactForCaller, type ValidityCaller } from './redaction.js';
-import { buildRuleDescriptors, evaluateOrderedClauses } from './rules.js';
+import { buildRuleDescriptors, evaluateAppliedR7ClauseSlots, evaluateOrderedClauses } from './rules.js';
 import type { MemberValidityPayload, VyawasthaShulkStatusPayload } from './types.js';
 
 /** Service dependencies = the engine DI (db, keyedStore, servicePool, actor, traceId). */
@@ -80,7 +88,7 @@ export async function getValidityAt(
 
   const { db } = deps;
 
-  // (1) Seven independent reads — none depends on another's result — run concurrently (p95 budget).
+  // (1) Eight independent reads — none depends on another's result — run concurrently (p95 budget).
   const [
     memberState,
     moderationOverlay,
@@ -89,6 +97,7 @@ export async function getValidityAt(
     lockInClock,
     renewal,
     medicalDisclosureFlags,
+    contributionFacts,
   ] = await Promise.all([
       // Member lifecycle state at the pinned instant (the is_valid/is_active + grace authority).
       member.getMemberStateAt(db, memberCtx.memberId, at),
@@ -105,6 +114,10 @@ export async function getValidityAt(
       member.getLockInClock(db, memberCtx.memberId, at),
       member.getVyawasthaShulkStatus(db, memberCtx.pariwarId, memberCtx.memberId, at),
       produceMedicalDisclosureFlags(db, memberCtx, at, opts.concealmentAssessment),
+      // Story 10.24 — the contribution facts, produced at the SAME pinned instant as every other read
+      // (joined to this `Promise.all` rather than added as a sequential await, so the family costs two
+      // concurrent aggregate queries rather than two more round-trips on the critical path).
+      produceContributionFacts(db, memberCtx, at),
     ]);
 
   const retirementFacts = deriveRetirementFacts({
@@ -115,10 +128,24 @@ export async function getValidityAt(
   });
 
   // (2) Ordered multi-clause evaluation at the pinned instant (AC2 deterministic order).
+  //
+  // Story 10.24 D2: the R7 family does NOT ride `buildRuleDescriptors`. It is evaluated through the
+  // family ladder and contributes ONLY APPLIED clauses, because `assembleClauses` pushes every non-null
+  // slot and `deriveViolatorFlags` flags every R7 id it finds — wiring the four as ordinary descriptors
+  // would flag EVERY member in the Pariwar four times on the surface that feeds suspension decisions.
+  //
+  // Order is `VALIDITY_RULE_ORDER`: R12 first, then the R7 family in clause-id ascending order (the
+  // ladder sorts). The concatenation below IS that order — never `Promise.all` completion order.
+  const contributionBag = contributionFacts ? contributionFactsToBag(contributionFacts) : null;
   const descriptors = buildRuleDescriptors({
     retirement: retirementFacts ? retirementFactsToBag(retirementFacts) : null,
+    contribution: contributionBag,
   });
-  const slots = await evaluateOrderedClauses(deps, memberCtx, descriptors, at);
+  const [orderedSlots, r7Evaluation] = await Promise.all([
+    evaluateOrderedClauses(deps, memberCtx, descriptors, at),
+    evaluateAppliedR7ClauseSlots(deps, memberCtx, contributionBag, at),
+  ]);
+  const slots = [...orderedSlots, ...r7Evaluation.slots];
 
   // (3) Retirement date projection ([[CR-4.5-D3]]) from the R12 slot.
   const r12Slot = slots.find((s) => String(s.clauseId) === R12_CLAUSE_ID);
@@ -134,6 +161,20 @@ export async function getValidityAt(
     vyawasthaShulkStatus: toRenewalPayload(renewal),
     medicalDisclosureFlags,
     retirementCoverage,
+    // The produced `ok` arm, or ABSENT so `assemblePayload` falls back to the honest sentinel (D6).
+    // NEVER a fabricated `{ total_count: 0 }` — zero and unknown are different claims.
+    //
+    // `registryUnavailable` (2026-08-06 finding) OVERRIDES the `ok` arm even though the FACTS were
+    // derivable: when no activated R7 clause version is provisioned for this Pariwar, the family was
+    // never evaluated at all, so an `ok` summary + zero R7 entries in `applicableNiyamavaliClauses[]`
+    // is indistinguishable from a genuinely clean member — the exact false all-clear the bulk
+    // Trustee-Lite scan already guards against (`r7-candidate-scan.ts`'s `resolvedClauses.length === 0`
+    // check). This is the individual-lookup analogue of that same guard.
+    ...(r7Evaluation.registryUnavailable
+      ? { contributionHistory: CONTRIBUTION_R7_REGISTRY_UNAVAILABLE }
+      : contributionFacts
+        ? { contributionHistory: contributionFactsToSummary(contributionFacts) }
+        : {}),
     slots,
   });
 

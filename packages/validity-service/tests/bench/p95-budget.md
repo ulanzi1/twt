@@ -115,3 +115,88 @@ headline is a pre-launch operator run with `KMS_TEST_MODE=live`).
 > against the frozen "warm + cold-miss mix" requirement) and its admin-search run neither decrypted the
 > KYC-name field nor wrote the per-search audit entry (both real per-request costs); both gaps are fixed
 > in this revision, and these numbers reflect the corrected, more faithful measured path.
+
+---
+
+## Story 10.24 — contribution-fact producer + R7(C)–(F) activation (2026-08-05)
+
+Re-measured through the EXISTING harness (AI-6-2's one shared tooling — no new benchmarking code was
+built; [[project_measured_validation_framework]], [[feedback_no_premature_package]]).
+
+**Why an A/B and not just an "after":** the story's AC7 predicted ~8 additional queries per validity
+evaluation (four extra `evaluateAt` calls, each with its own `getMemberStateAt` replay and keyed-store
+round-trip, plus the ladder shell's `resolveByClauseId`). That is a claim about a DELTA, so a delta is
+what was measured. Both arms were run **in isolation on the same machine, back-to-back**; the "before"
+arm was produced by temporarily stubbing the two `service.ts` call sites (`produceContributionFacts` →
+`null`, `evaluateAppliedR7ClauseSlots` → `[]`) and nothing else, then restoring.
+
+| metric | before | after (run 1) | after (run 2) |
+|---|---|---|---|
+| uncached `getValidityAt` p50 | 5.50 ms | 6.05 ms | 6.31 ms |
+| uncached `getValidityAt` **p95** | **15.55 ms** | **18.73 ms** | **15.98 ms** |
+| uncached `getValidityAt` p99 | 38.81 ms | 24.90 ms | 24.66 ms |
+| cached-path (AI-4-1) p50 | 3.55 ms | 2.66 ms | 2.44 ms |
+| cached-path (AI-4-1) **p95** | **115.03 ms** | **34.85 ms** | **38.96 ms** |
+
+**Reading, honestly.** The p95 columns straddle each other across runs and are NOT a clean signal at
+this sample size — the cached-path p95 in particular is dominated by cold-miss/warmup placement, which
+is why the "before" number there is the *largest* in the table despite being the *smaller* workload. The
+one figure that moves consistently and in the expected direction is the uncached **p50: +0.6–0.8 ms**,
+which is the cost of the producer's two aggregate queries. Nothing here approaches the FR-12A budget
+(p95 < 200 ms @ 4L, delivered by the Story 4.8 cache).
+
+**⚠ UN-ATTESTED, and it matters ([[feedback_record_unattested_no_backfill]]):** the bench Pariwar seeds
+**R12 only**. With no R7 clause version effective at the pinned instant, `evaluateLadderAt` takes its
+`missingClauseIds` path per sub-clause — so these numbers include the four extra `evaluateAt` calls but
+**NOT** the four extra `resolveByClauseId` payload resolutions, nor the memo/audit writes, that a
+FULLY-PROVISIONED Pariwar incurs. The fully-provisioned delta is therefore **larger than measured here
+and has not been measured**. It is bounded and predictable rather than open-ended (a FIXED four extra
+clause resolutions per evaluation, member-count-independent), and the binding AC7 gate is the
+structural one — no new N+1 query path — which is asserted directly by the counted-query test
+(`tests/integration/contribution-facts.spec.ts`: 1 vs. 25 contributions → **identical** query count,
+exactly 2). Measuring the fully-provisioned p95 needs a seeded-R7 bench fixture and is recorded in
+`deferred-work.md` rather than backfilled with a number nobody ran.
+
+The 100×-thread determinism gate (`test:determinism`) stays at **exactly one hash** — re-run green.
+
+---
+
+## Round-2 code review (2026-08-05) — a SECOND un-attested cost, and what changed underneath
+
+**⚠ UN-ATTESTED: the Trustee-Lite Pariwar-wide scan (`scanR7ViolatorCandidates`) has never been
+measured.** ⚖ BigDev, 2026-08-05: *"AC7 currently bounds query count, not computational cost. The
+implementation satisfies the accepted story scope. Scaling strategy should be selected from production
+evidence rather than predicted in advance."* Recorded here rather than mitigated speculatively.
+
+What is and is not known:
+
+- **Bounded, and that part IS asserted.** The scan issues a FIXED number of queries regardless of
+  member count — `listMemberStatesForPariwar` + the two bulk fact aggregates + one coverage read + four
+  member-independent `resolveByClauseId` calls. AC7's binding structural criterion (no query inside a
+  loop over members, pools or clauses) genuinely holds.
+- **Unbounded in WORK, and that part is not measured.** "Fixed query count" says nothing about
+  result-set size or CPU. The scan materialises one row per member from the membership read, one
+  aggregate row per member, then runs four pure clause interpretations and allocates one candidate
+  payload per member in a single un-yielded tick, after which `summarizeViolatorFlags` re-iterates the
+  same collection. There is no cap, page, budget or cache, and it recomputes per request.
+- **The shape of the risk at 4L**, stated so a future measurement has something to falsify: ~400k rows
+  across three collections plus ~1.6M pure clause evaluations on one event-loop tick, on an admin GET.
+  The response body is sized by the number of FLAGGED members, not the membership.
+- **Explicitly NOT done, and why:** capping or paginating the violator section would pick a
+  governance-visible cutoff (which candidates get dropped from a suspension list?) with no data behind
+  it; a second cache would need its own invalidation story; pre-emptive read chunking would add
+  complexity for an unmeasured problem.
+
+**Counter-pressure worth noting when this IS measured:** two round-2 rulings shrink the FLAGGED
+population substantially — `months_since_last` now counts opportunities rather than elapsed time, and
+the activated R7 clauses carry a `member_state_in` lifecycle gate. Neither reduces the O(M) scan work,
+which is the thing at issue here; both reduce the response size. Do not read a smaller flag list as
+evidence that the scan cost improved.
+
+**Also changed underneath these numbers, so the table above is no longer comparable like-for-like:**
+`months_since_last` is derived from the missed-cycle aggregate instead of in-JS calendar arithmetic
+(the aggregate now carries a `last_conf` CTE and two `FILTER` clauses over one scan — still ONE query),
+and a coverage-watermark read was added (folded into the existing ledger query as a scalar subquery on
+the single-member path, so it remains exactly TWO queries there; a third Pariwar-scoped read on the
+bulk path, which cannot fold it). The p95/p50 figures above were taken BEFORE those changes and have
+**not** been re-run. Re-measuring is the same seeded-R7 bench fixture already owed above.

@@ -242,7 +242,7 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R7(C)","title_en":"Long-gap restoration (treat as new registration)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":70,"on_pass":"treat_as_new_registration","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.months_since_last","min":12}],"restoration":{"consecutive_required":5,"lock_in_months":3},"policy_review_required":true,"provisional":true}'::jsonb,
+    '{"rule_code":"R7(C)","title_en":"Long-gap restoration (treat as new registration)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":70,"on_pass":"treat_as_new_registration","on_fail":"r7_not_applicable","all_of":[{"op":"member_state_in","states":["lock-in","active","active-in-grace","lapsed-unpaid"]},{"op":"fact_gte","fact":"contribution.months_since_last","min":12}],"restoration":{"consecutive_required":5,"lock_in_months":3},"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   ),
   (
@@ -251,7 +251,7 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R7(D)","title_en":"Established member single-skip restoration (3-month lock-in plus catch-up)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":30,"on_pass":"lockin_3mo_plus_catchup","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_equals","fact":"contribution.skips_current_year","value":1}],"restoration":{"lock_in_months":3,"catch_up_required":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    '{"rule_code":"R7(D)","title_en":"Established member single-skip restoration (3-month lock-in plus catch-up)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":30,"on_pass":"lockin_3mo_plus_catchup","on_fail":"r7_not_applicable","all_of":[{"op":"member_state_in","states":["lock-in","active","active-in-grace","lapsed-unpaid"]},{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_equals","fact":"contribution.skips_current_year","value":1}],"restoration":{"lock_in_months":3,"catch_up_required":true},"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   ),
   (
@@ -260,7 +260,7 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R7(E)","title_en":"Established member multi-skip restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":40,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_gte","fact":"contribution.skips_current_year","min":2}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    '{"rule_code":"R7(E)","title_en":"Established member multi-skip restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":40,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"member_state_in","states":["lock-in","active","active-in-grace","lapsed-unpaid"]},{"op":"fact_gte","fact":"contribution.total_count","min":10},{"op":"fact_gte","fact":"contribution.skips_current_year","min":2}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   ),
   (
@@ -269,7 +269,7 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R7(F)","title_en":"Six-month gap restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":45,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"fact_gte","fact":"contribution.months_since_last","min":6}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    '{"rule_code":"R7(F)","title_en":"Six-month gap restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":45,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"member_state_in","states":["lock-in","active","active-in-grace","lapsed-unpaid"]},{"op":"fact_gte","fact":"contribution.months_since_last","min":6}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":true,"provisional":true}'::jsonb,
     'pool'
   ),
   (

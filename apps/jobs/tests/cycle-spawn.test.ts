@@ -114,6 +114,8 @@ function childSpec(input: {
     pariwarId: input.pariwarId,
     poolIndex: input.poolIndex,
     poolId: randomUUID(),
+    // Cycle-level constant, carried on the spec so spawnChildPool does not re-read it per pool.
+    committedAtIso: new Date('2026-07-01T00:00:00.000Z').toISOString(),
     claimCaseId: input.claimCaseId,
     poolCanonicalIdentifier: `P-2026-07-00${String(input.poolIndex + 1)}`,
     supportCategory: poolDomain.V1_SPAWN_SUPPORT_CATEGORY,

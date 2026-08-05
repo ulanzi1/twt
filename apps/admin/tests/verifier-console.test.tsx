@@ -44,7 +44,7 @@ const PRESENT_PACKET: VerifierConsolePacket = {
       isAssignable: true,
       lockInStatus: { daysAtJoin: 0, unlockDate: null, state: 'unlocked' },
       vyawasthaShulkStatus: { paidThrough: null, daysUntilLapse: null, inRenewalGrace: false, graceRemainingDays: null },
-      contributionHistorySummary: { status: 'producer_unavailable', producer: 'epic-8-9' },
+      contributionHistorySummary: { status: 'producer_unavailable', producer: 'story-10-24' },
       medicalDisclosureFlags: { hasDisclosureOnRecord: false, declaredConditionCount: null, imaListVersion: null, pendingConcealmentFlag: false },
       retirementCoverage: { status: 'clause_unavailable' },
       specialFlags: [],

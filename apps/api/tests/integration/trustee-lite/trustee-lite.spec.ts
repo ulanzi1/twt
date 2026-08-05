@@ -382,12 +382,48 @@ describe.skipIf(!hasDatabase)('trustee-lite list + signals — E2E (:5433)', () 
       expect(row.severity).toBeNull();
     });
 
-    it('AC4 — the violator arm renders detection_unavailable naming the producer, NOT an empty list', async () => {
+    // ── THE 10.24 SEAM FLIP (Story 10.24, Task 6; AC5) ────────────────────────────────────────
+    //
+    // 10.11 shipped this arm as `detection_unavailable` and NAMED the one call site that would change
+    // when the contribution-fact producer landed. It landed; this is the assertion that moved with it.
+    //
+    // ⚠ `detection_unavailable` is NOT gone and NOT dead — it is now reachable for a genuine
+    // PER-MEMBER gap rather than as a deployment-wide statement (10.24 D6), and
+    // `summarizeViolatorFlags` still degrades the WHOLE section rather than showing a partial list.
+    // The AC4 invariant this test has always protected is unchanged: the section NEVER renders as a
+    // bare empty array whose meaning is ambiguous — it is always a DISCRIMINATED status.
+    it('AC4/10.24 — the violator arm now runs detection, and reports a DISCRIMINATED status either way', async () => {
       const { body } = await fetchAs(superAdmin, shared.p);
 
       const violator = body.violator_flags as Json;
+      expect(['ok', 'detection_unavailable']).toContain(violator.status);
+      if (violator.status === 'ok') {
+        // Detection RAN. `members` carries only members holding >=1 applied R7 clause; this Pariwar
+        // seeds no R7 clause versions, so the honest answer is an evaluated-and-empty list.
+        expect(Array.isArray(violator.members)).toBe(true);
+        expect(violator).not.toHaveProperty('producer');
+      } else {
+        // The gap arm still NAMES what is missing rather than showing a bare hole.
+        expect(typeof violator.producer).toBe('string');
+        expect(violator).not.toHaveProperty('members');
+      }
+    });
+
+    it('10.24 — an UNPROVISIONED R7 registry reports detection_unavailable, never a clean all-clear', async () => {
+      // ⚖ ASSERTION INVERTED 2026-08-05 (round-2 code review). This previously asserted
+      // `status: 'ok'` with `members: []` for this fixture — which seeds NO R7 clause versions — and
+      // in doing so regression-protected the exact false all-clear the handler's own comment forbids:
+      // an empty evaluated list renders as "detection ran, nobody is flagged", indistinguishable from
+      // a genuinely clean Pariwar, when in fact R7 detection never ran at all.
+      //
+      // Ruling: "Unknown rules and unknown facts are the same constitutional state: evaluation
+      // unavailable." So a Pariwar with no R7 clause in effect reports `detection_unavailable`, naming
+      // the REGISTRY (not the fact producer) as the source — the facts derived fine; there was no rule
+      // to apply, and pointing at the producer would send an operator to debug the wrong subsystem.
+      const { body } = await fetchAs(superAdmin, shared.p);
+      const violator = body.violator_flags as Json;
       expect(violator.status).toBe('detection_unavailable');
-      expect(typeof violator.producer).toBe('string');
+      expect(violator.producer).toBe('niyamavali-registry');
       expect(violator).not.toHaveProperty('members');
     });
   });

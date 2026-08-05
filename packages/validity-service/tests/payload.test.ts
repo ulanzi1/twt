@@ -53,7 +53,7 @@ function baseInput(over: Partial<AssembleInput> = {}): AssembleInput {
 describe('assemblePayload — the canonical shape (AC1)', () => {
   it('always carries contribution producer_unavailable (D2-A — never a fabricated 0)', () => {
     const p = assemblePayload(baseInput());
-    expect(p.contributionHistorySummary).toEqual({ status: 'producer_unavailable', producer: 'epic-8-9' });
+    expect(p.contributionHistorySummary).toEqual({ status: 'producer_unavailable', producer: 'story-10-24' });
   });
 
   it('omits R7/R8 from applicableNiyamavaliClauses (only R12 slots exist at member standing)', () => {

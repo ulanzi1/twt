@@ -77,16 +77,41 @@ const EN: Record<string, string> = {
   'trustee.violator.link': 'Open member record',
 
   // AC4 — the detection-unavailable state NAMES what is missing, and never renders as an empty list.
-  // ⚠ The raw sentinel the validity payload carries today is the internal string `epic-8-9`
-  // (`validity-service/types.ts:65`), which is stale: the same gap's sibling sentinel on the Story
-  // 10.16 surface already reads `story-10-24`. Echoing `epic-8-9` verbatim would put inconsistent
-  // internal jargon on a trustee-facing surface, so `producerLabel` below maps the known sentinels to
-  // admin-facing copy and falls back to the raw value for anything unrecognized (never swallowing it).
-  'trustee.violator.unavailable.title': 'Contribution-discipline observation is not available yet.',
+  //
+  // ── Story 10.24 landed; this copy no longer describes a MISSING producer ─────────────────────
+  // 10.11 wrote this state for "no producer exists yet", and mapped the then-current raw sentinel
+  // `epic-8-9` to admin-facing copy. The producer now exists. Reaching this state today means
+  // something narrower and more useful to say: AT LEAST ONE MEMBER'S contribution history could not
+  // be derived, and `summarizeViolatorFlags` deliberately darkens the WHOLE section rather than
+  // showing a partial list (10.11's strictness — a partial scan is a false all-clear for exactly the
+  // members it skipped, and a trustee reading three flagged members cannot know a fourth was missed).
+  //
+  // The `epic-8-9` key is RETAINED, but NOT for the reason originally written here. The old rationale
+  // claimed a pre-rollout `member_validity_cache` row could still render the old literal for up to the
+  // 60s TTL — it cannot. `ContributionHistoryUnavailableDto` types the producer as
+  // `z.literal('story-10-24')` inside a `.strict()` object, so a cached payload carrying `epic-8-9`
+  // fails response validation and 500s; it never reaches this map. The real deploy-window failure mode
+  // is that 500, mitigated by the AC6(b) `invalidate-all` lever, not by a fallback label
+  // (code review 2026-08-05, round 2).
+  //
+  // It stays because the key costs nothing and `producerLabel` is a pure lookup used by more than the
+  // validity path — a stored/exported/log-derived value carrying the historical literal still renders
+  // as prose rather than jargon. `producerLabel` falls back to the raw value for anything unrecognized,
+  // so this is a nicety, not a safety net.
+  'trustee.violator.unavailable.title': 'Contribution-discipline observation could not be completed.',
+  // Deliberately NOT specific to "a member's history could not be derived" any more: the section also
+  // withholds when the Niyamavali registry has no R7 clause in effect, in which case detection did not
+  // run at all and no member history was involved. The one sentence has to be true of BOTH, so it names
+  // the failure as "did not complete" and defers the specifics to {producer}.
   'trustee.violator.unavailable.body':
-    'Nothing is being checked against R7 right now, so this section is blank because the check cannot run — not because every member is clear. Waiting on: {producer}.',
+    'Contribution-discipline detection did not complete, so the whole section is withheld — this is blank because the check could not run to completion, NOT because every member is clear. Source: {producer}.',
   'trustee.violator.producer.epic-8-9': 'the contribution-fact producer (Story 10.24)',
   'trustee.violator.producer.story-10-24': 'the contribution-fact producer (Story 10.24)',
+  // Not a producer fault: the facts derived fine, but the Pariwar has no R7 clause version in effect at
+  // the evaluated instant, so there was no rule to apply. Points the operator at the registry, not at
+  // the projection.
+  'trustee.violator.producer.niyamavali-registry':
+    'the Niyamavali rule registry (no R7 clause is in effect for this Pariwar)',
   'trustee.violator.producer.unknown': 'the contribution-fact producer',
 };
 

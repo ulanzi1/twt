@@ -126,14 +126,14 @@ describe('the four section states render distinguishably (AC9)', () => {
   });
 
   it('DETECTION UNAVAILABLE — the violator section names the missing producer and shows no member list', () => {
-    const unavailable: ViolatorFlagsSection = { status: 'detection_unavailable', producer: 'epic-8-9' };
+    const unavailable: ViolatorFlagsSection = { status: 'detection_unavailable', producer: 'story-10-24' };
     renderShell(response({ violator_flags: unavailable }));
     const section = screen.getByTestId('trustee-section-violator_flag');
     expect(section.getAttribute('data-state')).toBe('detection-unavailable');
     const body = within(section).getByTestId('trustee-violator-unavailable-body').textContent ?? '';
     // It must NAME what is missing, and must NOT echo the raw internal sentinel.
     expect(body).toContain('Story 10.24');
-    expect(body).not.toContain('epic-8-9');
+    expect(body).not.toContain('story-10-24');
     // And it must not read as an all-clear.
     expect(within(section).queryByText(resolveEn('trustee.violator.empty'))).toBeNull();
   });
@@ -142,7 +142,7 @@ describe('the four section states render distinguishably (AC9)', () => {
     const { unmount } = render(
       <TrusteeLiteShell
         pariwarId={PARIWAR}
-        data={response({ violator_flags: { status: 'detection_unavailable', producer: 'epic-8-9' } })}
+        data={response({ violator_flags: { status: 'detection_unavailable', producer: 'story-10-24' } })}
         loading={false}
         onNavigate={vi.fn()}
       />,
@@ -165,7 +165,7 @@ describe('the four section states render distinguishably (AC9)', () => {
 
   it('an unrecognized producer sentinel falls through to the raw value rather than being hidden', () => {
     expect(producerLabel('some-future-story')).toBe('some-future-story');
-    expect(producerLabel('epic-8-9')).toContain('Story 10.24');
+    expect(producerLabel('story-10-24')).toContain('Story 10.24');
   });
 
   it('LOADING and ERROR render OUTSIDE every list (no section mounts)', () => {

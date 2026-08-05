@@ -37,8 +37,10 @@ export const DETAIL_KEYS = {
   lockInActive: 'memberStatus.detail.lockInActive',
   lockInUnlocked: 'memberStatus.detail.lockInUnlocked',
   lockInNeverEntered: 'memberStatus.detail.lockInNeverEntered',
-  // Contribution (D2 producer_unavailable)
+  // Contribution — the D2 gap sentinel (still reachable per 10.24 D6) + the two produced arms (10.24).
   contributionUnavailable: 'memberStatus.detail.contributionUnavailable',
+  contributionOnRecord: 'memberStatus.detail.contributionOnRecord',
+  contributionInLapse: 'memberStatus.detail.contributionInLapse',
   // Medical
   medicalHasDisclosure: 'memberStatus.detail.medicalHasDisclosure',
   medicalNoDisclosure: 'memberStatus.detail.medicalNoDisclosure',

@@ -43,6 +43,37 @@ function payloadWithConcealment() {
   });
 }
 
+/** A payload carrying the Story 10.24 PRODUCED contribution arm (the redaction subject below). */
+function payloadWithContribution() {
+  return assemblePayload({
+    memberId: MEMBER,
+    evaluatedAt: new Date('2025-06-01T00:00:00Z'),
+    memberState: 'active',
+    lockInStatus: { daysAtJoin: null, unlockDate: null, state: 'never-entered' },
+    vyawasthaShulkStatus: { paidThrough: null, daysUntilLapse: null, inRenewalGrace: false, graceRemainingDays: null },
+    medicalDisclosureFlags: {
+      hasDisclosureOnRecord: false,
+      declaredConditionCount: null,
+      imaListVersion: null,
+      pendingConcealmentFlag: false,
+    },
+    retirementCoverage: { status: 'clause_unavailable' },
+    contributionHistory: {
+      status: 'ok',
+      facts: {
+        'contribution.total_count': 12,
+        'contribution.ever_contributed': true,
+        'contribution.months_since_last': 7,
+        'contribution.skips_current_year': 1,
+        'contribution.in_lapse': true,
+      },
+      lapseSince: '2025-03-01T00:00:00.000Z',
+      heldFacts: [{ key: 'contribution.r7a_restorations_used', producer: 'story-10-25' }],
+    },
+    slots: [r12Slot(r12Result({ grantedYears: 0, isRetired: false, specialFlags: [] }))],
+  });
+}
+
 function districtResource(over: Partial<rbac.ResourceLocator> = {}): rbac.ResourceLocator {
   return { dimension: 'district', value: 'Patna', pariwarId: PARIWAR_A, ...over };
 }
@@ -201,6 +232,33 @@ describe('redactForCaller — field redaction (hash unchanged)', () => {
       const out = redactForCaller(full, caller);
       expect(out.isAssignable).toBe(full.isAssignable);
       expect(out).toHaveProperty('isAssignable'); // present, not merely equal-by-undefined
+    }
+  });
+
+  it('Story 10.24: `contributionHistorySummary` facts SURVIVE redaction for every caller', () => {
+    // The POSITIVE pin Task 4 requires, asserted rather than assumed. Contribution facts are NON-PII
+    // MEMBER STANDING — how many contributions are on record, how long since the last one, whether a
+    // cycle was missed. They are not State-Trustee-only material like the concealment flag, and they
+    // are not medical, financial-account or identity data.
+    //
+    // Redacting them would break the two surfaces this story exists to light up: the member's own
+    // status panel (they are entitled to see their own contribution standing — it is the restoration
+    // path they are being asked to walk) and the Trustee-Lite violator section, whose
+    // `factsEstablishing[]` is read straight off this sub-object. It is deliberately NOT in
+    // `STATE_TRUSTEE_ONLY_FLAGS`, and this test is what keeps that deliberate.
+    const full = payloadWithContribution();
+    const narrow: ValidityCaller = {
+      actorId: ACTOR,
+      grants: [{ pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }],
+      resource: districtResource(),
+      isSelf: false,
+    };
+    const selfCall: ValidityCaller = { actorId: ACTOR, grants: [], resource: districtResource(), isSelf: true };
+
+    for (const caller of [narrow, selfCall]) {
+      const out = redactForCaller(full, caller);
+      expect(out.contributionHistorySummary).toEqual(full.contributionHistorySummary);
+      expect(out.contributionHistorySummary.status).toBe('ok');
     }
   });
 

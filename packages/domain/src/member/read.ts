@@ -75,6 +75,44 @@ export async function listMemberIdsForPariwar(db: Db, pariwarId: PariwarId): Pro
   return rows.map((r) => r.memberId);
 }
 
+/** One member's id paired with its CURRENT projected lifecycle state. */
+export interface MemberIdWithState {
+  readonly memberId: MemberId;
+  readonly state: MemberLifecycleState;
+}
+
+/**
+ * Enumerate every member id in a Pariwar WITH its current projected lifecycle state — ONE query
+ * (Story 10.24, Task 6).
+ *
+ * The Trustee-Lite R7 violator scan needs a `memberState` per member to build the engine's resolved
+ * evaluation context, over the WHOLE Pariwar. Calling `getMemberStateAt` per member would be an event
+ * replay per member — precisely the N+1 that story's AC7 names as its binding structural criterion
+ * (10.11 already paid for this lesson: its own spec went 44s → 220s doing per-member work). This read
+ * is the bounded alternative.
+ *
+ * ⚠ It reads the `members.state` PROJECTION, so it answers for NOW — which is correct for the LIVE
+ * trustee surface and ONLY for it. It is deliberately not an `At(instant)` accessor: a historical
+ * answer must come from `getMemberStateAt`'s replay, and offering a cheap-but-wrong as-of variant here
+ * is how a replay-correctness invariant erodes. `members.state` is projector-maintained (DB trigger +
+ * CI gate), so this is a read of derived state, never a second derivation of it.
+ *
+ * Ordered by `member_id` ascending — stable and replay-diffable, mirroring
+ * {@link listMemberIdsForPariwar}. Tenant-scoped (RLS + the explicit predicate). No user-controlled
+ * `.limit()` (the whole membership is the set), so no domain-invariants clamp is needed.
+ */
+export async function listMemberStatesForPariwar(
+  db: Db,
+  pariwarId: PariwarId,
+): Promise<MemberIdWithState[]> {
+  const rows = await db
+    .select({ memberId: members.memberId, state: members.state })
+    .from(members)
+    .where(eq(members.pariwarId, pariwarId))
+    .orderBy(asc(members.memberId));
+  return rows.map((r) => ({ memberId: r.memberId, state: r.state }));
+}
+
 /**
  * Compute a member's lifecycle state as of `atTimestamp` by replaying its event
  * stream up to (and including) that instant, ordered by `event_version`.

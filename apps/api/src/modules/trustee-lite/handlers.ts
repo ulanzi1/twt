@@ -55,7 +55,7 @@ import {
   reconciliation,
   trusteeLite,
 } from '@twt/domain';
-import { CONTRIBUTION_UNAVAILABLE } from '@twt/validity-service';
+import { scanR7ViolatorCandidates } from '@twt/validity-service';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -218,26 +218,32 @@ export function createTrusteeLiteHandlers(deps: AppDeps) {
         now,
       );
 
-      // ── The R7 violator arm (AC4, D1-B) ───────────────────────────────────────────────────
+      // ── The R7 violator arm (AC4, D1-B) — THE 10.24 SEAM, FLIPPED ─────────────────────────
       // Gated on `member.moderate` — the flags exist to inform a moderation decision, and a caller
       // who cannot moderate has no business reading a list of suspension candidates.
       //
-      // The candidate source is `unavailable` today, and passing an empty candidate list instead
-      // would be WRONG: it would render as "detection ran, nobody is flagged", the false all-clear
-      // D1-B exists to forbid. `CONTRIBUTION_UNAVAILABLE` (validity-service/payload.ts:283) is the
-      // authority on whether a producer exists — it is hardcoded into EVERY member's payload, so the
-      // question is a deployment property, not a per-member one, and no member scan is needed to
-      // answer it.
+      // Story 10.11 shipped this call site as `{ status: 'unavailable', producer }` and NAMED it as
+      // the one line that would change when the contribution-fact producer landed. Story 10.24 built
+      // that producer, and this is that change — the whole change. It held:
+      // `packages/domain/src/trustee-lite/violator-flags.ts` is BYTE-UNCHANGED below its header
+      // comment. 10.11's claim that the seam was producer-shaped rather than story-shaped was correct.
       //
-      // ⚠ THE 10.24 SEAM, named: when the contribution-fact producer lands, THIS is the one call
-      // site that changes — `{ status: 'available', candidates }` over the R7 projection 10.24 owns.
-      // `summarizeViolatorFlags` / `deriveViolatorFlags` need no edit (a domain unit test feeds a
-      // synthetic payload carrying applied R7 clauses and asserts flags render, proving the seam now).
+      // `scanR7ViolatorCandidates` is BOUNDED over the Pariwar — a fixed 7 queries regardless of
+      // member count, then a pure per-member ladder evaluation (AC7's binding structural criterion:
+      // no query inside a loop over members, pools or clauses). It contributes APPLIED clauses ONLY
+      // (D2): `deriveViolatorFlags` flags every R7 id it finds with no `applied` check, so a
+      // non-applied clause reaching the payload would flag every member in the Pariwar.
+      //
+      // Passing an empty candidate list would still be WRONG (it renders as "detection ran, nobody is
+      // flagged" — the false all-clear D1-B forbids); the honest degradations remain the sentinel
+      // arms, which `summarizeViolatorFlags` derives from the candidates' own payloads.
+      // The scan reports its OWN discriminant: `available` with candidates, or `unavailable` when the
+      // Pariwar's Niyamavali registry has no R7 clause effective at `now`. Passing a blanket
+      // `{ status: 'available' }` here is what previously turned an unprovisioned registry into the
+      // false all-clear this block warns about — the handler asserted the invariant while the call
+      // site broke it (⚖ 2026-08-05: unknown rules and unknown facts are the same constitutional state).
       const violatorFlags = mayModeration
-        ? trusteeLite.summarizeViolatorFlags({
-            status: 'unavailable',
-            producer: CONTRIBUTION_UNAVAILABLE.producer,
-          })
+        ? trusteeLite.summarizeViolatorFlags(await scanR7ViolatorCandidates(scopeTx.tx, pariwarId, now))
         : undefined;
 
       const response: TrusteeLiteResponse = {

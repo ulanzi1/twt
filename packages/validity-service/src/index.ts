@@ -42,6 +42,8 @@ export type {
   LockInStatusPayload,
   VyawasthaShulkStatusPayload,
   ContributionHistoryUnavailable,
+  ContributionHistoryAvailable,
+  ContributionHistorySummary,
   MedicalDisclosureFlagsPayload,
   RetirementCoveragePayload,
   RetirementCoverageUnavailable,
@@ -62,6 +64,7 @@ export {
   VALID_STATES,
   ACTIVE_STATES,
   CONTRIBUTION_UNAVAILABLE,
+  CONTRIBUTION_R7_REGISTRY_UNAVAILABLE,
   EMPTY_REGISTRY_VERSION,
   type AssembleInput,
   type AssembledClauses,
@@ -73,6 +76,17 @@ export {
   produceRetirementFacts,
   deriveMedicalDisclosureFlags,
   produceMedicalDisclosureFlags,
+  // Story 10.24 — the contribution-fact producer (the seam Story 4.2 deferred to "Epic 8/9").
+  deriveContributionFacts,
+  contributionFactsToBag,
+  contributionFactsToSummary,
+  produceContributionFacts,
+  CONTRIBUTION_LAPSE_POLICY,
+  R7_SUPPLIED_FACT_KEYS,
+  R7_HELD_FACTS,
+  type ContributionFacts,
+  type ContributionFactsInput,
+  type ContributionLapsePolicy,
   type RetirementFacts,
   type RetirementFactsInput,
   type LapseNettingPolicy,
@@ -84,6 +98,14 @@ export {
   VALIDITY_RULE_ORDER,
   buildRuleDescriptors,
   evaluateOrderedClauses,
+  // Story 10.24 — the R7(C)–(F) activation/hold constants + the APPLIED-ONLY family evaluator (D2/D4).
+  R7_ACTIVATED_CLAUSE_IDS,
+  R7_HELD_CLAUSES,
+  R7_REGISTRY_UNPROVISIONED_PRODUCER,
+  evaluateAppliedR7ClauseSlots,
+  type R7ClauseId,
+  type R7HeldClause,
+  type R7ClauseEvaluation,
   type RuleDescriptor,
   type AvailableFacts,
   type ClauseEvalSlot,
@@ -100,6 +122,16 @@ export {
 export {
   addCalendarYears,
   addCalendarDays,
+  addCalendarMonths,
   calendarYearsBetween,
+  calendarMonthsBetween,
   ceilDaysBetween,
 } from './calendar.js';
+
+// Story 10.24 — the Trustee-Lite R7 candidate scan (the supply side of Story 10.11's named seam).
+// BOUNDED over the Pariwar (7 queries, member-count-independent), APPLIED-clauses-only (D2).
+export {
+  scanR7ViolatorCandidates,
+  type R7ViolatorCandidate,
+  type R7CandidateClause,
+} from './r7-candidate-scan.js';

@@ -652,6 +652,20 @@
       "when": 1788666000000,
       "tag": "0092_member-moderation-rtbf",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1788752400000,
+      "tag": "0093_contribution-fact-projection",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1788838800000,
+      "tag": "0094_contribution-projection-coverage",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,7 @@ import { createHash } from 'node:crypto';
 import { and, asc, eq } from 'drizzle-orm';
 import type pg from 'pg';
 
+import { insertMemberPoolAssignments } from '../contribution/projection-write.js';
 import { bindScopedDb, type Db } from '../db.js';
 import type { CycleFreezeCommitId, PariwarId, PoolId } from '../ids/index.js';
 import { claimId, cycleFreezeCommitId, pariwarId as toPariwarId, poolId } from '../ids/index.js';
@@ -236,6 +237,16 @@ export interface ChildSpawnSpec {
   readonly fixedAmount: number;
   /** N — the cycle's total pool count, so the child can detect `count == N` and finalize. */
   readonly poolCount: number;
+  /**
+   * The cycle-freeze `committed_at`, ISO-8601 (this spec is JSON — no `Date`).
+   *
+   * Carried rather than re-read: it is a CYCLE-level constant, so `spawnChildPool` fetching it per
+   * child was one round-trip per pool inside Story 7.9's <60s spawn envelope — a query in a loop over
+   * pools, which is the shape AC7 names by category (code review 2026-08-05, round 2). `planCycleSpawn`
+   * already reads this exact value to derive the freeze month and the fixed amount, so threading it
+   * through costs nothing and keeps every child on the SAME instant by construction.
+   */
+  readonly committedAtIso: string;
 }
 
 export interface PlanCycleSpawnResult {
@@ -330,6 +341,7 @@ export async function planCycleSpawn(
     benefitMechanism,
     fixedAmount,
     poolCount: n,
+    committedAtIso: commit.committedAt.toISOString(),
   }));
 
   return { children, names };
@@ -500,6 +512,40 @@ export async function spawnChildPool(
     integrityHash: snapshot.integrity_hash,
     stateEventVersion: eventVersion,
     snapshot,
+  });
+
+  // ── Story 10.24 (D3): project the freeze-time assignments alongside the snapshot ──────────────
+  //
+  // Written from the SAME `memberAssignments` value the snapshot just serialized — never a second
+  // derivation, never a recompute of `assignMembersToPools` (AC4). On the CALLER's transaction, so the
+  // projection commits or rolls back WITH the snapshot it mirrors (the atomicity half of the D3
+  // observational-equivalence contract), and ONE bulk insert for the whole roster, never a per-member
+  // statement inside Story 7.9's <60s spawn envelope (AC7).
+  //
+  // This is the EXPLICIT-WRITER half of the deliberate two-mechanism split: its sibling
+  // `member_contribution_ledger` is trigger-maintained (migration 0093). A trigger on `pool_snapshots`
+  // would expand a JSONB array of up to 4L/N member ids inside this transaction, un-instrumented — the
+  // reason the mechanisms differ. What must NOT differ is the projected state, which is why both are
+  // held to atomicity · idempotency · replay equivalence · ordering-independence by ONE shared test.
+  //
+  // `committed_at` (NOT the spawn wall-clock) is the assignment instant: it is the durable, re-readable
+  // value a re-spawn resolves identically, which is what keeps the current-year window replay-correct.
+  // Taken from the SPEC, never re-read per child: `committed_at` is a cycle-level constant, and a read
+  // here would be one round-trip PER POOL inside Story 7.9's <60s envelope — a query in a loop over
+  // pools (AC7 names that shape by category). `planCycleSpawn` already read it to derive the freeze
+  // month and the fixed amount, so every child now shares that one instant by construction.
+  const committedAt = new Date(spec.committedAtIso);
+  if (Number.isNaN(committedAt.getTime())) {
+    throw new Error(
+      `[spawnChildPool] spec.committedAtIso is not a valid instant (${spec.committedAtIso}) — cannot project member assignments`,
+    );
+  }
+  await insertMemberPoolAssignments(db, {
+    pariwarId: brandedPariwarId,
+    poolId: poolId(derivedPoolId),
+    cycleId: brandedCycleId,
+    assignedAt: committedAt,
+    memberIds: memberAssignments.map((a) => a.member_id),
   });
 
   return { poolId: derivedPoolId, poolCanonicalIdentifier: spec.poolCanonicalIdentifier, spawned: true };

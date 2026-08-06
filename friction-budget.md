@@ -35,6 +35,7 @@ deliberately accepted.
 | trustee / reconciliation reviewer (step-up OTP + reason-code on every confirm/reject/facilitate-recovery/reverse) | Canonical financial truth (`contribution.confirmed`) + reconciliation integrity (no silent remap) | forced |
 | member/donor (choosing which nominee bank account to pay, when the claim has two) | Paying-to-the-correct-nominee confidence — no opaque server-side default; the donor actively confirms via the bank-name choice + the nominee-name-match banking-info panel (Story 9.9) | forced |
 | member (filing a helpdesk support request — category + subject + body, optional attachments) | Structured triage/routing to the correct role with a visible SLA, instead of an unstructured WhatsApp message or phone call (FR-52) | optional |
+| member (asserting a personal event affected a contribution — a bounded 6-value picker, no free text) | Honest expectation-setting for the ratified Niyamavali §3.1 "carries no consequence of its own" invariant — the member cannot record without first being shown, before they act, that asserting changes nothing (AC1/AC7, Story 10.26) | optional |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -1045,6 +1046,53 @@ Zero gratuitous friction introduced; ledger reviewed, no new row warranted. Page
 baseline unchanged (mobile EAS build stays a no-op; the public Astro surface is
 untouched). This story owns the sixth producer fact and no new state beyond it —
 the declaration facet is the only friction ledger this change touches.
+
+**Story 10.26 disposition (NEW row — optional personal-event-assertion friction; gate corrected 2026-08-06):**
+the personal-event assertion surface (`apps/mobile/app/(membership)/index.tsx`,
+`apps/mobile/components/member-status/{PersonalEventAssertion.tsx,usePersonalEventAssertion.ts}`,
+`apps/mobile/lib/personal-event-api.ts`) is a wholly new member surface: an entry
+button on the member's own status panel → a bounded 6-value picker (bereavement /
+illness / caregiving / displacement / financial_hardship / other, no free text,
+D3) → a mandatory pre-submit disclosure stating the Niyamavali's answer → submit.
+⚠ This declaration was missing from the story's own commits and is added by the
+code review as one of its patches — the gate's AC-4 check was not run to
+completion during dev (it silently no-ops when `origin/main` isn't resolvable
+locally, per the check's own "push event or no origin/main" branch), so the gap
+went undetected until the pre-push hook ran `friction:check` for real. Friction
+analysis:
+
+(1) **The affordance itself — NEW, but `optional` not `forced`.** Nothing else in
+the app routes the member through this flow — they arrive only by deliberately
+tapping "record that a personal event affected my ability to contribute." Same
+category as the Story 10.2 helpdesk-filing row and the WhatsApp/Telegram opt-in
+rows: member-initiated, no other flow is gated behind it.
+
+(2) **The pre-submit disclosure is the deliberate part.** Unlike Story 10.16's
+read-only pay-screen prose (which sits ABOVE an already-existing flow and asks
+nothing of the member), this disclosure sits INSIDE a flow the member chose to
+enter and — per AC7 — is rendered unconditionally, not collapsible, specifically
+so the member cannot complete the flow without having been told it changes
+nothing. That is the deliberate non-effortless step this row declares: reading
+the Niyamavali's answer is not optional once the member has opened the form,
+even though opening the form in the first place is.
+
+(3) **No free text, no upload, no file — the minimum interaction inherent to
+"pick which kind of personal event."** D3 forecloses a text box entirely (Tier-1
+PII in an append-only, unredactable `events_log` with nothing designed to read
+it), so the friction here is bounded to one tap on one of six options plus one
+confirm — smaller than the helpdesk row it is modeled on.
+
+(4) **Dignified, no dark pattern.** The consequence is disclosed BEFORE the
+member commits, not after (AC7) — naming it only in a post-submit confirmation
+would be a dark pattern (the member has already spent the effort). A link to the
+Helpdesk is offered for anything the member actually needs a human for, rather
+than simulating a reviewer here (D3).
+
+The **page-weight baseline is unchanged**: every touched file is in the
+authenticated mobile app (`apps/mobile`, EAS build is a no-op →
+`member-app-native` stays a no-op) or `packages/i18n`/`packages/contracts`
+(not page-weight-gated build targets); `apps/public` is **not** touched. Do NOT
+ratchet (`[[project_friction_budget_baseline_ratchet]]`).
 
 ## How to declare (attribution-on-change — AC-4)
 

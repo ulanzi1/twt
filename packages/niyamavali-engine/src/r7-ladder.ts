@@ -53,12 +53,15 @@ import type {
 // Deriving these is exclusively the fact PRODUCER's job — Story 10.24, assembled by the
 // Story 4.6 Validity Service, supplies `total_count` / `ever_contributed` /
 // `months_since_last` / `skips_current_year` / `in_lapse` from real event history as of
-// Story 9.4 (the `contribution.confirmed` event producer has existed since then). 4.2
-// defines the CONTRACT and tests against injected synthetic facts.
+// Story 9.4 (the `contribution.confirmed` event producer has existed since then), and
+// Story 10.25 added `r7a_restorations_used`. SIX of the seven are supplied;
+// `personal_event_excuse_claimed` is Story 10.26's. 4.2 defines the CONTRACT and tests
+// against injected synthetic facts.
 //
-// Calendar-correct derivation (AI-3-1: `date_trunc`/`interval`, never fixed-ms spans) is
-// the PRODUCER's responsibility — `months_since_last` etc. arrive here already computed.
-// These keys are the single source of truth shared by the future producer and the tests.
+// Derivation correctness (AI-3-1: `date_trunc`/`interval`, never fixed-ms spans; and, since
+// 2026-08-05, OPPORTUNITY counting rather than elapsed time) is the PRODUCER's
+// responsibility — `months_since_last` etc. arrive here already computed. These keys are the
+// single source of truth shared by the producer and the tests.
 
 export const R7_CONTRIBUTION_FACT_KEYS = {
   /** int — lifetime confirmed contributions. R7(A) `< 10`; R7(D/E) `>= 10` gate. */
@@ -67,9 +70,26 @@ export const R7_CONTRIBUTION_FACT_KEYS = {
   EVER_CONTRIBUTED: 'contribution.ever_contributed',
   /** int — missed cycles in the rolling/calendar year. R7(D) `== 1`; R7(E) `>= 2`. */
   SKIPS_CURRENT_YEAR: 'contribution.skips_current_year',
-  /** int — CALENDAR months since last contribution. R7(C) long-gap; R7(F) `>= 6`. */
+  /**
+   * int — elapsed contribution OPPORTUNITIES since the last live confirmation. R7(C) long-gap;
+   * R7(F) `>= 6`.
+   *
+   * ⚠ NOT calendar months, despite the key name (which is frozen — it is on the wire and in the clause
+   * payloads). ⚖ Ratified 2026-08-05 during the Story 10.24 round-2 review: contribution discipline is
+   * evaluated against OPPORTUNITIES, never elapsed time — a wall-clock reading trips R7(F) for every
+   * member of a quiet Pariwar. The UNIT is still months (pool cycles are single-calendar-month
+   * instruments, Decision 2026-08-05-075), so these thresholds keep their meaning. This comment said
+   * "CALENDAR months" until Story 10.25 corrected it; the CONSTANT is unchanged.
+   */
   MONTHS_SINCE_LAST: 'contribution.months_since_last',
-  /** int — lifetime R7(A) one-time restorations consumed. R7(A) `< 2` (lifetime cap). */
+  /**
+   * int — lifetime R7(A) restoration episodes COMPLETED. R7(A) `< 2` (lifetime cap).
+   *
+   * Supplied since Story 10.25 under the ratified `consecutive-opportunity-restoration-v1` policy
+   * (Decision 2026-08-06-076). UNCLAMPED: `lifetime_max` lives in the clause data and the clause
+   * applies it. Supplying this fact did NOT activate R7(A) — the engine reads facts; it never decides
+   * which clauses run.
+   */
   R7A_RESTORATIONS_USED: 'contribution.r7a_restorations_used',
   /** bool — currently in a discipline lapse. R7(A) precondition gate. */
   IN_LAPSE: 'contribution.in_lapse',

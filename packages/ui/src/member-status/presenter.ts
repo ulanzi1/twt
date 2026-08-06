@@ -207,6 +207,10 @@ function contributionSection(payload: MemberValidityPayloadDto): PanelSection {
       everContributed: summary.facts['contribution.ever_contributed'] ?? null,
       monthsSinceLast: summary.facts['contribution.months_since_last'] ?? null,
       skipsCurrentYear: summary.facts['contribution.skips_current_year'] ?? null,
+      // Story 10.25 — the sixth fact. `?? null` is the SAME honest-absence protocol the two
+      // conditional keys above use: absent means the producer could not derive it (here, R7(A)
+      // resolved to no clause version so the restoration threshold is unknown), never `0`.
+      r7aRestorationsUsed: summary.facts['contribution.r7a_restorations_used'] ?? null,
       inLapse,
       lapseSince: summary.lapseSince,
       // The honest hold, surfaced: WHICH facts are still missing. `PanelSection.data` carries scalars

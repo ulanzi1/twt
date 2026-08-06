@@ -12,15 +12,22 @@
 // ── What is / isn't produced here (D2 / D2m) ─────────────────────────────────────────────────────
 //   · PRODUCED now: `member.valid_membership_years` + `member.is_retired` (R12 / Story 4.5), the
 //     member-standing medical-disclosure summary (D2m-A, NON-PII).
-//   · PRODUCED since Story 10.24: FIVE of the seven `contribution.*` facts — `total_count`,
+//   · PRODUCED since Story 10.24: five of the seven `contribution.*` facts — `total_count`,
 //     `ever_contributed`, `months_since_last`, `skips_current_year`, `in_lapse` — derived from the
 //     migration-0093 projections (see {@link deriveContributionFacts}), which ACTIVATES R7(C)–(F).
 //     `contribution_history_summary` now carries a real `ok` arm; the `producer_unavailable` sentinel
 //     remains reachable for a genuine per-member or per-Pariwar coverage gap (D6), never as a blanket
 //     "no producer exists" statement.
-//   · STILL NOT produced: `contribution.r7a_restorations_used` (Story 10.25) and
-//     `contribution.personal_event_excuse_claimed` (Story 10.26) — so R7(A)/(B)/(G) stay HELD; and
-//     `claim.*` + `contribution.compliance_percent`, so R8 is NOT activated by any of the above.
+//   · PRODUCED since Story 10.25: the SIXTH fact, `contribution.r7a_restorations_used`, under the
+//     versioned {@link R7ARestorationPolicy} — plus `restorationPackage`, the `{remaining, required}`
+//     count Story 10.16's disclosure owes a member being asked to contribute without coverage.
+//     ⚠ This did NOT activate R7(A). It lifted ONE of R7(A)'s two named blockers; the clause stays in
+//     `R7_HELD_CLAUSES` on `member.joining_discipline_state` (Story 10.23), and beyond that on the
+//     Trustee Panel's published Part 11 amendment to R7(A)'s clause data (Decision 2026-08-06-077).
+//     Supplying a fact and activating a clause are different acts (`prd.md:346`, normative).
+//   · STILL NOT produced: `contribution.personal_event_excuse_claimed` (Story 10.26) — so R7(G) stays
+//     HELD; and `claim.*` + `contribution.compliance_percent`, so R8 is NOT activated by any of the
+//     above.
 //     ⚠ Supplying facts does NOT activate R8: it additionally needs a CLAIM-TIME fact
 //     (`claim.death_classification`, absent at member standing) and `compliance_percent`, which this
 //     producer does not supply. `VALIDITY_RULE_ORDER` must never gain an R8 clause id.
@@ -31,7 +38,11 @@ import { contribution, medical, member, type Db, type ids } from '@twt/domain';
 import { R7_CONTRIBUTION_FACT_KEYS, R12_MEMBER_FACT_KEYS, type Facts } from '@twt/niyamavali-engine';
 
 import { calendarYearsBetween } from './calendar.js';
-import type { ContributionHistoryAvailable, MedicalDisclosureFlagsPayload } from './types.js';
+import type {
+  ContributionHistoryAvailable,
+  MedicalDisclosureFlagsPayload,
+  RestorationPackagePayload,
+} from './types.js';
 
 /**
  * Lapse-netting policy for `valid_membership_years` ([[CR-4.5-D2]] — the D4 `policy_review_required`
@@ -177,15 +188,22 @@ export async function produceMedicalDisclosureFlags(
 // ── Contribution facts — Story 10.24 (the producer Story 4.2 deferred to "Epic 8/9") ──────────────
 
 /**
- * The `contribution.*` fact keys Story 10.24's producer supplies — EXACTLY five of the engine's seven
- * (`R7_CONTRIBUTION_FACT_KEYS`). This is the producer's output CONTRACT, and it is what makes the
- * `R7_HELD_CLAUSES` hold falsifiable: the totality test asserts every held clause's `blockedBy` names
- * a key that is genuinely NOT in this list, so a hold cannot silently outlive its reason (add the
- * missing producer, and the test tells you the hold is now unjustified).
+ * The `contribution.*` fact keys this producer supplies — SIX of the engine's seven
+ * (`R7_CONTRIBUTION_FACT_KEYS`) since Story 10.25 added `r7a_restorations_used`. This is the
+ * producer's output CONTRACT, and it is what makes the `R7_HELD_CLAUSES` hold falsifiable: the
+ * totality test asserts every held clause's `blockedBy` names a key that is genuinely NOT in this
+ * list, so a hold cannot silently outlive its reason (add the missing producer, and the test tells you
+ * the hold is now unjustified).
  *
- * The two omitted keys and their owners:
- *   · `contribution.r7a_restorations_used`         → Story 10.25 (R7(A) restoration accounting)
+ * The ONE omitted key and its owner:
  *   · `contribution.personal_event_excuse_claimed` → Story 10.26 (the member-assertion path)
+ *
+ * ⚠ Supplying `r7a_restorations_used` did NOT activate R7(A), and adding a key here never activates
+ * anything. R7(A) remains in `R7_HELD_CLAUSES` on `member.joining_discipline_state` (Story 10.23) —
+ * and, beyond any story, on the Trustee Panel's published Part 11 amendment to R7(A)'s clause DATA
+ * (Decision 2026-08-06-077), because the seeded clause still keys its population on the
+ * `contribution.total_count < 10` proxy that `prd.md:344` disclaims and `:346` forbids evaluating.
+ * Facts ≠ clause activation (D6).
  *
  * `contribution.compliance_percent` (R8) is not an `R7_CONTRIBUTION_FACT_KEYS` member at all and is
  * unowned — recorded in `deferred-work.md`, not silently implied by this list.
@@ -196,11 +214,11 @@ export const R7_SUPPLIED_FACT_KEYS = [
   R7_CONTRIBUTION_FACT_KEYS.MONTHS_SINCE_LAST,
   R7_CONTRIBUTION_FACT_KEYS.SKIPS_CURRENT_YEAR,
   R7_CONTRIBUTION_FACT_KEYS.IN_LAPSE,
+  R7_CONTRIBUTION_FACT_KEYS.R7A_RESTORATIONS_USED,
 ] as const;
 
 /** The facts this producer does NOT supply, each naming its owner — the honest hold, ON THE WIRE. */
 export const R7_HELD_FACTS = [
-  { key: R7_CONTRIBUTION_FACT_KEYS.R7A_RESTORATIONS_USED, producer: 'story-10-25' },
   { key: R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED, producer: 'story-10-26' },
 ] as const;
 
@@ -247,7 +265,56 @@ export type ContributionLapsePolicy = 'missed-closed-cycle-v1';
 /** The one shipped lapse policy (see {@link ContributionLapsePolicy}). */
 export const CONTRIBUTION_LAPSE_POLICY: ContributionLapsePolicy = 'missed-closed-cycle-v1';
 
-/** The five `contribution.*` facts this producer derives, in domain (camelCase) form. */
+/**
+ * The v1 R7(A) restoration-accounting policy. A DOCUMENTED, VERSIONED implementation policy — a
+ * genuine derivation under an explicit stated rule, NOT a placeholder and NOT provisional. It is part
+ * of the payload contract the moment it ships: hashed into `validityPayloadHash`, read by the
+ * trustee-lite `factsEstablishing[]`, and (once Story 10.23 lands, and once the Trustee Panel's Part 11
+ * amendment to R7(A)'s clause data is PUBLISHED) consumed by R7(A) — a clause that decides whether a
+ * member's restoration path still exists at all.
+ *
+ * ⚖ RATIFIED 2026-08-06 by BigDev (Decision 2026-08-06-076), at STORY-AUTHORING time — deliberately
+ * before implementation and before the fact reached the payload contract, the same lowest-cost-moment
+ * argument that governed {@link ContributionLapsePolicy} on 2026-08-05. Read "v1" as a VERSION, not an
+ * expiry date: the cheap-re-pin window is CLOSED and the bar for changing this rule is now HIGHER.
+ *
+ * ⚠ Any future change SUPERSEDES Decision 2026-08-06-076; it does NOT REINTERPRET it. Historical
+ * payloads remain CORRECT under the policy in force when they were produced — they are not re-derived,
+ * not re-hashed, and not "corrected" (Decision 2026-08-06-078, the standing principle). So a
+ * supersession is never a backfill: re-running this producer over history under a new policy is a
+ * separate, data-rewriting act needing its own decision. Decisions are superseded; history is not
+ * rewritten. The forward blast radius is migration-shaped either way — every payload hash moves and
+ * every cached row is re-shaped.
+ *
+ * ── `consecutive-opportunity-restoration-v1`, stated once, precisely ──────────────────────────────
+ * Over the member's OPPORTUNITY SEQUENCE (their `member_pool_assignments` rows whose alert reached a
+ * closed state at/before `at`, ordered by close instant), each opportunity is TAKEN (a live
+ * confirmation at `at`) or MISSED. A COMPLETED RESTORATION EPISODE is a maximal run of
+ * ≥ `consecutive_required` consecutive TAKEN opportunities that is IMMEDIATELY PRECEDED BY AT LEAST
+ * ONE MISSED opportunity. `r7a_restorations_used` is the COUNT of such episodes.
+ *
+ * Ratified as policy, NOT as implementation latitude — each of these is load-bearing and each is the
+ * thing a naive reading gets wrong:
+ *   · Episodes are RUNS, never `floor(run / required)`. Six consecutive contributions after a miss is
+ *     ONE restoration, not two: the member restored once and kept contributing.
+ *   · The PRECEDING-MISS gate. Without it, a member who has taken every opportunity they were ever
+ *     given reads as having burned restorations and is pushed toward R7(B) — the HARSHER clause.
+ *   · "Consecutive" is an OPPORTUNITY-sequence predicate, never three ledger rows in a row and never
+ *     `contribution.in_lapse`. `in_lapse` is scoped to the current IST calendar year, so a December
+ *     miss cured by three January contributions would vanish on 1 January; the episode-opening lapse
+ *     is a SEQUENCE fact, not a YEAR fact. The two are deliberately different (AC2).
+ *
+ * The count is NOT clamped at R7(A)'s `restoration.lifetime_max`. That threshold is CLAUSE DATA and
+ * the clause applies it (`fact_lt … max: 2`); a producer that clamped would make "used 2" and "used 7"
+ * indistinguishable and would put a governance threshold in code — exactly what the registry prevents.
+ */
+export type R7ARestorationPolicy = 'consecutive-opportunity-restoration-v1';
+
+/** The one shipped R7(A) restoration-accounting policy (see {@link R7ARestorationPolicy}). */
+export const R7A_RESTORATION_POLICY: R7ARestorationPolicy =
+  'consecutive-opportunity-restoration-v1';
+
+/** The six `contribution.*` facts this producer derives, in domain (camelCase) form. */
 export interface ContributionFacts {
   /** `contribution.total_count` — lifetime LIVE confirmations at the pinned instant. */
   totalCount: number;
@@ -292,6 +359,24 @@ export interface ContributionFacts {
   inLapse: boolean;
   /** ISO-8601 onset of the current lapse (`lapseSince`); null when not in lapse. */
   lapseSince: string | null;
+  /**
+   * `contribution.r7a_restorations_used` — lifetime COMPLETED R7(A) restoration episodes as of the
+   * pinned instant, per {@link R7ARestorationPolicy}. Never clamped at `lifetime_max`.
+   *
+   * `null` when R7(A)'s `restoration.consecutive_required` could not be resolved from the registry at
+   * the pinned instant, and the fact is then OMITTED from the bag rather than sent as `0`. Zero and
+   * unknown are different claims on a clause that decides whether a member's restoration path still
+   * exists — the same discipline `monthsSinceLast` follows, for the same reason.
+   */
+  r7aRestorationsUsed: number | null;
+  /**
+   * The length of the member's CURRENT OPEN run of consecutive taken opportunities — the run that
+   * reaches the end of the sequence AND was opened by a miss. NOT a `contribution.*` fact: it never
+   * enters the engine fact bag. It exists so Story 10.16's disclosure can report
+   * `{ remaining, required }` against whichever R7 clause actually applied to the member (AC4), which
+   * need not be R7(A) and therefore need not use R7(A)'s threshold.
+   */
+  currentOpenTakenRun: number;
 }
 
 /** The already-read projection anchors the PURE derivation consumes (mirrors the domain read). */
@@ -310,6 +395,15 @@ export interface ContributionFactsInput {
   /** The instant this Pariwar's projection is authoritative from; `null` when the backfill has never
    *  run. THE reachability condition for the sentinel — see {@link deriveContributionFacts}. */
   coveredFrom: Date | null;
+  /** COMPLETED R7(A) restoration episodes over the opportunity sequence (Story 10.25 AC1). Ignored
+   *  when `r7aConsecutiveRequired` is null — the episode threshold was then never applied. */
+  completedRestorationEpisodes: number;
+  /** The length of the current OPEN taken run (the one opened by a miss and reaching the sequence
+   *  end); `0` when none. Threshold-independent — Story 10.16's `{remaining}` measures against it. */
+  currentOpenTakenRun: number;
+  /** R7(A)'s `restoration.consecutive_required` from the clause DATA at the pinned instant; `null`
+   *  when R7(A) resolves to no version. The reachability condition for an UNKNOWN restoration count. */
+  r7aConsecutiveRequired: number | null;
 }
 
 /**
@@ -361,6 +455,23 @@ export function deriveContributionFacts(
   if (!Number.isInteger(input.opportunitiesSinceLast) || input.opportunitiesSinceLast < 0) return null;
   if (input.lastConfirmedAt !== null && input.lastConfirmedAt.getTime() > at.getTime()) return null;
   if (input.skipsCurrentYear > 0 && input.earliestSkipClosedAt === null) return null;
+  if (
+    !Number.isInteger(input.completedRestorationEpisodes) ||
+    input.completedRestorationEpisodes < 0
+  ) {
+    return null;
+  }
+  if (!Number.isInteger(input.currentOpenTakenRun) || input.currentOpenTakenRun < 0) return null;
+  // A non-positive `consecutive_required` is a corrupt governance number, not a small one: every taken
+  // run would qualify as a completed restoration. Treated as UNRESOLVED (the fact is omitted), never
+  // as "every run counts" — a wrong restoration count feeds the clause that decides whether a member's
+  // restoration path still exists.
+  const consecutiveRequired =
+    input.r7aConsecutiveRequired !== null &&
+    Number.isInteger(input.r7aConsecutiveRequired) &&
+    input.r7aConsecutiveRequired > 0
+      ? input.r7aConsecutiveRequired
+      : null;
 
   const inLapse = input.skipsCurrentYear > 0; // `missed-closed-cycle-v1`
   return {
@@ -373,6 +484,12 @@ export function deriveContributionFacts(
     skipsCurrentYear: input.skipsCurrentYear,
     inLapse,
     lapseSince: inLapse ? (input.earliestSkipClosedAt?.toISOString() ?? null) : null,
+    // ⚖ `consecutive-opportunity-restoration-v1` — the run counting itself happens in the SAME scan
+    // that produces the missed-cycle aggregates (`facts.ts`, D3); what is decided HERE is the one
+    // thing the SQL cannot decide: whether the threshold that counting used was genuinely resolved.
+    // Un-resolved ⇒ UNKNOWN, never `0` (AC7).
+    r7aRestorationsUsed: consecutiveRequired === null ? null : input.completedRestorationEpisodes,
+    currentOpenTakenRun: input.currentOpenTakenRun,
   };
 }
 
@@ -381,8 +498,10 @@ export function deriveContributionFacts(
  * `R7_CONTRIBUTION_FACT_KEYS` — never re-spelled string literals, so a key rename in the engine breaks
  * the build here rather than silently un-gating a clause.
  *
- * `months_since_last` is OMITTED when null (see {@link ContributionFacts.monthsSinceLast}) — the one
- * conditional key, and deliberately so.
+ * `months_since_last` and `r7a_restorations_used` are OMITTED when null (see
+ * {@link ContributionFacts}) — the two conditional keys, and deliberately so: the engine's `hasFact`
+ * guard resolves an absent fact to a failed condition, which is the honest outcome for a fact that
+ * could not be derived. A fabricated `0` would read as an affirmative claim about the member.
  */
 export function contributionFactsToBag(facts: ContributionFacts): Facts {
   const bag: Facts = {
@@ -393,6 +512,9 @@ export function contributionFactsToBag(facts: ContributionFacts): Facts {
   };
   if (facts.monthsSinceLast !== null) {
     bag[R7_CONTRIBUTION_FACT_KEYS.MONTHS_SINCE_LAST] = facts.monthsSinceLast;
+  }
+  if (facts.r7aRestorationsUsed !== null) {
+    bag[R7_CONTRIBUTION_FACT_KEYS.R7A_RESTORATIONS_USED] = facts.r7aRestorationsUsed;
   }
   return bag;
 }
@@ -418,18 +540,70 @@ function assertNumberOrBooleanFacts(bag: Facts): Readonly<Record<string, number 
 }
 
 /**
+ * The APPLIED R7 clause's restoration parameters, as the ladder's precedence pick reports them —
+ * Story 10.25 (AC4). Read from the CLAUSE DATA (`restoration.consecutive_required`), never a constant.
+ *
+ * `null` for the whole object means NO R7 clause applied to this member: they are in no
+ * contribution-discipline restoration path at all. `consecutiveRequired: null` means one DID apply but
+ * its restoration package is not measured in consecutive contributions (R7(D)/(E)/(F) prescribe
+ * `lock_in_months` + `catch_up_required` / `complete_all` instead).
+ */
+export interface AppliedRestorationRequirement {
+  readonly clauseId: string;
+  readonly consecutiveRequired: number | null;
+}
+
+/**
+ * Derive the restoration-package sub-object Story 10.16's disclosure renders — Story 10.25 (AC4, D4).
+ *
+ * ⚠ `required` comes from the APPLIED clause, NOT from R7(A). A member whose applied clause is R7(C)
+ * is serving a 5-consecutive package; measuring their progress against R7(A)'s 3 would tell them they
+ * are further along than they are, on the surface that asks them for money without coverage. The open
+ * run (`currentOpenTakenRun`) is deliberately threshold-independent so this can be true.
+ *
+ * `remaining` is floored at 0: a member who has already completed the run still has a package that is
+ * simply finished, and a negative "remaining" is not a thing to render.
+ */
+export function deriveRestorationPackage(
+  facts: ContributionFacts,
+  applied: AppliedRestorationRequirement | null,
+): RestorationPackagePayload {
+  if (applied === null) return { status: 'no_consecutive_requirement', clauseId: null };
+  if (applied.consecutiveRequired === null || applied.consecutiveRequired <= 0) {
+    return { status: 'no_consecutive_requirement', clauseId: applied.clauseId };
+  }
+  const required = applied.consecutiveRequired;
+  return {
+    status: 'ok',
+    remaining: Math.max(0, required - facts.currentOpenTakenRun),
+    required,
+  };
+}
+
+/**
  * Build the `contributionHistorySummary` `ok` arm from the derived facts.
  *
  * The fact map is keyed by the DOTTED `R7_CONTRIBUTION_FACT_KEYS` values, because that is the shape
  * `deriveViolatorFlags` already filters on (`startsWith('contribution.')`) — the trustee-lite
- * `factsEstablishing[]` reads it directly, with ZERO changes to `violator-flags.ts`.
+ * `factsEstablishing[]` reads it directly, with ZERO changes to `violator-flags.ts`. Story 10.25's
+ * sixth key rides that same map and therefore needs no change there either.
+ *
+ * `applied` is the ladder's precedence pick (Story 10.25 AC4). It is a REQUIRED parameter rather than
+ * an optional one on purpose: a caller that forgets it would silently report every member as having no
+ * restoration package, which is a claim about their standing, not a missing decoration.
  */
-export function contributionFactsToSummary(facts: ContributionFacts): ContributionHistoryAvailable {
+export function contributionFactsToSummary(
+  facts: ContributionFacts,
+  applied: AppliedRestorationRequirement | null,
+): ContributionHistoryAvailable {
   return {
     status: 'ok',
     facts: assertNumberOrBooleanFacts(contributionFactsToBag(facts)),
     lapseSince: facts.lapseSince,
     heldFacts: R7_HELD_FACTS,
+    // APPENDED, never reordered — `validityPayloadHash` canonicalises the object and the 4.6 hash
+    // contract is order-sensitive.
+    restorationPackage: deriveRestorationPackage(facts, applied),
   };
 }
 

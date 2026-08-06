@@ -117,6 +117,33 @@ describe.skipIf(!hasDatabase)(
       }
     });
 
+    it('Story 10.25 — the SAME trigger evicts on a confirmation that moves a RESTORATION RUN', async () => {
+      // ⚖ AC5(c) — VERIFY, do not re-build. Story 10.25 added `contribution.r7a_restorations_used`
+      // and `restorationPackage` to the cached payload, both derived from the member's opportunity
+      // sequence. Every event that can move a run is a `contribution.*` / `reconciliation.*` event
+      // keyed on `payload->>'memberId'` — precisely the family this trigger already covers — so the
+      // correct discharge is a proof that it still holds, NOT a third trigger.
+      //
+      // ⚠ EXPLICITLY REJECTED AGAIN (10.17 D5, re-rejected by 10.24 and by 10.25): adding a
+      // payload-shape component to the frozen 4.8 cache key. A confirmation does not shift
+      // `member_state_hash` one bit — this trigger is the whole freshness mechanism for the new
+      // fields, which is why it is asserted here rather than assumed.
+      for (const eventType of [
+        CONFIRMED_EVENT_TYPE, // a TAKEN opportunity: extends a run, and can COMPLETE an episode
+        RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE, // flips TAKEN → MISSED: BREAKS a run
+      ]) {
+        const { tx, client } = getTx();
+        await enterAppScope(client, PARIWAR_A);
+        const memberId = randomUUID();
+        await seedCacheRow(tx, memberId);
+        await appendOnAlertStream(tx, eventType, memberId);
+        expect(
+          await cacheRowCount(tx, memberId),
+          `${eventType} moves a restoration run but left a STALE cached restoration count`,
+        ).toBe(0);
+      }
+    });
+
     it('invalidates ONLY the named member — a co-assigned member keeps their warm row', async () => {
       const { tx, client } = getTx();
       await enterAppScope(client, PARIWAR_A);

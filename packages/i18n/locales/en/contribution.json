@@ -135,6 +135,7 @@
   "suspension_disclosure.lock_in.title": "Your membership is in a restoration period",
   "suspension_disclosure.lock_in.what_it_does": "Contributing during this period counts toward completing your restoration.",
   "suspension_disclosure.lock_in.what_it_does_not_buy": "It does not create beneficiary entitlement for a death that occurs during this restoration period.",
+  "suspension_disclosure.package_no_consecutive_requirement": "Your restoration path is not measured as a number of contributions. If you would like to know what it involves, our helpline can go through it with you.",
   "suspension_disclosure.package_remaining": "{remaining} of {required} contributions remain in your restoration package.",
   "suspension_disclosure.package_unavailable": "We cannot yet tell you how many contributions remain in your restoration package. If you would like to know where you stand, our helpline can go through it with you.",
   "suspension_disclosure.reason_line": "The reason on record is {reason}.",

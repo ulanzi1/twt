@@ -33,11 +33,56 @@ deliberately does NOT do is recorded here rather than left for a future reader t
   this diff can absorb. **Re-trigger:** when admin member-search needs to FILTER or SORT on contribution
   standing (today it only displays the section).
 
-- **`contribution.r7a_restorations_used` → Story 10.25; `contribution.personal_event_excuse_claimed` →
-  Story 10.26.** The two of the engine's seven fact keys this producer does NOT supply. Mechanized, not
-  merely noted: `R7_HELD_CLAUSES` names each blocking fact + owner, and the totality test asserts every
-  `blockedBy` key is genuinely absent from `R7_SUPPLIED_FACT_KEYS` — so a hold cannot silently outlive
-  its reason. **Re-trigger:** 10.25 / 10.26 landing; the test will then fail until the hold is lifted.
+- **~~`contribution.r7a_restorations_used` → Story 10.25~~ DISCHARGED 2026-08-06;
+  `contribution.personal_event_excuse_claimed` → Story 10.26 STILL OPEN.** The two of the engine's
+  seven fact keys the 10.24 producer did not supply. Mechanized, not merely noted: `R7_HELD_CLAUSES`
+  names each blocking fact + owner, and the totality test asserts every `blockedBy` key is genuinely
+  absent from `R7_SUPPLIED_FACT_KEYS` — so a hold cannot silently outlive its reason.
+
+  **The mechanism worked exactly as written.** `deferred-work.md` predicted *"the test will then fail
+  until the hold is lifted"*, and on 10.25 it did — with its own message ("the hold has outlived its
+  reason and must be re-justified or lifted"). The correct response was to **NARROW** R7(A)'s
+  `blockedBy` to `['member.joining_discipline_state']` and re-point its owner to `story-10-23`, NOT to
+  delete the entry or activate the clause. `R7_SUPPLIED_FACT_KEYS` is now SIX keys; `R7_HELD_FACTS`
+  carries only `story-10-26`. A revert-sanity probe was RUN and recorded (Story 10.25 Dev Agent
+  Record): adding `r7-a` to `R7_ACTIVATED_CLAUSE_IDS` produced `6 failed | 214 passed` — five
+  mechanization assertions plus one behavioural payload test.
+
+  **⚠ One clarification the discharge makes necessary.** *"The hold is lifted when the fact arrives"*
+  is now only HALF true for R7(A), and half-true is how a normative prohibition gets rationalised away.
+  R7(A) has **THREE** activation conditions, not two: the restoration fact (**done**),
+  `member.joining_discipline_state` (**Story 10.23**, still `backlog`), and the Trustee Panel's
+  **published** Part 11 amendment replacing the `total_count < 10` proxy population (Decision
+  2026-08-06-077 — an instrument no story owns and no code change can satisfy). Only `blockedBy` is
+  mechanizable, because only fact keys can be falsified against `R7_SUPPLIED_FACT_KEYS`; the third
+  condition is recorded in prose at `rules.ts` and in the seed comment beside the clause itself.
+  **Re-trigger:** 10.26 landing (for the remaining half); and, for R7(A), all three conditions
+  together — never any one of them alone.
+
+- **Story 10.25 deploy step — the ≤60 s payload-shape window.** `contributionHistorySummary` gained
+  `restorationPackage` and a sixth fact key, so for up to `VALIDITY_CACHE_TTL_SECONDS` (60 s) after
+  rollout a warm PRE-deploy cache row holds the OLD-shaped JSONB and the `.strict()` DTO can 500.
+  Accepted, not a defect — and there is a zero-window lever, exactly as Story 10.24 documented for the
+  same transient: `POST /api/v1/p/:pariwarId/admin/validity-cache/invalidate-all`
+  (`apps/api/src/modules/member-validity/routes.ts`). Run it immediately after rollout.
+  **Re-trigger:** any future change to the validity payload shape.
+
+- **Story 10.25 Escalation 4 — `lifetime_max: 2` vs. the UNCAPPED fact.** The producer deliberately
+  does NOT clamp `r7a_restorations_used` at 2. `lifetime_max` is clause DATA and the clause applies it
+  (`fact_lt … max: 2`); a producer-side clamp would make "used 2" and "used 7" indistinguishable and
+  would put a governance threshold in code. If the Trustee Panel ever wants "restorations remaining"
+  surfaced, it is `lifetime_max − used` read from the clause data. Recorded so a future reader does not
+  "fix" the uncapped count. **Re-trigger:** any request to surface restorations remaining.
+
+- **Story 10.25 Escalation 5 — the BACKFILL HORIZON bounds restoration history. UN-ATTESTED.** The
+  restoration count is only as deep as `contribution_projection_coverage.covered_from`: an episode
+  completed before that watermark is invisible, and for any `at` inside that window the honest answer
+  is the `producer_unavailable` sentinel, not a number. `0` means *"projected, and none completed"*;
+  the sentinel means *"we do not know"* — collapsing them on a clause that decides whether a member's
+  restoration path still exists would be the failure the watermark was built to end. **No production
+  data exists to measure the real depth**, so the depth is recorded as un-attested rather than
+  estimated ([[feedback_record_unattested_no_backfill]]). **Re-trigger:** the first production backfill,
+  which is when the horizon becomes measurable.
 
 - **`contribution.compliance_percent` (R8) is UNOWNED.** R8 needs it plus a claim-time
   `claim.death_classification`, and it is not one of the seven `R7_CONTRIBUTION_FACT_KEYS` at all. R8 is
@@ -2705,3 +2750,14 @@ _Pass 2 (second adversarial review of the same commit, Group 1 = domain + migrat
 
 - **UN-ATTESTED: the Trustee-Lite Pariwar-wide R7 scan's per-request computational cost has never been measured.** ⚖ BigDev, 2026-08-05: *"AC7 currently bounds query count, not computational cost. The implementation satisfies the accepted story scope. Scaling strategy should be selected from production evidence rather than predicted in advance."* `scanR7ViolatorCandidates` is genuinely BOUNDED in queries (a fixed count regardless of member count — AC7's binding structural criterion holds), but not in work: it materialises one row per member from `listMemberStatesForPariwar`, one aggregate row per member, four pure clause interpretations per member and one candidate payload per member, all on a single un-yielded tick, with no cap, page, budget or cache, recomputed per request. At 4L that shape is ~400k rows across three collections plus ~1.6M pure evaluations on an admin GET. **Reason for deferring:** ratified as an explicit scope decision, not an oversight — mitigation options (capping/paginating the violator section, a second cache, pre-emptive read chunking) each carry a real cost, and the first of them would pick a governance-visible cutoff on a suspension list with no data behind it. Recorded rather than mitigated, per [[feedback_record_unattested_no_backfill]]. **Re-trigger:** the first production or staging Pariwar large enough to produce a real latency signal on the trustee-lite GET — measure THEN choose. Note when measuring that the round-2 opportunity-aware `months_since_last` and the `member_state_in` clause gate shrink the FLAGGED population but NOT the O(M) scan work; a shorter flag list is not evidence the scan got cheaper. [packages/validity-service/src/r7-candidate-scan.ts; packages/validity-service/tests/bench/p95-budget.md]
 - **UN-ATTESTED: the p95/p50 figures recorded for Story 10.24 predate the round-2 changes and were not re-run.** `months_since_last` moved from in-JS calendar arithmetic to the missed-cycle SQL aggregate (which gained a `last_conf` CTE and two `FILTER` clauses over one scan — still one query), and a coverage-watermark read was added (folded as a scalar subquery into the existing ledger query on the single-member path, so that path is still exactly two queries; one extra Pariwar-scoped read on the bulk path). **Reason for deferring:** the same seeded-R7 bench fixture already owed for the fully-provisioned delta is the prerequisite for a meaningful re-measurement, and re-running the old fixture would produce a number that is not comparable like-for-like. **Re-trigger:** whoever builds the seeded-R7 bench fixture re-runs both at once. [packages/validity-service/tests/bench/p95-budget.md]
+
+## Deferred from: code review of 10-25-r7a-restoration-accounting (2026-08-06)
+
+- **`r7aConsecutiveRequiredSql` executes twice per single-member fact read, across two un-transactioned statements.** Once folded into the ledger/context query (`readContributionFactInputs`/`readContributionProjectionContext`), and again embedded inside `missedCycleAggregateSql`'s `runs` CTE — two separate round-trips resolving the same governance number. **Reason for deferring:** documented, deliberate two-query-budget tradeoff (D3) — the alternative (threading the JS-resolved value from the first read into the second statement instead of re-embedding the subquery) touches a heavily pinned SQL/pure-parity module and wasn't attempted here. The risk is a clause-version change landing between the two reads, pairing a run count computed under one threshold with a different resolved threshold — narrow, since clause amendments are rare governance events, not high-frequency writes. **Re-trigger:** any report of a restoration count disagreeing with the reported threshold for the same read, or a future story that needs a stronger consistency guarantee across this module's statements. [packages/domain/src/contribution/facts.ts:158,366]
+- **`resolveAppliedRestoration`/`restorationOfPick` collapse "clause applied but its payload vanished from the registry mid-read" into the same `null` as "no clause applied at all."** The resulting UI copy (`no_consecutive_requirement`) asserts the clause isn't measured in consecutive contributions — not actually true for this case. **Reason for deferring:** the code's own comment already names the window, and it "cannot open at a pinned historical `at`" — only reachable evaluating a live `at` in the exact moment a clause is deprecated mid-read. **Re-trigger:** if this race is ever observed in production (a member reporting a restoration-package explanation that doesn't match their actual applied clause). [packages/validity-service/src/rules.ts:350-361]
+- **`deriveRestorationPackage`'s `consecutiveRequired <= 0` branch is unreachable from any real caller.** `readConsecutiveRequired` (its only real source) already filters non-positive values to `null` before this function ever sees them. **Reason for deferring:** harmless defensive redundancy, not a functional defect — removing it would only reduce robustness against a future caller that bypasses `readConsecutiveRequired`. **Re-trigger:** none; leave as defensive code. [packages/validity-service/src/producer.ts:572]
+- **R7(A)'s clause id `'niy.contribution-discipline.r7-a'` is re-spelled as a raw string literal in multiple places instead of one shared exported constant.** A private `R7A_CLAUSE_ID` in `facts.ts`, a raw literal in `rules.ts`'s `R7_HELD_CLAUSES`, and again in fixtures/tests. **Reason for deferring:** pre-existing, repo-wide convention — the same pattern already exists in `r7-ladder.ts:108` and `violator-flags.ts:70`; centralizing it is a repo-wide refactor out of scope for this story. **Re-trigger:** the next story that touches R7 clause-id literals should consider centralizing at that point. [packages/domain/src/contribution/facts.ts:63; packages/validity-service/src/rules.ts:127]
+- **Admin panel test fixtures updated for type compatibility only — no assertion that the new fields actually render.** `member-status/presenter.ts` now threads `r7aRestorationsUsed` into panel data, but `member-status-panel.test.tsx`'s updated fixtures only keep the mocks type-compatible; none of the file's assertions touch the new field. **Reason for deferring:** not an AC of this story (no admin-surface AC was named), and the exact assertion text depends on how the admin surface actually renders the field, which needs its own look. **Re-trigger:** the next story that touches the admin member-status panel should add real coverage for this field's rendering. [apps/admin/tests/member-status-panel.test.tsx:88-131]
+- **`RestorationPackagePayload` and `RestorationPackageDto` independently declare the same union shape with no parity test.** Unlike this diff's other cross-checked dual-spelling pairs (SQL vs. pure `deriveRestorationRuns`; SQL-threshold vs. `resolveByClauseId`), nothing pins the service-internal type and the contracts DTO to the same shape. **Reason for deferring:** TS structural typing likely catches gross drift at compile time already; a runtime parity test is a nice-to-have, not a fix for an observed defect. **Re-trigger:** the first time these two types actually diverge (e.g. a field added to one and not the other) without a compile error catching it. [packages/validity-service/src/types.ts:150; packages/contracts/src/members/validity.ts:96]
+- **`resolveByClauseId` rejection inside `resolveAppliedRestoration` is an unhandled-rejection path that would fail the whole `getValidityAt` call.** No `try`/`catch` around the DB call. **Reason for deferring:** pre-existing pattern shared by the frozen `ladder.ts:219`'s identical unguarded call — not a regression introduced by this diff, and fixing it here alone would diverge from the module's established error-handling posture. **Re-trigger:** the first cross-cutting resilience pass over `niyamavali-engine`/`validity-service`'s DB-error handling — fix all call sites together, not one at a time. [packages/validity-service/src/rules.ts:358]
+- **SQL vs. pure-reference divergence when `consecutiveRequired` resolves to ≤0.** SQL's `run_length >= threshold` FILTER becomes always-true (inflated raw count) while `deriveRestorationRuns` (the designated pure reference) always returns 0 for that input. **Reason for deferring:** confirmed harmless in production — `deriveContributionFacts` (producer.ts:469-474) discards the SQL-side count and reports `null` whenever the threshold is non-positive, before it ever reaches a caller. But the "SQL === PURE" pinned-test invariant (`contribution-facts.spec.ts`'s `expectRuns` helper) doesn't exercise this degenerate case, so the two implementations are latently allowed to disagree undetected. **Re-trigger:** any future change to either spelling that touches the threshold-comparison boundary — add the ≤0 case to `expectRuns` at that point. [packages/domain/src/contribution/facts.ts:362-367,413-439]

@@ -126,15 +126,16 @@ describe('deriveContributionDisclosure — the suspension arm (AC1)', () => {
   });
 });
 
-describe('the restoration count is honest, never fabricated (AC4 / D1-B)', () => {
+describe('the restoration count is honest, never fabricated (AC4 / D1-B; Story 10.25 AC4/D4)', () => {
   // Asserted as the LITERAL, so a future `remaining: 0` fabrication fails this spec rather than
   // quietly telling a member they have completed a restoration package they may never have started.
   //
-  // ⚠ `producer` re-pointed 'story-10-24' → 'story-10-25' (Story 10.24 AC9). 10.24 shipped the
-  // `contribution.*` FACT producer but explicitly NOT restoration accounting — this arm needs the
-  // count of CONSECUTIVE contributions against `restoration.consecutive_required`, which belongs to
-  // Story 10.25 and couples to 10.23's separately-expiring overlay. Leaving the label naming a story
-  // that has already shipped without closing the gap would turn an honest sentinel into a lie.
+  // ⚠ `package_unavailable` is no longer the only reachable arm. Story 10.25 shipped the count, so
+  // this arm now means specifically "the contribution FACTS are un-derivable" — no projection
+  // coverage, an `at` before the watermark, or an unprovisioned R7 registry. Its `producer` literal
+  // correctly stays `'story-10-25'`: that story IS its producer, and a per-member gap in a SHIPPED
+  // producer is honest (10.24 D6). The base fixture carries a `producer_unavailable` summary, which
+  // is exactly that case.
   const expectUnavailable = (payload: MemberValidityPayloadDto): void => {
     const vm = deriveContributionDisclosure(payload);
     expect(vm!.restorationPackage).toEqual({
@@ -143,7 +144,39 @@ describe('the restoration count is honest, never fabricated (AC4 / D1-B)', () =>
     });
   };
 
-  it('is package_unavailable on the suspension arm', () => {
+  /** The PRODUCED contribution summary arm, carrying the given restoration package. */
+  type ProducedSummary = Extract<
+    MemberValidityPayloadDto['contributionHistorySummary'],
+    { status: 'ok' }
+  >;
+
+  /** A SUSPENDED member whose contribution facts DID derive — the Story 10.25 ordinary case. */
+  const withPackage = (
+    restorationPackage: ProducedSummary['restorationPackage'],
+  ): MemberValidityPayloadDto =>
+    basePayload({
+      isValid: false,
+      isActive: false,
+      isAssignable: true,
+      specialFlags: ['suspended_per_r7-contribution-discipline'],
+      contributionHistorySummary: {
+        status: 'ok',
+        facts: {
+          'contribution.total_count': 4,
+          'contribution.ever_contributed': true,
+          'contribution.skips_current_year': 1,
+          'contribution.in_lapse': true,
+          'contribution.r7a_restorations_used': 1,
+        },
+        lapseSince: '2026-03-01T00:00:00.000Z',
+        heldFacts: [
+          { key: 'contribution.personal_event_excuse_claimed', producer: 'story-10-26' },
+        ],
+        restorationPackage,
+      },
+    });
+
+  it('is package_unavailable when the contribution FACTS are un-derivable', () => {
     expectUnavailable(suspendedPayload());
   });
 
@@ -151,7 +184,38 @@ describe('the restoration count is honest, never fabricated (AC4 / D1-B)', () =>
     expectUnavailable(basePayload({ specialFlags: ['restoration_lock_in'] }));
   });
 
-  it('is never 0 and never null-rendered-as-blank', () => {
+  it('Story 10.25 — carries the PRODUCED { remaining, required } straight through', () => {
+    // The presenter is strictly pure `(payload) → view-model`: the numbers are derived by the
+    // producer against the APPLIED clause's own `restoration.consecutive_required` and arrive on the
+    // payload. This asserts the pass-through, and that the presenter invents nothing.
+    const vm = deriveContributionDisclosure(withPackage({ status: 'ok', remaining: 3, required: 5 }));
+    expect(vm!.restorationPackage).toEqual({ status: 'ok', remaining: 3, required: 5 });
+  });
+
+  it('Story 10.25/D4 — carries the no_consecutive_requirement arm rather than mislabelling it', () => {
+    // ⚠ R7(D)/(E)/(F) — the majority of what is activated today — prescribe `lock_in_months` +
+    // `catch_up_required` / `complete_all` and carry NO `consecutive_required`. Leaving those members
+    // on `package_unavailable` after 10.25 shipped would name a story that HAS shipped and did not
+    // close their case — the "honest sentinel quietly becomes a lie" failure 10.24 AC9 corrected.
+    const vm = deriveContributionDisclosure(
+      withPackage({ status: 'no_consecutive_requirement', clauseId: 'niy.contribution-discipline.r7-d' }),
+    );
+    expect(vm!.restorationPackage).toEqual({
+      status: 'no_consecutive_requirement',
+      clauseId: 'niy.contribution-discipline.r7-d',
+    });
+  });
+
+  it('Story 10.25 — a NULL clauseId means "in no restoration path", not "we cannot tell you"', () => {
+    const vm = deriveContributionDisclosure(
+      withPackage({ status: 'no_consecutive_requirement', clauseId: null }),
+    );
+    expect(vm!.restorationPackage).toEqual({ status: 'no_consecutive_requirement', clauseId: null });
+    // The distinction that matters: this is NOT the producer-gap arm.
+    expect(vm!.restorationPackage.status).not.toBe('package_unavailable');
+  });
+
+  it('is never 0-fabricated and never null-rendered-as-blank', () => {
     const vm = deriveContributionDisclosure(suspendedPayload());
     expect(vm!.restorationPackage.status).not.toBe('ok');
     expect(vm!.restorationPackage).not.toBeNull();

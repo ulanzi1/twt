@@ -52,11 +52,32 @@ export const RESTORATION_LOCK_IN_DISCLOSURE_KEYS = {
 export const RESTORATION_PACKAGE_UNAVAILABLE_KEY = 'suspension_disclosure.package_unavailable';
 
 /**
- * The Story-10.24 count line — DECLARED AND UNREACHABLE TODAY, alongside the `ok` view-model arm it
- * renders. Interpolates `{remaining}` / `{required}` as Latin operational numerals at the render
- * boundary. Declared now so the producer's arrival is a data change, not a copy change (AC4).
+ * The count line — LIVE since Story 10.25, alongside the `ok` view-model arm it renders. Interpolates
+ * `{remaining}` / `{required}` as Latin operational numerals at the render boundary.
+ *
+ * ⚖ It shipped in `en` AND `hi` under Story 10.16 precisely so the producer's arrival would be a DATA
+ * change and not a copy change — and it was: Story 10.25 lit this arm without authoring a word here.
  */
 export const RESTORATION_PACKAGE_REMAINING_KEY = 'suspension_disclosure.package_remaining';
+
+/**
+ * Story 10.25 (AC4 / D4) — the honest line for a restoration package that is NOT measured in
+ * consecutive contributions, or for a member in no restoration path at all.
+ *
+ * R7(D)/(E)/(F) — the majority of what is activated today — prescribe `lock_in_months` +
+ * `catch_up_required` / `complete_all` and carry no `consecutive_required`, so there is no count to
+ * show those members. Leaving them on {@link RESTORATION_PACKAGE_UNAVAILABLE_KEY} after 10.25 shipped
+ * would tell them "we cannot yet tell you" about a producer that HAS shipped and simply does not
+ * measure their package that way.
+ *
+ * Zero interpolation params, on the same D5 discipline as the unavailable line (`t()` THROWS on a
+ * missing param — the Story 10.10 trap that turned a fallback branch into a crashing dead branch). It
+ * states a fact about the INSTRUMENT, never about the member: 10.16's AC5 forbids copy that
+ * characterises the member's standing as a moral failing, and "not measured as a number of
+ * contributions" attributes nothing to them.
+ */
+export const RESTORATION_PACKAGE_NO_CONSECUTIVE_REQUIREMENT_KEY =
+  'suspension_disclosure.package_no_consecutive_requirement';
 
 /**
  * The reason-attribution line — interpolates `{reason}`, which the render layer resolves from

@@ -53,8 +53,17 @@
 import { contribution, member, niyamavali, ids, type Db } from '@twt/domain';
 import { evaluateLadder, R7_NOT_APPLICABLE, type ResolvedClause } from '@twt/niyamavali-engine';
 
-import { contributionFactsToBag, contributionFactsToSummary, deriveContributionFacts } from './producer.js';
-import { R7_ACTIVATED_CLAUSE_IDS, R7_REGISTRY_UNPROVISIONED_PRODUCER } from './rules.js';
+import {
+  contributionFactsToBag,
+  contributionFactsToSummary,
+  deriveContributionFacts,
+  type AppliedRestorationRequirement,
+} from './producer.js';
+import {
+  R7_ACTIVATED_CLAUSE_IDS,
+  R7_REGISTRY_UNPROVISIONED_PRODUCER,
+  readConsecutiveRequired,
+} from './rules.js';
 import { CONTRIBUTION_UNAVAILABLE } from './payload.js';
 import type { ContributionHistorySummary } from './types.js';
 
@@ -155,6 +164,12 @@ export async function scanR7ViolatorCandidates(
       earliestSkipClosedAt: null,
       opportunitiesSinceLast: 0,
       coveredFrom: factInputs.coveredFrom,
+      // A member with no assignments has no opportunity sequence, so no run and no completed episode.
+      // That is DATA, not a gap — and it stays distinguishable from "unknown" because the threshold
+      // below is the Pariwar-wide one, carried onto the synthesized row exactly like `coveredFrom`.
+      completedRestorationEpisodes: 0,
+      currentOpenTakenRun: 0,
+      r7aConsecutiveRequired: factInputs.r7aConsecutiveRequired,
     };
     const facts = deriveContributionFacts(inputs, at);
     if (facts === null) {
@@ -184,12 +199,17 @@ export async function scanR7ViolatorCandidates(
       R7_NOT_APPLICABLE,
     );
 
+    // Story 10.25 (AC4) — the ladder's PRECEDENCE PICK and its `restoration.consecutive_required`,
+    // read from the payloads THIS SCAN ALREADY RESOLVED. Zero extra queries and zero extra reads in
+    // the loop: the clause resolution is hoisted above it, which is the whole point of this module.
+    const appliedRestoration = restorationOfPick(ladder.applicableClauseId, resolvedClauses);
+
     candidates.push({
       memberId: String(memberId),
       payload: {
         memberId: String(memberId),
         evaluatedAt,
-        contributionHistorySummary: contributionFactsToSummary(facts),
+        contributionHistorySummary: contributionFactsToSummary(facts, appliedRestoration),
         // D2 — APPLIED ONLY. The ladder already sorts by clause id (deterministic order).
         applicableNiyamavaliClauses: ladder.perClauseResults
           .filter((entry) => entry.applied)
@@ -203,6 +223,27 @@ export async function scanR7ViolatorCandidates(
     });
   }
   return { status: 'available', candidates };
+}
+
+/**
+ * The ladder pick's restoration parameters, from the ALREADY-RESOLVED clause payloads — Story 10.25.
+ *
+ * PURE, and deliberately a lookup rather than a read: the individual-member path (`rules.ts`) has to
+ * spend a query here because `LadderResult` does not carry the payload and `ladder.ts` is frozen; this
+ * path does not, because it holds the resolutions itself. Both use the SAME
+ * {@link readConsecutiveRequired} spelling, so the two cannot read the governance block differently.
+ */
+function restorationOfPick(
+  applicableClauseId: string | null,
+  resolvedClauses: readonly ResolvedClause[],
+): AppliedRestorationRequirement | null {
+  if (applicableClauseId === null) return null;
+  const clause = resolvedClauses.find((c) => String(c.clauseId) === applicableClauseId);
+  if (clause === undefined) return null;
+  return {
+    clauseId: applicableClauseId,
+    consecutiveRequired: readConsecutiveRequired(clause.payload),
+  };
 }
 
 /**

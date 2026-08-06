@@ -108,8 +108,8 @@ describe('Story 10.24 — the hold is FALSIFIABLE, not decorative (AC3)', () => 
     }
   });
 
-  it('supplies EXACTLY five of the engine seven contribution fact keys', () => {
-    expect(supplied.length).toBe(5);
+  it('supplies EXACTLY six of the engine seven contribution fact keys', () => {
+    expect(supplied.length).toBe(6);
     // Every supplied key must be a real engine key (never an invented one the ladder cannot read).
     const engineKeys = new Set<string>([
       'contribution.total_count',
@@ -121,7 +121,31 @@ describe('Story 10.24 — the hold is FALSIFIABLE, not decorative (AC3)', () => 
       'contribution.personal_event_excuse_claimed',
     ]);
     for (const key of supplied) expect(engineKeys.has(key)).toBe(true);
-    expect(supplied).not.toContain('contribution.r7a_restorations_used');
+    // ⚠ The `r7a_restorations_used` line is GONE, not commented out: Story 10.25 supplies it. The
+    // 10.26 line STAYS — that hold is still live.
     expect(supplied).not.toContain('contribution.personal_event_excuse_claimed');
+  });
+
+  it('R7(A) is STILL HELD after Story 10.25 supplied its restoration count (D6)', () => {
+    // ⚠ The tempting moment, mechanized. Every story before 10.25 could say "R7(A) is dark because a
+    // fact is missing". After 10.25 that sentence is HALF true — and half-true is how a normative
+    // prohibition gets rationalised away. `prd.md:346` is unchanged and unconditional, and R7(A) has
+    // THREE activation conditions, not two: `member.joining_discipline_state` (Story 10.23), AND the
+    // Trustee Panel's PUBLISHED Part 11 amendment replacing the `total_count < 10` proxy population
+    // (Decision 2026-08-06-077), which no story owns and no code change can satisfy.
+    expect(supplied).toContain('contribution.r7a_restorations_used');
+    expect(R7_HELD_CLAUSES.map((c) => String(c.clauseId))).toContain(
+      'niy.contribution-discipline.r7-a',
+    );
+    expect([...R7_ACTIVATED_CLAUSE_IDS] as string[]).not.toContain(
+      'niy.contribution-discipline.r7-a',
+    );
+
+    const r7a = R7_HELD_CLAUSES.find((c) => c.clauseId === 'niy.contribution-discipline.r7-a');
+    // The hold was NARROWED to the one remaining fact, not deleted — deleting it (or activating r7-a)
+    // to make the falsifiable-hold assertion above go green is the failure this apparatus exists to
+    // catch ([[feedback_mechanization_split_commitment]]).
+    expect(r7a?.blockedBy).toEqual(['member.joining_discipline_state']);
+    expect(r7a?.owner).toBe('story-10-23');
   });
 });

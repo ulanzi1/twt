@@ -1,4 +1,170 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-06b (10-25-r7a-restoration-accounting: review -> done via bmad-code-review off
+#   branch feat/10-25-r7a-restoration-accounting @ 8be7669. Three parallel layers (Blind Hunter, Edge
+#   Case Hunter, Acceptance Auditor) ran against the full uncommitted diff (31 files, +2348/-182).
+#   ACCEPTANCE AUDITOR: zero AC violations across all 9 ACs; two disclosed/tested variances from the
+#   story's illustrative text (an extra registry read on the individual-member restoration path, and
+#   `clauseId: string | null` widening the AC4 snippet's bare `string`) were already recorded in the
+#   decision log and are not defects.
+#   THREE PATCHES APPLIED AND RE-VERIFIED LIVE: (1) `r7aConsecutiveRequiredSql`'s bare `::int` cast on
+#   `restoration.consecutive_required` crashed on non-numeric clause payload data — guarded with a
+#   `CASE WHEN ... ~ '^[0-9]+$'` check that degrades to NULL, matching the JS twin
+#   `readConsecutiveRequired`'s validation (29/29 live-DB tests in contribution-facts.spec.ts still pass);
+#   (2) `RESTORATION_PACKAGE_NO_CONSECUTIVE_KEY` renamed to
+#   `RESTORATION_PACKAGE_NO_CONSECUTIVE_REQUIREMENT_KEY` for consistency with its own i18n string and
+#   sibling constants; (3) the mobile disclosure's non-exhaustive status ternary replaced with a
+#   `degradedRestorationKey` switch carrying a `never`-typed exhaustiveness check, so a future 4th
+#   `RestorationPackageState` arm fails to compile instead of silently mis-rendering. `tsc --noEmit`
+#   clean on @twt/domain, @twt/ui, @twt/mobile; all touched suites re-run green.
+#   EIGHT FINDINGS DEFERRED (real, pre-existing, or documented tradeoffs — not blocking): the R7(A)
+#   threshold subquery's double-execution across two un-transactioned statements (documented two-query-
+#   budget tradeoff, D3); a registry-race edge case in `resolveAppliedRestoration` that "cannot open at a
+#   pinned historical `at`"; dead defensive code in `deriveRestorationPackage`'s unreachable `<=0` branch;
+#   the R7(A) clause-id string-literal duplication (pre-existing repo-wide convention); a test-coverage
+#   gap on the admin panel's new `r7aRestorationsUsed` field; a missing `RestorationPackagePayload`/
+#   `RestorationPackageDto` parity test; the pre-existing unhandled-rejection pattern shared with the
+#   frozen `ladder.ts`; and a latent SQL/pure-reference divergence at `consecutiveRequired <= 0` that is
+#   confirmed harmless in production (discarded downstream) but untested at that boundary. All eight
+#   appended to `deferred-work.md` under "Deferred from: code review of 10-25-r7a-restoration-accounting
+#   (2026-08-06)"; also written to the story's Review Findings section.
+#   FIVE DISMISSED AS NOISE: the mobile source-scan test methodology (documented, established
+#   convention); self-ratified decision-log entries (established repo-wide convention); documentation
+#   volume/narrative tone (same); a claim that the `readContributionProjectionCoverage` ->
+#   `readContributionProjectionContext` rename breaks external callers (verified false — one internal
+#   call site, already updated in this diff); and the Acceptance Auditor's two disclosed variances
+#   (already reasoned and tested, judged non-defects by the auditor itself).)
+# last_updated: 2026-08-06a (10-25-r7a-restoration-accounting: ready-for-dev -> in-progress -> review via
+#   bmad-dev-story off main @ 8be7669, branch feat/10-25-r7a-restoration-accounting. All 9 ACs satisfied,
+#   40/40 subtasks complete. Epic 10's SECOND contribution-governance decomposition story to ship.
+#   WHAT SHIPPED: `contribution.r7a_restorations_used` as the SIXTH supplied R7 fact, derived as-of `at`
+#   under the ratified `consecutive-opportunity-restoration-v1` (Decision 2026-08-06-076) — episodes are
+#   RUNS (six-after-a-miss is ONE, never floor(6/3)), the PRECEDING-MISS gate is load-bearing (without it
+#   every never-missing member reads as having burned restorations and is pushed toward the HARSHER
+#   R7(B)), and "consecutive" is an OPPORTUNITY-sequence predicate — NOT ledger rows and NOT
+#   `contribution.in_lapse` (which is IST-year-scoped: a December miss cured in January would evaporate
+#   on 1 January; pinned by its own test). Story 10.16's restorationPackage reaches its `ok` arm with real
+#   {remaining, required} measured against the APPLIED clause's own restoration.consecutive_required —
+#   never R7(A)'s — plus D4's third honest `no_consecutive_requirement` arm for R7(D)/(E)/(F), which carry
+#   no consecutive package at all.
+#   R7(A) DID NOT ACTIVATE, BY DESIGN. Its hold was NARROWED to ['member.joining_discipline_state'] and
+#   its owner re-pointed to story-10-23. The mechanization fired exactly as deferred-work.md predicted in
+#   writing: the falsifiable-hold test went RED with its own message the moment the fact was supplied.
+#   REVERT-SANITY PROBE RUN AND RECORDED VERBATIM (AC3): adding r7-a to R7_ACTIVATED_CLAUSE_IDS produced
+#   `Test Files 2 failed | 15 passed (17) / Tests 6 failed | 214 passed (220)` — FIVE mechanization
+#   assertions (totality, disjointness, exactly-CDEF, the omission ENFORCEMENT, and this story's new
+#   still-held assertion) plus ONE BEHAVIOURAL payload test. Restored; 220/220.
+#   R7(A) NOW HAS THREE ACTIVATION CONDITIONS, NOT TWO, and only one is mechanizable: 10.23's fact, the
+#   restoration count (DONE), and the Trustee Panel's PUBLISHED Part 11 amendment replacing the
+#   `total_count < 10` proxy population (Decision 2026-08-06-077). A narrowed `blockedBy` must NOT be read
+#   as "one step from activation" — `blockedBy` can only carry FACT keys, because that is all the totality
+#   test can falsify against R7_SUPPLIED_FACT_KEYS. The registry condition is recorded in prose at
+#   rules.ts and in the seed comment beside the clause itself.
+#   D3 HELD THE TWO-QUERY BUDGET, and its obligation was DISCHARGED not assumed: missedCycleAggregateSql's
+#   WHERE was relaxed to admit TAKEN opportunities (runs were structurally invisible before) with the
+#   missed predicate pushed into each FILTER, the runs computed by gap-and-islands window functions over
+#   the SAME scan, and R7(A)'s consecutive_required folded in as a scalar subquery. The three pre-existing
+#   aggregates were PINNED FIRST and proven bit-for-bit unchanged (projection-equivalence 15/15, live fact
+#   spec 15/15, both identical to their 8be7669 baseline). Counted-query assertion EXTENDED to 0/1/several
+#   completed episodes -> still exactly TWO.
+#   DECISIONS D2-D5 RECORDED AS 2026-08-06-079 (D1 was already ratified as 076 and was cited, not
+#   re-litigated): a pure derivation with NO new event/table/migration and `member.moderation.restored`
+#   REJECTED BY NAME as a source (wrong in BOTH directions); the scan relaxation + its unchanged-aggregates
+#   obligation; the third arm; and the 10.23 NON-SUBSUMPTION constraint recorded at the definition site
+#   (one clock never absorbs the other — 10.23's overlay must not read this count as its own expiry).
+#   THREE VARIANCES RECORDED RATHER THAN ABSORBED: (1) ONE extra bounded registry read on the
+#   individual-member path — LadderResult does not surface the resolved payload and ladder.ts is FROZEN,
+#   so "never a second registry read" was unreachable without widening a frozen result shape; it sits
+#   outside every loop (AC8's structural gate holds) and the bulk scan pays nothing. (2) the new arm's
+#   clauseId is `string | null` — null is the honest answer for a member in NO restoration path, which is
+#   neither "we cannot tell you" nor "your package is not counted in contributions". (3) the WIRE type
+#   carries TWO arms where @twt/ui's carries THREE — restorationPackage exists only on the `ok` summary
+#   arm, so declaring package_unavailable there would have been the exact "declared and unreachable"
+#   narration this story removed elsewhere.
+#   ONE GENUINE FINDING, surfaced by a LIVE test rather than predicted by the story: `remaining` is
+#   NECESSARILY EQUAL to `required` on every `ok` arm reachable TODAY. R7(C) is the only ACTIVATED clause
+#   carrying consecutive_required, and its own precondition (`months_since_last >= 12`, counted in missed
+#   opportunities SINCE the last live confirmation) resets the instant the member contributes — so any
+#   member for whom the arm renders has a trailing run of 0. The partial-progress arithmetic is real and
+#   pinned DB-free; it becomes live only when R7(A)/(B) activate. A PROPERTY OF WHICH CLAUSES ARE
+#   ACTIVATED, not a defect — recorded in the spec beside the test that exposed it so nobody "fixes" the
+#   run measurement.
+#   BLAST RADIUS DISCHARGED: POOL_ASSIGNMENT_HASH_VERSION still 'v1' and assignment-version-pin-replay
+#   green AND UNEDITED; migration 0093's existing trigger PROVEN to still evict on run-moving events (no
+#   third trigger, no cache-key change — 10.17 D5 re-rejected); violator-flags.ts / ladder.ts /
+#   interpretClause UNTOUCHED; openapi/v1.yaml regen BYTE-IDENTICAL (the 4.6 payload was never registered
+#   in the hand-curated emitter — 10.17's finding, recorded not "fixed"); determinism gate exactly ONE
+#   hash; p95 re-measured and appended to p95-budget.md as a versioned record.
+#   VALIDATION: typecheck 20/20, lint 20/20, domain-invariants pass, contracts determinism pass,
+#   ci:local WITHOUT DATABASE_URL EXIT 0 fully green. ci:local WITH DATABASE_URL: ONE failure —
+#   @twt/channels dispatch-audit.spec.ts "Test timed out in 5000ms", a package this diff does not touch
+#   and a DIFFERENT victim from the TWO the pre-edit baseline already carried (news-blog + banners, both
+#   `expected 500 to be ...`, neither of which recurred). Chased to root cause, not presumed innocent:
+#   confirmed INNOCENT by running it in isolation (1 passed). Classic
+#   [[project_ci_local_concurrency_oversubscription]]. Nothing recorded as un-attested — every AC9 gate
+#   was actually run.
+#   MEMORIES UPDATED (both went stale on merge): project_r7_fact_producer_unbuilt (six of seven supplied;
+#   R7(A)'s THREE conditions) and project_contribution_fact_projection_substrate (the ONE-statement
+#   two-query budget + its two obligations + the PURE-reference parity pin).
+#   Saved 10-25-r7a-restoration-accounting.md.)
+# last_updated: 2026-08-06 (10-25-r7a-restoration-accounting: backlog -> ready-for-dev via
+#   bmad-create-story. Comprehensive Story 10.25 file authored off main @ 8be7669 at
+#   _bmad-output/implementation-artifacts/10-25-r7a-restoration-accounting.md. Epic 10's THIRTEENTH
+#   authored story and the second of the three-story contribution-governance decomposition (10.24
+#   facts / 10.25 restoration accounting / 10.26 member assertion). Supplies the SIXTH
+#   `contribution.*` fact — `contribution.r7a_restorations_used` — and lights Story 10.16's
+#   `{remaining, required}` restoration-package count (owner CONFIRMED by Decision 2026-08-05-074).
+#   R7(A) does NOT activate here: the epic's own AC makes activation JOINT with 10.23's
+#   `member.joining_discipline_state`.
+#   ⚠ DEPENDENCY GAP RECORDED, NOT ABSORBED: epics.md:3952 says "Depends on: 10.23, 10.24". 10.24 is
+#   done; 10.23 has NOT been authored. The story is still authorable because 10.24 ratified that
+#   supplying a FACT and activating a CLAUSE are different acts (prd.md:346 is normative) — so 10.25
+#   supplies the fact and NARROWS R7(A)'s mechanized hold from two blockers to one, rather than
+#   lifting it. What genuinely cannot be built — the epic's "couples to 10.23's restoration-discipline
+#   overlay with separate expiry" — is discharged as a FIRST-CLASS ABSENT SEAM (D5, the 8.4
+#   nominee-VPA posture), never faked.
+#   SIX DECISIONS. D1 (the governance core): a restoration is consumed on COMPLETION, not on grant —
+#   "restorations USED" + FR-9's "max 2 lifetime -> after that R7(B) applies"; grant-counting would
+#   push a member who never actually restored into the HARSHER clause. D2: a pure versioned derivation
+#   (`consecutive-opportunity-restoration-v1`) over the 10.24 projections — no new event, no new table
+#   (10.24 D8 carries) — and `member.moderation.restored`/`rule-clearance` REJECTED BY NAME as a
+#   source, wrong in both directions (packages exist without suspension; a restore is a consequence,
+#   not a record of which rule was cleared). D3: fold the run computation into the EXISTING scan by
+#   relaxing missedCycleAggregateSql's WHERE and pushing the missed predicate into each FILTER —
+#   two-query budget kept, and the three existing aggregates must be PINNED BYTE-IDENTICAL first.
+#   D4: the `{remaining, required}` shape fits only `consecutive_required` packages — R7(D)/(E)/(F)
+#   carry NONE, so a third honest `no_consecutive_requirement` arm is added rather than leaving those
+#   members on a sentinel naming a story that shipped (the 10.24-AC9 lie-by-staleness failure).
+#   D5 (above). D6: facts != clause activation, restated because this is the tempting moment.
+#   THE STORY'S OWN LOAD-BEARING TRAP: "3 consecutive contributions" is an OPPORTUNITY-sequence
+#   predicate, never 3 ledger rows, and the episode-opening lapse is a SEQUENCE fact, not
+#   `contribution.in_lapse` (which is IST-year-scoped and would erase a December miss on 1 January).
+#   AC3 is mechanically FORCED: r7-activation-totality.test.ts's falsifiable-hold assertion goes RED
+#   the moment the fact is supplied — deferred-work.md:40 predicted this in writing — and narrowing
+#   the hold, not deleting it, is the correct response.
+#   ESCALATION 1 RESOLVED SAME DAY BY RATIFICATION, not deferral: BigDev ratified D1 (COMPLETION, not
+#   grant) and `consecutive-opportunity-restoration-v1` as the versioned implementation policy —
+#   Decision 2026-08-06-076. Ratified at AUTHORING time, before implementation and before the fact
+#   reached the payload contract, on the same lowest-cost-moment argument Decision 2026-08-05-074 used
+#   for `contribution.in_lapse`, and with the same consequence: the cheap-re-pin window is now CLOSED
+#   and the bar went UP. Runs, preceding-MISS gate and opportunity-sequence are ratified POLICY, not
+#   implementation latitude. The producer still does NOT clamp at 2.
+#   FIVE ESCALATIONS RAISED, TWO RESOLVED SAME DAY, 3 open. ESCALATION 3 — the one that was NEW and
+#   structural — RESOLVED BY OWNER ASSIGNMENT (Decision 2026-08-06-077): R7(A)'s CLAUSE DATA still keys
+#   on `contribution.total_count < 10`, which prd.md:344 disclaims and :346 forbids evaluating; amending
+#   it is a registry/Part-11 instrument that NEITHER 10.23 NOR 10.25 had an AC for — the same
+#   unowned-obligation shape that produced the gap 10.24 closed ([[project_r7_fact_producer_unbuilt]]).
+#   OWNER: the Trustee Panel, as a Part 11 amendment. Deliverable = a ratified amendment replacing the
+#   proxy population with the constitutional joining-discipline criterion; 10.23 supplies the fact,
+#   10.25 consumes the PUBLISHED registry; completion = ratified -> version published -> implementation
+#   references the new version. R7(A) therefore has THREE activation conditions, not two, and the third
+#   is verifiable as published rather than merely intended. Corrected BEFORE the failure could recur.
+#   ALSO RATIFIED: Decision 2026-08-06-078, a STANDING PRINCIPLE binding every versioned-policy decision
+#   in the log (074, 076, and future ones) — versioned policies are SUPERSEDED, never REINTERPRETED, and
+#   historical payloads remain CORRECT under the policy in force when they were produced. A policy
+#   supersession is therefore NEVER a backfill: re-deriving history under a new policy is a separate
+#   data-rewriting act needing its own decision. Decisions are superseded; history is not rewritten.
+#   Recorded as a NEW entry rather than by editing 076 in place — which is the principle applied to
+#   itself, and which the log's own preamble already required.)
 # last_updated: 2026-08-05i (10-24-contribution-fact-producer-projection-r7-cf-activation:
 #   SECOND bmad-code-review pass over the POST-PATCH state at 82ccbbf. Stays `done`; all findings
 #   resolved in-pass. Three parallel layers again, no failed layers; 6 decision-needed + 13 patch +
@@ -3664,7 +3830,7 @@ development_status:
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: backlog
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
-  10-25-r7a-restoration-accounting: backlog
+  10-25-r7a-restoration-accounting: done
   10-26-r7g-personal-event-excuse-assertion: backlog
   epic-10-retrospective: optional
 

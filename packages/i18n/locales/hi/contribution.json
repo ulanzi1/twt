@@ -135,6 +135,7 @@
   "suspension_disclosure.lock_in.title": "आपकी सदस्यता पुनर्बहाली अवधि में है",
   "suspension_disclosure.lock_in.what_it_does": "इस अवधि में किया गया अंशदान आपकी पुनर्बहाली पूर्ण करने की ओर गिना जाता है।",
   "suspension_disclosure.lock_in.what_it_does_not_buy": "इस पुनर्बहाली अवधि में हुई किसी मृत्यु के लिए इससे हिताधिकारी पात्रता नहीं बनती।",
+  "suspension_disclosure.package_no_consecutive_requirement": "आपकी पुनर्बहाली का मार्ग अंशदान की संख्या से नहीं मापा जाता। इसमें क्या शामिल है, यह जानने के लिए आप हमारी हेल्पलाइन से बात कर सकते हैं।",
   "suspension_disclosure.package_remaining": "आपके पुनर्बहाली पैकेज में {required} में से {remaining} अंशदान शेष हैं।",
   "suspension_disclosure.package_unavailable": "आपके पुनर्बहाली पैकेज में कितने अंशदान शेष हैं, यह हम अभी नहीं बता सकते। अपनी स्थिति जानने के लिए आप हमारी हेल्पलाइन से बात कर सकते हैं।",
   "suspension_disclosure.reason_line": "अभिलेख में दर्ज कारण: {reason}",

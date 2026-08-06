@@ -16,10 +16,11 @@
 // Module-level (never render-nested) — the `FieldRow` / `ChooseOtherAccountButton` convention at
 // `pay.tsx:64-90`, so it never remounts on a parent re-render.
 
-import type { ContributionDisclosureViewModel } from '@twt/ui'
+import type { ContributionDisclosureViewModel, RestorationPackageState } from '@twt/ui'
 import {
   DISCLOSURE_GET_HELP_KEY,
   DISCLOSURE_REASON_LINE_KEY,
+  RESTORATION_PACKAGE_NO_CONSECUTIVE_REQUIREMENT_KEY,
   RESTORATION_PACKAGE_REMAINING_KEY,
   RESTORATION_PACKAGE_UNAVAILABLE_KEY,
 } from '@twt/ui'
@@ -30,6 +31,21 @@ import { CallHelplineCTA } from '../common/CallHelplineCTA'
 
 const NS = { namespace: 'contribution' } as const
 
+// Exhaustive over the non-`ok` arms — a compiler error, not a silent fallback, is what a future
+// fourth `RestorationPackageState` arm should produce here.
+function degradedRestorationKey(status: Exclude<RestorationPackageState['status'], 'ok'>): string {
+  switch (status) {
+    case 'no_consecutive_requirement':
+      return RESTORATION_PACKAGE_NO_CONSECUTIVE_REQUIREMENT_KEY
+    case 'package_unavailable':
+      return RESTORATION_PACKAGE_UNAVAILABLE_KEY
+    default: {
+      const exhaustive: never = status
+      return exhaustive
+    }
+  }
+}
+
 export interface SuspensionDisclosureProps {
   /** The pure `@twt/ui` derivation's output. The caller renders nothing when it is `null`. */
   vm: ContributionDisclosureViewModel
@@ -38,11 +54,12 @@ export interface SuspensionDisclosureProps {
 }
 
 export function SuspensionDisclosure({ vm, t }: SuspensionDisclosureProps): React.ReactElement {
-  // AC4 — the count is FIRST-CLASS ABSENT today, never `0` and never silently omitted. The `ok` arm is
-  // declared and unreachable until the Story 10.24 contribution-fact producer lands; when it does, this
-  // renders the count with NO change to the (a)/(b) copy keys or to `pay.tsx`. The numerals interpolate
-  // as Latin operational numerals (amendment-A2) — `t` does no Devanagari numeral conversion here.
-  // Destructured so the discriminated union narrows in both arms below.
+  // AC4 — the count is FIRST-CLASS ABSENT when it cannot be counted, never `0` and never silently
+  // omitted. Story 10.25 made the `ok` arm REACHABLE and added the `no_consecutive_requirement` arm;
+  // both landed with NO change to the (a)/(b) copy keys and NO change to `pay.tsx`, which is what the
+  // 10.16 shape was designed for. The numerals interpolate as Latin operational numerals
+  // (amendment-A2) — `t` does no Devanagari numeral conversion here.
+  // Destructured so the discriminated union narrows in every arm below.
   const restoration = vm.restorationPackage
 
   return (
@@ -87,15 +104,15 @@ export function SuspensionDisclosure({ vm, t }: SuspensionDisclosureProps): Reac
         {t(vm.whatItDoesNotBuyKey, undefined, NS)}
       </Paragraph>
 
-      {/* (c) the restoration count. */}
-      {restoration.status === 'package_unavailable' ? (
-        <YStack gap="$1">
-          <Paragraph fontSize="$3" color="$colorPress">
-            {t(RESTORATION_PACKAGE_UNAVAILABLE_KEY, undefined, NS)}
-          </Paragraph>
-          <CallHelplineCTA label={t(DISCLOSURE_GET_HELP_KEY, undefined, NS)} />
-        </YStack>
-      ) : (
+      {/* (c) the restoration count — THREE arms since Story 10.25, each a different claim.
+
+          `package_unavailable` and `no_consecutive_requirement` both pair with the helpline CTA
+          because both leave the member with a question a person can answer; they differ in WHAT is
+          being said. "We cannot yet tell you" (facts un-derivable) is not "your package is not counted
+          in contributions" (R7(D)/(E)/(F) prescribe lock-in months and catch-up instead), and
+          collapsing the two would tell a member the system is broken when it is simply measuring
+          something else. */}
+      {restoration.status === 'ok' ? (
         <Paragraph fontFamily="$tabular" fontSize="$3" color="$color">
           {t(
             RESTORATION_PACKAGE_REMAINING_KEY,
@@ -106,6 +123,13 @@ export function SuspensionDisclosure({ vm, t }: SuspensionDisclosureProps): Reac
             NS,
           )}
         </Paragraph>
+      ) : (
+        <YStack gap="$1">
+          <Paragraph fontSize="$3" color="$colorPress">
+            {t(degradedRestorationKey(restoration.status), undefined, NS)}
+          </Paragraph>
+          <CallHelplineCTA label={t(DISCLOSURE_GET_HELP_KEY, undefined, NS)} />
+        </YStack>
       )}
     </YStack>
   )

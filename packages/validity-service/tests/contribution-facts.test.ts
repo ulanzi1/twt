@@ -12,22 +12,43 @@
 //     round-2 review) the one with a REACHABLE sentinel: no projection coverage ⇒ no facts.
 //   · D5  — `missed-closed-cycle-v1` behaves as its documented policy says, including `lapseSince`.
 
+import { contribution } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { addCalendarMonths, calendarMonthsBetween } from '../src/calendar.js';
 import {
   CONTRIBUTION_LAPSE_POLICY,
+  R7A_RESTORATION_POLICY,
   contributionFactsToBag,
   contributionFactsToSummary,
   deriveContributionFacts,
+  deriveRestorationPackage,
 } from '../src/producer.js';
 
 const AT = new Date('2026-08-05T00:00:00.000Z');
 
+/** Story 10.25 — opportunity-sequence shorthand. `T` = TAKEN (live-confirmed at `at`), `M` = MISSED. */
+const T = true;
+const M = false;
+
+/** The PURE `consecutive-opportunity-restoration-v1` reference, pinned to the SQL by a live parity spec. */
+const runs = contribution.deriveRestorationRuns;
+
+const R7_A = 'niy.contribution-discipline.r7-a';
+const R7_C = 'niy.contribution-discipline.r7-c';
+const R7_D = 'niy.contribution-discipline.r7-d';
+
 /** A coverage watermark old enough that `at` is always inside it — the "projection is complete" case. */
 const COVERED_FROM = new Date('2020-01-01T00:00:00.000Z');
 
-/** Anchors for a member with a readable, ordinary history in a fully-backfilled Pariwar. */
+/**
+ * Anchors for a member with a readable, ordinary history in a fully-backfilled Pariwar.
+ *
+ * ⚠ The three Story-10.25 anchors are REQUIRED, not optional. When 10.25 supplied
+ * `contribution.r7a_restorations_used`, every call site here failed to compile — which is the
+ * mechanization working: a new fact anchor must be stated for each fixture, never defaulted into
+ * existence, because a defaulted `0` restoration count is an affirmative claim about a member.
+ */
 function inputs(over: Partial<Parameters<typeof deriveContributionFacts>[0]> = {}) {
   return {
     totalCount: 12,
@@ -36,6 +57,12 @@ function inputs(over: Partial<Parameters<typeof deriveContributionFacts>[0]> = {
     earliestSkipClosedAt: null,
     opportunitiesSinceLast: 0,
     coveredFrom: COVERED_FROM,
+    completedRestorationEpisodes: 0,
+    currentOpenTakenRun: 0,
+    // R7(A)'s seeded `restoration.consecutive_required`. Sourced from the CLAUSE DATA on the live path
+    // (`facts.ts`'s scalar subquery); stated here as the fixture's registry state, never as a policy
+    // constant this module owns.
+    r7aConsecutiveRequired: 3,
     ...over,
   };
 }
@@ -235,29 +262,215 @@ describe('D5 — the missed-closed-cycle-v1 lapse policy (RATIFIED 2026-08-05-07
 });
 
 describe('AC3/AC5 — the fact bag and the payload ok arm', () => {
-  it('emits EXACTLY the supplied keys, dotted, and never the two held keys', () => {
+  it('emits EXACTLY the supplied keys, dotted, and never the one remaining held key', () => {
     const bag = contributionFactsToBag(deriveContributionFacts(inputs(), AT)!);
     expect(Object.keys(bag).sort()).toEqual([
       'contribution.ever_contributed',
       'contribution.in_lapse',
       'contribution.months_since_last',
+      'contribution.r7a_restorations_used',
       'contribution.skips_current_year',
       'contribution.total_count',
     ]);
-    expect(bag).not.toHaveProperty('contribution.r7a_restorations_used');
     expect(bag).not.toHaveProperty('contribution.personal_event_excuse_claimed');
   });
 
   it('the ok arm keys facts by the DOTTED keys deriveViolatorFlags filters on, and names its holds', () => {
-    const summary = contributionFactsToSummary(deriveContributionFacts(inputs(), AT)!);
+    const summary = contributionFactsToSummary(deriveContributionFacts(inputs(), AT)!, null);
     expect(summary.status).toBe('ok');
     // The consumer filters with `startsWith('contribution.')` — every key must survive that filter.
     for (const key of Object.keys(summary.facts)) expect(key.startsWith('contribution.')).toBe(true);
-    expect(summary.heldFacts.map((f) => f.key).sort()).toEqual([
+    // Story 10.25 discharged the `r7a_restorations_used` half of the 10.24 hold; the 10.26 half stays.
+    expect(summary.heldFacts.map((f) => f.key)).toEqual([
       'contribution.personal_event_excuse_claimed',
-      'contribution.r7a_restorations_used',
     ]);
     // The hold names an OWNER, so a reader can act on it rather than merely noticing a gap.
-    for (const held of summary.heldFacts) expect(held.producer).toMatch(/^story-10-2[56]$/);
+    for (const held of summary.heldFacts) expect(held.producer).toBe('story-10-26');
+  });
+});
+
+// ── Story 10.25 — `consecutive-opportunity-restoration-v1` (AC1, AC2, AC7; D1) ────────────────────
+//
+// ⚠ These assert the POLICY, which is RATIFIED (Decision 2026-08-06-076) and whose re-pin window is
+// CLOSED. Each case below is one a naive reading gets wrong, and each wrong answer lands on a member's
+// record on the clause that decides whether their restoration path still exists at all. A change here
+// is a superseding decision-log entry, never a fixture update.
+
+describe('AC1 — a restoration is consumed on COMPLETION, and episodes are RUNS', () => {
+  it('is the RATIFIED policy identifier — changing it is a governance change, not a refactor', () => {
+    // Deliberately a bare literal, for the same reason `CONTRIBUTION_LAPSE_POLICY` is: a re-pin must
+    // be an explicit, reviewed edit to a test that says why, never a passenger in a refactor.
+    expect(R7A_RESTORATION_POLICY).toBe('consecutive-opportunity-restoration-v1');
+  });
+
+  it('SIX consecutive taken after a miss is ONE restoration, not two — episodes are runs', () => {
+    // The `floor(run / required)` error. The member restored once and then kept contributing; reading
+    // that as two consumed restorations moves them two-thirds of the way to R7(A)'s lifetime cap for
+    // the offence of being diligent.
+    expect(runs([M, T, T, T, T, T, T], 3).completedEpisodes).toBe(1);
+  });
+
+  it('TEN taken from the very first opportunity, never missed, is ZERO — the preceding-MISS gate', () => {
+    // The single most damaging way to get this wrong. Without the gate every member who has never
+    // missed reads as having burned restorations and is pushed toward R7(B), the HARSHER clause.
+    expect(runs([T, T, T, T, T, T, T, T, T, T], 3).completedEpisodes).toBe(0);
+    expect(runs([T, T, T, T, T, T, T, T, T, T], 3).currentOpenRun).toBe(0);
+  });
+
+  it('a SHORT run then a LONG run counts only the run that completed', () => {
+    // MISS, TAKE, TAKE, MISS, TAKE, TAKE, TAKE → the first run is 2, short of 3; only the second one
+    // completes the package.
+    expect(runs([M, T, T, M, T, T, T], 3).completedEpisodes).toBe(1);
+  });
+
+  it('an IN-PROGRESS package is not a consumed one', () => {
+    // MISS, TAKE, TAKE → 0 consumed, and 1 contribution still to go (AC4 reads the same run).
+    const summary = runs([M, T, T], 3);
+    expect(summary.completedEpisodes).toBe(0);
+    expect(summary.currentOpenRun).toBe(2);
+  });
+
+  it('a MISS mid-run breaks the run — a reversal that turns a TAKEN into a MISS un-completes it', () => {
+    // The same seven opportunities, differing only in whether the fourth was live-confirmed AT `at`.
+    // A Story 9.5 reversal naming that confirmation flips it to MISSED and the 6-run becomes 3+2.
+    expect(runs([M, T, T, T, T, T, T], 3).completedEpisodes).toBe(1);
+    expect(runs([M, T, T, T, M, T, T], 3).completedEpisodes).toBe(1); // the first 3 still completed
+    expect(runs([M, T, T, M, T, T], 3).completedEpisodes).toBe(0); // neither run reaches 3
+  });
+
+  it('an EMPTY opportunity sequence is zero episodes and no open package', () => {
+    // A member never assigned to a closed cycle, and a member whose cycles are all still OPEN, both
+    // arrive here as an empty sequence: neither had anything to take, so neither missed anything.
+    expect(runs([], 3)).toEqual({ completedEpisodes: 0, currentOpenRun: 0 });
+  });
+
+  it('respects the clause DATA threshold rather than a hardcoded 3', () => {
+    // R7(B)/(C) prescribe FIVE. The same sequence answers differently under a different clause, which
+    // is the whole reason `consecutive_required` is read from the registry.
+    expect(runs([M, T, T, T], 3).completedEpisodes).toBe(1);
+    expect(runs([M, T, T, T], 5).completedEpisodes).toBe(0);
+    expect(runs([M, T, T, T, T, T], 5).completedEpisodes).toBe(1);
+  });
+
+  it('the count is NOT clamped — `lifetime_max` is clause data, not a producer concern', () => {
+    // Four separate completed episodes. A producer that clamped at R7(A)'s `lifetime_max: 2` would
+    // make "used 2" and "used 7" indistinguishable and would put a governance threshold in code.
+    const sequence = [M, T, T, T, M, T, T, T, M, T, T, T, M, T, T, T];
+    expect(runs(sequence, 3).completedEpisodes).toBe(4);
+    expect(
+      deriveContributionFacts(inputs({ completedRestorationEpisodes: 7 }), AT)?.r7aRestorationsUsed,
+    ).toBe(7);
+  });
+});
+
+describe('AC2 — "consecutive" is an OPPORTUNITY predicate, and in_lapse is the WRONG gate', () => {
+  it('a DECEMBER miss cured by three JANUARY takes is a completed restoration', () => {
+    // ⚠ THE TRAP. `contribution.in_lapse` is `missed-closed-cycle-v1`, scoped to the CURRENT IST
+    // CALENDAR YEAR. Keyed off it, the December miss is invisible from 1 January and this member's
+    // completed restoration evaporates on New Year's Day. The episode-opening lapse is a SEQUENCE
+    // fact, not a YEAR fact — the two are deliberately different and must never be collapsed.
+    const facts = deriveContributionFacts(
+      inputs({
+        // Evaluated in January: no skip lands in THIS IST year, so `in_lapse` is false …
+        skipsCurrentYear: 0,
+        earliestSkipClosedAt: null,
+        // … and yet the December-miss-then-three-January-takes episode genuinely completed.
+        completedRestorationEpisodes: runs([M, T, T, T], 3).completedEpisodes,
+        currentOpenTakenRun: runs([M, T, T, T], 3).currentOpenRun,
+      }),
+      AT,
+    );
+    expect(facts?.inLapse).toBe(false);
+    expect(facts?.r7aRestorationsUsed).toBe(1);
+  });
+});
+
+describe('AC7 — an un-resolvable threshold is UNKNOWN, never a fabricated zero', () => {
+  it('OMITS r7a_restorations_used when R7(A) resolves to no clause version', () => {
+    // "We could not resolve how long a restoration is" and "this member has completed none" are
+    // different claims. The engine's `hasFact` guard resolves the absent key to a failed condition,
+    // which is the honest outcome; a `0` would be an affirmative statement about the member.
+    const facts = deriveContributionFacts(inputs({ r7aConsecutiveRequired: null }), AT);
+    expect(facts?.r7aRestorationsUsed).toBeNull();
+    expect(contributionFactsToBag(facts!)).not.toHaveProperty('contribution.r7a_restorations_used');
+  });
+
+  it('treats a corrupt (non-positive / non-integer) threshold as UNRESOLVED, not as "every run counts"', () => {
+    for (const bad of [0, -3, 2.5]) {
+      expect(
+        deriveContributionFacts(inputs({ r7aConsecutiveRequired: bad }), AT)?.r7aRestorationsUsed,
+      ).toBeNull();
+    }
+  });
+
+  it('still returns the sentinel when the Pariwar has NO coverage, threshold or not', () => {
+    // Coverage is checked FIRST: the restoration count is only as deep as the backfill horizon, and a
+    // restoration completed before `covered_from` is invisible. The sentinel — not a wrong number — is
+    // the answer for any `at` in that window (Escalation 5, recorded un-attested).
+    expect(deriveContributionFacts(inputs({ coveredFrom: null }), AT)).toBeNull();
+  });
+
+  it('rejects a structurally impossible episode / open-run count rather than reporting it', () => {
+    expect(deriveContributionFacts(inputs({ completedRestorationEpisodes: -1 }), AT)).toBeNull();
+    expect(deriveContributionFacts(inputs({ completedRestorationEpisodes: 1.5 }), AT)).toBeNull();
+    expect(deriveContributionFacts(inputs({ currentOpenTakenRun: -1 }), AT)).toBeNull();
+  });
+});
+
+describe('AC4/D4 — the restoration package is measured against the APPLIED clause', () => {
+  const facts = () => deriveContributionFacts(inputs({ currentOpenTakenRun: 2 }), AT)!;
+
+  it('reports { remaining, required } from the applied clause DATA', () => {
+    expect(
+      deriveRestorationPackage(facts(), { clauseId: R7_C, consecutiveRequired: 5 }),
+    ).toEqual({ status: 'ok', remaining: 3, required: 5 });
+  });
+
+  it('measures against the APPLIED clause, NOT R7(A) — the two disagree and the member pays', () => {
+    // Same member, same two taken contributions. Under R7(C)'s 5-consecutive package they have three
+    // to go; measuring them against R7(A)'s 3 would tell them they have one, on the surface that is
+    // asking them for money without coverage.
+    const underR7c = deriveRestorationPackage(facts(), { clauseId: R7_C, consecutiveRequired: 5 });
+    const underR7a = deriveRestorationPackage(facts(), { clauseId: R7_A, consecutiveRequired: 3 });
+    expect(underR7c).toEqual({ status: 'ok', remaining: 3, required: 5 });
+    expect(underR7a).toEqual({ status: 'ok', remaining: 1, required: 3 });
+  });
+
+  it('floors `remaining` at 0 for a package that is already finished', () => {
+    const done = deriveContributionFacts(inputs({ currentOpenTakenRun: 9 }), AT)!;
+    expect(deriveRestorationPackage(done, { clauseId: R7_C, consecutiveRequired: 5 })).toEqual({
+      status: 'ok',
+      remaining: 0,
+      required: 5,
+    });
+  });
+
+  it('says `no_consecutive_requirement` for R7(D)/(E)/(F), naming the clause', () => {
+    // ⚠ D4. R7(D)/(E)/(F) — the MAJORITY of what is activated today — carry `lock_in_months` +
+    // `catch_up_required` / `complete_all` and NO `consecutive_required`. Leaving those members on a
+    // sentinel naming a story that has already shipped is exactly the "honest sentinel quietly becomes
+    // a lie" failure 10.24's AC9 was written to correct.
+    expect(deriveRestorationPackage(facts(), { clauseId: R7_D, consecutiveRequired: null })).toEqual({
+      status: 'no_consecutive_requirement',
+      clauseId: R7_D,
+    });
+  });
+
+  it('says `no_consecutive_requirement` with a NULL clause when no R7 clause applied at all', () => {
+    // A member in no contribution-discipline restoration path. There is no package to count, and
+    // saying so is a different claim from "we cannot tell you" (`package_unavailable`, which the
+    // render layer reaches from the summary's own `producer_unavailable` arm).
+    expect(deriveRestorationPackage(facts(), null)).toEqual({
+      status: 'no_consecutive_requirement',
+      clauseId: null,
+    });
+  });
+
+  it('rides the payload summary, so the presenter needs no second source', () => {
+    const summary = contributionFactsToSummary(facts(), {
+      clauseId: R7_C,
+      consecutiveRequired: 5,
+    });
+    expect(summary.restorationPackage).toEqual({ status: 'ok', remaining: 3, required: 5 });
   });
 });

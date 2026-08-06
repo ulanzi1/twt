@@ -25,6 +25,8 @@ export * from './overlay.js';
 // Story 3.9 — Life Events address + posting history accessors (append-only write + latest read).
 export * from './address.js';
 export * from './posting.js';
+// Story 10.26 — the personal-event assertion: the write + the as-of existential reads (no table).
+export * from './personal-event.js';
 // Story 3.10 — voluntary-withdrawal record write + in-scope read (the rejoin-lock read is folded into
 // the signup repo's cross-tenant resolveMembersByMobile, NOT here).
 export * from './withdrawal.js';

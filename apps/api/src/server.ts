@@ -54,6 +54,7 @@ import { registerDataExportModule } from './modules/data-export/index.js';
 import { registerRtbfModule } from './modules/rtbf/index.js';
 import { registerWithdrawalModule } from './modules/withdrawal/index.js';
 import { registerPoolFixedAmountModule } from './modules/pool-fixed-amount/index.js';
+import { registerContributionsModule } from './modules/contributions/index.js';
 import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
@@ -266,6 +267,13 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // event + projected state in one tx, and audits the routing decision via withCompensatingAudit. The
   // member/operator/admin surfaces are Stories 10.2/10.3/10.4.
   registerHelpdeskModule(app, deps);
+  // Story 10.26 — the personal-event ASSERTION (member-session-gated): POST
+  // /api/v1/p/:pariwarId/member/contributions/personal-events records that a personal event affected
+  // a contribution, supplying `contribution.personal_event_excuse_claimed` and activating R7(G).
+  // ⚖ It RECORDS; it grants nothing. The ratified Niyamavali §3.1 says the assertion "grants no
+  // restoration relief and carries no consequence of its own" — there is no reviewer, no approval and
+  // no GET, because there is nothing for a member to check back on.
+  registerContributionsModule(app, deps);
   // Story 10.5 — the News/Blog admin authoring surface (the FIRST non-helpdesk Epic-10 surface):
   // list/create/read/edit + submit/approve(+tone-review sign-off)/schedule/publish, gated on the NEW
   // `news.manage` key (pariwar-dimension). The domain owns author≠reviewer + the tone gate; the

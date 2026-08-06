@@ -6,14 +6,22 @@
 // `@twt/validity-service` (the reverse dependency is a turbo cycle), so this is the shipped split.
 //
 // ── AC7: a FIXED number of queries, independent of member history size ──────────────────────────
-// `readContributionFactInputs` runs exactly TWO queries regardless of how many contributions,
-// assignments or cycles the member has: one aggregate over the ledger (COUNT + MAX + two folded-in
-// scalar subqueries), one aggregate over the assignment × alert × ledger join. It NEVER fetches rows
-// to count them in JS and NEVER issues one query per cycle. `readContributionFactInputsForPariwar` is
-// the same two queries GROUPED BY member for the whole Pariwar, PLUS one member-independent context
-// read — the bounded bulk read the trustee-lite candidate scan needs so it can evaluate without one
-// fact read per member in a loop. A counted-query test (1 vs. N fixtures → identical query count) pins
-// this, because a counted assertion survives a refactor that a comment does not.
+// `readContributionFactInputs` runs exactly THREE queries regardless of how many contributions,
+// assignments, cycles or assertions the member has: one aggregate over the ledger (COUNT + MAX + two
+// folded-in scalar subqueries), one aggregate over the assignment × alert × ledger join, and — since
+// Story 10.26 — one EXISTS over the member's `member.personal_event_asserted` events. It NEVER fetches
+// rows to count them in JS and NEVER issues one query per cycle.
+// `readContributionFactInputsForPariwar` is the same three queries GROUPED BY member for the whole
+// Pariwar, PLUS one member-independent context read (FOUR total) — the bounded bulk read the
+// trustee-lite candidate scan needs so it can evaluate without one fact read per member in a loop. A
+// counted-query test (1 vs. N fixtures → identical query count) pins this, because a counted assertion
+// survives a refactor that a comment does not.
+//
+// ⚖ Story 10.26 (AC9/D7) moved the budget 2 → 3 rather than folding the assertion into an existing
+// statement, and the reason is structural, not laziness: the assertion lives on the member's own
+// `events_log` stream, while `missedCycleAggregateSql` scans the pool/assignment axis. A join across
+// axes would make the riskiest SQL in the subsystem riskier and buy nothing — both reads are already
+// member-count-independent, which is the property AC7 actually protects.
 //
 // ⚖ Story 10.25 (D3) held that budget while adding R7(A) restoration accounting: the run computation
 // is FOLDED INTO the existing missed-cycle statement as window functions over the same scan, and
@@ -50,6 +58,10 @@ import { and, eq, sql, type SQL } from 'drizzle-orm';
 import type { Db } from '../db.js';
 import { memberId as toMemberId, type MemberId, type PariwarId } from '../ids/index.js';
 import { memberContributionLedger } from '../schema/member_contribution_ledger.js';
+import {
+  hasAssertedPersonalEventAt,
+  listMembersWithPersonalEventAssertionAt,
+} from '../member/personal-event.js';
 
 /**
  * R7(A)'s clause id — the ONLY registry identity this module names, and it names it to read a
@@ -502,6 +514,23 @@ export interface ContributionFactInputs {
    * when R7(A) resolves to no version — the restoration count is then UNKNOWN and the fact is omitted.
    */
   readonly r7aConsecutiveRequired: number | null;
+  /**
+   * Has this member EVER asserted that a personal event affected a contribution, as of `at`? — Story
+   * 10.26's SEVENTH and final engine fact anchor. A LIFETIME existential (D5), read from
+   * `member/personal-event.ts`.
+   *
+   * ⚠ NOT nullable, and that asymmetry against every other field here is deliberate. The others are
+   * read from a PROJECTION with a backfill watermark, so `0` and *unknown* had to be distinguished
+   * (Story 10.25 AC7). This one is read from `events_log` — the PRIMARY RECORD, with no backfill
+   * horizon — so `false` genuinely means "this member has never asserted". Do NOT extend the coverage
+   * watermark to it and do NOT "fix" it into a nullable; the coverage gate still governs the payload
+   * as a whole, so this fact never appears alone when the other six are un-derivable (AC3).
+   *
+   * ⚠ A plain BOOLEAN anchor, never the dotted fact key. The 8.10 `no-ingest-path` fence source-scans
+   * this very directory for `contribution.*` literals; the producer maps this onto
+   * `R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED` in `@twt/validity-service` (AC2).
+   */
+  readonly personalEventAsserted: boolean;
 }
 
 /** The `(pariwarId, memberId)` scope tuple for a single-member read. */
@@ -616,6 +645,17 @@ export async function readContributionFactInputs(
   );
   const skip = resultRows<RawSkipRow>(skipResult)[0];
 
+  // Story 10.26 — the THIRD query. Deliberately separate: the assertion lives on the member's own
+  // `events_log` stream, a different axis from the pool/assignment scan `missedCycleAggregateSql`
+  // walks, and forcing a join across axes would make the riskiest SQL in the subsystem riskier for no
+  // gain (D7). Still member-history-independent — an `EXISTS`, not a row fetch.
+  const personalEventAsserted = await hasAssertedPersonalEventAt(
+    db,
+    scope.pariwarId,
+    scope.memberId,
+    at,
+  );
+
   return {
     totalCount: toCount(ledger?.totalCount),
     lastConfirmedAt: toDate(ledger?.lastConfirmedAt),
@@ -626,6 +666,7 @@ export async function readContributionFactInputs(
     completedRestorationEpisodes: toCount(skip?.completed_restoration_episodes),
     currentOpenTakenRun: toCount(skip?.current_open_taken_run),
     r7aConsecutiveRequired: toNullableCount(ledger?.r7aConsecutiveRequired),
+    personalEventAsserted,
   };
 }
 
@@ -697,6 +738,11 @@ export async function readContributionFactInputsForPariwar(
     at,
   );
 
+  // Story 10.26 — the FOURTH query, the bulk shape of the assertion existential. One GROUP BY over the
+  // Pariwar's `member.personal_event_asserted` events, never one read per member in a loop (10.24
+  // AC7's binding structural criterion).
+  const asserted = await listMembersWithPersonalEventAssertionAt(db, pariwarId, at);
+
   const byMember = new Map<string, MemberContributionFactInputs>();
   for (const row of ledgerRows) {
     byMember.set(row.memberId, {
@@ -710,6 +756,7 @@ export async function readContributionFactInputsForPariwar(
       completedRestorationEpisodes: 0,
       currentOpenTakenRun: 0,
       r7aConsecutiveRequired,
+      personalEventAsserted: asserted.has(toMemberId(row.memberId)),
     });
   }
   for (const row of resultRows<RawSkipRow>(skipResult)) {
@@ -726,6 +773,29 @@ export async function readContributionFactInputsForPariwar(
       completedRestorationEpisodes: toCount(row.completed_restoration_episodes),
       currentOpenTakenRun: toCount(row.current_open_taken_run),
       r7aConsecutiveRequired,
+      personalEventAsserted: asserted.has(toMemberId(row.member_id)),
+    });
+  }
+  // A member who has ONLY ever asserted — no ledger rows, no assignments — appears in neither
+  // aggregate above, and must still reach the caller carrying `personalEventAsserted: true`. Without
+  // this pass the bulk path would report `false` for exactly the member R7(G) is about, while the
+  // single-member path reported `true`: a silent bulk/individual divergence on the one fact this
+  // story exists to supply.
+  for (const assertedMemberId of asserted) {
+    const key = String(assertedMemberId);
+    if (byMember.has(key)) continue;
+    byMember.set(key, {
+      memberId: assertedMemberId,
+      totalCount: 0,
+      lastConfirmedAt: null,
+      skipsCurrentYear: 0,
+      earliestSkipClosedAt: null,
+      opportunitiesSinceLast: 0,
+      coveredFrom,
+      completedRestorationEpisodes: 0,
+      currentOpenTakenRun: 0,
+      r7aConsecutiveRequired,
+      personalEventAsserted: true,
     });
   }
   // Deterministic order — by member id, the projection-wide ordering discipline.

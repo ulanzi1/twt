@@ -13,10 +13,22 @@
 //
 // So the scan is BOUNDED — a FIXED number of queries regardless of member count:
 //   1× `listMemberStatesForPariwar`            (the membership + its projected lifecycle state)
-//   2× `readContributionFactInputsForPariwar`  (the ledger + missed-cycle aggregates, GROUP BY member)
-//   4× `resolveByClauseId`                     (the R7(C)–(F) payloads — MEMBER-INDEPENDENT, resolved once)
+//   4× `readContributionFactInputsForPariwar`  (ledger GROUP BY member; the missed-cycle aggregate;
+//                                               the member-independent projection context; and, since
+//                                               Story 10.26, the assertion existential GROUP BY member)
+//   5× `resolveByClauseId`                     (the R7(C)–(G) payloads — MEMBER-INDEPENDENT, resolved once)
 //   ────────────────────────────────────────────
-//   7 queries total, then a PURE per-member ladder evaluation with zero I/O.
+//   10 queries total, then a PURE per-member ladder evaluation with zero I/O.
+//
+// ⚠ RE-COUNTED, not incremented (Story 10.26 AC9). This header read "2× … 7 queries total" until now,
+// and BOTH figures were stale: Story 10.25 added `readContributionProjectionContext` as a third
+// statement inside the bulk fact read and updated only `facts.ts`'s own budget comment, so the true
+// baseline was 8. Story 10.26 adds two — the assertion existential (a per-member GROUP BY on the
+// member's own `events_log` stream, deliberately NOT folded into `missedCycleAggregateSql`, which
+// scans the pool/assignment axis: a join across axes would make the riskiest SQL in the subsystem
+// riskier for no gain, D7) and a fifth hoisted clause resolution now that R7(G) is activated.
+// Neither is a per-member cost. Counting from the code beats trusting the comment — which is the
+// whole lesson this paragraph records.
 //
 // ── Why the PURE `evaluateLadder`, not `evaluateLadderAt` ───────────────────────────────────────
 // `evaluateLadderAt` is the DB SHELL: it re-resolves each clause payload per call and routes through
@@ -38,6 +50,32 @@
 // `deriveViolatorFlags` maps EVERY R7 clause id it finds in `applicableNiyamavaliClauses[]` into a
 // flag, with no `applied` check. Contributing non-applied clauses here would flag every member in the
 // Pariwar — the single worst outcome available in this story.
+//
+// ── ⭐ AC5/D4 (Story 10.26) — APPLIED is necessary but NO LONGER SUFFICIENT here ─────────────────
+//
+//     A clause may influence trustee UNDERSTANDING without influencing trustee SUSPICION.
+//
+// This module's `applicableNiyamavaliClauses[]` is the ACCUSATION channel: it exists to become
+// `flags[]` on the surface that feeds SUSPENSION decisions, and nothing else reads it. R7(G) applies
+// exactly when a member disclosed a bereavement/illness, and the ratified §3.1 text
+// (`docs/legal/niyamavali.md:81`) says that assertion "carries no consequence of its own". So this
+// seam additionally filters on `imposesRestorationObligation` (rules.ts) — a DATA predicate over the
+// clause payload, never a clause-id branch, shared with the individual-member producer.
+//
+// ⚠ THE TWO R7 PRODUCERS ARE DELIBERATELY ASYMMETRIC, and the asymmetry is the D4 invariant itself.
+// Story 10.26's AC5 table asked for the identical filter at `evaluateAppliedR7ClauseSlots` (rules.ts)
+// on the assumption that both seams feed violator flags. They do not, and a source trace settles it:
+//   · THIS seam's clause list  → `deriveViolatorFlags` → `summarizeViolatorFlags` → the violator
+//     section. ACCUSATION. Filtered.
+//   · `evaluateAppliedR7ClauseSlots`'s → `assembleClauses` → `MemberValidityPayload` →
+//     `ui/member-status/presenter.ts` `buildRuleExplanations`. The MEMBER'S OWN RECORD.
+//     UNDERSTANDING. NOT filtered — filtering it would delete `memberStatus.rule.no_exemption`, the
+//     one thing Story 10.26 exists to put on the member's record (its AC6), and would leave R7(G)
+//     activated but mute. That is not a relaxation of AC5; it is AC5's own invariant applied to the
+//     channel that actually carries accusations.
+// The asymmetry is MECHANIZED by `tests/violator-accusation-channel.test.ts`, which fails if any
+// production module other than the trustee-lite handler routes a clause list into
+// `deriveViolatorFlags` — i.e. if a future story ever makes the individual payload an accusation.
 //
 // ── Revert-sanity probe, RUN AND RECORDED (2026-08-05, round-2 code review) ─────────────────────
 // A green scan proves nothing ([[feedback_gate_scope_semantic_coverage]]). Story 10.24 recorded a
@@ -62,6 +100,7 @@ import {
 import {
   R7_ACTIVATED_CLAUSE_IDS,
   R7_REGISTRY_UNPROVISIONED_PRODUCER,
+  contributesViolatorFlag,
   readConsecutiveRequired,
 } from './rules.js';
 import { CONTRIBUTION_UNAVAILABLE } from './payload.js';
@@ -150,6 +189,9 @@ export async function scanR7ViolatorCandidates(
 
   const inputsByMember = new Map(factInputs.members.map((row) => [String(row.memberId), row]));
   const resolvedClauseVersionIds = resolvedClauses.map((c) => c.clauseVersionId);
+  // AC5 — hoisted like every other member-independent read in this module: the exclusion predicate
+  // reads clause DATA, and this scan already holds every activated clause's payload.
+  const payloadsByClauseId = new Map(resolvedClauses.map((c) => [String(c.clauseId), c.payload]));
 
   const candidates: R7ViolatorCandidate[] = [];
   for (const { memberId, state } of memberStates) {
@@ -170,6 +212,12 @@ export async function scanR7ViolatorCandidates(
       completedRestorationEpisodes: 0,
       currentOpenTakenRun: 0,
       r7aConsecutiveRequired: factInputs.r7aConsecutiveRequired,
+      // Story 10.26 — `false` is the CORRECT synthesized value here, and it is not a fabrication in
+      // the way a synthesized `totalCount: 0` would be if coverage were unknown. The bulk read folds
+      // EVERY member who has asserted into its result, including one with no ledger rows and no
+      // assignments (`facts.ts`'s third pass exists for exactly that member), so absence from the
+      // read genuinely means "has never asserted" rather than "we did not look".
+      personalEventAsserted: false,
     };
     const facts = deriveContributionFacts(inputs, at);
     if (facts === null) {
@@ -213,6 +261,11 @@ export async function scanR7ViolatorCandidates(
         // D2 — APPLIED ONLY. The ladder already sorts by clause id (deterministic order).
         applicableNiyamavaliClauses: ladder.perClauseResults
           .filter((entry) => entry.applied)
+          // ⭐ AC5/D4 — APPLIED AND IMPOSING. This list becomes `flags[]`, the ACCUSATION channel, and
+          // R7(G) applies exactly when a member disclosed a bereavement. `payloadsByClauseId` is
+          // hoisted above the loop from the resolutions this scan already holds, so the exclusion
+          // costs ZERO extra reads here. See `imposesRestorationObligation` for the ratified basis.
+          .filter((entry) => contributesViolatorFlag(entry.clauseId, payloadsByClauseId))
           .map((entry) => ({
             clauseId: entry.clauseId,
             clauseVersionId: String(entry.result.provenance.clauseVersionId),

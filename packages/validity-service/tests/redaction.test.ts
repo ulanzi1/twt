@@ -68,9 +68,12 @@ function payloadWithContribution() {
         'contribution.in_lapse': true,
         // Story 10.25 — the sixth supplied fact, on the wire alongside the other five.
         'contribution.r7a_restorations_used': 1,
+        // Story 10.26 — the seventh and final one. All seven now ride the same map.
+        'contribution.personal_event_excuse_claimed': true,
       },
       lapseSince: '2025-03-01T00:00:00.000Z',
-      heldFacts: [{ key: 'contribution.personal_event_excuse_claimed', producer: 'story-10-26' }],
+      // EMPTY since Story 10.26 — every engine fact key has a producer.
+      heldFacts: [],
       restorationPackage: { status: 'ok', remaining: 2, required: 5 },
     },
     slots: [r12Slot(r12Result({ grantedYears: 0, isRetired: false, specialFlags: [] }))],

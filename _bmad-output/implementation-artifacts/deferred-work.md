@@ -4,6 +4,143 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: implementation of story 10-26-r7g-personal-event-excuse-assertion (2026-08-06)
+
+- **⚠ Escalation 4 — NO UX-SPEC COVERAGE for the personal-event surface; tone review RECORDED, not
+  waived.** `ux-design-specification.md` has ZERO hits for *personal event* or *excuse*, so every
+  visible string on this surface is NEW copy on a bereavement-adjacent screen with no spec to inherit
+  register from. Routed deliberately through `docs/tone-guide.md` rather than inferred from the
+  neighbouring suspension-disclosure copy — **different register**: that disclosure is about *money
+  without coverage*; this one is about *a life event the rules do not bend for*. Authored in `en` and
+  `hi` (`packages/i18n/locales/{en,hi}/contribution.json`, plus
+  `memberStatus.rule.rule.no_exemption` in `common.json`); the `microcopy` and `i18n-parity` gates
+  both pass. ⚠ **The `out-of-band-blame` tone pattern shaped the wording**: the obvious phrasing
+  "recording this does not count against you" MATCHES the gate's `(does|did|will|would)\s+not\s+count`
+  rule, so the copy says "it takes nothing away from you" instead — a real constraint that a future
+  author will hit again. **Re-trigger:** a UX spec section for member-facing governance disclosures,
+  or the next story adding copy to this surface.
+
+- **⚠ Escalation 5 — NO member surface shows a MISSED cycle. OWNER: the TRUSTEE PANEL (assigned
+  2026-08-06 by BigDev).** The Yogdaan Bahi
+  (`contracts/src/contributions/contribution-history.ts`) lists the member's own **attested**
+  contributions — a missed cycle produces no attestation and therefore **no row**, and `grey` means
+  *attested, cycle closed, no verdict*, never *missed*. So a member has nowhere to point at the
+  specific cycle a personal event affected. The assertion event carries an OPTIONAL `cycle_ref` for
+  exactly this, and it ships **unpopulated by any UI** — the seam exists so a future cycle-scoped
+  surface needs no new event type. A real gap in the member's view of their own contribution
+  discipline; RECORDED, not absorbed, and not Story 10.26's to close.
+
+  **⚠ WHAT THE PANEL OWNS, stated precisely so this does not stall.** The Trustee Panel owns the
+  **DECISION**, not the surface: whether a member may see their own missed cycles at all, under what
+  definition, and with what framing. Trustees do not ship UI. **Implementation ownership is assigned
+  by, and only after, their answer** — and if the answer is Q1-NO or Q4-REMOVE, there is nothing to
+  implement and the escalation closes without a story. Recording it this way avoids the failure mode
+  where "the Trustee Panel owns it" becomes indistinguishable from unowned
+  ([[project_r7_fact_producer_unbuilt]] — a deferral that names no answerable question expires just
+  as surely as one that names an epic).
+
+  **⚠ WHY THIS IS A GOVERNANCE QUESTION AND NOT A PRODUCT ONE.** "Missed" is not an observed fact; it
+  is a DERIVED CLAIM about a member's conduct, produced under the implementation policy
+  `missed-closed-cycle-v1` (an assigned-and-closed cycle that resolved with no live confirmation).
+  Rendering that derivation to the member converts a producer's internal label into a **member-facing
+  accusation** — the same class of act D4 governs on the trustee side. It also lands on a
+  dignity-first surface whose tone rules forbid shame and scarcity framing, against a transparency
+  interest that cuts the other way (a member in lock-in currently cannot see the basis of their own
+  standing).
+
+  **⚠ THE COST OF LEAVING THIS OPEN IS NOT ZERO, and it grows.** R7(G) is LIVE now. Assertions are
+  being recorded today with `cycle_ref` absent. If the Panel later rules that cycle-scoping matters,
+  those historical assertions **cannot be backfilled** — the members who made them will never be
+  reconstructible against a cycle ([[feedback_record_unattested_no_backfill]] — never reconstruct
+  evidence to fake validation). Every cycle that passes widens the un-anchored set. This is a
+  decaying question, not a dormant one.
+
+  **THE QUESTIONS OWED. Q1 and Q4 are BLOCKING** (nothing can be built or removed until both are
+  answered); Q2–Q3 and Q5–Q6 are answerable in the same sitting and shape what gets built.
+
+  1. **⛔ BLOCKING — May a member be shown their own MISSED cycles at all?** Not "should we build the
+     screen" — may the system tell a member, on their own record, *"you did not contribute in these
+     cycles"*? **YES** ⇒ a member-facing missed-cycle surface is legitimate and gets a story.
+     **NO** ⇒ `cycle_ref` is undeliverable by design, Q4 becomes REMOVE, and this escalation closes
+     as *"Resolved via explicit deferral — the Panel ruled the surface out of bounds"*, NOT as *"not
+     addressed"* ([[feedback_closure_language_precision]]).
+
+  2. **Is `missed-closed-cycle-v1` the Niyamavali's definition of a MISS, or an implementation
+     proxy?** Today it is a documented producer policy, not ratified text. If a member is to be shown
+     "missed", the label they read must be one the Panel stands behind. **RATIFY** ⇒ it enters §3.1
+     and the seed's review-status flags follow. **PROXY** ⇒ it may drive engine facts but must NOT be
+     rendered to a member as a finding about them — the same distinction `prd.md:346` already draws
+     for R7(A)'s `total_count < 10`, which is disclaimed as a proxy and normatively forbidden as an
+     evaluation basis.
+
+  3. **What must a missed-cycle list do about causes the pool engine structurally cannot see?** At
+     least three exist today: an **out-of-band contribution** (a member who sent money directly to a
+     bereaved family — `docs/policies/out-of-band-contributions.md` says the trust does NOT
+     characterise this as wrong, yet the ledger has no row for it); a member who was **assigned but
+     never notified** (the 8.8 dispatch family is log-only in places); and a member in **grace or
+     under a moderation overlay** during the window. Rendering all three as "missed" would tell a
+     member who did something honourable that they failed. Does the Panel require a distinct
+     **`unattributed` / `disputed`** state, or accept a single "no contribution recorded" label with
+     neutral framing?
+
+  4. **⛔ BLOCKING — Does the assertion's cycle anchor have constitutional meaning, or is it
+     decoration?** R7(G)'s fact is a LIFETIME BOOLEAN by frozen wire contract
+     (`R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED`), and the ratified §3.1 says the
+     assertion carries no consequence of its own. So a cycle-scoped assertion changes **nothing**
+     today. **KEEP** ⇒ the Panel intends the anchor to carry provenance a human may one day read
+     (e.g. informing discretion on a specific claim), and Q1 must be YES or the field can never be
+     populated. **REMOVE** ⇒ `cycle_ref` comes out of `PersonalEventAssertedPayloadSchema` and the
+     DTO, and the escalation closes. ⚠ Deciding this LATE is the expensive path — see the decay note
+     above.
+
+  5. **If a member-facing missed-cycle list exists, does it change what a TRUSTEE may act on?** The
+     Trustee-Lite violator section already surfaces R7 flags. A member-visible list makes the same
+     facts mutually known, which is usually good — but it also creates an expectation that a member
+     who *saw* their missed cycles and did nothing was on notice. Does the Panel intend that
+     inference to be available in a suspension decision, or explicitly not? (This is the D4
+     understanding-vs-suspicion boundary, re-asked on the member side.)
+
+  6. **Is there an obligation to NOTIFY, or only to DISPLAY?** A list a member must navigate to is a
+     different instrument from a message telling them they missed a cycle. FR-88 and the 8.8 notify
+     family make the second buildable. The tone guide's anti-pressure rules (no manufactured urgency,
+     no "you're behind") bind hard here. **DISPLAY-ONLY** is the conservative default and is what
+     this entry assumes absent an answer.
+
+  **Closure condition (state which, verbatim):** *"Closed by Trustee Panel decision [id]"* with Q1 +
+  Q4 answered — never *"deferred pending review"*, which is how this becomes permanent.
+  **Re-trigger:** the next Trustee Panel sitting; OR any story that proposes to surface
+  missed/skipped cycles to a member, which MUST NOT proceed on Q1 alone being assumed.
+
+- **⚠ Escalation 6 — the query budget grew, and the 4L figure is STILL UN-ATTESTED.** Single-member
+  fact read **2 → 3** (the assertion `EXISTS`); Pariwar scan **8 → 10** (+1 assertion existential,
+  +1 hoisted clause resolution for R7(G)). Both are member-count-independent and both are now pinned
+  by COUNTED assertions rather than comments. Measured against FR-12A's p95 < 200 ms: the AI-4-1
+  harness reports **p95 10.92 ms** on the uncached single-member path (`p95-budget.md`, 10.26 row).
+  ⚠ **But the Trustee-Lite Pariwar-wide scan has still never been measured at production scale**, and
+  10.26 did not measure it. Its query count is bounded; its per-member pure ladder work is O(M) and
+  one clause wider than before. Un-attested, recorded, not mitigated speculatively
+  ([[feedback_record_unattested_no_backfill]]). **Re-trigger:** a 4L-scale load test, or the first
+  operator report of a slow Trustee-Lite dashboard.
+
+- **⚠ Escalation 3 (carried, NOT closed) — R8's `contribution.compliance_percent` is UNOWNED and
+  UN-MECHANIZED.** With `R7_HELD_FACTS` now empty, the `contribution.*` fact-hold apparatus has
+  reached its end state and will never fire again. R8's missing fact has **no equivalent
+  mechanization**: it is not an `R7_CONTRIBUTION_FACT_KEYS` member, so no totality test can notice it
+  staying dark — the same shape of gap that let R7 go structurally un-evaluated for two epics.
+  Recorded at the moment the R7 apparatus stops watching. **Re-trigger:** any story touching R8, or a
+  decision to mechanize an R8 fact-hold the way 10.24 mechanized R7's.
+
+- **Story 10.26 deploy step — the ≤60 s payload-shape window (the third time).** Adding the seventh
+  fact and a fifth activated clause moves EVERY `validityPayloadHash`. For up to
+  `VALIDITY_CACHE_TTL_SECONDS` (60 s) after rollout, a warm pre-deploy cache row holds the old-shaped
+  JSONB and the `.strict()` DTO can 500. Zero-window lever, same as 10.24/10.25: after deploying, call
+  `POST /api/v1/p/:pariwarId/admin/validity-cache/invalidate-all`
+  (`apps/api/src/modules/member-validity/routes.ts:68`). ⚠ **Accepted, not a defect** — and note that
+  an ASSERTION itself needs no such step: migration `0036`'s `member.%` trigger evicts that member's
+  row on append (proved by a live-DB test, AC8(b)).
+
+---
+
 ## Deferred / recorded from: implementation of story 10-24-contribution-fact-producer-projection-r7-cf-activation (2026-08-05)
 
 _Story 10.24 is the `contribution.*` FACT producer Story 4.2 deferred to "Epic 8/9" and that neither
@@ -34,7 +171,8 @@ deliberately does NOT do is recorded here rather than left for a future reader t
   standing (today it only displays the section).
 
 - **~~`contribution.r7a_restorations_used` → Story 10.25~~ DISCHARGED 2026-08-06;
-  `contribution.personal_event_excuse_claimed` → Story 10.26 STILL OPEN.** The two of the engine's
+  ~~`contribution.personal_event_excuse_claimed` → Story 10.26~~ DISCHARGED 2026-08-06. ENTRY CLOSED —
+  BOTH HALVES.** The two of the engine's
   seven fact keys the 10.24 producer did not supply. Mechanized, not merely noted: `R7_HELD_CLAUSES`
   names each blocking fact + owner, and the totality test asserts every `blockedBy` key is genuinely
   absent from `R7_SUPPLIED_FACT_KEYS` — so a hold cannot silently outlive its reason.
@@ -56,8 +194,29 @@ deliberately does NOT do is recorded here rather than left for a future reader t
   2026-08-06-077 — an instrument no story owns and no code change can satisfy). Only `blockedBy` is
   mechanizable, because only fact keys can be falsified against `R7_SUPPLIED_FACT_KEYS`; the third
   condition is recorded in prose at `rules.ts` and in the seed comment beside the clause itself.
-  **Re-trigger:** 10.26 landing (for the remaining half); and, for R7(A), all three conditions
+  **Re-trigger:** ~~10.26 landing (for the remaining half)~~ — **FIRED, and the entry closes.** Story
+  10.26 built the member ASSERTION instrument (`member.personal_event_asserted`, on the member's own
+  stream — the key was never derivable because it records an act that had nowhere to happen) and
+  supplied `contribution.personal_event_excuse_claimed`. `R7_SUPPLIED_FACT_KEYS` is now **all seven**
+  and **`R7_HELD_FACTS` is EMPTY** — the first time this apparatus has reached its own end state.
+  R7(G) also ACTIVATED (legitimately, unlike R7(A)/(B): its population is "a member who asserted",
+  which IS the constitutional fact rather than a disclaimed proxy, and it is ratified into §3.1 with
+  no outstanding amendment). Its revert-sanity probe was RUN and recorded, in the OPPOSITE direction
+  from 10.24's: removing `r7-g` from `R7_ACTIVATED_CLAUSE_IDS` without re-adding the hold produced
+  `Tests  2 failed | 8 passed (10)` — totality catches an under-count as loudly as an over-count.
+
+  **⚠ EMPTY HELD-FACTS IS NOT AN ALL-CLEAR, and the distinction is the point of keeping this entry.**
+  R7(A)/(B) remain un-evaluated, and **no producer can ever lift them**: their blockers are Story
+  10.23's `member.joining_discipline_state` (a MEMBER fact, outside this producer's family) and the
+  Trustee Panel's published Part 11 amendment. **Re-trigger for R7(A):** all three conditions
   together — never any one of them alone.
+
+  **⚠ And the NEXT fact-hold has no mechanization at all.** `contribution.compliance_percent` (R8) is
+  **UNOWNED**, is not an `R7_CONTRIBUTION_FACT_KEYS` member, and therefore nothing in the totality
+  apparatus can notice if it stays dark forever — the exact shape of the gap that let R7 go
+  structurally un-evaluated for two epics ([[project_r7_fact_producer_unbuilt]]). Recorded here
+  because this entry closing is precisely when that would otherwise be forgotten. See Escalation 3
+  below.
 
 - **Story 10.25 deploy step — the ≤60 s payload-shape window.** `contributionHistorySummary` gained
   `restorationPackage` and a sixth fact key, so for up to `VALIDITY_CACHE_TTL_SECONDS` (60 s) after
@@ -2761,3 +2920,9 @@ _Pass 2 (second adversarial review of the same commit, Group 1 = domain + migrat
 - **`RestorationPackagePayload` and `RestorationPackageDto` independently declare the same union shape with no parity test.** Unlike this diff's other cross-checked dual-spelling pairs (SQL vs. pure `deriveRestorationRuns`; SQL-threshold vs. `resolveByClauseId`), nothing pins the service-internal type and the contracts DTO to the same shape. **Reason for deferring:** TS structural typing likely catches gross drift at compile time already; a runtime parity test is a nice-to-have, not a fix for an observed defect. **Re-trigger:** the first time these two types actually diverge (e.g. a field added to one and not the other) without a compile error catching it. [packages/validity-service/src/types.ts:150; packages/contracts/src/members/validity.ts:96]
 - **`resolveByClauseId` rejection inside `resolveAppliedRestoration` is an unhandled-rejection path that would fail the whole `getValidityAt` call.** No `try`/`catch` around the DB call. **Reason for deferring:** pre-existing pattern shared by the frozen `ladder.ts:219`'s identical unguarded call — not a regression introduced by this diff, and fixing it here alone would diverge from the module's established error-handling posture. **Re-trigger:** the first cross-cutting resilience pass over `niyamavali-engine`/`validity-service`'s DB-error handling — fix all call sites together, not one at a time. [packages/validity-service/src/rules.ts:358]
 - **SQL vs. pure-reference divergence when `consecutiveRequired` resolves to ≤0.** SQL's `run_length >= threshold` FILTER becomes always-true (inflated raw count) while `deriveRestorationRuns` (the designated pure reference) always returns 0 for that input. **Reason for deferring:** confirmed harmless in production — `deriveContributionFacts` (producer.ts:469-474) discards the SQL-side count and reports `null` whenever the threshold is non-positive, before it ever reaches a caller. But the "SQL === PURE" pinned-test invariant (`contribution-facts.spec.ts`'s `expectRuns` helper) doesn't exercise this degenerate case, so the two implementations are latently allowed to disagree undetected. **Re-trigger:** any future change to either spelling that touches the threshold-comparison boundary — add the ≤0 case to `expectRuns` at that point. [packages/domain/src/contribution/facts.ts:362-367,413-439]
+
+## Deferred from: code review of 10-26-r7g-personal-event-excuse-assertion (2026-08-06)
+
+- **Idempotency-Key replay doesn't verify the request body matches the original claim.** `personal-event-handlers.ts`'s `record()` returns whatever was stored on `already_claimed` without comparing `requestPayloadHash` against the incoming request — a client reusing the same Idempotency-Key with a genuinely different body (a different `kind`) silently gets back the first response. **Reason for deferring:** verified as a faithful inheritance, not a 10.26-specific gap — this is the exact shipped pattern in `helpdesk/member-handlers.ts`, which this story's AC7 explicitly instructs following. Fixing it only here would diverge this route from the pattern it was built to mirror. **Re-trigger:** the first cross-cutting hardening pass over member-surface idempotency handling, or a real report of a mis-attributed idempotent replay — fix all call sites together. [apps/api/src/modules/contributions/personal-event-handlers.ts:115-120; apps/api/src/modules/helpdesk/member-handlers.ts:324-325]
+- **`cycle_ref` validation is looser in the domain write path than in the wire contract.** `packages/contracts/src/contributions/personal-event.ts` validates `cycleRef` as `UuidString.optional()`, but `packages/domain/src/member/events.ts`'s `PersonalEventAssertedPayloadSchema` accepts any non-empty string (`z.string().min(1).optional()`) for `cycle_ref`. **Reason for deferring:** currently unreachable — D5 records that no surface populates this field today, so there is no live caller that could exploit the gap. **Re-trigger:** whichever future story first wires a real UI/caller to `cycleRef` should tighten the domain schema to match the contract at that point, not before. [packages/domain/src/member/events.ts:264]
+- **`imposesRestorationObligation` treats a malformed restoration value on a known key as "no obligation" instead of failing loudly.** For a key in `RESTORATION_OBLIGATION_KEYS` (e.g. `core_team_recommendation`), a value that is neither a positive number nor `true` (e.g. a mistyped string) silently falls through to `false` — same as a deliberate `0`/`false`. The vocabulary-coverage test (`imposes-restoration-obligation.test.ts`) guards unknown *keys* but not malformed *value types* on known keys. **Reason for deferring:** narrow and hypothetical — requires a future malformed trustee JSONB amendment, and the practically-likely error mode (an entirely new, unclassified key) is already covered and fails loudly. This function gates AC5, the story's highest-stakes acceptance criterion, so the gap is recorded rather than silently accepted. **Re-trigger:** the first trustee amendment that introduces a non-boolean/non-numeric value on an already-classified restoration key — add a type-check that throws (or is itself counted in the vocabulary-coverage test) at that point. [packages/validity-service/src/rules.ts:343-354]

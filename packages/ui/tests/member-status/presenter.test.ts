@@ -4,6 +4,10 @@
 // rendering decision; the admin-vs-member view-model divergence; and redaction-aware rendering (a
 // narrower caller's already-redacted payload never surfaces a concealment flag).
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import type { MemberValidityPayloadDto } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
@@ -208,6 +212,58 @@ describe('buildMemberStatusViewModel', () => {
     );
     expect(vm.ruleExplanations.map((r) => r.reasonCode)).toEqual(['rule.a_ok', 'rule.b_ok']);
     expect(vm.ruleExplanations[0]?.explanationKey).toBe('memberStatus.rule.rule.a_ok');
+  });
+
+  // ── Story 10.26 (AC6) — R7(G) reaches the MEMBER'S OWN RECORD as an explanation ─────────────────
+  //
+  // This is the thing the story exists to produce. R7(G) is excluded from the trustee ACCUSATION
+  // channel (`r7-candidate-scan.ts`'s `imposesRestorationObligation` filter, AC5/D4), and it is
+  // deliberately NOT excluded here: `factsEstablishing[]` informs, `flags[]` accuses, and R7(G) is
+  // granted the first and denied the second. Filtering this path would leave R7(G) activated but
+  // MUTE — the member would still never learn what the Niyamavali says about personal events.
+  it("R7(G) surfaces on the member's own record with a key that RESOLVES in en and hi (AC6)", async () => {
+    const vm = buildMemberStatusViewModel(
+      basePayload({
+        applicableNiyamavaliClauses: [
+          {
+            clauseId: 'niy.contribution-discipline.r7-g',
+            clauseVersionId: 'v1',
+            // `interpretClause` builds `rule.${decision}` and R7(G)'s `on_pass` is `no_exemption`.
+            outcome: 'no_exemption',
+            reasonCode: 'rule.no_exemption',
+          },
+        ],
+      }),
+      { variant: 'member' },
+    );
+    const explanation = vm.ruleExplanations.find(
+      (r) => r.clauseId === 'niy.contribution-discipline.r7-g',
+    );
+    expect(explanation).toBeDefined();
+    // ⚠ NOTE the DOUBLED `rule.` segment. Story 10.26's AC6 predicted `memberStatus.rule.no_exemption`,
+    // one segment short: `ruleExplanationKey` prefixes `memberStatus.rule.` onto a reasonCode that is
+    // ITSELF already `rule.`-prefixed. The shipped shape (pinned by the test above since Story 4.7)
+    // is what the copy must be authored against.
+    expect(explanation!.explanationKey).toBe('memberStatus.rule.rule.no_exemption');
+
+    // ⭐ AND IT RESOLVES. `ruleExplanationKey` interpolates blindly and cannot fail loudly, so a
+    // missing key renders the RAW CODE to the member — which `ux-design-specification.md:1896`
+    // forbids on accessibility grounds. Both locales are checked, not just `en`.
+    // Read from disk rather than importing `@twt/i18n`: `@twt/ui` deliberately does not depend on it
+    // (the presenter is PURE and emits KEYS only — the screen resolves them with `useT()`), and a
+    // test must not be the reason a package boundary moves.
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+    for (const locale of ['en', 'hi'] as const) {
+      const bundle = JSON.parse(
+        readFileSync(path.join(repoRoot, `packages/i18n/locales/${locale}/common.json`), 'utf8'),
+      ) as Record<string, string>;
+      const copy = bundle[explanation!.explanationKey];
+      expect(
+        copy,
+        `${explanation!.explanationKey} is missing from ${locale}/common.json — the member would be shown the raw reason code`,
+      ).toBeTruthy();
+      expect(copy!.length).toBeGreaterThan(20);
+    }
   });
 
   it('surfaces the lock-in policy clause deep-link target when present in provenance', () => {

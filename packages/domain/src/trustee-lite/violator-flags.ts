@@ -22,11 +22,30 @@
 // reads — the conflation that let the gap survive two rounds of governance review
 // ([[project_r7_fact_producer_unbuilt]]).
 //
-// Story 10.24 built the projection + producer and ACTIVATED R7(C)/(D)/(E)/(F). R7(A)/(B)/(G) remain
-// omitted under an explicit mechanized hold (`R7_HELD_CLAUSES`), each naming its blocking fact and
-// owner — 10.25 (R7(A) restoration accounting) and 10.26 (R7(G) excuse assertion). So the R7 ∩
-// applicable-clauses intersection is no longer empty by construction, and an empty `flags` array now
-// legitimately means "no R7 clause applied to this member".
+// Story 10.24 built the projection + producer and ACTIVATED R7(C)/(D)/(E)/(F); Story 10.26 added
+// R7(G). Only R7(A)/(B) remain omitted under the mechanized hold (`R7_HELD_CLAUSES`), and their
+// blockers are NOT facts (Story 10.23's `member.joining_discipline_state` plus the Trustee Panel's
+// unpublished Part 11 amendment). So the R7 ∩ applicable-clauses intersection is no longer empty by
+// construction, and an empty `flags` array now legitimately means "no R7 clause applied".
+//
+// ── ⭐ Story 10.26 (AC5/D4) — a SECOND upstream filter now guards this module ──────────────────
+//
+//     A clause may influence trustee UNDERSTANDING without influencing trustee SUSPICION.
+//
+// This file still flags EVERY clause it is given — that contract is unchanged and this module stays
+// FROZEN (10.24 AC5: "if it needs a change, that is a finding, not a task"). What changed is what the
+// producer gives it. Alongside the `applied` filter, the bulk scan now also filters on
+// `imposesRestorationObligation` (@twt/validity-service `rules.ts`): a clause contributes a violator
+// flag only if its `restoration` block PRESCRIBES an obligation. R7(G)'s `{never_excuses: true}`
+// prescribes none, so an asserted personal event can never become a suspension signal — the ratified
+// Niyamavali §3.1 (`docs/legal/niyamavali.md:81`) says the assertion "carries no consequence of its
+// own", and a flag on this surface IS a consequence.
+//
+// ⚠ The predicate reads the clause PAYLOAD, never the clause id, so a trustee amendment moves it and
+// any future purely-declarative clause is excluded automatically. And note the deliberate other half:
+// `factsEstablishing[]` below filters on `startsWith('contribution.')`, so
+// `contribution.personal_event_excuse_claimed` still rides into the fact list of a member flagged for
+// some OTHER clause. Asserting can only ever help or do nothing; it can never hurt.
 //
 // The producer-unavailable sentinel is STILL checked FIRST and still short-circuits to
 // `detection_unavailable` — it did not become dead code. It is now the honest answer for a genuine

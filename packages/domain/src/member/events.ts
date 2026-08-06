@@ -190,7 +190,82 @@ export const PostingUpdatedPayloadSchema = z
   })
   .strict();
 
-// ── The 19-event vocabulary + the type→schema map (single source) ─────────────
+/**
+ * The BOUNDED vocabulary a personal-event assertion may name — Story 10.26 (D3). NO free text.
+ *
+ * Free text here would be Tier-1 PII of the most sensitive kind (a member describing a death, an
+ * illness, a family crisis) landing in `events_log`, which is append-only plaintext JSONB and is
+ * NEVER redacted — requiring KMS envelope encryption (1.5), an RTBF path (3.12) and a
+ * PII-scrape-gate exemption (1.16b). And it would earn nothing: R7(G) is declarative, there is no
+ * reviewer (D1), and the fact the engine reads is a BOOLEAN. A free-text box nothing reads is a
+ * false promise that someone is listening. Members who need a human have the Helpdesk (10.1–10.4).
+ *
+ * ⚠ `other` is retained deliberately despite carrying no information: removing it would force a
+ * member whose situation is not on this list to mis-categorise their own life, which is worse than
+ * a coarse bucket.
+ */
+export const PERSONAL_EVENT_KINDS = [
+  'bereavement',
+  'illness',
+  'caregiving',
+  'displacement',
+  'financial_hardship',
+  'other',
+] as const;
+
+/** One bounded personal-event kind. */
+export type PersonalEventKind = (typeof PERSONAL_EVENT_KINDS)[number];
+
+export const personalEventKindSchema = z.enum(PERSONAL_EVENT_KINDS);
+
+/**
+ * Story 10.26: the member asserts that a personal event affected their ability to contribute.
+ *
+ * ⚖ THE INSTRUMENT GRANTS NOTHING. The ratified Niyamavali §3.1 (`docs/legal/niyamavali.md:81`,
+ * Trustee Panel 2026-08-06) is explicit: "No exemption. Personal events do not excuse a missed
+ * contribution; the assertion is recorded on the member's own record but grants no restoration
+ * relief and carries no consequence of its own." The seeded R7(G) clause matches
+ * (`on_pass: no_exemption`, `restoration: {never_excuses: true}`).
+ *
+ * So there is deliberately NO approval field, NO status, NO reviewer, NO state machine and nothing
+ * to reverse — a one-way record with no counterparty (D1). A member may assert again; nothing
+ * "approves" an earlier assertion. Naming any field `status` / `approved` / `request` would make a
+ * false promise STRUCTURAL, which is the strongest form of the harm AC1 forbids.
+ *
+ * Why it exists at all, given it changes nothing: the member has something to say and had nowhere to
+ * say it, and an un-evaluated R7(G) never told them what the rule was. Once evaluated, their own
+ * record states it plainly — and the assertion is visible to a trustee as a FACT that can inform
+ * discretion on a flag that already exists, while never itself creating one (AC5/D4).
+ *
+ * ⚠ NON-TRANSITION MARKER (`from_state === to_state`) — the reducer treats it as IDENTITY via its
+ * `default` arm, exactly like `member.address_updated` / `member.posting_updated` (R5).
+ *
+ * ⚠ NOT in the `contribution.*` namespace (D2), for three reasons — it is semantically a member act
+ * about the member; the reducer already has this identity shape; and, decisively, migration
+ * `0036_member-validity-cache.sql:103-107` fires its cache-eviction trigger on
+ * `NEW.event_type LIKE 'member.%'` keyed `member_id = NEW.stream_id`, so an assertion evicts the
+ * member's validity-cache row with NO new trigger and NO migration. Any other namespace would owe
+ * one. (It also keeps Story 8.10's `no-ingest-path` fence green, which pins the `contribution.*`
+ * event vocabulary at exactly three.)
+ */
+export const PersonalEventAssertedPayloadSchema = z
+  .object({
+    ...auditShape,
+    /** ⚠ `actor` is narrowed to `member`: nobody asserts a member's own life on their behalf. */
+    actor: z.literal('member'),
+    kind: personalEventKindSchema,
+    /**
+     * OPTIONAL provenance: the cycle the member means. Unpopulated by any surface today, and that is
+     * a recorded gap rather than an oversight — NO member surface lists a MISSED cycle (the Yogdaan
+     * Bahi lists ATTESTED contributions, and a missed cycle produces no attestation and so no row),
+     * so the member has nothing to point at. Carried now so a future cycle-scoped surface needs no
+     * new event type (D5; Escalation 5).
+     */
+    cycle_ref: z.string().min(1).optional(),
+  })
+  .strict();
+
+// ── The 20-event vocabulary + the type→schema map (single source) ─────────────
 //
 // Story 10.10 adds the THREE `member.moderation.*` events. They are declared in
 // `moderation/events.ts` (with the moderation overlay they belong to) and folded in here so this
@@ -217,6 +292,9 @@ export const MEMBER_EVENT_TYPES = [
   // Story 3.9 — Life Events panel: two NON-TRANSITION markers (address + posting change).
   'member.address_updated',
   'member.posting_updated',
+  // Story 10.26 — the personal-event ASSERTION: a NON-TRANSITION marker on the member's own stream.
+  // Supplies `contribution.personal_event_excuse_claimed`, the seventh and final engine fact key.
+  'member.personal_event_asserted',
   // Story 10.10 — moderation OVERLAY: three NON-TRANSITION events on the member's own stream.
   // They move the ORTHOGONAL moderation status machine (moderation/status.ts), never `members.state`.
   'member.moderation.suspended',
@@ -224,7 +302,10 @@ export const MEMBER_EVENT_TYPES = [
   'member.moderation.restored',
 ] as const;
 
-/** The dotted `member.*` event-type literal union (the 16 AC1 events + the 3 Story 10.10 moderation events = 19). */
+/**
+ * The dotted `member.*` event-type literal union — the 16 AC1 events + the 3 Story 10.10 moderation
+ * events + Story 10.26's `personal_event_asserted` = **20**.
+ */
 export type MemberEventType = (typeof MEMBER_EVENT_TYPES)[number];
 
 /**
@@ -251,6 +332,8 @@ export const MEMBER_EVENT_PAYLOAD_SCHEMAS = {
   // Story 3.9 — Life Events markers (both non-transition; reducer treats them as identity).
   'member.address_updated': AddressUpdatedPayloadSchema,
   'member.posting_updated': PostingUpdatedPayloadSchema,
+  // Story 10.26 — the personal-event assertion (non-transition; reducer treats it as identity).
+  'member.personal_event_asserted': PersonalEventAssertedPayloadSchema,
   // Story 10.10 — moderation overlay (all three non-transition; reducer treats them as identity).
   ...MODERATION_EVENT_PAYLOAD_SCHEMAS,
 } as const satisfies Record<MemberEventType, z.ZodTypeAny>;

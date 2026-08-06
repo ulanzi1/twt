@@ -63,6 +63,8 @@ function inputs(over: Partial<Parameters<typeof deriveContributionFacts>[0]> = {
     // (`facts.ts`'s scalar subquery); stated here as the fixture's registry state, never as a policy
     // constant this module owns.
     r7aConsecutiveRequired: 3,
+    // Story 10.26 — the seventh anchor. Defaults to "never asserted", the overwhelmingly common case.
+    personalEventAsserted: false,
     ...over,
   };
 }
@@ -262,30 +264,86 @@ describe('D5 — the missed-closed-cycle-v1 lapse policy (RATIFIED 2026-08-05-07
 });
 
 describe('AC3/AC5 — the fact bag and the payload ok arm', () => {
-  it('emits EXACTLY the supplied keys, dotted, and never the one remaining held key', () => {
+  it('emits EXACTLY the seven supplied keys, dotted — none held back', () => {
     const bag = contributionFactsToBag(deriveContributionFacts(inputs(), AT)!);
     expect(Object.keys(bag).sort()).toEqual([
       'contribution.ever_contributed',
       'contribution.in_lapse',
       'contribution.months_since_last',
+      'contribution.personal_event_excuse_claimed',
       'contribution.r7a_restorations_used',
       'contribution.skips_current_year',
       'contribution.total_count',
     ]);
-    expect(bag).not.toHaveProperty('contribution.personal_event_excuse_claimed');
+    // Story 10.26 — the seventh key is now PRESENT and UNCONDITIONAL. `false` is a real answer about
+    // the member (they have never asserted), not an unresolved one, so unlike `months_since_last` and
+    // `r7a_restorations_used` it is never omitted from the bag.
+    expect(bag).toHaveProperty('contribution.personal_event_excuse_claimed', false);
   });
 
-  it('the ok arm keys facts by the DOTTED keys deriveViolatorFlags filters on, and names its holds', () => {
+  it('the ok arm keys facts by the DOTTED keys deriveViolatorFlags filters on, and holds NOTHING', () => {
     const summary = contributionFactsToSummary(deriveContributionFacts(inputs(), AT)!, null);
     expect(summary.status).toBe('ok');
     // The consumer filters with `startsWith('contribution.')` — every key must survive that filter.
     for (const key of Object.keys(summary.facts)) expect(key.startsWith('contribution.')).toBe(true);
-    // Story 10.25 discharged the `r7a_restorations_used` half of the 10.24 hold; the 10.26 half stays.
-    expect(summary.heldFacts.map((f) => f.key)).toEqual([
-      'contribution.personal_event_excuse_claimed',
-    ]);
-    // The hold names an OWNER, so a reader can act on it rather than merely noticing a gap.
-    for (const held of summary.heldFacts) expect(held.producer).toBe('story-10-26');
+    // Story 10.25 discharged the `r7a_restorations_used` half of the 10.24 hold; Story 10.26
+    // discharged the other. The honest hold is now EMPTY — every engine key has a producer.
+    expect(summary.heldFacts).toEqual([]);
+  });
+});
+
+// ── Story 10.26 — the SEVENTH fact: an as-of existential, never a fabricated false (AC3; D5) ──────
+describe('AC3 — contribution.personal_event_excuse_claimed', () => {
+  it('is false for a member who has never asserted', () => {
+    const facts = deriveContributionFacts(inputs({ personalEventAsserted: false }), AT)!;
+    expect(facts.personalEventAsserted).toBe(false);
+    expect(contributionFactsToBag(facts)['contribution.personal_event_excuse_claimed']).toBe(false);
+  });
+
+  it('is true once the member has asserted', () => {
+    const facts = deriveContributionFacts(inputs({ personalEventAsserted: true }), AT)!;
+    expect(facts.personalEventAsserted).toBe(true);
+    expect(contributionFactsToBag(facts)['contribution.personal_event_excuse_claimed']).toBe(true);
+  });
+
+  it('SEVERAL assertions are still exactly one `true` — a lifetime existential, not a count (D5)', () => {
+    // The read is an EXISTS, so "asserted three times" and "asserted once" reach the derivation
+    // identically. Pinned so nobody later widens the anchor into a count and changes the wire type:
+    // `R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED` is a BOOL and the clause reads
+    // `fact_equals … value: true`. Both are frozen wire contract.
+    const once = deriveContributionFacts(inputs({ personalEventAsserted: true }), AT)!;
+    const thrice = deriveContributionFacts(inputs({ personalEventAsserted: true }), AT)!;
+    expect(once.personalEventAsserted).toBe(thrice.personalEventAsserted);
+    expect(typeof once.personalEventAsserted).toBe('boolean');
+  });
+
+  it('an assertion made AFTER `at` is not visible at `at` — as-of correctness (AC3)', () => {
+    // As-of correctness lives in the READ (`hasAssertedPersonalEventAt` filters `occurred_at <= at`);
+    // what this pins is that the derivation adds no clock of its own and cannot re-introduce "now".
+    // A replay at a historical `at` therefore sees the anchor the read produced for that instant —
+    // which is what `apps/jobs/src/assignable-roster.ts`'s `getValidityAt(..., committedAt)` and Epic
+    // 4's "Replayable for audit" (prd.md:425) require.
+    const before = deriveContributionFacts(inputs({ personalEventAsserted: false }), AT)!;
+    const after = deriveContributionFacts(inputs({ personalEventAsserted: true }), AT)!;
+    expect(before.personalEventAsserted).toBe(false);
+    expect(after.personalEventAsserted).toBe(true);
+  });
+
+  it('⭐ NEVER rides alone: an assertion on an UN-DERIVABLE member yields the sentinel, not a lone fact', () => {
+    // The coverage gate is respected. `coveredFrom === null` means the Pariwar's projection never ran,
+    // and the honest answer is `producer_unavailable` for the WHOLE summary — not a payload carrying
+    // one true fact and six missing ones. The assertion's own source (`events_log`) has no backfill
+    // horizon, but that does NOT exempt the payload from the gate.
+    expect(
+      deriveContributionFacts(inputs({ personalEventAsserted: true, coveredFrom: null }), AT),
+    ).toBeNull();
+    // ... and equally for an `at` that precedes the watermark.
+    expect(
+      deriveContributionFacts(
+        inputs({ personalEventAsserted: true, coveredFrom: new Date('2026-09-01T00:00:00.000Z') }),
+        AT,
+      ),
+    ).toBeNull();
   });
 });
 

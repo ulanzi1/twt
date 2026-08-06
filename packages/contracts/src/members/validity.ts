@@ -71,12 +71,16 @@ export const ContributionHistoryUnavailableDto = z
  * Story 10.24 — the PRODUCED contribution history.
  *
  * `facts` is an open record keyed by the DOTTED `contribution.*` fact keys (`contribution.total_count`,
- * …). It is deliberately NOT `.strict()`-enumerated — and Story 10.25 proved the point by adding
- * `contribution.r7a_restorations_used` to the map with no change here at all. The key set grows as
- * Story 10.26 supplies the last held fact, and the consumer (`deriveViolatorFlags`) filters by
- * `startsWith('contribution.')` rather than by a fixed field list. `heldFacts` puts the omission ON
- * THE WIRE, so a client can say WHAT is missing and WHO owns it instead of silently rendering a
- * partial picture.
+ * …). It is deliberately NOT `.strict()`-enumerated — and Stories 10.25 and 10.26 proved the point
+ * twice, adding `contribution.r7a_restorations_used` and then
+ * `contribution.personal_event_excuse_claimed` to the map with no change here at all. The consumer
+ * (`deriveViolatorFlags`) filters by `startsWith('contribution.')` rather than by a fixed field list.
+ *
+ * `heldFacts` puts the omission ON THE WIRE, so a client can say WHAT is missing and WHO owns it
+ * instead of silently rendering a partial picture. ⚠ Since Story 10.26 it is EMPTY — all seven engine
+ * fact keys have a producer. The field STAYS: an empty array is a live claim ("nothing is held"), not
+ * a vestige, and a future fact family would populate it again. ⚠ Empty here does NOT mean no CLAUSE is
+ * held — R7(A)/(B) remain un-evaluated on blockers that are not facts.
  */
 
 /**

@@ -89,13 +89,13 @@ describe('<MemberStatusPanel> (admin variant)', () => {
               'contribution.skips_current_year': 0,
               'contribution.in_lapse': false,
               // Story 10.25 — the sixth supplied fact. The `story-10-25` hold entry is GONE from
-              // `heldFacts` because that producer shipped; only the 10.26 hold remains.
+              // `heldFacts` because that producer shipped; Story 10.26 supplied the last one, so
+              // `heldFacts` is now EMPTY.
               'contribution.r7a_restorations_used': 0,
+              'contribution.personal_event_excuse_claimed': false,
             },
             lapseSince: null,
-            heldFacts: [
-              { key: 'contribution.personal_event_excuse_claimed', producer: 'story-10-26' },
-            ],
+            heldFacts: [],
             restorationPackage: { status: 'no_consecutive_requirement', clauseId: null },
           },
         })}

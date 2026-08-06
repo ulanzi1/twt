@@ -12,13 +12,18 @@
 
 import { buildMemberStatusViewModel } from '@twt/ui'
 import { useT } from '@twt/i18n/react'
+import { useRouter } from 'expo-router'
 import { ScrollView } from 'react-native'
 import { Button, H2, Paragraph, Text, YStack } from 'tamagui'
 
+import { PersonalEventAssertion } from '../../components/member-status/PersonalEventAssertion'
 import { useMemberValidityQuery } from '../../components/member-status/useMemberValidityQuery'
+import { useSession } from '../../lib/session-context'
 
 export default function MembershipStatusScreen() {
   const t = useT()
+  const router = useRouter()
+  const { session } = useSession()
   const { data, isLoading, isError } = useMemberValidityQuery()
 
   if (isLoading) {
@@ -102,6 +107,18 @@ export default function MembershipStatusScreen() {
             </YStack>
           ))}
         </YStack>
+
+        {/*
+          Story 10.26 (AC7) — the personal-event ASSERTION, on the member's OWN record, which is
+          literally "in my record" from the user story. Placed AFTER the sections that state where
+          the member stands and BEFORE the appeal CTA: it is not an appeal and must not read as one.
+          The affordance discloses the Niyamavali's answer BEFORE the member commits, and it grants
+          nothing — see the component header and `docs/legal/niyamavali.md:81`.
+        */}
+        <PersonalEventAssertion
+          pariwarId={session?.pariwarId}
+          onOpenHelpdesk={() => router.push('/(helpdesk)')}
+        />
 
         {/* Appeal CTA — reachable from every failure state (AC3 + UX). */}
         {vm.showAppealCta ? (

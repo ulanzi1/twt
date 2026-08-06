@@ -31,3 +31,8 @@ export * from './contribution-note.js';
 // with @twt/domain), the `<SelfVerifySurface>` read DTO (default/uploaded/resolved), and the
 // screenshot-upload request/response shapes. Evidence-intake only — no reconciliation-outcome field (AC4).
 export * from './self-verify.js';
+// Story 10.26 — the personal-event ASSERTION: a bounded-vocabulary RECORD with no counterparty. NO
+// free-text field (D3), and no `status`/`approved`/`decision` anywhere in the shapes — the ratified
+// Niyamavali §3.1 says the assertion "grants no restoration relief and carries no consequence of its
+// own", so an approval-shaped API would make a false promise STRUCTURAL (AC1).
+export * from './personal-event.js';

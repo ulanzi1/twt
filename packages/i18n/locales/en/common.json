@@ -347,5 +347,6 @@
   "memberStatus.moderationReason.rule-clearance": "the rule being cleared",
   "memberStatus.moderationReason.trustee-discretion": "a trustee decision",
   "memberStatus.moderationReason.moderation-error": "a correction to an earlier decision",
-  "memberStatus.moderationReason.unspecified": "a recorded decision"
+  "memberStatus.moderationReason.unspecified": "a recorded decision",
+  "memberStatus.rule.rule.no_exemption": "You have recorded that a personal event affected your ability to contribute. The Niyamavali sets the same expectation for everyone, so this does not change your standing either way — and it is held on your record as something you told us."
 }

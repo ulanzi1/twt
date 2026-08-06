@@ -1,4 +1,176 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-06e (10-26-r7g-personal-event-excuse-assertion: review -> done via bmad-code-review.
+#   3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor): 12 raw findings, 3 duplicates merged,
+#   9 dismissed as false positives or handled-elsewhere (incl. the AC5 seam deviation the Dev Agent Record
+#   already self-documented and mechanized). 5 patches applied — the stale Escalation-5-owner ledger line
+#   below, a mobile idempotency key re-minted per attempt instead of cached (defeated its own stated
+#   retry-dedup), a submit button not re-checking `pariwarId`, and two a11y nits (a misapplied live region,
+#   a missing `radiogroup` role). 3 deferred as pre-existing/unreachable (idempotency replay not
+#   hash-checking the body — the shipped helpdesk pattern; `cycle_ref` domain validation looser than the
+#   wire contract, unreachable while unpopulated; a malformed-restoration-value edge in
+#   `imposesRestorationObligation`, narrow and hypothetical) — see deferred-work.md. Findings recorded in
+#   the story file's Review Findings section.)
+# last_updated: 2026-08-06d (10-26-r7g-personal-event-excuse-assertion: ready-for-dev -> in-progress ->
+#   review via bmad-dev-story off main @ c46d872, branch feat/10-26-r7g-personal-event-excuse-assertion,
+#   after a PRECURSOR commit 838f667 landing the Escalation-1(a) pre-work (Decision 2026-08-06-080:
+#   R7(F)/R7(G) ratified into niyamavali.md §3.1/Appendix A; the seed's r7-f/r7-g rows drop
+#   provisional/policy_review_required). All 11 ACs satisfied. THE LAST of the three-story
+#   contribution-governance decomposition: all SEVEN `contribution.*` engine fact keys now have a
+#   producer, `R7_HELD_FACTS` is EMPTY for the first time, and FIVE of the seven R7 clauses evaluate.
+#   Only R7(A)/(B) remain held and their blockers are NOT facts (Story 10.23 + the Trustee Panel's
+#   unpublished Part 11 amendment), so no future producer can lift them.
+#   THE HEADLINE (AC5/D4), and the reason this story was risky: `deriveViolatorFlags` maps EVERY R7
+#   clause id into a violator flag on the surface that feeds SUSPENSION decisions, and R7(G) applies
+#   exactly when a member TOLD THE TRUTH about their own life. Naively activated, disclosing a father's
+#   death makes a member a suspension candidate — which the ratified §3.1 ("carries no consequence of
+#   its own") makes a CONSTITUTIONAL violation, not merely a UX failure. Resolved with
+#   `imposesRestorationObligation(payload)`, a PURE DATA predicate over the clause's own `restoration`
+#   block (R7(A)-(F) prescribe consecutive/lock-in obligations; R7(G)'s `never_excuses:true` prescribes
+#   nothing), applied UPSTREAM. NO clause-id branch; `violator-flags.ts` stays byte-frozen.
+#   ⚠ A CORRECTION TO THE STORY'S OWN AC5, recorded rather than absorbed: AC5 asked for the identical
+#   filter at BOTH R7 producers on the premise that both feed violator flags. A source trace showed
+#   they do NOT. The bulk scan's clause list is the ACCUSATION channel (-> deriveViolatorFlags -> the
+#   violator section) and IS filtered; `evaluateAppliedR7ClauseSlots`'s is the MEMBER'S OWN RECORD
+#   (-> buildRuleExplanations) and is NOT — filtering it would delete `memberStatus.rule.rule.
+#   no_exemption`, the one thing this story exists to produce (its own AC6), leaving R7(G) activated
+#   but MUTE. That IS D4's invariant ("a clause may influence trustee UNDERSTANDING without influencing
+#   trustee SUSPICION"), applied to the channel that actually accuses. The asymmetry is MECHANIZED by a
+#   new fence (tests/violator-accusation-channel.test.ts) that fails if any production module outside
+#   the trustee-lite handler routes a clause list into deriveViolatorFlags.
+#   THREE revert-sanity probes RUN AND RECORDED verbatim: (1) removing r7-g from
+#   R7_ACTIVATED_CLAUSE_IDS without re-adding the hold -> totality RED, `expected [ ...(6) ] to deeply
+#   equal [ ...(7) ]`, `Tests 2 failed | 8 passed (10)` — the OPPOSITE direction from 10.24's probe, so
+#   totality catches an under-count as loudly as an over-count; (2) deleting the AC5 filter from
+#   r7-candidate-scan.ts -> both harm-gate cases RED naming `niy.contribution-discipline.r7-g` in the
+#   diff, `Tests 2 failed | 30 skipped (32)`; (3) adding a second production caller of
+#   deriveViolatorFlags -> the new fence RED naming the offending file.
+#   THE INSTRUMENT (D1/D2/D3/D7): `member.personal_event_asserted` on the MEMBER's own stream — NOT
+#   `contribution.*` (Story 8.10's no-ingest-path fence pins that vocabulary at three) and decisively
+#   because migration 0036's `member.%` trigger then evicts the validity-cache row for free: no new
+#   trigger, no migration, no cache-key change. PROVED by a live-DB test, not assumed. Bounded 6-value
+#   `kind` enum with NO free text (Tier-1 PII in append-only events_log, and nothing would read it —
+#   a text box with no reader is a false promise that someone is listening; the Helpdesk is linked
+#   instead). No table, no projection, no migration: the event IS the record.
+#   AC1 IS STRUCTURAL, not copy: the route is POST .../member/contributions/personal-events (never
+#   `excuse-requests`), the audit action is `member_personal_event.recorded`, the response carries NO
+#   status/approved/decision field, `grantsRelief` is a z.literal(false) so the WIRE asserts the
+#   ratified invariant, and there is deliberately NO GET — a member has nothing to check back on.
+#   ⚠ TWO STORY-SPEC INACCURACIES CORRECTED IN PLACE: (a) AC6 predicted the explanation key
+#   `memberStatus.rule.no_exemption`; the shipped `ruleExplanationKey` prefixes `memberStatus.rule.`
+#   onto an already-`rule.`-prefixed reasonCode, so the real key is `memberStatus.rule.rule.
+#   no_exemption` (authored in en+hi, and a test now asserts it RESOLVES in both — a missing key
+#   renders the raw code, which a11y forbids). (b) AC9 predicted the Pariwar-scan budget 7 -> 8; the
+#   true baseline was already 8 (Story 10.25 added readContributionProjectionContext and updated only
+#   facts.ts's comment), so the real move is 8 -> 10. Both budgets are now carried by COUNTED
+#   assertions, never comments — including a NEW bulk counted-query test that did not exist before.
+#   Single-member fact read 2 -> 3; p95 measured at 10.92ms against FR-12A's 200ms; determinism gate
+#   reports exactly ONE hash. The Pariwar scan at 4L stays UN-ATTESTED and is recorded as such.
+#   Escalations 4 (no UX-spec coverage; tone review recorded — note the `out-of-band-blame` gate
+#   forbids "does not count against you", so the copy says "takes nothing away from you"), 5 (NO member
+#   surface shows a MISSED cycle, so `cycle_ref` ships unpopulated — genuinely open; OWNER: the Trustee
+#   Panel, assigned 2026-08-06 by BigDev, per the follow-up commit and .decision-log.md Decision
+#   2026-08-06-081 — corrected here 2026-08-06 by code review, this line was stale)
+#   and 6 (query budget) opened in deferred-work.md; the 10.24 fact-hold entry CLOSED, both halves.
+#   Escalation 1 was already closed by ratification. Decision 2026-08-06-081 records the implementation
+#   posture; the `:205` R7(G) fact-hold follow-up is marked DISCHARGED.
+#   Files: 44 changed. ci:local green both DATABASE_URL modes.)
+# last_updated: 2026-08-06c (10-26-r7g-personal-event-excuse-assertion: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ c46d872 (origin/main confirmed identical, tree clean). Saved
+#   _bmad-output/implementation-artifacts/10-26-r7g-personal-event-excuse-assertion.md. Epic 10's
+#   FOURTEENTH authored story, and the LAST of the three-story contribution-governance decomposition
+#   (10.24 projection + R7(C)-(F); 10.25 restoration accounting; 10.26 the excuse assertion). It
+#   supplies the SEVENTH and final `contribution.*` fact key and activates R7(G) -> five of seven R7
+#   clauses evaluated; only R7(A)/(B) remain held, and their blockers are NOT facts (Story 10.23 plus
+#   the Trustee Panel's Part 11 amendment, Decision 2026-08-06-077).
+#   THE HEADLINE FINDING (AC5/D4), which the epic ACs do not mention and which a naive implementation
+#   gets catastrophically wrong: `deriveViolatorFlags` (violator-flags.ts:209-216) maps EVERY R7 clause
+#   id in `applicableNiyamavaliClauses[]` into a violator flag with no `applied` and no outcome check,
+#   on the Trustee-Lite surface that feeds SUSPENSION decisions. R7(G) applies exactly when a member
+#   discloses a bereavement/illness — so activating it naively FLAGS A MEMBER AS A SUSPENSION CANDIDATE
+#   FOR TELLING THE TRUTH. Resolved by filtering UPSTREAM at BOTH R7 producers (rules.ts
+#   `evaluateAppliedR7ClauseSlots` and `r7-candidate-scan.ts`) on a DATA-driven
+#   `imposesRestorationObligation(payload)` predicate — R7(A)-(F) prescribe consecutive/lock-in
+#   obligations, R7(G) prescribes `never_excuses: true`, i.e. nothing. `violator-flags.ts` stays FROZEN
+#   (10.24 AC5) and there is NO clause-id branch (the engine's no-branch-on-registry-identity
+#   invariant). The assertion stays VISIBLE as a fact in `factsEstablishing[]`, so it can inform
+#   trustee discretion on a flag that already exists: asserting can only help or do nothing, never hurt.
+#   Both seams get RUN-and-RECORDED revert probes (the bulk seam was found un-probed in 10.24 round 2).
+#   D4 RATIFIED 2026-08-06 by BigDev, with the governing invariant stated once so it can be cited:
+#   "A CLAUSE MAY INFLUENCE TRUSTEE UNDERSTANDING WITHOUT INFLUENCING TRUSTEE SUSPICION."
+#   `factsEstablishing[]` informs; `flags[]` accuses. R7(G) is granted the first and denied the second;
+#   any future declarative clause inherits the same treatment automatically because the predicate reads
+#   the PAYLOAD, never the clause id. The invariant is carried into the predicate's doc comment.
+#   AND IT IS NOW CONSTITUTIONAL, NOT MERELY HUMANE: the Trustee Panel ratified R7(G) into the legal
+#   Niyamavali on 2026-08-06 (docs/legal/niyamavali.md:81), and the ratified text is STRONGER than this
+#   story originally assumed -- the assertion "is recorded on the member's own record but grants no
+#   restoration relief AND CARRIES NO CONSEQUENCE OF ITS OWN". A violator flag on the
+#   suspension-candidate surface IS a consequence, so the naive implementation does not just harm
+#   members, it CONTRADICTS THE RATIFIED NIYAMAVALI. AC5/D4 now cite niyamavali.md:81 as their basis.
+#   THE SECOND STRUCTURAL FINDING (AC2/D2): the event CANNOT be `contribution.*`. Story 8.10's
+#   `no-ingest-path` fence (packages/domain/tests/contribution/no-ingest-path.test.ts:63-68)
+#   SOURCE-SCANS four roots for a fourth `contribution.*` literal and pins the vocabulary at exactly
+#   three. Chosen: `member.personal_event_asserted` on the MEMBER stream. Decisive reason beyond
+#   semantics -- migration 0036_member-validity-cache.sql:103-107 already fires the validity-cache
+#   invalidation trigger on `NEW.event_type LIKE 'member.%'` keyed `member_id = NEW.stream_id`, so
+#   cache eviction comes FREE and this story owes NO new trigger and NO migration (any other namespace
+#   would have owed one). The dotted fact key `contribution.personal_event_excuse_claimed` must never
+#   be spelled inside the four scanned roots -- the domain read returns a plain boolean anchor and
+#   `producer.ts` maps it onto the engine constant.
+#   OTHER LOAD-BEARING DECISIONS: D1 the instrument is an ASSERTION with no counterparty (no review, no
+#   approval, no waiver -- AC1 bans waiver/exemption/request/approve semantics in every route, field,
+#   event, constant and copy key, because a route named `.../excuse-requests` makes the false promise
+#   structural); D3 a bounded no-free-text vocabulary (free text would be Tier-1 PII in an append-only
+#   log, read by nobody, on a bereavement surface -- a false promise that someone is listening; the
+#   Helpdesk is the surface with real humans); D5 the fact is a lifetime as-of existential (the engine
+#   key is a frozen bool) and is MONOTONE -- acceptable ONLY because AC5 makes it harmless; D6 why
+#   R7(G) may activate when R7(A)/(B) may not (no disclaimed proxy population, no pending registry
+#   amendment, and prd.md:346 explicitly carves out R7(C)-(G)); D7 the mirror of 10.24 D8 -- a new fact
+#   needs an event exactly when nothing in the system already knows it, so one event type, no table,
+#   no projection, no migration.
+#   MECHANIZATION END STATE: `R7_SUPPLIED_FACT_KEYS` 6 -> 7, `R7_ACTIVATED_CLAUSE_IDS` 4 -> 5,
+#   `R7_HELD_CLAUSES` 3 -> 2, and `R7_HELD_FACTS` becomes EMPTY for the first time (flagged as a TYPING
+#   hazard: `[] as const` loses the element type at every consumer). Deleting R7(G)'s held entry is
+#   correct HERE and only here -- 10.25 narrowed R7(A) because a second blocker remained; the story
+#   records that distinction at the deletion site so "the previous story narrowed" is not carried
+#   forward as a rule. A revert probe runs in the OPPOSITE direction from 10.25's, and an explicit
+#   `R7_HELD_CLAUSES.length === 2` assertion is added so the held-clause loops cannot go vacuous.
+#   SIX ESCALATIONS RAISED, ONE ALREADY CLOSED: (1) RESOLVED SAME DAY BY RATIFICATION, not by deferral
+#   [[feedback_closure_language_precision]]. Raised because the moderation brief (:163) marked R7(G)
+#   with a warning as NOT IN Niyamavali section 3.1 -- a TSCT carry-over -- while its sibling R7(F) had
+#   only a brief-D9 RECOMMENDATION behind it. The Trustee Panel ratified BOTH into docs/legal/
+#   niyamavali.md section 3.1 (:80-83) + Appendix A (:223-224) on 2026-08-06
+#   [[project_r7f_r7g_ratified_into_niyamavali]]. Note the ordering the escalation bought: R7(F) was
+#   ALREADY ACTIVATED by 10.24 and was operating ahead of its legal text until this ratification;
+#   R7(G) now activates BEHIND its ratification, which is the correct order and the whole reason this
+#   was raised before activation rather than after. TWO THINGS THE RATIFICATION DID NOT DO, carried
+#   forward explicitly: (a) the seed clause JSONB still carries "provisional": true and
+#   "policy_review_required": true on BOTH the r7-f and r7-g rows (niyamavali-v1-clauses.sql:282,291),
+#   which now CONTRADICT the ratified legal text -- dropping them is a governance-data edit requiring a
+#   new clause VERSION, never an in-place JSONB edit [[feedback_supersede_never_reinterpret]], is NOT
+#   this story's, and must be recorded WITH A NAMED OWNER rather than an epic
+#   [[project_r7_fact_producer_unbuilt]]; (b) the brief's warning markers and the decision-log /
+#   deferred-work entries may still read as open -- verify current state before citing, correct in
+#   place under AC10 [[feedback_verify_before_committing_governance_claims]];
+#   (2) the violator-flag exclusion is a
+#   second upstream filter on a shipped governance path; (3) `R7_HELD_FACTS` emptying -- and R8's
+#   `compliance_percent` still UNOWNED with no equivalent mechanization; (4) ZERO UX-spec coverage
+#   (`ux-design-specification.md` has no hits for "personal event" or "excuse"), so every string is new
+#   copy on a bereavement-adjacent surface and must be tone-gated deliberately; (5) NO member surface
+#   shows a MISSED cycle -- the Yogdaan Bahi lists only ATTESTED contributions, so a missed cycle has
+#   no row and `grey` means "attested, closed, no verdict", NOT "missed". The member cannot point at
+#   the cycle they mean, so the assertion anchors on the status panel and its cycle reference ships
+#   optional and unpopulated. A real gap in the member's view of their own discipline, recorded with no
+#   owner yet; (6) the query budget grows 2 -> 3 (per-member) and 7 -> 8 (Pariwar scan) plus a fifth
+#   hoisted clause resolution, measured against FR-12A's p95 < 200ms at 4L which remains un-attested at
+#   production scale.
+#   SURFACE: the member-facing <MemberStatusPanel> (apps/mobile/app/(membership)/index.tsx) -- literally
+#   "in my record" from the user story -- with the R7(G) consequence stated BEFORE submit, not in the
+#   confirmation (naming it only after the member has acted is a dark pattern). The reason code is
+#   `rule.no_exemption` (interpret.ts builds `rule.${decision}`), so the i18n key is
+#   `memberStatus.rule.no_exemption`, needed in en AND hi. Member route follows the 10.2 pattern
+#   (requireMemberSession, per-member FR-88 write limit, Idempotency-Key header, pariwarId-vs-JWT
+#   mismatch -> 404). Status flipped in this file only; no code changed. Story committed manually
+#   [[project_story_automator_ops]]. Story file: 10-26-r7g-personal-event-excuse-assertion.md.)
 # last_updated: 2026-08-06b (10-25-r7a-restoration-accounting: review -> done via bmad-code-review off
 #   branch feat/10-25-r7a-restoration-accounting @ 8be7669. Three parallel layers (Blind Hunter, Edge
 #   Case Hunter, Acceptance Auditor) ran against the full uncommitted diff (31 files, +2348/-182).
@@ -3831,7 +4003,7 @@ development_status:
   10-23-restoration-discipline-lock-in: backlog
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done
-  10-26-r7g-personal-event-excuse-assertion: backlog
+  10-26-r7g-personal-event-excuse-assertion: done
   epic-10-retrospective: optional
 
   # ==========================================================================

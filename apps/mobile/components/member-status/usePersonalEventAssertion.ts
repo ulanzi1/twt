@@ -5,9 +5,13 @@
 // nothing to check back on. A `useMyAssertionsQuery` here would invite the member to look for a
 // decision that will never come (AC1).
 //
-// The `Idempotency-Key` is minted ONCE PER MUTATION ATTEMPT and rides a HEADER, so React Query's
-// retry of a request that actually succeeded server-side (a flaky connection dropping the response)
-// replays the ORIGINAL record instead of writing a second assertion.
+// The `Idempotency-Key` is minted ONCE PER HOOK INSTANCE — cached in a ref on first use, not
+// regenerated per call — and rides a HEADER, so a genuine retry (React Query's own, or the member
+// pressing Submit again after `mutation.isError`) replays the SAME key and the server's idempotency
+// store returns the ORIGINAL record instead of writing a second assertion. ⚠ [Review 2026-08-06] An
+// earlier revision called `newIdempotencyKey()` inline inside `mutationFn`, so every attempt — including
+// a user-initiated resubmit after a lost response — minted a fresh key and silently defeated the
+// dedup this comment already claimed. Fixed by hoisting the key into a `useRef`.
 //
 // On success the member's validity query is invalidated: R7(G) now applies, so their own record gains
 // the `memberStatus.rule.rule.no_exemption` explanation the story exists to produce. The cache row
@@ -16,6 +20,7 @@
 
 import type { PersonalEventKind } from '@twt/contracts'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
 
 import { personalEventApi } from '../../lib/personal-event-api'
 
@@ -26,13 +31,18 @@ function newIdempotencyKey(): string {
 
 export function usePersonalEventAssertion(pariwarId: string | undefined) {
   const qc = useQueryClient()
+  // Cached for the lifetime of this hook instance (the open form) — every attempt, including a
+  // user-initiated resubmit after a failure, reuses the SAME key so the server dedupes it.
+  const idempotencyKeyRef = useRef<string | null>(null)
   return useMutation({
-    mutationFn: (input: { kind: PersonalEventKind }) =>
-      personalEventApi.recordPersonalEvent(
+    mutationFn: (input: { kind: PersonalEventKind }) => {
+      idempotencyKeyRef.current ??= newIdempotencyKey()
+      return personalEventApi.recordPersonalEvent(
         pariwarId as string,
         { kind: input.kind },
-        { idempotencyKey: newIdempotencyKey() },
-      ),
+        { idempotencyKey: idempotencyKeyRef.current },
+      )
+    },
     onSuccess: () => {
       // The member's own record now carries R7(G)'s explanation.
       void qc.invalidateQueries({ queryKey: ['member', 'validity'] })

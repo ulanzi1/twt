@@ -4,7 +4,7 @@ baseline_commit: c46d872
 
 # Story 10.26: R7(G) Personal-Event Excuse Assertion `[SURFACE]`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -863,6 +863,62 @@ enters `VALIDITY_RULE_ORDER` means there is no commit in which an assertion coul
 - [x] Update [[project_r7_fact_producer_unbuilt]] and
       [[project_contribution_fact_projection_substrate]] — both become stale the moment this merges
       (all seven keys supplied; five of seven clauses activated).
+
+### Review Findings
+
+Reviewed via `bmad-code-review` (2026-08-06): Blind Hunter (diff-only), Edge Case Hunter (diff + limited
+project read), Acceptance Auditor (diff + this spec). 12 raw findings; 3 duplicates merged; 9 dismissed as
+false positives or handled-elsewhere (see below); 5 patch, 3 defer survive.
+
+- [x] [Review][Patch] `sprint-status.yaml` ledger still says Escalation 5 owner is UNASSIGNED after the
+      Trustee Panel assignment landed — commit `61d9764` assigns ownership in `.decision-log.md` and
+      `deferred-work.md`, but the `2026-08-06d` ledger comment was never reconciled. Fixed: the ledger
+      line now states the Trustee Panel ownership and cites Decision 2026-08-06-081.
+      [_bmad-output/implementation-artifacts/sprint-status.yaml:59]
+- [x] [Review][Patch] Mobile idempotency key is re-minted on every `mutate()` call, not stable across a
+      user-retried submit — the hook's own header comment claims retry-dedup the code doesn't provide.
+      Fixed: the key is now cached in a `useRef` on first use and reused for every attempt within the
+      hook's lifetime, so a resubmit after a lost response dedupes server-side as the comment claims.
+      [apps/mobile/components/member-status/usePersonalEventAssertion.ts:30-35]
+- [x] [Review][Patch] Submit button doesn't re-check `pariwarId` before mutating — only the entry-button
+      gate does; a session race after the form is open can fire a request with `pariwarId` undefined.
+      Fixed: `!pariwarId` added to the submit button's `disabled` condition.
+      [apps/mobile/components/member-status/PersonalEventAssertion.tsx:163]
+- [x] [Review][Patch] `accessibilityLiveRegion="polite"` misapplied to static pre-submit disclosure text —
+      live regions are for content that changes post-mount; this text is present unconditionally. Fixed:
+      the prop was dropped.
+      [apps/mobile/components/member-status/PersonalEventAssertion.tsx:128]
+- [x] [Review][Patch] Kind picker's six radio buttons aren't grouped with a `radiogroup` role — screen
+      readers may not convey they form one mutually exclusive set. Fixed: `accessibilityRole="radiogroup"`
+      added to the enclosing `YStack`.
+      [apps/mobile/components/member-status/PersonalEventAssertion.tsx:134]
+- [x] [Review][Defer] Idempotency-Key replay doesn't verify the request body matches the original claim
+      (no `requestPayloadHash` comparison on `already_claimed`) — deferred, pre-existing: the exact
+      shipped `helpdesk/member-handlers.ts` pattern this story explicitly follows.
+      [apps/api/src/modules/contributions/personal-event-handlers.ts:115-120]
+- [x] [Review][Defer] `cycle_ref` validation is looser in the domain write path (`z.string().min(1)`) than
+      the wire contract (`UuidString`) — deferred, pre-existing/unreachable: D5 notes no surface populates
+      `cycleRef` today, so this is a hardening item for whichever future story first supplies it.
+      [packages/domain/src/member/events.ts:264]
+- [x] [Review][Defer] `imposesRestorationObligation` treats a malformed restoration value on a known key
+      as "no obligation" instead of failing loudly (only unknown *keys* are guarded, not malformed
+      *value types* on known keys) — deferred, narrow/hypothetical: requires a future malformed trustee
+      JSONB amendment; the practically-likely error mode (a new key) is already covered.
+      [packages/validity-service/src/rules.ts:343-354]
+
+**Dismissed (9):** hardcoded `personalEventAsserted: false` "overrides every member" (false positive —
+it's the fallback for members absent from `factInputs.members`; `facts.ts`'s third pass guarantees every
+asserting member has a real entry) · `core_team_recommendation` "never exercised by seeded data" (false
+positive — R7(B)'s seed carries it, covered by the parametrized test) · "no cap/cooldown on repeated
+assertions" (by design, AC1/D5) · tenant-mismatch guard's falsy-`pathPariwarId` branch (unreachable —
+Fastify's `PariwarParam` schema guarantees a valid UUID param) · route path `contributions/personal-events`
+"contradicts non-contribution namespace" (cosmetic — the 8.10 fence scans event-type literals, not URL
+paths) · `trigger` field tautological (stylistic, defensible) · idempotency-key's internal `contribution.`
+prefix (cosmetic, unscanned by the fence) · AC5's literal seam requirement not followed at
+`evaluateAppliedR7ClauseSlots` (genuine deviation from the AC's literal text, but deliberate, reasoned, and
+mechanized by `tests/violator-accusation-channel.test.ts` in this same diff — already self-documented as a
+FINDING in the Dev Agent Record's Completion Notes) · no "record another" affordance after success (UX
+polish gap, not an AC violation).
 
 ---
 

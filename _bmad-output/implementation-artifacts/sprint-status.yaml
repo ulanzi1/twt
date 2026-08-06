@@ -1,4 +1,15 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-06e (10-26-r7g-personal-event-excuse-assertion: review -> done via bmad-code-review.
+#   3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor): 12 raw findings, 3 duplicates merged,
+#   9 dismissed as false positives or handled-elsewhere (incl. the AC5 seam deviation the Dev Agent Record
+#   already self-documented and mechanized). 5 patches applied — the stale Escalation-5-owner ledger line
+#   below, a mobile idempotency key re-minted per attempt instead of cached (defeated its own stated
+#   retry-dedup), a submit button not re-checking `pariwarId`, and two a11y nits (a misapplied live region,
+#   a missing `radiogroup` role). 3 deferred as pre-existing/unreachable (idempotency replay not
+#   hash-checking the body — the shipped helpdesk pattern; `cycle_ref` domain validation looser than the
+#   wire contract, unreachable while unpopulated; a malformed-restoration-value edge in
+#   `imposesRestorationObligation`, narrow and hypothetical) — see deferred-work.md. Findings recorded in
+#   the story file's Review Findings section.)
 # last_updated: 2026-08-06d (10-26-r7g-personal-event-excuse-assertion: ready-for-dev -> in-progress ->
 #   review via bmad-dev-story off main @ c46d872, branch feat/10-26-r7g-personal-event-excuse-assertion,
 #   after a PRECURSOR commit 838f667 landing the Escalation-1(a) pre-work (Decision 2026-08-06-080:
@@ -56,7 +67,9 @@
 #   reports exactly ONE hash. The Pariwar scan at 4L stays UN-ATTESTED and is recorded as such.
 #   Escalations 4 (no UX-spec coverage; tone review recorded — note the `out-of-band-blame` gate
 #   forbids "does not count against you", so the copy says "takes nothing away from you"), 5 (NO member
-#   surface shows a MISSED cycle, so `cycle_ref` ships unpopulated — genuinely open, owner UNASSIGNED)
+#   surface shows a MISSED cycle, so `cycle_ref` ships unpopulated — genuinely open; OWNER: the Trustee
+#   Panel, assigned 2026-08-06 by BigDev, per the follow-up commit and .decision-log.md Decision
+#   2026-08-06-081 — corrected here 2026-08-06 by code review, this line was stale)
 #   and 6 (query budget) opened in deferred-work.md; the 10.24 fact-hold entry CLOSED, both halves.
 #   Escalation 1 was already closed by ratification. Decision 2026-08-06-081 records the implementation
 #   posture; the `:205` R7(G) fact-hold follow-up is marked DISCHARGED.
@@ -3990,7 +4003,7 @@ development_status:
   10-23-restoration-discipline-lock-in: backlog
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done
-  10-26-r7g-personal-event-excuse-assertion: review
+  10-26-r7g-personal-event-excuse-assertion: done
   epic-10-retrospective: optional
 
   # ==========================================================================

@@ -125,13 +125,16 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
       <Paragraph
         fontSize="$2"
         accessibilityRole="text"
-        accessibilityLiveRegion="polite"
         testID="personal-event-before-you-record"
       >
         {t('personal_event.before_you_record')}
       </Paragraph>
 
-      <YStack gap="$2" accessibilityLabel={t('personal_event.kind_label')}>
+      <YStack
+        gap="$2"
+        accessibilityRole="radiogroup"
+        accessibilityLabel={t('personal_event.kind_label')}
+      >
         <Text fontSize="$2" fontWeight="600">
           {t('personal_event.kind_label')}
         </Text>
@@ -160,7 +163,7 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
 
       <Button
         accessibilityRole="button"
-        disabled={kind === null || mutation.isPending}
+        disabled={kind === null || mutation.isPending || !pariwarId}
         onPress={() => {
           if (kind !== null) mutation.mutate({ kind })
         }}

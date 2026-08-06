@@ -1012,6 +1012,40 @@ story owns no state (no table, no migration, no event, no route, no contract
 change, no OpenAPI regen, `PERMISSION_CATALOG_VERSION` stays 28) — the friction
 budget's declaration facet is the only ledger this change touches.
 
+**Story 10.25 disposition (declaration affirmed, no new row):** the R7(A)
+restoration-accounting story touches the SAME disclosure surface the Story 10.16
+disposition above already covers (`apps/mobile/components/active-contribution/SuspensionDisclosure.tsx`,
+`apps/mobile/tests/unit/pay-screen-disclosure-render.test.ts`) — it introduces
+**zero new friction**, only honest content within the arms that surface already
+declared.
+
+(1) **The `ok` arm goes from structurally unreachable to real** — Story 10.24 left
+`restorationPackage` unable to reach `{status: 'ok', remaining, required}` because
+nothing yet supplied `contribution.r7a_restorations_used` or the applied clause's
+`consecutive_required`. Story 10.25 supplies both, so the arm now renders real
+numbers instead of never firing. This is the SAME read-only prose position Story
+10.16 declared (AC1(c)) — no new tap, form, or step, and the pay flow underneath
+remains entirely un-gated by it (D5/fail-soft, unchanged).
+
+(2) **The `no_consecutive_requirement` arm (D4) is a THIRD honest-absence state**,
+added so a member whose applied R7 clause is NOT measured in consecutive
+contributions (R7(D)/(E)/(F)) is told the true thing instead of being silently
+folded into `package_unavailable`'s "we cannot yet tell you." Still prose, still
+paired with the pre-existing `<CallHelplineCTA>` affordance (Story 6.2/6.12), still
+zero interaction demanded of the member.
+
+(3) **Code-review pass (2026-08-06):** the two-arm ternary selecting between
+`no_consecutive_requirement` and `package_unavailable` copy keys was replaced with
+an exhaustive `switch` (a `never`-typed default) for compile-time safety against a
+future fourth arm — a type-level refactor with byte-identical rendered output; the
+render-fence test (`pay-screen-disclosure-render.test.ts`) is unchanged in intent
+and still green.
+
+Zero gratuitous friction introduced; ledger reviewed, no new row warranted. Page-weight
+baseline unchanged (mobile EAS build stays a no-op; the public Astro surface is
+untouched). This story owns the sixth producer fact and no new state beyond it —
+the declaration facet is the only friction ledger this change touches.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

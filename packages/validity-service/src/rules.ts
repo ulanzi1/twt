@@ -25,7 +25,7 @@
 // below, and R8 is NOT activated by the 10.24 facts (see the R8 note on `R7_ACTIVATED_CLAUSE_IDS`).
 // R5/R9/R14 remain CLAIM-time (Epic 6). Adding a family is still one descriptor + one order entry.
 
-import { ids } from '@twt/domain';
+import { ids, niyamavali, type Db } from '@twt/domain';
 import {
   evaluateLadderAt,
   evaluateRetirementCoverageAt,
@@ -37,6 +37,8 @@ import {
   type EvaluationResult,
   type Facts,
 } from '@twt/niyamavali-engine';
+
+import type { AppliedRestorationRequirement } from './producer.js';
 
 // ── R7 activation / hold — Story 10.24 (Task 1; AC3, D2/D4) ──────────────────────────────────────
 //
@@ -53,18 +55,25 @@ import {
 export type R7ClauseId = (typeof R7_CLAUSE_IDS)[number];
 
 /**
- * The R7 sub-clauses Story 10.24 ACTIVATES — exactly those gated ONLY on the five `contribution.*`
- * facts this story's producer supplies (`R7_SUPPLIED_FACT_KEYS`, producer.ts):
+ * The R7 sub-clauses ACTIVATED at member standing — exactly those gated ONLY on the `contribution.*`
+ * facts the producer supplies (`R7_SUPPLIED_FACT_KEYS`, producer.ts):
  *   · R7(C) `months_since_last >= 12`
  *   · R7(D) `total_count >= 10 && skips_current_year == 1`
  *   · R7(E) `total_count >= 10 && skips_current_year >= 2`
  *   · R7(F) `months_since_last >= 6`
  *
+ * ⚠ Story 10.25 supplied a SIXTH fact (`r7a_restorations_used`) and this list did NOT grow. That is
+ * the point, not an oversight: "gated only on supplied facts" is a NECESSARY condition for activation,
+ * never a sufficient one. R7(A) reads that fact and stays HELD, because `prd.md:346` forbids
+ * evaluating its population from the `total_count < 10` proxy until the Trustee Panel publishes the
+ * Part 11 amendment (Decision 2026-08-06-077) and Story 10.23 supplies
+ * `member.joining_discipline_state`.
+ *
  * ⚠ R8 (`niy.ninety-percent-rule.r8`) is NOT activated by these facts and MUST NOT be added to
  * `VALIDITY_RULE_ORDER`. Its `all_of` needs `claim.death_classification` (a CLAIM-time fact — Epic 6,
- * absent at member standing) AND `contribution.compliance_percent`, which is NOT one of the five keys
- * this story supplies. `types.ts`'s historical "R7/R8 are OMITTED … until the Epic 8/9 producer"
- * wording read literally would imply otherwise; it is corrected in place (AC8).
+ * absent at member standing) AND `contribution.compliance_percent`, which is NOT one of the keys this
+ * producer supplies. `types.ts`'s historical "R7/R8 are OMITTED … until the Epic 8/9 producer" wording
+ * read literally would imply otherwise; it was corrected in place by Story 10.24 (its AC8).
  */
 export const R7_ACTIVATED_CLAUSE_IDS = [
   'niy.contribution-discipline.r7-c',
@@ -85,8 +94,9 @@ export interface R7HeldClause {
 /**
  * R7 sub-clauses this story deliberately does NOT evaluate, each naming its blocking fact + owner.
  *
- * ⚠ R7(A) and R7(B) are held even though `contribution.total_count` and
- * `contribution.ever_contributed` ARE supplied. `prd.md:346` (2026-08-04) is NORMATIVE:
+ * ⚠ R7(A) and R7(B) are held even though `contribution.total_count`, `contribution.ever_contributed`
+ * and (since Story 10.25) `contribution.r7a_restorations_used` ARE supplied. `prd.md:346`
+ * (2026-08-04) is NORMATIVE:
  *
  *   "R7(A) and R7(B) MUST NOT be evaluated from the `contribution.total_count < 10` /
  *    `contribution.ever_contributed == false` proxies alone. … An omitted clause is honest; a clause
@@ -99,9 +109,24 @@ export interface R7HeldClause {
  */
 export const R7_HELD_CLAUSES = [
   {
+    // ── Story 10.25 NARROWED this hold; it did not lift it ────────────────────────────────────────
+    // The producer now supplies `contribution.r7a_restorations_used`, so the falsifiable-hold test
+    // went RED with its own message ("…the hold has outlived its reason and must be re-justified or
+    // lifted"), exactly as `deferred-work.md` predicted in writing. NARROWING is the correct response.
+    // Deleting this entry, or adding `r7-a` to `R7_ACTIVATED_CLAUSE_IDS` to make the red go away, is
+    // the failure the whole apparatus exists to catch ([[feedback_mechanization_split_commitment]]).
+    //
+    // ⚠ `blockedBy` is the MECHANIZED half and lists only FACT keys, because that is what the totality
+    // test can falsify against `R7_SUPPLIED_FACT_KEYS`. R7(A) has a THIRD activation condition that no
+    // fact key can express: its clause DATA still keys the population on `contribution.total_count <
+    // 10`, which `prd.md:344` disclaims as "an implementation proxy, not the constitutional
+    // definition" and `:346` forbids evaluating from. Amending it is a Part 11 registry instrument
+    // owned by the TRUSTEE PANEL (Decision 2026-08-06-077), not by any story — completion is
+    // "ratified → version published → implementation references the new version". So R7(A) needs
+    // BOTH Story 10.23's fact AND that published amendment before it may be activated.
     clauseId: 'niy.contribution-discipline.r7-a',
-    blockedBy: ['member.joining_discipline_state', 'contribution.r7a_restorations_used'],
-    owner: 'story-10-23 + story-10-25',
+    blockedBy: ['member.joining_discipline_state'],
+    owner: 'story-10-23',
   },
   {
     clauseId: 'niy.contribution-discipline.r7-b',
@@ -224,10 +249,39 @@ export function buildRuleDescriptors(available: AvailableFacts): RuleDescriptor[
  */
 export const R7_REGISTRY_UNPROVISIONED_PRODUCER = 'niyamavali-registry' as const;
 
+/**
+ * Read `restoration.consecutive_required` out of a resolved clause payload — Story 10.25 (AC4).
+ *
+ * ONE spelling, shared by the individual-member path and the bulk Trustee-Lite scan, so the two
+ * cannot drift into different readings of the same governance block. PURE: it interprets nothing and
+ * decides nothing; it reads a number the registry already published.
+ *
+ * `null` when the clause carries no `restoration` block, no `consecutive_required`, or a value that is
+ * not a positive integer — i.e. this clause's restoration package is NOT measured in consecutive
+ * contributions (R7(D)/(E)/(F) prescribe `lock_in_months` + `catch_up_required` / `complete_all`).
+ * That is a real, honest answer about the clause, never a producer gap.
+ */
+export function readConsecutiveRequired(payload: Record<string, unknown>): number | null {
+  const restoration = (payload as { restoration?: unknown }).restoration;
+  if (typeof restoration !== 'object' || restoration === null) return null;
+  const value = (restoration as { consecutive_required?: unknown }).consecutive_required;
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
+}
+
 /** {@link evaluateAppliedR7ClauseSlots}'s result: the applied slots, plus the registry-gap signal. */
 export interface R7ClauseEvaluation {
   /** The APPLIED R7 clause slots only (D2), clause-id ascending. */
   slots: ClauseEvalSlot[];
+  /**
+   * The restoration parameters of the ladder's PRECEDENCE PICK — Story 10.25 (AC4). `null` when no
+   * clause applied.
+   *
+   * The pick, not the whole applied set, because `precedence` is exactly the field that decides WHICH
+   * EXPLANATION SURFACES when several clauses apply ([[project_niyamavali_precedence_is_provenance]]),
+   * and the disclosure shows one package. Every applied clause already means the restoration path
+   * applies; the pick decides which one the member is told about.
+   */
+  restoration: AppliedRestorationRequirement | null;
   /**
    * True when NONE of `R7_ACTIVATED_CLAUSE_IDS` resolves to a clause version at `at` for this
    * Pariwar — the registry is unprovisioned, a DIFFERENT gap from `facts === null` (the fact
@@ -257,7 +311,7 @@ export async function evaluateAppliedR7ClauseSlots(
   facts: Facts | null,
   at: Date,
 ): Promise<R7ClauseEvaluation> {
-  if (facts === null) return { slots: [], registryUnavailable: false };
+  if (facts === null) return { slots: [], registryUnavailable: false, restoration: null };
   const ladder = await evaluateLadderAt(
     deps,
     { pariwarId: baseContext.pariwarId, memberId: baseContext.memberId, facts },
@@ -270,7 +324,40 @@ export async function evaluateAppliedR7ClauseSlots(
       .filter((entry) => entry.applied)
       .map((entry) => ({ clauseId: ids.clauseId(entry.clauseId), result: entry.result })),
     registryUnavailable: ladder.missingClauseIds.length === R7_ACTIVATED_CLAUSE_IDS.length,
+    restoration: await resolveAppliedRestoration(deps.db, baseContext.pariwarId, ladder, at),
   };
+}
+
+/**
+ * Resolve the ladder PICK's `restoration.consecutive_required` from the clause DATA — Story 10.25.
+ *
+ * ⚠ RECORDED VARIANCE from the story's "never a second registry read". `LadderResult` does not surface
+ * the resolved payload (only `clauseId` / `applied` / `EvaluationResult`), and `ladder.ts` is FROZEN —
+ * it is shared by R7/R8/special-death and sits behind the 100×-thread determinism P0 gate, so widening
+ * its result shape is out of bounds for this story. The alternatives were: resolve all four activated
+ * payloads concurrently with the ladder (four extra queries on EVERY evaluation, zero extra
+ * round-trips) or resolve the ONE picked clause afterwards (one extra query, one extra round-trip,
+ * only for members who actually have an applied R7 clause). This is the second.
+ *
+ * It is NOT an N+1: it is a single bounded read outside any loop over members, pools or clauses, which
+ * is AC8's binding structural criterion. The bulk Trustee-Lite scan pays NOTHING for it — that path
+ * already hoists the clause payloads out of its per-member loop and reads the same block from them.
+ *
+ * `null` when no clause applied — the member is in no contribution-discipline restoration path — or
+ * when the picked clause vanished from the registry between the ladder's resolution and this one (a
+ * window that cannot open at a pinned historical `at`, and degrades honestly if it ever did).
+ */
+async function resolveAppliedRestoration(
+  db: Db,
+  pariwarId: ids.PariwarId,
+  ladder: { applicableClauseId: string | null },
+  at: Date,
+): Promise<AppliedRestorationRequirement | null> {
+  const clauseIdStr = ladder.applicableClauseId;
+  if (clauseIdStr === null) return null;
+  const row = await niyamavali.resolveByClauseId(db, pariwarId, ids.clauseId(clauseIdStr), at);
+  if (row === null) return null;
+  return { clauseId: clauseIdStr, consecutiveRequired: readConsecutiveRequired(row.payload) };
 }
 
 /** One ordered evaluation slot: the descriptor + its engine result (`null` when the clause isn't resolvable). */

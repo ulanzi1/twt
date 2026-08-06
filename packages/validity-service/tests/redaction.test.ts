@@ -66,9 +66,12 @@ function payloadWithContribution() {
         'contribution.months_since_last': 7,
         'contribution.skips_current_year': 1,
         'contribution.in_lapse': true,
+        // Story 10.25 — the sixth supplied fact, on the wire alongside the other five.
+        'contribution.r7a_restorations_used': 1,
       },
       lapseSince: '2025-03-01T00:00:00.000Z',
-      heldFacts: [{ key: 'contribution.r7a_restorations_used', producer: 'story-10-25' }],
+      heldFacts: [{ key: 'contribution.personal_event_excuse_claimed', producer: 'story-10-26' }],
+      restorationPackage: { status: 'ok', remaining: 2, required: 5 },
     },
     slots: [r12Slot(r12Result({ grantedYears: 0, isRetired: false, specialFlags: [] }))],
   });
@@ -259,6 +262,29 @@ describe('redactForCaller — field redaction (hash unchanged)', () => {
       const out = redactForCaller(full, caller);
       expect(out.contributionHistorySummary).toEqual(full.contributionHistorySummary);
       expect(out.contributionHistorySummary.status).toBe('ok');
+    }
+  });
+
+  it('Story 10.25: the SIXTH fact and `restorationPackage` SURVIVE redaction too', () => {
+    // The same positive pin, extended to the fields 10.25 added — asserted on the FIELDS rather than
+    // inherited from the `toEqual` above, because a future redaction rule that stripped one of them
+    // would be a silent regression on the two surfaces that need them most.
+    //
+    // `r7a_restorations_used` is member standing of exactly the same class as the other five facts,
+    // and `restorationPackage` is the count the member is OWED before being asked to contribute
+    // without coverage (10.16 AC1(c)). Redacting either from a self-call would mean withholding from
+    // a member the very number that tells them how far along their own restoration is.
+    const full = payloadWithContribution();
+    const selfCall: ValidityCaller = { actorId: ACTOR, grants: [], resource: districtResource(), isSelf: true };
+    const out = redactForCaller(full, selfCall);
+    expect(out.contributionHistorySummary.status).toBe('ok');
+    if (out.contributionHistorySummary.status === 'ok') {
+      expect(out.contributionHistorySummary.facts['contribution.r7a_restorations_used']).toBe(1);
+      expect(out.contributionHistorySummary.restorationPackage).toEqual({
+        status: 'ok',
+        remaining: 2,
+        required: 5,
+      });
     }
   });
 

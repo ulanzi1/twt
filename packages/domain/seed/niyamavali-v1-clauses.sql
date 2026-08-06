@@ -218,8 +218,18 @@ ON CONFLICT (clause_version_id) DO NOTHING;
 -- match a member who contributed <10× and exhausted R7(A). R7(A)'s `< 2` cap is encoded
 -- faithfully; the "falls through to R7(B)" wording is an inherited-TSCT ambiguity flagged
 -- for trustee clarification, NOT an engine defect. R7(A) restoration SATISFACTION (counting
--- 3 consecutive contributions, incrementing r7a_restorations_used) is a downstream Epic 8/9
--- workflow — this seed only encodes the precondition evaluation. R7(G) is declarative: it
+-- 3 consecutive contributions and deriving r7a_restorations_used) was originally deferred here
+-- to "a downstream Epic 8/9 workflow" — an epic-shaped deferral that no epic owned. It is BUILT
+-- by Story 10.25, as a pure as-of derivation over the Story 10.24 projections under the ratified
+-- `consecutive-opportunity-restoration-v1` policy (Decision 2026-08-06-076); nothing INCREMENTS a
+-- stored counter, and this seed still only encodes the precondition evaluation.
+--   ⚠ R7(A) is still NOT evaluated. Its `all_of` below keys the population on
+--   `contribution.total_count < 10`, which prd.md:344 disclaims as "an implementation proxy, not the
+--   constitutional definition" and prd.md:346 forbids evaluating from. Replacing that proxy with the
+--   constitutional joining-discipline criterion is a PART 11 AMENDMENT owned by the Trustee Panel
+--   (Decision 2026-08-06-077) — NOT a code change, and deliberately not edited here. R7(A) activates
+--   only when that amendment is PUBLISHED and Story 10.23 supplies member.joining_discipline_state.
+-- R7(G) is declarative: it
 -- exists as an auditable clause that records an explicit non-exemption ('no_exemption') when
 -- a personal-event excuse is claimed, and NEVER produces a restoration path.
 -- All benefit_mechanism='pool' (the benefit-mechanism CI gate's seed_globs cover this file).

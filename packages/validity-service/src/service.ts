@@ -170,10 +170,20 @@ export async function getValidityAt(
     // is indistinguishable from a genuinely clean member — the exact false all-clear the bulk
     // Trustee-Lite scan already guards against (`r7-candidate-scan.ts`'s `resolvedClauses.length === 0`
     // check). This is the individual-lookup analogue of that same guard.
+    //
+    // Story 10.25 — the summary now also carries `restorationPackage`, measured against the LADDER'S
+    // PICK (`r7Evaluation.restoration`), not against R7(A). A member whose applied clause is R7(C) is
+    // serving a 5-consecutive package; showing them progress toward R7(A)'s 3 would overstate how far
+    // along they are, on the surface that asks them for money without coverage.
     ...(r7Evaluation.registryUnavailable
       ? { contributionHistory: CONTRIBUTION_R7_REGISTRY_UNAVAILABLE }
       : contributionFacts
-        ? { contributionHistory: contributionFactsToSummary(contributionFacts) }
+        ? {
+            contributionHistory: contributionFactsToSummary(
+              contributionFacts,
+              r7Evaluation.restoration,
+            ),
+          }
         : {}),
     slots,
   });

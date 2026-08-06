@@ -71,11 +71,44 @@ export const ContributionHistoryUnavailableDto = z
  * Story 10.24 — the PRODUCED contribution history.
  *
  * `facts` is an open record keyed by the DOTTED `contribution.*` fact keys (`contribution.total_count`,
- * …). It is deliberately NOT `.strict()`-enumerated: the key set grows as Stories 10.25/10.26 supply
- * the two held facts, and the consumer (`deriveViolatorFlags`) filters by `startsWith('contribution.')`
- * rather than by a fixed field list. `heldFacts` puts the omission ON THE WIRE, so a client can say
- * WHAT is missing and WHO owns it instead of silently rendering a partial picture.
+ * …). It is deliberately NOT `.strict()`-enumerated — and Story 10.25 proved the point by adding
+ * `contribution.r7a_restorations_used` to the map with no change here at all. The key set grows as
+ * Story 10.26 supplies the last held fact, and the consumer (`deriveViolatorFlags`) filters by
+ * `startsWith('contribution.')` rather than by a fixed field list. `heldFacts` puts the omission ON
+ * THE WIRE, so a client can say WHAT is missing and WHO owns it instead of silently rendering a
+ * partial picture.
  */
+
+/**
+ * Story 10.25 — how many contributions remain in the member's restoration package (AC4, D4).
+ *
+ * A `.strict()` DISCRIMINATED UNION, because `{ remaining, required }` only describes a package
+ * MEASURED IN CONSECUTIVE CONTRIBUTIONS and only three of the seven R7 clauses have one (R7(A) 3,
+ * R7(B) 5, R7(C) 5). R7(D)/(E)/(F) — the majority of what is activated today — prescribe
+ * `lock_in_months` + `catch_up_required` / `complete_all` and have no consecutive count to show.
+ *
+ * `clauseId` names the applied clause; `null` means NO R7 clause applied at all, i.e. the member is in
+ * no contribution-discipline restoration path. There is deliberately no `package_unavailable` arm: this
+ * field only exists on the `ok` summary arm, where the facts ARE derivable by construction. The
+ * un-derivable case is carried by the summary's own `producer_unavailable` arm, and `@twt/ui` maps
+ * that to `package_unavailable` for the render layer.
+ */
+export const RestorationPackageDto = z.union([
+  z
+    .object({
+      status: z.literal('ok'),
+      remaining: z.number().int().nonnegative(),
+      required: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('no_consecutive_requirement'),
+      clauseId: z.string().nullable(),
+    })
+    .strict(),
+]);
+
 export const ContributionHistoryAvailableDto = z
   .object({
     status: z.literal('ok'),
@@ -84,6 +117,9 @@ export const ContributionHistoryAvailableDto = z
     // `.readonly()` mirrors the service type's `readonly [...]`, so the apps/api boundary stays a pure
     // pass-through with no defensive copy (the DTO IS the service payload's shape, not a re-modelling).
     heldFacts: z.array(z.object({ key: z.string(), producer: z.string() }).strict()).readonly(),
+    // ⚠ APPENDED (Story 10.25). `computeValidityPayloadHash` canonicalises this object and the 4.6
+    // hash contract is order-sensitive — reordering an existing field moves every payload hash.
+    restorationPackage: RestorationPackageDto,
   })
   .strict();
 

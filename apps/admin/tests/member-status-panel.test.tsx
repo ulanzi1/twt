@@ -88,12 +88,15 @@ describe('<MemberStatusPanel> (admin variant)', () => {
               'contribution.months_since_last': 2,
               'contribution.skips_current_year': 0,
               'contribution.in_lapse': false,
+              // Story 10.25 — the sixth supplied fact. The `story-10-25` hold entry is GONE from
+              // `heldFacts` because that producer shipped; only the 10.26 hold remains.
+              'contribution.r7a_restorations_used': 0,
             },
             lapseSince: null,
             heldFacts: [
-              { key: 'contribution.r7a_restorations_used', producer: 'story-10-25' },
               { key: 'contribution.personal_event_excuse_claimed', producer: 'story-10-26' },
             ],
+            restorationPackage: { status: 'no_consecutive_requirement', clauseId: null },
           },
         })}
         identity={identity}
@@ -116,9 +119,12 @@ describe('<MemberStatusPanel> (admin variant)', () => {
               'contribution.months_since_last': 7,
               'contribution.skips_current_year': 2,
               'contribution.in_lapse': true,
+              'contribution.r7a_restorations_used': 1,
             },
             lapseSince: '2026-03-15T00:00:00.000Z',
             heldFacts: [],
+            // A member in lapse under R7(C): five consecutive contributions, none taken yet.
+            restorationPackage: { status: 'ok', remaining: 5, required: 5 },
           },
         })}
         identity={identity}

@@ -34,6 +34,37 @@ const R7_ELIGIBLE_MEMBER_STATES = {
   states: ['lock-in', 'active', 'active-in-grace', 'lapsed-unpaid'],
 } as const;
 
+/**
+ * R7(A)'s payload — Story 10.25, and needed for its DATA ALONE (`restoration.consecutive_required`).
+ *
+ * ⚠ This does NOT weaken the D4 omission discipline the header states, and the reason is structural
+ * rather than a promise: the omission mechanism is `VALIDITY_RULE_ORDER` / `R7_ACTIVATED_CLAUSE_IDS`,
+ * and `evaluateAppliedR7ClauseSlots` passes ONLY the activated ids to the ladder. Seeding this clause
+ * version therefore cannot cause R7(A) to be evaluated, memoized, audited, or to reach
+ * `applicableNiyamavaliClauses[]` — the totality test and the D2 behavioural tests both still hold.
+ * What it DOES do is make the restoration-accounting threshold resolvable, which is exactly the state
+ * production is in (`niyamavali-v1-clauses.sql` row `0e1c0001` seeds all seven).
+ *
+ * Mirrors that seed row VERBATIM.
+ */
+export const R7A_PAYLOAD: Record<string, unknown> = {
+  rule_code: 'R7(A)',
+  title_en: 'Restoration after contribution lapse (member with under 10 lifetime contributions)',
+  rule_kind: 'conditional',
+  family: 'r7-contribution-discipline',
+  precedence: 50,
+  on_pass: 'restore_3_consecutive_one_time',
+  on_fail: 'r7_not_applicable',
+  all_of: [
+    { op: 'fact_equals', fact: 'contribution.in_lapse', value: true },
+    { op: 'fact_lt', fact: 'contribution.total_count', max: 10 },
+    { op: 'fact_lt', fact: 'contribution.r7a_restorations_used', max: 2 },
+  ],
+  restoration: { consecutive_required: 3, lock_in_months: 0, one_time_only: true, lifetime_max: 2 },
+  policy_review_required: true,
+  provisional: true,
+};
+
 /** The four ACTIVATED R7 payloads keyed by clause_id (mirrors the seed rows 0e1c0008–0e1c000b). */
 export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
   'niy.contribution-discipline.r7-c': {

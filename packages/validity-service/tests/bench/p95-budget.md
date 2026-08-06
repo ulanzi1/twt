@@ -200,3 +200,47 @@ and a coverage-watermark read was added (folded into the existing ledger query a
 the single-member path, so it remains exactly TWO queries there; a third Pariwar-scoped read on the
 bulk path, which cannot fold it). The p95/p50 figures above were taken BEFORE those changes and have
 **not** been re-run. Re-measuring is the same seeded-R7 bench fixture already owed above.
+
+---
+
+## Story 10.25 (2026-08-06) — R7(A) restoration accounting, measured after the scan relaxation
+
+**Run on the local live DB (`twt-test-pg`, :5433), same harness, same fixtures** — the AI-4-1
+measured-validation framework and the two existing integration specs, never a second benchmarking tool
+([[project_measured_validation_framework]]).
+
+| Measurement | Spec | Result |
+|---|---|---|
+| Uncached `getValidityAt` p95 | `tests/integration/p95-bench.spec.ts` | `p50 6.69 ms · p95 11.31 ms · p99 23.29 ms` (120 iterations) |
+| Cached-path FR-12A p95 under concurrency | `tests/integration/measured-validation-fr12a.spec.ts` | `p50 2.61 ms · p95 34.49 ms · p99 37.03 ms` (120 samples, scale 60) |
+| 100×-thread determinism gate | `tests/determinism.test.ts` | **exactly ONE** distinct `validity_payload_hash` |
+
+**What changed underneath, and why the numbers are still in the same shape.** Story 10.25 relaxed
+`missedCycleAggregateSql`'s `WHERE` to admit TAKEN opportunities and added a gap-and-islands run
+computation (two window functions + two grouping CTEs) over that same scan, plus R7(A)'s
+`restoration.consecutive_required` as a scalar subquery on the ledger statement. The scan therefore
+reads MORE rows than before (every assigned-and-closed opportunity, not only the missed ones) while
+issuing the SAME number of queries.
+
+- **The two-query budget held.** The counted-query assertion in
+  `tests/integration/contribution-facts.spec.ts` was extended to fixtures with **0, 1 and several**
+  completed restoration episodes and still reports exactly `2`, alongside the pre-existing 1-vs-25
+  contribution comparison.
+- **No N+1 was introduced on the bulk path.** `scanR7ViolatorCandidates` pays nothing for the new
+  fields: the clause payloads it needs for `restoration.consecutive_required` are the ones it already
+  hoists out of its per-member loop.
+- **One extra BOUNDED read on the individual-member path**, recorded rather than hidden: `rules.ts`
+  resolves the ladder PICK's clause payload once, and only when a clause actually applied. It is
+  outside every loop, so AC8's structural criterion holds, but it is one more round-trip for a flagged
+  member than before. See the variance note at `resolveAppliedRestoration`.
+
+**⚠ Comparability, stated rather than implied.** The figures above were taken on the 10.25 tree and are
+directly comparable to *each other*, not to the pre-10.24 rows earlier in this file — those predate the
+opportunity-aware `months_since_last`, the coverage watermark AND this story's scan relaxation. The
+older table is kept as history, not as a baseline.
+
+**⚠ STILL UN-ATTESTED, carried forward unchanged:** the Trustee-Lite Pariwar-wide scan
+(`scanR7ViolatorCandidates`) has still never been measured, and 10.25 did not measure it. Its cost
+profile is described in the round-2 section above and is unaffected in SHAPE by this story (fixed query
+count, O(M) work). Recorded, not mitigated speculatively
+([[feedback_record_unattested_no_backfill]]).

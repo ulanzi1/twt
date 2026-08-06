@@ -213,12 +213,29 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
         'contribution.in_lapse': false,
       });
       expect(p.contributionHistorySummary.facts).not.toHaveProperty('contribution.months_since_last');
+      // ⚠ Story 10.25 (AC7) — `r7a_restorations_used` is ABSENT here too, and for a DIFFERENT reason
+      // from `months_since_last`: this Pariwar seeds only R7(C)–(F), so R7(A) resolves to no clause
+      // version and the restoration THRESHOLD is unknown. "We cannot tell how long a restoration is"
+      // is not "this member has completed none" — and a `0` would be an affirmative claim about them
+      // on the clause that decides whether their restoration path still exists. Production seeds all
+      // seven (`niyamavali-v1-clauses.sql` row 0e1c0001), so this is the honest-gap path, not the
+      // ordinary one; the ordinary one is proven in `contribution-facts.spec.ts`.
+      expect(p.contributionHistorySummary.facts).not.toHaveProperty(
+        'contribution.r7a_restorations_used',
+      );
       expect(p.contributionHistorySummary.lapseSince).toBeNull();
-      // The honest hold, on the wire: what is missing and who owns it.
+      // The honest hold, on the wire: what is missing and who owns it. Story 10.25 DISCHARGED the
+      // `story-10-25` half (it supplies `r7a_restorations_used`); the 10.26 half is still open.
       expect(p.contributionHistorySummary.heldFacts.map((f) => f.producer).sort()).toEqual([
-        'story-10-25',
         'story-10-26',
       ]);
+      // Story 10.25 (AC4/D4) — no R7 clause applied to this member, so there is no consecutive
+      // package to count. That is a different claim from `package_unavailable` ("we cannot tell you"),
+      // which the render layer reaches from the summary's own `producer_unavailable` arm.
+      expect(p.contributionHistorySummary.restorationPackage).toEqual({
+        status: 'no_consecutive_requirement',
+        clauseId: null,
+      });
     }
     // R12 is still the ONLY applicable clause here: this Pariwar DOES provision R7(C)–(F) (seeded
     // above), but none of them APPLY to a member with no contribution history (D2 — only clauses

@@ -115,7 +115,41 @@ export interface ContributionHistoryAvailable {
   lapseSince: string | null;
   /** Facts this producer does NOT supply, each naming its owner — the honest hold, on the wire. */
   heldFacts: readonly { readonly key: string; readonly producer: string }[];
+  /**
+   * The restoration package the member is CURRENTLY serving — Story 10.25 (AC4/AC5, D4).
+   *
+   * ⚠ APPENDED, never reordered. `computeValidityPayloadHash` canonicalises this object and the 4.6
+   * hash contract is order-sensitive; moving an existing field would move every payload hash for a
+   * reason nobody intended.
+   */
+  restorationPackage: RestorationPackagePayload;
 }
+
+/**
+ * How many contributions remain in the member's restoration package — Story 10.25 (AC4, D4).
+ *
+ * TWO arms, because `{ remaining, required }` only describes a package MEASURED IN CONSECUTIVE
+ * CONTRIBUTIONS, and only three of the seven R7 clauses have one (R7(A) 3, R7(B) 5, R7(C) 5). R7(D),
+ * R7(E) and R7(F) — the majority of what is activated today — prescribe `lock_in_months` +
+ * `catch_up_required` / `complete_all` instead, and there is no consecutive count to show them.
+ *
+ *   · `ok`                        — the applied clause prescribes `restoration.consecutive_required`,
+ *                                   and this is the member's progress against it.
+ *   · `no_consecutive_requirement`— there is no consecutive-contribution package to count.
+ *                                   `clauseId` names the applied clause when one applied; it is
+ *                                   `null` when NO R7 clause applied to this member at all, i.e. they
+ *                                   are in no contribution-discipline restoration path.
+ *
+ * ⚠ There is deliberately no `package_unavailable` arm HERE. This type only exists on the `ok`
+ * ({@link ContributionHistoryAvailable}) summary arm, where the facts ARE derivable by construction —
+ * declaring an unreachable arm on the wire is precisely the "declared and unreachable" narration
+ * Story 10.25 removed elsewhere. The un-derivable case is carried by the summary's OWN
+ * `producer_unavailable` arm, and `@twt/ui`'s `RestorationPackageState` maps that to
+ * `package_unavailable` for the render layer (which is where AC4 pins the three-arm union).
+ */
+export type RestorationPackagePayload =
+  | { readonly status: 'ok'; readonly remaining: number; readonly required: number }
+  | { readonly status: 'no_consecutive_requirement'; readonly clauseId: string | null };
 
 /** The contribution-history sub-object: produced, or an honest typed gap (never a fabricated zero). */
 export type ContributionHistorySummary =

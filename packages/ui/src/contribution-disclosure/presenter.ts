@@ -33,14 +33,15 @@ import type {
 } from './view-model.js';
 
 /**
- * AC4 / D1-B — the ONLY `restorationPackage` value reachable today.
+ * AC4 / D1-B — the `restorationPackage` value for a member whose contribution FACTS are un-derivable.
  *
- * Story 10.24 shipped the `contribution.*` fact producer, but NOT restoration accounting: this arm
- * needs the count of CONSECUTIVE contributions completed against the clause's
- * `restoration.consecutive_required`, which 10.24's boundary excludes by name and which couples to
- * Story 10.23's separately-expiring overlay. The label is therefore re-pointed to **Story 10.25**
- * (10.24 AC9) — leaving it naming a story that shipped without closing the gap would turn an honest
- * sentinel into a lie. ⚖ Ownership CONFIRMED by BigDev, Decision 2026-08-05-074.
+ * Story 10.25 shipped the count, so this is no longer the only reachable arm: it is now specifically
+ * the answer when the summary itself is `producer_unavailable` — no projection coverage for the
+ * Pariwar, an `at` before the coverage watermark, or an unprovisioned R7 registry. A per-member gap in
+ * a SHIPPED producer is honest (10.24 D6), so the `producer` literal correctly stays `'story-10-25'`:
+ * this story is its producer, and a reader who hits this arm is being told exactly whose gap it is.
+ *
+ * ⚖ Ownership CONFIRMED by BigDev, Decision 2026-08-05-074.
  *
  * Deriving a count HERE from `listMemberContributionHistory` or an ad-hoc `events_log` scan remains the
  * explicitly REJECTED branch D1-C: that read anchors on `contribution.utr-attested` (a member CLAIM,
@@ -52,6 +53,23 @@ const RESTORATION_PACKAGE_UNAVAILABLE: RestorationPackageState = {
   status: 'package_unavailable',
   producer: 'story-10-25',
 };
+
+/**
+ * Read the restoration package off the validity payload — Story 10.25 (AC4).
+ *
+ * The presenter stays STRICTLY PURE `(payload) → view-model`: the numbers arrive already derived on
+ * `contributionHistorySummary`, and this maps the wire arm to the render arm. It does NOT recompute,
+ * does NOT read the registry, and does NOT reach for a second source.
+ *
+ * A `producer_unavailable` summary (or a payload from an older service) degrades to
+ * `package_unavailable` — "we cannot tell you", which is a genuinely different claim from
+ * `no_consecutive_requirement` ("there is no consecutive package to count").
+ */
+function restorationPackageOf(payload: MemberValidityPayloadDto): RestorationPackageState {
+  const summary = payload.contributionHistorySummary;
+  if (summary.status !== 'ok') return RESTORATION_PACKAGE_UNAVAILABLE;
+  return summary.restorationPackage;
+}
 
 /**
  * The Story-10.23 restoration-discipline lock-in overlay signal, as it will cross the wire.
@@ -140,7 +158,7 @@ export function deriveContributionDisclosure(
       titleKey: SUSPENSION_DISCLOSURE_KEYS.title,
       whatItDoesKey: SUSPENSION_DISCLOSURE_KEYS.whatItDoes,
       whatItDoesNotBuyKey: SUSPENSION_DISCLOSURE_KEYS.whatItDoesNotBuy,
-      restorationPackage: RESTORATION_PACKAGE_UNAVAILABLE,
+      restorationPackage: restorationPackageOf(payload),
       // The ONLY cause this disclosure attributes (AC5) — the trustee-recorded code, rendered as its
       // catalogued label. `moderation` is non-null here by construction of the predicate above.
       reasonLabelKey:
@@ -155,7 +173,7 @@ export function deriveContributionDisclosure(
       titleKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.title,
       whatItDoesKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.whatItDoes,
       whatItDoesNotBuyKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.whatItDoesNotBuy,
-      restorationPackage: RESTORATION_PACKAGE_UNAVAILABLE,
+      restorationPackage: restorationPackageOf(payload),
       // The lock-in instrument carries no trustee reason code of its own — it is a consequence of the
       // restoration discipline, not a fresh finding. `null`, not a fabricated attribution.
       reasonLabelKey: null,

@@ -141,7 +141,10 @@ describe('SuspensionDisclosure — says all three things, through i18n (AC1 / AC
   it('routes every part through t(', () => {
     expect(disclosureSrc).toMatch(/t\(vm\.whatItDoesKey/)
     expect(disclosureSrc).toMatch(/t\(vm\.whatItDoesNotBuyKey/)
-    expect(disclosureSrc).toMatch(/t\(RESTORATION_PACKAGE_UNAVAILABLE_KEY/)
+    // Story 10.25 folded the two non-`ok` arms into one <Paragraph> whose KEY is selected by a
+    // ternary, so the unavailable key is no longer the direct argument of a `t(` call.
+    expect(disclosureSrc).toContain('RESTORATION_PACKAGE_UNAVAILABLE_KEY')
+    expect(disclosureSrc).toContain('RESTORATION_PACKAGE_NO_CONSECUTIVE_REQUIREMENT_KEY')
   })
 
   it('resolves the contribution namespace on every t( call — a dropped NS resolves the wrong catalog or throws', () => {
@@ -159,18 +162,25 @@ describe('SuspensionDisclosure — says all three things, through i18n (AC1 / AC
     }
   })
 
-  it('renders the honest-absence arm with a route to the helpline (AC4)', () => {
-    expect(disclosureSrc).toContain("'package_unavailable'")
+  it('renders BOTH degraded arms with a route to the helpline, and keeps them distinct (AC4; 10.25 D4)', () => {
+    // Story 10.25 made a THIRD arm reachable. Both non-`ok` arms end at the helpline, because both
+    // leave the member with a question a person can answer — but they must not collapse into one
+    // sentence: "we cannot yet tell you" (facts un-derivable) and "your package is not counted in
+    // contributions" (R7(D)/(E)/(F) prescribe lock-in months instead) are DIFFERENT claims, and
+    // telling a member the system is broken when it is simply measuring something else is the
+    // "honest sentinel quietly becomes a lie" failure in a new costume.
+    expect(disclosureSrc).toContain("'no_consecutive_requirement'")
     expect(disclosureSrc).toContain('CallHelplineCTA')
+    expect(disclosureSrc).toContain('RESTORATION_PACKAGE_UNAVAILABLE_KEY')
+    expect(disclosureSrc).toContain('RESTORATION_PACKAGE_NO_CONSECUTIVE_REQUIREMENT_KEY')
     // Never a fabricated zero.
     expect(disclosureSrc).not.toMatch(/remaining:\s*0\b/)
   })
 
-  it('renders the declared-but-unreachable `ok` arm correctly, so Story 10.24 is a true zero-change activation (AC4)', () => {
-    // `deriveContributionDisclosure` never produces `{status:'ok', ...}` today (D1) — nothing exercises
-    // this branch at runtime. That must not mean it ships unverified: the anatomy the eventual 10.24
-    // activation depends on has to already be correct in source.
-    const okBranch = disclosureSrc.slice(disclosureSrc.indexOf("restoration.status === 'package_unavailable'"))
+  it('renders the `ok` arm correctly — LIVE since Story 10.25, and still a zero-change activation (AC4)', () => {
+    // 10.16 declared this arm and 10.24 left it unreachable; Story 10.25's producer lit it with no
+    // change to the (a)/(b) copy keys and no change to `pay.tsx`, which is what the shape was for.
+    const okBranch = disclosureSrc.slice(disclosureSrc.indexOf("restoration.status === 'ok'"))
     expect(okBranch).toMatch(/t\(\s*RESTORATION_PACKAGE_REMAINING_KEY/)
     // Both counts are interpolated as STRINGS (Latin operational numerals, amendment-A2) — not raw
     // numbers, which `t()`'s param typing rejects, and not a fabricated fallback.
@@ -180,8 +190,9 @@ describe('SuspensionDisclosure — says all three things, through i18n (AC1 / AC
     expect(okBranch.slice(0, okBranch.indexOf('RESTORATION_PACKAGE_REMAINING_KEY'))).toContain('$tabular')
   })
 
-  it('never suppresses (a) and (b) when the count is unavailable — they are outside that branch', () => {
-    const packageBranch = disclosureSrc.indexOf("restoration.status === 'package_unavailable'")
+  it('never suppresses (a) and (b) whatever the count arm — they are outside that branch', () => {
+    const packageBranch = disclosureSrc.indexOf("restoration.status === 'ok'")
+    expect(packageBranch).toBeGreaterThan(-1)
     expect(disclosureSrc.indexOf('vm.whatItDoesKey')).toBeLessThan(packageBranch)
     expect(disclosureSrc.indexOf('vm.whatItDoesNotBuyKey')).toBeLessThan(packageBranch)
   })

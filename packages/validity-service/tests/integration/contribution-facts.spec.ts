@@ -20,23 +20,29 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { contribution, createDb, ids, idempotency, schema, type Db } from '@twt/domain';
+import { contribution, createDb, ids, idempotency, niyamavali, schema, type Db } from '@twt/domain';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
+  contributionFactsToBag,
+  contributionFactsToSummary,
   deriveContributionFacts,
   getValidityAt,
   scanR7ViolatorCandidates,
   type ValidityServiceDeps,
 } from '../../src/index.js';
-import { R7_PAYLOADS } from '../fixtures/r7-clauses.js';
+import { R7A_PAYLOAD, R7_PAYLOADS } from '../fixtures/r7-clauses.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 
 /** The pinned evaluation instant for every case below (mid-2026, so the IST year is 2026). */
 const AT = new Date('2026-08-05T00:00:00.000Z');
+
+/** Story 10.25 — opportunity-sequence shorthand. `T` = TAKEN (live-confirmed at `at`), `M` = MISSED. */
+const T = true;
+const M = false;
 
 describe.skipIf(!hasDatabase)(
   'Story 10.24 — the contribution-fact producer (live DB, own-committing) (:5433)',
@@ -76,6 +82,28 @@ describe.skipIf(!hasDatabase)(
           benefitMechanism: 'pool',
         });
       }
+    }
+
+    /**
+     * Seed R7(A) — Story 10.25, and for its DATA ALONE (`restoration.consecutive_required: 3`).
+     *
+     * ⚠ This does NOT activate R7(A) and cannot: `evaluateAppliedR7ClauseSlots` passes only
+     * `R7_ACTIVATED_CLAUSE_IDS` to the ladder, so a seeded r7-a version is never evaluated, memoized,
+     * audited, or admitted to `applicableNiyamavaliClauses[]`. The D2 behavioural tests below still
+     * assert exactly which clauses reach the payload, and the totality test still asserts r7-a is
+     * held. What this DOES do is make the restoration threshold resolvable — which is the state
+     * production is already in (`niyamavali-v1-clauses.sql` seeds all seven).
+     */
+    async function seedR7ARestorationClause(pariwarId: ids.PariwarId): Promise<void> {
+      await db.insert(schema.clauseVersions).values({
+        clauseVersionId: ids.clauseVersionId(randomUUID()),
+        clauseId: ids.clauseId('niy.contribution-discipline.r7-a'),
+        pariwarId,
+        version: 1,
+        effectiveDate: new Date('2000-01-01T00:00:00Z'),
+        payload: { ...R7A_PAYLOAD },
+        benefitMechanism: 'pool',
+      });
     }
 
     /**
@@ -426,6 +454,365 @@ describe.skipIf(!hasDatabase)(
     });
 
     // ── AC7: the counted-query assertion (the binding structural criterion) ───────────────────────
+    // ── Story 10.25 — R7(A) restoration accounting, END TO END (AC1, AC2, AC4, AC7; D1, D3) ───────
+    //
+    // The unit tests pin `consecutive-opportunity-restoration-v1` as a PURE function over a boolean
+    // sequence. These pin the thing the unit tests structurally cannot: that the SQL gap-and-islands
+    // spelling folded into `missedCycleAggregateSql` computes the SAME policy over real assignments,
+    // real alert closures and real reversals — the [[project_epic6_drizzle_correlated_subquery_bug]]
+    // drift class, which only a live DB can catch.
+    describe('Story 10.25 — restoration accounting over the real opportunity sequence', () => {
+      /**
+       * Seed one member whose opportunity sequence is exactly `sequence` (`true` = TAKEN), one cycle
+       * per element, in order, and return the derived fact inputs at `AT`.
+       *
+       * Each opportunity is its own cycle with a strictly increasing close instant, so the SQL's
+       * `(closed_at, pool_id)` ordering is the array order — the fixture cannot accidentally pass by
+       * agreeing with a scan order.
+       */
+      async function seedSequence(
+        sequence: readonly boolean[],
+        opts: { seedR7A?: boolean } = {},
+      ): Promise<{
+        inputs: Awaited<ReturnType<typeof contribution.readContributionFactInputs>>;
+        pariwarId: ids.PariwarId;
+        memberId: string;
+      }> {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const memberId = randomUUID();
+        await seedCoverage(pariwarId);
+        if (opts.seedR7A !== false) await seedR7ARestorationClause(pariwarId);
+
+        for (const [index, taken] of sequence.entries()) {
+          // One DAY apart, all inside IST-2026 January and all before `AT`. Days rather than months
+          // so a long sequence cannot silently run past `AT` and drop its own tail — an as-of
+          // truncation would make a fixture look like a producer bug.
+          const assignedAt = new Date(Date.UTC(2026, 0, 1 + index));
+          const closedAt = new Date(Date.UTC(2026, 0, 1 + index, 12));
+          const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
+            assignedAt,
+            closedAt,
+          });
+          if (taken) {
+            await confirm(
+              pariwarId,
+              alertId,
+              memberId,
+              poolId,
+              100 + index,
+              new Date(Date.UTC(2026, 0, 1 + index, 6)),
+            );
+          }
+        }
+
+        const inputs = await contribution.readContributionFactInputs(
+          db,
+          { pariwarId, memberId: ids.memberId(memberId) },
+          AT,
+        );
+        return { inputs, pariwarId, memberId };
+      }
+
+      /**
+       * THE PIN (D3). Assert the SQL and the PURE reference agree on the SAME sequence, and that both
+       * agree with the case's stated expectation. Three assertions rather than one, deliberately: two
+       * implementations that are wrong in the same way would still pass a bare equality check.
+       */
+      async function expectRuns(
+        sequence: readonly boolean[],
+        expected: { completedEpisodes: number; currentOpenRun: number },
+      ): Promise<void> {
+        const { inputs } = await seedSequence(sequence);
+        const pure = contribution.deriveRestorationRuns(sequence, 3);
+        expect(pure, 'the PURE reference disagreed with the expectation').toEqual(expected);
+        expect(
+          {
+            completedEpisodes: inputs.completedRestorationEpisodes,
+            currentOpenRun: inputs.currentOpenTakenRun,
+          },
+          'the SQL gap-and-islands spelling disagreed with the PURE reference — a second definition has drifted in',
+        ).toEqual(pure);
+        // The threshold reached the SQL from the CLAUSE DATA, not from a constant.
+        expect(inputs.r7aConsecutiveRequired).toBe(3);
+      }
+
+      it('AC1 — SIX consecutive taken after a miss is ONE restoration, not two', async () => {
+        await expectRuns([M, T, T, T, T, T, T], { completedEpisodes: 1, currentOpenRun: 6 });
+      });
+
+      it('AC1 — a member who NEVER missed has completed ZERO restorations (the preceding-MISS gate)', async () => {
+        // Without the gate this member reads as having burned restorations and is pushed toward
+        // R7(B), the harsher clause — for the offence of taking every opportunity they were given.
+        await expectRuns([T, T, T, T, T, T], { completedEpisodes: 0, currentOpenRun: 0 });
+      });
+
+      it('AC1 — a SHORT run then a LONG run counts only the run that completed', async () => {
+        await expectRuns([M, T, T, M, T, T, T], { completedEpisodes: 1, currentOpenRun: 3 });
+      });
+
+      it('AC1 — an IN-PROGRESS package is not a consumed one', async () => {
+        await expectRuns([M, T, T], { completedEpisodes: 0, currentOpenRun: 2 });
+      });
+
+      it('AC1 — a member with NO opportunities has no episodes and no open package', async () => {
+        await expectRuns([], { completedEpisodes: 0, currentOpenRun: 0 });
+      });
+
+      it('AC2 — a REVERSAL turns a TAKEN opportunity into a MISS and breaks the run', async () => {
+        // The live-only case: the same six confirmations, one of which is reversed BEFORE `AT`. A
+        // ledger-row count would still see six contributions; the opportunity sequence sees the break.
+        const pariwarId = ids.pariwarId(randomUUID());
+        const memberId = randomUUID();
+        await seedCoverage(pariwarId);
+        await seedR7ARestorationClause(pariwarId);
+
+        const confirmationIds: string[] = [];
+        const alertIds: string[] = [];
+        for (const index of [0, 1, 2, 3, 4, 5]) {
+          const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
+            assignedAt: new Date(Date.UTC(2026, index, 5)),
+            closedAt: new Date(Date.UTC(2026, index, 20)),
+          });
+          alertIds.push(alertId);
+          // Opportunity 0 is the opening MISS; 1..5 are taken.
+          if (index === 0) continue;
+          confirmationIds.push(
+            await confirm(
+              pariwarId,
+              alertId,
+              memberId,
+              poolId,
+              100 + index,
+              new Date(Date.UTC(2026, index, 10)),
+            ),
+          );
+        }
+
+        const scope = { pariwarId, memberId: ids.memberId(memberId) };
+        const before = await contribution.readContributionFactInputs(db, scope, AT);
+        // MISS then five TAKEN → one completed episode, open run 5.
+        expect(before.completedRestorationEpisodes).toBe(1);
+        expect(before.currentOpenTakenRun).toBe(5);
+
+        // Reverse the SECOND taken opportunity (sequence index 2), splitting 5 into 1 + 3.
+        await reverse(pariwarId, alertIds[2]!, memberId, confirmationIds[1]!, 200, new Date(Date.UTC(2026, 6, 1)));
+
+        const after = await contribution.readContributionFactInputs(db, scope, AT);
+        expect({
+          completedEpisodes: after.completedRestorationEpisodes,
+          currentOpenRun: after.currentOpenTakenRun,
+        }).toEqual(contribution.deriveRestorationRuns([M, T, M, T, T, T], 3));
+        expect(after.completedRestorationEpisodes).toBe(1); // the trailing 3-run, not the broken 5
+        expect(after.currentOpenTakenRun).toBe(3);
+      });
+
+      it('AC2 — an OPEN cycle and a NON-ASSIGNED cycle are not opportunities at all', async () => {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const memberId = randomUUID();
+        const otherMemberId = randomUUID();
+        await seedCoverage(pariwarId);
+        await seedR7ARestorationClause(pariwarId);
+
+        // The opening miss, then two taken — an in-progress package of 2.
+        for (const index of [0, 1, 2]) {
+          const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
+            assignedAt: new Date(Date.UTC(2026, index, 5)),
+            closedAt: new Date(Date.UTC(2026, index, 20)),
+          });
+          if (index > 0) {
+            await confirm(pariwarId, alertId, memberId, poolId, 100 + index, new Date(Date.UTC(2026, index, 10)));
+          }
+        }
+        // A cycle this member IS assigned to but which is still OPEN: mid-window, they have missed
+        // nothing — it must not break the run and must not become a third taken opportunity.
+        await seedCycleFixture(pariwarId, [memberId], {
+          assignedAt: new Date(Date.UTC(2026, 3, 5)),
+          closedAt: null,
+        });
+        // A CLOSED cycle this member was never assigned to: they had nothing to take, so it is not a
+        // missed opportunity and must not break the run either.
+        await seedCycleFixture(pariwarId, [otherMemberId], {
+          assignedAt: new Date(Date.UTC(2026, 4, 5)),
+          closedAt: new Date(Date.UTC(2026, 4, 20)),
+        });
+
+        const inputs = await contribution.readContributionFactInputs(
+          db,
+          { pariwarId, memberId: ids.memberId(memberId) },
+          AT,
+        );
+        expect({
+          completedEpisodes: inputs.completedRestorationEpisodes,
+          currentOpenRun: inputs.currentOpenTakenRun,
+        }).toEqual(contribution.deriveRestorationRuns([M, T, T], 3));
+      });
+
+      it('AC1 — the fact reaches the engine bag UNCLAMPED, and the summary carries it', async () => {
+        // Four completed episodes — twice R7(A)'s `lifetime_max: 2`. A producer that clamped would
+        // make "used 2" and "used 7" indistinguishable and would put a governance threshold in code.
+        const sequence = [M, T, T, T, M, T, T, T, M, T, T, T, M, T, T, T];
+        const { inputs } = await seedSequence(sequence);
+        const facts = deriveContributionFacts(inputs, AT)!;
+        expect(facts.r7aRestorationsUsed).toBe(4);
+        expect(contributionFactsToBag(facts)['contribution.r7a_restorations_used']).toBe(4);
+        expect(contributionFactsToSummary(facts, null).facts['contribution.r7a_restorations_used']).toBe(4);
+      });
+
+      it('AC7 — an UNPROVISIONED R7(A) makes the count UNKNOWN, never a fabricated zero', async () => {
+        // ⚠ The Pariwar is fully backfilled and the member's history is perfectly readable — what is
+        // missing is the GOVERNANCE NUMBER: no R7(A) clause version resolves at `AT`, so "how long is
+        // a restoration?" has no answer. Reporting `0` would be an affirmative claim about the member
+        // on the clause that decides whether their restoration path still exists.
+        const { inputs } = await seedSequence([M, T, T, T], { seedR7A: false });
+        expect(inputs.r7aConsecutiveRequired).toBeNull();
+        const facts = deriveContributionFacts(inputs, AT)!;
+        expect(facts.r7aRestorationsUsed).toBeNull();
+        expect(contributionFactsToBag(facts)).not.toHaveProperty('contribution.r7a_restorations_used');
+      });
+
+      it('AC1 — the R7(A) threshold read agrees with `niyamavali.resolveByClauseId` (the parity pin)', async () => {
+        // `facts.ts` re-spells clause resolution as a scalar subquery to stay inside AC8's two-query
+        // budget. That is a second EXECUTION STRATEGY, not a second definition — and this is what
+        // keeps it so. A future change to clause resolution must update both and keep this green.
+        const { pariwarId } = await seedSequence([M, T, T, T]);
+        const row = await niyamavali.resolveByClauseId(
+          db,
+          pariwarId,
+          ids.clauseId('niy.contribution-discipline.r7-a'),
+          AT,
+        );
+        const viaAccessor = (row?.payload as { restoration?: { consecutive_required?: number } })
+          ?.restoration?.consecutive_required;
+        const viaSql = (
+          await contribution.readContributionProjectionContext(db, pariwarId, AT)
+        ).r7aConsecutiveRequired;
+        expect(viaSql).toBe(viaAccessor);
+        expect(viaSql).toBe(3);
+      });
+
+      it('AC1 — the count is AS-OF correct: an episode completed after `at` is not counted at `at`', async () => {
+        // Replayability is not decoration here: `assignable-roster.ts` calls `getValidityAt(...,
+        // committedAt)`, and an R7(A) finding that only answers "now" would be irreproducible on the
+        // surface that feeds a suspension decision.
+        const { pariwarId, memberId } = await seedSequence([M, T, T, T]);
+        const scope = { pariwarId, memberId: ids.memberId(memberId) };
+        // Opportunities close on Jan 1/2/3/4 at 12:00. Evaluated at Jan 4 00:00 only the first three
+        // have closed, so the package is still open with two taken.
+        const midPackage = new Date(Date.UTC(2026, 0, 4));
+        const early = await contribution.readContributionFactInputs(db, scope, midPackage);
+        expect(early.completedRestorationEpisodes).toBe(0);
+        expect(early.currentOpenTakenRun).toBe(2);
+
+        const now = await contribution.readContributionFactInputs(db, scope, AT);
+        expect(now.completedRestorationEpisodes).toBe(1);
+      });
+
+      /**
+       * Seed a member with a real lifecycle + the activated R7 clauses + R7(A)'s data, walk them
+       * through `sequence`, and return their full validity payload at `AT`.
+       */
+      async function payloadForSequence(
+        sequence: readonly boolean[],
+      ): Promise<Awaited<ReturnType<typeof getValidityAt>>> {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const memberId = randomUUID();
+        await seedCoverage(pariwarId);
+        await seedMember(pariwarId, ids.memberId(memberId));
+        await seedActivatedR7(pariwarId);
+        await seedR7ARestorationClause(pariwarId);
+        for (const [index, taken] of sequence.entries()) {
+          const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
+            assignedAt: new Date(Date.UTC(2026, 0, 1 + index)),
+            closedAt: new Date(Date.UTC(2026, 0, 1 + index, 12)),
+          });
+          if (taken) {
+            await confirm(pariwarId, alertId, memberId, poolId, 100 + index, new Date(Date.UTC(2026, 0, 1 + index, 6)));
+          }
+        }
+        return getValidityAt(deps, { pariwarId, memberId: ids.memberId(memberId) }, AT, {
+          internal: true,
+        });
+      }
+
+      it('AC4 — the payload carries { remaining, required } from the APPLIED clause DATA', async () => {
+        // One contribution, then twelve missed opportunities ⇒ `months_since_last` reaches 12 and
+        // R7(C) applies (precedence 70, so it is also the ladder's PICK over R7(F)). R7(C) prescribes
+        // FIVE consecutive contributions — and FIVE is what the disclosure must say, not R7(A)'s
+        // three. That is the whole point of reading `required` from the APPLIED clause.
+        const payload = await payloadForSequence([T, ...Array<boolean>(12).fill(M)]);
+
+        expect(payload.applicableNiyamavaliClauses.map((c) => String(c.clauseId))).toContain(
+          'niy.contribution-discipline.r7-c',
+        );
+        expect(payload.contributionHistorySummary.status).toBe('ok');
+        if (payload.contributionHistorySummary.status === 'ok') {
+          expect(payload.contributionHistorySummary.restorationPackage).toEqual({
+            status: 'ok',
+            remaining: 5,
+            required: 5,
+          });
+          // The sixth fact rides the same summary, from the same read.
+          expect(
+            payload.contributionHistorySummary.facts['contribution.r7a_restorations_used'],
+          ).toBe(0);
+        }
+      });
+
+      // ⚠ RECORDED FINDING (Story 10.25, surfaced by the test above rather than asserted from the
+      // story text). Today `remaining` is NECESSARILY EQUAL to `required` on every reachable `ok`
+      // arm, and it is worth stating rather than leaving for a reader to rediscover:
+      //
+      //   · R7(C) is the ONLY activated clause carrying `restoration.consecutive_required`, and its
+      //     own precondition is `months_since_last >= 12` — a gap counted in MISSED opportunities
+      //     SINCE THE LAST LIVE CONFIRMATION.
+      //   · So the moment the member takes one contribution, that gap resets to 0, R7(C) stops
+      //     applying, and the `ok` arm stops being reached at all.
+      //   · Therefore any member for whom the `ok` arm renders has a trailing run of 0.
+      //
+      // The PARTIAL-progress case (`{ remaining: 3, required: 5 }`) is real arithmetic and is pinned
+      // DB-free in `contribution-facts.test.ts`; it becomes reachable on a live payload only when a
+      // clause whose precondition survives a contribution activates — i.e. R7(A)/(B), which need
+      // Story 10.23's fact AND the Trustee Panel's published Part 11 amendment (Decision
+      // 2026-08-06-077). This is NOT a defect in the accounting and must not be "fixed" by measuring
+      // the run differently; it is a property of which clauses are activated today.
+      it('AC4/D4 — a member whose applied clause has NO consecutive package is told exactly that', async () => {
+        // Ten contributions then a single missed cycle ⇒ R7(D) (`total_count >= 10 && skips == 1`),
+        // which prescribes `lock_in_months` + `catch_up_required` and NO `consecutive_required`.
+        // Leaving this member on `package_unavailable` after 10.25 shipped would name a story that
+        // has already shipped and did not close their case — the 10.24-AC9 lie-by-staleness failure.
+        const payload = await payloadForSequence([...Array<boolean>(10).fill(T), M]);
+
+        expect(payload.applicableNiyamavaliClauses.map((c) => String(c.clauseId))).toEqual([
+          'niy.contribution-discipline.r7-d',
+        ]);
+        expect(payload.contributionHistorySummary.status).toBe('ok');
+        if (payload.contributionHistorySummary.status === 'ok') {
+          expect(payload.contributionHistorySummary.restorationPackage).toEqual({
+            status: 'no_consecutive_requirement',
+            clauseId: 'niy.contribution-discipline.r7-d',
+          });
+        }
+      });
+
+      it('AC4 — a member in NO restoration path gets the null-clause arm, not a sentinel', async () => {
+        // Every opportunity taken: no R7 clause applies at all. There is no package to count, which
+        // is a different claim from "we cannot tell you".
+        const payload = await payloadForSequence([T, T, T]);
+        expect(payload.applicableNiyamavaliClauses.map((c) => String(c.clauseId))).toEqual([]);
+        expect(payload.contributionHistorySummary.status).toBe('ok');
+        if (payload.contributionHistorySummary.status === 'ok') {
+          expect(payload.contributionHistorySummary.restorationPackage).toEqual({
+            status: 'no_consecutive_requirement',
+            clauseId: null,
+          });
+          // The preceding-MISS gate, end to end: a member who never missed has burned nothing.
+          expect(
+            payload.contributionHistorySummary.facts['contribution.r7a_restorations_used'],
+          ).toBe(0);
+        }
+      });
+    });
+
     it('AC7 — the fact read costs the SAME number of queries for 1 vs N contributions (no N+1)', async () => {
       /** Wrap the Db handle and count every query it issues. */
       function countingDb(): { handle: Db; count: () => number } {
@@ -475,12 +862,54 @@ describe.skipIf(!hasDatabase)(
         return counting.count();
       }
 
+      /**
+       * Story 10.25 (AC8) — the same count, for a member with `episodes` COMPLETED restoration
+       * episodes. The run computation folded into `missedCycleAggregateSql` must cost nothing extra,
+       * and it must not start costing per-episode as the sequence grows.
+       */
+      async function queriesForEpisodes(episodes: number): Promise<number> {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const memberId = randomUUID();
+        await seedCoverage(pariwarId);
+        await seedR7ARestorationClause(pariwarId);
+        let index = 0;
+        for (let e = 0; e < episodes; e += 1) {
+          for (const taken of [M, T, T, T]) {
+            const { poolId, alertId } = await seedCycleFixture(pariwarId, [memberId], {
+              assignedAt: new Date(Date.UTC(2026, 0, 1 + index)),
+              closedAt: new Date(Date.UTC(2026, 0, 1 + index, 12)),
+            });
+            if (taken) {
+              await confirm(pariwarId, alertId, memberId, poolId, 100 + index, new Date(Date.UTC(2026, 0, 1 + index, 6)));
+            }
+            index += 1;
+          }
+        }
+        const counting = countingDb();
+        const inputs = await contribution.readContributionFactInputs(
+          counting.handle,
+          { pariwarId, memberId: ids.memberId(memberId) },
+          AT,
+        );
+        // The fixture must genuinely produce the episodes it claims, or the count below is vacuous.
+        expect(inputs.completedRestorationEpisodes).toBe(episodes);
+        return counting.count();
+      }
+
       const one = await queriesFor(1);
       const many = await queriesFor(25);
       // An N-INDEPENDENT read is the definition of "no N+1". Asserting equality (rather than a
       // threshold) is what makes a future per-row read fail here instead of merely looking slower.
       expect(many).toBe(one);
       expect(one).toBe(2); // one ledger aggregate + one missed-cycle aggregate — and nothing else.
+
+      // ⚖ Story 10.25 / D3 — the two-query budget SURVIVED the restoration accounting. The run
+      // computation rides the existing scan as window functions and R7(A)'s threshold rides the
+      // existing ledger statement as a scalar subquery, so 0, 1 and several episodes all cost two.
+      const zeroEpisodes = await queriesForEpisodes(0);
+      const oneEpisode = await queriesForEpisodes(1);
+      const severalEpisodes = await queriesForEpisodes(4);
+      expect([zeroEpisodes, oneEpisode, severalEpisodes]).toEqual([2, 2, 2]);
     });
 
     // ── D3: the ACCEPTANCE-level equivalence (a diff here is a P0 finding) ────────────────────────

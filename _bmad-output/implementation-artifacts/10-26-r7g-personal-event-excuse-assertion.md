@@ -711,8 +711,10 @@ regenerate raises `42P07`, [[project_live_db_test_gotchas]]).
    through `docs/tone-guide.md` deliberately and record the review.
 5. **No member surface shows a MISSED cycle (D5).** The member cannot point at the cycle they mean, so
    the assertion's cycle reference ships **optional and unpopulated**. A genuine gap in the member's
-   view of their own contribution discipline; recorded, with an owner to be assigned — not this story's
-   to close.
+   view of their own contribution discipline; recorded, and **OWNED BY THE TRUSTEE PANEL** (assigned
+   2026-08-06 by BigDev) — not this story's to close. Six questions owed, two blocking; see
+   `deferred-work.md`. ⚠ Decaying: assertions are being recorded now with no cycle anchor and cannot
+   be backfilled later.
 6. **The query budget grows (AC9):** 2 → 3 per-member, 7 → 8 for the Pariwar scan, plus a fifth hoisted
    clause resolution. Measured against FR-12A's p95 < 200 ms at 4L, and recorded in `p95-budget.md`
    — but the 4L figure remains **un-attested** at production scale
@@ -1129,8 +1131,11 @@ no such step — migration `0036`'s trigger handles it per-member.
 
 **Escalations:** 1 closed by ratification (pre-work commit `838f667`); 2 built and flagged; 3, 4, 5, 6
 recorded in `deferred-work.md`. **Escalation 5 (no member surface shows a MISSED cycle) is genuinely
-open and its owner is UNASSIGNED** — flagged because a deferral without an owner is how R7's own fact
-producer went missing for two epics.
+open and is OWNED BY THE TRUSTEE PANEL** (assigned 2026-08-06 by BigDev), with six questions recorded
+verbatim in `deferred-work.md` — two of them blocking. The Panel owns the DECISION, not the surface;
+implementation ownership follows from their answer, and two of the possible answers close the
+escalation with nothing to build. Flagged this precisely because a deferral that names an owner but
+no answerable question expires just as surely as one that names an epic.
 
 ### File List
 

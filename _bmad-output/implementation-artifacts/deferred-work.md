@@ -20,17 +20,96 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   author will hit again. **Re-trigger:** a UX spec section for member-facing governance disclosures,
   or the next story adding copy to this surface.
 
-- **⚠ Escalation 5 — NO member surface shows a MISSED cycle. Genuinely open; owner UNASSIGNED.** The
-  Yogdaan Bahi (`contracts/src/contributions/contribution-history.ts`) lists the member's own
-  **attested** contributions — a missed cycle produces no attestation and therefore **no row**, and
-  `grey` means *attested, cycle closed, no verdict*, never *missed*. So a member has nowhere to point
-  at the specific cycle a personal event affected. The assertion event carries an OPTIONAL `cycle_ref`
-  for exactly this, and it ships **unpopulated by any UI** — the seam exists so a future cycle-scoped
-  surface needs no new event type. This is a real gap in the member's view of their own contribution
-  discipline; it is RECORDED, not absorbed, and **it is not Story 10.26's to close**.
-  ⚠ **An owner must be assigned** — a deferral naming no owner (or an EPIC) expires unowned, which is
-  how R7's own fact producer went missing for two epics ([[project_r7_fact_producer_unbuilt]]).
-  **Re-trigger:** any story that surfaces missed/skipped cycles to a member.
+- **⚠ Escalation 5 — NO member surface shows a MISSED cycle. OWNER: the TRUSTEE PANEL (assigned
+  2026-08-06 by BigDev).** The Yogdaan Bahi
+  (`contracts/src/contributions/contribution-history.ts`) lists the member's own **attested**
+  contributions — a missed cycle produces no attestation and therefore **no row**, and `grey` means
+  *attested, cycle closed, no verdict*, never *missed*. So a member has nowhere to point at the
+  specific cycle a personal event affected. The assertion event carries an OPTIONAL `cycle_ref` for
+  exactly this, and it ships **unpopulated by any UI** — the seam exists so a future cycle-scoped
+  surface needs no new event type. A real gap in the member's view of their own contribution
+  discipline; RECORDED, not absorbed, and not Story 10.26's to close.
+
+  **⚠ WHAT THE PANEL OWNS, stated precisely so this does not stall.** The Trustee Panel owns the
+  **DECISION**, not the surface: whether a member may see their own missed cycles at all, under what
+  definition, and with what framing. Trustees do not ship UI. **Implementation ownership is assigned
+  by, and only after, their answer** — and if the answer is Q1-NO or Q4-REMOVE, there is nothing to
+  implement and the escalation closes without a story. Recording it this way avoids the failure mode
+  where "the Trustee Panel owns it" becomes indistinguishable from unowned
+  ([[project_r7_fact_producer_unbuilt]] — a deferral that names no answerable question expires just
+  as surely as one that names an epic).
+
+  **⚠ WHY THIS IS A GOVERNANCE QUESTION AND NOT A PRODUCT ONE.** "Missed" is not an observed fact; it
+  is a DERIVED CLAIM about a member's conduct, produced under the implementation policy
+  `missed-closed-cycle-v1` (an assigned-and-closed cycle that resolved with no live confirmation).
+  Rendering that derivation to the member converts a producer's internal label into a **member-facing
+  accusation** — the same class of act D4 governs on the trustee side. It also lands on a
+  dignity-first surface whose tone rules forbid shame and scarcity framing, against a transparency
+  interest that cuts the other way (a member in lock-in currently cannot see the basis of their own
+  standing).
+
+  **⚠ THE COST OF LEAVING THIS OPEN IS NOT ZERO, and it grows.** R7(G) is LIVE now. Assertions are
+  being recorded today with `cycle_ref` absent. If the Panel later rules that cycle-scoping matters,
+  those historical assertions **cannot be backfilled** — the members who made them will never be
+  reconstructible against a cycle ([[feedback_record_unattested_no_backfill]] — never reconstruct
+  evidence to fake validation). Every cycle that passes widens the un-anchored set. This is a
+  decaying question, not a dormant one.
+
+  **THE QUESTIONS OWED. Q1 and Q4 are BLOCKING** (nothing can be built or removed until both are
+  answered); Q2–Q3 and Q5–Q6 are answerable in the same sitting and shape what gets built.
+
+  1. **⛔ BLOCKING — May a member be shown their own MISSED cycles at all?** Not "should we build the
+     screen" — may the system tell a member, on their own record, *"you did not contribute in these
+     cycles"*? **YES** ⇒ a member-facing missed-cycle surface is legitimate and gets a story.
+     **NO** ⇒ `cycle_ref` is undeliverable by design, Q4 becomes REMOVE, and this escalation closes
+     as *"Resolved via explicit deferral — the Panel ruled the surface out of bounds"*, NOT as *"not
+     addressed"* ([[feedback_closure_language_precision]]).
+
+  2. **Is `missed-closed-cycle-v1` the Niyamavali's definition of a MISS, or an implementation
+     proxy?** Today it is a documented producer policy, not ratified text. If a member is to be shown
+     "missed", the label they read must be one the Panel stands behind. **RATIFY** ⇒ it enters §3.1
+     and the seed's review-status flags follow. **PROXY** ⇒ it may drive engine facts but must NOT be
+     rendered to a member as a finding about them — the same distinction `prd.md:346` already draws
+     for R7(A)'s `total_count < 10`, which is disclaimed as a proxy and normatively forbidden as an
+     evaluation basis.
+
+  3. **What must a missed-cycle list do about causes the pool engine structurally cannot see?** At
+     least three exist today: an **out-of-band contribution** (a member who sent money directly to a
+     bereaved family — `docs/policies/out-of-band-contributions.md` says the trust does NOT
+     characterise this as wrong, yet the ledger has no row for it); a member who was **assigned but
+     never notified** (the 8.8 dispatch family is log-only in places); and a member in **grace or
+     under a moderation overlay** during the window. Rendering all three as "missed" would tell a
+     member who did something honourable that they failed. Does the Panel require a distinct
+     **`unattributed` / `disputed`** state, or accept a single "no contribution recorded" label with
+     neutral framing?
+
+  4. **⛔ BLOCKING — Does the assertion's cycle anchor have constitutional meaning, or is it
+     decoration?** R7(G)'s fact is a LIFETIME BOOLEAN by frozen wire contract
+     (`R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED`), and the ratified §3.1 says the
+     assertion carries no consequence of its own. So a cycle-scoped assertion changes **nothing**
+     today. **KEEP** ⇒ the Panel intends the anchor to carry provenance a human may one day read
+     (e.g. informing discretion on a specific claim), and Q1 must be YES or the field can never be
+     populated. **REMOVE** ⇒ `cycle_ref` comes out of `PersonalEventAssertedPayloadSchema` and the
+     DTO, and the escalation closes. ⚠ Deciding this LATE is the expensive path — see the decay note
+     above.
+
+  5. **If a member-facing missed-cycle list exists, does it change what a TRUSTEE may act on?** The
+     Trustee-Lite violator section already surfaces R7 flags. A member-visible list makes the same
+     facts mutually known, which is usually good — but it also creates an expectation that a member
+     who *saw* their missed cycles and did nothing was on notice. Does the Panel intend that
+     inference to be available in a suspension decision, or explicitly not? (This is the D4
+     understanding-vs-suspicion boundary, re-asked on the member side.)
+
+  6. **Is there an obligation to NOTIFY, or only to DISPLAY?** A list a member must navigate to is a
+     different instrument from a message telling them they missed a cycle. FR-88 and the 8.8 notify
+     family make the second buildable. The tone guide's anti-pressure rules (no manufactured urgency,
+     no "you're behind") bind hard here. **DISPLAY-ONLY** is the conservative default and is what
+     this entry assumes absent an answer.
+
+  **Closure condition (state which, verbatim):** *"Closed by Trustee Panel decision [id]"* with Q1 +
+  Q4 answered — never *"deferred pending review"*, which is how this becomes permanent.
+  **Re-trigger:** the next Trustee Panel sitting; OR any story that proposes to surface
+  missed/skipped cycles to a member, which MUST NOT proceed on Q1 alone being assumed.
 
 - **⚠ Escalation 6 — the query budget grew, and the 4L figure is STILL UN-ATTESTED.** Single-member
   fact read **2 → 3** (the assertion `EXISTS`); Pariwar scan **8 → 10** (+1 assertion existential,

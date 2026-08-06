@@ -347,5 +347,6 @@
   "memberStatus.moderationReason.rule-clearance": "नियम की पूर्ति",
   "memberStatus.moderationReason.trustee-discretion": "ट्रस्टी का निर्णय",
   "memberStatus.moderationReason.moderation-error": "पूर्व निर्णय में सुधार",
-  "memberStatus.moderationReason.unspecified": "एक दर्ज निर्णय"
+  "memberStatus.moderationReason.unspecified": "एक दर्ज निर्णय",
+  "memberStatus.rule.rule.no_exemption": "आपने दर्ज किया है कि एक निजी घटना ने आपके योगदान की क्षमता को प्रभावित किया। नियमावली सभी से एक ही अपेक्षा रखती है, इसलिए इससे आपकी स्थिति में कोई अंतर नहीं आता — और यह आपके रिकॉर्ड में आपकी बात के रूप में सुरक्षित है।"
 }

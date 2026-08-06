@@ -244,3 +244,47 @@ older table is kept as history, not as a baseline.
 profile is described in the round-2 section above and is unaffected in SHAPE by this story (fixed query
 count, O(M) work). Recorded, not mitigated speculatively
 ([[feedback_record_unattested_no_backfill]]).
+
+---
+
+## Story 10.26 — the SEVENTH fact + R7(G) activation (2026-08-06)
+
+**Run:** `pnpm --filter @twt/validity-service exec vitest run tests/integration/p95-bench.spec.ts`
+against `twt-test-pg` (:5433), on the 10.26 tree. The SAME AI-4-1 harness as every row above — reused,
+never re-built ([[project_measured_validation_framework]]).
+
+| Metric | 10.26 | 10.25 (previous row) |
+|---|---|---|
+| iterations | 120 | 120 |
+| p50 | **7.80 ms** | see the 10.25 section |
+| p95 | **10.92 ms** | " |
+| p99 | **13.91 ms** | " |
+
+Uncached single-member `getValidityAt`. FR-12A's **p95 < 200 ms at 4L** is delivered by the Story 4.8
+cache (D3-A); this measures the recompute the cache falls back to, which is the path the new query
+actually spends against. **10.92 ms against a 200 ms budget** — the added read is not the constraint.
+
+**What changed underneath.** Story 10.26 adds ONE bounded query to the single-member fact read (an
+`EXISTS` over the member's own `member.personal_event_asserted` events, 2 → 3) and activates a FIFTH
+R7 clause, so the ladder resolves one more payload. Both are fixed costs, independent of member
+history size and outside every loop over members, pools or clauses.
+
+- **The counted-query assertions moved DELIBERATELY, and are pinned.**
+  `tests/integration/contribution-facts.spec.ts` now asserts exactly **3** for the single-member read
+  (across fixtures with 0, 1 and several contributions; 0, 1 and several restoration episodes; and 0,
+  1 and several **assertions** — an `EXISTS` cannot start costing per-row) and exactly **10** for the
+  Pariwar scan (1 vs 12 members, 0 vs 5 asserting).
+- **⚠ The Pariwar-scan budget was RE-COUNTED, not incremented.** `r7-candidate-scan.ts`'s header
+  claimed **7** while the code had issued **8** since Story 10.25 added
+  `readContributionProjectionContext` as a third statement inside the bulk fact read and updated only
+  `facts.ts`'s own comment. Story 10.26's AC9 predicted 7 → 8 on that stale premise; the true move is
+  **8 → 10** (+1 assertion existential, +1 hoisted clause resolution for R7(G)). The number is now
+  carried by a **counted assertion**, not a comment — which is the whole lesson.
+- **The determinism gate reports exactly ONE hash** across 100 real OS threads, unchanged.
+
+**⚠ STILL UN-ATTESTED, carried forward unchanged:** the Trustee-Lite Pariwar-wide scan
+(`scanR7ViolatorCandidates`) has still never been measured at production scale, and 10.26 did not
+measure it either. Its query count is now pinned and member-independent, but that is a SHAPE
+guarantee, not a latency measurement — the per-member pure ladder work is still O(M) and one clause
+wider than before. The 4L figure remains un-attested; recorded, not mitigated speculatively
+([[feedback_record_unattested_no_backfill]]).

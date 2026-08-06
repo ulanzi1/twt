@@ -115,6 +115,17 @@ export const EVENT_TYPE_REGISTRY = {
       'Posting / transfer-in-out changed via the Life Events panel (Story 3.9) — non-transition marker; carries non-PII district + optional pariwar_ref + is_retirement (Epic 4 Story 4.5 retirement anchor).',
     schema: member.PostingUpdatedPayloadSchema,
   },
+  // ── Story 10.26 — the personal-event ASSERTION ────────────────────────────────────
+  // ⚠ `member.*` ON PURPOSE, and this file is one of the four roots Story 8.10's `no-ingest-path`
+  // fence source-scans for a fourth `contribution.*` literal. The event supplies a `contribution.*`
+  // FACT but is not a `contribution.*` EVENT — the producer maps the boolean anchor onto the dotted
+  // fact key in `@twt/validity-service`, which the fence does not scan and must not need to.
+  'member.personal_event_asserted': {
+    type: 'member.personal_event_asserted',
+    description:
+      'Member asserts a personal event affected a contribution (Story 10.26, FR-9/R7(G)) — non-transition marker on the member stream. Records only; grants NO exemption and carries no consequence (ratified Niyamavali §3.1). Bounded `kind` enum, NO free text (Tier-1 PII discipline).',
+    schema: member.PersonalEventAssertedPayloadSchema,
+  },
   // ── Story 10.10 — member.moderation.* (the moderation OVERLAY, not the lifecycle) ──
   // Three-segment dotted names, legal by the cycle.spawn.started precedent below. They live on the
   // MEMBER's own stream (stream_id = member_id) and move a SECOND, orthogonal state machine

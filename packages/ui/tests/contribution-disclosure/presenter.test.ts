@@ -167,11 +167,13 @@ describe('the restoration count is honest, never fabricated (AC4 / D1-B; Story 1
           'contribution.skips_current_year': 1,
           'contribution.in_lapse': true,
           'contribution.r7a_restorations_used': 1,
+          // Story 10.26 — the SEVENTH and final supplied fact, on the wire alongside the other six.
+          'contribution.personal_event_excuse_claimed': false,
         },
         lapseSince: '2026-03-01T00:00:00.000Z',
-        heldFacts: [
-          { key: 'contribution.personal_event_excuse_claimed', producer: 'story-10-26' },
-        ],
+        // EMPTY since Story 10.26: every engine key now has a producer. ⚠ Empty does NOT mean
+        // "nothing is held" — R7(A)/(B) stay held on blockers that are not facts.
+        heldFacts: [],
         restorationPackage,
       },
     });

@@ -18,8 +18,9 @@
 // reducer). Whether a transition SHOULD be emitted is the EMITTER's concern (the
 // signup route / SIE scheduler / projector), not the reducer's. The non-transition
 // MARKER events (nominees_declared, medical_disclosed, lock_in_entered,
-// valid_through_reached, withdrawal_requested, and the Story 3.9 Life Events markers
-// address_updated + posting_updated) are identity by design (events.ts).
+// valid_through_reached, withdrawal_requested, the Story 3.9 Life Events markers
+// address_updated + posting_updated, and Story 10.26's personal_event_asserted) are
+// identity by design (events.ts) — they need no arm below, only the `default` one.
 
 import { z } from 'zod';
 

@@ -13,6 +13,8 @@ import {
   HelpdeskCategoryListResponse,
   MemberTicketDetailResponse,
   MemberTicketListResponse,
+  PersonalEventAssertionResponse,
+  type PersonalEventAssertionRequest,
   MemberBannerListResponse,
   DismissBannerResponse,
   KycInitiateResponse,
@@ -213,8 +215,11 @@ function createApiCallers(opts: MemberAuthClientOptions) {
     auth = false,
     method: 'GET' | 'POST' | 'DELETE' = 'POST',
     bearerOverride?: string,
+    /** Extra request headers (Story 10.26 — `Idempotency-Key` rides a HEADER, never the body).
+     *  Applied BEFORE `authorization`/`content-type`, so it can never override either. */
+    extraHeaders?: Record<string, string>,
   ): Promise<T> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...extraHeaders };
     if (method !== 'GET') headers['content-type'] = 'application/json';
     // An explicit bearer (e.g. the one-shot signup_continuation token) wins over the
     // stored access token — signup-create runs BEFORE a member session exists.
@@ -1100,6 +1105,52 @@ export function createMemberHelpdeskClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberHelpdeskClient = ReturnType<typeof createMemberHelpdeskClient>;
+
+// ── Personal-event ASSERTION client (Story 10.26) ──────────────────────────────
+
+/**
+ * The member's personal-event ASSERTION surface — ONE write, and deliberately no read.
+ *
+ * ⚖ The ratified Niyamavali §3.1 (`docs/legal/niyamavali.md:81`): personal events do not excuse a
+ * missed contribution; the assertion "is recorded on the member's own record but grants no
+ * restoration relief and carries no consequence of its own". So there is nothing to poll, nothing to
+ * approve and nothing to cancel — a `listAssertions` here would invite the member to look for a
+ * decision that will never come, which is the false promise AC1 forbids.
+ *
+ * Member-session-gated with NO RBAC key: the member JWT is the tenancy authority, and a `pariwarId`
+ * that is not the member's own answers 404 (never 403, which would leak that the tenant exists).
+ */
+export function createPersonalEventClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+
+  return {
+    /**
+     * RECORD that a personal event affected a contribution (session; auth). Returns the recorded
+     * assertion — whose `grantsRelief` is always `false` — with 201, or the ORIGINAL record (200) if
+     * `idempotencyKey` replays a completed request.
+     *
+     * `idempotencyKey` rides the `Idempotency-Key` HEADER, not the body, so a retried submit from a
+     * flaky connection records once rather than twice.
+     */
+    recordPersonalEvent(
+      pariwarId: string,
+      input: PersonalEventAssertionRequest,
+      opts2: { idempotencyKey: string },
+    ): Promise<PersonalEventAssertionResponse> {
+      return call(
+        `/api/v1/p/${encodeURIComponent(pariwarId)}/member/contributions/personal-events`,
+        PersonalEventAssertionResponse,
+        input,
+        true,
+        'POST',
+        undefined,
+        { 'idempotency-key': opts2.idempotencyKey },
+      );
+    },
+  };
+}
+
+export type PersonalEventClient = ReturnType<typeof createPersonalEventClient>;
 
 // ── Member banner/popup client (Story 10.9) ────────────────────────────────────
 

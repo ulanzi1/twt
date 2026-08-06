@@ -159,8 +159,23 @@ Niyamavali §3.1 alongside the seeded registry (`packages/domain/seed/niyamavali
 | **R7(C)** | `months_since_last ≥ 12` | New-registration treatment → 5 consecutive + lock-in | `treat_as_new_registration` | **YES** |
 | **R7(D)** | `total_count ≥ 10` ∧ `skips_current_year == 1` | 3-mo lock-in + catch-up | `lockin_3mo_plus_catchup` | **YES** |
 | **R7(E)** | `total_count ≥ 10` ∧ `skips_current_year ≥ 2` | 5-mo lock-in + complete all missed | `lockin_5mo_complete_all` | **YES** |
-| **R7(F)** ⚠️ | `months_since_last ≥ 6` | **not in §3.1** | `lockin_5mo_complete_all` | **YES** |
-| **R7(G)** ⚠️ | `personal_event_excuse_claimed == true` | **not in §3.1** | `no_exemption` | no (declarative) |
+| **R7(F)** | `months_since_last ≥ 6` | 5-mo lock-in + complete all missed | `lockin_5mo_complete_all` | **YES** |
+| **R7(G)** | `personal_event_excuse_claimed == true` | **No exemption** — recorded, grants no relief, carries no consequence | `no_exemption` | no (declarative) |
+
+> **⚠️ MARKERS CLEARED 2026-08-06 (Decision 2026-08-06-080).** Both rows above read *"not in §3.1"*
+> until the Trustee Panel **ratified R7(F) and R7(G) into `docs/legal/niyamavali.md`** §3.1 and
+> Appendix A — closing this brief's **D9** (which recommended ratifying R7(F) as a real rung) and
+> Story 10.26's **Escalation 1** (which raised the identical gap for R7(G)). The seed rows dropped
+> `provisional`/`policy_review_required` to `false` accordingly. ⚠ **R7(A)/(B)/(C)/(D)/(E) are
+> UNCHANGED and still provisional** — do not infer their ratification from this. R7(C)'s 12-month
+> threshold is now *stated* in §3.1 as a textual corollary of D9's two-rung ladder, but its own
+> ratification was not confirmed in that pass.
+>
+> **R7(G) is also now EVALUATED** (Story 10.26): its fact
+> `contribution.personal_event_excuse_claimed` had no source anywhere in the substrate until that
+> story built the member assertion instrument. ⚠ It is deliberately excluded from the violator-flag
+> channel — a member who discloses a bereavement must never become a suspension candidate for it,
+> which the ratified text now makes constitutional ("carries no consequence of its own").
 
 **Six of seven R7 clauses can only be cleared by contributing.** All six are unreachable today.
 

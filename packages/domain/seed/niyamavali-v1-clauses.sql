@@ -213,7 +213,15 @@ ON CONFLICT (clause_version_id) DO NOTHING;
 --
 -- ⚠ PROVISIONAL POLICY (FR-9 `policy_review_required`): the `precedence` ints, R7(C)'s
 -- long-gap threshold (12 months), R7(C)'s lock-in, and the R7(A)→R7(B) fall-through wording
--- are Trustee-Panel-tunable. FR-9 says R7(A) is "max 2 lifetime, after that R7(B) applies",
+-- are Trustee-Panel-tunable.
+--   ⚠ SCOPE OF THAT CAVEAT, since the ratification: R7(F) and R7(G) are NO LONGER provisional —
+--   both rows carry `policy_review_required:false, provisional:false` after Decision 2026-08-06-080
+--   ratified them into `docs/legal/niyamavali.md` §3.1/Appendix A. R7(A)/(B)/(C)/(D)/(E) are
+--   UNCHANGED and still provisional; do NOT infer their ratification from R7(F)'s. In particular,
+--   R7(G)'s `precedence: 10` — the LOWEST in the family, which is what stops the declarative clause
+--   displacing a real restoration package's explanation on a member serving one — is now ratified
+--   DATA rather than a provisional integer, but it remains DATA: re-tune it in the seed, never in
+--   engine logic ([[project_niyamavali_precedence_is_provenance]]). FR-9 says R7(A) is "max 2 lifetime, after that R7(B) applies",
 -- but R7(B)'s stated precondition is "registered but NEVER contributed" — which does not
 -- match a member who contributed <10× and exhausted R7(A). R7(A)'s `< 2` cap is encoded
 -- faithfully; the "falls through to R7(B)" wording is an inherited-TSCT ambiguity flagged
@@ -232,6 +240,19 @@ ON CONFLICT (clause_version_id) DO NOTHING;
 -- R7(G) is declarative: it
 -- exists as an auditable clause that records an explicit non-exemption ('no_exemption') when
 -- a personal-event excuse is claimed, and NEVER produces a restoration path.
+--   ⚠ R7(G) IS NOW EVALUATED (Story 10.26). Its fact,
+--   `contribution.personal_event_excuse_claimed`, had no source anywhere in the substrate until that
+--   story built the member ASSERTION instrument (`member.personal_event_asserted`, on the member's
+--   own stream) — so the clause was held for want of a producer, not for want of ratification. All
+--   seven `contribution.*` fact keys are now supplied and FIVE of the seven R7 clauses evaluate;
+--   only R7(A)/(B) remain held, on the blockers named above. There is no longer any "a future story
+--   will supply the excuse fact" pointer here, because there is no future story: this one is done.
+--   ⚠ And because R7(G) applies exactly when a member TOLD THE TRUTH about their own life, it is
+--   excluded from the Trustee-Lite violator-flag channel upstream, on a DATA predicate over this
+--   very payload: `restoration: {never_excuses: true}` prescribes no obligation, so the clause
+--   explains without accusing (ratified §3.1 — the assertion "carries no consequence of its own").
+--   If a Trustee amendment ever gives this clause a real restoration block, that exclusion lifts
+--   automatically — which is why the predicate reads the DATA and not the clause id.
 --
 -- ⚠ RATIFIED 2026-08-06 (Decision 2026-08-06-080): R7(F) and R7(G) were previously implemented here
 -- but ABSENT from the ratified legal text (§3.1/Appendix A only covered R7(A)-(E)) — the moderation

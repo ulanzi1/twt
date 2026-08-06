@@ -25,9 +25,19 @@
 //     `R7_HELD_CLAUSES` on `member.joining_discipline_state` (Story 10.23), and beyond that on the
 //     Trustee Panel's published Part 11 amendment to R7(A)'s clause data (Decision 2026-08-06-077).
 //     Supplying a fact and activating a clause are different acts (`prd.md:346`, normative).
-//   · STILL NOT produced: `contribution.personal_event_excuse_claimed` (Story 10.26) — so R7(G) stays
-//     HELD; and `claim.*` + `contribution.compliance_percent`, so R8 is NOT activated by any of the
-//     above.
+//   · PRODUCED since Story 10.26: the SEVENTH and FINAL fact,
+//     `contribution.personal_event_excuse_claimed` — a lifetime as-of existential over the member's
+//     own `member.personal_event_asserted` events (D5), which ACTIVATES R7(G). ⭐ ALL SEVEN engine
+//     fact keys now have a producer and `R7_HELD_FACTS` is EMPTY, for the first time.
+//     ⚠ Empty held-facts does NOT mean "nothing is held": R7(A)/(B) remain in `R7_HELD_CLAUSES` on
+//     blockers that are NOT facts, so no future producer can lift them.
+//     ⚠ Activating R7(G) is NOT an eligibility change: `on_pass: no_exemption`,
+//     `restoration: {never_excuses: true}`. And it is deliberately EXCLUDED from the violator-flag
+//     channel upstream (`imposesRestorationObligation`, rules.ts) — a member who discloses a
+//     bereavement must never become a suspension candidate for it (the ratified §3.1: the assertion
+//     "carries no consequence of its own").
+//   · STILL NOT produced: `claim.*` + `contribution.compliance_percent`, so R8 is NOT activated by any
+//     of the above.
 //     ⚠ Supplying facts does NOT activate R8: it additionally needs a CLAIM-TIME fact
 //     (`claim.death_classification`, absent at member standing) and `compliance_percent`, which this
 //     producer does not supply. `VALIDITY_RULE_ORDER` must never gain an R8 clause id.
@@ -188,25 +198,24 @@ export async function produceMedicalDisclosureFlags(
 // ── Contribution facts — Story 10.24 (the producer Story 4.2 deferred to "Epic 8/9") ──────────────
 
 /**
- * The `contribution.*` fact keys this producer supplies — SIX of the engine's seven
- * (`R7_CONTRIBUTION_FACT_KEYS`) since Story 10.25 added `r7a_restorations_used`. This is the
+ * The `contribution.*` fact keys this producer supplies — ALL SEVEN of the engine's
+ * (`R7_CONTRIBUTION_FACT_KEYS`) since Story 10.26 added `personal_event_excuse_claimed`. This is the
  * producer's output CONTRACT, and it is what makes the `R7_HELD_CLAUSES` hold falsifiable: the
  * totality test asserts every held clause's `blockedBy` names a key that is genuinely NOT in this
  * list, so a hold cannot silently outlive its reason (add the missing producer, and the test tells you
  * the hold is now unjustified).
  *
- * The ONE omitted key and its owner:
- *   · `contribution.personal_event_excuse_claimed` → Story 10.26 (the member-assertion path)
- *
- * ⚠ Supplying `r7a_restorations_used` did NOT activate R7(A), and adding a key here never activates
- * anything. R7(A) remains in `R7_HELD_CLAUSES` on `member.joining_discipline_state` (Story 10.23) —
- * and, beyond any story, on the Trustee Panel's published Part 11 amendment to R7(A)'s clause DATA
- * (Decision 2026-08-06-077), because the seeded clause still keys its population on the
- * `contribution.total_count < 10` proxy that `prd.md:344` disclaims and `:346` forbids evaluating.
- * Facts ≠ clause activation (D6).
+ * ⚠ NONE ARE OMITTED — and that is precisely why the remaining holds must be read carefully. Adding a
+ * key here never activates anything, and an empty `R7_HELD_FACTS` does NOT mean "nothing is held":
+ * R7(A)/(B) stay in `R7_HELD_CLAUSES` blocked on `member.joining_discipline_state` (Story 10.23, a
+ * MEMBER fact this producer does not own) and, beyond any story, on the Trustee Panel's published
+ * Part 11 amendment to R7(A)'s clause DATA (Decision 2026-08-06-077), because the seeded clause still
+ * keys its population on the `contribution.total_count < 10` proxy that `prd.md:344` disclaims and
+ * `:346` forbids evaluating. Facts ≠ clause activation (D6).
  *
  * `contribution.compliance_percent` (R8) is not an `R7_CONTRIBUTION_FACT_KEYS` member at all and is
- * unowned — recorded in `deferred-work.md`, not silently implied by this list.
+ * UNOWNED — recorded in `deferred-work.md`, not silently implied by this list. ⚠ It also has NO
+ * equivalent mechanization: nothing here can notice if it stays dark (Story 10.26, Escalation 3).
  */
 export const R7_SUPPLIED_FACT_KEYS = [
   R7_CONTRIBUTION_FACT_KEYS.TOTAL_COUNT,
@@ -215,12 +224,23 @@ export const R7_SUPPLIED_FACT_KEYS = [
   R7_CONTRIBUTION_FACT_KEYS.SKIPS_CURRENT_YEAR,
   R7_CONTRIBUTION_FACT_KEYS.IN_LAPSE,
   R7_CONTRIBUTION_FACT_KEYS.R7A_RESTORATIONS_USED,
+  // Story 10.26 — the SEVENTH and final key. The mechanization's own end state.
+  R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED,
 ] as const;
 
-/** The facts this producer does NOT supply, each naming its owner — the honest hold, ON THE WIRE. */
-export const R7_HELD_FACTS = [
-  { key: R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED, producer: 'story-10-26' },
-] as const;
+/**
+ * The facts this producer does NOT supply, each naming its owner — the honest hold, ON THE WIRE.
+ * EMPTY since Story 10.26: every engine key is now supplied, the first time this has been true.
+ *
+ * ⚠ TYPED EXPLICITLY, not `[] as const`. An empty `as const` infers `readonly []`, which loses the
+ * `{key, producer}` ELEMENT type at every consumer — `contributionFactsToSummary` below,
+ * `@twt/ui`'s `member-status/presenter.ts` (`summary.heldFacts.map((f) => f.key)`), and the contracts
+ * DTO — turning a compile-time contract into `never` and quietly accepting anything later.
+ *
+ * ⚠ Empty ≠ nothing held. See {@link R7_SUPPLIED_FACT_KEYS}: R7(A)/(B) remain held on blockers that
+ * are NOT facts, so no future producer can lift them.
+ */
+export const R7_HELD_FACTS: readonly { readonly key: string; readonly producer: string }[] = [];
 
 /**
  * The v1 contribution-lapse derivation policy. A DOCUMENTED, VERSIONED implementation policy — a
@@ -377,6 +397,22 @@ export interface ContributionFacts {
    * need not be R7(A) and therefore need not use R7(A)'s threshold.
    */
   currentOpenTakenRun: number;
+  /**
+   * `contribution.personal_event_excuse_claimed` — Story 10.26's seventh and FINAL engine fact.
+   * `true` iff ≥1 `member.personal_event_asserted` event exists on the member's own stream at/before
+   * the pinned instant.
+   *
+   * ⚖ Its clause, R7(G), is DECLARATIVE: `on_pass: no_exemption`, `restoration: {never_excuses: true}`.
+   * Asserting changes no eligibility, no lock-in, no restoration package and no roster position — the
+   * ratified Niyamavali §3.1 says the assertion "grants no restoration relief and carries no
+   * consequence of its own". The fact exists so the member's own record can STATE the rule, and so a
+   * trustee reading an ALREADY-flagged member can see the human context. It can never create a flag
+   * (AC5/D4).
+   *
+   * NOT nullable: unlike `monthsSinceLast` / `r7aRestorationsUsed`, `false` here is a real answer, not
+   * an unresolved one — so it is always emitted into the bag, never conditionally omitted.
+   */
+  personalEventAsserted: boolean;
 }
 
 /** The already-read projection anchors the PURE derivation consumes (mirrors the domain read). */
@@ -404,6 +440,17 @@ export interface ContributionFactsInput {
   /** R7(A)'s `restoration.consecutive_required` from the clause DATA at the pinned instant; `null`
    *  when R7(A) resolves to no version. The reachability condition for an UNKNOWN restoration count. */
   r7aConsecutiveRequired: number | null;
+  /**
+   * Has the member EVER asserted a personal event, as of the pinned instant (Story 10.26)? A LIFETIME
+   * existential over their own `events_log` stream, NOT a windowed or per-cycle predicate (D5).
+   *
+   * ⚠ NOT nullable, unlike every other anchor here — see `ContributionFactInputs.personalEventAsserted`
+   * in `@twt/domain` for the full asymmetry. In short: the others come from a PROJECTION with a
+   * backfill watermark, where `0` and *unknown* must stay distinct; this comes from `events_log`, the
+   * primary record, where `false` is a real answer. The coverage gate still governs the payload as a
+   * whole, so this fact never appears alone when the other six are un-derivable.
+   */
+  personalEventAsserted: boolean;
 }
 
 /**
@@ -490,6 +537,12 @@ export function deriveContributionFacts(
     // Un-resolved ⇒ UNKNOWN, never `0` (AC7).
     r7aRestorationsUsed: consecutiveRequired === null ? null : input.completedRestorationEpisodes,
     currentOpenTakenRun: input.currentOpenTakenRun,
+    // Story 10.26 — the SEVENTH and final engine fact. A straight pass-through: the existential was
+    // already answered as-of `at` by the read, and there is nothing here for the derivation to decide.
+    // ⚠ MONOTONE (`false → true`, never back) — a member cannot un-assert. Acceptable ONLY because an
+    // asserted event can never worsen a member's standing (AC5/D4 keeps R7(G) out of the violator-flag
+    // channel entirely). If that exclusion is ever relaxed, this monotonicity becomes a defect.
+    personalEventAsserted: input.personalEventAsserted,
   };
 }
 
@@ -509,6 +562,11 @@ export function contributionFactsToBag(facts: ContributionFacts): Facts {
     [R7_CONTRIBUTION_FACT_KEYS.EVER_CONTRIBUTED]: facts.everContributed,
     [R7_CONTRIBUTION_FACT_KEYS.SKIPS_CURRENT_YEAR]: facts.skipsCurrentYear,
     [R7_CONTRIBUTION_FACT_KEYS.IN_LAPSE]: facts.inLapse,
+    // Story 10.26 — UNCONDITIONAL, unlike the two nullable keys below: `false` is a real answer about
+    // this member, not an unresolved one, so omitting it would misrepresent a member who has genuinely
+    // never asserted as one whose assertion state could not be read. Keyed from
+    // `R7_CONTRIBUTION_FACT_KEYS`, never a re-spelled literal (AC8(a)).
+    [R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED]: facts.personalEventAsserted,
   };
   if (facts.monthsSinceLast !== null) {
     bag[R7_CONTRIBUTION_FACT_KEYS.MONTHS_SINCE_LAST] = facts.monthsSinceLast;
@@ -610,8 +668,9 @@ export function contributionFactsToSummary(
 /**
  * Read + derive the contribution facts for one member at the PINNED instant (the service seam).
  *
- * TWO queries, independent of the member's contribution/assignment/cycle count (AC7) — the aggregate
- * shape is the domain read's contract, pinned by a counted-query test.
+ * THREE queries, independent of the member's contribution/assignment/cycle/assertion count (AC7; the
+ * budget moved 2 → 3 in Story 10.26 for the assertion existential) — the aggregate shape is the domain
+ * read's contract, pinned by a counted-query test.
  */
 export async function produceContributionFacts(
   db: Db,

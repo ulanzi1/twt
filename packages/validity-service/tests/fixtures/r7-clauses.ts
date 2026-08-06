@@ -6,10 +6,16 @@
 // lives under another package's `tests/`, outside its published surface), so the payloads are mirrored
 // rather than shared.
 //
-// ⚠ The three HELD sub-clauses (R7(A)/(B)/(G)) are DELIBERATELY ABSENT from this file. A test that
-// cannot seed them cannot accidentally prove behaviour for a clause Story 10.24 does not evaluate, and
-// the absence is itself a small piece of the D4 omission discipline. Their payloads live in the seed
-// and in the engine's own fixture, where they belong.
+// ⚠ The two remaining HELD sub-clauses (R7(A)/(B)) are DELIBERATELY not among the ACTIVATED payloads.
+// A test that cannot seed them cannot accidentally prove behaviour for a clause the service does not
+// evaluate, and the absence is itself a small piece of the D4 omission discipline. R7(A) appears below
+// for its DATA ALONE (see {@link R7A_PAYLOAD}); R7(B)'s payload lives in the seed and in the engine's
+// own fixture, where it belongs.
+//
+// ⚠ Story 10.26 moved R7(G) OUT of the held set and INTO `R7_PAYLOADS`: its blocking fact is now
+// supplied, it is ratified into §3.1, and it activates. That is a real change to this file's contract
+// and not a relaxation of the discipline above — the omission mechanism is
+// `R7_ACTIVATED_CLAUSE_IDS`, and R7(G) is now in it.
 //
 // These pin the fact-key names/types/semantics R7 depends on. They are NOT a mock of the contribution
 // subsystem — the facts under test are produced by the real projection.
@@ -65,7 +71,7 @@ export const R7A_PAYLOAD: Record<string, unknown> = {
   provisional: true,
 };
 
-/** The four ACTIVATED R7 payloads keyed by clause_id (mirrors the seed rows 0e1c0008–0e1c000b). */
+/** The five ACTIVATED R7 payloads keyed by clause_id (mirrors the seed rows 0e1c0008–0e1c000c). */
 export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
   'niy.contribution-discipline.r7-c': {
     rule_code: 'R7(C)',
@@ -130,7 +136,32 @@ export const R7_PAYLOADS: Readonly<Record<string, Record<string, unknown>>> = {
       { op: 'fact_gte', fact: 'contribution.months_since_last', min: 6 },
     ],
     restoration: { lock_in_months: 5, complete_all: true },
-    policy_review_required: true,
-    provisional: true,
+    // ⚠ `false` since Decision 2026-08-06-080: the Trustee Panel RATIFIED R7(F) into
+    // `docs/legal/niyamavali.md` §3.1/Appendix A, so the seed row dropped both review-status flags.
+    // Mirrored here because this fixture's whole contract is to match the seed VERBATIM.
+    policy_review_required: false,
+    provisional: false,
+  },
+  // ── Story 10.26 — R7(G), ACTIVATED and no longer held (mirrors seed row 0e1c000c) ──────────────
+  // ⚠ Note what it does NOT carry: no `member_state_in` gate (the assertion is meaningful from any
+  // state a member can assert in) and, decisively, a `restoration` block that prescribes NOTHING.
+  // `never_excuses: true` is the payload saying "this clause imposes no obligation" in its own words,
+  // which is exactly what `imposesRestorationObligation` reads to keep R7(G) out of the violator-flag
+  // channel (AC5/D4). Its precedence, 10, is the LOWEST in the family — so it can never displace an
+  // imposing clause's explanation on a member who is actually serving a restoration package (AC6).
+  'niy.contribution-discipline.r7-g': {
+    rule_code: 'R7(G)',
+    title_en: 'Personal events do not excuse contribution skips (non-exemption)',
+    rule_kind: 'conditional',
+    family: 'r7-contribution-discipline',
+    precedence: 10,
+    on_pass: 'no_exemption',
+    on_fail: 'r7_not_applicable',
+    all_of: [
+      { op: 'fact_equals', fact: 'contribution.personal_event_excuse_claimed', value: true },
+    ],
+    restoration: { never_excuses: true },
+    policy_review_required: false,
+    provisional: false,
   },
 };

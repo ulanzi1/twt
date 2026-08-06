@@ -138,9 +138,13 @@ export type ViolatorFlagMember = z.output<typeof ViolatorFlagMember>;
  * violator list on a governance surface reads as *"no members are in violation"*, a false all-clear.
  *
  * `detection_unavailable` NAMES the missing producer, so the surface can say what is absent instead
- * of showing a bare gap. It is what ships today: `validity-service/payload.ts:294` hardcodes the
- * contribution-history sentinel, so no R7 clause can be applied to any member. Stories 10.24/10.25/
- * 10.26 own the fact producer.
+ * of showing a bare gap.
+ *
+ * ⚠ It is NO LONGER the everyday answer. That sentence described the 10.11 state, when
+ * `validity-service/payload.ts` hardcoded the contribution-history sentinel and no R7 clause could
+ * apply to anyone. Stories 10.24/10.25/10.26 built the fact producer (all seven keys) and activated
+ * R7(C)–(G), so this arm now means what it says: a GENUINE per-member or per-Pariwar gap — no
+ * projected history, an instant before the coverage watermark, or an unprovisioned R7 registry.
  */
 export const ViolatorFlagsSection = z.discriminatedUnion('status', [
   z

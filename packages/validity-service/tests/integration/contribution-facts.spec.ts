@@ -20,7 +20,16 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { contribution, createDb, ids, idempotency, niyamavali, schema, type Db } from '@twt/domain';
+import {
+  contribution,
+  createDb,
+  ids,
+  idempotency,
+  niyamavali,
+  schema,
+  trusteeLite,
+  type Db,
+} from '@twt/domain';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -71,6 +80,9 @@ describe.skipIf(!hasDatabase)(
         'niy.contribution-discipline.r7-d',
         'niy.contribution-discipline.r7-e',
         'niy.contribution-discipline.r7-f',
+        // Story 10.26 — R7(G) is ACTIVATED, so the seeder must provision it or the scan reports
+        // fewer resolved clauses than `R7_ACTIVATED_CLAUSE_IDS` names.
+        'niy.contribution-discipline.r7-g',
       ]) {
         await db.insert(schema.clauseVersions).values({
           clauseVersionId: ids.clauseVersionId(randomUUID()),
@@ -148,6 +160,36 @@ describe.skipIf(!hasDatabase)(
           occurredAt,
         });
       }
+    }
+
+    /**
+     * Append a `member.personal_event_asserted` on the MEMBER's own stream — Story 10.26.
+     *
+     * `eventVersion` starts at 5 because `seedMember` writes four lifecycle events. The event is a
+     * NON-TRANSITION marker, so `members.state` is deliberately left untouched.
+     */
+    async function assertPersonalEvent(
+      pariwarId: ids.PariwarId,
+      memberId: ids.MemberId,
+      occurredAt: Date,
+      version = 5,
+      kind = 'bereavement',
+    ): Promise<void> {
+      await db.insert(schema.eventsLog).values({
+        streamId: memberId,
+        eventType: 'member.personal_event_asserted',
+        payload: {
+          from_state: 'active',
+          to_state: 'active',
+          trigger: 'member.personal_event_asserted',
+          actor: 'member',
+          kind,
+        },
+        eventVersion: version,
+        actorId: null,
+        pariwarId,
+        occurredAt,
+      });
     }
 
     /** Append a `contribution.confirmed` on an alert stream — the TRIGGER projects it into the ledger. */
@@ -896,20 +938,63 @@ describe.skipIf(!hasDatabase)(
         return counting.count();
       }
 
+      /**
+       * Story 10.26 (AC9) — the same count, for a member with `count` ASSERTIONS on their own stream.
+       *
+       * The assertion existential is an `EXISTS`, so 0, 1 and several assertions must all cost exactly
+       * one query. A future rewrite that fetched the assertion ROWS (to count them, or to read their
+       * `kind`) would break this — and would also be wrong, because the fact is a lifetime boolean.
+       */
+      async function queriesForAssertions(count: number): Promise<number> {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const memberId = ids.memberId(randomUUID());
+        await seedCoverage(pariwarId);
+        await seedMember(pariwarId, memberId);
+        for (let i = 0; i < count; i += 1) {
+          await assertPersonalEvent(
+            pariwarId,
+            memberId,
+            new Date(Date.UTC(2026, 0, 10 + i)),
+            5 + i,
+          );
+        }
+        const counting = countingDb();
+        const inputs = await contribution.readContributionFactInputs(
+          counting.handle,
+          { pariwarId, memberId },
+          AT,
+        );
+        // The fixture must genuinely produce the assertion state it claims, or the count is vacuous.
+        expect(inputs.personalEventAsserted).toBe(count > 0);
+        return counting.count();
+      }
+
       const one = await queriesFor(1);
       const many = await queriesFor(25);
       // An N-INDEPENDENT read is the definition of "no N+1". Asserting equality (rather than a
       // threshold) is what makes a future per-row read fail here instead of merely looking slower.
       expect(many).toBe(one);
-      expect(one).toBe(2); // one ledger aggregate + one missed-cycle aggregate — and nothing else.
+      // ⚖ Story 10.26 (AC9/D7) — the budget moved 2 → 3, DELIBERATELY and not by folding. One ledger
+      // aggregate + one missed-cycle aggregate + one assertion EXISTS. The third is separate because
+      // the assertion lives on the member's own `events_log` stream while `missedCycleAggregateSql`
+      // scans the pool/assignment axis: joining across axes would make the riskiest SQL in the
+      // subsystem riskier and buy nothing, since all three are already history-size-independent.
+      expect(one).toBe(3);
 
-      // ⚖ Story 10.25 / D3 — the two-query budget SURVIVED the restoration accounting. The run
+      // ⚖ Story 10.25 / D3 — the restoration accounting itself still costs NOTHING extra. The run
       // computation rides the existing scan as window functions and R7(A)'s threshold rides the
-      // existing ledger statement as a scalar subquery, so 0, 1 and several episodes all cost two.
+      // existing ledger statement as a scalar subquery, so 0, 1 and several episodes all cost the same.
       const zeroEpisodes = await queriesForEpisodes(0);
       const oneEpisode = await queriesForEpisodes(1);
       const severalEpisodes = await queriesForEpisodes(4);
-      expect([zeroEpisodes, oneEpisode, severalEpisodes]).toEqual([2, 2, 2]);
+      expect([zeroEpisodes, oneEpisode, severalEpisodes]).toEqual([3, 3, 3]);
+
+      // ⚖ Story 10.26 (AC9) — 0, 1 and SEVERAL assertions all cost exactly three: the existential is
+      // an EXISTS, never a row fetch, and the fact is a lifetime boolean rather than a count.
+      const zeroAsserts = await queriesForAssertions(0);
+      const oneAssert = await queriesForAssertions(1);
+      const severalAsserts = await queriesForAssertions(4);
+      expect([zeroAsserts, oneAssert, severalAsserts]).toEqual([3, 3, 3]);
     });
 
     // ── D3: the ACCEPTANCE-level equivalence (a diff here is a P0 finding) ────────────────────────
@@ -1205,6 +1290,198 @@ describe.skipIf(!hasDatabase)(
       const cleanCandidate = byId.get(String(clean));
       expect(cleanCandidate).toBeDefined();
       expect(cleanCandidate!.payload.applicableNiyamavaliClauses).toEqual([]);
+    });
+
+    /**
+     * Story 10.26 (AC9) — the BULK scan's query budget, counted rather than commented.
+     *
+     * ⚠ This assertion did not exist before. AC9 asked for the Pariwar-scan budget to be "re-stated
+     * rather than smuggled", and re-stating a comment is exactly what let the previous number rot:
+     * `r7-candidate-scan.ts`'s header claimed SEVEN while the code had issued EIGHT since Story 10.25
+     * added `readContributionProjectionContext` (only `facts.ts`'s own comment was updated then). A
+     * counted assertion survives a refactor that a comment does not — the same argument the
+     * single-member counted test above already makes.
+     *
+     * TEN: 1 membership + 4 fact reads (ledger GROUP BY, missed-cycle aggregate, projection context,
+     * assertion existential) + 5 hoisted `resolveByClauseId` (R7(C)–(G), member-INDEPENDENT).
+     */
+    it('AC9 — the Pariwar scan costs the SAME bounded query count for 1 vs N members (no N+1)', async () => {
+      function countingDb(): { handle: Db; count: () => number } {
+        let n = 0;
+        const target = db as unknown as Record<string, unknown>;
+        const proxy = new Proxy(target, {
+          get(obj, prop, receiver) {
+            const value = Reflect.get(obj, prop, receiver);
+            if ((prop === 'select' || prop === 'execute') && typeof value === 'function') {
+              return (...args: unknown[]) => {
+                n += 1;
+                return (value as (...a: unknown[]) => unknown).apply(obj, args);
+              };
+            }
+            return typeof value === 'function' ? (value as () => unknown).bind(obj) : value;
+          },
+        });
+        return { handle: proxy as unknown as Db, count: () => n };
+      }
+
+      async function queriesForMembers(memberCount: number, assertingCount: number): Promise<number> {
+        const pariwarId = ids.pariwarId(randomUUID());
+        await seedActivatedR7(pariwarId);
+        await seedCoverage(pariwarId);
+        const members: ids.MemberId[] = [];
+        for (let i = 0; i < memberCount; i += 1) {
+          const memberId = ids.memberId(randomUUID());
+          await seedMember(pariwarId, memberId);
+          members.push(memberId);
+        }
+        for (let i = 0; i < assertingCount; i += 1) {
+          await assertPersonalEvent(pariwarId, members[i]!, new Date(Date.UTC(2026, 0, 10)));
+        }
+        const counting = countingDb();
+        const scan = await scanR7ViolatorCandidates(counting.handle, pariwarId, AT);
+        // The scan must genuinely have evaluated every member, or the count below is vacuous.
+        expect(scan.status).toBe('available');
+        if (scan.status === 'available') expect(scan.candidates.length).toBe(memberCount);
+        return counting.count();
+      }
+
+      const oneMember = await queriesForMembers(1, 0);
+      const manyMembers = await queriesForMembers(12, 5);
+      // MEMBER-INDEPENDENT is the definition of "no N+1" for this path — and asserting equality is
+      // what makes a future per-member read fail here rather than merely look slower.
+      expect(manyMembers).toBe(oneMember);
+      expect(oneMember).toBe(10);
+    });
+
+    // ── ⭐ Story 10.26 AC5/D4 — THE HARM GATE, on the live scan path ──────────────────────────────
+    //
+    // ⚖ "A clause may influence trustee UNDERSTANDING without influencing trustee SUSPICION."
+    //
+    // R7(G) applies exactly when a member told the truth about their own life. `deriveViolatorFlags`
+    // maps EVERY R7 clause id in `applicableNiyamavaliClauses[]` into a violator flag with no applied
+    // check and no outcome check, on the surface that feeds SUSPENSION decisions — so without the
+    // upstream `imposesRestorationObligation` filter, disclosing a bereavement makes a member a
+    // suspension candidate. The ratified Niyamavali §3.1 says the assertion "carries no consequence
+    // of its own", so that is not merely a bad UX: it contradicts the constitution.
+    //
+    // ── Revert-sanity probe, RUN AND RECORDED (Story 10.26, AC5) ─────────────────────────────────
+    // Recorded in the Dev Agent Record with verbatim counts. Removing
+    // `.filter((entry) => contributesViolatorFlag(entry.clauseId, payloadsByClauseId))` from
+    // `r7-candidate-scan.ts` makes BOTH tests below go RED, each naming
+    // `niy.contribution-discipline.r7-g` in its diff.
+    describe('AC5/D4 — an asserted personal event NEVER becomes a violator flag', () => {
+      it('⭐ a member whose ONLY applied clause is R7(G) carries ZERO flags — they do not appear at all', async () => {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const bereaved = ids.memberId(randomUUID());
+        await seedActivatedR7(pariwarId);
+        await seedCoverage(pariwarId);
+        await seedMember(pariwarId, bereaved);
+        // A recent confirmation ⇒ no gap, no skips: NO imposing clause fires. The ONLY thing true of
+        // this member is that they disclosed a bereavement.
+        const recent = await seedCycleFixture(pariwarId, [bereaved], {
+          assignedAt: new Date('2026-07-01T00:00:00Z'),
+          closedAt: new Date('2026-08-01T00:00:00Z'),
+        });
+        await confirm(
+          pariwarId,
+          recent.alertId,
+          bereaved,
+          recent.poolId,
+          1,
+          new Date('2026-07-10T00:00:00Z'),
+        );
+        await assertPersonalEvent(pariwarId, bereaved, new Date('2026-07-15T00:00:00Z'));
+
+        const scan = await scanR7ViolatorCandidates(db, pariwarId, AT);
+        expect(scan.status).toBe('available');
+        if (scan.status !== 'available') throw new Error('unreachable — asserted above');
+        const candidate = scan.candidates.find((c) => c.memberId === String(bereaved));
+        expect(candidate).toBeDefined();
+
+        // R7(G) genuinely APPLIED — the fact is true and the clause fired. It is excluded from the
+        // ACCUSATION channel, not from evaluation.
+        expect(candidate!.payload.applicableNiyamavaliClauses.map((c) => c.clauseId)).toEqual([]);
+
+        // ...and therefore the member is absent from the violator section entirely.
+        const section = trusteeLite.summarizeViolatorFlags({ status: 'available', candidates: scan.candidates });
+        expect(section.status).toBe('ok');
+        if (section.status !== 'ok') throw new Error('unreachable — asserted above');
+        expect(section.members.map((m) => m.memberId)).not.toContain(String(bereaved));
+      });
+
+      it('⭐ an assertion NEVER changes the flag count of a member flagged for an IMPOSING clause', async () => {
+        const pariwarId = ids.pariwarId(randomUUID());
+        const silent = ids.memberId(randomUUID());
+        const disclosed = ids.memberId(randomUUID());
+        await seedActivatedR7(pariwarId);
+        await seedCoverage(pariwarId);
+        await seedMember(pariwarId, silent);
+        await seedMember(pariwarId, disclosed);
+
+        // Two members with IDENTICAL contribution histories. The only difference between them is that
+        // one of them disclosed a bereavement — which is the whole experiment.
+        for (const memberId of [silent, disclosed]) {
+          const old = await seedCycleFixture(pariwarId, [memberId], {
+            assignedAt: new Date('2023-12-01T00:00:00Z'),
+            closedAt: new Date('2024-01-01T00:00:00Z'),
+          });
+          await confirm(pariwarId, old.alertId, memberId, old.poolId, 1, new Date('2024-01-05T00:00:00Z'));
+          for (let i = 0; i < 12; i++) {
+            await seedCycleFixture(pariwarId, [memberId], {
+              assignedAt: new Date(Date.UTC(2024, 1 + i, 1)),
+              closedAt: new Date(Date.UTC(2024, 1 + i, 20)),
+            });
+          }
+        }
+        await assertPersonalEvent(pariwarId, disclosed, new Date('2026-01-15T00:00:00Z'));
+
+        const scan = await scanR7ViolatorCandidates(db, pariwarId, AT);
+        expect(scan.status).toBe('available');
+        if (scan.status !== 'available') throw new Error('unreachable — asserted above');
+        const byId = new Map(scan.candidates.map((c) => [c.memberId, c]));
+
+        const silentClauses = byId.get(String(silent))!.payload.applicableNiyamavaliClauses
+          .map((c) => c.clauseId)
+          .sort();
+        const disclosedClauses = byId.get(String(disclosed))!.payload.applicableNiyamavaliClauses
+          .map((c) => c.clauseId)
+          .sort();
+
+        // The imposing clauses fired for BOTH, identically — asserting neither adds nor removes one.
+        expect(silentClauses).toEqual(['niy.contribution-discipline.r7-c', 'niy.contribution-discipline.r7-f']);
+        expect(disclosedClauses).toEqual(silentClauses);
+        expect(disclosedClauses).not.toContain('niy.contribution-discipline.r7-g');
+
+        const section = trusteeLite.summarizeViolatorFlags({ status: 'available', candidates: scan.candidates });
+        if (section.status !== 'ok') throw new Error('unreachable');
+        const flagsOf = (m: ids.MemberId): number =>
+          section.members.find((x) => x.memberId === String(m))?.flags.length ?? 0;
+        // THE assertion this AC exists for: the flag count is UNCHANGED from what it would have been
+        // had they never asserted.
+        expect(flagsOf(disclosed)).toBe(flagsOf(silent));
+        expect(flagsOf(disclosed)).toBe(2);
+
+        // ── And the DELIBERATE OTHER HALF: the assertion stays VISIBLE to the trustee as a FACT ────
+        // `deriveViolatorFlags` builds `factsEstablishing[]` from every `contribution.*` key on the
+        // payload, so the assertion rides into the fact list of a member flagged for some OTHER
+        // clause and can inform a trustee's discretion there. Asserting can only ever HELP or do
+        // NOTHING; it can never HURT. Both halves are the design — pin both.
+        const disclosedFlags = section.members.find((x) => x.memberId === String(disclosed))!.flags;
+        const factKeys = disclosedFlags[0]!.factsEstablishing.map((f) => f.key);
+        expect(factKeys).toContain('contribution.personal_event_excuse_claimed');
+        expect(
+          disclosedFlags[0]!.factsEstablishing.find(
+            (f) => f.key === 'contribution.personal_event_excuse_claimed',
+          )!.value,
+        ).toBe(true);
+        // ...and the SILENT member's identical flag carries the same key as `false`.
+        const silentFlags = section.members.find((x) => x.memberId === String(silent))!.flags;
+        expect(
+          silentFlags[0]!.factsEstablishing.find(
+            (f) => f.key === 'contribution.personal_event_excuse_claimed',
+          )!.value,
+        ).toBe(false);
+      });
     });
   },
 );

@@ -231,6 +231,56 @@ describe.skipIf(!hasDatabase)('getValidityCached — cache-aside + conservative-
     expect(afterChange.isValid).toBe(false); // reflects lapsed-unpaid immediately (no ≤60s stale window)
   });
 
+  // ── ⭐ Story 10.26 AC8(b) — the cache invalidation is ALREADY WIRED; PROVE it, do not build it ───
+  //
+  // This is the strongest single argument for D2's namespace choice, so it is pinned rather than
+  // asserted in a comment. Migration `0036_member-validity-cache.sql:103-107` installs an AFTER-INSERT
+  // trigger on `events_log` gated `WHEN (NEW.event_type LIKE 'member.%')`, keyed
+  // `member_id = NEW.stream_id`. Because Story 10.26 puts the assertion in the `member.*` namespace ON
+  // THE MEMBER'S OWN STREAM, an assertion evicts that member's validity-cache row automatically:
+  //
+  //   · NO third trigger (migration `0093`'s contribution trigger covers only four
+  //     `contribution.*`/`reconciliation.*` types and is IRRELEVANT here);
+  //   · NO migration at all (D7 — the story ships no schema change);
+  //   · NO payload-shape component added to the frozen Story 4.8 cache key (10.17 D5 rejected that by
+  //     name, and 10.24/10.25 re-rejected it).
+  //
+  // Choose any other namespace and this story owes a hand-authored migration in a subsystem where
+  // [[project_live_db_test_gotchas]] applies. Choose `member.*` and the freshness guarantee is already
+  // installed — it only needed proving.
+  it('AC8(b) — a member.personal_event_asserted append EVICTS the warm cache row (migration 0036 trigger)', async () => {
+    const pariwarId = ids.pariwarId(randomUUID());
+    const memberId = ids.memberId(randomUUID());
+    track(pariwarId);
+    await seedActiveMember(pariwarId, memberId, new Date('2012-06-01T00:00:00Z'));
+    await seedR12(pariwarId);
+
+    const { observer, events } = makeObserver();
+    await getValidityCached(deps, { pariwarId, memberId }, { internal: true, observer }); // miss → warm
+    await getValidityCached(deps, { pariwarId, memberId }, { internal: true, observer }); // hit
+    expect(lastOutcome(events)).toEqual({ kind: 'hit' });
+    expect(await cacheRowCount(memberId)).toBe(1);
+
+    // THE ASSERTION — Story 10.26's event, on the member's own stream, in the `member.*` namespace.
+    await seedEvent(pariwarId, memberId, 5, 'member.personal_event_asserted', new Date('2025-02-01T00:00:00Z'), {
+      from_state: 'active',
+      to_state: 'active',
+      trigger: 'member.personal_event_asserted',
+      actor: 'member',
+      kind: 'bereavement',
+    });
+
+    // ⭐ The row is GONE — evicted by the trigger, with no code in this story doing the eviction.
+    expect(await cacheRowCount(memberId)).toBe(0);
+
+    // ...and the next read therefore MISSES and recomputes, rather than serving a stale payload that
+    // is missing the seventh fact. The member's standing is UNCHANGED, which is the whole point of
+    // R7(G): the assertion moves the payload's facts, never the member's eligibility.
+    const afterAssertion = await getValidityCached(deps, { pariwarId, memberId }, { internal: true, observer });
+    expect(lastOutcome(events)).toEqual({ kind: 'miss' });
+    expect(afterAssertion.isValid).toBe(true);
+  });
+
   it('AC4a — freshness invariant: an amendment epoch bump forces a miss (synchronous rule freshness)', async () => {
     const pariwarId = ids.pariwarId(randomUUID());
     const memberId = ids.memberId(randomUUID());

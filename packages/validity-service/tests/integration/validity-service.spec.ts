@@ -211,6 +211,12 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
         'contribution.ever_contributed': false,
         'contribution.skips_current_year': 0,
         'contribution.in_lapse': false,
+        // ⚠ Story 10.26 — the seventh key, and it is UNCONDITIONAL, unlike the two absences called
+        // out below. `false` here is a REAL ANSWER about this member ("has never asserted"), not an
+        // unresolved one: the assertion is read from `events_log`, the PRIMARY RECORD, which has no
+        // backfill horizon and no registry dependency. Omitting it would misrepresent a member who
+        // genuinely never asserted as one whose assertion state could not be read.
+        'contribution.personal_event_excuse_claimed': false,
       });
       expect(p.contributionHistorySummary.facts).not.toHaveProperty('contribution.months_since_last');
       // ⚠ Story 10.25 (AC7) — `r7a_restorations_used` is ABSENT here too, and for a DIFFERENT reason
@@ -224,11 +230,12 @@ describe.skipIf(!hasDatabase)('validity-service — canonical payload (live DB, 
         'contribution.r7a_restorations_used',
       );
       expect(p.contributionHistorySummary.lapseSince).toBeNull();
-      // The honest hold, on the wire: what is missing and who owns it. Story 10.25 DISCHARGED the
-      // `story-10-25` half (it supplies `r7a_restorations_used`); the 10.26 half is still open.
-      expect(p.contributionHistorySummary.heldFacts.map((f) => f.producer).sort()).toEqual([
-        'story-10-26',
-      ]);
+      // The honest hold, on the wire. Story 10.25 discharged the `story-10-25` half
+      // (`r7a_restorations_used`) and Story 10.26 discharged the last one
+      // (`personal_event_excuse_claimed`), so the hold is now EMPTY — every engine fact key has a
+      // producer. ⚠ Empty held-FACTS does not mean no held CLAUSES: R7(A)/(B) are still
+      // un-evaluated, blocked by things no producer can supply.
+      expect(p.contributionHistorySummary.heldFacts).toEqual([]);
       // Story 10.25 (AC4/D4) — no R7 clause applied to this member, so there is no consecutive
       // package to count. That is a different claim from `package_unavailable` ("we cannot tell you"),
       // which the render layer reaches from the summary's own `producer_unavailable` arm.

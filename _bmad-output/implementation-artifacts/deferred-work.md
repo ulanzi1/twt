@@ -4,6 +4,64 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: implementation of story 10-26-r7g-personal-event-excuse-assertion (2026-08-06)
+
+- **⚠ Escalation 4 — NO UX-SPEC COVERAGE for the personal-event surface; tone review RECORDED, not
+  waived.** `ux-design-specification.md` has ZERO hits for *personal event* or *excuse*, so every
+  visible string on this surface is NEW copy on a bereavement-adjacent screen with no spec to inherit
+  register from. Routed deliberately through `docs/tone-guide.md` rather than inferred from the
+  neighbouring suspension-disclosure copy — **different register**: that disclosure is about *money
+  without coverage*; this one is about *a life event the rules do not bend for*. Authored in `en` and
+  `hi` (`packages/i18n/locales/{en,hi}/contribution.json`, plus
+  `memberStatus.rule.rule.no_exemption` in `common.json`); the `microcopy` and `i18n-parity` gates
+  both pass. ⚠ **The `out-of-band-blame` tone pattern shaped the wording**: the obvious phrasing
+  "recording this does not count against you" MATCHES the gate's `(does|did|will|would)\s+not\s+count`
+  rule, so the copy says "it takes nothing away from you" instead — a real constraint that a future
+  author will hit again. **Re-trigger:** a UX spec section for member-facing governance disclosures,
+  or the next story adding copy to this surface.
+
+- **⚠ Escalation 5 — NO member surface shows a MISSED cycle. Genuinely open; owner UNASSIGNED.** The
+  Yogdaan Bahi (`contracts/src/contributions/contribution-history.ts`) lists the member's own
+  **attested** contributions — a missed cycle produces no attestation and therefore **no row**, and
+  `grey` means *attested, cycle closed, no verdict*, never *missed*. So a member has nowhere to point
+  at the specific cycle a personal event affected. The assertion event carries an OPTIONAL `cycle_ref`
+  for exactly this, and it ships **unpopulated by any UI** — the seam exists so a future cycle-scoped
+  surface needs no new event type. This is a real gap in the member's view of their own contribution
+  discipline; it is RECORDED, not absorbed, and **it is not Story 10.26's to close**.
+  ⚠ **An owner must be assigned** — a deferral naming no owner (or an EPIC) expires unowned, which is
+  how R7's own fact producer went missing for two epics ([[project_r7_fact_producer_unbuilt]]).
+  **Re-trigger:** any story that surfaces missed/skipped cycles to a member.
+
+- **⚠ Escalation 6 — the query budget grew, and the 4L figure is STILL UN-ATTESTED.** Single-member
+  fact read **2 → 3** (the assertion `EXISTS`); Pariwar scan **8 → 10** (+1 assertion existential,
+  +1 hoisted clause resolution for R7(G)). Both are member-count-independent and both are now pinned
+  by COUNTED assertions rather than comments. Measured against FR-12A's p95 < 200 ms: the AI-4-1
+  harness reports **p95 10.92 ms** on the uncached single-member path (`p95-budget.md`, 10.26 row).
+  ⚠ **But the Trustee-Lite Pariwar-wide scan has still never been measured at production scale**, and
+  10.26 did not measure it. Its query count is bounded; its per-member pure ladder work is O(M) and
+  one clause wider than before. Un-attested, recorded, not mitigated speculatively
+  ([[feedback_record_unattested_no_backfill]]). **Re-trigger:** a 4L-scale load test, or the first
+  operator report of a slow Trustee-Lite dashboard.
+
+- **⚠ Escalation 3 (carried, NOT closed) — R8's `contribution.compliance_percent` is UNOWNED and
+  UN-MECHANIZED.** With `R7_HELD_FACTS` now empty, the `contribution.*` fact-hold apparatus has
+  reached its end state and will never fire again. R8's missing fact has **no equivalent
+  mechanization**: it is not an `R7_CONTRIBUTION_FACT_KEYS` member, so no totality test can notice it
+  staying dark — the same shape of gap that let R7 go structurally un-evaluated for two epics.
+  Recorded at the moment the R7 apparatus stops watching. **Re-trigger:** any story touching R8, or a
+  decision to mechanize an R8 fact-hold the way 10.24 mechanized R7's.
+
+- **Story 10.26 deploy step — the ≤60 s payload-shape window (the third time).** Adding the seventh
+  fact and a fifth activated clause moves EVERY `validityPayloadHash`. For up to
+  `VALIDITY_CACHE_TTL_SECONDS` (60 s) after rollout, a warm pre-deploy cache row holds the old-shaped
+  JSONB and the `.strict()` DTO can 500. Zero-window lever, same as 10.24/10.25: after deploying, call
+  `POST /api/v1/p/:pariwarId/admin/validity-cache/invalidate-all`
+  (`apps/api/src/modules/member-validity/routes.ts:68`). ⚠ **Accepted, not a defect** — and note that
+  an ASSERTION itself needs no such step: migration `0036`'s `member.%` trigger evicts that member's
+  row on append (proved by a live-DB test, AC8(b)).
+
+---
+
 ## Deferred / recorded from: implementation of story 10-24-contribution-fact-producer-projection-r7-cf-activation (2026-08-05)
 
 _Story 10.24 is the `contribution.*` FACT producer Story 4.2 deferred to "Epic 8/9" and that neither
@@ -34,7 +92,8 @@ deliberately does NOT do is recorded here rather than left for a future reader t
   standing (today it only displays the section).
 
 - **~~`contribution.r7a_restorations_used` → Story 10.25~~ DISCHARGED 2026-08-06;
-  `contribution.personal_event_excuse_claimed` → Story 10.26 STILL OPEN.** The two of the engine's
+  ~~`contribution.personal_event_excuse_claimed` → Story 10.26~~ DISCHARGED 2026-08-06. ENTRY CLOSED —
+  BOTH HALVES.** The two of the engine's
   seven fact keys the 10.24 producer did not supply. Mechanized, not merely noted: `R7_HELD_CLAUSES`
   names each blocking fact + owner, and the totality test asserts every `blockedBy` key is genuinely
   absent from `R7_SUPPLIED_FACT_KEYS` — so a hold cannot silently outlive its reason.
@@ -56,8 +115,29 @@ deliberately does NOT do is recorded here rather than left for a future reader t
   2026-08-06-077 — an instrument no story owns and no code change can satisfy). Only `blockedBy` is
   mechanizable, because only fact keys can be falsified against `R7_SUPPLIED_FACT_KEYS`; the third
   condition is recorded in prose at `rules.ts` and in the seed comment beside the clause itself.
-  **Re-trigger:** 10.26 landing (for the remaining half); and, for R7(A), all three conditions
+  **Re-trigger:** ~~10.26 landing (for the remaining half)~~ — **FIRED, and the entry closes.** Story
+  10.26 built the member ASSERTION instrument (`member.personal_event_asserted`, on the member's own
+  stream — the key was never derivable because it records an act that had nowhere to happen) and
+  supplied `contribution.personal_event_excuse_claimed`. `R7_SUPPLIED_FACT_KEYS` is now **all seven**
+  and **`R7_HELD_FACTS` is EMPTY** — the first time this apparatus has reached its own end state.
+  R7(G) also ACTIVATED (legitimately, unlike R7(A)/(B): its population is "a member who asserted",
+  which IS the constitutional fact rather than a disclaimed proxy, and it is ratified into §3.1 with
+  no outstanding amendment). Its revert-sanity probe was RUN and recorded, in the OPPOSITE direction
+  from 10.24's: removing `r7-g` from `R7_ACTIVATED_CLAUSE_IDS` without re-adding the hold produced
+  `Tests  2 failed | 8 passed (10)` — totality catches an under-count as loudly as an over-count.
+
+  **⚠ EMPTY HELD-FACTS IS NOT AN ALL-CLEAR, and the distinction is the point of keeping this entry.**
+  R7(A)/(B) remain un-evaluated, and **no producer can ever lift them**: their blockers are Story
+  10.23's `member.joining_discipline_state` (a MEMBER fact, outside this producer's family) and the
+  Trustee Panel's published Part 11 amendment. **Re-trigger for R7(A):** all three conditions
   together — never any one of them alone.
+
+  **⚠ And the NEXT fact-hold has no mechanization at all.** `contribution.compliance_percent` (R8) is
+  **UNOWNED**, is not an `R7_CONTRIBUTION_FACT_KEYS` member, and therefore nothing in the totality
+  apparatus can notice if it stays dark forever — the exact shape of the gap that let R7 go
+  structurally un-evaluated for two epics ([[project_r7_fact_producer_unbuilt]]). Recorded here
+  because this entry closing is precisely when that would otherwise be forgotten. See Escalation 3
+  below.
 
 - **Story 10.25 deploy step — the ≤60 s payload-shape window.** `contributionHistorySummary` gained
   `restorationPackage` and a sixth fact key, so for up to `VALIDITY_CACHE_TTL_SECONDS` (60 s) after

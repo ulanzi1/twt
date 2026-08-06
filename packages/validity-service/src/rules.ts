@@ -18,12 +18,13 @@
 // The service ORCHESTRATES registry-driven engine calls; it never branches on clause identity or
 // re-implements a rule. Adding a rule family = appending a descriptor to `VALIDITY_RULE_ORDER`.
 //
-// ── Epic-4 member-standing scope (AMENDED by Story 10.24) ────────────────────────────────────────
+// ── Epic-4 member-standing scope (AMENDED by Story 10.24, again by 10.26) ───────────────────────
 // Two engine-evaluated families run at member standing today: R12 (retirement coverage, Story 4.5)
-// and the R7 contribution-discipline family — but only its (C)/(D)/(E)/(F) sub-clauses (Story 10.24's
-// `R7_ACTIVATED_CLAUSE_IDS`). R7(A)/(B)/(G) stay OMITTED under the mechanized `R7_HELD_CLAUSES` hold
-// below, and R8 is NOT activated by the 10.24 facts (see the R8 note on `R7_ACTIVATED_CLAUSE_IDS`).
-// R5/R9/R14 remain CLAIM-time (Epic 6). Adding a family is still one descriptor + one order entry.
+// and the R7 contribution-discipline family — its (C)/(D)/(E)/(F) sub-clauses since Story 10.24, plus
+// (G) since Story 10.26 (`R7_ACTIVATED_CLAUSE_IDS`). Only R7(A)/(B) stay OMITTED under the mechanized
+// `R7_HELD_CLAUSES` hold below, and R8 is NOT activated by any of these facts (see the R8 note on
+// `R7_ACTIVATED_CLAUSE_IDS`). R5/R9/R14 remain CLAIM-time (Epic 6). Adding a family is still one
+// descriptor + one order entry.
 
 import { ids, niyamavali, type Db } from '@twt/domain';
 import {
@@ -80,6 +81,19 @@ export const R7_ACTIVATED_CLAUSE_IDS = [
   'niy.contribution-discipline.r7-d',
   'niy.contribution-discipline.r7-e',
   'niy.contribution-discipline.r7-f',
+  // ── Story 10.26 — R7(G) `personal_event_excuse_claimed == true` ────────────────────────────────
+  // ⚠ Activating a clause is NOT the same act as supplying its fact, and this is the one place in the
+  // R7 family where doing both in one story is legitimate. Read D6 before treating it as precedent:
+  //   · its blocking fact has exactly ONE owner, and this story is it;
+  //   · its population is "a member who ASSERTED" — the assertion IS the constitutional fact, not a
+  //     proxy for one, so `prd.md:346`'s proxy prohibition (which pins R7(A)/(B)) does not reach it,
+  //     and `:346` says so by name ("R7(C)–(G) … are unaffected by this constraint");
+  //   · it is RATIFIED into `docs/legal/niyamavali.md` §3.1 (Trustee Panel, 2026-08-06) with NO
+  //     outstanding registry amendment — unlike R7(A), whose Part 11 amendment is unpublished;
+  //   · and activating it moves NO eligibility: `on_pass: no_exemption`, `never_excuses: true`.
+  // ⚠ It reaches the member's own record as an EXPLANATION and is excluded from the violator-flag
+  // channel by `imposesRestorationObligation` (AC5/D4) — activation without accusation.
+  'niy.contribution-discipline.r7-g',
 ] as const satisfies readonly R7ClauseId[];
 
 /** One deliberately-unevaluated R7 sub-clause: the blocking fact(s) + the story that will supply them. */
@@ -106,6 +120,13 @@ export interface R7HeldClause {
  *
  * Supplying the facts and activating the clause are DIFFERENT acts. The facts are honestly derived
  * and surfaces read them; what is forbidden is putting `r7-a` / `r7-b` into `VALIDITY_RULE_ORDER`.
+ *
+ * ⚠ Story 10.26 DELETED the R7(G) entry (its fact is now supplied and the clause is ratified into
+ * §3.1), leaving exactly TWO. Read that as the mechanization working, NOT as a licence to delete the
+ * remaining two: R7(A)/(B) are blocked by things NO producer can supply — Story 10.23's
+ * `member.joining_discipline_state` is a MEMBER fact, and the Part 11 amendment is a Trustee Panel
+ * instrument. `R7_HELD_FACTS` (producer.ts) is now EMPTY while these two holds remain live; the two
+ * constants answer different questions and must not be collapsed.
  */
 export const R7_HELD_CLAUSES = [
   {
@@ -133,11 +154,15 @@ export const R7_HELD_CLAUSES = [
     blockedBy: ['member.joining_discipline_state'],
     owner: 'story-10-23',
   },
-  {
-    clauseId: 'niy.contribution-discipline.r7-g',
-    blockedBy: ['contribution.personal_event_excuse_claimed'],
-    owner: 'story-10-26',
-  },
+  // ── Story 10.26 DELETED the R7(G) entry, and deletion is right HERE and ONLY here ───────────────
+  // The previous story NARROWED R7(A)'s `blockedBy` rather than deleting its entry, and "10.25
+  // narrowed, so I should narrow" is the wrong lesson to carry forward. Narrowing was correct there
+  // because a SECOND blocker remained (`member.joining_discipline_state`) on top of `prd.md:346`'s
+  // proxy prohibition and an unpublished Part 11 amendment. R7(G) had exactly ONE blocking fact, this
+  // story supplies it, there is no proxy prohibition reaching it (`prd.md:346` exempts R7(C)–(G) by
+  // name) and no outstanding registry amendment — it is RATIFIED into §3.1 as of 2026-08-06 (D6).
+  // With no reason left to hold, keeping a hold entry would be a decorative one, and a decorative hold
+  // is exactly what this mechanization exists to prevent.
 ] as const satisfies readonly R7HeldClause[];
 
 /**
@@ -266,6 +291,89 @@ export function readConsecutiveRequired(payload: Record<string, unknown>): numbe
   if (typeof restoration !== 'object' || restoration === null) return null;
   const value = (restoration as { consecutive_required?: unknown }).consecutive_required;
   return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+// ── ⭐ AC5 / D4 — the VIOLATOR-FLAG exclusion, filtered here rather than downstream ────────────────
+
+/**
+ * The `restoration`-block keys that PRESCRIBE an obligation, as the seeded R7(A)–(G) payloads spell
+ * them. Everything else in a restoration block either QUALIFIES an obligation prescribed by one of
+ * these (`one_time_only`, `lifetime_max` bound R7(A)'s consecutive requirement) or is the payload
+ * declaring that it prescribes nothing (R7(G)'s `never_excuses`).
+ *
+ * This is the payload's own DATA VOCABULARY, not a clause list — a trustee amendment that gives a
+ * declarative clause a `lock_in_months` flips the predicate with no code change, and a new declarative
+ * clause is excluded automatically. `tests/imposes-restoration-obligation.test.ts` walks the SEEDED
+ * payloads and additionally requires every restoration key it finds to be classified, so a trustee
+ * amendment introducing an unknown key fails loudly instead of being swept into "no obligation".
+ */
+export const RESTORATION_OBLIGATION_KEYS = [
+  'catch_up_required',
+  'complete_all',
+  'consecutive_required',
+  'core_team_recommendation',
+  'lock_in_months',
+] as const;
+
+/**
+ * Does this clause's payload IMPOSE a restoration obligation? A violator flag asserts that a member is
+ * in a restoration/lock-in HOLDING; a clause that prescribes nothing is not a holding, it is an
+ * EXPLANATION. Read from the clause DATA (never a clause-id branch) so a trustee amendment moves it.
+ *
+ * ⚖ THE RATIFIED INVARIANT THIS ENFORCES (D4, ratified 2026-08-06 by BigDev; constitutional since the
+ * Trustee Panel ratified R7(G) into `docs/legal/niyamavali.md` §3.1 the same day):
+ *
+ *     A clause may influence trustee UNDERSTANDING without influencing trustee SUSPICION.
+ *
+ * `factsEstablishing[]` informs; `flags[]` accuses. These are two different powers and the substrate
+ * already keeps them apart. R7(G) is granted the first and denied the second, because the ratified
+ * §3.1 text (`niyamavali.md:81`) says its assertion "is recorded on the member's own record but grants
+ * no restoration relief AND CARRIES NO CONSEQUENCE OF ITS OWN" — and a flag on the Trustee-Lite
+ * surface that feeds SUSPENSION decisions is a consequence. R7(G) applies exactly when a member told
+ * the truth about their own life, so without this predicate, disclosing a bereavement would make a
+ * member a suspension candidate. That does not merely harm members; it contradicts the Niyamavali.
+ *
+ * ⚠ The filter belongs HERE, upstream, beside the `applied` filter — never inside
+ * `@twt/domain`'s `trustee-lite/violator-flags.ts`, which is FROZEN (10.24 AC5: "if it needs a change,
+ * that is a finding, not a task") and whose contract is deliberately "flag every R7 clause you are
+ * given". Both R7 producers import THIS function so the two seams cannot drift.
+ *
+ * PURE. It interprets nothing and decides no eligibility; it reads what the registry already published.
+ */
+export function imposesRestorationObligation(payload: Record<string, unknown>): boolean {
+  const restoration = (payload as { restoration?: unknown }).restoration;
+  if (typeof restoration !== 'object' || restoration === null) return false;
+  const block = restoration as Record<string, unknown>;
+  return RESTORATION_OBLIGATION_KEYS.some((key) => {
+    const value = block[key];
+    // PRESCRIPTION, not presence: `lock_in_months: 0` (R7(A) ships exactly that) and
+    // `complete_all: false` prescribe nothing. Only a positive requirement or an affirmed flag does.
+    if (typeof value === 'number') return Number.isFinite(value) && value > 0;
+    return value === true;
+  });
+}
+
+/**
+ * Does this APPLIED clause contribute a violator flag? — the shared seam filter (AC5).
+ *
+ * ONE spelling, imported by BOTH R7 producers (`evaluateAppliedR7ClauseSlots` here and the bulk
+ * `r7-candidate-scan.ts`), because they already carry twin `applied` filters and drifted by omission
+ * once (10.24 round-2 review found the bulk seam un-probed). A clause whose payload cannot be found is
+ * treated as NOT imposing: it contributes no accusation on evidence nobody can read.
+ *
+ * ⚠ This filters `applicableNiyamavaliClauses[]` — the accusation channel — ONLY. The assertion stays
+ * fully visible to the trustee as a FACT: `deriveViolatorFlags` builds `factsEstablishing[]` from every
+ * `contribution.*` key on the payload (`violator-flags.ts:204-207`), so
+ * `contribution.personal_event_excuse_claimed` still rides into the fact list of any member flagged for
+ * some OTHER clause, and can inform a trustee's discretion there. Asserting can only ever help or do
+ * nothing; it can never hurt. That asymmetry is the design, not an oversight — see D4.
+ */
+export function contributesViolatorFlag(
+  clauseId: string,
+  payloadsByClauseId: ReadonlyMap<string, Record<string, unknown>>,
+): boolean {
+  const payload = payloadsByClauseId.get(clauseId);
+  return payload !== undefined && imposesRestorationObligation(payload);
 }
 
 /** {@link evaluateAppliedR7ClauseSlots}'s result: the applied slots, plus the registry-gap signal. */

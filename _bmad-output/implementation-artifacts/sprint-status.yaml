@@ -1,4 +1,66 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-06d (10-26-r7g-personal-event-excuse-assertion: ready-for-dev -> in-progress ->
+#   review via bmad-dev-story off main @ c46d872, branch feat/10-26-r7g-personal-event-excuse-assertion,
+#   after a PRECURSOR commit 838f667 landing the Escalation-1(a) pre-work (Decision 2026-08-06-080:
+#   R7(F)/R7(G) ratified into niyamavali.md §3.1/Appendix A; the seed's r7-f/r7-g rows drop
+#   provisional/policy_review_required). All 11 ACs satisfied. THE LAST of the three-story
+#   contribution-governance decomposition: all SEVEN `contribution.*` engine fact keys now have a
+#   producer, `R7_HELD_FACTS` is EMPTY for the first time, and FIVE of the seven R7 clauses evaluate.
+#   Only R7(A)/(B) remain held and their blockers are NOT facts (Story 10.23 + the Trustee Panel's
+#   unpublished Part 11 amendment), so no future producer can lift them.
+#   THE HEADLINE (AC5/D4), and the reason this story was risky: `deriveViolatorFlags` maps EVERY R7
+#   clause id into a violator flag on the surface that feeds SUSPENSION decisions, and R7(G) applies
+#   exactly when a member TOLD THE TRUTH about their own life. Naively activated, disclosing a father's
+#   death makes a member a suspension candidate — which the ratified §3.1 ("carries no consequence of
+#   its own") makes a CONSTITUTIONAL violation, not merely a UX failure. Resolved with
+#   `imposesRestorationObligation(payload)`, a PURE DATA predicate over the clause's own `restoration`
+#   block (R7(A)-(F) prescribe consecutive/lock-in obligations; R7(G)'s `never_excuses:true` prescribes
+#   nothing), applied UPSTREAM. NO clause-id branch; `violator-flags.ts` stays byte-frozen.
+#   ⚠ A CORRECTION TO THE STORY'S OWN AC5, recorded rather than absorbed: AC5 asked for the identical
+#   filter at BOTH R7 producers on the premise that both feed violator flags. A source trace showed
+#   they do NOT. The bulk scan's clause list is the ACCUSATION channel (-> deriveViolatorFlags -> the
+#   violator section) and IS filtered; `evaluateAppliedR7ClauseSlots`'s is the MEMBER'S OWN RECORD
+#   (-> buildRuleExplanations) and is NOT — filtering it would delete `memberStatus.rule.rule.
+#   no_exemption`, the one thing this story exists to produce (its own AC6), leaving R7(G) activated
+#   but MUTE. That IS D4's invariant ("a clause may influence trustee UNDERSTANDING without influencing
+#   trustee SUSPICION"), applied to the channel that actually accuses. The asymmetry is MECHANIZED by a
+#   new fence (tests/violator-accusation-channel.test.ts) that fails if any production module outside
+#   the trustee-lite handler routes a clause list into deriveViolatorFlags.
+#   THREE revert-sanity probes RUN AND RECORDED verbatim: (1) removing r7-g from
+#   R7_ACTIVATED_CLAUSE_IDS without re-adding the hold -> totality RED, `expected [ ...(6) ] to deeply
+#   equal [ ...(7) ]`, `Tests 2 failed | 8 passed (10)` — the OPPOSITE direction from 10.24's probe, so
+#   totality catches an under-count as loudly as an over-count; (2) deleting the AC5 filter from
+#   r7-candidate-scan.ts -> both harm-gate cases RED naming `niy.contribution-discipline.r7-g` in the
+#   diff, `Tests 2 failed | 30 skipped (32)`; (3) adding a second production caller of
+#   deriveViolatorFlags -> the new fence RED naming the offending file.
+#   THE INSTRUMENT (D1/D2/D3/D7): `member.personal_event_asserted` on the MEMBER's own stream — NOT
+#   `contribution.*` (Story 8.10's no-ingest-path fence pins that vocabulary at three) and decisively
+#   because migration 0036's `member.%` trigger then evicts the validity-cache row for free: no new
+#   trigger, no migration, no cache-key change. PROVED by a live-DB test, not assumed. Bounded 6-value
+#   `kind` enum with NO free text (Tier-1 PII in append-only events_log, and nothing would read it —
+#   a text box with no reader is a false promise that someone is listening; the Helpdesk is linked
+#   instead). No table, no projection, no migration: the event IS the record.
+#   AC1 IS STRUCTURAL, not copy: the route is POST .../member/contributions/personal-events (never
+#   `excuse-requests`), the audit action is `member_personal_event.recorded`, the response carries NO
+#   status/approved/decision field, `grantsRelief` is a z.literal(false) so the WIRE asserts the
+#   ratified invariant, and there is deliberately NO GET — a member has nothing to check back on.
+#   ⚠ TWO STORY-SPEC INACCURACIES CORRECTED IN PLACE: (a) AC6 predicted the explanation key
+#   `memberStatus.rule.no_exemption`; the shipped `ruleExplanationKey` prefixes `memberStatus.rule.`
+#   onto an already-`rule.`-prefixed reasonCode, so the real key is `memberStatus.rule.rule.
+#   no_exemption` (authored in en+hi, and a test now asserts it RESOLVES in both — a missing key
+#   renders the raw code, which a11y forbids). (b) AC9 predicted the Pariwar-scan budget 7 -> 8; the
+#   true baseline was already 8 (Story 10.25 added readContributionProjectionContext and updated only
+#   facts.ts's comment), so the real move is 8 -> 10. Both budgets are now carried by COUNTED
+#   assertions, never comments — including a NEW bulk counted-query test that did not exist before.
+#   Single-member fact read 2 -> 3; p95 measured at 10.92ms against FR-12A's 200ms; determinism gate
+#   reports exactly ONE hash. The Pariwar scan at 4L stays UN-ATTESTED and is recorded as such.
+#   Escalations 4 (no UX-spec coverage; tone review recorded — note the `out-of-band-blame` gate
+#   forbids "does not count against you", so the copy says "takes nothing away from you"), 5 (NO member
+#   surface shows a MISSED cycle, so `cycle_ref` ships unpopulated — genuinely open, owner UNASSIGNED)
+#   and 6 (query budget) opened in deferred-work.md; the 10.24 fact-hold entry CLOSED, both halves.
+#   Escalation 1 was already closed by ratification. Decision 2026-08-06-081 records the implementation
+#   posture; the `:205` R7(G) fact-hold follow-up is marked DISCHARGED.
+#   Files: 44 changed. ci:local green both DATABASE_URL modes.)
 # last_updated: 2026-08-06c (10-26-r7g-personal-event-excuse-assertion: backlog -> ready-for-dev via
 #   bmad-create-story, off main @ c46d872 (origin/main confirmed identical, tree clean). Saved
 #   _bmad-output/implementation-artifacts/10-26-r7g-personal-event-excuse-assertion.md. Epic 10's
@@ -3928,7 +3990,7 @@ development_status:
   10-23-restoration-discipline-lock-in: backlog
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done
-  10-26-r7g-personal-event-excuse-assertion: ready-for-dev
+  10-26-r7g-personal-event-excuse-assertion: review
   epic-10-retrospective: optional
 
   # ==========================================================================

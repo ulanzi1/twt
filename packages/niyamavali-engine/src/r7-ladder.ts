@@ -54,9 +54,11 @@ import type {
 // Story 4.6 Validity Service, supplies `total_count` / `ever_contributed` /
 // `months_since_last` / `skips_current_year` / `in_lapse` from real event history as of
 // Story 9.4 (the `contribution.confirmed` event producer has existed since then), and
-// Story 10.25 added `r7a_restorations_used`. SIX of the seven are supplied;
-// `personal_event_excuse_claimed` is Story 10.26's. 4.2 defines the CONTRACT and tests
-// against injected synthetic facts.
+// Story 10.25 added `r7a_restorations_used`, and Story 10.26 added
+// `personal_event_excuse_claimed` (a lifetime as-of existential over the member's own
+// `member.personal_event_asserted` events). ALL SEVEN are now supplied, and five of the
+// seven R7 clauses evaluate — only R7(A)/(B) remain held, on blockers that are not facts.
+// 4.2 defines the CONTRACT and tests against injected synthetic facts.
 //
 // Derivation correctness (AI-3-1: `date_trunc`/`interval`, never fixed-ms spans; and, since
 // 2026-08-05, OPPORTUNITY counting rather than elapsed time) is the PRODUCER's

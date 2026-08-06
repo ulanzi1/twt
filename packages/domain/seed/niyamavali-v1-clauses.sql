@@ -232,6 +232,16 @@ ON CONFLICT (clause_version_id) DO NOTHING;
 -- R7(G) is declarative: it
 -- exists as an auditable clause that records an explicit non-exemption ('no_exemption') when
 -- a personal-event excuse is claimed, and NEVER produces a restoration path.
+--
+-- ⚠ RATIFIED 2026-08-06 (Decision 2026-08-06-080): R7(F) and R7(G) were previously implemented here
+-- but ABSENT from the ratified legal text (§3.1/Appendix A only covered R7(A)-(E)) — the moderation
+-- brief's D9 recommended documenting R7(F); Story 10.26 Escalation 1 raised the same gap for R7(G).
+-- The Trustee Panel has now ratified BOTH into `docs/legal/niyamavali.md` §3.1/Appendix A. The r7-f
+-- and r7-g rows below therefore drop `policy_review_required`/`provisional` to `false`.
+-- R7(C)'s complementary 12-month-or-more threshold is now STATED in §3.1 too (it is the other rung of
+-- the same gap ladder as R7(F), per D9), but R7(C)'s own `policy_review_required`/`provisional` flags
+-- are UNCHANGED (still `true`) — that specific ratification was not confirmed in this pass. Do not
+-- infer it from R7(F)'s flag drop. R7(A)/(B)/(D)/(E) are likewise UNCHANGED.
 -- All benefit_mechanism='pool' (the benefit-mechanism CI gate's seed_globs cover this file).
 -- Idempotent (ON CONFLICT DO NOTHING). snake_case JSONB keys.
 INSERT INTO clause_versions
@@ -279,7 +289,7 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R7(F)","title_en":"Six-month gap restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":45,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"member_state_in","states":["lock-in","active","active-in-grace","lapsed-unpaid"]},{"op":"fact_gte","fact":"contribution.months_since_last","min":6}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    '{"rule_code":"R7(F)","title_en":"Six-month gap restoration (5-month lock-in complete all)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":45,"on_pass":"lockin_5mo_complete_all","on_fail":"r7_not_applicable","all_of":[{"op":"member_state_in","states":["lock-in","active","active-in-grace","lapsed-unpaid"]},{"op":"fact_gte","fact":"contribution.months_since_last","min":6}],"restoration":{"lock_in_months":5,"complete_all":true},"policy_review_required":false,"provisional":false}'::jsonb,
     'pool'
   ),
   (
@@ -288,7 +298,7 @@ VALUES
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     1,
     '2025-03-01T00:00:00+00:00'::timestamptz,
-    '{"rule_code":"R7(G)","title_en":"Personal events do not excuse contribution skips (non-exemption)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":10,"on_pass":"no_exemption","on_fail":"r7_not_applicable","all_of":[{"op":"fact_equals","fact":"contribution.personal_event_excuse_claimed","value":true}],"restoration":{"never_excuses":true},"policy_review_required":true,"provisional":true}'::jsonb,
+    '{"rule_code":"R7(G)","title_en":"Personal events do not excuse contribution skips (non-exemption)","rule_kind":"conditional","family":"r7-contribution-discipline","precedence":10,"on_pass":"no_exemption","on_fail":"r7_not_applicable","all_of":[{"op":"fact_equals","fact":"contribution.personal_event_excuse_claimed","value":true}],"restoration":{"never_excuses":true},"policy_review_required":false,"provisional":false}'::jsonb,
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;

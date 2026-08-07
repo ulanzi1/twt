@@ -2460,9 +2460,55 @@ Mobile breakpoints, touch-target sizing, and viewport adaptations are deferred t
   - Out-of-hours: "हेल्पलाइन को कॉलबैक के लिए कहें" / "Request a callback"
 - **Variants:** Inline (compact, in forms and validation messages) · standalone (large, on dead-end surfaces and onboarding decline paths) · in-menu (persistent app-level fallback).
 
+### Group E — Tenant-Authored Rendering Patterns
+
+Distinct in kind from Groups A-D: those patterns govern surfaces with a fixed, known field set. This group governs a surface whose FIELD SET ITSELF is authored per-Pariwar at runtime (Story 10.12 per-Pariwar custom fields) — closing `ESCALATION 5` (Decision `2026-08-06-082`): no form-builder or dynamic-schema-rendering grammar existed anywhere in this spec before this pattern. Numbered to continue the sequence without renumbering Patterns 1-11.
+
+#### Pattern 12: Dynamic Field Rendering (Per-Pariwar Custom Fields)
+
+- **When to use:** any surface that renders or collects values for a Pariwar's tenant-authored custom-field definitions — member-facing value entry, admin-facing value entry/review, or any future read surface displaying custom-field values alongside a member's record. Explicitly NOT `<CustomFieldsPage>` (definition *authoring*, already shipped in Story 10.12) — this pattern governs *value* rendering against an already-published definition set.
+
+- **Grammar boundary (§11 tenant-invariance):** the RENDERER — the type→primitive mapping, the validation grammar, the layout algorithm, the interaction behavior — is tenant-invariant and identical for every Pariwar. What varies per Pariwar is DATA the renderer consumes: which fields exist, their `label_en`/`label_hi` text (copy layer), their declared order, and their bounds — never the grammar itself. A Pariwar authors field DEFINITIONS, never rendering BEHAVIOR.
+
+- **Type → primitive mapping.** The renderer maps each custom-field type supported by the domain contract to a fixed interaction primitive — the mapping is what's fixed, not the type count. At time of writing, the domain contract defines seven types:
+
+  | Custom-field type | Tier A primitive | Notes |
+  |---|---|---|
+  | `string` | Text input | Bounded to the definition's `max_length` (system ceiling 512 chars); live counter appears within 20 characters of the limit. |
+  | `integer` | Numeric input | Latin numerals only per §8 numeral discipline; no typed thousands separators. |
+  | `decimal` | Numeric input (decimal-enabled) | Same as `integer`; **NEVER styled or labeled as currency** — a tenant-authored decimal is not money (Story 10.12's fixed-amount denylist defends this). |
+  | `boolean` | Toggle/switch, not checkbox | A switch communicates a state, matching `<StatusPill>`'s register — not an action-item checkbox register. |
+  | `date` | Date picker, calendar-date only | No time component (the type is a calendar date, never a timestamp); ISO `YYYY-MM-DD` on the wire, locale-formatted on display. |
+  | `enum` | Dropdown/select | Options render in the ORDER the definition declares `enum_values` — no client-side re-sort. |
+  | `string_array` | Repeatable bounded input group ("tag" style) | Add/remove one item at a time; blocked (never silently truncated) at the definition's `max_items`; each item independently bounded by `max_length`. |
+
+- **Behavior:**
+  - The renderer fetches the Pariwar's in-force definition set once per surface load, not once per field — the whole form derives from one fetch.
+  - Fields render in the ORDER the definition set declares; no alphabetical or type-grouped re-sort, so an admin's authored order survives to what a member sees.
+  - `required: true` uses the surface's existing required-field convention; `required: false` fields carry an explicit "optional" affix — dignity-first surfaces avoid unexplained asterisks.
+  - Retired fields are **not rendered for new data entry** — the renderer draws only from the in-force definition set.
+  - An unknown field type or a malformed definition **fails safely with dignified error handling** (Pattern 4) rather than silently disappearing — a renderer must never silently hide data because it encountered something unexpected.
+  - Bilingual labels: `label_en`/`label_hi` are both mandatory on every definition (Story 10.12 AC9); the renderer shows the label matching the surface's primary language (Hindi-primary member surfaces, English-primary admin surfaces, per freeze-table row 10) — never both at once, never a toggle.
+
+- **Validation:** governed entirely by **Pattern 4 (Dignified Validation)** — no new validation grammar. A bound violation (`max_length`, `max_items`, a server-side `pii_tier` mismatch) surfaces via Pattern 4's three-element message, inline per field.
+
+- **Save behavior:** governed by **Pattern 5 (Form Save-and-Resume)** when the hosting surface is grief-paced or multi-step; a short custom-field block appended to an already-saved surface may use simple save-on-submit instead — the hosting surface's own save discipline governs; this pattern introduces no new one.
+
+- **Script/numerals:** governed entirely by **Pattern 6 (Bilingual Input)** — `string`/`string_array` accept both scripts; `integer`/`decimal` enforce Latin numerals per §8 v4.
+
+- **Accessibility:** each rendered field carries its definition's label as an accessible `<label>`/`aria-label` — the renderer never infers a label from the field key. The `boolean` toggle announces state changes; `string_array` groups announce item-count changes ("3 of 5 items"). Tab order follows the definition's declared field order.
+
+- **Recovery:** identical to Pattern 4/5's recovery rules — no new recovery grammar. A field whose definition retires mid-session (rare, admin-driven) surfaces Dignified Validation on the next save attempt, never a silent field disappearance.
+
+- **Empty state:** a Pariwar with zero in-force definitions renders **no custom-fields section at all** — not an empty-state message. Pattern 7 (Empty-State) does not apply here: a definition set can legitimately be empty (Story 10.12 D2 — no code-resident default), and "no custom fields yet" would be noise on every Pariwar that has none.
+
+- **Variants:** Member-facing (value entry, Hindi-primary) · Admin-facing (value entry/review, English-primary) — both reuse the SAME renderer; neither is `<CustomFieldsPage>` (definition authoring).
+
+- **Surfaces:** this pattern governs any future member or admin surface that renders values from tenant-authored custom-field definitions.
+
 ### Pattern Application Summary
 
-The 11 patterns above + the already-committed patterns (cross-referenced index at top) cover all UX consistency decisions downstream component-build agents need. The patterns are tenant-invariant — TWT-Bihar, Rail Parivar, Bank Parivar all apply the same grammar; per-Pariwar variation lives in the copy layer (translations, vocabulary), token layer (palette, typography), and surface label layer (HRMS column label, pool shortform), as committed in §11 Per-Pariwar Configurability.
+The 12 patterns above + the already-committed patterns (cross-referenced index at top) cover all UX consistency decisions downstream component-build agents need. The patterns are tenant-invariant — TWT-Bihar, Rail Parivar, Bank Parivar all apply the same grammar; per-Pariwar variation lives in the copy layer (translations, vocabulary), token layer (palette, typography), and surface label layer (HRMS column label, pool shortform), as committed in §11 Per-Pariwar Configurability.
 
 The recovery-first orientation — every pattern explicitly committing how the user returns after interruption — is a load-bearing discipline. Patterns that optimize only for clarity but leave recovery implicit produce surfaces that feel fragile under real-world conditions (network drops, emotional pauses, mistaken taps). Recovery treated as first-class produces surfaces that feel resilient.
 

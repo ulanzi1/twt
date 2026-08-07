@@ -279,6 +279,18 @@ export const R7_HELD_FACTS: readonly { readonly key: string; readonly producer: 
  * 2026-08-05-074 — never a refactor, never a "the derivation was only provisional" edit. The blast
  * radius is unchanged and remains migration-shaped: every payload hash moves, every cached row is
  * re-shaped, and every recorded flag's onset can shift.
+ *
+ * ── ⚖ CLARIFIED 2026-08-07 (Decision 2026-08-07-086). Not a proxy — a ratified fact, held back from
+ * member presentation only pending its restoration workflow. ─────────────────────────────────────
+ * `missed-closed-cycle-v1` is NOT standing in for another fact the way R7(A)'s `total_count < 10`
+ * proxy does (`prd.md:346`) — it IS the Trustee-Panel-ratified operational definition of "a skip"
+ * (see `niyamavali.md` §3.1's interpretive note). It stays un-rendered to members today only because
+ * the corresponding restoration workflow (Story 10.23, catch-up/complete-all) does not exist yet —
+ * showing this fact to a member today would be an INCOMPLETE explanation, since there would be no
+ * path to describe for resolving it. The identifier is NOT re-pinned now: its full semantic boundary
+ * (payment, catch-up completion, obligation discharge, member-facing explanation, possibly cycle
+ * linkage) is only known once Story 10.23 defines the complete restoration lifecycle. A future
+ * rename must describe that whole lifecycle, not merely the observation made at cycle close.
  */
 export type ContributionLapsePolicy = 'missed-closed-cycle-v1';
 

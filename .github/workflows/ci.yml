@@ -86,7 +86,16 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run test
+      # --concurrency=4: unbounded `turbo run test` oversubscribes the runner's real CPU/process
+      # budget across ~20 packages' worth of test processes running at once, which cascades into
+      # unrelated timeouts on shared/small runners (a pg-mocked unit test, or a Puppeteer/Chrome
+      # launch, whichever loses the scheduling race that run) — a different package flakes each
+      # time, never the same one twice, which is the signature of oversubscription, not a real
+      # regression. `scripts/ci-local.sh` already caps this job at `--concurrency=4` for the exact
+      # same reason (real CPU share per package instead of cascading timeouts); this job never got
+      # the same cap. [Review][Patch] Discovered when Story 10.12's PR CI hit this twice in a row on
+      # two unrelated files (tests/db.test.ts, then tests/unit/contribution-note-render.test.ts).
+      - run: pnpm turbo run test --concurrency=4
 
   build:
     name: build

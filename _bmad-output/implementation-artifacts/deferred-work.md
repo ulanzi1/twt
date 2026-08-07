@@ -20,96 +20,47 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   author will hit again. **Re-trigger:** a UX spec section for member-facing governance disclosures,
   or the next story adding copy to this surface.
 
-- **⚠ Escalation 5 — NO member surface shows a MISSED cycle. OWNER: the TRUSTEE PANEL (assigned
-  2026-08-06 by BigDev).** The Yogdaan Bahi
-  (`contracts/src/contributions/contribution-history.ts`) lists the member's own **attested**
-  contributions — a missed cycle produces no attestation and therefore **no row**, and `grey` means
-  *attested, cycle closed, no verdict*, never *missed*. So a member has nowhere to point at the
-  specific cycle a personal event affected. The assertion event carries an OPTIONAL `cycle_ref` for
-  exactly this, and it ships **unpopulated by any UI** — the seam exists so a future cycle-scoped
-  surface needs no new event type. A real gap in the member's view of their own contribution
-  discipline; RECORDED, not absorbed, and not Story 10.26's to close.
+- **✅ Escalation 5 — CLOSED by Trustee Panel decision 2026-08-07-086.** Originally: NO member surface
+  shows a MISSED cycle — the Yogdaan Bahi lists the member's own **attested** contributions only, so
+  a member had nowhere to point at the specific cycle a personal-event assertion (R7(G)) was about.
+  The assertion event's optional `cycle_ref` shipped unpopulated by any UI. Six questions were owed;
+  **all six answered 2026-08-07** (Q1 and Q4 were BLOCKING):
 
-  **⚠ WHAT THE PANEL OWNS, stated precisely so this does not stall.** The Trustee Panel owns the
-  **DECISION**, not the surface: whether a member may see their own missed cycles at all, under what
-  definition, and with what framing. Trustees do not ship UI. **Implementation ownership is assigned
-  by, and only after, their answer** — and if the answer is Q1-NO or Q4-REMOVE, there is nothing to
-  implement and the escalation closes without a story. Recording it this way avoids the failure mode
-  where "the Trustee Panel owns it" becomes indistinguishable from unowned
-  ([[project_r7_fact_producer_unbuilt]] — a deferral that names no answerable question expires just
-  as surely as one that names an epic).
+  1. **Q1 (BLOCKING) — May a member be shown their own missed cycles at all? YES, sequenced after
+     Story 10.23.** The transparency interest is real, but showing an obligation with no visible
+     resolution path (no catch-up mechanism exists yet) would be an incomplete disclosure. The
+     surface is commissioned in principle; **its story is not created until Story 10.23 (Restoration
+     Discipline Lock-In, `backlog`) lands** — this is an explicit dependency, not an assumption.
+  2. **Q2 — `missed-closed-cycle-v1` is neither a proxy nor left un-ratified.** The underlying fact
+     already re-evaluates AS-OF the assessment instant (`packages/domain/src/contribution/facts.ts`,
+     ratified 2026-08-05) — a late, tail-reconciled or catch-up confirmation clears the skip — and
+     R7(D)/(E)/(F) (`niyamavali.md:78-81`) explicitly treat the obligation as completable, not closed
+     at cycle end. **The "proxy" characterization is explicitly rejected**; the underlying semantics
+     are **ratified now** via an interpretive note in `niyamavali.md` §3.1 (does not alter R7(D)–(F)'s
+     substantive text). **The identifier `missed-closed-cycle-v1` is NOT re-pinned** — its full
+     semantic boundary is only known once Story 10.23 defines the complete restoration lifecycle; a
+     future rename must describe that whole lifecycle, not today's raw observation alone.
+     **Constraint carried into the future story's AC:** no member-facing copy may imply "missed" is
+     permanent or irredeemable.
+  3. **Q3 — a DISTINCT state is required**, not a single neutral label, for causes the pool engine
+     structurally cannot see (out-of-band contributions, assigned-but-never-notified, grace/overlay
+     window) — conflating them with an ordinary unconfirmed cycle recreates the false-accusation risk
+     Q1/Q2 exist to avoid. Binding on the future story's AC.
+  4. **Q4 (BLOCKING) — KEEP.** `cycle_ref` stays in `PersonalEventAssertedPayloadSchema` and the DTO.
+     Governing principle, recorded for citation: *"Where a governance assertion concerns a specific
+     contribution opportunity, its provenance shall identify that opportunity even if the assertion
+     has no direct consequence of its own."* **`cycle_ref` is provenance, not causation** — the
+     assertion still carries no consequence of its own (§3.1, unchanged).
+  5. **Q5 — NO, explicitly excluded.** Consistent with Decision `081`'s D4 (understanding without
+     suspicion), a trustee may NOT cite a member's visibility into their own missed cycles as an
+     aggravating "on notice" factor in a suspension decision. Binding constraint on the future story
+     and on the Trustee-Lite surface.
+  6. **Q6 — DISPLAY-ONLY.** No push notification. Revisit once the surface and Story 10.23's catch-up
+     path both exist.
 
-  **⚠ WHY THIS IS A GOVERNANCE QUESTION AND NOT A PRODUCT ONE.** "Missed" is not an observed fact; it
-  is a DERIVED CLAIM about a member's conduct, produced under the implementation policy
-  `missed-closed-cycle-v1` (an assigned-and-closed cycle that resolved with no live confirmation).
-  Rendering that derivation to the member converts a producer's internal label into a **member-facing
-  accusation** — the same class of act D4 governs on the trustee side. It also lands on a
-  dignity-first surface whose tone rules forbid shame and scarcity framing, against a transparency
-  interest that cuts the other way (a member in lock-in currently cannot see the basis of their own
-  standing).
-
-  **⚠ THE COST OF LEAVING THIS OPEN IS NOT ZERO, and it grows.** R7(G) is LIVE now. Assertions are
-  being recorded today with `cycle_ref` absent. If the Panel later rules that cycle-scoping matters,
-  those historical assertions **cannot be backfilled** — the members who made them will never be
-  reconstructible against a cycle ([[feedback_record_unattested_no_backfill]] — never reconstruct
-  evidence to fake validation). Every cycle that passes widens the un-anchored set. This is a
-  decaying question, not a dormant one.
-
-  **THE QUESTIONS OWED. Q1 and Q4 are BLOCKING** (nothing can be built or removed until both are
-  answered); Q2–Q3 and Q5–Q6 are answerable in the same sitting and shape what gets built.
-
-  1. **⛔ BLOCKING — May a member be shown their own MISSED cycles at all?** Not "should we build the
-     screen" — may the system tell a member, on their own record, *"you did not contribute in these
-     cycles"*? **YES** ⇒ a member-facing missed-cycle surface is legitimate and gets a story.
-     **NO** ⇒ `cycle_ref` is undeliverable by design, Q4 becomes REMOVE, and this escalation closes
-     as *"Resolved via explicit deferral — the Panel ruled the surface out of bounds"*, NOT as *"not
-     addressed"* ([[feedback_closure_language_precision]]).
-
-  2. **Is `missed-closed-cycle-v1` the Niyamavali's definition of a MISS, or an implementation
-     proxy?** Today it is a documented producer policy, not ratified text. If a member is to be shown
-     "missed", the label they read must be one the Panel stands behind. **RATIFY** ⇒ it enters §3.1
-     and the seed's review-status flags follow. **PROXY** ⇒ it may drive engine facts but must NOT be
-     rendered to a member as a finding about them — the same distinction `prd.md:346` already draws
-     for R7(A)'s `total_count < 10`, which is disclaimed as a proxy and normatively forbidden as an
-     evaluation basis.
-
-  3. **What must a missed-cycle list do about causes the pool engine structurally cannot see?** At
-     least three exist today: an **out-of-band contribution** (a member who sent money directly to a
-     bereaved family — `docs/policies/out-of-band-contributions.md` says the trust does NOT
-     characterise this as wrong, yet the ledger has no row for it); a member who was **assigned but
-     never notified** (the 8.8 dispatch family is log-only in places); and a member in **grace or
-     under a moderation overlay** during the window. Rendering all three as "missed" would tell a
-     member who did something honourable that they failed. Does the Panel require a distinct
-     **`unattributed` / `disputed`** state, or accept a single "no contribution recorded" label with
-     neutral framing?
-
-  4. **⛔ BLOCKING — Does the assertion's cycle anchor have constitutional meaning, or is it
-     decoration?** R7(G)'s fact is a LIFETIME BOOLEAN by frozen wire contract
-     (`R7_CONTRIBUTION_FACT_KEYS.PERSONAL_EVENT_EXCUSE_CLAIMED`), and the ratified §3.1 says the
-     assertion carries no consequence of its own. So a cycle-scoped assertion changes **nothing**
-     today. **KEEP** ⇒ the Panel intends the anchor to carry provenance a human may one day read
-     (e.g. informing discretion on a specific claim), and Q1 must be YES or the field can never be
-     populated. **REMOVE** ⇒ `cycle_ref` comes out of `PersonalEventAssertedPayloadSchema` and the
-     DTO, and the escalation closes. ⚠ Deciding this LATE is the expensive path — see the decay note
-     above.
-
-  5. **If a member-facing missed-cycle list exists, does it change what a TRUSTEE may act on?** The
-     Trustee-Lite violator section already surfaces R7 flags. A member-visible list makes the same
-     facts mutually known, which is usually good — but it also creates an expectation that a member
-     who *saw* their missed cycles and did nothing was on notice. Does the Panel intend that
-     inference to be available in a suspension decision, or explicitly not? (This is the D4
-     understanding-vs-suspicion boundary, re-asked on the member side.)
-
-  6. **Is there an obligation to NOTIFY, or only to DISPLAY?** A list a member must navigate to is a
-     different instrument from a message telling them they missed a cycle. FR-88 and the 8.8 notify
-     family make the second buildable. The tone guide's anti-pressure rules (no manufactured urgency,
-     no "you're behind") bind hard here. **DISPLAY-ONLY** is the conservative default and is what
-     this entry assumes absent an answer.
-
-  **Closure condition (state which, verbatim):** *"Closed by Trustee Panel decision [id]"* with Q1 +
-  Q4 answered — never *"deferred pending review"*, which is how this becomes permanent.
-  **Re-trigger:** the next Trustee Panel sitting; OR any story that proposes to surface
-  missed/skipped cycles to a member, which MUST NOT proceed on Q1 alone being assumed.
+  **Re-trigger:** Story 10.23 (Restoration Discipline Lock-In) landing — at that point, create the
+  member-facing missed-cycle story via `bmad-create-story`, carrying forward Q2/Q3/Q5/Q6's AC
+  constraints verbatim from this entry.
 
 - **⚠ Escalation 6 — the query budget grew, and the 4L figure is STILL UN-ATTESTED.** Single-member
   fact read **2 → 3** (the assertion `EXISTS`); Pariwar scan **8 → 10** (+1 assertion existential,
@@ -2955,9 +2906,14 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   DESTINATION and says so in that module's header rather than letting a reader assume coverage.
   **Reason for deferring:** retro-fitting is a repo-wide change far larger than one story, and each
   column needs its own ceiling chosen from its own usage — a single shared number would be wrong
-  everywhere. **Re-trigger:** ESCALATION 3's disposition. Flag at that point whether this warrants its
-  own gate story (a `jsonb-limits` invariant scan asserting every `jsonb(` column's writer imports the
-  constants) rather than a per-column sweep. [packages/domain/src/custom-fields/limits.ts]
+  everywhere. **RULED 2026-08-07 (Decision 2026-08-07-084): accepted as a named, gated deferral — not
+  commissioned as a story now.** Repository-wide mechanization is not rejected; it is deferred until
+  there is evidence that another JSONB write path requires the same architectural guarantees §1.7
+  freezes. **Re-trigger:** the first JSONB write path outside `custom-fields/` that is shown (through
+  implementation, incident, or code review) to require architectural payload or nesting limits
+  equivalent to §1.7 but lacks a mechanized enforcement. If a `jsonb-limits` invariant gate is
+  commissioned at that point, Epic 14's `[GOVERNANCE]` closure stories (14.4, 14.7) are the precedented
+  home, not a per-column sweep inferred from Story 10.12 alone. [packages/domain/src/custom-fields/limits.ts]
 
 - **§1.7's "write-rate limit when approached" on the GIN growth ceiling is NOT built (ESCALATION 3).**
   What ships is `ginIndexBytes()` — an OBSERVED signal read from `pg_relation_size` against a 256 MiB
@@ -2965,8 +2921,10 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   catalog read on a hot path to enforce a bound that moves in aggregate rather than per row — wrong at
   the only moment it matters (a bulk import) and expensive at every moment it does not. A real
   implementation needs a throttle with its own policy (who is limited, for how long, and what an
-  operator does about it), which is a story. **Re-trigger:** the first Pariwar whose observed reading
-  approaches the budget. [packages/domain/src/custom-fields/member-write.ts]
+  operator does about it), which is a story. **RULED 2026-08-07 (Decision 2026-08-07-084): accepted as
+  a named, gated deferral.** **Re-trigger:** the first Pariwar whose observed `ginIndexBytes()` reading
+  approaches the 256 MiB alarm threshold. (Unchanged — already concrete.)
+  [packages/domain/src/custom-fields/member-write.ts]
 
 - **The GIN budget reading is repo-global, not per-Pariwar.** Postgres has one index over the whole
   `members` table, so `ginIndexBytes()` returns the SUM across tenants while §1.7 frames the budget
@@ -2987,20 +2945,28 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   real need for a bounded object — add the type, and the depth check becomes reachable.
   [packages/domain/src/custom-fields/{types,validate,limits}.ts]
 
-- **No member-facing dynamic form renderer (ESCALATION 5).** Custom-field VALUES are written through
-  the API only. **Reason for deferring:** the UX specification has NO form-builder, field-definition
-  or per-Pariwar settings grammar anywhere, and §11 calls component grammar "tenant-invariant"
-  (`ux-design-specification.md:2254-2262`, `:2465`). Building one would mean inventing UX inside an
-  implementation story. **Re-trigger:** a UX pass that adds the grammar. The API seam is ready
-  (`getMemberCustomFields` / `setMemberCustomFields` in `apps/admin/src/api/client.ts` are the
-  no-caller-today clients kept deliberately for it). [apps/admin/src/modules/custom-fields/]
+- **✅ ESCALATION 5 CLOSED 2026-08-07.** No member-facing dynamic form renderer was built; custom-field
+  VALUES are still written through the API only, and this entry no longer gates that. **The UX grammar
+  gap is closed**: `ux-design-specification.md` §12 gained **Group E — Tenant-Authored Rendering
+  Patterns, Pattern 12 (Dynamic Field Rendering)**, closing the "no form-builder / per-Pariwar settings
+  grammar exists" gap the original entry named. The pattern is grammar only — a type→primitive mapping
+  reading from the domain contract (not hard-pinned to today's seven types), validation/save/bilingual
+  behavior delegated to Patterns 4/5/6, and explicit handling for retired fields (not rendered) vs.
+  unknown/malformed definitions (fail safely, never silently hidden). **No renderer is built by this
+  entry** — the pattern governs whichever future surface builds one. The API seam remains ready
+  (`getMemberCustomFields` / `setMemberCustomFields` in `apps/admin/src/api/client.ts`, no-caller-today,
+  kept deliberately). [apps/admin/src/modules/custom-fields/; `ux-design-specification.md` §12 Group E]
 
-- **Tier-1 and Tier-2 custom fields are not supported (ESCALATION 2).** Tier-1 needs per-value envelope
-  encryption (a per-row DEK has no home inside a shared JSONB column); Tier-2 needs a blind-index host
-  column. ⚠ **This makes the epic's own worked example unbuildable** — "alternate ID number"
-  (`epics.md:3603`) is Tier-2 by analogy to §2.7's classification of the eHRMS ID. **Re-trigger:**
-  ESCALATION 2's disposition. If a Tier-2 custom field is wanted, the fix is a blind-index host, NOT a
-  relaxed detector. [packages/domain/src/custom-fields/{types,validate}.ts]
+- **Tier-1 and Tier-2 custom fields are not supported (ESCALATION 2 — CLOSED 2026-08-07, Decision
+  2026-08-07-084).** Tier-1 needs per-value envelope encryption (a per-row DEK has no home inside a
+  shared JSONB column); Tier-2 needs a blind-index host column. The epic's own worked example was
+  "alternate ID number" (Tier-2 by analogy to §2.7's classification of the eHRMS ID), which the shipped
+  Tier-3-only guard correctly rejects. **RULED:** the Trustee Panel chose to rewrite the epic's example
+  (`epics.md:3603` now reads "cadre grade", Tier-3) rather than build a Tier-2 host. Tier-1/Tier-2
+  support remains unbuilt by design, not by gap. **Re-trigger:** a genuine product need for
+  tenant-authored Tier-2 fields (a Story 10.27 stub — blind-index host — was drafted during this
+  ruling and can be picked up then; NOT commissioned now). If pursued, the fix is a blind-index host,
+  NOT a relaxed detector. [packages/domain/src/custom-fields/{types,validate}.ts]
 
 ### Follow-ups on shipped artifacts
 

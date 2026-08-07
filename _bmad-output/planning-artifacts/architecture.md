@@ -964,11 +964,19 @@ declares:
   operational threshold (named in Category 5 Observability).
 
 **Custom-field evolution:**
-- **Versioned per-Pariwar JSON Schema** in
-  `packages/domain/per-pariwar/<id>/schema-v<n>.ts`.
-- **Custom-field migrations** are first-class drizzle-kit migrations, scoped to a single
-  `pariwar_id`; no silent renames.
-- Old fields supported in readers until a deprecation window closes.
+- **Only tenant-authored field definitions — key, type, labels, tier, bounds — live in
+  the registry; every governance constraint on what a definition may declare is
+  code-owned, never tenant-authored.**
+- Field definitions live in an append-only, versioned, RLS-scoped registry table
+  (`pariwar_custom_field_definitions`). The immutable identity of a definition is
+  `(pariwar_id, host_entity, field_key, version)`; changing `field_key` therefore
+  creates a new definition rather than modifying an existing one.
+- The type allowlist, forbidden-key patterns, and system-level hard limits remain CODE in
+  `packages/domain/`; a tenant must never author the fence that governs its own writes.
+- **Functional B-tree indexes** on specific JSON paths remain first-class drizzle-kit
+  migrations, scoped to a single `pariwar_id`; the index inventory + per-Pariwar policy
+  remain in `packages/domain/per-pariwar/<id>/index-inventory.ts`.
+- Old fields supported in readers until a deprecation window closes (`retired_at`).
 
 **System-level JSONB hard limits.** Independent of per-Pariwar custom-field policy, the
 system enforces three classes of hard limit:
@@ -4383,7 +4391,7 @@ twt/
     │   │   ├── per-pariwar/
     │   │   │   └── bihar/
     │   │   │       ├── manifest.ts     # Pariwar identity envelope (RE6-2)
-    │   │   │       └── schema-v<n>.ts
+    │   │   │       └── index-inventory.ts  # Functional B-tree index inventory (§1.7 D1)
     │   │   └── permissions/            # RBAC permission keys + role bundles
     ├── contracts/                      # Transport Zod schemas (by externally-consumed domain)
     │   └── src/

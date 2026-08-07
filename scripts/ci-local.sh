@@ -66,6 +66,7 @@ run "pool-bound-payment-invariant" "pnpm pool-bound-payment:test && pnpm pool-bo
 run "alert-state-invariant"  "pnpm alert-state:test && pnpm alert-state:check"
 run "helpdesk-state-invariant"  "pnpm helpdesk-state:test && pnpm helpdesk-state:check"
 run "governance-boundary"  "pnpm governance-boundary:test && pnpm governance-boundary:check"
+run "custom-field-governance" "pnpm custom-field:test && pnpm custom-field:check"
 run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"
 run "channels-determinism"  "pnpm --filter @twt/channels test:determinism"
 

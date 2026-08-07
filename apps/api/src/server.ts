@@ -60,6 +60,7 @@ import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
+import { registerCustomFieldsModule } from './modules/custom-fields/index.js';
 import { registerTrusteeLiteModule } from './modules/trustee-lite/index.js';
 import { registerReportsModule } from './modules/reports/index.js';
 import { registerCookie } from './plugins/cookie/index.js';
@@ -289,6 +290,21 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // Story 10.8 — the FR-58C feature-flag admin surface (catalog + effective inventory + versions +
   // the flip). The inventory routes are what make "no secret flags" real.
   registerFeatureFlagsModule(app, deps);
+  // Story 10.12 — the FR-54 per-Pariwar custom-fields admin surface: the definition-set read
+  // (in-force + full history in ONE call, so the two panels cannot be read at different instants),
+  // publish-or-retire through ONE route (retirement IS a version — a separate `/retire` route would
+  // be a second write path for the governance fence to be forgotten on), and the member value
+  // read/write. Gated on the TWO NEW pariwar-dimension keys `pariwar.view_custom_fields` /
+  // `pariwar.manage_custom_fields` (catalog 28 → 29) — the read/write split is deliberate, so an
+  // auditor can see what a tenant collects without holding the authority to change it.
+  //
+  // ⚠ WHAT THIS MODULE DOES NOT OWN. The FENCE lives in the domain writer
+  // (`customFields.publishDefinitionVersion`), not here, so it cannot be skipped by adding a route —
+  // and the `custom-field-governance` CI gate asserts that writer is the only INSERT site in the
+  // repo. There is NO member-facing dynamic form renderer in v1: custom-field VALUES are written
+  // through this API only, because the UX spec has no form-builder grammar and §11 calls component
+  // grammar tenant-invariant (a gated deferral + ESCALATION 5, not an oversight).
+  registerCustomFieldsModule(app, deps);
   // Story 10.9 — the FR-58B banner/popup manager. The ADMIN authoring surface (list/create/edit +
   // publish/retract) is gated on the NEW `banner.manage` key (pariwar-dimension); the MEMBER surface
   // (the server-RESOLVED at-most-one-banner + one-popup read, and the idempotent per-member dismiss)

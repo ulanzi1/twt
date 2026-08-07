@@ -608,6 +608,42 @@ jobs:
       - run: pnpm governance-boundary:test
       - run: pnpm governance-boundary:check
 
+  custom-field-governance:
+    name: custom-field-governance (a tenant custom field cannot reach around a frozen control)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 10.12 AC3 layer 3 (FR-54). TWO legs: (a) the domain denylist
+    # (CUSTOM_FIELD_FORBIDDEN_KEY_PATTERNS) covers every `forbidden_column` pattern in
+    # fr-100-non-add.yaml — the drift guard, so a v2 addition to the FR-100 registry cannot leave a
+    # newly-frozen name authorable as a JSONB key; (b) THE LOAD-BEARING ONE — a TS-AST scan over
+    # packages/apps/scripts proving `insert(pariwarCustomFieldDefinitions)` appears ONLY in the
+    # sanctioned writer (domain/src/custom-fields/registry.ts), which is where the runtime fence runs.
+    #
+    # ⚠ SCOPE LIMIT, STATED HONESTLY: definitions are DATABASE ROWS authored at runtime, so this gate
+    # proves NOTHING about their content in any tenant DB. Layer 1 (the runtime fence) and layer 2
+    # (the 0095 CHECK constraint) do that. epics.md:3605 cites Story 1.16c (schema-diff) as the
+    # enforcer of this rule; that citation is wrong — schema-diff scans migrations, route literals and
+    # Zod exports, none of which a runtime-authored JSONB key is. This gate is what that citation
+    # assumed existed. Do NOT widen schema-diff to read a tenant database.
+    #
+    # Teeth: planted violations per detection route in lib.test.ts. No DB / network.
+    # INVARIANT SCAN → NO fetch-depth: 0 (mirror governance-boundary / member-state-invariant).
+    # See scripts/custom-field-governance/README.md.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm custom-field:test
+      - run: pnpm custom-field:check
+
   pool-support-category-invariant:
     name: pool-support-category-invariant (pool engine has no death branches)
     runs-on: ubuntu-latest

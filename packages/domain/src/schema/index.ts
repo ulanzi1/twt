@@ -332,3 +332,11 @@ export * from './member_pool_assignments.js';
 // rows because nothing was projected", and an un-run backfill fabricates a clean record for every
 // member. ⚖ "Unknown projection state must never fabricate a clean member" (2026-08-05).
 export * from './contribution_projection_coverage.js';
+// Story 10.12 — the per-Pariwar custom-field `[PRIMITIVE]`: `pariwar_custom_field_definitions`, an
+// append-only VERSIONED registry of tenant-authored field shapes, keyed by the
+// `(pariwar_id, host_entity, field_key, version)` pin. ⚠ NOT event-derived state and NOT a mutable
+// [SURFACE]: it is the `clause_versions` / routing-policy / feature-flag immutability posture — the
+// row IS the record, so there is no event, no projector and no `current_state`.
+// ⚠ It is also a DECLARED DEVIATION from architecture §1.7, which names a code file
+// (`per-pariwar/<id>/schema-v<n>.ts`) as the medium. See the schema header, ADR-0037 and ESCALATION 1.
+export * from './pariwar_custom_field_definitions.js';

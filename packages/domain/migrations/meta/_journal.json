@@ -666,6 +666,20 @@
       "when": 1788838800000,
       "tag": "0094_contribution-projection-coverage",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1788925200000,
+      "tag": "0095_per-pariwar-custom-fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1789011600000,
+      "tag": "0096_members-custom-fields",
+      "breakpoints": true
     }
   ]
 }

@@ -180,6 +180,35 @@ const FEATURE_FLAG_FLIP = permissionKey('feature_flag.flip');
 // ACCEPTANCE CONDITION for district_admin: a banner gains a server-derived district AND the gate moves to
 // `dimension: 'district'` — never by widening a pariwar gate to a role that cannot satisfy it.
 const BANNER_MANAGE = permissionKey('banner.manage');
+// Story 10.12 (FR-54) — the per-Pariwar custom-field DEFINITION READ key (pariwar-dimension; the
+// helpdesk.create / news.manage / feature_flag.* / banner.manage pariwar-wide precedent — a custom-field
+// definition is a per-TENANT record, the tenant IS the target, resolvable TODAY with no geo-tree).
+// Granted to pariwar_admin + auditor (+ super_admin auto).
+//
+// ⚠ TWO KEYS, NOT ONE, AND THE SPLIT IS THE POINT — the 10.8 doctrine, verbatim: "If these ever collapse
+// to one key, the transparency property goes with it." A definition set is the tenant's DATA CONTRACT:
+// what a Pariwar collects about its members, and at what declared PII tier. Anyone auditing that must be
+// able to READ it without holding the authority to CHANGE it. This is the FEATURE_FLAG_VIEW/FLIP shape,
+// not the NEWS_MANAGE/BANNER_MANAGE one-key shape, because here — unlike a banner — there IS a
+// transparency property forcing the read broader than the write.
+const PARIWAR_VIEW_CUSTOM_FIELDS = permissionKey('pariwar.view_custom_fields');
+// Story 10.12 (FR-54) — the per-Pariwar custom-field WRITE key (pariwar-dimension). Gates definition
+// publish/retire AND the member value write. Granted to pariwar_admin ONLY (+ super_admin auto) — NOT
+// auditor: read-only oversight must never carry the authority to change the tenant's data contract.
+// NARROWER than PARIWAR_VIEW_CUSTOM_FIELDS by design.
+//
+// ⚠ district_admin is NOT granted, and that is the re-learned Story 10.3 finding rather than an omission:
+// a `district`-ceiling grant can NEVER satisfy a pariwar-dimension check (containment is asymmetric —
+// scopeContains denies a target broader than the grant, and the ceiling check forbids a district_admin
+// from holding a pariwar-scoped grant), so the grant would be an INERT capability that appears in the
+// catalog and is silently denied at every call site ([[project_rbac_geo_scope_containment]]).
+// state_trustee is excluded for the SAME structural reason in the other direction: its 'state' ceiling is
+// BROADER than 'pariwar', and a grant at a different ceiling than the gate's dimension never satisfies it.
+// NOT step-up-gated (a definition publish is not freeze-firing / not in AR-24); accountability is the
+// frozen-governance fence + the §1.5 audit line + the append-only registry row.
+// ACCEPTANCE CONDITION for either role: a definition gains a server-derived district AND the gate moves to
+// `dimension: 'district'` — never by widening a pariwar gate to a role that cannot satisfy it.
+const PARIWAR_MANAGE_CUSTOM_FIELDS = permissionKey('pariwar.manage_custom_fields');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -301,6 +330,12 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // holder: the tenant's content-authoring authority, exactly as for NEWS_MANAGE. A `pariwar`
       // scopeCeiling satisfies the pariwar-dimension check; district_admin/state_trustee cannot (inert).
       BANNER_MANAGE,
+      // Story 10.12 (FR-54) — the per-Pariwar custom-field READ + WRITE keys (pariwar-dimension).
+      // pariwar_admin is the SOLE non-super_admin holder of the write: authoring the tenant's own data
+      // shape is the tenant administrator's authority by definition. Holding BOTH here is correct; the
+      // view/manage split matters at auditor, which holds only the former.
+      PARIWAR_VIEW_CUSTOM_FIELDS,
+      PARIWAR_MANAGE_CUSTOM_FIELDS,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -409,7 +444,17 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // production behaviour, so an auditor who cannot see which flags are live cannot audit a
     // flag-gated behaviour change. FEATURE_FLAG_FLIP is deliberately NOT here — read-only oversight
     // must not carry a production-behaviour-changing authority (Decision 7's view/flip split).
-    permissions: [AUDIT_EXPORT, AUDIT_VERIFY, MEMBER_VIEW_VALIDITY, FEATURE_FLAG_VIEW],
+    // Story 10.12 — PARIWAR_VIEW_CUSTOM_FIELDS (read-only) joins the same read surface for the same
+    // reason: a Pariwar-authored custom field is runtime-declared data collection, and an auditor who
+    // cannot read the definitions cannot check what a tenant collects or what PII tier it declared.
+    // PARIWAR_MANAGE_CUSTOM_FIELDS is deliberately NOT here — the read/write split is the point.
+    permissions: [
+      AUDIT_EXPORT,
+      AUDIT_VERIFY,
+      MEMBER_VIEW_VALIDITY,
+      FEATURE_FLAG_VIEW,
+      PARIWAR_VIEW_CUSTOM_FIELDS,
+    ],
     scopeCeiling: 'pariwar',
   },
   {

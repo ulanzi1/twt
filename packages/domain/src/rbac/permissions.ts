@@ -334,7 +334,37 @@ export function permissionKey(value: string): PermissionKey {
 // ACCEPTANCE CONDITION: district_admin banner-manage may be enabled only if a banner gains a
 // server-derived district AND the gate moves to `dimension: 'district'` — never by widening a pariwar
 // gate to a role that cannot satisfy it.
-export const PERMISSION_CATALOG_VERSION = 28 as const;
+// Bumped 28 → 29 at Story 10.12 (added TWO keys): `pariwar.view_custom_fields` +
+// `pariwar.manage_custom_fields` — the FR-54 per-Pariwar custom-field definition READ and the
+// publish/retire WRITE (+ the member value read/write). Gates every route under
+// …/p/:pariwarId/custom-fields. They join the existing `pariwar.*` family (pariwar.configure_channels /
+// declare_degraded_mode / amend_rule / provision) because what is being configured IS the Pariwar's own
+// data shape — not a member, a claim or a pool.
+// TWO keys, deliberately NOT one `pariwar.manage_custom_fields` umbrella — the 10.8 doctrine applies
+// with full force: "⚠ THE READ/WRITE KEY SPLIT IS THE POINT … If these ever collapse to one key, the
+// transparency property goes with it." A custom-field definition set is the tenant's DATA CONTRACT:
+// anyone auditing what a Pariwar collects about its members must be able to READ the definitions
+// without holding the authority to change them. So: `pariwar.view_custom_fields` → pariwar_admin +
+// auditor (a Pariwar-authored field is exactly the kind of runtime-declared data collection an auditor
+// exists to see, and one whose PII tier they must be able to check); `pariwar.manage_custom_fields` →
+// pariwar_admin only. super_admin auto-derives both.
+// BOTH are `dimension: 'pariwar'` (value = scopeTx.pariwarId — the helpdesk.create / news.manage /
+// feature_flag.* / banner.manage pariwar-wide-key precedent): a custom-field definition is a per-TENANT
+// record, the tenant IS the target, and it is resolvable TODAY with no geo-tree.
+// ⚠ `district_admin` is NOT granted, and this is the re-learned finding, not an omission. A
+// `district`-ceiling grant can NEVER satisfy a pariwar-dimension check (scopeContains denies a target
+// broader than the grant; the ceiling check also forbids a district_admin from holding a pariwar-scoped
+// grant), so granting it would seed an INERT/false capability — the exact
+// [[project_rbac_geo_scope_containment]] asymmetry recorded at Story 10.3 and re-encoded at 10.4 / 10.5 /
+// 10.8 / 10.9. `state_trustee` is excluded for the SAME structural reason in the other direction (its
+// 'state' ceiling is BROADER than 'pariwar', and containment is asymmetric in EITHER direction).
+// NOT step-up-gated (publishing a field definition is not freeze-firing and is not in the AR-24 list);
+// accountability is the §1.5 hash-chain audit line on every publish/retire plus the append-only
+// registry row itself, which is a stronger record than a re-authentication prompt.
+// ACCEPTANCE CONDITION for district_admin: a custom-field definition gains a server-derived district AND
+// the gate moves to `dimension: 'district'` — never by widening a pariwar gate to a role that cannot
+// satisfy it.
+export const PERMISSION_CATALOG_VERSION = 29 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -554,6 +584,25 @@ export const SEED_PERMISSION_KEYS = [
   // step-up-gated; accountability is the non-author tone-review sign-off + the §1.5 audit line. The MEMBER
   // banner routes touch NO key — they are member-session-gated (the 10.2 precedent).
   'banner.manage',
+  // Story 10.12 (FR-54) — the per-Pariwar custom-field DEFINITION READ key. Gates
+  // GET …/p/:pariwarId/custom-fields/definitions (in-force + history) and
+  // GET …/p/:pariwarId/custom-fields/members/:memberId/values. Checked at `dimension: 'pariwar'` (value
+  // = scopeTx.pariwarId — the helpdesk.create / news.manage / feature_flag.* / banner.manage precedent).
+  // Granted to `pariwar_admin` + `auditor` — a Pariwar-authored field is runtime-declared data
+  // collection, and an auditor who cannot read the definitions cannot check what a tenant collects or
+  // what PII tier it declared. super_admin auto-derives. DELIBERATELY BROADER than
+  // pariwar.manage_custom_fields (the 10.8 read/write-split doctrine). district_admin DEFERRED (a
+  // district-ceiling grant can't satisfy a pariwar check — inert; see the version-bump note + roles.ts).
+  'pariwar.view_custom_fields',
+  // Story 10.12 (FR-54) — the per-Pariwar custom-field WRITE key. Gates
+  // POST …/p/:pariwarId/custom-fields/definitions/:hostEntity/:fieldKey/versions (publish OR retire —
+  // one route, because retirement IS a version) and
+  // PUT …/p/:pariwarId/custom-fields/members/:memberId/values. Checked at `dimension: 'pariwar'`.
+  // Granted to `pariwar_admin` ONLY (+ super_admin auto) — NOT auditor: read-only oversight must never
+  // carry the authority to change the tenant's data contract. NARROWER than pariwar.view_custom_fields
+  // by design. Every publish runs the frozen-governance fence + the PII-tier gate and carries a §1.5
+  // hash-chain audit line. NOT step-up-gated. district_admin DEFERRED for the same inert-grant reason.
+  'pariwar.manage_custom_fields',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

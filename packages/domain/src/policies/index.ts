@@ -158,3 +158,8 @@ export * from './member-moderation-actions-rls.js';
 // rather than decorative. Neither table grants DELETE — append projections, repaired by an idempotent
 // backfill. No write-rejection trigger: they hold projected facts, not lifecycle state.
 export * from './contribution-projection-rls.js';
+// Story 10.12 — pariwar_custom_field_definitions tenant-isolation policies. Plain three-policy
+// isolation (select/insert/update), NOT `for: 'all'` and NOT the feature-flag `OR pariwar_id IS NULL`
+// carve-out: there is no cross-tenant default definition, and a DELETE would destroy the only record
+// of what a stored custom-field value MEANS. Retirement is a VERSION, never a row removal.
+export * from './pariwar-custom-field-definitions-rls.js';

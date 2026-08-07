@@ -23,6 +23,7 @@ import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
 import { BannersRoute } from './routes/BannersRoute.js';
 import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
+import { CustomFieldsRoute } from './routes/CustomFieldsRoute.js';
 import { ReportsRoute } from './routes/ReportsRoute.js';
 import { HelpdeskTicketRoute } from './routes/HelpdeskTicketRoute.js';
 import { HelplineClaimRoute } from './routes/HelplineClaimRoute.js';
@@ -149,6 +150,17 @@ const reportsRoute = createRoute({
 });
 
 // Story 10.8 — the tenant-scoped feature-flag inventory console (the "no secret flags" surface + the flip).
+// Story 10.12 — the tenant-scoped per-Pariwar custom-fields console (FR-54): the in-force definition
+// list, the publish form over the FIXED type allowlist, and the per-definition Retire action.
+// Deliberately minimal — the UX spec has no form-builder or per-Pariwar settings grammar (§11 calls
+// component grammar tenant-invariant), so a richer surface would mean inventing UX (ESCALATION 5).
+// There is NO member-facing renderer: custom-field VALUES are written through the API only in v1.
+const customFieldsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/custom-fields',
+  component: CustomFieldsRoute,
+});
+
 const featureFlagsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/feature-flags',
@@ -222,6 +234,7 @@ const routeTree = rootRoute.addChildren([
   bannersRoute,
   reportsRoute,
   featureFlagsRoute,
+  customFieldsRoute,
   groundInspectionRoute,
   verifierConsoleRoute,
   cycleFreezeRoute,

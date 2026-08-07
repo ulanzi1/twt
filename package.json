@@ -59,6 +59,8 @@
     "helpdesk-state:test": "vitest run scripts/helpdesk-state-invariant",
     "governance-boundary:check": "tsx scripts/governance-boundary/check.ts",
     "governance-boundary:test": "vitest run scripts/governance-boundary",
+    "custom-field:check": "tsx scripts/custom-field-governance/check.ts",
+    "custom-field:test": "vitest run scripts/custom-field-governance",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "ci:local": "bash scripts/ci-local.sh"
   },

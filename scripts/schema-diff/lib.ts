@@ -234,6 +234,56 @@ export function scanTables(snapshot: unknown, sqlFiles: SqlFile[], config: Fr100
  * The exact table name (`payout_destinations`) is NOT a column finding — it is
  * owned by scanTables — so a raw-DDL token equal to `forbidden_table` is skipped.
  */
+/**
+ * SQL keywords that turn a single-quoted literal from a VALUE into executable DDL. Used to keep the
+ * dynamic-DDL vector covered when literals are otherwise masked — see {@link scannableDdl}.
+ */
+const DYNAMIC_DDL_RE = /\b(add\s+column|create\s+table|alter\s+table|rename\s+to)\b/i;
+
+/** Blank the CONTENTS of each single-quoted run, keeping length so reported positions do not shift.
+ *  Doubled quotes ('') are SQL's escape for a literal quote and stay inside the run. */
+function maskSqlLiterals(line: string): string {
+  return line.replace(/'(?:[^']|'')*'/g, (m) => `'${' '.repeat(Math.max(0, m.length - 2))}'`);
+}
+
+/**
+ * Return the part of a DDL line in which an IDENTIFIER may legitimately appear: the line with its
+ * `--` comment removed and its single-quoted string literals blanked out.
+ *
+ * ⚠ WHY THIS EXISTS (Story 10.12). Neither a comment nor a single-quoted literal can be a column
+ * name, but the raw-DDL scan below is a plain regex over the whole line and could not tell them from
+ * an identifier. That produced a false positive with a genuinely absurd shape: migration 0095's
+ * `pariwar_custom_field_definitions_frozen_key_ck` is a CHECK constraint that FORBIDS a custom field
+ * named `payout_destination*`, and its explanatory comment says so — so the FR-100 gate flagged that
+ * prohibition, twice, as if it were a payout-destination column. The gate was reporting its own
+ * enforcement as a violation of itself.
+ *
+ * The wrong fixes, and why each was rejected: adding an `allow` entry to `fr-100-non-add.yaml` would
+ * DECLARE a payout-destination artifact permitted — the opposite of the truth, and it would need a
+ * trustee-attested ADR for a thing that does not exist. Renaming the constraint would not help; the
+ * pattern is in the CHECK's body by necessity. Dropping the DB mirror would remove the layer
+ * migration 0088's doctrine exists to require. Not mentioning the pattern in the comment would make
+ * the most load-bearing constraint in the migration unexplained.
+ *
+ * ⚠ THIS DOES NOT WEAKEN THE GATE, and it is the same doctrine the sibling gates already apply
+ * (`member-state-invariant` is AST-based precisely so "a `.limit(` substring in a comment/string
+ * never matches"). A literal carrying DDL keywords — `EXECUTE 'ALTER TABLE … ADD COLUMN
+ * payout_destination_id …'` — is still scanned in full, see {@link DYNAMIC_DDL_RE}. So the only
+ * matches removed are ones that cannot create a column. (The gate has never parsed SQL, so an
+ * identifier assembled by concatenation was already outside its reach; that pre-existing limit is
+ * unchanged.)
+ */
+export function scannableDdl(line: string): string {
+  // Find the comment start on the LITERAL-MASKED line, so a `--` inside a string is not mistaken for
+  // one; then truncate both forms at the same index.
+  const masked = maskSqlLiterals(line);
+  const commentAt = masked.indexOf('--');
+  const codeMasked = commentAt === -1 ? masked : masked.slice(0, commentAt);
+  const codeRaw = commentAt === -1 ? line : line.slice(0, commentAt);
+  // Dynamic DDL keeps its literals: that is where a real column name could hide.
+  return DYNAMIC_DDL_RE.test(codeRaw) ? codeRaw : codeMasked;
+}
+
 export function scanColumns(
   snapshot: unknown,
   sqlFiles: SqlFile[],
@@ -264,7 +314,7 @@ export function scanColumns(
     const lines = file.text.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const seen = new Set<string>();
-      for (const match of lines[i].matchAll(tokenRe)) {
+      for (const match of scannableDdl(lines[i]).matchAll(tokenRe)) {
         const token = match[0];
         if (token.toLowerCase() === tableName) continue; // the table itself → scanTables owns it
         if (seen.has(token)) continue;

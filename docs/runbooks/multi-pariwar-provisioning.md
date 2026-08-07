@@ -45,7 +45,8 @@ Story 1.15 implemented the provisioning slice; the procedure below is reconciled
    - Branding bundle: logo asset paths, color tokens that compose with the design system (Story 1.17 — tokens / typography / vocabulary / numeral hardening).
    - Initial trustee panel composition (names, roles, contact).
    - Initial admin user IDs and role grants per architecture §2.6 + FR-46 (12 seeded roles).
-   - Per-Pariwar custom fields if any (per Story 10.12 JSONB; per-Pariwar JSON Schema per architecture §1.7).
+   - Per-Pariwar custom fields: **nothing to do at Passport time** — see step 2.2.3 below. Custom fields
+     are authored at runtime through the admin console, not declared on the Passport (Story 10.12).
 
 2. **Trustee review of Passport.** ≥2 trustees from the existing Pariwar review the new Passport. Authorization recorded in `.decision-log.md`.
 
@@ -59,9 +60,43 @@ Story 1.15 implemented the provisioning slice; the procedure below is reconciled
    - Apply the RBAC seed script (per `rbac-seed-reset.md` §2.4) scoped to the new `pariwar_id`. This seeds the 12 canonical roles for the new Pariwar.
    - Apply initial admin role grants per Passport.
    - Seed the Niyamavali rule registry (per architecture §1.10 reference, Story 2.3) with the canonical Niyamavali version applicable to the new Pariwar's jurisdiction. The Niyamavali may be the same as Bihar's at v1 or jurisdiction-specific per legal counsel review (Story 0.13).
-   - Seed any per-Pariwar custom-field schema (per Story 10.12).
+   - **No custom-field seed.** A new Pariwar starts with zero custom fields by design (Story 10.12 — there is no code-resident default set and no sentinel row). If it needs one, it is authored at runtime; see step 3 below.
 
-3. **Verify per-Pariwar RLS isolation.** Run the architectural CI gate (architecture §5.4 cross-Pariwar adversarial read test). Confirm queries from one Pariwar cannot read the other's rows.
+3. **Per-Pariwar custom fields (Story 10.12) — AS-BUILT, and deliberately NOT a provisioning step.**
+
+   A new Pariwar starts with **zero custom fields**, and that is a complete, correct state: there is no
+   default set, no sentinel row and no seed to run. Versions start at 1 when the Pariwar publishes its
+   first definition. If the Pariwar needs none, nothing here ever runs.
+
+   When it does need one:
+
+   1. Grant `pariwar.manage_custom_fields` — it ships on the `pariwar_admin` seeded role, so the
+      standard role grants in step 1 above already carry it. `auditor` gets the read key
+      (`pariwar.view_custom_fields`) but never the write: an auditor must be able to see what a tenant
+      collects without being able to change it.
+   2. The Pariwar admin opens **`/p/<pariwarId>/custom-fields`** in the admin console and publishes a
+      definition: a lowercase snake_case key, **both** an English and a Hindi label (required — members
+      read Hindi first, and a label cannot be corrected once values exist under it), one of the seven
+      fixed types, and `pii_tier: 3`.
+   3. **No migration, no release, no DDL.** That is the whole point of FR-54. In particular, ticking
+      "often searched" (`indexed: true`) **records a request and creates nothing** — a functional index
+      is a drizzle-kit migration a human authors, scoped to that one `pariwar_id`, and listed in
+      `packages/domain/src/per-pariwar/<id>/index-inventory.ts`. A tenant admin issues no DDL, ever.
+
+   **What the Pariwar CANNOT author, and what to tell them when they hit it:**
+
+   - A key that names a frozen governance control (`payout_destination*`, `benefit_mechanism`,
+     `is_valid`, `is_assignable`, `moderation_status`, `state*`, `pariwar_id`, `member_id`, `lock_in*`,
+     `fixed_amount*`, `audit_*`, `consent_*`). The refusal names the control. This is not negotiable at
+     the operator level — it takes an ADR or a Sprint Change Proposal.
+   - Anything at PII tier 1 or 2, or a key/label shaped like an identifier (`aadhaar`, `pan`, `mobile`,
+     `ifsc`, `upi`…). `members` is a certified PII-free table. This is a **missing substrate, not a
+     rejected requirement** — say so; the refusal message does.
+   - More than 32 live fields per Pariwar. Retiring one makes room; retirement keeps everything members
+     have already entered and only stops new entries.
+   - Custom fields on **claims or pools** — v1 hosts on members only (a recorded, gated deferral).
+
+4. **Verify per-Pariwar RLS isolation.** Run the architectural CI gate (architecture §5.4 cross-Pariwar adversarial read test). Confirm queries from one Pariwar cannot read the other's rows.
 
 ### 2.3 URL path scope + edge
 

@@ -210,3 +210,12 @@ export const CONTRACTS_API_VERSION = 'v1';
  * — type-shadowing via hand-written dto.ts / *.types.ts).
  */
 export const __substrateOnly = Symbol.for('@twt/contracts:substrate-only');
+// Story 10.12 — the per-Pariwar custom-field transport contracts (FR-54, architecture §1.7): the
+// definition body (stored as JSONB byte-for-byte, so wire and storage share one shape and there is no
+// adapter to get wrong), the publish/retire request (`retired_at` is a SIBLING of `definition` and its
+// presence is what routes the same POST to the retire path), the version row, and the member value
+// envelope carrying the `definition_set_version` replay pin.
+// Registers NO OpenAPI paths — the routes are admin-only and this module ships DTOs only, matching
+// the feature-flags precedent. The CUSTOM_FIELD_TYPES / PII_TIERS enums are drift-guarded against the
+// @twt/domain tuples by a test-only sync-guard (tests/custom-fields.test.ts).
+export * from './custom-fields/index.js';

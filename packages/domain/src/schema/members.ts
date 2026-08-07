@@ -29,8 +29,10 @@
 // Naming discipline per architecture line 3663-3677: DB columns snake_case, TS
 // fields camelCase. Table snake_case-plural. Header style mirrors consent_records.ts.
 
-import { bigint, index, pgEnum, pgTable, smallint, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { bigint, index, jsonb, pgEnum, pgTable, smallint, timestamp, uuid } from 'drizzle-orm/pg-core';
 
+import type { MemberCustomFieldsJson } from '../custom-fields/types.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
 
 /**
@@ -106,6 +108,34 @@ export const members = pgTable(
     // trigger fires only on `state` changes, so this non-`state` write needs no projector guard.
     lockInDaysAtJoin: smallint('lock_in_days_at_join').$type<number>(),
 
+    // Story 10.12 (AC6) — the per-Pariwar CUSTOM FIELDS envelope (FR-54, architecture §1.7).
+    // Tenant-authored values, validated at write time against the Pariwar's in-force definition set
+    // (`pariwar_custom_field_definitions`). The envelope carries a `definition_set_version` replay
+    // pin alongside the values, so a value written under one definition set can be re-validated
+    // against exactly that set rather than against whatever is in force when someone later asks.
+    //
+    // ⭐ WHY NO PROJECTOR GUARD IS NEEDED HERE, AND NONE IS ADDED. The migration-0018
+    // `app.member_state_writer` trigger fires ONLY on `state` changes — it RAISEs when `state` (or
+    // `state_event_version`) is set or changed without the guard, and is silent otherwise. A write to
+    // this column leaves both untouched, so it needs no guard and no allowlist entry in the
+    // `member-state-invariant` gate. `lock_in_days_at_join` above is the exact precedent: a plain
+    // scoped non-`state` UPDATE (`member/lock-in.ts:82`), and `custom-fields/member-write.ts` copies
+    // its shape. Do not "harden" this by extending the 0018 trigger — that would put a session
+    // variable in the path of every custom-field write to protect an invariant it cannot violate.
+    //
+    // ⚠ `members` IS A CERTIFIED PII-FREE TABLE (see `member_identities.ts`: "The `members` table
+    // stays PII-FREE (Story 3.1 — it is the lifecycle anchor)"). That certification is what forces
+    // Story 10.12's v1 restriction to `pii_tier: 3` plus a naked-PII key/label detector: this column
+    // is plaintext JSONB on the lifecycle anchor, and no declared tier makes an identifier safe here.
+    //
+    // DEFAULT `'{}'::jsonb`, not the full envelope: `ADD COLUMN … DEFAULT` on a hot table writes the
+    // default into every existing row, so the smallest one is right. Readers normalize through
+    // `customFields.normalizeEnvelope` — never dereference `.values` directly.
+    customFields: jsonb('custom_fields')
+      .notNull()
+      .$type<MemberCustomFieldsJson>()
+      .default(sql`'{}'::jsonb`),
+
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()
       .defaultNow(),
@@ -117,6 +147,14 @@ export const members = pgTable(
     // Per-tenant member scans / RLS-aware planner hint (pariwar_id leads, mirroring
     // events_log_pariwar_*). Point lookups use the member_id PK.
     index('members_pariwar_id_idx').on(t.pariwarId),
+    // Story 10.12 (AC6) — ⚠ THE FIRST GIN INDEX IN THIS REPO. `grep 'USING gin'` across every
+    // migration and schema file returned nothing before this. Default `jsonb_ops`, NOT
+    // `jsonb_path_ops`: §1.7 asks for "arbitrary path queries" and `jsonb_path_ops` supports only
+    // containment (`@>`), so it would silently fail to serve the `?`/`?|`/`?&` key-existence queries
+    // an admin filter needs. The cost is a larger index — accepted, and bounded by
+    // `CUSTOM_FIELDS_GIN_INDEX_BUDGET_BYTES` as an observed signal (see custom-fields/limits.ts).
+    // Created in migration 0096, where the tradeoff is written out in full.
+    index('members_custom_fields_gin_idx').using('gin', t.customFields),
   ],
 );
 

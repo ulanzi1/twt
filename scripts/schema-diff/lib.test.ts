@@ -232,6 +232,61 @@ describe('scanColumns (b)', () => {
     expect(scanColumns(compliantSnapshot, [compliantSql], config)).toEqual([]);
   });
 
+  // ── Comments + string literals are not identifiers (Story 10.12) ────────────────────────────────
+  //
+  // ⚠ THE FALSE POSITIVE THESE CLOSE HAD AN ABSURD SHAPE. Migration 0095 adds a CHECK constraint
+  // that FORBIDS a tenant-authored custom field named `payout_destination*` — the DB half of Story
+  // 10.12's governance fence — and explains itself in a comment. The gate flagged that prohibition,
+  // twice, as though it were a payout-destination column: it reported its own enforcement as a
+  // violation of itself. See `scannableDdl`'s header for the fixes that were rejected.
+
+  it('does NOT flag the pattern inside a single-quoted LIKE pattern (a CHECK that FORBIDS it)', () => {
+    const sql = {
+      path: 'packages/domain/migrations/0095_x.sql',
+      text: `ALTER TABLE t ADD CONSTRAINT t_ck CHECK (lower("field_key") NOT LIKE 'payout\\_destination%');`,
+    };
+    expect(scanColumns(null, [sql], config)).toEqual([]);
+  });
+
+  it('does NOT flag the pattern inside a `--` comment', () => {
+    const sql = {
+      path: 'packages/domain/migrations/0095_x.sql',
+      text: `-- What this MUST cover is the payout_destination* family (FR-100 Hook 2).\nCREATE TABLE t (id uuid);`,
+    };
+    expect(scanColumns(null, [sql], config)).toEqual([]);
+  });
+
+  it('⚠ REVERT-SANITY: a real column on the SAME LINE as a comment is still flagged', () => {
+    // The narrowing must not become "ignore any line containing a comment".
+    const sql = {
+      path: 'packages/domain/migrations/9999_rogue.sql',
+      text: `ALTER TABLE members ADD COLUMN payout_destination_id uuid; -- harmless-looking note`,
+    };
+    const findings = scanColumns(null, [sql], config);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].artifact).toBe('payout_destination_id');
+  });
+
+  it('⚠ REVERT-SANITY: DYNAMIC DDL inside a literal is STILL scanned', () => {
+    // The one case where a single-quoted literal really can create a column. Masking literals must
+    // not open this route — it is the only way the narrowing above could weaken the gate.
+    const sql = {
+      path: 'packages/domain/migrations/9999_rogue.sql',
+      text: `EXECUTE 'ALTER TABLE members ADD COLUMN payout_destination_id uuid';`,
+    };
+    const findings = scanColumns(null, [sql], config);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].artifact).toBe('payout_destination_id');
+  });
+
+  it('⚠ REVERT-SANITY: a bare identifier is still flagged (the masking is not a blanket skip)', () => {
+    const sql = {
+      path: 'packages/domain/migrations/9999_rogue.sql',
+      text: `CREATE INDEX i ON t (payout_destination_ref);`,
+    };
+    expect(scanColumns(null, [sql], config)).toHaveLength(1);
+  });
+
   it('does NOT flag a forbidden column that is allowlisted', () => {
     expect(scanColumns(forbiddenColumnSnapshot, [forbiddenColumnSql], allowingConfig)).toEqual([]);
   });

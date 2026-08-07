@@ -1,4 +1,112 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-07 (10-12-per-pariwar-custom-fields-jsonb: review -> done via bmad-code-review.
+#   22 findings triaged (1 decision-needed resolved as patch, 14 patch, 6 defer, 2 dismissed); all 14
+#   patches applied. Most severe: `definitionsInForce()`'s ORDER-BY-then-LIMIT truncated its candidate
+#   set BEFORE folding per-key winners, so alphabetically-late field_keys could silently drop out of the
+#   in-force set on heavy version churn — fixed as a `DISTINCT ON`, in the one function both the write
+#   path and admin display resolve in-force definitions through. Also fixed: the retire-then-republish
+#   AC2 compatibility bypass (the check ran only against the in-force row, which excludes retired ones);
+#   the CI gate's import-alias blind spot (leg b) PLUS a new leg (c) mechanizing AC6's
+#   `update(members)`-sole-writer claim, which no scan had ever actually asserted; the `pii_tier_ck`
+#   CHECK's opaque-cast risk (`::int` -> `::numeric` behind a CASE guard); the admin retire mutation's
+#   idempotency key being cleared on error (breaking its own stated retry-is-idempotent guarantee);
+#   three previously-untested DB constraints (self-FK, version_min, superseded-forward); and four
+#   doc/citation corrections (ADR decision-log ref, a 422-vs-400 comment, a nonexistent-file reference,
+#   the naked-PII detector's English-only blind spot on the mandatory label_hi field). 6 findings
+#   deferred as pre-existing (3 inherited verbatim from the feature-flags idempotency pattern, not
+#   introduced by this story). Re-verified green: custom-field:check (now 3 legs), custom-field:test,
+#   schema/governance-boundary/pii/member-state/domain-invariants:check, typecheck+lint on
+#   domain/api/admin, and the full custom-fields live-DB + E2E + render + contracts-sync test surface
+#   against a freshly recreated twt_dev.)
+# last_updated: 2026-08-06g (10-12-per-pariwar-custom-fields-jsonb: ready-for-dev -> in-progress ->
+#   review via bmad-dev-story. FR-54 / architecture §1.7 substrate SHIPPED, with the fence built FIRST
+#   per AC3's instruction. LANDED: (Task 1) the ⭐ THREE-LAYER GOVERNANCE FENCE —
+#   custom-fields/frozen-governance.ts (13 forbidden-key families + the fr-100-non-add.yaml
+#   forbidden_column prefix read at runtime + a naked-PII key/label detector + key normalization
+#   case/`-`/`.`/whitespace -> `_`), the 0095 CHECK `…_frozen_key_ck` mirroring it in SQL with the same
+#   normalization, and the new `custom-field-governance` CI gate (2 legs: denylist ⊇ fr-100
+#   forbidden_column, and `insert(pariwarCustomFieldDefinitions)` ONLY in the sanctioned writer) wired
+#   into ci.yml + ci-local.sh with its scope limit stated plainly in the README. ⚠ A DESIGN FLAW THE
+#   RED PHASE CAUGHT: a bare `startsWith` prefix match rejects `stateless_note` — fixed by giving each
+#   denylist entry an explicit match MODE (`prefix` vs `segment`), because `payout_destinations` must
+#   match and `stateless_note` must not and the two are structurally identical, so no universal
+#   predicate separates them. (Tasks 2-4) `pariwar_custom_field_definitions` (append-only, versioned,
+#   RLS FORCE + 3 policies + NO DELETE grant, composite self-FK on the FULL 4-tuple, immutability
+#   trigger, 6 CHECKs) + migration 0095 + branded `PariwarCustomFieldDefinitionId` + the registry
+#   writer/reader (in-force BY INSTANT not latest-row; retirement is a VERSION republishing the current
+#   body byte-for-byte; `definitionSetVersion` = RFC-8785 sha256 replay pin). (Task 3) the FIXED
+#   7-type vocabulary, `limits.ts` with the three §1.7 frozen classes + the Trustee-Panel review path +
+#   the HONEST coverage admission, a hand-written imperative validator (D3 — no runtime Zod, no new
+#   dependency), and the empty-at-v1 per-pariwar index inventory. (Task 5) `members.custom_fields` +
+#   migration 0096 carrying THE REPO'S FIRST GIN INDEX (`jsonb_ops`, not `jsonb_path_ops` — §1.7 asks
+#   for arbitrary path queries and path_ops is containment-only) + the validated write path with STRICT
+#   unknown-key rejection. ⚠ A SECOND DEFECT THE TESTS CAUGHT: `jsonDepth({values}) + 1` double-counted
+#   the envelope, making the effective depth ceiling 2 against a documented 3 — it would have rejected
+#   EVERY write containing a string_array. (Tasks 6-7) contracts + sync-guard, PERMISSION_CATALOG 28 ->
+#   29 minting `pariwar.view_custom_fields` + `pariwar.manage_custom_fields` (read/write split per the
+#   10.8 doctrine; auditor reads, pariwar_admin writes; district_admin NOT granted — the 10.3
+#   inert-capability finding re-encoded), 4 API routes with ONE POST serving publish AND retire, and a
+#   deliberately minimal admin console at /p/$pariwarId/custom-fields. (Task 8) 57 domain integration +
+#   9 RLS policy-regression + 13 API E2E + 17 admin RENDER tests (not view-model — the 10.10 lesson) +
+#   44 fence unit + 18 contracts + 13 gate-fixture. ⭐ REVERT-SANITY PROVEN EMPIRICALLY, not asserted:
+#   dropping the 0095 CHECK makes 3 named DB-mirror tests fail; restored and re-verified green.
+#   (Task 9) ADR-0037 `drafted` + adr-index row AND reconciliation AND breakdown (113->112 / 0->1 — the
+#   10.8 stale-reconciliation miss deliberately not repeated), D2-1.7 CLOSED BY EDIT (its trigger fired
+#   at Epic 3 and sat unnoticed for seven epics), 12 gated deferrals, gate-inventory, a concrete runbook
+#   step, friction-budget disposition, Decision 2026-08-06-082. ⚠ ONE SHIPPED GOVERNANCE ARTIFACT
+#   TOUCHED AND FLAGGED: scripts/schema-diff/lib.ts gained `scannableDdl` — migration 0095's CHECK
+#   FORBIDS `payout_destination*` and its comment explains why, and the FR-100 gate flagged both as
+#   payout-destination columns, i.e. it reported its own enforcement as a violation of itself; the
+#   narrowing (comments + single-quoted literals are not identifiers) is guarded by 4 new
+#   revert-sanity fixtures incl. one proving dynamic DDL inside a literal is STILL scanned. DELIBERATE
+#   DEVIATIONS FROM THE TASK LIST, both recorded: no `@twt/api-client` methods (that package is the
+#   MOBILE member SDK, consumed only by apps/mobile, and AC8 ships no member surface — the admin
+#   client got the methods instead); no packages/i18n/locales entries (that catalog is the
+#   member-facing bilingual one; admin chrome is English-primary per ux-spec:2379 and uses the
+#   per-module convention). ESCALATIONS 1-5 all raised, NONE resolved in-story. GATES: custom-field /
+#   schema / pii / governance-boundary / member-state / i18n / friction all green.
+#   development_status[10-12]: review.)
+# last_updated: 2026-08-06f (10-12-per-pariwar-custom-fields-jsonb: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ fe21dd6. Saved 10-12-per-pariwar-custom-fields-jsonb.md. The default
+#   "next" per the 2026-08-04b sequencing note, now taken. FR-54 / AR-7 (architecture §1.7) substrate:
+#   an append-only per-Pariwar `pariwar_custom_field_definitions` registry + a validated
+#   `members.custom_fields` JSONB column + the repo's FIRST GIN index (grep 'USING gin' currently
+#   returns nothing anywhere). THE FINDING that reshaped the story: the epic's third AC
+#   (epics.md:3605) claims a `payout_destinations` custom field "is rejected by Story 1.16c CI gate" —
+#   it is NOT. 1.16c is `schema-diff`, an invariant scan of committed repo state over four roots
+#   (drizzle migrations + meta, apps/api route literals, contracts Zod exports). A custom field is a
+#   JSONB key in a DB row authored at runtime; it is in none of those roots, so `pnpm schema:check`
+#   passes green and useless. AC3 therefore BUILDS the fence the citation assumed existed, in three
+#   layers modelled on 10.8's capability bar: runtime rejection in the domain writer (reading
+#   fr-100-non-add.yaml's forbidden_column prefix + an explicit freeze-table denylist), a DB CHECK
+#   mirror (the 0088 "an app-layer rule with no DB mirror" doctrine), and a new
+#   `custom-field-governance` gate whose README states plainly what a CI gate CANNOT prove about DB
+#   rows — each with revert-sanity [[feedback_gate_scope_semantic_coverage]]. Five escalations owed,
+#   none resolved in-story: (1) D1 replaces architecture §1.7's `schema-v<n>.ts` medium with a
+#   registry TABLE — §1.7's properties survive (versioned, no silent renames, deprecation window,
+#   migration-gated where DDL is involved) but the text says otherwise, so ADR-0037 carries the
+#   deviation and §1.7 is amended by proposal, never by a story's convenience
+#   [[feedback_supersede_never_reinterpret]]; (2) the epic's OWN worked example, "alternate ID
+#   number", is Tier-2 by analogy to §2.7's eHRMS-ID classification and therefore fails AC4's
+#   Tier-3-only guard — shipped as specified rather than widened, because widening means plaintext
+#   government-adjacent identifiers on the certified PII-FREE `members` table; (3) §1.7 freezes that
+#   the three JSONB hard-limit classes bind EVERY write path with no bypass — they currently bind
+#   NONE of the repo's ~20 other JSONB columns, a pre-existing repo-wide gap this story lands the
+#   constants module for but does not close; (4) the `[PRIMITIVE]` label vs the AC's admin UI vs
+#   epics.md:568 one-slice discipline (sibling 10.6 [PRIMITIVE] shipped no UI); (5) the UX spec has
+#   NO form-builder or per-Pariwar settings grammar at all and §11 calls component grammar
+#   tenant-invariant, so no member-facing dynamic renderer is built. Scope narrowed to the members
+#   host only — FR-54 and §1.7 both name member/claim/pool, and claims are additionally guarded by
+#   §1.9/§1.13 against exactly this vector — recorded as a GATED deferral, not absorbed. Closes the
+#   long-standing D2-1.7 deferral (deferred-work.md:1855; its trigger, "the first custom-field host
+#   table", fired at Epic 3) and the reserved ADR slot at adr-index.md:136 -> ADR-0037 `drafted`
+#   (drafted, NOT ratified — trustee ratification is a named forward obligation
+#   [[feedback_verify_before_committing_governance_claims]]). Verified live at authoring time:
+#   migration head 0094 (-> 0095/0096, journal `when` 1788925200000/1789011600000),
+#   PERMISSION_CATALOG_VERSION 28 (-> 29, minting `pariwar.view_custom_fields` +
+#   `pariwar.manage_custom_fields`, both dimension pariwar; district_admin deliberately NOT granted
+#   per the 10.3 inert-capability lesson), zero GIN indexes, fr-100-non-add.yaml `allow: []`.
+#   development_status[10-12]: ready-for-dev.)
 # last_updated: 2026-08-06e (10-26-r7g-personal-event-excuse-assertion: review -> done via bmad-code-review.
 #   3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor): 12 raw findings, 3 duplicates merged,
 #   9 dismissed as false positives or handled-elsewhere (incl. the AC5 seam deviation the Dev Agent Record
@@ -3989,7 +4097,7 @@ development_status:
   10-9-banner-popup-manager-valid-from-until-dismiss: done
   10-10-member-moderation-suspend-terminate-restore-reason-codes: done
   10-11-trustee-lite-list-signals: done
-  10-12-per-pariwar-custom-fields-jsonb: backlog
+  10-12-per-pariwar-custom-fields-jsonb: done
   10-13-fixed-amount-setter-admin-ui: backlog
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog

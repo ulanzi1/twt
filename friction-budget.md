@@ -1094,6 +1094,47 @@ authenticated mobile app (`apps/mobile`, EAS build is a no-op →
 (not page-weight-gated build targets); `apps/public` is **not** touched. Do NOT
 ratchet (`[[project_friction_budget_baseline_ratchet]]`).
 
+**Story 10.12 disposition (declaration affirmed, no new row):** the per-Pariwar custom-fields
+substrate (`packages/domain/src/custom-fields/`, `packages/contracts/src/custom-fields/`,
+`apps/api/src/modules/custom-fields/`, `apps/admin/src/modules/custom-fields/`, migrations 0095/0096)
+introduces **zero member-facing friction**, for a reason stronger than "the change is small": **there
+is no member surface at all.**
+
+(1) **Nothing member-facing was built, deliberately.** AC8 refuses to ship a member-facing dynamic
+form renderer: the UX specification has no form-builder, field-definition or per-Pariwar settings
+grammar anywhere, and §11 confines per-Pariwar variation to the token / surface-label / copy layers
+while calling component grammar "tenant-invariant" (`ux-design-specification.md:2254-2262`, `:2465`).
+Building one here would mean inventing UX inside an implementation story. Custom-field VALUES are
+written through the API only in v1 (a gated deferral + ESCALATION 5). No member ever sees a
+custom-field input in this story — so there is no interaction to tax.
+
+(2) **The one UI that ships is a STAFF surface, outside the member friction budget by construction.**
+`/p/$pariwarId/custom-fields` is an admin console page behind `requireAdminSession` +
+`pariwar.manage_custom_fields`. It is English-primary per `ux-design-specification.md:2379`, and the
+admin-side files in this commit (`apps/admin/**`) are staff-facing, exactly as the Story 10.10
+disposition records for its own admin half.
+
+(3) **The page-weight baseline is unchanged.** The page-weight ceilings the gate has teeth on cover
+the PUBLIC `apps/public` Astro surface; this story does not touch it. `apps/mobile` is untouched
+entirely (EAS build is a no-op → `member-app-native` stays a no-op).
+
+(4) ⚠ **One forward-looking friction commitment, made now while it is free.** Both `label_en` and
+`label_hi` are REQUIRED on every definition, enforced at the validator, at the contract and at the DB
+CHECK — even though **no member surface renders them today**. That is deliberate rather than
+zealous: freeze-table row 10 (`epics.md:526`) requires every member-visible string to carry Hindi
+parity; `packages/i18n/per-pariwar/` is a BUILD-TIME strings directory a runtime-authored label can
+never reach; and a label authored English-only today becomes an **un-backfillable** parity violation
+the moment a renderer lands [[feedback_record_unattested_no_backfill]]. Requiring both now costs a
+Pariwar admin one extra field; requiring it later costs a member a screen they cannot read. The
+admin form states the reason in the tone-guide register rather than as a validation scold (AC9).
+
+Zero gratuitous friction introduced; ledger reviewed, **no new row warranted**.
+
+⚠ **Declared deliberately, not read off a vacuous pass** [[project_friction_budget_baseline_ratchet]]:
+AC-4 diffs COMMITTED history, so `pnpm friction:check` passes trivially until this work is committed.
+The green result at authoring time is not evidence of anything, and this disposition is the actual
+assessment.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

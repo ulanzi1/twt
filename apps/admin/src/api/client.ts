@@ -202,6 +202,17 @@ import {
   type FeatureFlagVersionsResponse as FeatureFlagVersions,
   TrusteeLiteResponse,
   type TrusteeLiteResponse as TrusteeLite,
+  // Story 10.12 — the per-Pariwar custom-field definition + member-value DTOs.
+  CustomFieldDefinitionsResponse,
+  PublishCustomFieldDefinitionResponse,
+  MemberCustomFieldsResponse,
+  type CustomFieldDefinitionsResponse as CustomFieldDefinitions,
+  type CustomFieldDefinitionVersion as CustomFieldVersion,
+  type CustomFieldDefinition as CustomFieldDefinitionBody,
+  type PublishCustomFieldDefinitionRequest as PublishCustomFieldBody,
+  type PublishCustomFieldDefinitionResponse as PublishCustomFieldResult,
+  type MemberCustomFieldsResponse as MemberCustomFields,
+  type SetMemberCustomFieldsRequest as SetMemberCustomFieldsBody,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1590,4 +1601,101 @@ export function retractBanner(pariwarId: string, bannerId: string): Promise<Bann
  */
 export function getTrusteeLite(pariwarId: string): Promise<TrusteeLite> {
   return apiFetch(`/api/v1/p/${encodeURIComponent(pariwarId)}/admin/trustee-lite`, TrusteeLiteResponse);
+}
+
+// ── Custom fields (Story 10.12) ───────────────────────────────────────────────
+const customFieldsBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/custom-fields`;
+
+/** Re-exported so the console can type its rows without importing @twt/contracts directly. */
+export type {
+  CustomFieldDefinitions,
+  CustomFieldVersion,
+  CustomFieldDefinitionBody,
+  PublishCustomFieldBody,
+  PublishCustomFieldResult,
+  MemberCustomFields,
+  SetMemberCustomFieldsBody,
+};
+
+/**
+ * GET the Pariwar's custom-field definitions — the IN-FORCE set and the full version history, in one
+ * call. Requires `pariwar.view_custom_fields` (pariwar_admin or auditor).
+ *
+ * Both lists come from one read deliberately: the console renders in-force definitions as the working
+ * list and history as provenance, and two calls could be served at different instants — so a field
+ * could show as retired in one panel and live in the other.
+ */
+export function listCustomFieldDefinitions(pariwarId: string): Promise<CustomFieldDefinitions> {
+  return apiFetch(`${customFieldsBase(pariwarId)}/definitions`, CustomFieldDefinitionsResponse);
+}
+
+/**
+ * POST a definition version — PUBLISH, or RETIRE when `body.retired_at` is set.
+ *
+ * ⚠ ONE ENDPOINT FOR BOTH. Retirement IS a version: it republishes the current in-force body with
+ * `retired_at` set, so the retired version's shape stays byte-identical to the shape its stored
+ * values were written under. A separate retire call would be a second write path for the server's
+ * governance fence to be forgotten on.
+ *
+ * Requires the NARROWER `pariwar.manage_custom_fields`. Rejections an operator can hit here are
+ * governance refusals, not typos — see `describePublishError` in the console.
+ */
+export function publishCustomFieldDefinition(
+  pariwarId: string,
+  hostEntity: string,
+  fieldKey: string,
+  body: PublishCustomFieldBody,
+  /**
+   * Idempotency key. The server's `(pariwar_id, host_entity, field_key, version)` unique constraint
+   * only catches a CONCURRENT double-publish; a SEQUENTIAL replay — a request the client timed out
+   * on, a double-clicked button — simply claims the next version and records two operator decisions
+   * where there was one. On an append-only registry whose whole purpose is provenance, that is a
+   * correctness problem. The console is this route's only caller, so if it does not send a key,
+   * nothing does. Follows the `flipFeatureFlag` precedent.
+   */
+  idempotencyKey: string,
+): Promise<PublishCustomFieldResult> {
+  return apiFetch(
+    `${customFieldsBase(pariwarId)}/definitions/${encodeURIComponent(hostEntity)}/${encodeURIComponent(fieldKey)}/versions`,
+    PublishCustomFieldDefinitionResponse,
+    { method: 'POST', headers: { 'idempotency-key': idempotencyKey }, body: JSON.stringify(body) },
+  );
+}
+
+/**
+ * GET a member's stored custom-field envelope. Requires `pariwar.view_custom_fields`.
+ *
+ * ⚠ NO CALLER TODAY, and kept deliberately rather than by accident: v1 ships no member-facing form
+ * renderer (the UX spec has no form-builder grammar — a gated deferral + ESCALATION 5), and the admin
+ * console authors DEFINITIONS, not per-member values. The route exists so the value surface is a
+ * real, consumable seam rather than a dead endpoint. Re-trigger: the story that adds a value-editing
+ * surface. If that story never comes, delete this rather than leaving it to rot.
+ */
+export function getMemberCustomFields(pariwarId: string, memberId: string): Promise<MemberCustomFields> {
+  return apiFetch(
+    `${customFieldsBase(pariwarId)}/members/${encodeURIComponent(memberId)}/values`,
+    MemberCustomFieldsResponse,
+  );
+}
+
+/**
+ * PUT a member's custom-field values — a WHOLE-SET REPLACE, not a patch.
+ *
+ * Unknown keys are REJECTED by the server, never dropped: silently ignoring one would turn a client
+ * bug into invisible data loss and a retired field into a value that vanishes untold.
+ *
+ * Same "no caller today" disposition as `getMemberCustomFields` above.
+ */
+export function setMemberCustomFields(
+  pariwarId: string,
+  memberId: string,
+  body: SetMemberCustomFieldsBody,
+  idempotencyKey: string,
+): Promise<MemberCustomFields> {
+  return apiFetch(
+    `${customFieldsBase(pariwarId)}/members/${encodeURIComponent(memberId)}/values`,
+    MemberCustomFieldsResponse,
+    { method: 'PUT', headers: { 'idempotency-key': idempotencyKey }, body: JSON.stringify(body) },
+  );
 }

@@ -1852,7 +1852,7 @@ Independent re-review of Groups B–E confirmed the prior `7823fe4` triage as th
 
 ---
 
-- **D2-1.7: Per-Pariwar custom fields (`packages/domain/src/per-pariwar/bihar/`)** — NOT landed at Story 1.7 (explicit deferral). The GIN-indexed JSONB custom-field mechanism (architecture §1.7 line 936-985) attaches to the members / claims / pools tables, which do not exist until Epic 3 / 6 / 7. Story 1.7's epic ACs require only the Passport table + branding (landed). **Trigger: the first custom-field host table (Epic 3+)**. Recorded in the dir README. Per [[feedback_closure_language_precision]]: Resolved via explicit deferral, not "not addressed".
+- **D2-1.7: Per-Pariwar custom fields (`packages/domain/src/per-pariwar/bihar/`)** — ✅ **CLOSED BY EDIT at Story 10.12 (2026-08-06)**, per [[feedback_closure_language_precision]]. Was: NOT landed at Story 1.7 (explicit deferral) because the GIN-indexed JSONB custom-field mechanism (architecture §1.7) attaches to the members / claims / pools tables, which did not exist until Epic 3 / 6 / 7; **trigger: the first custom-field host table (Epic 3+)**. ⚠ **That trigger fired at Epic 3, when `members` landed, and went unnoticed until Story 10.12** — an un-gated re-commitment decaying exactly as [[feedback_record_unattested_no_backfill]] predicts. Closed by: `pariwar_custom_field_definitions` (migration 0095) + `members.custom_fields` with the repo's FIRST GIN index (migration 0096) + `per-pariwar/bihar/index-inventory.ts` (the §1.7 artifact this directory was reserved for) + the rewritten dir README. ⚠ **Partial in one named respect:** the original text said "members / claims / pools"; 10.12 hosts on **members only** — claims and pools are carried forward as a NEW gated entry in the Story 10.12 section below, NOT absorbed into this closure.
 - **D3-1.7: Distributed branding cache (Redis) replacing the in-process `Map`** [`packages/domain/src/pariwar-passport/read.ts`] — Story 1.7 ships an in-process cache-aside honouring `BRANDING_BUNDLE_MAX_STALENESS_MS = 60_000` (architecture §1.10 line 1047-1048). Redis is explicitly a future trigger (§1.10 line 1077). **Trigger: the §1.10 distributed-cache trigger fires** (multi-instance API + cache-coherence pressure). The successor must still honour the 60s staleness ceiling + the `invalidatePariwarPassport` seam.
 - **D4-1.7: FK on `pariwar_passport.created_by`** [`packages/domain/src/schema/pariwar_passport.ts`] — `created_by` is an unconstrained nullable `uuid` (no FK) because the admin-users table does not exist yet. **Trigger: Story 1.9+** (admin users table lands); add the FK retroactively then.
 - **D5-1.7: ADR-0007 trustee ratification** — `drafted` at Story 1.7 author-commit (`adr-index.md` Section A row at line 75); flips `under-trustee-review` post-merge; **ratified per Trustee Panel session** (light-touch path acceptable — engineering data-model decision). Per [[feedback_closure_language_precision]]: engineering Closed by [edit] on substrate; ADR ratification Resolved via explicit deferral.
@@ -2926,3 +2926,163 @@ _Pass 2 (second adversarial review of the same commit, Group 1 = domain + migrat
 - **Idempotency-Key replay doesn't verify the request body matches the original claim.** `personal-event-handlers.ts`'s `record()` returns whatever was stored on `already_claimed` without comparing `requestPayloadHash` against the incoming request — a client reusing the same Idempotency-Key with a genuinely different body (a different `kind`) silently gets back the first response. **Reason for deferring:** verified as a faithful inheritance, not a 10.26-specific gap — this is the exact shipped pattern in `helpdesk/member-handlers.ts`, which this story's AC7 explicitly instructs following. Fixing it only here would diverge this route from the pattern it was built to mirror. **Re-trigger:** the first cross-cutting hardening pass over member-surface idempotency handling, or a real report of a mis-attributed idempotent replay — fix all call sites together. [apps/api/src/modules/contributions/personal-event-handlers.ts:115-120; apps/api/src/modules/helpdesk/member-handlers.ts:324-325]
 - **`cycle_ref` validation is looser in the domain write path than in the wire contract.** `packages/contracts/src/contributions/personal-event.ts` validates `cycleRef` as `UuidString.optional()`, but `packages/domain/src/member/events.ts`'s `PersonalEventAssertedPayloadSchema` accepts any non-empty string (`z.string().min(1).optional()`) for `cycle_ref`. **Reason for deferring:** currently unreachable — D5 records that no surface populates this field today, so there is no live caller that could exploit the gap. **Re-trigger:** whichever future story first wires a real UI/caller to `cycleRef` should tighten the domain schema to match the contract at that point, not before. [packages/domain/src/member/events.ts:264]
 - **`imposesRestorationObligation` treats a malformed restoration value on a known key as "no obligation" instead of failing loudly.** For a key in `RESTORATION_OBLIGATION_KEYS` (e.g. `core_team_recommendation`), a value that is neither a positive number nor `true` (e.g. a mistyped string) silently falls through to `false` — same as a deliberate `0`/`false`. The vocabulary-coverage test (`imposes-restoration-obligation.test.ts`) guards unknown *keys* but not malformed *value types* on known keys. **Reason for deferring:** narrow and hypothetical — requires a future malformed trustee JSONB amendment, and the practically-likely error mode (an entirely new, unclassified key) is already covered and fails loudly. This function gates AC5, the story's highest-stakes acceptance criterion, so the gap is recorded rather than silently accepted. **Re-trigger:** the first trustee amendment that introduces a non-boolean/non-numeric value on an already-classified restoration key — add a type-check that throws (or is itself counted in the vocabulary-coverage test) at that point. [packages/validity-service/src/rules.ts:343-354]
+
+## Deferred from: Story 10.12 — per-Pariwar custom fields JSONB (2026-08-06)
+
+Every entry below is **gated**: it names the concrete condition that re-opens it. An un-gated
+re-commitment decays [[feedback_record_unattested_no_backfill]] — D2-1.7 above is this repo's own
+worked example, having sat mis-marked as pending for seven epics after its trigger fired.
+
+### Coverage gaps against FR-54 / architecture §1.7
+
+- **`claims.custom_fields` and `pools.custom_fields` are NOT built (story D7).** FR-54, `epics.md:108`
+  and §1.7 all name **member, claim, pool** as hosts; Story 10.12 ships **members only**. This is a
+  real FR-54 coverage gap, not a scoping nicety. The `host_entity` column and its CHECK exist from day
+  one, so extending is additive: widen `pariwar_custom_field_definitions_host_entity_ck`, add the
+  column + GIN index to the host table, and extend `CUSTOM_FIELD_HOST_ENTITIES`.
+  ⚠ **Claims are NOT a mechanical repeat of members.** §1.9/§1.13 guard the claim aggregate against
+  absorbing "accident-assistance fields, payout-destination columns…" — and a tenant-authored claim
+  custom field *is* precisely that vector. Claims need their **own fence review**, not a free ride on
+  this story's. **Re-trigger:** the first Pariwar-specific data need on a claim or a pool. Do not
+  extend `host_entity` without re-running the AC3 fence analysis for that host.
+  [packages/domain/src/custom-fields/types.ts; packages/domain/migrations/0095_per-pariwar-custom-fields.sql]
+
+- **The three §1.7 hard-limit classes bind ONLY Story 10.12's own write paths (ESCALATION 3).** §1.7
+  freezes that they bind *"every JSONB write path … no code path bypasses them."* They currently bind
+  **none** of the repo's ~20 other JSONB columns — not `events_log.payload`, not
+  `clause_versions.payload`, not `cohort_definition`, not `policy_document`, not
+  `member_scope_context`. Story 10.12 lands `packages/domain/src/custom-fields/limits.ts` as the
+  DESTINATION and says so in that module's header rather than letting a reader assume coverage.
+  **Reason for deferring:** retro-fitting is a repo-wide change far larger than one story, and each
+  column needs its own ceiling chosen from its own usage — a single shared number would be wrong
+  everywhere. **Re-trigger:** ESCALATION 3's disposition. Flag at that point whether this warrants its
+  own gate story (a `jsonb-limits` invariant scan asserting every `jsonb(` column's writer imports the
+  constants) rather than a per-column sweep. [packages/domain/src/custom-fields/limits.ts]
+
+- **§1.7's "write-rate limit when approached" on the GIN growth ceiling is NOT built (ESCALATION 3).**
+  What ships is `ginIndexBytes()` — an OBSERVED signal read from `pg_relation_size` against a 256 MiB
+  alarm threshold, surfaced for AR-31. **Reason for deferring:** a write-time size check would put a
+  catalog read on a hot path to enforce a bound that moves in aggregate rather than per row — wrong at
+  the only moment it matters (a bulk import) and expensive at every moment it does not. A real
+  implementation needs a throttle with its own policy (who is limited, for how long, and what an
+  operator does about it), which is a story. **Re-trigger:** the first Pariwar whose observed reading
+  approaches the budget. [packages/domain/src/custom-fields/member-write.ts]
+
+- **The GIN budget reading is repo-global, not per-Pariwar.** Postgres has one index over the whole
+  `members` table, so `ginIndexBytes()` returns the SUM across tenants while §1.7 frames the budget
+  per-Pariwar. **Reason for deferring:** per-tenant attribution needs the partial functional indexes
+  described in `per-pariwar/<id>/index-inventory.ts`, none of which exist at v1 (correctly — no access
+  pattern has been observed). **Re-trigger:** the first per-Pariwar functional index, or the first
+  multi-tenant deployment where the aggregate alarm cannot be acted on.
+  [packages/domain/src/custom-fields/member-write.ts]
+
+### Deliberate v1 narrowings
+
+- **Nested-object custom fields are not supported.** §1.7 permits "small bounded objects"; v1 ships
+  flat scalars plus bounded string arrays. Enforced from two directions — the vocabulary (no object
+  type) and `CUSTOM_FIELDS_MAX_NESTING_DEPTH`. ⚠ Note the consequence recorded in
+  `member-values.spec.ts`: the depth THROW is currently **unreachable** through
+  `validateCustomFieldValues`, because any payload deep enough to trip it fails its per-type check
+  first. The bound is a backstop for the widening, not a live control today. **Re-trigger:** the first
+  real need for a bounded object — add the type, and the depth check becomes reachable.
+  [packages/domain/src/custom-fields/{types,validate,limits}.ts]
+
+- **No member-facing dynamic form renderer (ESCALATION 5).** Custom-field VALUES are written through
+  the API only. **Reason for deferring:** the UX specification has NO form-builder, field-definition
+  or per-Pariwar settings grammar anywhere, and §11 calls component grammar "tenant-invariant"
+  (`ux-design-specification.md:2254-2262`, `:2465`). Building one would mean inventing UX inside an
+  implementation story. **Re-trigger:** a UX pass that adds the grammar. The API seam is ready
+  (`getMemberCustomFields` / `setMemberCustomFields` in `apps/admin/src/api/client.ts` are the
+  no-caller-today clients kept deliberately for it). [apps/admin/src/modules/custom-fields/]
+
+- **Tier-1 and Tier-2 custom fields are not supported (ESCALATION 2).** Tier-1 needs per-value envelope
+  encryption (a per-row DEK has no home inside a shared JSONB column); Tier-2 needs a blind-index host
+  column. ⚠ **This makes the epic's own worked example unbuildable** — "alternate ID number"
+  (`epics.md:3603`) is Tier-2 by analogy to §2.7's classification of the eHRMS ID. **Re-trigger:**
+  ESCALATION 2's disposition. If a Tier-2 custom field is wanted, the fix is a blind-index host, NOT a
+  relaxed detector. [packages/domain/src/custom-fields/{types,validate}.ts]
+
+### Follow-ups on shipped artifacts
+
+- **The `custom-field-governance` gate's leg (b) skips test trees.** Files under `tests/`/`__tests__/`
+  and any `*.test.ts`/`*.spec.ts` are excluded from the sole-writer scan, so a production write
+  laundered through such a path would not be reported. **Reason for deferring:** the alternative —
+  forcing every fixture through the audited writer — would make the revert-sanity specs in
+  `packages/domain/tests/integration/custom-fields/` impossible to write, and those specs are what
+  prove fence layers 1 and 2 have teeth. Stated in the gate's README rather than hidden.
+  **Re-trigger:** any production module that legitimately needs a `tests/`-pathed file.
+  [scripts/custom-field-governance/check.ts]
+
+- **`scripts/schema-diff/lib.ts` gained a `scannableDdl` narrowing (comments + single-quoted literals
+  are not identifiers).** Story 10.12 had to touch a Story 1.16c artifact: migration 0095's
+  `…_frozen_key_ck` CHECK *forbids* a `payout_destination*` custom field, and the FR-100 gate flagged
+  that prohibition — and its explanatory comment — as though each were a payout-destination column.
+  The gate was reporting its own enforcement as a violation of itself. The narrowing is guarded by
+  four new revert-sanity fixtures (a real column on a commented line, dynamic DDL inside a literal, a
+  bare identifier, and a segment-vs-prefix case). **Reason for recording:** a change to a shipped
+  governance gate made from a story that is not about that gate deserves to be visible in the ledger
+  rather than only in a diff. **Re-trigger:** any future widening of `scannableDdl` — re-read the
+  DYNAMIC_DDL_RE arm before touching it. [scripts/schema-diff/lib.ts]
+
+- **The publish/retire audit line's `resourceLocator` carries no VERSION.** It is
+  `custom_field/<host>/<key>`. Under ADR-0030 the intent line commits BEFORE the write (that is what
+  produces the `auditId`), so at hash time the version does not exist. The version is recoverable only
+  by following the `auditId` anchor to the row. **Reason for deferring:** the alternative is widening
+  `AuditEntryInput` with a context field, which would change the hash content of every audit line in
+  the system. This is the identical, already-accepted limit Story 10.8 recorded for flag flips.
+  **Re-trigger:** a cross-cutting change to the §1.5 chain content — fix all call sites together.
+  [apps/api/src/modules/custom-fields/handlers.ts]
+
+- **The idempotency result is recorded BEFORE the caller's scope tx commits.** The keyed store runs on
+  its own connection, so a commit failure after `recordResult` leaves a recorded result for a write
+  that never landed; a replay then reads it back. **Reason for deferring:** inherited verbatim from
+  the sibling create routes (feature-flags, helpdesk), not introduced here; worst case is a client
+  told about a version it then fails to find — noisy, not corrupting. **Re-trigger:** the first
+  cross-cutting pass over idempotency-vs-transaction ordering — fix all call sites together.
+  [apps/api/src/modules/custom-fields/handlers.ts]
+
+- **ADR-0037 trustee ratification.** `drafted` at Story 10.12 author-commit. Per
+  [[feedback_closure_language_precision]]: the engineering substrate is **Closed by edit**; ADR
+  ratification is **Resolved via explicit deferral**. ⚠ It ships with ESCALATIONS 1/2/3 open, so
+  ratification is a real decision point, not a formality. **Re-trigger:** the next Trustee Panel
+  session. [docs/adr/ADR-0037-per-tenant-custom-fields-jsonb.md]
+
+## Deferred from: code review of 10-12-per-pariwar-custom-fields-jsonb (2026-08-07)
+
+- **`withIdempotency`'s replay path doesn't verify the retried request body matches the original
+  claim.** A client reusing the same Idempotency-Key with a genuinely different body silently gets
+  back the first response. **Reason for deferring:** inherited verbatim from the `feature-flags`
+  handler pattern, not introduced by this story — this is now a THIRD confirmed call site of the same
+  gap, alongside the two already recorded above (`personal-event-handlers.ts`,
+  `helpdesk/member-handlers.ts`). **Re-trigger:** the first cross-cutting hardening pass over
+  idempotency handling — fix all call sites together, this one included.
+  [apps/api/src/modules/custom-fields/handlers.ts:207-217]
+
+- **A failed `idempotencyStore.release()` after a genuine write failure is silently swallowed**
+  (`.catch(() => undefined)`), leaving the claim locked for the full 300s TTL with no operator-visible
+  cause. **Reason for deferring:** copied verbatim from the `feature-flags` handler's identical
+  `.catch(() => undefined)`, not introduced by this story. **Re-trigger:** the same cross-cutting
+  idempotency-hardening pass as the request-body-mismatch item above.
+  [apps/api/src/modules/custom-fields/handlers.ts:238]
+
+- **`CustomFieldValue`'s numeric type has no magnitude/precision ceiling beyond the blanket 8KiB
+  payload-byte budget.** A handful of maximal-precision `decimal` values could consume a
+  disproportionate share of that budget with no per-field guard comparable to `max_length`/`max_items`
+  for the string types. **Reason for deferring:** real but low-impact — total damage is already
+  bounded by `CUSTOM_FIELDS_MAX_PAYLOAD_BYTES`, and no AC asks for a per-field numeric bound.
+  **Re-trigger:** an observed payload skewed toward maximal-precision decimals, or when AC5's limit
+  set is next revisited by the Trustee Panel. [packages/contracts/src/custom-fields/member-values.ts]
+
+- **`CustomFieldsPage`'s retire-confirmation dialog state is keyed by `field_key` alone, not
+  `(host_entity, field_key)`.** Harmless today because `HOST_ENTITY` is hardcoded to `'member'`, but
+  two different-host fields sharing a `field_key` would collide on the same confirmation state.
+  **Reason for deferring:** D7 (claims/pools hosts) is already its own gated deferral above; this is a
+  UI-layer consequence of that same not-yet-built extension. **Re-trigger:** whenever D7's host
+  extension is picked up. [apps/admin/src/modules/custom-fields/CustomFieldsPage.tsx]
+
+- **No test constructs an admin with a null `display_name` and asserts the publish/retire route
+  blocks with `admin.display_name_missing`.** The fail-closed mechanism itself
+  (`requireActorDisplay()`) is reused verbatim from elsewhere in the codebase and is exercised by tests
+  there. **Reason for deferring:** pre-existing, cross-module pattern gap, not specific to this
+  story's own new logic. **Re-trigger:** the first pass that adds per-route attribution regression
+  tests as a house-style requirement. [apps/api/src/modules/custom-fields/handlers.ts]

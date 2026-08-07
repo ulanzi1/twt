@@ -365,4 +365,16 @@ export * as featureFlags from './feature-flags/index.js';
 // flags off the Story 4.6 validity payload. Every accessor is DB-free and clock-injected; the six
 // reads themselves live in `apps/api/src/modules/trustee-lite/`.
 export * as trusteeLite from './trustee-lite/index.js';
+// Story 10.12 — the per-Pariwar custom-fields `[PRIMITIVE]` (FR-54, architecture §1.7): the
+// append-only VERSIONED definitions registry, the FIXED type vocabulary, the three frozen JSONB limit
+// classes, the hand-written validators (NO runtime Zod — story D3), the validated
+// `members.custom_fields` write path, and ⭐ the FROZEN-GOVERNANCE FENCE.
+// ⚠ The fence is the load-bearing half. epics.md:3605 cites Story 1.16c (`schema-diff`) as rejecting
+// a `payout_destinations` custom field; that citation is unenforceable — a custom field is a JSONB key
+// authored at runtime, and `schema-diff` scans committed migrations, route literals and Zod exports.
+// This namespace supplies the enforcement that citation assumed existed, in three layers: the runtime
+// fence here, the 0095 CHECK constraint, and the `custom-field-governance` CI gate.
+// ⚠ It is also a DECLARED DEVIATION from §1.7, which names a code file as the definition medium. See
+// ADR-0037 and ESCALATION 1 — architecture is amended by proposal, never by a story's convenience.
+export * as customFields from './custom-fields/index.js';
 export { UUID_REGEX } from './db.js';

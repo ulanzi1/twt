@@ -631,3 +631,20 @@ export const bannerId = uuidBrand('BannerId');
 export type ModerationActionId = Brand<'ModerationActionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ModerationActionId`. */
 export const moderationActionId = uuidBrand('ModerationActionId');
+
+// ── Story 10.12 — Per-Pariwar custom-field definition id (§Naming "branding mandatory on a new ID's
+// first PR") ──
+// `PariwarCustomFieldDefinitionId` is the per-row address of a `pariwar_custom_field_definitions`
+// row — the `ClauseVersionId` / `HelpdeskRoutingPolicyVersionId` / `FeatureFlagVersionId` twin. Like
+// those and unlike the five event-derived-state primitives it is NOT any event stream's stream_id
+// (the registry row IS the record; there is no event and no projector), and there is no derive
+// function — it is a plain DB-defaulted `gen_random_uuid()`.
+//
+// ⚠ THE REPLAY PIN IS NOT THIS ID. It is the `(pariwar_id, host_entity, field_key, version)` tuple:
+// `field_key` is the stable identity across versions (the 10.8 `flag_key` precedent), so a consumer
+// records the tuple, never this uuid. The uuid addresses one ROW; the tuple addresses one MEANING.
+
+/** Per-row address of a per-Pariwar custom-field definition version. */
+export type PariwarCustomFieldDefinitionId = Brand<'PariwarCustomFieldDefinitionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `PariwarCustomFieldDefinitionId`. */
+export const pariwarCustomFieldDefinitionId = uuidBrand('PariwarCustomFieldDefinitionId');

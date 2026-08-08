@@ -1,4 +1,60 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-08e (8-14-close-of-cycle-emitter: NEW KEY -> ready-for-dev via
+#   bmad-create-story, off branch feat/10-27-member-missed-cycle-visibility @ d3d8e92, after a focused
+#   substrate-integrity investigation. NO other story status changed; 10-27 stays ready-for-dev and its
+#   IMPLEMENTATION IS PAUSED pending this story.
+#   FINDING (classification B -- committed but never implemented): `alert.closed` has NO PRODUCTION
+#   EMITTER anywhere. The only alert event types appended in apps/*/src + packages/*/src are
+#   alert.frozen/published/live (registry.ts:406-407 says so in its own words); the sole DYNAMIC append
+#   site (reconciliation/handlers.ts:147 appendPoolEvent) is bounded to reconciliation.* constants on the
+#   POOL stream; no scheduled job closes an alert (full inventory checked); CYCLE_WINDOW_DAYS=15 is pure
+#   display math, not a trigger. alert.settled is TRANSITIVELY dead -- its only transition is
+#   {from:'closed'} (state.ts:109).
+#   ⭐ ROOT CAUSE IS A CIRCULAR ATTRIBUTION BETWEEN TWO `done` STORIES. 8.1 assigned it forward
+#   ("this story emits only the cycle-open transitions ... alert.closed is Story 8.9 ... THE REDUCER ARMS
+#   EXIST, THE EMITTERS DON'T", 8-1-...md:96). 8.9's scope table asserted the opposite ("Story 8.1
+#   (shipped) | Alert lifecycle ALREADY IMPLEMENTS live -> closed as a hard transition") and on that
+#   FALSE premise ratified "Do not touch live -> closed timing". 8.9's file contains ZERO occurrences of
+#   `alert.closed` or "emitter", and none of its five ACs is a producer AC -- so 8.9 is correctly `done`
+#   against its own scope while the obligation evaporated in the 2026-07-24 rescope.
+#   NO DECISION OR ADR EVER REMOVED THE PRODUCER -- .decision-log.md and docs/adr/ contain no such entry;
+#   ADR-0035:145 CONSUMES it. Absence is omission, not intentional design change.
+#   ⚠ THE MECHANIZATION LESSON, BUILT INTO AC6: Story 8.9's AC3 was a regression fence asserting the
+#   live->closed transition is "BYTE-UNCHANGED", proven by revert-sanity. It passed. Byte-unchanged is
+#   satisfied by code that NEVER RUNS. So 8.14's gate is END-TO-END (real cycle-open -> assign -> advance
+#   -> run the actual sweep -> assert alerts.current_state='closed' + a real schema-validated event +
+#   skips_current_year=1) and must be REVERT-PROBED RED.
+#   LIVE CORROBORATION (test DB 2026-08-08): 1,246 alert.closed events, ALL actor_id NULL with exactly
+#   ONE distinct payload, while all 1,287 alerts sit `live` -- zero closed, zero settled. The fixtures
+#   INSERT around the projector, which is ALSO why the alert-state-invariant gate never caught it (the
+#   projector really is the only writer; the fixtures simply went around it).
+#   THE IMPLEMENTATION IS SMALL: projectAlertState (project.ts) is ALREADY generic over all five
+#   AlertEventTypes and does append + replay + guarded upsert. The missing piece is a caller. D1 reuses
+#   it untouched; D3 computes the close instant in apps/jobs (domain MUST NOT import contracts,
+#   errors.ts:41) anchored on cycle.frozen's attestation.committed_at -- NOT the defaultNow() column --
+#   so a member's deadline cannot disagree with the countdown they were shown. Eight ACs, seven tasks.
+#   ✅ ESCALATION 1 WITHDRAWN -- THE PREMISE WAS FALSE. It was raised as a blocking Trustee question
+#   ("do historical un-closed cycles close retroactively?") on the strength of 1,287 `live` alert rows.
+#   THOSE ROWS ARE IN THE TEST DATABASE. The system has never run in production (launch-gate inventory
+#   is pre-launch throughout, 4L measurement un-executed -- inventory-roster.md:197-202), so there is NO
+#   historical member data, no member ever lived through an un-closed cycle, and "backfill" HAS NO
+#   REFERENT. A routing note was drafted and WITHDRAWN THE SAME DAY, unsent and uncommitted.
+#   ⚠ The reasoning error is recorded rather than quietly dropped: test-DB counts were read as a
+#   description of a live member population, and the caveat "this is the test DB; it cannot prove what
+#   production has done" -- correctly stated during the investigation -- evaporated one step later at
+#   write-up. Any future claim about member-facing historical state must NAME THE DATABASE it came from.
+#   CONSEQUENCE: the emitter is UNCONDITIONAL (no floor instant, no backfill switch), Task 3 is NOT
+#   blocked, AC7 needs no ratified disposition, and NO governance decision was created or is needed.
+#   The only residue is a TEST-ISOLATION concern (dev/CI DBs hold fixture-seeded `live` alerts a sweep
+#   would close in bulk -- handled in test setup, never by a production floor).
+#   Escalation 2: alert.settled stays unemitted and its owner (Epic 9) is complete --
+#   8.14 unblocks it without supplying it. Escalation 3: the attribution defect is a PROCESS finding --
+#   a registry entry naming an owner is an assertion nothing verifies, and "named owner + reducer arm +
+#   consumers + no emitter" is a mechanically detectable condition. Story 9.8 NOTICED (9-8-...md:191)
+#   and coded defensively around it without raising it.
+#   IMPACT: 10.23's restoration instrument is structurally inert regardless of its AC14 flag (no
+#   candidate can qualify); 10.27 would ship as a permanent no-op (its own AC4 renders NOTHING at zero
+#   missed cycles). Neither story was modified by this pass.)
 # last_updated: 2026-08-08d (10-27-member-missed-cycle-visibility: NEW KEY -> ready-for-dev via
 #   bmad-create-story, off branch feat/10-23-restoration-discipline-lock-in @ 9c08020. Saved
 #   10-27-member-missed-cycle-visibility.md. Epic 10's SIXTEENTH authored story.
@@ -4448,6 +4504,7 @@ development_status:
   8-11-call-helpline-cta-cross-cutting-affordance: done
   8-12-90-second-twt-portion-loop-measurement-instrumentation: done
   8-13-nominee-vpa-claim-time-collection-resolver-wiring-upi-intent-re-enable: done
+  8-14-close-of-cycle-emitter: ready-for-dev
   epic-8-retrospective: done
 
   # ==========================================================================

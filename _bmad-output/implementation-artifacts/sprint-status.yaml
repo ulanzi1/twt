@@ -1,4 +1,102 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-08g (8-14-close-of-cycle-emitter: review -> done via bmad-code-review, off
+#   branch feat/8-14-close-of-cycle-emitter. NO other story status changed. 3 layers (Blind Hunter,
+#   Edge Case Hunter, Acceptance Auditor) produced 15 unified findings; 5 dismissed as false
+#   positives/already-handled (verified live -- e.g. a claimed sibling-signature divergence was
+#   checked and found FALSE). Both decision-needed findings resolved by the user: the D3
+#   anchor-validation gap -> docstring/error-message fix ONLY (the check itself can't tighten without
+#   a bigger @twt/contracts boundary change, not taken on now); closeAt-not-persisted -> ACCEPTED as
+#   the documented tradeoff the implementer's own Completion Notes already reasoned through. All 6
+#   patch findings APPLIED: tightened the D3 docstring/error message; added a live-DB test pinning the
+#   sweep prefilter's DANGEROUS direction (a committed_at column drifted into the FUTURE silently
+#   excludes an otherwise-due alert -- scanned:0, no alarm); added 3 tests exercising
+#   registerCloseCycleAlertWorkers' actual pg-boss wiring (queue/cron/tz + the registered handler
+#   invoking the real sweep); added hand-authored migration 0098 (alerts_current_state_live_idx
+#   partial index + cycle_freeze_commits_committed_at_idx -- the sweep's own comment called the column
+#   "an indexed prefilter", it wasn't; snapshot-free per the 0021-0097 convention) -- APPLIED +
+#   VERIFIED against twt-test-pg:5433; replaced a fragile not.toMatch(/15/) test with a structural
+#   interval-literal check; fixed a test-cleanup transaction-ordering bug (alerts deleted in
+#   autocommit BEFORE the events_log transaction opened). 3 findings DEFERRED to deferred-work.md as
+#   pre-existing, system-wide apps/jobs conventions (no real onAlarm channel wired anywhere in the job
+#   suite; no backoff/circuit-breaker family-wide; the SAVEPOINT-outside-try shape reused verbatim
+#   from restoration-discipline.ts/claim-ocr-parity.ts/claim-peer-mesh.ts/several domain write
+#   functions). All touched packages typecheck + lint clean; close-cycle-alert.test.ts (9/9),
+#   close-cycle-alert-live.test.ts (5/5), close-of-cycle.spec.ts (6/6), alert-stream-concurrency.spec.ts
+#   (2/2) all pass against twt-test-pg:5433.
+# last_updated: 2026-08-08f (8-14-close-of-cycle-emitter: ready-for-dev -> in-progress -> review via
+#   bmad-dev-story, off branch feat/8-14-close-of-cycle-emitter @ aa94822. NO other story status changed;
+#   10-27 stays ready-for-dev and its implementation REMAINS PAUSED (see SEQUENCING below).
+#   ⭐ `alert.closed` NOW HAS A PRODUCTION EMITTER. Two pieces: (1) @twt/domain
+#   alert.closeCycleAlert(client, {cycleId, closeAt}) -- resolves the alert by the 8.1 deterministic
+#   deriveAlertId, applies the ASYMMETRIC not-`live` precondition (closed/settled -> idempotent no-op
+#   SUCCESS; draft/frozen/published -> ERROR, because a cycle whose window never opened cannot close),
+#   and drives the transition THROUGH THE EXISTING projectAlertState. (2) apps/jobs
+#   scheduler/close-cycle-alert.ts -- the hourly IST cross-tenant sweep, WIRED INTO boot.ts beside
+#   registerCycleOpenAlertWorkers. ⛔ projectAlertState is BYTE-UNCHANGED: no second write path, genesis
+#   rules + alert.frozen cross-validation untouched, alerts.current_state still projector-only (the
+#   alert-state-invariant gate is green and still names exactly ONE allowlisted writer).
+#   ⚠ THE SWEEP IS PRIMARY, NOT RECOVERY, and that is stated at the top of the file. Story 8.1's D4 made
+#   the cycle-open sweep secondary to a post-commit enqueue because a FREEZE is an event you can hook. A
+#   Day-15 close is a TIME boundary -- nothing commits, nothing fires -- so the periodic sweep IS the
+#   producer and its cadence is a member-facing property. The next reader will otherwise copy the
+#   "recovery only" framing and under-schedule it.
+#   D3 HELD: the authoritative anchor is cycle.frozen's attestation.committed_at (the same value
+#   openCycleAlert reads and the member's countdown is computed from). cycle_freeze_commits.committed_at
+#   (defaultNow()) is used ONLY as an indexed prefilter; every candidate's close instant is recomputed
+#   from the PAYLOAD and re-checked. Pinned by a live-DB regression that drags the COLUMN a year into the
+#   past and proves the cycle still does NOT close until the PAYLOAD boundary. AC3 held: the instant is
+#   computed in apps/jobs from CYCLE_WINDOW_DAYS and passed in explicitly; the domain has no clock read
+#   and no `15`; @twt/domain still does not import @twt/contracts; the SQL prefilter BINDS the derived
+#   instant as a parameter (no `interval '15 days'` literal to drift). Arithmetic is fixed-ms UTC.
+#   ⭐ AC6 GATE IS END-TO-END AND WAS REVERT-PROBED RED (3/3) -- the whole point of the story. It drives
+#   the real spawn saga -> real cycle.frozen -> the SHIPPED runCycleOpenAlert worker -> a real
+#   member_pool_assignments row -> the ACTUAL sweep, then asserts alerts.current_state='closed', a real
+#   schema-validated NON-fixture alert.closed payload at stream version 4, and skips_current_year = 1.
+#   It also asserts skips_current_year = 0 BEFORE the sweep, so the green cannot be a pre-existing value.
+#   This is the FIRST test in the repository proving the R7 fact chain works from a PRODUCTION-PRODUCED
+#   closed cycle rather than a manufactured one. Contrast 8.9's AC3, which asserted the transition was
+#   "byte-unchanged" and passed over code that never ran.
+#   AC7 held UNCONDITIONALLY: no floor instant, no backfill switch, with the pre-launch reasoning stated
+#   at the definition site. ⚠ EMPIRICALLY the test-isolation concern did NOT materialize -- twt-test-pg
+#   holds ZERO cycle.frozen events (verified before and after), so the payload-anchored scan finds no
+#   fixture candidates at all; the 1,654 `live` fixture alerts are invisible to it.
+#   ⚠ ONE DELIBERATE DEPARTURE FROM THE AC TEXT, RAISED NOT ABSORBED (AC1 invites this): the caller's
+#   close instant CANNOT be recorded as events_log.occurred_at without modifying projectAlertState, which
+#   AC1 freezes, and the pre-registered AlertClosedPayloadSchema ({...auditShape}.strict()) has nowhere
+#   to carry it. So occurred_at stays the DB default (the RECORDING instant), consistent with every other
+#   alert lifecycle event, and closeAt is made load-bearing differently: the domain CROSS-CHECKS it
+#   against the cycle's own durable cycle.frozen attestation and refuses an instant that could not be
+#   this cycle's Day-15 boundary -- D3's exact hazard, caught before anything reaches an append-only log.
+#   Consequence: a recorded close trails its boundary by at most one hourly tick. FLAGGED FOR REVIEW as a
+#   judgement call, not presented as required by the AC.
+#   STALE ATTRIBUTIONS CORRECTED (comments only, no behaviour change): registry.ts described alert.closed
+#   as "Story 8.9 owns the emitter" -- false for four stories. That line plus the matching claims in
+#   alert/events.ts, alert/state.ts and schema/alerts.ts now name Story 8.14, and a STANDING CAVEAT was
+#   added beside the registry block: AN OWNER NAMED THERE IS AN ASSERTION NOTHING VERIFIES. Leaving them
+#   would have re-armed the exact failure this story corrects.
+#   SCOPE HELD: no migration (none needed, none added). alert.settled NOT emitted -- Epic 9's, recorded.
+#   The owner-gap DETECTOR was NOT built -- recorded as a retrospective/process finding. Stories 10.23 and
+#   10.27 NOT modified. NO governance decision opened, and none was needed.
+#   VERIFICATION (AC8), reported honestly per [[feedback_record_unattested_no_backfill]]:
+#   BASELINE (pre-edit, same DB) = 30/31 green; `test (unit)` failed on @twt/validity-service (3,
+#   validity-cache double-run) + @twt/admin (10, RTL contention), with @twt/jobs and @twt/domain
+#   INTERRUPTED by turbo (no results, so no baseline claim is made about them).
+#   AFTER = 30/31 green with the FAILING JOB INVERTED: `test (unit)` is now GREEN (better than baseline),
+#   `integration-tests` failed. ALL FIVE of its failures are TIMEOUTS, not assertion failures -- a
+#   20s-budget test took 121s, the 90s determinism gate took 129s, plus a vitest module-resolution
+#   timeout -- i.e. the documented contention class, aggravated by the double-run
+#   ([[project_ci_local_double_run_pollution]], [[project_ci_local_concurrency_oversubscription]]).
+#   INNOCENCE PROVEN BY ISOLATION, per that memory's protocol: @twt/validity-service 284/284 in 11.7s
+#   (the determinism gate 129s-timeout -> 5.7s), @twt/jobs 320/320, @twt/api 871/871 (+1 skipped),
+#   @twt/channels 204/204; @twt/domain 2549/2549, @twt/events 33, @twt/queue 3, @twt/niyamavali-engine 144
+#   already green inside the ci:local run itself. All 26 static gates green including alert-state-invariant.
+#   ⛔ SEQUENCING -- what must happen next, recorded so it does not decay: re-run the real downstream chain
+#   through STORY 10.23 against PRODUCTION-PRODUCED alert.closed facts BEFORE resuming 10.27. 10.23's whole
+#   suite passed against fixture events raw-INSERTed BELOW the projector, so scanR7ViolatorCandidates /
+#   imposesRestorationObligation / the overlay have never met a state the system could reach. EXPECT
+#   FINDINGS. Only then resume 10.27, whose row source IS the closed-cycle opportunity set. Both recorded
+#   in deferred-work.md alongside Escalation 2 (alert.settled: reachable-but-unemitted, Epic 9's, RECORD
+#   ONLY) and Escalation 3 (the registry-attribution process finding; detector explicitly NOT built).)
 # last_updated: 2026-08-08e (8-14-close-of-cycle-emitter: NEW KEY -> ready-for-dev via
 #   bmad-create-story, off branch feat/10-27-member-missed-cycle-visibility @ d3d8e92, after a focused
 #   substrate-integrity investigation. NO other story status changed; 10-27 stays ready-for-dev and its
@@ -4504,7 +4602,7 @@ development_status:
   8-11-call-helpline-cta-cross-cutting-affordance: done
   8-12-90-second-twt-portion-loop-measurement-instrumentation: done
   8-13-nominee-vpa-claim-time-collection-resolver-wiring-upi-intent-re-enable: done
-  8-14-close-of-cycle-emitter: ready-for-dev
+  8-14-close-of-cycle-emitter: done
   epic-8-retrospective: done
 
   # ==========================================================================

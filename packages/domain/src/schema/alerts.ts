@@ -12,8 +12,9 @@
 // One alert per contribution cycle: when Epic 7's spawn saga emits `cycle.frozen`,
 // the cycle-open trigger (alert/project.ts + apps/jobs) mints THIS alert and drives
 // it draft → frozen → published → live (the contribution window opens). `closed` is
-// Story 8.9, `settled` is Epic 9's exclusive (yellow → green flip). The reducer
-// arms for all six states exist (alert/state.ts); this story emits only the first three.
+// emitted by Story 8.14's close-of-cycle sweep at FR-22's hard Day-15 boundary; `settled`
+// is Epic 9's exclusive (yellow → green flip) and remains UNEMITTED. The reducer arms for
+// all six states exist (alert/state.ts); Story 8.1 emitted only the first three.
 //
 // ── alerts.current_state is a READ-OPTIMIZATION CACHE, not the source of truth ──
 // The source of truth for an alert's lifecycle state is the alert's `events_log`
@@ -43,6 +44,7 @@
 // Naming discipline per architecture line 3663-3677: DB columns snake_case, TS
 // fields camelCase, table snake_case-plural. Header style mirrors schema/pools.ts.
 
+import { sql } from 'drizzle-orm';
 import { bigint, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import type { AlertId, CycleFreezeCommitId, PariwarId } from '../ids/index.js';
@@ -140,6 +142,11 @@ export const alerts = pgTable(
     // (23505), never a duplicate alert. Also serves the cycle → alert lookup the
     // recovery sweep runs (find cycles with a cycle.frozen but no minted alert).
     uniqueIndex('alerts_cycle_id_uq').on(t.cycleId),
+    // Story 8.14 (Review Finding) — the close-of-cycle sweep's cross-tenant scan filters
+    // `WHERE current_state = 'live'` every hour, BYPASSRLS, across every Pariwar. `live` is a small
+    // minority of rows once cycles start closing/settling, so a partial index keeps that filter an
+    // index scan instead of a full-table scan as `alerts` grows.
+    index('alerts_current_state_live_idx').on(t.currentState).where(sql`current_state = 'live'`),
   ],
 );
 

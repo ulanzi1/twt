@@ -24,7 +24,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { setPariwarScope } from '../../../src/db.js';
 import { cycleFreezeCommitId as toCycleId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import { PoolStreamConcurrencyError } from '../../../src/pool/index.js';
-import { deriveAlertId, projectAlertState } from '../../../src/alert/index.js';
+import { closeCycleAlert, deriveAlertId, projectAlertState } from '../../../src/alert/index.js';
 import { PARIWAR_A } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -153,5 +153,162 @@ describe.skipIf(!hasDatabase)('alert stream — two-connection concurrency (own-
       c1.release();
       c2.release();
     }
+  }, 20_000);
+
+  // ── Story 8.14 (AC4) — the CLOSE half of the same race ────────────────────────────────────────
+  // The genesis race above proves version 1 is arbitrated. The close is the OTHER concurrency shape
+  // the emitter can actually hit in production: two sweep ticks (or a redelivered job racing the
+  // next tick) both find the same alert `live` and both attempt the SAME next version. The sweep
+  // treats the loser's `PoolStreamConcurrencyError` as benign — but only because exactly one close
+  // is ever appended, which is what this pins.
+  it('two parallel closes on the SAME live alert — one wins, one throws PoolStreamConcurrencyError; ONE alert.closed', async () => {
+    const cycleId = randomUUID();
+    const alertId = deriveAlertId(cycleId);
+    createdAlerts.push(alertId, cycleId);
+    const committedAt = new Date('2026-07-15T06:00:00Z');
+    const closeAt = new Date(committedAt.getTime() + 15 * 24 * 60 * 60 * 1000);
+
+    // Seed a COMMITTED live alert + the cycle.frozen the close's D3 guard validates against.
+    const setup = await pool.connect();
+    try {
+      await setup.query('BEGIN');
+      await setPariwarScope(setup, PARIWAR_A);
+      await setup.query(
+        `INSERT INTO events_log (stream_id, event_type, payload, event_version, actor_id, pariwar_id)
+         VALUES ($1,'cycle.frozen',$2::jsonb,1,NULL,$3)`,
+        [
+          cycleId,
+          JSON.stringify({
+            cycle_id: cycleId,
+            pariwar_id: PARIWAR_A,
+            pool_count: 1,
+            pool_ids: [randomUUID()],
+            pool_canonical_identifiers: ['P-CLOSE-RACE'],
+            attestation: {
+              actor_id: 'trustee-actor-1',
+              actor_display: 'Trustee One',
+              committed_at: committedAt.toISOString(),
+            },
+          }),
+          PARIWAR_A,
+        ],
+      );
+      const common = {
+        alertId,
+        cycleId: toCycleId(cycleId),
+        pariwarId: toPariwarId(PARIWAR_A),
+        poolCount: 1,
+        createdByActor: 'trustee-actor-1',
+        actorId: null,
+      } as const;
+      await projectAlertState(setup, {
+        ...common,
+        eventType: 'alert.frozen',
+        payload: {
+          from_state: 'draft',
+          to_state: 'frozen',
+          trigger: 'cycle.frozen:cycle_open',
+          actor: 'system',
+          cycle_id: cycleId,
+          pariwar_id: PARIWAR_A,
+          pool_count: 1,
+          pool_ids: [randomUUID()],
+          attestation: {
+            actor_id: 'trustee-actor-1',
+            actor_display: 'Trustee One',
+            committed_at: committedAt.toISOString(),
+          },
+        },
+      });
+      await projectAlertState(setup, {
+        ...common,
+        eventType: 'alert.published',
+        payload: {
+          from_state: 'frozen',
+          to_state: 'published',
+          trigger: 'cycle.frozen:cycle_open',
+          actor: 'system',
+          time_critical: false,
+        },
+      });
+      await projectAlertState(setup, {
+        ...common,
+        eventType: 'alert.live',
+        payload: {
+          from_state: 'published',
+          to_state: 'live',
+          trigger: 'cycle.frozen:cycle_open',
+          actor: 'system',
+        },
+      });
+      await setup.query('COMMIT');
+    } catch (e) {
+      await setup.query('ROLLBACK').catch(() => undefined);
+      throw e;
+    } finally {
+      setup.release();
+    }
+
+    // Same deterministic rendezvous as the genesis race above, and for the same reason: without a
+    // pinned pre-commit snapshot the loser would read an ALREADY-closed alert and short-circuit on
+    // the idempotent no-op arm — a legitimate outcome, but not the one under test here.
+    let releaseBarrier!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+    let arrived = 0;
+    const arriveAndWait = (): Promise<void> => {
+      if (++arrived === 2) releaseBarrier();
+      return barrier;
+    };
+
+    async function attemptClose(client: pg.PoolClient): Promise<boolean> {
+      await client.query('BEGIN');
+      await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+      await client.query('SET LOCAL ROLE twt_app');
+      await setPariwarScope(client, PARIWAR_A);
+      await client.query('SELECT max(event_version) FROM events_log WHERE stream_id = $1', [alertId]);
+      await arriveAndWait();
+      try {
+        const res = await closeCycleAlert(client, { cycleId, closeAt });
+        await client.query('COMMIT');
+        return res.closed;
+      } catch (e) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw e;
+      }
+    }
+
+    const c1 = await pool.connect();
+    const c2 = await pool.connect();
+    try {
+      const [r1, r2] = await Promise.allSettled([attemptClose(c1), attemptClose(c2)]);
+      const fulfilled = [r1, r2].filter((r) => r.status === 'fulfilled');
+      const rejected = [r1, r2].filter((r) => r.status === 'rejected');
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect((fulfilled[0] as PromiseFulfilledResult<boolean>).value).toBe(true);
+      expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(PoolStreamConcurrencyError);
+      expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
+        poolId: alertId,
+        attemptedVersion: 4,
+      });
+    } finally {
+      c1.release();
+      c2.release();
+    }
+
+    // AC4's load-bearing assertion: no second `alert.closed` was ever appended to the stream.
+    const { rows } = await pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM events_log WHERE stream_id = $1 AND event_type = 'alert.closed'`,
+      [alertId],
+    );
+    expect(Number(rows[0]!.n)).toBe(1);
+    const { rows: proj } = await pool.query<{ current_state: string }>(
+      'SELECT current_state FROM alerts WHERE alert_id = $1',
+      [alertId],
+    );
+    expect(proj[0]!.current_state).toBe('closed');
   }, 20_000);
 });

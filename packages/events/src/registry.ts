@@ -402,9 +402,15 @@ export const EVENT_TYPE_REGISTRY = {
   // the ALERT stream (stream_id = alert_id = deriveAlertId(cycle_id); one alert per cycle).
   // These are DOMAIN LIFECYCLE events (the state-machine transitions), NOT the Story 5.1
   // AlertCategory notification payloads (contracts/src/alerts/alert.ts) — Story 8.8 dispatches
-  // a notification when it OBSERVES the alert.published lifecycle event (D6). This story emits
-  // only frozen/published/live (the cycle-open path); alert.closed is Story 8.9, alert.settled
-  // is Epic 9's exclusive.
+  // a notification when it OBSERVES the alert.published lifecycle event (D6). Story 8.1 emitted
+  // only frozen/published/live (the cycle-open path); alert.closed's emitter is Story 8.14,
+  // alert.settled is Epic 9's exclusive and remains UNEMITTED.
+  //
+  // ⚠ An owner named here is an ASSERTION NOTHING VERIFIES. `alert.closed` sat in this registry
+  // attributed to Story 8.9 for four stories with no emitter anywhere in the repository: 8.1
+  // assigned it forward, 8.9's scope table assumed it had already shipped, and five consumers were
+  // built on a fact no code could produce. Before trusting an attribution in this file, confirm a
+  // producer actually exists (Story 8.14 — recorded there as a process finding).
   'alert.frozen': {
     type: 'alert.frozen',
     description:
@@ -426,7 +432,7 @@ export const EVENT_TYPE_REGISTRY = {
   'alert.closed': {
     type: 'alert.closed',
     description:
-      'Contribution window closed (live → closed) — the calendar-aware close-of-cycle transition (Story 8.9 owns the emitter; Story 8.1 authors the reducer arm + registers the type). No more contributions accepted.',
+      'Contribution window closed (live → closed) at FR-22\'s hard Day-15 boundary. Story 8.1 authored the reducer arm + registered the type; Story 8.14 built the EMITTER (@twt/domain alert.closeCycleAlert, driven by the apps/jobs close-of-cycle sweep — the PRIMARY producer, since a time boundary has nothing to hook post-commit). No more contributions accepted. Story 8.9 governs the post-close RECONCILIATION TAIL only; it does not move this boundary.',
     schema: alert.AlertClosedPayloadSchema,
   },
   'alert.settled': {

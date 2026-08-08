@@ -233,9 +233,18 @@ on the discharge. **Owner: Story 2.2 tone sign-off. Status: OPEN.**
   6. **Q6 — DISPLAY-ONLY.** No push notification. Revisit once the surface and Story 10.23's catch-up
      path both exist.
 
-  **Re-trigger:** Story 10.23 (Restoration Discipline Lock-In) landing — at that point, create the
-  member-facing missed-cycle story via `bmad-create-story`, carrying forward Q2/Q3/Q5/Q6's AC
-  constraints verbatim from this entry.
+  **Re-trigger: ✅ FIRED and DISCHARGED 2026-08-08.** Story 10.23 landed `done` (`7729951`), and the
+  member-facing story was created via `bmad-create-story` as
+  **`10-27-member-missed-cycle-visibility`** (`ready-for-dev`), carrying Q2/Q3/Q5/Q6 verbatim into
+  AC3/AC2/AC8/AC9 and populating Q4's `cycleRef` in AC6.
+
+  ⚠ **Discharged as "story created", NOT as "concern resolved"** ([[feedback_closure_language_precision]]).
+  Q1 sequenced this surface after 10.23 on the rationale that *"showing an obligation with no visible
+  resolution path would be an incomplete disclosure, not a kinder one"* — and **10.23 landed with its
+  Escalation 6 UNDISCHARGED**, so no catch-up process exists and that rationale is still unmet. Story
+  10.27 carries this as its own **Escalation 1**, routed to the Trustee Panel **together with** the
+  two-string copy-truth defect below, since both are one question: what may the system tell a member
+  about an obligation it cannot let them satisfy?
 
 - **⚠ Escalation 6 — the query budget grew, and the 4L figure is STILL UN-ATTESTED.** Single-member
   fact read **2 → 3** (the assertion `EXISTS`); Pariwar scan **8 → 10** (+1 assertion existential,

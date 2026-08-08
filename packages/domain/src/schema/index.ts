@@ -314,6 +314,15 @@ export * from './feature_flag_versions.js';
 // carries only what a plaintext-JSONB event payload may not: the Tier-1 rationale ciphertext, the
 // actor display snapshot, and the FR-6 rejoin-lock instant.
 export * from './member_moderation_actions.js';
+// Story 10.23 — the restoration-discipline instrument: `member_restoration_impositions`, the
+// APPEND-ONLY record of a §3.1 R7 lock-in. The SECOND governance overlay's table.
+// ⚠ NOT the restoration status — that is DERIVED by folding `member.restoration_discipline.*` events
+// (AC1), and expiry in particular is derived at read from `expires_at` (AC4), so there is no status
+// column a stale row could contradict. It exists because VERSION PINNING IS NOT DERIVABLE (D1): the
+// duration in force at imposition must survive a Trustee re-tune, which is FR-8's whole point.
+// ⚠ NO PII column, no actor, no Tier-1 byte (D5) — imposition is automatic and the clause id is the
+// reason — so append-only holds absolutely, with no RTBF UPDATE carve-out of the 0092 kind.
+export * from './member_restoration_impositions.js';
 // Story 10.24 — the contribution-fact PROJECTION substrate (D1): `member_contribution_ledger` (one row
 // per `contribution.confirmed` event, its reversal folded into a NULLABLE, TIME-BEARING `reversed_at`)
 // + `member_pool_assignments` (one row per (member, pool) at freeze). Together they make the five

@@ -57,8 +57,26 @@
 import { R7_CLAUSE_IDS } from '@twt/niyamavali-engine';
 import { describe, expect, it } from 'vitest';
 
+import { R7_SUPPLIED_MEMBER_FACT_KEYS } from '../src/member-facts.js';
 import { R7_HELD_FACTS, R7_SUPPLIED_FACT_KEYS } from '../src/producer.js';
+import { R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES } from '../src/r7-fact-surface.js';
 import { R7_ACTIVATED_CLAUSE_IDS, R7_HELD_CLAUSES, VALIDITY_RULE_ORDER } from '../src/rules.js';
+
+/**
+ * Owners a hold may declare — a story key while a STORY owes the blocker, or a governance body when
+ * the remaining blocker is an instrument no story can satisfy. Bounded so `owner` cannot decay into
+ * free text once the hyphenated `story-10-NN` convention stops applying (Story 10.23, AC9/D7).
+ */
+const HOLD_OWNER_PATTERN = /^(story-\d+-\d+|trustee-panel)$/;
+
+/**
+ * A blocker shaped like a FACT key — the anti-cheat for `blockedByNonFacts` (Story 10.23, AC9/D7).
+ *
+ * The non-fact bucket exists so a hold can survive its last fact blocker being supplied. It must
+ * NEVER become a hiding place: parking a supplied fact key there would dodge the falsifiability
+ * check entirely and re-create exactly the decorative hold this apparatus exists to prevent.
+ */
+const FACT_KEY_SHAPE = /^(contribution|member|claim|pool|alert)\./;
 
 /** The R8 family id — the clause this story must NOT activate (the R8 trap, story Boundary §). */
 const R8_CLAUSE_ID = 'niy.ninety-percent-rule.r8';
@@ -102,10 +120,15 @@ describe('Story 10.24 — R7 activation/hold totality (AC3)', () => {
     // for a satisfied invariant ([[feedback_gate_scope_semantic_coverage]]).
     expect(R7_HELD_CLAUSES.length).toBe(2);
     for (const clause of R7_HELD_CLAUSES) {
-      expect(clause.blockedBy.length).toBeGreaterThan(0);
-      // Hyphenated `story-10-NN`, matching the convention every other producer/sentinel literal in
-      // this story uses (payload.ts:303, producer.ts:193-194, types.ts:85) — code review, 2026-08-05.
-      expect(clause.owner).toMatch(/story-10-\d+/);
+      // ⚠ Story 10.23 (AC9/D7) WIDENED this vacuity guard from `blockedBy.length > 0` to blockers of
+      // ANY KIND. The old form forced a hold to keep naming a fact blocker to stay green — so once
+      // Story 10.23 supplied `member.joining_discipline_state`, the only way to remain compliant
+      // would have been to keep listing a fact that IS supplied (a lie the falsifiability assertion
+      // below would then have caught) or to delete the entry (activating a clause `prd.md:346`
+      // forbids). Counting both buckets makes `blockedBy: []` + a real non-fact blocker the honest,
+      // expressible end state. A hold with NO blocker of any kind is still a decorative hold.
+      expect(clause.blockedBy.length + clause.blockedByNonFacts.length).toBeGreaterThan(0);
+      expect(clause.owner).toMatch(HOLD_OWNER_PATTERN);
     }
   });
 });
@@ -130,17 +153,39 @@ describe('Story 10.24 — VALIDITY_RULE_ORDER is the OMISSION mechanism (AC3, D4
 describe('Story 10.24 — the hold is FALSIFIABLE, not decorative (AC3)', () => {
   const supplied: readonly string[] = R7_SUPPLIED_FACT_KEYS;
 
-  it("every held clause's blockedBy names a fact key this producer genuinely does NOT supply", () => {
-    // Same vacuity guard as above: an empty `R7_HELD_CLAUSES` would satisfy this loop trivially.
+  it("every held clause's blockedBy names a fact key NO producer, in ANY family, supplies", () => {
+    // ⭐ Story 10.23 (AC9/D7) re-pointed this from `R7_SUPPLIED_FACT_KEYS` (the `contribution.*`
+    // producer's key set ALONE) to the union across every fact family. As written for 10.24 this
+    // assertion could not see a `member.*` key at all, so R7(A)/(B) — held on exactly such a key —
+    // were certified honest VACUOUSLY, and would have stayed certified at the moment Story 10.23
+    // satisfied the stated reason. A gate scoped to the wrong package still misses the target.
     expect(R7_HELD_CLAUSES.length).toBe(2);
     for (const clause of R7_HELD_CLAUSES) {
       for (const key of clause.blockedBy) {
         expect(
-          supplied.includes(key),
-          `${clause.clauseId} claims to be blocked by "${key}", but the producer DOES supply it — the hold has outlived its reason and must be re-justified or lifted.`,
+          R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES.includes(key),
+          `${clause.clauseId} claims to be blocked by "${key}", but a producer DOES supply it — the hold has outlived its reason and must be re-justified or lifted.`,
         ).toBe(false);
       }
     }
+  });
+
+  it('the widened surface genuinely spans BOTH fact families — not just the contribution producer', () => {
+    // Pins the widening itself. Without this, someone could quietly re-point the assertion above
+    // back at the single-family set and every other test here would stay green.
+    for (const key of R7_SUPPLIED_FACT_KEYS) {
+      expect(R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES).toContain(key);
+    }
+    for (const key of R7_SUPPLIED_MEMBER_FACT_KEYS) {
+      expect(R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES).toContain(key);
+    }
+    expect(R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES.length).toBe(
+      R7_SUPPLIED_FACT_KEYS.length + R7_SUPPLIED_MEMBER_FACT_KEYS.length,
+    );
+    // No `member.*` key may hide in the contribution producer's own set, and vice versa — the two
+    // families are declared in different modules precisely so neither can absorb the other.
+    for (const key of R7_SUPPLIED_FACT_KEYS) expect(key.startsWith('contribution.')).toBe(true);
+    for (const key of R7_SUPPLIED_MEMBER_FACT_KEYS) expect(key.startsWith('member.')).toBe(true);
   });
 
   it('supplies ALL SEVEN engine contribution fact keys — the mechanization reaches its end state', () => {
@@ -163,13 +208,28 @@ describe('Story 10.24 — the hold is FALSIFIABLE, not decorative (AC3)', () => 
     expect(R7_HELD_FACTS.length).toBe(0);
   });
 
-  it('the remaining holds are blocked by NON-FACTS — no producer can lift them', () => {
+  it('the remaining holds are blocked by NON-FACTS — no producer, in any family, can lift them', () => {
     // The honest end state, stated so nobody reads "R7_HELD_FACTS is empty" as "nothing is held".
-    // R7(A)/(B) wait on Story 10.23's `member.joining_discipline_state` (a MEMBER fact, not a
-    // `contribution.*` one) AND, beyond any story, the Trustee Panel's published Part 11 amendment
-    // (Decision 2026-08-06-077). Neither is something this producer can supply.
+    //
+    // ⭐ Story 10.23 (AC9/D7) RE-EXPRESSED this. As written for 10.24 it asserted only
+    // `!key.startsWith('contribution.')` — which `member.joining_discipline_state` satisfies
+    // TRIVIALLY, so the assertion stopped biting the moment a second fact family existed. It now
+    // asserts the property the title actually claims: every held clause carries at least one blocker
+    // that is NOT a fact at all, so no producer can ever lift it.
     for (const clause of R7_HELD_CLAUSES) {
-      for (const key of clause.blockedBy) expect(key.startsWith('contribution.')).toBe(false);
+      expect(
+        clause.blockedByNonFacts.length,
+        `${clause.clauseId} names no NON-FACT blocker — every blocker it lists could in principle be supplied by a producer, so the hold is not durable and must be re-justified or lifted.`,
+      ).toBeGreaterThan(0);
+      // ⛔ THE ANTI-CHEAT. The non-fact bucket must never become a parking space for a fact key:
+      // moving a supplied key in here would dodge the falsifiability assertion above completely.
+      for (const blocker of clause.blockedByNonFacts) {
+        expect(
+          FACT_KEY_SHAPE.test(blocker),
+          `${clause.clauseId} lists "${blocker}" as a NON-FACT blocker, but it is shaped like a fact key — a fact blocker parked here escapes the falsifiability check and makes the hold decorative.`,
+        ).toBe(false);
+        expect(R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES).not.toContain(blocker);
+      }
     }
     // ⚠ And the NEXT fact-hold has no mechanization at all: `contribution.compliance_percent` (R8)
     // is UNOWNED (`deferred-work.md`) and is not an `R7_CONTRIBUTION_FACT_KEYS` member, so nothing
@@ -177,26 +237,38 @@ describe('Story 10.24 — the hold is FALSIFIABLE, not decorative (AC3)', () => 
     expect(supplied).not.toContain('contribution.compliance_percent');
   });
 
-  it('R7(A) is STILL HELD after Story 10.25 supplied its restoration count (D6)', () => {
-    // ⚠ The tempting moment, mechanized. Every story before 10.25 could say "R7(A) is dark because a
-    // fact is missing". After 10.25 that sentence is HALF true — and half-true is how a normative
-    // prohibition gets rationalised away. `prd.md:346` is unchanged and unconditional, and R7(A) has
-    // THREE activation conditions, not two: `member.joining_discipline_state` (Story 10.23), AND the
-    // Trustee Panel's PUBLISHED Part 11 amendment replacing the `total_count < 10` proxy population
-    // (Decision 2026-08-06-077), which no story owns and no code change can satisfy.
+  it('⭐ R7(A)/(B) are STILL HELD after Story 10.23 supplied their LAST FACT (AC8)', () => {
+    // ⚠⚠ THE TEMPTING MOMENT, MECHANIZED — and this is the sharpest version of it the apparatus has
+    // faced. Before Story 10.25, "R7(A) is dark because a fact is missing" was simply true. After
+    // 10.25 it was half true. **After Story 10.23 it is FALSE: every fact blocker is satisfied.**
+    // Half-true is how a normative prohibition gets rationalised away, and "no facts are missing" is
+    // the most persuasive-sounding reason available to activate a clause that must NOT be activated.
+    //
+    // `prd.md:346` is unchanged and unconditional. R7(A) has THREE activation conditions and stories
+    // can only ever satisfy two of them; the third is a Trustee Panel instrument (Decision
+    // 2026-08-06-077) that no code change can satisfy. Verified live 2026-08-07: §3.1 and the seed
+    // rows both still carry the disclaimed proxy populations.
     expect(supplied).toContain('contribution.r7a_restorations_used');
-    expect(R7_HELD_CLAUSES.map((c) => String(c.clauseId))).toContain(
-      'niy.contribution-discipline.r7-a',
-    );
-    expect([...R7_ACTIVATED_CLAUSE_IDS] as string[]).not.toContain(
-      'niy.contribution-discipline.r7-a',
-    );
+    expect(R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES).toContain('member.joining_discipline_state');
 
-    const r7a = R7_HELD_CLAUSES.find((c) => c.clauseId === 'niy.contribution-discipline.r7-a');
-    // The hold was NARROWED to the one remaining fact, not deleted — deleting it (or activating r7-a)
-    // to make the falsifiable-hold assertion above go green is the failure this apparatus exists to
-    // catch ([[feedback_mechanization_split_commitment]]).
-    expect(r7a?.blockedBy).toEqual(['member.joining_discipline_state']);
-    expect(r7a?.owner).toBe('story-10-23');
+    for (const clauseId of ['niy.contribution-discipline.r7-a', 'niy.contribution-discipline.r7-b']) {
+      const held = R7_HELD_CLAUSES.find((c) => String(c.clauseId) === clauseId);
+      expect(held, `${clauseId} must remain HELD`).toBeDefined();
+      // ⛔ The hold was NARROWED, not deleted. `blockedBy: []` is the HONEST end state — every fact
+      // blocker met — and it is expressible only because `blockedByNonFacts` carries the reason the
+      // hold survives. Deleting the entry, or adding the id to `R7_ACTIVATED_CLAUSE_IDS`, to make
+      // the falsifiability assertion above go green is precisely the failure this apparatus exists
+      // to catch ([[feedback_mechanization_split_commitment]]).
+      expect(held?.blockedBy).toEqual([]);
+      expect(held?.blockedByNonFacts).toEqual([
+        'niyamavali-part-11-amendment:r7a-b-population-replacement',
+      ]);
+      // ⚠ Ownership moved to the Trustee Panel: Story 10.23 discharged everything a STORY could, and
+      // leaving a story key here would be an unowned obligation pointing at a completed story — the
+      // shape that left R7 dark for two epics ([[project_r7_fact_producer_unbuilt]]).
+      expect(held?.owner).toBe('trustee-panel');
+      expect([...R7_ACTIVATED_CLAUSE_IDS] as string[]).not.toContain(clauseId);
+      expect(VALIDITY_RULE_ORDER as readonly string[]).not.toContain(clauseId);
+    }
   });
 });

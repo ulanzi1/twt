@@ -680,6 +680,13 @@
       "when": 1789011600000,
       "tag": "0096_members-custom-fields",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1789098000000,
+      "tag": "0097_member-restoration-discipline",
+      "breakpoints": true
     }
   ]
 }

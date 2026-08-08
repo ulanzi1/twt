@@ -43,6 +43,10 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
       pendingConcealmentFlag: false,
     },
     retirementCoverage: { status: 'clause_unavailable' },
+    // Story 10.23 — the RESTORATION clock, a SIBLING of `lockInStatus` (never a merge of it). The
+    // fixtures below that model a locked-in member override this; everything else is truthfully
+    // `never-imposed`, so every pre-10.23 expectation keeps its exact meaning.
+    restorationDisciplineStatus: { state: 'never-imposed', imposedAt: null, expiresAt: null },
     specialFlags: [],
     applicableNiyamavaliClauses: [],
     provenanceTrace: [],

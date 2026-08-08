@@ -39,6 +39,10 @@ import {
   type Facts,
 } from '@twt/niyamavali-engine';
 
+// ⚠ TYPE-ONLY, and it must STAY type-only. A value import from `./producer.js` here materializes a
+// runtime edge in a graph that only tolerates the erased one, and the resulting module-init cycle
+// fails at RUNTIME in consuming packages while `typecheck`, `lint` and this package's own unit tests
+// all stay green. See `r7-fact-surface.ts`'s header for the full trace.
 import type { AppliedRestorationRequirement } from './producer.js';
 
 // ── R7 activation / hold — Story 10.24 (Task 1; AC3, D2/D4) ──────────────────────────────────────
@@ -96,12 +100,38 @@ export const R7_ACTIVATED_CLAUSE_IDS = [
   'niy.contribution-discipline.r7-g',
 ] as const satisfies readonly R7ClauseId[];
 
-/** One deliberately-unevaluated R7 sub-clause: the blocking fact(s) + the story that will supply them. */
+/**
+ * One deliberately-unevaluated R7 sub-clause: its remaining blockers + who owns them.
+ *
+ * ⚠ TWO BLOCKER BUCKETS, and the split is what keeps a narrowed hold from becoming a decorative one
+ * (Story 10.23, AC9/D7). A hold whose every FACT blocker has been supplied is not thereby lifted —
+ * R7(A)/(B) also wait on a Trustee Panel instrument no producer can ever supply. Before this split,
+ * `blockedBy` could only name facts, so the honest end state (`blockedBy: []`) was indistinguishable
+ * from an unjustified hold, and the vacuity guard `blockedBy.length > 0` forced implementers to keep
+ * a satisfied fact listed in order to stay green — i.e. to lie to keep the gate quiet.
+ */
 export interface R7HeldClause {
   readonly clauseId: R7ClauseId;
-  /** The fact keys that must exist before this clause could be evaluated HONESTLY. */
+  /**
+   * The FACT keys that must exist before this clause could be evaluated HONESTLY.
+   *
+   * MAY BE EMPTY once every blocking fact is supplied — that is the honest narrowed state, not a
+   * lifted hold. `blockedByNonFacts` is what must then be non-empty. Each key here is checked
+   * against `R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES` (`r7-fact-surface.ts`), which spans EVERY fact
+   * family: naming a key that IS supplied fails the gate, because the hold has outlived its stated
+   * reason.
+   */
   readonly blockedBy: readonly string[];
-  /** The story/stories that own those facts. */
+  /**
+   * The blockers NO PRODUCER CAN EVER SUPPLY — a Trustee Panel instrument, a published Part 11
+   * amendment, a ratification. These are why a hold can survive its last fact blocker being met.
+   *
+   * ⚠ NOT A HIDING PLACE FOR A FACT. Moving a supplied fact key in here to dodge the falsifiability
+   * check is the precise failure this apparatus exists to catch; the totality test asserts no entry
+   * here is shaped like a fact key ([[feedback_mechanization_split_commitment]]).
+   */
+  readonly blockedByNonFacts: readonly string[];
+  /** Who owns the remaining blockers — a story key, or a governance body for a non-fact blocker. */
   readonly owner: string;
 }
 
@@ -146,13 +176,41 @@ export const R7_HELD_CLAUSES = [
     // "ratified → version published → implementation references the new version". So R7(A) needs
     // BOTH Story 10.23's fact AND that published amendment before it may be activated.
     clauseId: 'niy.contribution-discipline.r7-a',
-    blockedBy: ['member.joining_discipline_state'],
-    owner: 'story-10-23',
+    // ── ⭐ Story 10.23 NARROWED this hold to EMPTY facts. It did NOT lift it ──────────────────────
+    // Story 10.23 supplies `member.joining_discipline_state`, so the falsifiable-hold gate went RED
+    // with its own message — "…claims to be blocked by 'member.joining_discipline_state', but a
+    // producer DOES supply it — the hold has outlived its reason and must be re-justified or
+    // lifted." NARROWING is the correct response, exactly as it was when Story 10.25 supplied
+    // `r7a_restorations_used`. Deleting this entry, or adding `r7-a` to `R7_ACTIVATED_CLAUSE_IDS`
+    // to make the red go away, is the failure the whole apparatus exists to catch
+    // ([[feedback_mechanization_split_commitment]]).
+    //
+    // ⚠ EVERY FACT BLOCKER IS NOW SATISFIED, AND THE CLAUSE IS STILL HELD. That is not a
+    // contradiction — it is the honest end state, and it is why `blockedByNonFacts` exists. R7(A)
+    // has THREE activation conditions and stories can only ever satisfy two:
+    //   1. `contribution.r7a_restorations_used`   — Story 10.25  ✅ supplied
+    //   2. `member.joining_discipline_state`      — Story 10.23  ✅ supplied (this story)
+    //   3. the PUBLISHED Part 11 amendment replacing the `total_count < 10` proxy population
+    //                                              — TRUSTEE PANEL  ⛔ NOT PUBLISHED
+    // `prd.md:346` is normative and unconditional: R7(A)/(B) MUST NOT be evaluated from the
+    // disclaimed proxies, and the seeded clause DATA still keys the population on exactly that
+    // proxy. Verified live 2026-08-07: `docs/legal/niyamavali.md` §3.1 still reads "Break before 10
+    // contributions" / "Registered but never contributed", and the seed rows still carry the proxy
+    // `all_of`. The amendment is a governance instrument no story owns and no code change can
+    // satisfy (Decision 2026-08-06-077); completion is "ratified → version published →
+    // implementation references the new version", so it is verifiable as PUBLISHED, never assumed.
+    blockedBy: [],
+    blockedByNonFacts: ['niyamavali-part-11-amendment:r7a-b-population-replacement'],
+    // ⚠ OWNER MOVED from `story-10-23` to the Trustee Panel. Story 10.23 discharged everything a
+    // story could; leaving a story key here would be an unowned obligation pointing at a completed
+    // story — the shape that left R7 dark for two epics ([[project_r7_fact_producer_unbuilt]]).
+    owner: 'trustee-panel',
   },
   {
     clauseId: 'niy.contribution-discipline.r7-b',
-    blockedBy: ['member.joining_discipline_state'],
-    owner: 'story-10-23',
+    blockedBy: [],
+    blockedByNonFacts: ['niyamavali-part-11-amendment:r7a-b-population-replacement'],
+    owner: 'trustee-panel',
   },
   // ── Story 10.26 DELETED the R7(G) entry, and deletion is right HERE and ONLY here ───────────────
   // The previous story NARROWED R7(A)'s `blockedBy` rather than deleting its entry, and "10.25

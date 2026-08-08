@@ -648,3 +648,22 @@ export const moderationActionId = uuidBrand('ModerationActionId');
 export type PariwarCustomFieldDefinitionId = Brand<'PariwarCustomFieldDefinitionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `PariwarCustomFieldDefinitionId`. */
 export const pariwarCustomFieldDefinitionId = uuidBrand('PariwarCustomFieldDefinitionId');
+
+// ── Story 10.23 — Restoration-imposition id (§Naming "branding mandatory on a new ID's first PR") ──
+// `RestorationImpositionId` is the per-row address of a `member_restoration_impositions` row — the
+// `ModerationActionId` twin, and it inherits that id's posture for the same reason. It addresses an
+// APPEND-ONLY RECORD, not a state object: the member's restoration standing is DERIVED by folding
+// the `member.restoration_discipline.*` events on the member's own stream (AC1), and this table is
+// the indexed read surface for a history the event log already authorises. So — like
+// `ModerationActionId`/`NewsPostId`/`BannerId` and UNLIKE the five event-derived-state primitives
+// (member/claim/pool/alert/helpdesk_ticket) — it is a plain DB-defaulted `gen_random_uuid()`, has no
+// derive function, and is NOT any event stream's stream_id (that is the `member_id`).
+//
+// ⚠ THE IDEMPOTENCY KEY IS NOT THIS ID. AC2's two legs key on `(member_id, clause_id)` while live
+// and on `(member_id, episode_key)` past expiry — this uuid addresses one ROW, those tuples address
+// one IMPOSITION and one EPISODE respectively. A consumer records the tuple, never this uuid.
+
+/** Per-row address of a restoration-discipline imposition record. */
+export type RestorationImpositionId = Brand<'RestorationImpositionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `RestorationImpositionId`. */
+export const restorationImpositionId = uuidBrand('RestorationImpositionId');

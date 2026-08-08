@@ -89,3 +89,23 @@ export {
   enqueueContributionMismatchNotification,
   type ContributionMismatchNotifyPayload,
 } from './scheduler/contribution-notify-triggers.js';
+
+// ── Story 10.23 (Task 4; AC2/AC14) — the restoration-discipline imposition job ──────────────────
+// ⛔ THE ONLY PRODUCTION WRITER of §3.1 R7 restoration lock-ins: an automatic process that removes a
+// member's COVERAGE with no human in the loop. Exported for the on-demand/scheduled invoker and for
+// its tests; DELIBERATELY NOT REGISTERED ON A CRON by this story.
+//
+// Two reasons, both governance rather than convenience:
+//   · the writer is gated behind the default-OFF `restoration_discipline_imposition` flag (AC14),
+//     whose enablement is Trustee-Panel-exclusive (Decision 2026-08-07-089) — a cron entry would
+//     imply an operational cadence for something nobody may yet turn on; and
+//   · Escalation 6's discharge invariant is UNDISCHARGED (no authorized catch-up process exists for
+//     R7(D)/(E)/(F)), and it binds the flag flip.
+// Scheduling is the successor concern of whichever change discharges that invariant.
+export {
+  runRestorationDiscipline,
+  RESTORATION_DISCIPLINE_FLAG_KEY,
+  RESTORATION_POLICY_UNPROVISIONED_PRODUCER,
+  type RestorationDisciplineDeps,
+  type RestorationDisciplineRunResult,
+} from './restoration-discipline.js';

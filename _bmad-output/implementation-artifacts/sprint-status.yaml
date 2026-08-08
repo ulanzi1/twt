@@ -1,4 +1,346 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-08c (10-23-restoration-discipline-lock-in: status UNCHANGED at done. RECORD
+#   CORRECTION ONLY -- Decision 2026-08-08-092. No code touched; the AC14 flag stays OFF; Escalation 6
+#   stays UNDISCHARGED.
+#   THE CONTRADICTION: this file and the story header both read `done`, while the story file asserted in
+#   six places that closing was not permitted ("Escalation 6's invariant blocks `done`"; "the story is
+#   `review`, NOT closed"; "binds the flag flip AS WELL AS closure"), as did Decision 2026-08-08-090
+#   ("enabling it and closing the story are not"). So the record simultaneously reported the story closed
+#   and reported closing it as a governance violation. The 2026-08-08b flip recorded NO basis.
+#   ⭐ THE DIVERGENCE WAS ONE WORD, AND IT IS TRACEABLE. Decision 2026-08-07-088 clause 4 reads: "Only
+#   its binding point moves: it now binds the FLAG FLIP, where the harm actually begins, RATHER THAN
+#   STORY CLOSURE." The story's Escalation 6 block transcribed that as "rather than story closure
+#   ALONE" -- converting an exclusive move into an additive one and re-creating routing-note option (d)
+#   ("merge permitted, closure gated"), which the Panel was offered and did NOT ratify. Every later
+#   restatement inherited it from that one word.
+#   THREE INDEPENDENT GROUNDS SETTLE IT EXCLUSIVE: (1) clause 4's wording -- "only its binding point
+#   moves" describes a move, "rather than" is exclusionary, and no "alone" appears; (2) the option
+#   table, where (a) and (d) differ on precisely this axis and (a)'s consequence column reads "10.23
+#   merges and IS REVIEWABLE IN FULL"; (3) Q4's purpose -- the Panel's finding was that a closure gate
+#   is the WRONG INSTRUMENT because it gates paperwork while the harm lands at merge, so ratifying (a)
+#   REPLACED a process gate with a technical one rather than stacking them. The story's own operative
+#   sentence already agreed ("Merging with the flag off is permitted; enabling the flag is not" --
+#   closure unmentioned).
+#   RESOLUTION: `done` is CORRECT as recorded and needed no further authorization; the missing rationale
+#   was a reporting gap, not an unauthorized act. Decision 2026-08-08-092 supersedes the closure clause
+#   of 2026-08-08-090 (author-committed, so no ratification needed) and amends NO Trustee-ratified text
+#   -- 088 and 089 stand exactly as ratified. Corrected in place with 092 pointers across the story file
+#   (in-scope table, D8 Dev Note, Escalation 6 block, Task 11, the asymmetry Dev Note, Completion Notes,
+#   disposition block) and deferred-work.md (the invariant re-stated in its ratified story-agnostic
+#   form, the enforcement paragraph, and the re-trigger -- whose "this story's own closure" leg is
+#   struck, leaving the flag proposal as the only trigger). Historical Change Log rows 0.1/0.2/1.0 were
+#   deliberately NOT rewritten -- they record what was believed when written
+#   ([[feedback_supersede_never_reinterpret]]).
+#   ⛔ NOTHING ABOUT THE GAP CHANGED: restoration_discipline_imposition is default-OFF with
+#   Trustee-Panel-exclusive enablement (089); R7(D)/(E)/(F) packages still name a completion act no
+#   workflow can perform; the TWO-string copy-truth defect is still separately owed to a Story 2.2 tone
+#   sign-off. Only which artifact the invariant gates changed.
+#   ⚠ PROCESS GAP RECORDED IN 092: bmad-code-review flipped review -> done with no stated basis on a
+#   story whose own text labelled an escalation BLOCKING against `done`. The flip was right, but a
+#   correct flip and an unnoticed one were indistinguishable in the record.)
+# last_updated: 2026-08-08b (10-23-restoration-discipline-lock-in: review -> done via bmad-code-review.
+#   The FIRST review pass ran against an INCOMPLETE diff — `git diff HEAD` silently drops untracked
+#   files, and 12 of this story's paths (the entire new primitive) were untracked; caught from the
+#   Blind Hunter's own top finding, both invalid layer runs stopped, all three re-launched against the
+#   corrected 51-file/6971-line diff. 11 findings triaged: 1 decision-needed (resolved + fixed), 8
+#   patch (7 applied, 1 RECLASSIFIED to defer mid-application when the obvious fix proved actively
+#   harmful — recorded honestly rather than silently applied), 2 defer, 1 dismissed as a verified false
+#   positive.
+#   ⭐ THE DECISION-NEEDED FINDING, and it was real: `shouldImpose`'s re-imposition bar matched on
+#   `episode_key`, which folds in `skipsCurrentYear` — IST-CALENDAR-YEAR scoped, so it moves at the
+#   year boundary AND on every further missed cycle, REGARDLESS of member action. For R7(D)/(E)/(F)
+#   (Escalation 6: no catch-up channel) a further skip is mechanical, not a choice — the roster keeps
+#   assigning the member (AC6) and they remain unable to pay. Matching on it reproduced, through
+#   skip-count drift, the exact "de-facto permanent, machine-imposed coverage removal" Decision
+#   `2026-08-07-088` clause 3 was ratified to bar. User's ruling: freeze the episode identity while
+#   unresolved+unsatisfiable; an IST-year reset alone must not create a new episode; a new episode
+#   needs discharge or a ratified policy transition. FIXED (Decision `2026-08-08-091`): a new pinned
+#   event field `completion_unsatisfiable` (computed at imposition like `lock_in_months`/
+#   `concurrency_rule`, FR-8) replaces `episode_key` as the bar's matching key, cross-clause (preserving
+#   the F→C drift precedent); `episode_key` is now audit data only; `shouldImpose` drops the param
+#   entirely and stays PURE. The documented discharge path (`UNSATISFIABLE_COMPLETION_KEYS` shrinking)
+#   still works with no backfill — the outer gate re-checks the CURRENT candidate's payload live, never
+#   a stored historical value.
+#   PATCHES APPLIED: (1) the Pariwar-wide batch writer ran its whole scan-and-write pass in ONE
+#   transaction with no per-candidate isolation — one bad row or a concurrent-write race aborted every
+#   OTHER member's already-decided imposition in the same run; now each candidate's write (and the
+#   AC14 flag resolution) runs behind its own `SAVEPOINT`, matching the established
+#   [[project_domain_limit_clamp_and_savepoint_retry]] convention, alarming via a new injectable
+#   `onAlarm`. (2) `now()` returns TRANSACTION start time, so a whole batch got an identical
+#   `imposed_at` — switched to `clock_timestamp()`, resolved ONCE via a CTE (it is VOLATILE; writing it
+#   twice in one SELECT list risked breaking AC4's exact `expires_at = imposed_at + N months` identity).
+#   (3) `combineLiveExpiries` trusted array-position for "most recent" — now computed explicitly via
+#   `imposedAt`. (4) `member_restoration_impositions` had NO dedicated RLS policy-regression spec
+#   despite citing `member-moderation-actions-policy-regression.spec.ts` as its own template — added
+#   (7 tests: leak, cross-tenant write block, fail-closed, FORCE+ENABLE, FK orphan, twt_service
+#   grant-shape). (5) `concurrency_rule` (registry data, AC5) had only an app-layer Zod enum, no DB
+#   CHECK unlike its two siblings — added `..._concurrency_rule_known`, amended directly into the
+#   still-unshipped migration 0097 (never regenerated), pinned by a new live-DB revert-sanity test. (6)
+#   the imposition audit's `from_state`/`to_state` read via a BOUNDED state lookup while the actual
+#   write's replay is unbounded — added `getCurrentMemberState` to `member/read.ts` and switched to it.
+#   (7) a stale comment claimed the scan is skipped for an unprovisioned Pariwar; corrected — only the
+#   WRITE is skipped.
+#   ⚠ THE RECLASSIFIED FINDING: `member.joining_discipline_state` conditionally dropped from the R7
+#   fact bag when contribution facts are unavailable LOOKED like an obvious unconditional-merge fix —
+#   investigation before applying it found `contributionBag === null` is the D6 sentinel gate
+#   `evaluateAppliedR7ClauseSlots` uses to stop "contribution history not derivable" from ever
+#   manufacturing a false-clean, partially-evaluated R7 record on the FROZEN ladder. Merging
+#   unconditionally would have defeated that gate. Deferred as an architecture question for whichever
+#   story activates R7(A)/(B), not a same-story patch.
+#   DISMISSED: the Blind Hunter's claim that `imposesRestorationObligation`/`contributesViolatorFlag`
+#   are contradictory, undocumented-diverging predicates — verified FALSE, `contributesViolatorFlag` is
+#   a direct provable wrapper (`rules.ts:429-434`) and the reviewer's own "zero grep hits" claim was
+#   itself in error.
+#   Re-verified green end-to-end: `@twt/domain` unit 1595/1595 (DB-free), `@twt/domain` live-DB
+#   946/946 (:5433, incl. the new + updated restoration-discipline specs), `@twt/validity-service`
+#   224/224, `apps/jobs` 228/228 (unit) + the touched live-DB test; `tsc --noEmit` + `eslint` clean
+#   across all four packages. Findings + full rationale recorded in the story file's Review Findings
+#   section; the reclassified/deferred items also carried to `deferred-work.md`.)
+# last_updated: 2026-08-08 (10-23-restoration-discipline-lock-in: ready-for-dev -> in-progress ->
+#   review via bmad-dev-story off branch feat/10-23-restoration-discipline-lock-in, cut from f2d90cd
+#   (the Decision 2026-08-07-088/089 governance commit, one ahead of main @ 6783eba) so history reads
+#   governance -> implementation. ALL 14 ACs satisfied; all 12 tasks complete.
+#   THE INSTRUMENT: the SECOND event-derived governance overlay on the member's own stream, mirroring
+#   the shipped moderation overlay. Migration 0097 + member_restoration_impositions (append-only, RLS
+#   enable+force, NO current_state column, NO ALTER TYPE, NO state-writer trigger, two load-bearing
+#   CHECKs) + member/restoration-discipline/{status,events,overlay,policy,write,read,index}.ts + the
+#   21st member.* event (member.restoration_discipline.imposed; there is deliberately NO ...expired
+#   sibling — expiry is DERIVED at read, AC4/D6). members.state provably never moves: pinned by a
+#   live-DB test that builds a REAL signup->lock-in->active stream (the first draft asserted against a
+#   directly-seeded row and failed 'expected pending-kyc to be active', because projectMemberState
+#   REPLAYS the stream — a test artifact, and the fix is what makes the assertion mean anything).
+#   member-state-invariant ALLOWLIST byte-unchanged.
+#   ⭐ D7 / AC9 — THE FINDING, and it was real: the falsifiable-hold gate was STRUCTURALLY BLIND to
+#   this story. It checked every held clause's blockedBy against R7_SUPPLIED_FACT_KEYS — the
+#   contribution.* producer's key set — while R7(A)/(B) are held on member.joining_discipline_state, a
+#   member.* fact that can NEVER enter it. The assertion was VACUOUSLY green and would have stayed
+#   green at the exact moment this story satisfied the hold's stated reason. Half-scoped since 10.24,
+#   unnoticed because the second fact family did not exist. Widened FIRST (Task 1, before the fact was
+#   supplied), revert-sanity probed RED with the gate's own message, then went RED FOR REAL when Task 6
+#   supplied the fact. Holds NARROWED (blockedBy: [], blockedByNonFacts: the unpublished Part 11
+#   amendment, owner story-10-23 -> trustee-panel), never deleted, never activated. R7HeldClause gained
+#   a non-fact blocker bucket WITH an anti-cheat asserting nothing fact-shaped can hide in it.
+#   ⚠ A REAL DEFECT CAUGHT BY THE BASELINE, recorded because it is a repeatable trap: adding a VALUE
+#   import to rules.ts (for the widened surface) where only a TYPE import had existed materialized a
+#   module-init cycle and broke @twt/jobs at RUNTIME with 'ReferenceError: R7_SUPPLIED_FACT_KEYS is not
+#   defined'. typecheck, lint AND the package's own suite were all green — only a CONSUMING package's
+#   entry point fails. Fixed by hoisting the union into its own leaf module (r7-fact-surface.ts);
+#   rules.ts's producer import is back to type-only with a comment saying why it must stay that way.
+#   RATIFIED ANSWERS IMPLEMENTED, NOT RE-DERIVED (Decision 2026-08-07-088): AC5 concurrency = MAXIMUM
+#   over live impositions, carried as REGISTRY DATA in the niy.restoration-discipline.policy payload and
+#   pinned onto each imposition event (a bare Math.max at the fold would not satisfy the AC); AC3
+#   unprovisioned Pariwar = do NOT impose + named sentinel; AC2 = no re-imposition while the SAME
+#   unresolved episode stays unsatisfiable, with an explicit episode identity (earliest unresolved skip
+#   or last confirmation, plus the skip count — deliberately NOT keyed on clause id, which would
+#   re-lock a gap member who merely drifted R7(F)->R7(C) without acting); AC14 = the apps/jobs writer
+#   gated behind restoration_discipline_imposition, DEFAULT OFF, resolved ONCE per run (not per member),
+#   governance_boundary.yaml count 4->5 with both golden hashes deliberately re-attested.
+#   D2 — the R7 clause supplies the DURATION (§3.1 puts months on the RUNG); the new
+#   niy.restoration-discipline.policy clause supplies only the INSTRUMENT (month-counting + concurrency).
+#   BOTH clause_version_ids pinned at imposition; a live-DB test publishes NEW versions of both with
+#   different values and proves the member's expires_at does not move. Clause id carries NO 'lock-in'
+#   substring (AC11) — pinned by test, because ui/member-status/presenter.ts:145 matches by substring.
+#   D3 — trigger is the SHARED imposesRestorationObligation AND lock_in_months > 0. The second conjunct
+#   is load-bearing: R7(A) imposes an obligation while prescribing NO lock-in, so the predicate alone
+#   would give every R7(A) member a spurious zero-length lock-in. Enforced semantically AND by DB CHECK.
+#   AC6 — folds into is_valid (COVERAGE) and specialFlags (the WIRE) and into deriveIsAssignable NOT AT
+#   ALL: the ROSTER guarantee is the SIGNATURE, which cannot see the overlay. Proven on the live path by
+#   a GENUINE re-spawn of the SAME cycle id (byte-identical roster hash + pool_snapshots.member_assignments
+#   + member_pool_assignments), and revert-sanity probed — leaking the overlay into deriveIsAssignable
+#   dropped the roster 4 -> 2. POOL_ASSIGNMENT_HASH_VERSION NOT bumped.
+#   AC7 — 'restoration_lock_in' emitted after the clause-order and moderation flags (order DECLARED and
+#   pinned). Story 10.16's dormant arm activates through the FLAG ALONE: the @twt/ui, apps/mobile AND
+#   packages/i18n diffs are EMPTY, zero new copy keys, and a new test proves all four keys resolve in
+#   en + hi so the disclosure genuinely REACHES a member (10.16 AC3's lesson).
+#   AC12 — the architectural record is the AI-10-1 block at the point of use (first in the Epic-10
+#   series); architecture.md NOT amended (Decision 2026-08-04-072).
+#   AC10 — openapi/v1.yaml byte-identical (the expected no-op); Story 4.8 cache needs NO new trigger
+#   (0036's LIKE 'member.%' already covers the member's own stream), asserted by live-DB test not assumed.
+#   MEASURED: uncached getValidityAt p95 9.91ms against a 200ms budget (+1 bounded read, joined to the
+#   existing Promise.all); the Pariwar scan gained ZERO queries — its counted-query pins are UNCHANGED
+#   at 3 and 10, which is the proof. 4L remains UN-ATTESTED and is now widened: the imposition writer is
+#   un-attested AND un-bounded in write volume on a first enablement.
+#   ⛔ ESCALATION 6 IS UNDISCHARGED AND THIS STORY IS **NOT** CLOSED BY THIS FLIP. Per
+#   [[feedback_closure_language_precision]] the honest disposition is: **Resolved via explicit deferral
+#   to a Trustee Panel decision that does not yet exist** — NOT 'closed'. The discharge invariant (the
+#   completion condition of every restoration package this story imposes must be satisfiable through a
+#   ratified system workflow) binds the AC14 FLAG FLIP and story closure; merging with the flag OFF is
+#   permitted. No authorized catch-up process exists, so R7(D)/(E)/(F) packages remain unsatisfiable.
+#   Owner of the discharging decision: the TRUSTEE PANEL exclusively (Decision 2026-08-07-089) — naming
+#   the owner is an ownership assignment, NOT a closure. Escalations 2, 3, 4, 7, 8 remain OPEN as
+#   authored; 5 and 9 recorded as RESOLVED BY RATIFICATION. The COPY-TRUTH DEFECT is separately owed
+#   (Story 2.2 tone sign-off) and refined during implementation: it is TWO strings, not one — the a11y
+#   label repeats the false sentence verbatim, so a screen-reader user hears it too.
+#   Decision 2026-08-08-090 records D1-D8. ci:local green with and without DATABASE_URL; two failures
+#   chased to root cause and confirmed innocent (the known double-run pollution + concurrency
+#   oversubscription — @twt/api and @twt/jobs both pass in isolation with zero failing tests).
+#   Story file: 10-23-restoration-discipline-lock-in.md.)
+# last_updated: 2026-08-07b (10-23-restoration-discipline-lock-in: status UNCHANGED at ready-for-dev;
+#   amended to carry Decision 2026-08-07-088, the Trustee Panel's PRE-IMPLEMENTATION ruling on the four
+#   questions the authored story had left to the implementer. Routed via
+#   planning-artifacts/trustee-panel-routing-note-2026-08-07-story-10-23.md. All four ratified at
+#   Option (a): AC5 concurrency = MAXIMUM over live impositions, and the rule lives in the
+#   niy.restoration-discipline.policy clause PAYLOAD (a bare Math.max at the fold no longer satisfies
+#   it); AC3 unprovisioned Pariwar = do NOT impose, surface a sentinel, code-default imposition
+#   explicitly rejected; AC2 re-imposition after expiry = does NOT re-impose while the same unresolved
+#   episode stays undischargeable. FOURTEENTH AC ADDED (AC14, numbered after AC13 so the
+#   cross-referenced existing ACs are not renumbered): the automatic apps/jobs writer is gated behind a
+#   rollout feature flag that DEFAULTS OFF.
+#
+#   AC14 came from a call-graph finding made while preparing the routing note: scanR7ViolatorCandidates
+#   today has exactly ONE production consumer -- apps/api/src/modules/trustee-lite/handlers.ts:246, an
+#   on-demand read that only DISPLAYS flags -- while Task 4 adds a WRITER. So Escalation 6's discharge
+#   invariant, as authored, bound story CLOSURE while every harm it describes lands at MERGE. The
+#   invariant is preserved VERBATIM and was not reopened; only its binding point moved, to the flag flip
+#   AND closure. Merging with the flag off is permitted.
+#
+#   THE PANEL'S AMENDMENT is the part worth remembering: a flag with an unstated default and an unnamed
+#   owner answers "how is this held back?" while leaving "who may release it?" open. So default and
+#   authority are now part of the AC, not deployment detail -- OFF in every environment except an
+#   explicit trustee-authorized rollout; authorization is NOT an operational act and may not precede the
+#   decision discharging the invariant; non-production enablement confers NO production authority; and
+#   flipping it without that decision is a GOVERNANCE VIOLATION, not a configuration change.
+#
+#   Escalations 5 and 9 are now RULED -> deferred-work.md records them as resolved-by-ratification, not
+#   as open questions. Escalations 2, 3, 4, 7, 8 were explicitly NOT ruled on and remain owed; the E4
+#   coverage contradiction (join lock-in is_valid:true vs restoration false) becomes live and
+#   member-visible AT THE FLAG FLIP and returns to the Panel then. Rung-splitting was considered and NOT
+#   taken (needs a payload-keyed condition at the imposition site, against D3); the flag can express
+#   partial rollout without touching the trigger. The copy defect
+#   (suspension_disclosure.lock_in.what_it_does asserting completability to members with no completion
+#   path) is SEPARATELY owed, discharged by none of the above, needs a Story 2.2 tone sign-off owner, and
+#   must NOT be "fixed" by narrowing the disclosure's trigger.
+#
+#   THE ACTIVATION AUTHORITY IS NOW OWNED -- Decision 2026-08-07-089, recorded as its own entry rather
+#   than an amendment to 088 [[feedback_supersede_never_reinterpret]]. The TRUSTEE PANEL exclusively
+#   owns authorization to activate the AC14 flag, exercised through a formal .decision-log.md entry.
+#   Three-way split: implementer builds the mechanism and holds NO authority to enable it in any
+#   environment including their own; Operations owns deployment mechanics -- HOW a flip executes, never
+#   WHETHER it may occur; only the Panel owns activation. A ticket, config-PR approval, deployment
+#   sign-off or verbal go-ahead is not an authorization and does not become one retroactively. If there
+#   is no Decision entry, the flag is not authorized.
+#
+#   BUT AN OWNER IS NOT A DISCHARGE [[feedback_closure_language_precision]]. The catch-up gap persists
+#   exactly as before -- R7(D)/(E)/(F) packages still name a completion act no workflow can perform.
+#   Task 11 records 089 as the answer to "who owns the discharge decision" and the discharge itself as
+#   OUTSTANDING [[feedback_record_unattested_no_backfill]].
+#
+# last_updated: 2026-08-07a (10-23-restoration-discipline-lock-in: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ 6783eba. Saved 10-23-restoration-discipline-lock-in.md. Epic 10's
+#   FIFTEENTH authored story and the FIRST of the moderation-model block (10.18-10.23) to be authored
+#   out of numeric order -- 10.18-10.22 stay backlog, and Task 0 requires re-confirming that before any
+#   edit. THIRTEEN ACs, EIGHT decisions, NINE escalations, TWELVE tasks.
+#
+#   TWO EPIC-AC PREMISES FALSIFIED against live code and corrected in the story rather than inherited:
+#   (1) "`lock_in_months` appears only in test fixtures and no production code consumes it" is FALSE --
+#   it is in six production seed clause payloads AND consumed by `RESTORATION_OBLIGATION_KEYS`
+#   (rules.ts:312-318) -> `imposesRestorationObligation` -> `contributesViolatorFlag`, i.e. the
+#   Trustee-Lite violator-flag channel. The true, narrower statement (its VALUE is never turned into a
+#   clock, date or coverage consequence) is what the story builds against. (2) "duration comes from a
+#   NEW restoration-discipline policy clause" would duplicate a constitutional number: the per-ground
+#   months already live in the R7 clause payloads, where Niyamavali 3.1's table puts them. D2 resolves
+#   it -- the R7 clause supplies the DURATION, a new `niy.restoration-discipline.policy` clause supplies
+#   the INSTRUMENT-level parameters no R7 clause can express (month-counting convention, concurrency
+#   rule, provisioning precondition), and BOTH clause_version_ids are pinned at imposition.
+#
+#   THE FINDING (Escalation 1, AC9/D7): the falsifiable-hold mechanization is STRUCTURALLY BLIND to this
+#   story. `r7-activation-totality.test.ts:133-144` checks every held clause's `blockedBy` against
+#   `R7_SUPPLIED_FACT_KEYS` -- the CONTRIBUTION producer's key set. `member.joining_discipline_state` is
+#   a `member.*` fact that can never enter it, so supplying the fact would leave the assertion GREEN
+#   VACUOUSLY, certifying R7(A)/(B)'s hold as honest at the exact moment its stated reason expired. The
+#   apparatus that correctly went RED for 10.25 and correctly permitted deletion for 10.26 cannot see
+#   this story at all. [[feedback_gate_scope_semantic_coverage]] in its literal form -- a gate scoped to
+#   the wrong package still misses the target. D7 makes widening it Task 1, BEFORE the fact lands, with
+#   a recorded revert-sanity probe; a gate written after the change it was meant to catch is a gate
+#   written to pass.
+#
+#   SCOPE HELD, NOT WIDENED. R7(A)/(B) are NOT activated: Decision 2026-08-06-077 says in terms that
+#   10.23 "carries the fact-supply half and cites this entry for the registry half -- it does not
+#   inherit the amendment itself". Verified LIVE per [[feedback_verify_before_committing_governance_claims]]:
+#   niyamavali.md 3.1 still carries "Break before 10 contributions" / "Registered but never contributed"
+#   and the seed rows still carry the proxy `all_of`, so the Part 11 amendment is UNPUBLISHED and R7(A)
+#   keeps three activation conditions of which this story satisfies one. Catch-up (`catch_up_required` /
+#   `complete_all`) is likewise NOT built -- Decision 2026-08-07-086 names 10.23 as its dependency while
+#   stating "its own scope was NOT expanded or redefined by this entry"; D8 ships it as a first-class
+#   ABSENT seam on the [[project_nominee_vpa_deferred_seam]] pattern.
+#
+#   ESCALATION 6 IS A BLOCKING DISCHARGE CONDITION ON `done`, NOT AN ADVISORY -- the one escalation of
+#   the nine that gates closure. The 2026-08-06/07 decisions together converted catch-up from a deferred
+#   implementation into a GOVERNANCE GAP: 3.1's ratified interpretive note says a skip clears only
+#   through "reconciliation or an authorized catch-up process"; no such process exists; contribution
+#   flows ONLY to an OPEN cycle (pool-bound payment enforcement 7.6, fenced by 8.10), so a closed cycle
+#   has no payment channel; and R7(D) `catch_up_required` + R7(E)/(F) `complete_all` -- three of the FOUR
+#   activated clauses -- define their entire restoration package in terms of that unavailable act. So
+#   10.23 puts a member into a coverage-removing restoration period whose stated completion condition no
+#   workflow can satisfy. Worse, the ALREADY-SHIPPED copy asserts otherwise: verified live in en AND hi,
+#   `suspension_disclosure.lock_in.what_it_does` reads "Contributing during this period counts toward
+#   completing your restoration" -- untrue for an R7(D)/(E)/(F) member, since a future-cycle contribution
+#   does not discharge a past missed one, and the `no_consecutive_requirement` arm does not cure it
+#   (it declines to give a COUNT while `what_it_does` renders alongside still asserting completability).
+#   That is the same harm class Story 10.16's own D3 refused -- a false statement to a member, about
+#   their own standing, on a payment surface -- and the inverse of Decision 2026-08-07-086's
+#   never-imply-permanence constraint.
+#
+#   THE INVARIANT IS PHRASED AS A SYSTEM PROPERTY, NOT A BACKLOG ARTIFACT: "Story 10.23 MUST NOT be
+#   marked complete until the completion condition of every restoration package it imposes is
+#   satisfiable through a ratified system workflow." Deliberately NOT "a successor story must exist" --
+#   a story-shaped condition is dischargeable by creating a file and is silently voided when that file
+#   is later split, merged or renamed, whereas a property survives any reorganisation and is falsifiable
+#   against the RUNNING system (take a member under each of R7(D)/(E)/(F); is there a ratified path to
+#   the state their clause calls completion?). Commit the property, not the instrument
+#   [[feedback_architecture_vs_adr_boundary]]. Four discharge routes, the choice being the Trustee
+#   Panel's not the implementer's: (a) EXPECTED -- a successor catch-up/complete-all payment path is
+#   ratified and owned (a story is the likely vehicle, not the requirement); (b) any other
+#   Trustee-ratified mechanism satisfying the same invariant; (c) a Part 11 reinterpretation under which
+#   the packages are satisfiable by acts the system already supports; (d) 10.23 imposes no unsatisfiable
+#   package -- technically valid, but it removes R7(D)/(E)/(F) and most of the story's value.
+#   ⚠ THE PROPERTY PHRASING DEMOTED AN EARLIER DISPOSITION: "fix the copy" was previously offered as an
+#   alternative and is NOT one -- honest copy about an unsatisfiable obligation leaves it unsatisfiable.
+#   The copy-truth defect is a SEPARATE, additionally-owed honesty obligation binding while the gap
+#   persists: necessary, not sufficient. Explicitly forbidden as a resolution: narrowing the disclosure
+#   trigger so R7(D)/(E)/(F) members see nothing, which re-creates the gap 10.16 closed. Without the
+#   invariant 10.23 could be marked complete while the system holds live, coverage-affecting obligations
+#   no workflow can satisfy ([[project_r7_fact_producer_unbuilt]] -- the unowned-obligation shape,
+#   except this one already has member-facing consequences in force).
+#
+#   A CONSEQUENCE THE SAME ANALYSIS SURFACED, FOLDED INTO AC2: re-imposition after expiry was
+#   unspecified. Idempotency-while-live says nothing about what happens once a lock-in elapses and its
+#   clause STILL applies -- which it will, since R7(D)/(E) key on `skips_current_year` and the skip
+#   cannot clear while no catch-up path exists. Left implicit, the writer re-imposes on the next scan
+#   and an uncatchable-up member is locked CONTINUOUSLY until the skip ages out at the IST year
+#   boundary (contribution/facts.ts:461-464) -- an indefinitely-renewing, machine-imposed permanent
+#   coverage removal, structurally Story 10.17's failure arriving through a different door. AC2 now
+#   requires the answer to be decided, stated at the imposition site and pinned by a test that runs a
+#   member past expiry with the clause still applying; recommended posture is DO NOT re-impose for an
+#   unresolved episode whose completion condition is unsatisfiable.
+#
+#   THREE GOVERNANCE ESCALATIONS the story refuses to absorb. (2) The NON-SUBSUMPTION PRINCIPLE -- this
+#   story's central constraint -- was never ratified into the Niyamavali: zero occurrences of "subsum"
+#   or "joining discipline", and 3.0 does not exist, although sprint-change-proposal-2026-08-04.md:150
+#   sequenced that ratification as step 0 BEFORE this story and only D9 landed. (3) STANCE #5: UX :89
+#   puts lock-in EXPIRY on the SIE allowlist and reserves accusations to a human edge; lock-in
+#   IMPOSITION is on neither list, so the reconciliation (a lock-in is not a sanction -- brief 1c,
+#   niyamavali 1.3) is written into the code comment at the imposition site rather than assumed. (4) The
+#   COVERAGE CONTRADICTION: `VALID_STATES` contains 'lock-in', so a JOIN-lock-in member is
+#   `is_valid: true` while this story's restoration lock-in makes it false -- two opposite answers to
+#   one constitutional question (3.3 says lock-in removes claim eligibility). That is 10.17's still-open
+#   Escalation 3; this story does not resolve it (changing VALID_STATES moves coverage for every
+#   existing member) but it makes it LIVE and member-visible.
+#
+#   CONSUMER SIDE ALREADY SHIPPED, DARK. Story 10.16 pre-built the whole disclosure arm: presenter.ts:84
+#   `RESTORATION_LOCK_IN_FLAG = 'restoration_lock_in'`, `isUnderRestorationDisciplineLockIn`, the
+#   view-model arm, and all four copy keys in en + hi. This story emits the flag into `specialFlags` and
+#   writes ZERO new disclosure copy; the 10.16 AC2 pin test must flip to in-force with NO change to its
+#   expected view-model, and the package answer for R7(D)/(E)/(F) is the already-shipped
+#   `no_consecutive_requirement` arm (10.25 D4), not a new lock-in-shaped one.
+#
+#   AC11 catches a live landmine: member-status/presenter.ts:145 finds the join-lock-in clause by
+#   `clauseId.includes('lock-in')` -- a documented known simplification -- so any new clause id carrying
+#   that substring would hijack the admin panel's join-lock-in section and deep link. AC12 fixes the
+#   architectural record as an `AI-10-n` doc-comment per Decision 2026-08-04-072; architecture.md is NOT
+#   amended [[feedback_architecture_vs_adr_boundary]]. Migration head is 0096 -> this story is 0097,
+#   hand-authored, never `db:generate` [[project_live_db_test_gotchas]]. Story authored with five
+#   parallel research agents; commit manually per [[project_story_automator_ops]].)
 # last_updated: 2026-08-07 (10-12-per-pariwar-custom-fields-jsonb: review -> done via bmad-code-review.
 #   22 findings triaged (1 decision-needed resolved as patch, 14 patch, 6 defer, 2 dismissed); all 14
 #   patches applied. Most severe: `definitionsInForce()`'s ORDER-BY-then-LIMIT truncated its candidate
@@ -4108,7 +4450,7 @@ development_status:
   10-20-moderation-record-model: backlog
   10-21-off-portal-dpdpa-access: backlog
   10-22-moderation-appeal-mechanism: backlog
-  10-23-restoration-discipline-lock-in: backlog
+  10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done
   10-26-r7g-personal-event-excuse-assertion: done

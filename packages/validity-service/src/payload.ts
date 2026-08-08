@@ -23,6 +23,7 @@ import type {
   ContributionHistorySummary,
   ContributionHistoryUnavailable,
   LockInStatusPayload,
+  RestorationDisciplineStatusPayload,
   MedicalDisclosureFlagsPayload,
   MemberValidityPayload,
   ProvenanceEntry,
@@ -74,18 +75,43 @@ export const VALID_STATES: readonly member.MemberLifecycleState[] = [
 export const ACTIVE_STATES: readonly member.MemberLifecycleState[] = ['active'];
 
 /**
- * `is_valid` = a covered lifecycle state AND not under moderation (Story 10.10, AC5).
+ * `is_valid` = a covered lifecycle state AND not under moderation AND not under a RESTORATION
+ * lock-in (Story 10.10 AC5, extended by Story 10.23 AC6).
  *
- * `moderationStatus` defaults to `'none'` so the ~dozen DB-free unit-test call sites that predate
- * Story 10.10 keep their meaning. The SERVICE always passes a real, DB-resolved status — see
- * `service.ts`, where the overlay is resolved alongside `getMemberStateAt` at the same pinned
- * instant, so the two halves of this composition can never be read from different moments.
+ * Both status arguments default so the DB-free unit-test call sites that predate each story keep
+ * their meaning. The SERVICE always passes real, DB-resolved values — see `service.ts`, where both
+ * overlays are resolved inside the existing `Promise.all` alongside `getMemberStateAt`, so all three
+ * halves of this composition are read at the SAME pinned instant and can never come from different
+ * moments.
+ *
+ * ── ⚠ Story 10.23: THIS is where the restoration lock-in reaches coverage, and the ONLY place ────
+ * A restoration lock-in removes COVERAGE (Niyamavali §3.3: *"only their eligibility to claim as a
+ * beneficiary is affected for the lock-in period"*) and must NOT touch the DONOR ROSTER. The
+ * structural guarantee is that `deriveIsAssignable` below takes `(state, moderationStatus)` and
+ * **cannot see this third input at all** — failure mode 2 is impossible by signature. ⛔ Do not widen
+ * that signature "for symmetry"; it is the single most damaging change available in this area. If a
+ * locked-in member left the roster, pool assignment is the only contribution path (Story 7.6, fenced
+ * by 8.10) and R7(D)'s catch-up would become unreachable — recreating, automatically and at scale,
+ * the de-facto permanent ban Story 10.17 exists to correct.
+ *
+ * ⚠ `'expired'` is NOT `'in-lock-in'`: a member who has SERVED a restoration lock-in is covered
+ * again with no event and no job (AC4 — expiry is derived at read).
+ *
+ * ⛔ And note what is NOT reopened here: a member in the JOINING `lock-in` lifecycle state stays
+ * `isValid: true`, because `VALID_STATES` contains `'lock-in'`. Story 10.16's D3 refused that
+ * substitution in writing. The system therefore holds two opposite answers to "does a lock-in remove
+ * coverage?" — a real, live contradiction this story makes member-visible and does NOT resolve
+ * (Escalation 4, routed to the Trustee Panel; changing `VALID_STATES` would move coverage for every
+ * existing member and rehash every payload).
  */
 export function deriveIsValid(
   state: member.MemberLifecycleState,
   moderationStatus: member.moderation.ModerationStatus = 'none',
+  restorationState: member.restorationDiscipline.RestorationDisciplineState = 'never-imposed',
 ): boolean {
-  return VALID_STATES.includes(state) && moderationStatus === 'none';
+  return (
+    VALID_STATES.includes(state) && moderationStatus === 'none' && restorationState !== 'in-lock-in'
+  );
 }
 
 /**
@@ -108,6 +134,19 @@ export function deriveIsValid(
  *
  * No reason-code branching, ever: the seven codes establish the GROUND for the sanction, never the
  * roster consequence. A per-code roster rule would relocate a governance decision into a derivation.
+ *
+ * ── ⛔ STORY 10.23 DELIBERATELY DID NOT TOUCH THIS FUNCTION, AND THAT IS AN INVARIANT (AC6) ───────
+ * A restoration lock-in removes COVERAGE and is IGNORED BY THE ROSTER (`epics.md:3878`). This
+ * signature — `(state, moderationStatus)`, and nothing else — is the STRUCTURAL guarantee: the
+ * restoration overlay is not a parameter, so it cannot leak in by accident. A locked-in member is
+ * `isValid: false, isAssignable: true`, exactly as a suspended member is.
+ *
+ * ⛔ **Widening this signature is the single most damaging change available in this area.** If a
+ * locked-in member left the donor roster, pool assignment is the ONLY contribution path (Story 7.6,
+ * fenced by 8.10), so R7(D)'s *"catch-up of the missed contribution"* — already unreachable for
+ * other reasons (Escalation 6) — would become structurally unreachable, and the instrument would
+ * recreate the de-facto permanent ban Story 10.17 was written to correct: automatically, at scale,
+ * with no trustee ever acting. Pinned by test, in `payload.test.ts` and on the live roster path.
  */
 export function deriveIsAssignable(
   state: member.MemberLifecycleState,
@@ -124,12 +163,24 @@ export function deriveIsAssignable(
  * `is_active: true` for a suspended member would contradict the PRD line this function implements,
  * and would render the member panel's "active" headline for someone who is suspended. Recorded in
  * the Dev Agent Record rather than made silently.
+ *
+ * ── Story 10.23 (AC6) — the restoration lock-in is reconciled here DELIBERATELY, not by accident ──
+ * FR-12A defines `is_active` as *"valid AND past lock-in AND not suspended"*, and a member serving a
+ * restoration lock-in satisfies neither of the first two conjuncts: `deriveIsValid` is already
+ * `false` for them, and they are by construction NOT past a lock-in. Rendering such a member as
+ * `active` would contradict the same PRD line this function was extended for in Story 10.10, and
+ * would put an "active" headline on the member panel of someone whose coverage the system has just
+ * removed. So the third input is threaded here too, and the choice is recorded rather than left to
+ * be inferred from `ACTIVE_STATES` — the precedent Story 10.10 set at this exact function.
  */
 export function deriveIsActive(
   state: member.MemberLifecycleState,
   moderationStatus: member.moderation.ModerationStatus = 'none',
+  restorationState: member.restorationDiscipline.RestorationDisciplineState = 'never-imposed',
 ): boolean {
-  return ACTIVE_STATES.includes(state) && moderationStatus === 'none';
+  return (
+    ACTIVE_STATES.includes(state) && moderationStatus === 'none' && restorationState !== 'in-lock-in'
+  );
 }
 
 // ── The `special_flags` moderation entries (PRD `prd.md:411` form) ────────────────────────────────
@@ -167,6 +218,41 @@ export function projectLockInStatus(
     daysAtJoin: clock.lockInDaysAtJoin,
     unlockDate: unlock.toISOString(),
     state,
+  };
+}
+
+// ── Restoration-discipline projection (Story 10.23 — the SECOND, INDEPENDENT clock; AC5/AC7) ──────
+
+/**
+ * The wire flag Story 10.16 shipped its consumer for, DARK, and named this story as the owner of:
+ *
+ * ```ts
+ * // packages/ui/src/contribution-disclosure/presenter.ts:74-84
+ * // Story 10.23 OWNS the wire name; if it ships a different one, THIS CONSTANT is
+ * // the only line that changes (the copy keys, the view-model shape and `pay.tsx` do not — AC2).
+ * const RESTORATION_LOCK_IN_FLAG = 'restoration_lock_in';
+ * ```
+ *
+ * Emitting this literal is the ENTIRE activation mechanism (AC7): the disclosure arm, its four copy
+ * keys (already authored in `en` + `hi`), the view-model shape and `pay.tsx` are all shipped and
+ * unchanged. **This story writes zero new disclosure copy and adds no UI implementation.**
+ */
+export const RESTORATION_LOCK_IN_FLAG = 'restoration_lock_in';
+
+/**
+ * Project the restoration-discipline overlay into its payload sub-object (D4).
+ *
+ * The overlay has already done the folding and the AC5 combination at the pinned instant; this is a
+ * pure shape/ISO conversion. ⚠ `lockInStatus` is NOT read, NOT merged and NOT modified here — the
+ * two clocks are siblings, and a member may be serving both with different unlock instants.
+ */
+export function projectRestorationDisciplineStatus(
+  overlay: member.restorationDiscipline.RestorationDisciplineOverlay,
+): RestorationDisciplineStatusPayload {
+  return {
+    state: overlay.state,
+    imposedAt: overlay.imposedAt?.toISOString() ?? null,
+    expiresAt: overlay.expiresAt?.toISOString() ?? null,
   };
 }
 
@@ -342,6 +428,15 @@ export interface AssembleInput {
    * tests that predate 10.24 keep compiling; absent ≡ the honest gap, never a fabricated zero.
    */
   contributionHistory?: ContributionHistorySummary;
+  /**
+   * Story 10.23 — the member's restoration-discipline overlay at the SAME pinned instant as
+   * `memberState` and `moderationOverlay`. Optional so DB-free unit tests that predate 10.23 keep
+   * compiling; absent ≡ never imposed (`NO_RESTORATION_DISCIPLINE`).
+   *
+   * ⚠ It must be resolved inside `service.ts`'s existing `Promise.all`, at the same `at` — never in
+   * a second read at a second moment (AC6).
+   */
+  restorationDiscipline?: member.restorationDiscipline.RestorationDisciplineOverlay;
   slots: readonly ClauseEvalSlot[];
 }
 
@@ -356,18 +451,34 @@ export function assemblePayload(input: AssembleInput): MemberValidityPayload {
     assembleClauses(input.slots);
 
   const moderation = input.moderationOverlay ?? member.moderation.NO_MODERATION;
-  // The moderation flag is APPENDED after the clause-order flags so the array stays deterministic
-  // (clause flags in declared clause order, then at most one moderation flag) — the payload hash is
-  // order-sensitive, and a non-deterministic position here would break replay-identity.
+  const restoration =
+    input.restorationDiscipline ?? member.restorationDiscipline.NO_RESTORATION_DISCIPLINE;
+
+  // ── `specialFlags` ORDER IS PART OF THE CONTRACT (AC7) ────────────────────────────────────────
+  // The payload hash is order-sensitive, so a non-deterministic position here would break replay
+  // identity. The order is DECLARED, not incidental:
+  //
+  //     [ …clause-order flags…, moderation flag?, restoration_lock_in? ]
+  //
+  // Clause flags first (in declared clause order), then at most one moderation flag (Story 10.10),
+  // then at most one restoration flag (Story 10.23) — appended LAST because it is the newest
+  // instrument, so no existing payload's flag positions move. Where a moderation flag and this flag
+  // co-occur, moderation precedes restoration, and a test pins exactly that.
   const moderationFlag = moderationSpecialFlag(moderation.status, moderation.reasonCode);
-  const allSpecialFlags = moderationFlag === null ? specialFlags : [...specialFlags, moderationFlag];
+  const allSpecialFlags = [
+    ...specialFlags,
+    ...(moderationFlag === null ? [] : [moderationFlag]),
+    // ⭐ THE WIRE (AC7). Emitting this literal is the whole activation mechanism for the dormant
+    // disclosure Story 10.16 shipped — no new component, no new copy key, no new view-model arm.
+    ...(restoration.state === 'in-lock-in' ? [RESTORATION_LOCK_IN_FLAG] : []),
+  ];
 
   const withoutHash: Omit<MemberValidityPayload, 'validityPayloadHash'> = {
     memberId: input.memberId,
     evaluatedAt: input.evaluatedAt.toISOString(),
     ruleRegistryVersion,
-    isValid: deriveIsValid(input.memberState, moderation.status),
-    isActive: deriveIsActive(input.memberState, moderation.status),
+    isValid: deriveIsValid(input.memberState, moderation.status, restoration.state),
+    isActive: deriveIsActive(input.memberState, moderation.status, restoration.state),
     // Story 10.17 — the ROSTER predicate, resolved from the SAME moderation status as the two above
     // (one overlay read, one instant). Placed immediately after `isActive` so the object literal, the
     // `MemberValidityPayload` type and `MemberValidityPayloadDto` stay in one declared order.
@@ -380,6 +491,9 @@ export function assemblePayload(input: AssembleInput): MemberValidityPayload {
     specialFlags: allSpecialFlags,
     applicableNiyamavaliClauses,
     provenanceTrace,
+    // Story 10.23 — APPENDED last (AC10a: the wire DTO is field-order sensitive; append, never
+    // insert). A sibling of `lockInStatus`, never a merge of it (D4).
+    restorationDisciplineStatus: projectRestorationDisciplineStatus(restoration),
   };
 
   return { ...withoutHash, validityPayloadHash: computeValidityPayloadHash(withoutHash) };

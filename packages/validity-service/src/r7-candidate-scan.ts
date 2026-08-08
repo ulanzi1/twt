@@ -115,9 +115,50 @@ export interface R7CandidateClause {
 }
 
 /**
+ * What Story 10.23's imposition writer needs from this scan, carried ALONGSIDE the accusation
+ * channel rather than inside it.
+ *
+ * ── ⭐ Why it rides THIS scan instead of a second evaluation path (Story 10.23, AC2) ─────────────
+ * "The trustee sees what is imposed and what is imposed is what the trustee sees." A second R7
+ * evaluation for the writer would let the DISPLAYED violator flags and the IMPOSED lock-ins diverge
+ * silently — the two would be different code reading the same clauses, and 10.24's round-2 review
+ * already found two such seams drifting by omission. So the writer consumes the same `evaluateLadder`
+ * result, the same `applied` filter and the same `imposesRestorationObligation` predicate.
+ *
+ * ⚠ COSTS ZERO EXTRA QUERIES. Both fields come from data this scan already holds above its own loop:
+ * `inputsByMember` (the bulk fact read) and `payloadsByClauseId` (the hoisted clause resolutions).
+ * The scan's bounded-query budget (AC7) is unchanged.
+ *
+ * ⚠ DELIBERATELY OUTSIDE `payload`. `payload` is the object handed to `summarizeViolatorFlags`, and
+ * keeping it byte-identical means this addition cannot perturb the ACCUSATION channel.
+ */
+export interface R7ImpositionInputs {
+  /** The contribution-record facts that anchor the member's current unresolved EPISODE (AC2). */
+  readonly episodeAnchor: {
+    readonly earliestSkipClosedAt: Date | null;
+    readonly lastConfirmedAt: Date | null;
+    readonly skipsCurrentYear: number;
+  };
+  /**
+   * The APPLIED clauses that IMPOSE a restoration obligation, with their resolved payloads and
+   * pinnable version ids — the same set as `applicableNiyamavaliClauses`, plus the payload the
+   * writer must read `restoration.lock_in_months` out of.
+   *
+   * ⚠ Still NOT the final imposition set: D3 requires `lock_in_months > 0` as well, because R7(A)
+   * imposes an obligation (`consecutive_required: 3`) while prescribing NO lock-in
+   * (`lock_in_months: 0`). The writer applies that second half via `readLockInMonths`.
+   */
+  readonly imposingClauses: readonly {
+    readonly clauseId: string;
+    readonly clauseVersionId: string;
+    readonly payload: Record<string, unknown>;
+  }[];
+}
+
+/**
  * One candidate, shaped as `ViolatorCandidate` (domain `trustee-lite`) — structurally, not by import:
  * `@twt/domain` cannot import `@twt/validity-service` (the package cycle), so the two sides meet on a
- * declared shape. The handler passes these straight into `summarizeViolatorFlags`.
+ * declared shape. The handler passes `payload` straight into `summarizeViolatorFlags`.
  */
 export interface R7ViolatorCandidate {
   readonly memberId: string;
@@ -127,6 +168,8 @@ export interface R7ViolatorCandidate {
     readonly contributionHistorySummary: ContributionHistorySummary;
     readonly applicableNiyamavaliClauses: readonly R7CandidateClause[];
   };
+  /** Story 10.23 — the imposition writer's inputs. Ignored by every Story 10.24 consumer. */
+  readonly impositionInputs: R7ImpositionInputs;
 }
 
 /**
@@ -219,6 +262,14 @@ export async function scanR7ViolatorCandidates(
       // read genuinely means "has never asserted" rather than "we did not look".
       personalEventAsserted: false,
     };
+    // Story 10.23 — the episode anchor, from the SAME bulk-read row the facts derive from. Carried
+    // for every member (including the un-derivable one below) so the shape is total.
+    const episodeAnchor = {
+      earliestSkipClosedAt: inputs.earliestSkipClosedAt,
+      lastConfirmedAt: inputs.lastConfirmedAt,
+      skipsCurrentYear: inputs.skipsCurrentYear,
+    };
+
     const facts = deriveContributionFacts(inputs, at);
     if (facts === null) {
       candidates.push({
@@ -229,6 +280,10 @@ export async function scanR7ViolatorCandidates(
           contributionHistorySummary: CONTRIBUTION_UNAVAILABLE,
           applicableNiyamavaliClauses: [],
         },
+        // ⚠ NO imposing clauses for an un-derivable member. Their facts are structurally incoherent,
+        // so no clause can honestly be said to apply — and imposing a coverage removal on evidence
+        // nobody can read is the worst available outcome here. Same posture as the empty clause list.
+        impositionInputs: { episodeAnchor, imposingClauses: [] },
       });
       continue;
     }
@@ -252,6 +307,18 @@ export async function scanR7ViolatorCandidates(
     // the loop: the clause resolution is hoisted above it, which is the whole point of this module.
     const appliedRestoration = restorationOfPick(ladder.applicableClauseId, resolvedClauses);
 
+    // Story 10.23 — the imposition set: APPLIED ∧ IMPOSING, exactly the filter pair the accusation
+    // channel below uses, plus the resolved payload. Built from the same `ladder.perClauseResults`
+    // so the two can never disagree about which clauses applied to this member.
+    const imposingClauses = ladder.perClauseResults
+      .filter((entry) => entry.applied)
+      .filter((entry) => contributesViolatorFlag(entry.clauseId, payloadsByClauseId))
+      .map((entry) => ({
+        clauseId: entry.clauseId,
+        clauseVersionId: String(entry.result.provenance.clauseVersionId),
+        payload: payloadsByClauseId.get(entry.clauseId) ?? {},
+      }));
+
     candidates.push({
       memberId: String(memberId),
       payload: {
@@ -273,6 +340,7 @@ export async function scanR7ViolatorCandidates(
             reasonCode: entry.result.reasonCode,
           })),
       },
+      impositionInputs: { episodeAnchor, imposingClauses },
     });
   }
   return { status: 'available', candidates };

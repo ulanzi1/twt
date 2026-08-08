@@ -164,7 +164,15 @@ describe('the SHIPPED governance_boundary.yaml', () => {
 // If you are INTENTIONALLY changing the bar: complete the admission workflow in the YAML header
 // (trustee attestation + rationale + ADR + `count` bump), then update EXPECTED_BAR_HASH below to the
 // hash this test reports on failure.
-const EXPECTED_BAR_HASH = 'cbd837f2c2be2095d8dfe10848d13e8e45d84f2a321859cae24cbe7c9332d9c6';
+// ⚖ UPDATED by Story 10.23 (2026-08-07) — a DELIBERATE bar change, admitted through the workflow:
+//   · new `allow` entry `member_flow` / `restoration_discipline_imposition` (the AC14 rollout flag
+//     gating the automatic restoration-lock-in writer), with its rationale and adr;
+//   · `count` bumped 4 → 5 in the SAME commit (the revert-sanity teeth the YAML header requires);
+//   · attested by Decision `2026-08-07-088` clauses 4-5 + Decision `2026-08-07-089`.
+// ⛔ The entry's rationale states the enablement authority in terms — Trustee-Panel-exclusive,
+// through a formal `.decision-log.md` entry — because this flag gates an automatic process that
+// removes a member's COVERAGE with no human in the loop.
+const EXPECTED_BAR_HASH = 'b00679ac96eeff3397e670957ee596ddf6b4f775827af319dd3ee8868b460b19';
 
 describe('governance_boundary.yaml golden hash', () => {
   it('matches the frozen hash — a bar change requires deliberate attestation', () => {
@@ -217,7 +225,12 @@ describe('governance_boundary.yaml golden hash', () => {
 //
 // If you are INTENTIONALLY changing a flag default: that is a governance change (the bar's admission
 // workflow applies to the paired `allow` entry), so update this hash deliberately.
-const EXPECTED_FLAG_DEFAULTS_HASH = 'beba074249660bbae2c07db6aa19536f4845f95c275e844e25fcfeca6d1c4e5c';
+// ⚖ UPDATED by Story 10.23 (2026-08-07) — the paired half of the bar change above: the new
+// `restoration_discipline_imposition` default. ⛔ `fallbackDefault: false` is load-bearing and is
+// separately asserted below: AC14 requires default-OFF to be the behaviour of the ABSENT
+// configuration, so every degraded path (no version in force, malformed cohort rule, lookup error)
+// must land on "the writer does nothing".
+const EXPECTED_FLAG_DEFAULTS_HASH = '05b02ba200f4b57c23bc59da30dd98ef435e0b811eb29767fc60eef447343bc1';
 
 describe('FLAG_DEFAULTS golden hash', () => {
   it('matches the frozen hash — a seeded flag default cannot change unnoticed', () => {
@@ -242,6 +255,24 @@ describe('FLAG_DEFAULTS golden hash', () => {
       )
       .digest('hex');
     expect(hash).toBe(EXPECTED_FLAG_DEFAULTS_HASH);
+  });
+
+  it('⛔ restoration_discipline_imposition DEFAULTS OFF — AC14, and absence is what must be off', () => {
+    // Story 10.23 AC14: "a test asserts the default: with no flag configuration present, the writer
+    // performs NO imposition — no row, no event. Default-off must be the behaviour of the ABSENT
+    // configuration, not a value that happens to be seeded off."
+    //
+    // `state: 'off'` covers the seeded case; `fallbackDefault: false` is the one that covers ABSENCE
+    // — it is what every degraded path resolves to (no version in force, malformed cohort rule,
+    // lookup error). Asserted by name rather than left to the golden hash, because the hash tells a
+    // future reader THAT something changed and this tells them WHY it must not: flipping either
+    // makes an automatic process start removing members' coverage with no human in the loop, and
+    // enabling it is Trustee-Panel-exclusive (Decision 2026-08-07-089).
+    const flag = FLAG_DEFAULTS['restoration_discipline_imposition'];
+    expect(flag).toBeDefined();
+    expect(flag?.state).toBe('off');
+    expect(flag?.fallbackDefault).toBe(false);
+    expect(flag?.cohortDefinition).toEqual({ clauses: [] });
   });
 
   it('⚠ kyc_manual_fallback.fallbackDefault is FALSE — the degraded path keeps members able to join', () => {

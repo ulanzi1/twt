@@ -32,6 +32,45 @@ export interface LockInStatusPayload {
   state: 'in-lock-in' | 'unlocked' | 'never-entered';
 }
 
+// ── Sub-object: restoration-discipline status (Story 10.23 — the SECOND, INDEPENDENT clock) ──────
+
+/**
+ * The §3.1 R7 restoration lock-in, as of the pinned instant — Story 10.23 (AC5; D4).
+ *
+ * ⚠ **A SIBLING OF `lockInStatus`, NEVER A MERGE OF IT.** These are two INDEPENDENT instruments that
+ * run CONCURRENTLY: the JOINING clock (`lockInStatus`, FR-8, driven by `lock_in_days_at_join`) and
+ * this RESTORATION clock (imposed by an R7 ladder verdict). Decision `2026-08-06-079` is explicit —
+ * *"joining discipline and restoration discipline are INDEPENDENT instruments that run CONCURRENTLY
+ * … One clock never absorbs the other."*
+ *
+ * ⛔ **The rejected design was a single `disciplineStatus` with a merged `unlockDate`.** It cannot
+ * represent a member serving both, and the first thing anyone does with it is take a `max` or a
+ * `min` — which is subsumption by arithmetic. A member CAN be `lockInStatus.state: 'in-lock-in'` AND
+ * `restorationDisciplineStatus.state: 'in-lock-in'` at once, with two DIFFERENT unlock instants, and
+ * expiring one leaves the other untouched.
+ *
+ * ⚠ `lock_in_days_at_join` is not read, reused or extended by this clock, and
+ * `contribution.r7a_restorations_used` is not an input to its expiry (Story 10.25 D5 forbids it by
+ * name).
+ */
+export interface RestorationDisciplineStatusPayload {
+  /**
+   * `in-lock-in` (any imposition un-expired at `evaluatedAt`) · `expired` (served, none live now) ·
+   * `never-imposed`. Deliberately spelled differently from `LockInStatusPayload.state` so the two
+   * clocks cannot be confused at a call site.
+   */
+  state: 'never-imposed' | 'in-lock-in' | 'expired';
+  /** ISO-8601 instant the CURRENT standing began (earliest live imposition); null when not in force. */
+  imposedAt: string | null;
+  /**
+   * ISO-8601 combined expiry — the **MAXIMUM** over live impositions, per the concurrency rule pinned
+   * from the `niy.restoration-discipline.policy` clause (⚖ ratified, Decision `2026-08-07-088`
+   * clause 1). Never the minimum (that would SHORTEN a live consequence), never a replacement (that
+   * would let a lesser imposition discharge a greater one), never a sum. `null` when not in force.
+   */
+  expiresAt: string | null;
+}
+
 // ── Sub-object: vyawastha shulk / renewal status (Story 3.8 getVyawasthaShulkStatus) ──
 
 /**
@@ -276,6 +315,11 @@ export interface MemberValidityPayload {
   applicableNiyamavaliClauses: ApplicableClause[];
   /** Ordered provenance trace (AC2 — same declared order as the clauses). */
   provenanceTrace: ProvenanceEntry[];
+  /**
+   * Story 10.23 — the §3.1 restoration lock-in clock. APPENDED, never inserted: the wire DTO is
+   * field-order sensitive and every existing consumer's expectations are positional (AC10a).
+   */
+  restorationDisciplineStatus: RestorationDisciplineStatusPayload;
   /** sha256hex over the ordered, redaction-free payload (minus this field + minus evaluatedAt). */
   validityPayloadHash: string;
 }

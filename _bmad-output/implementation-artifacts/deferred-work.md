@@ -4,6 +4,181 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: implementation of story 10-23-restoration-discipline-lock-in (2026-08-08)
+
+> Story 10.23 built §3.1's restoration lock-in — the first thing in the substrate that removes a
+> member's coverage automatically, with no human in the loop. Four of its nine escalations were RULED
+> before implementation (Decision `2026-08-07-088`); five remain owed exactly as authored.
+
+### ⛔ DISCHARGE INVARIANT — not a deferred row, and not dischargeable by creating a file
+
+**The invariant, in the form Decision `2026-08-07-088` clause 4 preserved verbatim:**
+
+> **The completion condition of every restoration package Story 10.23 imposes must be satisfiable
+> through a ratified system workflow.**
+
+⚠ **This entry originally rendered it in the story's pre-`088` authoring — *"Story 10.23 MUST NOT be
+marked complete until…"*.** That framing bakes **story closure** into the invariant's own text, which
+is exactly the placement Decision `2026-08-07-088` clause 4 moved and Decision `2026-08-08-092`
+corrected. The ratified form above is story-agnostic and says nothing about being "marked complete" —
+it is a property of the **system**, and it now gates the **flag flip**.
+
+**Status: UNDISCHARGED.** Four things are simultaneously true: the restoration lock-in exists and
+removes coverage; §3.1's ratified interpretive note (2026-08-07) says a skip clears through
+*"reconciliation or an **authorized catch-up process**"*; **no authorized catch-up process exists**
+(contribution flows only through assignment to an OPEN cycle — Story 7.6's pool-bound payment
+enforcement, fenced by Story 8.10 — so there is no channel by which a member can pay a CLOSED one);
+and three of the four activated clauses (R7(D) `catch_up_required`, R7(E)/(F) `complete_all`) define
+their restoration package **entirely** in terms of that unavailable act.
+
+⚠ **Phrased over the SYSTEM, not over the backlog, deliberately.** *"A successor story must exist"*
+is dischargeable by creating a file and is silently voided by a later merge or rename;
+*"every package this story imposes must have a satisfiable completion path"* survives any backlog
+reorganisation and is falsifiable against the running system — take a member under each of R7(D),
+(E), (F) and ask whether a ratified path reaches the state their clause calls completion. A successor
+catch-up story is the **expected vehicle, not the requirement**; a Trustee-ratified alternative
+mechanism or a Part 11 reinterpretation discharges it equally.
+
+**Enforcement mechanism (Decision `2026-08-07-088` clauses 4–5):** the `apps/jobs` imposition writer
+is gated behind the **default-OFF** `restoration_discipline_imposition` flag. The invariant binds the
+**FLAG FLIP** — where the harm begins — **and nothing else**. **Merging and closing with the flag off
+are permitted; enabling it is not, until the property holds.** ⚠ The flag is *how the invariant is
+enforced*, **not** a deployment toggle that happens to default off.
+
+⚠ *Corrected by Decision `2026-08-08-092`: this paragraph read "as well as story closure" and "closing
+the story is not", carrying the additive misreading of `088` clause 4 (which says the binding point
+moves to the flag flip **rather than** closure). Story 10.23 is `done`; the gap is unchanged.*
+
+**Owner of the discharging decision: the TRUSTEE PANEL, exclusively** (Decision `2026-08-07-089`),
+exercised through a formal `.decision-log.md` entry. Operations owns *how* a flip executes, never
+*whether* it may occur; a ticket, config-PR approval, deployment sign-off or verbal go-ahead is not an
+authorization. ⚠ **Naming the owner does NOT discharge the invariant** — this is an ownership
+assignment, not a closure ([[feedback_closure_language_precision]]). **The discharge itself is
+OUTSTANDING.**
+
+**Re-trigger:** **any proposal to enable the `restoration_discipline_imposition` flag.** ⚠ *Was "this
+story's own closure, and any proposal to enable the flag" — the closure leg is struck by Decision
+`2026-08-08-092`. Story 10.23 closed `done` on 2026-08-08 and that closure was **not** a discharge and
+**not** a trigger; the flag proposal is the only re-trigger.*
+
+### ⛔ Separately owed, and discharged by NONE of the above — the copy-truth defect
+
+`suspension_disclosure.lock_in.what_it_does` (verified live in `en` + `hi`) promises *"Contributing
+during this period counts toward completing your restoration."* For an R7(D)/(E)/(F) member that is
+**false**: contributing to a future cycle does not discharge a past missed one, and no catch-up
+channel exists at all. Same harm class Story 10.16's **D3** refused on identical grounds — a false
+statement to a member, about their own standing, on a payment surface.
+
+⚠ **FINDING REFINED DURING IMPLEMENTATION: it is TWO strings, not one.** The story text says *"one of
+those four strings is not true"*; the `suspension_disclosure.lock_in.a11y` label embeds the same
+sentence verbatim, so a screen-reader user hears the false claim too. Both are pinned by a test that
+asserts the defect is REACHED (never that the copy is correct), so it cannot be lost.
+
+⛔ **Not fixed here, and deliberately so.** AC7 freezes the implementation: the implementer does not
+edit the strings, and **must not** narrow the disclosure's trigger to hide R7(D)/(E)/(F) members —
+silence about a coverage removal is worse than an imperfect explanation and re-creates the exact gap
+Story 10.16 closed. A copy change needs a **Story 2.2 tone sign-off**, which sits above this story.
+⚠ Fixing the copy would **not** discharge the invariant above: honest copy about an unsatisfiable
+obligation leaves the obligation unsatisfiable. It binds **while the gap persists**, and is not gated
+on the discharge. **Owner: Story 2.2 tone sign-off. Status: OPEN.**
+
+### Escalations that remain OPEN (not ruled on by Decision `2026-08-07-088`)
+
+- **⚖ Escalation 2 — the non-subsumption principle is NOT in the ratified Niyamavali.** This story's
+  central constraint (AC5) rests on the moderation brief's §1d/D8, which the Sprint Change Proposal
+  sequenced as **step 0, before this story**. **Verified live 2026-08-08: `docs/legal/niyamavali.md`
+  contains ZERO occurrences of "subsum" or "joining discipline", and §3.0 does not exist.** Of the four
+  amendments the SCP sequenced, only D9 has landed (Decision 2026-08-06-080). The instrument is
+  therefore built ahead of the governance text that governs it. Defensible — the code implements the
+  *conservative* reading (never subsume, never shorten) and the Niyamavali is still unpublished — but
+  **routed to the Trustee Panel with this story**, not discovered afterwards. **OPEN.**
+
+- **⚖ Escalation 3 — Stance #5: imposition is not on the SIE allowlist.**
+  `ux-design-specification.md:89` permits time-as-actor for *"non-punitive state transitions only
+  (lock-in **expiry**, renewal grace close, pool window close)"* and reserves *"suspensions,
+  accusations"* to a human edge. This story makes a **machine remove a member's coverage**. The
+  reconciliation — a lock-in is **not a sanction** (brief §1c; Niyamavali §1.3) — is sound, is
+  implemented, and is written into the code at the imposition site. But it **extends** the SIE
+  allowlist in substance, and the extension should be ratified explicitly rather than asserted by the
+  implementation. **OPEN.**
+
+- **⚖ Escalation 4 — the coverage contradiction, now LIVE and member-visible.** `VALID_STATES`
+  contains `'lock-in'`, so the JOINING instrument does **not** remove coverage while this story's
+  RESTORATION instrument **does**. The system now holds two opposite answers to *"does a lock-in
+  remove coverage?"* Niyamavali §3.3 says it does; the moderation brief's §1c table records
+  *"Claim-eligible during? **No**"* for **both**. This is Story 10.17's still-open Escalation 3 and
+  `deferred-work.md` CR-4.6-D7. **This story does NOT resolve it** — changing `VALID_STATES` would
+  move coverage for every existing member and rehash every payload — but it makes the contradiction
+  live, and it is expected to return to the Panel at the flag flip. **OPEN.**
+
+- **⚠ Escalation 7 — the ladder asymmetry becomes operative.** §3.1 gives R7(C) (gap **≥ 12 months**)
+  a **3-month** lock-in and R7(F) (gap **6–11 months**) a **5-month** one — the longer absence draws
+  the shorter lock-in. R7(C) also requires 5 consecutive contributions, so it is not a pure inversion,
+  but the numbers were inert until now and become consequential the day the flag is flipped. Recorded
+  at `deferred-work.md:2190` and named in Decision 2026-08-06-080 as *"a separate, unaddressed
+  Trustee-review question"* (CR-4.2-D3). ⛔ **Flagged for confirmation; the seed was NOT re-tuned.**
+  **OPEN.**
+
+- **⚠ Escalation 8 — R7(A)'s Part 11 amendment remains UNPUBLISHED.** Verified live 2026-08-08: §3.1
+  still reads *"Break before 10 contributions"* / *"Registered but never contributed"*, and the seed
+  rows at `:38` / `:277` still carry the disclaimed proxy `all_of`. **After this story, R7(A)/(B) are
+  blocked on EXACTLY ONE thing**, and it is a Trustee Panel instrument no story can satisfy (Decision
+  2026-08-06-077). Both holds were narrowed to `blockedBy: []` with the amendment as their only
+  remaining (non-fact) blocker, and their owner moved from `story-10-23` to `trustee-panel`.
+  Completion criterion, restated so it is verifiable as **published** rather than assumed:
+  **ratified → version published → implementation references the new version.** **OPEN.**
+
+### ✅ RULED by Decision `2026-08-07-088` — recorded as resolved by ratification, NOT as open questions
+
+- **Escalation 5 — concurrent impositions (AC5). RESOLVED VIA RATIFICATION.** §3.1 was silent on
+  combination. **Clause 1 ratifies the non-shortening `max`-over-live-impositions reading**, and
+  ratifies that it lives in the `niy.restoration-discipline.policy` clause **payload** rather than in
+  code. Replacement was rejected by name, because it would let a member draw a LESSER imposition to
+  discharge a GREATER one already in force. Implemented as ratified: the rule is registry data, pinned
+  onto each imposition event, and the fold switches on it exhaustively.
+
+- **Escalation 9 — the R6 provisioning precondition (D2/AC3). RESOLVED VIA RATIFICATION.** **Clause 2
+  ratifies: do NOT impose on an unprovisioned Pariwar; surface the gap as a named sentinel**
+  (`niyamavali-registry:restoration-discipline-policy`, deliberately distinct from the R7 registry's
+  own sentinel so an operator is not sent to provision the wrong clause). Imposing under a code default
+  is **explicitly rejected** — coverage removal under a convention no Pariwar ratified, i.e. an
+  unratified sanction imposed by a machine.
+
+- **AC2's re-imposition question. RESOLVED VIA RATIFICATION.** **Clause 3: an expired imposition does
+  NOT re-impose while the same unresolved episode's completion condition remains unsatisfiable.**
+  Implemented with an explicit episode identity (anchored on the earliest unresolved skip or the last
+  confirmation, plus the skip count) so that a genuinely NEW episode still imposes normally.
+
+### Recorded operational obligations
+
+- **⚠ The ≤60 s warm-cache deploy step (AC10b).** Every `validityPayloadHash` moves and the wire DTO
+  is `.strict()`, so for up to `VALIDITY_CACHE_TTL_SECONDS = 60` after deploy a pre-deploy cache row
+  can 500 the parse. Handled by the TTL plus the **zero-window lever**
+  `POST /api/v1/p/:pariwarId/admin/validity-cache/invalidate-all`
+  (`apps/api/src/modules/member-validity/routes.ts:68`). ⛔ **Do NOT add a payload-shape or version
+  component to the frozen Story 4.8 cache key** — rejected by name by 10.17 D5 and re-rejected by
+  10.24 and 10.25. Record as a deploy step, as Story 10.25 did.
+  ✅ **No new cache trigger was needed**: migration `0036`'s
+  `AFTER INSERT ON events_log WHEN (NEW.event_type LIKE 'member.%')` already covers this family,
+  because the imposition rides the MEMBER's own stream (contrast Story 10.24's contribution events,
+  which ride the ALERT stream and needed `0093`'s sibling trigger). Asserted by a live-DB test, not
+  assumed.
+
+- **⚠ The imposition writer is un-attested at 4L and un-bounded in write volume.** On a first
+  enablement over a large Pariwar it could impose on many members in a single run; nothing in this
+  story rate-limits or batches that, because the flag being default-OFF makes the first flip a
+  deliberate, supervised governance act rather than a deploy. Recorded, not mitigated speculatively
+  ([[feedback_record_unattested_no_backfill]]). See `packages/validity-service/tests/bench/p95-budget.md`.
+
+- **✅ Entry A's re-trigger is now MET — the member-facing missed-cycle story is CREATABLE.** Story
+  10.23 has landed, which was the condition recorded at this file's Entry A. ⚠ **Read that precisely:
+  this story defines the LOCK-IN half of the restoration lifecycle, not the CATCH-UP half** (D8) — do
+  not let the re-trigger language imply otherwise. Create the story via `bmad-create-story`, carrying
+  **Q2/Q3/Q5/Q6's AC constraints forward VERBATIM** from Entry A. The Decision `2026-08-07-086`
+  re-pin of `missed-closed-cycle-v1` remains deferred on the same distinction.
+
+---
+
 ## Deferred / recorded from: implementation of story 10-26-r7g-personal-event-excuse-assertion (2026-08-06)
 
 - **⚠ Escalation 4 — NO UX-SPEC COVERAGE for the personal-event surface; tone review RECORDED, not
@@ -3052,3 +3227,30 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   there. **Reason for deferring:** pre-existing, cross-module pattern gap, not specific to this
   story's own new logic. **Re-trigger:** the first pass that adds per-route attribution regression
   tests as a house-style requirement. [apps/api/src/modules/custom-fields/handlers.ts]
+
+## Deferred from: code review of 10-23-restoration-discipline-lock-in (2026-08-08)
+
+- **No DB-level constraint prevents two simultaneously-live impositions for the same
+  `(member_id, clause_id)`** beyond the in-process read-then-write check in `shouldImpose`. **Reason
+  for deferring:** real gap introduced by this story (not pre-existing), but "live" is a function of
+  wall-clock time vs. `expires_at` and isn't cleanly expressible as a static UNIQUE/CHECK constraint —
+  a correct fix needs a `tstzrange` GiST exclusion constraint, a larger schema decision entangled with
+  the batch-transaction/SAVEPOINT patch also raised by this review. Not currently exploitable since the
+  writer is unreachable while AC14's `restoration_discipline_imposition` flag stays OFF. **Re-trigger:**
+  before the Trustee Panel discharges Escalation 6 and the flag is considered for enablement.
+  [packages/domain/migrations/0097_member-restoration-discipline.sql]
+
+- **`member.joining_discipline_state` is only merged into the R7 fact bag when `contributionFacts` is
+  non-null**, even though it is a pure projection of `lockInStatus` (always producible) unrelated to
+  the `contribution.*` family. **Reason for deferring:** the obvious-looking fix (merge it
+  unconditionally) was investigated during this same review's patch-application pass and found to be
+  WRONG — `contributionBag === null` is the D6 sentinel gate `evaluateAppliedR7ClauseSlots`
+  (`rules.ts:474-480`) uses to keep "this member's contribution history is not derivable" from ever
+  running the (FROZEN) R7 ladder on a partially-populated bag and manufacturing a false-clean
+  evaluation. Merging unconditionally would defeat that gate. 100% inert today (R7(A)/(B) both HELD).
+  The real question is architectural: once R7(A)/(B) activate, should they be evaluatable from
+  `member.joining_discipline_state` alone when the unrelated `contribution.*` family is unavailable, or
+  should the whole family stay all-or-nothing gated together? **Re-trigger:** whichever story next
+  activates R7(A)/(B) (the Trustee Panel's unpublished Part 11 amendment is the current blocker) must
+  decide this explicitly before touching `evaluateAppliedR7ClauseSlots`'s gating.
+  [packages/validity-service/src/service.ts:160-162; packages/validity-service/src/rules.ts:474-480]

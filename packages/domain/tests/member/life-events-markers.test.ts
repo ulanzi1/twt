@@ -31,17 +31,20 @@ const TO_ACTIVE: MemberEventInput[] = [
 ];
 
 describe('Story 3.9 — event vocabulary wiring', () => {
-  it('extends the vocabulary to 20 types including the two Life Events markers', () => {
+  it('extends the vocabulary to 21 types including the two Life Events markers', () => {
     // 14 (Story 3.1) + 2 (Story 3.9 Life Events markers, this story) + 3 (Story 10.10 moderation)
-    // + 1 (Story 10.26 `member.personal_event_asserted`).
+    // + 1 (Story 10.26 `member.personal_event_asserted`)
+    // + 1 (Story 10.23 `member.restoration_discipline.imposed`).
     // ⚠ Story 10.10's three `member.moderation.*` events are ALSO non-transition markers — they move
     // an ORTHOGONAL moderation overlay, never `members.state` — so they belong to the same identity
     // family this file exercises, and the count moved 16 → 19 with them. Story 10.26's assertion is
     // a non-transition marker too (reducer identity, the `address_updated` precedent), so it joins
-    // the same family and the count moved 19 → 20.
-    expect(MEMBER_EVENT_TYPES).toHaveLength(20);
+    // the same family and the count moved 19 → 20. Story 10.23's imposition is the SECOND overlay's
+    // one event — same identity family, same reason — taking it 20 → 21.
+    expect(MEMBER_EVENT_TYPES).toHaveLength(21);
     expect(MEMBER_EVENT_TYPES).toContain('member.address_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.posting_updated');
+    expect(MEMBER_EVENT_TYPES).toContain('member.restoration_discipline.imposed');
   });
 
   it('binds both new types to a payload schema (exhaustive registry)', () => {

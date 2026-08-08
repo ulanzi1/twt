@@ -459,3 +459,65 @@ VALUES
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── Story 10.23 — restoration-discipline INSTRUMENT policy clause (D2, AC3, AC5, AC11) ────────────
+--
+-- ⚠ THIS CLAUSE DOES NOT CARRY `lock_in_months`, AND THAT IS THE WHOLE POINT (D2).
+-- The epic AC asked for "a new restoration-discipline policy clause" and it was tempting to read that
+-- as "move the durations here". Three months for R7(B)/(C)/(D) and five for R7(E)/(F) already live in
+-- the R7 clauses above, which is exactly where Niyamavali §3.1's table puts them — the months are a
+-- property of THE RUNG, not of the instrument. Duplicating them here would create TWO REGISTRY SOURCES
+-- FOR ONE CONSTITUTIONAL NUMBER, and the Trustee Panel would have to amend two instruments to change
+-- one. A single policy clause also cannot express a per-rung table without re-encoding the ladder.
+--
+-- So the split is: the R7 clause supplies the DURATION; this clause supplies the INSTRUMENT-level
+-- parameters no R7 clause can express. BOTH `clause_version_id`s are pinned onto every imposition
+-- event (FR-8), so amending either is a governance act with NO retroactive effect on members already
+-- serving a lock-in — the `member.lock_in_entered` / `lock_in_policy_version` pattern, applied twice.
+--
+-- Payload parameters, and why each is REGISTRY DATA rather than a code constant:
+--   · `month_counting` = `calendar_end_of_month_clamped` — how a "month" is counted. A 31-Jan
+--     imposition + 3 months ends 30-Apr, not 3-May: the shift clamps to the last day of the target
+--     month rather than overflowing (AI-3-1; NEVER a fixed 30-day span, which drifts up to 3 days a
+--     quarter). Implemented by Postgres `make_interval(months => N)` at the imposition site.
+--   · `concurrency_rule` = `max_over_live` — ⚖ RATIFIED by Decision 2026-08-07-088 clause 1 (AC5).
+--     §3.1 is SILENT on what happens when two impositions are live at once. The Panel ratified the
+--     MAXIMUM over live impositions as the only reading that neither SHORTENS a live consequence
+--     (contrary to the §1d non-subsumption principle and Decision 2026-08-06-079) nor INVENTS a longer
+--     one than §3.1's per-rung table prescribes. Replacement was rejected BY NAME, because it would
+--     let a member draw a LESSER imposition to discharge a GREATER one already in force — an incentive
+--     the Niyamavali does not contemplate. ⚠ The same ruling fixed its PLACEMENT: the rule lives HERE,
+--     in registry data the Panel can amend, not in code. A `Math.max` at the fold with no clause
+--     backing does not satisfy AC5 even though it computes the same answer today.
+--
+-- ⚠ NAMING — the clause id MUST NOT contain the substring `lock-in` (AC11). `@twt/ui`'s
+-- `member-status/presenter.ts:145` finds the JOIN lock-in clause by
+-- `clauseId.includes('lock-in')` — a documented known simplification (2026-07-04 review) that matches
+-- by substring because `applicableNiyamavaliClauses` has no stable category field, with the recorded
+-- risk that "a future clause whose id contains 'lock-in' would false-match". That risk is not
+-- hypothetical: `niy.lock-in.policy`'s resolved version already reaches `resolvedClauseVersionIds`
+-- through the engine seam. A colliding id would hijack the admin panel's join-lock-in section and its
+-- deep link, silently showing a trustee the wrong clause and the wrong version on a member's record.
+-- Hence `niy.restoration-discipline.policy` — deliberately free of the substring, and pinned by test.
+--
+-- PROVISIONING PRECONDITION (R6) — ⚖ RATIFIED, Decision 2026-08-07-088 clause 2 (AC3):
+-- a Pariwar with no effective clause here gets NO IMPOSITION, and the gap is surfaced as a named
+-- sentinel. ⛔ Imposing under a code default is EXPLICITLY REJECTED: it would not be a fallback but
+-- coverage removal under a duration and month-counting convention NO PARIWAR RATIFIED — an unratified
+-- sanction imposed by a machine. ⚠ The sibling `niy.lock-in.policy` states its failure mode as a
+-- member-facing 503; that does NOT transfer here, because this is a background imposition with no
+-- request to fail. `benefit_mechanism='pool'` (frozen row 12 — required on every v1 rule).
+-- Idempotent (ON CONFLICT DO NOTHING).
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c0016-0000-4000-8000-000000000016',
+    'niy.restoration-discipline.policy',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"RESTORATION-DISCIPLINE","title_en":"Restoration-discipline lock-in instrument (§3.1 R7 consequence)","month_counting":"calendar_end_of_month_clamped","concurrency_rule":"max_over_live","provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;

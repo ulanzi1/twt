@@ -67,11 +67,15 @@ describe('AC2/D2 — the event is on the MEMBER stream, NOT in the contribution.
     expect(MEMBER_EVENT_PAYLOAD_SCHEMAS[ASSERTION_EVENT]).toBe(PersonalEventAssertedPayloadSchema);
   });
 
-  it('the vocabulary is now TWENTY member.* events (19 + this one)', () => {
+  it('the vocabulary is now TWENTY-ONE member.* events (20 + Story 10.23\'s imposition)', () => {
     // The stale-count class Story 10.25 AC6 catalogued: a doc comment that says 19 while the tuple
     // says 20. Pinned as a number so the comment cannot drift silently.
-    expect(MEMBER_EVENT_TYPES.length).toBe(20);
-    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(20);
+    // ⚠ Story 10.23 took it 20 → 21 with `member.restoration_discipline.imposed` — the SECOND
+    // governance overlay's one event (there is deliberately no `…expired` sibling: expiry is derived
+    // at read, AC4). This assertion is the SECOND count fixture in the repo; the other lives in
+    // `life-events-markers.test.ts`, and BOTH must move together or the pair itself goes stale.
+    expect(MEMBER_EVENT_TYPES.length).toBe(21);
+    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(21);
   });
 });
 

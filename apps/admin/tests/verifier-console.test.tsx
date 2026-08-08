@@ -47,6 +47,7 @@ const PRESENT_PACKET: VerifierConsolePacket = {
       contributionHistorySummary: { status: 'producer_unavailable', producer: 'story-10-24' },
       medicalDisclosureFlags: { hasDisclosureOnRecord: false, declaredConditionCount: null, imaListVersion: null, pendingConcealmentFlag: false },
       retirementCoverage: { status: 'clause_unavailable' },
+    restorationDisciplineStatus: { state: 'never-imposed', imposedAt: null, expiresAt: null },
       specialFlags: [],
       applicableNiyamavaliClauses: [],
       provenanceTrace: [],

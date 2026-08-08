@@ -288,3 +288,55 @@ measure it either. Its query count is now pinned and member-independent, but tha
 guarantee, not a latency measurement — the per-member pure ladder work is still O(M) and one clause
 wider than before. The 4L figure remains un-attested; recorded, not mitigated speculatively
 ([[feedback_record_unattested_no_backfill]]).
+
+## Story 10.23 — the restoration-discipline overlay (2026-08-07)
+
+Measured on the same harness (`tests/integration/p95-bench.spec.ts`), 120 iterations after 10 warmup,
+local `twt-test-pg` on :5433:
+
+| Percentile | Recorded (ms) | vs Story 10.26 |
+|---|---|---|
+| p50 | **6.88 ms** | 6.62 → 6.88 |
+| p95 | **9.91 ms** | 10.92 → 9.91 |
+| p99 | **10.36 ms** | 13.91 → 10.36 |
+
+Uncached single-member `getValidityAt`. FR-12A's **p95 < 200 ms at 4L** is delivered by the Story 4.8
+cache (D3-A); this measures the recompute the cache falls back to. **9.91 ms against a 200 ms budget.**
+The run-to-run delta is within this harness's noise band and is **not** read as an improvement — the
+honest statement is that one more bounded read did not move the figure.
+
+**What changed underneath — three deltas, and only one of them is a query.**
+
+- **Single-member read: +1 bounded query (`getMemberRestorationDiscipline`).** Joined to `service.ts`'s
+  existing `Promise.all`, so it costs a concurrent round-trip rather than a sequential one. It is an
+  indexed scan of the member's OWN `events_log` stream filtered to one event type — the same shape as
+  the moderation overlay read beside it, and independent of member history size.
+- **`member.joining_discipline_state` costs ZERO queries.** It is a PROJECTION of `lockInStatus.state`,
+  which the payload already reads (AC8; `epics.md:3888`). No new read, no engine change.
+- **The Pariwar-wide scan costs ZERO new queries, and this is PINNED, not asserted in prose.**
+  Story 10.23's `impositionInputs` (the episode anchor + the applied-and-imposing clauses with their
+  payloads) are built entirely from data `scanR7ViolatorCandidates` already holds ABOVE its own loop —
+  `inputsByMember` from the bulk fact read and `payloadsByClauseId` from the hoisted clause
+  resolutions. `tests/integration/contribution-facts.spec.ts`'s counted-query assertions are
+  **unchanged at 3 (single-member) and 10 (Pariwar scan)** and still pass, which is the proof.
+  Counting from the code beats trusting the comment — the lesson Story 10.26 recorded here.
+
+**The WRITE path is new, and it is NOT in this budget.** The `apps/jobs` imposition writer performs,
+per member who actually draws a lock-in: one unbounded overlay read, one `SELECT now()`, one
+`getMemberStateAt`, the projector's stream read, and two inserts. It is a background job, not a
+request path, and it is **gated behind the default-OFF `restoration_discipline_imposition` flag**
+(AC14) whose enablement is Trustee-Panel-exclusive. It has **never been measured at any scale**, and
+no attempt is made to speculate about it here.
+
+**⚠ STILL UN-ATTESTED AT PRODUCTION SCALE (4L), carried forward and now widened:**
+
+1. The Trustee-Lite Pariwar-wide scan (`scanR7ViolatorCandidates`) has still never been measured at
+   production scale. Its query count remains pinned and member-independent, but that is a SHAPE
+   guarantee, not a latency measurement, and the per-member pure ladder work is still O(M).
+2. **NEW — the imposition writer at 4L is un-attested and additionally un-BOUNDED in write volume.**
+   On a first enablement over a large Pariwar it could impose on many members in one run; nothing in
+   this story rate-limits or batches that, because the flag being default-OFF means the first flip is
+   a deliberate, supervised governance act rather than a deploy.
+
+Both are recorded as un-attested and carried as risk, not mitigated speculatively
+([[feedback_record_unattested_no_backfill]]).

@@ -47,8 +47,12 @@ describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', (
     //   r9-suicide-murder stub + the r14 concealment clause were both upgraded/amended IN PLACE per
     //   D1/D2, so they add NO new rows)
     // + 1 Story-4.5 R12 retirement-coverage clause (niy.retirement-coverage.r12 NET-new — the first
-    //   `rule_kind:'computed'` clause).
-    expect(records).toHaveLength(21);
+    //   `rule_kind:'computed'` clause)
+    // + 1 Story-10.23 restoration-discipline INSTRUMENT policy clause
+    //   (niy.restoration-discipline.policy NET-new). ⚠ It carries NO `lock_in_months`: §3.1 puts the
+    //   durations on the RUNG, so the R7 clauses above keep them and this clause supplies only what
+    //   no R7 clause can express — the month-counting convention and the concurrency rule (D2).
+    expect(records).toHaveLength(22);
     const ids = records.map((r) => r.id).sort();
     expect(ids).toEqual([
       'niy.concealment.r14',
@@ -64,6 +68,11 @@ describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', (
       'niy.ninety-percent-rule.r8',
       'niy.ninety-percent-rule.r8-a',
       'niy.ninety-percent-rule.r8-b',
+      // ⚠ Story 10.23 — deliberately NOT `niy.…lock-in…` (AC11). `@twt/ui`'s
+      // `member-status/presenter.ts:145` finds the JOIN lock-in clause by substring
+      // (`clauseId.includes('lock-in')`), so a colliding id would hijack the admin panel's
+      // join-lock-in section and show a trustee the wrong clause on a member's record.
+      'niy.restoration-discipline.policy',
       'niy.retirement-coverage.r12',
       'niy.special-death.r5-c-2',
       'niy.special-death.r5-d',

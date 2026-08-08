@@ -1,0 +1,261 @@
+// The restoration-discipline imposition job — Story 10.23 (Task 4; AC2, AC4, AC14; D3, D6).
+//
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+// ⛔ THE ONLY PRODUCTION WRITER OF RESTORATION LOCK-INS. IT REMOVES COVERAGE AUTOMATICALLY.
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+//
+// Every R7 verdict the §3.1 ladder has produced since Story 10.24 has been an EXPLANATION with
+// nothing behind it. This job is what puts something behind it: a ladder verdict here moves a
+// member's coverage. That is why AC7's disclosure and AC6's roster pin are not peripheral — they are
+// what makes an automatic sanction survivable.
+//
+// ── ⛔ IT IS GATED, AND THE GATE DEFAULTS OFF (AC14) ─────────────────────────────────────────────
+// `restoration_discipline_imposition` (Story 10.8's per-cohort substrate). Disabled — which is the
+// behaviour of the ABSENT configuration, not a seeded value — this job performs its read-only scan
+// exactly as before and skips the imposition step entirely.
+//
+// **Enabling it is Trustee-Panel-exclusive (Decision `2026-08-07-089`), through a formal
+// `.decision-log.md` entry, and may not precede the decision that discharges Escalation 6's
+// invariant. Flipping it without that decision is a GOVERNANCE VIOLATION, not a configuration
+// change.** Operations owns *how* a flip executes, never *whether* it may occur. See the flag's
+// definition site in `packages/domain/src/feature-flags/registry.ts` for the full statement.
+//
+// ── ⚠ WHY THE FLAG IS RESOLVED ONCE PER RUN, NOT PER MEMBER (AC14) ──────────────────────────────
+// `resolveFlagAudited` is a PER-MEMBER API (it takes a `MemberFlagContext`), and `apps/jobs` has no
+// existing caller to copy. Checking it inside the candidate loop would reintroduce exactly the N+1
+// evaluation shape AC2/D3 reject for the imposition predicate itself, and would multiply audit-log
+// volume for a decision that does not vary by member. This flag is a GLOBAL KILL SWITCH on the
+// writer, not a per-member cohort decision — so it is resolved ONCE, before the scan, with a
+// cohort-independent context. Per-member re-evaluation is not required and must not be added.
+//
+// ── ⚠ WHY THIS JOB DOES NOT RE-EVALUATE R7 ──────────────────────────────────────────────────────
+// It consumes `scanR7ViolatorCandidates` — the SAME bulk evaluation the Trustee-Lite surface reads.
+// "The trustee sees what is imposed and what is imposed is what the trustee sees." A second R7
+// evaluation path would let the displayed flags and the imposed lock-ins diverge silently, and
+// 10.24's round-2 review already found two seams drifting by omission. The scan's query budget is
+// bounded and member-count-independent; this job adds no per-member READ to it (only a per-imposition
+// write, on the members who actually draw one).
+//
+// ⛔ It must NOT live in `@twt/validity-service`: `assemblePayload` is a READ path, and writing from
+// it would put a second writer on the correctness path, break as-of replay, and make every payload
+// read a mutation.
+
+import { featureFlags, ids, member, withPariwarScope, type Db } from '@twt/domain';
+import { scanR7ViolatorCandidates } from '@twt/validity-service';
+import type pg from 'pg';
+
+/** The AC14 rollout flag key. Registered in `FLAG_DEFAULTS` + `governance_boundary.yaml`. */
+export const RESTORATION_DISCIPLINE_FLAG_KEY = 'restoration_discipline_imposition';
+
+/**
+ * ⛔ The caller default for the flag: **do not impose**.
+ *
+ * AC14: "Default-off must be the behaviour of the ABSENT configuration, not a value that happens to
+ * be seeded off." This constant is what every degraded path lands on — no version in force, a
+ * malformed cohort rule, or a lookup error — so a flag subsystem that tells us nothing results in
+ * the writer doing nothing.
+ */
+const IMPOSITION_DISABLED = false;
+
+/** What one run did. Reported for telemetry; the counts are what an operator checks after a flip. */
+export interface RestorationDisciplineRunResult {
+  readonly pariwarId: string;
+  /** `false` when the AC14 flag is off — the scan still ran, nothing was written. */
+  readonly writerEnabled: boolean;
+  /** Set when the run could not proceed; the named sentinel, never a silent skip. */
+  readonly unavailable: string | null;
+  readonly membersScanned: number;
+  readonly impositionsWritten: number;
+  /** Refusals by reason — the AC2 predicate's own vocabulary. */
+  readonly skipped: Record<string, number>;
+}
+
+export interface RestorationDisciplineDeps {
+  readonly pool: pg.Pool;
+  /** Injected clock — no `Date.now()` on a path that decides coverage. */
+  readonly clock: () => Date;
+  /** Failure alarm sink — a console stub by default (the `claim-peer-mesh.ts` precedent). */
+  readonly onAlarm?: (message: string) => void;
+}
+
+/**
+ * Run the restoration-discipline imposition pass for one Pariwar.
+ *
+ * Ordering, and why each step is where it is:
+ *   1. resolve the AC14 flag ONCE (above the scan, cohort-independent);
+ *   2. resolve the instrument-policy clause — ⛔ absent ⇒ DO NOT IMPOSE, report the sentinel (AC3);
+ *   3. scan (bounded, member-count-independent) — this happens whether or not the writer is enabled,
+ *      because the scan is the read-only behaviour that already exists today;
+ *   4. per candidate, per applied-and-imposing clause, apply the AC2 predicate and write.
+ */
+export async function runRestorationDiscipline(
+  deps: RestorationDisciplineDeps,
+  pariwarIdRaw: string,
+): Promise<RestorationDisciplineRunResult> {
+  const pariwarId = ids.pariwarId(pariwarIdRaw);
+  const at = deps.clock();
+  const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
+  const skipped: Record<string, number> = {};
+  const bump = (reason: string): void => {
+    skipped[reason] = (skipped[reason] ?? 0) + 1;
+  };
+
+  return withPariwarScope(deps.pool, pariwarId, async (tx: Db, client: pg.PoolClient) => {
+    // ── (1) The AC14 kill switch, resolved ONCE for the whole run ────────────────────────────────
+    // Cohort-independent context: this flag gates a background process, not a member's experience,
+    // so there is no per-member cohort decision to make. `IMPOSITION_DISABLED` is the caller default
+    // on every degraded path.
+    let writerEnabled = IMPOSITION_DISABLED;
+    // ⚠ Review finding: a SQL-level failure inside `resolveFlagAudited` (e.g. its own audit-write
+    // hitting a constraint) leaves Postgres with an ABORTED transaction (`25P02`) even though this
+    // `catch` swallows the JS error — the VERY NEXT statement (`scanR7ViolatorCandidates`) would then
+    // throw "current transaction is aborted", crashing the whole run instead of degrading to the
+    // documented read-only scan. A SAVEPOINT makes the fail-closed comment below true on every path,
+    // not just a plain JS throw.
+    await client.query('SAVEPOINT restoration_discipline_flag');
+    try {
+      const decision = await featureFlags.resolveFlagAudited(
+        tx,
+        RESTORATION_DISCIPLINE_FLAG_KEY,
+        pariwarId,
+        { pariwarId: String(pariwarId) },
+        at,
+        IMPOSITION_DISABLED,
+      );
+      await client.query('RELEASE SAVEPOINT restoration_discipline_flag');
+      writerEnabled = decision.enabled;
+    } catch (err) {
+      // ⛔ A flag-subsystem failure must never ENABLE an automatic coverage removal. Fail closed,
+      // loudly enough to notice in the result, and let the read-only scan proceed unchanged.
+      await client.query('ROLLBACK TO SAVEPOINT restoration_discipline_flag');
+      await client.query('RELEASE SAVEPOINT restoration_discipline_flag');
+      writerEnabled = IMPOSITION_DISABLED;
+      alarm(
+        `[jobs] restoration-discipline: flag resolution failed for Pariwar ${String(pariwarId)} — failing closed, scan proceeds read-only: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // ── (2) The instrument-policy clause — RATIFIED unprovisioned posture (AC3) ───────────────────
+    // ⛔ Decision `2026-08-07-088` clause 2: on a Pariwar with no effective
+    // `niy.restoration-discipline.policy` clause, DO NOT IMPOSE, and surface the gap as a NAMED
+    // SENTINEL. Imposing under a code default is explicitly REJECTED — it would be coverage removal
+    // under a duration and month-counting convention no Pariwar ratified, i.e. an unratified
+    // sanction imposed by a machine. ⚠ Resolved BEFORE the scan for ORDERING, not to skip the scan's
+    // cost — the scan below still runs unconditionally (it is the existing read-only behaviour); only
+    // the imposition WRITE step is skipped when `policy === null`, at the check further down.
+    const policy = await member.restorationDiscipline.resolveRestorationDisciplinePolicy(
+      tx,
+      pariwarId,
+      at,
+    );
+
+    const scan = await scanR7ViolatorCandidates(tx, pariwarId, at);
+    if (scan.status === 'unavailable') {
+      // The R7 REGISTRY is unprovisioned — a different gap from the instrument policy's, and it
+      // already has its own named producer. Reported, never treated as "nobody is in breach".
+      return {
+        pariwarId: String(pariwarId),
+        writerEnabled,
+        unavailable: scan.producer,
+        membersScanned: 0,
+        impositionsWritten: 0,
+        skipped,
+      };
+    }
+
+    if (policy === null) {
+      return {
+        pariwarId: String(pariwarId),
+        writerEnabled,
+        unavailable: RESTORATION_POLICY_UNPROVISIONED_PRODUCER,
+        membersScanned: scan.candidates.length,
+        impositionsWritten: 0,
+        skipped,
+      };
+    }
+
+    if (!writerEnabled) {
+      // The read-only behaviour that exists today, unchanged. Nothing is written.
+      return {
+        pariwarId: String(pariwarId),
+        writerEnabled,
+        unavailable: null,
+        membersScanned: scan.candidates.length,
+        impositionsWritten: 0,
+        skipped,
+      };
+    }
+
+    let impositionsWritten = 0;
+    for (const candidate of scan.candidates) {
+      for (const clause of candidate.impositionInputs.imposingClauses) {
+        // ⚠ D3 — the trigger is `imposesRestorationObligation` (already applied by the scan) AND
+        // `lock_in_months > 0`, checked inside `shouldImpose`. The second half is NOT optional:
+        // R7(A) imposes a restoration obligation (`consecutive_required: 3`) while prescribing NO
+        // lock-in (`lock_in_months: 0`), so the predicate alone would give every R7(A) member a
+        // spurious zero-length lock-in. There is no clause-id branch anywhere on this path.
+        //
+        // ⛔ Review finding: this Pariwar-wide loop runs inside ONE scope transaction (below AC2's
+        // per-write atomicity, which is preserved — the event append and the record insert for ONE
+        // imposition still commit together or not at all). Without per-candidate isolation, a single
+        // failure — a registry data mistake, or a concurrent invocation racing the same member's
+        // `events_log (stream_id, event_version)` unique index (`MemberStreamConcurrencyError`) —
+        // would abort the WHOLE transaction and roll back every OTHER member's already-decided,
+        // legitimate imposition in this run. A `SAVEPOINT` per candidate isolates that failure to
+        // the ONE row it belongs to, matching this codebase's established 23505-savepoint-recovery
+        // convention (`claim-peer-mesh.ts`'s `peer_mesh_pinged` savepoint;
+        // [[project_domain_limit_clamp_and_savepoint_retry]]).
+        await client.query('SAVEPOINT restoration_discipline_impose');
+        try {
+          const result = await member.restorationDiscipline.imposeRestorationLockIn(
+            // The scope tx's OWN client — the writer runs in the CALLER's transaction and never opens
+            // its own (the `moderateMember` contract), so the event append and the record insert
+            // commit together or not at all.
+            client,
+            {
+              memberId: ids.memberId(candidate.memberId),
+              pariwarId,
+              clauseId: clause.clauseId,
+              clausePayload: clause.payload,
+              clauseVersionId: ids.clauseVersionId(clause.clauseVersionId),
+              policyClauseVersionId: policy.policyClauseVersionId,
+              concurrencyRule: policy.concurrencyRule,
+              episodeAnchor: candidate.impositionInputs.episodeAnchor,
+              now: at,
+            },
+          );
+          await client.query('RELEASE SAVEPOINT restoration_discipline_impose');
+          if (result.decision.impose) impositionsWritten += 1;
+          else bump(result.decision.reason);
+        } catch (err) {
+          await client.query('ROLLBACK TO SAVEPOINT restoration_discipline_impose');
+          await client.query('RELEASE SAVEPOINT restoration_discipline_impose');
+          bump('write-failed');
+          alarm(
+            `[jobs] restoration-discipline: imposition write failed for member ${candidate.memberId} / clause ${clause.clauseId} — isolated to this candidate, run continues: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+    }
+
+    return {
+      pariwarId: String(pariwarId),
+      writerEnabled,
+      unavailable: null,
+      membersScanned: scan.candidates.length,
+      impositionsWritten,
+      skipped,
+    };
+  });
+}
+
+/**
+ * The named sentinel for a Pariwar with no effective `niy.restoration-discipline.policy` clause
+ * (AC3) — following `R7_REGISTRY_UNPROVISIONED_PRODUCER`'s convention.
+ *
+ * ⚠ Deliberately DISTINCT from the R7 registry's sentinel. They are different gaps with different
+ * fixes: one means "the ladder was never published for this Pariwar", the other means "the
+ * INSTRUMENT was never published". Collapsing them would send an operator to provision the wrong
+ * clause — the same reasoning that made `R7_REGISTRY_UNPROVISIONED_PRODUCER` not be `'story-10-24'`.
+ */
+export const RESTORATION_POLICY_UNPROVISIONED_PRODUCER = 'niyamavali-registry:restoration-discipline-policy';

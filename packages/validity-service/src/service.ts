@@ -26,6 +26,7 @@ import {
   projectLockInStatus,
   projectRetirementCoverage,
 } from './payload.js';
+import { memberFactsToBag } from './member-facts.js';
 import {
   contributionFactsToBag,
   contributionFactsToSummary,
@@ -88,10 +89,11 @@ export async function getValidityAt(
 
   const { db } = deps;
 
-  // (1) Eight independent reads — none depends on another's result — run concurrently (p95 budget).
+  // (1) Nine independent reads — none depends on another's result — run concurrently (p95 budget).
   const [
     memberState,
     moderationOverlay,
+    restorationDiscipline,
     signupAt,
     retiredAt,
     lockInClock,
@@ -106,6 +108,13 @@ export async function getValidityAt(
       // different moments could produce a payload claiming a member is valid at an instant when
       // they were suspended. This is Decision 8's entire enforcement surface.
       member.moderation.getMemberModerationOverlay(db, memberCtx.memberId, at),
+      // Story 10.23 — the RESTORATION-DISCIPLINE overlay at the SAME pinned instant, for exactly the
+      // reason the moderation overlay is read here: `is_valid` is now a composition of THREE things,
+      // and resolving them at different moments could produce a payload claiming a member is covered
+      // at an instant when their §3.1 lock-in was in force. ⚠ The BOUNDED (`at`-aware) reader is the
+      // right one here — this is the replay-correct read path; the UNBOUNDED variant exists only for
+      // the write path's legality check, which must see the present.
+      member.restorationDiscipline.getMemberRestorationDiscipline(db, memberCtx.memberId, at),
       // Tenure/retirement anchors (Task 2) — read ONCE so the R12 fact derivation AND the coverage
       // date projection share the same `retiredAt`.
       member.getMemberSignupInstantAt(db, memberCtx.memberId, at),
@@ -136,7 +145,21 @@ export async function getValidityAt(
   //
   // Order is `VALIDITY_RULE_ORDER`: R12 first, then the R7 family in clause-id ascending order (the
   // ladder sorts). The concatenation below IS that order — never `Promise.all` completion order.
-  const contributionBag = contributionFacts ? contributionFactsToBag(contributionFacts) : null;
+  //
+  // ── Story 10.23 (AC8) — the `member.*` fact family joins the R7 bag ─────────────────────────────
+  // `member.joining_discipline_state` is a PROJECTION of `lockInStatus.state`, injected here where
+  // the payload is assembled (`epics.md:3888`: "sourced from the validity payload, never computed
+  // inside the rule engine"). ⚠ NO engine change, NO ladder change, NO `interpretClause` change —
+  // all three are frozen behind the 100×-thread determinism P0 gate.
+  //
+  // ⛔ SUPPLYING IT ACTIVATES NOTHING. R7(A)/(B) are the only clauses that name this key and BOTH
+  // remain HELD — on the Trustee Panel's unpublished Part 11 amendment, which no producer and no
+  // story can supply (`R7_HELD_CLAUSES`; `prd.md:346`). The bag is merged so the fact is honestly
+  // available to the ladder; the ladder simply has no activated clause that reads it.
+  const lockInStatusPayload = projectLockInStatus(lockInClock, at);
+  const contributionBag = contributionFacts
+    ? { ...contributionFactsToBag(contributionFacts), ...memberFactsToBag(lockInStatusPayload) }
+    : null;
   const descriptors = buildRuleDescriptors({
     retirement: retirementFacts ? retirementFactsToBag(retirementFacts) : null,
     contribution: contributionBag,
@@ -157,7 +180,9 @@ export async function getValidityAt(
     evaluatedAt: at,
     memberState,
     moderationOverlay,
-    lockInStatus: projectLockInStatus(lockInClock, at),
+    // Story 10.23 — the SECOND governance overlay, resolved at the same instant as the first.
+    restorationDiscipline,
+    lockInStatus: lockInStatusPayload,
     vyawasthaShulkStatus: toRenewalPayload(renewal),
     medicalDisclosureFlags,
     retirementCoverage,

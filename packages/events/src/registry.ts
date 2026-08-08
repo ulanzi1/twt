@@ -151,6 +151,20 @@ export const EVENT_TYPE_REGISTRY = {
       'Member restored (Story 10.10, FR-56) — moderation OVERLAY suspended|terminated → none; lifecycle-identity. Clears the rejoin lock by making the CURRENT overlay status unmoderated.',
     schema: member.moderation.ModerationRestoredPayloadSchema,
   },
+  // ── Story 10.23 — member.restoration_discipline.* (the SECOND governance overlay) ──
+  // Lives on the MEMBER's own stream (stream_id = member_id) and moves an independent, event-derived
+  // status machine (restoration-discipline/status.ts) — `members.state` is NEVER touched and it folds
+  // through memberStateMachine as IDENTITY. ⚠ AUTOMATIC (`actor: 'system'`): unlike the moderation
+  // family above, no trustee decides. §3.1 applies, and the CLAUSE ID is the reason — so the payload
+  // carries no reason code, no actor and no PII of any kind (D5), and there is no Tier-1 sibling
+  // table column anywhere in the instrument.
+  // ⚠ There is deliberately NO `…expired` event: expiry is DERIVED at read from `expires_at` (AC4).
+  'member.restoration_discipline.imposed': {
+    type: 'member.restoration_discipline.imposed',
+    description:
+      'Restoration lock-in imposed by the §3.1 R7 ladder (Story 10.23, FR-8) — restoration-discipline OVERLAY; lifecycle-identity; AUTOMATIC (actor: system), not a trustee act. Pins BOTH the R7 clause version that supplied lock_in_months and the niy.restoration-discipline.policy version that supplied the counting + concurrency conventions, so a later re-tune never moves an existing member. Expiry is derived from expires_at — there is no expiry event.',
+    schema: member.restorationDiscipline.RestorationDisciplineImposedPayloadSchema,
+  },
   // ── Story 6.1 — claim.* lifecycle vocabulary (the claim-case state machine) ──
   // Payload schemas live in @twt/domain (packages/domain/src/claim/events.ts). Names
   // are single-dot snake_case — PINNED by the merged Story 3.1 account-frozen overlay

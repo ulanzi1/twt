@@ -163,6 +163,58 @@ export const FLAG_DEFAULTS: Readonly<Record<string, FlagDefault>> = {
     description:
       'When enabled for a cohort, WhatsApp cost-optimization routing is active (AR-18). NOT WIRED in Story 10.8 — the consumer still returns its fail-safe default.',
   },
+  // ── Story 10.23 — the restoration-discipline imposition writer's ROLLOUT KILL SWITCH (AC14) ────
+  //
+  // ⛔⛔ THIS IS NOT AN ORDINARY ROLLOUT TOGGLE. READ BEFORE FLIPPING IT. ⛔⛔
+  //
+  // **FLIPPING THIS FLAG WITHOUT THE DISCHARGING TRUSTEE PANEL DECISION IS A GOVERNANCE VIOLATION,
+  // NOT A CONFIGURATION CHANGE.**
+  //
+  // What it gates: whether the apps/jobs restoration-discipline job WRITES. Enabled, an automatic
+  // process removes members' coverage with no human in the loop, on the §3.1 R7 ladder's verdict.
+  // Disabled (the default), the job performs its read-only scan exactly as it does today and skips
+  // the imposition step entirely.
+  //
+  // ── Why it exists, and why default-OFF is part of the ACCEPTANCE CRITERION ──────────────────────
+  // Escalation 6 (Story 10.23) is an UNDISCHARGED GOVERNANCE GAP: R7(D)'s `catch_up_required` and
+  // R7(E)/(F)'s `complete_all` define their restoration packages entirely in terms of paying a
+  // CLOSED cycle, and no authorized catch-up process exists — contribution flows only to an OPEN
+  // cycle (Story 7.6, fenced by 8.10). So enabling this puts members into a coverage-removing period
+  // whose stated completion condition **no workflow in the system can satisfy**, and the
+  // already-shipped disclosure copy tells them otherwise.
+  //
+  //   ⛔ **DISCHARGE INVARIANT (preserved verbatim, NOT reopened):** *the completion condition of
+  //      every restoration package Story 10.23 imposes must be satisfiable through a ratified system
+  //      workflow.*
+  //
+  // Decision `2026-08-07-088` clauses 4–5 moved where that invariant BINDS — from story closure
+  // alone to **the flag flip**, where the harm actually begins. Merging with the flag off is
+  // permitted; enabling it is not, until the property holds.
+  //
+  // ── ⛔ WHO MAY ENABLE IT (Decision `2026-08-07-089`) ─────────────────────────────────────────────
+  // The **Trustee Panel EXCLUSIVELY**, through a formal `.decision-log.md` entry. **You do not hold
+  // that authority, and neither does Operations** — they own *how* a flip is executed, never
+  // *whether* it may occur. A ticket, a config-PR approval, a deployment sign-off or a verbal
+  // go-ahead is **not** an authorization and does not become one retroactively. **If there is no
+  // Decision entry, the flag is not authorized.** Enabling it in a non-production environment
+  // confers NO authority to enable it in production.
+  //
+  // ⚠ `fallbackDefault: false` = "do not impose". Default-off must be the behaviour of the ABSENT
+  // configuration, not a value that happens to be seeded off — so every degraded path (no version in
+  // force, malformed cohort rule, lookup error) lands on "the writer does nothing".
+  restoration_discipline_imposition: {
+    state: 'off',
+    cohortDefinition: { clauses: [] },
+    fallbackDefault: false,
+    owner: 'trustee-panel',
+    // ⚠ NOT a retirement horizon like the flags around it. This flag retires when Escalation 6's
+    // discharge invariant holds and the writer becomes unconditional — or never, if the Panel
+    // prefers to keep a standing kill switch on an automatic coverage-removing process. Reviewed at
+    // the Epic 10 close either way.
+    deadBy: '2027-06-30',
+    description:
+      'When enabled for a cohort, the apps/jobs restoration-discipline job WRITES §3.1 R7 lock-in impositions, automatically removing coverage with no human in the loop (Story 10.23, FR-8). DEFAULT OFF. Enabling requires an explicit Trustee Panel decision that discharges Escalation 6 (Decision 2026-08-07-088 clauses 4-5; 2026-08-07-089) — flipping it without that decision is a GOVERNANCE VIOLATION, not a configuration change.',
+  },
   // FR-73 — Telegram mirror. Recorded-but-UNWIRED (Decision 8).
   telegram_mirror: {
     state: 'off',

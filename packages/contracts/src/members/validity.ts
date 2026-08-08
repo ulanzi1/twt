@@ -34,6 +34,26 @@ export const LockInStatusDto = z
   })
   .strict();
 
+/**
+ * Story 10.23 — the §3.1 R7 restoration lock-in clock.
+ *
+ * ⚠ **A SIBLING OF `LockInStatusDto`, NEVER A MERGE OF IT.** The JOINING clock (above) and this
+ * RESTORATION clock are INDEPENDENT instruments that run CONCURRENTLY — Decision `2026-08-06-079`:
+ * *"One clock never absorbs the other."* A member may be `in-lock-in` on BOTH with two different
+ * unlock instants, and expiring one leaves the other untouched. The state vocabulary is deliberately
+ * spelled differently from `LockInStatusDto.state` so a consumer cannot confuse them.
+ *
+ * `expiresAt` is the MAXIMUM over live impositions, per the concurrency rule pinned from the
+ * `niy.restoration-discipline.policy` clause (⚖ ratified, Decision `2026-08-07-088` clause 1).
+ */
+export const RestorationDisciplineStatusDto = z
+  .object({
+    state: z.enum(['never-imposed', 'in-lock-in', 'expired']),
+    imposedAt: Iso8601Datetime.nullable(),
+    expiresAt: Iso8601Datetime.nullable(),
+  })
+  .strict();
+
 export const VyawasthaShulkStatusDto = z
   .object({
     paidThrough: Iso8601Datetime.nullable(),
@@ -213,6 +233,13 @@ export const MemberValidityPayloadDto = z
     specialFlags: z.array(z.string()),
     applicableNiyamavaliClauses: z.array(ApplicableClauseDto),
     provenanceTrace: z.array(ProvenanceEntryDto),
+    /**
+     * Story 10.23 — APPENDED, never inserted. This DTO is `.strict()` and field-order sensitive at
+     * the OpenAPI emitter, so a new field goes at the END and no existing consumer's positions move
+     * (AC10a). ⚠ A member under a restoration lock-in is `isValid: false, isAssignable: TRUE` — the
+     * instrument removes COVERAGE and is ignored by the DONOR ROSTER.
+     */
+    restorationDisciplineStatus: RestorationDisciplineStatusDto,
     validityPayloadHash: z.string().min(1),
   })
   .strict();

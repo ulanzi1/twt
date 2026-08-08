@@ -152,6 +152,11 @@ export * from './feature-flag-versions-rls.js';
 // read is NOT served here — it runs pre-scope on the BYPASSRLS servicePool, exactly as the
 // member_withdrawals rejoin read already does.
 export * from './member-moderation-actions-rls.js';
+// Story 10.23 — member_restoration_impositions tenant-isolation policies. APPEND-ONLY: SELECT +
+// INSERT only. Unlike its moderation sibling there is no UPDATE leg AT ALL — 0092 had to add one so
+// the DPDPA-RTBF scrub could reach a Tier-1 rationale, and this instrument has no PII column to
+// scrub (D5). If a future story adds one, revisit this file and 0097's grants together.
+export * from './member-restoration-impositions-rls.js';
 // Story 10.24 — the contribution-fact projection tenant-isolation policies (NOT cross-readable; mirror
 // member-validity-cache-rls). `member_contribution_ledger` is TRIGGER-written under the appending
 // session's own scope (SECURITY INVOKER, migration 0093), which is why its `withCheck` is load-bearing

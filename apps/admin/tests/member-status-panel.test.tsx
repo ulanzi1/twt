@@ -33,6 +33,7 @@ function payload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidityPa
       pendingConcealmentFlag: false,
     },
     retirementCoverage: { status: 'clause_unavailable' },
+    restorationDisciplineStatus: { state: 'never-imposed', imposedAt: null, expiresAt: null },
     specialFlags: [],
     applicableNiyamavaliClauses: [],
     provenanceTrace: [],

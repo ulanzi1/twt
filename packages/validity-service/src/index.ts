@@ -40,6 +40,7 @@ export type {
   ApplicableClause,
   ProvenanceEntry,
   LockInStatusPayload,
+  RestorationDisciplineStatusPayload,
   VyawasthaShulkStatusPayload,
   ContributionHistoryUnavailable,
   ContributionHistoryAvailable,
@@ -59,6 +60,9 @@ export {
   deriveIsActive,
   // Story 10.17 — the DONOR-ROSTER predicate (`is_assignable`), distinct from `is_valid` (coverage).
   deriveIsAssignable,
+  // Story 10.23 — the restoration clock's projection + the wire flag Story 10.16 shipped dark.
+  projectRestorationDisciplineStatus,
+  RESTORATION_LOCK_IN_FLAG,
   // Story 10.10 — the `suspended_per_<code>` / `terminated_per_<code>` special-flag builder.
   moderationSpecialFlag,
   VALID_STATES,
@@ -111,6 +115,17 @@ export {
   type ClauseEvalSlot,
 } from './rules.js';
 
+// Story 10.23 — the `member.*` R7 fact family (AC8/AC9). Supplying a fact NEVER activates a clause.
+export {
+  R7_SUPPLIED_MEMBER_FACT_KEYS,
+  MEMBER_JOINING_DISCIPLINE_STATE_KEY,
+  projectJoiningDisciplineState,
+  memberFactsToBag,
+} from './member-facts.js';
+// Story 10.23 (AC9/D7) — the falsifiable-hold gate's supplied-fact surface, spanning EVERY R7 fact
+// family. The single-family `R7_SUPPLIED_FACT_KEYS` was structurally blind to `member.*`.
+export { R7_SUPPLIED_FACT_KEYS_ALL_FAMILIES } from './r7-fact-surface.js';
+
 export {
   assertCanReadValidity,
   redactForCaller,
@@ -134,4 +149,6 @@ export {
   scanR7ViolatorCandidates,
   type R7ViolatorCandidate,
   type R7CandidateClause,
+  // Story 10.23 — the imposition writer's inputs, carried alongside the accusation channel.
+  type R7ImpositionInputs,
 } from './r7-candidate-scan.js';

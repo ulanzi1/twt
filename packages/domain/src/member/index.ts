@@ -41,3 +41,11 @@ export * from './errors.js';
 // visible at every call site — `member.getMemberStateAt` (lifecycle) vs
 // `member.moderation.getMemberModerationOverlay` (overlay) can never be mistaken for each other.
 export * as moderation from './moderation/index.js';
+// Story 10.23 — restoration discipline (the §3.1 R7 lock-in). NESTED for the same reason moderation
+// is, and the namespacing carries extra weight here: this is the THIRD member-scoped clock in the
+// codebase, alongside the lifecycle machine and the JOINING lock-in (`member.lock-in.ts`). Those two
+// discipline clocks are INDEPENDENT and run CONCURRENTLY (Decision `2026-08-06-079` — "one clock
+// never absorbs the other"), so `member.getLockInStatus` (joining) and
+// `member.restorationDiscipline.getMemberRestorationDiscipline` (restoration) reading identically at
+// a call site would be the first step toward subsuming one into the other.
+export * as restorationDiscipline from './restoration-discipline/index.js';

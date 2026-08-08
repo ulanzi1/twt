@@ -12,6 +12,9 @@
 //      accusation the trustee never recorded (AC5).
 
 import type { MemberValidityPayloadDto } from '@twt/contracts';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -48,6 +51,10 @@ function basePayload(over: Partial<MemberValidityPayloadDto> = {}): MemberValidi
       pendingConcealmentFlag: false,
     },
     retirementCoverage: { status: 'clause_unavailable' },
+    // Story 10.23 — the RESTORATION clock, a SIBLING of `lockInStatus` (never a merge of it). The
+    // fixtures below that model a locked-in member override this; everything else is truthfully
+    // `never-imposed`, so every pre-10.23 expectation keeps its exact meaning.
+    restorationDisciplineStatus: { state: 'never-imposed', imposedAt: null, expiresAt: null },
     specialFlags: [],
     applicableNiyamavaliClauses: [],
     provenanceTrace: [],
@@ -254,7 +261,21 @@ describe('THE D3 PIN — the join lock-in is NOT the restoration lock-in', () =>
 });
 
 describe('THE AC2 PIN — Story 10.23 lights the lock-in arm up with ZERO copy/render changes', () => {
-  it('is NOT IN FORCE today — nothing in a shipped payload can select it', () => {
+  // ⭐ THIS BLOCK MOVED FROM *NOT IN FORCE* TO *IN FORCE* — Story 10.23, and NOTHING BELOW IT
+  // CHANGED except this comment and the title of the first case.
+  //
+  // Story 10.16 shipped this entire arm DARK and named 10.23 as the owner of the wire literal. As of
+  // Story 10.23 `@twt/validity-service` emits `'restoration_lock_in'` into `payload.specialFlags`
+  // while a §3.1 restoration lock-in is in force, so a shipped payload CAN now select this arm.
+  //
+  // ⚠ Read the AC precisely: **what the member sees DOES change** — a locked-in member is now shown a
+  // disclosure on the payment surface where previously they were shown nothing, and that change is
+  // the entire point. What is FROZEN is the IMPLEMENTATION: no new component, no new copy key, no
+  // new interaction model, no new arm in the view-model union. The `@twt/ui` and `apps/mobile` source
+  // diff for this story is EMPTY; only this test file's framing moved. If the expected view-model
+  // below had needed an edit, the wire name or the fold would have been wrong — a finding, not a
+  // test to adjust.
+  it('a payload WITHOUT the flag still does not select the arm (the detector is flag-driven)', () => {
     expect(isUnderRestorationDisciplineLockIn(basePayload())).toBe(false);
     expect(isUnderRestorationDisciplineLockIn(suspendedPayload())).toBe(false);
   });
@@ -272,6 +293,104 @@ describe('THE AC2 PIN — Story 10.23 lights the lock-in arm up with ZERO copy/r
       reasonLabelKey: null,
       a11yLabelKey: RESTORATION_LOCK_IN_DISCLOSURE_KEYS.a11yLabel,
     });
+  });
+
+  it('⭐ a locked-in member with a HEALTHY summary reports `no_consecutive_requirement` (AC7)', () => {
+    // The expectation above reads `package_unavailable` ONLY because its fixture's
+    // `contributionHistorySummary` is the `producer_unavailable` sentinel. With a real summary the
+    // answer is already determined and is NOT a new arm: R7(D)/(E)/(F) — precisely this story's
+    // clauses — prescribe `lock_in_months` + `catch_up_required`/`complete_all` and carry NO
+    // `consecutive_required`, which is exactly the case Story 10.25's D4 added the third arm for.
+    // ⛔ Do NOT widen `RestorationPackageState` to a lock-in shape: 10.25 D4 rejected that by name,
+    // and showing months-elapsed/remaining would be a NEW view-model arm and is out of scope.
+    const vm = deriveContributionDisclosure(
+      basePayload({
+        specialFlags: ['restoration_lock_in'],
+        contributionHistorySummary: {
+          status: 'ok',
+          facts: {
+            'contribution.total_count': 24,
+            'contribution.ever_contributed': true,
+            'contribution.months_since_last': 1,
+            'contribution.skips_current_year': 1,
+            'contribution.in_lapse': false,
+          },
+          lapseSince: null,
+          heldFacts: [],
+          restorationPackage: {
+            status: 'no_consecutive_requirement',
+            clauseId: 'niy.contribution-discipline.r7-d',
+          },
+        },
+      }),
+    );
+    expect(vm?.instrument).toBe('restoration_lock_in');
+    expect(vm?.restorationPackage).toEqual({
+      status: 'no_consecutive_requirement',
+      clauseId: 'niy.contribution-discipline.r7-d',
+    });
+  });
+
+  it('⭐ every key the lock-in arm names RESOLVES in BOTH locales — the render half (AC7)', () => {
+    // Story 10.16 AC3's lesson, applied: a view-model assertion alone let AC9's prose reach NOBODY.
+    // The arm is only genuinely "in force" if the keys it names resolve to real, non-empty copy the
+    // member actually reads. Read from the shipped catalogues by relative path (this package does not
+    // depend on @twt/i18n, and adding a dependency to assert a fact would be the wrong trade).
+    const read = (loc: string): Record<string, string> =>
+      JSON.parse(
+        readFileSync(
+          fileURLToPath(new URL(`../../../i18n/locales/${loc}/contribution.json`, import.meta.url)),
+          'utf8',
+        ),
+      ) as Record<string, string>;
+    const vm = deriveContributionDisclosure(basePayload({ specialFlags: ['restoration_lock_in'] }))!;
+    for (const loc of ['en', 'hi']) {
+      const cat = read(loc);
+      for (const key of [vm.titleKey, vm.whatItDoesKey, vm.whatItDoesNotBuyKey, vm.a11yLabelKey]) {
+        expect(cat[key], `${loc}: ${key} must resolve to real copy`).toBeTruthy();
+      }
+    }
+    // ⛔ ZERO NEW COPY KEYS. All four were authored by Story 10.16 and shipped dark; this story adds
+    // none. If this list ever needs a new key, re-read AC7 — the implementation is frozen.
+    expect([vm.titleKey, vm.whatItDoesKey, vm.whatItDoesNotBuyKey, vm.a11yLabelKey]).toEqual([
+      'suspension_disclosure.lock_in.title',
+      'suspension_disclosure.lock_in.what_it_does',
+      'suspension_disclosure.lock_in.what_it_does_not_buy',
+      'suspension_disclosure.lock_in.a11y',
+    ]);
+  });
+
+  it('⛔ ESCALATION 6 COPY-TRUTH DEFECT — pinned as REACHED, deliberately NOT fixed here (AC7)', () => {
+    // ⚠ This test does not assert that the copy is CORRECT. It asserts that this story is what makes
+    // an already-shipped FALSE statement reachable by a member, so the defect cannot be lost.
+    //
+    // `suspension_disclosure.lock_in.what_it_does` promises "Contributing during this period counts
+    // toward completing your restoration." That holds for a consecutive-contribution package and is
+    // FALSE for R7(D)'s `catch_up_required` and R7(E)/(F)'s `complete_all` — contributing to a FUTURE
+    // cycle does not discharge a PAST missed one, and no authorized catch-up channel exists at all.
+    // Same harm class Story 10.16's D3 refused on identical grounds: a false statement to a member,
+    // about their own standing, on a payment surface.
+    //
+    // ⚠ FINDING REFINED DURING IMPLEMENTATION: the story text says "ONE of those four strings is not
+    // true". It is TWO — the `a11y` label embeds the same sentence verbatim, so a screen-reader user
+    // hears the false claim too. Both are pinned below.
+    //
+    // ⛔ The AC7 freeze stands: the implementer does NOT edit these strings and does NOT narrow the
+    // disclosure's trigger to hide R7(D)/(E)/(F) members (silence about a coverage removal is worse
+    // than an imperfect explanation, and re-creates the gap 10.16 closed). A copy change needs a
+    // Story 2.2 tone sign-off and sits above this story. Routed in deferred-work.md.
+    const en = JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL('../../../i18n/locales/en/contribution.json', import.meta.url)),
+        'utf8',
+      ),
+    ) as Record<string, string>;
+    expect(en['suspension_disclosure.lock_in.what_it_does']).toContain(
+      'counts toward completing your restoration',
+    );
+    expect(en['suspension_disclosure.lock_in.a11y']).toContain(
+      'counts toward completing your restoration',
+    );
   });
 
   it('gives the lock-in arm a DISTINCT copy key set from the suspension arm', () => {

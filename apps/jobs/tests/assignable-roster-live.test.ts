@@ -398,6 +398,131 @@ describe.skipIf(!hasDatabase)('assignable-roster → spawn → resolve — end-t
     });
   });
 
+  /**
+   * Append Story 10.23's `member.restoration_discipline.imposed` to an ALREADY-SEEDED member, landing
+   * at `occurredAt`. Lifecycle-identity by construction (`from_state` === `to_state`): the imposition
+   * is an OVERLAY event and `members.state` never moves (AC1).
+   */
+  async function imposeRestorationLockIn(
+    pariwarId: string,
+    memberId: string,
+    version: number,
+    occurredAt: Date,
+  ): Promise<void> {
+    const expiresAt = new Date(occurredAt.getTime() + 90 * 24 * 60 * 60 * 1000);
+    await seedEvent(pariwarId, memberId, version, 'member.restoration_discipline.imposed', occurredAt, {
+      from_state: 'active',
+      to_state: 'active',
+      trigger: 'restoration_discipline.imposed',
+      actor: 'system',
+      clause_id: 'niy.contribution-discipline.r7-d',
+      clause_version_id: randomUUID(),
+      policy_clause_version_id: randomUUID(),
+      lock_in_months: 3,
+      concurrency_rule: 'max_over_live',
+      imposed_at: occurredAt.toISOString(),
+      expires_at: expiresAt.toISOString(),
+      episode_key: 'no-record|skips:1',
+      completion_unsatisfiable: true,
+    });
+  }
+
+  /** Every member id stamped into this cycle's spawned snapshots, ascending. */
+  async function snapshotMemberIds(cycleId: string): Promise<string[]> {
+    const ids: string[] = [];
+    for (let i = 0; i < POOL_COUNT; i++) {
+      const res = await pool.query<{ snapshot: { member_assignments: Array<{ member_id: string }> } }>(
+        'SELECT snapshot FROM pool_snapshots WHERE pool_id = $1',
+        [poolDomain.derivePoolId(cycleId, i)],
+      );
+      for (const a of res.rows[0]?.snapshot.member_assignments ?? []) ids.push(`${String(i)}:${a.member_id}`);
+    }
+    return ids.sort();
+  }
+
+  /** The durable `(pool_id, member_id)` assignment rows for this cycle, ascending. */
+  async function assignmentRows(pariwarId: string, cycleId: string): Promise<string[]> {
+    const res = await pool.query<{ pool_id: string; member_id: string }>(
+      'SELECT pool_id, member_id FROM member_pool_assignments WHERE pariwar_id = $1 AND cycle_id = $2',
+      [pariwarId, cycleId],
+    );
+    return res.rows.map((r) => `${r.pool_id}:${r.member_id}`).sort();
+  }
+
+  /** Tear the spawned artifacts down so the SAME cycle can be genuinely RE-SPAWNED. */
+  async function tearDownSpawn(cycleId: string): Promise<void> {
+    const ids = Array.from({ length: POOL_COUNT }, (_, i) => poolDomain.derivePoolId(cycleId, i));
+    await pool.query('DELETE FROM member_pool_assignments WHERE pool_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM pool_snapshots WHERE pool_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM pools WHERE pool_id = ANY($1)', [ids]);
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      await c.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [ids]);
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+  }
+
+  it('⭐ Story 10.23 AC10(c): a RESTORATION LOCK-IN does not move the roster, the snapshot, or the assignment rows — so POOL_ASSIGNMENT_HASH_VERSION is NOT bumped', async () => {
+    // ⛔ THE PROOF THAT LICENCES NOT BUMPING THE PIN, and it is a REAL RE-SPAWN — not a re-run of the
+    // hash function, which round 2 of Story 10.24's review rejected by name as vacuous.
+    //
+    // The argument being tested: the roster reads `payload.isAssignable`, which is a function of
+    // lifecycle state and moderation status ALONE. Story 10.23 folds the restoration overlay into
+    // `deriveIsValid` (COVERAGE) and `specialFlags` (the WIRE) and into `deriveIsAssignable` NOT AT
+    // ALL — `deriveIsAssignable` cannot even see it, by signature. So a member under a restoration
+    // lock-in stays on the donor roster, every downstream artifact is byte-identical, and the
+    // assignment version pin does not move.
+    //
+    // ⚠ The imposition lands BEFORE the freeze deliberately. A post-freeze event proves much less:
+    // it is outside the replay window anyway. A PRE-freeze imposition is inside the window and IS
+    // resolved by `getValidityAt` — so if it leaked into assignability, this test goes red.
+    const pariwarId = randomUUID();
+    const committedAt = new Date('2026-05-01T00:00:00.000Z');
+    const joinedAt = new Date('2025-01-01T00:00:00.000Z');
+    const beforeFreeze = new Date(committedAt.getTime() - 24 * 60 * 60 * 1000);
+
+    const members: string[] = [];
+    for (let i = 0; i < 4; i++) members.push(await seedActiveMember(pariwarId, joinedAt));
+    const cycleId = await seedCycle(pariwarId, committedAt);
+    const resolver = createAssignableRosterResolver({ pool });
+
+    // (1) Spawn from the frozen instant, BEFORE any restoration event exists.
+    const rosterBefore = await resolver({ pariwarId, cycleId });
+    const hashBefore = poolDomain.computeAssignableRosterHash(rosterBefore);
+    expect(rosterBefore).toHaveLength(4);
+    await spawnPools(pariwarId, cycleId, rosterBefore);
+    const snapshotBefore = await snapshotMemberIds(cycleId);
+    const assignmentsBefore = await assignmentRows(pariwarId, cycleId);
+    expect(snapshotBefore.length).toBe(4);
+    expect(assignmentsBefore.length).toBe(4);
+
+    // (2) Impose restoration lock-ins on two of the four, INSIDE the replay window.
+    await imposeRestorationLockIn(pariwarId, members[0]!, 5, beforeFreeze);
+    await imposeRestorationLockIn(pariwarId, members[1]!, 5, beforeFreeze);
+
+    // (3) Re-resolve at the SAME frozen instant → byte-identical roster AND hash.
+    const rosterAfter = await resolver({ pariwarId, cycleId });
+    expect(rosterAfter).toEqual(rosterBefore);
+    expect(poolDomain.computeAssignableRosterHash(rosterAfter)).toBe(hashBefore);
+    // …and both locked-in members are still ON it. This is the AC6 divergence, on the live path:
+    // `isValid: false` (coverage removed) while `isAssignable: true` (roster untouched).
+    expect(rosterAfter).toContain(members[0]!);
+    expect(rosterAfter).toContain(members[1]!);
+
+    // (4) A GENUINE RE-SPAWN of the SAME cycle id (placement is a function of `(roster, cycleId, n)`,
+    //     so re-using the cycle id is what makes byte-identity a meaningful claim rather than a
+    //     coincidence of two different cycles).
+    await tearDownSpawn(cycleId);
+    await spawnPools(pariwarId, cycleId, rosterAfter);
+
+    expect(await snapshotMemberIds(cycleId)).toEqual(snapshotBefore);
+    expect(await assignmentRows(pariwarId, cycleId)).toEqual(assignmentsBefore);
+  });
+
   it('cross-tenant isolation: a member under Pariwar B never appears in Pariwar A\'s roster (AI-7-2 review AC)', async () => {
     const pariwarA = randomUUID();
     const pariwarB = randomUUID();

@@ -138,6 +138,25 @@ export async function getMemberStateAt(
 }
 
 /**
+ * The member's lifecycle state RIGHT NOW — the whole stream, with NO upper bound. Story 10.23
+ * (review finding) uses this for a lifecycle NON-transition's audit shape (`from_state`/`to_state`)
+ * instead of `getMemberStateAt(…, input.now)`, for exactly the clock-domain reason
+ * `member/restoration-discipline/overlay.ts`'s `getCurrentMemberRestorationDiscipline` documents:
+ * `occurred_at` is DB-generated while any `atTimestamp` a caller holds is the injected APP clock, and
+ * bounding by it can make an audit field disagree with the state `projectMemberState`'s OWN unbounded
+ * replay is about to write moments later. Mirrors `projectMemberState`'s internal `existing` read
+ * exactly (no `lte`, ordered by `event_version`).
+ */
+export async function getCurrentMemberState(db: Db, memberId: MemberId): Promise<MemberLifecycleState> {
+  const rows = await db
+    .select()
+    .from(eventsLog)
+    .where(eq(eventsLog.streamId, memberId))
+    .orderBy(asc(eventsLog.eventVersion));
+  return replayMemberState(rows);
+}
+
+/**
  * The member's tenure-anchor instant: the `occurred_at` of the FIRST `member.signup_initiated`
  * event at/before `atTimestamp`, or `null` when the member had not signed up by then. Story 4.6's
  * Validity Service reads this as the `joined_at` anchor for the calendar-correct

@@ -20,6 +20,7 @@ import { z } from 'zod';
 
 import { auditShape } from './audit-shape.js';
 import { MODERATION_EVENT_PAYLOAD_SCHEMAS } from './moderation/events.js';
+import { RESTORATION_DISCIPLINE_EVENT_PAYLOAD_SCHEMAS } from './restoration-discipline/events.js';
 
 // The audit shape + the two literal schemas are DECLARED in `./audit-shape.ts` (Story 10.10) so
 // that `moderation/events.ts` can share them without an import cycle — this module imports the
@@ -300,11 +301,17 @@ export const MEMBER_EVENT_TYPES = [
   'member.moderation.suspended',
   'member.moderation.terminated',
   'member.moderation.restored',
+  // Story 10.23 — restoration-discipline OVERLAY: the SECOND governance overlay, one NON-TRANSITION
+  // event. It moves an independent, event-derived status machine (restoration-discipline/status.ts)
+  // and never `members.state`. ⚠ There is deliberately NO `…expired` sibling: expiry is DERIVED at
+  // read from `expires_at` (AC4/D6), because this overlay has no lifecycle state that must move.
+  'member.restoration_discipline.imposed',
 ] as const;
 
 /**
  * The dotted `member.*` event-type literal union — the 16 AC1 events + the 3 Story 10.10 moderation
- * events + Story 10.26's `personal_event_asserted` = **20**.
+ * events + Story 10.26's `personal_event_asserted` + Story 10.23's restoration-discipline
+ * imposition = **21**.
  */
 export type MemberEventType = (typeof MEMBER_EVENT_TYPES)[number];
 
@@ -336,4 +343,6 @@ export const MEMBER_EVENT_PAYLOAD_SCHEMAS = {
   'member.personal_event_asserted': PersonalEventAssertedPayloadSchema,
   // Story 10.10 — moderation overlay (all three non-transition; reducer treats them as identity).
   ...MODERATION_EVENT_PAYLOAD_SCHEMAS,
+  // Story 10.23 — restoration-discipline overlay (non-transition; reducer treats it as identity).
+  ...RESTORATION_DISCIPLINE_EVENT_PAYLOAD_SCHEMAS,
 } as const satisfies Record<MemberEventType, z.ZodTypeAny>;

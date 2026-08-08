@@ -73,7 +73,7 @@ version: 1
 
 # The exact number of allowlisted behaviours. The gate asserts the registry and
 # this list both equal this count (revert-sanity teeth — flipping it fails CI).
-count: 4
+count: 5
 
 # The permitted behaviour kinds. A new kind is itself a bar expansion and needs
 # the same attestation as a new entry (the parser rejects an unknown kind).
@@ -123,6 +123,32 @@ allow:
       not live production behaviour, until the per-Pariwar cost-optimization admin surface
       ships and the consumer read replaces the hardcoded fail-safe.
     adr: ADR-0036
+  - kind: member_flow
+    artifact: restoration_discipline_imposition
+    rationale: >-
+      ⛔ NOT AN ORDINARY ROLLOUT TOGGLE. Gates whether the apps/jobs restoration-discipline
+      job WRITES the automatic §3.1 R7 lock-in imposition added by Story 10.23 — i.e.
+      whether an automatic process removes a member's COVERAGE with no human in the loop.
+      Classified `member_flow` as the closest fit of the three declared kinds, and that
+      classification is itself a small governance act: it is named explicitly here so a
+      future auditor of this file does not have to reverse-engineer why a BACKGROUND JOB
+      carries a member-flow flag. Disabled (the default), the job performs its existing
+      read-only scan and skips the imposition step entirely; enabled, every candidate the
+      scan's own `imposesRestorationObligation` predicate selects is written.
+      ⛔ ENABLEMENT IS TRUSTEE-PANEL-EXCLUSIVE per Decision 2026-08-07-089, exercised
+      through a formal .decision-log.md entry. Operations owns HOW a flip executes, never
+      WHETHER it may occur; a ticket, config-PR approval, deployment sign-off or verbal
+      go-ahead is NOT an authorization. Authorization is tied to — and may NOT precede —
+      the decision that discharges Story 10.23's Escalation 6 discharge invariant ("the
+      completion condition of every restoration package it imposes must be satisfiable
+      through a ratified system workflow"), which is UNDISCHARGED: R7(D)/(E)/(F) define
+      their packages in terms of paying a CLOSED cycle and no authorized catch-up process
+      exists. Non-production enablement confers NO production authority. FLIPPING IT
+      WITHOUT THAT DECISION IS A GOVERNANCE VIOLATION, NOT A CONFIGURATION CHANGE.
+      Safe to ADMIT (as distinct from enable) because `fallbackDefault` is `false` and
+      every degraded path — no version in force, malformed cohort rule, lookup error —
+      lands on "the writer does nothing", so the flag's mere existence changes nothing.
+    adr: Story 10.23 / Decision 2026-08-07-088 (clauses 4-5) + Decision 2026-08-07-089
   - kind: channel_routing
     artifact: telegram_mirror
     rationale: >-

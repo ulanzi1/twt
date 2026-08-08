@@ -12,10 +12,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ### ⛔ DISCHARGE INVARIANT — not a deferred row, and not dischargeable by creating a file
 
-**Recorded verbatim, as the story authored it:**
+**The invariant, in the form Decision `2026-08-07-088` clause 4 preserved verbatim:**
 
-> **Story 10.23 MUST NOT be marked complete until the completion condition of every restoration
-> package it imposes is satisfiable through a ratified system workflow.**
+> **The completion condition of every restoration package Story 10.23 imposes must be satisfiable
+> through a ratified system workflow.**
+
+⚠ **This entry originally rendered it in the story's pre-`088` authoring — *"Story 10.23 MUST NOT be
+marked complete until…"*.** That framing bakes **story closure** into the invariant's own text, which
+is exactly the placement Decision `2026-08-07-088` clause 4 moved and Decision `2026-08-08-092`
+corrected. The ratified form above is story-agnostic and says nothing about being "marked complete" —
+it is a property of the **system**, and it now gates the **flag flip**.
 
 **Status: UNDISCHARGED.** Four things are simultaneously true: the restoration lock-in exists and
 removes coverage; §3.1's ratified interpretive note (2026-08-07) says a skip clears through
@@ -35,9 +41,13 @@ mechanism or a Part 11 reinterpretation discharges it equally.
 
 **Enforcement mechanism (Decision `2026-08-07-088` clauses 4–5):** the `apps/jobs` imposition writer
 is gated behind the **default-OFF** `restoration_discipline_imposition` flag. The invariant binds the
-**FLAG FLIP** — where the harm begins — as well as story closure. **Merging with the flag off is
-permitted; enabling it is not, and closing the story is not, until the property holds.** ⚠ The flag is
-*how the invariant is enforced*, **not** a deployment toggle that happens to default off.
+**FLAG FLIP** — where the harm begins — **and nothing else**. **Merging and closing with the flag off
+are permitted; enabling it is not, until the property holds.** ⚠ The flag is *how the invariant is
+enforced*, **not** a deployment toggle that happens to default off.
+
+⚠ *Corrected by Decision `2026-08-08-092`: this paragraph read "as well as story closure" and "closing
+the story is not", carrying the additive misreading of `088` clause 4 (which says the binding point
+moves to the flag flip **rather than** closure). Story 10.23 is `done`; the gap is unchanged.*
 
 **Owner of the discharging decision: the TRUSTEE PANEL, exclusively** (Decision `2026-08-07-089`),
 exercised through a formal `.decision-log.md` entry. Operations owns *how* a flip executes, never
@@ -46,7 +56,10 @@ authorization. ⚠ **Naming the owner does NOT discharge the invariant** — thi
 assignment, not a closure ([[feedback_closure_language_precision]]). **The discharge itself is
 OUTSTANDING.**
 
-**Re-trigger:** this story's own closure, and any proposal to enable the flag.
+**Re-trigger:** **any proposal to enable the `restoration_discipline_imposition` flag.** ⚠ *Was "this
+story's own closure, and any proposal to enable the flag" — the closure leg is struck by Decision
+`2026-08-08-092`. Story 10.23 closed `done` on 2026-08-08 and that closure was **not** a discharge and
+**not** a trigger; the flag proposal is the only re-trigger.*
 
 ### ⛔ Separately owed, and discharged by NONE of the above — the copy-truth defect
 

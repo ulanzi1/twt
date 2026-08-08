@@ -1,4 +1,43 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-08c (10-23-restoration-discipline-lock-in: status UNCHANGED at done. RECORD
+#   CORRECTION ONLY -- Decision 2026-08-08-092. No code touched; the AC14 flag stays OFF; Escalation 6
+#   stays UNDISCHARGED.
+#   THE CONTRADICTION: this file and the story header both read `done`, while the story file asserted in
+#   six places that closing was not permitted ("Escalation 6's invariant blocks `done`"; "the story is
+#   `review`, NOT closed"; "binds the flag flip AS WELL AS closure"), as did Decision 2026-08-08-090
+#   ("enabling it and closing the story are not"). So the record simultaneously reported the story closed
+#   and reported closing it as a governance violation. The 2026-08-08b flip recorded NO basis.
+#   ⭐ THE DIVERGENCE WAS ONE WORD, AND IT IS TRACEABLE. Decision 2026-08-07-088 clause 4 reads: "Only
+#   its binding point moves: it now binds the FLAG FLIP, where the harm actually begins, RATHER THAN
+#   STORY CLOSURE." The story's Escalation 6 block transcribed that as "rather than story closure
+#   ALONE" -- converting an exclusive move into an additive one and re-creating routing-note option (d)
+#   ("merge permitted, closure gated"), which the Panel was offered and did NOT ratify. Every later
+#   restatement inherited it from that one word.
+#   THREE INDEPENDENT GROUNDS SETTLE IT EXCLUSIVE: (1) clause 4's wording -- "only its binding point
+#   moves" describes a move, "rather than" is exclusionary, and no "alone" appears; (2) the option
+#   table, where (a) and (d) differ on precisely this axis and (a)'s consequence column reads "10.23
+#   merges and IS REVIEWABLE IN FULL"; (3) Q4's purpose -- the Panel's finding was that a closure gate
+#   is the WRONG INSTRUMENT because it gates paperwork while the harm lands at merge, so ratifying (a)
+#   REPLACED a process gate with a technical one rather than stacking them. The story's own operative
+#   sentence already agreed ("Merging with the flag off is permitted; enabling the flag is not" --
+#   closure unmentioned).
+#   RESOLUTION: `done` is CORRECT as recorded and needed no further authorization; the missing rationale
+#   was a reporting gap, not an unauthorized act. Decision 2026-08-08-092 supersedes the closure clause
+#   of 2026-08-08-090 (author-committed, so no ratification needed) and amends NO Trustee-ratified text
+#   -- 088 and 089 stand exactly as ratified. Corrected in place with 092 pointers across the story file
+#   (in-scope table, D8 Dev Note, Escalation 6 block, Task 11, the asymmetry Dev Note, Completion Notes,
+#   disposition block) and deferred-work.md (the invariant re-stated in its ratified story-agnostic
+#   form, the enforcement paragraph, and the re-trigger -- whose "this story's own closure" leg is
+#   struck, leaving the flag proposal as the only trigger). Historical Change Log rows 0.1/0.2/1.0 were
+#   deliberately NOT rewritten -- they record what was believed when written
+#   ([[feedback_supersede_never_reinterpret]]).
+#   ⛔ NOTHING ABOUT THE GAP CHANGED: restoration_discipline_imposition is default-OFF with
+#   Trustee-Panel-exclusive enablement (089); R7(D)/(E)/(F) packages still name a completion act no
+#   workflow can perform; the TWO-string copy-truth defect is still separately owed to a Story 2.2 tone
+#   sign-off. Only which artifact the invariant gates changed.
+#   ⚠ PROCESS GAP RECORDED IN 092: bmad-code-review flipped review -> done with no stated basis on a
+#   story whose own text labelled an escalation BLOCKING against `done`. The flip was right, but a
+#   correct flip and an unnoticed one were indistinguishable in the record.)
 # last_updated: 2026-08-08b (10-23-restoration-discipline-lock-in: review -> done via bmad-code-review.
 #   The FIRST review pass ran against an INCOMPLETE diff — `git diff HEAD` silently drops untracked
 #   files, and 12 of this story's paths (the entire new primitive) were untracked; caught from the

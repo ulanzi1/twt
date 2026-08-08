@@ -1,4 +1,48 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-08d (10-27-member-missed-cycle-visibility: NEW KEY -> ready-for-dev via
+#   bmad-create-story, off branch feat/10-23-restoration-discipline-lock-in @ 9c08020. Saved
+#   10-27-member-missed-cycle-visibility.md. Epic 10's SIXTEENTH authored story.
+#   ⛔ NO EPIC AC, BY RATIFIED DESIGN. epics.md has no Story 10.27 and is deliberately untouched:
+#   Decision 2026-08-07-086's "Artifacts changed" states the member-facing story "is created via
+#   bmad-create-story only after Story 10.23 lands, carrying Q2/Q3/Q5/Q6's constraints into its AC".
+#   So Q1-Q6 ARE the requirements source of record, and no sprint-status key existed before this run.
+#   Re-trigger fired by 10.23 landing done (7729951).
+#   TWO FINDINGS ESTABLISHED AGAINST LIVE CODE, each invalidating the obvious implementation:
+#   ⭐ D1 -- Q3's "distinct state" CANNOT be cause-labelled. Of the three causes Q3 names, two are
+#   structurally unrecorded and out-of-band is FENCED against ever being recorded (out-of-band policy
+#   stance 4 "it does not appear in the member's Yogdaan Bahi" + no-ingest-path.test.ts:157, which
+#   proves no out_of_band/direct_gift/outside_payment/gift_* table, column or event type exists, with
+#   revert-sanity). So the state is EPISTEMIC: it reports what the RECORD contains, never what the
+#   member did -- the register that policy already demands ("statements about what the machine can do,
+#   never about the worth of what the member did").
+#   ⭐ D2 -- the row source ALREADY EXISTS. Story 10.25's D3 relaxed the facts.ts scan to see the whole
+#   assigned-and-closed OPPORTUNITY SEQUENCE, so skips_current_year/opportunities_since_last are
+#   aggregates over exactly these rows. A second scan would let what the member is SHOWN drift from
+#   what the ladder EVALUATES them on -- the hazard 10.23's AC2 named. Predicate shared; row-count ==
+#   skips_current_year pinned by test.
+#   D3 -- extend the RESPONSE, not the ROW (a missed cycle has no contributionId/date/amount, and the
+#   Bahi's identity as the record of ATTESTED contributions is load-bearing for stance 4).
+#   ⛔ D4 -- THE TWO-cycleRef TRAP, found against live contracts: contribution-history.ts:81 types
+#   `cycleRef` as a DISPLAY STRING (freeze month) while personal-event.ts:75 types it as a UUID. Same
+#   name, different type, different job; wiring the passbook value into the assertion request sends a
+#   freeze-month string where a UUID is required. Each entry carries BOTH under distinct names.
+#   Also confirmed live: the 10.26 assertion surface (PersonalEventAssertion.tsx + hook + api client)
+#   already exists and is CONSUMED not rebuilt -- and personal-event.ts:66-70 names this story as the
+#   anticipated populator of the optional cycleRef it shipped.
+#   TEN ACs. Q2/Q3/Q5/Q6 carried VERBATIM into AC3/AC2/AC8/AC9; Q4's cycleRef POPULATED (AC6) with
+#   schema and DTO untouched. No migration, no event, no write, no notification (Q6 display-only), and
+#   NO validity-cache invalidate step (no fact/clause/payload-hash change -- stated so it is not added
+#   out of pattern-matching).
+#   THREE ESCALATIONS. ⛔ Escalation 1 is the live one: Q1's LITERAL gate (10.23 landing) is met while
+#   Q1's RATIONALE is not -- Q1 sequenced this surface after 10.23 because "showing an obligation with
+#   no visible resolution path would be an incomplete disclosure, not a kinder one", and 10.23 landed
+#   with Escalation 6 UNDISCHARGED (no catch-up process exists; Decision 2026-08-08-092 for its
+#   corrected binding point). D1's epistemic framing MITIGATES but does not DISCHARGE this, and it is
+#   routed to the Trustee Panel TOGETHER WITH the still-owed two-string copy-truth defect -- one
+#   question about what the system may tell a member about an obligation it cannot let them satisfy.
+#   Escalation 2: assigned-but-never-notified has a signal (dispatch.ts:353 alert.channel_send audit
+#   lines) but no read model -- deliberately NOT built here. Escalation 3: Q3's cause enumeration
+#   cannot be satisfied as literally written; the Panel should confirm D1 is the substitute.)
 # last_updated: 2026-08-08c (10-23-restoration-discipline-lock-in: status UNCHANGED at done. RECORD
 #   CORRECTION ONLY -- Decision 2026-08-08-092. No code touched; the AC14 flag stays OFF; Escalation 6
 #   stays UNDISCHARGED.
@@ -4454,6 +4498,7 @@ development_status:
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done
   10-26-r7g-personal-event-excuse-assertion: done
+  10-27-member-missed-cycle-visibility: ready-for-dev
   epic-10-retrospective: optional
 
   # ==========================================================================

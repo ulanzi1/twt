@@ -91,6 +91,10 @@ import { createAssignableRosterResolver } from './assignable-roster.js';
 import { DEFAULT_CHILD_LOCAL_CONCURRENCY, registerCycleSpawnWorkers } from './cycle-spawn.js';
 import { enqueueCycleOpenAlert, registerCycleOpenAlertWorkers } from './scheduler/cycle-open-alert.js';
 import {
+  DEFAULT_CLOSE_CYCLE_ALERT_SWEEP_CRON,
+  registerCloseCycleAlertWorkers,
+} from './scheduler/close-cycle-alert.js';
+import {
   enqueueContributionConfirmedNotification,
   enqueueContributionMismatchNotification,
   enqueueContributionNotifyCycleOpen,
@@ -147,6 +151,11 @@ const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * 
 // Reconciliation UTR matcher recovery sweep (Story 9.4, AC1/D7) — the contracted "cron 6×/day" (every 4h,
 // IST). Cadence is operations policy; overridable.
 const MATCHER_CRON = process.env['MATCHER_CRON'] ?? DEFAULT_MATCHER_CRON;
+// Close-of-cycle emitter (Story 8.14) — the `alert.closed` PRODUCER, hourly IST. ⚠ Not a recovery
+// sweep: a Day-15 close is a TIME boundary with nothing to hook post-commit, so this cadence bounds
+// how long a cycle can sit `live` past its own deadline. Overridable, but do not slow it down casually.
+const CLOSE_CYCLE_ALERT_SWEEP_CRON =
+  process.env['CLOSE_CYCLE_ALERT_SWEEP_CRON'] ?? DEFAULT_CLOSE_CYCLE_ALERT_SWEEP_CRON;
 // The bank-statement parser slug the matcher re-parses under (mirrors apps/api's RECONCILIATION_PARIWAR_SLUG).
 const RECONCILIATION_PARIWAR_SLUG = process.env['RECONCILIATION_PARIWAR_SLUG'] ?? DEFAULT_MATCHER_PARSER_SLUG;
 // Rows older than this (default the 10× TTL constant) are reclaimed. Overridable like the cron cadences.
@@ -601,6 +610,16 @@ async function main(): Promise<void> {
           },
         ),
     });
+
+    // ── Close-of-cycle emitter (Story 8.14) — the `alert.closed` PRODUCER ─────────────────────────────
+    // ⭐ The counterpart to the cycle-open trigger registered immediately above: that one OPENS the
+    // contribution window, this one CLOSES it at FR-22's hard Day-15 boundary. `alert.closed` was
+    // specified by Story 8.1 and assigned forward, Story 8.9 assumed it already existed, and neither
+    // built it — so until this registration existed the transition never fired in production and five
+    // downstream consumers (R7 contribution facts, the Yogdaan `grey` tone, the matcher window, the
+    // review-queue ordering, Sahyog Vivran publication) read a fact no code could produce.
+    // ⚠ Unlike its sibling this sweep is PRIMARY, not recovery — a time boundary has nothing to hook.
+    await registerCloseCycleAlertWorkers(boss, { pool }, { sweepCron: CLOSE_CYCLE_ALERT_SWEEP_CRON });
 
     // ── Reconciliation UTR matcher (Story 9.4) — Class B (operational SLA) + Class C (sweep) ──────────
     // The FIRST live producer of contribution.confirmed (green) — closes the Epic-8 + Story-9.3 forward

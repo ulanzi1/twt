@@ -455,3 +455,146 @@ export async function openCycleAlert(
   });
   return { ...result, timeCritical };
 }
+
+// ── Story 8.14 — the close-of-cycle emitter (the `live → closed` producer) ────
+
+/**
+ * The `alert.closed` audit `trigger` string. `alert/events.ts`'s `auditShape` docstring names this
+ * exact literal as the close-of-cycle caller's value; exported so the emitter and its tests read the
+ * ONE spelling rather than two hand-typed copies.
+ */
+export const CLOSE_OF_CYCLE_TRIGGER = 'cron:close_of_cycle';
+
+export interface CloseCycleAlertInput {
+  /** The cycle boundary (== cycle_freeze_commits.commit_id == the cycle stream_id). */
+  cycleId: string;
+  /**
+   * The FR-22 hard Day-15 close instant, computed by the CALLER (`apps/jobs`) as the cycle-freeze
+   * `attestation.committed_at` + `CYCLE_WINDOW_DAYS`.
+   *
+   * ⛔ It is a PARAMETER, not a derivation, because `@twt/domain` MUST NOT import `@twt/contracts`
+   * (turbo cycle — errors.ts:41) and `CYCLE_WINDOW_DAYS` lives there. This function therefore never
+   * re-derives the instant, never reads a wall clock, and never hardcodes the window length —
+   * "is this cycle due to close?" is decided entirely by the caller (Story 8.14 AC3 / D3).
+   */
+  closeAt: Date;
+}
+
+export interface CloseCycleAlertResult {
+  readonly alertId: AlertId;
+  /** `false` on the idempotent no-op path (the alert was already `closed`/`settled`). */
+  readonly closed: boolean;
+  /** The alert's lifecycle state after this call. */
+  readonly state: AlertLifecycleState;
+}
+
+/**
+ * Close a cycle's alert — the `live → closed` transition (Story 8.14; FR-22).
+ *
+ * ⚠ Story 8.1 authored the `alert.closed` reducer arm, payload schema and registry entry and assigned
+ * the EMITTER forward; Story 8.9 assumed it already existed. Neither built it, so for four stories
+ * five consumers read a fact that could not exist. THIS is that emitter's domain half.
+ *
+ * It adds no write path: the transition goes through the same {@link projectAlertState} the cycle-open
+ * trigger uses (append + replay + the `app.alert_state_writer`-guarded projection upsert, all in the
+ * caller's transaction), so `alerts.current_state` stays projector-only.
+ *
+ * The not-`live` precondition is deliberately ASYMMETRIC:
+ *   · `closed` / `settled` → an idempotent no-op SUCCESS. A redelivered or double-scheduled close
+ *     must not throw; the transition has already happened.
+ *   · `draft` / `frozen` / `published` → an ERROR. A cycle whose contribution window never opened
+ *     cannot close, and silently succeeding would fabricate a closure the members never lived through.
+ *
+ * ⚠ `events_log.occurred_at` remains the DB default (the RECORDING instant), not `closeAt`. Passing a
+ * back-dated `occurred_at` would require modifying `projectAlertState`, which AC1 freezes — and every
+ * other alert lifecycle event records when it was written, not when it became due. The sweep runs
+ * hourly, so the two differ by at most one tick, and every downstream consumer of the close instant
+ * (`contribution/facts.ts`, the matcher window, the review-queue ordering) uses it for windowing and
+ * ordering, never as the member-facing deadline — that stays `committed_at + CYCLE_WINDOW_DAYS`,
+ * untouched by this story (AC5).
+ *
+ * Runs on the CALLER's transaction/client (the {@link openCycleAlert} contract) — it does NOT open or
+ * commit its own.
+ *
+ * @throws Error                       when the cycle has no alert, the alert is pre-`live`, or
+ *                                     `closeAt` is not anchored to this cycle's own freeze.
+ * @throws PoolStreamConcurrencyError  when a concurrent close won the `(stream_id, event_version)`
+ *                                     slot. The caller treats that as benign — the other worker
+ *                                     already closed this alert (AC4).
+ */
+export async function closeCycleAlert(
+  client: pg.PoolClient,
+  input: CloseCycleAlertInput,
+): Promise<CloseCycleAlertResult> {
+  const alertId = deriveAlertId(input.cycleId);
+  const db = bindScopedDb(client);
+
+  // (1) Resolve the alert for the cycle via the 8.1 deterministic identity — never a new id scheme.
+  const rows = await db
+    .select({
+      currentState: alerts.currentState,
+      cycleId: alerts.cycleId,
+      pariwarId: alerts.pariwarId,
+      poolCount: alerts.poolCount,
+      createdByActor: alerts.createdByActor,
+    })
+    .from(alerts)
+    .where(eq(alerts.alertId, alertId));
+  const alert = rows[0];
+  if (!alert) {
+    throw new Error(
+      `[closeCycleAlert] no alert for cycle ${input.cycleId} (expected alert ${alertId}) — a cycle whose alert was never minted has no window to close`,
+    );
+  }
+
+  // (2) The idempotent no-op arm — a redelivery of an already-closed (or settled) alert.
+  if (alert.currentState === 'closed' || alert.currentState === 'settled') {
+    return { alertId, closed: false, state: alert.currentState };
+  }
+  // (3) The error arm — pre-`live` means the contribution window never opened.
+  if (alert.currentState !== 'live') {
+    throw new Error(
+      `[closeCycleAlert] alert ${alertId} (cycle ${input.cycleId}) is '${alert.currentState}', not 'live' — a cycle whose contribution window never opened cannot close`,
+    );
+  }
+
+  // (4) D3 — the close instant must be anchored to THIS cycle's durable attestation. The domain
+  // cannot recompute `committed_at + CYCLE_WINDOW_DAYS` (no `@twt/contracts` import), so this check is
+  // a MINIMAL sanity guard only: `closeAt` must be after the freeze. It catches an instant anchored to
+  // the wrong cycle (a freeze that hasn't happened yet from this cycle's perspective) or a grossly
+  // stale/reversed value, but it does NOT verify `closeAt` actually sits near `committed_at +
+  // CYCLE_WINDOW_DAYS` — any positive offset from the freeze passes. The caller (`apps/jobs`) remains
+  // the sole authority for computing the real Day-15 boundary; this guard is a floor, not a window check.
+  const cf = await loadCycleFrozenPayload(db, input.cycleId);
+  if (!cf) {
+    throw new Error(
+      `[closeCycleAlert] no cycle.frozen event on cycle stream ${input.cycleId} — the close instant cannot be validated against an attestation that does not exist`,
+    );
+  }
+  const committedAt = new Date(cf.attestation.committed_at);
+  if (!(input.closeAt.getTime() > committedAt.getTime())) {
+    throw new Error(
+      `[closeCycleAlert] close instant ${input.closeAt.toISOString()} is not after cycle ${input.cycleId}'s freeze ${committedAt.toISOString()} — closeAt must postdate the freeze it is closing (this is a minimal sanity floor, not a Day-15 window check)`,
+    );
+  }
+
+  // (5) The transition, through the EXISTING projector. `actorId: null` = system — the same posture
+  // the cycle-open trigger uses (the alert lifecycle is time/cycle-driven, never a person's act).
+  const projected = await projectAlertState(client, {
+    alertId,
+    cycleId: alert.cycleId,
+    pariwarId: alert.pariwarId,
+    poolCount: alert.poolCount,
+    createdByActor: alert.createdByActor,
+    eventType: 'alert.closed',
+    payload: {
+      from_state: 'live',
+      to_state: 'closed',
+      trigger: CLOSE_OF_CYCLE_TRIGGER,
+      actor: 'system',
+    },
+    actorId: null,
+  });
+
+  return { alertId, closed: true, state: projected.state };
+}

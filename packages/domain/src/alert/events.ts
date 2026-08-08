@@ -135,8 +135,10 @@ export type AlertPublishedPayload = z.infer<typeof AlertPublishedPayloadSchema>;
 export const AlertLivePayloadSchema = z.object({ ...auditShape }).strict();
 export type AlertLivePayload = z.infer<typeof AlertLivePayloadSchema>;
 
-/** `alert.closed` → `closed` (no more contributions). Owner: Story 8.9 (calendar-aware
- *  close-of-cycle). The reducer arm exists (state.ts); 8.1 does NOT emit it. */
+/** `alert.closed` → `closed` (no more contributions accepted) at FR-22's hard Day-15 boundary.
+ *  Reducer arm + this schema: Story 8.1. EMITTER: Story 8.14 (`alert.closeCycleAlert`, driven by the
+ *  apps/jobs close-of-cycle sweep). ⚠ This slot was attributed to Story 8.9 for four stories while no
+ *  emitter existed anywhere — 8.9 owns the post-close reconciliation TAIL, never this transition. */
 export const AlertClosedPayloadSchema = z.object({ ...auditShape }).strict();
 export type AlertClosedPayload = z.infer<typeof AlertClosedPayloadSchema>;
 

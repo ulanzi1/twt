@@ -188,6 +188,23 @@ export const QUEUE_NAMES = {
    */
   CYCLE_OPEN_ALERT_SWEEP: 'cycle.open.alert.sweep',
   /**
+   * Close-of-cycle emitter — the `alert.closed` producer (Story 8.14; FR-22's hard Day-15 close).
+   *
+   * ⚠ Unlike every OTHER `*.sweep` queue in this list, this one is the PRIMARY mechanism, not a
+   * recovery net. The 8.1 D4 "enqueue primary, sweep recovery" split exists because a cycle FREEZE
+   * is an event you can hook post-commit. A Day-15 close is a TIME boundary with nothing to hook —
+   * so the periodic sweep IS the producer. Do not copy the recovery framing onto it.
+   *
+   * Scans `live` alerts cross-tenant on the BYPASSRLS service pool, prefiltered by
+   * `cycle_freeze_commits.committed_at`, and closes each whose authoritative `cycle.frozen`
+   * `attestation.committed_at` + `CYCLE_WINDOW_DAYS` has elapsed — through the domain's
+   * `closeCycleAlert`, i.e. the same `projectAlertState` writer the cycle-open path uses. Bounded per
+   * run with a non-silent cap alarm; the close is idempotent (a redelivery no-ops on the not-`live`
+   * precondition, a concurrent double-tick loses the `(stream_id, event_version)` race benignly), so
+   * at-least-once delivery is safe. Job class C (background cron).
+   */
+  CLOSE_CYCLE_ALERT_SWEEP: 'close.cycle.alert.sweep',
+  /**
    * Contribution-loop cycle-open notification — the PARENT fan-out job (Story 8.8, Task 5). Enqueued
    * POST-COMMIT by the CYCLE_OPEN_ALERT worker the instant the alert reaches `live` (the primary
    * path), and re-enqueued by the contribution-notify recovery sweep for any live alert whose

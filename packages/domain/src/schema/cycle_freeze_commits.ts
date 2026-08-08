@@ -64,6 +64,11 @@ export const cycleFreezeCommits = pgTable(
     index('cycle_freeze_commits_pariwar_id_idx').on(t.pariwarId),
     // Undelivered-trigger sweep (the self-healing redelivery scan reads WHERE trigger_delivered = false).
     index('cycle_freeze_commits_trigger_delivered_idx').on(t.triggerDelivered),
+    // Story 8.14 (Review Finding) — the close-of-cycle sweep's prefilter both filters
+    // (`committed_at <= $1`) AND orders (`ORDER BY committed_at ASC`) on this column every hourly
+    // tick, cross-tenant. The sweep's own header comment calls it "an indexed prefilter" — this makes
+    // that true.
+    index('cycle_freeze_commits_committed_at_idx').on(t.committedAt),
   ],
 );
 

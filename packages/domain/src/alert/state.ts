@@ -17,13 +17,13 @@
 // The reducer never throws on a well-formed event. An event that does not apply to the
 // current state returns the state unchanged. This keeps replay robust and forward-
 // compatible. Whether a transition SHOULD be emitted is the EMITTER's concern (the
-// cycle-open trigger this story owns for frozen/published/live; Story 8.9 for closed;
+// cycle-open trigger this story owns for frozen/published/live; Story 8.14 for closed;
 // Epic 9 for settled), not the reducer's.
 //
 // ── This story authors the COMPLETE reducer, emits only the cycle-open arms ────
 // All six states + all five transition arms are authored here (D3). This story's
 // cycle-open trigger emits only `alert.frozen`/`alert.published`/`alert.live`
-// (draft → frozen → published → live). `alert.closed` is Story 8.9; `alert.settled` is
+// (draft → frozen → published → live). `alert.closed`'s emitter is Story 8.14; `alert.settled` is
 // Epic 9's exclusive — the reducer arms exist, the emitters don't (the pool/state.ts
 // "authored `settled` arm, Epic 9 emits it" precedent).
 
@@ -74,7 +74,7 @@ function reduce(state: AlertLifecycleState, event: AlertEventInput): AlertLifecy
       if (state === 'published') return 'live';
       return state;
 
-    // Contribution window closes (Story 8.9 emits it). Only from `live`.
+    // Contribution window closes (Story 8.14's close-of-cycle sweep emits it). Only from `live`.
     case 'alert.closed':
       if (state === 'live') return 'closed';
       return state;

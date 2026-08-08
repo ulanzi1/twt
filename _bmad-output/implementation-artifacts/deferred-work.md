@@ -4,6 +4,84 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: implementation of story 8-14-close-of-cycle-emitter (2026-08-08)
+
+> Story 8.14 built the missing `alert.closed` producer — a corrective story, not new capability. Its
+> Escalation 1 was **WITHDRAWN before implementation** (the premise was false: the 1,287 `live` alerts
+> were TEST-database rows, the system is pre-launch, so "backfill" has no referent) and is recorded in
+> the story file, not here. The two entries below are the escalations that survived, each recorded at
+> the disposition the story fixed for it. ⚠ **Neither is implementation scope for 8.14, and neither
+> was expanded into one.**
+
+### ⚖ RECORD ONLY — `alert.settled` is now reachable-but-unemitted. Owner: Epic 9, exclusively.
+
+**What changed on 2026-08-08:** `alert.settled`'s only reducer transition is `{ from: 'closed', … }`
+(`packages/domain/src/alert/state.ts`). Until this story, no cycle could reach `closed`, so `settled`
+was **transitively dead** — unreachable, and therefore not a gap anyone could act on. Story 8.14
+**unblocks it without supplying it**: cycles now close, so `settled` becomes a real
+**reachable-but-unemitted terminal state**.
+
+⛔ **This is Epic 9's, not 8.14's.** `packages/events/src/registry.ts` assigns the emitter to *"Epic 9
+… EXCLUSIVELY"*. Every Epic 9 story and its retrospective are `done`, so the obligation is currently
+**unowned by any open story** — which is precisely the shape of the defect 8.14 exists to correct, and
+is why it is written down here rather than left as an implication.
+
+⚠ **Recorded, NOT resolved** ([[feedback_closure_language_precision]]). Nothing about this entry
+closes the gap; it names it and its owner.
+
+**Re-trigger:** the first consumer requiring `settled`. Sahyog Vivran publication is gated on the
+lifecycle at `_bmad-output/planning-artifacts/architecture.md:4643`.
+
+### ⚖ RETROSPECTIVE / PROCESS FINDING — a named owner in the event registry is an assertion nothing verifies.
+
+**The observation, stated generally because the specific instance is now fixed:** two `done` stories
+each believed the other owned the `alert.closed` producer. Story 8.1 assigned it forward (*"the
+reducer arms exist, the emitters don't"*); Story 8.9's scope table asserted 8.1 had already shipped
+`live → closed` and, on that false premise, ratified *"do not touch `live → closed` timing"*. Neither
+built it. **No decision or ADR ever removed the producer** — the absence was an omission, not a design
+change. Four subsequent stories and five consumers were then built on a fact no code could produce.
+
+**Three amplifiers worth naming, because each is independently generalizable:**
+
+1. **A registry entry naming an owner is an assertion nothing verifies.** `registry.ts` carried
+   *"Story 8.9 owns the emitter"* for four stories while no emitter existed anywhere in
+   `apps/*/src` or `packages/*/src`. The attribution read as a fact and was never checked. *(The
+   specific line was corrected by Story 8.14, and a standing caveat added beside it.)*
+2. **A byte-unchanged fence passes over code that never runs.** Story 8.9's AC3 was a revert-sanity
+   regression fence asserting the `live → closed` transition was byte-unchanged. It was green on
+   every run. It guarded a reducer arm with no emitter. ⚠ This is the same lesson
+   [[feedback_gate_scope_semantic_coverage]] records from a different direction: a green scan proves
+   nothing about semantic coverage. **8.14's own gate is end-to-end for exactly this reason.**
+3. **Someone noticed and coded around it.** Story 9.8 observed *"`alert.closed` (Story 8.9) may not be
+   wired for all cycles yet"* and defended against it without raising it. A defensive workaround is a
+   detection event that was allowed to expire un-escalated.
+
+**The mechanically detectable condition:** *a registered event type with a named owner + a reducer arm
++ live consumers + **no producer anywhere in the tree***. That is a static-analysis question, in the
+same family as the existing `*-state-invariant` gates.
+
+⛔ **Building that detector is explicitly OUT OF SCOPE here and was not built.** Recorded for the
+retrospective, to be scoped on its own merits — an un-gated re-commitment decays
+([[feedback_record_unattested_no_backfill]]), so it is written down rather than intended.
+
+**Re-trigger:** the next Epic-8 / cross-epic retrospective.
+
+### ⚠ Un-gated, recorded rather than intended: the post-8.14 downstream validation pass
+
+Story 8.14's own Sequencing section commits to re-running the real downstream chain through **Story
+10.23** against **production-produced** `alert.closed` facts before resuming **Story 10.27**. 10.23's
+entire suite passed against **fixture-produced** events raw-`INSERT`ed below the projector, so
+`scanR7ViolatorCandidates` / `imposesRestorationObligation` / the overlay have never met a state the
+system could actually reach. **Expect findings.** ⛔ Neither 10.23 nor 10.27 is modified by that pass;
+findings are recorded against those stories on their own terms.
+
+**Status: OUTSTANDING.** Recorded here so it survives the closure of 8.14's session.
+
+**Re-trigger:** resuming Story 10.27 — its row source *is* the closed-cycle opportunity set, so it
+cannot be meaningfully implemented or reviewed until that set is confirmed non-empty.
+
+---
+
 ## Deferred / recorded from: implementation of story 10-23-restoration-discipline-lock-in (2026-08-08)
 
 > Story 10.23 built §3.1's restoration lock-in — the first thing in the substrate that removes a
@@ -3263,3 +3341,34 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   activates R7(A)/(B) (the Trustee Panel's unpublished Part 11 amendment is the current blocker) must
   decide this explicitly before touching `evaluateAppliedR7ClauseSlots`'s gating.
   [packages/validity-service/src/service.ts:160-162; packages/validity-service/src/rules.ts:474-480]
+
+## Deferred from: code review of 8-14-close-of-cycle-emitter (2026-08-08)
+
+- **No real alerting/paging channel is wired for `onAlarm`** — the close-of-cycle sweep's `boot.ts`
+  call site passes no `onAlarm` override, so failures ("unresolvable anchor", "batch cap hit", a
+  candidate that failed to close) only reach `console.warn`. **Reason for deferring:** pre-existing,
+  system-wide — every job in `apps/jobs` (cycle-open-alert, restoration-discipline, claim-ocr-parity,
+  claim-peer-mesh, reports-export, etc.) shares this exact default; none of them wire a real channel at
+  their `boot.ts` call sites either. Not a defect introduced by this story. **Re-trigger:** whichever
+  story first wires real alerting/paging for the `apps/jobs` sweep family should cover all of them
+  together, not just this one. [apps/jobs/src/boot.ts:622]
+
+- **No backoff, circuit breaker, or dead-letter handling for a candidate that fails every tick** — a
+  genuine data defect causing `closeCycleAlert` to throw a non-concurrency error is counted `failed`
+  and alarmed on every single hourly run indefinitely, with no suppression or escalation after N
+  consecutive failures. **Reason for deferring:** same system-wide convention as every other sweep job
+  in this codebase; not unique to this diff. **Re-trigger:** alongside the `onAlarm` wiring above, if a
+  future story adds real alerting for the sweep family.
+  [apps/jobs/src/scheduler/close-cycle-alert.ts:219-233]
+
+- **The per-candidate `SAVEPOINT`/`RELEASE SAVEPOINT` statements themselves are not wrapped in their
+  own try/catch** — if `client.query('SAVEPOINT ...')` or the `ROLLBACK TO`/`RELEASE SAVEPOINT` pair in
+  the catch block throws (e.g. a dropped connection), the exception escapes per-candidate isolation and
+  aborts the whole tenant's transaction, silently rolling back any siblings already closed this tick
+  while the in-memory `closed`/`alreadyClosed` counters still report them as successful. **Reason for
+  deferring:** byte-identical pattern reused verbatim from the established "10.23 batch-writer
+  convention" (`restoration-discipline.ts`, `claim-ocr-parity.ts`, `claim-peer-mesh.ts`, and several
+  `packages/domain` write functions all share the exact same SAVEPOINT-outside-try shape) — a
+  repo-wide convention, not introduced by this story. **Re-trigger:** if this failure mode is ever
+  hardened, it should be fixed once at the shared convention level, not per call site.
+  [apps/jobs/src/scheduler/close-cycle-alert.ts:210-221]

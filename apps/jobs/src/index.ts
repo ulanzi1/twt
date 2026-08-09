@@ -106,6 +106,7 @@ export {
   runRestorationDiscipline,
   RESTORATION_DISCIPLINE_FLAG_KEY,
   RESTORATION_POLICY_UNPROVISIONED_PRODUCER,
+  CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER,
   type RestorationDisciplineDeps,
   type RestorationDisciplineRunResult,
 } from './restoration-discipline.js';

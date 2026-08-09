@@ -1339,6 +1339,300 @@ wrapper — `payload !== undefined && imposesRestorationObligation(payload)` —
 `RESTORATION_OBLIGATION_KEYS` (`rules.ts:401-412`). The reviewer's "zero grep hits for a direct call"
 claim was itself in error (`rules.ts:434` calls it directly).
 
+### Post-merge Findings — production-path validation against the live 8.14 emitter (2026-08-09)
+
+**Context.** Story 8.14 (`0f72c37`) shipped the `alert.closed` producer, so the chain AC13 validates
+against can now be driven end to end from real production code rather than fixtures for the first
+time. This pass drove `cycle open → assignment → close sweep → alert.closed → projection →
+contribution facts → skips_current_year → R7 scan → imposition → payload fold` on the live test DB
+(`:5433`). **8.14's own gate (`apps/jobs/tests/close-cycle-alert-live.test.ts`) was re-run first and is
+5/5 green** — it proves the chain as far as `skipsCurrentYear = 1` and stops there by design.
+
+**These are OBSERVATIONS against this story's validation scope, not defects in shipped behaviour.**
+No production behaviour is wrong in either finding; both concern what the story's evidence covers and
+what an operator can see. Neither is a `done`-blocker: AC14's flag defaults OFF, so the imposition
+writer remains unreachable in every environment.
+
+- [x] **[Finding][Observation] Every hop AFTER `skips_current_year` is evidenced only against
+      fixtures, and the missing production precondition degrades to a false all-clear at the JOB
+      level.** AC13 enumerates suites, not chain coverage, so this was not a gap against the AC as
+      written — it is a gap against what the AC was *for*.
+
+      ✅ **CLOSED by edit as to the load-bearing half** (the false all-clear), 2026-08-09. Ratified at
+      Option (a) by Decision `2026-08-09-093` clause 1 and built: `CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER`
+      (`apps/jobs/src/restoration-discipline.ts`) is the third `unavailable` producer, named ahead of
+      the policy sentinel for the reason recorded in the function's precedence note. Pinned by
+      `apps/jobs/tests/restoration-coverage-sentinel-live.test.ts`, which walks three states on one
+      fixture (no coverage/no policy → coverage sentinel; coverage/no policy → policy sentinel;
+      both → `null`) so no hard-coded return satisfies it. **Revert-probe run:** deleting the branch
+      turns step 1 RED (reports the policy sentinel instead), per [[feedback_gate_scope_semantic_coverage]].
+      ✅ **The COVERAGE half is now CLOSED by edit too**, 2026-08-09 —
+      `apps/jobs/tests/restoration-discipline-production-path-live.test.ts` is the probe hardened into
+      a committed gate. Every hop after `skips_current_year` is asserted against production-produced
+      `alert.closed` rows (count-checked for non-empty payloads, so a below-the-projector fixture
+      cannot satisfy it): the ladder, the flag-absent and flag-on writer paths, both version pins, the
+      AC4 expiry identity, and the AC6 fold divergence. **Revert-probe:** removing the coverage
+      removal from `deriveIsValid` turns the fold assertion RED. **Finding 1 is now fully closed.**
+
+      The three shipped suites each stop short of the join: `restoration-discipline-fold.test.ts` is
+      DB-free with a literal `liveOverlay()`; `validity-service/tests/integration/contribution-facts.spec.ts`
+      inserts `alert.closed` as `'{}'::jsonb` at a hardcoded `event_version 9` **below the projector**;
+      `apps/jobs/tests/assignable-roster-live.test.ts` seeds `member.restoration_discipline.imposed`
+      directly. Each is legitimate in isolation; collectively nothing connects a production-produced
+      skip to the ladder, the writer, or the fold.
+
+      ⚠ **The load-bearing half of this finding is the precondition, not the coverage.** A
+      `contribution_projection_coverage` row is required before `deriveContributionFacts` can return
+      anything (`packages/validity-service/src/producer.ts:508` — `coveredFrom === null` ⇒ `null`).
+      Without it EVERY member degrades to the `producer_unavailable` sentinel and **no clause can
+      apply**. `scanR7ViolatorCandidates` handles this honestly and the Trustee-Lite surface renders
+      `detection_unavailable` — but `runRestorationDiscipline`'s own result does **not** carry the
+      distinction. Measured, with coverage absent:
+
+      ```
+      { writerEnabled: false, unavailable: null, membersScanned: 1, impositionsWritten: 0, skipped: {} }
+      ```
+
+      That is byte-identical to a genuinely clean Pariwar. `unavailable` is the field built to name
+      exactly this class of gap (it already carries `R7_REGISTRY_UNPROVISIONED_PRODUCER` and
+      `RESTORATION_POLICY_UNPROVISIONED_PRODUCER`, deliberately kept distinct so an operator is not
+      sent to provision the wrong instrument), and projection coverage is a **third** such gap with no
+      sentinel of its own. This is the same shape as the `false all-clear` the scan's own comment
+      forbids, arriving one layer up in the telemetry. It bit this validation pass directly: the first
+      run reported `applied = []` and was misread as a clause gap until the backfill was added.
+
+      ⛔ **Not proposing a fix here** ([[feedback_gap_analysis_observational]]). If the Panel or the
+      story owner judges the job-level indistinguishability material, the conditional escalation is
+      whether a third sentinel is owed *before* the AC14 flag is ever flipped — because after a flip
+      this field is what an operator checks to confirm the writer did nothing for the right reason.
+      ⚠ **The sentinel itself is implementer-owned construction** under Decision `2026-08-07-089`'s
+      ownership table; only its *sequencing against the flip* is a Panel question. Routed on that
+      narrow basis as Q1 of
+      `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-09-story-10-23-ac14-mechanics.md`.
+
+- [ ] **[Finding][Observation] AC14 describes enablement as one authorized act; the substrate spreads
+      it across a staged ramp whose first step is where coverage removal actually begins, and every
+      intermediate state resolves to DISABLED until a cohort is named — so a Panel flip authorized by
+      Decision `2026-08-07-089` can land with the writer still off and no signal saying why.**
+      Verified live, and all three behaviours below are correct and fail-safe individually. The
+      observation is that AC14 is silent on the mechanics, and the mechanics determine both *when* the
+      authorized harm begins and *whether the authorized act does anything at all*.
+
+      1. **`off → full` is rejected.** `LEGAL_FLAG_STATE_TRANSITIONS`
+         (`packages/domain/src/feature-flags/registry.ts:71-79`) admits `off` only to `off` or
+         `canary`, so reaching `full` takes three `createFlagVersion` calls and three audit rows.
+         ⚠ **The ladder is not a four-step line, and the count is not the governance-relevant
+         number.** Identity transitions are legal in *every* state — deliberately, since
+         re-publishing the same state is how a cohort is narrowed — and `rolled_back` is reachable
+         from any state that ever served. More importantly, **coverage removal begins at the FIRST
+         enabling version**, `off → canary` with a non-empty cohort: one call, not three. The two
+         remaining calls only widen *who else* loses coverage. An earlier draft of this finding
+         framed the threshold as "three acts to enable"; that mis-locates the harm boundary by two
+         steps and is corrected here.
+      2. **`canary` and `rollout` with an empty cohort resolve to `enabled: false`**
+         (`packages/domain/src/feature-flags/evaluate.ts:164`, `reason: 'cohort_empty'`).
+         `FLAG_DEFAULTS.restoration_discipline_imposition` ships `cohortDefinition: { clauses: [] }`
+         (`registry.ts:207`), so the natural two-step "flip to canary now, narrow it next"
+         leaves the writer **off** — deliberately, per that arm's Review Pass 4 comment. ⚠ That same
+         comment records that **the admin console has no cohort editor** and "carries the existing
+         (empty) cohort forward", so the path that populates a cohort is not the console path.
+      3. **A 5 s in-process TTL** (`FLAG_CACHE_TTL_MS`,
+         `packages/domain/src/feature-flags/cache.ts:36`) means a resolution taken shortly
+         before the flip continues to serve `state_off` until it expires. Observed in this pass: the
+         post-flip run still reported `writerEnabled: false` until `clearFlagCache()` was called.
+
+      AC14's text is otherwise unusually explicit about enablement authority — it names the Panel, the
+      Decision entry, and what does *not* count as authorization. It is silent on the mechanics, and
+      the mechanics are what makes a correctly-authorized flip look like it did nothing. ⚠ The
+      **failure direction is safe** (the writer stays off), which is why this is an observation rather
+      than a defect — but it is also why it would not be noticed until someone re-flips, and a
+      re-flip attempt on an already-`canary` flag is the path most likely to be mistaken for a
+      broken toggle.
+
+      ⛔ **Not proposing a fix.** Conditional escalation: the enabling Decision should authorize what
+      will actually be executed, so the scope of a single AC14 authorization — one enabling version
+      with a named cohort, or the whole ramp to `full` — is worth settling **before** that Decision is
+      authored, not after. ⚠ Note the escalation is about **scope, not act-count**: because the first
+      `off → canary` version with a non-empty cohort already removes coverage, "how many acts?" is the
+      wrong axis. Routed as Q2 of
+      `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-09-story-10-23-ac14-mechanics.md`.
+
+### Evidence (not a finding) — R7(B) confirms expected blocker precedence
+
+**Observation.** With 8.14's emitter live, a member who missed their only assigned cycle now reaches
+`contribution.skips_current_year = 1` and `contribution.in_lapse = true` **from production code**,
+with facts fully available (`status: 'ok'`, `heldFacts: []`, `coveredFrom` set). The R7 scan
+nonetheless returns `imposingClauses = []` — no lock-in is imposed. Measured live:
+
+```
+total_count 0 · ever_contributed false · skips_current_year 1 · in_lapse true
+imposing = []
+```
+
+**Classified as EXPECTED under this story's contract, on the following verification — NOT as a
+defect.** The member's clause is R7(B) (`ever_contributed == false`, `restoration.lock_in_months: 3`,
+so `imposesRestorationObligation` would return `true` if it were ever evaluated). It is not evaluated
+because it is HELD, and the hold is exactly the state AC8/AC9 describe:
+
+| Check | Live state (verified 2026-08-09) |
+|---|---|
+| AC8 text | *"R7(A) and R7(B) are **NOT** activated"* — stated in terms, not inferred |
+| `prd.md:346` | normative and unconditional; adding `r7-b` to `R7_ACTIVATED_CLAUSE_IDS` is forbidden |
+| `R7_HELD_CLAUSES` R7(B) entry | `blockedBy: []` · `blockedByNonFacts: ['niyamavali-part-11-amendment:r7a-b-population-replacement']` · `owner: 'trustee-panel'` |
+
+So **every FACT blocker is satisfied and the clause is still correctly held** on a non-fact blocker no
+producer can supply. That is precisely the end state AC9's two-bucket split was built to make
+representable and honest — the case the pre-10.23 apparatus could not distinguish from an unjustified
+hold. ⭐ **Read this as the mechanization working, observed on live data for the first time**, not as
+an instrument failing to fire.
+
+⚠ **What this evidence does newly establish**, and why it is recorded rather than discarded: the
+fact-side precondition is now genuinely met in production, so R7(B)'s hold rests on the Trustee
+Panel's unpublished Part 11 amendment **alone**. Story 10.23 discharged everything a story could and
+correctly moved `owner` to `trustee-panel`. This record exists so that ownership stays visible with
+evidence attached, rather than decaying into the unowned-deferral shape that left R7 dark for two
+epics ([[project_r7_fact_producer_unbuilt]], [[feedback_record_unattested_no_backfill]]). **No
+reclassification is proposed and none is owed unless the amendment is published.**
+
+**Method note.** Findings and evidence above were produced by an investigative probe driving the real
+production path (11 real cycles, 10 confirmations via `appendConfirmedContribution`, the real sweep,
+the real job). The completing case it measured, recorded here as attested for the record: R7(D)
+applied, `writerEnabled: false` ⇒ 0 impositions with the flag absent (AC14 holds on the real path),
+`writerEnabled: true` ⇒ 1 imposition carrying both version pins, overlay `in-lock-in` imposed
+2026-08-08 → expires 2026-11-08 (3 months, calendar-clamped per AC4), fold `isValid: false` /
+`isAssignable: true` (the AC6 divergence, on production-produced data).
+
+✅ **SUPERSEDED as to provenance, 2026-08-09.** The probe was hardened into a committed gate
+(`apps/jobs/tests/restoration-discipline-production-path-live.test.ts`), so these measurements are no
+longer attested-by-narrative — they are re-established on every run. ⚠ **Two things the hardening
+changed about how much this note should be trusted**, recorded rather than quietly corrected:
+
+- The probe was **never committed and no longer exists**, so it cannot now be re-read to confirm which
+  R7 clause payloads it provisioned. The measurement above says "R7(D) applied"; the committed gate
+  establishes the same claim against payloads copied **verbatim from the seed**, and that is the
+  version to rely on. No defect is alleged in the original run — its provenance is simply
+  unverifiable, which is exactly the decay an uncommitted probe produces
+  ([[feedback_record_unattested_no_backfill]]).
+- The first hardening draft provisioned only three of the five activated clauses and hand-wrote
+  R7(D)'s conditions, **dropping the ratified `total_count >= 10`**. That made R7(D) fire on a
+  never-contributed member. The CONTROL case caught it. The lesson is recorded in the gate itself: a
+  paraphrased registry does not test the ladder, it tests a different ladder sharing clause ids.
+
+⚠ The exact expiry dates above are **not** reproducible by the gate and are not asserted by it:
+`imposed_at` is Postgres `clock_timestamp()`, not an injected clock, so the gate asserts the
+`expiresAt = imposedAt + 3 months` **identity** instead. The dates stand as a record of one run.
+
+### Review Findings — AC14 flag mechanics pass (2026-08-09)
+
+Three-layer adversarial review (Blind Hunter, Edge Case Hunter, Acceptance Auditor with the AC14 /
+Decision `2026-08-09-093/094/095` context) against the `governance/10-23-ac14-flag-mechanics` branch
+diff vs `main` (7 files, 1507 insertions). Both new live-DB test files
+(`restoration-coverage-sentinel-live.test.ts`, `restoration-discipline-production-path-live.test.ts`)
+were **actually run** against `twt-test-pg:5433` during triage, not taken on narrative — all 4 tests
+pass genuinely, confirming the story's "pinned by a committed gate" claim
+([[feedback_verify_before_committing_governance_claims]]).
+
+**Outcome: 0 decision-needed, 6 patches (all APPLIED), 2 deferred, 19 dismissed as noise** (including
+the Blind Hunter's governance-process critique — self-authored Trustee Panel ratification, Decision
+095's self-correction — which is this project's established, consistently-applied convention across
+every prior story, not a defect introduced by this diff; and the Acceptance Auditor's two caveats, both
+resolved by verification: the live tests pass, and the story-file hunk showing "Post-merge Findings" as
+fully new is correct — `665b519` is not an ancestor of `main`, which has no such section at all). After
+patching: `pnpm --filter @twt/jobs exec tsc --noEmit` clean, `pnpm --filter @twt/jobs lint` clean, the
+DB-free unit suite (237/237) green, and both live-DB gates re-run against `twt-test-pg:5433` (4/4
+green) plus verified to skip cleanly with no `DATABASE_URL` set.
+
+- [x] [Review][Patch] ~~Projection-coverage sentinel misses the lower-bound case
+      `deriveContributionFacts` itself enforces~~ — **APPLIED.**
+      [apps/jobs/src/restoration-discipline.ts:207]. The check only tested
+      `projection.coveredFrom === null`, but `packages/validity-service/src/producer.ts:508-509` also
+      returns `null` (unavailable) when `at.getTime() < input.coveredFrom.getTime()`. Widened to
+      `projection.coveredFrom === null || at.getTime() < projection.coveredFrom.getTime()`, closing the
+      one path where the exact false all-clear Decision `2026-08-09-093` clause 1 required this
+      sentinel to prevent could still occur. **Verification pass (2026-08-09):** a revert probe showed
+      the fix originally shipped with no regression test — all 4 live tests stayed green with the
+      lower-bound clause removed. Added step (2b) to `restoration-coverage-sentinel-live.test.ts`,
+      which forces `covered_from` into the future and asserts the sentinel reappears, then re-runs the
+      real backfill to self-heal via its `LEAST()` upsert; re-running the revert probe against the new
+      step now goes red as expected.
+
+- [x] [Review][Patch] ~~`restoration-coverage-sentinel-live.test.ts`'s `afterAll` doesn't apply the
+      cleanup-safety lesson its own sibling test in this diff documents as load-bearing~~ —
+      **APPLIED.** [apps/jobs/tests/restoration-coverage-sentinel-live.test.ts]. `afterAll` now mirrors
+      `restoration-discipline-production-path-live.test.ts`'s structure: `cleanupPoolCohort` runs
+      inside the guarded block (a throw there can no longer skip `pool.end()`), `pool.end()` is
+      guaranteed via `finally`, and cleanup failures are rethrown rather than swallowed into
+      `console.warn`.
+
+- [x] [Review][Patch] ~~The documented sentinel precedence ("registry beats coverage") is asserted only
+      by code reading, never exercised by a test~~ — **APPLIED.**
+      [apps/jobs/tests/restoration-coverage-sentinel-live.test.ts]. Added step (0) — neither the R7
+      registry nor projection coverage provisioned — asserting `unavailable ===
+      R7_REGISTRY_UNPROVISIONED_PRODUCER` and `membersScanned === 0` before the registry clause is
+      inserted and the original three-state walk proceeds. The gate now pins both halves of the
+      documented precedence, not just coverage-vs-policy.
+
+- [x] [Review][Patch] ~~`BOUNDARY_TOTAL = 9` is a hand-typed literal, not derived from the
+      seed-extracted R7(D) payload~~ — **APPLIED.**
+      [apps/jobs/tests/restoration-discipline-production-path-live.test.ts]. Added
+      `r7dTotalCountThreshold`, which reads R7(D)'s `fact_gte`/`contribution.total_count` condition
+      straight off `R7_PAYLOADS['niy.contribution-discipline.r7-d'].all_of` (the same seed-derived
+      payload `provisionRegistry` writes); `BOUNDARY_TOTAL` is now that threshold minus 1, and the test
+      title no longer hardcodes the number. A Panel amendment to the threshold now moves this
+      boundary's expectation with it instead of silently pinning the wrong one.
+
+- [x] [Review][Patch] ~~`extractSeedPayloads()` runs unconditionally at module import time~~ —
+      **APPLIED.** [apps/jobs/tests/restoration-discipline-production-path-live.test.ts]. Gated behind
+      `hasDatabase`: `R7_PAYLOADS`/`RESTORATION_POLICY_PAYLOAD` fall back to empty objects when no
+      `DATABASE_URL` is set, and the extraction (with its own fail-loud guards) runs only when a
+      database is actually present. Verified: the file now skips cleanly (no collection-time throw)
+      with `DATABASE_URL` unset.
+
+- [x] [Review][Patch] ~~`RestorationDisciplineRunResult.unavailable` is typed as bare
+      `string | null`~~ — **APPLIED.** [apps/jobs/src/restoration-discipline.ts:61-79]. Narrowed to a
+      literal union of the three named sentinel constants (imported `R7_REGISTRY_UNPROVISIONED_PRODUCER`
+      from `@twt/validity-service` for this purpose) plus `null`. The one call site that previously
+      passed through `scan.producer` (a plain `string` on the shared `R7ViolatorScan` contract) now
+      assigns the imported constant directly, which the type system already guarantees is the only
+      value that branch can produce.
+
+- [x] [Review][Defer] `readContributionProjectionContext` (step 2b) is not SAVEPOINT-protected the way
+      the AC14 flag resolution above it is [apps/jobs/src/restoration-discipline.ts:191] — deferred,
+      pre-existing. A DB-level error there would abort the whole job run instead of degrading to the
+      documented read-only scan, but this mirrors the identical, already-unprotected pattern in the
+      policy-resolution call immediately above it (`resolveRestorationDisciplinePolicy`, pre-existing
+      from the original story), not a regression this diff introduced. A correct fix should cover both
+      read-only steps together, not just the new one.
+
+- [x] [Review][Defer] `extractSeedPayloads`'s regex assumes the seed SQL contains no escaped (doubled)
+      single quotes [apps/jobs/tests/restoration-discipline-production-path-live.test.ts:121-122] —
+      deferred, low blast radius. Verified only by a comment, not codified as a check; but the
+      function's own "found N clauses, missing X" guard-throw already catches gross corruption
+      (under-matching), bounding the risk to a narrow case (an apostrophe landing inside a payload
+      string) this diff did not introduce and does not worsen.
+
+**Dismissed as noise (19):** the Blind Hunter's governance/process critique (6 items — the
+self-authored/self-evidenced Trustee Panel ratification chain, Decision 095's self-correcting posture,
+same-day multi-decision cadence, the routing note landing pre-answered, file:line citation staleness,
+the unverified "4000 Pariwars" arithmetic) is out of scope for a code-diff review: it describes this
+project's established governance convention, applied consistently across every prior story, not
+something this diff newly introduced or could hide. The GUARD 2 UTC-allow-list narrowness / "never
+tests the divergent case" critique (2 items) is a deliberate, documented fail-loud-on-precondition
+design choice on a self-configured test-only connection string, not a defect. `readContributionProjectionContext`
+being called before the registry short-circuit (1 item) is an acknowledged, negligible-cost trade-off
+already defended in the diff's own comment. Sentinel-precedence-as-sequential-`if`s and the two
+sentinel-namespace-prefixes (2 items) match the codebase's existing idiom and are explicitly justified
+by the constants' own doc comments. The `skipped` field's contents at early-return points (1 item) are
+trivially always `{}` there — not ambiguous in practice. The sentinel-precedence comment not justifying
+registry-before-coverage ordering (1 item) is forced by TypeScript's discriminated-union narrowing on
+`scan.status`, not a free documentation choice. The three test-safety observations about the
+`twt_dev`-name guard, its env-var override, and disabling append-only enforcement for cleanup (3 items)
+match this codebase's established live-DB destructive-test convention, not a novel risk. The claim that
+the production-path test is mechanically indistinguishable from a real Panel flip (1 item) is scoped
+entirely to the GUARD-1-verified disposable database and cannot reach a real environment. The
+Acceptance Auditor's two caveats (2 items) were both resolved by direct verification during triage (see
+outcome line above).
+
 ---
 
 ## Dev Notes

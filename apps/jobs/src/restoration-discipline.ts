@@ -40,8 +40,8 @@
 // it would put a second writer on the correctness path, break as-of replay, and make every payload
 // read a mutation.
 
-import { featureFlags, ids, member, withPariwarScope, type Db } from '@twt/domain';
-import { scanR7ViolatorCandidates } from '@twt/validity-service';
+import { contribution, featureFlags, ids, member, withPariwarScope, type Db } from '@twt/domain';
+import { R7_REGISTRY_UNPROVISIONED_PRODUCER, scanR7ViolatorCandidates } from '@twt/validity-service';
 import type pg from 'pg';
 
 /** The AC14 rollout flag key. Registered in `FLAG_DEFAULTS` + `governance_boundary.yaml`. */
@@ -62,8 +62,18 @@ export interface RestorationDisciplineRunResult {
   readonly pariwarId: string;
   /** `false` when the AC14 flag is off — the scan still ran, nothing was written. */
   readonly writerEnabled: boolean;
-  /** Set when the run could not proceed; the named sentinel, never a silent skip. */
-  readonly unavailable: string | null;
+  /**
+   * Set when the run could not proceed; the named sentinel, never a silent skip.
+   *
+   * ⛔ `null` means "the run genuinely proceeded" — it must NEVER be the value on a run that could
+   * not evaluate anybody. More than one gap can be true at once; see the precedence note on
+   * {@link runRestorationDiscipline}.
+   */
+  readonly unavailable:
+    | typeof R7_REGISTRY_UNPROVISIONED_PRODUCER
+    | typeof CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER
+    | typeof RESTORATION_POLICY_UNPROVISIONED_PRODUCER
+    | null;
   readonly membersScanned: number;
   readonly impositionsWritten: number;
   /** Refusals by reason — the AC2 predicate's own vocabulary. */
@@ -83,10 +93,26 @@ export interface RestorationDisciplineDeps {
  *
  * Ordering, and why each step is where it is:
  *   1. resolve the AC14 flag ONCE (above the scan, cohort-independent);
- *   2. resolve the instrument-policy clause — ⛔ absent ⇒ DO NOT IMPOSE, report the sentinel (AC3);
+ *   2. resolve the instrument-policy clause and the projection-coverage watermark — ⛔ either absent
+ *      ⇒ DO NOT IMPOSE, report the corresponding sentinel (AC3; Decision `2026-08-09-093` clause 1);
  *   3. scan (bounded, member-count-independent) — this happens whether or not the writer is enabled,
  *      because the scan is the read-only behaviour that already exists today;
  *   4. per candidate, per applied-and-imposing clause, apply the AC2 predicate and write.
+ *
+ * ── ⚠ SENTINEL PRECEDENCE, AND WHY IT IS THIS ORDER ─────────────────────────────────────────────
+ * Three gaps can each stop this job, and MORE THAN ONE CAN BE TRUE AT ONCE. `unavailable` reports a
+ * single producer, so the order below is a deterministic, documented naming order — NOT a severity
+ * ranking, and NOT a claim that the others are absent:
+ *
+ *   registry (no R7 clause published)  →  coverage (no projection, or `at` precedes it)  →  policy
+ *   (no instrument clause)
+ *
+ * Coverage is named BEFORE policy deliberately. With no coverage, `deriveContributionFacts` returns
+ * `null` for EVERY member, so the scan's candidate list carries no information whatsoever — naming
+ * the policy gap first would send an operator to publish an instrument that still could not fire.
+ * The reverse is not true: with coverage present and policy absent, the scan result is meaningful and
+ * the policy is genuinely the next thing to provision. ⛔ Fixing the named gap does NOT imply the
+ * others are clear — re-run and read the sentinel again.
  */
 export async function runRestorationDiscipline(
   deps: RestorationDisciplineDeps,
@@ -149,15 +175,56 @@ export async function runRestorationDiscipline(
       at,
     );
 
+    // ── (2b) The projection-coverage watermark — Decision `2026-08-09-093` clause 1 ────────────────
+    // ⛔ Without a `contribution_projection_coverage` row, `deriveContributionFacts` returns `null`
+    // for EVERY member (`producer.ts` — `if (input.coveredFrom === null) return null`), so every
+    // candidate degrades to the `producer_unavailable` sentinel and NO clause can apply. The scan
+    // reports that honestly per member and the Trustee-Lite surface renders `detection_unavailable`
+    // — but this job's own result did not carry the distinction, so a coverage-less Pariwar returned
+    // `{ unavailable: null, impositionsWritten: 0 }`: BYTE-IDENTICAL to a genuinely clean one. That
+    // is the same false all-clear the scan's own comment forbids, arriving one layer up in the
+    // telemetry, and after a flip this field is what an operator reads to confirm the writer did
+    // nothing FOR THE RIGHT REASON.
+    //
+    // ⚠ This re-reads a scalar the scan also computes internally, and that duplication is
+    // DELIBERATE. The alternative is widening `R7ViolatorScan` — a contract shared with the
+    // read-only Trustee-Lite consumer — to carry a diagnostic only this writer needs. One extra
+    // single-row scalar read per Pariwar per run is the cheaper side of that trade
+    // (`readContributionProjectionContext` is ONE statement, two scalars).
+    const projection = await contribution.readContributionProjectionContext(tx, pariwarId, at);
+
     const scan = await scanR7ViolatorCandidates(tx, pariwarId, at);
     if (scan.status === 'unavailable') {
       // The R7 REGISTRY is unprovisioned — a different gap from the instrument policy's, and it
       // already has its own named producer. Reported, never treated as "nobody is in breach".
+      // ⚠ `scan.producer` is read back rather than assigned here because `R7ViolatorScan`'s
+      // `producer` field is a plain `string` (a shared contract with the Trustee-Lite consumer);
+      // the imported constant is what actually pins the value to the literal union below.
       return {
         pariwarId: String(pariwarId),
         writerEnabled,
-        unavailable: scan.producer,
+        unavailable: R7_REGISTRY_UNPROVISIONED_PRODUCER,
         membersScanned: 0,
+        impositionsWritten: 0,
+        skipped,
+      };
+    }
+
+    // ⛔ Review finding: mirrors `deriveContributionFacts`'s own guard (`producer.ts:508-509`),
+    // which treats BOTH `coveredFrom === null` and `at < coveredFrom` as "unavailable". Checking
+    // only the former left the latter's false all-clear open — the exact gap Decision
+    // `2026-08-09-093` clause 1 required this sentinel to close.
+    if (projection.coveredFrom === null || at.getTime() < projection.coveredFrom.getTime()) {
+      // The FACT side is unprojected (or `at` precedes the watermark) — a different gap from either
+      // registry gap, with a different owner and a different fix (run/backfill the projection, or
+      // wait for `at` to reach `coveredFrom`; do NOT publish a clause).
+      // `membersScanned` is reported honestly: that many members were enumerated, and NONE of them
+      // was derivable. The non-null `unavailable` is what makes the pair unambiguous.
+      return {
+        pariwarId: String(pariwarId),
+        writerEnabled,
+        unavailable: CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER,
+        membersScanned: scan.candidates.length,
         impositionsWritten: 0,
         skipped,
       };
@@ -259,3 +326,20 @@ export async function runRestorationDiscipline(
  * clause — the same reasoning that made `R7_REGISTRY_UNPROVISIONED_PRODUCER` not be `'story-10-24'`.
  */
 export const RESTORATION_POLICY_UNPROVISIONED_PRODUCER = 'niyamavali-registry:restoration-discipline-policy';
+
+/**
+ * The named sentinel for a Pariwar whose contribution projection has never been built — the THIRD
+ * such producer, required by Decision `2026-08-09-093` clause 1 as a PRECONDITION of the AC14 flip.
+ *
+ * ⚠ Deliberately NOT a `niyamavali-registry:` producer, unlike the two above. Those two mean "an
+ * instrument was never PUBLISHED" and are discharged by a governance act — publishing a clause. This
+ * one means "the FACTS were never PROJECTED" and is discharged by an operational act
+ * (`backfillContributionProjections`). Collapsing it into a registry sentinel — or, worse, leaving it
+ * unnamed so the run reports `unavailable: null` — sends an operator to publish a clause that would
+ * still fire on nothing, which is precisely the wrong-instrument failure the other two were kept
+ * distinct to prevent.
+ *
+ * ⛔ Its absence is why a coverage-less Pariwar was indistinguishable from a clean one at the job
+ * level. It is diagnostic ONLY: it names a gap, and it neither imposes nor suppresses anything.
+ */
+export const CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER = 'contribution-projection:coverage';

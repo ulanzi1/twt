@@ -4,6 +4,26 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story-10-23-restoration-discipline-lock-in, AC14 flag mechanics pass (2026-08-09)
+
+Reviewed the `governance/10-23-ac14-flag-mechanics` branch diff vs `main` (the projection-coverage
+sentinel + production-path gate built against Decisions `2026-08-09-093/094/095`).
+
+- **`readContributionProjectionContext` (step 2b) is not SAVEPOINT-protected the way the AC14 flag
+  resolution above it is** [apps/jobs/src/restoration-discipline.ts:191]. A DB-level error there would
+  abort the whole job run instead of degrading to the documented read-only scan. Deferred because this
+  mirrors the identical, already-unprotected pattern in the policy-resolution call immediately above it
+  (`resolveRestorationDisciplinePolicy`, pre-existing from the original story) — not a regression this
+  diff introduced. A correct fix should cover both read-only steps together in one pass, not patch only
+  the new one.
+- **`extractSeedPayloads`'s regex assumes the seed SQL contains no escaped (doubled) single quotes**
+  [apps/jobs/tests/restoration-discipline-production-path-live.test.ts:121-122]. Verified only by a
+  comment, not codified as a check. Deferred as low blast radius: the function's own "found N clauses,
+  missing X" guard-throw already catches gross corruption (under-matching); the narrow remaining case
+  (an apostrophe landing inside a payload string) is not introduced or worsened by this diff.
+
+---
+
 ## Deferred / recorded from: implementation of story 8-14-close-of-cycle-emitter (2026-08-08)
 
 > Story 8.14 built the missing `alert.closed` producer — a corrective story, not new capability. Its

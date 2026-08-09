@@ -660,6 +660,30 @@ commissioning the story directly. The key is created by this run.
      does not match inside a longer identifier. A genuine `import type { MissedCycleEntry }` in the
      trustee-lite handler DID turn it red. Recorded because a weaker probe would have "proven" teeth
      the fence does not have.
+- **AC10 final: `pnpm ci:local` PASSED — 31/31 jobs green**, run with `--concurrency=4` and the live-DB
+  job enabled against `twt-test-pg`:5433. ⚠ **The first post-commit run was RED on five jobs, and four
+  of the five were genuinely mine** — recorded because three of them are invisible until you commit:
+  · `lint` — an unused `_removed` destructure in the contracts test (fixed);
+  · `contracts-determinism` — the widened response shape changes `openapi/v1.yaml`; re-emitted via
+    `pnpm contracts:emit-openapi` and committed;
+  · `friction-budget` — **AC-4 diffs COMMITTED history**, so it passed vacuously for the whole build
+    and only fired once the story commit existed ([[project_friction_budget_baseline_ratchet]]).
+    Resolved with a Story 10.27 **disposition (declaration affirmed, NO new row)**: the surface is
+    read-only, and its one affordance is Story 10.26's already-declared `optional` row — this story
+    populates that assertion's existing provenance field rather than adding a step, and a second row
+    would double-count the same picker;
+  · `test (unit)` / `integration-tests` — **NOT mine.** `@twt/channels` determinism timed out at 90 s
+    inside a 570 s suite run, and `apps/api` `news-blog.spec.ts` got a 500 on an unrelated draft
+    create. **Innocence confirmed by isolation**: channels 3/3 in **3.3 s**, news-blog 10/10. Both are
+    the known concurrency-oversubscription class, and neither package is touched by this story
+    ([[project_ci_local_concurrency_oversubscription]], [[project_ci_local_double_run_pollution]]).
+    ⚠ Note the signature: the clean baseline flaked on `@twt/admin` + `banners`, this run on
+    `channels` + `news-blog` — **a different suite each run** is the tell.
+- **A memoization bug I found reviewing my own handler, fixed with a regression test.** The freeze
+  month is memoized per CYCLE (pools in one cycle share it) but the *fallback* is derived from the
+  POOL's canonical identifier — so caching a fallback under the cycle id handed the second pool the
+  first pool's reference, on the one field the member reads out to Madad. Now only the RESOLVED value
+  is cached; the fallback is per-entry. Pinned by "the unresolvable-freeze fallback is PER POOL".
 - **Tone-gate teeth, verified live against these exact files** rather than inferred from a green run:
   every prohibited `out-of-band-blame` frame FIRES on `packages/i18n/locales/{en,hi}/contribution.json`
   (including the predicted `does not count` collision and the Hindi `गलती से` / `सिस्टम के बाहर` /
@@ -760,6 +784,10 @@ payment-adjacent surface. A green gate is not evidence the copy is in register.
 - `apps/mobile/components/member-status/usePersonalEventAssertion.ts`
 - `packages/i18n/locales/en/contribution.json`
 - `packages/i18n/locales/hi/contribution.json`
+- `openapi/v1.yaml` — re-emitted (`pnpm contracts:emit-openapi`); the widened response shape changes it
+- `friction-budget.md` — Story 10.27 disposition: **declaration affirmed, NO new row** (read-only
+  surface; its one affordance is Story 10.26's already-declared `optional` row, and this story
+  populates that assertion's existing provenance field rather than adding a step)
 - `_bmad-output/implementation-artifacts/deferred-work.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `_bmad-output/implementation-artifacts/10-27-member-missed-cycle-visibility.md`

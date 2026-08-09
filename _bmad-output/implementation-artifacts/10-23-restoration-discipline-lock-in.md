@@ -1353,10 +1353,22 @@ No production behaviour is wrong in either finding; both concern what the story'
 what an operator can see. Neither is a `done`-blocker: AC14's flag defaults OFF, so the imposition
 writer remains unreachable in every environment.
 
-- [ ] **[Finding][Observation] Every hop AFTER `skips_current_year` is evidenced only against
+- [x] **[Finding][Observation] Every hop AFTER `skips_current_year` is evidenced only against
       fixtures, and the missing production precondition degrades to a false all-clear at the JOB
       level.** AC13 enumerates suites, not chain coverage, so this was not a gap against the AC as
       written — it is a gap against what the AC was *for*.
+
+      ✅ **CLOSED by edit as to the load-bearing half** (the false all-clear), 2026-08-09. Ratified at
+      Option (a) by Decision `2026-08-09-093` clause 1 and built: `CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER`
+      (`apps/jobs/src/restoration-discipline.ts`) is the third `unavailable` producer, named ahead of
+      the policy sentinel for the reason recorded in the function's precedence note. Pinned by
+      `apps/jobs/tests/restoration-coverage-sentinel-live.test.ts`, which walks three states on one
+      fixture (no coverage/no policy → coverage sentinel; coverage/no policy → policy sentinel;
+      both → `null`) so no hard-coded return satisfies it. **Revert-probe run:** deleting the branch
+      turns step 1 RED (reports the policy sentinel instead), per [[feedback_gate_scope_semantic_coverage]].
+      ⚠ **The COVERAGE half of this finding is NOT closed** — the hops after `skips_current_year` are
+      still evidenced only against fixtures, and the probe that exercised them is still uncommitted.
+      That remains open and is not discharged by the sentinel.
 
       The three shipped suites each stop short of the join: `restoration-discipline-fold.test.ts` is
       DB-free with a literal `liveOverlay()`; `validity-service/tests/integration/contribution-facts.spec.ts`

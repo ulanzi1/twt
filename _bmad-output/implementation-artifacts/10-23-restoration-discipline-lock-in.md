@@ -1366,9 +1366,13 @@ writer remains unreachable in every environment.
       fixture (no coverage/no policy → coverage sentinel; coverage/no policy → policy sentinel;
       both → `null`) so no hard-coded return satisfies it. **Revert-probe run:** deleting the branch
       turns step 1 RED (reports the policy sentinel instead), per [[feedback_gate_scope_semantic_coverage]].
-      ⚠ **The COVERAGE half of this finding is NOT closed** — the hops after `skips_current_year` are
-      still evidenced only against fixtures, and the probe that exercised them is still uncommitted.
-      That remains open and is not discharged by the sentinel.
+      ✅ **The COVERAGE half is now CLOSED by edit too**, 2026-08-09 —
+      `apps/jobs/tests/restoration-discipline-production-path-live.test.ts` is the probe hardened into
+      a committed gate. Every hop after `skips_current_year` is asserted against production-produced
+      `alert.closed` rows (count-checked for non-empty payloads, so a below-the-projector fixture
+      cannot satisfy it): the ladder, the flag-absent and flag-on writer paths, both version pins, the
+      AC4 expiry identity, and the AC6 fold divergence. **Revert-probe:** removing the coverage
+      removal from `deriveIsValid` turns the fold assertion RED. **Finding 1 is now fully closed.**
 
       The three shipped suites each stop short of the join: `restoration-discipline-fold.test.ts` is
       DB-free with a literal `liveOverlay()`; `validity-service/tests/integration/contribution-facts.spec.ts`
@@ -1492,13 +1496,31 @@ reclassification is proposed and none is owed unless the amendment is published.
 
 **Method note.** Findings and evidence above were produced by an investigative probe driving the real
 production path (11 real cycles, 10 confirmations via `appendConfirmedContribution`, the real sweep,
-the real job). The probe is **deliberately NOT hardened into a gate and NOT committed** — it is
-console-logging and investigative, and hardening it is a separate decision. The completing case it
-measured, recorded here as attested for the record: R7(D) applied, `writerEnabled: false` ⇒ 0
-impositions with the flag absent (AC14 holds on the real path), `writerEnabled: true` ⇒ 1 imposition
-carrying both version pins, overlay `in-lock-in` imposed 2026-08-08 → expires 2026-11-08 (3 months,
-calendar-clamped per AC4), fold `isValid: false` / `isAssignable: true` (the AC6 divergence, on
-production-produced data).
+the real job). The completing case it measured, recorded here as attested for the record: R7(D)
+applied, `writerEnabled: false` ⇒ 0 impositions with the flag absent (AC14 holds on the real path),
+`writerEnabled: true` ⇒ 1 imposition carrying both version pins, overlay `in-lock-in` imposed
+2026-08-08 → expires 2026-11-08 (3 months, calendar-clamped per AC4), fold `isValid: false` /
+`isAssignable: true` (the AC6 divergence, on production-produced data).
+
+✅ **SUPERSEDED as to provenance, 2026-08-09.** The probe was hardened into a committed gate
+(`apps/jobs/tests/restoration-discipline-production-path-live.test.ts`), so these measurements are no
+longer attested-by-narrative — they are re-established on every run. ⚠ **Two things the hardening
+changed about how much this note should be trusted**, recorded rather than quietly corrected:
+
+- The probe was **never committed and no longer exists**, so it cannot now be re-read to confirm which
+  R7 clause payloads it provisioned. The measurement above says "R7(D) applied"; the committed gate
+  establishes the same claim against payloads copied **verbatim from the seed**, and that is the
+  version to rely on. No defect is alleged in the original run — its provenance is simply
+  unverifiable, which is exactly the decay an uncommitted probe produces
+  ([[feedback_record_unattested_no_backfill]]).
+- The first hardening draft provisioned only three of the five activated clauses and hand-wrote
+  R7(D)'s conditions, **dropping the ratified `total_count >= 10`**. That made R7(D) fire on a
+  never-contributed member. The CONTROL case caught it. The lesson is recorded in the gate itself: a
+  paraphrased registry does not test the ladder, it tests a different ladder sharing clause ids.
+
+⚠ The exact expiry dates above are **not** reproducible by the gate and are not asserted by it:
+`imposed_at` is Postgres `clock_timestamp()`, not an injected clock, so the gate asserts the
+`expiresAt = imposedAt + 3 months` **identity** instead. The dates stand as a record of one run.
 
 ---
 

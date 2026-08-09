@@ -95,10 +95,32 @@ entire suite passed against **fixture-produced** events raw-`INSERT`ed below the
 system could actually reach. **Expect findings.** ⛔ Neither 10.23 nor 10.27 is modified by that pass;
 findings are recorded against those stories on their own terms.
 
-**Status: OUTSTANDING.** Recorded here so it survives the closure of 8.14's session.
+**Status: DISCHARGED, 2026-08-09** — the pass ran, and it found what it was recorded to look for.
+Driven on the live test DB (`:5433`) as `cycle open → assignment → close sweep → alert.closed →
+projection → contribution facts → skips_current_year → R7 scan → imposition → payload fold`, with
+8.14's own gate (`apps/jobs/tests/close-cycle-alert-live.test.ts`) re-run first and green 5/5. Two
+findings, both recorded against Story 10.23 on its own terms per the ⛔ above (§ *Post-merge
+Findings*, first committed at `665b519`); neither is a `done`-blocker, because AC14's flag defaults
+OFF and the imposition writer is unreachable in every environment.
 
-**Re-trigger:** resuming Story 10.27 — its row source *is* the closed-cycle opportunity set, so it
-cannot be meaningfully implemented or reviewed until that set is confirmed non-empty.
+- **Finding 1 — CLOSED BY EDIT, both halves.** The *precondition* half (the false all-clear:
+  projection coverage absent ⇒ every member degrades to `producer_unavailable`, yet the job reported
+  `unavailable: null`, byte-identical to a clean Pariwar) was ratified at Option (a) by Decision
+  `2026-08-09-093` clause 1 and built as `CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER`, pinned by
+  `apps/jobs/tests/restoration-coverage-sentinel-live.test.ts`. The *coverage* half was closed by
+  `apps/jobs/tests/restoration-discipline-production-path-live.test.ts` — the probe hardened into a
+  committed gate asserting every hop after `skips_current_year` against production-produced
+  `alert.closed` rows. Both revert-probed RED.
+- **Finding 2 — RESOLVED VIA RATIFICATION, not by edit** (Decision `2026-08-09-093` clause 2, scope
+  fixed by `2026-08-09-094` clause 1). See the finding's own disposition for what those rulings did
+  *not* settle.
+
+⚠ **The pass is discharged; it is not a clean bill.** It deposited two ordinary deferred rows of its
+own — see the 2026-08-09 AC14-flag-mechanics section at the top of this file — which are carried on
+their own terms and are unaffected by this discharge.
+
+**Re-trigger: CONSUMED.** Story 10.27 is unblocked — the closed-cycle opportunity set is confirmed
+non-empty from production code, which is the condition this row existed to establish.
 
 ---
 

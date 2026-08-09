@@ -36,6 +36,7 @@ const BAHI = 'apps/mobile/components/yogdaan-bahi/YogdaanBahi.tsx'
 const SECTION = 'apps/mobile/components/yogdaan-bahi/MissedCycleSection.tsx'
 const ASSERTION = 'apps/mobile/components/member-status/PersonalEventAssertion.tsx'
 const HOOK = 'apps/mobile/components/member-status/usePersonalEventAssertion.ts'
+const MISSED_CYCLES = 'apps/mobile/components/yogdaan-bahi/missed-cycles.ts'
 
 const ENTRY: MissedCycleEntry = {
   cycleId: '22222222-2222-2222-2222-222222222222',
@@ -71,20 +72,25 @@ describe('AC4 — the section is ABSENT when there is nothing to show, never EMP
 
 describe('⛔ AC6/D4 — the assertion request receives the UUID, never the display string', () => {
   it('maps entry.cycleId (the UUID) onto the request’s UUID-typed cycleRef', () => {
-    const req = personalEventRequestForCycle(ENTRY, 'bereavement')
+    const req = personalEventRequestForCycle(ENTRY.cycleId, 'bereavement')
     expect(req.cycleRef).toBe(ENTRY.cycleId)
   })
 
   it('never sends the entry’s own display cycleRef (a freeze month) as provenance', () => {
-    const req = personalEventRequestForCycle(ENTRY, 'illness')
+    const req = personalEventRequestForCycle(ENTRY.cycleId, 'illness')
     expect(req.cycleRef).not.toBe(ENTRY.cycleRef)
     expect(req.cycleRef).not.toBe('2026-05')
     expect(req.cycleRef).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
   })
 
   it('carries NO free text and NO member id (ratified §3.1 / D3) — kind + provenance, nothing else', () => {
-    const req = personalEventRequestForCycle(ENTRY, 'other')
+    const req = personalEventRequestForCycle(ENTRY.cycleId, 'other')
     expect(Object.keys(req).sort()).toEqual(['cycleRef', 'kind'])
+  })
+
+  it('an absent cycle omits the field entirely (the membership screen’s cycle-less instance)', () => {
+    const req = personalEventRequestForCycle(undefined, 'bereavement')
+    expect(Object.keys(req)).toEqual(['kind'])
   })
 })
 
@@ -186,15 +192,17 @@ describe('AC2/AC6 — the section’s anatomy', () => {
 
 describe('AC6 — the assertion flow accepts a cycle without changing its contract', () => {
   const assertion = stripComments(read(ASSERTION))
+  const missedCycles = stripComments(read(MISSED_CYCLES))
   const hook = stripComments(read(HOOK))
 
-  it('the component takes an optional cycleId and threads it as the request’s cycleRef', () => {
+  it('the component takes an optional cycleId and threads it through the D4 request builder', () => {
     expect(assertion).toMatch(/cycleId\?:\s*string\s*\|\s*undefined/)
-    expect(assertion).toMatch(/cycleRef:\s*cycleId/)
+    expect(assertion).toMatch(/personalEventRequestForCycle\(cycleId,\s*kind\)/)
+    expect(missedCycles).toMatch(/cycleRef:\s*cycleId/)
   })
 
   it('an absent cycle omits the field entirely (the .strict() + .optional() shape)', () => {
-    expect(assertion).toMatch(/cycleId === undefined \? \{ kind \}/)
+    expect(missedCycles).toMatch(/cycleId === undefined \? \{ kind \}/)
     expect(hook).toMatch(/input\.cycleRef === undefined/)
   })
 

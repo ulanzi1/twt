@@ -34,19 +34,19 @@ export function shouldRenderMissedCycles(entries: readonly MissedCycleEntry[] | 
 }
 
 /**
- * Build the R7(G) personal-event assertion request for ONE missed cycle — the D4 mapping, in one place.
- *
- * ⛔ `cycleRef` on the OUTGOING request is the cycle's **UUID** (`entry.cycleId`), NOT the entry's own
- * display `cycleRef` (a freeze month like `2026-05`). Same field name, different type, different job.
- * Pinned by test; if you are reading this because that test went red, you have swapped the two.
+ * Build the R7(G) personal-event assertion request — the D4 mapping, in one place. `cycleId` is
+ * ALREADY the cycle's UUID (never the passbook's display `cycleRef`, a freeze month like `2026-05`) —
+ * callers pass `entry.cycleId` from a missed-cycle row, or `undefined` from the membership screen's
+ * cycle-less instance. Pinned by test; if you are reading this because that test went red, you have
+ * passed the wrong field.
  *
  * ⚖ The assertion still carries NO consequence of its own (ratified Niyamavali §3.1) and NO free text
  * (D3): the shape below is `kind` + provenance and nothing else. The member id is resolved from the
  * session server-side, and `Idempotency-Key` + Turnstile ride HEADERS, not this body.
  */
 export function personalEventRequestForCycle(
-  entry: MissedCycleEntry,
+  cycleId: string | undefined,
   kind: PersonalEventKind,
 ): PersonalEventAssertionRequest {
-  return { kind, cycleRef: entry.cycleId }
+  return cycleId === undefined ? { kind } : { kind, cycleRef: cycleId }
 }

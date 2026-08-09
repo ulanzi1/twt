@@ -302,6 +302,25 @@ describe('contributionHistory — wiring (AC1/AC2/AC3)', () => {
     expect(result.missedCycles).toEqual([]);
   });
 
+  it('[Review] fail-soft ISOLATION, the OTHER direction: an attested-history failure must NOT empty already-resolved missed cycles', async () => {
+    // The mirror of the case above. Confirmed-by-review regression: the attested-history read has its
+    // OWN fail-soft boundary now, so a throw here degrades to an empty passbook WITHOUT discarding the
+    // missed-cycle section resolved moments earlier in the same call.
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    listMemberMissedCycles.mockResolvedValue([
+      { cycleId: CYCLE_ID, poolId: POOL_ID, closedAt: new Date('2026-06-25T00:00:00.000Z') },
+    ]);
+    listMemberContributionHistory.mockRejectedValue(new Error('attested-history read exploded'));
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.rows).toEqual([]);
+    expect(result.totalInr).toBe(0);
+    expect(result.missedCycles).toHaveLength(1);
+  });
+
   it('fail-soft OMIT: a missed cycle whose pool context is unresolvable is dropped, others render', async () => {
     wireScopeTx();
     wireStandardPoolIdentity();

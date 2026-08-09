@@ -618,80 +618,90 @@ async function resolveHistory(
   // passbook must never suppress the member's own missed cycles.
   const missedCycles = await resolveMissedCycles(deps, tx, request, ctx);
 
-  const entries = await contributionDomain.listMemberContributionHistory(tx, { pariwarId, memberId });
-  // ⛔ NOT `HISTORY_EMPTY`. A member who has attested nothing but has ≥1 missed cycle is this story's
-  // PRIMARY population; returning the constant here would silently defeat the whole surface for them.
-  if (entries.length === 0) return { rows: [], totalInr: 0, missedCycles };
+  // The attested-history half owns its OWN fail-soft boundary too, mirroring `resolveMissedCycles`'s.
+  // Without this try/catch, any throw below would propagate to the outer handler's catch, which
+  // returns the shape-only `HISTORY_EMPTY` sentinel — discarding `missedCycles` even though it was
+  // already resolved successfully above. Story 10.27's own invariant ("neither collection can empty
+  // the other") requires that this half's failure preserve it.
+  try {
+    const entries = await contributionDomain.listMemberContributionHistory(tx, { pariwarId, memberId });
+    // ⛔ NOT `HISTORY_EMPTY`. A member who has attested nothing but has ≥1 missed cycle is this story's
+    // PRIMARY population; returning the constant here would silently defeat the whole surface for them.
+    if (entries.length === 0) return { rows: [], totalInr: 0, missedCycles };
 
-  // Per-DISTINCT-pool memo: one identity decrypt + one pool-context load per pool (D5/D6). `null` marks a
-  // pool whose identity is unresolvable (its rows are omitted) — cached so we do not re-attempt per row.
-  const identityByPool = new Map<string, (ResolvedPoolIdentity & { cycleRef: string }) | null>();
+    // Per-DISTINCT-pool memo: one identity decrypt + one pool-context load per pool (D5/D6). `null` marks a
+    // pool whose identity is unresolvable (its rows are omitted) — cached so we do not re-attempt per row.
+    const identityByPool = new Map<string, (ResolvedPoolIdentity & { cycleRef: string }) | null>();
 
-  async function resolveRowIdentity(poolId: ReturnType<typeof ids.poolId>): Promise<(ResolvedPoolIdentity & { cycleRef: string }) | null> {
-    const cached = identityByPool.get(poolId);
-    if (cached !== undefined) return cached;
+    async function resolveRowIdentity(poolId: ReturnType<typeof ids.poolId>): Promise<(ResolvedPoolIdentity & { cycleRef: string }) | null> {
+      const cached = identityByPool.get(poolId);
+      if (cached !== undefined) return cached;
 
-    const poolCtx = await poolDomain.getPoolContributionContext(tx, pariwarId, poolId);
-    if (poolCtx === null) {
-      identityByPool.set(poolId, null);
-      return null;
+      const poolCtx = await poolDomain.getPoolContributionContext(tx, pariwarId, poolId);
+      if (poolCtx === null) {
+        identityByPool.set(poolId, null);
+        return null;
+      }
+      const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, {
+        claimCaseId: poolCtx.claimCaseId,
+        poolIndex: poolCtx.poolIndex,
+        poolCanonicalIdentifier: poolCtx.poolCanonicalIdentifier,
+        fixedAmount: poolCtx.fixedAmount,
+        poolCount: poolCtx.poolCount,
+      });
+      if (identity === null) {
+        identityByPool.set(poolId, null);
+        return null;
+      }
+      // The cycle ref (freeze month) — its own point read, memoized under the pool (pools in one cycle share it).
+      const committedAt = await poolDomain.getCycleFreezeCommittedAt(tx, poolCtx.cycleId);
+      const cycleRef = committedAt === null ? poolCtx.poolCanonicalIdentifier : cycleRefFromCommittedAt(committedAt);
+      const resolved = { ...identity, cycleRef };
+      identityByPool.set(poolId, resolved);
+      return resolved;
     }
-    const identity = await resolvePoolIdentity(deps, tx, request, pariwarId, {
-      claimCaseId: poolCtx.claimCaseId,
-      poolIndex: poolCtx.poolIndex,
-      poolCanonicalIdentifier: poolCtx.poolCanonicalIdentifier,
-      fixedAmount: poolCtx.fixedAmount,
-      poolCount: poolCtx.poolCount,
-    });
-    if (identity === null) {
-      identityByPool.set(poolId, null);
-      return null;
+
+    const rows: ContributionHistoryRow[] = [];
+    let totalInr = 0;
+    for (const entry of entries) {
+      const identity = await resolveRowIdentity(entry.poolId);
+      if (identity === null) {
+        // An unresolvable pool/claim/KYC/name — OMIT the row (never an undignified blank), log the anomaly.
+        request.log.warn({ poolId: entry.poolId, contributionId: entry.contributionId }, 'contribution-history: row identity unresolvable — omitting');
+        continue;
+      }
+      rows.push({
+        contributionId: entry.contributionId,
+        date: entry.attestedAt.toISOString(),
+        deceasedFirstName: identity.deceasedFirstName,
+        deceasedLastInitial: identity.deceasedLastInitial,
+        poolLetterCode: identity.poolLetterCode,
+        poolName: identity.poolName,
+        poolCanonicalIdentifier: identity.poolCanonicalIdentifier,
+        cycleRef: identity.cycleRef,
+        amountInr: identity.fixedAmount,
+        status: entry.status,
+        // (Story 8.7 D3(a), RATIFIED) `noteAvailable` is a RESOLVABILITY predicate, NOT a status
+        // predicate. A Note exists iff the row resolves to a real artifact — the contribution is the
+        // caller's own AND `resolvePoolIdentity` succeeded (claim → deceased member → KYC name decrypt).
+        // At THIS point in the loop that is exactly true: the `identity === null` omission above has
+        // already dropped every unresolvable row. Hence the literal `true`.
+        //
+        // NO STATUS TERM BELONGS IN THIS EXPRESSION. A yellow/red/grey row with resolvable identity gets
+        // a Note; a green row whose identity is unresolvable does not. Status and availability are
+        // ORTHOGONAL: availability decides WHETHER a Note exists, `deriveContributionStatus` decides what
+        // it SAYS (and gates the UTR + the सत्यापित stamp inside the artifact). Letting status narrow
+        // availability would ship the feature dark — green is unreachable until Epic 9's producer lands.
+        noteAvailable: true,
+      });
+      totalInr += identity.fixedAmount;
     }
-    // The cycle ref (freeze month) — its own point read, memoized under the pool (pools in one cycle share it).
-    const committedAt = await poolDomain.getCycleFreezeCommittedAt(tx, poolCtx.cycleId);
-    const cycleRef = committedAt === null ? poolCtx.poolCanonicalIdentifier : cycleRefFromCommittedAt(committedAt);
-    const resolved = { ...identity, cycleRef };
-    identityByPool.set(poolId, resolved);
-    return resolved;
+
+    return { rows, totalInr, missedCycles };
+  } catch (err) {
+    request.log.error({ err, memberId }, 'contribution-history: attested rows fail-soft to empty, preserving missed cycles');
+    return { rows: [], totalInr: 0, missedCycles };
   }
-
-  const rows: ContributionHistoryRow[] = [];
-  let totalInr = 0;
-  for (const entry of entries) {
-    const identity = await resolveRowIdentity(entry.poolId);
-    if (identity === null) {
-      // An unresolvable pool/claim/KYC/name — OMIT the row (never an undignified blank), log the anomaly.
-      request.log.warn({ poolId: entry.poolId, contributionId: entry.contributionId }, 'contribution-history: row identity unresolvable — omitting');
-      continue;
-    }
-    rows.push({
-      contributionId: entry.contributionId,
-      date: entry.attestedAt.toISOString(),
-      deceasedFirstName: identity.deceasedFirstName,
-      deceasedLastInitial: identity.deceasedLastInitial,
-      poolLetterCode: identity.poolLetterCode,
-      poolName: identity.poolName,
-      poolCanonicalIdentifier: identity.poolCanonicalIdentifier,
-      cycleRef: identity.cycleRef,
-      amountInr: identity.fixedAmount,
-      status: entry.status,
-      // (Story 8.7 D3(a), RATIFIED) `noteAvailable` is a RESOLVABILITY predicate, NOT a status
-      // predicate. A Note exists iff the row resolves to a real artifact — the contribution is the
-      // caller's own AND `resolvePoolIdentity` succeeded (claim → deceased member → KYC name decrypt).
-      // At THIS point in the loop that is exactly true: the `identity === null` omission above has
-      // already dropped every unresolvable row. Hence the literal `true`.
-      //
-      // NO STATUS TERM BELONGS IN THIS EXPRESSION. A yellow/red/grey row with resolvable identity gets
-      // a Note; a green row whose identity is unresolvable does not. Status and availability are
-      // ORTHOGONAL: availability decides WHETHER a Note exists, `deriveContributionStatus` decides what
-      // it SAYS (and gates the UTR + the सत्यापित stamp inside the artifact). Letting status narrow
-      // availability would ship the feature dark — green is unreachable until Epic 9's producer lands.
-      noteAvailable: true,
-    });
-    totalInr += identity.fixedAmount;
-  }
-
-  return { rows, totalInr, missedCycles };
 }
 
 /**
@@ -734,33 +744,41 @@ async function resolveMissedCycles(
     if (missed.length === 0) return [];
 
     // Per-DISTINCT-pool and per-DISTINCT-cycle memos — pools in one cycle share a freeze month, and a
-    // member's missed cycles cluster. `null` marks an unresolvable pool so we do not re-attempt it.
-    const poolCtxById = new Map<string, Awaited<ReturnType<typeof poolDomain.getPoolContributionContext>>>();
-    const cycleRefById = new Map<string, string | null>();
+    // member's missed cycles cluster. Pre-fetched CONCURRENTLY (distinct pools/cycles are independent
+    // reads); the row loop below stays synchronous so ordering and omission logic are untouched.
+    const distinctPoolIds = [...new Set(missed.map((row) => row.poolId))];
+    const distinctCycleIds = [...new Set(missed.map((row) => row.cycleId))];
+
+    const poolCtxById = new Map<string, Awaited<ReturnType<typeof poolDomain.getPoolContributionContext>>>(
+      await Promise.all(
+        distinctPoolIds.map(
+          async (poolId) => [poolId, await poolDomain.getPoolContributionContext(tx, pariwarId, ids.poolId(poolId))] as const,
+        ),
+      ),
+    );
+    // ⚠ Only the RESOLVED freeze month is memoized by cycle. The fallback used per-row below is derived
+    // from THAT row's pool's canonical identifier, and two pools can share a cycle — caching a fallback
+    // under the cycle id would hand pool B the identifier belonging to pool A, i.e. a wrong reference on
+    // the one field the member reads out to Madad. `null` here means "asked, and the cycle has no
+    // resolvable freeze instant".
+    const cycleRefById = new Map<string, string | null>(
+      await Promise.all(
+        distinctCycleIds.map(async (cycleId) => {
+          const committedAt = await poolDomain.getCycleFreezeCommittedAt(tx, cycleId);
+          return [cycleId, committedAt === null ? null : cycleRefFromCommittedAt(committedAt)] as const;
+        }),
+      ),
+    );
 
     const entries: MissedCycleEntry[] = [];
     for (const row of missed) {
-      let poolCtx = poolCtxById.get(row.poolId);
-      if (poolCtx === undefined) {
-        poolCtx = await poolDomain.getPoolContributionContext(tx, pariwarId, ids.poolId(row.poolId));
-        poolCtxById.set(row.poolId, poolCtx);
-      }
+      const poolCtx = poolCtxById.get(row.poolId) ?? null;
       if (poolCtx === null) {
         request.log.warn({ poolId: row.poolId }, 'missed-cycles: pool context unresolvable — omitting');
         continue;
       }
 
-      // ⚠ Only the RESOLVED freeze month is memoized by cycle. The fallback below is derived from the
-      // POOL's canonical identifier, and two pools can share a cycle — caching a fallback under the
-      // cycle id would hand pool B the identifier belonging to pool A, i.e. a wrong reference on the
-      // one field the member reads out to Madad. `null` here means "asked, and the cycle has no
-      // resolvable freeze instant", which is still worth not re-asking.
-      let cycleRef = cycleRefById.get(row.cycleId) ?? undefined;
-      if (cycleRef === undefined && !cycleRefById.has(row.cycleId)) {
-        const committedAt = await poolDomain.getCycleFreezeCommittedAt(tx, row.cycleId);
-        cycleRef = committedAt === null ? undefined : cycleRefFromCommittedAt(committedAt);
-        cycleRefById.set(row.cycleId, cycleRef ?? null);
-      }
+      const cycleRef = cycleRefById.get(row.cycleId) ?? undefined;
 
       let poolLetterCode: string;
       try {
@@ -788,7 +806,10 @@ async function resolveMissedCycles(
     // above preserve it.
     return entries;
   } catch (err) {
-    request.log.warn({ err }, 'missed-cycles: fail-soft to an absent section');
+    // `log.error` (not `.warn`), matching every other fail-soft catch in this module (`:130`, `:164`,
+    // `:702`) — a genuine read failure here degrades to the SAME `[]` a member with nothing missed
+    // sees, so this is the one signal that distinguishes a regression from a clean record.
+    request.log.error({ err, memberId }, 'missed-cycles: fail-soft to an absent section');
     return [];
   }
 }

@@ -255,5 +255,5 @@
   "missed_cycle.cycle_label": "Cycle {cycle}",
   "missed_cycle.pool_label": "Pool {pool}",
   "missed_cycle.reference_label": "Reference {reference}",
-  "missed_cycle.entry_a11y": "Cycle {cycle}, Pool {pool}. Our records hold no matched contribution for this cycle. Reference {reference}."
+  "missed_cycle.entry_a11y": "Cycle {cycle}, Pool {pool}, Reference {reference}."
 }

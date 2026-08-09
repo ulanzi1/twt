@@ -753,8 +753,9 @@ interface RawMissedCycleRow {
  * ── ⚖ ONE SCAN, TWO CONSUMERS (D2) ───────────────────────────────────────────────────────────────
  * These are the SAME rows {@link missedCycleAggregateSql}'s `skips_current_year` and
  * `opportunities_since_last` are computed over, because both statements build on the SAME
- * {@link opportunitySequenceCtes} chain. The equality is PINNED by test (`missed-cycle-rows.spec.ts`):
- * for one member at one `at`, the rows falling in the IST calendar year of `at` number exactly
+ * {@link opportunitySequenceCtes} chain. The equality is PINNED by test
+ * (`apps/jobs/tests/missed-cycle-visibility-live.test.ts`): for one member at one `at`, the rows
+ * falling in the IST calendar year of `at` number exactly
  * `skipsCurrentYear`. A second scan spelled "equivalently" would let the member's view and the
  * ladder's verdict drift silently.
  *
@@ -802,26 +803,33 @@ export async function listMemberMissedCycles(
       at,
       sql`mpa.pariwar_id = ${scope.pariwarId} AND mpa.member_id = ${scope.memberId}`,
       sql`l.pariwar_id = ${scope.pariwarId} AND l.member_id = ${scope.memberId}`,
-    )}
+    )},
+    -- The coverage watermark, computed ONCE and cross-joined — {@link coveredFromSql} is a scalar
+    -- subquery, and both WHERE arms below need the same value.
+    covered AS (SELECT ${coveredFromSql(scope.pariwarId)} AS covered_from)
     SELECT s.cycle_id  AS cycle_id,
            s.pool_id   AS pool_id,
            s.closed_at AS closed_at
-      FROM sequenced s
+      FROM sequenced s, covered
      WHERE s.missed
        -- ⛔ D5: the coverage gate the CTE chain lacks. Both arms, in the producer's own order.
-       AND ${coveredFromSql(scope.pariwarId)} IS NOT NULL
-       AND ${coveredFromSql(scope.pariwarId)} <= ${at}
+       AND covered.covered_from IS NOT NULL
+       AND covered.covered_from <= ${at}
      ORDER BY s.closed_at DESC, s.pool_id DESC
      LIMIT 500
   `);
 
-  return resultRows<RawMissedCycleRow>(result).map((row) => ({
-    cycleId: row.cycle_id,
-    poolId: row.pool_id,
+  return resultRows<RawMissedCycleRow>(result).map((row) => {
     // `closed_at` reaches the driver from a `min(<timestamptz>)` aggregate, so it can arrive as a
     // STRING (the 10.24 live bug: an intended `Date` annotation the compiler happily believed).
-    closedAt: toDate(row.closed_at) as Date,
-  }));
+    const closedAt = toDate(row.closed_at);
+    if (closedAt === null) {
+      // A closed cycle (this read's whole population) always has a closed_at — a null here is a
+      // data-integrity anomaly, not a value to silently paper over with a bad cast.
+      throw new Error(`missed-cycles: closed_at resolved to null for cycle ${row.cycle_id}`);
+    }
+    return { cycleId: row.cycle_id, poolId: row.pool_id, closedAt };
+  });
 }
 
 /** One member's fact inputs, as the bulk Pariwar read returns them. */

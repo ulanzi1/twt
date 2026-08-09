@@ -30,6 +30,7 @@ import type { PersonalEventKind } from '@twt/contracts'
 import { useState } from 'react'
 import { Button, Paragraph, Text, YStack } from 'tamagui'
 
+import { personalEventRequestForCycle } from '../yogdaan-bahi/missed-cycles'
 import { usePersonalEventAssertion } from './usePersonalEventAssertion'
 
 /** The bounded vocabulary, in the order the picker renders it. Value-aligned with the domain enum. */
@@ -193,9 +194,10 @@ export function PersonalEventAssertion({
         onPress={() => {
           // ⛔ D4 — `cycleRef` on the REQUEST is the cycle's UUID. `cycleId` is already that UUID
           // (the prop is typed and documented as such); the passbook's freeze-month string of the
-          // same name never reaches this call site. Omitted entirely when there is no cycle in hand,
-          // which is the membership screen's unchanged behaviour.
-          if (kind !== null) mutation.mutate(cycleId === undefined ? { kind } : { kind, cycleRef: cycleId })
+          // same name never reaches this call site. `personalEventRequestForCycle` is the ONE place
+          // this mapping happens (Story 10.27, `missed-cycles.ts`) — omitted entirely when there is
+          // no cycle in hand, which is the membership screen's unchanged behaviour.
+          if (kind !== null) mutation.mutate(personalEventRequestForCycle(cycleId, kind))
         }}
         testID="personal-event-submit"
       >

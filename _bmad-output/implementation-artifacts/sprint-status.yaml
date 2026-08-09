@@ -1,4 +1,30 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-09c (10-27-member-missed-cycle-visibility: review -> done, via bmad-code-review.
+#   9 patch findings resolved (8 fixed, 1 corrected mid-implementation as a false positive — see below),
+#   3 decision-needed findings resolved by the user, 7 dismissed as noise, 0 deferred.
+#   ⭐ THE CONFIRMED FINDING: fail-soft isolation was broken in ONE direction. `resolveHistory` resolved
+#   `missedCycles` first, but an attested-history read failure propagated past it to the outer handler's
+#   `HISTORY_EMPTY` catch, silently discarding already-resolved missed cycles — contradicting the code's
+#   own comment and AC4. Reproduced directly (a scratch unit test showed the exact discard), then fixed
+#   by giving the attested-history half its own fail-soft boundary, mirroring `resolveMissedCycles`'s.
+#   A regression test now pins this direction; the reverse direction was already pinned.
+#   ⛔ A REVIEW-LAYER FALSE POSITIVE, CAUGHT BEFORE APPLYING IT: all three review layers (including a
+#   live-code-access Acceptance Auditor) flagged `MAX_MISSED_CYCLE_ROWS` as dead/unwired code needing a
+#   fix. It is not — `MAX_CONTRIBUTION_HISTORY_ROWS` (`history.ts`) is deliberately unwired from its own
+#   `.limit(500)` for the identical, already-documented reason: the `domain-invariants:check` gate
+#   accepts a literal integer bound but flags a named-const reference. Wiring it in would have TRIPPED
+#   the gate. Left unchanged after cross-checking the sibling pattern and re-running the gate green.
+#   Also fixed: a redundant `coveredFromSql` double-evaluation (hoisted into one `covered` CTE), a
+#   `toDate(...) as Date` cast that re-introduced the named "10.24 live bug" pattern (now throws loudly
+#   instead), a dead/duplicated D4 UUID-mapping helper now wired into its one real call site, a stale
+#   test-file citation, sequential per-pool DB round-trips in `resolveMissedCycles` now pre-fetched
+#   concurrently, an observability gap in a fail-soft catch (`log.warn` -> `log.error`, matching every
+#   sibling catch in the module), and a duplicated per-row a11y disclaimer trimmed in both locales.
+#   Verified: microcopy/i18n-parity/domain-invariants/friction gates green; typecheck clean on
+#   @twt/domain, @twt/api, @twt/mobile; full non-DB suites green (@twt/contracts 870, @twt/domain 1598,
+#   @twt/mobile 242, plus the touched apps/api unit files); live-DB
+#   `apps/jobs/tests/missed-cycle-visibility-live.test.ts` green against real `twt-test-pg:5433`,
+#   exercising the `coveredFromSql` CTE consolidation end-to-end.
 # last_updated: 2026-08-09b (10-27-member-missed-cycle-visibility: ready-for-dev -> review. Epic 10's
 #   SEVENTEENTH story, and the discharge of Escalation 5's re-trigger — the member finally has a
 #   surface that names a SPECIFIC missed cycle, so Story 10.26's optional `cycle_ref` has its first
@@ -4748,7 +4774,7 @@ development_status:
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done
   10-26-r7g-personal-event-excuse-assertion: done
-  10-27-member-missed-cycle-visibility: review
+  10-27-member-missed-cycle-visibility: done
   epic-10-retrospective: optional
 
   # ==========================================================================

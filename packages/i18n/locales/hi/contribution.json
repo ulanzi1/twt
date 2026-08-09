@@ -255,5 +255,5 @@
   "missed_cycle.cycle_label": "चक्र {cycle}",
   "missed_cycle.pool_label": "पूल {pool}",
   "missed_cycle.reference_label": "संदर्भ {reference}",
-  "missed_cycle.entry_a11y": "चक्र {cycle}, पूल {pool}। इस चक्र के लिए हमारे रिकॉर्ड में कोई मिलान योगदान दर्ज नहीं है। संदर्भ {reference}।"
+  "missed_cycle.entry_a11y": "चक्र {cycle}, पूल {pool}, संदर्भ {reference}।"
 }

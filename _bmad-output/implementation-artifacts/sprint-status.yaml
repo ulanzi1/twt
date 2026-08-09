@@ -1,4 +1,49 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-09 (NO status flip. 10-23 stays done, 10-27 stays ready-for-dev, no story key
+#   added or removed. This entry exists because the obligation it discharges was recorded HERE and
+#   nothing else would have recorded its discharge: none of the eight commits on branch
+#   governance/10-23-ac14-flag-mechanics touched this file (last write was 0f72c37, story 8.14), so
+#   the ledger's most recent word on the matter was still "PAUSED".
+#   ⭐ THE 8.14 SEQUENCING OBLIGATION IS DISCHARGED, AND STORY 10.27'S PAUSE IS LIFTED. Entry
+#   2026-08-08f committed to re-running the real downstream chain through STORY 10.23 against
+#   PRODUCTION-PRODUCED alert.closed facts before resuming 10.27, because 10.23's entire suite had
+#   passed against fixture events raw-INSERTed BELOW the projector. That pass RAN, on the live test DB
+#   (:5433), as cycle open -> assignment -> close sweep -> alert.closed -> projection -> contribution
+#   facts -> skips_current_year -> R7 scan -> imposition -> payload fold, with 8.14's own gate re-run
+#   first (close-cycle-alert-live.test.ts, 5/5). Merged as PR #178 @ ca5cb75.
+#   ⚠ IT EXPECTED FINDINGS AND IT PRODUCED TWO -- neither a done-blocker, because AC14's flag defaults
+#   OFF and the imposition writer is unreachable in every environment. FINDING 1 (the false all-clear:
+#   with projection coverage absent every member degrades to producer_unavailable, yet the job reported
+#   `unavailable: null` -- byte-identical to a genuinely clean Pariwar) is CLOSED BY EDIT in both
+#   halves: the PRECONDITION half by CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER, the third `unavailable`
+#   producer, ratified at Option (a) by Decision 2026-08-09-093 clause 1 and pinned by
+#   restoration-coverage-sentinel-live.test.ts; the COVERAGE half by
+#   restoration-discipline-production-path-live.test.ts, the probe hardened into a committed gate that
+#   asserts every hop AFTER skips_current_year against production-produced alert.closed rows
+#   (count-checked for non-empty payloads, so a below-the-projector fixture cannot satisfy it). BOTH
+#   REVERT-PROBED RED. FINDING 2 (AC14 calls enablement one authorized act; the substrate spreads it
+#   across a staged ramp) is RESOLVED VIA RATIFICATION, not by edit -- see below.
+#   GOVERNANCE, committed FIRST and separately per [[feedback_governance_commits_precede_implementation]]:
+#   routing note (24ebab8) -> Decision 2026-08-09-093, Q1 and Q2 both ratified at Option (a) -> Decision
+#   2026-08-09-094, Trustee clarification that the AC14 rollout scope is ALL PARIWARS = the `full` state,
+#   which WITHDRAWS 093's "the Panel still owes a cohort" follow-up and SCOPES 093 clause 6 to the two
+#   intermediate states -> Decision 2026-08-09-095, an author-committed record correction narrowing what
+#   in 093/094 was Trustee-ratified versus author-written (093's ratified scope is clauses 1-3 ONLY).
+#   ⭐ 093/094's "the Q1 sentinel remains owed and unblocked" follow-up is now SATISFIED by the sentinel
+#   above. Recorded in the STORY FILE, deliberately NOT by editing those entries
+#   ([[feedback_supersede_never_reinterpret]]).
+#   ⛔ WHAT IS STILL NOT TRUE, restated so the discharge above is not over-read: ESCALATION 6 REMAINS
+#   UNDISCHARGED (R7(D)/(E)/(F) packages still name a completion act no workflow can perform), the flag
+#   remains DEFAULT-OFF with Trustee-Panel-exclusive enablement, no flip is authorized, and the
+#   copy-truth defect is still separately owed. The pass is discharged; it is not a clean bill -- it
+#   deposited two ordinary deferred rows of its own (deferred-work.md, 2026-08-09 section).
+#   VERIFIED before this entry was written, not taken on narrative
+#   ([[feedback_verify_before_committing_governance_claims]]): both live gates re-run 4/4 green against
+#   twt-test-pg:5433 and verified to skip cleanly with no DATABASE_URL; @twt/jobs tsc --noEmit and lint
+#   clean; the DB-free unit suite 237/237. The AC14 flag-mechanics code review (3 layers) landed 0
+#   decision-needed, 6 patches all APPLIED, 2 deferred, 19 dismissed.
+#   NEXT: bmad-dev-story 10.27 -- its row source IS the closed-cycle opportunity set, now confirmed
+#   non-empty from production code.)
 # last_updated: 2026-08-08g (8-14-close-of-cycle-emitter: review -> done via bmad-code-review, off
 #   branch feat/8-14-close-of-cycle-emitter. NO other story status changed. 3 layers (Blind Hunter,
 #   Edge Case Hunter, Acceptance Auditor) produced 15 unified findings; 5 dismissed as false

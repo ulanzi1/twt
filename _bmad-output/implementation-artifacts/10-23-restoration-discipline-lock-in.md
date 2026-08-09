@@ -1410,7 +1410,7 @@ writer remains unreachable in every environment.
       narrow basis as Q1 of
       `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-09-story-10-23-ac14-mechanics.md`.
 
-- [ ] **[Finding][Observation] AC14 describes enablement as one authorized act; the substrate spreads
+- [x] **[Finding][Observation] AC14 describes enablement as one authorized act; the substrate spreads
       it across a staged ramp whose first step is where coverage removal actually begins, and every
       intermediate state resolves to DISABLED until a cohort is named — so a Panel flip authorized by
       Decision `2026-08-07-089` can land with the writer still off and no signal saying why.**
@@ -1456,6 +1456,36 @@ writer remains unreachable in every environment.
       `off → canary` version with a non-empty cohort already removes coverage, "how many acts?" is the
       wrong axis. Routed as Q2 of
       `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-09-story-10-23-ac14-mechanics.md`.
+
+      ✅ **RULED VIA RATIFICATION, 2026-08-09 — not closed by edit, and no code changed.** Taking the
+      four parts of this observation separately, because the rulings do not cover them uniformly:
+
+      - **The escalation's own axis — the SCOPE of one authorization — RULED.** Decision
+        `2026-08-09-093` clause 2 ratified Q2 at Option (a): **one Decision authorizes ONE enabling
+        version, naming its cohort explicitly.** Each widening (`canary → rollout → full`) requires
+        its own `.decision-log.md` entry; reaching `full` therefore costs three, and that cost is
+        recorded as the ratified posture, not an obstacle to route around.
+      - **Behaviour 1 — CARRIED FORWARD, not dissolved.** Decision `2026-08-09-094` clause 1 fixed the
+        rollout scope at **ALL PARIWARS**, which in the substrate is the `full` state, where
+        `evaluateFlag` short-circuits to `state_full` before any cohort clause is read
+        (`evaluate.ts:132-133`). That withdrew 093's "the Panel still owes a cohort" follow-up. But
+        094's own open follow-up then re-states this behaviour as the execution path clause 1 must
+        travel: `off → full` is still rejected, so `full` is reachable only *through* the two
+        cohort-gated states, where "all Pariwars" is expressible only by enumeration (bounded at
+        `20 × 200` = 4000, `registry.ts:495-496`). ✅ Its staleness window fails **safe** — a Pariwar
+        created after a `canary`/`rollout` version falls outside the enumeration → `no_match` → the
+        writer stays off for it.
+      - **Behaviour 2 — dissolved at `full` ONLY.** An empty cohort still resolves to
+        `enabled: false` / `cohort_empty` at `canary` and `rollout`, and the admin console still has
+        no cohort editor — so the two intermediate enabling Decisions remain exposed to exactly the
+        "authorized flip that did nothing" shape, which is why 093 clause 6's form requirement was
+        **scoped to those two states** rather than repealed (`2026-08-09-094` clause 3).
+      - **Behaviour 3 — NOT ruled on, and owed to no one.** The 5 s `FLAG_CACHE_TTL_MS` window
+        (`cache.ts:36`) stands exactly as recorded here: an operational note for whoever executes the
+        flip, not a question that was routed or answered.
+
+      ⛔ **Nothing above discharges Escalation 6, authorizes a flip, or moves the flag off default-OFF**
+      (`2026-08-09-093` clause 5; `2026-08-09-094` open follow-ups).
 
 ### Evidence (not a finding) — R7(B) confirms expected blocker precedence
 

@@ -639,12 +639,18 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     // ── Yogdaan Bahi contribution history (Story 8.6 — the member's OWN contribution passbook) ───────────
     /**
      * Read the server-authoritative Yogdaan Bahi — the member's OWN contribution history (FR-12A
-     * self-view). Returns `{ rows, totalInr }`: one row per the member's attested contribution (date,
-     * deceased-family first-name + last-initial, pool letter/name, canonical id, cycle ref, snapshotted
-     * amount, the honestly-derived four-state `status`, and the Contribution-Note availability flag),
-     * newest-first; legitimately `{ rows: [], totalInr: 0 }` for a member who has attested nothing.
-     * Member-scoped + PII-shielded — the client resolves nothing. The 5th `'GET'` arg is REQUIRED (`call`
-     * defaults to POST, which would misfire against the `r.get(...)`-registered route) (auth).
+     * self-view). Returns `{ rows, totalInr, missedCycles }`: one row per the member's attested
+     * contribution (date, deceased-family first-name + last-initial, pool letter/name, canonical id,
+     * cycle ref, snapshotted amount, the honestly-derived four-state `status`, and the Contribution-Note
+     * availability flag), newest-first; legitimately `{ rows: [], totalInr: 0, missedCycles: [] }` for a
+     * member who has attested nothing. Member-scoped + PII-shielded — the client resolves nothing. The
+     * 5th `'GET'` arg is REQUIRED (`call` defaults to POST, which would misfire against the
+     * `r.get(...)`-registered route) (auth).
+     *
+     * ⚖ `missedCycles` (Story 10.27) is a SEPARATE collection, never part of `rows`: assigned-and-closed
+     * cycles for which the record holds no matched contribution. It is EPISTEMIC — a statement about
+     * what the record contains, never about the member — and `[]` means "render nothing", never "you are
+     * clear" (it is also what absent projection coverage returns).
      */
     memberContributionHistory(): Promise<ContributionHistoryResult> {
       return call(

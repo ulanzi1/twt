@@ -33,8 +33,11 @@ import {
   ContributionMismatchReasonCode,
   ContributionStatus,
   ContributionUtr,
+  MISSED_CYCLE_STATE,
+  MissedCycleEntry,
   MyContributionStatus,
   PendingContributorsAggregate,
+  PersonalEventAssertionRequest,
   PoolContributorListResponse,
   SelfVerifyStateResponse,
   UpiFailureModeSchema,
@@ -433,9 +436,15 @@ const VALID_HISTORY_ROW = {
 describe('Story 8.6 — the Yogdaan Bahi contribution-history read model (AC1/AC2/AC3/AC6)', () => {
   it('accepts a fully-resolved row + an empty passbook (the dignified empty state)', () => {
     expect(ContributionHistoryRow.safeParse(VALID_HISTORY_ROW).success).toBe(true);
-    expect(ContributionHistoryResponse.safeParse({ rows: [], totalInr: 0 }).success).toBe(true);
     expect(
-      ContributionHistoryResponse.safeParse({ rows: [VALID_HISTORY_ROW], totalInr: 500 }).success,
+      ContributionHistoryResponse.safeParse({ rows: [], totalInr: 0, missedCycles: [] }).success,
+    ).toBe(true);
+    expect(
+      ContributionHistoryResponse.safeParse({
+        rows: [VALID_HISTORY_ROW],
+        totalInr: 500,
+        missedCycles: [],
+      }).success,
     ).toBe(true);
   });
 
@@ -482,19 +491,144 @@ describe('Story 8.6 — the Yogdaan Bahi contribution-history read model (AC1/AC
 
   it('is strict end-to-end: an unknown key on the response envelope is rejected too', () => {
     expect(
-      ContributionHistoryResponse.safeParse({ rows: [], totalInr: 0, cursor: 'x' }).success,
+      ContributionHistoryResponse.safeParse({
+        rows: [],
+        totalInr: 0,
+        missedCycles: [],
+        cursor: 'x',
+      }).success,
     ).toBe(false);
   });
 
   it('amountInr is a positive whole-INR integer; totalInr is a non-negative integer', () => {
     expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, amountInr: 0 }).success).toBe(false);
     expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, amountInr: 12.5 }).success).toBe(false);
-    expect(ContributionHistoryResponse.safeParse({ rows: [], totalInr: -1 }).success).toBe(false);
+    expect(
+      ContributionHistoryResponse.safeParse({ rows: [], totalInr: -1, missedCycles: [] }).success,
+    ).toBe(false);
   });
 
   it('poolName is nullable (curated name absent at launch → letter-code fallback) but never an empty string', () => {
     expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, poolName: 'भीष्म' }).success).toBe(true);
     expect(ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, poolName: '' }).success).toBe(false);
+  });
+});
+
+// ─── Story 10.27 — member missed-cycle visibility (AC1/AC2/AC4/AC6) ──────────────────────────────
+
+const VALID_MISSED_CYCLE = {
+  cycleId: '22222222-2222-2222-2222-222222222222',
+  cycleRef: '2026-05',
+  poolLetterCode: 'C',
+  poolCanonicalIdentifier: 'P-2026-05-001',
+};
+
+describe('Story 10.27 — the missed-cycle collection (AC1/AC2/AC4/AC6)', () => {
+  it('accepts a fully-resolved entry and rides the history response as its OWN array (D3)', () => {
+    expect(MissedCycleEntry.safeParse(VALID_MISSED_CYCLE).success).toBe(true);
+    expect(
+      ContributionHistoryResponse.safeParse({
+        rows: [],
+        totalInr: 0,
+        missedCycles: [VALID_MISSED_CYCLE],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('⛔ D3 — ContributionHistoryRow is NOT widened: it still rejects a missed-cycle-shaped row', () => {
+    // The change this contract exists to forbid. A missed cycle has no contributionId, no attestation
+    // date and no amount; making those nullable on the shipped row would weaken the shape for every
+    // existing consumer. `.strict()` + the required fields reject the attempt from both directions.
+    expect(ContributionHistoryRow.safeParse(VALID_MISSED_CYCLE).success).toBe(false);
+    for (const dropped of ['contributionId', 'date', 'amountInr', 'status'] as const) {
+      const partial: Record<string, unknown> = { ...VALID_HISTORY_ROW };
+      delete partial[dropped];
+      expect(
+        ContributionHistoryRow.safeParse(partial).success,
+        `the row must still REQUIRE ${dropped}`,
+      ).toBe(false);
+    }
+    // And the row rejects a cycle UUID smuggled onto it — the missed cycles live in their own array.
+    expect(
+      ContributionHistoryRow.safeParse({ ...VALID_HISTORY_ROW, cycleId: VALID_MISSED_CYCLE.cycleId })
+        .success,
+    ).toBe(false);
+  });
+
+  it('⛔ AC2 — the epistemic state is DISJOINT from the five attested tones (never `grey`)', () => {
+    // `grey` applies to a cycle the member DID attest ("on record, unreconciled"). Collapsing the two
+    // would tell a member "we have no record of a contribution from you" in the words already reserved
+    // for "you told us you paid and we haven't matched it".
+    expect([...ContributionStatus.options]).not.toContain(MISSED_CYCLE_STATE as string);
+    expect(ContributionStatus.safeParse(MISSED_CYCLE_STATE).success).toBe(false);
+    // The state is carried STRUCTURALLY (membership in `missedCycles`), never as a tone on an entry.
+    expect(
+      MissedCycleEntry.safeParse({ ...VALID_MISSED_CYCLE, status: 'grey' }).success,
+      'a missed-cycle entry must not carry a ContributionStatus tone',
+    ).toBe(false);
+  });
+
+  it('⛔ D4 — cycleId is a UUID and cycleRef is a display string; they are NOT interchangeable', () => {
+    // The trap: `PersonalEventAssertionRequest.cycleRef` is typed `UuidString`. Sending the passbook's
+    // freeze-month string there is a Zod rejection at best and corrupted provenance at worst.
+    expect(
+      MissedCycleEntry.safeParse({ ...VALID_MISSED_CYCLE, cycleId: '2026-05' }).success,
+      'cycleId must reject a freeze-month display string',
+    ).toBe(false);
+    expect(
+      PersonalEventAssertionRequest.safeParse({ kind: 'bereavement', cycleRef: '2026-05' }).success,
+      'the assertion request must reject a display string in its UUID-typed cycleRef',
+    ).toBe(false);
+    expect(
+      PersonalEventAssertionRequest.safeParse({
+        kind: 'bereavement',
+        cycleRef: VALID_MISSED_CYCLE.cycleId,
+      }).success,
+      'the assertion request accepts the entry’s cycleId (the UUID) — this is the wiring AC6 requires',
+    ).toBe(true);
+  });
+
+  it('THE PII GUARD over the NEW shape (a green run on the old shape proves nothing)', () => {
+    // [[feedback_gate_scope_semantic_coverage]] — the structural no-extra-PII test must cover the
+    // shape this story ADDS, not merely stay green on the one it already covered. `.strict()` is what
+    // enforces it; this asserts the teeth reach the new surface.
+    for (const field of [
+      'utr',
+      'tr',
+      'memberId',
+      'memberFullName',
+      'deceasedFirstName',
+      'deceasedLastInitial',
+      'deceasedFullName',
+      'contributorName',
+      'nomineeName',
+      'bankAccount',
+      'vpa',
+      'phone',
+      'mobile',
+      'amountInr',
+      // ⛔ A CAUSE LABEL is the one field this shape exists to forbid: the causes are structurally
+      // unrecorded and one of them is fenced against ever being recorded (out-of-band stance 4).
+      'reason',
+      'reasonCode',
+      'cause',
+      'explanation',
+    ]) {
+      const leaky = { ...VALID_MISSED_CYCLE, [field]: 'leaked' };
+      expect(
+        MissedCycleEntry.safeParse(leaky).success,
+        `the missed-cycle entry must reject the extra field ${field}`,
+      ).toBe(false);
+    }
+  });
+
+  it('every identity field is non-empty (a blank pool reference is not a usable Madad reference)', () => {
+    for (const field of ['cycleRef', 'poolLetterCode', 'poolCanonicalIdentifier'] as const) {
+      expect(
+        MissedCycleEntry.safeParse({ ...VALID_MISSED_CYCLE, [field]: '' }).success,
+        `${field} must reject an empty string`,
+      ).toBe(false);
+    }
   });
 });
 

@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppDeps } from '../../src/context.js';
 
 const listMemberContributionHistory = vi.fn();
+const listMemberMissedCycles = vi.fn();
 const getPoolContributionContext = vi.fn();
 const getCycleFreezeCommittedAt = vi.fn();
 const reserveNames = vi.fn();
@@ -47,6 +48,7 @@ vi.mock('@twt/domain', async (importActual) => {
     contribution: {
       ...actual.contribution,
       listMemberContributionHistory,
+      listMemberMissedCycles,
       hasAttestedContribution,
       listConfirmedContributorsForPool,
     },
@@ -107,6 +109,10 @@ function baseDeps(): AppDeps {
 // implementations after this runs, so clearing (not resetting) is safe.
 beforeEach(() => {
   vi.clearAllMocks();
+  // Story 10.27: the DEFAULT for every pre-existing case is "no missed cycles", so those tests keep
+  // asserting the attested passbook exactly as they did — and the missed-cycle section is ABSENT
+  // (`[]`), never an empty state.
+  listMemberMissedCycles.mockResolvedValue([]);
 });
 
 function wireScopeTx(): void {
@@ -171,12 +177,12 @@ describe('contributionHistory — wiring (AC1/AC2/AC3)', () => {
     expect(getPoolContributionContext).toHaveBeenCalledTimes(1);
   });
 
-  it('empty history → the dignified empty passbook `{ rows: [], totalInr: 0 }`', async () => {
+  it('empty history → the dignified empty passbook `{ rows: [], totalInr: 0, missedCycles: [] }`', async () => {
     wireScopeTx();
     listMemberContributionHistory.mockResolvedValue([]);
     const handlers = createMemberPoolHandlers(baseDeps());
     const result = await handlers.contributionHistory(fakeRequest());
-    expect(result).toEqual({ rows: [], totalInr: 0 });
+    expect(result).toEqual({ rows: [], totalInr: 0, missedCycles: [] });
   });
 
   it('fail-soft OMIT: a row whose pool/claim/KYC is unresolvable is dropped, others render, total excludes it', async () => {
@@ -200,7 +206,183 @@ describe('contributionHistory — wiring (AC1/AC2/AC3)', () => {
     listMemberContributionHistory.mockRejectedValue(new Error('db exploded'));
     const handlers = createMemberPoolHandlers(baseDeps());
     const result = await handlers.contributionHistory(fakeRequest());
-    expect(result).toEqual({ rows: [], totalInr: 0 });
+    expect(result).toEqual({ rows: [], totalInr: 0, missedCycles: [] });
+  });
+
+  // ─── Story 10.27 — the missed-cycle collection (AC1/AC4/AC6; D1/D3/D5) ────────────────────────
+  //
+  // The load-bearing wiring checks. Each one guards a way the surface could be silently defeated
+  // rather than loudly broken.
+
+  it('resolves each missed cycle to { cycleId, cycleRef, poolLetterCode, poolCanonicalIdentifier }', async () => {
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    listMemberContributionHistory.mockResolvedValue([]);
+    listMemberMissedCycles.mockResolvedValue([
+      { cycleId: CYCLE_ID, poolId: POOL_ID, closedAt: new Date('2026-06-25T00:00:00.000Z') },
+    ]);
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.missedCycles).toEqual([
+      {
+        // ⛔ D4 — the cycle's UUID, under its own name. The freeze month rides `cycleRef` beside it.
+        cycleId: CYCLE_ID,
+        cycleRef: '2026-06',
+        poolLetterCode: 'A',
+        poolCanonicalIdentifier: 'P-2026-06-001',
+      },
+    ]);
+  });
+
+  it('⛔ D1 — the missed-cycle path decrypts NO deceased-family name (no person is paired with an absence)', () => {
+    // Asserted as its own case because it is a DESIGN commitment, not an optimisation: naming a
+    // bereaved family beside "no matched contribution recorded" is the reading D1 exists to prevent.
+    // A future author who "helpfully" adds the family name to match the passbook row fails here.
+    return (async () => {
+      wireScopeTx();
+      wireStandardPoolIdentity();
+      listMemberContributionHistory.mockResolvedValue([]);
+      listMemberMissedCycles.mockResolvedValue([
+        { cycleId: CYCLE_ID, poolId: POOL_ID, closedAt: new Date('2026-06-25T00:00:00.000Z') },
+      ]);
+
+      const handlers = createMemberPoolHandlers(baseDeps());
+      const result = await handlers.contributionHistory(fakeRequest());
+
+      expect(result.missedCycles).toHaveLength(1);
+      expect(decryptKycField).not.toHaveBeenCalled();
+      expect(getClaimCase).not.toHaveBeenCalled();
+      for (const entry of result.missedCycles) {
+        expect(Object.keys(entry).sort()).toEqual([
+          'cycleId',
+          'cycleRef',
+          'poolCanonicalIdentifier',
+          'poolLetterCode',
+        ]);
+      }
+    })();
+  });
+
+  it('⛔ AC4 — a member with ZERO attested rows but ≥1 missed cycle still gets the section', async () => {
+    // THE PRIMARY POPULATION. The 8.6 handler returned the `HISTORY_EMPTY` constant the moment the
+    // attested list was empty; under 10.27 that would have silently defeated the whole surface for
+    // exactly the members it exists for.
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    listMemberContributionHistory.mockResolvedValue([]);
+    listMemberMissedCycles.mockResolvedValue([
+      { cycleId: CYCLE_ID, poolId: POOL_ID, closedAt: new Date('2026-06-25T00:00:00.000Z') },
+    ]);
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.rows).toEqual([]);
+    expect(result.totalInr).toBe(0);
+    expect(result.missedCycles).toHaveLength(1);
+  });
+
+  it('fail-soft ISOLATION: a missed-cycle read failure must NOT empty the attested passbook', async () => {
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    listMemberContributionHistory.mockResolvedValue([
+      { contributionId: 'evt-1', alertId: ALERT_ID, poolId: POOL_ID, attestedAt: new Date('2026-06-20T10:15:00.000Z'), utr: '123456789012', status: 'yellow' },
+    ]);
+    listMemberMissedCycles.mockRejectedValue(new Error('missed-cycle read exploded'));
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.totalInr).toBe(500);
+    // Degrades toward SILENCE — `[]` renders as an ABSENT section, never a partial or error state
+    // the member would read as being about them.
+    expect(result.missedCycles).toEqual([]);
+  });
+
+  it('fail-soft OMIT: a missed cycle whose pool context is unresolvable is dropped, others render', async () => {
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    const UNKNOWN_POOL = '88888888-8888-8888-8888-888888888888';
+    listMemberContributionHistory.mockResolvedValue([]);
+    listMemberMissedCycles.mockResolvedValue([
+      { cycleId: CYCLE_ID, poolId: POOL_ID, closedAt: new Date('2026-06-25T00:00:00.000Z') },
+      { cycleId: CYCLE_ID, poolId: UNKNOWN_POOL, closedAt: new Date('2026-05-25T00:00:00.000Z') },
+    ]);
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.missedCycles.map((m) => m.poolCanonicalIdentifier)).toEqual(['P-2026-06-001']);
+  });
+
+  it('falls back to the canonical identifier when the cycle freeze instant is unresolvable', async () => {
+    // The member still has a reference they can read out to Madad — never a blank cycle label.
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    getCycleFreezeCommittedAt.mockResolvedValue(null);
+    listMemberContributionHistory.mockResolvedValue([]);
+    listMemberMissedCycles.mockResolvedValue([
+      { cycleId: CYCLE_ID, poolId: POOL_ID, closedAt: new Date('2026-06-25T00:00:00.000Z') },
+    ]);
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    const result = await handlers.contributionHistory(fakeRequest());
+
+    expect(result.missedCycles[0]?.cycleRef).toBe('P-2026-06-001');
+  });
+
+  it('the unresolvable-freeze fallback is PER POOL — two pools in one cycle never share a reference', () => {
+    // Pools in one cycle share a freeze month, so the resolved value is memoized by CYCLE. The
+    // FALLBACK is not: it is derived from the POOL's canonical identifier, and caching it under the
+    // cycle id would hand the second pool the first pool's reference — a wrong value on the one
+    // field the member reads out to Madad.
+    return (async () => {
+      wireScopeTx();
+      wireStandardPoolIdentity();
+      getPoolContributionContext.mockImplementation(async (_tx: unknown, _p: unknown, poolId: string) => ({
+        cycleId: CYCLE_ID,
+        claimCaseId: CLAIM_CASE_ID,
+        poolIndex: poolId === POOL_ID ? 0 : 1,
+        poolCanonicalIdentifier: poolId === POOL_ID ? 'P-2026-06-001' : 'P-2026-06-002',
+        fixedAmount: 500,
+        poolCount: 2,
+      }));
+      getCycleFreezeCommittedAt.mockResolvedValue(null);
+      listMemberContributionHistory.mockResolvedValue([]);
+      listMemberMissedCycles.mockResolvedValue([
+        { cycleId: CYCLE_ID, poolId: POOL_ID, closedAt: new Date('2026-06-25T00:00:00.000Z') },
+        { cycleId: CYCLE_ID, poolId: POOL_ID_2, closedAt: new Date('2026-06-24T00:00:00.000Z') },
+      ]);
+
+      const handlers = createMemberPoolHandlers(baseDeps());
+      const result = await handlers.contributionHistory(fakeRequest());
+
+      expect(result.missedCycles.map((m) => m.cycleRef)).toEqual(['P-2026-06-001', 'P-2026-06-002']);
+      expect(result.missedCycles.map((m) => m.poolLetterCode)).toEqual(['A', 'B']);
+      // Still ONE freeze read for the shared cycle — the memo is doing its job.
+      expect(getCycleFreezeCommittedAt).toHaveBeenCalledTimes(1);
+    })();
+  });
+
+  it('reads missed cycles on the CALLER’S scope transaction at the injected clock (never its own tx)', async () => {
+    wireScopeTx();
+    wireStandardPoolIdentity();
+    listMemberContributionHistory.mockResolvedValue([]);
+    listMemberMissedCycles.mockResolvedValue([]);
+
+    const handlers = createMemberPoolHandlers(baseDeps());
+    await handlers.contributionHistory(fakeRequest());
+
+    // ONE scope tx for the whole response — RLS is fail-closed on `app.pariwar_id`, and a second tx
+    // would be a second scope to get wrong.
+    expect(openScopeTx).toHaveBeenCalledTimes(1);
+    const [, scope, at] = listMemberMissedCycles.mock.calls[0] as [unknown, { pariwarId: string; memberId: string }, Date];
+    // Ownership is the AUTHENTICATED member, resolved from the session — never client-supplied.
+    expect(scope).toEqual({ pariwarId: PARIWAR_ID, memberId: MEMBER_ID });
+    expect(at.toISOString()).toBe('2026-07-05T00:00:00.000Z');
   });
 
   it('member-session gate: no actor → 401 (resolved before any tx opens)', async () => {

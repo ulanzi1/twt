@@ -18,6 +18,15 @@
 // server-side is already gone by then — migration `0036`'s `member.%` trigger evicted it on append —
 // so the refetch recomputes rather than serving a payload missing the seventh fact.
 
+// ── Story 10.27 (AC6): the input WIDENED to carry an optional cycle UUID ────────────────────────
+// The mutation used to take `{ kind }` only, because no member surface listed a MISSED cycle and the
+// member therefore had nothing to point at. Story 10.27's missed-cycle section is that surface, so
+// the hook now threads an optional `cycleRef` — ⛔ the cycle's **UUID**, never the passbook's
+// freeze-month display string of the same name (D4) — into the outgoing request. The contract and
+// the DTO are UNCHANGED: `PersonalEventAssertionRequest.cycleRef` shipped optional in 10.26 and
+// explicitly anticipated this story as its first populator. Omitting it is still valid, which is
+// what keeps the membership-screen instance (no cycle context) working exactly as before.
+
 import type { PersonalEventKind } from '@twt/contracts'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef } from 'react'
@@ -35,11 +44,15 @@ export function usePersonalEventAssertion(pariwarId: string | undefined) {
   // user-initiated resubmit after a failure, reuses the SAME key so the server dedupes it.
   const idempotencyKeyRef = useRef<string | null>(null)
   return useMutation({
-    mutationFn: (input: { kind: PersonalEventKind }) => {
+    mutationFn: (input: { kind: PersonalEventKind; cycleRef?: string | undefined }) => {
       idempotencyKeyRef.current ??= newIdempotencyKey()
       return personalEventApi.recordPersonalEvent(
         pariwarId as string,
-        { kind: input.kind },
+        // Spread-free and explicit: `cycleRef` is omitted entirely when absent rather than sent as
+        // `undefined`, because the request schema is `.strict()` and the field is `.optional()`.
+        input.cycleRef === undefined
+          ? { kind: input.kind }
+          : { kind: input.kind, cycleRef: input.cycleRef },
         { idempotencyKey: idempotencyKeyRef.current },
       )
     },

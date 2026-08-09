@@ -2573,9 +2573,33 @@ components:
         totalInr:
           type: integer
           minimum: 0
+        missedCycles:
+          type: array
+          items:
+            type: object
+            properties:
+              cycleId:
+                type: string
+                format: uuid
+              cycleRef:
+                type: string
+                minLength: 1
+              poolLetterCode:
+                type: string
+                minLength: 1
+              poolCanonicalIdentifier:
+                type: string
+                minLength: 1
+            required:
+              - cycleId
+              - cycleRef
+              - poolLetterCode
+              - poolCanonicalIdentifier
+            additionalProperties: false
       required:
         - rows
         - totalInr
+        - missedCycles
       additionalProperties: false
     WaConfigDto:
       type: object

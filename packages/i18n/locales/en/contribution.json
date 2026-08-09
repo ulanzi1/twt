@@ -246,5 +246,14 @@
   "yogdaan.note.unavailable_a11y": "The Note for this contribution will be available soon",
   "yogdaan.retry": "Try again",
   "yogdaan.row_a11y": "{date}, {family}'s family, Pool {pool}, {amount}, {status}",
-  "yogdaan.title": "Yogdaan Bahi"
+  "yogdaan.title": "Yogdaan Bahi",
+  "missed_cycle.section_title": "Cycles with no matched contribution on record",
+  "missed_cycle.section_a11y": "Cycles you were part of that have closed, and for which our records hold no matched contribution. This describes our records, not you.",
+  "missed_cycle.section_note": "Our records hold no matched contribution from you for these cycles. Records may not hold the whole picture, and nothing here is settled or closed. If something looks wrong to you, or you would simply like to talk it through, Madad is here.",
+  "missed_cycle.state_label": "No matched contribution on record",
+  "missed_cycle.state_a11y": "Our records hold no matched contribution for this cycle. This stays open, and it takes nothing away from you.",
+  "missed_cycle.cycle_label": "Cycle {cycle}",
+  "missed_cycle.pool_label": "Pool {pool}",
+  "missed_cycle.reference_label": "Reference {reference}",
+  "missed_cycle.entry_a11y": "Cycle {cycle}, Pool {pool}. Our records hold no matched contribution for this cycle. Reference {reference}."
 }

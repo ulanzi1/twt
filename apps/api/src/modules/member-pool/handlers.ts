@@ -50,6 +50,7 @@ import type {
   ContributionHistoryResponse,
   ContributionHistoryRow,
   ContributionNoteFacts,
+  MissedCycleEntry,
   PoolContributorListResponse,
 } from '@twt/contracts';
 // Story 8.8 (Task 6; D5) — the cycle-window arithmetic now lives beside the tone gradient in
@@ -582,8 +583,19 @@ async function resolveCard(
 // Story 8.7 added the Contribution Note as their THIRD consumer — same implementation, one home, no
 // circular import between the handler and the Note resolver.
 
-/** The empty passbook — a member who has attested nothing, or a whole-read fail-soft (AC5-adjacent). */
-const HISTORY_EMPTY: ContributionHistoryResponse = { rows: [], totalInr: 0 };
+/**
+ * The empty passbook — a whole-read fail-soft (AC5-adjacent).
+ *
+ * ⚠ Story 10.27 widened the response with `missedCycles`, and this sentinel carries `[]` for it
+ * DELIBERATELY: a whole-read failure must not assert to the member that they have missed nothing. `[]`
+ * on this surface means "render nothing" (the section is ABSENT), never "you are clear" — the same
+ * posture absent projection coverage produces (D5).
+ *
+ * ⛔ NOT the zero-attested-rows path any more. A member who has attested nothing but HAS a missed
+ * cycle is exactly this story's primary population, so `resolveHistory` no longer returns this
+ * constant for them — see the early return below.
+ */
+const HISTORY_EMPTY: ContributionHistoryResponse = { rows: [], totalInr: 0, missedCycles: [] };
 
 /**
  * The Yogdaan Bahi pipeline (Story 8.6; AC1/AC2/AC3/AC6). Lists the member's OWN attested contributions
@@ -601,8 +613,15 @@ async function resolveHistory(
 ): Promise<ContributionHistoryResponse> {
   const { memberId, pariwarId } = ctx;
 
+  // Story 10.27 — resolved FIRST and with its OWN fail-soft, so neither collection can empty the
+  // other: a missed-cycle read failure must never blank the attested passbook, and an unresolvable
+  // passbook must never suppress the member's own missed cycles.
+  const missedCycles = await resolveMissedCycles(deps, tx, request, ctx);
+
   const entries = await contributionDomain.listMemberContributionHistory(tx, { pariwarId, memberId });
-  if (entries.length === 0) return HISTORY_EMPTY;
+  // ⛔ NOT `HISTORY_EMPTY`. A member who has attested nothing but has ≥1 missed cycle is this story's
+  // PRIMARY population; returning the constant here would silently defeat the whole surface for them.
+  if (entries.length === 0) return { rows: [], totalInr: 0, missedCycles };
 
   // Per-DISTINCT-pool memo: one identity decrypt + one pool-context load per pool (D5/D6). `null` marks a
   // pool whose identity is unresolvable (its rows are omitted) — cached so we do not re-attempt per row.
@@ -672,5 +691,104 @@ async function resolveHistory(
     totalInr += identity.fixedAmount;
   }
 
-  return { rows, totalInr };
+  return { rows, totalInr, missedCycles };
+}
+
+/**
+ * The MISSED-CYCLE half of the passbook response — Story 10.27 (AC1/AC4/AC6; D1/D3/D5).
+ *
+ * ⚖ A READ, and only a read. It records nothing, emits no event, sends no notification (Q6:
+ * DISPLAY-ONLY) and reaches no trustee-facing surface (Q5 — see the fence at the Trustee-Lite
+ * consumer). Filing an R7(G) assertion from this section changes none of these rows.
+ *
+ * ── What it resolves, and what it deliberately does NOT ──────────────────────────────────────────
+ * The domain read returns raw anchors (cycle UUID, pool id, close instant); this resolves them to the
+ * member-facing cycle reference + pool shortform, memoized per DISTINCT pool and per DISTINCT cycle.
+ * ⚠ It does NOT call `resolvePoolIdentity`: no deceased-family name is resolved and no Tier-1
+ * ciphertext is decrypted on this path. That is a DESIGN decision, not an optimisation — naming a
+ * bereaved family beside "no matched contribution recorded" pairs a person with an absence, which is
+ * the reading D1 exists to prevent. The saved decrypt is a side benefit.
+ *
+ * ── Fail-soft, in two layers ─────────────────────────────────────────────────────────────────────
+ *   · A row whose pool context is unresolvable is OMITTED (the passbook's own posture — never a blank
+ *     entry the member cannot act on).
+ *   · Any thrown error degrades the whole section to `[]`, which the surface renders as ABSENT. The
+ *     attested passbook is unaffected, because this runs outside its resolution.
+ * Both degrade toward SILENCE. On this surface that is the safe direction: `[]` says nothing, whereas
+ * a partial or error state would be a statement the member reads as being about them.
+ *
+ * Runs on the CALLER'S scope transaction (RLS is fail-closed on `app.pariwar_id`); it never opens its
+ * own. Ownership is the authenticated member, resolved from the session — never client-supplied.
+ */
+async function resolveMissedCycles(
+  deps: AppDeps,
+  tx: Db,
+  request: FastifyRequest,
+  ctx: { readonly memberId: ReturnType<typeof ids.memberId>; readonly pariwarId: ReturnType<typeof ids.pariwarId> },
+): Promise<MissedCycleEntry[]> {
+  const { memberId, pariwarId } = ctx;
+  try {
+    // The coverage gate (D5) lives INSIDE this read: absent coverage returns zero rows, so the section
+    // is absent rather than asserting a clean record the fact layer has refused to reason about.
+    const missed = await contributionDomain.listMemberMissedCycles(tx, { pariwarId, memberId }, deps.clock());
+    if (missed.length === 0) return [];
+
+    // Per-DISTINCT-pool and per-DISTINCT-cycle memos — pools in one cycle share a freeze month, and a
+    // member's missed cycles cluster. `null` marks an unresolvable pool so we do not re-attempt it.
+    const poolCtxById = new Map<string, Awaited<ReturnType<typeof poolDomain.getPoolContributionContext>>>();
+    const cycleRefById = new Map<string, string | null>();
+
+    const entries: MissedCycleEntry[] = [];
+    for (const row of missed) {
+      let poolCtx = poolCtxById.get(row.poolId);
+      if (poolCtx === undefined) {
+        poolCtx = await poolDomain.getPoolContributionContext(tx, pariwarId, ids.poolId(row.poolId));
+        poolCtxById.set(row.poolId, poolCtx);
+      }
+      if (poolCtx === null) {
+        request.log.warn({ poolId: row.poolId }, 'missed-cycles: pool context unresolvable — omitting');
+        continue;
+      }
+
+      // ⚠ Only the RESOLVED freeze month is memoized by cycle. The fallback below is derived from the
+      // POOL's canonical identifier, and two pools can share a cycle — caching a fallback under the
+      // cycle id would hand pool B the identifier belonging to pool A, i.e. a wrong reference on the
+      // one field the member reads out to Madad. `null` here means "asked, and the cycle has no
+      // resolvable freeze instant", which is still worth not re-asking.
+      let cycleRef = cycleRefById.get(row.cycleId) ?? undefined;
+      if (cycleRef === undefined && !cycleRefById.has(row.cycleId)) {
+        const committedAt = await poolDomain.getCycleFreezeCommittedAt(tx, row.cycleId);
+        cycleRef = committedAt === null ? undefined : cycleRefFromCommittedAt(committedAt);
+        cycleRefById.set(row.cycleId, cycleRef ?? null);
+      }
+
+      let poolLetterCode: string;
+      try {
+        poolLetterCode = poolDomain.poolLetterCode(poolCtx.poolIndex);
+      } catch (err) {
+        // A negative/non-integer pool index is a data-integrity anomaly, not a member-facing state.
+        request.log.warn({ err, poolId: row.poolId }, 'missed-cycles: pool letter code unresolvable — omitting');
+        continue;
+      }
+
+      entries.push({
+        // ⛔ D4 — the cycle's UUID, under a DISTINCT name. `cycleRef` beside it is the DISPLAY string.
+        // The R7(G) assertion request types its own `cycleRef` as a UUID; sending the freeze month
+        // there is a Zod rejection at best and corrupted provenance at worst.
+        cycleId: row.cycleId,
+        // The fallback is THIS pool's canonical identifier (it already carries `P-YYYY-MM-###`), so
+        // the member still has a reference they can read out to Madad — never a blank cycle label,
+        // and never a sibling pool's.
+        cycleRef: cycleRef ?? poolCtx.poolCanonicalIdentifier,
+        poolLetterCode,
+        poolCanonicalIdentifier: poolCtx.poolCanonicalIdentifier,
+      });
+    }
+    // Most-recent-cycle-first is guaranteed by the domain read's explicit ORDER BY; the omissions
+    // above preserve it.
+    return entries;
+  } catch (err) {
+    request.log.warn({ err }, 'missed-cycles: fail-soft to an absent section');
+    return [];
+  }
 }

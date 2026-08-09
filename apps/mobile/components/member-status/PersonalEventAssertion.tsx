@@ -42,14 +42,40 @@ const KINDS: readonly PersonalEventKind[] = [
   'other',
 ]
 
+/**
+ * ⛔ The `personal_event.*` keys live in the `contribution` namespace, and `t`'s default namespace is
+ * `common` — so every call here MUST pass this explicitly or the resolver throws
+ * `[i18n] missing key 'personal_event.…' in '<locale>/common'` (it is loud by design).
+ *
+ * ⚠ FOUND BY STORY 10.27, NOT INTRODUCED BY IT. Story 10.26 shipped these calls without a namespace,
+ * so this surface threw on first render wherever it was mounted. It surfaced here because AC6 mounts
+ * this component on the Yogdaan Bahi — a far more trafficked surface than the membership screen —
+ * which would have made the passbook itself throw for exactly the members this story exists for.
+ * Fixed rather than absorbed silently; recorded in the Dev Agent Record as a finding against 10.26.
+ */
+const NS = { namespace: 'contribution' } as const
+
 export interface PersonalEventAssertionProps {
   /** The member's own Pariwar, from the session context. */
   pariwarId: string | undefined
   /** Opens the Helpdesk — the surface with real humans on it (D3). */
   onOpenHelpdesk?: () => void
+  /**
+   * ⛔ The cycle's **UUID** (Story 10.27 AC6/D4) — machine provenance, so an assertion filed from the
+   * missed-cycle section names the opportunity it concerns. NEVER the passbook's display `cycleRef`
+   * (a freeze month): the request schema types this field as a UUID.
+   *
+   * `undefined` is first-class and unchanged behaviour: the membership screen's instance carries no
+   * cycle context and files exactly the assertion it always did.
+   */
+  cycleId?: string | undefined
 }
 
-export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEventAssertionProps) {
+export function PersonalEventAssertion({
+  pariwarId,
+  onOpenHelpdesk,
+  cycleId,
+}: PersonalEventAssertionProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<PersonalEventKind | null>(null)
@@ -68,14 +94,14 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
         testID="personal-event-recorded"
       >
         <Text fontWeight="600" accessibilityRole="header">
-          {t('personal_event.recorded_title')}
+          {t('personal_event.recorded_title', undefined, NS)}
         </Text>
         <Paragraph color="$colorPress" fontSize="$2" accessibilityRole="text">
-          {t('personal_event.recorded_body')}
+          {t('personal_event.recorded_body', undefined, NS)}
         </Paragraph>
         {onOpenHelpdesk ? (
           <Button size="$3" chromeless onPress={onOpenHelpdesk} accessibilityRole="button">
-            {t('personal_event.talk_to_someone')}
+            {t('personal_event.talk_to_someone', undefined, NS)}
           </Button>
         ) : null}
       </YStack>
@@ -90,12 +116,12 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
         size="$3"
         chromeless
         accessibilityRole="button"
-        accessibilityLabel={t('personal_event.entry_a11y')}
+        accessibilityLabel={t('personal_event.entry_a11y', undefined, NS)}
         onPress={() => setOpen(true)}
         testID="personal-event-entry"
         disabled={!pariwarId}
       >
-        {t('personal_event.entry')}
+        {t('personal_event.entry', undefined, NS)}
       </Button>
     )
   }
@@ -111,10 +137,10 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
       testID="personal-event-form"
     >
       <Text fontWeight="600" accessibilityRole="header">
-        {t('personal_event.title')}
+        {t('personal_event.title', undefined, NS)}
       </Text>
       <Paragraph color="$colorPress" fontSize="$2" accessibilityRole="text">
-        {t('personal_event.intro')}
+        {t('personal_event.intro', undefined, NS)}
       </Paragraph>
 
       {/*
@@ -127,16 +153,16 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
         accessibilityRole="text"
         testID="personal-event-before-you-record"
       >
-        {t('personal_event.before_you_record')}
+        {t('personal_event.before_you_record', undefined, NS)}
       </Paragraph>
 
       <YStack
         gap="$2"
         accessibilityRole="radiogroup"
-        accessibilityLabel={t('personal_event.kind_label')}
+        accessibilityLabel={t('personal_event.kind_label', undefined, NS)}
       >
         <Text fontSize="$2" fontWeight="600">
-          {t('personal_event.kind_label')}
+          {t('personal_event.kind_label', undefined, NS)}
         </Text>
         {KINDS.map((k) => (
           <Button
@@ -150,14 +176,14 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
             onPress={() => setKind(k)}
             testID={`personal-event-kind-${k}`}
           >
-            {t(`personal_event.kind.${k}`)}
+            {t(`personal_event.kind.${k}`, undefined, NS)}
           </Button>
         ))}
       </YStack>
 
       {mutation.isError ? (
         <Text color="$red11" fontSize="$2" accessibilityRole="alert">
-          {t('personal_event.error')}
+          {t('personal_event.error', undefined, NS)}
         </Text>
       ) : null}
 
@@ -165,16 +191,20 @@ export function PersonalEventAssertion({ pariwarId, onOpenHelpdesk }: PersonalEv
         accessibilityRole="button"
         disabled={kind === null || mutation.isPending || !pariwarId}
         onPress={() => {
-          if (kind !== null) mutation.mutate({ kind })
+          // ⛔ D4 — `cycleRef` on the REQUEST is the cycle's UUID. `cycleId` is already that UUID
+          // (the prop is typed and documented as such); the passbook's freeze-month string of the
+          // same name never reaches this call site. Omitted entirely when there is no cycle in hand,
+          // which is the membership screen's unchanged behaviour.
+          if (kind !== null) mutation.mutate(cycleId === undefined ? { kind } : { kind, cycleRef: cycleId })
         }}
         testID="personal-event-submit"
       >
-        {t('personal_event.submit')}
+        {t('personal_event.submit', undefined, NS)}
       </Button>
 
       {onOpenHelpdesk ? (
         <Button size="$3" chromeless onPress={onOpenHelpdesk} accessibilityRole="button">
-          {t('personal_event.talk_to_someone')}
+          {t('personal_event.talk_to_someone', undefined, NS)}
         </Button>
       ) : null}
     </YStack>

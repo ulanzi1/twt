@@ -1339,6 +1339,155 @@ wrapper — `payload !== undefined && imposesRestorationObligation(payload)` —
 `RESTORATION_OBLIGATION_KEYS` (`rules.ts:401-412`). The reviewer's "zero grep hits for a direct call"
 claim was itself in error (`rules.ts:434` calls it directly).
 
+### Post-merge Findings — production-path validation against the live 8.14 emitter (2026-08-09)
+
+**Context.** Story 8.14 (`0f72c37`) shipped the `alert.closed` producer, so the chain AC13 validates
+against can now be driven end to end from real production code rather than fixtures for the first
+time. This pass drove `cycle open → assignment → close sweep → alert.closed → projection →
+contribution facts → skips_current_year → R7 scan → imposition → payload fold` on the live test DB
+(`:5433`). **8.14's own gate (`apps/jobs/tests/close-cycle-alert-live.test.ts`) was re-run first and is
+5/5 green** — it proves the chain as far as `skipsCurrentYear = 1` and stops there by design.
+
+**These are OBSERVATIONS against this story's validation scope, not defects in shipped behaviour.**
+No production behaviour is wrong in either finding; both concern what the story's evidence covers and
+what an operator can see. Neither is a `done`-blocker: AC14's flag defaults OFF, so the imposition
+writer remains unreachable in every environment.
+
+- [ ] **[Finding][Observation] Every hop AFTER `skips_current_year` is evidenced only against
+      fixtures, and the missing production precondition degrades to a false all-clear at the JOB
+      level.** AC13 enumerates suites, not chain coverage, so this was not a gap against the AC as
+      written — it is a gap against what the AC was *for*.
+
+      The three shipped suites each stop short of the join: `restoration-discipline-fold.test.ts` is
+      DB-free with a literal `liveOverlay()`; `validity-service/tests/integration/contribution-facts.spec.ts`
+      inserts `alert.closed` as `'{}'::jsonb` at a hardcoded `event_version 9` **below the projector**;
+      `apps/jobs/tests/assignable-roster-live.test.ts` seeds `member.restoration_discipline.imposed`
+      directly. Each is legitimate in isolation; collectively nothing connects a production-produced
+      skip to the ladder, the writer, or the fold.
+
+      ⚠ **The load-bearing half of this finding is the precondition, not the coverage.** A
+      `contribution_projection_coverage` row is required before `deriveContributionFacts` can return
+      anything (`packages/validity-service/src/producer.ts:508` — `coveredFrom === null` ⇒ `null`).
+      Without it EVERY member degrades to the `producer_unavailable` sentinel and **no clause can
+      apply**. `scanR7ViolatorCandidates` handles this honestly and the Trustee-Lite surface renders
+      `detection_unavailable` — but `runRestorationDiscipline`'s own result does **not** carry the
+      distinction. Measured, with coverage absent:
+
+      ```
+      { writerEnabled: false, unavailable: null, membersScanned: 1, impositionsWritten: 0, skipped: {} }
+      ```
+
+      That is byte-identical to a genuinely clean Pariwar. `unavailable` is the field built to name
+      exactly this class of gap (it already carries `R7_REGISTRY_UNPROVISIONED_PRODUCER` and
+      `RESTORATION_POLICY_UNPROVISIONED_PRODUCER`, deliberately kept distinct so an operator is not
+      sent to provision the wrong instrument), and projection coverage is a **third** such gap with no
+      sentinel of its own. This is the same shape as the `false all-clear` the scan's own comment
+      forbids, arriving one layer up in the telemetry. It bit this validation pass directly: the first
+      run reported `applied = []` and was misread as a clause gap until the backfill was added.
+
+      ⛔ **Not proposing a fix here** ([[feedback_gap_analysis_observational]]). If the Panel or the
+      story owner judges the job-level indistinguishability material, the conditional escalation is
+      whether a third sentinel is owed *before* the AC14 flag is ever flipped — because after a flip
+      this field is what an operator checks to confirm the writer did nothing for the right reason.
+      ⚠ **The sentinel itself is implementer-owned construction** under Decision `2026-08-07-089`'s
+      ownership table; only its *sequencing against the flip* is a Panel question. Routed on that
+      narrow basis as Q1 of
+      `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-09-story-10-23-ac14-mechanics.md`.
+
+- [ ] **[Finding][Observation] AC14 describes enablement as one authorized act; the substrate spreads
+      it across a staged ramp whose first step is where coverage removal actually begins, and every
+      intermediate state resolves to DISABLED until a cohort is named — so a Panel flip authorized by
+      Decision `2026-08-07-089` can land with the writer still off and no signal saying why.**
+      Verified live, and all three behaviours below are correct and fail-safe individually. The
+      observation is that AC14 is silent on the mechanics, and the mechanics determine both *when* the
+      authorized harm begins and *whether the authorized act does anything at all*.
+
+      1. **`off → full` is rejected.** `LEGAL_FLAG_STATE_TRANSITIONS`
+         (`packages/domain/src/feature-flags/registry.ts:71-79`) admits `off` only to `off` or
+         `canary`, so reaching `full` takes three `createFlagVersion` calls and three audit rows.
+         ⚠ **The ladder is not a four-step line, and the count is not the governance-relevant
+         number.** Identity transitions are legal in *every* state — deliberately, since
+         re-publishing the same state is how a cohort is narrowed — and `rolled_back` is reachable
+         from any state that ever served. More importantly, **coverage removal begins at the FIRST
+         enabling version**, `off → canary` with a non-empty cohort: one call, not three. The two
+         remaining calls only widen *who else* loses coverage. An earlier draft of this finding
+         framed the threshold as "three acts to enable"; that mis-locates the harm boundary by two
+         steps and is corrected here.
+      2. **`canary` and `rollout` with an empty cohort resolve to `enabled: false`**
+         (`packages/domain/src/feature-flags/evaluate.ts:164`, `reason: 'cohort_empty'`).
+         `FLAG_DEFAULTS.restoration_discipline_imposition` ships `cohortDefinition: { clauses: [] }`
+         (`registry.ts:207`), so the natural two-step "flip to canary now, narrow it next"
+         leaves the writer **off** — deliberately, per that arm's Review Pass 4 comment. ⚠ That same
+         comment records that **the admin console has no cohort editor** and "carries the existing
+         (empty) cohort forward", so the path that populates a cohort is not the console path.
+      3. **A 5 s in-process TTL** (`FLAG_CACHE_TTL_MS`,
+         `packages/domain/src/feature-flags/cache.ts:36`) means a resolution taken shortly
+         before the flip continues to serve `state_off` until it expires. Observed in this pass: the
+         post-flip run still reported `writerEnabled: false` until `clearFlagCache()` was called.
+
+      AC14's text is otherwise unusually explicit about enablement authority — it names the Panel, the
+      Decision entry, and what does *not* count as authorization. It is silent on the mechanics, and
+      the mechanics are what makes a correctly-authorized flip look like it did nothing. ⚠ The
+      **failure direction is safe** (the writer stays off), which is why this is an observation rather
+      than a defect — but it is also why it would not be noticed until someone re-flips, and a
+      re-flip attempt on an already-`canary` flag is the path most likely to be mistaken for a
+      broken toggle.
+
+      ⛔ **Not proposing a fix.** Conditional escalation: the enabling Decision should authorize what
+      will actually be executed, so the scope of a single AC14 authorization — one enabling version
+      with a named cohort, or the whole ramp to `full` — is worth settling **before** that Decision is
+      authored, not after. ⚠ Note the escalation is about **scope, not act-count**: because the first
+      `off → canary` version with a non-empty cohort already removes coverage, "how many acts?" is the
+      wrong axis. Routed as Q2 of
+      `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-09-story-10-23-ac14-mechanics.md`.
+
+### Evidence (not a finding) — R7(B) confirms expected blocker precedence
+
+**Observation.** With 8.14's emitter live, a member who missed their only assigned cycle now reaches
+`contribution.skips_current_year = 1` and `contribution.in_lapse = true` **from production code**,
+with facts fully available (`status: 'ok'`, `heldFacts: []`, `coveredFrom` set). The R7 scan
+nonetheless returns `imposingClauses = []` — no lock-in is imposed. Measured live:
+
+```
+total_count 0 · ever_contributed false · skips_current_year 1 · in_lapse true
+imposing = []
+```
+
+**Classified as EXPECTED under this story's contract, on the following verification — NOT as a
+defect.** The member's clause is R7(B) (`ever_contributed == false`, `restoration.lock_in_months: 3`,
+so `imposesRestorationObligation` would return `true` if it were ever evaluated). It is not evaluated
+because it is HELD, and the hold is exactly the state AC8/AC9 describe:
+
+| Check | Live state (verified 2026-08-09) |
+|---|---|
+| AC8 text | *"R7(A) and R7(B) are **NOT** activated"* — stated in terms, not inferred |
+| `prd.md:346` | normative and unconditional; adding `r7-b` to `R7_ACTIVATED_CLAUSE_IDS` is forbidden |
+| `R7_HELD_CLAUSES` R7(B) entry | `blockedBy: []` · `blockedByNonFacts: ['niyamavali-part-11-amendment:r7a-b-population-replacement']` · `owner: 'trustee-panel'` |
+
+So **every FACT blocker is satisfied and the clause is still correctly held** on a non-fact blocker no
+producer can supply. That is precisely the end state AC9's two-bucket split was built to make
+representable and honest — the case the pre-10.23 apparatus could not distinguish from an unjustified
+hold. ⭐ **Read this as the mechanization working, observed on live data for the first time**, not as
+an instrument failing to fire.
+
+⚠ **What this evidence does newly establish**, and why it is recorded rather than discarded: the
+fact-side precondition is now genuinely met in production, so R7(B)'s hold rests on the Trustee
+Panel's unpublished Part 11 amendment **alone**. Story 10.23 discharged everything a story could and
+correctly moved `owner` to `trustee-panel`. This record exists so that ownership stays visible with
+evidence attached, rather than decaying into the unowned-deferral shape that left R7 dark for two
+epics ([[project_r7_fact_producer_unbuilt]], [[feedback_record_unattested_no_backfill]]). **No
+reclassification is proposed and none is owed unless the amendment is published.**
+
+**Method note.** Findings and evidence above were produced by an investigative probe driving the real
+production path (11 real cycles, 10 confirmations via `appendConfirmedContribution`, the real sweep,
+the real job). The probe is **deliberately NOT hardened into a gate and NOT committed** — it is
+console-logging and investigative, and hardening it is a separate decision. The completing case it
+measured, recorded here as attested for the record: R7(D) applied, `writerEnabled: false` ⇒ 0
+impositions with the flag absent (AC14 holds on the real path), `writerEnabled: true` ⇒ 1 imposition
+carrying both version pins, overlay `in-lock-in` imposed 2026-08-08 → expires 2026-11-08 (3 months,
+calendar-clamped per AC4), fold `isValid: false` / `isAssignable: true` (the AC6 divergence, on
+production-produced data).
+
 ---
 
 ## Dev Notes

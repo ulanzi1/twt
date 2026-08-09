@@ -4,6 +4,101 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: implementation of story 10-27-member-missed-cycle-visibility (2026-08-09)
+
+The member-facing missed-cycle surface shipped: a read-only, separate collection on the existing
+`GET /api/v1/member/contribution-history` response, rendered as a distinct section in **both** branches
+of the Yogdaan Bahi, routing into Story 10.26's assertion flow with a cycle in hand. It writes nothing,
+emits nothing, notifies nobody, and reaches no trustee surface.
+
+Four escalations are RAISED, not absorbed. Two of them (1 and 4) are owed to the Trustee Panel
+**before the surface is enabled for members**, and the implementer does not resolve either.
+
+- **⛔ Escalation 1 — Q1's literal gate is met; Q1's RATIONALE is not. OWED TO THE PANEL, UNRESOLVED.**
+  Q1 sequenced this surface after Story 10.23 because *"showing an obligation with no visible
+  resolution path would be an incomplete disclosure, not a kinder one."* Story 10.23 landed — **with
+  its Escalation 6 UNDISCHARGED**. There is still no authorized catch-up process, so R7(D)/(E)/(F)
+  name a completion act no workflow can perform. Reaffirmed twice since the story was drafted:
+  Decision `2026-08-09-093` clause 5 states in terms that it does not discharge Escalation 6, and
+  `2026-08-09-094`'s follow-ups repeat that nothing in them discharges it, authorizes a flip, or moves
+  the AC14 flag off default-OFF.
+
+  **So this story ships the disclosure Q1 authorized, into the exact condition Q1 named as the reason
+  to wait.** D1's epistemic framing is what makes that defensible: the surface reports what the RECORD
+  contains and never asserts an obligation it cannot show the member how to discharge. **That is a
+  mitigation, not a discharge** ([[feedback_closure_language_precision]]). ⚠ Same harm class as the
+  still-owed two-string copy-truth defect (`suspension_disclosure.lock_in.what_it_does` **and** its
+  `a11y` label, both asserting completability to members with no completion path, owed to a Story 2.2
+  tone sign-off). **Route both together** — they are one question about what the system may tell a
+  member about an obligation it cannot let them satisfy. **Re-trigger:** before member enablement.
+
+- **⚖ Escalation 2 — `assigned-but-never-notified` has a SIGNAL but no read model.** `dispatch` writes
+  `action: 'alert.channel_send'` audit lines (`packages/channels/src/dispatch.ts`), but they land in the
+  hash-chained `audit_log_entries` — an integrity log, not a queryable per-(member, cycle) delivery
+  projection. **Deliberately not built here**: a delivery projection is its own story with its own
+  retention, PII and RLS questions, and D1 means this surface does not need it. Recorded so a later
+  author does not conclude the signal is simply absent. **Re-trigger:** any story building a
+  notification-delivery read model, or a Panel request for cause attribution on this surface.
+
+- **⚖ Escalation 3 — Q3's cause enumeration cannot be satisfied as literally written; D1 is the
+  substitute. PANEL CONFIRMATION REQUESTED.** Q3 names three causes for the distinct state; two are
+  structurally unrecorded and one — out-of-band — is **fenced against ever being recorded**
+  (`docs/policies/out-of-band-contributions.md` stance 4 + `no-ingest-path.test.ts`, revert-sanity
+  proven). Creating a cause label would trip that fence and breach the stance. The state is therefore
+  **EPISTEMIC, not causal**: it says *"our records hold no matched contribution for this cycle"* — a
+  statement about the machine's record — and never *"you missed this"*. **The Panel should confirm D1
+  satisfies Q3's INTENT** (the false-accusation risk Q1/Q2 exist to avoid) rather than Q3 being read as
+  commissioning three cause labels. Raised now because a later reader comparing the shipped surface
+  against Q3's text will otherwise read a gap where there is a deliberate substitution.
+
+- **⚖ Escalation 4 — D5's coverage-absent posture INVERTS a question the Panel ruled one layer up.
+  PANEL CONFIRMATION REQUESTED.** Decision `2026-08-09-093` clause 1 ruled the *job's* coverage-absent
+  state must be **NAMED** (a distinct `unavailable` producer), because an operator reading a null would
+  mistake it for a clean Pariwar. **D5 rules the other way for the member surface**: name nothing,
+  render nothing — no rows, no header, no "we cannot show this yet". The asymmetry is deliberate and
+  mirrors [[project_r7g_violator_flag_exclusion]] — an **operator** needs to know the instrument is
+  dark so they can provision it; a **member** has no such action, and any state shown to them reads as
+  a statement about *them*, which is the harm D1 exists to prevent. ⚠ **But the Panel ruled the
+  adjacent question, not this one.** The Panel should confirm that member-facing silence is the
+  intended counterpart to operator-facing naming. Shipped as D5 and raised. **Re-trigger:** before the
+  surface is enabled for members.
+
+- **⚠ Q6's revisit condition, recorded VERBATIM as AC9 requires:** *"Revisit once the surface and Story
+  10.23's catch-up path both exist."* **Half of that condition is still unmet.** The surface now
+  exists; the catch-up path does not (Escalation 1). This story emits **no notification of any kind** —
+  no push, no SMS, no WhatsApp, no Telegram, no in-app banner, no `dispatch()` call — and the
+  `apps/jobs` notify family is not extended. **Re-trigger:** the discharge of Story 10.23's
+  Escalation 6, at which point BOTH halves hold and Q6 becomes answerable.
+
+- **⚠ A defect in Story 10.26's shipped surface, FOUND HERE and FIXED, recorded against 10.26.**
+  `PersonalEventAssertion.tsx` resolved all fourteen of its `personal_event.*` keys with no namespace
+  argument, so they resolved against `t`'s default namespace `common` — while the keys live in
+  `contribution.json`. The resolver is loud-by-default, so that surface **threw** on first render
+  (`[i18n] missing key 'personal_event.entry' in 'hi/common'`). It went unnoticed because the only
+  mount was the membership screen. It surfaced here because AC6 mounts the same component on the
+  **Yogdaan Bahi**, where the throw would have taken down the passbook for exactly the members this
+  story exists for. Fixed in place (the namespace is now passed explicitly) and pinned by
+  `apps/mobile/tests/unit/missed-cycle-section.test.ts`. ⚠ **The wider gap has no mechanized guard:**
+  nothing anywhere fails when a `t()` call names a key from a non-default namespace without saying so —
+  it is a runtime throw on a member surface, discoverable only by mounting it. **Re-trigger:** the next
+  story that adds i18n keys outside `common`, or any i18n tooling story; a static check pairing each
+  `t('<stem>.…')` call with the namespace that actually owns the stem would have caught this at PR time.
+
+- **⚠ The `out-of-band-blame` collision bit again, exactly as predicted.** The obvious phrasing for the
+  state's a11y line — *"recording this does not count against you"* — MATCHES the gate's
+  `(does|did|will|would)\s+not\s+count` arm. The shipped copy says *"it takes nothing away from you"* /
+  *"इससे आपका कुछ कम नहीं होता"* instead, reusing 10.26's dodge rather than weakening the rule. Teeth
+  re-verified live against these exact files: every prohibited frame FIRES on
+  `packages/i18n/locales/{en,hi}/contribution.json` and every shipped `missed_cycle.*` string is clean
+  ([[feedback_gate_scope_semantic_coverage]] — a green scan over newly-added copy proves nothing on its
+  own). ⚠ **A HUMAN TONE REVIEW IS STILL OWED** (AC7): `docs/tone-guide.md` §5 makes the paraphrased and
+  spelled-out tail explicitly the reviewer's job, and this surface tells a member something about their
+  own standing on a payment-adjacent surface — precisely the case that review exists for. A green
+  `microcopy:check` is not evidence the copy is in register. **Re-trigger:** the Story 2.2 tone sign-off
+  that already owes a pass on the two-string copy-truth defect (Escalation 1) — route them together.
+
+---
+
 ## Deferred from: code review of story-10-23-restoration-discipline-lock-in, AC14 flag mechanics pass (2026-08-09)
 
 Reviewed the `governance/10-23-ac14-flag-mechanics` branch diff vs `main` (the projection-coverage
@@ -365,6 +460,17 @@ on the discharge. **Owner: Story 2.2 tone sign-off. Status: OPEN.**
   10.27 carries this as its own **Escalation 1**, routed to the Trustee Panel **together with** the
   two-string copy-truth defect below, since both are one question: what may the system tell a member
   about an obligation it cannot let them satisfy?
+
+  **✅ Re-trigger CLOSED 2026-08-09 — the surface is BUILT.** Story 10.27 landed: the member-facing
+  missed-cycle collection ships on the contribution-history response, Q2/Q3/Q5/Q6 are carried into
+  AC3/AC2/AC8/AC9, and **Q4's `cycle_ref` is now POPULATED** — this story is the first populator of the
+  field 10.26 shipped optional and explicitly anticipated, with the schema and the DTO unchanged. See
+  the Story 10.27 section at the top of this file for what shipped and what is still owed.
+
+  ⚠ **"Surface built" is NOT "Q1's rationale met"** ([[feedback_closure_language_precision]] again, one
+  level down). Escalation 6 remains undischarged; Story 10.27's Escalation 1 carries that forward and
+  is owed to the Panel **before the surface is enabled for members**. Two of 10.27's own escalations
+  (1 and 4) gate enablement; this entry's closure covers the STORY, not the enablement.
 
 - **⚠ Escalation 6 — the query budget grew, and the 4L figure is STILL UN-ATTESTED.** Single-member
   fact read **2 → 3** (the assertion `EXISTS`); Pariwar scan **8 → 10** (+1 assertion existential,

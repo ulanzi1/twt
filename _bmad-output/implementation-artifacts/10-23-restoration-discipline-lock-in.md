@@ -1522,6 +1522,117 @@ changed about how much this note should be trusted**, recorded rather than quiet
 `imposed_at` is Postgres `clock_timestamp()`, not an injected clock, so the gate asserts the
 `expiresAt = imposedAt + 3 months` **identity** instead. The dates stand as a record of one run.
 
+### Review Findings — AC14 flag mechanics pass (2026-08-09)
+
+Three-layer adversarial review (Blind Hunter, Edge Case Hunter, Acceptance Auditor with the AC14 /
+Decision `2026-08-09-093/094/095` context) against the `governance/10-23-ac14-flag-mechanics` branch
+diff vs `main` (7 files, 1507 insertions). Both new live-DB test files
+(`restoration-coverage-sentinel-live.test.ts`, `restoration-discipline-production-path-live.test.ts`)
+were **actually run** against `twt-test-pg:5433` during triage, not taken on narrative — all 4 tests
+pass genuinely, confirming the story's "pinned by a committed gate" claim
+([[feedback_verify_before_committing_governance_claims]]).
+
+**Outcome: 0 decision-needed, 6 patches (all APPLIED), 2 deferred, 19 dismissed as noise** (including
+the Blind Hunter's governance-process critique — self-authored Trustee Panel ratification, Decision
+095's self-correction — which is this project's established, consistently-applied convention across
+every prior story, not a defect introduced by this diff; and the Acceptance Auditor's two caveats, both
+resolved by verification: the live tests pass, and the story-file hunk showing "Post-merge Findings" as
+fully new is correct — `665b519` is not an ancestor of `main`, which has no such section at all). After
+patching: `pnpm --filter @twt/jobs exec tsc --noEmit` clean, `pnpm --filter @twt/jobs lint` clean, the
+DB-free unit suite (237/237) green, and both live-DB gates re-run against `twt-test-pg:5433` (4/4
+green) plus verified to skip cleanly with no `DATABASE_URL` set.
+
+- [x] [Review][Patch] ~~Projection-coverage sentinel misses the lower-bound case
+      `deriveContributionFacts` itself enforces~~ — **APPLIED.**
+      [apps/jobs/src/restoration-discipline.ts:207]. The check only tested
+      `projection.coveredFrom === null`, but `packages/validity-service/src/producer.ts:508-509` also
+      returns `null` (unavailable) when `at.getTime() < input.coveredFrom.getTime()`. Widened to
+      `projection.coveredFrom === null || at.getTime() < projection.coveredFrom.getTime()`, closing the
+      one path where the exact false all-clear Decision `2026-08-09-093` clause 1 required this
+      sentinel to prevent could still occur. **Verification pass (2026-08-09):** a revert probe showed
+      the fix originally shipped with no regression test — all 4 live tests stayed green with the
+      lower-bound clause removed. Added step (2b) to `restoration-coverage-sentinel-live.test.ts`,
+      which forces `covered_from` into the future and asserts the sentinel reappears, then re-runs the
+      real backfill to self-heal via its `LEAST()` upsert; re-running the revert probe against the new
+      step now goes red as expected.
+
+- [x] [Review][Patch] ~~`restoration-coverage-sentinel-live.test.ts`'s `afterAll` doesn't apply the
+      cleanup-safety lesson its own sibling test in this diff documents as load-bearing~~ —
+      **APPLIED.** [apps/jobs/tests/restoration-coverage-sentinel-live.test.ts]. `afterAll` now mirrors
+      `restoration-discipline-production-path-live.test.ts`'s structure: `cleanupPoolCohort` runs
+      inside the guarded block (a throw there can no longer skip `pool.end()`), `pool.end()` is
+      guaranteed via `finally`, and cleanup failures are rethrown rather than swallowed into
+      `console.warn`.
+
+- [x] [Review][Patch] ~~The documented sentinel precedence ("registry beats coverage") is asserted only
+      by code reading, never exercised by a test~~ — **APPLIED.**
+      [apps/jobs/tests/restoration-coverage-sentinel-live.test.ts]. Added step (0) — neither the R7
+      registry nor projection coverage provisioned — asserting `unavailable ===
+      R7_REGISTRY_UNPROVISIONED_PRODUCER` and `membersScanned === 0` before the registry clause is
+      inserted and the original three-state walk proceeds. The gate now pins both halves of the
+      documented precedence, not just coverage-vs-policy.
+
+- [x] [Review][Patch] ~~`BOUNDARY_TOTAL = 9` is a hand-typed literal, not derived from the
+      seed-extracted R7(D) payload~~ — **APPLIED.**
+      [apps/jobs/tests/restoration-discipline-production-path-live.test.ts]. Added
+      `r7dTotalCountThreshold`, which reads R7(D)'s `fact_gte`/`contribution.total_count` condition
+      straight off `R7_PAYLOADS['niy.contribution-discipline.r7-d'].all_of` (the same seed-derived
+      payload `provisionRegistry` writes); `BOUNDARY_TOTAL` is now that threshold minus 1, and the test
+      title no longer hardcodes the number. A Panel amendment to the threshold now moves this
+      boundary's expectation with it instead of silently pinning the wrong one.
+
+- [x] [Review][Patch] ~~`extractSeedPayloads()` runs unconditionally at module import time~~ —
+      **APPLIED.** [apps/jobs/tests/restoration-discipline-production-path-live.test.ts]. Gated behind
+      `hasDatabase`: `R7_PAYLOADS`/`RESTORATION_POLICY_PAYLOAD` fall back to empty objects when no
+      `DATABASE_URL` is set, and the extraction (with its own fail-loud guards) runs only when a
+      database is actually present. Verified: the file now skips cleanly (no collection-time throw)
+      with `DATABASE_URL` unset.
+
+- [x] [Review][Patch] ~~`RestorationDisciplineRunResult.unavailable` is typed as bare
+      `string | null`~~ — **APPLIED.** [apps/jobs/src/restoration-discipline.ts:61-79]. Narrowed to a
+      literal union of the three named sentinel constants (imported `R7_REGISTRY_UNPROVISIONED_PRODUCER`
+      from `@twt/validity-service` for this purpose) plus `null`. The one call site that previously
+      passed through `scan.producer` (a plain `string` on the shared `R7ViolatorScan` contract) now
+      assigns the imported constant directly, which the type system already guarantees is the only
+      value that branch can produce.
+
+- [x] [Review][Defer] `readContributionProjectionContext` (step 2b) is not SAVEPOINT-protected the way
+      the AC14 flag resolution above it is [apps/jobs/src/restoration-discipline.ts:191] — deferred,
+      pre-existing. A DB-level error there would abort the whole job run instead of degrading to the
+      documented read-only scan, but this mirrors the identical, already-unprotected pattern in the
+      policy-resolution call immediately above it (`resolveRestorationDisciplinePolicy`, pre-existing
+      from the original story), not a regression this diff introduced. A correct fix should cover both
+      read-only steps together, not just the new one.
+
+- [x] [Review][Defer] `extractSeedPayloads`'s regex assumes the seed SQL contains no escaped (doubled)
+      single quotes [apps/jobs/tests/restoration-discipline-production-path-live.test.ts:121-122] —
+      deferred, low blast radius. Verified only by a comment, not codified as a check; but the
+      function's own "found N clauses, missing X" guard-throw already catches gross corruption
+      (under-matching), bounding the risk to a narrow case (an apostrophe landing inside a payload
+      string) this diff did not introduce and does not worsen.
+
+**Dismissed as noise (19):** the Blind Hunter's governance/process critique (6 items — the
+self-authored/self-evidenced Trustee Panel ratification chain, Decision 095's self-correcting posture,
+same-day multi-decision cadence, the routing note landing pre-answered, file:line citation staleness,
+the unverified "4000 Pariwars" arithmetic) is out of scope for a code-diff review: it describes this
+project's established governance convention, applied consistently across every prior story, not
+something this diff newly introduced or could hide. The GUARD 2 UTC-allow-list narrowness / "never
+tests the divergent case" critique (2 items) is a deliberate, documented fail-loud-on-precondition
+design choice on a self-configured test-only connection string, not a defect. `readContributionProjectionContext`
+being called before the registry short-circuit (1 item) is an acknowledged, negligible-cost trade-off
+already defended in the diff's own comment. Sentinel-precedence-as-sequential-`if`s and the two
+sentinel-namespace-prefixes (2 items) match the codebase's existing idiom and are explicitly justified
+by the constants' own doc comments. The `skipped` field's contents at early-return points (1 item) are
+trivially always `{}` there — not ambiguous in practice. The sentinel-precedence comment not justifying
+registry-before-coverage ordering (1 item) is forced by TypeScript's discriminated-union narrowing on
+`scan.status`, not a free documentation choice. The three test-safety observations about the
+`twt_dev`-name guard, its env-var override, and disabling append-only enforcement for cleanup (3 items)
+match this codebase's established live-DB destructive-test convention, not a novel risk. The claim that
+the production-path test is mechanically indistinguishable from a real Panel flip (1 item) is scoped
+entirely to the GUARD-1-verified disposable database and cannot reach a real environment. The
+Acceptance Auditor's two caveats (2 items) were both resolved by direct verification during triage (see
+outcome line above).
+
 ---
 
 ## Dev Notes

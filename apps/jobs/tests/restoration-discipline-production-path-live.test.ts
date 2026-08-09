@@ -35,6 +35,8 @@
 // ⚠ Step (6) — the flag ABSENT — is the half that pins production posture. Both are asserted.
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { CYCLE_WINDOW_DAYS } from '@twt/contracts';
 import {
@@ -76,103 +78,66 @@ const TOTAL_CYCLES = 11;
 const R7D_LOCK_IN_MONTHS = 3;
 const R7D_CLAUSE_ID = 'niy.contribution-discipline.r7-d';
 
-/**
- * ⛔ ALL FIVE ACTIVATED R7 clauses (`R7_ACTIVATED_CLAUSE_IDS`), copied VERBATIM from
- * `packages/domain/seed/niyamavali-v1-clauses.sql` (`policy_review_required` / `provisional` elided —
- * they are registry metadata the ladder does not read).
- *
- * ⚠ ALL FIVE, not a convenient subset. An earlier draft of this gate provisioned only three and
- * hand-wrote R7(D)'s conditions as `skips_current_year >= 1`, dropping the ratified
- * `total_count >= 10`. That fabrication made R7(D) fire on a never-contributed member, and the CONTROL
- * case below is what caught it. A partial or paraphrased registry does not test the ladder — it tests
- * a different ladder that happens to share clause ids.
- *
- * Copied rather than imported so a seed edit that changes a rung's MEANING breaks this gate loudly
- * instead of silently retuning what it proves.
- */
-const R7_PAYLOADS: Record<string, Record<string, unknown>> = {
-  'niy.contribution-discipline.r7-c': {
-    rule_code: 'R7(C)',
-    title_en: 'Long-gap restoration (treat as new registration)',
-    rule_kind: 'conditional',
-    family: 'r7-contribution-discipline',
-    precedence: 70,
-    on_pass: 'treat_as_new_registration',
-    on_fail: 'r7_not_applicable',
-    all_of: [
-      { op: 'member_state_in', states: ['lock-in', 'active', 'active-in-grace', 'lapsed-unpaid'] },
-      { op: 'fact_gte', fact: 'contribution.months_since_last', min: 12 },
-    ],
-    restoration: { consecutive_required: 5, lock_in_months: 3 },
-  },
-  'niy.contribution-discipline.r7-d': {
-    rule_code: 'R7(D)',
-    title_en: 'Established member single-skip restoration (3-month lock-in plus catch-up)',
-    rule_kind: 'conditional',
-    family: 'r7-contribution-discipline',
-    precedence: 30,
-    on_pass: 'lockin_3mo_plus_catchup',
-    on_fail: 'r7_not_applicable',
-    all_of: [
-      { op: 'member_state_in', states: ['lock-in', 'active', 'active-in-grace', 'lapsed-unpaid'] },
-      // ⛔ THE CONDITION THE FABRICATED DRAFT DROPPED. R7(D) is the ESTABLISHED-member rung; it
-      // cannot reach someone who has never contributed.
-      { op: 'fact_gte', fact: 'contribution.total_count', min: 10 },
-      { op: 'fact_equals', fact: 'contribution.skips_current_year', value: 1 },
-    ],
-    restoration: { lock_in_months: R7D_LOCK_IN_MONTHS, catch_up_required: true },
-  },
-  'niy.contribution-discipline.r7-e': {
-    rule_code: 'R7(E)',
-    title_en: 'Established member multi-skip restoration (5-month lock-in complete all)',
-    rule_kind: 'conditional',
-    family: 'r7-contribution-discipline',
-    precedence: 40,
-    on_pass: 'lockin_5mo_complete_all',
-    on_fail: 'r7_not_applicable',
-    all_of: [
-      { op: 'member_state_in', states: ['lock-in', 'active', 'active-in-grace', 'lapsed-unpaid'] },
-      { op: 'fact_gte', fact: 'contribution.total_count', min: 10 },
-      { op: 'fact_gte', fact: 'contribution.skips_current_year', min: 2 },
-    ],
-    restoration: { lock_in_months: 5, complete_all: true },
-  },
-  'niy.contribution-discipline.r7-f': {
-    rule_code: 'R7(F)',
-    title_en: 'Six-month gap restoration (5-month lock-in complete all)',
-    rule_kind: 'conditional',
-    family: 'r7-contribution-discipline',
-    precedence: 45,
-    on_pass: 'lockin_5mo_complete_all',
-    on_fail: 'r7_not_applicable',
-    all_of: [
-      { op: 'member_state_in', states: ['lock-in', 'active', 'active-in-grace', 'lapsed-unpaid'] },
-      { op: 'fact_gte', fact: 'contribution.months_since_last', min: 6 },
-    ],
-    restoration: { lock_in_months: 5, complete_all: true },
-  },
-  'niy.contribution-discipline.r7-g': {
-    rule_code: 'R7(G)',
-    title_en: 'Personal events do not excuse contribution skips (non-exemption)',
-    rule_kind: 'conditional',
-    family: 'r7-contribution-discipline',
-    precedence: 10,
-    on_pass: 'no_exemption',
-    on_fail: 'r7_not_applicable',
-    all_of: [{ op: 'fact_equals', fact: 'contribution.personal_event_excuse_claimed', value: true }],
-    // ⚠ `never_excuses` is deliberately NOT a `RESTORATION_OBLIGATION_KEYS` member, so R7(G) is
-    // ACTIVATED but imposes nothing (the ratified D4 invariant, Decision `2026-08-06-080`). Included
-    // precisely so this gate would catch a change that made it start imposing.
-    restoration: { never_excuses: true },
-  },
-};
+/** The seed that IS the registry's source of truth. Payloads are DERIVED from it, never restated. */
+const SEED_SQL_PATH = fileURLToPath(
+  new URL('../../../packages/domain/seed/niyamavali-v1-clauses.sql', import.meta.url),
+);
 
-const RESTORATION_POLICY_PAYLOAD = {
-  rule_code: 'RESTORATION-DISCIPLINE',
-  title_en: 'Restoration-discipline lock-in instrument (§3.1 R7 consequence)',
-  month_counting: 'calendar_end_of_month_clamped',
-  concurrency_rule: 'max_over_live',
-};
+/**
+ * ⛔ THE ACTIVATED REGISTRY, DERIVED FROM THE SEED — never hand-copied.
+ *
+ * ⚠ An earlier draft of this gate RESTATED these payloads as TS literals, with a comment claiming
+ * that a seed edit would "break this gate loudly". That claim was false and backwards: the gate never
+ * read the seed, so a drifted fixture stayed green forever. It was caught by mutation — changing the
+ * restated `total_count >= 10` to `>= 1` passed both tests — after an earlier fabrication of the same
+ * payload had already made R7(D) fire on a never-contributed member.
+ *
+ * Deriving is what makes the claim true. The ladder is now exercised against the SAME bytes production
+ * seeds, and a rung whose meaning changes moves this gate's expectations with it — loudly, because the
+ * assertions below name the OUTCOME (which clause imposes, on which member) rather than the payload.
+ */
+function extractSeedPayloads(): {
+  r7: Record<string, Record<string, unknown>>;
+  policy: Record<string, unknown>;
+} {
+  const sql = readFileSync(SEED_SQL_PATH, 'utf8');
+  // The seed writes each payload as a single-quoted JSON literal cast to jsonb. Verified to contain
+  // no escaped (doubled) single quotes, so a non-greedy scan to `'::jsonb` is exact — asserted below
+  // by requiring the full activated set, so a seed reformat FAILS rather than silently under-matching.
+  const literals = [...sql.matchAll(/'(\{"rule_code":"(?:R7\([CDEFG]\)|RESTORATION-DISCIPLINE)".*?)'::jsonb/g)];
+
+  const r7: Record<string, Record<string, unknown>> = {};
+  let policy: Record<string, unknown> | null = null;
+  const byRuleCode = new Map<string, Record<string, unknown>>();
+
+  for (const [, raw] of literals) {
+    const parsed = JSON.parse(raw!) as Record<string, unknown>;
+    const ruleCode = String(parsed['rule_code']);
+    if (byRuleCode.has(ruleCode)) continue; // the seed repeats the policy clause per environment
+    byRuleCode.set(ruleCode, parsed);
+    if (ruleCode === 'RESTORATION-DISCIPLINE') {
+      policy = parsed;
+      continue;
+    }
+    const letter = ruleCode.slice(3, 4).toLowerCase();
+    r7[`niy.contribution-discipline.r7-${letter}`] = parsed;
+  }
+
+  // ⛔ The extraction guards ITSELF. A seed reformat that breaks the scan must fail here rather than
+  // quietly provisioning a partial registry — a partial ladder is a DIFFERENT ladder sharing ids.
+  const expected = ['R7(C)', 'R7(D)', 'R7(E)', 'R7(F)', 'R7(G)'];
+  const missing = expected.filter((c) => !byRuleCode.has(c));
+  if (missing.length > 0) {
+    throw new Error(
+      `[10.23-gate] seed extraction found ${String(byRuleCode.size)} clauses; missing ${missing.join(', ')}. ` +
+        `The seed format changed — fix the extraction, do NOT restate the payloads inline.`,
+    );
+  }
+  if (policy === null) throw new Error('[10.23-gate] seed extraction found no RESTORATION-DISCIPLINE policy clause');
+  return { r7, policy };
+}
+
+const { r7: R7_PAYLOADS, policy: RESTORATION_POLICY_PAYLOAD } = extractSeedPayloads();
 
 /**
  * `imposedAt + months`, end-of-month CLAMPED — the JS mirror of Postgres `make_interval`.
@@ -348,12 +313,20 @@ describe.skipIf(!hasDatabase)('Story 10.23 — production path into the restorat
     // ⛔ The load-bearing distinction from the pre-existing fixtures: these rows went through the
     // PROJECTOR. A fixture inserting `'{}'::jsonb` below it is why the alert-state gate never caught
     // the original gap.
-    const { rows: closedEvents } = await pool.query<{ n: string }>(
-      `SELECT count(*) AS n FROM events_log
-        WHERE pariwar_id = $1 AND event_type = 'alert.closed' AND payload <> '{}'::jsonb`,
+    //
+    // ⚠ SCHEMA-VALID, not merely non-empty — matching the standard 8.14's sibling gate already set
+    // (`close-cycle-alert-live.test.ts` asserts `AlertClosedPayloadSchema.safeParse(...).success`).
+    // An earlier draft here asserted only `payload <> '{}'::jsonb`, which any non-empty fixture would
+    // satisfy. Two gates on the same event type must not hold it to two different standards: the
+    // weaker one becomes the one a future fixture is written against.
+    const { rows: closedEvents } = await pool.query<{ payload: unknown }>(
+      `SELECT payload FROM events_log WHERE pariwar_id = $1 AND event_type = 'alert.closed'`,
       [pariwarId],
     );
-    expect(Number(closedEvents[0]!.n)).toBe(TOTAL_CYCLES);
+    expect(closedEvents).toHaveLength(TOTAL_CYCLES);
+    for (const evt of closedEvents) {
+      expect(alertDomain.AlertClosedPayloadSchema.safeParse(evt.payload).success).toBe(true);
+    }
 
     // ── (3) The production precondition: the contribution-projection backfill ─────────────────────
     await withPariwarScope(pool, pariwarId, (db) =>
@@ -424,13 +397,22 @@ describe.skipIf(!hasDatabase)('Story 10.23 — production path into the restorat
     // post-flip run still resolves `state_off`, which is exactly the trap Finding 2 recorded.
     featureFlags.clearFlagCache();
 
+    // ⛔ RESOLVE AGAINST THE DATABASE CLOCK, NOT THE CLIENT'S. `createFlagVersion` stamps
+    // `effective_from` from the DB, so resolving at a client-side `new Date()` races it: under any
+    // clock skew the newest version is "not yet in force" and resolution silently falls back to the
+    // prior one (`rollout` + empty cohort ⇒ DISABLED). That produced an INTERMITTENT
+    // `expect(decision.enabled).toBe(true)` failure — a flake that looks exactly like the
+    // stale-cache trap but has a different cause, which is the worst kind to debug.
+    const { rows: nowRows } = await pool.query<{ now: Date | string }>('SELECT now() AS now');
+    const afterFlip = new Date(new Date(nowRows[0]!.now).getTime() + 1000);
+
     const decision = await withPariwarScope(pool, pariwarId, (db) =>
       featureFlags.resolveFlagAudited(
         db,
         'restoration_discipline_imposition',
         brandedPariwarId,
         { pariwarId },
-        new Date(),
+        afterFlip,
         false,
       ),
     );
@@ -439,7 +421,8 @@ describe.skipIf(!hasDatabase)('Story 10.23 — production path into the restorat
     // (Decision `2026-08-09-094`).
     expect(decision.reason).toBe('state_full');
 
-    const onRun = await runRestorationDiscipline({ pool, clock: () => new Date() }, pariwarId);
+    // Same DB-derived instant, for the same reason — the job resolves the flag itself.
+    const onRun = await runRestorationDiscipline({ pool, clock: () => afterFlip }, pariwarId);
     expect(onRun.writerEnabled).toBe(true);
     expect(onRun.unavailable).toBeNull();
     expect(onRun.impositionsWritten).toBe(1);
@@ -493,11 +476,127 @@ describe.skipIf(!hasDatabase)('Story 10.23 — production path into the restorat
     const status = projectRestorationDisciplineStatus(overlay);
     expect(status.state).toBe('in-lock-in');
 
-    // ⛔ THE AC6 DIVERGENCE, on production-produced data: coverage is removed, assignability is NOT.
-    // `deriveIsAssignable` takes no restoration parameter AT ALL — the roster cannot be affected by a
-    // lock-in BY SIGNATURE, not by a branch someone could later add.
-    expect(deriveIsValid('active', 'none', overlay.state)).toBe(false);
-    expect(deriveIsAssignable('active', 'none')).toBe(true);
+    // ── The fold's INPUTS, read from the database rather than assumed ────────────────────────────
+    // ⚠ An earlier draft passed the literals `('active', 'none')` into both fold calls. That made
+    // `deriveIsAssignable('active','none')` a CONSTANT EXPRESSION — it would have passed with no
+    // imposition, no member and no database, so the "divergence on production-produced data" claim
+    // was half tautology. Both inputs are now real, and both assertions move if the member does.
+    const states = await withPariwarScope(pool, pariwarId, (db) =>
+      member.listMemberStatesForPariwar(db, brandedPariwarId),
+    );
+    const liveState = states.find((s) => String(s.memberId) === memberId)?.state;
+    expect(liveState).toBeDefined();
+
+    // Moderation status is DERIVED from `member_moderation_actions`, so 'none' is VERIFIED here
+    // rather than assumed — otherwise a moderation action appearing in the fixture would silently
+    // change which property this assertion is testing.
+    const { rows: modActions } = await pool.query<{ n: string }>(
+      'SELECT count(*) AS n FROM member_moderation_actions WHERE member_id = $1',
+      [memberId],
+    );
+    expect(Number(modActions[0]!.n)).toBe(0);
+    const liveModeration = 'none' as const;
+
+    // ⛔ THE AC6 DIVERGENCE, on production-produced data: SAME member, SAME lifecycle state, SAME
+    // moderation status — coverage is removed, assignability is NOT. The only differing input is the
+    // restoration overlay, which `deriveIsAssignable` does not accept AT ALL: the roster cannot be
+    // affected by a lock-in BY SIGNATURE, not by a branch someone could later add.
+    expect(deriveIsValid(liveState!, liveModeration, overlay.state)).toBe(false);
+    expect(deriveIsAssignable(liveState!, liveModeration)).toBe(true);
+  }, 300_000);
+
+  it('BOUNDARY — total_count 9 with skips=1 draws NOTHING; 10 is the ratified threshold', async () => {
+    // ⛔ WHY THIS EXISTS. The CONTROL case below has `total_count = 0` — ten units from R7(D)'s
+    // `total_count >= 10`. It therefore does NOT test the boundary: mutating the threshold to `>= 1`
+    // left it green (proven by mutation during review), because 0 fails that too. Only a change to
+    // `>= 0` would have been caught.
+    //
+    // This case sits ONE below the threshold with every other R7(D) condition satisfied, so together
+    // with the main test (`total_count = 10` ⇒ imposes) it pins the boundary from both sides. A
+    // regression loosening the threshold by even one turns this RED.
+    const pb = randomUUID();
+    const brandedB = ids.pariwarId(pb);
+    const BOUNDARY_TOTAL = 9;
+    const boundaryCycles = BOUNDARY_TOTAL + 1; // 9 confirmed + 1 missed ⇒ skips_current_year = 1
+    const cb = await seedPoolCohort(pool, {
+      scale: 1,
+      n: 1,
+      cycleCount: boundaryCycles,
+      pariwarId: pb,
+    });
+    try {
+      const memberId = cb.memberIds[0]!;
+      for (let i = 0; i < boundaryCycles; i += 1) {
+        const { alertId, poolId } = await openCycle(pb, brandedB, cb.memberIds, cb.cycles[i]!);
+        if (i >= BOUNDARY_TOTAL) continue;
+        await withPariwarScope(pool, pb, (_db, client) =>
+          reconciliation.appendConfirmedContribution(client, {
+            pariwarId: brandedB,
+            alertId: ids.alertId(alertId),
+            payload: {
+              poolId,
+              memberId,
+              alertId,
+              utr: String(200000000000 + i),
+              confirmedAt: new Date(cb.committedAt.getTime() + i * MS_PER_DAY).toISOString(),
+              matchProvenance: {
+                bankStatementEntryId: randomUUID(),
+                idempotencyKey: `boundary-${i}`,
+                matcherRun: `boundary-run-${i}`,
+                senderVpaCheck: { available: false, reason: 'member_vpa_not_collected' },
+              },
+            },
+          }),
+        );
+      }
+      await runCloseCycleAlertSweep({
+        pool,
+        now: () => new Date(cb.committedAt.getTime() + (CYCLE_WINDOW_DAYS + 1) * MS_PER_DAY),
+      });
+      await withPariwarScope(pool, pb, (db) =>
+        contribution.backfillContributionProjections(db, brandedB),
+      );
+      await provisionRegistry(pb);
+
+      const facts = await withPariwarScope(pool, pb, (db) =>
+        contribution.readContributionFactInputs(
+          db,
+          { pariwarId: brandedB, memberId: ids.memberId(memberId) },
+          new Date(),
+        ),
+      );
+      // ⛔ Exactly ONE below the threshold, with R7(D)'s other conditions satisfied.
+      expect(facts.totalCount).toBe(BOUNDARY_TOTAL);
+      expect(facts.skipsCurrentYear).toBe(1);
+
+      const scan = await withPariwarScope(pool, pb, (db) =>
+        scanR7ViolatorCandidates(db, brandedB, new Date()),
+      );
+      expect(scan.status).toBe('available');
+      if (scan.status !== 'available') throw new Error('unreachable — narrowed above');
+      const candidate = scan.candidates.find((c) => c.memberId === memberId);
+      expect(candidate).toBeDefined();
+      expect(candidate!.impositionInputs.imposingClauses).toEqual([]);
+
+      const run = await runRestorationDiscipline({ pool, clock: () => new Date() }, pb);
+      expect(run.impositionsWritten).toBe(0);
+      expect(run.unavailable).toBeNull();
+    } finally {
+      await cleanupPoolCohort(pool, pb);
+      const admin = await pool.connect();
+      try {
+        await admin.query('BEGIN');
+        await admin.query("SET LOCAL session_replication_role = 'replica'");
+        await admin.query('DELETE FROM events_log WHERE pariwar_id = $1', [pb]);
+        await admin.query('DELETE FROM clause_versions WHERE pariwar_id = $1', [pb]);
+        await admin.query('DELETE FROM contribution_projection_coverage WHERE pariwar_id = $1', [pb]);
+        await admin.query('COMMIT');
+      } catch {
+        await admin.query('ROLLBACK').catch(() => undefined);
+      } finally {
+        admin.release();
+      }
+    }
   }, 300_000);
 
   it('CONTROL — a never-contributed member reaches skips=1 but draws NO imposition (R7(B) is HELD)', async () => {

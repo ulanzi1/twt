@@ -69,6 +69,13 @@ const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/** Databases this gate may write to. CI's ephemeral `postgres:16-alpine` service and the local
+ *  `twt-test-pg` container both use `twt_dev`; staging/prod carry different names. See GUARD 1. */
+const DISPOSABLE_DATABASES = ['twt_dev'];
+
+/** Session `TimeZone` values under which the AC4 expiry identity holds. See GUARD 2. */
+const UTC_SESSION_TIMEZONES = ['UTC', 'Etc/UTC', 'GMT', 'Etc/GMT'];
+
 /** 10 confirmed + 1 missed ⇒ `total_count = 10`, `skips_current_year = 1` ⇒ R7(D) applies and R7(C)
  *  (which needs a ≥12-month gap) does not. The one shape that isolates R7(D) cleanly. */
 const CONFIRMED_CYCLES = 10;
@@ -168,38 +175,112 @@ describe.skipIf(!hasDatabase)('Story 10.23 — production path into the restorat
   beforeAll(async () => {
     created = createDb(DATABASE_URL!, { ssl: false, max: 8 });
     pool = created.pool;
+
+    // ── ⛔ GUARD 1: refuse to run against anything but a disposable database ──────────────────────
+    // Most live tests write ordinary fixture rows. THIS one writes coverage-removing lock-ins and
+    // appends versions of a Trustee-Panel-controlled flag to an APPEND-ONLY table. `DATABASE_URL`
+    // being set is not evidence that the target is disposable, so the target is checked by name.
+    // ⚠ Both CI (`ci.yml`'s ephemeral `postgres:16-alpine` service) and the local `twt-test-pg`
+    // container use `twt_dev`; staging/prod carry different names, so this excludes them. Fails
+    // CLOSED — an unrecognised database aborts rather than being assumed safe.
+    const { rows: dbRows } = await pool.query<{ db: string; tz: string }>(
+      'SELECT current_database() AS db, current_setting($1) AS tz',
+      ['TimeZone'],
+    );
+    const dbName = dbRows[0]!.db;
+    const override = process.env['TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS'] === '1';
+    if (!DISPOSABLE_DATABASES.includes(dbName) && !override) {
+      throw new Error(
+        `[10.23-gate] REFUSING TO RUN against database '${dbName}'. This gate writes restoration ` +
+          `lock-ins and appends '${'restoration_discipline_imposition'}' flag versions to an ` +
+          `append-only table. Expected one of: ${DISPOSABLE_DATABASES.join(', ')}. If this database ` +
+          `really is disposable, set TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS=1.`,
+      );
+    }
+
+    // ── ⛔ GUARD 2: the AC4 expiry identity requires a UTC session ────────────────────────────────
+    // `expires_at` is computed as `imposed_at + make_interval(months => N)`, and Postgres adds
+    // MONTHS IN THE SESSION TIME ZONE, while `addMonthsClamped` is UTC-based. They agree under UTC
+    // and under any zone without DST, but diverge by an hour when a 3-month window crosses a DST
+    // transition — which would make the expiry assertion fail a few weeks a year, on a schedule
+    // nobody would connect to timezones. Asserted as an explicit PRECONDITION so that divergence is
+    // a loud, self-explaining failure at setup rather than a seasonal flake in the assertion.
+    const sessionTz = dbRows[0]!.tz;
+    if (!UTC_SESSION_TIMEZONES.includes(sessionTz)) {
+      throw new Error(
+        `[10.23-gate] session TimeZone is '${sessionTz}'; this gate's AC4 expiry identity assumes UTC ` +
+          `because Postgres adds months in the session zone while the JS mirror is UTC-based. Set it ` +
+          `on the CONNECTION — append '&options=-c%20timezone%3DUTC' to DATABASE_URL, or fix the ` +
+          `server default. ⚠ PGTZ does NOT work: node-postgres does not forward it. Alternatively, ` +
+          `make addMonthsClamped zone-aware.`,
+      );
+    }
+
     cohort = await seedPoolCohort(pool, { scale: 1, n: 1, cycleCount: TOTAL_CYCLES, pariwarId });
   }, 120_000);
 
   afterAll(async () => {
     if (!pool) return;
-    await cleanupPoolCohort(pool, pariwarId);
-    const alertIds = cohort?.cycles.map((c) => alertDomain.deriveAlertId(c.cycleId)) ?? [];
-    const admin = await pool.connect();
+    // ⛔ Cleanup failures are RAISED, not warned. An earlier draft swallowed them into a
+    // `console.warn`, which is the wrong trade for this file: cleanup bypasses the append-only
+    // triggers via `session_replication_role = 'replica'`, so where that is unavailable the deletes
+    // fail and leave a `full`-state flag version and live imposition rows behind — silently, in a
+    // SHARED test database, to be inherited by whatever runs next. A red teardown is recoverable;
+    // undetected residue on a coverage-removing writer is not.
+    let cleanupError: unknown = null;
     try {
-      await admin.query('BEGIN');
-      await admin.query("SET LOCAL session_replication_role = 'replica'");
-      if (alertIds.length > 0) {
-        await admin.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [alertIds]);
-        await admin.query('DELETE FROM alerts WHERE alert_id = ANY($1)', [alertIds]);
+      await cleanupPoolCohort(pool, pariwarId);
+      const alertIds = cohort?.cycles.map((c) => alertDomain.deriveAlertId(c.cycleId)) ?? [];
+      const admin = await pool.connect();
+      try {
+        await admin.query('BEGIN');
+        await admin.query("SET LOCAL session_replication_role = 'replica'");
+        if (alertIds.length > 0) {
+          await admin.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [alertIds]);
+          await admin.query('DELETE FROM alerts WHERE alert_id = ANY($1)', [alertIds]);
+        }
+        await admin.query('DELETE FROM events_log WHERE pariwar_id = $1', [pariwarId]);
+        await admin.query('DELETE FROM clause_versions WHERE pariwar_id = $1', [pariwarId]);
+        await admin.query('DELETE FROM feature_flag_versions WHERE pariwar_id = $1', [pariwarId]);
+        await admin.query('DELETE FROM member_restoration_impositions WHERE pariwar_id = $1', [
+          pariwarId,
+        ]);
+        await admin.query('DELETE FROM contribution_projection_coverage WHERE pariwar_id = $1', [
+          pariwarId,
+        ]);
+        await admin.query('COMMIT');
+
+        // Verify rather than trust: a DELETE that silently matched nothing is indistinguishable
+        // from one that was blocked, and both leave the same residue.
+        const { rows: residue } = await admin.query<{ table_name: string; n: string }>(
+          `SELECT 'feature_flag_versions' AS table_name, count(*)::text AS n
+             FROM feature_flag_versions WHERE pariwar_id = $1
+           UNION ALL
+           SELECT 'member_restoration_impositions', count(*)::text
+             FROM member_restoration_impositions WHERE pariwar_id = $1`,
+          [pariwarId],
+        );
+        const left = residue.filter((r) => Number(r.n) > 0);
+        if (left.length > 0) {
+          throw new Error(
+            `residue survived cleanup: ${left.map((r) => `${r.table_name}=${r.n}`).join(', ')}`,
+          );
+        }
+      } catch (err) {
+        await admin.query('ROLLBACK').catch(() => undefined);
+        throw err;
+      } finally {
+        admin.release();
       }
-      await admin.query('DELETE FROM events_log WHERE pariwar_id = $1', [pariwarId]);
-      await admin.query('DELETE FROM clause_versions WHERE pariwar_id = $1', [pariwarId]);
-      await admin.query('DELETE FROM feature_flag_versions WHERE pariwar_id = $1', [pariwarId]);
-      await admin.query('DELETE FROM member_restoration_impositions WHERE pariwar_id = $1', [
-        pariwarId,
-      ]);
-      await admin.query('DELETE FROM contribution_projection_coverage WHERE pariwar_id = $1', [
-        pariwarId,
-      ]);
-      await admin.query('COMMIT');
     } catch (err) {
-      await admin.query('ROLLBACK').catch(() => undefined);
-      console.warn('[10.23-gate] cleanup residue:', String(err));
+      cleanupError = err;
     } finally {
-      admin.release();
+      // The pool closes on EVERY path — otherwise a cleanup failure also hangs the run.
+      await pool.end().catch(() => undefined);
     }
-    await pool.end();
+    if (cleanupError !== null) {
+      throw new Error(`[10.23-gate] CLEANUP FAILED for Pariwar ${pariwarId}: ${String(cleanupError)}`);
+    }
   }, 60_000);
 
   /** Provision one clause version for a Pariwar. */

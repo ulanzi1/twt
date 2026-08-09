@@ -41,7 +41,7 @@
 // read a mutation.
 
 import { contribution, featureFlags, ids, member, withPariwarScope, type Db } from '@twt/domain';
-import { scanR7ViolatorCandidates } from '@twt/validity-service';
+import { R7_REGISTRY_UNPROVISIONED_PRODUCER, scanR7ViolatorCandidates } from '@twt/validity-service';
 import type pg from 'pg';
 
 /** The AC14 rollout flag key. Registered in `FLAG_DEFAULTS` + `governance_boundary.yaml`. */
@@ -63,15 +63,17 @@ export interface RestorationDisciplineRunResult {
   /** `false` when the AC14 flag is off — the scan still ran, nothing was written. */
   readonly writerEnabled: boolean;
   /**
-   * Set when the run could not proceed; the named sentinel, never a silent skip. One of
-   * `R7_REGISTRY_UNPROVISIONED_PRODUCER`, {@link CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER}, or
-   * {@link RESTORATION_POLICY_UNPROVISIONED_PRODUCER}.
+   * Set when the run could not proceed; the named sentinel, never a silent skip.
    *
    * ⛔ `null` means "the run genuinely proceeded" — it must NEVER be the value on a run that could
    * not evaluate anybody. More than one gap can be true at once; see the precedence note on
    * {@link runRestorationDiscipline}.
    */
-  readonly unavailable: string | null;
+  readonly unavailable:
+    | typeof R7_REGISTRY_UNPROVISIONED_PRODUCER
+    | typeof CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER
+    | typeof RESTORATION_POLICY_UNPROVISIONED_PRODUCER
+    | null;
   readonly membersScanned: number;
   readonly impositionsWritten: number;
   /** Refusals by reason — the AC2 predicate's own vocabulary. */
@@ -102,7 +104,8 @@ export interface RestorationDisciplineDeps {
  * single producer, so the order below is a deterministic, documented naming order — NOT a severity
  * ranking, and NOT a claim that the others are absent:
  *
- *   registry (no R7 clause published)  →  coverage (no projection)  →  policy (no instrument clause)
+ *   registry (no R7 clause published)  →  coverage (no projection, or `at` precedes it)  →  policy
+ *   (no instrument clause)
  *
  * Coverage is named BEFORE policy deliberately. With no coverage, `deriveContributionFacts` returns
  * `null` for EVERY member, so the scan's candidate list carries no information whatsoever — naming
@@ -194,19 +197,27 @@ export async function runRestorationDiscipline(
     if (scan.status === 'unavailable') {
       // The R7 REGISTRY is unprovisioned — a different gap from the instrument policy's, and it
       // already has its own named producer. Reported, never treated as "nobody is in breach".
+      // ⚠ `scan.producer` is read back rather than assigned here because `R7ViolatorScan`'s
+      // `producer` field is a plain `string` (a shared contract with the Trustee-Lite consumer);
+      // the imported constant is what actually pins the value to the literal union below.
       return {
         pariwarId: String(pariwarId),
         writerEnabled,
-        unavailable: scan.producer,
+        unavailable: R7_REGISTRY_UNPROVISIONED_PRODUCER,
         membersScanned: 0,
         impositionsWritten: 0,
         skipped,
       };
     }
 
-    if (projection.coveredFrom === null) {
-      // The FACT side is unprojected — a different gap from either registry gap, with a different
-      // owner and a different fix (run/backfill the projection; do NOT publish a clause).
+    // ⛔ Review finding: mirrors `deriveContributionFacts`'s own guard (`producer.ts:508-509`),
+    // which treats BOTH `coveredFrom === null` and `at < coveredFrom` as "unavailable". Checking
+    // only the former left the latter's false all-clear open — the exact gap Decision
+    // `2026-08-09-093` clause 1 required this sentinel to close.
+    if (projection.coveredFrom === null || at.getTime() < projection.coveredFrom.getTime()) {
+      // The FACT side is unprojected (or `at` precedes the watermark) — a different gap from either
+      // registry gap, with a different owner and a different fix (run/backfill the projection, or
+      // wait for `at` to reach `coveredFrom`; do NOT publish a clause).
       // `membersScanned` is reported honestly: that many members were enumerated, and NONE of them
       // was derivable. The non-null `unavailable` is what makes the pair unambiguous.
       return {

@@ -10,23 +10,27 @@
 // 0 }`, which is BYTE-IDENTICAL to a genuinely clean Pariwar. After a flip, `unavailable` is the field
 // an operator reads to confirm the writer did nothing FOR THE RIGHT REASON.
 //
-// ── ⛔ WHY THE GATE WALKS THREE STATES INSTEAD OF ASSERTING THE SENTINEL ONCE ────────────────────────
+// ── ⛔ WHY THE GATE WALKS FOUR STATES INSTEAD OF ASSERTING THE SENTINEL ONCE ────────────────────────
 // A test that only asserts "coverage absent ⇒ coverage sentinel" is satisfied by an implementation
 // that returns that sentinel UNCONDITIONALLY — it would pass against a job that has gone permanently
 // blind, a strictly worse failure than the one being fixed. So the fixture changes ONE thing at a time
 // and the sentinel must MOVE, predictably, each time:
 //
-//   (1) no coverage, no policy   → the COVERAGE sentinel  (also pins the documented precedence)
+//   (0) no registry, no coverage → the REGISTRY sentinel  (pins registry-before-coverage precedence)
+//   (1) coverage, no policy      → the COVERAGE sentinel  (also pins coverage-before-policy precedence)
 //   (2) coverage, no policy      → the POLICY sentinel    (proves the coverage check actually released)
 //   (3) coverage, policy         → `null`                 (proves no residual sentinel is left behind)
 //
 // Step (2) is the load-bearing one. Step (1) alone proves nothing a hard-coded return would not also
-// satisfy ([[feedback_gate_scope_semantic_coverage]]).
+// satisfy ([[feedback_gate_scope_semantic_coverage]]). Step (0) closes the same gap one level up: a
+// review pass found the documented "registry beats coverage" ordering was never exercised — every
+// earlier version of this gate provisioned the registry in `beforeAll`, so both gaps were never open
+// at once.
 //
-// ⚠ Step (1) doubles as the precedence pin. BOTH gaps are true there, and `unavailable` reports one
-// producer — the job names coverage first, deliberately: with no facts the scan's candidate list
-// carries no information, so naming the policy gap would send an operator to publish an instrument
-// that still could not fire.
+// ⚠ Step (1) doubles as the coverage-before-policy precedence pin. BOTH gaps are true there, and
+// `unavailable` reports one producer — the job names coverage first, deliberately: with no facts the
+// scan's candidate list carries no information, so naming the policy gap would send an operator to
+// publish an instrument that still could not fire.
 //
 // ⚠ The writer is never enabled here. The AC14 flag stays default-OFF, which is the correct posture
 // for this gate: the sentinel is diagnostic and must be reported on the read-only path too — that is
@@ -36,6 +40,7 @@ import { randomUUID } from 'node:crypto';
 
 import { contribution, createDb, ids, withPariwarScope, type CreatedDb } from '@twt/domain';
 import type pg from 'pg';
+import { R7_REGISTRY_UNPROVISIONED_PRODUCER } from '@twt/validity-service';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
@@ -94,34 +99,60 @@ describe.skipIf(!hasDatabase)('restoration discipline — projection-coverage se
     pool = created.pool;
     cohort = await seedPoolCohort(pool, { scale: 1, n: 1, cycleCount: 1, pariwarId });
     void cohort;
-    // The R7 registry only — the instrument policy is deliberately left UNPROVISIONED so step (1)
-    // has both gaps open and can pin which one is named.
-    await insertClause('niy.contribution-discipline.r7-d', R7_D_PAYLOAD);
+    // ⛔ The R7 registry is deliberately NOT provisioned here — step (0) in the `it` block below
+    // needs it absent to pin the registry-before-coverage precedence. It is inserted mid-test.
   }, 120_000);
 
   afterAll(async () => {
     if (!pool) return;
-    await cleanupPoolCohort(pool, pariwarId);
-    const admin = await pool.connect();
+    // ⛔ Cleanup failures are RAISED, not warned — matching the sibling production-path gate's
+    // documented rationale: swallowing them into a `console.warn` leaves residue silently in a
+    // SHARED test database for whatever runs next. `cleanupPoolCohort` runs INSIDE the guarded
+    // block too, so a throw there can no longer skip the admin-table cleanup or leak the pool.
+    let cleanupError: unknown = null;
     try {
-      await admin.query('BEGIN');
-      await admin.query("SET LOCAL session_replication_role = 'replica'");
-      await admin.query('DELETE FROM events_log WHERE pariwar_id = $1', [pariwarId]);
-      await admin.query('DELETE FROM clause_versions WHERE pariwar_id = $1', [pariwarId]);
-      await admin.query('DELETE FROM contribution_projection_coverage WHERE pariwar_id = $1', [
-        pariwarId,
-      ]);
-      await admin.query('COMMIT');
+      await cleanupPoolCohort(pool, pariwarId);
+      const admin = await pool.connect();
+      try {
+        await admin.query('BEGIN');
+        await admin.query("SET LOCAL session_replication_role = 'replica'");
+        await admin.query('DELETE FROM events_log WHERE pariwar_id = $1', [pariwarId]);
+        await admin.query('DELETE FROM clause_versions WHERE pariwar_id = $1', [pariwarId]);
+        await admin.query('DELETE FROM contribution_projection_coverage WHERE pariwar_id = $1', [
+          pariwarId,
+        ]);
+        await admin.query('COMMIT');
+      } catch (err) {
+        await admin.query('ROLLBACK').catch(() => undefined);
+        throw err;
+      } finally {
+        admin.release();
+      }
     } catch (err) {
-      await admin.query('ROLLBACK').catch(() => undefined);
-      console.warn('[coverage-sentinel] cleanup residue:', String(err));
+      cleanupError = err;
     } finally {
-      admin.release();
+      await pool.end().catch(() => undefined);
     }
-    await pool.end();
+    if (cleanupError !== null) {
+      throw new Error(`[coverage-sentinel] CLEANUP FAILED for Pariwar ${pariwarId}: ${String(cleanupError)}`);
+    }
   }, 60_000);
 
   it('names the coverage gap, releases it once projected, and goes quiet when fully provisioned', async () => {
+    // ── (0) NO REGISTRY, NO COVERAGE — pins registry-before-coverage precedence ────────────────────
+    const noRegistry = await runRestorationDiscipline({ pool, clock }, pariwarId);
+
+    expect(noRegistry.unavailable).toBe(R7_REGISTRY_UNPROVISIONED_PRODUCER);
+    expect(noRegistry.impositionsWritten).toBe(0);
+    expect(noRegistry.writerEnabled).toBe(false);
+    // The scan itself never enumerates candidates when the registry is unprovisioned — a different
+    // gap from the coverage/policy branches below, which DO scan.
+    expect(noRegistry.membersScanned).toBe(0);
+
+    // The R7 registry only — the instrument policy is deliberately left UNPROVISIONED so step (1)
+    // has both remaining gaps open and can pin which one is named.
+    await insertClause('niy.contribution-discipline.r7-d', R7_D_PAYLOAD);
+
     // ── (1) NO COVERAGE, NO POLICY — both gaps open; coverage is the one named ────────────────────
     const unprojected = await runRestorationDiscipline({ pool, clock }, pariwarId);
 
@@ -146,6 +177,33 @@ describe.skipIf(!hasDatabase)('restoration discipline — projection-coverage se
     expect(projected.unavailable).toBe(RESTORATION_POLICY_UNPROVISIONED_PRODUCER);
     expect(projected.membersScanned).toBe(unprojected.membersScanned);
     expect(projected.impositionsWritten).toBe(0);
+
+    // ── (2b) COVERAGE ROW PRESENT, BUT `at` PRECEDES ITS WATERMARK — pins the lower-bound half ────
+    // ⛔ Review finding: the coverage check originally tested only `coveredFrom === null`, missing
+    // the temporal branch `deriveContributionFacts` itself enforces (`producer.ts:508-509`:
+    // `at < coveredFrom` also degrades every member to `producer_unavailable`). Revert-probe run
+    // during triage: removing the `|| at.getTime() < coveredFrom.getTime()` clause left every test
+    // in this file green — this step is what makes that regression impossible to reintroduce
+    // silently ([[feedback_gate_scope_semantic_coverage]]).
+    await pool.query(
+      `UPDATE contribution_projection_coverage SET covered_from = '2999-01-01T00:00:00Z' WHERE pariwar_id = $1`,
+      [pariwarId],
+    );
+    const beforeWatermark = await runRestorationDiscipline({ pool, clock }, pariwarId);
+
+    expect(beforeWatermark.unavailable).toBe(CONTRIBUTION_COVERAGE_UNPROJECTED_PRODUCER);
+    expect(beforeWatermark.impositionsWritten).toBe(0);
+
+    // Self-heals rather than a manual reset: `recordContributionProjectionCoverage`'s upsert takes
+    // `LEAST(existing, new)`, so re-running the REAL backfill restores the true (earlier) watermark —
+    // proving the fix degrades to the SAME sentinel a genuine unprojected Pariwar produces, not a
+    // test-only code path.
+    await withPariwarScope(pool, pariwarId, (db) =>
+      contribution.backfillContributionProjections(db, brandedPariwarId),
+    );
+    const healed = await runRestorationDiscipline({ pool, clock }, pariwarId);
+
+    expect(healed.unavailable).toBe(RESTORATION_POLICY_UNPROVISIONED_PRODUCER);
 
     // ── (3) Provision the instrument policy — no gap left, so no sentinel ─────────────────────────
     await insertClause('niy.restoration-discipline.policy', RESTORATION_POLICY_PAYLOAD);

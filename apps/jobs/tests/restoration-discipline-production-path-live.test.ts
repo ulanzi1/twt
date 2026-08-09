@@ -144,7 +144,37 @@ function extractSeedPayloads(): {
   return { r7, policy };
 }
 
-const { r7: R7_PAYLOADS, policy: RESTORATION_POLICY_PAYLOAD } = extractSeedPayloads();
+// ⛔ Review finding: extraction ran unconditionally at import time regardless of `hasDatabase`, so a
+// seed-file rename/reformat broke test COLLECTION in DB-less CI instead of skipping cleanly like the
+// rest of this file's `describe.skipIf(!hasDatabase)` contract. Gated behind `hasDatabase`: the
+// `describe.skipIf` block below still registers its `it`s either way, but their bodies — the only
+// place `R7_PAYLOADS`/`RESTORATION_POLICY_PAYLOAD` are read — never run when skipped.
+const { r7: R7_PAYLOADS, policy: RESTORATION_POLICY_PAYLOAD } = hasDatabase
+  ? extractSeedPayloads()
+  : { r7: {}, policy: {} };
+
+/** Reads R7(D)'s ratified `total_count` threshold straight off its seed-derived payload's `all_of`
+ *  condition — never restated as a literal, for the same reason {@link extractSeedPayloads} exists:
+ *  a Panel amendment to the threshold must move this gate's expectations with it. */
+function r7dTotalCountThreshold(payload: Record<string, unknown>): number {
+  const allOf = payload['all_of'];
+  if (!Array.isArray(allOf)) {
+    throw new Error('[10.23-gate] R7(D) payload has no `all_of` array — seed format changed');
+  }
+  const condition = allOf.find(
+    (c): c is { op: string; fact: string; min: number } =>
+      typeof c === 'object' &&
+      c !== null &&
+      (c as Record<string, unknown>)['op'] === 'fact_gte' &&
+      (c as Record<string, unknown>)['fact'] === 'contribution.total_count',
+  );
+  if (condition === undefined) {
+    throw new Error(
+      '[10.23-gate] R7(D) payload has no `fact_gte contribution.total_count` condition — seed format changed',
+    );
+  }
+  return condition.min;
+}
 
 /**
  * `imposedAt + months`, end-of-month CLAMPED — the JS mirror of Postgres `make_interval`.
@@ -586,7 +616,7 @@ describe.skipIf(!hasDatabase)('Story 10.23 — production path into the restorat
     expect(deriveIsAssignable(liveState!, liveModeration)).toBe(true);
   }, 300_000);
 
-  it('BOUNDARY — total_count 9 with skips=1 draws NOTHING; 10 is the ratified threshold', async () => {
+  it('BOUNDARY — total_count one below the ratified R7(D) threshold, with skips=1, draws NOTHING', async () => {
     // ⛔ WHY THIS EXISTS. The CONTROL case below has `total_count = 0` — ten units from R7(D)'s
     // `total_count >= 10`. It therefore does NOT test the boundary: mutating the threshold to `>= 1`
     // left it green (proven by mutation during review), because 0 fails that too. Only a change to
@@ -597,8 +627,12 @@ describe.skipIf(!hasDatabase)('Story 10.23 — production path into the restorat
     // regression loosening the threshold by even one turns this RED.
     const pb = randomUUID();
     const brandedB = ids.pariwarId(pb);
-    const BOUNDARY_TOTAL = 9;
-    const boundaryCycles = BOUNDARY_TOTAL + 1; // 9 confirmed + 1 missed ⇒ skips_current_year = 1
+    // ⛔ Review finding: this was a hand-typed `9`, restated rather than derived — the exact drift
+    // class the header comment above `extractSeedPayloads` names as the reason for deriving in the
+    // first place. Derived here from the SAME seed-sourced payload `provisionRegistry` writes below,
+    // so a Panel amendment to R7(D)'s threshold moves this boundary with it.
+    const BOUNDARY_TOTAL = r7dTotalCountThreshold(R7_PAYLOADS[R7D_CLAUSE_ID]!) - 1;
+    const boundaryCycles = BOUNDARY_TOTAL + 1; // one below threshold, confirmed + 1 missed ⇒ skips_current_year = 1
     const cb = await seedPoolCohort(pool, {
       scale: 1,
       n: 1,

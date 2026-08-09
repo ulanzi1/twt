@@ -1,8 +1,16 @@
 # Trustee Panel Routing Note — Story 10.23, AC14 Flag Mechanics
 
-**Status:** 🟡 **OPEN — raised 2026-08-09, awaiting ruling.** Two questions. Neither blocks any
-artifact; both must be settled **before** the Decision that enables `restoration_discipline_imposition`
-is authored.
+**Status:** ✅ **Ruled 2026-08-09 — both questions ratified at Option (a), with one Panel direction on
+Q2's population.** Binding record: Decision `2026-08-09-093`. **This note is the question set; the
+Decision entry governs.**
+**Ruled:** 2026-08-09 by the Trustee Panel. The Q2 ruling carries a direction recorded verbatim in
+`2026-08-09-093` clause 3: *"Apply the mechanism to the members to whom the currently activated
+restoration rules apply. Do not narrow this wording to R7(D)/(E) only; the applicable population is
+determined by which restoration rules are currently activated."* ⚠ Two consequences are recorded in the
+Decision rather than here, because they are findings against the substrate rather than parts of the
+ruling: that direction **mandates no code change** (the writer already derives its population from
+clause data, and a rung-keyed branch would violate D3), and it **cannot serve as a cohort** (no cohort
+dimension can express it — see `2026-08-09-093` clause 4 and its first open follow-up).
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-09, against the post-merge findings in
 `_bmad-output/implementation-artifacts/10-23-restoration-discipline-lock-in.md` (§ *Post-merge
@@ -46,6 +54,8 @@ This note asks neither of those again. It asks **what a single exercise of that 
 ---
 
 ## Q1 — Is a projection-coverage sentinel owed *before* the flag is ever flipped?
+
+> ✅ **RULED — Option (a), Decision `2026-08-09-093`.** The A/B choice is closed and is not to be reopened.
 
 **Governs AC13 / AC14 sequencing. Arises from Finding 1.**
 
@@ -94,6 +104,8 @@ the flip.
 ---
 
 ## Q2 — What does a single AC14 authorization cover: the first enabling version, or the whole ramp?
+
+> ✅ **RULED — Option (a), Decision `2026-08-09-093`.** The A/B choice is closed and is not to be reopened.
 
 **Governs AC14 and the enabling Decision's own form. Arises from Finding 2.**
 

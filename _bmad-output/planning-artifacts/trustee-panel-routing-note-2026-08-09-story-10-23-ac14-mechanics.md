@@ -11,6 +11,11 @@ Decision rather than here, because they are findings against the substrate rathe
 ruling: that direction **mandates no code change** (the writer already derives its population from
 clause data, and a rung-keyed branch would violate D3), and it **cannot serve as a cohort** (no cohort
 dimension can express it — see `2026-08-09-093` clause 4 and its first open follow-up).
+⚠ **Superseded in part by Decision `2026-08-09-094`:** the Panel has since clarified that the rollout
+scope is **all Pariwars**, which is the `full` state, where the cohort is ignored entirely. That
+**withdraws** `093`'s "a `pariwar_id` cohort is still owed" follow-up and **scopes** its clause 6 to the
+two intermediate states. Read `094` alongside `093`; the population constraint in `093` clause 4 is
+unchanged and reaffirmed.
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-09, against the post-merge findings in
 `_bmad-output/implementation-artifacts/10-23-restoration-discipline-lock-in.md` (§ *Post-merge

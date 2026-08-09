@@ -1171,5 +1171,44 @@ The gate ships **before** the surfaces it ultimately governs — the
   explicit deferral"_ with a trigger in `deferred-work.md` — **not** silently
   dropped.
 
+**Story 10.27 disposition (declaration affirmed — NO new row):** the member
+missed-cycle section (`apps/mobile/components/yogdaan-bahi/{MissedCycleSection.tsx,YogdaanBahi.tsx,missed-cycles.ts}`,
+plus the two `apps/mobile/components/member-status/*` files this story widens) is
+**read-only**. It lists assigned-and-closed cycles for which the record holds no
+matched contribution, and it asks the member for **nothing**: no form, no upload,
+no gate, no step-up, no decision, no confirmation. Nothing else in the app is
+gated behind it and no existing flow gains a step. Friction analysis:
+
+(1) **The section itself introduces ZERO deliberate friction.** Same category as
+the Story 10.3 disposition's read-only inbox/detail reads and the Story 10.16
+read-only pay-screen prose: the member does nothing differently whether or not
+the section renders. It is information about their own record, shown on a screen
+they already opened. Indeed the section is **absent** — not empty — when there is
+nothing to show, so a member with no missed cycles sees no change at all.
+
+(2) **The one affordance inside it is ALREADY DECLARED, and is not widened.** Each
+entry mounts the shipped Story 10.26 `<PersonalEventAssertion>` — the row above
+("member (asserting a personal event affected a contribution — a bounded 6-value
+picker, no free text)", `optional`) covers it exactly, including its mandatory
+pre-submit disclosure. This story **populates** the assertion's already-optional
+`cycleRef` provenance field; it adds no field the member fills, no step, and no
+new decision. Per-row instantiation changes WHERE the same affordance is
+reachable, not WHAT it costs the member — and reaching it from the cycle it
+concerns is strictly *less* effort than the prior route (find the cycle, then
+find the assertion on a different screen). ⚠ A friction row declares a cost the
+member pays; a second row for the same picker would double-count it.
+
+(3) **Nothing is pushed.** Q6 is DISPLAY-ONLY: this story emits no notification of
+any kind, so the member is never interrupted, never summoned, and never given a
+task. The section waits to be looked at.
+
+Ledger reviewed against a member-facing path touch (AC-4 fires conservatively on
+the path, by design); **no new row warranted**. The **page-weight baseline is
+unchanged**: only `apps/mobile` (EAS build is a no-op → `member-app-native` stays
+a no-op) plus `packages/{contracts,i18n,domain,api-client}` and `apps/api`, none
+of which are page-weight-gated; `apps/public` is **not** touched. Do NOT ratchet
+([[project_friction_budget_baseline_ratchet]] — the baseline is a best-ever
+ratchet and this story measured nothing new).
+
 See `scripts/friction-budget/README.md` for the gate's mechanism and the
 baseline-of-record model.

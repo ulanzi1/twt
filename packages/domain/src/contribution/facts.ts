@@ -225,6 +225,81 @@ function liveAtInstant(at: Date): SQL {
 }
 
 /**
+ * The OPPORTUNITY SEQUENCE — `last_conf` → `opportunity` → `sequenced`, as a reusable CTE chain.
+ *
+ * ⚠ THIS IS THE SHARED SCAN, and sharing it is a correctness requirement, not a tidiness one
+ * (Story 10.27 D2). Two consumers read it:
+ *   · {@link missedCycleAggregateSql} — the COUNTS the R7 ladder evaluates a member on.
+ *   · {@link listMemberMissedCycles}  — the ROWS the member is SHOWN on their own passbook.
+ * A second scan spelled "equivalently" would let what the member is shown drift from what the ladder
+ * evaluates them on — the identical hazard Story 10.23's AC2 named when it required reusing
+ * `scanR7ViolatorCandidates` rather than adding a second R7 evaluation path. Extracted VERBATIM from
+ * the aggregate (Story 10.27 Task 1): the aggregates' behaviour is byte-unchanged, and the 10.24/10.25
+ * fact suites are what prove it.
+ *
+ * ⛔ COVERAGE-BLIND BY CONSTRUCTION. This chain knows nothing about
+ * `contribution_projection_coverage`; coverage is a separate scalar ({@link coveredFromSql}) applied
+ * one layer UP, in `deriveContributionFacts`. Any consumer that renders these rows directly must apply
+ * its own coverage gate — see {@link listMemberMissedCycles} (Story 10.27, Finding 3 / D5).
+ *
+ * Emitted WITHOUT a leading `WITH` so callers can append their own CTEs to the same chain.
+ */
+function opportunitySequenceCtes(at: Date, scope: SQL, ledgerScope: SQL): SQL {
+  // The current-IST-year window, applied as a FILTER so one scan serves both aggregates.
+  const inCurrentYear = sql`mpa.assigned_at >= ${istYearStartUtc(at)}`;
+  return sql`
+    last_conf AS (
+      SELECT l.member_id, max(l.confirmed_at) AS last_confirmed_at
+        FROM member_contribution_ledger l
+       WHERE ${ledgerScope}
+         AND l.confirmed_at <= ${at}
+         AND (l.reversed_at IS NULL OR l.reversed_at > ${at})
+       GROUP BY l.member_id
+    ),
+    -- Every assigned-and-closed OPPORTUNITY (taken AND missed) — the sequence AC2's "consecutive"
+    -- predicate is defined over. An OPEN cycle is still never an opportunity.
+    opportunity AS (
+      SELECT mpa.member_id                               AS member_id,
+             mpa.pool_id                                 AS pool_id,
+             -- Story 10.27: carried so the row-returning sibling can name the CYCLE the member is
+             -- looking at (the R7(G) assertion's cycle_ref provenance). Inert for the aggregates —
+             -- they never project it, and the sequenced CTE's o.* passes it through untouched.
+             mpa.cycle_id                                AS cycle_id,
+             closed.closed_at                            AS closed_at,
+             lc.last_confirmed_at                        AS last_confirmed_at,
+             NOT ${liveConfirmationExistsSql('mpa', at)} AS missed,
+             (${inCurrentYear})                          AS in_current_year
+        FROM member_pool_assignments mpa
+        JOIN alerts al
+          ON al.cycle_id = mpa.cycle_id
+         AND al.pariwar_id = mpa.pariwar_id
+        -- The AS-OF closure instant, per alert stream. A LATERAL keeps the correlation explicit.
+        JOIN LATERAL (
+          SELECT min(e.occurred_at) AS closed_at
+            FROM events_log e
+           WHERE e.stream_id = al.alert_id
+             AND e.event_type IN (${ALERT_CLOSED_EVENT_TYPES_SQL})
+             AND e.occurred_at <= ${at}
+        ) closed ON closed.closed_at IS NOT NULL
+        LEFT JOIN last_conf lc ON lc.member_id = mpa.member_id
+       WHERE ${scope}
+         AND mpa.assigned_at <= ${at}
+    ),
+    sequenced AS (
+      SELECT o.*,
+             count(*) FILTER (WHERE o.missed) OVER (
+               PARTITION BY o.member_id ORDER BY o.closed_at, o.pool_id
+               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+             ) AS misses_to_here,
+             row_number() OVER (
+               PARTITION BY o.member_id ORDER BY o.closed_at DESC, o.pool_id DESC
+             ) AS rev_seq
+        FROM opportunity o
+    )
+  `;
+}
+
+/**
  * The MISSED-CYCLE aggregate (AC4), as ONE statement serving TWO windows.
  *
  * "Missed" = **assigned at freeze, with no live confirmation**:
@@ -296,6 +371,10 @@ function liveAtInstant(at: Date): SQL {
  *     THRESHOLD-INDEPENDENT (Story 10.16's `{remaining, required}` measures it against whichever
  *     clause actually applied, which need not be R7(A)).
  *
+ * ⚠ Story 10.27 (Task 1) moved the `last_conf`/`opportunity`/`sequenced` chain into
+ * {@link opportunitySequenceCtes} so the member-facing row read shares it BY CONSTRUCTION. Nothing
+ * about the aggregates changed — the same scan, the same `FILTER` clauses, the same numbers.
+ *
  * ⚠ ORDERING IS TOTAL AND DETERMINISTIC — `(closed_at, pool_id)`. `member_pool_assignments`'s PK is
  * `(pool_id, member_id)`, so `pool_id` is unique per member and the order cannot depend on scan
  * order. The payload hash sits behind a 100×-thread P0 gate; a tie broken non-deterministically here
@@ -309,53 +388,8 @@ function missedCycleAggregateSql(
   groupByMember: boolean,
 ): SQL {
   const selectMember = groupByMember ? sql`base.member_id AS member_id,` : sql``;
-  // The current-IST-year window, applied as a FILTER so one scan serves both aggregates.
-  const inCurrentYear = sql`mpa.assigned_at >= ${istYearStartUtc(at)}`;
   return sql`
-    WITH last_conf AS (
-      SELECT l.member_id, max(l.confirmed_at) AS last_confirmed_at
-        FROM member_contribution_ledger l
-       WHERE ${ledgerScope}
-         AND l.confirmed_at <= ${at}
-         AND (l.reversed_at IS NULL OR l.reversed_at > ${at})
-       GROUP BY l.member_id
-    ),
-    -- Every assigned-and-closed OPPORTUNITY (taken AND missed) — the sequence AC2's "consecutive"
-    -- predicate is defined over. An OPEN cycle is still never an opportunity.
-    opportunity AS (
-      SELECT mpa.member_id                               AS member_id,
-             mpa.pool_id                                 AS pool_id,
-             closed.closed_at                            AS closed_at,
-             lc.last_confirmed_at                        AS last_confirmed_at,
-             NOT ${liveConfirmationExistsSql('mpa', at)} AS missed,
-             (${inCurrentYear})                          AS in_current_year
-        FROM member_pool_assignments mpa
-        JOIN alerts al
-          ON al.cycle_id = mpa.cycle_id
-         AND al.pariwar_id = mpa.pariwar_id
-        -- The AS-OF closure instant, per alert stream. A LATERAL keeps the correlation explicit.
-        JOIN LATERAL (
-          SELECT min(e.occurred_at) AS closed_at
-            FROM events_log e
-           WHERE e.stream_id = al.alert_id
-             AND e.event_type IN (${ALERT_CLOSED_EVENT_TYPES_SQL})
-             AND e.occurred_at <= ${at}
-        ) closed ON closed.closed_at IS NOT NULL
-        LEFT JOIN last_conf lc ON lc.member_id = mpa.member_id
-       WHERE ${scope}
-         AND mpa.assigned_at <= ${at}
-    ),
-    sequenced AS (
-      SELECT o.*,
-             count(*) FILTER (WHERE o.missed) OVER (
-               PARTITION BY o.member_id ORDER BY o.closed_at, o.pool_id
-               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-             ) AS misses_to_here,
-             row_number() OVER (
-               PARTITION BY o.member_id ORDER BY o.closed_at DESC, o.pool_id DESC
-             ) AS rev_seq
-        FROM opportunity o
-    ),
+    WITH ${opportunitySequenceCtes(at, scope, ledgerScope)},
     taken_run AS (
       SELECT s.member_id        AS member_id,
              s.misses_to_here   AS preceding_misses,
@@ -668,6 +702,134 @@ export async function readContributionFactInputs(
     r7aConsecutiveRequired: toNullableCount(ledger?.r7aConsecutiveRequired),
     personalEventAsserted,
   };
+}
+
+// ── The member-facing ROW read — Story 10.27 (AC1, AC5; D2, D5) ─────────────────────────────────
+
+/**
+ * A defensive upper bound on the number of missed-cycle rows one read returns.
+ *
+ * NOT caller-influenced: this read takes no page size, no cursor and no offset — a member's lifetime
+ * opportunity count is one per cycle they were assigned to. The bound is a fixed guard against a
+ * pathological event log, exactly like `MAX_CONTRIBUTION_HISTORY_ROWS` (`history.ts`), and the SQL
+ * below spells it as an INTEGER LITERAL for the same reason that constant does: the
+ * domain-accessor-invariants forced-pagination gate accepts a literal for a fixed bound but cannot
+ * prove a named const is not caller-influenced. This export MUST stay in sync with that literal.
+ */
+export const MAX_MISSED_CYCLE_ROWS = 500;
+
+/**
+ * ONE assigned-and-closed cycle for which the record holds NO live confirmation from this member.
+ *
+ * ⚖ EPISTEMIC, NOT CAUSAL (Story 10.27 D1). This row says "no matched contribution is recorded for
+ * this cycle" — a statement about the machine's record. It does NOT say the member missed anything,
+ * and it CANNOT be cause-labelled: of the three causes the commissioning decision names, two are
+ * structurally unrecorded and the third is FENCED against ever being recorded
+ * (`docs/policies/out-of-band-contributions.md` stance 4 + `tests/contribution/no-ingest-path.test.ts`).
+ * Any consumer that renders these rows owes the same register: the record's limit, never a verdict.
+ *
+ * Raw anchors only — no amount, no deceased-family identity, no status tone. The transport layer
+ * resolves whatever member-facing identity it needs (Story 8.6's D6 posture).
+ */
+export interface MissedCycleRow {
+  /** The cycle's UUID — MACHINE provenance (the R7(G) assertion's `cycle_ref`), never display copy. */
+  readonly cycleId: string;
+  /** The pool the member was assigned to for that cycle. */
+  readonly poolId: string;
+  /** The AS-OF closure instant, per the alert stream — the same instant the aggregates bucket on. */
+  readonly closedAt: Date;
+}
+
+/** The driver shape of a missed-cycle row (see {@link RawSkipRow} for why every field is raw). */
+interface RawMissedCycleRow {
+  cycle_id: string;
+  pool_id: string;
+  closed_at: Date | string;
+}
+
+/**
+ * List the member's assigned-and-closed cycles that hold NO live confirmation at `at` — Story 10.27.
+ *
+ * ── ⚖ ONE SCAN, TWO CONSUMERS (D2) ───────────────────────────────────────────────────────────────
+ * These are the SAME rows {@link missedCycleAggregateSql}'s `skips_current_year` and
+ * `opportunities_since_last` are computed over, because both statements build on the SAME
+ * {@link opportunitySequenceCtes} chain. The equality is PINNED by test
+ * (`apps/jobs/tests/missed-cycle-visibility-live.test.ts`): for one member at one `at`, the rows
+ * falling in the IST calendar year of `at` number exactly
+ * `skipsCurrentYear`. A second scan spelled "equivalently" would let the member's view and the
+ * ladder's verdict drift silently.
+ *
+ * ── ⛔ THE COVERAGE GATE (D5 / Finding 3) — this is the part the CTE chain will NOT do for you ────
+ * `deriveContributionFacts` refuses to reason at all when the Pariwar's projection has no coverage,
+ * or when `at` precedes it: "with no projection there is nothing to reason about, and every check
+ * below would otherwise 'pass' over an empty ledger and manufacture a clean record"
+ * (`@twt/validity-service` `producer.ts`). The chain has NO such gate — coverage is a separate scalar
+ * applied one layer up — so an ungated row read would show a member rows the fact layer has already
+ * declared un-derivable. That is the member-facing inverse of the false all-clear, pointed at a
+ * member instead of an operator.
+ *
+ * So the coverage predicate rides the statement itself, folded in as {@link coveredFromSql} — the ONE
+ * spelling — and mirrors the producer's two reachable `null` branches exactly:
+ *   · no coverage row   → `coveredFrom IS NULL`  → zero rows.
+ *   · `at < coveredFrom`                          → zero rows.
+ * (The producer's OTHER `null` family is the structural-incoherence backstop, every branch of which
+ * is documented there as unreachable given the SQL that feeds it.)
+ *
+ * ⚖ Zero rows, and the caller renders NOTHING — no header, no "we cannot show this yet" state. With
+ * no projection the record supports no statement in either direction, and on a member surface any
+ * state shown reads as a statement about THEM (D5). Deliberately the OPPOSITE of Decision
+ * `2026-08-09-093` clause 1, which requires the OPERATOR-facing coverage gap to be NAMED: an operator
+ * can provision the instrument, a member cannot ([[project_r7g_violator_flag_exclusion]] is the same
+ * asymmetry one clause over).
+ *
+ * ── AS-OF CORRECT (AC5) ──────────────────────────────────────────────────────────────────────────
+ * The `missed` predicate is evaluated AT `at`, so a tail-reconciled confirmation landing after the
+ * cycle closed REMOVES the row on the next read — no backfill, no migration, no write. That is the
+ * mechanical guarantee behind "never permanent": the surface is honest about impermanence because the
+ * DATA is impermanent, not because the copy says so.
+ *
+ * Most-recent-cycle-first, matching the passbook's presentation; the ordering is EXPLICIT and total
+ * (`(closed_at, pool_id)` — `member_pool_assignments`'s PK makes `pool_id` unique per member), never
+ * incidental. Tenant-scoped (RLS + the EXPLICIT `pariwar_id` predicate). A pure READ: it records
+ * nothing, emits nothing, and writes nothing.
+ */
+export async function listMemberMissedCycles(
+  db: Db,
+  scope: ContributionFactScope,
+  at: Date,
+): Promise<readonly MissedCycleRow[]> {
+  const result = await db.execute(sql`
+    WITH ${opportunitySequenceCtes(
+      at,
+      sql`mpa.pariwar_id = ${scope.pariwarId} AND mpa.member_id = ${scope.memberId}`,
+      sql`l.pariwar_id = ${scope.pariwarId} AND l.member_id = ${scope.memberId}`,
+    )},
+    -- The coverage watermark, computed ONCE and cross-joined — {@link coveredFromSql} is a scalar
+    -- subquery, and both WHERE arms below need the same value.
+    covered AS (SELECT ${coveredFromSql(scope.pariwarId)} AS covered_from)
+    SELECT s.cycle_id  AS cycle_id,
+           s.pool_id   AS pool_id,
+           s.closed_at AS closed_at
+      FROM sequenced s, covered
+     WHERE s.missed
+       -- ⛔ D5: the coverage gate the CTE chain lacks. Both arms, in the producer's own order.
+       AND covered.covered_from IS NOT NULL
+       AND covered.covered_from <= ${at}
+     ORDER BY s.closed_at DESC, s.pool_id DESC
+     LIMIT 500
+  `);
+
+  return resultRows<RawMissedCycleRow>(result).map((row) => {
+    // `closed_at` reaches the driver from a `min(<timestamptz>)` aggregate, so it can arrive as a
+    // STRING (the 10.24 live bug: an intended `Date` annotation the compiler happily believed).
+    const closedAt = toDate(row.closed_at);
+    if (closedAt === null) {
+      // A closed cycle (this read's whole population) always has a closed_at — a null here is a
+      // data-integrity anomaly, not a value to silently paper over with a bad cast.
+      throw new Error(`missed-cycles: closed_at resolved to null for cycle ${row.cycle_id}`);
+    }
+    return { cycleId: row.cycle_id, poolId: row.pool_id, closedAt };
+  });
 }
 
 /** One member's fact inputs, as the bulk Pariwar read returns them. */

@@ -218,6 +218,31 @@ export function createTrusteeLiteHandlers(deps: AppDeps) {
         now,
       );
 
+      // ══════════════════════════════════════════════════════════════════════════════════════
+      // ⛔ STORY 10.27 (Q5, RATIFIED VERBATIM) — MEMBER VISIBILITY IS NOT MEMBER NOTICE
+      // ══════════════════════════════════════════════════════════════════════════════════════
+      //   "A trustee may NOT cite a member's visibility into their own missed cycles as an
+      //    aggravating 'on notice' factor in a suspension decision."
+      //
+      // Story 10.27 gives a member a read-only view of their own assigned-and-closed cycles that
+      // carry no matched contribution. NOTHING from that surface reaches here. There is no new
+      // violator flag, no new signal category, no new column, and no "has seen their standing"
+      // bit anywhere on this response — and there must never be one.
+      //
+      // The reasoning, recorded at the site because the next reader will otherwise "helpfully" wire
+      // it: this mirrors Decision `2026-08-06-081`'s D4 on the member's side — a clause may
+      // influence trustee UNDERSTANDING without influencing trustee SUSPICION
+      // ([[project_r7g_violator_flag_exclusion]]). A member being ABLE to see their own record says
+      // nothing about their conduct; treating it as aggravation would punish the disclosure itself
+      // and make the honest surface a trap. The underlying facts the ladder evaluates
+      // (`skips_current_year` and friends) already reach this arm through
+      // `scanR7ViolatorCandidates` — that is the SAME scan the member surface reads its rows from,
+      // and it is the ONLY channel by which a missed cycle may inform a trustee.
+      //
+      // Pinned by `apps/api/tests/unit/missed-cycle-non-aggravation.test.ts`. If you are here
+      // because that fence went red: you have routed the member-visibility surface into the
+      // suspicion channel. Do not add it to an allowlist.
+      //
       // ── The R7 violator arm (AC4, D1-B) — THE 10.24 SEAM, FLIPPED ─────────────────────────
       // Gated on `member.moderate` — the flags exist to inform a moderation decision, and a caller
       // who cannot moderate has no business reading a list of suspension candidates.

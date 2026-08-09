@@ -3,9 +3,13 @@ import { FlatList, RefreshControl, StyleSheet } from 'react-native'
 import { useT } from '@twt/i18n/react'
 import { Button, Text, XStack, YStack } from 'tamagui'
 
+import { useRouter } from 'expo-router'
+
 import { CallHelplineCTA } from '../common/CallHelplineCTA'
+import { MissedCycleSection } from './MissedCycleSection'
 import { YogdaanBahiRow } from './YogdaanBahiRow'
 import { useYogdaanQuery } from './useYogdaanQuery'
+import { useSession } from '../../lib/session-context'
 import { formatInr, type YogdaanRow } from './sample-data'
 
 // Yogdaan Bahi (contribution passbook) — Story 8.6 (Task 4). Productionized from the P0-5 prototype: the
@@ -105,10 +109,19 @@ function StickyFooter({ totalInr, rowCount }: { totalInr: number; rowCount: numb
 
 export function YogdaanBahi() {
   const t = useT()
+  const router = useRouter()
+  const { session } = useSession()
   const { data, isFetching, isLoading, isError, refetch } = useYogdaanQuery()
 
   const rows = data?.rows ?? []
   const totalInr = data?.totalInr ?? 0
+  // Story 10.27 — the missed cycles ride the SAME response in their own array (D3). `?? []` mirrors
+  // the `rows`/`totalInr` defaults above and also covers a response restored from the MMKV offline
+  // cache that an older app version wrote without this field. `[]` renders the section ABSENT.
+  const missedCycles = data?.missedCycles ?? []
+  const openHelpdesk = useCallback(() => {
+    router.push('/(helpdesk)' as never)
+  }, [router])
 
   const renderItem = useCallback(
     ({ item, index }: { item: YogdaanRow; index: number }) => <YogdaanBahiRow row={item} rowIndex={index} />,
@@ -164,6 +177,16 @@ export function YogdaanBahi() {
             </Button>
           )}
         </YStack>
+        {/* ⛔ Story 10.27 (AC4) — the missed-cycle section, in the ZERO-ATTESTED-ROWS branch.
+            THIS BRANCH IS THE POINT. A member who has attested nothing but has ≥1 missed cycle is
+            this story's PRIMARY population; a literal reading of "a distinct section in the
+            populated list" would have shown them nothing at all. Outside any FlatList (there is none
+            in this branch), and absent entirely when there are no entries. */}
+        <MissedCycleSection
+          entries={missedCycles}
+          pariwarId={session?.pariwarId}
+          onOpenHelpdesk={openHelpdesk}
+        />
         <StickyFooter totalInr={0} rowCount={0} />
         {/* Cross-cutting helpline fallback (Story 8.11; UX-DR49 + AR-61), rendered OUTSIDE the list in
             this empty/loading/isError branch — never a FlatList item/header/footer, which would
@@ -194,6 +217,16 @@ export function YogdaanBahi() {
         // Save-and-resume (UX-DR50): keep the visible row anchored across a Note round-trip / refetch.
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={() => { void refetch() }} />}
+      />
+      {/* ⛔ Story 10.27 (AC4) — the missed-cycle section, in the POPULATED-LIST branch. A visually
+          distinct section BESIDE the attested rows, never inside them: the Bahi's identity as the
+          record of what the member DID contribute is load-bearing for out-of-band stance 4. Rendered
+          OUTSIDE the FlatList (never an item/header/footer), which also keeps it clear of the
+          Fabric empty→populated remount hazard the branch split above exists for. */}
+      <MissedCycleSection
+        entries={missedCycles}
+        pariwarId={session?.pariwarId}
+        onOpenHelpdesk={openHelpdesk}
       />
       <StickyFooter totalInr={totalInr} rowCount={rows.length} />
       {/* Cross-cutting helpline fallback (Story 8.11; UX-DR49 + AR-61) — OUTSIDE the FlatList, in the

@@ -168,7 +168,36 @@ Escalation 7, unchanged and not this story's to fix.
 
 ## Acceptance Criteria
 
-### AC1 — Niyamavali §8.4 is amended and §8.4a authored, in BOTH locales, and the durable record is the Decision entry
+> ## ✅ RULED 2026-08-10 — Decision `2026-08-10-097`, confirmed by `2026-08-10-098`
+>
+> **Every conditional below reads against these values.** Branches not taken are retained as the reasoning
+> that motivated the ruling, not as live options.
+>
+> | Q | Ruling | Binds |
+> |---|---|---|
+> | **Q1** | **(a)** restoration from termination requires a formal **Trustee Panel act**, stated expressly in §8.4 | AC3 |
+> | **Q2** | **(a)** the notice's *Summary* is a **first-class ABSENT element** (`{ available: false }`) until 10.20 | AC8 |
+> | **Q3** | **(b)** ⚠ **NO** off-portal channel guarantee — in-app-only. *Ruled against the author's recommendation.* | AC8, AC11 |
+> | **Q4** | **(a)** §8.4a lands **complete**, with the four-row mechanization disclosure. No `APPENDIX A` entry. | AC1 |
+> | **Q5** | **(a)** attestation-only precedent extends; counsel review **OWED, un-attested** | AC1 |
+> | **Q6** | **(b-i)** default-OFF flag; **flip gated on Story 10.21 landing only** — ⛔ *not* on the identity control | AC4–AC11 |
+> | **Annex** | **All three affirmed, ratified-as-written** (`098`): the capability bar extends into authentication; the block fails open; the flag is overlay-named. **The capability-bar entry is authorised.** | AC4 |
+>
+> ### ⭐ The Panel's member-facing direction — and the domain model it requires
+>
+> Decision `097` clause 8 (Panel-authored) requires a **controlled termination state, not a generic
+> authentication failure**. `098` adopts the **no-session** implementation of it and fixes the vocabulary:
+>
+> ⛔ **"Login succeeds but returns 403" is the wrong model and must not appear in code, comments, tests or
+> copy.** It collapses two distinct things. The domain sequence is:
+>
+> > **1.** OTP verification **succeeds** → **2.** termination status is **established** → **3.** session
+> > issuance is **denied** → **4.** a **structured termination response** is returned → **5.** the client
+> > renders the **termination surface**.
+>
+> **Identity verification succeeded; authorization to establish a member session did not.** The HTTP
+> representation may remain whatever the existing auth flow requires — the status code is a transport
+> detail. **The domain semantics are not.** Name things for step 3, never for a failed login.
 
 **Given** SCP §4d row 10 (D5) and the §8.4a comparison table at `sprint-change-proposal-2026-08-04.md:540-563`
 **When** the Part 8 amendment lands
@@ -291,6 +320,35 @@ blocks remain separable in the audit log
 `auth.member_withdrawn`: the caller has already proven possession of the OTP for that mobile, so they *are*
 the member, and an honest code is what AC10 renders. `ForbiddenError(message, code, details?)` takes a
 free-form `code` string (`apps/api/src/http-errors.ts:54-58`); there is no enum to extend
+
+**And** ⭐ **the response is STRUCTURED, not a bare error code** (Decision `097` clause 12, confirmed `098`).
+A bare code forces the client to invent the notice, which is how the two locales drift apart and how the
+notice stops matching what §8.4 says. The `details` payload carries **the information required to render the
+termination notice** — the same elements AC8 defines, minus what the rulings removed:
+
+| Element | Source | Ruling |
+|---|---|---|
+| **Decision** | `terminated` | — |
+| **Ground** | the resolved **label** (`moderationReasonLabelKey`) — ⛔ never a reason CODE, never the Tier-1 rationale, never an actor name | AC8 |
+| **Summary** | ⛔ **omitted as a first-class ABSENT element** — `{ available: false }`-shaped, **never an empty string** | **Q2 (a)** |
+| **Effective date** | the moderation action's `acted_at` | — |
+| **Further communication** | the administrative channel, honest about what exists today | AC10, **Q6 (b-i)** |
+
+⛔ **The payload is the notice's data, not its prose.** Rendered strings live in the i18n catalog with en/hi
+parity (AC10); the API returns values, never sentences. A server-rendered sentence would bypass the parity
+gate and put member-facing copy outside the tone guide.
+**And** ⛔ **nothing about the naming may describe a failed login** — per the ruled domain model, this is
+*session issuance denied after successful identity verification*. `blockReason` and the audit `reason` stay
+as specified (they name the **cause**, which is correct); it is the doc-comments, test titles and any new
+symbol that must not say "login failed"
+
+**And** ⭐ **no session, of any kind, is minted on this path** (Decision `097` clause 11, confirmed `098`).
+`issueFullSession` is **not reached**. ⛔ **A restricted, notice-only, or reduced-scope session is expressly
+foreclosed** — it would be a new authentication primitive, and it is strictly worse against the direction's
+own words, since a restricted session *does* establish privileges and would then need a mechanism proving
+they are not "normal" ones. **Notice access is distinguished from ordinary access STRUCTURALLY** — one path
+issues a session and the other does not — **never by a flag, scope or claim on a session object.** AC12
+pins this.
 **And** ⛔ the status check is **exhaustive over `ModerationStatus`, not a bare equality** — a doc-comment is
 not a guard. `MODERATION_STATUSES` is `['none', 'suspended', 'terminated']` (`status.ts:21`), and this story
 makes that union **load-bearing on the authentication gate** for the first time. The codebase has already
@@ -467,6 +525,24 @@ response never reaches
 **And** ⚠ the surface names an **administrative channel**, and the route behind that channel is **Story
 10.21's** — the copy must be honest about what exists today rather than promising a route that is `backlog`
 
+**And** ⭐ **the surface RENDERS FROM THE AC4 PAYLOAD**, not from hardcoded strings keyed off the code alone
+— Decision, Ground label, Effective date, Further communication, with **Summary structurally absent**
+(`{ available: false }`, ⛔ never a blank line rendered as prose). The screen must degrade honestly if an
+element is missing rather than substituting placeholder text.
+
+**And** ⭐ **access to PUBLIC TRUST CONTENT is expressly PRESERVED, without authentication** (Decision `097`
+clause 8, confirmed `098`). The termination surface is **not a dead end**:
+
+- The member reaches public Trust content (the public pages surface) **with no session and no
+  re-authentication** — it is already unauthenticated, so this is a **preservation** requirement, not a new
+  capability. ⛔ **The AC is that nothing in this story breaks it**, and a test proves the route is reachable
+  from the termination surface.
+- ⚠ **The termination surface must not be rendered inside an authenticated navigator or shell.** It sits on
+  the `(auth)` stack alongside `rejoin-locked.tsx` — a surface reached from a member-tab layout would drag a
+  session-shaped context behind it and quietly contradict AC12.
+- ⛔ **No link into the portal, and no CTA that would require a session.** "Public content" means public;
+  a link that lands on a login wall is a worse dead end than no link.
+
 ### AC11 — What this story does NOT close is recorded
 
 **Given** the Story 10.18 convention (its AC9)
@@ -487,6 +563,40 @@ response never reaches
    ruling, with the Q6 entry as the named re-trigger. ⛔ A story that lands its governance half and silently
    drops its implementation half is how `[[project_r7_fact_producer_unbuilt]]` happened — the deferral must
    name **this story's Q6 decision**, not "a later epic"
+
+---
+
+### AC12 — ⭐ The termination-notice path establishes NO session and NO member privileges, and a test proves it
+
+**Given** Decision `2026-08-10-097` clause 8 — *"The notice-only path must not establish normal member
+privileges"* — adopted as the **no-session** implementation by clause 11 and confirmed by `2026-08-10-098`
+**And** the failure this AC exists to prevent, stated plainly: **a future implementation quietly issuing a
+normal session because OTP authentication succeeded.** That is not a hypothetical — it is the most natural
+mistake at this seam, because step 1 of the domain sequence genuinely *does* succeed, and the code path sits
+inside a function whose name and history are about completing a login
+**When** a terminated member completes OTP verification with the flag **enabled**
+**Then** a test asserts **all** of the following, and asserts them **positively** rather than by the absence
+of a 200:
+
+| # | Assertion | Why a weaker form is insufficient |
+|---|---|---|
+| 1 | **No session token of any kind** is present in the response — no access token, no refresh token, no `Set-Cookie` session material | Asserting only "not 200" passes even if a token is issued alongside a 403 |
+| 2 | **No refresh-token row and no trusted-device row** is created for the member by this request | A response-only assertion cannot see a server-side write |
+| 3 | **`issueFullSession` is not invoked** | The one assertion that fails if a future edit re-enters the session path *before* the block |
+| 4 | **The structured payload IS present** — Ground label, Effective date, Further communication, and Summary structurally absent | Proves the path is a *controlled termination state*, not a generic failure (clause 8) |
+| 5 | **A subsequent authenticated call, using anything the response returned, is refused** | Closes the "it wasn't a session, it was just a token" reading |
+
+**And** ⛔ **the OTP-succeeded premise is explicit in the test**, not incidental: the test verifies a
+**correct** OTP and asserts the outcome is nonetheless session-denial. A test that supplies a wrong OTP
+would pass for the wrong reason and would keep passing after the block was deleted
+**And** ⭐ a **revert-sanity PAIR** proves teeth (`[[feedback_gate_scope_semantic_coverage]]`): revert the
+session-denial branch and confirm assertions 1–3 **fail**; confirm the **suspended** member's session is
+still issued under both states. A gate green before and after the change proves nothing
+**And** the test names the **domain sequence**, not a failed login — *"identity verified, session issuance
+denied"* — so the next reader inherits the ruled vocabulary rather than re-deriving it
+**And** ⚠ with the flag **OFF** (the shipped default under Q6 (b-i)) a **second** test pins that the member
+**does** receive a normal session, because that is the shipped truth until Story 10.21 lands and the Panel
+authorises the flip. ⛔ Asserting only the flag-ON behaviour while the default is OFF is a **false green**
 
 ---
 

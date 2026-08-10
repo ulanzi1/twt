@@ -249,7 +249,10 @@ describe('governance_boundary.yaml golden hash', () => {
 // SESSION — a safeguard that fails OPEN. That is deliberate and ratified (Q6 sub-choice (b-i)): it is
 // the status quo, so no degraded path is a regression, and default-OFF must be the behaviour of the
 // ABSENT configuration until the Panel authorises the flip.
-const EXPECTED_FLAG_DEFAULTS_HASH = '266aa14356a231a73be3bcd9924155352ec820967c0809eddeccf2a527466704';
+// ⚖ RE-PINNED within Story 10.19 (2026-08-10): `termination_access_block`'s `description` was
+// shortened 618 → 505 chars to fit the 512-char WIRE cap on `FeatureFlagInventoryResponse`. A
+// description edit is a hash change like any other; the behaviour it describes did not change.
+const EXPECTED_FLAG_DEFAULTS_HASH = 'd5b6d3bb6f98ab882900e053030b427d292f82b8ad67f611b8343adff242b4e8';
 
 describe('FLAG_DEFAULTS golden hash', () => {
   it('matches the frozen hash — a seeded flag default cannot change unnoticed', () => {
@@ -321,6 +324,25 @@ describe('FLAG_DEFAULTS golden hash', () => {
     // `members.state`. Pinned so a rename toward lifecycle vocabulary fails here as well as at parse.
     expect(Object.keys(FLAG_DEFAULTS)).toContain('termination_access_block');
     expect(Object.keys(FLAG_DEFAULTS).some((k) => k.includes('member_lifecycle'))).toBe(false);
+  });
+
+  it('⚠ every description fits the WIRE cap — an overrun blanks the WHOLE inventory, not one flag', () => {
+    // `FeatureFlagInventoryResponse.description` is `z.string().max(512)`
+    // (`packages/contracts/src/feature-flags/feature-flags.ts:94`), and the inventory handler
+    // projects EVERY registered flag into one strict response. So a single over-length description
+    // fails serialization for the entire payload and the admin console renders "Could not load the
+    // flag inventory" — hiding every flag, which is precisely the outage `safeCohort`'s header
+    // (`apps/api/src/modules/feature-flags/handlers.ts:102-112`) records for malformed cohorts.
+    //
+    // ⚖ ADDED by Story 10.19 (2026-08-10) after `termination_access_block` shipped at 618 chars and
+    // took out seven live-DB E2E assertions with a 500. Caught only by an integration suite, which
+    // is a slow and indirect way to learn about a string cap — this asserts it at the source, in a
+    // unit test, where the next author gets the answer in milliseconds and with the reason attached.
+    const WIRE_MAX = 512;
+    const over = Object.entries(FLAG_DEFAULTS)
+      .map(([key, d]) => ({ key, len: d.description.length }))
+      .filter((e) => e.len > WIRE_MAX);
+    expect(over).toEqual([]);
   });
 
   it('⚠ kyc_manual_fallback.fallbackDefault is FALSE — the degraded path keeps members able to join', () => {

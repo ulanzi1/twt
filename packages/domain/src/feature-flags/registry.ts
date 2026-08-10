@@ -280,8 +280,12 @@ export const FLAG_DEFAULTS: Readonly<Record<string, FlagDefault>> = {
     // authorised the flip, and the block becomes unconditional — or it stays as a standing kill
     // switch on the one control that ends member access. Reviewed at the Epic 10 close either way.
     deadBy: '2027-06-30',
+    // ⚠ KEEP THIS UNDER 512 CHARS. It is published on the wire and `FeatureFlagInventoryResponse`
+    // caps `description` at `z.string().max(512)` — an overrun fails serialization for the WHOLE
+    // inventory, blanking EVERY flag on the admin console, not just this one (the `safeCohort`
+    // header above records the same class of outage). The full account lives in the block above.
     description:
-      'When enabled for a cohort, a member carrying a `terminated` moderation overlay is DENIED issuance of a member session (identity verification still succeeds; a structured termination response is returned instead) on both the login and refresh-rotation paths (Story 10.19, FR-56 / Niyamavali §8.4). DEFAULT OFF, and it FAILS OPEN — every degraded path yields a normal session. Enabling requires an explicit Trustee Panel decision AND Story 10.21 (off-portal DPDPA access) to have landed (Decision 2026-08-10-097 clause 6, sub-choice (b-i)) — flipping it before then is a GOVERNANCE VIOLATION, not a configuration change.',
+      'When enabled for a cohort, a member carrying a `terminated` moderation overlay is DENIED issuance of a member session on the login and refresh paths; identity verification still succeeds and a structured termination response is returned (Story 10.19, Niyamavali §8.4). DEFAULT OFF and FAILS OPEN — every degraded path yields a normal session. Enabling needs a Trustee Panel decision AND Story 10.21 landed (Decision 2026-08-10-097, b-i); flipping it earlier is a GOVERNANCE VIOLATION, not a config change.',
   },
   // FR-73 — Telegram mirror. Recorded-but-UNWIRED (Decision 8).
   telegram_mirror: {

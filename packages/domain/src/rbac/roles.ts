@@ -69,6 +69,10 @@ const CLAIM_FILE = permissionKey('claim.file');
 // Story 6.7 — the FR-40 ground-inspection ACTION key + the D6 supervisor-OVERRIDE key.
 const CLAIM_CONDUCT_GROUND_INSPECTION = permissionKey('claim.conduct_ground_inspection');
 const CLAIM_OVERRIDE_GROUND_INSPECTION = permissionKey('claim.override_ground_inspection');
+// ⚠ DEPRECATED at Story 10.18 — SUCCESSOR: `member.moderate` (MEMBER_MODERATE below).
+// The key stays enforceable and all four grants below are honoured; NO NEW GRANT may be added.
+// Machine-readable via `DEPRECATED_PERMISSION_KEYS` / `isDeprecatedKey()` in permissions.ts, and
+// pinned by the holder-set gate in tests/rbac/roles.test.ts. Removal is a separate, later bump.
 const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
@@ -245,6 +249,7 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // catalog) is the correct holder, not `state_trustee`.
     permissions: [
       PARIWAR_AMEND_RULE,
+      // ⚠ DEPRECATED (Story 10.18) — SUCCESSOR: `member.moderate`. Grant HONOURED, not removed; no NEW grant.
       MEMBER_SUSPEND,
       MEMBER_MODERATE,
       // Story 4.6 — reads the FR-12A Member Validity payload (admin surfaces).
@@ -355,6 +360,7 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // Story 2.6 — the "Trustee Panel" approves T&C versions (tc.approve). Story 4.6 —
     // reads FR-12A validity + is the ONLY role that sees the pending_concealment_flag
     // (gated by role/scope in the validity service, NOT a second permission key).
+    // ⚠ DEPRECATED (Story 10.18) — SUCCESSOR: `member.moderate`. Grant HONOURED, not removed; no NEW grant.
     permissions: [CLAIM_APPROVE, MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY, NIYAMAVALI_REVIEW, TC_APPROVE],
     scopeCeiling: 'state',
   },
@@ -367,6 +373,7 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // permissions.ts for why block_admin is DEFERRED (a block grant cannot satisfy a district check).
     permissions: [
       CLAIM_APPROVE,
+      // ⚠ DEPRECATED (Story 10.18) — SUCCESSOR: `member.moderate`. Grant HONOURED, not removed; no NEW grant.
       MEMBER_SUSPEND,
       MEMBER_VIEW_VALIDITY,
       CLAIM_CONDUCT_GROUND_INSPECTION,
@@ -406,6 +413,7 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // preserving the role's `scopeCeiling: 'block'` — and enabling it must require no district-scoped
     // grant to the block administrator. (See check.test.ts for the explicit block-grant-fails-district
     // assertion that pins this behaviour.)
+    // ⚠ DEPRECATED (Story 10.18) — SUCCESSOR: `member.moderate`. Grant HONOURED, not removed; no NEW grant.
     permissions: [MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'block',
   },

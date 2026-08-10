@@ -411,6 +411,12 @@ export const SEED_PERMISSION_KEYS = [
   // inspector_actor_id. Never implicit, never "any district admin". Granted to
   // `pariwar_admin` (+ super_admin) — a supervisor above the district inspector.
   'claim.override_ground_inspection',
+  // ⚠ DEPRECATED at Story 10.18 — SUCCESSOR: `member.moderate`. NOT REMOVED.
+  // The key STAYS enforceable and all four existing grants are honoured; removal is a separate,
+  // later catalog bump taken only once no live grant references it (no story owns that yet — see
+  // the deprecation block below). It is checked by ZERO production call sites today: the moderation
+  // routes gate on `member.moderate`. Machine-readable via `DEPRECATED_PERMISSION_KEYS` /
+  // `isDeprecatedKey()` below — a comment cannot fail CI, and AC6 requires an assertion.
   'member.suspend',
   'member.moderate',
   // Story 4.6 — the FR-12A Member Validity READ key. Distinct from the write-oriented
@@ -652,4 +658,58 @@ const CATALOG_KEY_SET: ReadonlySet<string> = new Set(PERMISSION_CATALOG.keys);
  */
 export function isCatalogKey(key: string): key is PermissionKey {
   return CATALOG_KEY_SET.has(key);
+}
+
+// ── DEPRECATION (Story 10.18) ─────────────────────────────────────────────────────────────────────
+// ⚠ THIS STORY INVENTS THIS CONVENTION. Before 10.18 there was no way to mark a permission key
+// deprecated: `SEED_PERMISSION_KEYS` is a flat `as const` tuple of bare string literals with all
+// semantics in `//` comments, `PermissionCatalog` is `{ catalogVersion, keys }`, and `RoleBundle` is
+// `{ role, permissions, scopeCeiling }`. There was nowhere to hang a flag.
+//
+// WHY A SIBLING TUPLE rather than restructuring the keys into objects: `SEED_PERMISSION_KEYS` being a
+// flat literal tuple is load-bearing — `SeedPermissionKey` derives from it, `PERMISSION_CATALOG.keys`
+// maps over it, `permissions.test.ts` compares against it, and the contracts `PermissionCatalogSchema`
+// mirrors its shape. Turning it into an object array would break all four. This addition is purely
+// additive and breaks nothing.
+//
+// WHY MACHINE-READABLE: `epics.md:3741-3743` asks for BOTH a declaration-site note AND "a CI assertion
+// [that] fails if a new grant appears". A comment satisfies the first and cannot satisfy the second.
+// The holder-set gate in `tests/rbac/roles.test.ts` reads this tuple.
+//
+// ⛔ DEPRECATED ≠ REMOVED. A deprecated key stays in the catalog, stays enforceable, and its existing
+// grants stay honoured. Deprecation forbids only NEW grants. Removal is a separate, later catalog bump.
+
+/**
+ * Catalog keys that are deprecated in favour of a successor. The key remains in
+ * `SEED_PERMISSION_KEYS` and `PERMISSION_CATALOG` — this marks intent, not absence.
+ *
+ * ⚠ Adding a key here does NOT remove it, does NOT revoke existing grants, and does NOT stop it being
+ * enforced. It records that no NEW grant should be added, and gives CI something to assert over.
+ */
+export const DEPRECATED_PERMISSION_KEYS = [
+  // Story 10.18 — superseded by `member.moderate`, the key the moderation routes actually gate on
+  // (`apps/api/src/modules/member-moderation/routes.ts`). `member.suspend` has ZERO production call
+  // sites and predates the moderation surface; its four grants are honoured but frozen.
+  'member.suspend',
+] as const satisfies readonly SeedPermissionKey[];
+
+/** The literal union of deprecated keys. */
+export type DeprecatedPermissionKey = (typeof DEPRECATED_PERMISSION_KEYS)[number];
+
+/** The successor each deprecated key defers to. Every deprecated key MUST name one. */
+export const DEPRECATED_KEY_SUCCESSOR: Readonly<Record<DeprecatedPermissionKey, SeedPermissionKey>> = {
+  'member.suspend': 'member.moderate',
+};
+
+const DEPRECATED_KEY_SET: ReadonlySet<string> = new Set(DEPRECATED_PERMISSION_KEYS);
+
+/**
+ * Is `key` a deprecated catalog key? Accepts a raw string so callers needn't pre-validate.
+ *
+ * ⚠ This is NOT an authorization predicate and must never gate a check — a deprecated key is still
+ * enforceable, and treating `isDeprecatedKey(k)` as "deny" would silently revoke live grants. It exists
+ * for CI assertions, tooling, and admin-surface affordances (e.g. hiding a key from a grant picker).
+ */
+export function isDeprecatedKey(key: string): key is DeprecatedPermissionKey {
+  return DEPRECATED_KEY_SET.has(key);
 }

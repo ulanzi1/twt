@@ -5,7 +5,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { PERMISSION_CATALOG, isCatalogKey } from '../../src/rbac/permissions.js';
+import {
+  DEPRECATED_KEY_SUCCESSOR,
+  PERMISSION_CATALOG,
+  SEED_PERMISSION_KEYS,
+  isCatalogKey,
+  isDeprecatedKey,
+} from '../../src/rbac/permissions.js';
 import {
   bundleForRole,
   defaultRoleBundles,
@@ -446,6 +452,60 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     // deferral-with-acceptance-condition rather than a removal. See the DEFERRAL PIN in check.test.ts
     // for the scope algebra, and the assertion below for the catalog-dependent half.
     expect(holders).toEqual(['pariwar_admin', 'super_admin', 'trustee_panel', 'verifier']);
+  });
+
+  it('Story 10.18 AC6 GATE — member.suspend is DEPRECATED: its holder set is FROZEN, no new grant may appear', () => {
+    // ── WHY THIS IS A TEST AND NOT A scripts/ GATE ────────────────────────────────────────────────
+    // AC6 permits either. This is a test because the thing it inspects is an IMPORTED DATA STRUCTURE
+    // (`defaultRoleBundles`), not a source tree. The `scripts/<name>/check.ts` gates in this repo exist
+    // for invariants that must SCAN FILES (governance-boundary, friction-budget) — those cannot be
+    // expressed as a unit test because their subject is text across many files. This one has full type
+    // access to its subject in-process, needs no runner, no root `package.json` entry, and no
+    // `ci-local.sh` registration, and it runs in the existing `test` job on every CI run.
+    //
+    // ── IT IS A WHOLE-STATE SCAN, NOT A GIT-DIFF ──────────────────────────────────────────────────
+    // Per the repo standard (`scripts/governance-boundary/check.ts`): it recomputes the ENTIRE holder
+    // set from the live bundles every run. It therefore cannot miss a violation added earlier on the
+    // branch, and cannot wrongly pass one that is already merged.
+    const KEY = 'member.suspend';
+    expect(isDeprecatedKey(KEY)).toBe(true); // the machine-readable marker, not a comment
+    expect(DEPRECATED_KEY_SUCCESSOR[KEY]).toBe('member.moderate'); // every deprecated key names a successor
+
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+
+    // The FROZEN baseline: the four explicit grants that predate the deprecation, plus super_admin,
+    // whose bundle is `permissions: PERMISSION_CATALOG.keys` and therefore holds every catalog key —
+    // it appears here like any other holder, because this set is collected FROM the bundles.
+    expect(
+      holders,
+      `\n  member.suspend is DEPRECATED (Story 10.18; successor: member.moderate) and its holder set is FROZEN.\n` +
+        `  Expected: block_admin, district_admin, pariwar_admin, state_trustee, super_admin\n` +
+        `  Actual:   ${holders.join(', ')}\n` +
+        `\n` +
+        `  If you ADDED a holder: don't. Grant 'member.moderate' instead — that is the key the moderation\n` +
+        `  routes actually gate on, and the one the Niyamavali §8.7 Trustee Panel holds.\n` +
+        `  If you REMOVED a holder: removal is a SEPARATE, later catalog bump, taken only once no live\n` +
+        `  grant references the key. Deprecation freezes the set; it does not shrink it.\n` +
+        `\n` +
+        `  ⚠ THIS GATE'S REACH IS THE DECLARATIVE BUNDLES ONLY. It inspects 'defaultRoleBundles'. There is\n` +
+        `  NO SQL seed inserting role_grants rows, NO production caller of seedRoles(), and NO admin route\n` +
+        `  that writes role_grants — the Story-1.9+ role-admin surface was never built — and static CI has\n` +
+        `  no database. A grant written directly to the role_grants TABLE would NOT be caught here.\n` +
+        `  Re-trigger: the first story that builds a role_grants write path must extend this assertion.\n`,
+    ).toEqual(['block_admin', 'district_admin', 'pariwar_admin', 'state_trustee', 'super_admin']);
+  });
+
+  it('Story 10.18 — member.suspend stays ENFORCEABLE: deprecation marks intent, it does not remove the key', () => {
+    // ⛔ DEPRECATED ≠ REMOVED. Three properties that must survive the deprecation, each asserted so a
+    // later "cleanup" that deletes the key fails loudly rather than silently revoking four live grants.
+    expect(isCatalogKey('member.suspend')).toBe(true); // still in the catalog
+    expect(PERMISSION_CATALOG.keys).toContain('member.suspend'); // still enumerated
+    expect(SEED_PERMISSION_KEYS).toContain('member.suspend'); // still in the source tuple
+    // And the successor is a real catalog key, not a hopeful string.
+    expect(isCatalogKey(DEPRECATED_KEY_SUCCESSOR['member.suspend'])).toBe(true);
   });
 
   it('Story 10.18 DEFERRAL PIN (catalog-dependent): verifier STILL HOLDS member.moderate, inertly', () => {

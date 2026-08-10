@@ -1,6 +1,16 @@
 # Trustee Panel Routing Note — Story 10.19, Termination Ends Membership Privileges
 
 **Status:** ⏳ **Open — six questions, awaiting ruling.** Q1 and Q6 are ⛔ **BLOCKING**.
+⚠ **AMENDED 2026-08-10, before any ruling, and the amendment is material to Q6.** An investigation after
+this note was first committed established that **the login block does not end a terminated member's
+participation — it ends one account's access.** Nothing in the system prevents the same person signing up
+again on a different mobile number. The Q6 option table originally credited option (a) with *"closes
+ESCALATION 3 immediately"*; that claim was **too strong and has been corrected**, and option (b) has gained
+an explicit sub-choice about what the flip is gated on. **No question was added or removed; the question set
+is unchanged at six.** The finding is recorded in full at
+`_bmad-output/implementation-artifacts/deferred-work.md` (*"identity collision at signup is unenforced"*).
+The Panel is asked to rule on the corrected version. Nothing here has been ratified, so this is an
+amendment to an open note, **not** a re-reading of a ruled one (`[[feedback_supersede_never_reinterpret]]`).
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-10, against
 `_bmad-output/implementation-artifacts/10-19-termination-ends-membership-privileges.md`
@@ -93,6 +103,7 @@ has no owner.
 | **The appeal CTA's real destination** | **Story 10.22.** This story removes Decision 6's *justification*, not the *need* for an appeal route. |
 | **Minting a 10th `AlertCategory`** | ⛔ Refused under every Q3 option. `Alert` is a `.strict()` discriminated union and an 8th push category would redefine FR-71, which Story 5.2 froze in terms. |
 | **Amending `architecture.md`** | Not amended — Decision `2026-08-04-072` clause 3. The record is an `AI-10-2` doc block at the point of use. |
+| **Building the identity-collision control** (the Aadhaar-HMAC key) | ⚠ **Surfaced by the Q6 amendment, deliberately NOT routed here.** Its policy question — what a collision *means* — is genuinely the Panel's, but it cannot be ruled before a **feasibility answer** the repo does not have: key stability at the DigiLocker boundary is unverified, and one legitimate outcome is *"no stable key is obtainable."* Ruling on a mechanism that may not exist is the manufactured-ratification failure mode this note is built to avoid. Recorded in `deferred-work.md` with an unassigned owner, awaiting its own story. **Q6(b-ii) is the only place it bears on a ruling here, and only as a sequencing choice.** |
 
 ---
 
@@ -307,11 +318,53 @@ Story 10.21 with the disposition *"**Release gate on enabling termination**"*. *
 therefore not an implementer's sequencing call — it is a request to restate a gate the correct-course
 itself set.** That is why it is routed.
 
+### ⚠ AMENDMENT — what the block actually buys is smaller than this note first claimed
+
+**The login block ends one account's access. It does not end a terminated member's participation.** Traced
+live after this note was first committed, and recorded in full in `deferred-work.md`:
+
+| Layer | Why a second account is not caught |
+|---|---|
+| **Signup dedup** | `resolveMembersByMobile` (`member-auth.repo.ts:82`) resolves by `mobile_blind_index` **and nothing else**. A different mobile ⇒ zero rows ⇒ clean signup. No 409, no 403, no flag. |
+| **The rejoin lock** | Keys on `terminated` (`signup.handlers.ts:119`) and is scoped to the **same Pariwar**. A **suspended** member has no lock at all — not even on the same mobile. |
+| **DigiLocker KYC** | The Aadhaar reference is discarded at the provider boundary — `mapper.ts:89` keeps the **last 4 digits only**, stored with **no unique constraint** (migration `0024:33`). Not an identity key. |
+| **Manual KYC** | Written `self_declared`, `trusteeVerified: false` — and **nothing ever writes `true`**. There is no reviewer surface (`apps/admin/src` has no KYC module). |
+
+⚠ **The control that would close this is architecturally committed and unbuilt.** `architecture.md:1748-1749`
+promises *"Aadhaar HMAC hash retained for the 12-month rejoin lock (FR-6); **cross-attempts under same
+Aadhaar fail attribution**"*. The column exists (`member_withdrawals.aadhaar_hmac`) and the table GRANTs
+UPDATE specifically so it can be backfilled — **the only writer in the repo is a test.**
+
+**Why the Panel is being told this before ruling.** Q6 is a trade: an exposure accepted in exchange for a
+harm closed. This note originally priced the "harm closed" side at **all of ESCALATION 3**. The honest
+price is **the fraction of terminated members who do not obtain a second mobile number** — unknown, and
+plausibly not large. ⛔ **This is not an argument that the block is worthless.** A member who does not get a
+second SIM is genuinely blocked, and no identity control can be built on top of an authentication gate that
+does not exist. It is an argument that **the exposure and the benefit are closer in size than the original
+table implied**, which is the Panel's judgement to make and not the author's to absorb silently.
+
 | | Option | Consequence |
 |---|---|---|
-| **(a)** | **Ship now**, under a restated release gate. | Closes ESCALATION 3 immediately. ⛔ Requires the Panel to **expressly withdraw or restate** the `:156` release gate and accept a bounded window in which a terminated member has **no route at all** to their statutory rights. That is a DPDPA exposure, not a scheduling preference. |
-| **(b)** | ⭐ **Ship behind a default-OFF flag** — the Story 10.23 precedent (`2026-08-07-088` clause 4 / `2026-08-07-089`). | The mechanism lands built, tested and revert-proven; the flip becomes a **single auditable act the Panel itself authorises**, once 10.21 provides the replacement route. The release gate is honoured rather than withdrawn. ⚠ Costs the copy conditionality below. |
-| **(c)** | **Hold.** The story lands as its **governance half only** (AC1, AC2, AC3, AC11). | Nothing ships that outruns 10.21. ⚠ Leaves ESCALATION 3 — a **live open harm** — open with no date, and AC4–AC10 recorded as ruled-deferred with this Q6 entry as their re-trigger. |
+| **(a)** | **Ship now**, under a restated release gate. | Closes ESCALATION 3 **for the terminated account, not for the terminated person** (see the amendment above). ⛔ Requires the Panel to **expressly withdraw or restate** the `:156` release gate and accept a bounded window in which a terminated member has **no route at all** to their statutory rights. ⚠ **The amendment cuts hardest here:** this option pays a DPDPA exposure in full for a partial close. |
+| **(b)** | ⭐ **Ship behind a default-OFF flag** — the Story 10.23 precedent (`2026-08-07-088` clause 4 / `2026-08-07-089`). | The mechanism lands built, tested and revert-proven; the flip becomes a **single auditable act the Panel itself authorises**. The release gate is honoured rather than withdrawn. ⚠ Costs the copy conditionality below, and **requires the sub-choice below on what the flip is gated on**. |
+| **(c)** | **Hold.** The story lands as its **governance half only** (AC1, AC2, AC3, AC11). | Nothing ships that outruns 10.21. ⚠ Leaves ESCALATION 3 open with no date — though the amendment shows it would remain **partially open under (a) and (b) as well**, so "hold" forgoes less than it first appeared. AC4–AC10 recorded as ruled-deferred with this Q6 entry as their re-trigger. |
+
+### ⚠ Sub-choice, live only under (b): what is the flip gated on?
+
+Option (b) defers the decision to a later flip. **This note originally left unstated what that flip waits
+for**, which is how an un-gated re-commitment decays (`[[feedback_record_unattested_no_backfill]]`). The
+Panel is asked to name it:
+
+| | The flip is authorised once… | Consequence |
+|---|---|---|
+| **(b-i)** ⭐ | **Story 10.21 lands** — the off-portal DPDPA route exists. | Honours the `:156` release gate exactly as the SCP wrote it. The identity gap stays open and is carried as a **known, recorded** limitation with its own owner. **Terminating a member means something enforceable, if incompletely.** |
+| **(b-ii)** | **Story 10.21 lands AND the identity-collision control is built.** | The block means what the Niyamavali will say it means. ⚠ Gates the flip on a story that **does not exist and may not be buildable** — key stability at the DigiLocker boundary is unverified, and one legitimate outcome of that work is *"no stable key is obtainable."* This risks an indefinite hold wearing the clothes of a plan. |
+
+**Recommendation on the sub-choice (non-binding): (b-i).** Do not gate an authentication fix on an identity
+feature whose feasibility is unproven. ⚠ **But the Panel should rule (b-i) knowingly** — under it, the
+Niyamavali will state that termination *"ends all membership privileges and authenticated member access"*
+while the system enforces that against one account and not one person. **That gap must be recorded in AC11
+as a ruled-upon limitation**, not discovered later by a reader comparing the instrument to the code.
 
 ### ⚠ The branch note — under (a) and (c), two ACs would write falsehoods
 
@@ -343,9 +396,17 @@ Under a default-OFF flag the **shipped default is that termination still keeps l
 ⛔ **Neither (a) nor (b) is a licence to sweep first and reconcile later.** Under (c) the sweep does not run
 at all.
 
-**Recommendation (non-binding): (b).** It is the only option that neither withdraws a gate the
-correct-course set nor leaves a live open harm open indefinitely, and it moves the decision to a single
+**Recommendation (non-binding): (b), with sub-choice (b-i).** It is the only option that neither withdraws
+a gate the correct-course set nor leaves the harm open indefinitely, and it moves the decision to a single
 auditable flip — the shape the Panel has already used once, on Story 10.23.
+
+⚠ **The amendment did not change this recommendation, and the Panel should know why.** If anything it
+**strengthens** (b) against (a): the weaker the block's real effect, the worse the trade in (a), which pays
+a full DPDPA exposure up front for it. Against (c) the amendment cuts the other way and narrows the
+margin — (c) now forgoes less than it appeared to. **The author's judgement remains (b)**, because a
+partially-effective block is still the substrate every later identity control has to sit on, and because
+(b) is the only option that lets the Panel see 10.21 land before anything takes effect. **A Panel that
+weighs the corrected numbers differently and rules (c) would not be ruling against the evidence.**
 
 ---
 
@@ -360,13 +421,20 @@ Stated as a **governance consequence** per question, not as a prediction about i
 | **Q3** | AC8 | Defaults to **NO**. The notice is in-app-only, and **AC11 records it as a ruled-upon reach limitation** with the `CostOptimizationInput` exemption field named as the re-trigger. ⚠ Failure direction: a member who cannot open the app receives nothing. |
 | **Q4** | AC1 | Defaults to **(a) with the disclosure** — the full twelve rows, three of them flagged un-mechanized with named owners. No `APPENDIX A` entry; `niyamavali.md:196` unchanged. |
 | **Q5** | AC1 | Defaults to **proceed on `080`/`096`**; counsel review recorded as **OWED**. No `[LEGAL]` line is written under any circumstance. |
-| **Q6** | AC4–AC11 | ⛔ **The implementation half cannot begin.** The story lands as its governance half only (AC1, AC2, AC3, AC11) and AC4–AC10 are recorded as **ruled-deferred with this Q6 entry as their named re-trigger** — not "a later epic". ⚠ `:242` is left unchanged and still passing; the AC9 sweep does not run. |
+| **Q6** | AC4–AC11 | ⛔ **The implementation half cannot begin.** The story lands as its governance half only (AC1, AC2, AC3, AC11) and AC4–AC10 are recorded as **ruled-deferred with this Q6 entry as their named re-trigger** — not "a later epic". ⚠ `:242` is left unchanged and still passing; the AC9 sweep does not run. ⚠ **If (b) is ruled without the sub-choice**, the flip is authorised with nothing named as its precondition — the un-gated re-commitment this note exists to avoid. Default sub-choice if (b) is ruled bare: **(b-i)**, recorded as a default taken. |
 
 ⚠ **The failure direction is NOT uniformly safe here, and that is why Q6 blocks.** In Story 10.18 every
 non-blocking default granted no capability and imposed no sanction. Here, **Q6's default direction leaves a
 live open harm open** — ESCALATION 3, a terminated member retaining authenticated access to the system —
 while **the opposite direction opens a DPDPA gap**. There is no direction in which nothing happens. The
 Panel is choosing which exposure to carry, and for how long.
+
+⚠ **And per the amendment, no available direction closes ESCALATION 3 fully.** Under every option — ship,
+flag, or hold — a terminated member who obtains a second mobile number re-enters as a new member, unlinked
+to the old record. **That is true today, and this story does not change it.** The Panel is choosing how much
+of the harm to close and what to pay for it, not whether to close it. ⛔ **No ruling here should be recorded
+as having ended termination-evasion**, and the Decision entry must say so in terms — an overstated closure
+is how a gap stops being looked at.
 
 ⚠ **A default taken must be recorded in the Decision entry as a default taken, never as a ruling.** A safe
 default later read as a Panel decision is how convention hardens into apparent authority — the condition
@@ -397,3 +465,14 @@ Story 10.18 existed to end, one story ago.
 - `packages/domain/src/member/moderation/status.ts:47-48` — the `terminated --restore--> none` arm, **not removed** under Q1(a); `index.ts:22-25` — the `TERMINAL_STATES` prohibition
 - `apps/api/src/config.ts:377` — `MEMBER_ACCESS_TTL_MS`, default 15 min; the bounded residual disclosed rather than routed
 - `.gitignore:68` — `docs/legal/` untracked; why the Decision entry must quote both sections verbatim in both locales
+
+**Added by the 2026-08-10 amendment (Q6):**
+
+- `_bmad-output/implementation-artifacts/deferred-work.md` — *"identity collision at signup is unenforced"*; the full trace, the three constraints on any fix, and the re-trigger
+- `_bmad-output/planning-artifacts/architecture.md:1748-1749` — the committed-but-unbuilt Aadhaar-HMAC rejoin key: *"cross-attempts under same Aadhaar fail attribution"*
+- `apps/api/src/modules/auth/member/member-auth.repo.ts:82` — `resolveMembersByMobile`, keyed on `mobile_blind_index` alone
+- `apps/api/src/modules/auth/member/signup.handlers.ts:119` — the rejoin guard, keyed on `terminated` and scoped to `priorInThisPariwar`
+- `apps/api/src/modules/kyc/providers/digilocker/mapper.ts:79-89` — where the Aadhaar reference is read and masked to last-4; the only boundary at which a stable key could be captured
+- `packages/domain/src/schema/member_withdrawals.ts:30-34`, `:75` — the `aadhaar_hmac` seam column and its own account of why it is empty
+- `packages/domain/migrations/0024_member-kyc-profiles.sql:33`, `:36` — `aadhaar_masked_id` with no unique constraint; `trustee_verified` defaulting false, never written true
+- `apps/api/src/modules/kyc/kyc.handlers.ts:416` — the manual path writing `trusteeVerified: false`, with no reviewer surface anywhere in `apps/admin/src`

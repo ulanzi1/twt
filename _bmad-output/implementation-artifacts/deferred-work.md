@@ -3657,3 +3657,84 @@ never "final"._
 4. **Family A is NOT Story 1.18's to re-open.** The 24 rank-order blocks were rewritten in place because
    no resolver can ever lift them. Story 1.18 owns Family B's 21 blocks only, and its story text carries
    that prohibition.
+
+---
+
+## Deferred from: investigation — identity collision at signup is unenforced (2026-08-10)
+
+**Raised** during Story 10.19 authoring, from the question *"if a suspended member signs up again on a
+different mobile number, does KYC catch him?"* **Traced live at `a961e3b`. The answer is no — at every
+layer.** This is not a code-review finding against a story; it is a standing gap in a control the
+architecture already commits to, recorded here because nothing else records it.
+
+### The gap, and the four places it fails
+
+| # | Layer | Why it does not catch a second account |
+|---|---|---|
+| 1 | **Signup dedup** | `resolveMembersByMobile` (`member-auth.repo.ts:82`) resolves by `mobile_blind_index` **and nothing else**. A different mobile ⇒ a different blind index ⇒ zero rows ⇒ `priorInThisPariwar` undefined ⇒ signup proceeds clean. No 409, no 403, no flag. |
+| 2 | **The moderation rejoin lock** | Keys on `moderationStatus === 'terminated'` (`signup.handlers.ts:119`). A **suspended** member has no rejoin lock at all — not even on the same mobile. The lock is also scoped to `priorInThisPariwar`, so it is per-Pariwar by construction. |
+| 3 | **Automatic (DigiLocker) KYC** | The Aadhaar reference is discarded at the provider boundary — `mapper.ts:89` calls `maskAadhaar(referenceId)`, keeping the **last 4 digits only**. `member_kyc_profiles.aadhaar_masked_id` is nullable Tier-3 `text` with **no unique constraint** (migration `0024:33`). Last-4 is not an identity key (1-in-10⁴ collisions). |
+| 4 | **Manual KYC** | Stores name/dob/photo as `self_declared`, `trusteeVerified: false` (`kyc.handlers.ts:416`). **Nothing ever writes `true`** — the schema comment says "Epic 4 flips `trustee_verified`"; Epic 4 closed and no writer exists. `find apps/admin/src -ipath "*kyc*"` is **empty**: there is no reviewer surface. "Manual KYC" today means *self-declared and unreviewed*. |
+
+### The control is architecturally committed and unbuilt
+
+`architecture.md:1748-1749`, verbatim, under §2.12 RTBF mechanics:
+
+> Identifier retention: Aadhaar HMAC hash retained for the 12-month rejoin lock (FR-6);
+> **cross-attempts under same Aadhaar fail attribution.**
+
+The column exists — `member_withdrawals.aadhaar_hmac` — and `member_withdrawals.ts:30-34` is candid that it
+is a **seam only**: *"NULLABLE … the full Aadhaar is masked to last-4 at the KYC provider boundary today
+(nothing to HMAC at withdrawal time). v1 keys the lock on the mobile blind index."* The table even GRANTs
+UPDATE specifically so the column can be backfilled without a migration. **The only writer in the repo is a
+test** (`member-withdrawals.spec.ts:121`) asserting the backfill is possible. No production path populates
+it. `[[feedback_record_unattested_no_backfill]]`: recorded as un-built, not as partially working.
+
+### ⛔ What Story 10.19 does and does not do about it
+
+**Story 10.19 does not close this and must not be expanded to.** Its login block ends *one account's*
+authenticated access; it does nothing about a *second* account. If Q6 rules the block ships, the gap becomes
+a **live, known bypass of a rule the system has just started enforcing** — which is precisely why it is
+filed now rather than after. 10.19 already carries three flagged scope additions and two blocking Panel
+questions; a fourth would make Q6 unanswerable.
+
+### Three constraints any fix must satisfy — stated so the eventual story does not rediscover them
+
+1. ⛔ **It cannot be a UNIQUE constraint.** R2 permits multi-Pariwar membership: one person legitimately
+   holds several `members` rows. A globally-unique Aadhaar key would **break a supported case**. The shape
+   must mirror `member_identities UNIQUE(pariwar_id, mobile_blind_index)` — unique *within* a Pariwar,
+   permitted across them — and cross-Pariwar collisions must feed a **policy decision**, not a DB error.
+2. ⚠ **Key stability is UNKNOWN and is a precondition, not an implementation detail.** `mapper.ts:79-84`
+   reads the root `referenceId` attribute first, falling back to `UidData`/`Poi` `uid`. Real eAadhaar
+   `referenceId` values are typically **last-4 + a timestamp** — *not stable across pulls*. Hashing that
+   would dedup nothing and would look like it worked. **Whether a stable key is obtainable must be answered
+   against a live provider response before any acceptance criterion is written.**
+3. ⚠ **Retaining an Aadhaar-derived identifier is itself a governance and regulatory question.** Aadhaar
+   Act / UIDAI storage restrictions bear on holding even an HMAC; DPDPA retention bears on an identifier
+   that **survives anonymization** (architecture files it under RTBF mechanics for exactly that reason).
+   This is a counsel question on a track that is not open — Story 0.13 has not closed and no counsel is
+   selected.
+
+### The policy question, which is not self-evident
+
+A collision is not obviously a block. On a match the system could refuse signup, admit-and-flag for trustee
+review, or admit silently and surface the link on the moderation surface. Each has a different false-positive
+cost, and false positives here are **an identity-verified person told they may not join**. This is the same
+class of question Story 10.19 routed as Q1–Q6, and it belongs to the same body.
+
+### Disposition
+
+- **Owner: UNASSIGNED.** Stated plainly rather than routed to an epic — per
+  `[[project_r7_fact_producer_unbuilt]]`, a deferral naming an epic expires unowned, and this entry is
+  written to avoid that failure mode rather than repeat it.
+- **Recommendation: mint its own story** (see the note below). It is cross-cutting — signup, KYC provider
+  boundary, withdrawal, moderation, RTBF — has a governance half and a feasibility precondition, and is
+  not a task inside any story that exists today.
+- **Re-trigger — whichever fires FIRST:**
+  1. **Story 10.19's Q6 ruling authorises the login block to be enabled** (ship-now, or the default-OFF
+     flag being flipped). At that instant the gap stops being latent and becomes a live bypass of an
+     enforced rule.
+  2. **Any story that touches `apps/api/src/modules/kyc/providers/digilocker/mapper.ts`, or adds a second
+     KYC provider under the FR-58C swap.** The key can only be captured at that boundary — once the
+     response is mapped to `KycProfile`, the material is gone. A provider change that lands without
+     capturing it re-buries the gap for the life of that provider.

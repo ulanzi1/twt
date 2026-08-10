@@ -75,7 +75,8 @@ export const MAX_POOL_FIXED_AMOUNT_INR = 10_000_000;
 /** Minimum distinct-actor size of an emergency attesting panel (review hardening) — a lone actor is
  *  not a "panel"; it lets a single admin be their own sole attester, undercutting the R9-equivalent
  *  governance posture (D3). Full trustee-grant verification of panel membership is deferred (needs a
- *  trustee directory / RBAC geo-scope resolver not built until Epic 3) — this is the mechanical floor. */
+ *  trustee directory / RBAC geo-scope resolver — the resolver half is Story 1.18 (Geo-Tree Scope Resolver); the
+ *  trustee directory has no owner yet) — this is the mechanical floor. */
 export const POOL_FIXED_AMOUNT_MIN_PANEL_SIZE = 2;
 
 /** The minimal window fields the pure selector reasons over (a schedule row provides them all). */

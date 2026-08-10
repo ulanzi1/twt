@@ -15,7 +15,7 @@
 // explicit "not yet targetable" indicator — but they resolve to FALSE plus a logged seam note. The
 // `members` table (schema/members.ts) carries only `state` (LIFECYCLE, not geography) + `pariwar_id`
 // — there is NO queryable district / designation / cohort attribute to select on. Fabricating one
-// now would collide with Epic-3 geo ([[project_rbac_geo_scope_containment]] "resolve only what
+// now would collide with Story 1.18's geo ([[project_rbac_geo_scope_containment]] "resolve only what
 // exists"). The seam lights up for free when the selection primitive lands.
 
 import type { BannerAudienceScope } from '../schema/banners.js';
@@ -37,7 +37,7 @@ const defaultLogger: BannerAudienceLogger = {
  * a logged seam note.
  *
  * Takes no member row on purpose: neither resolvable scope depends on any member attribute, and the
- * three unresolvable ones have no attribute to depend on. When the Epic-3 geo / designation
+ * three unresolvable ones have no attribute to depend on. When Story 1.18's geo / designation
  * primitive lands, this signature grows a member argument and the three arms light up — the call
  * sites do not move.
  */

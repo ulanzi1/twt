@@ -10,7 +10,7 @@
 // key at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the member-validity / nominee-bank
 // pariwar-dimension precedent; NO server-derived-district preHandler, the target IS the tenant) + tenant
 // match — fail-closed, audited. v1 actor = pariwar_admin-as-Trustee-Lite (D-B; direct state_trustee gating
-// is DEFERRED to the Epic-3 geo-tree resolver — see permissions.ts).
+// is RANK-ORDER BLOCKED (packages/domain/src/rbac/scope.ts §RANK-ORDER — no resolver can lift it) — see permissions.ts).
 //
 // ── Commit is additionally step-up-gated (D-G/AC5) ──────────────────────────────────────────
 // The bulk commit requires a FRESH ~5-min elevation bound to `cycle_freeze_commit` (Story 1.9 / 5.9

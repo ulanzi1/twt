@@ -851,6 +851,8 @@ _Not code-review findings — forward seams Story 9.7 deliberately RESERVES for 
 - **`VERIFIER_CONSOLE_MAX_READS` doesn't account for the preHandler's own 2 DB round-trips** (`getClaimCase` + `getMemberPostingLatest` in `resolveVerifierConsoleDistrict`) before the assembler runs — understates true per-request DB cost, though the documented counter scope (D9/R4) already states what's counted (assembler-only). No runtime regression guard exists if the ceiling is silently exceeded later. **Re-trigger:** if a future change adds reads to either the preHandler or the assembler, re-measure and consider a runtime assertion, not just the live-DB test's implicit check.
 - **No verifier-annotation capture exists for peer-mesh responses.** Story 6.10's AC2(c) requires "peer-mesh responses with verifier annotations." Story 6.6's `ClaimPeerMeshRespondedPayloadSchema` (`packages/domain/src/claim/events.ts:125-134`) only ever captured `responder_member_id` + `response` — no verifier-added note/annotation field. **Decision (2026-07-11, user direction):** peer responses ship as specified; verifier annotations are modeled as an explicit `not_available_yet` (`PeerMeshVerifierAnnotations` in `packages/contracts/src/claims/verifier-console.ts`, wired through the assembler + rendered in `SignalsPanel`) rather than silently dropped. **Re-trigger:** when a story lands verifier-annotation capture on peer-mesh responses (a Story 6.6-substrate change — new event/field), it plugs into the existing `not_available_yet` slot by adding a `present` variant to `PeerMeshVerifierAnnotations` — no other contract shape changes needed.
 - **No RBAC path exists today for a global/higher-scope actor to open a claim whose deceased member has no resolvable posting district.** `hasPermission`/`scopeContains` (`packages/domain/src/rbac/check.ts`, `packages/domain/src/rbac/scope.ts`) fail closed on any unresolved (`null`-value, non-`global`-dimension) target locator before any grant — including `global` — is ever examined; this is a deliberate, doubly-enforced, system-wide invariant, not specific to this route. **Decision (2026-07-11, user direction):** this is the correct, shipped behavior — all actors fail closed when the posting district is unresolved. Whether a `global` grant should ever bypass an unresolved-target-locator denial is deferred to **RBAC architecture work** (not a 6.10/6.12/6.13 story-level concern). **Re-trigger:** if/when RBAC architecture work revisits the unresolved-target-locator invariant (e.g. as part of the Epic-3 geo-tree resolver), decide there whether `global` grants should get an explicit carve-out, and update `check.ts`/`scope.ts` + this route's authorization matrix together.
+  
+  ⚠ **Re-pointed by Story 10.18 (2026-08-10): successor is `Story 1.18 — Geo-Tree Scope Resolver`**, not "Epic 3". Family B — an unresolved target locator is a genuine geo-tree gap that a resolver fixes. ⛔ Note the DISTINCT rank-order case, which Story 1.18 does NOT own: a `state`-ceiling actor failing a `pariwar` check is blocked by the ordering itself and no resolver lifts it (`scope.ts` §RANK-ORDER).
 
 ---
 
@@ -1469,7 +1471,13 @@ Closure-language posture per [[feedback_closure_language_precision]]: test corre
 
 Closure-language posture per [[feedback_closure_language_precision]]: engineering substrate is **Closed by [edit]**; future-Story seams are **Resolved via explicit deferral** (gap intentional, trigger recorded).
 
-- **D1-1.8: Geo-tree containment resolver (the canonical org hierarchy)** — `rbac/scope.ts` `scopeContains` defers strictly-narrower geo containment (e.g. state→district→block) to an injectable `GeoTreeResolver`; the **default `denyDeeperGeoResolver` fails closed** (deny-deeper). Exact-node, `global`, `self`, and `pariwar`-ceiling containment resolve now. The canonical org/geo tree (state→district→block membership) is member/geo data that lands at **Epic 3**; the real resolver drops in behind the existing interface then. **Resolved via explicit deferral** — recorded as a seam, NOT a faked org tree. Re-trigger: Epic 3 member/geo data landing. ADR-0008 §Decision-4.
+- **D1-1.8: Geo-tree containment resolver (the canonical org hierarchy)** — `rbac/scope.ts` `scopeContains` defers strictly-narrower geo containment (e.g. state→district→block) to an injectable `GeoTreeResolver`; the **default `denyDeeperGeoResolver` fails closed** (deny-deeper). Exact-node, `global`, `self`, and `pariwar`-ceiling containment resolve now. **Resolved via explicit deferral** — recorded as a seam, NOT a faked org tree. ADR-0008 §Decision-4.
+  
+  ⛔ **REWRITTEN by Story 10.18 (2026-08-10). The original re-trigger EXPIRED UNOWNED and this entry is the worked example of why a deferral must name a STORY.** It previously read: *"the canonical org/geo tree … lands at **Epic 3**; the real resolver drops in behind the existing interface then. **Re-trigger:** Epic 3 member/geo data landing."* **That trigger fired and nobody saw it.** `member_postings.district` landed with Stories 3.1/3.9 — both `done`, along with all fourteen Epic 3 stories and the retrospective — and **no resolver was built**, because an epic carries no acceptance criteria and nothing owns it ([[project_r7_fact_producer_unbuilt]]: *a deferral naming an EPIC expires unowned*). Seven epics passed.
+  
+  ✅ **NEW OWNER: `Story 1.18 — Geo-Tree Scope Resolver`** (`1-18-geo-tree-scope-resolver`, Epic 1, `backlog`), minted by Story 10.18 with **four acceptance criteria**. Placed in Epic 1 because it extends the RBAC scope model Story 1.8 minted — the rule being that a successor belongs to the epic owning the model it extends. **Not** an Epic 3 story: Epic 3 supplies the geo *data*, which is precisely the dependency whose arrival was mistaken for the fix.
+  
+  ⚠ **SCOPE CORRECTION — this entry only ever covered HALF of what was filed against it.** Story 10.18 split the accumulated geo-deferral debt into two families across 45 marker blocks / 19 files. **Family B (21 blocks)** — grant and target in the same tree, target strictly narrower — is genuinely this deferral and is now re-pointed to Story 1.18. **Family A (24 blocks) was NEVER this deferral**: a `state`/`district`/`block`-ceiling grant failing a `pariwar`-dimension check is **rank-order blocked** — `scopeWithinCeiling` is a pure numeric compare over `CEILING_RANK` with no resolver parameter, and `scopeContains` denies independently before any resolver runs. **No org tree can ever lift it.** Those sites were misdiagnoses, not pending work; Story 10.18 rewrote them in place to say so, and Story 1.18 must **not** re-open them. See `packages/domain/src/rbac/scope.ts` §RANK-ORDER.
 - **D2-1.8: FR-47 authorization-denied audit SINK** — `rbac/check.ts` exposes the injectable `onAuthorizationDenied(denial)` seam (default no-op); the actual tamper-evident audit-log sink + hash chain is **Story 1.10** (epics.md L1133). Story 1.8 commits the seam; Story 1.10 wires the sink without changing this code. **Resolved via explicit deferral.** Re-trigger: Story 1.10 audit-log substrate.
 - **D3-1.8: HTTP-middleware adapter + scope-resolution middleware** — `requirePermission`/`hasPermission` are framework-agnostic (no Express/Hono/Fastify import). The middleware that mounts the guard on real routes, and the scope-resolution middleware that sets the active `pariwar_id` from the `/p/<pariwar_id>/` path, land at **Story 1.9** (which brings the HTTP framework + admin auth). Building middleware now would couple the primitive to a framework not yet chosen (mirror Story 1.7 stopping at the substrate). **Resolved via explicit deferral.** Re-trigger: Story 1.9 apps/api framework landing.
 - **D4-1.8: `role_grants` FK to the admin/users table** — `role_grants.user_id` + `created_by` are unconstrained `uuid` (NO FK) because the admin/users table does not exist until **Story 1.9+** (same precedent as `pariwar_passport.created_by`). A FK is added retroactively once that table lands. **Resolved via explicit deferral.** Re-trigger: Story 1.9+ users table.
@@ -3184,6 +3192,8 @@ _Second-pass code review (2026-07-31) addendum:_
 - **`contribution_rate_by_district`'s query is exercised by no live-DB test, AND its district-narrowing branch is dead for any real holder** — because `permissionKey='reconciliation.review'` is held only by pariwar-ceiling roles, `resolveDistrictNarrowing` can never return `{kind:'district'}`, so the aggregate only ever demonstrates *tenant* (`pariwar_id`) narrowing, not the district-level GROUP-BY narrowing AC1(b) describes (member_roster carries the district-narrowing proof instead). Harmless while the numerator is an honest `'n/a (Epic 8/9)'` placeholder. **Re-trigger:** the Epic 8/9 follow-up that wires the real numerator must (a) add a live-DB test for this template's query and (b) either give it a district-capable key or accept that its narrowing proof lives in member_roster. [packages/domain/src/reports/templates/contribution-rate-by-district.ts]
 
 - **`resolveActorReportScope` collapses multiple same-dimension grants → a multi-district admin silently exports only one district.** An actor holding `member.export_roster` at `{district,'Patna'}` AND `{district,'Gaya'}` resolves to a single `best` (the strict `<` broadness tie-break keeps the first-iterated grant), so the roster narrows `WHERE district = <one>` and the other district's members are silently absent — no error, no partial-export signal. `ResolvedReportScope` is single-valued. **Decision (2026-07-31): accept the single-scope v1 limitation** — it aligns with the Epic-3 deny-deeper geo deferral, where multi-value (`IN`-list) scope naturally lands alongside the geo-tree resolver; a `v1-limitation` code comment marks the seam. **Re-trigger:** the Epic-3 geo-tree resolver work must extend `ResolvedReportScope` to carry multiple same-dimension values + narrow templates with `WHERE district IN (...)`. [packages/domain/src/reports/scope.ts:67]
+  
+  ⚠ **Re-pointed by Story 10.18 (2026-08-10): successor is `Story 1.18 — Geo-Tree Scope Resolver`**, not "Epic 3". Family B. Story 1.18's fourth AC names this entry explicitly, so it is carried as an acceptance criterion rather than as a bare line here — the failure mode this whole re-pointing exists to prevent.
 
 ## Deferred from: 10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant (2026-07-31)
 
@@ -3520,3 +3530,130 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   repo-wide convention, not introduced by this story. **Re-trigger:** if this failure mode is ever
   hardened, it should be fixed once at the shared convention level, not per call site.
   [apps/jobs/src/scheduler/close-cycle-alert.ts:210-221]
+
+## Deferred from: code review of 10-18-constituting-the-trustee-panel-sanctioning-authority (2026-08-09)
+
+Note: this review ran against the story-authoring artifact itself, before any implementation existed
+(status `ready-for-dev`, zero code written) — the findings below are gaps in the story's own plan, not in
+shipped code.
+
+- **No process is stated for what happens if the still-owed counsel review of §8.7 comes back with a
+  rejection or requested amendment** — the story (AC9, Escalation 6) only handles the branch where the
+  review hasn't happened yet, never the branch where it happens and disagrees with the Panel-ratified
+  text. **Reason for deferring:** genuinely downstream of Story 0.13 / the counsel-engagement process
+  landing at all — nothing in this repo today can produce a counsel verdict to react to.
+  **Re-trigger:** whichever story first receives an actual counsel-review outcome on a Niyamavali
+  amendment should establish the supersede/re-open path back to the ratifying Decision entry.
+  [_bmad-output/implementation-artifacts/10-18-constituting-the-trustee-panel-sanctioning-authority.md, AC9]
+
+- **No mechanism addresses how the gitignored `docs/legal/niyamavali.md` / `.hi.md` edit propagates to
+  other environments** — a fresh clone, CI, or a second developer's machine has no way to obtain the
+  actual §8.7 text short of manually re-applying it from the `.decision-log.md` quote, since the file
+  itself produces no commit. **Reason for deferring:** pre-existing structural property of the
+  `docs/legal/` gitignore decision (`.gitignore:67-68`), not something this story's task list can fix.
+  **Re-trigger:** if `docs/legal/` is ever brought under version control, or if a second environment
+  actually needs the live file and doesn't have it.
+  [_bmad-output/implementation-artifacts/10-18-constituting-the-trustee-panel-sanctioning-authority.md, AC1]
+
+## Deferred from: 10-18-constituting-the-trustee-panel-sanctioning-authority (2026-08-10)
+
+_Story 10.18 constituted the Trustee Panel as a sanctioning authority: Niyamavali §8.7 authored in both
+locales and Panel-ratified (Decision `2026-08-10-096`), the 13th seeded role `trustee_panel` at a `pariwar`
+ceiling, the catalog bumped 29 → 30, `member.suspend` deprecated, and 45 geo-deferral markers swept by
+family. Everything below is what it did **not** close. Per `[[feedback_closure_language_precision]]`:
+§8.7 is **authored and Trustee-ratified**; counsel review **remains outstanding**. Never "approved",
+never "final"._
+
+### Owed obligations, each with a named owner or a concrete re-trigger
+
+- **Counsel review of §8.7 remains OWED and UN-ATTESTED.** Decision `2026-08-10-096` clause 5 ruled Q5
+  option (a): proceed on the `2026-08-06-080` Panel-attestation-only precedent. `niyamavali.md:211`
+  (Part 11) and `sprint-change-proposal-2026-08-04.md:618` both require counsel review, and
+  `:618` names §8.7 **specifically** as counsel's critical-path deliverable. Counsel is **not engaged** —
+  every return field in `docs/legal-counsel-engagement/` is a `<PENDING>` placeholder and Story 0.13 has
+  not closed. Recorded as un-attested per `[[feedback_record_unattested_no_backfill]]`; **no `[LEGAL]`
+  line was written and none may be inferred.** **Re-trigger:** Story 0.13 closing, or any counsel
+  engagement that can accept a Niyamavali amendment.
+
+- **The `member.suspend` REMOVAL bump has an owner now, and so does D5's gate extension.** Both previously
+  named *"the first story that builds a `role_grants` write path"* — a story that **does not exist and is
+  unowned**, which is the epic-named-deferral failure AC7 diagnoses, one indirection deeper.
+  **Concrete replacement, applying to BOTH:** the first story that adds a `role_grants` **write path** OR
+  removes the last `member.suspend` bundle entry, **whichever comes first**; and if neither has happened
+  by **Epic 11a's start**, the obligation is re-raised to the Trustee Panel as an explicit agenda item.
+  ⛔ Removal is **not** scheduled by this story and must not be inferred from the deprecation —
+  deprecation freezes the holder set, it does not shrink it.
+
+- **The AC6 gate's reach is `defaultRoleBundles` ONLY** (D5, accepted asymmetry). There is no SQL seed
+  inserting `role_grants` rows, no production caller of `seedRoles()`, and no admin route that writes
+  `role_grants` — the Story-1.9+ role-admin surface was never built — and static CI has no database.
+  A grant written directly to the table would **not** be caught. Stated in the gate's own failure message
+  rather than implied. **Re-trigger:** as above.
+
+- **Q8 — restoration from termination.** Decision `2026-08-10-096` clause 8 ruled option (a): deferred to
+  **Story 10.19**, which must carry it as an **acceptance criterion, not a note**. Today's single-actor
+  `trustee-discretion` path stands meanwhile. ⚠ **This is its SECOND deposit** — Story 10.17 filed it at
+  `deferred-work.md:3260` with the re-trigger *"Story 10.18 lands and defines what 'sanctioning authority'
+  actually gates"*, and that trigger fired here. A deferral to a story that does not carry it as an AC is
+  how it lapsed the first time. **Re-trigger:** Story 10.19 authoring.
+
+### Raised, not resolved — each now has a destination
+
+- **Escalation 2 — the Niyamavali is un-versionable.** `niyamavali.md:5` carries `[[v1.0]]`, `[[date]]`,
+  `[[date]]`, none filled, and Part 11 requires all three for an amendment to be formally recorded. §8.7
+  therefore has **no version anchor**: a later reader asking *"as of which version?"* has no answer.
+  **Not this story's to fix.** **Owner:** Story 0.13 / the Board-adoption event.
+
+- **Escalation 3 — Part 8 has never been mechanized.** The seeded rule registry
+  (`packages/domain/seed/niyamavali-v1-clauses.sql`) carries 22 clauses and **none from Part 8**, so §8.7
+  is a document amendment only: no `clause_versions` row, and neither the public Niyamavali render
+  (Story 2.5) nor the rule engine knows it exists. **Confirmed intended, not an omission.**
+  **Re-trigger:** if Part 8 should become registry-backed, that is its own story.
+
+- **Escalation 7 — `docs/legal/` is gitignored, so no governing instrument is ever under review.** The
+  Niyamavali, Trust Deed, T&C and Privacy Policy are all untracked (`.gitignore:67-68`). Amendments leave
+  no diff, no blame, no PR surface, and no way to answer *"what did §8.7 say on date X?"* other than the
+  decision log. This story worked **within** the constraint (AC1's verbatim reproduction) rather than
+  changing it. **The constraint is a governance risk larger than this story.** **Owner:** the Trustee
+  Panel, as a standing agenda item.
+
+### Recorded artifacts of this story's own sequencing
+
+- **Decision `2026-08-10-096` clause 7 cites `roles.ts:436-437`; the `verifier` bundle now sits at
+  `:453+`.** The Decision was accurate when written and is committed governance — per
+  `[[feedback_supersede_never_reinterpret]]` it is **NOT edited**. This is a structural artifact of
+  recording a governance decision **before** the implementation that shifts its own line pins, and it is
+  the same stale-pin defect Task 7 spent effort correcting, arriving through a door the story did not
+  anticipate. **Re-trigger:** any future story that records line-pinned citations in a `.decision-log.md`
+  entry ahead of the code should cite **symbols**, not line numbers.
+
+- **Code review of this story (`/bmad-code-review 10.18`) found four MORE stale citations in the same
+  ratified Decision and its co-committed routing note, beyond the `roles.ts:436-437` one already recorded
+  above** — all the same defect class, arriving through the same door. `.decision-log.md` (Decision
+  `2026-08-10-096`) and `trustee-panel-routing-note-2026-08-10-story-10-18.md` both cite: `scope.ts:74-79`
+  for `scopeWithinCeiling` (now `:113-118`); `scope.ts:193` for `scopeContains`'s independent `tRank <
+  gRank` deny guard (now `:232`); `member-moderation/routes.ts:112` for the `{ dimension: 'pariwar' }` gate
+  (now `:135`); and `roles.ts:238` for `pariwar_admin`'s `member.moderate` grant (now `:255`). Per
+  `[[feedback_supersede_never_reinterpret]]` none of these are edited in place — the ratified text stands as
+  written. **Re-trigger:** same as above — any future story citing line numbers instead of symbols ahead of
+  the code that produces them.
+
+- **Task 9's own records were written on `feat/…` after the code commits**, inverting D1's
+  governance-precedes-implementation ordering for the closing ledger entries specifically. Accepted
+  because these entries *describe* completed work and cannot precede it. Recorded rather than silently
+  normalized.
+
+### What this story does NOT unblock
+
+1. **Story 10.20 is unblocked. 10.19, 10.21 and 10.22 are NOT.** All three remain `backlog` and none
+   depends on this story. **Constituting the Panel does not make termination safe.**
+2. **The ten remaining Part 8 items are unlanded** — §8.4a, §8.5, §8.6, §8.8, §8.9 and the §8.2/§8.3/§8.4
+   edits of `sprint-change-proposal-2026-08-04.md:520-533`, owned by Stories 10.19 and 10.20.
+   **PRD FR-56 (`prd.md:866`) still cites §8.4a, which still does not exist** — a live dangling
+   constitutional cross-reference, explicitly not this story's to fix.
+3. **None of the four pre-existing Trustee Panel obligations is discharged** — Story 10.23's Escalation 6
+   (`2026-08-07-089`), the copy-truth defect, R7(A)'s unpublished Part 11 amendment (`2026-08-06-077`),
+   and the R7(C)/R7(F) lock-in asymmetry. **This story opened a fifth and discharged none.**
+4. **Family A is NOT Story 1.18's to re-open.** The 24 rank-order blocks were rewritten in place because
+   no resolver can ever lift them. Story 1.18 owns Family B's 21 blocks only, and its story text carries
+   that prohibition.

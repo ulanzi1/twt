@@ -37,7 +37,9 @@
 // a district-ceiling grant can never satisfy a pariwar-dimension check ([[project_rbac_geo_scope_containment]]
 // — containment is asymmetric; a narrower grant never satisfies a broader one). Consequences, stated
 // plainly rather than discovered later:
-//   · `concealment` resolves for `super_admin` only, until the Epic-3 geo-tree resolver lands.
+//   · `concealment` resolves for `super_admin` only — PERMANENTLY, not pending a resolver. This is
+//     RANK-ORDER BLOCKED (scope.ts §RANK-ORDER): a district-ceiling grant can never satisfy a
+//     pariwar-dimension check, and no org tree changes the numeric compare that denies it.
 //   · `appeal` is UNAFFECTED in practice — AC6 checks `claim.appeal_review` OR `claim.appeal_vote`,
 //     and `claim.appeal_vote` is genuinely pariwar-dimension and held by `pariwar_admin`.
 // This is the SEVENTH replay of the district-ceiling deferral (10.3 and 10.4 each recorded their own)

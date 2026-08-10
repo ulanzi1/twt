@@ -57,7 +57,7 @@ export function canRetract(status: BannerStatus): boolean {
 
 /**
  * Is this audience scope actually targetable today (Decision 4)? `state`/`role`/`cohort` are stored,
- * tone-reviewed and listed — but visible to NOBODY until the Epic-3 selection primitive lands. The
+ * tone-reviewed and listed — but visible to NOBODY until Story 1.18 (Geo-Tree Scope Resolver)'s selection primitive lands. The
  * console must say so out loud rather than let an admin publish into a void. Reads the shared
  * contracts list, which the sync-guard pins against @twt/domain's `isMemberInBannerAudience`
  * predicate — so the indicator can never drift from the rule the member read actually applies.

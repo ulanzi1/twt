@@ -2,7 +2,7 @@
 //
 // The scope-as-predicate narrowing decision (Decision 3) + the forced row cap. Every district-
 // narrowable template resolves the actor's scope into one of three modes; the deny-deeper geo
-// asymmetry ([[project_rbac_geo_scope_containment]]) lands as the `deny` mode until Epic 3.
+// asymmetry ([[project_rbac_geo_scope_containment]]) lands as the `deny` mode until Story 1.18 (Geo-Tree Scope Resolver).
 
 import { clampLimit } from '../../pagination.js';
 import type { ResolvedReportScope } from '../types.js';
@@ -21,7 +21,7 @@ export function reportRowLimit(limit?: number): number {
  *   · `district` — the actor is district-scoped → `WHERE district = <value>`.
  *   · `all`      — the actor is pariwar/global-scoped → no geo filter (RLS tenant-isolates underneath).
  *   · `deny`     — the actor is state/block/self-scoped → resolves NOTHING below its ceiling until the
- *     Epic-3 geo-tree resolver (deny-deeper; the documented 10.3/10.4/10.5/10.6 asymmetry, not a bug).
+ *     Story 1.18 (Geo-Tree Scope Resolver) (deny-deeper; the documented 10.3/10.4/10.5/10.6 asymmetry, not a bug).
  */
 export type DistrictNarrowing =
   | { kind: 'all' }
@@ -37,7 +37,7 @@ export function resolveDistrictNarrowing(resolvedScope: ResolvedReportScope): Di
       return resolvedScope.value != null
         ? { kind: 'district', district: resolvedScope.value }
         : { kind: 'deny' };
-    // state / block / self: no geo-tree resolver until Epic 3 → deny-deeper.
+    // state / block / self: no geo-tree resolver until Story 1.18 (Geo-Tree Scope Resolver) → deny-deeper.
     default:
       return { kind: 'deny' };
   }

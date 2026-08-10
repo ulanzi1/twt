@@ -40,7 +40,7 @@ const AUDIENCE_SCOPES_REQUIRING_VALUE: readonly BannerAudienceScope[] = ['state'
 /**
  * Ties `audience_scope_value` to `audience_scope` (Decision 4): required for the three
  * not-yet-resolvable scopes (`state`/`role`/`cohort` — a discriminator with nothing to discriminate
- * is authoring nonsense, even though nothing consumes it until the Epic-3 selector lands), and
+ * is authoring nonsense, even though nothing consumes it until Story 1.18 (Geo-Tree Scope Resolver)'s selector lands), and
  * forbidden for `public`/`members-all` (there's nothing to discriminate — a stray value there is
  * either a copy-paste leftover from a scope change or a client bug). Only checked when
  * `audience_scope` is present in THIS request: on a PATCH that doesn't touch `audience_scope`,

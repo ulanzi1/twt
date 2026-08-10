@@ -14,9 +14,9 @@
 // `members` table carries only `state` (LIFECYCLE, not geography) + `pariwar_id` (schema/members.ts)
 // — there is NO queryable district / designation / cohort attribute to filter on. So their dispatch
 // selector is a DOCUMENTED SEAM: resolve to the empty set + a logged "not yet resolvable" note, and
-// they light up for free when the Epic-3 geo / a member-designation attribute lands ([[project_rbac_
+// they light up for free when Story 1.18's geo / a member-designation attribute lands ([[project_rbac_
 // geo_scope_containment]] "resolve only what exists" discipline). Fabricating an attribute now would
-// collide with Epic-3 geo.
+// collide with Story 1.18 (Geo-Tree Scope Resolver)'s geo.
 
 import { and, eq, inArray } from 'drizzle-orm';
 

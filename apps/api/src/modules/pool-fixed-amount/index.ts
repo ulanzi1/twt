@@ -9,7 +9,7 @@
 // key at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze / claim.r9_vote
 // pariwar-wide precedent; the fixed amount is a Pariwar-wide policy) + tenant match — fail-closed,
 // audited. v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating DEFERRED to the
-// Epic-3 geo-tree resolver (see permissions.ts).
+// rank ordering — scope.ts §RANK-ORDER; no resolver can lift it (see permissions.ts).
 //
 // ── The emergency route is ADDITIONALLY step-up-gated (D3) ─────────────────────
 // The emergency override requires a FRESH ~5-min elevation bound to `pool_fixed_amount_emergency`

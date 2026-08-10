@@ -53,8 +53,8 @@ export const roleGrants = pgTable(
     // (compile-time only; the column is a plain pg `uuid`).
     pariwarId: uuid('pariwar_id').$type<PariwarId>().notNull(),
 
-    // The role name (one of the 12 seeded bundles). Plain `text`, NOT a pgEnum:
-    // the 12-role set is PROVISIONAL pending OQ-3 (Trustee may confirm/revise it
+    // The role name (one of the seeded bundles). Plain `text`, NOT a pgEnum:
+    // the seeded-role set is PROVISIONAL pending OQ-3 (Trustee may confirm/revise it
     // pre-launch) and FR-44 makes bundles Super-Admin-editable — a `text` column
     // lets the set change without an enum migration. Referential integrity to the
     // declared bundles is enforced at the seed/domain layer, not by the DB. See

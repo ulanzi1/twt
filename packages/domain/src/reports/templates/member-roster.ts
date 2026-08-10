@@ -41,7 +41,7 @@ const columns: readonly ReportColumn[] = [
 
 async function query(scopeCtx: ReportScopeCtx, client: Db): Promise<MemberRosterRow[]> {
   const narrowing = resolveDistrictNarrowing(scopeCtx.resolvedScope);
-  if (narrowing.kind === 'deny') return []; // deny-deeper geo until Epic 3.
+  if (narrowing.kind === 'deny') return []; // deny-deeper geo until Story 1.18 (Geo-Tree Scope Resolver).
 
   // Tenant isolation is the EXPLICIT `m.pariwar_id` predicate — the build worker runs on the BYPASSRLS
   // service pool (RLS is bypassed there; the 3.11 explicit-predicate convention), so a cross-Pariwar

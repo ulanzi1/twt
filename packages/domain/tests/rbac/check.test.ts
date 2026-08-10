@@ -555,3 +555,80 @@ describe('hasPermission — Story 10.9: banner.manage pariwar gate + district-ce
     expect(hasPermission(grants, 'banner.manage', pariwarResource)).toBe(false);
   });
 });
+
+// ── Story 10.18 — member.moderate is a pariwar-dimension gate; the trustee_panel satisfies it ───────
+//
+// The moderation gate is the story's own subject. Three things are pinned here, and NONE of the four
+// pins above is modified — D6 freezes them, and this is an ADDITION.
+//
+// ⚠ THE ASYMMETRY THIS FILE CANNOT SEE. These proofs use SYNTHETIC bundles so they are
+// catalog-INDEPENDENT — deliberately, per the revert-sanity convention. That means the `verifier`
+// deferral pin below holds whether or not `verifier` actually still holds `member.moderate`. It pins the
+// SCOPE ALGEBRA, not the grant. The catalog-DEPENDENT half lives in `roles.test.ts` and is what fails if
+// the grant is removed. Neither is sufficient alone; together they are a revert-sanity pair.
+describe('hasPermission — Story 10.18: member.moderate pariwar gate + verifier inert-grant deferral', () => {
+  const pariwarResource = resource({ dimension: 'pariwar', value: PARIWAR_A });
+
+  it('trustee_panel (pariwar ceiling) IS allowed member.moderate at the pariwar target', () => {
+    // The Niyamavali §8.7 body, seeded at a `pariwar` ceiling precisely so it satisfies this gate by
+    // construction (Decision `2026-08-10-096`). This is the capability the whole story exists to express.
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'member.moderate', pariwarResource)).toBe(true);
+  });
+
+  it('pariwar_admin RETAINS member.moderate — Panel authority is CONCURRENT, not exclusive', () => {
+    // Decision `2026-08-10-096` clause 3 ruled Q3 concurrent. If this ever flips to `false`, someone has
+    // read §8.7 as exclusive and removed a grant the Panel did not authorize removing.
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'member.moderate', pariwarResource)).toBe(true);
+  });
+
+  it('DEFERRAL PIN: a district-ceiling holder of member.moderate is DENIED the pariwar check (inert grant)', () => {
+    // The `verifier` shape, proven catalog-independently: `member.moderate` at a `district` ceiling,
+    // granted at district scope. Denied because the pariwar target is broader than the district grant.
+    // ⛔ RANK-ORDER BLOCKED (scope.ts §RANK-ORDER) — no geo-tree resolver lifts this.
+    // ACCEPTANCE CONDITION: enable only if a moderation target gains a server-derived district AND the
+    // gate moves to `dimension: 'district'` — never by widening the pariwar gate.
+    const districtCeilingCtx: Partial<AuthzContext> = {
+      bundles: [
+        { role: 'test_member_moderate_district', permissions: ['member.moderate'], scopeCeiling: 'district' },
+      ] as unknown as AuthzContext['bundles'],
+    };
+    const grants: EffectiveGrant[] = [
+      {
+        pariwarId: PARIWAR_A,
+        role: 'test_member_moderate_district',
+        scopeDimension: 'district',
+        scopeValue: 'Patna',
+      },
+    ];
+    expect(hasPermission(grants, 'member.moderate', pariwarResource, districtCeilingCtx)).toBe(false);
+  });
+
+  it('a state-ceiling holder of member.moderate is DENIED — the state_trustee case the story answers', () => {
+    // `epics.md:3540` originally cast a State Trustee as the moderation actor. This pins WHY that could
+    // never work and why the answer was a new pariwar-ceiling body rather than a resolver: `state` is
+    // NARROWER than `pariwar` in the ceiling ordering (rank 2 vs 1), so the grant is asking to act above
+    // its own ceiling. No org tree changes this.
+    const stateCeilingCtx: Partial<AuthzContext> = {
+      bundles: [
+        { role: 'test_member_moderate_state', permissions: ['member.moderate'], scopeCeiling: 'state' },
+      ] as unknown as AuthzContext['bundles'],
+    };
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'test_member_moderate_state', scopeDimension: 'state', scopeValue: 'Bihar' },
+    ];
+    expect(hasPermission(grants, 'member.moderate', pariwarResource, stateCeilingCtx)).toBe(false);
+  });
+
+  it('an actor with NO member.moderate grant is fail-closed at the pariwar target', () => {
+    const grants: EffectiveGrant[] = [
+      { pariwarId: PARIWAR_A, role: 'auditor', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    ];
+    expect(hasPermission(grants, 'member.moderate', pariwarResource)).toBe(false);
+  });
+});

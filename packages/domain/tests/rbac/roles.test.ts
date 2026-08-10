@@ -5,7 +5,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { PERMISSION_CATALOG, isCatalogKey } from '../../src/rbac/permissions.js';
+import {
+  DEPRECATED_KEY_SUCCESSOR,
+  PERMISSION_CATALOG,
+  SEED_PERMISSION_KEYS,
+  isCatalogKey,
+  isDeprecatedKey,
+} from '../../src/rbac/permissions.js';
 import {
   bundleForRole,
   defaultRoleBundles,
@@ -14,7 +20,7 @@ import {
 } from '../../src/rbac/roles.js';
 import { SCOPE_DIMENSIONS } from '../../src/rbac/scope.js';
 
-const TWELVE_ROLES: SeededRole[] = [
+const SEEDED_ROLES: SeededRole[] = [
   'super_admin',
   'pariwar_admin',
   'state_trustee',
@@ -27,12 +33,15 @@ const TWELVE_ROLES: SeededRole[] = [
   'verifier',
   'auditor',
   'helpline_operator',
+  // Story 10.18 — the 13th seeded role. Renamed from TWELVE_ROLES to SEEDED_ROLES so the
+  // next role addition does not have to rename it again.
+  'trustee_panel',
 ];
 
-describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
-  it('defines exactly the 12 named roles', () => {
-    expect(defaultRoleBundles).toHaveLength(12);
-    expect(defaultRoleBundles.map((b) => b.role).sort()).toEqual([...TWELVE_ROLES].sort());
+describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
+  it('defines exactly the 13 named roles', () => {
+    expect(defaultRoleBundles).toHaveLength(13);
+    expect(defaultRoleBundles.map((b) => b.role).sort()).toEqual([...SEEDED_ROLES].sort());
   });
 
   it('every scopeCeiling is a canonical scope dimension', () => {
@@ -103,7 +112,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
       .sort();
     expect(holders).toEqual(readCapable);
     // The non-read roles (finance_officer, it_cell, media_comms, field_worker) do NOT hold it.
-    for (const role of ['finance_officer', 'it_cell', 'media_comms', 'field_worker'] as const) {
+    for (const role of ['finance_officer', 'it_cell', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -126,6 +135,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
       'verifier',
       'auditor',
       'helpline_operator',
+      'trustee_panel',
     ] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
@@ -142,7 +152,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // district_admin is DELIBERATELY NOT granted: helpdesk.create is a pariwar-dimension key, and a
     // `district`-ceiling grant can never satisfy a pariwar check (the state_trustee-at-pariwar asymmetry) —
     // seeding it would be an inert/false capability. The check.test.ts scope proof pins WHY it can't work.
-    for (const role of ['district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer'] as const) {
+    for (const role of ['district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -157,7 +167,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(holders).toEqual(['finance_officer', 'helpline_operator', 'it_cell', 'pariwar_admin', 'super_admin']);
     // district_admin is DELIBERATELY NOT granted — same pariwar-dimension asymmetry as helpdesk.create
     // (a `district`-ceiling grant can never satisfy a pariwar check). check.test.ts pins WHY.
-    for (const role of ['district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor'] as const) {
+    for (const role of ['district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -172,7 +182,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(holders).toEqual(['pariwar_admin', 'super_admin']);
     // media_comms is NOT granted in v1 (its bundle stays empty); district_admin is DEFERRED (a `district`-
     // ceiling grant can never satisfy the pariwar-dimension check — check.test.ts pins WHY).
-    for (const role of ['media_comms', 'district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator'] as const) {
+    for (const role of ['media_comms', 'district_admin', 'state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -189,7 +199,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(holders).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
     // Distinct from member.view_validity — a roster EXPORT is its own read authority; roles that read a
     // single member's validity but should not export a roster do not inherit it.
-    for (const role of ['state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+    for (const role of ['state_trustee', 'block_admin', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -207,7 +217,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // district_admin DEFERRED: the gate is `dimension: 'pariwar'`, and a district-ceiling grant can never
     // satisfy a pariwar-dimension check — granting it would seed an INERT capability (the 10.3/10.4/10.5
     // asymmetry). Contrast 10.7's member.export_roster, which is district-DIMENSION and genuinely capable.
-    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -225,7 +235,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // So auditor MUST hold .view and MUST NOT hold .flip; if this ever equalises, the split has been lost.
     expect((bundleForRole('auditor')?.permissions as readonly string[]).includes('feature_flag.view')).toBe(true);
     expect((bundleForRole('auditor')?.permissions as readonly string[]).includes(KEY)).toBe(false);
-    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -244,7 +254,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // satisfy a pariwar-dimension check — granting it would seed an INERT capability (the 10.3/10.4/10.5/
     // 10.8 asymmetry). check.test.ts pins WHY. state_trustee excluded for the mirror-image reason (its
     // 'state' ceiling is BROADER than 'pariwar', and containment is asymmetric in either direction).
-    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker'] as const) {
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'auditor', 'finance_officer', 'it_cell', 'helpline_operator', 'media_comms', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -307,7 +317,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(holders).toEqual(['helpline_operator', 'super_admin']);
     // The intake/FILE key is distinct from the verifier/trustee APPROVE key: roles that may
     // APPROVE a claim (pariwar_admin, state_trustee, district_admin) do NOT gain intake-filing in v1.
-    for (const role of ['pariwar_admin', 'state_trustee', 'district_admin', 'verifier'] as const) {
+    for (const role of ['pariwar_admin', 'state_trustee', 'district_admin', 'verifier', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -324,7 +334,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(holders).toEqual(['district_admin', 'super_admin']);
     expect((bundleForRole('block_admin')?.permissions as readonly string[]).includes(KEY)).toBe(false);
     // NOT the verifier/trustee/pariwar APPROVE roles, and NOT field_worker (deferred to Epic 12).
-    for (const role of ['pariwar_admin', 'state_trustee', 'verifier', 'field_worker'] as const) {
+    for (const role of ['pariwar_admin', 'state_trustee', 'verifier', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -338,7 +348,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // The D6 supervisor override — a pariwar-ceiling authority above the district inspector.
     expect(holders).toEqual(['pariwar_admin', 'super_admin']);
     // The district inspector role itself does NOT hold the override (it acts as itself, not over peers).
-    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier'] as const) {
+    for (const role of ['district_admin', 'block_admin', 'state_trustee', 'verifier', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -352,7 +362,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     expect(holders).toEqual(['helpline_operator', 'super_admin']);
     // Replaces an initial claim.file reuse — pariwar_admin (an APPROVE-capable role) does NOT gain
     // ordinary nominee-bank collection/edit, the same posture as claim.file itself.
-    for (const role of ['pariwar_admin', 'state_trustee', 'district_admin', 'verifier'] as const) {
+    for (const role of ['pariwar_admin', 'state_trustee', 'district_admin', 'verifier', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -368,7 +378,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // the claim.override_ground_inspection rationale — though a pure pariwar_admin still cannot
     // reach the route without ALSO holding claim.manage_nominee_bank (it does not carry that key).
     expect(holders).toEqual(['helpline_operator', 'pariwar_admin', 'super_admin']);
-    for (const role of ['state_trustee', 'district_admin', 'verifier'] as const) {
+    for (const role of ['state_trustee', 'district_admin', 'verifier', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -383,7 +393,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // part of filing). helpline_operator honors a family's later takedown request; pariwar_admin is
     // the supervisor-escalation grant (the claim.manage_nominee_bank/override_ground_inspection shape).
     expect(holders).toEqual(['helpline_operator', 'pariwar_admin', 'super_admin']);
-    for (const role of ['state_trustee', 'district_admin', 'verifier'] as const) {
+    for (const role of ['state_trustee', 'district_admin', 'verifier', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
   });
@@ -401,7 +411,7 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
     // district-dimension check under the deny-deeper geo resolver (Epic 3). Their concealment-detail +
     // escalation decisions live in the dedicated 6.13/6.15 State-Trustee surfaces (the block_admin
     // deferral precedent). block_admin / pariwar_admin / field_worker do not hold it either.
-    for (const role of ['state_trustee', 'block_admin', 'pariwar_admin', 'field_worker'] as const) {
+    for (const role of ['state_trustee', 'block_admin', 'pariwar_admin', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }
     // Distinct from the pre-existing claim.approve WRITE (the 6.11 adjudication action) — a role may
@@ -426,6 +436,89 @@ describe('defaultRoleBundles — the 12 seeded roles (FR-46)', () => {
         true,
       );
     }
+  });
+
+  it('Story 10.18 — member.moderate holders are exactly pariwar_admin + trustee_panel (+ super_admin)', () => {
+    const KEY = 'member.moderate';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // The post-10.18 holder set, pinned. `trustee_panel` is the Niyamavali §8.7 body (Decision
+    // `2026-08-10-096`); `pariwar_admin` RETAINS the key because clause 3 ruled Panel authority
+    // CONCURRENT, not exclusive — this story removes no grant. `super_admin` holds the full catalog.
+    // `verifier` is here DELIBERATELY: it holds the key at a `district` ceiling against a
+    // pariwar-dimension gate, so the grant is INERT. Decision `2026-08-10-096` clause 7 ruled it a
+    // deferral-with-acceptance-condition rather than a removal. See the DEFERRAL PIN in check.test.ts
+    // for the scope algebra, and the assertion below for the catalog-dependent half.
+    expect(holders).toEqual(['pariwar_admin', 'super_admin', 'trustee_panel', 'verifier']);
+  });
+
+  it('Story 10.18 AC6 GATE — member.suspend is DEPRECATED: its holder set is FROZEN, no new grant may appear', () => {
+    // ── WHY THIS IS A TEST AND NOT A scripts/ GATE ────────────────────────────────────────────────
+    // AC6 permits either. This is a test because the thing it inspects is an IMPORTED DATA STRUCTURE
+    // (`defaultRoleBundles`), not a source tree. The `scripts/<name>/check.ts` gates in this repo exist
+    // for invariants that must SCAN FILES (governance-boundary, friction-budget) — those cannot be
+    // expressed as a unit test because their subject is text across many files. This one has full type
+    // access to its subject in-process, needs no runner, no root `package.json` entry, and no
+    // `ci-local.sh` registration, and it runs in the existing `test` job on every CI run.
+    //
+    // ── IT IS A WHOLE-STATE SCAN, NOT A GIT-DIFF ──────────────────────────────────────────────────
+    // Per the repo standard (`scripts/governance-boundary/check.ts`): it recomputes the ENTIRE holder
+    // set from the live bundles every run. It therefore cannot miss a violation added earlier on the
+    // branch, and cannot wrongly pass one that is already merged.
+    const KEY = 'member.suspend';
+    expect(isDeprecatedKey(KEY)).toBe(true); // the machine-readable marker, not a comment
+    expect(DEPRECATED_KEY_SUCCESSOR[KEY]).toBe('member.moderate'); // every deprecated key names a successor
+
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+
+    // The FROZEN baseline: the four explicit grants that predate the deprecation, plus super_admin,
+    // whose bundle is `permissions: PERMISSION_CATALOG.keys` and therefore holds every catalog key —
+    // it appears here like any other holder, because this set is collected FROM the bundles.
+    expect(
+      holders,
+      `\n  member.suspend is DEPRECATED (Story 10.18; successor: member.moderate) and its holder set is FROZEN.\n` +
+        `  Expected: block_admin, district_admin, pariwar_admin, state_trustee, super_admin\n` +
+        `  Actual:   ${holders.join(', ')}\n` +
+        `\n` +
+        `  If you ADDED a holder: don't. Grant 'member.moderate' instead — that is the key the moderation\n` +
+        `  routes actually gate on, and the one the Niyamavali §8.7 Trustee Panel holds.\n` +
+        `  If you REMOVED a holder: removal is a SEPARATE, later catalog bump, taken only once no live\n` +
+        `  grant references the key. Deprecation freezes the set; it does not shrink it.\n` +
+        `\n` +
+        `  ⚠ THIS GATE'S REACH IS THE DECLARATIVE BUNDLES ONLY. It inspects 'defaultRoleBundles'. There is\n` +
+        `  NO SQL seed inserting role_grants rows, NO production caller of seedRoles(), and NO admin route\n` +
+        `  that writes role_grants — the Story-1.9+ role-admin surface was never built — and static CI has\n` +
+        `  no database. A grant written directly to the role_grants TABLE would NOT be caught here.\n` +
+        `  Re-trigger: the first story that builds a role_grants write path must extend this assertion.\n`,
+    ).toEqual(['block_admin', 'district_admin', 'pariwar_admin', 'state_trustee', 'super_admin']);
+  });
+
+  it('Story 10.18 — member.suspend stays ENFORCEABLE: deprecation marks intent, it does not remove the key', () => {
+    // ⛔ DEPRECATED ≠ REMOVED. Three properties that must survive the deprecation, each asserted so a
+    // later "cleanup" that deletes the key fails loudly rather than silently revoking four live grants.
+    expect(isCatalogKey('member.suspend')).toBe(true); // still in the catalog
+    expect(PERMISSION_CATALOG.keys).toContain('member.suspend'); // still enumerated
+    expect(SEED_PERMISSION_KEYS).toContain('member.suspend'); // still in the source tuple
+    // And the successor is a real catalog key, not a hopeful string.
+    expect(isCatalogKey(DEPRECATED_KEY_SUCCESSOR['member.suspend'])).toBe(true);
+  });
+
+  it('Story 10.18 DEFERRAL PIN (catalog-dependent): verifier STILL HOLDS member.moderate, inertly', () => {
+    // ⚠ This assertion is the catalog-dependent half of a revert-sanity PAIR. Its partner in
+    // check.test.ts proves the scope algebra with a SYNTHETIC bundle, which makes that proof
+    // catalog-INDEPENDENT — it passes identically whether or not this grant exists. Only this
+    // assertion can observe the grant itself, so removing `verifier`'s key must fail HERE.
+    const verifier = bundleForRole('verifier');
+    expect((verifier?.permissions as readonly string[]).includes('member.moderate')).toBe(true);
+    expect(verifier?.scopeCeiling).toBe('district');
+    // ACCEPTANCE CONDITION (Decision `2026-08-10-096` clause 7): this grant becomes meaningful only if
+    // a moderation target gains a server-derived district AND the gate moves to `dimension: 'district'`
+    // — never by widening the pariwar gate to a role whose ceiling cannot satisfy it.
   });
 });
 

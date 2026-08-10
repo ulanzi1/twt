@@ -3596,6 +3596,14 @@ never "final"._
   `deferred-work.md:3260` with the re-trigger *"Story 10.18 lands and defines what 'sanctioning authority'
   actually gates"*, and that trigger fired here. A deferral to a story that does not carry it as an AC is
   how it lapsed the first time. **Re-trigger:** Story 10.19 authoring.
+  - ✅ **RESOLVED VIA EXPLICIT RULING, 2026-08-10 — Decision `2026-08-10-097` clause 1.** Story 10.19
+    carried it as **AC3**, the re-trigger fired, and the Panel ruled **option (a): restoration from a
+    terminated member requires a formal act of the Trustee Panel**, stated expressly in Niyamavali §8.4
+    because Decision `2026-08-10-096` clause 3's concurrency ruling would otherwise have left
+    reinstatement available to any authority Part 8 names. **Not** *Closed by edit* and **not** a third
+    deferral — the outcome is a ruling (`[[feedback_closure_language_precision]]`). **This entry is not
+    carried forward.** Implementation is a precondition on `performAction`'s legality path; the
+    `terminated --restore--> none` arm is not removed.
 
 ### Raised, not resolved — each now has a destination
 

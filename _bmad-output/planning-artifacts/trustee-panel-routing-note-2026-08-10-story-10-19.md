@@ -11,6 +11,11 @@ is unchanged at six.** The finding is recorded in full at
 `_bmad-output/implementation-artifacts/deferred-work.md` (*"identity collision at signup is unenforced"*).
 The Panel is asked to rule on the corrected version. Nothing here has been ratified, so this is an
 amendment to an open note, **not** a re-reading of a ruled one (`[[feedback_supersede_never_reinterpret]]`).
+⚠ **SECOND ADDITION 2026-08-10, at the Panel's request:** a **Q6(b) mechanism annex** answering *"what
+mechanism will we build under option (b)?"* — the capability-bar admission it requires, and **three
+properties of it that are the Panel's to decide rather than the implementer's**, the sharpest being that
+**this would be the first feature flag conditioning authentication**. Same purpose and shape as the existing
+Q3 mechanism note. **No question added or removed; still six.**
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-10, against
 `_bmad-output/implementation-artifacts/10-19-termination-ends-membership-privileges.md`
@@ -366,6 +371,81 @@ Niyamavali will state that termination *"ends all membership privileges and auth
 while the system enforces that against one account and not one person. **That gap must be recorded in AC11
 as a ruled-upon limitation**, not discovered later by a reader comparing the instrument to the code.
 
+### ⚠ Q6(b) mechanism annex — what "a default-OFF flag" actually costs
+
+*Added at the Panel's request, 2026-08-10. Same purpose as the Q3 mechanism note above: the Panel is being
+asked to authorise a mechanism, and three of its properties are governance choices that would otherwise be
+made silently by whoever writes the code.*
+
+**It is not a boolean. It is a capability-bar admission.** `governance_boundary.yaml` is a **closed
+allowlist** of behaviours a flag may toggle — *"A flag key that is not listed cannot be created (the domain
+registry and the gate both reject it)."* Its admission workflow (`:53-68`) requires **one reviewed change
+carrying all four** of:
+
+| # | Artifact | Detail |
+|---|---|---|
+| 1 | **Trustee attestation** in `.decision-log.md` | The capability-bar bump itself. Without it the key cannot exist. |
+| 2 | **A new `allow` entry** in `governance_boundary.yaml` | `{ kind, artifact, rationale, adr }`. The `rationale` must state what the flag toggles **and why that is safe to toggle without a code review**. |
+| 3 | **`count: 5 → 6`, same commit** (`:76`) | Revert-sanity teeth — silently dropping an entry, or adding one without attesting it, fails the gate. |
+| 4 | **A matching `FLAG_DEFAULTS` key** (`registry.ts`) | `state: 'off'`, `cohortDefinition: { clauses: [] }`, `fallbackDefault: false`, `owner: 'trustee-panel'`, a `deadBy` date. |
+
+The gate asserts registry ≡ allowlist **in both directions**, so neither half can move alone.
+
+**Mechanically the wiring is cheap and already proven.** `completeMemberLogin` holds `membership.pariwarId`
+at the gate (`member-auth.handlers.ts:53`), so per-Pariwar evaluation needs no new plumbing.
+`flagVersionInForce` (`registry.ts:306`) resolves **per-Pariwar override ≻ global row ≻ code default** — the
+**global row is how the Panel flips every tenant in one act**, the `full`-state shape Decision
+`2026-08-09-094` already used. States are `off / canary / rollout / full / rolled_back`. The read goes
+through `resolveFlagAudited` (`cache.ts:190`), the pattern `kyc/manual-fallback-seam.ts` established.
+
+#### The three properties the Panel decides, not the implementer
+
+**(1) ⛔ This would be the FIRST flag conditioning AUTHENTICATION.** The bar prohibits flag reads inside
+`apps/api/src/middleware` (`:232`) on the reasoning that *"this is where RBAC is actually ENFORCED — a
+flag-conditioned check would be a real privilege escalation."* The block site,
+`apps/api/src/modules/auth/`, is **not on the prohibited list** — not because it was cleared, but because
+**no story has ever proposed putting a flag there.** The scan would pass. ⚠ The bar warns against reading
+that as permission: leg (a) is *"BOOKKEEPING… green the moment it lands and stays green while someone adds
+a flag read inside the RBAC module."* **A green scan proves the root is unlisted, not that the behaviour is
+admissible.** If the Panel authorises (b), it is extending the capability bar into authentication for the
+first time, and that extension should be **the ruling**, not a side effect of it.
+
+**(2) ⚠ The block FAILS OPEN, and the attestation must trace why.** `fallbackDefault: false` is *required*
+by (b)'s intent — absent configuration must mean "not blocking", or the gate defeats itself. The
+consequence: **every degraded path — no version in force, malformed cohort rule, lookup error — resolves to
+*do not block*, and a terminated member logs in.** For Story 10.23 that same value meant *"the writer does
+nothing"*, safe in every direction. Here it means the safeguard silently does not apply. It is the status
+quo, so not a regression — but it is the opposite of what "fail-safe" normally means at an auth gate, and
+the `rationale` must say so in terms. ⛔ **This repo has been bitten by exactly this.** The
+`kyc_manual_fallback` polarity was documented backwards through **three** review passes, with the
+capability-bar attestation asserting the opposite of what the code did (see that entry's own correction
+note, and `manual-fallback-seam.ts:22-30`). The polarity must be traced in the rationale, not asserted.
+
+**(3) ⚠ The flag's NAME is load-bearing, not cosmetic.** `parseCapabilityBar` rejects any `artifact`
+containing a frozen-behaviour marker (`capability-bar.ts:64-80`), and **`member_lifecycle` is one** —
+freeze row 2, *event-derived member lifecycle state, §1.14*. The block is deliberately an **overlay** read,
+never a lifecycle-state read (AC4 is emphatic, and `members.state` is untouched). So the artifact must be
+named for the overlay — e.g. `termination_access_block` — and the rationale must state **why it is not a
+freeze-row-2 behaviour**. Classification is `member_flow`, the closest fit of the three declared kinds; per
+the Story 10.23 precedent, **that classification is itself a small governance act** and is named as such
+rather than left for a later auditor to reverse-engineer.
+
+#### One implementation trap, pinned here so it is not discovered later
+
+⛔ **The flag must gate BOTH read sites or neither.** AC4's login gate and AC5's refresh-rotation gate
+(`member-auth.service.ts:198-208`) are two separate code paths. If only login is gated, a terminated member
+holding a live session **keeps rotating refresh tokens indefinitely** and never re-authenticates — the block
+would be visible in tests and absent in production for exactly the members it targets. One key, two reads.
+
+⚠ And even with both gated, **the flip is not instantaneous for the blocked account**: the AC6 residual
+stands — `revokeAllMemberSessions` cannot invalidate a live access JWT, whose TTL is `MEMBER_ACCESS_TTL_MS`
+(default 15 min, `config.ts:377`).
+
+#### What the flip does not buy
+
+Per the amendment above: it ends **one account's** access. A terminated member who obtains a second mobile
+number re-enters unimpeded, and **no flag state changes that.**
+
 ### ⚠ The branch note — under (a) and (c), two ACs would write falsehoods
 
 AC8 and AC9 both correct copy **whose truth value this story's block is what changes**:
@@ -476,3 +556,13 @@ Story 10.18 existed to end, one story ago.
 - `packages/domain/src/schema/member_withdrawals.ts:30-34`, `:75` — the `aadhaar_hmac` seam column and its own account of why it is empty
 - `packages/domain/migrations/0024_member-kyc-profiles.sql:33`, `:36` — `aadhaar_masked_id` with no unique constraint; `trustee_verified` defaulting false, never written true
 - `apps/api/src/modules/kyc/kyc.handlers.ts:416` — the manual path writing `trusteeVerified: false`, with no reviewer surface anywhere in `apps/admin/src`
+
+**Added by the Q6(b) mechanism annex:**
+
+- `governance_boundary.yaml` — the capability bar; `:53-68` the four-part admission workflow, `:76` `count: 5`, `:232` the `apps/api/src/middleware` prohibition whose reasoning bears on property (1), and the `kyc_manual_fallback` entry's own correction note (the polarity precedent behind property (2))
+- `packages/domain/src/feature-flags/capability-bar.ts:64-80` — `FROZEN_BEHAVIOUR_MARKERS`; `:66` the `member_lifecycle` marker that constrains the flag's name
+- `packages/domain/src/feature-flags/registry.ts:205-217` — the Story 10.23 flag entry, the shape this one would mirror; `:306` `flagVersionInForce` and its per-Pariwar ≻ global ≻ default precedence
+- `packages/domain/src/feature-flags/evaluate.ts:19-22` — the never-throws hot-path contract; `cache.ts:190` `resolveFlagAudited`
+- `packages/domain/src/schema/feature_flag_versions.ts:47` — `off / canary / rollout / full / rolled_back`
+- `apps/api/src/modules/kyc/manual-fallback-seam.ts:12-32` — the established consumer pattern, and its own three-pass polarity correction
+- `apps/api/src/modules/auth/member/member-auth.handlers.ts:53` — `membership.pariwarId` in hand at the gate; `member-auth.service.ts:198-208` — the second read site that must not diverge

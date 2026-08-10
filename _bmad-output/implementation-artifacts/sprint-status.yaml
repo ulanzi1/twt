@@ -1,4 +1,68 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-10 (10-18-constituting-the-trustee-panel-sanctioning-authority: ready-for-dev ->
+#   IMPLEMENTED, pending Task 10 validation. THE STORY'S OWN THESIS: governance first, capability second.
+#   `git log` reads governance -> governance -> governance -> implementation, and the branch was CUT FROM
+#   the ratifying commit so the ordering is structural, not asserted.
+#   GOVERNANCE CHAIN: routing note (Q1-Q8, `trustee-panel-routing-note-2026-08-10-story-10-18.md`, committed
+#   ALONE on governance/10-18-trustee-panel-constitution) -> Trustee Panel ruled ALL EIGHT at option (a) as
+#   Panel rulings, no directions attached, none taken as a stated default -> Decision `2026-08-10-096`,
+#   which reproduces Niyamavali §8.7 VERBATIM in BOTH locales because docs/legal/ is gitignored and that
+#   entry is the amendment's ONLY durable copy (verified paragraph-by-paragraph against the live files).
+#   Per-clause provenance labelled per `2026-08-09-095`: clauses 1-8 Panel rulings, 9 the ratified §8.7
+#   text, 10-12 author-committed findings carrying NO ratified authority.
+#   ⛔ WHAT THE RATIFICATION IS NOT: no version bump, no effective date, no Board-resolution reference, no
+#   [LEGAL] line. The Niyamavali remains an unadopted [[v1.0]] draft and counsel is UNENGAGED. §8.7 is
+#   AUTHORED AND TRUSTEE-RATIFIED; counsel review REMAINS OWED and un-attested
+#   ([[feedback_closure_language_precision]], [[feedback_record_unattested_no_backfill]]).
+#   RULINGS AND THEIR CONSEQUENCES: Q1 the Panel is the BOARD in a moderation capacity (cites Deed 20(b),
+#   composition 18, quorum 19 -- CITED, never restated); Q2 §8.7 ADOPTS the existing §1.3 body and extends
+#   its scope Part 9 -> Part 8, so there is ONE Trustee Panel in the instrument; Q3 authority is CONCURRENT
+#   not exclusive, so `pariwar_admin` KEEPS member.moderate and NO grant was removed; Q4 the 13th role
+#   ships PROVISIONAL on the same footing as the twelve; Q5 proceed on the `080` precedent; Q6 the §1.3
+#   tier-ranking may be CITED but NEVER enters production code; Q7 `verifier`'s inert grant is RETAINED as
+#   a deliberate deferral; Q8 restoration-from-termination deferred to Story 10.19 AS AN AC.
+#   IMPLEMENTATION: `trustee_panel` seeded at a `pariwar` ceiling across SIX parity surfaces (union,
+#   bundles, contracts schema in matching index position, ceiling map, regenerated openapi &a2 enum, and a
+#   ~12-site prose sweep renaming TWELVE_ROLES -> SEEDED_ROLES so the next addition need not repeat it).
+#   PERMISSION_CATALOG_VERSION 29 -> 30 for a ROLE, not a key -- the FIRST bump in 29 that mints no key,
+#   recorded as a deliberate deviation; key count stays 40, and catalog version has STOPPED being a proxy
+#   for key count. `member.suspend` DEPRECATED not removed, via a convention this story invents
+#   (DEPRECATED_PERMISSION_KEYS + DEPRECATED_KEY_SUCCESSOR + isDeprecatedKey, a sibling tuple because the
+#   flat key tuple is load-bearing in four places).
+#   ⭐ THREE GATES, EACH REVERT-PROBED RED BEFORE ACCEPTANCE (a gate that has never failed proves nothing,
+#   [[feedback_gate_scope_semantic_coverage]]): (1) the domain<->contracts ceiling parity assertion, which
+#   is BEHAVIOURAL rather than by export because SEEDED_ROLE_SCOPE_CEILING is module-private -- probed in
+#   BOTH directions after the first version was found to be ONE-DIRECTIONAL, catching the inert-role
+#   direction while silently passing the privilege-escalation one; (2) the member.suspend frozen-holder-set
+#   gate, probed on ADD, on REMOVE, and on catalog deletion; (3) the verifier deferral PAIR, whose probe
+#   demonstrated that the shipped catalog-INDEPENDENT pin form stays fully green when the grant is deleted
+#   -- the catalog-dependent half is what bites.
+#   ⭐ THE MARKER SWEEP, and the correction underneath it: 45 geo-deferral BLOCKS across 19 files, counted
+#   under a rule this story had to write (geo-deferral blocks, marker string `Epic[ -]3` BOTH SPELLINGS,
+#   .ts + .tsx, non-test non-dist, one block per deferral subject). The hyphenated form DOMINATES in
+#   permissions.ts (13 of 21) and a space-only count missed roughly half. Family A (24) REWRITTEN IN PLACE
+#   -- a state/district/block-ceiling grant failing a pariwar check is RANK-ORDER BLOCKED, scopeWithinCeiling
+#   being a pure numeric compare over CEILING_RANK with no resolver parameter and scopeContains denying
+#   independently before any resolver runs, so those comments were MISDIAGNOSES and re-pointing them would
+#   have preserved the error under a fresher date. The distinction is stated ONCE, canonically, at
+#   scope.ts §RANK-ORDER. Family B (21) RE-POINTED to Story 1.18, minted in its own governance: commit
+#   BEFORE the sweep because the owner must exist before anything points at it. deferred-work.md D1-1.8
+#   REWRITTEN: its old "Re-trigger: Epic 3 member/geo data landing" FIRED at Stories 3.1/3.9 and nobody
+#   saw it for seven epics, because a deferral naming an EPIC expires unowned.
+#   VERIFIED (attested, this branch): pnpm typecheck 20/20; @twt/domain 1607 passed / 116 files;
+#   @twt/contracts 872 passed / 52 files; contracts:check-openapi-determinism green; lint clean across
+#   domain/contracts/api/admin; D6's NINE deny-deeper pins unmodified and green; denyDeeperGeoResolver
+#   const byte-unchanged; no migration authored (role_grants.role is plain text by design).
+#   ⚠ UN-ATTESTED at time of writing: `pnpm ci:local` has NOT yet been run -- it is Task 10 and the status
+#   flip is deliberately held until it is, rather than claiming a validation that has not happened.
+#   PROVENANCE, split by strength: (a) COMMIT-PINNED, git-tracked -- every count and gate result above.
+#   (b) READ ON-DISK, NOT commit-pinned -- §8.7's presence in docs/legal/niyamavali{,.hi}.md, which are
+#   untracked and carry no git history, so their content has no relationship to any SHA. The Decision
+#   entry's verbatim reproduction is the durable record; the files themselves are not evidence.
+#   NEXT: Task 10 (validate incl. ci:local), then flip to `review` and code-review the branch.
+#   development_status[10-18-constituting-the-trustee-panel-sanctioning-authority]: ready-for-dev (HELD
+#   pending Task 10; see above).
+#   Also minted: development_status[1-18-geo-tree-scope-resolver]: backlog, in Epic 1.)
 # last_updated: 2026-08-09d (10-18-constituting-the-trustee-panel-sanctioning-authority: backlog ->
 #   ready-for-dev via bmad-create-story, off main @ 71aae71. Saved
 #   10-18-constituting-the-trustee-panel-sanctioning-authority.md. Epic 10's SEVENTEENTH authored story,

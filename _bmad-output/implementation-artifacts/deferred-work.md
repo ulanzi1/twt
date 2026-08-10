@@ -3554,3 +3554,95 @@ shipped code.
   **Re-trigger:** if `docs/legal/` is ever brought under version control, or if a second environment
   actually needs the live file and doesn't have it.
   [_bmad-output/implementation-artifacts/10-18-constituting-the-trustee-panel-sanctioning-authority.md, AC1]
+
+## Deferred from: 10-18-constituting-the-trustee-panel-sanctioning-authority (2026-08-10)
+
+_Story 10.18 constituted the Trustee Panel as a sanctioning authority: Niyamavali §8.7 authored in both
+locales and Panel-ratified (Decision `2026-08-10-096`), the 13th seeded role `trustee_panel` at a `pariwar`
+ceiling, the catalog bumped 29 → 30, `member.suspend` deprecated, and 45 geo-deferral markers swept by
+family. Everything below is what it did **not** close. Per `[[feedback_closure_language_precision]]`:
+§8.7 is **authored and Trustee-ratified**; counsel review **remains outstanding**. Never "approved",
+never "final"._
+
+### Owed obligations, each with a named owner or a concrete re-trigger
+
+- **Counsel review of §8.7 remains OWED and UN-ATTESTED.** Decision `2026-08-10-096` clause 5 ruled Q5
+  option (a): proceed on the `2026-08-06-080` Panel-attestation-only precedent. `niyamavali.md:211`
+  (Part 11) and `sprint-change-proposal-2026-08-04.md:618` both require counsel review, and
+  `:618` names §8.7 **specifically** as counsel's critical-path deliverable. Counsel is **not engaged** —
+  every return field in `docs/legal-counsel-engagement/` is a `<PENDING>` placeholder and Story 0.13 has
+  not closed. Recorded as un-attested per `[[feedback_record_unattested_no_backfill]]`; **no `[LEGAL]`
+  line was written and none may be inferred.** **Re-trigger:** Story 0.13 closing, or any counsel
+  engagement that can accept a Niyamavali amendment.
+
+- **The `member.suspend` REMOVAL bump has an owner now, and so does D5's gate extension.** Both previously
+  named *"the first story that builds a `role_grants` write path"* — a story that **does not exist and is
+  unowned**, which is the epic-named-deferral failure AC7 diagnoses, one indirection deeper.
+  **Concrete replacement, applying to BOTH:** the first story that adds a `role_grants` **write path** OR
+  removes the last `member.suspend` bundle entry, **whichever comes first**; and if neither has happened
+  by **Epic 11a's start**, the obligation is re-raised to the Trustee Panel as an explicit agenda item.
+  ⛔ Removal is **not** scheduled by this story and must not be inferred from the deprecation —
+  deprecation freezes the holder set, it does not shrink it.
+
+- **The AC6 gate's reach is `defaultRoleBundles` ONLY** (D5, accepted asymmetry). There is no SQL seed
+  inserting `role_grants` rows, no production caller of `seedRoles()`, and no admin route that writes
+  `role_grants` — the Story-1.9+ role-admin surface was never built — and static CI has no database.
+  A grant written directly to the table would **not** be caught. Stated in the gate's own failure message
+  rather than implied. **Re-trigger:** as above.
+
+- **Q8 — restoration from termination.** Decision `2026-08-10-096` clause 8 ruled option (a): deferred to
+  **Story 10.19**, which must carry it as an **acceptance criterion, not a note**. Today's single-actor
+  `trustee-discretion` path stands meanwhile. ⚠ **This is its SECOND deposit** — Story 10.17 filed it at
+  `deferred-work.md:3260` with the re-trigger *"Story 10.18 lands and defines what 'sanctioning authority'
+  actually gates"*, and that trigger fired here. A deferral to a story that does not carry it as an AC is
+  how it lapsed the first time. **Re-trigger:** Story 10.19 authoring.
+
+### Raised, not resolved — each now has a destination
+
+- **Escalation 2 — the Niyamavali is un-versionable.** `niyamavali.md:5` carries `[[v1.0]]`, `[[date]]`,
+  `[[date]]`, none filled, and Part 11 requires all three for an amendment to be formally recorded. §8.7
+  therefore has **no version anchor**: a later reader asking *"as of which version?"* has no answer.
+  **Not this story's to fix.** **Owner:** Story 0.13 / the Board-adoption event.
+
+- **Escalation 3 — Part 8 has never been mechanized.** The seeded rule registry
+  (`packages/domain/seed/niyamavali-v1-clauses.sql`) carries 22 clauses and **none from Part 8**, so §8.7
+  is a document amendment only: no `clause_versions` row, and neither the public Niyamavali render
+  (Story 2.5) nor the rule engine knows it exists. **Confirmed intended, not an omission.**
+  **Re-trigger:** if Part 8 should become registry-backed, that is its own story.
+
+- **Escalation 7 — `docs/legal/` is gitignored, so no governing instrument is ever under review.** The
+  Niyamavali, Trust Deed, T&C and Privacy Policy are all untracked (`.gitignore:67-68`). Amendments leave
+  no diff, no blame, no PR surface, and no way to answer *"what did §8.7 say on date X?"* other than the
+  decision log. This story worked **within** the constraint (AC1's verbatim reproduction) rather than
+  changing it. **The constraint is a governance risk larger than this story.** **Owner:** the Trustee
+  Panel, as a standing agenda item.
+
+### Recorded artifacts of this story's own sequencing
+
+- **Decision `2026-08-10-096` clause 7 cites `roles.ts:436-437`; the `verifier` bundle now sits at
+  `:453+`.** The Decision was accurate when written and is committed governance — per
+  `[[feedback_supersede_never_reinterpret]]` it is **NOT edited**. This is a structural artifact of
+  recording a governance decision **before** the implementation that shifts its own line pins, and it is
+  the same stale-pin defect Task 7 spent effort correcting, arriving through a door the story did not
+  anticipate. **Re-trigger:** any future story that records line-pinned citations in a `.decision-log.md`
+  entry ahead of the code should cite **symbols**, not line numbers.
+
+- **Task 9's own records were written on `feat/…` after the code commits**, inverting D1's
+  governance-precedes-implementation ordering for the closing ledger entries specifically. Accepted
+  because these entries *describe* completed work and cannot precede it. Recorded rather than silently
+  normalized.
+
+### What this story does NOT unblock
+
+1. **Story 10.20 is unblocked. 10.19, 10.21 and 10.22 are NOT.** All three remain `backlog` and none
+   depends on this story. **Constituting the Panel does not make termination safe.**
+2. **The ten remaining Part 8 items are unlanded** — §8.4a, §8.5, §8.6, §8.8, §8.9 and the §8.2/§8.3/§8.4
+   edits of `sprint-change-proposal-2026-08-04.md:520-533`, owned by Stories 10.19 and 10.20.
+   **PRD FR-56 (`prd.md:866`) still cites §8.4a, which still does not exist** — a live dangling
+   constitutional cross-reference, explicitly not this story's to fix.
+3. **None of the four pre-existing Trustee Panel obligations is discharged** — Story 10.23's Escalation 6
+   (`2026-08-07-089`), the copy-truth defect, R7(A)'s unpublished Part 11 amendment (`2026-08-06-077`),
+   and the R7(C)/R7(F) lock-in asymmetry. **This story opened a fifth and discharged none.**
+4. **Family A is NOT Story 1.18's to re-open.** The 24 rank-order blocks were rewritten in place because
+   no resolver can ever lift them. Story 1.18 owns Family B's 21 blocks only, and its story text carries
+   that prohibition.

@@ -1,6 +1,16 @@
 # Trustee Panel Routing Note — Story 10.18, Constituting the Trustee Panel as a Sanctioning Authority
 
-**Status:** ⏳ **Open — eight questions, awaiting Panel ruling. Q1 and Q2 are BLOCKING.**
+**Status:** ✅ **Ruled 2026-08-10 — all eight questions ratified at Option (a), no directions attached.**
+Binding record: Decision `2026-08-10-096`. **This note is the question set; the Decision entry governs.**
+**Ruled:** 2026-08-10 by the Trustee Panel, as eight Panel rulings — **none was taken as a stated default**,
+so the defaults tabulated in *"What non-answer would mean"* were not exercised and are retained below only
+as the reasoning that motivated the ruling.
+⚠ **Three consequences are recorded in the Decision rather than here**, because they are findings against
+the substrate rather than parts of the ruling: Q6(a) **licenses no code comment** (the corroborating
+argument stays out of `roles.ts` under every option, because a comment cannot display ratification status);
+Q3(a) means `pariwar_admin`'s live `member.moderate` grant **stands and is not removed**; and Q7(a) requires
+a **second, catalog-dependent** assertion, because the shipped deferral-pin form is catalog-independent by
+design and cannot observe whether the grant exists.
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-10, against
 `_bmad-output/implementation-artifacts/10-18-constituting-the-trustee-panel-sanctioning-authority.md`

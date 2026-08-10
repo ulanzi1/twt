@@ -456,6 +456,30 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // district-dimension gate meaningful (exact-node match on the deceased's posting district).
     // NOT state_trustee (D3a — a state-ceiling grant cannot satisfy a district check until a resolver
     // proves state→district ancestry; DEFERRED to Story 1.18 (Geo-Tree Scope Resolver), Family B).
+    //
+    // ── ⚠ MEMBER_MODERATE IS AN INERT GRANT. DELIBERATE DEFERRAL, NOT AN OVERSIGHT. (Story 10.18, AC8) ──
+    // This role holds `member.moderate` at a `district` ceiling, but the ONLY route gating that key
+    // checks `{ dimension: 'pariwar' }` (`apps/api/src/modules/member-moderation/routes.ts`). So
+    // `scopeWithinCeiling('pariwar','district')` is `1 >= 3` → **false**: the grant confers NOTHING
+    // today, and no `verifier` can moderate a member. ⛔ This is RANK-ORDER BLOCKED, not pending a
+    // resolver (`scope.ts` §RANK-ORDER) — it is the same INERT/false capability Story 10.3's review
+    // identified and refused to seed, except here it was already seeded before that lesson landed.
+    //
+    // RULED, NOT ASSUMED: Story 10.18 routed this to the Trustee Panel as **Q7** and the Panel ruled
+    // **option (a) — retain, as a deliberate deferral** (Decision `2026-08-10-096` clause 7). Removal
+    // was the alternative and was NOT taken: it changes who may moderate, which is a governance act,
+    // and it is the less reversible direction. The grant therefore stays, documented as inert rather
+    // than quietly left to look effective.
+    //
+    // ACCEPTANCE CONDITION (the shipped 10.3/10.4 form): this grant becomes meaningful only if a
+    // moderation target gains a server-derived district AND the gate moves to `dimension: 'district'`
+    // — NEVER by widening the pariwar gate to a role whose ceiling cannot satisfy it.
+    //
+    // PINNED BY A PAIR, because either alone is insufficient:
+    //   · `tests/rbac/check.test.ts` — the scope algebra, via a SYNTHETIC bundle, so the proof is
+    //     catalog-INDEPENDENT (it holds whether or not this grant exists).
+    //   · `tests/rbac/roles.test.ts` — the catalog-DEPENDENT half, asserting this grant is still here.
+    //     Removing the key below must fail THERE; the synthetic pin would not notice.
     permissions: [MEMBER_MODERATE, MEMBER_VIEW_VALIDITY, CLAIM_VERIFY],
     scopeCeiling: 'district',
   },

@@ -185,6 +185,7 @@ components:
             - verifier
             - auditor
             - helpline_operator
+            - trustee_panel
         permissions:
           type: array
           items:

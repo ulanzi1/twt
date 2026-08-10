@@ -91,7 +91,7 @@ describe('PermissionKeySchema — <resource>.<action> regex', () => {
     expect(RoleGrantSchema.safeParse({ ...VALID_GRANT, scopeDimension: 'national' }).success).toBe(false);
   });
 
-  it('a grant with an unknown role is rejected (provisional 12-role enum)', () => {
+  it('a grant with an unknown role is rejected (provisional seeded-role enum)', () => {
     expect(RoleGrantSchema.safeParse({ ...VALID_GRANT, role: 'emperor' }).success).toBe(false);
   });
 
@@ -141,9 +141,47 @@ describe('DRIFT LOCKSTEP — transport enums/regex match domain canonical source
     expect(ScopeDimensionSchema.options).toEqual([...rbac.SCOPE_DIMENSIONS]);
   });
 
-  it('SeededRoleSchema options === the 12 domain role names', () => {
+  it('SeededRoleSchema options === the domain role names (order-exact)', () => {
     const domainRoles = rbac.defaultRoleBundles.map((b) => b.role);
     expect(SeededRoleSchema.options).toEqual(domainRoles);
+  });
+
+  it('Story 10.18 — every domain scopeCeiling agrees with the transport ceiling map (behavioural)', () => {
+    // ⚠ WHY THIS IS BEHAVIOURAL RATHER THAN A DIRECT COMPARISON.
+    // `SEEDED_ROLE_SCOPE_CEILING` is MODULE-PRIVATE in src/rbac/roles.ts and is deliberately left
+    // that way — asserting against it directly would mean exporting it, widening this package's
+    // public API for a test. Instead we exercise the one place it is consumed: `RoleGrantSchema`'s
+    // superRefine, which looks the ceiling up and rejects a grant that exceeds it.
+    //
+    // The hazard this closes is NOT a missing map entry — that is a loud `TS2741` typecheck failure,
+    // because the map is a total `Record` over the enum union. It is a WRONG entry: a ceiling that
+    // typechecks but disagrees with the domain bundle silently makes the role INERT, rejecting every
+    // grant it should hold. Before Story 10.18 nothing asserted the two agreed.
+    //
+    // Construction: for each bundle, build a grant AT that bundle's own declared ceiling. If the
+    // transport map agrees, it parses. If the transport map is narrower, superRefine rejects it.
+    for (const bundle of rbac.defaultRoleBundles) {
+      const dim = bundle.scopeCeiling;
+      const pariwarId = '00000000-0000-4000-8000-000000000001';
+      const grant = {
+        id: '00000000-0000-4000-8000-0000000000aa',
+        userId: '00000000-0000-4000-8000-0000000000bb',
+        pariwarId,
+        role: bundle.role,
+        scopeDimension: dim,
+        // `global` requires a null scopeValue; `pariwar` must echo pariwarId; others take any non-empty.
+        scopeValue: dim === 'global' ? null : dim === 'pariwar' ? pariwarId : 'probe-node',
+        createdAt: '2026-08-10T00:00:00.000Z',
+        createdBy: null,
+      };
+      const parsed = RoleGrantSchema.safeParse(grant);
+      expect(
+        parsed.success,
+        `${bundle.role} declares scopeCeiling '${dim}' in defaultRoleBundles, but the transport ` +
+          `ceiling map rejects a grant at that dimension — the two have drifted, and every ` +
+          `${bundle.role} grant would be rejected at runtime while typecheck stays green.`,
+      ).toBe(true);
+    }
   });
 
   it('permission-key regex source === domain PERMISSION_KEY_REGEX source', () => {

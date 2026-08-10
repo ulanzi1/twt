@@ -2,7 +2,7 @@
 //
 // Transport contract for the RBAC scope-dimension enum (Story 1.8, AC-6). Mirrors
 // the domain canonical set (packages/domain/src/rbac/scope.ts `SCOPE_DIMENSIONS`)
-// and the `scope_dimension` pgEnum — the reconciled UNION the 12 seeded roles
+// and the `scope_dimension` pgEnum — the reconciled UNION the seeded roles
 // require: `global | pariwar | state | district | block | self` (ordered ceiling,
 // high→low). The literal is REDECLARED here (the LocaleDefault precedent in
 // pariwar-passport/passport.ts) rather than imported, so the OpenAPI emit stays

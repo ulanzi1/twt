@@ -2,7 +2,7 @@
 // containment — Story 1.8 substrate (AC-2).
 //
 // THE LOAD-BEARING RECONCILIATION. The canonical scope-dimension set is the
-// SUPERSET the 12 seeded roles (FR-46) structurally require. Two source docs are
+// SUPERSET the seeded roles (FR-46) structurally require. Two source docs are
 // each individually incomplete:
 //
 //   | Source                                   | Enum                                          | Missing                              |

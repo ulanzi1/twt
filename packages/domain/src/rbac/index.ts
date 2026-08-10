@@ -10,7 +10,7 @@
 //
 //   scope.ts       — ScopeDimension enum + (dimension,value) + scopeContains + geo seam
 //   permissions.ts — PermissionKey type + smart constructor + versioned catalog
-//   roles.ts       — 12 declarative role bundles + idempotent seedRoles()
+//   roles.ts       — the declarative role bundles + idempotent seedRoles()
 //   check.ts       — hasPermission (pure) + requirePermission guard + audit seam
 
 export * from './scope.js';

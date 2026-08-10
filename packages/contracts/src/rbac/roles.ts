@@ -6,9 +6,10 @@
 // value)` grant row the role-admin endpoint (Story 1.9+) reads/writes. Reuses
 // `PariwarIdSchema` / `UuidString` / `Iso8601Datetime` from _common/primitives.
 //
-// The 12-role enum is PROVISIONAL pending OQ-3 (Trustee confirms/revises the set
+// The seeded-role enum is PROVISIONAL pending OQ-3 (Trustee confirms/revises the set
 // pre-launch). It mirrors the domain `SeededRole` union (packages/domain/src/rbac/
 // roles.ts); tests/rbac.test.ts asserts byte-parity so the two cannot drift.
+// Story 10.18 added the 13th role, `trustee_panel` (Decision `2026-08-10-096`).
 
 import { z } from 'zod';
 
@@ -16,7 +17,13 @@ import { Iso8601Datetime, PariwarIdSchema, UuidString } from '../_common/primiti
 import { PermissionKeySchema } from './permissions.js';
 import { ScopeDimensionSchema } from './scope.js';
 
-/** The 12 seeded role names (FR-46). Provisional pending OQ-3. Mirrors domain SeededRole. */
+/**
+ * The 13 seeded role names (FR-46). Provisional pending OQ-3. Mirrors domain SeededRole.
+ *
+ * ⚠ ORDER IS LOAD-BEARING — `tests/rbac.test.ts` asserts `SeededRoleSchema.options`
+ * **toEqual** `defaultRoleBundles.map(b => b.role)`, an order-exact comparison. Append a
+ * new role in the SAME index position here and in `defaultRoleBundles`.
+ */
 export const SeededRoleSchema = z.enum([
   'super_admin',
   'pariwar_admin',
@@ -30,6 +37,7 @@ export const SeededRoleSchema = z.enum([
   'verifier',
   'auditor',
   'helpline_operator',
+  'trustee_panel',
 ]);
 export type SeededRoleSchema = z.output<typeof SeededRoleSchema>;
 
@@ -65,6 +73,12 @@ const SEEDED_ROLE_SCOPE_CEILING: Record<SeededRoleSchema, ScopeDimensionSchema> 
   verifier: 'district',
   auditor: 'pariwar',
   helpline_operator: 'pariwar',
+  // Story 10.18 — MUST match the domain bundle's `scopeCeiling` exactly. This map is a total
+  // `Record` over the enum union, so OMITTING a role is a loud `TS2741` typecheck failure. The
+  // hazard that slips through is a WRONG value: it typechecks, and then `RoleGrantSchema`'s
+  // superRefine below rejects every grant the role should hold — an inert role, failing at runtime.
+  // `tests/rbac.test.ts` carries a behavioural parity assertion against `defaultRoleBundles`.
+  trustee_panel: 'pariwar',
 };
 
 function scopeWithinCeiling(

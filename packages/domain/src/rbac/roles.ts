@@ -1,7 +1,11 @@
-// The 12 seeded role bundles (FR-46) — Story 1.8 substrate (AC-3).
+// The 13 seeded role bundles (FR-46) — Story 1.8 substrate (AC-3); `trustee_panel`
+// added by Story 10.18.
 //
-// ⚠ PROVISIONAL PENDING OQ-3. The Trustee Panel confirms/revises the 12-role set
+// ⚠ PROVISIONAL PENDING OQ-3. The Trustee Panel confirms/revises the seeded role set
 // + their permission bundles pre-launch (OQ-3 "Blocks: RBAC seed in production").
+// This includes `trustee_panel`: Decision `2026-08-10-096` clause 4 ruled that the
+// thirteenth role needs no separate OQ-3 act and ships PROVISIONAL on the same
+// footing as the other twelve, which this header already declares for the set.
 // These bundles are the recommended v1 starting point — NOT immutable constants.
 // FR-44 requires Super-Admin editability; the `rbac-seed-reset` runbook requires a
 // deterministic, re-runnable seed. So the bundles are exposed as DATA
@@ -22,10 +26,16 @@ import {
 import type { ScopeDimension } from './scope.js';
 
 /**
- * The 12 seeded role names (FR-46). Stored as `snake_case` strings — these are the
+ * The 13 seeded role names (FR-46). Stored as `snake_case` strings — these are the
  * `role` value in `role_grants` (a plain `text` column, NOT a pgEnum, precisely so
  * OQ-3 can revise the set without an enum migration; see ADR-0008). The union is a
  * compile-time aid; the DB column trusts the seed/admin layer.
+ *
+ * ⚠ ORDER IS LOAD-BEARING. `packages/contracts/tests/rbac.test.ts` asserts
+ * `SeededRoleSchema.options` **toEqual** `defaultRoleBundles.map(b => b.role)` — an
+ * order-exact array comparison. A new role must be appended in the SAME index
+ * position in all three places: this union, `defaultRoleBundles`, and the contracts
+ * `SeededRoleSchema` enum.
  */
 export type SeededRole =
   | 'super_admin'
@@ -39,7 +49,8 @@ export type SeededRole =
   | 'field_worker'
   | 'verifier'
   | 'auditor'
-  | 'helpline_operator';
+  | 'helpline_operator'
+  | 'trustee_panel';
 
 /** A declarative role bundle: its permission-key set + its scope ceiling. */
 export interface RoleBundle {
@@ -505,6 +516,40 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // responding (HELPDESK_RESPOND) are distinct keys — the operator holds both.
       HELPDESK_RESPOND,
     ],
+    scopeCeiling: 'pariwar',
+  },
+  {
+    role: 'trustee_panel',
+    // Story 10.18 — the THIRTEENTH seeded role, and the first added since Story 1.8.
+    //
+    // The body: the Trustee Panel constituted by Niyamavali §8.7, ratified by Decision
+    // `2026-08-10-096`. §8.7 adopts the existing §1.3 "Trustee Panel (Core Team)" and extends its
+    // scope from Part 9 to Part 8, so this is not a new body — it is the body the governing
+    // instrument already named, now expressible in the capability model. Before this role existed
+    // there was no way to distinguish a Panel act from a `pariwar_admin` act, and every exclusivity
+    // `.decision-log.md` asserts was enforced by convention alone.
+    //
+    // ── Why `scopeCeiling: 'pariwar'` — THE RANK ORDERING, not a missing resolver ─────────────────
+    // A `state`/`district`/`block`-ceiling grant can NEVER satisfy the `pariwar`-dimension check at
+    // `member-moderation/routes.ts:112`, and no geo-tree resolver would change that:
+    //   · `scopeWithinCeiling` (scope.ts:74-79) reads CEILING_RANK (scope.ts:64-67 — `{...GEO_RANK,
+    //     self: 5}`) and is a PURE NUMERIC COMPARE with NO resolver parameter: `1 >= 2` → false.
+    //   · `scopeContains` denies independently at scope.ts:193 (`if (tRank < gRank) return false;`),
+    //     which is GEO_RANK-based (scope.ts:56-61), also BEFORE any resolver is consulted.
+    // ⚠ Supplying a geo-tree resolver would NOT have solved this. The constraint is the ordering,
+    // not the absence — so this ceiling is NOT a workaround for the unbuilt resolver, and must not
+    // be re-read as one when that resolver lands (Story 1.18). `global` is rejected for the opposite
+    // reason: it would make the Panel cross-tenant, contradicting multi-Pariwar isolation.
+    //
+    // Permission: the EXISTING `member.moderate` key. No new key is minted — the catalog's key count
+    // is unchanged at 40; only PERMISSION_CATALOG_VERSION moves (29 → 30), because a seeded role is a
+    // capability-model change a consumer caching authorization decisions should see.
+    //
+    // ⚠ Panel authority under Part 8 is CONCURRENT, not exclusive (§8.7; Decision `2026-08-10-096`
+    // clause 3). `pariwar_admin` retains `member.moderate` above, and §8.2's State-Trustee-confirmed
+    // concealment flag and §8.3's Trustee discretion are likewise unaffected. Do NOT read this bundle
+    // as displacing them.
+    permissions: [MEMBER_MODERATE],
     scopeCeiling: 'pariwar',
   },
 ];

@@ -32,7 +32,7 @@ const BIHAR_TREE: GeoTreeResolver = {
 };
 
 describe('scopeContains — canonical scope set', () => {
-  it('exposes the reconciled union the 12 seeded roles require (high→low)', () => {
+  it('exposes the reconciled union the seeded roles require (high→low)', () => {
     expect([...SCOPE_DIMENSIONS]).toEqual([
       'global',
       'pariwar',

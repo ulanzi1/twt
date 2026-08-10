@@ -557,6 +557,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   {
     role: 'trustee_panel',
     // Story 10.18 — the THIRTEENTH seeded role, and the first added since Story 1.8.
+    // ⚠ PROVISIONAL (Q4, defaulted per Decision `2026-08-10-096` clause 4) — ships on the same
+    // provisional footing as the other twelve (see file header, `roles.ts:1-9`). Not a silent
+    // approval; a Panel ruling on Q4 supersedes this footing when it lands.
     //
     // The body: the Trustee Panel constituted by Niyamavali §8.7, ratified by Decision
     // `2026-08-10-096`. §8.7 adopts the existing §1.3 "Trustee Panel (Core Team)" and extends its
@@ -567,10 +570,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     //
     // ── Why `scopeCeiling: 'pariwar'` — THE RANK ORDERING, not a missing resolver ─────────────────
     // A `state`/`district`/`block`-ceiling grant can NEVER satisfy the `pariwar`-dimension check at
-    // `member-moderation/routes.ts:112`, and no geo-tree resolver would change that:
-    //   · `scopeWithinCeiling` (scope.ts:74-79) reads CEILING_RANK (scope.ts:64-67 — `{...GEO_RANK,
+    // `member-moderation/routes.ts:135`, and no geo-tree resolver would change that:
+    //   · `scopeWithinCeiling` (scope.ts:113-118) reads CEILING_RANK (scope.ts:64-67 — `{...GEO_RANK,
     //     self: 5}`) and is a PURE NUMERIC COMPARE with NO resolver parameter: `1 >= 2` → false.
-    //   · `scopeContains` denies independently at scope.ts:193 (`if (tRank < gRank) return false;`),
+    //   · `scopeContains` denies independently at scope.ts:232 (`if (tRank < gRank) return false;`),
     //     which is GEO_RANK-based (scope.ts:56-61), also BEFORE any resolver is consulted.
     // ⚠ Supplying a geo-tree resolver would NOT have solved this. The constraint is the ordering,
     // not the absence — so this ceiling is NOT a workaround for the unbuilt resolver, and must not

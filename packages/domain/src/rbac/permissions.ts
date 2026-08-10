@@ -123,7 +123,7 @@ export function permissionKey(value: string): PermissionKey {
  * same-tree ancestry with the target strictly narrower (Family B, not the rank-order family).
  * ⚠ Successor is a STORY with acceptance criteria, never an epic — the prior `Epic 3` pointer expired
  * unowned when Epic 3's stories completed and no resolver was built.
- NO inert block_admin grant is seeded.
+ * NO inert block_admin grant is seeded.
  * ACCEPTANCE CONDITION: block_admin support may be enabled only when the authorization layer can
  * resolve a block grant through verified block→district ancestry while preserving the role's
  * `scopeCeiling: 'block'` — enabling it must require no district-scoped grant to the block admin.

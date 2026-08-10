@@ -1,4 +1,27 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-10b (10-18-constituting-the-trustee-panel-sanctioning-authority: review -> done via
+#   bmad-code-review. Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) + the
+#   load-bearing-invariant checklist lens against main...HEAD (36 files, +2670/-115). 1 decision-needed, 6
+#   patch, 0 defer, 10 dismissed as noise (several Blind-Hunter-only claims did NOT survive verification
+#   against live code -- unbalanced-parens, a version/key-count "contradiction", an "unfalsifiable"
+#   acceptance condition, and a "dead" test branch all checked out FINE on inspection).
+#   THE ONE DECISION: code review found 4 MORE stale line-pin citations inside the ratified Decision
+#   `2026-08-10-096` / its co-committed routing note, beyond the ONE the story already disclosed
+#   (roles.ts:436-437). Resolved on the SAME precedent -- ratified text NOT edited
+#   ([[feedback_supersede_never_reinterpret]]), disclosed instead as a new deferred-work.md entry.
+#   THE SIX PATCHES (all applied, all outside ratified text): AC2's routing-note table was missing its
+#   mandated "Feeds" column (restored verbatim); Decision clause 4's "provisional" disclosure was only
+#   half-discharged (now stated in BOTH the bundle comment and Completion Notes); a malformed JSDoc line in
+#   permissions.ts; the story's own "~12 sites" prose-sweep enumeration undercounted itself by one
+#   (README.md); and stale `member-moderation/routes.ts` / epics.md citations.
+#   ⭐ SCOPE EXPANSION, user-approved mid-review: the root cause of the citation drift -- this story's OWN
+#   39-line §RANK-ORDER insertion into scope.ts pushing scopeWithinCeiling/denyDeeperGeoResolver/
+#   scopeContains down by ~39 lines -- turned out to recur 8 MORE times in the story's own AC/Task body
+#   text (not just decision-log/routing-note). Fixed after confirming with the user. Deliberately NOT
+#   touched: the DIFFERENT, already-disclosed roles.ts:436-437 drift (verifier bundle comment growth,
+#   preserved as historical record per the same supersede-not-reinterpret precedent).
+#   VERIFIED: typecheck + lint clean on @twt/domain and @twt/contracts after all patches; every corrected
+#   citation re-checked against live line numbers before writing.
 # last_updated: 2026-08-10 (10-18-constituting-the-trustee-panel-sanctioning-authority: ready-for-dev ->
 #   IMPLEMENTED, pending Task 10 validation. THE STORY'S OWN THESIS: governance first, capability second.
 #   `git log` reads governance -> governance -> governance -> implementation, and the branch was CUT FROM
@@ -5020,7 +5043,7 @@ development_status:
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done
-  10-18-constituting-the-trustee-panel-sanctioning-authority: review
+  10-18-constituting-the-trustee-panel-sanctioning-authority: done
   10-19-termination-ends-membership-privileges: backlog
   10-20-moderation-record-model: backlog
   10-21-off-portal-dpdpa-access: backlog

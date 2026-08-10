@@ -10,8 +10,8 @@
 //   · GET  …/p/:pariwarId/moderation/reason-codes                 → the frozen registry (review follow-up)
 //
 // ── RBAC: the EXISTING `member.moderate` key. NO new key, NO catalog bump ────────────────────────
-// `member.moderate` is already in the v1 seed catalog (`permissions.ts:415`) and granted to
-// `pariwar_admin` (`roles.ts:253`) and — since Story 10.18 — `trustee_panel`.
+// `member.moderate` is already in the v1 seed catalog (`permissions.ts:428`) and granted to
+// `pariwar_admin` (`roles.ts:255`) and — since Story 10.18 — `trustee_panel`.
 // ⚠ Line pins and the version corrected by Story 10.18: this block previously read
 // "`permissions.ts:368`", "`roles.ts:209`" and "`PERMISSION_CATALOG_VERSION` STAYS 28". Story 10.10
 // added no key so *its own* delta was zero, but the version has since moved and is **30** (Story 10.18

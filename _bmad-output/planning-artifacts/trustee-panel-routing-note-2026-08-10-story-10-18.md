@@ -377,16 +377,16 @@ lapsed the first time.
 
 Stated as a **governance consequence** per question, not as a prediction about implementer behaviour.
 
-| Q | If unruled |
-|---|---|
-| **Q1** | ⛔ **§8.7 cannot be authored.** The story halts at Task 2 and records a block. Nothing is written to `.decision-log.md` — nothing enters the decision log without a decision — and no `packages/` change is made. |
-| **Q2** | ⛔ **§8.7 cannot reconcile with §1.3.** Same halt. An unreconciled §8.7 would put two Trustee Panels in one instrument, which is the defect the story exists to prevent. |
-| **Q3** | Defaults to **concurrent**. `pariwar_admin` keeps `member.moderate`; §8.7 states concurrency. The exclusivity option is recorded in `deferred-work.md` with the Panel ruling as re-trigger. ⚠ If §8.7 were instead left *silent*, exclusivity would be read in later against a grant nobody re-examined. |
-| **Q4** | Defaults to **provisional**, on the same footing as the other twelve, **stated explicitly** in the bundle comment and Completion Notes. Silence is not treated as confirmation. |
-| **Q5** | Defaults to **proceed on `080`**, counsel review recorded as **owed** and un-attested. No `[LEGAL]` line is written under any circumstance. |
-| **Q6** | Defaults to **no citation**. Consequence-free for the code: the ceiling rests on the rank ordering either way, and the argument never enters `roles.ts`. |
-| **Q7** | Defaults to **defer** with an acceptance condition. The inert grant stays, documented as inert. |
-| **Q8** | Defaults to **status quo**, re-deposited against **Story 10.19 as an acceptance criterion**. ⚠ This is its second deposit; a third lapse would mean the question has outlived two named re-triggers. |
+| Q | Feeds | If unruled |
+|---|---|---|
+| **Q1** | Task 3 | ⛔ **§8.7 cannot be authored.** The story halts at Task 2 and records a block. Nothing is written to `.decision-log.md` — nothing enters the decision log without a decision — and no `packages/` change is made. |
+| **Q2** | Task 3 | ⛔ **§8.7 cannot reconcile with §1.3.** Same halt. An unreconciled §8.7 would put two Trustee Panels in one instrument, which is the defect the story exists to prevent. |
+| **Q3** | Task 4, §8.7 text | Defaults to **concurrent**. `pariwar_admin` keeps `member.moderate`; §8.7 states concurrency. The exclusivity option is recorded in `deferred-work.md` with the Panel ruling as re-trigger. ⚠ If §8.7 were instead left *silent*, exclusivity would be read in later against a grant nobody re-examined. |
+| **Q4** | Task 4 | Defaults to **provisional**, on the same footing as the other twelve, **stated explicitly** in the bundle comment and Completion Notes. Silence is not treated as confirmation. |
+| **Q5** | AC1 | Defaults to **proceed on `080`**, counsel review recorded as **owed** and un-attested. No `[LEGAL]` line is written under any circumstance. |
+| **Q6** | Story/routing-note citation only | Defaults to **no citation**. Consequence-free for the code: the ceiling rests on the rank ordering either way, and the argument never enters `roles.ts`. |
+| **Q7** | Task 8 | Defaults to **defer** with an acceptance condition. The inert grant stays, documented as inert. |
+| **Q8** | Task 9 / AC9 | Defaults to **status quo**, re-deposited against **Story 10.19 as an acceptance criterion**. ⚠ This is its second deposit; a third lapse would mean the question has outlived two named re-triggers. |
 
 ⚠ **The failure direction is safe in every non-blocking case** — no capability is granted, no sanction is
 enabled, nothing is imposed. That is why none of Q3–Q8 blocks. **It is also why a default taken must be

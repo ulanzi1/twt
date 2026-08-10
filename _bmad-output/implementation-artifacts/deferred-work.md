@@ -3627,6 +3627,17 @@ never "final"._
   anticipate. **Re-trigger:** any future story that records line-pinned citations in a `.decision-log.md`
   entry ahead of the code should cite **symbols**, not line numbers.
 
+- **Code review of this story (`/bmad-code-review 10.18`) found four MORE stale citations in the same
+  ratified Decision and its co-committed routing note, beyond the `roles.ts:436-437` one already recorded
+  above** — all the same defect class, arriving through the same door. `.decision-log.md` (Decision
+  `2026-08-10-096`) and `trustee-panel-routing-note-2026-08-10-story-10-18.md` both cite: `scope.ts:74-79`
+  for `scopeWithinCeiling` (now `:113-118`); `scope.ts:193` for `scopeContains`'s independent `tRank <
+  gRank` deny guard (now `:232`); `member-moderation/routes.ts:112` for the `{ dimension: 'pariwar' }` gate
+  (now `:135`); and `roles.ts:238` for `pariwar_admin`'s `member.moderate` grant (now `:255`). Per
+  `[[feedback_supersede_never_reinterpret]]` none of these are edited in place — the ratified text stands as
+  written. **Re-trigger:** same as above — any future story citing line numbers instead of symbols ahead of
+  the code that produces them.
+
 - **Task 9's own records were written on `feat/…` after the code commits**, inverting D1's
   governance-precedes-implementation ordering for the closing ledger entries specifically. Accepted
   because these entries *describe* completed work and cannot precede it. Recorded rather than silently

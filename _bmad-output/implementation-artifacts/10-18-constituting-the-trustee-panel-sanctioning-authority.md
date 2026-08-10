@@ -4,7 +4,7 @@ baseline_commit: 71aae719b3022a84f23a790867c1ced0b919affc
 
 # Story 10.18: Constituting the Trustee Panel as a Sanctioning Authority `[GOVERNANCE]`
 
-Status: review
+Status: done
 
 ## Story
 
@@ -135,9 +135,9 @@ successor item"*).
 The epic does not make it, and re-pointing all markers to one successor would carry a false claim forward.
 
 **Family A — RANK-ORDER. A resolver can NEVER fix these.** The grant's ceiling is `state`/`district`/`block`
-and the check runs at `dimension: 'pariwar'`. `scopeWithinCeiling` (`scope.ts:74-79`) reads **`CEILING_RANK`**
+and the check runs at `dimension: 'pariwar'`. `scopeWithinCeiling` (`scope.ts:113-118`) reads **`CEILING_RANK`**
 (`:64-67`, = `{...GEO_RANK, self: 5}`) and is a **pure numeric compare** — `1 >= 2` → false — with **no
-resolver parameter**. `scopeContains` denies independently at **`:193`** (`if (tRank < gRank) return false;`),
+resolver parameter**. `scopeContains` denies independently at **`:232`** (`if (tRank < gRank) return false;`),
 which **is** `GEO_RANK`-based (`:56-61`), also before any resolver is consulted. **No org tree changes
 either line.**
 
@@ -153,7 +153,7 @@ occurrences of `Epic 3` *or* `Epic-3`; both already state the rank-order reason 
 target state. Do not edit them.**
 
 **Family B — GENUINE GEO-TREE.** Grant and target in the same tree, target strictly narrower.
-`denyDeeperGeoResolver` (`scope.ts:133-135`, `contains: () => false`) is the only implementation; a real
+`denyDeeperGeoResolver` (`scope.ts:172-174`, `contains: () => false`) is the only implementation; a real
 resolver **would** resolve these. Sites: 6.7 `claim.conduct_ground_inspection` for `block_admin`, 6.10
 `claim.verify` for `state_trustee`, `reports/scope.ts`, `reports/templates/_shared.ts`, the banners/news
 audience modules, `schema/cycle_freeze_commits.ts`. **Only Family B is re-pointed to Story 1.18.**
@@ -288,7 +288,7 @@ bundle comment.**
 **And** the comment states the ceiling is **not** a workaround for the missing resolver.
 **And** ⛔ **the §1.3 tier-ranking argument is NOT written into the code comment** (D1/D2) — it is
 unratified pending Q6, and a `roles.ts` comment cannot show ratification status.
-**And** the route is confirmed unchanged: `apps/api/src/modules/member-moderation/routes.ts:112` already
+**And** the route is confirmed unchanged: `apps/api/src/modules/member-moderation/routes.ts:135` already
 gates at `{ dimension: 'pariwar' }`. **No route change is required or permitted** — except that a Q3
 "exclusive" ruling makes removing `pariwar_admin`'s grant a `defaultRoleBundles` **data** edit (Task 4), not
 a route change and not schema DDL (`role_grants.role` is plain `text`).
@@ -312,7 +312,8 @@ a route change and not schema DDL (`role_grants.role` is plain `text`).
    **`pnpm contracts:emit-openapi`** and **commit**, or `contracts:check-openapi-determinism` fails
 6. ⭐ **The prose surface: ~12 sites hard-code "12 seeded roles."** Verified live: `roles.ts:1,:3,:25` (**the
    OQ-3 header AC2 Q4 quotes**), `rbac/index.ts:13`, `rbac/scope.ts:5`, `schema/role_grants.ts:56-58`,
-   `contracts/src/rbac/roles.ts:9,:19`, `contracts/src/rbac/scope.ts:5`, test titles at `roles.test.ts:32`,
+   `contracts/src/rbac/roles.ts:9,:19`, `contracts/src/rbac/scope.ts:5`,
+   `contracts/src/rbac/README.md` (two occurrences), test titles at `roles.test.ts:32`,
    `scope.test.ts:35`, `rbac.test.ts:94`, and the const **`TWELVE_ROLES`** → rename to **`SEEDED_ROLES`** so
    the next role addition does not repeat this sweep. A story whose AC7 purges stale comment claims must not
    ship twelve fresh ones.
@@ -417,7 +418,7 @@ superseded. And a figure of **20** for `permissions.ts`, previously ordered disc
 markers (21 union minus `:18`). ⛔ **Do not restore the "do not fix 11/9/3" or "discard on sight"
 instructions.**
 
-**Then** this story **does NOT build the geo-tree resolver.** `denyDeeperGeoResolver` (`scope.ts:133-135`)
+**Then** this story **does NOT build the geo-tree resolver.** `denyDeeperGeoResolver` (`scope.ts:172-174`)
 is **byte-unchanged** — the **const only**; its doc comment `:126-132` is editable.
 **And** every marker is handled by family: **Family A REWRITTEN in place** to the rank-order reason (naming
 `CEILING_RANK`/`GEO_RANK` correctly per AC3), **never re-pointed**; **Family B RE-POINTED** to Story 1.18.
@@ -443,8 +444,8 @@ read the same — the roll-up key is never flipped). *"Epic 3's stories are all 
 
 ### AC8 — The inert `verifier` grant is confronted, not stepped over
 
-**Given** `verifier` holds `member.moderate` (`roles.ts:436`) at `scopeCeiling: 'district'` (`:437`), while
-the only route gating that key checks `{ dimension: 'pariwar' }` (`routes.ts:112`) — so
+**Given** `verifier` holds `member.moderate` (`roles.ts:483`) at `scopeCeiling: 'district'` (`:484`), while
+the only route gating that key checks `{ dimension: 'pariwar' }` (`routes.ts:135`) — so
 `scopeWithinCeiling('pariwar','district')` is `1 >= 3` → **false**
 **Then** the grant is **inert today**, exactly the "INERT/false capability" Story 10.3's review refused to
 seed.
@@ -671,7 +672,7 @@ unruled Q1/Q2 the entry could never be completed *or* committed, leaving a dangl
       `scopeCeiling` and assert `RoleGrantSchema` parses. **No production export.**
 - [ ] ⭐ **Revert-probe the parity assertion RED**: flip one ceiling, confirm failure, revert. Record output.
 - [ ] Update `roles.test.ts` numerics and the seven negative holder-loops; add the AC4 holder-set assertion.
-- [ ] ⛔ **If Q3 was ruled "exclusive": remove `pariwar_admin`'s `member.moderate` entry (`roles.ts:238`)
+- [ ] ⛔ **If Q3 was ruled "exclusive": remove `pariwar_admin`'s `member.moderate` entry (`roles.ts:255`)
       here** — AC3 and Escalation 1 say it is owed, and this is the only task touching `defaultRoleBundles`.
       Move AC4's holder-set assertion with it, record the removal as its own line item in the Decision's
       per-clause provenance, and confirm the set matches what Task 8 pins. **Bundle-data edit, never DDL.**
@@ -796,7 +797,7 @@ unruled Q1/Q2 the entry could never be completed *or* committed, leaving a dangl
         is recorded at `:25-27`, not at `:12-13`.
 - [ ] **Family B — RE-POINT to `Story 1.18`.** 21 blocks, per the table. ⛔ `schema/cycle_freeze_commits.ts`
       is **excluded** (FK-posture, not a geo-deferral) despite appearing in the old draft.
-- [ ] ⛔ `denyDeeperGeoResolver` (`scope.ts:133-135`) byte-unchanged — **the const only**; `:126-132` is
+- [ ] ⛔ `denyDeeperGeoResolver` (`scope.ts:172-174`) byte-unchanged — **the const only**; `:165-171` is
       editable.
 - [ ] Rewrite `deferred-work.md:1472` (D1-1.8); re-point `:853` and `:3186` to Story 1.18.
 - [ ] ⛔ **Mint Story 1.18 in its OWN `governance:` commit, before the marker sweep.** Add
@@ -873,7 +874,20 @@ unruled Q1/Q2 the entry could never be completed *or* committed, leaving a dangl
 
 ---
 
-## Review history
+### Review Findings
+
+_From `/bmad-code-review 10.18` — 3-layer parallel review (Blind Hunter, Edge Case Hunter, Acceptance Auditor) + load-bearing-invariant checklist lens, against `main...HEAD` (36 files, +2670/-115)._
+
+- [x] [Review][Decision] 4 undisclosed stale-citation instances inside ratified governance text — `.decision-log.md` (Decision `2026-08-10-096` clause 3 cites `roles.ts:238`, actual `:255`; clause 7 area / general references cite `scope.ts:74-79` for `scopeWithinCeiling`, actual `:113-118`; cite `scope.ts:193` for `scopeContains`'s deny guard, actual `:232`; Q7/clause 7 cites `member-moderation/routes.ts:112`, actual `:135`) and the co-committed `trustee-panel-routing-note-2026-08-10-story-10-18.md` (same four, at `:413`×2, `:315`, `:414`). **Resolved:** same precedent as the already-disclosed `roles.ts:436-437` pin — ratified text not edited (`[[feedback_supersede_never_reinterpret]]`); disclosed as a new entry in `deferred-work.md` under "Recorded artifacts of this story's own sequencing."
+- [x] [Review][Patch] AC2's "carried verbatim" Q/Feeds/If-unruled table is missing its **Feeds** column in the shipped routing note [`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-10-story-10-18.md`] — the note has only `| Q | If unruled |`, dropping the column that maps each question to the Task/AC that consumes it. AC2 (`10-18-…md:246`) states the table "is binding and is carried verbatim into the note." The exact content to restore is at `10-18-…md:246-` in this story file.
+- [x] [Review][Patch] Decision `2026-08-10-096` clause 4's "provisional" disclosure requirement is only half-discharged [`packages/domain/src/rbac/roles.ts:554-590`, `10-18-…md` Completion Notes]. The clause requires "provisional" to be stated in **both** the bundle comment and the story's Completion Notes. The `trustee_panel` bundle's own comment never says "provisional" (only the file-level header does); the Completion Notes section never mentions Q4 or provisional status at all (verified via grep, zero hits). **Bonus fix applied in the same block:** the bundle's own comment (`roles.ts:570-574`) independently carried the identical three stale citations found in `.decision-log.md`/the routing note (`scope.ts:74-79`→`:113-118`, `scope.ts:193`→`:232`, `member-moderation/routes.ts:112`→`:135`) — a plain code comment, fixed directly, not previously caught by any of the three review layers.
+- [x] [Review][Patch] Stale line-pins reintroduced by the very commit meant to fix stale pins [`apps/api/src/modules/member-moderation/routes.ts:13-14`] — cites `permissions.ts:415` (actual `:428`) and `roles.ts:253` (actual `:255`). Same defect class Task 7 was written to eliminate, shipped in the same commit (`467eae2`) that did the eliminating. Plain code comment, safe to fix directly.
+- [x] [Review][Patch] Same underlying stale citations also appear in a mutable planning doc, safe to fix directly: `_bmad-output/planning-artifacts/epics.md` had **three** occurrences, not the two the review located (the review's own line-number pins had already drifted by the time of fixing — same defect class, proving the point) — `scope.ts:193` → `:232` (`scopeContains` deny guard, epics.md:1406) and `scope.ts:133-135` → `:172-174` (`denyDeeperGeoResolver`, epics.md:1413 and epics.md:3784). All three fixed by content search rather than trusting the cited line numbers.
+- [x] [Review][Patch] Malformed JSDoc continuation line [`packages/domain/src/rbac/permissions.ts:126`] — `NO inert block_admin grant is seeded.` is missing its leading `` * `` inside an otherwise well-formed `/** */` block. Confirmed independently by all three review layers.
+- [x] [Review][Patch] Story's own "~12 sites" prose-sweep enumeration (AC4 Surface 6, `10-18-…md:313`) omits `packages/contracts/src/rbac/README.md`, even though the diff itself correctly fixes two "12 seeded roles" occurrences there. Cosmetic — the fix was applied correctly, just not listed. Low priority.
+- [x] [Review][Patch] The same `scope.ts` §RANK-ORDER-insertion citation drift (root cause: this diff's own 39-line comment block, `scope.ts:69-107`, pushed `scopeWithinCeiling`/`denyDeeperGeoResolver`/`scopeContains`'s deny guard down by ~39 lines) recurred **8 more times in this story's own AC/Task body text** — surfaced during patch application, confirmed with the user, then fixed: `scope.ts:74-79`→`:113-118` (line 138), `scope.ts:133-135`→`:172-174` (lines 156, 421, 800), `member-moderation/routes.ts:112`→`:135` (lines 291, 448, 943), `roles.ts:238`→`:255` (line 675), and `roles.ts:436`/`:437`→`:483`/`:484` (line 447, `verifier`'s own AC8 Given). NOT touched: the `roles.ts:436-437` citations at lines 232, 819, and 1073-1076 — those are a *different*, already-disclosed drift (the `verifier` bundle's own comment growth) that the story deliberately preserves as historical record per `[[feedback_supersede_never_reinterpret]]`; touching them would be inconsistent with that established precedent.
+
+
 
 Three pre-implementation review passes ran before any code was written. Findings are discharged; the
 substance is folded into the ACs, Decisions and Tasks above, and the corrections that matter are recorded in
@@ -927,7 +941,7 @@ Two deferrals remain open, in `deferred-work.md`: no process exists for a counse
 ### Reuse map
 
 - The `member.moderate` handle exists: `roles.ts:62`. No new key, no new handle.
-- The route already gates at `{ dimension: 'pariwar' }`: `member-moderation/routes.ts:112`.
+- The route already gates at `{ dimension: 'pariwar' }`: `member-moderation/routes.ts:135`.
 - Gate skeleton: `scripts/governance-boundary/{check.ts,lib.ts,lib.test.ts,README.md}` — header naming the AC
   it mechanizes, whole-state scan, failure message naming the remediation workflow.
 - Routing-note shape: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-07-story-10-23.md`.
@@ -999,6 +1013,11 @@ after it. Verified by the Task 10 assertion over every governance commit, not by
 **All eight routed questions were ratified at option (a) as Panel rulings** — none taken as a stated
 default, no directions attached. Recorded in Decision `2026-08-10-096` with per-clause provenance
 (1–8 rulings, 9 the ratified §8.7 text, 10–12 author-committed findings carrying no ratified authority).
+
+**Q4 — the `trustee_panel` bundle ships PROVISIONAL**, per Decision `2026-08-10-096` clause 4, on the same
+footing as the other twelve seeded roles (`roles.ts:1-9`). Stated explicitly, not left to be inferred from
+silence: the bundle's own comment (`roles.ts:558-561`) now carries the `⚠ PROVISIONAL` line, satisfying the
+clause's requirement that both the bundle comment AND these Completion Notes say so.
 
 **§8.7 is authored and Trustee-ratified; counsel review remains OWED and un-attested.** No version bump,
 no effective date, no Board-resolution reference, no `[LEGAL]` line — and none may be inferred. The

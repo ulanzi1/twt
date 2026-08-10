@@ -1403,14 +1403,14 @@ So that a grant held at a broader geographic node can authorize an action target
 into two families and rewrote the first in place. **Family A (rank-order) is NOT this story's and must not
 be re-opened by it:** where a grant's `scopeCeiling` is `state`/`district`/`block` and the check runs at
 `dimension: 'pariwar'`, `scopeWithinCeiling` is a pure numeric compare over `CEILING_RANK` with **no
-resolver parameter**, and `scopeContains` denies independently at `scope.ts:193` before any resolver is
+resolver parameter**, and `scopeContains` denies independently at `scope.ts:232` before any resolver is
 consulted. **No org tree, however complete, changes either line.** Those sites were misdiagnoses, not
 pending work, and they now say so. This story fixes only the sites where grant and target are in the same
 tree with the target strictly narrower.
 
 **Acceptance Criteria:**
 
-**Given** `denyDeeperGeoResolver` (`packages/domain/src/rbac/scope.ts:133-135`, `contains: () => false`) is the only implementation of the resolver seam, and `member_postings.district` has been live since Story 3.1/3.9
+**Given** `denyDeeperGeoResolver` (`packages/domain/src/rbac/scope.ts:172-174`, `contains: () => false`) is the only implementation of the resolver seam, and `member_postings.district` has been live since Story 3.1/3.9
 **When** a real resolver is built
 **Then** an organizational-tree source of truth exists (pariwar → state → district → block), with an explicit answer recorded for whether it is a new table, a projection over `member_postings`, or a configuration artifact
 **And** the resolver implements `contains(grantNode, targetNode)` by genuine ancestry, replacing the fail-closed default
@@ -3781,7 +3781,7 @@ So that the governance document does not describe an authority the system cannot
 **Then** a **pariwar-ceiling** role (`trustee_panel`, `scopeCeiling: 'pariwar'`) is introduced holding `member.moderate`
 **And** the story records explicitly that supplying a geo-tree resolver would **not** have solved this — the constraint is the rank ordering, not the missing resolver
 
-**Given** `denyDeeperGeoResolver` (`scope.ts:133-135`) is the only implementation, no org-hierarchy table exists, and ~14 sites defer geo containment "to Epic 3" — which is `done`
+**Given** `denyDeeperGeoResolver` (`scope.ts:172-174`) is the only implementation, no org-hierarchy table exists, and ~14 sites defer geo containment "to Epic 3" — which is `done`
 **Then** this story **does NOT build the geo-tree resolver**. It re-points the stale markers to a named successor item and leaves the resolver deferred
 **And** the marker sites in `rbac/roles.ts` and `permissions.ts` are updated so the deferral is honestly addressed
 

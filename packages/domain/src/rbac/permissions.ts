@@ -364,7 +364,24 @@ export function permissionKey(value: string): PermissionKey {
 // ACCEPTANCE CONDITION for district_admin: a custom-field definition gains a server-derived district AND
 // the gate moves to `dimension: 'district'` — never by widening a pariwar gate to a role that cannot
 // satisfy it.
-export const PERMISSION_CATALOG_VERSION = 29 as const;
+// ── Bumped 29 → 30 at Story 10.18 (added ZERO keys) ──────────────────────────────────────────────
+// ⚠ THIS IS A DELIBERATE DEVIATION FROM EVERY PRIOR BUMP IN THIS CHANGELOG, and it is recorded as a
+// deviation rather than taken silently. All 29 prior bumps MINTED A PERMISSION KEY. This one mints a
+// ROLE — `trustee_panel`, the 13th seeded bundle (Story 10.18, Niyamavali §8.7, Decision
+// `2026-08-10-096`) — and reuses the existing `member.moderate` key. **`PERMISSION_CATALOG.keys` stays
+// at 40**, and `permissions.test.ts`'s `toHaveLength(40)` is unchanged; if that number ever moves in
+// this story, a key was minted and the story has exceeded its scope.
+// WHY BUMP AT ALL, when no key changed: the catalog version is the version of the CAPABILITY MODEL, not
+// a count of keys. A consumer caching authorization decisions keyed on `catalogVersion` must see the
+// model move when a new role can hold an existing key — otherwise a `trustee_panel` grant resolves
+// against a cache built when no such role existed. `epics.md`'s instruction ("the catalog bumps … with
+// the seeded role") is unconditional and does not condition the bump on a key being minted.
+// ⚠ The consequence a later reader must not mis-derive: **catalog version is no longer a proxy for key
+// count.** Before 10.18 the two moved together, so `version - 1 ≈ keys` was accidentally close enough to
+// look like an invariant. It is not one, and from here the two diverge permanently.
+// NO new key, NO new handle, NO route change, NO migration (`role_grants.role` is plain `text`, not a
+// pgEnum, precisely so the seeded set can change without one).
+export const PERMISSION_CATALOG_VERSION = 30 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file

@@ -184,6 +184,49 @@ describe('DRIFT LOCKSTEP — transport enums/regex match domain canonical source
     }
   });
 
+  it('Story 10.18 — the ceiling parity gate is BIDIRECTIONAL: a grant BROADER than the declared ceiling is rejected', () => {
+    // ⚠ WHY THIS SECOND HALF EXISTS. The assertion above only proves the transport map is not
+    // NARROWER than the domain bundle (which would make the role inert). It cannot detect the
+    // opposite drift, because `scopeWithinCeiling` is `rank[dim] >= rank[ceiling]`: if the transport
+    // ceiling were BROADER than the domain's, a grant at the domain's ceiling still parses and the
+    // first assertion stays green. That direction is the dangerous one — the transport layer would
+    // accept grants the domain says are above the role's ceiling, which is privilege escalation
+    // shaped, not inertness shaped. Found by probing both directions against the first assertion.
+    //
+    // Construction: for each bundle, take the dimension one rank BROADER than its declared ceiling
+    // and assert the grant is REJECTED. `super_admin` is skipped — its ceiling is `global`, the
+    // broadest dimension, so no broader probe exists.
+    const BROADER: Record<string, string | undefined> = {
+      global: undefined, // nothing broader
+      pariwar: 'global',
+      state: 'pariwar',
+      district: 'state',
+      block: 'district',
+      self: 'block',
+    };
+    for (const bundle of rbac.defaultRoleBundles) {
+      const broader = BROADER[bundle.scopeCeiling];
+      if (broader === undefined) continue;
+      const pariwarId = '00000000-0000-4000-8000-000000000001';
+      const parsed = RoleGrantSchema.safeParse({
+        id: '00000000-0000-4000-8000-0000000000aa',
+        userId: '00000000-0000-4000-8000-0000000000bb',
+        pariwarId,
+        role: bundle.role,
+        scopeDimension: broader,
+        scopeValue: broader === 'global' ? null : broader === 'pariwar' ? pariwarId : 'probe-node',
+        createdAt: '2026-08-10T00:00:00.000Z',
+        createdBy: null,
+      });
+      expect(
+        parsed.success,
+        `${bundle.role} declares scopeCeiling '${bundle.scopeCeiling}' in defaultRoleBundles, but the ` +
+          `transport ceiling map ACCEPTS a grant at the broader '${broader}' — the transport layer is ` +
+          `more permissive than the domain, which is a privilege-escalation drift, not an inert role.`,
+      ).toBe(false);
+    }
+  });
+
   it('permission-key regex source === domain PERMISSION_KEY_REGEX source', () => {
     // The contract regex is private; prove parity by behaviour over a probe set.
     const probes = ['claim.approve', 'Claim.Approve', 'claim', 'claim.approve.now', 'pariwar.amend_rule'];

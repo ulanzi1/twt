@@ -1382,6 +1382,56 @@ So that UX-DR7-12, UX-DR71, UX-DR73 commitments are land-once / consume-everywhe
 
 ---
 
+### Story 1.18: Geo-Tree Scope Resolver `[PRIMITIVE]`
+
+> ⚠ **WHY THIS STORY SITS IN A RETROSPECTED EPIC.** `epic-1-retrospective` is `done`. This placement is
+> deliberate, not an oversight, and must not be "corrected" into whichever epic happens to be open.
+> Story 1.18 extends the RBAC scope-containment model **minted by Story 1.8** (`packages/domain/src/rbac/`),
+> and the rule Story 10.18 established is that *a successor belongs to the epic that owns the model it
+> extends, at that epic's next free sequential number.* It is explicitly **not** an Epic 3 story: Epic 3
+> supplies the geo **data** (`member_postings.district`), and that is exactly the dependency whose arrival
+> was mistaken for the fix — `deferred-work.md:1472` carried this deferral with `Re-trigger: Epic 3
+> member/geo data landing`, **that trigger fired at Story 3.1/3.9 and nobody saw it**, because a deferral
+> naming an EPIC expires unowned. Re-homing this story into an open epic would repeat that failure with a
+> fresher number. **Minted by Story 10.18 (Decision `2026-08-10-096`); see `deferred-work.md` D1-1.8.**
+
+As Solo Builder and every epic that has deferred a geographic authorization check since Epic 6,
+I want a real organizational-tree resolver behind the `scopeContains` seam,
+So that a grant held at a broader geographic node can authorize an action targeting a node genuinely beneath it, instead of failing closed at `denyDeeperGeoResolver`.
+
+**⛔ SCOPE BOUNDARY — this story owns Family B ONLY.** Story 10.18 split the accumulated geo-deferral debt
+into two families and rewrote the first in place. **Family A (rank-order) is NOT this story's and must not
+be re-opened by it:** where a grant's `scopeCeiling` is `state`/`district`/`block` and the check runs at
+`dimension: 'pariwar'`, `scopeWithinCeiling` is a pure numeric compare over `CEILING_RANK` with **no
+resolver parameter**, and `scopeContains` denies independently at `scope.ts:193` before any resolver is
+consulted. **No org tree, however complete, changes either line.** Those sites were misdiagnoses, not
+pending work, and they now say so. This story fixes only the sites where grant and target are in the same
+tree with the target strictly narrower.
+
+**Acceptance Criteria:**
+
+**Given** `denyDeeperGeoResolver` (`packages/domain/src/rbac/scope.ts:133-135`, `contains: () => false`) is the only implementation of the resolver seam, and `member_postings.district` has been live since Story 3.1/3.9
+**When** a real resolver is built
+**Then** an organizational-tree source of truth exists (pariwar → state → district → block), with an explicit answer recorded for whether it is a new table, a projection over `member_postings`, or a configuration artifact
+**And** the resolver implements `contains(grantNode, targetNode)` by genuine ancestry, replacing the fail-closed default
+**And** the seam's injection point is unchanged — this is a resolver implementation, **not** a change to `GEO_RANK`, `CEILING_RANK`, `scopeContains`'s ordering, or the permission-key/scope-dimension model, which are **architectural freeze row 9** and would require an ADR
+
+**Given** the nine deny-deeper pins listed in Story 10.18's D6 (`scope.test.ts:98`, `check.test.ts:184`/`:64`/`:439`/`:479`/`:508`/`:539`, `bulk-operations/execute.test.ts:240`, `integration/reports/reports.spec.ts:124`)
+**When** the resolver lands
+**Then** each pin is **revisited explicitly** — a pin that encoded "deny because no resolver exists" is updated with its new expected behaviour, and a pin that encoded the rank-order asymmetry stays **unchanged**, because that asymmetry is unaffected by this story
+**And** the distinction is stated per pin, not inferred
+
+**Given** the 21 Family-B marker blocks Story 10.18 re-pointed here (the label→site table in `10-18-…md` Task 7)
+**When** this story completes
+**Then** every one of them is revisited and either resolved or re-deferred **with a named story successor**, never an epic
+**And** `deferred-work.md` D1-1.8 is closed or re-scoped explicitly
+
+**Given** `packages/domain/src/reports/scope.ts` resolves an actor's report scope to a single node
+**When** the resolver lands
+**Then** the multi-node scope limitation recorded at `deferred-work.md:3186` is revisited in the same pass
+
+---
+
 ## Epic 2: Niyamavali Publishing & Public Trust Identity
 
 The trust becomes *publicly real*. Niyamavali (the rulebook) is drafted, versioned, and published on twt.org with version-diff. T&C is lawyer-review-tracked-but-not-gated and tied to Niyamavali version. Consent registry records member acceptance with timestamp. Bilingual i18n + tone-guide enforcement are wired across every member-facing surface from here forward. **AR-48 public Astro SSR shell foundation initialized here** (Story 2.5), extended in Epic 11a (Member Directory + matrix), per-claim fragments in Epic 11b.

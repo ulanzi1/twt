@@ -4769,6 +4769,12 @@ development_status:
   1-16c-schema-diff-ci-gate: done
   1-16d-benefit-mechanism-tag-ci-gate: done
   1-17-design-system-foundation-tokens-typography-vocabulary-numeral-hardening: done
+  # Minted by Story 10.18 (Decision 2026-08-10-096) as the NAMED STORY successor for the Family-B
+  # geo-tree deferrals. Deliberately placed in a retrospected epic: it extends the RBAC scope model
+  # Story 1.8 minted, and the rule is that a successor belongs to the epic owning the model it
+  # extends. NOT an Epic 3 story -- Epic 3 supplies the geo DATA, which is the dependency whose
+  # arrival was mistaken for the fix and whose epic-named re-trigger expired unowned.
+  1-18-geo-tree-scope-resolver: backlog
   epic-1-retrospective: done
 
   # ==========================================================================

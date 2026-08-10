@@ -3520,3 +3520,27 @@ worked example, having sat mis-marked as pending for seven epics after its trigg
   repo-wide convention, not introduced by this story. **Re-trigger:** if this failure mode is ever
   hardened, it should be fixed once at the shared convention level, not per call site.
   [apps/jobs/src/scheduler/close-cycle-alert.ts:210-221]
+
+## Deferred from: code review of 10-18-constituting-the-trustee-panel-sanctioning-authority (2026-08-09)
+
+Note: this review ran against the story-authoring artifact itself, before any implementation existed
+(status `ready-for-dev`, zero code written) — the findings below are gaps in the story's own plan, not in
+shipped code.
+
+- **No process is stated for what happens if the still-owed counsel review of §8.7 comes back with a
+  rejection or requested amendment** — the story (AC9, Escalation 6) only handles the branch where the
+  review hasn't happened yet, never the branch where it happens and disagrees with the Panel-ratified
+  text. **Reason for deferring:** genuinely downstream of Story 0.13 / the counsel-engagement process
+  landing at all — nothing in this repo today can produce a counsel verdict to react to.
+  **Re-trigger:** whichever story first receives an actual counsel-review outcome on a Niyamavali
+  amendment should establish the supersede/re-open path back to the ratifying Decision entry.
+  [_bmad-output/implementation-artifacts/10-18-constituting-the-trustee-panel-sanctioning-authority.md, AC9]
+
+- **No mechanism addresses how the gitignored `docs/legal/niyamavali.md` / `.hi.md` edit propagates to
+  other environments** — a fresh clone, CI, or a second developer's machine has no way to obtain the
+  actual §8.7 text short of manually re-applying it from the `.decision-log.md` quote, since the file
+  itself produces no commit. **Reason for deferring:** pre-existing structural property of the
+  `docs/legal/` gitignore decision (`.gitignore:67-68`), not something this story's task list can fix.
+  **Re-trigger:** if `docs/legal/` is ever brought under version control, or if a second environment
+  actually needs the live file and doesn't have it.
+  [_bmad-output/implementation-artifacts/10-18-constituting-the-trustee-panel-sanctioning-authority.md, AC1]

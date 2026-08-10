@@ -1,4 +1,169 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-09d (10-18-constituting-the-trustee-panel-sanctioning-authority: backlog ->
+#   ready-for-dev via bmad-create-story, off main @ 71aae71. Saved
+#   10-18-constituting-the-trustee-panel-sanctioning-authority.md. Epic 10's SEVENTEENTH authored story,
+#   and the EARLIEST UN-STARTED story in the moderation arc — 10.19, 10.20, 10.21 and 10.22 all remain
+#   backlog behind it, and `epics.md:3745` makes this story the [GATE] on 10.20.
+#   ⭐ FOUR CARRIED PREMISES WERE VERIFIED LIVE: ONE STALE, TWO WRONG, ONE ALREADY DISCHARGED
+#   ([[feedback_verify_before_committing_governance_claims]]). ⚠ CORRECTED ON SECOND-PASS CODE REVIEW
+#   (2026-08-10): only #1 is a premise of the EPIC's Story 10.18 AC. #2 is V3's sentence
+#   (sprint-change-proposal-2026-08-04.md:67) and the epic's own Part-8-scoped wording is CORRECT
+#   (epics.md:3725 says Part 8 "never defines a Trustee Panel" — true; §1.3 is in Part 1). #3 is a
+#   state-of-the-world fact the epic never claimed, #4 an AC from the proposal, not the epic. The earlier
+#   "FOUR PREMISES IN THE EPIC AC ... FOUND STALE OR WRONG" framing charged epics.md with three defects it
+#   does not have, in a story whose own thesis is verify-before-committing. Attributions below are fixed:
+#   (1) `PERMISSION_CATALOG_VERSION` is 29, NOT 28 — Story 10.12 took 28->29 on 2026-08-07
+#   (permissions.ts:367, pinned at permissions.test.ts:54). The bump is 29->30. And underneath the number
+#   sits a question the epic asked without noticing: all 29 prior bumps minted a KEY; this story mints a
+#   ROLE and no key (count stays 40). ⚠ Corrected on second-pass review: AC5 no longer offers a CHOICE —
+#   the "(b) do not bump" alternative was removed on first-pass review as inconsistent with epics.md's
+#   unconditional "Then the catalog bumps ... with the seeded role". The bump to 30 is the only compliant
+#   path; what AC5 requires is that the DEVIATION from the 29-bump key-minting precedent be recorded
+#   explicitly, not that the bump be re-decided.
+#   (2) V3's "the Niyamavali does not define a Trustee Panel" is WRONG. §1.3 (niyamavali.md:39) already
+#   defines "District Admin / State Trustee / Trustee Panel (Core Team) — the three escalation tiers of
+#   decision authority (Part 9)", mirrored in Hindi at :43, and §5.3 (:126) gives the Panel "full
+#   discretion". The term exists, sits at the TOP of three tiers ABOVE State Trustee, and is scoped
+#   to Part 9 only. ⚠ CORRECTED ON THIRD-PASS REVIEW (2026-08-10): an earlier version of this entry added
+#   "which independently corroborates the pariwar ceiling — V1's rank ordering is no longer the only
+#   argument". That is exactly the claim Decisions D1/D2 DE-RATIFIED (it conflates a Part-9 appeal-tier
+#   ranking with an RBAC scope-ceiling claim); it is routed to the Panel as Q6 and NEVER enters production
+#   code. The ceiling rests on the rank ordering ALONE. Drift introduced by the second pass's own rewrite. So §8.7 must RECONCILE with §1.3, not invent beside it; the two-Panels defect is now
+#   the story's most likely failure mode (AC2 Q2). Deed Clause 20(b) already vests "admit, suspend, and
+#   cease members" in the Board and 20(h) permits committee delegation, so §8.7 names which of two lawful
+#   shapes the Panel is rather than creating an authority.
+#   (3) Part 8 runs §8.1-§8.4 ONLY — NONE of the eleven-item 2026-08-04 Part 8 amendment package has
+#   landed, in either locale. PRD FR-56 (prd.md:866) already cites "§8.4a", which does not exist: a live
+#   dangling constitutional cross-reference, recorded but explicitly NOT this story's to fix.
+#   (4) The `epics.md:3540` actor correction is ALREADY DISCHARGED (it reads "Trustee Panel" today).
+#   ⛔ TWO LATE FINDINGS RESHAPED AC1 AFTER FIRST DRAFT. (i) `docs/legal/` IS GITIGNORED
+#   (.gitignore:67-68; `git ls-files docs/legal/` empty) — the Niyamavali has NO git history, so "the
+#   amendment lands in a governance: commit" is mechanically impossible as the epic words it. The durable
+#   record must be a `.decision-log.md` entry QUOTING §8.7 VERBATIM, following Decision 2026-08-06-080,
+#   which amended §3.1/Appendix A the same way for the same reason. A dev agent planning to commit the
+#   amendment will find nothing to commit and may conclude it is optional. (ii) Part 9 already carries a
+#   differently-constituted "State Trustee panel" (niyamavali.md:129, :191) fixed at ">=2 trustees;
+#   majority-rules per R9" (review-scope-charter.md:63) — the only quorum stated for a NIYAMAVALI TRUSTEE
+#   PANEL (⚠ CORRECTED ON THIRD-PASS REVIEW: an earlier version of this entry said "the ONLY quorum number
+#   stated for any trustee body anywhere in the repo", which is FALSE — cf. trust-deed.md:227 Clause 19(b),
+#   ~10 launch-gate sites, prd.md:1475 — and left this comment block self-contradictory, asserting the
+#   overclaim here and calling it false 40 lines below. The narrowed claim still carries the point: the risk
+#   is that §8.7's silence lets Part 9's number be read across BY ADJACENCY, which needs no uniqueness),
+#   belonging to a GEOGRAPHIC appeal panel, which directly contradicts this
+#   story's "Pariwar-level governing body rather than a geographic office" settlement. Two bodies, one
+#   word, adjacent sections.
+#   ⭐ AC7 SPLITS THE GEO-DEFERRAL DEBT INTO TWO FAMILIES, which the epic does not: RANK-ORDER (a state
+#   or district ceiling against a pariwar-dimension check — `scopeWithinCeiling` is a pure numeric compare
+#   with NO resolver parameter, so no org tree can ever lift it; these markers are MISDIAGNOSES, not stale
+#   pointers) and GENUINE GEO-TREE (state->district, block->district ancestry, which a resolver would
+#   fix). Only the second belongs to the successor. ⛔ THE MARKER COUNT IS NOT ESTABLISHED — CORRECTED ON
+#   SECOND-PASS CODE REVIEW (2026-08-10). This entry previously claimed "the verified 29 blocks across 12
+#   files (25 in the two AC-named files alone)"; AC7 itself now marks that figure UNVERIFIED AND INTERNALLY
+#   INCONSISTENT (its components sum to 41, not 29), and it must not be cited as verified anywhere. What IS
+#   ⛔ CORRECTED AGAIN ON THIRD-PASS REVIEW (2026-08-10) — THE SECOND PASS'S COUNT WAS A SPELLING ARTIFACT.
+#   It counted `grep -c 'Epic 3'` (space-spelled) only. The repo writes the marker BOTH ways and the
+#   HYPHENATED `Epic-3` form DOMINATES in permissions.ts (13 of 21). Verified union counts under
+#   `Epic[ -]3`: roles.ts 13 / permissions.ts 21 / scope.ts 5; 115 lines (.ts) or 119 (with .tsx) across
+#   56 non-test, non-dist files. Two second-pass instructions are WITHDRAWN: (a) it blessed the 11/9/3
+#   figure as "a correct LINE count [that] must not be fixed" — 11/9/3 counts the space-spelled SUBSET and
+#   is NOT the marker population, so it may and should be superseded; (b) it ordered a figure of 20 for
+#   permissions.ts "discarded on sight" as unreliable — 20 is CORRECT for geo markers (21 union minus :18,
+#   the one epic-timing note the counting rule itself excludes). The reviewer it overrode was right and the
+#   enshrined number was off by twelve. AC7 now carries a counting rule specifying marker string, file
+#   extensions and block boundary; the BLOCK count is Task 0's to derive under it.
+#   Task 0 now carries an explicit COUNTING RULE (geo-deferral comment BLOCKS in non-test, non-dist source)
+#   without which the three tellings cannot converge, because they measure different things.
+#   The successor MUST be a STORY with acceptance criteria — named on second-pass review as
+#   STORY 1.18 — GEO-TREE SCOPE RESOLVER (key 1-18-geo-tree-scope-resolver, Epic 1, the epic that owns the
+#   scope model Story 1.8 minted), rather than left for the dev agent to invent: deferred-work.md:1472
+#   already carries this deferral with "Re-trigger: Epic 3 member/geo data landing", that trigger FIRED at
+#   Story 3.1/3.9 and nobody saw it, because a deferral naming an EPIC expires unowned
+#   ([[project_r7_fact_producer_unbuilt]]). Repeating it with a fresher epic number is the same defect.
+#   ⚠ ALSO SURFACED: `verifier` holds `member.moderate` at a `district` ceiling against a pariwar-dimension
+#   gate — an INERT grant a story about who may sanction a member must not walk past (AC8); NO `deprecated`
+#   convention exists anywhere in the codebase, so AC6 invents one and it must be MACHINE-READABLE or the
+#   epic's "a CI assertion fails if a new grant appears" clause is undischargeable (D4); that assertion can
+#   only reach `defaultRoleBundles` — there is no SQL seed, no production `seedRoles()` caller and no
+#   `role_grants` write path — so its reach is stated in its own failure message rather than implied (D5);
+#   and the `member.suspend` REMOVAL bump has no story owner, the same expires-unowned defect AC7 is
+#   cleaning up one epic later. Part 8 has also never been mechanized — the seeded registry carries 22
+#   clauses and none from Part 8 — so §8.7 amends prose only, with no `clause_versions` row.
+#   SEVEN ESCALATIONS RAISED, NONE ABSORBED. Note that this story OPENS A FIFTH open Trustee Panel
+#   obligation while four remain undischarged (10.23's Escalation 6, the copy-truth defect, R7(A)'s
+#   unpublished Part 11 amendment, the R7(C)/R7(F) lock-in asymmetry). It discharges NONE of them and must
+#   not read as if it did.
+#   PROVENANCE, stated at two different strengths — corrected on second-pass code review (2026-08-10),
+#   which found this block had collapsed both into "VERIFIED live at 71aae71" and thereby attributed
+#   gitignored-file reads to a commit SHA ([[feedback_verify_before_committing_governance_claims]],
+#   [[feedback_record_unattested_no_backfill]]):
+#   (a) COMMIT-PINNED at 71aae71, git-tracked files: permissions.ts:367 = 29; .decision-log.md head is
+#   2026-08-09-095; `git check-ignore -v docs/legal/niyamavali.md` matches .gitignore:68 and
+#   `git ls-files docs/legal/` is empty; marker LINES under `Epic[ -]3` (BOTH spellings) counted at
+#   13/21/5 in roles.ts/permissions.ts/scope.ts, 115 lines .ts / 119 with .tsx across 56 files
+#   (third-pass count — supersedes the second pass's 11/9/3, which matched the space-spelled subset only;
+#   see the marker-count note above).
+#   (b) READ ON-DISK on 2026-08-09, NOT commit-pinned — docs/legal/ is untracked and carries no git
+#   history, so its content has no relationship to any SHA and could have changed a moment before or
+#   after: niyamavali.md Part 8 ends at :183 with no §8.4a-§8.9 in EITHER locale; niyamavali.md:39 carries
+#   the §1.3 Panel definition. This is a weaker kind of provenance and is recorded as such rather than
+#   laundered into (a). NO code was written and NO other story status changed.
+#   ⚠ Recorded for the implementer: `sprint-status.yaml` literally reads `epic-3: in-progress` even though
+#   all 14 Epic 3 stories and the retrospective are `done` (Epics 4-10 read the same — the roll-up key is
+#   never flipped). AC7's evidence sentence is therefore worded at STORY granularity: "Epic 3's stories are
+#   all done (3.1-3.12)" is checkable; "Epic 3 is done" is checkably false against this file.
+#   SECOND-PASS CODE REVIEW (2026-08-10, still pre-implementation, via bmad-code-review): 3 decision-needed
+#   resolved by BigDev (second ceiling argument stays OUT of code; successor named Story 1.18 by a stated
+#   numbering rule; `verifier` gets its own Panel question), 27 patches applied, 0 deferred, 5 dismissed.
+#   SIX of the 27 were defects in FIRST-pass patches — applied to the story body but never to their
+#   siblings, or applied in a form that cannot work: the D1 ordering check used a two-dot git range that
+#   excludes the governance commits it was meant to observe; Task 7's P#/R#/S# labels are defined nowhere;
+#   scope.ts S4 stayed unassigned; the patch ordered the dev to find helpdesk.create/helpdesk.respond
+#   markers that DO NOT EXIST (verified: zero `Epic 3` refs; both already in target state); per-question
+#   consequences were made mandatory and then supplied for Q1 only; and THIS LEDGER re-asserted as VERIFIED
+#   what the story had retracted. Also corrected: AC4's "fails at runtime not typecheck" was INVERTED
+#   (it is a total Record over the role union — TS2741, a loud typecheck failure; the real hazard is a
+#   WRONG value, which typechecks and silently makes the role inert, and no test asserts the domain and
+#   contracts ceilings agree — one is now required); AC3 named GEO_RANK where scopeWithinCeiling actually
+#   reads CEILING_RANK (scope.ts:64-67), which would have pinned a false mechanism into roles.ts; AC1's
+#   "the only quorum number anywhere in the repo" is FALSE (trust-deed.md:227 Clause 19(b), ~10
+#   launch-gate sites, prd.md:1475) and is narrowed to "the only quorum stated for a Niyamavali trustee
+#   panel"; member-moderation/routes.ts:13-14 carries three stale pins incl. "PERMISSION_CATALOG_VERSION
+#   STAYS 28" that AC5 makes staler and no task touched; the Decision entry is now written in TWO passes
+#   (staged at Task 2, §8.7 inserted at Task 3, committed ONCE) because AC1 requires it to quote text that
+#   does not exist until Task 3; and Q8 was added so AC9's "route it to the Panel" branch is reachable at
+#   Task 1 rather than unreachable at Task 9. Routing note now carries Q1-Q8. Story stays ready-for-dev —
+#   no implementation has begun and none of this pass touched packages/ or apps/.
+#   THIRD-PASS CODE REVIEW + RESTRUCTURE (2026-08-10, still pre-implementation): 1 decision resolved by
+#   BigDev, 21 patches applied. TEN of pass 2's 27 patches were DEFECTIVE — the same one-location-not-its-
+#   mirrors failure pass 2 existed to fix. The critical one is the marker-count spelling artifact recorded
+#   above. Others: `GEO_RANK`->`CEILING_RANK` had been fixed in AC3 ONLY, leaving the instruction that
+#   governs the ENTIRE Family-A sweep ordering the false mechanism into ~20 production comments (the story
+#   would have shipped more of the defect than it removed); Q8 never reached Task 1 or Task 2, so an unruled
+#   Q8 fell into neither the blocking pair nor the defaulted range (third lapse of that obligation); both of
+#   pass 2's AC4 additions had ZERO task coverage; and the retracted quorum overclaim survived in two
+#   mirrors including this file. DECISION: the mandated ceiling-parity assertion is BEHAVIOURAL, not by
+#   export — SEEDED_ROLE_SCOPE_CEILING is module-private, so the test builds a RoleGrant at each bundle's
+#   own scopeCeiling and asserts RoleGrantSchema parses, with no @twt/contracts public-API widening; it
+#   carries its own revert-probe since all 12 ceilings already agree. ⭐ TASK 2/TASK 3 REDESIGNED AS A
+#   GOVERNANCE STATE MACHINE: pass 2's "stage the Decision at Task 2, complete at Task 3" created an
+#   IMPOSSIBLE STATE (on an unruled Q1/Q2 the entry could never be completed or committed). Now the ruling
+#   and the amendment are ONE ATOMIC ACT — nothing is written to .decision-log.md until both inputs exist,
+#   the entry is authored complete and committed ONCE at Task 3, and an unruled Q1/Q2 produces a BLOCK
+#   RECORD (routing-note section + deferred-work.md + this file flipped to `blocked`) that is explicitly NOT
+#   a decision-log entry, because nothing enters the decision log without a decision. The hard invariant
+#   holds: implementation is reachable only through a real ratification, with no manufactured ratification
+#   and no dangling torso. Also: Task 10's D1 check now ASSERTS (exit code) rather than prints, covers EVERY
+#   governance commit rather than only the first, is merge-safe via `git merge-base`, and excludes merge
+#   commits (on which --name-only emits nothing and would silently pass); Task 8 ADDS rather than modifies a
+#   D6-frozen pin; Escalation 4 and D5 no longer re-trigger on a story that does not exist; Task 0 has a
+#   real "if main moved" procedure; AC1's commit allowlist admits epics.md. STORY RESTRUCTURED ~1500 -> ~700
+#   lines: three review-findings sections condensed to one Review-history note, inline patch archaeology
+#   folded into the instructions it justified, duplicated framing collapsed — because mirror drift was the
+#   recurring defect across all three passes and the document had more mirrors than a pass could keep
+#   synchronized. Story stays ready-for-dev; nothing under packages/ or apps/ was touched by any pass.
+#   NEXT: the AC1/AC2 governance half — author the routing note (Q1-Q8) and route it to the Trustee Panel
+#   BEFORE any packages/ change. development_status[10-18-constituting-the-trustee-panel-sanctioning-authority]:
+#   ready-for-dev.)
 # last_updated: 2026-08-09c (10-27-member-missed-cycle-visibility: review -> done, via bmad-code-review.
 #   9 patch findings resolved (8 fixed, 1 corrected mid-implementation as a false positive — see below),
 #   3 decision-needed findings resolved by the user, 7 dismissed as noise, 0 deferred.
@@ -4765,7 +4930,7 @@ development_status:
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done
-  10-18-constituting-the-trustee-panel-sanctioning-authority: backlog
+  10-18-constituting-the-trustee-panel-sanctioning-authority: ready-for-dev
   10-19-termination-ends-membership-privileges: backlog
   10-20-moderation-record-model: backlog
   10-21-off-portal-dpdpa-access: backlog

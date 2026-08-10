@@ -172,7 +172,18 @@ describe('the SHIPPED governance_boundary.yaml', () => {
 // ⛔ The entry's rationale states the enablement authority in terms — Trustee-Panel-exclusive,
 // through a formal `.decision-log.md` entry — because this flag gates an automatic process that
 // removes a member's COVERAGE with no human in the loop.
-const EXPECTED_BAR_HASH = 'b00679ac96eeff3397e670957ee596ddf6b4f775827af319dd3ee8868b460b19';
+// ⚖ UPDATED by Story 10.19 (2026-08-10) — a DELIBERATE bar change, admitted through the workflow:
+//   · new `allow` entry `member_flow` / `termination_access_block` (the Q6 rollout gate on denying
+//     session issuance to a terminated member), with its rationale and adr;
+//   · `count` bumped 5 → 6 in the SAME commit (the revert-sanity teeth the YAML header requires);
+//   · attested by Decision `2026-08-10-097` clauses 6-8 + Decision `2026-08-10-098`.
+// ⛔ THIS ENTRY EXTENDED THE BAR INTO AUTHENTICATION — the first flag to condition it. That extension
+// was the RULING (`097` clause 7(i), ratified-as-written by `098` clause 2), NOT a consequence of the
+// source scan passing: `apps/api/src/modules/auth/` is simply not among the prohibited roots, and a
+// green leg (b) proves the root is unlisted, not that the behaviour is admissible.
+// ⛔ Its rationale TRACES the fail-open polarity to the member rather than asserting it, because the
+// `kyc_manual_fallback` attestation asserted the opposite of its own code through three review passes.
+const EXPECTED_BAR_HASH = '11da8ec7b166ca4bc313970baaec6b652ef34c33b3b7071b9637d5290dcb010a';
 
 describe('governance_boundary.yaml golden hash', () => {
   it('matches the frozen hash — a bar change requires deliberate attestation', () => {
@@ -230,7 +241,15 @@ describe('governance_boundary.yaml golden hash', () => {
 // separately asserted below: AC14 requires default-OFF to be the behaviour of the ABSENT
 // configuration, so every degraded path (no version in force, malformed cohort rule, lookup error)
 // must land on "the writer does nothing".
-const EXPECTED_FLAG_DEFAULTS_HASH = '05b02ba200f4b57c23bc59da30dd98ef435e0b811eb29767fc60eef447343bc1';
+// ⚖ UPDATED by Story 10.19 (2026-08-10) — the paired half of the bar change above: the new
+// `termination_access_block` default. ⛔ `fallbackDefault: false` is load-bearing here in the OPPOSITE
+// direction from every other flag in this file, and is separately asserted below: for
+// `restoration_discipline_imposition` it means "the writer does nothing" (a safeguard that fails
+// SAFE); here it means "session issuance is NOT denied", i.e. a terminated member RECEIVES A NORMAL
+// SESSION — a safeguard that fails OPEN. That is deliberate and ratified (Q6 sub-choice (b-i)): it is
+// the status quo, so no degraded path is a regression, and default-OFF must be the behaviour of the
+// ABSENT configuration until the Panel authorises the flip.
+const EXPECTED_FLAG_DEFAULTS_HASH = '266aa14356a231a73be3bcd9924155352ec820967c0809eddeccf2a527466704';
 
 describe('FLAG_DEFAULTS golden hash', () => {
   it('matches the frozen hash — a seeded flag default cannot change unnoticed', () => {
@@ -273,6 +292,35 @@ describe('FLAG_DEFAULTS golden hash', () => {
     expect(flag?.state).toBe('off');
     expect(flag?.fallbackDefault).toBe(false);
     expect(flag?.cohortDefinition).toEqual({ clauses: [] });
+  });
+
+  it('⛔ termination_access_block DEFAULTS OFF and FAILS OPEN — Q6 (b-i), and absence is what must be off', () => {
+    // Decision `2026-08-10-097` clause 6, sub-choice (b-i): the block ships default-OFF and the flip
+    // is gated on Story 10.21 landing. `state: 'off'` covers the seeded case; `fallbackDefault:
+    // false` is the one that covers ABSENCE — what every degraded path resolves to (no version in
+    // force, malformed cohort rule, lookup error).
+    //
+    // ⛔ READ THE POLARITY BEFORE "FIXING" IT. `false` here means "do NOT deny session issuance",
+    // so every degraded path yields a NORMAL SESSION for a terminated member. This safeguard FAILS
+    // OPEN — the opposite direction from `restoration_discipline_imposition` above, where `false`
+    // means "do nothing" and fails safe. Flipping this to `true` would make an unevaluable cohort
+    // rule START denying sessions, i.e. enable the block by accident, with zero flips and zero
+    // Panel decision — which is precisely the governance violation the entry's rationale forbids.
+    // The fail-open direction is deliberate and ratified (`097` clause 7(ii), `098` clause 2): it is
+    // today's behaviour, so no degraded path is a regression.
+    //
+    // Asserted by name rather than left to the golden hash, because the hash tells a future reader
+    // THAT something changed and this tells them WHY it must not.
+    const flag = FLAG_DEFAULTS['termination_access_block'];
+    expect(flag).toBeDefined();
+    expect(flag?.state).toBe('off');
+    expect(flag?.fallbackDefault).toBe(false);
+    expect(flag?.cohortDefinition).toEqual({ clauses: [] });
+    // The name is load-bearing: `parseCapabilityBar` rejects any artifact containing
+    // `member_lifecycle` (freeze row 2), and this gate reads the MODERATION OVERLAY, never
+    // `members.state`. Pinned so a rename toward lifecycle vocabulary fails here as well as at parse.
+    expect(Object.keys(FLAG_DEFAULTS)).toContain('termination_access_block');
+    expect(Object.keys(FLAG_DEFAULTS).some((k) => k.includes('member_lifecycle'))).toBe(false);
   });
 
   it('⚠ kyc_manual_fallback.fallbackDefault is FALSE — the degraded path keeps members able to join', () => {

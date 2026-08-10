@@ -398,7 +398,14 @@ figures because they measured **different things**. The binding rule:
 >   a single catalog JSDoc (`:77-366`), count **one block per deferral subject**, not per comment run.
 >   Otherwise the count collapses to 1 and the `P#` labels become meaningless.
 
-**Verified line counts under `Epic[ -]3`** (the *population*; the block count is Task 0's to derive):
+✅ **DERIVED 2026-08-10 — the count is now settled: 45 geo-deferral BLOCKS across 19 files** (Family A
+**24**, Family B **21**), plus **1 named site** (`member-moderation/routes.ts`) carrying no marker string.
+The full label→site table is in **Task 7** and is the execution authority. Three corrections it makes to
+the earlier drafts: `schema/cycle_freeze_commits.ts` is **excluded** (FK-posture, not a geo-deferral); the
+banners **mirrors are included** (settling the open inclusion-rule question); and `scope.ts` has **four**
+blocks (S1–S4), not the draft's five-with-a-gap.
+
+**Verified line counts under `Epic[ -]3`** (the *population* the blocks were derived from):
 
 | | `roles.ts` | `permissions.ts` | `scope.ts` | Repo-wide |
 |---|---|---|---|---|
@@ -693,14 +700,88 @@ unruled Q1/Q2 the entry could never be completed *or* committed, leaving a dangl
 
 ### Task 7 — Handle every marker, split by family (AC: 7)
 
-- [ ] **Execute against Task 0's label→site table**, not against any draft list. Where a draft and the table
-      disagree, **the table wins**.
+> ## ✅ Task 0's LABEL→SITE TABLE — derived 2026-08-10, THIS IS THE AUTHORITY
+>
+> Counted under AC7's rule: geo-deferral comment **blocks**, marker string **`Epic[ -]3` (both
+> spellings)**, `.ts` + `.tsx`, non-test, non-`dist`, one block per **deferral subject**.
+> ⚠ **Line numbers are post-Task-4/5/6** — `permissions.ts` and `roles.ts` shifted. Re-derive with
+> `grep -nE "Epic[ -]3"` if any further edit lands before Task 7 runs.
+>
+> **TOTAL: 45 blocks across 19 files** — Family A **24**, Family B **21**, plus **1 named site** carrying
+> no marker string. Population: 119 marker lines / 56 files; the remaining 37 files are **excluded** as
+> epic-timing, FK-posture, or consumer-ownership references, not geo-deferrals.
+>
+> ### Family A — RANK-ORDER. Rewrite in place. Never re-point. (24 blocks)
+>
+> | Label | File | Lines | Subject |
+> |---|---|---|---|
+> | P3 | `domain/src/rbac/permissions.ts` | 172, 175, 177 | D-B reconciliation / `cycle.freeze` |
+> | P4 | ″ | 186–187 | `state`-ceiling vs pariwar-dimension |
+> | P5 | ″ | 208 | pariwar-dimension keys, Trustee-Lite |
+> | P6 | ″ | 221–222 | Trustee-Lite precedent |
+> | P7 | ″ | 231–232 | `reconciliation.review` |
+> | P9 | ″ | 501, 503 | pariwar-dimension check |
+> | P10 | ″ | 510 | `claim.r9_vote` + panel membership |
+> | P11 | ″ | 529 | `appeal_stage3_decide` |
+> | P12 | ″ | 539 | version-bump note |
+> | P13 | ″ | 546 | `reconciliation.review` reviewer |
+> | R1–R5 | `domain/src/rbac/roles.ts` | 102, 106, 111, 118, 124 | key-handle comments |
+> | R6–R10 | ″ | 288–289, 295, 300, 308, 314 | `pariwar_admin` bundle deferrals |
+> | D10 | `api/…/claims/claims.cycle-freeze.routes.ts` | 13 | `state_trustee` deferred |
+> | D11 | `api/…/claims/claims.r9-voting.routes.ts` | 15 | `state_trustee` deferred |
+> | D12 | `api/…/pool-fixed-amount/index.ts` | 12 | `state_trustee` deferred |
+> | D13 | `api/…/trustee-lite/handlers.ts` | 40 | district-ceiling vs pariwar — the 7th replay |
+>
+> ### Family B — GENUINE GEO-TREE. Re-point to Story 1.18. (21 blocks)
+>
+> | Label | File | Lines | Subject |
+> |---|---|---|---|
+> | P1 | `domain/src/rbac/permissions.ts` | 120–121 | `claim.conduct_ground_inspection`, block→district |
+> | P2 | ″ | 157 | `claim.verify`, state→district console |
+> | P8 | ″ | 486 | state→district check |
+> | R11 | `domain/src/rbac/roles.ts` | 410 | `block_admin` ancestry |
+> | R12 | ″ | 454 | `verifier` state→district (D3a) |
+> | S1 | `domain/src/rbac/scope.ts` | 29 | injectable geo-tree seam |
+> | S2 | ″ | 116–121 | canonical org tree / containment seam |
+> | S3 | ″ | 126–132 | `denyDeeperGeoResolver` doc comment |
+> | S4 | ″ | 179 | fail-closed until org tree |
+> | D1 | `domain/src/reports/scope.ts` | 16 | district-narrowing below ceiling |
+> | D2 | ″ | 71 | multi-node scope |
+> | D3 | `domain/src/reports/templates/_shared.ts` | 5, 24, 40 | deny-deeper narrowing |
+> | D4 | `domain/src/reports/templates/member-roster.ts` | 44 | deny-deeper |
+> | D5 | `…/contribution-rate-by-district.ts` | 45 | deny-deeper |
+> | D6 | `domain/src/news-blog/audience.ts` | 17, 19 | geo/designation selector |
+> | D7 | `domain/src/banners/audience.ts` | 18, 40 | geo/designation selector |
+> | D8 | `domain/src/banners/read.ts` | 23 | geo selector drift |
+> | D9 | `domain/src/pool/fixed-amount.ts` | 78 | trustee directory + geo resolver *(compound)* |
+> | D14 | `contracts/src/banners/enums.ts` | 45 | selection primitive |
+> | D15 | `contracts/src/banners/dto.ts` | 43 | selection primitive |
+> | D16 | `admin/src/modules/banners/derive.ts` | 60 | selection primitive |
+>
+> ### ⛔ Corrections to the draft lists — the table overrides all three
+>
+> 1. **`schema/cycle_freeze_commits.ts:23` is EXCLUDED**, though the draft listed it under Family B. It is
+>    an **FK-posture** note (*"no `pariwars` base table to FK against pre-Epic-3"*), which AC7's counting
+>    rule excludes explicitly. Do not edit it.
+> 2. **The banners mirrors are IN scope** — D14/D15/D16 settle the open inclusion-rule question. The rule:
+>    *a mirror carrying the same deferral prose is swept with its origin.* `contracts/src/banners/{enums,dto}.ts`
+>    and `admin/src/modules/banners/derive.ts` all say "until the Epic-3 selection primitive lands", same as
+>    `domain/src/banners/audience.ts`. Sweeping the origin and not its mirrors would leave the claim
+>    half-corrected.
+> 3. **`scope.ts` has FOUR blocks, not five.** The draft's `S1/S2/S3/S5` (with S4 missing) was a
+>    line-based labelling; `:118` and `:120` are one contiguous doc comment on one subject. Labels are
+>    S1–S4, contiguous, none missing.
+>
+> **Excluded populations, recorded so they are not re-litigated:** `permissions.ts:18` (*"members at
+> Epic 3"* — epic timing); ~37 files of epic-timing / FK-posture / consumer-ownership references
+> (`consent_records.ts`, `ids/index.ts`, `terms-and-conditions/*`, `schema/pool*`, `members.ts`,
+> `apps/mobile/*`, the contracts consent/alerts/data-export families, and others). **None is a
+> geo-deferral.** Verified by reading every one.
+
+- [ ] **Execute against the label→site table above.** Where any draft list and the table disagree, **the
+      table wins**.
 - [ ] **Family A — REWRITE IN PLACE** to the rank-order reason (`CEILING_RANK` for the ceiling check,
-      `GEO_RANK` for containment). ⛔ **Do not re-point Family A to Story 1.18.**
-      Draft sites: `permissions.ts` P3/P4/P5/P6/P7/P9–P13; `roles.ts` R1–R10;
-      `claims.cycle-freeze.routes.ts`; `claims.r9-voting.routes.ts`; `pool-fixed-amount/index.ts`;
-      `trustee-lite/handlers.ts`; `reconciliation.review` (`permissions.ts:231-232`, `:523`;
-      `roles.ts:105-109`, `:294-298`).
+      `GEO_RANK` for containment). ⛔ **Do not re-point Family A to Story 1.18.** 24 blocks, per the table.
       ⛔ **Do NOT edit `helpdesk.create` (`permissions.ts:236-248`) or `helpdesk.respond` (`:248-263`)** —
       zero markers in either spelling; already in target state.
 - [ ] ⭐ **The moderation site — BOTH ranges, for different reasons**
@@ -713,14 +794,8 @@ unruled Q1/Q2 the entry could never be completed *or* committed, leaving a dangl
         story adds `trustee_panel` to that holder list and answers that finding.** AC7's instruction to
         *"name this story as the answer to the deferral the header records"* applies **here** — the deferral
         is recorded at `:25-27`, not at `:12-13`.
-- [ ] **Family B — RE-POINT to `Story 1.18`.** Draft: `permissions.ts` P1/P2/P8; `roles.ts` R11/R12;
-      `scope.ts` S1/S2/**S4**/S3/S5; `reports/scope.ts` (`:16` and `:67-72`);
-      `reports/templates/_shared.ts`, `member-roster.ts`, `contribution-rate-by-district.ts`;
-      `pool/fixed-amount.ts`; `news-blog/audience.ts`; `banners/audience.ts`; `banners/read.ts`;
-      `schema/cycle_freeze_commits.ts`.
-- [ ] State an **inclusion rule** for the contracts/admin mirrors — `banners/audience.ts` is in scope while
-      its identical-deferral siblings in `packages/contracts/src/banners/` and
-      `apps/admin/src/modules/banners/` are not. Either sweep them or record why they are out.
+- [ ] **Family B — RE-POINT to `Story 1.18`.** 21 blocks, per the table. ⛔ `schema/cycle_freeze_commits.ts`
+      is **excluded** (FK-posture, not a geo-deferral) despite appearing in the old draft.
 - [ ] ⛔ `denyDeeperGeoResolver` (`scope.ts:133-135`) byte-unchanged — **the const only**; `:126-132` is
       editable.
 - [ ] Rewrite `deferred-work.md:1472` (D1-1.8); re-point `:853` and `:3186` to Story 1.18.

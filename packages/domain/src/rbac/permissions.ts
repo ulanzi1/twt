@@ -117,9 +117,13 @@ export function permissionKey(value: string): PermissionKey {
  * district-scoped resource check (a block is narrower than a district → the district target is
  * "broader than the grant" → deny, scope.ts), and granting district scope would VIOLATE the role
  * ceiling. No geo-tree resolver currently exists to prove block→parent-district ancestry
- * (`denyDeeperGeoResolver`, until Epic 3). Therefore v1 grants `claim.conduct_ground_inspection`
- * to `district_admin` ONLY; block_admin scheduling is deferred until the Epic-3 geo-tree resolver
- * supports ancestry-aware authorization. NO inert block_admin grant is seeded.
+ * (`denyDeeperGeoResolver` is the fail-closed default). Therefore v1 grants
+ * `claim.conduct_ground_inspection` to `district_admin` ONLY; block_admin scheduling is DEFERRED to
+ * **Story 1.18 (Geo-Tree Scope Resolver)**, which a resolver GENUINELY fixes: `block`→parent-`district` is
+ * same-tree ancestry with the target strictly narrower (Family B, not the rank-order family).
+ * ⚠ Successor is a STORY with acceptance criteria, never an epic — the prior `Epic 3` pointer expired
+ * unowned when Epic 3's stories completed and no resolver was built.
+ NO inert block_admin grant is seeded.
  * ACCEPTANCE CONDITION: block_admin support may be enabled only when the authorization layer can
  * resolve a block grant through verified block→district ancestry while preserving the role's
  * `scopeCeiling: 'block'` — enabling it must require no district-scoped grant to the block admin.
@@ -154,8 +158,10 @@ export function permissionKey(value: string): PermissionKey {
 // action" lesson). Checked at `dimension: 'district'` against the deceased member's server-derived
 // posting district. Granted to `district_admin` + `verifier` (both `district` ceiling; derives to
 // `super_admin`). NOT `state_trustee` (D3a — a `state`-ceiling grant cannot satisfy a district-dimension
-// check under the deny-deeper geo resolver until Epic 3; State-Trustee district-console access is
-// deferred, the exact 6.7 block_admin precedent). See roles.ts for the grant rationale.
+// check under the deny-deeper geo resolver; State-Trustee district-console access is DEFERRED to
+// **Story 1.18 (Geo-Tree Scope Resolver)** — `state`→`district` is same-tree ancestry with the target strictly
+// narrower, which a resolver genuinely fixes (Family B; the exact 6.7 block_admin precedent).
+// See roles.ts for the grant rationale.
 // Bumped 13 → 14 at Story 6.12 (added ONE key): `claim.assign_shepherd` — the R6 MANUAL shepherd
 // reassignment WRITE key gating `POST …/admin/claims/:claimCaseId/shepherd/reassign`. FR-41 requires an
 // ordinary administrative reassignment/correction path that the AR-61 automatic fallback alone does not
@@ -169,22 +175,23 @@ export function permissionKey(value: string): PermissionKey {
 // Pariwar's pending cycle) → checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId, resolvable
 // TODAY — the validity.invalidate_cache / pariwar.configure_channels pariwar-wide-key precedent), granted
 // to `pariwar_admin` + `super_admin`.
-// ── D-B RECONCILIATION — direct `state_trustee` authorization DEFERRED to Epic 3 ───────────────
+// ── D-B RECONCILIATION — direct `state_trustee` authorization is RANK-ORDER BLOCKED ─────────────
 // The story's actor is the "State Trustee", but a `state`-ceiling role CANNOT satisfy a `pariwar`-dimension
 // check (`scopeWithinCeiling('pariwar','state')` is false) NOR hold a `pariwar` grant, and there is no
-// Pariwar→state geo data pre-Epic-3 (no `pariwars` base table with a state column; the geo tree is Epic 3).
-// So v1 gates on `pariwar_admin` acting as Trustee-Lite; direct `state_trustee` gating is DEFERRED to the
-// Epic-3 geo-tree resolver — the EXACT 6.7 block_admin + 6.10 state_trustee deferral precedent. This is a
-// DELIBERATE deferral, NOT an oversight (the 6.12 review lesson: a deliberate authz deferral must read as
-// deliberate). NO inert state_trustee grant is seeded. ACCEPTANCE CONDITION: direct state_trustee gating
-// may be enabled only when the authorization layer can resolve a state grant through verified
-// state→Pariwar containment while preserving the role's `scopeCeiling: 'state'`.
+// Pariwar→state geo data. So v1 gates on `pariwar_admin` acting as Trustee-Lite.
+// ⛔ RANK-ORDER BLOCK (scope.ts §RANK-ORDER) — no geo-tree resolver can lift this: `pariwar` is BROADER than `state`
+// (CEILING_RANK 1 vs 2), so a state-ceiling grant is asking to act ABOVE its own ceiling. This was
+// previously written as 'DEFERRED to the Epic-3 geo-tree resolver' — a promise Epic 3 could never have
+// kept. Corrected by Story 10.18. NO inert state_trustee grant is seeded.
+// ⛔ THE REAL CONDITION is not a resolver: it is a pariwar-ceiling actor. Story 10.18 supplies one —
+// `trustee_panel` (Niyamavali §8.7, Decision `2026-08-10-096`) — for moderation. A state_trustee could
+// only gate these keys if its `scopeCeiling` itself changed, which is freeze row 9 and needs an ADR.
 // Bumped 15 → 16 at Story 6.14 (D-B; added ONE key): `claim.r9_vote` — the R9 special-case panel-voting
 // WRITE key gating the R9 voting surface (GET/POST …/admin/r9-voting/*). Checked at `dimension: 'pariwar'`
 // (value = scopeTx.pariwarId — the cycle.freeze / validity.invalidate_cache pariwar-wide-key precedent; NO
 // server-derived district). Granted to `pariwar_admin` + `super_admin`. Direct `state_trustee` authorization
-// is DEFERRED to the Epic-3 geo-tree resolver (a `state`-ceiling grant cannot satisfy a pariwar-dimension
-// check pre-Epic-3 — the 6.13 D-B / 6.7 block_admin deferral precedent); v1 actor = pariwar_admin-as-
+// is ⛔ RANK-ORDER BLOCK (scope.ts §RANK-ORDER) — no geo-tree resolver can lift this (a `state`-ceiling grant can never satisfy a
+// pariwar-dimension check — `scopeWithinCeiling` is a pure numeric compare); v1 actor = pariwar_admin-as-
 // Trustee-Lite. A DELIBERATE deferral, documented so it never reads as an oversight. NO inert state_trustee
 // grant is seeded. The FINALIZE route is ADDITIONALLY step-up-gated (`r9_finalize`) — a route concern, not a
 // permission key. The panel-membership eligibility check (every panel actor must hold THIS key) is the
@@ -205,7 +212,7 @@ export function permissionKey(value: string): PermissionKey {
 // `POST …/admin/claims/:claimCaseId/appeal/stage3`. Checked at `dimension: 'pariwar'` (RESOLVED, v1 — a
 // global-scope Trustee escalation is a future extension). Granted to `pariwar_admin` (+ super_admin). The
 // DECIDE route is step-up-gated (`appeal_stage3_decide`). Direct `state_trustee` gating for the pariwar-
-// dimension keys is DEFERRED to the Epic-3 geo-tree resolver (the 6.13/6.14 Trustee-Lite precedent); v1 actor
+// dimension keys is ⛔ RANK-ORDER BLOCK (scope.ts §RANK-ORDER) — no geo-tree resolver can lift this (the 6.13/6.14 Trustee-Lite precedent); v1 actor
 // = pariwar_admin-as-Trustee-Lite. NO inert state_trustee grant is seeded. The member-facing INITIATE route
 // needs NO admin key — it is a claimant-or-operator action (member session, or an operator with the helpline
 // capability under AR-61).
@@ -218,8 +225,8 @@ export function permissionKey(value: string): PermissionKey {
 // `POST …/admin/pool-fixed-amount/emergency` (ADDITIONALLY step-up-gated at the route — governance posture
 // equivalent to R9: step-up + recorded trustee attestation + auditability, WITHOUT the R9 voting lifecycle).
 // Also `dimension: 'pariwar'`; granted to `pariwar_admin` (+ super_admin). v1 actor = pariwar_admin-as-
-// Trustee-Lite; direct `state_trustee` gating DEFERRED to the Epic-3 geo-tree resolver (the 6.13/6.14
-// Trustee-Lite precedent — a `state`-ceiling grant cannot satisfy a pariwar-dimension check pre-Epic-3). NO
+// Trustee-Lite; direct `state_trustee` gating is ⛔ RANK-ORDER BLOCK (scope.ts §RANK-ORDER) — no geo-tree resolver can lift this
+// (the 6.13/6.14 Trustee-Lite precedent — a `state`-ceiling grant can never satisfy a pariwar check). NO
 // inert state_trustee grant is seeded. A DELIBERATE deferral, documented so it never reads as an oversight.
 // Bumped 21 → 22 at Story 9.8 (added ONE key for the reconciliation review queue — the trustee
 // ADJUDICATION surface): `reconciliation.review` — the READ + four action WRITEs (confirm/reject/
@@ -228,8 +235,8 @@ export function permissionKey(value: string): PermissionKey {
 // precedent; a reconciliation review queue is PARIWAR-WIDE, not district-derived — unlike the 6.10 verifier
 // console, there is NO server-derived district). Granted to `pariwar_admin` (Trustee-Lite) + `super_admin`
 // (auto-derived) + `finance_officer` (the FR-50 "designated reconciliation reviewer"). Direct
-// `state_trustee` authorization is DEFERRED to the Epic-3 geo-tree resolver (a `state`-ceiling grant cannot
-// satisfy a pariwar-dimension check pre-Epic-3; the 6.13/6.14 Trustee-Lite precedent). NO inert
+// `state_trustee` authorization is ⛔ RANK-ORDER BLOCK (scope.ts §RANK-ORDER) — no geo-tree resolver can lift this (a `state`-ceiling grant
+// can never satisfy a pariwar-dimension check; the 6.13/6.14 Trustee-Lite precedent). NO inert
 // state_trustee grant is seeded. A DELIBERATE deferral, documented so it never reads as an oversight. Each
 // action is ADDITIONALLY step-up-gated at the route (distinct action contexts) — a route concern, not a key.
 // Bumped 22 → 23 at Story 10.3 (added ONE key): `helpdesk.create` — the helpdesk ticket-create WRITE key
@@ -483,8 +490,9 @@ export const SEED_PERMISSION_KEYS = [
   // district). Distinct from `claim.approve` (the 6.11 WRITE): reading a claim's signals to verify
   // standing ≠ approving it (the 4.6 `member.view_validity` read-key precedent). Granted to
   // `district_admin` + `verifier` ONLY (+ derived `super_admin`) — NOT `state_trustee` (D3a: a
-  // `state`-ceiling grant cannot satisfy a district-dimension check until the Epic-3 geo-tree resolver;
-  // the exact 6.7 block_admin deferral). See roles.ts.
+  // `state`-ceiling grant cannot satisfy a district-dimension check until a real resolver proves
+  // state→district ancestry — DEFERRED to **Story 1.18 (Geo-Tree Scope Resolver)**, Family B; the exact 6.7
+  // block_admin deferral). See roles.ts.
   'claim.verify',
   // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
   // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the
@@ -498,16 +506,16 @@ export const SEED_PERMISSION_KEYS = [
   // state_trustee-facing surface (GET/POST …/admin/cycle-freeze/{pending,decision,commit}). Checked at
   // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the validity.invalidate_cache /
   // pariwar.configure_channels pariwar-wide-key precedent; NO server-derived district). Granted to
-  // `pariwar_admin` + `super_admin`. Direct `state_trustee` authorization is DEFERRED to the Epic-3
+  // `pariwar_admin` + `super_admin`. Direct `state_trustee` authorization is RANK-ORDER BLOCKED (scope.ts
   // geo-tree resolver (see the version-bump note above — a `state`-ceiling grant cannot satisfy a
-  // pariwar-dimension check pre-Epic-3; the 6.7/6.10 deferral precedent). v1 actor = pariwar_admin-as-
+  // §RANK-ORDER — no resolver can lift it; the 6.7/6.10 precedent). v1 actor = pariwar_admin-as-
   // Trustee-Lite. A DELIBERATE deferral, documented so it never reads as an oversight.
   'cycle.freeze',
   // Story 6.14 (D-B) — the R9 special-case panel-voting WRITE key. Gates the R9 voting surface
   // (GET/POST …/admin/r9-voting/{queue,:claimCaseId,open,vote,finalize,cancel,votes-by-trustee}). Checked at
   // `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze pariwar-wide-key precedent; NO
   // server-derived district). Granted to `pariwar_admin` + `super_admin`. Direct `state_trustee` gating is
-  // DEFERRED to Epic 3 (the 6.13 D-B Trustee-Lite precedent). This key is ALSO the panel-membership
+  // RANK-ORDER BLOCKED, scope.ts §RANK-ORDER (the 6.13 D-B precedent). This key is ALSO the panel-membership
   // eligibility credential: openR9VotingSession validates EVERY panel_actor_ids member holds it @ pariwar
   // (assertPanelAuthorized). The finalize route ADDS an r9_finalize step-up (a route concern, not a key).
   'claim.r9_vote',
@@ -526,7 +534,7 @@ export const SEED_PERMISSION_KEYS = [
   // Story 6.16 — the Stage-3 Trustee discretion (final) WRITE key. Gates
   // POST …/admin/claims/:claimCaseId/appeal/stage3 (checked at `dimension: 'pariwar'` — RESOLVED v1; a
   // global-scope escalation is a future extension). Granted to `pariwar_admin` (+ super_admin). The route is
-  // step-up-gated (`appeal_stage3_decide`). Direct state_trustee gating deferred to Epic 3 (Trustee-Lite).
+  // step-up-gated (`appeal_stage3_decide`). Direct state_trustee gating RANK-ORDER BLOCKED (§RANK-ORDER).
   'claim.appeal_final',
   // Story 7.5 (FR-15) — the STANDARD (12-month-notice) fixed-amount change WRITE key. Gates
   // GET/POST …/admin/pool-fixed-amount + POST …/admin/pool-fixed-amount/schedule. Checked at
@@ -536,14 +544,14 @@ export const SEED_PERMISSION_KEYS = [
   // Story 7.5 (FR-15) — the EMERGENCY adjustment override WRITE key. Gates
   // POST …/admin/pool-fixed-amount/emergency (ADDITIONALLY step-up-gated at the route — governance posture
   // equivalent to R9 WITHOUT the R9 voting lifecycle). Also `dimension: 'pariwar'`. Granted to `pariwar_admin`
-  // (+ super_admin). Direct state_trustee gating deferred to Epic 3 (Trustee-Lite; see the version-bump note).
+  // (+ super_admin). Direct state_trustee gating RANK-ORDER BLOCKED (scope.ts §RANK-ORDER; see the bump note).
   'pool.fixed_amount_emergency',
   // Story 9.8 (FR-50) — the reconciliation review-queue READ + four action WRITEs (confirm/reject/
   // facilitate-recovery/review-and-reverse) gate. Gates GET/POST …/admin/reconciliation-review/* (the queue,
   // the case detail, and the four action routes). Checked at `dimension: 'pariwar'` (value = scopeTx.pariwarId
   // — the cycle.freeze / claim.r9_vote pariwar-wide-key precedent; the review queue is Pariwar-wide, NOT
   // district-derived). Granted to `pariwar_admin` (Trustee-Lite) + `finance_officer` (the "designated
-  // reconciliation reviewer") + super_admin (auto-derived). Direct `state_trustee` gating deferred to Epic 3
+  // reconciliation reviewer") + super_admin (auto-derived). Direct `state_trustee` gating RANK-ORDER BLOCKED
   // (Trustee-Lite; see the version-bump note). Each action is ADDITIONALLY step-up-gated (a route concern).
   'reconciliation.review',
   // Story 10.3 (SM-1 C3) — the helpdesk ticket-create WRITE key. Gates the EXISTING 10.1 create route

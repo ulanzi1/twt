@@ -12,7 +12,8 @@
 // The route IS the security control (AC6): an authenticated HUMAN admin session + the claim.r9_vote WRITE
 // key at `dimension: 'pariwar'` (value = scopeTx.pariwarId — the cycle.freeze pariwar-dimension precedent; NO
 // server-derived-district preHandler, the target IS the tenant) + tenant match — fail-closed, audited. v1
-// actor = pariwar_admin-as-Trustee-Lite (D-B; direct state_trustee gating DEFERRED to the Epic-3 geo-tree
+// actor = pariwar_admin-as-Trustee-Lite (D-B; direct state_trustee gating is RANK-ORDER BLOCKED —
+// see scope.ts §RANK-ORDER; no
 // resolver — see permissions.ts).
 //
 // ── Finalize is additionally step-up-gated (D-E/AC4/AC6, BigDev-ratified) ────────────────────

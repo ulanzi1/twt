@@ -20,7 +20,7 @@
 //   · dismissal        → SQL (the LEFT JOIN above).
 //   · AUDIENCE         → TS, via the single `isMemberInBannerAudience` authority (Decision 4). Not
 //     duplicated as a SQL `IN ('public','members-all')` predicate: a second copy of the rule would
-//     drift the moment the Epic-3 geo selector lands and starts consulting member attributes.
+//     drift the moment Story 1.18's geo selector lands and starts consulting member attributes.
 //   · PRECEDENCE       → NOT here. `resolveVisibleBanners` and `deriveBannerDisplayState` were
 //     relocated from `packages/domain` to `packages/contracts` because they are pure, read-time
 //     PRESENTATION POLICY shared by both the API/domain layer and the browser-based admin UI.

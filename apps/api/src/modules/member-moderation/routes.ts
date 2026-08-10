@@ -10,9 +10,13 @@
 //   · GET  …/p/:pariwarId/moderation/reason-codes                 → the frozen registry (review follow-up)
 //
 // ── RBAC: the EXISTING `member.moderate` key. NO new key, NO catalog bump ────────────────────────
-// `member.moderate` is already in the v1 seed catalog (`permissions.ts:368`) and already granted to
-// `pariwar_admin` (`roles.ts:209`). `PERMISSION_CATALOG_VERSION` STAYS 28 — the first Epic-10 story
-// with no bump. Do not invent a key to keep the chain going.
+// `member.moderate` is already in the v1 seed catalog (`permissions.ts:415`) and granted to
+// `pariwar_admin` (`roles.ts:253`) and — since Story 10.18 — `trustee_panel`.
+// ⚠ Line pins and the version corrected by Story 10.18: this block previously read
+// "`permissions.ts:368`", "`roles.ts:209`" and "`PERMISSION_CATALOG_VERSION` STAYS 28". Story 10.10
+// added no key so *its own* delta was zero, but the version has since moved and is **30** (Story 10.18
+// bumped 29 → 30 for a ROLE, not a key — the catalog version is no longer a proxy for key count).
+// Do not invent a key to keep the chain going.
 //
 // ⚠ THE FINDING (Decision 4) — THIS STORY'S OWN PROTAGONIST CANNOT PASS THIS GATE.
 // `epics.md:3540` casts a STATE TRUSTEE as the actor. But `state_trustee` holds `member.suspend`,
@@ -22,9 +26,28 @@
 // `member.moderate` to `state_trustee` would seed an INERT capability — the
 // [[project_rbac_geo_scope_containment]] asymmetry that 10.3/10.4/10.5/10.8/10.9 each deferred,
 // except this time it lands on the NAMED ACTOR.
-// → v1 holder is `pariwar_admin` (+ `super_admin`, auto-derived); `state_trustee` and
-//   `district_admin` are DEFERRED. This ships with its epic's protagonist unable to act, and that
-//   is a CAPABILITY-MODEL FINDING TO ESCALATE, not a defect to paper over.
+// → v1 holder was `pariwar_admin` (+ `super_admin`, auto-derived); `state_trustee` and
+//   `district_admin` were DEFERRED. This shipped with its epic's protagonist unable to act, and that
+//   was a CAPABILITY-MODEL FINDING TO ESCALATE, not a defect to paper over.
+//
+// ── ✅ ANSWERED BY STORY 10.18. The deferral recorded above is now discharged. ─────────────────────
+// The escalation was correct and its answer is NOT a geo-tree resolver — it never could have been.
+// A `state`-ceiling grant failing a `pariwar`-dimension check is RANK-ORDER BLOCKED (see
+// `packages/domain/src/rbac/scope.ts` §RANK-ORDER): `scopeWithinCeiling` is a pure numeric compare
+// with no resolver parameter, and `scopeContains` denies independently before any resolver runs.
+// **No org tree, however complete, would have lifted it.** The comment above correctly diagnosed the
+// mechanism and then mis-assigned the fix — the exact misdiagnosis Story 10.18's Family-A sweep exists
+// to correct, and this site is its worked example.
+//
+// THE ANSWER: the actor was never a `state_trustee`. It is the **Trustee Panel** — constituted by
+// Niyamavali §8.7 and ratified in Decision `2026-08-10-096` — seeded as `trustee_panel` with a
+// **`pariwar` scopeCeiling**, which satisfies this gate by construction. `epics.md:3540` was corrected
+// to name the Trustee Panel as the actor.
+// ⚠ `state_trustee` and `district_admin` remain non-holders, PERMANENTLY on present ranks, not pending
+// anything. `verifier` holds `member.moderate` at a `district` ceiling and is therefore INERT here —
+// a deliberate deferral with an acceptance condition (Decision `2026-08-10-096` clause 7), pinned in
+// `roles.test.ts`. Panel authority is CONCURRENT, not exclusive (clause 3): `pariwar_admin` keeps the
+// key and §8.2/§8.3's other authorities are unaffected.
 // *Rejected:* gating on `member.suspend` — held by `state_trustee` + `district_admin`, whose
 //   ceilings fail the same pariwar check, so it is a SECOND inert path. `member.suspend` is left
 //   untouched and is now effectively superseded.

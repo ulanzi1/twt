@@ -26,7 +26,7 @@
 // concrete node value and enforcement is containment of the action's target
 // locator within the grant's `(dimension, value)`. Containment across the geo
 // tree (state→district→block) needs a canonical org hierarchy that does NOT exist
-// until Epic 3 (member/geo data) — so the geo-tree lookup is an INJECTABLE seam
+// until Story 1.18 (Geo-Tree Scope Resolver) — so the geo-tree lookup is an INJECTABLE seam
 // (default: deny-deeper). Exact-node, `global`, and `self` resolve now; deeper
 // geo containment denies until a resolver is supplied (D-item: geo-tree seam).
 
@@ -65,6 +65,45 @@ const CEILING_RANK: Record<ScopeDimension, number> = {
   ...GEO_RANK,
   self: 5,
 };
+
+// ── §RANK-ORDER — the canonical explanation. Cited from every site that used to promise a resolver. ──
+//
+// Story 10.18 split the accumulated geo-deferral debt into two families, and this note is the answer to
+// the first. Sites across `permissions.ts`, `roles.ts` and `apps/api` used to say a `state`-ceiling role
+// would gain a `pariwar`-dimension capability "when the Epic-3 geo-tree resolver lands". **That promise
+// was never true, and those comments were misdiagnoses rather than pending work.**
+//
+// A grant whose ceiling is `state` / `district` / `block` can NEVER satisfy a `pariwar`-dimension check,
+// and NO organizational tree — however complete — changes that, because no resolver participates in
+// either of the two lines that deny it:
+//
+//   1. `scopeWithinCeiling(dimension, ceiling)` reads **CEILING_RANK** (directly above) and is a PURE
+//      NUMERIC COMPARE with **no resolver parameter at all**:
+//          scopeWithinCeiling('pariwar', 'state')  →  1 >= 2  →  false
+//      `pariwar` is rank 1 and `state` is rank 2 because this ordering is high→low: **lower number =
+//      BROADER**. A Pariwar is the tenant; a state is a subdivision *within* it. So a state-ceiling grant
+//      asking to act pariwar-wide is asking to act ABOVE its own ceiling.
+//
+//   2. `scopeContains` denies independently at the `tRank < gRank` guard (GEO_RANK-based), which also
+//      runs BEFORE any resolver is consulted.
+//
+// ⚠ THE DISTINCTION THAT MATTERS. A resolver answers *"is node X beneath node Y in the tree?"* — it can
+// only ever narrow. These sites need the opposite: a narrower grant authorizing a broader target. That is
+// not a missing capability; it is the ordering working correctly. Supplying a resolver would not have
+// solved it, and re-pointing these sites at the resolver story would preserve the error under a new date.
+//
+// ✅ WHERE A RESOLVER GENUINELY IS THE FIX (Family B) the sites say so and name **Story 1.18 — Geo-Tree
+// Scope Resolver**: grant and target in the same tree with the target strictly NARROWER
+// (`state`→`district`, `block`→`district` ancestry). Those are real deferrals. `denyDeeperGeoResolver`
+// below is their fail-closed default.
+//
+// ✅ FOR MODERATION SPECIFICALLY, Story 10.18 IS the answer: the actor was never a `state_trustee`. It is
+// the `trustee_panel` — a **pariwar-ceiling** body constituted by Niyamavali §8.7 (Decision
+// `2026-08-10-096`), which satisfies the pariwar-dimension gate by construction.
+//
+// ⛔ Do NOT "fix" this by re-ranking `pariwar` and `state`. The permission-key + scope-dimension model is
+// architectural **freeze row 9**; re-ranking would silently re-authorize every grant in the system. If it
+// is ever right, it is an ADR and a story of its own.
 
 /**
  * Is `dimension` at or below `ceiling` in the canonical high→low ordering? Used
@@ -115,9 +154,9 @@ export interface GeoNode {
  * The injectable geo-tree containment seam. `contains(ancestor, descendant)`
  * answers "is `descendant` within `ancestor` in the canonical org tree?" — e.g.
  * `contains({state,'Bihar'}, {district,'Patna'})` → true iff Patna ∈ Bihar. The
- * canonical org tree lands with member/geo data in Epic 3; until then the DEFAULT
+ * canonical org tree lands with Story 1.18 (Geo-Tree Scope Resolver); until then the DEFAULT
  * resolver denies all cross-level geo containment (fail-closed). Deferred D-item
- * (geo-tree containment seam → Epic 3).
+ * (geo-tree containment seam → Story 1.18 (Geo-Tree Scope Resolver)).
  */
 export interface GeoTreeResolver {
   contains(ancestor: GeoNode, descendant: GeoNode): boolean;
@@ -128,7 +167,7 @@ export interface GeoTreeResolver {
  * exact-node (same dimension + same value), `global` (universal), and `self`
  * (own-records) resolve. A state→district or pariwar→block grant covers a
  * narrower target ONLY when a real resolver is injected. This is the fail-closed
- * default the seam guarantees until the Epic-3 org tree exists.
+ * default the seam guarantees until Story 1.18 (Geo-Tree Scope Resolver) builds the org tree.
  */
 export const denyDeeperGeoResolver: GeoTreeResolver = {
   contains: () => false,
@@ -176,7 +215,7 @@ export function scopeContains(
 
   // (4) A self target: only a pariwar-ceiling grant reaches it by default. A
   // state/district/block grant cannot place a self-target in the geo tree, so it
-  // fails closed (deny) until the Epic-3 org tree + a richer self-resolution lands.
+  // fails closed (deny) until Story 1.18 (Geo-Tree Scope Resolver)'s org tree + a richer self-resolution lands.
   if (target.dimension === 'self') {
     return grant.dimension === 'pariwar';
   }

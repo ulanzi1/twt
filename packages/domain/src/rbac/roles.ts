@@ -99,29 +99,30 @@ const CLAIM_VERIFY = permissionKey('claim.verify');
 // claim.approve/claim.verify — routing the family's contact grants no adjudication power, AC6).
 const CLAIM_ASSIGN_SHEPHERD = permissionKey('claim.assign_shepherd');
 // Story 6.13 (D-B) — the State-Trustee cycle-freeze (bulk-approval) WRITE key (pariwar-dimension; the FIRST
-// state_trustee-facing surface, gated on pariwar_admin-as-Trustee-Lite pending the Epic-3 geo-tree resolver).
+// state_trustee-facing surface, gated on pariwar_admin-as-Trustee-Lite; direct state_trustee gating is
+// RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it).)
 const CYCLE_FREEZE = permissionKey('cycle.freeze');
 // Story 6.14 (D-B) — the R9 special-case panel-voting WRITE key (pariwar-dimension; ALSO the panel-membership
 // eligibility credential — assertPanelAuthorized requires every panel actor to hold it). Same Trustee-Lite
-// posture as cycle.freeze; direct state_trustee gating deferred to Epic 3.
+// posture as cycle.freeze; direct state_trustee gating RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it).
 const CLAIM_R9_VOTE = permissionKey('claim.r9_vote');
 // Story 6.16 — the internal 3-stage appeal keys. Stage-1 reviewer (district-dimension; the claim.verify
 // precedent); Stage-2 panel voter (pariwar-dimension; ALSO the panel-membership eligibility credential, the
 // claim.r9_vote precedent); Stage-3 Trustee discretion (pariwar-dimension, RESOLVED v1). Same Trustee-Lite
-// posture — direct state_trustee gating for the pariwar keys deferred to Epic 3.
+// posture — direct state_trustee gating for the pariwar keys is RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it).
 const CLAIM_APPEAL_REVIEW = permissionKey('claim.appeal_review');
 const CLAIM_APPEAL_VOTE = permissionKey('claim.appeal_vote');
 const CLAIM_APPEAL_FINAL = permissionKey('claim.appeal_final');
 // Story 7.5 (FR-15) — the fixed-amount schedule keys (both pariwar-dimension; the cycle.freeze / claim.r9_vote
 // pariwar-wide precedent). `pool.fixed_amount_set` = the standard (12-month-notice) change; `…_emergency` =
 // the emergency override (ALSO step-up-gated at the route). Same Trustee-Lite posture — direct state_trustee
-// gating deferred to Epic 3.
+// gating is RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it).
 const POOL_FIXED_AMOUNT_SET = permissionKey('pool.fixed_amount_set');
 const POOL_FIXED_AMOUNT_EMERGENCY = permissionKey('pool.fixed_amount_emergency');
 // Story 9.8 (FR-50) — the reconciliation review-queue READ + four action WRITEs gate (pariwar-dimension;
 // the cycle.freeze / claim.r9_vote pariwar-wide precedent). Each action is ALSO step-up-gated at the route.
 // Granted to pariwar_admin (Trustee-Lite) + finance_officer (the "designated reconciliation reviewer");
-// super_admin auto-derives. Direct state_trustee gating deferred to Epic 3.
+// super_admin auto-derives. Direct state_trustee gating RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it).
 const RECONCILIATION_REVIEW = permissionKey('reconciliation.review');
 // Story 10.3 (SM-1 C3) — the helpdesk ticket-create WRITE key (pariwar-dimension; the reconciliation.review /
 // cycle.freeze pariwar-wide precedent — the tenant IS the target, resolvable TODAY with no geo-tree). The
@@ -285,19 +286,19 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 6.13 (D-B) — the State-Trustee cycle-freeze (bulk-approval) key. A PARIWAR-WIDE bulk action
       // (checked at `dimension: 'pariwar'` = scopeTx.pariwarId), the exact validity.invalidate_cache /
       // pariwar.configure_channels ceiling rationale (a `pariwar`-ceiling-or-broader role). v1 actor =
-      // pariwar_admin acting as Trustee-Lite; direct state_trustee gating is DEFERRED to Epic 3 (see
-      // permissions.ts — a `state`-ceiling grant cannot satisfy a pariwar check pre-Epic-3). No inert
+      // pariwar_admin acting as Trustee-Lite; direct state_trustee gating is RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it)
+      // — a `state`-ceiling grant can NEVER satisfy a pariwar check, see permissions.ts. No inert
       // state_trustee grant is seeded.
       CYCLE_FREEZE,
       // Story 6.14 (D-B) — the R9 special-case panel-voting key. A PARIWAR-WIDE bulk-adjudication surface
       // (checked at `dimension: 'pariwar'`), the exact cycle.freeze ceiling rationale (a `pariwar`-ceiling-
-      // or-broader role). v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating DEFERRED to
-      // Epic 3 (see permissions.ts). No inert state_trustee grant is seeded.
+      // or-broader role). v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating is
+      // RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it), see permissions.ts. No inert state_trustee grant is seeded.
       CLAIM_R9_VOTE,
       // Story 6.16 — the Stage-2 State-Trustee appeal panel-voting key + the Stage-3 Trustee discretion key.
       // Both PARIWAR-WIDE bulk-adjudication surfaces (checked at `dimension: 'pariwar'`), the exact
       // cycle.freeze / claim.r9_vote ceiling rationale. v1 actor = pariwar_admin-as-Trustee-Lite; direct
-      // state_trustee gating DEFERRED to Epic 3. claim.appeal_vote is ALSO the panel-membership eligibility
+      // state_trustee gating RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it). claim.appeal_vote is ALSO the panel-membership eligibility
       // credential (openAppealPanel's assertPanelAuthorized). No inert state_trustee grant is seeded.
       CLAIM_APPEAL_VOTE,
       CLAIM_APPEAL_FINAL,
@@ -305,14 +306,14 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // `dimension: 'pariwar'` = scopeTx.pariwarId), the exact cycle.freeze / claim.r9_vote ceiling rationale
       // (a `pariwar`-ceiling-or-broader role). The emergency route is ADDITIONALLY step-up-gated (governance
       // posture equivalent to R9 WITHOUT the R9 voting lifecycle). v1 actor = pariwar_admin-as-Trustee-Lite;
-      // direct state_trustee gating DEFERRED to Epic 3. No inert state_trustee grant is seeded.
+      // direct state_trustee gating RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it). No inert state_trustee grant is seeded.
       POOL_FIXED_AMOUNT_SET,
       POOL_FIXED_AMOUNT_EMERGENCY,
       // Story 9.8 (FR-50) — the reconciliation review-queue key. A PARIWAR-WIDE adjudication surface
       // (checked at `dimension: 'pariwar'` = scopeTx.pariwarId), the exact cycle.freeze / claim.r9_vote
       // ceiling rationale (a `pariwar`-ceiling-or-broader role). Each action is ADDITIONALLY step-up-gated.
-      // v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating DEFERRED to Epic 3. No inert
-      // state_trustee grant is seeded.
+      // v1 actor = pariwar_admin-as-Trustee-Lite; direct state_trustee gating RANK-ORDER BLOCKED (scope.ts §RANK-ORDER — no resolver can lift it). No
+      // inert state_trustee grant is seeded.
       RECONCILIATION_REVIEW,
       // Story 10.3 (SM-1 C3) — the helpdesk ticket-create key (pariwar-dimension; the reconciliation.review /
       // cycle.freeze pariwar-wide precedent). pariwar_admin is the tenant's administrative authority and can
@@ -407,7 +408,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // `scopeCeiling: 'block'`: a block-scoped grant cannot satisfy a district-scoped resource check
     // (a block is NARROWER than a district → the district target is "broader than the grant" → deny),
     // and granting district scope would VIOLATE the block ceiling. No geo-tree resolver exists yet to
-    // prove block→parent-district ancestry (denyDeeperGeoResolver, until Epic 3). So NO inert conduct
+    // prove block→parent-district ancestry (denyDeeperGeoResolver is the fail-closed default) —
+    // DEFERRED to Story 1.18 (Geo-Tree Scope Resolver), Family B: same-tree ancestry, target strictly
+    // narrower, which a resolver genuinely fixes. So NO inert conduct
     // grant is seeded here. ACCEPTANCE CONDITION: block_admin support may be enabled only when the
     // authorization layer can resolve a block grant through verified block→district ancestry while
     // preserving the role's `scopeCeiling: 'block'` — and enabling it must require no district-scoped
@@ -451,7 +454,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // Story 4.6 — the verifier console (Epic 6) reads FR-12A validity to verify standing.
     // Story 6.10 — CLAIM_VERIFY: the verifier-console read key. A `district` ceiling makes the
     // district-dimension gate meaningful (exact-node match on the deceased's posting district).
-    // NOT state_trustee (D3a — a state-ceiling grant cannot satisfy a district check until Epic 3).
+    // NOT state_trustee (D3a — a state-ceiling grant cannot satisfy a district check until a resolver
+    // proves state→district ancestry; DEFERRED to Story 1.18 (Geo-Tree Scope Resolver), Family B).
     permissions: [MEMBER_MODERATE, MEMBER_VIEW_VALIDITY, CLAIM_VERIFY],
     scopeCeiling: 'district',
   },

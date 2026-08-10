@@ -13,7 +13,7 @@
 // re-loads grants and re-resolves, so a grant revoked between request and build fails the build closed
 // (no persisted resolved-scope column to go stale). Deny-deeper geo asymmetry
 // ([[project_rbac_geo_scope_containment]]): a `state`-scoped actor's district-granular report resolves
-// to {state} here, and the district-narrowing query returns nothing below that ceiling until the Epic-3
+// to {state} here, and the district-narrowing query returns nothing below that ceiling until Story 1.18 (Geo-Tree Scope Resolver)'s
 // geo-tree resolver lands — the same asymmetry 10.3/10.4/10.5/10.6 shipped, not a defect.
 
 import type { EffectiveGrant } from '../rbac/check.js';
@@ -68,7 +68,7 @@ export function resolveActorReportScope(
     // actor holding this key at TWO same-dimension nodes (e.g. `{district,'Patna'}` + `{district,'Gaya'}`)
     // resolves to whichever the strict-`<` tie-break keeps (the first-iterated), and the template narrows
     // to that ONE node — a multi-district admin silently exports only one district. Multi-value (`IN`-list)
-    // scope lands with the Epic-3 geo-tree resolver ([[project_rbac_geo_scope_containment]]), which is the
+    // scope lands with Story 1.18 (Geo-Tree Scope Resolver) ([[project_rbac_geo_scope_containment]]), which is the
     // same deferral horizon as deny-deeper geo; until then this is a documented limitation, not a bug.
     if (best === null || broadnessRank(candidate.dimension) < broadnessRank(best.dimension)) {
       best = candidate;

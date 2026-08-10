@@ -53,15 +53,35 @@
 #   @twt/contracts 872 passed / 52 files; contracts:check-openapi-determinism green; lint clean across
 #   domain/contracts/api/admin; D6's NINE deny-deeper pins unmodified and green; denyDeeperGeoResolver
 #   const byte-unchanged; no migration authored (role_grants.role is plain text by design).
-#   ⚠ UN-ATTESTED at time of writing: `pnpm ci:local` has NOT yet been run -- it is Task 10 and the status
-#   flip is deliberately held until it is, rather than claiming a validation that has not happened.
+#   ⭐ TASK 10 ATTESTED (2026-08-10): `pnpm ci:local` PASSED -- 30 jobs green, exit 0. Every static gate
+#   in the repo ran: lint, typecheck, build, unit tests, db-check, contracts-determinism, crypto-check,
+#   tokens-theme, i18n-parity, pii-scrape, friction-budget, schema-diff, benefit-mechanism, microcopy,
+#   domain-invariants, member/claim/pool/alert/helpdesk-state invariants, claim-canonical-id,
+#   claim-adjudication-human-actor, kyc-provider-boundary, access-wrapper, governance-boundary,
+#   custom-field-governance, determinism-replay, channels-determinism. Full `pnpm test` separately:
+#   37/37 turbo tasks green.
+#   D1/AC1 MECHANIZED CHECK RUN AND PASSED over the branch: the first commit is governance-prefixed, and
+#   NO governance commit touches packages/ or apps/ -- asserted by exit code across every non-merge
+#   commit, not read by eye.
+#   ⚠ LIVE-DB INTEGRATION: RUN, and it FAILED -- 4 tests across 2 files in @twt/domain. INNOCENCE
+#   CONFIRMED, NOT ASSUMED ([[project_known_livedb_test_failures]]): both specs fail IDENTICALLY at the
+#   baseline commit 71aae71, before any of this story's work. Failing specs are
+#   tests/integration/feature-flags/registry.spec.ts (1: "EVERY registered flag appears in the inventory")
+#   and tests/integration/custom-fields/registry.spec.ts (3: definition_set_version determinism, no-silent-
+#   renames, §1.7 cardinality bound). NEITHER touches RBAC, roles, permissions, scope or OpenAPI, and this
+#   story adds NO live-DB test -- everything it touches is declarative. Method: reproduced in isolation
+#   (ruling out concurrency/double-run pollution), then re-run at 71aae71 via stash + detached checkout,
+#   producing the same 4 failures in the same 2 files. These are PRE-EXISTING and OUT OF SCOPE; they are
+#   NOT fixed here and NOT claimed as green.
+#   ⚠ Note on method: ci:local was run WITHOUT DATABASE_URL exported, deliberately -- exporting it globally
+#   makes the unit job AND the integration job both run the integration specs
+#   ([[project_ci_local_double_run_pollution]]). The live-DB suite was then run separately, single-pass.
 #   PROVENANCE, split by strength: (a) COMMIT-PINNED, git-tracked -- every count and gate result above.
 #   (b) READ ON-DISK, NOT commit-pinned -- §8.7's presence in docs/legal/niyamavali{,.hi}.md, which are
 #   untracked and carry no git history, so their content has no relationship to any SHA. The Decision
 #   entry's verbatim reproduction is the durable record; the files themselves are not evidence.
-#   NEXT: Task 10 (validate incl. ci:local), then flip to `review` and code-review the branch.
-#   development_status[10-18-constituting-the-trustee-panel-sanctioning-authority]: ready-for-dev (HELD
-#   pending Task 10; see above).
+#   NEXT: code-review this branch (use a DIFFERENT LLM), then 10.19 -> 10.20.
+#   development_status[10-18-constituting-the-trustee-panel-sanctioning-authority]: review.
 #   Also minted: development_status[1-18-geo-tree-scope-resolver]: backlog, in Epic 1.)
 # last_updated: 2026-08-09d (10-18-constituting-the-trustee-panel-sanctioning-authority: backlog ->
 #   ready-for-dev via bmad-create-story, off main @ 71aae71. Saved
@@ -5000,7 +5020,7 @@ development_status:
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done
-  10-18-constituting-the-trustee-panel-sanctioning-authority: ready-for-dev
+  10-18-constituting-the-trustee-panel-sanctioning-authority: review
   10-19-termination-ends-membership-privileges: backlog
   10-20-moderation-record-model: backlog
   10-21-off-portal-dpdpa-access: backlog

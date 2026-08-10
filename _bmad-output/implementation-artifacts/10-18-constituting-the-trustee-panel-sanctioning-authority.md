@@ -4,7 +4,7 @@ baseline_commit: 71aae719b3022a84f23a790867c1ced0b919affc
 
 # Story 10.18: Constituting the Trustee Panel as a Sanctioning Authority `[GOVERNANCE]`
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -978,11 +978,114 @@ none.
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`), via `bmad-code-review` (three pre-implementation passes) then direct
+task execution, 2026-08-09 → 2026-08-10.
+
 ### Debug Log References
+
+Revert-probe outputs are recorded inline in the commits that introduced each gate — see
+`8e83b76` (ceiling parity, both directions), `3e7ab20` (`member.suspend` holder set: add / remove /
+catalog-delete), and `ad5b9e4` (the `verifier` pin pair asymmetry).
 
 ### Completion Notes List
 
+**Discharged before start:** the `epics.md:3540` actor correction (premise #4) was already done; changing
+it again would have been a no-op diff.
+
+**The governance half landed first, structurally.** `git log` reads governance → governance → governance
+→ implementation, and `feat/10-18-…` was **cut from** the ratifying commit rather than merely ordered
+after it. Verified by the Task 10 assertion over every governance commit, not by inspection.
+
+**All eight routed questions were ratified at option (a) as Panel rulings** — none taken as a stated
+default, no directions attached. Recorded in Decision `2026-08-10-096` with per-clause provenance
+(1–8 rulings, 9 the ratified §8.7 text, 10–12 author-committed findings carrying no ratified authority).
+
+**§8.7 is authored and Trustee-ratified; counsel review remains OWED and un-attested.** No version bump,
+no effective date, no Board-resolution reference, no `[LEGAL]` line — and none may be inferred. The
+Decision reproduces §8.7 **verbatim in both locales** because `docs/legal/` is gitignored and that entry
+is the amendment's only durable copy; the reproduction was verified paragraph-by-paragraph against the
+live files.
+
+**Deviations from the story as written, each deliberate:**
+- **Six parity surfaces, not five.** AC4's prose surface (~12 "12 seeded roles" sites) was swept
+  number-free and `TWELVE_ROLES` renamed `SEEDED_ROLES`, so the next role addition need not repeat it.
+- **All 16 negative holder-loops updated, not the 7 the story enumerated by line number.** That list had
+  already shifted once; the principle applies uniformly. Safe — `roles.test.ts` carries zero
+  `member.moderate` references, verified before editing.
+- **The ceiling-parity assertion is behavioural, not by export** (BigDev's ruling): `SEEDED_ROLE_SCOPE_CEILING`
+  stays module-private and the test exercises `RoleGrantSchema`'s `superRefine` instead.
+- **The status flip was held until after validation** rather than performed in Task 9, so the ledger never
+  claimed a validation that had not run.
+
+**Found and fixed during a focused review of Task 4:** the ceiling-parity gate was **one-directional** —
+it caught a transport ceiling narrower than the domain's (inert role) but silently passed a broader one
+(privilege-escalation shaped). Verified empirically at 22 passed with `trustee_panel: 'global'`. Now
+bidirectional and probed both ways (`8e83b76`).
+
+**Found while verifying Task 8:** the `verifier` bundle listed `MEMBER_MODERATE` first and left it
+**entirely unremarked** — exactly what AC8 forbids. The declaration site now carries the full deferral,
+the Q7 ruling, and the acceptance condition in the shipped 10.3/10.4 form.
+
+**The marker count was settled at 45 blocks / 19 files**, under a counting rule this story had to write.
+The prior "verified" figure was a **spelling artifact** — it matched `Epic 3` only, while the hyphenated
+`Epic-3` form dominates in `permissions.ts` (13 of 21). Two prior corrections were themselves reversed:
+the ledger's `11/9/3` was *not* the marker population, and a figure of 20 that had been ordered
+"discarded on sight" was **correct**. `permissions.ts` and `roles.ts` derived to 13 and 12 blocks —
+matching the story's *original* draft, which the intervening recount had wrongly discredited.
+
+**Validation (Task 10), attested:** `pnpm ci:local` **PASSED — 30 jobs green, exit 0**. Full `pnpm test`
+37/37 turbo tasks green. The D1/AC1 ordering check ran as an **assertion** over every non-merge commit and
+passed — the first time that check has actually executed, the pass-1 version having used a git range that
+excluded what it measured and the pass-2 version having printed rather than asserted.
+
+**⚠ The live-DB integration suite FAILED, and it is NOT this story's.** 4 tests across 2 files in
+`@twt/domain`: `tests/integration/feature-flags/registry.spec.ts` (1) and
+`tests/integration/custom-fields/registry.spec.ts` (3). **Innocence was confirmed, not assumed** — the
+specs were reproduced in isolation (ruling out concurrency/double-run pollution), then re-run at the
+baseline commit `71aae71` via stash + detached checkout, where they produce **the same 4 failures in the
+same 2 files**. Neither touches RBAC, roles, permissions, scope or OpenAPI. **Pre-existing, out of scope,
+not fixed here, and not claimed as green.**
+
+**Un-attested / not exercised, stated plainly:**
+- **This story adds no live-DB test.** Everything it touches is declarative, so the integration job
+  exercises nothing this story changed.
+- **The AC6 gate reaches `defaultRoleBundles` only.** No SQL seed, no production `seedRoles()` caller, no
+  `role_grants` write path, and static CI has no database. A grant written directly to the table would not
+  be caught. Stated in the gate's own failure message.
+- **Decision `2026-08-10-096` clause 7 cites `roles.ts:436-437`; the bundle now sits at `:453+`**, moved by
+  this story's own later commits. The Decision is committed governance and was accurate when written, so it
+  is **not** edited (`[[feedback_supersede_never_reinterpret]]`). Recorded in `deferred-work.md` with the
+  lesson: decision entries written ahead of code should cite **symbols, not line numbers**.
+
+**Not unblocked:** 10.19, 10.21, 10.22 remain `backlog`. The ten other Part 8 items are unlanded and
+PRD FR-56's `§8.4a` citation still dangles. None of the four pre-existing Trustee Panel obligations is
+discharged — this story opened a fifth.
+
 ### File List
+
+**Governance artifacts (7):** `.decision-log.md` · `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-10-story-10-18.md`
+(new) · `_bmad-output/planning-artifacts/epics.md` (Story 1.18 minted) ·
+`_bmad-output/implementation-artifacts/{sprint-status.yaml, deferred-work.md}` · this story file ·
+`docs/legal/niyamavali.md` + `docs/legal/niyamavali.hi.md` (**gitignored — §8.7 appears in no diff; the
+Decision entry is the record**).
+
+**Domain (8):** `packages/domain/src/rbac/{roles,permissions,scope,index}.ts` ·
+`packages/domain/src/schema/role_grants.ts` · `packages/domain/src/reports/scope.ts` ·
+`packages/domain/src/reports/templates/{_shared,member-roster,contribution-rate-by-district}.ts` ·
+`packages/domain/src/{banners/audience,banners/read,news-blog/audience,pool/fixed-amount}.ts`
+
+**Contracts (5):** `packages/contracts/src/rbac/{roles,scope}.ts` · `packages/contracts/src/rbac/README.md` ·
+`packages/contracts/src/banners/{enums,dto}.ts`
+
+**Apps (6):** `apps/api/src/modules/member-moderation/routes.ts` ·
+`apps/api/src/modules/claims/{claims.cycle-freeze,claims.r9-voting}.routes.ts` ·
+`apps/api/src/modules/{pool-fixed-amount/index,trustee-lite/handlers}.ts` ·
+`apps/admin/src/modules/banners/derive.ts`
+
+**Tests (4):** `packages/domain/tests/rbac/{roles,permissions,check,scope}.test.ts` ·
+`packages/contracts/tests/rbac.test.ts`
+
+**Generated (1):** `openapi/v1.yaml`
 
 ---
 

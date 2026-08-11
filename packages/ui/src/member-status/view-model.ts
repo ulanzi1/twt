@@ -84,8 +84,17 @@ export interface ValidityWindow {
  * (`.filter((s) => s.id !== 'headline')`) and render only `headlineKey` — so the prose, its two
  * catalog entries in en+hi, and the whole `{reason}` plumbing were unreachable. A suspended member
  * saw "Under review" and an appeal button, and was NEVER TOLD WHY: the exact outcome the flag is
- * member-visible to prevent, and the dignity commitment that justifies Decision 6 keeping login
+ * member-visible to prevent, and the dignity commitment behind keeping a SUSPENDED member's access
  * open at all.
+ *
+ * ⚖ Story 10.19: this used to credit "Decision 6 keeping login open". Decision 6 is SUPERSEDED by
+ * Decision `2026-08-10-097` clause 8 and Niyamavali §8.4 ([[feedback_supersede_never_reinterpret]] —
+ * the original record stands unedited). The dignity commitment survives it and is now SPLIT, which
+ * is exactly what this detail prose serves: a SUSPENDED member keeps access and must be told why, on
+ * the surface they are still using to cure. A TERMINATED member loses access once the
+ * `termination_access_block` flag is enabled (default OFF, flip gated on Story 10.21), and their
+ * explanation travels in the termination NOTICE and the API's structured denial payload instead —
+ * because after the flip they cannot reach this panel at all.
  *
  * Two keys, not one resolved string, because the view-model carries no copy (it is
  * render-agnostic): the render layer resolves `detailKey` with `{ reason: t(reasonLabelKey) }`.

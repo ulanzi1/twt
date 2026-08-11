@@ -30,7 +30,7 @@ import {
   type ModerationRationaleResponse,
   type ReasonCodesListResponse,
 } from '@twt/contracts';
-import { audit, ids, member as memberDomain } from '@twt/domain';
+import { audit, ids, member as memberDomain, rbac } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -42,6 +42,7 @@ import {
 } from '../../http-errors.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { revokeAllMemberSessions } from '../auth/member/member-auth.repo.js';
+import { auditAuthorizationDenied } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import {
   decryptModerationRationaleSafe,
@@ -49,6 +50,9 @@ import {
 } from './moderation-crypto.js';
 
 type ModerationAction = memberDomain.moderation.ModerationAction;
+
+/** Story 10.19 — the Panel-exclusive key gating restore-FROM-terminated (Niyamavali §8.4). */
+const MEMBER_RESTORE_TERMINATED_KEY = 'member.restore_terminated';
 
 /** The Story 1.10 audit action per moderation action (AC4). */
 const AUDIT_ACTIONS = {
@@ -207,6 +211,52 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     let ok = false;
     let result: memberDomain.moderation.ModerateMemberResult;
     try {
+      // ── ⭐ (b2) THE PANEL PRECONDITION — restore FROM terminated (Story 10.19, AC3) ─────────────
+      //
+      // Niyamavali §8.4, ratified 2026-08-10: *"Restoration from termination is an act of the
+      // Trustee Panel […] not an exercise of the individual Trustee discretion by which a suspended
+      // member is restored under §8.3."* Q1 option (a), Decision `2026-08-10-097` clause 1 — the
+      // discharge of a question on its SECOND deposit, which is why it is an AC and not a note.
+      //
+      // ⚠ THE READ RUNS INSIDE THE SCOPE TX, ON THE SAME CLIENT AS THE WRITE, and that is
+      // load-bearing rather than tidy. Checked outside, this is a TOCTOU: a concurrent `terminate`
+      // committing between the check and `moderateMember` would let a non-Panel actor restore a
+      // member who was terminated in the interval — the precondition would pass on a status that no
+      // longer held. One transaction, one snapshot, no window.
+      //
+      // ⛔ SCOPED TO EXACTLY ONE TRANSITION. Restoring a SUSPENDED member is untouched and stays on
+      // the single-actor `member.moderate` path (§8.3). Widening this to all restores — or to all
+      // moderation — would convert Panel authority from CONCURRENT to EXCLUSIVE across Part 8,
+      // contradicting Decision `2026-08-10-096` clause 3.
+      //
+      // ⛔ The `terminated --restore--> none` arm in `status.ts:47-48` is NOT removed. The
+      // transition stays LEGAL; what changes is WHO may ask for it. Removing the arm would make a
+      // terminated member unrestorable by anyone, which is the opposite of what §8.4 says.
+      if (action === 'restore') {
+        // `scopeTx.tx` — the drizzle handle BOUND TO THE SAME CLIENT as `scopeTx.client`
+        // (`openScopeTx` returns `bindScopedDb(client)`), so this read and the write below sit in
+        // the one transaction. Using `deps.serviceDb` here would silently reintroduce the TOCTOU.
+        const overlay = await memberDomain.moderation.getCurrentMemberModerationOverlay(
+          scopeTx.tx,
+          ctx.memberId,
+        );
+        if (overlay.status === 'terminated') {
+          rbac.requirePermission(
+            {
+              actorId: ctx.actorId,
+              // Fail-closed: an absent `scopeGrants` resolves to NO grants, i.e. deny. It is
+              // populated by the scope-resolution hook that every route here runs behind.
+              grants: request.scopeGrants ?? [],
+              key: MEMBER_RESTORE_TERMINATED_KEY,
+              resource: { dimension: 'pariwar', value: ctx.pariwarId, pariwarId: ctx.pariwarId },
+            },
+            {
+              onAuthorizationDenied: auditAuthorizationDenied(deps, request, ctx.actorId, ctx.pariwarId),
+            },
+          );
+        }
+      }
+
       result = await memberDomain.moderation.moderateMember(scopeTx.client, {
         memberId: ctx.memberId,
         pariwarId: ctx.pariwarId,
@@ -223,11 +273,24 @@ export function createMemberModerationHandlers(deps: AppDeps) {
       //     so it commits with the moderation record: a rolled-back action can never leave the
       //     member logged out. Suspend AND terminate cascade; a RESTORE does NOT re-mint sessions —
       //     the member simply logs in normally.
-      //     ⚠ This is NOT a login block. `member-auth.handlers.ts`'s gate stays `withdrawn ||
-      //     anonymized` — a moderated member MUST be able to sign back in to read the dignified
-      //     explanation and reach the appeal CTA (Decision 6). Enforcement is the validity payload's
-      //     moderation conjunction — `is_valid` (coverage) since 10.10, plus `is_assignable` (roster)
-      //     since Story 10.17 — never a locked door.
+      //     ⚠ The cascade is not itself an access gate — it clears sessions, it does not decide who
+      //     may open a new one. That decision lives in `member-auth.handlers.ts`, and Story 10.19
+      //     changed it:
+      //       · SUSPENSION keeps access, unconditionally and permanently. A suspended member is
+      //         CURING; they need the contribution surface, and Story 10.16's disclosure lives there.
+      //       · TERMINATION ends it — session issuance is denied — but ONLY where the
+      //         `termination_access_block` flag is enabled. That flag is DEFAULT OFF and its flip is
+      //         gated on Story 10.21 (Decision `2026-08-10-097` clause 6, sub-choice (b-i)), so as
+      //         SHIPPED a terminated member can still sign in today.
+      //     ⛔ Decision 6 ("a moderated member must be able to sign back in to reach the appeal CTA")
+      //     is SUPERSEDED, not reinterpreted — by Decision `2026-08-10-097` clause 8 and Niyamavali
+      //     §8.4, which the Panel ratified on 2026-08-10. The original Decision-6 record stands
+      //     unedited ([[feedback_supersede_never_reinterpret]]). Its justification was reaching an
+      //     appeal CTA that does not exist: the CTA still has no moderation destination, which is
+      //     Story 10.22's to build.
+      //     Coverage enforcement is unchanged and orthogonal: the validity payload's moderation
+      //     conjunction — `is_valid` (coverage) since 10.10, plus `is_assignable` (roster) since
+      //     Story 10.17.
       if (action === 'suspend' || action === 'terminate') {
         await revokeAllMemberSessions(scopeTx.client, ctx.memberId);
       }

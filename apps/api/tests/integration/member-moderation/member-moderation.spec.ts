@@ -134,6 +134,19 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     return a.client;
   }
 
+  /**
+   * A Trustee-Panel client — Story 10.19. The `trustee_panel` bundle is the ONLY holder of
+   * `member.restore_terminated`, the key Niyamavali §8.4 makes necessary to restore a TERMINATED
+   * member (Q1 option (a), Decision `2026-08-10-097` clause 1). A `pariwar_admin` holds
+   * `member.moderate` and so may still suspend, terminate, and restore a SUSPENDED member — the
+   * exclusivity is scoped to that ONE transition.
+   */
+  async function trusteePanel(pariwarId: string, displayName = 'Panel Member'): Promise<Client> {
+    const a = await authenticate({ displayName });
+    await grant(a.userId, pariwarId, 'trustee_panel');
+    return a.client;
+  }
+
   /** Mint a FRESH elevation for one action context (the per-action step-up flow). */
   async function elevate(client: Client, actionContext: string): Promise<void> {
     const req = await client.inject({
@@ -653,6 +666,69 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(lines.some((l) => l.request_payload_hash === expectedHash)).toBe(true);
   });
 
+  // ── Story 10.19 AC3 — restore FROM TERMINATED is a Trustee Panel act ────────────────────────────
+  //
+  // Niyamavali §8.4, ratified 2026-08-10: the "explicit Trustee reinstatement" that recovers a
+  // TERMINATED member is an act of the Trustee Panel under §8.7 — NOT the individual "Trustee
+  // discretion" of §8.3 by which a SUSPENDED member is restored. Q1 option (a), Decision
+  // `2026-08-10-097` clause 1, discharging a question on its SECOND deposit.
+  //
+  // The pair below is the whole ruling: the same action, the same member, the same reason code —
+  // and the outcome turns only on WHO asks.
+
+  it('⭐ AC3: a pariwar_admin CANNOT restore a TERMINATED member — 403, and the termination stands', async () => {
+    const { p, memberId, client } = await scenario();
+    await act(client, p, memberId, 'suspend', 'r7-contribution-discipline');
+    await act(client, p, memberId, 'terminate', 'r14-forgery');
+
+    // The same actor who terminated. They hold `member.moderate` and step-up elevation — everything
+    // that sufficed before this story — and it is no longer enough.
+    const res = await act(client, p, memberId, 'restore', 'moderation-error');
+    expect(res.statusCode).toBe(403);
+
+    // ⛔ FAIL-CLOSED, AND NOTHING PARTIAL. The denial happens INSIDE the scope tx before the write,
+    // so a refused restore must leave no event, no decision row, and no status change behind.
+    const hist = (await client.inject({ method: 'GET', url: historyUrl(p, memberId) })).json() as Json;
+    expect(hist.current_status).toBe('terminated');
+    expect((await moderationRows(memberId)).map((r) => r.action)).toEqual(['suspend', 'terminate']);
+    expect(await eventTypes(memberId)).not.toContain('member.moderation.restored');
+  });
+
+  it('⭐ AC3: a trustee_panel member CAN — the transition stays legal, only the authority narrows', async () => {
+    const { p, memberId, client } = await scenario();
+    await act(client, p, memberId, 'suspend', 'r7-contribution-discipline');
+    await act(client, p, memberId, 'terminate', 'r14-forgery');
+
+    // ⛔ The `terminated --restore--> none` arm in `status.ts` is NOT removed by this story. The
+    // transition is still legal; what changed is who may ask for it. If this test ever fails while
+    // the one above passes, the arm was deleted and a terminated member became unrestorable BY
+    // ANYONE — the opposite of what §8.4 says.
+    const panel = await trusteePanel(p);
+    expect((await act(panel, p, memberId, 'restore', 'moderation-error')).statusCode).toBe(200);
+
+    const hist = (await client.inject({ method: 'GET', url: historyUrl(p, memberId) })).json() as Json;
+    expect(hist.current_status).toBe('none');
+  });
+
+  it('⚠ AC3: the narrowing is EXACTLY ONE transition — a pariwar_admin still restores a SUSPENDED member', async () => {
+    // §8.3 is untouched, and Panel authority under Part 8 stays CONCURRENT everywhere else
+    // (Decision `2026-08-10-096` clause 3). A check that fired on every restore — or on every
+    // moderation action — would silently convert a concurrent authority into an exclusive one
+    // across the whole of Part 8. This is the test that fails if that widening ever happens.
+    const { p, memberId, client } = await scenario();
+    await act(client, p, memberId, 'suspend', 'r7-contribution-discipline');
+
+    expect((await act(client, p, memberId, 'restore', 'moderation-error')).statusCode).toBe(200);
+    const hist = (await client.inject({ method: 'GET', url: historyUrl(p, memberId) })).json() as Json;
+    expect(hist.current_status).toBe('none');
+  });
+
+  it('⚠ AC3: a pariwar_admin still SUSPENDS and TERMINATES — the new key gates nothing else', async () => {
+    const { p, memberId, client } = await scenario();
+    expect((await act(client, p, memberId, 'suspend', 'r7-contribution-discipline')).statusCode).toBe(200);
+    expect((await act(client, p, memberId, 'terminate', 'r14-forgery')).statusCode).toBe(200);
+  });
+
   it('AC1/AC9: the full legal walk suspend → terminate → restore, with the history read agreeing', async () => {
     const { p, memberId, client } = await scenario();
 
@@ -671,7 +747,11 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(hist.current_status).toBe('terminated');
     expect(hist.legal_actions).toEqual(['restore']);
 
-    expect((await act(client, p, memberId, 'restore', 'moderation-error')).statusCode).toBe(200);
+    // ⚖ Story 10.19: the restore FROM TERMINATED is now a TRUSTEE PANEL act (Niyamavali §8.4, Q1
+    // option (a)). The `pariwar_admin` who suspended and terminated may no longer perform it — the
+    // walk needs a second, differently-authorised actor, which is the whole point of the ruling.
+    const panel = await trusteePanel(p);
+    expect((await act(panel, p, memberId, 'restore', 'moderation-error')).statusCode).toBe(200);
     hist = (await client.inject({ method: 'GET', url: historyUrl(p, memberId) })).json() as Json;
     expect(hist.current_status).toBe('none');
     expect(hist.current_reason_code).toBeNull();
@@ -713,7 +793,8 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(await idsIn()).toContain(memberId);
     await act(client, p, memberId, 'terminate', 'r14-forgery');
     expect(await idsIn()).toContain(memberId);
-    await act(client, p, memberId, 'restore', 'moderation-error');
+    // ⚖ Story 10.19 — restore FROM TERMINATED is a Trustee Panel act (Niyamavali §8.4).
+    await act(await trusteePanel(p), p, memberId, 'restore', 'moderation-error');
     expect(await idsIn()).not.toContain(memberId);
     await act(client, p, memberId, 'suspend', 'regulator-action');
     expect(await idsIn()).toContain(memberId);

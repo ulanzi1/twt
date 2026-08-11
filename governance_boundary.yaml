@@ -73,7 +73,7 @@ version: 1
 
 # The exact number of allowlisted behaviours. The gate asserts the registry and
 # this list both equal this count (revert-sanity teeth — flipping it fails CI).
-count: 5
+count: 6
 
 # The permitted behaviour kinds. A new kind is itself a bar expansion and needs
 # the same attestation as a new entry (the parser rejects an unknown kind).
@@ -149,6 +149,58 @@ allow:
       every degraded path — no version in force, malformed cohort rule, lookup error —
       lands on "the writer does nothing", so the flag's mere existence changes nothing.
     adr: Story 10.23 / Decision 2026-08-07-088 (clauses 4-5) + Decision 2026-08-07-089
+  - kind: member_flow
+    artifact: termination_access_block
+    rationale: >-
+      ⛔ THE FIRST FLAG THAT CONDITIONS AUTHENTICATION. Gates whether a member carrying a
+      `terminated` MODERATION OVERLAY is denied issuance of a member session, on the login
+      and refresh-rotation paths (Story 10.19, FR-56 / Niyamavali §8.4). Enabled, OTP
+      verification still SUCCEEDS and identity is verified; what is denied is authorization
+      to ESTABLISH A MEMBER SESSION, and a structured termination response is returned
+      instead. Disabled (the default), both paths behave exactly as they do today.
+      ⛔ NOT to be described as "login fails" or "login succeeds but returns 403" — Decision
+      2026-08-10-098 clause 3 rules that vocabulary out, because it collapses identity
+      verification (which succeeds) with authorization to establish a session (which is
+      denied). The HTTP status is a transport detail; the domain semantics are not.
+      Classified `member_flow` as the closest fit of the three declared kinds, and that
+      classification is itself a small governance act: named here so a future auditor does
+      not have to reverse-engineer why an AUTHENTICATION gate carries a member-flow flag.
+      ⚠ ADMISSION INTO AUTHENTICATION WAS ITSELF THE RULING, NOT A SIDE EFFECT OF A GREEN
+      GATE. `apps/api/src/modules/auth/` is not among the `prohibited` roots below — not
+      because it was cleared, but because no story had proposed a flag there — so leg (b)
+      passes on this flag, and a passing scan proves the root is UNLISTED, not that the
+      behaviour is admissible. The bar was extended into authentication by Decision
+      2026-08-10-097 clause 7(i), ratified-as-written by 2026-08-10-098 clause 2. Do not
+      cite the gate as the authority for this entry; cite the Decisions.
+      ⚠ POLARITY, TRACED RATHER THAN ASSERTED (Decision 097 clause 7(ii)). `fallback_default`
+      is `false`, meaning "DO NOT deny session issuance". Traced through: a degraded path —
+      no version in force, a malformed cohort rule, a lookup error — yields `false`; the
+      consumer reads `false` as "the block is not active"; THE MEMBER RECEIVES A NORMAL
+      SESSION. ⇒ THIS SAFEGUARD FAILS OPEN. That is the opposite of what "fail-safe" usually
+      means at an auth gate, and it is deliberate and ratified: default-OFF must be the
+      behaviour of the ABSENT configuration (Q6 sub-choice (b-i)), so a terminated member
+      retaining access is the correct degraded outcome until the Panel authorises the flip —
+      and it is the status quo, so no degraded path is a regression. The tracing is required,
+      not decorative: the `kyc_manual_fallback` entry above asserted the opposite of its own
+      code through three review passes because a polarity was stated instead of followed
+      through to its outcome.
+      Safe to ADMIT (as distinct from enable) because `fallback_default` is `false` and every
+      degraded path lands on today's behaviour, so the flag's mere existence changes nothing.
+      ⛔ ENABLEMENT IS TRUSTEE-PANEL-EXCLUSIVE and is additionally gated on STORY 10.21 (the
+      off-portal DPDPA route) having landed — Decision 2026-08-10-097 clause 6, sub-choice
+      (b-i). Until 10.21 exists, enabling this leaves a terminated member with NO route to
+      their statutory rights, and §8.4's promise that those rights are exercised "through an
+      identity-verified administrative process" would have no process behind it. Operations
+      owns HOW a flip executes, never WHETHER it may occur; non-production enablement confers
+      NO production authority. FLIPPING IT BEFORE 10.21 LANDS IS A GOVERNANCE VIOLATION, NOT
+      A CONFIGURATION CHANGE.
+      ⚠ WHAT ENABLING IT DOES NOT ACHIEVE, recorded so no future reader overstates it: the
+      flip ends ONE ACCOUNT'S access. A terminated member who obtains a second mobile number
+      re-registers unimpeded — signup dedup keys on the mobile blind index alone, and neither
+      KYC path detects the collision (see deferred-work.md, "identity collision at signup is
+      unenforced"). Sub-choice (b-ii), which would have gated the flip on that control, was
+      NOT ratified; the Panel ruled (b-i) knowing this.
+    adr: Story 10.19 / Decision 2026-08-10-097 (clauses 6-8) + Decision 2026-08-10-098
   - kind: channel_routing
     artifact: telegram_mirror
     rationale: >-

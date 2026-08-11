@@ -3596,6 +3596,28 @@ never "final"._
   `deferred-work.md:3260` with the re-trigger *"Story 10.18 lands and defines what 'sanctioning authority'
   actually gates"*, and that trigger fired here. A deferral to a story that does not carry it as an AC is
   how it lapsed the first time. **Re-trigger:** Story 10.19 authoring.
+  - ✅ **RESOLVED VIA EXPLICIT RULING, 2026-08-10 — Decision `2026-08-10-097` clause 1.** Story 10.19
+    carried it as **AC3**, the re-trigger fired, and the Panel ruled **option (a): restoration from a
+    terminated member requires a formal act of the Trustee Panel**, stated expressly in Niyamavali §8.4
+    because Decision `2026-08-10-096` clause 3's concurrency ruling would otherwise have left
+    reinstatement available to any authority Part 8 names. **Not** *Closed by edit* and **not** a third
+    deferral — the outcome is a ruling (`[[feedback_closure_language_precision]]`). **This entry is not
+    carried forward.** Implementation is a precondition on `performAction`'s legality path; the
+    `terminated --restore--> none` arm is not removed.
+  - ✅ **IMPLEMENTED 2026-08-11 (Story 10.19, Task 9).** The ruling is mechanized, not merely recorded:
+    a new permission key **`member.restore_terminated`** (catalog 30 → 31, keys 40 → 41) held by
+    **`trustee_panel` alone**, checked at `performAction` when — and only when — the action is
+    `restore` **and** the current overlay status is `terminated`.
+    · The check runs **inside the scope tx on the same client as the write**, closing the TOCTOU a
+      pre-tx check would leave: a concurrent `terminate` committing in the gap would otherwise let a
+      non-Panel actor restore a member who had just become terminated.
+    · **Scoped to exactly one transition.** §8.3 restore-from-suspended stays on the single-actor
+      `member.moderate` path, so Panel authority remains CONCURRENT everywhere else in Part 8
+      (Decision `2026-08-10-096` clause 3). Pinned by a test that fails if the check is ever widened.
+    · `status.ts`'s `terminated --restore--> none` arm is **untouched** — the transition stays legal;
+      only the authority narrowed. A test pins that too, so deleting the arm (which would make a
+      terminated member unrestorable by anyone) fails rather than passing quietly.
+    **Nothing about this question remains open.**
 
 ### Raised, not resolved — each now has a destination
 
@@ -3657,3 +3679,187 @@ never "final"._
 4. **Family A is NOT Story 1.18's to re-open.** The 24 rank-order blocks were rewritten in place because
    no resolver can ever lift them. Story 1.18 owns Family B's 21 blocks only, and its story text carries
    that prohibition.
+
+---
+
+## Deferred from: investigation — identity collision at signup is unenforced (2026-08-10)
+
+**Raised** during Story 10.19 authoring, from the question *"if a suspended member signs up again on a
+different mobile number, does KYC catch him?"* **Traced live at `a961e3b`. The answer is no — at every
+layer.** This is not a code-review finding against a story; it is a standing gap in a control the
+architecture already commits to, recorded here because nothing else records it.
+
+### The gap, and the four places it fails
+
+| # | Layer | Why it does not catch a second account |
+|---|---|---|
+| 1 | **Signup dedup** | `resolveMembersByMobile` (`member-auth.repo.ts:82`) resolves by `mobile_blind_index` **and nothing else**. A different mobile ⇒ a different blind index ⇒ zero rows ⇒ `priorInThisPariwar` undefined ⇒ signup proceeds clean. No 409, no 403, no flag. |
+| 2 | **The moderation rejoin lock** | Keys on `moderationStatus === 'terminated'` (`signup.handlers.ts:119`). A **suspended** member has no rejoin lock at all — not even on the same mobile. The lock is also scoped to `priorInThisPariwar`, so it is per-Pariwar by construction. |
+| 3 | **Automatic (DigiLocker) KYC** | The Aadhaar reference is discarded at the provider boundary — `mapper.ts:89` calls `maskAadhaar(referenceId)`, keeping the **last 4 digits only**. `member_kyc_profiles.aadhaar_masked_id` is nullable Tier-3 `text` with **no unique constraint** (migration `0024:33`). Last-4 is not an identity key (1-in-10⁴ collisions). |
+| 4 | **Manual KYC** | Stores name/dob/photo as `self_declared`, `trusteeVerified: false` (`kyc.handlers.ts:416`). **Nothing ever writes `true`** — the schema comment says "Epic 4 flips `trustee_verified`"; Epic 4 closed and no writer exists. `find apps/admin/src -ipath "*kyc*"` is **empty**: there is no reviewer surface. "Manual KYC" today means *self-declared and unreviewed*. |
+
+### The control is architecturally committed and unbuilt
+
+`architecture.md:1748-1749`, verbatim, under §2.12 RTBF mechanics:
+
+> Identifier retention: Aadhaar HMAC hash retained for the 12-month rejoin lock (FR-6);
+> **cross-attempts under same Aadhaar fail attribution.**
+
+The column exists — `member_withdrawals.aadhaar_hmac` — and `member_withdrawals.ts:30-34` is candid that it
+is a **seam only**: *"NULLABLE … the full Aadhaar is masked to last-4 at the KYC provider boundary today
+(nothing to HMAC at withdrawal time). v1 keys the lock on the mobile blind index."* The table even GRANTs
+UPDATE specifically so the column can be backfilled without a migration. **The only writer in the repo is a
+test** (`member-withdrawals.spec.ts:121`) asserting the backfill is possible. No production path populates
+it. `[[feedback_record_unattested_no_backfill]]`: recorded as un-built, not as partially working.
+
+### ⛔ What Story 10.19 does and does not do about it
+
+**Story 10.19 does not close this and must not be expanded to.** Its login block ends *one account's*
+authenticated access; it does nothing about a *second* account. If Q6 rules the block ships, the gap becomes
+a **live, known bypass of a rule the system has just started enforcing** — which is precisely why it is
+filed now rather than after. 10.19 already carries three flagged scope additions and two blocking Panel
+questions; a fourth would make Q6 unanswerable.
+
+### Three constraints any fix must satisfy — stated so the eventual story does not rediscover them
+
+1. ⛔ **It cannot be a UNIQUE constraint.** R2 permits multi-Pariwar membership: one person legitimately
+   holds several `members` rows. A globally-unique Aadhaar key would **break a supported case**. The shape
+   must mirror `member_identities UNIQUE(pariwar_id, mobile_blind_index)` — unique *within* a Pariwar,
+   permitted across them — and cross-Pariwar collisions must feed a **policy decision**, not a DB error.
+2. ⚠ **Key stability is UNKNOWN and is a precondition, not an implementation detail.** `mapper.ts:79-84`
+   reads the root `referenceId` attribute first, falling back to `UidData`/`Poi` `uid`. Real eAadhaar
+   `referenceId` values are typically **last-4 + a timestamp** — *not stable across pulls*. Hashing that
+   would dedup nothing and would look like it worked. **Whether a stable key is obtainable must be answered
+   against a live provider response before any acceptance criterion is written.**
+3. ⚠ **Retaining an Aadhaar-derived identifier is itself a governance and regulatory question.** Aadhaar
+   Act / UIDAI storage restrictions bear on holding even an HMAC; DPDPA retention bears on an identifier
+   that **survives anonymization** (architecture files it under RTBF mechanics for exactly that reason).
+   This is a counsel question on a track that is not open — Story 0.13 has not closed and no counsel is
+   selected.
+
+### The policy question, which is not self-evident
+
+A collision is not obviously a block. On a match the system could refuse signup, admit-and-flag for trustee
+review, or admit silently and surface the link on the moderation surface. Each has a different false-positive
+cost, and false positives here are **an identity-verified person told they may not join**. This is the same
+class of question Story 10.19 routed as Q1–Q6, and it belongs to the same body.
+
+### Disposition
+
+- **Owner: UNASSIGNED.** Stated plainly rather than routed to an epic — per
+  `[[project_r7_fact_producer_unbuilt]]`, a deferral naming an epic expires unowned, and this entry is
+  written to avoid that failure mode rather than repeat it.
+- **Recommendation: mint its own story** (see the note below). It is cross-cutting — signup, KYC provider
+  boundary, withdrawal, moderation, RTBF — has a governance half and a feasibility precondition, and is
+  not a task inside any story that exists today.
+- **Re-trigger — whichever fires FIRST:**
+  1. **Story 10.19's Q6 ruling authorises the login block to be enabled** (ship-now, or the default-OFF
+     flag being flipped). At that instant the gap stops being latent and becomes a live bypass of an
+     enforced rule.
+  2. **Any story that touches `apps/api/src/modules/kyc/providers/digilocker/mapper.ts`, or adds a second
+     KYC provider under the FR-58C swap.** The key can only be captured at that boundary — once the
+     response is mapped to `KycProfile`, the material is gone. A provider change that lands without
+     capturing it re-buries the gap for the life of that provider.
+
+---
+
+## Deferred from: 10-19-termination-ends-membership-privileges (2026-08-11)
+
+Recorded per AC11. Decisions `2026-08-10-097` (the six rulings) and `2026-08-10-098` (the no-session
+implementation, the annex ratification, the domain vocabulary) govern; this section records what they
+leave OWED and what the story does NOT close.
+
+### Owed obligations, each with a named owner or a concrete re-trigger
+
+⛔ None of these names an epic. Per `[[project_r7_fact_producer_unbuilt]]`, a deferral naming an epic
+expires unowned, and this story is the one that had to discharge a question which had already lapsed
+once for exactly that reason.
+
+- **⭐ The Q6 FLIP is UNAUTHORISED — this is the single most consequential entry here.** The
+  `termination_access_block` flag ships **DEFAULT OFF**. Everything AC4–AC10 built is INERT until it is
+  enabled, so **as shipped, termination does not yet end authenticated access**. Enabling it is
+  **Trustee-Panel-exclusive**, through a formal `.decision-log.md` entry, and is additionally gated on
+  **Story 10.21** having landed (Decision `2026-08-10-097` clause 6, sub-choice (b-i)). ⛔ Flipping it
+  before then is a governance violation, not a configuration change — the `2026-08-07-089` posture
+  applied to a second flag. **Owner:** Trustee Panel. **Re-trigger:** Story 10.21 lands.
+- **Counsel review of Niyamavali §8.4 and §8.4a — OWED and UN-ATTESTED** (Decision `097` clause 5).
+  ⚠ The **third** amendment to land on Panel attestation alone (`080` → `096` §8.7 → `097` §8.4/§8.4a).
+  The count is recorded rather than left to accumulate silently. **Owner:** none exists today — Story
+  0.13 has not closed and no counsel is selected. **Re-trigger:** the first story that receives an
+  actual counsel-review outcome on a Niyamavali amendment.
+- **The access-token residual.** `revokeAllMemberSessions` deletes refresh tokens and trusted devices
+  but **cannot invalidate a live access JWT** — there is no denylist, and `MEMBER_ACCESS_TTL_MS`
+  defaults to 15 minutes (`apps/api/src/config.ts:377`). A member terminated mid-session retains write
+  access for that window. Governed as the documented TTL limitation (Decision `097` clause 8). ⛔ NOT
+  closed by shortening the TTL, by touching the five `TERMINAL_STATES` Sets, or by inventing a denylist
+  — each is a larger architectural act than this story owns. Recorded at its source in
+  `member-auth.repo.ts` and in the `AI-10-2` block. **Re-trigger:** the first story that introduces an
+  access-token denylist or revocation list for any reason.
+- **The notice is IN-APP-ONLY — a ruled-upon reach limitation** (Q3 option (b), Decision `097`
+  clause 3). ⚠ Ruled **against** the author's recommendation and recorded as a ruling, not a default.
+  Once the flip happens, the one communication a terminated member receives is delivered to a surface
+  they can no longer authenticate into. **Re-trigger:** a story that adds the per-alert
+  `CostOptimizationInput` exemption field — the fifth mechanism, which does not exist today; the other
+  four levers are closed (`time_critical` is pinned false, `toggleEnabled` is per-Pariwar,
+  `lastEngagementAt` is not sender-addressable, and `windowMsByCategory` is shared with Stories 10.5
+  and 8.x). **Owner:** unassigned.
+- **The transitional i18n key `moderation.notice.terminated.body_access_retained`** is DELETABLE once
+  the flag retires and the block is unconditional. It is named for the condition it describes rather
+  than a story number so this is obvious at the call site. **Re-trigger:** the flag flip.
+- **The `member.restore_terminated` grant set must not widen.** `trustee_panel` is its ONLY holder, and
+  that exclusivity is the mechanism behind §8.4. ⛔ Granting it to another role would return
+  restore-from-terminated to the single-actor path the ratified text forecloses — and the instrument
+  would then say something the system does not do. **Owner:** Trustee Panel; any change needs a
+  Decision entry.
+
+### What this story does NOT close (AC11)
+
+1. **Story 10.21 is NOT unblocked, and the DPDPA gap is OPEN.** After the flip a terminated member
+   loses Story 3.11's member-portal export with **no off-portal replacement**. The disposition is the
+   **Q6 ruling** — recorded, not assumed — and 10.21 is now the **named gate on the flip**, which is
+   the strongest form this dependency has ever had.
+2. **Story 10.22 is NOT unblocked.** The appeal CTA still has no moderation destination. This story
+   removes Decision 6's **justification**, not the **need** for a real appeal route (Decision `097`
+   clause 13). `FAILURE_STATES` deliberately still contains `terminated-with-reason`; the member-variant
+   unreachability is recorded at `presenter.ts`, not fixed by deleting a set entry.
+3. **§8.5, §8.6, §8.8, §8.9 and the §8.2/§8.3 edits stay UNLANDED** — owned by **10.20** (grounds,
+   principles, record model) and **10.22** (appeal). The `niyamavali.md:196` reserved-numbers note is
+   unchanged. ⚠ **Four rows of the newly-landed §8.4a are stated-but-unmechanized** and say so in the
+   instrument itself: escalation justification (10.20), prior sanction required (10.20), notice and
+   opportunity to respond (10.20/10.22), and portal access (the Q6 flip).
+4. **NO standing Trustee Panel obligation is discharged, and the queue GREW.** Five were open before
+   this story — Story 10.23's Escalation 6 (`2026-08-07-089`), the copy-truth defect (still unassigned),
+   R7(A)'s unpublished Part 11 amendment (`2026-08-06-077`), the R7(C)/R7(F) lock-in asymmetry, and
+   counsel review of §8.7 (`2026-08-10-096` clause 5). This story adds **two**: counsel review of
+   §8.4/§8.4a, and the Q6 flip authorisation. **The queue stands at SEVEN.** Stated as a count rather
+   than as progress.
+5. **The identity-collision gap is NOT this story's and remains UNASSIGNED** (its own section above).
+   Nothing here narrows it: the flip ends ONE ACCOUNT'S access, and a terminated member who obtains a
+   second mobile number re-registers unimpeded. Sub-choice (b-ii), which would have gated the flip on
+   that control, was **not** ratified — the Panel ruled (b-i) knowing this.
+
+### Recorded artifacts of this story's own sequencing
+
+- **AC8's copy correction was NOT deferred, and that is a debt deliberately avoided.** Decision `097`
+  clause 12 permitted either "describe the flag's default as the shipped truth" or "defer to the flip
+  and record as flag-gated". The notice body is instead **selected from the flag at send time**, so it
+  states what is true in every flag state and owes nothing later. AC9's five-site sweep took the same
+  approach — every corrected comment is true under both flag states rather than describing only the
+  post-flip world. ⚠ Recorded because the *permitted* option would have created a decay window gated on
+  a `backlog` story, and a future reader should know the divergence was deliberate.
+- **`PERMISSION_CATALOG_VERSION` moved 30 → 31 and the key count 40 → 41.** A return to the normal bump
+  shape after Story 10.18's deliberate role-only deviation; the two numbers have not tracked each other
+  since 10.18 and should not be expected to.
+- **Decision `2026-08-10-097` clause 7 records the A/A/A annex answer as affirmation-as-written**,
+  because the three properties were posed as prose rather than lettered options. Decision `098`
+  clause 2 confirmed no narrower reading was intended. Recorded so a later reader does not mistake the
+  shape of the question for a shape it did not have.
+
+## Deferred from: code review of story-10-19-termination-ends-membership-privileges (2026-08-11)
+
+- **`ForbiddenError`'s message hardcodes "Member is withdrawn" even when `denial.reason ===
+  'anonymized'`.** `denial.code` is correctly `auth.member_withdrawn` for both reasons, but the
+  human-readable message text never varies. Pre-existing (Story 3.2), not introduced by 10.19 — the
+  diff only touches the surrounding line while widening the `RotateResult` union for AC5, and carried
+  the inaccuracy forward unchanged. `apps/api/src/modules/auth/member/member-auth.handlers.ts`, the
+  withdrawn/anonymized `ForbiddenError` construction.

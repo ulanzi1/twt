@@ -38,6 +38,7 @@ import type { StepUpDeliveryResult, StepUpOtpDelivery } from '../shared/step-up-
 import * as authService from './member-auth.service.js';
 import * as repo from './member-auth.repo.js';
 import * as otpService from './member-otp.service.js';
+import * as terminationBlock from './termination-block-seam.js';
 import { signPariwarSelect, signSignupContinuation } from './tokens.js';
 
 const secs = (ms: number): number => Math.max(1, Math.floor(ms / 1000));
@@ -64,21 +65,109 @@ export async function completeMemberLogin(
     now,
   );
 
+  // ── ⭐ AI-10-2 — THE TERMINATION-ACCESS INVARIANT (Story 10.19, AC4/AC6/AC12) ───────────────────
+  //
+  // Recorded as a STRUCTURED DOC-COMMENT AT THE POINT OF USE, following `AI-10-1`
+  // (`packages/domain/src/member/restoration-discipline/overlay.ts:10-53`) and `AI-7-2`
+  // (`apps/jobs/src/assignable-roster.ts:1-53`). ⛔ `architecture.md` is NOT amended — Decision
+  // `2026-08-04-072` clause 3 fixes this comment as the canonical record for this class of
+  // invariant. A reviewer who reads only this block can identify a violation.
+  //
+  // ── (a) WHAT IS READ ────────────────────────────────────────────────────────────────────────────
+  // EXACTLY ONE moderation field: the MODERATION OVERLAY's `status`, via the UNBOUNDED
+  // `getCurrentMemberModerationOverlay`. Moderation is an OVERLAY, not a lifecycle state.
+  //
+  // ── (b) WHAT IS *NOT* READ OR WRITTEN ───────────────────────────────────────────────────────────
+  // ⛔ NO `TERMINAL_STATES` Set is consulted or modified — all five stay untouched (AC6). The
+  // prohibition at `packages/domain/src/member/moderation/index.ts:22-25` is load-bearing and this
+  // story does not become its first exception, because doing so would fork `AI-7-2`.
+  // ⛔ NO write to `members.state`. ⛔ NO lifecycle label is derived, inferred or implied from a
+  // moderation standing. The two `state === 'withdrawn' | 'anonymized'` reasons below are Story
+  // 3.2's LIFECYCLE block and are entirely separate from this story's moderation block; they share
+  // a branch, not a meaning.
+  //
+  // ── (c) WHY THE UNBOUNDED OVERLAY VARIANT ───────────────────────────────────────────────────────
+  // `occurred_at` is DB-generated; every `deps.clock()` is the app clock. Under app-clock-behind-DB
+  // skew, an `at`-bounded read would exclude the terminating event, fold `status: 'none'`, and admit
+  // a terminated member. See `moderation/overlay.ts:132-149`.
+  //
+  // ── (d) SUSPENSION IS DELIBERATELY NOT BLOCKED ──────────────────────────────────────────────────
+  // D5 requirement 3 / AC7: a suspended member MUST retain access — they are curing, they need the
+  // contribution surface, and Story 10.16's disclosure lives there. `moderationDeniesSession` is
+  // exhaustive over `ModerationStatus` with a `never` arm, so a future label (Story 10.20's sanction
+  // tiers are the live candidate) BREAKS THE BUILD rather than being silently admitted.
+  //
+  // ── (e) THE BOUNDED RESIDUAL, STATED RATHER THAN INHERITED (AC6) ────────────────────────────────
+  // `revokeAllMemberSessions` deletes refresh tokens and trusted devices but CANNOT invalidate a
+  // live access JWT — there is no denylist — and `MEMBER_ACCESS_TTL_MS` defaults to 15 minutes
+  // (`apps/api/src/config.ts:377`). A member terminated mid-session retains write access for that
+  // window. ⛔ NOT closed here: not by touching the Sets, not by shortening the TTL, not by inventing
+  // a denylist — each is a larger architectural act than this story owns. Decision `2026-08-10-097`
+  // clause 8 governs it as the documented TTL limitation; it is carried in `deferred-work.md`.
+  //
+  // ── (f) ⛔ THE DOMAIN VOCABULARY (Decision `2026-08-10-098` clause 3) ────────────────────────────
+  // This is NOT "login failed" and NOT "login succeeds but returns 403". OTP verification SUCCEEDED
+  // and identity IS verified; what is denied is AUTHORIZATION TO ESTABLISH A MEMBER SESSION. The
+  // HTTP status is a transport detail; the domain semantics are not.
+  //
+  // ── (g) ⛔ NO SESSION IS MINTED ON THE DENIED PATH ──────────────────────────────────────────────
+  // `issueFullSession` is not reached. A restricted, notice-only or reduced-scope session is
+  // EXPRESSLY FORECLOSED (Decision `097` clause 11, ruled at `098` clause 1): notice access is
+  // distinguished from ordinary access STRUCTURALLY — one path issues a session, the other does not
+  // — never by a flag, scope, audience or claim on a session object. AC12 pins this with a test that
+  // asserts `issueFullSession` is never invoked.
+  //
+  // ── (h) THE BLOCK IS FLAG-GATED AND FAILS OPEN ─────────────────────────────────────────────────
+  // `termination_access_block`, DEFAULT OFF. Every degraded path yields a normal session. The flip
+  // is Trustee-Panel-exclusive AND gated on Story 10.21 landing (Q6 sub-choice (b-i)).
+  //
   // PR-Patch-5: `getMemberStateAt` is non-nullable — an empty event stream replays to
   // the initial 'pending-kyc' (a member mid-signup, which the spec admits), never null.
   // The former `state === null` "state unavailable" branch was unreachable dead code
-  // and has been removed. Only the two terminal states block login.
-  if (state === 'withdrawn' || state === 'anonymized') {
+  // and has been removed.
+  //
+  // ⚠ The verdict is computed BEFORE the branch, deliberately. "ONE branch + ONE sleep" and "a
+  // DISTINCT audit reason + a DISTINCT error code" pull against each other if this is written as two
+  // `if`s; deriving a single nullable verdict and reading the reason and code OFF it satisfies both.
+  const denial = await terminationBlock.resolveSessionDenial(deps, {
+    memberId: membership.memberId,
+    pariwarId: membership.pariwarId,
+    lifecycleState: state,
+    now,
+    onError: (err) => request.log.warn({ err }, 'termination-access flag/overlay resolution failed'),
+    // AC5c-style observability, mirroring the KYC seam's wired consumers (`kyc.handlers.ts`): fires
+    // on every resolution, cache hit and miss alike, so the flag's audit trail includes login.
+    onAccess: (d, source) =>
+      request.log.debug(
+        { flag: 'termination_access_block', reason: d.reason, enabled: d.enabled, source },
+        'termination-access: flag resolved',
+      ),
+  });
+
+  if (denial !== null) {
     emitAuthAudit(deps, request, 'member_login.failure', {
       actorId: membership.memberId,
       pariwarId: membership.pariwarId,
-      context: { reason: state, ...(maskedMobile ? { masked_mobile: maskedMobile } : {}) },
+      // The reason is read OFF the verdict, so `terminated` stays separable from the two lifecycle
+      // reasons in the audit log without a second branch to keep in sync.
+      context: { reason: denial.reason, ...(maskedMobile ? { masked_mobile: maskedMobile } : {}) },
     });
-    // P6: timing-equalize the withdrawn block — without this, a withdrawn-member
-    // response is measurably faster than the full session-issuance path, letting an
-    // attacker enumerate account status via response time.
+    // P6: timing-equalize the denial — without this, a denied response is measurably faster than the
+    // full session-issuance path, letting an attacker enumerate account status via response time.
+    // ⛔ ONE sleep, shared by all three reasons. A second, separately-written sleep is a divergence
+    // waiting to happen, and it would re-open the enumeration channel for whichever reason drifted.
     await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 100));
-    throw new ForbiddenError('Member is withdrawn', 'auth.member_withdrawn');
+    if (denial.reason === 'terminated') {
+      // ⭐ STRUCTURED, not a bare code (AC4): a bare code is the shape of a generic authentication
+      // failure and would force the client to invent the notice — which is how the two locales drift
+      // and how the notice stops matching what Niyamavali §8.4 says. Values only, never sentences.
+      throw new ForbiddenError(
+        'Session issuance denied: membership terminated',
+        denial.code,
+        denial.notice,
+      );
+    }
+    throw new ForbiddenError('Member is withdrawn', denial.code);
   }
 
   // P11: audit session-issuance failure so the event is never silently dropped.
@@ -348,12 +437,33 @@ export function createMemberAuthHandlers(deps: AppDeps) {
             context: { device_id: result.deviceId },
           });
         } else if (result.reason === 'member_blocked') {
-          // PR-Patch-9: member is withdrawn/anonymized — the service already revoked the
-          // chain. Record it and block with the same 403 the login gate uses.
+          // PR-Patch-9: the service already revoked the chain. Record it and deny with the same
+          // 403 the login gate uses.
           emitAuthAudit(deps, request, 'member_session.revoked', {
             actorId: result.memberId,
-            context: { device_id: result.deviceId, reason: 'member_blocked' },
+            // ⚠ `reason` stays `member_blocked` — it is the STABLE key existing audit and reporting
+            // queries grep for, and renaming it would silently break them. The new `cause` is added
+            // BESIDE it, which is what makes a terminated denial separable from a withdrawn one
+            // without invalidating anything already written against this line.
+            context: { device_id: result.deviceId, reason: 'member_blocked', cause: result.cause },
           });
+          // ⛔ Story 10.19 AC5 — report the ACTUAL cause. This previously threw
+          // `auth.member_withdrawn` / "Member is not active" for EVERY `member_blocked`, so a
+          // terminated member was told something false about their own account on the one path a
+          // live app hits first.
+          //
+          // ⛔ Switch on the `cause` the service already computed. Do NOT re-read member state here:
+          // that would be a second query rebuilding information this result already carries, and the
+          // two reads could disagree under a concurrent moderation action.
+          if (result.cause === 'terminated') {
+            // Same structured payload as the login gate (AC4), so the member-app surface renders
+            // identically whichever path reached it. Not "login failed" — session issuance denied.
+            throw new ForbiddenError(
+              'Session issuance denied: membership terminated',
+              'auth.member_terminated',
+              result.notice,
+            );
+          }
           throw new ForbiddenError('Member is not active', 'auth.member_withdrawn');
         } else if (result.reason === 'concurrent') {
           // PR-Patch-11: benign concurrent rotation of the same token — the sibling

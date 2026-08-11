@@ -100,7 +100,7 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
 function RootLayoutNav() {
   const colorScheme = useColorScheme()
   const theme = useTheme()
-  const { session, isLoading } = useSession()
+  const { session, isLoading, terminationNotice, clearTerminationNotice } = useSession()
   const segments = useSegments()
   const router = useRouter()
 
@@ -109,13 +109,28 @@ function RootLayoutNav() {
   // — this guard, in the root layout, is what enforces the login wall.
   useEffect(() => {
     if (isLoading) return
+    // Story 10.19 (AC5) — a background token refresh discovered the member was terminated. Routes to
+    // the SAME termination surface the OTP-verify path reaches (`otp.tsx`), carrying the same AC4
+    // payload fields, instead of falling through to the bare `/(auth)/login` redirect below.
+    if (terminationNotice) {
+      router.replace({
+        pathname: '/(auth)/terminated',
+        params: {
+          ...(terminationNotice.groundLabelKey ? { groundLabelKey: terminationNotice.groundLabelKey } : {}),
+          ...(terminationNotice.effectiveAt ? { effectiveAt: terminationNotice.effectiveAt } : {}),
+          ...(terminationNotice.hasFurtherCommunication ? { hasFurtherCommunication: 'true' } : {}),
+        },
+      })
+      clearTerminationNotice()
+      return
+    }
     const inAuthGroup = segments[0] === '(auth)'
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login')
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)')
     }
-  }, [session, isLoading, segments, router])
+  }, [session, isLoading, segments, router, terminationNotice, clearTerminationNotice])
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

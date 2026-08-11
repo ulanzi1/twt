@@ -36,6 +36,7 @@ deliberately accepted.
 | member/donor (choosing which nominee bank account to pay, when the claim has two) | Paying-to-the-correct-nominee confidence — no opaque server-side default; the donor actively confirms via the bank-name choice + the nominee-name-match banking-info panel (Story 9.9) | forced |
 | member (filing a helpdesk support request — category + subject + body, optional attachments) | Structured triage/routing to the correct role with a visible SLA, instead of an unstructured WhatsApp message or phone call (FR-52) | optional |
 | member (asserting a personal event affected a contribution — a bounded 6-value picker, no free text) | Honest expectation-setting for the ratified Niyamavali §3.1 "carries no consequence of its own" invariant — the member cannot record without first being shown, before they act, that asserting changes nothing (AC1/AC7, Story 10.26) | optional |
+| terminated member (obtaining their own records and exercising data rights by PHONING THE HELPLINE, because authenticated self-serve export has ended) | The Niyamavali §8.4 boundary — termination ends authenticated access while statutory rights survive, exercised through an identity-verified administrative process. ⚠ INERT AS SHIPPED: payable only once `termination_access_block` is enabled, which is gated on Story 10.21 + a Trustee Panel decision (Story 10.19) | forced |
 
 **Story 2.5 disposition (declaration affirmed, no new row):** the `apps/public`
 Astro SSR shell + the public Niyamavali list/version/diff render are
@@ -1212,3 +1213,48 @@ ratchet and this story measured nothing new).
 
 See `scripts/friction-budget/README.md` for the gate's mechanism and the
 baseline-of-record model.
+
+---
+
+## Story 10.19 — Termination Ends Membership Privileges
+
+**ONE new row, and it is for a cost that is not yet payable.** The member-facing
+surfaces this story touches (`apps/mobile/app/(auth)/terminated.tsx`,
+`.../otp.tsx`, `apps/mobile/lib/public-site.ts`) are **read-only**: the
+termination surface states what happened, when, and on what ground, and asks the
+member for **nothing** — no form, no upload, no gate, no step-up, no decision, no
+confirmation. On its own it would warrant no row at all. It in fact *removes* a
+cost: before this story the OTP screen told a terminated member their **correct**
+code was wrong, so the only route forward was to retype it, request a new one, and
+eventually phone someone to find out why nothing worked.
+
+**The row exists for the one real cost this story moves onto the member.** Once
+`termination_access_block` is enabled, a terminated member's route to their own
+records changes from Story 3.11's authenticated self-serve export to **calling the
+helpline**. That is a genuine, `forced` friction — they have no alternative — and
+it is paid by the member with the least standing to object.
+
+⚠ **It is declared now precisely because it is NOT yet payable.** The flag ships
+DEFAULT OFF and its flip is gated on Story 10.21 landing plus a Trustee Panel
+decision (Decision `2026-08-10-097` clause 6, sub-choice (b-i)). A row added only
+at flip time is a row nobody would remember to add — the flip is a config act, not
+a code change, so it would never touch a member-facing path and would never fire
+this gate. Declaring it here, with its trigger stated in the row, is the same
+anti-decay posture the rest of this story takes toward deferred work.
+
+⭐ **Story 10.21 is what RETIRES this friction**, not merely what unblocks the
+flip: it builds the off-portal DPDPA route, which is the whole reason the helpline
+is the interim answer. When it lands, this row should be re-examined rather than
+inherited.
+
+**No row for the block itself.** Denying session issuance is an access decision,
+not friction: friction is a cost a member pays to obtain something, and a
+terminated member is not being asked to pay anything to get back in — §8.4 says
+they cannot, absent a Trustee Panel act. Recording it as friction would mis-file a
+governance boundary as a UX cost.
+
+**The page-weight baseline is UNCHANGED — do NOT ratchet.** Only `apps/mobile`
+(EAS build is a no-op → `member-app-native` stays a no-op), plus `apps/api`,
+`apps/jobs`, `packages/{domain,i18n,ui}`; `apps/public` is **not** touched
+([[project_friction_budget_baseline_ratchet]] — the baseline is a best-ever
+ratchet and this story measured nothing new).

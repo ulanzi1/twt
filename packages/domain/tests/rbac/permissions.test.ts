@@ -51,9 +51,9 @@ describe('permissionKey smart constructor', () => {
 
 describe('PERMISSION_CATALOG', () => {
   it('is versioned and seeded with exactly the grounded keys', () => {
-    expect(PERMISSION_CATALOG_VERSION).toBe(30); // Story 10.18 bump +1 (trustee_panel — a ROLE, not a key: the FIRST bump in this chain that mints NO permission key, so the key count stays 40 and catalog version STOPS being a proxy for key count; 29 at 10.12 +2 pariwar.view_custom_fields/…manage_custom_fields — ONE bump covering both, the 10.8 two-key precedent, 28 at 10.9 banner.manage, 27 at 10.8 +2 feature_flag.view/…flip, 26 at 10.7 member.export_roster, 25 at 10.5 news.manage, 24 at 10.4 helpdesk.respond, 23 at 10.3 helpdesk.create, 22 at 9.8 reconciliation.review, 21 at 7.5 +2 pool.fixed_amount_set/…_emergency, 19 at 6.16, 16 at 6.14, 15 at 6.13, 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
+    expect(PERMISSION_CATALOG_VERSION).toBe(31); // Story 10.19 bump +1 (member.restore_terminated — a KEY, so the count moves 40 -> 41: a RETURN to the normal shape after 10.18, which is why the two numbers no longer track each other; 30 at 10.18 +1 (trustee_panel — a ROLE, not a key: the FIRST bump in this chain that mints NO permission key, so the key count stays 40 and catalog version STOPS being a proxy for key count; 29 at 10.12 +2 pariwar.view_custom_fields/…manage_custom_fields — ONE bump covering both, the 10.8 two-key precedent, 28 at 10.9 banner.manage, 27 at 10.8 +2 feature_flag.view/…flip, 26 at 10.7 member.export_roster, 25 at 10.5 news.manage, 24 at 10.4 helpdesk.respond, 23 at 10.3 helpdesk.create, 22 at 9.8 reconciliation.review, 21 at 7.5 +2 pool.fixed_amount_set/…_emergency, 19 at 6.16, 16 at 6.14, 15 at 6.13, 14 at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1 at 1.8)
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(40);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(41);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

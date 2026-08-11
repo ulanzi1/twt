@@ -215,6 +215,78 @@ export const FLAG_DEFAULTS: Readonly<Record<string, FlagDefault>> = {
     description:
       'When enabled for a cohort, the apps/jobs restoration-discipline job WRITES §3.1 R7 lock-in impositions, automatically removing coverage with no human in the loop (Story 10.23, FR-8). DEFAULT OFF. Enabling requires an explicit Trustee Panel decision that discharges Escalation 6 (Decision 2026-08-07-088 clauses 4-5; 2026-08-07-089) — flipping it without that decision is a GOVERNANCE VIOLATION, not a configuration change.',
   },
+  // ── Story 10.19 — the TERMINATION-ACCESS block's ROLLOUT GATE (Q6 option (b), sub-choice (b-i)) ──
+  //
+  // ⛔⛔ THIS IS THE FIRST FLAG THAT CONDITIONS AUTHENTICATION. READ BEFORE FLIPPING IT. ⛔⛔
+  //
+  // **FLIPPING THIS FLAG BEFORE STORY 10.21 LANDS IS A GOVERNANCE VIOLATION, NOT A CONFIGURATION
+  // CHANGE.**
+  //
+  // What it gates: whether a member carrying a `terminated` MODERATION OVERLAY is denied issuance of
+  // a member session. Enabled, OTP verification still SUCCEEDS and the member's identity is verified
+  // — what is denied is authorization to ESTABLISH A MEMBER SESSION, and a structured termination
+  // response is returned instead (Decision `2026-08-10-098` clause 3). Disabled (the default), the
+  // login and refresh paths behave exactly as they do today and a terminated member still signs in.
+  //
+  //   ⛔ **DO NOT describe this as "login fails" / "login succeeds but returns 403".** Decision
+  //      `2026-08-10-098` clause 3 rules that vocabulary out: it collapses identity verification
+  //      (which SUCCEEDS) with authorization to establish a session (which is DENIED). The HTTP
+  //      status is a transport detail; the domain semantics are not.
+  //
+  // ── ⚠ WHY THE CAPABILITY-BAR ADMISSION WAS ITSELF A GOVERNANCE ACT ──────────────────────────────
+  // `apps/api/src/modules/auth/` is NOT among `governance_boundary.yaml`'s prohibited roots — not
+  // because it was cleared, but because no story had ever proposed a flag there. Leg (b)'s source
+  // scan therefore passes on this flag, and A PASSING SCAN PROVES THE ROOT IS UNLISTED, NOT THAT THE
+  // BEHAVIOUR IS ADMISSIBLE. The bar was extended into authentication BY RULING — Decision
+  // `2026-08-10-097` clause 7(i), ratified-as-written by `2026-08-10-098` clause 2 — and that
+  // extension is the decision, not a side effect of a green gate. Do not cite the gate as authority.
+  //
+  // ── ⚠ THE POLARITY, TRACED RATHER THAN ASSERTED (Decision `097` clause 7(ii)) ────────────────────
+  // `fallbackDefault: false` means "DO NOT deny session issuance". Trace it: a degraded path — no
+  // version in force, a malformed cohort rule, a lookup error — yields `false`, the consumer reads
+  // `false` as "the block is not active", and the member RECEIVES A NORMAL SESSION.
+  //
+  //   ⇒ **THIS SAFEGUARD FAILS OPEN.** That is the opposite of what "fail-safe" usually means at an
+  //     auth gate, and it is DELIBERATE and RATIFIED: default-OFF must be the behaviour of the ABSENT
+  //     configuration (Q6 (b-i)), so a terminated member retaining access is the correct degraded
+  //     outcome until the Panel authorises the flip. It is also the status quo, so no degraded path
+  //     is a regression.
+  //
+  // ⚠ The tracing above is required, not decorative. The `kyc_manual_fallback` attestation asserted
+  // the opposite of its own code through THREE review passes because a polarity was stated instead of
+  // followed through to its outcome. If you edit this constant, re-trace it to the member.
+  //
+  // ── ⚠ NAMED FOR THE OVERLAY, NOT THE LIFECYCLE (Decision `097` clause 7(iii)) ────────────────────
+  // `parseCapabilityBar` rejects any artifact whose name contains `member_lifecycle` (freeze row 2).
+  // This gate reads the MODERATION OVERLAY and never `members.state`; the key is named for what it
+  // reads. Renaming it toward lifecycle vocabulary would be rejected at parse time AND would be
+  // factually wrong.
+  //
+  // ── ⛔ WHO MAY ENABLE IT (Decision `2026-08-10-097` clause 6, sub-choice (b-i)) ──────────────────
+  // The **Trustee Panel EXCLUSIVELY**, through a formal `.decision-log.md` entry, and **not before
+  // Story 10.21 lands** — the off-portal DPDPA route. Until it exists, enabling this leaves a
+  // terminated member with NO route to their statutory rights: the Niyamavali §8.4 promise that those
+  // rights are exercised "through an identity-verified administrative process" would have no process
+  // behind it. ⛔ The flip is NOT gated on the identity-collision control (sub-choice (b-ii) was NOT
+  // ratified) — see `deferred-work.md`: once enabled, this ends ONE ACCOUNT'S access, and a
+  // terminated member who obtains a second mobile number re-registers unimpeded. The Panel ruled
+  // (b-i) knowing that.
+  termination_access_block: {
+    state: 'off',
+    cohortDefinition: { clauses: [] },
+    fallbackDefault: false,
+    owner: 'trustee-panel',
+    // ⚠ NOT a retirement horizon. This flag retires when Story 10.21 has landed, the Panel has
+    // authorised the flip, and the block becomes unconditional — or it stays as a standing kill
+    // switch on the one control that ends member access. Reviewed at the Epic 10 close either way.
+    deadBy: '2027-06-30',
+    // ⚠ KEEP THIS UNDER 512 CHARS. It is published on the wire and `FeatureFlagInventoryResponse`
+    // caps `description` at `z.string().max(512)` — an overrun fails serialization for the WHOLE
+    // inventory, blanking EVERY flag on the admin console, not just this one (the `safeCohort`
+    // header above records the same class of outage). The full account lives in the block above.
+    description:
+      'When enabled for a cohort, a member carrying a `terminated` moderation overlay is DENIED issuance of a member session on the login and refresh paths; identity verification still succeeds and a structured termination response is returned (Story 10.19, Niyamavali §8.4). DEFAULT OFF and FAILS OPEN — every degraded path yields a normal session. Enabling needs a Trustee Panel decision AND Story 10.21 landed (Decision 2026-08-10-097, b-i); flipping it earlier is a GOVERNANCE VIOLATION, not a config change.',
+  },
   // FR-73 — Telegram mirror. Recorded-but-UNWIRED (Decision 8).
   telegram_mirror: {
     state: 'off',

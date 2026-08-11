@@ -40,6 +40,13 @@ import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
 const KEY = 'kyc_manual_fallback';
 const AT = new Date('2026-08-10T00:00:00.000Z');
 const DEAD_BY = new Date('2027-06-30T00:00:00.000Z');
+// ⚠ The pinned seed instant for rows written through `createFlagVersion`, whose `effective_from`
+// otherwise defaults to the DB clock (registry.ts). Read against the fixed `AT`, such a row falls out
+// of force the moment wall-clock passes `AT` — which is exactly what took the AC4 test below red at
+// 2026-08-10T00:00Z. Every raw-insert seed in this file was already pinned via `values()`; this is
+// the same discipline for the one seed that goes through the writer. Must stay in the PAST: the
+// writer rejects `effectiveFrom > now`.
+const SEEDED_FROM = new Date('2026-01-01T00:00:00.000Z');
 
 function values(
   pariwarId: string | null,
@@ -484,6 +491,7 @@ describe.skipIf(!hasDatabase)('the inventory is COMPLETE — no secret flags (AC
       fallbackDefault: true,
       owner: 'kyc-desk',
       deadBy: DEAD_BY,
+      effectiveFrom: SEEDED_FROM,
       rationale: 'the only flip',
       actorWhoFlipped: null,
       actorDisplay: null,

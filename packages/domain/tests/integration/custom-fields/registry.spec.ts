@@ -29,7 +29,15 @@ import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integra
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
 
 const HOST = 'member' as const;
-const AT = new Date('2026-08-10T00:00:00.000Z');
+// ⚠ BOTH sides of the in-force comparison are FIXED historical instants, and SEEDED_AT precedes AT.
+// This file used to query at a hardcoded `AT` while seeding rows at the DB clock (`effective_at`
+// defaults to `now()` — registry.ts step 6), so every seeded row fell OUT of force the moment
+// wall-clock passed `AT`: `definitionsInForce` filters `effective_at <= at`. Three tests here began
+// failing at 2026-08-10T00:00Z and could not recover, because nothing about the code had changed —
+// only the date had. An unpinned seed instant read against a pinned query instant is a dated fuse,
+// not a fixture.
+const SEEDED_AT = new Date('2026-01-01T00:00:00.000Z');
+const AT = new Date('2026-02-01T00:00:00.000Z');
 
 function def(over: Partial<CustomFieldDefinitionJson> = {}): CustomFieldDefinitionJson {
   return {
@@ -45,7 +53,18 @@ function def(over: Partial<CustomFieldDefinitionJson> = {}): CustomFieldDefiniti
   };
 }
 
-/** Publish with the required-explicit attribution fields filled in. */
+/**
+ * Publish with the required-explicit attribution fields filled in, at the pinned SEEDED_AT.
+ *
+ * ⚠ `...over` stays LAST so the timeline tests below still pass their own explicit `effectiveAt` —
+ * this default governs only the seeds that never cared about the instant.
+ *
+ * ⚠ Repeated versions of the SAME key therefore land at an EQUAL `effective_at`, which is deliberate
+ * and safe in both directions: the order guard rejects only a STRICTLY earlier instant
+ * (`effectiveAt < priorRow.effectiveAt`, registry.ts), so equality is accepted; and resolution is
+ * `greatest effective_at <= at` tie-broken by `desc(version)`, so v2 still supersedes v1 at AT.
+ * Multi-version ordering is carried by the version counter here, not by wall-clock separation.
+ */
 async function publish(
   tx: Parameters<typeof publishDefinitionVersion>[0],
   definition: CustomFieldDefinitionJson,
@@ -55,6 +74,7 @@ async function publish(
     pariwarId: PARIWAR_A,
     hostEntity: HOST,
     definition,
+    effectiveAt: SEEDED_AT,
     authoredByActor: null,
     actorDisplay: 'Integration Seed',
     auditId: null,

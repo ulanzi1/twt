@@ -388,7 +388,13 @@ export function permissionKey(value: string): PermissionKey {
 // look like an invariant. It is not one, and from here the two diverge permanently.
 // NO new key, NO new handle, NO route change, NO migration (`role_grants.role` is plain `text`, not a
 // pgEnum, precisely so the seeded set can change without one).
-export const PERMISSION_CATALOG_VERSION = 30 as const;
+// Bumped 30 → 31 at Story 10.19 (added `member.restore_terminated` — restoring a TERMINATED member
+// is an act of the Trustee Panel under Niyamavali §8.4, ratified as Q1 option (a) in Decision
+// `2026-08-10-097` clause 1). This bump is a RETURN TO THE NORMAL SHAPE after 10.18's deliberate
+// deviation above: it mints a key, so `PERMISSION_CATALOG.keys` moves 40 → 41 and
+// `permissions.test.ts`'s length assertion moves with it. The reuse-check that ruled out
+// `member.moderate` is recorded at the key itself.
+export const PERMISSION_CATALOG_VERSION = 31 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -426,6 +432,25 @@ export const SEED_PERMISSION_KEYS = [
   // `isDeprecatedKey()` below — a comment cannot fail CI, and AC6 requires an assertion.
   'member.suspend',
   'member.moderate',
+  // Story 10.19 — restoring a TERMINATED member, which Niyamavali §8.4 makes an act of the Trustee
+  // Panel and not the ordinary §8.3 "Trustee discretion" by which a SUSPENDED member is restored.
+  // Ratified as Q1 option (a), Decision `2026-08-10-097` clause 1 — the discharge of a question on
+  // its SECOND deposit.
+  //
+  // ── The reuse-check, recorded because this catalog requires one ────────────────────────────────
+  // `member.moderate` CANNOT express this: `pariwar_admin` and `trustee_panel` both hold it
+  // (roles.ts:255, :591), which is exactly the indistinguishability Story 10.18 existed to end. A
+  // check on it would pass for either holder, so the Panel-exclusivity §8.4 now states would be
+  // enforced by convention alone — the condition 10.18 closed, reopened one story later.
+  // `member.suspend` is DEPRECATED and points at `member.moderate`. No other `member.*` key names a
+  // restoration authority. ⇒ a new key is the only faithful expression.
+  //
+  // ⚠ EXCLUSIVITY IS THE POINT, and it is narrow. This gates ONLY `restore` FROM `terminated`.
+  // Restoring a SUSPENDED member stays on the single-actor `member.moderate` path — §8.3 is
+  // untouched, and Panel authority under Part 8 remains CONCURRENT everywhere else (§8.7; Decision
+  // `2026-08-10-096` clause 3). Widening this key's check site would silently convert a concurrent
+  // authority into an exclusive one across all of Part 8.
+  'member.restore_terminated',
   // Story 4.6 — the FR-12A Member Validity READ key. Distinct from the write-oriented
   // `member.suspend`/`member.moderate` (a caller that may READ a member's validity is not
   // necessarily one that may suspend/moderate them, and vice-versa). Granted to the

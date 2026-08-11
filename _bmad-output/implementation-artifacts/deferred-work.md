@@ -3604,6 +3604,20 @@ never "final"._
     deferral — the outcome is a ruling (`[[feedback_closure_language_precision]]`). **This entry is not
     carried forward.** Implementation is a precondition on `performAction`'s legality path; the
     `terminated --restore--> none` arm is not removed.
+  - ✅ **IMPLEMENTED 2026-08-11 (Story 10.19, Task 9).** The ruling is mechanized, not merely recorded:
+    a new permission key **`member.restore_terminated`** (catalog 30 → 31, keys 40 → 41) held by
+    **`trustee_panel` alone**, checked at `performAction` when — and only when — the action is
+    `restore` **and** the current overlay status is `terminated`.
+    · The check runs **inside the scope tx on the same client as the write**, closing the TOCTOU a
+      pre-tx check would leave: a concurrent `terminate` committing in the gap would otherwise let a
+      non-Panel actor restore a member who had just become terminated.
+    · **Scoped to exactly one transition.** §8.3 restore-from-suspended stays on the single-actor
+      `member.moderate` path, so Panel authority remains CONCURRENT everywhere else in Part 8
+      (Decision `2026-08-10-096` clause 3). Pinned by a test that fails if the check is ever widened.
+    · `status.ts`'s `terminated --restore--> none` arm is **untouched** — the transition stays legal;
+      only the authority narrowed. A test pins that too, so deleting the arm (which would make a
+      terminated member unrestorable by anyone) fails rather than passing quietly.
+    **Nothing about this question remains open.**
 
 ### Raised, not resolved — each now has a destination
 

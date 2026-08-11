@@ -75,6 +75,8 @@ const CLAIM_OVERRIDE_GROUND_INSPECTION = permissionKey('claim.override_ground_in
 // pinned by the holder-set gate in tests/rbac/roles.test.ts. Removal is a separate, later bump.
 const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
+/** Story 10.19 — restore-from-TERMINATED, held by `trustee_panel` ALONE (Niyamavali §8.4). */
+const MEMBER_RESTORE_TERMINATED = permissionKey('member.restore_terminated');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
 const VALIDITY_INVALIDATE_CACHE = permissionKey('validity.invalidate_cache');
 const PARIWAR_CONFIGURE_CHANNELS = permissionKey('pariwar.configure_channels');
@@ -588,7 +590,16 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // clause 3). `pariwar_admin` retains `member.moderate` above, and §8.2's State-Trustee-confirmed
     // concealment flag and §8.3's Trustee discretion are likewise unaffected. Do NOT read this bundle
     // as displacing them.
-    permissions: [MEMBER_MODERATE],
+    // ⭐ Story 10.19 adds `member.restore_terminated`, and this bundle is its ONLY holder. That
+    // exclusivity is the mechanism behind Niyamavali §8.4's "Restoration from termination is an act
+    // of the Trustee Panel" (Q1 option (a), Decision `2026-08-10-097` clause 1) — before it, a
+    // `pariwar_admin` and a Panel member were indistinguishable at the restore call site.
+    // ⛔ Do NOT grant this key to any other role without a Panel decision: doing so would return
+    // restore-from-terminated to the single-actor path the ratified §8.4 text forecloses, and the
+    // instrument would then say something the system does not do.
+    // ⚠ It does NOT make Panel authority exclusive anywhere else — `member.moderate` stays shared
+    // and §8.2/§8.3 are untouched (Decision `2026-08-10-096` clause 3's concurrency ruling stands).
+    permissions: [MEMBER_MODERATE, MEMBER_RESTORE_TERMINATED],
     scopeCeiling: 'pariwar',
   },
 ];

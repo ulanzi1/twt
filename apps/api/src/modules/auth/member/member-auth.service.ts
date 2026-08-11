@@ -254,6 +254,15 @@ export async function rotateRefresh(
     pariwarId: row.pariwarId,
     lifecycleState: state,
     now,
+    // Mirrors the login call site (`member-auth.handlers.ts`) — without this, a flag/overlay lookup
+    // failure on the refresh path degrades silently with zero telemetry, unlike login.
+    onError: (err) =>
+      app.log.warn({ err }, 'termination-access flag/overlay resolution failed on refresh'),
+    onAccess: (d, source) =>
+      app.log.debug(
+        { flag: 'termination_access_block', reason: d.reason, enabled: d.enabled, source },
+        'termination-access: flag resolved',
+      ),
   });
   if (denial !== null) {
     await repo.revokeDeviceChain(deps.pool, row.memberId, row.deviceId, now);

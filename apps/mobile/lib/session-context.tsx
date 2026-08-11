@@ -11,7 +11,14 @@ import type { ReactNode } from 'react'
 import type { MemberFullSession } from '@twt/contracts'
 
 import { memberAuth } from './member-api'
-import { clearSession, loadSession, saveSession, type StoredSession } from './session'
+import {
+  clearSession,
+  loadSession,
+  saveSession,
+  setTerminatedDuringRefreshHandler,
+  type StoredSession,
+  type TerminationDuringRefresh,
+} from './session'
 import { clearAllMemberDrafts } from '../components/life-events/draft-store'
 
 interface SessionContextValue {
@@ -19,6 +26,12 @@ interface SessionContextValue {
   isLoading: boolean
   signIn: (full: MemberFullSession) => Promise<void>
   signOut: () => Promise<void>
+  /**
+   * Story 10.19 (AC5) — set when a background token refresh discovered the member was terminated.
+   * The root layout's guard redirects to `/(auth)/terminated` when this is non-null, then clears it.
+   */
+  terminationNotice: TerminationDuringRefresh | null
+  clearTerminationNotice: () => void
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null)
@@ -26,6 +39,7 @@ const SessionContext = createContext<SessionContextValue | null>(null)
 export function SessionProvider({ children }: { children: ReactNode }): ReactNode {
   const [session, setSession] = useState<StoredSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [terminationNotice, setTerminationNotice] = useState<TerminationDuringRefresh | null>(null)
 
   useEffect(() => {
     let active = true
@@ -39,6 +53,16 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     return () => {
       active = false
     }
+  }, [])
+
+  useEffect(() => {
+    setTerminatedDuringRefreshHandler((notice) => {
+      // The SecureStore side is already cleared by `refreshAccessToken`; this is what makes that
+      // clear REACTIVE — without it `session` stays stale in context and the root guard never fires.
+      setSession(null)
+      setTerminationNotice(notice)
+    })
+    return () => setTerminatedDuringRefreshHandler(null)
   }, [])
 
   async function signIn(full: MemberFullSession): Promise<void> {
@@ -66,7 +90,16 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   }
 
   return (
-    <SessionContext.Provider value={{ session, isLoading, signIn, signOut }}>
+    <SessionContext.Provider
+      value={{
+        session,
+        isLoading,
+        signIn,
+        signOut,
+        terminationNotice,
+        clearTerminationNotice: () => setTerminationNotice(null),
+      }}
+    >
       {children}
     </SessionContext.Provider>
   )

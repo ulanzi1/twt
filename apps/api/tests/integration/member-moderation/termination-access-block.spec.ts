@@ -34,6 +34,7 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { featureFlags } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { encryptMobile, mobileBlindIndex, normalizeMobile } from '../../../src/modules/auth/shared/mobile-index.js';
@@ -141,17 +142,20 @@ async function recordModeration(
  * convention: the write path has its own coverage, and routing through it here would drag in the
  * AC7 transition ladder (a first flip may only go `off → canary`, and `canary` must name a cohort
  * clause) — three extra hops that test the flip API, not this gate. `state: 'full'` serves everyone,
- * so the cohort is irrelevant by construction. The code default owns version 1; persisted rows
- * start at 2.
+ * so the cohort is irrelevant by construction. The code default owns `DEFAULT_FLAG_VERSION` (1);
+ * persisted rows start at the version immediately after it — asserted, not just commented, so this
+ * row cannot silently decouple from the registry's own numbering and become inert
+ * (`flagVersionInForce` ignores a version it does not recognise as the chain head).
  */
 async function enableBlockFor(t: TestApp, pariwarId: string): Promise<void> {
+  const version = featureFlags.DEFAULT_FLAG_VERSION + 1;
   await t.pool.query(
     `INSERT INTO feature_flag_versions
        (flag_key, pariwar_id, version, cohort_definition, state, fallback_default, owner, dead_by,
         effective_from, effective_until, rationale)
-     VALUES ($1, $2, 2, '{"clauses":[]}'::jsonb, 'full', false, 'trustee-panel', '2027-06-30',
+     VALUES ($1, $2, $3, '{"clauses":[]}'::jsonb, 'full', false, 'trustee-panel', '2027-06-30',
              now() - interval '1 minute', NULL, 'AC12 test: block enabled')`,
-    [FLAG, pariwarId],
+    [FLAG, pariwarId, version],
   );
 }
 
@@ -235,6 +239,17 @@ describe.skipIf(!hasDatabase)('termination access — session issuance denial (l
       // Closes the "it wasn't a session, it was just a token" reading: scan the WHOLE payload —
       // including the notice — for anything JWT-shaped, wherever a future edit might tuck it.
       expect(jwtLikeStrings(res.body)).toEqual([]);
+
+      // ⭐ …and PROVEN, not just scanned for shape: a subsequent authenticated call, presenting
+      // literally everything the response returned as the bearer credential, is refused. This is the
+      // AC12 assertion the shape-scan above cannot make by itself — `jwtLikeStrings` proves no JWT
+      // sits IN the payload; this proves the payload, taken whole, cannot BE used as one.
+      const subsequentCall = await t.app.inject({
+        method: 'GET',
+        url: '/api/v1/member/lock-in-status',
+        headers: { origin: 'http://localhost:3001', authorization: `Bearer ${JSON.stringify(res.body)}` },
+      });
+      expect(subsequentCall.statusCode).toBe(401);
 
       // ── (2) No server-side session state was created ────────────────────────────────────────────
       // A response-only assertion cannot see a write. These can.

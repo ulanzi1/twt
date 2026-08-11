@@ -74,6 +74,31 @@ export async function clearSession(): Promise<void> {
 let refreshInFlight: Promise<string | null> | null = null
 
 /**
+ * The AC4 termination-notice fields, forwarded the same way `otp.tsx` forwards them to the
+ * terminated surface — a presence flag for `further_communication`, never the raw payload, so the
+ * screen degrades honestly if an element is absent (Story 10.19, AC10).
+ */
+export interface TerminationDuringRefresh {
+  readonly groundLabelKey?: string
+  readonly effectiveAt?: string
+  readonly hasFurtherCommunication: boolean
+}
+
+// Story 10.19 — a terminated member's REFRESH token is rejected exactly like the login path (AC5,
+// the same `resolveSessionDenial` seam), and that must reach the same termination surface, not a
+// silent logout. `lib/session` intentionally has no import on `session-context`/router (see the
+// header above — no cycle with `lib/member-api`), so `session-context` registers a handler here
+// instead of this module reaching upward into React.
+let onTerminatedDuringRefresh: ((notice: TerminationDuringRefresh) => void) | null = null
+
+/** Registered by `SessionProvider` on mount; `null` unregisters (its cleanup). */
+export function setTerminatedDuringRefreshHandler(
+  handler: ((notice: TerminationDuringRefresh) => void) | null,
+): void {
+  onTerminatedDuringRefresh = handler
+}
+
+/**
  * The current access token for the api-client bearer header, refreshing the stored
  * session first when the token is expired (or within REFRESH_SKEW_MS of it). Returns
  * null when there is no session, or when the refresh token is itself rejected — in
@@ -103,6 +128,11 @@ export async function getAccessToken(): Promise<string | null> {
  * rotated refresh token are persisted and the new access token returned. A 4xx means
  * the refresh token is dead → clear the session and return null; a network error is
  * transient → keep the session and return null (the current call 401s just this once).
+ *
+ * Story 10.19 (AC5) — a 4xx whose body carries `error.code === 'auth.member_terminated'` is the
+ * SAME structured termination response the login path returns, so it is forwarded to the
+ * registered handler (see `setTerminatedDuringRefreshHandler` above) instead of degrading to a
+ * bare, unexplained logout.
  */
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY)
@@ -118,7 +148,33 @@ async function refreshAccessToken(): Promise<string | null> {
     return null
   }
   if (!res.ok) {
-    if (res.status >= 400 && res.status < 500) await clearSession()
+    if (res.status >= 400 && res.status < 500) {
+      // Body-parse is best-effort: an unparseable/empty body still clears the session (the token IS
+      // dead either way) and simply cannot carry a termination notice.
+      let code: string | undefined
+      let details: Record<string, unknown> | undefined
+      try {
+        const body = (await res.json()) as { error?: { code?: string; details?: unknown } }
+        code = body.error?.code
+        details =
+          body.error?.details && typeof body.error.details === 'object'
+            ? (body.error.details as Record<string, unknown>)
+            : undefined
+      } catch {
+        // Not JSON, or no body — fall through with code/details left undefined.
+      }
+      await clearSession()
+      if (code === 'auth.member_terminated' && onTerminatedDuringRefresh) {
+        onTerminatedDuringRefresh({
+          groundLabelKey: typeof details?.ground_label_key === 'string' ? details.ground_label_key : undefined,
+          effectiveAt: typeof details?.effective_at === 'string' ? details.effective_at : undefined,
+          hasFurtherCommunication:
+            details?.further_communication !== undefined &&
+            details?.further_communication !== null &&
+            typeof details.further_communication === 'object',
+        })
+      }
+    }
     return null
   }
   const full = (await res.json()) as StoredSession

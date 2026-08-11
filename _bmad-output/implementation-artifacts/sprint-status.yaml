@@ -1,4 +1,40 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-11b (10-19-termination-ends-membership-privileges: review -> done via
+#   bmad-code-review, branch diff 6f1b165..HEAD (governance/10-19-termination-part-8), three parallel
+#   layers (Blind Hunter -- diff only, no project context; Edge Case Hunter -- diff + read access;
+#   Acceptance Auditor -- diff + this story's spec). 19 raw findings, deduped to 15: 2 decision-needed
+#   (both resolved -> patch, by the user's call, then implemented), 8 patch, 1 defer, 4 dismissed as
+#   noise after DIRECT verification against source (not taken on either subagent's word).
+#   FIXED: the `moderationDeniesSession` exhaustive-switch throw was UNCAUGHT in the whole call chain --
+#   contradicted the seam's own repeated "FAILS OPEN" invariant, would 500 login/refresh instead of
+#   degrading, on the exact drift class (a future ModerationStatus label) AC4's own text warns about;
+#   `rotateRefresh` passed no `onError` (silent, zero telemetry, unlike login); `onAccess` audit hook
+#   unwired at both call sites; `SessionDenialInput.lifecycleState` was bare `string`, losing the same
+#   typo protection the adjacent exhaustive switch was written to guarantee; the mobile termination
+#   surface hardcoded "further communication" copy with ZERO reference to the AC4 payload (verified: the
+#   API does send `further_communication`, the client dropped it) -- now renders from a payload-presence
+#   flag; AC12 assertion 5 ("a subsequent authenticated call, using anything the response returned, is
+#   refused") was UNTESTED -- the shipped test substituted a JWT-shape scan that re-proves assertion 1,
+#   not 5 -- now a real second `inject()` call against a protected route, asserted 401.
+#   ONE JUDGEMENT CALL beyond the findings' literal text: a background TOKEN REFRESH that discovers
+#   termination was previously a SILENT, unexplained logout -- `lib/session.ts`'s `refreshAccessToken`
+#   clears SecureStore but never notified the React session context (a PRE-EXISTING reactivity gap, not
+#   this story's), so the root guard's redirect never fired either. Resolved: `refreshAccessToken` now
+#   forwards the AC4 notice through a registered handler; `SessionProvider` makes the clear REACTIVE
+#   (`setSession(null)`) and stores it; the root layout's guard redirects to `/(auth)/terminated` ahead
+#   of the plain login-bounce. New test: `terminated-during-refresh.test.ts` (source-scan style, no RTL
+#   in this harness). DEFERRED (pre-existing, Story 3.2's): `ForbiddenError` hardcodes "Member is
+#   withdrawn" even for `denial.reason === 'anonymized'`.
+#   DISMISSED, each verified directly rather than taken on a subagent's word: moderation-notify's
+#   `accessEnded`-defaults-false-on-lookup-error is the DELIBERATE ratified fail-open posture (Decision
+#   097 clause 7(ii)), not an oversight; the "505 chars, pinned" Dev-Agent-Record claim -- the string IS
+#   exactly 505 chars and the shipped generic <=512 assertion is the CORRECT test (an exact pin would be
+#   brittle); the rationale duplicated across governance docs is this repo's OWN per-artifact-restatement
+#   convention, not decay; a `restore` on an already-non-terminated member "bypassing" the Panel gate --
+#   the gate is scoped to fire only when `overlay.status === 'terminated'`, by design.
+#   VALIDATED: @twt/api + @twt/mobile + @twt/domain typecheck and lint clean; termination-access-block.spec
+#   6/6, moderation-auth-effects.spec 7/7, member-auth.spec 18/18, member-moderation.spec 26/26 all green
+#   live-DB (:5433); capability-bar/permissions/roles.test.ts 94/94 unaffected; mobile unit 17/17 green.
 # last_updated: 2026-08-11 (10-19-termination-ends-membership-privileges: ready-for-dev -> review via
 #   bmad-dev-story, Tasks 1-11, off governance/10-19-termination-part-8 @ baseline 6f1b165. Epic 10's D5 leg.
 #   GOVERNANCE RAN FIRST AND SEPARATELY: routing note committed ALONE (six questions, blocking Q1+Q6),
@@ -5124,7 +5160,7 @@ development_status:
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done
   10-18-constituting-the-trustee-panel-sanctioning-authority: done
-  10-19-termination-ends-membership-privileges: review
+  10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: backlog
   10-21-off-portal-dpdpa-access: backlog
   10-22-moderation-appeal-mechanism: backlog

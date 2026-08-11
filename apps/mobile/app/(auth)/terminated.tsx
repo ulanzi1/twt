@@ -33,9 +33,10 @@ export default function TerminatedScreen() {
   const t = useT()
   const { locale } = useLocale()
   const router = useRouter()
-  const { groundLabelKey, effectiveAt } = useLocalSearchParams<{
+  const { groundLabelKey, effectiveAt, hasFurtherCommunication } = useLocalSearchParams<{
     groundLabelKey?: string
     effectiveAt?: string
+    hasFurtherCommunication?: string
   }>()
 
   // ⚠ `t()` THROWS on an unknown key — it never returns the key
@@ -77,8 +78,12 @@ export default function TerminatedScreen() {
 
       {/* Further communication. ⚠ Honest about what exists TODAY: the off-portal records route is
           Story 10.21 and is `backlog`, so this names the helpline — which does exist — and promises
-          nothing else. */}
-      <Paragraph color="$colorPress">{t('auth.terminated_further_communication')}</Paragraph>
+          nothing else. RENDERED FROM THE PAYLOAD (AC10): `otp.tsx` only forwards this param when the
+          server's response actually carried a `further_communication` element — an absent element
+          degrades to no paragraph at all, never placeholder text. */}
+      {hasFurtherCommunication === 'true' ? (
+        <Paragraph color="$colorPress">{t('auth.terminated_further_communication')}</Paragraph>
+      ) : null}
 
       <Button
         theme="accent"

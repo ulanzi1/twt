@@ -32,6 +32,9 @@ import type { AppDeps } from '../../../context.js';
  *  handlers' established convention (`handlers.ts:51`); it is not re-exported from the root barrel. */
 type ModerationStatus = memberDomain.moderation.ModerationStatus;
 
+/** The domain's lifecycle-state union — same namespace convention as `ModerationStatus` above. */
+type MemberLifecycleState = memberDomain.MemberLifecycleState;
+
 /** The capability-bar-admitted flag key (`governance_boundary.yaml`, `member_flow`). */
 export const TERMINATION_ACCESS_BLOCK_FLAG = 'termination_access_block';
 
@@ -137,7 +140,7 @@ export interface SessionDenialInput {
   readonly memberId: string;
   readonly pariwarId: string;
   /** The Story 3.1 lifecycle state the caller already read; never re-read here. */
-  readonly lifecycleState: string;
+  readonly lifecycleState: MemberLifecycleState;
   readonly now: Date;
   /** Best-effort observability; the seam degrades to "not denied" either way. */
   readonly onError?: (err: unknown) => void;
@@ -147,15 +150,21 @@ export interface SessionDenialInput {
 /**
  * Resolve whether session issuance is denied, and with what notice (AC4).
  *
- * ── Resolution order, and why the flag is read FIRST ──────────────────────────────────────────────
- *   1. The `termination_access_block` flag. **Default OFF**, so on every login in production today
- *      this is one CACHED lookup and the function returns after step 2's lifecycle check.
- *   2. The lifecycle terminal states (`withdrawn` / `anonymized`) — checked regardless of the flag,
- *      because that block is Story 3.2's and predates this story entirely.
- *   3. Only if the flag is ENABLED: the moderation overlay read, and the exhaustive status check.
+ * ── Resolution order, and why the flag is read SECOND ─────────────────────────────────────────────
+ * The function runs three checks, in this execution order (each labelled at its call site below):
+ *   (2) The lifecycle terminal states (`withdrawn` / `anonymized`) run FIRST and unconditionally —
+ *       checked regardless of the flag, because that block is Story 3.2's and predates this story
+ *       entirely. It is numbered `(2)` here because it is the second of the three CONCEPTS this
+ *       function resolves, not the second to execute.
+ *   (1) The `termination_access_block` flag runs SECOND. **Default OFF**, so on every login in
+ *       production today this is one CACHED lookup and the function returns immediately after it.
+ *   (3) Only if the flag is ENABLED: the moderation overlay read, and the exhaustive status check,
+ *       runs THIRD and last.
  *
- * Reading the flag first is what keeps the default path from paying for an overlay query it would
- * discard. It also means the overlay read cannot fail a login while the block is disabled.
+ * Checking the flag before the overlay is what keeps the default path from paying for an overlay
+ * query it would discard. It also means the overlay read cannot fail a login while the block is
+ * disabled. The lifecycle check runs before either because it is unconditional on the flag and was
+ * already the established gate this story extends, not replaces.
  *
  * ── ⚠ THE POLARITY, TRACED (Decision `097` clause 7(ii)) ──────────────────────────────────────────
  * `callerDefault: false` = "do NOT deny". Trace it to the member: a degraded path — no version in
@@ -226,7 +235,21 @@ export async function resolveSessionDenial(
     return null; // FAIL OPEN, consistent with the flag path.
   }
 
-  if (!moderationDeniesSession(overlay.status)) return null;
+  // ⛔ GUARDED, LIKE EVERY OTHER DEGRADED PATH ABOVE. `moderationDeniesSession`'s `never` arm exists
+  // to BREAK THE BUILD when a status label is added and left unclassified — but if one ever reaches
+  // this line at runtime anyway (a rollback, a shared-DB skew), the throw must not escape uncaught:
+  // an uncaught exception here 500s the request, which is the opposite of "FAIL OPEN" this function
+  // guarantees for every other failure mode (flag lookup, overlay read). Catching it and failing
+  // open is consistent with those, and still leaves the `never` arm doing its real job — breaking
+  // the BUILD, not the runtime.
+  let deniesSession: boolean;
+  try {
+    deniesSession = moderationDeniesSession(overlay.status);
+  } catch (err) {
+    input.onError?.(err);
+    return null; // FAIL OPEN, consistent with the flag and overlay-read paths above.
+  }
+  if (!deniesSession) return null;
 
   return {
     reason: 'terminated',

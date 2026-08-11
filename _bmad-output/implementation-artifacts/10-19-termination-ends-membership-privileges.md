@@ -4,7 +4,7 @@ baseline_commit: 6f1b1654a457e34549ad06b26bbf87243b4aeecd
 
 # Story 10.19: Termination Ends Membership Privileges `[SURFACE]`
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -757,7 +757,29 @@ cascade all exist. This story reads them from one more place and tells the truth
 
 ---
 
-## Dev Notes
+### Review Findings
+
+_bmad-code-review, 2026-08-11 — branch diff `6f1b165..HEAD`, three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)._
+
+- [x] [Review][Patch] `onAccess` audit hook is defined on `resolveSessionDenial`'s input but never supplied by either production call site — the audit-observability pattern `manual-fallback-seam.ts` establishes isn't followed here. Resolved: wire it at both call sites, matching `manual-fallback-seam.ts`'s audit-event shape. [`termination-block-seam.ts:144,198-200`, `member-auth.handlers.ts:132-138`, `member-auth.service.ts:252-257`]
+- [x] [Review][Patch] `terminated.tsx`'s own doc-comment claims the screen is "Reached when `verifyOtp` or a token refresh returns 403 `auth.member_terminated`," but `apps/mobile/lib/session.ts`'s `refreshAccessToken()` (unchanged by this diff) clears the session and returns `null` on any 4xx without ever navigating there — a member terminated mid-session during a background token refresh is silently logged out with no notice. Resolved: implement the navigation so a background-refresh 403 `auth.member_terminated` routes to `/(auth)/terminated`, making the comment's claim true. [`apps/mobile/lib/session.ts:107-123`, `apps/mobile/app/(auth)/terminated.tsx:1-3`]
+
+- [x] [Review][Patch] `moderationDeniesSession`'s exhaustive-switch `throw` (the `never`-guard defense against a future `ModerationStatus` label) is never caught anywhere in the call chain — not in `resolveSessionDenial`, not at either call site — contradicting the module's own repeated "FAIL OPEN" invariant for every other degraded path in the same function; a new status value would 500 login/refresh instead of degrading gracefully. [`apps/api/src/modules/auth/member/termination-block-seam.ts:121-133,229`]
+- [x] [Review][Patch] The mobile termination surface never reads `further_communication.channel`/`route_available` from the AC4 payload — `otp.tsx` only forwards `ground_label_key`/`effective_at` to the router, and `terminated.tsx` renders a hardcoded i18n string unconditionally. AC10 explicitly requires the surface to "RENDER FROM THE AC4 PAYLOAD... Further communication" and "degrade honestly if an element is missing." Confirmed: the API does return `further_communication: { channel, route_available }` (`handlers.ts`) but it's dropped on the client. [`apps/mobile/app/(auth)/otp.tsx`, `apps/mobile/app/(auth)/terminated.tsx:3796-3799`]
+- [x] [Review][Patch] AC12 assertion 5 ("A subsequent authenticated call, using anything the response returned, is refused") is not implemented by the shipped test — it substitutes a JWT-shape scan of the response body (`jwtLikeStrings`), which re-proves assertion 1 (no token present) rather than assertion 5 (a second authenticated call using the response is refused). [`apps/api/tests/integration/member-moderation/termination-access-block.spec.ts:2957-3424`, JWT-scan at `:3154-3199`]
+- [x] [Review][Patch] `rotateRefresh` (refresh path) passes no `onError` to `resolveSessionDenial`, unlike `completeMemberLogin` (login path) — refresh-path flag/overlay lookup failures are silently swallowed with zero telemetry. [`apps/api/src/modules/auth/member/member-auth.service.ts:252-257` vs `member-auth.handlers.ts:132-138`]
+- [x] [Review][Patch] `SessionDenialInput.lifecycleState` is typed as bare `string` rather than the domain's `MemberLifecycleState` union, so the `'withdrawn'`/`'anonymized'` string-literal checks have no compile-time typo protection — the same failure class the exhaustive `ModerationStatus` switch three lines below it was written specifically to prevent. [`apps/api/src/modules/auth/member/termination-block-seam.ts:140,179-183`]
+- [x] [Review][Patch] `resolveSessionDenial`'s doc-comment header ("why the flag is read FIRST", numbered 1-flag/2-lifecycle/3-overlay) doesn't match execution order — the code runs the lifecycle check first (self-labeled `(2)`), then the flag (`(1)`), then the overlay (`(3)`), against its own header's numbering. [`termination-block-seam.ts:150-159` vs `:177-227`]
+- [x] [Review][Patch] `otp.tsx` casts `e.details` to a typed shape without runtime validation of field types before forwarding values into router params. [`apps/mobile/app/(auth)/otp.tsx`, the `verifyOtp` catch block]
+- [x] [Review][Patch] `termination-access-block.spec.ts`'s `enableBlockFor` test helper hardcodes an unasserted magic `version: 2`, relying on an unstated coupling to the flag registry's default version numbering; if the versioning baseline ever changes this row could silently become inert. [`apps/api/tests/integration/member-moderation/termination-access-block.spec.ts:3109-3118`]
+
+- [x] [Review][Defer] `ForbiddenError`'s message hardcodes "Member is withdrawn" even when `denial.reason === 'anonymized'` — deferred, pre-existing (predates this story; the diff only touches the surrounding line, the inaccuracy itself is Story 3.2's). [`apps/api/src/modules/auth/member/member-auth.handlers.ts`, the withdrawn/anonymized `ForbiddenError` construction]
+
+_Dismissed as noise (4): moderation-notify's `accessEnded` defaulting to "access retained" on a flag-lookup error, plus repeated-alarm volume on a sustained outage — verified as the deliberate, heavily-documented ratified fail-open design (Decision `097` clause 7(ii)), not an oversight; the Dev Agent Record's "shortened to 505 chars, pinned by a unit assertion" claim — verified the string is in fact exactly 505 chars, and the shipped generic `<=512` assertion is the correct test design (an exact-505 pin would be needlessly brittle); the near-verbatim rationale duplicated across `.decision-log.md`/story/routing-note/`deferred-work.md` — this repo's governance convention deliberately restates rationale per-artifact rather than cross-referencing; a `restore` action on an already-non-terminated member "bypassing" the Panel-permission gate — verified the gate is correctly scoped to fire only when `overlay.status === 'terminated'`, with `moderateMember`'s own transition-legality guard covering every other case, exactly as designed._
+
+**All 10 patches applied 2026-08-11.** Files touched: `termination-block-seam.ts` (caught-and-fail-open on the `moderationDeniesSession` throw, `MemberLifecycleState` typing, reworded resolution-order comment), `member-auth.handlers.ts` + `member-auth.service.ts` (`onAccess`/`onError` wired at both call sites), `otp.tsx` + `terminated.tsx` (runtime-validated `e.details`, `further_communication` rendered from payload presence), `lib/session.ts` + `lib/session-context.tsx` + `app/_layout.tsx` (a refresh-triggered termination now routes to `/(auth)/terminated` instead of a silent logout — new `TerminationDuringRefresh` handler wiring), `termination-access-block.spec.ts` (AC12 assertion 5 implemented as a real subsequent-call attempt; `enableBlockFor`'s version tied to `featureFlags.DEFAULT_FLAG_VERSION`). New test: `apps/mobile/tests/unit/terminated-during-refresh.test.ts`. Verified: `@twt/api`/`@twt/mobile`/`@twt/domain` typecheck + lint clean; `termination-access-block.spec.ts` (6/6), `moderation-auth-effects.spec.ts` (7/7), `member-auth.spec.ts` (18/18), `member-moderation.spec.ts` (26/26) all green live-DB; `capability-bar.test.ts`/`permissions.test.ts`/`roles.test.ts` (94/94) unaffected; mobile unit suites (17/17) green.
+
+
 
 ### Files to read before writing a line
 

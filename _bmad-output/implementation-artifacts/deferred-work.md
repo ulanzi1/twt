@@ -3854,3 +3854,12 @@ once for exactly that reason.
   because the three properties were posed as prose rather than lettered options. Decision `098`
   clause 2 confirmed no narrower reading was intended. Recorded so a later reader does not mistake the
   shape of the question for a shape it did not have.
+
+## Deferred from: code review of story-10-19-termination-ends-membership-privileges (2026-08-11)
+
+- **`ForbiddenError`'s message hardcodes "Member is withdrawn" even when `denial.reason ===
+  'anonymized'`.** `denial.code` is correctly `auth.member_withdrawn` for both reasons, but the
+  human-readable message text never varies. Pre-existing (Story 3.2), not introduced by 10.19 — the
+  diff only touches the surrounding line while widening the `RotateResult` union for AC5, and carried
+  the inaccuracy forward unchanged. `apps/api/src/modules/auth/member/member-auth.handlers.ts`, the
+  withdrawn/anonymized `ForbiddenError` construction.

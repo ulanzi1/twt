@@ -135,6 +135,13 @@ export async function completeMemberLogin(
     lifecycleState: state,
     now,
     onError: (err) => request.log.warn({ err }, 'termination-access flag/overlay resolution failed'),
+    // AC5c-style observability, mirroring the KYC seam's wired consumers (`kyc.handlers.ts`): fires
+    // on every resolution, cache hit and miss alike, so the flag's audit trail includes login.
+    onAccess: (d, source) =>
+      request.log.debug(
+        { flag: 'termination_access_block', reason: d.reason, enabled: d.enabled, source },
+        'termination-access: flag resolved',
+      ),
   });
 
   if (denial !== null) {

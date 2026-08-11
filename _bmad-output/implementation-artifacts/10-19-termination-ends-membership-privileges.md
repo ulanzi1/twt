@@ -849,11 +849,86 @@ Everything below is reuse-only.
 
 ### Agent Model Used
 
+Claude Opus 5 (`claude-opus-5`).
+
 ### Debug Log References
+
+Four issues found during implementation, each recorded because each failed SILENTLY:
+
+1. **`termination_access_block`'s `description` shipped at 618 chars** against
+   `FeatureFlagInventoryResponse`'s `z.string().max(512)`. The inventory handler projects EVERY flag
+   into one strict response, so the overrun 500'd the endpoint and blanked **every** flag on the admin
+   console — 7 live-DB assertions. Shortened to 505 and pinned by a new unit assertion over all
+   descriptions, because a live-DB E2E is a slow, indirect way to learn about a string cap.
+2. **The AC12 JWT scan false-positived on this story's own reason-label key.** A first draft matched
+   three dot-separated `[A-Za-z0-9_-]` runs — the exact shape of
+   `memberStatus.moderationReason.r14-forgery` and of most dotted i18n keys. Anchored on the `eyJ`
+   prefix (a real JWT's first segment is base64url of a JSON header).
+3. **The test seed left every member in `lock-in`, never `active`.** `member.lock_in_expired` must
+   carry `{ kyc_verified: true }`; the reducer safeParses and returns state UNCHANGED on a malformed
+   payload (`state.ts:91-96`, whose own comment names this case). Nothing failed — login does not gate
+   on `lock-in` — so assertions passed while testing the wrong state.
+4. **The withdrawal event is `member.withdrawal_completed`, not `member.withdrawn`.** The STATE is
+   named `withdrawn` but no event carries that name; an unrecognised type replays to no transition.
+   Initially misread as clock skew; checking the transition table rather than trusting the theory
+   found it.
 
 ### Completion Notes List
 
+- **Governance ran first and separately**, per `[[feedback_governance_commits_precede_implementation]]`:
+  the routing note committed ALONE, then the ruling + Niyamavali amendment as one atomic act, then the
+  AC fold, and only then implementation. `git log` reads governance → governance → implementation.
+- **Two Panel-issued corrections landed mid-story and changed the work.** The member-facing direction
+  (Decision `097` clause 8) was not selected from any option offered and is not covered by any original
+  AC — it produced AC12 and reshaped AC4/AC10. The domain-vocabulary correction (`098` clause 3) is
+  enforced throughout: nothing in code, comments, test titles or copy describes a failed login.
+- **⚠ THE BLOCK IS INERT AS SHIPPED.** `termination_access_block` defaults OFF and the flip is gated on
+  Story 10.21 plus a Panel decision. Every flag-ON behaviour is tested with the flag forced on, and
+  every flag-OFF default is tested too — asserting only one side would let the default invert with
+  nothing failing.
+- **Two judgement calls beyond the ACs' literal text, both recorded in `deferred-work.md`:** the notice
+  body is selected from the flag rather than stripped-or-deferred (AC8), and the refresh denial carries
+  the structured notice (AC5). Both avoid a decay window gated on a `backlog` story.
+- **Revert-sanity run on every gate this story added or relies on** — the capability-bar count and
+  allowlist, the frozen-marker naming rule, the flag polarity, the `never` exhaustiveness arm, the
+  session-denial branch, the AC5 cause switch, the notice body selection, the mobile fence, and the
+  Panel precondition in both directions (removed, and widened).
+- **What is NOT closed is recorded in `deferred-work.md`**, including that the standing Trustee Panel
+  obligation queue GREW from five to seven. Stated as a count, not as progress.
+
 ### File List
+
+**Governance / records**
+- `.decision-log.md` — Decisions `2026-08-10-097`, `2026-08-10-098`
+- `docs/legal/niyamavali.md`, `docs/legal/niyamavali.hi.md` — §8.4 amended, §8.4a authored (UNTRACKED;
+  the Decision entry's verbatim reproduction is the only durable copy)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-10-story-10-19.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+
+**Capability model**
+- `governance_boundary.yaml` — `termination_access_block` admitted; `count` 5 → 6
+- `packages/domain/src/feature-flags/registry.ts` — the flag default
+- `packages/domain/src/rbac/permissions.ts` — `member.restore_terminated`; catalog 30 → 31, keys 40 → 41
+- `packages/domain/src/rbac/roles.ts` — granted to `trustee_panel` ALONE
+- `packages/domain/tests/feature-flags/capability-bar.test.ts`, `packages/domain/tests/rbac/permissions.test.ts`
+
+**API**
+- `apps/api/src/modules/auth/member/termination-block-seam.ts` (new) — the single read-point
+- `apps/api/src/modules/auth/member/member-auth.handlers.ts` — the gate + the `AI-10-2` block
+- `apps/api/src/modules/auth/member/member-auth.service.ts` — `RotateResult.cause` + the refresh gate
+- `apps/api/src/modules/auth/member/member-auth.repo.ts` — Decision-6 sweep + the residual at its source
+- `apps/api/src/modules/member-moderation/handlers.ts` — the Panel precondition + Decision-6 sweep
+- `apps/api/tests/integration/member-moderation/termination-access-block.spec.ts` (new) — AC12 + AC5
+- `apps/api/tests/integration/member-moderation/member-moderation.spec.ts`,
+  `.../moderation-auth-effects.spec.ts`
+
+**Jobs / i18n / UI / mobile**
+- `apps/jobs/src/scheduler/moderation-notify.ts` + its test — the flag-selected notice body
+- `packages/i18n/locales/{en,hi}/common.json` — notice + termination-surface copy, Hindi primary
+- `packages/ui/src/member-status/{presenter,view-model}.ts` — Decision-6 sweep
+- `apps/mobile/app/(auth)/terminated.tsx` (new), `apps/mobile/app/(auth)/otp.tsx`,
+  `apps/mobile/lib/public-site.ts` (new), `apps/mobile/lib/niyamavali-link.ts`,
+  `apps/mobile/tests/unit/terminated-surface.test.ts` (new)
 
 ---
 

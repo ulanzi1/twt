@@ -3760,3 +3760,97 @@ class of question Story 10.19 routed as Q1–Q6, and it belongs to the same body
      KYC provider under the FR-58C swap.** The key can only be captured at that boundary — once the
      response is mapped to `KycProfile`, the material is gone. A provider change that lands without
      capturing it re-buries the gap for the life of that provider.
+
+---
+
+## Deferred from: 10-19-termination-ends-membership-privileges (2026-08-11)
+
+Recorded per AC11. Decisions `2026-08-10-097` (the six rulings) and `2026-08-10-098` (the no-session
+implementation, the annex ratification, the domain vocabulary) govern; this section records what they
+leave OWED and what the story does NOT close.
+
+### Owed obligations, each with a named owner or a concrete re-trigger
+
+⛔ None of these names an epic. Per `[[project_r7_fact_producer_unbuilt]]`, a deferral naming an epic
+expires unowned, and this story is the one that had to discharge a question which had already lapsed
+once for exactly that reason.
+
+- **⭐ The Q6 FLIP is UNAUTHORISED — this is the single most consequential entry here.** The
+  `termination_access_block` flag ships **DEFAULT OFF**. Everything AC4–AC10 built is INERT until it is
+  enabled, so **as shipped, termination does not yet end authenticated access**. Enabling it is
+  **Trustee-Panel-exclusive**, through a formal `.decision-log.md` entry, and is additionally gated on
+  **Story 10.21** having landed (Decision `2026-08-10-097` clause 6, sub-choice (b-i)). ⛔ Flipping it
+  before then is a governance violation, not a configuration change — the `2026-08-07-089` posture
+  applied to a second flag. **Owner:** Trustee Panel. **Re-trigger:** Story 10.21 lands.
+- **Counsel review of Niyamavali §8.4 and §8.4a — OWED and UN-ATTESTED** (Decision `097` clause 5).
+  ⚠ The **third** amendment to land on Panel attestation alone (`080` → `096` §8.7 → `097` §8.4/§8.4a).
+  The count is recorded rather than left to accumulate silently. **Owner:** none exists today — Story
+  0.13 has not closed and no counsel is selected. **Re-trigger:** the first story that receives an
+  actual counsel-review outcome on a Niyamavali amendment.
+- **The access-token residual.** `revokeAllMemberSessions` deletes refresh tokens and trusted devices
+  but **cannot invalidate a live access JWT** — there is no denylist, and `MEMBER_ACCESS_TTL_MS`
+  defaults to 15 minutes (`apps/api/src/config.ts:377`). A member terminated mid-session retains write
+  access for that window. Governed as the documented TTL limitation (Decision `097` clause 8). ⛔ NOT
+  closed by shortening the TTL, by touching the five `TERMINAL_STATES` Sets, or by inventing a denylist
+  — each is a larger architectural act than this story owns. Recorded at its source in
+  `member-auth.repo.ts` and in the `AI-10-2` block. **Re-trigger:** the first story that introduces an
+  access-token denylist or revocation list for any reason.
+- **The notice is IN-APP-ONLY — a ruled-upon reach limitation** (Q3 option (b), Decision `097`
+  clause 3). ⚠ Ruled **against** the author's recommendation and recorded as a ruling, not a default.
+  Once the flip happens, the one communication a terminated member receives is delivered to a surface
+  they can no longer authenticate into. **Re-trigger:** a story that adds the per-alert
+  `CostOptimizationInput` exemption field — the fifth mechanism, which does not exist today; the other
+  four levers are closed (`time_critical` is pinned false, `toggleEnabled` is per-Pariwar,
+  `lastEngagementAt` is not sender-addressable, and `windowMsByCategory` is shared with Stories 10.5
+  and 8.x). **Owner:** unassigned.
+- **The transitional i18n key `moderation.notice.terminated.body_access_retained`** is DELETABLE once
+  the flag retires and the block is unconditional. It is named for the condition it describes rather
+  than a story number so this is obvious at the call site. **Re-trigger:** the flag flip.
+- **The `member.restore_terminated` grant set must not widen.** `trustee_panel` is its ONLY holder, and
+  that exclusivity is the mechanism behind §8.4. ⛔ Granting it to another role would return
+  restore-from-terminated to the single-actor path the ratified text forecloses — and the instrument
+  would then say something the system does not do. **Owner:** Trustee Panel; any change needs a
+  Decision entry.
+
+### What this story does NOT close (AC11)
+
+1. **Story 10.21 is NOT unblocked, and the DPDPA gap is OPEN.** After the flip a terminated member
+   loses Story 3.11's member-portal export with **no off-portal replacement**. The disposition is the
+   **Q6 ruling** — recorded, not assumed — and 10.21 is now the **named gate on the flip**, which is
+   the strongest form this dependency has ever had.
+2. **Story 10.22 is NOT unblocked.** The appeal CTA still has no moderation destination. This story
+   removes Decision 6's **justification**, not the **need** for a real appeal route (Decision `097`
+   clause 13). `FAILURE_STATES` deliberately still contains `terminated-with-reason`; the member-variant
+   unreachability is recorded at `presenter.ts`, not fixed by deleting a set entry.
+3. **§8.5, §8.6, §8.8, §8.9 and the §8.2/§8.3 edits stay UNLANDED** — owned by **10.20** (grounds,
+   principles, record model) and **10.22** (appeal). The `niyamavali.md:196` reserved-numbers note is
+   unchanged. ⚠ **Four rows of the newly-landed §8.4a are stated-but-unmechanized** and say so in the
+   instrument itself: escalation justification (10.20), prior sanction required (10.20), notice and
+   opportunity to respond (10.20/10.22), and portal access (the Q6 flip).
+4. **NO standing Trustee Panel obligation is discharged, and the queue GREW.** Five were open before
+   this story — Story 10.23's Escalation 6 (`2026-08-07-089`), the copy-truth defect (still unassigned),
+   R7(A)'s unpublished Part 11 amendment (`2026-08-06-077`), the R7(C)/R7(F) lock-in asymmetry, and
+   counsel review of §8.7 (`2026-08-10-096` clause 5). This story adds **two**: counsel review of
+   §8.4/§8.4a, and the Q6 flip authorisation. **The queue stands at SEVEN.** Stated as a count rather
+   than as progress.
+5. **The identity-collision gap is NOT this story's and remains UNASSIGNED** (its own section above).
+   Nothing here narrows it: the flip ends ONE ACCOUNT'S access, and a terminated member who obtains a
+   second mobile number re-registers unimpeded. Sub-choice (b-ii), which would have gated the flip on
+   that control, was **not** ratified — the Panel ruled (b-i) knowing this.
+
+### Recorded artifacts of this story's own sequencing
+
+- **AC8's copy correction was NOT deferred, and that is a debt deliberately avoided.** Decision `097`
+  clause 12 permitted either "describe the flag's default as the shipped truth" or "defer to the flip
+  and record as flag-gated". The notice body is instead **selected from the flag at send time**, so it
+  states what is true in every flag state and owes nothing later. AC9's five-site sweep took the same
+  approach — every corrected comment is true under both flag states rather than describing only the
+  post-flip world. ⚠ Recorded because the *permitted* option would have created a decay window gated on
+  a `backlog` story, and a future reader should know the divergence was deliberate.
+- **`PERMISSION_CATALOG_VERSION` moved 30 → 31 and the key count 40 → 41.** A return to the normal bump
+  shape after Story 10.18's deliberate role-only deviation; the two numbers have not tracked each other
+  since 10.18 and should not be expected to.
+- **Decision `2026-08-10-097` clause 7 records the A/A/A annex answer as affirmation-as-written**,
+  because the three properties were posed as prose rather than lettered options. Decision `098`
+  clause 2 confirmed no narrower reading was intended. Recorded so a later reader does not mistake the
+  shape of the question for a shape it did not have.

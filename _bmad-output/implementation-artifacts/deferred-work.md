@@ -4,6 +4,46 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: the 2026-08-10 date-bomb investigation (2026-08-11)
+
+`main` was red for two days on `integration-tests` — four failures across
+`custom-fields/registry.spec.ts` and `feature-flags/registry.spec.ts`. Root cause was **not** a code
+regression: both specs read a pinned query instant (`AT = 2026-08-10T00:00:00Z`) against seed rows
+whose `effective_at` / `effective_from` defaulted to the DB clock. Resolution is
+`effective <= at`, so at 2026-08-10T00:00Z every seeded row fell permanently out of force and the
+in-force set went empty (`sha256("")`, `[]`, `+0`, `'default'`). Fixed by pinning BOTH sides of the
+comparison; the fuses had been armed 10 and 3 days ahead, on 2026-07-31 and 2026-08-07 respectively.
+
+- **⚖ Follow-up — a FORWARD-TIME nightly integration run. NOT BUILT; deferred deliberately.** Nothing
+  in the suite can currently detect an armed date bomb: by construction it is green until the instant
+  it is not, and the failure lands on whoever's PR happens to run first afterwards. The proposal is a
+  scheduled job alongside `nightly-integrity` that runs the live-DB integration suite with the clock
+  advanced (~90 days), so a bomb detonates a quarter early, on a schedule, attributed to no story.
+  Open questions the implementing story owns, and the reason this is not a one-line cron addition:
+  (a) **where the offset is applied** — faking the *Node* clock leaves Postgres's `now()` untouched,
+  and these two registries take their default from the DB, so a Node-only fake would have proved
+  nothing here; the offset likely belongs on the container clock or via `libfaketime`, not in vitest;
+  (b) **expected-failure handling** — genuinely time-relative specs (renewal windows, deadline
+  reminders, `dead_by` horizons) may legitimately fail under a forward clock, so the job needs an
+  allowlist or it becomes chronically red and gets ignored, which is the disease it treats;
+  (c) **non-blocking by design** — it must report, never gate a PR, or a false positive stalls
+  delivery. **Re-trigger:** the next time any spec fails on a date rather than on a diff, or the next
+  CI-policy story. Related: `DEAD_BY = 2027-06-30` in `feature-flags/registry.spec.ts` was checked
+  during this investigation and is **inert** — `dead_by` is stored and typed but never compared to a
+  clock, so it is data, not a fuse.
+
+- **⚖ Recorded — the "proven pre-existing" ritual cannot discriminate this failure class.** Story
+  10.19 did check its baseline (`6f1b165`) honestly and reproduced the identical four failures, then
+  merged on that basis; 10.18 did the same one day earlier. Both were right that the failures were not
+  theirs and wrong about what that implied, because **checking out an older commit does not rewind the
+  clock** — a date bomb is commit-invariant, so a baseline comparison returns "pre-existing" with full
+  confidence and zero information. Twenty-six commits in the last 200 carry that phrase. No change is
+  proposed here: the remedy (an owned, expiring red-baseline ledger) is CI policy and was explicitly
+  held out of scope for this fix. **Re-trigger:** the next CI-policy story, or the third consecutive
+  story to inherit the same red job.
+
+---
+
 ## Deferred / recorded from: implementation of story 10-27-member-missed-cycle-visibility (2026-08-09)
 
 The member-facing missed-cycle surface shipped: a read-only, separate collection on the existing

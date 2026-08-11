@@ -10,6 +10,7 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { featureFlags } from '@twt/domain';
 import type { QueueClient } from '@twt/queue';
 import { QUEUE_NAMES } from '@twt/queue';
 import { describe, expect, it, vi } from 'vitest';
@@ -17,6 +18,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ContributionNotifyDeps } from '../src/scheduler/contribution-notify.js';
 import {
   buildModerationAlert,
+  TERMINATION_ACCESS_BLOCK_FLAG,
   deriveModerationAlertId,
   moderationReasonLabelKey,
   registerModerationNotifyWorker,
@@ -220,5 +222,85 @@ describe('buildModerationAlert — the member-facing notice (AC8)', () => {
       (a) => (alertFor(a).payload_data as { body: string }).body,
     );
     expect(new Set(bodies).size).toBe(3);
+  });
+});
+
+// ── Story 10.19 AC8 — the notice tells the truth in BOTH flag states ─────────────────────────────
+//
+// The termination body is selected by whether authenticated access has ACTUALLY ended. Under the
+// Panel's Q6 (b-i) ruling the `termination_access_block` flag ships DEFAULT OFF and its flip is
+// gated on Story 10.21, so a terminated member CAN still sign in today — and a notice that said
+// otherwise would be false for every termination between now and the flip.
+
+function terminateBody(accessEnded: boolean | undefined, locale: 'en' | 'hi' = 'en'): string {
+  const alert = buildModerationAlert({
+    moderationActionId: '9f1d3c7a-5b2e-4a68-9c31-0d4e6f8a2b15',
+    pariwarId: '22222222-2222-4222-8222-222222222222',
+    memberId: '11111111-1111-4111-8111-111111111111',
+    action: 'terminate',
+    reasonCode: 'r14-forgery',
+    locale,
+    now: NOW,
+    ...(accessEnded === undefined ? {} : { accessEnded }),
+  });
+  return (alert.payload_data as { body: string }).body;
+}
+
+describe('buildModerationAlert — the termination body tracks the flag (Story 10.19, AC8)', () => {
+  it('⛔ access ENDED: the body does NOT promise sign-in, and names an administrative channel', () => {
+    for (const locale of ['en', 'hi'] as const) {
+      const body = terminateBody(true, locale);
+      // The AC8 strip, asserted by MEANING rather than by an exact string so a tone-guide reword
+      // does not fail the test while a reintroduced promise would.
+      expect(body).not.toMatch(/sign in as usual|साइन इन कर सकते/);
+      // …and it still tells the member where to go, since Q3 ruled the notice in-app-only and this
+      // is the only explanation they receive.
+      expect(body).toMatch(/helpline|हेल्पलाइन/);
+    }
+  });
+
+  it('⚠ access RETAINED (the shipped default): the body DOES say they can still sign in', () => {
+    // Not a courtesy assertion. Until the Panel authorises the flip, this sentence is TRUE, and a
+    // notice that dropped it would be the copy-truth defect this story exists to close — inverted.
+    for (const locale of ['en', 'hi'] as const) {
+      const body = terminateBody(false, locale);
+      expect(body).toMatch(/sign in as usual|साइन इन कर सकते/);
+    }
+  });
+
+  it('⛔ an ABSENT signal degrades to "access retained" — never to telling a member they are locked out', () => {
+    // Matches the flag's own fail-open posture. A notice is delivered once and cannot be recalled,
+    // so the degraded answer must be the one that stays true under the shipped default.
+    expect(terminateBody(undefined)).toBe(terminateBody(false));
+  });
+
+  it('the two bodies are genuinely different copy, and suspend/restore are untouched by the flag', () => {
+    expect(terminateBody(true)).not.toBe(terminateBody(false));
+    // AC8: the suspended and restored bodies are unchanged under every flag state — suspension
+    // never loses portal access, so nothing about them depends on this flag.
+    for (const action of ['suspend', 'restore'] as const) {
+      const withFlag = buildModerationAlert({
+        moderationActionId: '9f1d3c7a-5b2e-4a68-9c31-0d4e6f8a2b15',
+        pariwarId: '22222222-2222-4222-8222-222222222222',
+        memberId: '11111111-1111-4111-8111-111111111111',
+        action,
+        reasonCode: 'r14-forgery',
+        // ⚠ `hi`, to match `alertFor`'s locale — comparing across locales would fail for the
+        // trivial reason that the two catalogs differ, and would say nothing about the flag.
+        locale: 'hi',
+        now: NOW,
+        accessEnded: true,
+      });
+      expect((withFlag.payload_data as { body: string }).body).toBe(
+        (alertFor(action).payload_data as { body: string }).body,
+      );
+    }
+  });
+
+  it('⛔ the flag key this module names is a REGISTERED flag — a typo would silently revert the copy', () => {
+    // The key is declared locally because `apps/jobs` must not import from `apps/api`. An
+    // unregistered key resolves to the code default (`off`), so a typo would quietly send every
+    // terminated member the "you can sign in" wording forever, with nothing failing.
+    expect(featureFlags.isRegisteredFlag(TERMINATION_ACCESS_BLOCK_FLAG)).toBe(true);
   });
 });

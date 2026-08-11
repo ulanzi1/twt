@@ -33,7 +33,7 @@
 import { createHash } from 'node:crypto';
 
 import { Alert } from '@twt/contracts';
-import { ids, member as memberDomain, withPariwarScope } from '@twt/domain';
+import { featureFlags, ids, member as memberDomain, withPariwarScope } from '@twt/domain';
 import { DEFAULT_LOCALE, t, type Locale } from '@twt/i18n';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
 
@@ -66,6 +66,8 @@ const NOTICE_KEYS = {
     titleKey: 'moderation.notice.terminated.title',
     bodyKey: 'moderation.notice.terminated.body',
   },
+  // ⚠ `terminate` has a SECOND body, selected below by whether access has actually ended. See
+  // TERMINATED_ACCESS_RETAINED_BODY_KEY.
   restore: {
     titleKey: 'moderation.notice.restored.title',
     bodyKey: 'moderation.notice.restored.body',
@@ -73,6 +75,43 @@ const NOTICE_KEYS = {
 } as const satisfies Record<ModerationNotifyPayload['action'], { titleKey: string; bodyKey: string }>;
 
 const NS = { namespace: 'common' } as const;
+
+/**
+ * The TRANSITIONAL termination body — the one that still says *"You can sign in as usual…"*.
+ *
+ * ── Why there are two bodies, and why neither is a hedge (Story 10.19, AC8) ───────────────────────
+ * AC8 says the terminated body loses that sentence because "after this story that sentence is
+ * false". Under the Panel's Q6 ruling — option (b), sub-choice (b-i), Decision `2026-08-10-097`
+ * clause 6 — that is not yet true: the `termination_access_block` flag ships DEFAULT OFF and its
+ * flip is gated on Story 10.21 landing. **Until the flip, a terminated member CAN still sign in, and
+ * the sentence is accurate.**
+ *
+ * So a straight strip would have made the notice WRONG for every termination between now and the
+ * flip, and deferring the strip would have left it wrong from the instant the flip happened — with
+ * nothing but a `deferred-work.md` line standing between the member and a false statement. Decision
+ * `097` clause 12 permits either "describe the flag's default as the shipped truth" or "defer and
+ * record". Selecting the body from the flag does better than both: the notice states what is true
+ * AT THE MOMENT IT IS SENT, in every flag state, with no reconciliation owed later.
+ *
+ * That is also the correct semantics for a notice. It is a point-in-time record of what the member
+ * was told, not a live view — a notice sent before the flip should keep saying what was true then.
+ *
+ * ⚠ This key is DELETABLE once the flag retires and the block is unconditional. It is named for the
+ * condition it describes, not for a story number, so the next reader can tell from the name alone
+ * which of the two is transitional.
+ */
+const TERMINATED_ACCESS_RETAINED_BODY_KEY = 'moderation.notice.terminated.body_access_retained';
+
+/**
+ * The capability-bar-admitted flag key gating whether authenticated access has actually ended.
+ *
+ * ⚠ Declared here rather than imported: the sibling constant lives in
+ * `apps/api/src/modules/auth/member/termination-block-seam.ts`, and `apps/jobs` must not import from
+ * `apps/api`. `moderation-notify.test.ts` pins it against the domain registry, so a typo or a rename
+ * fails a test rather than silently resolving to the code default and quietly reverting every
+ * terminated notice to the "you can sign in" wording.
+ */
+export const TERMINATION_ACCESS_BLOCK_FLAG = 'termination_access_block';
 
 /** The reason-code LABEL key. Never render the raw code to a member (UX a11y `:1896`). */
 export function moderationReasonLabelKey(reasonCode: string): string {
@@ -123,9 +162,26 @@ export function buildModerationAlert(input: {
   readonly reasonCode: string;
   readonly locale: Locale;
   readonly now: Date;
+  /**
+   * Whether authenticated access has ACTUALLY ended for this member — i.e. whether the
+   * `termination_access_block` flag is enabled for their Pariwar. INJECTED, never read here: this
+   * function is PURE (see the header) and a flag lookup is a DB call. The caller resolves it.
+   *
+   * Only consulted for `terminate`; a suspension or restoration never loses portal access, so the
+   * suspended and restored bodies are unaffected under every flag state.
+   */
+  readonly accessEnded?: boolean;
 }): Alert {
   const keys = NOTICE_KEYS[input.action];
   const { locale } = input;
+  // ⛔ The ONE conditional in this builder. `accessEnded` defaults to FALSE — matching the flag's
+  // own default-OFF and fail-open posture, so an absent or unresolvable signal degrades toward the
+  // statement that is true today rather than toward telling a member they cannot sign in when they
+  // still can.
+  const bodyKey =
+    input.action === 'terminate' && input.accessEnded !== true
+      ? TERMINATED_ACCESS_RETAINED_BODY_KEY
+      : keys.bodyKey;
   // A code with no catalog entry resolves through the `unspecified` label rather than leaking the
   // raw slug into member-facing prose (a new registry code shipped ahead of its copy must degrade
   // gracefully, not read as machine output).
@@ -150,7 +206,7 @@ export function buildModerationAlert(input: {
     alert_category: 'alert_published',
     payload_data: {
       title: t(keys.titleKey, { reason }, { locale, ...NS }),
-      body: t(keys.bodyKey, { reason }, { locale, ...NS }),
+      body: t(bodyKey, { reason }, { locale, ...NS }),
     },
   });
 }
@@ -217,6 +273,35 @@ export async function runModerationNotify(
   // v1 resolves the DEFAULT locale. Per-member locale preference is not yet on the member record;
   // the same seam the cycle-open/news producers carry. Hindi-first is a CATALOG property here.
   const locale: Locale = DEFAULT_LOCALE;
+
+  // Has authenticated access actually ended for this Pariwar? Only a `terminate` notice's wording
+  // depends on it (see TERMINATED_ACCESS_RETAINED_BODY_KEY), so the lookup is skipped entirely for
+  // suspend/restore rather than paying for a decision nothing reads.
+  //
+  // ⛔ FAILS TOWARD "access retained", matching the flag's own fail-open posture: if the lookup
+  // errors we must not tell a member they can no longer sign in when they still can. A wrong notice
+  // is unrecoverable — it has already been delivered — so the degraded answer is the one that stays
+  // true under the shipped default.
+  let accessEnded = false;
+  if (payload.action === 'terminate') {
+    try {
+      const decision = await featureFlags.resolveFlagAudited(
+        deps.notify.serviceDb,
+        TERMINATION_ACCESS_BLOCK_FLAG,
+        ids.pariwarId(pariwarId),
+        { pariwarId },
+        now,
+        false,
+      );
+      accessEnded = decision.enabled;
+    } catch (err) {
+      alarm(
+        `[jobs] moderation-notify: termination-access flag lookup failed for pariwar ${pariwarId} — notice will state access is RETAINED (${String(err)})`,
+      );
+      accessEnded = false;
+    }
+  }
+
   const alert = buildModerationAlert({
     moderationActionId: payload.moderationActionId,
     pariwarId,
@@ -225,6 +310,7 @@ export async function runModerationNotify(
     reasonCode: payload.reasonCode,
     locale,
     now,
+    accessEnded,
   });
 
   const { undelivered } = await fanOutAlertToMembers(

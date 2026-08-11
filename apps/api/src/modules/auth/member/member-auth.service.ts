@@ -11,6 +11,8 @@ import type { FastifyInstance } from 'fastify';
 
 import type { AppDeps } from '../../../context.js';
 import * as repo from './member-auth.repo.js';
+import * as terminationBlock from './termination-block-seam.js';
+import type { TerminationNotice } from './termination-block-seam.js';
 import { generateRefreshToken, hashToken, signAccessToken } from './tokens.js';
 
 export interface IssueSessionArgs {
@@ -153,7 +155,36 @@ export type RotateResult =
   | { ok: true; session: MemberFullSession; memberId: string; deviceId: string }
   | { ok: false; reason: 'unknown' | 'expired' | 'concurrent' }
   | { ok: false; reason: 'reuse'; memberId: string; deviceId: string }
-  | { ok: false; reason: 'member_blocked'; memberId: string; deviceId: string };
+  | {
+      ok: false;
+      reason: 'member_blocked';
+      /**
+       * ⛔ WHY the member is blocked — Story 10.19 AC5, and it is REQUIRED, not informational.
+       *
+       * Before this, `member_blocked` carried no discriminator, so the handler could not tell a
+       * withdrawn member from a terminated one and threw `auth.member_withdrawn` with "Member is
+       * not active" for BOTH. A terminated member on the refresh path was therefore told something
+       * false about their own account.
+       *
+       * ⛔ The handler must switch on THIS field. It must NOT re-read member state to recover the
+       * cause — that is a second query to rebuild information the service already had and threw
+       * away, and the two reads could disagree under concurrent moderation.
+       */
+      cause: 'withdrawn' | 'anonymized' | 'terminated';
+      /**
+       * The structured termination notice, present ONLY when `cause === 'terminated'`.
+       *
+       * ⚠ Carried here deliberately, slightly beyond AC5's literal text. Decision `2026-08-10-097`
+       * clause 8 requires a CONTROLLED TERMINATION STATE rather than a generic authentication
+       * failure, and AC10 requires the member-app surface to render FROM this payload. A refresh
+       * denial is where a member with a live app hits the block FIRST — before any re-login — so
+       * omitting it here would leave that surface with nothing to render but an error code, which
+       * is precisely the generic failure clause 8 rules out.
+       */
+      notice?: TerminationNotice;
+      memberId: string;
+      deviceId: string;
+    };
 
 /**
  * Rotate-on-use refresh (§2.4). Presenting an already-rotated/revoked token (or
@@ -195,16 +226,47 @@ export async function rotateRefresh(
     return { ok: false, reason: 'expired' };
   }
 
-  // PR-Patch-9: re-check member lifecycle state. The login path blocks
-  // withdrawn/anonymized members; a long-lived (90d) refresh chain must too —
-  // belt-and-suspenders over the suspension cascade (revokeAllMemberSessions), which a
-  // later epic wires. Without this, a member withdrawn AFTER login keeps minting fresh
-  // access tokens for the life of the refresh chain. Read via serviceDb (BYPASSRLS,
+  // PR-Patch-9: re-check member lifecycle state. The login path blocks withdrawn/anonymized
+  // members; a long-lived (90d) refresh chain must too — belt-and-suspenders over the suspension
+  // cascade (`revokeAllMemberSessions`). Without this, a member withdrawn AFTER login keeps minting
+  // fresh access tokens for the life of the refresh chain. Read via serviceDb (BYPASSRLS,
   // pre-scope-safe), mirroring the login gate.
+  //
+  // ⚖ Story 10.19: the cascade IS now wired — this comment previously read "which a later epic
+  // wires", and this is that epic. Left as a live sentence it would send the next reader hunting for
+  // work already done. `revokeAllMemberSessions` runs inside the moderation transaction
+  // (`member-moderation/handlers.ts`), and the two mechanisms are complementary, not redundant: the
+  // cascade clears sessions at the MOMENT of the decision, while this re-check catches a chain that
+  // survived it (a race, a retry, or a moderation action that never reached the cascade).
+  //
+  // ── ⭐ THE SECOND READ SITE, AND WHY IT SHARES THE LOGIN GATE'S SEAM (AC5) ──────────────────────
+  // This is the same `resolveSessionDenial` the login gate calls, with the same inputs, and that is
+  // load-bearing rather than tidy. If only the login path were gated, a terminated member holding a
+  // live app would KEEP ROTATING refresh tokens indefinitely and never re-authenticate — the block
+  // would be green in tests and absent in production for exactly the members it targets. One key,
+  // one seam, two call sites: the flag state, the fail-open polarity, the unbounded overlay read and
+  // the exhaustive `ModerationStatus` switch cannot drift between them, because there is only one of
+  // each. `row.pariwarId` is the SAME tenant the login gate resolves, so a per-Pariwar flip applies
+  // identically at both sites.
   const state = await memberDomain.getMemberStateAt(deps.serviceDb, ids.memberId(row.memberId), now);
-  if (state === 'withdrawn' || state === 'anonymized') {
+  const denial = await terminationBlock.resolveSessionDenial(deps, {
+    memberId: row.memberId,
+    pariwarId: row.pariwarId,
+    lifecycleState: state,
+    now,
+  });
+  if (denial !== null) {
     await repo.revokeDeviceChain(deps.pool, row.memberId, row.deviceId, now);
-    return { ok: false, reason: 'member_blocked', memberId: row.memberId, deviceId: row.deviceId };
+    return {
+      ok: false,
+      reason: 'member_blocked',
+      // Set at THE one return site — the union's `cause` cannot be forgotten at a second one,
+      // because the seam is what produces it and there is no other path to this arm.
+      cause: denial.reason,
+      ...(denial.reason === 'terminated' ? { notice: denial.notice } : {}),
+      memberId: row.memberId,
+      deviceId: row.deviceId,
+    };
   }
 
   const rotated = await repo.markRefreshTokenRotated(deps.pool, row.id, now);

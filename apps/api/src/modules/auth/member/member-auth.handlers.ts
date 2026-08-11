@@ -430,12 +430,33 @@ export function createMemberAuthHandlers(deps: AppDeps) {
             context: { device_id: result.deviceId },
           });
         } else if (result.reason === 'member_blocked') {
-          // PR-Patch-9: member is withdrawn/anonymized — the service already revoked the
-          // chain. Record it and block with the same 403 the login gate uses.
+          // PR-Patch-9: the service already revoked the chain. Record it and deny with the same
+          // 403 the login gate uses.
           emitAuthAudit(deps, request, 'member_session.revoked', {
             actorId: result.memberId,
-            context: { device_id: result.deviceId, reason: 'member_blocked' },
+            // ⚠ `reason` stays `member_blocked` — it is the STABLE key existing audit and reporting
+            // queries grep for, and renaming it would silently break them. The new `cause` is added
+            // BESIDE it, which is what makes a terminated denial separable from a withdrawn one
+            // without invalidating anything already written against this line.
+            context: { device_id: result.deviceId, reason: 'member_blocked', cause: result.cause },
           });
+          // ⛔ Story 10.19 AC5 — report the ACTUAL cause. This previously threw
+          // `auth.member_withdrawn` / "Member is not active" for EVERY `member_blocked`, so a
+          // terminated member was told something false about their own account on the one path a
+          // live app hits first.
+          //
+          // ⛔ Switch on the `cause` the service already computed. Do NOT re-read member state here:
+          // that would be a second query rebuilding information this result already carries, and the
+          // two reads could disagree under a concurrent moderation action.
+          if (result.cause === 'terminated') {
+            // Same structured payload as the login gate (AC4), so the member-app surface renders
+            // identically whichever path reached it. Not "login failed" — session issuance denied.
+            throw new ForbiddenError(
+              'Session issuance denied: membership terminated',
+              'auth.member_terminated',
+              result.notice,
+            );
+          }
           throw new ForbiddenError('Member is not active', 'auth.member_withdrawn');
         } else if (result.reason === 'concurrent') {
           // PR-Patch-11: benign concurrent rotation of the same token — the sibling

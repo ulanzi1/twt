@@ -80,13 +80,24 @@ async function seedMember(t: TestApp, mobile: string, pariwarId: string): Promis
     `INSERT INTO member_identities (member_id, pariwar_id, mobile_ciphertext, mobile_blind_index) VALUES ($1, $2, $3, $4)`,
     [memberId, pariwarId, ciphertext, blindIndex],
   );
-  const events = ['member.signup_initiated', 'member.kyc_completed', 'member.vyawastha_shulk_paid', 'member.lock_in_expired'];
+  // ⚠ `member.lock_in_expired` MUST carry `{ kyc_verified: true }`. The reducer safeParses it and
+  // returns the state UNCHANGED on a malformed payload (`domain/member/state.ts:91-96`, whose own
+  // comment names "seeded without kyc_verified" as the case), so an empty payload leaves the member
+  // stuck in `lock-in` — never `active`. Nothing here would fail: login does not gate on `lock-in`,
+  // so every assertion in this file would still pass while silently testing the wrong member state,
+  // and `member.withdrawal_completed` (which transitions only from `active`) would become a no-op.
+  const events: Array<[string, string]> = [
+    ['member.signup_initiated', '{}'],
+    ['member.kyc_completed', '{}'],
+    ['member.vyawastha_shulk_paid', '{}'],
+    ['member.lock_in_expired', JSON.stringify({ kyc_verified: true })],
+  ];
   let v = 1;
-  for (const type of events) {
+  for (const [type, payload] of events) {
     await t.pool.query(
       `INSERT INTO events_log (stream_id, event_type, payload, event_version, occurred_at, pariwar_id)
-         VALUES ($1, $2, '{}'::jsonb, $3, now() - interval '1 day', $4)`,
-      [memberId, type, v++, pariwarId],
+         VALUES ($1, $2, $3::jsonb, $4, now() - interval '1 day', $5)`,
+      [memberId, type, payload, v++, pariwarId],
     );
   }
   return memberId;
@@ -293,6 +304,135 @@ describe.skipIf(!hasDatabase)('termination access — session issuance denial (l
       expect(res.status).toBe(200);
       expect(await liveRefreshRows(t, memberId)).toBeGreaterThan(0);
       expect(t.auditSink.ofType('member_login.otp_consume')).toHaveLength(1);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // ── AC5 — the refresh path, the SECOND read site ────────────────────────────────────────────────
+  //
+  // ⚠ Every test below terminates the member MID-SESSION, with the flag already enabled before
+  // login. That ordering is deliberate on two counts. It is the real scenario AC5 exists for — a
+  // member with a live app is terminated, and the refresh chain is what catches them. And it keeps
+  // the flag state CONSTANT across the test: the lookup is memoized for 5s, so flipping mid-test
+  // would race the cache, while the overlay read is uncached and sees the termination immediately.
+
+  it('⭐ AC5: a member terminated MID-SESSION is denied on refresh, with the same code and notice as login', async () => {
+    const pariwarId = randomUUID();
+    const t = await createTestApp({ env: { DEFAULT_SIGNUP_PARIWAR_ID: pariwarId } });
+    try {
+      const mobile = randomMobile();
+      const memberId = await seedMember(t, mobile, pariwarId);
+      await enableBlockFor(t, pariwarId);
+
+      // Active member, block enabled → a normal session. The block is not a blanket gate.
+      const login = await verifyWithCorrectOtp(t, mobile, 'device-midsession');
+      expect(login.status).toBe(200);
+      const refreshToken = login.body.refreshToken as string;
+      expect(typeof refreshToken).toBe('string');
+      expect(await liveRefreshRows(t, memberId)).toBeGreaterThan(0);
+
+      // …then the trustee terminates them, while that session is still live.
+      await recordModeration(t, memberId, 5, 'suspend', 'r14-forgery', pariwarId);
+      await recordModeration(t, memberId, 6, 'terminate', 'r14-forgery', pariwarId);
+
+      const res = await post(t, `${BASE}/token/refresh`, { refreshToken });
+
+      // ⛔ Without this gate the member would keep rotating refresh tokens indefinitely and never
+      // re-authenticate — the block would be green at login and absent in production for exactly
+      // the members it targets.
+      expect(res.status).toBe(403);
+      const err = res.body.error as Json;
+      // AC5's correction: this previously reported `auth.member_withdrawn` / "Member is not active"
+      // for EVERY blocked cause, telling a terminated member something false about their account.
+      expect(String(err?.code)).toBe('auth.member_terminated');
+      expect(String(err?.code)).not.toBe('auth.member_withdrawn');
+
+      // The SAME structured payload as the login gate, so the member-app surface renders identically
+      // whichever path reached it — a refresh denial is where a live app hits the block FIRST.
+      const notice = err?.details as Json;
+      expect(notice?.decision).toBe('terminated');
+      expect(notice?.ground_label_key).toBe('memberStatus.moderationReason.r14-forgery');
+      expect(notice?.summary).toEqual({ available: false });
+
+      // The device chain is revoked, so the denial is terminal rather than a retryable blip.
+      expect(await liveRefreshRows(t, memberId)).toBe(0);
+      const revoked = t.auditSink.ofType('member_session.revoked');
+      expect(revoked).toHaveLength(1);
+      // `reason` stays the stable `member_blocked` key existing queries grep for; `cause` is what
+      // makes a terminated denial separable from a withdrawn one.
+      expect(JSON.stringify(revoked[0])).toContain('member_blocked');
+      expect(JSON.stringify(revoked[0])).toContain('terminated');
+
+      // Nothing usable came back on this path either.
+      expect(res.body.accessToken).toBeUndefined();
+      expect(res.body.refreshToken).toBeUndefined();
+      expect(jwtLikeStrings(res.body)).toEqual([]);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⚠ AC5: with the block at its SHIPPED DEFAULT (off), a terminated member still refreshes', async () => {
+    // The flag-OFF half of the pair, for the same reason as at login: under Q6 (b-i) this is the
+    // shipped truth until Story 10.21 lands, and asserting only the flag-ON side would let the
+    // default invert without a single test noticing.
+    const pariwarId = randomUUID();
+    const t = await createTestApp({ env: { DEFAULT_SIGNUP_PARIWAR_ID: pariwarId } });
+    try {
+      const mobile = randomMobile();
+      const memberId = await seedMember(t, mobile, pariwarId);
+      const login = await verifyWithCorrectOtp(t, mobile, 'device-midsession-off');
+      expect(login.status).toBe(200);
+      const refreshToken = login.body.refreshToken as string;
+
+      await recordModeration(t, memberId, 5, 'suspend', 'r14-forgery', pariwarId);
+      await recordModeration(t, memberId, 6, 'terminate', 'r14-forgery', pariwarId);
+
+      const res = await post(t, `${BASE}/token/refresh`, { refreshToken });
+      expect(res.status).toBe(200);
+      expect(typeof res.body.refreshToken).toBe('string');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⚠ AC5: a WITHDRAWN member still reports auth.member_withdrawn — the cause switch is not a rename', async () => {
+    // The regression guard on AC5's correction. Adding `cause` and switching on it must not
+    // reclassify the pre-existing lifecycle block: a withdrawn member's code, message and audit
+    // line are unchanged, and no termination notice is attached to a non-termination cause.
+    const pariwarId = randomUUID();
+    const t = await createTestApp({ env: { DEFAULT_SIGNUP_PARIWAR_ID: pariwarId } });
+    try {
+      const mobile = randomMobile();
+      const memberId = await seedMember(t, mobile, pariwarId);
+      await enableBlockFor(t, pariwarId);
+      const login = await verifyWithCorrectOtp(t, mobile, 'device-withdrawn');
+      expect(login.status).toBe(200);
+      const refreshToken = login.body.refreshToken as string;
+
+      // Withdrawal is a LIFECYCLE state, not a moderation overlay — a different mechanism entirely.
+      // ⚠ The event is `member.withdrawal_completed` (`domain/member/state.ts:152`), NOT
+      // `member.withdrawn`; the state is named `withdrawn` but no event carries that name, and an
+      // unrecognised type replays to no transition at all — leaving the member `active` and this
+      // test passing a 200 while appearing to assert a block.
+      // ⚠ `occurred_at` is backdated because `getMemberStateAt` is bounded by the INJECTED APP clock
+      // while `now()` is the DB clock; under app-behind-DB skew a same-instant event falls outside
+      // the window and is silently skipped (`moderation/overlay.ts:132-149` documents the same trap).
+      await t.pool.query(
+        `INSERT INTO events_log (stream_id, event_type, payload, event_version, occurred_at, pariwar_id)
+           VALUES ($1, 'member.withdrawal_completed', '{}'::jsonb, 5, now() - interval '1 minute', $2)`,
+        [memberId, pariwarId],
+      );
+
+      const res = await post(t, `${BASE}/token/refresh`, { refreshToken });
+      expect(res.status).toBe(403);
+      const err = res.body.error as Json;
+      expect(String(err?.code)).toBe('auth.member_withdrawn');
+      expect(String(err?.code)).not.toBe('auth.member_terminated');
+      // ⛔ No termination notice rides a withdrawal — the payload is only for the terminated cause.
+      expect(err?.details).toBeUndefined();
+      expect(await liveRefreshRows(t, memberId)).toBe(0);
     } finally {
       await teardown(t);
     }

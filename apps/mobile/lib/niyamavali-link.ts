@@ -5,20 +5,9 @@
 // `?clause=<clauseId>&lang=<locale>` (niyamavali.astro:43 `clause`, :29 `lang`); a malformed clause
 // falls through to its unknown-clause view, so no client-side guard is needed beyond URL-encoding.
 //
-// The public-site origin is sourced from EXPO_PUBLIC_PUBLIC_SITE_ORIGIN (mirrors EXPO_PUBLIC_API_URL
-// in lib/member-api.ts:13; matches the public app's PUBLIC_SITE_ORIGIN). It is CODE-defaulted to
-// production — eas.json carries no env blocks (not even EXPO_PUBLIC_API_URL), so for non-default
-// environments operators set the var at build time via EAS environment or .env.local.
+// ⚖ Story 10.19: the origin resolution moved to `lib/public-site.ts` when the termination surface
+// became a second consumer of it (AC10 — a terminated member keeps reaching public Trust content).
+// This module is kept as the named entry point its existing callers import; the builder itself now
+// lives beside the origin so the two cannot drift.
 
-const publicSiteOrigin = (process.env.EXPO_PUBLIC_PUBLIC_SITE_ORIGIN ?? 'https://twt.org').replace(
-  /\/$/,
-  '',
-)
-
-/**
- * Build the public Niyamavali URL for `clauseId` in `locale`. The clauseId is SERVER-returned (the
- * lock-in-status read), never hardcoded in the widget — keeping the policy source server-authoritative.
- */
-export function niyamavaliClauseUrl(clauseId: string, locale: string): string {
-  return `${publicSiteOrigin}/niyamavali?clause=${encodeURIComponent(clauseId)}&lang=${encodeURIComponent(locale)}`
-}
+export { niyamavaliClauseUrl } from './public-site'

@@ -326,6 +326,27 @@ function buildRuleExplanations(payload: MemberValidityPayloadDto): RuleExplanati
  * `restore` a trustee-reachable action from `terminated`, so a terminated member has a genuine
  * remedy to ask for. Omitting it would leave the one member with the most at stake with no way to
  * ask anyone to look again.
+ *
+ * ── ⚖ Story 10.19: `terminated-with-reason` STAYS, and the reason is not the one it used to be ────
+ * ⛔ Do NOT "fix" this by removing `terminated-with-reason`. That looks like the tidy response to
+ * Story 10.19 and it is wrong on two counts.
+ *
+ * FIRST, this panel has an ADMIN variant. A terminated member's record is legitimately viewed by
+ * staff (`apps/admin/tests/member-status-panel.test.tsx`), and for that reader the state and its CTA
+ * are meaningful. Removing the entry would strip it from the admin surface to fix a member-surface
+ * problem.
+ *
+ * SECOND, the member-surface problem is REACHABILITY, not membership of this set. Once the
+ * `termination_access_block` flag is enabled (DEFAULT OFF; flip gated on Story 10.21 — Decision
+ * `2026-08-10-097` clause 6, sub-choice (b-i)), a terminated member cannot open a session, so they
+ * cannot reach the member variant of this panel to see the CTA at all. That unreachability is
+ * RECORDED here rather than papered over by deleting a set entry: the view-model is not the thing
+ * that is broken.
+ *
+ * ⚠ And the CTA still has no moderation destination — that is **Story 10.22's** to build, and
+ * Decision `2026-08-10-097` clause 13 states in terms that this story removes Decision 6's
+ * JUSTIFICATION, not the NEED for a real appeal route. Decision 6 itself is superseded, not
+ * reinterpreted ([[feedback_supersede_never_reinterpret]]).
  */
 const FAILURE_STATES: ReadonlySet<HeadlineState> = new Set<HeadlineState>([
   'suspended-with-reason',

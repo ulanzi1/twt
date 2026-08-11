@@ -223,11 +223,24 @@ export function createMemberModerationHandlers(deps: AppDeps) {
       //     so it commits with the moderation record: a rolled-back action can never leave the
       //     member logged out. Suspend AND terminate cascade; a RESTORE does NOT re-mint sessions —
       //     the member simply logs in normally.
-      //     ⚠ This is NOT a login block. `member-auth.handlers.ts`'s gate stays `withdrawn ||
-      //     anonymized` — a moderated member MUST be able to sign back in to read the dignified
-      //     explanation and reach the appeal CTA (Decision 6). Enforcement is the validity payload's
-      //     moderation conjunction — `is_valid` (coverage) since 10.10, plus `is_assignable` (roster)
-      //     since Story 10.17 — never a locked door.
+      //     ⚠ The cascade is not itself an access gate — it clears sessions, it does not decide who
+      //     may open a new one. That decision lives in `member-auth.handlers.ts`, and Story 10.19
+      //     changed it:
+      //       · SUSPENSION keeps access, unconditionally and permanently. A suspended member is
+      //         CURING; they need the contribution surface, and Story 10.16's disclosure lives there.
+      //       · TERMINATION ends it — session issuance is denied — but ONLY where the
+      //         `termination_access_block` flag is enabled. That flag is DEFAULT OFF and its flip is
+      //         gated on Story 10.21 (Decision `2026-08-10-097` clause 6, sub-choice (b-i)), so as
+      //         SHIPPED a terminated member can still sign in today.
+      //     ⛔ Decision 6 ("a moderated member must be able to sign back in to reach the appeal CTA")
+      //     is SUPERSEDED, not reinterpreted — by Decision `2026-08-10-097` clause 8 and Niyamavali
+      //     §8.4, which the Panel ratified on 2026-08-10. The original Decision-6 record stands
+      //     unedited ([[feedback_supersede_never_reinterpret]]). Its justification was reaching an
+      //     appeal CTA that does not exist: the CTA still has no moderation destination, which is
+      //     Story 10.22's to build.
+      //     Coverage enforcement is unchanged and orthogonal: the validity payload's moderation
+      //     conjunction — `is_valid` (coverage) since 10.10, plus `is_assignable` (roster) since
+      //     Story 10.17.
       if (action === 'suspend' || action === 'terminate') {
         await revokeAllMemberSessions(scopeTx.client, ctx.memberId);
       }

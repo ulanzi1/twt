@@ -3,15 +3,32 @@
 // The two auth-surface consequences of a moderation decision, both of which are easy to get
 // backwards:
 //
-//   AC6 — the SUSPENSION CASCADE revokes every session, but does NOT block login.
+//   AC6 — the SUSPENSION CASCADE revokes every session, but does NOT block access.
 //     `architecture.md:1433-1434` mandates the revocation and `member-auth.service.ts:198-201` named
-//     `revokeAllMemberSessions` as the seam "which a later epic wires". This is that epic. But the
-//     obvious next move — adding `suspended`/`terminated` to the `withdrawn || anonymized` login
-//     block-list — is WRONG (Decision 6): `ux-design-specification.md:1890-1896` commits the member
-//     to a dignified prose explanation with an appeal CTA reachable "from every failure state", and
-//     a member who cannot log in can never read it. Enforcement is `is_valid`, not a locked door.
-//     ⚠ A suspended member logging in LOOKS like a bug. It is the requirement. The pinning test
-//     below exists to defend it from a future reviewer's well-meaning "fix".
+//     `revokeAllMemberSessions` as the seam "which a later epic wires". This is that epic.
+//     ⚠ A suspended member signing in LOOKS like a bug. It is the requirement — D5 requirement 3:
+//     they are CURING, they need the contribution surface, and Story 10.16's disclosure lives there.
+//     The pinning test below exists to defend it from a future reviewer's well-meaning "fix".
+//
+//   ⚖ UPDATED BY STORY 10.19 — READ THIS BEFORE "FIXING" ANYTHING BELOW.
+//     This header used to say that adding `terminated` to the login block-list "is WRONG (Decision
+//     6)". **That instruction is obsolete and would now cause a reviewer to revert shipped,
+//     Panel-ratified work.** Decision 6 is SUPERSEDED — not reinterpreted — by Decision
+//     `2026-08-10-097` clause 8 and Niyamavali §8.4, ratified 2026-08-10
+//     ([[feedback_supersede_never_reinterpret]]; the original Decision-6 record stands unedited).
+//     Its justification was reaching an appeal CTA that does not exist, and still does not — that
+//     destination is Story 10.22's to build.
+//
+//     The truth as of Story 10.19, and the distinction is the whole point:
+//       · SUSPENSION keeps access. Unconditionally, permanently, by requirement.
+//       · TERMINATION denies SESSION ISSUANCE — identity verification still succeeds — but only
+//         where the `termination_access_block` flag is ENABLED. It ships DEFAULT OFF and its flip is
+//         gated on Story 10.21 (Q6 sub-choice (b-i)).
+//     ⇒ **As shipped today a terminated member CAN still sign in, so the test below is still
+//     correct** — but it is now pinning the FLAG'S DEFAULT, not Decision 6. The flag-ON behaviour
+//     (403 + `auth.member_terminated` + the structured notice, and proof that no session is
+//     established) lives in `termination-access-block.spec.ts`. Both halves are required: asserting
+//     only one of them would let the default invert with nothing failing.
 //
 //   AC7 — TERMINATION extends the FR-56 → FR-6 12-month rejoin lock, and RESTORE clears it.
 //     A SECOND, independent lock alongside Story 3.10's withdrawal lock. No fake `member_withdrawals`
@@ -217,7 +234,11 @@ describe.skipIf(!hasDatabase)('moderation → auth effects (live DB) (:5433)', (
     }
   });
 
-  it('AC6/Decision 6: a SUSPENDED member can STILL log in — this is the requirement, not a bug', async () => {
+  // ⚖ Story 10.19: retitled off Decision 6, which is superseded. The assertion is UNCHANGED and its
+  // ground is now stronger, not weaker — a suspended member keeping access is D5 requirement 3 and
+  // Niyamavali §8.4a's "Portal access: Retained", ratified 2026-08-10. This holds under EVERY flag
+  // state, which is why `termination-access-block.spec.ts` re-asserts it with the flag forced ON.
+  it('AC6 + D5 req 3: a SUSPENDED member can STILL sign in — this is the requirement, not a bug', async () => {
     const t = await signupApp();
     try {
       const mobile = randomMobile();
@@ -239,7 +260,13 @@ describe.skipIf(!hasDatabase)('moderation → auth effects (live DB) (:5433)', (
     }
   });
 
-  it('AC6/Decision 6: a TERMINATED member can still log in too (the appeal path stays open)', async () => {
+  // ⚖ Story 10.19: retitled, and its MEANING changed even though its assertion did not. This no
+  // longer pins "Decision 6 keeps the appeal path open" — Decision 6 is superseded. It now pins the
+  // `termination_access_block` flag's SHIPPED DEFAULT (off), which is the truth until Story 10.21
+  // lands and the Trustee Panel authorises the flip. ⛔ Do NOT invert this test to expect a 403: the
+  // flag-ON denial is asserted in `termination-access-block.spec.ts`, and inverting this one would
+  // assert a behaviour the shipped default does not have — a false green in the other direction.
+  it('AC6 + Story 10.19 (b-i): a TERMINATED member still signs in while the block flag is OFF (the shipped default)', async () => {
     const t = await signupApp();
     try {
       const mobile = randomMobile();

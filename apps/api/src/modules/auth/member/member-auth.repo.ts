@@ -429,11 +429,29 @@ export async function revokeDeviceChain(
  * it goes. This is also the behaviour this function has had since 3.2 — Story 10.10 wires the seam,
  * it does not redefine it.
  *
- * ⚠ This is NOT a login block. A suspended or terminated member MUST still be able to sign in, to
- * read the dignified explanation and reach the appeal CTA (Decision 6). Enforcement is the validity
- * payload's moderation conjunction — `is_valid` (COVERAGE) since 10.10, and since Story 10.17 the
- * separate `is_assignable` (DONOR ROSTER), on which a suspended member stays TRUE so they can
- * contribute their way back — never a locked door. See the pinning test in the moderation spec.
+ * ⚠ This function is NOT the access gate. It clears what exists; it does not decide who may open a
+ * new session. That decision lives in `member-auth.handlers.ts` / `termination-block-seam.ts`, and
+ * Story 10.19 changed it:
+ *   · A SUSPENDED member keeps access, unconditionally — they are curing, they need the contribution
+ *     surface, and Story 10.16's disclosure lives there. This is a requirement, not an oversight.
+ *   · A TERMINATED member is denied SESSION ISSUANCE — identity verification still succeeds — but
+ *     only where the `termination_access_block` flag is enabled. DEFAULT OFF, flip gated on Story
+ *     10.21 (Decision `2026-08-10-097` clause 6, sub-choice (b-i)). As shipped today, a terminated
+ *     member can still sign in.
+ * ⛔ Decision 6 is SUPERSEDED, not reinterpreted — Decision `2026-08-10-097` clause 8 and Niyamavali
+ * §8.4 (ratified 2026-08-10). The original record is left unedited
+ * ([[feedback_supersede_never_reinterpret]]).
+ *
+ * ⚠ AND THIS FUNCTION IS WHY THE RESIDUAL EXISTS. It deletes refresh tokens and trusted devices, but
+ * it CANNOT invalidate a live access JWT — there is no denylist, and `MEMBER_ACCESS_TTL_MS` defaults
+ * to 15 minutes (`config.ts:377`). A member terminated mid-session keeps write access for that
+ * window. Governed as the documented TTL limitation (Decision `097` clause 8); ⛔ not closed by
+ * shortening the TTL or inventing a denylist here.
+ *
+ * Coverage enforcement is unchanged and orthogonal: the validity payload's moderation conjunction —
+ * `is_valid` (COVERAGE) since 10.10, and since Story 10.17 the separate `is_assignable` (DONOR
+ * ROSTER), on which a suspended member stays TRUE so they can contribute their way back. See the
+ * pinning tests in `moderation-auth-effects.spec.ts` and `termination-access-block.spec.ts`.
  */
 export async function revokeAllMemberSessions(
   executor: pg.Pool | pg.PoolClient,

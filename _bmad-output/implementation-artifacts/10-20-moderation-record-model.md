@@ -1,0 +1,1088 @@
+---
+baseline_commit: 4c7fdee490c18b3010dcdb3b392cc1806b5dc262
+---
+
+# Story 10.20: Moderation Record Model `[PRIMITIVE]`
+
+Status: ready-for-dev
+
+## Story
+
+As a Trustee Panel recording a moderation decision,
+I want the record to separate the ground, the facts, and the proportionality reasoning,
+so that a decision can be reconstructed, tested against the principles, and enriched without being rewritten.
+
+---
+
+## What this story is
+
+Today a moderation action carries **one** structured `reason_code` and **one** free-text
+`rationale_ciphertext`. That single field is asked to answer three different questions at once — *what
+happened*, *why this sanction*, and *how can the case be reconstructed* — and it answers none of them
+testably. `member_moderation_actions` (migration `0091`) has exactly eleven columns and no notion of a
+supporting ground, an evidence reference, or a proportionality test.
+
+This story does **three things, in this order**:
+
+1. **Governance.** Niyamavali **§8.5** (grounds for termination), **§8.6** (the principles, led by the
+   constitutional sentence) and **§8.9** (the future governance test) are authored — three of the four
+   numbers `niyamavali.md:230` reserves, routed here by Story 10.19
+   (`deferred-work.md:3865-3869`). §8.4a's **mechanization-status disclosure is corrected and updated**
+   in both locales. ⛔ **Do not pre-commit to a count.** AC3 disposes §8.4a's four rows as one
+   *correction*, one *mechanization*, one *partial* and one *untouched* — **a correction is not a
+   mechanization**, and the true number is whatever AC3's dispositions add up to once Q4 rules.
+2. **The record model** (WS-A/WS-B/WS-E). One hand-authored migration `0099` splits the conflated
+   field into: **primary + supporting grounds** (a new append-only table), a renamed **Decision Note**,
+   a **two-part escalation justification**, and **evidence references that are references, not prose**.
+3. **The safeguards** (WS-C/WS-D/WS-F). The escalation justification becomes **mandatory and
+   structurally two-part** on `terminate`; a **dwell/notice precondition** enters
+   `nextModerationStatus`'s *caller*; and the frozen reason-code registry gains **guidance** metadata
+   without narrowing what it permits.
+
+**The constitutional frame, from the ratified §8.4a and PRD FR-56 (`prd.md:866`):**
+**Termination is an exceptional governance act, not a stronger suspension.** Every acceptance
+criterion below is subordinate to that sentence.
+
+> **⚠ Six labelled workstreams; split along them, never across them.** `epics.md:3832`: *"WS-B is the
+> only one that touches the schema; WS-A/C/D/E/F build on it; WS-F is data and copy only. If capacity
+> requires splitting, split along these lines rather than re-cutting the scope."* A split that ships
+> WS-B's columns without WS-C's enforcement leaves nullable governance fields nobody fills.
+
+---
+
+## Verified premises — checked live at `4c7fdee`
+
+**⛔ #1 — §8.5, §8.6 and §8.9 do not exist, and §8.7 already sits ahead of them.**
+`docs/legal/niyamavali.md:230` (mirror `niyamavali.hi.md:228`): *"§8.5, §8.6, §8.8 and §8.9 are
+reserved. §8.7 is deliberately numbered ahead of them; the intervening numbers are held for the
+remaining Part 8 amendments and are **not to be closed up**."* So §8.5/§8.6/§8.9 are authored **in
+their reserved slots, physically before §8.7**, and the reserved-numbers note is **edited to drop the
+three now-landed numbers while keeping §8.8** (10.22's). Do **not** renumber §8.7.
+
+**⛔ #2 — §8.4a's mechanization disclosure is WRONG on one of its four rows, in both locales.**
+`niyamavali.md:212` (hi `:210`) states: *"**Prior sanction required** — no precondition requires a
+prior suspension."* **That is false at HEAD.** `nextModerationStatus('none','terminate')` returns
+`null` (`packages/domain/src/member/moderation/status.ts:41-42`), so termination structurally *cannot*
+be reached except from `suspended` — Story 10.10's Decision 2. What is actually missing is **dwell**:
+the decision brief states it precisely (`moderation-model-decision-brief.md:516-518`) — *"No dwell
+time. `nextModerationStatus('suspended','terminate')` returns `'terminated'` unconditionally. Two API
+calls seconds apart terminate a member …"*  ⇒ the row must be **corrected, not merely flipped to
+mechanized**: the precondition exists and is *nominal*. Correcting an over-stated gap is the same
+copy-truth discipline as correcting an over-stated capability.
+
+**⛔ #3 — `rationale_ciphertext` carries FOUR attachments a standalone rename would re-do.** Confirmed
+at all four sites: `piiColumn(1, 'member_moderation')` (`schema/member_moderation_actions.ts:90`), the
+decrypt endpoint (`apps/api/.../member-moderation/routes.ts:208-215` → `handlers.ts:414-461`), the
+RTBF scrub (`packages/domain/src/member/anonymize.ts:183-185`), and migration `0092`'s
+**column-level** `GRANT UPDATE ("rationale_ciphertext")` (`0092:32`). This is exactly why
+`epics.md:3843` bundles the rename here.
+
+**⛔ #4 — ⭐ THE TRAP: a Postgres column-level GRANT does NOT extend to a new column.** `0092` granted
+UPDATE on **one named column**. Every *new* Tier-1 column this story adds
+(`escalation_*`, the grounds `note`) is therefore **structurally un-erasable** the moment it ships —
+the identical defect `0092`'s own header describes (`0092:1-14`), reintroduced. **Migration `0099`
+must carry its own `GRANT UPDATE (…)` for every new PII column, and `anonymize.ts` must scrub them.**
+A column rename is different and safe: Postgres tracks privileges by attribute, so
+`GRANT UPDATE ("rationale_ciphertext")` follows `rationale_ciphertext → decision_note_ciphertext`
+automatically. **The rename needs no re-grant; the new columns do.**
+
+**⛔ #5 — the two-part "not a restatement" check CANNOT be a DB constraint or a ciphertext compare.**
+Envelope encryption is non-deterministic (`encryptModerationRationale` →
+`encryption.encryptTier1` + `serializeEnvelope`), so two identical plaintexts produce different
+ciphertexts and a `CHECK (a <> b)` proves nothing. ⇒ the anti-restatement guard runs on **plaintext,
+in the route, before encryption**, alongside the existing `assertRationalePresent` placement
+(`handlers.ts:197-208`). The DB half is what a CHECK *can* express: **presence**, `NOT NULL` iff
+`action = 'terminate'` — the `member_moderation_actions_rejoin_iff_terminate` shape (`0091:61`)
+reused verbatim.
+
+**⛔ #6 — the last applied migration is `0098`.** `packages/domain/migrations/meta/_journal.json` ends
+at `idx: 98`, `tag: "0098_story-8-14-close-cycle-alert-indexes"`, `when: 1789184400000`. This story's
+migration is **`0099`**, journal `idx: 99`, `when: 1789270800000` (+1 day, the file's own cadence).
+⛔ **HAND-AUTHORED. Never `db:generate`** — the drizzle snapshot baseline is frozen at `0020` and a
+regenerate raises `42P07` ([[project_live_db_test_gotchas]]; `0091:3-5` states the rule).
+
+**⛔ #7 — WS-F and PRD FR-56 pull in opposite directions, and the resolution must be stated.**
+`epics.md:3866` forbids narrowing `appliesTo` (*"it stays `['suspend','terminate']`"*), while
+`prd.md:871` lists as a **testable consequence**: *"Grounds for termination are enumerated separately
+from grounds for suspension; the two sets are not interchangeable."* **Both hold, at different
+layers:** the *enumeration* is **governance text** (Niyamavali §8.5), the *registry* stays permissive
+with `ordinarilyResultsIn` **guidance**, and the Trustee Panel — not the registry — determines the
+sanction (principle 2). ⛔ A dev agent that "satisfies FR-56" by narrowing `MODERATION_APPLIES_TO`
+(`reason-codes.ts:72`) has violated the epic AC and pre-empted the Panel.
+
+**✅ #8 — ALREADY DISCHARGED: PRD FR-56 needs no edit.** `prd.md:866-874` already carries the
+constitutional sentence verbatim, the two-part escalation justification with part (a)'s three
+alternatives, and the four testable consequences. The SCP §4c amendment landed 2026-08-04. **Record as
+discharged-before-start so the dev agent does not re-apply it.**
+
+**✅ #9 — ALREADY DISCHARGED: 10.18 unblocked this story and said so.** `deferred-work.md:3710`:
+*"Story 10.20 is unblocked."* `trustee_panel` exists at `scopeCeiling: 'pariwar'`
+(`packages/domain/src/rbac/roles.ts:560`) holding `member.moderate`, and Panel authority under Part 8
+is **concurrent, not exclusive** (Decision `2026-08-10-096` clause 3). ⇒ **no new permission key, no
+`PERMISSION_CATALOG_VERSION` bump** (it stands at **31**, `permissions.ts:397`). Do not invent one.
+
+**⚠ #10 — the epic's "checkable from data" claim is reachable, but not from where you'd guess.**
+`contribution.r7a_restorations_used` is produced by `@twt/validity-service`
+(`producer.ts:550`) from `readContributionFactInputs` (`packages/domain/src/contribution/facts.ts:633`
+— the **per-member** reader; `:867` is the Pariwar-wide scan variant Story 10.11 uses). The moderation
+handler currently imports no validity code at all. ⇒ using the fact is a **new dependency edge** from
+`apps/api/src/modules/member-moderation` to `@twt/validity-service`, which
+`apps/api/src/modules/trustee-lite/handlers.ts:60` already establishes as legal. **It is not free, and
+Q5 decides whether it is worth it.**
+
+**⚠ #11 — there is NO `docs/` governance reference for the moderation model.** SCP §4f promises one
+(*"New — the permanent home §5a asks for … Cited by 10.20/10.21/10.22/10.23"*). It does not exist;
+`docs/` was checked. Unlike `docs/legal/`, **`docs/` is tracked** — so this file is the record model's
+one *diffable* home, and it is this story's to create (AC13).
+
+---
+
+## ⛔ The one thing this story must not do: manufacture a ratification
+
+Identical constraint to Stories 10.18 and 10.19, unmoved. The Niyamavali is an **unadopted draft**
+(`niyamavali.md:5` — `[[v1.0]]`, `[[date]]`, unfilled) and **counsel is not engaged** (every return
+field in `docs/legal-counsel-engagement/` is `<PENDING>`).
+
+| Landing means | Landing does NOT mean |
+|---|---|
+| §8.5, §8.6, §8.9 authored into `niyamavali.md` **and** `niyamavali.hi.md` | A `[[v1.0]]` → `v1.1` version bump |
+| Q1–Q7 routed to the Panel and ruled (AC1) | An `Effective:` or `Adopted by Board resolution` date |
+| The ruling — **quoting every new section verbatim, both locales** — recorded in `.decision-log.md` | A `[LEGAL]` counsel-acceptance entry |
+| The owed counsel review recorded **as owed** in `deferred-work.md` | Any claim Part 8 is legally settled |
+
+Use `[[feedback_closure_language_precision]]` verbs: **authored and Panel-ratified**; **counsel review
+remains outstanding**. Never "approved", never "final".
+
+⚠ **`docs/legal/` is gitignored** (`.gitignore`) — the amendment leaves **no diff and no blame**. The
+`.decision-log.md` verbatim reproduction **is** the record, in both locales. Story 10.18's Escalation 7,
+unchanged and not this story's to fix.
+
+---
+
+## In scope / out of scope
+
+| In scope | Out of scope → owner |
+|---|---|
+| Niyamavali **§8.5**, **§8.6**, **§8.9** (new) + the **§8.2 disposition** of the two unanchored codes, `en` + `hi` | **§8.8** (the appeal route) → **10.22** |
+| **§8.4a's mechanization disclosure**: corrected (premise #2) and updated for what this story mechanizes | Building the moderation **appeal** → **10.22** |
+| A routing note + `.decision-log.md` Decision settling **Q1–Q7** | Building the **off-portal DPDPA** route → **10.21**; flipping `termination_access_block` |
+| **WS-B** migration `0099`: rename + `escalation_*` + `evidence_refs` + `member_moderation_grounds` | A **generic** discipline-record primitive → recorded extraction point ONLY (WS-F, D7) |
+| **WS-A/C/D/E/F** domain, contracts, API and the intrinsic admin authoring surface | A new `ModerationStatus` label / sanction tier — **none is added** (D8) |
+| The **RTBF completeness** of every new Tier-1 column (premise #4) | `member_moderation_actions.reason_code`'s **removal** — it stays, as the primary ground (D3) |
+| `docs/moderation-record-model.md` — the tracked governance reference (premise #11) | A new permission key or catalog bump (premise #9) |
+| The `ordinarilyResultsIn` **guidance** metadata + its admin rendering | Narrowing `appliesTo` — ⛔ forbidden (premise #7) |
+
+⚠ **Scope additions beyond the epic's literal AC, flagged per the 10.18/10.19 convention:**
+
+- **The Niyamavali §8.5/§8.6/§8.9 work (AC1–AC3).** Provenance: `deferred-work.md:3865-3869` routes
+  them here by name, and the SCP §4d rows 6/7/11 source them to D10. Without them, WS-C/WS-D enforce
+  rules the governing instrument does not yet state.
+- **AC3's §8.4a correction** (premise #2) — the instrument currently understates its own mechanization.
+- **AC11's RTBF completeness** (premise #4) — the epic does not name it; shipping without it
+  reintroduces `0092`'s defect on three new columns.
+- **AC13's `docs/` reference** (premise #11) — promised by the SCP, owned by nobody, and the only
+  tracked home for a record model whose constitutional half lives in an untracked file.
+- **D2's TWO escalation columns**, where `epics.md` WS-B names one `escalation_justification`. The
+  epic's very next line requires the two parts be *"separately answerable"* and neither *"pre-filled
+  from the other"*, which a single column cannot deliver. This is a deviation from the epic's
+  **literal column name** — taken deliberately, recorded here per the 10.18/10.19 convention.
+- **AC5's `NOT VALID` escalation CHECK** — the repo's **first**. Forced by the table already being
+  populated with `terminate` rows (AC5 item 4); the un-validated legacy rows become an **owed
+  obligation** (AC13.5), never a silent gap.
+- **AC4's `IMMUTABLE` validator FUNCTION** — a new DB object the epic does not name, taken because
+  Postgres permits **neither** a subquery **nor** a set-returning function inside a `CHECK`, so the
+  per-entry shape has no other legal home. Precedented (`0001`, `0035`, `0036` and seven more
+  migrations declare functions), and the alternative is not "a simpler CHECK" but **no per-entry
+  enforcement at all**.
+- **AC9's denormalized `member_id` on the grounds table** — the epic's WS-E column list does not
+  include it. Without it AC11's RTBF scrub cannot be written in the shape every other scrub uses, in
+  the one path where a miss leaves PII behind an erasure request.
+
+---
+
+## Acceptance Criteria
+
+### AC1 — Q1–Q7 are ROUTED to the Trustee Panel, never authored unilaterally
+
+**Given** [[feedback_governance_commits_precede_implementation]] and the 10.18/10.19 precedent
+**When** the governance half begins
+**Then** a routing note `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-story-10-20.md`
+is authored **and committed ALONE** on a `governance/…` branch **before any `packages/` or `apps/`
+change**, carrying seven questions, each with lettered options, a ⭐ recommendation, and a **"Feeds"**
+column naming the AC the answer unblocks:
+
+| Q | Question | Feeds |
+|---|---|---|
+| **Q1** | **§8.5 — grounds for termination.** Land (a) the failure-of-trust **test** plus the six-item enumeration (forged documents · identity fraud · financial fraud · deliberate concealment · repeated malicious abuse · persistent conduct materially threatening the Trust after due process), or (b) the test alone, leaving enumeration to case law? ⚠ (b) makes `prd.md:871`'s "enumerated separately" consequence untestable | AC2 |
+| **Q2** | **§8.6 — the principles.** Land principles 1–7 (`moderation-model-decision-brief.md:531-583`) with the constitutional sentence **verbatim and leading**, plus the two-part escalation justification? Any principle the Panel declines must be named, because WS-C/WS-D mechanize 3, 5, 6 and 7 | AC2, AC6, AC8 |
+| **Q3** | **§8.2 — the two unanchored codes.** `regulator-action` and `voluntary-pending-review` ship today with **no §8.2 anchor** (D7.2). (a) **authorise** them in §8.2, or (b) **retire** them. ⛔ **The routing note must state that (b) is not implementable by this story**: retiring a code is a vocabulary change WS-F forbids here (`epics.md:3867`) and would need its own story plus a `moderation_reason_code` enum migration against live rows | AC2, AC10 |
+| **Q4** | **WS-D — the dwell/notice precondition.** What interval must separate a suspension from the termination that follows it, and is *"opportunity to respond"* satisfied by **elapsed dwell alone** (a), or does it require a **recorded response-or-waiver** (b)? ⭐ Recommend (a) for v1 with (b) named as 10.22's, since a response has nowhere to arrive until the appeal route exists. Also: does the duration live in the **registry as a version-pinned policy clause** (the FR-8 / Story 10.23 pattern) or as a code constant? ⭐ Registry | AC8 |
+| **Q5** | **WS-C — restoration exhaustion.** `epics.md:3852` says terminating on a ground with an available restoration path "requires a recorded justification", and that `contribution.r7a_restorations_used >= 2` makes exhaustion *checkable from data*. Is that (a) a **recorded justification + a fact snapshot on the record**, or (b) a **hard server-side block** below the threshold? ⚠ (b) makes a Panel decision refusable by a projection — see premise #10 for the cost, and D6 | AC7 |
+| **Q6** | **WS-F — `ordinarilyResultsIn` guidance.** The per-code guidance value is *governance data*, not an implementation default. Ratify the value for each of the seven moderation codes (⭐ recommend `'suspend'` for all seven, per §8.4a's test — the Panel escalates by recording why, not by the registry pre-empting it). ⚠ **The ruling must also cover the THREE restore grounds** (`rule-clearance`, `trustee-discretion`, `moderation-error`), which share the one `ReasonCodeMeta` type: ⭐ ratify **`null`** for all three — *a code that justifies no sanction carries no sanction guidance*. Without that clause the type forces a dev agent to invent guidance the Panel never gave (AC10) | AC10 |
+| **Q7** | **§8.9 + the severity gradient.** Land the future-governance test (*"Any future moderation ground or sanction shall be evaluated against these principles rather than by analogy to existing reason codes"*) here or with 10.22? **And** confirm the §2.5 gradient the SCP asks about (`sprint-change-proposal-2026-08-04.md:559`): the 12-month rejoin lock applies to a member *"terminated **or lapses**"*, so termination's harshest consequence is shared with ordinary lapsing | AC2, AC13 |
+
+**And** the ruling is recorded as a single `.decision-log.md` entry with **per-clause provenance** —
+Decision `2026-08-09-095` made per-clause provenance **mandatory** on any entry mixing ratification with
+author analysis; an author-written clause is labelled `[Author-committed]`, never flatly
+"Trustee-ratified"
+**And** the note states plainly what a ruling does **and does not** mean (the fence table above)
+**And** `git log` reads **governance → governance → implementation**, with the implementation branch
+**cut from the ratifying commit**, so the ordering is structural rather than asserted
+
+### AC2 — §8.5, §8.6 and §8.9 are authored in their RESERVED slots, both locales
+
+**Given** premise #1 and the Q1/Q2/Q3/Q7 rulings
+**When** the Part 8 amendment lands
+**Then** `docs/legal/niyamavali.md` gains **§8.5**, **§8.6** and **§8.9** *physically between §8.4a and
+§8.7*, and `niyamavali.hi.md` receives them at the structurally identical position — **the Hindi is a
+co-equal governing instrument, not a translation artifact**
+**And** §8.6 opens with the constitutional sentence **verbatim and leading**:
+> **Termination is an exceptional governance act, not a stronger suspension.**
+
+**And** the `:230` / hi `:228` reserved-numbers note is **edited to reserve §8.8 only**, and the
+sentence *"§8.7 is deliberately numbered ahead of them"* is retained as the historical record of why
+the ordering looks the way it does — ⛔ the numbers are **not closed up** and §8.7 is **not renumbered**
+**And** the §8.2 disposition from Q3 lands in §8.2 (option (a)) or is recorded as owed (option (b))
+**And** all new text is reproduced **verbatim, both locales**, in the `.decision-log.md` entry, because
+`docs/legal/` is gitignored and that entry is the only durable copy
+**And** **no** version bump, `Effective:` date, or `[LEGAL]` line is written, and none may be inferred
+**And** an `APPENDIX A — RULE INDEX` entry is added **only if** the Panel's ruling requires one —
+§8.5/§8.6/§8.9 are principles and grounds, not indexable `R`-rules (the Decision `2026-08-10-096`
+clause 10 / `2026-08-10-097` precedent); **record the absence** so a later reader does not read it as
+an omission
+
+### AC3 — §8.4a's mechanization disclosure is CORRECTED, then updated
+
+**Given** premise #2 — the *"Prior sanction required"* row asserts a gap that does not exist
+**When** this story updates the §8.4a disclosure to reflect the **mechanisms actually landed and
+green** and the **prior-sanction correction** — ⛔ which is **not** one of them — with **all four rows
+dispositioned, including the one this story leaves untouched**
+**Then** the disclosure block (`niyamavali.md:209-215`, hi `:207-213`) is rewritten in **both locales**
+so that:
+- **Prior sanction required** — is recorded as **already structurally enforced** (`none --terminate-->`
+  is illegal) and previously **understated**, with what was actually missing named: **dwell**
+- **Escalation justification** — flips to **mechanized** (WS-C)
+- **Notice + opportunity to respond** — flips to **mechanized to the extent Q4 rules**; if Q4 rules
+  (a), the *opportunity to respond* half is recorded as **still unmechanized, owned by 10.22**
+- **Portal access** — is **untouched**: still gated on the `termination_access_block` flip, which is
+  Story 10.21's and **not this story's**
+
+**And** the block's count sentence (*"Four of its rows…"*) is rewritten to match the four dispositions
+above **row by row**, rather than collapsed into a single count — ⛔ **a correction is NOT a
+mechanization**, and a sentence claiming this story "mechanized three of four rows" would repeat
+premise #2's defect in the opposite direction. If a count is retained at all, it counts **only** rows
+an AC actually mechanized, and its arithmetic must be checkable against AC3's own list
+**And** ⛔ a row is flipped to mechanized **only after** the enforcing code and its test are green — a
+disclosure that runs ahead of its mechanism is the same defect class, inverted
+
+### AC4 — WS-A: the record carries three separable parts, and each is structurally distinct
+
+**Given** `epics.md:3836-3838`
+**Then** a moderation record carries:
+
+| Part | Form | Required | Where |
+|---|---|---|---|
+| **(1) Reason code(s)** | Structured registry vocabulary — **exactly one primary**, any number of supporting | Always | `member_moderation_actions.reason_code` (primary, unchanged) + `member_moderation_grounds` |
+| **(2) Decision Note** | Prose, governance-grade, Tier-1 | Always, every action | `member_moderation_actions.decision_note_ciphertext` (renamed) |
+| **(3) Evidence** | **References only, NEVER free text** — complaint #, investigation #, helpdesk ticket, document id, external order number | Optional | `evidence_refs` JSONB, on the action **and** on each ground |
+
+**And** ⭐ **evidence references are structurally incapable of carrying prose.** Each entry is a
+`.strict()` object `{ kind, ref }` where `kind` is a **bounded enum** and `ref` matches a restricted
+identifier charset with a short max length — **a sentence must be REJECTED, not truncated**, and a test
+plants one and asserts the 422
+**And** the array is **cardinality-capped** and validated in the domain; the DB asserts
+`jsonb_typeof(evidence_refs) = 'array'`, **the cap, AND the per-entry shape**
+**And** ⚠ **be exact about what the DB actually backstops.** Array-ness and cardinality alone do
+**not** stop a raw-SQL writer: `[{"kind":"anything","ref":"<a full sentence of prose>"}]` satisfies
+both, and is precisely the free-text evidence this AC exists to make structurally impossible. **The
+per-entry shape check is the half that closes it.**
+**And** ⛔ **THE PER-ENTRY SHAPE CANNOT BE AN INLINE `CHECK` EXPRESSION — both obvious spellings are
+hard errors, verified against `twt-test-pg` (PG 16.14):**
+- `CHECK ((SELECT bool_and(…) FROM jsonb_array_elements(evidence_refs) e))` →
+  **`ERROR: cannot use subquery in check constraint`**
+- `CHECK (jsonb_array_elements(evidence_refs) ? 'kind')` →
+  **`ERROR: set-returning functions are not allowed in check constraints`**
+
+⇒ the per-entry shape rides an **`IMMUTABLE` SQL helper function** the CHECK calls — the set-returning
+scan lives inside the function body, where it is legal. `0099` therefore declares, before the table
+DDL, a function in the `0001`/`0035`/`0036` `CREATE FUNCTION`-in-a-migration voice, and the CHECK is
+`CHECK (moderation_evidence_refs_valid(evidence_refs))`. The verified-working body shape:
+
+```sql
+CREATE OR REPLACE FUNCTION moderation_evidence_refs_valid(v jsonb) RETURNS boolean
+  LANGUAGE sql IMMUTABLE AS $$
+  SELECT jsonb_typeof(v) = 'array' AND jsonb_array_length(v) <= <cap> AND NOT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(v) e
+     WHERE jsonb_typeof(e) <> 'object'
+        OR (SELECT count(*) FROM jsonb_object_keys(e)) <> 2
+        OR NOT (e ? 'kind' AND e ? 'ref')
+        OR e->>'kind' NOT IN (<the bounded kind set>)
+        OR e->>'ref' !~ '<the ref charset + length bound>' );
+$$;
+```
+
+Driven live, this shape **accepts** `[]` and `[{"kind":"complaint","ref":"CMP-2026-0001"}]` and
+**rejects** a prose `ref`, an unknown `kind`, and a third key — i.e. it is the half AC4 needs, not a
+weaker restatement of the array/cap pair
+**And** ⛔ **the array + cap CHECKs stay INLINE and separate** from the function call, so a violation
+names which rule it broke; ⛔ the function is **not** used to re-implement them
+**And** ⛔ If the shape check is judged not worth its cost, the honest statement is *"the entry shape
+is enforced in the domain only; a raw-SQL writer can bypass it"* — written into the migration header
+**and** `docs/moderation-record-model.md`, never the stronger claim
+([[feedback_record_unattested_no_backfill]]). ⛔ What is **not** available is the middle position of
+claiming a shape CHECK that the DDL could never have created
+**And** ⛔ **no query in this story filters or sorts on `evidence_refs`** — no `->>'` cast is
+introduced anywhere ([[project_story_validate_footguns]]: JSONB `->>'` yields TEXT and silently
+mis-compares against integers)
+
+### AC5 — WS-B: ONE hand-authored migration `0099`, and the rename is bundled
+
+**Given** premise #6 and `epics.md:3841-3844`
+**Then** **one** migration `packages/domain/migrations/0099_moderation-record-model.sql`:
+1. **RENAMES** `member_moderation_actions.rationale_ciphertext` → `decision_note_ciphertext`
+   (`ALTER TABLE … RENAME COLUMN`). ⚠ Privileges follow the attribute, so `0092`'s column-level
+   `GRANT UPDATE` and its RLS UPDATE policy survive the rename **untouched** — state this in the
+   migration header so a reader does not "helpfully" re-grant it (premise #4)
+2. **ADDS** `escalation_inadequacy_ciphertext` and `escalation_proportionality_ciphertext` — **TWO
+   columns, not one JSON blob**: the two-part test is enforced by the *shape of the record*, and one
+   column would let a UI concatenate the parts and satisfy the check with a single paragraph
+3. **ADDS** `evidence_refs` JSONB (default `'[]'::jsonb`, NOT NULL) with its array + cap CHECKs
+   **inline** and its per-entry shape CHECK **through the `IMMUTABLE` helper function declared
+   earlier in the same migration** — ⛔ an inline `jsonb_array_elements` or subquery is a migrate-time
+   `ERROR`, not a style preference (AC4 carries both verbatim). ⚠ **These are added VALID, and the
+   contrast with item 4 is the lesson**: every
+   pre-existing row acquires the `'[]'` default, which satisfies all three checks, so the validating
+   scan passes. ⛔ Do **not** blanket-apply `NOT VALID` to item 3 because item 4 needs it — a
+   constraint added `NOT VALID` without cause leaves a permanent un-validated gap for nothing
+4. **ADDS** the escalation-presence CHECK — ⭐ **`NOT VALID`, and the qualifier is load-bearing**:
+   `(action = 'terminate') = (escalation_inadequacy_ciphertext IS NOT NULL AND escalation_proportionality_ciphertext IS NOT NULL)`
+   — the **structural half** of WS-C, in the `member_moderation_actions_rejoin_iff_terminate` shape
+   (`0091:61`): a termination without both parts, or a suspend/restore carrying one, is impossible on
+   **every** write path including a raw SQL one.
+   ⛔ **Why `NOT VALID` and not a bare `ADD CONSTRAINT`.** `0091:61`'s identically-shaped CHECK was
+   created **inside `CREATE TABLE`, on an empty table**. This one is an `ALTER TABLE` against a
+   **populated** one — 10.10 and 10.19 have been writing `action = 'terminate'` rows since they
+   shipped, and every one carries `NULL` in both new columns, so a bare `ADD CONSTRAINT` scans the
+   existing rows and dies **`23514` at migrate time**.
+   ⛔ **A sentinel backfill is NOT available and must not be attempted.** `encSentinel` is a
+   per-Pariwar Tier-1 envelope encrypt (`anonymize.ts:183-185`); a `.sql` migration cannot make a KMS
+   round-trip, and writing a plaintext literal into a ciphertext column would poison `decryptSafe`
+   for those rows forever.
+   ⇒ `NOT VALID` skips the scan of pre-existing rows while enforcing **every INSERT and UPDATE from
+   that moment on** — and because this table is append-only, that is **full forward enforcement**,
+   not a weakened constraint.
+   ⚠ **This is the repo's FIRST `NOT VALID`** — `grep -l "NOT VALID" packages/domain/migrations/`
+   returns nothing at `4c7fdee`. It is a deliberate precedent: state in the migration header why the
+   ordinary `ADD CONSTRAINT` shape does not apply to a table that was already accumulating rows.
+   The un-validated legacy rows are recorded as an **owed obligation** (AC13.5), never left silent
+5. **CREATES** `member_moderation_grounds` (WS-E) — append-only, tenant-isolated, RLS FORCE'd, with
+   `GRANT SELECT, INSERT` for `twt_app` and **no `twt_service` grant** (the pre-scope signup rejoin
+   guard reads `action`/`rejoin_permitted_at` only and has no business here — state it)
+6. **GRANTS** `UPDATE` on **each new Tier-1 column by name** (`escalation_*`, and the grounds `note`)
+   plus the matching tenant-scoped RLS UPDATE policy on the new table — **premise #4's trap, closed
+   at the point it opens**
+7. **ADDS the two RULING-DEPENDENT columns — and ⛔ only the ones the ruling actually calls for.**
+   AC7 and AC8 each require a column no other item in this list creates, and both are gated on a
+   Task-2 ruling, so this item is authored **after** the ruling and its content is determined by it:
+   - **Q5 (a) ⇒** `r7a_restorations_used_snapshot integer NULL` on `member_moderation_actions` —
+     AC7's as-of-decision fact snapshot. ⛔ **NULLABLE, and `NULL` is a first-class value meaning
+     *unknown*, never `0`** (AC7). Under **Q5 (b)** this column is **not created**.
+   - **Q4 (registry) ⇒** `dwell_policy_version text NULL` on `member_moderation_actions` — AC8's
+     version pin, in the `resolveRestorationDisciplinePolicy` shape. Under **Q4 (code constant)**
+     this column is **not created**, and that outcome is itself recorded (AC13.6).
+   ⚠ **Neither column is Tier-1.** A bounded integer and a version string are non-PII ⇒ **neither
+   takes a `GRANT UPDATE`** (item 6) and **neither is scrubbed** (AC11). State that reasoning where
+   they are declared, because the default posture on this table is the opposite and a reviewer will
+   read the omission as premise #4's trap recurring.
+   ⛔ **Item 7 is why WS-B cannot be split AHEAD of WS-C/WS-D.** The epic permits splitting along the
+   workstream lines, and WS-B is *"the only one that touches the schema"* — so WS-C's and WS-D's
+   columns must ride WS-B's migration, and WS-B must therefore land **after** the Q4/Q5 rulings that
+   determine them. A split that ships WS-B first strands item 7 and forces the second migration this
+   AC forbids
+
+**And** the migration is authored **after the Task-2 ruling** — items 1–6 are fixed, **item 7 is
+determined by it**, and there is **still exactly ONE migration**: a follow-up migration to add a
+column the ruling implied is a second migration this AC forbids
+**And** the file is **hand-authored**, carries **only this story's DDL**, and `_journal.json` gains
+`{ "idx": 99, "version": "7", "tag": "0099_moderation-record-model", "when": 1789270800000,
+"breakpoints": true }`
+**And** ⛔ **`0091`/`0092` are NOT regenerated and NOT edited.** They are applied and journalled;
+drizzle skips by journal `when`, and a regen raises `42P07`
+**And** the drizzle schema module, the `policies/` declarations (`policies/index.ts` barrel included)
+and the migration agree — `pnpm db:check` is green, and the RLS policy-regression spec is extended to
+the new table in the `member-moderation-actions-policy-regression.spec.ts` shape
+
+### AC6 — WS-C: the escalation justification is mandatory, two-part, and neither part is derivable from the other
+
+**Given** principles 3 and 5, and `epics.md:3846-3851`
+**When** `action === 'terminate'`
+**Then** **both** parts are required and each is separately answerable:
+- **(a) Why suspension is inadequate** — what suspension would fail to protect, what risk would persist
+  through it, or why the restoration path it preserves is unavailable or futile
+- **(b) Why termination is proportionate** — why the chosen sanction fits the conduct
+
+**And** part (a) is **NOT satisfied** by (i) asserting the seriousness of the conduct, (ii) citing the
+reason code, or (iii) restating (b). Per premise #5 the anti-restatement guard runs **on plaintext, in
+the route, before encryption** — the `assertRationalePresent` placement (`handlers.ts:197-208`), so a
+doomed request never spends a KMS round-trip. A normalized-equality match between (a) and (b) is a
+typed **422**, never a silent accept
+**And** a minimum-substance floor applies to each part independently (a length floor is a floor, not a
+quality test — say so where it lives; it exists to reject `"n/a"`, not to judge reasoning)
+**And** ⛔ **neither field may be pre-filled from the other** in the admin surface: two separate
+controls, no copy-across affordance, no shared state — pinned by a **render** test, not only a
+view-model test (the `epics.md:3729` finding: *"AC9's prose reached nobody because tests asserted the
+view-model and never the render"*)
+**And** both parts are **Tier-1 encrypted** under `MEMBER_MODERATION_FIELD_CLASS`, via the existing
+`moderation-crypto.ts` helpers — the **domain never encrypts** (`write.ts:9-15`)
+**And** the domain writer takes them as **already-serialized ciphertext**, with a non-empty backstop
+mirroring `write.ts:136-139`
+
+### AC7 — WS-C: terminating over an available restoration path requires a recorded justification
+
+**Given** principle 4 and `epics.md:3852`, under the **Q5 ruling**
+**When** the ground is one with a Niyamavali-defined restoration path
+**Then** a justification addressing that path is recorded — part (a)'s third alternative (*"why the
+restoration path it preserves is unavailable or futile"*) is the field it lands in, not a fourth column
+**And** under Q5 option (a): the record additionally carries a **snapshot of
+`contribution.r7a_restorations_used` as of the decision instant**, so a later reviewer can test the
+assertion against the data that existed *then* rather than re-deriving it against a moved projection —
+the `actor_display` snapshot rationale (`schema/member_moderation_actions.ts:92-95`), applied to a fact
+**And** ⛔ **the snapshot is `produceContributionFacts(...).r7aRestorationsUsed`
+(`packages/validity-service/src/producer.ts:687-693`) — the DERIVED fact, never the raw input.**
+`produceContributionFacts` is the per-member entry point: it calls
+`readContributionFactInputs` (`packages/domain/src/contribution/facts.ts:633` — **not** the `:867`
+Pariwar scan) and hands the result to `deriveContributionFacts`. ⚠ **Snapshotting the input directly
+is the defect this AC forbids, wearing a different hat**: `inputs.completedRestorationEpisodes` is
+always a number, while the *fact* is `null` whenever `consecutiveRequired` did not resolve —
+`r7aRestorationsUsed: consecutiveRequired === null ? null : input.completedRestorationEpisodes`
+(`producer.ts:550`). Reading the input would therefore record a confident count on exactly the
+Pariwars where the threshold was never provisioned, which is the false-all-clear the next paragraph
+bans. **Only the producer knows the difference between `0` and *unknown*.**
+⛔ Never re-derive the count in `apps/api` ([[project_engine_never_infers_contribution_facts]])
+**And** a **null snapshot is a first-class value, never zero**: R7(A) resolves to no clause version on
+an unprovisioned Pariwar and the fact is then **omitted** (`producer.ts:586-587`;
+`contribution-facts.test.ts:447-453`). ⛔ Recording `0` where the answer is *unknown* would let
+"restorations exhausted" read as "never restored" — the false-all-clear class D1-B forbids
+**And** under Q5 option (b) only: the block is implemented in the **caller**, alongside AC8's
+precondition, never inside `nextModerationStatus`
+
+### AC8 — WS-D: a dwell/notice precondition, in the CALLER, and NOT a new state
+
+**Given** principles 6–7 and `epics.md:3854-3857`
+**Then** the precondition is added in **`nextModerationStatus`'s caller** — `moderateMember`
+(`packages/domain/src/member/moderation/write.ts:129-209`), or the route's legality path, per D5 —
+and ⛔ **`nextModerationStatus` itself is not touched**: it stays the pure, total, four-arm
+`(status, action) => status | null` reducer, and its `suspended --terminate--> terminated` arm
+**remains legal**. What changes is *when* it may be asked for, not *whether* it exists
+**And** the story records what it corrects, verbatim from `epics.md:3857`: *"`nextModerationStatus('suspended','terminate')`
+returns `'terminated'` unconditionally, so two API calls seconds apart terminate a member — and because
+the suspension notice is a best-effort post-commit job, termination can precede its own notice"*
+**And** the dwell is measured from the **producing suspension's `acted_at`** on the latest
+`member_moderation_actions` row, read **inside the same scope transaction** as the write — checked
+outside, it is a TOCTOU, exactly as the Story 10.19 Panel precondition documents
+(`apps/api/src/modules/member-moderation/handlers.ts:214-258`)
+**And** ⭐ **`acted_at` — the APP clock — is the pinned base, and the alternative is named so it is
+not picked by accident.** `getCurrentMemberModerationOverlay` is already read in-tx and already
+returns `since`, the producing event's `occurred_at` — which is the **DB** clock. It is the closer
+value to hand and it is the **wrong** one here: the dwell comparison's *now* is `deps.clock()`, the
+injected app clock, so measuring against `since` compares two different clocks and the elapsed
+interval silently carries their skew. Both sides of the comparison come from the same clock, or the
+gate is un-testable ([[project_known_livedb_test_failures]] #12 — the date-bomb class: a spec that
+pins one side and lets the other default is a failure that arrives on a DATE, and a baseline
+comparison can never see it). ⇒ compare `input.now` against `acted_at`, and the spec pins **both**
+**And** ⚠ `read.ts:190-197` records that `acted_at` **can tie** (it is injected, not `DEFAULT now()`),
+which is why the moderated-members list breaks ties on `created_at`. That does not transfer here: the
+row this precondition reads is the one the legality check has *already* established as the current
+suspension, so it is identified by status, not by an ordering — ⛔ do not import the tie-break and do
+not re-derive "latest" independently of the overlay the write path already trusts
+**And** the duration resolves per Q4 — if from the registry, as a **version-pinned policy clause** in
+the `resolveRestorationDisciplinePolicy` shape
+(`packages/domain/src/member/restoration-discipline/policy.ts:96-108`), with the **version pinned onto
+the record** and an **unprovisioned registry surfacing a named sentinel, never a code default**
+(Decision `2026-08-07-088` clause 2: an unratified sanction imposed by a machine is explicitly
+rejected — here the safe direction is **do not permit the termination**, and the error must say why)
+**And** the violation is a typed **409** with its own code, distinct from
+`MODERATION_INVALID_STATE_CODE` — "too soon" and "illegal transition" are different facts and a
+trustee must be able to tell them apart
+**And** ⭐ **the console must not offer a button the server will refuse.** D5 rejects dwell-in-the-reducer
+because it would fork `legal_actions` and make *"the console's buttons disagree with the server"* —
+but leaving dwell **only** in the caller produces that same disagreement from the other side:
+`legalActions` derives purely from `isLegalModerationTransition(overlay.status, a)`
+(`handlers.ts:380-382`), so `terminate` stays in the list for the whole dwell window and the console
+renders an enabled control that 409s. ⇒ the status / history response carries a **separate, additive**
+`termination_available_at` (or the Q4-named equivalent) **alongside** `legal_actions`
+**And** ⛔ **`legal_actions` itself is NOT filtered.** Legality and precondition are different facts;
+collapsing them into one list is exactly the fork D5 forbids, and it would make the reducer's output
+depend on a clock
+**And** ⚠ if the Panel prefers the control stay enabled with the 409 as the feedback, that is a
+legitimate ruling — but it is **recorded as a decision** in `docs/moderation-record-model.md`, never
+arrived at by omission
+**And** ⛔ **suspension, restore and the first suspension are unaffected.** A test pins that a
+`suspend` immediately following a `restore` is still accepted
+
+### AC9 — WS-E: grounds are append-only; a later finding attaches, it never rewrites
+
+**Given** `epics.md:3859-3862`
+**Then** `member_moderation_grounds` is keyed to `moderation_action_id` and carries: `code` ·
+`is_primary` · `added_by` (+ `added_by_display` snapshot) · `added_at` · `note` (Tier-1, optional) ·
+`evidence_refs` · `supersedes_ground_id` (nullable self-reference) · `pariwar_id` (RLS) ·
+**`member_id`**
+**And** ⭐ **`member_id` is DENORMALIZED onto this table deliberately, and AC11 is why.** Every scrub
+in `anonymize.ts` is `.where(eq(<table>.memberId, memberId))` — the RTBF has a member id and nothing
+else. A grounds table reachable only through `moderation_action_id` would make AC11's
+*"every `member_moderation_grounds.note` for the member"* **unexpressible in the shape every other
+scrub uses**, forcing either a correlated subquery inside an UPDATE or a two-step read-then-write, in
+the one code path where a miss means PII survives an erasure request. This is the **same**
+denormalization `pariwar_id` already takes on this table for RLS, for the same reason: the row must
+be findable by the axis its guard queries on. ⛔ It is NOT a second source of truth — it is written in
+the action's own transaction from the action's own `member_id`, both rows are append-only, and a
+live-DB test asserts the pair agrees (the D3 argument, applied a second time)
+**And** **exactly one primary** is structurally enforced by a **partial unique index** on
+`(moderation_action_id) WHERE is_primary`, and the primary row is written **in the same transaction as
+the action** — so "at most one" is the DB's job and "at least one" is the writer's, pinned by a test
+**And** the primary ground's `code` **equals** `member_moderation_actions.reason_code` — a deliberate
+denormalization (D3), guarded the way `listModeratedMembersForPariwar` guards its own
+(`read.ts:183-199`): a **live-DB equivalence test** that drives a member through suspend → append a
+**supporting** ground → supersede **that supporting** ground → terminate, and asserts the two agree at
+every step
+**And** codes may be **added, superseded, or corrected by a further append-only record** — ⛔ **never
+`UPDATE`d, never `DELETE`d.** The GRANT posture is `SELECT, INSERT` only, with the single column-level
+`UPDATE` on `note` existing **solely** for the RTBF scrub (AC11), exactly as `0092` did for the
+rationale
+**And** ⛔ **supersede applies to SUPPORTING grounds ONLY — the primary ground is immutable BY
+CONSTRUCTION, and that is deliberate, not an oversight.** The partial unique index and the
+`SELECT, INSERT` grant together make it structurally unmovable: a second `is_primary` row raises
+**`23505`**, and clearing the existing row's flag would be an `UPDATE` that no grant permits. ⇒
+`epics.md` WS-E's *"added, superseded, or corrected"* is satisfied **for supporting grounds**; for the
+primary the answer is that it **never moves at all**
+**And** ⭐ **this is what makes D3's denormalization safe, and the story states it rather than leaving
+it implicit.** `member_moderation_actions` is append-only too, so `reason_code` cannot move either —
+the held-equivalent pair is immutable on **both** sides. That is strictly stronger than the
+`read.ts:183-199` argument it is modelled on: that one holds because one writer writes both in one tx;
+this one holds because **neither can ever be rewritten**
+**And** ⛔ **any request that would produce a SECOND primary is a typed 409** — whether it supersedes
+the primary, appends a fresh `is_primary: true` row, or both. Not a silent no-op, and ⛔ **never a
+`23505` leaking as a 500**: the partial unique index is the *backstop*, the typed error is the
+*interface*. *"The primary ground is fixed at the action"* is a fact a trustee must be able to read
+off the error
+**And** a **supersede** inserts a new **supporting** row referencing the superseded one; the read folds
+them so the console can render the current set **and** the history that produced it. The superseded
+row is still returned — an audit trail that hides what was superseded is not an audit trail
+**And** the append path emits a registered `member.moderation.ground-appended` event on the **member's
+own stream**, via `projectMemberState` (the `write.ts:163-177` shape): lifecycle-**identity**,
+`.strict()` payload = **`...auditShape`** + the bounded `code` + the superseded id — ⛔ **NO note, NO
+evidence refs, NO actor display, NO free text of any kind** (R1: `events_log.payload` is plaintext
+JSONB; `events.ts:15-19`)
+**And** ⛔ **the `auditShape` spread is REQUIRED, not optional decoration.** Every `member.*` payload
+carries `from_state` / `to_state` / `trigger` / `actor`, `projectMemberState` **parses the payload
+against the registered schema before the insert**, and this AC's own `from_state === to_state` test
+has nothing to assert without them. ⚠ `overlayShape` (`moderation_from`/`moderation_to`) is
+**deliberately NOT spread** — no moderation status moves on an append, and claiming a from/to pair
+would be a false statement about the overlay
+**And** ⛔ **the new type has THREE registration points, and missing the domain two fails at RUNTIME,
+not at compile time.** All three are this story's:
+1. `packages/domain/src/member/events.ts:300` — `MEMBER_EVENT_TYPES` (the tuple `MemberEventType` is
+   derived from; `projectMemberState`'s `eventType` parameter is typed by it, `project.ts:50`)
+2. `packages/domain/src/member/events.ts:324` — `MEMBER_EVENT_PAYLOAD_SCHEMAS`, whose `satisfies`
+   makes a type without a schema a compile error **only once step 1 has landed**. `projectMemberState`
+   does `MEMBER_EVENT_PAYLOAD_SCHEMAS[input.eventType].parse(input.payload)` (`project.ts:78`) — an
+   unregistered type is `undefined.parse(…)`, a **TypeError on the live write path**
+3. `packages/events/src/registry.ts` — `EVENT_TYPE_REGISTRY`, in the `member.moderation.*` block's
+   voice (`registry.ts:129-152`)
+
+⚠ The `MemberEventType` doc block at `events.ts:313-315` states the union's size as **21** in prose;
+this story makes it **22** and the sentence is updated with it — a stale count is a comment that lies
+**And** ⛔ **`is_primary` is NOT in the payload, and the omission is reasoned rather than accidental.**
+The primary ground is written in the action's own transaction and is already on the timeline via that
+action's `member.moderation.suspended` / `.terminated` event `reason_code`; appends are
+supporting-only by construction, so `is_primary` here would be a field that is **always `false`**. A
+test pins that **no `ground-appended` event is ever emitted for a primary ground**
+**And** the reducer stays **TOTAL by construction, and the story says why**: `memberStateMachine`'s
+`default: return state;` arm (`packages/domain/src/member/state.ts:123-124`) makes every
+`member.moderation.*` type an identity transition — `state.ts:23` says it in terms, *"they need no arm
+below, only the `default` one"*, and `moderation/events.ts:11-13` records the same for the existing
+three. ⇒ this fourth type needs **NO new reducer arm** and `members.state` provably cannot move.
+⛔ Do not add an arm — **do** add the `from_state === to_state` test that pins it, the way the
+existing three are pinned
+**And** ⚠ **that identity test proves less than it looks like it proves, so it does not stand alone.**
+`memberStateMachine` `safeParse`s the payload and returns the state **UNCHANGED** on a malformed one
+(`state.ts:91-96`, whose own comment names the case) — this is precisely Story 10.19's debug-log
+finding #3, where a seed carrying a malformed payload left every member in the wrong state while
+every assertion passed. An identity assertion is therefore satisfied by a **correct** payload and by a
+**rejected** one alike. ⇒ pin the payload's acceptance **separately**, by parsing it against the
+registered schema directly, so a payload that silently fails validation cannot pass as identity
+**And** the append route is gated on the existing `member.moderate` key with a **fourth step-up action
+context** (`member_moderation_append_ground`), so an elevation minted for a restore can never be spent
+on a finding (the 10.10 three-context precedent, `routes.ts:108-110`)
+
+### AC10 — WS-F: guidance is added; the vocabulary boundary is NOT reopened
+
+**Given** principle 2 and `epics.md:3864-3868`
+**Then** ⛔ **`appliesTo` is NOT hard-narrowed** — it stays `['suspend','terminate']`
+(`reason-codes.ts:72`). `ReasonCodeMeta` gains **`ordinarilyResultsIn`** (Q6-ratified values), the
+registry read (`listReasonCodeMeta` → `ReasonCodesListResponse`) carries it, and the admin dropdown
+**surfaces it as guidance** — ⛔ never as a default selection, a pre-selected action, a severity score,
+or a recommendation. FR-57's prohibition is a prohibition **on the decision moving**, and a
+pre-selected sanction moves it
+**And** ⛔ **the field is typed `readonly ordinarilyResultsIn: ModerationAction | null` — REQUIRED,
+nullable, and `null` on all three RESTORE grounds.** `ReasonCodeMeta` is the metadata type for
+**every** code in the registry, and `ReasonCode` spans **ten**: the seven moderation grounds *and*
+`rule-clearance` / `trustee-discretion` / `moderation-error` (`reason-codes.ts:44-49`). Q6 ratifies
+guidance for the seven. The two lazy readings both fail:
+- **optional (`?:`)** ⇒ `satisfies Record<ReasonCode, ReasonCodeMeta>` no longer bites and a
+  moderation ground can ship with **no** guidance, silently — the exact discipline this AC invokes;
+- **required and non-nullable** ⇒ the three restore grounds need a value **the Panel never ratified**,
+  and a dev agent invents one. *"What does `moderation-error` ordinarily result in?"* has no
+  governance answer, and manufacturing one is the registry pre-empting the Panel in miniature —
+  principle 2's defect, at one-tenth scale.
+
+⇒ `null` is the **ratified** answer for a restore ground: *this code carries no sanction guidance
+because it justifies no sanction*. The Q6 ruling states it, so the value has provenance rather than
+being a placeholder
+**And** the exhaustiveness discipline then holds as claimed: `satisfies Record<ReasonCode,
+ReasonCodeMeta>` makes a code without guidance a **compile error** (`reason-codes.ts:139,172-176`)
+**And** the admin dropdown renders guidance **only where it is non-null**, and renders **nothing** —
+not "n/a", not an empty chip — where it is `null`
+**And** `reason-codes.ts`'s frozen code-level vocabulary **stays exactly as shipped**: creating a
+**new** reason code remains a Part 11 amendment → registry version → trustee approval → audit →
+publication, **never a runtime mint path**. ⛔ No per-tenant reason-code table, no `moderation_reason_code`
+enum values added or removed (the Q3 (b) branch is explicitly out of scope — AC1)
+**And** the **operational/governance split** is recorded at the point of use: *appending a ground to an
+existing action* is operational (built here); *creating a new code* is a governance act (not built,
+ever, at runtime)
+**And** the record model is built **moderation-only**, with the grounds table's columns kept
+**subject-agnostic** (`code`/`is_primary`/`note`/`evidence_refs` name no member concept), and the
+**future extraction point is named in `docs/moderation-record-model.md`** — extracted only when a
+second discipline surface actually exists ([[feedback_no_premature_package]])
+
+### AC11 — Every new Tier-1 column is erasable, and a test proves it
+
+**Given** premise #4 — a column-level GRANT does not extend to new columns, and an RTBF is a **soft**
+delete so the `ON DELETE cascade` FK never fires
+**Then** `packages/domain/src/member/anonymize.ts` scrubs `escalation_inadequacy_ciphertext`,
+`escalation_proportionality_ciphertext` and every `member_moderation_grounds.note` for the member,
+using the **sentinel** (`encSentinel`), never `NULL` — the columns are NOT NULL where required and the
+append-only posture forbids deleting the row (`anonymize.ts:172-176`)
+**And** the grounds scrub is `.where(eq(memberModerationGrounds.memberId, memberId))` — **the
+identical one-liner shape every other table in this file uses**, which is what AC9's denormalized
+`member_id` exists to make possible. ⛔ A scrub that has to reach through `moderation_action_id` is
+the signal that the column was dropped from the migration
+**And** the rename is followed through: the existing scrub at `anonymize.ts:183-185` targets
+`decisionNoteCiphertext` after the rename, with **no behaviour change**
+**And** the bounded governance facts are **retained** — `action`, `reason_code`, ground `code`,
+`is_primary`, `added_at`, `rejoin_permitted_at`: FR-6's rejoin lock and the audit trail depend on the
+rows existing
+**And** `evidence_refs` are **retained**, because they are bounded references to other records, not
+free text — ⚠ **state this decision explicitly**; a reviewer will ask, and "they are identifiers" is
+the answer only because AC4 makes it structurally true
+**And** the live-DB `rtbf-anonymize.test.ts` is extended to assert **every** new column, by name. ⛔ A
+test that asserts "the rationale is scrubbed" and stops is what let `0092`'s gap ship the first time
+
+### AC12 — The record surfaces where the decision is made and where it is reviewed
+
+**Given** the `[PRIMITIVE]` + one-slice-one-surface named exception (`epics.md:563`) — a primitive
+whose only viable population mechanism is administrator-authored data may include the **minimal
+authoring surface intrinsic to its existence**
+**Then** `apps/admin/.../member-status/ModerationStrip.tsx` gains, on `terminate` **only**: the two
+escalation controls (AC6), the supporting-ground picker, and the evidence-reference rows —
+⛔ **not** a free-text evidence box
+**And** the terminate control reflects **AC8's dwell precondition** — disabled, with a stated reason
+and the "available at" instant, while dwell is unelapsed (or enabled-with-409 if the Panel so ruled,
+per AC8). ⛔ A disabled control with no reason is a worse failure than the 409 it replaces
+**And** the Decision Note label, placeholder and helper copy are renamed from *rationale* throughout
+the admin surface and its i18n modules — the field is now the **Decision Note**, and a UI that still
+says "rationale" describes a field that no longer exists
+**And** `MODERATION_RATIONALE_MAX_CHARS` (`packages/contracts/src/member-moderation/dto.ts:37`) is
+renamed alongside it and stays the **single exported source** the textarea's `maxLength` reads — the
+duplication-by-value defect its own doc block records was already fixed once
+**And** the history read renders each action's grounds (primary, supporting, superseded) and its
+evidence references; the **Decision Note and both escalation parts stay decrypt-on-demand**, per-action,
+never in a list DTO (`dto.ts:9-16`) — ⛔ **three new Tier-1 fields must not become three new list
+columns**
+**And** the OpenAPI spec regenerates deterministically (`pnpm contracts:check-openapi-determinism`)
+**And** domain-camelCase ↔ contracts-snake_case is walked at the boundary for **every** new field
+(`decision_note`, `escalation_inadequacy`, `escalation_proportionality`, `evidence_refs`,
+`is_primary`, `ordinarily_results_in`, `supersedes_ground_id`, `termination_available_at`, **plus
+whichever of `r7a_restorations_used_snapshot` / `dwell_policy_version` the ruling created** per AC5
+item 7) — [[feedback_story_validate_footguns]]
+
+### AC13 — What this story does and does NOT close is recorded
+
+**Given** [[feedback_record_unattested_no_backfill]]
+**Then** `docs/moderation-record-model.md` is created (premise #11) carrying: the three-part record
+model, the operational-vs-governance vocabulary split, the two-part escalation test, and the named
+**future extraction point** — the tracked companion to the untracked Niyamavali text
+**And** `deferred-work.md` records, without softening:
+1. **§8.8 stays UNLANDED** — the moderation appeal, owned by **10.22**. §8.6 principle 8 states the
+   gap; it does not close it
+2. **Q3 (b), if ruled** — retiring `regulator-action` / `voluntary-pending-review` needs its own story
+   and an enum migration against live rows. Named, with a re-trigger
+3. **The *opportunity to respond* half of §8.4a**, if Q4 rules (a) — mechanized as dwell only, with
+   10.22 as the named owner
+4. **The generic discipline-record primitive is NOT extracted** — one consumer exists. Re-trigger: a
+   second discipline surface (trustee removal, volunteer discipline, vendor blacklisting)
+5. **`0099`'s escalation CHECK ships `NOT VALID`** — every `member_moderation_actions` row written
+   before this migration is **grandfathered unvalidated**. Forward enforcement is complete (the table
+   is append-only), but **`VALIDATE CONSTRAINT` is OWED** and is dischargeable only once those legacy
+   `terminate` rows are dispositioned by a governance act — which is not this story's. ⛔ Record the
+   row count **observed at migrate time**; ⛔ never backfill a justification nobody wrote
+   ([[feedback_record_unattested_no_backfill]])
+6. **Whichever of AC5 item 7's two columns the ruling did NOT create** — if Q4 ruled the code-constant
+   branch, the dwell duration is **unversioned on the record** and a later policy change cannot be
+   read off a historical decision; if Q5 ruled (b), no fact snapshot exists and the exhaustion
+   assertion is **re-derivable only against a moved projection**. Name the consequence, not just the
+   absence
+7. **The standing Trustee Panel obligation queue**, restated as a **count** rather than as progress:
+   it stood at **seven** after Story 10.19 (`deferred-work.md:3870-3875`); this story's counsel review
+   of §8.5/§8.6/§8.9 makes it **eight** unless a ruling discharges one. ⛔ State the number this story
+   leaves, verified at the time of writing — never asserted from this file
+**And** ⛔ **no `termination_access_block` flag change**, no Story 10.21 claim, no assertion that Part 8
+is settled
+
+---
+
+## Load-Bearing Decisions
+
+### D1 — ⭐ The governance half is not a preamble; it is half the story.
+WS-C/WS-D mechanize principles 3, 5, 6 and 7. Those principles exist today only in a **decision brief**
+and a **sprint change proposal** — neither is a governing instrument. Shipping the enforcement first
+would mean the system enforces a rule the Niyamavali does not state, which is the inverse of the defect
+this whole arc exists to close. Route → rule → author → record → implement, as 10.18 and 10.19 both did.
+
+### D2 — Two columns for the escalation justification, never one.
+`epics.md:3851` requires the two parts be "separately answerable" and neither "pre-filled from the
+other". One column (or one JSON blob) satisfies a presence check with a single concatenated paragraph
+and makes the anti-restatement guard meaningless. **The record's shape is the enforcement**; the route
+guard and the UI guard are the second and third layers, not the first.
+
+### D3 — `member_moderation_actions.reason_code` STAYS, as the primary ground.
+It is read by the event payload (`events.ts:44`), the history DTO, the moderated-members list, the
+notice worker and the admin console. Moving the primary ground into the grounds table would rewrite six
+read paths for zero governance gain, and the FR-6 rejoin guard would then depend on a join. The
+denormalization is deliberate, and it is guarded the way this codebase already guards its other
+held-equivalent pair — by a live-DB test that drives every arm ([[project_contribution_fact_projection_substrate]]).
+
+### D4 — The rename needs no re-grant; the new columns do.
+Premise #4. Postgres column privileges follow the attribute through a rename, so `0092`'s
+`GRANT UPDATE ("rationale_ciphertext")` becomes a grant on `decision_note_ciphertext` with no action.
+Every **new** PII column starts with **no** UPDATE grant and is therefore un-erasable until `0099`
+grants it. The failure is silent: the scrub compiles, runs, and raises a permission error only against
+a real database — or worse, is simply never written, which is how `0091` shipped.
+
+### D5 — The precondition goes in the CALLER, and the reducer stays pure.
+`epics.md:3856` says it in terms. `nextModerationStatus` is pure, total and exhaustive
+(`status.ts:36-55`); it takes no clock, no db and no policy. Putting dwell inside it would make it
+async, un-testable in isolation, and would fork the one place four other call sites derive
+`legal_actions` from (`handlers.ts:380-382`) — the console's buttons would then disagree with the
+server. **A precondition is a caller's concern; legality is the reducer's.**
+
+### D6 — A fact must not be able to refuse a Panel decision (Q5's shape, and why (a) is recommended).
+`contribution.r7a_restorations_used` is a **projection**. It can be `null` (unprovisioned registry), it
+can lag, and it is *omitted* rather than zeroed when R7(A) resolves to no clause version. A hard block
+below `>= 2` would mean a Pariwar with an unprovisioned registry cannot terminate anyone — an
+availability failure wearing a governance costume — and it would contradict principle 2, which assigns
+the sanction to the Panel. ⭐ Recommend the **snapshot + recorded justification**: it makes the
+assertion *checkable* by a reviewer, which is what `epics.md:3852` actually asks for, without making a
+projection the decider. **The Panel rules; this story presents the cost.**
+
+### D7 — Subject-agnostic columns, no extraction.
+The shape (primary ground · supporting grounds · findings · proportionality · evidence) would serve
+trustee removals or vendor blacklisting unchanged. **One consumer exists today.** A generic version
+needs a polymorphic subject, and `member_moderation_actions` carries a member FK plus member-scoped
+RLS. Keep the grounds columns subject-agnostic, name the extraction point in `docs/`, extract when a
+second surface is actually being built ([[feedback_no_premature_package]]).
+
+### D8 — No new `ModerationStatus` label, and no sanction tier.
+`apps/api/src/modules/auth/member/termination-block-seam.ts:116` speculates that *"Story 10.20's
+sanction tiers"* are the live candidate for a new label. **They are not.** This story adds no status,
+no tier and no lifecycle state — it adds *record structure and preconditions*. The `never` arm at
+`termination-block-seam.ts:131-133` must stay unbroken, and the speculative comment should be corrected
+where it is cheap to do so.
+
+### D9 — `[PRIMITIVE]`, with the named authoring-surface exception.
+The primary deliverable is the record model (schema, validation, governance, enforcement). The admin
+form changes are admitted under the `epics.md:563` exception — the two-part test is only real if the
+form makes the parts separately answerable, so the surface is *intrinsic to the primitive*, not an
+independent product surface. It does **not** reclassify the story to `[SURFACE]`.
+
+---
+
+## Tasks / Subtasks
+
+### Task 0 — Orient (AC: all)
+- [ ] Read every file in **Files to read before writing a line**. Re-verify each cited line at
+      `4c7fdee` — citation drift is this repo's recurring defect class and a wrong line number is a
+      wrong instruction.
+- [ ] Confirm premise #2 yourself: `nextModerationStatus('none','terminate') === null`. The story turns
+      on the instrument being wrong about its own code.
+- [ ] Confirm `_journal.json` still ends at `idx: 98`. If another migration landed first, take the
+      next number and adjust `when` by the same +1-day cadence.
+
+### Task 1 — ⭐ FIRST: the routing note (AC: 1)
+- [ ] Author `trustee-panel-routing-note-<date>-story-10-20.md` with Q1–Q7, lettered options, ⭐
+      recommendations, verified citations, and the **"Feeds"** column.
+- [ ] For **Q3** state plainly that option (b) is not implementable by this story, and why.
+- [ ] For **Q5** present D6's cost analysis, not just the two options.
+- [ ] Commit **ALONE** on `governance/10-20-moderation-record-model` with a `governance(10.20):` prefix.
+      ⛔ No `packages/` or `apps/` file may be in this commit.
+
+### Task 2 — Obtain the ruling (AC: 1)
+- [ ] Present the note. Record the ruling in `.decision-log.md` with **per-clause provenance**
+      (`[Trustee-ratified]` / `[Author-committed]`), the fence table, and what the ruling does not mean.
+- [ ] ⛔ Do not proceed to Task 3 on an assumed answer. A blocked ruling stops the story at its
+      governance half, recorded as such.
+
+### Task 3 — Author §8.5, §8.6, §8.9 + the §8.2 disposition, both locales, atomically (AC: 2, 3)
+- [ ] Insert into `niyamavali.md` **between §8.4a and §8.7**; mirror into `niyamavali.hi.md` at the
+      structurally identical position. Hindi is co-equal, not a translation artifact.
+- [ ] Edit the reserved-numbers note to reserve **§8.8 only**; keep the §8.7-ordering sentence.
+- [ ] **AC3**: correct and update §8.4a's mechanization block in both locales — including its count
+      sentence. ⚠ Land the *correction* now; land each *flip to mechanized* only as its task goes green
+      (Task 5, Task 6).
+- [ ] Reproduce every new section **verbatim, both locales**, in the Decision entry. Commit with the
+      ruling as one atomic governance act.
+
+### Task 4 — WS-B: migration `0099` + schema + policies (AC: 5, 4)
+- [ ] Hand-author `0099_moderation-record-model.sql` with **all seven** items in AC5 — items 1–6 fixed,
+      **item 7 determined by the Task-2 ruling** — a header in the `0091`/`0092` voice, the premise-#4
+      note about which grants survive the rename and which do not, and the **`NOT VALID` rationale**
+      (item 4: populated table, `23514`, no KMS in `.sql`). ⛔ Never `db:generate`. ⛔ One migration
+      only — no follow-up for a ruling-implied column.
+- [ ] Declare the **`IMMUTABLE` evidence-ref validator function** ahead of the table DDL (AC4) — an
+      inline `jsonb_array_elements` or subquery in a CHECK is a migrate-time `ERROR`. Verify the two
+      rejections and the two acceptances against `twt-test-pg` before moving on.
+- [ ] Update `schema/member_moderation_actions.ts` (rename + three new columns) and add
+      `schema/member_moderation_grounds.ts`; export from `schema/index.ts`.
+- [ ] Add `policies/member-moderation-grounds-rls.ts` and export from `policies/index.ts`.
+- [ ] Journal entry; `pnpm db:check` green.
+
+### Task 5 — WS-A + WS-C: the record, the guards, the crypto (AC: 4, 6, 7)
+- [ ] Domain: the evidence-ref schema (bounded `kind`, restricted `ref`, cap), the escalation inputs on
+      `ModerateMemberInput`, the ciphertext backstops, the plaintext guards exported for the route.
+- [ ] Route (`apps/api/.../member-moderation/handlers.ts`): presence + anti-restatement + substance
+      floor on **plaintext**, before `encryptModerationRationale`; then encrypt both parts; then
+      `openScopeTx`.
+- [ ] Q5 (a): read the fact snapshot via `produceContributionFacts` (**the derived fact, not
+      `completedRestorationEpisodes`** — AC7), and carry `null` through as `null`.
+- [ ] Contracts: `ModerateMemberRequest` gains the two parts + evidence refs, `.strict()`, snake_case.
+
+### Task 6 — WS-D: the dwell precondition (AC: 8)
+- [ ] Resolve the duration per Q4 (registry clause preferred; version-pinned onto the record).
+- [ ] Read the producing suspension's `acted_at` **inside the scope tx**; throw a distinct typed 409;
+      map it in `middleware/error-mapping/index.ts` alongside the existing moderation errors.
+- [ ] ⛔ Do not touch `nextModerationStatus`. Pin that `suspend` after `restore` is unaffected.
+
+### Task 7 — WS-E: append-only grounds (AC: 9)
+- [ ] `member_moderation_grounds` writer + reader (fold supersedes; return superseded rows).
+- [ ] Register `member.moderation.ground-appended` at **all three** points (AC9): `MEMBER_EVENT_TYPES`
+      + `MEMBER_EVENT_PAYLOAD_SCHEMAS` (`member/events.ts:300,324`, and the `21` → `22` prose count at
+      `:313-315`), then `EVENT_TYPE_REGISTRY` (`packages/events/src/registry.ts`). `.strict()` payload
+      = `auditShape` + `code` + the superseded id; description in the `member.moderation.*` voice.
+      ⛔ Do **not** add it to `MODERATION_EVENT_TYPES` / `MODERATION_ACTION_EVENT_TYPES`
+      (`status.ts:66-88`) — it is action-less (anti-pattern 17).
+- [ ] New route + a **fourth** step-up context; the primary-ground row written in the action's tx.
+
+### Task 8 — WS-F: guidance metadata (AC: 10)
+- [ ] `ordinarilyResultsIn: ModerationAction | null` on `ReasonCodeMeta` — **required**, Q6's values
+      for the seven moderation grounds, **`null` for the three restore grounds** (AC10); through
+      `listReasonCodeMeta` → `ReasonCodesListResponse` → the admin dropdown as **guidance text only**,
+      rendering nothing at all where the value is `null`.
+- [ ] ⛔ `MODERATION_APPLIES_TO` unchanged. ⛔ No enum values added or removed.
+
+### Task 9 — WS-A: RTBF completeness (AC: 11)
+- [ ] `anonymize.ts`: sentinel-scrub both escalation columns and every ground `note` — the grounds
+      scrub keyed on the table's own `member_id` (AC9), in the same one-liner shape as every sibling
+      scrub; follow the rename through. Extend `rtbf-anonymize.test.ts` to assert **each** new column
+      by name, including a ground `note` on a **superseded** row.
+
+### Task 10 — The surfaces (AC: 12)
+- [ ] `ModerationStrip.tsx` / `ModerationSection.tsx` / their i18n modules: two separate escalation
+      controls with no copy-across, supporting-ground picker, evidence rows, Decision Note renaming.
+- [ ] Render tests, not view-model tests, for the two-part separation.
+- [ ] Regenerate OpenAPI; determinism check green.
+
+### Task 11 — Records + what is not closed (AC: 13, 3)
+- [ ] Create `docs/moderation-record-model.md`.
+- [ ] `deferred-work.md`: **all seven** items (AC13.1–AC13.7), with the Panel-obligation **count
+      verified at time of writing**.
+- [ ] Flip §8.4a's mechanized rows now that Tasks 5–6 are green.
+
+### Task 12 — Validate (AC: all)
+- [ ] `pnpm --filter @twt/domain typecheck lint` · same for `@twt/contracts`, `@twt/api`, `@twt/admin`.
+- [ ] Live-DB: `member-moderation.spec.ts`, `moderation-auth-effects.spec.ts`,
+      `termination-access-block.spec.ts`, the RLS policy-regression specs, `rtbf-anonymize.test.ts`.
+- [ ] `pnpm db:check` · `pnpm contracts:check-openapi-determinism` · `pnpm domain-invariants:check` ·
+      `pnpm governance-boundary:check` · `pnpm schema:check`.
+- [ ] **Revert-sanity** on every new gate: the `evidence_refs` array/cap CHECKs **and the
+      function-backed shape CHECK** (plant `{"kind":"complaint","ref":"<a full sentence>"}`, an
+      unknown `kind`, and a third key — three distinct rejections), the
+      escalation-presence CHECK, the one-primary partial unique index (**`23505` on a second primary**),
+      the **grounds `UPDATE`-privilege denial**, the anti-restatement guard, the dwell precondition,
+      and the RTBF scrub. A gate that has never been seen to fail has not been shown to have teeth
+      ([[feedback_gate_scope_semantic_coverage]]).
+- [ ] ⛔ Never regenerate an applied migration; never `DROP SCHEMA`
+      ([[project_live_db_test_gotchas]]). Any failure claimed pre-existing must be **proven**
+      pre-existing at `baseline_commit`.
+
+---
+
+## Dev Notes
+
+### Files to read before writing a line
+
+| File | Why |
+|---|---|
+| `packages/domain/migrations/0091_member-moderation.sql` | The table, the CHECK shape, the grant posture, the header voice |
+| `packages/domain/migrations/0092_member-moderation-rtbf.sql` | ⭐ The column-level GRANT trap (premise #4) stated in its own words |
+| `packages/domain/src/member/moderation/write.ts:129-209` | The one write path; where the guards and the insert live |
+| `packages/domain/src/member/moderation/status.ts:36-55` | The reducer D5 forbids touching |
+| `packages/domain/src/member/moderation/reason-codes.ts:56-80,139-176` | `ReasonCodeMeta`, `MODERATION_APPLIES_TO`, the exhaustiveness argument |
+| `packages/domain/src/member/anonymize.ts:165-186` | The scrub AC11 extends, and its sentinel-not-NULL reasoning |
+| `apps/api/src/modules/member-moderation/handlers.ts:174-321` | Encrypt-before-`openScopeTx`; the 10.19 in-tx precondition AC8 mirrors |
+| `packages/domain/src/member/restoration-discipline/policy.ts:42-108` | The version-pinned registry-clause pattern Q4 (a) reuses |
+| `packages/validity-service/src/producer.ts:502-570,687-693` | `produceContributionFacts` (AC7's snapshot) and the `consecutiveRequired === null ⇒ null` rule at `:550` |
+| `packages/domain/src/contribution/facts.ts:633` | The per-member input reader the producer wraps — **not** the `:867` Pariwar scan, and **not** what AC7 snapshots |
+| `docs/legal/niyamavali.md:190-232` (hi `:188-230`) | §8.4a, its mechanization block, and the reserved-numbers note |
+| `_bmad-output/implementation-artifacts/10-19-…​.md` | The governance-first shape this story repeats |
+
+### Anti-patterns — the eighteen ways this story goes wrong
+
+1. **Narrowing `appliesTo`** to "satisfy" `prd.md:871`. Forbidden by `epics.md:3866`; pre-empts the
+   Panel (premise #7, AC10).
+2. **One escalation column, or a JSON blob.** Defeats the two-part test at the record layer (D2).
+3. **Shipping new Tier-1 columns without a `GRANT UPDATE`.** Re-creates `0092`'s defect, silently
+   (premise #4, D4).
+4. **A `CHECK (a <> b)` for the anti-restatement rule.** Structurally impossible under non-deterministic
+   envelope encryption (premise #5).
+5. **Putting dwell inside `nextModerationStatus`.** Forks `legal_actions`; makes a pure reducer async
+   (D5).
+6. **Regenerating `0091`/`0092`, or running `db:generate`.** `42P07`
+   ([[project_live_db_test_gotchas]]).
+7. **Adding a `ModerationStatus` label or a sanction tier.** Not this story; breaks the `never` arm at
+   an authentication gate (D8).
+8. **Free-text evidence.** `epics.md:3838` says *"references only, never free text"* — a `z.string()`
+   with a long max is free text with extra steps (AC4).
+9. **Flipping §8.4a rows to "mechanized" before the mechanism is green.** The disclosure would then
+   overstate in the other direction (AC3).
+10. **Putting the Decision Note or an escalation part into a list DTO, an event payload, an audit line
+    or a log.** R1; `dto.ts:9-16`; `events.ts:15-19`.
+11. **Testing the two-part separation at the view-model layer only.** The exact finding `epics.md:3729`
+    records against Story 10.10 (AC6).
+12. **Hard-blocking termination on `r7a_restorations_used`** without the Q5 ruling. A projection cannot
+    be allowed to refuse a Panel decision (D6).
+13. **Importing `@twt/contracts` from `@twt/domain`** to share the evidence-ref schema. Turbo cycle;
+    `errors.ts:41` forbids it by name, and a type-only import fails **silently** at module-init in
+    consuming packages ([[project_type_only_import_cycle_trap]]). Two copies + a drift guard.
+14. **A bare `ADD CONSTRAINT` for the escalation CHECK.** `23514` at migrate time against a table that
+    already holds `terminate` rows — and a sentinel backfill is impossible from `.sql` (no KMS).
+    `NOT VALID` (AC5 item 4).
+15. **Trying to supersede the PRIMARY ground.** Structurally impossible (`23505` / no UPDATE grant) and
+    deliberately so; supersede is a supporting-ground operation (AC9).
+16. **Shipping AC7's snapshot or AC8's version pin without a column in `0099`.** Both are ruling-gated
+    and both live in AC5 **item 7** — a second migration to add them is forbidden (AC5).
+17. **Adding `ground-appended` to `MODERATION_EVENT_TYPES` / `MODERATION_ACTION_EVENT_TYPES`**
+    (`status.ts:66-88`) because it is spelled `member.moderation.*`. Those tuples are the
+    **action-bearing** three: `MODERATION_ACTION_EVENT_TYPES` is `satisfies Record<ModerationAction,
+    string>` and the overlay's `inArray` filter reads from them. An append carries **no action** —
+    `moderationActionForEventType` returning `null` and the fold skipping it (`overlay.ts:98-100`) is
+    the CORRECT behaviour, not a gap to close (AC9).
+18. **Snapshotting `inputs.completedRestorationEpisodes` instead of the derived fact.** Always a
+    number; the fact is `null` when the threshold never resolved (`producer.ts:550`). Records a
+    confident count precisely where the honest answer is *unknown* (AC7, D6).
+
+### Reuse map — almost nothing here is new
+
+⚠ **Three deliberate exceptions**, all mandatory: the **new table** (WS-E), the **new event type**
+(AC9), and the **fourth step-up context** (AC9). Everything else is reuse.
+
+| Need | Existing thing | Do NOT |
+|---|---|---|
+| Tier-1 encrypt/decrypt | `moderation-crypto.ts` (`encrypt`/`decryptSafe`) | encrypt in the domain |
+| Append an event | `projectMemberState` via `write.ts:163-177` | write `events_log` directly |
+| Structural presence rule | the `rejoin_iff_terminate` CHECK shape (`0091:61`) | enforce presence only in TS |
+| Version-pinned policy | `resolveRestorationDisciplinePolicy` (`policy.ts:96`) | a code constant for a duration |
+| Per-member facts | `produceContributionFacts` (`producer.ts:687`) | snapshot the raw input, or re-derive in `apps/api` |
+| In-tx precondition | `handlers.ts:214-258` (the 10.19 Panel gate) | check outside the tx (TOCTOU) |
+| Attribution snapshot | `getDisplayName` + fail-closed (`handlers.ts:109-115`) | an email-derived fallback |
+| Held-equivalent pair | `listModeratedMembersForPariwar`'s argument (`read.ts:183-199`) | assert equivalence without a driving test |
+| RLS policy shape | `policies/member-moderation-actions-rls.ts` | a bespoke policy |
+| Cross-package schema | two copies + a **test-only** drift guard (`review-reason-codes.ts:15-19`) | ⛔ import `@twt/contracts` from `@twt/domain` |
+
+### Testing standards
+
+- Live-DB integration specs under `apps/api/tests/integration/member-moderation/`, own-committing
+  seeds, fresh random mobile per test. **Assert membership, not counts**
+  ([[project_live_db_test_gotchas]]).
+- The **RLS policy-regression spec** for the new table is acceptance evidence, not a nice-to-have —
+  the `member-moderation-actions-policy-regression.spec.ts` shape, including the negative leg.
+- **Revert-sanity pairs** for every DB constraint and every guard (Task 12).
+- Pure/unit for the evidence-ref schema, the anti-restatement guard, the dwell arithmetic and the
+  grounds fold. **Render** tests — not view-model tests — for AC6's separation.
+- `t()` **throws** on an unknown key and defaults to the `common` namespace: a copy change without its
+  catalog entry fails loudly at runtime.
+- ⚠ Pin **both sides** of any in-force / as-of comparison in a spec — a pinned query instant read
+  against a clock-defaulted seed is the 2026-08-10 **date-bomb** class
+  ([[project_known_livedb_test_failures]] #12), and a baseline comparison can never see it.
+
+### Project structure
+
+- Domain-camelCase ↔ contracts-snake_case at the boundary ([[feedback_story_validate_footguns]]).
+- ⛔ **The dependency direction is one-way: `@twt/contracts` depends on `@twt/domain`, NEVER the
+  reverse.** `packages/domain/src/errors.ts:41` states it in terms — *"`@twt/domain` must NOT import
+  `@twt/contracts` (turbo cycle — contracts depends on domain, never the reverse)"* — and
+  `contracts/package.json` carries `"@twt/domain": "workspace:*"`. A domain→contracts import is a
+  **turbo cycle**; a **type-only** one is worse, because typecheck, lint and the local suite all stay
+  green while consuming packages break at module-init ([[project_type_only_import_cycle_trap]]).
+- ⇒ **The evidence-ref schema therefore follows the TWO-COPY pattern, not a shared import.** The
+  canonical Zod schema lives in `@twt/domain` (the defence-in-depth enforcement point); a
+  **value-aligned copy** lives in `@twt/contracts` (it produces the 400 at the boundary and drives the
+  admin control); the two are held in lockstep by a **test-only** drift guard. This is the shape
+  already used at `packages/domain/src/reconciliation/review-reason-codes.ts:15-19` (the BankCode /
+  verifier precedent) — reuse it verbatim rather than inventing a third arrangement.
+- `packages/contracts` must **never** import a pg-touching `@twt/domain` namespace
+  ([[project_contracts_domain_bundle_boundary]]) — which is why the **contracts** copy is pure Zod and
+  imports nothing from domain, not even a type.
+- Governance commits use `governance(10.20):`; implementation uses `story(10.20):`.
+- ⚠ `git push` runs the full `ci:local` via the pre-push hook — that is the "hang", not a failure
+  ([[project_friction_budget_baseline_ratchet]]).
+
+### References
+
+- `_bmad-output/planning-artifacts/epics.md:3826-3870` — this story's AC; `:3701-3708` the sequencing
+  frame; `:563` the authoring-surface exception
+- `_bmad-output/implementation-artifacts/moderation-model-decision-brief.md:495-731` — D10 in full
+  (principles at `:529-586`; the record model at `:588-626`; the vocabulary split at `:645-672`; the
+  extraction note at `:628-643`; the implementation shape at `:696-715`)
+- `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-04.md:518-532` (the §4d Niyamavali
+  table, rows 4/6/7/11), `:534-538` (the constitutional sentence), `:559` (the severity gradient)
+- `.decision-log.md` — `2026-08-10-096` (the Panel's constitution; concurrency at clause 3),
+  `2026-08-10-097`/`-098` (§8.4/§8.4a; §8.5–§8.9 named as 10.20's and 10.22's at `:275`),
+  `2026-08-09-095` (per-clause provenance)
+- `_bmad-output/implementation-artifacts/deferred-work.md:3710` (10.20 unblocked), `:3865-3869` (what
+  10.19 does not close), `:3870-3875` (the obligation queue at seven)
+- `docs/legal/niyamavali.md:170-232` — Part 8 as it stands; `:63` §2.5 (the rejoin lock Q7 asks about)
+- `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md:851-874` — FR-56 as amended; `:880`
+  FR-57's detection-only prohibition
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List
+
+---
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-11 | Story authored via `bmad-create-story` off `main` @ `4c7fdee`. Eleven premises verified live, two of them findings: §8.4a's mechanization disclosure is **wrong** about the prior-sanction row in both locales (premise #2), and a Postgres column-level `GRANT UPDATE` does **not** extend to new columns, so every new Tier-1 column ships structurally un-erasable unless `0099` grants it (premise #4). Recorded the WS-F ↔ FR-56 tension and its two-layer resolution (premise #7), and that PRD FR-56 needs no edit (premise #8). |
+| 2026-08-11 | **Two stale counts corrected.** (1) AC3's **`When` clause** still read *"this story mechanizes three of the four disclosed rows"* — the exact sentence the same AC forbids twenty lines later (*"a correction is NOT a mechanization"*). The earlier S3 fix reached the instrument's count sentence but not the AC's own header, so a dev agent reading only the Given/When could still infer three rows must be flipped to *mechanized*. Rewritten to bind the `When` to the **mechanisms actually landed and green** plus the prior-sanction **correction** — *"which is not one of them"* — with all four rows dispositioned including the untouched one. The count is gone, the correction sits structurally outside the mechanisms, and the header now states the same green-before-flip condition the AC's closing `And` enforces instead of describing an intention that clause has to walk back. (2) Task 11 said *"all five items"* against AC13's **seven** (AC13.1–AC13.7, grown by the `NOT VALID` and ruling-gated-column items added in earlier passes) ⇒ **all seven**, cited by number. ⚠ The two surviving *"three of four"* strings are **correct and deliberate**: `:28` counts the reserved §-numbers this story lands (§8.5/§8.6/§8.9 of the four `niyamavali.md:230` holds), and `:272` quotes the forbidden sentence in order to ban it. |
+| 2026-08-11 | **Second validation pass — all 11 premises re-verified live at `4c7fdee` (every line citation resolves exactly, including `niyamavali.md:230`/hi `:228`, `deferred-work.md:3865-3869`/`:3870-3875`, `0091:61`, journal `idx:98`, catalog version 31, and the no-`NOT VALID`-in-repo claim); 4 blockers + 2 should-fix + 2 minor closed by edit.** (B1) ⭐ **AC4's per-entry evidence CHECK was not implementable.** Driven against `twt-test-pg` (PG 16.14): the subquery spelling raises `cannot use subquery in check constraint` and the bare `jsonb_array_elements` spelling raises `set-returning functions are not allowed in check constraints` — while the surviving array+cap CHECK **accepts** `[{"kind":"x","ref":"<a full sentence of prose>"}]`, the exact residual AC4 exists to close. Replaced with an `IMMUTABLE` helper function called from the CHECK, proven live to reject a prose `ref`, an unknown `kind` and a third key; precedented by ten `CREATE FUNCTION` migrations. (B2) **AC11's grounds scrub was unreachable** — every `anonymize.ts` scrub keys on `member_id` and AC9's table had none ⇒ `member_id` denormalized onto `member_moderation_grounds`, on the same reasoning `pariwar_id` already is. (B3) **The new event type has THREE registration points and the story named one**; the domain two (`member/events.ts:300,324`) fail at RUNTIME (`MEMBER_EVENT_PAYLOAD_SCHEMAS[type].parse` on `undefined`), and AC9's payload spec omitted the `auditShape` its own identity test needs. (B4) **AC10's compile-error guarantee could not hold**: `ReasonCodeMeta` spans ten codes, Q6 ratified seven ⇒ `ordinarilyResultsIn: ModerationAction \| null`, required, `null` ratified for the three restore grounds and Q6 rescoped to say so. (S1) AC7 named `readContributionFactInputs`, whose raw `completedRestorationEpisodes` is always a number ⇒ `produceContributionFacts`, the derived fact, which is `null` when the threshold never resolved (`producer.ts:550`). (S2) AC8's dwell base was unpinned between `acted_at` (app clock) and the in-hand `overlay.since` (DB clock) ⇒ `acted_at` pinned, the skew named as the date-bomb class. (M1) Anti-pattern 17 — `ground-appended` must not join `MODERATION_EVENT_TYPES`. (M2) 10.19's debug-log #3 carried: the reducer `safeParse`s and returns state unchanged, so the identity test passes on a malformed payload too ⇒ pin the parse separately. |
+| 2026-08-11 | **Adversarial spec review — all 11 premises re-verified live at `4c7fdee` and all 11 hold; 4 blockers + 3 should-fix + 2 minor closed by edit.** (B1) Dev Notes stated the package dependency direction **backwards** and offered `@twt/domain` → `@twt/contracts` as one of two options — a turbo cycle forbidden by name at `errors.ts:41`; replaced with the two-copy + drift-guard pattern (`review-reason-codes.ts:15-19`). (B2) AC7's fact snapshot and AC8's version pin each needed a column **AC5's DDL never created**, while AC5 forbade a second migration ⇒ new ruling-dependent **item 7**. (B3) AC5 item 4's CHECK was an `ALTER TABLE` against a **populated** table (`0091:61`'s twin was created inside `CREATE TABLE`, on an empty one) ⇒ `23514` at migrate time; a sentinel backfill is impossible from `.sql` (no KMS round-trip) ⇒ **`NOT VALID`**, the repo's first, with `VALIDATE CONSTRAINT` recorded as owed (AC13.5). (B4) The one-primary partial unique index + `SELECT, INSERT` grant make the **primary ground un-supersedable**, contradicting AC9's prose and its own driving test ⇒ supersede scoped to **supporting** grounds, typed 409 on the primary, and D3's now-explicit both-sides-immutable argument. (S1) AC4's *"a raw-SQL writer cannot bypass the domain"* was false for the **entry shape** ⇒ per-entry `jsonb_array_elements` CHECK, or the residual stated honestly. (S2) D5's own anti-fork argument turned against AC8 — dwell in the caller alone leaves `terminate` in `legal_actions` (`handlers.ts:380-382`) so the console renders a button that 409s ⇒ additive `termination_available_at`, `legal_actions` **unfiltered**. (S3) The "mechanizes three of four rows" count contradicted AC3's own dispositions (a correction is not a mechanization). (M1) D2's two-column split and the `NOT VALID` precedent added to the scope-additions list. (M2) Reducer totality for `ground-appended` stated as covered-by-construction via `memberStateMachine`'s `default: return state` arm. Anti-patterns 13–16 added. |

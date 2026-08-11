@@ -1,4 +1,47 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-11 (10-19-termination-ends-membership-privileges: ready-for-dev -> review via
+#   bmad-dev-story, Tasks 1-11, off governance/10-19-termination-part-8 @ baseline 6f1b165. Epic 10's D5 leg.
+#   GOVERNANCE RAN FIRST AND SEPARATELY: routing note committed ALONE (six questions, blocking Q1+Q6),
+#   then the ruling + Niyamavali amendment as ONE ATOMIC act, then the AC fold, then implementation.
+#   Decisions `2026-08-10-097` (six rulings, ratified §8.4 + new §8.4a verbatim in BOTH locales -- the only
+#   durable copy, docs/legal/ being gitignored) and `2026-08-10-098` (discharging 097's two open conditions).
+#   RULINGS: Q1(a) restoration-from-terminated is a PANEL act; Q2(a) Summary structurally absent; Q3(b) NO
+#   off-portal guarantee -- AGAINST the author's recommendation, recorded as a ruling; Q4(a) §8.4a complete
+#   with a mechanization disclosure naming FOUR unmechanized rows; Q5(a) attestation-only extends (the THIRD
+#   such amendment, counted not buried); Q6(b-i) default-OFF flag, flip gated on Story 10.21 ALONE.
+#   ⭐ THE BLOCK IS INERT AS SHIPPED. `termination_access_block` defaults OFF and the flip is
+#   Panel-exclusive + 10.21-gated, so TERMINATION DOES NOT YET END ACCESS. Every flag-ON behaviour is
+#   tested flag-forced-ON and every flag-OFF default is tested too -- asserting one side only would let the
+#   default invert with nothing failing.
+#   MID-STORY the Panel issued a direction covered by NO existing AC (a controlled termination state, not a
+#   generic auth failure) and corrected the vocabulary ("login succeeds but returns 403" is the wrong model:
+#   identity verification SUCCEEDS, session issuance is DENIED). That produced AC12 and reshaped AC4/AC10.
+#   TWO JUDGEMENT CALLS beyond the ACs' literal text, both recorded in deferred-work.md: the notice body is
+#   SELECTED FROM THE FLAG at send time rather than stripped-or-deferred (AC8), and the refresh denial
+#   carries the structured notice (AC5). Decision 097 clause 12 PERMITTED the deferral; it would have left a
+#   decay window gated on a backlog story.
+#   BUILT: capability-bar admission (count 5->6) -- the FIRST flag conditioning AUTHENTICATION, admitted BY
+#   RULING and not by a green scan; the shared session-denial seam (ONE seam, TWO read sites -- login and
+#   refresh -- so reverting one arm fails both, which is the proof they cannot drift); AI-10-2; the
+#   flag-selected bilingual notice; the five-site Decision-6 sweep (SUPERSEDED, never edited in place); the
+#   member-app termination surface (the OTP screen no longer tells a terminated member their CORRECT code
+#   was wrong); and `member.restore_terminated` (catalog 30->31, keys 40->41) held by trustee_panel ALONE,
+#   checked INSIDE the scope tx to close a TOCTOU, scoped to exactly ONE transition.
+#   VALIDATION: ci:local 17/19 green. The 2 red jobs (test-unit + integration-tests) carry the SAME 4
+#   @twt/domain failures -- custom-fields registry x3 + feature-flags registry x1 -- PROVEN PRE-EXISTING by
+#   re-running the suite at baseline 6f1b165, where the identical 4 fail (totals differ only by this story's
+#   2 added tests). A 5th (bulk-operations audit-seam) appears in ONE job only and passes single-pass on
+#   both branch and baseline: the known DATABASE_URL-global double-run count pollution. Every other
+#   ELIFECYCLE line is turbo CASCADE, not a failure -- bank-parsers/measured-validation/niyamavali-engine
+#   all passed their own suites. friction-budget went red on a REAL finding (Task 8 touched member-facing
+#   surfaces undeclared) and is now green with ONE new row, declared for a cost NOT YET PAYABLE because a
+#   row added at flip time would never fire the gate -- the flip is a config act.
+#   AC7's revert-sanity PAIR run: neutering the terminated arm fails BOTH login and refresh while the
+#   suspended guard and the flag-OFF default keep passing.
+#   NOT CLOSED, stated as a count not as progress: the Trustee Panel obligation queue GREW from five to
+#   SEVEN (this story discharges none and adds counsel review of §8.4/§8.4a plus the Q6 flip authorisation).
+#   10.21 NOT unblocked -- it is now the NAMED GATE on the flip; 10.22 NOT unblocked; the identity-collision
+#   gap untouched and unassigned. No other story status changed.)
 # last_updated: 2026-08-10c (10-19-termination-ends-membership-privileges: backlog -> ready-for-dev via
 #   bmad-create-story, off main @ 6f1b165. Saved 10-19-termination-ends-membership-privileges.md. Epic 10's
 #   EIGHTEENTH authored story, and the D5 leg of the moderation-model correct-course.
@@ -5081,7 +5124,7 @@ development_status:
   10-16-contribution-during-suspension-disclosure: done
   10-17-moderation-roster-unblock: done
   10-18-constituting-the-trustee-panel-sanctioning-authority: done
-  10-19-termination-ends-membership-privileges: ready-for-dev
+  10-19-termination-ends-membership-privileges: review
   10-20-moderation-record-model: backlog
   10-21-off-portal-dpdpa-access: backlog
   10-22-moderation-appeal-mechanism: backlog

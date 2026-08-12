@@ -156,6 +156,8 @@ describe('response DTOs — the rationale never leaves the database', () => {
             },
           ],
           evidence_refs: [{ kind: 'complaint', ref: 'CMP-2026-0001' }],
+          r7a_restorations_used_snapshot: null,
+          dwell_policy_version: null,
         },
       ],
       has_more: false,

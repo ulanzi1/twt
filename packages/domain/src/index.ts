@@ -358,6 +358,8 @@ export {
   MODERATION_GROUND_NOT_FOUND_CODE,
   ModerationPrimaryGroundImmutableError,
   MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE,
+  ModerationGroundAlreadySupersededError,
+  MODERATION_GROUND_ALREADY_SUPERSEDED_CODE,
 } from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the

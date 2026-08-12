@@ -4099,3 +4099,168 @@ once for exactly that reason.
   diff only touches the surrounding line while widening the `RotateResult` union for AC5, and carried
   the inaccuracy forward unchanged. `apps/api/src/modules/auth/member/member-auth.handlers.ts`, the
   withdrawn/anonymized `ForbiddenError` construction.
+
+## Deferred from: code review of 10-20-moderation-record-model, domain-core chunk (2026-08-12)
+
+⚠ Partial-review chunk — `packages/domain/**` only, out of a 58-file / ~11,245-line branch diff.
+Remaining chunks (API layer, contracts/OpenAPI, admin UI, governance/docs) not yet reviewed.
+
+- **`evidence_refs` is exempted from RTBF scrubbing on the premise that "a reference is an
+  identifier, not prose," enforced structurally by three CHECK constraints.** No DPO/legal sign-off
+  is evidenced for this exemption. An identifier such as an external order/complaint number could
+  itself be quasi-identifying or directly traceable to the member. **Needs DPO/legal review**:
+  whether bounded structural references satisfy DPDPA RTBF, or whether `evidence_refs` needs its own
+  scrub path. `packages/domain/src/member/moderation/evidence-refs.ts`,
+  `packages/domain/src/member/anonymize.ts:216-227` (where the exemption is applied).
+- **`resolveModerationDwellPolicy` collapses "unprovisioned" and "malformed payload" into the same
+  `null`/503 outcome.** An admin sees "the moderation dwell policy is not provisioned for this
+  Pariwar" even when a `niy.moderation.dwell` clause exists but fails `.safeParse` — indistinguishable
+  from a genuinely absent clause. `packages/domain/src/member/moderation/dwell.ts`.
+- **`getProducingSuspensionActedAt` orders candidate suspensions by the app-injected `acted_at`, not
+  a monotonic/DB-generated sequence.** Under clock skew between application instances, the row with
+  the largest `acted_at` need not be the one that actually produced the member's current suspended
+  standing. Theoretical — no evidence of multi-writer clock skew in the current deployment.
+  `packages/domain/src/member/moderation/dwell.ts:153`.
+- **`moderation-dwell.test.ts`'s DST-boundary test operates entirely on UTC (`Z`-suffixed) timestamps
+  with plain millisecond arithmetic**, so no local-timezone DST transition is actually exercised
+  despite the test name/comment claiming that coverage. Test-quality gap, not a runtime defect.
+  `packages/domain/tests/member/moderation-dwell.test.ts`.
+- **Live-DB negative-case coverage for the evidence-shape CHECK constraints is added only for
+  `member_moderation_grounds`**, even though migration 0099 installs the identical three CHECKs
+  (`_is_array`, `_cap`, `_shape`) on `member_moderation_actions` too. No equivalent spec update
+  demonstrates those constraints fire on the actions table.
+  `packages/domain/tests/integration/rls/member-moderation-actions-policy-regression.spec.ts`.
+- **The immediate-termination exception's substance floor silently reuses
+  `ESCALATION_PART_MIN_CHARS` (40 chars)** imported from the two-part escalation test, with no
+  comment at the reuse site flagging the shared dependency — a future retune of one silently retunes
+  the other. `packages/domain/src/member/moderation/escalation.ts:152-172`.
+- **RTBF scrub for `member_moderation_grounds` filters only on `memberId`, with no explicit
+  `pariwarId` predicate**, relying entirely on RLS session scope for tenant isolation during the
+  erasure write. Matches the pre-existing sibling `member_moderation_actions` scrub pattern — not a
+  new regression, but both scrubs share the same single point of failure.
+  `packages/domain/src/member/anonymize.ts:216-227`.
+- **`member_moderation_grounds.code` ↔ action-type applicability (`assertReasonCodeAppliesTo`) has
+  no DB-level CHECK/trigger — app-code only.** Rescoped from a code-review patch during Story 10.20's
+  domain-core review: enforcing this at the DB layer means replicating the reason-code registry's
+  applicability rules in SQL (an IMMUTABLE function, mirroring `moderation_evidence_refs_valid`'s
+  pattern in migration 0099) — that's registry-design work carrying drift risk between the TS and SQL
+  copies, not a mechanical patch. `packages/domain/src/member/moderation/grounds.ts`,
+  `packages/domain/src/member/moderation/reason-codes.ts`.
+- **`dwell_policy_version` has no FK to the clause registry.** Rescoped from the same patch pass:
+  needs the clause-registry table's exact versioning shape confirmed (which table/column
+  `dwell_policy_version` should reference) before a target can be picked.
+  `packages/domain/migrations/0099_moderation-record-model.sql:125`.
+
+## Deferred from: code review of 10-20-moderation-record-model, API-layer chunk (2026-08-12)
+
+⚠ Partial-review chunk — `apps/api/**` only. Remaining chunks (contracts/OpenAPI, admin UI,
+governance/docs) reviewed or pending separately.
+
+- **`appendGround`'s `note` has no domain-layer substance-floor backstop for a non-HTTP caller**,
+  unlike every sibling Tier-1 field. HTTP callers are already protected by the contracts
+  `DecisionNote` schema (`.trim().min(1)`) — this is a non-HTTP-caller-only defense-in-depth gap.
+  `apps/api/src/modules/member-moderation/handlers.ts` (appendGround).
+- **The 42501-grant revert-sanity test proves the one permitted `note_ciphertext` UPDATE doesn't
+  throw, but never asserts `rowCount`/re-reads state**, so a predicate typo matching zero rows would
+  still pass. `apps/api` tests, grounds RLS revert-sanity.
+- **The 403/`auth.step_up_required` test for a wrong-context elevation on `appendGround` checks only
+  the status code, not that no ground was written**, unlike its sibling refusal tests.
+- **No test asserts entry-level `evidence_refs` (from the action row) agrees with the primary
+  ground's `evidence_refs`** — the two lists can silently diverge.
+- **`AVAILABLE_AT`/`JUST_BEFORE` in `moderation-dwell.spec.ts` are hand-computed literal `Date`
+  strings** rather than derived from `SUSPENDED_AT`/`DWELL_DAYS`.
+- **`moderation-dwell.spec.ts`'s cleanup omits `events_log`/`members` with no comment**, unlike its
+  sibling `moderation-escalation.spec.ts` which explicitly documents the same omission.
+- **Test setup boilerplate (`authenticate`/`grant`/`elevate`/`seedActiveMember`/`errCode`) is
+  duplicated near-verbatim (~60-70 lines each)** across `moderation-dwell.spec.ts`/
+  `moderation-escalation.spec.ts`/`moderation-grounds.spec.ts` instead of a shared fixture.
+- **`error-mapping/index.ts` carries roughly 60 lines of policy prose (Q4.1, Q4.2, D5, D6) for ~35
+  lines of logic**, none of it living near the domain code it describes.
+
+## Deferred from: code review of 10-20-moderation-record-model, contracts+OpenAPI chunk (2026-08-12)
+
+⚠ Partial-review chunk — `packages/contracts/**` + `openapi/v1.yaml` only. Remaining chunks (admin
+UI, governance/docs) pending.
+
+- **`EVIDENCE_REF_PATTERN` (`^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$`) permits `.`/`/` combinations that
+  could form traversal-shaped strings** (e.g. `a/../../secret`). Verified via grep that nothing in
+  the current codebase resolves `evidence_refs.ref` against a filesystem or object store (stored/
+  displayed as an opaque JSONB identifier only) — no live exploit path today. Tighten the regex
+  (reject `..`/`//` sequences) whenever a real storage/file resolver consumes this field; requires
+  synchronized changes to both the domain and contracts copies plus their drift test.
+  `packages/domain/src/member/moderation/evidence-refs.ts`,
+  `packages/contracts/src/member-moderation/evidence-refs.ts`.
+- **Output-side `evidence_refs` arrays (`ModerationGroundDto.evidence_refs`,
+  `ModerationHistoryEntryDto.evidence_refs`) have no `.max()`**, unlike the inbound `EvidenceRefsDto`
+  (capped at `EVIDENCE_REFS_MAX`) — benign today since the DB-side CHECK constraints bound storage to
+  10, but the read DTOs don't structurally mirror that cap.
+  `packages/contracts/src/member-moderation/dto.ts`.
+- **`AppendModerationGroundResponse` echoes back only `ground_id`/`moderation_action_id`/`code`/
+  `supersedes_ground_id`/`added_at`** — omits `evidence_refs` and `has_note`, so a caller that just
+  appended a ground has no way to confirm what was persisted without a follow-up GET. Fixing this
+  spans domain (`AppendGroundResult`) + contracts + API layers again. A follow-up GET on history
+  already works as a workaround. `packages/domain/src/member/moderation/grounds.ts`,
+  `packages/contracts/src/member-moderation/dto.ts`.
+- **The AC12 drift-guard test covers only the evidence-ref primitives and the escalation floor** —
+  `is_primary`, `ordinarily_results_in`, `supersedes_ground_id`, `termination_available_at`, and
+  `decision_note` have no drift assertion anywhere, despite AC12 naming all of them for the boundary
+  walk. `packages/contracts/tests/member-moderation-evidence-refs.test.ts`.
+- **Response-side `grounds` array on a history entry has no upper bound** — a heavily-disputed action
+  with many append+supersede cycles ships an arbitrarily large list with no truncation signal. No
+  domain-level cap on total grounds per action exists; capping it is a domain-layer design decision,
+  not a contracts-only fix.
+- **Submitting the same `{kind, ref}` pair twice in one `evidence_refs` array is not rejected** — a
+  data-quality nicety, not a correctness or security issue.
+
+## Deferred from: code review of 10-20-moderation-record-model, admin-UI chunk (2026-08-12)
+
+⚠ Partial-review chunk — `apps/admin/**` only. Remaining chunk (governance/docs) pending.
+
+- **Unsafe cast on the evidence "kind" `<select>` (`e.target.value as EvidenceRefDto['kind']`) with
+  no runtime check** — technically unsound, but constrained in practice since the `<select>`'s own
+  `<option>`s are generated exhaustively from `EVIDENCE_REF_KINDS`, so no actually-invalid value can
+  reach it via normal UI interaction. Type-safety hygiene, not a functional defect.
+  `apps/admin/src/modules/member-status/ModerationStrip.tsx`.
+- **Required-field asterisks are `aria-hidden` with no compensating `aria-required`/`required`
+  attribute** on the escalation-inadequacy, escalation-proportionality, and immediate-reason
+  textareas — screen-reader users get no non-visual signal these fields are mandatory before hitting
+  a validation error. Accessibility gap, not a runtime defect.
+- **`t.dwellOpenBody.replace('{date}', ...)` uses `String.prototype.replace` with a string
+  argument**, which only replaces the FIRST occurrence — fine today (one `{date}` placeholder),
+  fragile if a future translation needs it twice.
+- **Test coverage is asymmetric between the two 40-character floors**: there's a dedicated test for
+  the escalation-parts length floor, but no equivalent test for the immediate-termination-reason
+  floor's below-floor-but-nonempty case (only the fully-empty case is tested).
+- **No test exercises the server-rejection (422) paths for the four new conditional fields**
+  (`escalation_inadequacy`, `escalation_proportionality`, `evidence_refs`,
+  `immediate_termination_reason`) to verify the UI surfaces that failure sensibly.
+- **No per-row error for an invalid evidence reference** — with multiple rows, the operator has no
+  indication of WHICH row is invalid, only a single generic form-level error.
+
+## Deferred from: code review of 10-20-moderation-record-model, governance/docs chunk (2026-08-12)
+
+⚠ Final chunk — scoped to `.decision-log.md`, the routing note, and `docs/moderation-record-model.md`
+(the story file, `deferred-work.md` itself, and `sprint-status.yaml` were excluded — dominated by this
+review session's own additions, not the story's original governance content).
+
+- **Decision `100` Clause 2 files a substantive update ("the dwell it named as missing is now
+  enforced") under a clause titled "What did NOT change"** — reads as contradictory on a skim, though
+  the underlying logic (continuity of which row needed fixing, vs. a new fact layered onto it) is
+  defensible once read closely. Wording-clarity issue, not a factual error. `.decision-log.md`,
+  Decision `2026-08-12-100`.
+- **The dwell boundary's exact inclusive/exclusive comparison (`now >= suspended_at + 7 days` vs
+  `>`) is stated correctly in code but never spelled out in the governance text** — a
+  documentation-completeness gap, not a code defect.
+- **Whether an individual Pariwar's dwell registry clause may diverge from the ratified "7 days"**
+  (per-Pariwar override vs. Trust-wide constant) is not addressed anywhere in the governance text.
+- **`docs/moderation-record-model.md` §8 row 3 justifies `escalation_iff_terminate`'s `NOT VALID`
+  grandfathering with "the table is append-only"** — but append-only describes
+  `member_moderation_grounds`, not `member_moderation_actions` (the table the CHECK is actually on).
+  The real justification (GRANT posture / no UPDATE path on that table) is stated correctly
+  elsewhere in the same doc but not cross-referenced from this row.
+- **Decision `100` invokes "Decision `2026-08-12-099` clause 10" as the standing rule authorizing
+  future §8.4a disclosure-row flips, but clause 10 is itself labeled `[Author-finding]`, not
+  Trustee-ratified** — an authority-chain question (can an author-finding rule govern future updates
+  without itself being ratified?) worth a dedicated look, not urgent.
+- **Symbol vocabulary (⛔/⚠/✅) carries several distinct meanings throughout with no legend** —
+  consistent with this project's established (if informal) documentation style, low priority.

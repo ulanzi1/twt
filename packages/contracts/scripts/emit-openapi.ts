@@ -3000,6 +3000,8 @@ const {
   ModeratedMembersListResponse,
   ModerationRationaleResponse,
   ReasonCodesListResponse,
+  AppendModerationGroundRequest,
+  AppendModerationGroundResponse,
 } = await import('../src/member-moderation/index.js');
 
 const ModerateMemberRequestComponent = ModerateMemberRequest.openapi('ModerateMemberRequest');
@@ -3008,6 +3010,14 @@ const ModerationHistoryComponent = ModerationHistoryResponse.openapi('Moderation
 const ModeratedMembersListComponent = ModeratedMembersListResponse.openapi('ModeratedMembersList');
 const ModerationRationaleComponent = ModerationRationaleResponse.openapi('ModerationRationale');
 const ReasonCodesListComponent = ReasonCodesListResponse.openapi('ReasonCodesList');
+// Story 10.20 (AC9, WS-E) — review follow-up: this endpoint is live in apps/api/routes.ts but was
+// never registered here, so the OpenAPI spec silently undersold a real write endpoint.
+const AppendModerationGroundRequestComponent = AppendModerationGroundRequest.openapi(
+  'AppendModerationGroundRequest',
+);
+const AppendModerationGroundResponseComponent = AppendModerationGroundResponse.openapi(
+  'AppendModerationGroundResponse',
+);
 
 const moderationMemberParams = z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() });
 const moderationPariwarParams = z.object({ pariwarId: z.string().uuid() });
@@ -3139,6 +3149,33 @@ registry.registerPath({
     403: moderationForbidden,
     404: errorResponse('No moderation action with that id for this member in this Pariwar'),
     503: errorResponse('The key service is unavailable — the rationale exists but cannot be decrypted right now (`member_moderation.rationale_unavailable`)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/members/{memberId}/moderation/{moderationActionId}/grounds',
+  summary: 'Append a SUPPORTING ground to an existing moderation decision',
+  description:
+    'A LATER FINDING ATTACHES; it never rewrites (AC9). Records an append-only supporting ground ' +
+    'against an existing decision, optionally superseding an earlier supporting ground — the ' +
+    'PRIMARY ground is not reachable here and can never be superseded or replaced (structurally ' +
+    'immutable by construction). Step-up gated (`member_moderation_append_ground`), a FOURTH ' +
+    'context distinct from suspend/terminate/restore, so an elevation minted for one of those three ' +
+    'can never be spent on appending a finding, and vice versa.',
+  tags: moderationTags,
+  request: {
+    params: z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() }),
+    body: { content: jsonOf(AppendModerationGroundRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The appended ground', content: jsonOf(AppendModerationGroundResponseComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: moderationForbidden,
+    404: errorResponse('The moderation action does not exist for this member in this Pariwar; OR `supersedes_ground_id` does not name a ground of this action (`member_moderation.action_not_found` / `member_moderation.ground_not_found`)'),
+    409: errorResponse('An attempt to supersede the PRIMARY ground (`member_moderation.primary_ground_immutable`); OR the named target already has an active superseder (`member_moderation.ground_already_superseded`)'),
+    422: errorResponse('The reason code cannot support this action; OR evidence_refs is not a bounded array of `{kind, ref}` identifiers'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

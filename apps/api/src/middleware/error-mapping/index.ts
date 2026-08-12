@@ -32,6 +32,7 @@ import {
   ModerationActionNotFoundError,
   ModerationDwellNotElapsedError,
   ModerationDwellPolicyUnprovisionedError,
+  ModerationGroundAlreadySupersededError,
   ModerationGroundNotFoundError,
   ModerationPrimaryGroundImmutableError,
   ModerationEscalationNotApplicableError,
@@ -77,6 +78,36 @@ const KYC_ERROR_STATUS: Readonly<Record<string, number>> = {
   certificate_stale: 422,
   provider_unavailable: 502,
 };
+
+/**
+ * Story 10.20 (WS-A/WS-C) — the record model's typed refusals that all resolve to 422. Each says
+ * the request is malformed as a GOVERNANCE RECORD, not that the state forbids the action (that
+ * stays the 409 `ModerationStateError` mapping, and the two must remain tellable apart):
+ *   ModerationEscalationRequiredError      → a termination omits part (a) or (b), or one is below
+ *                                            the substance floor; the error names WHICH part and WHY
+ *   ModerationEscalationNotApplicableError → a suspend/restore carries an escalation part — the
+ *                                            0099 CHECK is an `iff` and bites both ways; this keeps
+ *                                            a 23514 from surfacing as a 500
+ *   ModerationEscalationRestatementError   → part (a) merely restates part (b) under normalization
+ *                                            — a plaintext-only check, envelope encryption is
+ *                                            non-deterministic
+ *   ModerationEvidenceRefInvalidError      → evidence must be bounded `{kind, ref}` identifiers,
+ *                                            never prose
+ * Grouped rather than four identical if-blocks — same status, same `toErrorResponse` call — so a
+ * future addition to this family cannot get pasted with the wrong status code.
+ */
+const MODERATION_RECORD_SHAPE_ERROR_CLASSES = [
+  ModerationEscalationRequiredError,
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRestatementError,
+  ModerationEvidenceRefInvalidError,
+] as const;
+
+function isModerationRecordShapeError(
+  error: unknown,
+): error is InstanceType<(typeof MODERATION_RECORD_SHAPE_ERROR_CLASSES)[number]> {
+  return MODERATION_RECORD_SHAPE_ERROR_CLASSES.some((ErrorClass) => error instanceof ErrorClass);
+}
 
 function envelope(code: string, message: string, requestId: string, details?: unknown): ErrorResponseShape {
   return {
@@ -257,34 +288,10 @@ export function errorMappingHandler(
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }
-  // Story 10.20 (WS-A/WS-C) — the record model's typed refusals. All 422: each says the request is
-  // malformed as a GOVERNANCE RECORD, not that the state forbids the action (that stays the 409
-  // above, and the two must remain tellable apart).
-  //   ModerationEscalationRequiredError      → 422 …escalation_required (a termination omits part (a)
-  //                                            or (b), or one is below the substance floor; the
-  //                                            error names WHICH part and WHY)
-  //   ModerationEscalationNotApplicableError → 422 …escalation_not_applicable (a suspend/restore
-  //                                            carries an escalation part — the 0099 CHECK is an
-  //                                            `iff` and bites both ways; this keeps a 23514 from
-  //                                            surfacing as a 500)
-  //   ModerationEscalationRestatementError   → 422 …escalation_restatement (part (a) merely restates
-  //                                            part (b) under normalization — a plaintext-only
-  //                                            check, since envelope encryption is non-deterministic)
-  //   ModerationEvidenceRefInvalidError      → 422 …evidence_ref_invalid (evidence must be bounded
-  //                                            `{kind, ref}` identifiers, never prose)
-  if (error instanceof ModerationEscalationRequiredError) {
-    void reply.status(422).send(error.toErrorResponse(requestId));
-    return;
-  }
-  if (error instanceof ModerationEscalationNotApplicableError) {
-    void reply.status(422).send(error.toErrorResponse(requestId));
-    return;
-  }
-  if (error instanceof ModerationEscalationRestatementError) {
-    void reply.status(422).send(error.toErrorResponse(requestId));
-    return;
-  }
-  if (error instanceof ModerationEvidenceRefInvalidError) {
+  // Story 10.20 (WS-A/WS-C) — see MODERATION_RECORD_SHAPE_ERROR_CLASSES above for the per-class
+  // breakdown. All 422: each says the request is malformed as a GOVERNANCE RECORD, not that the
+  // state forbids the action (that stays the 409 above, and the two must remain tellable apart).
+  if (isModerationRecordShapeError(error)) {
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }
@@ -319,6 +326,10 @@ export function errorMappingHandler(
   //                                           must never reach a caller as a 500 — "the primary
   //                                           ground is fixed at the action" is a fact a trustee has
   //                                           to be able to read off the error.
+  //   ModerationGroundAlreadySupersededError → 409 …ground_already_superseded. Same backstop/interface
+  //                                            split, against `member_moderation_grounds_supersedes_
+  //                                            target_idx` (migration 0100) — at most one active
+  //                                            superseder per target.
   if (error instanceof ModerationActionNotFoundError) {
     void reply.status(404).send(error.toErrorResponse(requestId));
     return;
@@ -328,6 +339,10 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof ModerationPrimaryGroundImmutableError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationGroundAlreadySupersededError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
     return;
   }

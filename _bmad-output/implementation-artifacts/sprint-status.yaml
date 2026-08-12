@@ -1,4 +1,121 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-12g (10-20-moderation-record-model: in-progress -> done. All 5 code-review
+#   chunks complete, all decision-needed and patch findings resolved, live-DB verification complete.
+#   Migration 0100 applied cleanly against twt-test-pg:5433 (trigger + unique index + CHECK all
+#   confirmed present). Running the full live-DB suite caught TWO REAL REGRESSIONS the review's own
+#   earlier patches had introduced -- exactly the reason this step exists: (1) the chunk-2 API
+#   legality pre-read ran before the reason-code applicability check, flipping a pinned 422-vs-409
+#   check-order test to 409 -- fixed by adding a synchronous assertReasonCodeAppliesTo pre-check
+#   ordered first, mirroring moderateMember's own (1)-before-(2) priority; (2) the chunk-3 Zod
+#   .min(MODERATION_ESCALATION_MIN_CHARS) wiring made Fastify reject a too-short escalation part with
+#   a generic 400 before the domain's specific typed 422 ever ran -- reverted to .min(1), leaving the
+#   substance floor as the domain's job one layer in. Both caught by tests already in the diff, not
+#   new ones added. Final state: domain live-DB (22) + API live-DB (100, 7 spec files) + domain unit
+#   (202) + contracts (28) + admin (35) all green; typecheck/lint clean across domain/contracts/api/
+#   admin; openapi/v1.yaml deterministic. Total across all 5 chunks: 6 decisions resolved, 28 patches
+#   applied (2 later corrected by live-DB findings), 32 items deferred with reasoning (recorded in
+#   deferred-work.md), 23 findings dismissed as verified-false or non-issues. Headline finding: a
+#   manufactured-ratification defect in .decision-log.md (Decision 099 claimed Trustee Panel
+#   confirmation for content its own Status line said was author-committed) -- corrected via new
+#   Decision 2026-08-12-101 without editing the original ratified record. Standout code fix: the RTBF
+#   scrub bug that would have violated a DB CHECK constraint and aborted for any previously-suspended
+#   member. Remaining deferred items (32) are non-blocking by design -- test-coverage gaps,
+#   accessibility hardening, DB-level registry-replication design work, and two items needing DPO/
+#   legal sign-off outside engineering's authority to close.)
+# last_updated: 2026-08-12f (10-20-moderation-record-model: in-progress, bmad-code-review completes
+#   its 5th and FINAL chunk (governance/docs -- .decision-log.md, the routing note,
+#   docs/moderation-record-model.md; story file/deferred-work.md/sprint-status.yaml excluded as
+#   dominated by this review session's own additions). All 5 chunks of the 58-file/~11,245-line
+#   branch diff now reviewed. This chunk's headline finding: two independent review layers caught a
+#   MANUFACTURED-RATIFICATION defect -- Decision 2026-08-12-099 clause 8.1 claimed "CONFIRMED by the
+#   Trustee Panel" for the brief-principle-3 reading, contradicting the same decision's own Status
+#   line (clause 8 is Author-committed, "neither is presented as ratified") and unsupported by any
+#   Panel session anywhere in the routing note -- exactly the failure mode this story's own rule
+#   prohibits ("the one thing this story must not do: manufacture a ratification"). User confirmed no
+#   real second confirmation occurred; corrected via new Decision 2026-08-12-101, which supersedes
+#   the false claim WITHOUT editing Decision 099's text (per this log's own never-edit-in-place
+#   rule) and separately records a missing APPENDIX A disposition Decision 099 also omitted (matching
+#   established precedent in the same log). Two more patches: migration 0100's live-DB-unverified
+#   status, and the evidence_refs RTBF DPO/legal-sign-off gap this session's OWN chunk-1 review had
+#   already recorded but this reference doc contradicted with a flat "safe" claim -- both now
+#   disclosed in docs/moderation-record-model.md's "not closed" table. One Blind Hunter finding
+#   (routing-note "provenance contradiction") was verified FALSE via `git log --follow` and
+#   dismissed. STORY STATUS STAYS in-progress, not done: migration 0100 and every live-DB-integration
+#   spec touched across all 5 chunks remain UNVERIFIED against a real Postgres instance this session
+#   (none was running). NEXT: live-DB verification is the one remaining gate before this story can
+#   honestly close.)
+# last_updated: 2026-08-12e (10-20-moderation-record-model: in-progress, bmad-code-review continues
+#   with the admin-UI chunk (4 of 5, apps/admin/** -- 1 chunk remains: governance/docs). 0
+#   decision-needed this pass; 8 patches applied, all confirmed by direct code inspection (one Edge
+#   Case Hunter finding was VERIFIED FALSE during triage -- a restore-guidance code correctly maps to
+#   "Not moderated" since that IS the standing a restore produces -- and dismissed rather than
+#   patched). Fixes: (1) confirm() re-reads escalation/evidence state without re-validating it before
+#   sending -- shared validateEscalationGroup() now runs in both requestSubmit and confirm(); (2) the
+#   dwell-open check failed OPEN on a malformed timestamp (NaN > Date.now() === false) -- now fails
+#   toward showing the safety warning; (3) two rationale strings survived the AC12 Decision Note
+#   rename untouched; (4) escalation/immediate-reason fields borrowed the Decision Note's max-chars
+#   constant with no dedicated one of their own -- added MODERATION_ESCALATION_MAX_CHARS to
+#   contracts, drift-tested against domain; (5) no duplicate-evidence-reference guard; (6) the error
+#   box was gated by translated-string identity instead of a field discriminator -- validationError
+#   is now a typed {field, message}; (7) evidence rows were keyed by array index -- now a stable
+#   client-only key; (8) evidence-reference rendering was inconsistent (kind dropped / untranslated)
+#   between the two history surfaces -- unified via one formatEvidenceRef helper. The contracts DTO
+#   change from the previous chunk had left two admin test fixtures failing typecheck (missing
+#   r7a_restorations_used_snapshot/dwell_policy_version) -- fixed alongside. Admin (35) + contracts
+#   (28 in the two moderation files) tests green; typecheck + lint clean across admin/contracts.
+#   openapi/v1.yaml regenerated, byte-identical (escalation-max value unchanged, only its source).
+#   NEXT: review the final chunk (governance/docs), THEN live-DB verification of migration 0100 +
+#   all touched specs across every chunk.)
+# last_updated: 2026-08-12d (10-20-moderation-record-model: in-progress, bmad-code-review continues
+#   with the contracts+OpenAPI chunk (3 of 5, packages/contracts/** + openapi/v1.yaml -- 2 chunks
+#   remain: admin UI, governance/docs). 1 decision resolved to dismiss: the Decision Note's wire
+#   field stays `rationale`, not renamed to `decision_note` -- AC12's field list is satisfied by
+#   chunk 1's DB-column rename, a wire rename would be a breaking change AC12 doesn't clearly
+#   mandate. 3 patches applied, all confirmed by direct code inspection (not just trusting the
+#   findings): (1) AC6's 40-char escalation floor was declared, drift-tested, but never wired into
+#   the Zod schema (`.min(1)` instead of `.min(MODERATION_ESCALATION_MIN_CHARS)`) -- all three
+#   review layers independently caught this; fixed + added a behavioral test that actually exercises
+#   the floor; (2) the live `POST .../grounds` endpoint (shipped in chunk 2) had ZERO representation
+#   in openapi/v1.yaml -- emit-openapi.ts is hand-maintained, not auto-discovered from routes, and
+#   nobody had added the registration; fixed with a full registerPath block; (3) two of AC5 item 7's
+#   three ruled governance-fact columns (r7a_restorations_used_snapshot, dwell_policy_version) were
+#   completely unreadable via the API -- fixed across domain reader + contracts DTO + API handler,
+#   since both are non-PII and belong on the regular history list. openapi/v1.yaml regenerated
+#   deterministically after each fix. Domain (202) + contracts (882) unit suites green; typecheck +
+#   lint clean across domain/contracts/api. Migration 0100 and all live-DB-integration-spec-covered
+#   behaviors still NOT run against a live DB this session -- verify before merge. NEXT: review
+#   remaining 2 chunks, THEN live-DB verification of migration 0100 + all touched specs.)
+# last_updated: 2026-08-12c (10-20-moderation-record-model: in-progress, bmad-code-review continues
+#   with the API-layer chunk (2 of 5, apps/api/** only -- 3 chunks remain: contracts/OpenAPI, admin
+#   UI, governance/docs). 1 decision resolved to a patch: performAction's own plaintext pre-checks
+#   ran before ANY legality check in the whole call chain, so the chunk-1 domain reorder fix never
+#   reached real HTTP callers -- fixed with an early, non-authoritative legality fast-fail on the
+#   already-open request.scopeTx.tx (moderateMember's tx-scoped check stays the TOCTOU-safe
+#   authority). 6 patches applied: (1) a genuine race Edge Case Hunter caught and this session
+#   verified by reading the code -- two concurrent appendGround calls could both supersede the same
+#   ground, now closed by a new ModerationGroundAlreadySupersededError + a partial UNIQUE INDEX in
+#   migration 0100; (2) AC12 gap closed -- escalation parts + immediate-termination reason are now
+#   decrypt-on-demand via the rationale endpoint (domain reader + contracts DTO + handler, all three
+#   layers), openapi/v1.yaml regenerated deterministically; (3-6) parallelized KMS calls and dwell
+#   reads, deduped a route-param schema, consolidated 4 duplicate error-mapping blocks. Migration
+#   0100 and the two new live-DB-integration-spec-covered behaviors (ground-supersede race,
+#   AC12 decrypt) NOT yet run against a live DB this session -- verify before merge. Domain (202) +
+#   contracts (881) unit suites green; typecheck + lint clean across domain/contracts/api. NEXT:
+#   review remaining 3 chunks, THEN live-DB verification of migration 0100 + all touched specs.)
+# last_updated: 2026-08-12b (10-20-moderation-record-model: review -> in-progress via bmad-code-review,
+#   domain-core chunk (1 of 5, packages/domain/** only -- 4 chunks remain: API layer,
+#   contracts/OpenAPI, admin UI, governance/docs). 3 decision-needed resolved (1 became a patch --
+#   check ordering; 1 dismissed -- RTBF asymmetry is correct per-column; 1 deferred -- evidence_refs
+#   RTBF exemption needs DPO/legal sign-off). 8 patches: 6 applied in domain code + a new migration
+#   0100 (grounds-supersede-integrity trigger + r7a bounds CHECK), 2 rescoped to deferred (DB-level
+#   registry replication is design work, not a mechanical patch). Critical finding: the RTBF scrub
+#   unconditionally wrote both escalation ciphertext columns on every row, violating
+#   escalation_iff_terminate on any non-terminate row and aborting the whole scrub for any
+#   previously-suspended member -- fixed via a per-row CASE guard; not caught by the mocked
+#   rtbf-anonymize.test.ts, which was updated to assert the new SQL-fragment shape. Migration 0100
+#   NOT yet run against a live DB in this session -- verify before merge. Domain unit suite (202
+#   tests across tests/member) + typecheck + lint all green post-patch. NEXT: review remaining 4
+#   chunks, THEN live-DB verification of migration 0100 + the moderation-grounds/actions specs.)
 # last_updated: 2026-08-12 (10-20-moderation-record-model: in-progress -> review via bmad-dev-story,
 #   off governance/10-20-moderation-record-model. Tasks 0 and 5-12 landed this session; Tasks 1-4
 #   (routing note, ruling, the SS8.5/SS8.6/SS8.9 authoring and migration 0099) were already done.
@@ -5241,7 +5358,7 @@ development_status:
   10-17-moderation-roster-unblock: done
   10-18-constituting-the-trustee-panel-sanctioning-authority: done
   10-19-termination-ends-membership-privileges: done
-  10-20-moderation-record-model: review
+  10-20-moderation-record-model: done
   10-21-off-portal-dpdpa-access: backlog
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: done

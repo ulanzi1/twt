@@ -24,6 +24,7 @@ import {
   EVIDENCE_REF_KINDS,
   EVIDENCE_REF_PATTERN,
   MODERATION_DECISION_NOTE_MAX_CHARS,
+  MODERATION_ESCALATION_MAX_CHARS,
   MODERATION_ESCALATION_MIN_CHARS,
   type EvidenceRefDto,
   type ModerationAction,
@@ -41,6 +42,17 @@ import { moderationEn as t } from './i18n-en.js';
 // It now comes from the contracts DTO itself, so the textarea's cap and the server's `.max()` are
 // one number and cannot drift.
 export { MODERATION_DECISION_NOTE_MAX_CHARS };
+
+/**
+ * Which control a validation error belongs to — `reasonCode`/`rationale` render inline beside
+ * their own field; `group` covers the escalation/evidence controls, which belong to a group rather
+ * than any single field (review follow-up: see the `validationError` state declaration).
+ */
+type ValidationErrorField = 'reasonCode' | 'rationale' | 'group';
+interface ValidationErrorState {
+  field: ValidationErrorField;
+  message: string;
+}
 
 export interface ModerationSubmit {
   action: ModerationAction;
@@ -131,6 +143,16 @@ export function reasonCodeLabel(code: string, reasonCodes: readonly ReasonCodeMe
   return reasonCodes.find((m) => m.code === code)?.label ?? code.replace(/-/g, ' ');
 }
 
+/**
+ * Render one evidence reference as `<translated kind>: <ref>` — the ONE formatting used by both
+ * the action-level and the ground-level history lists (review follow-up: the ground list previously
+ * dropped `kind` entirely, and the action list showed the RAW untranslated slug instead of running
+ * it through `t.evidenceKinds`, the same lookup the form's own `<select>` already used).
+ */
+function formatEvidenceRef(ref: EvidenceRefDto): string {
+  return `${t.evidenceKinds[ref.kind] ?? ref.kind}: ${ref.ref}`;
+}
+
 export function ModerationStrip({
   moderation,
   reasonCodes,
@@ -148,9 +170,18 @@ export function ModerationStrip({
   // whose entire point is that they are separately answerable (`epics.md:3851`, D2).
   const [escalationInadequacy, setEscalationInadequacy] = useState('');
   const [escalationProportionality, setEscalationProportionality] = useState('');
-  const [evidenceRefs, setEvidenceRefs] = useState<EvidenceRefDto[]>([]);
+  // ⚠ `key`, a client-only stable identity — NEVER sent to the server (stripped when building the
+  // submit payload). Review follow-up: rows were previously keyed by array INDEX, which React can
+  // misassociate across add/remove (removing a middle row shifts every later row's index, so React
+  // reuses that DOM node's live input state for a different row's data — a textbook index-as-key
+  // bug, especially costly here since every row holds live user-typed text).
+  const nextEvidenceRowKey = useRef(0);
+  const [evidenceRefs, setEvidenceRefs] = useState<(EvidenceRefDto & { key: number })[]>([]);
   const [immediateReason, setImmediateReason] = useState('');
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // ⚠ Which CONTROL an error belongs to, not just its text (review follow-up: the render sites
+  // previously matched on `validationError === t.reasonRequiredError`-style string identity, which
+  // silently breaks — hides or double-renders — if a translation edit ever makes two messages equal).
+  const [validationError, setValidationError] = useState<ValidationErrorState | null>(null);
   const [pending, setPending] = useState<ModerationAction | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
@@ -184,10 +215,19 @@ export function ModerationStrip({
   // is what makes taking it INFORMED.
   const legal = new Set<ModerationAction>(moderation.legal_actions);
 
-  /** True while the ordinary termination path has not yet opened (AC8). */
-  const dwellOpen =
-    moderation.termination_available_at !== null &&
-    new Date(moderation.termination_available_at).getTime() > Date.now();
+  /**
+   * True while the ordinary termination path has not yet opened (AC8).
+   *
+   * ⚠ FAILS TOWARD SHOWING THE WARNING, not past it (review follow-up). `new Date(malformed)
+   * .getTime()` is `NaN`, and a bare `NaN > Date.now()` is `false` — which would silently skip the
+   * whole re-confirmation/immediate-reason flow this field exists to require. An unparseable value
+   * is a data problem, not evidence the dwell has elapsed, so it is treated as OPEN.
+   */
+  const dwellOpen = ((): boolean => {
+    if (moderation.termination_available_at === null) return false;
+    const at = new Date(moderation.termination_available_at).getTime();
+    return Number.isNaN(at) || at > Date.now();
+  })();
 
   /** Choose an action — reset a reason code the new action's `appliesTo` does not admit. */
   const chooseAction = useCallback(
@@ -214,43 +254,55 @@ export function ModerationStrip({
     return () => document.removeEventListener('keydown', onKey);
   }, [pending]);
 
+  // ── Story 10.20 (AC6) — the two-part escalation test, on `terminate` ONLY ─────────────────────
+  // ⚠ THIS IS THE THIRD LAYER, NOT THE FIRST. The record's SHAPE is the first (migration 0099's
+  // `escalation_iff_terminate` CHECK) and the route guard is the second. Client validation here is
+  // for the operator's benefit — it must never be mistaken for the boundary.
+  //
+  // ⚠ SHARED between `requestSubmit` and `confirm()` (review follow-up): the confirmation modal is
+  // an overlay, not a route change, so the escalation/evidence textareas stay mounted underneath it
+  // while it's open. `confirm()` previously re-read this live state without re-running these checks
+  // — an operator editing a field between opening the dialog and clicking Confirm could send an
+  // already-invalid value. Not a security gap (the server re-validates and 422s), but this closes
+  // the gap between "the client validated" and "the client actually sent what it validated."
+  const validateEscalationGroup = (): string | null => {
+    const a = escalationInadequacy.trim();
+    const b = escalationProportionality.trim();
+    if (a === '' || b === '') return t.escalationRequiredError;
+    if (a.length < MODERATION_ESCALATION_MIN_CHARS || b.length < MODERATION_ESCALATION_MIN_CHARS) {
+      return t.escalationTooShortError;
+    }
+    if (normalizeForCompare(a) === normalizeForCompare(b)) return t.escalationRestatementError;
+    // Every reference must be an identifier. ⛔ A prose `ref` is REJECTED, never truncated — a
+    // truncation would silently store a prefix of the prose the rule exists to keep out.
+    if (evidenceRefs.some((r) => r.ref.trim() === '' || !EVIDENCE_REF_PATTERN.test(r.ref.trim()))) {
+      return t.evidenceInvalidError;
+    }
+    // A (kind, ref) pair listed twice pads the record with a redundant entry — reject rather than
+    // silently store both.
+    const evidenceKeys = evidenceRefs.map((r) => `${r.kind}:${r.ref.trim()}`);
+    if (new Set(evidenceKeys).size !== evidenceKeys.length) return t.evidenceDuplicateError;
+    return null;
+  };
+
   /** Validate, then open the confirmation modal. */
   const requestSubmit = (): void => {
     if (action === null) return;
     if (reasonCode === '') {
-      setValidationError(t.reasonRequiredError);
+      setValidationError({ field: 'reasonCode', message: t.reasonRequiredError });
       return;
     }
     // The rationale is required on EVERY action (AC3) — deliberately stricter than the UX
     // `<ReasonCodeDropdown>` "other-text-required" state, which asks for text only on an "other"
     // code. A structured code alone cannot explain a suspension to the member who receives it.
     if (rationale.trim() === '') {
-      setValidationError(t.rationaleRequiredError);
+      setValidationError({ field: 'rationale', message: t.rationaleRequiredError });
       return;
     }
-    // ── Story 10.20 (AC6) — the two-part escalation test, on `terminate` ONLY ───────────────────
-    // ⚠ THIS IS THE THIRD LAYER, NOT THE FIRST. The record's SHAPE is the first (migration 0099's
-    // `escalation_iff_terminate` CHECK) and the route guard is the second. Client validation here is
-    // for the operator's benefit — it must never be mistaken for the boundary.
     if (action === 'terminate') {
-      const a = escalationInadequacy.trim();
-      const b = escalationProportionality.trim();
-      if (a === '' || b === '') {
-        setValidationError(t.escalationRequiredError);
-        return;
-      }
-      if (a.length < MODERATION_ESCALATION_MIN_CHARS || b.length < MODERATION_ESCALATION_MIN_CHARS) {
-        setValidationError(t.escalationTooShortError);
-        return;
-      }
-      if (normalizeForCompare(a) === normalizeForCompare(b)) {
-        setValidationError(t.escalationRestatementError);
-        return;
-      }
-      // Every reference must be an identifier. ⛔ A prose `ref` is REJECTED, never truncated — a
-      // truncation would silently store a prefix of the prose the rule exists to keep out.
-      if (evidenceRefs.some((r) => r.ref.trim() === '' || !EVIDENCE_REF_PATTERN.test(r.ref.trim()))) {
-        setValidationError(t.evidenceInvalidError);
+      const groupError = validateEscalationGroup();
+      if (groupError !== null) {
+        setValidationError({ field: 'group', message: groupError });
         return;
       }
     }
@@ -270,6 +322,19 @@ export function ModerationStrip({
         return;
       }
     }
+    // Re-validate the escalation/evidence group (review follow-up — see `validateEscalationGroup`'s
+    // comment): the underlying form stays mounted behind this overlay, so a field edited after
+    // `requestSubmit` validated it must be checked again before it is actually sent. Closes the
+    // modal on failure — there is no in-modal slot for these fields, only for the immediate reason
+    // above — so the SAME group-level error `requestSubmit` would have shown now appears below.
+    if (pending === 'terminate') {
+      const groupError = validateEscalationGroup();
+      if (groupError !== null) {
+        setValidationError({ field: 'group', message: groupError });
+        setPending(null);
+        return;
+      }
+    }
     try {
       const isTerminate = pending === 'terminate';
       await onSubmit({
@@ -283,7 +348,10 @@ export function ModerationStrip({
               escalationInadequacy: escalationInadequacy.trim(),
               escalationProportionality: escalationProportionality.trim(),
               ...(evidenceRefs.length > 0
-                ? { evidenceRefs: evidenceRefs.map((r) => ({ ...r, ref: r.ref.trim() })) }
+                ? {
+                    // `key` is client-only reconciliation state — never built into the wire payload.
+                    evidenceRefs: evidenceRefs.map((r) => ({ kind: r.kind, ref: r.ref.trim() })),
+                  }
                 : {}),
               ...(immediateReason.trim() !== ''
                 ? { immediateTerminationReason: immediateReason.trim() }
@@ -380,9 +448,9 @@ export function ModerationStrip({
                 </option>
               ))}
             </select>
-            {validationError === t.reasonRequiredError && (
+            {validationError?.field === 'reasonCode' && (
               <p className="text-xs text-status-fail-fg" role="alert" data-testid="moderation-reason-error">
-                {validationError}
+                {validationError.message}
               </p>
             )}
             {/*
@@ -422,13 +490,13 @@ export function ModerationStrip({
             <p id="moderation-rationale-note" className="text-xs opacity-60">
               {t.rationaleEncryptedNote}
             </p>
-            {validationError === t.rationaleRequiredError && (
+            {validationError?.field === 'rationale' && (
               <p
                 className="text-xs text-status-fail-fg"
                 role="alert"
                 data-testid="moderation-rationale-error"
               >
-                {validationError}
+                {validationError.message}
               </p>
             )}
           </div>
@@ -459,7 +527,7 @@ export function ModerationStrip({
                   id="moderation-escalation-inadequacy"
                   data-testid="moderation-escalation-inadequacy"
                   className="rounded border p-1 text-sm"
-                  maxLength={MODERATION_DECISION_NOTE_MAX_CHARS}
+                  maxLength={MODERATION_ESCALATION_MAX_CHARS}
                   placeholder={t.escalationInadequacyPlaceholder}
                   value={escalationInadequacy}
                   disabled={processing}
@@ -482,7 +550,7 @@ export function ModerationStrip({
                   id="moderation-escalation-proportionality"
                   data-testid="moderation-escalation-proportionality"
                   className="rounded border p-1 text-sm"
-                  maxLength={MODERATION_DECISION_NOTE_MAX_CHARS}
+                  maxLength={MODERATION_ESCALATION_MAX_CHARS}
                   placeholder={t.escalationProportionalityPlaceholder}
                   value={escalationProportionality}
                   disabled={processing}
@@ -505,7 +573,7 @@ export function ModerationStrip({
               <legend className="px-1 text-xs font-semibold">{t.evidenceHeading}</legend>
               <p className="text-xs opacity-70">{t.evidenceIntro}</p>
               {evidenceRefs.map((row, i) => (
-                <div key={i} className="flex flex-wrap items-end gap-2">
+                <div key={row.key} className="flex flex-wrap items-end gap-2">
                   <label className="sr-only" htmlFor={`moderation-evidence-kind-${i}`}>
                     {t.evidenceKindLabel}
                   </label>
@@ -559,7 +627,12 @@ export function ModerationStrip({
                 data-testid="moderation-evidence-add"
                 className="self-start rounded border px-2 py-1 text-xs"
                 disabled={processing}
-                onClick={() => setEvidenceRefs((prev) => [...prev, { kind: 'complaint', ref: '' }])}
+                onClick={() =>
+                  setEvidenceRefs((prev) => [
+                    ...prev,
+                    { key: nextEvidenceRowKey.current++, kind: 'complaint', ref: '' },
+                  ])
+                }
               >
                 {t.evidenceAdd}
               </button>
@@ -575,17 +648,15 @@ export function ModerationStrip({
             exactly the failure mode `epics.md:3729` records: a view-model assertion would have
             passed, because the state was being set correctly all along.
           */}
-          {validationError !== null &&
-            validationError !== t.reasonRequiredError &&
-            validationError !== t.rationaleRequiredError && (
-              <p
-                className="text-xs text-status-fail-fg"
-                role="alert"
-                data-testid="moderation-validation-error"
-              >
-                {validationError}
-              </p>
-            )}
+          {validationError?.field === 'group' && (
+            <p
+              className="text-xs text-status-fail-fg"
+              role="alert"
+              data-testid="moderation-validation-error"
+            >
+              {validationError.message}
+            </p>
+          )}
 
           <button
             type="button"
@@ -651,7 +722,7 @@ export function ModerationStrip({
                   id="moderation-immediate-reason"
                   data-testid="moderation-immediate-reason"
                   className="rounded border p-1 text-sm"
-                  maxLength={MODERATION_DECISION_NOTE_MAX_CHARS}
+                  maxLength={MODERATION_ESCALATION_MAX_CHARS}
                   placeholder={t.immediateReasonPlaceholder}
                   value={immediateReason}
                   disabled={processing}
@@ -779,7 +850,7 @@ export function ModerationHistory({
                       {g.supersedes_ground_id !== null ? ` — ${t.groundSupersedes}` : ''}
                       {g.has_note ? ` · ${t.groundHasNote}` : ''}
                       {g.evidence_refs.length > 0
-                        ? ` · ${t.evidenceLabel}: ${g.evidence_refs.map((r) => r.ref).join(', ')}`
+                        ? ` · ${t.evidenceLabel}: ${g.evidence_refs.map(formatEvidenceRef).join(', ')}`
                         : ''}
                     </li>
                   ))}
@@ -791,7 +862,7 @@ export function ModerationHistory({
                   className="mt-1 text-xs opacity-70"
                   data-testid={`moderation-evidence-${e.moderation_action_id}`}
                 >
-                  {t.evidenceLabel}: {e.evidence_refs.map((r) => `${r.kind} ${r.ref}`).join(', ')}
+                  {t.evidenceLabel}: {e.evidence_refs.map(formatEvidenceRef).join(', ')}
                 </div>
               )}
               {/*

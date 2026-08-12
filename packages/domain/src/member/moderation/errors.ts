@@ -143,14 +143,19 @@ export class ModerationEscalationRequiredError extends Error {
   public readonly code = MODERATION_ESCALATION_REQUIRED_CODE;
   public constructor(
     public readonly part: EscalationPart,
-    public readonly reason: 'missing' | 'too_short',
+    public readonly reason: 'missing' | 'too_short' | 'too_long',
+    // ⚠ Named `minChars` for both bounds — `.minChars` is asserted directly in
+    // moderation-dwell.test.ts, so the property name stays put. It holds the MAX when
+    // `reason === 'too_long'`; `toErrorResponse` picks the right JSON key per reason.
     public readonly minChars: number,
   ) {
     super(
       `${FIELD_DESCRIPTIONS[part]} is ${
         reason === 'missing'
           ? 'required for a termination'
-          : `too short (minimum ${minChars} characters)`
+          : reason === 'too_short'
+            ? `too short (minimum ${minChars} characters)`
+            : `too long (maximum ${minChars} characters)`
       }`,
     );
   }
@@ -160,7 +165,11 @@ export class ModerationEscalationRequiredError extends Error {
       error: {
         code: this.code,
         message: this.message,
-        details: { part: this.part, reason: this.reason, min_chars: this.minChars },
+        details: {
+          part: this.part,
+          reason: this.reason,
+          ...(this.reason === 'too_long' ? { max_chars: this.minChars } : { min_chars: this.minChars }),
+        },
         request_id: requestId,
       },
     };
@@ -422,6 +431,42 @@ export class ModerationPrimaryGroundImmutableError extends Error {
         code: this.code,
         message: this.message,
         details: { moderation_action_id: this.moderationActionId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for a supersede target that already has an active superseder (HTTP 409). */
+export const MODERATION_GROUND_ALREADY_SUPERSEDED_CODE =
+  'member_moderation.ground_already_superseded';
+
+/**
+ * Thrown when `supersedes_ground_id` names a ground that ANOTHER row already supersedes.
+ *
+ * ⛔ "At most one active superseder per target" — without this, two concurrent appends (or one
+ * caller who did not re-fetch the console state) could each successfully supersede the same
+ * ground, and a reader would have no way to tell which superseding entry is the current one.
+ *
+ * ⛔ NOT a silent no-op, and ⛔ never a `23505` leaking as a 500, same discipline as
+ * `ModerationPrimaryGroundImmutableError`. The pre-check here is the INTERFACE; the partial unique
+ * index `member_moderation_grounds_supersedes_target_idx` (migration 0100) is the BACKSTOP that
+ * closes the race the pre-check alone cannot — two concurrent appends can both pass the pre-check
+ * before either commits, but only one INSERT can win the index.
+ */
+export class ModerationGroundAlreadySupersededError extends Error {
+  public readonly name = 'ModerationGroundAlreadySupersededError';
+  public readonly code = MODERATION_GROUND_ALREADY_SUPERSEDED_CODE;
+  public constructor(public readonly groundId: string) {
+    super(`ground '${groundId}' already has an active superseding entry`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { ground_id: this.groundId },
         request_id: requestId,
       },
     };

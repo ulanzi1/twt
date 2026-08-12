@@ -29,7 +29,7 @@
 // Every write runs under the caller's RLS scope-tx (tenant-isolated). Naming: DB snake_case, TS
 // camelCase. NO HTTP / audit / event emission here — the route orchestrates (mirrors assemble.ts).
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import { encryptTier1, serializeEnvelope } from '../encryption/envelope.js';
@@ -204,10 +204,15 @@ export async function anonymizeMember(
     .update(memberModerationActions)
     .set({
       decisionNoteCiphertext: moderationSentinel,
-      // ⚠ Set unconditionally, including on rows where they are already NULL. A conditional scrub
-      // would need to read first, and the whole point of this shape is that it cannot miss a row.
-      escalationInadequacyCiphertext: moderationSentinel,
-      escalationProportionalityCiphertext: moderationSentinel,
+      // ⚠ CASE-guarded, NOT unconditional, on these two: `escalation_iff_terminate` requires BOTH
+      // columns NULL on any non-`terminate` row. A flat sentinel write here satisfies `terminate`
+      // rows but violates the CHECK (23514) the instant a member's history includes a suspend or
+      // restore row, aborting the whole scrub. The CASE still reaches every row in this ONE
+      // statement (no read-first, no missed row) — it just keeps each row's action-gated NULL-ness
+      // instead of collapsing it.
+      escalationInadequacyCiphertext: sql`CASE WHEN ${memberModerationActions.action} = 'terminate' THEN ${moderationSentinel} ELSE NULL END`,
+      escalationProportionalityCiphertext: sql`CASE WHEN ${memberModerationActions.action} = 'terminate' THEN ${moderationSentinel} ELSE NULL END`,
+      // No CHECK ties this one to `action`, so an unconditional sentinel is safe here.
       immediateTerminationReasonCiphertext: moderationSentinel,
     })
     .where(eq(memberModerationActions.memberId, memberId));

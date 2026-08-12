@@ -53,10 +53,31 @@ const DecisionNote = z.string().trim().min(1).max(MODERATION_DECISION_NOTE_MAX_C
 export const MODERATION_ESCALATION_MIN_CHARS = 40;
 
 /**
- * One part of the two-part escalation justification. Same cap as the Decision Note — this is
- * governance-grade prose, not a label.
+ * The MAXIMUM length for each escalation part / the immediate-termination reason. Value-aligned
+ * with `ESCALATION_PART_MAX_CHARS` in `@twt/domain` and pinned by the drift guard (review
+ * follow-up: the admin console previously reused `MODERATION_DECISION_NOTE_MAX_CHARS` for these
+ * three fields — harmless only because the two numbers happened to be equal, not because they were
+ * the same constant, which is exactly the drift risk this file's own header warns against).
  */
-const EscalationPart = z.string().trim().min(1).max(MODERATION_DECISION_NOTE_MAX_CHARS);
+export const MODERATION_ESCALATION_MAX_CHARS = 4_000;
+
+/**
+ * One part of the two-part escalation justification (also backs `immediate_termination_reason`).
+ * Its own cap, not the Decision Note's — this is governance-grade prose, not a label, but a
+ * different field with a different owner of "what's the right length".
+ *
+ * ⚠ DELIBERATELY `.min(1)`, NOT `.min(MODERATION_ESCALATION_MIN_CHARS)` (review follow-up, REVERTED
+ * after a live-DB regression: wiring the 40-char floor into THIS schema makes Fastify reject a
+ * too-short value with a generic 400 before the request ever reaches the domain — which is the
+ * layer that produces the SPECIFIC typed 422 (`member_moderation.escalation_required`, reason
+ * `missing` vs `too_short`, with a `min_chars` detail) callers and the admin UI depend on. `.min(1)`
+ * here rejects only the truly-empty case (a schema-shape objection); the substance floor is
+ * INTENTIONALLY the domain's `assertPart`/`assertImmediateTerminationReason` job, one layer in —
+ * `member-moderation.spec.ts`'s and `moderation-dwell.spec.ts`'s live-DB specs pin the 422, not a
+ * 400, for a below-floor value. `MODERATION_ESCALATION_MIN_CHARS` stays exported for the admin
+ * console's client-side length hint and the drift-guard test, just not wired into `.min()` here.
+ */
+const EscalationPart = z.string().trim().min(1).max(MODERATION_ESCALATION_MAX_CHARS);
 
 /**
  * The body of a suspend / terminate / restore request. The ACTION itself is carried by the ROUTE
@@ -206,6 +227,19 @@ export const ModerationHistoryEntryDto = z
     grounds: z.array(ModerationGroundDto),
     /** The evidence REFERENCES recorded on the action itself. Identifiers, never prose (AC4). */
     evidence_refs: z.array(EvidenceRefDto),
+    /**
+     * AC5 item 7 / AC7 (Story 10.20, Q5(a)) — the restoration-exhaustion fact SNAPSHOTTED at the
+     * decision instant, justified against in escalation part (a). NEVER re-derived from a current
+     * projection (that would defeat the point of a snapshot) — `null` means "not applicable to this
+     * action" (a suspend/restore, or a `terminate` predating this story), NOT zero.
+     */
+    r7a_restorations_used_snapshot: z.number().int().nonnegative().nullable(),
+    /**
+     * AC5 item 7 / AC7 (Story 10.20, Q4.4) — the dwell-policy clause VERSION pin in force at the
+     * decision instant, so a later reviewer can test the assertion against the policy that actually
+     * governed it rather than whatever the registry says today. `null` for the same reasons as above.
+     */
+    dwell_policy_version: z.string().nullable(),
   })
   .strict();
 export type ModerationHistoryEntryDto = z.output<typeof ModerationHistoryEntryDto>;
@@ -294,11 +328,26 @@ export type ModeratedMembersListResponse = z.output<typeof ModeratedMembersListR
  * claimed existed). `rationale` is nullable ONLY as the fail-soft outcome of a corrupt/rotated
  * envelope (the `claims.verifier-console.handlers.ts` `safeDecrypt` discipline) — never because the
  * rationale was optional to write (AC3 makes it mandatory on every action).
+ *
+ * ⚠ Story 10.20 (AC12) — the same decrypt-on-demand discipline extends to the two escalation parts
+ * and the immediate-termination exception reason (code-review follow-up: this endpoint was the
+ * ONLY read AC12 names, but originally decrypted just the Decision Note). All three are nullable
+ * for TWO independent reasons, and a caller cannot tell which from the field alone:
+ *   · NOT APPLICABLE — a `suspend`/`restore` action never carries an escalation part, and an
+ *     ordinary-path `terminate` never carries the immediate-termination reason (`escalation_
+ *     inadequacy`/`escalation_proportionality`/`immediate_termination_reason` are all `null` at
+ *     the DB layer for these rows — see migration 0099's `escalation_iff_terminate` CHECK).
+ *   · CORRUPT ENVELOPE — the fail-soft outcome, same as `rationale`.
+ * Distinguishing the two is not this DTO's job: `action` (already on `ModerationActionResponse`/
+ * `ModerationHistoryResponse`) tells a caller which fields are EXPECTED to be non-null.
  */
 export const ModerationRationaleResponse = z
   .object({
     moderation_action_id: UuidString,
     rationale: z.string().nullable(),
+    escalation_inadequacy: z.string().nullable(),
+    escalation_proportionality: z.string().nullable(),
+    immediate_termination_reason: z.string().nullable(),
   })
   .strict();
 export type ModerationRationaleResponse = z.output<typeof ModerationRationaleResponse>;

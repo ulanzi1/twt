@@ -330,6 +330,8 @@ describe('<ModerationHistory> — the read-only audit trail (AC9)', () => {
       },
     ],
     evidence_refs: [],
+    r7a_restorations_used_snapshot: null,
+    dwell_policy_version: null,
   };
 
   it('renders action · reason LABEL · actor_display', () => {

@@ -20,6 +20,7 @@ import {
   EVIDENCE_REF_MAX_LENGTH,
   EVIDENCE_REF_PATTERN,
   EvidenceRefDto,
+  MODERATION_ESCALATION_MAX_CHARS,
   MODERATION_ESCALATION_MIN_CHARS,
   MODERATION_DECISION_NOTE_MAX_CHARS,
   ModerateMemberRequest,
@@ -36,8 +37,35 @@ describe('the contracts copy is value-aligned with @twt/domain (anti-drift)', ()
     expect(EVIDENCE_REF_PATTERN.flags).toBe(domainModeration.EVIDENCE_REF_PATTERN.flags);
   });
 
-  it('pins the escalation substance floor', () => {
+  it('pins the escalation substance floor and ceiling', () => {
     expect(MODERATION_ESCALATION_MIN_CHARS).toBe(domainModeration.ESCALATION_PART_MIN_CHARS);
+    expect(MODERATION_ESCALATION_MAX_CHARS).toBe(domainModeration.ESCALATION_PART_MAX_CHARS);
+  });
+
+  it('⭐ the escalation substance floor is DELIBERATELY NOT wired into the schema (only emptiness is)', () => {
+    // Review follow-up, REVERTED after a live-DB regression: an earlier pass wired
+    // MODERATION_ESCALATION_MIN_CHARS into `EscalationPart`'s `.min()`, which made Fastify reject a
+    // too-short value with a generic 400 before the request ever reached the domain — the layer that
+    // produces the SPECIFIC typed 422 (`member_moderation.escalation_required`, `missing` vs
+    // `too_short`, with a `min_chars` detail) `member-moderation.spec.ts` and `moderation-dwell.spec.ts`
+    // pin against a live DB. The schema's job here is only to reject the truly-empty case; the
+    // substance floor is the domain's `assertPart`/`assertImmediateTerminationReason` job, one layer in.
+    const base = { reason_code: 'r14-forgery', rationale: 'Forged documents confirmed by the panel.' };
+    const tooShort = 'x'.repeat(MODERATION_ESCALATION_MIN_CHARS - 1);
+    expect(
+      ModerateMemberRequest.safeParse({
+        ...base,
+        escalation_inadequacy: tooShort,
+        escalation_proportionality: 'y'.repeat(60),
+      }).success,
+    ).toBe(true);
+    expect(
+      ModerateMemberRequest.safeParse({
+        ...base,
+        escalation_inadequacy: '',
+        escalation_proportionality: 'y'.repeat(60),
+      }).success,
+    ).toBe(false);
   });
 
   it('⭐ the two copies AGREE on accept/reject for the cases that matter', () => {

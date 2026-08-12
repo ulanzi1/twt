@@ -39,6 +39,7 @@ import { getMemberStateAt } from '../read.js';
 import { assertEvidenceRefs, type EvidenceRef } from './evidence-refs.js';
 import {
   ModerationActionNotFoundError,
+  ModerationGroundAlreadySupersededError,
   ModerationGroundNotFoundError,
   ModerationPrimaryGroundImmutableError,
 } from './errors.js';
@@ -144,10 +145,11 @@ export interface AppendGroundResult {
  * Runs in the CALLER's scope transaction (the `moderateMember` contract) — the event and the row
  * commit or roll back together.
  *
- * @throws ModerationReasonCodeInvalidError      (→ 422) the code is not declared.
- * @throws ModerationGroundNotFoundError         (→ 404) the superseded ground is not on this action.
- * @throws ModerationPrimaryGroundImmutableError (→ 409) an attempt to supersede the PRIMARY ground.
- * @throws ModerationEvidenceRefInvalidError     (→ 422) evidence that is not a reference.
+ * @throws ModerationReasonCodeInvalidError       (→ 422) the code is not declared.
+ * @throws ModerationGroundNotFoundError          (→ 404) the superseded ground is not on this action.
+ * @throws ModerationPrimaryGroundImmutableError  (→ 409) an attempt to supersede the PRIMARY ground.
+ * @throws ModerationGroundAlreadySupersededError (→ 409) the target already has an active superseder.
+ * @throws ModerationEvidenceRefInvalidError      (→ 422) evidence that is not a reference.
  */
 export async function appendModerationGround(
   client: pg.PoolClient,
@@ -185,7 +187,7 @@ export async function appendModerationGround(
 
   const evidenceRefs: EvidenceRef[] = assertEvidenceRefs(input.evidenceRefs);
 
-  // (2) The supersede target must exist ON THIS ACTION and must not be the primary.
+  // (2b) The supersede target must exist ON THIS ACTION and must not be the primary.
   //     ⛔ The PRIMARY is un-supersedable BY CONSTRUCTION (the partial unique index + the grant
   //     posture), so this is not merely a policy check: without it the caller would get a `23505`
   //     or a silently-orphaned reference instead of a readable refusal.
@@ -209,6 +211,20 @@ export async function appendModerationGround(
     if (!found) throw new ModerationGroundNotFoundError(input.supersedesGroundId);
     if (found.isPrimary) {
       throw new ModerationPrimaryGroundImmutableError(input.moderationActionId);
+    }
+
+    // ⛔ AT MOST ONE ACTIVE SUPERSEDER PER TARGET — without this, two grounds could each claim to
+    // supersede the SAME target, and a reader would have no way to tell which is current. This is
+    // the INTERFACE half; `member_moderation_grounds_supersedes_target_idx` (migration 0100) is the
+    // BACKSTOP that closes the race this pre-check cannot (two concurrent appends can both pass
+    // this SELECT before either commits).
+    const existingSuperseder = await db
+      .select({ groundId: memberModerationGrounds.groundId })
+      .from(memberModerationGrounds)
+      .where(eq(memberModerationGrounds.supersedesGroundId, input.supersedesGroundId))
+      .limit(1);
+    if (existingSuperseder[0]) {
+      throw new ModerationGroundAlreadySupersededError(input.supersedesGroundId);
     }
   }
 

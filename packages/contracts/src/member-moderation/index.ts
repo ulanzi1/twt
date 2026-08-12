@@ -33,6 +33,7 @@ export {
 
 export {
   MODERATION_DECISION_NOTE_MAX_CHARS,
+  MODERATION_ESCALATION_MAX_CHARS,
   MODERATION_ESCALATION_MIN_CHARS,
   ModerateMemberRequest,
   ModerationActionResponse,

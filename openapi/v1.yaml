@@ -6285,6 +6285,15 @@ components:
                     - kind
                     - ref
                   additionalProperties: false
+              r7a_restorations_used_snapshot:
+                type:
+                  - integer
+                  - "null"
+                minimum: 0
+              dwell_policy_version:
+                type:
+                  - string
+                  - "null"
             required:
               - moderation_action_id
               - action
@@ -6295,6 +6304,8 @@ components:
               - acted_at
               - grounds
               - evidence_refs
+              - r7a_restorations_used_snapshot
+              - dwell_policy_version
             additionalProperties: false
         has_more:
           type: boolean
@@ -6318,9 +6329,85 @@ components:
           type:
             - string
             - "null"
+        escalation_inadequacy:
+          type:
+            - string
+            - "null"
+        escalation_proportionality:
+          type:
+            - string
+            - "null"
+        immediate_termination_reason:
+          type:
+            - string
+            - "null"
       required:
         - moderation_action_id
         - rationale
+        - escalation_inadequacy
+        - escalation_proportionality
+        - immediate_termination_reason
+      additionalProperties: false
+    AppendModerationGroundResponse:
+      type: object
+      properties:
+        ground_id:
+          type: string
+          format: uuid
+        moderation_action_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          enum: *a40
+        supersedes_ground_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        added_at:
+          type: string
+          format: date-time
+      required:
+        - ground_id
+        - moderation_action_id
+        - code
+        - supersedes_ground_id
+        - added_at
+      additionalProperties: false
+    AppendModerationGroundRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: *a40
+        note:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        evidence_refs:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum: *a42
+              ref:
+                type: string
+                minLength: 1
+                maxLength: 64
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$
+            required:
+              - kind
+              - ref
+            additionalProperties: false
+          maxItems: 10
+        supersedes_ground_id:
+          type: string
+          format: uuid
+      required:
+        - code
       additionalProperties: false
     ModeratedMembersList:
       type: object
@@ -11724,6 +11811,79 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
           description: The key service is unavailable — the rationale exists but cannot be decrypted right now (`member_moderation.rationale_unavailable`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/members/{memberId}/moderation/{moderationActionId}/grounds:
+    post:
+      summary: Append a SUPPORTING ground to an existing moderation decision
+      description: A LATER FINDING ATTACHES; it never rewrites (AC9). Records an append-only supporting ground against an existing decision, optionally superseding an earlier supporting ground — the PRIMARY ground is not reachable here and can never be superseded or replaced (structurally immutable by construction). Step-up gated (`member_moderation_append_ground`), a FOURTH context distinct from suspend/terminate/restore, so an elevation minted for one of those three can never be spent on appending a finding, and vice versa.
+      tags: *a63
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: memberId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: moderationActionId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppendModerationGroundRequest"
+      responses:
+        "200":
+          description: The appended ground
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppendModerationGroundResponse"
+        "400":
+          description: Request validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized (member.moderate) for this Pariwar; OR step-up required / the elevation was minted for a DIFFERENT moderation action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: The moderation action does not exist for this member in this Pariwar; OR `supersedes_ground_id` does not name a ground of this action (`member_moderation.action_not_found` / `member_moderation.ground_not_found`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: An attempt to supersede the PRIMARY ground (`member_moderation.primary_ground_immutable`); OR the named target already has an active superseder (`member_moderation.ground_already_superseded`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: The reason code cannot support this action; OR evidence_refs is not a bounded array of `{kind, ref}` identifiers
           content:
             application/json:
               schema:

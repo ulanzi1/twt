@@ -197,6 +197,38 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     const body = request.body as ModerateMemberRequest;
     const now = deps.clock();
 
+    // (0a) The registry guard (AC3) — a restore code can never justify a termination. Pure and
+    //      synchronous (no DB read), so it costs nothing to run before anything else — and it MUST
+    //      run before (0b)'s legality check, mirroring `moderateMember`'s own priority: "this code
+    //      cannot justify this action" (a vocabulary objection) is more fundamental than "this
+    //      action is not legal right now" (a state objection), pinned by a live-DB regression test
+    //      (`member-moderation.spec.ts`, "a request invalid on BOTH axes... pins the check ORDER").
+    memberDomain.moderation.assertReasonCodeAppliesTo(body.reason_code, action);
+
+    // (0b) ⭐ CODE-REVIEW FOLLOW-UP (Story 10.20, chunk 2) — an EARLY, non-authoritative legality
+    //      fast-fail, on the per-request scope tx already open for (0). Without this, every plaintext
+    //      check below (rationale/escalation/evidence/immediate-reason) ran BEFORE legality anywhere
+    //      in the call chain — `moderateMember`'s own legality check only runs later, inside its own
+    //      transaction — so a `terminate` against a member who is not even suspended, that ALSO omits
+    //      escalation, always got `422 escalation_required` here, never the `409 invalid_state` that
+    //      is the more fundamental objection. `errors.ts`'s stated 422-vs-409 diagnostic intent (and
+    //      `moderateMember`'s own now-corrected internal ordering) was invisible to every real HTTP
+    //      caller, since this handler duplicates the plaintext checks ahead of the domain call.
+    //
+    //      ⚠ ORDERED AFTER (0a), NOT BEFORE IT — same reasoning as `moderateMember`'s (1)-before-(2).
+    //      ⚠ THIS IS A FAST-FAIL, NOT THE AUTHORITY. `moderateMember`'s tx-scoped legality check
+    //      (inside its own `openScopeTx`, below) remains the TOCTOU-safe source of truth for the
+    //      actual write — a concurrent moderation committing in the gap between this read and that
+    //      one is caught there, exactly as before. This block only decides which error a doomed
+    //      request sees FIRST; it changes no write-path behavior.
+    const earlyOverlay = await memberDomain.moderation.getCurrentMemberModerationOverlay(
+      request.scopeTx!.tx,
+      ctx.memberId,
+    );
+    if (memberDomain.moderation.nextModerationStatus(earlyOverlay.status, action) === null) {
+      throw new memberDomain.moderation.ModerationStateError(ctx.memberId, earlyOverlay.status, action);
+    }
+
     // (a) The mandatory-rationale guard runs on the PLAINTEXT, before encrypting — a request that
     //     was always going to 422 must not spend a KMS round-trip. (The Zod schema already trims +
     //     rejects empty; this is the defence-in-depth backstop for a non-HTTP caller.)
@@ -237,33 +269,29 @@ export function createMemberModerationHandlers(deps: AppDeps) {
 
     // (b) Encrypt BEFORE opening the scope tx (the verification-decision placement) so no KMS
     //     network call is made while holding a pooled connection inside an open transaction.
-    //     ⚠ On a `terminate` this is THREE round-trips, not one — all made here, together, for the
-    //     same reason the first one is: none of them may happen inside an open tenant transaction.
-    const decisionNoteCiphertext = await encryptModerationRationale(
-      rationale,
-      ctx.pariwarId,
-      deps.encryption,
-    );
-    const escalationCiphertext = escalation
-      ? {
-          inadequacy: await encryptModerationRationale(
-            escalation.inadequacy,
-            ctx.pariwarId,
-            deps.encryption,
-          ),
-          proportionality: await encryptModerationRationale(
-            escalation.proportionality,
-            ctx.pariwarId,
-            deps.encryption,
-          ),
-        }
-      : null;
-    // Tier-1 too — it describes the case, so unlike the version pin and the fact snapshot it is
-    // encrypted, granted UPDATE by name in 0099, and scrubbed under RTBF.
-    const immediateReasonCiphertext =
-      immediateReason === null
-        ? null
-        : await encryptModerationRationale(immediateReason, ctx.pariwarId, deps.encryption);
+    //     ⚠ On a `terminate` this is up to FOUR round-trips, not one — genuinely CONCURRENT
+    //     (`Promise.all`), not merely co-located: each envelope encrypt is independent (a fresh
+    //     DEK/IV per call), so there is no ordering dependency between them, only the shared
+    //     constraint that none may happen inside an open tenant transaction.
+    const [decisionNoteCiphertext, escalationInadequacyCiphertext, escalationProportionalityCiphertext, immediateReasonCiphertext] =
+      await Promise.all([
+        encryptModerationRationale(rationale, ctx.pariwarId, deps.encryption),
+        escalation
+          ? encryptModerationRationale(escalation.inadequacy, ctx.pariwarId, deps.encryption)
+          : Promise.resolve(null),
+        escalation
+          ? encryptModerationRationale(escalation.proportionality, ctx.pariwarId, deps.encryption)
+          : Promise.resolve(null),
+        // Tier-1 too — it describes the case, so unlike the version pin and the fact snapshot it is
+        // encrypted, granted UPDATE by name in 0099, and scrubbed under RTBF.
+        immediateReason === null
+          ? Promise.resolve(null)
+          : encryptModerationRationale(immediateReason, ctx.pariwarId, deps.encryption),
+      ]);
+    const escalationCiphertext =
+      escalationInadequacyCiphertext !== null && escalationProportionalityCiphertext !== null
+        ? { inadequacy: escalationInadequacyCiphertext, proportionality: escalationProportionalityCiphertext }
+        : null;
 
     const scopeTx = await openScopeTx(deps, ctx.pariwarId);
     let ok = false;
@@ -506,13 +534,11 @@ export function createMemberModerationHandlers(deps: AppDeps) {
       // be computed). The console gates on the presence of an instant in the FUTURE, not on `null`.
       let terminationAvailableAt: string | null = null;
       if (overlay.status === 'suspended') {
-        const dwellPolicy = await memberDomain.moderation.resolveModerationDwellPolicy(
-          tx,
-          ctx.pariwarId,
-        );
-        const suspendedAt = dwellPolicy
-          ? await memberDomain.moderation.getProducingSuspensionActedAt(tx, ctx.memberId)
-          : null;
+        // Two independent lookups — genuinely CONCURRENT (`Promise.all`), not sequential.
+        const [dwellPolicy, suspendedAt] = await Promise.all([
+          memberDomain.moderation.resolveModerationDwellPolicy(tx, ctx.pariwarId),
+          memberDomain.moderation.getProducingSuspensionActedAt(tx, ctx.memberId),
+        ]);
         if (dwellPolicy && suspendedAt) {
           const at = memberDomain.moderation.terminationAvailableAt(
             suspendedAt,
@@ -556,6 +582,8 @@ export function createMemberModerationHandlers(deps: AppDeps) {
             added_at: g.addedAt.toISOString(),
           })),
           evidence_refs: e.evidenceRefs,
+          r7a_restorations_used_snapshot: e.r7aRestorationsUsedSnapshot,
+          dwell_policy_version: e.dwellPolicyVersion,
         })),
         // ⚠ An audit trail MUST NOT present a truncated page as the whole record (AC9). Without
         // this the console silently dropped everything past the newest 50 — typically the ORIGINAL
@@ -565,11 +593,14 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     },
 
     /**
-     * GET …/moderation/:moderationActionId/rationale — decrypt ONE rationale on demand.
+     * GET …/moderation/:moderationActionId/rationale — decrypt ONE action's Tier-1 fields on demand:
+     * the Decision Note (mandatory), and — Story 10.20 (AC12) — the two escalation parts + the
+     * immediate-termination reason (all three nullable, `terminate`-only).
      *
-     * The single exception to "the ciphertext never leaves the DB" (AC3): a gated, per-action read,
-     * never a list. Fail-soft on a corrupt/rotated envelope (the `claims.verifier-console.handlers.
-     * ts:115` `safeDecrypt` discipline verbatim) — a single bad envelope answers `null`, never a 500.
+     * The single exception to "the ciphertext never leaves the DB" (AC3/AC12): a gated, per-action
+     * read, never a list. Fail-soft PER FIELD on a corrupt/rotated envelope (the `claims.verifier-
+     * console.handlers.ts:115` `safeDecrypt` discipline, applied to all four) — one bad envelope
+     * answers `null` for THAT field only, never a 500, and never masks the other three.
      */
     async rationale(request: FastifyRequest): Promise<ModerationRationaleResponse> {
       const ctx = readContextOf(request);
@@ -590,34 +621,52 @@ export function createMemberModerationHandlers(deps: AppDeps) {
 
       // ⚠ A corrupt STORED envelope and an unreachable KMS are different facts and must not both
       // answer `null` — see `decryptModerationRationaleSafe`. Only the first is the documented
-      // fail-soft case; the second is an operational incident and becomes a 503.
-      let outcome;
-      try {
-        outcome = await decryptModerationRationaleSafe(
-          row.decisionNoteCiphertext,
-          ctx.pariwarId,
-          deps.encryption,
-        );
-      } catch (err) {
-        request.log.error(
-          { err, moderationActionId },
-          'member-moderation: rationale decrypt failed at the KMS; surfacing 503 (NOT a null rationale)',
-        );
-        throw new ServiceUnavailableError(
-          'The rationale cannot be decrypted right now. This is a key-service problem, not a missing rationale — retry shortly.',
-          'member_moderation.rationale_unavailable',
-        );
+      // fail-soft case; the second is an operational incident and becomes a 503 for the WHOLE
+      // response (a KMS outage is tenant-wide, not per-field — there is nothing field-specific to
+      // partially succeed).
+      async function decryptField(
+        label: string,
+        ciphertext: string | null,
+      ): Promise<string | null> {
+        if (ciphertext === null) return null;
+        let outcome;
+        try {
+          outcome = await decryptModerationRationaleSafe(ciphertext, ctx.pariwarId, deps.encryption);
+        } catch (err) {
+          request.log.error(
+            { err, moderationActionId, field: label },
+            'member-moderation: decrypt failed at the KMS; surfacing 503 (NOT a null field)',
+          );
+          throw new ServiceUnavailableError(
+            'This field cannot be decrypted right now. This is a key-service problem, not a missing value — retry shortly.',
+            'member_moderation.rationale_unavailable',
+          );
+        }
+        if (outcome.kind === 'corrupt') {
+          request.log.warn(
+            { err: outcome.error, moderationActionId, field: label },
+            'member-moderation: stored envelope is unreadable; returning null (fail-soft, per-field)',
+          );
+          return null;
+        }
+        return outcome.rationale;
       }
 
-      if (outcome.kind === 'corrupt') {
-        request.log.warn(
-          { err: outcome.error, moderationActionId },
-          'member-moderation: stored rationale envelope is unreadable; returning null (fail-soft, per-row)',
-        );
-        return { moderation_action_id: moderationActionId, rationale: null };
-      }
+      const [rationale, escalationInadequacy, escalationProportionality, immediateTerminationReason] =
+        await Promise.all([
+          decryptField('rationale', row.decisionNoteCiphertext),
+          decryptField('escalation_inadequacy', row.escalationInadequacyCiphertext),
+          decryptField('escalation_proportionality', row.escalationProportionalityCiphertext),
+          decryptField('immediate_termination_reason', row.immediateTerminationReasonCiphertext),
+        ]);
 
-      return { moderation_action_id: moderationActionId, rationale: outcome.rationale };
+      return {
+        moderation_action_id: moderationActionId,
+        rationale,
+        escalation_inadequacy: escalationInadequacy,
+        escalation_proportionality: escalationProportionality,
+        immediate_termination_reason: immediateTerminationReason,
+      };
     },
 
     /**

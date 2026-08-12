@@ -118,6 +118,8 @@ export const moderationEn = {
   evidenceRemove: 'Remove',
   evidenceInvalidError:
     'A reference must be an identifier \u2014 letters, digits and . _ / - with no spaces.',
+  evidenceDuplicateError:
+    'The same reference (kind + value) is listed more than once \u2014 remove the duplicate.',
   evidenceKinds: {
     complaint: 'Complaint',
     investigation: 'Investigation',
@@ -171,9 +173,12 @@ export const moderationEn = {
   groundSupersedes: 'supersedes an earlier ground',
   groundHasNote: 'has a note',
   evidenceLabel: 'Evidence',
-  revealRationale: 'Show rationale',
+  // ⚠ Key names unchanged (they're internal identifiers, `onRevealRationale` etc. in
+  // ModerationSection.tsx) — only the user-facing COPY is renamed (AC12; review follow-up: these
+  // two were missed in the original rename pass while `rationaleLabel` and its siblings were not).
+  revealRationale: 'Show Decision Note',
   rationaleUnreadable:
-    'This rationale cannot be read. The stored record is unreadable — it was recorded, but it can no longer be decrypted.',
+    'This Decision Note cannot be read. The stored record is unreadable — it was recorded, but it can no longer be decrypted.',
   reasonCodesUnavailable:
     'Reason codes could not be loaded, so no moderation action can be taken right now.',
 } as const;

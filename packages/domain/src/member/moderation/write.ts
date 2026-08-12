@@ -35,6 +35,7 @@ import {
   resolveModerationDwellPolicy,
   terminationAvailableAt,
 } from './dwell.js';
+import { ESCALATION_PART_MIN_CHARS } from './escalation.js';
 import { assertEvidenceRefs, type EvidenceRef } from './evidence-refs.js';
 import { insertPrimaryGround } from './grounds.js';
 import {
@@ -178,31 +179,53 @@ export async function moderateMember(
   // (1) The registry guard (AC3) — a restore code can never justify a termination.
   const reasonCode = assertReasonCodeAppliesTo(input.reasonCode, input.action);
 
-  // (1b) ── Story 10.20 (AC6) — the escalation PRESENCE backstop, in the same voice as (0) ───────
+  // (2) Legality, against the CURRENT derived overlay status — read inside the tx so a concurrent
+  //     moderation of the same member is serialized by the row/stream contention below.
+  //     ⚠ UNBOUNDED deliberately: `input.now` is the injected APP clock while `occurred_at` is
+  //     DB-generated, so bounding the legality read by it would let app-clock lag hide the previous
+  //     action's event and accept a duplicate suspend. See `getCurrentMemberModerationOverlay`.
+  //
+  //     ⚠ ORDERED BEFORE (2c)/(2d), NOT AFTER. "This action is not legal right now" (409) is the
+  //     more fundamental objection than "your escalation justification is incomplete" (422) — a
+  //     terminate against a member who was never even suspended should not be told its paperwork is
+  //     short. The one DB read this costs on a request that would ALSO fail (2c)/(2d) is the price
+  //     of that priority; a malformed caller can no longer have legality hidden behind a shape
+  //     complaint.
+  const overlay = await getCurrentMemberModerationOverlay(db, input.memberId);
+  const toStatus = nextModerationStatus(overlay.status, input.action);
+  if (toStatus === null) {
+    // Rejected BEFORE any write (AC2): a no-op never returns 200, and a re-suspend is a 409.
+    throw new ModerationStateError(input.memberId, overlay.status, input.action);
+  }
+
+  // (2c) ── Story 10.20 (AC6) — the escalation PRESENCE backstop, in the same voice as (0) ───────
   //      Niyamavali §8.6: termination is an exceptional governance act, not a stronger suspension,
   //      so it carries both parts of the escalation test — and no other action carries either.
   //      ⛔ This is a BACKSTOP, not the guard. The substantive checks (substance floor,
   //      anti-restatement) run on the PLAINTEXT in the route, because envelope encryption is
   //      non-deterministic and there is nothing to compare once these are ciphertext. The DB's
-  //      `escalation_iff_terminate` CHECK is the third layer and enforces the same `iff` on every
+  //      `escalation_iff_terminate` CHECK is the fourth layer and enforces the same `iff` on every
   //      write path including raw SQL; this typed error is what keeps a 23514 from reaching a
   //      caller as a 500.
   //
-  //      ⚠ ORDERED DELIBERATELY AFTER (1), NOT BEFORE IT. The vocabulary objection is the more
-  //      fundamental one — "this code cannot justify a termination" has to be answered before "your
+  //      ⚠ STILL ORDERED AFTER (1), NOT BEFORE IT. The vocabulary objection is the more fundamental
+  //      one — "this code cannot justify a termination" has to be answered before "your
   //      justification for the termination is incomplete", or a caller offering a restore code for a
   //      terminate would be told to write an escalation justification for an action the code can
-  //      never support. Story 10.10 pinned that ordering with a no-query revert-sanity test; these
-  //      checks slot in behind it, and still ahead of (2), so a doomed request never touches the DB.
+  //      never support. Story 10.10 pinned that ordering with a no-query revert-sanity test.
   const escalationInadequacy = (input.escalationInadequacyCiphertext ?? '').trim() || null;
   const escalationProportionality =
     (input.escalationProportionalityCiphertext ?? '').trim() || null;
   if (input.action === 'terminate') {
     if (escalationInadequacy === null) {
-      throw new ModerationEscalationRequiredError('inadequacy', 'missing', 0);
+      throw new ModerationEscalationRequiredError('inadequacy', 'missing', ESCALATION_PART_MIN_CHARS);
     }
     if (escalationProportionality === null) {
-      throw new ModerationEscalationRequiredError('proportionality', 'missing', 0);
+      throw new ModerationEscalationRequiredError(
+        'proportionality',
+        'missing',
+        ESCALATION_PART_MIN_CHARS,
+      );
     }
   } else if (
     escalationInadequacy !== null ||
@@ -216,23 +239,11 @@ export async function moderateMember(
     throw new ModerationEscalationNotApplicableError(input.action);
   }
 
-  // (1c) Evidence references — the domain enforcement point (AC4). Absent ⇒ `[]`; anything that is
+  // (2d) Evidence references — the domain enforcement point (AC4). Absent ⇒ `[]`; anything that is
   //      not an array of bounded `{ kind, ref }` identifiers within the cap is a typed 422. The DB
   //      mirrors all three rules (array-ness, cap, per-entry shape via the IMMUTABLE validator), so
   //      a raw-SQL writer cannot bypass what this rejects.
   const evidenceRefs: EvidenceRef[] = assertEvidenceRefs(input.evidenceRefs);
-
-  // (2) Legality, against the CURRENT derived overlay status — read inside the tx so a concurrent
-  //     moderation of the same member is serialized by the row/stream contention below.
-  //     ⚠ UNBOUNDED deliberately: `input.now` is the injected APP clock while `occurred_at` is
-  //     DB-generated, so bounding the legality read by it would let app-clock lag hide the previous
-  //     action's event and accept a duplicate suspend. See `getCurrentMemberModerationOverlay`.
-  const overlay = await getCurrentMemberModerationOverlay(db, input.memberId);
-  const toStatus = nextModerationStatus(overlay.status, input.action);
-  if (toStatus === null) {
-    // Rejected BEFORE any write (AC2): a no-op never returns 200, and a re-suspend is a 409.
-    throw new ModerationStateError(input.memberId, overlay.status, input.action);
-  }
 
   // ── ⭐ (2b) STORY 10.20 (AC8, WS-D) — THE DWELL PRECONDITION, IN THE CALLER ───────────────────
   //

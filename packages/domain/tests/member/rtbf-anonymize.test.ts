@@ -115,14 +115,36 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // and the failure is silent, surfacing only against a real database.
     const { captured, pariwar } = await run();
     const set = setFor(captured, memberModerationActions);
-    for (const col of [
-      'decisionNoteCiphertext',
-      'escalationInadequacyCiphertext',
-      'escalationProportionalityCiphertext',
-      'immediateTerminationReasonCiphertext',
-    ]) {
+    for (const col of ['decisionNoteCiphertext', 'immediateTerminationReasonCiphertext']) {
       expect(set, `${col} must be scrubbed`).toHaveProperty(col);
       expect(await dec(set[col], pariwar, 'member_moderation')).toBe(ANONYMIZED_SENTINEL);
+    }
+
+    // ⛔ CASE-guarded, NOT a flat overwrite (post-review fix): a flat sentinel here would violate
+    // `escalation_iff_terminate` on any non-`terminate` row in the member's history. The captured
+    // value is a raw drizzle SQL fragment, not a plain string — assert its shape instead of
+    // decrypting it directly: the sentinel is embedded as a param, the CASE keys on the `action`
+    // column, and the guard text names `terminate` and falls through to `NULL`.
+    for (const col of ['escalationInadequacyCiphertext', 'escalationProportionalityCiphertext']) {
+      expect(set, `${col} must be scrubbed`).toHaveProperty(col);
+      const fragment = set[col] as { queryChunks: unknown[] };
+      expect(
+        Array.isArray(fragment?.queryChunks),
+        `${col} must be a CASE-guarded SQL fragment, not a flat sentinel`,
+      ).toBe(true);
+      const embeddedSentinel = fragment.queryChunks.find((c): c is string => typeof c === 'string');
+      expect(embeddedSentinel, `${col} must embed the sentinel ciphertext`).toBeDefined();
+      expect(await dec(embeddedSentinel, pariwar, 'member_moderation')).toBe(ANONYMIZED_SENTINEL);
+      const referencesActionColumn = fragment.queryChunks.some(
+        (c) => !!c && typeof c === 'object' && (c as { name?: string }).name === 'action',
+      );
+      expect(referencesActionColumn, `${col}'s CASE must key on the action column`).toBe(true);
+      const guardText = fragment.queryChunks
+        .filter((c): c is { value: string[] } => !!c && typeof c === 'object' && 'value' in c)
+        .flatMap((c) => c.value)
+        .join('');
+      expect(guardText).toContain('terminate');
+      expect(guardText).toContain('ELSE NULL');
     }
 
     // ⛔ The NON-PII columns are deliberately NOT scrubbed: a bounded integer and a clause-version

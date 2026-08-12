@@ -78,7 +78,10 @@ round-trip.
 A reference is an *identifier*, not prose about a member. That is true **structurally**, not by
 convention: the `kind` is a bounded enum, and the `ref` charset **excludes whitespace**, which is the
 single exclusion that makes a sentence unrepresentable. This is why `evidence_refs` is safe in a list
-DTO and safe to keep out of the RTBF scrub.
+DTO. ⚠ **The RTBF-scrub exemption is the ENGINEERING half of that argument, not the legal one** — see
+§8 row 9. A bounded identifier can still be quasi-identifying (an external order/complaint number
+traceable to the member), and whether the structural non-prose property is sufficient for DPDPA RTBF
+is a question this model does not close.
 
 > ⛔ **If the shape enforcement is ever weakened, the column's PII classification must be revisited
 > in the same change** — not afterwards.
@@ -205,6 +208,8 @@ and `member_moderation_actions` carries a member FK plus member-scoped RLS.
 | 5 | **The rejoin-model governance drift** — four texts and one live code path still state a flat "12 months from termination" model that Decision `2026-08-12-099` (Q7.2) supersedes | A Part 11 amendment, its own routing note and ruling |
 | 6 | **The supporting-ground picker on the terminate form.** The append API is built and tested; the console affordance for it is not | A follow-up surface story |
 | 7 | **Counsel review of §8.5 / §8.6 / §8.9** | Standing Trustee Panel obligation queue |
+| 8 | **Migration `0100` (the `member_moderation_grounds` supersede-target uniqueness trigger + the `r7a_restorations_used_snapshot` bounds CHECK, added during code review) has not been run against a live database in this session** | Live-DB verification before merge |
+| 9 | **`evidence_refs`' RTBF exemption has no evidenced DPO/legal sign-off.** The structural argument in §7 (bounded, non-prose, CHECK-enforced) is sound engineering reasoning, but whether it satisfies DPDPA RTBF for a quasi-identifying reference (e.g. an external order/complaint number traceable to the member) is a legal question this model does not answer | DPO/legal review |
 
 ⛔ **No `termination_access_block` flag change was made here**, and nothing in this model asserts that
 Part 8 is legally settled. The Niyamavali remains an **unadopted draft** and **counsel is not

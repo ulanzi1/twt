@@ -121,13 +121,12 @@ const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 const MemberParam = z
   .object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() })
   .strict();
-/** The grounds route's params — the same shape the rationale read uses. */
-const GroundParam = z
-  .object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() })
-  .strict();
+/** The rationale read's params. The grounds route shares this shape exactly — aliased, not
+ *  re-declared, so the two can never drift apart. */
 const RationaleParam = z
   .object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() })
   .strict();
+const GroundParam = RationaleParam;
 const ListQuery = z
   .object({
     limit: z.coerce.number().int().positive().max(200).optional(),

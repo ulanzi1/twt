@@ -92,6 +92,9 @@ function assertPart(part: EscalationPart, raw: string | null | undefined): strin
   if (trimmed.length < ESCALATION_PART_MIN_CHARS) {
     throw new ModerationEscalationRequiredError(part, 'too_short', ESCALATION_PART_MIN_CHARS);
   }
+  if (trimmed.length > ESCALATION_PART_MAX_CHARS) {
+    throw new ModerationEscalationRequiredError(part, 'too_long', ESCALATION_PART_MAX_CHARS);
+  }
   return trimmed;
 }
 
@@ -166,6 +169,13 @@ export function assertImmediateTerminationReason(
       'immediate_termination_reason',
       'too_short',
       ESCALATION_PART_MIN_CHARS,
+    );
+  }
+  if (trimmed.length > ESCALATION_PART_MAX_CHARS) {
+    throw new ModerationEscalationRequiredError(
+      'immediate_termination_reason',
+      'too_long',
+      ESCALATION_PART_MAX_CHARS,
     );
   }
   return trimmed;

@@ -41,6 +41,9 @@ export {
   ModeratedMemberDto,
   ModeratedMembersListResponse,
   ModerationRationaleResponse,
+  AppendModerationGroundRequest,
+  ModerationGroundDto,
+  AppendModerationGroundResponse,
   ReasonCodeMetaDto,
   ReasonCodesListResponse,
 } from './dto.js';

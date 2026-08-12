@@ -151,6 +151,12 @@ export const EVENT_TYPE_REGISTRY = {
       'Member restored (Story 10.10, FR-56) — moderation OVERLAY suspended|terminated → none; lifecycle-identity. Clears the rejoin lock by making the CURRENT overlay status unmoderated.',
     schema: member.moderation.ModerationRestoredPayloadSchema,
   },
+  'member.moderation.ground-appended': {
+    type: 'member.moderation.ground-appended',
+    description:
+      'A SUPPORTING ground appended to an existing moderation action (Story 10.20, WS-E) — a later finding ATTACHES to the decision, it never rewrites it. ACTION-LESS: no moderation status moves, so the payload carries NO overlay from/to pair (claiming one would be a false statement about the member\'s standing) and it is deliberately absent from MODERATION_ACTION_EVENT_TYPES. Lifecycle-identity. Carries the bounded registry code + the superseded ground id ONLY — the optional Tier-1 note and the evidence references live on member_moderation_grounds and MUST NEVER reach this plaintext-JSONB payload (R1). `is_primary` is absent because appends are supporting-only by construction: the primary ground is written in the action\'s own transaction and already rides that action\'s own event.',
+    schema: member.moderation.ModerationGroundAppendedPayloadSchema,
+  },
   // ── Story 10.23 — member.restoration_discipline.* (the SECOND governance overlay) ──
   // Lives on the MEMBER's own stream (stream_id = member_id) and moves an independent, event-derived
   // status machine (restoration-discipline/status.ts) — `members.state` is NEVER touched and it folds

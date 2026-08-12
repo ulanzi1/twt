@@ -23,6 +23,7 @@ import {
   memberKycProfiles,
   memberMedicalDisclosures,
   memberModerationActions,
+  memberModerationGrounds,
   memberNominees,
   memberWithdrawals,
 } from '../../src/schema/index.js';
@@ -85,12 +86,13 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the seven member-PII tables, once each', async () => {
-    // Seven since Story 10.10's review pass added `member_moderation_actions`. This count is the
-    // completeness check for the RTBF surface — a new Tier-1 column landing in a table absent from
-    // this list is exactly how the moderation rationale came to survive an erasure request.
+  it('updates exactly the eight member-PII tables, once each', async () => {
+    // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
+    // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
+    // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
+    // moderation rationale came to survive an erasure request in the first place.
     const { captured } = await run();
-    expect(captured).toHaveLength(7);
+    expect(captured).toHaveLength(8);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -100,8 +102,57 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memberMedicalDisclosures,
       memberWithdrawals,
       memberModerationActions,
+      memberModerationGrounds,
     ]) {
       expect(tables).toContain(t);
+    }
+  });
+
+  it('⭐ Story 10.20: EVERY new Tier-1 moderation column is scrubbed, BY NAME', async () => {
+    // ⛔ A test that asserts "the rationale is scrubbed" and stops is what let migration 0092's gap
+    // ship the first time. Premise #4: a Postgres COLUMN-LEVEL grant does not extend to columns
+    // added later, so each of these was structurally UN-ERASABLE until 0099 granted it by name —
+    // and the failure is silent, surfacing only against a real database.
+    const { captured, pariwar } = await run();
+    const set = setFor(captured, memberModerationActions);
+    for (const col of [
+      'decisionNoteCiphertext',
+      'escalationInadequacyCiphertext',
+      'escalationProportionalityCiphertext',
+      'immediateTerminationReasonCiphertext',
+    ]) {
+      expect(set, `${col} must be scrubbed`).toHaveProperty(col);
+      expect(await dec(set[col], pariwar, 'member_moderation')).toBe(ANONYMIZED_SENTINEL);
+    }
+
+    // ⛔ The NON-PII columns are deliberately NOT scrubbed: a bounded integer and a clause-version
+    // id are governance facts the record depends on to stay readable, and `evidence_refs` are
+    // bounded REFERENCES rather than prose — a property three CHECK constraints CREATE.
+    for (const col of [
+      'r7aRestorationsUsedSnapshot',
+      'dwellPolicyVersion',
+      'evidenceRefs',
+      'action',
+      'reasonCode',
+      'rejoinPermittedAt',
+    ]) {
+      expect(set, `${col} must be RETAINED`).not.toHaveProperty(col);
+    }
+  });
+
+  it('⭐ Story 10.20: the grounds note is scrubbed via the table\'s OWN member_id', async () => {
+    // This one-liner is why `member_id` is denormalized onto `member_moderation_grounds`. Every
+    // scrub in `anonymize.ts` keys on `<table>.memberId` — an erasure request carries a member id
+    // and nothing else. ⛔ A scrub reaching through `moderation_action_id` is the signal that the
+    // column was dropped from the migration.
+    const { captured } = await run();
+    const set = setFor(captured, memberModerationGrounds);
+    // NULL, not the sentinel: the column is NULLABLE (a ground need not carry a note), so writing a
+    // sentinel where the honest answer is "there was never a note" would fabricate a record.
+    expect(set).toHaveProperty('noteCiphertext', null);
+    // ⛔ The governance facts stay: code, is_primary, added_at and the evidence references.
+    for (const col of ['code', 'isPrimary', 'addedAt', 'evidenceRefs']) {
+      expect(set, `${col} must be RETAINED`).not.toHaveProperty(col);
     }
   });
 

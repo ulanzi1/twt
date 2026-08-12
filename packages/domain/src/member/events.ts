@@ -301,6 +301,12 @@ export const MEMBER_EVENT_TYPES = [
   'member.moderation.suspended',
   'member.moderation.terminated',
   'member.moderation.restored',
+  // Story 10.20 — a SUPPORTING ground appended to an existing moderation action (WS-E). ⚠ It is
+  // ACTION-LESS: no moderation status moves, so it carries no overlay from/to and must NOT join
+  // `MODERATION_EVENT_TYPES` / `MODERATION_ACTION_EVENT_TYPES` (moderation/status.ts) merely because
+  // it is spelled `member.moderation.*`. Those tuples are the action-bearing three, and
+  // `moderationActionForEventType` returning null for this type is CORRECT, not a gap to close.
+  'member.moderation.ground-appended',
   // Story 10.23 — restoration-discipline OVERLAY: the SECOND governance overlay, one NON-TRANSITION
   // event. It moves an independent, event-derived status machine (restoration-discipline/status.ts)
   // and never `members.state`. ⚠ There is deliberately NO `…expired` sibling: expiry is DERIVED at
@@ -311,7 +317,7 @@ export const MEMBER_EVENT_TYPES = [
 /**
  * The dotted `member.*` event-type literal union — the 16 AC1 events + the 3 Story 10.10 moderation
  * events + Story 10.26's `personal_event_asserted` + Story 10.23's restoration-discipline
- * imposition = **21**.
+ * imposition + Story 10.20's `moderation.ground-appended` = **22**.
  */
 export type MemberEventType = (typeof MEMBER_EVENT_TYPES)[number];
 

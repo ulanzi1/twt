@@ -129,6 +129,8 @@ describe('response DTOs — the rationale never leaves the database', () => {
       current_reason_code: 'r7-contribution-discipline',
       since: ACTION.acted_at,
       legal_actions: ['terminate', 'restore'],
+      // Story 10.20 (AC8) — ADDITIVE alongside `legal_actions`, never a filter on it.
+      termination_available_at: null,
       entries: [
         {
           moderation_action_id: ACTION.moderation_action_id,
@@ -138,6 +140,22 @@ describe('response DTOs — the rationale never leaves the database', () => {
           actor_display: 'A. Trustee',
           rejoin_permitted_at: null,
           acted_at: ACTION.acted_at,
+          // Story 10.20 (AC9/AC4) — the grounds behind the action + its evidence references.
+          grounds: [
+            {
+              ground_id: '44444444-4444-4444-8444-444444444444',
+              code: 'r7-contribution-discipline',
+              is_primary: true,
+              has_note: false,
+              evidence_refs: [],
+              supersedes_ground_id: null,
+              superseded: false,
+              added_by: '33333333-3333-4333-8333-333333333333',
+              added_by_display: 'A. Trustee',
+              added_at: ACTION.acted_at,
+            },
+          ],
+          evidence_refs: [{ kind: 'complaint', ref: 'CMP-2026-0001' }],
         },
       ],
       has_more: false,
@@ -145,6 +163,25 @@ describe('response DTOs — the rationale never leaves the database', () => {
     expect(parsed.legal_actions).toEqual(['terminate', 'restore']);
     expect(parsed.entries[0]).not.toHaveProperty('rationale');
     expect(parsed.has_more).toBe(false);
+    // ⚠ `has_note`, never the note itself: the ground note is Tier-1 and stays decrypt-on-demand.
+    expect(parsed.entries[0].grounds[0]).not.toHaveProperty('note');
+    expect(parsed.entries[0].grounds[0].is_primary).toBe(true);
+  });
+
+  it('⛔ Story 10.20: `termination_available_at` is REQUIRED — its absence must not read as "go ahead"', () => {
+    // Nullable, but never optional. A response that simply omitted it would be indistinguishable
+    // from "the dwell has elapsed" to a console that reads the field, which is exactly the
+    // disagreement between the console's buttons and the server that AC8 exists to prevent.
+    const withoutIt = {
+      member_id: ACTION.member_id,
+      current_status: 'suspended',
+      current_reason_code: 'r7-contribution-discipline',
+      since: ACTION.acted_at,
+      legal_actions: ['terminate', 'restore'],
+      entries: [],
+      has_more: false,
+    };
+    expect(() => ModerationHistoryResponse.parse(withoutIt)).toThrow();
   });
 
   it('ModerationHistoryResponse REQUIRES has_more — an audit trail cannot omit its truncation flag', () => {
@@ -157,6 +194,7 @@ describe('response DTOs — the rationale never leaves the database', () => {
       current_reason_code: null,
       since: null,
       legal_actions: ['suspend'],
+      termination_available_at: null,
       entries: [],
     };
     expect(() => ModerationHistoryResponse.parse(withoutFlag)).toThrow();

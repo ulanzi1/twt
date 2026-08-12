@@ -52,6 +52,7 @@ export {
   reasonCodeAppliesTo,
   reasonCodesForAction,
   listReasonCodeMeta,
+  assertReasonCodeAppliesTo,
 } from './reason-codes.js';
 
 export {
@@ -59,6 +60,7 @@ export {
   ModerationSuspendedPayloadSchema,
   ModerationTerminatedPayloadSchema,
   ModerationRestoredPayloadSchema,
+  ModerationGroundAppendedPayloadSchema,
   MODERATION_EVENT_PAYLOAD_SCHEMAS,
 } from './events.js';
 
@@ -77,7 +79,6 @@ export {
   type ModerateMemberResult,
   moderationResourceLocator,
   assertRationalePresent,
-  assertReasonCodeAppliesTo,
   moderateMember,
 } from './write.js';
 
@@ -119,6 +120,18 @@ export {
 } from './escalation.js';
 
 export {
+  MODERATION_GROUND_APPENDED_EVENT,
+  type ModerationGround,
+  type InsertPrimaryGroundInput,
+  type AppendGroundInput,
+  type AppendGroundResult,
+  insertPrimaryGround,
+  appendModerationGround,
+  listGroundsForActions,
+  moderationGroundResourceLocator,
+} from './grounds.js';
+
+export {
   MODERATION_DWELL_POLICY_CLAUSE_ID,
   ModerationDwellPolicyPayloadSchema,
   type ModerationDwellPolicyPayload,
@@ -139,6 +152,9 @@ export {
   MODERATION_EVIDENCE_REF_INVALID_CODE,
   MODERATION_DWELL_NOT_ELAPSED_CODE,
   MODERATION_DWELL_UNPROVISIONED_CODE,
+  MODERATION_ACTION_NOT_FOUND_CODE,
+  MODERATION_GROUND_NOT_FOUND_CODE,
+  MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE,
   type EscalationPart,
   ModerationStateError,
   ModerationReasonCodeInvalidError,
@@ -149,4 +165,7 @@ export {
   ModerationEvidenceRefInvalidError,
   ModerationDwellNotElapsedError,
   ModerationDwellPolicyUnprovisionedError,
+  ModerationActionNotFoundError,
+  ModerationGroundNotFoundError,
+  ModerationPrimaryGroundImmutableError,
 } from './errors.js';

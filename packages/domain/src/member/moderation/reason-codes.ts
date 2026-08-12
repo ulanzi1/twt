@@ -23,6 +23,7 @@
 // sub-clause. Story 10.10 gates all three actions on the ONE `member.moderate` key and RECORDS the
 // gap; it does not invent a per-sub-clause authority model.
 
+import { ModerationReasonCodeInvalidError } from './errors.js';
 import { MODERATION_ACTIONS, type ModerationAction } from './status.js';
 
 /**
@@ -167,6 +168,23 @@ export function reasonCodesForAction(action: ModerationAction): readonly ReasonC
  */
 export function listReasonCodeMeta(): readonly ReasonCodeMeta[] {
   return ALL_REASON_CODES.map((c) => REASON_CODE_REGISTRY[c]);
+}
+
+/**
+ * The AC3 registry guard: the code must be declared AND its `appliesTo` must include the action.
+ *
+ * ⚠ IT LIVES HERE, in the registry's own leaf module, rather than in `write.ts` where Story 10.10
+ * first put it. Story 10.20's grounds writer needs the same guard, and importing it from `write.ts`
+ * created a `write ↔ grounds` module cycle — the failure mode that stays green through typecheck,
+ * lint and the local suite while breaking CONSUMING packages at module-init
+ * ([[project_type_only_import_cycle_trap]]). The registry is where a registry guard belongs, and
+ * from here it is a leaf both writers can reach.
+ */
+export function assertReasonCodeAppliesTo(code: string, action: ModerationAction): ReasonCode {
+  if (!reasonCodeAppliesTo(code, action)) {
+    throw new ModerationReasonCodeInvalidError(code, action);
+  }
+  return code as ReasonCode;
 }
 
 // EXHAUSTIVENESS: the `satisfies Record<ReasonCode, ReasonCodeMeta>` above makes a declared code

@@ -23,6 +23,8 @@
 import { createHash } from 'node:crypto';
 
 import {
+  type AppendModerationGroundRequest,
+  type AppendModerationGroundResponse,
   type ModerateMemberRequest,
   type ModeratedMembersListResponse,
   type ModerationActionResponse,
@@ -472,6 +474,16 @@ export function createMemberModerationHandlers(deps: AppDeps) {
         { limit, offset },
       );
 
+      // Story 10.20 (AC9) — the grounds behind each action on THIS page. One batched read keyed by
+      // the page's action ids, so the query count does not grow with the page size.
+      // ⚠ Carries `has_note`, never the note: the note is Tier-1 and stays decrypt-on-demand, per
+      // action. ⛔ Three new Tier-1 fields must not become three new list columns (`dto.ts:9-16`).
+      const groundsByAction = await memberDomain.moderation.listGroundsForActions(
+        tx,
+        ctx.pariwarId,
+        page.entries.map((e) => e.moderationActionId),
+      );
+
       // ⛔ `legal_actions` is NOT filtered by the dwell (Story 10.20, AC8). Legality and precondition
       // are different facts; collapsing them would make this pure reducer's output depend on a clock
       // and would fork the one place four call sites derive legality from (D5). ✅ The Panel ruled
@@ -528,6 +540,22 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           actor_display: e.actorDisplay,
           rejoin_permitted_at: e.rejoinPermittedAt ? e.rejoinPermittedAt.toISOString() : null,
           acted_at: e.actedAt.toISOString(),
+          // ⛔ SUPERSEDED grounds are RETAINED and flagged, never filtered — an audit trail that
+          // hides what was superseded is not an audit trail, and on a contested member the
+          // superseded ground is often precisely the one under dispute.
+          grounds: (groundsByAction.get(e.moderationActionId) ?? []).map((g) => ({
+            ground_id: g.groundId,
+            code: g.code as ModerationHistoryResponse['entries'][number]['reason_code'],
+            is_primary: g.isPrimary,
+            has_note: g.hasNote,
+            evidence_refs: g.evidenceRefs,
+            supersedes_ground_id: g.supersedesGroundId,
+            superseded: g.superseded,
+            added_by: g.addedBy,
+            added_by_display: g.addedByDisplay,
+            added_at: g.addedAt.toISOString(),
+          })),
+          evidence_refs: e.evidenceRefs,
         })),
         // ⚠ An audit trail MUST NOT present a truncated page as the whole record (AC9). Without
         // this the console silently dropped everything past the newest 50 — typically the ORIGINAL
@@ -625,6 +653,90 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           rejoin_permitted_at: r.rejoinPermittedAt ? r.rejoinPermittedAt.toISOString() : null,
         })),
         has_more: hasMore,
+      };
+    },
+
+    /**
+     * POST …/members/:memberId/moderation/:moderationActionId/grounds — append a SUPPORTING ground
+     * to an existing decision (Story 10.20, AC9, WS-E).
+     *
+     * ⭐ A LATER FINDING ATTACHES; IT NEVER REWRITES. Before this route a finding that emerged after
+     * a decision had nowhere to go: it either overwrote the original rationale — destroying the
+     * record of what was known WHEN the decision was made — or it was not recorded at all.
+     *
+     * ⛔ THE PRIMARY GROUND IS NOT REACHABLE FROM HERE, by construction rather than by policy. It is
+     * written in the action's own transaction, and the partial unique index plus the
+     * `SELECT, INSERT`-only grant make it structurally unmovable thereafter.
+     *
+     * Gated on the existing `member.moderate` key with a FOURTH step-up context, so an elevation
+     * minted for a restore can never be spent on a finding (the 10.10 three-context precedent).
+     */
+    async appendGround(request: FastifyRequest): Promise<AppendModerationGroundResponse> {
+      const ctx = await writeContextOf(request);
+      const params = request.params as { moderationActionId: string };
+      const moderationActionId = ids.moderationActionId(params.moderationActionId);
+      const body = request.body as AppendModerationGroundRequest;
+      const now = deps.clock();
+
+      // The note is Tier-1 and OPTIONAL — encrypted BEFORE `openScopeTx`, the same placement as
+      // every other Tier-1 write on this surface, so no KMS round-trip is held inside an open
+      // tenant transaction.
+      const noteCiphertext =
+        body.note === undefined
+          ? null
+          : await encryptModerationRationale(body.note, ctx.pariwarId, deps.encryption);
+
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      let result: memberDomain.moderation.AppendGroundResult;
+      try {
+        // ⚠ The action-existence check, the `appliesTo` guard, the supersede-target check, the event
+        // and the row ALL run inside this ONE transaction. Checked outside, the supersede target
+        // could be superseded by a concurrent request between the check and the insert.
+        result = await memberDomain.moderation.appendModerationGround(scopeTx.client, {
+          moderationActionId,
+          memberId: ctx.memberId,
+          pariwarId: ctx.pariwarId,
+          code: body.code,
+          noteCiphertext,
+          evidenceRefs: body.evidence_refs,
+          supersedesGroundId: body.supersedes_ground_id
+            ? ids.moderationGroundId(body.supersedes_ground_id)
+            : null,
+          addedBy: ctx.actorId,
+          addedByDisplay: ctx.actorDisplay,
+          now,
+        });
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      // Post-commit, best-effort — ⚠ the NOTE is never audited, exactly as the rationale is not:
+      // the bounded code and the member id are the non-secret facts an auditor needs.
+      const input: audit.AuditEntryInput = {
+        pariwarId: ctx.pariwarId,
+        actorId: ctx.actorId,
+        actorRole: null,
+        action: 'member_moderation.ground_appended',
+        resourceLocator: memberDomain.moderation.moderationGroundResourceLocator(ctx.memberId),
+        requestPayloadHash: auditPayloadHash('ground_appended', ctx.memberId),
+        responseStatus: 200,
+        traceId: ctx.traceId,
+      };
+      void audit.writeAuditEntry(deps.servicePool, input).catch((err: unknown) => {
+        console.error(
+          '[member-moderation-audit] failed to persist ground-append audit line',
+          JSON.stringify({ error: String(err) }),
+        );
+      });
+
+      return {
+        ground_id: result.groundId,
+        moderation_action_id: moderationActionId,
+        code: result.code,
+        supersedes_ground_id: result.supersedesGroundId,
+        added_at: result.addedAt.toISOString(),
       };
     },
 

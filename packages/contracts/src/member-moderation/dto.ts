@@ -19,7 +19,7 @@ import { z } from 'zod';
 
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
 import { ModerationAction, ModerationStatus, ReasonCode } from './enums.js';
-import { EvidenceRefsDto } from './evidence-refs.js';
+import { EvidenceRefDto, EvidenceRefsDto } from './evidence-refs.js';
 
 /**
  * The free-text rationale. REQUIRED on every action (AC3) — deliberately stricter than the UX
@@ -115,6 +115,72 @@ export const ModerationActionResponse = z
   .strict();
 export type ModerationActionResponse = z.output<typeof ModerationActionResponse>;
 
+// ── Story 10.20 (WS-E) — the APPEND-ONLY grounds ────────────────────────────────────────────────
+
+/**
+ * The body of an append-a-supporting-ground request (AC9).
+ *
+ * ⛔ There is deliberately NO `is_primary` field. Appends are supporting-only BY CONSTRUCTION: the
+ * primary ground is written in the action's own transaction and is structurally immutable
+ * thereafter (a partial unique index plus a `SELECT, INSERT`-only grant). Accepting an `is_primary`
+ * flag here would offer a client something the database can never honour.
+ */
+export const AppendModerationGroundRequest = z
+  .object({
+    code: ReasonCode,
+    /** Optional Tier-1 note explaining the ground. */
+    note: Rationale.optional(),
+    /** References only, never prose (AC4). */
+    evidence_refs: EvidenceRefsDto.optional(),
+    /**
+     * The SUPPORTING ground this one replaces, if any.
+     * ⛔ Superseding the PRIMARY ground is a typed 409 — it is fixed at the action.
+     */
+    supersedes_ground_id: UuidString.optional(),
+  })
+  .strict();
+export type AppendModerationGroundRequest = z.output<typeof AppendModerationGroundRequest>;
+
+/**
+ * One ground on a moderation action.
+ *
+ * ⚠ `has_note` rather than the note itself: the note is Tier-1 and stays decrypt-on-demand, per
+ * action, exactly like the Decision Note. ⛔ Three new Tier-1 fields must not become three new list
+ * columns.
+ */
+export const ModerationGroundDto = z
+  .object({
+    ground_id: UuidString,
+    code: ReasonCode,
+    is_primary: z.boolean(),
+    has_note: z.boolean(),
+    evidence_refs: z.array(EvidenceRefDto),
+    supersedes_ground_id: UuidString.nullable(),
+    /**
+     * True when a LATER ground supersedes this one.
+     * ⛔ A superseded ground is FLAGGED, never filtered out — an audit trail that hides what was
+     * superseded is not an audit trail, and the superseded ground is often the one under dispute.
+     */
+    superseded: z.boolean(),
+    added_by: UuidString,
+    added_by_display: z.string(),
+    added_at: Iso8601Datetime,
+  })
+  .strict();
+export type ModerationGroundDto = z.output<typeof ModerationGroundDto>;
+
+/** The result of appending a supporting ground. */
+export const AppendModerationGroundResponse = z
+  .object({
+    ground_id: UuidString,
+    moderation_action_id: UuidString,
+    code: ReasonCode,
+    supersedes_ground_id: UuidString.nullable(),
+    added_at: Iso8601Datetime,
+  })
+  .strict();
+export type AppendModerationGroundResponse = z.output<typeof AppendModerationGroundResponse>;
+
 /**
  * One entry of a member's moderation history — the audit trail the admin record renders.
  * ⚠ No rationale field, by design (see the header).
@@ -128,6 +194,13 @@ export const ModerationHistoryEntryDto = z
     actor_display: z.string(),
     rejoin_permitted_at: Iso8601Datetime.nullable(),
     acted_at: Iso8601Datetime,
+    /**
+     * The grounds behind this action — primary first, then supporting in append order, with
+     * superseded rows RETAINED and flagged (Story 10.20, AC9).
+     */
+    grounds: z.array(ModerationGroundDto),
+    /** The evidence REFERENCES recorded on the action itself. Identifiers, never prose (AC4). */
+    evidence_refs: z.array(EvidenceRefDto),
   })
   .strict();
 export type ModerationHistoryEntryDto = z.output<typeof ModerationHistoryEntryDto>;

@@ -74,8 +74,8 @@ describe('AC2/D2 — the event is on the MEMBER stream, NOT in the contribution.
     // governance overlay's one event (there is deliberately no `…expired` sibling: expiry is derived
     // at read, AC4). This assertion is the SECOND count fixture in the repo; the other lives in
     // `life-events-markers.test.ts`, and BOTH must move together or the pair itself goes stale.
-    expect(MEMBER_EVENT_TYPES.length).toBe(21);
-    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(21);
+    expect(MEMBER_EVENT_TYPES.length).toBe(22);
+    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(22);
   });
 });
 

@@ -346,6 +346,88 @@ export class ModerationDwellPolicyUnprovisionedError extends Error {
   }
 }
 
+// ── Story 10.20 (WS-E) — the append-only grounds ─────────────────────────────────────────────────
+
+/** Namespaced code for a moderation action that does not exist in this scope (HTTP 404). */
+export const MODERATION_ACTION_NOT_FOUND_CODE = 'member_moderation.action_not_found';
+
+/**
+ * Thrown when the action a ground would attach to has no row for this Pariwar + member.
+ *
+ * ⚠ 404, NOT 403, on a cross-tenant or cross-member id. RLS plus the explicit predicate means a
+ * mismatched combination simply has no row, and answering 403 would turn this endpoint into an
+ * existence oracle for another Pariwar's decisions.
+ */
+export class ModerationActionNotFoundError extends Error {
+  public readonly name = 'ModerationActionNotFoundError';
+  public readonly code = MODERATION_ACTION_NOT_FOUND_CODE;
+  public constructor(public readonly moderationActionId: string) {
+    super(`moderation action '${moderationActionId}' not found`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: { code: this.code, message: this.message, details: {}, request_id: requestId },
+    };
+  }
+}
+
+/** Namespaced code for a superseded-ground reference that resolves to nothing (HTTP 404). */
+export const MODERATION_GROUND_NOT_FOUND_CODE = 'member_moderation.ground_not_found';
+
+/** Thrown when the ground being superseded is not on the action the append targets. */
+export class ModerationGroundNotFoundError extends Error {
+  public readonly name = 'ModerationGroundNotFoundError';
+  public readonly code = MODERATION_GROUND_NOT_FOUND_CODE;
+  public constructor(public readonly groundId: string) {
+    super(`ground '${groundId}' is not a ground of this moderation action`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: { code: this.code, message: this.message, details: {}, request_id: requestId },
+    };
+  }
+}
+
+/** Namespaced code for any attempt to move the PRIMARY ground (HTTP 409). */
+export const MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE =
+  'member_moderation.primary_ground_immutable';
+
+/**
+ * Thrown when a request would produce a SECOND primary ground — whether by superseding the primary,
+ * by appending a fresh `is_primary` row, or both.
+ *
+ * ⛔ NOT a silent no-op, and ⛔ never a `23505` leaking as a 500. The partial unique index
+ * `(moderation_action_id) WHERE is_primary` is the BACKSTOP; this typed error is the INTERFACE.
+ * *"The primary ground is fixed at the action"* is a fact a trustee must be able to read off the
+ * error rather than infer from a stack trace.
+ *
+ * ⚠ The immutability is by CONSTRUCTION, not by policy: the partial unique index makes a second
+ * primary a `23505`, and clearing the existing row's flag would be an `UPDATE` that the table's
+ * `SELECT, INSERT`-only grant does not permit. There is no code path that could move it.
+ */
+export class ModerationPrimaryGroundImmutableError extends Error {
+  public readonly name = 'ModerationPrimaryGroundImmutableError';
+  public readonly code = MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE;
+  public constructor(public readonly moderationActionId: string) {
+    super(
+      'the primary ground is fixed at the moderation action and can never be superseded or replaced; append a SUPPORTING ground instead',
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { moderation_action_id: this.moderationActionId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
 // NOTE: actor-display resolution (AC4's "missing display name BLOCKS the action" requirement,
 // [[project_admin_display_name_attribution]]) happens entirely at the API layer, BEFORE the
 // domain is ever called — `moderateMember`'s `actorDisplay` parameter is a required, non-nullable

@@ -351,6 +351,13 @@ export {
   MODERATION_DWELL_NOT_ELAPSED_CODE,
   ModerationDwellPolicyUnprovisionedError,
   MODERATION_DWELL_UNPROVISIONED_CODE,
+  // Story 10.20 (WS-E) — the append-only grounds.
+  ModerationActionNotFoundError,
+  MODERATION_ACTION_NOT_FOUND_CODE,
+  ModerationGroundNotFoundError,
+  MODERATION_GROUND_NOT_FOUND_CODE,
+  ModerationPrimaryGroundImmutableError,
+  MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE,
 } from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the

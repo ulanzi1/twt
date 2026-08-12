@@ -36,17 +36,17 @@ import {
   terminationAvailableAt,
 } from './dwell.js';
 import { assertEvidenceRefs, type EvidenceRef } from './evidence-refs.js';
+import { insertPrimaryGround } from './grounds.js';
 import {
   ModerationDwellNotElapsedError,
   ModerationDwellPolicyUnprovisionedError,
   ModerationEscalationNotApplicableError,
   ModerationEscalationRequiredError,
   ModerationRationaleRequiredError,
-  ModerationReasonCodeInvalidError,
   ModerationStateError,
 } from './errors.js';
 import { getCurrentMemberModerationOverlay } from './overlay.js';
-import { reasonCodeAppliesTo, type ReasonCode } from './reason-codes.js';
+import { assertReasonCodeAppliesTo, type ReasonCode } from './reason-codes.js';
 import {
   MODERATION_ACTION_EVENT_TYPES,
   nextModerationStatus,
@@ -73,14 +73,6 @@ export function assertRationalePresent(rationale: string | null | undefined, act
   const trimmed = (rationale ?? '').trim();
   if (trimmed.length === 0) throw new ModerationRationaleRequiredError(action);
   return trimmed;
-}
-
-/** The AC3 registry guard: the code must be declared AND its `appliesTo` must include the action. */
-export function assertReasonCodeAppliesTo(code: string, action: ModerationAction): ReasonCode {
-  if (!reasonCodeAppliesTo(code, action)) {
-    throw new ModerationReasonCodeInvalidError(code, action);
-  }
-  return code as ReasonCode;
 }
 
 /** One moderation decision record to insert (the rationale arrives already Tier-1 encrypted). */
@@ -347,6 +339,24 @@ export async function moderateMember(
   if (!row) {
     throw new Error('[moderateMember] insert returned no row — check session scope');
   }
+
+  // (6) ── Story 10.20 (AC9, WS-E) — the PRIMARY GROUND, in the SAME transaction ─────────────────
+  //     "At most one primary" is the DB's job (the partial unique index); "AT LEAST ONE" is the
+  //     writer's, and this is the writer. Written here rather than by the grounds route so the
+  //     grounds table is COMPLETE for every action ever recorded — a fold that had to special-case
+  //     "actions taken before anyone appended a ground" would not be a record model.
+  //     ⛔ Emits NO event: the primary ground is already on the member's timeline via the action's
+  //     own `member.moderation.*` event, which carries the same `reason_code`. D3's denormalization
+  //     is safe because BOTH tables are append-only — neither side can ever be rewritten.
+  await insertPrimaryGround(db, {
+    moderationActionId: row.moderationActionId,
+    memberId: input.memberId,
+    pariwarId: input.pariwarId,
+    code: reasonCode,
+    addedBy: input.actorId,
+    addedByDisplay: input.actorDisplay,
+    addedAt: input.now,
+  });
 
   return {
     moderationActionId: row.moderationActionId,

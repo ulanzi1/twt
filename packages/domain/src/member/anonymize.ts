@@ -40,6 +40,7 @@ import { memberIdentities } from '../schema/member_identities.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
 import { memberMedicalDisclosures } from '../schema/member_medical_disclosures.js';
 import { memberModerationActions } from '../schema/member_moderation_actions.js';
+import { memberModerationGrounds } from '../schema/member_moderation_grounds.js';
 import { memberNominees } from '../schema/member_nominees.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 
@@ -179,8 +180,50 @@ export async function anonymizeMember(
   // ⚠ This UPDATE is why migration 0092 exists. `0091` granted `twt_app` SELECT + INSERT only, so
   // before it this scrub could not have been written at all — the column was structurally
   // un-erasable, which is a stronger failure than merely being forgotten.
+  // ── ⭐ Story 10.20 — EVERY new Tier-1 column, BY NAME (AC11) ─────────────────────────────────────
+  // Premise #4, and the reason this block exists at all: a Postgres COLUMN-LEVEL `GRANT UPDATE` does
+  // NOT extend to columns added later. `0092` granted UPDATE on ONE named column, so every Tier-1
+  // column migration 0099 adds started life structurally UN-ERASABLE — the identical defect 0092's
+  // own header describes, reintroduced. 0099 grants each of them by name, and this scrub is the
+  // other half of that pair. ⛔ Shipping one without the other is silent: the scrub compiles, runs,
+  // and raises a permission error only against a real database.
+  //
+  // ⚠ The RENAME needed no re-grant (privileges follow the attribute), which is why
+  // `decisionNoteCiphertext` above works unchanged. The NEW columns are the opposite case.
+  //
+  // ⛔ `evidence_refs` is deliberately NOT scrubbed, and a reviewer will ask why. They are BOUNDED
+  // REFERENCES to records that live elsewhere — a complaint number, a ticket id — not prose about
+  // the member, and that is true STRUCTURALLY rather than by convention: three CHECK constraints
+  // make a sentence unrepresentable in the column (`evidence-refs.ts`). If that shape enforcement is
+  // ever weakened, this exemption must be revisited in the SAME change.
+  // ⛔ `r7a_restorations_used_snapshot` and `dwell_policy_version` are likewise not scrubbed: a
+  // bounded integer and a clause-version id are non-PII, and both are governance facts the record
+  // depends on to stay readable.
+  const moderationSentinel = await encSentinel(pariwarId, FIELD_CLASS_MODERATION, enc);
   await client
     .update(memberModerationActions)
-    .set({ decisionNoteCiphertext: await encSentinel(pariwarId, FIELD_CLASS_MODERATION, enc) })
+    .set({
+      decisionNoteCiphertext: moderationSentinel,
+      // ⚠ Set unconditionally, including on rows where they are already NULL. A conditional scrub
+      // would need to read first, and the whole point of this shape is that it cannot miss a row.
+      escalationInadequacyCiphertext: moderationSentinel,
+      escalationProportionalityCiphertext: moderationSentinel,
+      immediateTerminationReasonCiphertext: moderationSentinel,
+    })
     .where(eq(memberModerationActions.memberId, memberId));
+
+  // The grounds table's optional Tier-1 note (Story 10.20, WS-E).
+  // ⭐ THIS ONE-LINER IS WHY `member_id` IS DENORMALIZED ONTO THAT TABLE. Every scrub in this file
+  // is `.where(eq(<table>.memberId, memberId))` — an erasure request carries a member id and
+  // nothing else. Reachable only through `moderation_action_id`, this would have needed a correlated
+  // subquery inside an UPDATE or a two-step read-then-write, in the one code path where a miss
+  // leaves PII behind an erasure request. ⛔ A scrub here that reaches through the action id is the
+  // signal that the column was dropped from the migration.
+  // ⚠ NULL, not the sentinel: unlike the action's Decision Note this column is NULLABLE (a ground
+  // need not carry a note), so there is no NOT NULL constraint forcing a placeholder — and writing a
+  // sentinel where the honest answer is "there was never a note" would fabricate a record.
+  await client
+    .update(memberModerationGrounds)
+    .set({ noteCiphertext: null })
+    .where(eq(memberModerationGrounds.memberId, memberId));
 }

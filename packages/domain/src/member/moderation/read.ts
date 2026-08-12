@@ -29,6 +29,7 @@ import type { Db } from '../../db.js';
 import type { MemberId, ModerationActionId, PariwarId } from '../../ids/index.js';
 import { clampLimit } from '../../pagination.js';
 import { memberModerationActions } from '../../schema/member_moderation_actions.js';
+import type { EvidenceRef } from './evidence-refs.js';
 import type { ModerationStatus } from './status.js';
 
 /** One row of a member's moderation history (newest-first). */
@@ -41,6 +42,13 @@ export interface ModerationHistoryEntry {
   actorDisplay: string;
   rejoinPermittedAt: Date | null;
   actedAt: Date;
+  /**
+   * Evidence REFERENCES recorded on the action (Story 10.20, AC4). Safe on a list DTO precisely
+   * because they are identifiers, not prose — a property the three `evidence_refs` CHECKs CREATE.
+   * ⛔ If that shape enforcement is ever weakened, this field's PII classification must be revisited
+   * in the same change.
+   */
+  evidenceRefs: EvidenceRef[];
   /** Tier-1 ciphertext AS STORED. The caller decrypts on demand; a LIST DTO never carries it. */
   decisionNoteCiphertext: string;
 }
@@ -115,6 +123,7 @@ export async function listModerationHistoryForMember(
       actorDisplay: memberModerationActions.actorDisplay,
       rejoinPermittedAt: memberModerationActions.rejoinPermittedAt,
       actedAt: memberModerationActions.actedAt,
+      evidenceRefs: memberModerationActions.evidenceRefs,
       decisionNoteCiphertext: memberModerationActions.decisionNoteCiphertext,
     })
     .from(memberModerationActions)
@@ -144,6 +153,7 @@ export async function listModerationHistoryForMember(
       actorDisplay: r.actorDisplay,
       rejoinPermittedAt: r.rejoinPermittedAt,
       actedAt: r.actedAt,
+      evidenceRefs: r.evidenceRefs,
       decisionNoteCiphertext: r.decisionNoteCiphertext,
     })),
     hasMore,

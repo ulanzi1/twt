@@ -1096,15 +1096,30 @@ own commit with its own evidence. Portal access stays untouched — Story 10.21'
       asserts the suspension's `acted_at` equals the pinned instant, so the gate cannot silently
       start measuring from wall-clock time ([[project_known_livedb_test_failures]] #12).
 
-### Task 7 — WS-E: append-only grounds (AC: 9)
-- [ ] `member_moderation_grounds` writer + reader (fold supersedes; return superseded rows).
-- [ ] Register `member.moderation.ground-appended` at **all three** points (AC9): `MEMBER_EVENT_TYPES`
-      + `MEMBER_EVENT_PAYLOAD_SCHEMAS` (`member/events.ts:300,324`, and the `21` → `22` prose count at
-      `:313-315`), then `EVENT_TYPE_REGISTRY` (`packages/events/src/registry.ts`). `.strict()` payload
-      = `auditShape` + `code` + the superseded id; description in the `member.moderation.*` voice.
-      ⛔ Do **not** add it to `MODERATION_EVENT_TYPES` / `MODERATION_ACTION_EVENT_TYPES`
-      (`status.ts:66-88`) — it is action-less (anti-pattern 17).
-- [ ] New route + a **fourth** step-up context; the primary-ground row written in the action's tx.
+### Task 7 — WS-E: append-only grounds (AC: 9) ✅ DONE 2026-08-12
+- [x] `member_moderation_grounds` writer + reader (`grounds.ts`) — the fold RETAINS superseded rows and
+      flags them; `superseded` is DERIVED from the ids actually pointed at, never stored, so it cannot
+      go stale.
+- [x] Registered `member.moderation.ground-appended` at **all three** points; the `21` → `22` prose
+      count and **both** count fixtures (`life-events-markers`, `personal-event-assertion`) moved with
+      it. `.strict()` payload = `auditShape` + `code` + the superseded id.
+      ⛔ NOT added to `MODERATION_EVENT_TYPES` / `MODERATION_ACTION_EVENT_TYPES` — it is action-less.
+      ⚠ `overlayShape` deliberately NOT spread: no status moves on an append, and claiming a from/to
+      pair would be a false statement about the member's standing.
+- [x] New route + the **FOURTH** step-up context (`member_moderation_append_ground`); the
+      primary-ground row written in the action's own tx. ⛔ No event for a primary ground — it already
+      rides the action's own event; pinned by a test.
+- [x] ⭐ **Broke a `write ↔ grounds` module cycle** by moving `assertReasonCodeAppliesTo` to
+      `reason-codes.ts`, its natural leaf home — the failure mode that stays green through typecheck,
+      lint and the local suite while breaking CONSUMING packages at module-init
+      ([[project_type_only_import_cycle_trap]]).
+- [x] ⭐ **Revert-sanity from raw SQL**: a second `is_primary` row → `23505`; `twt_app` UPDATE and
+      DELETE → `42501` (each probe on its own SAVEPOINT, or the second reports `25P02` and the test
+      would be asserting Postgres error-recovery rather than the grant).
+- [x] ⭐ **The identity test does NOT stand alone.** `memberStateMachine` `safeParse`s and returns the
+      state unchanged on a malformed payload, so an identity assertion is satisfied by a correct
+      payload and a REJECTED one alike (Story 10.19 debug finding #3) — the payload's acceptance is
+      pinned SEPARATELY by parsing it against the registered schema.
 
 ### Task 8 — WS-F: guidance metadata (AC: 10)
 - [ ] `ordinarilyResultsIn: ModerationAction | null` on `ReasonCodeMeta` — **required**, Q6's values
@@ -1113,11 +1128,17 @@ own commit with its own evidence. Portal access stays untouched — Story 10.21'
       rendering nothing at all where the value is `null`.
 - [ ] ⛔ `MODERATION_APPLIES_TO` unchanged. ⛔ No enum values added or removed.
 
-### Task 9 — WS-A: RTBF completeness (AC: 11)
-- [ ] `anonymize.ts`: sentinel-scrub both escalation columns and every ground `note` — the grounds
-      scrub keyed on the table's own `member_id` (AC9), in the same one-liner shape as every sibling
-      scrub; follow the rename through. Extend `rtbf-anonymize.test.ts` to assert **each** new column
-      by name, including a ground `note` on a **superseded** row.
+### Task 9 — WS-A: RTBF completeness (AC: 11) ✅ DONE 2026-08-12
+- [x] `anonymize.ts`: sentinel-scrubs **all three** new action-level Tier-1 columns (both escalation
+      parts **and** the immediate-termination exception reason) plus every ground `note` — the grounds
+      scrub keyed on the table's **own** `member_id`, in the same one-liner shape as every sibling
+      scrub; the rename followed through with no behaviour change.
+- [x] `rtbf-anonymize.test.ts` asserts **each** new column BY NAME, and asserts the non-PII columns
+      (`r7a_restorations_used_snapshot`, `dwell_policy_version`, `evidence_refs`) are **RETAINED**.
+      The table-count fixture moved 7 → 8.
+      ⚠ **The ground note is NULLed, not sentineled** — unlike the action's Decision Note that column
+      is NULLABLE, so no NOT NULL constraint forces a placeholder, and writing a sentinel where the
+      honest answer is *"there was never a note"* would fabricate a record.
 
 ### Task 10 — The surfaces (AC: 12)
 - [ ] `ModerationStrip.tsx` / `ModerationSection.tsx` / their i18n modules: two separate escalation
@@ -1395,7 +1416,7 @@ non-array, leaving that violation to the array CHECK.
 
 ### File List
 
-**Added (12)**
+**Added (14)**
 - `packages/domain/migrations/0099_moderation-record-model.sql`
 - `packages/domain/src/member/moderation/evidence-refs.ts`
 - `packages/domain/src/member/moderation/escalation.ts` *(Task 5)*
@@ -1408,6 +1429,8 @@ non-array, leaving that violation to the array CHECK.
 - `packages/domain/src/member/moderation/dwell.ts` *(Task 6)*
 - `packages/domain/tests/member/moderation-dwell.test.ts` *(Task 6)*
 - `apps/api/tests/integration/member-moderation/moderation-dwell.spec.ts` *(Task 6)*
+- `packages/domain/src/member/moderation/grounds.ts` *(Task 7)*
+- `apps/api/tests/integration/member-moderation/moderation-grounds.spec.ts` *(Task 7)*
 
 **Modified — schema/domain (12)**
 - `packages/domain/migrations/meta/_journal.json` (idx 99)
@@ -1423,6 +1446,17 @@ non-array, leaving that violation to the array CHECK.
 - `packages/domain/src/member/moderation/escalation.ts` (Task 6 — the exception-reason guard)
 - `packages/domain/seed/niyamavali-v1-clauses.sql` (Task 6 — the ratified `niy.moderation.dwell` clause)
 - `openapi/v1.yaml` (regenerated; determinism check green)
+- `packages/domain/src/member/moderation/events.ts` (Task 7 — the ground-appended payload schema)
+- `packages/domain/src/member/events.ts` (Task 7 — registration point 1 + the 21→22 prose count)
+- `packages/events/src/registry.ts` (Task 7 — registration point 3)
+- `packages/domain/src/member/moderation/reason-codes.ts` (Task 7 — the guard moved here; cycle broken)
+- `packages/domain/src/member/moderation/read.ts` (Task 7 — `evidenceRefs` on the history entry)
+- `packages/domain/src/member/anonymize.ts` (Task 9 — all new Tier-1 columns + the grounds note)
+- `apps/api/src/modules/member-moderation/routes.ts` (Task 7 — the grounds route, 4th step-up context)
+- `packages/domain/tests/member/life-events-markers.test.ts`,
+  `packages/domain/tests/member/personal-event-assertion.test.ts` (Task 7 — the 21→22 count fixtures)
+- `packages/domain/tests/member/rtbf-anonymize.test.ts` (Task 9 — every new column by name; 7→8 tables)
+- `packages/contracts/tests/member-moderation.test.ts` (Task 7 — the history fixture)
 
 **Modified — contracts/api (5)**
 - `packages/contracts/src/member-moderation/dto.ts` (comment; Task 5 request fields)

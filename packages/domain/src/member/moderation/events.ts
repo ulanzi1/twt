@@ -67,9 +67,44 @@ export const ModerationRestoredPayloadSchema = z
   })
   .strict();
 
-/** type → payload-schema map for the three moderation events (consumed by `member/events.ts`). */
+/**
+ * A SUPPORTING ground appended to an existing moderation action — Story 10.20 (Task 7; AC9, WS-E).
+ *
+ * ── ⚠ `auditShape` IS SPREAD; `overlayShape` DELIBERATELY IS NOT ────────────────────────────────
+ * `auditShape` is REQUIRED, not decoration: `projectMemberState` parses the payload against this
+ * schema BEFORE the insert, every `member.*` payload carries `from_state`/`to_state`/`trigger`/
+ * `actor`, and this event's own `from_state === to_state` identity test would have nothing to
+ * assert without them.
+ *
+ * `overlayShape` is omitted because NO MODERATION STATUS MOVES ON AN APPEND. Claiming a
+ * `moderation_from`/`moderation_to` pair here would be a false statement about the overlay — the
+ * member's standing is exactly what it was a moment ago, and a later reader folding this stream must
+ * not be told otherwise.
+ *
+ * ── ⛔ WHAT THIS PAYLOAD MUST NEVER CARRY (R1) ──────────────────────────────────────────────────
+ * NO note. NO evidence refs. NO actor display. No free text of ANY kind — `events_log.payload` is
+ * plaintext JSONB. Only the audit shape, the bounded registry `code`, and the id of the ground this
+ * one supersedes.
+ *
+ * ⛔ `is_primary` is NOT here, and the omission is reasoned rather than accidental: the primary
+ * ground is written in the ACTION's own transaction and is already on the timeline via that action's
+ * `member.moderation.suspended` / `.terminated` event `reason_code`. Appends are supporting-only by
+ * construction, so `is_primary` would be a field that is ALWAYS `false`. A test pins that no
+ * `ground-appended` event is ever emitted for a primary ground.
+ */
+export const ModerationGroundAppendedPayloadSchema = z
+  .object({
+    ...auditShape,
+    code: z.enum([...MODERATION_REASON_CODES, ...RESTORE_REASON_CODES]),
+    /** The SUPPORTING ground this one replaces, when it replaces one. Never a primary (23505). */
+    supersedes_ground_id: z.string().uuid().nullable(),
+  })
+  .strict();
+
+/** type → payload-schema map for the moderation events (consumed by `member/events.ts`). */
 export const MODERATION_EVENT_PAYLOAD_SCHEMAS = {
   'member.moderation.suspended': ModerationSuspendedPayloadSchema,
   'member.moderation.terminated': ModerationTerminatedPayloadSchema,
   'member.moderation.restored': ModerationRestoredPayloadSchema,
+  'member.moderation.ground-appended': ModerationGroundAppendedPayloadSchema,
 } as const;

@@ -29,8 +29,11 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
+  ModerationActionNotFoundError,
   ModerationDwellNotElapsedError,
   ModerationDwellPolicyUnprovisionedError,
+  ModerationGroundNotFoundError,
+  ModerationPrimaryGroundImmutableError,
   ModerationEscalationNotApplicableError,
   ModerationEscalationRequiredError,
   ModerationEscalationRestatementError,
@@ -303,6 +306,29 @@ export function errorMappingHandler(
   }
   if (error instanceof ModerationDwellPolicyUnprovisionedError) {
     void reply.status(503).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // Story 10.20 (WS-E) — the append-only grounds.
+  //   ModerationActionNotFoundError         → 404 …action_not_found. 404-NOT-403 on a cross-tenant
+  //                                           or cross-member id: answering 403 would turn this into
+  //                                           an existence oracle for another Pariwar's decisions.
+  //   ModerationGroundNotFoundError         → 404 …ground_not_found (the superseded ground is not on
+  //                                           this action).
+  //   ModerationPrimaryGroundImmutableError → 409 …primary_ground_immutable. The partial unique index
+  //                                           is the BACKSTOP; this is the INTERFACE. ⛔ A 23505
+  //                                           must never reach a caller as a 500 — "the primary
+  //                                           ground is fixed at the action" is a fact a trustee has
+  //                                           to be able to read off the error.
+  if (error instanceof ModerationActionNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationGroundNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationPrimaryGroundImmutableError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
     return;
   }
 

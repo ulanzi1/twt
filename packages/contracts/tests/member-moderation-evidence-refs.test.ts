@@ -21,7 +21,7 @@ import {
   EVIDENCE_REF_PATTERN,
   EvidenceRefDto,
   MODERATION_ESCALATION_MIN_CHARS,
-  MODERATION_RATIONALE_MAX_CHARS,
+  MODERATION_DECISION_NOTE_MAX_CHARS,
   ModerateMemberRequest,
 } from '../src/member-moderation/index.js';
 
@@ -115,7 +115,7 @@ describe('ModerateMemberRequest (AC4, AC6)', () => {
     expect(
       ModerateMemberRequest.safeParse({
         ...base,
-        escalation_inadequacy: 'x'.repeat(MODERATION_RATIONALE_MAX_CHARS + 1),
+        escalation_inadequacy: 'x'.repeat(MODERATION_DECISION_NOTE_MAX_CHARS + 1),
       }).success,
     ).toBe(false);
   });

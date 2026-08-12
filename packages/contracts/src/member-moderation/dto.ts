@@ -28,16 +28,21 @@ import { EvidenceRefDto, EvidenceRefsDto } from './evidence-refs.js';
  * the domain's `ModerationRationaleRequiredError` is the defence-in-depth backstop behind it.
  */
 /**
- * The rationale's max length, EXPORTED so the admin textarea's `maxLength` reads the same number
+ * The DECISION NOTE's max length, EXPORTED so the admin textarea's `maxLength` reads the same number
  * the server validates against (review follow-up). It was previously hand-copied into
  * `ModerationStrip.tsx` with a "mirrors the contracts DTO" comment and no sync-guard — the exact
  * duplication-by-value shape this surface's earlier review pass removed from the reason-code
  * registry. Raising it here alone would silently truncate the operator's text at the old value;
  * lowering it would let the client accept text the server then 400s.
+ *
+ * ⚠ RENAMED from `MODERATION_RATIONALE_MAX_CHARS` by Story 10.20 (AC12), alongside the column rename
+ * `rationale_ciphertext` → `decision_note_ciphertext`. The old name described a field that was asked
+ * to answer three questions at once; the record now separates them, and a constant still saying
+ * "rationale" would name a field that no longer exists.
  */
-export const MODERATION_RATIONALE_MAX_CHARS = 4_000;
+export const MODERATION_DECISION_NOTE_MAX_CHARS = 4_000;
 
-const Rationale = z.string().trim().min(1).max(MODERATION_RATIONALE_MAX_CHARS);
+const DecisionNote = z.string().trim().min(1).max(MODERATION_DECISION_NOTE_MAX_CHARS);
 
 /**
  * The minimum-substance floor for each escalation part (Story 10.20, AC6). Value-aligned with
@@ -51,7 +56,7 @@ export const MODERATION_ESCALATION_MIN_CHARS = 40;
  * One part of the two-part escalation justification. Same cap as the Decision Note — this is
  * governance-grade prose, not a label.
  */
-const EscalationPart = z.string().trim().min(1).max(MODERATION_RATIONALE_MAX_CHARS);
+const EscalationPart = z.string().trim().min(1).max(MODERATION_DECISION_NOTE_MAX_CHARS);
 
 /**
  * The body of a suspend / terminate / restore request. The ACTION itself is carried by the ROUTE
@@ -76,7 +81,7 @@ export const ModerateMemberRequest = z
   .object({
     reason_code: ReasonCode,
     /** The governance-grade Decision Note. Required on EVERY action. */
-    rationale: Rationale,
+    rationale: DecisionNote,
     /** `terminate` only — (a) why SUSPENSION is inadequate. */
     escalation_inadequacy: EscalationPart.optional(),
     /** `terminate` only — (b) why TERMINATION is proportionate. */
@@ -129,7 +134,7 @@ export const AppendModerationGroundRequest = z
   .object({
     code: ReasonCode,
     /** Optional Tier-1 note explaining the ground. */
-    note: Rationale.optional(),
+    note: DecisionNote.optional(),
     /** References only, never prose (AC4). */
     evidence_refs: EvidenceRefsDto.optional(),
     /**

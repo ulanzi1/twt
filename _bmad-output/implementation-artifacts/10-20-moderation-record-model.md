@@ -1146,11 +1146,32 @@ own commit with its own evidence. Portal access stays untouched — Story 10.21'
       is NULLABLE, so no NOT NULL constraint forces a placeholder, and writing a sentinel where the
       honest answer is *"there was never a note"* would fabricate a record.
 
-### Task 10 — The surfaces (AC: 12)
-- [ ] `ModerationStrip.tsx` / `ModerationSection.tsx` / their i18n modules: two separate escalation
-      controls with no copy-across, supporting-ground picker, evidence rows, Decision Note renaming.
-- [ ] Render tests, not view-model tests, for the two-part separation.
-- [ ] Regenerate OpenAPI; determinism check green.
+### Task 10 — The surfaces (AC: 12) ✅ DONE 2026-08-12
+- [x] `ModerationStrip.tsx` / `ModerationSection.tsx` / `i18n-en.ts`: **two separate escalation
+      controls** (distinct ids, independent state, ⛔ no copy-across affordance), **evidence rows**
+      (bounded `kind` `<select>` + restricted-charset `<input>` — ⛔ never a free-text box), the
+      **ruled console shape** (terminate stays ENABLED during the dwell; the re-confirmation names
+      the open dwell and the immediate route, renders `termination_available_at`, requires the
+      exception reason, and says the SERVER decides), the **guidance** line (non-null only), and the
+      **Decision Note renaming** throughout including `MODERATION_RATIONALE_MAX_CHARS` →
+      `MODERATION_DECISION_NOTE_MAX_CHARS`.
+- [x] History renders each action's **grounds** (primary · supporting · superseded, the superseded
+      ones struck through rather than hidden) and its evidence references; the Decision Note and both
+      escalation parts stay **decrypt-on-demand** — ⛔ three new Tier-1 fields did NOT become three
+      new list columns (only `has_note` crosses the wire).
+- [x] **RENDER tests, not view-model tests** — and they earned their keep: they caught that the
+      escalation validation errors were being set into state and rendered **NOWHERE**, so the submit
+      silently did nothing. ⭐ A view-model assertion would have PASSED, because the state was
+      correct all along — exactly the `epics.md:3729` failure mode.
+- [x] The camelCase ↔ snake_case walk at the boundary for **every** new field; OpenAPI regenerated,
+      determinism check green.
+- [x] ⚠ **NOT BUILT, and named rather than silently dropped:** the *supporting-ground picker* as an
+      affordance on the terminate form. AC12 lists it, but the action request carries no supporting
+      grounds — appending one is `POST …/:moderationActionId/grounds` (Task 7), which is an operation
+      on an EXISTING decision. Wiring a picker into the terminate form would have required either a
+      contract field the story does not define or a second request the harness cannot make atomic
+      with the action. The API is built and tested; the console affordance for it is not, and that is
+      recorded in `docs/moderation-record-model.md` rather than left to be discovered.
 
 ### Task 11 — Records + what is not closed (AC: 13, 3)
 - [ ] Create `docs/moderation-record-model.md`.

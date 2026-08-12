@@ -32,7 +32,7 @@ export {
 } from './evidence-refs.js';
 
 export {
-  MODERATION_RATIONALE_MAX_CHARS,
+  MODERATION_DECISION_NOTE_MAX_CHARS,
   MODERATION_ESCALATION_MIN_CHARS,
   ModerateMemberRequest,
   ModerationActionResponse,

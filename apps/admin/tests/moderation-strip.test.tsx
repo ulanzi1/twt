@@ -26,6 +26,8 @@ function moderation(over: Partial<ModerationHistoryResponse> = {}): ModerationHi
     current_reason_code: null,
     since: null,
     legal_actions: ['suspend'],
+    // Story 10.20 (AC8) — ADDITIVE alongside `legal_actions`, never a filter on it.
+    termination_available_at: null,
     entries: [],
     has_more: false,
     ...over,
@@ -38,16 +40,16 @@ function moderation(over: Partial<ModerationHistoryResponse> = {}): ModerationHi
  * they used to read a hand-duplicated `i18n-en.ts` map instead of a server source).
  */
 const REASON_CODES: ReasonCodeMetaDto[] = [
-  { code: 'r7-contribution-discipline', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R7', label: 'Contribution discipline (R7)' },
-  { code: 'r14-forgery', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R14', label: 'Forgery or falsified documents (R14)' },
-  { code: 'r10a-parallel-org-office', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R10(A)', label: 'Office held in a parallel organisation (R10(A))' },
-  { code: 'concealment-confirmed', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-11', label: 'Concealment confirmed by State Trustee (FR-11)' },
-  { code: 'helpdesk-escalated-abuse', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Abuse escalated from the helpdesk' },
-  { code: 'regulator-action', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Regulatory or statutory action' },
-  { code: 'voluntary-pending-review', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Voluntary pause pending review' },
-  { code: 'rule-clearance', applies_to: ['restore'], niyamavali_ref: 'R7(A)', label: 'Rule cleared — three consecutive contributions (R7(A))' },
-  { code: 'trustee-discretion', applies_to: ['restore'], niyamavali_ref: 'R5(D)/R10(D)', label: 'Trustee discretion (R5(D)/R10(D))' },
-  { code: 'moderation-error', applies_to: ['restore'], niyamavali_ref: 'FR-56', label: 'Moderation recorded in error' },
+  { code: 'r7-contribution-discipline', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R7', label: 'Contribution discipline (R7)' , ordinarily_results_in: 'suspend' },
+  { code: 'r14-forgery', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R14', label: 'Forgery or falsified documents (R14)' , ordinarily_results_in: 'suspend' },
+  { code: 'r10a-parallel-org-office', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R10(A)', label: 'Office held in a parallel organisation (R10(A))' , ordinarily_results_in: 'suspend' },
+  { code: 'concealment-confirmed', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-11', label: 'Concealment confirmed by State Trustee (FR-11)' , ordinarily_results_in: 'suspend' },
+  { code: 'helpdesk-escalated-abuse', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Abuse escalated from the helpdesk' , ordinarily_results_in: 'suspend' },
+  { code: 'regulator-action', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Regulatory or statutory action' , ordinarily_results_in: 'suspend' },
+  { code: 'voluntary-pending-review', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'FR-56', label: 'Voluntary pause pending review' , ordinarily_results_in: 'suspend' },
+  { code: 'rule-clearance', applies_to: ['restore'], niyamavali_ref: 'R7(A)', label: 'Rule cleared — three consecutive contributions (R7(A))' , ordinarily_results_in: null },
+  { code: 'trustee-discretion', applies_to: ['restore'], niyamavali_ref: 'R5(D)/R10(D)', label: 'Trustee discretion (R5(D)/R10(D))' , ordinarily_results_in: null },
+  { code: 'moderation-error', applies_to: ['restore'], niyamavali_ref: 'FR-56', label: 'Moderation recorded in error' , ordinarily_results_in: null },
 ];
 
 const noop = async (): Promise<void> => undefined;
@@ -267,6 +269,15 @@ describe('the confirmation modal — UX Pattern 2', () => {
       target: { value: 'r14-forgery' },
     });
     fireEvent.change(screen.getByTestId('moderation-rationale'), { target: { value: 'Confirmed.' } });
+    // ⚠ Story 10.20 (AC6): a termination now carries the two-part escalation justification, so the
+    // modal is unreachable without it. This test is about the CONSEQUENCE COPY, so the parts are
+    // supplied as fixture rather than being what it asserts.
+    fireEvent.change(screen.getByTestId('moderation-escalation-inadequacy'), {
+      target: { value: 'Suspension would not protect the Trust because the misused access remains live.' },
+    });
+    fireEvent.change(screen.getByTestId('moderation-escalation-proportionality'), {
+      target: { value: 'Termination fits the conduct: the forgery was deliberate and repeated.' },
+    });
     fireEvent.click(screen.getByTestId('moderation-submit'));
     expect(screen.getByTestId('moderation-confirm-consequence').textContent).toMatch(/12 months/i);
   });
@@ -303,6 +314,22 @@ describe('<ModerationHistory> — the read-only audit trail (AC9)', () => {
     actor_display: 'A. Trustee',
     rejoin_permitted_at: null,
     acted_at: '2026-08-02T00:00:00.000Z',
+    // Story 10.20 (AC9/AC4) — every action carries its primary ground and its evidence references.
+    grounds: [
+      {
+        ground_id: '55555555-5555-4555-8555-555555555555',
+        code: 'r14-forgery' as const,
+        is_primary: true,
+        has_note: false,
+        evidence_refs: [],
+        supersedes_ground_id: null,
+        superseded: false,
+        added_by: '33333333-3333-4333-8333-333333333333',
+        added_by_display: 'A. Trustee',
+        added_at: '2026-08-02T00:00:00.000Z',
+      },
+    ],
+    evidence_refs: [],
   };
 
   it('renders action · reason LABEL · actor_display', () => {
@@ -339,5 +366,254 @@ describe('<ModerationHistory> — the read-only audit trail (AC9)', () => {
   it('renders an explicit empty state, never a blank list', () => {
     render(<ModerationHistory entries={[]} reasonCodes={REASON_CODES} />);
     expect(screen.getByTestId('moderation-history-empty')).toBeInTheDocument();
+  });
+});
+
+
+// ── Story 10.20 (AC6, AC4, AC10, AC12) — RENDER tests, not view-model tests ─────────────────────
+//
+// ⚠ THE TEST LAYER IS THE POINT HERE. `epics.md:3729` records the finding against Story 10.10:
+// *"AC9's prose reached nobody because tests asserted the view-model and never the render"*. The
+// two-part escalation test is only real if the FORM makes the parts separately answerable, so these
+// assertions go through the rendered DOM.
+
+describe('the two-part escalation justification (AC6) — asserted through the RENDER', () => {
+  const codes = REASON_CODES;
+
+  function renderTerminable(over: Partial<ModerationHistoryResponse> = {}) {
+    return render(
+      <ModerationStrip
+        moderation={moderation({ current_status: 'suspended', legal_actions: ['terminate', 'restore'], ...over })}
+        reasonCodes={codes}
+        onSubmit={vi.fn()}
+      />,
+    );
+  }
+
+  it('⭐ renders TWO separate controls, and NO copy-across affordance between them', () => {
+    renderTerminable();
+    fireEvent.click(screen.getByTestId('moderation-action-terminate'));
+
+    const a = screen.getByTestId('moderation-escalation-inadequacy');
+    const b = screen.getByTestId('moderation-escalation-proportionality');
+    // ⛔ Two DISTINCT elements with distinct ids — not one control, not a nested object.
+    expect(a).not.toBe(b);
+    expect(a.id).not.toBe(b.id);
+
+    // ⛔ NO COPY-ACROSS: typing into (b) must leave (a) untouched, and no control offers to copy.
+    fireEvent.change(b, { target: { value: 'Termination fits the conduct because the forgery was deliberate.' } });
+    expect((a as HTMLTextAreaElement).value).toBe('');
+    const strip = screen.getByTestId('moderation-strip');
+    expect(strip.textContent ?? '').not.toMatch(/same as|copy|use above/i);
+  });
+
+  it('⛔ neither escalation control is rendered for a SUSPEND or a RESTORE', () => {
+    render(
+      <ModerationStrip
+        moderation={moderation({ legal_actions: ['suspend'] })}
+        reasonCodes={codes}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('moderation-action-suspend'));
+    expect(screen.queryByTestId('moderation-escalation')).toBeNull();
+    expect(screen.queryByTestId('moderation-evidence')).toBeNull();
+  });
+
+  it('refuses a termination where part (a) merely RESTATES part (b)', () => {
+    renderTerminable();
+    fireEvent.click(screen.getByTestId('moderation-action-terminate'));
+    fireEvent.change(screen.getByTestId('moderation-reason-code'), { target: { value: 'r14-forgery' } });
+    fireEvent.change(screen.getByTestId('moderation-rationale'), { target: { value: 'Terminated by the Panel.' } });
+
+    const restated = 'Termination fits the conduct because the forgery was deliberate and repeated.';
+    fireEvent.change(screen.getByTestId('moderation-escalation-inadequacy'), { target: { value: restated } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-proportionality'), { target: { value: restated } });
+    fireEvent.click(screen.getByTestId('moderation-submit'));
+
+    // No confirmation modal — the request never leaves the client.
+    expect(screen.queryByTestId('moderation-confirm-modal')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toContain('Part (a)');
+  });
+
+  it('refuses a termination missing either part, and one below the substance floor', () => {
+    renderTerminable();
+    fireEvent.click(screen.getByTestId('moderation-action-terminate'));
+    fireEvent.change(screen.getByTestId('moderation-reason-code'), { target: { value: 'r14-forgery' } });
+    fireEvent.change(screen.getByTestId('moderation-rationale'), { target: { value: 'Terminated by the Panel.' } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-inadequacy'), { target: { value: 'Suspension is not enough here because the access remains live.' } });
+    fireEvent.click(screen.getByTestId('moderation-submit'));
+    expect(screen.queryByTestId('moderation-confirm-modal')).toBeNull();
+
+    // Present but too short — a floor exists to reject "n/a", not to judge reasoning.
+    fireEvent.change(screen.getByTestId('moderation-escalation-proportionality'), { target: { value: 'n/a' } });
+    fireEvent.click(screen.getByTestId('moderation-submit'));
+    expect(screen.queryByTestId('moderation-confirm-modal')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toContain('40 characters');
+  });
+});
+
+describe('evidence references (AC4) — structurally not a free-text box', () => {
+  it('⛔ renders NO free-text evidence field; each row is a bounded kind + a restricted ref', () => {
+    render(
+      <ModerationStrip
+        moderation={moderation({ current_status: 'suspended', legal_actions: ['terminate'] })}
+        reasonCodes={REASON_CODES}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('moderation-action-terminate'));
+    fireEvent.click(screen.getByTestId('moderation-evidence-add'));
+
+    // A SELECT for the kind — the vocabulary is bounded, so prose cannot be chosen.
+    const kind = screen.getByTestId('moderation-evidence-kind-0') as HTMLSelectElement;
+    expect(kind.tagName).toBe('SELECT');
+    // An INPUT (not a textarea) for the ref — and prose in it is refused below.
+    const ref = screen.getByTestId('moderation-evidence-ref-0') as HTMLInputElement;
+    expect(ref.tagName).toBe('INPUT');
+  });
+
+  it('refuses a prose reference — REJECTED, never truncated to a prefix of the prose', () => {
+    render(
+      <ModerationStrip
+        moderation={moderation({ current_status: 'suspended', legal_actions: ['terminate'] })}
+        reasonCodes={REASON_CODES}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('moderation-action-terminate'));
+    fireEvent.change(screen.getByTestId('moderation-reason-code'), { target: { value: 'r14-forgery' } });
+    fireEvent.change(screen.getByTestId('moderation-rationale'), { target: { value: 'Terminated by the Panel.' } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-inadequacy'), { target: { value: 'Suspension would not protect the Trust because the misused access remains live.' } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-proportionality'), { target: { value: 'Termination fits the conduct: the forgery was deliberate and repeated.' } });
+    fireEvent.click(screen.getByTestId('moderation-evidence-add'));
+    fireEvent.change(screen.getByTestId('moderation-evidence-ref-0'), { target: { value: 'the member admitted it' } });
+    fireEvent.click(screen.getByTestId('moderation-submit'));
+
+    expect(screen.queryByTestId('moderation-confirm-modal')).toBeNull();
+    // ⛔ The typed value is NOT silently trimmed to the part before the first space.
+    expect((screen.getByTestId('moderation-evidence-ref-0') as HTMLInputElement).value).toBe(
+      'the member admitted it',
+    );
+  });
+});
+
+describe('the RULED console shape during the dwell (AC8/AC12, Q4.2)', () => {
+  const DURING_DWELL = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString();
+
+  function renderDuringDwell() {
+    return render(
+      <ModerationStrip
+        moderation={moderation({
+          current_status: 'suspended',
+          legal_actions: ['terminate', 'restore'],
+          termination_available_at: DURING_DWELL,
+        })}
+        reasonCodes={REASON_CODES}
+        onSubmit={vi.fn()}
+      />,
+    );
+  }
+
+  it('⛔ the Terminate control stays VISIBLE AND ENABLED — it is NOT disabled until day 7', () => {
+    renderDuringDwell();
+    const btn = screen.getByTestId('moderation-action-terminate') as HTMLButtonElement;
+    // The Panel ruled a THIRD shape, neither of the two the routing note offered: enabled, gated by
+    // re-confirmation. `legal_actions` is not rewritten merely because the dwell exists.
+    expect(btn.disabled).toBe(false);
+  });
+
+  it('⭐ the confirmation NAMES the open dwell and the immediate route, and requires the reason', () => {
+    renderDuringDwell();
+    fireEvent.click(screen.getByTestId('moderation-action-terminate'));
+    fireEvent.change(screen.getByTestId('moderation-reason-code'), { target: { value: 'r14-forgery' } });
+    fireEvent.change(screen.getByTestId('moderation-rationale'), { target: { value: 'Terminated by the Panel.' } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-inadequacy'), { target: { value: 'Suspension would not protect the Trust because the misused access remains live.' } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-proportionality'), { target: { value: 'Termination fits the conduct: the forgery was deliberate and repeated.' } });
+    fireEvent.click(screen.getByTestId('moderation-submit'));
+
+    const warning = screen.getByTestId('moderation-dwell-warning');
+    // ⛔ NOT a generic "are you sure" — it states (i) the dwell is open and (ii) the route taken.
+    expect(warning.textContent).toContain('seven-day dwell is still open');
+    expect(warning.textContent).toMatch(/immediate-termination exception/i);
+    // ⛔ The dialog obtains INFORMED INTENT; it does not grant authority.
+    expect(warning.textContent).toMatch(/server decides/i);
+    // And the instant is rendered where it is actually decision-relevant.
+    expect(warning.textContent).toContain(new Date(DURING_DWELL).toLocaleString());
+
+    // Confirming without a recorded reason is refused at the dialog.
+    fireEvent.click(screen.getByTestId('moderation-confirm-submit'));
+    expect(screen.getByTestId('moderation-confirm-error')).toBeTruthy();
+  });
+
+  it('renders NO dwell warning once the ordinary path has opened', () => {
+    render(
+      <ModerationStrip
+        moderation={moderation({
+          current_status: 'suspended',
+          legal_actions: ['terminate'],
+          termination_available_at: null,
+        })}
+        reasonCodes={REASON_CODES}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('moderation-action-terminate'));
+    fireEvent.change(screen.getByTestId('moderation-reason-code'), { target: { value: 'r14-forgery' } });
+    fireEvent.change(screen.getByTestId('moderation-rationale'), { target: { value: 'Terminated by the Panel.' } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-inadequacy'), { target: { value: 'Suspension would not protect the Trust because the misused access remains live.' } });
+    fireEvent.change(screen.getByTestId('moderation-escalation-proportionality'), { target: { value: 'Termination fits the conduct: the forgery was deliberate and repeated.' } });
+    fireEvent.click(screen.getByTestId('moderation-submit'));
+    expect(screen.getByTestId('moderation-confirm-modal')).toBeTruthy();
+    expect(screen.queryByTestId('moderation-dwell-warning')).toBeNull();
+  });
+});
+
+describe('ordinarilyResultsIn guidance (AC10)', () => {
+  it('renders guidance for a moderation ground — as TEXT, never as a pre-selected action', () => {
+    render(
+      <ModerationStrip
+        moderation={moderation({ legal_actions: ['suspend'] })}
+        reasonCodes={REASON_CODES}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('moderation-action-suspend'));
+    fireEvent.change(screen.getByTestId('moderation-reason-code'), { target: { value: 'r14-forgery' } });
+    expect(screen.getByTestId('moderation-reason-guidance').textContent).toContain('Ordinarily results in');
+    // ⛔ Guidance must not MOVE the decision: the chosen action is still the one the operator picked.
+    expect((screen.getByTestId('moderation-action-suspend') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('⛔ renders NOTHING for a restore ground — not "n/a", not an empty chip', () => {
+    render(
+      <ModerationStrip
+        moderation={moderation({ current_status: 'suspended', legal_actions: ['restore'] })}
+        reasonCodes={REASON_CODES}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('moderation-action-restore'));
+    fireEvent.change(screen.getByTestId('moderation-reason-code'), { target: { value: 'moderation-error' } });
+    // `null` is the RATIFIED answer for a restore ground — a code that justifies no sanction carries
+    // no sanction guidance — and the UI says nothing rather than inventing a placeholder.
+    expect(screen.queryByTestId('moderation-reason-guidance')).toBeNull();
+  });
+});
+
+describe('the Decision Note rename (AC12)', () => {
+  it('the surface says "Decision Note", never "rationale"', () => {
+    render(
+      <ModerationStrip
+        moderation={moderation({ legal_actions: ['suspend'] })}
+        reasonCodes={REASON_CODES}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('moderation-action-suspend'));
+    const strip = screen.getByTestId('moderation-strip');
+    expect(strip.textContent).toContain('Decision Note');
+    // A UI still saying "rationale" would describe a field that no longer exists.
+    expect(strip.textContent ?? '').not.toMatch(/rationale/i);
   });
 });

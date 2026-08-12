@@ -1,6 +1,12 @@
 # Trustee Panel Routing Note — Story 10.20, Moderation Record Model
 
-**Status:** ⏳ **Open — seven questions, awaiting ruling.** Q1, Q2, Q4 and Q5 are ⛔ **BLOCKING**.
+**Status:** ✅ **RULED 2026-08-12 — all seven questions answered.** See *"The ruling as given"* at the
+foot of this note, which is authoritative where it differs from the option text above. ⚠ The Panel
+**added two dimensions this note did not offer** (an immediate-termination exception, and a third
+console shape) and **materially redefined** the Q7.2 subject rather than merely confirming it — each is
+recorded as an addition, not read back into the options as though it had been one.
+*(Superseded status line, retained: ⏳ Open — seven questions, awaiting ruling. Q1, Q2, Q4 and Q5 are
+⛔ BLOCKING.)*
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-11, against
 `_bmad-output/implementation-artifacts/10-20-moderation-record-model.md`
@@ -436,3 +442,181 @@ carry per-clause provenance.
 | **Q6** | seven moderation codes = ______ ; three restore grounds = ______ | |
 | **Q7.1** | (a) / (b) | |
 | **Q7.2** | gradient intended / unintended | If unintended, recorded as owed — no edit here |
+
+---
+
+# The ruling as given — 2026-08-12
+
+**Authoritative** where it differs from the option text above. To be recorded as Decision
+`2026-08-12-099` with per-clause provenance (Decision `2026-08-09-095`), reproduced with the §8.5/§8.6/
+§8.9 verbatim text at Task 3, as one atomic governance act.
+
+| Q | Ruling |
+|---|---|
+| **Q1** | **(a)** — general test **and** six enumerated grounds; both govern |
+| **Q2** | **All seven principles adopted** |
+| **Q3** | **(a)** — authorise both unanchored codes in §8.2; no retirement, no enum migration |
+| **Q4.1** | **(a)** — ordinary 7-day dwell **+ an immediate-termination exception** |
+| **Q4.2** | **(a)** — Terminate control stays enabled, gated by explicit re-confirmation |
+| **Q4.3** | **(a)** — elapsed dwell satisfies v1 opportunity-to-respond |
+| **Q4.4** | **Registry** — versioned policy value, not a code constant |
+| **Q4 duration** | **7 days** |
+| **Q5** | **(a)** — evaluate + snapshot the fact + record justification; **never** a hard block |
+| **Q6** | ⭐ accepted in full — `'suspend'` ×7 moderation grounds, `null` ×3 restore grounds |
+| **Q7.1** | **Yes** — land the §8.9 future-governance test |
+| **Q7.2** | **Yes** — the severity gradient is intentional and governing |
+
+## ⚠ Sub-question renumbering — the Panel's Q4 numbering is NOT this note's
+
+Recorded explicitly so no clause is read against the wrong question
+(`[[feedback_closure_language_precision]]`):
+
+| Panel's number | This note's question | Disposition |
+|---|---|---|
+| **Q4.1** | *(none — no counterpart)* | ⭐ **NEW DIMENSION.** The note framed dwell as an absolute precondition. The Panel ruled it the **ordinary** path and preserved an **immediate-termination exception** alongside it. |
+| **Q4.2** | Ruling-template row **Q4.3** (console control) | Resolved with a **third shape** the note did not offer — see below. |
+| **Q4.3** | **Q4.1** (opportunity to respond) | ⭐ (a) as recommended. |
+| **Q4.4** + duration | **Q4.2** (interval + where the duration lives) | ⭐ Registry as recommended; **7 days** is the Panel's number. |
+
+## The two additions the Panel made beyond the options offered
+
+**1. The immediate-termination exception (Q4.1).** This note offered dwell as an unconditional
+precondition on `terminate`. The Panel did not accept that framing, and was right not to: **principle 5
+as adopted says termination *normally* follows suspension, and principle 6 says notice and opportunity
+*normally* precede it** — both carry an express exception, and the decision brief states it. A dwell
+built as an absolute gate would have **contradicted the very principles it was built to mechanize**.
+
+⇒ The dwell is a precondition on the **ordinary** path only. The immediate path stays available where
+the governing rules permit the exception **and the authorised actor records the reason for invoking
+it**. ⛔ Immediate termination does **not** forfeit the member's future right of appeal — that right is
+Story 10.22's to build and is not narrowed here.
+
+**2. The console shape (Q4.2).** The note offered *disabled-with-reason* or *enabled-and-409s*. The
+Panel ruled a third: **enabled, with explicit re-confirmation** that names the open dwell and states
+the actor is invoking the immediate-termination route — with the **server authoritative** on whether
+that route is actually permitted. ⛔ The UI confirmation **does not grant authority**; it obtains
+informed intent. This is consistent with the story's earlier D5 correction: `legal_actions` is not
+silently rewritten merely because a dwell exists.
+
+## Q5 — the restoration clarification the Panel volunteered
+
+Beyond ruling (a), the Panel clarified what restoration **means**. This is governing and was not asked:
+
+**Two distinct cases, never merged.**
+- **Suspension restoration** — the ordinary lifecycle `active → suspended → restored`.
+- **Termination restoration** — the exceptional `terminated → restored`, requiring the dedicated
+  Trustee Panel authority established by Story 10.19 (Decision `2026-08-10-097` clause 1).
+
+The three restoration grounds (`rule-clearance`, `trustee-discretion`, `moderation-error`) are
+**reasons for a restoration decision, not permissions**.
+
+**⭐ Restoration is PROSPECTIVE, not retroactive.** It restores membership from the restoration point
+forward and **does not erase the terminated period**. Therefore:
+- no retroactive contribution credit for the terminated period;
+- missed contribution obligations are **not** treated as fulfilled;
+- R7 continues to determine the member's resulting obligations and standing;
+- renewal / lapse / rejoin rules are evaluated on the member's **actual state and dates**.
+
+If restoration occurs months later and the ordinary rules mean the member has lapsed, **the ordinary
+lapse rules apply**. ⛔ **Do not create a special "restored terminated member" state that bypasses R7 or
+any other ordinary membership rule.** Restoration is not amnesty.
+
+## Q7.2 — confirmed, then materially redefined
+
+The note asked only whether the §2.5 gradient was *intended*. The Panel answered **yes** — and then
+stated a **more precise governing model than §2.5 currently expresses**:
+
+> Termination remains uncleared → **no ordinary rejoin eligibility**.
+> Authorised restoration / clearance → membership restored **prospectively** → ordinary membership /
+> R7 / lapse rules evaluated → the applicable 12-month rejoin restriction **then** governs eligibility.
+
+⛔ The Panel directed that the old wording **not** be implemented mechanically as *"termination and
+lapse both get a 12-month rejoin lock running from the date of termination/lapse."*
+
+**This is an addition to the governing position, not a re-reading of §2.5.** It is therefore recorded
+as such, and the sections that state the older model are surfaced as **drift** in the section below —
+⛔ **not edited here.**
+
+---
+
+# ⛔ GOVERNANCE DRIFT — surfaced, NOT closed
+
+Directed by the Panel: *"Do not silently reinterpret a ratified decision; if an already-ratified text
+conflicts, surface it as governance drift rather than editing it."* Every item below was located by
+searching for the two patterns the Panel named — *a flat 12-month rejoin lock running from termination*,
+and *restoration as retroactive reinstatement*. **Nothing in this section is edited by Story 10.20.**
+
+## D-1 ⭐ THE SHARP ONE: today, time alone cures an uncleared termination
+
+**This is a behavioural conflict, not a wording one, and it is live in production code.**
+
+The signup guard (`apps/api/src/modules/auth/member/signup.handlers.ts:118-123`) blocks a returning
+identity only while **both** hold:
+
+```
+priorInThisPariwar.moderationStatus === 'terminated'   &&   now < moderationRejoinPermittedAt
+```
+
+and `rejoin_permitted_at` is derived, at the moment of termination, as
+`addTwelveMonths(now)` (`apps/api/src/modules/member-moderation/handlers.ts:269`).
+
+⇒ **At month 13, an identity whose termination was never cleared passes the guard and may sign up.**
+The lock's clock starts at termination and expires unaided. That is *precisely* the model the Panel
+directed must not be implemented mechanically, and it is what the system does today.
+
+| | Shipped behaviour | Ruled position |
+|---|---|---|
+| Uncleared termination, month 3 | blocked | blocked ✅ |
+| **Uncleared termination, month 13** | **PERMITTED** | ⛔ **no ordinary rejoin eligibility** |
+| After authorised restoration | block clears immediately | restored prospectively; ordinary rules then govern ✅ |
+
+⚠ **The divergence is one row wide, and it is the row that matters** — it is the case where the
+passage of time substitutes for the governance act the Panel says is required first.
+
+⛔ **Not fixed here, deliberately.** Changing the guard now would make the code enforce a rejoin model
+**no governing instrument states** — §2.5 still says the opposite. That is the exact inversion this
+whole arc exists to end (D1), and it would be the same defect as shipping the enforcement before the
+principles. **The instrument moves first.**
+
+## D-2 — Ratified and base texts that state the older model
+
+| # | Text | Says | Status |
+|---|---|---|---|
+| **a** | `niyamavali.md:64` / hi `:68` — **§2.5** | *"A member who is terminated **or lapses** may re-attempt membership only after a [[12-month]] rejoin lock."* | **Base instrument.** No numbered ratification. States the flat model the Panel has now displaced. |
+| **b** | `niyamavali.md:182` / hi `:180` — **§8.4** | *"…and is subject to the **[[12-month]] rejoin lock** (§2.5, FR-6)."* | ⛔ **RATIFIED** by Decision `2026-08-10-097`, reproduced verbatim at `.decision-log.md:170` / `:181`. **Superseded only by a superseding decision — never re-read.** |
+| **c** | `niyamavali.md:207` / hi `:205` — **§8.4a**, *Rejoin* row | *"**12-month rejoin lock** (§2.5, FR-6)"* | ⛔ **RATIFIED** by `2026-08-10-097`, reproduced at `.decision-log.md:214` / `:244`. |
+| **d** | `prd.md:858` — **FR-56** | *"rejoin under same identity blocked for 12 months (FR-6)"* | PRD consequence. Amendable, but **not by this story** — 10.20 touches no FR text (premise #8). |
+
+⚠ **Deliberately NOT listed as drift:** `prd.md:300` (**FR-6**, voluntary withdrawal) and
+`packages/domain/src/member/withdrawal.ts:37`. That is the **withdrawal** rejoin lock — a *second,
+independent* lock over the same identity, arising from a voluntary act, and the Panel's ruling does not
+touch it. `signup.handlers.ts` checks the two separately and on purpose
+(*"NO fake `member_withdrawals` row is ever written on termination — termination is not voluntary and
+must not masquerade as withdrawal"*). ⛔ **Do not conflate them.** A future amendment that "fixes the
+12-month lock" without distinguishing the two would silently change a voluntary-withdrawal consequence
+for disciplinary reasons.
+
+## D-3 — What is NOT drift
+
+⛔ Restoration is **not** implemented retroactively anywhere. The search for the second pattern the
+Panel named returned **no** conflicting implementation: the signup guard maps the latest action, so a
+`restore` clears the block by making the identity not-currently-terminated
+(`member-auth.repo.ts:72-76`), and the code comment already warns against the opposite bug (*"A guard
+keyed on the mere EXISTENCE of a historical `terminate` row would leave a restored member permanently
+locked out"*). **No special "restored terminated member" state exists**, which is the state the Panel
+directed must not be created. The prospective-restoration model is therefore **consistent with the code
+as shipped**; it is the *rejoin* half (D-1) that diverges.
+
+⚠ Recorded as **verified-consistent**, not as *fixed* — nothing was changed to make it so.
+
+## Disposition
+
+**Owed, with a named trigger — not scheduled by this story.** Reconciling §2.5 / §8.4 / §8.4a with the
+ruled model is a **Part 11 amendment** against **ratified** text and needs its own routing note, its
+own Panel ruling and its own superseding decision (`[[feedback_supersede_never_reinterpret]]`). It
+would also amend the §8.4a comparison table that Story 10.19 landed nine days ago.
+
+⛔ Until that amendment lands, **§2.5 governs as written** and the shipped guard stays as shipped.
+Story 10.20 records the divergence and closes none of it. Carried into `deferred-work.md`; the standing
+Trustee Panel obligation queue moves from **seven** to **nine** (counsel review of §8.5/§8.6/§8.9, and
+this reconciliation).

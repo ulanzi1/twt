@@ -204,6 +204,16 @@ unchanged and not this story's to fix.
 
 ### AC1 — Q1–Q7 are ROUTED to the Trustee Panel, never authored unilaterally
 
+> ✅ **SATISFIED 2026-08-12.** The note was authored and committed **alone** on
+> `governance/10-20-moderation-record-model` (`5ea5213`), with no `packages/` or `apps/` file in the
+> commit, and the Panel has **ruled all seven**. The ruling is recorded verbatim at the foot of
+> `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-11-story-10-20.md`, to be
+> entered as Decision `2026-08-12-099` with the §8.5/§8.6/§8.9 verbatim text at Task 3.
+> ⚠ **The Panel's Q4 sub-numbering is not this note's** — the mapping is recorded in the note and must
+> be consulted before any clause is read against a question number.
+> ⚠ **Two dimensions were ADDED by the ruling** (the immediate-termination exception, and a third
+> console shape) and **Q7.2 was materially redefined** rather than merely confirmed. See AC8 and AC13.8.
+
 **Given** [[feedback_governance_commits_precede_implementation]] and the 10.18/10.19 precedent
 **When** the governance half begins
 **Then** a routing note `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-story-10-20.md`
@@ -231,6 +241,24 @@ author analysis; an author-written clause is labelled `[Author-committed]`, neve
 
 ### AC2 — §8.5, §8.6 and §8.9 are authored in their RESERVED slots, both locales
 
+✅ **RULED — the content is now fixed** (Decision `2026-08-12-099`):
+- **Q1 (a)** — §8.5 carries **both** a general test (*termination requires conduct evidencing a
+  fundamental failure of the trust on which membership rests*) **and** the six enumerated grounds:
+  forged documents · identity fraud · financial fraud · deliberate concealment · repeated malicious
+  abuse · persistent conduct materially threatening the Trust after due process. **Both govern.**
+  ⛔ The six are **not** a licence to invent further termination grounds in application code.
+- **Q2 — all seven principles adopted.** §8.6 carries them, constitutional sentence leading and
+  verbatim. ⛔ Principle 8 (the appeal gap) is **stated, not closed** — do not implement §8.8 here.
+- **Q3 (a)** — §8.2 is amended to **authorise** `regulator-action` and `voluntary-pending-review`.
+  ⛔ No retirement, **no vocabulary-removal migration**, no enum change.
+- **Q7.1 Yes** — §8.9 lands here, establishing that any future moderation ground or sanction is
+  evaluated **against the principles**, never justified by analogy to an existing reason code. ⛔ A new
+  reason code is therefore **not** a route to new moderation policy.
+
+⚠ **Principles 5 and 6 as adopted each carry an express immediate-termination exception** — the wording
+must preserve *"normally"*, because AC8's mechanization depends on it and an absolute reading would
+contradict the ruling (see AC8's reshaping banner).
+
 **Given** premise #1 and the Q1/Q2/Q3/Q7 rulings
 **When** the Part 8 amendment lands
 **Then** `docs/legal/niyamavali.md` gains **§8.5**, **§8.6** and **§8.9** *physically between §8.4a and
@@ -242,7 +270,8 @@ co-equal governing instrument, not a translation artifact**
 **And** the `:230` / hi `:228` reserved-numbers note is **edited to reserve §8.8 only**, and the
 sentence *"§8.7 is deliberately numbered ahead of them"* is retained as the historical record of why
 the ordering looks the way it does — ⛔ the numbers are **not closed up** and §8.7 is **not renumbered**
-**And** the §8.2 disposition from Q3 lands in §8.2 (option (a)) or is recorded as owed (option (b))
+**And** the §8.2 disposition lands **in §8.2 as an amendment** — Q3 ruled (a), so both codes are
+authorised in the instrument and nothing is recorded as owed on this question
 **And** all new text is reproduced **verbatim, both locales**, in the `.decision-log.md` entry, because
 `docs/legal/` is gitignored and that entry is the only durable copy
 **And** **no** version bump, `Effective:` date, or `[LEGAL]` line is written, and none may be inferred
@@ -381,19 +410,30 @@ mis-compares against integers)
 6. **GRANTS** `UPDATE` on **each new Tier-1 column by name** (`escalation_*`, and the grounds `note`)
    plus the matching tenant-scoped RLS UPDATE policy on the new table — **premise #4's trap, closed
    at the point it opens**
-7. **ADDS the two RULING-DEPENDENT columns — and ⛔ only the ones the ruling actually calls for.**
-   AC7 and AC8 each require a column no other item in this list creates, and both are gated on a
-   Task-2 ruling, so this item is authored **after** the ruling and its content is determined by it:
-   - **Q5 (a) ⇒** `r7a_restorations_used_snapshot integer NULL` on `member_moderation_actions` —
+7. ✅ **RULED — ADDS THE THREE RULING-DEPENDENT COLUMNS.** Both conditional columns were ruled INTO
+   existence, and the ruling's Q4.1 addition creates a third. Decision `2026-08-12-099`:
+   - **Q5 (a) ruled ⇒** `r7a_restorations_used_snapshot integer NULL` on `member_moderation_actions` —
      AC7's as-of-decision fact snapshot. ⛔ **NULLABLE, and `NULL` is a first-class value meaning
-     *unknown*, never `0`** (AC7). Under **Q5 (b)** this column is **not created**.
-   - **Q4 (registry) ⇒** `dwell_policy_version text NULL` on `member_moderation_actions` — AC8's
-     version pin, in the `resolveRestorationDisciplinePolicy` shape. Under **Q4 (code constant)**
-     this column is **not created**, and that outcome is itself recorded (AC13.6).
-   ⚠ **Neither column is Tier-1.** A bounded integer and a version string are non-PII ⇒ **neither
-   takes a `GRANT UPDATE`** (item 6) and **neither is scrubbed** (AC11). State that reasoning where
-   they are declared, because the default posture on this table is the opposite and a reviewer will
-   read the omission as premise #4's trap recurring.
+     *unknown*, never `0`** (AC7). *(The Q5 (b) branch, under which this column was not created, was
+     rejected.)*
+   - **Q4.4 registry ruled ⇒** `dwell_policy_version text NULL` on `member_moderation_actions` —
+     AC8's version pin, in the `resolveRestorationDisciplinePolicy` shape. *(The code-constant branch,
+     under which this column was not created, was rejected — so **AC13.6 is DISCHARGED**, not carried:
+     neither column was left uncreated.)*
+   - ⭐ **Q4.1 ruled ⇒ a THIRD column the pre-ruling story did not have:** the
+     **immediate-termination exception reason**. The Panel preserved an immediate path conditioned on
+     *"the authorised actor records the reason/justification for using that exception"* — a recorded
+     reason with no column is not recorded. ⛔ **It is Tier-1 free text** (it describes the case), so
+     unlike the other two it **DOES** take a `GRANT UPDATE` by name (item 6) and **IS** scrubbed
+     (AC11). ⛔ It is a **separate field from both escalation parts**: the two-part test answers *why
+     termination*, this answers *why now*. ⛔ It is `NULL` on the ordinary path and non-`NULL` exactly
+     when the exception was invoked — which makes "how often is the exception used?" answerable, and
+     that is the point of recording it.
+   ⚠ **The first two columns are not Tier-1.** A bounded integer and a version string are non-PII ⇒
+   **neither takes a `GRANT UPDATE`** (item 6) and **neither is scrubbed** (AC11). State that reasoning
+   where they are declared, because the default posture on this table is the opposite and a reviewer
+   will read the omission as premise #4's trap recurring. ⛔ **The exception-reason column is the
+   opposite case and must not be swept into the same sentence.**
    ⛔ **Item 7 is why WS-B cannot be split AHEAD of WS-C/WS-D.** The epic permits splitting along the
    workstream lines, and WS-B is *"the only one that touches the schema"* — so WS-C's and WS-D's
    columns must ride WS-B's migration, and WS-B must therefore land **after** the Q4/Q5 rulings that
@@ -439,11 +479,14 @@ mirroring `write.ts:136-139`
 
 ### AC7 — WS-C: terminating over an available restoration path requires a recorded justification
 
-**Given** principle 4 and `epics.md:3852`, under the **Q5 ruling**
+**Given** principle 4 and `epics.md:3852`, under **Q5 ruled (a)** (Decision `2026-08-12-099`)
 **When** the ground is one with a Niyamavali-defined restoration path
 **Then** a justification addressing that path is recorded — part (a)'s third alternative (*"why the
 restoration path it preserves is unavailable or futile"*) is the field it lands in, not a fourth column
-**And** under Q5 option (a): the record additionally carries a **snapshot of
+**And** ⛔ **restoration exhaustion is NEVER a hard technical gate.** The Panel ruled that an
+unresolved projection must not refuse an otherwise-authorised Trustee decision. The fact is
+**evaluated**, **snapshotted** and **justified against** — it never blocks
+**And** the record carries a **snapshot of
 `contribution.r7a_restorations_used` as of the decision instant**, so a later reviewer can test the
 assertion against the data that existed *then* rather than re-deriving it against a moved projection —
 the `actor_display` snapshot rationale (`schema/member_moderation_actions.ts:92-95`), applied to a fact
@@ -463,12 +506,42 @@ bans. **Only the producer knows the difference between `0` and *unknown*.**
 an unprovisioned Pariwar and the fact is then **omitted** (`producer.ts:586-587`;
 `contribution-facts.test.ts:447-453`). ⛔ Recording `0` where the answer is *unknown* would let
 "restorations exhausted" read as "never restored" — the false-all-clear class D1-B forbids
-**And** under Q5 option (b) only: the block is implemented in the **caller**, alongside AC8's
-precondition, never inside `nextModerationStatus`
+**And** ⛔ **Q5 option (b) — the hard server-side block — was PUT and REJECTED.** It is not implemented
+in the caller, not behind a flag, and not "for later". D6's cost was ruled decisive.
 
-### AC8 — WS-D: a dwell/notice precondition, in the CALLER, and NOT a new state
+**And** ⭐ **RESTORATION IS PROSPECTIVE, NOT RETROACTIVE** (Decision `2026-08-12-099`, the Panel's
+volunteered clarification). Two distinct cases, **never merged**: *suspension restoration*
+(`active → suspended → restored`, the ordinary lifecycle) and *termination restoration*
+(`terminated → restored`, requiring the Story 10.19 Panel authority — Decision `2026-08-10-097`
+clause 1). The three restoration grounds are **reasons for a decision, not permissions**.
+Restoration restores membership **from the restoration point forward** and does **not** erase the
+terminated period ⇒ **no retroactive contribution credit**, missed obligations are **not** treated as
+fulfilled, R7 continues to determine resulting standing, and renewal / lapse / rejoin rules evaluate on
+the member's **actual state and dates**. If the elapsed time means the member has lapsed, **the
+ordinary lapse rules apply.**
+**And** ⛔ **no special "restored terminated member" state is created**, in this story or by inference
+from it — a state that bypasses R7 or any ordinary membership rule is expressly forbidden. Restoration
+is **not amnesty**. ✅ Verified consistent with the code as shipped: the signup guard maps the *latest*
+action so a `restore` clears the block by making the identity not-currently-terminated
+(`apps/api/src/modules/auth/member/member-auth.repo.ts:72-76`), and no such state exists to remove.
+Recorded as **verified-consistent, not as fixed** — nothing was changed to make it so.
+**And** ⚠ **the REJOIN half of this model diverges from shipped behaviour and is NOT reconciled here**
+— see AC13.8 and the routing note's D-1. `[[feedback_supersede_never_reinterpret]]`
 
-**Given** principles 6–7 and `epics.md:3854-3857`
+### AC8 — WS-D: a 7-day dwell on the ORDINARY path, in the CALLER, with an express immediate-termination exception
+
+> ⭐ **RESHAPED BY THE RULING — read this before the clauses below.** The story originally specified
+> dwell as an **absolute** precondition on `terminate`. **The Panel did not accept that framing**
+> (Q4.1), and was right not to: **principle 5 as adopted says termination *normally* follows
+> suspension and principle 6 says notice and opportunity *normally* precede it** — both carry an
+> express exception. An absolute gate would have **contradicted the very principles it was built to
+> mechanize**. The dwell governs the **ordinary** path only.
+
+**Ruled parameters** (Decision `2026-08-12-099`): **7 days** · sourced from the **versioned registry**,
+never a code constant · elapsed dwell **satisfies** v1 opportunity-to-respond · the Terminate control
+stays **enabled**, gated by re-confirmation.
+
+**Given** principles 5–7 and `epics.md:3854-3857`
 **Then** the precondition is added in **`nextModerationStatus`'s caller** — `moderateMember`
 (`packages/domain/src/member/moderation/write.ts:129-209`), or the route's legality path, per D5 —
 and ⛔ **`nextModerationStatus` itself is not touched**: it stays the pure, total, four-arm
@@ -495,28 +568,55 @@ which is why the moderated-members list breaks ties on `created_at`. That does n
 row this precondition reads is the one the legality check has *already* established as the current
 suspension, so it is identified by status, not by an ordering — ⛔ do not import the tie-break and do
 not re-derive "latest" independently of the overlay the write path already trusts
-**And** the duration resolves per Q4 — if from the registry, as a **version-pinned policy clause** in
-the `resolveRestorationDisciplinePolicy` shape
+**And** ⭐ **the duration is SEVEN DAYS, resolved from the REGISTRY as a version-pinned policy clause**
+(Q4.4 ruled) in the `resolveRestorationDisciplinePolicy` shape
 (`packages/domain/src/member/restoration-discipline/policy.ts:96-108`), with the **version pinned onto
-the record** and an **unprovisioned registry surfacing a named sentinel, never a code default**
-(Decision `2026-08-07-088` clause 2: an unratified sanction imposed by a machine is explicitly
-rejected — here the safe direction is **do not permit the termination**, and the error must say why)
+the record** (`dwell_policy_version`, AC5 item 7) and an **unprovisioned registry surfacing a named
+sentinel, never a code default** (Decision `2026-08-07-088` clause 2: an unratified sanction imposed by
+a machine is explicitly rejected — here the safe direction is **do not permit the ORDINARY
+termination**, and the error must say why). ⛔ **`7` is never hard-coded in the moderation service.**
+The Trust runs versioned per-Pariwar rules (FR-7); a decision must stay readable against the dwell
+policy that governed it
+**And** ⭐ **THE IMMEDIATE-TERMINATION EXCEPTION IS PRESERVED** (Q4.1 ruled). Immediate termination
+remains available where the governing rules permit the exception **and the authorised actor records
+the reason for invoking it**. ⛔ **Do not eliminate immediate termination merely because a 7-day dwell
+exists.** The recorded exception reason is a **first-class field on the record**, not a re-use of
+either escalation part — the two-part test answers *why termination*, the exception reason answers
+*why now*, and collapsing them makes both unfalsifiable
+**And** ⛔ **invoking the exception does NOT forfeit the member's future right of appeal.** The appeal
+mechanism is Story 10.22's and is **not narrowed** by anything in this AC
+**And** ⭐ **elapsed dwell SATISFIES v1 opportunity-to-respond** (Q4.3 ruled). ⛔ **No response or
+waiver record is required, and none may be invented as a precondition** — a response has nowhere to
+arrive until §8.8 exists. Inventing one would block ordinary termination on a surface this story does
+not build. The richer response/appeal capability is **10.22's**
 **And** the violation is a typed **409** with its own code, distinct from
 `MODERATION_INVALID_STATE_CODE` — "too soon" and "illegal transition" are different facts and a
-trustee must be able to tell them apart
+trustee must be able to tell them apart. ⚠ Under the ruling this 409 means **"the ordinary path is not
+yet open and the immediate-termination exception was not validly invoked"** — it is not a blanket
+refusal to terminate during dwell
 **And** ⭐ **the console must not offer a button the server will refuse.** D5 rejects dwell-in-the-reducer
 because it would fork `legal_actions` and make *"the console's buttons disagree with the server"* —
 but leaving dwell **only** in the caller produces that same disagreement from the other side:
 `legalActions` derives purely from `isLegalModerationTransition(overlay.status, a)`
 (`handlers.ts:380-382`), so `terminate` stays in the list for the whole dwell window and the console
 renders an enabled control that 409s. ⇒ the status / history response carries a **separate, additive**
-`termination_available_at` (or the Q4-named equivalent) **alongside** `legal_actions`
+`termination_available_at` **alongside** `legal_actions`
 **And** ⛔ **`legal_actions` itself is NOT filtered.** Legality and precondition are different facts;
 collapsing them into one list is exactly the fork D5 forbids, and it would make the reducer's output
-depend on a clock
-**And** ⚠ if the Panel prefers the control stay enabled with the 409 as the feedback, that is a
-legitimate ruling — but it is **recorded as a decision** in `docs/moderation-record-model.md`, never
-arrived at by omission
+depend on a clock. ✅ **The Panel ruled this correction explicitly right** (Q4.2): *"legal_actions
+should not silently be rewritten merely because the dwell exists."*
+
+**And** ⭐ **THE CONSOLE SHAPE IS RULED — a third one, neither of the two the note offered** (Q4.2).
+During the seven-day dwell:
+1. the Terminate control **remains visible and enabled** — ⛔ **do NOT disable it until day 7**;
+2. selecting it **requires an explicit re-confirmation**;
+3. that confirmation must state **that the seven-day dwell is still open** and that the actor is
+   **invoking the immediate-termination route** — not a generic "are you sure";
+4. the **server remains authoritative**: server-side validation determines whether immediate
+   termination is actually permitted;
+5. ⛔ **the UI confirmation does NOT grant authority.** It obtains informed intent. A client that
+   treats its own confirmation as the authorisation has reimplemented the gate in the one place the
+   Trust does not control.
 **And** ⛔ **suspension, restore and the first suspension are unaffected.** A test pins that a
 `suspend` immediately following a `restore` is still accepted
 
@@ -619,6 +719,14 @@ on a finding (the 10.10 three-context precedent, `routes.ts:108-110`)
 
 **Given** principle 2 and `epics.md:3864-3868`
 **Then** ⛔ **`appliesTo` is NOT hard-narrowed** — it stays `['suspend','terminate']`
+✅ **Q6 RULED — recommendation accepted in full** (Decision `2026-08-12-099`). The ratified values, and
+⛔ **no dev agent may substitute its own**: `'suspend'` for **all seven** moderation grounds
+(`r7-contribution-discipline`, `r14-forgery`, `r10a-parallel-org-office`, `concealment-confirmed`,
+`helpdesk-escalated-abuse`, `regulator-action`, `voluntary-pending-review`) and `null` for **all three**
+restore grounds (`rule-clearance`, `trustee-discretion`, `moderation-error`). The Panel restated the
+constraint that makes this guidance and not policy: *"a reason code does not itself terminate a member;
+the Trustee Panel decides whether the actual case warrants suspension or termination"* — principle 2.
+
 (`reason-codes.ts:72`). `ReasonCodeMeta` gains **`ordinarilyResultsIn`** (Q6-ratified values), the
 registry read (`listReasonCodeMeta` → `ReasonCodesListResponse`) carries it, and the admin dropdown
 **surfaces it as guidance** — ⛔ never as a default selection, a pre-selected action, a severity score,
@@ -686,9 +794,15 @@ authoring surface intrinsic to its existence**
 **Then** `apps/admin/.../member-status/ModerationStrip.tsx` gains, on `terminate` **only**: the two
 escalation controls (AC6), the supporting-ground picker, and the evidence-reference rows —
 ⛔ **not** a free-text evidence box
-**And** the terminate control reflects **AC8's dwell precondition** — disabled, with a stated reason
-and the "available at" instant, while dwell is unelapsed (or enabled-with-409 if the Panel so ruled,
-per AC8). ⛔ A disabled control with no reason is a worse failure than the 409 it replaces
+**And** ⭐ **the terminate control follows the RULED console shape (Q4.2), which is neither of the two
+this clause previously offered.** While the 7-day dwell is unelapsed the control **stays visible and
+enabled** — ⛔ **it is NOT disabled until day 7** — and selecting it opens an **explicit
+re-confirmation** that states (i) the seven-day dwell is still open and (ii) the actor is invoking the
+**immediate-termination route**, requiring the exception reason (AC5 item 7) before it will submit.
+⛔ **The confirmation obtains informed intent; it does not grant authority** — the server decides
+whether the immediate route is permitted, and a client that treats its own dialog as the authorisation
+has moved the gate somewhere the Trust does not control. The `termination_available_at` instant is
+rendered in that dialog, which is where it is actually decision-relevant
 **And** the Decision Note label, placeholder and helper copy are renamed from *rationale* throughout
 the admin surface and its i18n modules — the field is now the **Decision Note**, and a UI that still
 says "rationale" describes a field that no longer exists
@@ -702,9 +816,9 @@ columns**
 **And** the OpenAPI spec regenerates deterministically (`pnpm contracts:check-openapi-determinism`)
 **And** domain-camelCase ↔ contracts-snake_case is walked at the boundary for **every** new field
 (`decision_note`, `escalation_inadequacy`, `escalation_proportionality`, `evidence_refs`,
-`is_primary`, `ordinarily_results_in`, `supersedes_ground_id`, `termination_available_at`, **plus
-whichever of `r7a_restorations_used_snapshot` / `dwell_policy_version` the ruling created** per AC5
-item 7) — [[feedback_story_validate_footguns]]
+`is_primary`, `ordinarily_results_in`, `supersedes_ground_id`, `termination_available_at`, and **all
+three** ruled columns per AC5 item 7 — `r7a_restorations_used_snapshot`, `dwell_policy_version` and the
+immediate-termination **exception reason**) — [[feedback_story_validate_footguns]]
 
 ### AC13 — What this story does and does NOT close is recorded
 
@@ -715,10 +829,11 @@ model, the operational-vs-governance vocabulary split, the two-part escalation t
 **And** `deferred-work.md` records, without softening:
 1. **§8.8 stays UNLANDED** — the moderation appeal, owned by **10.22**. §8.6 principle 8 states the
    gap; it does not close it
-2. **Q3 (b), if ruled** — retiring `regulator-action` / `voluntary-pending-review` needs its own story
-   and an enum migration against live rows. Named, with a re-trigger
-3. **The *opportunity to respond* half of §8.4a**, if Q4 rules (a) — mechanized as dwell only, with
-   10.22 as the named owner
+2. ✅ **DISCHARGED — Q3 ruled (a).** Both codes are authorised in §8.2; no retirement story and no enum
+   migration is owed. Recorded as discharged-by-ruling so a later reader does not carry it forward
+3. **The *opportunity to respond* half of §8.4a** — Q4.3 ruled that **elapsed dwell satisfies v1**, so
+   this is mechanized **as dwell only**. The richer response/waiver workflow is **10.22's**, named.
+   ⛔ Record it as *deliberately scoped to dwell by ruling*, never as *"partially done"*
 4. **The generic discipline-record primitive is NOT extracted** — one consumer exists. Re-trigger: a
    second discipline surface (trustee removal, volunteer discipline, vendor blacklisting)
 5. **`0099`'s escalation CHECK ships `NOT VALID`** — every `member_moderation_actions` row written
@@ -727,15 +842,50 @@ model, the operational-vs-governance vocabulary split, the two-part escalation t
    `terminate` rows are dispositioned by a governance act — which is not this story's. ⛔ Record the
    row count **observed at migrate time**; ⛔ never backfill a justification nobody wrote
    ([[feedback_record_unattested_no_backfill]])
-6. **Whichever of AC5 item 7's two columns the ruling did NOT create** — if Q4 ruled the code-constant
+6. ✅ **DISCHARGED — both columns were ruled INTO existence** (Q4.4 registry, Q5 (a)), so neither
+   consequence below materialised. Retained struck-through as the record of what was at stake:
+   ~~if Q4 ruled the code-constant
    branch, the dwell duration is **unversioned on the record** and a later policy change cannot be
    read off a historical decision; if Q5 ruled (b), no fact snapshot exists and the exhaustion
    assertion is **re-derivable only against a moved projection**. Name the consequence, not just the
    absence
 7. **The standing Trustee Panel obligation queue**, restated as a **count** rather than as progress:
    it stood at **seven** after Story 10.19 (`deferred-work.md:3870-3875`); this story's counsel review
-   of §8.5/§8.6/§8.9 makes it **eight** unless a ruling discharges one. ⛔ State the number this story
-   leaves, verified at the time of writing — never asserted from this file
+   of §8.5/§8.6/§8.9 makes it **eight**, and item 8 below makes it **nine**. No ruling here discharged
+   a queue item. ⛔ State the number this story leaves, verified at the time of writing — never
+   asserted from this file
+
+8. ⭐ **NEW — GOVERNANCE DRIFT on the rejoin model, SURFACED AND NOT CLOSED.** Decision
+   `2026-08-12-099` (Q7.2) ruled that an **uncleared** termination confers **no ordinary rejoin
+   eligibility**, and that the 12-month restriction governs only **after** authorised
+   restoration/clearance. **Four texts and one shipped code path still state the older, flat model**,
+   and this story edits **none** of them:
+   - `niyamavali.md:64` / hi `:68` — **§2.5**, base instrument, no numbered ratification;
+   - `niyamavali.md:182` / hi `:180` — **§8.4**, ⛔ **RATIFIED** by Decision `2026-08-10-097`
+     (reproduced verbatim at `.decision-log.md:170` / `:181`);
+   - `niyamavali.md:207` / hi `:205` — **§8.4a** *Rejoin* row, ⛔ **RATIFIED** by the same decision
+     (`.decision-log.md:214` / `:244`);
+   - `prd.md:858` — FR-56's rejoin consequence;
+   - ⭐ **the live guard**: `signup.handlers.ts:118-123` blocks only while
+     `moderationStatus === 'terminated' && now < rejoin_permitted_at`, where `rejoin_permitted_at` is
+     `addTwelveMonths(now)` fixed at termination (`handlers.ts:269`) ⇒ **at month 13 an uncleared
+     termination passes the guard.** Time alone currently cures it.
+
+   ⛔ **Reconciling these is a Part 11 amendment against RATIFIED text** — its own routing note, its
+   own ruling, its own **superseding** decision ([[feedback_supersede_never_reinterpret]]). ⛔ **The
+   guard is NOT changed here**: doing so would make the code enforce a rejoin model no instrument
+   states, which is the inversion D1 exists to prevent. Until the amendment lands, **§2.5 governs as
+   written**. Full analysis in the routing note's *Governance Drift* section (D-1, D-2).
+   ⚠ ⛔ **`prd.md:300` (FR-6, voluntary withdrawal) is NOT in scope of that amendment** — it is a
+   second, independent lock arising from a voluntary act. Do not conflate the two.
+
+9. ⭐ **NEW — the prospective-restoration model is recorded, and it closes nothing by itself.**
+   Restoration restores membership **forward only**; the terminated period is not erased; no
+   retroactive contribution credit; ordinary R7 / renewal / lapse rules then govern; ⛔ no special
+   "restored terminated member" state exists or may be created. ✅ **Verified consistent with the code
+   as shipped** (AC7) — recorded as *verified-consistent*, **not** as *fixed*, because nothing was
+   changed to make it so ([[feedback_closure_language_precision]]).
+
 **And** ⛔ **no `termination_access_block` flag change**, no Story 10.21 claim, no assertion that Part 8
 is settled
 
@@ -818,19 +968,29 @@ independent product surface. It does **not** reclassify the story to `[SURFACE]`
 - [ ] Confirm `_journal.json` still ends at `idx: 98`. If another migration landed first, take the
       next number and adjust `when` by the same +1-day cadence.
 
-### Task 1 — ⭐ FIRST: the routing note (AC: 1)
-- [ ] Author `trustee-panel-routing-note-<date>-story-10-20.md` with Q1–Q7, lettered options, ⭐
+### Task 1 — ⭐ FIRST: the routing note (AC: 1) ✅ DONE 2026-08-11
+- [x] Author `trustee-panel-routing-note-2026-08-11-story-10-20.md` with Q1–Q7, lettered options, ⭐
       recommendations, verified citations, and the **"Feeds"** column.
-- [ ] For **Q3** state plainly that option (b) is not implementable by this story, and why.
-- [ ] For **Q5** present D6's cost analysis, not just the two options.
-- [ ] Commit **ALONE** on `governance/10-20-moderation-record-model` with a `governance(10.20):` prefix.
-      ⛔ No `packages/` or `apps/` file may be in this commit.
+- [x] For **Q3** state plainly that option (b) is not implementable by this story, and why.
+- [x] For **Q5** present D6's cost analysis, not just the two options.
+- [x] Commit **ALONE** on `governance/10-20-moderation-record-model` with a `governance(10.20):` prefix
+      (`5ea5213`). ⛔ No `packages/` or `apps/` file was in this commit.
 
-### Task 2 — Obtain the ruling (AC: 1)
-- [ ] Present the note. Record the ruling in `.decision-log.md` with **per-clause provenance**
-      (`[Trustee-ratified]` / `[Author-committed]`), the fence table, and what the ruling does not mean.
-- [ ] ⛔ Do not proceed to Task 3 on an assumed answer. A blocked ruling stops the story at its
-      governance half, recorded as such.
+### Task 2 — Obtain the ruling (AC: 1) — ⏳ ruled 2026-08-12, entry pending
+- [x] Present the note. **All seven ruled 2026-08-12**; recorded verbatim at the foot of the routing
+      note, with the Panel's Q4 sub-numbering mapped to this note's.
+- [x] ⭐ **Reconcile the story, the routing note and the decision record against the ruling** — done
+      **before** Task 3, at the Panel's direction. Two dimensions added (immediate-termination
+      exception; console shape), one question materially redefined (Q7.2), one drift class surfaced.
+- [ ] Write Decision `2026-08-12-099` in `.decision-log.md` with **per-clause provenance**
+      (`[Trustee-ratified]` / `[Author-committed]` / `[Author-finding]`), the fence table, and what the
+      ruling does not mean. ⚠ **Lands WITH Task 3**, carrying the §8.5/§8.6/§8.9 verbatim both-locale
+      text, as one atomic governance act — the entry is incomplete without that text.
+- [x] ⛔ Do not proceed to Task 3 on an assumed answer. *(Not needed — nothing was blocked.)*
+- [ ] ⛔ **Carry the ruling's own prohibitions into the entry, not just its permissions:** no §8.8
+      appeal work; no invented termination grounds beyond §8.5; `7` never hard-coded; immediate
+      termination not eliminated; no response-record precondition; no `ordinarilyResultsIn` value
+      invented for a restore ground; no special restored-terminated state; **no rejoin-model edit**.
 
 ### Task 3 — Author §8.5, §8.6, §8.9 + the §8.2 disposition, both locales, atomically (AC: 2, 3)
 - [ ] Insert into `niyamavali.md` **between §8.4a and §8.7**; mirror into `niyamavali.hi.md` at the
@@ -1082,6 +1242,7 @@ independent product surface. It does **not** reclassify the story to `[SURFACE]`
 
 | Date | Change |
 |---|---|
+| 2026-08-12 | ⭐ **Trustee Panel ruled all seven questions; story reconciled against the ruling BEFORE Task 3, at the Panel's direction.** The ruling was not a straight selection from the options offered — it **added two dimensions** and **redefined one question**, and the reconciliation is correspondingly structural, not cosmetic. **(1) AC8 was RESHAPED, not parameterised.** The story specified dwell as an **absolute** precondition on `terminate`; the Panel ruled it governs the **ordinary path only**, preserving an **immediate-termination exception** conditioned on a recorded reason. The story's own framing was wrong on its own terms — principles 5 and 6 **as adopted** say termination *normally* follows suspension and notice *normally* precedes it, so an absolute gate would have contradicted the very principles AC8 exists to mechanize. Ruled parameters: **7 days**, from the **versioned registry** (never hard-coded, FR-7), elapsed dwell **satisfies** v1 opportunity-to-respond, with ⛔ no response-record precondition invented. **(2) AC5 item 7 gained a THIRD column.** Both conditional columns were ruled *into* existence (`r7a_restorations_used_snapshot` via Q5(a), `dwell_policy_version` via Q4.4), **discharging AC13.6**; the Q4.1 exception then requires an **immediate-termination exception reason** — Tier-1, therefore `GRANT UPDATE` by name **and** scrubbed, unlike the other two, and a **separate field from both escalation parts** (they answer *why termination*; it answers *why now*). **(3) AC12's console clause was CONTRARY to the ruling and is rewritten.** It specified a disabled control; the Panel ruled a third shape neither option offered — **enabled, gated by explicit re-confirmation** naming the open dwell and the immediate route, with the **server authoritative** and ⛔ the dialog explicitly **not** granting authority. The Panel affirmed the story's earlier D5 correction by name (`legal_actions` is not rewritten because a dwell exists). **(4) AC7 hardened**: Q5(b) was **put and rejected** — a projection may never refuse an authorised decision — and the Panel volunteered the **prospective-restoration model** (restoration is forward-only, the terminated period is not erased, no retroactive contribution credit, ordinary R7/lapse rules then govern, ⛔ no special "restored terminated member" state). Verified **consistent with the code as shipped** and recorded as *verified-consistent, not fixed*. **(5) ⛔ GOVERNANCE DRIFT surfaced, not closed (new AC13.8).** Q7.2 was asked as a *confirmation* and answered with a **materially more precise governing model**: an uncleared termination confers **no ordinary rejoin eligibility**, and the 12-month restriction governs only *after* clearance. Four texts and one live code path still state the flat model — §2.5 (base), **§8.4 and §8.4a (both RATIFIED by Decision `2026-08-10-097`)**, `prd.md:858`, and the signup guard, which blocks only while `now < terminated_at + 12mo` (`signup.handlers.ts:118-123`, `handlers.ts:269`) ⇒ **at month 13 an uncleared termination passes**. Time alone currently cures it. ⛔ **Nothing was edited**: reconciling ratified text is a Part 11 amendment needing its own routing note, ruling and *superseding* decision, and changing the guard first would make code enforce a rule no instrument states — the inversion D1 exists to prevent. The Panel obligation queue moves **seven → nine**. ⚠ `prd.md:300` (FR-6, voluntary withdrawal) deliberately excluded — a second, independent lock from a voluntary act. |
 | 2026-08-11 | Story authored via `bmad-create-story` off `main` @ `4c7fdee`. Eleven premises verified live, two of them findings: §8.4a's mechanization disclosure is **wrong** about the prior-sanction row in both locales (premise #2), and a Postgres column-level `GRANT UPDATE` does **not** extend to new columns, so every new Tier-1 column ships structurally un-erasable unless `0099` grants it (premise #4). Recorded the WS-F ↔ FR-56 tension and its two-layer resolution (premise #7), and that PRD FR-56 needs no edit (premise #8). |
 | 2026-08-11 | **Two stale counts corrected.** (1) AC3's **`When` clause** still read *"this story mechanizes three of the four disclosed rows"* — the exact sentence the same AC forbids twenty lines later (*"a correction is NOT a mechanization"*). The earlier S3 fix reached the instrument's count sentence but not the AC's own header, so a dev agent reading only the Given/When could still infer three rows must be flipped to *mechanized*. Rewritten to bind the `When` to the **mechanisms actually landed and green** plus the prior-sanction **correction** — *"which is not one of them"* — with all four rows dispositioned including the untouched one. The count is gone, the correction sits structurally outside the mechanisms, and the header now states the same green-before-flip condition the AC's closing `And` enforces instead of describing an intention that clause has to walk back. (2) Task 11 said *"all five items"* against AC13's **seven** (AC13.1–AC13.7, grown by the `NOT VALID` and ruling-gated-column items added in earlier passes) ⇒ **all seven**, cited by number. ⚠ The two surviving *"three of four"* strings are **correct and deliberate**: `:28` counts the reserved §-numbers this story lands (§8.5/§8.6/§8.9 of the four `niyamavali.md:230` holds), and `:272` quotes the forbidden sentence in order to ban it. |
 | 2026-08-11 | **Second validation pass — all 11 premises re-verified live at `4c7fdee` (every line citation resolves exactly, including `niyamavali.md:230`/hi `:228`, `deferred-work.md:3865-3869`/`:3870-3875`, `0091:61`, journal `idx:98`, catalog version 31, and the no-`NOT VALID`-in-repo claim); 4 blockers + 2 should-fix + 2 minor closed by edit.** (B1) ⭐ **AC4's per-entry evidence CHECK was not implementable.** Driven against `twt-test-pg` (PG 16.14): the subquery spelling raises `cannot use subquery in check constraint` and the bare `jsonb_array_elements` spelling raises `set-returning functions are not allowed in check constraints` — while the surviving array+cap CHECK **accepts** `[{"kind":"x","ref":"<a full sentence of prose>"}]`, the exact residual AC4 exists to close. Replaced with an `IMMUTABLE` helper function called from the CHECK, proven live to reject a prose `ref`, an unknown `kind` and a third key; precedented by ten `CREATE FUNCTION` migrations. (B2) **AC11's grounds scrub was unreachable** — every `anonymize.ts` scrub keys on `member_id` and AC9's table had none ⇒ `member_id` denormalized onto `member_moderation_grounds`, on the same reasoning `pariwar_id` already is. (B3) **The new event type has THREE registration points and the story named one**; the domain two (`member/events.ts:300,324`) fail at RUNTIME (`MEMBER_EVENT_PAYLOAD_SCHEMAS[type].parse` on `undefined`), and AC9's payload spec omitted the `auditShape` its own identity test needs. (B4) **AC10's compile-error guarantee could not hold**: `ReasonCodeMeta` spans ten codes, Q6 ratified seven ⇒ `ordinarilyResultsIn: ModerationAction \| null`, required, `null` ratified for the three restore grounds and Q6 rescoped to say so. (S1) AC7 named `readContributionFactInputs`, whose raw `completedRestorationEpisodes` is always a number ⇒ `produceContributionFacts`, the derived fact, which is `null` when the threshold never resolved (`producer.ts:550`). (S2) AC8's dwell base was unpinned between `acted_at` (app clock) and the in-hand `overlay.since` (DB clock) ⇒ `acted_at` pinned, the skew named as the date-bomb class. (M1) Anti-pattern 17 — `ground-appended` must not join `MODERATION_EVENT_TYPES`. (M2) 10.19's debug-log #3 carried: the reducer `safeParse`s and returns state unchanged, so the identity test passes on a malformed payload too ⇒ pin the parse separately. |

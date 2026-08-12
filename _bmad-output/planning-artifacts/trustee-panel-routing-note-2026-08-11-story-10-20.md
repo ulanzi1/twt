@@ -14,9 +14,11 @@ at its baseline `main` @ `4c7fdee`. **No code has been written.** The story is `
 at **Task 2** until this note is ruled.
 **Story state:** 10.20 is `ready-for-dev`. 10.21 and 10.22 are `backlog`. 10.16, 10.17, 10.18, 10.19 and
 10.23 are `done`. Story 10.19 landed and its Decision `2026-08-10-098` is the head of `.decision-log.md`.
-**Disposition on ruling:** a single `.decision-log.md` entry, numbered **`2026-08-11-099`** from the
+**Disposition on ruling:** a single `.decision-log.md` entry, numbered **`2026-08-12-099`** from the
 current head `2026-08-10-098`, in the per-question option-ratification pattern of Decision
-`2026-08-07-088`. Per Decision `2026-08-09-095` the entry must **label per-clause provenance** —
+`2026-08-07-088`. *(This line anticipated `2026-08-11-099` when the note was raised; the ruling came on
+**2026-08-12** and the entry takes that date. Corrected here so the note carries **one** identity for
+the ruling — the `-099` sequence is unchanged, since `2026-08-10-098` is still the head.)* Per Decision `2026-08-09-095` the entry must **label per-clause provenance** —
 which clauses are Panel rulings (`[Trustee-ratified]`), which are defaults taken (`[Author-committed]`),
 and which are author findings. The new §8.5, §8.6 and §8.9 must be reproduced **verbatim in both
 locales** in that entry, because `docs/legal/` is gitignored and the entry is the only durable copy.
@@ -528,7 +530,13 @@ stated a **more precise governing model than §2.5 currently expresses**:
 
 > Termination remains uncleared → **no ordinary rejoin eligibility**.
 > Authorised restoration / clearance → membership restored **prospectively** → ordinary membership /
-> R7 / lapse rules evaluated → the applicable 12-month rejoin restriction **then** governs eligibility.
+> R7 / lapse / **rejoin** rules are **evaluated from the member's actual state and dates**.
+
+⛔ **The model is NOT "12 months after restoration."** It is *restoration first, then evaluate the
+ordinary rules against actual dates and state*. ⛔ **Do not create a new restoration-relative 12-month
+clock** — no such clock is ratified, and no future implementation may introduce one unless a governance
+amendment says so **expressly**. The ordinary rules decide what applies and from when; restoration
+supplies neither a new start instant nor a new duration.
 
 ⛔ The Panel directed that the old wording **not** be implemented mechanically as *"termination and
 lapse both get a 12-month rejoin lock running from the date of termination/lapse."*

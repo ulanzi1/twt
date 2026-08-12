@@ -29,6 +29,10 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRequiredError,
+  ModerationEscalationRestatementError,
+  ModerationEvidenceRefInvalidError,
   ModerationRationaleRequiredError,
   ModerationReasonCodeInvalidError,
   ModerationStateError,
@@ -245,6 +249,37 @@ export function errorMappingHandler(
     return;
   }
   if (error instanceof ModerationRationaleRequiredError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // Story 10.20 (WS-A/WS-C) — the record model's typed refusals. All 422: each says the request is
+  // malformed as a GOVERNANCE RECORD, not that the state forbids the action (that stays the 409
+  // above, and the two must remain tellable apart).
+  //   ModerationEscalationRequiredError      → 422 …escalation_required (a termination omits part (a)
+  //                                            or (b), or one is below the substance floor; the
+  //                                            error names WHICH part and WHY)
+  //   ModerationEscalationNotApplicableError → 422 …escalation_not_applicable (a suspend/restore
+  //                                            carries an escalation part — the 0099 CHECK is an
+  //                                            `iff` and bites both ways; this keeps a 23514 from
+  //                                            surfacing as a 500)
+  //   ModerationEscalationRestatementError   → 422 …escalation_restatement (part (a) merely restates
+  //                                            part (b) under normalization — a plaintext-only
+  //                                            check, since envelope encryption is non-deterministic)
+  //   ModerationEvidenceRefInvalidError      → 422 …evidence_ref_invalid (evidence must be bounded
+  //                                            `{kind, ref}` identifiers, never prose)
+  if (error instanceof ModerationEscalationRequiredError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationEscalationNotApplicableError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationEscalationRestatementError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationEvidenceRefInvalidError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
     return;
   }

@@ -208,8 +208,30 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     `/api/v1/p/${p}/members/${m}/moderation/${action}`;
   const historyUrl = (p: string, m: string) => `/api/v1/p/${p}/members/${m}/moderation`;
 
-  function body(reasonCode: string, rationale = 'Recorded after review of the file.'): Json {
-    return { reason_code: reasonCode, rationale };
+  // ── Story 10.20 (AC6) — a TERMINATION now carries the two-part escalation justification ────────
+  // Both parts are MANDATORY on `terminate` (Niyamavali §8.6), enforced in three layers: the route
+  // guard, the domain backstop and migration 0099's `escalation_iff_terminate` CHECK. These two
+  // strings are the default so that the tests BELOW — which are about legality, RBAC, step-up and
+  // the history read — keep testing what they were written to test.
+  // ⛔ They are deliberately DIFFERENT texts: identical parts are a 422 restatement, and a shared
+  // constant here would have made every termination in this file fail for the wrong reason.
+  // The escalation rules themselves are pinned in `moderation-escalation.spec.ts`.
+  const ESCALATION_INADEQUACY =
+    'Suspension would not protect the Trust: the member retains the access that was misused and the restoration path it preserves is futile here.';
+  const ESCALATION_PROPORTIONALITY =
+    'Termination fits the conduct because the forgery was deliberate, repeated, and aimed at the claim-verification process itself.';
+
+  function body(
+    reasonCode: string,
+    rationale = 'Recorded after review of the file.',
+    action?: 'suspend' | 'terminate' | 'restore',
+  ): Json {
+    const base: Json = { reason_code: reasonCode, rationale };
+    if (action === 'terminate') {
+      base.escalation_inadequacy = ESCALATION_INADEQUACY;
+      base.escalation_proportionality = ESCALATION_PROPORTIONALITY;
+    }
+    return base;
   }
 
   async function act(
@@ -226,7 +248,7 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     return client.inject({
       method: 'POST',
       url: modUrl(p, m, action),
-      payload: body(reasonCode, opts.rationale),
+      payload: body(reasonCode, opts.rationale, action),
     });
   }
 

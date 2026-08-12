@@ -19,6 +19,7 @@ import { z } from 'zod';
 
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
 import { ModerationAction, ModerationStatus, ReasonCode } from './enums.js';
+import { EvidenceRefsDto } from './evidence-refs.js';
 
 /**
  * The free-text rationale. REQUIRED on every action (AC3) — deliberately stricter than the UX
@@ -39,15 +40,49 @@ export const MODERATION_RATIONALE_MAX_CHARS = 4_000;
 const Rationale = z.string().trim().min(1).max(MODERATION_RATIONALE_MAX_CHARS);
 
 /**
+ * The minimum-substance floor for each escalation part (Story 10.20, AC6). Value-aligned with
+ * `ESCALATION_PART_MIN_CHARS` in `@twt/domain` and pinned by the drift guard.
+ *
+ * ⚠ A FLOOR IS NOT A QUALITY TEST. It exists to reject `"n/a"`, not to judge reasoning.
+ */
+export const MODERATION_ESCALATION_MIN_CHARS = 40;
+
+/**
+ * One part of the two-part escalation justification. Same cap as the Decision Note — this is
+ * governance-grade prose, not a label.
+ */
+const EscalationPart = z.string().trim().min(1).max(MODERATION_RATIONALE_MAX_CHARS);
+
+/**
  * The body of a suspend / terminate / restore request. The ACTION itself is carried by the ROUTE
  * (`…/moderation/suspend`), not the body — so a client cannot post a `restore` body to the
  * `terminate` endpoint, and the step-up action context (which is per-route) can never disagree with
  * the action being performed.
+ *
+ * ── ⚠ Why the escalation parts are OPTIONAL HERE and REQUIRED ON `terminate` ─────────────────────
+ * ONE request schema serves all three routes (see above), so a `.required()` here would break
+ * `suspend` and `restore`. The `iff` is therefore enforced where it can see the action: the route
+ * handler (`assertEscalationJustification`, a typed 422 naming which part failed and why), backed by
+ * the domain presence backstop and — structurally, on every write path including raw SQL — by
+ * migration 0099's `member_moderation_actions_escalation_iff_terminate` CHECK.
+ * ⛔ Do NOT "tidy" this into a discriminated union on an action field in the body: the action's
+ * absence from the body is what keeps it from disagreeing with the route's step-up context.
+ *
+ * ⛔ TWO SEPARATE FIELDS, NEVER ONE (D2). `epics.md:3851` requires the two parts be "separately
+ * answerable" and neither "pre-filled from the other"; one field (or a nested object) lets a UI
+ * concatenate them and satisfy a presence check with a single paragraph.
  */
 export const ModerateMemberRequest = z
   .object({
     reason_code: ReasonCode,
+    /** The governance-grade Decision Note. Required on EVERY action. */
     rationale: Rationale,
+    /** `terminate` only — (a) why SUSPENSION is inadequate. */
+    escalation_inadequacy: EscalationPart.optional(),
+    /** `terminate` only — (b) why TERMINATION is proportionate. */
+    escalation_proportionality: EscalationPart.optional(),
+    /** References only, never prose (AC4). Absent ⇒ no references. */
+    evidence_refs: EvidenceRefsDto.optional(),
   })
   .strict();
 export type ModerateMemberRequest = z.output<typeof ModerateMemberRequest>;

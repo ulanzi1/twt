@@ -96,10 +96,41 @@ export {
 } from './read.js';
 
 export {
+  EVIDENCE_REF_KINDS,
+  type EvidenceRefKind,
+  EVIDENCE_REFS_MAX,
+  EVIDENCE_REF_MAX_LENGTH,
+  EVIDENCE_REF_PATTERN,
+  EVIDENCE_REFS_SQL_VALIDATOR,
+  evidenceRefSchema,
+  evidenceRefsSchema,
+  type EvidenceRef,
+  assertEvidenceRefs,
+} from './evidence-refs.js';
+
+export {
+  ESCALATION_PART_MIN_CHARS,
+  ESCALATION_PART_MAX_CHARS,
+  type EscalationJustificationInput,
+  type EscalationJustificationPlaintext,
+  normalizeEscalationPart,
+  assertEscalationJustification,
+} from './escalation.js';
+
+export {
   MODERATION_INVALID_STATE_CODE,
   MODERATION_REASON_CODE_INVALID_CODE,
   MODERATION_RATIONALE_REQUIRED_CODE,
+  MODERATION_ESCALATION_REQUIRED_CODE,
+  MODERATION_ESCALATION_NOT_APPLICABLE_CODE,
+  MODERATION_ESCALATION_RESTATEMENT_CODE,
+  MODERATION_EVIDENCE_REF_INVALID_CODE,
+  type EscalationPart,
   ModerationStateError,
   ModerationReasonCodeInvalidError,
   ModerationRationaleRequiredError,
+  ModerationEscalationRequiredError,
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRestatementError,
+  ModerationEvidenceRefInvalidError,
 } from './errors.js';

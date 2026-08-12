@@ -972,14 +972,16 @@ independent product surface. It does **not** reclassify the story to `[SURFACE]`
 
 ## Tasks / Subtasks
 
-### Task 0 — Orient (AC: all)
-- [ ] Read every file in **Files to read before writing a line**. Re-verify each cited line at
+### Task 0 — Orient (AC: all) ✅ DONE 2026-08-12
+- [x] Read every file in **Files to read before writing a line**. Re-verify each cited line at
       `4c7fdee` — citation drift is this repo's recurring defect class and a wrong line number is a
       wrong instruction.
-- [ ] Confirm premise #2 yourself: `nextModerationStatus('none','terminate') === null`. The story turns
-      on the instrument being wrong about its own code.
-- [ ] Confirm `_journal.json` still ends at `idx: 98`. If another migration landed first, take the
-      next number and adjust `when` by the same +1-day cadence.
+- [x] Confirm premise #2 yourself: `nextModerationStatus('none','terminate') === null` — **confirmed
+      live** at `status.ts:41-42` (`case 'none': return action === 'suspend' ? 'suspended' : null`).
+      The story turns on the instrument being wrong about its own code.
+- [x] Confirm `_journal.json` still ends at `idx: 98`. ⚠ **It now ends at `idx: 99` — this story's
+      own Task-4 entry** (`0099_moderation-record-model`, `when: 1789270800000`). No foreign
+      migration landed in between; the number is unchanged and correct.
 
 ### Task 1 — ⭐ FIRST: the routing note (AC: 1) ✅ DONE 2026-08-11
 - [x] Author `trustee-panel-routing-note-2026-08-11-story-10-20.md` with Q1–Q7, lettered options, ⭐
@@ -1051,15 +1053,25 @@ own commit with its own evidence. Portal access stays untouched — Story 10.21'
 - [x] Add `policies/member-moderation-grounds-rls.ts` and export from `policies/index.ts`.
 - [x] Journal entry; `pnpm db:check` green.
 
-### Task 5 — WS-A + WS-C: the record, the guards, the crypto (AC: 4, 6, 7)
-- [ ] Domain: the evidence-ref schema (bounded `kind`, restricted `ref`, cap), the escalation inputs on
+### Task 5 — WS-A + WS-C: the record, the guards, the crypto (AC: 4, 6, 7) ✅ DONE 2026-08-12
+- [x] Domain: the evidence-ref schema (bounded `kind`, restricted `ref`, cap), the escalation inputs on
       `ModerateMemberInput`, the ciphertext backstops, the plaintext guards exported for the route.
-- [ ] Route (`apps/api/.../member-moderation/handlers.ts`): presence + anti-restatement + substance
+      Four new typed errors (`escalation_required` / `escalation_not_applicable` /
+      `escalation_restatement` / `evidence_ref_invalid`), all four mapped in the middleware.
+- [x] Route (`apps/api/.../member-moderation/handlers.ts`): presence + anti-restatement + substance
       floor on **plaintext**, before `encryptModerationRationale`; then encrypt both parts; then
       `openScopeTx`.
-- [ ] Q5 (a): read the fact snapshot via `produceContributionFacts` (**the derived fact, not
+- [x] Q5 (a): read the fact snapshot via `produceContributionFacts` (**the derived fact, not
       `completedRestorationEpisodes`** — AC7), and carry `null` through as `null`.
-- [ ] Contracts: `ModerateMemberRequest` gains the two parts + evidence refs, `.strict()`, snake_case.
+- [x] Contracts: `ModerateMemberRequest` gains the two parts + evidence refs, `.strict()`, snake_case;
+      the evidence-ref schema follows the **two-copy + test-only drift guard** pattern.
+- [x] ⛔ **The Task-4/Task-5 KNOWN-RED window is CLOSED** — the 3 documented failures are green.
+- [x] ⚠ **ORDERING CORRECTION, found by an existing revert-sanity test rather than by inspection.**
+      The escalation/evidence backstops were first written ahead of the `assertReasonCodeAppliesTo`
+      registry guard, which broke Story 10.10's *"the appliesTo guard fires before any DB access"*
+      pin (2 failures). Moved to **after** (1) and still ahead of (2): the vocabulary objection is
+      the more fundamental one — a caller offering a restore code for a `terminate` must not be told
+      to write an escalation justification for an action that code can never support.
 
 ### Task 6 — WS-D: the dwell precondition (AC: 8)
 - [ ] Resolve the duration per Q4 (registry clause preferred; version-pinned onto the record).
@@ -1270,6 +1282,29 @@ governance half, completed and committed beforehand as `governance(10.20):`).
 
 ### Debug Log References
 
+**✅ THE KNOWN-RED WINDOW BELOW IS CLOSED (Task 5, 2026-08-12).** All 3 documented failures are
+green; `@twt/api` now runs **915 passed / 1 skipped, 0 failed** (112 files). The route supplying both
+escalation ciphertexts is what closed it — ⛔ the constraint was not relaxed.
+
+**⚠ FOUR PRE-EXISTING FAILURES, PROVEN pre-existing rather than asserted.**
+`packages/domain/tests/integration/sms-rate-limit/sms-rate-buckets.spec.ts` fails 4/4 with
+*"The server does not support SSL connections"*. `createDb` defaults to `ssl: {rejectUnauthorized:
+false}` and this spec passes no override, so it cannot connect to the local Docker Postgres at all —
+it fails at CONNECTION, before any query. **Proven by re-running it with this story's entire working
+tree stashed: still 4/4 red at `baseline_commit`.** Nothing in Story 10.20 touches SMS rate limiting.
+⛔ Recorded as an environment artifact of the local `:5433` container, NOT as a green claim.
+
+**⚠ ORDERING DEFECT I INTRODUCED, caught by an EXISTING test — recorded rather than smoothed over.**
+The Task-5 escalation and evidence backstops were first placed ahead of the `assertReasonCodeAppliesTo`
+registry guard in `moderateMember`, which broke Story 10.10's *"the appliesTo guard fires before any
+DB access (revert-sanity)"* pin — 2 failures in `moderation-reason-codes.test.ts`. The fix is an
+ordering one, and the reasoning is worth keeping: the **vocabulary** objection is more fundamental
+than the **completeness** one. A caller offering a restore code for a `terminate` must be told the
+code cannot justify that action, not told to write an escalation justification for an action the code
+can never support. The backstops moved to after (1) and still ahead of (2), so a doomed request still
+never reaches the database. ⭐ This is the value of a no-query revert-sanity pin: it caught a
+regression that every new Task-5 test would have passed.
+
 **⛔ KNOWN-RED WINDOW between Task 4 and Task 5 — 3 tests, and it is STRUCTURAL, not a defect.**
 `apps/api/tests/integration/member-moderation/member-moderation.spec.ts` has 3 failures at the Task 4
 boundary:
@@ -1343,25 +1378,36 @@ non-array, leaving that violation to the array CHECK.
 
 ### File List
 
-**Added (4)**
+**Added (8)**
 - `packages/domain/migrations/0099_moderation-record-model.sql`
 - `packages/domain/src/member/moderation/evidence-refs.ts`
+- `packages/domain/src/member/moderation/escalation.ts` *(Task 5)*
 - `packages/domain/src/schema/member_moderation_grounds.ts`
 - `packages/domain/src/policies/member-moderation-grounds-rls.ts`
+- `packages/contracts/src/member-moderation/evidence-refs.ts` *(Task 5 — the value-aligned copy)*
+- `packages/domain/tests/member/moderation-escalation.test.ts` *(Task 5)*
+- `packages/contracts/tests/member-moderation-evidence-refs.test.ts` *(Task 5 — the drift guard)*
+- `apps/api/tests/integration/member-moderation/moderation-escalation.spec.ts` *(Task 5)*
 
-**Modified — schema/domain (9)**
+**Modified — schema/domain (12)**
 - `packages/domain/migrations/meta/_journal.json` (idx 99)
 - `packages/domain/src/schema/member_moderation_actions.ts` (rename + 6 columns)
 - `packages/domain/src/schema/index.ts`, `packages/domain/src/policies/index.ts` (barrels)
 - `packages/domain/src/ids/index.ts` (`ModerationGroundId`)
 - `packages/domain/src/member/anonymize.ts` (rename, moderation scrub only)
-- `packages/domain/src/member/moderation/read.ts`, `.../write.ts`, `.../events.ts` (rename)
+- `packages/domain/src/member/moderation/read.ts`, `.../events.ts` (rename)
+- `packages/domain/src/member/moderation/write.ts` (rename; Task 5 inputs + backstops + insert)
+- `packages/domain/src/member/moderation/errors.ts` (Task 5 — four new typed errors)
+- `packages/domain/src/member/moderation/index.ts` (Task 5 — barrel)
+- `packages/domain/src/index.ts` (Task 5 — the four errors surfaced at the top level)
 
-**Modified — contracts/api (2)**
-- `packages/contracts/src/member-moderation/dto.ts` (comment)
-- `apps/api/src/modules/member-moderation/handlers.ts` (rename)
+**Modified — contracts/api (5)**
+- `packages/contracts/src/member-moderation/dto.ts` (comment; Task 5 request fields)
+- `packages/contracts/src/member-moderation/index.ts` (Task 5 — barrel)
+- `apps/api/src/modules/member-moderation/handlers.ts` (rename; Task 5 guards + crypto + snapshot)
+- `apps/api/src/middleware/error-mapping/index.ts` (Task 5 — four new 422 arms)
 
-**Modified — tests (7)**
+**Modified — tests (8)**
 - `packages/domain/tests/integration/rls/member-moderation-actions-policy-regression.spec.ts`
   (rename + the legal-`terminate` seed now carries both escalation parts)
 - `packages/domain/tests/member/moderation-reason-codes.test.ts`, `.../rtbf-anonymize.test.ts`
@@ -1369,6 +1415,9 @@ non-array, leaving that violation to the array CHECK.
   `.../moderation-auth-effects.spec.ts`, `.../termination-access-block.spec.ts`
 - `apps/api/tests/integration/trustee-lite/trustee-lite.spec.ts` (moderation INSERT only — the
   `claim_verifier_decisions` INSERT in the same file is deliberately untouched)
+- `apps/api/tests/integration/member-moderation/member-moderation.spec.ts` (Task 5 — `body()` is now
+  action-aware so a `terminate` carries both escalation parts; the 26 tests below keep testing
+  legality/RBAC/step-up rather than failing for the wrong reason)
 
 ---
 
@@ -1376,6 +1425,7 @@ non-array, leaving that violation to the array CHECK.
 
 | Date | Change |
 |---|---|
+| 2026-08-12 | ✅ **Task 5 (WS-A + WS-C) — the record's three separable parts, the guards, and the crypto.** The two-part escalation justification is now mandatory, two-part and non-restatable on `terminate`; evidence references are structurally incapable of carrying prose at three layers; and AC7's as-of-decision fact snapshot is taken. **The Task-4/Task-5 known-red window is CLOSED** — `@twt/api` **915 passed / 0 failed** (was 894 + 3 red), `@twt/contracts` **880 green**, `@twt/domain` **2570 green**; typecheck and lint clean on all three. ⛔ The `escalation_iff_terminate` constraint was **not** relaxed to close the window — the route now supplies both parts, which is what the sequencing intended. **Four new typed errors**, each with its own code and all four mapped in the middleware (an unmapped domain error is a 500 — the Story 10.8 finding). ⭐ **A DEFECT I INTRODUCED, caught by an EXISTING test rather than by inspection:** the new backstops were first placed ahead of `assertReasonCodeAppliesTo`, breaking Story 10.10's *"the appliesTo guard fires before any DB access"* revert-sanity pin. Moved to after the registry guard and still ahead of the legality read — the **vocabulary** objection is more fundamental than the **completeness** one, since a caller offering a restore code for a termination must not be told to write a justification for an action that code can never support. Every new Task-5 test would have passed with the wrong ordering; the no-query pin is what caught it. ⭐ **Revert-sanity driven from RAW SQL, past every TypeScript layer:** the `escalation_iff_terminate` CHECK bites in **both** directions (a `terminate` missing either part → `23514`; a `suspend` carrying one → `23514`; both parts → accepted), and all six per-entry evidence rejections plus the non-array and over-cap cases each return a clean `23514`. **AC7's `null` is pinned as *unknown*:** the snapshot reads `produceContributionFacts(...).r7aRestorationsUsed` — the DERIVED fact, never `completedRestorationEpisodes` — and a Pariwar with no resolved R7(A) threshold records `NULL`, not `0`; a companion test pins that the same unresolved projection still returns **200**, because Q5 option (b) was put and rejected (D6). **The two-copy pattern, not a shared import:** the evidence-ref schema is canonical in `@twt/domain` and value-aligned in `@twt/contracts`, held in lockstep by a test-only drift guard that asserts both copies agree on ten accept/reject cases — ⛔ a domain→contracts import is a turbo cycle and a contracts→domain source import would drag `pg` into the RN bundle. ⚠ **Four pre-existing failures PROVEN pre-existing, not asserted:** `sms-rate-buckets.spec.ts` fails 4/4 at CONNECTION (*"The server does not support SSL connections"* — `createDb` defaults to SSL and that spec passes no override), and re-running it with this story's entire working tree **stashed** reproduces all four at `baseline_commit`. |
 | 2026-08-12 | ✅ **Task 4 (WS-B) — migration `0099`, both schema modules, the RLS policy module, the `ModerationGroundId` brand, both barrels, journal `idx: 99`.** `db:check` green; typecheck green on domain + contracts + api; `@twt/domain` **2560 tests green**; `@twt/api` **894 green, 3 red at the documented Task-4/Task-5 boundary** (the `escalation_iff_terminate` CHECK lands with the record's shape in Task 4; the route that supplies both parts is Task 5 — see the Debug Log, and ⛔ do not relax the constraint to make them green). **Four things driven live rather than asserted:** (1) both inline CHECK spellings re-confirmed as hard Postgres errors, so the `IMMUTABLE` helper is forced not stylistic; (2) ⭐ **a FINDING — the first cut of the cap CHECK raised `22023` (*"cannot get array length of a non-array"*) instead of a `23514` when handed a JSON object, and since Postgres does not guarantee `AND` short-circuits the sibling array CHECK could not be relied on to run first ⇒ the cap is now GUARDED and the function uses `CASE`, which does guarantee ordering; all 9 rejection cases now return a clean 23514**; (3) the `NOT VALID` rationale proven against a seeded legacy row — bare `ADD CONSTRAINT` dies `23514` at migrate time, the `NOT VALID` form applies, and forward enforcement still bites **both** ways; (4) ⭐ premise #4 proven in BOTH directions via `column_privileges` — the renamed column kept its grant with **no re-grant**, the three new Tier-1 columns have theirs **because 0099 names them**, and the two non-PII columns correctly have none. **The rename fanned out to 29 sites across 9 files**; ⛔ only `member_moderation_actions` moved — six other tables carry their own `rationale_ciphertext` and are untouched, including a verifier INSERT sitting in the same spec file as a moderation one. **One deliberate deviation from AC4's illustrative snippet:** the shipped function checks the per-entry shape ONLY (returning `true` for a non-array), because AC4's prose requires array-ness and the cap to stay inline and separate so a violation names which rule it broke. |
 | 2026-08-12 | ⭐ **§8.6 principle-count reconciliation, before Task 4 — presentational, not substantive.** §8.6 was authored with **eight** numbered clauses (appeal gap as 8), which made the instrument assert eight principles where the ruling adopted **seven**. Collating the ruling's summary bullets against the source brief showed the mismatch was not where it was first flagged: **the seven bullets map to brief principles {1, 2, 4, 5, 6, 7, 8} — brief 3, *"Proportionality — termination is the final measure"*, appears in no bullet.** So the bullet list cannot be the enumeration of *"all seven"*, since that reading silently drops brief 3. **Brief 1–7 is the ratified set**, because (a) Q2 as put asked to land *"principles 1–7"* and required any decline to be **named** — none was; (b) brief 3 is the governing basis for the two-part escalation justification the same ruling ratified and AC6 mechanizes, so ratifying the mechanization while dropping its principle is incoherent; (c) the ruling reads *"All seven principles are Trustee-ratified. **In particular**, implementation must preserve these distinctions"* — *in particular* is emphasis, not enumeration; (d) the ruling cites *"principles 6 and 7"* on the brief's numbering. ⇒ **§8.6 clauses 1–7 unchanged and byte-identical**; the appeal-gap statement is **de-numbered** into an unnumbered closing clause ***Recorded gap — the moderation appeal***, which states in terms that it is *"not one of the seven principles above"*; the opening line now reads *"The following **seven** principles govern"*. ⛔ **No principle added, removed or reworded.** Both locales; cross-references repointed from *"§8.6, principle 8"* to *"§8.6, Recorded gap"* in the reserved-numbers note (×2 locales), AC2, AC13.1, Task 3 and the routing note. All **ten** verbatim reproductions in Decision `2026-08-12-099` **resynced and re-verified byte-for-byte**, and both locales now assert exactly **7** numbered principles (checked programmatically). Recorded as Decision clause 8.1. |
 | 2026-08-12 | ✅ **Task 3 complete — the governance half of the story is landed.** Niyamavali **§8.5** (grounds for termination: the failure-of-trust test **and** six enumerated grounds, both governing), **§8.6** (constitutional sentence leading verbatim, eight principles, the two-part escalation justification) and **§8.9** (the future-governance test) authored in **both locales**; **§8.2 amended** to authorise `regulator-action` and `voluntary-pending-review` (Q3(a)); the reserved-numbers note reduced to **§8.8 only**, now naming what it is held for; and **§8.4a's mechanization disclosure corrected** (AC3). Recorded as Decision **`2026-08-12-099`**, committed with the instrument as one atomic governance act, with per-clause provenance — `[Trustee-ratified]` clauses 1–7, `[Author-committed]` 8/9/11, `[Author-finding]` 10/12. **Three judgement calls recorded rather than taken silently.** **(1) §8.9 placement.** AC2 and Task 3 both said to insert all three sections *"between §8.4a and §8.7"*; followed literally that yields **§8.6 → §8.9 → §8.7**, numerically wrong. §8.5/§8.6 went where instructed, **§8.9 after §8.7**. Part 8 now reads **8.1 · 8.2 · 8.3 · 8.4 · 8.4a · 8.5 · 8.6 · 8.7 · [8.8 reserved] · 8.9**, identically in both locales; §8.7 not renumbered. **(2) Principle numbering.** The ruling said *"all seven principles"* and listed seven distinctions ending with the appeal gap, while the source brief states **eight**, with the appeal gap as **#8** (`:583`) — and the ruling itself cites *"principles 6 and 7"* on the brief's numbering. §8.6 authored with **eight clauses**: seven substantive + the appeal gap as 8, matching what AC2 and AC13.1 already assumed. ⚠ Flagged in the decision entry as correctable rather than assumed silently — if the Panel meant a substantive principle to be dropped, clause 8 is wrong and must be **superseded**, not re-read. **(3) AC3 landed the CORRECTION ONLY.** The *"Four of its rows"* count sentence is replaced by **per-row dispositions**, because the four now differ in kind and a single count would misdescribe them; the block also gained a standing rule that a row leaves the list **only once its enforcing mechanism and test are in place**. ⛔ **No row was flipped to mechanized** — escalation justification and notice flip at Tasks 5 and 6 on green evidence, and that requirement is now carried forward explicitly under Task 3 so a later agent does not read the task as finished with the instrument. **Ten verbatim reproductions verified programmatically** against both instruments after writing (§8.2, §8.4a, §8.5, §8.6, §8.9, reserved note × 2 locales) — byte-for-byte. `docs/legal/` is gitignored, so a drifted quote would be worse than no quote: the entry **is** the record. ⛔ No `packages/` or `apps/` file touched; no version bump, no `Effective:` date, no `[LEGAL]` line; counsel review of §8.5/§8.6/§8.9 recorded as **owed**. Panel obligation queue stands at **nine**. |

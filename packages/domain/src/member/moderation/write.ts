@@ -29,7 +29,10 @@ import type { MemberId, ModerationActionId, PariwarId } from '../../ids/index.js
 import { memberModerationActions } from '../../schema/member_moderation_actions.js';
 import { projectMemberState } from '../project.js';
 import { getMemberStateAt } from '../read.js';
+import { assertEvidenceRefs, type EvidenceRef } from './evidence-refs.js';
 import {
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRequiredError,
   ModerationRationaleRequiredError,
   ModerationReasonCodeInvalidError,
   ModerationStateError,
@@ -102,6 +105,29 @@ export interface ModerateMemberInput {
   now: Date;
   /** `terminate` only: the FR-6 rejoin-lock lift instant, clock-derived by the caller. */
   rejoinPermittedAt?: Date | null;
+
+  // ── Story 10.20 (WS-C) — the two-part escalation justification ──────────────────────────────
+  // Both arrive as ALREADY-SERIALIZED Tier-1 ciphertext, exactly like `decisionNoteCiphertext`:
+  // the route encrypts, the domain never does. Required together iff `action === 'terminate'`.
+  // ⚠ The SUBSTANTIVE guards (the anti-restatement rule and the substance floor) run on the
+  // PLAINTEXT in the route — `assertEscalationJustification` — because ciphertext has nothing
+  // meaningful to assert about it. What lives here is the PRESENCE backstop, mirroring the
+  // rationale backstop below: it catches a future non-HTTP caller that skipped that step.
+  escalationInadequacyCiphertext?: string | null;
+  escalationProportionalityCiphertext?: string | null;
+
+  /** Evidence REFERENCES (never prose) — validated here as defence-in-depth. Defaults to `[]`. */
+  evidenceRefs?: unknown;
+
+  /**
+   * AC7 (Q5(a)): the as-of-decision snapshot of `contribution.r7a_restorations_used`.
+   *
+   * ⛔ `null` IS A FIRST-CLASS VALUE MEANING *UNKNOWN*, NEVER `0`. R7(A) resolves to no clause
+   * version on an unprovisioned Pariwar and the fact is then omitted — recording `0` there would
+   * let "restorations exhausted" read as "never restored", which is the false-all-clear D1-B
+   * forbids. The caller passes the DERIVED fact through unchanged; it is never defaulted here.
+   */
+  r7aRestorationsUsedSnapshot?: number | null;
 }
 
 export interface ModerateMemberResult {
@@ -140,6 +166,42 @@ export async function moderateMember(
 
   // (1) The registry guard (AC3) — a restore code can never justify a termination.
   const reasonCode = assertReasonCodeAppliesTo(input.reasonCode, input.action);
+
+  // (1b) ── Story 10.20 (AC6) — the escalation PRESENCE backstop, in the same voice as (0) ───────
+  //      Niyamavali §8.6: termination is an exceptional governance act, not a stronger suspension,
+  //      so it carries both parts of the escalation test — and no other action carries either.
+  //      ⛔ This is a BACKSTOP, not the guard. The substantive checks (substance floor,
+  //      anti-restatement) run on the PLAINTEXT in the route, because envelope encryption is
+  //      non-deterministic and there is nothing to compare once these are ciphertext. The DB's
+  //      `escalation_iff_terminate` CHECK is the third layer and enforces the same `iff` on every
+  //      write path including raw SQL; this typed error is what keeps a 23514 from reaching a
+  //      caller as a 500.
+  //
+  //      ⚠ ORDERED DELIBERATELY AFTER (1), NOT BEFORE IT. The vocabulary objection is the more
+  //      fundamental one — "this code cannot justify a termination" has to be answered before "your
+  //      justification for the termination is incomplete", or a caller offering a restore code for a
+  //      terminate would be told to write an escalation justification for an action the code can
+  //      never support. Story 10.10 pinned that ordering with a no-query revert-sanity test; these
+  //      checks slot in behind it, and still ahead of (2), so a doomed request never touches the DB.
+  const escalationInadequacy = (input.escalationInadequacyCiphertext ?? '').trim() || null;
+  const escalationProportionality =
+    (input.escalationProportionalityCiphertext ?? '').trim() || null;
+  if (input.action === 'terminate') {
+    if (escalationInadequacy === null) {
+      throw new ModerationEscalationRequiredError('inadequacy', 'missing', 0);
+    }
+    if (escalationProportionality === null) {
+      throw new ModerationEscalationRequiredError('proportionality', 'missing', 0);
+    }
+  } else if (escalationInadequacy !== null || escalationProportionality !== null) {
+    throw new ModerationEscalationNotApplicableError(input.action);
+  }
+
+  // (1c) Evidence references — the domain enforcement point (AC4). Absent ⇒ `[]`; anything that is
+  //      not an array of bounded `{ kind, ref }` identifiers within the cap is a typed 422. The DB
+  //      mirrors all three rules (array-ness, cap, per-entry shape via the IMMUTABLE validator), so
+  //      a raw-SQL writer cannot bypass what this rejects.
+  const evidenceRefs: EvidenceRef[] = assertEvidenceRefs(input.evidenceRefs);
 
   // (2) Legality, against the CURRENT derived overlay status — read inside the tx so a concurrent
   //     moderation of the same member is serialized by the row/stream contention below.
@@ -185,6 +247,12 @@ export async function moderateMember(
       action: input.action,
       reasonCode,
       decisionNoteCiphertext: input.decisionNoteCiphertext,
+      escalationInadequacyCiphertext: escalationInadequacy,
+      escalationProportionalityCiphertext: escalationProportionality,
+      evidenceRefs,
+      // ⛔ Passed through UNCHANGED, `null` included. `?? 0` here would be the D1-B false-all-clear:
+      // "unknown" would become "never restored" in a record a reviewer later relies on.
+      r7aRestorationsUsedSnapshot: input.r7aRestorationsUsedSnapshot ?? null,
       actorId: input.actorId,
       actorDisplay: input.actorDisplay,
       rejoinPermittedAt,

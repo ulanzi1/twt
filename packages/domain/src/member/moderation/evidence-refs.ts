@@ -31,6 +31,8 @@
 
 import { z } from 'zod';
 
+import { ModerationEvidenceRefInvalidError } from './errors.js';
+
 /**
  * The bounded evidence KINDS. Each names a record that lives in another system and can be looked
  * up; none is a container for narrative. ⛔ Adding a kind is a vocabulary change — it must be added
@@ -87,3 +89,31 @@ export const evidenceRefsSchema = z.array(evidenceRefSchema).max(EVIDENCE_REFS_M
  * exists and is the one the CHECK calls, rather than trusting the migration was applied.
  */
 export const EVIDENCE_REFS_SQL_VALIDATOR = 'moderation_evidence_refs_valid' as const;
+
+/**
+ * Validate an untrusted `evidence_refs` value — the DOMAIN enforcement point (Story 10.20, AC4).
+ *
+ * ⚠ ABSENT AND EMPTY ARE THE SAME THING HERE, AND THAT IS DELIBERATE: evidence is OPTIONAL (AC4's
+ * table), the column is `NOT NULL DEFAULT '[]'`, and there is no third state to represent. A caller
+ * that omits the field means "no references", which is exactly `[]`.
+ *
+ * ⛔ Everything else is a typed 422, never a coercion. A non-array is NOT silently read as an empty
+ * list — that would turn a client bug into a record that quietly claims no evidence existed, which
+ * is a false statement about a governance decision rather than a tidy default.
+ *
+ * @throws ModerationEvidenceRefInvalidError (→ 422)
+ */
+export function assertEvidenceRefs(value: unknown): EvidenceRef[] {
+  if (value === undefined || value === null) return [];
+  const parsed = evidenceRefsSchema.safeParse(value);
+  if (!parsed.success) {
+    // The Zod message names the failing index and rule (bad `kind`, prose `ref`, third key, over
+    // cap) — that specificity is what lets an operator fix the entry rather than guess at it.
+    throw new ModerationEvidenceRefInvalidError(
+      parsed.error.issues
+        .map((i) => `${i.path.length > 0 ? i.path.join('.') : '(root)'}: ${i.message}`)
+        .join('; '),
+    );
+  }
+  return parsed.data;
+}

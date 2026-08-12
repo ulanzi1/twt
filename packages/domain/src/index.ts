@@ -332,6 +332,18 @@ export {
   MODERATION_REASON_CODE_INVALID_CODE,
   ModerationRationaleRequiredError,
   MODERATION_RATIONALE_REQUIRED_CODE,
+  // Story 10.20 (WS-A/WS-C) — the record model's typed refusals. All four are 422s about the
+  // request's shape AS A GOVERNANCE RECORD, deliberately distinct from the 409 above about the
+  // member's state; a trustee must be able to tell "this is not a valid record" from "this action
+  // is not legal right now".
+  ModerationEscalationRequiredError,
+  MODERATION_ESCALATION_REQUIRED_CODE,
+  ModerationEscalationNotApplicableError,
+  MODERATION_ESCALATION_NOT_APPLICABLE_CODE,
+  ModerationEscalationRestatementError,
+  MODERATION_ESCALATION_RESTATEMENT_CODE,
+  ModerationEvidenceRefInvalidError,
+  MODERATION_EVIDENCE_REF_INVALID_CODE,
 } from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the

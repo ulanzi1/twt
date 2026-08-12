@@ -31,6 +31,7 @@ import {
   type ReasonCodesListResponse,
 } from '@twt/contracts';
 import { audit, ids, member as memberDomain, rbac } from '@twt/domain';
+import { produceContributionFacts } from '@twt/validity-service';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -199,13 +200,53 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     //     rejects empty; this is the defence-in-depth backstop for a non-HTTP caller.)
     const rationale = memberDomain.moderation.assertRationalePresent(body.rationale, action);
 
+    // ── ⭐ (a2) THE TWO-PART ESCALATION TEST — Story 10.20 (AC6), ON THE PLAINTEXT ────────────────
+    //
+    // Niyamavali §8.6 (Decision `2026-08-12-099`): *"Termination is an exceptional governance act,
+    // not a stronger suspension."* A termination answers TWO separately-answerable questions —
+    // (a) why SUSPENSION is inadequate, (b) why TERMINATION is proportionate — and part (a) is not
+    // satisfied by restating part (b).
+    //
+    // ⛔ THIS CANNOT MOVE TO THE DATABASE, and the reason is structural rather than stylistic:
+    // `encryptModerationRationale` is a NON-DETERMINISTIC Tier-1 envelope encrypt, so two identical
+    // plaintexts produce two different ciphertexts and a `CHECK (a <> b)` would be satisfied by
+    // exactly the case it was written to catch. What a CHECK *can* express is PRESENCE, and that is
+    // what migration 0099's `escalation_iff_terminate` enforces — on every write path, raw SQL
+    // included. Restatement and substance live here, at the `assertRationalePresent` placement, so
+    // a doomed request never spends a KMS round-trip either.
+    const escalation = memberDomain.moderation.assertEscalationJustification(action, {
+      inadequacy: body.escalation_inadequacy,
+      proportionality: body.escalation_proportionality,
+    });
+
+    // (a3) Evidence REFERENCES, never prose (AC4). The contracts DTO already 400s a prose `ref` at
+    //      the boundary; this is the defence-in-depth pass for a non-HTTP caller, and the DB's
+    //      `moderation_evidence_refs_valid` CHECK is the third layer that also binds raw SQL.
+    const evidenceRefs = memberDomain.moderation.assertEvidenceRefs(body.evidence_refs);
+
     // (b) Encrypt BEFORE opening the scope tx (the verification-decision placement) so no KMS
     //     network call is made while holding a pooled connection inside an open transaction.
+    //     ⚠ On a `terminate` this is THREE round-trips, not one — all made here, together, for the
+    //     same reason the first one is: none of them may happen inside an open tenant transaction.
     const decisionNoteCiphertext = await encryptModerationRationale(
       rationale,
       ctx.pariwarId,
       deps.encryption,
     );
+    const escalationCiphertext = escalation
+      ? {
+          inadequacy: await encryptModerationRationale(
+            escalation.inadequacy,
+            ctx.pariwarId,
+            deps.encryption,
+          ),
+          proportionality: await encryptModerationRationale(
+            escalation.proportionality,
+            ctx.pariwarId,
+            deps.encryption,
+          ),
+        }
+      : null;
 
     const scopeTx = await openScopeTx(deps, ctx.pariwarId);
     let ok = false;
@@ -257,12 +298,50 @@ export function createMemberModerationHandlers(deps: AppDeps) {
         }
       }
 
+      // ── ⭐ (b3) AC7 — THE AS-OF-DECISION RESTORATION-EXHAUSTION SNAPSHOT (Q5 ruled (a)) ─────────
+      //
+      // `epics.md:3852` wants "terminating on a ground with an available restoration path" to be
+      // CHECKABLE. Q5 ruled option (a): the fact is SNAPSHOTTED and justified against, in part (a)
+      // of the escalation test. ⛔ It is NEVER a gate — Q5 option (b), the hard server-side block,
+      // was PUT AND REJECTED (D6): `contribution.r7a_restorations_used` is a projection that can be
+      // null, can lag, and is omitted rather than zeroed, so blocking on it would let an
+      // unprovisioned registry refuse an authorised Panel decision — an availability failure
+      // wearing a governance costume. It is not implemented here, not behind a flag, not for later.
+      //
+      // The snapshot is taken INSIDE the scope tx at the decision instant, so what is recorded is
+      // what the data actually said THEN — the `actor_display` snapshot rationale, applied to a
+      // fact. A later reviewer can test the assertion against that rather than re-deriving it
+      // against a projection that has since moved.
+      //
+      // ⛔ `produceContributionFacts` — the DERIVED fact, NEVER `readContributionFactInputs`'s raw
+      // `completedRestorationEpisodes`. The raw input is ALWAYS a number; the fact is `null`
+      // whenever `consecutiveRequired` did not resolve (`producer.ts:550`). Snapshotting the input
+      // would therefore record a confident count on exactly the Pariwars where the threshold was
+      // never provisioned — the false-all-clear this AC exists to forbid. Only the producer knows
+      // the difference between `0` and *unknown*, and `null` is carried through AS `null`.
+      // ⛔ Never re-derive the count here ([[project_engine_never_infers_contribution_facts]]).
+      let r7aRestorationsUsedSnapshot: number | null = null;
+      if (action === 'terminate') {
+        const facts = await produceContributionFacts(
+          scopeTx.tx,
+          { pariwarId: ctx.pariwarId, memberId: ctx.memberId },
+          now,
+        );
+        // A `null` FACTS object (no contribution history to derive from) and a `null` FACT are the
+        // same answer here — *unknown* — and both must record NULL rather than 0.
+        r7aRestorationsUsedSnapshot = facts?.r7aRestorationsUsed ?? null;
+      }
+
       result = await memberDomain.moderation.moderateMember(scopeTx.client, {
         memberId: ctx.memberId,
         pariwarId: ctx.pariwarId,
         action,
         reasonCode: body.reason_code,
         decisionNoteCiphertext,
+        escalationInadequacyCiphertext: escalationCiphertext?.inadequacy ?? null,
+        escalationProportionalityCiphertext: escalationCiphertext?.proportionality ?? null,
+        evidenceRefs,
+        r7aRestorationsUsedSnapshot,
         actorId: ctx.actorId,
         actorDisplay: ctx.actorDisplay,
         now,

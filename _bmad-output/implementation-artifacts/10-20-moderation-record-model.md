@@ -1173,11 +1173,31 @@ own commit with its own evidence. Portal access stays untouched — Story 10.21'
       with the action. The API is built and tested; the console affordance for it is not, and that is
       recorded in `docs/moderation-record-model.md` rather than left to be discovered.
 
-### Task 11 — Records + what is not closed (AC: 13, 3)
-- [ ] Create `docs/moderation-record-model.md`.
-- [ ] `deferred-work.md`: **all seven** items (AC13.1–AC13.7), with the Panel-obligation **count
-      verified at time of writing**.
-- [ ] Flip §8.4a's mechanized rows now that Tasks 5–6 are green.
+### Task 11 — Records + what is not closed (AC: 13, 3) ✅ DONE 2026-08-12
+- [x] Created `docs/moderation-record-model.md` — the three-part record model, the
+      operational-vs-governance vocabulary split, the two-part escalation test, the dwell and its
+      exception, prospective restoration, and the **named future extraction point**.
+- [x] `deferred-work.md`: all seven AC13 items **plus two more this story surfaced** (the missing
+      supporting-ground picker; what the story did not touch). ⚠ **AC13.8/13.9 were VERIFIED, not
+      re-authored** — the rejoin-drift section was committed ahead of implementation and duplicating
+      it would create two records that can drift apart, which is the defect that entry is about.
+- [x] ⭐ The Panel-obligation count is **VERIFIED BY ENUMERATION**, not asserted: the seven open after
+      10.19 are listed by name, plus this story's two ⇒ **NINE**. No ruling discharged an item.
+- [x] ⭐ **AC13.5's row count is recorded for exactly what it is.** `pg_constraint.convalidated = f`
+      verified live; **260** failing legacy rows observed **in the local `twt-test-pg` dev database**,
+      explicitly flagged as **NOT a production figure** (no production DB was queried, and the number
+      is inflated by this story's own test runs). ⛔ The production count is recorded as UNOBSERVED
+      and must be measured before the obligation is discharged
+      ([[feedback_record_unattested_no_backfill]]).
+- [x] Flipped §8.4a's two mechanized rows in **both locales**, on green evidence — escalation
+      justification → *mechanized*; notice → *mechanized to the extent of the dwell only*. ⛔ Portal
+      access untouched (10.21's); ⛔ no count sentence reintroduced.
+- [x] ⭐ **The flip rides a NEW decision entry, `2026-08-12-100`, NOT an edit of `2026-08-12-099`.**
+      `docs/legal/` is gitignored, so the entry IS the record — and a ratified entry is never edited
+      in place ([[feedback_supersede_never_reinterpret]]): 099's reproduction stays correct for the
+      state in force when it was taken. Both locales reproduced **verbatim and verified
+      byte-for-byte programmatically**. Marked **[Author-committed]**, ⛔ not presented as a new
+      Panel ruling — the Panel ratified the RULES; this records that two are now enforced.
 
 ### Task 12 — Validate (AC: all)
 - [ ] `pnpm --filter @twt/domain typecheck lint` · same for `@twt/contracts`, `@twt/api`, `@twt/admin`.
@@ -1473,6 +1493,13 @@ non-array, leaving that violation to the array CHECK.
 - `packages/domain/src/member/moderation/escalation.ts` (Task 6 — the exception-reason guard)
 - `packages/domain/seed/niyamavali-v1-clauses.sql` (Task 6 — the ratified `niy.moderation.dwell` clause)
 - `openapi/v1.yaml` (regenerated; determinism check green)
+- `docs/moderation-record-model.md` *(Task 11 — NEW, the tracked governance reference)*
+- `_bmad-output/implementation-artifacts/deferred-work.md` (Task 11 — the 10.20 section)
+- `.decision-log.md` (Task 11 — Decision `2026-08-12-100`)
+- `docs/legal/niyamavali.md`, `docs/legal/niyamavali.hi.md` (Task 11 — the §8.4a flips; ⚠ gitignored)
+- `apps/admin/src/modules/member-status/ModerationStrip.tsx`, `.../ModerationSection.tsx`,
+  `.../i18n-en.ts` (Task 10), `apps/admin/tests/moderation-strip.test.tsx`,
+  `apps/admin/tests/moderation-section.test.tsx` (Task 10)
 - `packages/domain/src/member/moderation/events.ts` (Task 7 — the ground-appended payload schema)
 - `packages/domain/src/member/events.ts` (Task 7 — registration point 1 + the 21→22 prose count)
 - `packages/events/src/registry.ts` (Task 7 — registration point 3)

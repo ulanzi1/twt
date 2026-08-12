@@ -97,6 +97,109 @@ this reconciliation (**nine**). Stated as a count, not as progress. No ruling in
 
 ---
 
+## Deferred / recorded from: Story 10.20 — the moderation record model (2026-08-12)
+
+**Written at implementation close, after Tasks 3–10 landed green.** ⚠ The **rejoin-model governance
+drift** (AC13.8) and the **prospective-restoration model** (AC13.9) are recorded in **their own
+section at the top of this file**, committed ahead of implementation — ⛔ they are deliberately NOT
+duplicated here. Two records of one fact can drift apart, which is the defect that entry is about.
+
+### 1. §8.8 stays UNLANDED — the moderation appeal
+
+Owned by **Story 10.22**. §8.6 closes with an **unnumbered *Recorded gap* clause** which STATES the
+gap; ⛔ it does not close it, and it is expressly **not** one of the seven principles. The reserved
+number §8.8 is held for it and was **not** closed up.
+
+### 2. ✅ DISCHARGED — the two unanchored reason codes
+
+Q3 ruled **(a)**: `regulator-action` and `voluntary-pending-review` are **authorised in §8.2**, both
+locales. No retirement story and no `moderation_reason_code` enum migration is owed. Recorded as
+**discharged-by-ruling** so a later reader does not carry it forward as open.
+
+### 3. The *opportunity to respond* half of §8.4a — scoped to dwell BY RULING
+
+Q4.3 ruled that **elapsed dwell satisfies v1**, so §8.4a's row is now mechanized **as dwell only**
+and says so in the instrument. The richer response/waiver workflow is **10.22's**, named.
+
+⛔ **Record this as *deliberately scoped to dwell by ruling*, never as *"partially done"*.** No
+response and no waiver is recorded or required, because a response has **nowhere to arrive** until
+§8.8 exists. ⛔ Inventing a response-record precondition would block ordinary termination on a
+surface this story does not build.
+
+### 4. The generic discipline-record primitive is NOT extracted
+
+One consumer exists. The `member_moderation_grounds` columns were kept **subject-agnostic** so the
+extraction stays cheap, and the extraction point is named in `docs/moderation-record-model.md` §7.
+
+**Re-trigger:** a **second** discipline surface actually being built — trustee removal, volunteer
+discipline, vendor blacklisting. ⛔ Not before ([[feedback_no_premature_package]]).
+
+### 5. ⛔ `0099`'s escalation CHECK ships `NOT VALID` — `VALIDATE CONSTRAINT` is OWED
+
+`member_moderation_actions_escalation_iff_terminate` was added `NOT VALID` because the table was
+already populated with `terminate` rows carrying `NULL` in both new columns; a bare `ADD CONSTRAINT`
+dies `23514` at migrate time, and a sentinel backfill is impossible from a `.sql` migration (no KMS
+round-trip). **Forward enforcement is complete** — the table is append-only, so every INSERT from the
+migration onward is checked — but the pre-existing rows are **grandfathered unvalidated**.
+
+**Observed at migrate time, and stated for exactly what it is:**
+
+- `pg_constraint.convalidated = f` — **verified live**, so the constraint genuinely is un-validated.
+- **260** pre-existing `terminate` rows fail the constraint **in the local `twt-test-pg` development
+  database**. ⛔ **This is NOT a production figure.** No production database was queried, and this
+  number is inflated by this story's own test runs. It is recorded because AC13.5 asks for the count
+  *observed*, and the honest observation is a dev-database one
+  ([[feedback_record_unattested_no_backfill]]).
+- ⛔ **The production count is UNOBSERVED and must be measured before the obligation is discharged.**
+
+**Discharge condition:** `VALIDATE CONSTRAINT` becomes available only once those legacy `terminate`
+rows are **dispositioned by a governance act** — which is not this story's. ⛔ **Never backfill a
+justification nobody wrote.**
+
+### 6. ✅ DISCHARGED — both ruling-gated columns were ruled INTO existence
+
+Q4.4 ruled the **registry** branch and Q5 ruled **(a)**, so `dwell_policy_version` and
+`r7a_restorations_used_snapshot` both exist and neither consequence materialised. Retained as the
+record of what was at stake: ~~had Q4 ruled the code-constant branch, the dwell duration would be
+unversioned on the record and a later policy change unreadable off a historical decision; had Q5
+ruled (b), no fact snapshot would exist and the exhaustion assertion would be re-derivable only
+against a moved projection.~~
+
+### 7. The standing Trustee Panel obligation queue: **NINE**
+
+⚠ **Verified by ENUMERATION at the time of writing, not asserted from this file.** The seven open
+after Story 10.19 are: (i) Story 10.23's Escalation 6 (`2026-08-07-089`); (ii) the copy-truth defect,
+still unassigned; (iii) R7(A)'s unpublished Part 11 amendment (`2026-08-06-077`); (iv) the
+R7(C)/R7(F) lock-in asymmetry; (v) counsel review of §8.7 (`2026-08-10-096` clause 5); (vi) counsel
+review of §8.4/§8.4a; (vii) the Q6 portal-access flip authorisation. Story 10.20 adds **(viii)**
+counsel review of §8.5/§8.6/§8.9 and **(ix)** the rejoin-model reconciliation.
+
+⛔ **No ruling in Decision `2026-08-12-099` discharged a queue item.** Stated as a count, not as
+progress.
+
+### 8. NEW — the supporting-ground picker is NOT on the terminate form
+
+AC12 lists a supporting-ground picker among the terminate form's controls. **It was not built, and
+that is recorded rather than left to be discovered.** The append API (`POST
+…/:moderationActionId/grounds`) **is** built, tested and step-up gated — but it is an operation on an
+**existing** decision, and the action request carries no supporting grounds. Wiring a picker into the
+terminate form would need either a contract field the story does not define, or a second request the
+handler cannot make atomic with the action itself.
+
+**Re-trigger:** the next story touching the moderation console. ⛔ Do **not** close this by adding a
+`supporting_grounds` array to `ModerateMemberRequest` without deciding whether those grounds are
+written in the action's transaction (and therefore what happens if the second write fails).
+
+### 9. What this story did NOT touch, stated so it is not inferred
+
+⛔ **No `termination_access_block` flag change** — that flip is Story 10.21's and remains gated.
+⛔ **No claim that Part 8 is legally settled.** The Niyamavali remains an **unadopted draft**
+(`[[v1.0]]`, `[[date]]` unfilled) and **counsel is not engaged** — every return field in
+`docs/legal-counsel-engagement/` is still `<PENDING>`. §8.5/§8.6/§8.9 are **authored and
+Panel-ratified**; **counsel review remains outstanding** ([[feedback_closure_language_precision]]).
+
+---
+
 ## Deferred / recorded from: the 2026-08-10 date-bomb investigation (2026-08-11)
 
 `main` was red for two days on `integration-tests` — four failures across

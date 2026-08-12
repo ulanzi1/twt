@@ -249,7 +249,7 @@ author analysis; an author-written clause is labelled `[Author-committed]`, neve
   ⛔ The six are **not** a licence to invent further termination grounds in application code.
 - **Q2 — all seven principles adopted.** §8.6 carries them, constitutional sentence leading and
   verbatim — **seven** numbered principles (the brief's 1–7, including principle 3 *Proportionality*,
-  which the ruling's summary bullets do not restate but Q2 put and the Panel did not decline).
+  which the ruling's summary bullets do not restate — **Panel-confirmed 2026-08-12 that it STANDS**).
   ⛔ The appeal gap is **stated, not closed**, as an **unnumbered *Recorded gap* clause — NOT an eighth
   principle** — do not implement §8.8 here. See Decision `2026-08-12-099` clause 8.1.
 - **Q3 (a)** — §8.2 is amended to **authorise** `regulator-action` and `voluntary-pending-review`.

@@ -314,6 +314,14 @@ export * from './feature_flag_versions.js';
 // carries only what a plaintext-JSONB event payload may not: the Tier-1 rationale ciphertext, the
 // actor display snapshot, and the FR-6 rejoin-lock instant.
 export * from './member_moderation_actions.js';
+// Story 10.20 — `member_moderation_grounds`, the APPEND-ONLY grounds attached to a decision. A later
+// finding ATTACHES to the original action; it never rewrites it. Exactly one PRIMARY per action is
+// the DB's job (a PARTIAL UNIQUE index) and "at least one" is the writer's — and because the grant
+// posture is SELECT/INSERT plus ONE column-level UPDATE for the RTBF note scrub, the primary ground
+// is structurally IMMUTABLE: supersede is a SUPPORTING-ground operation, by construction.
+// ⚠ `member_id` is denormalized here on purpose (the RTBF scrub queries on that axis, and every
+// other scrub in anonymize.ts has the same shape) — see the schema header.
+export * from './member_moderation_grounds.js';
 // Story 10.23 — the restoration-discipline instrument: `member_restoration_impositions`, the
 // APPEND-ONLY record of a §3.1 R7 lock-in. The SECOND governance overlay's table.
 // ⚠ NOT the restoration status — that is DERIVED by folding `member.restoration_discipline.*` events

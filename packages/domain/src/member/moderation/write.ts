@@ -7,7 +7,7 @@
 // record. The event and the row therefore commit or roll back together and can never diverge.
 //
 // ── The domain NEVER encrypts ───────────────────────────────────────────────────────────────────
-// `rationaleCiphertext` arrives ALREADY-SERIALIZED as a Tier-1 envelope — exactly like
+// `decisionNoteCiphertext` arrives ALREADY-SERIALIZED as a Tier-1 envelope — exactly like
 // `insertMemberWithdrawal` (`member/withdrawal.ts:8-13`) and `recordVerifierDecision`. The ROUTE
 // encrypts under the Pariwar's field class via `deps.encryption` BEFORE opening the scope tx (the
 // `claims.verification-decision.handlers.ts:190-204` placement). Passing plaintext here would put
@@ -79,7 +79,7 @@ export interface InsertModerationActionInput {
   action: ModerationAction;
   reasonCode: ReasonCode;
   /** Tier-1 envelope ciphertext (serialized) of the MANDATORY free-text rationale. */
-  rationaleCiphertext: string;
+  decisionNoteCiphertext: string;
   actorId: string;
   /** `users.display_name` SNAPSHOT — resolved (and required) by the route. */
   actorDisplay: string;
@@ -95,7 +95,7 @@ export interface ModerateMemberInput {
   /** The requested reason code (untrusted — validated against the registry here). */
   reasonCode: string;
   /** Tier-1 envelope ciphertext of the mandatory rationale (the domain never encrypts). */
-  rationaleCiphertext: string;
+  decisionNoteCiphertext: string;
   actorId: string;
   actorDisplay: string;
   /** Clock-injected instant (no `Date.now()` in the domain). */
@@ -134,7 +134,7 @@ export async function moderateMember(
 
   // (0) Backstop only — the route asserts the PLAINTEXT rationale before encrypting. This catches a
   //     future caller that skipped that step; it cannot inspect the ciphertext's contents.
-  if (input.rationaleCiphertext.trim().length === 0) {
+  if (input.decisionNoteCiphertext.trim().length === 0) {
     throw new ModerationRationaleRequiredError(input.action);
   }
 
@@ -184,7 +184,7 @@ export async function moderateMember(
       pariwarId: input.pariwarId,
       action: input.action,
       reasonCode,
-      rationaleCiphertext: input.rationaleCiphertext,
+      decisionNoteCiphertext: input.decisionNoteCiphertext,
       actorId: input.actorId,
       actorDisplay: input.actorDisplay,
       rejoinPermittedAt,

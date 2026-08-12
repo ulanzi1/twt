@@ -244,7 +244,7 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     const c = await td.pool.connect();
     try {
       const r = await c.query(
-        `SELECT action, reason_code, actor_display, rejoin_permitted_at, rationale_ciphertext
+        `SELECT action, reason_code, actor_display, rejoin_permitted_at, decision_note_ciphertext
            FROM member_moderation_actions WHERE member_id = $1 ORDER BY acted_at ASC`,
         [memberId],
       );
@@ -556,7 +556,7 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe('suspend');
     expect(rows[0]?.actor_display).toBe('Trustee One');
-    expect(String(rows[0]?.rationale_ciphertext)).not.toContain('Recorded after review');
+    expect(String(rows[0]?.decision_note_ciphertext)).not.toContain('Recorded after review');
   });
 
   it('AC6: the REAL suspend route revokes the member\'s sessions and device bindings', async () => {

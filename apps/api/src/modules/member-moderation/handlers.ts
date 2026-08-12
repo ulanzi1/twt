@@ -201,7 +201,7 @@ export function createMemberModerationHandlers(deps: AppDeps) {
 
     // (b) Encrypt BEFORE opening the scope tx (the verification-decision placement) so no KMS
     //     network call is made while holding a pooled connection inside an open transaction.
-    const rationaleCiphertext = await encryptModerationRationale(
+    const decisionNoteCiphertext = await encryptModerationRationale(
       rationale,
       ctx.pariwarId,
       deps.encryption,
@@ -262,7 +262,7 @@ export function createMemberModerationHandlers(deps: AppDeps) {
         pariwarId: ctx.pariwarId,
         action,
         reasonCode: body.reason_code,
-        rationaleCiphertext,
+        decisionNoteCiphertext,
         actorId: ctx.actorId,
         actorDisplay: ctx.actorDisplay,
         now,
@@ -434,7 +434,7 @@ export function createMemberModerationHandlers(deps: AppDeps) {
       let outcome;
       try {
         outcome = await decryptModerationRationaleSafe(
-          row.rationaleCiphertext,
+          row.decisionNoteCiphertext,
           ctx.pariwarId,
           deps.encryption,
         );

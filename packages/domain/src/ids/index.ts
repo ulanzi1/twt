@@ -632,6 +632,22 @@ export type ModerationActionId = Brand<'ModerationActionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ModerationActionId`. */
 export const moderationActionId = uuidBrand('ModerationActionId');
 
+// ── Story 10.20 — Moderation-ground id (§Naming "branding mandatory on a new ID's first PR") ──
+// `ModerationGroundId` is the per-row address of a `member_moderation_grounds` row — the
+// `ModerationActionId` twin, and it inherits that id's posture for exactly the same reasons: it
+// addresses an APPEND-ONLY record attached to a decision, not a state object, and it is NOT any
+// event stream's stream_id (the `member.moderation.ground-appended` event rides the MEMBER's stream,
+// keyed by `member_id`). It is a plain DB-defaulted `gen_random_uuid()`.
+// ⚠ It is also the target of `supersedes_ground_id`, a nullable SELF-reference: superseding a
+// SUPPORTING ground appends a new row pointing at the one it replaces. The primary ground can never
+// be superseded — the partial unique index plus the SELECT/INSERT-only grant make it structurally
+// immutable — so a `supersedes_ground_id` never addresses a primary row.
+
+/** Per-row address of a moderation ground (`member_moderation_grounds.ground_id`). */
+export type ModerationGroundId = Brand<'ModerationGroundId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ModerationGroundId`. */
+export const moderationGroundId = uuidBrand('ModerationGroundId');
+
 // ── Story 10.12 — Per-Pariwar custom-field definition id (§Naming "branding mandatory on a new ID's
 // first PR") ──
 // `PariwarCustomFieldDefinitionId` is the per-row address of a `pariwar_custom_field_definitions`

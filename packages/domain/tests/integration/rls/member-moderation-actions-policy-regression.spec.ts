@@ -63,7 +63,7 @@ function actionValues(
     memberId,
     action: 'suspend',
     reasonCode: 'r14-forgery',
-    rationaleCiphertext: 'enc:v1:fake-envelope-for-rls-test',
+    decisionNoteCiphertext: 'enc:v1:fake-envelope-for-rls-test',
     actorId: ACTOR,
     actorDisplay: 'Trustee One',
     rejoinPermittedAt: null,
@@ -151,7 +151,7 @@ describe.skipIf(!hasDatabase)('member_moderation_actions RLS policy regression (
     // SELECT+INSERT-only, which made a Tier-1 PII column structurally UN-erasable.
     const scrubbed = await tx
       .update(schema.memberModerationActions)
-      .set({ rationaleCiphertext: 'enc:v1:anonymized-sentinel' })
+      .set({ decisionNoteCiphertext: 'enc:v1:anonymized-sentinel' })
       .where(
         and(
           eq(schema.memberModerationActions.pariwarId, PARIWAR_A),
@@ -164,7 +164,7 @@ describe.skipIf(!hasDatabase)('member_moderation_actions RLS policy regression (
     // Cross-tenant: an RTBF in A can never reach B's rows.
     const crossed = await tx
       .update(schema.memberModerationActions)
-      .set({ rationaleCiphertext: 'enc:v1:should-never-land' })
+      .set({ decisionNoteCiphertext: 'enc:v1:should-never-land' })
       .where(eq(schema.memberModerationActions.pariwarId, PARIWAR_B))
       .returning();
     expect(crossed).toHaveLength(0);
@@ -240,12 +240,17 @@ describe.skipIf(!hasDatabase)('member_moderation_actions RLS policy regression (
     );
 
     // The legal shape still inserts — the CHECK is not merely rejecting everything.
+    // ⚠ Story 10.20: a legal `terminate` now ALSO requires both escalation parts
+    // (`member_moderation_actions_escalation_iff_terminate`, migration 0099). Without them this
+    // insert is rejected — which is the new constraint working, not a regression.
     const ok = await tx
       .insert(schema.memberModerationActions)
       .values(
         actionValues(PARIWAR_A, a, {
           action: 'terminate',
           rejoinPermittedAt: new Date('2027-08-03T00:00:00.000Z'),
+          escalationInadequacyCiphertext: 'enc:v1:fake-inadequacy-for-rls-test',
+          escalationProportionalityCiphertext: 'enc:v1:fake-proportionality-for-rls-test',
         }),
       )
       .returning();

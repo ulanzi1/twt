@@ -181,6 +181,6 @@ export async function anonymizeMember(
   // un-erasable, which is a stronger failure than merely being forgotten.
   await client
     .update(memberModerationActions)
-    .set({ rationaleCiphertext: await encSentinel(pariwarId, FIELD_CLASS_MODERATION, enc) })
+    .set({ decisionNoteCiphertext: await encSentinel(pariwarId, FIELD_CLASS_MODERATION, enc) })
     .where(eq(memberModerationActions.memberId, memberId));
 }

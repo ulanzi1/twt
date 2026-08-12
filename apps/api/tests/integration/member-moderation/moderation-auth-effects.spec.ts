@@ -156,8 +156,11 @@ async function recordModeration(
   );
   await t.pool.query(
     `INSERT INTO member_moderation_actions
-       (pariwar_id, member_id, action, reason_code, rationale_ciphertext, actor_id, actor_display, rejoin_permitted_at, acted_at)
-       VALUES ($1, $2, $3, $4, 'enc:v1:test', $5, 'A Trustee', $6, now() - interval '1 hour' + ($7 || ' seconds')::interval)`,
+       (pariwar_id, member_id, action, reason_code, decision_note_ciphertext, actor_id, actor_display, rejoin_permitted_at, acted_at,
+        escalation_inadequacy_ciphertext, escalation_proportionality_ciphertext)
+       VALUES ($1, $2, $3::moderation_action, $4, 'enc:v1:test', $5, 'A Trustee', $6, now() - interval '1 hour' + ($7 || ' seconds')::interval,
+        CASE WHEN $3 = 'terminate' THEN 'enc:v1:inadequacy' END,
+        CASE WHEN $3 = 'terminate' THEN 'enc:v1:proportionality' END)`,
     [
       pariwarId,
       memberId,

@@ -8,7 +8,7 @@
 //
 // ── ⚠ `rationale` is INBOUND-ONLY on every LIST/ACTION shape; the ciphertext NEVER appears ────────
 // The free-text rationale is Tier-1 encrypted at rest (`member_moderation_actions.
-// rationale_ciphertext`) and the ciphertext is NEVER projected into a DTO — not into the history
+// decision_note_ciphertext`) and the ciphertext is NEVER projected into a DTO — not into the history
 // list, not into the action response, not anywhere. The ONE exception is
 // `ModerationRationaleResponse`: a single-item, decrypt-on-demand read (behind the same
 // `member.moderate` gate) that carries the PLAINTEXT rationale for exactly one action, never the

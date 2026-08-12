@@ -112,7 +112,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // depend on the row, and they are bounded non-PII vocabulary. Only the prose goes.
     const { captured, pariwar } = await run();
     const set = setFor(captured, memberModerationActions);
-    expect(await dec(set['rationaleCiphertext'], pariwar, 'member_moderation')).toBe(
+    expect(await dec(set['decisionNoteCiphertext'], pariwar, 'member_moderation')).toBe(
       ANONYMIZED_SENTINEL,
     );
     for (const retained of [

@@ -5,7 +5,7 @@
 //   · `listModeratedMembersForPariwar`   — the moderated-members list (Decision 9), which Story
 //     10.11's Trustee-Lite view consumes.
 //
-// ⚠ NEITHER read ever selects `rationale_ciphertext` into a list DTO. The history read returns it
+// ⚠ NEITHER read ever selects `decision_note_ciphertext` into a list DTO. The history read returns it
 // (the admin console decrypts ONE rationale on demand through the mirror helper); the Pariwar-wide
 // list does not project it at all.
 //
@@ -42,7 +42,7 @@ export interface ModerationHistoryEntry {
   rejoinPermittedAt: Date | null;
   actedAt: Date;
   /** Tier-1 ciphertext AS STORED. The caller decrypts on demand; a LIST DTO never carries it. */
-  rationaleCiphertext: string;
+  decisionNoteCiphertext: string;
 }
 
 /** One entry of the Pariwar-wide moderated-members list. No rationale, ever. */
@@ -115,7 +115,7 @@ export async function listModerationHistoryForMember(
       actorDisplay: memberModerationActions.actorDisplay,
       rejoinPermittedAt: memberModerationActions.rejoinPermittedAt,
       actedAt: memberModerationActions.actedAt,
-      rationaleCiphertext: memberModerationActions.rationaleCiphertext,
+      decisionNoteCiphertext: memberModerationActions.decisionNoteCiphertext,
     })
     .from(memberModerationActions)
     .where(
@@ -144,7 +144,7 @@ export async function listModerationHistoryForMember(
       actorDisplay: r.actorDisplay,
       rejoinPermittedAt: r.rejoinPermittedAt,
       actedAt: r.actedAt,
-      rationaleCiphertext: r.rationaleCiphertext,
+      decisionNoteCiphertext: r.decisionNoteCiphertext,
     })),
     hasMore,
   };
@@ -152,7 +152,7 @@ export async function listModerationHistoryForMember(
 
 /**
  * ONE moderation action's ciphertext, tenant + member scoped. The ONLY accessor that ever selects
- * `rationale_ciphertext` for a single row (review follow-up — wires the "decrypts a SINGLE
+ * `decision_note_ciphertext` for a single row (review follow-up — wires the "decrypts a SINGLE
  * rationale on demand" read this header always claimed existed). The route decrypts; a list DTO
  * never carries this field, and this accessor is never called for a list.
  */
@@ -161,9 +161,9 @@ export async function getModerationActionRationale(
   pariwarId: PariwarId,
   memberId: MemberId,
   moderationActionId: ModerationActionId,
-): Promise<{ rationaleCiphertext: string } | null> {
+): Promise<{ decisionNoteCiphertext: string } | null> {
   const rows = await db
-    .select({ rationaleCiphertext: memberModerationActions.rationaleCiphertext })
+    .select({ decisionNoteCiphertext: memberModerationActions.decisionNoteCiphertext })
     .from(memberModerationActions)
     .where(
       and(
@@ -174,7 +174,7 @@ export async function getModerationActionRationale(
     )
     .limit(1);
   const row = rows[0];
-  return row ? { rationaleCiphertext: row.rationaleCiphertext } : null;
+  return row ? { decisionNoteCiphertext: row.decisionNoteCiphertext } : null;
 }
 
 /**

@@ -16,7 +16,7 @@
 // NO rationale free-text. NO member name. NO actor display name. Only the audit shape + the bounded
 // non-PII `reason_code` + the overlay's own from/to. This is the `nominees_declared` /
 // `medical_disclosed` / `address_updated` discipline: the sensitive bytes live Tier-1-encrypted in
-// `member_moderation_actions.rationale_ciphertext`, and the event carries only the CODE.
+// `member_moderation_actions.decision_note_ciphertext`, and the event carries only the CODE.
 
 import { z } from 'zod';
 

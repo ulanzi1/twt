@@ -855,7 +855,10 @@ model, the operational-vs-governance vocabulary split, the two-part escalation t
    a queue item. ⛔ State the number this story leaves, verified at the time of writing — never
    asserted from this file
 
-8. ⭐ **NEW — GOVERNANCE DRIFT on the rejoin model, SURFACED AND NOT CLOSED.** Decision
+8. ⭐ **NEW — GOVERNANCE DRIFT on the rejoin model, SURFACED AND NOT CLOSED.** ✅ **ALREADY WRITTEN to
+   `deferred-work.md` (2026-08-12), ahead of implementation, as its own `governance(10.20):` commit** —
+   ⛔ **Task 11 VERIFIES this section, it does not re-author it.** Duplicating it would create two
+   records that can drift apart, which is the defect this entry is about. Decision
    `2026-08-12-099` (Q7.2) ruled that an **uncleared** termination confers **no ordinary rejoin
    eligibility**; and that on authorised restoration/clearance, membership is restored
    **prospectively** and the ordinary membership / R7 / lapse / **rejoin** rules are then **evaluated

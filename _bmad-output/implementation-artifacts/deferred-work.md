@@ -4,6 +4,99 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## ⛔ GOVERNANCE DRIFT — the rejoin model, from Story 10.20's Trustee Panel ruling (2026-08-12)
+
+**Recorded BEFORE implementation, deliberately.** Story 10.20's Panel ruling (to be entered as Decision
+`2026-08-12-099`) states a governing position on rejoin that **four texts and one live code path
+contradict**. ⛔ **Story 10.20 closes none of it and edits none of it**, at the Panel's direction:
+*"Do not silently reinterpret a ratified decision; if an already-ratified text conflicts, surface it as
+governance drift rather than editing it."*
+
+### The ruled position (Q7.2)
+
+> Termination remains uncleared → **no ordinary rejoin eligibility**.
+> Authorised restoration / clearance → membership restored **prospectively** → ordinary membership /
+> R7 / lapse / **rejoin** rules are **evaluated from the member's actual state and dates**.
+
+⛔ **The model is NOT "12 months after restoration."** Restoration supplies **neither a new start
+instant nor a new duration**. ⛔ **No restoration-relative 12-month clock may be introduced** unless a
+future governance amendment says so **expressly** — a later implementation reaching for
+`restored_at + 12 months` because it looks like the tidy answer is the failure this paragraph exists to
+prevent.
+
+### ⭐ The sharp one: today, time alone cures an uncleared termination
+
+**A behavioural conflict, not a wording one, and it is live.** The signup guard
+(`apps/api/src/modules/auth/member/signup.handlers.ts:118-123`) blocks a returning identity only while
+**both** hold:
+
+```
+priorInThisPariwar.moderationStatus === 'terminated'   &&   now < moderationRejoinPermittedAt
+```
+
+and `rejoin_permitted_at` is fixed at the moment of termination as `addTwelveMonths(now)`
+(`apps/api/src/modules/member-moderation/handlers.ts:269`).
+
+| | Shipped behaviour | Ruled position |
+|---|---|---|
+| Uncleared termination, month 3 | blocked | blocked ✅ |
+| **Uncleared termination, month 13** | **PERMITTED** | ⛔ **no ordinary rejoin eligibility** |
+| After authorised restoration | block clears immediately | restored prospectively; ordinary rules then evaluated on actual dates ✅ |
+
+⚠ **The divergence is one row wide, and it is the row that matters** — the case where the passage of
+time substitutes for the governance act the Panel says must come first.
+
+### The texts that state the older, flat model
+
+| # | Text | Status |
+|---|---|---|
+| a | `docs/legal/niyamavali.md:64` / hi `:68` — **§2.5** | **Base instrument.** No numbered ratification. |
+| b | `docs/legal/niyamavali.md:182` / hi `:180` — **§8.4** | ⛔ **RATIFIED** by Decision `2026-08-10-097`; reproduced verbatim at `.decision-log.md:170` / `:181`. |
+| c | `docs/legal/niyamavali.md:207` / hi `:205` — **§8.4a**, *Rejoin* row | ⛔ **RATIFIED** by the same decision; `.decision-log.md:214` / `:244`. |
+| d | `prd.md:858` — FR-56's rejoin consequence | PRD. Amendable, but not by 10.20 (premise #8). |
+| e | `signup.handlers.ts:118-123` + `handlers.ts:269` | **Shipped code.** See above. |
+
+### ⚠ NOT in scope of the eventual amendment — do not conflate
+
+`prd.md:300` (**FR-6**, voluntary withdrawal) and `packages/domain/src/member/withdrawal.ts:37` are a
+**second, independent** 12-month lock over the same identity, arising from a **voluntary** act. The
+Panel's ruling does not touch it, and `signup.handlers.ts` checks the two separately on purpose
+(*"NO fake `member_withdrawals` row is ever written on termination — termination is not voluntary and
+must not masquerade as withdrawal"*). ⛔ An amendment that "fixes the 12-month lock" without
+distinguishing them would silently change a **withdrawal** consequence for **disciplinary** reasons.
+
+### ✅ What is NOT drift
+
+The **prospective-restoration** half is **consistent with the code as shipped**. No special *"restored
+terminated member"* state exists — the state the Panel forbade creating — and the signup guard already
+maps the **latest** action so a `restore` clears the block by making the identity not-currently-
+terminated (`member-auth.repo.ts:72-76`), with a comment already warning against the opposite bug.
+⚠ Recorded as **verified-consistent, not fixed** — nothing was changed to make it so
+([[feedback_closure_language_precision]]).
+
+### Disposition — OWED, with a named trigger
+
+**Owner: unassigned.** Reconciling §2.5 / §8.4 / §8.4a with the ruled model is a **Part 11 amendment
+against RATIFIED text** and needs its own routing note, its own Panel ruling and its own **superseding**
+decision ([[feedback_supersede_never_reinterpret]]). It would also amend the §8.4a comparison table
+Story 10.19 landed on 2026-08-10.
+
+⛔ **The guard is NOT changed first.** Doing so would make the code enforce a rejoin model **no
+governing instrument states** — the exact inversion Story 10.20's D1 exists to prevent, and the same
+defect as shipping enforcement ahead of principles. **The instrument moves first.** Until the amendment
+lands, **§2.5 governs as written** and the shipped guard stays as shipped.
+
+**Re-trigger:** the next story that touches the rejoin guard, the §2.5 / §8.4 text, or a member's
+post-termination return path — whichever comes first. ⚠ Also re-triggered if anyone proposes
+`restored_at + 12 months` anywhere.
+
+**Standing Trustee Panel obligation queue: NINE.** It stood at **seven** after Story 10.19
+(`deferred-work.md`, 10.19 section); Story 10.20 adds counsel review of §8.5/§8.6/§8.9 (**eight**) and
+this reconciliation (**nine**). Stated as a count, not as progress. No ruling in
+`2026-08-12-099` discharged a queue item.
+
+---
+
 ## Deferred / recorded from: the 2026-08-10 date-bomb investigation (2026-08-11)
 
 `main` was red for two days on `integration-tests` — four failures across

@@ -521,3 +521,44 @@ VALUES
     'pool'
   )
 ON CONFLICT (clause_version_id) DO NOTHING;
+
+-- ── `niy.moderation.dwell` — the TERMINATION DWELL policy (Story 10.20, Task 6; AC8, WS-D) ────────
+--
+-- ⚖ RATIFIED REGISTRY DATA, not a code constant. Decision `2026-08-12-099` (Q4) sets the dwell at
+-- SEVEN DAYS and rules that it is sourced from the versioned registry: the Trust runs versioned
+-- per-Pariwar rules (FR-7), and a moderation decision must stay readable against the dwell policy
+-- that actually governed it. The resolved `clause_version_id` is pinned onto every termination
+-- (`member_moderation_actions.dwell_policy_version`), so a later re-tune can never retroactively
+-- move the window a historical decision was taken under.
+--
+-- ⛔ `7` IS NEVER HARD-CODED IN THE MODERATION SERVICE, and this clause is not a "default" the code
+-- falls back to. `resolveModerationDwellPolicy` returns NULL on an unprovisioned Pariwar and the
+-- caller REFUSES the ordinary termination path with a named 503 — Decision `2026-08-07-088` clause 2:
+-- imposing under a code default is explicitly rejected, because it is not a fallback but a sanction
+-- under a convention NO PARIWAR RATIFIED, an unratified sanction imposed by a machine.
+--
+-- ── ⭐ WHAT THIS CLAUSE DOES NOT DO ───────────────────────────────────────────────────────────────
+-- It governs the ORDINARY path only. Niyamavali §8.6 principles 5 and 6 as adopted say termination
+-- *normally* follows suspension and notice *normally* precedes it — both carry an express exception —
+-- so immediate termination remains available where the authorised actor RECORDS THE REASON for
+-- invoking it (Q4.1). ⛔ A future edit that reads this clause as an absolute bar would contradict the
+-- principles it exists to mechanize.
+--
+-- Q4.3: elapsed dwell SATISFIES v1's "opportunity to respond". ⛔ No response-or-waiver record is
+-- required and none may be invented as a precondition — a response has nowhere to arrive until §8.8
+-- (the moderation appeal) exists, which is Story 10.22's.
+--
+-- `benefit_mechanism='pool'` (frozen row 12 — required on every v1 rule). Idempotent.
+INSERT INTO clause_versions
+  (clause_version_id, clause_id, pariwar_id, version, effective_date, payload, benefit_mechanism)
+VALUES
+  (
+    '0e1c0017-0000-4000-8000-000000000017',
+    'niy.moderation.dwell',
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    1,
+    '2025-01-01T00:00:00+00:00'::timestamptz,
+    '{"rule_code":"MODERATION-DWELL","title_en":"Dwell between suspension and termination (Niyamavali §8.6 principles 5-6)","dwell_days":7,"provisional":true}'::jsonb,
+    'pool'
+  )
+ON CONFLICT (clause_version_id) DO NOTHING;

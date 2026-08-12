@@ -114,8 +114,22 @@ export class ModerationRationaleRequiredError extends Error {
 /** Namespaced code for a missing / insubstantial escalation part on a `terminate` (HTTP 422). */
 export const MODERATION_ESCALATION_REQUIRED_CODE = 'member_moderation.escalation_required';
 
-/** Which half of the two-part test the error is about. */
-export type EscalationPart = 'inadequacy' | 'proportionality';
+/**
+ * Which field the error is about.
+ *
+ * ⚠ `immediate_termination_reason` is NOT a third half of the two-part test — it is a separate
+ * field answering a different question (*why now*, rather than *why termination*). It shares this
+ * error only because it shares the substance floor.
+ */
+export type EscalationPart = 'inadequacy' | 'proportionality' | 'immediate_termination_reason';
+
+/** Human-readable field names — the error has to be actionable, not merely typed. */
+const FIELD_DESCRIPTIONS: Record<EscalationPart, string> = {
+  inadequacy: 'the escalation justification part (a) — why suspension is inadequate —',
+  proportionality: 'the escalation justification part (b) — why termination is proportionate —',
+  immediate_termination_reason:
+    'the recorded reason for invoking the immediate-termination exception —',
+};
 
 /**
  * Thrown when a `terminate` omits an escalation part, or supplies one below the substance floor.
@@ -133,9 +147,11 @@ export class ModerationEscalationRequiredError extends Error {
     public readonly minChars: number,
   ) {
     super(
-      part === 'inadequacy'
-        ? `the escalation justification part (a) — why suspension is inadequate — is ${reason === 'missing' ? 'required for a termination' : `too short (minimum ${minChars} characters)`}`
-        : `the escalation justification part (b) — why termination is proportionate — is ${reason === 'missing' ? 'required for a termination' : `too short (minimum ${minChars} characters)`}`,
+      `${FIELD_DESCRIPTIONS[part]} is ${
+        reason === 'missing'
+          ? 'required for a termination'
+          : `too short (minimum ${minChars} characters)`
+      }`,
     );
   }
 
@@ -230,6 +246,100 @@ export class ModerationEvidenceRefInvalidError extends Error {
         code: this.code,
         message: this.message,
         details: { detail: this.detail },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+// ── Story 10.20 (WS-D) — the termination DWELL precondition ──────────────────────────────────────
+//
+// Decision `2026-08-12-099` (Q4): a **7-day** dwell, from the **versioned registry**, separating a
+// suspension from the termination that follows it on the ORDINARY path. ⛔ The dwell does NOT make
+// immediate termination unavailable — principles 5 and 6 as adopted say termination *normally*
+// follows suspension and notice *normally* precedes it, and both carry an express exception.
+
+/** Namespaced code for a termination attempted before the dwell has elapsed (HTTP 409). */
+export const MODERATION_DWELL_NOT_ELAPSED_CODE = 'member_moderation.dwell_not_elapsed';
+
+/**
+ * Thrown when the ORDINARY termination path is not yet open and the immediate-termination exception
+ * was not validly invoked.
+ *
+ * ⚠ THIS IS NOT A BLANKET REFUSAL TO TERMINATE, and the message must not read like one. It means
+ * exactly: *the ordinary path is not yet open, and the exception was not invoked.* A trustee with
+ * grounds for immediate termination records the exception reason and proceeds.
+ *
+ * ⛔ Its code is deliberately DISTINCT from `MODERATION_INVALID_STATE_CODE`. "Too soon" and "illegal
+ * transition" are different facts about a member, and a trustee must be able to tell them apart:
+ * one resolves by waiting (or by invoking the exception), the other never does.
+ */
+export class ModerationDwellNotElapsedError extends Error {
+  public readonly name = 'ModerationDwellNotElapsedError';
+  public readonly code = MODERATION_DWELL_NOT_ELAPSED_CODE;
+  public constructor(
+    public readonly availableAt: Date,
+    public readonly dwellDays: number,
+    public readonly policyClauseVersionId: string,
+  ) {
+    super(
+      `the ordinary termination path opens ${dwellDays} days after the suspension (at ${availableAt.toISOString()}); to terminate before then, record a reason for invoking the immediate-termination exception`,
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: {
+          available_at: this.availableAt.toISOString(),
+          dwell_days: this.dwellDays,
+          dwell_policy_version: this.policyClauseVersionId,
+        },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for a Pariwar with no effective dwell clause (HTTP 503). */
+export const MODERATION_DWELL_UNPROVISIONED_CODE = 'member_moderation.dwell_policy_unprovisioned';
+
+/**
+ * Thrown when the ORDINARY termination path is asked for on a Pariwar with no effective
+ * `niy.moderation.dwell` clause.
+ *
+ * ⛔ **`7` IS NOT HARD-CODED AS A FALLBACK.** Decision `2026-08-07-088` clause 2 governs: imposing
+ * under a code default is explicitly rejected, because it is not a fallback but a sanction under a
+ * convention no Pariwar ratified — an unratified sanction imposed by a machine. The safe direction
+ * is to refuse the ordinary path and SAY WHY.
+ *
+ * ⚠ **503, NOT 409, AND THE DISTINCTION IS THE POINT.** A 409 would tell a trustee to wait, and
+ * waiting will never resolve this — no amount of elapsed time provisions a registry clause. This is
+ * a configuration gap an administrator fixes, which is what a 503 says. The sibling
+ * `niy.lock-in.policy` states its provisioning failure as a member-facing 503 for the same reason;
+ * the `niy.restoration-discipline.policy` sibling instead reports a sentinel precisely because it
+ * runs as a background imposition with no request to fail. This path HAS a request to fail.
+ *
+ * ⛔ It does NOT block the immediate-termination exception, which is a separate governance route and
+ * is not conditioned on this clause existing.
+ */
+export class ModerationDwellPolicyUnprovisionedError extends Error {
+  public readonly name = 'ModerationDwellPolicyUnprovisionedError';
+  public readonly code = MODERATION_DWELL_UNPROVISIONED_CODE;
+  public constructor(public readonly pariwarId: string) {
+    super(
+      'the moderation dwell policy is not provisioned for this Pariwar, so the ordinary termination path cannot be opened — this is a registry gap for an administrator to close, not a waiting period',
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { clause_id: 'niy.moderation.dwell' },
         request_id: requestId,
       },
     };

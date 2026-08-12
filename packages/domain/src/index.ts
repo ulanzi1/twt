@@ -344,6 +344,13 @@ export {
   MODERATION_ESCALATION_RESTATEMENT_CODE,
   ModerationEvidenceRefInvalidError,
   MODERATION_EVIDENCE_REF_INVALID_CODE,
+  // Story 10.20 (WS-D) — the dwell precondition. ⚠ The two differ in KIND, not merely in severity:
+  // `dwell_not_elapsed` is a 409 a trustee resolves by waiting or by invoking the immediate
+  // exception; `dwell_policy_unprovisioned` is a 503 no amount of waiting resolves.
+  ModerationDwellNotElapsedError,
+  MODERATION_DWELL_NOT_ELAPSED_CODE,
+  ModerationDwellPolicyUnprovisionedError,
+  MODERATION_DWELL_UNPROVISIONED_CODE,
 } from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the

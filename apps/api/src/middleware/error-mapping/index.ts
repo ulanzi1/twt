@@ -29,6 +29,8 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
+  ModerationDwellNotElapsedError,
+  ModerationDwellPolicyUnprovisionedError,
   ModerationEscalationNotApplicableError,
   ModerationEscalationRequiredError,
   ModerationEscalationRestatementError,
@@ -281,6 +283,26 @@ export function errorMappingHandler(
   }
   if (error instanceof ModerationEvidenceRefInvalidError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // Story 10.20 (WS-D) — the dwell precondition. ⚠ The two differ in KIND, not in severity:
+  //   ModerationDwellNotElapsedError            → 409 …dwell_not_elapsed. DISTINCT from
+  //                                               `invalid_state` on purpose: "too soon" and
+  //                                               "illegal transition" are different facts, and this
+  //                                               one resolves by waiting OR by recording a reason
+  //                                               for the immediate-termination exception. It is NOT
+  //                                               a blanket refusal to terminate during the dwell.
+  //   ModerationDwellPolicyUnprovisionedError   → 503 …dwell_policy_unprovisioned. NOT a 409,
+  //                                               because no amount of waiting provisions a registry
+  //                                               clause — this is a configuration gap an admin
+  //                                               closes, and a 409 would send a trustee away to
+  //                                               wait for something that will never arrive.
+  if (error instanceof ModerationDwellNotElapsedError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationDwellPolicyUnprovisionedError) {
+    void reply.status(503).send(error.toErrorResponse(requestId));
     return;
   }
 

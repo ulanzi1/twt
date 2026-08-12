@@ -221,6 +221,18 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
   const ESCALATION_PROPORTIONALITY =
     'Termination fits the conduct because the forgery was deliberate, repeated, and aimed at the claim-verification process itself.';
 
+  // ── Story 10.20 (AC8) — these terminations take the IMMEDIATE-TERMINATION EXCEPTION, on purpose ─
+  // A 7-day dwell now separates a suspension from the termination that ordinarily follows it, and
+  // every test in this file suspends and terminates seconds apart. The exception the Panel preserved
+  // (Q4.1) is a legitimate termination route, not a test-only bypass: it is available where the
+  // authorised actor RECORDS THE REASON, which is exactly what this string does.
+  // ⛔ The alternative — seeding a `dwell_days: 0` clause — was rejected: fabricating governance
+  // data to make tests pass would put a duration in the registry that no Panel ratified.
+  // The ORDINARY path (and this exception's own effect on the record) is pinned in
+  // `moderation-dwell.spec.ts`, which seeds the real 7-day clause and advances an injected clock.
+  const IMMEDIATE_REASON =
+    'The forged documents are still circulating and each day of delay exposes further claims to the same fraud.';
+
   function body(
     reasonCode: string,
     rationale = 'Recorded after review of the file.',
@@ -230,6 +242,7 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     if (action === 'terminate') {
       base.escalation_inadequacy = ESCALATION_INADEQUACY;
       base.escalation_proportionality = ESCALATION_PROPORTIONALITY;
+      base.immediate_termination_reason = IMMEDIATE_REASON;
     }
     return base;
   }

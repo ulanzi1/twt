@@ -224,6 +224,15 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     //      `moderation_evidence_refs_valid` CHECK is the third layer that also binds raw SQL.
     const evidenceRefs = memberDomain.moderation.assertEvidenceRefs(body.evidence_refs);
 
+    // (a4) AC8 (Q4.1) — the IMMEDIATE-TERMINATION EXCEPTION REASON. ⭐ Its presence is what selects
+    //      the route: absent ⇒ the ordinary path (dwell-gated below, in the domain, inside the tx);
+    //      present ⇒ the exception the Panel preserved. Validated on the plaintext here for the same
+    //      reason as everything else in this block — a doomed request must not spend a KMS call.
+    const immediateReason = memberDomain.moderation.assertImmediateTerminationReason(
+      action,
+      body.immediate_termination_reason,
+    );
+
     // (b) Encrypt BEFORE opening the scope tx (the verification-decision placement) so no KMS
     //     network call is made while holding a pooled connection inside an open transaction.
     //     ⚠ On a `terminate` this is THREE round-trips, not one — all made here, together, for the
@@ -247,6 +256,12 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           ),
         }
       : null;
+    // Tier-1 too — it describes the case, so unlike the version pin and the fact snapshot it is
+    // encrypted, granted UPDATE by name in 0099, and scrubbed under RTBF.
+    const immediateReasonCiphertext =
+      immediateReason === null
+        ? null
+        : await encryptModerationRationale(immediateReason, ctx.pariwarId, deps.encryption);
 
     const scopeTx = await openScopeTx(deps, ctx.pariwarId);
     let ok = false;
@@ -340,6 +355,7 @@ export function createMemberModerationHandlers(deps: AppDeps) {
         decisionNoteCiphertext,
         escalationInadequacyCiphertext: escalationCiphertext?.inadequacy ?? null,
         escalationProportionalityCiphertext: escalationCiphertext?.proportionality ?? null,
+        immediateTerminationReasonCiphertext: immediateReasonCiphertext,
         evidenceRefs,
         r7aRestorationsUsedSnapshot,
         actorId: ctx.actorId,
@@ -456,9 +472,45 @@ export function createMemberModerationHandlers(deps: AppDeps) {
         { limit, offset },
       );
 
+      // ⛔ `legal_actions` is NOT filtered by the dwell (Story 10.20, AC8). Legality and precondition
+      // are different facts; collapsing them would make this pure reducer's output depend on a clock
+      // and would fork the one place four call sites derive legality from (D5). ✅ The Panel ruled
+      // this explicitly right (Q4.2): "legal_actions should not silently be rewritten merely because
+      // the dwell exists."
       const legalActions = memberDomain.moderation.MODERATION_ACTIONS.filter((a) =>
         memberDomain.moderation.isLegalModerationTransition(overlay.status, a),
       );
+
+      // ── ⭐ AC8 — `termination_available_at`, ADDITIVE alongside `legal_actions` ─────────────────
+      // Leaving the dwell ONLY in the write path would make the console render an enabled Terminate
+      // control that 409s — the same console/server disagreement D5 rejects, arriving from the other
+      // side. This is the separate, additive fact that lets the console tell the trustee WHEN the
+      // ordinary path opens (rendered in the re-confirmation dialog, which is where it is actually
+      // decision-relevant).
+      //
+      // `null` covers three genuinely different situations, and none of them should read as "you may
+      // terminate now": not suspended (terminate is not even legal), the dwell already elapsed
+      // (nothing to wait for), and the policy unprovisioned (the write path 503s and no instant can
+      // be computed). The console gates on the presence of an instant in the FUTURE, not on `null`.
+      let terminationAvailableAt: string | null = null;
+      if (overlay.status === 'suspended') {
+        const dwellPolicy = await memberDomain.moderation.resolveModerationDwellPolicy(
+          tx,
+          ctx.pariwarId,
+        );
+        const suspendedAt = dwellPolicy
+          ? await memberDomain.moderation.getProducingSuspensionActedAt(tx, ctx.memberId)
+          : null;
+        if (dwellPolicy && suspendedAt) {
+          const at = memberDomain.moderation.terminationAvailableAt(
+            suspendedAt,
+            dwellPolicy.dwellDays,
+          );
+          // Only surfaced while it is still in the FUTURE — a past instant is not a precondition,
+          // and rendering one would invite a console to display a stale "available at" forever.
+          if (at.getTime() > deps.clock().getTime()) terminationAvailableAt = at.toISOString();
+        }
+      }
 
       return {
         member_id: ctx.memberId,
@@ -467,6 +519,7 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           overlay.reasonCode as ModerationHistoryResponse['current_reason_code'],
         since: overlay.since ? overlay.since.toISOString() : null,
         legal_actions: [...legalActions],
+        termination_available_at: terminationAvailableAt,
         entries: page.entries.map((e) => ({
           moderation_action_id: e.moderationActionId,
           action: e.action as ModerationAction,

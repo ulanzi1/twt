@@ -29,8 +29,16 @@ import type { MemberId, ModerationActionId, PariwarId } from '../../ids/index.js
 import { memberModerationActions } from '../../schema/member_moderation_actions.js';
 import { projectMemberState } from '../project.js';
 import { getMemberStateAt } from '../read.js';
+import {
+  getProducingSuspensionActedAt,
+  isDwellElapsed,
+  resolveModerationDwellPolicy,
+  terminationAvailableAt,
+} from './dwell.js';
 import { assertEvidenceRefs, type EvidenceRef } from './evidence-refs.js';
 import {
+  ModerationDwellNotElapsedError,
+  ModerationDwellPolicyUnprovisionedError,
   ModerationEscalationNotApplicableError,
   ModerationEscalationRequiredError,
   ModerationRationaleRequiredError,
@@ -116,6 +124,17 @@ export interface ModerateMemberInput {
   escalationInadequacyCiphertext?: string | null;
   escalationProportionalityCiphertext?: string | null;
 
+  /**
+   * AC8 (Q4.1): the recorded reason for invoking the IMMEDIATE-TERMINATION exception, as
+   * already-serialized Tier-1 ciphertext.
+   *
+   * ⭐ ITS PRESENCE IS WHAT SELECTS THE ROUTE. Absent ⇒ the ordinary path, which the dwell gate
+   * below governs. Present ⇒ the exception, which the Panel preserved and which the dwell does not
+   * close. ⛔ It is a SEPARATE field from both escalation parts and must never be folded into
+   * either: they answer *why termination*, this answers *why now*.
+   */
+  immediateTerminationReasonCiphertext?: string | null;
+
   /** Evidence REFERENCES (never prose) — validated here as defence-in-depth. Defaults to `[]`. */
   evidenceRefs?: unknown;
 
@@ -193,7 +212,15 @@ export async function moderateMember(
     if (escalationProportionality === null) {
       throw new ModerationEscalationRequiredError('proportionality', 'missing', 0);
     }
-  } else if (escalationInadequacy !== null || escalationProportionality !== null) {
+  } else if (
+    escalationInadequacy !== null ||
+    escalationProportionality !== null ||
+    (input.immediateTerminationReasonCiphertext ?? '').trim().length > 0
+  ) {
+    // A suspend/restore carrying an escalation part OR an immediate-termination reason: all three
+    // fields describe a termination, so on any other action they describe something that did not
+    // happen. The DB has no `iff` CHECK on the exception reason (it is legitimately NULL on both
+    // paths of a terminate), which makes this backstop the only structural guard on that field.
     throw new ModerationEscalationNotApplicableError(input.action);
   }
 
@@ -213,6 +240,58 @@ export async function moderateMember(
   if (toStatus === null) {
     // Rejected BEFORE any write (AC2): a no-op never returns 200, and a re-suspend is a 409.
     throw new ModerationStateError(input.memberId, overlay.status, input.action);
+  }
+
+  // ── ⭐ (2b) STORY 10.20 (AC8, WS-D) — THE DWELL PRECONDITION, IN THE CALLER ───────────────────
+  //
+  // `epics.md:3857`: *"`nextModerationStatus('suspended','terminate')` returns `'terminated'`
+  // unconditionally, so two API calls seconds apart terminate a member — and because the suspension
+  // notice is a best-effort post-commit job, termination can precede its own notice."* This is what
+  // closes that.
+  //
+  // ⛔ IT LIVES HERE, NOT IN THE REDUCER (D5). `nextModerationStatus` stays pure, total and
+  // clock-free, and its `suspended --terminate--> terminated` arm remains LEGAL — what changes is
+  // WHEN it may be asked for, not whether it exists. Putting dwell inside it would fork the one
+  // place `legal_actions` is derived from and make the console's buttons disagree with the server.
+  //
+  // ⚠ RUNS INSIDE THE CALLER'S SCOPE TX, on the same client as the write. Checked outside, this is
+  // a TOCTOU — the 10.19 Panel-precondition lesson, applied a second time.
+  //
+  // ⭐ THE DWELL GOVERNS THE ORDINARY PATH ONLY (Q4.1). Principles 5 and 6 as adopted say
+  // termination *normally* follows suspension and notice *normally* precedes it; both carry an
+  // express exception. Recording the exception reason takes the immediate route.
+  let dwellPolicyVersion: string | null = null;
+  if (input.action === 'terminate') {
+    const immediateReason = (input.immediateTerminationReasonCiphertext ?? '').trim() || null;
+    const policy = await resolveModerationDwellPolicy(db, input.pariwarId, input.now);
+    // Pinned even when the exception is taken: which policy was IN FORCE is part of the record,
+    // independently of whether the ordinary path was the one used (FR-8 version pinning).
+    dwellPolicyVersion = policy?.policyClauseVersionId ?? null;
+
+    if (immediateReason === null) {
+      // The ORDINARY path. ⛔ `7` is never hard-coded: an unprovisioned registry REFUSES rather than
+      // falling back, because a sanction under a convention no Pariwar ratified is an unratified
+      // sanction imposed by a machine (Decision `2026-08-07-088` clause 2).
+      if (policy === null) {
+        throw new ModerationDwellPolicyUnprovisionedError(input.pariwarId);
+      }
+      const suspendedAt = await getProducingSuspensionActedAt(db, input.memberId);
+      // ⚠ The legality check above already established the member IS suspended, so a missing row
+      // here would mean the overlay and the decision table disagree — a real inconsistency, not a
+      // "not yet" — and it must not be silently treated as an elapsed dwell.
+      if (suspendedAt === null) {
+        throw new Error(
+          `[moderateMember] member '${input.memberId}' reads as suspended but has no suspension row`,
+        );
+      }
+      if (!isDwellElapsed(suspendedAt, policy.dwellDays, input.now)) {
+        throw new ModerationDwellNotElapsedError(
+          terminationAvailableAt(suspendedAt, policy.dwellDays),
+          policy.dwellDays,
+          policy.policyClauseVersionId,
+        );
+      }
+    }
   }
 
   // (3) The lifecycle state, for the audit shape. `from_state === to_state` on every moderation
@@ -249,6 +328,11 @@ export async function moderateMember(
       decisionNoteCiphertext: input.decisionNoteCiphertext,
       escalationInadequacyCiphertext: escalationInadequacy,
       escalationProportionalityCiphertext: escalationProportionality,
+      immediateTerminationReasonCiphertext:
+        (input.immediateTerminationReasonCiphertext ?? '').trim() || null,
+      // AC5 item 7: the FR-8 version pin, so a historical decision stays readable against the dwell
+      // policy that governed it rather than whatever is in force when it is later reviewed.
+      dwellPolicyVersion,
       evidenceRefs,
       // ⛔ Passed through UNCHANGED, `null` included. `?? 0` here would be the D1-B false-all-clear:
       // "unknown" would become "never restored" in a record a reviewer later relies on.

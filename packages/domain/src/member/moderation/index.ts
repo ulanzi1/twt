@@ -115,7 +115,19 @@ export {
   type EscalationJustificationPlaintext,
   normalizeEscalationPart,
   assertEscalationJustification,
+  assertImmediateTerminationReason,
 } from './escalation.js';
+
+export {
+  MODERATION_DWELL_POLICY_CLAUSE_ID,
+  ModerationDwellPolicyPayloadSchema,
+  type ModerationDwellPolicyPayload,
+  type ResolvedModerationDwellPolicy,
+  resolveModerationDwellPolicy,
+  terminationAvailableAt,
+  isDwellElapsed,
+  getProducingSuspensionActedAt,
+} from './dwell.js';
 
 export {
   MODERATION_INVALID_STATE_CODE,
@@ -125,6 +137,8 @@ export {
   MODERATION_ESCALATION_NOT_APPLICABLE_CODE,
   MODERATION_ESCALATION_RESTATEMENT_CODE,
   MODERATION_EVIDENCE_REF_INVALID_CODE,
+  MODERATION_DWELL_NOT_ELAPSED_CODE,
+  MODERATION_DWELL_UNPROVISIONED_CODE,
   type EscalationPart,
   ModerationStateError,
   ModerationReasonCodeInvalidError,
@@ -133,4 +147,6 @@ export {
   ModerationEscalationNotApplicableError,
   ModerationEscalationRestatementError,
   ModerationEvidenceRefInvalidError,
+  ModerationDwellNotElapsedError,
+  ModerationDwellPolicyUnprovisionedError,
 } from './errors.js';

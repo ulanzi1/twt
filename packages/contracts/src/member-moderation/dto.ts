@@ -83,6 +83,15 @@ export const ModerateMemberRequest = z
     escalation_proportionality: EscalationPart.optional(),
     /** References only, never prose (AC4). Absent ⇒ no references. */
     evidence_refs: EvidenceRefsDto.optional(),
+    /**
+     * `terminate` only — the recorded reason for invoking the IMMEDIATE-TERMINATION exception (AC8).
+     *
+     * ⭐ ITS PRESENCE SELECTS THE ROUTE. Absent ⇒ the ordinary path, gated by the 7-day dwell.
+     * Present ⇒ the exception the Panel preserved (Q4.1), which the dwell does not close.
+     * ⛔ A SEPARATE field from both escalation parts, never a re-use of either: they answer *why
+     * termination*, this answers *why now*. Collapsing them makes both unfalsifiable.
+     */
+    immediate_termination_reason: EscalationPart.optional(),
   })
   .strict();
 export type ModerateMemberRequest = z.output<typeof ModerateMemberRequest>;
@@ -139,6 +148,26 @@ export const ModerationHistoryResponse = z
      * never disagree with what the server will accept — the client re-implements no legality rules.
      */
     legal_actions: z.array(ModerationAction),
+    /**
+     * When the ORDINARY termination path opens for a currently-SUSPENDED member (Story 10.20, AC8) —
+     * the producing suspension's `acted_at` plus the registry dwell. `null` when the member is not
+     * suspended, when the dwell has already elapsed, or when the dwell policy is unprovisioned.
+     *
+     * ── ⭐ ADDITIVE, AND `legal_actions` IS DELIBERATELY NOT FILTERED ─────────────────────────────
+     * Legality and precondition are DIFFERENT FACTS. `legal_actions` derives purely from
+     * `nextModerationStatus`, so `terminate` stays in it for the whole dwell window; collapsing the
+     * two into one list would make a pure reducer's output depend on a clock, and would fork the one
+     * place four call sites derive legality from (D5). ✅ The Panel ruled this correction explicitly
+     * right (Q4.2): *"legal_actions should not silently be rewritten merely because the dwell
+     * exists."*
+     *
+     * ⛔ The console must NOT disable the Terminate control until this instant. The ruled shape
+     * (Q4.2) is: control visible and ENABLED, selecting it requires an explicit re-confirmation
+     * stating that the dwell is still open and that the actor is invoking the immediate-termination
+     * route, and the SERVER remains authoritative — the dialog obtains informed intent, it does not
+     * grant authority.
+     */
+    termination_available_at: Iso8601Datetime.nullable(),
     entries: z.array(ModerationHistoryEntryDto),
     /**
      * True when moderation actions exist beyond this page. An AUDIT TRAIL must never present a

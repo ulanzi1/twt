@@ -129,3 +129,44 @@ export function assertEscalationJustification(
 
   return { inadequacy, proportionality };
 }
+
+/**
+ * The IMMEDIATE-TERMINATION EXCEPTION REASON — Story 10.20 (Task 6; AC8, Q4.1).
+ *
+ * The Panel preserved an immediate path past the 7-day dwell, conditioned on *"the authorised actor
+ * records the reason/justification for using that exception"*. A recorded reason with no substance
+ * is not recorded, so the same floor applies.
+ *
+ * ── ⛔ THIS IS A THIRD FIELD, NOT A RE-USE OF EITHER ESCALATION PART ────────────────────────────
+ * The two-part test answers **why termination**; this answers **why NOW**. Collapsing them makes
+ * both unfalsifiable — a single paragraph could be read as satisfying whichever one is being
+ * questioned. It is `NULL` on the ordinary path and non-`NULL` exactly when the exception was
+ * invoked, which is what makes *"how often is the exception used?"* an answerable question. That is
+ * the point of recording it.
+ *
+ * Returns the trimmed reason, or `null` when the exception was not invoked.
+ *
+ * @throws ModerationEscalationNotApplicableError (→ 422) supplied on a non-termination.
+ * @throws ModerationEscalationRequiredError      (→ 422) supplied but below the substance floor.
+ */
+export function assertImmediateTerminationReason(
+  action: ModerationAction,
+  raw: string | null | undefined,
+): string | null {
+  const trimmed = (raw ?? '').trim();
+  if (action !== 'terminate') {
+    if (trimmed.length > 0) throw new ModerationEscalationNotApplicableError(action);
+    return null;
+  }
+  // ⚠ ABSENT IS LEGAL AND MEANS "the ordinary path" — this field is what SELECTS the immediate
+  // route, so requiring it would eliminate the ordinary route entirely.
+  if (trimmed.length === 0) return null;
+  if (trimmed.length < ESCALATION_PART_MIN_CHARS) {
+    throw new ModerationEscalationRequiredError(
+      'immediate_termination_reason',
+      'too_short',
+      ESCALATION_PART_MIN_CHARS,
+    );
+  }
+  return trimmed;
+}

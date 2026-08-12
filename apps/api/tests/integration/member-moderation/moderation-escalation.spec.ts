@@ -171,12 +171,27 @@ describe.skipIf(!hasDatabase)('moderation record model — escalation, evidence,
     return { p, memberId, client: a.client };
   }
 
+  /**
+   * ⚠ These terminations take the IMMEDIATE-TERMINATION EXCEPTION (Story 10.20, AC8), because this
+   * spec suspends and terminates seconds apart and a 7-day dwell now governs the ORDINARY path. The
+   * exception is a legitimate route the Panel preserved (Q4.1), not a test-only bypass — it is
+   * available where the authorised actor RECORDS THE REASON, which is what this default does.
+   * The dwell itself is pinned in `moderation-dwell.spec.ts` against the real seeded clause.
+   */
+  const IMMEDIATE_REASON =
+    'The forged documents are still circulating and each day of delay exposes further claims to the same fraud.';
+
   async function terminate(p: string, memberId: string, client: Client, extra: Json = {}) {
     await elevate(client, 'member_moderation_terminate');
     return client.inject({
       method: 'POST',
       url: `/api/v1/p/${p}/members/${memberId}/moderation/terminate`,
-      payload: { reason_code: 'r14-forgery', rationale: 'Terminated by the Panel.', ...extra },
+      payload: {
+        reason_code: 'r14-forgery',
+        rationale: 'Terminated by the Panel.',
+        immediate_termination_reason: IMMEDIATE_REASON,
+        ...extra,
+      },
     });
   }
 

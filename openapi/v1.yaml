@@ -6114,6 +6114,41 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
+        escalation_inadequacy:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        escalation_proportionality:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        evidence_refs:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum:
+                  - complaint
+                  - investigation
+                  - helpdesk-ticket
+                  - document
+                  - external-order
+              ref:
+                type: string
+                minLength: 1
+                maxLength: 64
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$
+            required:
+              - kind
+              - ref
+            additionalProperties: false
+          maxItems: 10
+        immediate_termination_reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
       required:
         - reason_code
         - rationale
@@ -6142,6 +6177,11 @@ components:
           items:
             type: string
             enum: *a41
+        termination_available_at:
+          type:
+            - string
+            - "null"
+          format: date-time
         entries:
           type: array
           items:
@@ -6186,6 +6226,7 @@ components:
         - current_reason_code
         - since
         - legal_actions
+        - termination_available_at
         - entries
         - has_more
       additionalProperties: false

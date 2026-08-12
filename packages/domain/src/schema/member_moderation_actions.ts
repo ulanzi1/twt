@@ -32,10 +32,12 @@
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
-import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { MemberId, ModerationActionId, PariwarId } from '../ids/index.js';
+import type { EvidenceRef } from '../member/moderation/evidence-refs.js';
 import { MODERATION_ACTIONS } from '../member/moderation/status.js';
 import {
   MODERATION_REASON_CODES,
@@ -85,9 +87,70 @@ export const memberModerationActions = pgTable(
     // Why, as a registry CODE. NON-PII; this is the value that also rides the event payload.
     reasonCode: moderationReasonCodeEnum('reason_code').notNull(),
 
-    // The mandatory free-text rationale, Tier-1 envelope ciphertext. NOT NULL: AC3 requires a
-    // rationale on EVERY action, not only on an "other" code.
-    rationaleCiphertext: piiColumn(1, 'member_moderation')('rationale_ciphertext').notNull(),
+    // The mandatory governance-grade DECISION NOTE, Tier-1 envelope ciphertext. NOT NULL — required
+    // on EVERY action, not only on an "other" code.
+    // ⚠ Renamed from `rationale_ciphertext` by migration 0099 (Story 10.20). The old name described
+    // a field asked to answer three questions at once; the record now separates them (see below).
+    // Postgres tracks column privileges BY ATTRIBUTE, so 0092's `GRANT UPDATE` and its RLS UPDATE
+    // policy followed the rename automatically — the RTBF scrub needed no re-grant.
+    decisionNoteCiphertext: piiColumn(1, 'member_moderation')('decision_note_ciphertext').notNull(),
+
+    // ── The two-part escalation justification (Niyamavali §8.6; Story 10.20 WS-C) ───────────────
+    // TWO columns, never one. The two parts must be SEPARATELY ANSWERABLE and neither pre-filled
+    // from the other; a single column (or a JSON blob) lets a UI concatenate them and satisfy a
+    // presence check with one paragraph. THE RECORD'S SHAPE IS THE ENFORCEMENT — the route guard
+    // and the UI guard are the second and third layers, not the first.
+    //   (a) why suspension is INADEQUATE   (b) why termination is PROPORTIONATE
+    // Both are NOT NULL iff `action = 'terminate'`, enforced by the
+    // `member_moderation_actions_escalation_iff_terminate` CHECK (added NOT VALID in 0099 — the
+    // table was already populated with `terminate` rows; see that migration's header).
+    // Tier-1: admin-authored prose about what a member allegedly did.
+    escalationInadequacyCiphertext: piiColumn(
+      1,
+      'member_moderation',
+    )('escalation_inadequacy_ciphertext'),
+    escalationProportionalityCiphertext: piiColumn(
+      1,
+      'member_moderation',
+    )('escalation_proportionality_ciphertext'),
+
+    // The recorded reason for invoking the IMMEDIATE-TERMINATION exception (Decision
+    // `2026-08-12-099` Q4.1). The Panel preserved an immediate path past the 7-day dwell, on
+    // condition that the authorised actor records WHY the exception applies.
+    // ⛔ This is a SEPARATE field from both escalation parts and must never be folded into either:
+    // they answer WHY TERMINATION, this answers WHY NOW. NULL on the ordinary path, non-NULL exactly
+    // when the exception was invoked — which is what makes "how often is the exception used?"
+    // answerable, and is the point of recording it. Tier-1.
+    immediateTerminationReasonCiphertext: piiColumn(
+      1,
+      'member_moderation',
+    )('immediate_termination_reason_ciphertext'),
+
+    // Evidence REFERENCES — never free text (§Story 10.20 AC4). Each entry is `{ kind, ref }` with a
+    // bounded `kind` and a restricted-charset `ref`; the DB backstops array-ness, the cardinality
+    // cap AND the per-entry shape (the last via the `moderation_evidence_refs_valid` IMMUTABLE
+    // function, because an inline subquery or set-returning function in a CHECK is a hard error).
+    // ⛔ NON-PII BY CONSTRUCTION: a reference is an identifier, not prose. That is precisely why the
+    // shape is enforced at the DB — the constraint is what keeps this column out of Tier-1.
+    // ⛔ No query filters or sorts on this column: JSONB `->>` yields TEXT and mis-compares.
+    evidenceRefs: jsonb('evidence_refs')
+      .$type<EvidenceRef[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+
+    // ── The two ruling-dependent NON-PII columns (Decision `2026-08-12-099`) ────────────────────
+    // Q5(a): the as-of-decision snapshot of `contribution.r7a_restorations_used`, so a later
+    // reviewer can test an exhaustion assertion against the data that existed THEN rather than
+    // re-deriving it against a moved projection.
+    // ⛔ NULL IS A FIRST-CLASS VALUE MEANING *UNKNOWN*, NEVER 0. R7(A) resolves to no clause version
+    // on an unprovisioned Pariwar and the fact is then OMITTED — recording 0 there would let
+    // "restorations exhausted" read as "never restored".
+    r7aRestorationsUsedSnapshot: integer('r7a_restorations_used_snapshot'),
+
+    // Q4.4: the version of the dwell policy clause that governed this decision. The Trust runs
+    // versioned per-Pariwar rules (FR-7); without this pin a later policy change cannot be read off
+    // a historical decision. ⛔ The duration itself is NEVER hard-coded in the service.
+    dwellPolicyVersion: text('dwell_policy_version'),
 
     // Who acted (the admin `users.user_id`) + their display-name SNAPSHOT at action time. No FK:
     // the attribution must survive a staff-record change, and the snapshot is the durable record.

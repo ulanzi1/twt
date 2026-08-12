@@ -101,6 +101,378 @@ export class ModerationRationaleRequiredError extends Error {
   }
 }
 
+// ── Story 10.20 (WS-C) — the two-part escalation justification, and evidence references ──────────
+//
+// Niyamavali §8.6 (Decision `2026-08-12-099`): *"Termination is an exceptional governance act, not a
+// stronger suspension."* A termination therefore carries TWO separately-answerable justifications —
+// (a) why suspension is INADEQUATE and (b) why termination is PROPORTIONATE — and neither may be
+// derived from the other. Migration 0099 enforces PRESENCE structurally
+// (`member_moderation_actions_escalation_iff_terminate`); the errors below carry the half a CHECK
+// constraint cannot express, because envelope encryption is non-deterministic and two identical
+// plaintexts produce different ciphertexts (a `CHECK (a <> b)` would prove nothing).
+
+/** Namespaced code for a missing / insubstantial escalation part on a `terminate` (HTTP 422). */
+export const MODERATION_ESCALATION_REQUIRED_CODE = 'member_moderation.escalation_required';
+
+/**
+ * Which field the error is about.
+ *
+ * ⚠ `immediate_termination_reason` is NOT a third half of the two-part test — it is a separate
+ * field answering a different question (*why now*, rather than *why termination*). It shares this
+ * error only because it shares the substance floor.
+ */
+export type EscalationPart = 'inadequacy' | 'proportionality' | 'immediate_termination_reason';
+
+/** Human-readable field names — the error has to be actionable, not merely typed. */
+const FIELD_DESCRIPTIONS: Record<EscalationPart, string> = {
+  inadequacy: 'the escalation justification part (a) — why suspension is inadequate —',
+  proportionality: 'the escalation justification part (b) — why termination is proportionate —',
+  immediate_termination_reason:
+    'the recorded reason for invoking the immediate-termination exception —',
+};
+
+/**
+ * Thrown when a `terminate` omits an escalation part, or supplies one below the substance floor.
+ *
+ * ⚠ The floor is a FLOOR, not a quality test: it exists to reject `"n/a"`, not to judge reasoning.
+ * The error names WHICH part failed and WHY, because "you must justify the escalation" is not
+ * actionable when two independent fields can each fail for two different reasons.
+ */
+export class ModerationEscalationRequiredError extends Error {
+  public readonly name = 'ModerationEscalationRequiredError';
+  public readonly code = MODERATION_ESCALATION_REQUIRED_CODE;
+  public constructor(
+    public readonly part: EscalationPart,
+    public readonly reason: 'missing' | 'too_short' | 'too_long',
+    // ⚠ Named `minChars` for both bounds — `.minChars` is asserted directly in
+    // moderation-dwell.test.ts, so the property name stays put. It holds the MAX when
+    // `reason === 'too_long'`; `toErrorResponse` picks the right JSON key per reason.
+    public readonly minChars: number,
+  ) {
+    super(
+      `${FIELD_DESCRIPTIONS[part]} is ${
+        reason === 'missing'
+          ? 'required for a termination'
+          : reason === 'too_short'
+            ? `too short (minimum ${minChars} characters)`
+            : `too long (maximum ${minChars} characters)`
+      }`,
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: {
+          part: this.part,
+          reason: this.reason,
+          ...(this.reason === 'too_long' ? { max_chars: this.minChars } : { min_chars: this.minChars }),
+        },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for an escalation part supplied on a non-`terminate` action (HTTP 422). */
+export const MODERATION_ESCALATION_NOT_APPLICABLE_CODE =
+  'member_moderation.escalation_not_applicable';
+
+/**
+ * Thrown when a `suspend` or `restore` carries an escalation part. The DB CHECK is an `iff`, so it
+ * bites both ways and such a row is impossible; this error is what makes the refusal READABLE
+ * instead of a `23514` leaking as a 500. An escalation justification explains a termination — on any
+ * other action it is a field that describes something that did not happen.
+ */
+export class ModerationEscalationNotApplicableError extends Error {
+  public readonly name = 'ModerationEscalationNotApplicableError';
+  public readonly code = MODERATION_ESCALATION_NOT_APPLICABLE_CODE;
+  public constructor(public readonly action: string) {
+    super(`an escalation justification is recorded only for a termination, never for a '${action}'`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { action: this.action },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for part (a) merely restating part (b) (HTTP 422). */
+export const MODERATION_ESCALATION_RESTATEMENT_CODE = 'member_moderation.escalation_restatement';
+
+/**
+ * Thrown when the two parts are the same text under normalization (AC6).
+ *
+ * ⛔ This can NEVER be a database constraint. `encryptModerationRationale` is a non-deterministic
+ * Tier-1 envelope encrypt, so the same plaintext yields different ciphertexts on every call and a
+ * `CHECK (a <> b)` would pass on two byte-identical answers. The comparison has exactly one
+ * legitimate home: the PLAINTEXT, in the route, before encryption — which is also where it is
+ * cheapest, since a doomed request never spends a KMS round-trip.
+ */
+export class ModerationEscalationRestatementError extends Error {
+  public readonly name = 'ModerationEscalationRestatementError';
+  public readonly code = MODERATION_ESCALATION_RESTATEMENT_CODE;
+  public constructor() {
+    super(
+      'part (a) must explain why SUSPENSION is inadequate; restating why termination is proportionate does not answer it',
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: { code: this.code, message: this.message, details: {}, request_id: requestId },
+    };
+  }
+}
+
+/** Namespaced code for an evidence reference that is not a reference (HTTP 422). */
+export const MODERATION_EVIDENCE_REF_INVALID_CODE = 'member_moderation.evidence_ref_invalid';
+
+/**
+ * Thrown when `evidence_refs` is not an array of `{ kind, ref }` identifiers within the cap (AC4).
+ *
+ * Evidence is *"references only, never free text"*. A sentence is REJECTED, never truncated — a
+ * truncation would silently store a prefix of the prose the rule exists to keep out.
+ */
+export class ModerationEvidenceRefInvalidError extends Error {
+  public readonly name = 'ModerationEvidenceRefInvalidError';
+  public readonly code = MODERATION_EVIDENCE_REF_INVALID_CODE;
+  public constructor(public readonly detail: string) {
+    super(`evidence references must be identifiers, not free text: ${detail}`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { detail: this.detail },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+// ── Story 10.20 (WS-D) — the termination DWELL precondition ──────────────────────────────────────
+//
+// Decision `2026-08-12-099` (Q4): a **7-day** dwell, from the **versioned registry**, separating a
+// suspension from the termination that follows it on the ORDINARY path. ⛔ The dwell does NOT make
+// immediate termination unavailable — principles 5 and 6 as adopted say termination *normally*
+// follows suspension and notice *normally* precedes it, and both carry an express exception.
+
+/** Namespaced code for a termination attempted before the dwell has elapsed (HTTP 409). */
+export const MODERATION_DWELL_NOT_ELAPSED_CODE = 'member_moderation.dwell_not_elapsed';
+
+/**
+ * Thrown when the ORDINARY termination path is not yet open and the immediate-termination exception
+ * was not validly invoked.
+ *
+ * ⚠ THIS IS NOT A BLANKET REFUSAL TO TERMINATE, and the message must not read like one. It means
+ * exactly: *the ordinary path is not yet open, and the exception was not invoked.* A trustee with
+ * grounds for immediate termination records the exception reason and proceeds.
+ *
+ * ⛔ Its code is deliberately DISTINCT from `MODERATION_INVALID_STATE_CODE`. "Too soon" and "illegal
+ * transition" are different facts about a member, and a trustee must be able to tell them apart:
+ * one resolves by waiting (or by invoking the exception), the other never does.
+ */
+export class ModerationDwellNotElapsedError extends Error {
+  public readonly name = 'ModerationDwellNotElapsedError';
+  public readonly code = MODERATION_DWELL_NOT_ELAPSED_CODE;
+  public constructor(
+    public readonly availableAt: Date,
+    public readonly dwellDays: number,
+    public readonly policyClauseVersionId: string,
+  ) {
+    super(
+      `the ordinary termination path opens ${dwellDays} days after the suspension (at ${availableAt.toISOString()}); to terminate before then, record a reason for invoking the immediate-termination exception`,
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: {
+          available_at: this.availableAt.toISOString(),
+          dwell_days: this.dwellDays,
+          dwell_policy_version: this.policyClauseVersionId,
+        },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for a Pariwar with no effective dwell clause (HTTP 503). */
+export const MODERATION_DWELL_UNPROVISIONED_CODE = 'member_moderation.dwell_policy_unprovisioned';
+
+/**
+ * Thrown when the ORDINARY termination path is asked for on a Pariwar with no effective
+ * `niy.moderation.dwell` clause.
+ *
+ * ⛔ **`7` IS NOT HARD-CODED AS A FALLBACK.** Decision `2026-08-07-088` clause 2 governs: imposing
+ * under a code default is explicitly rejected, because it is not a fallback but a sanction under a
+ * convention no Pariwar ratified — an unratified sanction imposed by a machine. The safe direction
+ * is to refuse the ordinary path and SAY WHY.
+ *
+ * ⚠ **503, NOT 409, AND THE DISTINCTION IS THE POINT.** A 409 would tell a trustee to wait, and
+ * waiting will never resolve this — no amount of elapsed time provisions a registry clause. This is
+ * a configuration gap an administrator fixes, which is what a 503 says. The sibling
+ * `niy.lock-in.policy` states its provisioning failure as a member-facing 503 for the same reason;
+ * the `niy.restoration-discipline.policy` sibling instead reports a sentinel precisely because it
+ * runs as a background imposition with no request to fail. This path HAS a request to fail.
+ *
+ * ⛔ It does NOT block the immediate-termination exception, which is a separate governance route and
+ * is not conditioned on this clause existing.
+ */
+export class ModerationDwellPolicyUnprovisionedError extends Error {
+  public readonly name = 'ModerationDwellPolicyUnprovisionedError';
+  public readonly code = MODERATION_DWELL_UNPROVISIONED_CODE;
+  public constructor(public readonly pariwarId: string) {
+    super(
+      'the moderation dwell policy is not provisioned for this Pariwar, so the ordinary termination path cannot be opened — this is a registry gap for an administrator to close, not a waiting period',
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { clause_id: 'niy.moderation.dwell' },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+// ── Story 10.20 (WS-E) — the append-only grounds ─────────────────────────────────────────────────
+
+/** Namespaced code for a moderation action that does not exist in this scope (HTTP 404). */
+export const MODERATION_ACTION_NOT_FOUND_CODE = 'member_moderation.action_not_found';
+
+/**
+ * Thrown when the action a ground would attach to has no row for this Pariwar + member.
+ *
+ * ⚠ 404, NOT 403, on a cross-tenant or cross-member id. RLS plus the explicit predicate means a
+ * mismatched combination simply has no row, and answering 403 would turn this endpoint into an
+ * existence oracle for another Pariwar's decisions.
+ */
+export class ModerationActionNotFoundError extends Error {
+  public readonly name = 'ModerationActionNotFoundError';
+  public readonly code = MODERATION_ACTION_NOT_FOUND_CODE;
+  public constructor(public readonly moderationActionId: string) {
+    super(`moderation action '${moderationActionId}' not found`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: { code: this.code, message: this.message, details: {}, request_id: requestId },
+    };
+  }
+}
+
+/** Namespaced code for a superseded-ground reference that resolves to nothing (HTTP 404). */
+export const MODERATION_GROUND_NOT_FOUND_CODE = 'member_moderation.ground_not_found';
+
+/** Thrown when the ground being superseded is not on the action the append targets. */
+export class ModerationGroundNotFoundError extends Error {
+  public readonly name = 'ModerationGroundNotFoundError';
+  public readonly code = MODERATION_GROUND_NOT_FOUND_CODE;
+  public constructor(public readonly groundId: string) {
+    super(`ground '${groundId}' is not a ground of this moderation action`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: { code: this.code, message: this.message, details: {}, request_id: requestId },
+    };
+  }
+}
+
+/** Namespaced code for any attempt to move the PRIMARY ground (HTTP 409). */
+export const MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE =
+  'member_moderation.primary_ground_immutable';
+
+/**
+ * Thrown when a request would produce a SECOND primary ground — whether by superseding the primary,
+ * by appending a fresh `is_primary` row, or both.
+ *
+ * ⛔ NOT a silent no-op, and ⛔ never a `23505` leaking as a 500. The partial unique index
+ * `(moderation_action_id) WHERE is_primary` is the BACKSTOP; this typed error is the INTERFACE.
+ * *"The primary ground is fixed at the action"* is a fact a trustee must be able to read off the
+ * error rather than infer from a stack trace.
+ *
+ * ⚠ The immutability is by CONSTRUCTION, not by policy: the partial unique index makes a second
+ * primary a `23505`, and clearing the existing row's flag would be an `UPDATE` that the table's
+ * `SELECT, INSERT`-only grant does not permit. There is no code path that could move it.
+ */
+export class ModerationPrimaryGroundImmutableError extends Error {
+  public readonly name = 'ModerationPrimaryGroundImmutableError';
+  public readonly code = MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE;
+  public constructor(public readonly moderationActionId: string) {
+    super(
+      'the primary ground is fixed at the moderation action and can never be superseded or replaced; append a SUPPORTING ground instead',
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { moderation_action_id: this.moderationActionId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for a supersede target that already has an active superseder (HTTP 409). */
+export const MODERATION_GROUND_ALREADY_SUPERSEDED_CODE =
+  'member_moderation.ground_already_superseded';
+
+/**
+ * Thrown when `supersedes_ground_id` names a ground that ANOTHER row already supersedes.
+ *
+ * ⛔ "At most one active superseder per target" — without this, two concurrent appends (or one
+ * caller who did not re-fetch the console state) could each successfully supersede the same
+ * ground, and a reader would have no way to tell which superseding entry is the current one.
+ *
+ * ⛔ NOT a silent no-op, and ⛔ never a `23505` leaking as a 500, same discipline as
+ * `ModerationPrimaryGroundImmutableError`. The pre-check here is the INTERFACE; the partial unique
+ * index `member_moderation_grounds_supersedes_target_idx` (migration 0100) is the BACKSTOP that
+ * closes the race the pre-check alone cannot — two concurrent appends can both pass the pre-check
+ * before either commits, but only one INSERT can win the index.
+ */
+export class ModerationGroundAlreadySupersededError extends Error {
+  public readonly name = 'ModerationGroundAlreadySupersededError';
+  public readonly code = MODERATION_GROUND_ALREADY_SUPERSEDED_CODE;
+  public constructor(public readonly groundId: string) {
+    super(`ground '${groundId}' already has an active superseding entry`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { ground_id: this.groundId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
 // NOTE: actor-display resolution (AC4's "missing display name BLOCKS the action" requirement,
 // [[project_admin_display_name_attribution]]) happens entirely at the API layer, BEFORE the
 // domain is ever called — `moderateMember`'s `actorDisplay` parameter is a required, non-nullable

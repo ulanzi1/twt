@@ -22,7 +22,19 @@ export {
 } from './enums.js';
 
 export {
-  MODERATION_RATIONALE_MAX_CHARS,
+  EVIDENCE_REF_KINDS,
+  type EvidenceRefKind,
+  EVIDENCE_REFS_MAX,
+  EVIDENCE_REF_MAX_LENGTH,
+  EVIDENCE_REF_PATTERN,
+  EvidenceRefDto,
+  EvidenceRefsDto,
+} from './evidence-refs.js';
+
+export {
+  MODERATION_DECISION_NOTE_MAX_CHARS,
+  MODERATION_ESCALATION_MAX_CHARS,
+  MODERATION_ESCALATION_MIN_CHARS,
   ModerateMemberRequest,
   ModerationActionResponse,
   ModerationHistoryEntryDto,
@@ -30,6 +42,9 @@ export {
   ModeratedMemberDto,
   ModeratedMembersListResponse,
   ModerationRationaleResponse,
+  AppendModerationGroundRequest,
+  ModerationGroundDto,
+  AppendModerationGroundResponse,
   ReasonCodeMetaDto,
   ReasonCodesListResponse,
 } from './dto.js';

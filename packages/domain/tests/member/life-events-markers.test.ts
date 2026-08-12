@@ -40,11 +40,14 @@ describe('Story 3.9 — event vocabulary wiring', () => {
     // family this file exercises, and the count moved 16 → 19 with them. Story 10.26's assertion is
     // a non-transition marker too (reducer identity, the `address_updated` precedent), so it joins
     // the same family and the count moved 19 → 20. Story 10.23's imposition is the SECOND overlay's
-    // one event — same identity family, same reason — taking it 20 → 21.
-    expect(MEMBER_EVENT_TYPES).toHaveLength(21);
+    // one event — same identity family, same reason — taking it 20 → 21. Story 10.20's
+    // `moderation.ground-appended` is an ACTION-LESS marker on the same overlay (a later finding
+    // ATTACHES to a decision; no status moves), so it joins the identity family too: 21 → 22.
+    expect(MEMBER_EVENT_TYPES).toHaveLength(22);
     expect(MEMBER_EVENT_TYPES).toContain('member.address_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.posting_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.restoration_discipline.imposed');
+    expect(MEMBER_EVENT_TYPES).toContain('member.moderation.ground-appended');
   });
 
   it('binds both new types to a payload schema (exhaustive registry)', () => {

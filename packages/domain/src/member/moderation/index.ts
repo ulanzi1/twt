@@ -52,6 +52,7 @@ export {
   reasonCodeAppliesTo,
   reasonCodesForAction,
   listReasonCodeMeta,
+  assertReasonCodeAppliesTo,
 } from './reason-codes.js';
 
 export {
@@ -59,6 +60,7 @@ export {
   ModerationSuspendedPayloadSchema,
   ModerationTerminatedPayloadSchema,
   ModerationRestoredPayloadSchema,
+  ModerationGroundAppendedPayloadSchema,
   MODERATION_EVENT_PAYLOAD_SCHEMAS,
 } from './events.js';
 
@@ -77,7 +79,6 @@ export {
   type ModerateMemberResult,
   moderationResourceLocator,
   assertRationalePresent,
-  assertReasonCodeAppliesTo,
   moderateMember,
 } from './write.js';
 
@@ -96,10 +97,75 @@ export {
 } from './read.js';
 
 export {
+  EVIDENCE_REF_KINDS,
+  type EvidenceRefKind,
+  EVIDENCE_REFS_MAX,
+  EVIDENCE_REF_MAX_LENGTH,
+  EVIDENCE_REF_PATTERN,
+  EVIDENCE_REFS_SQL_VALIDATOR,
+  evidenceRefSchema,
+  evidenceRefsSchema,
+  type EvidenceRef,
+  assertEvidenceRefs,
+} from './evidence-refs.js';
+
+export {
+  ESCALATION_PART_MIN_CHARS,
+  ESCALATION_PART_MAX_CHARS,
+  type EscalationJustificationInput,
+  type EscalationJustificationPlaintext,
+  normalizeEscalationPart,
+  assertEscalationJustification,
+  assertImmediateTerminationReason,
+} from './escalation.js';
+
+export {
+  MODERATION_GROUND_APPENDED_EVENT,
+  type ModerationGround,
+  type InsertPrimaryGroundInput,
+  type AppendGroundInput,
+  type AppendGroundResult,
+  insertPrimaryGround,
+  appendModerationGround,
+  listGroundsForActions,
+  moderationGroundResourceLocator,
+} from './grounds.js';
+
+export {
+  MODERATION_DWELL_POLICY_CLAUSE_ID,
+  ModerationDwellPolicyPayloadSchema,
+  type ModerationDwellPolicyPayload,
+  type ResolvedModerationDwellPolicy,
+  resolveModerationDwellPolicy,
+  terminationAvailableAt,
+  isDwellElapsed,
+  getProducingSuspensionActedAt,
+} from './dwell.js';
+
+export {
   MODERATION_INVALID_STATE_CODE,
   MODERATION_REASON_CODE_INVALID_CODE,
   MODERATION_RATIONALE_REQUIRED_CODE,
+  MODERATION_ESCALATION_REQUIRED_CODE,
+  MODERATION_ESCALATION_NOT_APPLICABLE_CODE,
+  MODERATION_ESCALATION_RESTATEMENT_CODE,
+  MODERATION_EVIDENCE_REF_INVALID_CODE,
+  MODERATION_DWELL_NOT_ELAPSED_CODE,
+  MODERATION_DWELL_UNPROVISIONED_CODE,
+  MODERATION_ACTION_NOT_FOUND_CODE,
+  MODERATION_GROUND_NOT_FOUND_CODE,
+  MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE,
+  type EscalationPart,
   ModerationStateError,
   ModerationReasonCodeInvalidError,
   ModerationRationaleRequiredError,
+  ModerationEscalationRequiredError,
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRestatementError,
+  ModerationEvidenceRefInvalidError,
+  ModerationDwellNotElapsedError,
+  ModerationDwellPolicyUnprovisionedError,
+  ModerationActionNotFoundError,
+  ModerationGroundNotFoundError,
+  ModerationPrimaryGroundImmutableError,
 } from './errors.js';

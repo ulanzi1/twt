@@ -71,7 +71,23 @@ export function ModerationSection({ pariwarId, memberId }: ModerationSectionProp
     try {
       await moderate.mutateAsync({
         action: input.action,
-        body: { reason_code: input.reasonCode, rationale: input.rationale },
+        // ⚠ The camelCase→snake_case walk for EVERY new field (Story 10.20, AC12) —
+        // [[feedback_story_validate_footguns]]. Each is sent only when present: the server 422s an
+        // escalation part or an exception reason on a non-termination.
+        body: {
+          reason_code: input.reasonCode,
+          rationale: input.rationale,
+          ...(input.escalationInadequacy !== undefined
+            ? { escalation_inadequacy: input.escalationInadequacy }
+            : {}),
+          ...(input.escalationProportionality !== undefined
+            ? { escalation_proportionality: input.escalationProportionality }
+            : {}),
+          ...(input.evidenceRefs !== undefined ? { evidence_refs: input.evidenceRefs } : {}),
+          ...(input.immediateTerminationReason !== undefined
+            ? { immediate_termination_reason: input.immediateTerminationReason }
+            : {}),
+        },
       });
       setOtp('');
       setClearSignal((n) => n + 1);

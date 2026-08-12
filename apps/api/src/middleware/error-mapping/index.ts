@@ -29,6 +29,16 @@ import {
   DraftSelfReviewError,
   DraftStateError,
   InvalidPariwarScopeError,
+  ModerationActionNotFoundError,
+  ModerationDwellNotElapsedError,
+  ModerationDwellPolicyUnprovisionedError,
+  ModerationGroundAlreadySupersededError,
+  ModerationGroundNotFoundError,
+  ModerationPrimaryGroundImmutableError,
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRequiredError,
+  ModerationEscalationRestatementError,
+  ModerationEvidenceRefInvalidError,
   ModerationRationaleRequiredError,
   ModerationReasonCodeInvalidError,
   ModerationStateError,
@@ -68,6 +78,36 @@ const KYC_ERROR_STATUS: Readonly<Record<string, number>> = {
   certificate_stale: 422,
   provider_unavailable: 502,
 };
+
+/**
+ * Story 10.20 (WS-A/WS-C) — the record model's typed refusals that all resolve to 422. Each says
+ * the request is malformed as a GOVERNANCE RECORD, not that the state forbids the action (that
+ * stays the 409 `ModerationStateError` mapping, and the two must remain tellable apart):
+ *   ModerationEscalationRequiredError      → a termination omits part (a) or (b), or one is below
+ *                                            the substance floor; the error names WHICH part and WHY
+ *   ModerationEscalationNotApplicableError → a suspend/restore carries an escalation part — the
+ *                                            0099 CHECK is an `iff` and bites both ways; this keeps
+ *                                            a 23514 from surfacing as a 500
+ *   ModerationEscalationRestatementError   → part (a) merely restates part (b) under normalization
+ *                                            — a plaintext-only check, envelope encryption is
+ *                                            non-deterministic
+ *   ModerationEvidenceRefInvalidError      → evidence must be bounded `{kind, ref}` identifiers,
+ *                                            never prose
+ * Grouped rather than four identical if-blocks — same status, same `toErrorResponse` call — so a
+ * future addition to this family cannot get pasted with the wrong status code.
+ */
+const MODERATION_RECORD_SHAPE_ERROR_CLASSES = [
+  ModerationEscalationRequiredError,
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRestatementError,
+  ModerationEvidenceRefInvalidError,
+] as const;
+
+function isModerationRecordShapeError(
+  error: unknown,
+): error is InstanceType<(typeof MODERATION_RECORD_SHAPE_ERROR_CLASSES)[number]> {
+  return MODERATION_RECORD_SHAPE_ERROR_CLASSES.some((ErrorClass) => error instanceof ErrorClass);
+}
 
 function envelope(code: string, message: string, requestId: string, details?: unknown): ErrorResponseShape {
   return {
@@ -246,6 +286,64 @@ export function errorMappingHandler(
   }
   if (error instanceof ModerationRationaleRequiredError) {
     void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // Story 10.20 (WS-A/WS-C) — see MODERATION_RECORD_SHAPE_ERROR_CLASSES above for the per-class
+  // breakdown. All 422: each says the request is malformed as a GOVERNANCE RECORD, not that the
+  // state forbids the action (that stays the 409 above, and the two must remain tellable apart).
+  if (isModerationRecordShapeError(error)) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // Story 10.20 (WS-D) — the dwell precondition. ⚠ The two differ in KIND, not in severity:
+  //   ModerationDwellNotElapsedError            → 409 …dwell_not_elapsed. DISTINCT from
+  //                                               `invalid_state` on purpose: "too soon" and
+  //                                               "illegal transition" are different facts, and this
+  //                                               one resolves by waiting OR by recording a reason
+  //                                               for the immediate-termination exception. It is NOT
+  //                                               a blanket refusal to terminate during the dwell.
+  //   ModerationDwellPolicyUnprovisionedError   → 503 …dwell_policy_unprovisioned. NOT a 409,
+  //                                               because no amount of waiting provisions a registry
+  //                                               clause — this is a configuration gap an admin
+  //                                               closes, and a 409 would send a trustee away to
+  //                                               wait for something that will never arrive.
+  if (error instanceof ModerationDwellNotElapsedError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationDwellPolicyUnprovisionedError) {
+    void reply.status(503).send(error.toErrorResponse(requestId));
+    return;
+  }
+  // Story 10.20 (WS-E) — the append-only grounds.
+  //   ModerationActionNotFoundError         → 404 …action_not_found. 404-NOT-403 on a cross-tenant
+  //                                           or cross-member id: answering 403 would turn this into
+  //                                           an existence oracle for another Pariwar's decisions.
+  //   ModerationGroundNotFoundError         → 404 …ground_not_found (the superseded ground is not on
+  //                                           this action).
+  //   ModerationPrimaryGroundImmutableError → 409 …primary_ground_immutable. The partial unique index
+  //                                           is the BACKSTOP; this is the INTERFACE. ⛔ A 23505
+  //                                           must never reach a caller as a 500 — "the primary
+  //                                           ground is fixed at the action" is a fact a trustee has
+  //                                           to be able to read off the error.
+  //   ModerationGroundAlreadySupersededError → 409 …ground_already_superseded. Same backstop/interface
+  //                                            split, against `member_moderation_grounds_supersedes_
+  //                                            target_idx` (migration 0100) — at most one active
+  //                                            superseder per target.
+  if (error instanceof ModerationActionNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationGroundNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationPrimaryGroundImmutableError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationGroundAlreadySupersededError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
     return;
   }
 

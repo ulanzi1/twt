@@ -13,6 +13,7 @@ import {
   REASON_CODE_REGISTRY,
   RESTORE_REASON_CODES,
   isReasonCode,
+  listReasonCodeMeta,
   reasonCodeAppliesTo,
   reasonCodeMeta,
   reasonCodesForAction,
@@ -131,7 +132,7 @@ describe('moderateMember — the appliesTo guard fires before any DB access (rev
   const BASE = {
     memberId: '11111111-1111-4111-8111-111111111111' as never,
     pariwarId: '22222222-2222-4222-8222-222222222222' as never,
-    rationaleCiphertext: 'enc:v1:not-a-real-envelope',
+    decisionNoteCiphertext: 'enc:v1:not-a-real-envelope',
     actorId: '33333333-3333-4333-8333-333333333333',
     actorDisplay: 'Trustee Name',
     now: new Date('2026-08-03T00:00:00.000Z'),
@@ -180,5 +181,56 @@ describe('moderateMember — the appliesTo guard fires before any DB access (rev
         reasonCode: 'r14-forgery',
       }),
     ).rejects.not.toBeInstanceOf(ModerationReasonCodeInvalidError);
+  });
+});
+
+
+// ── Story 10.20 (Task 8; AC10, WS-F) — the `ordinarilyResultsIn` GUIDANCE ────────────────────────
+describe('ordinarilyResultsIn — ratified guidance, never policy (AC10)', () => {
+  it('⚖ carries the Q6-RATIFIED values: `suspend` for all seven grounds, `null` for all three restores', () => {
+    // ⛔ These are governance data (Decision `2026-08-12-099`), not an implementation default. A dev
+    // agent may not substitute its own — which is precisely why they are asserted literally here
+    // rather than derived from `appliesTo`.
+    for (const code of MODERATION_REASON_CODES) {
+      expect(REASON_CODE_REGISTRY[code].ordinarilyResultsIn, code).toBe('suspend');
+    }
+    for (const code of RESTORE_REASON_CODES) {
+      expect(REASON_CODE_REGISTRY[code].ordinarilyResultsIn, code).toBeNull();
+    }
+  });
+
+  it('⭐ every moderation ground says `suspend` even though each may equally justify a TERMINATION', () => {
+    // §8.6 principle 2: *"a reason code does not itself terminate a member; the Trustee Panel
+    // decides whether the actual case warrants suspension or termination."* The Panel escalates by
+    // RECORDING WHY (the two-part escalation test), not by the registry pre-empting it. A registry
+    // that guided toward termination would move the decision — FR-57's prohibition is a prohibition
+    // on the decision moving.
+    for (const code of MODERATION_REASON_CODES) {
+      expect(REASON_CODE_REGISTRY[code].appliesTo).toContain('terminate');
+      expect(REASON_CODE_REGISTRY[code].ordinarilyResultsIn).not.toBe('terminate');
+    }
+  });
+
+  it('⛔ the field is present on EVERY code — required, so a ground cannot ship without guidance', () => {
+    // The `satisfies Record<ReasonCode, ReasonCodeMeta>` makes this a COMPILE error, but the value
+    // half needs a runtime pin: an OPTIONAL field would let a new moderation ground ship with no
+    // guidance silently, which is the exact discipline this AC invokes.
+    for (const m of listReasonCodeMeta()) {
+      expect(m, m.code).toHaveProperty('ordinarilyResultsIn');
+    }
+  });
+
+  it('⛔ WS-F does NOT reopen the vocabulary boundary — `appliesTo` is unchanged', () => {
+    // `epics.md:3866` forbids narrowing `appliesTo`. A dev agent that "satisfies FR-56" by narrowing
+    // `MODERATION_APPLIES_TO` has violated the epic AC and pre-empted the Panel — the enumeration
+    // lives in Niyamavali §8.5 (governance text), not in this registry.
+    for (const code of MODERATION_REASON_CODES) {
+      expect([...REASON_CODE_REGISTRY[code].appliesTo]).toEqual(['suspend', 'terminate']);
+    }
+    for (const code of RESTORE_REASON_CODES) {
+      expect([...REASON_CODE_REGISTRY[code].appliesTo]).toEqual(['restore']);
+    }
+    // And the vocabulary itself is frozen at TEN — no code added, none removed.
+    expect(ALL_REASON_CODES).toHaveLength(10);
   });
 });

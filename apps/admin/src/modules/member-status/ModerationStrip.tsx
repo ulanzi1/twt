@@ -21,7 +21,12 @@
 // (sessions revoked, rejoin locked 12 months) — never a generic "are you sure?".
 
 import {
-  MODERATION_RATIONALE_MAX_CHARS,
+  EVIDENCE_REF_KINDS,
+  EVIDENCE_REF_PATTERN,
+  MODERATION_DECISION_NOTE_MAX_CHARS,
+  MODERATION_ESCALATION_MAX_CHARS,
+  MODERATION_ESCALATION_MIN_CHARS,
+  type EvidenceRefDto,
   type ModerationAction,
   type ModerationHistoryResponse,
   type ReasonCode,
@@ -36,12 +41,42 @@ import { moderationEn as t } from './i18n-en.js';
 // component whose earlier review fix was deleting exactly that pattern from the reason-code map.
 // It now comes from the contracts DTO itself, so the textarea's cap and the server's `.max()` are
 // one number and cannot drift.
-export { MODERATION_RATIONALE_MAX_CHARS };
+export { MODERATION_DECISION_NOTE_MAX_CHARS };
+
+/**
+ * Which control a validation error belongs to — `reasonCode`/`rationale` render inline beside
+ * their own field; `group` covers the escalation/evidence controls, which belong to a group rather
+ * than any single field (review follow-up: see the `validationError` state declaration).
+ */
+type ValidationErrorField = 'reasonCode' | 'rationale' | 'group';
+interface ValidationErrorState {
+  field: ValidationErrorField;
+  message: string;
+}
 
 export interface ModerationSubmit {
   action: ModerationAction;
   reasonCode: ReasonCode;
+  /** The governance-grade DECISION NOTE (renamed from `rationale` by Story 10.20, AC12). */
   rationale: string;
+  // ── Story 10.20 — `terminate` only ────────────────────────────────────────────────────────────
+  /** (a) why SUSPENSION is inadequate. */
+  escalationInadequacy?: string;
+  /** (b) why TERMINATION is proportionate. ⛔ Never derived from (a). */
+  escalationProportionality?: string;
+  /** References only, never prose (AC4). */
+  evidenceRefs?: EvidenceRefDto[];
+  /** The recorded reason for invoking the immediate-termination exception (AC8). */
+  immediateTerminationReason?: string;
+}
+
+/** Normalize for the anti-restatement compare — mirrors the domain's `normalizeEscalationPart`. */
+function normalizeForCompare(value: string): string {
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 }
 
 export interface ModerationStripProps {
@@ -81,9 +116,41 @@ export function reasonCodesFor(
   return reasonCodes.filter((m) => m.applies_to.includes(action)).map((m) => m.code);
 }
 
+/**
+ * ⚖ The Q6-ratified guidance for a code, or `null` when the code carries none (AC10).
+ *
+ * ⛔ `null` is a FIRST-CLASS ANSWER, not a missing value: on the three restore grounds it means
+ * *this code carries no sanction guidance because it justifies no sanction*, and the UI must render
+ * NOTHING there — not "n/a", not an empty chip.
+ */
+export function guidanceFor(
+  code: ReasonCode | '',
+  reasonCodes: readonly ReasonCodeMetaDto[],
+): ModerationAction | null {
+  if (code === '') return null;
+  return reasonCodes.find((m) => m.code === code)?.ordinarily_results_in ?? null;
+}
+
+/** Label a guidance action with the standing it produces, reusing the existing status copy. */
+function statusForGuidance(action: ModerationAction): 'none' | 'suspended' | 'terminated' {
+  if (action === 'suspend') return 'suspended';
+  if (action === 'terminate') return 'terminated';
+  return 'none';
+}
+
 /** Resolve a code's label from server metadata; a readable fallback (never a raw slug) pre-fetch. */
 export function reasonCodeLabel(code: string, reasonCodes: readonly ReasonCodeMetaDto[]): string {
   return reasonCodes.find((m) => m.code === code)?.label ?? code.replace(/-/g, ' ');
+}
+
+/**
+ * Render one evidence reference as `<translated kind>: <ref>` — the ONE formatting used by both
+ * the action-level and the ground-level history lists (review follow-up: the ground list previously
+ * dropped `kind` entirely, and the action list showed the RAW untranslated slug instead of running
+ * it through `t.evidenceKinds`, the same lookup the form's own `<select>` already used).
+ */
+function formatEvidenceRef(ref: EvidenceRefDto): string {
+  return `${t.evidenceKinds[ref.kind] ?? ref.kind}: ${ref.ref}`;
 }
 
 export function ModerationStrip({
@@ -98,15 +165,37 @@ export function ModerationStrip({
   const [action, setAction] = useState<ModerationAction | null>(null);
   const [reasonCode, setReasonCode] = useState<ReasonCode | ''>('');
   const [rationale, setRationale] = useState('');
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // ⛔ TWO INDEPENDENT PIECES OF STATE, and that is the enforcement at this layer. One shared value,
+  // or a "copy from (b)" affordance, would let a single paragraph satisfy both halves of a test
+  // whose entire point is that they are separately answerable (`epics.md:3851`, D2).
+  const [escalationInadequacy, setEscalationInadequacy] = useState('');
+  const [escalationProportionality, setEscalationProportionality] = useState('');
+  // ⚠ `key`, a client-only stable identity — NEVER sent to the server (stripped when building the
+  // submit payload). Review follow-up: rows were previously keyed by array INDEX, which React can
+  // misassociate across add/remove (removing a middle row shifts every later row's index, so React
+  // reuses that DOM node's live input state for a different row's data — a textbook index-as-key
+  // bug, especially costly here since every row holds live user-typed text).
+  const nextEvidenceRowKey = useRef(0);
+  const [evidenceRefs, setEvidenceRefs] = useState<(EvidenceRefDto & { key: number })[]>([]);
+  const [immediateReason, setImmediateReason] = useState('');
+  // ⚠ Which CONTROL an error belongs to, not just its text (review follow-up: the render sites
+  // previously matched on `validationError === t.reasonRequiredError`-style string identity, which
+  // silently breaks — hides or double-renders — if a translation edit ever makes two messages equal).
+  const [validationError, setValidationError] = useState<ValidationErrorState | null>(null);
   const [pending, setPending] = useState<ModerationAction | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
 
   const clearForm = useCallback((): void => {
     setAction(null);
     setReasonCode('');
     setRationale('');
+    setEscalationInadequacy('');
+    setEscalationProportionality('');
+    setEvidenceRefs([]);
+    setImmediateReason('');
     setValidationError(null);
+    setConfirmError(null);
     setPending(null);
   }, []);
 
@@ -120,7 +209,25 @@ export function ModerationStrip({
     clearForm();
   }, [clearSignal, clearForm]);
 
+  // ⛔ `legal_actions` is the SERVER's, and it is NOT filtered by the dwell (Q4.2) — legality and
+  // precondition are different facts. `terminate` therefore stays enabled for the whole dwell
+  // window, which is exactly the ruled shape: the control is offered, and the re-confirmation below
+  // is what makes taking it INFORMED.
   const legal = new Set<ModerationAction>(moderation.legal_actions);
+
+  /**
+   * True while the ordinary termination path has not yet opened (AC8).
+   *
+   * ⚠ FAILS TOWARD SHOWING THE WARNING, not past it (review follow-up). `new Date(malformed)
+   * .getTime()` is `NaN`, and a bare `NaN > Date.now()` is `false` — which would silently skip the
+   * whole re-confirmation/immediate-reason flow this field exists to require. An unparseable value
+   * is a data problem, not evidence the dwell has elapsed, so it is treated as OPEN.
+   */
+  const dwellOpen = ((): boolean => {
+    if (moderation.termination_available_at === null) return false;
+    const at = new Date(moderation.termination_available_at).getTime();
+    return Number.isNaN(at) || at > Date.now();
+  })();
 
   /** Choose an action — reset a reason code the new action's `appliesTo` does not admit. */
   const chooseAction = useCallback(
@@ -147,19 +254,57 @@ export function ModerationStrip({
     return () => document.removeEventListener('keydown', onKey);
   }, [pending]);
 
+  // ── Story 10.20 (AC6) — the two-part escalation test, on `terminate` ONLY ─────────────────────
+  // ⚠ THIS IS THE THIRD LAYER, NOT THE FIRST. The record's SHAPE is the first (migration 0099's
+  // `escalation_iff_terminate` CHECK) and the route guard is the second. Client validation here is
+  // for the operator's benefit — it must never be mistaken for the boundary.
+  //
+  // ⚠ SHARED between `requestSubmit` and `confirm()` (review follow-up): the confirmation modal is
+  // an overlay, not a route change, so the escalation/evidence textareas stay mounted underneath it
+  // while it's open. `confirm()` previously re-read this live state without re-running these checks
+  // — an operator editing a field between opening the dialog and clicking Confirm could send an
+  // already-invalid value. Not a security gap (the server re-validates and 422s), but this closes
+  // the gap between "the client validated" and "the client actually sent what it validated."
+  const validateEscalationGroup = (): string | null => {
+    const a = escalationInadequacy.trim();
+    const b = escalationProportionality.trim();
+    if (a === '' || b === '') return t.escalationRequiredError;
+    if (a.length < MODERATION_ESCALATION_MIN_CHARS || b.length < MODERATION_ESCALATION_MIN_CHARS) {
+      return t.escalationTooShortError;
+    }
+    if (normalizeForCompare(a) === normalizeForCompare(b)) return t.escalationRestatementError;
+    // Every reference must be an identifier. ⛔ A prose `ref` is REJECTED, never truncated — a
+    // truncation would silently store a prefix of the prose the rule exists to keep out.
+    if (evidenceRefs.some((r) => r.ref.trim() === '' || !EVIDENCE_REF_PATTERN.test(r.ref.trim()))) {
+      return t.evidenceInvalidError;
+    }
+    // A (kind, ref) pair listed twice pads the record with a redundant entry — reject rather than
+    // silently store both.
+    const evidenceKeys = evidenceRefs.map((r) => `${r.kind}:${r.ref.trim()}`);
+    if (new Set(evidenceKeys).size !== evidenceKeys.length) return t.evidenceDuplicateError;
+    return null;
+  };
+
   /** Validate, then open the confirmation modal. */
   const requestSubmit = (): void => {
     if (action === null) return;
     if (reasonCode === '') {
-      setValidationError(t.reasonRequiredError);
+      setValidationError({ field: 'reasonCode', message: t.reasonRequiredError });
       return;
     }
     // The rationale is required on EVERY action (AC3) — deliberately stricter than the UX
     // `<ReasonCodeDropdown>` "other-text-required" state, which asks for text only on an "other"
     // code. A structured code alone cannot explain a suspension to the member who receives it.
     if (rationale.trim() === '') {
-      setValidationError(t.rationaleRequiredError);
+      setValidationError({ field: 'rationale', message: t.rationaleRequiredError });
       return;
+    }
+    if (action === 'terminate') {
+      const groupError = validateEscalationGroup();
+      if (groupError !== null) {
+        setValidationError({ field: 'group', message: groupError });
+        return;
+      }
     }
     setValidationError(null);
     setPending(action);
@@ -168,8 +313,52 @@ export function ModerationStrip({
   /** The modal's Confirm — fires the write. Always closes so a rejection reveals the error below. */
   const confirm = async (): Promise<void> => {
     if (pending === null || reasonCode === '') return;
+    // ⛔ A recorded reason with no substance is not recorded (AC8). The server applies the same floor
+    // and is the authority; this keeps the operator from losing the dialog to a 422.
+    if (pending === 'terminate' && dwellOpen) {
+      const reason = immediateReason.trim();
+      if (reason.length < MODERATION_ESCALATION_MIN_CHARS) {
+        setConfirmError(t.immediateReasonRequiredError);
+        return;
+      }
+    }
+    // Re-validate the escalation/evidence group (review follow-up — see `validateEscalationGroup`'s
+    // comment): the underlying form stays mounted behind this overlay, so a field edited after
+    // `requestSubmit` validated it must be checked again before it is actually sent. Closes the
+    // modal on failure — there is no in-modal slot for these fields, only for the immediate reason
+    // above — so the SAME group-level error `requestSubmit` would have shown now appears below.
+    if (pending === 'terminate') {
+      const groupError = validateEscalationGroup();
+      if (groupError !== null) {
+        setValidationError({ field: 'group', message: groupError });
+        setPending(null);
+        return;
+      }
+    }
     try {
-      await onSubmit({ action: pending, reasonCode, rationale: rationale.trim() });
+      const isTerminate = pending === 'terminate';
+      await onSubmit({
+        action: pending,
+        reasonCode,
+        rationale: rationale.trim(),
+        // ⛔ The escalation parts, the evidence and the exception reason ride a TERMINATION only —
+        // on any other action they describe something that did not happen, and the server 422s them.
+        ...(isTerminate
+          ? {
+              escalationInadequacy: escalationInadequacy.trim(),
+              escalationProportionality: escalationProportionality.trim(),
+              ...(evidenceRefs.length > 0
+                ? {
+                    // `key` is client-only reconciliation state — never built into the wire payload.
+                    evidenceRefs: evidenceRefs.map((r) => ({ kind: r.kind, ref: r.ref.trim() })),
+                  }
+                : {}),
+              ...(immediateReason.trim() !== ''
+                ? { immediateTerminationReason: immediateReason.trim() }
+                : {}),
+            }
+          : {}),
+      });
       // Cleared on the DIRECT success path. The step-up path throws here and is cleared by
       // `clearSignal` once the parent's retry commits — see the prop's note.
       clearForm();
@@ -259,9 +448,22 @@ export function ModerationStrip({
                 </option>
               ))}
             </select>
-            {validationError === t.reasonRequiredError && (
+            {validationError?.field === 'reasonCode' && (
               <p className="text-xs text-status-fail-fg" role="alert" data-testid="moderation-reason-error">
-                {validationError}
+                {validationError.message}
+              </p>
+            )}
+            {/*
+              ⚖ Q6-ratified GUIDANCE (AC10). ⛔ Rendered as TEXT ONLY — never a default selection, a
+              pre-selected action, a severity score or a recommendation: FR-57's prohibition is a
+              prohibition ON THE DECISION MOVING, and a pre-selected sanction moves it.
+              ⛔ Rendered ONLY where the value is non-null. On the three restore grounds it is `null`
+              — a code that justifies no sanction carries no sanction guidance — and NOTHING is
+              rendered there: not "n/a", not an empty chip.
+            */}
+            {guidanceFor(reasonCode, reasonCodes) !== null && (
+              <p className="text-xs opacity-60" data-testid="moderation-reason-guidance">
+                {t.guidancePrefix}: {t.status[statusForGuidance(guidanceFor(reasonCode, reasonCodes)!)]}
               </p>
             )}
           </div>
@@ -275,7 +477,7 @@ export function ModerationStrip({
               id="moderation-rationale"
               data-testid="moderation-rationale"
               className="rounded border p-1 text-sm"
-              maxLength={MODERATION_RATIONALE_MAX_CHARS}
+              maxLength={MODERATION_DECISION_NOTE_MAX_CHARS}
               placeholder={t.rationalePlaceholder}
               value={rationale}
               disabled={processing}
@@ -288,16 +490,173 @@ export function ModerationStrip({
             <p id="moderation-rationale-note" className="text-xs opacity-60">
               {t.rationaleEncryptedNote}
             </p>
-            {validationError === t.rationaleRequiredError && (
+            {validationError?.field === 'rationale' && (
               <p
                 className="text-xs text-status-fail-fg"
                 role="alert"
                 data-testid="moderation-rationale-error"
               >
-                {validationError}
+                {validationError.message}
               </p>
             )}
           </div>
+
+          {/*
+            ── Story 10.20 (AC6) — the two-part escalation justification, `terminate` ONLY ────────
+            ⛔ TWO SEPARATE CONTROLS with no copy-across affordance and no shared state. `epics.md`
+            requires the parts be separately answerable and neither pre-filled from the other, and a
+            single control (or a "same as above" button) defeats that at the layer the operator
+            actually touches. Pinned by a RENDER test, not only a view-model test — the
+            `epics.md:3729` finding against Story 10.10 was that "AC9's prose reached nobody because
+            tests asserted the view-model and never the render".
+          */}
+          {action === 'terminate' && (
+            <fieldset
+              className="flex flex-col gap-2 rounded border p-2"
+              data-testid="moderation-escalation"
+            >
+              <legend className="px-1 text-xs font-semibold">{t.escalationHeading}</legend>
+              <p className="text-xs opacity-70">{t.escalationIntro}</p>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium" htmlFor="moderation-escalation-inadequacy">
+                  {t.escalationInadequacyLabel}
+                  <span aria-hidden> *</span>
+                </label>
+                <textarea
+                  id="moderation-escalation-inadequacy"
+                  data-testid="moderation-escalation-inadequacy"
+                  className="rounded border p-1 text-sm"
+                  maxLength={MODERATION_ESCALATION_MAX_CHARS}
+                  placeholder={t.escalationInadequacyPlaceholder}
+                  value={escalationInadequacy}
+                  disabled={processing}
+                  onChange={(e) => {
+                    setEscalationInadequacy(e.target.value);
+                    setValidationError(null);
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-xs font-medium"
+                  htmlFor="moderation-escalation-proportionality"
+                >
+                  {t.escalationProportionalityLabel}
+                  <span aria-hidden> *</span>
+                </label>
+                <textarea
+                  id="moderation-escalation-proportionality"
+                  data-testid="moderation-escalation-proportionality"
+                  className="rounded border p-1 text-sm"
+                  maxLength={MODERATION_ESCALATION_MAX_CHARS}
+                  placeholder={t.escalationProportionalityPlaceholder}
+                  value={escalationProportionality}
+                  disabled={processing}
+                  onChange={(e) => {
+                    setEscalationProportionality(e.target.value);
+                    setValidationError(null);
+                  }}
+                />
+              </div>
+            </fieldset>
+          )}
+
+          {/*
+            ── Story 10.20 (AC4) — evidence REFERENCES ───────────────────────────────────────────
+            ⛔ NOT a free-text evidence box. Each row is a bounded `kind` plus a restricted-charset
+            `ref`, so prose is UNREPRESENTABLE rather than merely discouraged.
+          */}
+          {action === 'terminate' && (
+            <fieldset className="flex flex-col gap-2 rounded border p-2" data-testid="moderation-evidence">
+              <legend className="px-1 text-xs font-semibold">{t.evidenceHeading}</legend>
+              <p className="text-xs opacity-70">{t.evidenceIntro}</p>
+              {evidenceRefs.map((row, i) => (
+                <div key={row.key} className="flex flex-wrap items-end gap-2">
+                  <label className="sr-only" htmlFor={`moderation-evidence-kind-${i}`}>
+                    {t.evidenceKindLabel}
+                  </label>
+                  <select
+                    id={`moderation-evidence-kind-${i}`}
+                    data-testid={`moderation-evidence-kind-${i}`}
+                    className="rounded border p-1 text-sm"
+                    value={row.kind}
+                    disabled={processing}
+                    onChange={(e) => {
+                      const kind = e.target.value as EvidenceRefDto['kind'];
+                      setEvidenceRefs((prev) => prev.map((r, j) => (j === i ? { ...r, kind } : r)));
+                      setValidationError(null);
+                    }}
+                  >
+                    {EVIDENCE_REF_KINDS.map((k) => (
+                      <option key={k} value={k}>
+                        {t.evidenceKinds[k] ?? k}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="sr-only" htmlFor={`moderation-evidence-ref-${i}`}>
+                    {t.evidenceRefLabel}
+                  </label>
+                  <input
+                    id={`moderation-evidence-ref-${i}`}
+                    data-testid={`moderation-evidence-ref-${i}`}
+                    className="rounded border p-1 text-sm"
+                    placeholder={t.evidenceRefPlaceholder}
+                    value={row.ref}
+                    disabled={processing}
+                    onChange={(e) => {
+                      const ref = e.target.value;
+                      setEvidenceRefs((prev) => prev.map((r, j) => (j === i ? { ...r, ref } : r)));
+                      setValidationError(null);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    data-testid={`moderation-evidence-remove-${i}`}
+                    className="rounded border px-2 py-1 text-xs"
+                    disabled={processing}
+                    onClick={() => setEvidenceRefs((prev) => prev.filter((_, j) => j !== i))}
+                  >
+                    {t.evidenceRemove}
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                data-testid="moderation-evidence-add"
+                className="self-start rounded border px-2 py-1 text-xs"
+                disabled={processing}
+                onClick={() =>
+                  setEvidenceRefs((prev) => [
+                    ...prev,
+                    { key: nextEvidenceRowKey.current++, kind: 'complaint', ref: '' },
+                  ])
+                }
+              >
+                {t.evidenceAdd}
+              </button>
+            </fieldset>
+          )}
+
+          {/*
+            The FORM-LEVEL validation message. The reason-code and Decision Note errors render
+            beside their own fields above; the escalation and evidence errors belong to a GROUP of
+            controls rather than to any single one, so they render here.
+            ⚠ Without this site the escalation errors were set into state and displayed NOWHERE — the
+            operator saw a submit that silently did nothing. Caught by a RENDER test, which is
+            exactly the failure mode `epics.md:3729` records: a view-model assertion would have
+            passed, because the state was being set correctly all along.
+          */}
+          {validationError?.field === 'group' && (
+            <p
+              className="text-xs text-status-fail-fg"
+              role="alert"
+              data-testid="moderation-validation-error"
+            >
+              {validationError.message}
+            </p>
+          )}
 
           <button
             type="button"
@@ -333,6 +692,58 @@ export function ModerationStrip({
             <p className="text-sm" data-testid="moderation-confirm-consequence">
               {t.consequence[pending]}
             </p>
+
+            {/*
+              ── Story 10.20 (AC8/AC12) — THE RULED CONSOLE SHAPE (Q4.2) ──────────────────────────
+              A THIRD shape, neither of the two the routing note offered. During the seven-day dwell
+              the Terminate control stays VISIBLE AND ENABLED — ⛔ it is NOT disabled until day 7 —
+              and selecting it opens THIS re-confirmation, which states that the dwell is still open
+              and that the actor is invoking the immediate-termination route. Not a generic "are you
+              sure".
+              ⛔ THE DIALOG OBTAINS INFORMED INTENT; IT DOES NOT GRANT AUTHORITY. The server decides
+              whether the immediate route is permitted — a client that treats its own confirmation as
+              the authorisation has reimplemented the gate in the one place the Trust does not
+              control. That is why the reason is COLLECTED here and VALIDATED there.
+            */}
+            {pending === 'terminate' && dwellOpen && (
+              <div className="flex flex-col gap-2" data-testid="moderation-dwell-warning">
+                <p className="text-sm font-semibold">{t.dwellOpenHeading}</p>
+                <p className="text-xs">
+                  {t.dwellOpenBody.replace(
+                    '{date}',
+                    new Date(moderation.termination_available_at!).toLocaleString(),
+                  )}
+                </p>
+                <label className="text-xs font-medium" htmlFor="moderation-immediate-reason">
+                  {t.immediateReasonLabel}
+                  <span aria-hidden> *</span>
+                </label>
+                <textarea
+                  id="moderation-immediate-reason"
+                  data-testid="moderation-immediate-reason"
+                  className="rounded border p-1 text-sm"
+                  maxLength={MODERATION_ESCALATION_MAX_CHARS}
+                  placeholder={t.immediateReasonPlaceholder}
+                  value={immediateReason}
+                  disabled={processing}
+                  onChange={(e) => {
+                    setImmediateReason(e.target.value);
+                    setConfirmError(null);
+                  }}
+                />
+                <p className="text-xs opacity-70">{t.dwellServerAuthoritative}</p>
+                {confirmError !== null && (
+                  <p
+                    className="text-xs text-status-fail-fg"
+                    role="alert"
+                    data-testid="moderation-confirm-error"
+                  >
+                    {confirmError}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <button
                 ref={cancelRef}
@@ -413,7 +824,49 @@ export function ModerationHistory({
                   : ''}
               </div>
               {/*
-                The rationale is NOT rendered with the row — it is Tier-1 PII and is decrypted only
+                ── Story 10.20 (AC9) — the GROUNDS behind this action ──────────────────────────
+                Primary first, then supporting in append order. ⛔ SUPERSEDED grounds are RENDERED
+                AND FLAGGED, never hidden — an audit trail that hides what was superseded is not an
+                audit trail, and on a contested member the superseded ground is often precisely the
+                one under dispute.
+                ⚠ `has_note` only. The ground note is Tier-1 and stays decrypt-on-demand, exactly
+                like the Decision Note — three new Tier-1 fields must not become three new list
+                columns.
+              */}
+              {e.grounds.length > 0 && (
+                <ul
+                  className="mt-1 flex flex-col gap-0.5 text-xs"
+                  data-testid={`moderation-grounds-${e.moderation_action_id}`}
+                >
+                  {e.grounds.map((g) => (
+                    <li
+                      key={g.ground_id}
+                      data-testid={`moderation-ground-${g.ground_id}`}
+                      className={g.superseded ? 'opacity-60 line-through' : undefined}
+                    >
+                      {reasonCodeLabel(g.code, reasonCodes)}
+                      {g.is_primary ? ` (${t.groundPrimary})` : ''}
+                      {g.superseded ? ` — ${t.groundSuperseded}` : ''}
+                      {g.supersedes_ground_id !== null ? ` — ${t.groundSupersedes}` : ''}
+                      {g.has_note ? ` · ${t.groundHasNote}` : ''}
+                      {g.evidence_refs.length > 0
+                        ? ` · ${t.evidenceLabel}: ${g.evidence_refs.map(formatEvidenceRef).join(', ')}`
+                        : ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {/* The action's OWN evidence references — identifiers, safe to render in a list. */}
+              {e.evidence_refs.length > 0 && (
+                <div
+                  className="mt-1 text-xs opacity-70"
+                  data-testid={`moderation-evidence-${e.moderation_action_id}`}
+                >
+                  {t.evidenceLabel}: {e.evidence_refs.map(formatEvidenceRef).join(', ')}
+                </div>
+              )}
+              {/*
+                The Decision Note is NOT rendered with the row — it is Tier-1 PII and is decrypted only
                 when an operator explicitly asks. What is shown is the DECRYPTED plaintext; the
                 ciphertext never reaches this component at all (the list DTO has no such field).
               */}

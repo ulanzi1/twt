@@ -7,7 +7,7 @@
 // record. The event and the row therefore commit or roll back together and can never diverge.
 //
 // ── The domain NEVER encrypts ───────────────────────────────────────────────────────────────────
-// `rationaleCiphertext` arrives ALREADY-SERIALIZED as a Tier-1 envelope — exactly like
+// `decisionNoteCiphertext` arrives ALREADY-SERIALIZED as a Tier-1 envelope — exactly like
 // `insertMemberWithdrawal` (`member/withdrawal.ts:8-13`) and `recordVerifierDecision`. The ROUTE
 // encrypts under the Pariwar's field class via `deps.encryption` BEFORE opening the scope tx (the
 // `claims.verification-decision.handlers.ts:190-204` placement). Passing plaintext here would put
@@ -30,12 +30,24 @@ import { memberModerationActions } from '../../schema/member_moderation_actions.
 import { projectMemberState } from '../project.js';
 import { getMemberStateAt } from '../read.js';
 import {
+  getProducingSuspensionActedAt,
+  isDwellElapsed,
+  resolveModerationDwellPolicy,
+  terminationAvailableAt,
+} from './dwell.js';
+import { ESCALATION_PART_MIN_CHARS } from './escalation.js';
+import { assertEvidenceRefs, type EvidenceRef } from './evidence-refs.js';
+import { insertPrimaryGround } from './grounds.js';
+import {
+  ModerationDwellNotElapsedError,
+  ModerationDwellPolicyUnprovisionedError,
+  ModerationEscalationNotApplicableError,
+  ModerationEscalationRequiredError,
   ModerationRationaleRequiredError,
-  ModerationReasonCodeInvalidError,
   ModerationStateError,
 } from './errors.js';
 import { getCurrentMemberModerationOverlay } from './overlay.js';
-import { reasonCodeAppliesTo, type ReasonCode } from './reason-codes.js';
+import { assertReasonCodeAppliesTo, type ReasonCode } from './reason-codes.js';
 import {
   MODERATION_ACTION_EVENT_TYPES,
   nextModerationStatus,
@@ -64,14 +76,6 @@ export function assertRationalePresent(rationale: string | null | undefined, act
   return trimmed;
 }
 
-/** The AC3 registry guard: the code must be declared AND its `appliesTo` must include the action. */
-export function assertReasonCodeAppliesTo(code: string, action: ModerationAction): ReasonCode {
-  if (!reasonCodeAppliesTo(code, action)) {
-    throw new ModerationReasonCodeInvalidError(code, action);
-  }
-  return code as ReasonCode;
-}
-
 /** One moderation decision record to insert (the rationale arrives already Tier-1 encrypted). */
 export interface InsertModerationActionInput {
   memberId: MemberId;
@@ -79,7 +83,7 @@ export interface InsertModerationActionInput {
   action: ModerationAction;
   reasonCode: ReasonCode;
   /** Tier-1 envelope ciphertext (serialized) of the MANDATORY free-text rationale. */
-  rationaleCiphertext: string;
+  decisionNoteCiphertext: string;
   actorId: string;
   /** `users.display_name` SNAPSHOT — resolved (and required) by the route. */
   actorDisplay: string;
@@ -95,13 +99,47 @@ export interface ModerateMemberInput {
   /** The requested reason code (untrusted — validated against the registry here). */
   reasonCode: string;
   /** Tier-1 envelope ciphertext of the mandatory rationale (the domain never encrypts). */
-  rationaleCiphertext: string;
+  decisionNoteCiphertext: string;
   actorId: string;
   actorDisplay: string;
   /** Clock-injected instant (no `Date.now()` in the domain). */
   now: Date;
   /** `terminate` only: the FR-6 rejoin-lock lift instant, clock-derived by the caller. */
   rejoinPermittedAt?: Date | null;
+
+  // ── Story 10.20 (WS-C) — the two-part escalation justification ──────────────────────────────
+  // Both arrive as ALREADY-SERIALIZED Tier-1 ciphertext, exactly like `decisionNoteCiphertext`:
+  // the route encrypts, the domain never does. Required together iff `action === 'terminate'`.
+  // ⚠ The SUBSTANTIVE guards (the anti-restatement rule and the substance floor) run on the
+  // PLAINTEXT in the route — `assertEscalationJustification` — because ciphertext has nothing
+  // meaningful to assert about it. What lives here is the PRESENCE backstop, mirroring the
+  // rationale backstop below: it catches a future non-HTTP caller that skipped that step.
+  escalationInadequacyCiphertext?: string | null;
+  escalationProportionalityCiphertext?: string | null;
+
+  /**
+   * AC8 (Q4.1): the recorded reason for invoking the IMMEDIATE-TERMINATION exception, as
+   * already-serialized Tier-1 ciphertext.
+   *
+   * ⭐ ITS PRESENCE IS WHAT SELECTS THE ROUTE. Absent ⇒ the ordinary path, which the dwell gate
+   * below governs. Present ⇒ the exception, which the Panel preserved and which the dwell does not
+   * close. ⛔ It is a SEPARATE field from both escalation parts and must never be folded into
+   * either: they answer *why termination*, this answers *why now*.
+   */
+  immediateTerminationReasonCiphertext?: string | null;
+
+  /** Evidence REFERENCES (never prose) — validated here as defence-in-depth. Defaults to `[]`. */
+  evidenceRefs?: unknown;
+
+  /**
+   * AC7 (Q5(a)): the as-of-decision snapshot of `contribution.r7a_restorations_used`.
+   *
+   * ⛔ `null` IS A FIRST-CLASS VALUE MEANING *UNKNOWN*, NEVER `0`. R7(A) resolves to no clause
+   * version on an unprovisioned Pariwar and the fact is then omitted — recording `0` there would
+   * let "restorations exhausted" read as "never restored", which is the false-all-clear D1-B
+   * forbids. The caller passes the DERIVED fact through unchanged; it is never defaulted here.
+   */
+  r7aRestorationsUsedSnapshot?: number | null;
 }
 
 export interface ModerateMemberResult {
@@ -134,7 +172,7 @@ export async function moderateMember(
 
   // (0) Backstop only — the route asserts the PLAINTEXT rationale before encrypting. This catches a
   //     future caller that skipped that step; it cannot inspect the ciphertext's contents.
-  if (input.rationaleCiphertext.trim().length === 0) {
+  if (input.decisionNoteCiphertext.trim().length === 0) {
     throw new ModerationRationaleRequiredError(input.action);
   }
 
@@ -146,11 +184,117 @@ export async function moderateMember(
   //     ⚠ UNBOUNDED deliberately: `input.now` is the injected APP clock while `occurred_at` is
   //     DB-generated, so bounding the legality read by it would let app-clock lag hide the previous
   //     action's event and accept a duplicate suspend. See `getCurrentMemberModerationOverlay`.
+  //
+  //     ⚠ ORDERED BEFORE (2c)/(2d), NOT AFTER. "This action is not legal right now" (409) is the
+  //     more fundamental objection than "your escalation justification is incomplete" (422) — a
+  //     terminate against a member who was never even suspended should not be told its paperwork is
+  //     short. The one DB read this costs on a request that would ALSO fail (2c)/(2d) is the price
+  //     of that priority; a malformed caller can no longer have legality hidden behind a shape
+  //     complaint.
   const overlay = await getCurrentMemberModerationOverlay(db, input.memberId);
   const toStatus = nextModerationStatus(overlay.status, input.action);
   if (toStatus === null) {
     // Rejected BEFORE any write (AC2): a no-op never returns 200, and a re-suspend is a 409.
     throw new ModerationStateError(input.memberId, overlay.status, input.action);
+  }
+
+  // (2c) ── Story 10.20 (AC6) — the escalation PRESENCE backstop, in the same voice as (0) ───────
+  //      Niyamavali §8.6: termination is an exceptional governance act, not a stronger suspension,
+  //      so it carries both parts of the escalation test — and no other action carries either.
+  //      ⛔ This is a BACKSTOP, not the guard. The substantive checks (substance floor,
+  //      anti-restatement) run on the PLAINTEXT in the route, because envelope encryption is
+  //      non-deterministic and there is nothing to compare once these are ciphertext. The DB's
+  //      `escalation_iff_terminate` CHECK is the fourth layer and enforces the same `iff` on every
+  //      write path including raw SQL; this typed error is what keeps a 23514 from reaching a
+  //      caller as a 500.
+  //
+  //      ⚠ STILL ORDERED AFTER (1), NOT BEFORE IT. The vocabulary objection is the more fundamental
+  //      one — "this code cannot justify a termination" has to be answered before "your
+  //      justification for the termination is incomplete", or a caller offering a restore code for a
+  //      terminate would be told to write an escalation justification for an action the code can
+  //      never support. Story 10.10 pinned that ordering with a no-query revert-sanity test.
+  const escalationInadequacy = (input.escalationInadequacyCiphertext ?? '').trim() || null;
+  const escalationProportionality =
+    (input.escalationProportionalityCiphertext ?? '').trim() || null;
+  if (input.action === 'terminate') {
+    if (escalationInadequacy === null) {
+      throw new ModerationEscalationRequiredError('inadequacy', 'missing', ESCALATION_PART_MIN_CHARS);
+    }
+    if (escalationProportionality === null) {
+      throw new ModerationEscalationRequiredError(
+        'proportionality',
+        'missing',
+        ESCALATION_PART_MIN_CHARS,
+      );
+    }
+  } else if (
+    escalationInadequacy !== null ||
+    escalationProportionality !== null ||
+    (input.immediateTerminationReasonCiphertext ?? '').trim().length > 0
+  ) {
+    // A suspend/restore carrying an escalation part OR an immediate-termination reason: all three
+    // fields describe a termination, so on any other action they describe something that did not
+    // happen. The DB has no `iff` CHECK on the exception reason (it is legitimately NULL on both
+    // paths of a terminate), which makes this backstop the only structural guard on that field.
+    throw new ModerationEscalationNotApplicableError(input.action);
+  }
+
+  // (2d) Evidence references — the domain enforcement point (AC4). Absent ⇒ `[]`; anything that is
+  //      not an array of bounded `{ kind, ref }` identifiers within the cap is a typed 422. The DB
+  //      mirrors all three rules (array-ness, cap, per-entry shape via the IMMUTABLE validator), so
+  //      a raw-SQL writer cannot bypass what this rejects.
+  const evidenceRefs: EvidenceRef[] = assertEvidenceRefs(input.evidenceRefs);
+
+  // ── ⭐ (2b) STORY 10.20 (AC8, WS-D) — THE DWELL PRECONDITION, IN THE CALLER ───────────────────
+  //
+  // `epics.md:3857`: *"`nextModerationStatus('suspended','terminate')` returns `'terminated'`
+  // unconditionally, so two API calls seconds apart terminate a member — and because the suspension
+  // notice is a best-effort post-commit job, termination can precede its own notice."* This is what
+  // closes that.
+  //
+  // ⛔ IT LIVES HERE, NOT IN THE REDUCER (D5). `nextModerationStatus` stays pure, total and
+  // clock-free, and its `suspended --terminate--> terminated` arm remains LEGAL — what changes is
+  // WHEN it may be asked for, not whether it exists. Putting dwell inside it would fork the one
+  // place `legal_actions` is derived from and make the console's buttons disagree with the server.
+  //
+  // ⚠ RUNS INSIDE THE CALLER'S SCOPE TX, on the same client as the write. Checked outside, this is
+  // a TOCTOU — the 10.19 Panel-precondition lesson, applied a second time.
+  //
+  // ⭐ THE DWELL GOVERNS THE ORDINARY PATH ONLY (Q4.1). Principles 5 and 6 as adopted say
+  // termination *normally* follows suspension and notice *normally* precedes it; both carry an
+  // express exception. Recording the exception reason takes the immediate route.
+  let dwellPolicyVersion: string | null = null;
+  if (input.action === 'terminate') {
+    const immediateReason = (input.immediateTerminationReasonCiphertext ?? '').trim() || null;
+    const policy = await resolveModerationDwellPolicy(db, input.pariwarId, input.now);
+    // Pinned even when the exception is taken: which policy was IN FORCE is part of the record,
+    // independently of whether the ordinary path was the one used (FR-8 version pinning).
+    dwellPolicyVersion = policy?.policyClauseVersionId ?? null;
+
+    if (immediateReason === null) {
+      // The ORDINARY path. ⛔ `7` is never hard-coded: an unprovisioned registry REFUSES rather than
+      // falling back, because a sanction under a convention no Pariwar ratified is an unratified
+      // sanction imposed by a machine (Decision `2026-08-07-088` clause 2).
+      if (policy === null) {
+        throw new ModerationDwellPolicyUnprovisionedError(input.pariwarId);
+      }
+      const suspendedAt = await getProducingSuspensionActedAt(db, input.memberId);
+      // ⚠ The legality check above already established the member IS suspended, so a missing row
+      // here would mean the overlay and the decision table disagree — a real inconsistency, not a
+      // "not yet" — and it must not be silently treated as an elapsed dwell.
+      if (suspendedAt === null) {
+        throw new Error(
+          `[moderateMember] member '${input.memberId}' reads as suspended but has no suspension row`,
+        );
+      }
+      if (!isDwellElapsed(suspendedAt, policy.dwellDays, input.now)) {
+        throw new ModerationDwellNotElapsedError(
+          terminationAvailableAt(suspendedAt, policy.dwellDays),
+          policy.dwellDays,
+          policy.policyClauseVersionId,
+        );
+      }
+    }
   }
 
   // (3) The lifecycle state, for the audit shape. `from_state === to_state` on every moderation
@@ -184,7 +328,18 @@ export async function moderateMember(
       pariwarId: input.pariwarId,
       action: input.action,
       reasonCode,
-      rationaleCiphertext: input.rationaleCiphertext,
+      decisionNoteCiphertext: input.decisionNoteCiphertext,
+      escalationInadequacyCiphertext: escalationInadequacy,
+      escalationProportionalityCiphertext: escalationProportionality,
+      immediateTerminationReasonCiphertext:
+        (input.immediateTerminationReasonCiphertext ?? '').trim() || null,
+      // AC5 item 7: the FR-8 version pin, so a historical decision stays readable against the dwell
+      // policy that governed it rather than whatever is in force when it is later reviewed.
+      dwellPolicyVersion,
+      evidenceRefs,
+      // ⛔ Passed through UNCHANGED, `null` included. `?? 0` here would be the D1-B false-all-clear:
+      // "unknown" would become "never restored" in a record a reviewer later relies on.
+      r7aRestorationsUsedSnapshot: input.r7aRestorationsUsedSnapshot ?? null,
       actorId: input.actorId,
       actorDisplay: input.actorDisplay,
       rejoinPermittedAt,
@@ -195,6 +350,24 @@ export async function moderateMember(
   if (!row) {
     throw new Error('[moderateMember] insert returned no row — check session scope');
   }
+
+  // (6) ── Story 10.20 (AC9, WS-E) — the PRIMARY GROUND, in the SAME transaction ─────────────────
+  //     "At most one primary" is the DB's job (the partial unique index); "AT LEAST ONE" is the
+  //     writer's, and this is the writer. Written here rather than by the grounds route so the
+  //     grounds table is COMPLETE for every action ever recorded — a fold that had to special-case
+  //     "actions taken before anyone appended a ground" would not be a record model.
+  //     ⛔ Emits NO event: the primary ground is already on the member's timeline via the action's
+  //     own `member.moderation.*` event, which carries the same `reason_code`. D3's denormalization
+  //     is safe because BOTH tables are append-only — neither side can ever be rewritten.
+  await insertPrimaryGround(db, {
+    moderationActionId: row.moderationActionId,
+    memberId: input.memberId,
+    pariwarId: input.pariwarId,
+    code: reasonCode,
+    addedBy: input.actorId,
+    addedByDisplay: input.actorDisplay,
+    addedAt: input.now,
+  });
 
   return {
     moderationActionId: row.moderationActionId,

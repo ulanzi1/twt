@@ -5,7 +5,7 @@
 //   · `listModeratedMembersForPariwar`   — the moderated-members list (Decision 9), which Story
 //     10.11's Trustee-Lite view consumes.
 //
-// ⚠ NEITHER read ever selects `rationale_ciphertext` into a list DTO. The history read returns it
+// ⚠ NEITHER read ever selects `decision_note_ciphertext` into a list DTO. The history read returns it
 // (the admin console decrypts ONE rationale on demand through the mirror helper); the Pariwar-wide
 // list does not project it at all.
 //
@@ -29,6 +29,7 @@ import type { Db } from '../../db.js';
 import type { MemberId, ModerationActionId, PariwarId } from '../../ids/index.js';
 import { clampLimit } from '../../pagination.js';
 import { memberModerationActions } from '../../schema/member_moderation_actions.js';
+import type { EvidenceRef } from './evidence-refs.js';
 import type { ModerationStatus } from './status.js';
 
 /** One row of a member's moderation history (newest-first). */
@@ -41,8 +42,23 @@ export interface ModerationHistoryEntry {
   actorDisplay: string;
   rejoinPermittedAt: Date | null;
   actedAt: Date;
+  /**
+   * Evidence REFERENCES recorded on the action (Story 10.20, AC4). Safe on a list DTO precisely
+   * because they are identifiers, not prose — a property the three `evidence_refs` CHECKs CREATE.
+   * ⛔ If that shape enforcement is ever weakened, this field's PII classification must be revisited
+   * in the same change.
+   */
+  evidenceRefs: EvidenceRef[];
   /** Tier-1 ciphertext AS STORED. The caller decrypts on demand; a LIST DTO never carries it. */
-  rationaleCiphertext: string;
+  decisionNoteCiphertext: string;
+  /**
+   * AC5 item 7 / AC7's two ruled governance-fact columns (Story 10.20, Q5(a)/Q4.4). Both non-PII —
+   * a bounded integer and a clause-version id — so, unlike the Tier-1 fields above, they are safe
+   * to carry on the LIST entry directly; no decrypt-on-demand gate applies. `null` on a `suspend`/
+   * `restore` row (not applicable) and on an ordinary-path `terminate` predating this story.
+   */
+  r7aRestorationsUsedSnapshot: number | null;
+  dwellPolicyVersion: string | null;
 }
 
 /** One entry of the Pariwar-wide moderated-members list. No rationale, ever. */
@@ -115,7 +131,10 @@ export async function listModerationHistoryForMember(
       actorDisplay: memberModerationActions.actorDisplay,
       rejoinPermittedAt: memberModerationActions.rejoinPermittedAt,
       actedAt: memberModerationActions.actedAt,
-      rationaleCiphertext: memberModerationActions.rationaleCiphertext,
+      evidenceRefs: memberModerationActions.evidenceRefs,
+      decisionNoteCiphertext: memberModerationActions.decisionNoteCiphertext,
+      r7aRestorationsUsedSnapshot: memberModerationActions.r7aRestorationsUsedSnapshot,
+      dwellPolicyVersion: memberModerationActions.dwellPolicyVersion,
     })
     .from(memberModerationActions)
     .where(
@@ -144,26 +163,47 @@ export async function listModerationHistoryForMember(
       actorDisplay: r.actorDisplay,
       rejoinPermittedAt: r.rejoinPermittedAt,
       actedAt: r.actedAt,
-      rationaleCiphertext: r.rationaleCiphertext,
+      evidenceRefs: r.evidenceRefs,
+      decisionNoteCiphertext: r.decisionNoteCiphertext,
+      r7aRestorationsUsedSnapshot: r.r7aRestorationsUsedSnapshot,
+      dwellPolicyVersion: r.dwellPolicyVersion,
     })),
     hasMore,
   };
 }
 
+/** One moderation action's decrypt-on-demand ciphertext (Decision Note + the two escalation parts
+ *  + the immediate-termination exception reason). The three added columns are nullable — `null`
+ *  means "not applicable to this action" (suspend/restore, or the ordinary termination path). */
+export interface ModerationActionRationaleRow {
+  decisionNoteCiphertext: string;
+  escalationInadequacyCiphertext: string | null;
+  escalationProportionalityCiphertext: string | null;
+  immediateTerminationReasonCiphertext: string | null;
+}
+
 /**
  * ONE moderation action's ciphertext, tenant + member scoped. The ONLY accessor that ever selects
- * `rationale_ciphertext` for a single row (review follow-up — wires the "decrypts a SINGLE
- * rationale on demand" read this header always claimed existed). The route decrypts; a list DTO
- * never carries this field, and this accessor is never called for a list.
+ * `decision_note_ciphertext` for a single row (review follow-up — wires the "decrypts a SINGLE
+ * rationale on demand" read this header always claimed existed). Story 10.20 (AC12) extends it to
+ * the two escalation parts + the immediate-termination reason — the same "decrypt-on-demand,
+ * per-action, never in a list DTO" discipline the header already committed to for all four Tier-1
+ * moderation fields. The route decrypts; a list DTO never carries any of them, and this accessor is
+ * never called for a list.
  */
 export async function getModerationActionRationale(
   db: Db,
   pariwarId: PariwarId,
   memberId: MemberId,
   moderationActionId: ModerationActionId,
-): Promise<{ rationaleCiphertext: string } | null> {
+): Promise<ModerationActionRationaleRow | null> {
   const rows = await db
-    .select({ rationaleCiphertext: memberModerationActions.rationaleCiphertext })
+    .select({
+      decisionNoteCiphertext: memberModerationActions.decisionNoteCiphertext,
+      escalationInadequacyCiphertext: memberModerationActions.escalationInadequacyCiphertext,
+      escalationProportionalityCiphertext: memberModerationActions.escalationProportionalityCiphertext,
+      immediateTerminationReasonCiphertext: memberModerationActions.immediateTerminationReasonCiphertext,
+    })
     .from(memberModerationActions)
     .where(
       and(
@@ -173,8 +213,7 @@ export async function getModerationActionRationale(
       ),
     )
     .limit(1);
-  const row = rows[0];
-  return row ? { rationaleCiphertext: row.rationaleCiphertext } : null;
+  return rows[0] ?? null;
 }
 
 /**

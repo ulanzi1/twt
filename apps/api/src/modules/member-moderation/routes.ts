@@ -77,6 +77,8 @@
 // so it is left to a story that can carry the revert-sanity proof rather than bolted on here.
 
 import {
+  AppendModerationGroundRequest,
+  AppendModerationGroundResponse,
   ModerateMemberRequest,
   ModeratedMembersListResponse,
   ModerationActionResponse,
@@ -108,14 +110,23 @@ const MEMBER_MODERATE_KEY = 'member.moderate';
 const STEP_UP_SUSPEND = 'member_moderation_suspend';
 const STEP_UP_TERMINATE = 'member_moderation_terminate';
 const STEP_UP_RESTORE = 'member_moderation_restore';
+/**
+ * Story 10.20 (AC9) — the FOURTH context. An elevation minted for a restore can never be spent on
+ * appending a finding, and vice versa: recording a new ground against a member is its own
+ * consequential act, not a footnote to whichever action the operator most recently elevated for.
+ */
+const STEP_UP_APPEND_GROUND = 'member_moderation_append_ground';
 
 const PariwarParam = z.object({ pariwarId: z.string().uuid() }).strict();
 const MemberParam = z
   .object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() })
   .strict();
+/** The rationale read's params. The grounds route shares this shape exactly — aliased, not
+ *  re-declared, so the two can never drift apart. */
 const RationaleParam = z
   .object({ pariwarId: z.string().uuid(), memberId: z.string().uuid(), moderationActionId: z.string().uuid() })
   .strict();
+const GroundParam = RationaleParam;
 const ListQuery = z
   .object({
     limit: z.coerce.number().int().positive().max(200).optional(),
@@ -199,6 +210,23 @@ export function registerMemberModerationRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, requireModerate],
     },
     h.history,
+  );
+
+  // AC9 (WS-E) — append a SUPPORTING ground to an existing decision. A WRITE, so it is step-up
+  // gated like the three actions; ⛔ the PRIMARY ground is not reachable from here (it is written in
+  // the action's own transaction and is structurally immutable thereafter).
+  r.post(
+    '/api/v1/p/:pariwarId/members/:memberId/moderation/:moderationActionId/grounds',
+    {
+      schema: {
+        params: GroundParam,
+        body: AppendModerationGroundRequest,
+        response: { 200: AppendModerationGroundResponse },
+        tags: [TAG],
+      },
+      preHandler: [adminSession, scope, requireModerate, requireStepUp(deps, STEP_UP_APPEND_GROUND)],
+    },
+    h.appendGround,
   );
 
   // Review follow-up — decrypt ONE rationale on demand. A READ, same posture as `history` above: no

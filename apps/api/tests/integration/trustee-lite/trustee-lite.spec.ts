@@ -276,7 +276,7 @@ describe.skipIf(!hasDatabase)('trustee-lite list + signals — E2E (:5433)', () 
     try {
       await c.query(
         `INSERT INTO member_moderation_actions
-           (pariwar_id, member_id, action, reason_code, rationale_ciphertext, actor_id, actor_display, acted_at)
+           (pariwar_id, member_id, action, reason_code, decision_note_ciphertext, actor_id, actor_display, acted_at)
          VALUES ($1, $2, 'suspend', 'r7-contribution-discipline', $3, $4, 'Trustee Three', now() - interval '10 days')`,
         [pariwarId, memberId, 'enc:v1:SECRET-MODERATION-RATIONALE', randomUUID()],
       );

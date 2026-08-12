@@ -23,6 +23,8 @@
 import { createHash } from 'node:crypto';
 
 import {
+  type AppendModerationGroundRequest,
+  type AppendModerationGroundResponse,
   type ModerateMemberRequest,
   type ModeratedMembersListResponse,
   type ModerationActionResponse,
@@ -31,6 +33,7 @@ import {
   type ReasonCodesListResponse,
 } from '@twt/contracts';
 import { audit, ids, member as memberDomain, rbac } from '@twt/domain';
+import { produceContributionFacts } from '@twt/validity-service';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -194,18 +197,101 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     const body = request.body as ModerateMemberRequest;
     const now = deps.clock();
 
+    // (0a) The registry guard (AC3) — a restore code can never justify a termination. Pure and
+    //      synchronous (no DB read), so it costs nothing to run before anything else — and it MUST
+    //      run before (0b)'s legality check, mirroring `moderateMember`'s own priority: "this code
+    //      cannot justify this action" (a vocabulary objection) is more fundamental than "this
+    //      action is not legal right now" (a state objection), pinned by a live-DB regression test
+    //      (`member-moderation.spec.ts`, "a request invalid on BOTH axes... pins the check ORDER").
+    memberDomain.moderation.assertReasonCodeAppliesTo(body.reason_code, action);
+
+    // (0b) ⭐ CODE-REVIEW FOLLOW-UP (Story 10.20, chunk 2) — an EARLY, non-authoritative legality
+    //      fast-fail, on the per-request scope tx already open for (0). Without this, every plaintext
+    //      check below (rationale/escalation/evidence/immediate-reason) ran BEFORE legality anywhere
+    //      in the call chain — `moderateMember`'s own legality check only runs later, inside its own
+    //      transaction — so a `terminate` against a member who is not even suspended, that ALSO omits
+    //      escalation, always got `422 escalation_required` here, never the `409 invalid_state` that
+    //      is the more fundamental objection. `errors.ts`'s stated 422-vs-409 diagnostic intent (and
+    //      `moderateMember`'s own now-corrected internal ordering) was invisible to every real HTTP
+    //      caller, since this handler duplicates the plaintext checks ahead of the domain call.
+    //
+    //      ⚠ ORDERED AFTER (0a), NOT BEFORE IT — same reasoning as `moderateMember`'s (1)-before-(2).
+    //      ⚠ THIS IS A FAST-FAIL, NOT THE AUTHORITY. `moderateMember`'s tx-scoped legality check
+    //      (inside its own `openScopeTx`, below) remains the TOCTOU-safe source of truth for the
+    //      actual write — a concurrent moderation committing in the gap between this read and that
+    //      one is caught there, exactly as before. This block only decides which error a doomed
+    //      request sees FIRST; it changes no write-path behavior.
+    const earlyOverlay = await memberDomain.moderation.getCurrentMemberModerationOverlay(
+      request.scopeTx!.tx,
+      ctx.memberId,
+    );
+    if (memberDomain.moderation.nextModerationStatus(earlyOverlay.status, action) === null) {
+      throw new memberDomain.moderation.ModerationStateError(ctx.memberId, earlyOverlay.status, action);
+    }
+
     // (a) The mandatory-rationale guard runs on the PLAINTEXT, before encrypting — a request that
     //     was always going to 422 must not spend a KMS round-trip. (The Zod schema already trims +
     //     rejects empty; this is the defence-in-depth backstop for a non-HTTP caller.)
     const rationale = memberDomain.moderation.assertRationalePresent(body.rationale, action);
 
+    // ── ⭐ (a2) THE TWO-PART ESCALATION TEST — Story 10.20 (AC6), ON THE PLAINTEXT ────────────────
+    //
+    // Niyamavali §8.6 (Decision `2026-08-12-099`): *"Termination is an exceptional governance act,
+    // not a stronger suspension."* A termination answers TWO separately-answerable questions —
+    // (a) why SUSPENSION is inadequate, (b) why TERMINATION is proportionate — and part (a) is not
+    // satisfied by restating part (b).
+    //
+    // ⛔ THIS CANNOT MOVE TO THE DATABASE, and the reason is structural rather than stylistic:
+    // `encryptModerationRationale` is a NON-DETERMINISTIC Tier-1 envelope encrypt, so two identical
+    // plaintexts produce two different ciphertexts and a `CHECK (a <> b)` would be satisfied by
+    // exactly the case it was written to catch. What a CHECK *can* express is PRESENCE, and that is
+    // what migration 0099's `escalation_iff_terminate` enforces — on every write path, raw SQL
+    // included. Restatement and substance live here, at the `assertRationalePresent` placement, so
+    // a doomed request never spends a KMS round-trip either.
+    const escalation = memberDomain.moderation.assertEscalationJustification(action, {
+      inadequacy: body.escalation_inadequacy,
+      proportionality: body.escalation_proportionality,
+    });
+
+    // (a3) Evidence REFERENCES, never prose (AC4). The contracts DTO already 400s a prose `ref` at
+    //      the boundary; this is the defence-in-depth pass for a non-HTTP caller, and the DB's
+    //      `moderation_evidence_refs_valid` CHECK is the third layer that also binds raw SQL.
+    const evidenceRefs = memberDomain.moderation.assertEvidenceRefs(body.evidence_refs);
+
+    // (a4) AC8 (Q4.1) — the IMMEDIATE-TERMINATION EXCEPTION REASON. ⭐ Its presence is what selects
+    //      the route: absent ⇒ the ordinary path (dwell-gated below, in the domain, inside the tx);
+    //      present ⇒ the exception the Panel preserved. Validated on the plaintext here for the same
+    //      reason as everything else in this block — a doomed request must not spend a KMS call.
+    const immediateReason = memberDomain.moderation.assertImmediateTerminationReason(
+      action,
+      body.immediate_termination_reason,
+    );
+
     // (b) Encrypt BEFORE opening the scope tx (the verification-decision placement) so no KMS
     //     network call is made while holding a pooled connection inside an open transaction.
-    const rationaleCiphertext = await encryptModerationRationale(
-      rationale,
-      ctx.pariwarId,
-      deps.encryption,
-    );
+    //     ⚠ On a `terminate` this is up to FOUR round-trips, not one — genuinely CONCURRENT
+    //     (`Promise.all`), not merely co-located: each envelope encrypt is independent (a fresh
+    //     DEK/IV per call), so there is no ordering dependency between them, only the shared
+    //     constraint that none may happen inside an open tenant transaction.
+    const [decisionNoteCiphertext, escalationInadequacyCiphertext, escalationProportionalityCiphertext, immediateReasonCiphertext] =
+      await Promise.all([
+        encryptModerationRationale(rationale, ctx.pariwarId, deps.encryption),
+        escalation
+          ? encryptModerationRationale(escalation.inadequacy, ctx.pariwarId, deps.encryption)
+          : Promise.resolve(null),
+        escalation
+          ? encryptModerationRationale(escalation.proportionality, ctx.pariwarId, deps.encryption)
+          : Promise.resolve(null),
+        // Tier-1 too — it describes the case, so unlike the version pin and the fact snapshot it is
+        // encrypted, granted UPDATE by name in 0099, and scrubbed under RTBF.
+        immediateReason === null
+          ? Promise.resolve(null)
+          : encryptModerationRationale(immediateReason, ctx.pariwarId, deps.encryption),
+      ]);
+    const escalationCiphertext =
+      escalationInadequacyCiphertext !== null && escalationProportionalityCiphertext !== null
+        ? { inadequacy: escalationInadequacyCiphertext, proportionality: escalationProportionalityCiphertext }
+        : null;
 
     const scopeTx = await openScopeTx(deps, ctx.pariwarId);
     let ok = false;
@@ -257,12 +343,51 @@ export function createMemberModerationHandlers(deps: AppDeps) {
         }
       }
 
+      // ── ⭐ (b3) AC7 — THE AS-OF-DECISION RESTORATION-EXHAUSTION SNAPSHOT (Q5 ruled (a)) ─────────
+      //
+      // `epics.md:3852` wants "terminating on a ground with an available restoration path" to be
+      // CHECKABLE. Q5 ruled option (a): the fact is SNAPSHOTTED and justified against, in part (a)
+      // of the escalation test. ⛔ It is NEVER a gate — Q5 option (b), the hard server-side block,
+      // was PUT AND REJECTED (D6): `contribution.r7a_restorations_used` is a projection that can be
+      // null, can lag, and is omitted rather than zeroed, so blocking on it would let an
+      // unprovisioned registry refuse an authorised Panel decision — an availability failure
+      // wearing a governance costume. It is not implemented here, not behind a flag, not for later.
+      //
+      // The snapshot is taken INSIDE the scope tx at the decision instant, so what is recorded is
+      // what the data actually said THEN — the `actor_display` snapshot rationale, applied to a
+      // fact. A later reviewer can test the assertion against that rather than re-deriving it
+      // against a projection that has since moved.
+      //
+      // ⛔ `produceContributionFacts` — the DERIVED fact, NEVER `readContributionFactInputs`'s raw
+      // `completedRestorationEpisodes`. The raw input is ALWAYS a number; the fact is `null`
+      // whenever `consecutiveRequired` did not resolve (`producer.ts:550`). Snapshotting the input
+      // would therefore record a confident count on exactly the Pariwars where the threshold was
+      // never provisioned — the false-all-clear this AC exists to forbid. Only the producer knows
+      // the difference between `0` and *unknown*, and `null` is carried through AS `null`.
+      // ⛔ Never re-derive the count here ([[project_engine_never_infers_contribution_facts]]).
+      let r7aRestorationsUsedSnapshot: number | null = null;
+      if (action === 'terminate') {
+        const facts = await produceContributionFacts(
+          scopeTx.tx,
+          { pariwarId: ctx.pariwarId, memberId: ctx.memberId },
+          now,
+        );
+        // A `null` FACTS object (no contribution history to derive from) and a `null` FACT are the
+        // same answer here — *unknown* — and both must record NULL rather than 0.
+        r7aRestorationsUsedSnapshot = facts?.r7aRestorationsUsed ?? null;
+      }
+
       result = await memberDomain.moderation.moderateMember(scopeTx.client, {
         memberId: ctx.memberId,
         pariwarId: ctx.pariwarId,
         action,
         reasonCode: body.reason_code,
-        rationaleCiphertext,
+        decisionNoteCiphertext,
+        escalationInadequacyCiphertext: escalationCiphertext?.inadequacy ?? null,
+        escalationProportionalityCiphertext: escalationCiphertext?.proportionality ?? null,
+        immediateTerminationReasonCiphertext: immediateReasonCiphertext,
+        evidenceRefs,
+        r7aRestorationsUsedSnapshot,
         actorId: ctx.actorId,
         actorDisplay: ctx.actorDisplay,
         now,
@@ -377,9 +502,53 @@ export function createMemberModerationHandlers(deps: AppDeps) {
         { limit, offset },
       );
 
+      // Story 10.20 (AC9) — the grounds behind each action on THIS page. One batched read keyed by
+      // the page's action ids, so the query count does not grow with the page size.
+      // ⚠ Carries `has_note`, never the note: the note is Tier-1 and stays decrypt-on-demand, per
+      // action. ⛔ Three new Tier-1 fields must not become three new list columns (`dto.ts:9-16`).
+      const groundsByAction = await memberDomain.moderation.listGroundsForActions(
+        tx,
+        ctx.pariwarId,
+        page.entries.map((e) => e.moderationActionId),
+      );
+
+      // ⛔ `legal_actions` is NOT filtered by the dwell (Story 10.20, AC8). Legality and precondition
+      // are different facts; collapsing them would make this pure reducer's output depend on a clock
+      // and would fork the one place four call sites derive legality from (D5). ✅ The Panel ruled
+      // this explicitly right (Q4.2): "legal_actions should not silently be rewritten merely because
+      // the dwell exists."
       const legalActions = memberDomain.moderation.MODERATION_ACTIONS.filter((a) =>
         memberDomain.moderation.isLegalModerationTransition(overlay.status, a),
       );
+
+      // ── ⭐ AC8 — `termination_available_at`, ADDITIVE alongside `legal_actions` ─────────────────
+      // Leaving the dwell ONLY in the write path would make the console render an enabled Terminate
+      // control that 409s — the same console/server disagreement D5 rejects, arriving from the other
+      // side. This is the separate, additive fact that lets the console tell the trustee WHEN the
+      // ordinary path opens (rendered in the re-confirmation dialog, which is where it is actually
+      // decision-relevant).
+      //
+      // `null` covers three genuinely different situations, and none of them should read as "you may
+      // terminate now": not suspended (terminate is not even legal), the dwell already elapsed
+      // (nothing to wait for), and the policy unprovisioned (the write path 503s and no instant can
+      // be computed). The console gates on the presence of an instant in the FUTURE, not on `null`.
+      let terminationAvailableAt: string | null = null;
+      if (overlay.status === 'suspended') {
+        // Two independent lookups — genuinely CONCURRENT (`Promise.all`), not sequential.
+        const [dwellPolicy, suspendedAt] = await Promise.all([
+          memberDomain.moderation.resolveModerationDwellPolicy(tx, ctx.pariwarId),
+          memberDomain.moderation.getProducingSuspensionActedAt(tx, ctx.memberId),
+        ]);
+        if (dwellPolicy && suspendedAt) {
+          const at = memberDomain.moderation.terminationAvailableAt(
+            suspendedAt,
+            dwellPolicy.dwellDays,
+          );
+          // Only surfaced while it is still in the FUTURE — a past instant is not a precondition,
+          // and rendering one would invite a console to display a stale "available at" forever.
+          if (at.getTime() > deps.clock().getTime()) terminationAvailableAt = at.toISOString();
+        }
+      }
 
       return {
         member_id: ctx.memberId,
@@ -388,6 +557,7 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           overlay.reasonCode as ModerationHistoryResponse['current_reason_code'],
         since: overlay.since ? overlay.since.toISOString() : null,
         legal_actions: [...legalActions],
+        termination_available_at: terminationAvailableAt,
         entries: page.entries.map((e) => ({
           moderation_action_id: e.moderationActionId,
           action: e.action as ModerationAction,
@@ -396,6 +566,24 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           actor_display: e.actorDisplay,
           rejoin_permitted_at: e.rejoinPermittedAt ? e.rejoinPermittedAt.toISOString() : null,
           acted_at: e.actedAt.toISOString(),
+          // ⛔ SUPERSEDED grounds are RETAINED and flagged, never filtered — an audit trail that
+          // hides what was superseded is not an audit trail, and on a contested member the
+          // superseded ground is often precisely the one under dispute.
+          grounds: (groundsByAction.get(e.moderationActionId) ?? []).map((g) => ({
+            ground_id: g.groundId,
+            code: g.code as ModerationHistoryResponse['entries'][number]['reason_code'],
+            is_primary: g.isPrimary,
+            has_note: g.hasNote,
+            evidence_refs: g.evidenceRefs,
+            supersedes_ground_id: g.supersedesGroundId,
+            superseded: g.superseded,
+            added_by: g.addedBy,
+            added_by_display: g.addedByDisplay,
+            added_at: g.addedAt.toISOString(),
+          })),
+          evidence_refs: e.evidenceRefs,
+          r7a_restorations_used_snapshot: e.r7aRestorationsUsedSnapshot,
+          dwell_policy_version: e.dwellPolicyVersion,
         })),
         // ⚠ An audit trail MUST NOT present a truncated page as the whole record (AC9). Without
         // this the console silently dropped everything past the newest 50 — typically the ORIGINAL
@@ -405,11 +593,14 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     },
 
     /**
-     * GET …/moderation/:moderationActionId/rationale — decrypt ONE rationale on demand.
+     * GET …/moderation/:moderationActionId/rationale — decrypt ONE action's Tier-1 fields on demand:
+     * the Decision Note (mandatory), and — Story 10.20 (AC12) — the two escalation parts + the
+     * immediate-termination reason (all three nullable, `terminate`-only).
      *
-     * The single exception to "the ciphertext never leaves the DB" (AC3): a gated, per-action read,
-     * never a list. Fail-soft on a corrupt/rotated envelope (the `claims.verifier-console.handlers.
-     * ts:115` `safeDecrypt` discipline verbatim) — a single bad envelope answers `null`, never a 500.
+     * The single exception to "the ciphertext never leaves the DB" (AC3/AC12): a gated, per-action
+     * read, never a list. Fail-soft PER FIELD on a corrupt/rotated envelope (the `claims.verifier-
+     * console.handlers.ts:115` `safeDecrypt` discipline, applied to all four) — one bad envelope
+     * answers `null` for THAT field only, never a 500, and never masks the other three.
      */
     async rationale(request: FastifyRequest): Promise<ModerationRationaleResponse> {
       const ctx = readContextOf(request);
@@ -430,34 +621,52 @@ export function createMemberModerationHandlers(deps: AppDeps) {
 
       // ⚠ A corrupt STORED envelope and an unreachable KMS are different facts and must not both
       // answer `null` — see `decryptModerationRationaleSafe`. Only the first is the documented
-      // fail-soft case; the second is an operational incident and becomes a 503.
-      let outcome;
-      try {
-        outcome = await decryptModerationRationaleSafe(
-          row.rationaleCiphertext,
-          ctx.pariwarId,
-          deps.encryption,
-        );
-      } catch (err) {
-        request.log.error(
-          { err, moderationActionId },
-          'member-moderation: rationale decrypt failed at the KMS; surfacing 503 (NOT a null rationale)',
-        );
-        throw new ServiceUnavailableError(
-          'The rationale cannot be decrypted right now. This is a key-service problem, not a missing rationale — retry shortly.',
-          'member_moderation.rationale_unavailable',
-        );
+      // fail-soft case; the second is an operational incident and becomes a 503 for the WHOLE
+      // response (a KMS outage is tenant-wide, not per-field — there is nothing field-specific to
+      // partially succeed).
+      async function decryptField(
+        label: string,
+        ciphertext: string | null,
+      ): Promise<string | null> {
+        if (ciphertext === null) return null;
+        let outcome;
+        try {
+          outcome = await decryptModerationRationaleSafe(ciphertext, ctx.pariwarId, deps.encryption);
+        } catch (err) {
+          request.log.error(
+            { err, moderationActionId, field: label },
+            'member-moderation: decrypt failed at the KMS; surfacing 503 (NOT a null field)',
+          );
+          throw new ServiceUnavailableError(
+            'This field cannot be decrypted right now. This is a key-service problem, not a missing value — retry shortly.',
+            'member_moderation.rationale_unavailable',
+          );
+        }
+        if (outcome.kind === 'corrupt') {
+          request.log.warn(
+            { err: outcome.error, moderationActionId, field: label },
+            'member-moderation: stored envelope is unreadable; returning null (fail-soft, per-field)',
+          );
+          return null;
+        }
+        return outcome.rationale;
       }
 
-      if (outcome.kind === 'corrupt') {
-        request.log.warn(
-          { err: outcome.error, moderationActionId },
-          'member-moderation: stored rationale envelope is unreadable; returning null (fail-soft, per-row)',
-        );
-        return { moderation_action_id: moderationActionId, rationale: null };
-      }
+      const [rationale, escalationInadequacy, escalationProportionality, immediateTerminationReason] =
+        await Promise.all([
+          decryptField('rationale', row.decisionNoteCiphertext),
+          decryptField('escalation_inadequacy', row.escalationInadequacyCiphertext),
+          decryptField('escalation_proportionality', row.escalationProportionalityCiphertext),
+          decryptField('immediate_termination_reason', row.immediateTerminationReasonCiphertext),
+        ]);
 
-      return { moderation_action_id: moderationActionId, rationale: outcome.rationale };
+      return {
+        moderation_action_id: moderationActionId,
+        rationale,
+        escalation_inadequacy: escalationInadequacy,
+        escalation_proportionality: escalationProportionality,
+        immediate_termination_reason: immediateTerminationReason,
+      };
     },
 
     /**
@@ -497,6 +706,90 @@ export function createMemberModerationHandlers(deps: AppDeps) {
     },
 
     /**
+     * POST …/members/:memberId/moderation/:moderationActionId/grounds — append a SUPPORTING ground
+     * to an existing decision (Story 10.20, AC9, WS-E).
+     *
+     * ⭐ A LATER FINDING ATTACHES; IT NEVER REWRITES. Before this route a finding that emerged after
+     * a decision had nowhere to go: it either overwrote the original rationale — destroying the
+     * record of what was known WHEN the decision was made — or it was not recorded at all.
+     *
+     * ⛔ THE PRIMARY GROUND IS NOT REACHABLE FROM HERE, by construction rather than by policy. It is
+     * written in the action's own transaction, and the partial unique index plus the
+     * `SELECT, INSERT`-only grant make it structurally unmovable thereafter.
+     *
+     * Gated on the existing `member.moderate` key with a FOURTH step-up context, so an elevation
+     * minted for a restore can never be spent on a finding (the 10.10 three-context precedent).
+     */
+    async appendGround(request: FastifyRequest): Promise<AppendModerationGroundResponse> {
+      const ctx = await writeContextOf(request);
+      const params = request.params as { moderationActionId: string };
+      const moderationActionId = ids.moderationActionId(params.moderationActionId);
+      const body = request.body as AppendModerationGroundRequest;
+      const now = deps.clock();
+
+      // The note is Tier-1 and OPTIONAL — encrypted BEFORE `openScopeTx`, the same placement as
+      // every other Tier-1 write on this surface, so no KMS round-trip is held inside an open
+      // tenant transaction.
+      const noteCiphertext =
+        body.note === undefined
+          ? null
+          : await encryptModerationRationale(body.note, ctx.pariwarId, deps.encryption);
+
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      let result: memberDomain.moderation.AppendGroundResult;
+      try {
+        // ⚠ The action-existence check, the `appliesTo` guard, the supersede-target check, the event
+        // and the row ALL run inside this ONE transaction. Checked outside, the supersede target
+        // could be superseded by a concurrent request between the check and the insert.
+        result = await memberDomain.moderation.appendModerationGround(scopeTx.client, {
+          moderationActionId,
+          memberId: ctx.memberId,
+          pariwarId: ctx.pariwarId,
+          code: body.code,
+          noteCiphertext,
+          evidenceRefs: body.evidence_refs,
+          supersedesGroundId: body.supersedes_ground_id
+            ? ids.moderationGroundId(body.supersedes_ground_id)
+            : null,
+          addedBy: ctx.actorId,
+          addedByDisplay: ctx.actorDisplay,
+          now,
+        });
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      // Post-commit, best-effort — ⚠ the NOTE is never audited, exactly as the rationale is not:
+      // the bounded code and the member id are the non-secret facts an auditor needs.
+      const input: audit.AuditEntryInput = {
+        pariwarId: ctx.pariwarId,
+        actorId: ctx.actorId,
+        actorRole: null,
+        action: 'member_moderation.ground_appended',
+        resourceLocator: memberDomain.moderation.moderationGroundResourceLocator(ctx.memberId),
+        requestPayloadHash: auditPayloadHash('ground_appended', ctx.memberId),
+        responseStatus: 200,
+        traceId: ctx.traceId,
+      };
+      void audit.writeAuditEntry(deps.servicePool, input).catch((err: unknown) => {
+        console.error(
+          '[member-moderation-audit] failed to persist ground-append audit line',
+          JSON.stringify({ error: String(err) }),
+        );
+      });
+
+      return {
+        ground_id: result.groundId,
+        moderation_action_id: moderationActionId,
+        code: result.code,
+        supersedes_ground_id: result.supersedesGroundId,
+        added_at: result.addedAt.toISOString(),
+      };
+    },
+
+    /**
      * GET …/moderation/reason-codes — the full frozen registry (review follow-up).
      *
      * The ONE source both the server's `appliesTo` 422 and the admin dropdown now read — no DB, no
@@ -510,6 +803,9 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           applies_to: [...m.appliesTo] as ReasonCodesListResponse['items'][number]['applies_to'],
           niyamavali_ref: m.niyamavaliRef,
           label: m.label,
+          // ⚖ Q6-ratified guidance, passed through UNCHANGED. ⛔ The server never substitutes a
+          // value for a restore ground's `null` — that null IS the ratified answer.
+          ordinarily_results_in: m.ordinarilyResultsIn,
         })),
       };
     },

@@ -152,6 +152,11 @@ export * from './feature-flag-versions-rls.js';
 // read is NOT served here — it runs pre-scope on the BYPASSRLS servicePool, exactly as the
 // member_withdrawals rejoin read already does.
 export * from './member-moderation-actions-rls.js';
+// Story 10.20 — member_moderation_grounds tenant-isolation policies. Same append-only posture as its
+// sibling above, but it ships the narrow RTBF UPDATE leg AT BIRTH rather than as a follow-up: 0091
+// shipped SELECT+INSERT-only and 0092 had to come back to make a Tier-1 column erasable at all. No
+// twt_service leg of any kind — this table has no pre-scope reader.
+export * from './member-moderation-grounds-rls.js';
 // Story 10.23 — member_restoration_impositions tenant-isolation policies. APPEND-ONLY: SELECT +
 // INSERT only. Unlike its moderation sibling there is no UPDATE leg AT ALL — 0092 had to add one so
 // the DPDPA-RTBF scrub could reach a Tier-1 rationale, and this instrument has no PII column to

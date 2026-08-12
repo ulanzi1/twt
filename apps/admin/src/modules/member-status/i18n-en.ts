@@ -79,11 +79,68 @@ export const moderationEn = {
   reasonLabel: 'Reason code',
   reasonPlaceholder: 'Select a reason\u2026',
   reasonRequiredError: 'Select a reason code.',
-  rationaleLabel: 'Rationale',
-  rationalePlaceholder: 'Explain the decision in your own words.',
-  rationaleRequiredError: 'A rationale is required for every moderation action.',
+  // \u2696 Story 10.20 (AC10) \u2014 Q6-ratified GUIDANCE. \u26d4 Rendered as text only: never a default,
+  // never a pre-selection, never a severity score. FR-57's prohibition is a prohibition ON THE
+  // DECISION MOVING, and a pre-selected sanction moves it.
+  guidancePrefix: 'Ordinarily results in',
+  // \u26a0 Story 10.20 (AC12) \u2014 renamed from "Rationale" throughout. The record now separates what
+  // happened, why this sanction, and how the case can be reconstructed; a UI still saying
+  // "rationale" would describe a field that no longer exists.
+  rationaleLabel: 'Decision Note',
+  rationalePlaceholder: 'Record the decision: what happened, and what was decided.',
+  rationaleRequiredError: 'A Decision Note is required for every moderation action.',
   rationaleEncryptedNote:
     'Stored encrypted. Never shown to the member, never written to the event log or the audit trail.',
+  // \u2014\u2014 Story 10.20 (AC6) \u2014 the two-part escalation justification, terminate ONLY \u2014\u2014
+  // \u26d4 TWO controls, never one, and no copy-across affordance: `epics.md:3851` requires the parts be
+  // separately answerable and neither pre-filled from the other.
+  escalationHeading: 'Why termination rather than suspension',
+  escalationIntro:
+    'Termination is an exceptional governance act, not a stronger suspension (Niyamavali \u00a78.6). Both questions below must be answered separately.',
+  escalationInadequacyLabel: '(a) Why suspension is inadequate',
+  escalationInadequacyPlaceholder:
+    'What would suspension fail to protect, what risk would persist through it, or why is the restoration path it preserves unavailable or futile?',
+  escalationProportionalityLabel: '(b) Why termination is proportionate',
+  escalationProportionalityPlaceholder: 'Why does this sanction fit the conduct?',
+  escalationRequiredError: 'Both parts of the escalation justification are required for a termination.',
+  escalationTooShortError:
+    'Each part needs at least 40 characters \u2014 enough to state a reason, not a placeholder.',
+  escalationRestatementError:
+    'Part (a) must explain why SUSPENSION is inadequate. Restating why termination is proportionate does not answer it.',
+  // \u2014\u2014 Story 10.20 (AC4) \u2014 evidence REFERENCES, never prose \u2014\u2014
+  evidenceHeading: 'Evidence references',
+  evidenceIntro:
+    'References only \u2014 a complaint number, an investigation number, a ticket, a document id, an order number. Not a description.',
+  evidenceKindLabel: 'Kind',
+  evidenceRefLabel: 'Reference',
+  evidenceRefPlaceholder: 'e.g. CMP-2026-0001',
+  evidenceAdd: 'Add a reference',
+  evidenceRemove: 'Remove',
+  evidenceInvalidError:
+    'A reference must be an identifier \u2014 letters, digits and . _ / - with no spaces.',
+  evidenceDuplicateError:
+    'The same reference (kind + value) is listed more than once \u2014 remove the duplicate.',
+  evidenceKinds: {
+    complaint: 'Complaint',
+    investigation: 'Investigation',
+    'helpdesk-ticket': 'Helpdesk ticket',
+    document: 'Document',
+    'external-order': 'External order',
+  } as Record<string, string>,
+  // \u2014\u2014 Story 10.20 (AC8/AC12) \u2014 the RULED console shape (Q4.2) \u2014\u2014
+  // \u26d4 The Terminate control stays VISIBLE AND ENABLED during the dwell \u2014 it is NOT disabled until
+  // day 7. Selecting it requires an EXPLICIT re-confirmation naming the open dwell and the immediate
+  // route. \u26d4 The dialog obtains INFORMED INTENT; it does not grant authority \u2014 the server decides.
+  dwellOpenHeading: 'The seven-day dwell is still open',
+  dwellOpenBody:
+    'The ordinary termination path opens on {date}. Terminating now means invoking the immediate-termination exception, which requires you to record why it applies.',
+  dwellServerAuthoritative:
+    'This confirmation records your intent. The server decides whether immediate termination is permitted.',
+  immediateReasonLabel: 'Why terminate now, ahead of the dwell',
+  immediateReasonPlaceholder:
+    'What makes waiting until the ordinary path opens unsafe or futile in this case?',
+  immediateReasonRequiredError:
+    'Record why the immediate-termination exception applies before confirming.',
   submit: 'Review and confirm',
   processing: 'Working\u2026',
   confirmTitle: 'Confirm this moderation action',
@@ -109,9 +166,19 @@ export const moderationEn = {
   historyTruncated:
     'Showing the most recent actions only — this member has more moderation history than is shown here.',
   rejoinPermitted: 'rejoin permitted',
-  revealRationale: 'Show rationale',
+  // \u2014\u2014 Story 10.20 (AC9) \u2014 the grounds behind an action \u2014\u2014
+  groundsHeading: 'Grounds',
+  groundPrimary: 'primary',
+  groundSuperseded: 'superseded',
+  groundSupersedes: 'supersedes an earlier ground',
+  groundHasNote: 'has a note',
+  evidenceLabel: 'Evidence',
+  // ⚠ Key names unchanged (they're internal identifiers, `onRevealRationale` etc. in
+  // ModerationSection.tsx) — only the user-facing COPY is renamed (AC12; review follow-up: these
+  // two were missed in the original rename pass while `rationaleLabel` and its siblings were not).
+  revealRationale: 'Show Decision Note',
   rationaleUnreadable:
-    'This rationale cannot be read. The stored record is unreadable — it was recorded, but it can no longer be decrypted.',
+    'This Decision Note cannot be read. The stored record is unreadable — it was recorded, but it can no longer be decrypted.',
   reasonCodesUnavailable:
     'Reason codes could not be loaded, so no moderation action can be taken right now.',
 } as const;

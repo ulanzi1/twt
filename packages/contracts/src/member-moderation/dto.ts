@@ -8,7 +8,7 @@
 //
 // ── ⚠ `rationale` is INBOUND-ONLY on every LIST/ACTION shape; the ciphertext NEVER appears ────────
 // The free-text rationale is Tier-1 encrypted at rest (`member_moderation_actions.
-// rationale_ciphertext`) and the ciphertext is NEVER projected into a DTO — not into the history
+// decision_note_ciphertext`) and the ciphertext is NEVER projected into a DTO — not into the history
 // list, not into the action response, not anywhere. The ONE exception is
 // `ModerationRationaleResponse`: a single-item, decrypt-on-demand read (behind the same
 // `member.moderate` gate) that carries the PLAINTEXT rationale for exactly one action, never the
@@ -19,6 +19,7 @@ import { z } from 'zod';
 
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
 import { ModerationAction, ModerationStatus, ReasonCode } from './enums.js';
+import { EvidenceRefDto, EvidenceRefsDto } from './evidence-refs.js';
 
 /**
  * The free-text rationale. REQUIRED on every action (AC3) — deliberately stricter than the UX
@@ -27,27 +28,96 @@ import { ModerationAction, ModerationStatus, ReasonCode } from './enums.js';
  * the domain's `ModerationRationaleRequiredError` is the defence-in-depth backstop behind it.
  */
 /**
- * The rationale's max length, EXPORTED so the admin textarea's `maxLength` reads the same number
+ * The DECISION NOTE's max length, EXPORTED so the admin textarea's `maxLength` reads the same number
  * the server validates against (review follow-up). It was previously hand-copied into
  * `ModerationStrip.tsx` with a "mirrors the contracts DTO" comment and no sync-guard — the exact
  * duplication-by-value shape this surface's earlier review pass removed from the reason-code
  * registry. Raising it here alone would silently truncate the operator's text at the old value;
  * lowering it would let the client accept text the server then 400s.
+ *
+ * ⚠ RENAMED from `MODERATION_RATIONALE_MAX_CHARS` by Story 10.20 (AC12), alongside the column rename
+ * `rationale_ciphertext` → `decision_note_ciphertext`. The old name described a field that was asked
+ * to answer three questions at once; the record now separates them, and a constant still saying
+ * "rationale" would name a field that no longer exists.
  */
-export const MODERATION_RATIONALE_MAX_CHARS = 4_000;
+export const MODERATION_DECISION_NOTE_MAX_CHARS = 4_000;
 
-const Rationale = z.string().trim().min(1).max(MODERATION_RATIONALE_MAX_CHARS);
+const DecisionNote = z.string().trim().min(1).max(MODERATION_DECISION_NOTE_MAX_CHARS);
+
+/**
+ * The minimum-substance floor for each escalation part (Story 10.20, AC6). Value-aligned with
+ * `ESCALATION_PART_MIN_CHARS` in `@twt/domain` and pinned by the drift guard.
+ *
+ * ⚠ A FLOOR IS NOT A QUALITY TEST. It exists to reject `"n/a"`, not to judge reasoning.
+ */
+export const MODERATION_ESCALATION_MIN_CHARS = 40;
+
+/**
+ * The MAXIMUM length for each escalation part / the immediate-termination reason. Value-aligned
+ * with `ESCALATION_PART_MAX_CHARS` in `@twt/domain` and pinned by the drift guard (review
+ * follow-up: the admin console previously reused `MODERATION_DECISION_NOTE_MAX_CHARS` for these
+ * three fields — harmless only because the two numbers happened to be equal, not because they were
+ * the same constant, which is exactly the drift risk this file's own header warns against).
+ */
+export const MODERATION_ESCALATION_MAX_CHARS = 4_000;
+
+/**
+ * One part of the two-part escalation justification (also backs `immediate_termination_reason`).
+ * Its own cap, not the Decision Note's — this is governance-grade prose, not a label, but a
+ * different field with a different owner of "what's the right length".
+ *
+ * ⚠ DELIBERATELY `.min(1)`, NOT `.min(MODERATION_ESCALATION_MIN_CHARS)` (review follow-up, REVERTED
+ * after a live-DB regression: wiring the 40-char floor into THIS schema makes Fastify reject a
+ * too-short value with a generic 400 before the request ever reaches the domain — which is the
+ * layer that produces the SPECIFIC typed 422 (`member_moderation.escalation_required`, reason
+ * `missing` vs `too_short`, with a `min_chars` detail) callers and the admin UI depend on. `.min(1)`
+ * here rejects only the truly-empty case (a schema-shape objection); the substance floor is
+ * INTENTIONALLY the domain's `assertPart`/`assertImmediateTerminationReason` job, one layer in —
+ * `member-moderation.spec.ts`'s and `moderation-dwell.spec.ts`'s live-DB specs pin the 422, not a
+ * 400, for a below-floor value. `MODERATION_ESCALATION_MIN_CHARS` stays exported for the admin
+ * console's client-side length hint and the drift-guard test, just not wired into `.min()` here.
+ */
+const EscalationPart = z.string().trim().min(1).max(MODERATION_ESCALATION_MAX_CHARS);
 
 /**
  * The body of a suspend / terminate / restore request. The ACTION itself is carried by the ROUTE
  * (`…/moderation/suspend`), not the body — so a client cannot post a `restore` body to the
  * `terminate` endpoint, and the step-up action context (which is per-route) can never disagree with
  * the action being performed.
+ *
+ * ── ⚠ Why the escalation parts are OPTIONAL HERE and REQUIRED ON `terminate` ─────────────────────
+ * ONE request schema serves all three routes (see above), so a `.required()` here would break
+ * `suspend` and `restore`. The `iff` is therefore enforced where it can see the action: the route
+ * handler (`assertEscalationJustification`, a typed 422 naming which part failed and why), backed by
+ * the domain presence backstop and — structurally, on every write path including raw SQL — by
+ * migration 0099's `member_moderation_actions_escalation_iff_terminate` CHECK.
+ * ⛔ Do NOT "tidy" this into a discriminated union on an action field in the body: the action's
+ * absence from the body is what keeps it from disagreeing with the route's step-up context.
+ *
+ * ⛔ TWO SEPARATE FIELDS, NEVER ONE (D2). `epics.md:3851` requires the two parts be "separately
+ * answerable" and neither "pre-filled from the other"; one field (or a nested object) lets a UI
+ * concatenate them and satisfy a presence check with a single paragraph.
  */
 export const ModerateMemberRequest = z
   .object({
     reason_code: ReasonCode,
-    rationale: Rationale,
+    /** The governance-grade Decision Note. Required on EVERY action. */
+    rationale: DecisionNote,
+    /** `terminate` only — (a) why SUSPENSION is inadequate. */
+    escalation_inadequacy: EscalationPart.optional(),
+    /** `terminate` only — (b) why TERMINATION is proportionate. */
+    escalation_proportionality: EscalationPart.optional(),
+    /** References only, never prose (AC4). Absent ⇒ no references. */
+    evidence_refs: EvidenceRefsDto.optional(),
+    /**
+     * `terminate` only — the recorded reason for invoking the IMMEDIATE-TERMINATION exception (AC8).
+     *
+     * ⭐ ITS PRESENCE SELECTS THE ROUTE. Absent ⇒ the ordinary path, gated by the 7-day dwell.
+     * Present ⇒ the exception the Panel preserved (Q4.1), which the dwell does not close.
+     * ⛔ A SEPARATE field from both escalation parts, never a re-use of either: they answer *why
+     * termination*, this answers *why now*. Collapsing them makes both unfalsifiable.
+     */
+    immediate_termination_reason: EscalationPart.optional(),
   })
   .strict();
 export type ModerateMemberRequest = z.output<typeof ModerateMemberRequest>;
@@ -71,6 +141,72 @@ export const ModerationActionResponse = z
   .strict();
 export type ModerationActionResponse = z.output<typeof ModerationActionResponse>;
 
+// ── Story 10.20 (WS-E) — the APPEND-ONLY grounds ────────────────────────────────────────────────
+
+/**
+ * The body of an append-a-supporting-ground request (AC9).
+ *
+ * ⛔ There is deliberately NO `is_primary` field. Appends are supporting-only BY CONSTRUCTION: the
+ * primary ground is written in the action's own transaction and is structurally immutable
+ * thereafter (a partial unique index plus a `SELECT, INSERT`-only grant). Accepting an `is_primary`
+ * flag here would offer a client something the database can never honour.
+ */
+export const AppendModerationGroundRequest = z
+  .object({
+    code: ReasonCode,
+    /** Optional Tier-1 note explaining the ground. */
+    note: DecisionNote.optional(),
+    /** References only, never prose (AC4). */
+    evidence_refs: EvidenceRefsDto.optional(),
+    /**
+     * The SUPPORTING ground this one replaces, if any.
+     * ⛔ Superseding the PRIMARY ground is a typed 409 — it is fixed at the action.
+     */
+    supersedes_ground_id: UuidString.optional(),
+  })
+  .strict();
+export type AppendModerationGroundRequest = z.output<typeof AppendModerationGroundRequest>;
+
+/**
+ * One ground on a moderation action.
+ *
+ * ⚠ `has_note` rather than the note itself: the note is Tier-1 and stays decrypt-on-demand, per
+ * action, exactly like the Decision Note. ⛔ Three new Tier-1 fields must not become three new list
+ * columns.
+ */
+export const ModerationGroundDto = z
+  .object({
+    ground_id: UuidString,
+    code: ReasonCode,
+    is_primary: z.boolean(),
+    has_note: z.boolean(),
+    evidence_refs: z.array(EvidenceRefDto),
+    supersedes_ground_id: UuidString.nullable(),
+    /**
+     * True when a LATER ground supersedes this one.
+     * ⛔ A superseded ground is FLAGGED, never filtered out — an audit trail that hides what was
+     * superseded is not an audit trail, and the superseded ground is often the one under dispute.
+     */
+    superseded: z.boolean(),
+    added_by: UuidString,
+    added_by_display: z.string(),
+    added_at: Iso8601Datetime,
+  })
+  .strict();
+export type ModerationGroundDto = z.output<typeof ModerationGroundDto>;
+
+/** The result of appending a supporting ground. */
+export const AppendModerationGroundResponse = z
+  .object({
+    ground_id: UuidString,
+    moderation_action_id: UuidString,
+    code: ReasonCode,
+    supersedes_ground_id: UuidString.nullable(),
+    added_at: Iso8601Datetime,
+  })
+  .strict();
+export type AppendModerationGroundResponse = z.output<typeof AppendModerationGroundResponse>;
+
 /**
  * One entry of a member's moderation history — the audit trail the admin record renders.
  * ⚠ No rationale field, by design (see the header).
@@ -84,6 +220,26 @@ export const ModerationHistoryEntryDto = z
     actor_display: z.string(),
     rejoin_permitted_at: Iso8601Datetime.nullable(),
     acted_at: Iso8601Datetime,
+    /**
+     * The grounds behind this action — primary first, then supporting in append order, with
+     * superseded rows RETAINED and flagged (Story 10.20, AC9).
+     */
+    grounds: z.array(ModerationGroundDto),
+    /** The evidence REFERENCES recorded on the action itself. Identifiers, never prose (AC4). */
+    evidence_refs: z.array(EvidenceRefDto),
+    /**
+     * AC5 item 7 / AC7 (Story 10.20, Q5(a)) — the restoration-exhaustion fact SNAPSHOTTED at the
+     * decision instant, justified against in escalation part (a). NEVER re-derived from a current
+     * projection (that would defeat the point of a snapshot) — `null` means "not applicable to this
+     * action" (a suspend/restore, or a `terminate` predating this story), NOT zero.
+     */
+    r7a_restorations_used_snapshot: z.number().int().nonnegative().nullable(),
+    /**
+     * AC5 item 7 / AC7 (Story 10.20, Q4.4) — the dwell-policy clause VERSION pin in force at the
+     * decision instant, so a later reviewer can test the assertion against the policy that actually
+     * governed it rather than whatever the registry says today. `null` for the same reasons as above.
+     */
+    dwell_policy_version: z.string().nullable(),
   })
   .strict();
 export type ModerationHistoryEntryDto = z.output<typeof ModerationHistoryEntryDto>;
@@ -104,6 +260,26 @@ export const ModerationHistoryResponse = z
      * never disagree with what the server will accept — the client re-implements no legality rules.
      */
     legal_actions: z.array(ModerationAction),
+    /**
+     * When the ORDINARY termination path opens for a currently-SUSPENDED member (Story 10.20, AC8) —
+     * the producing suspension's `acted_at` plus the registry dwell. `null` when the member is not
+     * suspended, when the dwell has already elapsed, or when the dwell policy is unprovisioned.
+     *
+     * ── ⭐ ADDITIVE, AND `legal_actions` IS DELIBERATELY NOT FILTERED ─────────────────────────────
+     * Legality and precondition are DIFFERENT FACTS. `legal_actions` derives purely from
+     * `nextModerationStatus`, so `terminate` stays in it for the whole dwell window; collapsing the
+     * two into one list would make a pure reducer's output depend on a clock, and would fork the one
+     * place four call sites derive legality from (D5). ✅ The Panel ruled this correction explicitly
+     * right (Q4.2): *"legal_actions should not silently be rewritten merely because the dwell
+     * exists."*
+     *
+     * ⛔ The console must NOT disable the Terminate control until this instant. The ruled shape
+     * (Q4.2) is: control visible and ENABLED, selecting it requires an explicit re-confirmation
+     * stating that the dwell is still open and that the actor is invoking the immediate-termination
+     * route, and the SERVER remains authoritative — the dialog obtains informed intent, it does not
+     * grant authority.
+     */
+    termination_available_at: Iso8601Datetime.nullable(),
     entries: z.array(ModerationHistoryEntryDto),
     /**
      * True when moderation actions exist beyond this page. An AUDIT TRAIL must never present a
@@ -152,11 +328,26 @@ export type ModeratedMembersListResponse = z.output<typeof ModeratedMembersListR
  * claimed existed). `rationale` is nullable ONLY as the fail-soft outcome of a corrupt/rotated
  * envelope (the `claims.verifier-console.handlers.ts` `safeDecrypt` discipline) — never because the
  * rationale was optional to write (AC3 makes it mandatory on every action).
+ *
+ * ⚠ Story 10.20 (AC12) — the same decrypt-on-demand discipline extends to the two escalation parts
+ * and the immediate-termination exception reason (code-review follow-up: this endpoint was the
+ * ONLY read AC12 names, but originally decrypted just the Decision Note). All three are nullable
+ * for TWO independent reasons, and a caller cannot tell which from the field alone:
+ *   · NOT APPLICABLE — a `suspend`/`restore` action never carries an escalation part, and an
+ *     ordinary-path `terminate` never carries the immediate-termination reason (`escalation_
+ *     inadequacy`/`escalation_proportionality`/`immediate_termination_reason` are all `null` at
+ *     the DB layer for these rows — see migration 0099's `escalation_iff_terminate` CHECK).
+ *   · CORRUPT ENVELOPE — the fail-soft outcome, same as `rationale`.
+ * Distinguishing the two is not this DTO's job: `action` (already on `ModerationActionResponse`/
+ * `ModerationHistoryResponse`) tells a caller which fields are EXPECTED to be non-null.
  */
 export const ModerationRationaleResponse = z
   .object({
     moderation_action_id: UuidString,
     rationale: z.string().nullable(),
+    escalation_inadequacy: z.string().nullable(),
+    escalation_proportionality: z.string().nullable(),
+    immediate_termination_reason: z.string().nullable(),
   })
   .strict();
 export type ModerationRationaleResponse = z.output<typeof ModerationRationaleResponse>;
@@ -168,6 +359,16 @@ export const ReasonCodeMetaDto = z
     applies_to: z.array(ModerationAction),
     niyamavali_ref: z.string(),
     label: z.string(),
+    /**
+     * ⚖ Q6-ratified GUIDANCE — what this ground ordinarily results in (Story 10.20, AC10).
+     *
+     * ⛔ The admin dropdown renders this as GUIDANCE TEXT ONLY — never as a default selection, a
+     * pre-selected action, a severity score, or a recommendation. FR-57's prohibition is a
+     * prohibition ON THE DECISION MOVING, and a pre-selected sanction moves it.
+     * ⛔ `null` on all three RESTORE grounds — a code that justifies no sanction carries no sanction
+     * guidance — and the UI renders NOTHING there: not "n/a", not an empty chip.
+     */
+    ordinarily_results_in: ModerationAction.nullable(),
   })
   .strict();
 export type ReasonCodeMetaDto = z.output<typeof ReasonCodeMetaDto>;

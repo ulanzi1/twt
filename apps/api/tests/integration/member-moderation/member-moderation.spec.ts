@@ -208,8 +208,43 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     `/api/v1/p/${p}/members/${m}/moderation/${action}`;
   const historyUrl = (p: string, m: string) => `/api/v1/p/${p}/members/${m}/moderation`;
 
-  function body(reasonCode: string, rationale = 'Recorded after review of the file.'): Json {
-    return { reason_code: reasonCode, rationale };
+  // ── Story 10.20 (AC6) — a TERMINATION now carries the two-part escalation justification ────────
+  // Both parts are MANDATORY on `terminate` (Niyamavali §8.6), enforced in three layers: the route
+  // guard, the domain backstop and migration 0099's `escalation_iff_terminate` CHECK. These two
+  // strings are the default so that the tests BELOW — which are about legality, RBAC, step-up and
+  // the history read — keep testing what they were written to test.
+  // ⛔ They are deliberately DIFFERENT texts: identical parts are a 422 restatement, and a shared
+  // constant here would have made every termination in this file fail for the wrong reason.
+  // The escalation rules themselves are pinned in `moderation-escalation.spec.ts`.
+  const ESCALATION_INADEQUACY =
+    'Suspension would not protect the Trust: the member retains the access that was misused and the restoration path it preserves is futile here.';
+  const ESCALATION_PROPORTIONALITY =
+    'Termination fits the conduct because the forgery was deliberate, repeated, and aimed at the claim-verification process itself.';
+
+  // ── Story 10.20 (AC8) — these terminations take the IMMEDIATE-TERMINATION EXCEPTION, on purpose ─
+  // A 7-day dwell now separates a suspension from the termination that ordinarily follows it, and
+  // every test in this file suspends and terminates seconds apart. The exception the Panel preserved
+  // (Q4.1) is a legitimate termination route, not a test-only bypass: it is available where the
+  // authorised actor RECORDS THE REASON, which is exactly what this string does.
+  // ⛔ The alternative — seeding a `dwell_days: 0` clause — was rejected: fabricating governance
+  // data to make tests pass would put a duration in the registry that no Panel ratified.
+  // The ORDINARY path (and this exception's own effect on the record) is pinned in
+  // `moderation-dwell.spec.ts`, which seeds the real 7-day clause and advances an injected clock.
+  const IMMEDIATE_REASON =
+    'The forged documents are still circulating and each day of delay exposes further claims to the same fraud.';
+
+  function body(
+    reasonCode: string,
+    rationale = 'Recorded after review of the file.',
+    action?: 'suspend' | 'terminate' | 'restore',
+  ): Json {
+    const base: Json = { reason_code: reasonCode, rationale };
+    if (action === 'terminate') {
+      base.escalation_inadequacy = ESCALATION_INADEQUACY;
+      base.escalation_proportionality = ESCALATION_PROPORTIONALITY;
+      base.immediate_termination_reason = IMMEDIATE_REASON;
+    }
+    return base;
   }
 
   async function act(
@@ -226,7 +261,7 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     return client.inject({
       method: 'POST',
       url: modUrl(p, m, action),
-      payload: body(reasonCode, opts.rationale),
+      payload: body(reasonCode, opts.rationale, action),
     });
   }
 
@@ -244,7 +279,7 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     const c = await td.pool.connect();
     try {
       const r = await c.query(
-        `SELECT action, reason_code, actor_display, rejoin_permitted_at, rationale_ciphertext
+        `SELECT action, reason_code, actor_display, rejoin_permitted_at, decision_note_ciphertext
            FROM member_moderation_actions WHERE member_id = $1 ORDER BY acted_at ASC`,
         [memberId],
       );
@@ -556,7 +591,7 @@ describe.skipIf(!hasDatabase)('member moderation — E2E (:5433)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe('suspend');
     expect(rows[0]?.actor_display).toBe('Trustee One');
-    expect(String(rows[0]?.rationale_ciphertext)).not.toContain('Recorded after review');
+    expect(String(rows[0]?.decision_note_ciphertext)).not.toContain('Recorded after review');
   });
 
   it('AC6: the REAL suspend route revokes the member\'s sessions and device bindings', async () => {

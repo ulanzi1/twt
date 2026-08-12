@@ -332,6 +332,34 @@ export {
   MODERATION_REASON_CODE_INVALID_CODE,
   ModerationRationaleRequiredError,
   MODERATION_RATIONALE_REQUIRED_CODE,
+  // Story 10.20 (WS-A/WS-C) — the record model's typed refusals. All four are 422s about the
+  // request's shape AS A GOVERNANCE RECORD, deliberately distinct from the 409 above about the
+  // member's state; a trustee must be able to tell "this is not a valid record" from "this action
+  // is not legal right now".
+  ModerationEscalationRequiredError,
+  MODERATION_ESCALATION_REQUIRED_CODE,
+  ModerationEscalationNotApplicableError,
+  MODERATION_ESCALATION_NOT_APPLICABLE_CODE,
+  ModerationEscalationRestatementError,
+  MODERATION_ESCALATION_RESTATEMENT_CODE,
+  ModerationEvidenceRefInvalidError,
+  MODERATION_EVIDENCE_REF_INVALID_CODE,
+  // Story 10.20 (WS-D) — the dwell precondition. ⚠ The two differ in KIND, not merely in severity:
+  // `dwell_not_elapsed` is a 409 a trustee resolves by waiting or by invoking the immediate
+  // exception; `dwell_policy_unprovisioned` is a 503 no amount of waiting resolves.
+  ModerationDwellNotElapsedError,
+  MODERATION_DWELL_NOT_ELAPSED_CODE,
+  ModerationDwellPolicyUnprovisionedError,
+  MODERATION_DWELL_UNPROVISIONED_CODE,
+  // Story 10.20 (WS-E) — the append-only grounds.
+  ModerationActionNotFoundError,
+  MODERATION_ACTION_NOT_FOUND_CODE,
+  ModerationGroundNotFoundError,
+  MODERATION_GROUND_NOT_FOUND_CODE,
+  ModerationPrimaryGroundImmutableError,
+  MODERATION_PRIMARY_GROUND_IMMUTABLE_CODE,
+  ModerationGroundAlreadySupersededError,
+  MODERATION_GROUND_ALREADY_SUPERSEDED_CODE,
 } from './member/moderation/errors.js';
 // Story 10.6 — the bulk operations `[PRIMITIVE]`: a single `bulkExecute` harness (dry-run flag),
 // the `BulkOperation` contract, an empty registry (operations are surface-owned — 10.10/10.12/the

@@ -52,7 +52,12 @@ describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', (
     //   (niy.restoration-discipline.policy NET-new). ⚠ It carries NO `lock_in_months`: §3.1 puts the
     //   durations on the RUNG, so the R7 clauses above keep them and this clause supplies only what
     //   no R7 clause can express — the month-counting convention and the concurrency rule (D2).
-    expect(records).toHaveLength(22);
+    // + 1 Story-10.20 moderation-dwell policy clause (niy.moderation.dwell NET-new) — the SEVEN-DAY
+    //   dwell between suspension and termination, ratified as versioned registry data by Decision
+    //   `2026-08-12-099` (Q4) rather than a code constant (review follow-up: this seed addition
+    //   shipped without updating this gate's expected count/id-list, which the live CI-local
+    //   pre-push run caught).
+    expect(records).toHaveLength(23);
     const ids = records.map((r) => r.id).sort();
     expect(ids).toEqual([
       'niy.concealment.r14',
@@ -65,6 +70,7 @@ describe('Niyamavali v1 seed × benefit-mechanism gate (the importable seam)', (
       'niy.contribution-discipline.r7-g',
       'niy.lock-in.policy',
       'niy.medical.ima-list',
+      'niy.moderation.dwell',
       'niy.ninety-percent-rule.r8',
       'niy.ninety-percent-rule.r8-a',
       'niy.ninety-percent-rule.r8-b',

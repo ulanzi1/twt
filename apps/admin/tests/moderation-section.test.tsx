@@ -28,6 +28,8 @@ function history(over: Partial<ModerationHistoryResponse> = {}): ModerationHisto
     current_reason_code: null,
     since: null,
     legal_actions: ['suspend'],
+    // Story 10.20 (AC8) — ADDITIVE alongside `legal_actions`, never a filter on it.
+    termination_available_at: null,
     entries: [],
     has_more: false,
     ...over,
@@ -38,7 +40,7 @@ function history(over: Partial<ModerationHistoryResponse> = {}): ModerationHisto
 function reasonCodes(): ReasonCodesListResponse {
   return {
     items: [
-      { code: 'r14-forgery', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R14', label: 'Forgery or falsified documents (R14)' },
+      { code: 'r14-forgery', applies_to: ['suspend', 'terminate'], niyamavali_ref: 'R14', label: 'Forgery or falsified documents (R14)' , ordinarily_results_in: 'suspend' },
     ],
   };
 }

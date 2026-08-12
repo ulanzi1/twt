@@ -4,7 +4,7 @@ baseline_commit: 4c7fdee490c18b3010dcdb3b392cc1806b5dc262
 
 # Story 10.20: Moderation Record Model `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -1199,22 +1199,35 @@ own commit with its own evidence. Portal access stays untouched — Story 10.21'
       byte-for-byte programmatically**. Marked **[Author-committed]**, ⛔ not presented as a new
       Panel ruling — the Panel ratified the RULES; this records that two are now enforced.
 
-### Task 12 — Validate (AC: all)
-- [ ] `pnpm --filter @twt/domain typecheck lint` · same for `@twt/contracts`, `@twt/api`, `@twt/admin`.
-- [ ] Live-DB: `member-moderation.spec.ts`, `moderation-auth-effects.spec.ts`,
-      `termination-access-block.spec.ts`, the RLS policy-regression specs, `rtbf-anonymize.test.ts`.
-- [ ] `pnpm db:check` · `pnpm contracts:check-openapi-determinism` · `pnpm domain-invariants:check` ·
-      `pnpm governance-boundary:check` · `pnpm schema:check`.
-- [ ] **Revert-sanity** on every new gate: the `evidence_refs` array/cap CHECKs **and the
-      function-backed shape CHECK** (plant `{"kind":"complaint","ref":"<a full sentence>"}`, an
-      unknown `kind`, and a third key — three distinct rejections), the
-      escalation-presence CHECK, the one-primary partial unique index (**`23505` on a second primary**),
-      the **grounds `UPDATE`-privilege denial**, the anti-restatement guard, the dwell precondition,
-      and the RTBF scrub. A gate that has never been seen to fail has not been shown to have teeth
-      ([[feedback_gate_scope_semantic_coverage]]).
-- [ ] ⛔ Never regenerate an applied migration; never `DROP SCHEMA`
-      ([[project_live_db_test_gotchas]]). Any failure claimed pre-existing must be **proven**
-      pre-existing at `baseline_commit`.
+### Task 12 — Validate (AC: all) ✅ DONE 2026-08-12
+- [x] typecheck + lint green on `@twt/domain`, `@twt/contracts`, `@twt/api`, `@twt/admin`,
+      `@twt/events`.
+- [x] Live-DB: `member-moderation.spec.ts` (26) · `moderation-escalation.spec.ts` (18) ·
+      `moderation-dwell.spec.ts` (10) · `moderation-grounds.spec.ts` (14) ·
+      `moderation-auth-effects.spec.ts` (7) · `termination-access-block.spec.ts` (6) ·
+      `trustee-lite.spec.ts` (19) · **both** RLS policy-regression specs ·
+      `rtbf-anonymize.test.ts` (11).
+      ⭐ **`member-moderation-grounds-policy-regression.spec.ts` was MISSING and is now written** —
+      AC5 makes it acceptance evidence, not a nice-to-have; 13 tests in the sibling's shape.
+- [x] `db:check` · `contracts:check-openapi-determinism` · `domain-invariants:check` ·
+      `governance-boundary:check` · `schema:check` — **all five green**.
+- [x] **Revert-sanity on every new gate, driven from RAW SQL past every TypeScript layer:**
+      evidence array/cap CHECKs + the function-backed **shape** CHECK (prose ref · unknown kind ·
+      third key · non-object entry · missing ref · over-length · non-array · over-cap — each a clean
+      `23514`, plus the accepting cases); the escalation-presence CHECK **in both directions**; the
+      one-primary partial unique index (**`23505`**) **and** its partiality (two supporting grounds
+      accepted — without which the assertion would pass on a plain unique index); the grounds
+      `UPDATE` **and** `DELETE` privilege denials (**`42501`**); the FK orphan rejection (`23503`);
+      the anti-restatement guard; the dwell precondition; and the RTBF scrub asserting every new
+      column **by name** plus the retained non-PII ones.
+- [x] ⛔ No applied migration regenerated; no `DROP SCHEMA`.
+- [x] ⚠ **The 4 `sms-rate-buckets` failures are PROVEN pre-existing**, not asserted: re-run with this
+      story's entire working tree **stashed** at `baseline_commit`, still 4/4 red. They fail at
+      CONNECTION (*"The server does not support SSL connections"* — `createDb` defaults to SSL and
+      that spec passes no override), before any query, and nothing here touches SMS rate limiting.
+
+**Final counts:** `@twt/domain` **2600 passed** (+ the 4 pre-existing) · `@twt/api` **939 passed** ·
+`@twt/contracts` **881** · `@twt/admin` **300** · `@twt/events` **20**.
 
 ---
 
@@ -1512,6 +1525,8 @@ non-array, leaving that violation to the array CHECK.
 - `packages/domain/tests/member/life-events-markers.test.ts`,
   `packages/domain/tests/member/personal-event-assertion.test.ts` (Task 7 — the 21→22 count fixtures)
 - `packages/domain/tests/member/rtbf-anonymize.test.ts` (Task 9 — every new column by name; 7→8 tables)
+- `packages/domain/tests/integration/rls/member-moderation-grounds-policy-regression.spec.ts`
+  *(Task 12 — NEW; AC5's acceptance evidence for the new table)*
 - `packages/contracts/tests/member-moderation.test.ts` (Task 7 — the history fixture)
 
 **Modified — contracts/api (5)**

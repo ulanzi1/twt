@@ -4264,3 +4264,82 @@ review session's own additions, not the story's original governance content).
   without itself being ratified?) worth a dedicated look, not urgent.
 - **Symbol vocabulary (⛔/⚠/✅) carries several distinct meanings throughout with no legend** —
   consistent with this project's established (if informal) documentation style, low priority.
+
+---
+
+## Deferred from: 1-18-geo-tree-scope-resolver — the successor mints (2026-08-12)
+
+**Recorded BEFORE implementation, deliberately** ([[feedback_governance_commits_precede_implementation]]).
+This section is the governance half of Story 1.18: it records the **owners** for everything the story
+re-defers, and it commits **first**, so no marker ever points at a story that does not yet exist. All
+dispositions were **ruled by BigDev on 2026-08-12** and are entered as Decision `2026-08-12-102`.
+
+The vocabulary below is [[feedback_closure_language_precision]]'s and is never collapsed: *"Closed by
+[edit]"* ≠ *"Resolved via explicit deferral"* ≠ *"Not addressed"*.
+
+### The three mints — each a **named story**, never an epic
+
+`[[project_r7_fact_producer_unbuilt]]`: *a deferral naming an EPIC expires unowned.* That is the exact
+failure D1-1.8 embodied for seven epics, so every re-deferral below names a story that **exists in
+`sprint-status.yaml` as of this commit**, carries **acceptance criteria** in `epics.md`, and was minted
+before anything pointed at it.
+
+| Re-deferral | Model it extends | Owner | Status |
+|---|---|---|---|
+| Geo **audience** selection (markers D6, D7, D8, D14, D15, D16) | member→geo attribution over Story 1.18's tree | **Story 1.19** — `1-19-member-geo-attribution-geo-audience-consumer` | **MINTED**, Epic 1, `backlog`, 8 ACs |
+| Block-dimension **ground-inspection gate** (D2's honest path) | Story 6.7's ground-inspection gate (FR-40) | **Story 6.17** — `6-17-block-dimension-ground-inspection-gate` | **MINTED**, Epic 6, `backlog`, 5 ACs |
+| **Multi-node report scope** (marker D2 / `reports/scope.ts:71` / `:3432` below) | Story 10.7's `ResolvedReportScope` | **Story 10.28** — `10-28-multi-node-report-scope` | **MINTED**, Epic 10, `backlog`, 5 ACs |
+
+⚠ **Two of the three land in retrospected epics** (Epic 6 `done`, Epic 10 `optional`). That is the *same
+deliberate act* that placed Story 1.18 itself in a retrospected Epic 1: a successor belongs to the epic
+that owns the model it extends. Each carries a placement comment in `sprint-status.yaml` and a placement
+note in `epics.md` so a later reader does not "correct" it. **No retrospective was flipped back.**
+
+⛔ **Why three and not one.** The original D7 proposed a single successor holding everything. Scoped
+against the project's own numbering rule, the re-deferrals turned out to share **no owning model** —
+bundling four unrelated capabilities into one Epic-1 story would have recreated the epic-shaped bucket
+this whole correct-course exists to abolish, in story clothing.
+
+### The two dispositions that are NOT mints — deliberately
+
+- **S4 (`scope.ts:218`, `self` targets) — "Closed by [edit]". NO successor is minted.**
+  **Resolved via explicit deferral is the WRONG label here and was rejected on evidence.** The repo's
+  only live `dimension: 'self'` check (`apps/api/src/modules/member-validity/handlers.ts:132`) passes
+  **`grants: []` with `isSelf: true`** and bypasses the grant path entirely, so the branch the comment
+  defers — a narrower-than-`pariwar` grant reaching a `self` target — has **zero live consumers, zero
+  backlog consumers, and no FR behind it**. `scope.ts:50-55` already states the design fact (`self` is
+  *"orthogonal to the geo tree: own records only, not a node in it"*) and `GeoNode` excludes `self`
+  **by type** (`:149`). The comment was therefore a **misdescription of a deliberate design choice**,
+  not a deferral. Minting an owner for work nobody has asked for manufactures precisely the un-gated
+  re-commitment [[feedback_record_unattested_no_backfill]] warns decays.
+  ⛔ **The deny does not change** — this is a comment correction, not a logic change. If a `self`-scoped
+  actor ever becomes real (`field_worker`, `scopeCeiling: 'self'`, permissions currently empty), that
+  story raises it **with a live requirement attached**.
+
+- **The trustee-**directory** half of `pool/fixed-amount.ts:78` — RE-POINTED to existing Story 10.13.
+  No mint.** The marker is compound: *"needs a trustee directory / RBAC geo-scope resolver — the
+  resolver half is Story 1.18; the trustee directory has no owner yet."* The second clause is now
+  **stale**. `10-13-fixed-amount-setter-admin-ui` (`backlog`) is the surface that consumes Story 7.5's
+  workflow **including the emergency attesting panel** — the exact place "who may attest" must be
+  answered. ⚠ The obligation is **also recorded in Story 10.13's own `epics.md` section**, because a
+  marker pointing at a story whose text never mentions the obligation is how an inherited deferral goes
+  unnoticed. ⛔ `POOL_FIXED_AMOUNT_MIN_PANEL_SIZE = 2` stays as the mechanical floor; Story 1.18 changes
+  no value.
+
+### ⭐ Story 10.28's existence is UNCONDITIONAL
+
+Multi-node report scope (one actor holding grants at **several** districts) is **orthogonal** to ancestry
+(one actor reaching districts **beneath** a state). Because a permanent owner born already-discharged is
+a contradiction, **Story 1.18 dispositions multi-node scope and never builds it** — even if it looks
+cheap once the ancestry work is in hand. The earlier *"unless it falls out cheaply"* branch is **CLOSED**.
+
+What Story 1.18 **does** owe here: `reports/templates/_shared.ts:40`'s `deny` branch is genuinely reached
+differently once ancestry is live, so that branch is **re-examined and re-pinned** within Story 1.18.
+Changing `ResolvedReportScope`'s **cardinality** is Story 10.28's, and only Story 10.28's.
+
+### Third-generation warning, recorded so it cannot be waved through
+
+Epic 3 → Story 1.18 → {1.19, 6.17, 10.28}. This is the **third generation** of the same deferral. The
+difference that is supposed to break the cycle is that all three successors carry acceptance criteria and
+a named owner rather than an epic and a re-trigger. **Three owners is also three chances to repeat the
+failure.** Whoever retrospects Epic 1 next should check these three by name.

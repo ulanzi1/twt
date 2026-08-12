@@ -1432,6 +1432,66 @@ tree with the target strictly narrower.
 
 ---
 
+### Story 1.19: Member Geo Attribution + Geo Audience Consumer `[PRIMITIVE]` + `[CONSUMER]`
+
+> ⚠ **Minted by Story 1.18 Task 1 (Decision `2026-08-12-102`), governance-first.** Same deliberate
+> retrospected-epic placement as Story 1.18, and for the same reason: it extends the geo-tree model
+> Story 1.18 mints, and *a successor belongs to the epic that owns the model it extends.* Do **not**
+> re-home it into whichever epic happens to be open, and do **not** flip `epic-1-retrospective` back.
+
+As Solo Builder and every surface that has stored a geo audience it cannot resolve,
+I want a member→geo attribution primitive over Story 1.18's tree, with the `state` audience arm wired
+end-to-end,
+So that a banner or post targeted at a state reaches the members who are actually in it, instead of being
+stored, tone-reviewed, listed — and visible to nobody.
+
+> **The gap.** `member_postings.district` is the only per-member geography that exists. Members carry no
+> `state` and no `block`. Story 1.18 supplies district→state ancestry; what is still missing is the
+> member→district read that turns ancestry into an audience.
+>
+> ⛔ **Wires ONE consumer end-to-end.** A producer with no consumer is the Story 5.6/5.7 anti-pattern that
+> Story 10.8's Decision 8 exists to prevent.
+
+**Acceptance Criteria:**
+
+1. **The primitive.** `resolveMemberGeoNode` returns the member's current district (newest `member_postings`
+   row by `created_at`), lifted through Story 1.18's in-force tree to `{pariwar, state, district, block}`.
+   ⭐ **Every ancestor the tree cannot supply is TYPED-ABSENT** (`{available: false, reason}`) — never
+   guessed, never null-collapsed (the Story 8.4 nominee-VPA discipline). ⛔ **Nothing in this story may
+   imply a member necessarily resolves to all four levels**: a Pariwar publishing only districts yields no
+   state and no block, and that is a first-class answer, not a degraded one. A member with **no posting
+   row** resolves to **no geo**, and every consumer treats that as *"in no geo audience"* — **fail-closed,
+   never "in all."**
+2. **The tree is the only ancestry source.** State/block come **only** from Story 1.18's published tree — no
+   second geography, no hardcoded district→state map. A Pariwar with no tree resolves district-only, so its
+   `state` audience arm denies **exactly as today**.
+3. **The `state` arm lights up in BOTH consumers** — banners' read-time predicate
+   (`isMemberInBannerAudience`) and news-blog's dispatch selector (`resolveAudienceMemberIds`). Call sites do
+   not move; banners' signature grows a member argument exactly as `banners/audience.ts:40-43` predicts.
+   ⛔ **The polarity difference is preserved**: `public` → `true` for banners, empty set for news-blog
+   (`banners/audience.ts:5-12`).
+4. **`role` and `cohort` stay seamed, with a named owner.** No member attribute exists for either — `members`
+   carries lifecycle `state` + `pariwar_id` only. Both continue to resolve false/empty + a logged seam note,
+   their prose names a **story** and never an epic, and the per-arm distinction between *"resolvable now"*
+   and *"no attribute exists"* is stated explicitly.
+5. **The six re-pointed markers are discharged.** D6/D7/D8/D14/D15/D16: geo half resolved, role/cohort half
+   re-pointed. ⛔ `contracts/src/banners/{enums,dto}.ts` and `apps/admin/.../derive.ts` are **comment/DTO
+   edits only** — contracts must never import a pg-touching `@twt/domain` namespace (the RN Metro bundle
+   boundary).
+6. ⚠ **The quiet-turn-on hazard.** `state`-scoped banner rows authored before this story are currently
+   visible to **nobody**; when the arm resolves they become live. The admin console's *"not yet targetable"*
+   indicator (`apps/admin/src/modules/banners/derive.ts:60`) is removed for `state` and retained for
+   `role`/`cohort`, and **existing `state` rows receive an explicit disposition** — publish, or require
+   re-confirmation — rather than silently appearing.
+7. **The dispatch read is bounded.** The `state` fan-out is one query joining newest-posting-per-member
+   against the tree's district set — **no N+1 at 4L members**. Watch the `DISTINCT ON` 42P10 gotcha and the
+   domain limit-clamp gate.
+8. **Story 12.2 inherits a seam, not a surprise.** The targeting wizard's scope filter
+   (`epics.md:4429` — `national/state/district/role/cohort`) is recorded as a downstream consumer of this
+   primitive. **No code is written for it here.**
+
+---
+
 ## Epic 2: Niyamavali Publishing & Public Trust Identity
 
 The trust becomes *publicly real*. Niyamavali (the rulebook) is drafted, versioned, and published on twt.org with version-diff. T&C is lawyer-review-tracked-but-not-gated and tied to Niyamavali version. Consent registry records member acceptance with timestamp. Bilingual i18n + tone-guide enforcement are wired across every member-facing surface from here forward. **AR-48 public Astro SSR shell foundation initialized here** (Story 2.5), extended in Epic 11a (Member Directory + matrix), per-claim fragments in Epic 11b.
@@ -2644,6 +2704,40 @@ So that procedural fairness is enforced and reversed claims are publicly transpa
 
 ---
 
+### Story 6.17: Block-Dimension Ground-Inspection Gate `[SURFACE]`
+
+> ⚠ **Minted by Story 1.18 Task 1 (Decision `2026-08-12-102`), governance-first.** `epic-6-retrospective`
+> is `done`; adding a story here is the **same deliberate act** that placed Story 1.18 in Epic 1 — this
+> extends **Story 6.7's ground-inspection gate** (FR-40), so it belongs to Epic 6. Do not "correct" the
+> placement and do not flip the retrospective back. **Depends on Story 1.18.**
+
+As a Pariwar running ground inspections at block level,
+I want the ground-inspection gate checked at the block dimension,
+So that FR-40's block-level administrators can actually schedule inspections, instead of holding a grant the
+model can never satisfy.
+
+> ⭐ **Why a block gate works where the district gate cannot.** Re-gating at `dimension: 'block'` authorizes
+> **both** actors: `block_admin` by exact-node match, and `district_admin` by *district→block ancestry
+> through Story 1.18's resolver* (`tRank 4 > gRank 3` → falls through to the resolver, which now answers).
+> The current district gate can never authorize `block_admin` — Story 1.18's D2 traced that to rank order,
+> not to a missing resolver. This is a **gate redesign**, not a resolver deferral.
+
+**Acceptance Criteria:**
+
+1. `claim_ground_inspections` gains a block value — **or** block is derived via Story 1.19's primitive. The
+   choice is **recorded, not assumed** (the table carries `district text NOT NULL` and no block column today,
+   `:116`).
+2. `claim.conduct_ground_inspection` is checked at `dimension: 'block'`, preserving `block_admin`'s
+   `scopeCeiling: 'block'` — ⛔ **no district-scoped grant is issued to a block admin**, which would violate
+   the ceiling.
+3. `district_admin` still authorizes, via Story 1.18 ancestry. **Both roles are pinned by test.**
+4. ⛔ `check.test.ts:184`'s rank-order pin stays **green and unmodified**. This story routes around it with a
+   different gate; it does not lift it.
+5. ⛔ **No change to `GEO_RANK`, `CEILING_RANK`, or `scopeContains`** — architectural freeze row 9. Any such
+   change is an ADR and a different story.
+
+---
+
 ## Epic 7: Pool Engine & Cycle Spawn
 
 At trustee bulk-approval (cycle freeze), the engine atomically spawns N pools per cycle, names them from a culture-rooted curated list (Mahabharata seed + extensions), assigns every active member deterministically (`hash(member_id + cycle_id) % N`), snapshots the `fixed_amount`, and emits all events. **Replay-verifiable, idempotent, partitioned for capacity.** Saga decomposition targets the < 60s p95 envelope at N=50 / M=4L. Pre-launch measured-validation gate (Sprint Change Proposal Item 15) must close before Phase 1.
@@ -3668,6 +3762,25 @@ So that the operation is admin-friendly and emits the right audit + notification
 **And** the UI shows current + scheduled values; audit trail of past changes; submitting fires Story 7.5's workflow
 **And** scope-respecting via Story 1.8
 
+> ⭐ **INHERITED OBLIGATION — the trustee directory (recorded by Story 1.18 Task 1, D9-R, Decision
+> `2026-08-12-102`).** `packages/domain/src/pool/fixed-amount.ts:78` carries a **compound** deferral:
+> *"needs a trustee directory / RBAC geo-scope resolver."* Story 1.18 delivered the **resolver** half; the
+> **trustee-directory** half — *who may sit on the emergency attesting panel* — re-points **here**, because
+> this is the surface that consumes Story 7.5's workflow **including the emergency attesting panel**, and
+> that is the exact place "who may attest" has to be answered.
+>
+> **Given** `POOL_FIXED_AMOUNT_MIN_PANEL_SIZE = 2` is a mechanical floor with no directory behind it —
+> the code can count attestors but cannot enumerate *eligible* ones
+> **When** this story implements the emergency-override attestation path (AC (b) above)
+> **Then** the eligible-attestor directory is resolved explicitly — either a real directory read or a
+> **recorded** decision that panel membership is asserted at attestation time — and `fixed-amount.ts:78`'s
+> marker is closed against it
+> **And** ⛔ `POOL_FIXED_AMOUNT_MIN_PANEL_SIZE` is **not** changed by that work; it is the floor, not the
+> directory.
+>
+> This obligation is recorded in **this story's own section** deliberately: a marker pointing at a story
+> whose text never mentions the obligation is exactly how an inherited deferral goes unnoticed.
+
 ### Story 10.14: Permission Delegation `[SURFACE]`
 
 As a Pariwar admin delegating limited authority,
@@ -4016,6 +4129,33 @@ So that R7(G) can explain, in my record, how the Niyamavali treats it.
 **Then** this story supplies it by recording that an excuse **was asserted**, so R7(G) fires and explains why it does not apply — detection-and-explanation, never a waiver
 
 **Depends on:** Story 10.24.
+
+### Story 10.28: Multi-Node Report Scope `[PRIMITIVE]`
+
+> ⚠ **Minted by Story 1.18 Task 1 (Decision `2026-08-12-102`), governance-first.** It extends **Story
+> 10.7's `ResolvedReportScope`**, so it belongs to Epic 10 — the same numbering rule that placed Story
+> 1.18 in Epic 1. ⭐ **This is the PERMANENT owner of multi-node report scope, and its existence is NOT
+> conditional on Story 1.18's implementation.** Multi-node (one actor holding grants at *several*
+> districts) is orthogonal to ancestry (one actor reaching districts *beneath* a state). Because a
+> permanent owner born already-discharged is a contradiction, **Story 1.18 dispositions this and never
+> builds it**, even if it looks cheap after the ancestry work.
+
+As a district administrator holding a report key at more than one district,
+I want report scope to carry every node I hold,
+So that an export covers all of them, instead of silently returning one district and no signal that the rest
+were dropped.
+
+**Acceptance Criteria:**
+
+1. `ResolvedReportScope` carries **multiple** same-dimension values; `resolveActorReportScope` returns every
+   grant at the broadest dimension instead of the strict-`<` tie-break winner (`reports/scope.ts:73`).
+2. Report templates narrow `WHERE district IN (...)` — `member-roster` and `contribution-rate-by-district`.
+3. **A silent single-district export is impossible**: a two-grant test asserts both districts appear. The
+   failure this story exists to remove is *silent*, so the test must prove presence, not absence of error.
+4. `_shared.ts`'s narrowing modes are extended, and `reports.spec.ts:124` is re-pinned as a **query**
+   deny-deeper pin (it is not an RBAC pin — `checkPermission` already allows there).
+5. **Composition with Story 1.18's ancestry is stated**: a state grant reaches districts beneath it, and
+   multi-node + ancestry must not double-count a district reachable by both paths.
 
 ---
 

@@ -399,7 +399,7 @@ proceeded on an assumed answer (`[[feedback_record_unattested_no_backfill]]`).
 
 | Not asked here | Owner |
 |---|---|
-| **§8.8 — the moderation appeal route** | **10.22.** §8.6 principle 8 *states* the gap; it does not close it. |
+| **§8.8 — the moderation appeal route** | **10.22.** §8.6's unnumbered *Recorded gap* clause *states* the gap; it does not close it. |
 | **The off-portal DPDPA access route** | **10.21.** |
 | **Flipping `termination_access_block`** | Story 10.21's gate, per Decision `2026-08-10-097`. ⛔ Untouched here. |
 | **Retiring a reason code** | Its own story + an enum migration against live rows (Q3(b)). |

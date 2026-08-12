@@ -1121,12 +1121,18 @@ own commit with its own evidence. Portal access stays untouched — Story 10.21'
       payload and a REJECTED one alike (Story 10.19 debug finding #3) — the payload's acceptance is
       pinned SEPARATELY by parsing it against the registered schema.
 
-### Task 8 — WS-F: guidance metadata (AC: 10)
-- [ ] `ordinarilyResultsIn: ModerationAction | null` on `ReasonCodeMeta` — **required**, Q6's values
-      for the seven moderation grounds, **`null` for the three restore grounds** (AC10); through
-      `listReasonCodeMeta` → `ReasonCodesListResponse` → the admin dropdown as **guidance text only**,
-      rendering nothing at all where the value is `null`.
-- [ ] ⛔ `MODERATION_APPLIES_TO` unchanged. ⛔ No enum values added or removed.
+### Task 8 — WS-F: guidance metadata (AC: 10) ✅ DONE 2026-08-12 *(domain/contracts/API; the dropdown rendering rides Task 10)*
+- [x] `ordinarilyResultsIn: ModerationAction | null` on `ReasonCodeMeta` — **required and nullable**,
+      Q6's `'suspend'` for **all seven** moderation grounds and **`null` for all three** restore
+      grounds; through `listReasonCodeMeta` → `ReasonCodesListResponse` unchanged (⛔ the server never
+      substitutes a value for a restore ground's `null` — that null IS the ratified answer).
+- [x] ⛔ `MODERATION_APPLIES_TO` unchanged, pinned by a test that asserts every moderation ground
+      still reads `['suspend','terminate']`. ⛔ No enum values added or removed; the vocabulary is
+      pinned at **ten**.
+- [x] ⭐ A test pins that **every moderation ground says `'suspend'` even though each may equally
+      justify a termination** — the Panel escalates by RECORDING WHY, not by the registry pre-empting
+      it. The literal values are asserted rather than derived from `appliesTo`, because they are
+      governance data a dev agent may not substitute.
 
 ### Task 9 — WS-A: RTBF completeness (AC: 11) ✅ DONE 2026-08-12
 - [x] `anonymize.ts`: sentinel-scrubs **all three** new action-level Tier-1 columns (both escalation
@@ -1451,6 +1457,8 @@ non-array, leaving that violation to the array CHECK.
 - `packages/events/src/registry.ts` (Task 7 — registration point 3)
 - `packages/domain/src/member/moderation/reason-codes.ts` (Task 7 — the guard moved here; cycle broken)
 - `packages/domain/src/member/moderation/read.ts` (Task 7 — `evidenceRefs` on the history entry)
+- `packages/domain/src/member/moderation/reason-codes.ts` (Task 8 — `ordinarilyResultsIn`)
+- `packages/domain/tests/member/moderation-reason-codes.test.ts` (Task 8 — the guidance pins)
 - `packages/domain/src/member/anonymize.ts` (Task 9 — all new Tier-1 columns + the grounds note)
 - `apps/api/src/modules/member-moderation/routes.ts` (Task 7 — the grounds route, 4th step-up context)
 - `packages/domain/tests/member/life-events-markers.test.ts`,

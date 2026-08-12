@@ -164,8 +164,8 @@ describe('response DTOs — the rationale never leaves the database', () => {
     expect(parsed.entries[0]).not.toHaveProperty('rationale');
     expect(parsed.has_more).toBe(false);
     // ⚠ `has_note`, never the note itself: the ground note is Tier-1 and stays decrypt-on-demand.
-    expect(parsed.entries[0].grounds[0]).not.toHaveProperty('note');
-    expect(parsed.entries[0].grounds[0].is_primary).toBe(true);
+    expect(parsed.entries[0]!.grounds[0]).not.toHaveProperty('note');
+    expect(parsed.entries[0]!.grounds[0]!.is_primary).toBe(true);
   });
 
   it('⛔ Story 10.20: `termination_available_at` is REQUIRED — its absence must not read as "go ahead"', () => {

@@ -191,7 +191,7 @@ describe.skipIf(!hasDatabase)('moderation grounds — append-only (:5433)', () =
   it('⭐ AC9: the PRIMARY ground is written in the ACTION\'s own transaction, exactly once', async () => {
     const { p, memberId, actionId, client } = await suspended();
     const hist = await history(p, memberId, client);
-    const grounds = hist.entries[0].grounds;
+    const grounds = hist.entries[0]!.grounds;
     // "At most one primary" is the DB's job (the partial unique index); "AT LEAST ONE" is the
     // writer's — this is the assertion that pins the writer's half.
     expect(grounds.filter((g) => g.is_primary)).toHaveLength(1);
@@ -229,7 +229,7 @@ describe.skipIf(!hasDatabase)('moderation grounds — append-only (:5433)', () =
     expect(res.statusCode).toBe(200);
 
     const hist = await history(p, memberId, client);
-    const grounds = hist.entries[0].grounds;
+    const grounds = hist.entries[0]!.grounds;
     expect(grounds).toHaveLength(2);
     const supporting = grounds.find((g) => !g.is_primary)!;
     expect(supporting).toMatchObject({
@@ -253,7 +253,7 @@ describe.skipIf(!hasDatabase)('moderation grounds — append-only (:5433)', () =
         [memberId],
       );
       expect(r.rows).toHaveLength(1);
-      const payload = r.rows[0].payload;
+      const payload = r.rows[0]!.payload;
 
       // (a) Lifecycle identity — `members.state` provably cannot move.
       expect(payload['from_state']).toBe(payload['to_state']);
@@ -293,7 +293,7 @@ describe.skipIf(!hasDatabase)('moderation grounds — append-only (:5433)', () =
     });
     expect(second.statusCode).toBe(200);
 
-    const grounds = (await history(p, memberId, client)).entries[0].grounds;
+    const grounds = (await history(p, memberId, client)).entries[0]!.grounds;
     expect(grounds).toHaveLength(3); // primary + superseded + superseder — nothing disappears.
     const superseded = grounds.find((g) => g['ground_id'] === firstId)!;
     expect(superseded['superseded']).toBe(true);
@@ -305,7 +305,7 @@ describe.skipIf(!hasDatabase)('moderation grounds — append-only (:5433)', () =
 
   it('⭐ AC9: superseding the PRIMARY ground is a TYPED 409, never a 23505 leaking as a 500', async () => {
     const { p, memberId, actionId, client } = await suspended();
-    const primaryId = (await history(p, memberId, client)).entries[0].grounds.find(
+    const primaryId = (await history(p, memberId, client)).entries[0]!.grounds.find(
       (g) => g.is_primary,
     )!['ground_id'] as string;
 
@@ -323,7 +323,7 @@ describe.skipIf(!hasDatabase)('moderation grounds — append-only (:5433)', () =
   it('AC9: a supersede target from ANOTHER action is a 404, never an existence oracle', async () => {
     const a = await suspended();
     const b = await suspended();
-    const bPrimaryId = (await history(b.p, b.memberId, b.client)).entries[0].grounds[0]['ground_id'] as string;
+    const bPrimaryId = (await history(b.p, b.memberId, b.client)).entries[0]!.grounds[0]!['ground_id'] as string;
 
     const res = await appendGround(a.p, a.memberId, a.actionId, a.client, {
       code: 'concealment-confirmed',

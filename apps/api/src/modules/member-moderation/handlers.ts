@@ -754,6 +754,9 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           applies_to: [...m.appliesTo] as ReasonCodesListResponse['items'][number]['applies_to'],
           niyamavali_ref: m.niyamavaliRef,
           label: m.label,
+          // ⚖ Q6-ratified guidance, passed through UNCHANGED. ⛔ The server never substitutes a
+          // value for a restore ground's `null` — that null IS the ratified answer.
+          ordinarily_results_in: m.ordinarilyResultsIn,
         })),
       };
     },

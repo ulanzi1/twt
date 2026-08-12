@@ -305,6 +305,16 @@ export const ReasonCodeMetaDto = z
     applies_to: z.array(ModerationAction),
     niyamavali_ref: z.string(),
     label: z.string(),
+    /**
+     * ⚖ Q6-ratified GUIDANCE — what this ground ordinarily results in (Story 10.20, AC10).
+     *
+     * ⛔ The admin dropdown renders this as GUIDANCE TEXT ONLY — never as a default selection, a
+     * pre-selected action, a severity score, or a recommendation. FR-57's prohibition is a
+     * prohibition ON THE DECISION MOVING, and a pre-selected sanction moves it.
+     * ⛔ `null` on all three RESTORE grounds — a code that justifies no sanction carries no sanction
+     * guidance — and the UI renders NOTHING there: not "n/a", not an empty chip.
+     */
+    ordinarily_results_in: ModerationAction.nullable(),
   })
   .strict();
 export type ReasonCodeMetaDto = z.output<typeof ReasonCodeMetaDto>;

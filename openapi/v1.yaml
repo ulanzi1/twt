@@ -6389,11 +6389,17 @@ components:
                 type: string
               label:
                 type: string
+              ordinarily_results_in:
+                type:
+                  - string
+                  - "null"
+                enum: *a41
             required:
               - code
               - applies_to
               - niyamavali_ref
               - label
+              - ordinarily_results_in
             additionalProperties: false
       required:
         - items

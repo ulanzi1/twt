@@ -62,6 +62,37 @@ export interface ReasonCodeMeta {
   readonly niyamavaliRef: string;
   /** Short English label for the admin dropdown; the member surface renders the i18n label. */
   readonly label: string;
+  /**
+   * ⚖ RATIFIED GUIDANCE — what this ground ORDINARILY results in (Story 10.20, AC10; Q6, Decision
+   * `2026-08-12-099`). ⛔ NOT a default, not a pre-selection, not a severity score.
+   *
+   * ── The tension this field resolves, and why it resolves it HERE ───────────────────────────────
+   * `prd.md:871` lists as a testable consequence that *"grounds for termination are enumerated
+   * separately from grounds for suspension; the two sets are not interchangeable"*, while
+   * `epics.md:3866` forbids narrowing `appliesTo` (*"it stays `['suspend','terminate']`"*). Both
+   * hold, at DIFFERENT LAYERS: the ENUMERATION is governance text (Niyamavali §8.5), the REGISTRY
+   * stays permissive and carries this guidance, and the TRUSTEE PANEL — not the registry —
+   * determines the sanction. The Panel restated the constraint that makes this guidance and not
+   * policy: *"a reason code does not itself terminate a member; the Trustee Panel decides whether
+   * the actual case warrants suspension or termination"* (§8.6 principle 2).
+   * ⛔ A dev agent that "satisfies FR-56" by narrowing `MODERATION_APPLIES_TO` has violated the epic
+   * AC and pre-empted the Panel.
+   *
+   * ── ⭐ Why REQUIRED and NULLABLE, when both lazier readings fail ───────────────────────────────
+   * `ReasonCodeMeta` types EVERY code in the registry, and `ReasonCode` spans TEN — the seven
+   * moderation grounds AND the three restore grounds. Q6 ratified guidance for the seven.
+   *   · OPTIONAL (`?:`) ⇒ `satisfies Record<ReasonCode, ReasonCodeMeta>` no longer bites, and a
+   *     moderation ground could ship with NO guidance, silently — the exact discipline this field
+   *     invokes.
+   *   · REQUIRED AND NON-NULLABLE ⇒ the three restore grounds need a value THE PANEL NEVER
+   *     RATIFIED, and a dev agent invents one. *"What does `moderation-error` ordinarily result
+   *     in?"* has no governance answer, and manufacturing one is the registry pre-empting the Panel
+   *     in miniature — principle 2's defect, at one-tenth scale.
+   * ⇒ `null` is the RATIFIED answer for a restore ground: *this code carries no sanction guidance
+   * because it justifies no sanction.* The Q6 ruling states it, so the value has provenance rather
+   * than being a placeholder.
+   */
+  readonly ordinarilyResultsIn: ModerationAction | null;
 }
 
 /**
@@ -73,7 +104,15 @@ export interface ReasonCodeMeta {
 const MODERATION_APPLIES_TO: readonly ModerationAction[] = ['suspend', 'terminate'];
 const RESTORE_APPLIES_TO: readonly ModerationAction[] = ['restore'];
 
-/** The registry: code → metadata. The single source both the API and the admin dropdown read. */
+/**
+ * The registry: code → metadata. The single source both the API and the admin dropdown read.
+ *
+ * ⚖ **`ordinarilyResultsIn` IS Q6-RATIFIED GOVERNANCE DATA** (Decision `2026-08-12-099`), and ⛔ no
+ * dev agent may substitute its own: `'suspend'` for ALL SEVEN moderation grounds, `null` for ALL
+ * THREE restore grounds. The Panel escalates by RECORDING WHY (the two-part escalation test), not by
+ * the registry pre-empting it — which is why every moderation ground says `'suspend'` even though
+ * each may equally justify a termination.
+ */
 export const REASON_CODE_REGISTRY = {
   // ── Moderation grounds (suspend + terminate) ──────────────────────────────────────────────────
   'r7-contribution-discipline': {
@@ -81,42 +120,49 @@ export const REASON_CODE_REGISTRY = {
     appliesTo: MODERATION_APPLIES_TO,
     niyamavaliRef: 'R7',
     label: 'Contribution discipline (R7)',
+    ordinarilyResultsIn: 'suspend',
   },
   'r14-forgery': {
     code: 'r14-forgery',
     appliesTo: MODERATION_APPLIES_TO,
     niyamavaliRef: 'R14',
     label: 'Forgery or falsified documents (R14)',
+    ordinarilyResultsIn: 'suspend',
   },
   'r10a-parallel-org-office': {
     code: 'r10a-parallel-org-office',
     appliesTo: MODERATION_APPLIES_TO,
     niyamavaliRef: 'R10(A)',
     label: 'Office held in a parallel organisation (R10(A))',
+    ordinarilyResultsIn: 'suspend',
   },
   'concealment-confirmed': {
     code: 'concealment-confirmed',
     appliesTo: MODERATION_APPLIES_TO,
     niyamavaliRef: 'FR-11',
     label: 'Concealment confirmed by State Trustee (FR-11)',
+    ordinarilyResultsIn: 'suspend',
   },
   'helpdesk-escalated-abuse': {
     code: 'helpdesk-escalated-abuse',
     appliesTo: MODERATION_APPLIES_TO,
     niyamavaliRef: 'FR-56',
     label: 'Abuse escalated from the helpdesk',
+    ordinarilyResultsIn: 'suspend',
   },
   'regulator-action': {
     code: 'regulator-action',
     appliesTo: MODERATION_APPLIES_TO,
     niyamavaliRef: 'FR-56',
     label: 'Regulatory or statutory action',
+    ordinarilyResultsIn: 'suspend',
   },
   'voluntary-pending-review': {
     code: 'voluntary-pending-review',
     appliesTo: MODERATION_APPLIES_TO,
     niyamavaliRef: 'FR-56',
     label: 'Voluntary pause pending review',
+    ordinarilyResultsIn: 'suspend',
   },
   // ── Restore grounds (restore only) ────────────────────────────────────────────────────────────
   'rule-clearance': {
@@ -124,18 +170,21 @@ export const REASON_CODE_REGISTRY = {
     appliesTo: RESTORE_APPLIES_TO,
     niyamavaliRef: 'R7(A)',
     label: 'Rule cleared — three consecutive contributions (R7(A))',
+    ordinarilyResultsIn: null,
   },
   'trustee-discretion': {
     code: 'trustee-discretion',
     appliesTo: RESTORE_APPLIES_TO,
     niyamavaliRef: 'R5(D)/R10(D)',
     label: 'Trustee discretion (R5(D)/R10(D))',
+    ordinarilyResultsIn: null,
   },
   'moderation-error': {
     code: 'moderation-error',
     appliesTo: RESTORE_APPLIES_TO,
     niyamavaliRef: 'FR-56',
     label: 'Moderation recorded in error',
+    ordinarilyResultsIn: null,
   },
 } as const satisfies Record<ReasonCode, ReasonCodeMeta>;
 

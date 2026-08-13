@@ -20,12 +20,23 @@
 // ── ⭐ THE RE-TRIGGER — STANDING, AND MECHANIZED ELSEWHERE ──────────────────────────────────────
 // **The first authorization or routing consumer of `resolveMemberGeoNode` requires reassessment.**
 // At that moment a flag that could weaken this read becomes a config-shaped privilege switch, and
-// this root must be admitted. The two named triggers are recorded in their OWN `epics.md` sections,
+// this root must be admitted. The named triggers are recorded in their OWN `epics.md` sections,
 // because a marker pointing at a story whose text never mentions the obligation is how an inherited
 // deferral goes unnoticed:
-//   · **Story 6.17** — the block-dimension ground-inspection gate, but ⛔ ONLY on its AC1
-//     derive-via-1.19 arm (its AC1 offers a genuine either/or).
-//   · **Story 10.4** — `helpdesk_tickets.member_scope_context` geo enrichment.
+//   · ✅ **Story 6.17 — EVALUATED 2026-08-13; DID NOT FIRE. Discharged, not pending.** ⛔ The bullet
+//     is kept rather than deleted: a deleted trigger is indistinguishable from a forgotten one.
+//     6.17's AC1 offered a genuine either/or, and it resolved to the COLUMN arm (Decision
+//     `2026-08-13-104`, D1) — `claim_ground_inspections` gained a `block text` supplied at schedule
+//     time. The derive-via-1.19 arm was closed on evidence, not preference: `liftDistrictThroughTree`
+//     types `block` PERMANENTLY absent (`no-member-attribute` — ancestry walks UP, block sits BELOW
+//     district), no member block attribute exists at any layer, and even if one did it would be the
+//     WRONG VALUE, because an inspection's jurisdiction is the SITE's and not the member's. ⇒ the
+//     story creates NO authorization consumer of `resolveMemberGeoNode`, the obligation does not
+//     bind, and this root stays off the prohibited list. ⛔ Note what a green `governance-boundary`
+//     run proved about that: nothing. The root is unlisted, so the scan was always going to pass —
+//     which is exactly why the non-firing is written HERE and in the decision log instead.
+//   · ⭐ **Story 10.4** — `helpdesk_tickets.member_scope_context` geo enrichment. **THE SOLE
+//     STANDING TRIGGER.** ⛔ Do not read the discharge above as discharging this one.
 
 // The primitive, its pure half, and the audience-selection district-set read.
 export * from './resolve.js';

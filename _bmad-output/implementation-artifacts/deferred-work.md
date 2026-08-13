@@ -1727,7 +1727,7 @@ Closure-language posture per [[feedback_closure_language_precision]]: engineerin
   
   **Residue, each Resolved via explicit deferral to a NAMED STORY that exists with acceptance criteria** (never an epic — that is what made this entry the worked example in the first place):
   · geo AUDIENCE selection (6 markers) → **Story 1.19** — needs a per-MEMBER geo attribute; a tree answers *"is Patna in Bihar"*, never *"which members are in Patna"*.
-  · the block-dimension ground-inspection gate → **Story 6.17**.
+  · the block-dimension ground-inspection gate → **Story 6.17** — ✅ **SHIPPED 2026-08-13, "Closed by [edit]"** ([[feedback_closure_language_precision]]). `claim_ground_inspections` gained a **nullable** `block` (migration `0102`), `block_admin` holds `claim.conduct_ground_inspection`, and the gate DIMENSION became a property of the ROW: block-tagged ⇒ `dimension: 'block'`, block-null ⇒ `dimension: 'district'` byte-identically to 6.7 (Decision `2026-08-13-104`). ⭐ **The rank-order pin did not move and no resolver was changed** — the fix was a different GATE, which is what this line always said it would be. ⚠ The `district_admin`-by-ancestry half is **DECLARED, NOT PRODUCTION-ACTIVE**: no surface publishes a geo tree, so it is provable by test and unreachable by a real operator (recorded with its own re-trigger in the Story 6.17 section below).
   · multi-node report scope → **Story 10.28** (see `:3432` below).
   · the trustee-DIRECTORY half of `pool/fixed-amount.ts` → **Story 10.13** (existing; no mint).
   · `self` targets (`scope.ts`) → **"Closed by [edit]", NO successor** — zero live consumers, zero backlog consumers, no FR; the comment misdescribed a deliberate design choice.
@@ -4312,7 +4312,7 @@ before anything pointed at it.
 | Re-deferral | Model it extends | Owner | Status |
 |---|---|---|---|
 | Geo **audience** selection (markers D6, D7, D8, D14, D15, D16) | member→geo attribution over Story 1.18's tree | **Story 1.19** — `1-19-member-geo-attribution-geo-audience-consumer` | **MINTED**, Epic 1, `backlog`, 8 ACs |
-| Block-dimension **ground-inspection gate** (D2's honest path) | Story 6.7's ground-inspection gate (FR-40) | **Story 6.17** — `6-17-block-dimension-ground-inspection-gate` | **MINTED**, Epic 6, `backlog`, 5 ACs |
+| Block-dimension **ground-inspection gate** (D2's honest path) | Story 6.7's ground-inspection gate (FR-40) | **Story 6.17** — `6-17-block-dimension-ground-inspection-gate` | ✅ **SHIPPED 2026-08-13** (was: MINTED, Epic 6, `backlog`, 5 ACs) — Decision `2026-08-13-104` |
 | **Multi-node report scope** (marker D2 / `reports/scope.ts:71` / `:3432` below) | Story 10.7's `ResolvedReportScope` | **Story 10.28** — `10-28-multi-node-report-scope` | **MINTED**, Epic 10, `backlog`, 5 ACs |
 
 ⚠ **Two of the three land in retrospected epics** (Epic 6 `done`, Epic 10 `optional`). That is the *same
@@ -4457,6 +4457,15 @@ the un-mechanized half*). So it is written into **both successors' OWN `epics.md
   primitive; what it lacked is the governance-boundary half. ⚠ AC1 offers a **genuine either/or**, so the
   obligation binds **only on the derive-via-1.19 arm** — a new `claim_ground_inspections` column does not
   carry it.
+  ✅ **EVALUATED 2026-08-13 — DID NOT FIRE. Discharged, not pending** (Decision `2026-08-13-104`, D9).
+  AC1 resolved to the **column** arm, on evidence rather than preference: `liftDistrictThroughTree` types
+  `block` PERMANENTLY absent (`no-member-attribute`), no member block attribute exists at any layer, and
+  even if one did it would be the **wrong value** — an inspection's jurisdiction is the SITE's, not the
+  member's. ⇒ no authorization consumer of `resolveMemberGeoNode` was created, `governance_boundary.yaml`
+  is **untouched**, and the non-firing is recorded at `member-geo/index.ts` as well as here.
+  ⚠ **A passing `governance-boundary` run proved nothing about this** — the root is unlisted, so the scan
+  was always going to be green ([[feedback_gate_scope_semantic_coverage]]).
+  ⇒ **Story 10.4 is now the SOLE standing trigger.**
 - **Story 10.4** (`epics.md`, §Helpdesk Admin Console) — ⛔ its section mentioned the geo obligation
   **nowhere**; the seam existed solely as a code comment
   (`apps/api/src/modules/helpdesk/handlers.ts:10-15`), which is the invisible-inherited-deferral shape in

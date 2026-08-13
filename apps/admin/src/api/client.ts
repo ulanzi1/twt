@@ -791,6 +791,8 @@ export const GroundInspectionPhoto = z.object({
 export const GroundInspectionAssignment = z.object({
   groundInspectionId: z.string(),
   district: z.string(),
+  // Story 6.17 — the block-level jurisdiction, NULL on a legacy district-only assignment.
+  block: z.string().nullable(),
   inspectionStage: z.string(),
   inspectionSiteType: z.string(),
   inspectorActorId: z.string(),
@@ -816,6 +818,8 @@ export type GroundInspectionAssignmentT = z.infer<typeof GroundInspectionAssignm
 
 export interface ScheduleGroundInspectionBody {
   district: string;
+  /** Story 6.17 — OPTIONAL. Supplied ⇒ the assignment is authorized at the BLOCK dimension. */
+  block?: string;
   inspectionStage: string;
   inspectionSiteType: string;
   inspectorActorId: string;
@@ -826,16 +830,24 @@ export interface ScheduleGroundInspectionBody {
   structuredFindings?: Record<string, unknown>;
 }
 
-/** GET the claim's ground-inspection assignments in ONE district (the AC5 absence-is-a-signal read). */
+/**
+ * GET the claim's ground-inspection assignments under ONE locator (the AC5 absence-is-a-signal read).
+ *
+ * Story 6.17 (D4) — the server requires EXACTLY ONE of `district` / `block` and resolves the
+ * permission gate's dimension from whichever arrives, so a `block_admin` (which can never satisfy a
+ * district-dimension check) finally has a read it can pass. ⛔ Sending both is a 400 by design, so
+ * this sends exactly the one the caller chose — never both, and never a "helpful" default.
+ */
 export function listGroundInspection(
   pariwarId: string,
   claimCaseId: string,
-  district: string,
+  locator: { district: string; block?: undefined } | { block: string; district?: undefined },
 ): Promise<{ assignments: GroundInspectionAssignmentT[] }> {
-  return apiFetch(
-    `${giBase(pariwarId, claimCaseId)}?district=${encodeURIComponent(district)}`,
-    GroundInspectionReadResponse,
-  );
+  const query =
+    locator.block !== undefined
+      ? `block=${encodeURIComponent(locator.block)}`
+      : `district=${encodeURIComponent(locator.district!)}`;
+  return apiFetch(`${giBase(pariwarId, claimCaseId)}?${query}`, GroundInspectionReadResponse);
 }
 
 /** POST a new ground-inspection assignment (schedule). Idempotency-Key dedups a retry. */

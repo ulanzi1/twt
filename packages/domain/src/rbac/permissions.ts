@@ -110,16 +110,13 @@ export function permissionKey(value: string): PermissionKey {
  * `claim.ground_inspection.conduct` VIOLATES PERMISSION_KEY_REGEX; the single-dot
  * `<resource>.<action>` form (ADR-0008) is correct.
  *
- * ── D1 RECONCILIATION — block_admin DEFERRED (v1: district_admin only) ─────────
- * PRD FR-40 names block- AND district-level admins as ground-inspection actors. In the current
- * RBAC model, however, ground-inspection assignments are authorized at `dimension: 'district'`,
- * while `block_admin` has `scopeCeiling: 'block'`. A block-scoped grant cannot satisfy a
- * district-scoped resource check (a block is narrower than a district → the district target is
- * "broader than the grant" → deny, scope.ts), and granting district scope would VIOLATE the role
- * ceiling. Therefore v1 grants `claim.conduct_ground_inspection` to `district_admin` ONLY, and NO
- * inert block_admin grant is seeded.
+ * ── ✅ D1 RECONCILIATION — SHIPPED at Story 6.17. block_admin HOLDS the conduct key. ───────────
+ * PRD FR-40 names block- AND district-level admins as ground-inspection actors. Story 6.7 shipped
+ * `district_admin` ONLY and recorded `block_admin` DEFERRED. That deferral was MISCLASSIFIED, and
+ * this block records both halves of the correction: why no resolver was ever going to fix it, and
+ * what actually did.
  *
- * ── ⛔ THIS IS RANK ORDER (FAMILY A). NO RESOLVER LIFTS IT. ─────────────────────────────────────
+ * ── ⛔ THIS IS RANK ORDER (FAMILY A). NO RESOLVER EVER LIFTED IT, AND NONE DOES NOW. ────────────
  * This block previously said the gap was DEFERRED to Story 1.18's geo-tree resolver, "which a
  * resolver GENUINELY fixes: block→parent-district is same-tree ancestry with the target strictly
  * narrower." ⭐ THAT PREMISE WAS INVERTED, and Story 1.18 found it while implementing the resolver:
@@ -135,20 +132,33 @@ export function permissionKey(value: string): PermissionKey {
  * answers "is X beneath Y" and can only ever NARROW; this needs the opposite. See `scope.ts`
  * §RANK-ORDER for the canonical explanation.
  *
- * ⇒ RE-CLASSIFIED as Family A at Story 1.18 (Decision `2026-08-12-102`). The geo-tree resolver has
- * SHIPPED and changes nothing here, by design.
+ * ⇒ RE-CLASSIFIED as Family A at Story 1.18 (Decision `2026-08-12-102`), and it STAYS Family A.
+ * The rank-order pin in `check.test.ts` is unmodified and still passes. Story 6.17 ROUTED AROUND
+ * it; it did not lift it.
  *
- * ── THE HONEST PATH: a different GATE, not a resolver ──────────────────────────────────────────
- * Re-gating ground inspection at `dimension: 'block'` authorizes BOTH actors — `block_admin` by
- * exact-node match, and `district_admin` by district→block ancestry through the resolver that now
- * exists (`tRank 4 > gRank 3` → falls through to the resolver, which answers). That is a schema +
- * gate-design change (`claim_ground_inspections` carries `district text NOT NULL` and no block
- * column), and it is **Story 6.17: Block-Dimension Ground-Inspection Gate**.
+ * ── ✅ WHAT ACTUALLY SHIPPED: a different GATE, not a resolver (Story 6.17) ─────────────────────
+ * `claim_ground_inspections` gained a NULLABLE `block` column (migration `0102`) and the
+ * authorization DIMENSION became a property of the ROW (Decision `2026-08-13-104`, D2):
+ *   · `block != null` → the conduct key is checked at `dimension: 'block'`, which authorizes BOTH
+ *     actors — `block_admin` by EXACT-NODE match (`gRank === tRank` → value compare) and
+ *     `district_admin` by district→block ANCESTRY (`gRank 3 < tRank 4` → the Story 1.18 resolver).
+ *   · `block == null` → checked at `dimension: 'district'`, byte-identically to Story 6.7.
+ * ⛔ NOT an unconditional block gate: that would make every pre-6.17 row unreachable AND revoke
+ * `district_admin` in every Pariwar with no published tree — which, with no writer surface anywhere
+ * in the repo and no code default geography (ADR-0038), is every Pariwar.
+ * ⛔ NOT an OR of two checks: strictly wider than either gate, and it would deliver the ancestry
+ * outcome while deleting the ancestry mechanism.
+ * ⛔ NO FALLBACK when the tree is absent (D6) — absence must DENY, never widen.
+ * ⛔ `block_admin`'s `scopeCeiling` stays `'block'`; no district-scoped grant is ever issued to it.
+ * ⛔ `claim.override_ground_inspection` is NOT extended to `block_admin` (D8) — the D6 supervisor
+ * override is a pariwar-ceiling authority ABOVE the inspector, and re-gating the CONDUCT key says
+ * nothing about it.
  *
  * ⛔ The old ACCEPTANCE CONDITION — "enable block_admin when the authorization layer can resolve a
- * block grant through verified block→district ancestry" — is REMOVED, not merely reworded: it
- * promised something this model cannot do at any point in the future, and a condition that can
- * never be met is worse than no condition, because it reads as pending work forever.
+ * block grant through verified block→district ancestry" — was REMOVED, not merely reworded, at
+ * Story 1.18: it promised something this model cannot do at any point in the future, and a
+ * condition that can never be met is worse than no condition, because it reads as pending work
+ * forever. ⛔ Do not resurrect it.
  *
  * `field_worker` is likewise DEFERRED to Epic 12 (its `self` scopeCeiling + the dispatch/
  * assignment substrate that would let a field worker act on an arbitrary claim land there).
@@ -420,7 +430,20 @@ export function permissionKey(value: string): PermissionKey {
 // deviation above: it mints a key, so `PERMISSION_CATALOG.keys` moves 40 → 41 and
 // `permissions.test.ts`'s length assertion moves with it. The reuse-check that ruled out
 // `member.moderate` is recorded at the key itself.
-export const PERMISSION_CATALOG_VERSION = 31 as const;
+// ── Bumped 31 → 32 at Story 6.17 (added ZERO keys) ───────────────────────────────────────────────
+// The SECOND bump in this changelog that mints no permission key — and it applies, verbatim, the
+// rule 10.18 wrote down above: **the catalog version is the version of the CAPABILITY MODEL, not a
+// count of keys. A consumer caching authorization decisions keyed on `catalogVersion` must see the
+// model move WHEN A NEW ROLE CAN HOLD AN EXISTING KEY** — otherwise a `block_admin` conduct grant
+// resolves against a cache built when no such holder existed. Story 6.17 grants the EXISTING
+// `claim.conduct_ground_inspection` key to the EXISTING `block_admin` role (Decision
+// `2026-08-13-104`, D5), so the model moves and the key set does not.
+// ⛔ **`PERMISSION_CATALOG.keys` stays at 41**, and `permissions.test.ts`'s `toHaveLength(41)` is
+// unchanged; if that number moves in this story, a key was minted and the story exceeded its scope.
+// ⛔ NO new key, NO new role, NO route addition, NO migration to `role_grants` (`role` is plain
+// `text`). The migration this story DOES carry (`0102`) adds a column to `claim_ground_inspections`
+// — a RESOURCE attribute, not a capability one.
+export const PERMISSION_CATALOG_VERSION = 32 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file

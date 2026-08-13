@@ -11,8 +11,11 @@ const EN: Record<string, string> = {
     'Schedule a physical verification assignment, record findings, upload photos, and complete or record a refusal. Ground inspection runs alongside the peer mesh — both signals, not either.',
   'gi.claim.label': 'Claim case id',
   'gi.district.label': 'District (your jurisdiction)',
+  'gi.block.label': 'Block (optional)',
+  'gi.block.hint': 'Leave blank to work at district level. Naming a block authorizes the assignment at the block level instead — a block admin reaches it directly, and a district admin reaches it only where the Pariwar has published a geo tree placing that block under their district.',
+  'gi.locator.exactlyOne': 'Load by district OR by block — fill in exactly one.',
   'gi.load': 'Load assignments',
-  'gi.empty': 'No ground-inspection assignments for this claim in this district yet — the absence of a completed inspection is itself a signal the verifier must acknowledge.',
+  'gi.empty': 'No ground-inspection assignments for this claim under this jurisdiction yet — the absence of a completed inspection is itself a signal the verifier must acknowledge.',
   // Schedule form
   'gi.schedule.heading': 'Schedule a new assignment',
   'gi.schedule.stage': 'Inspection stage',
@@ -25,11 +28,15 @@ const EN: Record<string, string> = {
   'gi.schedule.submit': 'Schedule assignment',
   'gi.schedule.pending': 'Scheduling…',
   'gi.schedule.otherRequiresLocation': "Site type 'other' requires a location description.",
+  'gi.schedule.blockImmutable': 'A reschedule cannot move the assignment to a different block.',
   // Assignment card
   'gi.card.status': 'Status',
   'gi.card.inspector': 'Inspector',
   'gi.card.stage': 'Stage',
   'gi.card.site': 'Site',
+  'gi.card.district': 'District',
+  'gi.card.block': 'Block',
+  'gi.card.blockNone': 'District level (no block)',
   'gi.card.photos': 'Photos',
   'gi.card.scheduledAt': 'Scheduled',
   // Actions

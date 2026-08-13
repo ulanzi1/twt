@@ -206,7 +206,7 @@ export const EVENT_TYPE_REGISTRY = {
   'claim.ground_inspection_scheduled': {
     type: 'claim.ground_inspection_scheduled',
     description:
-      'Ground inspection ASSIGNMENT scheduled — annotation event; identity (both signals required, state unchanged); carries ground_inspection_id + district + inspector_actor_id + scheduled_at + supersedes_ground_inspection_id (a reschedule back-reference), NO PII (Story 6.7).',
+      'Ground inspection ASSIGNMENT scheduled — annotation event; identity (both signals required, state unchanged); carries ground_inspection_id + district + block (Story 6.17 — nullish: the block-level authorization anchor when the assignment carries one, absent on events written before 6.17) + inspector_actor_id + scheduled_at + supersedes_ground_inspection_id (a reschedule back-reference), NO PII (Story 6.7).',
     schema: claim.ClaimGroundInspectionScheduledPayloadSchema,
   },
   'claim.ground_inspection_completed': {

@@ -4,7 +4,9 @@
 // sequential or parallel, in the SAME or DIFFERENT districts (corroboration / additional
 // evidence), so there is NO active-uniqueness of any kind (NOT `(claim_case_id)` and NOT
 // `(claim_case_id, district)`): district is an AUTHORIZATION boundary, not an inspection
-// identity. Duplicate/accidental scheduling is controlled by request idempotency + operator
+// identity. ⭐ Story 6.17 adds a NULLABLE `block` beside it and makes the authorization
+// DIMENSION a property of the row (null ⇒ district gate, non-null ⇒ block gate) — it adds no
+// uniqueness either, for the identical reason. Duplicate/accidental scheduling is controlled by request idempotency + operator
 // visibility (Dev Notes "Schedule + reschedule idempotency"), never a DB uniqueness constraint.
 //
 // Each assignment carries its OWN lifecycle on `status` — a SEPARATE machine from the claim's
@@ -20,7 +22,7 @@
 //     family_contact_ciphertext (phone), notes_ciphertext (free-text findings/refusal reason) →
 //     Tier-1 envelope ciphertext (`piiColumn(1, 'ground_inspection')`). Encrypt-before-insert in
 //     the route; the accessor returns ciphertext AS STORED. NEVER logged / echoed.
-//   · district / inspection_stage / inspection_site_type / status / refusal_reason /
+//   · district / block / inspection_stage / inspection_site_type / status / refusal_reason /
 //     inspector_actor_id / scheduled_at / structured_findings → NON-PII (safe for the console + logs).
 //
 // TENANT-ISOLATED (mirrors `claims` / `claim_documents` / peer-mesh). RLS in
@@ -112,8 +114,35 @@ export const claimGroundInspections = pgTable(
 
     // The assignment's jurisdiction — the D6 AUTHORIZATION anchor. Structured, non-null,
     // plaintext non-PII (the member_postings.district posture). Supplied at schedule time;
-    // the permission gate runs at `dimension: 'district'` against THIS value.
+    // the permission gate runs at `dimension: 'district'` against THIS value WHEN `block` IS NULL.
     district: text('district').notNull(),
+
+    // The assignment's BLOCK-level jurisdiction — the Story 6.17 authorization anchor when present
+    // (Decision `2026-08-13-104`, D2). Same class as `district`: structured, plaintext, NON-PII,
+    // supplied at schedule time, and IMMUTABLE on reschedule (D3 — moving it would mint a
+    // replacement in a node the actor was never checked against). ⛔ Compared BYTE-IDENTICALLY —
+    // no trimming, no case-folding — because `geo-tree/resolver.ts` made that exact commitment for
+    // that exact reason, and a module that case-folded while the tree did not would resolve
+    // `Bihar ⊇ patna` but not `Patna ⊇ patna` within one request.
+    //
+    // ⭐ NULLABLE, AND THE NULLABILITY IS THE DESIGN — not a soft rollout. Two reasons, either
+    // sufficient:
+    //   (a) PRE-6.17 ROWS CANNOT BE BACKFILLED. A NOT NULL add demands a value for every existing
+    //       row and no honest value exists; inventing one is exactly the reconstruction
+    //       [[feedback_record_unattested_no_backfill]] forbids. ⛔ Never backfill this column.
+    //   (b) THE GATE DIMENSION IS A PROPERTY OF THE ROW. `block == null` ⇒ the assignment
+    //       authorizes at `dimension: 'district'`, byte-identically to Story 6.7. `block != null`
+    //       ⇒ it authorizes at `dimension: 'block'`, which admits BOTH FR-40 actors: `block_admin`
+    //       by exact-node match, and `district_admin` by district→block ancestry through Story
+    //       1.18's resolver. An UNCONDITIONAL block gate would revoke `district_admin` in every
+    //       Pariwar with no published tree — which, with no writer surface and no code default
+    //       geography (ADR-0038), is every Pariwar — i.e. a total outage of the 6.7 surface.
+    //
+    // ⛔ NO FALLBACK (D6). A block-tagged row in a Pariwar with no resolvable tree DENIES
+    // ancestry-based district access. Absence must deny, never widen: a grant-on-absence rule makes
+    // the absence of data widen authorization and makes publishing a tree narrow it, inverting
+    // ADR-0038's posture (*a wrong tree silently GRANTS authority; an absent one merely denies*).
+    block: text('block'),
 
     // WHY (stage) + WHAT/WHERE (site type) — two separate bounded non-PII fields (D6).
     inspectionStage: groundInspectionStageEnum('inspection_stage').notNull(),

@@ -404,33 +404,42 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
   },
   {
     role: 'block_admin',
-    // Story 6.7 D1 RECONCILIATION — block_admin ground-inspection scheduling is DEFERRED (NOT
-    // granted). PRD FR-40 names block- and district-level admins as ground-inspection actors, but
-    // ground-inspection assignments authorize at `dimension: 'district'` while block_admin has
-    // `scopeCeiling: 'block'`: a block-scoped grant cannot satisfy a district-scoped resource check
-    // (a block is NARROWER than a district → the district target is "broader than the grant" → deny),
-    // and granting district scope would VIOLATE the block ceiling. So NO inert conduct grant is
-    // seeded here.
-    // ⛔ RANK ORDER (FAMILY A) — NO RESOLVER LIFTS IT. This comment previously deferred the gap to
-    // Story 1.18's geo-tree resolver as "Family B: same-tree ancestry, target strictly narrower".
-    // ⭐ THAT PREMISE WAS INVERTED, and Story 1.18 found it while implementing the resolver: the
-    // parent district is not narrower, it is the PARENT, hence BROADER. GEO_RANK is state 2 <
-    // district 3 < block 4 (lower = broader), so a {block} grant (gRank 4) against a {district}
-    // target (tRank 3) is denied by `tRank < gRank` at scope.ts — BEFORE any resolver runs. The
-    // alternative (a district-scoped grant to a block admin) fails the other line:
+    // ✅ SHIPPED at Story 6.17 — block_admin HOLDS `claim.conduct_ground_inspection` (Decision
+    // `2026-08-13-104`). This block used to explain why the grant was WITHHELD; it now explains why
+    // it works, because the rank-order half of that explanation is still true and still load-bearing.
+    //
+    // ⛔ RANK ORDER (FAMILY A) — NO RESOLVER EVER LIFTED IT, AND NONE DOES NOW. Story 6.7 deferred
+    // this gap to Story 1.18's geo-tree resolver as "Family B: same-tree ancestry, target strictly
+    // narrower". ⭐ THAT PREMISE WAS INVERTED, and Story 1.18 found it while implementing the
+    // resolver: the parent district is not narrower, it is the PARENT, hence BROADER. GEO_RANK is
+    // state 2 < district 3 < block 4 (lower = broader), so a {block} grant (gRank 4) against a
+    // {district} target (tRank 3) is denied by `tRank < gRank` at scope.ts — BEFORE any resolver
+    // runs. The alternative (a district-scoped grant to a block admin) fails the other line:
     // scopeWithinCeiling('district','block') is a pure CEILING_RANK compare with no resolver
     // parameter → 3 >= 4 → false. Both denial paths are resolver-free. See scope.ts §RANK-ORDER.
-    // ⇒ RE-CLASSIFIED as Family A at Story 1.18 (Decision 2026-08-12-102). The resolver has SHIPPED
-    // and changes nothing here, by design.
+    // ⇒ RE-CLASSIFIED as Family A at Story 1.18 (Decision 2026-08-12-102), and it stays Family A.
     // ⛔ The old ACCEPTANCE CONDITION ("enable when the authorization layer can resolve a block grant
-    // through verified block→district ancestry") is REMOVED, not reworded — it promised something
-    // this model can never do, and an unmeetable condition reads as pending work forever.
-    // ✅ THE HONEST PATH is a different GATE: re-gating at `dimension: 'block'` authorizes BOTH
-    // actors — block_admin by exact-node, district_admin by district→block ancestry through the
-    // resolver that now exists. That is **Story 6.17**. (See check.test.ts for the explicit
-    // block-grant-fails-district assertion that pins the rank-order behaviour.)
+    // through verified block→district ancestry") was REMOVED, not reworded, at Story 1.18 — it
+    // promised something this model can never do. ⛔ Do not resurrect it.
+    //
+    // ✅ WHAT ACTUALLY SHIPPED — a different GATE, not a resolver, and not a lifted pin. Story 6.17
+    // added a NULLABLE `block` to `claim_ground_inspections` and made the authorization DIMENSION a
+    // property of the ROW: a block-tagged assignment is checked at `dimension: 'block'`, which
+    // authorizes BOTH FR-40 actors — block_admin by EXACT-NODE match (gRank === tRank → value
+    // compare), and district_admin by district→block ANCESTRY (gRank 3 < tRank 4 → the resolver,
+    // which can only ever narrow, which is the direction this points). A row with `block == null`
+    // is still checked at `dimension: 'district'`, byte-identically to Story 6.7.
+    // ⛔ `scopeCeiling` STAYS 'block'. No district-scoped grant is ever issued to a block admin —
+    // that would violate the ceiling and is exactly what AC2 forbids.
+    // ⛔ NO FALLBACK (D6): a block-tagged row in a Pariwar with no resolvable tree DENIES the
+    // ancestry path. Absence must deny, never widen.
+    // ⛔ `claim.override_ground_inspection` is deliberately NOT held here (D8) — the D6 supervisor
+    // override is a pariwar-ceiling authority ABOVE the inspector; a block admin acts only as the
+    // assigned inspector. The omission is a ruling, not an oversight.
+    // (check.test.ts still pins the rank-order assertion, unmodified: a BLOCK grant can NEVER
+    // satisfy a DISTRICT-dimension check. Story 6.17 routed around that pin; it did not lift it.)
     // ⚠ DEPRECATED (Story 10.18) — SUCCESSOR: `member.moderate`. Grant HONOURED, not removed; no NEW grant.
-    permissions: [MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY],
+    permissions: [MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY, CLAIM_CONDUCT_GROUND_INSPECTION],
     scopeCeiling: 'block',
   },
   {

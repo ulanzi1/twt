@@ -102,6 +102,15 @@ function translateGroundInspectionError(err: unknown): never {
       { district: err.currentDistrict },
     );
   }
+  if (err instanceof claim.GroundInspectionBlockImmutableError) {
+    // Story 6.17 (D3) — the SIBLING of district_immutable, with its own stable code. ⛔ Not folded
+    // into the district mapping: `ground_inspection.district_immutable` is an asserted contract.
+    throw new ConflictError(
+      'A reschedule cannot move the assignment to a different block',
+      'ground_inspection.block_immutable',
+      { block: err.currentBlock },
+    );
+  }
   if (err instanceof claim.GroundInspectionIdempotencyMismatchError) {
     throw new ConflictError(
       'The Idempotency-Key was already used for a different request',
@@ -222,6 +231,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           claimCaseId: ids.claimId(claimCaseId),
           pariwarId: ids.pariwarId(ctx.pariwarId),
           district: body.district,
+          block: body.block ?? null,
           inspectionStage: body.inspectionStage,
           inspectionSiteType: body.inspectionSiteType,
           inspectorActorId: body.inspectorActorId,
@@ -249,6 +259,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
             claim_case_id: claimCaseId,
             ground_inspection_id: result!.groundInspection.groundInspectionId,
             district: body.district,
+            // Story 6.17 — non-PII, same class as `district` (the schema's PII discipline note).
+            block: body.block ?? null,
             inspector_actor_id: body.inspectorActorId,
             inspection_stage: body.inspectionStage,
             inspection_site_type: body.inspectionSiteType,
@@ -277,6 +289,16 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           { district: target.district },
         );
       }
+      // (Story 6.17, D3) The same fail-fast one level down. ⚠ Compares null↔non-null too: adding a
+      // block would move the row from the district gate to the block gate and clearing one would move
+      // it back — a silent re-gating in either direction. The writer re-asserts under the row lock.
+      if ((body.block ?? null) !== target.block) {
+        throw new ConflictError(
+          'A reschedule cannot move the assignment to a different block',
+          'ground_inspection.block_immutable',
+          { block: target.block },
+        );
+      }
 
       const locationCiphertext = await encryptOptionalGroundInspectionField(body.locationDetail, ctx.pariwarId, deps.encryption);
       const familyContactCiphertext = await encryptOptionalGroundInspectionField(body.familyContact, ctx.pariwarId, deps.encryption);
@@ -291,6 +313,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           groundInspectionId: ids.groundInspectionId(ground_inspection_id),
           idempotencyKey,
           district: body.district,
+          block: body.block ?? null,
           inspectionStage: body.inspectionStage,
           inspectionSiteType: body.inspectionSiteType,
           inspectorActorId: body.inspectorActorId,
@@ -316,6 +339,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
             supersedes_ground_inspection_id: ground_inspection_id,
             ground_inspection_id: result!.groundInspection.groundInspectionId,
             district: body.district,
+            block: body.block ?? null,
             inspector_actor_id: body.inspectorActorId,
             // Forensic trail (review #10): the superseded assignment's inspector, so a reassignment
             // is legible. District is immutable across a reschedule (1a), so it is not duplicated.
@@ -570,16 +594,20 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
     },
 
     /**
-     * GET …/ground-inspection?district=… — read the claim's assignments in ONE district (AC5).
-     * District-scoped (the conduct gate resolves the required `district` query param); a claim may
-     * hold assignments across districts (the unified multi-district console view is 6.10's, which
-     * calls the accessor server-side). Decrypts PII + mints short-lived signed URLs (never bytes).
-     * A claim with no inspection in the district → `[]` (the absence-is-a-signal read).
+     * GET …/ground-inspection?district=… | ?block=… — read the claim's assignments under ONE
+     * locator (AC5; Story 6.17 D4 added the block arm, with EXACTLY-ONE-OF enforced by the zod
+     * schema, so this handler never has to pick a precedence). The conduct gate has already resolved
+     * its dimension from the SAME locator, so the filter below and the authorization agree by
+     * construction — ⛔ do not filter on a different field than the gate checked.
+     *
+     * A claim may hold assignments across districts/blocks (the unified multi-jurisdiction console
+     * view is 6.10's, which calls the accessor server-side). Decrypts PII + mints short-lived signed
+     * URLs (never bytes). No assignment under the locator → `[]` (the absence-is-a-signal read).
      */
     async read(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
       const ctx = adminCtx(request);
       const { claimCaseId } = request.params as { claimCaseId: string };
-      const { district } = request.query as { district: string };
+      const { district, block } = request.query as { district?: string; block?: string };
       const scopeTx = request.scopeTx!;
 
       const all = await claim.getClaimGroundInspection(
@@ -587,10 +615,16 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         ids.pariwarId(ctx.pariwarId),
         ids.claimId(claimCaseId),
       );
-      const inDistrict = all.filter((r) => r.inspection.district === district);
+      // Exactly one of the two is defined (the zod `.refine`), so this is a total choice, not a
+      // precedence rule. A block query matches only block-TAGGED rows; a district query matches
+      // every row in the district, block-tagged or not — the district IS still populated on both.
+      const inScope =
+        block !== undefined
+          ? all.filter((r) => r.inspection.block === block)
+          : all.filter((r) => r.inspection.district === district);
 
       const assignments = await Promise.all(
-        inDistrict.map(async (r) => {
+        inScope.map(async (r) => {
           // (review #4) Per-field fail-soft: a single corrupt/rotated/wrong-context envelope must
           // yield `null` for THAT field, not reject the whole read (which would blind the verifier
           // to every healthy assignment in the district — the opposite of the absence-is-a-signal
@@ -619,6 +653,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           return {
             groundInspectionId: r.inspection.groundInspectionId,
             district: r.inspection.district,
+            block: r.inspection.block,
             inspectionStage: r.inspection.inspectionStage,
             inspectionSiteType: r.inspection.inspectionSiteType,
             inspectorActorId: r.inspection.inspectorActorId,
@@ -646,6 +681,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
 
 interface ScheduleBody {
   district: string;
+  /** Story 6.17 — optional block-level jurisdiction; present ⇒ the row is gated at `dimension: 'block'`. */
+  block?: string;
   inspectionStage: schema.ClaimGroundInspectionRow['inspectionStage'];
   inspectionSiteType: schema.ClaimGroundInspectionRow['inspectionSiteType'];
   inspectorActorId: string;

@@ -1,11 +1,18 @@
 // The /p/:pariwarId/ground-inspection route + its session gate (Story 6.7, Task 6).
 //
 // The ground-inspection console is tenant-scoped (like the helpline route). `claim.conduct_ground_inspection`
-// is a PER-PARIWAR district-scoped grant, so — like the helpline console — the CLIENT gate is only
+// is a PER-PARIWAR geo-scoped grant, so — like the helpline console — the CLIENT gate is only
 // "is there a live session"; the REAL boundary is the server's per-endpoint guard chain
-// [adminSession, scope, requirePermissionHook(claim.conduct_ground_inspection, { dimension: 'district', … })]
+// [adminSession, scope, requirePermissionHook(claim.conduct_ground_inspection, { resolveDimension, resolveValue })]
 // (+ the inspector-identity guard on the evidence-authoring verbs) — fail-closed, audited. An
 // unauthenticated session (401) bounces to /login.
+//
+// ⚠ UPDATED at Story 6.17 — the gate is no longer district-only, and this comment used to say it was.
+// The DIMENSION is now a property of the ROW (Decision `2026-08-13-104`, D2): an assignment carrying a
+// `block` is checked at `dimension: 'block'` (which authorizes `block_admin` by exact node and
+// `district_admin` by district→block ancestry); one carrying none is checked at `dimension: 'district'`,
+// byte-identically to Story 6.7. ⛔ Nothing about the CLIENT gate changed — it is still session-only,
+// and adding a role check here would be a second, weaker copy of a boundary the server already owns.
 //
 // `GroundInspectionGateView` is a PURE presentational decision (no hooks/router) so the gate is
 // unit-testable without a router context (mirrors HelplineClaimRoute).

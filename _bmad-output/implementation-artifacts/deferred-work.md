@@ -4501,3 +4501,51 @@ discharges nothing* — which is why it is recorded here rather than inferred.
   the only write path (`POST /member/life-events/posting`) already enforces non-empty via
   `z.string().trim().min(1)` at the contract boundary, so this is a theoretical defense-in-depth gap,
   pre-existing to this diff (schema unchanged by Story 1.19).
+
+---
+
+## Deferred from: 6-17-block-dimension-ground-inspection-gate — the Escalation 4 deferral (2026-08-13)
+
+**Recorded BEFORE implementation, deliberately** ([[feedback_governance_commits_precede_implementation]]).
+This section is the governance half of Story 6.17. It records the ONE thing the story ruled out of its own
+scope, with a named-story owner, so the deferral does not live only in a story file — where it would decay
+([[feedback_mechanization_split_commitment]]). Ruled by BigDev on 2026-08-13 and entered as Decision
+`2026-08-13-104` (Escalation 4).
+
+### The verifier-console contract stays **district-only** — **Resolved via explicit deferral**
+
+⛔ The ruling, **verbatim**:
+
+> **The verifier-console contract remains district-only for this story. The first block-tagged assignment
+> reaching the verifier console re-triggers Story 6.10's surface for a reviewed contract widening.**
+
+**What is true today.** `packages/contracts/src/claims/verifier-console.ts` types each ground-inspection
+entry as `{ groundInspectionId, district, … }`. Story 6.17 adds a **nullable `block`** to
+`claim_ground_inspections` and gates the conduct key at `dimension: 'block'` **for block-tagged rows only**
+(Decision `2026-08-13-104`, D2). Adding the column **breaks nothing** on the console — but from this story
+on, a verifier reading the console can see a **district-only** description of an assignment whose actual
+jurisdiction is a **block**. That is an incomplete signal on the very surface FR-40 exists to feed.
+
+**Why it is NOT taken here.** Widening a `@twt/contracts` read shape is **Story 6.10's** surface and a
+separate reviewed change. Taking it inside Story 6.17 would grow the story from *"re-gate one action"* into
+*"re-shape the verifier console"*. ⛔ Do **not** quietly add the field to the contract "while we are here".
+
+**Owner: `Story 6.10 — Verifier Console Signals Panel`** (`6-10-verifier-console-signals-panel-cross-pariwar-scope-handling`,
+`done`). ⛔ The re-trigger names a **STORY**, never an epic ([[project_r7_fact_producer_unbuilt]]:
+*a deferral naming an EPIC expires unowned*).
+
+**Re-trigger:** *the first **block-tagged** assignment reaching the verifier console.* ⚠ That instant is
+**not** the moment this story ships — it is gated behind an operator actually supplying a `block` on a
+schedule, which in turn is gated behind their Pariwar having a published geo tree if any `district_admin`
+is to reach the row by ancestry. See the standing item below.
+
+### ⚠ Companion status, recorded so a later reader does not misread the capability as live
+
+**AC3's ancestry path is `DECLARED, NOT PRODUCTION-ACTIVE`** — the `wa_cost_optimization` /
+`kyc_provider_selection` posture. `geo_tree_versions` has a domain writer (`geoTree.createGeoTreeVersion`)
+and **no route**: Decision `2026-08-12-102` §7 — *"No writer surface ships with Story 1.18."* Verified at
+`ba52ba0`: no `apps/api` route references `geoTree` beyond the per-request loader. So
+`district_admin`-reaches-a-block-row-by-ancestry is **provable by test and unreachable by a real operator**
+until a publishing surface ships. ⛔ Do not label AC3 "live". **Re-trigger:** *the first surface that
+publishes a geo tree.* ⛔ No story is minted from inside Story 6.17 — mints are governance acts taken at
+their owning story ([[feedback_governance_commits_precede_implementation]]).

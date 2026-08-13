@@ -23,6 +23,7 @@ import {
   submitForReview,
   updateDraft,
 } from '../../../src/news-blog/index.js';
+import { createGeoTreeVersion, loadGeoTree } from '../../../src/geo-tree/index.js';
 import {
   NewsPostAuthorReviewerError,
   NewsPostBilingualRequiredError,
@@ -236,10 +237,43 @@ describe.skipIf(!hasDatabase)('news_posts workflow + audience', () => {
     expect(membersAll).not.toContain(lapsed);
     expect(membersAll).not.toContain(otherTenant);
 
+    // `public` renders on the web; no member push. Polarity is inverted vs the BANNERS predicate,
+    // and that difference is load-bearing (`banners/audience.ts:5-12`).
     expect(await resolveAudienceMemberIds(tx, PARIWAR_A, 'public', null)).toEqual([]);
+
+    // ⚠ THE THREE `[]` PINS BELOW USED TO MEAN ONE THING. THEY NOW MEAN THREE DIFFERENT THINGS,
+    // and the distinction is stated PER ASSERTION rather than once per file, because a pin that
+    // encoded "no attribute exists" is NOT the same pin as one that encoded "not yet wired"
+    // (Story 1.19 AC4/D8).
+
+    // ⭐ `state` — MOVED. This is no longer "the seam returns empty": the arm RESOLVES now, and it
+    // returns empty here for a CONCRETE, ASSERTED reason — this Pariwar has published NO geo tree,
+    // so no district set exists to select on. ⛔ Fail-closed, never a fallback to `members-all`.
+    // The positive path (a published tree, members in different districts, exactly the right ones
+    // selected) is covered in `tests/integration/member-geo/news-blog-state-audience.spec.ts`.
+    expect(await loadGeoTree(tx, PARIWAR_A, NOW)).toBeNull(); // the REASON, asserted not assumed
     expect(await resolveAudienceMemberIds(tx, PARIWAR_A, 'state', 'BR')).toEqual([]);
+
+    // ⛔ `role` / `cohort` — UNCHANGED, and unchanged for a categorically different reason: there is
+    // NO member `role` or `cohort` attribute at any layer, so there is nothing to resolve against.
+    // No tree, no data and no future story changes these; Story 1.19 recorded them "Not addressed"
+    // and minted NO successor. These pins must NOT be "fixed" alongside a geo change.
     expect(await resolveAudienceMemberIds(tx, PARIWAR_A, 'role', 'x')).toEqual([]);
     expect(await resolveAudienceMemberIds(tx, PARIWAR_A, 'cohort', 'y')).toEqual([]);
+    // ⭐ And they stay empty even when a tree IS published and the member geo resolves — proving
+    // the two arms are independent, not merely untested together.
+    await createGeoTreeVersion(tx, {
+      pariwarId: PARIWAR_A,
+      nodes: [
+        { dimension: 'state', value: 'BR', parent_dimension: null, parent_value: null },
+        { dimension: 'district', value: 'Patna', parent_dimension: 'state', parent_value: 'BR' },
+      ],
+      effectiveAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    const tree = await loadGeoTree(tx, PARIWAR_A, NOW);
+    expect(tree).not.toBeNull();
+    expect(await resolveAudienceMemberIds(tx, PARIWAR_A, 'role', 'x', undefined, { tree, now: NOW })).toEqual([]);
+    expect(await resolveAudienceMemberIds(tx, PARIWAR_A, 'cohort', 'y', undefined, { tree, now: NOW })).toEqual([]);
   });
 
   it('a stale/edited body invalidates the sign-off hash comparison (content-binding)', async () => {

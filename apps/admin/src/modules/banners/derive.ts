@@ -56,16 +56,29 @@ export function canRetract(status: BannerStatus): boolean {
 }
 
 /**
- * Is this audience scope actually targetable today (Decision 4)? `state`/`role`/`cohort` are stored,
- * tone-reviewed and listed — but visible to NOBODY until **Story 1.19**'s member→geo attribution
- * primitive lands (⛔ NOT Story 1.18, which shipped the geo-tree scope RESOLVER — "is Patna in
- * Bihar" — and deliberately did not supply the per-MEMBER attribute audience selection needs).
- * ⚠ Story 1.19 AC6 owns the QUIET-TURN-ON hazard this indicator guards: when the `state` arm
- * resolves, rows authored today become live, so this indicator is removed for `state` and RETAINED
- * for `role`/`cohort`, and existing `state` rows get an explicit disposition. The
- * console must say so out loud rather than let an admin publish into a void. Reads the shared
- * contracts list, which the sync-guard pins against @twt/domain's `isMemberInBannerAudience`
- * predicate — so the indicator can never drift from the rule the member read actually applies.
+ * Is this audience scope actually targetable today (Decision 4)?
+ *
+ * ⭐ **`state` IS targetable as of Story 1.19** — its member→geo attribution primitive lifts a
+ * member's `member_postings` district through Story 1.18's published tree, so the indicator is
+ * **REMOVED for `state`** and **RETAINED for `role`/`cohort`**, which have no member attribute at
+ * any layer and no owning story (Story 1.19 D8, "Not addressed").
+ *
+ * ⛔ **This function did not change, and must not.** It reads the shared `@twt/contracts` list,
+ * which the sync-guard pins against @twt/domain's `isMemberInBannerAudience` predicate — so the
+ * indicator follows the rule the member read actually applies, automatically, and can never drift.
+ * Adding a hard-coded scope check here would be the second list that drift comes from.
+ *
+ * ⚠ **THIS IS NOT ONLY AN INDICATOR — see `:171`.** `visibilityVerdict` calls this function to
+ * decide which live banners COMPETE with a draft (the AC5 verdict). Now that `state` is targetable,
+ * a live `state` banner can win that contest, which changes what the console tells an author about
+ * whether their draft would be **SEEN** — not merely whether its audience is targetable. That is
+ * correct behaviour and it is ASSERTED by test rather than left to be discovered (Story 1.19,
+ * Escalation 2).
+ *
+ * ⚠ Story 1.19 AC6's QUIET-TURN-ON hazard — `state` rows authored while this indicator was showing
+ * become live the moment the arm resolves — was discharged BY EVIDENCE at that story's Task 0: the
+ * mandatory pre-flight found ZERO affected rows, so existing rows retain their authored status and
+ * no migration was written (Decision `2026-08-13-103`, D2).
  */
 export function isTargetableAudience(audienceScope: string): boolean {
   return (BANNER_TARGETABLE_AUDIENCE_SCOPES as readonly string[]).includes(audienceScope);
@@ -162,11 +175,18 @@ export function visibilityVerdict(
   liveBanners: readonly BannerResponse[],
   now: Date,
 ): VisibilityVerdict | null {
-  // Only same-mode, same-AUDIENCE banners compete (AC5: "the same display_mode and audience"). A
-  // `state`/`role`/`cohort`-scoped banner resolves to visible-to-NOBODY (Decision 4) — it can never
-  // actually contest a draft's visibility, so it must not be able to "win" the verdict. `public` and
-  // `members-all` are both effectively "every member" today, so they correctly still compete with
-  // each other — this filters on TARGETABILITY, not literal audience_scope equality.
+  // Only same-mode, TARGETABLE-audience banners compete (AC5: "the same display_mode and audience").
+  // A banner nobody can ever see must not be able to hide a real draft, so it must not "win" the
+  // verdict. This filters on TARGETABILITY, not literal audience_scope equality — `public` and
+  // `members-all` are both effectively "every member", so they correctly still compete.
+  //
+  // ⚠ **STORY 1.19 CHANGED WHAT THIS LINE DOES, and the change is deliberate.** `state` became
+  // targetable when its arm lit up, so a live `state`-scoped banner now COMPETES here where it
+  // previously could not. That means this verdict can newly tell an author their draft would be
+  // HIDDEN — a real behaviour change in the console, asserted by test rather than discovered
+  // (`tests/banners-derive.test.ts`, Escalation 2).
+  // ⛔ `role`/`cohort` still resolve to visible-to-NOBODY — no member attribute exists for either —
+  // so they remain non-competitors. Do not collapse the two cases back together.
   const competitors = liveBanners.filter(
     (b) => b.display_mode === draft.displayMode && isTargetableAudience(b.audience_scope),
   );

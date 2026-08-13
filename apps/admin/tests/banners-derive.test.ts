@@ -104,10 +104,19 @@ describe('AC4 — the popup forces dismissible in the UI', () => {
 });
 
 describe('Decision 4 — the "not yet targetable" indicator', () => {
-  it('members-all and public are targetable; state/role/cohort are not', () => {
+  // ⭐ UPDATED BY STORY 1.19. `state` is now TARGETABLE — its member→geo attribution primitive
+  // lifts a member's posting district through the published geo tree. ⛔ `role`/`cohort` are NOT,
+  // and for a categorically different reason: no member attribute exists at any layer and no story
+  // owns one ("Not addressed", Decision `2026-08-13-103` D8). The two must be asserted SEPARATELY —
+  // collapsing them back into one list is how the distinction gets lost.
+  it('members-all, public AND state are targetable', () => {
     expect(isTargetableAudience('members-all')).toBe(true);
     expect(isTargetableAudience('public')).toBe(true);
-    for (const s of ['state', 'role', 'cohort']) expect(isTargetableAudience(s)).toBe(false);
+    expect(isTargetableAudience('state')).toBe(true);
+  });
+
+  it('role and cohort are NOT targetable — no member attribute exists for either', () => {
+    for (const s of ['role', 'cohort']) expect(isTargetableAudience(s)).toBe(false);
   });
 });
 
@@ -239,17 +248,40 @@ describe('AC5 — the visibility verdict', () => {
     expect(visibleRow.title).toBe(expectedTitle);
   });
 
-  it('a state/role/cohort-scoped incumbent (visible to NOBODY per Decision 4) never wins the verdict', () => {
-    // A ghost banner: stored, published, "live" by window — but isMemberInBannerAudience resolves it
-    // to visible-to-nobody. It must not be able to hide a real draft, no matter its severity.
-    const ghost = live({
+  // ⭐ THE ESCALATION-2 ASSERTION (Story 1.19). This is a REAL BEHAVIOUR CHANGE in the console, and
+  // it is asserted here rather than discovered later: `visibilityVerdict` filters competitors by
+  // `isTargetableAudience` (`derive.ts:171`), so making `state` targetable means a live `state`
+  // banner can now CONTEST a draft — changing what the console tells an author about whether their
+  // draft would be SEEN, not merely whether its audience is targetable.
+  it('a live STATE-scoped incumbent NOW competes for the verdict (Story 1.19 — was: never won)', () => {
+    const incumbent = live({
       banner_id: 'aaaa1111-1111-1111-1111-111111111111',
       severity: 'critical',
       audience_scope: 'state',
       audience_scope_value: 'Bihar',
     });
-    expect(visibilityVerdict(draft({ severity: 'info' }), [ghost], NOW)).toBeNull();
+    const v = visibilityVerdict(draft({ severity: 'info' }), [incumbent], NOW);
+    // ⚠ Before Story 1.19 this was `toBeNull()` — a `state` banner resolved to visible-to-nobody and
+    // could not hide anything. It resolves for real now, so it can.
+    expect(v).not.toBeNull();
+    expect(v!.draftHidden).toBe(true);
   });
+
+  // ⛔ …but role/cohort ghosts still cannot. A banner nobody can ever see must not hide a real
+  // draft, no matter its severity — and that is STILL true for the two arms with no attribute
+  // behind them. This is the half of the old assertion that survives, kept deliberately.
+  it.each(['role', 'cohort'] as const)(
+    'a %s-scoped incumbent (visible to NOBODY — no member attribute exists) never wins the verdict',
+    (scope) => {
+      const ghost = live({
+        banner_id: 'aaaa1111-1111-1111-1111-111111111111',
+        severity: 'critical',
+        audience_scope: scope,
+        audience_scope_value: 'whatever',
+      });
+      expect(visibilityVerdict(draft({ severity: 'info' }), [ghost], NOW)).toBeNull();
+    },
+  );
 
   it('public and members-all DO still compete with each other — both are "every member" today', () => {
     const incumbent = live({

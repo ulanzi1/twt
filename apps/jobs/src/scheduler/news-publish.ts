@@ -33,7 +33,7 @@
 import { createHash } from 'node:crypto';
 
 import { Alert } from '@twt/contracts';
-import { idempotency, ids, newsBlog, withPariwarScope } from '@twt/domain';
+import { geoTree, idempotency, ids, newsBlog, withPariwarScope } from '@twt/domain';
 import type { schema } from '@twt/domain';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
 
@@ -196,7 +196,23 @@ export async function runNewsPublish(
       const reason = payload.mode === 'scheduled' ? ('not-scheduled' as const) : ('not-published' as const);
       return { proceed: false as const, reason };
     }
-    const memberIds = await newsBlog.resolveAudienceMemberIds(db, current.pariwarId, current.audienceScope, current.audienceScopeValue);
+    // ⭐ THE GEO TREE IS LOADED **ONCE**, HERE — inside the SAME `withPariwarScope` callback as the
+    // post read, on the SAME scoped tx (Story 1.19 AC3/AC7). ⛔ Never once per member: this fan-out
+    // runs against a 4L-member Pariwar, and a per-member load is exactly the N+1 AC7 forbids.
+    // A Pariwar with no published tree loads `null`, and the `state` arm then resolves to the EMPTY
+    // set — fail-closed, never a fallback to `members-all` (ADR-0038: no code default geography).
+    const tree = await geoTree.loadGeoTree(db, current.pariwarId, now);
+    const memberIds = await newsBlog.resolveAudienceMemberIds(
+      db,
+      current.pariwarId,
+      current.audienceScope,
+      current.audienceScopeValue,
+      undefined,
+      // ⛔ tree AND instant travel together — the read-time banners predicate bounds its
+      // newest-posting lookup by the same `now`, and a disagreement between the two consumers
+      // would dispatch a post to a member the banner predicate then denies.
+      { tree, now },
+    );
     return { proceed: true as const, post: current, memberIds };
   });
 

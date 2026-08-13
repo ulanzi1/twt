@@ -121,8 +121,13 @@ export type BannerDisplayState = (typeof BANNER_DISPLAY_STATES)[number];
  *
  * Resolution is a read-time PREDICATE, not a dispatch list (Decision 4 — `isMemberInBannerAudience`):
  * `members-all` → true; `public` → **true** (a `public` banner widens who ELSE may see it — Story
- * 11a.5's `<NoticeboardStrip>` — it never narrows it away from members); `state`/`role`/`cohort` →
- * false + a logged seam note (the `members` table carries no district/designation/cohort attribute).
+ * 11a.5's `<NoticeboardStrip>` — it never narrows it away from members); `state` → **resolves**
+ * against the member's geography (Story 1.19); `role`/`cohort` → false + a logged note.
+ *
+ * ⚠ `state` and `role`/`cohort` are NO LONGER the same case, though they were when this enum was
+ * written. `state` is answered by lifting the member's `member_postings` district through Story
+ * 1.18's published geo tree. `role`/`cohort` have NO member attribute at any layer and no owning
+ * story, and are recorded "Not addressed" (Decision `2026-08-13-103`, D8).
  */
 export const BANNER_AUDIENCE_SCOPES = ['public', 'members-all', 'state', 'role', 'cohort'] as const;
 export const bannerAudienceScopeEnum = pgEnum('banner_audience_scope', BANNER_AUDIENCE_SCOPES);

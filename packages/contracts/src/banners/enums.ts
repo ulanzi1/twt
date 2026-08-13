@@ -41,11 +41,18 @@ export type BannerDisplayState = z.output<typeof BannerDisplayState>;
 /**
  * The audience-scope tuple. Shares its VALUES with `news_audience_scope` but is a separate DB type
  * (two independently-evolving tables must not share one `CREATE TYPE`). Resolution is a read-time
- * PREDICATE (Decision 4): `members-all`/`public` → visible; `state`/`role`/`cohort` → a documented
- * seam, stored and listed but visible to nobody until **Story 1.19**'s member→geo attribution
- * primitive lands (its AC3/AC4). ⛔ NOT Story 1.18: that story shipped the geo-tree scope RESOLVER,
- * which answers "is Patna in Bihar" — audience selection needs a per-MEMBER geo attribute, which is
- * a different capability that merely shares the word "geo".
+ * PREDICATE (Decision 4): `members-all`/`public`/`state` → resolvable; `role`/`cohort` → a
+ * documented seam.
+ *
+ * ⭐ **`state` RESOLVES as of Story 1.19** — the member's `member_postings` district is lifted
+ * through Story 1.18's published geo tree. ⚠ Its two remaining absences are FIRST-CLASS answers,
+ * not failures: a Pariwar with no published tree resolves district-only, and a member with no
+ * posting row is in NO state audience (fail-closed, never "in all").
+ *
+ * ⛔ `role` / `cohort` are a DIFFERENT disposition and must not be lumped in with `state`: there is
+ * NO member `role` or `cohort` attribute at any layer, and **no story owns one**. Story 1.19
+ * recorded them as "Not addressed" with the re-trigger *"the first surface that must target members
+ * by role or cohort"*, and deliberately minted no successor (Decision `2026-08-13-103`, D8).
  */
 export const BANNER_AUDIENCE_SCOPES = ['public', 'members-all', 'state', 'role', 'cohort'] as const;
 export const BannerAudienceScope = z.enum(BANNER_AUDIENCE_SCOPES);
@@ -59,8 +66,25 @@ export type BannerAudienceScope = z.output<typeof BannerAudienceScope>;
  * The PREDICATE (`isMemberInBannerAudience`) remains @twt/domain's — this list is the browser-side
  * mirror the console needs, and the sync-guard test asserts the two agree scope-for-scope, so the
  * indicator can never drift from the rule the member read actually applies.
+ *
+ * ⛔ **THIS FILE MUST NEVER IMPORT `@twt/domain`.** That is why the list is MIRRORED rather than
+ * re-exported: @twt/contracts is bundled into the React Native app by Metro, and @twt/domain's
+ * namespaces pull in `pg` ([[project_contracts_domain_bundle_boundary]]). The sync-guard is the
+ * mechanism that makes a mirror safe.
+ *
+ * ⚠ **The sync-guard is an ORDER-SENSITIVE `toEqual`** (`tests/banners.test.ts:56-62`), so this
+ * list and @twt/domain's must gain a scope in the SAME POSITION or it fails on ordering alone.
+ *
+ * ⭐ `'state'` was added by **Story 1.19** when the arm lit up. ⚠ That is not only an indicator
+ * change: `apps/admin/src/modules/banners/derive.ts:171` calls `isTargetableAudience` inside the
+ * **AC5 visibility verdict**, so a live `state` banner now COMPETES with a draft for what the
+ * console tells an author about whether their draft would be seen (Story 1.19, Escalation 2).
  */
-export const BANNER_TARGETABLE_AUDIENCE_SCOPES: readonly BannerAudienceScope[] = ['public', 'members-all'];
+export const BANNER_TARGETABLE_AUDIENCE_SCOPES: readonly BannerAudienceScope[] = [
+  'public',
+  'members-all',
+  'state',
+];
 
 /**
  * What a dismissal row records. `dismissed` = the member acted; `shown` = the automatic

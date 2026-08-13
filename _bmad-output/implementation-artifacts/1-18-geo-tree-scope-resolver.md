@@ -4,7 +4,7 @@ baseline_commit: 63c844ee253bbb699ff1a4c55ba42ceab9878de0
 
 # Story 1.18: Geo-Tree Scope Resolver `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 > ⚠ **WHY THIS STORY SITS IN A RETROSPECTED EPIC.** `epic-1-retrospective` is `done`. The placement is
 > deliberate: this story extends the RBAC scope-containment model **Story 1.8 minted**
@@ -646,6 +646,56 @@ deny-deeper pin, not an RBAC one, and say so in the disposition.
       failed.**
 - [x] Update `sprint-status.yaml`: `1-18-geo-tree-scope-resolver` → `done`, plus **one combined** top-of-file
       reverse-chron `last_updated` comment entry ([[project_sprint_status_ledger]]).
+
+### Review Findings
+
+*Adversarial (blind), edge-case, and acceptance-audit layers, cross-verified by reading the actual
+source and running the relevant unit suites directly — 2026-08-13.*
+
+- [x] [Review][Patch] `resolver.ts`'s `nodeKey` (NUL-byte delimiter) and `document.ts`'s `identity`/parent-lookup
+      (plain-space delimiter) are two independent implementations of the same composite node-identity concept
+      [packages/domain/src/geo-tree/resolver.ts:68-70, packages/domain/src/geo-tree/document.ts:32-33,136] —
+      fixed: `nodeKey` exported from `resolver.ts`, `document.ts` now imports and reuses it in all three places
+      (duplicate detection, dangling-parent check, cycle detection).
+- [x] [Review][Patch] The NUL byte in `resolver.ts` makes git/tooling classify the file as binary, hiding the
+      resolver's actual implementation from `git diff` and ordinary review tools
+      [packages/domain/src/geo-tree/resolver.ts:68-70] — fixed: `.gitattributes` entry forces `text` handling
+      for this file; `git diff` now shows a normal 161-line unified diff instead of "Binary files differ".
+- [x] [Review][Patch] `geo_tree_versions_reject_mutation`'s `IS DISTINCT FROM` guard omits `id` (the primary key)
+      — an UPDATE changing only `id` slips past the immutability trigger
+      [packages/domain/migrations/0101_geo-tree-versions.sql:77-83] — fixed: added `NEW.id IS DISTINCT FROM OLD.id`
+      to the guard and to the exception message's column list.
+- [x] [Review][Patch] `runReportExportBuild` computes an injectable `now` (line 121) but doesn't thread it into
+      `loadGeoTree` (line 191), unlike the scope-resolution middleware which passes `deps.clock()` — untestable
+      and inconsistent with the job's own DI convention
+      [apps/jobs/src/reports-export.ts:121,191] — fixed: `loadGeoTree(client, ids.pariwarId(pariwarId), now)`.
+- [x] [Review][Patch] `validateGeoTreeDocument`'s `MAX_NODES` check doesn't short-circuit — full O(n)/O(n²)
+      structural validation still runs against an oversized document before it's rejected
+      [packages/domain/src/geo-tree/document.ts:72-74] — fixed: returns immediately after pushing the
+      oversized-document reason, matching the non-empty check's early-return pattern.
+- [x] [Review][Patch] `findGeoTreeCycles`'s memoization gate checks the global `reasons` array instead of the
+      current walk — once any cycle is found anywhere, memoization is disabled for every subsequent start node,
+      degrading to worst-case quadratic on exactly the adversarial input it exists to guard against
+      [packages/domain/src/geo-tree/document.ts:201] — fixed: a local `hitCycle` flag now gates memoization
+      per-walk instead of on the global `reasons.length`.
+- [x] [Review][Patch] AC8 revert-probe test (a)'s first assertion (`expect(reverted.contains()).toBe(false)`)
+      is dead/tautological — it calls the stub with zero arguments and can only ever pass; the test's real
+      probe is its second assertion against the actual `scopeContains`
+      [packages/domain/tests/geo-tree/resolver.test.ts:340-345] — fixed: dead assertion removed, a comment
+      now points at the second assertion as the actual probe.
+
+All 7 patches applied and verified: `pnpm typecheck` and `pnpm lint` clean on `@twt/domain`, `@twt/jobs`,
+`@twt/api`; `packages/domain/tests/geo-tree/`, `tests/rbac/`, and the full non-live-DB domain suite
+(119 files / 1688 tests) all green; `apps/api/tests/unit/geo-tree-resolver-wiring.test.ts` green.
+- [x] [Review][Defer] `createGeoTreeVersion`'s INSERT + supersede UPDATE rely on the caller wrapping both in a
+      transaction (documented convention, matches the `helpdesk/registry.ts` twin); no writer surface ships in
+      this story to exercise it — deferred, pre-existing convention, binds whichever future story adds a writer
+      [packages/domain/src/geo-tree/registry.ts:174-212]
+- [x] [Review][Defer] The "byte-identical, no normalization" guarantee between the geo-tree resolver and the
+      exact-node grant-value comparison is pinned by tests only on the geo-tree side; no existing test in
+      `scope.test.ts`/`check.test.ts` pins the same discipline for `role_grants.scope_value` — deferred, low
+      priority, test-only addition
+      [packages/domain/tests/rbac/scope.test.ts]
 
 ---
 

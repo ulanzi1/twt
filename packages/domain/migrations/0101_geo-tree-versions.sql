@@ -74,7 +74,8 @@ CREATE POLICY "geo_tree_versions_tenant_isolation_update" ON "geo_tree_versions"
 CREATE FUNCTION geo_tree_versions_reject_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.pariwar_id IS DISTINCT FROM OLD.pariwar_id
+  IF NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.pariwar_id IS DISTINCT FROM OLD.pariwar_id
      OR NEW.version IS DISTINCT FROM OLD.version
      OR NEW.effective_at IS DISTINCT FROM OLD.effective_at
      OR NEW.tree_document IS DISTINCT FROM OLD.tree_document
@@ -82,7 +83,7 @@ BEGIN
      OR NEW.audit_id IS DISTINCT FROM OLD.audit_id
      OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
     RAISE EXCEPTION
-      'geo_tree_versions immutable-column write rejected — only superseded_by_version may be updated on an existing version row (Story 1.18 AC1, the clause_versions posture); attempted a change to pariwar_id/version/effective_at/tree_document/authored_by_actor/audit_id/created_at on version % for pariwar %',
+      'geo_tree_versions immutable-column write rejected — only superseded_by_version may be updated on an existing version row (Story 1.18 AC1, the clause_versions posture); attempted a change to id/pariwar_id/version/effective_at/tree_document/authored_by_actor/audit_id/created_at on version % for pariwar %',
       OLD.version, OLD.pariwar_id
       USING ERRCODE = 'P0001';
   END IF;

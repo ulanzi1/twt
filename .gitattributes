@@ -7,3 +7,9 @@ openapi/v1.yaml linguist-generated=true
 
 # Lockfile collapsed in diff view (still tracked + reviewed via commands).
 pnpm-lock.yaml linguist-generated=true
+
+# This source file embeds a deliberate literal NUL byte as a map-key delimiter
+# (Story 1.18 — see packages/domain/src/geo-tree/resolver.ts's header comment
+# for the collision-safety rationale). Without this, git classifies the file
+# as binary and `git diff`/`git show` hide its content from ordinary review.
+packages/domain/src/geo-tree/resolver.ts diff text

@@ -4368,3 +4368,17 @@ Epic 3 → Story 1.18 → {1.19, 6.17, 10.28}. This is the **third generation** 
 difference that is supposed to break the cycle is that all three successors carry acceptance criteria and
 a named owner rather than an epic and a re-trigger. **Three owners is also three chances to repeat the
 failure.** Whoever retrospects Epic 1 next should check these three by name.
+
+## Deferred from: code review of 1-18-geo-tree-scope-resolver (2026-08-13)
+
+- **`createGeoTreeVersion`'s INSERT + supersede UPDATE are not wrapped in an explicit `db.transaction()`
+  call** — the module documents this as running on the caller's transaction (the same convention as the
+  `helpdesk/registry.ts` twin), and Story 1.18 ships no writer surface that calls this function outside
+  tests, so there is no live caller to violate the contract yet. Whichever future story adds a writer
+  surface on top of `packages/domain/src/geo-tree/registry.ts` (`createGeoTreeVersion`/`amendGeoTreeVersion`,
+  lines 144-215) must wrap both statements in one transaction.
+- **The "byte-identical, no normalization" guarantee between the geo-tree resolver and the exact-node
+  grant-value comparison is pinned by tests only on the geo-tree side** (`packages/domain/tests/geo-tree/resolver.test.ts`)
+  — no existing test in `packages/domain/tests/rbac/scope.test.ts` or `check.test.ts` pins the same
+  case-sensitivity/no-trim discipline for `role_grants.scope_value`. Low priority, test-only addition
+  when convenient.

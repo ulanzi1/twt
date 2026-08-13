@@ -188,7 +188,7 @@ export async function runReportExportBuild(
       // ADDED widens it, exactly as a revoked or added grant does. Freezing the tree into the
       // pending row would be a different (and un-asked-for) as-of-request model, and would also
       // reintroduce the resolved-scope columns this design deliberately removed.
-      const buildTimeTree = await geoTree.loadGeoTree(client, ids.pariwarId(pariwarId));
+      const buildTimeTree = await geoTree.loadGeoTree(client, ids.pariwarId(pariwarId), now);
       const geoResolver = buildTimeTree ? geoTree.createGeoTreeResolver(buildTimeTree) : undefined;
 
       // assembleReport re-authorizes fail-closed + runs the scope-narrowed query (Decisions 3/6).

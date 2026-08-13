@@ -340,10 +340,8 @@ describe('geo-tree resolver — AC8 revert-sanity (the tests have teeth)', () =>
   it('(a) RESOLVER-ABSENT probe: reverting to `contains: () => false` breaks the ancestry claims', () => {
     // This is `denyDeeperGeoResolver` byte-for-byte — the exact revert the manual probe performed.
     const reverted = { contains: () => false };
-    expect(
-      reverted.contains(),
-    ).toBe(false);
-    // Every ancestry assertion in this file would flip to false under it.
+    // The probe is `scopeContains` below, called with `reverted` injected — that's what exercises
+    // the seam. Every ancestry assertion in this file would flip to false under it.
     expect(
       scopeContains(
         { dimension: 'state', value: 'Bihar' },

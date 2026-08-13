@@ -17,7 +17,7 @@ import {
   type GeoTreeNodeJson,
 } from '../schema/geo_tree_versions.js';
 import { GeoTreeDocumentInvalidError } from './errors.js';
-import { GEO_TREE_NODE_RANK, isGeoTreeNodeDimension } from './resolver.js';
+import { GEO_TREE_NODE_RANK, isGeoTreeNodeDimension, nodeKey } from './resolver.js';
 
 /** Node values are free `text`; this is a sanity ceiling against a typo'd absurd value, not policy.
  *  Mirrors the `MAX_TARGET_ROLE_LENGTH` posture in `helpdesk/registry.ts`. */
@@ -28,9 +28,13 @@ const MAX_NODE_VALUE_LENGTH = 128;
  *  a request-path cost. ADR-0038 records the revisit trigger if a tree ever outgrows this. */
 const MAX_NODES = 5000;
 
-/** The composite identity of a node, for duplicate detection. */
+/** The composite identity of a node, for duplicate detection. Reuses `resolver.ts`'s `nodeKey` so
+ *  write-time uniqueness and read-time ancestry agree on what "the same node" means — a review
+ *  finding caught two independent (dimension, value) key functions with different delimiters
+ *  (this one a plain space, the resolver's a NUL byte for collision-safety) that could silently
+ *  diverge if the dimension set ever grows past its current 3 prefix-distinct names. */
 function identity(node: GeoTreeNodeJson): string {
-  return `${node.dimension} ${node.value}`;
+  return nodeKey(node.dimension, node.value);
 }
 
 /**
@@ -71,6 +75,7 @@ export function validateGeoTreeDocument(document: GeoTreeDocumentJson): string[]
   }
   if (nodes.length > MAX_NODES) {
     reasons.push(`nodes must contain at most ${String(MAX_NODES)} entries (got ${String(nodes.length)})`);
+    return reasons; // oversized — the checks below are O(n) or worse and not worth running
   }
   if (!Number.isInteger(document.version) || document.version < 1) {
     reasons.push('version must be a positive integer');
@@ -133,7 +138,7 @@ export function validateGeoTreeDocument(document: GeoTreeDocumentJson): string[]
     if (node.parent_dimension === null || node.parent_value === null) continue;
     if (!isGeoTreeNodeDimension(node.parent_dimension)) continue;
 
-    const parentId = `${node.parent_dimension} ${node.parent_value}`;
+    const parentId = nodeKey(node.parent_dimension, node.parent_value);
     if (!present.has(parentId)) {
       reasons.push(
         `node[${String(i)}] '${node.dimension}=${node.value}' names parent ` +
@@ -173,7 +178,7 @@ export function findGeoTreeCycles(nodes: readonly GeoTreeNodeJson[]): string[] {
       isGeoTreeNodeDimension(node.parent_dimension);
     parentOf.set(
       identity(node),
-      hasParent ? `${String(node.parent_dimension)} ${String(node.parent_value)}` : null,
+      hasParent ? nodeKey(node.parent_dimension as string, node.parent_value as string) : null,
     );
   }
 
@@ -184,11 +189,13 @@ export function findGeoTreeCycles(nodes: readonly GeoTreeNodeJson[]): string[] {
     const path: string[] = [];
     const onPath = new Set<string>();
     let cursor: string | null | undefined = start;
+    let hitCycle = false;
 
     while (cursor != null && parentOf.has(cursor)) {
       if (onPath.has(cursor)) {
         const cycle = path.slice(path.indexOf(cursor)).concat(cursor);
         reasons.push(`cycle detected in the parent graph: ${cycle.join(' → ')}`);
+        hitCycle = true;
         break;
       }
       if (safe.has(cursor)) break;
@@ -197,8 +204,11 @@ export function findGeoTreeCycles(nodes: readonly GeoTreeNodeJson[]): string[] {
       cursor = parentOf.get(cursor);
     }
     // Everything walked without hitting a cycle terminates at a root (or a dangling parent, which
-    // check (4) reports separately) — remember it so the next start does not re-walk it.
-    if (reasons.length === 0) for (const k of path) safe.add(k);
+    // check (4) reports separately) — remember it so a LATER start does not re-walk it. Gated on
+    // THIS walk only: an earlier unrelated cycle elsewhere must not disable memoization for every
+    // subsequent start (that degraded the whole detector to worst-case quadratic on precisely the
+    // adversarial cyclic documents it exists to guard against — a review finding).
+    if (!hitCycle) for (const k of path) safe.add(k);
   }
   return reasons;
 }

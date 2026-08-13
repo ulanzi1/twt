@@ -198,11 +198,16 @@ describe('districtsBeneathState — the audience-selection direction (AC7, D7)',
   // directions ever disagreed, a member could be dispatched to an audience the read-time predicate
   // would then deny them — the two consumers would silently contradict each other.
   it('round-trips with liftDistrictThroughTree for every district in the set', () => {
-    for (const district of districtsBeneathState(FULL_TREE, 'Bihar')) {
-      expect(liftDistrictThroughTree(PARIWAR, district, FULL_TREE).state).toEqual({
-        available: true,
-        value: 'Bihar',
-      });
+    for (const [state, districts] of [
+      ['Bihar', districtsBeneathState(FULL_TREE, 'Bihar')],
+      ['UP', districtsBeneathState(FULL_TREE, 'UP')],
+    ] as const) {
+      for (const district of districts) {
+        expect(liftDistrictThroughTree(PARIWAR, district, FULL_TREE).state).toEqual({
+          available: true,
+          value: state,
+        });
+      }
     }
   });
 

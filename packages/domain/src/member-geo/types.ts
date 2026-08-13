@@ -6,8 +6,6 @@
 // and the local suite all stay green ([[project_type_only_import_cycle_trap]]). Keeping the shared
 // shapes here means a consumer can name the contract without pulling in either implementation.
 
-import type { GeoTreeNodeDimension } from '../schema/geo_tree_versions.js';
-
 /**
  * WHY a level is absent. ⭐ A CLOSED FIVE-VALUE UNION (Decision `2026-08-13-103`, D6) — no additions
  * without a fresh ruling, so consumers can branch exhaustively and logs stay greppable.
@@ -81,9 +79,6 @@ export interface MemberGeoNode {
   block: MemberGeoLevel;
 }
 
-/** The geo dimensions a member can be attributed at. Mirrors `GeoTreeNodeDimension` + `pariwar`. */
-export type MemberGeoDimension = GeoTreeNodeDimension | 'pariwar';
-
 /** Convenience constructor for a present level. */
 export function geoPresent(value: string): MemberGeoLevel {
   return { available: true, value };
@@ -92,15 +87,4 @@ export function geoPresent(value: string): MemberGeoLevel {
 /** Convenience constructor for a typed-absent level. */
 export function geoAbsent(reason: MemberGeoAbsenceReason): MemberGeoLevel {
   return { available: false, reason };
-}
-
-/**
- * The resolved `state` value, or `null` — the ONE place a typed absence is intentionally narrowed,
- * for consumers that genuinely only need "which state, if any".
- *
- * ⛔ Do NOT use this to store or pass geo around: it discards exactly the distinction AC1 exists to
- * preserve. It is a comparison helper for a predicate that is about to answer a boolean anyway.
- */
-export function geoValueOrNull(level: MemberGeoLevel): string | null {
-  return level.available ? level.value : null;
 }

@@ -1,4 +1,17 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-13g (1-19-member-geo-attribution-geo-audience-consumer: review -> done via
+#   bmad-code-review. Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+#   against the branch diff 9fa4e31...dc25916. Acceptance Auditor: ZERO AC/Decision/Escalation
+#   violations -- full compliance across AC1-AC8 and D1-D8. 0 decision-needed, 6 patch (all applied:
+#   combined a duplicate import; added a GENUINE PARIWAR_B cross-tenant regression test to both the
+#   member-geo primitive spec AND the news-blog raw-SQL correlated-subquery spec -- the prior
+#   "tenant-scoped" test used a nonexistent member id, not a real second Pariwar; split a conflated
+#   diagnostic log message into its two actual causes; removed two dead exports; cross-referenced the
+#   two independent D3 tie-break implementations; extended the round-trip test to the fixture's
+#   second state), 3 defer (unconditional loadGeoTree cost claim scoping, untested cycle guard,
+#   theoretical empty-string district gap -- all logged to deferred-work.md), 4 dismissed as noise
+#   (D7's required literal SQL qualifiers, an overstated complexity claim, an unreachable-scale test
+#   nitpick, a retirement-row false positive). All 141 domain tests green live-DB, tsc + lint clean.
 # last_updated: 2026-08-13f (1-19-member-geo-attribution-geo-audience-consumer: ready-for-dev ->
 #   in-progress -> review via bmad-dev-story, branch feature/1-19-member-geo-attribution-geo-audience-
 #   consumer off main @ 9fa4e31. TWO commits, governance FIRST: f263ce4 governance(1.19) carrying
@@ -5640,7 +5653,7 @@ development_status:
   # SELECTION, which needs a per-MEMBER geo attribute, not an org tree. An org tree answers "is Patna
   # in Bihar"; it cannot answer "which members are in Patna". Also the named owner of the role/cohort
   # audience arms (its AC4), which have no member attribute at all.
-  1-19-member-geo-attribution-geo-audience-consumer: review
+  1-19-member-geo-attribution-geo-audience-consumer: done
   epic-1-retrospective: done
 
   # ==========================================================================

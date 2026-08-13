@@ -4485,3 +4485,19 @@ targetable when the arm ships. ⛔ No migration, no status rewrite.
 `.tfstate`, no remote backend block, no real `terraform.tfvars`, no `gcloud` on the workstation. **Verified
 live, not assumed** ([[feedback_verify_before_committing_governance_claims]]). *An unrecorded zero
 discharges nothing* — which is why it is recorded here rather than inferred.
+
+## Deferred from: code review of 1-19-member-geo-attribution-geo-audience-consumer (2026-08-13)
+
+- The `listMemberBannerCandidates`-scoped comment "the common request path pays NOTHING" is accurate for
+  the per-candidate geo resolve it describes, but both real callers
+  (`apps/api/src/modules/banners/member-handlers.ts:106`, `apps/jobs/src/scheduler/news-publish.ts`) call
+  `loadGeoTree` unconditionally on every request/job regardless of whether any audience is `state`-scoped —
+  a modest, pre-existing-pattern (mirrors 1.18's admin scope-resolution middleware) per-request query cost
+  not captured by the comment's scope.
+- `ancestorAtDimension`/`districtsBeneathState`'s `steps < tree.parents.size` cycle guard (defensive
+  against a malformed/cyclic persisted tree, mirroring `createGeoTreeResolver`'s Story 1.18 pattern) is
+  never exercised by a test that actually constructs a cyclic document.
+- `member_postings.district` is `text NOT NULL` with no empty-string guard at the DB or domain-read layer;
+  the only write path (`POST /member/life-events/posting`) already enforces non-empty via
+  `z.string().trim().min(1)` at the contract boundary, so this is a theoretical defense-in-depth gap,
+  pre-existing to this diff (schema unchanged by Story 1.19).

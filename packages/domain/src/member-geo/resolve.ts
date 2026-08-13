@@ -37,6 +37,11 @@
 // panel summary and Epic 4's retirement anchor, a different blast radius. The divergence is
 // commented at BOTH sites.
 //
+// ⚠ A THIRD site adopts the same PEER-MESH tie-break: `news-blog/audience.ts`'s `state` fan-out
+// correlated subquery hand-writes the identical `ORDER BY p.created_at DESC, p.posting_id DESC`.
+// That copy is raw SQL, not this module's Drizzle `.orderBy()` below, so the two implement the SAME
+// rule independently and can drift silently if D3 is ever revisited — change one, check the other.
+//
 // ── ⛔ THE TREE IS THE CALLER'S TO LOAD ─────────────────────────────────────────────────────────
 // `geoTree.loadGeoTree` runs ONCE per request/job, exactly as `scope-resolution/index.ts:71` does it.
 // ⛔ NEVER load the tree per member — that is the N+1 AC7 forbids, and it is the reason this function

@@ -20,7 +20,7 @@ import { createGeoTreeVersion, loadGeoTree } from '../../../src/geo-tree/index.j
 import { resolveAudienceMemberIds } from '../../../src/news-blog/index.js';
 import type { GeoTreeNodeJson } from '../../../src/schema/geo_tree_versions.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedMember, seedMemberPosting } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember, seedMemberPosting } from '../_helpers.js';
 
 const NOW = new Date('2026-08-13T12:00:00Z');
 const EFFECTIVE = new Date('2026-01-01T00:00:00Z');
@@ -109,6 +109,29 @@ describe.skipIf(!hasDatabase)('news-blog `state` dispatch audience (AC3, AC7)', 
     expect(await resolveAudienceMemberIds(tx, PARIWAR_A, 'state', 'UP', undefined, { tree, now: NOW })).toContain(
       transferred,
     );
+  });
+
+  // ⭐ THE CROSS-TENANT CASE, against the RAW-SQL correlated subquery specifically. This is the
+  // exact site the file header warns is a tautology-collapse risk — the inner `FROM member_postings
+  // p` has its own `pariwar_id` column, so if the outer `"members"."pariwar_id"` qualifier ever
+  // collapsed the same way `"members"."member_id"` was proven to, this member would silently leak
+  // into PARIWAR_A's audience despite belonging to a different tenant
+  // ([[project_epic6_drizzle_correlated_subquery_bug]]). A same-district, same-timestamp member of
+  // PARIWAR_B is the minimum shape that would expose a collapsed pariwar_id correlation.
+  it('excludes a REAL member of another Pariwar in the SAME district', async () => {
+    const { client, tx } = getTx();
+    const inPatnaA = await seedMember(tx, PARIWAR_A, { state: 'active' });
+    await seedMemberPosting(tx, PARIWAR_A, inPatnaA, 'Patna', { createdAt: POSTED });
+    const inPatnaB = await seedMember(tx, PARIWAR_B, { state: 'active' });
+    await seedMemberPosting(tx, PARIWAR_B, inPatnaB, 'Patna', { createdAt: POSTED });
+
+    await enterAppScope(client, PARIWAR_A);
+    await createGeoTreeVersion(tx, { pariwarId: PARIWAR_A, nodes: TWO_STATE_TREE, effectiveAt: EFFECTIVE });
+    const tree = await loadGeoTree(tx, PARIWAR_A, NOW);
+
+    const bihar = await resolveAudienceMemberIds(tx, PARIWAR_A, 'state', 'Bihar', undefined, { tree, now: NOW });
+    expect(bihar).toContain(inPatnaA);
+    expect(bihar).not.toContain(inPatnaB);
   });
 
   // The `members-all` arm's reachability rule must survive into the geo arm: a grace member is

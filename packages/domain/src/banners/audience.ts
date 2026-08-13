@@ -82,12 +82,21 @@ export function isMemberInBannerAudience(
       // ancestor above it), or a banner with no scope value — all deny. A member whose geo cannot
       // be established is in NO state audience, never in ALL of them.
       const memberState = memberGeo?.state;
-      if (!memberState?.available || scopeValue === null) {
+      if (scopeValue === null) {
+        // The banner itself is missing `audience_scope_value` — a data problem, not a member-geo
+        // problem. Kept distinct from the branch below so a log reader can grep by ACTUAL cause
+        // (Story 1.19 D6's closed-vocabulary discipline, extended to this predicate's own messages).
+        logger.info('state-scoped banner denied — banner has no audience_scope_value', {
+          audience_scope: audienceScope,
+        });
+        return false;
+      }
+      if (!memberState?.available) {
         logger.info('state-scoped banner denied — member geo unresolved', {
           audience_scope: audienceScope,
           audience_scope_value: scopeValue,
           // The CLOSED reason vocabulary (Story 1.19 D6), so this log is greppable by cause.
-          member_geo_absence_reason: memberState && !memberState.available ? memberState.reason : null,
+          member_geo_absence_reason: memberState ? memberState.reason : null,
         });
         return false;
       }

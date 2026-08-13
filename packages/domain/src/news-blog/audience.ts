@@ -37,8 +37,7 @@ import type { Db } from '../db.js';
 import type { LoadedGeoTree } from '../geo-tree/resolver.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
 import { districtsBeneathState } from '../member-geo/resolve.js';
-import { members } from '../schema/members.js';
-import { type MemberLifecycleState } from '../schema/members.js';
+import { type MemberLifecycleState, members } from '../schema/members.js';
 import { memberPostings } from '../schema/member_postings.js';
 import type { NewsAudienceScope } from '../schema/news_posts.js';
 
@@ -142,6 +141,10 @@ export async function resolveAudienceMemberIds(
       // the latest posting across EVERY member in the tenant — a reproducible ~30-40% wrong-district
       // bug that DB-free tests cannot see ([[project_epic6_drizzle_correlated_subquery_bug]];
       // `claim/peer-mesh-read.ts:60-73`, the proven template this copies).
+      //
+      // ⚠ The `ORDER BY p.created_at DESC, p.posting_id DESC` tie-break below is the SAME D3 rule
+      // `member-geo/resolve.ts`'s `getMemberCurrentDistrict` implements via Drizzle's `.orderBy()` —
+      // a second, independent copy in raw SQL. Change one, check the other (`resolve.ts:30-42`).
       //
       // ⛔ NOT a freshly-invented `DISTINCT ON`: that additionally carries the 42P10 trap (the
       // `ORDER BY` must lead with the `DISTINCT ON` expressions).

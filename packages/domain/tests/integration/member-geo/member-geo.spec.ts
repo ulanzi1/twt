@@ -19,7 +19,7 @@ import { memberId as toMemberId } from '../../../src/ids/index.js';
 import { getMemberCurrentDistrict, resolveMemberGeoNode } from '../../../src/member-geo/index.js';
 import type { GeoTreeNodeJson } from '../../../src/schema/geo_tree_versions.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedMember, seedMemberPosting } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember, seedMemberPosting } from '../_helpers.js';
 
 // A tree WITH blocks — needed so the `block` assertion proves D5 (a member-attribute fact) rather
 // than merely re-observing that this tree happens to have no blocks in it.
@@ -221,16 +221,30 @@ describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
     expect(geo.state).toEqual({ available: false, reason: 'node-not-in-tree' });
   });
 
-  // The primitive reads through the caller's scoped tx, so a member of another tenant is simply not
-  // visible — the district read returns null rather than another Pariwar's posting.
-  it('is tenant-scoped: another Pariwar’s member resolves to no posting', async () => {
+  // A member id that exists in NO tenant at all: the read is keyed on (pariwar_id, member_id).
+  it('an unknown member id resolves to no posting', async () => {
     const { client, tx } = getTx();
     const foreignMemberIdStr = await seedMember(tx, PARIWAR_A, { state: 'active' });
     await seedMemberPosting(tx, PARIWAR_A, foreignMemberIdStr, 'Patna');
     await enterAppScope(client, PARIWAR_A);
 
-    // A member id that exists in NO tenant: the read is keyed on (pariwar_id, member_id).
     const strangerId = toMemberId('99999999-9999-4999-8999-999999999999');
     expect(await getMemberCurrentDistrict(tx, PARIWAR_A, strangerId, NOW)).toBeNull();
+  });
+
+  // ⭐ THE GENUINE CROSS-TENANT CASE — a REAL member of PARIWAR_B, with a posting in the SAME
+  // district, is invisible from a PARIWAR_A-scoped session. Unlike the unknown-id case above, this
+  // proves RLS (not merely a lucky id mismatch) is what gates the read: the query is issued with
+  // PARIWAR_B's OWN member id, and the row genuinely exists — it's the session scope that denies it.
+  it('is tenant-scoped: a REAL member of another Pariwar, same district, is invisible', async () => {
+    const { client, tx } = getTx();
+    const memberBIdStr = await seedMember(tx, PARIWAR_B, { state: 'active' });
+    await seedMemberPosting(tx, PARIWAR_B, memberBIdStr, 'Patna');
+    await enterAppScope(client, PARIWAR_A);
+
+    // Queried under PARIWAR_B's own member id, from a PARIWAR_A-scoped session — RLS denies it
+    // regardless of which `pariwarId` argument the caller passes.
+    expect(await getMemberCurrentDistrict(tx, PARIWAR_A, toMemberId(memberBIdStr), NOW)).toBeNull();
+    expect(await getMemberCurrentDistrict(tx, PARIWAR_B, toMemberId(memberBIdStr), NOW)).toBeNull();
   });
 });

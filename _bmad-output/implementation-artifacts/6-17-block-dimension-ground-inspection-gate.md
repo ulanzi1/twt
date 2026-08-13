@@ -803,6 +803,13 @@ off `main` @ `ba52ba0`; `origin/main` confirmed == `ba52ba0` via `git fetch orig
 ⚠ **`DATABASE_URL` was scoped to the command on every live run**, never exported globally
 ([[project_ci_local_double_run_pollution]]). No unreproduced flake was observed in either pass.
 
+⭐ **`ci:local` was run a THIRD time, AFTER the story commit `b0d660e`, and this is the run that
+actually means something for the friction budget.** AC-4 diffs **committed** history, so the two runs
+above passed it *vacuously* — there was nothing committed to diff
+([[project_friction_budget_baseline_ratchet]]). Post-commit: **`✓ friction-budget gate passed` →
+`ci:local PASSED — 30 job(s) green`**, with the real 27-file diff in scope. (This is also what the
+pre-push hook will run, so "the hang" on `git push` has already been paid.)
+
 ⛔ **THE `governance-boundary` GREEN PROVES NOTHING ABOUT `member-geo`, and saying so is the point.**
 The gate's scanned roots are `packages/domain/src/{contribution,pool,claim,geo-tree}`,
 `apps/api/src/{middleware,modules/rbac,audit,plugins}` and `scripts`. **`packages/domain/src/member-geo`

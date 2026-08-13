@@ -290,6 +290,25 @@ prohibited:
     prohibition: >-
       (d) A flag must never condition the permission-gate composition. The
       require*Permission wrappers are the enforcement seam every admin route depends on.
+  # ── Added by Story 1.18 (Decision 2026-08-12-102 / ADR-0038) ────────────────
+  # ⭐ ADMITTED DELIBERATELY, AND THE ANSWER IS RECORDED EITHER WAY (Story 1.18 AC7).
+  # The geo-tree resolver is the implementation behind `rbac.scopeContains`'
+  # injectable seam. It was kept OUTSIDE `packages/domain/src/rbac` on purpose —
+  # that root must gain no DB-reading module — but moving it did NOT move it out
+  # of the prohibition's reach, and leaving the new root UNLISTED would have made
+  # every future scan of it vacuous. Per this gate's own README (:169-174), a
+  # passing scan over an unlisted root proves the root is unlisted, not that the
+  # behaviour is admissible. So it is listed.
+  - root: packages/domain/src/geo-tree
+    prohibition: >-
+      (d) A flag must never weaken the geo-tree resolver. The resolver's answers ARE
+      authorization decisions — `contains(state=Bihar, district=Patna)` is what lets a
+      state-held grant reach a district-scoped target — so a flag-conditioned edge, a
+      flag-conditioned loader, or a flag-gated fallback to `denyDeeperGeoResolver` is a
+      privilege escalation (or a silent revocation) with a config-shaped switch on it.
+      The correct control surface is the PUBLISHED TREE ITSELF: it is versioned,
+      append-only and per-Pariwar precisely so that changing who can reach what is an
+      auditable data act rather than a config flip.
   - root: apps/api/src/audit
     prohibition: >-
       (a) A flag must never condition audit writing at the app boundary — the same

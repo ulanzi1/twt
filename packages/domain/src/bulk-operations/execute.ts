@@ -161,16 +161,25 @@ export async function bulkExecute<TItem, TContext>(
       const locator = op.targetLocatorOf(item);
       itemRef = resolveItemRef(op, item, locator, itemIndex);
 
-      const scopeResult = checkPermission({
-        actorId: actorContext.actorId,
-        grants: actorContext.grants,
-        key: op.permissionKey,
-        resource: {
-          dimension: locator.dimension,
-          value: locator.value,
-          pariwarId: actorContext.pariwarId,
+      // ⭐ SITE 8 (Story 1.18, AC3) — WIRED, and one of only two sites where a resolver genuinely
+      // changes the answer. `locator.dimension` is often `district`, so this is a real geo check
+      // that has been silently deny-deeper since Story 10.6.
+      // ⛔ The resolver rides the ACTOR CONTEXT, not the harness: `bulkExecute` still branches on
+      // nothing ([[project_bulk_operations_open_closed_invariant]]). An absent `geoResolver` means
+      // `denyDeeperGeoResolver`, i.e. today's behaviour, so no existing caller changes.
+      const scopeResult = checkPermission(
+        {
+          actorId: actorContext.actorId,
+          grants: actorContext.grants,
+          key: op.permissionKey,
+          resource: {
+            dimension: locator.dimension,
+            value: locator.value,
+            pariwarId: actorContext.pariwarId,
+          },
         },
-      });
+        { resolver: actorContext.geoResolver },
+      );
 
       // An out-of-scope item is recorded as skipped WITHOUT calling op.evaluate (it was never a
       // candidate for action).

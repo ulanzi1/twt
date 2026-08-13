@@ -327,6 +327,10 @@ export function createMemberModerationHandlers(deps: AppDeps) {
           ctx.memberId,
         );
         if (overlay.status === 'terminated') {
+          // ⛔ SITE 5 (Story 1.18, AC3) — no geo-tree resolver, reason stated. The check runs at
+          // `dimension: 'pariwar'`, answered at `scope.ts:236` before the resolver is reached, so a
+          // resolver would change no outcome. ⚠ Re-visit if this key is ever re-gated at a geo
+          // dimension; `request.geoTree` is loaded and `geoTreeResolverForRequest` is available.
           rbac.requirePermission(
             {
               actorId: ctx.actorId,

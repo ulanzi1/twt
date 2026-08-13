@@ -25,10 +25,19 @@
 // approve Patna claims but NOT Vaishali; prd.md L754) proves a grant carries the
 // concrete node value and enforcement is containment of the action's target
 // locator within the grant's `(dimension, value)`. Containment across the geo
-// tree (state→district→block) needs a canonical org hierarchy that does NOT exist
-// until Story 1.18 (Geo-Tree Scope Resolver) — so the geo-tree lookup is an INJECTABLE seam
-// (default: deny-deeper). Exact-node, `global`, and `self` resolve now; deeper
-// geo containment denies until a resolver is supplied (D-item: geo-tree seam).
+// tree (state→district→block) needs a canonical org hierarchy, so the geo-tree
+// lookup is an INJECTABLE seam (default: deny-deeper). Exact-node, `global`, and
+// `self` resolve here; deeper geo containment resolves only when a resolver is
+// supplied.
+//
+// ✅ THE RESOLVER EXISTS (Story 1.18, ADR-0038). `@twt/domain`'s `geoTree` namespace
+// implements this seam over a versioned per-Pariwar tree document
+// (`geo_tree_versions`), loaded ONCE PER REQUEST in `apps/api`'s scope-resolution
+// middleware and closed over by a PURE, SYNCHRONOUS resolver. ⭐ There is NO code
+// default geography: a Pariwar that has published no tree passes no resolver, so
+// `denyDeeperGeoResolver` applies and its behaviour is byte-identical to before.
+// The seam itself is unchanged — this file was not modified to make that work, and
+// must not be (architectural freeze row 9).
 
 /**
  * Canonical ordered scope-dimension set, high→low ceiling. Single source of
@@ -153,10 +162,17 @@ export interface GeoNode {
 /**
  * The injectable geo-tree containment seam. `contains(ancestor, descendant)`
  * answers "is `descendant` within `ancestor` in the canonical org tree?" — e.g.
- * `contains({state,'Bihar'}, {district,'Patna'})` → true iff Patna ∈ Bihar. The
- * canonical org tree lands with Story 1.18 (Geo-Tree Scope Resolver); until then the DEFAULT
- * resolver denies all cross-level geo containment (fail-closed). Deferred D-item
- * (geo-tree containment seam → Story 1.18 (Geo-Tree Scope Resolver)).
+ * `contains({state,'Bihar'}, {district,'Patna'})` → true iff Patna ∈ Bihar.
+ *
+ * ✅ IMPLEMENTED by `geoTree.createGeoTreeResolver` (Story 1.18, ADR-0038) over a
+ * published per-Pariwar tree document. When NO tree is published for the active
+ * Pariwar, no resolver is passed and {@link denyDeeperGeoResolver} applies — so the
+ * fail-closed posture remains the resting state rather than a legacy fallback.
+ *
+ * ⛔ `contains` is SYNCHRONOUS by contract and must stay that way: `hasPermission`
+ * is a pure side-effect-free predicate (ADR-0008 Decision 8), so an implementation
+ * may never query. The tree is loaded BEFORE the check and closed over. Changing
+ * this interface is architectural freeze row 9.
  */
 export interface GeoTreeResolver {
   contains(ancestor: GeoNode, descendant: GeoNode): boolean;
@@ -166,8 +182,19 @@ export interface GeoTreeResolver {
  * Default resolver: denies every cross-level geo containment. With it, only
  * exact-node (same dimension + same value), `global` (universal), and `self`
  * (own-records) resolve. A state→district or pariwar→block grant covers a
- * narrower target ONLY when a real resolver is injected. This is the fail-closed
- * default the seam guarantees until Story 1.18 (Geo-Tree Scope Resolver) builds the org tree.
+ * narrower target ONLY when a real resolver is injected.
+ *
+ * ⭐ THIS IS THE STANDING DEFAULT, NOT A PLACEHOLDER. It used to say "until Story
+ * 1.18 builds the org tree"; that story shipped, and this const is deliberately
+ * BYTE-UNCHANGED by it. It remains the correct fail-closed posture for every
+ * Pariwar that has published no tree — and because there is NO code default
+ * geography (ADR-0038), that is the state every Pariwar starts in. A wrong tree
+ * silently GRANTS authority; an absent one merely denies. Deny is the safe resting
+ * state, so it stays the default.
+ *
+ * ⛔ Do not delete this, and do not replace it with a real resolver as a
+ * "convenience default" — the nine deny-deeper pins depend on it, and swapping it
+ * would silently widen authorization for every tenant at once.
  */
 export const denyDeeperGeoResolver: GeoTreeResolver = {
   contains: () => false,
@@ -213,9 +240,24 @@ export function scopeContains(
   // (3) A global target needs a global grant (handled above) → deny.
   if (target.dimension === 'global') return false;
 
-  // (4) A self target: only a pariwar-ceiling grant reaches it by default. A
-  // state/district/block grant cannot place a self-target in the geo tree, so it
-  // fails closed (deny) until Story 1.18 (Geo-Tree Scope Resolver)'s org tree + a richer self-resolution lands.
+  // (4) A self target: a `pariwar` grant reaches it, and nothing narrower does —
+  // BY DESIGN, and NOT pending anything.
+  //
+  // ⛔ This is not a deferral, and the comment that used to say it was ("until the
+  // org tree + a richer self-resolution lands") was a MISDESCRIPTION of a
+  // deliberate design choice. `self` is orthogonal to the geo tree — see `:50-55`,
+  // "own records only, not a node in it" — and `GeoNode` excludes it BY TYPE
+  // (`:149`). Placing a self-target in the tree would require member→geo
+  // attribution (which member sits in which district), a different primitive that
+  // would put an I/O dependency inside a pure predicate.
+  //
+  // Closed by [edit] at Story 1.18, with NO successor minted, on evidence: the
+  // repo's ONLY live `dimension: 'self'` check
+  // (`apps/api/src/modules/member-validity/handlers.ts`) passes `grants: []` with
+  // `isSelf: true` and bypasses the grant path entirely, so this branch has zero
+  // live consumers, zero backlog consumers and no FR behind it. If a `self`-scoped
+  // actor ever becomes real (`field_worker`, `scopeCeiling: 'self'`, permissions
+  // currently empty), that story raises it WITH a live requirement attached.
   if (target.dimension === 'self') {
     return grant.dimension === 'pariwar';
   }

@@ -13,10 +13,24 @@
 // `state` / `role` / `cohort` are STORED + rendered + they DRIVE the bilingual requirement, but the
 // `members` table carries only `state` (LIFECYCLE, not geography) + `pariwar_id` (schema/members.ts)
 // — there is NO queryable district / designation / cohort attribute to filter on. So their dispatch
-// selector is a DOCUMENTED SEAM: resolve to the empty set + a logged "not yet resolvable" note, and
-// they light up for free when Story 1.18's geo / a member-designation attribute lands ([[project_rbac_
-// geo_scope_containment]] "resolve only what exists" discipline). Fabricating an attribute now would
-// collide with Story 1.18 (Geo-Tree Scope Resolver)'s geo.
+// selector is a DOCUMENTED SEAM: resolve to the empty set + a logged "not yet resolvable" note
+// ([[project_rbac_geo_scope_containment]] "resolve only what exists" discipline).
+//
+// ── ⛔ THE OWNER IS **STORY 1.19**, NOT STORY 1.18. THE TWO ARMS ARE NOT THE SAME PROBLEM. ──────
+// This seam used to name Story 1.18. Story 1.18 SHIPPED (the geo-tree scope resolver, ADR-0038) and
+// it does NOT light this up — a tree answers *"is Patna in Bihar"*, and it cannot answer *"which
+// members are in Patna"*. That needs a per-MEMBER geo attribute, which does not exist: audience
+// SELECTION and authorization CONTAINMENT are different capabilities that happen to share the word
+// "geo". Leaving this pointing at a completed story would be worse than pointing at an epic — it
+// would read as already-delivered.
+//   · `state`            → **Story 1.19: Member Geo Attribution + Geo Audience Consumer**, which
+//     builds member→district attribution ON TOP of Story 1.18's tree and wires THIS selector
+//     end-to-end (its AC3). Typed-absent, never guessed; a member with no posting row resolves to
+//     NO geo and is read as "in no audience", never "in all" — fail-closed.
+//   · `role` / `cohort`  → NO member attribute exists for either, at any layer. They stay seamed
+//     under **Story 1.19 AC4**, which owns them explicitly as a separate question from the geo arm.
+// ⛔ Do not collapse the three arms into one pointer: 1.19 delivers the geo arm and merely OWNS the
+// other two.
 
 import { and, eq, inArray } from 'drizzle-orm';
 

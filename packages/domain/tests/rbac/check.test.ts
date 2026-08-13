@@ -62,12 +62,20 @@ describe('hasPermission — explicit allow paths', () => {
   });
 
   it('State Trustee at state=Bihar allows district=Patna ONLY with an injected resolver', () => {
+    // ── PIN 2/9 — Story 1.18 disposition: ASSERTION UNCHANGED, PROSE UPDATED. ──────────────────
+    // This pin already tested BOTH directions, so the resolver landing changes nothing about it —
+    // it is the seam's contract, and the contract did not move. Only the prose was stale: it called
+    // the injected stub "the Epic-3 geo tree", and Epic 3 never owned this (Epic 3 supplied the geo
+    // DATA, which is precisely the dependency whose arrival was mistaken for the fix). The real
+    // resolver is now `geoTree.createGeoTreeResolver`, built over a published `geo_tree_versions`
+    // document; `tests/geo-tree/resolver.test.ts` proves it satisfies exactly this contract, and
+    // `tests/integration/geo-tree/registry.spec.ts` proves the same end-to-end from a stored row.
     const grants: EffectiveGrant[] = [
       { pariwarId: PARIWAR_A, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' },
     ];
-    // Without a resolver → fail-closed deny.
+    // Without a resolver → fail-closed deny. STILL the behaviour for a Pariwar with no tree.
     expect(hasPermission(grants, 'claim.approve', resource())).toBe(false);
-    // With the Epic-3 geo tree injected → allow.
+    // With a geo tree injected → allow. Story 1.18 is what makes this reachable in production.
     expect(hasPermission(grants, 'claim.approve', resource(), { resolver: BIHAR_TREE })).toBe(true);
   });
 });
@@ -181,12 +189,30 @@ describe('hasPermission — Story 6.7 ground-inspection district gate', () => {
     ).toBe(false);
   });
 
-  it('D1 DEFERRAL PIN: a BLOCK-scoped grant can NEVER satisfy a district-dimension check', () => {
-    // This is WHY block_admin is not granted claim.conduct_ground_inspection in v1 (roles.ts D1
-    // reconciliation). block_admin holds member.suspend at block scope; even so, that block grant
-    // cannot authorize a district-dimension target — the district target is BROADER than a block
-    // grant (scope.ts: tRank < gRank → deny), and no geo-tree resolver maps block→parent-district
-    // yet. Granting the conduct key to block_admin would therefore be inert under the district gate.
+  it('RANK-ORDER PIN: a BLOCK-scoped grant can NEVER satisfy a district-dimension check', () => {
+    // ── PIN 3/9 — Story 1.18 disposition: ASSERTION UNCHANGED, PROSE CORRECTED. ────────────────
+    // ⛔ THIS PIN WAS MISLABELLED, and the correction is the point (Story 1.18 D2). The old comment
+    // ended "…and no geo-tree resolver maps block→parent-district YET", which reads as a deferral
+    // waiting on Story 1.18. It was never a deferral. This is RANK ORDER, and no org tree — however
+    // complete — lifts it:
+    //
+    //   GEO_RANK: state 2 < district 3 < block 4  (lower = BROADER)
+    //   grant {block,'Block-1'} → gRank 4;  target {district,'Patna'} → tRank 3
+    //   scope.ts:232  `if (tRank < gRank) return false`  →  3 < 4  →  DENIED, before any resolver.
+    //
+    // The parent district is BROADER than the block grant, not narrower. A resolver answers "is X
+    // beneath Y" and can only ever narrow; this needs the opposite. Story 10.18 placed this in
+    // Family B on the reasoning that "block→parent-district is same-tree ancestry with the target
+    // strictly narrower" — the target is the PARENT, hence broader, so the premise was inverted.
+    // See `rbac/scope.ts` §RANK-ORDER for the canonical explanation.
+    //
+    // ⇒ The assertion below STANDS EXACTLY AS WRITTEN and must keep passing forever. Story 1.18
+    // changed only this comment. The honest path for FR-40's block-level actor is a DIFFERENT GATE
+    // (re-gate at `dimension: 'block'`, which authorizes block_admin by exact-node AND
+    // district_admin by district→block ancestry) — that is **Story 6.17**, not a resolver deferral.
+    //
+    // This is also WHY block_admin is not granted claim.conduct_ground_inspection in v1 (roles.ts D1
+    // reconciliation): granting the conduct key to block_admin is inert under the district gate.
     const grants: EffectiveGrant[] = [
       { pariwarId: PARIWAR_A, role: 'block_admin', scopeDimension: 'block', scopeValue: 'Block-1' },
     ];
@@ -436,7 +462,16 @@ describe('hasPermission — Story 10.3: helpdesk.create pariwar gate + district-
     expect(hasPermission(grants, 'helpdesk.create', pariwarResource)).toBe(true);
   });
 
-  it('DEFERRAL PIN: a district-ceiling holder of helpdesk.create is DENIED the pariwar check (inert grant)', () => {
+  it('RANK-ORDER PIN: a district-ceiling holder of helpdesk.create is DENIED the pariwar check (inert grant)', () => {
+    // ── PIN 4/9 — Story 1.18 disposition: UNCHANGED, and it MUST stay unchanged. ─────────────────
+    // ⛔ FAMILY A (rank order), not a resolver deferral. `scopeWithinCeiling('pariwar','district')`
+    // reads CEILING_RANK and is a PURE NUMERIC COMPARE WITH NO RESOLVER PARAMETER AT ALL:
+    // 1 >= 3 → false. `scopeContains` denies independently at scope.ts:232 for the same ordering
+    // reason. Neither line consults a resolver, so Story 1.18's geo tree changes NOTHING here —
+    // by design, not by omission. `rbac/scope.ts` §RANK-ORDER is the canonical explanation.
+    // Story 10.3 minted `helpdesk.create` with a `pariwar` dimension; the 10.3 finding was that district_admin is DEFERRED because a district-ceiling grant cannot satisfy a pariwar-dimension check.
+    // ⚠ IF THIS PIN EVER FLIPS TO ALLOW, THE RESOLVER HAS REACHED INTO FAMILY A. These four pins
+    // are the tripwire for exactly that: a narrower grant must never satisfy a broader check.
     // A synthetic role with helpdesk.create at a `district` ceiling, granted at district scope — the
     // exact shape a district_admin grant would take. It is denied because the pariwar target is broader
     // than the district grant (scopeContains: target broader than grant → deny).
@@ -476,7 +511,16 @@ describe('hasPermission — Story 10.4: helpdesk.respond pariwar gate + district
     expect(hasPermission(grants, 'helpdesk.respond', pariwarResource)).toBe(true);
   });
 
-  it('DEFERRAL PIN: a district-ceiling holder of helpdesk.respond is DENIED the pariwar check (inert grant)', () => {
+  it('RANK-ORDER PIN: a district-ceiling holder of helpdesk.respond is DENIED the pariwar check (inert grant)', () => {
+    // ── PIN 5/9 — Story 1.18 disposition: UNCHANGED, and it MUST stay unchanged. ─────────────────
+    // ⛔ FAMILY A (rank order), not a resolver deferral. `scopeWithinCeiling('pariwar','district')`
+    // reads CEILING_RANK and is a PURE NUMERIC COMPARE WITH NO RESOLVER PARAMETER AT ALL:
+    // 1 >= 3 → false. `scopeContains` denies independently at scope.ts:232 for the same ordering
+    // reason. Neither line consults a resolver, so Story 1.18's geo tree changes NOTHING here —
+    // by design, not by omission. `rbac/scope.ts` §RANK-ORDER is the canonical explanation.
+    // Same shape as pin 4, for the responder surface (Story 10.4).
+    // ⚠ IF THIS PIN EVER FLIPS TO ALLOW, THE RESOLVER HAS REACHED INTO FAMILY A. These four pins
+    // are the tripwire for exactly that: a narrower grant must never satisfy a broader check.
     const districtCeilingCtx: Partial<AuthzContext> = {
       bundles: [
         { role: 'test_helpdesk_respond_district', permissions: ['helpdesk.respond'], scopeCeiling: 'district' },
@@ -505,7 +549,16 @@ describe('hasPermission — Story 10.5: news.manage pariwar gate + district-ceil
     expect(hasPermission(grants, 'news.manage', pariwarResource)).toBe(true);
   });
 
-  it('DEFERRAL PIN: a district-ceiling holder of news.manage is DENIED the pariwar check (inert grant)', () => {
+  it('RANK-ORDER PIN: a district-ceiling holder of news.manage is DENIED the pariwar check (inert grant)', () => {
+    // ── PIN 6/9 — Story 1.18 disposition: UNCHANGED, and it MUST stay unchanged. ─────────────────
+    // ⛔ FAMILY A (rank order), not a resolver deferral. `scopeWithinCeiling('pariwar','district')`
+    // reads CEILING_RANK and is a PURE NUMERIC COMPARE WITH NO RESOLVER PARAMETER AT ALL:
+    // 1 >= 3 → false. `scopeContains` denies independently at scope.ts:232 for the same ordering
+    // reason. Neither line consults a resolver, so Story 1.18's geo tree changes NOTHING here —
+    // by design, not by omission. `rbac/scope.ts` §RANK-ORDER is the canonical explanation.
+    // Same shape, for the News/Blog surface (Story 10.5).
+    // ⚠ IF THIS PIN EVER FLIPS TO ALLOW, THE RESOLVER HAS REACHED INTO FAMILY A. These four pins
+    // are the tripwire for exactly that: a narrower grant must never satisfy a broader check.
     const districtCeilingCtx: Partial<AuthzContext> = {
       bundles: [
         { role: 'test_news_manage_district', permissions: ['news.manage'], scopeCeiling: 'district' },
@@ -536,7 +589,16 @@ describe('hasPermission — Story 10.9: banner.manage pariwar gate + district-ce
     expect(hasPermission(grants, 'banner.manage', pariwarResource)).toBe(true);
   });
 
-  it('DEFERRAL PIN: a district-ceiling holder of banner.manage is DENIED the pariwar check (inert grant)', () => {
+  it('RANK-ORDER PIN: a district-ceiling holder of banner.manage is DENIED the pariwar check (inert grant)', () => {
+    // ── PIN 7/9 — Story 1.18 disposition: UNCHANGED, and it MUST stay unchanged. ─────────────────
+    // ⛔ FAMILY A (rank order), not a resolver deferral. `scopeWithinCeiling('pariwar','district')`
+    // reads CEILING_RANK and is a PURE NUMERIC COMPARE WITH NO RESOLVER PARAMETER AT ALL:
+    // 1 >= 3 → false. `scopeContains` denies independently at scope.ts:232 for the same ordering
+    // reason. Neither line consults a resolver, so Story 1.18's geo tree changes NOTHING here —
+    // by design, not by omission. `rbac/scope.ts` §RANK-ORDER is the canonical explanation.
+    // Same shape, for the banner/popup surface (Story 10.9).
+    // ⚠ IF THIS PIN EVER FLIPS TO ALLOW, THE RESOLVER HAS REACHED INTO FAMILY A. These four pins
+    // are the tripwire for exactly that: a narrower grant must never satisfy a broader check.
     const districtCeilingCtx: Partial<AuthzContext> = {
       bundles: [
         { role: 'test_banner_manage_district', permissions: ['banner.manage'], scopeCeiling: 'district' },

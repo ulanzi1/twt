@@ -138,6 +138,12 @@ export function createTrusteeLiteHandlers(deps: AppDeps) {
 
       // Grants resolved ONCE (the 10.7 precedent), then each section's key evaluated with the pure
       // fail-closed predicate. `resource` is the tenant itself — see the district-dimension note above.
+      // ⛔ SITE 4 (Story 1.18, AC3) — no geo-tree resolver, and the reason is stated rather than
+      // left silent. Every key here is evaluated at `dimension: 'pariwar'`, which `scopeContains`
+      // answers at `scope.ts:236` (any pariwar grant covers every in-tenant target) BEFORE the
+      // resolver is consulted. Passing one would change no outcome. ⚠ If a section key is ever
+      // re-gated at a GEO dimension, this site must be re-visited and wired via
+      // `geoTreeResolverForRequest(request)` — the resolver is on `request.geoTree` and available.
       const grants = request.scopeGrants ?? [];
       const resource = { dimension: 'pariwar' as const, value: scopeTx.pariwarId, pariwarId: scopeTx.pariwarId };
       const may = (key: string): boolean => rbac.hasPermission(grants, key, resource);

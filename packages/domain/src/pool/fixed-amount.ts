@@ -74,9 +74,17 @@ export const MAX_POOL_FIXED_AMOUNT_INR = 10_000_000;
 
 /** Minimum distinct-actor size of an emergency attesting panel (review hardening) — a lone actor is
  *  not a "panel"; it lets a single admin be their own sole attester, undercutting the R9-equivalent
- *  governance posture (D3). Full trustee-grant verification of panel membership is deferred (needs a
- *  trustee directory / RBAC geo-scope resolver — the resolver half is Story 1.18 (Geo-Tree Scope Resolver); the
- *  trustee directory has no owner yet) — this is the mechanical floor. */
+ *  governance posture (D3). Full trustee-grant verification of panel membership is a COMPOUND
+ *  deferral, and its two halves now have different statuses:
+ *    · ✅ THE RBAC GEO-SCOPE RESOLVER HALF IS DELIVERED — Story 1.18 (ADR-0038). A grant held at a
+ *      broader geographic node can now authorize a narrower target wherever a tree is published.
+ *    · ⚠ THE TRUSTEE-DIRECTORY HALF — enumerating WHO IS ELIGIBLE to sit on an emergency attesting
+ *      panel — is owned by **Story 10.13: Fixed-Amount Setter Admin UI**, the surface that consumes
+ *      Story 7.5's workflow INCLUDING the emergency attesting panel, i.e. the exact place "who may
+ *      attest" has to be answered. The obligation is recorded in Story 10.13's own `epics.md`
+ *      section as well as here, because a marker pointing at a story whose text never mentions the
+ *      obligation is how an inherited deferral goes unnoticed.
+ *  ⛔ This constant is the MECHANICAL FLOOR and Story 1.18 changed no value here. */
 export const POOL_FIXED_AMOUNT_MIN_PANEL_SIZE = 2;
 
 /** The minimal window fields the pure selector reasons over (a schedule row provides them all). */

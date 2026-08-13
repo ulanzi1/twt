@@ -41,7 +41,10 @@ const columns: readonly ReportColumn[] = [
 
 async function query(scopeCtx: ReportScopeCtx, client: Db): Promise<MemberRosterRow[]> {
   const narrowing = resolveDistrictNarrowing(scopeCtx.resolvedScope);
-  if (narrowing.kind === 'deny') return []; // deny-deeper geo until Story 1.18 (Geo-Tree Scope Resolver).
+  // deny-deeper geo. ⛔ NOT pending a resolver — Story 1.18 shipped one and this branch deliberately
+  // did not change; see `_shared.ts`'s per-dimension re-examination (state → Story 10.28's
+  // single-valued-type limitation; block → rank order; self → not a tree node).
+  if (narrowing.kind === 'deny') return [];
 
   // Tenant isolation is the EXPLICIT `m.pariwar_id` predicate — the build worker runs on the BYPASSRLS
   // service pool (RLS is bypassed there; the 3.11 explicit-predicate convention), so a cross-Pariwar

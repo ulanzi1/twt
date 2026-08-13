@@ -57,7 +57,12 @@ export function canRetract(status: BannerStatus): boolean {
 
 /**
  * Is this audience scope actually targetable today (Decision 4)? `state`/`role`/`cohort` are stored,
- * tone-reviewed and listed — but visible to NOBODY until Story 1.18 (Geo-Tree Scope Resolver)'s selection primitive lands. The
+ * tone-reviewed and listed — but visible to NOBODY until **Story 1.19**'s member→geo attribution
+ * primitive lands (⛔ NOT Story 1.18, which shipped the geo-tree scope RESOLVER — "is Patna in
+ * Bihar" — and deliberately did not supply the per-MEMBER attribute audience selection needs).
+ * ⚠ Story 1.19 AC6 owns the QUIET-TURN-ON hazard this indicator guards: when the `state` arm
+ * resolves, rows authored today become live, so this indicator is removed for `state` and RETAINED
+ * for `role`/`cohort`, and existing `state` rows get an explicit disposition. The
  * console must say so out loud rather than let an admin publish into a void. Reads the shared
  * contracts list, which the sync-guard pins against @twt/domain's `isMemberInBannerAudience`
  * predicate — so the indicator can never drift from the rule the member read actually applies.

@@ -95,6 +95,13 @@ describe('scopeContains — hierarchical (state→district via resolver seam)', 
     ).toBe(false);
   });
 
+  // ── PIN 1/9 — Story 1.18 disposition: UNCHANGED. ────────────────────────────────────────────
+  // This pin explicitly passes `denyDeeperGeoResolver`, so it tests THE DEFAULT, not the absence of
+  // an implementation. Story 1.18 shipped a real resolver but left the default byte-unchanged (D3),
+  // because it remains the correct fail-closed posture for every Pariwar that has published no
+  // tree. The assertion is therefore still true and still load-bearing — arguably more so now that
+  // a resolver exists to contrast it with. `tests/geo-tree/resolver.test.ts` holds the with-resolver
+  // half of the same question.
   it('FAIL-CLOSED: state=Bihar ⊉ district=Patna WITHOUT a resolver (default deny-deeper)', () => {
     expect(
       scopeContains(

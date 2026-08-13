@@ -223,6 +223,64 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
     );
     expect(raw.rows).toHaveLength(0);
   });
+
+  // Story 1.18 — geo_tree_versions is a SCOPED table, and it belongs in this set for a sharper
+  // reason than "it has a pariwar_id". ⛔ A LEAKED ORG TREE IS A LEAKED AUTHORIZATION INPUT: the
+  // resolver's answers ARE authorization decisions (`contains(state=Bihar, district=Patna)` is what
+  // lets a state-held grant reach a district-scoped target), so reading another Pariwar's tree
+  // discloses that tenant's administrative structure AND supplies a widening input to a decision
+  // that is supposed to be scoped. It is NOT geography-as-reference-data and must never be
+  // reclassified as a Passport-style cross-readable carve-out — each Pariwar owns its own subtree
+  // (`GEO_RANK` puts `pariwar` ABOVE `state`), so there is no shared national tree to carve out.
+  it('geo_tree_versions (scoped) — A scope sees only A trees, never B', async () => {
+    const { tx, client } = getTx();
+    // Seed one tree version per tenant as superuser (before entering app scope).
+    for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
+      await tx.insert(schema.geoTreeVersions).values({
+        pariwarId: pariwar,
+        version: 1,
+        effectiveAt: new Date('2025-01-01T00:00:00Z'),
+        treeDocument: {
+          version: 1,
+          nodes: [
+            { dimension: 'state', value: 'Bihar', parent_dimension: null, parent_value: null },
+            {
+              dimension: 'district',
+              value: 'Patna',
+              parent_dimension: 'state',
+              parent_value: 'Bihar',
+            },
+          ],
+        },
+      });
+    }
+    await enterAppScope(client, PARIWAR_A);
+
+    const all = await tx.select().from(schema.geoTreeVersions);
+    expect(all).toHaveLength(1);
+    expect(all[0]?.pariwarId).toBe(PARIWAR_A);
+
+    const bRows = await tx
+      .select()
+      .from(schema.geoTreeVersions)
+      .where(eq(schema.geoTreeVersions.pariwarId, PARIWAR_B));
+    expect(bRows).toHaveLength(0);
+
+    // Raw SQL bypass attempt — still RLS-filtered to 0 rows.
+    const raw = await client.query<{ pariwar_id: string }>(
+      `SELECT pariwar_id FROM geo_tree_versions WHERE pariwar_id = $1`,
+      [PARIWAR_B],
+    );
+    expect(raw.rows).toHaveLength(0);
+
+    // ⭐ The one that matters most: the DOCUMENT BODY must not leak either. A tree read that
+    // returned the JSONB with a filtered pariwar_id would still hand over the other tenant's
+    // administrative structure — so probe the payload column directly, not just the tenant key.
+    const rawDoc = await client.query<{ tree_document: unknown }>(
+      `SELECT tree_document FROM geo_tree_versions WHERE tree_document IS NOT NULL`,
+    );
+    expect(rawDoc.rows).toHaveLength(1);
+  });
 });
 
 describe.skipIf(!hasDatabase)('Pariwar-Passport carve-out (EXPECTED cross-readable exception)', () => {

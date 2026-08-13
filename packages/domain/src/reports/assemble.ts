@@ -41,16 +41,24 @@ export async function assembleReport(
   }
 
   // Authorization (Decision 6): the actor must hold the template's OWN key at their resolved scope.
-  const check = checkPermission({
-    actorId: scopeCtx.actorId,
-    grants: scopeCtx.grants,
-    key: template.permissionKey,
-    resource: {
-      dimension: scopeCtx.resolvedScope.dimension,
-      value: scopeCtx.resolvedScope.value,
-      pariwarId: scopeCtx.pariwarId,
+  // ⭐ SITE 9 (Story 1.18, AC3) — WIRED. `resolvedScope.dimension` is a geo dimension for a
+  // district- or state-scoped report actor, so this is a real geo check. An absent `geoResolver`
+  // means `denyDeeperGeoResolver`, i.e. today's behaviour, so no existing caller changes.
+  // ⚠ AUTHORIZATION ONLY. The template's `query` narrows on `resolvedScope` through a SEPARATE
+  // deny-deeper mechanism (`templates/_shared.ts`) that this resolver does not touch.
+  const check = checkPermission(
+    {
+      actorId: scopeCtx.actorId,
+      grants: scopeCtx.grants,
+      key: template.permissionKey,
+      resource: {
+        dimension: scopeCtx.resolvedScope.dimension,
+        value: scopeCtx.resolvedScope.value,
+        pariwarId: scopeCtx.pariwarId,
+      },
     },
-  });
+    { resolver: scopeCtx.geoResolver },
+  );
   if (!check.ok) {
     // Fail-closed — surface the structured denial (the app maps it to 403).
     throw check.error;

@@ -101,6 +101,10 @@ function requireNiyamavaliReadAccess(deps: AppDeps): preHandlerHookHandler {
     if (!scopeTx || !actorId) {
       throw new Error('[rules] read gate ran without session + scope-resolution');
     }
+    // ⛔ SITE 7 (Story 1.18, AC3) — no geo-tree resolver, reason stated. Both keys are evaluated at
+    // `dimension: 'pariwar'`, answered at `scope.ts:236` before the resolver is consulted. The
+    // Niyamavali is a per-Pariwar document with no geographic subdivision, so this is unlikely ever
+    // to become a geo check — but if it does, wire `geoTreeResolverForRequest(request)` here.
     const grants = request.scopeGrants ?? [];
     const resource = {
       dimension: 'pariwar' as const,

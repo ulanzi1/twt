@@ -42,7 +42,10 @@ const columns: readonly ReportColumn[] = [
 
 async function query(scopeCtx: ReportScopeCtx, client: Db): Promise<ContributionRateRow[]> {
   const narrowing = resolveDistrictNarrowing(scopeCtx.resolvedScope);
-  if (narrowing.kind === 'deny') return []; // deny-deeper geo until Story 1.18 (Geo-Tree Scope Resolver).
+  // deny-deeper geo. ⛔ NOT pending a resolver — Story 1.18 shipped one and this branch deliberately
+  // did not change; see `_shared.ts`'s per-dimension re-examination (state → Story 10.28's
+  // single-valued-type limitation; block → rank order; self → not a tree node).
+  if (narrowing.kind === 'deny') return [];
 
   // Tenant isolation via the EXPLICIT `m.pariwar_id` predicate (the build worker's BYPASSRLS service
   // pool bypasses RLS — the 3.11 convention); the district narrowing (Decision 3) composes on top.

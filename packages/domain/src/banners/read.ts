@@ -20,7 +20,10 @@
 //   · dismissal        → SQL (the LEFT JOIN above).
 //   · AUDIENCE         → TS, via the single `isMemberInBannerAudience` authority (Decision 4). Not
 //     duplicated as a SQL `IN ('public','members-all')` predicate: a second copy of the rule would
-//     drift the moment Story 1.18's geo selector lands and starts consulting member attributes.
+//     drift the moment the geo selector lands and starts consulting member attributes. ⛔ That
+//     selector is **Story 1.19**'s (member→geo attribution), NOT Story 1.18's — 1.18 shipped the
+//     geo-tree scope RESOLVER, which answers "is Patna in Bihar" and never "which members are in
+//     Patna". This single-authority requirement is what keeps that future change to one file.
 //   · PRECEDENCE       → NOT here. `resolveVisibleBanners` and `deriveBannerDisplayState` were
 //     relocated from `packages/domain` to `packages/contracts` because they are pure, read-time
 //     PRESENTATION POLICY shared by both the API/domain layer and the browser-based admin UI.

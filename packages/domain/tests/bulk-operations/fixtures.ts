@@ -35,8 +35,20 @@ export const STATE_TRUSTEE_BIHAR_GRANT: EffectiveGrant = {
   scopeValue: 'Bihar',
 };
 
-export function actorContext(grants: readonly EffectiveGrant[]): BulkActorContext {
-  return { actorId: FIXTURE_ACTOR_ID, actorRole: null, pariwarId: FIXTURE_PARIWAR_ID, grants };
+export function actorContext(
+  grants: readonly EffectiveGrant[],
+  /** Story 1.18 — the optional geo-tree resolver. OMITTED by default, deliberately: every existing
+   *  caller of this helper keeps the deny-deeper posture with no edit, which is the same guarantee
+   *  the production contract change makes. Pass one only where the resolver is the thing under test. */
+  geoResolver?: BulkActorContext['geoResolver'],
+): BulkActorContext {
+  return {
+    actorId: FIXTURE_ACTOR_ID,
+    actorRole: null,
+    pariwarId: FIXTURE_PARIWAR_ID,
+    grants,
+    geoResolver,
+  };
 }
 
 // ── Fixture A — the primary harness-exercising operation ────────────────────────────────────────

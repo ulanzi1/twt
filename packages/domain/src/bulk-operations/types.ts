@@ -7,6 +7,7 @@
 
 import type { AuditEntryInput } from '../audit/write.js';
 import type { EffectiveGrant } from '../rbac/check.js';
+import type { GeoTreeResolver } from '../rbac/scope.js';
 import type { ScopeDimension, TargetLocator } from '../rbac/scope.js';
 
 /**
@@ -127,6 +128,26 @@ export interface BulkActorContext {
   actorRole: string | null;
   pariwarId: string;
   grants: readonly EffectiveGrant[];
+  /**
+   * ⭐ Story 1.18 (AC3, site 8) — the caller's in-force geo-tree resolver, OPTIONAL.
+   *
+   * WHY IT LIVES ON THE ACTOR CONTEXT AND NOT ON THE HARNESS. Bulk items are frequently located at
+   * `district` (`locator.dimension`), so the per-item `checkPermission` at `execute.ts` is a REAL
+   * geo check — one of the few places a resolver genuinely changes the answer. But
+   * [[project_bulk_operations_open_closed_invariant]] holds: `bulkExecute` must never branch on
+   * `operationType`, and operations extend the CONTRACT, not the harness. The resolver is a
+   * property of WHO IS ACTING and WHERE, exactly like `grants` and `pariwarId` — so it rides here,
+   * beside them, and every operation gets it for free without the harness learning anything.
+   *
+   * ⛔ OPTIONAL, and omitting it means TODAY'S BEHAVIOUR EXACTLY. When absent, `checkPermission`
+   * falls back to `denyDeeperGeoResolver` — so every existing caller (and every test that predates
+   * Story 1.18) keeps the deny-deeper posture with no edit. The API layer supplies it from
+   * `request.geoTree`; a job or a test that has no tree simply leaves it off.
+   *
+   * ⛔ It is a resolver, NOT a loader. It is PURE and SYNCHRONOUS, closing over an already-loaded
+   * document — `checkPermission` is a pure predicate and cannot await.
+   */
+  geoResolver?: GeoTreeResolver;
 }
 
 /** `bulkExecute`'s mode + wiring options (AC1). */

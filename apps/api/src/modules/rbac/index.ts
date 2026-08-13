@@ -9,7 +9,7 @@
 //
 // Discharges D3-1.8 (the HTTP-middleware adapter for the framework-agnostic guard).
 
-import { AuthorizationDeniedError, rbac } from '@twt/domain';
+import { AuthorizationDeniedError, geoTree, rbac } from '@twt/domain';
 import type { FastifyRequest, preHandlerHookHandler } from 'fastify';
 import type pg from 'pg';
 
@@ -48,6 +48,28 @@ export async function loadActorGrants(
     scopeDimension: r.scope_dimension,
     scopeValue: r.scope_value,
   }));
+}
+
+/**
+ * Story 1.18 — the geo-tree resolver for THIS request, or `undefined`.
+ *
+ * `scopeResolutionHook` loads the active Pariwar's in-force tree ONCE and parks it on
+ * `request.geoTree`. This turns it into the `GeoTreeResolver` the domain guard accepts. Returning
+ * `undefined` (not a resolver that always denies) is deliberate: `resolveContext` then falls back to
+ * `denyDeeperGeoResolver`, so the no-tree path is byte-identically today's behaviour rather than a
+ * new object that merely behaves like it.
+ *
+ * ⛔ PURE + SYNCHRONOUS by construction. It reads an already-loaded document and awaits nothing —
+ * `rbac.hasPermission` is a pure synchronous predicate (ADR-0008 Decision 8) and cannot tolerate I/O.
+ * ⛔ Do NOT call `geoTree.loadGeoTree` from here. That is the scope-resolution middleware's job, once
+ * per request; doing it per check would put a query inside a predicate.
+ */
+export function geoTreeResolverForRequest(
+  request: FastifyRequest,
+): rbac.GeoTreeResolver | undefined {
+  const tree = request.geoTree;
+  if (!tree) return undefined;
+  return geoTree.createGeoTreeResolver(tree);
 }
 
 /** Shared `authz.denied` audit-emission shape — the standard denial callback every permission gate in this module fires on deny. */
@@ -114,6 +136,9 @@ export function requirePermissionHook(
       },
       {
         onAuthorizationDenied: auditAuthorizationDenied(deps, request, actorId, scopeTx.pariwarId),
+        // ⭐ SITE 1 (Story 1.18, AC3) — the primary injection point. `undefined` when this Pariwar
+        // has published no tree, which `resolveContext` turns back into `denyDeeperGeoResolver`.
+        resolver: geoTreeResolverForRequest(request),
       },
     );
   };
@@ -178,6 +203,12 @@ export function requireGlobalPermission(deps: AppDeps, key: string): preHandlerH
     }
     const grants = await loadGlobalActorGrants(deps.servicePool, actorId);
 
+    // ⛔ SITE 2 (Story 1.18, AC3) — DELIBERATELY NOT WIRED, and this is the stated reason rather
+    // than a silent omission. The check runs at `dimension: 'global'`, and `scopeContains` answers
+    // a global target at `scope.ts:202/:214` — before the geo branch is reached at all. There is
+    // also no scope tx here (this is the no-`:pariwarId` sibling), so no tree could have been
+    // loaded. A resolver is not merely unnecessary here; it is unreachable. Wiring one would be
+    // decoration that a later reader might mistake for coverage.
     rbac.requirePermission(
       {
         actorId,
@@ -238,6 +269,11 @@ export function requireGlobalOrAnyPariwarPermission(deps: AppDeps, key: string):
     }
     const grants = await loadGlobalActorGrants(deps.servicePool, actorId);
 
+    // ⛔ SITE 3 (Story 1.18, AC3) — DELIBERATELY NOT WIRED, reason stated. BOTH arms check at a
+    // dimension the resolver never sees: the first at `global` (answered at `scope.ts:202/:214`),
+    // the second at `pariwar` (answered at `scope.ts:236`, which returns true for any pariwar grant
+    // BEFORE the resolver is consulted). No geo dimension is evaluated here, and like site 2 this
+    // gate has no scope tx to have loaded a tree from.
     const holdsGlobally = rbac.hasPermission(grants, key, {
       dimension: 'global',
       value: null,

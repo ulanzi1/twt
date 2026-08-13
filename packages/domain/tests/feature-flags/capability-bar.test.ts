@@ -183,7 +183,25 @@ describe('the SHIPPED governance_boundary.yaml', () => {
 // green leg (b) proves the root is unlisted, not that the behaviour is admissible.
 // ⛔ Its rationale TRACES the fail-open polarity to the member rather than asserting it, because the
 // `kyc_manual_fallback` attestation asserted the opposite of its own code through three review passes.
-const EXPECTED_BAR_HASH = '11da8ec7b166ca4bc313970baaec6b652ef34c33b3b7071b9637d5290dcb010a';
+// ⭐ RE-PINNED 2026-08-12 by Story 1.18 (Decision `2026-08-12-102` / ADR-0038) — and the guard
+// working is why. Adding `packages/domain/src/geo-tree` to the `prohibited` roots is a semantic
+// change to the capability bar, so this hash flipped and the test went red on the very first full
+// run. That is the intended teeth: a prohibited root cannot be added, altered or silently DROPPED
+// without a deliberate re-pin in the same change.
+//
+// WHAT CHANGED, so a later reader can audit the flip rather than trust it: ONE new `prohibited`
+// entry, root `packages/domain/src/geo-tree`, prohibition (d) — a flag must never weaken the
+// geo-tree resolver, because the resolver's answers ARE authorization decisions and a
+// flag-conditioned edge (or a flag-gated fallback to `denyDeeperGeoResolver`) would be a privilege
+// escalation, or a silent revocation, with a config-shaped switch on it. ⛔ NOTHING under `allow`
+// changed: `count` is still 6, no flag key was added, and no rationale was touched. Story 1.18
+// mints no flag and toggles nothing.
+//
+// The root was ADMITTED rather than left unlisted deliberately (Story 1.18 AC7): per this gate's
+// own README (`:169-174`), a passing scan over an UNLISTED root proves the root is unlisted, not
+// that the behaviour is admissible.
+// Prior hash: 11da8ec7b166ca4bc313970baaec6b652ef34c33b3b7071b9637d5290dcb010a (12 prohibited roots).
+const EXPECTED_BAR_HASH = 'd178ea959ae39a85acd0d5f4804bcd227e23ed3554af3c54da4d758a54c17cb1';
 
 describe('governance_boundary.yaml golden hash', () => {
   it('matches the frozen hash — a bar change requires deliberate attestation', () => {

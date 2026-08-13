@@ -42,7 +42,10 @@ export type BannerDisplayState = z.output<typeof BannerDisplayState>;
  * The audience-scope tuple. Shares its VALUES with `news_audience_scope` but is a separate DB type
  * (two independently-evolving tables must not share one `CREATE TYPE`). Resolution is a read-time
  * PREDICATE (Decision 4): `members-all`/`public` → visible; `state`/`role`/`cohort` → a documented
- * seam, stored and listed but visible to nobody until Story 1.18 (Geo-Tree Scope Resolver)'s selection primitive lands.
+ * seam, stored and listed but visible to nobody until **Story 1.19**'s member→geo attribution
+ * primitive lands (its AC3/AC4). ⛔ NOT Story 1.18: that story shipped the geo-tree scope RESOLVER,
+ * which answers "is Patna in Bihar" — audience selection needs a per-MEMBER geo attribute, which is
+ * a different capability that merely shares the word "geo".
  */
 export const BANNER_AUDIENCE_SCOPES = ['public', 'members-all', 'state', 'role', 'cohort'] as const;
 export const BannerAudienceScope = z.enum(BANNER_AUDIENCE_SCOPES);

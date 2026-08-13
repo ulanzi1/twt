@@ -20,10 +20,14 @@
 //   · dismissal        → SQL (the LEFT JOIN above).
 //   · AUDIENCE         → TS, via the single `isMemberInBannerAudience` authority (Decision 4). Not
 //     duplicated as a SQL `IN ('public','members-all')` predicate: a second copy of the rule would
-//     drift the moment the geo selector lands and starts consulting member attributes. ⛔ That
-//     selector is **Story 1.19**'s (member→geo attribution), NOT Story 1.18's — 1.18 shipped the
-//     geo-tree scope RESOLVER, which answers "is Patna in Bihar" and never "which members are in
-//     Patna". This single-authority requirement is what keeps that future change to one file.
+//     have drifted the moment the geo selector started consulting member attributes.
+//     ⭐ **THE SINGLE-AUTHORITY RULE PAID OFF, AND THIS IS THE RECORD OF IT.** Story 1.19 lit up the
+//     `state` arm — the audience predicate now consults the member's RESOLVED geography — and the
+//     change landed in ONE file (`audience.ts`) exactly as this note predicted. Had the rule been
+//     duplicated in SQL here, a `state` banner would now be visible to everyone the SQL let through
+//     and invisible to everyone the TS predicate denied, with no single place to read the truth.
+//     ⛔ Do not add a SQL audience predicate now that the arm resolves: the geo answer is not
+//     expressible as a constant `IN` list, which is precisely why it is applied in TS.
 //   · PRECEDENCE       → NOT here. `resolveVisibleBanners` and `deriveBannerDisplayState` were
 //     relocated from `packages/domain` to `packages/contracts` because they are pure, read-time
 //     PRESENTATION POLICY shared by both the API/domain layer and the browser-based admin UI.
@@ -35,7 +39,9 @@
 import { and, desc, eq, gt, isNull, lt, lte, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
+import type { LoadedGeoTree } from '../geo-tree/resolver.js';
 import type { BannerId, MemberId, PariwarId } from '../ids/index.js';
+import { resolveMemberGeoNode } from '../member-geo/resolve.js';
 import { clampLimit } from '../pagination.js';
 import { type BannerDisplayState, type BannerRow, bannerDismissals, banners } from '../schema/banners.js';
 import { isMemberInBannerAudience, type BannerAudienceLogger } from './audience.js';
@@ -183,9 +189,27 @@ export async function listMemberBannerCandidates(
   memberId: MemberId,
   now: Date,
   logger?: BannerAudienceLogger,
+  tree?: LoadedGeoTree | null,
 ): Promise<BannerRow[]> {
   const candidates = await listVisibleBannersForMember(db, pariwarId, memberId, now);
-  return candidates.filter((b) => isMemberInBannerAudience(b.audienceScope, b.audienceScopeValue, logger));
+
+  // ⭐ RESOLVE THE MEMBER'S GEO **ONCE**, BEFORE FILTERING (Story 1.19, D4). ⛔ Never inside the
+  // `.filter()` below: `isMemberInBannerAudience` is pure + synchronous, and loading geo per
+  // candidate would make it async AND issue one query per banner — the N+1 AC7 forbids in the
+  // news-blog consumer, acquired here by accident. This is the same load-once-and-close-over shape
+  // as `apps/api/src/middleware/scope-resolution/index.ts:64-71`.
+  //
+  // Skipped entirely when no candidate is `state`-scoped, so the common request path pays NOTHING.
+  // ⚠ `tree` is OPTIONAL: an existing caller that passes none resolves geo against a `null` tree,
+  // whose `state` is typed-absent, so `state` banners deny — today's behaviour, unchanged.
+  const needsGeo = candidates.some((b) => b.audienceScope === 'state');
+  const memberGeo = needsGeo
+    ? await resolveMemberGeoNode(db, pariwarId, memberId, tree ?? null, now)
+    : null;
+
+  return candidates.filter((b) =>
+    isMemberInBannerAudience(b.audienceScope, b.audienceScopeValue, memberGeo, logger),
+  );
 }
 
 /**

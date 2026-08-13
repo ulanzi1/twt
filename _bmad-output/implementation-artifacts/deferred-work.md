@@ -4382,3 +4382,122 @@ failure.** Whoever retrospects Epic 1 next should check these three by name.
   — no existing test in `packages/domain/tests/rbac/scope.test.ts` or `check.test.ts` pins the same
   case-sensitivity/no-trim discipline for `role_grants.scope_value`. Low priority, test-only addition
   when convenient.
+
+---
+
+## Deferred from: 1-19-member-geo-attribution-geo-audience-consumer (2026-08-13)
+
+**Recorded BEFORE implementation, deliberately** ([[feedback_governance_commits_precede_implementation]]).
+This is the governance half of Story 1.19: it dispositions the **six markers Story 1.18 re-pointed here**,
+records the **one non-mint**, and mechanizes the **one standing obligation** the story leaves behind. All
+dispositions were **ruled by BigDev on 2026-08-13** and are entered as Decision `2026-08-13-103`.
+
+The vocabulary below is [[feedback_closure_language_precision]]'s and is **never collapsed**. ⛔ The **geo
+half** and the **role/cohort half** of each compound marker get **separate labels** — they are not the same
+disposition, and the source files say so themselves (`banners/audience.ts:30`,
+`news-blog/audience.ts:32-33`).
+
+### The six re-pointed markers — each split into its two halves
+
+| Marker | File (anchors re-derived at `9fa4e31`) | **Geo half** | **`role`/`cohort` half** |
+|---|---|---|---|
+| **D6** | `packages/domain/src/news-blog/audience.ts:26`, `:31` | **Closed by [edit]** — the `state` arm resolves via one bounded query | **Not addressed** (see below) |
+| **D7** | `packages/domain/src/banners/audience.ts:24-25`, `:29`, `:51`, `:56` | **Closed by [edit]** — the `state` arm resolves against injected member geo | **Not addressed** |
+| **D8** | `packages/domain/src/banners/read.ts:24` | **Closed by [edit]** — the single-authority note rewritten as **delivered** | n/a (this marker has no role/cohort half) |
+| **D14** | `packages/contracts/src/banners/enums.ts:45` | **Closed by [edit]** — comment + `'state'` added to the browser mirror list | **Not addressed** |
+| **D15** | `packages/contracts/src/banners/dto.ts:43` | **Closed by [edit]** — comment only; the `audience_scope_value` rule is unchanged | **Not addressed** |
+| **D16** | `apps/admin/src/modules/banners/derive.ts:60`, `:63` | **Closed by [edit]** — comment only; the indicator follows the shared list automatically | **Not addressed** |
+
+⛔ **D14/D15/D16 are comment/DTO edits ONLY.** `packages/contracts` must never import a pg-touching
+`@twt/domain` namespace and `apps/admin` is a browser bundle
+([[project_contracts_domain_bundle_boundary]]; `derive.ts:11-14` states the same rule from the other side).
+
+### The one disposition that is NOT a mint — deliberately
+
+- **`role` / `cohort` as a member attribute — "Not addressed". ⛔ NO successor is minted.**
+  Story 1.19's AC4 requires the seam prose to *"name a **story** and never an epic"*. **No such story
+  exists**, and this was **verified at `9fa4e31`, not assumed**: `members` carries lifecycle `state` +
+  `pariwar_id` only, and both consumer headers say so independently (`banners/audience.ts:16-18`,
+  `news-blog/audience.ts:13-17`).
+  - ⛔ **Story 10.8 is NOT the owner.** It is `done`, and its "cohort" is a **flag-targeting** tag — by
+    `pariwar_id`, scope, role or arbitrary tag (`epics.md:115`, FR-58C) — not a member attribute on the
+    audience axis. Pointing a re-deferral at a `done` story is **worse than pointing at an epic**: it reads
+    as **already-delivered**.
+  - ⛔ **Story 12.2 is NOT the owner.** It *consumes* a role/cohort scope filter but does not **own** the
+    attribute — the same failure in a fresher coat.
+  - **Re-trigger, concrete:** *the first surface that must target members by `role` or `cohort`.*
+  - **Why no mint.** There is no FR behind a member role/cohort attribute, **no live consumer and no backlog
+    consumer**. Minting an owner for work nobody has asked for manufactures exactly the un-gated
+    re-commitment [[feedback_record_unattested_no_backfill]] warns decays. This is the disposition Story
+    1.18 gave `deferred-work.md:1091`, for the same reason.
+  - ⚠ **AC4 over-specified** — it assumed a story existed to name. **Every other obligation in AC4 is
+    delivered in full** (resolve `false`/`[]`, log the seam note, state the *"no attribute exists at all"*
+    distinction explicitly); only the successor-naming clause cannot be met. ⛔ **AC4's text is not edited**
+    ([[feedback_supersede_never_reinterpret]]) — this disposition sits beside it and the AC stands as minted.
+
+### ⭐ The one STANDING obligation — and why it is MECHANIZED rather than merely recorded
+
+**`packages/domain/src/member-geo/` is deliberately NOT admitted to `governance_boundary.yaml`'s
+`prohibited` list**, because a member-attribution read is **not an authorization decision today**, and
+folding it under a prohibition it does not earn makes the prohibition **mean less, not more**. ⚠ The
+non-admission is **recorded** — *a green scan over an UNLISTED root proves the root is unlisted, not that
+the behaviour is admissible* (the gate's own README, `:169-174`; the exact lesson Story 1.18's AC7 paid for).
+
+**Re-trigger, verbatim:** *the first authorization or routing consumer of `resolveMemberGeoNode` requires
+reassessment.*
+
+Unlike the pre-flight disposition — a **one-time act**, discharged at Task 0 — this obligation is
+**standing**, and fires in a story nobody has scheduled. Recorded only in `.decision-log.md` and the story
+file, it would decay exactly like the epic-shaped deferrals this lineage exists to abolish
+([[project_r7_fact_producer_unbuilt]]; [[feedback_mechanization_split_commitment]] — *decay concentrates in
+the un-mechanized half*). So it is written into **both successors' OWN `epics.md` sections**, the fix Story
+1.18's D9-R applied to Story 10.13:
+
+- **Story 6.17** (`epics.md`, §Block-Dimension Ground-Inspection Gate) — its AC1 **already names** 1.19's
+  primitive; what it lacked is the governance-boundary half. ⚠ AC1 offers a **genuine either/or**, so the
+  obligation binds **only on the derive-via-1.19 arm** — a new `claim_ground_inspections` column does not
+  carry it.
+- **Story 10.4** (`epics.md`, §Helpdesk Admin Console) — ⛔ its section mentioned the geo obligation
+  **nowhere**; the seam existed solely as a code comment
+  (`apps/api/src/modules/helpdesk/handlers.ts:10-15`), which is the invisible-inherited-deferral shape in
+  its purest form. **Both** halves are now recorded there.
+
+⛔ **Neither successor's acceptance criteria are edited.** The obligation lands as a section note — minting
+scope into another story's ACs from outside is not this story's to do
+([[feedback_supersede_never_reinterpret]]).
+
+### The AC8 seam — recorded, not built
+
+**Story 12.2's targeting wizard** (`epics.md`, §Admin Module-Targeting Wizard) is recorded in **its own
+section** as a downstream consumer of `resolveMemberGeoNode` for the `national/state/district/role/cohort`
+scope filter. ⛔ **No code is written for it by Story 1.19.** ⚠ The epic's AC8 text cites the pre-mint line
+`4429`, which has drifted; the wizard is at `:4569` at `9fa4e31`. **Recorded, not silently corrected** — the
+ACs are minted text and are not edited by the implementing story (Escalation 3).
+
+### The quiet-turn-on hazard — discharged BY EVIDENCE, and the evidence is written down
+
+Both mandatory pre-flight disposition queries (D2 over `banners`, AC6-E over `news_posts`) returned **zero
+rows**. Option (a) applies: existing `state`-scoped rows **retain their authored status** and become
+targetable when the arm ships. ⛔ No migration, no status rewrite.
+
+⚠ **Environment scope, stated honestly:** the **local dev/test DB is the only environment that exists**.
+`infra/gcp/` authors dev/staging/prod Cloud SQL, but the Terraform has **never been applied** — no
+`.tfstate`, no remote backend block, no real `terraform.tfvars`, no `gcloud` on the workstation. **Verified
+live, not assumed** ([[feedback_verify_before_committing_governance_claims]]). *An unrecorded zero
+discharges nothing* — which is why it is recorded here rather than inferred.
+
+## Deferred from: code review of 1-19-member-geo-attribution-geo-audience-consumer (2026-08-13)
+
+- The `listMemberBannerCandidates`-scoped comment "the common request path pays NOTHING" is accurate for
+  the per-candidate geo resolve it describes, but both real callers
+  (`apps/api/src/modules/banners/member-handlers.ts:106`, `apps/jobs/src/scheduler/news-publish.ts`) call
+  `loadGeoTree` unconditionally on every request/job regardless of whether any audience is `state`-scoped —
+  a modest, pre-existing-pattern (mirrors 1.18's admin scope-resolution middleware) per-request query cost
+  not captured by the comment's scope.
+- `ancestorAtDimension`/`districtsBeneathState`'s `steps < tree.parents.size` cycle guard (defensive
+  against a malformed/cyclic persisted tree, mirroring `createGeoTreeResolver`'s Story 1.18 pattern) is
+  never exercised by a test that actually constructs a cyclic document.
+- `member_postings.district` is `text NOT NULL` with no empty-string guard at the DB or domain-read layer;
+  the only write path (`POST /member/life-events/posting`) already enforces non-empty via
+  `z.string().trim().min(1)` at the contract boundary, so this is a theoretical defense-in-depth gap,
+  pre-existing to this diff (schema unchanged by Story 1.19).

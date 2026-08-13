@@ -151,6 +151,13 @@ export * as niyamavali from './niyamavali/index.js';
 export * as termsAndConditions from './terms-and-conditions/index.js';
 export * as consent from './consent/index.js';
 export * as member from './member/index.js';
+// Story 1.19 — member→geo attribution over Story 1.18's tree: `resolveMemberGeoNode` reads the
+// member's newest posting district and LIFTS it through the in-force tree, with EVERY level
+// independently TYPED-ABSENT ({available:false, reason}) rather than guessed or null-collapsed.
+// ⛔ `block` is PERMANENTLY absent — a posting supplies a district and ancestry walks UP. ⛔ This
+// root is DELIBERATELY NOT on governance_boundary.yaml's prohibited list; see the module barrel for
+// the recorded reason and the standing re-trigger.
+export * as memberGeo from './member-geo/index.js';
 // Story 6.1 — claim case lifecycle primitive (claims table + claim.* state machine +
 // pure reducer + single-writer projector + time-travel reads). Twin of `member`.
 export * as claim from './claim/index.js';

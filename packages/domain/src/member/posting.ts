@@ -113,6 +113,18 @@ export async function getMemberRetirementAnchorAt(
 /**
  * Resolve a member's CURRENT (newest) posting row within a Pariwar, or `null` when none exists.
  * The current posting is the newest row by `created_at` (append-only history). Tenant-scoped.
+ *
+ * ⚠ **DELIBERATE ORDERING DIVERGENCE — read before "fixing" this** (Story 1.19 D3, Decision
+ * `2026-08-13-103`). This reader orders by `created_at DESC` **alone**, so two rows sharing a
+ * `created_at` (same-transaction inserts; `defaultNow()` resolution) resolve **nondeterministically**.
+ * Two other readers add a `posting_id DESC` tie-break — `claim/peer-mesh-read.ts:83-88` and
+ * `member-geo/resolve.ts`'s `getMemberCurrentDistrict`, where a nondeterministic answer would mean a
+ * nondeterministic geo AUDIENCE, and therefore a nondeterministic test.
+ *
+ * ⛔ Story 1.19 deliberately did **not** change this function. It serves Story 3.9's panel summary and
+ * Epic 4's retirement anchor — a different blast radius from an audience read. The divergence is
+ * recorded at both sites so the next reader sees it as **deliberate, not drift**; closing it is its own
+ * story, with those two consumers in scope.
  */
 export async function getMemberPostingLatest(
   db: Db,

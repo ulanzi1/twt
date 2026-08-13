@@ -26,7 +26,7 @@ import type { DismissBannerRequest, DismissBannerResponse, MemberBannerListRespo
 // import @twt/contracts — a cycle). apps/api depends on both, so this is where the two halves meet:
 // @twt/domain supplies the candidate set, @twt/contracts decides the winner.
 import { resolveVisibleBanners } from '@twt/contracts';
-import { banners as bannersDomain, ids, type schema } from '@twt/domain';
+import { banners as bannersDomain, geoTree as geoTreeDomain, ids, type schema } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -92,11 +92,29 @@ export function createMemberBannerHandlers(deps: AppDeps) {
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
+        // ⭐ THE GEO TREE IS LOADED **HERE** (Story 1.19 AC3) — and it has to be. This is a MEMBER
+        // route, so there is no scope-resolution hook to have loaded it: that middleware is
+        // admin-session-gated (`scope-resolution/index.ts:41-45`) because it also computes RBAC
+        // grants, which members do not have. So this handler loads the tree on its OWN RLS-scoped
+        // tx, with the injected clock, exactly as it opens its own `openScopeTx`
+        // ([[project_helpdesk_member_surface_102]] — member routes own their RLS tx).
+        //
+        // ⛔ ONCE per request, never per banner and never per member: `listMemberBannerCandidates`
+        // closes over the result (Story 1.19 D4). A Pariwar with no published tree loads `null`,
+        // and `state`-scoped banners then deny exactly as they did before this story — there is no
+        // code default geography (ADR-0038).
+        const geoTree = await geoTreeDomain.loadGeoTree(scopeTx.tx, pariwarId, now);
+
         // Two stages, one authority each: the domain applies status ∧ window ∧ dismissal-suppression
         // ∧ audience; the shared pure resolver picks at most one winner per lane.
-        const candidates = await bannersDomain.listMemberBannerCandidates(scopeTx.tx, pariwarId, memberId, now, {
-          info: (message, context) => request.log.info({ ...context }, message),
-        });
+        const candidates = await bannersDomain.listMemberBannerCandidates(
+          scopeTx.tx,
+          pariwarId,
+          memberId,
+          now,
+          { info: (message, context) => request.log.info({ ...context }, message) },
+          geoTree,
+        );
         const resolved = resolveVisibleBanners(candidates, now);
         ok = true;
         return {

@@ -41,7 +41,9 @@ import { ToneReviewRequiredError } from '../../../src/tone-review/errors.js';
 import { bannerId as toBannerId, type MemberId, type PariwarId, type UserId } from '../../../src/ids/index.js';
 import { banners as bannersTable } from '../../../src/schema/banners.js';
 import { hasDatabase, getTx, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember, seedMemberPosting } from '../_helpers.js';
+import { createGeoTreeVersion, loadGeoTree } from '../../../src/geo-tree/index.js';
+import type { GeoTreeNodeJson } from '../../../src/schema/geo_tree_versions.js';
 
 /**
  * Which DB constraint did this write violate? Drizzle WRAPS the pg error ("Failed query: …"), so the
@@ -62,6 +64,15 @@ async function expectConstraintViolation(promise: Promise<unknown>, constraint: 
   );
 }
 
+// Bihar ⊃ {Patna}; UP ⊃ {Lucknow}. Two states so "reaches the right member" is a real
+// discrimination, not merely "reaches everyone in the only state there is" (Story 1.19).
+const GEO_TREE: GeoTreeNodeJson[] = [
+  { dimension: 'state', value: 'Bihar', parent_dimension: null, parent_value: null },
+  { dimension: 'state', value: 'UP', parent_dimension: null, parent_value: null },
+  { dimension: 'district', value: 'Patna', parent_dimension: 'state', parent_value: 'Bihar' },
+  { dimension: 'district', value: 'Lucknow', parent_dimension: 'state', parent_value: 'UP' },
+];
+
 const AUTHOR = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' as UserId;
 const OTHER_ADMIN = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' as UserId;
 
@@ -70,6 +81,12 @@ const UNTIL = new Date('2026-08-08T00:00:00.000Z');
 const MID = new Date('2026-08-04T12:00:00.000Z');
 const BEFORE = new Date('2026-07-01T00:00:00.000Z');
 const AFTER = new Date('2026-09-01T00:00:00.000Z');
+// ⚠ Posting seeds pin `created_at` EXPLICITLY. `seedMemberPosting` defaults it to the REAL wall
+// clock (`_helpers.ts:515`), while the member read is bounded by the PINNED instant `MID`
+// (2026-08-04) — so the default would put every seeded posting in the FUTURE relative to the query
+// and silently empty the geo audience. That is the DATE-BOMB class: it fails on a DATE, not a diff
+// ([[project_known_livedb_test_failures]] #12).
+const POSTED = new Date('2026-07-15T00:00:00.000Z');
 
 function draftInput(pariwarId: PariwarId, o: Partial<CreateBannerDraftInput> = {}): CreateBannerDraftInput {
   return {
@@ -624,17 +641,98 @@ describe.skipIf(!hasDatabase)('listMemberBannerCandidates — the audience predi
     expect(ids).toContain(pub.bannerId);
   });
 
-  it('a `cohort`-audience banner is a candidate for NOBODY (the Decision 4 seam)', async () => {
+  // ⭐ THE END-TO-END GEO CASE (Story 1.19 AC3). Two members in DIFFERENT districts under ONE tree,
+  // one `state` banner — EXACTLY ONE of them sees it. This is the minimum shape that distinguishes a
+  // working geo lift from "the arm returns true for everyone" AND from "the arm is still unwired".
+  it('a `state`-audience banner reaches the member IN that state, and only them', async () => {
+    const { tx, client } = getTx();
+    const inPatna = (await seedMember(tx, PARIWAR_A)) as MemberId;
+    const inLucknow = (await seedMember(tx, PARIWAR_A)) as MemberId;
+    await seedMemberPosting(tx, PARIWAR_A, inPatna, 'Patna', { createdAt: POSTED });
+    await seedMemberPosting(tx, PARIWAR_A, inLucknow, 'Lucknow', { createdAt: POSTED });
+    await enterAppScope(client, PARIWAR_A);
+    await createGeoTreeVersion(tx, { pariwarId: PARIWAR_A, nodes: GEO_TREE, effectiveAt: BEFORE });
+    const tree = await loadGeoTree(tx, PARIWAR_A, MID);
+
+    const biharBanner = await publishedBanner(tx, PARIWAR_A, {
+      audienceScope: 'state',
+      audienceScopeValue: 'Bihar',
+    });
+
+    const seenBy = async (m: MemberId) =>
+      (await listMemberBannerCandidates(tx, PARIWAR_A, m, MID, { info: () => {} }, tree)).map(
+        (b) => b.bannerId,
+      );
+
+    expect(await seenBy(inPatna)).toContain(biharBanner.bannerId);
+    expect(await seenBy(inLucknow)).not.toContain(biharBanner.bannerId);
+
+    // …and the raw window/dismissal read sees it for BOTH — proving the split is the audience
+    // predicate's doing, not an accidental window or suppression miss.
+    for (const m of [inPatna, inLucknow]) {
+      expect((await listVisibleBannersForMember(tx, PARIWAR_A, m, MID)).map((b) => b.bannerId)).toContain(
+        biharBanner.bannerId,
+      );
+    }
+  });
+
+  // ⛔ FAIL-CLOSED — the member with no geo is in NO state audience, never in all of them.
+  it('a member with NO posting row does NOT see a `state` banner', async () => {
+    const { tx, client } = getTx();
+    const nowhere = (await seedMember(tx, PARIWAR_A)) as MemberId;
+    await enterAppScope(client, PARIWAR_A);
+    await createGeoTreeVersion(tx, { pariwarId: PARIWAR_A, nodes: GEO_TREE, effectiveAt: BEFORE });
+    const tree = await loadGeoTree(tx, PARIWAR_A, MID);
+
+    const biharBanner = await publishedBanner(tx, PARIWAR_A, {
+      audienceScope: 'state',
+      audienceScopeValue: 'Bihar',
+    });
+    const ids = (
+      await listMemberBannerCandidates(tx, PARIWAR_A, nowhere, MID, { info: () => {} }, tree)
+    ).map((b) => b.bannerId);
+    expect(ids).not.toContain(biharBanner.bannerId);
+  });
+
+  // AC2: no tree ⇒ the arm denies EXACTLY as it did before this story. This is what makes the
+  // change safe to land for every Pariwar that has published nothing.
+  it('with NO published tree, a `state` banner is visible to nobody — today’s behaviour', async () => {
+    const { tx, client } = getTx();
+    const inPatna = (await seedMember(tx, PARIWAR_A)) as MemberId;
+    await seedMemberPosting(tx, PARIWAR_A, inPatna, 'Patna', { createdAt: POSTED });
+    await enterAppScope(client, PARIWAR_A);
+    const tree = await loadGeoTree(tx, PARIWAR_A, MID);
+    expect(tree).toBeNull(); // the REASON, asserted rather than assumed
+
+    const biharBanner = await publishedBanner(tx, PARIWAR_A, {
+      audienceScope: 'state',
+      audienceScopeValue: 'Bihar',
+    });
+    const ids = (
+      await listMemberBannerCandidates(tx, PARIWAR_A, inPatna, MID, { info: () => {} }, tree)
+    ).map((b) => b.bannerId);
+    expect(ids).not.toContain(biharBanner.bannerId);
+  });
+
+  // ⛔ `role`/`cohort` are NOT the same case as `state` — asserted PER ARM. A fully-resolved member
+  // geo changes nothing for them, because there is no attribute to resolve against at all.
+  it('a `cohort`-audience banner is a candidate for NOBODY — even with geo fully resolved', async () => {
     const { tx, client } = getTx();
     const alice = (await seedMember(tx, PARIWAR_A)) as MemberId;
+    await seedMemberPosting(tx, PARIWAR_A, alice, 'Patna', { createdAt: POSTED });
     await enterAppScope(client, PARIWAR_A);
+    await createGeoTreeVersion(tx, { pariwarId: PARIWAR_A, nodes: GEO_TREE, effectiveAt: BEFORE });
+    const tree = await loadGeoTree(tx, PARIWAR_A, MID);
+
     const seamOnly = await publishedBanner(tx, PARIWAR_A, {
       audienceScope: 'cohort',
       audienceScopeValue: 'lock-in-2026',
     });
-    const ids = (await listMemberBannerCandidates(tx, PARIWAR_A, alice, MID, { info: () => {} })).map(
-      (b) => b.bannerId,
-    );
+    // Alice's geo resolves FULLY here (Patna ∈ Bihar) and it still makes no difference — there is
+    // no member `cohort` attribute at any layer for the predicate to consult.
+    const ids = (
+      await listMemberBannerCandidates(tx, PARIWAR_A, alice, MID, { info: () => {} }, tree)
+    ).map((b) => b.bannerId);
     expect(ids).not.toContain(seamOnly.bannerId);
     // …but the raw window/dismissal read DOES see it — proving the exclusion is the audience
     // predicate's doing, not an accidental window or suppression miss.

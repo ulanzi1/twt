@@ -1,4 +1,236 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-13g (1-19-member-geo-attribution-geo-audience-consumer: review -> done via
+#   bmad-code-review. Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+#   against the branch diff 9fa4e31...dc25916. Acceptance Auditor: ZERO AC/Decision/Escalation
+#   violations -- full compliance across AC1-AC8 and D1-D8. 0 decision-needed, 6 patch (all applied:
+#   combined a duplicate import; added a GENUINE PARIWAR_B cross-tenant regression test to both the
+#   member-geo primitive spec AND the news-blog raw-SQL correlated-subquery spec -- the prior
+#   "tenant-scoped" test used a nonexistent member id, not a real second Pariwar; split a conflated
+#   diagnostic log message into its two actual causes; removed two dead exports; cross-referenced the
+#   two independent D3 tie-break implementations; extended the round-trip test to the fixture's
+#   second state), 3 defer (unconditional loadGeoTree cost claim scoping, untested cycle guard,
+#   theoretical empty-string district gap -- all logged to deferred-work.md), 4 dismissed as noise
+#   (D7's required literal SQL qualifiers, an overstated complexity claim, an unreachable-scale test
+#   nitpick, a retirement-row false positive). All 141 domain tests green live-DB, tsc + lint clean.
+# last_updated: 2026-08-13f (1-19-member-geo-attribution-geo-audience-consumer: ready-for-dev ->
+#   in-progress -> review via bmad-dev-story, branch feature/1-19-member-geo-attribution-geo-audience-
+#   consumer off main @ 9fa4e31. TWO commits, governance FIRST: f263ce4 governance(1.19) carrying
+#   ZERO files under packages/ or apps/, then the story(1.19) code commit.
+#   ⭐ THE QUIET-TURN-ON HAZARD WAS DISCHARGED BY EVIDENCE, NOT CEREMONY. Both mandatory pre-flight
+#   queries (D2 over banners, AC6-E over news_posts) returned ZERO rows, recorded verbatim. And the
+#   ENVIRONMENT SCOPE was VERIFIED LIVE rather than assumed: infra/gcp/ authors dev/staging/prod
+#   Cloud SQL but the Terraform was NEVER APPLIED -- no tfstate, no remote backend block, no real
+#   tfvars, no gcloud on the workstation -- so the local dev DB is the ONLY environment that exists
+#   and there is no second place the answer could differ ([[feedback_verify_before_committing_
+#   governance_claims]]). Ruled option (a) applies: existing state rows keep their authored status.
+#   ⛔ NO MIGRATION WAS WRITTEN; next free remains 0102.
+#   ⭐ THREE REVERT PROBES run RED, output recorded, restored -- and the failure sets DIFFER (9 / 3 /
+#   4 of 126). Probe 2 (ONE tree edge re-parented, applied in BOTH directions) proves the suite
+#   detects a WRONG AUDIENCE, not merely an unwired arm -- the failure that actually matters, since a
+#   wrong geo audience shows the WRONG members a banner rather than showing nobody one.
+#   ⚠ A FINDING WORTH KEEPING: the districtsBeneathState<->lift ROUND-TRIP test stayed GREEN under
+#   probe 2. A consistently-corrupted edge is self-consistent in both directions, so a round-trip
+#   property can NEVER catch it; what caught it was the EXPLICIT EXPECTED-SET assertion. A suite
+#   relying on round-tripping alone would have passed a wrong tree.
+#   ⚠ A DATE-BOMB was caught and defused: seedMemberPosting defaults created_at to the REAL wall
+#   clock (_helpers.ts:515) while these reads are bounded by a PINNED instant, so every seeded
+#   posting landed in the FUTURE relative to the query and silently emptied the geo audience
+#   ([[project_known_livedb_test_failures]] #12 -- fails on a DATE, not a diff, and a baseline
+#   comparison can never see it). Every posting seed now pins created_at explicitly, with the reason
+#   stated in-file so it is not "tidied" away later.
+#   ⚠ FIVE DEVIATIONS, each deliberate and recorded, none silent: (1) a PURE parseNodeKey was added
+#   to geo-tree/resolver.ts so the NUL delimiter stays in the ONE file that owns it rather than being
+#   re-encoded inside member-geo -- the exact drift 1.18's code review removed; it is not a
+#   flag-conditioned change and the governance-boundary gate is green. (2) resolveAudienceMemberIds
+#   grew ONE optional `geo: { tree, now }` object rather than a bare optional `tree` -- a CORRECTNESS
+#   FIX FOUND BY A FAILING TEST: the banners read bounds its newest-posting lookup by its injected
+#   now, and an unbounded dispatch read would have let the TWO CONSUMERS DISAGREE about a member's
+#   current district, dispatching a post to someone the banner predicate then denies. (3) two stale
+#   comments OUTSIDE the six-marker list were corrected because this story's own change made them
+#   false. (4) two apps/admin tests were UPDATED not deleted -- the Escalation-2 verdict change,
+#   asserted in BOTH directions (state now competes; role/cohort still cannot). (5) the
+#   TARGETABLE<=>predicate invariant was RESTATED to "targetable <=> SOME member can see it"; its old
+#   form silently encoded "true for a member with nothing supplied", which breaks the moment a scope
+#   depends on member data.
+#   D8 APPLIED AS RULED: role/cohort recorded "Not addressed" with the re-trigger "the first surface
+#   that must target members by role or cohort"; ⛔ NO successor minted; ⛔ AC4's text UNEDITED;
+#   ⛔ neither Story 10.8 (done; flag-targeting tag) nor Story 12.2 (consumer, not owner) named.
+#   D1's re-trigger MECHANIZED into Story 6.17 and Story 10.4's OWN epics.md sections (6.17 bound
+#   ONLY to its AC1 derive-via-1.19 arm); AC8 seam recorded in Story 12.2's own section. ⛔ No
+#   successor's acceptance criteria were edited -- section notes only.
+#   VERIFICATION, all real local runs at branch HEAD: pnpm ci:local 30/30 GREEN; live-DB SINGLE pass
+#   (DATABASE_URL scoped to the command, never exported globally --
+#   [[project_ci_local_double_run_pollution]]) @twt/domain 2723 passed/1 skipped, @twt/api 944
+#   passed/1 skipped. ⚠ RECORDED HONESTLY: the FIRST ci:local had a `test (unit)` failure that did
+#   NOT reproduce -- a direct pnpm test was fully green and a second ci:local was 30/30 -- and the
+#   failing suite was NOT captured before the re-run, so it is logged as an UNREPRODUCED FLAKE, NOT
+#   ATTRIBUTED to any named suite. That same first run DID surface two REAL failures, both fixed: a
+#   tsc narrowing error on geo.now and its downstream build/crypto-check cascade.
+#   NEXT: bmad-code-review, ideally on a DIFFERENT model than the one that implemented this.)
+# last_updated: 2026-08-13e (1-19-member-geo-attribution-geo-audience-consumer: D8 ruled; status
+#   UNCHANGED at ready-for-dev. Story file only, nothing committed.
+#   ⭐ A READINESS CHECK SURFACED THAT AC4 ASKS FOR A STORY NAME THAT DOES NOT EXIST. AC4 requires the
+#   role/cohort seam prose to "name a STORY and never an epic". Verified at 9fa4e31: NO story owns a
+#   member `role` or `cohort` attribute. members carries lifecycle state + pariwar_id only, and both
+#   consumer headers say so independently (banners/audience.ts:16-18, news-blog/audience.ts:13-17).
+#   ⛔ Story 10.8 (feature-flags-per-cohort, DONE) is NOT the owner -- its "cohort" is a FLAG-TARGETING
+#   tag by pariwar_id/scope/role/arbitrary tag (epics.md:115, FR-58C), and pointing a re-deferral at a
+#   DONE story is WORSE than pointing at an epic: it reads as already-delivered. ⛔ Story 12.2 CONSUMES
+#   a role/cohort scope filter but does not OWN the attribute -- the same failure in a fresher coat.
+#   So the minted AC and the anti-decay discipline pulled against each other, and Task 1 had been
+#   leaving that tension for the DEV AGENT to settle -- which contradicts this story's own rule that
+#   an unruled question is RAISED, not settled quietly.
+#   ⭐ RULED: record role/cohort as "Not addressed" ([[feedback_closure_language_precision]], the third
+#   label used honestly) with a CONCRETE re-trigger -- "the first surface that must target members by
+#   role or cohort" -- and ⛔ MINT NO SUCCESSOR. No FR sits behind the attribute, no live consumer and
+#   no backlog consumer demands it, so an owner minted here is precisely the un-gated re-commitment
+#   [[feedback_record_unattested_no_backfill]] warns decays. Same disposition Story 1.18 gave
+#   deferred-work.md:1091, for the same reason.
+#   ⚠ The story now says PLAINLY that AC4 OVER-SPECIFIED -- it assumed a story existed to name --
+#   while recording that EVERY OTHER OBLIGATION IN AC4 IS DELIVERED IN FULL (resolve false/[], log the
+#   seam note, state the "no attribute exists at all" distinction explicitly). Only the
+#   successor-naming clause cannot be met. ⛔ AC4's TEXT IS NOT EDITED
+#   ([[feedback_supersede_never_reinterpret]]); the disposition sits beside it. Task 1's instruction is
+#   now PRE-RULED rather than a judgment call, and names BOTH wrong answers explicitly so neither can
+#   be reached for.
+#   STORY IS READY FOR DEV: D1-D8 ruled, Escalations 1+2 absorbed, Esc. 3 informational, zero open
+#   questions, 50 task items across 9 tasks. ⚠ ONE DESIGNED CONDITIONAL STOP REMAINS BY INTENT --
+#   Task 0's pre-flight over banners AND news_posts: non-zero live/scheduled state rows => HALT and
+#   escalate, with no authorized fallback (D2). That is the gate working, not un-readiness.
+#   PROVENANCE: the "no owner exists" claim was VERIFIED against sprint-status.yaml and epics.md at
+#   9fa4e31, not assumed. Nothing attested by a test run -- still an authoring pass.)
+# last_updated: 2026-08-13d (1-19-member-geo-attribution-geo-audience-consumer: D1's re-trigger
+#   MECHANIZED; status UNCHANGED at ready-for-dev. Story file only -- no code, no epics.md edit yet
+#   (that IS Task 1's governance commit), nothing committed.
+#   ⭐ D1 IS THE ONE RULING THAT LEAVES A STANDING OBLIGATION, not a one-time act. D2 discharges at
+#   Task 0 and is done; D1 fires at "the first authorization or routing consumer of
+#   resolveMemberGeoNode" -- in a story NOBODY HAS SCHEDULED. Recorded only in .decision-log.md and
+#   the story file, it would decay exactly like the epic-shaped deferrals this whole lineage exists
+#   to abolish ([[project_r7_fact_producer_unbuilt]], [[feedback_mechanization_split_commitment]] --
+#   decay concentrates in the UN-MECHANIZED half). So Task 1 now writes the obligation into BOTH
+#   successors' OWN epics.md sections -- the fix Story 1.18's D9-R applied to Story 10.13.
+#   ⚠ THE TWO ARE NOT SYMMETRIC, and treating them identically would miss the point:
+#   · Story 6.17 (epics.md:2707-2735) ALREADY names 1.19's primitive in AC1 ("block is derived via
+#     Story 1.19's primitive ... the choice is recorded, not assumed"). What it lacks is the
+#     GOVERNANCE-BOUNDARY half: deriving block via resolveMemberGeoNode makes that read an
+#     AUTHORIZATION input (it feeds claim.conduct_ground_inspection at dimension:'block'), so
+#     packages/domain/src/member-geo must be RE-ASSESSED for prohibited-list admission. ⚠ AC1 offers
+#     a genuine either/or (a new claim_ground_inspections column OR derive-via-1.19) -- the
+#     obligation binds ONLY the derive arm and must say so, or a reader will think the column arm
+#     carries it too.
+#   · Story 10.4 (epics.md:3576-3590) mentions the geo obligation NOWHERE AT ALL. It exists solely as
+#     a code comment (apps/api/src/modules/helpdesk/handlers.ts:10-15) -- the invisible-inherited-
+#     deferral shape in its purest form. Both halves get recorded: 10.4 is the named consumer for
+#     member_scope_context enrichment, AND that enrichment makes the read a ROUTING input.
+#   ⛔ NEITHER successor's ACCEPTANCE CRITERIA are edited -- the obligation lands as a SECTION NOTE.
+#   Minting scope into another story's ACs from outside is not 1.19's to do
+#   ([[feedback_supersede_never_reinterpret]]). Both edits ride Task 1's `governance:` commit; still
+#   ZERO files under packages/ or apps/.
+#   PROVENANCE: 6.17 and 10.4 section anchors read from epics.md at 9fa4e31 on a clean tree. Nothing
+#   attested by a test run -- still an authoring pass.)
+# last_updated: 2026-08-13c (1-19-member-geo-attribution-geo-audience-consumer: story-file rulings
+#   recorded; status UNCHANGED at ready-for-dev. No code written, no story minted, nothing committed.
+#   ⭐ ALL SEVEN DECISIONS RULED AND BOTH LIVE ESCALATIONS ABSORBED (BigDev, 2026-08-13). Task 1 is
+#   UNBLOCKED. D1 -> packages/domain/src/member-geo, DELIBERATELY NOT admitted to
+#   governance_boundary.yaml's prohibited roots (member attribution is not an authorization decision
+#   TODAY), with the reason recorded explicitly -- a passing scan over an UNLISTED root proves the
+#   root is unlisted, not that the behaviour is admissible -- and the re-trigger RETAINED VERBATIM:
+#   the first authorization or routing consumer of resolveMemberGeoNode requires reassessment.
+#   ⭐ D2 -- option (a): existing state-scoped banners RETAIN THEIR AUTHORED STATUS and become
+#   targetable when the arm ships, but ONLY after the mandatory pre-flight query runs and its result
+#   is RECORDED. ⛔ Non-zero live/scheduled rows => STOP AND ESCALATE; the state machine is NEVER
+#   bypassed by a migration (published -> draft is not a legal transition and `retracted` is
+#   terminal, so options (b) and (c) are explicitly unauthorized). A zero result is the EVIDENCE that
+#   discharges the hazard and must be written down -- an unrecorded zero discharges nothing.
+#   D3 deterministic created_at DESC, posting_id DESC. D4 resolved-geo injection with
+#   isMemberInBannerAudience staying SYNC + PURE. D5 `block` permanently typed-absent with
+#   no-member-attribute. D6 the closed FIVE-value reason union exactly as proposed. D7 the peer-mesh
+#   correlated-scalar-subquery with LITERAL outer qualifiers.
+#   ⭐ ESCALATION 1 ABSORBED -- the pre-flight disposition now EXTENDS to unpublished/scheduled
+#   state-targeted news posts (draft/submitted/approved/scheduled) under the identical
+#   stop-and-escalate gate. Recorded as AC6-E, a ruled ADDITION rather than an in-place re-reading of
+#   minted AC text ([[feedback_supersede_never_reinterpret]]) -- the epic's AC6 is left BYTE-UNCHANGED.
+#   Already-published posts stay out of scope BY EVIDENCE: dispatch is one-shot and never re-fans-out.
+#   ⭐ ESCALATION 2 ABSORBED -- both targetable-scope lists gain 'state' in the SAME POSITION (the
+#   sync-guard is an order-sensitive toEqual) AND the admin visibility verdict at derive.ts:171 is
+#   EXPLICITLY TESTED. It is a real behaviour change -- what the console tells an author about whether
+#   their draft would be SEEN -- and must be asserted, not discovered.
+#   ESCALATION 3 informational: use the re-derived current-head anchors; ⛔ do not edit the epic's
+#   minted AC text to fix its drifted line numbers.
+#   PROVENANCE: rulings are BigDev's, recorded verbatim in intent. Every code fact cited remains
+#   commit-pinned at 9fa4e31. NOTHING is attested by a test run -- still an authoring pass.
+#   Next: dev-story, then code-review with a DIFFERENT LLM.)
+# last_updated: 2026-08-13b (1-19-member-geo-attribution-geo-audience-consumer: backlog ->
+#   ready-for-dev via bmad-create-story, off main @ 9fa4e31 (== origin/main, clean tree). Saved
+#   1-19-member-geo-attribution-geo-audience-consumer.md. The FIRST of Story 1.18's three Family-B
+#   successors to be scheduled; owns the six re-pointed banners/news-blog audience markers (1.18 D5)
+#   plus the role/cohort arms (AC4).
+#   ⭐ THIS STORY DOES NOT HAVE 1.18's LOAD-BEARING PROPERTY. 1.18 changed no authorization outcome
+#   anywhere; 1.19 deliberately CHANGES WHAT MEMBERS SEE. That asymmetry is why AC6 exists at all,
+#   and the story says so out loud so 1.18's reassurance is not pasted forward.
+#   The eight ACs are reproduced from epics.md:1435-1491 (minted verbatim from 1.18's Appendix A,
+#   Decision 2026-08-12-102) with every line anchor RE-DERIVED at 9fa4e31 -- and two of the epic's
+#   own anchors have DRIFTED: AC3 cites banners/audience.ts:40-43 (that is defaultLogger; the
+#   prediction is :45-57) and AC8 cites epics.md:4429 (the wizard moved to :4569 when the three
+#   successors were minted into the file). RECORDED, not silently corrected -- minted AC text is not
+#   edited by the implementing story.
+#   SEVEN DECISIONS RAISED (D1, D2, D6 BLOCKING), THREE ESCALATIONS, NONE ABSORBED:
+#   ⭐ D4 -- THE STRUCTURAL FINDING. isMemberInBannerAudience is a PURE SYNC predicate called inside
+#   a .filter() (banners/read.ts:188), so AC3's "signature grows a member argument" must be a
+#   RESOLVED GEO, never a Db: the obvious reading would make the filter async and issue one query PER
+#   CANDIDATE BANNER -- acquiring, in the banners consumer, the very N+1 AC7 forbids in the news-blog
+#   one. Resolve once in listMemberBannerCandidates, pass it in, keep the predicate pure (the same
+#   split 1.18 used for hasPermission/GeoTreeResolver).
+#   ⭐ D5 -- `block` CAN NEVER BE POPULATED. A posting supplies a DISTRICT and ancestry walks UP;
+#   block sits BELOW district. So block is permanently typed-absent and needs its OWN reason
+#   (`no-member-attribute`), distinct from the tree-shaped absences -- collapse them and a future
+#   reader will believe a richer tree lights it up. It does not; only a new member attribute would.
+#   Resolution matrix: pariwar ALWAYS, district if a posting row exists, state if the tree also has
+#   an ancestor edge, block NEVER.
+#   ⭐ D2 -- AC6's "require re-confirmation" CANNOT be a plain migration: published -> draft is NOT a
+#   legal banner transition (status.ts:18-19) and `retracted` is TERMINAL (schema/banners.ts:91), so
+#   the three options differ in kind, not degree. Recommended disposition is PUBLISH, gated on a
+#   MANDATORY pre-flight count per environment -- the "not yet targetable" indicator was on screen
+#   when those rows were authored and banners carry a validity window, so an expired row can never
+#   render. If the count is zero the hazard is discharged BY EVIDENCE rather than by ceremony
+#   ([[feedback_record_unattested_no_backfill]]); if non-zero, BigDev picks the mechanism. ⛔ "Probably
+#   zero" is not a disposition.
+#   ESCALATION 1 -- AC6 names BANNERS ONLY, but news-blog carries the same hazard in a different
+#   shape: dispatch is one-shot at publish, so already-published posts are genuinely safe, BUT
+#   `scheduled` is a STORED status and runNewsPublish transitions scheduled -> published and then
+#   fans out. A post scheduled today with audience_scope='state' WILL dispatch for real after this
+#   lands. Raised, not absorbed.
+#   ESCALATION 2 -- BANNER_TARGETABLE_AUDIENCE_SCOPES has THREE consumers, and the third is the easy
+#   miss: apps/admin/.../derive.ts:171 calls isTargetableAudience inside the AC5 VISIBILITY VERDICT,
+#   so adding 'state' changes what the console tells an author about whether their draft would be
+#   SEEN -- correct, but it must be ASSERTED, not discovered. The domain/contracts sync-guard is an
+#   ORDER-SENSITIVE toEqual (contracts/tests/banners.test.ts:56-62), so both lists must gain 'state'
+#   in the same position.
+#   D3 -- the repo's two newest-posting readers DISAGREE on tie-break: member/posting.ts:117-129
+#   orders by created_at DESC only (nondeterministic on ties) while claim/peer-mesh-read.ts adds
+#   posting_id DESC. Recommend the peer-mesh form and ⛔ do NOT "fix" getMemberPostingLatest here
+#   (Story 3.9 panel + Epic 4 retirement anchor is a different blast radius) -- record the divergence
+#   at both sites instead.
+#   D1 -- the primitive lands in a NEW packages/domain/src/member-geo (NOT inside geo-tree/, which is
+#   a governance_boundary prohibited root it does not earn: member attribution is not an
+#   authorization decision TODAY). ⚠ The admission answer must be RECORDED EITHER WAY -- a passing
+#   scan over an UNLISTED root proves the root is unlisted, not that the behaviour is admissible
+#   (the gate's own README, :169-174). Concrete re-trigger: the first authorization/routing consumer
+#   (Story 10.4's helpdesk geo enrichment, or Story 6.17's block gate).
+#   D6 -- the typed-absent `reason` set is CLOSED (no-posting-row / no-tree-published /
+#   node-not-in-tree / no-ancestor-at-dimension / no-member-attribute); free text rejected.
+#   D7 -- the fan-out reuses peer-mesh-read.ts's correlated-scalar-subquery with LITERAL outer-table
+#   qualifiers, NOT a fresh DISTINCT ON: that form is proven against the Epic-6 tautology bug (a live
+#   ~30-40% wrong-district failure invisible to DB-free tests) and dodges the 42P10 trap. The district
+#   set is computed IN MEMORY from the JSONB tree (MAX_NODES 5000) -- there is nothing to join to.
+#   AC8 REVERT-SANITY HAS TEETH BY DESIGN: two probes whose failure SETS MUST DIFFER -- (a) unwire the
+#   state arm, (b) corrupt ONE tree edge with the resolver otherwise intact. A suite that only detects
+#   "the arm is unwired" would stay green on a WRONG AUDIENCE, which is the failure that actually
+#   matters here (the wrong members see the banner, rather than nobody does).
+#   PROVENANCE: every line number, count and file fact is commit-pinned at 9fa4e31 on a clean tree,
+#   read from source. NO code was written, NO gate was run, and no claim is attested by a test run --
+#   this is an authoring pass only. Next: rule D1/D2/D6, then dev-story, then code-review.
+#   Still backlog: 6-17-block-dimension-ground-inspection-gate, 10-28-multi-node-report-scope.)
 # last_updated: 2026-08-13 (1-18-geo-tree-scope-resolver: ready-for-dev -> in-progress -> review ->
 #   done via bmad-dev-story then bmad-code-review, branch feature/1-18-geo-tree-scope-resolver off
 #   main @ 63c844e. All 8 tasks, all
@@ -5421,7 +5653,7 @@ development_status:
   # SELECTION, which needs a per-MEMBER geo attribute, not an org tree. An org tree answers "is Patna
   # in Bihar"; it cannot answer "which members are in Patna". Also the named owner of the role/cohort
   # audience arms (its AC4), which have no member attribute at all.
-  1-19-member-geo-attribution-geo-audience-consumer: backlog
+  1-19-member-geo-attribution-geo-audience-consumer: done
   epic-1-retrospective: done
 
   # ==========================================================================

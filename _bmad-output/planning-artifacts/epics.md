@@ -2736,6 +2736,31 @@ model can never satisfy.
 5. ⛔ **No change to `GEO_RANK`, `CEILING_RANK`, or `scopeContains`** — architectural freeze row 9. Any such
    change is an ADR and a different story.
 
+> ⭐ **INHERITED OBLIGATION — the governance-boundary re-assessment (recorded by Story 1.19 Task 1, D1,
+> Decision `2026-08-13-103`).** Story 1.19 shipped `resolveMemberGeoNode` in a **new**
+> `packages/domain/src/member-geo/` and **deliberately did NOT admit that root** to
+> `governance_boundary.yaml`'s `prohibited` list — because a member-attribution read is **not an
+> authorization decision today**, and folding it under a prohibition it does not earn makes the prohibition
+> mean less, not more. ⚠ That non-admission is **conditional**, and this story is one of its two named
+> triggers.
+>
+> ⛔ **The obligation binds ONLY on AC1's derive-via-1.19 arm.** AC1 above offers a genuine either/or, and
+> the two arms are **not** equivalent here: adding a block value to `claim_ground_inspections` carries no
+> such obligation at all.
+>
+> **Given** AC1 is satisfied by deriving block via Story 1.19's `resolveMemberGeoNode` (rather than by a new
+> `claim_ground_inspections` column)
+> **When** that derived value feeds `claim.conduct_ground_inspection` at `dimension: 'block'` (AC2)
+> **Then** the member-geo read has become an **AUTHORIZATION input**, and
+> `packages/domain/src/member-geo` **must be re-assessed for admission** to `governance_boundary.yaml`'s
+> `prohibited` list — at that point a feature flag that could weaken the read is a privilege escalation
+> with a config-shaped switch on it (prohibition (d)), which is exactly why `geo-tree/` is already listed
+> **And** the re-assessment's outcome is **RECORDED either way** — *a green scan over an unlisted root
+> proves the root is unlisted, not that the behaviour is admissible* (the gate's own README, `:169-174`)
+>
+> This obligation is recorded in **this story's own section** deliberately: a marker pointing at a story
+> whose text never mentions the obligation is exactly how an inherited deferral goes unnoticed.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn
@@ -3586,6 +3611,33 @@ So that I can resolve tickets efficiently with full context from the rest of the
 **Then** the console shows my queue (scope-respecting), per-ticket SLA timers (24h first-response; 5/10 biz-day resolution), severity, and cross-link badges (claim, reconciliation, partner-module, validity-service when applicable)
 **And** cross-link integration: when a ticket carries a claim cross-link, the admin can navigate to Story 6.10 verifier console for that claim; reconciliation cross-link → Story 9.8 review queue case; partner-module cross-link → Story 12.x module lead; validity-service cross-link → Story 4.7 MemberStatusPanel
 **And** SLA breaches surface alerts; SLA timers stop when status transitions to `awaiting_member` or `resolved`
+
+> ⭐ **INHERITED OBLIGATION — `member_scope_context` geo enrichment, and the governance-boundary
+> re-assessment it triggers (recorded by Story 1.19 Task 1, D1, Decision `2026-08-13-103`).** ⛔ Until now
+> this obligation existed **nowhere in this story's text** — only as a code comment at
+> `apps/api/src/modules/helpdesk/handlers.ts:10-15` (*"that enrichment (a member-geo read) lands with the
+> geo-dimension routing consumer (Story 10.4)"*), which is the invisible-inherited-deferral shape in its
+> purest form. **Both** halves are recorded here.
+>
+> **Half 1 — this story is the NAMED CONSUMER.** `helpdesk_tickets`' `MemberScopeContextSnapshot` declares
+> `state`/`district`/`block`, and its only producer leaves **all three null**. Story 1.19 shipped
+> `resolveMemberGeoNode` (`packages/domain/src/member-geo/`), which is the read that fills them. ⚠ The v1
+> routing policy routes at `pariwar` throughout, so nothing is broken today — this is enrichment, not a fix.
+>
+> **Half 2 — enriching it makes the read a ROUTING input.** Story 1.19 **deliberately did NOT admit**
+> `packages/domain/src/member-geo` to `governance_boundary.yaml`'s `prohibited` list, because a member
+> attribution read is not an authorization decision **today**. That non-admission is **conditional** and
+> this story is one of its two named triggers.
+>
+> **Given** this story enriches `member_scope_context` via Story 1.19's `resolveMemberGeoNode`
+> **When** any routing decision consumes the enriched geo dimensions
+> **Then** `packages/domain/src/member-geo` **must be re-assessed for admission** to
+> `governance_boundary.yaml`'s `prohibited` list, and the outcome is **RECORDED either way** — *a green
+> scan over an unlisted root proves the root is unlisted, not that the behaviour is admissible* (the
+> gate's own README, `:169-174`)
+>
+> This obligation is recorded in **this story's own section** deliberately: a marker pointing at a story
+> whose text never mentions the obligation is exactly how an inherited deferral goes unnoticed.
 
 ### Story 10.5: News/Blog Dual Surface + Author ≠ Reviewer + Scheduled Publish + Channel-Per-Post `[SURFACE]`
 
@@ -4569,6 +4621,23 @@ So that module creation is structured + scope-respecting + audit-logged.
 **Then** the wizard steps through: (a) partner identification + module name/description (Hindi + English per Story 2.1); (b) eligibility filter authoring with structured rule expression preview; (c) scope filter (national/state/district/role/cohort); (d) validity window (valid_from/until); (e) slot capacity; (f) partner integration setup (lead_handoff_url + signing key from Secret Manager — Story 1.5); (g) review + tone-review sign-off per Story 2.2; (h) publish
 **And** scope is RBAC-enforced — admins can only author modules within their scope
 **And** publish requires step-up OTP per Story 5.9; emits `module.activated` event
+
+> ⭐ **INHERITED SEAM — the scope filter's `state`/`district` arms have a producer now (recorded by Story
+> 1.19 Task 1, AC8, Decision `2026-08-13-103`).** This story's step (c) scope filter
+> (`national/state/district/role/cohort`) is a **downstream consumer** of Story 1.19's member→geo
+> attribution primitive, `resolveMemberGeoNode` (`packages/domain/src/member-geo/`). ⛔ **Story 1.19 wrote
+> no code for this wizard** — it recorded the seam so this story inherits a seam rather than a surprise.
+>
+> ⚠ **The five arms are NOT uniform, and assuming they are is the trap:**
+> - `state` / `district` — **resolvable today** via `resolveMemberGeoNode`, but only for a Pariwar that has
+>   published a geo tree (Story 1.18). ⭐ A Pariwar with **no tree** resolves **district-only**, and a member
+>   with **no posting row** resolves to **no geo at all** — treated as *"in no audience"*, **fail-closed,
+>   never "in all."** Both are **first-class answers, not degraded ones**.
+> - `role` / `cohort` — ⛔ **no member attribute exists at any layer**, and **no story owns one**. Story
+>   1.19 recorded these as **"Not addressed"** with the re-trigger *"the first surface that must target
+>   members by `role` or `cohort`"* — ⚠ **this story may be that surface.** If so, the attribute is this
+>   story's to raise **with its live requirement attached**; it is not a thing 1.19 left half-built.
+> - `national` — orthogonal to both; it is not a geo-tree node dimension.
 
 ### Story 12.3: Member Module Shelf — Eligibility Filter + Scope Filter `[SURFACE]`
 

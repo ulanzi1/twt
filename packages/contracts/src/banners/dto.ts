@@ -38,15 +38,20 @@ const AudienceScopeValue = z.string().min(1).max(120);
 const AUDIENCE_SCOPES_REQUIRING_VALUE: readonly BannerAudienceScope[] = ['state', 'role', 'cohort'];
 
 /**
- * Ties `audience_scope_value` to `audience_scope` (Decision 4): required for the three
- * not-yet-resolvable scopes (`state`/`role`/`cohort` — a discriminator with nothing to discriminate
- * is authoring nonsense, even though nothing consumes it until **Story 1.19**'s member→geo
- * attribution primitive lands — NOT Story 1.18, which shipped the geo-tree scope RESOLVER and
- * deliberately did not supply member attribution), and
- * forbidden for `public`/`members-all` (there's nothing to discriminate — a stray value there is
- * either a copy-paste leftover from a scope change or a client bug). Only checked when
- * `audience_scope` is present in THIS request: on a PATCH that doesn't touch `audience_scope`,
- * whether the existing scope needs a value is a question about the stored row, not this payload.
+ * Ties `audience_scope_value` to `audience_scope` (Decision 4): required for the three scopes that
+ * need a discriminator (`state`/`role`/`cohort` — a discriminator with nothing to discriminate is
+ * authoring nonsense), and forbidden for `public`/`members-all` (there's nothing to discriminate —
+ * a stray value there is either a copy-paste leftover from a scope change or a client bug). Only
+ * checked when `audience_scope` is present in THIS request: on a PATCH that doesn't touch
+ * `audience_scope`, whether the existing scope needs a value is a question about the stored row,
+ * not this payload.
+ *
+ * ⭐ **The rule below is UNCHANGED by Story 1.19, and that is the point.** `state`'s value is now
+ * genuinely CONSUMED — the member read compares it against the member's resolved geography — but it
+ * was always REQUIRED, so no validation moves. `role`/`cohort` still require a value that nothing
+ * consumes, because no member attribute exists to compare it to (Story 1.19 D8, "Not addressed").
+ * ⚠ The three are no longer uniform in meaning even though they remain uniform in validation; do
+ * not "simplify" this list on the assumption that they are still the same case.
  */
 function checkAudienceScopeValue(
   val: { audience_scope?: BannerAudienceScope; audience_scope_value?: string | null },

@@ -35,7 +35,7 @@
 
 import type { EffectiveGrant } from '../rbac/check.js';
 import { bundleForRole, defaultRoleBundles, type RoleBundle } from '../rbac/roles.js';
-import { SCOPE_DIMENSIONS, scopeWithinCeiling } from '../rbac/scope.js';
+import { SCOPE_DIMENSIONS, scopeWithinCeiling, type ScopeDimension } from '../rbac/scope.js';
 import type { ResolvedReportScope } from './types.js';
 
 /** Broadness rank: lower index in the canonical high→low set = broader. */
@@ -49,9 +49,15 @@ function broadnessRank(dimension: ResolvedReportScope['dimension']): number {
  * (Story 10.28, D1(iv)) — the well-formedness guard was already doing the work; it just was not
  * telling the type system. A defensive `.filter(Boolean)` on the value set would instead SWALLOW a
  * future well-formedness regression, where this rejects it and contributes nothing (fail-closed).
+ * [Review fix] The non-global arm is constrained to `Exclude<ScopeDimension, 'global'>` — without it,
+ * the union structurally still admitted `{ scopeDimension: 'global'; scopeValue: string }`, closed
+ * only by the runtime guard below never producing that shape, not by the type itself.
  */
 type WellFormedGrant = EffectiveGrant &
-  ({ scopeDimension: 'global'; scopeValue: null } | { scopeValue: string });
+  (
+    | { scopeDimension: 'global'; scopeValue: null }
+    | { scopeDimension: Exclude<ScopeDimension, 'global'>; scopeValue: string }
+  );
 
 /** A grant's scope is well-formed (mirror check.ts isGrantScopeWellFormed). */
 function grantScopeWellFormed(grant: EffectiveGrant, pariwarId: string): grant is WellFormedGrant {

@@ -75,7 +75,8 @@ export interface ReportScopeCtx {
   readonly actorId: string;
   readonly grants: readonly EffectiveGrant[];
   readonly pariwarId: string;
-  /** The actor's resolved (dimension, value) for this report's permission key. */
+  /** The actor's resolved (dimension, values) for this report's permission key — MULTI-VALUED since
+   *  Story 10.28; see `ResolvedReportScope` above. */
   readonly resolvedScope: ResolvedReportScope;
   /** Bounded, NON-PII request params (forward-compat seam; v1 seed templates are parameterless). */
   readonly params?: Readonly<Record<string, unknown>>;

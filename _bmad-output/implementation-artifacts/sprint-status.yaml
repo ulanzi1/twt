@@ -1,4 +1,23 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-13p (10-28-multi-node-report-scope: review -> done, via bmad-code-review.
+#   Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) ran clean -- zero AC/ruling
+#   violations found; the Acceptance Auditor independently reproduced the Escalation-2 revert-sanity probe
+#   byte-for-byte and re-ran the full live-DB suite. FIVE genuine patch findings survived triage and were
+#   ALL applied: (1) D4's "deterministic because sorted" claim was FALSE -- values.sort() orders
+#   ResolvedReportScope.values, not the `grants` array .find() iterates, and neither grant-loading query
+#   carries an ORDER BY; fixed by sorting `grants` locally (scopeValue, then role) at both D4 sites
+#   (handlers.ts, reports-export.ts) before .find(). (2) AC3/D2's defence-in-depth deny assertion was a bare
+#   .rejects.toThrow() -- tightened to assert AuthorizationDeniedError specifically. (3)
+#   contribution-rate-by-district.ts's own IN(...) construction (a hand-copied duplicate of member-roster's,
+#   not a shared helper) had ZERO test coverage -- added a direct .query()-level two-district test, hand-built
+#   ctx per Escalation 1's no-invented-grant rule. (4) A stale doc comment on ReportScopeCtx.resolvedScope
+#   still described the pre-10.28 singular shape -- fixed. (5) WellFormedGrant's non-global arm didn't
+#   structurally constrain scopeDimension -- now Exclude<ScopeDimension, 'global'>. One Blind Hunter finding
+#   (D4's null-fallback allegedly not reusing grantScopeWellFormed) was VERIFIED AS A FALSE POSITIVE and
+#   dropped -- the dimension guard already scopes it to `global`, where scopeValue==null IS well-formedness.
+#   Re-verified after patches: domain/api/jobs typecheck + lint all clean; domain unit 25/25; domain live-DB
+#   12/12 (was 11, +1 new); api live-DB 9/9; jobs live-DB 5/5; assemble.ts untouched, both Open/Closed proofs
+#   green unmodified. Zero decision-needed, zero deferred.)
 # last_updated: 2026-08-13o (10-28-multi-node-report-scope: ready-for-dev -> in-progress -> review.
 #   IMPLEMENTED off main @ 6bd01ec on feature/10-28-multi-node-report-scope. All 5 ACs satisfied, all 8
 #   tasks complete. governance(10.28) commit aa4318e landed FIRST with ZERO packages//apps files
@@ -6172,7 +6191,7 @@ development_status:
   # orthogonal to ancestry (a state admin reaching districts BENEATH it). Because a permanent owner
   # born already-discharged is a contradiction, Story 1.18 DISPOSITIONS this and never builds it --
   # even if it looks cheap after the ancestry work (1.18 AC6 / D6's "falls out cheaply" branch CLOSED).
-  10-28-multi-node-report-scope: review
+  10-28-multi-node-report-scope: done
   epic-10-retrospective: optional
 
   # ==========================================================================

@@ -4,7 +4,7 @@ baseline_commit: 6bd01ec2cfab641500b437d1235e79c1dc6e2655
 
 # Story 10.28: Multi-Node Report Scope `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 > ⚠ **WHY THIS STORY SITS IN A RETROSPECTED EPIC.** `epic-10-retrospective` is `optional`. The placement is
 > deliberate and is **not** to be "corrected" into whichever epic happens to be open: this story extends
@@ -481,6 +481,16 @@ would reintroduce the resolved-scope columns 10.7 deliberately removed.
       reconstructed ([[feedback_record_unattested_no_backfill]], [[feedback_verify_before_committing_governance_claims]]).
 
 ---
+
+### Review Findings
+
+- [x] [Review][Patch] D4's "deterministic because sorted" claim is false — `values.sort()` orders `ResolvedReportScope.values`, not the `grants` array `.find()` iterates, and neither grant-loading query (`apps/api/src/modules/rbac/index.ts:39-44`, `apps/jobs/src/reports-export.ts:101`) carries an `ORDER BY`; Postgres row order for `SELECT ... FROM role_grants WHERE user_id = $1` is otherwise unspecified [apps/api/src/modules/reports/handlers.ts:347-363, apps/jobs/src/reports-export.ts:175-188] — fixed: `grants` sorted locally (`scopeValue`, then `role`) at both D4 sites before `.find()`, making "first hit" actually deterministic.
+- [x] [Review][Patch] AC3/D2's defence-in-depth authorization assertion is a bare `.rejects.toThrow()` with no error-type/message check, so it can't distinguish "denied for the right reason" from an unrelated crash — thin for the trap the story itself calls the most dangerous [packages/domain/tests/integration/reports/reports.spec.ts:240] — fixed: asserts `AuthorizationDeniedError` specifically.
+- [x] [Review][Patch] `contribution-rate-by-district.ts`'s new `districts` narrowing / `sql.join` `IN (...)` construction is a byte-for-byte duplicate of `member-roster.ts`'s (not a shared helper) and is exercised by zero tests — a typo here ships unnoticed even though `member-roster`'s copy is proven correct via AC3 [packages/domain/src/reports/templates/contribution-rate-by-district.ts:60-70] — fixed: added a direct `.query()`-level two-district test (hand-built ctx, no invented grant, per Escalation 1).
+- [x] [Review][Patch] Stale doc comment still describes the pre-10.28 singular `(dimension, value)` shape, two lines below the correctly-updated `ResolvedReportScope` interface — exactly the "stale reason left behind" class D3 warns about, just outside the files the task list named [packages/domain/src/reports/types.ts:78] — fixed.
+- [x] [Review][Patch] `WellFormedGrant`'s non-global arm (`{ scopeValue: string }`) doesn't constrain `scopeDimension`, so it structurally still admits `{ scopeDimension: 'global', scopeValue: string }` — the "no null filter, no `!`" guarantee holds only because runtime code doesn't exploit the gap, not because the type closes it [packages/domain/src/reports/scope.ts:52-53] — fixed: non-global arm now typed `{ scopeDimension: Exclude<ScopeDimension, 'global'>; scopeValue: string }`.
+
+**Verification after patches:** `pnpm --filter @twt/domain typecheck`, `@twt/api typecheck`, `@twt/jobs typecheck` — all clean. `pnpm --filter @twt/domain lint`, `@twt/api lint`, `@twt/jobs lint` — all clean. Live-DB: `packages/domain/tests/integration/reports/reports.spec.ts` 12/12 (was 11, +1 new), `apps/api/tests/integration/reports/reports.spec.ts` 9/9, `apps/jobs/tests/reports-export.test.ts` 5/5. Domain unit: `tests/reports/*.test.ts` 25/25. `assemble.ts` untouched by these patches — both Open/Closed proofs (`assemble.test.ts`) still green unmodified.
 
 ## Dev Notes
 

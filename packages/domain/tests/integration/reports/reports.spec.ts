@@ -14,6 +14,7 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
+import { AuthorizationDeniedError } from '../../../src/errors.js';
 import { buildGeoTree, createGeoTreeResolver } from '../../../src/geo-tree/index.js';
 import { reportExportId as toReportExportId } from '../../../src/ids/index.js';
 import * as reports from '../../../src/reports/index.js';
@@ -203,6 +204,33 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
     expect(ids.has(b1)).toBe(false);
   });
 
+  // [Review fix] `contribution-rate-by-district.ts`'s `IN (...)` construction is a hand-copied
+  // duplicate of `member-roster.ts`'s (not a shared helper), so the test above proves nothing about
+  // THIS template's own copy — a typo here would ship unnoticed. `reconciliation.review` is held only
+  // at pariwar ceilings (Escalation 1), so no real grant can ever drive this branch; hand-build the
+  // ctx directly at the `.query()` level, exactly as D5(b) below does for the empty-set case, rather
+  // than inventing a grant (which Escalation 1 explicitly rejects).
+  it('contribution_rate_by_district also narrows WHERE district IN (...) — its own IN(...) construction, proven directly since no real grant can reach it (Escalation 1)', async () => {
+    const { tx, client } = getTx();
+    await seedTwoDistricts(tx);
+    await enterAppScope(client, PARIWAR_A);
+
+    const contributionRateTemplate = registry.get<{ district: string; member_count: number }>(
+      'contribution_rate_by_district',
+    )!;
+    const twoDistrictsCtx: reports.ReportScopeCtx = {
+      actorId: ACTOR,
+      grants: [],
+      pariwarId: PARIWAR_A,
+      resolvedScope: { dimension: 'district', values: ['Gaya', 'Patna'] },
+    };
+
+    const rows = await contributionRateTemplate.query(twoDistrictsCtx, tx);
+    const districts = new Set(rows.map((r) => r.district));
+    expect(districts.has('Patna')).toBe(true);
+    expect(districts.has('Gaya')).toBe(true);
+  });
+
   it('D5(b): an EMPTY district set DENIES — zero rows against a tenant that demonstrably HAS rows', async () => {
     const { tx, client } = getTx();
     const { a1, a2, a3 } = await seedTwoDistricts(tx);
@@ -237,7 +265,12 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
     // Defence-in-depth, the D2 half: the same empty scope also fails CLOSED at the authorization
     // layer — `assembleReport` maps the empty set to a single `null` target, which `scopeContains`
     // rejects for any non-global dimension. ⛔ It must never become an empty loop that checks nothing.
-    await expect(reports.assembleReport(registry, 'member_roster', emptyCtx, tx)).rejects.toThrow();
+    // [Review fix] Asserted on `AuthorizationDeniedError` specifically, not a bare `toThrow()` — this
+    // is the trap the story calls the most dangerous, and a bare `toThrow()` can't tell "denied for
+    // the right reason" apart from an unrelated crash.
+    await expect(reports.assembleReport(registry, 'member_roster', emptyCtx, tx)).rejects.toThrow(
+      AuthorizationDeniedError,
+    );
   });
 
   // ── PIN 9/9 — RE-PINNED AT STORY 10.28 (AC4). ASSERTIONS UNCHANGED; THE REASON IS REWRITTEN. ──

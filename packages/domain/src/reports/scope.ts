@@ -13,8 +13,16 @@
 // re-loads grants and re-resolves, so a grant revoked between request and build fails the build closed
 // (no persisted resolved-scope column to go stale). Deny-deeper geo asymmetry
 // ([[project_rbac_geo_scope_containment]]): a `state`-scoped actor's district-granular report resolves
-// to {state} here, and the district-narrowing query returns nothing below that ceiling until Story 1.18 (Geo-Tree Scope Resolver)'s
-// geo-tree resolver lands — the same asymmetry 10.3/10.4/10.5/10.6 shipped, not a defect.
+// to {state} here, and the district-narrowing query returns nothing below that ceiling.
+// ✅ THE AUTHORIZATION HALF IS RESOLVED (Story 1.18): a state-held grant now genuinely reaches a
+// district target through the geo-tree resolver (ADR-0038), so `assembleReport`'s `checkPermission`
+// no longer denies for want of ancestry.
+// ⛔ THE QUERY HALF DELIBERATELY DID NOT MOVE, and the two must not be conflated. `resolveActorReportScope`
+// still returns {state}, and `templates/_shared.ts` still narrows that to `deny` — not because a
+// resolver is missing, but because `ResolvedReportScope` and `DistrictNarrowing` are SINGLE-VALUED
+// and the correct answer for a state actor is `WHERE district IN (…)`. That cardinality change is
+// **Story 10.28**'s, permanently. Narrowing to one arbitrary district beneath the state would be
+// WORSE than denying: a silent partial export. See `_shared.ts`'s per-dimension re-examination.
 
 import type { EffectiveGrant } from '../rbac/check.js';
 import { bundleForRole, defaultRoleBundles, type RoleBundle } from '../rbac/roles.js';
@@ -64,12 +72,17 @@ export function resolveActorReportScope(
     if (!(bundle.permissions as readonly string[]).includes(key)) continue;
 
     const candidate: ResolvedReportScope = { dimension: grant.scopeDimension, value: grant.scopeValue };
-    // v1 LIMITATION (review finding — deferred, accepted): `ResolvedReportScope` is single-valued, so an
-    // actor holding this key at TWO same-dimension nodes (e.g. `{district,'Patna'}` + `{district,'Gaya'}`)
-    // resolves to whichever the strict-`<` tie-break keeps (the first-iterated), and the template narrows
-    // to that ONE node — a multi-district admin silently exports only one district. Multi-value (`IN`-list)
-    // scope lands with Story 1.18 (Geo-Tree Scope Resolver) ([[project_rbac_geo_scope_containment]]), which is the
-    // same deferral horizon as deny-deeper geo; until then this is a documented limitation, not a bug.
+    // ⚠ v1 LIMITATION — OWNED BY **STORY 10.28: Multi-Node Report Scope**. `ResolvedReportScope` is
+    // single-valued, so an actor holding this key at TWO same-dimension nodes (e.g. `{district,'Patna'}`
+    // + `{district,'Gaya'}`) resolves to whichever the strict-`<` tie-break keeps (the first-iterated),
+    // and the template narrows to that ONE node — a multi-district admin silently exports only one
+    // district, with no signal that the rest were dropped.
+    // ⛔ THIS IS NOT THE DENY-DEEPER GEO DEFERRAL, and it never shared its horizon. That horizon
+    // arrived with Story 1.18 (the geo-tree resolver, ADR-0038) and this limitation OUTLIVED it,
+    // because the two are orthogonal: ancestry is one actor reaching nodes BENEATH a grant;
+    // multi-node is one actor holding grants at SEVERAL sibling nodes. Story 1.18 deliberately did
+    // not absorb this even though it looked cheap from there — Story 10.28 is its PERMANENT owner,
+    // and its existence was ruled unconditional (Decision `2026-08-12-102`).
     if (best === null || broadnessRank(candidate.dimension) < broadnessRank(best.dimension)) {
       best = candidate;
     }

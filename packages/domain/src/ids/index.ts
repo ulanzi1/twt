@@ -683,3 +683,25 @@ export const pariwarCustomFieldDefinitionId = uuidBrand('PariwarCustomFieldDefin
 export type RestorationImpositionId = Brand<'RestorationImpositionId'>;
 /** Smart constructor: validates UUID shape, returns a branded `RestorationImpositionId`. */
 export const restorationImpositionId = uuidBrand('RestorationImpositionId');
+
+// ── Story 1.18 — Geo-tree version id (§Naming "branding mandatory on a new ID's first PR") ──
+// `GeoTreeVersionId` is the per-row address of a `geo_tree_versions` row — the
+// `HelpdeskRoutingPolicyVersionId` / `ClauseVersionId` / `FeatureFlagVersionId` twin. Like them, and
+// UNLIKE the five event-derived-state primitives (member/claim/pool/alert/helpdesk_ticket), it is
+// NOT any event stream's stream_id and has no derive function: a plain DB-defaulted
+// `gen_random_uuid()` addressing one versioned-immutable ROW.
+//
+// ⚠ THE REPLAY PIN IS `(pariwar_id, version)`, NOT THIS ID — the versioned-registry convention.
+// ⛔ AND THE RESOLVER PIN IS NEITHER. `scopeContains` receives no version at all: authorization is
+// evaluated against whatever tree is IN FORCE at request time, exactly as it is evaluated against
+// whatever grants are in force. A grant revoked a moment ago stops authorizing; an edge removed a
+// moment ago stops resolving. Do NOT pin a tree version into an authorization decision expecting
+// as-of-then semantics — that is a different (and un-asked-for) model. ⚠ Unlike
+// `HelpdeskRoutingPolicyVersionId`, version 1 is NOT owned by a code constant: there is NO code
+// default geography (ADR-0038 / Decision 2026-08-12-102), so a Pariwar's own versions start at 1
+// and the ABSENCE of a row means "no tree", never "the default tree".
+
+/** Per-row address of a published geo-tree version (`geo_tree_versions.id`). */
+export type GeoTreeVersionId = Brand<'GeoTreeVersionId'>;
+/** Smart constructor: validates UUID shape, returns a branded `GeoTreeVersionId`. */
+export const geoTreeVersionId = uuidBrand('GeoTreeVersionId');

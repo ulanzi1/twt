@@ -14,9 +14,20 @@
 // `state` / `role` / `cohort` are STORED, tone-reviewed, and listed in the admin console with an
 // explicit "not yet targetable" indicator — but they resolve to FALSE plus a logged seam note. The
 // `members` table (schema/members.ts) carries only `state` (LIFECYCLE, not geography) + `pariwar_id`
-// — there is NO queryable district / designation / cohort attribute to select on. Fabricating one
-// now would collide with Story 1.18's geo ([[project_rbac_geo_scope_containment]] "resolve only what
-// exists"). The seam lights up for free when the selection primitive lands.
+// — there is NO queryable district / designation / cohort attribute to select on
+// ([[project_rbac_geo_scope_containment]] "resolve only what exists").
+//
+// ── ⛔ THE OWNER IS **STORY 1.19**, NOT STORY 1.18. ─────────────────────────────────────────────
+// This seam used to name Story 1.18. That story SHIPPED (the geo-tree scope resolver, ADR-0038) and
+// does NOT light this up: a tree answers *"is Patna in Bihar"*, never *"which members are in
+// Patna"*. Audience SELECTION needs a per-MEMBER geo attribute; authorization CONTAINMENT does not.
+//   · `state`           → **Story 1.19**, which builds member→district attribution over Story 1.18's
+//     tree and wires this predicate end-to-end (its AC3). ⚠ Story 1.19 AC6 also owns the
+//     QUIET-TURN-ON hazard: `state`-scoped rows authored today are visible to NOBODY, and become
+//     live the moment the arm resolves — so existing rows get an explicit disposition, not a
+//     surprise appearance.
+//   · `role` / `cohort` → no member attribute exists at all; owned by **Story 1.19 AC4**.
+// ⛔ Do not collapse the three arms into one pointer.
 
 import type { BannerAudienceScope } from '../schema/banners.js';
 
@@ -37,9 +48,12 @@ const defaultLogger: BannerAudienceLogger = {
  * a logged seam note.
  *
  * Takes no member row on purpose: neither resolvable scope depends on any member attribute, and the
- * three unresolvable ones have no attribute to depend on. When Story 1.18's geo / designation
- * primitive lands, this signature grows a member argument and the three arms light up — the call
- * sites do not move.
+ * three unresolvable ones have no attribute to depend on. When **Story 1.19**'s member→geo
+ * attribution primitive lands, this signature grows a member argument and the `state` arm lights up
+ * — the call sites do not move. ⛔ NOT Story 1.18: that story shipped the geo-tree scope RESOLVER
+ * (which answers "is Patna in Bihar") and deliberately did not supply member attribution (which
+ * would answer "which members are in Patna"). `role`/`cohort` have no attribute at all and stay
+ * seamed under Story 1.19 AC4.
  */
 export function isMemberInBannerAudience(
   audienceScope: BannerAudienceScope,

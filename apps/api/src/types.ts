@@ -43,6 +43,14 @@ declare module 'fastify' {
     scopeTx?: ScopeTx;
     /** The actor's effective grants in the active Pariwar (loaded by scope-resolution). */
     scopeGrants?: readonly rbac.EffectiveGrant[];
+    /** Story 1.18 — the active Pariwar's in-force GEO TREE, loaded ONCE by scope-resolution
+     *  alongside `scopeGrants` and consumed SYNCHRONOUSLY by every downstream permission gate.
+     *  ⭐ `null` means this Pariwar has published NO tree — a first-class answer, not a degraded
+     *  one: the gate then passes NO resolver and `denyDeeperGeoResolver` applies, i.e. deeper geo
+     *  containment denies exactly as it did before Story 1.18 existed.
+     *  ⛔ `rbac.hasPermission` is a pure synchronous predicate, so this MUST be preloaded — never
+     *  fetch a tree inside a permission check, and never make `contains` async (freeze row 9). */
+    geoTree?: import('@twt/domain').geoTree.LoadedGeoTree | null;
     /** Story 6.7 — the ground-inspection assignment a row-sourced route resolved (set by the
      *  `resolveGroundInspectionAssignment` preHandler so `requirePermissionHook`'s district
      *  resolveValue can read the assignment's own district; the handler reuses it). */

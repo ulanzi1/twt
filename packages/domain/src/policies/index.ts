@@ -173,3 +173,9 @@ export * from './contribution-projection-rls.js';
 // carve-out: there is no cross-tenant default definition, and a DELETE would destroy the only record
 // of what a stored custom-field value MEANS. Retirement is a VERSION, never a row removal.
 export * from './pariwar-custom-field-definitions-rls.js';
+// Story 1.18 — geo_tree_versions tenant-isolation policies. Plain three-policy isolation
+// (select/insert/update), NOT `for: 'all'` and NOT the feature-flag `OR pariwar_id IS NULL`
+// carve-out: each Pariwar owns its own subtree (`GEO_RANK` puts `pariwar` ABOVE `state`), there is
+// no cross-tenant default tree, and a DELETE would break the `superseded_by_version` chain.
+// ⛔ A leaked org tree is a leaked AUTHORIZATION INPUT — hence the adversarial-leak membership.
+export * from './geo-tree-versions-rls.js';

@@ -28,6 +28,7 @@ import {
   AuthorizationDeniedError,
   audit,
   encryption,
+  geoTree,
   ids,
   rbac,
   reports,
@@ -176,11 +177,25 @@ export async function runReportExportBuild(
           (g) => g.scopeDimension === resolvedScope.dimension && g.scopeValue === resolvedScope.value,
         )?.role ?? null;
 
+      // ⭐ SITE 10 (Story 1.18, AC3) — WIRED. The geo tree is re-loaded HERE, at build time, on the
+      // same scoped client and in the same breath as the grants above.
+      //
+      // ⚠ THE INTENDED CONSEQUENCE, STATED RATHER THAN DISCOVERED LATER: if the tree changes
+      // between the request and the build, the build re-resolves against the NEWER tree. That is
+      // deliberate and matches the revoked-grant posture two lines up — this whole block exists
+      // because build-time authorization is re-validated from current state, not frozen at request
+      // time. So an edge REMOVED after the request narrows what the export covers, and an edge
+      // ADDED widens it, exactly as a revoked or added grant does. Freezing the tree into the
+      // pending row would be a different (and un-asked-for) as-of-request model, and would also
+      // reintroduce the resolved-scope columns this design deliberately removed.
+      const buildTimeTree = await geoTree.loadGeoTree(client, ids.pariwarId(pariwarId), now);
+      const geoResolver = buildTimeTree ? geoTree.createGeoTreeResolver(buildTimeTree) : undefined;
+
       // assembleReport re-authorizes fail-closed + runs the scope-narrowed query (Decisions 3/6).
       const result = await reports.assembleReport(
         registry,
         row.reportType,
-        { actorId, grants, pariwarId, resolvedScope },
+        { actorId, grants, pariwarId, resolvedScope, geoResolver },
         client,
       );
 

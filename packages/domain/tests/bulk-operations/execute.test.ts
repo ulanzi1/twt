@@ -20,6 +20,7 @@ import {
   UnknownBulkOperationError,
 } from '../../src/bulk-operations/errors.js';
 import { createBulkOperationRegistry } from '../../src/bulk-operations/registry.js';
+import { buildGeoTree, createGeoTreeResolver } from '../../src/geo-tree/index.js';
 import type { BulkExecuteOptions, BulkOperation } from '../../src/bulk-operations/types.js';
 import {
   DISTRICT_ADMIN_PATNA_GRANT,
@@ -237,7 +238,23 @@ describe('bulkExecute — scope-respecting (AC3)', () => {
     expect(ctx.applied).toEqual([]); // never became a candidate for apply
   });
 
-  it('deny-deeper geo pin: a state-ceiling grant does not reach a district-level item (Epic-3 deferral)', async () => {
+  // ── PIN 8/9 — Story 1.18 disposition: UPDATED. The ONLY pin of the nine whose behaviour moves. ──
+  //
+  // ⭐ GENUINE FAMILY B, and the one place among the nine where a resolver really was the missing
+  // piece. `STATE_TRUSTEE_BIHAR_GRANT` against a `{district,'Patna'}` item was denied for exactly
+  // one reason: `checkPermission` at `execute.ts` passed NO ctx, so it got the deny-deeper default.
+  // Threading site 8 (`BulkActorContext.geoResolver`) makes the with-resolver answer reachable.
+  //
+  // The old title said "(Epic-3 deferral)". That attribution was wrong twice over — Epic 3 supplied
+  // the geo DATA and never owned the resolver, and the deferral is now DISCHARGED — so it is gone.
+  //
+  // BOTH halves are pinned below, deliberately as two tests rather than one:
+  //   · the NO-resolver assertion is KEPT, because it still pins the default, which is still what a
+  //     Pariwar with no published tree gets. Deleting it would have removed the guarantee that this
+  //     story's change is opt-in.
+  //   · a COMPANION asserts the with-resolver ALLOW. Without it, the contract change at site 8 would
+  //     be untested from the harness's side and could be silently dropped by a later refactor.
+  it('deny-deeper geo pin (NO resolver): a state-ceiling grant does not reach a district-level item', async () => {
     const registry = registryWithA();
     const items: FixtureItemA[] = [{ id: 'a-0', district: 'Patna', parity: 'even' }];
     const ctx = createFixtureContextA();
@@ -246,11 +263,71 @@ describe('bulkExecute — scope-respecting (AC3)', () => {
       registry,
       'test.fixture_a',
       items,
-      actorContext([STATE_TRUSTEE_BIHAR_GRANT]), // state ceiling — broader than district, but denied by default resolver
+      // No geoResolver → checkPermission falls back to denyDeeperGeoResolver → out of scope.
+      actorContext([STATE_TRUSTEE_BIHAR_GRANT]),
       ctx,
       { dryRun: false, auditItem },
     );
     expect(result.items[0]).toMatchObject({ status: 'skipped', reason: 'out_of_scope' });
+    expect(ctx.applied).toEqual([]); // never became a candidate for apply
+  });
+
+  it('⭐ WITH a geo resolver: the SAME state-ceiling grant DOES reach the district-level item', async () => {
+    const registry = registryWithA();
+    const items: FixtureItemA[] = [{ id: 'a-0', district: 'Patna', parity: 'even' }];
+    const ctx = createFixtureContextA();
+    const { auditItem } = auditCapture();
+
+    // A published Bihar tree containing Patna — the same fixture shape as tests/geo-tree.
+    const resolver = createGeoTreeResolver(
+      buildGeoTree({
+        version: 1,
+        nodes: [
+          { dimension: 'state', value: 'Bihar', parent_dimension: null, parent_value: null },
+          { dimension: 'district', value: 'Patna', parent_dimension: 'state', parent_value: 'Bihar' },
+        ],
+      }),
+    );
+
+    const result = await bulkExecute(
+      registry,
+      'test.fixture_a',
+      items,
+      actorContext([STATE_TRUSTEE_BIHAR_GRANT], resolver),
+      ctx,
+      { dryRun: false, auditItem },
+    );
+    // Same grant, same item, same operation — only the resolver differs.
+    expect(result.items[0]).toMatchObject({ status: 'succeeded' });
+    expect(ctx.applied).toEqual(['a-0']);
+  });
+
+  it('a resolver does NOT make every district reachable — only the ones the tree contains', async () => {
+    // Guards against the corresponding over-correction: wiring a resolver must not become a blanket
+    // allow. A district absent from the published tree still denies.
+    const registry = registryWithA();
+    const items: FixtureItemA[] = [{ id: 'a-0', district: 'Lucknow', parity: 'even' }];
+    const ctx = createFixtureContextA();
+    const { auditItem } = auditCapture();
+    const resolver = createGeoTreeResolver(
+      buildGeoTree({
+        version: 1,
+        nodes: [
+          { dimension: 'state', value: 'Bihar', parent_dimension: null, parent_value: null },
+          { dimension: 'district', value: 'Patna', parent_dimension: 'state', parent_value: 'Bihar' },
+        ],
+      }),
+    );
+    const result = await bulkExecute(
+      registry,
+      'test.fixture_a',
+      items,
+      actorContext([STATE_TRUSTEE_BIHAR_GRANT], resolver),
+      ctx,
+      { dryRun: false, auditItem },
+    );
+    expect(result.items[0]).toMatchObject({ status: 'skipped', reason: 'out_of_scope' });
+    expect(ctx.applied).toEqual([]);
   });
 
   it('uses the per-item locator dimension for the scope check, not the operation-declared static scopeDimension (Review Findings)', async () => {

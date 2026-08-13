@@ -14,6 +14,7 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
+import { buildGeoTree, createGeoTreeResolver } from '../../../src/geo-tree/index.js';
 import { reportExportId as toReportExportId } from '../../../src/ids/index.js';
 import * as reports from '../../../src/reports/index.js';
 import { reportExports } from '../../../src/schema/report_exports.js';
@@ -121,7 +122,29 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
     expect(ids.has(a3)).toBe(false);
   });
 
-  it('deny-deeper: a state-scoped actor resolves nothing below its ceiling — through the REAL checkPermission + assembleReport chain, not just the query helper', async () => {
+  // ── PIN 9/9 — Story 1.18 disposition: ASSERTION UNCHANGED, CLASSIFICATION CORRECTED. ──────────
+  //
+  // ⛔ THIS IS A **QUERY** DENY-DEEPER PIN, NOT AN RBAC ONE — and that distinction is the whole
+  // disposition. Read the chain before touching it: `checkPermission` ALREADY ALLOWS here. A real
+  // `state_trustee` genuinely holds `member.view_validity` at `{state,'Bihar'}`, and the resolved
+  // scope is ALSO `{state,'Bihar'}` — an EXACT-NODE match at the SAME dimension, answered at
+  // `rbac/scope.ts:241` with no resolver involved at all. The zero rows come from the QUERY-level
+  // narrowing in `templates/_shared.ts` (`resolveDistrictNarrowing` → `deny`).
+  //
+  // ⇒ Story 1.18's ancestry resolver does NOT move this pin, and could not have. It was listed among
+  // the nine because it says "deny-deeper", not because a resolver was ever the blocker.
+  //
+  // ⭐ WHAT STORY 1.18 DID OWE HERE, AND DISCHARGED (AC6): re-examining whether the `_shared.ts`
+  // `deny` branch should change now that ancestry is live. It should not — but the REASON changed,
+  // from "no resolver exists" to "`DistrictNarrowing` and `ResolvedReportScope` are SINGLE-VALUED".
+  // With a tree, the districts beneath Bihar are knowable, so the correct narrowing is
+  // `WHERE district IN (…)`; expressing that is a CARDINALITY change owned permanently by
+  // **Story 10.28**, which Story 1.18 deliberately does not absorb. Narrowing to one arbitrary
+  // district would be worse than denying — a silent partial export.
+  //
+  // ⚠ Story 10.28 will re-pin this test. When it does, the change is to the QUERY's behaviour, and
+  // the RBAC allow above it stays exactly as it is.
+  it('deny-deeper (QUERY-level, not RBAC): a state-scoped actor resolves nothing below its ceiling — through the REAL checkPermission + assembleReport chain, not just the query helper', async () => {
     const { tx, client } = getTx();
     await seedTwoDistricts(tx);
     await enterAppScope(client, PARIWAR_A);
@@ -151,6 +174,31 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
     );
     expect(result.rows).toHaveLength(0); // real checkPermission ALLOWED (state_trustee genuinely holds
     // member.view_validity @ state); the QUERY's deny-deeper narrowing is what actually stops the leak.
+
+    // ⭐ Story 1.18 — the classification above ASSERTED rather than merely claimed. Re-run the exact
+    // same assembly with a REAL geo-tree resolver supplied (a published Bihar tree containing both
+    // seeded districts). If this pin were RBAC-blocked, the resolver would change the outcome. It
+    // does not: still zero rows, because the block is the QUERY's narrowing, which no resolver
+    // touches. This is what makes the "not an RBAC pin" disposition falsifiable instead of asserted.
+    const withResolver = await reports.assembleReport(
+      stateFixtureRegistry,
+      'fixture_state_trustee_roster',
+      {
+        ...ctx,
+        geoResolver: createGeoTreeResolver(
+          buildGeoTree({
+            version: 1,
+            nodes: [
+              { dimension: 'state', value: 'Bihar', parent_dimension: null, parent_value: null },
+              { dimension: 'district', value: 'Patna', parent_dimension: 'state', parent_value: 'Bihar' },
+              { dimension: 'district', value: 'Vaishali', parent_dimension: 'state', parent_value: 'Bihar' },
+            ],
+          }),
+        ),
+      },
+      tx,
+    );
+    expect(withResolver.rows).toHaveLength(0);
   });
 });
 

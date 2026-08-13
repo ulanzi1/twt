@@ -204,6 +204,14 @@ export * as payment from './payment/index.js';
 // consumes `assembleMemberExport`; the ZIP/encrypt/persist orchestration is the thin job runtime.
 export * as dataExport from './data-export/index.js';
 export * as rbac from './rbac/index.js';
+// Story 1.18 — the geo-tree scope resolver behind `rbac.scopeContains`' injectable seam. A PURE,
+// synchronous resolver (`hasPermission` is a pure predicate — ADR-0008 Decision 8) over a versioned
+// per-Pariwar tree document loaded ONCE PER REQUEST by `loadGeoTree`. ⭐ There is NO code default
+// geography: a Pariwar with no published tree loads `null`, the caller passes no resolver, and
+// `denyDeeperGeoResolver` applies — today's behaviour, byte-identical (ADR-0038).
+// ⛔ Lives OUTSIDE `rbac/` so that prohibited root gains no DB-reading module; this root is itself
+// admitted to `governance_boundary.yaml`'s prohibited list under the same prohibition (d).
+export * as geoTree from './geo-tree/index.js';
 export * as toneReview from './tone-review/index.js';
 // Story 7.8 — the close-of-cycle template-driven framing policy: the pure
 // `selectCloseOfCycleFraming` (outcome → canonical `close-of-cycle` template keys +

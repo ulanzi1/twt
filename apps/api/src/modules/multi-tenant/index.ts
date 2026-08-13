@@ -39,6 +39,11 @@ export function registerMultiTenant(app: FastifyInstance, deps: AppDeps): void {
 
   // Membership-gated scope introspection — proves scope-resolution (404 on
   // non-member) + the scoped grant load. Any member of the Pariwar may call it.
+  //
+  // ⛔ SITE 6 (Story 1.18, AC3) — no geo-tree resolver, reason stated. This is a GRANT PROJECTION,
+  // not an authorization evaluation: it maps `request.scopeGrants` into a response shape and calls
+  // no predicate at all. There is nothing here for a resolver to participate in. Authorization for
+  // this route is the membership 404 that `scopeResolutionHook` already performed.
   app.get(
     '/api/v1/p/:pariwarId/whoami',
     { schema: { hide: true }, preHandler: [session, scope] },

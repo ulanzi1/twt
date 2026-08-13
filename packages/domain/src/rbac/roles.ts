@@ -409,15 +409,26 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // ground-inspection assignments authorize at `dimension: 'district'` while block_admin has
     // `scopeCeiling: 'block'`: a block-scoped grant cannot satisfy a district-scoped resource check
     // (a block is NARROWER than a district → the district target is "broader than the grant" → deny),
-    // and granting district scope would VIOLATE the block ceiling. No geo-tree resolver exists yet to
-    // prove block→parent-district ancestry (denyDeeperGeoResolver is the fail-closed default) —
-    // DEFERRED to Story 1.18 (Geo-Tree Scope Resolver), Family B: same-tree ancestry, target strictly
-    // narrower, which a resolver genuinely fixes. So NO inert conduct
-    // grant is seeded here. ACCEPTANCE CONDITION: block_admin support may be enabled only when the
-    // authorization layer can resolve a block grant through verified block→district ancestry while
-    // preserving the role's `scopeCeiling: 'block'` — and enabling it must require no district-scoped
-    // grant to the block administrator. (See check.test.ts for the explicit block-grant-fails-district
-    // assertion that pins this behaviour.)
+    // and granting district scope would VIOLATE the block ceiling. So NO inert conduct grant is
+    // seeded here.
+    // ⛔ RANK ORDER (FAMILY A) — NO RESOLVER LIFTS IT. This comment previously deferred the gap to
+    // Story 1.18's geo-tree resolver as "Family B: same-tree ancestry, target strictly narrower".
+    // ⭐ THAT PREMISE WAS INVERTED, and Story 1.18 found it while implementing the resolver: the
+    // parent district is not narrower, it is the PARENT, hence BROADER. GEO_RANK is state 2 <
+    // district 3 < block 4 (lower = broader), so a {block} grant (gRank 4) against a {district}
+    // target (tRank 3) is denied by `tRank < gRank` at scope.ts — BEFORE any resolver runs. The
+    // alternative (a district-scoped grant to a block admin) fails the other line:
+    // scopeWithinCeiling('district','block') is a pure CEILING_RANK compare with no resolver
+    // parameter → 3 >= 4 → false. Both denial paths are resolver-free. See scope.ts §RANK-ORDER.
+    // ⇒ RE-CLASSIFIED as Family A at Story 1.18 (Decision 2026-08-12-102). The resolver has SHIPPED
+    // and changes nothing here, by design.
+    // ⛔ The old ACCEPTANCE CONDITION ("enable when the authorization layer can resolve a block grant
+    // through verified block→district ancestry") is REMOVED, not reworded — it promised something
+    // this model can never do, and an unmeetable condition reads as pending work forever.
+    // ✅ THE HONEST PATH is a different GATE: re-gating at `dimension: 'block'` authorizes BOTH
+    // actors — block_admin by exact-node, district_admin by district→block ancestry through the
+    // resolver that now exists. That is **Story 6.17**. (See check.test.ts for the explicit
+    // block-grant-fails-district assertion that pins the rank-order behaviour.)
     // ⚠ DEPRECATED (Story 10.18) — SUCCESSOR: `member.moderate`. Grant HONOURED, not removed; no NEW grant.
     permissions: [MEMBER_SUSPEND, MEMBER_VIEW_VALIDITY],
     scopeCeiling: 'block',
@@ -456,8 +467,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // Story 4.6 — the verifier console (Epic 6) reads FR-12A validity to verify standing.
     // Story 6.10 — CLAIM_VERIFY: the verifier-console read key. A `district` ceiling makes the
     // district-dimension gate meaningful (exact-node match on the deceased's posting district).
-    // NOT state_trustee (D3a — a state-ceiling grant cannot satisfy a district check until a resolver
-    // proves state→district ancestry; DEFERRED to Story 1.18 (Geo-Tree Scope Resolver), Family B).
+    // NOT state_trustee (D3a — a state-ceiling grant could not satisfy a district check without a
+    // resolver proving state→district ancestry). ✅ RESOLVED at Story 1.18: the resolver exists
+    // (ADR-0038), so a state-held grant reaches a district target wherever the Pariwar has published
+    // a tree carrying that edge. ⛔ No grant changed here — reachability moved, role composition did
+    // not, and a Pariwar with no published tree behaves exactly as before.
     //
     // ── ⚠ MEMBER_MODERATE IS AN INERT GRANT. DELIBERATE DEFERRAL, NOT AN OVERSIGHT. (Story 10.18, AC8) ──
     // This role holds `member.moderate` at a `district` ceiling, but the ONLY route gating that key

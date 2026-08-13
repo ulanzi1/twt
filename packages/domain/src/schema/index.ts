@@ -357,3 +357,11 @@ export * from './contribution_projection_coverage.js';
 // ⚠ It is also a DECLARED DEVIATION from architecture §1.7, which names a code file
 // (`per-pariwar/<id>/schema-v<n>.ts`) as the medium. See the schema header, ADR-0037 and ESCALATION 1.
 export * from './pariwar_custom_field_definitions.js';
+// Story 1.18 — the versioned per-Pariwar organizational-tree registry behind `scopeContains`'
+// geo-tree resolver seam. Same immutability posture as `helpdesk_routing_policy_versions` /
+// `clause_versions` (append a version, never mutate a prior row except its forward pointer).
+// ⭐ THE ONE DIVERGENCE: there is NO code default. A Pariwar with no row has NO tree, the loader
+// returns `null`, no resolver is passed, and `denyDeeperGeoResolver` applies — today's behaviour,
+// byte-identical, by construction (ADR-0038 / Decision 2026-08-12-102). ⛔ An authorization INPUT,
+// not reference data: tenant RLS + the adversarial cross-Pariwar must-return-0 set.
+export * from './geo_tree_versions.js';

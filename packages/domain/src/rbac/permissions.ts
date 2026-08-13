@@ -116,17 +116,39 @@ export function permissionKey(value: string): PermissionKey {
  * while `block_admin` has `scopeCeiling: 'block'`. A block-scoped grant cannot satisfy a
  * district-scoped resource check (a block is narrower than a district → the district target is
  * "broader than the grant" → deny, scope.ts), and granting district scope would VIOLATE the role
- * ceiling. No geo-tree resolver currently exists to prove block→parent-district ancestry
- * (`denyDeeperGeoResolver` is the fail-closed default). Therefore v1 grants
- * `claim.conduct_ground_inspection` to `district_admin` ONLY; block_admin scheduling is DEFERRED to
- * **Story 1.18 (Geo-Tree Scope Resolver)**, which a resolver GENUINELY fixes: `block`→parent-`district` is
- * same-tree ancestry with the target strictly narrower (Family B, not the rank-order family).
- * ⚠ Successor is a STORY with acceptance criteria, never an epic — the prior `Epic 3` pointer expired
- * unowned when Epic 3's stories completed and no resolver was built.
- * NO inert block_admin grant is seeded.
- * ACCEPTANCE CONDITION: block_admin support may be enabled only when the authorization layer can
- * resolve a block grant through verified block→district ancestry while preserving the role's
- * `scopeCeiling: 'block'` — enabling it must require no district-scoped grant to the block admin.
+ * ceiling. Therefore v1 grants `claim.conduct_ground_inspection` to `district_admin` ONLY, and NO
+ * inert block_admin grant is seeded.
+ *
+ * ── ⛔ THIS IS RANK ORDER (FAMILY A). NO RESOLVER LIFTS IT. ─────────────────────────────────────
+ * This block previously said the gap was DEFERRED to Story 1.18's geo-tree resolver, "which a
+ * resolver GENUINELY fixes: block→parent-district is same-tree ancestry with the target strictly
+ * narrower." ⭐ THAT PREMISE WAS INVERTED, and Story 1.18 found it while implementing the resolver:
+ * the parent district is not narrower, it is the PARENT, hence BROADER. Traced:
+ *
+ *   GEO_RANK: state 2 < district 3 < block 4   (lower = BROADER)
+ *   grant {block,'Block-1'} → gRank 4;  target {district,'Patna'} → tRank 3
+ *   scope.ts `if (tRank < gRank) return false`  →  3 < 4  →  DENIED, before any resolver runs.
+ *
+ * And the alternative — issuing a district-scoped grant to a block admin — fails the OTHER line:
+ * `scopeWithinCeiling('district','block')` reads CEILING_RANK and is a pure numeric compare with no
+ * resolver parameter at all → 3 >= 4 → false. Both denial paths are resolver-free. A resolver
+ * answers "is X beneath Y" and can only ever NARROW; this needs the opposite. See `scope.ts`
+ * §RANK-ORDER for the canonical explanation.
+ *
+ * ⇒ RE-CLASSIFIED as Family A at Story 1.18 (Decision `2026-08-12-102`). The geo-tree resolver has
+ * SHIPPED and changes nothing here, by design.
+ *
+ * ── THE HONEST PATH: a different GATE, not a resolver ──────────────────────────────────────────
+ * Re-gating ground inspection at `dimension: 'block'` authorizes BOTH actors — `block_admin` by
+ * exact-node match, and `district_admin` by district→block ancestry through the resolver that now
+ * exists (`tRank 4 > gRank 3` → falls through to the resolver, which answers). That is a schema +
+ * gate-design change (`claim_ground_inspections` carries `district text NOT NULL` and no block
+ * column), and it is **Story 6.17: Block-Dimension Ground-Inspection Gate**.
+ *
+ * ⛔ The old ACCEPTANCE CONDITION — "enable block_admin when the authorization layer can resolve a
+ * block grant through verified block→district ancestry" — is REMOVED, not merely reworded: it
+ * promised something this model cannot do at any point in the future, and a condition that can
+ * never be met is worse than no condition, because it reads as pending work forever.
  *
  * `field_worker` is likewise DEFERRED to Epic 12 (its `self` scopeCeiling + the dispatch/
  * assignment substrate that would let a field worker act on an arbitrary claim land there).
@@ -158,10 +180,14 @@ export function permissionKey(value: string): PermissionKey {
 // action" lesson). Checked at `dimension: 'district'` against the deceased member's server-derived
 // posting district. Granted to `district_admin` + `verifier` (both `district` ceiling; derives to
 // `super_admin`). NOT `state_trustee` (D3a — a `state`-ceiling grant cannot satisfy a district-dimension
-// check under the deny-deeper geo resolver; State-Trustee district-console access is DEFERRED to
-// **Story 1.18 (Geo-Tree Scope Resolver)** — `state`→`district` is same-tree ancestry with the target strictly
-// narrower, which a resolver genuinely fixes (Family B; the exact 6.7 block_admin precedent).
-// See roles.ts for the grant rationale.
+// check WITHOUT a geo resolver). ✅ RESOLVED at Story 1.18: `state`→`district` IS same-tree ancestry
+// with the target strictly narrower, and the resolver that answers it now EXISTS
+// (`geoTree.createGeoTreeResolver` over a published `geo_tree_versions` document, ADR-0038). A
+// `state_trustee` grant reaches a district-dimension check ⇔ its Pariwar has published a tree
+// placing that district beneath that state. ⛔ NOTE WHAT DID NOT CHANGE: no grant was added and no
+// key was re-keyed — `state_trustee` still is not granted this key. The resolver changed what a
+// state-held grant CAN reach, not who holds what. A Pariwar with no published tree behaves exactly
+// as before. See roles.ts for the grant rationale.
 // Bumped 13 → 14 at Story 6.12 (added ONE key): `claim.assign_shepherd` — the R6 MANUAL shepherd
 // reassignment WRITE key gating `POST …/admin/claims/:claimCaseId/shepherd/reassign`. FR-41 requires an
 // ordinary administrative reassignment/correction path that the AR-61 automatic fallback alone does not
@@ -515,9 +541,12 @@ export const SEED_PERMISSION_KEYS = [
   // district). Distinct from `claim.approve` (the 6.11 WRITE): reading a claim's signals to verify
   // standing ≠ approving it (the 4.6 `member.view_validity` read-key precedent). Granted to
   // `district_admin` + `verifier` ONLY (+ derived `super_admin`) — NOT `state_trustee` (D3a: a
-  // `state`-ceiling grant cannot satisfy a district-dimension check until a real resolver proves
-  // state→district ancestry — DEFERRED to **Story 1.18 (Geo-Tree Scope Resolver)**, Family B; the exact 6.7
-  // block_admin deferral). See roles.ts.
+  // `state`-ceiling grant could not satisfy a district-dimension check without a resolver proving
+  // state→district ancestry). ✅ RESOLVED at Story 1.18 — that resolver now exists (ADR-0038), so a
+  // state-held grant reaches a district target wherever the Pariwar has published a tree containing
+  // that edge. ⛔ Still no `state_trustee` grant for this key: the resolver changed reachability, not
+  // role composition. ⚠ The 6.7 block_admin case was NOT the same deferral and is NOT resolved by
+  // this — it is rank order (see the `claim.conduct_ground_inspection` block above). See roles.ts.
   'claim.verify',
   // Story 6.12 (R6) — the MANUAL shepherd reassignment WRITE key. Gates
   // `POST …/admin/claims/:claimCaseId/shepherd/reassign` (checked at `dimension: 'district'` against the

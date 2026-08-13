@@ -1088,7 +1088,13 @@ _Not code-review findings — forward seams Story 9.7 deliberately RESERVES for 
 - **No verifier-annotation capture exists for peer-mesh responses.** Story 6.10's AC2(c) requires "peer-mesh responses with verifier annotations." Story 6.6's `ClaimPeerMeshRespondedPayloadSchema` (`packages/domain/src/claim/events.ts:125-134`) only ever captured `responder_member_id` + `response` — no verifier-added note/annotation field. **Decision (2026-07-11, user direction):** peer responses ship as specified; verifier annotations are modeled as an explicit `not_available_yet` (`PeerMeshVerifierAnnotations` in `packages/contracts/src/claims/verifier-console.ts`, wired through the assembler + rendered in `SignalsPanel`) rather than silently dropped. **Re-trigger:** when a story lands verifier-annotation capture on peer-mesh responses (a Story 6.6-substrate change — new event/field), it plugs into the existing `not_available_yet` slot by adding a `present` variant to `PeerMeshVerifierAnnotations` — no other contract shape changes needed.
 - **No RBAC path exists today for a global/higher-scope actor to open a claim whose deceased member has no resolvable posting district.** `hasPermission`/`scopeContains` (`packages/domain/src/rbac/check.ts`, `packages/domain/src/rbac/scope.ts`) fail closed on any unresolved (`null`-value, non-`global`-dimension) target locator before any grant — including `global` — is ever examined; this is a deliberate, doubly-enforced, system-wide invariant, not specific to this route. **Decision (2026-07-11, user direction):** this is the correct, shipped behavior — all actors fail closed when the posting district is unresolved. Whether a `global` grant should ever bypass an unresolved-target-locator denial is deferred to **RBAC architecture work** (not a 6.10/6.12/6.13 story-level concern). **Re-trigger:** if/when RBAC architecture work revisits the unresolved-target-locator invariant (e.g. as part of the Epic-3 geo-tree resolver), decide there whether `global` grants should get an explicit carve-out, and update `check.ts`/`scope.ts` + this route's authorization matrix together.
   
-  ⚠ **Re-pointed by Story 10.18 (2026-08-10): successor is `Story 1.18 — Geo-Tree Scope Resolver`**, not "Epic 3". Family B — an unresolved target locator is a genuine geo-tree gap that a resolver fixes. ⛔ Note the DISTINCT rank-order case, which Story 1.18 does NOT own: a `state`-ceiling actor failing a `pariwar` check is blocked by the ordering itself and no resolver lifts it (`scope.ts` §RANK-ORDER).
+  ⚠ **Re-pointed by Story 10.18 (2026-08-10): successor is `Story 1.18 — Geo-Tree Scope Resolver`**, not "Epic 3". ⛔ Note the DISTINCT rank-order case, which Story 1.18 does NOT own: a `state`-ceiling actor failing a `pariwar` check is blocked by the ordering itself and no resolver lifts it (`scope.ts` §RANK-ORDER).
+  
+  ⚠ **DISPOSITIONED 2026-08-12 by Story 1.18 — "Not addressed", stated plainly rather than absorbed.** ([[feedback_closure_language_precision]] — this is the third label, and using it honestly matters more here than claiming a discharge.)
+  
+  **The re-pointing was itself a misclassification, and Story 1.18 is the wrong owner.** This entry asks whether a `global` grant should bypass the **unresolved-target-locator** guard — `scopeContains`'s very first line, `if (target.dimension !== 'global' && target.value == null) return false`, which fires when a claim's deceased member has **no resolvable posting district at all**. That is a NULL-VALUE question, not an ancestry question. A geo-tree resolver answers *"is Patna beneath Bihar"*; it is never even reached here, because there is no node value to place. ⭐ **Story 1.18 shipped a complete resolver and this guard is bit-for-bit unaffected** — which is the proof, not the excuse.
+  
+  **Status: OPEN, owner UNCHANGED — "RBAC architecture work", as the original 2026-07-11 decision recorded.** ⚠ That is an EPIC-shaped owner and therefore decay-prone ([[project_r7_fact_producer_unbuilt]] — *a deferral naming an epic expires unowned*), and Story 1.18 deliberately does **not** mint a story to make the ledger look tidy: the question is a genuine architecture decision about whether `global` should ever bypass a fail-closed guard, it has no live consumer demanding it, and minting an owner for work nobody has asked for is the un-gated re-commitment [[feedback_record_unattested_no_backfill]] warns decays. **Re-trigger (concrete, replacing the vague one): the first surface that must serve a claim whose deceased member has no posting district.** The shipped behaviour — every actor including `global` fails closed — remains correct and is unchanged.
 
 ---
 
@@ -1712,6 +1718,19 @@ Closure-language posture per [[feedback_closure_language_precision]]: engineerin
   ⛔ **REWRITTEN by Story 10.18 (2026-08-10). The original re-trigger EXPIRED UNOWNED and this entry is the worked example of why a deferral must name a STORY.** It previously read: *"the canonical org/geo tree … lands at **Epic 3**; the real resolver drops in behind the existing interface then. **Re-trigger:** Epic 3 member/geo data landing."* **That trigger fired and nobody saw it.** `member_postings.district` landed with Stories 3.1/3.9 — both `done`, along with all fourteen Epic 3 stories and the retrospective — and **no resolver was built**, because an epic carries no acceptance criteria and nothing owns it ([[project_r7_fact_producer_unbuilt]]: *a deferral naming an EPIC expires unowned*). Seven epics passed.
   
   ✅ **NEW OWNER: `Story 1.18 — Geo-Tree Scope Resolver`** (`1-18-geo-tree-scope-resolver`, Epic 1, `backlog`), minted by Story 10.18 with **four acceptance criteria**. Placed in Epic 1 because it extends the RBAC scope model Story 1.8 minted — the rule being that a successor belongs to the epic owning the model it extends. **Not** an Epic 3 story: Epic 3 supplies the geo *data*, which is precisely the dependency whose arrival was mistaken for the fix.
+  
+  ✅ **DISCHARGED 2026-08-12 by Story 1.18 — "Closed by [edit]" for the seam, with the residue re-deferred to NAMED STORIES.** ([[feedback_closure_language_precision]]; the three labels are never collapsed.)
+  
+  **What is Closed by [edit]:** the geo-tree containment resolver itself. `geo_tree_versions` (migration `0101`) + `@twt/domain`'s `geoTree` namespace implement the seam by genuine ancestry (ADR-0038, Decision `2026-08-12-102`). ⭐ **The default did not change and the seam did not move**: `denyDeeperGeoResolver` is byte-unchanged and there is NO code default geography, so a Pariwar with no published tree behaves EXACTLY as it did before this story — the resolver is opt-in per tenant, by publication. `GEO_RANK`, `CEILING_RANK`, `scopeContains`'s ordering and the `GeoTreeResolver` interface were all untouched (architectural freeze row 9).
+  
+  ⛔ **What this entry NEVER covered, restated because the correction is the point:** the Family-A rank-order sites. **And Story 1.18 found TWO MORE of them inside the Family-B list it inherited** — `permissions.ts` `claim.conduct_ground_inspection` and `roles.ts` `block_admin` were re-pointed here on the reasoning that *"block→parent-district is same-tree ancestry with the target strictly narrower."* **The target is the PARENT, hence BROADER**, so the premise was inverted: `tRank 3 < gRank 4` denies at `scope.ts` before any resolver runs. Both were **rewritten in place as rank order**, the same treatment Story 10.18 gave the other 24. The honest path for FR-40's block actor is a different GATE, not a resolver → **Story 6.17**.
+  
+  **Residue, each Resolved via explicit deferral to a NAMED STORY that exists with acceptance criteria** (never an epic — that is what made this entry the worked example in the first place):
+  · geo AUDIENCE selection (6 markers) → **Story 1.19** — needs a per-MEMBER geo attribute; a tree answers *"is Patna in Bihar"*, never *"which members are in Patna"*.
+  · the block-dimension ground-inspection gate → **Story 6.17**.
+  · multi-node report scope → **Story 10.28** (see `:3432` below).
+  · the trustee-DIRECTORY half of `pool/fixed-amount.ts` → **Story 10.13** (existing; no mint).
+  · `self` targets (`scope.ts`) → **"Closed by [edit]", NO successor** — zero live consumers, zero backlog consumers, no FR; the comment misdescribed a deliberate design choice.
   
   ⚠ **SCOPE CORRECTION — this entry only ever covered HALF of what was filed against it.** Story 10.18 split the accumulated geo-deferral debt into two families across 45 marker blocks / 19 files. **Family B (21 blocks)** — grant and target in the same tree, target strictly narrower — is genuinely this deferral and is now re-pointed to Story 1.18. **Family A (24 blocks) was NEVER this deferral**: a `state`/`district`/`block`-ceiling grant failing a `pariwar`-dimension check is **rank-order blocked** — `scopeWithinCeiling` is a pure numeric compare over `CEILING_RANK` with no resolver parameter, and `scopeContains` denies independently before any resolver runs. **No org tree can ever lift it.** Those sites were misdiagnoses, not pending work; Story 10.18 rewrote them in place to say so, and Story 1.18 must **not** re-open them. See `packages/domain/src/rbac/scope.ts` §RANK-ORDER.
 - **D2-1.8: FR-47 authorization-denied audit SINK** — `rbac/check.ts` exposes the injectable `onAuthorizationDenied(denial)` seam (default no-op); the actual tamper-evident audit-log sink + hash chain is **Story 1.10** (epics.md L1133). Story 1.8 commits the seam; Story 1.10 wires the sink without changing this code. **Resolved via explicit deferral.** Re-trigger: Story 1.10 audit-log substrate.
@@ -3429,7 +3448,13 @@ _Second-pass code review (2026-07-31) addendum:_
 
 - **`resolveActorReportScope` collapses multiple same-dimension grants → a multi-district admin silently exports only one district.** An actor holding `member.export_roster` at `{district,'Patna'}` AND `{district,'Gaya'}` resolves to a single `best` (the strict `<` broadness tie-break keeps the first-iterated grant), so the roster narrows `WHERE district = <one>` and the other district's members are silently absent — no error, no partial-export signal. `ResolvedReportScope` is single-valued. **Decision (2026-07-31): accept the single-scope v1 limitation** — it aligns with the Epic-3 deny-deeper geo deferral, where multi-value (`IN`-list) scope naturally lands alongside the geo-tree resolver; a `v1-limitation` code comment marks the seam. **Re-trigger:** the Epic-3 geo-tree resolver work must extend `ResolvedReportScope` to carry multiple same-dimension values + narrow templates with `WHERE district IN (...)`. [packages/domain/src/reports/scope.ts:67]
   
-  ⚠ **Re-pointed by Story 10.18 (2026-08-10): successor is `Story 1.18 — Geo-Tree Scope Resolver`**, not "Epic 3". Family B. Story 1.18's fourth AC names this entry explicitly, so it is carried as an acceptance criterion rather than as a bare line here — the failure mode this whole re-pointing exists to prevent.
+  ⚠ **Re-pointed by Story 10.18 (2026-08-10): successor is `Story 1.18 — Geo-Tree Scope Resolver`**, not "Epic 3".
+  
+  ✅ **RE-DEFERRED 2026-08-12 by Story 1.18 → `Story 10.28 — Multi-Node Report Scope` (Epic 10, `backlog`, 5 ACs). Resolved via explicit deferral, and 10.28 is its PERMANENT owner.**
+  
+  ⛔ **The 2026-07-31 decision's premise is superseded on evidence.** It accepted the limitation on the reasoning that it *"aligns with the Epic-3 deny-deeper geo deferral, where multi-value (`IN`-list) scope naturally lands alongside the geo-tree resolver."* **It does not, and it did not.** Story 1.18 built the resolver and multi-node scope fell out of it not at all — the two are ORTHOGONAL: ancestry is ONE actor reaching nodes BENEATH a grant; multi-node is ONE actor holding grants at SEVERAL SIBLING nodes. A state-above-district admin and a multi-district admin are different problems that happen to share a `WHERE` clause. Story 1.18 could have absorbed it cheaply once the ancestry work was in hand and **deliberately did not** (its AC6, ruled 2026-08-12): a permanent owner born already-discharged is a contradiction.
+  
+  **What Story 1.18 DID discharge here:** the `v1 LIMITATION` comment at `reports/scope.ts` no longer claims *"the same deferral horizon as deny-deeper geo"* — that horizon arrived and this limitation outlived it — and `templates/_shared.ts`'s `deny` branch was re-examined per dimension and re-pinned, with `state` now denying because the TYPE is single-valued rather than because a resolver is missing. **Re-trigger:** Story 10.28, unconditionally.
 
 ## Deferred from: 10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant (2026-07-31)
 
@@ -4264,3 +4289,96 @@ review session's own additions, not the story's original governance content).
   without itself being ratified?) worth a dedicated look, not urgent.
 - **Symbol vocabulary (⛔/⚠/✅) carries several distinct meanings throughout with no legend** —
   consistent with this project's established (if informal) documentation style, low priority.
+
+---
+
+## Deferred from: 1-18-geo-tree-scope-resolver — the successor mints (2026-08-12)
+
+**Recorded BEFORE implementation, deliberately** ([[feedback_governance_commits_precede_implementation]]).
+This section is the governance half of Story 1.18: it records the **owners** for everything the story
+re-defers, and it commits **first**, so no marker ever points at a story that does not yet exist. All
+dispositions were **ruled by BigDev on 2026-08-12** and are entered as Decision `2026-08-12-102`.
+
+The vocabulary below is [[feedback_closure_language_precision]]'s and is never collapsed: *"Closed by
+[edit]"* ≠ *"Resolved via explicit deferral"* ≠ *"Not addressed"*.
+
+### The three mints — each a **named story**, never an epic
+
+`[[project_r7_fact_producer_unbuilt]]`: *a deferral naming an EPIC expires unowned.* That is the exact
+failure D1-1.8 embodied for seven epics, so every re-deferral below names a story that **exists in
+`sprint-status.yaml` as of this commit**, carries **acceptance criteria** in `epics.md`, and was minted
+before anything pointed at it.
+
+| Re-deferral | Model it extends | Owner | Status |
+|---|---|---|---|
+| Geo **audience** selection (markers D6, D7, D8, D14, D15, D16) | member→geo attribution over Story 1.18's tree | **Story 1.19** — `1-19-member-geo-attribution-geo-audience-consumer` | **MINTED**, Epic 1, `backlog`, 8 ACs |
+| Block-dimension **ground-inspection gate** (D2's honest path) | Story 6.7's ground-inspection gate (FR-40) | **Story 6.17** — `6-17-block-dimension-ground-inspection-gate` | **MINTED**, Epic 6, `backlog`, 5 ACs |
+| **Multi-node report scope** (marker D2 / `reports/scope.ts:71` / `:3432` below) | Story 10.7's `ResolvedReportScope` | **Story 10.28** — `10-28-multi-node-report-scope` | **MINTED**, Epic 10, `backlog`, 5 ACs |
+
+⚠ **Two of the three land in retrospected epics** (Epic 6 `done`, Epic 10 `optional`). That is the *same
+deliberate act* that placed Story 1.18 itself in a retrospected Epic 1: a successor belongs to the epic
+that owns the model it extends. Each carries a placement comment in `sprint-status.yaml` and a placement
+note in `epics.md` so a later reader does not "correct" it. **No retrospective was flipped back.**
+
+⛔ **Why three and not one.** The original D7 proposed a single successor holding everything. Scoped
+against the project's own numbering rule, the re-deferrals turned out to share **no owning model** —
+bundling four unrelated capabilities into one Epic-1 story would have recreated the epic-shaped bucket
+this whole correct-course exists to abolish, in story clothing.
+
+### The two dispositions that are NOT mints — deliberately
+
+- **S4 (`scope.ts:218`, `self` targets) — "Closed by [edit]". NO successor is minted.**
+  **Resolved via explicit deferral is the WRONG label here and was rejected on evidence.** The repo's
+  only live `dimension: 'self'` check (`apps/api/src/modules/member-validity/handlers.ts:132`) passes
+  **`grants: []` with `isSelf: true`** and bypasses the grant path entirely, so the branch the comment
+  defers — a narrower-than-`pariwar` grant reaching a `self` target — has **zero live consumers, zero
+  backlog consumers, and no FR behind it**. `scope.ts:50-55` already states the design fact (`self` is
+  *"orthogonal to the geo tree: own records only, not a node in it"*) and `GeoNode` excludes `self`
+  **by type** (`:149`). The comment was therefore a **misdescription of a deliberate design choice**,
+  not a deferral. Minting an owner for work nobody has asked for manufactures precisely the un-gated
+  re-commitment [[feedback_record_unattested_no_backfill]] warns decays.
+  ⛔ **The deny does not change** — this is a comment correction, not a logic change. If a `self`-scoped
+  actor ever becomes real (`field_worker`, `scopeCeiling: 'self'`, permissions currently empty), that
+  story raises it **with a live requirement attached**.
+
+- **The trustee-**directory** half of `pool/fixed-amount.ts:78` — RE-POINTED to existing Story 10.13.
+  No mint.** The marker is compound: *"needs a trustee directory / RBAC geo-scope resolver — the
+  resolver half is Story 1.18; the trustee directory has no owner yet."* The second clause is now
+  **stale**. `10-13-fixed-amount-setter-admin-ui` (`backlog`) is the surface that consumes Story 7.5's
+  workflow **including the emergency attesting panel** — the exact place "who may attest" must be
+  answered. ⚠ The obligation is **also recorded in Story 10.13's own `epics.md` section**, because a
+  marker pointing at a story whose text never mentions the obligation is how an inherited deferral goes
+  unnoticed. ⛔ `POOL_FIXED_AMOUNT_MIN_PANEL_SIZE = 2` stays as the mechanical floor; Story 1.18 changes
+  no value.
+
+### ⭐ Story 10.28's existence is UNCONDITIONAL
+
+Multi-node report scope (one actor holding grants at **several** districts) is **orthogonal** to ancestry
+(one actor reaching districts **beneath** a state). Because a permanent owner born already-discharged is
+a contradiction, **Story 1.18 dispositions multi-node scope and never builds it** — even if it looks
+cheap once the ancestry work is in hand. The earlier *"unless it falls out cheaply"* branch is **CLOSED**.
+
+What Story 1.18 **does** owe here: `reports/templates/_shared.ts:40`'s `deny` branch is genuinely reached
+differently once ancestry is live, so that branch is **re-examined and re-pinned** within Story 1.18.
+Changing `ResolvedReportScope`'s **cardinality** is Story 10.28's, and only Story 10.28's.
+
+### Third-generation warning, recorded so it cannot be waved through
+
+Epic 3 → Story 1.18 → {1.19, 6.17, 10.28}. This is the **third generation** of the same deferral. The
+difference that is supposed to break the cycle is that all three successors carry acceptance criteria and
+a named owner rather than an epic and a re-trigger. **Three owners is also three chances to repeat the
+failure.** Whoever retrospects Epic 1 next should check these three by name.
+
+## Deferred from: code review of 1-18-geo-tree-scope-resolver (2026-08-13)
+
+- **`createGeoTreeVersion`'s INSERT + supersede UPDATE are not wrapped in an explicit `db.transaction()`
+  call** — the module documents this as running on the caller's transaction (the same convention as the
+  `helpdesk/registry.ts` twin), and Story 1.18 ships no writer surface that calls this function outside
+  tests, so there is no live caller to violate the contract yet. Whichever future story adds a writer
+  surface on top of `packages/domain/src/geo-tree/registry.ts` (`createGeoTreeVersion`/`amendGeoTreeVersion`,
+  lines 144-215) must wrap both statements in one transaction.
+- **The "byte-identical, no normalization" guarantee between the geo-tree resolver and the exact-node
+  grant-value comparison is pinned by tests only on the geo-tree side** (`packages/domain/tests/geo-tree/resolver.test.ts`)
+  — no existing test in `packages/domain/tests/rbac/scope.test.ts` or `check.test.ts` pins the same
+  case-sensitivity/no-trim discipline for `role_grants.scope_value`. Low priority, test-only addition
+  when convenient.

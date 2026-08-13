@@ -11,11 +11,23 @@
 //      doesn't exist OR no membership; the two collapse, by design, to "not found").
 //   4. caches the grants on the request (the RBAC adapter reuses them) and sets
 //      `request.requestContext.pariwarId`.
+//   5. Story 1.18 — loads the Pariwar's in-force GEO TREE, ONCE, alongside the grants.
 //
 // MUST run after `requireAdminSession` (which sets `requestContext.actorId`). The
 // scope tx it opens is closed by the multi-tenant lifecycle hook.
+//
+// ── ⭐ WHY THE GEO TREE LOADS HERE AND NOWHERE ELSE (Story 1.18, AC2) ──────────
+// `rbac.hasPermission` is a PURE, SYNCHRONOUS predicate (ADR-0008 Decision 8) and
+// `GeoTreeResolver.contains` is synchronous BY INTERFACE, so the resolver cannot
+// query — the tree must be in memory BEFORE any permission check runs. This is the
+// exact precedent `request.scopeGrants` already sets: loaded once here, consumed
+// synchronously by every downstream gate. ⛔ Never load a tree inside a permission
+// check, and never make `contains` async (that is architectural freeze row 9).
+//
+// A Pariwar that has published NO tree loads `null`, the RBAC adapter then passes
+// NO resolver, and `denyDeeperGeoResolver` applies — today's behaviour, byte-identical.
 
-import { ids } from '@twt/domain';
+import { geoTree, ids } from '@twt/domain';
 import type { FastifyRequest, preHandlerHookHandler } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -48,8 +60,17 @@ export function scopeResolutionHook(deps: AppDeps): preHandlerHookHandler {
       if (grants.length === 0) {
         throw new NotFoundError('Pariwar not found', 'pariwar.not_found');
       }
+      // Story 1.18 — the in-force geo tree, loaded ONCE per request beside the grants (AC2).
+      // `null` = this Pariwar has published no tree, which is a first-class answer: downstream
+      // gates then pass no resolver and deeper geo containment denies exactly as it does today.
+      // Read on the SCOPED tx, so RLS confines it to this Pariwar's own subtree.
+      // `pariwarId` is already the branded value returned by `ids.pariwarId(raw)` above; re-brand
+      // for the domain signature without re-validating a string that was validated at :38.
+      const tree = await geoTree.loadGeoTree(scopeTx.tx, ids.pariwarId(pariwarId), deps.clock());
+
       request.scopeTx = scopeTx;
       request.scopeGrants = grants;
+      request.geoTree = tree;
       request.requestContext.pariwarId = pariwarId;
       attached = true;
 

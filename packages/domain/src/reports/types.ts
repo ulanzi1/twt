@@ -7,7 +7,7 @@
 
 import type { Db } from '../db.js';
 import type { EffectiveGrant } from '../rbac/check.js';
-import type { ScopeDimension } from '../rbac/scope.js';
+import type { GeoTreeResolver, ScopeDimension } from '../rbac/scope.js';
 
 /** The report-export lifecycle status value set (the `report_exports.status` domain of truth; the
  *  contracts `ReportExportStatus` enum mirrors this — a test-only sync-guard pins them equal). */
@@ -69,6 +69,26 @@ export interface ReportScopeCtx {
   readonly resolvedScope: ResolvedReportScope;
   /** Bounded, NON-PII request params (forward-compat seam; v1 seed templates are parameterless). */
   readonly params?: Readonly<Record<string, unknown>>;
+  /**
+   * ⭐ Story 1.18 (AC3, site 9) — the caller's in-force geo-tree resolver, OPTIONAL.
+   *
+   * `assembleReport`'s `checkPermission` evaluates the actor at `resolvedScope.dimension`, which for
+   * a district-scoped report actor IS a geo dimension — so this is a real geo check that has been
+   * silently deny-deeper since Story 10.7.
+   *
+   * ⛔ OPTIONAL, and omitting it means TODAY'S BEHAVIOUR EXACTLY: `checkPermission` falls back to
+   * `denyDeeperGeoResolver`, so every existing caller and test keeps the deny-deeper posture
+   * unchanged. The API handler supplies it from `request.geoTree`; the build worker re-loads it at
+   * build time, alongside the grants it already re-validates.
+   *
+   * ⛔ It is a resolver, NOT a loader — PURE and SYNCHRONOUS, closing over an already-loaded
+   * document, because `checkPermission` is a pure predicate and cannot await.
+   *
+   * ⚠ THIS AFFECTS AUTHORIZATION ONLY, NOT QUERY NARROWING. A template's `query` narrows on
+   * `resolvedScope` independently (`templates/_shared.ts`), and that narrowing is a SEPARATE
+   * deny-deeper mechanism with its own disposition — see `reports/scope.ts` and Story 10.28.
+   */
+  readonly geoResolver?: GeoTreeResolver;
 }
 
 /**

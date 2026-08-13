@@ -27,7 +27,7 @@ function authorizedCtx(): ReportScopeCtx {
     actorId: 'actor-1',
     grants: [{ ...SUPER_ADMIN_GLOBAL_GRANT }],
     pariwarId: PARIWAR,
-    resolvedScope: { dimension: 'global', value: null },
+    resolvedScope: { dimension: 'global', values: [] },
   };
 }
 
@@ -82,7 +82,7 @@ describe('assembleReport — Open/Closed', () => {
       actorId: 'nobody',
       grants: [],
       pariwarId: PARIWAR,
-      resolvedScope: { dimension: 'pariwar', value: PARIWAR },
+      resolvedScope: { dimension: 'pariwar', values: [PARIWAR] },
     };
     await expect(assembleReport(registry, 'fixture_spy', ctx, DUMMY_DB)).rejects.toThrow(
       AuthorizationDeniedError,

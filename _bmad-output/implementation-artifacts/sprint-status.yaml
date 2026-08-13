@@ -1,4 +1,171 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-13p (10-28-multi-node-report-scope: review -> done, via bmad-code-review.
+#   Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) ran clean -- zero AC/ruling
+#   violations found; the Acceptance Auditor independently reproduced the Escalation-2 revert-sanity probe
+#   byte-for-byte and re-ran the full live-DB suite. FIVE genuine patch findings survived triage and were
+#   ALL applied: (1) D4's "deterministic because sorted" claim was FALSE -- values.sort() orders
+#   ResolvedReportScope.values, not the `grants` array .find() iterates, and neither grant-loading query
+#   carries an ORDER BY; fixed by sorting `grants` locally (scopeValue, then role) at both D4 sites
+#   (handlers.ts, reports-export.ts) before .find(). (2) AC3/D2's defence-in-depth deny assertion was a bare
+#   .rejects.toThrow() -- tightened to assert AuthorizationDeniedError specifically. (3)
+#   contribution-rate-by-district.ts's own IN(...) construction (a hand-copied duplicate of member-roster's,
+#   not a shared helper) had ZERO test coverage -- added a direct .query()-level two-district test, hand-built
+#   ctx per Escalation 1's no-invented-grant rule. (4) A stale doc comment on ReportScopeCtx.resolvedScope
+#   still described the pre-10.28 singular shape -- fixed. (5) WellFormedGrant's non-global arm didn't
+#   structurally constrain scopeDimension -- now Exclude<ScopeDimension, 'global'>. One Blind Hunter finding
+#   (D4's null-fallback allegedly not reusing grantScopeWellFormed) was VERIFIED AS A FALSE POSITIVE and
+#   dropped -- the dimension guard already scopes it to `global`, where scopeValue==null IS well-formedness.
+#   Re-verified after patches: domain/api/jobs typecheck + lint all clean; domain unit 25/25; domain live-DB
+#   12/12 (was 11, +1 new); api live-DB 9/9; jobs live-DB 5/5; assemble.ts untouched, both Open/Closed proofs
+#   green unmodified. Zero decision-needed, zero deferred.)
+# last_updated: 2026-08-13o (10-28-multi-node-report-scope: ready-for-dev -> in-progress -> review.
+#   IMPLEMENTED off main @ 6bd01ec on feature/10-28-multi-node-report-scope. All 5 ACs satisfied, all 8
+#   tasks complete. governance(10.28) commit aa4318e landed FIRST with ZERO packages//apps files
+#   (Decision 2026-08-13-105), then the story commit.
+#   D1 arm A: ResolvedReportScope.value REPLACED by values: readonly string[] -- the four read sites became
+#   compile errors exactly as designed. Ties at the winning dimension ACCUMULATE; dedupe + sort AT THE
+#   PRODUCER; the broadest-dimension PICK is unchanged (pariwar still beats district).
+#   D1(iv) delivered by making grantScopeWellFormed a TYPE PREDICATE over a WellFormedGrant union, so
+#   scopeValue narrows to string through the EXISTING guard -- no null filter, no `!`, and a future
+#   well-formedness regression is REJECTED rather than swallowed.
+#   D5: DistrictNarrowing.district -> districts (non-empty by construction) and EMPTY RETURNS deny AT THE
+#   SOURCE; both templates emit WHERE district IN (...) via sql.join over PARAMETERIZED values.
+#   D2: assembleReport checks EVERY node (ALL, never ANY); Open/Closed intact (loop iterates SCOPE VALUES,
+#   never reportType) and both 10.7 proofs pass UNMODIFIED.
+#   D3 + Escalation 3: TWO DELIBERATE NO-OWNER CLOSURES recorded in deferred-work.md. The `state` arm stays
+#   deny -- "Closed by [edit]", NO successor -- on evidence verified live in roles.ts: no role holds a
+#   district-narrowable report key at a `state` ceiling (state_trustee lacks member.export_roster;
+#   reconciliation.review is pariwar-ceiling only at :319 and :452). Its THIRD reason names a missing ACTOR,
+#   not a missing mechanism -- the previous two both expired. NEITHER entry may be re-read as a deferral.
+#   TWO LATENT HAZARDS FOUND AND CLOSED while implementing the rulings, both fail-OPEN in the obvious
+#   implementation: (1) looping over an empty `values` runs ZERO checks -- authorizing nothing and therefore
+#   permitting everything -- so the empty set maps to a single `null` target that global passes canonically
+#   and every other dimension fails CLOSED on at rbac/scope.ts:236; (2) D4 attribution via
+#   values.includes(...) alone would have UN-ATTRIBUTED every global/super_admin actor, since a global scope
+#   carries the empty set while its grants carry a null scopeValue.
+#   ESCALATION 2's revert-sanity was MANDATORY and it EARNED ITS KEEP: the first AC3 fixture hand-built its
+#   resolvedScope, so it did NOT go red against the restored strict-`<` implementation -- it exercised only
+#   the template's IN(...) narrowing and would have passed against the OLD resolver. Rewritten to derive the
+#   scope through the real producer (grants -> resolveActorReportScope -> assembleReport -> SQL), it went RED
+#   on the silently-dropped Gaya district, then GREEN after restoration verified BYTE-FOR-BYTE (sha256
+#   identical). D5(b) stayed GREEN throughout, proving the polarity pair isolates rather than co-fires.
+#   AC4: the pin's REASON rewritten, assertions BYTE-FROZEN -- the spec's diff has zero non-comment changed
+#   lines beyond the four mandatory value->values ctx migrations. Half of AC4 was already discharged by
+#   Story 1.18 and the report says so plainly.
+#   Grep sweep: all 12 hits / 6 files disposed; no owner/pending-language survives; moderation-dwell.test.ts
+#   :54 (the date 2026-10-28) correctly untouched as the known false positive.
+#   ZERO migrations, ZERO contracts, ZERO admin UI, ZERO RBAC-catalog change, ZERO new files.
+#   VERIFIED: ci:local 30/30 green; cache-less `turbo run test --force` 37/37; @twt/domain live-DB single
+#   pass 238 files / 2741 passed / 1 skipped; @twt/api live-DB single pass 115 files / 953 passed / 1
+#   skipped; domain+api+jobs typecheck clean.
+#   UN-ATTESTED, RECORDED NOT RECONSTRUCTED: the FIRST cold-cache ci:local reported `x test (unit)` with
+#   29/30 otherwise green, and its log was overwritten before the failing package could be identified. Which
+#   package flaked is NOT attested and deliberately NOT guessed; a later cache-less --force run passed 37/37
+#   and two later ci:local runs passed 30/30. Consistent with the known concurrency-oversubscription flake
+#   class, but that attribution is a SUSPICION, not a finding.
+#   ⭐ THIRD GENERATION CLOSED: Epic 3 -> Story 1.18 -> {1.19, 6.17, 10.28}. This was the LAST of the three
+#   mints made by Decision 2026-08-12-102. Cardinality and ancestry stayed ORTHOGONAL to the end -- no
+#   resolver changed, no enumeration API built.)
+# last_updated: 2026-08-13n (10-28-multi-node-report-scope: story-file rulings recorded; status
+#   UNCHANGED at ready-for-dev. No code written, no story minted, nothing committed.
+#   ⭐ ALL SEVEN DECISIONS AND ALL FOUR ESCALATIONS NOW CLOSED. D1-D7 ruled AS RECOMMENDED by
+#   BigDev, which carries every sub-ruling and every prohibition stated inside them:
+#   D1 -- arm A. ResolvedReportScope.value -> values: readonly string[]. ONE source of truth; the
+#   four read sites become COMPILE ERRORS, which is the migration aid. Sub-rulings: (i) global <=>
+#   values.length === 0, asserted by a unit test; (ii) sort + dedupe AT THE PRODUCER, not at each
+#   consumer; (iii) pariwar => [pariwarId]; (iv) ⛔ NO null filter and NO `!` assertion --
+#   grantScopeWellFormed (scope.ts:38-43) already guarantees scopeValue non-null for every
+#   non-global dimension, and a defensive .filter(Boolean) would swallow a future well-formedness
+#   regression instead of failing closed.
+#   D2 -- ALL, not ANY. checkPermission is called per node and EVERY node must pass. All of them
+#   come from qualifying grants today, so ALL passes by construction -- which is exactly why it is
+#   free now and why it fails CLOSED if resolveActorReportScope and checkPermission ever drift.
+#   ⛔ The 10.7-AC1/10.6-Decision-5 Open/Closed invariant survives: the loop iterates SCOPE VALUES,
+#   never reportType. Both proofs stay green UNMODIFIED -- the source-text check (assemble.test.ts
+#   :52, which readFileSync's assemble.ts itself) and the two-divergent-fixture behavioural proof
+#   (assemble.test.ts:34 over fixtures.ts).
+#   ⭐ D3 -- arm B, THE CONSEQUENTIAL ONE. The `state` arm STAYS deny, labelled "Closed by [edit]"
+#   with ⛔ NO SUCCESSOR MINTED. Evidence, not preference: NO role holds a district-narrowable
+#   report key at a `state` ceiling (state_trustee roles.ts:361-369 holds member.view_validity but
+#   NOT member.export_roster; that key sits only at pariwar_admin :341 and district_admin :401;
+#   reconciliation.review is pariwar-ceiling only) => zero live consumers, zero backlog consumers,
+#   no FR. Same evidentiary shape on which Story 1.18's D4-R closed `self` by edit with no
+#   successor. ⛔ The reason written into _shared.ts must be the DURABLE one -- "no actor exists to
+#   serve, and no enumeration API exists because none was ever needed" -- because the two previous
+#   reasons both expired ("no resolver until 1.18"; "the type is single-valued", which dies the
+#   moment AC1 lands). This is the THIRD reason on that branch and it must be the last.
+#   D4 -- attribution matches on dimension + values.includes(scopeValue), first hit, deterministic
+#   because D1(ii) sorts. The residual ambiguity (different roles at different nodes) is RECORDED,
+#   not solved. D5 -- DistrictNarrowing kind renamed district -> districts so every call site is a
+#   compile error, and ⛔ EMPTY RETURNS `deny` AT THE SOURCE. D6 -- resolveActorReportScope's
+#   signature does NOT change (⛔ no geoResolver parameter -- that is D3 arm A by the back door).
+#   D7 -- dedupe is a Set, pinned by a test that CAN actually fail (two roles, one district).
+#   ESCALATIONS: (1) ACCEPT THE RECOMMENDATION -- contribution_rate_by_district is edited for shape
+#   consistency and its unreachability recorded AT THE SITE; ⛔ no grant is invented to make AC2's
+#   second template demonstrable, member-roster carries AC3's proof. (2) REVERT-SANITY MANDATORY --
+#   the AC3 two-grant test must demonstrably go RED when the old strict-< implementation is
+#   restored, then GREEN after restoration, BOTH recorded with their REAL OUTPUT and the
+#   restoration verified byte-for-byte. A described probe is not a run
+#   ([[feedback_record_unattested_no_backfill]]); a probe that was never made to fail proves
+#   nothing ([[feedback_gate_scope_semantic_coverage]]). (3) D4's residual is RECORDED with NO
+#   successor and NO additional audit mechanism -- ⛔ no audit column, no array field, no second
+#   audit line, no "re-trigger: someday". (4) Request->build scope drift LEFT UNCHANGED; the
+#   build-time re-resolution (reports-export.ts:163-192) is deliberate and correct, and that file
+#   is out of scope except for D4's attribution line.
+#   ⛔ TWO DISPOSITIONS CARRY A DELIBERATE NO-OWNER LABEL (D3 and Escalation 3). Neither is a
+#   deferral and neither may be re-read as one -- [[feedback_closure_language_precision]]'s three
+#   labels are never collapsed, and minting an owner for work nobody has asked for is the un-gated
+#   re-commitment [[feedback_record_unattested_no_backfill]] warns decays.
+#   NEXT: Task 0 baseline (the reports suites, measured BEFORE any edit), then Task 1's
+#   `governance:` commit carrying Decision 2026-08-13-105 with ZERO packages/ and apps/ files
+#   ([[feedback_governance_commits_precede_implementation]]).
+#   PROVENANCE: rulings are BigDev's, recorded verbatim in intent. Every code fact cited remains
+#   commit-pinned at 6bd01ec. NOTHING is attested by a test run -- still an authoring pass.)
+# last_updated: 2026-08-13m (10-28-multi-node-report-scope: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ 6bd01ec (clean, fetched). Saved 10-28-multi-node-report-scope.md.
+#   Epic 10's TWENTY-EIGHTH authored story and the LAST of Story 1.18's three mints
+#   (Decision 2026-08-12-102): 1.19 done, 6.17 done, 10.28 now ready-for-dev. Epic 10 is
+#   retrospected (optional) and the placement STANDS -- this extends Story 10.7's
+#   ResolvedReportScope. Do NOT flip epic-10-retrospective. NO other story status changed.
+#   BLAST RADIUS TRACED AND BOUNDED: 10 source files + 4 test files. ZERO migrations, ZERO
+#   contracts change, ZERO admin-UI change, ZERO RBAC-catalog change (PERMISSION_CATALOG_VERSION
+#   and the key count both stay put). No new package, no new domain namespace, no new file.
+#   ⛔ TASK 0 IS BLOCKING: seven decisions (D1-D7) and four escalations are RAISED, NOT RULED.
+#   Nothing is committed until BigDev rules them ([[feedback_governance_commits_precede_implementation]]:
+#   the `governance:` decision-log entry for 2026-08-13-105 commits FIRST, zero packages/apps files).
+#   ⭐ FOUR LOAD-BEARING AUTHORING FINDINGS, each verified against the working tree at 6bd01ec:
+#   (1) AC4's `reports.spec.ts:124` is the WRONG FILE under the obvious reading. TWO specs share the
+#   basename; apps/api/tests/integration/reports/reports.spec.ts:124 is an unrelated auditor-200
+#   test. The pin is packages/domain/tests/integration/reports/reports.spec.ts:147 (comment block
+#   :125-146). This is the [[project_story_validate_footguns]] sibling-module misattribution class,
+#   and it is recorded IN the story file rather than by editing the minted AC.
+#   (2) AC4 was ALREADY HALF-DISCHARGED by Story 1.18's AC6 -- the RBAC-vs-query reclassification is
+#   done and was asserted falsifiably (the with-resolver companion at :183-201). What REMAINS is
+#   that the pin's stated reason ("DistrictNarrowing and ResolvedReportScope are SINGLE-VALUED")
+#   EXPIRES the moment AC1 lands. That would be the THIRD stale reason on this branch (first: "no
+#   resolver until 1.18"; second: the cardinality one). D3 supplies a reason that does not decay.
+#   (3) ⭐ D3 EVIDENCE -- AC5's state->descendants arm has ZERO live and ZERO backlog consumers.
+#   NO role holds a district-narrowable report key at a `state` ceiling: state_trustee (roles.ts
+#   :361-369) holds member.view_validity but NOT member.export_roster; member.export_roster is held
+#   only by pariwar_admin (:341, pariwar ceiling) and district_admin (:401, district ceiling);
+#   reconciliation.review is pariwar-ceiling only. RECOMMENDED "Closed by [edit]", NO successor --
+#   the same evidentiary shape on which 1.18's D4-R closed `self`, and the discipline against
+#   minting an owner for work nobody wants ([[feedback_record_unattested_no_backfill]]).
+#   AC4's own verb ("re-pinned AS A query deny-deeper pin") independently presupposes it.
+#   (4) ⛔ TRAP 1 IS A PRIVILEGE ESCALATION, not a bug: `WHERE district IN ()` is a Postgres syntax
+#   error, and the smallest edit that makes the error go away is to DROP the predicate -- which
+#   emits the FULL TENANT to an actor entitled to zero districts, without touching a line that
+#   mentions authorization. Hence the MANDATORY D5 polarity pair (both halves), modelled on 6.17's
+#   D6 pair, plus a revert-sanity probe on the AC3 two-grant test -- a test that cannot be made to
+#   fail proves nothing ([[feedback_gate_scope_semantic_coverage]]).
+#   ⚠ ESCALATION 1 recorded, not solved: contribution_rate_by_district's district branch is DEAD
+#   for every real holder (reconciliation.review is pariwar-ceiling), already at deferred-work.md
+#   :3447. It is edited for shape consistency and its unreachability recorded AT THE SITE; ⛔ no
+#   grant is invented to make AC2's second template demonstrable. member-roster carries AC3's proof.
+#   PROVENANCE: authoring pass only. NOTHING here is attested by a test run; the Task 0 baseline is
+#   explicitly required BEFORE any edit. Every line anchor in the story file was re-derived at
+#   6bd01ec and the minted AC text was NOT edited to chase drift
+#   ([[feedback_supersede_never_reinterpret]]).)
 # last_updated: 2026-08-13l (6-17-block-dimension-ground-inspection-gate: review -> done via
 #   bmad-code-review. Three parallel layers (Blind Hunter/no-context, Edge Case Hunter/repo-read,
 #   Acceptance Auditor/spec+decisions+AI-6-5 load-bearing-invariant lens) against main..HEAD
@@ -6024,7 +6191,7 @@ development_status:
   # orthogonal to ancestry (a state admin reaching districts BENEATH it). Because a permanent owner
   # born already-discharged is a contradiction, Story 1.18 DISPOSITIONS this and never builds it --
   # even if it looks cheap after the ancestry work (1.18 AC6 / D6's "falls out cheaply" branch CLOSED).
-  10-28-multi-node-report-scope: backlog
+  10-28-multi-node-report-scope: done
   epic-10-retrospective: optional
 
   # ==========================================================================

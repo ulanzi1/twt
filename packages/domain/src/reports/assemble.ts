@@ -46,22 +46,43 @@ export async function assembleReport(
   // means `denyDeeperGeoResolver`, i.e. today's behaviour, so no existing caller changes.
   // ⚠ AUTHORIZATION ONLY. The template's `query` narrows on `resolvedScope` through a SEPARATE
   // deny-deeper mechanism (`templates/_shared.ts`) that this resolver does not touch.
-  const check = checkPermission(
-    {
-      actorId: scopeCtx.actorId,
-      grants: scopeCtx.grants,
-      key: template.permissionKey,
-      resource: {
-        dimension: scopeCtx.resolvedScope.dimension,
-        value: scopeCtx.resolvedScope.value,
-        pariwarId: scopeCtx.pariwarId,
+  //
+  // ⭐ N NODES ⇒ N CHECKS, AND **EVERY** ONE MUST PASS (Story 10.28, D2 — ALL, never ANY).
+  // `checkPermission` takes ONE `ResourceLocator`, so a multi-node scope is checked node by node.
+  // ⛔ OR WOULD BE A GENUINE ESCALATION: one qualifying node would authorize a query that reads N.
+  // Every value came from a grant that already passed the bundle + ceiling + active-Pariwar filters
+  // in `resolveActorReportScope`, so ALL passes BY CONSTRUCTION today — which is exactly why
+  // requiring ALL costs nothing now, and why it fails CLOSED if the producer and this checker ever
+  // drift apart. `global` carries the empty set and is checked ONCE with `value: null` (D1(i)).
+  // ⛔ THE OPEN/CLOSED INVARIANT SURVIVES (10.7 AC1, inherited from 10.6 Decision 5): this loop
+  // iterates SCOPE VALUES, never `reportType`. There is still no `if (reportType === …)` here, and
+  // `tests/reports/assemble.test.ts` proves it BOTH structurally (it `readFileSync`s this file) and
+  // behaviourally (two divergent fixtures through the unchanged harness).
+  // ⛔ THE EMPTY SET MAPS TO A SINGLE `null` TARGET, AND THAT IS THE FAIL-CLOSED PATH — never an
+  // empty loop, which would authorize NOTHING and therefore permit EVERYTHING. For `global` that
+  // `null` IS the canonical target and passes; for any other dimension `scopeContains` rejects a
+  // null target outright (`rbac/scope.ts:236`), so an (unreachable) empty non-global set denies
+  // through the REAL mechanism rather than through a hand-built error.
+  const targetValues: readonly (string | null)[] =
+    scopeCtx.resolvedScope.values.length > 0 ? scopeCtx.resolvedScope.values : [null];
+  for (const value of targetValues) {
+    const check = checkPermission(
+      {
+        actorId: scopeCtx.actorId,
+        grants: scopeCtx.grants,
+        key: template.permissionKey,
+        resource: {
+          dimension: scopeCtx.resolvedScope.dimension,
+          value,
+          pariwarId: scopeCtx.pariwarId,
+        },
       },
-    },
-    { resolver: scopeCtx.geoResolver },
-  );
-  if (!check.ok) {
-    // Fail-closed — surface the structured denial (the app maps it to 403).
-    throw check.error;
+      { resolver: scopeCtx.geoResolver },
+    );
+    if (!check.ok) {
+      // Fail-closed — surface the structured denial (the app maps it to 403).
+      throw check.error;
+    }
   }
 
   // Scope-respecting fetch (Decision 3): the template pushes the resolved scope into its SQL.

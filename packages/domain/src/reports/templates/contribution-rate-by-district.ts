@@ -42,16 +42,33 @@ const columns: readonly ReportColumn[] = [
 
 async function query(scopeCtx: ReportScopeCtx, client: Db): Promise<ContributionRateRow[]> {
   const narrowing = resolveDistrictNarrowing(scopeCtx.resolvedScope);
-  // deny-deeper geo. ⛔ NOT pending a resolver — Story 1.18 shipped one and this branch deliberately
-  // did not change; see `_shared.ts`'s per-dimension re-examination (state → Story 10.28's
-  // single-valued-type limitation; block → rank order; self → not a tree node).
+  // deny-deeper geo. ⛔ NOT pending a resolver and NOT pending a type — Story 1.18 shipped the
+  // resolver and Story 10.28 made the narrowing multi-valued; this branch deliberately did not change
+  // through either. See `_shared.ts`'s per-dimension re-examination (state → no actor holds a
+  // district-narrowable report key at a `state` ceiling, "Closed by [edit]" with no successor;
+  // block → rank order; self → not a tree node).
+  // ⛔ This also catches an EMPTY district set, which `resolveDistrictNarrowing` collapses to `deny`
+  // at the source (D5) — never an un-narrowed query, which would export the FULL TENANT.
   if (narrowing.kind === 'deny') return [];
 
   // Tenant isolation via the EXPLICIT `m.pariwar_id` predicate (the build worker's BYPASSRLS service
   // pool bypasses RLS — the 3.11 convention); the district narrowing (Decision 3) composes on top.
+  //
+  // ⚠ THIS TEMPLATE'S DISTRICTS BRANCH IS UNREACHABLE FOR EVERY REAL HOLDER, AND IS EDITED ANYWAY.
+  // `CONTRIBUTION_RATE_PERMISSION_KEY = 'reconciliation.review'` is held only at PARIWAR ceilings
+  // (`roles.ts:319` under `pariwar_admin`, `:452` under `finance_officer`), so a pariwar-scoped actor
+  // always resolves to `all` and `resolveDistrictNarrowing` can never return `districts` here. The
+  // branch is kept in SHAPE CONSISTENCY with `member-roster` — both templates share the one narrowing
+  // authority in `_shared.ts`, and a divergent second form is how the two drift apart. ⛔ No grant was
+  // invented to make it demonstrable: `member-roster` carries the Story 10.28 AC3 proof, as it
+  // already carries Story 10.7's district-narrowing proof. (Story 10.28, Escalation 1; also recorded
+  // at `deferred-work.md:3447`.)
   const scopeFilter =
-    narrowing.kind === 'district'
-      ? sql`WHERE m.pariwar_id = ${scopeCtx.pariwarId} AND cp.district = ${narrowing.district}`
+    narrowing.kind === 'districts'
+      ? sql`WHERE m.pariwar_id = ${scopeCtx.pariwarId} AND cp.district IN (${sql.join(
+          narrowing.districts.map((d) => sql`${d}`),
+          sql`, `,
+        )})`
       : sql`WHERE m.pariwar_id = ${scopeCtx.pariwarId}`;
 
   // The CTE is TENANT-SCOPED via its own `pariwar_id` predicate (review finding): on the worker's

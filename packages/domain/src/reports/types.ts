@@ -47,13 +47,23 @@ export interface ReportColumn {
 }
 
 /**
- * The actor's RESOLVED scope for a report — the (dimension, value) their grant carries for the
- * template's permission key (Decision 3). The template's `query` pushes THIS into the SQL predicate so
- * out-of-scope rows are never fetched. `value` is `null` for `global`.
+ * The actor's RESOLVED scope for a report — the dimension their grant carries for the template's
+ * permission key, and EVERY node they hold it at (Decision 3). The template's `query` pushes THIS
+ * into the SQL predicate so out-of-scope rows are never fetched.
+ *
+ * ⭐ MULTI-VALUED SINCE STORY 10.28 (D1 arm A). An actor holding the key at two same-dimension nodes
+ * (`{district,'Patna'}` + `{district,'Gaya'}`) carries BOTH, and the template narrows
+ * `WHERE district IN (…)`. Before 10.28 this was single-valued and a strict-`<` tie-break silently
+ * kept whichever grant iterated first — a multi-district admin exported ONE district with no signal
+ * that the rest were dropped.
  */
 export interface ResolvedReportScope {
   readonly dimension: ScopeDimension;
-  readonly value: string | null;
+  /** EVERY node the actor holds this key at, at `dimension` — deduped, sorted, stable.
+   *  EMPTY iff `dimension === 'global'` (the one dimension whose canonical target value is
+   *  null — `rbac/scope.ts:236`). A NON-global dimension with an empty set is UNREACHABLE:
+   *  `resolveActorReportScope` returns `null` rather than an empty-set scope. */
+  readonly values: readonly string[];
 }
 
 /**
@@ -65,7 +75,8 @@ export interface ReportScopeCtx {
   readonly actorId: string;
   readonly grants: readonly EffectiveGrant[];
   readonly pariwarId: string;
-  /** The actor's resolved (dimension, value) for this report's permission key. */
+  /** The actor's resolved (dimension, values) for this report's permission key — MULTI-VALUED since
+   *  Story 10.28; see `ResolvedReportScope` above. */
   readonly resolvedScope: ResolvedReportScope;
   /** Bounded, NON-PII request params (forward-compat seam; v1 seed templates are parameterless). */
   readonly params?: Readonly<Record<string, unknown>>;

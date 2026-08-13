@@ -37,6 +37,14 @@ const DISTRICT_ONLY: GeoTreeNodeJson[] = [
 
 const NOW = new Date('2026-08-13T12:00:00Z');
 const EFFECTIVE = new Date('2026-08-01T00:00:00Z');
+// [Review fix — DATE-BOMB] `seedMemberPosting`'s default `createdAt` is real wall-clock
+// (`Date.now()`), which eventually overtakes the pinned `NOW` above; once it does,
+// `lte(memberPostings.createdAt, at)` silently excludes the freshly-seeded row and every test below
+// that relies on the default clock starts failing — exactly the class this file already guards
+// explicitly at the "posting created AFTER the query instant" case
+// ([[project_known_livedb_test_failures]] #12). Every `seedMemberPosting` call that needs its
+// posting to be CURRENT as of `NOW` pins this constant instead of the default clock.
+const POSTING_CREATED_AT = new Date('2026-08-02T00:00:00Z');
 
 describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
   setupLiveDb();
@@ -65,7 +73,7 @@ describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
   it('a Pariwar with NO published tree → district present, state `no-tree-published`', async () => {
     const { client, tx } = getTx();
     const memberIdStr = await seedMember(tx, PARIWAR_A, { state: 'active' });
-    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna');
+    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna', { createdAt: POSTING_CREATED_AT });
     await enterAppScope(client, PARIWAR_A);
 
     const tree = await loadGeoTree(tx, PARIWAR_A, NOW);
@@ -79,7 +87,7 @@ describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
   it('lifts a real posting district to its state through a real published tree', async () => {
     const { client, tx } = getTx();
     const memberIdStr = await seedMember(tx, PARIWAR_A, { state: 'active' });
-    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna');
+    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna', { createdAt: POSTING_CREATED_AT });
     await enterAppScope(client, PARIWAR_A);
     await createGeoTreeVersion(tx, {
       pariwarId: PARIWAR_A,
@@ -96,7 +104,7 @@ describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
   it('a district that is NOT a node in the published tree → `node-not-in-tree`', async () => {
     const { client, tx } = getTx();
     const memberIdStr = await seedMember(tx, PARIWAR_A, { state: 'active' });
-    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Gaya');
+    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Gaya', { createdAt: POSTING_CREATED_AT });
     await enterAppScope(client, PARIWAR_A);
     await createGeoTreeVersion(tx, {
       pariwarId: PARIWAR_A,
@@ -113,7 +121,7 @@ describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
   it('a DISTRICT-ONLY tree → the district is a node but has no state above it', async () => {
     const { client, tx } = getTx();
     const memberIdStr = await seedMember(tx, PARIWAR_A, { state: 'active' });
-    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna');
+    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna', { createdAt: POSTING_CREATED_AT });
     await enterAppScope(client, PARIWAR_A);
     await createGeoTreeVersion(tx, {
       pariwarId: PARIWAR_A,
@@ -133,7 +141,7 @@ describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
   it('`block` is absent with `no-member-attribute` EVEN under a tree that HAS blocks', async () => {
     const { client, tx } = getTx();
     const memberIdStr = await seedMember(tx, PARIWAR_A, { state: 'active' });
-    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna');
+    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'Patna', { createdAt: POSTING_CREATED_AT });
     await enterAppScope(client, PARIWAR_A);
     await createGeoTreeVersion(tx, {
       pariwarId: PARIWAR_A,
@@ -207,7 +215,7 @@ describe.skipIf(!hasDatabase)('member-geo primitive (AC1, AC2)', () => {
   it('a district differing only by CASE does NOT match the tree node', async () => {
     const { client, tx } = getTx();
     const memberIdStr = await seedMember(tx, PARIWAR_A, { state: 'active' });
-    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'patna'); // lowercase
+    await seedMemberPosting(tx, PARIWAR_A, memberIdStr, 'patna', { createdAt: POSTING_CREATED_AT }); // lowercase
     await enterAppScope(client, PARIWAR_A);
     await createGeoTreeVersion(tx, {
       pariwarId: PARIWAR_A,

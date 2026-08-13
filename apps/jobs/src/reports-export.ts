@@ -172,10 +172,29 @@ export async function runReportExportBuild(
           targetLocator: { dimension: template.scopeDimension, value: null },
         });
       }
+      // ⭐ Story 10.28 (D4) — the resolved scope carries N nodes, so the match is set MEMBERSHIP and
+      // the FIRST hit is recorded. ⚠ [Review fix] `resolveActorReportScope` sorting `values` does NOT
+      // order `grants` — `role_grants` is loaded with no `ORDER BY`, so Postgres row order is
+      // unspecified. Sort `grants` locally (same key as D1(ii): `scopeValue`, then `role` as a full
+      // tiebreak) so "first hit" is actually deterministic, not merely labelled so.
+      // ⛔ `global` carries the EMPTY set and its grants carry a null `scopeValue`, so the empty set
+      // matches the null-valued grant exactly as the pre-10.28 equality did.
+      // ⚠ RESIDUAL, RECORDED NOT SOLVED: different roles at different nodes ⇒ ONE role recorded.
+      // Not a regression (today's code is ambiguous with LESS determinism); `deferred-work.md`, no
+      // successor. ⛔ No audit column, no array field, no second audit line.
       auditActorRole =
-        grants.find(
-          (g) => g.scopeDimension === resolvedScope.dimension && g.scopeValue === resolvedScope.value,
-        )?.role ?? null;
+        [...grants]
+          .sort((a, b) =>
+            (a.scopeValue ?? '') === (b.scopeValue ?? '')
+              ? a.role.localeCompare(b.role)
+              : (a.scopeValue ?? '').localeCompare(b.scopeValue ?? ''),
+          )
+          .find((g) => {
+            if (g.scopeDimension !== resolvedScope.dimension) return false;
+            return resolvedScope.values.length > 0
+              ? g.scopeValue != null && resolvedScope.values.includes(g.scopeValue)
+              : g.scopeValue == null;
+          })?.role ?? null;
 
       // ⭐ SITE 10 (Story 1.18, AC3) — WIRED. The geo tree is re-loaded HERE, at build time, on the
       // same scoped client and in the same breath as the grants above.

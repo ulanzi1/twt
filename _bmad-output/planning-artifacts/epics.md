@@ -4209,6 +4209,40 @@ were dropped.
 5. **Composition with Story 1.18's ancestry is stated**: a state grant reaches districts beneath it, and
    multi-node + ancestry must not double-count a district reachable by both paths.
 
+> ✅ **SHIPPED 2026-08-13. Dispositions recorded BESIDE the minted ACs above, which are NOT edited**
+> ([[feedback_supersede_never_reinterpret]]). Ruled in Decision `2026-08-13-105` (D1–D7, Escalations 1–4).
+> ⚠ The AC line anchors (`scope.ts:73`, `reports.spec.ts:124`) were written at older heads and are
+> deliberately left as-authored — anchors are re-derived in the story file, never "fixed" inside minted text.
+>
+> · **AC1 — delivered as ruled (D1 arm A).** `value` was **replaced** by `values: readonly string[]`, not
+>   augmented, so all four read sites became compile errors. The broadest-dimension *pick* is unchanged
+>   (a `pariwar` grant still beats a `district` grant); what changed is that **ties at the winning
+>   dimension accumulate**. Deduped + sorted **at the producer** (D1(ii)). Invariant
+>   `dimension === 'global' ⇔ values.length === 0` pinned by unit test (D1(i)).
+> · **AC2 — delivered, with one branch UNREACHABLE and recorded as such.** Both templates emit
+>   `WHERE district IN (…)` via `sql.join` over parameterized values. ⚠ `contribution_rate_by_district`'s
+>   districts branch is **dead for every real holder** (`reconciliation.review` is pariwar-ceiling only);
+>   it was edited for **shape consistency** and its unreachability recorded **at the site**. ⛔ No grant
+>   was invented to make it demonstrable (Escalation 1) — `member-roster` carries the proof.
+> · **AC3 — delivered, and it is the story.** A live-DB two-grant test asserts **presence** of both
+>   districts (`ids.has(a1) && ids.has(a2) && ids.has(a3)`, `!ids.has(b1)`) through the real
+>   grants → `resolveActorReportScope` → `assembleReport` → SQL chain. ⭐ Proven **falsifiable**: it went
+>   **RED** against the restored strict-`<` implementation and **GREEN** after byte-verified restoration
+>   (Escalation 2, mandatory). ⛔ Membership, never counts.
+> · **AC4 — HALF was already discharged by Story 1.18, and saying so is the honest report.** 1.18's AC6
+>   performed the RBAC-vs-query reclassification in full and asserted it falsifiably. What 10.28 owed and
+>   delivered is narrower: the pin's stated **reason** — *"the types are SINGLE-VALUED"* — expired the
+>   moment AC1 landed, and was rewritten to the durable one (no actor holds a district-narrowable report
+>   key at a `state` ceiling). ⛔ The assertions are **byte-frozen**; the diff of that spec contains zero
+>   non-comment lines beyond the four mandatory `value`→`values` type migrations.
+> · **AC5 — delivered in two UNEQUAL halves, as ruled (D3, D7).** **(a) The de-duplication contract is
+>   BUILT AND PINNED** by a reachable test (two roles at one district — no ancestry required).
+>   **(b) The state→descendants arm is `deny`, "Closed by [edit]", with ⛔ NO SUCCESSOR MINTED** — on
+>   evidence, not preference: no role holds a district-narrowable report key at a `state` ceiling, so the
+>   branch has zero live consumers, zero backlog consumers and no FR. The composition **rule** is still
+>   stated in code, so whichever future story first grants such a key finds the de-dup contract already
+>   built. ⛔ This is **not** a deferral and must never be re-read as one.
+
 ---
 
 ## Epic 11a: Public Trust Identity Shell (parallel to Epic 3)

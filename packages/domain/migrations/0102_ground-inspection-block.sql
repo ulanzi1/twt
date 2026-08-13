@@ -1,0 +1,40 @@
+-- Migration 0102 — claim_ground_inspections.block (Story 6.17, Task 2; AC1).
+--
+-- ⚠ DO NOT REGENERATE with `db:generate` (same discipline as 0021–0101): the drizzle snapshot
+-- baseline is frozen at 0020, so a regenerate emits a bloated full-schema catch-up migration and
+-- can raise 42P07. This file is HAND-AUTHORED, carrying ONLY this one new column. No snapshot file
+-- is emitted.
+--
+-- ── WHAT THIS COLUMN IS ────────────────────────────────────────────────────────────────────────
+-- The ground-inspection ASSIGNMENT's block-level jurisdiction — the D2 authorization anchor when
+-- present (Decision `2026-08-13-104`). Structured, plaintext, NON-PII, exactly the `district`
+-- posture beside it. Supplied at schedule time and IMMUTABLE on reschedule (D3), byte-compared with
+-- NO normalization (the geo tree does not normalize either, and a module that case-folded while the
+-- tree did not would resolve `Bihar ⊇ patna` but not `Patna ⊇ patna` within one request).
+--
+-- ── ⭐ NULLABLE, AND THE NULLABILITY IS THE DESIGN — NOT A SOFT START ───────────────────────────
+-- Two reasons, either sufficient (Decision `2026-08-13-104`, D2):
+--   (a) Pre-6.17 rows CANNOT be backfilled. A NOT NULL add demands a value for every existing row
+--       and no honest value exists; inventing one is exactly the reconstruction
+--       [[feedback_record_unattested_no_backfill]] forbids. ⛔ Never backfill this column.
+--   (b) The gate dimension is a property of the ROW. `block IS NULL` ⇒ the assignment authorizes at
+--       `dimension: 'district'`, byte-identically to Story 6.7. `block IS NOT NULL` ⇒ it authorizes
+--       at `dimension: 'block'`. An UNCONDITIONAL block gate would revoke `district_admin` in every
+--       Pariwar that has published no geo tree — which, with no writer surface anywhere in the repo
+--       and no code default geography (ADR-0038), is EVERY Pariwar. It would ship as a total outage
+--       of the 6.7 surface.
+--
+-- ⇒ APPLYING THIS MIGRATION CHANGES NO AUTHORIZATION OUTCOME ANYWHERE. Every existing row is NULL,
+-- so every existing row keeps the district gate it already had. Behaviour changes only when an
+-- operator deliberately supplies a `block` on a schedule.
+--
+-- ── NO RLS CHANGE, NO INDEX, NO CONSTRAINT ─────────────────────────────────────────────────────
+-- · RLS: the existing tenant-isolation policies on `claim_ground_inspections` gate the ROW, not the
+--   column. Nothing to add (policies/claim-ground-inspections-rls.ts is unchanged).
+-- · Index: the block is read from an already-id-addressed row (the assignment resolver loads by
+--   ground_inspection_id) or filtered in memory by the AC5 read. It is never scanned.
+-- · Uniqueness: ⛔ NONE, deliberately — the table has NO active-uniqueness of any kind, because a
+--   claim may hold MANY assignments in the same district/block (corroboration, additional
+--   evidence). Jurisdiction is an AUTHORIZATION boundary, not an inspection identity.
+
+ALTER TABLE "claim_ground_inspections" ADD COLUMN "block" text;

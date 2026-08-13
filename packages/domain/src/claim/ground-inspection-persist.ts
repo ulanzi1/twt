@@ -136,6 +136,32 @@ export class GroundInspectionDistrictImmutableError extends Error {
   }
 }
 
+/** Thrown when a reschedule would move the assignment to a DIFFERENT block (Story 6.17, D3). The
+ *  SIBLING of the district guard above, and a sibling on purpose: ⛔ the existing
+ *  `GroundInspectionDistrictImmutableError` is NOT generalized, because the `ground_inspection.
+ *  district_immutable` code literal is asserted in tests and mapped in the handler — its contract
+ *  stays byte-identical.
+ *
+ *  The reasoning is identical to the district's, and so is the hazard: when the row carries a block,
+ *  the permission gate resolves from THAT block (`dimension: 'block'`), so allowing it to change
+ *  would mint a replacement in a node the actor was never checked against — cross-node authz
+ *  escalation. ⚠ It also covers the null↔non-null transitions in both directions, which are the
+ *  sharper cases: adding a block would move a legacy row from the district gate to the block gate,
+ *  and clearing one would move a block-tagged row BACK to the district gate — a silent re-gating
+ *  either way. A different block (or a different gate) is a NEW schedule, not a reschedule. */
+export class GroundInspectionBlockImmutableError extends Error {
+  constructor(
+    public readonly groundInspectionId: string,
+    public readonly currentBlock: string | null,
+    public readonly requestedBlock: string | null,
+  ) {
+    super(
+      `[ground-inspection] a reschedule cannot change block (${currentBlock ?? 'none'} → ${requestedBlock ?? 'none'}) for ${groundInspectionId}`,
+    );
+    this.name = 'GroundInspectionBlockImmutableError';
+  }
+}
+
 /** Thrown when a schedule/reschedule Idempotency-Key is replayed with a DIFFERENT material payload
  *  (review #3). The key binds `scoped_key → assignment_id`; silently returning the original on a
  *  changed district/inspector/stage/site/time would discard the operator's correction as a no-op. */
@@ -284,25 +310,31 @@ function assertIdempotentReplayMatches(
   bound: ClaimGroundInspectionRow,
   input: {
     district: string;
+    /** Story 6.17 — `undefined` and `null` both mean "no block" (a legacy-shaped request). */
+    block?: string | null;
     inspectionStage: GroundInspectionStage;
     inspectionSiteType: GroundInspectionSiteType;
     inspectorActorId: string;
     scheduledAt: Date;
   },
 ): void {
-  const mismatch =
-    bound.district !== input.district
-      ? 'district'
-      : bound.inspectionStage !== input.inspectionStage
-        ? 'inspection stage'
-        : bound.inspectionSiteType !== input.inspectionSiteType
-          ? 'inspection site type'
-          : bound.inspectorActorId !== input.inspectorActorId
-            ? 'inspector'
-            : bound.scheduledAt.getTime() !== input.scheduledAt.getTime()
-              ? 'scheduled time'
-              : null;
-  if (mismatch) throw new GroundInspectionIdempotencyMismatchError(bound.groundInspectionId, mismatch);
+  // (review fix, code review 2026-08-13) Collect EVERY mismatched field, not just the first — a
+  // ternary chain that stops at `district` silently drops a simultaneous `block` mismatch from the
+  // response detail, which is the one case (both fields changed in the same replay) an operator most
+  // needs surfaced. `?? null` folds `undefined` into `null` so an omitted block matches a NULL row
+  // rather than mismatching it.
+  const mismatched: string[] = [];
+  if (bound.district !== input.district) mismatched.push('district');
+  // Story 6.17 — WITHOUT this arm, a retry carrying a DIFFERENT block silently returns the first
+  // assignment and the operator's correction is discarded as a no-op.
+  if (bound.block !== (input.block ?? null)) mismatched.push('block');
+  if (bound.inspectionStage !== input.inspectionStage) mismatched.push('inspection stage');
+  if (bound.inspectionSiteType !== input.inspectionSiteType) mismatched.push('inspection site type');
+  if (bound.inspectorActorId !== input.inspectorActorId) mismatched.push('inspector');
+  if (bound.scheduledAt.getTime() !== input.scheduledAt.getTime()) mismatched.push('scheduled time');
+  if (mismatched.length > 0) {
+    throw new GroundInspectionIdempotencyMismatchError(bound.groundInspectionId, mismatched.join(', '));
+  }
 }
 
 // ── Public writers ────────────────────────────────────────────────────────────
@@ -312,6 +344,14 @@ export interface ScheduleGroundInspectionInput {
   pariwarId: PariwarId;
   /** The assignment's jurisdiction — the D6 authz anchor (non-PII plaintext, from the request body). */
   district: string;
+  /**
+   * Story 6.17 — the assignment's BLOCK-level jurisdiction. OPTIONAL, and the optionality IS the
+   * design: omitted/null ⇒ the assignment authorizes at `dimension: 'district'` exactly as it did
+   * before this story; supplied ⇒ it authorizes at `dimension: 'block'`, which admits both FR-40
+   * actors (block_admin by exact node, district_admin by district→block ancestry).
+   * ⛔ Stored BYTE-AS-SUPPLIED — no trim, no case-fold (the geo tree does not normalize either).
+   */
+  block?: string | null;
   inspectionStage: GroundInspectionStage;
   inspectionSiteType: GroundInspectionSiteType;
   /** The assigned inspector (an actor id). */
@@ -376,6 +416,7 @@ export async function scheduleGroundInspection(
       claimCaseId: input.claimCaseId,
       pariwarId: input.pariwarId,
       district: input.district,
+      block: input.block ?? null,
       inspectionStage: input.inspectionStage,
       inspectionSiteType: input.inspectionSiteType,
       inspectorActorId: input.inspectorActorId,
@@ -407,6 +448,7 @@ export async function scheduleGroundInspection(
       actor: 'operator',
       ground_inspection_id: gid,
       district: input.district,
+      block: input.block ?? null,
       inspector_actor_id: input.inspectorActorId,
       scheduled_at: input.scheduledAt.toISOString(),
       supersedes_ground_inspection_id: null,
@@ -426,6 +468,8 @@ export interface RescheduleGroundInspectionInput {
   /** The replacement's attributes — MAY reassign a different inspector (D6 — reschedule is a
    *  district-AUTHORITY op, not an evidence-authoring one; no inspector guard). */
   district: string;
+  /** Story 6.17 — MUST equal the target's block (immutable, D3); enforced under the row lock. */
+  block?: string | null;
   inspectionStage: GroundInspectionStage;
   inspectionSiteType: GroundInspectionSiteType;
   inspectorActorId: string;
@@ -479,6 +523,15 @@ export async function rescheduleGroundInspection(
     throw new GroundInspectionDistrictImmutableError(input.groundInspectionId, target.district, input.district);
   }
 
+  // (Story 6.17, D3) The identical rule one level down, and a SEPARATE error on purpose. When the
+  // row carries a block the gate resolved from THAT block, so a replacement in a different block was
+  // never authorization-checked. ⚠ This also catches the null↔non-null transitions, which silently
+  // re-gate the assignment (adding a block moves it from the district gate to the block gate;
+  // clearing one moves it back) — both are new schedules, not reschedules.
+  if ((input.block ?? null) !== target.block) {
+    throw new GroundInspectionBlockImmutableError(input.groundInspectionId, target.block, input.block ?? null);
+  }
+
   const claimRow = await assertClaimInVerification(db, input.pariwarId, target.claimCaseId);
 
   await db
@@ -498,6 +551,7 @@ export async function rescheduleGroundInspection(
       claimCaseId: target.claimCaseId,
       pariwarId: input.pariwarId,
       district: input.district,
+      block: input.block ?? null,
       inspectionStage: input.inspectionStage,
       inspectionSiteType: input.inspectionSiteType,
       inspectorActorId: input.inspectorActorId,
@@ -528,6 +582,7 @@ export async function rescheduleGroundInspection(
       actor: 'operator',
       ground_inspection_id: replacementGid,
       district: input.district,
+      block: input.block ?? null,
       inspector_actor_id: input.inspectorActorId,
       scheduled_at: input.scheduledAt.toISOString(),
       supersedes_ground_inspection_id: input.groundInspectionId,

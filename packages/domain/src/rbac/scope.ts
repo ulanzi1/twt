@@ -103,8 +103,18 @@ const CEILING_RANK: Record<ScopeDimension, number> = {
 //
 // ✅ WHERE A RESOLVER GENUINELY IS THE FIX (Family B) the sites say so and name **Story 1.18 — Geo-Tree
 // Scope Resolver**: grant and target in the same tree with the target strictly NARROWER
-// (`state`→`district`, `block`→`district` ancestry). Those are real deferrals. `denyDeeperGeoResolver`
+// (`state`→`district`, `district`→`block` ancestry). Those are real deferrals. `denyDeeperGeoResolver`
 // below is their fail-closed default.
+//
+// ⚠ CORRECTED at Story 6.17 (Decision `2026-08-13-104`, D7) — COMMENT-ONLY. That list previously read
+// "`block`→`district` ancestry", which is the EXACT INVERTED PREMISE the twelve lines above exist to
+// correct: a `block` grant reaching a `district` target is the target being BROADER, i.e. Family A,
+// denied at `tRank < gRank` before any resolver runs. Decision `2026-08-12-102` §5 ruled on that
+// inversion and rewrote it at `permissions.ts` and `roles.ts`, but it survived here. The genuine
+// Family-B ancestry is `district`→`block` — and it is the ancestry Story 6.17's block-dimension
+// ground-inspection gate actually uses (a `district_admin` reaching a block-tagged assignment).
+// ⛔ Nothing executable changed with this correction: `GEO_RANK`, `CEILING_RANK`, `scopeContains` and
+// the `GeoTreeResolver` interface are architectural freeze row 9 and are byte-unchanged.
 //
 // ✅ FOR MODERATION SPECIFICALLY, Story 10.18 IS the answer: the actor was never a `state_trustee`. It is
 // the `trustee_panel` — a **pariwar-ceiling** body constituted by Niyamavali §8.7 (Decision

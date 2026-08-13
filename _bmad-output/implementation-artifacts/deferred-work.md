@@ -1727,7 +1727,7 @@ Closure-language posture per [[feedback_closure_language_precision]]: engineerin
   
   **Residue, each Resolved via explicit deferral to a NAMED STORY that exists with acceptance criteria** (never an epic — that is what made this entry the worked example in the first place):
   · geo AUDIENCE selection (6 markers) → **Story 1.19** — needs a per-MEMBER geo attribute; a tree answers *"is Patna in Bihar"*, never *"which members are in Patna"*.
-  · the block-dimension ground-inspection gate → **Story 6.17**.
+  · the block-dimension ground-inspection gate → **Story 6.17** — ✅ **SHIPPED 2026-08-13, "Closed by [edit]"** ([[feedback_closure_language_precision]]). `claim_ground_inspections` gained a **nullable** `block` (migration `0102`), `block_admin` holds `claim.conduct_ground_inspection`, and the gate DIMENSION became a property of the ROW: block-tagged ⇒ `dimension: 'block'`, block-null ⇒ `dimension: 'district'` byte-identically to 6.7 (Decision `2026-08-13-104`). ⭐ **The rank-order pin did not move and no resolver was changed** — the fix was a different GATE, which is what this line always said it would be. ⚠ The `district_admin`-by-ancestry half is **DECLARED, NOT PRODUCTION-ACTIVE**: no surface publishes a geo tree, so it is provable by test and unreachable by a real operator (recorded with its own re-trigger in the Story 6.17 section below).
   · multi-node report scope → **Story 10.28** (see `:3432` below).
   · the trustee-DIRECTORY half of `pool/fixed-amount.ts` → **Story 10.13** (existing; no mint).
   · `self` targets (`scope.ts`) → **"Closed by [edit]", NO successor** — zero live consumers, zero backlog consumers, no FR; the comment misdescribed a deliberate design choice.
@@ -4312,7 +4312,7 @@ before anything pointed at it.
 | Re-deferral | Model it extends | Owner | Status |
 |---|---|---|---|
 | Geo **audience** selection (markers D6, D7, D8, D14, D15, D16) | member→geo attribution over Story 1.18's tree | **Story 1.19** — `1-19-member-geo-attribution-geo-audience-consumer` | **MINTED**, Epic 1, `backlog`, 8 ACs |
-| Block-dimension **ground-inspection gate** (D2's honest path) | Story 6.7's ground-inspection gate (FR-40) | **Story 6.17** — `6-17-block-dimension-ground-inspection-gate` | **MINTED**, Epic 6, `backlog`, 5 ACs |
+| Block-dimension **ground-inspection gate** (D2's honest path) | Story 6.7's ground-inspection gate (FR-40) | **Story 6.17** — `6-17-block-dimension-ground-inspection-gate` | ✅ **SHIPPED 2026-08-13** (was: MINTED, Epic 6, `backlog`, 5 ACs) — Decision `2026-08-13-104` |
 | **Multi-node report scope** (marker D2 / `reports/scope.ts:71` / `:3432` below) | Story 10.7's `ResolvedReportScope` | **Story 10.28** — `10-28-multi-node-report-scope` | **MINTED**, Epic 10, `backlog`, 5 ACs |
 
 ⚠ **Two of the three land in retrospected epics** (Epic 6 `done`, Epic 10 `optional`). That is the *same
@@ -4457,6 +4457,15 @@ the un-mechanized half*). So it is written into **both successors' OWN `epics.md
   primitive; what it lacked is the governance-boundary half. ⚠ AC1 offers a **genuine either/or**, so the
   obligation binds **only on the derive-via-1.19 arm** — a new `claim_ground_inspections` column does not
   carry it.
+  ✅ **EVALUATED 2026-08-13 — DID NOT FIRE. Discharged, not pending** (Decision `2026-08-13-104`, D9).
+  AC1 resolved to the **column** arm, on evidence rather than preference: `liftDistrictThroughTree` types
+  `block` PERMANENTLY absent (`no-member-attribute`), no member block attribute exists at any layer, and
+  even if one did it would be the **wrong value** — an inspection's jurisdiction is the SITE's, not the
+  member's. ⇒ no authorization consumer of `resolveMemberGeoNode` was created, `governance_boundary.yaml`
+  is **untouched**, and the non-firing is recorded at `member-geo/index.ts` as well as here.
+  ⚠ **A passing `governance-boundary` run proved nothing about this** — the root is unlisted, so the scan
+  was always going to be green ([[feedback_gate_scope_semantic_coverage]]).
+  ⇒ **Story 10.4 is now the SOLE standing trigger.**
 - **Story 10.4** (`epics.md`, §Helpdesk Admin Console) — ⛔ its section mentioned the geo obligation
   **nowhere**; the seam existed solely as a code comment
   (`apps/api/src/modules/helpdesk/handlers.ts:10-15`), which is the invisible-inherited-deferral shape in
@@ -4501,3 +4510,72 @@ discharges nothing* — which is why it is recorded here rather than inferred.
   the only write path (`POST /member/life-events/posting`) already enforces non-empty via
   `z.string().trim().min(1)` at the contract boundary, so this is a theoretical defense-in-depth gap,
   pre-existing to this diff (schema unchanged by Story 1.19).
+
+---
+
+## Deferred from: 6-17-block-dimension-ground-inspection-gate — the Escalation 4 deferral (2026-08-13)
+
+**Recorded BEFORE implementation, deliberately** ([[feedback_governance_commits_precede_implementation]]).
+This section is the governance half of Story 6.17. It records the ONE thing the story ruled out of its own
+scope, with a named-story owner, so the deferral does not live only in a story file — where it would decay
+([[feedback_mechanization_split_commitment]]). Ruled by BigDev on 2026-08-13 and entered as Decision
+`2026-08-13-104` (Escalation 4).
+
+### The verifier-console contract stays **district-only** — **Resolved via explicit deferral**
+
+⛔ The ruling, **verbatim**:
+
+> **The verifier-console contract remains district-only for this story. The first block-tagged assignment
+> reaching the verifier console re-triggers Story 6.10's surface for a reviewed contract widening.**
+
+**What is true today.** `packages/contracts/src/claims/verifier-console.ts` types each ground-inspection
+entry as `{ groundInspectionId, district, … }`. Story 6.17 adds a **nullable `block`** to
+`claim_ground_inspections` and gates the conduct key at `dimension: 'block'` **for block-tagged rows only**
+(Decision `2026-08-13-104`, D2). Adding the column **breaks nothing** on the console — but from this story
+on, a verifier reading the console can see a **district-only** description of an assignment whose actual
+jurisdiction is a **block**. That is an incomplete signal on the very surface FR-40 exists to feed.
+
+**Why it is NOT taken here.** Widening a `@twt/contracts` read shape is **Story 6.10's** surface and a
+separate reviewed change. Taking it inside Story 6.17 would grow the story from *"re-gate one action"* into
+*"re-shape the verifier console"*. ⛔ Do **not** quietly add the field to the contract "while we are here".
+
+**Owner: `Story 6.10 — Verifier Console Signals Panel`** (`6-10-verifier-console-signals-panel-cross-pariwar-scope-handling`,
+`done`). ⛔ The re-trigger names a **STORY**, never an epic ([[project_r7_fact_producer_unbuilt]]:
+*a deferral naming an EPIC expires unowned*).
+
+**Re-trigger:** *the first **block-tagged** assignment reaching the verifier console.* ⚠ That instant is
+**not** the moment this story ships — it is gated behind an operator actually supplying a `block` on a
+schedule, which in turn is gated behind their Pariwar having a published geo tree if any `district_admin`
+is to reach the row by ancestry. See the standing item below.
+
+### ⚠ Companion status, recorded so a later reader does not misread the capability as live
+
+**AC3's ancestry path is `DECLARED, NOT PRODUCTION-ACTIVE`** — the `wa_cost_optimization` /
+`kyc_provider_selection` posture. `geo_tree_versions` has a domain writer (`geoTree.createGeoTreeVersion`)
+and **no route**: Decision `2026-08-12-102` §7 — *"No writer surface ships with Story 1.18."* Verified at
+`ba52ba0`: no `apps/api` route references `geoTree` beyond the per-request loader. So
+`district_admin`-reaches-a-block-row-by-ancestry is **provable by test and unreachable by a real operator**
+until a publishing surface ships. ⛔ Do not label AC3 "live". **Re-trigger:** *the first surface that
+publishes a geo tree.* ⛔ No story is minted from inside Story 6.17 — mints are governance acts taken at
+their owning story ([[feedback_governance_commits_precede_implementation]]).
+
+---
+
+## Deferred from: code review of 6-17-block-dimension-ground-inspection-gate (2026-08-13)
+
+- **No write-time validation that a schedule-time `(district, block)` pair corresponds to a real edge in any
+  published geo tree** — an operator (including a `block_admin`) can store an arbitrary, unrelated
+  `(district, block)` combination and it persists verbatim; the ancestry check only ever runs later, for a
+  *different* actor's read/act authorization, never for the pair's own data integrity. Mirrors `district`'s
+  own pre-existing unvalidated posture — not a regression introduced by this story.
+  [`apps/api/src/modules/claims/claims.ground-inspection.routes.ts`, `ScheduleBody`]
+- **`district` stays hard-required on schedule even for pure block-dimension actors**, and the admin UI's
+  `defaultDistrict` prefill is empty when scope was loaded by block — a `block_admin` scheduling a new
+  inspection has no lookup aid for which district value to supply, since no tree-browsing surface exists
+  anywhere (Escalation 2). A real UX gap, but outside this story's "absorb minimally, no redesign" mandate.
+  [`apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`]
+- **`GroundInspectionBlockImmutableError`'s 409 echoes `err.currentBlock`** back to the caller on a failed
+  reschedule. Lower severity than the read-route gap found in the same review: the caller already passed the
+  per-row conduct gate to reach this endpoint, so this mirrors the existing `district_immutable` sibling's
+  own posture rather than introducing a new authorization-boundary leak.
+  [`packages/domain/src/claim/ground-inspection-persist.ts`]

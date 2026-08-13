@@ -99,6 +99,24 @@ export interface RequirePermissionOptions {
   /** The scope dimension the action is required at. Default: `pariwar`. */
   dimension?: rbac.ScopeDimension;
   /**
+   * Story 6.17 — resolve the scope DIMENSION per request, when it is a property of the RESOURCE
+   * rather than of the route. Takes precedence over `dimension` when supplied.
+   *
+   * ⚠ WHY THIS EXISTS, stated so it is not mistaken for redundancy: `dimension` is read ONCE, at
+   * hook-CONSTRUCTION time (below), unlike `resolveValue`, which correctly re-runs per request
+   * inside the returned closure. That is fine for every gate whose dimension is fixed by the route
+   * — which was every gate until Story 6.17. Ground-inspection assignments, though, vary
+   * block-tagged vs. legacy district-only **row by row under one route registration**
+   * (Decision `2026-08-13-104`, D2), so a hook built once at startup can never flip to `'district'`
+   * for a legacy row. Rather than special-case that route with an inline factory call, the dimension
+   * simply joins the value in being resolved INSIDE the closure.
+   *
+   * ⛔ SYNCHRONOUS, like `resolveValue`, and for the same reason: `rbac.hasPermission` is a pure
+   * predicate (ADR-0008 Decision 8). Resolve from data an earlier preHandler already stashed on the
+   * request; ⛔ never query here.
+   */
+  resolveDimension?: (request: FastifyRequest) => rbac.ScopeDimension;
+  /**
    * Resolve the concrete target node from the request. Default: the active
    * `pariwarId` (a pariwar-wide action). Geo/self actions pass a custom resolver.
    */
@@ -115,7 +133,7 @@ export function requirePermissionHook(
   key: string,
   opts: RequirePermissionOptions = {},
 ): preHandlerHookHandler {
-  const dimension = opts.dimension ?? 'pariwar';
+  const fixedDimension = opts.dimension ?? 'pariwar';
   return async function preHandler(request: FastifyRequest): Promise<void> {
     const scopeTx = request.scopeTx;
     const actorId = request.requestContext.actorId;
@@ -125,6 +143,9 @@ export function requirePermissionHook(
       throw new Error('[rbac] requirePermission ran without session + scope-resolution');
     }
     const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
+    // Both resolved INSIDE the closure, per request (Story 6.17). `resolveDimension` is absent for
+    // every caller but the ground-inspection gate, which falls back to the construction-time value.
+    const dimension = opts.resolveDimension ? opts.resolveDimension(request) : fixedDimension;
     const value = opts.resolveValue ? opts.resolveValue(request) : scopeTx.pariwarId;
 
     rbac.requirePermission(

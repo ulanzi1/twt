@@ -322,17 +322,29 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
-  it('Story 6.7 — claim.conduct_ground_inspection is granted to district_admin (+ super_admin); block_admin DEFERRED', () => {
+  it('Story 6.17 — claim.conduct_ground_inspection is granted to block_admin AND district_admin (+ super_admin)', () => {
     const KEY = 'claim.conduct_ground_inspection';
     const holders = defaultRoleBundles
       .filter((b) => (b.permissions as readonly string[]).includes(KEY))
       .map((b) => b.role)
       .sort();
-    // D1 reconciliation: district_admin only in v1 (+ super_admin, full catalog). block_admin is
-    // DEFERRED — a block-scoped grant cannot satisfy the D6 dimension:'district' gate under the
-    // current scope model (see check.test.ts for the pinning assertion + roles.ts for the rationale).
-    expect(holders).toEqual(['district_admin', 'super_admin']);
-    expect((bundleForRole('block_admin')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    // ⚠ THIS IS THE v1-DEFERRAL PIN, AND IT MOVES. Do NOT confuse it with the RANK-ORDER pin in
+    // check.test.ts, which is byte-frozen and stays green (a BLOCK grant can never satisfy a
+    // DISTRICT-dimension check — still true, and Story 6.17 routed around it rather than lifting it).
+    //
+    // Story 6.7 shipped `district_admin` only and recorded block_admin DEFERRED, on the reasoning
+    // that a block-scoped grant cannot satisfy the D6 `dimension: 'district'` gate. That reasoning
+    // was correct about the GATE and wrong about the CONCLUSION: the fix was never a resolver, it
+    // was a different gate. Story 6.17 made the authorization DIMENSION a property of the ROW —
+    // a block-tagged assignment (`claim_ground_inspections.block != null`) is checked at
+    // `dimension: 'block'`, which authorizes block_admin by EXACT-NODE match and district_admin by
+    // district→block ANCESTRY; a legacy row (`block == null`) is still checked at
+    // `dimension: 'district'`. See roles.ts / permissions.ts and Decision `2026-08-13-104`.
+    // ⛔ block_admin's scopeCeiling stays 'block' — no district-scoped grant is issued to it.
+    expect(holders).toEqual(['block_admin', 'district_admin', 'super_admin']);
+    expect((bundleForRole('block_admin')?.permissions as readonly string[]).includes(KEY)).toBe(true);
+    // The ceiling is the other half of AC2 — granting the key must not have widened the role's scope.
+    expect(bundleForRole('block_admin')?.scopeCeiling).toBe('block');
     // NOT the verifier/trustee/pariwar APPROVE roles, and NOT field_worker (deferred to Epic 12).
     for (const role of ['pariwar_admin', 'state_trustee', 'verifier', 'field_worker', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);

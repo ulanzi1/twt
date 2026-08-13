@@ -81,8 +81,15 @@ export async function getClaimGroundInspection(
 
 /**
  * A single assignment (with photos) by id, tenant-scoped — the point read the route uses to
- * resolve the assignment's `district` for the D6 permission gate + the inspector guard. Returns
- * `null` when no such assignment exists in this Pariwar.
+ * resolve the assignment's AUTHORIZATION LOCATOR for the permission gate + the inspector guard.
+ * Returns `null` when no such assignment exists in this Pariwar.
+ *
+ * ⚠ Story 6.17 widened what "the locator" means, and the widening is the reason this comment moved
+ * off the word `district`: the gate DIMENSION is a property of the ROW. A row with a non-null
+ * `block` is checked at `dimension: 'block'` against that block; a row with `block == null` is
+ * checked at `dimension: 'district'` against its district, exactly as before. The route's
+ * dimension-selecting hook reads BOTH fields off the row this accessor stashes — so the shape did
+ * not change, only the number of columns the caller consults.
  */
 export async function getGroundInspectionById(
   db: Db,

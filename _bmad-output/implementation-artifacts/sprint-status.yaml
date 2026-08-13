@@ -1,4 +1,185 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-13l (6-17-block-dimension-ground-inspection-gate: review -> done via
+#   bmad-code-review. Three parallel layers (Blind Hunter/no-context, Edge Case Hunter/repo-read,
+#   Acceptance Auditor/spec+decisions+AI-6-5 load-bearing-invariant lens) against main..HEAD
+#   (ba52ba0..f4352eb). 1 decision-needed (resolved -> patch: verify the governance-boundary
+#   scanner's actual mechanism against resolveDimension rather than trusting a green scan alone) +
+#   7 patch (all applied) + 3 defer (recorded in deferred-work.md, pre-existing/out-of-scope
+#   patterns) + 1 dismissed (migration-file verbosity).
+#   HEADLINE FINDING, independently corroborated by Blind Hunter AND Edge Case Hunter: the
+#   `GET .../ground-inspection` LIST route gated the REQUEST once at the query locator's dimension
+#   but filtered returned ROWS by raw `district ===` string match -- which a block-tagged row also
+#   satisfies (district stays populated on every row, D1). A plain district-dimension grant could
+#   read block-tagged rows (incl. decrypted Tier-1 PII) with ZERO resolver/tree check -- D6's
+#   "absence must deny, never widen" violated on the read path instead of the fallback hook everyone
+#   was watching. FIXED: each candidate row is now re-checked at ITS OWN dimension (rbac.hasPermission,
+#   the same blockAware rule applied per-row) before inclusion. Pinned by a NEW regression test
+#   (fallback-probe verified RED on the pre-fix handler, GREEN restored -- this story's own D6
+#   discipline turned on itself).
+#   Also fixed: 4 of 6 admin_ground_inspection.* audit contexts (findings_recorded/photo_uploaded/
+#   completed/refused) were missing `block` -- a Family #8 (audit-after-mutation & attribution) REAL
+#   GAP per the AI-6-5 lens, since D2 makes block the actual dimension these verbs were gated
+#   against; the idempotency-mismatch discriminator silently dropped a simultaneous block mismatch
+#   behind district (now reports all mismatched fields); the DAR's governance-boundary count read "9
+#   roots" against a live 13 (corrected, doesn't change the D9 conclusion); a duplicate accessible
+#   label ('Block (optional)' on two simultaneously-visible inputs) and an overpromising hint string
+#   (implying district-admin-by-ancestry is normally reachable when NO Pariwar can publish a tree in
+#   production) were both fixed on the admin UI.
+#   Verified post-patch: tsc --noEmit clean (api/domain/admin), admin lint clean, admin
+#   ground-inspection-page.test.tsx 9/9, live-DB apps/api ground-inspection.spec.ts 16/16 (14
+#   original + 2 new), live-DB packages/domain rbac/*+ground-inspection* 177/177.
+#   Findings written to the story file's Review Findings section; 3 deferred items also appended to
+#   deferred-work.md.
+#   FOLLOW-UP self-audit (same session, BigDev-requested): checked 3 specific claims live rather than
+#   from memory. resolveDimension backward-compat and event block/nullish historical-compat both
+#   checked out solid with no code change (verified against all ~35 requirePermissionHook call sites;
+#   verified via the PRE-EXISTING untouched ground-inspection-events.test.ts fixture). Found ONE real
+#   gap: D3's reschedule-immutable guard is symmetric-by-construction across all 3 block-transition
+#   directions (add/clear/move) but only 2 of 3 were test-pinned -- null->non-null (adding a block to
+#   a legacy row) had zero coverage. Added + fallback-probed (disabling BOTH the domain-writer AND
+#   the HTTP-handler's own fail-fast copy -- the handler's copy runs FIRST and a writer-only probe
+#   gave a false-negative, caught mid-session): RED with both disabled (silent 201 re-gating), GREEN
+#   restored. Story 6.17 Status: done.
+# last_updated: 2026-08-13k (6-17-block-dimension-ground-inspection-gate: ready-for-dev -> in-progress
+#   -> review via bmad-dev-story, branch feature/6-17-block-dimension-ground-inspection-gate off main
+#   @ ba52ba0 (origin/main confirmed equal before branching).
+#   GOVERNANCE COMMITTED FIRST (9e28fc4, ZERO files under packages/ or apps/): Decision
+#   2026-08-13-104 (head was 2026-08-13-103, verified not assumed) carrying D1-D9 + the four
+#   escalation dispositions, plus Escalation 4's deferral recorded VERBATIM in deferred-work.md with
+#   Story 6.10 as its named owner -- a deferral living only in a story file decays.
+#   IMPLEMENTATION: migration 0102 adds a NULLABLE claim_ground_inspections.block (hand-authored --
+#   drizzle snapshots are frozen at 0020, so db:generate would emit a 114 KB catch-up dump; the full
+#   0001->0102 chain was applied to a FRESH database and the column verified before dropping it).
+#   block_admin gains claim.conduct_ground_inspection with scopeCeiling UNCHANGED at 'block';
+#   PERMISSION_CATALOG_VERSION 31 -> 32 while keys STAYS 41 (the 10.18 rule: the catalog versions the
+#   CAPABILITY MODEL, and it must move when a new ROLE can hold an EXISTING key).
+#   ⭐ THE GATE DIMENSION IS NOW A PROPERTY OF THE ROW, not of the route. That required the one edit
+#   the story flagged as load-bearing: requirePermissionHook's `dimension` was captured ONCE at
+#   hook-construction time -- unlike resolveValue, which re-runs per request -- so a hook built at
+#   startup could never flip to 'district' for a legacy row under the same route registration. Added
+#   an ADDITIVE `resolveDimension` option read INSIDE the closure; every existing caller is
+#   byte-unaffected, and scopeResolutionHook / geoTreeResolverForRequest were NOT touched.
+#   ⛔ AC4 AND AC5 BOTH HELD, AND BOTH ARE PROVEN RATHER THAN ASSERTED. scope.ts: 11 insertions, 1
+#   deletion, ZERO non-comment diff lines (the D7 comment-only correction of the inverted Family-B
+#   premise). check.test.ts: the comment-stripped diff against HEAD is the single hunk 191a192,270 --
+#   a PURE ADDITION -- and the file has zero REMOVED non-comment lines anywhere, so the RANK-ORDER
+#   PIN's assertion body is byte-frozen. The DIFFERENT pin (roles.test.ts's v1-deferral holder set)
+#   moved, as AC2/AC3 require; the two are now explicitly distinguished in both comments.
+#   ⭐ THE D6 POLARITY PAIR SHIPS AS EXECUTABLE CONTROL, AND THE FALLBACK PROBE PROVES IT ISOLATES
+#   THE FORBIDDEN BEHAVIOUR. Both halves pass, named in the Dev Agent Record. Inserting the forbidden
+#   "if no tree, gate this block row at district" turned (a) RED with `expected 201 to be 403` --
+#   note the SHAPE: the fallback did not crash anything, it SILENTLY GRANTED the schedule, which is
+#   exactly what D6 exists to forbid and exactly what a naive not-200 assertion would have missed --
+#   while (b) stayed GREEN and nothing else moved. Two further revert probes DISCRIMINATE rather than
+#   merely fail: reverting the roles.ts grant reddens exactly 2 tests, and corrupting ONE tree edge
+#   reddens ONLY the ancestry test while the exact-node test stays green (the Story 1.18 AC8 design,
+#   repeated on purpose -- a revert that reddens everything proves presence, not discrimination).
+#   AC-INH EVALUATED AND DID NOT FIRE (D9). AC1 resolved to arm A on evidence -- the 1.19 primitive
+#   types `block` PERMANENTLY absent, no member block attribute exists at any layer, and even if one
+#   did it would be the WRONG VALUE because an inspection's jurisdiction is the SITE's, not the
+#   member's. So no authorization consumer of resolveMemberGeoNode was created,
+#   governance_boundary.yaml is UNTOUCHED, and the member-geo/index.ts bullet naming this story is
+#   REWRITTEN rather than deleted to record the non-firing (a deleted trigger is indistinguishable
+#   from a forgotten one). ⛔ The Dev Agent Record states plainly that the green governance-boundary
+#   run proves NOTHING there: member-geo is not among the gate's nine scanned roots, so the scan was
+#   always going to pass. Story 10.4 is now the SOLE standing trigger.
+#   Escalation 1 ABSORBED (optional Block input on both admin forms, block on the assignment card
+#   INCLUDING its absence rendered as "District level (no block)" rather than left blank, and the
+#   read sends whichever locator the operator actually supplied -- asserted in BOTH directions,
+#   because "the field renders" proves nothing on its own). Escalations 2/3/4 honoured by OMISSION
+#   THAT IS RECORDED: AC3's ancestry path is DECLARED, NOT PRODUCTION-ACTIVE (no surface publishes a
+#   geo tree anywhere in the repo, re-verified at this HEAD), no opportunistic claim.verify for
+#   block_admin, no claim.override_ground_inspection (D8), and verifier-console.ts is byte-unchanged.
+#   Verification at branch HEAD, every number a real local run: pnpm ci:local PASSED -- 30 jobs
+#   green; live-DB single pass @twt/domain 238 files / 2733 passed (+8 vs the pre-change baseline of
+#   2725) and @twt/api 115 files / 951 passed (+7 vs 944), DATABASE_URL scoped to the command and
+#   never exported; domain/api/admin lint clean; governance-boundary green. No unreproduced flake was
+#   observed in either pass.
+#   ⛔ epic-6-retrospective NOT flipped -- the placement is deliberate: a successor belongs to the
+#   epic that owns the model it extends. No other story status changed.)
+# last_updated: 2026-08-13j (6-17-block-dimension-ground-inspection-gate: D6's polarity carried into
+#   IMPLEMENTATION, status unchanged at ready-for-dev. BigDev: "Missing geo-tree data is a DENIAL
+#   condition, not a FALLBACK condition" -- and that must appear in the TEST, not merely in comments.
+#   Task 7 now opens with the D6 POLARITY PAIR: two named, mandatory, never-skippable integration
+#   assertions written BEFORE the happy paths.
+#   (a) "block assignment + NO resolvable tree -> access DENIED": non-NULL block, NO tree at all (not
+#   a tree missing one edge -- the resting state of every Pariwar), actor = a district_admin who WOULD
+#   pass under the legacy path so the tree's absence is the SOLE cause; expect a clean structured 403
+#   with an authz.denied emission -- ⛔ not a 404, not a 500, not a validation error, because a crash
+#   that happens to block access is not a deny and would pass a naive not-200 check; plus the
+#   with-a-tree companion proving the deny is about the TREE, not the block column.
+#   (b) "district assignment + existing district path -> behaviour UNCHANGED": block = NULL, no tree,
+#   right district -> 200 and wrong district -> 403, asserted against the EXISTING 6.7 expectations
+#   rather than re-derived ones (the claim is "unchanged", and a re-derived expectation can drift into
+#   agreeing with a regression).
+#   ⭐ The pair is non-negotiable AS A PAIR: (a) alone passes on a system that denies everything;
+#   (b) alone passes on a system that has silently re-widened. Revert-sanity gains the FALLBACK PROBE
+#   -- temporarily insert the forbidden "if no tree, gate this block row at district" and (a) must go
+#   RED while (b) stays GREEN; if (b) also reddens, the pair is not isolating the fallback and the
+#   story does not ship. Task 8 requires both halves NAMED in the Dev Agent Record with real output.
+#   No other story status changed.)
+# last_updated: 2026-08-13i (6-17-block-dimension-ground-inspection-gate: ALL RULINGS CLOSED, status
+#   unchanged at ready-for-dev. BigDev approved D1-D9 as recommended. D6 ruled in BigDev's own words:
+#   "No district fallback when the geo tree is absent. Absence must deny rather than widen
+#   authorization." D7 approved -- the scope.ts:106 stale-Family-B correction is COMMENT-ONLY with a
+#   zero-non-comment-diff proof, so the deferred-work.md branch is NOT taken.
+#   Escalations 1 (the apps/admin surface), 2 (AC3's ancestry path recorded DECLARED, NOT
+#   PRODUCTION-ACTIVE with its re-trigger) and 3 (the block_admin no-grant boundary) ABSORBED.
+#   ⏸ Escalation 4 DEFERRED, recorded verbatim: "The verifier-console contract remains district-only
+#   for this story. The first block-tagged assignment reaching the verifier console re-triggers Story
+#   6.10's surface for a reviewed contract widening." -- written into deferred-work.md AND the
+#   decision-log entry, because a deferral living only in a story file decays, and the re-trigger
+#   names a STORY, never an epic.
+#   ⭐ THE THREE TRAPS are hoisted to the top of the handoff, because each is the OBVIOUS reading of
+#   an AC and each breaks the system in a different direction: (1) block is never mandatory --
+#   pre-6.17 rows cannot be honestly backfilled; (2) block is never the universal gate -- NULL block
+#   means legacy district authorization, non-NULL block means block-dimension authorization, so the
+#   gate dimension is a property of the ROW; (3) block never falls back to district when the tree is
+#   absent -- a block row without a resolvable tree DENIES ancestry-based district access. Trap 3 is
+#   the dangerous one: it will arrive as a bug report and its "fix" is a grant-on-absence rule that
+#   makes absent data WIDEN authorization and publishing a tree NARROW it, inverting ADR-0038. It is
+#   pinned by a test for exactly that reason. Task 0 unblocked; no other story status changed.)
+# last_updated: 2026-08-13h (6-17-block-dimension-ground-inspection-gate: backlog -> ready-for-dev
+#   via bmad-create-story, off main @ ba52ba0. Saved 6-17-block-dimension-ground-inspection-gate.md.
+#   The Family-A correction Story 1.18's D2 minted (Decision 2026-08-12-102 section 5): FR-40's
+#   block-level actor needs a different GATE, not a resolver. epic-6-retrospective stays done.
+#   D1-D9 + Escalations 1-3 are PROPOSED and Task 0 is BLOCKING -- this story is an authorization
+#   boundary and a guessed ruling is a privilege change nobody attested.
+#   ⭐ THE LOAD-BEARING FINDING -- AC1's EITHER/OR HAS ONLY ONE LIVE ARM. "block is derived via
+#   Story 1.19's primitive" is STRUCTURALLY IMPOSSIBLE, on three independent lines: (a)
+#   liftDistrictThroughTree returns block = geoAbsent('no-member-attribute') UNCONDITIONALLY
+#   (member-geo/resolve.ts:124), ruled permanent by Decision 2026-08-13-103 D5 -- a posting supplies
+#   a DISTRICT, ancestry walks UP, block sits BELOW; (b) no member block attribute exists at any
+#   layer (member_postings carries district text NOT NULL and nothing else geographic); (c) even if
+#   it existed it is the WRONG VALUE -- the assignment's jurisdiction is the SITE's, not the
+#   member's (site types include workplace / school_or_office / incident_location), and district is
+#   already "supplied at schedule time" as the D6 authorization anchor. => AC1 resolves to arm A (a
+#   nullable block column, migration 0102). => THE INHERITED GOVERNANCE-BOUNDARY OBLIGATION DOES
+#   NOT BIND, by the epic's own terms. ⛔ But "does not bind" is not "nothing to do": the re-trigger
+#   comment at member-geo/index.ts:26-27 names Story 6.17 BY NUMBER, so D9 records the NON-FIRING
+#   there and in the decision log, leaving Story 10.4 as the sole standing trigger. A trigger left
+#   pointing at a shipped story reads as pending forever.
+#   ⛔ SECOND FINDING -- AN UNCONDITIONAL BLOCK GATE IS AN OUTAGE, not an implementation of AC2.
+#   Pre-6.17 rows have no block and cannot be honestly backfilled; and with dimension:'block' a
+#   district_admin grant falls through to resolver.contains, which denies wherever no tree is
+#   published -- i.e. EVERYWHERE, since there is no code default geography (ADR-0038) and Story 1.18
+#   shipped no writer surface. So D2 makes the gate dimension a property of the ROW: block != null
+#   -> checked at dimension:'block'; block == null -> checked at dimension:'district', byte-identical
+#   to today. D6 explicitly REJECTS the tempting "fall back to district when no tree" escape --
+#   grant-on-absence would make absent data WIDEN authorization and publishing a tree NARROW it.
+#   ⛔ THIRD FINDING -- scope.ts:106 still carries the inverted Family-B premise ("block->district
+#   ancestry ... those are real deferrals") that Decision 2026-08-12-102 section 5 corrected at
+#   permissions.ts and roles.ts but never here, twelve lines below the section-RANK-ORDER note that
+#   refutes it. D7 proposes a comment-only fix with a zero-non-comment-diff proof (AC5 freeze).
+#   ⚠ TWO PINS, AND THEY ARE NOT THE SAME PIN. AC4 freezes check.test.ts's rank-order ASSERTION
+#   (re-derived :192-224; the AC cites the drifted :184) -- comment updatable, body byte-frozen.
+#   roles.test.ts:325's "block_admin DEFERRED" holder-set pin is a v1-deferral pin and MUST move.
+#   D5 rules PERMISSION_CATALOG_VERSION 31 -> 32 with keys frozen at 41, applying Story 10.18's own
+#   written rule verbatim: the version tracks the CAPABILITY MODEL, and a role newly holding an
+#   existing key moves the model. Escalation 1 absorbs the apps/admin surface (a gate with no UI is
+#   the same inert grant one layer up); Escalation 2 records that AC3's ancestry path is DECLARED,
+#   NOT PRODUCTION-ACTIVE until a tree-publishing surface ships, with a named re-trigger and no mint
+#   taken from inside this story. No other story status changed.)
 # last_updated: 2026-08-13g (1-19-member-geo-attribution-geo-audience-consumer: review -> done via
 #   bmad-code-review. Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
 #   against the branch diff 9fa4e31...dc25916. Acceptance Auditor: ZERO AC/Decision/Escalation
@@ -5747,7 +5928,7 @@ development_status:
   # resolver is consulted, so NO org tree lifts it. The honest path for FR-40's block-level actor is
   # a DIFFERENT GATE, not a resolver: re-gate at dimension:'block', which authorizes block_admin by
   # exact-node AND district_admin by district->block ancestry through 1.18's resolver. Depends on 1.18.
-  6-17-block-dimension-ground-inspection-gate: backlog
+  6-17-block-dimension-ground-inspection-gate: done
   epic-6-retrospective: done
 
   # ==========================================================================

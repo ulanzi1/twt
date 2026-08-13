@@ -155,6 +155,14 @@ export const ClaimGroundInspectionScheduledPayloadSchema = requireIdentityTransi
   ground_inspection_id: z.string().uuid(),
   // The assignment's jurisdiction — the D6 authorization anchor. Non-PII bounded metadata.
   district: z.string().min(1),
+  // Story 6.17 — the assignment's BLOCK-level jurisdiction when it carries one, and the anchor the
+  // permission gate actually resolved against for that row. Non-PII bounded metadata, same class as
+  // `district`. ⚠ `.nullish()` rather than `.nullable()` ON PURPOSE: this shape also validates the
+  // events appended BEFORE Story 6.17, which carry no `block` key at all. The payload is `.strict()`,
+  // so an absent key must be legal or every historical event would fail replay.
+  // ⛔ Never backfilled onto a historical event ([[feedback_record_unattested_no_backfill]]) — an
+  // event is correct under the policy in force when it was written.
+  block: z.string().min(1).nullish(),
   // The assigned inspector (an actor id, not a name) — D6 threads it into the audit trail.
   inspector_actor_id: z.string().min(1),
   scheduled_at: z.string().datetime(),

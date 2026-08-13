@@ -280,8 +280,11 @@ export type AuthAuditEventType =
   // The schedule/reschedule/findings/complete/refusal/photo verbs on a ground-inspection
   // ASSIGNMENT. Post-commit SINK lines (NOT a same-tx DB write — the durable record is the
   // events_log event for schedule/complete + the assignment row state). Context is NON-PII:
-  // ground_inspection_id + claim_case_id + district + inspector_actor_id (+ override actor,
-  // photo_count, disposition/refusal_reason) — NEVER the encrypted location/contact/notes/caption.
+  // ground_inspection_id + claim_case_id + district + block (Story 6.17 — the block-level
+  // authorization anchor when the assignment carries one; NON-PII, the same class as `district`
+  // per the schema's PII-discipline note, and null on a legacy district-only assignment) +
+  // inspector_actor_id (+ override actor, photo_count, disposition/refusal_reason) — NEVER the
+  // encrypted location/contact/notes/caption.
   | 'admin_ground_inspection.scheduled'
   | 'admin_ground_inspection.rescheduled'
   | 'admin_ground_inspection.findings_recorded'

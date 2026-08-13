@@ -198,7 +198,7 @@ describe('hasPermission — Story 6.7 ground-inspection district gate', () => {
     //
     //   GEO_RANK: state 2 < district 3 < block 4  (lower = BROADER)
     //   grant {block,'Block-1'} → gRank 4;  target {district,'Patna'} → tRank 3
-    //   scope.ts:232  `if (tRank < gRank) return false`  →  3 < 4  →  DENIED, before any resolver.
+    //   `if (tRank < gRank) return false`  →  3 < 4  →  DENIED, before any resolver runs.
     //
     // The parent district is BROADER than the block grant, not narrower. A resolver answers "is X
     // beneath Y" and can only ever narrow; this needs the opposite. Story 10.18 placed this in
@@ -206,13 +206,25 @@ describe('hasPermission — Story 6.7 ground-inspection district gate', () => {
     // strictly narrower" — the target is the PARENT, hence broader, so the premise was inverted.
     // See `rbac/scope.ts` §RANK-ORDER for the canonical explanation.
     //
-    // ⇒ The assertion below STANDS EXACTLY AS WRITTEN and must keep passing forever. Story 1.18
-    // changed only this comment. The honest path for FR-40's block-level actor is a DIFFERENT GATE
-    // (re-gate at `dimension: 'block'`, which authorizes block_admin by exact-node AND
-    // district_admin by district→block ancestry) — that is **Story 6.17**, not a resolver deferral.
+    // ⇒ The assertion below STANDS EXACTLY AS WRITTEN and must keep passing forever.
     //
-    // This is also WHY block_admin is not granted claim.conduct_ground_inspection in v1 (roles.ts D1
-    // reconciliation): granting the conduct key to block_admin is inert under the district gate.
+    // ── ✅ STORY 6.17 SHIPPED, AND THIS PIN DID NOT MOVE. THAT IS THE POINT. ──────────────────────
+    // The honest path for FR-40's block-level actor was always a DIFFERENT GATE, not a resolver and
+    // not a weaker pin. Story 6.17 delivered it (Decision `2026-08-13-104`) by making the
+    // authorization DIMENSION a property of the ROW rather than of the route:
+    //   · `claim_ground_inspections` gained a NULLABLE `block` (migration `0102`);
+    //   · a block-tagged assignment is checked at `dimension: 'block'`, which authorizes block_admin
+    //     by EXACT-NODE match and district_admin by district→block ANCESTRY (gRank 3 < tRank 4 →
+    //     the Story 1.18 resolver, which narrows — the direction it actually points);
+    //   · a legacy row (`block == null`) is still checked at `dimension: 'district'`, byte-identically.
+    // ⭐ NOTHING ABOVE CONTRADICTS THIS PIN. A block grant against a DISTRICT target is still denied
+    // at `tRank < gRank`, forever. 6.17 ROUTED AROUND the pin by changing the TARGET's dimension; it
+    // did not lift, weaken or re-target the assertion. ⛔ If a future story finds this pin
+    // inconvenient, the answer is another gate — never an edit here.
+    // ⛔ block_admin now DOES hold claim.conduct_ground_inspection (roles.ts), and that grant is NOT
+    // inert: it resolves by exact-node against a block-dimension target. The v1-deferral pin that
+    // asserted the opposite lives in roles.test.ts and MOVED with 6.17 — a DIFFERENT pin from this
+    // one, and the distinction matters.
     const grants: EffectiveGrant[] = [
       { pariwarId: PARIWAR_A, role: 'block_admin', scopeDimension: 'block', scopeValue: 'Block-1' },
     ];
@@ -231,6 +243,110 @@ describe('hasPermission — Story 6.7 ground-inspection district gate', () => {
       { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
     ];
     expect(hasPermission(districtAdmin, 'claim.override_ground_inspection', resource())).toBe(false);
+  });
+});
+
+// ── Story 6.17 — the BLOCK-dimension ground-inspection gate ───────────────────
+//
+// ⛔ A SEPARATE `describe` ON PURPOSE. The Story 6.7 block above contains the RANK-ORDER PIN, whose
+// assertion is byte-frozen (AC4). These are the NEW behaviours: a block-DIMENSION target, which the
+// rank-order pin says nothing about because it only ever asks about a DISTRICT-dimension target.
+//
+// ⭐ The whole story in one line: a block-tagged assignment authorizes BOTH FR-40 actors —
+// `block_admin` by EXACT-NODE match (gRank === tRank → value compare), and `district_admin` by
+// district→block ANCESTRY (gRank 3 < tRank 4 → the resolver, which narrows). A resolver can only
+// ever narrow; this is the direction it points.
+
+describe('hasPermission — Story 6.17 block-dimension ground-inspection gate', () => {
+  /** A block-dimension target: the shape a block-TAGGED assignment resolves to. */
+  const blockTarget = (value: string): ResourceLocator => ({
+    dimension: 'block',
+    value,
+    pariwarId: PARIWAR_A,
+  });
+
+  /** A tree publishing `Block-1 ∈ Patna` — the AC3 ancestry edge. Nothing else resolves. */
+  const PATNA_HAS_BLOCK1: GeoTreeResolver = {
+    contains: (ancestor, descendant) =>
+      ancestor.dimension === 'district' &&
+      ancestor.value === 'Patna' &&
+      descendant.dimension === 'block' &&
+      descendant.value === 'Block-1',
+  };
+
+  /** A tree publishing `Block-1 ∈ Vaishali` — a DIFFERENT parent. Used to prove the ancestry test
+   *  discriminates the EDGE, not merely the PRESENCE of a resolver (the Story 1.18 AC8 design). */
+  const VAISHALI_HAS_BLOCK1: GeoTreeResolver = {
+    contains: (ancestor, descendant) =>
+      ancestor.dimension === 'district' &&
+      ancestor.value === 'Vaishali' &&
+      descendant.dimension === 'block' &&
+      descendant.value === 'Block-1',
+  };
+
+  const blockAdmin: EffectiveGrant[] = [
+    { pariwarId: PARIWAR_A, role: 'block_admin', scopeDimension: 'block', scopeValue: 'Block-1' },
+  ];
+  const districtAdminPatna: EffectiveGrant[] = [
+    { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+  ];
+
+  it('block_admin@Block-1 ALLOWS claim.conduct_ground_inspection on a Block-1 assignment (exact node)', () => {
+    // The grant this story shipped, resolving by exact-node match — NO resolver involved at all.
+    // ⭐ This is why the fix was a gate and not a resolver: the block admin never needed one.
+    expect(hasPermission(blockAdmin, 'claim.conduct_ground_inspection', blockTarget('Block-1'))).toBe(true);
+  });
+
+  it('block_admin@Block-1 is DENIED on a Block-2 assignment (exact-node mismatch, the Anita/Patna-vs-Vaishali rule)', () => {
+    expect(hasPermission(blockAdmin, 'claim.conduct_ground_inspection', blockTarget('Block-2'))).toBe(false);
+    // ⛔ And a resolver does not rescue it: same-dimension is decided by VALUE before the resolver
+    // is ever consulted, so an over-eager tree cannot widen an exact-node mismatch.
+    expect(
+      hasPermission(blockAdmin, 'claim.conduct_ground_inspection', blockTarget('Block-2'), { resolver: PATNA_HAS_BLOCK1 }),
+    ).toBe(false);
+  });
+
+  it('district_admin@Patna is DENIED on a Block-1 assignment when NO resolver is supplied (D6 — absence DENIES)', () => {
+    // ⛔ THE POLARITY, at the pure-predicate layer. With no tree the default is
+    // `denyDeeperGeoResolver`, and the strictly-narrower branch fails closed. Absence must DENY —
+    // never fall back to the district gate, which would make the ABSENCE of data WIDEN authorization
+    // and make PUBLISHING a tree narrow it (Decision `2026-08-13-104`, D6; ADR-0038's posture).
+    expect(hasPermission(districtAdminPatna, 'claim.conduct_ground_inspection', blockTarget('Block-1'))).toBe(false);
+  });
+
+  it('district_admin@Patna is ALLOWED on a Block-1 assignment when a resolver places Block-1 UNDER Patna (AC3 ancestry)', () => {
+    expect(
+      hasPermission(districtAdminPatna, 'claim.conduct_ground_inspection', blockTarget('Block-1'), { resolver: PATNA_HAS_BLOCK1 }),
+    ).toBe(true);
+  });
+
+  it('district_admin@Patna is DENIED when the resolver places Block-1 under VAISHALI — the test discriminates ANCESTRY, not resolver PRESENCE', () => {
+    // ⭐ THE ONE THAT MATTERS (Story 1.18 AC8's design, repeated deliberately). A resolver is
+    // supplied in BOTH this case and the one above; only the EDGE differs. Without this assertion the
+    // ancestry test would pass on an implementation that allows whenever any resolver exists.
+    expect(
+      hasPermission(districtAdminPatna, 'claim.conduct_ground_inspection', blockTarget('Block-1'), { resolver: VAISHALI_HAS_BLOCK1 }),
+    ).toBe(false);
+  });
+
+  it('block_admin@Block-1 is STILL DENIED on a district-dimension target — the rank order is untouched', () => {
+    // The AC4 pin's behaviour, restated against THIS story's key so the two can never drift apart.
+    // ⛔ Story 6.17 routed around the rank order by changing the TARGET's dimension. It did not lift
+    // it, and no resolver ever will: `tRank 3 < gRank 4` denies before the resolver is consulted.
+    expect(hasPermission(blockAdmin, 'claim.conduct_ground_inspection', resource())).toBe(false);
+    expect(
+      hasPermission(blockAdmin, 'claim.conduct_ground_inspection', resource(), { resolver: PATNA_HAS_BLOCK1 }),
+    ).toBe(false);
+  });
+
+  it('a legacy (block == null) assignment still authorizes district_admin at the district dimension — byte-identical to Story 6.7', () => {
+    // The D2 null path. Nothing about it changed, and this pins that it did not.
+    expect(hasPermission(districtAdminPatna, 'claim.conduct_ground_inspection', resource())).toBe(true);
+    expect(hasPermission(districtAdminPatna, 'claim.conduct_ground_inspection', resource({ value: 'Vaishali' }))).toBe(false);
+  });
+
+  it('block_admin does NOT hold claim.override_ground_inspection (D8 — the supervisor override is not re-gated)', () => {
+    expect(hasPermission(blockAdmin, 'claim.override_ground_inspection', blockTarget('Block-1'))).toBe(false);
   });
 });
 

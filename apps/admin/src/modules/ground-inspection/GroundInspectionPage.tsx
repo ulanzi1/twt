@@ -44,17 +44,30 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
   const qc = useQueryClient();
   const [claimCaseId, setClaimCaseId] = useState('');
   const [district, setDistrict] = useState('');
+  const [block, setBlock] = useState('');
   // The loaded scope (frozen at "Load" so the query key is stable while typing continues).
-  const [scope, setScope] = useState<{ claimCaseId: string; district: string } | null>(null);
+  // Story 6.17 — EXACTLY ONE of district / block, mirroring the server's `.refine` (D4). The button
+  // enforces it client-side purely so the operator sees the rule before the round-trip; the SERVER
+  // is the boundary, and it answers 400 either way.
+  const [scope, setScope] = useState<{ claimCaseId: string; district?: string; block?: string } | null>(null);
+  const exactlyOneLocator = (district.trim() !== '') !== (block.trim() !== '');
 
   const assignmentsQuery = useQuery({
-    queryKey: ['ground-inspection', pariwarId, scope?.claimCaseId, scope?.district],
-    queryFn: () => api.listGroundInspection(pariwarId, scope!.claimCaseId, scope!.district),
+    queryKey: ['ground-inspection', pariwarId, scope?.claimCaseId, scope?.district, scope?.block],
+    queryFn: () =>
+      api.listGroundInspection(
+        pariwarId,
+        scope!.claimCaseId,
+        // Send the locator the operator ACTUALLY supplied — never both, never a default.
+        scope!.block !== undefined ? { block: scope!.block } : { district: scope!.district! },
+      ),
     enabled: scope !== null,
   });
 
   const invalidate = () =>
-    void qc.invalidateQueries({ queryKey: ['ground-inspection', pariwarId, scope?.claimCaseId, scope?.district] });
+    void qc.invalidateQueries({
+      queryKey: ['ground-inspection', pariwarId, scope?.claimCaseId, scope?.district, scope?.block],
+    });
 
   return (
     <section className="flex flex-col gap-6" aria-label={t('gi.title')}>
@@ -67,7 +80,10 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (claimCaseId && district) setScope({ claimCaseId, district });
+          if (!claimCaseId || !exactlyOneLocator) return;
+          setScope(
+            block.trim() !== '' ? { claimCaseId, block: block.trim() } : { claimCaseId, district: district.trim() },
+          );
         }}
       >
         <label className="flex flex-col text-sm">
@@ -88,16 +104,35 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
             aria-label={t('gi.district.label')}
           />
         </label>
-        <button className="rounded bg-blue-600 px-3 py-1 text-white" type="submit" disabled={!claimCaseId || !district}>
+        <label className="flex flex-col text-sm">
+          {t('gi.block.label')}
+          <input
+            className="rounded border px-2 py-1"
+            value={block}
+            onChange={(e) => setBlock(e.target.value)}
+            aria-label={t('gi.block.label')}
+          />
+        </label>
+        <button
+          className="rounded bg-blue-600 px-3 py-1 text-white"
+          type="submit"
+          disabled={!claimCaseId || !exactlyOneLocator}
+        >
           {t('gi.load')}
         </button>
+        {!exactlyOneLocator && (
+          <p role="status" className="w-full text-sm text-amber-700">
+            {t('gi.locator.exactlyOne')}
+          </p>
+        )}
       </form>
 
       {scope && (
         <ScheduleForm
           pariwarId={pariwarId}
           claimCaseId={scope.claimCaseId}
-          defaultDistrict={scope.district}
+          defaultDistrict={scope.district ?? ''}
+          defaultBlock={scope.block ?? ''}
           onScheduled={invalidate}
         />
       )}
@@ -131,9 +166,12 @@ function ScheduleForm(props: {
   pariwarId: string;
   claimCaseId: string;
   defaultDistrict: string;
+  /** Story 6.17 — prefilled when the operator loaded by block; '' means district-level. */
+  defaultBlock: string;
   onScheduled: () => void;
 }): ReactElement {
   const [district, setDistrict] = useState(props.defaultDistrict);
+  const [block, setBlock] = useState(props.defaultBlock);
   const [inspectionStage, setStage] = useState<string>(STAGES[0]);
   const [inspectionSiteType, setSiteType] = useState<string>(SITE_TYPES[0]);
   const [inspectorActorId, setInspector] = useState('');
@@ -149,6 +187,9 @@ function ScheduleForm(props: {
         props.claimCaseId,
         {
           district,
+          // ⛔ OMITTED, not sent as '' — an empty block would be a validation error, and the whole
+          // point of the null path is that a district-level assignment carries no block at all.
+          ...(block.trim() !== '' ? { block: block.trim() } : {}),
           inspectionStage,
           inspectionSiteType,
           inspectorActorId,
@@ -175,9 +216,14 @@ function ScheduleForm(props: {
     >
       <h2 className="font-medium">{t('gi.schedule.heading')}</h2>
       <label className="text-sm">
-        {t('gi.district.label')}
+        {t('gi.schedule.district')}
         <input className="ml-2 rounded border px-2 py-1" value={district} onChange={(e) => setDistrict(e.target.value)} />
       </label>
+      <label className="text-sm">
+        {t('gi.schedule.block')}
+        <input className="ml-2 rounded border px-2 py-1" value={block} onChange={(e) => setBlock(e.target.value)} />
+      </label>
+      <p className="text-xs text-gray-600">{t('gi.block.hint')}</p>
       <label className="text-sm">
         {t('gi.schedule.stage')}
         <select className="ml-2 rounded border px-2 py-1" value={inspectionStage} onChange={(e) => setStage(e.target.value)}>
@@ -262,6 +308,15 @@ function AssignmentCard(props: {
         </span>
         <span>
           <strong>{t('gi.card.site')}:</strong> {a.inspectionSiteType}
+        </span>
+        <span>
+          <strong>{t('gi.card.district')}:</strong> {a.district}
+        </span>
+        <span>
+          {/* Story 6.17 — surfaced ALWAYS, including its absence: which jurisdiction authorized the
+              assignment is exactly what the operator needs to know, and a blank field would read as
+              "unknown" rather than "district level". */}
+          <strong>{t('gi.card.block')}:</strong> {a.block ?? t('gi.card.blockNone')}
         </span>
         <span>
           <strong>{t('gi.card.photos')}:</strong> {a.photos.length}

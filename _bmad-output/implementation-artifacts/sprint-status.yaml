@@ -1,4 +1,45 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-13l (6-17-block-dimension-ground-inspection-gate: review -> done via
+#   bmad-code-review. Three parallel layers (Blind Hunter/no-context, Edge Case Hunter/repo-read,
+#   Acceptance Auditor/spec+decisions+AI-6-5 load-bearing-invariant lens) against main..HEAD
+#   (ba52ba0..f4352eb). 1 decision-needed (resolved -> patch: verify the governance-boundary
+#   scanner's actual mechanism against resolveDimension rather than trusting a green scan alone) +
+#   7 patch (all applied) + 3 defer (recorded in deferred-work.md, pre-existing/out-of-scope
+#   patterns) + 1 dismissed (migration-file verbosity).
+#   HEADLINE FINDING, independently corroborated by Blind Hunter AND Edge Case Hunter: the
+#   `GET .../ground-inspection` LIST route gated the REQUEST once at the query locator's dimension
+#   but filtered returned ROWS by raw `district ===` string match -- which a block-tagged row also
+#   satisfies (district stays populated on every row, D1). A plain district-dimension grant could
+#   read block-tagged rows (incl. decrypted Tier-1 PII) with ZERO resolver/tree check -- D6's
+#   "absence must deny, never widen" violated on the read path instead of the fallback hook everyone
+#   was watching. FIXED: each candidate row is now re-checked at ITS OWN dimension (rbac.hasPermission,
+#   the same blockAware rule applied per-row) before inclusion. Pinned by a NEW regression test
+#   (fallback-probe verified RED on the pre-fix handler, GREEN restored -- this story's own D6
+#   discipline turned on itself).
+#   Also fixed: 4 of 6 admin_ground_inspection.* audit contexts (findings_recorded/photo_uploaded/
+#   completed/refused) were missing `block` -- a Family #8 (audit-after-mutation & attribution) REAL
+#   GAP per the AI-6-5 lens, since D2 makes block the actual dimension these verbs were gated
+#   against; the idempotency-mismatch discriminator silently dropped a simultaneous block mismatch
+#   behind district (now reports all mismatched fields); the DAR's governance-boundary count read "9
+#   roots" against a live 13 (corrected, doesn't change the D9 conclusion); a duplicate accessible
+#   label ('Block (optional)' on two simultaneously-visible inputs) and an overpromising hint string
+#   (implying district-admin-by-ancestry is normally reachable when NO Pariwar can publish a tree in
+#   production) were both fixed on the admin UI.
+#   Verified post-patch: tsc --noEmit clean (api/domain/admin), admin lint clean, admin
+#   ground-inspection-page.test.tsx 9/9, live-DB apps/api ground-inspection.spec.ts 16/16 (14
+#   original + 2 new), live-DB packages/domain rbac/*+ground-inspection* 177/177.
+#   Findings written to the story file's Review Findings section; 3 deferred items also appended to
+#   deferred-work.md.
+#   FOLLOW-UP self-audit (same session, BigDev-requested): checked 3 specific claims live rather than
+#   from memory. resolveDimension backward-compat and event block/nullish historical-compat both
+#   checked out solid with no code change (verified against all ~35 requirePermissionHook call sites;
+#   verified via the PRE-EXISTING untouched ground-inspection-events.test.ts fixture). Found ONE real
+#   gap: D3's reschedule-immutable guard is symmetric-by-construction across all 3 block-transition
+#   directions (add/clear/move) but only 2 of 3 were test-pinned -- null->non-null (adding a block to
+#   a legacy row) had zero coverage. Added + fallback-probed (disabling BOTH the domain-writer AND
+#   the HTTP-handler's own fail-fast copy -- the handler's copy runs FIRST and a writer-only probe
+#   gave a false-negative, caught mid-session): RED with both disabled (silent 201 re-gating), GREEN
+#   restored. Story 6.17 Status: done.
 # last_updated: 2026-08-13k (6-17-block-dimension-ground-inspection-gate: ready-for-dev -> in-progress
 #   -> review via bmad-dev-story, branch feature/6-17-block-dimension-ground-inspection-gate off main
 #   @ ba52ba0 (origin/main confirmed equal before branching).
@@ -5887,7 +5928,7 @@ development_status:
   # resolver is consulted, so NO org tree lifts it. The honest path for FR-40's block-level actor is
   # a DIFFERENT GATE, not a resolver: re-gate at dimension:'block', which authorizes block_admin by
   # exact-node AND district_admin by district->block ancestry through 1.18's resolver. Depends on 1.18.
-  6-17-block-dimension-ground-inspection-gate: review
+  6-17-block-dimension-ground-inspection-gate: done
   epic-6-retrospective: done
 
   # ==========================================================================

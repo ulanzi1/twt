@@ -4558,3 +4558,24 @@ and **no route**: Decision `2026-08-12-102` §7 — *"No writer surface ships wi
 until a publishing surface ships. ⛔ Do not label AC3 "live". **Re-trigger:** *the first surface that
 publishes a geo tree.* ⛔ No story is minted from inside Story 6.17 — mints are governance acts taken at
 their owning story ([[feedback_governance_commits_precede_implementation]]).
+
+---
+
+## Deferred from: code review of 6-17-block-dimension-ground-inspection-gate (2026-08-13)
+
+- **No write-time validation that a schedule-time `(district, block)` pair corresponds to a real edge in any
+  published geo tree** — an operator (including a `block_admin`) can store an arbitrary, unrelated
+  `(district, block)` combination and it persists verbatim; the ancestry check only ever runs later, for a
+  *different* actor's read/act authorization, never for the pair's own data integrity. Mirrors `district`'s
+  own pre-existing unvalidated posture — not a regression introduced by this story.
+  [`apps/api/src/modules/claims/claims.ground-inspection.routes.ts`, `ScheduleBody`]
+- **`district` stays hard-required on schedule even for pure block-dimension actors**, and the admin UI's
+  `defaultDistrict` prefill is empty when scope was loaded by block — a `block_admin` scheduling a new
+  inspection has no lookup aid for which district value to supply, since no tree-browsing surface exists
+  anywhere (Escalation 2). A real UX gap, but outside this story's "absorb minimally, no redesign" mandate.
+  [`apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`]
+- **`GroundInspectionBlockImmutableError`'s 409 echoes `err.currentBlock`** back to the caller on a failed
+  reschedule. Lower severity than the read-route gap found in the same review: the caller already passed the
+  per-row conduct gate to reach this endpoint, so this mirrors the existing `district_immutable` sibling's
+  own posture rather than introducing a new authorization-boundary leak.
+  [`packages/domain/src/claim/ground-inspection-persist.ts`]

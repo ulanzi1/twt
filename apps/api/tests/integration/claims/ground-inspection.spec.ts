@@ -499,6 +499,40 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     expect(cleared.json<{ error: { code: string } }>().error.code).toBe('ground_inspection.block_immutable');
   });
 
+  it('reschedule ADDING a block to a legacy district-only assignment (null → non-null) → 409 ground_inspection.block_immutable (review fix, code review 2026-08-13 — the third transition direction; the other two are the test above)', async () => {
+    // The above test pins non-null→non-null (moving) and non-null→null (clearing). It never pinned
+    // the third direction: null→non-null (ADDING a block to a row scheduled before it carried one).
+    // `assertReschedule`'s guard (`ground-inspection-persist.ts`) is a single symmetric
+    // `(input.block ?? null) !== target.block` check — correct BY CONSTRUCTION for all three
+    // directions — but "correct by construction" is a claim about the code, not evidence; this pins
+    // it the same way the other two are pinned.
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    // A plain district_admin, no block grant and no published tree — exactly the actor who could
+    // reach a legacy row's reschedule route (dimension resolves to 'district' from the row's own
+    // NULL block, D2) but must never be able to newly authorize it at the block dimension by simply
+    // naming one in the reschedule body.
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+    const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    const gid = (await schedule(client, pariwarId, claimCaseId, { inspectorActorId: userId }))
+      .json<{ groundInspectionId: string }>().groundInspectionId;
+
+    const added = await client.inject({
+      method: 'POST',
+      url: `${base(pariwarId, claimCaseId)}/${gid}/reschedule`,
+      payload: scheduleBody({ block: BLOCK, inspectorActorId: userId }),
+      headers: { 'idempotency-key': randomUUID() },
+    });
+    expect(added.statusCode).toBe(409);
+    expect(added.json<{ error: { code: string } }>().error.code).toBe('ground_inspection.block_immutable');
+
+    // Control: the row is untouched — still district-only, still `scheduled`, no replacement minted.
+    const rows = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}?district=${DISTRICT}` });
+    const assignments = rows.json<{ assignments: { groundInspectionId: string; block: string | null; status: string }[] }>().assignments;
+    expect(assignments).toHaveLength(1);
+    expect(assignments[0]).toMatchObject({ groundInspectionId: gid, block: null, status: 'scheduled' });
+  });
+
   it('idempotent retry with a DIFFERENT block → mismatch, never a silent first-row return', async () => {
     const pariwarId = randomUUID();
     await publishTree(pariwarId, DISTRICT, [BLOCK, OTHER_BLOCK]);
@@ -562,6 +596,34 @@ describe.skipIf(!hasDatabase)('Ground-inspection admin surface — E2E (:5433)',
     // ⛔ NEITHER — also a 400. It must never degrade into "return everything on the claim".
     const neither = await client.inject({ method: 'GET', url: base(pariwarId, claimCaseId) });
     expect(neither.statusCode).toBe(400);
+  });
+
+  it('read (review fix, code review 2026-08-13): `?district=` does NOT return a block-tagged row the actor cannot pass at `dimension: \'block\'`', async () => {
+    // ⛔ THE GAP THIS PINS: the list handler used to filter candidate rows with a raw
+    // `r.inspection.district === district` string match — which a block-tagged row ALSO satisfies,
+    // because `district` stays populated on every row (D1). A plain district-dimension grant then
+    // reached a row whose real authorization boundary is `dimension: 'block'` (D2), with zero
+    // resolver/tree check — the exact "absence widens" shape D6 forbids, on the read path instead of
+    // the fallback hook. NO tree is published here, so if the fix regresses, the block-tagged row
+    // reappears via the unauthorized district-string match, not via legitimate ancestry.
+    const pariwarId = randomUUID();
+    const claimCaseId = await seedClaim(pariwarId, { toVerification: true });
+    // The vulnerable row: block-tagged, but the SAME district string as the legacy row below. Seeded
+    // directly (not via HTTP) — a plain district_admin with no tree cannot schedule a block-tagged row
+    // through the gate under test, which is exactly why this row is the dangerous one to leak.
+    const blockTaggedId = await seedAssignment(pariwarId, claimCaseId, { block: BLOCK });
+    // The control: a legacy, district-only row under the identical district — must still be visible.
+    const legacyId = await seedAssignment(pariwarId, claimCaseId, { block: null });
+
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'district_admin', 'district', DISTRICT);
+
+    const res = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}?district=${DISTRICT}` });
+    expect(res.statusCode).toBe(200);
+    const ids_ = res.json<{ assignments: { groundInspectionId: string }[] }>().assignments.map((a) => a.groundInspectionId);
+    expect(ids_).toContain(legacyId);
+    expect(ids_).not.toContain(blockTaggedId);
+    expect(ids_).toHaveLength(1);
   });
 
   it('cross-tenant: a tree published in Pariwar A does NOT resolve the same edge in Pariwar B', async () => {

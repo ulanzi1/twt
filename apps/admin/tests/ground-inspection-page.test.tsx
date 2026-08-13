@@ -174,7 +174,10 @@ describe('<GroundInspectionPage>', () => {
     expect(vi.mocked(api.scheduleGroundInspection).mock.calls[0]![2]).not.toHaveProperty('block');
 
     // Now fill it in and schedule again — the block must ride the body.
-    await user.type(within(form).getByLabelText('Block (optional)'), 'Block-1');
+    // Story 6.17 (review fix) — the ScheduleForm's block field carries its OWN label
+    // ('Assignment block (optional)'), distinct from the scope-load form's 'Block (optional)' above,
+    // so this no longer needs `within(form)` to disambiguate — it is the only match.
+    await user.type(within(form).getByLabelText('Assignment block (optional)'), 'Block-1');
     await user.click(screen.getByRole('button', { name: 'Schedule assignment' }));
     await waitFor(() => expect(vi.mocked(api.scheduleGroundInspection).mock.calls).toHaveLength(2));
     expect(vi.mocked(api.scheduleGroundInspection).mock.calls[1]![2]).toMatchObject({ block: 'Block-1' });

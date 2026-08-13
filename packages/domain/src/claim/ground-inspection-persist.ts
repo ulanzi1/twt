@@ -318,24 +318,23 @@ function assertIdempotentReplayMatches(
     scheduledAt: Date;
   },
 ): void {
-  const mismatch =
-    bound.district !== input.district
-      ? 'district'
-      : // Story 6.17 — WITHOUT this arm, a retry carrying a DIFFERENT block silently returns the
-        // first assignment and the operator's correction is discarded as a no-op. `?? null` folds
-        // `undefined` into `null` so an omitted block matches a NULL row rather than mismatching it.
-        bound.block !== (input.block ?? null)
-        ? 'block'
-        : bound.inspectionStage !== input.inspectionStage
-        ? 'inspection stage'
-        : bound.inspectionSiteType !== input.inspectionSiteType
-          ? 'inspection site type'
-          : bound.inspectorActorId !== input.inspectorActorId
-            ? 'inspector'
-            : bound.scheduledAt.getTime() !== input.scheduledAt.getTime()
-              ? 'scheduled time'
-              : null;
-  if (mismatch) throw new GroundInspectionIdempotencyMismatchError(bound.groundInspectionId, mismatch);
+  // (review fix, code review 2026-08-13) Collect EVERY mismatched field, not just the first — a
+  // ternary chain that stops at `district` silently drops a simultaneous `block` mismatch from the
+  // response detail, which is the one case (both fields changed in the same replay) an operator most
+  // needs surfaced. `?? null` folds `undefined` into `null` so an omitted block matches a NULL row
+  // rather than mismatching it.
+  const mismatched: string[] = [];
+  if (bound.district !== input.district) mismatched.push('district');
+  // Story 6.17 — WITHOUT this arm, a retry carrying a DIFFERENT block silently returns the first
+  // assignment and the operator's correction is discarded as a no-op.
+  if (bound.block !== (input.block ?? null)) mismatched.push('block');
+  if (bound.inspectionStage !== input.inspectionStage) mismatched.push('inspection stage');
+  if (bound.inspectionSiteType !== input.inspectionSiteType) mismatched.push('inspection site type');
+  if (bound.inspectorActorId !== input.inspectorActorId) mismatched.push('inspector');
+  if (bound.scheduledAt.getTime() !== input.scheduledAt.getTime()) mismatched.push('scheduled time');
+  if (mismatched.length > 0) {
+    throw new GroundInspectionIdempotencyMismatchError(bound.groundInspectionId, mismatched.join(', '));
+  }
 }
 
 // ── Public writers ────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ baseline_commit: ba52ba0d88386458669cd89f2ad4b7b45b1a81cc
 
 # Story 6.17: Block-Dimension Ground-Inspection Gate `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⚠ **WHY THIS STORY SITS IN A RETROSPECTED EPIC.** `epic-6-retrospective` is `done`. The placement is
 > deliberate and is **not** to be "corrected" into whichever epic happens to be open: this story extends the
@@ -624,7 +624,93 @@ finds them from the ruling:
 
 ---
 
-## Dev Notes
+### Review Findings
+
+_Code review run 2026-08-13 (`bmad-code-review`), three parallel layers (Blind Hunter, Edge Case Hunter,
+Acceptance Auditor incl. the AI-6-5 load-bearing-invariant lens) against `main..HEAD` (`ba52ba0..f4352eb`)._
+
+**All 7 patches applied 2026-08-13.** The headline fix (list-route per-row re-check) carries its own
+regression test (`ground-inspection.spec.ts`, "does NOT return a block-tagged row…"), fallback-probe
+verified RED on the pre-fix handler and GREEN with the fix restored, matching this story's own D6
+polarity-pair discipline. `pnpm --filter @twt/api exec tsc --noEmit`, `--filter @twt/domain exec tsc
+--noEmit`, `--filter @twt/admin exec tsc --noEmit`, `--filter @twt/admin lint`, the admin
+`ground-inspection-page.test.tsx` suite (9/9), the live-DB `ground-inspection.spec.ts` integration suite
+(16/16, `apps/api`) and the live-DB `rbac/*` + `ground-inspection*` suites (177/177, `packages/domain`)
+all pass post-patch. 3 findings remain **deferred** (see below); 1 dismissed as noise (migration-file
+verbosity).
+
+**Follow-up (post-summary, 2026-08-13) — a self-audit against three specific claims, requested by
+BigDev, turned up ONE genuine test-coverage gap and fixed it.** D3's reschedule immutability guard
+(`(input.block ?? null) !== target.block`, mirrored fail-fast in the HTTP handler) is a single
+SYMMETRIC check — correct BY CONSTRUCTION for all three block-transition directions (add / clear /
+move). The pre-existing test pinned only two of the three: non-null→non-null (moving) and
+non-null→null (clearing). The third, null→non-null (ADDING a block to a legacy district-only row on
+reschedule), was correct by construction but had ZERO test coverage anywhere in the repo. Added
+`ground-inspection.spec.ts` — *"reschedule ADDING a block to a legacy district-only assignment (null →
+non-null) → 409"* — and fallback-probed it properly: disabling BOTH copies of the guard (the HTTP
+handler's fail-fast copy is what actually runs first, not just the domain-writer backstop —
+disabling the writer's copy alone left the handler's copy still catching it, a false-negative probe
+caught and corrected mid-session) turned the request into a silent 201 re-gating and the new test RED;
+restoring either copy turns it GREEN. The other two claims checked out solid on inspection with no code
+change needed: `resolveDimension` is additive-only (verified live against all ~35
+`requirePermissionHook` call sites in `apps/api/src` — only the ground-inspection routes pass it, every
+other caller's `dimension` computation is byte-unaffected), and the `block` event-payload field's
+historical/new compatibility is proven by the PRE-EXISTING (untouched by this diff)
+`ground-inspection-events.test.ts`, whose baseline fixture already carries no `block` key and already
+parses clean against the new `.nullish()` schema.
+
+- [x] [Review][Patch] `resolveDimension` sits inside a governance-boundary "prohibited root" and the Dev
+      Agent Record self-certifies it is not "flag-shaped" authorization logic on the strength of a green
+      `governance-boundary` scan alone. **Resolved 2026-08-13 (decision-needed → patch):** inspect the
+      scanner's pattern definitions against `resolveDimension` specifically and record concrete evidence
+      (not just "scan passed") in the Dev Agent Record that it does or doesn't match the prohibited pattern.
+      [`apps/api/src/modules/rbac/index.ts`]
+
+- [x] [Review][Patch] `GET …/ground-inspection` list route returns block-tagged rows to a plain
+      `district_admin` grant via raw string match, bypassing the block-dimension gate entirely — a D6
+      "absence must deny, never widen" violation on the read path, independently found by both the Blind
+      Hunter and the Edge Case Hunter. Includes Tier-1 PII (location, family contact, notes) in the leaked
+      rows, and no test exercises the mixed block-tagged + legacy-row-under-one-district configuration that
+      would surface it. [`apps/api/src/modules/claims/claims.ground-inspection.handlers.ts` list/read handler]
+- [x] [Review][Patch] `admin_ground_inspection.findings_recorded`, `.photo_uploaded`, `.completed`, and
+      `.refused` audit contexts still emit only `district`, omitting `block` — even though D2 makes block the
+      actual authorization dimension these id-addressed verbs were gated against. Only `.scheduled` and
+      `.rescheduled` carry `block`. Family #8 (audit-after-mutation & attribution) REAL GAP.
+      [`apps/api/src/modules/claims/claims.ground-inspection.handlers.ts:~385,488,536,581`]
+- [x] [Review][Patch] Dev Agent Record's governance-boundary verification table states "9 roots"; a live
+      re-run at this HEAD reports 13 prohibited roots (the listed 9 silently omit
+      `packages/domain/src/{audit,rbac,consent}` and `packages/validity-service/src`). Does not change the D9
+      conclusion but is an un-verified number sitting in the story's own trustworthy-evidence record.
+      [story file, Debug Log References table]
+- [x] [Review][Patch] `assertIdempotentReplayMatches`'s mismatch discriminator checks `district` before
+      `block`; a retry that differs in both is reported as a `district` mismatch only, silently dropping the
+      block discrepancy from the response detail. [`packages/domain/src/claim/ground-inspection-persist.ts`]
+- [x] [Review][Patch] `'gi.block.label'` is reused verbatim as the accessible label for two simultaneously
+      visible inputs (the scope/load form's Block field and the ScheduleForm's Block field) once a scope is
+      loaded — an a11y regression and a `getByLabelText` trap for future tests. Repeats a pre-existing
+      District-field duplication rather than avoiding it.
+      [`apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`, `i18n-en.ts`]
+- [x] [Review][Patch] `gi.block.hint` copy tells operators a district admin reaches a block row "only where the
+      Pariwar has published a geo tree," phrased as a normal operating condition — without disclosing that no
+      Pariwar can currently publish a tree in production at all (Escalation 2's own "declared, not
+      production-active" finding). Overpromises a capability no real operator can trigger.
+      [`apps/admin/src/modules/ground-inspection/i18n-en.ts`]
+
+- [x] [Review][Defer] No validation that a schedule-time `(district, block)` pair corresponds to a real edge
+      in any published geo tree — an operator can store an arbitrary, unrelated combination. Mirrors
+      `district`'s own pre-existing unvalidated-pair posture; not introduced by this diff. — deferred,
+      pre-existing pattern
+- [x] [Review][Defer] `district` stays hard-required on schedule even for pure block-dimension actors, and the
+      admin UI's `defaultDistrict` prefill is empty when scope was loaded by block — a block_admin scheduling
+      a new inspection has no lookup aid for which district value to supply (no tree-browsing surface exists
+      per Escalation 2). — deferred, pre-existing capability/UX gap, not this story's scope
+- [x] [Review][Defer] `GroundInspectionBlockImmutableError`'s 409 echoes `err.currentBlock` back to the
+      caller on a failed reschedule. Lower severity than the read-route gap: the caller already passed the
+      per-row conduct gate to reach this endpoint, so this mirrors the existing `district_immutable` sibling's
+      posture rather than introducing a new authorization boundary leak. — deferred, mirrors existing sibling
+      error pattern
+
+
 
 ### Files being MODIFIED — read each **before** editing
 
@@ -796,7 +882,7 @@ off `main` @ `ba52ba0`; `origin/main` confirmed == `ba52ba0` via `git fetch orig
 | `pnpm --filter @twt/domain lint` | clean | — |
 | `pnpm --filter @twt/api lint` | clean | — |
 | `pnpm --filter @twt/admin lint` | clean | — |
-| `pnpm governance-boundary:check` | **✓ gate passed** — 167 source files, 9 roots | ⛔ see the caveat below |
+| `pnpm governance-boundary:check` | **✓ gate passed** — 167 source files, 13 roots | ⛔ see the caveat below |
 | `pnpm --filter @twt/domain db:migrate` (FRESH db `twt_fresh_0102`, full 0001→0102 chain) | applied cleanly; `block \| text \| (nullable)` verified, then dropped | — |
 | admin-UI suite `ground-inspection-page.test.tsx` | 9 passed (was 4) | **+5** |
 
@@ -811,12 +897,23 @@ above passed it *vacuously* — there was nothing committed to diff
 pre-push hook will run, so "the hang" on `git push` has already been paid.)
 
 ⛔ **THE `governance-boundary` GREEN PROVES NOTHING ABOUT `member-geo`, and saying so is the point.**
-The gate's scanned roots are `packages/domain/src/{contribution,pool,claim,geo-tree}`,
-`apps/api/src/{middleware,modules/rbac,audit,plugins}` and `scripts`. **`packages/domain/src/member-geo`
-is not among them** — it was deliberately NOT admitted at Story 1.19 (Decision `2026-08-13-103`, D1), so
-the scan was always going to be green whatever this story did. *A green scan over an UNLISTED root proves
-the root is unlisted, not that the behaviour is admissible* ([[feedback_gate_scope_semantic_coverage]];
-the gate's own README caveat). The real answer is D9's, recorded in prose in two places.
+
+⚠ **CORRECTED (review fix, code review 2026-08-13) — the original "9 roots" figure above and the root
+list below were an un-verified, from-memory count; re-run live at this HEAD.** The gate's own output is
+authoritative: **`governance_boundary.yaml v1 — 6 allowed behaviour(s), 13 prohibited root(s)`**, scanning
+`packages/domain/src/{audit,rbac,consent,contribution,scripts,pool,claim,geo-tree}`,
+`packages/validity-service/src`, and `apps/api/src/{middleware,modules/rbac,audit,plugins}`. The original
+9-item list silently omitted `packages/domain/src/{audit,rbac,consent}` and `packages/validity-service/src`
+— four real roots the scan runs and always ran. This does not change the qualitative D9 conclusion below
+(`member-geo` is genuinely absent from all 13), but the number itself was wrong, sitting in the exact
+record whose entire purpose is to be a trustworthy, un-reconstructed verification line
+([[feedback_verify_before_committing_governance_claims]]).
+
+**`packages/domain/src/member-geo` is not among the 13** — it was deliberately NOT admitted at Story 1.19
+(Decision `2026-08-13-103`, D1), so the scan was always going to be green whatever this story did. *A green
+scan over an UNLISTED root proves the root is unlisted, not that the behaviour is admissible*
+([[feedback_gate_scope_semantic_coverage]]; the gate's own README caveat). The real answer is D9's,
+recorded in prose in two places.
 
 ### Completion Notes List
 
@@ -907,8 +1004,22 @@ would have missed.
    Option **(b)** was taken (as the story recommends): a new `resolveDimension?: (request) => ScopeDimension`
    read **inside** the closure. It keeps the one-hook-per-registration shape every other caller relies on,
    and it is **additive** — every existing caller is byte-unaffected. ⛔ `scopeResolutionHook` and
-   `geoTreeResolverForRequest` were **not** touched; nothing flag-shaped entered the prohibited roots (the
-   gate confirms both roots clean).
+   `geoTreeResolverForRequest` were **not** touched.
+
+   ⚠ **CORRECTED (review fix, code review 2026-08-13) — "the gate confirms both roots clean" was not, on
+   its own, evidence that `resolveDimension` is safe against what this gate polices; a green scan is
+   evidence only once you know what the scan actually looks for.** Read live (`scripts/governance-boundary/
+   lib.ts`): the gate's leg (b) detects exactly one thing — a **feature-flag evaluation surface** reaching
+   a prohibited root, via five syntactic routes (a `feature-flags` module specifier, a named import of
+   `evaluateFlag`/the evaluation surface, a namespace-then-property access, re-exports, and destructuring
+   off any expression). It is **not** a general "no dynamic authorization logic" scanner — it has no
+   opinion on a plain per-row data branch that imports nothing from `feature-flags`. `grep -n
+   'feature-flags\|evaluateFlag\|isFlagEnabled' apps/api/src/modules/rbac/index.ts` returns **zero
+   matches**: `resolveDimension`'s `block != null ? 'block' : 'district'` branch reads only the stashed
+   request locator, never a flag registry. So the green scan **is** real evidence here — for the specific
+   claim "this file doesn't import the flag-evaluation surface" — but the broader claim "not flag-shaped
+   authorization logic" needed the mechanism read to be honest, not the scan result alone
+   ([[feedback_gate_scope_semantic_coverage]]).
 2. ⚠ **The `claim.ground_inspection_scheduled` payload gained `block`, typed `.nullish()`.** The story's
    Task 5 asked for the registry **description** to name `block`; a description naming a field the payload
    does not carry would be false, so the payload carries it. `.nullish()` rather than `.nullable()` is

@@ -216,11 +216,11 @@ function ScheduleForm(props: {
     >
       <h2 className="font-medium">{t('gi.schedule.heading')}</h2>
       <label className="text-sm">
-        {t('gi.district.label')}
+        {t('gi.schedule.district')}
         <input className="ml-2 rounded border px-2 py-1" value={district} onChange={(e) => setDistrict(e.target.value)} />
       </label>
       <label className="text-sm">
-        {t('gi.block.label')}
+        {t('gi.schedule.block')}
         <input className="ml-2 rounded border px-2 py-1" value={block} onChange={(e) => setBlock(e.target.value)} />
       </label>
       <p className="text-xs text-gray-600">{t('gi.block.hint')}</p>

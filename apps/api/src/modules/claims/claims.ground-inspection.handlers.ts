@@ -35,7 +35,7 @@ import {
   UnsupportedMediaTypeError,
 } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
-import { auditAuthorizationDenied } from '../rbac/index.js';
+import { auditAuthorizationDenied, geoTreeResolverForRequest } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import {
   decryptGroundInspectionField,
@@ -52,6 +52,9 @@ const PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 
 /** The D6 supervisor-override key (catalog v9) — the conduct key is gated by the route preHandlers. */
 const OVERRIDE_KEY = 'claim.override_ground_inspection';
+/** Story 6.17 (review fix) — the conduct key, needed here (not just at the route layer) to
+ *  re-check EACH row's OWN dimension in `read()`'s list filter (see there for why). */
+const CONDUCT_KEY = 'claim.conduct_ground_inspection';
 
 /** Translate a ground-inspection domain error to its stable HTTP shape (the backstop mapping; the
  *  route also pre-checks the common cases for a clean early signal). Rethrows anything unknown. */
@@ -388,6 +391,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         context: {
           ground_inspection_id,
           district: assignment.district,
+          // Story 6.17 (review fix) — the dimension the conduct gate actually checked for this row.
+          block: assignment.block,
           ...(override ? { override_actor_id: override.byActorId } : {}),
         },
       });
@@ -491,6 +496,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         context: {
           ground_inspection_id,
           district: assignment.district,
+          // Story 6.17 (review fix) — the dimension the conduct gate actually checked for this row.
+          block: assignment.block,
           photo_id: photoRow!.photoId,
           byte_size: buffer.byteLength,
           content_type: data.mimetype,
@@ -539,6 +546,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         context: {
           ground_inspection_id,
           district: assignment.district,
+          // Story 6.17 (review fix) — the dimension the conduct gate actually checked for this row.
+          block: assignment.block,
           photo_count: result!.photoCount,
           ...(override ? { override_actor_id: override.byActorId } : {}),
         },
@@ -584,6 +593,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         context: {
           ground_inspection_id,
           district: assignment.district,
+          // Story 6.17 (review fix) — the dimension the conduct gate actually checked for this row.
+          block: assignment.block,
           disposition: body.disposition,
           refusal_reason: body.refusalReason,
           ...(override ? { override_actor_id: override.byActorId } : {}),
@@ -596,13 +607,23 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
     /**
      * GET …/ground-inspection?district=… | ?block=… — read the claim's assignments under ONE
      * locator (AC5; Story 6.17 D4 added the block arm, with EXACTLY-ONE-OF enforced by the zod
-     * schema, so this handler never has to pick a precedence). The conduct gate has already resolved
-     * its dimension from the SAME locator, so the filter below and the authorization agree by
-     * construction — ⛔ do not filter on a different field than the gate checked.
+     * schema, so this handler never has to pick a precedence).
+     *
+     * ⛔ (review fix, code review 2026-08-13) The preHandler gate (`conductFromQuery`) only checks
+     * the QUERY's own dimension ONCE, at the request level — it does NOT re-run per row. A `?district=`
+     * query matches every row carrying that district string, block-tagged or not, because `district`
+     * stays populated on block rows too (D1). Left alone, that made a plain district-dimension grant
+     * return block-tagged rows (with decrypted Tier-1 PII) that D2 says are authorized at
+     * `dimension:'block'` — reachable only via block-grant exact match or district→block ancestry
+     * through a published tree. That is exactly the "absence widens" shape D6 forbids, just on the
+     * read path instead of the fallback hook everyone was watching. So EACH row is re-checked here at
+     * ITS OWN dimension (`blockAware`'s rule, applied per row) before being included — a district
+     * query no longer implies district-dimension authorization for a block-tagged row.
      *
      * A claim may hold assignments across districts/blocks (the unified multi-jurisdiction console
      * view is 6.10's, which calls the accessor server-side). Decrypts PII + mints short-lived signed
-     * URLs (never bytes). No assignment under the locator → `[]` (the absence-is-a-signal read).
+     * URLs (never bytes). No assignment under the locator (or none visible to this actor) → `[]` (the
+     * absence-is-a-signal read).
      */
     async read(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
       const ctx = adminCtx(request);
@@ -618,10 +639,27 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       // Exactly one of the two is defined (the zod `.refine`), so this is a total choice, not a
       // precedence rule. A block query matches only block-TAGGED rows; a district query matches
       // every row in the district, block-tagged or not — the district IS still populated on both.
-      const inScope =
+      const locatorMatch =
         block !== undefined
           ? all.filter((r) => r.inspection.block === block)
           : all.filter((r) => r.inspection.district === district);
+      // Per-row re-check at the row's OWN dimension (see the doc comment above). `hasPermission` is
+      // the pure, non-throwing predicate — no `authz.denied` audit fires for a row silently narrowed
+      // out of a list; that is visibility filtering, not a denied action attempt.
+      const grants = request.scopeGrants ?? [];
+      const resolver = geoTreeResolverForRequest(request);
+      const inScope = locatorMatch.filter((r) =>
+        rbac.hasPermission(
+          grants,
+          CONDUCT_KEY,
+          {
+            dimension: r.inspection.block != null ? 'block' : 'district',
+            value: r.inspection.block ?? r.inspection.district,
+            pariwarId: ctx.pariwarId,
+          },
+          { resolver },
+        ),
+      );
 
       const assignments = await Promise.all(
         inScope.map(async (r) => {

@@ -12,12 +12,23 @@ const EN: Record<string, string> = {
   'gi.claim.label': 'Claim case id',
   'gi.district.label': 'District (your jurisdiction)',
   'gi.block.label': 'Block (optional)',
-  'gi.block.hint': 'Leave blank to work at district level. Naming a block authorizes the assignment at the block level instead — a block admin reaches it directly, and a district admin reaches it only where the Pariwar has published a geo tree placing that block under their district.',
+  // (review fix, code review 2026-08-13) Previously implied a district admin reaching a block row via
+  // a published tree was a normal, reachable operating condition. No Pariwar can currently publish a
+  // geo tree in production at all (Story 1.18 shipped no writer surface — Escalation 2) — the ancestry
+  // path is DECLARED, NOT PRODUCTION-ACTIVE. Restated so the hint does not overpromise a capability no
+  // real operator can trigger today.
+  'gi.block.hint': 'Leave blank to work at district level. Naming a block authorizes the assignment at the block level instead — a block admin reaches it directly. A district admin can only reach a block-tagged assignment once their Pariwar publishes a geo tree placing that block under their district; no Pariwar can do that yet.',
   'gi.locator.exactlyOne': 'Load by district OR by block — fill in exactly one.',
   'gi.load': 'Load assignments',
   'gi.empty': 'No ground-inspection assignments for this claim under this jurisdiction yet — the absence of a completed inspection is itself a signal the verifier must acknowledge.',
   // Schedule form
   'gi.schedule.heading': 'Schedule a new assignment',
+  // (review fix, code review 2026-08-13) DISTINCT from `gi.district.label` / `gi.block.label` above —
+  // once a scope is loaded, the scope-load form and this ScheduleForm are both on screen, and reusing
+  // the same label text gave two simultaneously-visible inputs the SAME accessible name (an a11y
+  // regression and a `getByLabelText` collision).
+  'gi.schedule.district': 'Assignment district',
+  'gi.schedule.block': 'Assignment block (optional)',
   'gi.schedule.stage': 'Inspection stage',
   'gi.schedule.siteType': 'Site type',
   'gi.schedule.inspector': 'Assigned inspector (actor id)',

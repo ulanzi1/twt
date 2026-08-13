@@ -34,7 +34,7 @@ function districtCtx(): reports.ReportScopeCtx {
     actorId: ACTOR,
     grants: [{ pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }],
     pariwarId: PARIWAR_A,
-    resolvedScope: { dimension: 'district', value: 'Patna' },
+    resolvedScope: { dimension: 'district', values: ['Patna'] },
   };
 }
 function pariwarCtx(): reports.ReportScopeCtx {
@@ -42,8 +42,29 @@ function pariwarCtx(): reports.ReportScopeCtx {
     actorId: ACTOR,
     grants: [{ pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A }],
     pariwarId: PARIWAR_A,
-    resolvedScope: { dimension: 'pariwar', value: PARIWAR_A },
+    resolvedScope: { dimension: 'pariwar', values: [PARIWAR_A] },
   };
+}
+/**
+ * ⭐ Story 10.28 (AC3) — a district_admin holding the roster key at BOTH Patna and Gaya. Two
+ * legitimate grants, both inside the `district` ceiling.
+ *
+ * ⛔ THE RESOLVED SCOPE IS **DERIVED FROM THE GRANTS BY THE REAL PRODUCER**, NEVER HAND-BUILT — and
+ * that is load-bearing, not stylistic. A hand-built `{ values: ['Gaya','Patna'] }` would exercise
+ * only the TEMPLATE's `IN (…)` narrowing and would pass unchanged against the old single-valued
+ * resolver, proving nothing about the bug this story fixes. Running the chain end-to-end —
+ * grants → `resolveActorReportScope` → `assembleReport` → SQL — is what makes the AC3 test go RED
+ * when the strict-`<` tie-break is restored (Escalation 2's revert-sanity, which caught exactly this
+ * defect in an earlier draft of this fixture).
+ */
+function twoDistrictCtx(): reports.ReportScopeCtx {
+  const grants = [
+    { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district' as const, scopeValue: 'Patna' },
+    { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district' as const, scopeValue: 'Gaya' },
+  ];
+  const resolvedScope = reports.resolveActorReportScope(grants, 'member.export_roster', PARIWAR_A);
+  if (!resolvedScope) throw new Error('fixture: the two district grants must resolve to a scope');
+  return { actorId: ACTOR, grants, pariwarId: PARIWAR_A, resolvedScope };
 }
 
 describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', () => {
@@ -111,7 +132,7 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
       actorId: ACTOR,
       grants: [{ pariwarId: PARIWAR_B, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_B }],
       pariwarId: PARIWAR_B,
-      resolvedScope: { dimension: 'pariwar', value: PARIWAR_B },
+      resolvedScope: { dimension: 'pariwar', values: [PARIWAR_B] },
     };
     const result = await reports.assembleReport(registry, 'member_roster', ctx, tx);
     const ids = new Set((result.rows as { member_id: string }[]).map((r) => r.member_id));
@@ -122,28 +143,141 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
     expect(ids.has(a3)).toBe(false);
   });
 
-  // ── PIN 9/9 — Story 1.18 disposition: ASSERTION UNCHANGED, CLASSIFICATION CORRECTED. ──────────
+  // ══ STORY 10.28 ══════════════════════════════════════════════════════════════════════════════
+  //
+  // ⭐ AC3 — THIS TEST IS THE STORY. The failure it removes is SILENT: before 10.28 a strict-`<`
+  // tie-break kept whichever same-dimension grant iterated first, so this actor's export contained
+  // Patna and simply omitted Gaya — no error, no warning, no partial-export signal, and a CSV the
+  // administrator would read as complete.
+  // ⛔ THEREFORE IT ASSERTS **PRESENCE**, NOT ABSENCE OF ERROR. A `rows.length > 0` assertion would
+  // not satisfy AC3 — the OLD behaviour also returned rows.
+  // ⛔ MEMBERSHIP, NEVER COUNTS: the shared dev DB accumulates committed rows from own-committing
+  // test runs ([[project_live_db_test_gotchas]]), so an absolute count is brittle by construction.
+  it('AC3: a TWO-DISTRICT actor sees BOTH districts (Patna AND Gaya) — never the other Pariwar', async () => {
+    const { tx, client } = getTx();
+    const { a1, a2, a3, b1 } = await seedTwoDistricts(tx);
+    await enterAppScope(client, PARIWAR_A);
+
+    const result = await reports.assembleReport(registry, 'member_roster', twoDistrictCtx(), tx);
+    const rows = result.rows as { member_id: string; district: string }[];
+    const ids = new Set(rows.map((r) => r.member_id));
+
+    // ⭐ THE ASSERTION THE STORY EXISTS FOR — every district the actor holds is REPRESENTED.
+    expect(ids.has(a1)).toBe(true); // Patna
+    expect(ids.has(a2)).toBe(true); // Patna
+    expect(ids.has(a3)).toBe(true); // Gaya — the one the single-valued tie-break silently dropped
+    expect(ids.has(b1)).toBe(false); // Pariwar B — cross-tenant, still excluded
+
+    // …and the narrowing still NARROWS: nothing outside the two held districts is returned. (A
+    // polluted row from another district would fail this without touching the membership asserts.)
+    expect(rows.every((r) => r.district === 'Patna' || r.district === 'Gaya')).toBe(true);
+  });
+
+  // ── ⛔ THE D5 POLARITY PAIR — BOTH HALVES ARE MANDATORY, AND NEITHER PROVES ANYTHING ALONE. ────
+  //
+  // (a) alone passes on a system that has stopped narrowing at all (it would also return both
+  // districts — and everything else). (b) alone passes on a system that denies everything. Only the
+  // pair isolates the polarity: narrow to EXACTLY the held set, and DENY when the set is empty.
+  //
+  // ⭐ WHY (b) IS THE DANGEROUS HALF. `WHERE district IN ()` is a Postgres SYNTAX ERROR, so an empty
+  // set arrives as a runtime failure — and the smallest edit that makes that failure go away is to
+  // DROP THE PREDICATE, which exports the FULL TENANT to an actor entitled to zero districts. That is
+  // a privilege escalation with a `.length === 0` on it, and it touches no line mentioning authz.
+  it('D5(a): a two-district scope narrows to EXACTLY those districts — both present, others absent', async () => {
+    const { tx, client } = getTx();
+    const { a1, a2, a3, b1 } = await seedTwoDistricts(tx);
+    await seedMemberPosting(tx, PARIWAR_A, await seedMember(tx, PARIWAR_A), 'Nalanda');
+    await enterAppScope(client, PARIWAR_A);
+
+    const rosterTemplate = registry.get<{ member_id: string; district: string }>('member_roster')!;
+    const rows = await rosterTemplate.query(twoDistrictCtx(), tx);
+    const districts = new Set(rows.map((r) => r.district));
+    const ids = new Set(rows.map((r) => r.member_id));
+
+    expect(districts.has('Patna')).toBe(true);
+    expect(districts.has('Gaya')).toBe(true);
+    // ⛔ A third seeded district in the SAME tenant is NOT swept in — the `IN` list is the held set,
+    // not "every district that exists".
+    expect(districts.has('Nalanda')).toBe(false);
+    expect(ids.has(a1) && ids.has(a2) && ids.has(a3)).toBe(true);
+    expect(ids.has(b1)).toBe(false);
+  });
+
+  it('D5(b): an EMPTY district set DENIES — zero rows against a tenant that demonstrably HAS rows', async () => {
+    const { tx, client } = getTx();
+    const { a1, a2, a3 } = await seedTwoDistricts(tx);
+    await enterAppScope(client, PARIWAR_A);
+
+    const rosterTemplate = registry.get<{ member_id: string; district: string }>('member_roster')!;
+
+    // ⚠ THIS INPUT IS UNREACHABLE THROUGH A REAL ACTOR'S GRANTS, BY D1(i)'s OWN INVARIANT —
+    // `resolveActorReportScope` never returns a non-global scope with an empty set, and an actor with
+    // no district grant resolves to `null` and is 403'd before any template runs. So it is HAND-BUILT
+    // here, exactly as the PIN 9/9 test hand-builds its state_trustee scope. That is the point: the
+    // guarantee must hold at the narrowing authority even for an input the producer cannot emit.
+    const emptyCtx: reports.ReportScopeCtx = {
+      actorId: ACTOR,
+      grants: [
+        { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+      ],
+      pariwarId: PARIWAR_A,
+      resolvedScope: { dimension: 'district', values: [] },
+    };
+
+    // ⛔ ZERO ROWS — never the tenant.
+    expect(await rosterTemplate.query(emptyCtx, tx)).toEqual([]);
+
+    // ⭐ AND THE ASSERTION THAT STOPS THIS PASSING VACUOUSLY: the very same tenant, read through a
+    // pariwar-scoped actor in the very same transaction, DOES have rows. Without this, a suite that
+    // seeded nothing (or a DB that returned nothing) would satisfy the line above.
+    const tenantRows = await rosterTemplate.query(pariwarCtx(), tx);
+    const tenantIds = new Set(tenantRows.map((r) => r.member_id));
+    expect(tenantIds.has(a1) && tenantIds.has(a2) && tenantIds.has(a3)).toBe(true);
+
+    // Defence-in-depth, the D2 half: the same empty scope also fails CLOSED at the authorization
+    // layer — `assembleReport` maps the empty set to a single `null` target, which `scopeContains`
+    // rejects for any non-global dimension. ⛔ It must never become an empty loop that checks nothing.
+    await expect(reports.assembleReport(registry, 'member_roster', emptyCtx, tx)).rejects.toThrow();
+  });
+
+  // ── PIN 9/9 — RE-PINNED AT STORY 10.28 (AC4). ASSERTIONS UNCHANGED; THE REASON IS REWRITTEN. ──
   //
   // ⛔ THIS IS A **QUERY** DENY-DEEPER PIN, NOT AN RBAC ONE — and that distinction is the whole
   // disposition. Read the chain before touching it: `checkPermission` ALREADY ALLOWS here. A real
   // `state_trustee` genuinely holds `member.view_validity` at `{state,'Bihar'}`, and the resolved
-  // scope is ALSO `{state,'Bihar'}` — an EXACT-NODE match at the SAME dimension, answered at
+  // scope is ALSO `{state,['Bihar']}` — an EXACT-NODE match at the SAME dimension, answered at
   // `rbac/scope.ts:241` with no resolver involved at all. The zero rows come from the QUERY-level
   // narrowing in `templates/_shared.ts` (`resolveDistrictNarrowing` → `deny`).
   //
   // ⇒ Story 1.18's ancestry resolver does NOT move this pin, and could not have. It was listed among
-  // the nine because it says "deny-deeper", not because a resolver was ever the blocker.
+  // the nine because it says "deny-deeper", not because a resolver was ever the blocker. That half of
+  // the disposition — the RBAC-vs-QUERY reclassification — was DISCHARGED IN FULL by Story 1.18
+  // (AC6), and asserted falsifiably by the with-resolver companion at the bottom of this test. ⛔ It
+  // is not re-litigated here, and Story 10.28 changes NONE of it.
   //
-  // ⭐ WHAT STORY 1.18 DID OWE HERE, AND DISCHARGED (AC6): re-examining whether the `_shared.ts`
-  // `deny` branch should change now that ancestry is live. It should not — but the REASON changed,
-  // from "no resolver exists" to "`DistrictNarrowing` and `ResolvedReportScope` are SINGLE-VALUED".
-  // With a tree, the districts beneath Bihar are knowable, so the correct narrowing is
-  // `WHERE district IN (…)`; expressing that is a CARDINALITY change owned permanently by
-  // **Story 10.28**, which Story 1.18 deliberately does not absorb. Narrowing to one arbitrary
-  // district would be worse than denying — a silent partial export.
+  // ⭐ WHAT STORY 10.28 CHANGES IS THE *REASON*, AND ONLY THE REASON — because the one Story 1.18
+  // left has now EXPIRED. That reason was "`DistrictNarrowing` and `ResolvedReportScope` are
+  // SINGLE-VALUED", and Story 10.28 made both MULTI-valued: the narrowing is now
+  // `WHERE district IN (…)` and a two-district admin genuinely gets both. So the cardinality that
+  // used to be the blocker is GONE, and a `state` actor STILL resolves nothing here.
   //
-  // ⚠ Story 10.28 will re-pin this test. When it does, the change is to the QUERY's behaviour, and
-  // the RBAC allow above it stays exactly as it is.
+  // ⚠ THE REASON ON THIS BRANCH HAS NOW BEEN WRONG TWICE ("no resolver until 1.18"; "the type is
+  // single-valued"). Both named a MISSING MECHANISM, and mechanisms get built. The third reason
+  // names a MISSING ACTOR, which is why it is durable:
+  //
+  //   **NO ROLE HOLDS A DISTRICT-NARROWABLE REPORT KEY AT A `state` CEILING.** `state_trustee`
+  //   (`roles.ts:361-369`, ceiling `state`) holds `member.view_validity` but NOT
+  //   `member.export_roster` — which lives only at `pariwar_admin` (`:341`) and `district_admin`
+  //   (`:401`); `reconciliation.review` is pariwar-ceiling only. Zero live consumers, zero backlog
+  //   consumers, no FR. The district-ENUMERATION API a state→descendants expansion needs does not
+  //   exist BECAUSE NONE WAS EVER NEEDED (`GeoTreeResolver` is `contains`-only by interface;
+  //   `LoadedGeoTree.parents` is child→parent only).
+  //
+  // ⛔ **"Closed by [edit]", NO successor minted** (Story 10.28, D3) — deliberately, on Story 1.18's
+  // own D4-R precedent. This is NOT a deferral and must never be re-read as one. If a state-ceiling
+  // role ever gains such a key, THAT story raises the enumeration question with a live requirement
+  // attached. ⛔ This test asserts the SAME zero rows it always has; the fixture below is registered
+  // under `member.view_validity` precisely because no `state`-ceiling role holds the roster key.
   it('deny-deeper (QUERY-level, not RBAC): a state-scoped actor resolves nothing below its ceiling — through the REAL checkPermission + assembleReport chain, not just the query helper', async () => {
     const { tx, client } = getTx();
     await seedTwoDistricts(tx);
@@ -164,7 +298,7 @@ describe.skipIf(!hasDatabase)('reports — scope-respecting narrowing (AC3)', ()
       actorId: ACTOR,
       grants: [{ pariwarId: PARIWAR_A, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' }],
       pariwarId: PARIWAR_A,
-      resolvedScope: { dimension: 'state', value: 'Bihar' },
+      resolvedScope: { dimension: 'state', values: ['Bihar'] },
     };
     const result = await reports.assembleReport(
       stateFixtureRegistry,

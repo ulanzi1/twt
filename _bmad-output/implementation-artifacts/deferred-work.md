@@ -1728,7 +1728,7 @@ Closure-language posture per [[feedback_closure_language_precision]]: engineerin
   **Residue, each Resolved via explicit deferral to a NAMED STORY that exists with acceptance criteria** (never an epic — that is what made this entry the worked example in the first place):
   · geo AUDIENCE selection (6 markers) → **Story 1.19** — needs a per-MEMBER geo attribute; a tree answers *"is Patna in Bihar"*, never *"which members are in Patna"*.
   · the block-dimension ground-inspection gate → **Story 6.17** — ✅ **SHIPPED 2026-08-13, "Closed by [edit]"** ([[feedback_closure_language_precision]]). `claim_ground_inspections` gained a **nullable** `block` (migration `0102`), `block_admin` holds `claim.conduct_ground_inspection`, and the gate DIMENSION became a property of the ROW: block-tagged ⇒ `dimension: 'block'`, block-null ⇒ `dimension: 'district'` byte-identically to 6.7 (Decision `2026-08-13-104`). ⭐ **The rank-order pin did not move and no resolver was changed** — the fix was a different GATE, which is what this line always said it would be. ⚠ The `district_admin`-by-ancestry half is **DECLARED, NOT PRODUCTION-ACTIVE**: no surface publishes a geo tree, so it is provable by test and unreachable by a real operator (recorded with its own re-trigger in the Story 6.17 section below).
-  · multi-node report scope → **Story 10.28** (see `:3432` below).
+  · multi-node report scope → **Story 10.28** — ✅ **SHIPPED 2026-08-13, "Closed by [edit]"** ([[feedback_closure_language_precision]]). `ResolvedReportScope.value` became `values: readonly string[]`, ties at the winning dimension now ACCUMULATE (deduped + sorted at the producer), and both district-narrowable templates emit `WHERE district IN (…)` (Decision `2026-08-13-105`). ⭐ **Cardinality and ancestry stayed ORTHOGONAL to the end** — no resolver was changed, no enumeration API was built, and the `state` narrowing arm still denies. See `:3432` below.
   · the trustee-DIRECTORY half of `pool/fixed-amount.ts` → **Story 10.13** (existing; no mint).
   · `self` targets (`scope.ts`) → **"Closed by [edit]", NO successor** — zero live consumers, zero backlog consumers, no FR; the comment misdescribed a deliberate design choice.
   
@@ -3455,6 +3455,8 @@ _Second-pass code review (2026-07-31) addendum:_
   ⛔ **The 2026-07-31 decision's premise is superseded on evidence.** It accepted the limitation on the reasoning that it *"aligns with the Epic-3 deny-deeper geo deferral, where multi-value (`IN`-list) scope naturally lands alongside the geo-tree resolver."* **It does not, and it did not.** Story 1.18 built the resolver and multi-node scope fell out of it not at all — the two are ORTHOGONAL: ancestry is ONE actor reaching nodes BENEATH a grant; multi-node is ONE actor holding grants at SEVERAL SIBLING nodes. A state-above-district admin and a multi-district admin are different problems that happen to share a `WHERE` clause. Story 1.18 could have absorbed it cheaply once the ancestry work was in hand and **deliberately did not** (its AC6, ruled 2026-08-12): a permanent owner born already-discharged is a contradiction.
   
   **What Story 1.18 DID discharge here:** the `v1 LIMITATION` comment at `reports/scope.ts` no longer claims *"the same deferral horizon as deny-deeper geo"* — that horizon arrived and this limitation outlived it — and `templates/_shared.ts`'s `deny` branch was re-examined per dimension and re-pinned, with `state` now denying because the TYPE is single-valued rather than because a resolver is missing. **Re-trigger:** Story 10.28, unconditionally.
+  
+  ✅ **DISCHARGED by Story 10.28 (2026-08-13) — Closed by [edit].** `ResolvedReportScope.value` was **replaced** by `values: readonly string[]` (D1 arm A — not augmented, so every consumer became a compile error), `resolveActorReportScope` now **accumulates** ties at the winning dimension and **dedupes + sorts at the producer**, `DistrictNarrowing`'s `district` kind became `districts` (non-empty by construction), and both district-narrowable templates emit `WHERE district IN (…)` via `sql.join`. The silent single-district export is **impossible**: the AC3 live-DB test asserts **presence** of both districts through the real grants → `resolveActorReportScope` → `assembleReport` → SQL chain, and was demonstrably **RED** against the restored strict-`<` implementation before going green (Decision `2026-08-13-105`, Escalation 2). ⛔ The `v1 LIMITATION` comment block is **deleted**, not amended — no "owned by Story 10.28" prose survives behind a shipped fix. **This entry has NO remaining re-trigger.**
 
 ## Deferred from: 10-8-feature-flags-per-cohort-capability-bar-governance-boundary-invariant (2026-07-31)
 
@@ -4313,7 +4315,7 @@ before anything pointed at it.
 |---|---|---|---|
 | Geo **audience** selection (markers D6, D7, D8, D14, D15, D16) | member→geo attribution over Story 1.18's tree | **Story 1.19** — `1-19-member-geo-attribution-geo-audience-consumer` | **MINTED**, Epic 1, `backlog`, 8 ACs |
 | Block-dimension **ground-inspection gate** (D2's honest path) | Story 6.7's ground-inspection gate (FR-40) | **Story 6.17** — `6-17-block-dimension-ground-inspection-gate` | ✅ **SHIPPED 2026-08-13** (was: MINTED, Epic 6, `backlog`, 5 ACs) — Decision `2026-08-13-104` |
-| **Multi-node report scope** (marker D2 / `reports/scope.ts:71` / `:3432` below) | Story 10.7's `ResolvedReportScope` | **Story 10.28** — `10-28-multi-node-report-scope` | **MINTED**, Epic 10, `backlog`, 5 ACs |
+| **Multi-node report scope** (marker D2 / `reports/scope.ts:71` / `:3432` below) | Story 10.7's `ResolvedReportScope` | **Story 10.28** — `10-28-multi-node-report-scope` | ✅ **SHIPPED 2026-08-13** (was: MINTED, Epic 10, `backlog`, 5 ACs) — Decision `2026-08-13-105` |
 
 ⚠ **Two of the three land in retrospected epics** (Epic 6 `done`, Epic 10 `optional`). That is the *same
 deliberate act* that placed Story 1.18 itself in a retrospected Epic 1: a successor belongs to the epic
@@ -4368,6 +4370,43 @@ Epic 3 → Story 1.18 → {1.19, 6.17, 10.28}. This is the **third generation** 
 difference that is supposed to break the cycle is that all three successors carry acceptance criteria and
 a named owner rather than an epic and a re-trigger. **Three owners is also three chances to repeat the
 failure.** Whoever retrospects Epic 1 next should check these three by name.
+
+## Recorded from: 10-28-multi-node-report-scope (2026-08-13) — TWO DELIBERATE NO-OWNER CLOSURES
+
+⛔ **NEITHER ENTRY BELOW IS A DEFERRAL, AND NEITHER MAY BE RE-READ AS ONE.** They are recorded because
+recording them is the honest alternative to minting an owner for work nobody has asked for — the
+un-gated re-commitment [[feedback_record_unattested_no_backfill]] warns decays, and *a deferral naming
+an epic expires unowned* ([[project_r7_fact_producer_unbuilt]]). ⛔ The three closure labels are never
+collapsed ([[feedback_closure_language_precision]]): these are **"Closed by [edit]"** and **recorded
+limitation**, not *"Resolved via explicit deferral"*. Ruled in Decision `2026-08-13-105` (D3, Escalation 3).
+
+- **The `state` narrowing arm stays `deny` — "Closed by [edit]", NO successor minted.** A `state`-scoped
+  actor's district-narrowable report resolves nothing below its ceiling, and Story 10.28 did **not**
+  change that even though it removed the reason previously given for it. ⭐ **The reason on this branch
+  has now been wrong TWICE** — *"no geo-tree resolver until Story 1.18"* (expired when 1.18 shipped) and
+  *"`DistrictNarrowing` / `ResolvedReportScope` are SINGLE-VALUED"* (expired the moment 10.28 landed).
+  Both named a **missing mechanism**, and mechanisms get built. The third reason names a **missing
+  actor**, which is why it is durable: **no role holds a district-narrowable report key at a `state`
+  ceiling** — `state_trustee` (`roles.ts:361-369`, ceiling `state`) holds `member.view_validity` but not
+  `member.export_roster`, which lives only at `pariwar_admin` (`:341`) and `district_admin` (`:401`);
+  `reconciliation.review` is pariwar-ceiling only (`:319`, `:452`). **Zero live consumers, zero backlog
+  consumers, no FR.** The district-**enumeration** API a `state`→descendants expansion would need does
+  not exist *because none was ever needed* (`GeoTreeResolver` is `contains`-only by interface;
+  `LoadedGeoTree.parents` is child→parent only). Closed on exactly the evidentiary shape that let Story
+  1.18's D4-R close `self` by edit with no successor. ⛔ **No story, no epic pointer, no "re-trigger:
+  someday".** If a state-ceiling role ever gains such a key, **that** story raises the enumeration
+  question with a live requirement attached. [`packages/domain/src/reports/templates/_shared.ts`]
+
+- **Audit actor-role attribution records ONE role for an actor holding DIFFERENT roles at DIFFERENT
+  nodes — recorded, not solved, and with no owner.** Both attribution sites match a grant against the
+  resolved scope by `dimension` + set membership and take the **first** hit, which is deterministic only
+  because `resolveActorReportScope` sorts the set at the producer (D1(ii)). An actor who is, say,
+  `district_admin` at Patna and some other key-bearing role at Gaya has one of those roles written to
+  the audit line. ⭐ **This is NOT a regression**: today's code has the same ambiguity with *less*
+  determinism, and the Story 10.7 review already chose *"the grant that actually authorized"* over
+  *"the first grant in the tenant"*. ⛔ **No audit column, no array field, no second audit line, no
+  successor.** The entry states the ambiguity, states that it predates this story, and stops.
+  [`apps/api/src/modules/reports/handlers.ts`; `apps/jobs/src/reports-export.ts`]
 
 ## Deferred from: code review of 1-18-geo-tree-scope-resolver (2026-08-13)
 

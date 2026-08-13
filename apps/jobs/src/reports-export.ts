@@ -172,10 +172,20 @@ export async function runReportExportBuild(
           targetLocator: { dimension: template.scopeDimension, value: null },
         });
       }
+      // ⭐ Story 10.28 (D4) — the resolved scope carries N nodes, so the match is set MEMBERSHIP and
+      // the FIRST hit is recorded; deterministic because the producer sorts the set (D1(ii)).
+      // ⛔ `global` carries the EMPTY set and its grants carry a null `scopeValue`, so the empty set
+      // matches the null-valued grant exactly as the pre-10.28 equality did.
+      // ⚠ RESIDUAL, RECORDED NOT SOLVED: different roles at different nodes ⇒ ONE role recorded.
+      // Not a regression (today's code is ambiguous with LESS determinism); `deferred-work.md`, no
+      // successor. ⛔ No audit column, no array field, no second audit line.
       auditActorRole =
-        grants.find(
-          (g) => g.scopeDimension === resolvedScope.dimension && g.scopeValue === resolvedScope.value,
-        )?.role ?? null;
+        grants.find((g) => {
+          if (g.scopeDimension !== resolvedScope.dimension) return false;
+          return resolvedScope.values.length > 0
+            ? g.scopeValue != null && resolvedScope.values.includes(g.scopeValue)
+            : g.scopeValue == null;
+        })?.role ?? null;
 
       // ⭐ SITE 10 (Story 1.18, AC3) — WIRED. The geo tree is re-loaded HERE, at build time, on the
       // same scoped client and in the same breath as the grants above.

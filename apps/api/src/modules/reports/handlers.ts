@@ -344,12 +344,22 @@ export function createReportsHandlers(deps: AppDeps) {
       const downloadResolvedScope = downloadTemplate
         ? reports.resolveActorReportScope(grants, downloadTemplate.permissionKey, pariwarId)
         : null;
+      // ⭐ Story 10.28 (D4) — the resolved scope carries N nodes, so the match is set MEMBERSHIP and
+      // the FIRST hit is recorded. It is deterministic because `resolveActorReportScope` sorts the
+      // set at the producer (D1(ii)). ⚠ RESIDUAL, STATED RATHER THAN SOLVED: an actor holding
+      // DIFFERENT roles at DIFFERENT nodes has ONE of those roles recorded. That is not a
+      // regression — today's code has the same ambiguity with LESS determinism — and it is recorded
+      // in `deferred-work.md` with no successor. ⛔ No audit column, no array field, no second line.
+      // ⛔ `global` carries the EMPTY set (D1(i)), and its grants carry a null `scopeValue` — so the
+      // empty set matches the null-valued grant, exactly as the pre-10.28 equality did. Dropping
+      // that arm would silently un-attribute every super_admin download.
       const actorRole = downloadResolvedScope
-        ? (grants.find(
-            (g) =>
-              g.scopeDimension === downloadResolvedScope.dimension &&
-              g.scopeValue === downloadResolvedScope.value,
-          )?.role ?? null)
+        ? (grants.find((g) => {
+            if (g.scopeDimension !== downloadResolvedScope.dimension) return false;
+            return downloadResolvedScope.values.length > 0
+              ? g.scopeValue != null && downloadResolvedScope.values.includes(g.scopeValue)
+              : g.scopeValue == null;
+          })?.role ?? null)
         : null;
       try {
         await audit.writeAuditEntry(deps.servicePool, {

@@ -337,28 +337,34 @@ Per ruled row:
 
 ## Session Resolution
 
-> ⛔ **BLANK BY DESIGN — DO NOT PRE-FILL.** This section is completed **during** the session, from
-> what the Panel actually rules. An entry here without initials is the exact defect Decision
-> `2026-08-12-101` was filed to correct.
+Session held **2026-08-14**. All eight rows ruled; none deferred, none rejected.
 
-Quorum met: ☐ Yes (≥2 trustees present) ☐ No — session not quorate, no rulings recorded
+> ⚠ **RULINGS RECORDED AS REPORTED BY THE PREPARER. THE INITIALS BLOCK BELOW IS NOT YET
+> COUNTERSIGNED.** The rulings are entered here because they were reported; the **attestation** is
+> incomplete until both trustees initial. ⛔ Until then, no clause of Decision `2026-08-14-109` may
+> be cited as counter-signed. This is recorded openly rather than backfilled
+> ([[feedback_record_unattested_no_backfill]]) — Decision `2026-08-12-101` exists because a Panel
+> confirmation was once asserted with no session record behind it, and this note is how that is
+> avoided here. ⛔ Do not fill the initials on anyone's behalf.
+
+Quorum met: ☑ Yes (≥2 trustees present) ☐ No — session not quorate, no rulings recorded
 
 | Row | Escalation | Decision | Conditions / amendments |
 |---|---|---|---|
-| 1 | Delivery of the export artifact | ☐ Ruled ☐ Deferred ☐ Rejected | |
-| 2 | Correction + gate discharge | ☐ Ruled ☐ Deferred ☐ Rejected | |
-| 3 | Moderation-record disclosure | ☐ Ruled ☐ Deferred ☐ Rejected | |
-| 4 | Statutory response horizon | ☐ Ruled ☐ Deferred ☐ Rejected | |
-| 5 | `claim_history` subject predicate | ☐ Ruled ☐ Deferred ☐ Rejected | |
-| 6 | `consumed`-row retention | ☐ Ruled ☐ Deferred ☐ Rejected | |
-| 7 | Trustee-authority recipient | ☐ Ruled ☐ Deferred ☐ Rejected | |
-| 8 | Export-content ownership | ☐ Ruled ☐ Deferred ☐ Rejected | |
+| 1 | Delivery of the export artifact | ☑ **Ruled — A: member-direct delivery** | Settles **1(iii)** (member grant is primary); the staff-mediated model is not built. ⛔ **1(ii) — the lost-mobile fallback — was NOT separately answered** and is carried as an OPEN sub-question, not inferred either way. |
+| 2 | Correction + gate discharge | ☑ **Ruled — A: three mechanized rights + a recorded helpdesk-ticket correction process are sufficient** | ⛔ No general member-profile editor. Makes the gate **dischargeable**, does **not** discharge it; the flip stays a separate Panel-exclusive act. |
+| 3 | Moderation-record disclosure | ☑ **Ruled — B: internal deliberative material is withheld** | Covers the decision note, 10.20's three further Tier-1 columns, and `actor_display`. The member still learns the outcome + reason-code label. **Un-attested** (counsel unengaged). |
+| 4 | Statutory response horizon | ☑ **Ruled — 48h first response / 5 business days** | ⭐ The shipped `other` desk is **24h/5** — stricter, therefore already compliant. ⛔ **No code change; `DEFAULT_ROUTING_POLICY` untouched.** Do not loosen 24h to 48h. **Un-attested.** |
+| 5 | `claim_history` subject predicate | ☑ **Ruled — B: claimant only** | Closes the third-party-PII hole by construction. Nominee / verifier / R9 voter / shepherd / inspector / assigned-donor roles are out of scope. **Un-attested.** |
+| 6 | `consumed`-row retention | ☑ **Ruled — A: retain `consumed` as the fulfilment/audit record** | ⭐ Already the shipped behaviour. Zeroing still applies. AC11's `consumed` arm un-blocks as **already-correct**; no code change. **Un-attested.** |
+| 7 | Trustee-authority recipient | ☑ **Ruled — 7(i): No, no DPDPA action inherently requires Panel authority · 7(ii): Trustee decides, authorised administrator executes** | **AC-R3 closes with a disposition and NO code changes.** ⛔ `trustee_panel` is not granted `member.data_rights`; the exclusion's rationale changes from *pending a ruling* to *ruled: not required*. |
+| 8 | Export-content ownership | ☑ **Ruled — A: a separate successor story owns the export-content contract** | AC5's content half **transfers out** of Story 10.21 — transferred, not abandoned. Successor story still **unnamed**. |
 
-Counsel attestation status for Rows 3, 5, 6: ☐ un-attested (Panel alone) ☐ counsel-attested
+Counsel attestation status for Rows 3, 4, 5, 6: ☑ **un-attested (Panel alone)** ☐ counsel-attested
 
-Trustee initials: ______ (DR)  ______ (KB)   Date: __________
+Trustee initials: ______ (DR)  ______ (KB)   Date: 2026-08-14 *(initials pending — see the caveat above)*
 
-Logged in `.decision-log.md` as Decision `____________`. Cascade applied: __________
+Logged in `.decision-log.md` as Decision **`2026-08-14-109`**. Cascade applied: **in progress — see below**
 
 ---
 

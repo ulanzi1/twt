@@ -25,9 +25,16 @@
 // Every read runs under the caller's RLS scope (tenant-isolated). Naming: DB snake_case, TS camelCase.
 //
 // ── ⚠ DELIBERATELY NOT EXPORTED: the Story 10.10 moderation rationale ────────────────────────────
-// `member_moderation_actions.rationale_ciphertext` is Tier-1 member-related PII, and this module's
-// own header calls itself "the authoritative checklist" for the PII surface — so its absence here
-// is recorded rather than left to read as an oversight.
+// `member_moderation_actions.decision_note_ciphertext` is Tier-1 member-related PII, and this
+// module's own header calls itself "the authoritative checklist" for the PII surface — so its
+// absence here is recorded rather than left to read as an oversight.
+// ⚠ NAME CORRECTED at Story 10.21 (Finding 6): this note said `rationale_ciphertext`, which migration
+// 0099 RENAMED to `decision_note_ciphertext` (Story 10.20). A stale name in the module that calls
+// itself the authoritative PII checklist is exactly the kind of drift that makes the checklist
+// un-followable. ⚠ Story 10.20 also added THREE further Tier-1 columns to that table —
+// `escalation_inadequacy_ciphertext`, `escalation_proportionality_ciphertext` and
+// `immediate_termination_reason_ciphertext` — and every one of them inherits the SAME undecided
+// disclosure question stated below. The open question now covers four columns, not one.
 //
 // The ERASURE half IS wired: `member/anonymize.ts` scrubs the rationale on RTBF, and migration 0092
 // grants the column-level UPDATE that makes the scrub possible at all (0091 was SELECT+INSERT-only,
@@ -43,6 +50,12 @@
 // → OPEN QUESTION for PM/legal, recorded per [[feedback_record_unattested_no_backfill]]. Whoever
 // answers it should also decide whether `actor_display` rides along, since naming the acting
 // trustee to a terminated member is its own decision.
+// ⭐ NOW DUE, AND OWNED: Story 10.21 is the hypothetical this note was written against — the DPDPA
+// access right exercised by exactly the terminated member it names. Raised as **Escalation 3**
+// (Decision `2026-08-14-106`), owner Trustee Panel + Legal Counsel, ⛔ RAISED AND UNANSWERED.
+// ⛔ Story 10.21 does NOT resolve it in either direction: it neither adds these four columns to the
+// export nor stays silent about them. *Re-trigger:* before `EXPORT_SCHEMA_VERSION` is bumped again —
+// the ruling decides the artifact's CONTENTS, so it is due at the next change to its shape.
 
 import { and, asc, desc, eq } from 'drizzle-orm';
 

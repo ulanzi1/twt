@@ -22,6 +22,8 @@
 // lifecycle — a terminated member's `members.state` is whatever it already was, which is why (b) cannot
 // be expressed as a lifecycle check.
 
+import { createHash } from 'node:crypto';
+
 import type { Db } from '../db.js';
 import type { MemberId } from '../ids/index.js';
 import { getCurrentMemberModerationOverlay } from './moderation/overlay.js';
@@ -84,6 +86,7 @@ export async function resolveRtbfLegality(
  * transaction-scoped; the one session-scoped precedent needs a manual unlock on a dedicated client, and
  * copied onto a POOLED client without that `finally` it leaks the lock for the connection's life.
  */
-export function rtbfAdvisoryLockKey(pariwarId: string, memberId: string): string {
-  return `member.rtbf:${pariwarId}:${memberId}`;
+export function rtbfAdvisoryLockKey(pariwarId: string, memberId: string): bigint {
+  const hex = createHash('sha256').update(`member.rtbf:${pariwarId}:${memberId}`).digest('hex');
+  return BigInt(`0x${hex.slice(0, 15)}`);
 }

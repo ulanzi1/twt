@@ -1,4 +1,26 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-14d (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. `Decision 2026-08-14-111`
+#   CLOSES the fallback-justification disclosure question AND rules the fallback's TRIGGER.
+#   (1) The justification is WITHHELD from the member export -- an internal operational/audit record.
+#   Confirms the reading recorded at `110` cl.3(d); the code was already built that way as the
+#   conservative default, so NO behaviour changes -- only its status, from reading to ratified.
+#   (2) THE CONSEQUENTIAL HALF, ruled of the Panel's own motion: the TRIGGER is the MEMBER'S OWN
+#   EXPLICIT REQUEST for staff mediation. The fallback is MEMBER-INITIATED, not operator-assessed --
+#   an operator cannot unilaterally route a member onto the staff-mediated path. That is a materially
+#   STRONGER control than `110` described, and it REFINES `110` cl.2 (which read as an operator-assessed
+#   "member no longer controls the registered mobile"). `110` is NOT edited; the refinement is stated.
+#   (3) TWO FACTS, DIFFERENT AUTHORS, BOTH RECORDED, not collapsible: the member's explicit request
+#   (member-authored, the trigger) and why the exception was permitted (staff-authored, the
+#   justification). A single staff "reason" field would absorb the member's trigger into a staff
+#   assertion.
+#   (4) TWO READINGS RECORDED, NOT INFERRED: (a) no machine-checkable lost-mobile precondition is built
+#   because none was ruled -- and this is the WIDER reading, admitting any member who asks and whose
+#   request is permitted, which widens how often a staff actor holds a decrypted Tier-1 export. IF THE
+#   PANEL INTENDED THE NARROWER SHAPE, THIS IS THE ITEM TO CORRECT, before AC-R1 ships. (b) whether the
+#   member's own request (as distinct from the staff justification) is exportable is untouched by cl.1;
+#   nothing added on that basis.
+#   Story state unchanged otherwise: AC-R1 + AC-R2 un-blocked but UNBUILT, release gate OPEN, export-
+#   content successor story still UNNAMED, consent-sheet initials still uncountersigned.
 # last_updated: 2026-08-14c (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. Sub-question 1(ii)
 #   ANSWERED -- `Decision 2026-08-14-110`, option (c): staff-mediated delivery IS permitted as a NARROW
 #   FALLBACK where the member no longer controls the registered mobile, conditioned on a RECORDED

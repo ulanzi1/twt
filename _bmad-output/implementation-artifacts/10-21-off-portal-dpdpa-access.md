@@ -1006,17 +1006,34 @@ off-portal-build half** (defined in AC5), leaving the release gate
 explicitly OPEN. That is a complete,
 honest delivery of the un-blocked scope — not a partial failure.
 
-### AC-R1 — Delivery of the export artifact ✅ `[FULLY RULED — Decisions 2026-08-14-109 cl.1 + 2026-08-14-110]`
+### AC-R1 — Delivery of the export artifact ✅ `[FULLY RULED — Decisions 2026-08-14-109 cl.1 + 110 + 111]`
 
 ⭐ **THE DELIVERY MODEL IS SETTLED IN FULL. This AC is un-blocked to BUILD AND SHIP.**
 
 **PRIMARY — member-direct** (`109` clause 1). A **one-time, OTP-verified download grant to the
 registered mobile**: the member proves possession, and ⛔ **no session is issued**.
 
-**FALLBACK — staff-mediated, NARROW** (`110` clause 1, option (c)). A staff actor obtains the
-assembled, decrypted export and hands it over through the administrative process — ⛔ **ONLY** where
-the member **no longer controls the registered mobile**, and ⛔ **ONLY** with a **RECORDED
-JUSTIFICATION**.
+**FALLBACK — staff-mediated, NARROW** (`110` clause 1 option (c); trigger refined by `111` clause 2).
+A staff actor obtains the assembled, decrypted export and hands it over through the administrative
+process.
+
+⭐ **THE TRIGGER IS THE MEMBER'S OWN EXPLICIT REQUEST for staff mediation** (`111` clause 2). ⛔ **The
+fallback is MEMBER-INITIATED, not operator-assessed.** An operator **cannot** unilaterally route a
+member onto this path, however well-intentioned — absent the member's own request there is no
+exception to permit. ⚠ This **refines** `110` clause 2, which phrased availability as an
+operator-assessed circumstance ("the member no longer controls the registered mobile"); that
+circumstance is now the **paradigm reason recorded in the justification**, ⛔ **not** a second
+machine-checkable precondition — see the ⚠ below.
+
+⛔ **TWO SEPARATE FACTS, DIFFERENT AUTHORS, BOTH RECORDED — do not collapse them into one field**
+(`111` clause 3):
+| Fact | Author | Role |
+|---|---|---|
+| The member **explicitly requested** staff mediation | **the member** (captured at intake) | the **TRIGGER** — without it there is no fallback |
+| **Why the exception was permitted** | **the staff actor** | the **JUSTIFICATION** — internal operational/audit record |
+
+⛔ A single staff-authored "reason" field would silently absorb the member's trigger into a staff
+assertion — precisely the substitution `111` clause 2 forecloses.
 
 ⛔ **PRIMARY PLUS EXCEPTION — NOT TWO CO-EQUAL ROUTES.** The fallback must read as an exception at
 every layer: in the code, in the operator UI, and in the audit record. ⛔ It must not be offered to an
@@ -1038,10 +1055,20 @@ erasure (10.10), and **exactly** the class Finding 9 / AC11 exist to close. ⛔ 
 that survives an erasure is a PII-retention defect created by the very control meant to add safety.
 The `rtbf-anonymize.test.ts` count assertion (**9 tables / 10 statements**) is what catches it — it
 must move **upward** in the same commit
-**And** ⚠ **the justification is treated as WITHHELD from the export** — `109` clause 3 withholds
-internal deliberative material, and this is structurally the same kind of artifact. ⛔ That is the
-**author's reading**, recorded as an open question in `110`, not a ruling; build it withheld (the
-conservative default) and re-present it
+**And** ⭐ **the justification is WITHHELD from the member export — RULED, not inferred**
+(`111` clause 1): it is an **internal operational / audit record**, not member-facing content. ✅ This
+was already the built posture as the conservative default, so **no behaviour changes — only its status
+does**, from *author's reading* to *ratified*
+**And** ⚠ **the member's TRIGGER is a different artifact from the staff JUSTIFICATION**, and `111`
+clause 1 is silent on it — the request is the member's **own act** on their own helpdesk ticket. ⛔ Do
+**not** infer an export requirement either way; nothing is added to the export on this basis (`111`
+*Open follow-ups*)
+**And** ⚠ ⛔ **NO machine-checkable lost-mobile precondition is built**, because none was ruled. The
+implementation gates on the member's explicit request (ratified) and records the circumstance in the
+justification. ⚠ **This is the WIDER of two readings** — it admits any member who explicitly asks and
+whose request is permitted, not only one who has lost the mobile — and it widens how often a staff
+actor holds a decrypted Tier-1 export. ⛔ **If the Panel intended the narrower shape, this is the item
+to correct** (`111` *Open follow-ups*, re-trigger: before AC-R1 ships)
 
 **Given** the rulings at Decision `2026-08-14-109` clause 1 and Decision `2026-08-14-110`
 **Then** the permitted delivery model — and **only** that model — is implemented over AC5's built artifact
@@ -1132,7 +1159,7 @@ this matrix and the task it points to, or the next validation finds the drift
 | **AC13** `[family 2]` | `pg_advisory_xact_lock` on a **namespaced** `member.rtbf:` key in **both** erasure callers; live two-connection **domain** spec with a forced interleave | 6, 7a, 9 |
 | **AC14** `[family 9]` | DELIBERATE doc block on the `member.rtbf_anonymized` reducer arm + re-examination trigger | 6 |
 | **AC15** `[family 5]` | partial-unique assertion in `data-exports-policy-regression.spec.ts` | 9 |
-| **AC-R1** | ✅ FULLY RULED (`109` cl.1 + `110`) — member-direct primary + narrow staff fallback w/ recorded justification (Tier-1 column, added to `anonymizeMember`'s coverage set) | 7b |
+| **AC-R1** | ✅ FULLY RULED (`109` cl.1 + `110` + `111`) — member-direct primary + **member-triggered** narrow staff fallback; TWO recorded facts (member request / staff justification); justification withheld (ruled); Tier-1 column in `anonymizeMember`'s coverage set | 7b |
 | **AC-R2** | ✅ RULED (`109` cl.2) — recorded helpdesk-ticket correction process | 7c |
 | **AC-R3** | ✅ RULED + CLOSED (`109` cl.7-8) — no code changes | — |
 
@@ -1329,16 +1356,27 @@ this matrix and the task it points to, or the next validation finds the drift
 - [ ] **Task 7b — Delivery** (AC-R1) ✅ **FULLY UN-BLOCKED — `2026-08-14-109` cl.1 + `2026-08-14-110`.**
   - [ ] **PRIMARY — member-direct.** A one-time, OTP-verified download grant to the registered mobile;
         the member proves possession and ⛔ **no session is issued**.
-  - [ ] **FALLBACK — staff-mediated, NARROW.** ⛔ Reachable ONLY where the member no longer controls
-        the registered mobile, and ONLY with a **recorded justification**. ⛔ Must read as an
-        **exception** in code, UI and audit — never as an equivalent choice.
+  - [ ] **FALLBACK — staff-mediated, NARROW. ⭐ TRIGGERED BY THE MEMBER'S OWN EXPLICIT REQUEST**
+        (`111` cl.2) — ⛔ **member-initiated, NOT operator-assessed**; an operator cannot route a member
+        here unilaterally. ⛔ Must read as an **exception** in code, UI and audit — never as an
+        equivalent choice.
+  - [ ] ⛔ **RECORD TWO SEPARATE FACTS, DIFFERENT AUTHORS — do not collapse into one field** (`111`
+        cl.3): (1) **the member explicitly requested** staff mediation — the TRIGGER, captured at
+        intake, member-authored; (2) **why the exception was permitted** — the JUSTIFICATION,
+        staff-authored. A single staff "reason" field would absorb the member's trigger into a staff
+        assertion.
+  - [ ] ⛔ **Do NOT build a machine-checkable lost-mobile precondition** — none was ruled. Gate on the
+        member's explicit request; record the circumstance in the justification. ⚠ Flagged in `111` as
+        the WIDER reading, correctable before ship.
   - [ ] ⛔ **The justification is MECHANIZED and fail-closed** — the fallback cannot proceed without
         one. ⛔ Free text about a member ⇒ a **Tier-1 encrypted column**, ⛔ NEVER an event payload.
   - [ ] ⭐ **Add that column to `anonymizeMember`'s coverage set IN THE SAME COMMIT**, and move
         `rtbf-anonymize.test.ts`'s count assertion (9 tables / 10 statements) **upward**. ⛔ Skipping
         this creates a Tier-1 column that survives an erasure — the exact 10.10 / Finding-9 class.
-  - [ ] Treat the justification as **withheld** from the export (`109` cl.3 by analogy; an open
-        reading recorded in `110`, ⛔ not a ruling).
+  - [ ] ✅ Keep the justification **withheld** from the export — **RULED** (`111` cl.1), an internal
+        operational/audit record. Already the built posture; the status moved from reading to ruling.
+        ⛔ Its counterpart — the member's own **request** — is a different artifact and `111` cl.1 is
+        silent on it; add nothing to the export on that basis.
 - [ ] **Task 7c — Correction** (AC-R2) ✅ **UN-BLOCKED — Decision `2026-08-14-109` clause 2.**
       Build a **recorded, staff-executed correction process on the existing helpdesk substrate**.
       ⛔ **No general admin member-profile editor** — the ruling authorises a recorded *process*, not a
@@ -1800,3 +1838,4 @@ arm (Escalation 9), **AC-R1** (Escalation 1), **AC-R2** (Escalation 2), **AC-R3*
 | 2026-08-14 | ⛔ **`Decision 2026-08-14-107` committed — Escalation 10 is now GOVERNED, and still unanswered.** The follow-on governance entry raising Escalation 10 landed, `governance(10.21):`-prefixed, **before any code** ([[feedback_governance_commits_precede_implementation]]). ⛔ **`Decision 2026-08-14-106` is NOT edited** — Escalation 10 post-dates it, and `107` is **additive, superseding nothing** ([[feedback_supersede_never_reinterpret]]). `107` records **three sub-questions CLOSED on evidence and deliberately NOT put to the Panel** — (1a) *“Trustee” is not `state_trustee`*, closed twice over and independently: by §8.7's ratified text (Decision `2026-08-10-096` clause 9) **and** by structure (`state_trustee` at `scopeCeiling: 'state'` holds neither helpdesk key, and `scopeWithinCeiling` is a pure numeric compare with no resolver parameter); (1b) *the Operator may intake/verify/route but not execute*, already ruled by AC3; (1c) *the routing mechanism needs no change*. It then records four findings — `routed_to_role` is **inert**, `target_role` is **not catalog-constrained**, the Panel has **governance authority and no operational queue**, and the request routes to the one role forbidden from executing it (absorbing **F6**'s role half) — plus one **non-defect** kept from being misread: the `actor: 'trustee'` pin is a coarse three-label enum, ⛔ not a Panel attribution. **Task 0 flipped to complete.** ⚠ **Anchor drift caught and corrected in BOTH files during the pre-commit verification:** the `trustee_panel` bundle comment cites `scope.ts:113-118` for `scopeWithinCeiling`, and that range is a **comment block** — the function is at **`:132-137`**, `CEILING_RANK` at **`:73-76`**, and the §RANK-ORDER canonical note at **`:89-91`**. Finding 10 and `107` now carry the correct anchors and flag the stale one in place. ⚠ **Recorded, not actioned:** `106`'s **title** says *“five escalations are RAISED AND LEFT OPEN”* while its own *Open follow-ups* enumerate **nine** — an internal inconsistency in a committed entry. ⛔ Not corrected here: `106` is not edited, and a title correction is its own record-correction act (the `2026-08-12-101` shape). |
 | 2026-08-14 | ⭐ **TRUSTEE PANEL RULED ALL EIGHT ESCALATIONS — `Decision 2026-08-14-109`. ZERO BLOCKS REMAIN; the story is still NOT done.** Rulings: **(1)** delivery is **MEMBER-DIRECT** — a one-time OTP-verified grant to the registered mobile, no session issued; ⛔ the staff-mediated model is **not built, not flagged, not left dormant**. **(2)** three mechanized rights **plus a recorded helpdesk-ticket correction process** discharge the release gate — ⛔ no general member-profile editor. **(3)** deliberative moderation material is **WITHHELD** (decision note, 10.20's three further Tier-1 columns, `actor_display`); the member still learns the outcome + reason-code label. **(4)** the statutory horizon is **48h/5 business days**. **(5)** claim history is **CLAIMANT-ONLY**. **(6)** a `consumed` export **RETAINS** its status. **(7i)** **no** DPDPA action inherently requires Panel authority. **(7ii)** the **Trustee decides, an authorised administrator executes**. **(8)** the export-content contract passes to **a separate successor story**. ⭐ **THREE RULINGS REQUIRED NO CODE, and that is recorded rather than turned into work:** Row 4 — the shipped `other` desk is **24h/5, STRICTER** than the ratified 48h/5, so it already complies; ⛔ `DEFAULT_ROUTING_POLICY` untouched, golden hash intact, and ⛔ **do not loosen 24h to 48h to "match" the ruling**. Row 6 — retaining `consumed` is exactly what ships, so AC11's carved-out arm closes as **already-correct** and its test gains a ratified basis. Row 7 — **AC-R3 closes with a disposition and no code**; `trustee_panel` is still not granted `member.data_rights`, and the `roles.test.ts` rationale moves from *"pending a ruling"* to *"ruled: not required"*, with the test now instructing that a future grant **contradicts a ratified ruling**. **AC5's content half TRANSFERRED OUT** (clause 9) — ⛔ *transferred, not abandoned*: recorded in `deferred-work.md` with the full successor scope, and ⚠ **the successor story is still UNNAMED**, which is exactly the class that produced `emptySection('Epic 8')`. `assemble.ts`'s Story-10.10 OPEN QUESTION is **CLOSED BY RULING** — its omission is now correct *by ruling*, not merely undecided, and the header says so. ⛔ **ONE SUB-QUESTION WAS NOT ANSWERED AND IS NOT INFERRED:** Row **1(ii)** — is staff-mediated delivery permitted as a **fallback** for a member who no longer controls the registered mobile? Member-direct delivery is an OTP grant **to that mobile**, and Finding 4 records that it **fails for exactly that member** — the population this story exists to serve. Carried as an OPEN follow-up owned by the Panel, ⛔ **gating SHIP of AC-R1**, with no fallback built pending an answer. ⚠ **Row 2 makes the gate DISCHARGEABLE, not discharged** — the flip remains a separate Panel-exclusive act. ⚠ **Attestation caveat:** the consent sheet's initials block is **not yet countersigned**; rulings recorded as reported, and no clause may be cited as counter-signed until it is. ⚠ **Counsel unengaged**, so Rows 3/4/5/6 are recorded **`un-attested`** with re-presentation owed at first engagement. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1/R2/R3, AC2's SLA disposition, AC5, AC11, the banner, the in-scope ruling-gated block, the *THREE ACs ARE RULING-GATED* preamble, the escalation trailer, the Panel-queue breakdown, 3 coverage-matrix rows, Tasks 5/6b/7b/7c/7d, `deferred-work.md`, `roles.test.ts`, `assemble.ts`, and §8.4a in **both** locales. ⛔ Verified afterwards: **zero** live `BLOCKED on Escalation` markers outside the Change Log, and 18 AC headings ↔ 18 matrix rows. |
 | 2026-08-14 | ⭐ **SUB-QUESTION 1(ii) ANSWERED — `Decision 2026-08-14-110`. NOTHING ON THIS STORY REMAINS UN-RULED.** The Panel ruled option **(c)**: staff-mediated delivery **IS** permitted as a **NARROW FALLBACK** where the member no longer controls the registered mobile, conditioned on a **RECORDED JUSTIFICATION**. This was the one gap `109` recorded openly and refused to infer — and it mattered, because member-direct delivery is an OTP grant **to** that mobile and **Finding 4** records it fails for exactly that member, who is the population this story exists to serve. Left unanswered, the story would have delivered a statutory right a subset of terminated members structurally could not exercise. ⭐ **The delivery model is now PRIMARY + NARROW EXCEPTION, ⛔ not two co-equal routes** — the fallback must read as an exception in code, UI and audit, and ⛔ must not be reachable merely because it is quicker than waiting for an OTP. **AC-R1 is un-blocked to BUILD AND SHIP.** ⛔ **FOUR IMPLEMENTATION CONSTRAINTS, recorded because three of them are traps:** **(a)** the justification is **MECHANIZED and fail-closed** — the fallback is structurally incapable of proceeding without one; an un-mechanized requirement decays **silently** here, since the export would still be delivered and only the record would be missing. **(b)** it is **free text about a member**, so it rides a **Tier-1 encrypted column** (the `decision_note_ciphertext` precedent) and ⛔ **NEVER an event payload** — member payloads are `.strict()` auditShape-only precisely so they cannot carry free text (R1), which is why AC3's widening admitted exactly ONE opaque UUID. ⛔ Not `.passthrough()`, not an audit context field. **(c) ⭐ THE HIGHEST-RISK ITEM: the new Tier-1 column MUST be added to `anonymizeMember`'s coverage set IN THE SAME COMMIT that creates it.** A new Tier-1 column landing in a table outside that set is **exactly** how the moderation rationale survived an erasure (10.10) and **exactly** the class Finding 9 / AC11 exist to close — so a justification column added as a *safety control* would itself become a **PII-retention defect**. `rtbf-anonymize.test.ts`'s count assertion (**9 tables / 10 statements**) is the mechanism that catches it and must move **upward**. **(d)** its **export status is the AUTHOR'S READING, not a ruling**: `109` clause 3 withholds internal deliberative material and enumerates four artifacts, but this one did not exist when that row was ruled. Built **withheld** (the conservative default, matching its enumerated siblings) and recorded in `110` as an open question for the next session or first counsel engagement. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1, Task 7b (now four sub-checkboxes), the in-scope ruling-gated bullet, the AC preamble, the banner, the escalation trailer, the coverage-matrix AC-R1 row, and the consent sheet's Row 1 + session header. ⛔ Verified afterwards: **zero** stale "unanswered" references outside the Change Log. ⚠ `109` is **not edited** — it stands as committed, including its record that 1(ii) was open at the time; `110` **completes** it and supersedes nothing ([[feedback_supersede_never_reinterpret]]). |
+| 2026-08-14 | ⭐ **`Decision 2026-08-14-111` — the fallback-justification disclosure question is CLOSED BY RULING, and the Panel additionally established the fallback's TRIGGER.** **(1) Withheld, ruled.** The staff-mediated fallback justification is an **internal operational / audit record** and is **withheld** from the member export. ✅ This **confirms** the reading `110` clause 3(d) recorded — the code was already built to it as the conservative default, so **no behaviour changes; only its status does**, from *author's reading* to *ratified*. `110`'s open follow-up is **Closed by ruling**, not by edit ([[feedback_closure_language_precision]]). **(2) ⭐ THE CONSEQUENTIAL HALF, ruled of the Panel's own motion: the TRIGGER for the fallback is the MEMBER'S OWN EXPLICIT REQUEST for staff mediation.** ⛔ **This makes the fallback MEMBER-INITIATED, not operator-assessed** — an operator **cannot** unilaterally route a member onto the staff-mediated path, however well-intentioned; absent the member's request there is no exception to permit. ⚠ **That is a materially STRONGER control than the shape `110` described**, and it **REFINES `110` clause 2**, which phrased availability as an operator-assessed circumstance (*"the member no longer controls the registered mobile"*). ⛔ `110` is **NOT edited** — it stands as committed, and the refinement is **stated openly** rather than absorbed by re-reading it ([[feedback_supersede_never_reinterpret]]). **(3) TWO SEPARATE FACTS, DIFFERENT AUTHORS, BOTH RECORDED — ⛔ not collapsible into one field:** the **member's explicit request** (member-authored, captured at intake — the TRIGGER, without which there is no fallback) and **why the exception was permitted** (staff-authored — the JUSTIFICATION, internal per clause 1). ⛔ A single staff-authored "reason" field would **silently absorb the member's trigger into a staff assertion**, which is exactly the substitution the trigger ruling forecloses. **(4) ⚠ TWO READINGS RECORDED, NOT INFERRED.** *(a)* Does the lost-mobile circumstance remain a **hard precondition**, or is it the paradigm reason recorded in the justification? The author's reading is the latter — the ruling says the justification records *why the exception was permitted*, which is where that circumstance lives. ⛔ **No machine-checkable lost-mobile precondition is built, because none was ruled** — and ⚠ **this is the WIDER of the two readings**: it admits any member who explicitly asks and whose request is permitted, not only one who lost the mobile, which widens how often a staff actor holds a member's assembled, **decrypted** Tier-1 export — the posture `109` clause 1 was careful about. ⛔ **If the Panel intended the narrower shape, that is the item to correct**, re-trigger **before AC-R1 ships**. *(b)* Is the member's **trigger** — as distinct from the staff justification — disclosable in the export? Clause 1 withholds the *justification* and is **silent** on the request, which is the member's **own act** on their own ticket. ⛔ Nothing added to the export on that basis. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1's heading, FALLBACK block, withheld clause and new no-precondition clause; Task 7b's fallback + two-facts + no-precondition + withheld checkboxes; the coverage-matrix AC-R1 row. |

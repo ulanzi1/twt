@@ -861,6 +861,47 @@ export function useHelpdeskTransitions(pariwarId: string, ticketId: string) {
   return { pickUp, reply, resolve };
 }
 
+// ── Story 10.21 — off-portal DPDPA data-rights fulfilment ─────────────────────
+/**
+ * The two fulfilment mutations for a data-rights ticket.
+ *
+ * ⛔ A FRESH `Idempotency-Key` PER USER-INITIATED ATTEMPT, generated here. The route REQUIRES the
+ * header and refuses a replay of the same key with a typed 409 — which is the correct behaviour for an
+ * irreversible act, and the reason a key must not be reused across separate deliberate attempts.
+ * ⚠ It is generated at MUTATE time, not at hook time: a key captured once per render would make an
+ * operator's genuine second attempt (after fixing a problem) look like a replay and be refused.
+ */
+export function useDataRightsFulfilment(pariwarId: string, ticketId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  const onSettled = (): void => {
+    void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
+    void qc.invalidateQueries({ queryKey: ['helpdesk-queue', pariwarId] });
+  };
+  const buildExport = useMutation({
+    mutationFn: () => {
+      if (memberId === null) throw new Error('This ticket names no subject member');
+      return api.buildOffPortalExport(pariwarId, {
+        memberId,
+        helpdeskTicketId: ticketId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  const erasure = useMutation({
+    mutationFn: () => {
+      if (memberId === null) throw new Error('This ticket names no subject member');
+      return api.fulfilOffPortalErasure(pariwarId, {
+        memberId,
+        helpdeskTicketId: ticketId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  return { buildExport, erasure };
+}
+
 // ── News/Blog admin authoring hooks (Story 10.5) ──────────────────────────────
 export const newsPostsKey = (pariwarId: string) => ['news-posts', pariwarId] as const;
 export const newsPostKey = (pariwarId: string, postId: string) => ['news-post', pariwarId, postId] as const;

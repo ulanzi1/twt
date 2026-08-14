@@ -57,12 +57,23 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Every scanned source file that contains `needle` as a raw literal, repo-relative. */
+/**
+ * Every scanned source file declaring `needle` as a COMPLETE quoted string literal, repo-relative.
+ *
+ * ⚠ QUOTE-DELIMITED, and that is a correctness requirement rather than a nicety. A bare
+ * `.includes(needle)` also matches the token as a PREFIX of a longer, semantically different literal —
+ * e.g. the audit action `'member_data_rights.rtbf_fulfilled'` contains the step-up context
+ * `'member_data_rights'`. That produced a false violation on a correct implementation, which is the
+ * worst failure mode a gate can have: it teaches the next reader to distrust it and weaken it.
+ * ⛔ Do not "simplify" this back to a substring test.
+ */
 function filesContaining(needle: string): string[] {
+  const quoted = [`'${needle}'`, `"${needle}"`, `\`${needle}\``];
   const hits: string[] = [];
   for (const root of SCAN_ROOTS) {
     for (const file of walk(path.join(repoRoot, root))) {
-      if (readFileSync(file, 'utf8').includes(needle)) hits.push(path.relative(repoRoot, file));
+      const text = readFileSync(file, 'utf8');
+      if (quoted.some((q) => text.includes(q))) hits.push(path.relative(repoRoot, file));
     }
   }
   return hits.sort();
@@ -98,5 +109,8 @@ describe('Story 10.21 AC2 — the DPDPA tokens are declared in exactly ONE modul
     // asserts the machinery itself works, using a token the scanner WILL find in the owner module.
     expect(filesContaining(DPDPA_DATA_RIGHTS_SUBCATEGORY).length).toBeGreaterThan(0);
     expect(filesContaining('a-token-that-appears-in-no-source-file-anywhere')).toEqual([]);
+    // ⛔ And the quote-delimiting itself must hold: a token that only ever appears as the PREFIX of a
+    // longer literal is NOT a declaration of that token, and must not be reported as one.
+    expect(filesContaining('member_data_rights.rtbf')).toEqual([]);
   });
 });

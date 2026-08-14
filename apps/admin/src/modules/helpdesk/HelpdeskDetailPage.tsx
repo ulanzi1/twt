@@ -7,8 +7,9 @@
 import type { ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { useHelpdeskTicket, useHelpdeskTransitions } from '../../api/hooks.js';
+import { useDataRightsFulfilment, useHelpdeskTicket, useHelpdeskTransitions } from '../../api/hooks.js';
 import { HelpdeskDetailShell } from './HelpdeskDetailShell.js';
+import { resolveEn } from './i18n-en.js';
 
 function messageOf(err: unknown): string | undefined {
   if (err instanceof ApiError) return err.message;
@@ -19,6 +20,9 @@ function messageOf(err: unknown): string | undefined {
 export function HelpdeskDetailPage({ pariwarId, ticketId }: { pariwarId: string; ticketId: string }): ReactElement {
   const ticket = useHelpdeskTicket(pariwarId, ticketId);
   const { pickUp, reply, resolve } = useHelpdeskTransitions(pariwarId, ticketId);
+  // Story 10.21 — the DPDPA fulfilment mutations. The shell decides whether to SHOW the panel (it
+  // checks the subcategory + subject member); this only supplies the actions.
+  const dataRights = useDataRightsFulfilment(pariwarId, ticketId, ticket.data?.subject_member_id ?? null);
 
   const actionError =
     (pickUp.isError ? messageOf(pickUp.error) : undefined) ??
@@ -36,6 +40,29 @@ export function HelpdeskDetailPage({ pariwarId, ticketId }: { pariwarId: string;
       onResolve={(message) => resolve.mutate(message)}
       pending={{ pickUp: pickUp.isPending, reply: reply.isPending, resolve: resolve.isPending }}
       actionError={actionError}
+      // ⚠ PRESENTATIONAL ONLY. The API is the real gate (permission key + distinct step-up); this just
+      // avoids offering an action that would 403. ⛔ A 403 here is not a bug to route around — it means
+      // the acting admin genuinely lacks `member.data_rights`.
+      // ⚠ The admin app has no client-side permission introspection today, so the panel is offered and
+      // the API refuses if the caller lacks the key. ⛔ Do NOT infer authority from this flag.
+      canFulfilDataRights
+      onBuildExport={() => dataRights.buildExport.mutate()}
+      onFulfilErasure={() => dataRights.erasure.mutate()}
+      dataRightsPending={{
+        buildExport: dataRights.buildExport.isPending,
+        erasure: dataRights.erasure.isPending,
+      }}
+      dataRightsError={
+        (dataRights.buildExport.isError ? messageOf(dataRights.buildExport.error) : undefined) ??
+        (dataRights.erasure.isError ? messageOf(dataRights.erasure.error) : undefined)
+      }
+      dataRightsNotice={
+        dataRights.erasure.isSuccess
+          ? resolveEn('helpdesk.dataRights.erasedNotice')
+          : dataRights.buildExport.isSuccess
+            ? resolveEn('helpdesk.dataRights.builtNotice')
+            : undefined
+      }
     />
   );
 }

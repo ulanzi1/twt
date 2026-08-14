@@ -28,6 +28,32 @@ const EN: Record<string, string> = {
   'helpdesk.category.loading': 'Loading the category list…',
   'helpdesk.category.error': 'Could not load the category list. Retry in a moment.',
   'helpdesk.subcategory.label': 'Subcategory (optional)',
+  // Story 10.21 — the DPDPA data-rights subcategory, shown under the `other` category. Operator-facing
+  // wording may be precise (UX-DR54/DR55); this label names the statutory route in plain terms so an
+  // operator taking the call can recognise it without knowing the token.
+  'helpdesk.subcategory.dpdpa': 'Data rights request (access, correction, portability, erasure)',
+  // ── Story 10.21 — the DPDPA fulfilment panel on the ticket detail page ────────────────────────────
+  // ⚠ Operator-facing copy, so it may be precise (UX-DR54/DR55). It is written to be HONEST about what
+  // each action does and does not do — an operator who over-reads a success message here could hand a
+  // member's decrypted dossier to the wrong person, or believe a right was satisfied when it was not.
+  'helpdesk.dataRights.title': 'Data rights fulfilment',
+  'helpdesk.dataRights.help':
+    'This member has no portal access. These actions carry out their statutory data rights through the administrative process — they require a separate permission and a fresh identity check.',
+  'helpdesk.dataRights.noPermission':
+    'You can view and route this request, but you do not hold the permission to carry it out. Escalate to a Pariwar Admin.',
+  'helpdesk.dataRights.buildExport': 'Build the member’s data export',
+  // ⛔ States the AC-R1 boundary in plain words. Building is settled; DELIVERING is an open governance
+  // question, and an operator must not infer permission to hand the file over from a success message.
+  'helpdesk.dataRights.buildExportNote':
+    'This assembles the member’s record. It does not release it — how the file may be handed over is not yet settled, so no download is offered here.',
+  'helpdesk.dataRights.erasureConfirm':
+    'I have verified the caller’s identity and confirm they asked for their data to be erased.',
+  'helpdesk.dataRights.erasure': 'Erase this member’s personal data',
+  'helpdesk.dataRights.builtNotice': 'Export built. It has not been released — see the note above.',
+  'helpdesk.dataRights.erasedNotice':
+    'Erasure completed. The member’s personal details have been overwritten.',
+  'helpdesk.dataRights.erasureNote':
+    'Permanent and cannot be undone. Their personal details are overwritten; the membership record and history remain for audit.',
   'helpdesk.subcategory.placeholder': 'Select a subcategory…',
   'helpdesk.subcategory.none': 'No subcategories for this category',
   // Body capture

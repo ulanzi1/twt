@@ -5,7 +5,7 @@
 // legality too, this just hides an action that would 409). PURE presentational: the container wires
 // the mutations. The reply/resolve message is local input state (a presentational concern).
 
-import type { HelpdeskAdminTicketDetailResponse } from '@twt/contracts';
+import { DPDPA_DATA_RIGHTS_SUBCATEGORY, type HelpdeskAdminTicketDetailResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
@@ -23,11 +23,45 @@ export interface HelpdeskDetailShellProps {
   onResolve: (message: string) => void;
   pending: { pickUp: boolean; reply: boolean; resolve: boolean };
   actionError?: string;
+
+  // ── Story 10.21 (AC2/AC3) — the DPDPA fulfilment affordances ──────────────────────────────────────
+  // ⚠ These are SEPARATE from the reply/resolve actions above, because they are a DIFFERENT AUTHORITY.
+  // Responding to a ticket rides `helpdesk.respond`; EXECUTING a data-rights request on a member with
+  // no session rides `member.data_rights` + a distinct step-up. The container decides whether the
+  // acting admin holds it — the shell only renders what it is told.
+  /** Whether the acting admin holds `member.data_rights`. ⛔ Presentational only — the API is the real
+   *  gate; hiding an action the caller cannot perform is a courtesy, not a control. */
+  canFulfilDataRights?: boolean;
+  onBuildExport?: () => void;
+  onFulfilErasure?: () => void;
+  dataRightsPending?: { buildExport: boolean; erasure: boolean };
+  dataRightsError?: string;
+  dataRightsNotice?: string;
 }
 
 export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactElement {
-  const { pariwarId, detail, loading, error, onPickUp, onReply, onResolve, pending, actionError } = props;
+  const {
+    pariwarId,
+    detail,
+    loading,
+    error,
+    onPickUp,
+    onReply,
+    onResolve,
+    pending,
+    actionError,
+    canFulfilDataRights = false,
+    onBuildExport,
+    onFulfilErasure,
+    dataRightsPending,
+    dataRightsError,
+    dataRightsNotice,
+  } = props;
   const [message, setMessage] = useState('');
+  // ⛔ Erasure is IRREVERSIBLE and operator-initiated, so it requires an explicit second confirmation
+  // in the UI. This is a usability guard, NOT a security control — the API's step-up + idempotency +
+  // advisory lock are the real ones. ⛔ Do not remove the API guards on the strength of this checkbox.
+  const [erasureConfirmed, setErasureConfirmed] = useState(false);
 
   if (loading) return <p role="status">{resolveEn('helpdesk.detail.loading')}</p>;
   if (error !== undefined) return <p role="alert" className="text-red-700">{error}</p>;
@@ -39,6 +73,14 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
   const canResolve = state === 'in_progress' || state === 'awaiting_member';
   const messageReady = message.trim().length > 0;
   const navs = crossLinkNavs(pariwarId, detail.cross_links);
+
+  // ⛔ Shown ONLY for a data-rights ticket that names a subject member. The subcategory token is
+  // IMPORTED, never re-declared — a typo would silently fail to match and the panel would never
+  // appear, with nothing anywhere reporting why (the @twt/contracts source-scan gate enforces this).
+  // ⚠ `subject_member_id` is required because every fulfilment read keys on the MEMBER, never on the
+  // ticket (AC4) — a ticket with no subject member has nobody to fulfil for.
+  const isDataRightsTicket =
+    detail.sub_category === DPDPA_DATA_RIGHTS_SUBCATEGORY && detail.subject_member_id !== null;
 
   return (
     <section aria-label={resolveEn('helpdesk.detail.title')} className="flex flex-col gap-4">
@@ -89,6 +131,77 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
           </li>
         ))}
       </ol>
+
+      {/* ── Story 10.21 — DPDPA fulfilment (a DIFFERENT authority from reply/resolve) ─────────────── */}
+      {isDataRightsTicket && (
+        <div className="flex flex-col gap-2 rounded border border-amber-300 bg-amber-50 p-3">
+          <h2 className="text-sm font-semibold">{resolveEn('helpdesk.dataRights.title')}</h2>
+          <p className="text-xs text-gray-700">{resolveEn('helpdesk.dataRights.help')}</p>
+
+          {!canFulfilDataRights && (
+            <p role="status" className="text-xs text-gray-600">
+              {resolveEn('helpdesk.dataRights.noPermission')}
+            </p>
+          )}
+
+          {dataRightsError !== undefined && (
+            <p role="alert" className="text-red-700">{dataRightsError}</p>
+          )}
+          {dataRightsNotice !== undefined && (
+            <p role="status" className="text-green-800">{dataRightsNotice}</p>
+          )}
+
+          {canFulfilDataRights && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  className="w-fit rounded bg-blue-700 px-3 py-1 text-white disabled:opacity-50"
+                  disabled={dataRightsPending?.buildExport === true}
+                  onClick={onBuildExport}
+                  data-testid="helpdesk-datarights-build-export"
+                >
+                  {dataRightsPending?.buildExport === true
+                    ? resolveEn('helpdesk.action.pending')
+                    : resolveEn('helpdesk.dataRights.buildExport')}
+                </button>
+                {/* ⚠ Says plainly that BUILDING is not DELIVERING. Delivery is undecided governance
+                    (AC-R1 / Escalation 1), and an operator must not infer from a success message that
+                    they may now hand the file over. */}
+                <p className="text-xs text-gray-600">{resolveEn('helpdesk.dataRights.buildExportNote')}</p>
+              </div>
+
+              <div className="flex flex-col gap-1 border-t border-amber-200 pt-2">
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={erasureConfirmed}
+                    onChange={(e) => setErasureConfirmed(e.target.checked)}
+                    data-testid="helpdesk-datarights-erasure-confirm"
+                  />
+                  {resolveEn('helpdesk.dataRights.erasureConfirm')}
+                </label>
+                <button
+                  type="button"
+                  className="w-fit rounded bg-red-700 px-3 py-1 text-white disabled:opacity-50"
+                  disabled={!erasureConfirmed || dataRightsPending?.erasure === true}
+                  onClick={onFulfilErasure}
+                  data-testid="helpdesk-datarights-erasure"
+                >
+                  {dataRightsPending?.erasure === true
+                    ? resolveEn('helpdesk.action.pending')
+                    : resolveEn('helpdesk.dataRights.erasure')}
+                </button>
+                <p className="text-xs text-gray-600">{resolveEn('helpdesk.dataRights.erasureNote')}</p>
+              </div>
+
+              {/* ⛔ There is deliberately NO "correction" affordance here. The correction right is
+                  unmechanized for EVERY member, and what discharges it is AC-R2 / Escalation 2 —
+                  RAISED AND UNANSWERED. An affordance would imply a capability that does not exist. */}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Actions — hidden when illegal for the current state (the API also guards). */}
       <div className="flex flex-col gap-2 border-t pt-3">

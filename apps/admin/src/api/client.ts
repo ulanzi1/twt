@@ -213,6 +213,9 @@ import {
   type PublishCustomFieldDefinitionResponse as PublishCustomFieldResult,
   type MemberCustomFieldsResponse as MemberCustomFields,
   type SetMemberCustomFieldsRequest as SetMemberCustomFieldsBody,
+  DATA_RIGHTS_STEP_UP_CONTEXT,
+  OffPortalErasureResponse,
+  OffPortalExportResponse,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -604,6 +607,55 @@ export function verifyStepUp(otp: string): Promise<StepUpVerifyResult> {
   return apiFetch('/api/v1/auth/step-up/verify', StepUpVerifyResponse, {
     method: 'POST',
     body: JSON.stringify({ otp }),
+  });
+}
+
+// ── Story 10.21 — off-portal DPDPA data-rights fulfilment ─────────────────────
+// The identity-verified administrative process for a member whose portal access has ended. Both
+// routes are gated server-side by
+//   [adminSession, scope, requirePermissionHook('member.data_rights', {dimension:'pariwar'}),
+//    requireStepUp(DATA_RIGHTS_STEP_UP_CONTEXT)]
+// ⛔ THE OTP SIDE MUST USE THE SAME IMPORTED CONSTANT. `requireStepUp` compares a BARE STRING by
+// equality and the contract carries no allow-list, so a literal typed here would elevate the session
+// under a context that can NEVER satisfy the gate — a permanently broken action, with nothing anywhere
+// naming the cause. `requestDataRightsStepUp` below exists so no caller is tempted to pass a literal.
+//
+// ⛔ There is NO download/handover call here (AC-R1, Escalation 1) and NO correction call (AC-R2,
+// Escalation 2). Both are unanswered governance questions; adding an unused client function would be
+// the first half of building the capability.
+
+const memberDataRightsBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/member-data-rights`;
+
+/** Request the step-up OTP for the data-rights context. ⛔ Always via this helper, never a literal. */
+export function requestDataRightsStepUp(): Promise<StepUpRequestResult> {
+  return requestStepUp(DATA_RIGHTS_STEP_UP_CONTEXT);
+}
+
+/**
+ * BUILD the member's export off-session. ⛔ Builds only — it does not deliver.
+ * `Idempotency-Key` is REQUIRED by the route; a fresh key per user-initiated attempt.
+ */
+export function buildOffPortalExport(
+  pariwarId: string,
+  input: { memberId: string; helpdeskTicketId: string; idempotencyKey: string },
+): Promise<z.output<typeof OffPortalExportResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/export`, OffPortalExportResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({ member_id: input.memberId, helpdesk_ticket_id: input.helpdeskTicketId }),
+  });
+}
+
+/** EXECUTE erasure off-session. ⛔ IRREVERSIBLE. `Idempotency-Key` REQUIRED. */
+export function fulfilOffPortalErasure(
+  pariwarId: string,
+  input: { memberId: string; helpdeskTicketId: string; idempotencyKey: string },
+): Promise<z.output<typeof OffPortalErasureResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/erasure`, OffPortalErasureResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({ member_id: input.memberId, helpdesk_ticket_id: input.helpdeskTicketId }),
   });
 }
 

@@ -34,12 +34,12 @@ Status: ready-for-dev
 > THE GATE IS NOT DISCHARGED, AND THIS BANNER STILL DOES NOT DISCHARGE IT. Clause 2 ruled that
 > three mechanized rights **plus a recorded helpdesk-ticket correction process** are sufficient — which
 > makes the gate **DISCHARGEABLE**, not discharged. The correction process (**AC-R2**) and member-direct
-> delivery (**AC-R1**) are now un-blocked but **NOT YET BUILT** — ⛔ **and AC-R1's FALLBACK half was
-> RE-BLOCKED on 2026-08-14 by Decision `2026-08-14-112`.** The Panel confirmed the **narrower**
-> eligibility (BOTH an explicit member request **AND** loss of the registered mobile) and directed that
-> the mechanization problem be raised rather than papered over: ⛔ **there is no reliable
-> machine-verifiable "lost mobile" signal** in this system, and how condition (2) is enforced is
-> **unanswered**. ⚠ So **ONE OPEN QUESTION REMAINS** — do not report this story as fully ruled. And the
+> delivery (**AC-R1**) are now un-blocked but **NOT YET BUILT**. ⭐ AC-R1's fallback half was re-blocked
+> by `2026-08-14-112` and **un-blocked again by `2026-08-14-113`**, which ratified **option (i)**: a
+> three-part gate (member request · unsuccessful OTP attempt · staff attestation) with the terminology
+> **mandated** as `primary_delivery_not_completed`. ⛔ **ZERO BLOCKS REMAIN — and that still is NOT
+> "done": AC-R1 and AC-R2 are UNBUILT.** ⚠ One narrow question stays open (whether element 2 should
+> also require `attempts = 0`); it does **not** block. And the
 > gate stays **OPEN** until a ratified `.decision-log.md` entry says otherwise — the **flip** remains
 > a separate Panel-exclusive act, and `109` clause 2 expressly does not authorise it. ⛔ Do not read a green
 > suite as a discharged gate, and ⛔ do not let this banner answer Escalation 2 — an earlier draft did
@@ -432,11 +432,12 @@ so no reader mistakes it for a Panel attribution. → **Escalation 10 / D10**.
 ⚠ These are this story's, and the release gate is not discharged without them. They are blocked on a
 ratified `.decision-log.md` entry, not descoped. See *"Ruling-gated acceptance criteria"*.
 ALL THREE RULED 2026-08-14 (Decision `2026-08-14-109`). They are no longer ruling-gated.
-- **Delivery** (AC-R1) — **PRIMARY ruled and buildable** (`109` cl.1): member-direct, a one-time
-  OTP-verified grant. ⛔ **FALLBACK RE-BLOCKED** (`112`): eligibility requires **BOTH** an explicit
-  member request **AND** loss of the registered mobile — neither substituting for the other — and
-  ⛔ **condition (2) has no reliable machine-verifiable signal**, so how it is enforced is
-  **unanswered** and blocks the fallback half. Primary plus exception, never two co-equal routes.
+- **Delivery** (AC-R1) — ✅ **UN-BLOCKED IN FULL** (`109` cl.1 + `110` + `111` + `112` + `113`).
+  **Primary:** member-direct, a one-time OTP-verified grant. **Fallback:** the `113` option-(i)
+  **three-part gate** — the member's explicit request **AND** an unsuccessful OTP attempt (both
+  machine-enforced, fail-closed) **AND** a staff attestation (recorded, ⛔ not machine-verifiable).
+  ⛔ Terminology **mandated**: `primary_delivery_not_completed`, never `mobile_lost` /
+  `mobile_unreachable`. Primary plus exception, never two co-equal routes.
 - **Correction** (AC-R2) — ruled: a **recorded helpdesk-ticket process** suffices (clause 2).
   Un-blocked to build. No general member-profile editor.
 - **The trustee-authority recipient** (AC-R3) — **CLOSED, no code** (clauses 7-8): no DPDPA action
@@ -469,11 +470,11 @@ ALL THREE RULING-GATED ACs WERE RULED on 2026-08-14 (Decision `2026-08-14-109`).
 (delivery - **member-direct**) and `AC-R2` (correction - **a recorded helpdesk-ticket process**) are
 **un-blocked and buildable**; `AC-R3` **closed with a disposition and no code**. They are stated after
 AC15 with their rulings. AC6 remains deliberately empty and points at AC-R2.
-Sub-question **1(ii)** was answered by Decision `2026-08-14-110` (the fallback is permitted), and its
-eligibility was **narrowed** by `2026-08-14-112` to require **BOTH** conditions. ⛔ **ONE OPEN QUESTION
-REMAINS:** how condition (2) — *"no longer controls the registered mobile"* — is enforced, given the
-system has **no reliable machine-verifiable signal** for it. It blocks AC-R1's fallback half.
-**Read that section before planning any task.**
+Sub-question **1(ii)** was answered by `2026-08-14-110`, **narrowed** by `2026-08-14-112` to require
+**BOTH** conditions, and its enforcement **settled** by `2026-08-14-113` (option (i), plus a mandated
+terminology). ⛔ **ZERO BLOCKS REMAIN — and that is still NOT "done": AC-R1 and AC-R2 are UNBUILT.**
+⚠ One narrow non-blocking question stays open (`attempts = 0`). **Read that section before planning
+any task.**
 
 ### AC1 — The route (minted, verbatim)
 
@@ -1012,16 +1013,10 @@ off-portal-build half** (defined in AC5), leaving the release gate
 explicitly OPEN. That is a complete,
 honest delivery of the un-blocked scope — not a partial failure.
 
-### AC-R1 — Delivery of the export artifact ⛔ `[RE-BLOCKED — Decision 2026-08-14-112 raises an unanswered mechanization question]`
+### AC-R1 — Delivery of the export artifact ✅ `[UN-BLOCKED IN FULL — Decisions 109 cl.1 + 110 + 111 + 112 + 113]`
 
-⛔ **THE DELIVERY MODEL IS SETTLED. THE FALLBACK'S ENFORCEMENT IS NOT — THIS AC IS BLOCKED AGAIN.**
-⚠ Decision `2026-08-14-112` confirmed the **narrower** eligibility (BOTH conditions, neither
-substituting for the other) and, as that ruling directs, raised the question it creates: **the system
-has NO reliable machine-verifiable "lost mobile" signal.** ⛔ Nothing ships until that is answered —
-every option changes what gets built. ⚠ **`110` un-blocked this AC and `112` re-blocks it. That is not
-governance churn — it is the ruling correctly refusing to let an unverifiable condition ship as though
-it were verified.**
-✅ **The PRIMARY (member-direct) half below is unaffected and remains buildable.**
+✅ **UN-BLOCKED IN FULL.** Decision `2026-08-14-113` ratified **option (i)** and answered the
+enforcement question `112` raised. Both halves are buildable.
 
 **PRIMARY — member-direct** (`109` clause 1). A **one-time, OTP-verified download grant to the
 registered mobile**: the member proves possession, and ⛔ **no session is issued**.
@@ -1080,8 +1075,38 @@ does**, from *author's reading* to *ratified*
 clause 1 is silent on it — the request is the member's **own act** on their own helpdesk ticket. ⛔ Do
 **not** infer an export requirement either way; nothing is added to the export on this basis (`111`
 *Open follow-ups*)
-**And** ⛔ **BLOCKED — condition (2) HAS NO RELIABLE MACHINE-VERIFIABLE SIGNAL, and this AC does not
-proceed until the Panel says how to enforce it** (`112` clause 4 + *Open follow-ups*). The trace:
+**And** ⭐ **RULED — option (i): a THREE-PART GATE** (`113` clause 1). ⛔ All three required; none substitutes
+for another:
+| # | Element | Author | Enforcement |
+|---|---|---|---|
+| **1** | the member's **explicit request** | the **member**, at intake | ⛔ machine-enforced, **fails closed** |
+| **2** | an **unsuccessful OTP attempt** on the primary route | the **system**, observed | ⛔ machine-enforced, **fails closed** |
+| **3** | the **attestation** that the member no longer controls the registered mobile | the **staff actor** | recorded in the internal justification; ⛔ **NOT** machine-verifiable and ⛔ **not claimed to be** |
+
+⭐ **What element 2 buys:** the fallback is **unreachable until the primary has genuinely been tried
+and failed** — a real narrowing, and exactly *"mechanized only to the extent necessary"* (`112` cl.3).
+
+**And** ⛔ **THE TERMINOLOGY IS MANDATED — `primary_delivery_not_completed`. ⛔ NEVER `mobile_lost`,
+⛔ NEVER `mobile_unreachable`** (`113` clause 2). This binds the **predicate, the column/field, the
+error code and the audit action**. ⚠ **It is not style — it is the control that stops element 2 from
+becoming a claim it cannot support.** The check observes that an OTP was issued and the route did not
+complete; it does **not** observe the handset. A field named `mobile_lost` asserts to every future
+reader that the system **established** what it merely **inferred** — and the inference is wrong for any
+member who was asleep, busy, or ignored the message. ✅ **MECHANIZED:** a source-scan gate
+(`packages/contracts/tests/delivery-terminology-gate.test.ts`) forbids the banned terms tree-wide,
+⛔ with revert-sanity proven
+**And** ⚠ **the predicate is `consumed_at IS NULL AND expires_at < now()`** over `member_auth_otps` —
+an OTP **issued** for the member-direct grant that **expired unconsumed**. ⛔ **`attempts` is
+deliberately NOT in the predicate** — see the open question below
+**And** ⚠ ⛔ **OPEN, and it narrows eligibility if answered "yes": should element 2 additionally require
+`attempts = 0`?** A non-zero attempt count means somebody **received the message and entered a wrong
+code** — evidence the member **DOES** control the mobile, cutting directly against element 3. ⛔ Not
+built, because it narrows beyond what was ruled and `112` cl.3 forbids inventing mechanism. ⚠ **The
+asymmetry matters:** wrong permissively admits a fallback that should have been refused; wrong
+restrictively denies a member a statutory route. *Re-trigger:* before AC-R1 ships (`113` *Open
+follow-ups*)
+
+⚠ **Retained for context — why element 3 cannot be machine-verified** (`112` clause 4):
 · ⛔ **No delivery receipt.** `channels/src/providers/sms-dlt.ts` says so itself — *"The gateway gives
 NO synchronous delivery receipt at accept time (no DLR seam in v1)."* `status: 'accepted'` means the
 **gateway** accepted it, not that a handset received it.
@@ -1185,7 +1210,7 @@ this matrix and the task it points to, or the next validation finds the drift
 | **AC13** `[family 2]` | `pg_advisory_xact_lock` on a **namespaced** `member.rtbf:` key in **both** erasure callers; live two-connection **domain** spec with a forced interleave | 6, 7a, 9 |
 | **AC14** `[family 9]` | DELIBERATE doc block on the `member.rtbf_anonymized` reducer arm + re-examination trigger | 6 |
 | **AC15** `[family 5]` | partial-unique assertion in `data-exports-policy-regression.spec.ts` | 9 |
-| **AC-R1** | ⛔ **PRIMARY buildable; FALLBACK RE-BLOCKED** (`112`) — eligibility needs BOTH member request AND loss of the registered mobile, and condition (2) has **no machine-verifiable signal**; enforcement unanswered | 7b |
+| **AC-R1** | ✅ **UN-BLOCKED IN FULL** (`113`, option (i)) — member-direct primary + three-part fallback gate (member request · unsuccessful OTP · staff attestation); terminology `primary_delivery_not_completed` MANDATED and gate-enforced | 7b |
 | **AC-R2** | ✅ RULED (`109` cl.2) — recorded helpdesk-ticket correction process | 7c |
 | **AC-R3** | ✅ RULED + CLOSED (`109` cl.7-8) — no code changes | — |
 
@@ -1379,29 +1404,32 @@ this matrix and the task it points to, or the next validation finds the drift
         (ADR-0030 — ⛔ not a bare `writeAuditEntry`).
   - [ ] ⛔ **Every fulfilment read keys on `member_id`** — never `ticket_id`, never `data_export_id` (AC4).
   - [ ] Regenerate `openapi/v1.yaml` (the EXPECTED diff).
-- [ ] **Task 7b — Delivery** (AC-R1) ⛔ **FALLBACK HALF RE-BLOCKED — `2026-08-14-112`.**
-      ✅ The **PRIMARY** (member-direct) sub-task below is un-blocked and may proceed.
-      ⛔ **Every FALLBACK sub-task is BLOCKED** on the unanswered question of how to enforce condition
-      (2) — there is no reliable machine-verifiable "lost mobile" signal (`112` cl.4). ⛔ Do not build
-      the fallback, and ⛔ do not implement the OTP-expiry proxy as if it verified the condition.
+- [ ] **Task 7b — Delivery** (AC-R1) ✅ **UN-BLOCKED IN FULL — `2026-08-14-113` ratified option (i).**
+      Both halves may proceed. ⛔ Build the fallback as the **three-part gate** below, and ⛔ name
+      everything `primary_delivery_not_completed` — the terminology gate will fail the build otherwise.
   - [ ] **PRIMARY — member-direct.** A one-time, OTP-verified download grant to the registered mobile;
         the member proves possession and ⛔ **no session is issued**.
-  - [ ] ⛔ **BLOCKED — FALLBACK.** Eligibility requires **BOTH** (1) the member's explicit request
-        **AND** (2) the member no longer controls the registered mobile — ⛔ neither substitutes for the
-        other (`112` cl.1). ⛔ Staff may not initiate or unilaterally select it. Must read as an
-        **exception** in code, UI and audit — never an equivalent choice.
+  - [ ] **FALLBACK — the THREE-PART GATE** (`113` cl.1), ⛔ all three required, none substituting:
+        **(1)** the member's **explicit request** — machine-enforced, fails closed;
+        **(2)** an **unsuccessful OTP attempt** (`consumed_at IS NULL AND expires_at < now()` over
+        `member_auth_otps`) — machine-enforced, fails closed;
+        **(3)** the staff **attestation** — recorded in the internal justification, ⛔ NOT
+        machine-verifiable and ⛔ not claimed to be.
+        ⛔ Staff may not initiate or unilaterally select it. Must read as an **exception** in code, UI
+        and audit — never an equivalent choice.
   - [ ] ⛔ **RECORD TWO SEPARATE FACTS, DIFFERENT AUTHORS — do not collapse into one field** (`111`
         cl.3): (1) **the member explicitly requested** staff mediation — the TRIGGER, captured at
         intake, member-authored; (2) **why the exception was permitted** — the JUSTIFICATION,
         staff-authored. A single staff "reason" field would absorb the member's trigger into a staff
         assertion.
-  - [ ] ⛔ **BLOCKED — how condition (2) is enforced is UNANSWERED** (`112` *Open follow-ups*). Three
-        options are on the table and each changes what ships: **(i)** mechanize the *attempted-and-did-
-        not-complete* OTP proxy as a hard precondition + carry "lost mobile" as a staff attestation;
-        **(ii)** build a stronger positive signal first (a DLR seam, or a mobile-change/unreachable
-        event) — net-new engineering; **(iii)** attestation-only, no machine precondition.
-        ⛔ Do not pick one. ⛔ And if (i) is later ruled, name the check for what it verifies — *"the
-        primary route did not complete"* — ⛔ **never** *"lost mobile"*.
+  - [ ] ⛔ **NAME IT `primary_delivery_not_completed` — predicate, column/field, error code AND audit
+        action** (`113` cl.2). ⛔ **NEVER `mobile_lost`, NEVER `mobile_unreachable`.** The check
+        verifies the ROUTE, not the handset; the other names assert what the system never established.
+        ✅ Enforced by `packages/contracts/tests/delivery-terminology-gate.test.ts` — it will fail the
+        build, tree-wide, on either banned term.
+  - [ ] ⚠ **`attempts` is NOT in the predicate**, and whether it should be (`attempts = 0`) is an OPEN
+        question — a non-zero count is evidence the member DOES control the mobile. ⛔ Do not add it
+        unilaterally (`113` *Open follow-ups*).
   - [ ] ⛔ **The justification is MECHANIZED and fail-closed** — the fallback cannot proceed without
         one. ⛔ Free text about a member ⇒ a **Tier-1 encrypted column**, ⛔ NEVER an event payload.
   - [ ] ⭐ **Add that column to `anonymizeMember`'s coverage set IN THE SAME COMMIT**, and move
@@ -1681,12 +1709,12 @@ helpdesk-ticket correction discharges the gate) · **3** ruled (deliberative mat
 (no DPDPA action inherently requires Panel authority) · **7** discharged **by transfer of ownership**
 to a named successor story. ⛔ **4** and **6** were never Panel items and remain owned by named
 successor stories — they are **not** discharged by this ruling.
-⛔ **CORRECTED 2026-08-14 — "zero blocks" NO LONGER HOLDS.** Decision `2026-08-14-112` narrowed the
-fallback's eligibility to **both** conditions and **re-blocked AC-R1's fallback half** on an
-**unanswered** question: there is **no reliable machine-verifiable "lost mobile" signal**, so how
-condition (2) is enforced is undecided, and three options are live — each changing what ships.
-**Current state: ONE open block (AC-R1's fallback half).** AC-R2 and AC-R1's **primary** half are
-un-blocked but **UNBUILT**, and the release gate is **OPEN**. ⚠ **AC5's off-portal-build half is independent of Escalations 7 and 8**
+⭐ **RESOLVED 2026-08-14 — `Decision 2026-08-14-113` ratified option (i) and un-blocked AC-R1 in full.**
+The fallback ships as a **three-part gate** (member request · unsuccessful OTP attempt · staff
+attestation), with the terminology **mandated** as `primary_delivery_not_completed` and enforced by a
+source-scan gate. ⛔ **Current state: ZERO open blocks — and the story is STILL NOT DONE.** AC-R1 and
+AC-R2 are un-blocked but **UNBUILT**, and the release gate is **OPEN**. ⚠ One narrow **non-blocking**
+question stays open: whether element 2 should also require `attempts = 0`. ⚠ **AC5's off-portal-build half is independent of Escalations 7 and 8**
 and may land — it is the export **content** wiring and the schema bump that are blocked. State the split
 explicitly; do not report AC5 as "done".
 ⚠ **Escalation 10 is different in kind from the other five blocks:** it blocks **AC-R3 only** and takes no
@@ -1876,3 +1904,4 @@ arm (Escalation 9), **AC-R1** (Escalation 1), **AC-R2** (Escalation 2), **AC-R3*
 | 2026-08-14 | ⭐ **SUB-QUESTION 1(ii) ANSWERED — `Decision 2026-08-14-110`. NOTHING ON THIS STORY REMAINS UN-RULED.** The Panel ruled option **(c)**: staff-mediated delivery **IS** permitted as a **NARROW FALLBACK** where the member no longer controls the registered mobile, conditioned on a **RECORDED JUSTIFICATION**. This was the one gap `109` recorded openly and refused to infer — and it mattered, because member-direct delivery is an OTP grant **to** that mobile and **Finding 4** records it fails for exactly that member, who is the population this story exists to serve. Left unanswered, the story would have delivered a statutory right a subset of terminated members structurally could not exercise. ⭐ **The delivery model is now PRIMARY + NARROW EXCEPTION, ⛔ not two co-equal routes** — the fallback must read as an exception in code, UI and audit, and ⛔ must not be reachable merely because it is quicker than waiting for an OTP. **AC-R1 is un-blocked to BUILD AND SHIP.** ⛔ **FOUR IMPLEMENTATION CONSTRAINTS, recorded because three of them are traps:** **(a)** the justification is **MECHANIZED and fail-closed** — the fallback is structurally incapable of proceeding without one; an un-mechanized requirement decays **silently** here, since the export would still be delivered and only the record would be missing. **(b)** it is **free text about a member**, so it rides a **Tier-1 encrypted column** (the `decision_note_ciphertext` precedent) and ⛔ **NEVER an event payload** — member payloads are `.strict()` auditShape-only precisely so they cannot carry free text (R1), which is why AC3's widening admitted exactly ONE opaque UUID. ⛔ Not `.passthrough()`, not an audit context field. **(c) ⭐ THE HIGHEST-RISK ITEM: the new Tier-1 column MUST be added to `anonymizeMember`'s coverage set IN THE SAME COMMIT that creates it.** A new Tier-1 column landing in a table outside that set is **exactly** how the moderation rationale survived an erasure (10.10) and **exactly** the class Finding 9 / AC11 exist to close — so a justification column added as a *safety control* would itself become a **PII-retention defect**. `rtbf-anonymize.test.ts`'s count assertion (**9 tables / 10 statements**) is the mechanism that catches it and must move **upward**. **(d)** its **export status is the AUTHOR'S READING, not a ruling**: `109` clause 3 withholds internal deliberative material and enumerates four artifacts, but this one did not exist when that row was ruled. Built **withheld** (the conservative default, matching its enumerated siblings) and recorded in `110` as an open question for the next session or first counsel engagement. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1, Task 7b (now four sub-checkboxes), the in-scope ruling-gated bullet, the AC preamble, the banner, the escalation trailer, the coverage-matrix AC-R1 row, and the consent sheet's Row 1 + session header. ⛔ Verified afterwards: **zero** stale "unanswered" references outside the Change Log. ⚠ `109` is **not edited** — it stands as committed, including its record that 1(ii) was open at the time; `110` **completes** it and supersedes nothing ([[feedback_supersede_never_reinterpret]]). |
 | 2026-08-14 | ⭐ **`Decision 2026-08-14-111` — the fallback-justification disclosure question is CLOSED BY RULING, and the Panel additionally established the fallback's TRIGGER.** **(1) Withheld, ruled.** The staff-mediated fallback justification is an **internal operational / audit record** and is **withheld** from the member export. ✅ This **confirms** the reading `110` clause 3(d) recorded — the code was already built to it as the conservative default, so **no behaviour changes; only its status does**, from *author's reading* to *ratified*. `110`'s open follow-up is **Closed by ruling**, not by edit ([[feedback_closure_language_precision]]). **(2) ⭐ THE CONSEQUENTIAL HALF, ruled of the Panel's own motion: the TRIGGER for the fallback is the MEMBER'S OWN EXPLICIT REQUEST for staff mediation.** ⛔ **This makes the fallback MEMBER-INITIATED, not operator-assessed** — an operator **cannot** unilaterally route a member onto the staff-mediated path, however well-intentioned; absent the member's request there is no exception to permit. ⚠ **That is a materially STRONGER control than the shape `110` described**, and it **REFINES `110` clause 2**, which phrased availability as an operator-assessed circumstance (*"the member no longer controls the registered mobile"*). ⛔ `110` is **NOT edited** — it stands as committed, and the refinement is **stated openly** rather than absorbed by re-reading it ([[feedback_supersede_never_reinterpret]]). **(3) TWO SEPARATE FACTS, DIFFERENT AUTHORS, BOTH RECORDED — ⛔ not collapsible into one field:** the **member's explicit request** (member-authored, captured at intake — the TRIGGER, without which there is no fallback) and **why the exception was permitted** (staff-authored — the JUSTIFICATION, internal per clause 1). ⛔ A single staff-authored "reason" field would **silently absorb the member's trigger into a staff assertion**, which is exactly the substitution the trigger ruling forecloses. **(4) ⚠ TWO READINGS RECORDED, NOT INFERRED.** *(a)* Does the lost-mobile circumstance remain a **hard precondition**, or is it the paradigm reason recorded in the justification? The author's reading is the latter — the ruling says the justification records *why the exception was permitted*, which is where that circumstance lives. ⛔ **No machine-checkable lost-mobile precondition is built, because none was ruled** — and ⚠ **this is the WIDER of the two readings**: it admits any member who explicitly asks and whose request is permitted, not only one who lost the mobile, which widens how often a staff actor holds a member's assembled, **decrypted** Tier-1 export — the posture `109` clause 1 was careful about. ⛔ **If the Panel intended the narrower shape, that is the item to correct**, re-trigger **before AC-R1 ships**. *(b)* Is the member's **trigger** — as distinct from the staff justification — disclosable in the export? Clause 1 withholds the *justification* and is **silent** on the request, which is the member's **own act** on their own ticket. ⛔ Nothing added to the export on that basis. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1's heading, FALLBACK block, withheld clause and new no-precondition clause; Task 7b's fallback + two-facts + no-precondition + withheld checkboxes; the coverage-matrix AC-R1 row. |
 | 2026-08-14 | ⛔ **`Decision 2026-08-14-112` — the NARROWER fallback eligibility is CONFIRMED, and AC-R1's fallback half is RE-BLOCKED on a question the ruling itself directed me to raise.** **(1) Eligibility requires BOTH conditions, neither substituting for the other:** an **explicit request by the member** for staff mediation **AND** the member **no longer controlling the registered mobile**, making the primary OTP route unavailable. ⛔ Staff may not initiate or unilaterally select the fallback. ⚠ This **supersedes the READING** recorded at `111` *Open follow-ups* item (a) — the wider shape (request alone suffices) is **rejected**. It was flagged there as the wider of two readings with a correction re-trigger *before AC-R1 ships*; the correction was taken. ⛔ `111` clause 2 itself **stands unchanged** and is now **one of two** conditions; `110` and `111` are **not edited** ([[feedback_supersede_never_reinterpret]]). **(2) ⛔ THE RULING DIRECTED THAT THE MECHANIZATION PROBLEM BE RAISED RATHER THAN SILENTLY WEAKENED — SO IT IS RAISED, AND IT BLOCKS.** A trace of the tree establishes there is **no reliable machine-verifiable "lost mobile" signal**: · **no delivery receipt** — `channels/src/providers/sms-dlt.ts` says so in its own words, *"The gateway gives NO synchronous delivery receipt at accept time (no DLR seam in v1)"*, so `status: 'accepted'` means the **gateway** took the message, not that a handset got it; · **no mobile-change history** — `member_identities` has no history table and there is **no `member.mobile_changed` event**, so a number lapsing or being ported away is unobservable; · **the one real observable is a PROXY** — `member_auth_otps` can show *an OTP was issued and never consumed* (`consumed_at IS NULL AND expires_at < now()`), which proves **the primary route did not complete** and ⛔ **NOT** that the member lost the mobile: it is satisfied identically by a member who was asleep, busy, or ignored the message. ⛔ **Implementing that proxy as if it verified condition (2) would be a claimed protection that does not exist** — the same class as this story's own inert `23505` catch, its inert `ON DELETE CASCADE` comment, and the vacuous `pii-scrape` gate. **(3) THREE OPTIONS ARE LIVE and each changes what ships — ⛔ none is chosen here:** (i) mechanize the *attempted-and-did-not-complete* proxy as a hard precondition + carry "lost mobile" as a recorded staff attestation; (ii) build a **stronger positive signal** first (a DLR seam, or a mobile-change/unreachable event) — net-new engineering in `@twt/channels` and the identity surface; (iii) **attestation-only**, no machine precondition — ⚠ the weakest, and closest to the shape clause 1 just rejected. **(4) ⚠ AC-R1's FALLBACK HALF IS BLOCKED AGAIN, and that is recorded plainly rather than worked around.** `110` un-blocked AC-R1; `112` re-blocks its fallback half. ⛔ That is **not governance churn** — it is the ruling correctly refusing to let an **unverifiable** condition ship as though it were verified. ✅ **AC-R1's PRIMARY (member-direct) half is unaffected and remains buildable**, as does AC-R2. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1's heading, its settled-in-full claim, the FALLBACK eligibility block and the no-precondition clause; Task 7b's header + fallback + enforcement checkboxes; the coverage-matrix AC-R1 row; the banner, the in-scope ruling-gated bullet, the AC preamble and the escalation trailer — all four of which had claimed *"nothing remains un-ruled"* and were **false the moment this ruling landed**. ⛔ Verified afterwards: **one** open block, stated consistently at every site. |
+| 2026-08-14 | ⭐ **`Decision 2026-08-14-113` — OPTION (i) RATIFIED; AC-R1 UN-BLOCKED IN FULL; the code terminology is MANDATED.** **(1) A THREE-PART GATE on the fallback**, ⛔ all three required and none substituting: **(1)** the member's **explicit request** — machine-enforced, fails closed; **(2)** an **unsuccessful OTP attempt** on the primary route — machine-enforced, fails closed; **(3)** the staff **attestation** that the member no longer controls the registered mobile — recorded in the internal justification, ⛔ **not machine-verifiable and not claimed to be**. ⭐ What element 2 buys is real: the fallback is **unreachable until the primary has genuinely been tried and failed** — exactly *"mechanized only to the extent necessary"* (`112` cl.3). **(2) ⛔ TERMINOLOGY MANDATED — `primary_delivery_not_completed`; ⛔ NEVER `mobile_lost`, ⛔ NEVER `mobile_unreachable`** — binding the predicate, the column/field, the error code AND the audit action. ⚠ **This is not style; it is the control that stops element 2 from becoming a claim it cannot support.** The check observes that an OTP was issued and the route did not complete; it does **not** observe the handset — there is no DLR seam and no mobile-change history. A field named `mobile_lost` would assert to every future reader, reviewer, operator and auditor that the system **established** what it merely **inferred**, and the inference is simply wrong for a member who was asleep, busy, or ignored the message. ⚠ This story has already had to correct **three** artifacts that named a protection they did not deliver (the inert `23505` catch, the inert `ON DELETE CASCADE` comment, the vacuous `pii-scrape` gate) — ⛔ the mandate exists so a fourth is not created **deliberately**. ✅ **MECHANIZED, not left as a convention:** `packages/contracts/tests/delivery-terminology-gate.test.ts` scans `contracts`/`domain`/`api`/`admin`/`jobs` for the banned terms in both snake_case and camelCase and fails the build tree-wide. ⚠ It builds its needles by **concatenation** and **excludes itself** by name — a terminology gate necessarily contains the terms it bans, so an un-excluded scan fails on itself and looks like a real violation. ⛔ **REVERT-SANITY PROVEN:** a planted `mobile_lost` in `domain/src/helpdesk/routing.ts` failed the gate with an actionable message naming the file; reverted; green. **(3) ⚠ THE PREDICATE IS `consumed_at IS NULL AND expires_at < now()`** over `member_auth_otps` — an OTP **issued** for the member-direct grant that **expired unconsumed**. ⛔ **`attempts` is deliberately NOT in it**, and whether it should be is recorded as an OPEN, **non-blocking** question: a **non-zero** attempt count means somebody **received the message and entered a wrong code**, which is evidence the member **DOES** control the mobile and cuts directly **against** element 3. ⛔ Not added, because it narrows eligibility beyond what was ruled and `112` cl.3 forbids inventing mechanism. ⚠ **The asymmetry is stated so whoever answers sees it:** wrong permissively admits a fallback that should have been refused; wrong restrictively **denies a member a statutory route**. **Propagated in the same pass**: AC-R1's heading + blocked banner + eligibility block + terminology/predicate clauses; Task 7b's header, fallback gate, terminology and `attempts` checkboxes; the coverage-matrix AC-R1 row; and the banner / in-scope bullet / AC preamble / escalation trailer, **all four of which said AC-R1's fallback was blocked** and were false the moment this ruling landed. ⛔ **ZERO blocks now — and the story is STILL NOT DONE: AC-R1 and AC-R2 are UNBUILT and the release gate is OPEN.** |

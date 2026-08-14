@@ -1,4 +1,30 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-14f (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. `Decision 2026-08-14-113`
+#   ratified OPTION (i) and UN-BLOCKED AC-R1 IN FULL. ⛔ ZERO BLOCKS -- and STILL NOT DONE: AC-R1 and
+#   AC-R2 are UNBUILT and the release gate is OPEN.
+#   THE FALLBACK IS A THREE-PART GATE, all required, none substituting: (1) the member's explicit
+#   request -- machine-enforced, fails closed; (2) an unsuccessful OTP attempt on the primary route --
+#   machine-enforced, fails closed; (3) the staff attestation that the member no longer controls the
+#   registered mobile -- recorded internally, NOT machine-verifiable and not claimed to be. Element 2
+#   makes the fallback unreachable until the primary has genuinely been tried and failed.
+#   ⛔ TERMINOLOGY MANDATED: primary_delivery_not_completed -- binding the predicate, column/field, error
+#   code AND audit action. NEVER the two banned alternatives. This is NOT style: the check observes the
+#   ROUTE, not the handset (no DLR seam, no mobile-change history), so a handset-flavoured name would
+#   assert what the system never established -- wrong for any member who was asleep, busy, or ignored
+#   the SMS. This story has already corrected THREE artifacts that named a protection they did not
+#   deliver (inert 23505 catch, inert ON DELETE CASCADE comment, vacuous pii-scrape gate); the mandate
+#   exists so a fourth is not created deliberately.
+#   MECHANIZED: packages/contracts/tests/delivery-terminology-gate.test.ts scans contracts/domain/api/
+#   admin/jobs in snake_case AND camelCase. It builds needles by concatenation and excludes itself (a
+#   terminology gate necessarily contains the terms it bans). REVERT-SANITY PROVEN: a planted term
+#   failed it with an actionable message; reverted; green.
+#   PREDICATE: consumed_at IS NULL AND expires_at < now() over member_auth_otps. `attempts` is
+#   DELIBERATELY NOT in it. OPEN, NON-BLOCKING: should element 2 also require attempts = 0? A non-zero
+#   count means someone RECEIVED the message and typed a wrong code -- evidence the member DOES control
+#   the mobile, cutting against element 3. Not added: it narrows beyond what was ruled and 112 cl.3
+#   forbids inventing mechanism. Asymmetry stated: wrong permissively admits a fallback that should have
+#   been refused; wrong restrictively DENIES A MEMBER A STATUTORY ROUTE.
+#   Export-content successor story still UNNAMED; consent-sheet initials still uncountersigned.
 # last_updated: 2026-08-14e (10-21-off-portal-dpdpa-access: stays IN-PROGRESS, and AC-R1's FALLBACK half
 #   is RE-BLOCKED -- `Decision 2026-08-14-112`. ⛔ "Zero blocks" NO LONGER HOLDS; there is ONE open block.
 #   (1) NARROWER ELIGIBILITY CONFIRMED: the fallback requires BOTH an explicit member request AND the

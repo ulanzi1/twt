@@ -333,4 +333,150 @@ describe.skipIf(!hasDatabase)('RTBF anonymization — soft-delete + retain + RLS
     )[0]!;
     expect(bRow.mobileCiphertext).toBe('enc:v1:b-original');
   });
+
+
+  // ── Story 10.21 (AC11) — erasure REACHES the export artifact ──────────────────────────────────────
+  //
+  // ⛔ WHY THESE ARE HERE. `anonymizeMember` did not touch `data_exports`, whose `artifact_ciphertext`
+  // is `piiColumn(1, 'data_export')` — the member's WHOLE assembled dossier as one Tier-1 envelope.
+  // The mechanism 3.11 documented for this (ON DELETE CASCADE on the member FK) has NEVER fired,
+  // because 3.12 shipped RTBF as a SOFT delete. What actually protected the artifact was a TTL: the
+  // vacuum zeroes only `consumed`/`expired` rows, hourly, against a 24h window ⇒ a `ready`, unconsumed
+  // export survived an erasure for ~25 hours, in full and decryptable.
+  //
+  // ⛔ THESE ASSERT ON THE ROW DIRECTLY, deliberately. The sibling sentinel-sweep test iterates
+  // `anonymizeMember`'s OWN coverage set and is structurally blind to a table outside it — reusing that
+  // shape here would reproduce the defect as its own proof.
+  describe('Story 10.21 (AC11) — the dossier does not survive the erasure', () => {
+    /** Insert a `data_exports` row for a member under the current scope. */
+    async function seedExport(
+      tx: ReturnType<typeof getTx>['tx'],
+      memberId: string,
+      status: string,
+      ciphertext: string | null = 'enc:v1:the-whole-dossier',
+    ): Promise<string> {
+      const [row] = await tx
+        .insert(schema.dataExports)
+        .values({
+          memberId: memberId as never,
+          pariwarId: PARIWAR_A,
+          status,
+          requestedAt: new Date(),
+          artifactCiphertext: ciphertext,
+        })
+        .returning();
+      return row!.exportId;
+    }
+
+    it('⭐ a READY, unconsumed export is zeroed IMMEDIATELY — not "after the vacuum", not "within 24h"', async () => {
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+      const exportId = await seedExport(tx, mid, 'ready');
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.dataExports)
+        .where(eq(schema.dataExports.exportId, exportId as never));
+      // ⛔ A TTL is not an erasure. This must hold in the SAME transaction as the scrub.
+      expect(row!.artifactCiphertext).toBeNull();
+      expect(row!.status).toBe('expired');
+    });
+
+    it('⭐ the PENDING flip is the GUARD — it is what stops an in-flight build resurrecting the dossier', async () => {
+      // ⚠ THE LOAD-BEARING CASE, and the one most likely to be skipped: a `pending` row holds no
+      // ciphertext, so "zero the ciphertext" reads as a no-op on it. But the DATA_EXPORT_BUILD worker
+      // writes `status = 'ready'` AND the fresh ciphertext under `WHERE status = 'pending'`. Flipping
+      // pending → expired is what makes that UPDATE match ZERO rows after the erasure commits.
+      // ⛔ A test that merely asserts a pending row's ciphertext is NULL passes VACUOUSLY (it was
+      // always NULL) and proves nothing. This one simulates the worker's actual write.
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+      const exportId = await seedExport(tx, mid, 'pending', null);
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      // Now let the worker run: its UPDATE is scoped `WHERE status = 'pending'`.
+      const updated = await client.query(
+        `UPDATE data_exports SET status = 'ready', artifact_ciphertext = $2
+         WHERE export_id = $1 AND status = 'pending' RETURNING export_id`,
+        [exportId, 'enc:v1:RESURRECTED'],
+      );
+      // ⭐ The whole point: the worker matches NOTHING, because the status is no longer 'pending'.
+      expect(updated.rowCount).toBe(0);
+
+      const [row] = await tx
+        .select()
+        .from(schema.dataExports)
+        .where(eq(schema.dataExports.exportId, exportId as never));
+      expect(row!.artifactCiphertext).toBeNull();
+      expect(row!.status).toBe('expired');
+    });
+
+    it('⛔ a CONSUMED row is ZEROED but KEEPS its status — Escalation 9, unanswered', async () => {
+      // ⚠ The zeroing is uncontroversial (the vacuum already does exactly this). The STATUS CHANGE is
+      // contested: overwriting `consumed` would destroy the record that the member ACTUALLY DOWNLOADED
+      // their export — a completed statutory-access fulfilment, and a fact AC11 separately promises to
+      // keep. That is a retention question owed to the Trustee Panel, not a coding preference.
+      // ⛔ If this assertion is changed to expect 'expired', check for a ratified decision id first —
+      // absent one, the code change is the defect, not this test.
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+      const exportId = await seedExport(tx, mid, 'consumed');
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.dataExports)
+        .where(eq(schema.dataExports.exportId, exportId as never));
+      expect(row!.artifactCiphertext).toBeNull();
+      expect(row!.status).toBe('consumed');
+    });
+
+    it('the metadata ROW is retained, never deleted — the erasure stays a soft delete', async () => {
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+      await seedExport(tx, mid, 'ready');
+      await seedExport(tx, mid, 'consumed');
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const rows = await tx
+        .select()
+        .from(schema.dataExports)
+        .where(eq(schema.dataExports.memberId, mid as never));
+      // Both rows survive — the audit trail of what was requested and fulfilled must outlive the PII.
+      expect(rows).toHaveLength(2);
+      expect(rows.every((r) => r.artifactCiphertext === null)).toBe(true);
+    });
+
+    it("does NOT touch another member's exports", async () => {
+      const { tx, client } = getTx();
+      const target = toMemberId(randomUUID());
+      const bystander = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: target });
+      await seedMember(tx, PARIWAR_A, { memberId: bystander });
+      const bystanderExport = await seedExport(tx, bystander, 'ready');
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: target, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.dataExports)
+        .where(eq(schema.dataExports.exportId, bystanderExport as never));
+      expect(row!.artifactCiphertext).toBe('enc:v1:the-whole-dossier');
+      expect(row!.status).toBe('ready');
+    });
+  });
 });

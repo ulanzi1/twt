@@ -1,4 +1,51 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-14 (10-21-off-portal-dpdpa-access: ready-for-dev -> IN-PROGRESS, NOT done.
+#   The UN-BLOCKED scope landed and is verified; FIVE blocks remain OPEN and no escalation was answered,
+#   so the `termination_access_block` RELEASE GATE STAYS OPEN. ⛔ Do not read this entry as completion.
+#   LANDED: AC1-AC4, AC7-AC15, AC5's off-portal-build half, AC11's pending/ready arms.
+#   · Governance FIRST (3 entries, all `governance:`-prefixed, before any code): `2026-08-14-106`
+#     (authoring rulings + Escalations 1-9), `2026-08-14-107` (NEW Escalation 10 / D10 - an off-portal
+#     DPDPA request needing TRUSTEE authority has NO operational recipient: trustee_panel IS a seeded
+#     role at a pariwar ceiling but holds member.moderate + member.restore_terminated and NO helpdesk
+#     capability at all; `routed_to_role` is INERT - written once, read only as an optional queue
+#     filter, consulted by no authorization path; and validateRoutingPolicyRules does not constrain
+#     target_role to the seeded catalog, so a Panel-named routed destination would be SILENTLY inert.
+#     Three adjacent sub-questions recorded CLOSED ON EVIDENCE so the Panel is not asked what the model
+#     already answers), `2026-08-14-108` (§8.4a's "Statutory rights (DPDPA)" row DISPOSITIONED - the
+#     only row that had none - as PARTIALLY mechanized in three parts and deliberately LEFT IN the
+#     stated-but-unmechanized list; both locales verbatim, because docs/legal/ is gitignored).
+#   · CODE: member.data_rights minted (catalog 32->33, keys 41->42, pariwar_admin ONLY - NOT
+#     helpline_operator who files but does not execute, and ⛔ NOT trustee_panel pending Escalation 10;
+#     the roles.test.ts holder assertion records that exclusion as pending-a-ruling so a future grant
+#     fails until a decision id exists). RTBF legality RELOCATED out of the reducer into the callers via
+#     ONE shared predicate (reducer arm widened to every MEMBER_LIFECYCLE_STATES label but `anonymized`,
+#     enum-derived, with an AC14 DELIBERATE block). anonymizeMember now REACHES data_exports - the
+#     documented ON DELETE CASCADE never fired because 3.12 shipped a SOFT delete, so a ready export
+#     survived erasure ~25h fully decryptable. Migration 0103 (requested_via + CHECK,
+#     requested_by_actor_id, helpdesk_ticket_id + FK). New apps/api member-data-rights module (build +
+#     erasure, four-hook chain, Idempotency-Key, withCompensatingAudit, display_name-blocks-the-action).
+#     Admin operator surface + fulfilment panel.
+#   · TWO SHIPPED DEFECTS CLOSED, both pre-existing: (a) AC12 - the MEMBER data-export enqueue route had
+#     no lifecycle check and RTBF revokes no session, so an ERASED member could rebuild their dossier
+#     within their ~15-min token TTL; (b) AC13 - the RTBF 23505 catch was INERT (tested err.code, but
+#     the domain wraps it in a class carrying no `code`), and under READ COMMITTED the real failure mode
+#     was a DUPLICATE EVENT, not a conflict; now serialized by a namespaced pg_advisory_xact_lock on
+#     BOTH callers, proven by a forced two-connection race that FAILS when the lock is removed.
+#   · UNNAMED COLLATERAL found by running the suite, not by the spec: rtbf-anonymize.test.ts asserted
+#     anonymizeMember touches exactly 8 tables (now 9 tables / 10 statements, rewritten not weakened).
+#   · AC2's single-literal gate had a REAL false positive (substring match: the audit action
+#     'member_data_rights.rtbf_fulfilled' matched the step-up context as a prefix) - now quote-delimited
+#     with a regression assertion. Revert-sanity verified on that gate AND on the race test.
+#   ⛔ STILL BLOCKED, nothing decided: Escalation 1 (delivery / AC-R1), 2 (correction / AC-R2), 7+8
+#     (AC5's export CONTENT half - contribution_history/claim_history section contracts + claim subject
+#     predicate), 9 (AC11's `consumed`-STATUS arm only), 10 (AC-R3 / trustee recipient). Panel queue
+#     by enumeration: 1,2,3,5,8,9,10 = seven.
+#   ⚠ AC10 BASELINE CAVEAT: the documented `DATABASE_URL=... pnpm ci:local` invocation returns RED
+#     BEFORE ANY EDIT - the DATABASE_URL-global double-run pollution plus vitest `resolveId` starvation
+#     that kills tsc with zero TS errors. Verification used the single-pass method instead.
+#   VERIFIED: `pnpm ci:local` 30/30 green (identical to the pre-edit baseline); single-pass live-DB
+#     @twt/domain 2771 passed / 241 files and @twt/api 956 passed / 115 files, exit 0; i18n:check,
+#     microcopy 230/230 + check, member-state:test/check, schema:test 27/27, friction:test 32/32.
 # last_updated: 2026-08-13q (10-21-off-portal-dpdpa-access: backlog -> ready-for-dev via
 #   bmad-create-story, off main @ 19fa644 (clean, fetched). Saved 10-21-off-portal-dpdpa-access.md.
 #   RELEASE GATE on enabling termination. Eight findings recorded; four invalidate the obvious build:
@@ -6229,7 +6276,7 @@ development_status:
   10-18-constituting-the-trustee-panel-sanctioning-authority: done
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
-  10-21-off-portal-dpdpa-access: ready-for-dev
+  10-21-off-portal-dpdpa-access: in-progress
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done

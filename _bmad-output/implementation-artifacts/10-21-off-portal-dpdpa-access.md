@@ -1603,11 +1603,44 @@ audit context and never the event payload. Do not invent a verification primitiv
 
 ### Agent Model Used
 
+claude-opus-5 (2026-08-14).
+
+### Completion status — ⛔ UN-BLOCKED SCOPE ONLY. The release gate is OPEN.
+
+⛔ **This story is NOT done, and must not be reported as done.** Sprint status is `in-progress`.
+**Landed:** AC1–AC4, AC7–AC15, AC5's **off-portal-build half**, AC11's **`pending`/`ready`** arms.
+**Held, nothing decided:** AC5's export-**content** half (Escalations 7 + 8), AC11's **`consumed`-status**
+arm (Escalation 9), **AC-R1** (Escalation 1), **AC-R2** (Escalation 2), **AC-R3** (Escalation 10).
+⛔ No escalation was answered and no decision id fills any AC-R placeholder.
+
+### Debug Log References
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- **Governance committed FIRST, three entries, before any code** ([[feedback_governance_commits_precede_implementation]]): `2026-08-14-106` (pre-existing), **`2026-08-14-107`** (Escalation 10 / D10 raised), **`2026-08-14-108`** (the §8.4a disposition, landing LAST per §8.4a's own rule).
+- **Escalation 10 was found by a focused routing trace, not by the spec.** `trustee_panel` IS a seeded role at a `pariwar` ceiling (so it *could* satisfy the check) but holds **no helpdesk capability at all**; `routed_to_role` is **inert** (written once, read only as an optional queue filter, consulted by no authorization path); and `validateRoutingPolicyRules` does **not** constrain `target_role` to the seeded catalog. Three adjacent sub-questions were recorded **CLOSED on evidence** rather than put to the Panel.
+- **Two shipped defects closed, both pre-existing:** AC12 (an erased member could rebuild their dossier within their ~15-min token TTL — RTBF revokes no session and the enqueue route had no lifecycle check) and AC13 (the 23505 catch was **inert**; the real failure mode under READ COMMITTED was a **duplicate event**, now serialized by a namespaced `pg_advisory_xact_lock` on **both** callers).
+- **Unnamed collateral, found by running the suite:** `tests/member/rtbf-anonymize.test.ts` asserted `anonymizeMember` touches exactly **8** tables. Now **9 tables / 10 statements** — rewritten to the new truth, not weakened. ⚠ The spec named `state.test.ts:118` as collateral but not this.
+- **AC2's single-literal gate had a REAL false positive** — a substring scan matched the audit action `'member_data_rights.rtbf_fulfilled'` against the step-up context `'member_data_rights'` as a prefix, failing a *correct* implementation. Now quote-delimited, with a regression assertion. ⛔ A gate that cries wolf teaches the next reader to weaken it.
+- **Revert-sanity verified on two gates** (both fail when the thing they protect is removed, then pass again): the single-literal scan (planted duplicate) and the two-connection race (lock removed).
+- **Three DB-level mechanisms adopted rather than worked around** while writing tests: `events_log` is append-only and `members.state` is projector-only (both trigger-enforced, so fixtures drive the real `projectMemberState`), and cleanup uses the shipped `session_replication_role = 'replica'` idiom.
+- **A fixture bug that mimicked a missing guard:** the first AC12 route test seeded a `members` row with the state set and got 200, because the guard replays the **event stream**. The guard was correct; the fixture was not. The helper now says so.
+- ⚠ **AC10 baseline caveat, recorded openly** ([[feedback_record_unattested_no_backfill]]): the documented `DATABASE_URL=… pnpm ci:local` invocation returns **RED before any edit** — the DATABASE_URL-global double-run pollution plus a vitest `resolveId` starvation that kills `tsc` with zero TS errors. Both suspect specs were verified green in isolation. Verification therefore used `pnpm ci:local` (30/30, identical to the pre-edit baseline) **plus** a single-pass live-DB run.
+- ⚠ **`docs/legal/` is gitignored**, so the §8.4a working-tree edit is untracked; `2026-08-14-108` reproduces the added bullet verbatim in both locales, which is the durable record.
+- ⚠ **Migration `0033` was edited (comment-only)** as Task 6b orders. Drizzle applies by timestamp, not hash, so this is hash drift with no re-apply; `db:migrate` verified a clean no-op.
+
+**Verified:** `pnpm ci:local` **30/30 green**; single-pass live-DB **@twt/domain 2771 passed / 241 files**, **@twt/api 956 passed / 115 files**, exit 0; `i18n:check`, `microcopy:test` 230/230 + `microcopy:check`, `member-state:test` 9/9 + `member-state:check`, `schema:test` 27/27, `domain-invariants:test` 7/7, `friction:test` 32/32.
+
 ### File List
+
+**Domain** — `rbac/{permissions,roles}.ts`; `member/{events,state,anonymize,index}.ts`; **NEW** `member/rtbf-legality.ts`; `data-export/{assemble,store}.ts`; `schema/data_exports.ts`; **NEW** `migrations/0103_data-exports-off-portal.sql` + `migrations/meta/_journal.json`; `migrations/0033_data-exports.sql` (comment-only).
+**Contracts** — **NEW** `member-data-rights/{member-data-rights,index}.ts`; `index.ts`.
+**API** — **NEW** `modules/member-data-rights/{handlers,routes,index}.ts`; `modules/{rtbf,data-export}/handlers.ts`; `server.ts`.
+**Admin** — `modules/helpdesk/{HelpdeskOperatorShell,HelpdeskDetailShell,HelpdeskDetailPage,i18n-en}.tsx|ts`; `api/{client,hooks}.ts`.
+**Tests** — **NEW** `domain/tests/member/rtbf-payload.test.ts`, `domain/tests/integration/rls/data-exports-policy-regression.spec.ts`, `domain/tests/integration/member/rtbf-concurrency.spec.ts`, `contracts/tests/member-data-rights-single-literal.test.ts`; updated `domain/tests/member/{state,rtbf-anonymize}.test.ts`, `domain/tests/rbac/{permissions,roles}.test.ts`, `domain/tests/integration/member/rtbf-anonymize.spec.ts`, `api/tests/integration/data-export/data-export.spec.ts`.
+**Governance** — `.decision-log.md` (`107`, `108`); `deferred-work.md`; `sprint-status.yaml`; `docs/legal/niyamavali{,.hi}.md` (untracked).
 
 ---
 

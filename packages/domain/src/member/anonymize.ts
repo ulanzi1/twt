@@ -29,12 +29,13 @@
 // Every write runs under the caller's RLS scope-tx (tenant-isolated). Naming: DB snake_case, TS
 // camelCase. NO HTTP / audit / event emission here — the route orchestrates (mirrors assemble.ts).
 
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import { encryptTier1, serializeEnvelope } from '../encryption/envelope.js';
 import type { KmsKeyRef, KmsProvider } from '../encryption/kms-provider.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
+import { dataExports } from '../schema/data_exports.js';
 import { memberAddresses } from '../schema/member_addresses.js';
 import { memberIdentities } from '../schema/member_identities.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
@@ -231,4 +232,51 @@ export async function anonymizeMember(
     .update(memberModerationGrounds)
     .set({ noteCiphertext: null })
     .where(eq(memberModerationGrounds.memberId, memberId));
+
+  // ── data_exports (Story 10.21, AC11) — the member's assembled DOSSIER ──────────────────────────────
+  //
+  // ⛔ THE DOCUMENTED RTBF MECHANISM FOR THIS TABLE HAS NEVER FIRED. `migrations/0033_data-exports.sql`
+  // and `schema/data_exports.ts` both state that RTBF removal happens via `ON DELETE CASCADE` on the
+  // member FK. Story 3.12 shipped RTBF as a **SOFT delete** — this very file performs ZERO `delete()`
+  // calls and the `members` row is retained — so the cascade never fires and the stated protection has
+  // been inert since 3.11 landed. 3.11 was written against an assumption 3.12 then contradicted, and
+  // nothing detected it because no story until 10.21 built an export for a member it also erases.
+  // Both stale comments are corrected in place; this block is the real mechanism.
+  //
+  // ⚠ WHAT WAS ACTUALLY PROTECTING THE ARTIFACT WAS A TTL, NOT AN ERASURE. `DATA_EXPORT_VACUUM` zeroes
+  // `artifact_ciphertext` only for `consumed`/`expired` rows, hourly, against a 24h window — so a
+  // `ready`, unconsumed export survived an erasure for up to ~25 hours, in full and decryptable.
+  // ⛔ A TTL is not an erasure. This runs in the SAME transaction as the scrub above.
+  //
+  // `artifact_ciphertext` is `piiColumn(1, 'data_export')` — the member's WHOLE assembled dossier as a
+  // single Tier-1 envelope ciphertext. It is NULLed, not sentinel-ed: unlike the NOT NULL columns above
+  // it is nullable, and the vacuum already NULLs it, so this matches the shipped posture.
+  //
+  // ⛔ THE METADATA ROW IS RETAINED, never deleted — the same posture as the vacuum ("drop the PII
+  // payload, keep the metadata row for audit"). The erasure stays a soft delete.
+  await client
+    .update(dataExports)
+    .set({ artifactCiphertext: null })
+    .where(eq(dataExports.memberId, memberId));
+
+  // ⭐ THE `pending` FLIP IS THE LOAD-BEARING HALF, AND IT IS NOT HYGIENE — IT IS THE GUARD.
+  // A `pending` row holds no ciphertext yet, so "zero the ciphertext" reads as a no-op on it. But the
+  // `DATA_EXPORT_BUILD` worker writes `status: 'ready'` AND the freshly-assembled ciphertext under
+  // `WHERE status = 'pending'`. Flipping `pending` → `expired` is what stops an in-flight build from
+  // RESURRECTING the dossier after this erasure commits. ⛔ Do not "optimise" this away as redundant
+  // with the zeroing above; they defend different moments.
+  //
+  // ⛔ `consumed` IS DELIBERATELY EXCLUDED FROM THE STATUS FLIP — Escalation 9, RAISED AND UNANSWERED
+  // (Decision `2026-08-14-106`). Overwriting a `consumed` row's status destroys the record that the
+  // member ACTUALLY DOWNLOADED their export — a completed statutory-access fulfilment, and a fact the
+  // retention clause above promises to keep. The ZEROING applies to `consumed` (uncontroversial; the
+  // vacuum already does exactly that) and is handled by the unconditional update above; only the STATUS
+  // change is contested. ⛔ Do NOT add 'consumed' to this list without a ratified decision id — that is
+  // a retention question owed to the Trustee Panel, not a coding preference. Story 10.21 AC11 owns it.
+  await client
+    .update(dataExports)
+    .set({ status: 'expired' })
+    .where(
+      sql`${dataExports.memberId} = ${memberId} AND ${inArray(dataExports.status, ['pending', 'ready'])}`,
+    );
 }

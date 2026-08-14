@@ -114,10 +114,41 @@ function reduce(state: MemberLifecycleState, event: MemberEventInput): MemberLif
       }
       return state;
 
-    // RTBF anonymization (Story 3.12) — terminal, only from `withdrawn`. FR-96.
+    // ── DELIBERATE — RTBF anonymization is legal from EVERY live state, and legality is NOT here ──────
+    //
+    // ⚠ THIS ARM IS DELIBERATELY BROAD. It was `withdrawn`-only (Story 3.12, FR-96) and was widened by
+    // Story 10.21 to every `MEMBER_LIFECYCLE_STATES` label except `anonymized` — eight `from` states.
+    // ⛔ This is NOT a loosened guard. It is a RELOCATED one.
+    //
+    // WHY. Termination is an OVERLAY, not a lifecycle state (the ratified 10.16–10.23 model), so a
+    // terminated member's `members.state` is whatever it already was — and `nextModerationStatus`
+    // carries NO lifecycle precondition, so termination is legal from ANY of the nine labels. Under the
+    // old `withdrawn`-only arm, an off-portal erasure of a terminated `active` member would scrub every
+    // PII column and then append an event that returned IDENTITY — a PHANTOM ANONYMIZATION: PII gone,
+    // state never moved, member still `active` on replay.
+    //
+    // WHERE LEGALITY LIVES NOW — in the CALLERS, both of them, and there are exactly two:
+    //   1. `apps/api/src/modules/rtbf/handlers.ts`            — member self-service (`withdrawn` only)
+    //   2. `apps/api/src/modules/member-data-rights/`          — off-portal admin (the overlay reads
+    //                                                            `terminated`)
+    // Each asserts its own predicate BEFORE appending. This is the Story 10.20 WS-D shape: a precondition
+    // belongs in `nextModerationStatus`'s CALLER, never as a new state.
+    //
+    // ⛔ WHY THE REDUCER MUST NOT READ THE OVERLAY. `reduce` is a PURE, SYNCHRONOUS fold over
+    // `(state, event)` with no DB handle and no I/O — that purity is what makes replay deterministic and
+    // what `member-state-invariant` enforces. The overlay is a SEPARATE event-derived projection
+    // requiring an async read. Teaching this arm to consult it would make replay non-deterministic and
+    // order-dependent on a second stream. ⛔ Do not.
+    //
+    // ⚠ RE-EXAMINATION TRIGGER — a NEW caller appending `member.rtbf_anonymized` MUST carry the overlay
+    // precondition, or this arm is wrong for that path. If you are adding a third emitter and did not
+    // write a legality check, stop: the breadth here is covering for you, and it will phantom-anonymize.
+    // Likewise, a TENTH lifecycle label is admitted here automatically — the totality test in
+    // `tests/member/state.test.ts` is what forces a deliberate decision about it.
     case 'member.rtbf_anonymized':
-      if (state === 'withdrawn') return 'anonymized';
-      return state;
+      // Derived from the enum, ⛔ NEVER hand-listed — a hand-listed set is how the four
+      // `pending-*`/`lock-in` labels were missed once already.
+      return state === 'anonymized' ? state : 'anonymized';
 
     // Non-transition markers + any unknown/forward-compat event type → identity.
     default:
@@ -152,6 +183,15 @@ export const memberStateMachine: StateMachine<MemberLifecycleState, MemberEventI
       { from: 'active', event: 'member.withdrawal_completed', to: 'withdrawn' },
       { from: 'active-in-grace', event: 'member.withdrawal_completed', to: 'withdrawn' },
       { from: 'lapsed-unpaid', event: 'member.withdrawal_completed', to: 'withdrawn' },
+      // Story 10.21 — RTBF is legal from every live label, not only `withdrawn` (see the DELIBERATE
+      // block on the reducer arm). Seven rows added; the `withdrawn` row below predates this story.
+      { from: 'pending-kyc', event: 'member.rtbf_anonymized', to: 'anonymized' },
+      { from: 'pending-fee', event: 'member.rtbf_anonymized', to: 'anonymized' },
+      { from: 'pending-valid', event: 'member.rtbf_anonymized', to: 'anonymized' },
+      { from: 'lock-in', event: 'member.rtbf_anonymized', to: 'anonymized' },
+      { from: 'active', event: 'member.rtbf_anonymized', to: 'anonymized' },
+      { from: 'active-in-grace', event: 'member.rtbf_anonymized', to: 'anonymized' },
+      { from: 'lapsed-unpaid', event: 'member.rtbf_anonymized', to: 'anonymized' },
       { from: 'withdrawn', event: 'member.rtbf_anonymized', to: 'anonymized' },
     ],
   });

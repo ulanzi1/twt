@@ -33,6 +33,8 @@ export * from './withdrawal.js';
 // Story 3.12 — RTBF field-level anonymization core (the inverse of data-export/assemble.ts) + the
 // display-time member-name resolver seam that renders "an anonymous member" for anonymized members.
 export * from './anonymize.js';
+// Story 10.21 — the ONE RTBF legality predicate, shared by both erasure callers so they cannot diverge.
+export * from './rtbf-legality.js';
 export * from './display-name.js';
 export * from './errors.js';
 // Story 10.10 — member moderation (suspend / terminate / restore). A NESTED namespace

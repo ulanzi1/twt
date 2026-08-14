@@ -37,7 +37,12 @@ CREATE TABLE "data_exports" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
--- FK → members.member_id (ON DELETE CASCADE: RTBF row-deletes the member, Story 3.12).
+-- FK → members.member_id (ON DELETE CASCADE).
+-- ⛔ CORRECTED at Story 10.21: this comment previously claimed "RTBF row-deletes the member, Story
+-- 3.12". It does not. Story 3.12 shipped RTBF as a SOFT delete (the members row is retained), so this
+-- cascade has NEVER fired for an RTBF and the stated protection was inert. Erasure of this table's
+-- Tier-1 artifact is done explicitly in `member/anonymize.ts`. The cascade is retained for genuine
+-- member row-deletes (fixtures, tenant teardown); it is simply not the RTBF mechanism.
 ALTER TABLE "data_exports" ADD CONSTRAINT "data_exports_member_id_members_member_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("member_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 -- GRANT (SELECT/INSERT/UPDATE — DEVIATES from the append-only Life Events tables: the row transitions
 -- status, the job writes the artifact, the download stamps consumed_at, the vacuum zeroes the

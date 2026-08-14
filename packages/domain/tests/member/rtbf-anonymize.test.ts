@@ -18,6 +18,7 @@ import type { KmsKeyRef, KmsProvider } from '../../src/encryption/kms-provider.j
 import { ANONYMIZED_SENTINEL, anonymizeMember } from '../../src/member/anonymize.js';
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../src/ids/index.js';
 import {
+  dataExports,
   memberAddresses,
   memberIdentities,
   memberKycProfiles,
@@ -86,13 +87,25 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the eight member-PII tables, once each', async () => {
+  it('updates exactly the nine member-PII tables (ten statements), once each except data_exports', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
     // moderation rationale came to survive an erasure request in the first place.
+    //
+    // ⚠ REWRITTEN by Story 10.21 (AC11): NINE tables, TEN statements. `data_exports` joined the surface
+    // — its `artifact_ciphertext` is `piiColumn(1, 'data_export')`, i.e. the member's WHOLE assembled
+    // dossier as one Tier-1 envelope — and it takes TWO statements, deliberately:
+    //   1. an unconditional NULL of `artifact_ciphertext` on every row of the member; and
+    //   2. a status flip to `expired` restricted to `pending`/`ready` rows ONLY.
+    // ⛔ The two are NOT collapsible. (2) is scoped and (1) is not, because the `consumed` STATUS is
+    // deliberately left untouched pending Escalation 9 while its ciphertext is still zeroed. And the
+    // `pending` flip is the load-bearing guard that stops an in-flight DATA_EXPORT_BUILD resurrecting
+    // the dossier after the erasure commits.
+    // ⛔ This assertion was NOT named as collateral by the story spec; it was found by running the
+    // suite. It is REWRITTEN to the new truth, never weakened — the count is the completeness check.
     const { captured } = await run();
-    expect(captured).toHaveLength(8);
+    expect(captured).toHaveLength(10);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -103,9 +116,36 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memberWithdrawals,
       memberModerationActions,
       memberModerationGrounds,
+      dataExports,
     ]) {
       expect(tables).toContain(t);
     }
+    // Exactly one statement per table, EXCEPT data_exports which takes the documented two.
+    expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
+    expect(new Set(tables).size).toBe(9);
+  });
+
+  it('⭐ Story 10.21 (AC11): the dossier ciphertext is NULLed and `consumed` KEEPS its status', async () => {
+    // ⛔ This test must be able to FAIL. It asserts the two data_exports statements by shape, rather
+    // than iterating anonymizeMember's own coverage set — that shape is structurally blind to a table
+    // outside the set, which is precisely how this gap survived from 3.11 until 10.21.
+    const { captured } = await run();
+    const exportStatements = captured.filter((c) => c.table === dataExports);
+    expect(exportStatements).toHaveLength(2);
+
+    // (1) the unconditional zeroing — NULL, not a sentinel (the column is nullable and the vacuum
+    // already NULLs it, so this matches the shipped posture).
+    const zeroing = exportStatements.find((c) => 'artifactCiphertext' in c.set);
+    expect(zeroing, 'artifact_ciphertext must be zeroed').toBeDefined();
+    expect(zeroing!.set.artifactCiphertext).toBeNull();
+
+    // (2) the status flip — and it must NOT be an unconditional 'expired' on every row.
+    const flip = exportStatements.find((c) => 'status' in c.set);
+    expect(flip, 'pending/ready must flip to expired').toBeDefined();
+    expect(flip!.set.status).toBe('expired');
+    // ⛔ The two statements are distinct: the zeroing must not also carry the status.
+    expect(zeroing).not.toBe(flip);
+    expect('status' in zeroing!.set).toBe(false);
   });
 
   it('⭐ Story 10.20: EVERY new Tier-1 moderation column is scrubbed, BY NAME', async () => {

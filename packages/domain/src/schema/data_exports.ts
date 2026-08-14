@@ -16,7 +16,14 @@
 // The row transitions status (`pending → ready|failed → consumed|expired`), the job writes the
 // artifact, the download stamps `consumed_at`, and the TTL vacuum zeroes `artifact_ciphertext`. All
 // UPDATEs — hence the GRANT widens beyond the append-only Life Events tables (mirror
-// member_withdrawals). NO direct DELETE — RTBF removal (Story 3.12) is via the member FK cascade.
+// member_withdrawals). NO direct DELETE.
+// ⛔ CORRECTED at Story 10.21 (AC11). This line previously read "RTBF removal (Story 3.12) is via the
+// member FK cascade" — that was NEVER TRUE. Story 3.12 shipped RTBF as a SOFT delete: `member/
+// anonymize.ts` performs zero `delete()` calls and the `members` row is RETAINED, so `ON DELETE
+// CASCADE` never fires. The claim had asserted a protection that did not exist since 3.11 landed.
+// The REAL mechanism is now an explicit block at the end of `anonymizeMember`: it NULLs
+// `artifact_ciphertext` on every row of the member and flips `pending`/`ready` → `expired`, in the
+// erasure's own transaction. (The `consumed` STATUS is deliberately left alone — Escalation 9.)
 //
 // ── PII discipline (R1) ────────────────────────────────────────────────────────────────────────────
 //   · status / failed_reason  → NON-PII bounded values (contracts `DataExportStatus`; failed_reason is

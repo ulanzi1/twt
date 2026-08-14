@@ -117,6 +117,30 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.21 — member.data_rights is granted ONLY to pariwar_admin (+ super_admin auto-derived)', () => {
+    const KEY = 'member.data_rights';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // `super_admin` is NEVER written into a grant list — its bundle IS `PERMISSION_CATALOG.keys`, so it
+    // auto-derives. Assert what the resolver returns, not what roles.ts spells out.
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // ⛔ helpline_operator FILES a data-rights request (helpdesk.create) but does NOT execute it — the
+    // AC3 intake/fulfilment separation. district_admin and state_trustee are rank-order blocked in
+    // OPPOSITE directions against this key's `pariwar` dimension (scope.ts §RANK-ORDER), and neither
+    // exclusion is an oversight.
+    // ⚠ trustee_panel is excluded PENDING A RULING, not on structural grounds: it sits at a `pariwar`
+    // ceiling and COULD satisfy the check. Escalation 10 (Decision `2026-08-14-107`) asks whether a
+    // Trustee-authority DPDPA action needs it as a holder; that question is RAISED AND UNANSWERED, and
+    // Story 10.21's AC-R3 owns it. ⛔ Adding trustee_panel here before the Panel rules would decide the
+    // escalation by implementation. If this assertion fails because trustee_panel was added, check for a
+    // ratified decision id first — absent one, the grant is the defect, not this test.
+    for (const role of ['helpline_operator', 'district_admin', 'state_trustee', 'trustee_panel'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 4.8 code review — validity.invalidate_cache is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'validity.invalidate_cache';
     const holders = defaultRoleBundles

@@ -77,6 +77,11 @@ const MEMBER_SUSPEND = permissionKey('member.suspend');
 const MEMBER_MODERATE = permissionKey('member.moderate');
 /** Story 10.19 — restore-from-TERMINATED, held by `trustee_panel` ALONE (Niyamavali §8.4). */
 const MEMBER_RESTORE_TERMINATED = permissionKey('member.restore_terminated');
+// Story 10.21 — the off-portal DPDPA data-rights FULFILMENT key (pariwar-dimension). Filing a request
+// (`helpdesk.create`) and EXECUTING it on a member with no session are different authorities, so this is
+// a distinct key held by `pariwar_admin` ONLY. ⛔ NOT `helpline_operator` (files, does not execute),
+// ⛔ NOT `district_admin` / `state_trustee` (rank-order blocked in both directions — scope.ts §RANK-ORDER).
+const MEMBER_DATA_RIGHTS = permissionKey('member.data_rights');
 const MEMBER_VIEW_VALIDITY = permissionKey('member.view_validity');
 const VALIDITY_INVALIDATE_CACHE = permissionKey('validity.invalidate_cache');
 const PARIWAR_CONFIGURE_CHANNELS = permissionKey('pariwar.configure_channels');
@@ -255,6 +260,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // ⚠ DEPRECATED (Story 10.18) — SUCCESSOR: `member.moderate`. Grant HONOURED, not removed; no NEW grant.
       MEMBER_SUSPEND,
       MEMBER_MODERATE,
+      // Story 10.21 — off-portal DPDPA fulfilment. `pariwar_admin` is the ONLY seeded holder.
+      // ⚠ Escalation 10 (Decision `2026-08-14-107`) asks whether a Trustee-authority action needs a
+      // different or additional holder; it is RAISED AND UNANSWERED. ⛔ Do not add `trustee_panel` here
+      // pending that ruling (Story 10.21 AC-R3) — see the key's own note in permissions.ts.
+      MEMBER_DATA_RIGHTS,
       // Story 4.6 — reads the FR-12A Member Validity payload (admin surfaces).
       MEMBER_VIEW_VALIDITY,
       VALIDITY_INVALIDATE_CACHE,

@@ -17,6 +17,9 @@ import { describe, expect, it } from 'vitest';
 
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { ids, member as memberDomain } from '@twt/domain';
+
+import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -251,6 +254,120 @@ describe.skipIf(!hasDatabase)('Member data export — E2E (:5433)', () => {
       const r = await injectRaw(t, `${BASE}/${id}/download`, tok);
       expect(r.status).toBe(410);
       expect(String((r.body.error as Json)?.code)).toBe('data_export.expired');
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 10.21 (AC12) — the terminal guard on the MEMBER self-service enqueue path ────────────────
+//
+// ⛔ THIS CLOSES A SHIPPED DEFECT, NOT A HYPOTHETICAL. Three facts combined to make this reachable:
+//   · `requireMemberSession` is a STATELESS JWT verify — no DB read, no lifecycle check;
+//   · `anonymizeMember` revokes NOTHING (zero refresh-token / elevation / session writes), so an
+//     already-issued access token keeps working for the rest of its ~15-minute TTL; and
+//   · this handler had NO lifecycle check, while `assemble.ts` reads `members` by id with no state
+//     predicate.
+// So within their token window an ERASED member could enqueue a rebuild of the very dossier the
+// erasure had just zeroed — re-opening the artifact class AC11 exists to close.
+//
+// ⚠ The wider defect (RTBF revokes no session) is NOT closed by this and is recorded in
+// `deferred-work.md` with a named successor story. This AC closes only the `data_exports` surface.
+describe.skipIf(!hasDatabase)('Story 10.21 (AC12) — terminal members cannot enqueue an export', () => {
+  /**
+   * Seed a member at a terminal lifecycle state THROUGH THE EVENT STREAM.
+   *
+   * ⛔ NOT by inserting a `members` row with the state set. The guard resolves state by REPLAYING the
+   * event stream (`getMemberStateAt` — the same source the shipped `assertAnonymizable` RTBF guard
+   * uses), so a row-only fixture replays to `pending-kyc` and the test would assert 409 against a
+   * member the system does not consider terminal at all. That is a fixture bug that looks exactly like
+   * a missing guard, so it is called out here.
+   */
+  async function seedTerminalMember(
+    t: TestApp,
+    state: 'withdrawn' | 'anonymized',
+  ): Promise<{ memberId: string; pariwarId: string }> {
+    const memberId = randomUUID();
+    const pariwarId = randomUUID();
+    const scopeTx = await openScopeTx(t.deps, pariwarId);
+    try {
+      const mid = ids.memberId(memberId);
+      const pid = ids.pariwarId(pariwarId);
+      const audit = (from: string | null, to: string, trigger: string, actor: string, extra = {}) => ({
+        from_state: from,
+        to_state: to,
+        trigger,
+        actor,
+        ...extra,
+      });
+      const project = (eventType: string, payload: unknown) =>
+        memberDomain.projectMemberState(scopeTx.client, {
+          memberId: mid,
+          pariwarId: pid,
+          eventType: eventType as never,
+          actorId: memberId,
+          payload: payload as never,
+        });
+      await project('member.signup_initiated', audit(null, 'pending-kyc', 'signup', 'member'));
+      await project('member.kyc_completed', audit('pending-kyc', 'pending-fee', 'kyc', 'member'));
+      await project(
+        'member.vyawastha_shulk_paid',
+        audit('pending-fee', 'lock-in', 'fee_paid', 'member', { utr: 'UTR-T', amount_inr: 110 }),
+      );
+      await project(
+        'member.lock_in_expired',
+        audit('lock-in', 'active', 'lock_in_expired', 'system', { kyc_verified: true }),
+      );
+      await project('member.withdrawal_completed', audit('active', 'withdrawn', 'withdraw', 'member'));
+      if (state === 'anonymized') {
+        await project('member.rtbf_anonymized', audit('withdrawn', 'anonymized', 'rtbf_request', 'member'));
+      }
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+    return { memberId, pariwarId };
+  }
+
+  for (const state of ['anonymized', 'withdrawn'] as const) {
+    it(`a ${state} member holding a live token gets 409 data_export.member_terminal — and NO row is created`, async () => {
+      const t = await createTestApp();
+      try {
+        const { memberId, pariwarId } = await seedTerminalMember(t, state);
+        // ⭐ The token is issued the ordinary way. That is the point: erasure does not invalidate it,
+        // so this is exactly the request an erased member could make today.
+        const tok = token(t, memberId, pariwarId);
+
+        const res = await injectJson(t, 'POST', '/api/v1/member/data-export', tok);
+
+        expect(res.status).toBe(409);
+        // ⛔ The code is `data_export.member_terminal`, following the five shipped TERMINAL_STATES
+        // guards — NOT an `rtbf.already_anonymized`-shaped code, which would tell a client the wrong
+        // thing about what happened on a non-RTBF route.
+        expect(String((res.body.error as Json)?.code)).toBe('data_export.member_terminal');
+
+        // ⭐ THE LOAD-BEARING ASSERTION: no row. A 409 that still created a `pending` row would leave
+        // the dossier rebuildable AND would wedge the member behind the one-pending-per-member index.
+        const rows = await t.pool.query('SELECT export_id FROM data_exports WHERE member_id = $1', [
+          memberId,
+        ]);
+        expect(rows.rowCount).toBe(0);
+      } finally {
+        await teardown(t);
+      }
+    });
+  }
+
+  it('a LIVE member is unaffected — the guard is additive, not a regression', async () => {
+    // ⛔ Revert-sanity for the guard itself: if this fails, the terminal set was widened too far and
+    // ordinary members can no longer exercise their access right at all.
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t); // 'active'
+      const tok = token(t, memberId, pariwarId);
+      const res = await injectJson(t, 'POST', '/api/v1/member/data-export', tok);
+      expect(res.status).not.toBe(409);
     } finally {
       await teardown(t);
     }

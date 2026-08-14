@@ -83,7 +83,7 @@ describe.skipIf(!hasDatabase)('data_exports RLS + constraint policy regression',
     const err = await tx
       .insert(schema.dataExports)
       .values({
-        memberId: bMember,
+        memberId: bMember as never,
         pariwarId: PARIWAR_B, // ← MISMATCH under scope A
         status: 'pending',
         requestedAt: new Date(),

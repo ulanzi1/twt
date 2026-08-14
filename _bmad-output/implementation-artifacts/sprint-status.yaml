@@ -1,4 +1,27 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-14e (10-21-off-portal-dpdpa-access: stays IN-PROGRESS, and AC-R1's FALLBACK half
+#   is RE-BLOCKED -- `Decision 2026-08-14-112`. ⛔ "Zero blocks" NO LONGER HOLDS; there is ONE open block.
+#   (1) NARROWER ELIGIBILITY CONFIRMED: the fallback requires BOTH an explicit member request AND the
+#   member no longer controlling the registered mobile. Neither substitutes for the other. Staff may not
+#   initiate or unilaterally select it. This SUPERSEDES the READING recorded at `111` follow-up (a) --
+#   the wider "request alone suffices" shape is rejected. `111` cl.2 stands as one of two conditions;
+#   `110`/`111` are not edited.
+#   (2) THE RULING DIRECTED ME TO RAISE THE MECHANIZATION PROBLEM RATHER THAN WEAKEN THE CONDITION, and
+#   the trace says there is NO reliable machine-verifiable "lost mobile" signal: no delivery receipt
+#   (sms-dlt.ts states "no DLR seam in v1"; 'accepted' means the GATEWAY took it, not that a handset got
+#   it); no mobile-change history (member_identities has no history table, no member.mobile_changed
+#   event); and the one real observable -- member_auth_otps consumed_at IS NULL AND expires_at < now() --
+#   is a PROXY proving THE PRIMARY ROUTE DID NOT COMPLETE, not that the member lost the mobile (a member
+#   asleep/busy/ignoring the SMS satisfies it identically). ⛔ Shipping that proxy as if it verified the
+#   condition would be a claimed protection that does not exist -- the same class as this story's own
+#   inert 23505 catch, inert ON DELETE CASCADE comment, and vacuous pii-scrape gate.
+#   (3) THREE LIVE OPTIONS, none chosen: (i) proxy-as-hard-precondition + staff attestation for the rest;
+#   (ii) build a stronger positive signal first (DLR seam, or a mobile-change/unreachable event) -- net-new
+#   engineering; (iii) attestation-only, no machine precondition (weakest, closest to what was rejected).
+#   ⛔ Nothing is built until the Panel answers; every option changes what ships.
+#   ✅ UNAFFECTED and still buildable: AC-R1's PRIMARY (member-direct OTP grant) half, and AC-R2.
+#   Release gate still OPEN; export-content successor story still UNNAMED; consent-sheet initials still
+#   uncountersigned.
 # last_updated: 2026-08-14d (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. `Decision 2026-08-14-111`
 #   CLOSES the fallback-justification disclosure question AND rules the fallback's TRIGGER.
 #   (1) The justification is WITHHELD from the member export -- an internal operational/audit record.

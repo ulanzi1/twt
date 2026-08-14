@@ -130,12 +130,15 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     // AC3 intake/fulfilment separation. district_admin and state_trustee are rank-order blocked in
     // OPPOSITE directions against this key's `pariwar` dimension (scope.ts §RANK-ORDER), and neither
     // exclusion is an oversight.
-    // ⚠ trustee_panel is excluded PENDING A RULING, not on structural grounds: it sits at a `pariwar`
-    // ceiling and COULD satisfy the check. Escalation 10 (Decision `2026-08-14-107`) asks whether a
-    // Trustee-authority DPDPA action needs it as a holder; that question is RAISED AND UNANSWERED, and
-    // Story 10.21's AC-R3 owns it. ⛔ Adding trustee_panel here before the Panel rules would decide the
-    // escalation by implementation. If this assertion fails because trustee_panel was added, check for a
-    // ratified decision id first — absent one, the grant is the defect, not this test.
+    // ⭐ trustee_panel is excluded BY RULING, not merely pending one. Decision `2026-08-14-109`
+    // clause 7 (Escalation 10 / consent-sheet Row 7) ruled that **NO DPDPA action inherently requires
+    // Trustee Panel authority**, and clause 8 that where Trustee authority applies for some other
+    // governance reason, the **Trustee decides and an authorised administrator executes** — authority
+    // attaches to the DECISION, never the EXECUTION. `pariwar_admin` is that administrator.
+    // ⚠ The exclusion is therefore SETTLED, not provisional. It remains non-structural: trustee_panel
+    // sits at a `pariwar` ceiling and COULD satisfy this check — it simply must not hold this key.
+    // ⛔ If this assertion fails because trustee_panel was added, that grant CONTRADICTS a ratified
+    // ruling. Do not "fix" the test; revert the grant, or supersede `2026-08-14-109` clause 7 first.
     for (const role of ['helpline_operator', 'district_admin', 'state_trustee', 'trustee_panel'] as const) {
       expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
     }

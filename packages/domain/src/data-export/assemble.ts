@@ -50,12 +50,21 @@
 // → OPEN QUESTION for PM/legal, recorded per [[feedback_record_unattested_no_backfill]]. Whoever
 // answers it should also decide whether `actor_display` rides along, since naming the acting
 // trustee to a terminated member is its own decision.
-// ⭐ NOW DUE, AND OWNED: Story 10.21 is the hypothetical this note was written against — the DPDPA
-// access right exercised by exactly the terminated member it names. Raised as **Escalation 3**
-// (Decision `2026-08-14-106`), owner Trustee Panel + Legal Counsel, ⛔ RAISED AND UNANSWERED.
-// ⛔ Story 10.21 does NOT resolve it in either direction: it neither adds these four columns to the
-// export nor stays silent about them. *Re-trigger:* before `EXPORT_SCHEMA_VERSION` is bumped again —
-// the ruling decides the artifact's CONTENTS, so it is due at the next change to its shape.
+// ⭐ CLOSED BY RULING, 2026-08-14 — Decision `2026-08-14-109` clause 3 (Escalation 3 / consent-sheet
+// Row 3). The Trustee Panel ruled option (b): **internal deliberative material is WITHHELD.** The
+// decision note, Story 10.20's three further Tier-1 moderation columns
+// (`escalation_inadequacy_ciphertext`, `escalation_proportionality_ciphertext`,
+// `immediate_termination_reason_ciphertext`) and **`actor_display`** are NOT disclosed to the data
+// principal under the DPDPA access right. They are admin-authored deliberative material written under
+// governance authority, and the exemption is recorded as such.
+// ⚠ The member is NOT left uninformed: they continue to learn the moderation OUTCOME and its
+// REASON-CODE LABEL through the status panel and the notification. The exemption covers the
+// REASONING, not the FACT.
+// ⛔ THEREFORE THIS MODULE'S OMISSION IS NOW CORRECT BY RULING, not merely undecided — the absence
+// above is the ratified posture and must not be "fixed" by adding the fields.
+// ⚠ Recorded `un-attested`: legal counsel is unengaged, so this arrived on Panel attestation alone
+// (the `2026-08-06-080` precedent). *Re-trigger:* the first counsel engagement, at which it should be
+// re-presented ([[feedback_record_unattested_no_backfill]]).
 
 import { and, asc, desc, eq } from 'drizzle-orm';
 

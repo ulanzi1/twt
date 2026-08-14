@@ -54,6 +54,41 @@ on that cascade for RTBF** has the same inert guard — and each one is a silent
 - **Re-trigger:** **immediate**. ⚠ ⛔ Do **not** wait for another story to trip over it — that is
   precisely how this one surfaced, ~2 epics late.
 
+### ⛔ TRANSFERRED BY RULING — the export-content data contract (Decision `2026-08-14-109` clause 9)
+
+The Trustee Panel ruled (consent-sheet **Row 8**, option (a)) that **a separate successor story owns
+the export-content data contract**. Story 10.21 ships **without** `contribution_history` /
+`claim_history` content.
+
+⛔ **TRANSFERRED, NOT ABANDONED.** The work is real and now has a different owner
+([[feedback_closure_language_precision]] — "discharged by transfer of ownership" is not "done").
+
+**Scope the successor story owns:**
+1. **Replace the two structurally-empty section contracts.** `EmptyExportSection` pins
+   `records: z.array(z.never())` and `_status: z.literal('no_source_system_at_this_epic')`, and the
+   build job contract-validates every section on every export — so real records are impossible until
+   both are replaced. ⚠ The failure surfaces at **job runtime**, not at typecheck.
+2. **Define the record shapes.** ⛔ Never specified by anyone. This is a data-contract decision with
+   PII consequences: the records land **decrypted** in a ZIP.
+3. **Implement the CLAIMANT-ONLY predicate** ruled at Decision `2026-08-14-109` clause 5
+   (consent-sheet Row 5, option (b)). ⭐ **This ruling is what closes the third-party-PII hole**: the
+   requesting member may appear across seven tables in six roles, and an unqualified join would export
+   **another member's** identity, nominee bank details or medical disclosure. Claimant-only is
+   single-subject by construction. ⛔ Do not widen it to any other role without a superseding ruling.
+4. **Honour the withholding ruled at clause 3** — the moderation decision note, 10.20's three further
+   Tier-1 columns and `actor_display` are **NOT** exported. ⛔ Do not re-open by adding them.
+5. **The `EXPORT_SCHEMA_VERSION` bump and its collateral** — `ManifestSection.schemaVersion` is a
+   `z.literal(1)` inside a `.strict()` object that the job parses on **every** build, so bumping one
+   without the other makes every export fail. Three shipped assertions in
+   `data-export.spec.ts` must be **rewritten, not deleted**.
+
+- **Owner:** ⛔ **A NAMED SUCCESSOR STORY — AND IT IS NOT YET NAMED.** ⚠ This is the single most
+  fragile thing in this record: an unnamed successor is *exactly* how a deferral expires unowned, which
+  is the class that produced `emptySection('Epic 8')` / `emptySection('Epic 6')` in the first place
+  ([[project_r7_fact_producer_unbuilt]]). ⛔ Naming it is owed by the PO/Panel, immediately.
+- **Re-trigger:** **immediate** — the story needs a number and a place in the sprint plan. It does
+  **not** wait for anything: every input it needs is now ruled.
+
 ### FR-95 export contents still absent (recorded, NOT deferred silently)
 
 FR-95 names *"member profile, contribution history, attribution chain, Contribution Notes (PDFs)"*.
@@ -71,10 +106,16 @@ Two named contents are still **not** in the export, and neither is blocked by Es
    decide *in writing* whether helpdesk tickets are owed under the access right. ⛔ Deciding by
    omission is not a decision.
 
-⚠ `contribution_history.json` and `claim_history.json` themselves are **not** listed here — they are
-**BLOCKED**, not deferred (Escalations 7 + 8), and they remain Story 10.21's scope pending those
-rulings. ⛔ Do not fold a block into this list; a block has an owner and a live question, and filing
-it as deferred work would lose both.
+⚠ **UPDATED 2026-08-14.** `contribution_history.json` and `claim_history.json` were previously
+recorded here as **BLOCKED, not deferred** (Escalations 7 + 8) and as remaining Story 10.21's scope.
+⭐ Both are now resolved: **Escalation 8 by ruling** (claimant-only, `2026-08-14-109` clause 5) and
+**Escalation 7 by transfer of ownership** (clause 9). They are covered by the TRANSFERRED-BY-RULING
+section above and are **no longer Story 10.21's scope**. ⛔ The original caution still stands for
+anything else: do not fold a live block into this list — a block has an owner and a live question, and
+filing it as deferred work would lose both.
+⚠ **The two re-triggers above (Contribution-Note PDFs, helpdesk tickets) point at "the story that
+resolves Escalation 7."** That story is now the **unnamed export-content successor** — ⛔ so naming it
+also un-orphans these two.
 
 ---
 

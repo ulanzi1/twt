@@ -13,8 +13,11 @@ operational decisions.
 
 > ### ⛔ What this sheet is NOT
 >
-> **It is not a record of consent.** The Session Resolution below is **blank** and stays blank until a
-> real session happens with real initials. This project has already had to file a correction —
+> **It is not a record of consent.** *(As prepared. ⚠ The session has since been held on 2026-08-14 —
+> see the Session Resolution, which is now filled from what was ruled. This paragraph is retained as
+> written because it states the discipline the sheet was built on; the initials block is **still**
+> uncountersigned, so its central claim continues to hold.)* The Session Resolution below is **blank**
+> and stays blank until a real session happens with real initials. This project has already had to file a correction —
 > Decision `2026-08-12-101` — because a decision-log entry once claimed *"CONFIRMED by the Trustee
 > Panel"* with no corresponding session anywhere in the record. ⛔ Nothing on this sheet may be
 > treated as ruled, and no cascade runs, without initials from both trustees named above.
@@ -40,7 +43,13 @@ passed). Five blocks remain open. **The release gate is OPEN.**
 ## ⚠ Read-first — the two things that change how you read every row
 
 **1. Legal counsel is NOT engaged, and four of these rows are counsel-shaped.**
-Rows 3, 5, 8 and 9 are questions this project has recorded as *Trustee Panel **+ Legal Counsel***.
+**Rows 3, 4, 5 and 6** are questions this project has recorded as *Trustee Panel **+ Legal Counsel***.
+⚠ *Corrected 2026-08-14 (post-session):* this line originally read *"Rows 3, 5, 8 and 9"* — those are
+the **escalation** numbers from `2026-08-14-106`, not this sheet's **row** numbers, and there is no
+Row 9. The footnote at the foot of this sheet always said Rows 3/4/5/6 correctly, so the sheet
+contradicted itself. ⛔ Corrected in place rather than overwritten, because the erroneous line named
+**Row 8** (export-content ownership) as counsel-shaped when it is not — a Panel reading only the
+read-first block could have deferred the wrong row waiting for counsel.
 Counsel is not engaged: `counsel-roster.md` sits at `pending-trustee-selection`, and Story 0.13's
 counsel shortlist / selection / engagement-letter tasks are unclosed. ⛔ **If the Panel rules these
 rows today, the ruling arrives on Panel attestation alone and must be recorded as

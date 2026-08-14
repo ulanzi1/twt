@@ -1,4 +1,33 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-14b (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. Trustee Panel RULED all
+#   eight escalations -- `Decision 2026-08-14-109`. ZERO BLOCKS REMAIN, and the story is still NOT done:
+#   AC-R1 (member-direct delivery) and AC-R2 (a recorded helpdesk-ticket correction process) are
+#   UN-BLOCKED BUT UNBUILT, and the RELEASE GATE IS STILL OPEN -- clause 2 makes it DISCHARGEABLE, not
+#   discharged, and the flip remains a separate Panel-exclusive act.
+#   RULINGS: 1 delivery = MEMBER-DIRECT (one-time OTP grant to the registered mobile, no session issued;
+#   the staff-mediated model is NOT built/flagged/dormant) · 2 three rights + a recorded helpdesk-ticket
+#   correction process DISCHARGE the gate (no general member-profile editor) · 3 deliberative moderation
+#   material WITHHELD · 4 horizon = 48h/5 business days · 5 claim history CLAIMANT-ONLY · 6 a `consumed`
+#   export RETAINS its status · 7(i) NO DPDPA action inherently requires Panel authority · 7(ii) Trustee
+#   decides, authorised administrator executes · 8 export-content contract -> a separate successor story.
+#   THREE RULINGS NEEDED NO CODE, recorded rather than turned into work: Row 4 -- the shipped `other` desk
+#   is 24h/5, STRICTER than the ratified 48h/5, so it already complies; DEFAULT_ROUTING_POLICY untouched
+#   and its golden hash intact, and do NOT loosen 24h to 48h to "match" the ruling. Row 6 -- retaining
+#   `consumed` is exactly what ships. Row 7 -- AC-R3 CLOSED with a disposition and no code; trustee_panel
+#   still not granted member.data_rights, and roles.test.ts now says a future grant CONTRADICTS a ratified
+#   ruling rather than merely pre-empting an open one.
+#   AC5's content half TRANSFERRED OUT (clause 9) -- transferred, NOT abandoned, recorded in
+#   deferred-work.md with the full successor scope. ⚠ THAT SUCCESSOR STORY IS STILL UNNAMED, which is
+#   precisely the class that produced emptySection('Epic 8'); naming it is owed immediately.
+#   ⛔ ONE SUB-QUESTION UNANSWERED AND NOT INFERRED: Row 1(ii) -- is staff-mediated delivery permitted as
+#   a FALLBACK for a member who no longer controls the registered mobile? Member-direct delivery is an OTP
+#   grant TO that mobile and Finding 4 records it FAILS for exactly that member -- the population the
+#   story exists to serve. Owned by the Panel; GATES SHIPPING AC-R1; no fallback built pending an answer.
+#   ⚠ Attestation: the consent sheet's initials block is NOT yet countersigned -- rulings recorded as
+#   reported, nothing citable as counter-signed until it is. ⚠ Counsel unengaged, so Rows 3/4/5/6 are
+#   recorded un-attested with re-presentation owed at first engagement.
+#   VERIFIED after the cascade: domain typecheck + lint clean, rbac 151/151; zero live
+#   `BLOCKED on Escalation` markers outside the Change Log; 18 AC headings <-> 18 matrix rows.
 # last_updated: 2026-08-14 (10-21-off-portal-dpdpa-access: ready-for-dev -> IN-PROGRESS, NOT done.
 #   The UN-BLOCKED scope landed and is verified; FIVE blocks remain OPEN and no escalation was answered,
 #   so the `termination_access_block` RELEASE GATE STAYS OPEN. ⛔ Do not read this entry as completion.

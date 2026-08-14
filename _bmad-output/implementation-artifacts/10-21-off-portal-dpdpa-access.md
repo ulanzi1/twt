@@ -25,12 +25,19 @@ Status: ready-for-dev
 > process discharge it, or whether all four must be mechanized first. What this story CAN state without
 > pre-empting that ruling: landing **AC1–AC4 and AC7–AC15**, plus AC5's **off-portal-build half** (defined
 > in AC5), delivers the entire un-blocked scope — ⛔ **with two carve-outs**: AC5's export-content half
-> (Escalations 7 + 8) and **AC11's `consumed`-status arm** (Escalation 9). ⚠ "AC7–AC15" is therefore not
-> fully landable; do not report it as such. ⚠ **And Escalation 10 (raised 2026-08-14) is a FURTHER
-> release-gate input** — it takes no un-blocked AC away, so the arithmetic above is unchanged, but it asks
-> **who receives and who executes** an off-portal DPDPA request requiring **Trustee** authority (Finding 10,
-> AC-R3). ⛔ Do not treat the gate as dischargeable while it is open. And the
-> gate stays **OPEN** until a ratified `.decision-log.md` entry says otherwise. ⛔ Do not read a green
+> (Escalations 7 + 8) and **AC11's `consumed`-status arm** (Escalation 9).
+>
+> SUPERSEDED 2026-08-14 BY DECISION `2026-08-14-109` — THE PANEL RULED ALL EIGHT ESCALATIONS.
+> The carve-outs above are **discharged**: AC11's `consumed` arm is ruled (clause 6) and was already
+> correct; AC5's export-**content** half **transferred** to a named successor story (clause 9), so it
+> leaves this story rather than blocking it; and **AC-R3 closed with no code** (clause 7).
+> THE GATE IS NOT DISCHARGED, AND THIS BANNER STILL DOES NOT DISCHARGE IT. Clause 2 ruled that
+> three mechanized rights **plus a recorded helpdesk-ticket correction process** are sufficient — which
+> makes the gate **DISCHARGEABLE**, not discharged. The correction process (**AC-R2**) and member-direct
+> delivery (**AC-R1**) are now un-blocked but **NOT YET BUILT**, and **AC-R1 additionally waits on the
+> unanswered sub-question 1(ii)** (the lost-mobile fallback). And the
+> gate stays **OPEN** until a ratified `.decision-log.md` entry says otherwise — the **flip** remains
+> a separate Panel-exclusive act, and `109` clause 2 expressly does not authorise it. ⛔ Do not read a green
 > suite as a discharged gate, and ⛔ do not let this banner answer Escalation 2 — an earlier draft did
 > exactly that while forbidding it elsewhere in the same document. ⚠ `deferred-work.md:195` reads *"that flip is Story 10.21's and remains gated"* —
 > that line is **loose phrasing from the 10.20 section**; the authoritative record is the 10.19 section
@@ -155,7 +162,10 @@ the flip this export is the **only** route a terminated member has to their own 
 gate on an export that returns `records: []` for the member's entire contribution life would deliver a
 gesture, not a right — and it would do so silently, exactly like the `_wired_by` marker did.
 
-⭐ **In scope (AC5) — ⛔ but NOW BLOCKED on Escalations 7 + 8:** wiring `contribution_history.json` and
+⭐ **In scope (AC5) — ⚠ SUPERSEDED 2026-08-14: this work TRANSFERRED OUT of Story 10.21 to a named
+successor story (Decision `2026-08-14-109` clause 9), with the claimant-only predicate ruled at clause 5.
+It is no longer blocked and no longer this story's. The paragraph below is retained as the historical
+statement of the problem.** ⛔ Formerly blocked on Escalations 7 + 8: wiring `contribution_history.json` and
 `claim_history.json` from the sources that now exist is this story's, but cannot start — the section
 contracts structurally reject any record (Escalation 7) and the claim subject predicate is undefined
 (Escalation 8). ⚠ Finding 2 stands; only its remedy is blocked. **Not in scope, but must be RECORDED with a named re-trigger** (never another epic name): the
@@ -417,12 +427,15 @@ so no reader mistakes it for a Panel attribution. → **Escalation 10 / D10**.
 **In scope, RULING-GATED — blocked, not deferred**
 ⚠ These are this story's, and the release gate is not discharged without them. They are blocked on a
 ratified `.decision-log.md` entry, not descoped. See *"Ruling-gated acceptance criteria"*.
-- **Delivery** of the built artifact (AC-R1, Escalation 1) — ⛔ the delivery model is the **Panel's**
-  choice, not the implementation agent's.
-- **Correction** (AC-R2, Escalation 2) — ⛔ what discharges the release gate is the **Panel's** call.
-- **The trustee-authority recipient** (AC-R3, Escalation 10) — ⛔ **who receives and who executes** an
-  off-portal DPDPA request whose requested action requires **Trustee** authority is the **Panel's** call,
-  not a routing default and not the implementation agent's. See Finding 10.
+ALL THREE RULED 2026-08-14 (Decision `2026-08-14-109`). They are no longer ruling-gated.
+- **Delivery** (AC-R1) — ruled **MEMBER-DIRECT** (clause 1). Un-blocked to build as a one-time
+  OTP-verified grant. Still waits on the **unanswered** sub-question **1(ii)** (lost-mobile fallback)
+  before it can ship; no fallback of any shape is built pending that answer.
+- **Correction** (AC-R2) — ruled: a **recorded helpdesk-ticket process** suffices (clause 2).
+  Un-blocked to build. No general member-profile editor.
+- **The trustee-authority recipient** (AC-R3) — **CLOSED, no code** (clauses 7-8): no DPDPA action
+  inherently requires Panel authority; where Trustee authority applies for another reason, the Trustee
+  decides and an authorised administrator executes.
 
 **Out of scope — named, so absence is not read as oversight**
 - ⛔ The `termination_access_block` flip (Panel-exclusive; see the banner).
@@ -446,9 +459,12 @@ an earlier draft claimed AC1–AC4 were minted, which would have wrongly frozen 
 prescription against correction. ⚠ **AC12–AC15 discharge load-bearing-invariant families** and are
 stated after AC11 with their provenance. AC-R1/AC-R2/AC-R3 are ruling-gated and stated after AC15.
 
-⛔ **THREE ACs ARE RULING-GATED AND CANNOT BE STARTED — `AC-R1` (delivery), `AC-R2` (correction) and
-`AC-R3` (the trustee-authority recipient).** They are stated after AC15 with their preconditions. AC6 is
-deliberately empty and points at AC-R2. **Read that section before planning any task.**
+ALL THREE RULING-GATED ACs WERE RULED on 2026-08-14 (Decision `2026-08-14-109`). `AC-R1`
+(delivery - **member-direct**) and `AC-R2` (correction - **a recorded helpdesk-ticket process**) are
+**un-blocked and buildable**; `AC-R3` **closed with a disposition and no code**. They are stated after
+AC15 with their rulings. AC6 remains deliberately empty and points at AC-R2.
+One thing is still NOT answered: sub-question **1(ii)**, the lost-mobile fallback, which gates
+**shipping** AC-R1. **Read that section before planning any task.**
 
 ### AC1 — The route (minted, verbatim)
 
@@ -487,8 +503,13 @@ establishes that the `other` catch-all matches **anything**, so a typo'd token r
 desk and nothing anywhere complains. The convention has no natural failure signal — so it needs a gate or
 it has nothing
 **And** ⚠ **the `other` rule's SLA is inherited KNOWINGLY, not endorsed.** Routing here lands the request
-on `sla_first_response_hours: 24` / `sla_resolution_business_days: 5` (`registry.ts:62`). **Escalation 5
-declares that number legally unverified** — so this story ships a concrete SLA commitment for statutory
+on `sla_first_response_hours: 24` / `sla_resolution_business_days: 5` (`registry.ts:62`). ⭐ **RULED 2026-08-14 (Decision `2026-08-14-109` clause 4): the statutory horizon is
+**48h first response / 5 business days**. The shipped 24h/5 is **STRICTER and therefore already
+compliant** — ⛔ **no code change, and `DEFAULT_ROUTING_POLICY` is NOT edited.** ⛔ Do **not** loosen
+24h to 48h to "match" the ruling: that would relax a commitment the Trust already meets. The
+disposition moves from *"carried knowingly, pending the ruling"* to *"ratified at 48h/5; the shipped
+24h/5 exceeds it."* ⚠ Historical context — **Escalation 5
+declared that number legally unverified** — so this story ships a concrete SLA commitment for statutory
 requests while stating that the correct one is unknown. ⛔ Do not invent a different number to look
 compliant, and ⛔ do not let the escalation read as un-actioned: the disposition is *"carried knowingly,
 pending the ruling"*, stated in the story record. If the Panel rules a shorter horizon, the fix is a
@@ -622,11 +643,19 @@ forced the dev agent to quietly restate this AC's central proof rather than sati
 **And** the ticket linkage is **provenance only** — it records *which request* caused the act, never *what
 the act may see*
 
-### AC5 — Access + portability: the artifact stops being hollow ⛔ `[BLOCKED on Escalations 7 + 8]`
+### AC5 — Access + portability: the off-portal build ✅ `[content half TRANSFERRED OUT — Decision 2026-08-14-109 clauses 5 + 9]`
 
-⛔ **The export-CONTENT half of this AC cannot start.** Escalation 7 (the section contracts structurally
-forbid records) and Escalation 8 (no subject predicate for `claim_history`) both block it. The
-**off-portal-build half** is independent and may land. ⚠ Do not report AC5 as satisfied on it alone.
+⭐ **RULED 2026-08-14 — the export-CONTENT half LEAVES THIS STORY.** Decision `2026-08-14-109`
+clause 9 (Row 8) assigns the export-content data contract to **a separate successor story**, which
+owns: replacing the two structurally-empty section contracts, defining the record shapes, and
+implementing the **claimant-only** predicate ruled at clause 5 (Row 5).
+⛔ **TRANSFERRED, NOT ABANDONED** — it must be recorded in `deferred-work.md` with a **named**
+successor story and a non-epic re-trigger. ⚠ **The successor story is still UNNAMED**; an unnamed
+successor is precisely how a deferral expires unowned ([[project_r7_fact_producer_unbuilt]]).
+⭐ **Escalations 7 and 8 are therefore DISCHARGED for this story** — 8 by ruling (claimant-only), 7 by
+transfer of ownership. ⛔ "Discharged by transfer" is not "done": the work exists and has a new owner
+([[feedback_closure_language_precision]]).
+✅ **What remains in AC5 here is the off-portal-build half, which already landed.**
 
 ⭐ **DEFINITION — "AC5's off-portal-build half" (the ONE definition; every other mention points here).**
 It is everything in AC5's **second** Given/Then block plus the schema work it needs:
@@ -789,14 +818,19 @@ open and is **not** this story's
 **And** the friction-budget diff is COMMITTED history — AC-4 passes vacuously until you commit
 ([[project_friction_budget_baseline_ratchet]])
 
-### AC11 — Erasure reaches the export artifact ⚠ `[consumed-row arm BLOCKED on Escalation 9]`
+### AC11 — Erasure reaches the export artifact ✅ `[consumed-row arm RULED — Decision 2026-08-14-109 clause 6]`
 
 **Given** Finding 9 — `anonymizeMember` does not touch `data_exports`, and the `ON DELETE CASCADE` that
 3.11 documented as the RTBF mechanism never fires because 3.12 is a soft delete
 **Then** `anonymizeMember` additionally zeroes `artifact_ciphertext` (→ NULL) for **every** `data_exports`
 row of the member, in the **same transaction** as the rest of the erasure, and flips `pending` and `ready`
 rows to `expired`
-**And** ⚠ **the `consumed` row's STATUS is left untouched, pending Escalation 9.** The zeroing applies to
+**And** ⭐ **RULED 2026-08-14: the `consumed` row RETAINS its status** (Decision `2026-08-14-109`
+clause 6) — the record that the member **actually downloaded** their export is a fulfilment/audit fact
+the Trust keeps, and erasure does not reach it. ✅ **This is exactly what already ships**, so the arm
+un-blocks as **already-correct with no code change**; the test asserting `status === 'consumed'` after
+erasure now rests on a ratified basis instead of a pending one.
+**And** ⚠ **the `consumed` row's STATUS is left untouched** (as ruled). The zeroing applies to
 it (uncontroversial — the vacuum already does exactly that); the **status flip** does not, because
 overwriting `consumed` destroys the record that the member actually downloaded their export — a fact this
 same AC promises to keep two clauses below. ⛔ An earlier draft said "every row" and contradicted itself
@@ -969,9 +1003,21 @@ off-portal-build half** (defined in AC5), leaving the release gate
 explicitly OPEN. That is a complete,
 honest delivery of the un-blocked scope — not a partial failure.
 
-### AC-R1 — Delivery of the export artifact `[BLOCKED on Escalation 1]`
+### AC-R1 — Delivery of the export artifact ✅ `[RULED — Decision 2026-08-14-109 clause 1]`
 
-**Given** a ruling on Escalation 1, cited by decision id
+⭐ **RULED 2026-08-14: delivery is MEMBER-DIRECT.** The built artifact reaches the member **directly**;
+a staff actor is **not** the delivery path. Build a **one-time, OTP-verified download grant to the
+registered mobile** — the member proves possession, and ⛔ **no session is issued**.
+⛔ **The staff-mediated model is NOT built** — not behind a flag, not "for later". A dormant
+staff-decrypt path is the same capability merely unlit, and clause 1 forecloses it.
+⛔ **UNANSWERED, AND IT BLOCKS SHIPPING THIS AC:** consent-sheet sub-question **1(ii)** — is
+staff-mediated delivery permitted as a **fallback** for a member who no longer controls the registered
+mobile? Finding 4 records that the OTP route **fails for exactly that member**, and they are the
+population this whole story exists to serve. The ruling as reported does not address it, and ⛔ it is
+**not inferred in either direction**. *Owner:* Trustee Panel. *Re-trigger:* **before AC-R1 ships.*
+⚠ Everything else in this AC is un-blocked; ⛔ do not build a fallback of any shape pending that answer.
+
+**Given** the ruling at Decision `2026-08-14-109` clause 1
 **Then** the permitted delivery model — and **only** that model — is implemented over AC5's built artifact
 **And** if staff-mediated delivery is permitted in any form, it carries `member.data_rights` + the
 `data_rights` step-up + `withCompensatingAudit` + the ticket linkage + whatever additional condition the
@@ -979,18 +1025,41 @@ ruling imposes (a recorded justification, a second-actor authorisation, a narrow
 **And** ⛔ the model the ruling did **not** permit is not built "for later" and not left behind a flag —
 a dormant staff-decrypt path is the same capability, merely unlit
 
-### AC-R2 — Correction `[BLOCKED on Escalation 2]`
+### AC-R2 — Correction ✅ `[RULED — Decision 2026-08-14-109 clause 2]`
 
-**Given** a ruling on Escalation 2, cited by decision id
-**Then** correction is mechanized to the extent the ruling requires
+⭐ **RULED 2026-08-14: three mechanized rights PLUS a recorded, staff-executed correction process
+carried on a HELPDESK TICKET are sufficient to discharge the release gate.**
+⛔ **No general admin member-profile editor is built** — the ruling authorises a *recorded process*,
+not a write surface. The larger act (its own RBAC surface, its own PII write-audit posture, its own
+correction-vs-falsification question) is expressly not authorised here.
+⚠ **This ruling makes the gate DISCHARGEABLE. It does not discharge it, and it does not authorise the
+flip.** `termination_access_block` remains a separate, Panel-exclusive act requiring its own
+`.decision-log.md` entry (`2026-08-10-097` clause 12 bullet 4; `2026-08-10-098` clause 2).
+
+**Given** the ruling at Decision `2026-08-14-109` clause 2
+**Then** correction is mechanized as a **recorded process on the existing helpdesk substrate**
 **And** ⛔ **no general member-profile editor is built unless the ruling requires one** — it carries its own
 RBAC surface, its own PII write-audit posture, and its own correction-vs-falsification governance question,
 none of which this story has analysed
 **And** whatever ships, the §8.4a disposition (AC8) and `deferred-work.md` state **only** what has a test
 
-### AC-R3 — The trustee-authority recipient `[BLOCKED on Escalation 10]`
+### AC-R3 — The trustee-authority recipient ✅ `[RULED — Decision 2026-08-14-109 clauses 7–8; CLOSED, NO CODE]`
 
-**Given** a ruling on Escalation 10, cited by decision id
+⭐ **RULED 2026-08-14 — 7(i): NO DPDPA action inherently requires Trustee Panel authority.** Not
+access, not portability, not correction, and **not erasure of a terminated member**; its adjacency to
+the Panel-exclusive `member.restore_terminated` does not carry exclusivity across.
+⭐ **7(ii): where Trustee authority is required for some other governance reason — the Trustee
+DECIDES and an authorised administrator EXECUTES.** Authority attaches to the **decision**, never the
+**execution**. This ratifies the shape already shipped: `pariwar_admin` (Trustee-Lite) executes.
+✅ **THIS AC CLOSES WITH A DISPOSITION AND NO CODE CHANGES.** ⛔ `member.data_rights` is **not**
+granted to `trustee_panel`; the `roles.test.ts` holder assertion stands, and its recorded rationale
+changes from *"pending a ruling"* to ***"ruled: not required"*** (Decision `2026-08-14-109` clause 7).
+⚠ **The Finding-10 warning survives the ruling:** if any future requirement says a Trustee decision
+must precede an act, it must be enforced by a **permission grant and/or a caller precondition** —
+⛔ **never by a routing rule**, because `routed_to_role` is an advisory filter no authorization path
+reads and the registry does not constrain a target to a real role.
+
+**Given** the ruling at Decision `2026-08-14-109` clauses 7–8
 **Then** the ruling's answer to *"which off-portal DPDPA actions, if any, require **Trustee** authority"* is
 implemented **exactly as ruled** — and if the answer is *"none"*, that is recorded as a disposition and
 **no code changes**
@@ -1037,9 +1106,9 @@ this matrix and the task it points to, or the next validation finds the drift
 | **AC13** `[family 2]` | `pg_advisory_xact_lock` on a **namespaced** `member.rtbf:` key in **both** erasure callers; live two-connection **domain** spec with a forced interleave | 6, 7a, 9 |
 | **AC14** `[family 9]` | DELIBERATE doc block on the `member.rtbf_anonymized` reducer arm + re-examination trigger | 6 |
 | **AC15** `[family 5]` | partial-unique assertion in `data-exports-policy-regression.spec.ts` | 9 |
-| **AC-R1** | ⛔ BLOCKED on Escalation 1 | 7b |
-| **AC-R2** | ⛔ BLOCKED on Escalation 2 | 7c |
-| **AC-R3** | ⛔ BLOCKED on Escalation 10 | 7d |
+| **AC-R1** | ✅ RULED (`109` cl.1) — member-direct OTP grant; ⛔ 1(ii) unanswered, gates shipping | 7b |
+| **AC-R2** | ✅ RULED (`109` cl.2) — recorded helpdesk-ticket correction process | 7c |
+| **AC-R3** | ✅ RULED + CLOSED (`109` cl.7-8) — no code changes | — |
 
 ---
 
@@ -1128,7 +1197,11 @@ this matrix and the task it points to, or the next validation finds the drift
         columns **are** covered — differs from 0099's column-level grants, needs **no** re-grant.
         ⛔ Do not regenerate; do not `DROP SCHEMA`.
   - [ ] ⛔ **No enum migration.** If you are writing `ALTER TYPE helpdesk_category`, re-read Finding 5.
-- [ ] **Task 5 — Export** (AC5) ⛔ **CONTENT HALF BLOCKED on Escalations 7 + 8.**
+- [ ] **Task 5 — Export** (AC5) ✅ **CONTENT HALF TRANSFERRED OUT — Decision `2026-08-14-109` clause 9.**
+      ⛔ It is **not blocked** and **not this story's**: a named successor story owns the export-content
+      data contract (record shapes + the **claimant-only** predicate ruled at clause 5 + honouring the
+      withholding ruled at clause 3). ⚠ **That successor story is still UNNAMED** — recorded in
+      `deferred-work.md` with an immediate re-trigger. The un-blocked items below remain Task 5's.
   - [ ] ⛔ **BLOCKED:** wiring `contribution_history` + `claim_history`, deleting the two `emptySection`
         calls, bumping `EXPORT_SCHEMA_VERSION`, and bumping `ManifestSection.schemaVersion`
         (`contracts/data-export/data-export.ts:239`). The section contracts reject any record
@@ -1176,7 +1249,7 @@ this matrix and the task it points to, or the next validation finds the drift
 - [ ] **Task 6b — Erasure REACH** (AC11)
   - [ ] Extend `anonymizeMember` to zero `artifact_ciphertext` (→ NULL) and flip status → `expired` for
         the member's `data_exports` rows, **in the same tx**. ⛔ Retain the metadata rows.
-  - [ ] ⛔ **BLOCKED on Escalation 9 — the `consumed`-row arm only.** ⛔ **Do NOT resolve this yourself.**
+  - [x] ✅ **RULED — Decision `2026-08-14-109` clause 6: the `consumed` row RETAINS its status.** The shipped behaviour is already exactly this, so this arm closes with **no code change**; the test asserting `status === 'consumed'` after erasure now rests on a ratified basis. The historical framing below is retained for context.
         AC11 says "every row" flips to `expired` **and** that the metadata row is retained *"so the audit
         trail survives"*; overwriting a `consumed` row's status destroys the record that the member
         actually downloaded their export. That is a **retention** question owed to the Panel, not a coding
@@ -1227,12 +1300,22 @@ this matrix and the task it points to, or the next validation finds the drift
         (ADR-0030 — ⛔ not a bare `writeAuditEntry`).
   - [ ] ⛔ **Every fulfilment read keys on `member_id`** — never `ticket_id`, never `data_export_id` (AC4).
   - [ ] Regenerate `openapi/v1.yaml` (the EXPECTED diff).
-- [ ] **Task 7b — Delivery** (AC-R1) ⛔ **BLOCKED on Escalation 1.** Do not start.
-- [ ] **Task 7c — Correction** (AC-R2) ⛔ **BLOCKED on Escalation 2.** Do not start.
-- [ ] **Task 7d — Trustee-authority recipient** (AC-R3) ⛔ **BLOCKED on Escalation 10.** Do not start.
-      ⛔ Do **not** pre-emptively grant `member.data_rights` to `trustee_panel`, do **not** add a routing
-      rule or override, and do **not** "fix" `routed_to_role` into an authorization check — Finding 10
-      supplies the facts, the Panel supplies the answer.
+- [ ] **Task 7b — Delivery** (AC-R1) ✅ **UN-BLOCKED — Decision `2026-08-14-109` clause 1.**
+      Build the **member-direct** one-time OTP-verified download grant to the registered mobile; the
+      member proves possession and ⛔ **no session is issued**. ⛔ Do **not** build a staff-mediated
+      path in any form. ⛔ **Do not SHIP until sub-question 1(ii) (the lost-mobile fallback) is
+      answered** — and ⛔ do not build a fallback of any shape pre-emptively.
+- [ ] **Task 7c — Correction** (AC-R2) ✅ **UN-BLOCKED — Decision `2026-08-14-109` clause 2.**
+      Build a **recorded, staff-executed correction process on the existing helpdesk substrate**.
+      ⛔ **No general admin member-profile editor** — the ruling authorises a recorded *process*, not a
+      write surface.
+- [x] ✅ **Task 7d — Trustee-authority recipient** (AC-R3) — **CLOSED 2026-08-14 with NO CODE**
+      (Decision `2026-08-14-109` clauses 7-8). No DPDPA action inherently requires Panel authority;
+      where Trustee authority applies for another reason, the Trustee **decides** and an authorised
+      administrator **executes**. ⛔ `member.data_rights` is still **not** granted to `trustee_panel`,
+      `routed_to_role` is still **not** an authorization check, and no routing rule was added — the
+      ruling confirms the shipped shape rather than changing it. ⛔ Update the `roles.test.ts` rationale
+      from *"pending a ruling"* to *"ruled: not required"*, citing the decision id.
 - [ ] **Task 8 — Operator surface** (AC2/AC9)
   - [ ] The subcategory in the operator ticket-filing surface + the fulfilment action in the helpdesk
         detail page (`apps/admin/src/modules/helpdesk/` — ⚠ verify the module before editing; sibling
@@ -1483,7 +1566,17 @@ this matrix and the task it points to, or the next validation finds the drift
 original drafting. Escalation 10 was found later still, by a focused routing trace.** ⛔ The correct dev-agent action is now: ship AC1–AC4, AC7–AC15 **and AC5's
 off-portal-build half** (defined in AC5) **and AC11's `pending`/`ready` arms**, hold **AC5's
 export-content half** and **AC11's `consumed`-status arm**, and report all **six** blocks
-(Escalations 1, 2, 7, 8, 9, 10). ⚠ **AC5's off-portal-build half is independent of Escalations 7 and 8**
+(Escalations 1, 2, 7, 8, 9, 10).
+⭐ **SUPERSEDED 2026-08-14 — Decision `2026-08-14-109` RULED ALL EIGHT PANEL ESCALATIONS. ZERO BLOCKS
+REMAIN.** Disposition, by escalation: **1** ruled (member-direct delivery) · **2** ruled (recorded
+helpdesk-ticket correction discharges the gate) · **3** ruled (deliberative material withheld) ·
+**5** ruled (48h/5 — the shipped 24h/5 already exceeds it, no code change) · **8** ruled
+(claimant-only) · **9** ruled (`consumed` retains its status — already shipped) · **10** ruled + closed
+(no DPDPA action inherently requires Panel authority) · **7** discharged **by transfer of ownership**
+to a named successor story. ⛔ **4** and **6** were never Panel items and remain owned by named
+successor stories — they are **not** discharged by this ruling.
+⛔ **"Zero blocks" is NOT "done".** AC-R1 and AC-R2 are un-blocked but **unbuilt**, sub-question
+**1(ii)** is **unanswered** and gates shipping AC-R1, and the release gate is **OPEN**. ⚠ **AC5's off-portal-build half is independent of Escalations 7 and 8**
 and may land — it is the export **content** wiring and the schema bump that are blocked. State the split
 explicitly; do not report AC5 as "done".
 ⚠ **Escalation 10 is different in kind from the other five blocks:** it blocks **AC-R3 only** and takes no
@@ -1494,7 +1587,10 @@ completion report must not read the gate as dischargeable while it is open.
 State the new count by **enumeration**, not by arithmetic on that number, and state it as a count — not as
 progress. ⚠ **Not all ten above are Panel obligations, and the breakdown is stated here so no one does
 arithmetic on it:**
-· **Panel (or Panel + Counsel):** 1, 2, 3, 5, 8, 9, 10 — **seven**
+· **Panel (or Panel + Counsel):** 1, 2, 3, 5, 8, 9, 10 — **seven** — ⭐ **ALL SEVEN RULED 2026-08-14
+  (Decision `2026-08-14-109`), four of them (3, 5, 8, 9) recorded `un-attested` because counsel is
+  unengaged.** ⚠ They leave the standing queue as *ruled*, not as *withdrawn*; and the counsel
+  re-presentation of those four is a NEW obligation, not a discharged one.
 · **A named successor story, NOT the Panel:** 4, 6 — **two**
 · **Ambiguous by construction:** 7 — its owner is *"a named successor story **or** this story re-scoped by
   ruling — the Panel/PO decides which"*, so it enters the queue only if the Panel takes it.
@@ -1666,3 +1762,4 @@ arm (Escalation 9), **AC-R1** (Escalation 1), **AC-R2** (Escalation 2), **AC-R3*
 | 2026-08-14 | ⚠ **Two precision fixes — and the first one turned out to require changing the VALUE, not just the justification.** **(1) AC3's trigger token.** The justification claimed an `admin_`-prefix convention *"for admin-initiated member events"*. Verified false: all three `admin_`-prefixed triggers live in `claim/ground-inspection-persist.ts:447,581,766` and ride **`claim.*`** events. The **member** family's convention for staff-initiated acts is a **dotted namespace** — `member_moderation.${action}` (`moderation/write.ts:314`) and `'member_moderation.ground_appended'` (`grounds.ts:245`). Since the token had been chosen *from* the wrong family's convention, correcting only the prose would have left the value stranded behind a justification that no longer supported it. Token changed **`admin_off_portal_rtbf` → `member_data_rights.rtbf_fulfilled`**, propagated to AC3, Task 7a and Task 9; the superseded token is retained in AC3 only as the ⛔ do-not-use note. ⚠ Zero risk: `trigger` is `z.string().min(1)` (`audit-shape.ts:39`) and no consumer keys on it. The `actor: 'trustee'` justification now cites the **in-family** precedent (`member/moderation/write.ts:315`, `grounds.ts:245` — both on `member.*` events) rather than the cross-enum `claim.*` handlers, whose `claimActorSchema` (`claim/events.ts:36`) also offers an `operator` label the member enum does not have. Value unchanged and still correct. **(2) The `pii-scrape` claim.** Dev Notes asserted the gate *"will catch a contract leak but not a log line"* — false: `check-pii-scrape.ts:38-40`'s `loadSnapshots()` returns `[]` and the file's own header calls it *"self-green by construction … the engine evaluates nothing → pass."* It catches nothing and stays inert until Story 2.5/11a.2. Replaced with an explicit ⛔ that the gate is vacuous and that PII discipline rests on review and the R1 rules, not on a gate. ⚠ This was the same defect AC13 orders the dev agent to fix in the codebase (*"do not leave a comment claiming a protection that does not exist"*) — the story had been applying that rule outward and exempting itself. ⚠ **Self-caught during application:** the first edit left the false clause dangling as an orphaned tail after the replacement; removed. Post-fix state re-confirmed mechanically: 17 ACs ↔ 17 matrix rows, four scope statements carrying the AC11 `consumed` carve-out, zero decision ids answering any escalation, release gate **OPEN**. |
 | 2026-08-14 | ⛔ **Escalation 10 / D10 raised — the trustee-authority recipient. BLOCKING for AC-R3; a release-gate input; NO substantive decision taken.** A focused routing trace at `b860523` asked where an off-portal DPDPA request goes operationally when the requested action requires **Trustee** authority. **Three things the existing model DOES answer, evidenced and recorded so the Panel is not asked a settled question:** (i) *“Trustee” is not `state_trustee`* — §8.7's ratified text says so outright (*“The Trustee Panel is **not** the ‘State Trustee panel’ of Part 9”*, Decision `2026-08-10-096` clause 9), and it is structurally impossible besides: `state_trustee` (`roles.ts:362-369`) sits at `scopeCeiling: 'state'`, holds neither `helpdesk.respond` nor `helpdesk.create`, and `scopeWithinCeiling` (`rbac/scope.ts:113-118`) is a pure numeric compare with **no resolver parameter**, so `pariwar:1 >= state:2` is false under every resolver. (ii) *The Helpdesk Operator may intake/verify/route but not execute* — AC3 already rules `member.data_rights` → `pariwar_admin` **only**, ⛔ not `helpline_operator`; that half is **CLOSED** and is explicitly **not** re-opened ([[feedback_closure_language_precision]]). (iii) *The routing mechanism needs no change* — per-Pariwar versioned overrides plus a free-token `sub_category` already express any destination. **What it does NOT answer, and why a new escalation is genuinely owed rather than a redundant one:** the Trustee Panel has **governance authority and no operational queue.** `trustee_panel` **is** a real seeded role (13th bundle, `roles.ts:583-627`, `scopeCeiling: 'pariwar'` — so unlike `state_trustee` it *could* satisfy a pariwar check), but its permissions are exactly `member.moderate` + `member.restore_terminated`: it cannot see the queue, open a ticket, reply or resolve, and `grep trustee_panel` across `packages/domain/src`, `apps/api/src` and `packages/contracts/src` returns **no helpdesk module at all**. Meanwhile AC2 routes every DPDPA request to the `other` catch-all → **`helpline_operator`** (`registry.ts:62`), the one role AC3 forbids from executing. **And `routed_to_role` is INERT** (new **Finding 10**): written once at creation (`helpdesk/project.ts:227`) and read **only** as an optional caller-supplied queue filter (`helpdesk/read.ts:71,90`; `handlers.ts:346`) — ⛔ no transition, no detail read and no permission check consults it, so every `helpdesk.respond` holder in the Pariwar can act on any ticket regardless of routing. Compounding it, `validateRoutingPolicyRules` constrains `target_role` only to *non-empty and ≤ length* (`registry.ts:184-189`), **not** to the seeded catalog — so an override naming `trustee_panel`, or a typo, validates and then fails **silently**, the Finding-5 misroute class through a different door. **This ABSORBS the `F6` role half** the final validation pass recorded as *“dispositioned nowhere”*; F6's SLA half stays dispositioned *“carried knowingly”* and is untouched. ⛔ **Nothing is decided here** — posed as three questions (does any action require Panel authority, notably erasure of a terminated member, adjacent to the Panel-exclusive `member.restore_terminated`; if so who is the operational recipient; and the warning that a merely-*routed* destination carries no enforcement). **Added:** Finding 10, **AC-R3** (`[BLOCKED on Escalation 10]`), **Task 7d** (blocked), a coverage-matrix row, and the in-scope ruling-gated bullet. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): the banner's release-gate sentence, *“TWO ACs ARE RULING-GATED”* → **THREE**, *“Precondition for BOTH”* → **ALL THREE**, the governance-sequence preamble, Task 0's raise-list (→ 1, 2, 7, 8, 9, **10**), the escalation trailer (**five** → **six** open blocks; Panel count **six** → **seven**, ⛔ stated as a count, not progress). ⚠ **The banner's AC arithmetic is deliberately UNCHANGED** — AC-R3 was never inside *“AC1–AC4 and AC7–AC15”*, so Escalation 10 removes no un-blocked scope; it constrains the **gate**, not the build. ⚠ **Task 0 is REOPENED and now BLOCKS:** Escalation 10 is absent from `Decision 2026-08-14-106` (committed before this trace), and ⛔ that entry must **not** be edited in place ([[feedback_supersede_never_reinterpret]]) — a **new**, separately-committed `governance(10.21):` entry raising it is owed **before any code lands** ([[feedback_governance_commits_precede_implementation]]). ⚠ **Method caveat:** this pass ran a targeted trace of the routing, RBAC and helpdesk surfaces plus the §8.7 governance record; it was **not** a full re-validation of the story's other ~66 claims, which stand on the prior passes. |
 | 2026-08-14 | ⛔ **`Decision 2026-08-14-107` committed — Escalation 10 is now GOVERNED, and still unanswered.** The follow-on governance entry raising Escalation 10 landed, `governance(10.21):`-prefixed, **before any code** ([[feedback_governance_commits_precede_implementation]]). ⛔ **`Decision 2026-08-14-106` is NOT edited** — Escalation 10 post-dates it, and `107` is **additive, superseding nothing** ([[feedback_supersede_never_reinterpret]]). `107` records **three sub-questions CLOSED on evidence and deliberately NOT put to the Panel** — (1a) *“Trustee” is not `state_trustee`*, closed twice over and independently: by §8.7's ratified text (Decision `2026-08-10-096` clause 9) **and** by structure (`state_trustee` at `scopeCeiling: 'state'` holds neither helpdesk key, and `scopeWithinCeiling` is a pure numeric compare with no resolver parameter); (1b) *the Operator may intake/verify/route but not execute*, already ruled by AC3; (1c) *the routing mechanism needs no change*. It then records four findings — `routed_to_role` is **inert**, `target_role` is **not catalog-constrained**, the Panel has **governance authority and no operational queue**, and the request routes to the one role forbidden from executing it (absorbing **F6**'s role half) — plus one **non-defect** kept from being misread: the `actor: 'trustee'` pin is a coarse three-label enum, ⛔ not a Panel attribution. **Task 0 flipped to complete.** ⚠ **Anchor drift caught and corrected in BOTH files during the pre-commit verification:** the `trustee_panel` bundle comment cites `scope.ts:113-118` for `scopeWithinCeiling`, and that range is a **comment block** — the function is at **`:132-137`**, `CEILING_RANK` at **`:73-76`**, and the §RANK-ORDER canonical note at **`:89-91`**. Finding 10 and `107` now carry the correct anchors and flag the stale one in place. ⚠ **Recorded, not actioned:** `106`'s **title** says *“five escalations are RAISED AND LEFT OPEN”* while its own *Open follow-ups* enumerate **nine** — an internal inconsistency in a committed entry. ⛔ Not corrected here: `106` is not edited, and a title correction is its own record-correction act (the `2026-08-12-101` shape). |
+| 2026-08-14 | ⭐ **TRUSTEE PANEL RULED ALL EIGHT ESCALATIONS — `Decision 2026-08-14-109`. ZERO BLOCKS REMAIN; the story is still NOT done.** Rulings: **(1)** delivery is **MEMBER-DIRECT** — a one-time OTP-verified grant to the registered mobile, no session issued; ⛔ the staff-mediated model is **not built, not flagged, not left dormant**. **(2)** three mechanized rights **plus a recorded helpdesk-ticket correction process** discharge the release gate — ⛔ no general member-profile editor. **(3)** deliberative moderation material is **WITHHELD** (decision note, 10.20's three further Tier-1 columns, `actor_display`); the member still learns the outcome + reason-code label. **(4)** the statutory horizon is **48h/5 business days**. **(5)** claim history is **CLAIMANT-ONLY**. **(6)** a `consumed` export **RETAINS** its status. **(7i)** **no** DPDPA action inherently requires Panel authority. **(7ii)** the **Trustee decides, an authorised administrator executes**. **(8)** the export-content contract passes to **a separate successor story**. ⭐ **THREE RULINGS REQUIRED NO CODE, and that is recorded rather than turned into work:** Row 4 — the shipped `other` desk is **24h/5, STRICTER** than the ratified 48h/5, so it already complies; ⛔ `DEFAULT_ROUTING_POLICY` untouched, golden hash intact, and ⛔ **do not loosen 24h to 48h to "match" the ruling**. Row 6 — retaining `consumed` is exactly what ships, so AC11's carved-out arm closes as **already-correct** and its test gains a ratified basis. Row 7 — **AC-R3 closes with a disposition and no code**; `trustee_panel` is still not granted `member.data_rights`, and the `roles.test.ts` rationale moves from *"pending a ruling"* to *"ruled: not required"*, with the test now instructing that a future grant **contradicts a ratified ruling**. **AC5's content half TRANSFERRED OUT** (clause 9) — ⛔ *transferred, not abandoned*: recorded in `deferred-work.md` with the full successor scope, and ⚠ **the successor story is still UNNAMED**, which is exactly the class that produced `emptySection('Epic 8')`. `assemble.ts`'s Story-10.10 OPEN QUESTION is **CLOSED BY RULING** — its omission is now correct *by ruling*, not merely undecided, and the header says so. ⛔ **ONE SUB-QUESTION WAS NOT ANSWERED AND IS NOT INFERRED:** Row **1(ii)** — is staff-mediated delivery permitted as a **fallback** for a member who no longer controls the registered mobile? Member-direct delivery is an OTP grant **to that mobile**, and Finding 4 records that it **fails for exactly that member** — the population this story exists to serve. Carried as an OPEN follow-up owned by the Panel, ⛔ **gating SHIP of AC-R1**, with no fallback built pending an answer. ⚠ **Row 2 makes the gate DISCHARGEABLE, not discharged** — the flip remains a separate Panel-exclusive act. ⚠ **Attestation caveat:** the consent sheet's initials block is **not yet countersigned**; rulings recorded as reported, and no clause may be cited as counter-signed until it is. ⚠ **Counsel unengaged**, so Rows 3/4/5/6 are recorded **`un-attested`** with re-presentation owed at first engagement. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1/R2/R3, AC2's SLA disposition, AC5, AC11, the banner, the in-scope ruling-gated block, the *THREE ACs ARE RULING-GATED* preamble, the escalation trailer, the Panel-queue breakdown, 3 coverage-matrix rows, Tasks 5/6b/7b/7c/7d, `deferred-work.md`, `roles.test.ts`, `assemble.ts`, and §8.4a in **both** locales. ⛔ Verified afterwards: **zero** live `BLOCKED on Escalation` markers outside the Change Log, and 18 AC headings ↔ 18 matrix rows. |

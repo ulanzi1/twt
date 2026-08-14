@@ -1,4 +1,57 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-13q (10-21-off-portal-dpdpa-access: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ 19fa644 (clean, fetched). Saved 10-21-off-portal-dpdpa-access.md.
+#   RELEASE GATE on enabling termination. Eight findings recorded; four invalidate the obvious build:
+#   (1) erasure is structurally unreachable -- RTBF legality is {withdrawn} only and the reducer arm
+#   `member.rtbf_anonymized` is identity for every other state, while termination is an OVERLAY so
+#   members.state stays `active`; fix goes in the CALLER (the ratified 10.20 WS-D shape), never a new
+#   lifecycle state. (2) the export artifact is HOLLOW -- assemble.ts:377 still emits
+#   emptySection('Epic 8')/emptySection('Epic 6') for contribution_history + claim_history; the
+#   deferral named EPICS and expired unowned (2nd instance of the R7-fact-producer class) and FR-95
+#   names contribution history explicitly. (3) CORRECTION has no endpoint on ANY surface -- it is
+#   unmechanized for every member, not just terminated ones; escalated rather than silently narrowed.
+#   (5) the new-category route is a TRAP: default-policy-hash.test.ts fences DEFAULT_ROUTING_POLICY
+#   and its OWN prescribed remedy (bump DEFAULT_ROUTING_POLICY_VERSION) would misresolve every
+#   version-2 override and make every version-1 ticket un-replayable, AND a new category SILENTLY
+#   mis-routes under every pre-existing override -- resolveRoute Phase-2 falls through to the `other`
+#   catch-all (routing.ts:108-111), which validateRoutingPolicyRules REQUIRES in every published policy
+#   (registry.ts:209-210), so tickets land on the generic `other` desk with no error rather than failing.
+#   Design therefore reuses category `other` + sub_category 'dpdpa-data-rights' with
+#   DEFAULT_ROUTING_POLICY byte-identical -- a design the catch-all guarantee makes STRONGER, since the
+#   `other` rule's presence is validator-enforced rather than conventional.
+#   Also: (4) delivery of the Tier-1 export to a member with no session, (6) the assemble.ts open
+#   question on decision_note disclosure is now DUE, (7) niyamavali.md 8.4a's "Statutory rights" row
+#   is the only row with no disposition, (8) the in-app-only notice reach is NOT this story's.
+#   Five escalations raised (delivery posture, correction disposition, moderation-record disclosure,
+#   the default-policy versioning defect, the statutory response horizon).
+#   MINTS: permission key `member.data_rights`, PERMISSION_CATALOG_VERSION 32 -> 33, admin step-up
+#   context `data_rights`, migration 0103 (data_exports provenance columns; table-level GRANT at
+#   0033:46 already covers them -- NO re-grant, unlike 0099), EXPORT_SCHEMA_VERSION 1 -> 2.
+#   NO new role (no `dpo` -- FR-99/OQ-7 open; the 10.18 inert-capability lesson). NO enum migration.
+#   NO flag flip: landing this DISCHARGES the gate on `termination_access_block`; the flip stays
+#   Trustee-Panel-exclusive per Decision 2026-08-10-097 clause 6 (b-i). deferred-work.md:195's "that
+#   flip is Story 10.21's" is loose phrasing -- the 10.19 record at :4043-4047 governs.
+#   Do NOT flip epic-10-retrospective. NO other story status changed.
+#   ⚠ REVISED same-day, before any implementation: the draft had TWO ACs pre-empting their own
+#   escalations -- AC5's delivery arm asserted staff-mediated Tier-1 handover "is required as the
+#   fallback under either ruling" and BUILT it, and AC6 specified the very correction disposition
+#   Escalation 2 exists to decide. Both would have let the implementation agent settle a PII-posture
+#   question and a release-gate-discharge question by writing code. Now AC-R1 / AC-R2, BLOCKED on a
+#   ratified .decision-log.md entry cited by decision id; AC5 keeps only the ruling-independent build
+#   + provenance columns; AC6 deliberately empty; Escalation 1 re-posed as three questions, not a
+#   binary. Sequence is Panel ruling -> permitted model -> tests -> release gate. Recorded: because
+#   the flag is DEFAULT OFF and its flip is gated on this story, NO member can be stranded without a
+#   route while the rulings are taken -- the correct sequence costs nothing. If the dev agent reaches
+#   Task 7b/7c without a ruling, the correct action is to ship AC1-AC5 + AC7-AC10, report the block,
+#   and leave the release gate explicitly OPEN.
+#   ⚠ VALIDATED same-day via bmad-create-story validate: 40+ anchors re-verified against the tree at
+#   19fa644 and all hold EXCEPT Finding 5 reason 3, which was FACTUALLY WRONG -- it claimed a new
+#   category is unrouted / creation fails. resolveRoute Phase-2 falls through to the `other` catch-all
+#   that validateRoutingPolicyRules REQUIRES of every published policy (present since 10.1's f130468),
+#   so the real behaviour is a SILENT mis-route to the generic desk -- worse than the claimed failure.
+#   Reason 3 rewritten; the reject-a-new-category conclusion UNCHANGED (reasons 1+2 re-verified and
+#   sufficient); AC2 is strengthened, since the catch-all is validator-enforced not conventional.
+#   Source memory project_helpdesk_default_policy_version_trap corrected. Status stays ready-for-dev.)
 # last_updated: 2026-08-13p (10-28-multi-node-report-scope: review -> done, via bmad-code-review.
 #   Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) ran clean -- zero AC/ruling
 #   violations found; the Acceptance Auditor independently reproduced the Escalation-2 revert-sanity probe
@@ -6176,7 +6229,7 @@ development_status:
   10-18-constituting-the-trustee-panel-sanctioning-authority: done
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
-  10-21-off-portal-dpdpa-access: backlog
+  10-21-off-portal-dpdpa-access: ready-for-dev
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done

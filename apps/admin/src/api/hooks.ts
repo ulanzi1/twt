@@ -902,6 +902,80 @@ export function useDataRightsFulfilment(pariwarId: string, ticketId: string, mem
   return { buildExport, erasure };
 }
 
+/**
+ * AC-R1 delivery + AC-R2 correction mutations.
+ *
+ * ⛔ `memberDirect` is the PRIMARY. `staffMediated` is a NARROW EXCEPTION and the UI must present it
+ * as one — it is reachable only where the member THEMSELVES asked and the primary route has already
+ * been tried and did not complete (the server enforces the second condition; the operator cannot
+ * assert it).
+ */
+export function useDataRightsDelivery(
+  pariwarId: string,
+  ticketId: string,
+  memberId: string | null,
+  exportId: string | null,
+) {
+  const qc = useQueryClient();
+  const onSettled = (): void => {
+    void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
+  };
+  const requireIds = (): { memberId: string; exportId: string } => {
+    if (memberId === null) throw new Error('This ticket names no subject member');
+    if (exportId === null) throw new Error('Build the export first — there is nothing to deliver yet');
+    return { memberId, exportId };
+  };
+  const memberDirect = useMutation({
+    mutationFn: () => {
+      const { memberId: m, exportId: e } = requireIds();
+      return api.grantMemberDirectDelivery(pariwarId, {
+        memberId: m,
+        exportId: e,
+        helpdeskTicketId: ticketId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  const staffMediated = useMutation({
+    mutationFn: (attestation: string) => {
+      const { memberId: m, exportId: e } = requireIds();
+      return api.grantStaffMediatedDelivery(pariwarId, {
+        memberId: m,
+        exportId: e,
+        helpdeskTicketId: ticketId,
+        attestation,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  return { memberDirect, staffMediated };
+}
+
+/** AC-R2 — record a correction against the ticket. ⛔ A record, not a member-profile write. */
+export function useRecordCorrection(pariwarId: string, ticketId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      requestedChange: string;
+      actionTaken: string;
+      outcome: 'recorded' | 'applied' | 'declined';
+    }) => {
+      if (memberId === null) throw new Error('This ticket names no subject member');
+      return api.recordDataRightsCorrection(pariwarId, {
+        memberId,
+        helpdeskTicketId: ticketId,
+        ...input,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
+    },
+  });
+}
+
 // ── News/Blog admin authoring hooks (Story 10.5) ──────────────────────────────
 export const newsPostsKey = (pariwarId: string) => ['news-posts', pariwarId] as const;
 export const newsPostKey = (pariwarId: string, postId: string) => ['news-post', pariwarId, postId] as const;

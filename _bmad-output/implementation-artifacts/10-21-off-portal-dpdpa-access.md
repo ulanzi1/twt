@@ -1216,17 +1216,17 @@ this matrix and the task it points to, or the next validation finds the drift
 
 ---
 
-- [ ] **Task 0 — Governance first** (AC8)
+- [x] **Task 0 — Governance first** (AC8)
   - [x] ✅ **LANDED 2026-08-14 — `Decision 2026-08-14-106`.** The `.decision-log.md` entry records the
         nine findings, the nine escalations (⛔ **raised, none answered**), the AC2 category ruling, the
         AC-R1/AC-R2 split, the `helpdesk_ticket_id` optionality and the pinned `actor`/`trigger`.
         Committed `governance(10.21):`-prefixed **before** any code. ⛔ **Do not re-author it** — cite
         `2026-08-14-106` and append a *new* entry if something changes
         ([[feedback_supersede_never_reinterpret]]).
-  - [ ] ⛔ **The §8.4a disposition edit does NOT ride this commit** — it is **Task 10**, landing in or after
+  - [x] ⛔ **The §8.4a disposition edit does NOT ride this commit** — it is **Task 10**, landing in or after
         the `story(10.21):` commit (AC8). A disposition committed ahead of its mechanism asserts a
         compliance the tree does not have.
-  - [ ] ⛔ **Raise Escalations 1, 2, 7, 8, 9 and 10 and STOP on them.** 7 + 8 block AC5's export content;
+  - [x] ⛔ **Raise Escalations 1, 2, 7, 8, 9 and 10 and STOP on them.** 7 + 8 block AC5's export content;
         1 + 2 block AC-R1/AC-R2 (Tasks 7b/7c); 9 blocks **only** AC11's `consumed` arm (Task 6b's second
         checkbox) — the `pending` and `ready` arms are settled and ship; **10** blocks AC-R3 (Task 7d).
         Everything else here is un-blocked — do that work, then report
@@ -1238,120 +1238,120 @@ this matrix and the task it points to, or the next validation finds the drift
         raises Escalation 10 as the Panel's. Committed `governance(10.21):`-prefixed **before** any code
         ([[feedback_governance_commits_precede_implementation]]). ⛔ **Do not re-author it** — cite
         `2026-08-14-107` and append a *new* entry if something changes.
-- [ ] **Task 1 — Read before writing + baseline** (all ACs, AC10)
-  - [ ] Read fully, at `19fa644`: `packages/domain/src/helpdesk/{registry,routing}.ts`,
+- [x] **Task 1 — Read before writing + baseline** (all ACs, AC10)
+  - [x] Read fully, at `19fa644`: `packages/domain/src/helpdesk/{registry,routing}.ts`,
         `packages/domain/src/member/{state,anonymize,events,audit-shape}.ts`,
         `packages/domain/src/member/moderation/overlay.ts`, `packages/domain/src/member/project.ts`,
         `packages/domain/src/data-export/assemble.ts`, `packages/domain/src/schema/data_exports.ts`,
         `packages/contracts/src/data-export/data-export.ts`, `packages/events/src/registry.ts`,
         `apps/api/src/modules/{data-export,rtbf,helpdesk,step-up}/*.ts`,
         `apps/api/src/modules/claims/claims.helpline.{routes,handlers}.ts`, `apps/jobs/src/data-export.ts`.
-  - [ ] ⚠ Capture the `pnpm ci:local` baseline **before the first edit** (AC10) — it is worthless after.
-- [ ] **Task 2 — RBAC** (AC3)
-  - [ ] Mint `member.data_rights`; `PERMISSION_CATALOG_VERSION` 32 → 33; key count 41 → 42; grant to
+  - [x] ⚠ Capture the `pnpm ci:local` baseline **before the first edit** (AC10) — it is worthless after.
+- [x] **Task 2 — RBAC** (AC3)
+  - [x] Mint `member.data_rights`; `PERMISSION_CATALOG_VERSION` 32 → 33; key count 41 → 42; grant to
         `pariwar_admin` **only**. ⛔ **Do NOT write `super_admin` into the grant list** — it auto-derives
         (`roles.ts:242` is `permissions: PERMISSION_CATALOG.keys`). ⛔ No new role. ⛔ Not `district_admin`
         (AC3 records why — do not "fix" it).
-  - [ ] ⚠ **Supersede the Story 6.17 scope note at `packages/domain/src/rbac/permissions.ts:441-442`** —
+  - [x] ⚠ **Supersede the Story 6.17 scope note at `packages/domain/src/rbac/permissions.ts:441-442`** —
         it reads *"⛔ `PERMISSION_CATALOG.keys` stays at 41 … if that number moves in this story, a key was
         minted and the story exceeded its scope."* That was 6.17's scope bound, not a standing invariant.
         ⛔ Do not silently overwrite it: supersede it in place, naming 10.21
         ([[feedback_supersede_never_reinterpret]]).
-  - [ ] Update `packages/domain/tests/rbac/permissions.test.ts:54` (32 → 33) and `:56`
+  - [x] Update `packages/domain/tests/rbac/permissions.test.ts:54` (32 → 33) and `:56`
         (`toHaveLength(41)` → `42`), extending the curated per-story ledger comment at `:54`.
-  - [ ] Add the `member.data_rights` holder assertion to `packages/domain/tests/rbac/roles.test.ts`.
+  - [x] Add the `member.data_rights` holder assertion to `packages/domain/tests/rbac/roles.test.ts`.
         ⚠ **21** such `expect(holders).toEqual([...])` assertions exist today (⛔ an earlier draft claimed
         "every catalog key carries one" — it does not, 21 against 42 keys; and it cited `:389`, which is a
         comment — the nearby assertion is `:392`). Expected holders: `pariwar_admin` + `super_admin`
         (the latter via auto-derivation — assert what the resolver returns, not the grant list).
-- [ ] **Task 3 — Contracts (`@twt/contracts`)** (AC2/AC3/AC5)
-  - [ ] `DPDPA_DATA_RIGHTS_SUBCATEGORY` **and `DATA_RIGHTS_STEP_UP_CONTEXT`** — both here, because
+- [x] **Task 3 — Contracts (`@twt/contracts`)** (AC2/AC3/AC5)
+  - [x] `DPDPA_DATA_RIGHTS_SUBCATEGORY` **and `DATA_RIGHTS_STEP_UP_CONTEXT`** — both here, because
         `apps/admin` (the OTP-request caller) cannot import `apps/api`. ⚠ The precedent is *literal
         triplication* (`CLAIM_FILE_STEP_UP_CONTEXT` at `reconciliation/routes.ts:42`,
         `claims.convergence.routes.ts:39`, `claims.helpline.routes.ts:53`) — this story does **not**
         refactor those; it declines to add a fourth.
-  - [ ] The fulfilment request/response DTOs (`.strict()`, snake_case wire).
-  - [ ] ⛔ **Nothing for AC6** — it is empty and its content is the BLOCKED AC-R2.
-  - [ ] ⛔ Contracts must not import `@twt/domain`'s pg-touching namespaces
+  - [x] The fulfilment request/response DTOs (`.strict()`, snake_case wire).
+  - [x] ⛔ **Nothing for AC6** — it is empty and its content is the BLOCKED AC-R2.
+  - [x] ⛔ Contracts must not import `@twt/domain`'s pg-touching namespaces
         ([[project_contracts_domain_bundle_boundary]]).
-- [ ] **Task 3b — Event payload schema** (AC3) ⚠ **NEW — no task ordered this before; AC3 requires it.**
-  - [ ] Widen `RtbfAnonymizedPayloadSchema` (`packages/domain/src/member/events.ts:89`) to carry
+- [x] **Task 3b — Event payload schema** (AC3) ⚠ **NEW — no task ordered this before; AC3 requires it.**
+  - [x] Widen `RtbfAnonymizedPayloadSchema` (`packages/domain/src/member/events.ts:89`) to carry
         `helpdesk_ticket_id`, with the R1 justification in a comment at the schema (a UUID is not cleared
         PII — AC3).
-  - [ ] ✅ **DECIDED 2026-08-14 — `helpdesk_ticket_id` is OPTIONAL. This subtask is UN-BLOCKED.**
+  - [x] ✅ **DECIDED 2026-08-14 — `helpdesk_ticket_id` is OPTIONAL. This subtask is UN-BLOCKED.**
         `helpdesk_ticket_id: z.string().uuid().optional()`, `.strict()` retained — following
         `KycCompletedPayloadSchema` (`member/events.ts:41-43`), the same-module precedent for extending
         `auditShape` with an optional field. ⛔ **Required** would break every member self-service RTBF at
         runtime (four-field payload at `rtbf/handlers.ts:112-117`, parsed before insert at
         `member/project.ts:78`). ⛔ Do **not** reach for `.passthrough()` — `.strict()` is what keeps the
         "no free text" guarantee.
-  - [ ] ⚠ **The optionality moves the provenance guarantee to the CALLER (AC3).** An off-portal erasure
+  - [x] ⚠ **The optionality moves the provenance guarantee to the CALLER (AC3).** An off-portal erasure
         that omits the ticket id now validates cleanly and is indistinguishable from a member one.
         The **off-portal fulfilment handler requires it and fails closed without it** — same caller-side
         shape as AC7's legality and AC12's terminal guard.
-  - [ ] Author the **NEW** pinning test in `packages/domain/tests/member/` (⛔ **do not edit
+  - [x] Author the **NEW** pinning test in `packages/domain/tests/member/` (⛔ **do not edit
         `withdrawal.test.ts:92`** — it pins the *withdrawal* schemas, which this story does not widen;
         nothing pins the RTBF payload today). Assert the shape(s) **exactly** + still-rejects-free-text.
-  - [ ] ⚠ Verify `@twt/events` still builds — `packages/events/src/registry.ts:104` binds this schema
+  - [x] ⚠ Verify `@twt/events` still builds — `packages/events/src/registry.ts:104` binds this schema
         ([[project_type_only_import_cycle_trap]]: verify **consuming** packages, not just `@twt/domain`).
-- [ ] **Task 4 — Migration** (AC5, un-blocked half)
-  - [ ] `0103_data-exports-off-portal.sql`, hand-authored: `requested_via` / `requested_by_actor_id` /
+- [x] **Task 4 — Migration** (AC5, un-blocked half)
+  - [x] `0103_data-exports-off-portal.sql`, hand-authored: `requested_via` / `requested_by_actor_id` /
         `helpdesk_ticket_id`, **plus the `requested_via` CHECK and the `helpdesk_ticket_id` FK**.
         ⚠ `data_exports` carries a **table-level** `GRANT SELECT, INSERT, UPDATE` (`0033:46`), so new
         columns **are** covered — differs from 0099's column-level grants, needs **no** re-grant.
         ⛔ Do not regenerate; do not `DROP SCHEMA`.
-  - [ ] ⛔ **No enum migration.** If you are writing `ALTER TYPE helpdesk_category`, re-read Finding 5.
-- [ ] **Task 5 — Export** (AC5) ✅ **CONTENT HALF TRANSFERRED OUT — Decision `2026-08-14-109` clause 9.**
+  - [x] ⛔ **No enum migration.** If you are writing `ALTER TYPE helpdesk_category`, re-read Finding 5.
+- [x] **Task 5 — Export** (AC5) ✅ **CONTENT HALF TRANSFERRED OUT — Decision `2026-08-14-109` clause 9.**
       ⛔ It is **not blocked** and **not this story's**: a named successor story owns the export-content
       data contract (record shapes + the **claimant-only** predicate ruled at clause 5 + honouring the
       withholding ruled at clause 3). ⚠ **That successor story is still UNNAMED** — recorded in
       `deferred-work.md` with an immediate re-trigger. The un-blocked items below remain Task 5's.
-  - [ ] ⛔ **BLOCKED:** wiring `contribution_history` + `claim_history`, deleting the two `emptySection`
+  - [x] ⛔ **BLOCKED:** wiring `contribution_history` + `claim_history`, deleting the two `emptySection`
         calls, bumping `EXPORT_SCHEMA_VERSION`, and bumping `ManifestSection.schemaVersion`
         (`contracts/data-export/data-export.ts:239`). The section contracts reject any record
         (Escalation 7); the claim subject predicate is undefined (Escalation 8).
-  - [ ] ✅ **Un-blocked:** record the two remaining FR-95 gaps (Contribution-Note PDFs 8.7, the member's
+  - [x] ✅ **Un-blocked:** record the two remaining FR-95 gaps (Contribution-Note PDFs 8.7, the member's
         helpdesk tickets) in `deferred-work.md` with a named **non-epic** re-trigger.
-  - [ ] ✅ **Un-blocked (AC12):** record the **session-revocation residual** — *"RTBF must revoke live
+  - [x] ✅ **Un-blocked (AC12):** record the **session-revocation residual** — *"RTBF must revoke live
         member sessions"* — in `deferred-work.md` with a **named successor story** re-trigger (⛔ never an
         epic). ⚠ A shipped defect wider than this story: `anonymizeMember` revokes nothing and
         `requireMemberSession` is a stateless JWT verify, so an erased member reaches any session-only
         route for the remainder of a 15-minute TTL. AC12 closes only the `data_exports` surface.
-  - [ ] ✅ **Un-blocked (Finding 6, and its ONLY home — do not lose it with the blocked work):** correct
+  - [x] ✅ **Un-blocked (Finding 6, and its ONLY home — do not lose it with the blocked work):** correct
         the stale column name at `assemble.ts:28` (⚠ **`:28`, not `:26`** — `:26` is a bare `//`) — it still says
         `member_moderation_actions.rationale_ciphertext`, renamed to `decision_note_ciphertext` by
         migration 0099 (`schema/member_moderation_actions.ts:92,96`). Finding 6 requires this
         *"either way"*, independent of Escalation 3's disposition.
-- [ ] **Task 6 — Erasure legality** (AC7)
-  - [ ] Widen the `member.rtbf_anonymized` reducer arm to **every `MEMBER_LIFECYCLE_STATES` label but
+- [x] **Task 6 — Erasure legality** (AC7)
+  - [x] Widen the `member.rtbf_anonymized` reducer arm to **every `MEMBER_LIFECYCLE_STATES` label but
         `anonymized`** (eight `from` states) + add the **seven new** matrix rows (⛔ the `withdrawn` row
         already exists at `state.ts:155` — do not duplicate).
-  - [ ] ⚠ **Rewrite `packages/domain/tests/member/state.test.ts:118`** — it asserts
+  - [x] ⚠ **Rewrite `packages/domain/tests/member/state.test.ts:118`** — it asserts
         `step('active', rtbf) === 'active'`, the **exact opposite** of AC7. ⛔ Rewrite to the new truth and
         record it in the Dev Agent Record; do not silently delete a pinned invariant.
-  - [ ] Add the **enum-derived totality test** over `MEMBER_LIFECYCLE_STATES` (AC7).
-  - [ ] Put the legality precondition in the **callers** (⛔ never the reducer), using
+  - [x] Add the **enum-derived totality test** over `MEMBER_LIFECYCLE_STATES` (AC7).
+  - [x] Put the legality precondition in the **callers** (⛔ never the reducer), using
         `getCurrentMemberModerationOverlay` (**unbounded**) — ⛔ never the `at`-bounded variant
         (`overlay.ts:132-149` records why). Extend the **existing member RTBF handler's** guard to the
         same predicate so the two paths cannot diverge.
-  - [ ] **AC14** — add the **DELIBERATE** doc block to the `member.rtbf_anonymized` arm in `state.ts`:
+  - [x] **AC14** — add the **DELIBERATE** doc block to the `member.rtbf_anonymized` arm in `state.ts`:
         breadth is intentional; legality lives in the callers (name both); why the reducer must not read
         the overlay; and the re-examination trigger (*"a new caller appending this event must carry the
         overlay precondition or this arm is wrong"*).
-  - [ ] **AC13** — take a **`pg_advisory_xact_lock`** on a key derived from
+  - [x] **AC13** — take a **`pg_advisory_xact_lock`** on a key derived from
         `` `member.rtbf:${pariwarId}:${memberId}` `` before the legality read in the **existing member RTBF
         handler** (the off-portal half is Task 7a). ⛔ Namespaced — a bare `hashtext(memberId)` collides
         with `member-auth.service.ts:54`'s device-binding lock. ⛔ **`_xact_`, not `pg_advisory_lock`.**
         ⛔ A lock on one path only is not serialization.
-  - [ ] **AC13** — the existing 23505 catch at `rtbf/handlers.ts:136-148` is **INERT**
+  - [x] **AC13** — the existing 23505 catch at `rtbf/handlers.ts:136-148` is **INERT**
         (`MemberStreamConcurrencyError` has no `code`, `errors.ts:107-118`) and under READ COMMITTED the
         loser appends a **duplicate event** instead. ⛔ Do not read it as prior art. Either fix it or
         delete it — ⛔ do not leave a comment claiming a protection that does not exist.
-  - [ ] ⚠ **Fix `apps/api/src/modules/rtbf/handlers.ts:113`** — `from_state: 'withdrawn'` is hardcoded.
+  - [x] ⚠ **Fix `apps/api/src/modules/rtbf/handlers.ts:113`** — `from_state: 'withdrawn'` is hardcoded.
         Read the member's real replayed state and write what you read. ⛔ Left as-is, the moment the guard
         admits a terminated `active` member this line writes a **false audit record** (AC7).
-- [ ] **Task 6b — Erasure REACH** (AC11)
-  - [ ] Extend `anonymizeMember` to zero `artifact_ciphertext` (→ NULL) and flip status → `expired` for
+- [x] **Task 6b — Erasure REACH** (AC11)
+  - [x] Extend `anonymizeMember` to zero `artifact_ciphertext` (→ NULL) and flip status → `expired` for
         the member's `data_exports` rows, **in the same tx**. ⛔ Retain the metadata rows.
   - [x] ✅ **RULED — Decision `2026-08-14-109` clause 6: the `consumed` row RETAINS its status.** The shipped behaviour is already exactly this, so this arm closes with **no code change**; the test asserting `status === 'consumed'` after erasure now rests on a ratified basis. The historical framing below is retained for context.
         AC11 says "every row" flips to `expired` **and** that the metadata row is retained *"so the audit
@@ -1361,55 +1361,55 @@ this matrix and the task it points to, or the next validation finds the drift
         in-flight build resurrecting the dossier) and the `ready` flip, plus zeroing
         `artifact_ciphertext` on **all** statuses including `consumed` (uncontroversial — the vacuum
         already does exactly that). ⛔ Leave only the `consumed` **status** untouched pending the ruling.
-  - [ ] Correct the two stale comments that claim a cascade protection which never fires:
+  - [x] Correct the two stale comments that claim a cascade protection which never fires:
         `packages/domain/migrations/0033_data-exports.sql:40` and
         `packages/domain/src/schema/data_exports.ts:19`.
-  - [ ] Raise **Escalation 6** (the wider inert-cascade class) — owner: a named successor story, ⛔ never
+  - [x] Raise **Escalation 6** (the wider inert-cascade class) — owner: a named successor story, ⛔ never
         an epic.
-- [ ] **Task 7a — Fulfilment routes + handlers, UN-BLOCKED half** (AC3/AC4/AC5/AC7)
-  - [ ] `apps/api/src/modules/member-data-rights/` — the AC3 preHandler chain
+- [x] **Task 7a — Fulfilment routes + handlers, UN-BLOCKED half** (AC3/AC4/AC5/AC7)
+  - [x] `apps/api/src/modules/member-data-rights/` — the AC3 preHandler chain
         (`requireAdminSession, scopeResolutionHook, requirePermissionHook(… 'member.data_rights',
         { dimension: 'pariwar' }), requireStepUp(deps, DATA_RIGHTS_STEP_UP_CONTEXT)`).
-  - [ ] The **export-build enqueue** route: enqueues the existing `DATA_EXPORT_BUILD` job (⛔ do not write
+  - [x] The **export-build enqueue** route: enqueues the existing `DATA_EXPORT_BUILD` job (⛔ do not write
         a second assembler); writes `requested_via: 'off_portal_admin'` + actor + ticket id; enqueue
         **after commit**, with compensation on enqueue failure (`data-export/handlers.ts` is the
         exemplar). ⛔ **NO download/handover path** — that is AC-R1.
-  - [ ] The **erasure** route (AC7's caller-side legality).
-  - [ ] **AC12** — a `TERMINAL_STATES` set + 409 **`data_export.member_terminal`** on the off-portal
+  - [x] The **erasure** route (AC7's caller-side legality).
+  - [x] **AC12** — a `TERMINAL_STATES` set + 409 **`data_export.member_terminal`** on the off-portal
         enqueue route, creating **no** `data_exports` row. Follow the five shipped precedents
         (`nominee.handlers.ts:40`, `member-terms:39`, `medical:62`, `vyawastha-shulk:43`,
         `life-events:42`) — ⛔ not an `rtbf.already_anonymized`-shaped code on a non-RTBF route.
-  - [ ] **AC12** — ⚠ **the SAME guard on the EXISTING member enqueue handler**
+  - [x] **AC12** — ⚠ **the SAME guard on the EXISTING member enqueue handler**
         (`apps/api/src/modules/data-export/handlers.ts`, which has no lifecycle check today). ⛔ Guarding
         only the new route leaves the already-reachable one open. ⚠ Verify no shipped export spec seeds a
         terminal member on the enqueue path before assuming this is additive.
-  - [ ] **AC13** — `pg_advisory_xact_lock` on the namespaced `member.rtbf:` key before the legality read
+  - [x] **AC13** — `pg_advisory_xact_lock` on the namespaced `member.rtbf:` key before the legality read
         in the **off-portal erasure handler** (member-side half is Task 6).
-  - [ ] **AC3** — the off-portal erasure handler writes **`actor: 'trustee'`** and
+  - [x] **AC3** — the off-portal erasure handler writes **`actor: 'trustee'`** and
         **`trigger: 'member_data_rights.rtbf_fulfilled'`** on the appended `member.rtbf_anonymized`
         (⚠ the member family's dotted namespace, per `moderation/write.ts:314` — ⛔ **not** an `admin_`
         prefix, which is the `claim.*` family's). ⛔ Do **not**
         copy `rtbf/handlers.ts:112-117`'s `actor: 'member'` / `trigger: 'rtbf_request'` — that is the
         member exemplar and copying it writes a false actor attribution.
-  - [ ] **AC3** — the off-portal erasure handler **requires** `helpdesk_ticket_id` and fails closed
+  - [x] **AC3** — the off-portal erasure handler **requires** `helpdesk_ticket_id` and fails closed
         without it. ⚠ The payload schema makes it `.optional()` for the member path's sake, so the
         schema **cannot** enforce this — an off-portal erasure missing the id would validate cleanly and
         become indistinguishable from a member self-service one.
-  - [ ] `23505` on `data_exports_one_pending_per_member` → **typed 409 naming the existing pending
+  - [x] `23505` on `data_exports_one_pending_per_member` → **typed 409 naming the existing pending
         export**. ⛔ Do not reuse the member's row; ⛔ do not cancel it. ⚠ `23505` is on `err.cause.code`.
-  - [ ] `Idempotency-Key` on **every** fulfilment route (AC3) — erasure is irreversible.
-  - [ ] `users.display_name` attribution snapshotted server-side; ⛔ a missing name **blocks** the action
+  - [x] `Idempotency-Key` on **every** fulfilment route (AC3) — erasure is irreversible.
+  - [x] `users.display_name` attribution snapshotted server-side; ⛔ a missing name **blocks** the action
         with a typed error (AC3).
-  - [ ] `withCompensatingAudit` + the originating `helpdesk_ticket_id` on every fulfilment call
+  - [x] `withCompensatingAudit` + the originating `helpdesk_ticket_id` on every fulfilment call
         (ADR-0030 — ⛔ not a bare `writeAuditEntry`).
-  - [ ] ⛔ **Every fulfilment read keys on `member_id`** — never `ticket_id`, never `data_export_id` (AC4).
-  - [ ] Regenerate `openapi/v1.yaml` (the EXPECTED diff).
-- [ ] **Task 7b — Delivery** (AC-R1) ✅ **UN-BLOCKED IN FULL — `2026-08-14-113` ratified option (i).**
+  - [x] ⛔ **Every fulfilment read keys on `member_id`** — never `ticket_id`, never `data_export_id` (AC4).
+  - [x] Regenerate `openapi/v1.yaml` (the EXPECTED diff).
+- [x] **Task 7b — Delivery** (AC-R1) ✅ **UN-BLOCKED IN FULL — `2026-08-14-113` ratified option (i).**
       Both halves may proceed. ⛔ Build the fallback as the **three-part gate** below, and ⛔ name
       everything `primary_delivery_not_completed` — the terminology gate will fail the build otherwise.
-  - [ ] **PRIMARY — member-direct.** A one-time, OTP-verified download grant to the registered mobile;
+  - [x] **PRIMARY — member-direct.** A one-time, OTP-verified download grant to the registered mobile;
         the member proves possession and ⛔ **no session is issued**.
-  - [ ] **FALLBACK — the THREE-PART GATE** (`113` cl.1), ⛔ all three required, none substituting:
+  - [x] **FALLBACK — the THREE-PART GATE** (`113` cl.1), ⛔ all three required, none substituting:
         **(1)** the member's **explicit request** — machine-enforced, fails closed;
         **(2)** an **unsuccessful OTP attempt** (`consumed_at IS NULL AND expires_at < now()` over
         `member_auth_otps`) — machine-enforced, fails closed;
@@ -1417,29 +1417,29 @@ this matrix and the task it points to, or the next validation finds the drift
         machine-verifiable and ⛔ not claimed to be.
         ⛔ Staff may not initiate or unilaterally select it. Must read as an **exception** in code, UI
         and audit — never an equivalent choice.
-  - [ ] ⛔ **RECORD TWO SEPARATE FACTS, DIFFERENT AUTHORS — do not collapse into one field** (`111`
+  - [x] ⛔ **RECORD TWO SEPARATE FACTS, DIFFERENT AUTHORS — do not collapse into one field** (`111`
         cl.3): (1) **the member explicitly requested** staff mediation — the TRIGGER, captured at
         intake, member-authored; (2) **why the exception was permitted** — the JUSTIFICATION,
         staff-authored. A single staff "reason" field would absorb the member's trigger into a staff
         assertion.
-  - [ ] ⛔ **NAME IT `primary_delivery_not_completed` — predicate, column/field, error code AND audit
+  - [x] ⛔ **NAME IT `primary_delivery_not_completed` — predicate, column/field, error code AND audit
         action** (`113` cl.2). ⛔ **NEVER `mobile_lost`, NEVER `mobile_unreachable`.** The check
         verifies the ROUTE, not the handset; the other names assert what the system never established.
         ✅ Enforced by `packages/contracts/tests/delivery-terminology-gate.test.ts` — it will fail the
         build, tree-wide, on either banned term.
-  - [ ] ⚠ **`attempts` is NOT in the predicate**, and whether it should be (`attempts = 0`) is an OPEN
+  - [ ] ⚠ **OPEN, NON-BLOCKING — `attempts` is NOT in the predicate**, and whether it should be (`attempts = 0`) is an OPEN
         question — a non-zero count is evidence the member DOES control the mobile. ⛔ Do not add it
         unilaterally (`113` *Open follow-ups*).
-  - [ ] ⛔ **The justification is MECHANIZED and fail-closed** — the fallback cannot proceed without
+  - [x] ⛔ **The justification is MECHANIZED and fail-closed** — the fallback cannot proceed without
         one. ⛔ Free text about a member ⇒ a **Tier-1 encrypted column**, ⛔ NEVER an event payload.
-  - [ ] ⭐ **Add that column to `anonymizeMember`'s coverage set IN THE SAME COMMIT**, and move
+  - [x] ⭐ **Add that column to `anonymizeMember`'s coverage set IN THE SAME COMMIT**, and move
         `rtbf-anonymize.test.ts`'s count assertion (9 tables / 10 statements) **upward**. ⛔ Skipping
         this creates a Tier-1 column that survives an erasure — the exact 10.10 / Finding-9 class.
-  - [ ] ✅ Keep the justification **withheld** from the export — **RULED** (`111` cl.1), an internal
+  - [x] ✅ Keep the justification **withheld** from the export — **RULED** (`111` cl.1), an internal
         operational/audit record. Already the built posture; the status moved from reading to ruling.
         ⛔ Its counterpart — the member's own **request** — is a different artifact and `111` cl.1 is
         silent on it; add nothing to the export on that basis.
-- [ ] **Task 7c — Correction** (AC-R2) ✅ **UN-BLOCKED — Decision `2026-08-14-109` clause 2.**
+- [x] **Task 7c — Correction** (AC-R2) ✅ **UN-BLOCKED — Decision `2026-08-14-109` clause 2.**
       Build a **recorded, staff-executed correction process on the existing helpdesk substrate**.
       ⛔ **No general admin member-profile editor** — the ruling authorises a recorded *process*, not a
       write surface.
@@ -1450,16 +1450,16 @@ this matrix and the task it points to, or the next validation finds the drift
       `routed_to_role` is still **not** an authorization check, and no routing rule was added — the
       ruling confirms the shipped shape rather than changing it. ⛔ Update the `roles.test.ts` rationale
       from *"pending a ruling"* to *"ruled: not required"*, citing the decision id.
-- [ ] **Task 8 — Operator surface** (AC2/AC9)
-  - [ ] The subcategory in the operator ticket-filing surface + the fulfilment action in the helpdesk
+- [x] **Task 8 — Operator surface** (AC2/AC9)
+  - [x] The subcategory in the operator ticket-filing surface + the fulfilment action in the helpdesk
         detail page (`apps/admin/src/modules/helpdesk/` — ⚠ verify the module before editing; sibling
         admin modules are easy to misattribute, [[feedback_story_validate_footguns]]).
-  - [ ] Both surfaces **import** `DPDPA_DATA_RIGHTS_SUBCATEGORY` and `DATA_RIGHTS_STEP_UP_CONTEXT` — ⛔
+  - [x] Both surfaces **import** `DPDPA_DATA_RIGHTS_SUBCATEGORY` and `DATA_RIGHTS_STEP_UP_CONTEXT` — ⛔
         never re-declare either literal (AC2/AC3).
-  - [ ] `i18n-en.ts` + **both** locale files in the same commit (AC9). ⛔ Do **not** re-word
+  - [x] `i18n-en.ts` + **both** locale files in the same commit (AC9). ⛔ Do **not** re-word
         `moderation.notice.terminated.body` (Finding 8).
-- [ ] **Task 9 — Tests** (AC2/AC3/AC4/AC5/AC7/AC11)
-  - [ ] `apps/api/tests/integration/member-data-rights/*.spec.ts`:
+- [x] **Task 9 — Tests** (AC2/AC3/AC4/AC5/AC7/AC11)
+  - [x] `apps/api/tests/integration/member-data-rights/*.spec.ts`:
         · AC4 two-ticket identity proof — **assembled plaintext**, `manifest.json` excluded **wholesale**
         (⛔ not "`generated_at` excluded": the field is `generatedAt`, and `exportId` is a row identity
         that differs between builds; ⛔ never a ciphertext byte compare)
@@ -1484,23 +1484,23 @@ this matrix and the task it points to, or the next validation finds the drift
           `apps/api/tests/integration/login-wall.spec.ts` proves *"authenticated ⇒ guarded"* across the
           **real route table** — a new non-allowlisted route that forgets the preHandler **fails CI, not
           prod**. Re-asserting it per route is duplication. ⛔ Do not treat its absence as a gap.
-  - [ ] **AC13** — ⚠ a **live two-connection** erasure race as an **own-committing DOMAIN spec** under
+  - [x] **AC13** — ⚠ a **live two-connection** erasure race as an **own-committing DOMAIN spec** under
         `packages/domain/tests/integration/`, following `claim/appeal-concurrency.spec.ts:26` (*"a real
         race needs REAL concurrent COMMITs on SEPARATE pool clients"*). Assert **exactly one** write,
         **exactly one** `member.rtbf_anonymized` event, losers rejected with the existing typed 409.
         ⛔ **Force the interleave** — hold the winner's tx open past the loser's guard read. Two
         concurrent `app.inject` calls serialize by chance and pass **with or without** the lock. ⛔ A
         route-level spec cannot witness this.
-  - [ ] `packages/domain/tests/member/state.test.ts` — the AC7 enum-derived totality test **and** the
+  - [x] `packages/domain/tests/member/state.test.ts` — the AC7 enum-derived totality test **and** the
         `:118` rewrite (Task 6).
-  - [ ] `packages/domain/tests/member/` — the **NEW** `RtbfAnonymizedPayloadSchema` pinning test
+  - [x] `packages/domain/tests/member/` — the **NEW** `RtbfAnonymizedPayloadSchema` pinning test
         (Task 3b, un-blocked): asserts **BOTH** the 4-field member payload and the 5-field off-portal
         payload parse **exactly**, and that free text is still rejected. ⛔ Not one shape only.
-  - [ ] The AC3 caller-side assertions: the **off-portal** route rejects an erasure with no
+  - [x] The AC3 caller-side assertions: the **off-portal** route rejects an erasure with no
         `helpdesk_ticket_id` (the half `.optional()` cannot enforce); and the appended event carries
         **`actor: 'trustee'`** + **`trigger: 'member_data_rights.rtbf_fulfilled'`**, ⛔ not the member exemplar's
         `'member'` / `'rtbf_request'`.
-  - [ ] `packages/domain/tests/integration/rls/data-exports-policy-regression.spec.ts` — **NEW**; the
+  - [x] `packages/domain/tests/integration/rls/data-exports-policy-regression.spec.ts` — **NEW**; the
         table has none today (23 table specs exist, `data_exports` is not among them). RLS
         positive/negative/fail-closed/FORCE + the new FK + the `requested_via` CHECK, asserted at the
         **migration level**, plus the cross-Pariwar `WITH CHECK` refusal AC4's route test cannot witness.
@@ -1510,29 +1510,29 @@ this matrix and the task it points to, or the next validation finds the drift
         ⛔ (b) pins the **predicate** — a "different member" case would pass on a plain `UNIQUE
         (member_id)` too (`member-moderation-grounds-policy-regression.spec.ts:262`). ⛔ Not one `it()` —
         after the 23505 the harness tx is aborted and the next INSERT fails with `25P02`.
-  - [ ] The AC2 single-literal gate (⚠ excluding the scanning test's own file) and the AC3
+  - [x] The AC2 single-literal gate (⚠ excluding the scanning test's own file) and the AC3
         `DATA_RIGHTS_STEP_UP_CONTEXT` shared-symbol assertion.
-  - [ ] `packages/domain/tests/rbac/permissions.test.ts:54,56` + `roles.test.ts` holder assertion (Task 2).
-  - [ ] ⚠ Must pass **UNTOUCHED**: `packages/domain/tests/helpdesk/default-policy-hash.test.ts` (a diff on
+  - [x] `packages/domain/tests/rbac/permissions.test.ts:54,56` + `roles.test.ts` holder assertion (Task 2).
+  - [x] ⚠ Must pass **UNTOUCHED**: `packages/domain/tests/helpdesk/default-policy-hash.test.ts` (a diff on
         `EXPECTED_HASH` is a failed AC2, not a rebase artifact) and
         `packages/contracts/tests/helpdesk.test.ts` (the tuple sync-guard).
-  - [ ] ⛔ **BLOCKED (Escalations 7 + 8):** the AC5 non-empty presence assertions, and the
+  - [x] ⛔ **BLOCKED (Escalations 7 + 8):** the AC5 non-empty presence assertions, and the
         `packages/domain/tests/integration/data-export/data-export.spec.ts:134,139,150` rewrites. Do not
         author or touch them.
-  - [ ] ⚠ Live-DB specs: suite-level `{ timeout: 20000 }`; test DB `twt-test-pg` on **:5433**; set
+  - [x] ⚠ Live-DB specs: suite-level `{ timeout: 20000 }`; test DB `twt-test-pg` on **:5433**; set
         `DATABASE_URL` for a **single pass only** ([[project_ci_local_double_run_pollution]]).
-- [ ] **Task 10 — Instrument, gates + record** (AC8/AC9/AC10)
-  - [ ] ⚠ **The §8.4a disposition edit — `docs/legal/niyamavali.md`** (AC8). ⚠ **No task ordered this
+- [x] **Task 10 — Instrument, gates + record** (AC8/AC9/AC10)
+  - [x] ⚠ **The §8.4a disposition edit — `docs/legal/niyamavali.md`** (AC8). ⚠ **No task ordered this
         before.** Add the explicit **"Statutory rights (DPDPA)"** disposition to the mechanization-status
         note, claiming **only** what has a test. ⛔ Lands in or **after** the `story(10.21):` commit, never
         in Task 0's governance commit. ⛔ No §8.4 text is re-read or reinterpreted.
-  - [ ] `pnpm member-state:test && pnpm member-state:check` (AC7).
-  - [ ] `pnpm i18n:check && pnpm microcopy:test && pnpm microcopy:check` (AC9).
-  - [ ] `pnpm ci:local` with `DATABASE_URL`, compared against the Task 1 baseline (AC10).
+  - [x] `pnpm member-state:test && pnpm member-state:check` (AC7).
+  - [x] `pnpm i18n:check && pnpm microcopy:test && pnpm microcopy:check` (AC9).
+  - [x] `pnpm ci:local` with `DATABASE_URL`, compared against the Task 1 baseline (AC10).
         ⚠ [[project_known_livedb_test_failures]] #3 (renewal-lifecycle) is still open and is **not** this
         story's. ⛔ Never regenerate an applied migration (`42P07`); ⛔ never `DROP SCHEMA` (`42P01`).
-  - [ ] The AC2 SLA disposition (*"carried knowingly, pending Escalation 5"*) stated in the story record.
-  - [ ] `deferred-work.md` section; the Dev Agent Record below; ⚠ the friction-budget diff is **committed**
+  - [x] The AC2 SLA disposition (*"carried knowingly, pending Escalation 5"*) stated in the story record.
+  - [x] `deferred-work.md` section; the Dev Agent Record below; ⚠ the friction-budget diff is **committed**
         history — AC-4 passes vacuously until you commit ([[project_friction_budget_baseline_ratchet]]).
 
 ---
@@ -1839,13 +1839,20 @@ audit context and never the event payload. Do not invent a verification primitiv
 
 claude-opus-5 (2026-08-14).
 
-### Completion status — ⛔ UN-BLOCKED SCOPE ONLY. The release gate is OPEN.
+### Completion status — ALL ACs BUILT. The release gate is still OPEN, and the story is not closed.
 
-⛔ **This story is NOT done, and must not be reported as done.** Sprint status is `in-progress`.
-**Landed:** AC1–AC4, AC7–AC15, AC5's **off-portal-build half**, AC11's **`pending`/`ready`** arms.
-**Held, nothing decided:** AC5's export-**content** half (Escalations 7 + 8), AC11's **`consumed`-status**
-arm (Escalation 9), **AC-R1** (Escalation 1), **AC-R2** (Escalation 2), **AC-R3** (Escalation 10).
-⛔ No escalation was answered and no decision id fills any AC-R placeholder.
+**Landed:** AC1–AC4, AC7–AC15, AC5's **off-portal-build half**, AC11 in full (the `consumed` arm ruled
+`retain`), and **AC-R1 + AC-R2 + AC-R3** — every escalation ruled by Decisions `2026-08-14-109` … `114`.
+**Transferred out by ruling:** AC5's export-**content** half → a named successor story (`109` cl.9).
+⛔ **STILL NOT CLOSED, and these are not mine to close:**
+- the **`termination_access_block` flip** — Panel-exclusive, needs its own decision-log entry. The gate
+  is **OPEN**; `109` cl.2 made it *dischargeable*, not discharged;
+- the **export-content successor story is UNNAMED** — an unnamed successor is how a deferral expires
+  unowned ([[project_r7_fact_producer_unbuilt]]);
+- the consent sheet's **initials block is uncountersigned** — rulings are recorded *as reported*;
+- **counsel re-presentation** of consent-sheet Rows 3/4/5/6, recorded `un-attested`;
+- ⚠ **one open, NON-BLOCKING question:** whether element 2 should additionally require `attempts = 0`
+  (`113` *Open follow-ups*).
 
 ### Debug Log References
 
@@ -1874,7 +1881,10 @@ arm (Escalation 9), **AC-R1** (Escalation 1), **AC-R2** (Escalation 2), **AC-R3*
 **API** — **NEW** `modules/member-data-rights/{handlers,routes,index}.ts`; `modules/{rtbf,data-export}/handlers.ts`; `server.ts`.
 **Admin** — `modules/helpdesk/{HelpdeskOperatorShell,HelpdeskDetailShell,HelpdeskDetailPage,i18n-en}.tsx|ts`; `api/{client,hooks}.ts`.
 **Tests** — **NEW** `domain/tests/member/rtbf-payload.test.ts`, `domain/tests/integration/rls/data-exports-policy-regression.spec.ts`, `domain/tests/integration/member/rtbf-concurrency.spec.ts`, `contracts/tests/member-data-rights-single-literal.test.ts`; updated `domain/tests/member/{state,rtbf-anonymize}.test.ts`, `domain/tests/rbac/{permissions,roles}.test.ts`, `domain/tests/integration/member/rtbf-anonymize.spec.ts`, `api/tests/integration/data-export/data-export.spec.ts`.
-**Governance** — `.decision-log.md` (`107`, `108`); `deferred-work.md`; `sprint-status.yaml`; `docs/legal/niyamavali{,.hi}.md` (untracked).
+**AC-R1/AC-R2 (delivery + correction)** — **NEW** `domain/migrations/0104_data-rights-delivery-and-correction.sql`; **NEW** `domain/src/schema/{data_export_delivery_grants,member_data_rights_corrections}.ts`; **NEW** `domain/src/data-export/delivery.ts`; **NEW** `domain/src/member-data-rights/{corrections,index}.ts`; `domain/src/schema/member_auth_otps.ts` (new OTP pool); `domain/src/member/anonymize.ts` (+2 Tier-1 surfaces); `contracts/src/member-data-rights/member-data-rights.ts`; `apps/api/src/modules/member-data-rights/{handlers,routes}.ts`; `apps/admin/src/api/{client,hooks}.ts`; `apps/admin/src/modules/helpdesk/{HelpdeskDetailShell.tsx,HelpdeskDetailPage.tsx,i18n-en.ts}`.
+**AC-R1/AC-R2 tests** — **NEW** `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts`; `domain/tests/member/rtbf-anonymize.test.ts` (coverage 9→11 tables / 10→12 statements); `apps/api/tests/integration/login-wall.spec.ts` (the redemption route allowlisted, with its rationale).
+**Corrected en route** — `domain/tests/integration/device-token/device-token.spec.ts` (a global-count assertion that was a date bomb; diagnosed as pre-existing before touching it).
+**Governance** — `.decision-log.md` (`107`, `108`, `109`, `110`, `111`, `112`, `113`, `114`); `docs/knowledge-transfer/trustee-consent-sheet-2026-08-14-story-10-21-escalations.md`; `deferred-work.md`; `sprint-status.yaml`; `docs/legal/niyamavali{,.hi}.md` (untracked).
 
 ---
 
@@ -1905,3 +1915,5 @@ arm (Escalation 9), **AC-R1** (Escalation 1), **AC-R2** (Escalation 2), **AC-R3*
 | 2026-08-14 | ⭐ **`Decision 2026-08-14-111` — the fallback-justification disclosure question is CLOSED BY RULING, and the Panel additionally established the fallback's TRIGGER.** **(1) Withheld, ruled.** The staff-mediated fallback justification is an **internal operational / audit record** and is **withheld** from the member export. ✅ This **confirms** the reading `110` clause 3(d) recorded — the code was already built to it as the conservative default, so **no behaviour changes; only its status does**, from *author's reading* to *ratified*. `110`'s open follow-up is **Closed by ruling**, not by edit ([[feedback_closure_language_precision]]). **(2) ⭐ THE CONSEQUENTIAL HALF, ruled of the Panel's own motion: the TRIGGER for the fallback is the MEMBER'S OWN EXPLICIT REQUEST for staff mediation.** ⛔ **This makes the fallback MEMBER-INITIATED, not operator-assessed** — an operator **cannot** unilaterally route a member onto the staff-mediated path, however well-intentioned; absent the member's request there is no exception to permit. ⚠ **That is a materially STRONGER control than the shape `110` described**, and it **REFINES `110` clause 2**, which phrased availability as an operator-assessed circumstance (*"the member no longer controls the registered mobile"*). ⛔ `110` is **NOT edited** — it stands as committed, and the refinement is **stated openly** rather than absorbed by re-reading it ([[feedback_supersede_never_reinterpret]]). **(3) TWO SEPARATE FACTS, DIFFERENT AUTHORS, BOTH RECORDED — ⛔ not collapsible into one field:** the **member's explicit request** (member-authored, captured at intake — the TRIGGER, without which there is no fallback) and **why the exception was permitted** (staff-authored — the JUSTIFICATION, internal per clause 1). ⛔ A single staff-authored "reason" field would **silently absorb the member's trigger into a staff assertion**, which is exactly the substitution the trigger ruling forecloses. **(4) ⚠ TWO READINGS RECORDED, NOT INFERRED.** *(a)* Does the lost-mobile circumstance remain a **hard precondition**, or is it the paradigm reason recorded in the justification? The author's reading is the latter — the ruling says the justification records *why the exception was permitted*, which is where that circumstance lives. ⛔ **No machine-checkable lost-mobile precondition is built, because none was ruled** — and ⚠ **this is the WIDER of the two readings**: it admits any member who explicitly asks and whose request is permitted, not only one who lost the mobile, which widens how often a staff actor holds a member's assembled, **decrypted** Tier-1 export — the posture `109` clause 1 was careful about. ⛔ **If the Panel intended the narrower shape, that is the item to correct**, re-trigger **before AC-R1 ships**. *(b)* Is the member's **trigger** — as distinct from the staff justification — disclosable in the export? Clause 1 withholds the *justification* and is **silent** on the request, which is the member's **own act** on their own ticket. ⛔ Nothing added to the export on that basis. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1's heading, FALLBACK block, withheld clause and new no-precondition clause; Task 7b's fallback + two-facts + no-precondition + withheld checkboxes; the coverage-matrix AC-R1 row. |
 | 2026-08-14 | ⛔ **`Decision 2026-08-14-112` — the NARROWER fallback eligibility is CONFIRMED, and AC-R1's fallback half is RE-BLOCKED on a question the ruling itself directed me to raise.** **(1) Eligibility requires BOTH conditions, neither substituting for the other:** an **explicit request by the member** for staff mediation **AND** the member **no longer controlling the registered mobile**, making the primary OTP route unavailable. ⛔ Staff may not initiate or unilaterally select the fallback. ⚠ This **supersedes the READING** recorded at `111` *Open follow-ups* item (a) — the wider shape (request alone suffices) is **rejected**. It was flagged there as the wider of two readings with a correction re-trigger *before AC-R1 ships*; the correction was taken. ⛔ `111` clause 2 itself **stands unchanged** and is now **one of two** conditions; `110` and `111` are **not edited** ([[feedback_supersede_never_reinterpret]]). **(2) ⛔ THE RULING DIRECTED THAT THE MECHANIZATION PROBLEM BE RAISED RATHER THAN SILENTLY WEAKENED — SO IT IS RAISED, AND IT BLOCKS.** A trace of the tree establishes there is **no reliable machine-verifiable "lost mobile" signal**: · **no delivery receipt** — `channels/src/providers/sms-dlt.ts` says so in its own words, *"The gateway gives NO synchronous delivery receipt at accept time (no DLR seam in v1)"*, so `status: 'accepted'` means the **gateway** took the message, not that a handset got it; · **no mobile-change history** — `member_identities` has no history table and there is **no `member.mobile_changed` event**, so a number lapsing or being ported away is unobservable; · **the one real observable is a PROXY** — `member_auth_otps` can show *an OTP was issued and never consumed* (`consumed_at IS NULL AND expires_at < now()`), which proves **the primary route did not complete** and ⛔ **NOT** that the member lost the mobile: it is satisfied identically by a member who was asleep, busy, or ignored the message. ⛔ **Implementing that proxy as if it verified condition (2) would be a claimed protection that does not exist** — the same class as this story's own inert `23505` catch, its inert `ON DELETE CASCADE` comment, and the vacuous `pii-scrape` gate. **(3) THREE OPTIONS ARE LIVE and each changes what ships — ⛔ none is chosen here:** (i) mechanize the *attempted-and-did-not-complete* proxy as a hard precondition + carry "lost mobile" as a recorded staff attestation; (ii) build a **stronger positive signal** first (a DLR seam, or a mobile-change/unreachable event) — net-new engineering in `@twt/channels` and the identity surface; (iii) **attestation-only**, no machine precondition — ⚠ the weakest, and closest to the shape clause 1 just rejected. **(4) ⚠ AC-R1's FALLBACK HALF IS BLOCKED AGAIN, and that is recorded plainly rather than worked around.** `110` un-blocked AC-R1; `112` re-blocks its fallback half. ⛔ That is **not governance churn** — it is the ruling correctly refusing to let an **unverifiable** condition ship as though it were verified. ✅ **AC-R1's PRIMARY (member-direct) half is unaffected and remains buildable**, as does AC-R2. **Propagated in the same pass** ([[feedback_spec_edits_must_propagate_to_tasks]]): AC-R1's heading, its settled-in-full claim, the FALLBACK eligibility block and the no-precondition clause; Task 7b's header + fallback + enforcement checkboxes; the coverage-matrix AC-R1 row; the banner, the in-scope ruling-gated bullet, the AC preamble and the escalation trailer — all four of which had claimed *"nothing remains un-ruled"* and were **false the moment this ruling landed**. ⛔ Verified afterwards: **one** open block, stated consistently at every site. |
 | 2026-08-14 | ⭐ **`Decision 2026-08-14-113` — OPTION (i) RATIFIED; AC-R1 UN-BLOCKED IN FULL; the code terminology is MANDATED.** **(1) A THREE-PART GATE on the fallback**, ⛔ all three required and none substituting: **(1)** the member's **explicit request** — machine-enforced, fails closed; **(2)** an **unsuccessful OTP attempt** on the primary route — machine-enforced, fails closed; **(3)** the staff **attestation** that the member no longer controls the registered mobile — recorded in the internal justification, ⛔ **not machine-verifiable and not claimed to be**. ⭐ What element 2 buys is real: the fallback is **unreachable until the primary has genuinely been tried and failed** — exactly *"mechanized only to the extent necessary"* (`112` cl.3). **(2) ⛔ TERMINOLOGY MANDATED — `primary_delivery_not_completed`; ⛔ NEVER `mobile_lost`, ⛔ NEVER `mobile_unreachable`** — binding the predicate, the column/field, the error code AND the audit action. ⚠ **This is not style; it is the control that stops element 2 from becoming a claim it cannot support.** The check observes that an OTP was issued and the route did not complete; it does **not** observe the handset — there is no DLR seam and no mobile-change history. A field named `mobile_lost` would assert to every future reader, reviewer, operator and auditor that the system **established** what it merely **inferred**, and the inference is simply wrong for a member who was asleep, busy, or ignored the message. ⚠ This story has already had to correct **three** artifacts that named a protection they did not deliver (the inert `23505` catch, the inert `ON DELETE CASCADE` comment, the vacuous `pii-scrape` gate) — ⛔ the mandate exists so a fourth is not created **deliberately**. ✅ **MECHANIZED, not left as a convention:** `packages/contracts/tests/delivery-terminology-gate.test.ts` scans `contracts`/`domain`/`api`/`admin`/`jobs` for the banned terms in both snake_case and camelCase and fails the build tree-wide. ⚠ It builds its needles by **concatenation** and **excludes itself** by name — a terminology gate necessarily contains the terms it bans, so an un-excluded scan fails on itself and looks like a real violation. ⛔ **REVERT-SANITY PROVEN:** a planted `mobile_lost` in `domain/src/helpdesk/routing.ts` failed the gate with an actionable message naming the file; reverted; green. **(3) ⚠ THE PREDICATE IS `consumed_at IS NULL AND expires_at < now()`** over `member_auth_otps` — an OTP **issued** for the member-direct grant that **expired unconsumed**. ⛔ **`attempts` is deliberately NOT in it**, and whether it should be is recorded as an OPEN, **non-blocking** question: a **non-zero** attempt count means somebody **received the message and entered a wrong code**, which is evidence the member **DOES** control the mobile and cuts directly **against** element 3. ⛔ Not added, because it narrows eligibility beyond what was ruled and `112` cl.3 forbids inventing mechanism. ⚠ **The asymmetry is stated so whoever answers sees it:** wrong permissively admits a fallback that should have been refused; wrong restrictively **denies a member a statutory route**. **Propagated in the same pass**: AC-R1's heading + blocked banner + eligibility block + terminology/predicate clauses; Task 7b's header, fallback gate, terminology and `attempts` checkboxes; the coverage-matrix AC-R1 row; and the banner / in-scope bullet / AC preamble / escalation trailer, **all four of which said AC-R1's fallback was blocked** and were false the moment this ruling landed. ⛔ **ZERO blocks now — and the story is STILL NOT DONE: AC-R1 and AC-R2 are UNBUILT and the release gate is OPEN.** |
+| 2026-08-14 | ⭐ **AC-R1 + AC-R2 CLOSED OUT — tests, operator surface, §8.4a and the record.** Five gaps I had left open after the build are now closed. **(1) TESTS — the real gap.** The new routes had shipped with **no route-level coverage**: only the login-wall guard and the two source-scan gates referenced them. Added `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts` (7 tests) proving what the DB CHECKs cannot: that the **handler** refuses before reaching the database, so a caller gets a typed 409 rather than a constraint violation as a 500. Covers element 2 failing closed **with no grant row created**; a `member_direct` grant carrying **none** of the gate elements; staff-mediated succeeding **only** once an OTP has expired unconsumed, with all three elements recorded and the attestation **encrypted** (asserted by `/^enc:/` **and** by the plaintext being absent); redemption returning the **identical** 404 for unknown-grant and wrong-code; a **staff_mediated grant being unredeemable** by the member; the correction record with both sides encrypted and the display name snapshotted; and an un-elevated admin refused (revert-sanity on the DISTINCT step-up context). ⛔ **REVERT-SANITY PROVEN:** disabling the element-2 check fails exactly that one test. ⚠ **Fixture correction worth recording:** the ticket was first hand-INSERTed and failed on `audit_log_entries.audit_hash NOT NULL` — the §1.5 hash chain. Rather than forge a chain entry the fixture now drives the **real AC2 intake route**, which is both simpler and a truer fixture; it also caught that the column is `subcategory`, not `sub_category`. **(2) OPERATOR SURFACE.** `apps/admin` had the client/hooks but **no page wiring** — an operator could not issue a delivery grant or record a correction at all. Added both, and the UI **encodes the ruling's shape**: the member-direct button is primary and prominent, while the fallback and the correction form are **collapsed `<details>`** an operator must deliberately open. Copy states the precondition in plain words (*"Send the code to the member first…"*) so a server refusal is not a mystery — ⛔ but the UI does **not** evaluate it; the server observes it. **(3) §8.4a WAS FALSE.** It still read *"Neither is built yet"* about delivery and correction. Re-stated in **both locales** and recorded as **`Decision 2026-08-14-114`** (`docs/legal/` is untracked). ⭐ The row is **deliberately KEPT** in the stated-but-unmechanized list, with the exit condition now explicit: **a row leaves when the Trust has seen its mechanism work — not when the code exists.** The portal-access control is still not enabled, so no member has exercised any of this live. **(4) RECORD.** Completion status rewritten (all ACs built; five things still open, none of them mine); File List extended; **15 tasks / 76 subtasks ticked** — they had drifted badly out of date and were not a reliable signal. ⛔ The one genuinely-open item (`attempts = 0`) is deliberately left **unticked**. **(5)** Gates re-run — see the next entry. |
+| 2026-08-15 | ✅ **GATES RE-RUN AFTER THE CLOSE-OUT — all green.** `pnpm ci:local` **30/30**; single-pass live-DB **@twt/domain 2772 passed / 241 files** and **@twt/api 963 passed / 116 files** (the 7 new AC-R1/AC-R2 route tests included), exit 0; `microcopy:check`, `i18n:check`, `member-state:test/check`, `schema:test`, `friction:test` all green; both source-scan gates (single-literal + delivery terminology) green with revert-sanity intact. ⚠ **TWO FLAKES AND ONE REAL FINDING ALONG THE WAY, all recorded rather than retried into silence.** *Flake 1* — `@twt/admin` timed out at 5000ms across four unrelated pages on one run; 308/308 in isolation. *Flake 2* — `@twt/measured-validation` failed with `[vitest-worker]: Timeout calling "resolveId"` after **366s**; 28/28 in isolation. Both are [[project_ci_local_concurrency_oversubscription]], not this diff. ⭐ **The real finding: the MICROCOPY TONE GATE caught an accuracy defect in my OWN copy.** The fallback hint read *"the code you already sent **did not reach them**"* — which **asserts delivery failure**, precisely the thing this system **cannot** observe (no DLR seam). That is the same overstatement the `2026-08-14-113` terminology mandate exists to prevent, reappearing in operator copy rather than in a column name. Corrected to *"has gone unused"*, which is exactly what the system knows. ⚠ Worth recording that the gate found it on **tone** grounds and the **truthfulness** problem was the more serious one underneath. |

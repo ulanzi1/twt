@@ -37,6 +37,17 @@ export interface HelpdeskDetailShellProps {
   dataRightsPending?: { buildExport: boolean; erasure: boolean };
   dataRightsError?: string;
   dataRightsNotice?: string;
+
+  // ── AC-R1 delivery + AC-R2 correction ────────────────────────────────────────────────────────────
+  onDeliverMemberDirect?: () => void;
+  onDeliverStaffMediated?: (attestation: string) => void;
+  deliveryPending?: { memberDirect: boolean; staffMediated: boolean };
+  onRecordCorrection?: (input: {
+    requestedChange: string;
+    actionTaken: string;
+    outcome: 'recorded' | 'applied' | 'declined';
+  }) => void;
+  correctionPending?: boolean;
 }
 
 export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactElement {
@@ -56,7 +67,16 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
     dataRightsPending,
     dataRightsError,
     dataRightsNotice,
+    onDeliverMemberDirect,
+    onDeliverStaffMediated,
+    deliveryPending,
+    onRecordCorrection,
+    correctionPending,
   } = props;
+  const [attestation, setAttestation] = useState('');
+  const [correctionRequested, setCorrectionRequested] = useState('');
+  const [correctionAction, setCorrectionAction] = useState('');
+  const [correctionOutcome, setCorrectionOutcome] = useState<'recorded' | 'applied' | 'declined'>('applied');
   const [message, setMessage] = useState('');
   // ⛔ Erasure is IRREVERSIBLE and operator-initiated, so it requires an explicit second confirmation
   // in the UI. This is a usability guard, NOT a security control — the API's step-up + idempotency +
@@ -195,9 +215,125 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
                 <p className="text-xs text-gray-600">{resolveEn('helpdesk.dataRights.erasureNote')}</p>
               </div>
 
-              {/* ⛔ There is deliberately NO "correction" affordance here. The correction right is
-                  unmechanized for EVERY member, and what discharges it is AC-R2 / Escalation 2 —
-                  RAISED AND UNANSWERED. An affordance would imply a capability that does not exist. */}
+              {/* ── AC-R1 DELIVERY. ⛔ PRIMARY first and prominent; the fallback is visually and
+                  textually subordinate, because it IS subordinate. */}
+              <div className="flex flex-col gap-1 border-t border-amber-200 pt-2">
+                <button
+                  type="button"
+                  className="w-fit rounded bg-blue-700 px-3 py-1 text-white disabled:opacity-50"
+                  disabled={deliveryPending?.memberDirect === true}
+                  onClick={onDeliverMemberDirect}
+                  data-testid="helpdesk-datarights-deliver"
+                >
+                  {deliveryPending?.memberDirect === true
+                    ? resolveEn('helpdesk.action.pending')
+                    : resolveEn('helpdesk.dataRights.deliver')}
+                </button>
+                <p className="text-xs text-gray-600">{resolveEn('helpdesk.dataRights.deliverNote')}</p>
+              </div>
+
+              <details className="rounded border border-gray-300 bg-white p-2">
+                {/* ⛔ Collapsed by default. An operator must actively open the exception rather than
+                    meet it as a peer of the primary button. */}
+                <summary className="cursor-pointer text-xs font-medium">
+                  {resolveEn('helpdesk.dataRights.fallbackTitle')}
+                </summary>
+                <div className="flex flex-col gap-1 pt-2">
+                  <p className="text-xs text-gray-700">{resolveEn('helpdesk.dataRights.fallbackNote')}</p>
+                  <label className="text-xs" htmlFor="helpdesk-datarights-attestation">
+                    {resolveEn('helpdesk.dataRights.fallbackAttestation')}
+                  </label>
+                  <textarea
+                    id="helpdesk-datarights-attestation"
+                    className="rounded border border-gray-300 p-2 text-sm"
+                    rows={2}
+                    value={attestation}
+                    onChange={(e) => setAttestation(e.target.value)}
+                    data-testid="helpdesk-datarights-attestation"
+                  />
+                  <button
+                    type="button"
+                    className="w-fit rounded border border-red-700 px-3 py-1 text-red-700 disabled:opacity-50"
+                    disabled={attestation.trim() === '' || deliveryPending?.staffMediated === true}
+                    onClick={() => onDeliverStaffMediated?.(attestation.trim())}
+                    data-testid="helpdesk-datarights-fallback"
+                  >
+                    {deliveryPending?.staffMediated === true
+                      ? resolveEn('helpdesk.action.pending')
+                      : resolveEn('helpdesk.dataRights.fallback')}
+                  </button>
+                  {/* ⚠ States the server-side precondition in plain words so a refusal is not a
+                      mystery. ⛔ The UI does NOT evaluate it — the server observes it. */}
+                  <p className="text-xs text-gray-500">{resolveEn('helpdesk.dataRights.fallbackBlocked')}</p>
+                </div>
+              </details>
+
+              {/* ── AC-R2 CORRECTION. ⛔ A RECORD, not a member-profile editor. */}
+              <details className="rounded border border-gray-300 bg-white p-2">
+                <summary className="cursor-pointer text-xs font-medium">
+                  {resolveEn('helpdesk.dataRights.correctionTitle')}
+                </summary>
+                <div className="flex flex-col gap-1 pt-2">
+                  <p className="text-xs text-gray-700">{resolveEn('helpdesk.dataRights.correctionNote')}</p>
+                  <label className="text-xs" htmlFor="helpdesk-correction-requested">
+                    {resolveEn('helpdesk.dataRights.correctionRequested')}
+                  </label>
+                  <textarea
+                    id="helpdesk-correction-requested"
+                    className="rounded border border-gray-300 p-2 text-sm"
+                    rows={2}
+                    value={correctionRequested}
+                    onChange={(e) => setCorrectionRequested(e.target.value)}
+                    data-testid="helpdesk-correction-requested"
+                  />
+                  <label className="text-xs" htmlFor="helpdesk-correction-action">
+                    {resolveEn('helpdesk.dataRights.correctionAction')}
+                  </label>
+                  <textarea
+                    id="helpdesk-correction-action"
+                    className="rounded border border-gray-300 p-2 text-sm"
+                    rows={2}
+                    value={correctionAction}
+                    onChange={(e) => setCorrectionAction(e.target.value)}
+                    data-testid="helpdesk-correction-action"
+                  />
+                  <label className="text-xs" htmlFor="helpdesk-correction-outcome">
+                    {resolveEn('helpdesk.dataRights.correctionOutcome')}
+                  </label>
+                  <select
+                    id="helpdesk-correction-outcome"
+                    className="w-fit rounded border px-2 py-1 text-sm"
+                    value={correctionOutcome}
+                    onChange={(e) => setCorrectionOutcome(e.target.value as typeof correctionOutcome)}
+                    data-testid="helpdesk-correction-outcome"
+                  >
+                    <option value="applied">applied</option>
+                    <option value="recorded">recorded</option>
+                    <option value="declined">declined</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="w-fit rounded bg-blue-700 px-3 py-1 text-white disabled:opacity-50"
+                    disabled={
+                      correctionRequested.trim() === '' ||
+                      correctionAction.trim() === '' ||
+                      correctionPending === true
+                    }
+                    onClick={() =>
+                      onRecordCorrection?.({
+                        requestedChange: correctionRequested.trim(),
+                        actionTaken: correctionAction.trim(),
+                        outcome: correctionOutcome,
+                      })
+                    }
+                    data-testid="helpdesk-correction-submit"
+                  >
+                    {correctionPending === true
+                      ? resolveEn('helpdesk.action.pending')
+                      : resolveEn('helpdesk.dataRights.correctionSubmit')}
+                  </button>
+                </div>
+              </details>
             </div>
           )}
         </div>

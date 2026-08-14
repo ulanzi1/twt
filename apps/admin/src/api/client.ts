@@ -214,8 +214,11 @@ import {
   type MemberCustomFieldsResponse as MemberCustomFields,
   type SetMemberCustomFieldsRequest as SetMemberCustomFieldsBody,
   DATA_RIGHTS_STEP_UP_CONTEXT,
+  MemberDirectDeliveryResponse,
   OffPortalErasureResponse,
   OffPortalExportResponse,
+  RecordCorrectionResponse,
+  StaffMediatedDeliveryResponse,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -656,6 +659,79 @@ export function fulfilOffPortalErasure(
     method: 'POST',
     headers: { 'Idempotency-Key': input.idempotencyKey },
     body: JSON.stringify({ member_id: input.memberId, helpdesk_ticket_id: input.helpdeskTicketId }),
+  });
+}
+
+/**
+ * PRIMARY delivery — member-direct. Issues the one-time OTP grant to the registered mobile.
+ * ⛔ This is the route an operator should reach for FIRST and almost always.
+ */
+export function grantMemberDirectDelivery(
+  pariwarId: string,
+  input: { exportId: string; memberId: string; helpdeskTicketId: string; idempotencyKey: string },
+): Promise<z.output<typeof MemberDirectDeliveryResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/delivery/member-direct`, MemberDirectDeliveryResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({
+      export_id: input.exportId,
+      member_id: input.memberId,
+      helpdesk_ticket_id: input.helpdeskTicketId,
+    }),
+  });
+}
+
+/**
+ * FALLBACK delivery — staff-mediated. ⛔ A NARROW EXCEPTION, not an alternative.
+ * ⚠ `member_requested_staff_mediation` is `true` by construction in the contract: the member must have
+ * ASKED. ⛔ The "primary did not complete" condition is NOT sent — the server observes it, and a
+ * client-suppliable flag would let the caller assert the very fact the gate exists to check.
+ */
+export function grantStaffMediatedDelivery(
+  pariwarId: string,
+  input: {
+    exportId: string;
+    memberId: string;
+    helpdeskTicketId: string;
+    attestation: string;
+    idempotencyKey: string;
+  },
+): Promise<z.output<typeof StaffMediatedDeliveryResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/delivery/staff-mediated`, StaffMediatedDeliveryResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({
+      export_id: input.exportId,
+      member_id: input.memberId,
+      helpdesk_ticket_id: input.helpdeskTicketId,
+      member_requested_staff_mediation: true,
+      attestation: input.attestation,
+    }),
+  });
+}
+
+/** AC-R2 — record a correction. ⛔ A record, not a member-profile write. */
+export function recordDataRightsCorrection(
+  pariwarId: string,
+  input: {
+    memberId: string;
+    helpdeskTicketId: string;
+    requestedChange: string;
+    actionTaken: string;
+    outcome: 'recorded' | 'applied' | 'declined';
+    idempotencyKey: string;
+  },
+): Promise<z.output<typeof RecordCorrectionResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/correction`, RecordCorrectionResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({
+      member_id: input.memberId,
+      helpdesk_ticket_id: input.helpdeskTicketId,
+      requested_change: input.requestedChange,
+      action_taken: input.actionTaken,
+      outcome: input.outcome,
+    }),
   });
 }
 

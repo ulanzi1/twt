@@ -49,6 +49,26 @@ const EN: Record<string, string> = {
   'helpdesk.dataRights.erasureConfirm':
     'I have verified the caller’s identity and confirm they asked for their data to be erased.',
   'helpdesk.dataRights.erasure': 'Erase this member’s personal data',
+  // ── AC-R1 delivery + AC-R2 correction ─────────────────────────────────────────────────────────────
+  // ⛔ The fallback copy deliberately reads as an EXCEPTION, not an alternative. An operator who reads
+  // these two options as equivalent is the failure mode the ruling exists to prevent.
+  'helpdesk.dataRights.deliver': 'Send the export to the member',
+  'helpdesk.dataRights.deliverNote':
+    'Sends a one-time code to their registered mobile. They open it themselves — this is the normal way.',
+  'helpdesk.dataRights.fallbackTitle': 'If the member cannot receive the code',
+  'helpdesk.dataRights.fallbackNote':
+    'Only when the member has asked you to handle it for them AND the code you already sent has gone unused. You will be handling their personal records yourself, so write down why this was needed.',
+  'helpdesk.dataRights.fallbackAttestation': 'Why can the member not receive the code?',
+  'helpdesk.dataRights.fallback': 'Handle it for the member',
+  'helpdesk.dataRights.fallbackBlocked':
+    'Send the code to the member first. This option opens only after that code has gone unused.',
+  'helpdesk.dataRights.correctionTitle': 'Record a correction',
+  'helpdesk.dataRights.correctionNote':
+    'Write down what the member asked to be corrected and what you did about it. This is a record of the request — it does not change their details by itself.',
+  'helpdesk.dataRights.correctionRequested': 'What did the member ask to be corrected?',
+  'helpdesk.dataRights.correctionAction': 'What did you do?',
+  'helpdesk.dataRights.correctionOutcome': 'Outcome',
+  'helpdesk.dataRights.correctionSubmit': 'Save this record',
   'helpdesk.dataRights.builtNotice': 'Export built. It has not been released — see the note above.',
   'helpdesk.dataRights.erasedNotice':
     'Erasure completed. The member’s personal details have been overwritten.',

@@ -7,7 +7,13 @@
 import type { ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { useDataRightsFulfilment, useHelpdeskTicket, useHelpdeskTransitions } from '../../api/hooks.js';
+import {
+  useDataRightsDelivery,
+  useDataRightsFulfilment,
+  useHelpdeskTicket,
+  useHelpdeskTransitions,
+  useRecordCorrection,
+} from '../../api/hooks.js';
 import { HelpdeskDetailShell } from './HelpdeskDetailShell.js';
 import { resolveEn } from './i18n-en.js';
 
@@ -23,6 +29,16 @@ export function HelpdeskDetailPage({ pariwarId, ticketId }: { pariwarId: string;
   // Story 10.21 — the DPDPA fulfilment mutations. The shell decides whether to SHOW the panel (it
   // checks the subcategory + subject member); this only supplies the actions.
   const dataRights = useDataRightsFulfilment(pariwarId, ticketId, ticket.data?.subject_member_id ?? null);
+  // ⚠ `exportId` comes from the build result — delivery is only meaningful once an export exists, and
+  // the hook refuses with a plain message rather than letting the server 404 opaquely.
+  const builtExportId = dataRights.buildExport.data?.export_id ?? null;
+  const delivery = useDataRightsDelivery(
+    pariwarId,
+    ticketId,
+    ticket.data?.subject_member_id ?? null,
+    builtExportId,
+  );
+  const correction = useRecordCorrection(pariwarId, ticketId, ticket.data?.subject_member_id ?? null);
 
   const actionError =
     (pickUp.isError ? messageOf(pickUp.error) : undefined) ??
@@ -54,8 +70,19 @@ export function HelpdeskDetailPage({ pariwarId, ticketId }: { pariwarId: string;
       }}
       dataRightsError={
         (dataRights.buildExport.isError ? messageOf(dataRights.buildExport.error) : undefined) ??
-        (dataRights.erasure.isError ? messageOf(dataRights.erasure.error) : undefined)
+        (dataRights.erasure.isError ? messageOf(dataRights.erasure.error) : undefined) ??
+        (delivery.memberDirect.isError ? messageOf(delivery.memberDirect.error) : undefined) ??
+        (delivery.staffMediated.isError ? messageOf(delivery.staffMediated.error) : undefined) ??
+        (correction.isError ? messageOf(correction.error) : undefined)
       }
+      onDeliverMemberDirect={() => delivery.memberDirect.mutate()}
+      onDeliverStaffMediated={(attestation) => delivery.staffMediated.mutate(attestation)}
+      deliveryPending={{
+        memberDirect: delivery.memberDirect.isPending,
+        staffMediated: delivery.staffMediated.isPending,
+      }}
+      onRecordCorrection={(input) => correction.mutate(input)}
+      correctionPending={correction.isPending}
       dataRightsNotice={
         dataRights.erasure.isSuccess
           ? resolveEn('helpdesk.dataRights.erasedNotice')

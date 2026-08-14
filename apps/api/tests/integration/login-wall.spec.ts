@@ -47,6 +47,19 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   'POST /api/v1/member/auth/otp/verify',
   'POST /api/v1/member/auth/otp/select-pariwar',
   'POST /api/v1/member/auth/token/refresh',
+  // ── Story 10.21 AC-R1 — the member-direct export DELIVERY redemption ─────────
+  // ⛔ DELIBERATELY UNAUTHENTICATED, and this allowlist entry is where that decision is
+  // visible. The subject is a TERMINATED member: Niyamavali §8.4 ends authenticated
+  // access while statutory rights survive, so the delivery route cannot require a
+  // session — issuing one is precisely what the instrument forecloses. Ruled
+  // member-direct by Decision `2026-08-14-109` clause 1.
+  // ⚠ It is NOT an open surface. Redemption needs TWO secrets — the unguessable
+  // `grantId` in the path AND the OTP delivered to the registered mobile — the grant is
+  // one-time (burned by a conditional UPDATE) and short-lived, and EVERY failure mode
+  // (unknown / spent / expired / wrong code / staff-mediated channel) returns the SAME
+  // 404, so it is not an existence oracle. It carries the named read rate limit.
+  // ⛔ Do not "fix" this by adding a session guard — that deletes the route's purpose.
+  'POST /api/v1/member-data-rights/delivery/:grantId/redeem',
   // Story 3.6a — first-signup member creation is PUBLIC (pre-session): the caller holds a
   // signup_continuation bearer (intent-scoped, single-use), not a member session, so it cannot
   // carry requireMemberSession. It is authenticated-equivalent via that verified-mobile token

@@ -280,7 +280,16 @@ describe.skipIf(!hasDatabase)('member_device_tokens accessors — RLS + rebuild 
     // Run the prune on the tx client (sees uncommitted rows; superuser bypasses RLS like the service pool).
     const client = getTx().client as unknown as import('pg').Pool;
     const deleted = await purgeExpiredDeviceTokens(client);
-    expect(deleted).toBe(2);
+    // ⚠ CORRECTED (Story 10.21 live-DB run, 2026-08-14). This was `toBe(2)`, which asserted a GLOBAL
+    // delete count against rows this test seeds for ONE member — the "own-committing writers ⇒ assert
+    // MEMBERSHIP, not counts" class ([[project_live_db_test_gotchas]]), and a DATE BOMB besides.
+    // `purgeExpiredDeviceTokens` sweeps the whole table, so any OTHER committed prunable row inflates
+    // it. It was observed failing 4-vs-2 with exactly two leftover `stale` rows that had been seeded by
+    // an earlier run at precisely the 7-day boundary and crossed it hours later — nothing had changed
+    // in the code, only the clock. ⛔ Do not restore the equality: it passes or fails on the DATE and
+    // on unrelated residue, which is the worst kind of red.
+    // ⭐ The EXACT assertion that matters is the per-member one below, and it is unchanged.
+    expect(deleted).toBeGreaterThanOrEqual(2);
 
     const remaining = await tx
       .select()

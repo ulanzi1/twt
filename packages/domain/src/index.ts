@@ -210,6 +210,8 @@ export * as payment from './payment/index.js';
 // logic; decrypts Tier-1 PII — the member is the legitimate audience). The apps/jobs build worker
 // consumes `assembleMemberExport`; the ZIP/encrypt/persist orchestration is the thin job runtime.
 export * as dataExport from './data-export/index.js';
+// Story 10.21 AC-R2 — the recorded, staff-executed correction process (⛔ a record, not a write path).
+export * as memberDataRights from './member-data-rights/index.js';
 export * as rbac from './rbac/index.js';
 // Story 1.18 — the geo-tree scope resolver behind `rbac.scopeContains`' injectable seam. A PURE,
 // synchronous resolver (`hasPermission` is a pure predicate — ADR-0008 Decision 8) over a versioned

@@ -729,6 +729,13 @@
       "when": 1789616400000,
       "tag": "0103_data-exports-off-portal",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1789702800000,
+      "tag": "0104_data-rights-delivery-and-correction",
+      "breakpoints": true
     }
   ]
 }

@@ -21,7 +21,15 @@ import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-
 import type { MemberId } from '../ids/index.js';
 
 /** The two distinct member-OTP pools (§2.2 line 1379). */
-export const MEMBER_OTP_INTENTS = ['login', 'step_up'] as const;
+// ⚠ Story 10.21 (migration 0104) added `data_export_delivery` — a DISTINCT pool for the member-direct
+// export delivery grant. ⛔ It could NOT reuse `step_up`: `invalidateLiveOtps` clears the live OTP per
+// (mobile, intent), so a shared pool would make a delivery OTP and a step-up OTP silently burn each
+// other — a member mid-step-up would lose their delivery code, and vice versa, with no error anywhere.
+// ⚠ TTL: `requestOtp` maps anything that is not `login` onto `stepUpOtpTtlMs`, so the delivery OTP
+// inherits the step-up TTL. That is intentional and unremarkable here — a SHORT TTL makes the
+// `primary_delivery_not_completed` observable (an OTP that expired unconsumed) resolve promptly rather
+// than leaving the fallback unreachable for a long window.
+export const MEMBER_OTP_INTENTS = ['login', 'step_up', 'data_export_delivery'] as const;
 export type MemberOtpIntent = (typeof MEMBER_OTP_INTENTS)[number];
 export const memberOtpIntentEnum = pgEnum('member_otp_intent', MEMBER_OTP_INTENTS);
 

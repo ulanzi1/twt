@@ -18,7 +18,20 @@
 // ⛔ NO delivery route (AC-R1, Escalation 1), NO correction route (AC-R2, Escalation 2), and NO
 // trustee-authority destination (AC-R3, Escalation 10). All three are RAISED AND UNANSWERED.
 
-import { DATA_RIGHTS_STEP_UP_CONTEXT, OffPortalErasureRequest, OffPortalErasureResponse, OffPortalExportRequest, OffPortalExportResponse } from '@twt/contracts';
+import {
+  DATA_RIGHTS_STEP_UP_CONTEXT,
+  DeliveryRedeemRequest,
+  MemberDirectDeliveryRequest,
+  MemberDirectDeliveryResponse,
+  OffPortalErasureRequest,
+  OffPortalErasureResponse,
+  OffPortalExportRequest,
+  OffPortalExportResponse,
+  RecordCorrectionRequest,
+  RecordCorrectionResponse,
+  StaffMediatedDeliveryRequest,
+  StaffMediatedDeliveryResponse,
+} from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -78,5 +91,74 @@ export function registerMemberDataRightsRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, requireDataRights, stepUp],
     },
     h.fulfilErasure,
+  );
+
+  // ── AC-R1 — DELIVERY. ⛔ A PRIMARY and a NARROW EXCEPTION, never two co-equal routes. ────────────
+
+  // PRIMARY — member-direct. Issues a one-time OTP grant to the registered mobile.
+  r.post(
+    '/api/v1/p/:pariwarId/member-data-rights/delivery/member-direct',
+    {
+      schema: {
+        params: PariwarParam,
+        body: MemberDirectDeliveryRequest,
+        response: { 200: MemberDirectDeliveryResponse },
+        tags: [MEMBER_DATA_RIGHTS_TAG],
+      },
+      config: { rateLimit: limits.write },
+      preHandler: [adminSession, scope, requireDataRights, stepUp],
+    },
+    h.grantMemberDirectDelivery,
+  );
+
+  // FALLBACK — staff-mediated, behind the THREE-PART GATE. ⛔ Element 2
+  // (`primary_delivery_not_completed`) is SERVER-OBSERVED and is never accepted from the caller.
+  r.post(
+    '/api/v1/p/:pariwarId/member-data-rights/delivery/staff-mediated',
+    {
+      schema: {
+        params: PariwarParam,
+        body: StaffMediatedDeliveryRequest,
+        response: { 200: StaffMediatedDeliveryResponse },
+        tags: [MEMBER_DATA_RIGHTS_TAG],
+      },
+      config: { rateLimit: limits.write },
+      preHandler: [adminSession, scope, requireDataRights, stepUp],
+    },
+    h.grantStaffMediatedDelivery,
+  );
+
+  // ── AC-R2 — the RECORDED correction process. ⛔ A record, not a member-profile write path. ───────
+  r.post(
+    '/api/v1/p/:pariwarId/member-data-rights/correction',
+    {
+      schema: {
+        params: PariwarParam,
+        body: RecordCorrectionRequest,
+        response: { 200: RecordCorrectionResponse },
+        tags: [MEMBER_DATA_RIGHTS_TAG],
+      },
+      config: { rateLimit: limits.write },
+      preHandler: [adminSession, scope, requireDataRights, stepUp],
+    },
+    h.recordCorrection,
+  );
+
+  // ── The MEMBER redemption. ⛔ DELIBERATELY UNAUTHENTICATED, and deliberately NOT on the admin
+  // chain above: the subject is a terminated member with no session, and issuing one is precisely what
+  // Niyamavali §8.4 forecloses. Two secrets are required (the unguessable grant id AND the OTP), every
+  // failure returns the SAME 404 so it is not an existence oracle, and it carries the read rate limit.
+  // ⛔ Do not "fix" this by adding a session guard — that would delete the route's whole purpose.
+  r.post(
+    '/api/v1/member-data-rights/delivery/:grantId/redeem',
+    {
+      schema: {
+        params: z.object({ grantId: z.string().uuid() }).strict(),
+        body: DeliveryRedeemRequest,
+        tags: [MEMBER_DATA_RIGHTS_TAG],
+      },
+      config: { rateLimit: limits.read },
+    },
+    h.redeemDelivery,
   );
 }

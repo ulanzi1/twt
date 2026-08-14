@@ -18,8 +18,10 @@ import type { KmsKeyRef, KmsProvider } from '../../src/encryption/kms-provider.j
 import { ANONYMIZED_SENTINEL, anonymizeMember } from '../../src/member/anonymize.js';
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../src/ids/index.js';
 import {
+  dataExportDeliveryGrants,
   dataExports,
   memberAddresses,
+  memberDataRightsCorrections,
   memberIdentities,
   memberKycProfiles,
   memberMedicalDisclosures,
@@ -87,7 +89,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the nine member-PII tables (ten statements), once each except data_exports', async () => {
+  it('updates exactly the eleven member-PII tables (twelve statements), once each except data_exports', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -104,8 +106,16 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // the dossier after the erasure commits.
     // ⛔ This assertion was NOT named as collateral by the story spec; it was found by running the
     // suite. It is REWRITTEN to the new truth, never weakened — the count is the completeness check.
+    //
+    // ⭐ MOVED UPWARD AGAIN by Story 10.21 AC-R1/AC-R2: ELEVEN tables, TWELVE statements.
+    // `data_export_delivery_grants` (the staff ATTESTATION) and `member_data_rights_corrections` (the
+    // member's requested change + the staff action taken) both carry Tier-1 columns, so both MUST be
+    // scrubbed. ⚠ This assertion is the mechanism that forced them in: adding the columns without the
+    // scrub failed HERE, which is precisely what it exists to do. ⛔ Whoever adds the next Tier-1
+    // column raises this number in the same commit — a Tier-1 column outside `anonymizeMember` is how
+    // the 10.10 moderation rationale survived an erasure request.
     const { captured } = await run();
-    expect(captured).toHaveLength(10);
+    expect(captured).toHaveLength(12);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -117,12 +127,31 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memberModerationActions,
       memberModerationGrounds,
       dataExports,
+      dataExportDeliveryGrants,
+      memberDataRightsCorrections,
     ]) {
       expect(tables).toContain(t);
     }
     // Exactly one statement per table, EXCEPT data_exports which takes the documented two.
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(9);
+    expect(new Set(tables).size).toBe(11);
+  });
+
+  it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {
+    // ⚠ SENTINEL, not NULL, and the distinction is deliberate. That a staff actor obtained the export,
+    // and that a correction was requested and handled, are AUDIT FACTS the Trust keeps — it is the
+    // CONTENT that the erasure removes, not the record of the act. Same posture as the moderation
+    // tables. ⛔ A NULL here would erase the fact along with the content.
+    const { captured, pariwar } = await run();
+
+    const grants = setFor(captured, dataExportDeliveryGrants);
+    expect(grants, 'the staff attestation must be scrubbed').toHaveProperty('attestationCiphertext');
+
+    const corrections = setFor(captured, memberDataRightsCorrections);
+    for (const col of ['requestedChangeCiphertext', 'actionTakenCiphertext']) {
+      expect(corrections, `${col} must be scrubbed`).toHaveProperty(col);
+      expect(await dec(corrections[col], pariwar, 'data_rights_correction')).toBe(ANONYMIZED_SENTINEL);
+    }
   });
 
   it('⭐ Story 10.21 (AC11): the dossier ciphertext is NULLed and `consumed` KEEPS its status', async () => {

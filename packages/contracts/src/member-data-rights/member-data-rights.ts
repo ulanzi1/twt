@@ -108,3 +108,97 @@ export const OffPortalErasureResponse = z
   })
   .strict();
 export type OffPortalErasureResponse = z.infer<typeof OffPortalErasureResponse>;
+
+// ── AC-R1 — DELIVERY (Decisions 2026-08-14-109 cl.1, 110, 111, 112, 113) ──────────────────────────
+//
+// ⛔ A PRIMARY AND A NARROW EXCEPTION — never two co-equal routes, and never presented as a choice.
+
+/** PRIMARY — issue the member-direct, OTP-verified delivery grant. No session is ever issued. */
+export const MemberDirectDeliveryRequest = z
+  .object({
+    export_id: z.string().uuid(),
+    member_id: z.string().uuid(),
+    helpdesk_ticket_id: z.string().uuid(),
+  })
+  .strict();
+export type MemberDirectDeliveryRequest = z.infer<typeof MemberDirectDeliveryRequest>;
+
+export const MemberDirectDeliveryResponse = z
+  .object({
+    grant_id: z.string().uuid(),
+    channel: z.literal('member_direct'),
+    expires_at: z.string(),
+  })
+  .strict();
+export type MemberDirectDeliveryResponse = z.infer<typeof MemberDirectDeliveryResponse>;
+
+/**
+ * FALLBACK — the staff-mediated exception. ⛔ THREE-PART GATE (`2026-08-14-113` cl.1); all required.
+ *
+ * ⚠ Only elements (1) and (3) are caller-supplied. Element (2) —
+ * `primary_delivery_not_completed` — is ⛔ NEVER accepted from the caller: the server observes it
+ * from the OTP record. A client-suppliable "the primary failed" flag would let the caller assert the
+ * very fact the gate exists to check.
+ */
+export const StaffMediatedDeliveryRequest = z
+  .object({
+    export_id: z.string().uuid(),
+    member_id: z.string().uuid(),
+    helpdesk_ticket_id: z.string().uuid(),
+    /** Element 1 — the member's OWN explicit request. ⛔ `z.literal(true)`: staff may not initiate or
+     *  unilaterally select the fallback, so there is no "false" that still proceeds. */
+    member_requested_staff_mediation: z.literal(true),
+    /** Element 3 — the staff attestation. Stored Tier-1 and ⛔ WITHHELD from the member export. */
+    attestation: z.string().min(1).max(2000),
+  })
+  .strict();
+export type StaffMediatedDeliveryRequest = z.infer<typeof StaffMediatedDeliveryRequest>;
+
+export const StaffMediatedDeliveryResponse = z
+  .object({
+    grant_id: z.string().uuid(),
+    channel: z.literal('staff_mediated'),
+    expires_at: z.string(),
+    /** ⛔ MANDATED NAME (`2026-08-14-113` cl.2). Echoes WHEN the primary route was observed not to have
+     *  completed — ⛔ never a claim about the handset, which this system cannot observe. */
+    primary_delivery_not_completed_at: z.string(),
+  })
+  .strict();
+export type StaffMediatedDeliveryResponse = z.infer<typeof StaffMediatedDeliveryResponse>;
+
+/** Redemption of a member-direct grant. Unauthenticated by necessity — the member has no session —
+ *  but requires TWO secrets: the unguessable grant id in the path and the OTP in the body. */
+export const DeliveryRedeemRequest = z.object({ otp: z.string().min(4).max(10) }).strict();
+export type DeliveryRedeemRequest = z.infer<typeof DeliveryRedeemRequest>;
+
+// ── AC-R2 — CORRECTION (Decision 2026-08-14-109 cl.2) ─────────────────────────────────────────────
+//
+// ⛔ A RECORDED PROCESS, NOT A WRITE PATH. The ruling authorised recording what was asked and what was
+// done, on a helpdesk ticket. ⛔ It did NOT authorise a member-profile editor, and nothing here writes
+// a member field.
+
+export const CorrectionOutcomeSchema = z.enum(['recorded', 'applied', 'declined']);
+
+export const RecordCorrectionRequest = z
+  .object({
+    member_id: z.string().uuid(),
+    /** ⛔ REQUIRED — the ruling places this process ON the helpdesk substrate. */
+    helpdesk_ticket_id: z.string().uuid(),
+    /** What the member asked to be corrected (relayed at intake). Stored Tier-1. */
+    requested_change: z.string().min(1).max(2000),
+    /** What the staff actor actually did. Stored Tier-1. */
+    action_taken: z.string().min(1).max(2000),
+    outcome: CorrectionOutcomeSchema,
+  })
+  .strict();
+export type RecordCorrectionRequest = z.infer<typeof RecordCorrectionRequest>;
+
+export const RecordCorrectionResponse = z
+  .object({
+    correction_id: z.string().uuid(),
+    outcome: CorrectionOutcomeSchema,
+    recorded_by_display: z.string().min(1),
+    created_at: z.string(),
+  })
+  .strict();
+export type RecordCorrectionResponse = z.infer<typeof RecordCorrectionResponse>;

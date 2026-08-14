@@ -26,23 +26,31 @@
 // widen or narrow the subject, which is precisely the artifact-scoped shape AC4 forbids.
 
 import type {
+  MemberDirectDeliveryRequest,
+  MemberDirectDeliveryResponse,
   OffPortalErasureRequest,
   OffPortalErasureResponse,
   OffPortalExportRequest,
   OffPortalExportResponse,
+  RecordCorrectionRequest,
+  RecordCorrectionResponse,
+  StaffMediatedDeliveryRequest,
+  StaffMediatedDeliveryResponse,
 } from '@twt/contracts';
 import {
   audit,
   canonicalJsonStringify,
   dataExport,
+  encryption,
   helpdesk,
   idempotency,
   ids,
   member as memberDomain,
+  memberDataRights,
 } from '@twt/domain';
 import { createHash } from 'node:crypto';
 
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import {
@@ -54,6 +62,9 @@ import {
   UnauthorizedError,
 } from '../../http-errors.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
+import * as memberAuthRepo from '../auth/member/member-auth.repo.js';
+import * as otpService from '../auth/member/member-otp.service.js';
+import { decryptExportArtifact } from '../data-export/data-export-crypto.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 
 /** Local SHA-256 hex over a canonical string (the helpdesk-handler idiom — a sha256Hex helper in a
@@ -62,9 +73,42 @@ function sha256Hex(canonicalInput: string): string {
   return createHash('sha256').update(canonicalInput, 'utf8').digest('hex');
 }
 
+/** Encrypt free text as a Tier-1 envelope for a member-related column. ⛔ Free text about a member
+ *  NEVER rides an event payload (R1 / `.strict()`); it lives Tier-1-encrypted at rest. */
+async function encTier1(
+  plaintext: string,
+  pariwarId: string,
+  fieldClass: string,
+  enc: { kms: Parameters<typeof encryption.encryptTier1>[2]; kekRef: Parameters<typeof encryption.encryptTier1>[3] },
+): Promise<string> {
+  const ct = await encryption.encryptTier1(
+    new TextEncoder().encode(plaintext),
+    { pariwarId, fieldClass },
+    enc.kms,
+    enc.kekRef,
+  );
+  return encryption.serializeEnvelope(ct);
+}
+
 /** Audit actions — the two fulfilment acts, each attributable to a named staff actor. */
 const EXPORT_ACTION = 'member_data_rights.export_requested';
 const ERASURE_ACTION = 'member_data_rights.rtbf_fulfilled';
+/** ⛔ MANDATED naming reaches the AUDIT ACTION too (`2026-08-14-113` cl.2), not just the column. */
+const DELIVERY_MEMBER_DIRECT_ACTION = 'member_data_rights.delivery_member_direct_granted';
+const DELIVERY_STAFF_MEDIATED_ACTION = 'member_data_rights.delivery_staff_mediated_granted';
+const CORRECTION_ACTION = 'member_data_rights.correction_recorded';
+
+/** How long a delivery grant stays live. Short: it is a one-time hand-off, not a standing download. */
+const DELIVERY_GRANT_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Tier-1 field-class contexts for the two AC-R1/AC-R2 surfaces (mirrors migration 0104). */
+const FIELD_CLASS_ATTESTATION = 'data_rights_attestation';
+const FIELD_CLASS_CORRECTION = 'data_rights_correction';
+
+/** The OTP pool reserved for the member-direct delivery grant (migration 0104). */
+const DATA_EXPORT_DELIVERY_OTP_INTENT = 'data_export_delivery' as const;
+/** The audit `action_context` threaded through the OTP delivery seam. */
+const DELIVERY_OTP_ACTION_CONTEXT = 'member_data_rights.delivery';
 
 /**
  * Lifecycle states in which an off-portal export is refused (AC12), identical to the set the member
@@ -309,6 +353,379 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }
       }
 
+      return response!;
+    },
+
+    /**
+     * POST …/member-data-rights/delivery/member-direct — the PRIMARY delivery route (AC-R1).
+     *
+     * ⭐ RULED MEMBER-DIRECT (`2026-08-14-109` cl.1). Issues a one-time, OTP-verified grant to the
+     * member's REGISTERED MOBILE. The member proves possession of the number on record and redeems it
+     * at the unauthenticated redemption route — ⛔ **no session is ever issued**, which is the whole
+     * point: statutory rights survive termination, authenticated access does not.
+     */
+    async grantMemberDirectDelivery(request: FastifyRequest): Promise<MemberDirectDeliveryResponse> {
+      const { actorId, pariwarIdStr } = adminCtx(request);
+      const body = request.body as MemberDirectDeliveryRequest;
+      const now = deps.clock();
+      const memberId = ids.memberId(body.member_id);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const ticketId = ids.helpdeskTicketId(body.helpdesk_ticket_id);
+
+      await requireAttribution(actorId);
+      await claimIdempotency(request, 'delivery_member_direct', body.member_id);
+
+      const requestPayloadHash = sha256Hex(
+        canonicalJsonStringify({ member_id: body.member_id, export_id: body.export_id, channel: 'member_direct' }),
+      );
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      let grantedMemberId: string | null = null;
+      let response: MemberDirectDeliveryResponse;
+      try {
+        await requireTicketInScope(scopeTx, pariwarId, ticketId);
+        const exportRow = await dataExport.getExportForMember(
+          scopeTx.tx,
+          ids.dataExportId(body.export_id),
+          memberId,
+        );
+        // ⛔ 404, not 403 — an export that is not this member's is indistinguishable from one that does
+        // not exist, so the route is not an existence oracle.
+        if (!exportRow) throw new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+
+        const grant = await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: {
+            pariwarId: pariwarIdStr,
+            actorId,
+            actorRole: null,
+            action: DELIVERY_MEMBER_DIRECT_ACTION,
+            resourceLocator: `member/${body.member_id}`,
+            requestPayloadHash,
+            traceId: request.requestContext.traceId ?? null,
+          },
+          mutate: async () =>
+            dataExport.insertMemberDirectGrant(scopeTx.tx, {
+              exportId: ids.dataExportId(body.export_id),
+              memberId,
+              pariwarId,
+              helpdeskTicketId: ticketId,
+              grantedByActorId: actorId,
+              expiresAt: new Date(now.getTime() + DELIVERY_GRANT_TTL_MS),
+            }),
+        });
+
+        response = {
+          grant_id: grant.grantId,
+          channel: 'member_direct',
+          expires_at: grant.expiresAt.toISOString(),
+        };
+        grantedMemberId = body.member_id;
+        ok = true;
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ConflictError(
+            'A delivery grant is already live for this export',
+            'member_data_rights.delivery_grant_already_live',
+          );
+        }
+        throw err;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      // ── Issue + deliver the OTP AFTER the grant commits ─────────────────────────────────────────
+      // ⚠ TWO DIFFERENT "INTENT" CONCEPTS, deliberately not conflated:
+      //   · the OTP POOL intent is `data_export_delivery` — a DISTINCT pool, so a delivery OTP and a
+      //     step-up OTP never burn each other via `invalidateLiveOtps`;
+      //   · the DELIVERY-SEAM intent is `step_up`, which selects the mobile-RESOLUTION path (the
+      //     adapter decrypts the member's Tier-1 mobile from memberId + pariwarId). ⛔ Widening the
+      //     seam's own union would mean a new DLT template and channels work this story does not own.
+      // ⛔ Delivery failure does NOT roll back the grant: the grant is what the member redeems, and a
+      // transient SMS failure must not destroy their route. The operator can re-issue.
+      if (grantedMemberId !== null) {
+        const blindIndex = await memberAuthRepo.getMemberMobileBlindIndex(deps.servicePool, grantedMemberId);
+        if (blindIndex) {
+          const { code } = await otpService.requestOtp(
+            deps,
+            DATA_EXPORT_DELIVERY_OTP_INTENT,
+            blindIndex,
+            { memberId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT },
+          );
+          try {
+            await deps.stepUpDelivery.deliver({
+              code,
+              actorId: grantedMemberId,
+              actionContext: DELIVERY_OTP_ACTION_CONTEXT,
+              intent: 'step_up',
+              pariwarId: pariwarIdStr,
+            });
+          } catch (err) {
+            // ⚠ Recorded, not thrown. An undelivered OTP is exactly the circumstance that later makes
+            // `primary_delivery_not_completed` true and opens the narrow fallback — so a delivery
+            // failure is a NORMAL, expected step on this path, not an error to surface as a 5xx.
+            deps.stepUpDelivery.onPrimaryDeliveryFailure?.(
+              { code, actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
+              err,
+            );
+          }
+        }
+      }
+
+      return response!;
+    },
+
+    /**
+     * POST /api/v1/member-data-rights/delivery/:grantId/redeem — the MEMBER redeems (AC-R1, primary).
+     *
+     * ⛔ UNAUTHENTICATED BY NECESSITY — the subject is a terminated member with no session, and issuing
+     * one is exactly what Niyamavali §8.4 forecloses. It is NOT an open surface: redemption requires
+     * TWO secrets — the unguessable `grantId` in the path AND the OTP delivered to the registered
+     * mobile — and every failure returns the SAME 404, so the route is not an existence oracle.
+     */
+    async redeemDelivery(
+      request: FastifyRequest,
+      reply: FastifyReply,
+    ): Promise<Buffer | { error: unknown }> {
+      const { grantId } = request.params as { grantId: string };
+      const body = request.body as { otp: string };
+      const now = deps.clock();
+
+      // ⛔ The grant lookup runs on the SERVICE pool: an unauthenticated caller has no tenant scope, so
+      // there is no scope tx to read under. The tenant comes FROM the grant, and every subsequent read
+      // is scoped to it.
+      const grant = await dataExport.findLiveGrantUnscoped(deps.servicePool, grantId, now);
+      const notFound = new NotFoundError('Grant not found', 'member_data_rights.grant_not_found');
+      if (!grant) throw notFound;
+      // ⛔ Only the PRIMARY route is redeemable by the member. A staff-mediated grant is handed over
+      // through the administrative process, not pulled down here.
+      if (grant.channel !== 'member_direct') throw notFound;
+
+      const blindIndex = await memberAuthRepo.getMemberMobileBlindIndex(deps.servicePool, grant.memberId);
+      if (!blindIndex) throw notFound;
+      const verified = await otpService.verifyOtp(
+        deps,
+        DATA_EXPORT_DELIVERY_OTP_INTENT,
+        blindIndex,
+        body.otp,
+        { expectedMemberId: grant.memberId },
+      );
+      // ⛔ Same 404 on a wrong code as on an unknown grant — a distinct error would let a caller
+      // confirm that a grant id exists.
+      if (!verified.ok) throw notFound;
+
+      const scopeTx = await openScopeTx(deps, grant.pariwarId);
+      let ok = false;
+      try {
+        // ⛔ ONE-TIME, and the guarantee lives in this conditional UPDATE — not in a read-then-write.
+        // A concurrent redemption loses here and gets the same 404.
+        const burned = await dataExport.consumeGrant(scopeTx.tx, grantId, now);
+        if (!burned) throw notFound;
+
+        const exportRow = await dataExport.getExportForMember(
+          scopeTx.tx,
+          grant.exportId,
+          grant.memberId,
+        );
+        if (!exportRow?.artifactCiphertext) throw notFound;
+        const zip = await decryptExportArtifact(exportRow.artifactCiphertext, grant.pariwarId, enc);
+        ok = true;
+        void reply.header('content-type', 'application/zip');
+        void reply.header('content-disposition', 'attachment; filename="my-data-export.zip"');
+        return zip;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * POST …/member-data-rights/delivery/staff-mediated — the NARROW EXCEPTION (AC-R1).
+     *
+     * ⛔ THE THREE-PART GATE (`2026-08-14-113` cl.1). All three required; none substitutes:
+     *   (1) the member's OWN explicit request — ⛔ staff may not initiate or unilaterally select this;
+     *   (2) `primary_delivery_not_completed` — ⛔ SERVER-OBSERVED, never caller-supplied;
+     *   (3) the staff attestation — Tier-1, and WITHHELD from the member export.
+     * Migration 0104 additionally enforces all three as a DB CHECK, because this gates the one path on
+     * which a staff actor obtains a member's assembled, DECRYPTED Tier-1 export.
+     */
+    async grantStaffMediatedDelivery(request: FastifyRequest): Promise<StaffMediatedDeliveryResponse> {
+      const { actorId, pariwarIdStr } = adminCtx(request);
+      const body = request.body as StaffMediatedDeliveryRequest;
+      const now = deps.clock();
+      const memberId = ids.memberId(body.member_id);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const ticketId = ids.helpdeskTicketId(body.helpdesk_ticket_id);
+
+      await requireAttribution(actorId);
+      await claimIdempotency(request, 'delivery_staff_mediated', body.member_id);
+
+      const requestPayloadHash = sha256Hex(
+        canonicalJsonStringify({
+          member_id: body.member_id,
+          export_id: body.export_id,
+          channel: 'staff_mediated',
+          member_requested_staff_mediation: body.member_requested_staff_mediation,
+        }),
+      );
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      let response: StaffMediatedDeliveryResponse;
+      try {
+        await requireTicketInScope(scopeTx, pariwarId, ticketId);
+        const exportRow = await dataExport.getExportForMember(
+          scopeTx.tx,
+          ids.dataExportId(body.export_id),
+          memberId,
+        );
+        if (!exportRow) throw new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+
+        // ── ELEMENT 2 — SERVER-OBSERVED, and it FAILS CLOSED ────────────────────────────────────────
+        // ⛔ Deliberately NOT taken from the request body. A caller-suppliable "the primary failed"
+        // flag would let the actor assert the very fact this gate exists to check.
+        // ⚠ It records that THE PRIMARY ROUTE DID NOT COMPLETE — ⛔ never that the member lost the
+        // handset, which this system cannot observe (no DLR seam, no mobile-change history).
+        const primaryNotCompletedAt = await dataExport.primaryDeliveryNotCompletedAt(
+          scopeTx.tx,
+          memberId,
+          now,
+        );
+        if (primaryNotCompletedAt === null) {
+          throw new ConflictError(
+            'The member-direct delivery route has not been attempted and left incomplete; staff-mediated delivery is not available yet',
+            'member_data_rights.primary_delivery_not_completed_required',
+          );
+        }
+
+        // Element 3 — Tier-1 at rest. ⛔ Never an event payload, never an audit context field.
+        const attestationCiphertext = await encTier1(
+          body.attestation,
+          pariwarIdStr,
+          FIELD_CLASS_ATTESTATION,
+          enc,
+        );
+
+        const grant = await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: {
+            pariwarId: pariwarIdStr,
+            actorId,
+            actorRole: null,
+            action: DELIVERY_STAFF_MEDIATED_ACTION,
+            resourceLocator: `member/${body.member_id}`,
+            requestPayloadHash,
+            traceId: request.requestContext.traceId ?? null,
+          },
+          mutate: async () =>
+            dataExport.insertStaffMediatedGrant(scopeTx.tx, {
+              exportId: ids.dataExportId(body.export_id),
+              memberId,
+              pariwarId,
+              helpdeskTicketId: ticketId,
+              grantedByActorId: actorId,
+              expiresAt: new Date(now.getTime() + DELIVERY_GRANT_TTL_MS),
+              // Element 1 — recorded now, on the strength of the member's own request relayed at intake.
+              memberRequestRecordedAt: now,
+              primaryDeliveryNotCompletedAt: primaryNotCompletedAt,
+              attestationCiphertext,
+            }),
+        });
+
+        response = {
+          grant_id: grant.grantId,
+          channel: 'staff_mediated',
+          expires_at: grant.expiresAt.toISOString(),
+          primary_delivery_not_completed_at: primaryNotCompletedAt.toISOString(),
+        };
+        ok = true;
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ConflictError(
+            'A delivery grant is already live for this export',
+            'member_data_rights.delivery_grant_already_live',
+          );
+        }
+        throw err;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+      return response!;
+    },
+
+    /**
+     * POST …/member-data-rights/correction — the RECORDED correction process (AC-R2).
+     *
+     * ⭐ RULED (`2026-08-14-109` cl.2): three mechanized rights PLUS a recorded, staff-executed
+     * correction process on a helpdesk ticket discharge the release gate.
+     * ⛔ THIS RECORDS; IT DOES NOT WRITE. No member profile field is touched here, and none may be —
+     * a general member-profile editor was expressly not authorised.
+     */
+    async recordCorrection(request: FastifyRequest): Promise<RecordCorrectionResponse> {
+      const { actorId, pariwarIdStr } = adminCtx(request);
+      const body = request.body as RecordCorrectionRequest;
+      const memberId = ids.memberId(body.member_id);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const ticketId = ids.helpdeskTicketId(body.helpdesk_ticket_id);
+
+      const recordedByDisplay = await requireAttribution(actorId);
+      await claimIdempotency(request, 'correction', body.member_id);
+
+      const requestPayloadHash = sha256Hex(
+        canonicalJsonStringify({
+          member_id: body.member_id,
+          helpdesk_ticket_id: body.helpdesk_ticket_id,
+          outcome: body.outcome,
+        }),
+      );
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      let response: RecordCorrectionResponse;
+      try {
+        await requireTicketInScope(scopeTx, pariwarId, ticketId);
+        const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
+        if (!exists) {
+          throw new NotFoundError('Member not found', 'member_data_rights.member_not_found');
+        }
+
+        // Both Tier-1: what the member asked (relayed) and what staff did. ⛔ Never an event payload.
+        const [requestedChangeCiphertext, actionTakenCiphertext] = await Promise.all([
+          encTier1(body.requested_change, pariwarIdStr, FIELD_CLASS_CORRECTION, enc),
+          encTier1(body.action_taken, pariwarIdStr, FIELD_CLASS_CORRECTION, enc),
+        ]);
+
+        const row = await audit.withCompensatingAudit(deps.servicePool, {
+          auditIntent: {
+            pariwarId: pariwarIdStr,
+            actorId,
+            actorRole: null,
+            action: CORRECTION_ACTION,
+            resourceLocator: `member/${body.member_id}`,
+            requestPayloadHash,
+            traceId: request.requestContext.traceId ?? null,
+          },
+          mutate: async () =>
+            memberDataRights.recordCorrection(scopeTx.tx, {
+              memberId,
+              pariwarId,
+              helpdeskTicketId: ticketId,
+              requestedChangeCiphertext,
+              actionTakenCiphertext,
+              outcome: body.outcome,
+              recordedByActorId: actorId,
+              recordedByDisplay,
+            }),
+        });
+
+        response = {
+          correction_id: row.correctionId,
+          outcome: row.outcome,
+          recorded_by_display: row.recordedByDisplay,
+          created_at: row.createdAt.toISOString(),
+        };
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
       return response!;
     },
 

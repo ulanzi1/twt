@@ -35,7 +35,9 @@ import type { Db } from '../db.js';
 import { encryptTier1, serializeEnvelope } from '../encryption/envelope.js';
 import type { KmsKeyRef, KmsProvider } from '../encryption/kms-provider.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
+import { dataExportDeliveryGrants } from '../schema/data_export_delivery_grants.js';
 import { dataExports } from '../schema/data_exports.js';
+import { memberDataRightsCorrections } from '../schema/member_data_rights_corrections.js';
 import { memberAddresses } from '../schema/member_addresses.js';
 import { memberIdentities } from '../schema/member_identities.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
@@ -74,6 +76,11 @@ const FIELD_CLASS_ADDRESS = 'member_address';
 const FIELD_CLASS_MOBILE = 'member_mobile';
 // Story 10.10 — mirrors `piiColumn(1, 'member_moderation')` on member_moderation_actions.
 const FIELD_CLASS_MODERATION = 'member_moderation';
+// Story 10.21 AC-R1 / AC-R2 — the two Tier-1 field classes introduced by the delivery + correction
+// surfaces (migration 0104). ⚠ They are here because a Tier-1 column that is NOT in this file survives
+// an erasure — the exact defect that let the 10.10 moderation rationale outlive an RTBF request.
+const FIELD_CLASS_DATA_RIGHTS_ATTESTATION = 'data_rights_attestation';
+const FIELD_CLASS_DATA_RIGHTS_CORRECTION = 'data_rights_correction';
 
 // The member mobile Tier-1 envelope keys on this fixed sentinel namespace (login runs pre-scope — see
 // apps/api context.ts MEMBER_IDENTITY_NAMESPACE + assemble.ts), NOT the member's real pariwarId.
@@ -273,6 +280,38 @@ export async function anonymizeMember(
   // vacuum already does exactly that) and is handled by the unconditional update above; only the STATUS
   // change is contested. ⛔ Do NOT add 'consumed' to this list without a ratified decision id — that is
   // a retention question owed to the Trustee Panel, not a coding preference. Story 10.21 AC11 owns it.
+  // ── data_export_delivery_grants (Story 10.21, AC-R1) — the staff ATTESTATION ────────────────────
+  //
+  // ⭐ THE HIGHEST-RISK ITEM OF AC-R1, AND IT IS HANDLED IN THE SAME CHANGE THAT CREATED THE COLUMN.
+  // `attestation_ciphertext` is `piiColumn(1, 'data_rights_attestation')` — staff-authored deliberative
+  // text ABOUT the member. A new Tier-1 column landing in a table absent from this file is EXACTLY how
+  // the Story 10.10 moderation rationale came to survive an erasure request, and exactly the class
+  // Finding 9 / AC11 exist to close. ⛔ A justification column added as a SAFETY CONTROL that then
+  // outlived the member's erasure would be a PII-retention defect created by the control itself.
+  //
+  // ⚠ SENTINEL, not NULL: the column is nullable only because `member_direct` grants carry no
+  // attestation. Where one EXISTS the row must keep saying "an attestation was recorded here" after the
+  // scrub, because the fact that a staff actor obtained the export is an audit fact the Trust keeps —
+  // it is the CONTENT that is erased, not the record of the act.
+  await client
+    .update(dataExportDeliveryGrants)
+    .set({
+      attestationCiphertext: sql`CASE WHEN ${dataExportDeliveryGrants.attestationCiphertext} IS NULL THEN NULL ELSE ${await encSentinel(pariwarId, FIELD_CLASS_DATA_RIGHTS_ATTESTATION, enc)} END`,
+    })
+    .where(eq(dataExportDeliveryGrants.memberId, memberId));
+
+  // ── member_data_rights_corrections (Story 10.21, AC-R2) — both Tier-1 columns ───────────────────
+  // The member's requested change and the staff action taken. Both NOT NULL, so both take the sentinel.
+  // ⛔ The ROW is retained: that a correction was requested and handled is audit history; only its
+  // content is erased. Same posture as the moderation tables above.
+  await client
+    .update(memberDataRightsCorrections)
+    .set({
+      requestedChangeCiphertext: await encSentinel(pariwarId, FIELD_CLASS_DATA_RIGHTS_CORRECTION, enc),
+      actionTakenCiphertext: await encSentinel(pariwarId, FIELD_CLASS_DATA_RIGHTS_CORRECTION, enc),
+    })
+    .where(eq(memberDataRightsCorrections.memberId, memberId));
+
   await client
     .update(dataExports)
     .set({ status: 'expired' })

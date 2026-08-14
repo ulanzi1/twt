@@ -1,4 +1,28 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-14c (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. Sub-question 1(ii)
+#   ANSWERED -- `Decision 2026-08-14-110`, option (c): staff-mediated delivery IS permitted as a NARROW
+#   FALLBACK where the member no longer controls the registered mobile, conditioned on a RECORDED
+#   JUSTIFICATION. NOTHING ON THIS STORY REMAINS UN-RULED; what remains is BUILD WORK (AC-R1 + AC-R2),
+#   and the RELEASE GATE IS STILL OPEN.
+#   Why it mattered: member-direct delivery is an OTP grant TO the registered mobile, and Finding 4
+#   records it FAILS for exactly the member who no longer controls it -- the population the story exists
+#   to serve. Unanswered, the story would have shipped a statutory right a subset of terminated members
+#   structurally could not exercise. `109` recorded the gap openly and refused to infer it; `110`
+#   answers it. `109` is NOT edited -- it stands including its record that 1(ii) was open.
+#   Delivery model is now PRIMARY + NARROW EXCEPTION, not two co-equal routes: the fallback must read as
+#   an exception in code, UI and audit, and must not be reachable merely because it beats waiting for an
+#   OTP.
+#   FOUR BUILD CONSTRAINTS on AC-R1, three of them traps: (a) the justification is MECHANIZED and
+#   fail-closed -- un-mechanized it decays SILENTLY, since the export still gets delivered and only the
+#   record goes missing; (b) free text about a member => a Tier-1 encrypted column, NEVER an event
+#   payload (member payloads are .strict() auditShape-only precisely so they cannot carry free text --
+#   R1); (c) HIGHEST RISK -- that new Tier-1 column MUST join anonymizeMember's coverage set in the SAME
+#   commit, or a control added for safety becomes a PII-retention defect, the exact 10.10 / Finding-9
+#   class; rtbf-anonymize.test.ts's 9-tables/10-statements count assertion must move UPWARD; (d) its
+#   export status is the AUTHOR'S READING, not a ruling -- built withheld (conservative, matches its
+#   enumerated siblings) and recorded in `110` as open for the next session / first counsel engagement.
+#   Attestation + counsel caveats carry from `109`: initials block uncountersigned, counsel unengaged.
+#   VERIFIED: zero stale "unanswered" refs outside the Change Log; 18 AC headings <-> 18 matrix rows.
 # last_updated: 2026-08-14b (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. Trustee Panel RULED all
 #   eight escalations -- `Decision 2026-08-14-109`. ZERO BLOCKS REMAIN, and the story is still NOT done:
 #   AC-R1 (member-direct delivery) and AC-R2 (a recorded helpdesk-ticket correction process) are

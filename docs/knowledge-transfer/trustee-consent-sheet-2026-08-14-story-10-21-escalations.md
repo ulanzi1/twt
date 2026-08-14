@@ -347,6 +347,8 @@ Per ruled row:
 ## Session Resolution
 
 Session held **2026-08-14**. All eight rows ruled; none deferred, none rejected.
+⭐ **Row 1's sub-question 1(ii) was answered in a follow-up on the same date** — Decision
+`2026-08-14-110`. Row 1 is therefore complete; no sub-question remains open on this sheet.
 
 > ⚠ **RULINGS RECORDED AS REPORTED BY THE PREPARER. THE INITIALS BLOCK BELOW IS NOT YET
 > COUNTERSIGNED.** The rulings are entered here because they were reported; the **attestation** is
@@ -360,7 +362,7 @@ Quorum met: ☑ Yes (≥2 trustees present) ☐ No — session not quorate, no r
 
 | Row | Escalation | Decision | Conditions / amendments |
 |---|---|---|---|
-| 1 | Delivery of the export artifact | ☑ **Ruled — A: member-direct delivery** | Settles **1(iii)** (member grant is primary); the staff-mediated model is not built. ⛔ **1(ii) — the lost-mobile fallback — was NOT separately answered** and is carried as an OPEN sub-question, not inferred either way. |
+| 1 | Delivery of the export artifact | ☑ **Ruled — A: member-direct delivery** · **1(ii) ruled (c)** | Settles **1(iii)** (member grant is primary). ⭐ **1(ii) subsequently ruled 2026-08-14 at option (c) — Decision `2026-08-14-110`: staff-mediated delivery IS permitted as a NARROW FALLBACK where the member no longer controls the registered mobile, conditioned on a RECORDED JUSTIFICATION.** Primary + exception, ⛔ not two co-equal routes. |
 | 2 | Correction + gate discharge | ☑ **Ruled — A: three mechanized rights + a recorded helpdesk-ticket correction process are sufficient** | ⛔ No general member-profile editor. Makes the gate **dischargeable**, does **not** discharge it; the flip stays a separate Panel-exclusive act. |
 | 3 | Moderation-record disclosure | ☑ **Ruled — B: internal deliberative material is withheld** | Covers the decision note, 10.20's three further Tier-1 columns, and `actor_display`. The member still learns the outcome + reason-code label. **Un-attested** (counsel unengaged). |
 | 4 | Statutory response horizon | ☑ **Ruled — 48h first response / 5 business days** | ⭐ The shipped `other` desk is **24h/5** — stricter, therefore already compliant. ⛔ **No code change; `DEFAULT_ROUTING_POLICY` untouched.** Do not loosen 24h to 48h. **Un-attested.** |

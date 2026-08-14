@@ -4,6 +4,80 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 10.21 — off-portal DPDPA access (2026-08-14)
+
+⛔ **Every re-trigger below names a STORY or a concrete event — never an EPIC.** A deferral naming an
+epic expires unowned: epics carry no acceptance criteria, so no story owns the work, and it is found
+later by a story tripping over it ([[project_r7_fact_producer_unbuilt]]). Story 10.21 hit exactly that
+class twice (the `emptySection('Epic 8')` / `emptySection('Epic 6')` placeholders), which is why this
+section is strict about it.
+
+### ⛔ RTBF revokes NO live member session — the wider defect AC12 does NOT close
+
+`anonymizeMember` performs **zero** refresh-token, elevation or session writes, and
+`requireMemberSession` is a **stateless JWT verify** — no DB read, no state check — against a
+**~15-minute** access TTL. Login and refresh *do* block for a terminated member, so no NEW session
+mints; but an **existing token survives the erasure** for the remainder of its TTL.
+
+⇒ For up to ~15 minutes after their own erasure, an erased member can reach **any session-only route**.
+
+Story 10.21 (AC12) closes **only the `data_exports` surface**, by adding the shipped-convention
+`TERMINAL_STATES` guard to **both** enqueue callers. The five other guards
+(`nominee` / `member-terms` / `medical` / `vyawastha-shulk` / `life-events`) cover most member write
+surfaces — but the gap is **session revocation itself**, and a per-route guard is not a fix for it.
+
+- **Scope:** *"RTBF must revoke live member sessions"* — revoke refresh tokens and invalidate
+  outstanding access tokens (or add a cheap terminal check to the session guard) at erasure time.
+- **Owner:** a **named successor story**. ⛔ Not an epic, and ⛔ not "the next story that touches auth".
+- **Re-trigger:** **immediate** — it is a live, reachable PII-adjacent hole, not a latent one.
+  ⚠ It also grows: every NEW session-only member route inherits it and needs its own guard until the
+  revocation is built.
+
+### ⛔ The inert `ON DELETE CASCADE` class — WIDER than `data_exports` (Escalation 6)
+
+`migrations/0033_data-exports.sql` and `schema/data_exports.ts` **both** stated that RTBF removal
+happens via `ON DELETE CASCADE` on the member FK. **It never fired.** Story 3.12 shipped RTBF as a
+**SOFT** delete — `member/anonymize.ts` performs zero `delete()` calls and the `members` row is
+retained — so the documented mechanism has been **inert since 3.11 landed**, and nothing detected it
+because no story until 10.21 built an export for a member it also erases.
+
+Story 10.21 (AC11) closes it **for `data_exports` only**, with an explicit scrub in the erasure
+transaction, and corrects both stale comments in place.
+
+⚠ **The class is wider.** Every table carrying `ON DELETE CASCADE` to `members.member_id` **and relying
+on that cascade for RTBF** has the same inert guard — and each one is a silent PII-retention hole.
+
+- **Scope:** audit **every** `members` FK cascade against `anonymizeMember`'s coverage set; for each,
+  either add an explicit scrub or record why the table holds no member PII. Correct any further
+  comments that assert a protection which does not exist.
+- **Owner:** a **named successor story**. ⛔ Never an epic ([[project_r7_fact_producer_unbuilt]]).
+- **Re-trigger:** **immediate**. ⚠ ⛔ Do **not** wait for another story to trip over it — that is
+  precisely how this one surfaced, ~2 epics late.
+
+### FR-95 export contents still absent (recorded, NOT deferred silently)
+
+FR-95 names *"member profile, contribution history, attribution chain, Contribution Notes (PDFs)"*.
+Two named contents are still **not** in the export, and neither is blocked by Escalations 7/8:
+
+1. **Contribution-Note PDFs** — Story **8.7** renders them. They are *generated artifacts*, not
+   records, so they need a different section shape from the record-array sections.
+   **Re-trigger:** the first story that gives `data-export/assemble.ts` a non-record (binary/artifact)
+   section — or, if none arrives, the story that resolves Escalation 7, since it is redefining the
+   section contracts anyway and this is the cheapest moment to add the shape.
+2. **The member's helpdesk tickets** (Stories 10.1–10.4) — **member-authored data** about the member,
+   absent from the export entirely. ⚠ Not named by FR-95 (which predates the helpdesk), which is
+   exactly why it would otherwise never be noticed.
+   **Re-trigger:** the story that resolves **Escalation 7** (the section-contract replacement) must
+   decide *in writing* whether helpdesk tickets are owed under the access right. ⛔ Deciding by
+   omission is not a decision.
+
+⚠ `contribution_history.json` and `claim_history.json` themselves are **not** listed here — they are
+**BLOCKED**, not deferred (Escalations 7 + 8), and they remain Story 10.21's scope pending those
+rulings. ⛔ Do not fold a block into this list; a block has an owner and a live question, and filing
+it as deferred work would lose both.
+
+---
+
 ## ⛔ GOVERNANCE DRIFT — the rejoin model, from Story 10.20's Trustee Panel ruling (2026-08-12)
 
 **Recorded BEFORE implementation, deliberately.** Story 10.20's Panel ruling (to be entered as Decision

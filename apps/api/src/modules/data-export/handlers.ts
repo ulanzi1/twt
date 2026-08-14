@@ -17,7 +17,7 @@
 // actorId, status, byte size) — NEVER any exported field value, NEVER the plaintext.
 
 import type { DataExportRequestResponse, DataExportStatusResponse } from '@twt/contracts';
-import { dataExport, ids } from '@twt/domain';
+import { dataExport, ids, member as memberDomain } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -31,6 +31,17 @@ import {
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { decryptExportArtifact } from './data-export-crypto.js';
+
+/**
+ * Lifecycle states in which an export request is refused (Story 10.21, AC12).
+ *
+ * Follows the FIVE shipped `TERMINAL_STATES` guards — `nominee`, `member-terms`, `medical`,
+ * `vyawastha-shulk`, `life-events` — each `new Set(['withdrawn', 'anonymized'])` returning a 409
+ * `<module>.member_terminal`. ⛔ The error code is `data_export.member_terminal`, NOT an
+ * `rtbf.already_anonymized`-shaped code: this is not an RTBF route and borrowing that code would tell
+ * a client the wrong thing about what happened.
+ */
+const DATA_EXPORT_TERMINAL_STATES: ReadonlySet<string> = new Set(['withdrawn', 'anonymized']);
 
 export function createDataExportHandlers(deps: AppDeps) {
   const enc = deps.encryption;
@@ -68,6 +79,29 @@ export function createDataExportHandlers(deps: AppDeps) {
       let toEnqueue: string | null = null;
       let response: DataExportRequestResponse;
       try {
+        // ── Story 10.21 (AC12) — TERMINAL GUARD. This closes a SHIPPED defect, not a new one ─────────
+        // ⛔ This route was reachable by an ERASED member and created a fresh dossier row for them.
+        // Three facts combine:
+        //   · `requireMemberSession` is a STATELESS JWT verify — no DB read, no state check;
+        //   · `anonymizeMember` revokes NOTHING (zero refresh-token/session writes), so an existing
+        //     access token survives the erasure for the rest of its ~15-minute TTL; and
+        //   · this handler had NO lifecycle check, and `assemble.ts` reads `members` by id with no
+        //     state predicate.
+        // So within their token window an erased member could enqueue a rebuild of the very dossier
+        // the erasure had just zeroed. AC11 closes the artifact; without THIS, AC11 is re-openable.
+        //
+        // ⛔ The guard goes in the CALLER, never in `assemble.ts` — the assembler is shared and must
+        // not learn lifecycle rules (the same WS-D shape that moved RTBF legality out of the reducer).
+        // ⛔ And it goes on BOTH enqueue callers: guarding only the new off-portal route would leave
+        // this older, already-reachable one open.
+        const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, now);
+        if (DATA_EXPORT_TERMINAL_STATES.has(state)) {
+          throw new ConflictError(
+            'Data export is not available for a closed membership',
+            'data_export.member_terminal',
+          );
+        }
+
         const active = await dataExport.findActiveExport(scopeTx.tx, memberId, now);
         if (active) {
           // Idempotent: return the existing in-flight export, no new job.

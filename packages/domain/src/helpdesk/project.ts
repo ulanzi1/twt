@@ -105,6 +105,14 @@ export interface ProjectTicketGenesisInput {
   // first PR that actually builds the owning primitive.
   moduleId: string | null;
   validityLookupId: string | null;
+  /**
+   * Story 10.29 — ELEMENT 1, captured at intake (Decision `2026-08-15-120` cl.1). The instant the
+   * MEMBER's request for staff-mediated delivery was recorded, or `null` when they did not ask.
+   * ⛔ The CALLER passes the SERVER's clock instant, never a client value — the two intake routes
+   * derive it as `request.member_requested_staff_mediated_delivery === true ? createdAt : null`.
+   * ⛔ GENESIS-ONLY: there is no transition and no update path (`2026-08-15-120` cl.4).
+   */
+  memberStaffMediationRequestedAt: Date | null;
 }
 
 export interface ProjectTicketGenesisResult {
@@ -177,6 +185,7 @@ export async function projectTicketGenesis(
     pool_id: input.poolId,
     module_id: input.moduleId,
     validity_lookup_id: input.validityLookupId,
+    member_staff_mediation_requested_at: input.memberStaffMediationRequestedAt?.toISOString() ?? null,
   };
   // Fail-fast validation (defense-in-depth alongside the JSONB column + the DB CHECK).
   HELPDESK_EVENT_PAYLOAD_SCHEMAS['helpdesk.ticket_created'].parse(payload);
@@ -238,6 +247,8 @@ export async function projectTicketGenesis(
         poolId: input.poolId,
         moduleId: input.moduleId,
         validityLookupId: input.validityLookupId,
+        // ⛔ From the SAME input as the payload above — payload and row cannot disagree.
+        memberStaffMediationRequestedAt: input.memberStaffMediationRequestedAt,
       });
     } catch (err) {
       throw new HelpdeskTicketPersistError(input.ticketId, err);

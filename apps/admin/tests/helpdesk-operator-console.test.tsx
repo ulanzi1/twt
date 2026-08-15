@@ -51,6 +51,8 @@ function ShellHarness(over: Partial<HelpdeskOperatorShellProps> = {}): ReactElem
   const [category, setCategory] = useState<string | null>(over.category ?? null);
   const [subCategory, setSubCategory] = useState<string | null>(over.subCategory ?? null);
   const [body, setBody] = useState(over.body ?? '');
+  // Story 10.29 — element 1's intake checkbox is controlled too, so the harness must hold its state.
+  const [staffMediation, setStaffMediation] = useState(over.memberRequestedStaffMediation ?? false);
   return (
     <HelpdeskOperatorShell
       lookupSlot={<div data-testid="lookup-slot" />}
@@ -61,6 +63,8 @@ function ShellHarness(over: Partial<HelpdeskOperatorShellProps> = {}): ReactElem
       onCategoryChange={setCategory}
       subCategory={subCategory}
       onSubCategoryChange={setSubCategory}
+      memberRequestedStaffMediation={staffMediation}
+      onMemberRequestedStaffMediationChange={setStaffMediation}
       body={body}
       onBodyChange={setBody}
       onSubmit={() => {}}

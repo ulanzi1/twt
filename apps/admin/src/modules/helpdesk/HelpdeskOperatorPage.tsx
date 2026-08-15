@@ -44,6 +44,8 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [subCategory, setSubCategory] = useState<string | null>(null);
+  // Story 10.29 — element 1's intake capture (Decision `2026-08-15-120` cl.1/cl.2).
+  const [memberRequestedStaffMediation, setMemberRequestedStaffMediation] = useState(false);
   const [body, setBody] = useState('');
   const [result, setResult] = useState<HelpdeskFiledResult | null>(null);
 
@@ -58,6 +60,9 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
   const resetIntake = (): void => {
     setCategory(null);
     setSubCategory(null);
+    // ⛔ Story 10.29 — reset with the rest of the intake. A ticked box surviving a member change would
+    // record ONE member's request against ANOTHER member's ticket.
+    setMemberRequestedStaffMediation(false);
     setBody('');
     setResult(null);
     create.reset();
@@ -82,6 +87,9 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
       sub_category: subCategory === null ? undefined : (subCategory as HelpdeskSubcategory),
       body: body.trim(),
       created_via: 'helpline_call',
+      // Story 10.29 — element 1, captured at intake. ⛔ Sent only when actually ticked; the SERVER
+      // stamps the instant (`2026-08-15-120` cl.1) — the wire never carries a client timestamp.
+      member_requested_staff_mediated_delivery: memberRequestedStaffMediation ? true : undefined,
     } satisfies CreateTicketRequest;
     create.mutate(payload, {
       onSuccess: (ticket) => {
@@ -116,6 +124,8 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
       onCategoryChange={setCategory}
       subCategory={subCategory}
       onSubCategoryChange={setSubCategory}
+      memberRequestedStaffMediation={memberRequestedStaffMediation}
+      onMemberRequestedStaffMediationChange={setMemberRequestedStaffMediation}
       body={body}
       onBodyChange={setBody}
       onSubmit={submit}

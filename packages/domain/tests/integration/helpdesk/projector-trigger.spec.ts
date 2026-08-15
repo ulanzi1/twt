@@ -54,6 +54,9 @@ function genesisInput(
     auditId: randomUUID(),
     createdVia: 'member_app' as const,
     operatorAttribution: null,
+    // Story 10.29 — element 1's intake capture. The ordinary case is `null` (the member did not ask);
+    // ⛔ present-and-nullable on the input, never optional, so a fixture cannot silently omit it.
+    memberStaffMediationRequestedAt: null,
     actor: 'member' as const,
     actorId,
     claimCaseId: null,
@@ -124,6 +127,62 @@ describe.skipIf(!hasDatabase)('helpdesk projector + trigger (AC4)', () => {
     expect(row!.subjectActorId).toBe(actorId);
     expect(row!.subjectMemberId).toBeNull();
     expect(row!.createdVia).toBe('helpline_call');
+  });
+
+  // ── Story 10.29 — element 1's capture reaches BOTH the payload and the row, from ONE input ──────
+  //
+  // ⛔ THE FAILURE THIS EXISTS TO CATCH is a silent divergence: the field written to the ticket ROW but
+  // not mirrored into the genesis PAYLOAD (or the reverse). The row is what `grantStaffMediatedDelivery`
+  // reads; the payload is the immutable record that makes the fact replayable. If they disagreed,
+  // nothing anywhere would report it — the route would still work and the event stream would quietly
+  // stop being the source of truth for element 1.
+
+  it('Story 10.29: memberStaffMediationRequestedAt is written to the ROW and the genesis PAYLOAD, from the same input', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const ticketId = randomUUID();
+    const askedAt = new Date('2026-08-15T09:15:00.000Z');
+
+    await projectTicketGenesis(client, genesisInput(ticketId, PARIWAR_A, { memberStaffMediationRequestedAt: askedAt }));
+
+    const row = await getTicketById(tx, ids.pariwarId(PARIWAR_A), ids.helpdeskTicketId(ticketId));
+    expect(row!.memberStaffMediationRequestedAt).not.toBeNull();
+    expect(row!.memberStaffMediationRequestedAt!.getTime()).toBe(askedAt.getTime());
+
+    const { rows } = await client.query(
+      `SELECT payload FROM events_log WHERE stream_id = $1 AND event_type = 'helpdesk.ticket_created'`,
+      [ticketId],
+    );
+    expect(rows).toHaveLength(1);
+    const payload = rows[0].payload as { member_staff_mediation_requested_at: string | null };
+    expect(payload.member_staff_mediation_requested_at).toBe(askedAt.toISOString());
+    // ⭐ The two must agree BECAUSE they come from one input — asserted, not assumed.
+    expect(new Date(payload.member_staff_mediation_requested_at!).getTime()).toBe(
+      row!.memberStaffMediationRequestedAt!.getTime(),
+    );
+  });
+
+  it('Story 10.29: the ordinary case — not asked — is NULL on the row and null in the payload', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const ticketId = randomUUID();
+
+    // ⛔ The default fixture passes `null`. This is the overwhelmingly common case and it must record
+    // NOTHING — a default, a `now()` fallback or a coerced `false`→epoch would manufacture element 1
+    // on every ticket ever filed.
+    await projectTicketGenesis(client, genesisInput(ticketId, PARIWAR_A));
+
+    const row = await getTicketById(tx, ids.pariwarId(PARIWAR_A), ids.helpdeskTicketId(ticketId));
+    expect(row!.memberStaffMediationRequestedAt).toBeNull();
+
+    const { rows } = await client.query(
+      `SELECT payload FROM events_log WHERE stream_id = $1 AND event_type = 'helpdesk.ticket_created'`,
+      [ticketId],
+    );
+    const payload = rows[0].payload as Record<string, unknown>;
+    // ⛔ PRESENT-and-null, never absent: "not captured yet" must stay distinguishable from "did not ask".
+    expect(Object.hasOwn(payload, 'member_staff_mediation_requested_at')).toBe(true);
+    expect(payload['member_staff_mediation_requested_at']).toBeNull();
   });
 
   it('projectTicketGenesis rejects a genesis with BOTH subject refs set (the payload schema\'s XOR superRefine fires before either INSERT is attempted)', async () => {

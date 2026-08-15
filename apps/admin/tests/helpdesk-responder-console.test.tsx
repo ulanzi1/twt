@@ -57,6 +57,9 @@ const detail = (over: Partial<HelpdeskAdminTicketDetailResponse> = {}): Helpdesk
   routing_policy_version: 1,
   assigned_at: '2026-08-03T06:00:00.000Z',
   member_scope_context: { pariwar_id: PARIWAR, state: null, district: null, block: null, subject_member_id: '44444444-4444-4444-4444-444444444444' },
+  // Story 10.29 — element 1's captured instant. ⛔ The DEFAULT is null (the member did not ask), which
+  // is the ordinary case; the tests that need the fallback enabled pass it explicitly.
+  member_staff_mediation_requested_at: null,
   ...over,
 });
 

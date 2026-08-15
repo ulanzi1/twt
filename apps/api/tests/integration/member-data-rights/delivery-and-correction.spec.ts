@@ -22,6 +22,7 @@ import { encryption } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { encryptMobile, mobileBlindIndex, normalizeMobile } from '../../../src/modules/auth/shared/mobile-index.js';
+import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
@@ -173,7 +174,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
   async function seedSubject(
     client: Client,
     pariwarId: string,
-    opts: { status?: 'pending' | 'ready' } = {},
+    opts: { status?: 'pending' | 'ready'; memberRequestedStaffMediation?: boolean } = {},
   ): Promise<{ memberId: string; exportId: string; ticketId: string }> {
     const status = opts.status ?? 'ready';
     const memberId = randomUUID();
@@ -227,6 +228,15 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         sub_category: DPDPA_DATA_RIGHTS_SUBCATEGORY,
         body: 'Member is exercising their data rights.',
         created_via: 'helpline_call',
+        // ── Story 10.29 — ELEMENT 1, CAPTURED AT INTAKE THROUGH THE REAL ROUTE ─────────────────────
+        // ⛔ DELIBERATELY OPT-IN AND DEFAULTED OFF. Every pre-existing caller of `seedSubject` gets a
+        // ticket with NO captured request, which is what makes the polarity pair below meaningful:
+        // the two arms differ in this one flag and in nothing else.
+        // ⛔ The ticket is filed through the REAL create route, so the instant is stamped by the
+        // SERVER at genesis — never hand-inserted, and never a fixture-authored timestamp.
+        ...(opts.memberRequestedStaffMediation === true
+          ? { member_requested_staff_mediated_delivery: true }
+          : {}),
       },
     });
     expect(filed.statusCode).toBe(201);
@@ -274,6 +284,56 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     }
   }
 
+  /**
+   * Story 10.29 (AC2) — file a DPDPA ticket through the REAL Story 10.2 MEMBER route.
+   *
+   * ⭐ Why the member route matters here: on the operator route element 1 is OPERATOR-TRANSCRIBED
+   * (`2026-08-15-120` cl.6), so proving the gate only there would prove it on the weaker of the two
+   * intake paths. ⛔ AC2 requires BOTH.
+   *
+   * ⚠ MULTIPART, with Turnstile + Idempotency-Key riding HEADERS (the 10.2 harness posture — they are
+   * NOT multipart fields). The staff-mediation flag arrives as a FIELD, as a STRING, which is exactly
+   * the normalization the handler has to get right.
+   */
+  async function fileMemberTicket(
+    pariwarId: string,
+    memberId: string,
+    opts: { staffMediation: boolean },
+  ): Promise<string> {
+    const boundary = `----twt${randomUUID().replace(/-/g, '')}`;
+    const fields: ReadonlyArray<readonly [string, string]> = [
+      ['category', 'other'],
+      ['sub_category', DPDPA_DATA_RIGHTS_SUBCATEGORY],
+      ['subject', 'I want a copy of my records'],
+      ['body', 'Please send me everything you hold about me.'],
+      // ⛔ Sent only when ticked — the mobile client appends it conditionally, and the absent case is
+      // what the negative arm exercises.
+      ...(opts.staffMediation ? ([['member_requested_staff_mediated_delivery', 'true']] as const) : []),
+    ];
+    const body = Buffer.concat([
+      ...fields.map(([name, value]) =>
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`),
+      ),
+      Buffer.from(`--${boundary}--\r\n`),
+    ]);
+
+    const token = signAccessToken(app, { memberId, pariwarId, deviceId: 'test-device' }, 15 * 60 * 1000);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/p/${pariwarId}/member/helpdesk/tickets`,
+      payload: body as unknown as object,
+      headers: {
+        'content-type': `multipart/form-data; boundary=${boundary}`,
+        origin: 'http://localhost:3001',
+        authorization: `Bearer ${token}`,
+        'x-turnstile-token': 'test-turnstile-token',
+        'idempotency-key': randomUUID(),
+      },
+    });
+    expect(res.statusCode, 'the member intake route must accept the filing').toBe(201);
+    return (res.json() as { ticket_id: string }).ticket_id;
+  }
+
   // ── AC-R1 — the THREE-PART GATE ────────────────────────────────────────────────────────────────
 
   it('⛔ staff-mediated is REFUSED when the primary route has not been tried (element 2 fails closed)', async () => {
@@ -281,7 +341,10 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     const a = await authenticate('Operator A');
     await grant(a.userId, p, 'pariwar_admin');
     await elevate(a.client);
-    const s = await seedSubject(a.client, p);
+    // ⭐ Story 10.29 — element 1 IS captured, so element 2 remains the operative gate this test names.
+    // ⛔ Without it the route would refuse for element 1's reason and this test would silently stop
+    // proving anything about element 2 — passing green on the wrong refusal.
+    const s = await seedSubject(a.client, p, { memberRequestedStaffMediation: true });
 
     // ⭐ Elements 1 and 3 are supplied and valid; only element 2 is absent — and it alone must refuse.
     // ⛔ This is the assertion that proves element 2 is SERVER-OBSERVED: there is no request field the
@@ -294,7 +357,6 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         export_id: s.exportId,
         member_id: s.memberId,
         helpdesk_ticket_id: s.ticketId,
-        member_requested_staff_mediation: true,
         attestation: 'Caller states the registered handset was lost last week.',
       },
     });
@@ -354,7 +416,10 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     const a = await authenticate('Operator C');
     await grant(a.userId, p, 'pariwar_admin');
     await elevate(a.client);
-    const s = await seedSubject(a.client, p);
+    // ⭐ Story 10.29 — element 1 is captured AT INTAKE, on the ticket, by the real create route.
+    // ⛔ There is no request field that could supply it: the only way to make this route succeed is to
+    // have filed a ticket that recorded the member's request.
+    const s = await seedSubject(a.client, p, { memberRequestedStaffMediation: true });
 
     // The primary route is genuinely TRIED, through the real route, and its code then lapses. ⚠ This is
     // the ONLY thing that changes between this test and the refusal above — which is what makes
@@ -369,7 +434,6 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         export_id: s.exportId,
         member_id: s.memberId,
         helpdesk_ticket_id: s.ticketId,
-        member_requested_staff_mediation: true,
         attestation: 'Caller states the registered handset was lost; identity confirmed by read-back.',
       },
     });
@@ -412,6 +476,220 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     }
   });
 
+  // ── Story 10.29 — ELEMENT 1 IS MEMBER-AUTHORED, NOT MERELY PRESENT (AC3/AC4/AC5/AC6) ────────────
+  //
+  // ⛔ WHY A POLARITY PAIR AND NOT AN ASSERTION. `expect(row.member_request_recorded_at).not.toBeNull()`
+  // was ALREADY TRUE under the deleted `z.literal(true)` — it is in this very suite, in the
+  // "records all three elements" test above. An assertion that was true before the change cannot
+  // distinguish the fix from the defect. What CAN: the same route, the same operator, the same export,
+  // REFUSED against a ticket with no captured request and PERMITTED against one with it.
+  //
+  // ⛔ BOTH ARMS RUN `primaryTriedAndLapsed`, and that is load-bearing. Element 2 is genuinely true in
+  // both, so it cannot be the thing doing the refusing — leaving element 1 as provably the ONLY
+  // difference between the two outcomes.
+
+  it('⭐ AC6 (a) — REFUSED when the originating ticket records NO member request, and no grant row is created', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator M1');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    // ⛔ The ONLY difference from arm (b): this ticket carries no captured request.
+    const s = await seedSubject(a.client, p);
+
+    // Element 2 is made GENUINELY true through the real routes — so a refusal here cannot be element
+    // 2's refusal wearing element 1's name.
+    await primaryTriedAndLapsed(a.client, p, s);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/staff-mediated`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: {
+        export_id: s.exportId,
+        member_id: s.memberId,
+        helpdesk_ticket_id: s.ticketId,
+        attestation: 'Caller states the registered handset was lost last week.',
+      },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'member_data_rights.member_request_not_captured',
+    );
+
+    // ⛔ AC5 — REFUSED BEFORE ANY ROW EXISTS. A refused exception must leave no trace of an exception.
+    // ⚠ Filtered by CHANNEL, not asserted by count: the honest sequence necessarily leaves the
+    // member_direct grant that made element 2 true.
+    const c = await td.pool.connect();
+    try {
+      const { rowCount } = await c.query(
+        `SELECT 1 FROM data_export_delivery_grants WHERE member_id = $1 AND channel = 'staff_mediated'`,
+        [s.memberId],
+      );
+      expect(rowCount, 'a refused staff-mediated grant must not exist at all').toBe(0);
+    } finally {
+      c.release();
+    }
+  });
+
+  it('⭐ AC6 (b) + AC4 — PERMITTED when the ticket records the request, and the grant carries the MEMBER’s instant', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator M2');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    // ⭐ THE ONLY DIFFERENCE FROM ARM (a): a fact recorded at INTAKE, by the intake route, on a ticket
+    // this delivery route cannot create. ⛔ There is no request field that could substitute for it.
+    const s = await seedSubject(a.client, p, { memberRequestedStaffMediation: true });
+    await primaryTriedAndLapsed(a.client, p, s);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/staff-mediated`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: {
+        export_id: s.exportId,
+        member_id: s.memberId,
+        helpdesk_ticket_id: s.ticketId,
+        attestation: 'Caller states the registered handset was lost; identity confirmed by read-back.',
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as { channel: string }).channel).toBe('staff_mediated');
+
+    const c = await td.pool.connect();
+    try {
+      // ── AC4 — THE INSTANT IS THE MEMBER'S, NOT THE OPERATOR'S ────────────────────────────────────
+      // ⛔ `not.toBeNull()` cannot tell the fix from the defect: `memberRequestRecordedAt: now` was
+      // non-null too. THESE TWO ASSERTIONS CAN.
+      //   (1) EQUALITY with the ticket's captured instant — it is the same fact, copied, not a new
+      //       timestamp minted at staff-submit time;
+      //   (2) STRICTLY EARLIER than the grant's own created_at — the invariant that makes the two
+      //       instants distinguishable to every later reader of the column.
+      // ⚠ (1) IS THE DISCRIMINATOR, not (2). Under the defect `memberRequestRecordedAt: now`, the
+      // handler's clock still precedes the DB's insert-time `created_at`, so (2) would pass anyway.
+      // Verified by revert-sanity: restoring the defect fails (1) with a ~26ms delta and leaves (2)
+      // green. ⛔ Do not "simplify" this to the ordering check alone — it would stop proving AC4.
+      const { rows } = await c.query(
+        `SELECT g.member_request_recorded_at, g.created_at, t.member_staff_mediation_requested_at
+           FROM data_export_delivery_grants g
+           JOIN helpdesk_tickets t ON t.ticket_id = g.helpdesk_ticket_id
+          WHERE g.member_id = $1 AND g.channel = 'staff_mediated'`,
+        [s.memberId],
+      );
+      expect(rows).toHaveLength(1);
+      const row = rows[0] as {
+        member_request_recorded_at: Date;
+        created_at: Date;
+        member_staff_mediation_requested_at: Date;
+      };
+
+      expect(row.member_staff_mediation_requested_at, 'the ticket must carry the capture').not.toBeNull();
+      expect(
+        row.member_request_recorded_at.getTime(),
+        'the grant must carry the TICKET’s instant — not a `now` minted when staff submitted',
+      ).toBe(row.member_staff_mediation_requested_at.getTime());
+      expect(
+        row.member_request_recorded_at.getTime(),
+        'the member’s request must strictly PRECEDE the staff grant — equality is the defect',
+      ).toBeLessThan(row.created_at.getTime());
+    } finally {
+      c.release();
+    }
+  });
+
+  it('⭐ AC2 — a ticket filed through the MEMBER app (10.2, multipart) is equally sufficient', async () => {
+    // ⛔ WITHOUT THIS, AC2 IS MET ON ONE ROUTE AND UNPROVEN ON THE OTHER — the exact failure the AC
+    // names. The two arms above both file through the OPERATOR route, where the field is
+    // operator-transcribed (`2026-08-15-120` cl.6). ⭐ THIS is the route on which element 1's
+    // authorship is genuine: the member is the authenticated actor filing for themselves.
+    const p = randomUUID();
+    const a = await authenticate('Operator M3');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p);
+
+    // File a SECOND ticket — this time through the real member route, with the capture set.
+    const memberTicketId = await fileMemberTicket(p, s.memberId, { staffMediation: true });
+
+    await primaryTriedAndLapsed(a.client, p, s);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/staff-mediated`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: {
+        export_id: s.exportId,
+        member_id: s.memberId,
+        // ⭐ The MEMBER-filed ticket, not the operator-filed one seeded above.
+        helpdesk_ticket_id: memberTicketId,
+        attestation: 'Member filed the request themselves in the app; handset since lost.',
+      },
+    });
+    expect(res.statusCode, 'a member-filed capture must be equally sufficient').toBe(200);
+
+    const c = await td.pool.connect();
+    try {
+      const { rows } = await c.query(
+        `SELECT g.member_request_recorded_at, t.member_staff_mediation_requested_at, t.created_via
+           FROM data_export_delivery_grants g
+           JOIN helpdesk_tickets t ON t.ticket_id = g.helpdesk_ticket_id
+          WHERE g.member_id = $1 AND g.channel = 'staff_mediated'`,
+        [s.memberId],
+      );
+      expect(rows).toHaveLength(1);
+      const row = rows[0] as {
+        member_request_recorded_at: Date;
+        member_staff_mediation_requested_at: Date;
+        created_via: string;
+      };
+      // ⭐ The grant rests on a ticket the MEMBER filed — `member_app`, not `helpline_call`.
+      expect(row.created_via).toBe('member_app');
+      expect(row.member_request_recorded_at.getTime()).toBe(row.member_staff_mediation_requested_at.getTime());
+    } finally {
+      c.release();
+    }
+  });
+
+  it('⛔ AC2 — the member route WITHOUT the field records nothing, and the same grant is refused', async () => {
+    // ⚠ The converse of the arm above, on the member route: the multipart field's absence must mean
+    // "did not ask", not "defaulted to true". ⛔ Without this, a permissive multipart parse (every
+    // non-empty string is truthy) would pass the arm above and still manufacture element 1.
+    const p = randomUUID();
+    const a = await authenticate('Operator M4');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p);
+    const memberTicketId = await fileMemberTicket(p, s.memberId, { staffMediation: false });
+
+    const c = await td.pool.connect();
+    try {
+      const { rows } = await c.query(
+        'SELECT member_staff_mediation_requested_at FROM helpdesk_tickets WHERE ticket_id = $1',
+        [memberTicketId],
+      );
+      expect(rows[0].member_staff_mediation_requested_at, 'an unticked box must record NOTHING').toBeNull();
+    } finally {
+      c.release();
+    }
+
+    await primaryTriedAndLapsed(a.client, p, s);
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/staff-mediated`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: {
+        export_id: s.exportId,
+        member_id: s.memberId,
+        helpdesk_ticket_id: memberTicketId,
+        attestation: 'x',
+      },
+    });
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'member_data_rights.member_request_not_captured',
+    );
+  });
+
   it('⭐ staff-mediated succeeds on the SAME export once the member-direct grant itself has gone stale (lazy-expire-on-read, code-review fix)', async () => {
     // ⛔ THE SEQUENCE THIS PROVES, THAT THE TEST ABOVE DOES NOT: this drives the REAL
     // member-direct → (stale) → staff-mediated path on the SAME export, via the actual routes —
@@ -424,7 +702,8 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     const a = await authenticate('Operator F');
     await grant(a.userId, p, 'pariwar_admin');
     await elevate(a.client);
-    const s = await seedSubject(a.client, p);
+    // ⭐ Story 10.29 — element 1 captured at intake (see the sibling test above).
+    const s = await seedSubject(a.client, p, { memberRequestedStaffMediation: true });
 
     const primary = await a.client.inject({
       method: 'POST',
@@ -459,7 +738,6 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         export_id: s.exportId,
         member_id: s.memberId,
         helpdesk_ticket_id: s.ticketId,
-        member_requested_staff_mediation: true,
         attestation: 'Member asked for staff-mediated delivery after the primary route went stale.',
       },
     });
@@ -604,7 +882,8 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     const a = await authenticate('Operator E');
     await grant(a.userId, p, 'pariwar_admin');
     await elevate(a.client);
-    const s = await seedSubject(a.client, p);
+    // ⭐ Story 10.29 — element 1 captured at intake, so the grant is actually issued here.
+    const s = await seedSubject(a.client, p, { memberRequestedStaffMediation: true });
     await primaryTriedAndLapsed(a.client, p, s);
     const granted = await a.client.inject({
       method: 'POST',
@@ -614,7 +893,6 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         export_id: s.exportId,
         member_id: s.memberId,
         helpdesk_ticket_id: s.ticketId,
-        member_requested_staff_mediation: true,
         attestation: 'lost handset',
       },
     });
@@ -1028,7 +1306,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         url: `${base(p)}/delivery/staff-mediated`,
         payload: {
           export_id: s.exportId, member_id: s.memberId, helpdesk_ticket_id: s.ticketId,
-          member_requested_staff_mediation: true, attestation: 'x',
+          attestation: 'x',
         },
       },
       {

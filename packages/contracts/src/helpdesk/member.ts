@@ -69,6 +69,27 @@ export const MemberCreateTicketRequest = z
       .transform((s) => s.replace(/\s*\n+\s*/g, ' ').trim())
       .pipe(z.string().min(1, 'Subject is required')),
     body: z.string().min(1).max(HELPDESK_MEMBER_BODY_MAX),
+    /**
+     * Story 10.29 — ELEMENT 1 of the ratified three-part gate on staff-mediated data-export delivery
+     * (`2026-08-14-113` cl.1): the MEMBER asked staff to hand over their export because they cannot
+     * receive the code themselves. Captured HERE, at intake, because that is where the member's own
+     * request is authored (Decision `2026-08-15-116` cl.3 option (c); shape per `2026-08-15-120` cl.1).
+     *
+     * ⛔ A BOOLEAN ON THE WIRE — the SERVER stamps the instant onto
+     * `helpdesk_tickets.member_staff_mediation_requested_at`. A client-supplied `..._at` would
+     * re-create the very defect this replaces (`2026-08-15-115` cl.3).
+     *
+     * ⛔ ACCEPTED ON ANY TICKET, and deliberately NOT coupled to the DPDPA subcategory in this schema:
+     * the client offers the control only under that subcategory (`2026-08-15-120` cl.2), but enforcing
+     * "subcategory ⇒ field" here would put a ROUTING token into a SECOND enforcement site and make the
+     * intake schema depend on it — the exact coupling Story 10.21's AC2 spent its design avoiding.
+     *
+     * ⭐ THIS IS THE ROUTE ON WHICH AUTHORSHIP IS GENUINE (`2026-08-15-120` cl.6): the member is the
+     * authenticated actor, so the request is theirs in fact and not by transcription — unlike the
+     * `helpline_call` path, where the same field is operator-transcribed. ⚠ The story's AC2 requires
+     * BOTH routes to capture it, so the asymmetry is stated rather than resolved by pretending.
+     */
+    member_requested_staff_mediated_delivery: z.boolean().optional(),
   })
   .strict();
 export type MemberCreateTicketRequest = z.output<typeof MemberCreateTicketRequest>;

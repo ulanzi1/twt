@@ -4,7 +4,9 @@
 // return WITHOUT losing their typed text. This persists the in-progress "new ticket" draft to the
 // app's LOCAL synchronous store, keyed per member, and restores it on re-entry; the flow clears it
 // on a successful submit. Attachments are NOT persisted (file URIs are transient; the member re-adds
-// them) — only the category + subject + body text.
+// them) — only the category + subject + body text, and (Story 10.29) the data-rights staff-mediation
+// tick, so a member who steps away mid-filing does not silently lose the one field the delivery gate
+// later reads.
 //
 // ── Storage backend (memory [[project_mmkv_asyncstorage_equivalent]]) ──────────────────────────
 // The app standardized on MMKV (architecture §4.5 — the AsyncStorage-equivalent), so we persist
@@ -22,6 +24,16 @@ export interface HelpdeskDraft {
   subCategory?: string
   subject?: string
   body?: string
+  /**
+   * Story 10.29 — whether the member ticked "I am asking staff to hand my records over to me"
+   * (element 1 of the ratified three-part gate, captured at intake — Decision `2026-08-15-120` cl.1).
+   * ⛔ A BOOLEAN, never an instant: the SERVER stamps the time when the ticket is actually filed. A
+   * timestamp persisted on the device would be a client-authored `..._at`, which is the defect this
+   * story removes.
+   * ⚠ Non-sensitive, like every other field here — it records an intention typed into a form, not a
+   * filed request. Nothing acts on it until the member submits.
+   */
+  staffMediation?: boolean
 }
 
 function draftKey(memberId: string): string {

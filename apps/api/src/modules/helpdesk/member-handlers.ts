@@ -345,11 +345,22 @@ export function createMemberHelpdeskHandlers(deps: AppDeps) {
         // request while an omitted field succeeded; the mobile client never sends it today, but any
         // other caller could).
         const rawSubCategory = fields['sub_category'];
+        // ── Story 10.29 — element 1's intake boolean, over MULTIPART ────────────────────────────────
+        // ⚠ Multipart fields arrive as STRINGS ('true' / 'false' / absent / ''). ⛔ Do NOT hand a raw
+        // string to `z.boolean()` — every non-empty string is truthy to a human reader and a type
+        // error to Zod, so the failure would be a confusing 400 rather than a clean false.
+        // ⚠ The SAME `''`-means-absent normalization `sub_category` has above (the 10.2 review
+        // hardening): an explicitly-empty field is treated exactly like an omitted one.
+        // ⛔ Anything that is not literally 'true' is FALSE. A permissive parse here would let a
+        // stray value manufacture element 1 — the defect class this whole story removes.
+        const rawStaffMediation = fields['member_requested_staff_mediated_delivery'];
         const parsed = MemberCreateTicketRequest.safeParse({
           category: fields['category'],
           sub_category: rawSubCategory === undefined || rawSubCategory === '' ? undefined : rawSubCategory,
           subject: fields['subject'],
           body: fields['body'],
+          member_requested_staff_mediated_delivery:
+            rawStaffMediation === undefined || rawStaffMediation === '' ? undefined : rawStaffMediation === 'true',
         });
         if (!parsed.success) {
           throw new BadRequestError('Invalid ticket request', 'helpdesk.invalid_request', {
@@ -364,6 +375,14 @@ export function createMemberHelpdeskHandlers(deps: AppDeps) {
         const createdAt = deps.clock();
         const subCategory = input.sub_category ?? null;
         const storedBody = helpdesk.joinMemberTicketSubjectBody(input.subject, input.body);
+        // ── Story 10.29 — ELEMENT 1, CAPTURED AT INTAKE (Decision `2026-08-15-120` cl.1) ────────────
+        // ⭐ THIS is the route on which element 1's authorship is GENUINE: the member is the
+        // authenticated actor, so the request is theirs in fact and not by transcription (contrast the
+        // `helpline_call` path — `2026-08-15-120` cl.6). The story's AC2 requires BOTH routes to
+        // capture it, which is why the asymmetry is stated rather than papered over.
+        // ⛔ THE SERVER'S CLOCK, never a client value — the wire carries a boolean and nothing else.
+        const memberStaffMediationRequestedAt =
+          input.member_requested_staff_mediated_delivery === true ? createdAt : null;
 
         // (5) member_scope_context — tenancy + subject; geo fields seamed (the 10.1 posture; the v1
         // default policy is pariwar-dimension throughout).
@@ -428,6 +447,8 @@ export function createMemberHelpdeskHandlers(deps: AppDeps) {
               attachment_count: attachments.length,
               sla_first_response_due: sla.slaFirstResponseDue.toISOString(),
               sla_resolution_due: sla.slaResolutionDue.toISOString(),
+              // Story 10.29 — ⛔ the INSTANT written, not the request boolean (`2026-08-15-120` cl.1).
+              member_staff_mediation_requested_at: memberStaffMediationRequestedAt?.toISOString() ?? null,
             }),
           );
 
@@ -472,6 +493,7 @@ export function createMemberHelpdeskHandlers(deps: AppDeps) {
                   poolId: null,
                   moduleId: null,
                   validityLookupId: null,
+                  memberStaffMediationRequestedAt,
                 });
               } catch (err) {
                 if (

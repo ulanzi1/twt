@@ -124,6 +124,24 @@ export const HelpdeskTicketCreatedPayloadSchema = z
     pool_id: z.string().uuid().nullable(),
     module_id: z.string().uuid().nullable(),
     validity_lookup_id: z.string().uuid().nullable(),
+    /**
+     * Story 10.29 — ELEMENT 1 of the ratified three-part gate on staff-mediated data-export delivery
+     * (`2026-08-14-113` cl.1), captured where it is authored: at INTAKE (Decision `2026-08-15-120`
+     * cl.1, implementing `2026-08-15-116` cl.3's option (c)). The ISO instant the member's request
+     * was recorded, or `null` when they did not ask — the ordinary case for almost every ticket.
+     *
+     * ⛔ PRESENT-AND-NULLABLE, deliberately NOT `.optional()`. If the key could be absent, a pre-10.29
+     * genesis and a post-10.29 genesis whose member did not ask would be INDISTINGUISHABLE: "not
+     * captured yet" would read identically to "did not ask". Requiring the key keeps them apart.
+     *
+     * ⛔ The WIRE carries a boolean (`member_requested_staff_mediated_delivery` on the two intake
+     * requests); the SERVER converts it to its own clock instant. A client-supplied `..._at` would
+     * re-create the defect `2026-08-15-115` cl.3 found, with a new author.
+     *
+     * ⚠ On `created_via: 'helpline_call'` this is OPERATOR-TRANSCRIBED at intake — the same posture as
+     * `body` and `operator_attribution` (`2026-08-15-120` cl.6). ⛔ It does NOT prove the member spoke.
+     */
+    member_staff_mediation_requested_at: z.string().datetime({ offset: true }).nullable(),
   })
   .strict()
   .superRefine((v, ctx) => {

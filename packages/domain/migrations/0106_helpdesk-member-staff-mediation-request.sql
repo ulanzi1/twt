@@ -1,0 +1,34 @@
+-- Story 10.29 — Decision `2026-08-15-120` clause 1 (implementing `2026-08-15-116` clause 3, option (c)).
+-- Hand-authored. ⛔ NOT generated: the drizzle-kit snapshots stop at 0020, and regenerating an applied
+-- migration is the 42P07 footgun (memory: project_live_db_test_gotchas).
+--
+-- ── ELEMENT 1 OF THE RATIFIED THREE-PART GATE, CAPTURED WHERE IT IS AUTHORED ───────────────────────
+-- `2026-08-14-113` cl.1 ratified element 1 as "the member's explicit request… author: the member, at
+-- intake". `2026-08-15-115` found what shipped instead: a caller-supplied `z.literal(true)` boolean on
+-- the delivery request — a type with no `false`, hardcoded by its only caller, whose timestamp was
+-- stamped at the instant STAFF submitted. This column is where the fact now lives: recorded at TICKET
+-- INTAKE, on a ticket the delivery route cannot create, and READ by `grantStaffMediatedDelivery`.
+--
+-- ⭐ ONE NULLABLE TIMESTAMP, not a boolean + a timestamp. Two columns can disagree; one cannot.
+-- `asked ⇔ NOT NULL`, `when ⇔ the value` — the IDENTICAL shape
+-- `data_export_delivery_grants.member_request_recorded_at` already uses, which is what makes the
+-- hand-off to migration 0104's `data_export_delivery_grants_three_part_gate_check` a COPY of a value
+-- rather than a translation between two representations.
+--
+-- ⛔ NULLABLE, NO DEFAULT, NO BACKFILL (`2026-08-15-120` cl.4). Every ticket created before today
+-- carries NULL because no request was captured on it — that is a TRUE FACT, not a data gap
+-- (memory: feedback_record_unattested_no_backfill). A DEFAULT or a backfill would manufacture element 1
+-- for tickets whose members never asked, which is precisely the defect this story exists to remove.
+--
+-- ⛔ NOT NOT-NULL, and never will be: the overwhelming majority of helpdesk tickets have nothing to do
+-- with data rights, and "not asked" is the ordinary case.
+--
+-- ⛔ WRITTEN ONLY BY THE PROJECTOR AT GENESIS, from the server's clock. The wire carries a boolean.
+-- ⛔ NO UPDATE PATH: an updatable element 1 recreates the collapse with one extra hop.
+--
+-- ⛔ MIGRATION 0104's THREE-PART-GATE CHECK IS UNTOUCHED BY THIS FILE AND STAYS EXACTLY AS IT IS. The
+-- app-layer read FEEDS that DB backstop; it does not replace it. It gates a PII-disclosure path — the
+-- one path on which a staff actor obtains a member's assembled, DECRYPTED Tier-1 export — precisely so
+-- a caller-side bug cannot create an ungated row.
+
+ALTER TABLE "helpdesk_tickets" ADD COLUMN "member_staff_mediation_requested_at" timestamp with time zone;

@@ -766,17 +766,156 @@ direction: **F-4** (the fifth untrue copy site); **Q2.2's exhausted-Panel sub-po
 NAME** (`member.moderation_appeal.decide` is the author's proposal — Q8(a) ruled *that* a key be
 created, not *which*).
 
+---
+
+## The implementation half — Tasks 3–10
+
+**The three-tier amendment was NOT RATIFIED (2026-08-16), which resolved C-1…C-7 at a stroke.** Q3D's
+option (a) stands. The record of the amendment and of the seven conflicts is RETAINED in the routing
+note and in Decision `2026-08-15-121` clause 8 — the record of what was proposed and why it did not
+stand *is* the governance ([[feedback_supersede_never_reinterpret]]).
+
+⭐ Two of those conflicts were with the **Trust Deed** and are recorded as durable governance facts for
+any future attempt at a tiered moderation appeal: **Clause 18(a)** (the Board is three-to-nine
+Trustees, not three) and **Clause 19(c)** (the Chairperson's casting vote is *mandated*, and a Part 8
+amendment cannot disapply it — that needs a **Clause 27(b)** supplementary *registered* deed).
+
+### ⭐ FIVE FINDINGS — every one raised, none absorbed
+
+**1 — `decided_at` was missing from migration 0107's column-level UPDATE grants, and EVERY
+determination would have failed.** The six decision columns are `status`, `outcome`,
+`reasoned_outcome_ciphertext`, `decided_by_actor_id`, `decided_by_display` **and `decided_at`**; 0107
+granted five. `decideMemberModerationAppeal` sets all six in one statement, so Postgres refused the
+whole statement with **42501 permission denied**. §8.8's appeal could be **filed and never decided**.
+⚠ **Nothing in the pure suite could have caught it** — a column-level GRANT has no representation in
+TypeScript, and domain/handler/contracts all typechecked with every unit test green. It was caught by
+the live-DB spec. Fixed by **forward migration `0108`**, ⛔ never by re-authoring an applied migration.
+
+**2 — the obvious CTA wiring was wrong.** `showAppealCta` derives from `FAILURE_STATES`, which includes
+the two **EXPIRED** states. An expired member is under no moderation and has no act to appeal, so
+wiring the §8.8 destination to it would have sent every expired member to a 422
+`appeal_not_appealable`. Added a narrower `showModerationAppealCta`; ⛔ left `showAppealCta` untouched.
+A polarity-pair test pins the two apart.
+
+**3 — the validity payload carries no `moderation_action_id`.** It derives standing from
+`specialFlags`, so the member surface could not name the act it was appealing — and §8.8 identifies an
+appeal BY the act's §8.6 record. ⛔ Rejected the obvious fix of letting the server INFER the act: an
+inferred subject on a governance write is the shape that lets a member appeal something other than
+what they were shown. Added a member-facing context read instead.
+
+**4 — the routing note's proposed key name is INVALID.** `member.moderation_appeal.decide` fails the
+catalog's own `PERMISSION_KEY_REGEX` (exactly one dot); `permissionKey()` throws on it. Corrected to
+**`member.decide_moderation_appeal`** and recorded at the key, because the note's name is quoted in a
+committed governance artifact. `[Author-committed]` throughout — the ruling minted a key without
+naming it.
+
+**5 — the FIFTH untrue copy site** (`moderation.notice.terminated.body_access_retained`, en + hi),
+absent from the story's four-site inventory. Un-ruled; folded into AC3 as `[Author-committed]`.
+
+### ⚠ The stale epic citation, recorded and NOT fixed
+
+`epics.md:4066` cites `handlers.ts:228`. **STALE, confirmed live**: Story 10.20 inserted the
+escalation-test block ahead of it, `:228` is now the early-legality fast-fail, and the appeal-CTA
+claim lives at **`:414-419`**. ⛔ The epic is not edited.
+
+### AC-by-AC disposition
+
+| AC | Status |
+|---|---|
+| **AC1** | ✅ Routing note with Q1–Q10, committed ALONE (`56663ac`, zero `packages/`/`apps/`); ruling recorded verbatim; per-clause provenance in `2026-08-15-121`; implementation branch cut from the ratifying commit `5bb34d6` |
+| **AC2** | ✅ §8.8 authored between §8.7 and §8.9 in BOTH locales (en `:276`, hi `:274`); reserved-numbers note retired with the "deliberately numbered ahead" sentence preserved; §8.6's gap closed-by-§8.8 with the original preserved as superseded; ⛔ no version bump, no `Effective:` date, no `[LEGAL]` line; **no APPENDIX A entry** — it is an `R`-rule index and §8.8 is a procedure (absence recorded) |
+| **AC3** | ✅ All **five** sites corrected (four named + F-4); Decision 6 held superseded with an explicit fence; outcome copy carries the external-recourse disclosure with the AR-56 **analogy-not-ratification** distinction recorded; microcopy gate green both locales |
+| **AC4** | ✅ `0107` + the partial UNIQUE index (both arms tested), the helpline⇒ticket CHECK, the decision-coherence CHECK, RLS, `MemberModerationAppealId`, two overlay-inert events, the fold-invariance pin |
+| **AC5** | ✅ Exclusion set (actors ∪ ground authors), enforced in-tx pre-write as a typed **409**; polarity pair on real rows; key minted (v33→34, 42→43) with the recorded reuse-check; full four-hook chain + a distinct step-up constant imported by both sides; **the adjudication LIST**, asserted to return a newly-filed appeal before any decision |
+| **AC6** | ✅ `allowed` DIRECTS — the overlay is byte-identical after, no `member.moderation.restored` is emitted, the console says so on the form, and the cross-link carries the lineage. `nextModerationStatus` / `MODERATION_ACTIONS` / `MODERATION_STATUSES` / the `TERMINAL_STATES` sets are untouched |
+| **AC7** | ✅ Both surfaces, one record; member arm opens its own `openScopeTx` with Turnstile + `Idempotency-Key` in HEADERS and 404-not-403; off-portal on `helpdesk.create` (⛔ not `member.data_rights`); admin CTA links to the record and does **not** file on the member's behalf; ⭐ **the flag-ON proof** — the off-portal chain has NO member-session guard, revert-sanity confirmed |
+| **AC8** | ✅ `deferred-work.md` §10.22 in the three registers; the counsel sibling with the PENDING-LEGAL-REVIEW marker and ⛔ **no** fail-closed gate, with the 6.16 asymmetry reasoned in `moderation-appeal.md` §3; publication recorded as a **decided absence**; §8.4a's row re-dispositioned in both locales and **kept in the list**, for two stated reasons; the DPDPA row untouched |
+| **AC9** | ✅ New `FIELD_CLASS_MODERATION_APPEAL`; both Tier-1 columns scrubbed; live-DB test asserts the sentinel and that the **ROW SURVIVES**; plus the arm proving the where-non-null guard (an open appeal is scrubbed without tripping the coherence CHECK). ⚠ **`rtbf-legality.ts` READ and deliberately NOT modified, with the answer recorded both ways.** `resolveRtbfLegality` is a *permission* predicate (is erasure legal at all — `withdrawn`, or the overlay reads `terminated`), **not** a retention hold; there is no hold mechanism there to add a pending appeal to. And no hold is needed for the *record*: the appeal row survives RTBF by design, so the governance act stays readable. ⚠ **But there IS a consequence, and it is named rather than glossed** — a terminated member with an OPEN appeal may still be erased, after which their grounds read as the sentinel and the Panel would determine an appeal whose stated grounds are gone. That is arguably correct (erasure is the member's own act, and §8.8's appeal is theirs to abandon) but it was never ruled. **Carried into `deferred-work.md` as an observation with a named trigger, not closed here** |
+| **AC10** | ✅ Six gates run and green; ⭐ `domain-accessor-invariants` **FIRED** on the new module (two findings, fixed) — the coverage is demonstrated, not asserted; **two** revert-sanity proofs; `ci:local` reported as observed below |
+
+### Test tally
+
+| Suite | Result |
+|---|---|
+| `@twt/domain` unit — `moderation-appeal.test.ts` | **27 passed** |
+| `@twt/domain` live-DB — `moderation-appeal.spec.ts` (:5433) | **14 passed** |
+| `@twt/domain` live-DB — `rtbf-anonymize.spec.ts` (2 added) | **14 passed** |
+| `@twt/domain` — `tests/rbac` | **151 passed** |
+| `@twt/contracts` — `member-moderation-appeal.test.ts` | **21 passed** |
+| `@twt/api` — `moderation-appeal-routes.test.ts` | **8 passed** |
+| `@twt/ui` (3 added) | **108 passed** |
+| `@twt/admin` | **310 passed** |
+
+### Revert-sanity — TWO, both restored byte-identical
+
+1. Mapping `member.moderation.appeal-decided` to `'restore'` in `MODERATION_EVENT_TYPE_ACTIONS` turned
+   **3** overlay-invariance tests RED; restoring returned 27/27.
+2. Adding `memberSession` to the off-portal preHandler chain turned the **flag-ON reachability** test
+   RED (1 failed / 7 passed); restoring returned 8/8.
+
 ### File List
 
-**Added**
+**Governance (added)**
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-15-story-10-22.md`
+- `docs/appeal-procedural-fairness/moderation-appeal.md` — the counsel sibling, PENDING-LEGAL-REVIEW
 
-**Modified**
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `10-22…: ready-for-dev → in-progress`
-- `_bmad-output/implementation-artifacts/10-22-moderation-appeal-mechanism.md` — this record
+**Governance (modified)**
+- `.decision-log.md` — Decision `2026-08-15-121` (the only durable copy of §8.8, both locales)
+- `docs/legal/niyamavali.md` · `docs/legal/niyamavali.hi.md` — ⚠ **GITIGNORED**, not in any commit
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the §10.22 section, three registers
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` · this story file
 
-*(No `packages/`, `apps/`, `docs/` or migration file has been touched. §8.8 is **not** authored, no
-`.decision-log.md` entry exists, and the implementation half has **not** begun.)*
+**Migrations (added)**
+- `packages/domain/migrations/0107_moderation-appeals.sql`
+- `packages/domain/migrations/0108_moderation-appeal-decided-at-grant.sql`
+- `packages/domain/migrations/meta/_journal.json` *(modified — two hand-appended entries)*
+
+**Domain (added)**
+- `packages/domain/src/schema/member_moderation_appeals.ts`
+- `packages/domain/src/policies/member-moderation-appeals-rls.ts`
+- `packages/domain/src/member/moderation/appeal-vocabulary.ts` *(leaf — cycle-safe)*
+- `packages/domain/src/member/moderation/appeal.ts` *(pure rules)*
+- `packages/domain/src/member/moderation/appeal-read.ts`
+- `packages/domain/src/member/moderation/appeal-persist.ts`
+
+**Domain (modified)**
+- `src/ids/index.ts` · `src/schema/index.ts` · `src/policies/index.ts` · `src/index.ts`
+- `src/member/moderation/{events,errors,index,status}.ts` · `src/member/events.ts`
+- `src/member/anonymize.ts` · `src/rbac/{permissions,roles}.ts`
+- `packages/events/src/registry.ts`
+
+**Contracts / api-client**
+- `packages/contracts/src/member-moderation/appeal.ts` *(added)* · `…/index.ts`
+- `packages/contracts/scripts/emit-openapi.ts` · `openapi/v1.yaml`
+- `packages/api-client/src/index.ts`
+
+**API (added)**
+- `apps/api/src/modules/member-moderation-appeals/{routes,handlers,appeal-crypto}.ts`
+
+**API (modified)**
+- `apps/api/src/context.ts` · `src/server.ts` · `src/middleware/error-mapping/index.ts`
+- `apps/api/src/modules/member-moderation/handlers.ts` *(AC3 site 2)*
+
+**UI / apps**
+- `packages/ui/src/member-status/{presenter,view-model}.ts` *(AC3 site 3 + the new predicate)*
+- `apps/mobile/app/(membership)/index.tsx` · `apps/mobile/app/(membership)/appeal.tsx` *(added)*
+- `apps/mobile/lib/moderation-appeal-api.ts` *(added)*
+- `apps/admin/src/modules/member-status/MemberStatusPanel.tsx`
+- `apps/admin/src/modules/moderation-appeals/ModerationAppealsPage.tsx` *(added)*
+- `apps/admin/src/routes/ModerationAppealsRoute.tsx` *(added)* · `src/router.tsx`
+- `apps/admin/src/api/{client,hooks}.ts`
+- `packages/i18n/locales/{en,hi}/common.json`
+
+**Tests (added)**
+- `packages/domain/tests/member/moderation-appeal.test.ts` *(27)*
+- `packages/domain/tests/integration/member/moderation-appeal.spec.ts` *(14, live DB)*
+- `packages/contracts/tests/member-moderation-appeal.test.ts` *(21)*
+- `apps/api/tests/unit/moderation-appeal-routes.test.ts` *(8)*
+
+**Tests (modified)**
+- `packages/domain/tests/rbac/permissions.test.ts` *(v33→34, keys 42→43)*
+- `packages/domain/tests/integration/member/rtbf-anonymize.spec.ts` *(2 added)*
+- `packages/ui/tests/member-status/{moderation,presenter}.test.ts` *(3 added)*
 
 ---
 

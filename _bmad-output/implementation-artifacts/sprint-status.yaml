@@ -1,4 +1,65 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16 (10-22-moderation-appeal-mechanism: in-progress -> review via bmad-dev-story,
+#   off main @ b3e12e1. Niyamavali §8.8 -- THE MODERATION APPEAL -- is AUTHORED AND PANEL-RATIFIED
+#   (Decision 2026-08-15-121), and the appeal the system has claimed for four stories is now real.
+#   GOVERNANCE FIRST, structurally: routing note committed ALONE (56663ac, zero packages/apps paths)
+#   -> the ratification (5bb34d6) -> the implementation branch CUT FROM IT. git log reads
+#   governance -> governance -> implementation ([[feedback_governance_commits_precede_implementation]]).
+#   ⛔ docs/legal/ IS GITIGNORED, so Decision 2026-08-15-121 is the ONLY durable copy of §8.8 -- both
+#   locales verbatim, plus all three consequential edits.
+#   THE PANEL RULED all ten questions option (a), then MATERIALLY AMENDED Q3D into a three-tier ladder
+#   (1 Trustee -> 2 -> all 3, majority vote, tie auto-escalation with NO casting vote, NO recusal,
+#   finality at the third). I STOPPED and surfaced SEVEN CONFLICTS rather than inventing a rule; the
+#   Panel then ruled the amendment NOT RATIFIED, which resolved C-1..C-7 at a stroke. ⛔ The record of
+#   the amendment is RETAINED -- what was proposed and why it did not stand IS the governance.
+#   ⭐ TWO OF THE CONFLICTS WERE WITH THE TRUST DEED, recorded as durable facts for any future tiered
+#   appeal: Clause 18(a) puts the Board at THREE-TO-NINE Trustees (the amendment presumed three), and
+#   Clause 19(c) MANDATES the Chairperson's casting vote -- which a Part 8 amendment CANNOT disapply;
+#   that needs a Clause 27(b) supplementary REGISTERED deed.
+#   ⭐ FIVE FINDINGS, every one raised, none absorbed:
+#   (1) ⛔ MIGRATION 0107 OMITTED `decided_at` FROM ITS COLUMN-LEVEL UPDATE GRANTS. The decide path
+#       sets all six decision columns in ONE statement, so Postgres refused the whole statement with
+#       42501 -- EVERY determination, every time. §8.8's appeal could be FILED AND NEVER DECIDED.
+#       ⚠ Nothing in the pure suite could catch it: a column GRANT has no representation in TypeScript.
+#       Caught by the live-DB spec; fixed by FORWARD migration 0108, never by re-authoring an applied
+#       migration. That is the argument for the live spec existing.
+#   (2) THE OBVIOUS CTA WIRING WAS WRONG. showAppealCta covers the two EXPIRED states, which have no
+#       moderation act -- routing them to the §8.8 form would 422 every expired member. Added a
+#       narrower showModerationAppealCta; ⛔ left showAppealCta untouched. Polarity-pair test.
+#   (3) The validity payload carries NO moderation_action_id (it derives standing from specialFlags).
+#       ⛔ REJECTED the obvious fix of inferring the act server-side -- an inferred subject on a
+#       governance write lets a member appeal something other than what they were shown. Added a
+#       member-facing context read instead.
+#   (4) The routing note's proposed key name is INVALID under the catalog's own PERMISSION_KEY_REGEX
+#       (exactly one dot). Corrected to member.decide_moderation_appeal and RECORDED at the key.
+#   (5) A FIFTH untrue copy site the story's four-site inventory missed
+#       (moderation.notice.terminated.body_access_retained, en+hi). Un-ruled => [Author-committed].
+#   SHIPPED: 0107+0108; member_moderation_appeals keyed to the ACT with a PARTIAL unique index (§8.8
+#   permits re-filing after a determination -- ⛔ NOT Part 9's exhausted-forever); the FILING immutable
+#   by ATTRIBUTE PRIVILEGE (verified live: 42501 on a filing-column update); two events that OMIT
+#   overlayShape so NOTHING moves the overlay -- including on `allowed`, because §8.8 makes an allowed
+#   appeal DIRECT a restore; the different-individual exclusion (actors UNION ground authors) enforced
+#   in-tx pre-write as a typed 409 and ⛔ NEVER a 403; member.decide_moderation_appeal minted (v33->34,
+#   42->43) held by trustee_panel ALONE; TWO intake surfaces / ONE record; and ⭐ the adjudication
+#   QUEUE, without which a filed appeal is reachable only by direct link -- trustee_panel holds NO
+#   helpdesk capability and routed_to_role is inert, so no operator queue can ever surface one (D6).
+#   AC10: all six gates green, and the coverage is DEMONSTRATED -- domain-accessor-invariants FIRED on
+#   the new module (I had hoisted clampLimit into a local; the gate is syntactic and correctly refused
+#   it). TWO revert-sanity proofs, both restored byte-identical.
+#   AC9: both Tier-1 columns scrubbed, the ROW SURVIVES (a governance act survives RTBF; its
+#   member-authored CONTENT does not), plus the arm proving the where-non-null guard.
+#   ⚠ OBSERVED NOT CLOSED: a terminated member with an OPEN appeal is still erasable, after which the
+#   Panel would determine an appeal whose grounds read as the sentinel. Arguably correct -- but never
+#   ruled. Carried with a named trigger; ⛔ do not close it by letting a disciplinary matter defeat a
+#   statutory right.
+#   ⚠ epics.md:4066's handlers.ts:228 citation confirmed STALE; recorded, ⛔ the epic NOT edited.
+#   ⚠ The Panel queue is reported as LAST ENUMERATED (NINE) and expressly NOT re-enumerated; this
+#   story discharges none and ADDS one (counsel review of §8.8). Item (ii), the copy-truth defect,
+#   becomes DISCHARGEABLE -- ⛔ not discharged.
+#   ⛔ NOT DONE, deliberately: the termination_access_block flip (Panel-exclusive, still only
+#   DISCHARGEABLE); any change to Epic 6's claim appeal; any new ModerationStatus/Action; publication
+#   of an outcome (a DECIDED absence); and NO fail-closed legal gate -- the 6.16 asymmetry is RULED,
+#   with the reasoning recorded in docs/appeal-procedural-fairness/moderation-appeal.md §3.)
 # last_updated: 2026-08-15n (10-22-moderation-appeal-mechanism: ready-for-dev -> in-progress via
 #   bmad-dev-story, off main @ b3e12e1 (clean, fetched, == origin/main). GOVERNANCE HALF ONLY --
 #   the implementation half has NOT begun and §8.8 is NOT authored.
@@ -6847,7 +6908,7 @@ development_status:
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
   10-21-off-portal-dpdpa-access: done
-  10-22-moderation-appeal-mechanism: in-progress
+  10-22-moderation-appeal-mechanism: review
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done

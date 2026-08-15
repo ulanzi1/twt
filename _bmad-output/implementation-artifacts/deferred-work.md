@@ -5007,6 +5007,32 @@ attempt at a tiered moderation appeal:
   two-thirds resolution **and a supplementary registered deed**. ⚠ There is also **no Chairperson
   concept anywhere in the codebase**.
 
+### 6b. ⚠ OBSERVED, NOT CLOSED — an erased member with an OPEN appeal
+
+AC9 required `rtbf-legality.ts` be checked for whether a pending appeal is a lawful-retention
+consideration, **and the answer recorded either way**. It was read, and **not modified**. The answer,
+both halves:
+
+- **No change is owed to the predicate.** `resolveRtbfLegality` decides whether erasure is *legal at
+  all* (lifecycle `withdrawn`, or the overlay reads `terminated`). It is a **permission** predicate,
+  not a **retention hold**, and there is no hold mechanism in it to which a pending appeal could be
+  added. Nor is one needed for the RECORD: `member_moderation_appeals` rows survive RTBF by design,
+  so the governance act stays readable.
+
+- **⚠ But there is a consequence, and it is named rather than glossed.** A **terminated** member is
+  erasable, and termination is exactly the state from which §8.8 appeals are most likely open. After
+  erasure the member's `grounds_ciphertext` reads as the sentinel — so **the Trustee Panel would
+  determine an appeal whose stated grounds are gone.**
+
+  It is arguable this is *correct*: erasure is the member's own act, §8.8's appeal is theirs to
+  abandon, and the alternative (blocking a DPDPA erasure because the Trust has an open disciplinary
+  matter) is a worse posture. ⛔ **But it was never ruled**, and the Panel has not been asked whether
+  an erasure should CLOSE an open appeal, WARN the member, or do neither.
+
+**Re-trigger:** the next story touching either RTBF or the moderation appeal. ⛔ Do not close this by
+adding an erasure-blocks-appeal rule without a ruling — that would let a disciplinary matter defeat a
+statutory right.
+
 ### 7. What this story did NOT touch, stated so it is not inferred
 
 ⛔ **No `termination_access_block` flag change.** It remains DEFAULT OFF and **dischargeable, not

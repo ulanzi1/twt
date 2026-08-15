@@ -19,3 +19,5 @@ export {
   markExportConsumed,
   markExportFailed,
 } from './store.js';
+// Story 10.21 AC-R1 — delivery grants + the three-part fallback gate.
+export * from './delivery.js';

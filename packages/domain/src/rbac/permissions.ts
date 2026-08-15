@@ -440,10 +440,20 @@ export function permissionKey(value: string): PermissionKey {
 // `2026-08-13-104`, D5), so the model moves and the key set does not.
 // ⛔ **`PERMISSION_CATALOG.keys` stays at 41**, and `permissions.test.ts`'s `toHaveLength(41)` is
 // unchanged; if that number moves in this story, a key was minted and the story exceeded its scope.
+// ⚠ SUPERSEDED AS A STANDING RULE BY STORY 10.21 ([[feedback_supersede_never_reinterpret]] — superseded
+// in place, not deleted). The sentence above was **Story 6.17's own scope bound**, correct for 6.17 and
+// never a standing invariant of this catalog. Story 10.21 mints `member.data_rights`, so the count moves
+// 41 → 42 legitimately. Read the line above as historical: it constrained 6.17, and it constrains nothing
+// after it.
 // ⛔ NO new key, NO new role, NO route addition, NO migration to `role_grants` (`role` is plain
 // `text`). The migration this story DOES carry (`0102`) adds a column to `claim_ground_inspections`
 // — a RESOURCE attribute, not a capability one.
-export const PERMISSION_CATALOG_VERSION = 32 as const;
+// ── Bumped 32 → 33 at Story 10.21 (added ONE key) ────────────────────────────────────────────────
+// `member.data_rights` — the off-portal DPDPA FULFILMENT key (Niyamavali §8.4's "identity-verified
+// administrative process"). A RETURN TO THE NORMAL SHAPE after 6.17's key-less bump: it mints a key, so
+// `PERMISSION_CATALOG.keys` moves 41 → 42 and `permissions.test.ts`'s length assertion moves with it.
+// ⚠ This is the bump that supersedes 6.17's "stays at 41" scope note above.
+export const PERMISSION_CATALOG_VERSION = 33 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -500,6 +510,38 @@ export const SEED_PERMISSION_KEYS = [
   // `2026-08-10-096` clause 3). Widening this key's check site would silently convert a concurrent
   // authority into an exclusive one across all of Part 8.
   'member.restore_terminated',
+  // Story 10.21 — the off-portal DPDPA data-rights FULFILMENT key. Gates the identity-verified
+  // administrative process Niyamavali §8.4 requires for a member whose authenticated access has ended:
+  // building the access/portability artifact off-session, and executing erasure, on a member with NO
+  // session. Checked at `dimension: 'pariwar'` (a data-rights request is Pariwar-scoped and the tenant IS
+  // the target — the `helpdesk.create` / `helpdesk.respond` pariwar-wide-key precedent).
+  //
+  // ── The separation this key EXISTS to express (AC3) ────────────────────────────────────────────────
+  // Filing a data-rights request and EXECUTING it on a member with no session are different authorities.
+  // Intake rides the existing `helpdesk.create` (Story 10.3), which `helpline_operator` holds.
+  // ⛔ `helpline_operator` is deliberately NOT granted this key: the operator FILES but does not EXECUTE.
+  //
+  // ⛔ `district_admin` is NOT granted — a district-ceiling grant cannot satisfy a `pariwar`-dimension
+  // check. This is the ALREADY-RULED containment result recorded for `helpdesk.respond`
+  // ([[project_rbac_geo_scope_containment]]), not an oversight. Do not "fix" it.
+  // ⛔ `state_trustee` is NOT granted, for the SAME structural reason in the other direction (its `state`
+  // ceiling is BROADER than `pariwar`, and containment is asymmetric in EITHER direction).
+  // ⛔ No `dpo` role is minted. FR-99 activates at the MeitY threshold and DPO appointment is OQ-7 (open);
+  // minting a bundle for an unconstituted body seeds an INERT capability (the Story 10.18 lesson). The
+  // DPO is the intended future holder of this key — recorded here as a comment, not as a bundle.
+  //
+  // ⭐ SETTLED — Decision `2026-08-14-109` clause 7 RULED Escalation 10 (raised by `2026-08-14-107`):
+  // *"NO DPDPA ACTION INHERENTLY REQUIRES TRUSTEE PANEL AUTHORITY"* — not access, not portability, not
+  // correction, and not erasure of a terminated member; its adjacency to the Panel-exclusive
+  // `member.restore_terminated` does not carry Panel exclusivity across. Story 10.21's AC-R3 closed
+  // with a recorded disposition and NO code changes.
+  // ⛔ Do NOT grant this key to `trustee_panel` — the exclusion is now RULED ("ruled: not required"),
+  // not pending a ruling, and reversing it would require SUPERSEDING `109`
+  // ([[feedback_supersede_never_reinterpret]]). The Trustee Panel holds governance authority and no
+  // operational queue: `trustee_panel` (roles.ts) holds no helpdesk capability at all.
+  // STEP-UP: gated behind a DISTINCT step-up context (`DATA_RIGHTS_STEP_UP_CONTEXT`), so no other
+  // elevation satisfies it and vice-versa.
+  'member.data_rights',
   // Story 4.6 — the FR-12A Member Validity READ key. Distinct from the write-oriented
   // `member.suspend`/`member.moderate` (a caller that may READ a member's validity is not
   // necessarily one that may suspend/moderate them, and vice-versa). Granted to the

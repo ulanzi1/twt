@@ -16,7 +16,14 @@
 // The row transitions status (`pending → ready|failed → consumed|expired`), the job writes the
 // artifact, the download stamps `consumed_at`, and the TTL vacuum zeroes `artifact_ciphertext`. All
 // UPDATEs — hence the GRANT widens beyond the append-only Life Events tables (mirror
-// member_withdrawals). NO direct DELETE — RTBF removal (Story 3.12) is via the member FK cascade.
+// member_withdrawals). NO direct DELETE.
+// ⛔ CORRECTED at Story 10.21 (AC11). This line previously read "RTBF removal (Story 3.12) is via the
+// member FK cascade" — that was NEVER TRUE. Story 3.12 shipped RTBF as a SOFT delete: `member/
+// anonymize.ts` performs zero `delete()` calls and the `members` row is RETAINED, so `ON DELETE
+// CASCADE` never fires. The claim had asserted a protection that did not exist since 3.11 landed.
+// The REAL mechanism is now an explicit block at the end of `anonymizeMember`: it NULLs
+// `artifact_ciphertext` on every row of the member and flips `pending`/`ready` → `expired`, in the
+// erasure's own transaction. (The `consumed` STATUS is deliberately left alone — RULED, `2026-08-14-109` cl.6.)
 //
 // ── PII discipline (R1) ────────────────────────────────────────────────────────────────────────────
 //   · status / failed_reason  → NON-PII bounded values (contracts `DataExportStatus`; failed_reason is
@@ -35,7 +42,10 @@
 import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
-import type { DataExportId, MemberId, PariwarId } from '../ids/index.js';
+import type { DataExportId, HelpdeskTicketId, MemberId, PariwarId } from '../ids/index.js';
+
+/** The originating channel of an export request (migration 0103 CHECK mirrors this union). */
+export type DataExportRequestedVia = 'member_portal' | 'off_portal_admin';
 import { members } from './members.js';
 
 export const dataExports = pgTable(
@@ -81,6 +91,27 @@ export const dataExports = pgTable(
     artifactBytes: integer('artifact_bytes'),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+
+    // ── Story 10.21 — off-portal DPDPA provenance (migration 0103) ────────────────────────────────
+    // ⚠ These three DO carry DB-level constraints, UNLIKE `status` / `failed_reason` above. That is
+    // deliberate, not an inconsistency: `status` is a DISPLAY value, while `requested_via` gates a
+    // PII-DISCLOSURE PATH. An unconstrained column lets a mis-set 'member_portal' DISGUISE an
+    // off-portal build in every audit query that filters on it. See migration 0103's header.
+
+    // The originating channel. NOT NULL DEFAULT 'member_portal' — every pre-0103 row genuinely WAS a
+    // member self-service export (that was the only way to create one), so the default states a fact.
+    // DB CHECK constrains it to the two-value union.
+    requestedVia: text('requested_via').notNull().default('member_portal').$type<DataExportRequestedVia>(),
+
+    // The acting ADMIN for an off-portal build; NULL for every member self-service row. Deliberately
+    // un-FK'd to `users` — an attribution snapshot must stay readable if the actor row disappears.
+    requestedByActorId: uuid('requested_by_actor_id'),
+
+    // The originating helpdesk ticket for an off-portal build; NULL otherwise. FK → helpdesk_tickets
+    // ON DELETE SET NULL. ⛔ PROVENANCE ONLY — it records WHICH REQUEST caused the build, never WHAT
+    // the build may see. Every fulfilment read keys on `member_id` (AC4); nothing resolves subject
+    // scope through this column, and nothing may start.
+    helpdeskTicketId: uuid('helpdesk_ticket_id').$type<HelpdeskTicketId>(),
   },
   (t) => [
     // The active-export / status lookup key (a member's exports).

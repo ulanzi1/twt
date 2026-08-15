@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MEMBER_LIFECYCLE_STATES,
   type MemberEventInput,
   type MemberLifecycleState,
   memberStateMachine,
@@ -114,8 +115,15 @@ describe('member lifecycle reducer — transitions', () => {
     expect(memberStateMachine.step('pending-kyc', ev('member.vyawastha_shulk_paid', { utr: 'X', amount_inr: 1 }))).toBe('pending-kyc');
     // kyc_completed when already active
     expect(memberStateMachine.step('active', ev('member.kyc_completed'))).toBe('active');
-    // rtbf from a non-withdrawn state
-    expect(memberStateMachine.step('active', ev('member.rtbf_anonymized'))).toBe('active');
+    // ⚠ REWRITTEN by Story 10.21 — this line previously asserted
+    //   step('active', rtbf) === 'active'
+    // i.e. that RTBF from a non-`withdrawn` state is IDENTITY. That is now the EXACT OPPOSITE of the
+    // truth: the arm was widened to every label but `anonymized`, because termination is an overlay and
+    // a terminated member's lifecycle state is whatever it already was — so an `active` member CAN be
+    // legally erased, and an identity return there is precisely the PHANTOM ANONYMIZATION the widening
+    // exists to prevent. ⛔ Not deleted, rewritten: the pinned invariant moved, and the move is recorded.
+    // The positive assertions now live in the two 10.21 blocks below.
+    // (RTBF is only identity from `anonymized` itself — asserted in the totality block.)
     // grace_expired when not in grace
     expect(memberStateMachine.step('active', ev('member.grace_expired'))).toBe('active');
     // withdrawal from lock-in (funds locked) → no-op
@@ -183,5 +191,56 @@ describe('member lifecycle reducer — determinism + idempotency (AC2)', () => {
       eventVersion: i + 1,
     })) as unknown as ReplayRows;
     expect(replayMemberState(rows)).toBe(fold(stream));
+  });
+});
+
+describe('Story 10.21 — member.rtbf_anonymized is legal from EVERY label but `anonymized` (AC7)', () => {
+  it('TOTALITY — the accepted `from` set is DERIVED FROM THE ENUM, never hand-listed', () => {
+    // ⭐ This is the test that makes a TENTH lifecycle label a deliberate decision rather than a silent
+    // re-opening of the phantom-anonymization hole. It iterates `MEMBER_LIFECYCLE_STATES` itself, so a
+    // new label is covered the moment it is added — ⛔ do not replace this loop with a literal array,
+    // which is exactly the mistake that once left four `pending-*`/`lock-in` labels uncovered.
+    const anonymizing = MEMBER_LIFECYCLE_STATES.filter((s) => s !== 'anonymized');
+    expect(anonymizing).toHaveLength(MEMBER_LIFECYCLE_STATES.length - 1);
+
+    for (const from of anonymizing) {
+      expect(memberStateMachine.step(from, ev('member.rtbf_anonymized'))).toBe('anonymized');
+    }
+
+    // ...and `anonymized` is the ONE identity case (terminal, and re-erasing is a no-op, not a throw).
+    expect(memberStateMachine.step('anonymized', ev('member.rtbf_anonymized'))).toBe('anonymized');
+  });
+
+  it('the documentation matrix carries a row for every accepted `from` state', () => {
+    // The matrix is documentation-only, but a matrix that disagrees with the reducer is worse than no
+    // matrix — it is a false map. Derived from the enum for the same reason as above.
+    // ⛔ Assert the matrix EXISTS before filtering it. `transitions` is optional on the StateMachine
+    // type, and a `?? []` fallback here would make every assertion below pass vacuously against an
+    // absent matrix — the exact shape of vacuity this story polices elsewhere.
+    const { transitions } = memberStateMachine;
+    expect(transitions).toBeDefined();
+    const rows = transitions!.filter((t) => t.event === 'member.rtbf_anonymized');
+    const documented = rows.map((t) => t.from).sort();
+    const expected = MEMBER_LIFECYCLE_STATES.filter((s) => s !== 'anonymized').slice().sort();
+    expect(documented).toEqual(expected);
+    for (const row of rows) expect(row.to).toBe('anonymized');
+  });
+
+  it('replay reaches `anonymized` from a live `active` stream (the off-portal case)', () => {
+    // The end-to-end shape 10.21's off-portal path produces: a member who never withdrew, erased under
+    // the termination overlay. Under the pre-10.21 reducer this replayed to 'active' with the PII gone.
+    const stream: MemberEventInput[] = [
+      ev('member.signup_initiated'),
+      ev('member.kyc_completed'),
+      ev('member.vyawastha_shulk_paid', { utr: 'U1', amount_inr: 1 }),
+      ev('member.lock_in_expired', { kyc_verified: true }),
+      ev('member.rtbf_anonymized'),
+    ];
+    const rows = stream.map((e, i) => ({
+      eventType: e.type,
+      payload: e.payload,
+      eventVersion: i + 1,
+    })) as unknown as ReplayRows;
+    expect(replayMemberState(rows)).toBe('anonymized');
   });
 });

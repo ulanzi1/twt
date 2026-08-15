@@ -144,6 +144,11 @@ export * from './reconciliation/index.js';
 // files — the RN bundle boundary); tuples are drift-guarded against @twt/domain by a test-only
 // sync-guard (tests/helpdesk.test.ts).
 export * from './helpdesk/index.js';
+// Story 10.21 — off-portal DPDPA data-rights fulfilment DTOs + the two SHARED constants
+// (`DPDPA_DATA_RIGHTS_SUBCATEGORY`, `DATA_RIGHTS_STEP_UP_CONTEXT`). They live here because
+// `apps/admin` cannot import `apps/api`, and both surfaces must import the SAME symbol — a typo in
+// either token fails silently rather than loudly.
+export * from './member-data-rights/index.js';
 
 // Story 10.5 — the News/Blog `[SURFACE]` transport contracts (FR-51): the audience/status/channel
 // enums (sync-guarded against the @twt/domain pgEnum tuples), the create/update/submit/approve/

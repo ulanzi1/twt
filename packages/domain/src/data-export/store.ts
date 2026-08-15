@@ -8,8 +8,12 @@
 import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { DataExportId, MemberId, PariwarId } from '../ids/index.js';
-import { type DataExportRow, dataExports } from '../schema/data_exports.js';
+import type { DataExportId, HelpdeskTicketId, MemberId, PariwarId } from '../ids/index.js';
+import {
+  type DataExportRequestedVia,
+  type DataExportRow,
+  dataExports,
+} from '../schema/data_exports.js';
 
 /**
  * The single ACTIVE export for a member, if any — a `pending` row OR a `ready` row that is neither
@@ -45,7 +49,25 @@ export async function findActiveExport(
 /** Insert a fresh `pending` export row. Returns the inserted row (with the generated `export_id`). */
 export async function insertDataExport(
   client: Db,
-  input: { memberId: MemberId; pariwarId: PariwarId; requestedAt: Date },
+  input: {
+    memberId: MemberId;
+    pariwarId: PariwarId;
+    requestedAt: Date;
+    /**
+     * Story 10.21 — the originating channel. OMITTED for the member self-service path, which keeps
+     * its shipped behaviour unchanged via the column DEFAULT `'member_portal'`. ⛔ Do not make this
+     * required: the member caller must not have to name a channel it never had to name before.
+     */
+    requestedVia?: DataExportRequestedVia;
+    /** The acting ADMIN, for an off-portal build only. NULL for member self-service. */
+    requestedByActorId?: string | null;
+    /**
+     * The originating helpdesk ticket, for an off-portal build only. PROVENANCE ONLY — it records
+     * WHICH REQUEST caused the build, never WHAT the build may see. ⛔ Nothing resolves subject scope
+     * through this column; every fulfilment read keys on `member_id`.
+     */
+    helpdeskTicketId?: HelpdeskTicketId | null;
+  },
 ): Promise<DataExportRow> {
   const [row] = await client
     .insert(dataExports)
@@ -54,6 +76,11 @@ export async function insertDataExport(
       pariwarId: input.pariwarId,
       status: 'pending',
       requestedAt: input.requestedAt,
+      // Spread-omitted rather than passed as undefined so the member path genuinely relies on the
+      // column DEFAULT, keeping its behaviour identical to before Story 10.21.
+      ...(input.requestedVia === undefined ? {} : { requestedVia: input.requestedVia }),
+      ...(input.requestedByActorId === undefined ? {} : { requestedByActorId: input.requestedByActorId }),
+      ...(input.helpdeskTicketId === undefined ? {} : { helpdeskTicketId: input.helpdeskTicketId }),
     })
     .returning();
   if (!row) throw new Error('insertDataExport: INSERT returning produced no row');

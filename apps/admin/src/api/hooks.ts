@@ -311,6 +311,20 @@ export function useRequestStepUp() {
   return useMutation({ mutationFn: (actionContext: string) => api.requestStepUp(actionContext) });
 }
 
+/**
+ * Request the step-up OTP for the DATA-RIGHTS context (Story 10.21).
+ *
+ * ⛔ Goes through `api.requestDataRightsStepUp`, which supplies the context from the ONE imported
+ * constant — never a literal. `requireStepUp` compares a bare string by equality and the contract
+ * carries no allow-list, so a typo'd context elevates the session under something that can never
+ * satisfy the gate: a permanently broken action with nothing anywhere naming the cause.
+ * ⚠ This hook exists because the helper it wraps shipped defined-and-uncalled (round-2 code review) —
+ * the panel it was written for had no elevation flow at all.
+ */
+export function useRequestDataRightsStepUp() {
+  return useMutation({ mutationFn: () => api.requestDataRightsStepUp() });
+}
+
 /** Verify a step-up OTP → the session gains the fresh elevated context the intake route needs. */
 export function useVerifyStepUp() {
   return useMutation({ mutationFn: (otp: string) => api.verifyStepUp(otp) });
@@ -859,6 +873,153 @@ export function useHelpdeskTransitions(pariwarId: string, ticketId: string) {
   const reply = useMutation({ mutationFn: (message: string) => api.replyHelpdeskTicket(pariwarId, ticketId, message), onSettled });
   const resolve = useMutation({ mutationFn: (message: string) => api.resolveHelpdeskTicket(pariwarId, ticketId, message), onSettled });
   return { pickUp, reply, resolve };
+}
+
+// ── Story 10.21 — off-portal DPDPA data-rights fulfilment ─────────────────────
+
+/** Query key for the member's currently-active export (code-review addition, this story). */
+export function activeDataRightsExportKey(pariwarId: string, memberId: string): readonly unknown[] {
+  return ['data-rights-active-export', pariwarId, memberId];
+}
+
+/**
+ * The member's currently-active export, or `null` — lets the operator surface recover
+ * `builtExportId` across a reload instead of relying solely on `buildExport`'s in-memory mutation
+ * result (code-review addition, this story).
+ */
+export function useActiveDataRightsExport(
+  pariwarId: string,
+  memberId: string | null,
+  isDataRightsTicket: boolean,
+) {
+  return useQuery({
+    queryKey: activeDataRightsExportKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getActiveDataRightsExport(pariwarId, memberId as string),
+    // ⛔ GATED ON THE TICKET BEING A DPDPA ONE, not merely on having a subject member (round-2 code
+    // review). The route requires `member.data_rights` AND a fresh data-rights elevation, so keying
+    // only on `memberId !== null` fired a request that 403s on EVERY member-linked ticket-detail mount
+    // — payment queries, address changes — for every operator who will never open this panel.
+    enabled: memberId !== null && isDataRightsTicket,
+  });
+}
+
+/**
+ * The two fulfilment mutations for a data-rights ticket.
+ *
+ * ⛔ A FRESH `Idempotency-Key` PER USER-INITIATED ATTEMPT, generated here. The route REQUIRES the
+ * header and refuses a replay of the same key with a typed 409 — which is the correct behaviour for an
+ * irreversible act, and the reason a key must not be reused across separate deliberate attempts.
+ * ⚠ It is generated at MUTATE time, not at hook time: a key captured once per render would make an
+ * operator's genuine second attempt (after fixing a problem) look like a replay and be refused.
+ */
+export function useDataRightsFulfilment(pariwarId: string, ticketId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  const onSettled = (): void => {
+    void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
+    void qc.invalidateQueries({ queryKey: ['helpdesk-queue', pariwarId] });
+    // ⭐ A successful build changes what `useActiveDataRightsExport` should return — refetch it so the
+    // recovered `builtExportId` is available immediately, not only after a reload.
+    if (memberId !== null) {
+      void qc.invalidateQueries({ queryKey: activeDataRightsExportKey(pariwarId, memberId) });
+    }
+  };
+  const buildExport = useMutation({
+    mutationFn: () => {
+      if (memberId === null) throw new Error('This ticket names no subject member');
+      return api.buildOffPortalExport(pariwarId, {
+        memberId,
+        helpdeskTicketId: ticketId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  const erasure = useMutation({
+    mutationFn: () => {
+      if (memberId === null) throw new Error('This ticket names no subject member');
+      return api.fulfilOffPortalErasure(pariwarId, {
+        memberId,
+        helpdeskTicketId: ticketId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  return { buildExport, erasure };
+}
+
+/**
+ * AC-R1 delivery + AC-R2 correction mutations.
+ *
+ * ⛔ `memberDirect` is the PRIMARY. `staffMediated` is a NARROW EXCEPTION and the UI must present it
+ * as one — it is reachable only where the member THEMSELVES asked and the primary route has already
+ * been tried and did not complete (the server enforces the second condition; the operator cannot
+ * assert it).
+ */
+export function useDataRightsDelivery(
+  pariwarId: string,
+  ticketId: string,
+  memberId: string | null,
+  exportId: string | null,
+) {
+  const qc = useQueryClient();
+  const onSettled = (): void => {
+    void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
+  };
+  const requireIds = (): { memberId: string; exportId: string } => {
+    if (memberId === null) throw new Error('This ticket names no subject member');
+    if (exportId === null) throw new Error('Build the export first — there is nothing to deliver yet');
+    return { memberId, exportId };
+  };
+  const memberDirect = useMutation({
+    mutationFn: () => {
+      const { memberId: m, exportId: e } = requireIds();
+      return api.grantMemberDirectDelivery(pariwarId, {
+        memberId: m,
+        exportId: e,
+        helpdeskTicketId: ticketId,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  const staffMediated = useMutation({
+    mutationFn: (attestation: string) => {
+      const { memberId: m, exportId: e } = requireIds();
+      return api.grantStaffMediatedDelivery(pariwarId, {
+        memberId: m,
+        exportId: e,
+        helpdeskTicketId: ticketId,
+        attestation,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled,
+  });
+  return { memberDirect, staffMediated };
+}
+
+/** AC-R2 — record a correction against the ticket. ⛔ A record, not a member-profile write. */
+export function useRecordCorrection(pariwarId: string, ticketId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      requestedChange: string;
+      actionTaken: string;
+      outcome: 'recorded' | 'applied' | 'declined';
+    }) => {
+      if (memberId === null) throw new Error('This ticket names no subject member');
+      return api.recordDataRightsCorrection(pariwarId, {
+        memberId,
+        helpdeskTicketId: ticketId,
+        ...input,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
+    },
+  });
 }
 
 // ── News/Blog admin authoring hooks (Story 10.5) ──────────────────────────────

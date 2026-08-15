@@ -4,6 +4,121 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred / recorded from: Story 10.21 — off-portal DPDPA access (2026-08-14)
+
+⛔ **Every re-trigger below names a STORY or a concrete event — never an EPIC.** A deferral naming an
+epic expires unowned: epics carry no acceptance criteria, so no story owns the work, and it is found
+later by a story tripping over it ([[project_r7_fact_producer_unbuilt]]). Story 10.21 hit exactly that
+class twice (the `emptySection('Epic 8')` / `emptySection('Epic 6')` placeholders), which is why this
+section is strict about it.
+
+### ⛔ RTBF revokes NO live member session — the wider defect AC12 does NOT close
+
+`anonymizeMember` performs **zero** refresh-token, elevation or session writes, and
+`requireMemberSession` is a **stateless JWT verify** — no DB read, no state check — against a
+**~15-minute** access TTL. Login and refresh *do* block for a terminated member, so no NEW session
+mints; but an **existing token survives the erasure** for the remainder of its TTL.
+
+⇒ For up to ~15 minutes after their own erasure, an erased member can reach **any session-only route**.
+
+Story 10.21 (AC12) closes **only the `data_exports` surface**, by adding the shipped-convention
+`TERMINAL_STATES` guard to **both** enqueue callers. The five other guards
+(`nominee` / `member-terms` / `medical` / `vyawastha-shulk` / `life-events`) cover most member write
+surfaces — but the gap is **session revocation itself**, and a per-route guard is not a fix for it.
+
+- **Scope:** *"RTBF must revoke live member sessions"* — revoke refresh tokens and invalidate
+  outstanding access tokens (or add a cheap terminal check to the session guard) at erasure time.
+- **Owner:** a **named successor story**. ⛔ Not an epic, and ⛔ not "the next story that touches auth".
+- **Re-trigger:** **immediate** — it is a live, reachable PII-adjacent hole, not a latent one.
+  ⚠ It also grows: every NEW session-only member route inherits it and needs its own guard until the
+  revocation is built.
+
+### ⛔ The inert `ON DELETE CASCADE` class — WIDER than `data_exports` (Escalation 6)
+
+`migrations/0033_data-exports.sql` and `schema/data_exports.ts` **both** stated that RTBF removal
+happens via `ON DELETE CASCADE` on the member FK. **It never fired.** Story 3.12 shipped RTBF as a
+**SOFT** delete — `member/anonymize.ts` performs zero `delete()` calls and the `members` row is
+retained — so the documented mechanism has been **inert since 3.11 landed**, and nothing detected it
+because no story until 10.21 built an export for a member it also erases.
+
+Story 10.21 (AC11) closes it **for `data_exports` only**, with an explicit scrub in the erasure
+transaction, and corrects both stale comments in place.
+
+⚠ **The class is wider.** Every table carrying `ON DELETE CASCADE` to `members.member_id` **and relying
+on that cascade for RTBF** has the same inert guard — and each one is a silent PII-retention hole.
+
+- **Scope:** audit **every** `members` FK cascade against `anonymizeMember`'s coverage set; for each,
+  either add an explicit scrub or record why the table holds no member PII. Correct any further
+  comments that assert a protection which does not exist.
+- **Owner:** a **named successor story**. ⛔ Never an epic ([[project_r7_fact_producer_unbuilt]]).
+- **Re-trigger:** **immediate**. ⚠ ⛔ Do **not** wait for another story to trip over it — that is
+  precisely how this one surfaced, ~2 epics late.
+
+### ⛔ TRANSFERRED BY RULING — the export-content data contract (Decision `2026-08-14-109` clause 9)
+
+The Trustee Panel ruled (consent-sheet **Row 8**, option (a)) that **a separate successor story owns
+the export-content data contract**. Story 10.21 ships **without** `contribution_history` /
+`claim_history` content.
+
+⛔ **TRANSFERRED, NOT ABANDONED.** The work is real and now has a different owner
+([[feedback_closure_language_precision]] — "discharged by transfer of ownership" is not "done").
+
+**Scope the successor story owns:**
+1. **Replace the two structurally-empty section contracts.** `EmptyExportSection` pins
+   `records: z.array(z.never())` and `_status: z.literal('no_source_system_at_this_epic')`, and the
+   build job contract-validates every section on every export — so real records are impossible until
+   both are replaced. ⚠ The failure surfaces at **job runtime**, not at typecheck.
+2. **Define the record shapes.** ⛔ Never specified by anyone. This is a data-contract decision with
+   PII consequences: the records land **decrypted** in a ZIP.
+3. **Implement the CLAIMANT-ONLY predicate** ruled at Decision `2026-08-14-109` clause 5
+   (consent-sheet Row 5, option (b)). ⭐ **This ruling is what closes the third-party-PII hole**: the
+   requesting member may appear across seven tables in six roles, and an unqualified join would export
+   **another member's** identity, nominee bank details or medical disclosure. Claimant-only is
+   single-subject by construction. ⛔ Do not widen it to any other role without a superseding ruling.
+4. **Honour the withholding ruled at clause 3** — the moderation decision note, 10.20's three further
+   Tier-1 columns and `actor_display` are **NOT** exported. ⛔ Do not re-open by adding them.
+5. **The `EXPORT_SCHEMA_VERSION` bump and its collateral** — `ManifestSection.schemaVersion` is a
+   `z.literal(1)` inside a `.strict()` object that the job parses on **every** build, so bumping one
+   without the other makes every export fail. Three shipped assertions in
+   `data-export.spec.ts` must be **rewritten, not deleted**.
+
+- **Owner:** ⛔ **A NAMED SUCCESSOR STORY — AND IT IS NOT YET NAMED.** ⚠ This is the single most
+  fragile thing in this record: an unnamed successor is *exactly* how a deferral expires unowned, which
+  is the class that produced `emptySection('Epic 8')` / `emptySection('Epic 6')` in the first place
+  ([[project_r7_fact_producer_unbuilt]]). ⛔ Naming it is owed by the PO/Panel, immediately.
+- **Re-trigger:** **immediate** — the story needs a number and a place in the sprint plan. It does
+  **not** wait for anything: every input it needs is now ruled.
+
+### FR-95 export contents still absent (recorded, NOT deferred silently)
+
+FR-95 names *"member profile, contribution history, attribution chain, Contribution Notes (PDFs)"*.
+Two named contents are still **not** in the export, and neither is blocked by Escalations 7/8:
+
+1. **Contribution-Note PDFs** — Story **8.7** renders them. They are *generated artifacts*, not
+   records, so they need a different section shape from the record-array sections.
+   **Re-trigger:** the first story that gives `data-export/assemble.ts` a non-record (binary/artifact)
+   section — or, if none arrives, the story that resolves Escalation 7, since it is redefining the
+   section contracts anyway and this is the cheapest moment to add the shape.
+2. **The member's helpdesk tickets** (Stories 10.1–10.4) — **member-authored data** about the member,
+   absent from the export entirely. ⚠ Not named by FR-95 (which predates the helpdesk), which is
+   exactly why it would otherwise never be noticed.
+   **Re-trigger:** the story that resolves **Escalation 7** (the section-contract replacement) must
+   decide *in writing* whether helpdesk tickets are owed under the access right. ⛔ Deciding by
+   omission is not a decision.
+
+⚠ **UPDATED 2026-08-14.** `contribution_history.json` and `claim_history.json` were previously
+recorded here as **BLOCKED, not deferred** (Escalations 7 + 8) and as remaining Story 10.21's scope.
+⭐ Both are now resolved: **Escalation 8 by ruling** (claimant-only, `2026-08-14-109` clause 5) and
+**Escalation 7 by transfer of ownership** (clause 9). They are covered by the TRANSFERRED-BY-RULING
+section above and are **no longer Story 10.21's scope**. ⛔ The original caution still stands for
+anything else: do not fold a live block into this list — a block has an owner and a live question, and
+filing it as deferred work would lose both.
+⚠ **The two re-triggers above (Contribution-Note PDFs, helpdesk tickets) point at "the story that
+resolves Escalation 7."** That story is now the **unnamed export-content successor** — ⛔ so naming it
+also un-orphans these two.
+
+---
+
 ## ⛔ GOVERNANCE DRIFT — the rejoin model, from Story 10.20's Trustee Panel ruling (2026-08-12)
 
 **Recorded BEFORE implementation, deliberately.** Story 10.20's Panel ruling (to be entered as Decision
@@ -4618,3 +4733,127 @@ their owning story ([[feedback_governance_commits_precede_implementation]]).
   per-row conduct gate to reach this endpoint, so this mirrors the existing `district_immutable` sibling's
   own posture rather than introducing a new authorization-boundary leak.
   [`packages/domain/src/claim/ground-inspection-persist.ts`]
+
+---
+
+## Deferred from: code review of 10-21-off-portal-dpdpa-access (2026-08-15) — CLOSED BY RULING 2026-08-15
+
+⛔ **This section's original item is CLOSED, not deleted** — raised as Escalation 11 (Decision
+`2026-08-15-115`) and ruled the same day (Decision `2026-08-15-116`, option (c)). The ruling itself
+creates a NEW open item, recorded below as its replacement, per [[feedback_closure_language_precision]]
+("Closed by ruling" is not "Not addressed").
+
+- ~~`member_requested_staff_mediation` is `z.literal(true)` — a caller-controlled constant, not a
+  captured member-authored fact.~~ **RULED 2026-08-15 — Decision `2026-08-15-116`, option (c).**
+
+- **NEW, owed by this ruling: mint a successor story implementing option (c).** A structured
+  member-request field captured at helpdesk ticket intake (AC2), with the staff-mediated delivery route
+  (`grantStaffMediatedDelivery`) reading that captured fact instead of accepting the caller-supplied
+  `member_requested_staff_mediation: z.literal(true)` boolean it accepts today. Sized as a real feature
+  (intake contract changes + a new read path), not a patch — per Decision `2026-08-15-116` clause 3,
+  explicitly **not built inside the ruling or this deferral entry**. ⚠ **Until it lands, the current
+  mechanization stays in production unchanged** — the ruling found element 1's evidentiary strength
+  weak, not the fallback unsafe to operate. *Owner:* a named successor story — ⛔ **still unnamed**
+  ([[project_r7_fact_producer_unbuilt]] — a deferral naming an epic expires unowned; no story is minted
+  from inside a sibling story or this file — mints are governance acts taken at their owning story,
+  [[feedback_governance_commits_precede_implementation]]). *Re-trigger:* the next story that touches
+  either the helpdesk ticket-intake surface (AC2) or the member-data-rights delivery module, or
+  immediately if prioritized on its own.
+  [`packages/contracts/src/member-data-rights/member-data-rights.ts` — `StaffMediatedDeliveryRequest.member_requested_staff_mediation`, `apps/api/src/modules/member-data-rights/handlers.ts` — `grantStaffMediatedDelivery`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx` — the fallback panel]
+  [`packages/contracts/src/member-data-rights/member-data-rights.ts:6278`, `apps/admin/src/api/client.ts:3159`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx`]
+
+---
+
+## Deferred from: 10-21 dev-story completion pass (2026-08-15) — a TEST-DESIGN defect, observed not inferred
+
+⛔ **Not a 10.21 defect and ⛔ not a product defect** — recorded here because it was *observed live* during
+this story's gate re-run and will keep costing runs until someone owns it
+([[feedback_record_unattested_no_backfill]] — an observation is recorded openly, never smoothed away).
+
+- **`medical-disclose.spec.ts:270-271`'s plaintext-leak assertions are PROBABILISTIC and will fail at
+  random.** The test asserts `expect(disclosed_conditions_ciphertext).not.toContain('ckd')` against a
+  Tier-1 envelope of the form `enc:v1:<base64>`. The base64 payload wraps a **randomly generated DEK**,
+  so the three-character needle `'ckd'` appears in it by chance on a predictable fraction of runs —
+  observed failing on 2026-08-15 with a ciphertext whose body contained the substring. ⚠ **The intent of
+  the assertion is right** (prove the plaintext condition code never lands in the column); ⛔ **the
+  mechanism is wrong** — a substring search over base64 cannot distinguish a leak from a collision, so it
+  is simultaneously **flaky** (false failures) and **weak** (a real leak of a longer code could still
+  slip past a differently-encoded envelope).
+  ⚠ **This is the same family as the DATE-BOMB class** already recorded in this project's test lore: the
+  test fails on **data**, not on a diff, so a baseline comparison can never see it coming and a re-run
+  "fixes" it — which is exactly how it survives.
+  ⛔ **Not fixed here.** The correct remedy is a decrypt-and-assert (or an assertion over the decoded
+  envelope's plaintext slot), which is a change to a Story 3.x test's design and its PII posture — ⛔ not
+  a widening of the needle, which would only lower the collision rate rather than remove it.
+  *Owner:* a named successor story — ⛔ **still unnamed**, and ⛔ never an epic
+  ([[project_r7_fact_producer_unbuilt]]). *Re-trigger:* the next story touching medical disclosure or the
+  Tier-1 envelope format, or immediately if the flake rate becomes a merge-gate problem.
+  [`apps/api/tests/integration/medical/medical-disclose.spec.ts:270-271`]
+
+## Deferred from: code review of 10-21-off-portal-dpdpa-access, round 2 (2026-08-15)
+
+- **`withCompensatingAudit` settles before the scope transaction commits.** Every write handler on the
+  member-data-rights surface wraps its mutation as
+  `audit.withCompensatingAudit(deps.servicePool, { auditIntent, mutate })`, but `mutate` only issues
+  statements inside a `scopeTx` that is still open — the `COMMIT` happens later, in
+  `closeScopeTx(scopeTx, ok)` in the `finally`. The audit runs on its own connection and settles the
+  moment `mutate` **returns**, so the compensation covers a throw *inside* `mutate` and nothing else. If
+  the COMMIT itself fails (connection reset, serialization failure, disk error) the audit trail records a
+  completed `member_data_rights.rtbf_fulfilled` / `…_granted` with **no** compensating line and **no**
+  row — an audit assertion of an act that never landed, on the surface whose whole subject is a staff
+  actor exercising a member's statutory rights.
+  ⚠ **Why deferred rather than patched:** the ordering is a property of the shared `withCompensatingAudit`
+  helper and the scope-tx call convention, not of this story — Story 10.21 uses the helper exactly as its
+  siblings do, and correcting it means changing the helper's contract (settle-on-commit, or accept a tx
+  handle) across every consumer. Patching it here alone would make this surface inconsistent with the
+  rest of the tree without closing the class.
+  ⛔ **What was NOT deferred:** the *comment* on these call sites, which claims the compensation covers
+  partial application generally. That over-claim is new in this story and is corrected in the round-2
+  patch set — a comment asserting a protection that does not exist is the defect class this story polices
+  elsewhere ([[feedback_record_unattested_no_backfill]]).
+  *Owner:* a named successor story — ⛔ **still unnamed**, and ⛔ never an epic
+  ([[project_r7_fact_producer_unbuilt]]). *Re-trigger:* the next story that touches
+  `withCompensatingAudit`'s implementation or adds a consumer that wraps a scope-tx mutation.
+  [`apps/api/src/modules/member-data-rights/handlers.ts:299`]
+
+- **✅ ESCALATION 12 — the routeless member (no mobile on file). RAISED 2026-08-15, WITHDRAWN 2026-08-15
+  ON EVIDENCE.** Decision `2026-08-15-119` supersedes `2026-08-15-118`'s escalation. ⛔ **NOT an open
+  item; do not carry it in any Panel-queue count.**
+  ⭐ **Why it was withdrawn.** A persisted member with no mobile is **unreachable** under the
+  member-creation invariant, so the "no statutory route by either path" premise was false. Traced, not
+  assumed: `members` rows have ONE production writer (`member/project.ts:121`); the only FIRST event is
+  `member.signup_initiated` from ONE emitter (`auth/member/signup.handlers.ts:184`); that handler writes
+  `member_identities` in the SAME scope-tx (`:188`, closed by `closeScopeTx(scopeTx, ok)`);
+  `member_identities.member_id` is PRIMARY KEY with `mobile_ciphertext` and `mobile_blind_index` both
+  NOT NULL (`0019_polite_penance.sql:34`); identity rows are never deleted outside tests; and
+  `anonymizeMember` sentinels the ciphertext while RETAINING the blind index (`anonymize.ts:132-134`), so
+  even an erased member still resolves one. At the delivery route the member's existence is guaranteed by
+  `data_exports_member_id_members_member_id_fk` (`0033:41`).
+  ⇒ A null blind index there means a `members` row with no identity row: **corrupt data**, not an
+  unserved member.
+  ⛔ **The 409 `member_data_rights.no_mobile_on_file` is RETAINED**, reclassified as a defensive backstop:
+  corrupt data must fail closed rather than mint a grant and return 200 for a delivery that never
+  happened. ⚠ **Method note:** the escalation was raised from a review finding whose reachability had not
+  been traced — the state existed only because a round-2 test deleted the identity row. An escalation
+  asserting a gap must first establish the gap is REACHABLE.
+  *Owner:* none — closed. *Re-trigger:* only if a production path is found that persists a member without
+  a mobile; ⛔ re-raising without that evidence is not warranted.
+
+  ~~Original entry (superseded, retained for the record):~~ Decision `2026-08-15-118`. A member with no mobile on file can never satisfy element 2 of the ratified
+  three-part gate (`2026-08-14-113` cl.1): no mobile ⇒ no OTP is minted ⇒
+  `primaryDeliveryNotCompletedAt` returns `null` permanently ⇒ the staff-mediated fallback fails closed
+  exactly as ratified. The primary route is simultaneously impossible for the same reason. The two
+  compound: **that member has no route to their statutory data rights by any path this story ships** —
+  the precise outcome Story 10.21 exists to prevent.
+  ⛔ **What was corrected and what was NOT.** The *reporting* defect is fixed in this story's round-2
+  patch set — the route previously returned **200 with a `grant_id`** for a delivery that never happened
+  and now refuses with a typed 409 `member_data_rights.no_mobile_on_file` before any grant row is
+  created. ⛔ That makes the failure **honest**; it does **not** give the member a route, and
+  manufacturing one would be inventing gate mechanism against `2026-08-14-112` clause 3.
+  ⚠ Options are enumerated in `2026-08-15-118`'s *Open follow-ups* — (a) out of scope for the ratified
+  model, served by a recorded alternative mechanism; (b) a distinct, separately-attested fourth ground
+  parallel to element 2; (c) require a recorded mobile before an off-portal export can be built at all;
+  (d) something else the Panel specifies.
+  *Owner:* **Trustee Panel.** *Re-trigger:* **immediate** — a statutory-access gap, due **before the
+  `termination_access_block` flip**, ⛔ never at a later epic ([[project_r7_fact_producer_unbuilt]]).
+  [`apps/api/src/modules/member-data-rights/handlers.ts` — `grantMemberDirectDelivery`]

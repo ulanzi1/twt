@@ -117,6 +117,33 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 10.21 — member.data_rights is granted ONLY to pariwar_admin (+ super_admin auto-derived)', () => {
+    const KEY = 'member.data_rights';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // `super_admin` is NEVER written into a grant list — its bundle IS `PERMISSION_CATALOG.keys`, so it
+    // auto-derives. Assert what the resolver returns, not what roles.ts spells out.
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    // ⛔ helpline_operator FILES a data-rights request (helpdesk.create) but does NOT execute it — the
+    // AC3 intake/fulfilment separation. district_admin and state_trustee are rank-order blocked in
+    // OPPOSITE directions against this key's `pariwar` dimension (scope.ts §RANK-ORDER), and neither
+    // exclusion is an oversight.
+    // ⭐ trustee_panel is excluded BY RULING, not merely pending one. Decision `2026-08-14-109`
+    // clause 7 (Escalation 10 / consent-sheet Row 7) ruled that **NO DPDPA action inherently requires
+    // Trustee Panel authority**, and clause 8 that where Trustee authority applies for some other
+    // governance reason, the **Trustee decides and an authorised administrator executes** — authority
+    // attaches to the DECISION, never the EXECUTION. `pariwar_admin` is that administrator.
+    // ⚠ The exclusion is therefore SETTLED, not provisional. It remains non-structural: trustee_panel
+    // sits at a `pariwar` ceiling and COULD satisfy this check — it simply must not hold this key.
+    // ⛔ If this assertion fails because trustee_panel was added, that grant CONTRADICTS a ratified
+    // ruling. Do not "fix" the test; revert the grant, or supersede `2026-08-14-109` clause 7 first.
+    for (const role of ['helpline_operator', 'district_admin', 'state_trustee', 'trustee_panel'] as const) {
+      expect((bundleForRole(role)?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    }
+  });
+
   it('Story 4.8 code review — validity.invalidate_cache is granted ONLY to pariwar_admin (+ super_admin)', () => {
     const KEY = 'validity.invalidate_cache';
     const holders = defaultRoleBundles

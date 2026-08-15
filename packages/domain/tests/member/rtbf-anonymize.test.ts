@@ -18,7 +18,11 @@ import type { KmsKeyRef, KmsProvider } from '../../src/encryption/kms-provider.j
 import { ANONYMIZED_SENTINEL, anonymizeMember } from '../../src/member/anonymize.js';
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../src/ids/index.js';
 import {
+  dataExportDeliveryGrants,
+  memberAuthOtps,
+  dataExports,
   memberAddresses,
+  memberDataRightsCorrections,
   memberIdentities,
   memberKycProfiles,
   memberMedicalDisclosures,
@@ -86,13 +90,39 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the eight member-PII tables, once each', async () => {
+  it('updates exactly the eleven member-PII tables (twelve statements), once each except data_exports', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
     // moderation rationale came to survive an erasure request in the first place.
+    //
+    // ⚠ REWRITTEN by Story 10.21 (AC11): NINE tables, TEN statements. `data_exports` joined the surface
+    // — its `artifact_ciphertext` is `piiColumn(1, 'data_export')`, i.e. the member's WHOLE assembled
+    // dossier as one Tier-1 envelope — and it takes TWO statements, deliberately:
+    //   1. an unconditional NULL of `artifact_ciphertext` on every row of the member; and
+    //   2. a status flip to `expired` restricted to `pending`/`ready` rows ONLY.
+    // ⛔ The two are NOT collapsible. (2) is scoped and (1) is not, because the `consumed` STATUS is
+    // deliberately left untouched by RULING (`2026-08-14-109` cl.6) while its ciphertext is still zeroed. And the
+    // `pending` flip is the load-bearing guard that stops an in-flight DATA_EXPORT_BUILD resurrecting
+    // the dossier after the erasure commits.
+    // ⛔ This assertion was NOT named as collateral by the story spec; it was found by running the
+    // suite. It is REWRITTEN to the new truth, never weakened — the count is the completeness check.
+    //
+    // ⭐ MOVED UPWARD AGAIN by the Story 10.21 ROUND-2 REVIEW: TWELVE tables, FOURTEEN statements.
+    // The two added statements are the REVOCATION half — `data_export_delivery_grants` is updated a
+    // SECOND time (status `pending` → `expired`) and `member_auth_otps` is burned on the delivery pool.
+    // ⛔ Scrubbing the attestation is not revoking the grant: without these, an erasure left a live
+    // grant and a live OTP in the member's hands, safe only by the INCIDENTAL 404 that `redeemDelivery`
+    // returns on a null artifact.
+    // ⚠ Story 10.21 AC-R1/AC-R2 had already moved it to ELEVEN tables / TWELVE statements:
+    // `data_export_delivery_grants` (the staff ATTESTATION) and `member_data_rights_corrections` (the
+    // member's requested change + the staff action taken) both carry Tier-1 columns, so both MUST be
+    // scrubbed. ⚠ This assertion is the mechanism that forced them in: adding the columns without the
+    // scrub failed HERE, which is precisely what it exists to do. ⛔ Whoever adds the next Tier-1
+    // column raises this number in the same commit — a Tier-1 column outside `anonymizeMember` is how
+    // the 10.10 moderation rationale survived an erasure request.
     const { captured } = await run();
-    expect(captured).toHaveLength(8);
+    expect(captured).toHaveLength(14);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -103,9 +133,59 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memberWithdrawals,
       memberModerationActions,
       memberModerationGrounds,
+      dataExports,
+      dataExportDeliveryGrants,
+      memberDataRightsCorrections,
+      memberAuthOtps,
     ]) {
       expect(tables).toContain(t);
     }
+    // Exactly one statement per table, EXCEPT the two that take a documented second:
+    //   · `data_exports`     — zero the artifact, then flip `pending` → `expired` (the build guard);
+    //   · `…delivery_grants` — scrub the attestation, then revoke the live grant.
+    expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
+    expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
+    expect(new Set(tables).size).toBe(12);
+  });
+
+  it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {
+    // ⚠ SENTINEL, not NULL, and the distinction is deliberate. That a staff actor obtained the export,
+    // and that a correction was requested and handled, are AUDIT FACTS the Trust keeps — it is the
+    // CONTENT that the erasure removes, not the record of the act. Same posture as the moderation
+    // tables. ⛔ A NULL here would erase the fact along with the content.
+    const { captured, pariwar } = await run();
+
+    const grants = setFor(captured, dataExportDeliveryGrants);
+    expect(grants, 'the staff attestation must be scrubbed').toHaveProperty('attestationCiphertext');
+
+    const corrections = setFor(captured, memberDataRightsCorrections);
+    for (const col of ['requestedChangeCiphertext', 'actionTakenCiphertext']) {
+      expect(corrections, `${col} must be scrubbed`).toHaveProperty(col);
+      expect(await dec(corrections[col], pariwar, 'data_rights_correction')).toBe(ANONYMIZED_SENTINEL);
+    }
+  });
+
+  it('⭐ Story 10.21 (AC11): the dossier ciphertext is NULLed and `consumed` KEEPS its status', async () => {
+    // ⛔ This test must be able to FAIL. It asserts the two data_exports statements by shape, rather
+    // than iterating anonymizeMember's own coverage set — that shape is structurally blind to a table
+    // outside the set, which is precisely how this gap survived from 3.11 until 10.21.
+    const { captured } = await run();
+    const exportStatements = captured.filter((c) => c.table === dataExports);
+    expect(exportStatements).toHaveLength(2);
+
+    // (1) the unconditional zeroing — NULL, not a sentinel (the column is nullable and the vacuum
+    // already NULLs it, so this matches the shipped posture).
+    const zeroing = exportStatements.find((c) => 'artifactCiphertext' in c.set);
+    expect(zeroing, 'artifact_ciphertext must be zeroed').toBeDefined();
+    expect(zeroing!.set.artifactCiphertext).toBeNull();
+
+    // (2) the status flip — and it must NOT be an unconditional 'expired' on every row.
+    const flip = exportStatements.find((c) => 'status' in c.set);
+    expect(flip, 'pending/ready must flip to expired').toBeDefined();
+    expect(flip!.set.status).toBe('expired');
+    // ⛔ The two statements are distinct: the zeroing must not also carry the status.
+    expect(zeroing).not.toBe(flip);
+    expect('status' in zeroing!.set).toBe(false);
   });
 
   it('⭐ Story 10.20: EVERY new Tier-1 moderation column is scrubbed, BY NAME', async () => {

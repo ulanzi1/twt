@@ -32,6 +32,15 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
 
+/** A Postgres unique-violation, checked on BOTH the direct code and `err.cause.code` — the domain
+ *  convention. ⛔ A direct-only check misses every error the domain wraps (which is all of them here). */
+function isUniqueViolation(err: unknown): boolean {
+  if (err === null || typeof err !== 'object') return false;
+  const direct = (err as { code?: unknown }).code;
+  const cause = (err as { cause?: { code?: unknown } }).cause?.code;
+  return direct === '23505' || cause === '23505';
+}
+
 export function createRtbfHandlers(deps: AppDeps) {
   const enc = deps.encryption;
 
@@ -46,39 +55,65 @@ export function createRtbfHandlers(deps: AppDeps) {
   }
 
   /**
-   * Guard: RTBF is legal ONLY from `state = withdrawn` (Story 3.10 closes there). This is NOT the
-   * withdrawal `assertWithdrawable` guard — that permits {active, active-in-grace, lapsed-unpaid}, the
-   * WRONG permitted-set here. RTBF permits ONLY {withdrawn} and rejects everything else:
-   *   · `anonymized` → 409 `rtbf.already_anonymized` (distinct code so a client that completed RTBF
-   *     but lost the response can distinguish "already erased" from "not yet withdrawn").
-   *   · any other non-withdrawn state → 409 `rtbf.invalid_state`.
-   * Rejecting explicitly (rather than relying on the reducer's silent identity no-op) prevents a PHANTOM
-   * anonymization: without this guard we would run anonymizeMember + append an event that never moved
-   * the state.
+   * Guard + serialization for a member self-service erasure.
+   *
+   * ── Story 10.21 (AC7/AC13) — TWO CHANGES, both load-bearing ───────────────────────────────────────
+   * (1) The permitted-set is no longer decided here. It comes from `member.resolveRtbfLegality`, the ONE
+   *     predicate shared with the off-portal admin caller, so the two paths CANNOT diverge. ⛔ Do not
+   *     re-inline a local state check: 10.21 relocated legality out of the reducer into the callers
+   *     precisely so it lives in exactly one place, and two copies is how that guarantee dies.
+   *     The rule is: legal from `withdrawn`, OR when the moderation overlay reads `terminated`.
+   * (2) A transaction-scoped ADVISORY LOCK is taken BEFORE the legality read.
+   *
+   * ⛔ WHY THE LOCK, and why the pre-existing 23505 catch was NOT protection. `scope-tx.ts` issues a
+   * bare `BEGIN` — READ COMMITTED, no serialization. Two concurrent erasures of the same member both
+   * pass this guard, and the loser does NOT reliably hit 23505: it blocks on the winner's row locks
+   * inside `anonymizeMember`, then `projectMemberState` re-reads the stream head AFTER the winner
+   * commits, computes a valid `nextVersion`, and appends a SECOND `member.rtbf_anonymized`, returning
+   * 200. The live failure mode was a DUPLICATE EVENT, not a conflict. The lock is what makes the guard
+   * mean anything.
+   *
+   * Rejecting explicitly (rather than relying on the reducer's identity no-op) prevents a PHANTOM
+   * anonymization — and since 10.21 widened the reducer arm, the reducer no longer no-ops at all, so
+   * this guard is the ONLY thing standing between an illegal request and a real erasure.
    */
   async function assertAnonymizable(
     scopeTx: ScopeTx,
     pariwarId: ids.PariwarId,
     memberId: ids.MemberId,
     at: Date,
-  ): Promise<void> {
+    pariwarIdStr: string,
+    memberIdStr: string,
+  ): Promise<memberDomain.MemberLifecycleState> {
     const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
     if (!exists) {
       throw new NotFoundError('Member not found', 'rtbf.member_not_found');
     }
+
+    // ⛔ BEFORE the legality read, and `_xact_` (transaction-scoped), never `pg_advisory_lock`. A
+    // session-scoped lock on a POOLED client without a manual unlock in a `finally` leaks the lock for
+    // the connection's whole life. The key is NAMESPACE-PREFIXED (`member.rtbf:`) — a bare
+    // `hashtext(member_id)` collides with the device-binding lock in `member-auth.service.ts`.
+    await scopeTx.client.query('SELECT pg_advisory_xact_lock($1)', [
+      memberDomain.rtbfAdvisoryLockKey(pariwarIdStr, memberIdStr).toString(),
+    ]);
+
     const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, at);
-    if (state === 'anonymized') {
+    const legality = await memberDomain.resolveRtbfLegality(scopeTx.tx, memberId, state);
+    if (legality.kind === 'already_anonymized') {
       throw new ConflictError(
         'Member has already been anonymized',
         'rtbf.already_anonymized',
       );
     }
-    if (state !== 'withdrawn') {
+    if (legality.kind === 'illegal') {
       throw new ConflictError(
         'RTBF is only permitted for a withdrawn membership',
         'rtbf.invalid_state',
       );
     }
+    // ⚠ Returned so the caller writes the REAL replayed state into the event's `from_state`.
+    return legality.fromState;
   }
 
   return {
@@ -97,7 +132,7 @@ export function createRtbfHandlers(deps: AppDeps) {
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
-        await assertAnonymizable(scopeTx, pariwarId, memberId, anonymizedAt);
+        const fromState = await assertAnonymizable(scopeTx, pariwarId, memberId, anonymizedAt, pariwarIdStr, memberIdStr);
 
         // Field-level anonymize every Tier-1 PII column (the inverse of data-export/assemble). Runs
         // under the scope tx; RETAINS mobile_blind_index (AC4) + all non-PII / history rows.
@@ -110,7 +145,11 @@ export function createRtbfHandlers(deps: AppDeps) {
           pariwarId,
           eventType: 'member.rtbf_anonymized',
           payload: {
-            from_state: 'withdrawn',
+            // ⛔ Story 10.21: was hardcoded `'withdrawn'`. Since the legality predicate now also admits a
+            // member whose moderation overlay reads `terminated` — whose lifecycle state may be ANY live
+            // label — a hardcoded value would write a FALSE AUDIT RECORD on the one event whose `from`
+            // set this story widened. Write what was actually replayed.
+            from_state: fromState,
             to_state: 'anonymized',
             trigger: 'rtbf_request',
             actor: 'member',
@@ -135,15 +174,15 @@ export function createRtbfHandlers(deps: AppDeps) {
         });
         return result;
       } catch (err: unknown) {
-        // Concurrent RTBF: a parallel request already anonymized + projected `anonymized` between our
-        // assertAnonymizable read and this projection. The event-stream `(stream_id, event_version)`
-        // unique index raises 23505 → map to the same clean 409 the guard would have.
-        if (
-          err !== null &&
-          typeof err === 'object' &&
-          'code' in err &&
-          (err as { code: unknown }).code === '23505'
-        ) {
+        // ⚠ Story 10.21 — THIS BRANCH WAS INERT AND IS NOW CORRECT. It previously tested
+        // `err.code === '23505'`, but `projectMemberState` wraps the violation in
+        // `MemberStreamConcurrencyError`, which carries NO `code` property — so the branch could never
+        // match, and the comment claimed a protection that did not exist. The domain convention is to
+        // check BOTH the direct code and `err.cause.code` (see `claim/appeal-persist.ts`).
+        // ⛔ The real serialization is the `pg_advisory_xact_lock` in `assertAnonymizable`; this remains
+        // as a genuine backstop for the narrow window it can still cover, not as the primary guard.
+        // ⛔ Do not delete it and do not restore the old single-property test.
+        if (isUniqueViolation(err)) {
           throw new ConflictError('Member has already been anonymized', 'rtbf.already_anonymized');
         }
         throw err;

@@ -12,7 +12,12 @@
 // (raw category keys, SLA labels) per UX-DR54/DR55; the dignified member-facing header renders in the
 // mobile app, not here. NO step-up leg (helpdesk create is not freeze-firing / not in AR-24 — unlike 6.3).
 
-import type { HelpdeskCategoryListItem, HelpdeskGrantScope, MemberSearchResultItem } from '@twt/contracts';
+import {
+  DPDPA_DATA_RIGHTS_SUBCATEGORY,
+  type HelpdeskCategoryListItem,
+  type HelpdeskGrantScope,
+  type MemberSearchResultItem,
+} from '@twt/contracts';
 import type { ReactElement, ReactNode } from 'react';
 
 import { resolveEn } from './i18n-en.js';
@@ -72,7 +77,21 @@ export function HelpdeskOperatorShell(props: HelpdeskOperatorShellProps): ReactE
 
   // Subcategories available for the chosen category (from the registry, never hardcoded).
   const activeCategory = categories.find((c) => c.category === category) ?? null;
-  const subCategories = activeCategory?.sub_categories ?? [];
+  const registrySubCategories = activeCategory?.sub_categories ?? [];
+
+  // ── Story 10.21 (AC2) — the DPDPA data-rights subcategory, offered under `other` ─────────────────
+  // ⚠ It is NOT in the registry and must not be. `HelpdeskSubcategory` is a FREE token
+  // (`z.string().min(1).max(64)`, no allow-list), and the whole design of 10.21's intake is that
+  // NOTHING in `DEFAULT_ROUTING_POLICY` changes: minting a real category would be absent from every
+  // per-Pariwar override authored before today and would SILENTLY mis-route under the wrong SLA.
+  // So the token is offered by the CLIENT under the `other` catch-all, which is validator-guaranteed
+  // to exist in every published policy.
+  // ⛔ Imported, never re-declared — a typo here routes just as cleanly to the same desk and nothing
+  // anywhere complains (the source-scan gate in @twt/contracts enforces the single declaration).
+  const subCategories =
+    category === 'other' && !registrySubCategories.includes(DPDPA_DATA_RIGHTS_SUBCATEGORY)
+      ? [...registrySubCategories, DPDPA_DATA_RIGHTS_SUBCATEGORY]
+      : registrySubCategories;
 
   // THE GATE: a member selected + a category chosen (still present in the in-force policy — a
   // category selected before a mid-session policy refetch narrows the set must not ride through) +
@@ -162,6 +181,9 @@ export function HelpdeskOperatorShell(props: HelpdeskOperatorShellProps): ReactE
               </div>
 
               {/* Subcategory (optional; only when the chosen category defines some). */}
+              {/* Keyed off the OFFERED list (registry + the 10.21 DPDPA token), not the registry list
+                  alone — otherwise the `other` category, whose registry list is empty, would hide the
+                  picker and make the data-rights subcategory unreachable from the console. */}
               {category !== null && subCategories.length > 0 && (
                 <div className="flex flex-col gap-1">
                   <label htmlFor="helpdesk-subcategory" className="text-sm font-medium">
@@ -177,7 +199,7 @@ export function HelpdeskOperatorShell(props: HelpdeskOperatorShellProps): ReactE
                     <option value="">{resolveEn('helpdesk.subcategory.placeholder')}</option>
                     {subCategories.map((s) => (
                       <option key={s} value={s}>
-                        {s}
+                        {s === DPDPA_DATA_RIGHTS_SUBCATEGORY ? resolveEn('helpdesk.subcategory.dpdpa') : s}
                       </option>
                     ))}
                   </select>

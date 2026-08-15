@@ -115,6 +115,15 @@ export interface ApiConfig {
   readonly stepUpElevatedMs: number;
   /** Member LOGIN-OTP TTL (Story 3.2, §2.2 line 1370 — 5 min, distinct from the 3-min step-up TTL). */
   readonly loginOtpTtlMs: number;
+  /**
+   * Data-export-delivery OTP TTL (Story 10.21, code-review decision — 60 min, distinct from the 3-min
+   * step-up TTL). ⚠ Deliberately LONGER than `stepUpOtpTtlMs`: this OTP's expiry-unconsumed doubles as
+   * AC-R1's fallback-gate element 2 (`primary_delivery_not_completed`), and a 3-min window let that
+   * observable go true on any member who was simply not looking at their phone within 3 minutes — not
+   * only one for whom the primary route had genuinely failed. See `member_auth_otps.ts`'s header for
+   * the full rationale and the tradeoff this does NOT eliminate.
+   */
+  readonly dataExportDeliveryOtpTtlMs: number;
   /** Member access-token (JWT) TTL (Story 3.2, §2.4 — ≤15 min). */
   readonly memberAccessTtlMs: number;
   /** Member refresh-token TTL (Story 3.2, §2.2/AR-23/R1 — 90 days, NOT the §2.4 generic 30d). */
@@ -374,6 +383,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     stepUpOtpTtlMs: intEnv(env, 'STEP_UP_OTP_TTL_MS', 3 * MINUTE),
     stepUpElevatedMs: intEnv(env, 'STEP_UP_ELEVATED_MS', 5 * MINUTE),
     loginOtpTtlMs: intEnv(env, 'LOGIN_OTP_TTL_MS', 5 * MINUTE),
+    dataExportDeliveryOtpTtlMs: intEnv(env, 'DATA_EXPORT_DELIVERY_OTP_TTL_MS', 60 * MINUTE),
     memberAccessTtlMs: intEnv(env, 'MEMBER_ACCESS_TTL_MS', 15 * MINUTE),
     memberRefreshTtlMs: intEnv(env, 'MEMBER_REFRESH_TTL_MS', 90 * DAY),
     signupContinuationTtlMs: intEnv(env, 'SIGNUP_CONTINUATION_TTL_MS', 30 * MINUTE),

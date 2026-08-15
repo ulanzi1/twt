@@ -213,6 +213,13 @@ import {
   type PublishCustomFieldDefinitionResponse as PublishCustomFieldResult,
   type MemberCustomFieldsResponse as MemberCustomFields,
   type SetMemberCustomFieldsRequest as SetMemberCustomFieldsBody,
+  ActiveDataRightsExportResponse,
+  DATA_RIGHTS_STEP_UP_CONTEXT,
+  MemberDirectDeliveryResponse,
+  OffPortalErasureResponse,
+  OffPortalExportResponse,
+  RecordCorrectionResponse,
+  StaffMediatedDeliveryResponse,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -604,6 +611,142 @@ export function verifyStepUp(otp: string): Promise<StepUpVerifyResult> {
   return apiFetch('/api/v1/auth/step-up/verify', StepUpVerifyResponse, {
     method: 'POST',
     body: JSON.stringify({ otp }),
+  });
+}
+
+// ── Story 10.21 — off-portal DPDPA data-rights fulfilment ─────────────────────
+// The identity-verified administrative process for a member whose portal access has ended. Every
+// route below is gated server-side by
+//   [adminSession, scope, requirePermissionHook('member.data_rights', {dimension:'pariwar'}),
+//    requireStepUp(DATA_RIGHTS_STEP_UP_CONTEXT)]
+// ⛔ THE OTP SIDE MUST USE THE SAME IMPORTED CONSTANT. `requireStepUp` compares a BARE STRING by
+// equality and the contract carries no allow-list, so a literal typed here would elevate the session
+// under a context that can NEVER satisfy the gate — a permanently broken action, with nothing anywhere
+// naming the cause. `requestDataRightsStepUp` below exists so no caller is tempted to pass a literal.
+//
+// ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT — `grantMemberDirectDelivery`,
+// `grantStaffMediatedDelivery` and `recordDataRightsCorrection` below.
+
+const memberDataRightsBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/member-data-rights`;
+
+/** Request the step-up OTP for the data-rights context. ⛔ Always via this helper, never a literal. */
+export function requestDataRightsStepUp(): Promise<StepUpRequestResult> {
+  return requestStepUp(DATA_RIGHTS_STEP_UP_CONTEXT);
+}
+
+/**
+ * BUILD the member's export off-session. ⛔ Builds only — it does not deliver.
+ * `Idempotency-Key` is REQUIRED by the route; a fresh key per user-initiated attempt.
+ */
+export function buildOffPortalExport(
+  pariwarId: string,
+  input: { memberId: string; helpdeskTicketId: string; idempotencyKey: string },
+): Promise<z.output<typeof OffPortalExportResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/export`, OffPortalExportResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({ member_id: input.memberId, helpdesk_ticket_id: input.helpdeskTicketId }),
+  });
+}
+
+/**
+ * The member's currently-active export, or `null` (code-review addition, this story). Lets the
+ * operator surface recover `builtExportId` across a reload instead of relying solely on
+ * `buildOffPortalExport`'s in-memory mutation result.
+ */
+export function getActiveDataRightsExport(
+  pariwarId: string,
+  memberId: string,
+): Promise<z.output<typeof ActiveDataRightsExportResponse>> {
+  return apiFetch(
+    `${memberDataRightsBase(pariwarId)}/export/active?member_id=${encodeURIComponent(memberId)}`,
+    ActiveDataRightsExportResponse,
+  );
+}
+
+/** EXECUTE erasure off-session. ⛔ IRREVERSIBLE. `Idempotency-Key` REQUIRED. */
+export function fulfilOffPortalErasure(
+  pariwarId: string,
+  input: { memberId: string; helpdeskTicketId: string; idempotencyKey: string },
+): Promise<z.output<typeof OffPortalErasureResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/erasure`, OffPortalErasureResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({ member_id: input.memberId, helpdesk_ticket_id: input.helpdeskTicketId }),
+  });
+}
+
+/**
+ * PRIMARY delivery — member-direct. Issues the one-time OTP grant to the registered mobile.
+ * ⛔ This is the route an operator should reach for FIRST and almost always.
+ */
+export function grantMemberDirectDelivery(
+  pariwarId: string,
+  input: { exportId: string; memberId: string; helpdeskTicketId: string; idempotencyKey: string },
+): Promise<z.output<typeof MemberDirectDeliveryResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/delivery/member-direct`, MemberDirectDeliveryResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({
+      export_id: input.exportId,
+      member_id: input.memberId,
+      helpdesk_ticket_id: input.helpdeskTicketId,
+    }),
+  });
+}
+
+/**
+ * FALLBACK delivery — staff-mediated. ⛔ A NARROW EXCEPTION, not an alternative.
+ * ⚠ `member_requested_staff_mediation` is `true` by construction in the contract: the member must have
+ * ASKED. ⛔ The "primary did not complete" condition is NOT sent — the server observes it, and a
+ * client-suppliable flag would let the caller assert the very fact the gate exists to check.
+ */
+export function grantStaffMediatedDelivery(
+  pariwarId: string,
+  input: {
+    exportId: string;
+    memberId: string;
+    helpdeskTicketId: string;
+    attestation: string;
+    idempotencyKey: string;
+  },
+): Promise<z.output<typeof StaffMediatedDeliveryResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/delivery/staff-mediated`, StaffMediatedDeliveryResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({
+      export_id: input.exportId,
+      member_id: input.memberId,
+      helpdesk_ticket_id: input.helpdeskTicketId,
+      member_requested_staff_mediation: true,
+      attestation: input.attestation,
+    }),
+  });
+}
+
+/** AC-R2 — record a correction. ⛔ A record, not a member-profile write. */
+export function recordDataRightsCorrection(
+  pariwarId: string,
+  input: {
+    memberId: string;
+    helpdeskTicketId: string;
+    requestedChange: string;
+    actionTaken: string;
+    outcome: 'recorded' | 'applied' | 'declined';
+    idempotencyKey: string;
+  },
+): Promise<z.output<typeof RecordCorrectionResponse>> {
+  return apiFetch(`${memberDataRightsBase(pariwarId)}/correction`, RecordCorrectionResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({
+      member_id: input.memberId,
+      helpdesk_ticket_id: input.helpdeskTicketId,
+      requested_change: input.requestedChange,
+      action_taken: input.actionTaken,
+      outcome: input.outcome,
+    }),
   });
 }
 

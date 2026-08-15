@@ -21,7 +21,23 @@ import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-
 import type { MemberId } from '../ids/index.js';
 
 /** The two distinct member-OTP pools (§2.2 line 1379). */
-export const MEMBER_OTP_INTENTS = ['login', 'step_up'] as const;
+// ⚠ Story 10.21 (migration 0104) added `data_export_delivery` — a DISTINCT pool for the member-direct
+// export delivery grant. ⛔ It could NOT reuse `step_up`: `invalidateLiveOtps` clears the live OTP per
+// (mobile, intent), so a shared pool would make a delivery OTP and a step-up OTP silently burn each
+// other — a member mid-step-up would lose their delivery code, and vice versa, with no error anywhere.
+// ⚠ TTL — REVISED (code-review decision, this story). `requestOtp` originally mapped this intent onto
+// `stepUpOtpTtlMs` (3 min), on the reasoning that a SHORT TTL makes `primary_delivery_not_completed`
+// resolve promptly. In review that was found to cut the other way: a 3-minute window lets element 2 of
+// the AC-R1 fallback gate go true for ANY member who simply had not looked at their phone yet — not
+// only one for whom the primary route had genuinely failed — which undercuts the gate's own stated
+// purpose ("unreachable until the primary has genuinely been tried and failed", `2026-08-14-113` cl.1).
+// `requestOtp` now maps this intent onto its OWN `dataExportDeliveryOtpTtlMs` (60 min, distinct from
+// BOTH `loginOtpTtlMs` and `stepUpOtpTtlMs`). ⚠ This does NOT fully resolve the underlying tension —
+// there remains no machine-verifiable signal that distinguishes "genuinely lost the mobile" from
+// "hasn't checked it in an hour" (see `delivery.ts`'s `primaryDeliveryNotCompletedAt` header) — it only
+// moves the false-positive window from minutes to an hour. Element 3 (the staff attestation) remains
+// the load-bearing control for that distinction, by design.
+export const MEMBER_OTP_INTENTS = ['login', 'step_up', 'data_export_delivery'] as const;
 export type MemberOtpIntent = (typeof MEMBER_OTP_INTENTS)[number];
 export const memberOtpIntentEnum = pgEnum('member_otp_intent', MEMBER_OTP_INTENTS);
 

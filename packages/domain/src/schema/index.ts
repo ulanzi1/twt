@@ -95,6 +95,8 @@ export * from './member_withdrawals.js';
 // non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum zeroing). FK cascade to
 // members for RTBF (Story 3.12).
 export * from './data_exports.js';
+export * from './data_export_delivery_grants.js';
+export * from './member_data_rights_corrections.js';
 // Story 10.7 — report_exports (tenant-isolated; one row per ADMIN/trustee report-export request). The
 // serialized CSV/JSON artifact Tier-1 envelope-encrypted at rest (artifact_ciphertext); status/
 // failed_reason/params_hash non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum

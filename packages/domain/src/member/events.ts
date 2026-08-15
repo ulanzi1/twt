@@ -85,8 +85,31 @@ export const GraceExpiredPayloadSchema = z.object({ ...auditShape }).strict();
 /** Voluntary withdrawal completed → `withdrawn`. FR-6. */
 export const WithdrawalCompletedPayloadSchema = z.object({ ...auditShape }).strict();
 
-/** RTBF anonymization → `anonymized` (terminal). FR-96 (Story 3.12). */
-export const RtbfAnonymizedPayloadSchema = z.object({ ...auditShape }).strict();
+/**
+ * RTBF anonymization → `anonymized` (terminal). FR-96 (Story 3.12).
+ *
+ * ── Story 10.21 — WIDENED with `helpdesk_ticket_id`, deliberately and narrowly ─────────────────────
+ * This payload was a FROZEN auditShape-only `.strict()` contract, R1-rationalised at the handler
+ * (`rtbf/handlers.ts` — "the frozen auditShape-only `.strict()` payload cannot carry any cleared PII").
+ * Story 10.21 adds ONE field, and the justification is that a `helpdesk_ticket_id` **UUID is not cleared
+ * PII** — it is an opaque internal row address, which is why this specific field is admissible where any
+ * free-text field would not be. `.strict()` is RETAINED; ⛔ `.passthrough()` is forbidden — strictness,
+ * not requiredness, is what carries the "no free text / no cleared PII" guarantee.
+ *
+ * ⛔ WHY OPTIONAL, and why that is not laziness: the member self-service path emits a FOUR-field payload
+ * (`apps/api/src/modules/rtbf/handlers.ts`) and `member/project.ts` parses the payload BEFORE insert, so
+ * a REQUIRED fifth field would break every member RTBF at runtime — in a schema also bound into
+ * `@twt/events` (`packages/events/src/registry.ts`). The shape is not novel: `KycCompletedPayloadSchema`
+ * twenty lines above is already an `auditShape` extension carrying an optional field.
+ *
+ * ⚠ CONSEQUENCE — the provenance guarantee moves OUT of the schema and INTO the caller. An off-portal
+ * erasure that omits the ticket id validates cleanly here and becomes indistinguishable from a member
+ * self-service one. The off-portal fulfilment handler therefore REQUIRES it and fails closed without it.
+ * ⛔ Do not "simplify" that caller-side check away on the grounds that the schema allows omission.
+ */
+export const RtbfAnonymizedPayloadSchema = z
+  .object({ ...auditShape, helpdesk_ticket_id: z.string().uuid().optional() })
+  .strict();
 
 // ── Non-transition marker events (reducer returns the current state unchanged) ──
 // Declared in the vocabulary (AC1) + replay-safe (Dev Notes note e). They record a

@@ -25,9 +25,16 @@
 // Every read runs under the caller's RLS scope (tenant-isolated). Naming: DB snake_case, TS camelCase.
 //
 // ── ⚠ DELIBERATELY NOT EXPORTED: the Story 10.10 moderation rationale ────────────────────────────
-// `member_moderation_actions.rationale_ciphertext` is Tier-1 member-related PII, and this module's
-// own header calls itself "the authoritative checklist" for the PII surface — so its absence here
-// is recorded rather than left to read as an oversight.
+// `member_moderation_actions.decision_note_ciphertext` is Tier-1 member-related PII, and this
+// module's own header calls itself "the authoritative checklist" for the PII surface — so its
+// absence here is recorded rather than left to read as an oversight.
+// ⚠ NAME CORRECTED at Story 10.21 (Finding 6): this note said `rationale_ciphertext`, which migration
+// 0099 RENAMED to `decision_note_ciphertext` (Story 10.20). A stale name in the module that calls
+// itself the authoritative PII checklist is exactly the kind of drift that makes the checklist
+// un-followable. ⚠ Story 10.20 also added THREE further Tier-1 columns to that table —
+// `escalation_inadequacy_ciphertext`, `escalation_proportionality_ciphertext` and
+// `immediate_termination_reason_ciphertext` — and every one of them inherits the SAME undecided
+// disclosure question stated below. The open question now covers four columns, not one.
 //
 // The ERASURE half IS wired: `member/anonymize.ts` scrubs the rationale on RTBF, and migration 0092
 // grants the column-level UPDATE that makes the scrub possible at all (0091 was SELECT+INSERT-only,
@@ -43,6 +50,21 @@
 // → OPEN QUESTION for PM/legal, recorded per [[feedback_record_unattested_no_backfill]]. Whoever
 // answers it should also decide whether `actor_display` rides along, since naming the acting
 // trustee to a terminated member is its own decision.
+// ⭐ CLOSED BY RULING, 2026-08-14 — Decision `2026-08-14-109` clause 3 (Escalation 3 / consent-sheet
+// Row 3). The Trustee Panel ruled option (b): **internal deliberative material is WITHHELD.** The
+// decision note, Story 10.20's three further Tier-1 moderation columns
+// (`escalation_inadequacy_ciphertext`, `escalation_proportionality_ciphertext`,
+// `immediate_termination_reason_ciphertext`) and **`actor_display`** are NOT disclosed to the data
+// principal under the DPDPA access right. They are admin-authored deliberative material written under
+// governance authority, and the exemption is recorded as such.
+// ⚠ The member is NOT left uninformed: they continue to learn the moderation OUTCOME and its
+// REASON-CODE LABEL through the status panel and the notification. The exemption covers the
+// REASONING, not the FACT.
+// ⛔ THEREFORE THIS MODULE'S OMISSION IS NOW CORRECT BY RULING, not merely undecided — the absence
+// above is the ratified posture and must not be "fixed" by adding the fields.
+// ⚠ Recorded `un-attested`: legal counsel is unengaged, so this arrived on Panel attestation alone
+// (the `2026-08-06-080` precedent). *Re-trigger:* the first counsel engagement, at which it should be
+// re-presented ([[feedback_record_unattested_no_backfill]]).
 
 import { and, asc, desc, eq } from 'drizzle-orm';
 

@@ -324,6 +324,12 @@ export * from './member_moderation_actions.js';
 // ⚠ `member_id` is denormalized here on purpose (the RTBF scrub queries on that axis, and every
 // other scrub in anonymize.ts has the same shape) — see the schema header.
 export * from './member_moderation_grounds.js';
+// Story 10.22 — `member_moderation_appeals`, the Niyamavali §8.8 appeal RECORD (Decision
+// `2026-08-15-121`). ⛔ A RECORD, NOT a second moderation write path: an allowed appeal DIRECTS a
+// restore through the existing path, and nothing here moves the moderation overlay. Keyed to the
+// moderation ACT, not the member, with a PARTIAL unique index (`WHERE status = 'open'`) because §8.8
+// permits re-filing after a determination. ⛔ Not Epic 6's claim appeal — distinct journey, distinct id.
+export * from './member_moderation_appeals.js';
 // Story 10.23 — the restoration-discipline instrument: `member_restoration_impositions`, the
 // APPEND-ONLY record of a §3.1 R7 lock-in. The SECOND governance overlay's table.
 // ⚠ NOT the restoration status — that is DERIVED by folding `member.restoration_discipline.*` events

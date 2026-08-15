@@ -330,6 +330,15 @@ export const MEMBER_EVENT_TYPES = [
   // it is spelled `member.moderation.*`. Those tuples are the action-bearing three, and
   // `moderationActionForEventType` returning null for this type is CORRECT, not a gap to close.
   'member.moderation.ground-appended',
+  // Story 10.22 — Niyamavali §8.8 (Decision `2026-08-15-121`): the moderation APPEAL, two events.
+  // ⚠ ACTION-LESS, both of them. NO moderation status moves on a filing (§8.8: "the filing of an
+  // appeal does not suspend the act appealed against") and — the load-bearing one — NO status moves
+  // on an `allowed` outcome either, because §8.8 makes an allowed appeal DIRECT a restore rather than
+  // perform one. They therefore carry no overlay from/to and must NOT join `MODERATION_EVENT_TYPES` /
+  // `MODERATION_ACTION_EVENT_TYPES` merely because they are spelled `member.moderation.*`.
+  // `moderationActionForEventType` returning null for both is CORRECT, not a gap to close.
+  'member.moderation.appeal-filed',
+  'member.moderation.appeal-decided',
   // Story 10.23 — restoration-discipline OVERLAY: the SECOND governance overlay, one NON-TRANSITION
   // event. It moves an independent, event-derived status machine (restoration-discipline/status.ts)
   // and never `members.state`. ⚠ There is deliberately NO `…expired` sibling: expiry is DERIVED at

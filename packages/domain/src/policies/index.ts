@@ -157,6 +157,11 @@ export * from './member-moderation-actions-rls.js';
 // shipped SELECT+INSERT-only and 0092 had to come back to make a Tier-1 column erasable at all. No
 // twt_service leg of any kind — this table has no pre-scope reader.
 export * from './member-moderation-grounds-rls.js';
+// Story 10.22 — member_moderation_appeals tenant-isolation policies. SELECT + INSERT + a NARROW
+// UPDATE (the §8.8 decision write and the DPDPA-RTBF scrub), with NO delete leg and NO `FOR ALL`
+// policy — a recorded appeal is immutable. The column-level GRANTs in migration 0107 are what keep
+// the UPDATE policy from being a general edit capability over the filing.
+export * from './member-moderation-appeals-rls.js';
 // Story 10.23 — member_restoration_impositions tenant-isolation policies. APPEND-ONLY: SELECT +
 // INSERT only. Unlike its moderation sibling there is no UPDATE leg AT ALL — 0092 had to add one so
 // the DPDPA-RTBF scrub could reach a Tier-1 rationale, and this instrument has no PII column to

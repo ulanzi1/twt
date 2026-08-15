@@ -29,7 +29,7 @@
 // Every write runs under the caller's RLS scope-tx (tenant-isolated). Naming: DB snake_case, TS
 // camelCase. NO HTTP / audit / event emission here — the route orchestrates (mirrors assemble.ts).
 
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import { encryptTier1, serializeEnvelope } from '../encryption/envelope.js';
@@ -40,6 +40,7 @@ import { dataExportDeliveryGrants } from '../schema/data_export_delivery_grants.
 import { memberAuthOtps } from '../schema/member_auth_otps.js';
 import { dataExports } from '../schema/data_exports.js';
 import { memberDataRightsCorrections } from '../schema/member_data_rights_corrections.js';
+import { memberModerationAppeals } from '../schema/member_moderation_appeals.js';
 import { memberAddresses } from '../schema/member_addresses.js';
 import { memberIdentities } from '../schema/member_identities.js';
 import { memberKycProfiles } from '../schema/member_kyc_profiles.js';
@@ -83,6 +84,9 @@ const FIELD_CLASS_MODERATION = 'member_moderation';
 // an erasure — the exact defect that let the 10.10 moderation rationale outlive an RTBF request.
 const FIELD_CLASS_DATA_RIGHTS_ATTESTATION = 'data_rights_attestation';
 const FIELD_CLASS_DATA_RIGHTS_CORRECTION = 'data_rights_correction';
+// Story 10.22 (AC9) — the moderation APPEAL's two Tier-1 columns (migration 0107). Niyamavali §8.8.
+// ⚠ Same reason as the two above: a Tier-1 column that is NOT in this file SURVIVES an erasure.
+const FIELD_CLASS_MODERATION_APPEAL = 'moderation_appeal';
 
 // The member mobile Tier-1 envelope keys on this fixed sentinel namespace (login runs pre-scope — see
 // apps/api context.ts MEMBER_IDENTITY_NAMESPACE + assemble.ts), NOT the member's real pariwarId.
@@ -358,6 +362,36 @@ export async function anonymizeMember(
       actionTakenCiphertext: await encSentinel(pariwarId, FIELD_CLASS_DATA_RIGHTS_CORRECTION, enc),
     })
     .where(eq(memberDataRightsCorrections.memberId, memberId));
+
+  // ── member_moderation_appeals (Story 10.22, AC9) — both Tier-1 columns ─────────────────────────
+  // The member's own grounds of appeal, and the adjudicator's reasoned outcome.
+  // ⛔ THE ROW IS RETAINED, and the distinction matters: **the record of a governance act survives
+  // RTBF; its member-authored CONTENT does not.** That an appeal was filed under §8.8, against which
+  // act, through which intake surface, and how it was determined, is the Trust's audit history of its
+  // own conduct — erasing the row would erase the Trust's record of how it treated a member, not the
+  // member's personal data. Same posture as the moderation tables above.
+  // ⚠ `reasoned_outcome_ciphertext` is NULLABLE (an open appeal has none). Scrubbing it
+  // unconditionally would write a sentinel into an OPEN appeal and trip migration 0107's
+  // `member_moderation_appeals_decision_coherence_check`, which requires every decision field to be
+  // NULL while `status = 'open'`. It is therefore scrubbed only where it is already non-null.
+  await client
+    .update(memberModerationAppeals)
+    .set({
+      groundsCiphertext: await encSentinel(pariwarId, FIELD_CLASS_MODERATION_APPEAL, enc),
+    })
+    .where(eq(memberModerationAppeals.memberId, memberId));
+
+  await client
+    .update(memberModerationAppeals)
+    .set({
+      reasonedOutcomeCiphertext: await encSentinel(pariwarId, FIELD_CLASS_MODERATION_APPEAL, enc),
+    })
+    .where(
+      and(
+        eq(memberModerationAppeals.memberId, memberId),
+        isNotNull(memberModerationAppeals.reasonedOutcomeCiphertext),
+      ),
+    );
 
   await client
     .update(dataExports)

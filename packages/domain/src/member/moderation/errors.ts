@@ -483,3 +483,170 @@ export class ModerationGroundAlreadySupersededError extends Error {
 // to mirror that check, but the domain has no code path that can ever raise it, so it was removed
 // as dead code (Story 10.10 review). Do not re-add it unless the domain itself starts resolving
 // or validating the display name.
+
+// ── Story 10.22 — the moderation APPEAL (Niyamavali §8.8, Decision `2026-08-15-121`) ─────────────
+// ⚠ Every error below MUST be wired into `apps/api/src/middleware/error-mapping/index.ts`. An
+// UNMAPPED domain error becomes a 500 — the Story 10.8 Pass-3 finding, not being repeated here.
+
+/** Namespaced code for an appeal filed from a status §8.8 does not make appealable (HTTP 422). */
+export const MODERATION_APPEAL_NOT_APPEALABLE_CODE = 'member_moderation.appeal_not_appealable';
+
+/**
+ * Thrown when a member who is under NO moderation attempts to file an appeal.
+ *
+ * §8.8 opens the appeal to "a member under suspension (§8.2) or termination (§8.4)". An unmoderated
+ * member has no act to appeal against — this is a 422 (the request is not a coherent one), not a 409.
+ */
+export class ModerationAppealNotAppealableError extends Error {
+  public readonly name = 'ModerationAppealNotAppealableError';
+  public readonly code = MODERATION_APPEAL_NOT_APPEALABLE_CODE;
+  public constructor(public readonly moderationStatus: string) {
+    super(
+      `Niyamavali §8.8 permits an appeal from 'suspended' or 'terminated'; this member's moderation standing is '${moderationStatus}'`,
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { moderation_status: this.moderationStatus },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for a second open appeal against the same act (HTTP 409). */
+export const MODERATION_APPEAL_ALREADY_OPEN_CODE = 'member_moderation.appeal_already_open';
+
+/**
+ * Thrown when an appeal against this moderation act is ALREADY OPEN.
+ *
+ * §8.8: "Only one appeal against a given moderation act may be open at any time." ⚠ Note what this
+ * error does NOT mean: the right is **not exhausted**. §8.8 permits a further appeal against the same
+ * act once the open one has been determined, and does not exhaust the right after any number of
+ * determinations — deliberately narrower than Part 9's one-journey-per-claim-ever standard.
+ *
+ * ⛔ The pre-check that raises this is the INTERFACE; the partial UNIQUE index
+ * `member_moderation_appeals_one_open_per_action` is the BACKSTOP that closes the race the pre-check
+ * cannot — two concurrent filings can both pass before either commits, but only one INSERT wins.
+ * A `23505` leaking to a caller as a 500 is a bug.
+ */
+export class ModerationAppealAlreadyOpenError extends Error {
+  public readonly name = 'ModerationAppealAlreadyOpenError';
+  public readonly code = MODERATION_APPEAL_ALREADY_OPEN_CODE;
+  public constructor(
+    public readonly moderationActionId: string,
+    public readonly openAppealId: string,
+  ) {
+    super(
+      `an appeal against moderation action '${moderationActionId}' is already open; a further appeal may be filed once it is determined`,
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { moderation_action_id: this.moderationActionId, open_appeal_id: this.openAppealId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for an appeal that has already been determined (HTTP 409). */
+export const MODERATION_APPEAL_ALREADY_DECIDED_CODE = 'member_moderation.appeal_already_decided';
+
+/** Thrown when a determination is attempted on an appeal that is no longer `open`. §8.8 gives one review. */
+export class ModerationAppealAlreadyDecidedError extends Error {
+  public readonly name = 'ModerationAppealAlreadyDecidedError';
+  public readonly code = MODERATION_APPEAL_ALREADY_DECIDED_CODE;
+  public constructor(public readonly appealId: string) {
+    super(`appeal '${appealId}' has already been determined; a recorded appeal decision is immutable`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { appeal_id: this.appealId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for the different-individual exclusion (HTTP 409 — ⛔ NEVER 403). */
+export const MODERATION_APPEAL_ADJUDICATOR_EXCLUDED_CODE =
+  'member_moderation.appeal_adjudicator_excluded';
+
+/**
+ * ⭐ Thrown when the adjudicator TOOK PART in the act under appeal — as the authority who imposed it,
+ * or by contributing a ground it rests on.
+ *
+ * §8.8: the appeal "shall be heard by a member of the Panel who did not take part in the act appealed
+ * against". That is the natural-justice requirement Deed Clause 26 binds every Board discretion to.
+ *
+ * ⛔ **THIS IS A 409, NEVER A 403**, and the distinction is not pedantry. A 403 says *you may not do
+ * this at all*; this actor holds the key and may decide any other appeal. What is being refused is a
+ * relationship between THIS actor and THIS case — a state objection, not an authorization failure.
+ * Mapping it to 403 makes the two indistinguishable to the operator, who is then told they lack a
+ * capability they in fact hold, with nothing naming the real cause.
+ *
+ * ⚠ Where the exclusion set leaves NO eligible Panel member, §8.8 is explicit: the appeal "remains
+ * filed and open" — neither determined nor dismissed — and constituting an eligible bench is a matter
+ * for the Board under Deed Clause 18. This error is that outcome's mechanism: it refuses the
+ * determination and leaves the record untouched.
+ */
+export class ModerationAppealAdjudicatorExcludedError extends Error {
+  public readonly name = 'ModerationAppealAdjudicatorExcludedError';
+  public readonly code = MODERATION_APPEAL_ADJUDICATOR_EXCLUDED_CODE;
+  public constructor(
+    public readonly appealId: string,
+    public readonly moderationActionId: string,
+  ) {
+    super(
+      'Niyamavali §8.8 requires the appeal to be heard by a Panel member who did not take part in the act appealed against; this actor imposed it or contributed a ground it rests on',
+    );
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { appeal_id: this.appealId, moderation_action_id: this.moderationActionId },
+        request_id: requestId,
+      },
+    };
+  }
+}
+
+/** Namespaced code for an appeal id that does not resolve in the caller's scope (HTTP 404). */
+export const MODERATION_APPEAL_NOT_FOUND_CODE = 'member_moderation.appeal_not_found';
+
+/** Thrown when no appeal with this id exists in the caller's Pariwar. ⚠ 404, not 403 — an ownership
+ *  read must not reveal that a record exists in another tenant. */
+export class ModerationAppealNotFoundError extends Error {
+  public readonly name = 'ModerationAppealNotFoundError';
+  public readonly code = MODERATION_APPEAL_NOT_FOUND_CODE;
+  public constructor(public readonly appealId: string) {
+    super(`no moderation appeal '${appealId}'`);
+  }
+
+  public toErrorResponse(requestId: string): ErrorResponseShape {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        details: { appeal_id: this.appealId },
+        request_id: requestId,
+      },
+    };
+  }
+}

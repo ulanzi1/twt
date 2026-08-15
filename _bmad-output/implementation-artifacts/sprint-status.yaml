@@ -1,4 +1,33 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-15g (10-21-off-portal-dpdpa-access: stays DONE. ⛔ ESCALATION 12 WITHDRAWN ON
+#   EVIDENCE -- `Decision 2026-08-15-119`, superseding `-118`'s escalation (⛔ 118 NOT edited).
+#   The round-2 review had raised Escalation 12 claiming a member with no mobile on file has NO
+#   statutory route by either path. On challenge the member-creation invariant was TRACED rather than
+#   assumed, and the premise does not survive: `members` rows have ONE production writer
+#   (member/project.ts:121); the only FIRST event is `member.signup_initiated` from ONE emitter
+#   (auth/member/signup.handlers.ts:184); that handler inserts `member_identities` in the SAME scope-tx
+#   (:188, closed by closeScopeTx(scopeTx, ok) -- both land or neither); `member_identities.member_id` is
+#   PRIMARY KEY with `mobile_ciphertext` and `mobile_blind_index` BOTH NOT NULL (0019:34); there is no
+#   DELETE FROM member_identities outside tests; and `anonymizeMember` sentinels the ciphertext while
+#   RETAINING the blind index (anonymize.ts:132-134), so even an ERASED member still resolves one. At the
+#   delivery route the member provably exists via data_exports_member_id_members_member_id_fk (0033:41).
+#   ⇒ a null blind index there is CORRUPT DATA, not an unserved member. There is no statutory gap.
+#   ⛔ THE 409 `member_data_rights.no_mobile_on_file` IS RETAINED, reclassified from "open policy gap" to
+#   "corrupt-data backstop": a bad row must fail closed and loudly rather than mint a grant and return
+#   200 with a grant_id for a delivery that never happened. Handler + test comments corrected to say so.
+#   ⚠ METHOD LESSON, recorded because it is the useful part: the escalation was raised from a review
+#   finding whose REACHABILITY had never been traced -- the state existed only because a round-2 test
+#   deleted the identity row by hand. An escalation asserting a gap must first establish the gap is
+#   REACHABLE; raising one from a fabricated state consumes Panel attention and, left standing, becomes a
+#   false record of an unserved population.
+#   ⛔ PANEL-QUEUE NET EFFECT IS ZERO, NOT +1. Story 10.21's Panel-owned set is Escalations 1, 2, 3, 5, 8,
+#   9, 10 and 11 -- EIGHT, NONE OPEN. 113's attempts=0 follow-up is untouched and still open. The release
+#   gate remains OPEN and the flip remains unauthorised -- unchanged by this correction.
+#   Gates re-verified after the reclassification: domain 242 files/2794 passed, api 116/980 passed (1
+#   skipped), contracts 55/891, admin 31/308; typecheck + lint clean in all four. ⚠ The reclassification
+#   surfaced one more thing: `piiColumn` types the two correction ciphertext columns NULLABLE while 0104
+#   declares both NOT NULL -- the DB is the stricter of the two. The new scrub test now ASSERTS the
+#   non-null rather than `!`-asserting it, so the divergence stays visible.)
 # last_updated: 2026-08-15f (10-21-off-portal-dpdpa-access: REVIEW -> DONE via bmad-code-review round 2.
 #   Three parallel layers over the branch diff (54 files, +5154/-56, code+tests only). 5 decision-needed
 #   RULED, 28 patches APPLIED, 1 DEFERRED, 2 dismissed as unsubstantiated.

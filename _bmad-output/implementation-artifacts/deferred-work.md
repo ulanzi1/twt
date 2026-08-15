@@ -4816,8 +4816,30 @@ this story's gate re-run and will keep costing runs until someone owns it
   `withCompensatingAudit`'s implementation or adds a consumer that wraps a scope-tx mutation.
   [`apps/api/src/modules/member-data-rights/handlers.ts:299`]
 
-- **⛔ ESCALATION 12 — the routeless member (no mobile on file). RAISED 2026-08-15, OPEN.** Decision
-  `2026-08-15-118`. A member with no mobile on file can never satisfy element 2 of the ratified
+- **✅ ESCALATION 12 — the routeless member (no mobile on file). RAISED 2026-08-15, WITHDRAWN 2026-08-15
+  ON EVIDENCE.** Decision `2026-08-15-119` supersedes `2026-08-15-118`'s escalation. ⛔ **NOT an open
+  item; do not carry it in any Panel-queue count.**
+  ⭐ **Why it was withdrawn.** A persisted member with no mobile is **unreachable** under the
+  member-creation invariant, so the "no statutory route by either path" premise was false. Traced, not
+  assumed: `members` rows have ONE production writer (`member/project.ts:121`); the only FIRST event is
+  `member.signup_initiated` from ONE emitter (`auth/member/signup.handlers.ts:184`); that handler writes
+  `member_identities` in the SAME scope-tx (`:188`, closed by `closeScopeTx(scopeTx, ok)`);
+  `member_identities.member_id` is PRIMARY KEY with `mobile_ciphertext` and `mobile_blind_index` both
+  NOT NULL (`0019_polite_penance.sql:34`); identity rows are never deleted outside tests; and
+  `anonymizeMember` sentinels the ciphertext while RETAINING the blind index (`anonymize.ts:132-134`), so
+  even an erased member still resolves one. At the delivery route the member's existence is guaranteed by
+  `data_exports_member_id_members_member_id_fk` (`0033:41`).
+  ⇒ A null blind index there means a `members` row with no identity row: **corrupt data**, not an
+  unserved member.
+  ⛔ **The 409 `member_data_rights.no_mobile_on_file` is RETAINED**, reclassified as a defensive backstop:
+  corrupt data must fail closed rather than mint a grant and return 200 for a delivery that never
+  happened. ⚠ **Method note:** the escalation was raised from a review finding whose reachability had not
+  been traced — the state existed only because a round-2 test deleted the identity row. An escalation
+  asserting a gap must first establish the gap is REACHABLE.
+  *Owner:* none — closed. *Re-trigger:* only if a production path is found that persists a member without
+  a mobile; ⛔ re-raising without that evidence is not warranted.
+
+  ~~Original entry (superseded, retained for the record):~~ Decision `2026-08-15-118`. A member with no mobile on file can never satisfy element 2 of the ratified
   three-part gate (`2026-08-14-113` cl.1): no mobile ⇒ no OTP is minted ⇒
   `primaryDeliveryNotCompletedAt` returns `null` permanently ⇒ the staff-mediated fallback fails closed
   exactly as ratified. The primary route is simultaneously impossible for the same reason. The two

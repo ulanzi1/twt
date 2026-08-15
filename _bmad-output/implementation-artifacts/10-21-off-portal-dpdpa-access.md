@@ -2042,15 +2042,24 @@ mandate) and none of them change. Separately verified: **neither the 24h grant T
       permanently closed for precisely the member who cannot use the primary route. Both statutory paths
       shut, and the operator is told it worked. Whether the right answer is a typed 409, an explicit
       "unreachable member" state, or auto-opening the fallback is a policy call. *(blind)*
-      ⭐ **RULED 2026-08-15 — fail closed now, and escalate the policy hole underneath it.** ⚠ The finding
-      has two halves, owed to different authorities. **(a) Engineering:** the blind-index lookup moves
-      **ahead of** the grant insert and the route refuses with a typed 409
-      `member_data_rights.no_mobile_on_file` — no grant row, no false success. **(b) Policy — ⛔ NOT the
-      author's to decide:** element 2 requires an unsuccessful **OTP** attempt, so a member with no mobile
-      on file can **never** satisfy it — the primary route is impossible and the fallback is structurally
-      closed, leaving that member **no statutory route by either path**. That is a hole in the ratified
-      three-part gate itself. ⛔ Raised as an escalation to the Trustee Panel with an **immediate**
-      re-trigger, ⛔ never deferred to an epic ([[project_r7_fact_producer_unbuilt]]).
+      ⭐ **RULED 2026-08-15 — fail closed. ⚠ CORRECTED SAME DAY: the escalation half was WITHDRAWN.**
+      **(a) Engineering — STANDS.** The blind-index lookup moves **ahead of** the grant insert and the
+      route refuses with a typed 409 `member_data_rights.no_mobile_on_file` — no grant row, no false
+      success where there was previously a **200 with a `grant_id`** for a delivery that never happened.
+      **(b) Policy — ⛔ WITHDRAWN, and the withdrawal is the more important half.** This was first ruled
+      as a statutory gap and raised as **Escalation 12** (`2026-08-15-118`). On challenge the invariant
+      was **traced rather than assumed**, and the premise did not survive: a persisted member with no
+      mobile is **UNREACHABLE** — `members` has one production writer (`member/project.ts:121`), the only
+      FIRST event is `member.signup_initiated` from one emitter (`signup.handlers.ts:184`), that handler
+      writes `member_identities` in the **same scope-tx** (`:188`), `member_id` is PRIMARY KEY with both
+      mobile columns **NOT NULL** (`0019:34`), identity rows are never deleted, and RTBF **retains**
+      `mobile_blind_index` (`anonymize.ts:132-134`). The member provably exists at the route via
+      `data_exports_member_id_members_member_id_fk`. ⇒ a null blind index there is **corrupt data**, not
+      an unserved member. **Escalation 12 is WITHDRAWN** by `2026-08-15-119`; the 409 is **retained and
+      reclassified** as a corrupt-data backstop. ⚠ **The method lesson, recorded because it is the useful
+      part:** the escalation was raised from a review finding whose reachability had never been traced —
+      the state existed only because a round-2 test deleted the identity row by hand. An escalation
+      asserting a gap must first establish the gap is REACHABLE.
       → carried as patches below.
 
 - [x] [Review][Decision] **Nothing on this surface checks `requested_via` or member lifecycle** —
@@ -2193,10 +2202,16 @@ code (`93647ad`), then the tests (`c5c10f4`) — history reads governance → im
 
 ⛔ **What this round does NOT do.** It does not discharge the release gate, and it does not authorise
 the `termination_access_block` flip — both remain exactly where the banner at the top of this file
-leaves them. It **adds** one open Panel escalation rather than closing one: **Escalation 12** (the
-member with no mobile on file, who can satisfy NEITHER route) is RAISED and OPEN, with an **immediate**
-re-trigger, due before the flip. ⚠ The `attempts = 0` follow-up from `2026-08-14-113` clause 3 is
-untouched and still open.
+leaves them. ⚠ The `attempts = 0` follow-up from `2026-08-14-113` clause 3 is untouched and still open.
+
+⚠ **THE ROUND CORRECTED ITSELF ONCE, AND THAT IS RECORDED RATHER THAN SMOOTHED.** It first RAISED
+**Escalation 12** (`2026-08-15-118`) — a member with no mobile on file having no statutory route — and
+then **WITHDREW it on evidence** (`2026-08-15-119`) when the member-creation invariant was traced instead
+of assumed: that state is **unreachable**, and it existed only because a round-2 test deleted the
+subject's `member_identities` row. ⛔ Net effect on the Panel's queue is **zero**, not +1: Story 10.21's
+Panel-owned set is Escalations 1, 2, 3, 5, 8, 9, 10 and 11 — **eight, NONE open**. The `no_mobile_on_file`
+409 is retained as a corrupt-data backstop. ⚠ `118` is **not edited**; `119` supersedes it
+([[feedback_supersede_never_reinterpret]]).
 
 ⚠ **Three things the round-2 fixtures exposed once they became honest**, each recorded because the
 green suite before them proved less than its name:

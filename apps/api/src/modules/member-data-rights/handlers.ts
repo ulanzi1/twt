@@ -550,15 +550,27 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
           );
         }
 
-        // ── ⛔ NO MOBILE ON FILE ⇒ REFUSE, BEFORE ANY ROW EXISTS (round-2 code review) ────────────
-        // The route previously created the grant, skipped OTP minting, and returned 200 with a
-        // `grant_id` and an `expires_at` — reporting success for a delivery that never happened. The
-        // member could not redeem, the operator had no signal, and (because no OTP row was ever
-        // written) `primaryDeliveryNotCompletedAt` returned null forever, so the narrow fallback was
-        // ALSO permanently closed for precisely the member who could not use the primary route.
-        // ⛔ THIS MAKES THE FAILURE HONEST; IT DOES NOT GIVE THAT MEMBER A ROUTE. That gap is
-        // ESCALATION 12 (Decision `2026-08-15-118`), OPEN, owned by the Trustee Panel — manufacturing
-        // a route here would be inventing gate mechanism, which `2026-08-14-112` cl.3 forbids.
+        // ── ⛔ NO MOBILE ON FILE ⇒ REFUSE, BEFORE ANY ROW EXISTS ──────────────────────────────────
+        //
+        // ⭐ THIS IS A CORRUPT-DATA BACKSTOP, NOT A SERVED CASE (Decision `2026-08-15-119`).
+        // A persisted member with no mobile is UNREACHABLE under the creation invariant: `members` rows
+        // have one production writer (`member/project.ts`), the only FIRST event is
+        // `member.signup_initiated` from one emitter (`auth/member/signup.handlers.ts`), and that
+        // handler writes `member_identities` in the SAME scope-tx — where `member_id` is PRIMARY KEY and
+        // both mobile columns are NOT NULL (`0019_polite_penance.sql`). Identity rows are never deleted,
+        // and RTBF sentinels `mobile_ciphertext` while RETAINING `mobile_blind_index` (AC4). The member
+        // itself provably exists here, via `data_exports_member_id_members_member_id_fk`.
+        // ⇒ A null blind index at this point means a `members` row with no identity row: an invariant
+        // violation, not a member the DPDPA leaves unserved.
+        //
+        // ⛔ KEPT ANYWAY, and the reason is the failure mode it replaces: the route previously created
+        // the grant, skipped OTP minting, and returned **200 with a `grant_id` and an `expires_at`** —
+        // reporting success for a delivery that never happened. Corrupt data must fail CLOSED and
+        // LOUDLY, not mint a grant nobody can redeem.
+        // ⚠ This was briefly recorded as an open statutory gap (Escalation 12, `2026-08-15-118`).
+        // That escalation is WITHDRAWN: the premise was never traced, and the state was reachable only
+        // in a test that deleted the identity row by hand. ⛔ Do not re-raise it without first showing a
+        // production path that persists a member without a mobile.
         const mobileBlindIndex = await memberAuthRepo.getMemberMobileBlindIndex(
           deps.servicePool,
           body.member_id,

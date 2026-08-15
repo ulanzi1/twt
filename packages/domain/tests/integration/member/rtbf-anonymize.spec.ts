@@ -602,10 +602,18 @@ describe.skipIf(!hasDatabase)('RTBF anonymization — soft-delete + retain + RLS
         .from(schema.memberDataRightsCorrections)
         .where(eq(schema.memberDataRightsCorrections.correctionId, corr!.correctionId));
       expect(row, 'the row is RETAINED — that a correction was handled is audit history').toBeDefined();
-      expect(await dec(row!.requestedChangeCiphertext, PARIWAR_A, 'data_rights_correction')).toBe(
+      // ⚠ ASSERTED, not `!`-asserted: `piiColumn` types these NULLABLE while migration 0104 declares
+      // both NOT NULL — the DATABASE is the stricter of the two. Checking it here keeps the divergence
+      // visible instead of silently trusting the looser type, and would catch a future migration that
+      // relaxed the column to match the type.
+      const requested = row!.requestedChangeCiphertext;
+      const actionTaken = row!.actionTakenCiphertext;
+      expect(requested, 'requested_change_ciphertext is NOT NULL at the database').not.toBeNull();
+      expect(actionTaken, 'action_taken_ciphertext is NOT NULL at the database').not.toBeNull();
+      expect(await dec(requested as string, PARIWAR_A, 'data_rights_correction')).toBe(
         ANONYMIZED_SENTINEL,
       );
-      expect(await dec(row!.actionTakenCiphertext, PARIWAR_A, 'data_rights_correction')).toBe(
+      expect(await dec(actionTaken as string, PARIWAR_A, 'data_rights_correction')).toBe(
         ANONYMIZED_SENTINEL,
       );
       // Non-PII provenance survives untouched.

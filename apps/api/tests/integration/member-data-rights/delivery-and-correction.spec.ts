@@ -961,9 +961,15 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
   });
 
   it('⛔ member-direct delivery is REFUSED when the member has no mobile on file', async () => {
-    // ⛔ The route used to return 200 with a `grant_id` for a delivery that never happened. ⚠ The
-    // underlying policy hole — such a member can satisfy NEITHER route — is Escalation 12 (Decision
-    // `2026-08-15-118`), OPEN. This asserts only that the failure is now HONEST.
+    // ⭐ A CORRUPT-DATA BACKSTOP, NOT A SERVED CASE (Decision `2026-08-15-119`). ⛔ Note what this
+    // test has to DO to reach the state: delete the member's identity row. That is the point — a
+    // persisted member with no mobile is unreachable in production (one member writer, one first
+    // event, identity written in the same scope-tx, both mobile columns NOT NULL, never deleted, and
+    // RTBF retains the blind index). The assertion is that CORRUPT DATA fails closed and loudly
+    // instead of minting a grant and returning 200 for a delivery that never happened.
+    // ⚠ This was briefly escalated as a statutory gap (Escalation 12) and is WITHDRAWN on that
+    // evidence. ⛔ The `DELETE` below is the fixture ADMITTING the state is fabricated — do not read it
+    // as a supported scenario.
     const p = randomUUID();
     const a = await authenticate('Operator NoMobile');
     await grant(a.userId, p, 'pariwar_admin');

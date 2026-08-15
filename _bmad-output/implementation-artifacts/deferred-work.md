@@ -4765,9 +4765,26 @@ creates a NEW open item, recorded below as its replacement, per [[feedback_closu
   fallback unsafe to operate. ⚠ Keep this entry: it is the trail from the escalation to its owner, and
   deleting it would leave `2026-08-15-116` clause 3's "owed mint" pointing at nothing
   ([[feedback_closure_language_precision]] — "Closed by [mint]" is not "Not addressed").
-  *Re-trigger:* the next story that touches
-  either the helpdesk ticket-intake surface (AC2) or the member-data-rights delivery module, or
-  immediately if prioritized on its own.
+  ⭐ **CLOSED BY IMPLEMENTATION 2026-08-15 — Story 10.29 (`10-29-member-authored-staff-mediation-request`).**
+  The WORK is now done, not merely owned: the captured fact
+  (`helpdesk_tickets.member_staff_mediation_requested_at`, migration `0106`) is written at genesis on
+  BOTH intake surfaces, `grantStaffMediatedDelivery` READS it, and the caller-supplied
+  `member_requested_staff_mediation: z.literal(true)` is **DELETED** from the contract, the admin client
+  and the audit digest — the removal `2026-08-15-116` clause 3 names, not a read path added beside the
+  boolean. `member_request_recorded_at` now carries the MEMBER's intake instant rather than the `now`
+  stamped when staff submit (`2026-08-15-115` cl.3). The six implementation decisions this required are
+  logged as Decision `2026-08-15-120`. ⛔ **"Closed by [implementation]" — ⛔ NOT "Resolved via deferral"
+  and ⛔ NOT "Not addressed"** ([[feedback_closure_language_precision]]).
+  ⚠ **One limit is CARRIED, not closed** (Decision `2026-08-15-120` clause 6): on
+  `created_via: 'helpline_call'` the field is **operator-transcribed at intake**. It buys a separate act
+  at a separate instant, an immutable genesis record, and the removal of the delivery caller's ability to
+  manufacture element 1 at all — ⛔ but it does **not** prove the member spoke, and nothing in the tree
+  claims it does. The member-app path (Story 10.2) is where authorship is genuine.
+  ⚠ Keep this entry in full: it is the trail from Escalation 11 → its ruling → its mint → its
+  implementation, and deleting any leg would leave `2026-08-15-116` clause 3 pointing at nothing.
+  *Re-trigger:* ⛔ **none — discharged.** Reopen only if a genuinely member-authored HELPLINE artifact
+  (a recorded consent, a call-back confirmation) is ever ratified as a requirement, which would supersede
+  Decision `2026-08-15-120` clause 6 rather than reinterpret it.
   [`packages/contracts/src/member-data-rights/member-data-rights.ts` — `StaffMediatedDeliveryRequest.member_requested_staff_mediation`, `apps/api/src/modules/member-data-rights/handlers.ts` — `grantStaffMediatedDelivery`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx` — the fallback panel]
   [`packages/contracts/src/member-data-rights/member-data-rights.ts:6278`, `apps/admin/src/api/client.ts:3159`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx`]
 

@@ -1,0 +1,27 @@
+-- Story 10.22 — the ONE grant migration 0107 forgot.
+-- Hand-authored. ⛔ NOT a regeneration of 0107: that migration is APPLIED, and re-authoring an
+-- applied migration is the 42P07 footgun (memory: project_live_db_test_gotchas). A forward migration
+-- is the only safe correction, and it leaves the record of the mistake where a reader will find it.
+--
+-- ── WHAT WENT WRONG, RECORDED RATHER THAN QUIETLY PATCHED ────────────────────────────────────────
+-- 0107 deliberately withholds table-wide UPDATE and grants it COLUMN BY COLUMN, so a recorded
+-- appeal's FILING is immutable by attribute privilege rather than by convention. That posture is
+-- right and is unchanged here. The mistake was in the enumeration: the six decision columns are
+-- `status`, `outcome`, `reasoned_outcome_ciphertext`, `decided_by_actor_id`, `decided_by_display`
+-- AND `decided_at` — and 0107 granted five of them.
+--
+-- ⚠ THE CONSEQUENCE WAS TOTAL, NOT PARTIAL. `decideMemberModerationAppeal` sets all six in ONE
+-- statement, and Postgres checks column privileges for the whole statement, so the determination
+-- failed with `42501 permission denied for table member_moderation_appeals` — EVERY determination,
+-- every time. Niyamavali §8.8's appeal could be filed and never decided.
+--
+-- ⭐ NOTHING IN THE PURE SUITE COULD HAVE CAUGHT THIS. The domain typechecks, the handler typechecks,
+-- the contracts typecheck, and every unit test passes: a column-level GRANT has no representation in
+-- TypeScript. It was caught by the live-DB spec (`tests/integration/member/moderation-appeal.spec.ts`),
+-- which is the argument for that spec existing at all.
+--
+-- ⛔ This does NOT widen the grant posture. `member_id`, `pariwar_id`, `moderation_action_id`,
+-- `filed_via`, `helpdesk_ticket_id` and `filed_at` still carry NO update privilege, so the filing
+-- remains immutable. Only the sixth decision column joins the five that were already granted.
+
+GRANT UPDATE ("decided_at") ON "member_moderation_appeals" TO twt_app;

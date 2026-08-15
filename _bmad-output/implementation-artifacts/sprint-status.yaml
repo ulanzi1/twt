@@ -1,4 +1,84 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-15e (10-21-off-portal-dpdpa-access: IN-PROGRESS -> REVIEW via bmad-dev-story
+#   completion pass from a cold context. ⛔ READ THE FLIP NARROWLY: `review` is this file's own STATUS
+#   DEFINITIONS value for "ready for code review" -- it is NOT `done`, and it does NOT discharge the
+#   release gate. The `termination_access_block` flip stays Panel-exclusive, untouched, and no flag,
+#   default or seed was changed. NO new feature code was written by this pass -- every AC was already
+#   built; what was missing was verification, record reconciliation and the status itself.
+#   GATES (re-run live, not read off the prior ledger entry): `pnpm ci:local` 30/30 green, exit 0;
+#   single-pass live-DB across 8 packages -- domain 2772/241 files, api 966/116 files, validity-service
+#   284, channels 204, niyamavali-engine 144, events 33, queue 3, jobs green; story-own specs 28/28
+#   including all 10 delivery-and-correction tests. ⚠ NOT a one-pass green and not reported as one:
+#   the api suite failed on runs 1 and 2, each time a DIFFERENT spec, and each was cleared of 10.21 by
+#   isolation rather than by assumption -- (1) moderation-dwell/-escalation 500-on-suspend under
+#   full-suite contention, then 81/81 across all six moderation specs together and 18/18 alone (and the
+#   only 10.21 edit in that path is a provably no-op reducer simplification); (2) medical-disclose's
+#   `not.toContain('ckd')` colliding with random base64 -- a TEST-DESIGN defect of the DATE-BOMB family
+#   (fails on data, not on a diff), recorded in deferred-work.md with a re-trigger and DELIBERATELY NOT
+#   fixed here. A third full api pass ran 116/116, exit 0.
+#   RECORD: File List reconciled against the working tree -- the code-review round's `apps/api/src/config.ts`
+#   and `member-otp.service.ts`, the `findLiveGrant` DELETION, Decisions `115`/`116`, and the Escalation 11
+#   consent sheet were all missing from it; three Change Log rows added (review round, Escalation 11
+#   raised+ruled, this pass); a duplicated `### Debug Log References` heading removed.
+#   ⚠ Task 7b's single unchecked `[ ]` box is left unchecked DELIBERATELY and PERMANENTLY for this story:
+#   it is the unruled `attempts = 0` Open follow-up of Decision `113` (.decision-log.md:317, re-verified
+#   live), whose own text forbids implementing it unilaterally -- checking it would assert work that must
+#   not be done. Recorded as "Resolved via explicit deferral", not "Closed by [edit]".
+#   ⛔ THREE successor-story mints remain UNNAMED, stated by enumeration and NOT as progress: AC5's
+#   export-content half; Escalation 11's option-(c) build; Escalations 4 and 6. An unnamed successor is
+#   how a deferral expires unowned.)
+# last_updated: 2026-08-15d (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. Escalation 11 RULED the
+#   same day it was raised -- Decision `2026-08-15-116`, session on
+#   docs/knowledge-transfer/trustee-consent-sheet-2026-08-15-story-10-21-escalation-11.md, quorum met
+#   (DR + KB initialed and dated; the sheet's quorum checkbox and one trustee's initials transcription
+#   were corrected in the Session Resolution with the discrepancy recorded, not silently absorbed).
+#   RULED OPTION (c): the fallback's element 1 must be a genuinely member-authored artifact -- captured
+#   as a structured field at ticket intake (AC2), read by the staff-mediated route instead of the
+#   caller-supplied z.literal(true) it accepts today. Ruled as posed, no conditions. Does NOT reopen
+#   Decision 113's delivery MODEL ratification or touch elements 2/3 of the gate, both separately
+#   confirmed correctly built. ⛔ NOT BUILT BY THIS RULING -- option (c) is a real feature (intake
+#   contract change + new read path), owed to a NAMED SUCCESSOR STORY, still UNNAMED; z.literal(true)
+#   stays in production unchanged until it lands. Cascaded: story file's Escalation 11 closed +
+#   Panel-queue breakdown updated (eight, zero open; successor-mint recorded as a new, separate
+#   obligation); deferred-work.md's code-review deferral closed by ruling, replaced with the owed
+#   successor-story-mint entry; trustee sheet's Session Resolution filled (decision id + cascade note).
+# last_updated: 2026-08-15c (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. Escalation 11 RAISED --
+#   Decision `2026-08-15-115` -- from the code-review D3 deferral (member_requested_staff_mediation is a
+#   staff-set z.literal(true), not a captured member-authored fact; collapses the ratified three-part
+#   fallback gate's element 1 into element 3, exactly the collapse Decision 111 clause 3 warned against
+#   in advance of the build). Blocks nothing already shipped -- AC-R1 remains built and delivering by
+#   both routes; elements 2 and 3 of the gate separately confirmed correctly built. Story file's
+#   "Escalations owed" section updated (Escalation 11 added; Panel-queue breakdown moved 7->8, one
+#   open); deferred-work.md's D3 entry updated to cite the raised escalation. A dedicated single-row
+#   Trustee consent sheet prepared:
+#   docs/knowledge-transfer/trustee-consent-sheet-2026-08-15-story-10-21-escalation-11.md -- mirrors the
+#   2026-08-14 eight-row sheet's format/discipline (blank Session Resolution, quorum note, un-attested
+#   caveat) scaled to one question with three options (accept current mechanization / add a distinct UI
+#   confirmation control / capture a genuinely member-authored fact at intake). NOT YET RULED -- no
+#   session has happened; nothing here is ratified.
+# last_updated: 2026-08-15b (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. Adversarial code review
+#   (Blind Hunter + Edge Case Hunter + Acceptance Auditor, triaged with spot-verification against the
+#   diff/repo) at `ebd3599`. 13 findings survived triage (2 more were checked and found FALSE, dropped).
+#   3 decision-needed items resolved: D1 (staff-mediated fallback unreachable once a member-direct grant
+#   goes stale -- one_pending_per_export permanently blocked reissue) fixed via lazy-expire-on-read, new
+#   `expireStaleGrantForExport`; D2 (delivery OTP inherited the 3-min step-up TTL, letting element 2 go
+#   true too easily) fixed via a dedicated 60-min `dataExportDeliveryOtpTtlMs`; D3
+#   (`member_requested_staff_mediation` is staff-set `z.literal(true)`, not a captured member-authored
+#   fact -- collapses gate element 1 into element 3) DEFERRED to a new Trustee Panel escalation, not a
+#   unilateral code fix -- recorded in deferred-work.md. All 12 remaining PATCH findings applied:
+#   export-not-ready guard on both delivery routes; the admin UI's lost-export-id-on-reload gap (new
+#   `GET .../export/active` read route + wiring, NOT the RLS-scoped grant-lookup dead code the original
+#   finding mis-cited -- that was deleted instead); no-signal blind-index/OTP-mint failure paths now
+#   recorded via the existing `onPrimaryDeliveryFailure` seam; the SAME advisory lock `fulfilErasure`
+#   takes now serializes both delivery-grant routes against a concurrent erasure; the redemption route's
+#   rate-limit tier corrected read->write; three stale "still BLOCKED on Escalation 1/2" header comments
+#   corrected (two MORE found during patch application the original finding missed); a genuine no-op
+#   ternary in the lifecycle reducer's `anonymized` arm simplified; `OffPortalErasureResponse.from_state`
+#   moved off an unconstrained `z.string()` onto the existing `MemberLifecycleStateWire`. Coverage gap
+#   closed as part of the redemption-tenancy finding: NO test in the file previously exercised a
+#   genuinely SUCCESSFUL redemption at all. 3 new integration tests added (all pass); full contracts +
+#   domain + api + admin builds and lints clean; 890 contracts / 1749 domain-unit / 297 api-unit / 22
+#   member-data-rights+data-export+login-wall+rtbf DB-integration tests all pass post-patch.
 # last_updated: 2026-08-15 (10-21-off-portal-dpdpa-access: stays IN-PROGRESS. AC-R1 + AC-R2 CLOSED OUT --
 #   tests, operator surface, §8.4a, the record, and the gates. ALL ACs are now BUILT AND VERIFIED.
 #   (1) TESTS were the real gap: the new routes had shipped with NO route-level coverage. Added 7
@@ -6430,7 +6510,7 @@ development_status:
   10-18-constituting-the-trustee-panel-sanctioning-authority: done
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
-  10-21-off-portal-dpdpa-access: in-progress
+  10-21-off-portal-dpdpa-access: review
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done

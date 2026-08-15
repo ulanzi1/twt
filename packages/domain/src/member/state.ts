@@ -146,9 +146,13 @@ function reduce(state: MemberLifecycleState, event: MemberEventInput): MemberLif
     // Likewise, a TENTH lifecycle label is admitted here automatically — the totality test in
     // `tests/member/state.test.ts` is what forces a deliberate decision about it.
     case 'member.rtbf_anonymized':
-      // Derived from the enum, ⛔ NEVER hand-listed — a hand-listed set is how the four
-      // `pending-*`/`lock-in` labels were missed once already.
-      return state === 'anonymized' ? state : 'anonymized';
+      // ⚠ NOT A LEGALITY GUARD (code-review correction, this story). This arm is a plain
+      // unconditional transition to `anonymized` — it does NOT gate against re-anonymizing an
+      // already-anonymized member; that legality check lives entirely in the CALLERS
+      // (`resolveRtbfLegality`), which is why `reduce` may see this event applied to a member
+      // already in `anonymized` without objecting. Derived from the enum, ⛔ NEVER hand-listed —
+      // a hand-listed set is how the four `pending-*`/`lock-in` labels were missed once already.
+      return 'anonymized';
 
     // Non-transition markers + any unknown/forward-compat event type → identity.
     default:

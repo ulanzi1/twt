@@ -862,6 +862,25 @@ export function useHelpdeskTransitions(pariwarId: string, ticketId: string) {
 }
 
 // ── Story 10.21 — off-portal DPDPA data-rights fulfilment ─────────────────────
+
+/** Query key for the member's currently-active export (code-review addition, this story). */
+export function activeDataRightsExportKey(pariwarId: string, memberId: string): readonly unknown[] {
+  return ['data-rights-active-export', pariwarId, memberId];
+}
+
+/**
+ * The member's currently-active export, or `null` — lets the operator surface recover
+ * `builtExportId` across a reload instead of relying solely on `buildExport`'s in-memory mutation
+ * result (code-review addition, this story).
+ */
+export function useActiveDataRightsExport(pariwarId: string, memberId: string | null) {
+  return useQuery({
+    queryKey: activeDataRightsExportKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getActiveDataRightsExport(pariwarId, memberId as string),
+    enabled: memberId !== null,
+  });
+}
+
 /**
  * The two fulfilment mutations for a data-rights ticket.
  *
@@ -876,6 +895,11 @@ export function useDataRightsFulfilment(pariwarId: string, ticketId: string, mem
   const onSettled = (): void => {
     void qc.invalidateQueries({ queryKey: ['helpdesk-ticket', pariwarId, ticketId] });
     void qc.invalidateQueries({ queryKey: ['helpdesk-queue', pariwarId] });
+    // ⭐ A successful build changes what `useActiveDataRightsExport` should return — refetch it so the
+    // recovered `builtExportId` is available immediately, not only after a reload.
+    if (memberId !== null) {
+      void qc.invalidateQueries({ queryKey: activeDataRightsExportKey(pariwarId, memberId) });
+    }
   };
   const buildExport = useMutation({
     mutationFn: () => {

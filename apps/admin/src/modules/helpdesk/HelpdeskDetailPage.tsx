@@ -8,6 +8,7 @@ import type { ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
+  useActiveDataRightsExport,
   useDataRightsDelivery,
   useDataRightsFulfilment,
   useHelpdeskTicket,
@@ -29,9 +30,13 @@ export function HelpdeskDetailPage({ pariwarId, ticketId }: { pariwarId: string;
   // Story 10.21 — the DPDPA fulfilment mutations. The shell decides whether to SHOW the panel (it
   // checks the subcategory + subject member); this only supplies the actions.
   const dataRights = useDataRightsFulfilment(pariwarId, ticketId, ticket.data?.subject_member_id ?? null);
-  // ⚠ `exportId` comes from the build result — delivery is only meaningful once an export exists, and
-  // the hook refuses with a plain message rather than letting the server 404 opaquely.
-  const builtExportId = dataRights.buildExport.data?.export_id ?? null;
+  // ⚠ `exportId` comes from the build result FIRST — freshest in the common case, and available the
+  // instant a build succeeds without waiting on a refetch. ⭐ CODE-REVIEW ADDITION: falls back to
+  // `useActiveDataRightsExport`'s server-recovered value so a page reload after a successful build
+  // does not strand the operator (previously this was in-memory `useMutation` state ONLY, lost on
+  // reload even though a `ready` export already existed server-side).
+  const activeExport = useActiveDataRightsExport(pariwarId, ticket.data?.subject_member_id ?? null);
+  const builtExportId = dataRights.buildExport.data?.export_id ?? activeExport.data?.export_id ?? null;
   const delivery = useDataRightsDelivery(
     pariwarId,
     ticketId,

@@ -14,7 +14,10 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { encryption } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { encryptMobile, mobileBlindIndex, normalizeMobile } from '../../../src/modules/auth/shared/mobile-index.js';
 
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
@@ -102,6 +105,13 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     }
   }
 
+  /** A fresh 10-digit mobile per call — avoids blind-index collisions across parallel-ish tests. */
+  function randomMobile(): string {
+    let n = String(6 + Math.floor(Math.random() * 4));
+    for (let i = 0; i < 9; i++) n += Math.floor(Math.random() * 10);
+    return n;
+  }
+
   /** Elevate for the DISTINCT data-rights step-up context. */
   async function elevate(client: Client): Promise<void> {
     const req = await client.inject({
@@ -116,29 +126,64 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
   }
 
   /**
-   * Seed a member + a ready export + a REAL helpdesk ticket.
+   * Seed a member + a REAL helpdesk ticket, and an export at the given status (default `ready`).
    *
    * ⭐ The ticket is created through the ACTUAL Story 10.1 intake route with
    * `category: 'other'` + `sub_category: 'dpdpa-data-rights'` — i.e. exactly the AC2 path a real
    * DPDPA request arrives on. ⛔ Hand-INSERTing it was tried and rejected: `audit_log_entries` carries
    * a NOT NULL `audit_hash` (the §1.5 hash chain), so a hand-seeded ticket would have required forging
    * a chain entry. Driving the real route is both simpler AND a truer fixture.
+   *
+   * ⚠ CODE-REVIEW FIX — a `ready` export now carries a REAL envelope-encrypted artifact (the same
+   * `encryptTier1`/`kekRef` shape `data-export.spec.ts` uses), not the placeholder `'enc:v1:fake'`
+   * string. The placeholder made a genuine successful-redemption test impossible: `decryptExportArtifact`
+   * would fail on it, so no test could ever exercise the full member-direct → redeem → 200 path.
+   * ⚠ CODE-REVIEW FIX — the member now carries a REAL `member_identities` row (mobile ciphertext +
+   * blind index), not NONE. Without one, `getMemberMobileBlindIndex` returns null and
+   * `grantMemberDirectDelivery` silently skips issuing an OTP at all (this is `P3`'s own finding) —
+   * which made a real member-direct → redeem or member-direct → (stale) → staff-mediated sequence
+   * untestable end-to-end. The two PRE-EXISTING gate tests that hand-insert an OTP row under a fake
+   * `bi-${memberId}` blind index are UNAFFECTED — `primaryDeliveryNotCompletedAt` filters on
+   * `member_id`, never the blind index.
    */
   async function seedSubject(
     client: Client,
     pariwarId: string,
+    opts: { status?: 'pending' | 'ready' } = {},
   ): Promise<{ memberId: string; exportId: string; ticketId: string }> {
+    const status = opts.status ?? 'ready';
     const memberId = randomUUID();
     const exportId = randomUUID();
     createdMemberIds.push(memberId);
     const c = await td.pool.connect();
     try {
       await c.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1,$2,'active',1)`, [memberId, pariwarId]);
+      const mobile = randomMobile();
+      const mobileCiphertext = await encryptMobile(normalizeMobile(mobile) as string, deps.encryption);
+      const blindIndex = await mobileBlindIndex(mobile, deps.encryption);
       await c.query(
-        `INSERT INTO data_exports (export_id, member_id, pariwar_id, status, requested_at, artifact_ciphertext)
-         VALUES ($1,$2,$3,'ready', now(), 'enc:v1:fake')`,
-        [exportId, memberId, pariwarId],
+        `INSERT INTO member_identities (member_id, pariwar_id, mobile_ciphertext, mobile_blind_index) VALUES ($1,$2,$3,$4)`,
+        [memberId, pariwarId, mobileCiphertext, blindIndex],
       );
+      if (status === 'ready') {
+        const ct = await encryption.encryptTier1(
+          Buffer.from('fake zip bytes'),
+          { pariwarId, fieldClass: 'data_export' },
+          deps.encryption.kms,
+          deps.encryption.kekRef,
+        );
+        await c.query(
+          `INSERT INTO data_exports (export_id, member_id, pariwar_id, status, requested_at, artifact_ciphertext)
+           VALUES ($1,$2,$3,'ready', now(), $4)`,
+          [exportId, memberId, pariwarId, encryption.serializeEnvelope(ct)],
+        );
+      } else {
+        await c.query(
+          `INSERT INTO data_exports (export_id, member_id, pariwar_id, status, requested_at)
+           VALUES ($1,$2,$3,'pending', now())`,
+          [exportId, memberId, pariwarId],
+        );
+      }
     } finally {
       c.release();
     }
@@ -290,7 +335,155 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     }
   });
 
+  it('⭐ staff-mediated succeeds on the SAME export once the member-direct grant itself has gone stale (lazy-expire-on-read, code-review fix)', async () => {
+    // ⛔ THE SEQUENCE THIS PROVES, THAT THE TEST ABOVE DOES NOT: this drives the REAL
+    // member-direct → (stale) → staff-mediated path on the SAME export, via the actual routes —
+    // rather than hand-inserting an OTP row with no member-direct grant ever having existed. Before
+    // the fix, the stale `pending` member-direct grant still occupied migration 0104's
+    // `one_pending_per_export` partial unique index, so the second insert collided and the caller saw
+    // a MISLEADING 409 `delivery_grant_already_live` (misleading because the grant that was "live" per
+    // the index was, in fact, dead and unredeemable).
+    const p = randomUUID();
+    const a = await authenticate('Operator F');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p);
+
+    const primary = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/member-direct`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: { export_id: s.exportId, member_id: s.memberId, helpdesk_ticket_id: s.ticketId },
+    });
+    expect(primary.statusCode).toBe(200);
+    const primaryGrantId = (primary.json() as { grant_id: string }).grant_id;
+
+    // The primary route's OTP AND the grant itself both go stale (the member never redeemed).
+    const c = await td.pool.connect();
+    try {
+      await c.query(
+        `UPDATE member_auth_otps SET expires_at = now() - interval '1 hour'
+           WHERE member_id = $1 AND intent = 'data_export_delivery'`,
+        [s.memberId],
+      );
+      await c.query(
+        `UPDATE data_export_delivery_grants SET expires_at = now() - interval '1 hour' WHERE grant_id = $1`,
+        [primaryGrantId],
+      );
+    } finally {
+      c.release();
+    }
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/staff-mediated`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: {
+        export_id: s.exportId,
+        member_id: s.memberId,
+        helpdesk_ticket_id: s.ticketId,
+        member_requested_staff_mediation: true,
+        attestation: 'Member asked for staff-mediated delivery after the primary route went stale.',
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as { channel: string }).channel).toBe('staff_mediated');
+
+    // The stale member-direct grant was transitioned to `expired`, not left `pending` — the exact
+    // transition `expireStaleGrantForExport` makes, proven at the row level.
+    const c2 = await td.pool.connect();
+    try {
+      const { rows } = await c2.query(
+        'SELECT grant_id, channel, status FROM data_export_delivery_grants WHERE member_id = $1 ORDER BY created_at',
+        [s.memberId],
+      );
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toMatchObject({ grant_id: primaryGrantId, channel: 'member_direct', status: 'expired' });
+      expect(rows[1]).toMatchObject({ channel: 'staff_mediated', status: 'pending' });
+    } finally {
+      c2.release();
+    }
+  });
+
+  it('⛔ delivery is REFUSED when the export is not ready (still building)', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator H');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p, { status: 'pending' });
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/member-direct`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: { export_id: s.exportId, member_id: s.memberId, helpdesk_ticket_id: s.ticketId },
+    });
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'member_data_rights.export_not_ready',
+    );
+  });
+
   // ── AC-R1 — redemption ─────────────────────────────────────────────────────────────────────────
+
+  it('✅ the FULL member-direct → redeem sequence succeeds and returns the decrypted artifact (tenant-scoped)', async () => {
+    // ⛔ THE COVERAGE GAP THIS CLOSES (code-review addition). No existing test exercised a genuinely
+    // SUCCESSFUL redemption — every other redemption test asserts a 404. `redeemDelivery`'s tenant
+    // comes from `findLiveGrantUnscoped`'s DB-derived `grant.pariwarId`, never from caller input,
+    // which is what makes the route's cross-tenant surface non-existent by construction; this test
+    // proves that path end-to-end, not just by inspection: if a future change ever scoped the
+    // redemption tx to the WRONG pariwar, `decryptExportArtifact` would fail (Tier-1 envelopes are
+    // KEK-scoped per Pariwar) and this test would catch it immediately.
+    const p = randomUUID();
+    const a = await authenticate('Operator I');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p);
+
+    const granted = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/member-direct`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: { export_id: s.exportId, member_id: s.memberId, helpdesk_ticket_id: s.ticketId },
+    });
+    expect(granted.statusCode).toBe(200);
+    const grantId = (granted.json() as { grant_id: string }).grant_id;
+    // ⚠ `td.stepUpDelivery` (the MEMBER-facing port), NOT `adminStepUp` — `grantMemberDirectDelivery`
+    // delivers the member's OTP through `deps.stepUpDelivery`, a DISTINCT capturing instance from the
+    // `deps.adminStepUpDelivery` the operator's OWN elevation OTP rides (see `elevate()` above).
+    const code = td.stepUpDelivery.last?.code as string;
+    expect(code).toBeTruthy();
+
+    // ⚠ Raw `app.inject` here, not the `makeClient` cookie-jar wrapper (used elsewhere in this file)
+    // — the wrapper's `InjectResult` deliberately exposes only `statusCode`/`json()`/`body`, and this
+    // assertion needs the raw headers + binary payload `data-export.spec.ts`'s own `injectRaw` helper
+    // reads the same way. The route is unauthenticated, so no cookie jar is needed anyway.
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/member-data-rights/delivery/${grantId}/redeem`,
+      payload: { otp: code },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/zip');
+    expect(res.rawPayload.toString('utf8')).toBe('fake zip bytes');
+
+    const c = await td.pool.connect();
+    try {
+      const { rows } = await c.query('SELECT status, consumed_at FROM data_export_delivery_grants WHERE grant_id = $1', [grantId]);
+      expect(rows[0].status).toBe('consumed');
+      expect(rows[0].consumed_at).not.toBeNull();
+    } finally {
+      c.release();
+    }
+
+    // ⛔ ONE-TIME — a second redemption with the SAME (now-burned) code gets the same 404 as unknown.
+    const second = await app.inject({
+      method: 'POST',
+      url: `/api/v1/member-data-rights/delivery/${grantId}/redeem`,
+      payload: { otp: code },
+    });
+    expect(second.statusCode).toBe(404);
+  });
 
   it('⛔ redemption returns the SAME 404 for an unknown grant and a wrong code (not an existence oracle)', async () => {
     const p = randomUUID();

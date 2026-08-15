@@ -213,6 +213,7 @@ import {
   type PublishCustomFieldDefinitionResponse as PublishCustomFieldResult,
   type MemberCustomFieldsResponse as MemberCustomFields,
   type SetMemberCustomFieldsRequest as SetMemberCustomFieldsBody,
+  ActiveDataRightsExportResponse,
   DATA_RIGHTS_STEP_UP_CONTEXT,
   MemberDirectDeliveryResponse,
   OffPortalErasureResponse,
@@ -614,8 +615,8 @@ export function verifyStepUp(otp: string): Promise<StepUpVerifyResult> {
 }
 
 // ── Story 10.21 — off-portal DPDPA data-rights fulfilment ─────────────────────
-// The identity-verified administrative process for a member whose portal access has ended. Both
-// routes are gated server-side by
+// The identity-verified administrative process for a member whose portal access has ended. Every
+// route below is gated server-side by
 //   [adminSession, scope, requirePermissionHook('member.data_rights', {dimension:'pariwar'}),
 //    requireStepUp(DATA_RIGHTS_STEP_UP_CONTEXT)]
 // ⛔ THE OTP SIDE MUST USE THE SAME IMPORTED CONSTANT. `requireStepUp` compares a BARE STRING by
@@ -623,9 +624,8 @@ export function verifyStepUp(otp: string): Promise<StepUpVerifyResult> {
 // under a context that can NEVER satisfy the gate — a permanently broken action, with nothing anywhere
 // naming the cause. `requestDataRightsStepUp` below exists so no caller is tempted to pass a literal.
 //
-// ⛔ There is NO download/handover call here (AC-R1, Escalation 1) and NO correction call (AC-R2,
-// Escalation 2). Both are unanswered governance questions; adding an unused client function would be
-// the first half of building the capability.
+// ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT — `grantMemberDirectDelivery`,
+// `grantStaffMediatedDelivery` and `recordDataRightsCorrection` below.
 
 const memberDataRightsBase = (pariwarId: string): string =>
   `/api/v1/p/${encodeURIComponent(pariwarId)}/member-data-rights`;
@@ -648,6 +648,21 @@ export function buildOffPortalExport(
     headers: { 'Idempotency-Key': input.idempotencyKey },
     body: JSON.stringify({ member_id: input.memberId, helpdesk_ticket_id: input.helpdeskTicketId }),
   });
+}
+
+/**
+ * The member's currently-active export, or `null` (code-review addition, this story). Lets the
+ * operator surface recover `builtExportId` across a reload instead of relying solely on
+ * `buildOffPortalExport`'s in-memory mutation result.
+ */
+export function getActiveDataRightsExport(
+  pariwarId: string,
+  memberId: string,
+): Promise<z.output<typeof ActiveDataRightsExportResponse>> {
+  return apiFetch(
+    `${memberDataRightsBase(pariwarId)}/export/active?member_id=${encodeURIComponent(memberId)}`,
+    ActiveDataRightsExportResponse,
+  );
 }
 
 /** EXECUTE erasure off-session. ⛔ IRREVERSIBLE. `Idempotency-Key` REQUIRED. */

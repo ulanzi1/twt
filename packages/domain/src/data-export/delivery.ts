@@ -144,25 +144,34 @@ export async function insertStaffMediatedGrant(
   return row;
 }
 
-/** A live (pending, unexpired) grant by id — the redemption lookup. Returns null when absent, spent or
- *  expired, so a caller cannot distinguish those cases and the endpoint is not an enumeration oracle. */
-export async function findLiveGrant(
+/**
+ * Expire a stale `pending` grant on this export, if any, BEFORE issuing a new one.
+ *
+ * ⭐ LAZY-EXPIRE-ON-READ (code-review decision, this story). Without this, migration 0104's
+ * `data_export_delivery_grants_one_pending_per_export` partial unique index permanently blocks
+ * reissuing a grant on this export once the live one's `expires_at` passes with nobody having
+ * redeemed it — which is exactly the sequence AC-R1's fallback exists for (member-direct tried →
+ * its OTP expires unconsumed → the member asks for staff-mediated delivery on the SAME export).
+ * ⛔ No new scheduled job: the transition happens inline, in the SAME tx as the new grant's insert,
+ * the first time anyone asks for a grant on this export after the old one has gone stale.
+ * ⚠ A no-op when the live grant is still within its window — that grant keeps blocking a second one,
+ * which is correct: `one_pending_per_export` is doing its job there.
+ */
+export async function expireStaleGrantForExport(
   db: Db,
-  grantId: string,
+  exportId: DataExportId,
   now: Date,
-): Promise<DataExportDeliveryGrantRow | null> {
-  const rows = await db
-    .select()
-    .from(dataExportDeliveryGrants)
+): Promise<void> {
+  await db
+    .update(dataExportDeliveryGrants)
+    .set({ status: 'expired' })
     .where(
       and(
-        eq(dataExportDeliveryGrants.grantId, grantId),
+        eq(dataExportDeliveryGrants.exportId, exportId),
         eq(dataExportDeliveryGrants.status, 'pending'),
-        sql`${dataExportDeliveryGrants.expiresAt} > ${now}`,
+        lt(dataExportDeliveryGrants.expiresAt, now),
       ),
-    )
-    .limit(1);
-  return rows[0] ?? null;
+    );
 }
 
 /**

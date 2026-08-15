@@ -1,15 +1,19 @@
-// Story 10.21 — off-portal DPDPA data-rights fulfilment contracts (AC2/AC3/AC5).
+// Story 10.21 — off-portal DPDPA data-rights fulfilment contracts (AC2/AC3/AC5/AC-R1/AC-R2).
 //
 // The wire contracts for the identity-verified administrative process Niyamavali §8.4 requires when a
 // member's authenticated access has ended but their statutory rights have not. Wire shape is
 // snake_case; every object is `.strict()`.
 //
-// ⛔ NOTHING HERE SERVES DELIVERY OR CORRECTION. Handing the built artifact to anyone (AC-R1) and the
-// correction right (AC-R2) are BLOCKED on Escalations 1 and 2, and the trustee-authority recipient
-// (AC-R3) on Escalation 10 — all three RAISED AND UNANSWERED. ⛔ Do not add a download/handover DTO
-// here "so it is ready": a dormant staff-decrypt contract is the same capability, merely unlit.
+// ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT — see the AC-R1/AC-R2 sections below.
+// Decisions `2026-08-14-109` through `-113` ruled the model (member-direct primary + narrow
+// staff-mediated exception, three-part gate, mandated `primary_delivery_not_completed` naming) and it
+// shipped. ⛔ AC-R3 (the trustee-authority recipient) REMAINS BLOCKED on Escalation 10 — do not grant
+// `member.data_rights` to `trustee_panel`, do not add a routing rule, and do not make `routed_to_role`
+// authoritative on the strength of anything in this file.
 
 import { z } from 'zod';
+
+import { MemberLifecycleStateWire } from '../kyc/signup.js';
 
 /**
  * ⭐ THE SUBCATEGORY TOKEN — declared ONCE, here, and imported everywhere else.
@@ -47,10 +51,12 @@ export const DATA_RIGHTS_STEP_UP_CONTEXT = 'member_data_rights';
 /**
  * Enqueue an off-portal export BUILD for a member with no session (AC5, off-portal-build half).
  *
- * ⛔ This BUILDS the artifact; it does not deliver it. Delivery is AC-R1, blocked on Escalation 1 —
- * the Trustee Panel has not ruled whether a staff actor may obtain a member's assembled, decrypted
- * Tier-1 export at all. Building is ruling-INDEPENDENT: the artifact is assembled the same way under
- * either delivery model, which is why this half may land now.
+ * ⛔ This BUILDS the artifact; it does not deliver it — delivery is the separate AC-R1
+ * `MemberDirectDeliveryRequest`/`StaffMediatedDeliveryRequest` pair below. ⚠ STALE-COMMENT CORRECTION
+ * (code-review, this story): this used to say delivery was "blocked on Escalation 1" — the Trustee
+ * Panel RULED it (`2026-08-14-109` through `-113`) and it is built. Building was always
+ * ruling-INDEPENDENT (the artifact is assembled the same way under either delivery model), which is
+ * why it shipped first — that reasoning stands; only the "still blocked" framing was stale.
  */
 export const OffPortalExportRequest = z
   .object({
@@ -75,6 +81,27 @@ export const OffPortalExportResponse = z
   })
   .strict();
 export type OffPortalExportResponse = z.infer<typeof OffPortalExportResponse>;
+
+/**
+ * The member's currently-active export (`pending`, or `ready` and neither consumed nor past its
+ * window), or `null` — a READ, not a build. `null` on the `.strict()` object arm (not an absent
+ * field) so the caller cannot mistake "haven't checked yet" for "checked; none exists".
+ *
+ * ⭐ EXISTS SO THE ADMIN OPERATOR SURFACE SURVIVES A RELOAD (code-review decision, this story). Before
+ * this, `builtExportId` lived ONLY in a `useMutation`'s in-memory result — a page reload after a
+ * successful build stranded the operator with no way to reach delivery, even though a `ready` export
+ * already existed server-side. ⛔ Reads key on `member_id` (AC4), same as every other read on this
+ * surface — never on the ticket.
+ */
+export const ActiveDataRightsExportResponse = z
+  .object({
+    export_id: z.string().uuid(),
+    status: z.string(),
+    requested_at: z.string(),
+  })
+  .strict()
+  .nullable();
+export type ActiveDataRightsExportResponse = z.infer<typeof ActiveDataRightsExportResponse>;
 
 /**
  * Execute an off-portal ERASURE for a member with no session (AC7).
@@ -103,8 +130,12 @@ export const OffPortalErasureResponse = z
     state: z.literal('anonymized'),
     anonymized_at: z.string(),
     /** The REAL replayed `from_state`, not a hardcoded 'withdrawn' — an erasure is now legal from any
-     *  live label when the moderation overlay reads `terminated`. */
-    from_state: z.string(),
+     *  live label when the moderation overlay reads `terminated`. ⚠ Value-aligned with the domain's
+     *  `MemberLifecycleState` (was an unconstrained `z.string()`) — in practice always one of AC7's
+     *  eight non-`anonymized` `from` states (the handler refuses an already-anonymized member before
+     *  this response is built), but `'anonymized'` stays in the wire enum rather than fought out of it
+     *  by a cast at the call site: the domain type itself does not statically prove the exclusion. */
+    from_state: MemberLifecycleStateWire,
   })
   .strict();
 export type OffPortalErasureResponse = z.infer<typeof OffPortalErasureResponse>;

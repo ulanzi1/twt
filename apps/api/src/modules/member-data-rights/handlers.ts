@@ -1,15 +1,16 @@
-// Story 10.21 — off-portal DPDPA data-rights FULFILMENT handlers (AC3/AC4/AC5/AC7/AC12/AC13).
+// Story 10.21 — off-portal DPDPA data-rights FULFILMENT handlers
+// (AC3/AC4/AC5/AC7/AC12/AC13/AC-R1/AC-R2).
 //
 // The identity-verified administrative process Niyamavali §8.4 requires when a member's authenticated
-// access has ended but their statutory rights have not. Two routes: BUILD the access/portability
-// artifact, and EXECUTE erasure — both on a member with NO session.
+// access has ended but their statutory rights have not. Routes: BUILD the access/portability artifact,
+// DELIVER it (member-direct primary + narrow staff-mediated exception), RECORD a correction, and
+// EXECUTE erasure — all on a member with NO session.
 //
-// ⛔ WHAT IS DELIBERATELY ABSENT, AND WHY IT MUST STAY ABSENT ────────────────────────────────────────
-//   · NO download / handover path. Delivering the built artifact is AC-R1, BLOCKED on Escalation 1 —
-//     the Trustee Panel has not ruled whether a staff actor may obtain a member's assembled, decrypted
-//     Tier-1 export AT ALL. ⛔ Do not add one "behind a flag": a dormant staff-decrypt path is the same
-//     capability, merely unlit, and building it would settle a PII-posture question by implementation.
-//   · NO correction path. AC-R2, BLOCKED on Escalation 2.
+// ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT — see `grantMemberDirectDelivery`,
+// `grantStaffMediatedDelivery`, `redeemDelivery` and `recordCorrection` below. Decisions
+// `2026-08-14-109` through `-113` ruled the model.
+//
+// ⛔ WHAT IS DELIBERATELY STILL ABSENT, AND WHY IT MUST STAY ABSENT ────────────────────────────────
 //   · NO trustee-authority routing or grant. AC-R3, BLOCKED on Escalation 10 (Decision
 //     `2026-08-14-107`). ⛔ Do not grant `member.data_rights` to `trustee_panel`, do not add a routing
 //     rule, and do not make `routed_to_role` authoritative — it is an advisory queue filter that NO
@@ -26,6 +27,7 @@
 // widen or narrow the subject, which is precisely the artifact-scoped shape AC4 forbids.
 
 import type {
+  ActiveDataRightsExportResponse,
   MemberDirectDeliveryRequest,
   MemberDirectDeliveryResponse,
   OffPortalErasureRequest,
@@ -211,10 +213,13 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
      * POST …/member-data-rights/export — BUILD the access/portability artifact for an off-portal
      * subject (AC5, off-portal-build half).
      *
-     * ⛔ BUILDS ONLY. There is no delivery here (AC-R1, Escalation 1). Building is ruling-INDEPENDENT:
-     * the artifact is assembled identically under either delivery model, which is why this half ships
-     * while delivery does not. The expected end state of this route is therefore a `ready`, UNCONSUMED
-     * row holding the complete dossier — which is exactly why AC11's erasure reach is load-bearing.
+     * ⛔ BUILDS ONLY. Delivery is the separate `grantMemberDirectDelivery`/`grantStaffMediatedDelivery`
+     * routes below. ⚠ STALE-COMMENT CORRECTION (code-review, this story): this used to say delivery
+     * was "blocked on Escalation 1" — the Trustee Panel ruled it and it is built (see those handlers).
+     * Building was always ruling-INDEPENDENT (the artifact is assembled identically under either
+     * delivery model), which is why this half shipped first. The expected end state of this route is
+     * therefore a `ready`, UNCONSUMED row holding the complete dossier — which is exactly why AC11's
+     * erasure reach is load-bearing.
      */
     async requestExport(request: FastifyRequest): Promise<OffPortalExportResponse> {
       const { actorId, pariwarIdStr } = adminCtx(request);
@@ -357,6 +362,36 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
     },
 
     /**
+     * GET …/member-data-rights/export/active — the member's currently-active export, or `null`
+     * (code-review addition, this story).
+     *
+     * ⭐ EXISTS SO THE OPERATOR SURFACE SURVIVES A RELOAD. Before this, the admin UI's "which export
+     * did I just build" state lived ONLY in a `useMutation`'s in-memory result — a reload after a
+     * successful build stranded the operator with no way to reach delivery even though a `ready`
+     * export already existed. ⛔ Reads key on `member_id` (AC4), never the ticket.
+     */
+    async getActiveExport(request: FastifyRequest): Promise<ActiveDataRightsExportResponse> {
+      const { pariwarIdStr } = adminCtx(request);
+      const query = request.query as { member_id: string };
+      const memberId = ids.memberId(query.member_id);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const now = deps.clock();
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
+        if (!exists) throw new NotFoundError('Member not found', 'member_data_rights.member_not_found');
+        const row = await dataExport.findActiveExport(scopeTx.tx, memberId, now);
+        ok = true;
+        if (!row) return null;
+        return { export_id: row.exportId, status: row.status, requested_at: row.requestedAt.toISOString() };
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
      * POST …/member-data-rights/delivery/member-direct — the PRIMARY delivery route (AC-R1).
      *
      * ⭐ RULED MEMBER-DIRECT (`2026-08-14-109` cl.1). Issues a one-time, OTP-verified grant to the
@@ -384,6 +419,15 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       let grantedMemberId: string | null = null;
       let response: MemberDirectDeliveryResponse;
       try {
+        // ── Serialize against a concurrent erasure BEFORE any read (code-review addition) ─────────
+        // ⛔ The SAME lock `fulfilErasure` (AC13) takes. Without it, a delivery grant could be created
+        // in the window between an erasure's legality read and its commit — issuing a grant for an
+        // export whose artifact is about to be zeroed (AC11), or racing the export's own terminal
+        // state. A lock on one path only is not serialization.
+        await scopeTx.client.query('SELECT pg_advisory_xact_lock($1)', [
+          memberDomain.rtbfAdvisoryLockKey(pariwarIdStr, body.member_id).toString(),
+        ]);
+
         await requireTicketInScope(scopeTx, pariwarId, ticketId);
         const exportRow = await dataExport.getExportForMember(
           scopeTx.tx,
@@ -393,6 +437,22 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         // ⛔ 404, not 403 — an export that is not this member's is indistinguishable from one that does
         // not exist, so the route is not an existence oracle.
         if (!exportRow) throw new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+        // ⛔ CODE-REVIEW ADDITION — a grant must not be issuable against an export that is not yet
+        // built (`pending`), or is already `expired`/`consumed`/`failed`: there is nothing (or nothing
+        // current) for the member to redeem, and issuing a grant anyway would silently promise a
+        // download that can never succeed.
+        if (exportRow.status !== 'ready') {
+          throw new ConflictError(
+            'This export is not ready for delivery',
+            'member_data_rights.export_not_ready',
+          );
+        }
+
+        // ⭐ LAZY-EXPIRE-ON-READ (code-review addition). A stale `pending` grant on this export — one
+        // whose `expires_at` has passed with nobody having redeemed it — must not permanently block a
+        // fresh grant via migration 0104's `one_pending_per_export` partial unique index. See
+        // `expireStaleGrantForExport`'s own header for the full rationale.
+        await dataExport.expireStaleGrantForExport(scopeTx.tx, ids.dataExportId(body.export_id), now);
 
         const grant = await audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
@@ -446,29 +506,51 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       if (grantedMemberId !== null) {
         const blindIndex = await memberAuthRepo.getMemberMobileBlindIndex(deps.servicePool, grantedMemberId);
         if (blindIndex) {
-          const { code } = await otpService.requestOtp(
-            deps,
-            DATA_EXPORT_DELIVERY_OTP_INTENT,
-            blindIndex,
-            { memberId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT },
-          );
           try {
-            await deps.stepUpDelivery.deliver({
-              code,
-              actorId: grantedMemberId,
-              actionContext: DELIVERY_OTP_ACTION_CONTEXT,
-              intent: 'step_up',
-              pariwarId: pariwarIdStr,
-            });
+            const { code } = await otpService.requestOtp(
+              deps,
+              DATA_EXPORT_DELIVERY_OTP_INTENT,
+              blindIndex,
+              { memberId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT },
+            );
+            try {
+              await deps.stepUpDelivery.deliver({
+                code,
+                actorId: grantedMemberId,
+                actionContext: DELIVERY_OTP_ACTION_CONTEXT,
+                intent: 'step_up',
+                pariwarId: pariwarIdStr,
+              });
+            } catch (err) {
+              // ⚠ Recorded, not thrown. An undelivered OTP is exactly the circumstance that later makes
+              // `primary_delivery_not_completed` true and opens the narrow fallback — so a delivery
+              // failure is a NORMAL, expected step on this path, not an error to surface as a 5xx.
+              deps.stepUpDelivery.onPrimaryDeliveryFailure?.(
+                { code, actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
+                err,
+              );
+            }
           } catch (err) {
-            // ⚠ Recorded, not thrown. An undelivered OTP is exactly the circumstance that later makes
-            // `primary_delivery_not_completed` true and opens the narrow fallback — so a delivery
-            // failure is a NORMAL, expected step on this path, not an error to surface as a 5xx.
+            // ⛔ CODE-REVIEW ADDITION — `requestOtp` itself (OTP MINTING, not delivery) can throw, and
+            // it runs AFTER the grant already committed above. Uncaught, that would surface as an
+            // opaque 500 on a route the caller otherwise experienced as succeeding. Recorded via the
+            // same observability seam as a delivery failure, not thrown — the grant is the artifact
+            // that matters, and the operator can retry.
             deps.stepUpDelivery.onPrimaryDeliveryFailure?.(
-              { code, actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
+              { code: '', actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
               err,
             );
           }
+        } else {
+          // ⛔ CODE-REVIEW ADDITION — no mobile blind index on file at all: an OTP can NEVER be issued
+          // for this member, so `primary_delivery_not_completed` (which requires an OTP row to exist)
+          // can never become true and the narrow fallback can never open. Previously swallowed with no
+          // record anywhere; recorded via the same failure-observability seam so it is at least
+          // audit-visible rather than silent.
+          deps.stepUpDelivery.onPrimaryDeliveryFailure?.(
+            { code: '', actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
+            new Error('member_data_rights.no_mobile_on_file'),
+          );
         }
       }
 
@@ -572,6 +654,14 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       let ok = false;
       let response: StaffMediatedDeliveryResponse;
       try {
+        // ── Serialize against a concurrent erasure BEFORE any read (code-review addition) ─────────
+        // ⛔ The SAME lock `fulfilErasure` (AC13) and `grantMemberDirectDelivery` take — see the
+        // sibling comment there. A staff-mediated grant obtains the DECRYPTED artifact for hand-over;
+        // it must not race an erasure that is about to zero it (AC11).
+        await scopeTx.client.query('SELECT pg_advisory_xact_lock($1)', [
+          memberDomain.rtbfAdvisoryLockKey(pariwarIdStr, body.member_id).toString(),
+        ]);
+
         await requireTicketInScope(scopeTx, pariwarId, ticketId);
         const exportRow = await dataExport.getExportForMember(
           scopeTx.tx,
@@ -579,6 +669,14 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
           memberId,
         );
         if (!exportRow) throw new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+        // ⛔ CODE-REVIEW ADDITION — see the identical guard in `grantMemberDirectDelivery`: a grant
+        // must not be issuable against an export that is not `ready`.
+        if (exportRow.status !== 'ready') {
+          throw new ConflictError(
+            'This export is not ready for delivery',
+            'member_data_rights.export_not_ready',
+          );
+        }
 
         // ── ELEMENT 2 — SERVER-OBSERVED, and it FAILS CLOSED ────────────────────────────────────────
         // ⛔ Deliberately NOT taken from the request body. A caller-suppliable "the primary failed"
@@ -596,6 +694,13 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
             'member_data_rights.primary_delivery_not_completed_required',
           );
         }
+
+        // ⭐ LAZY-EXPIRE-ON-READ (code-review addition) — see `grantMemberDirectDelivery`'s identical
+        // call for the full rationale. Without it, the stale `pending` member-direct grant that made
+        // element 2 true above would ALSO still be occupying `one_pending_per_export`, and this insert
+        // would collide with a misleading "already live" 409 — on exactly the sequence this fallback
+        // exists to serve.
+        await dataExport.expireStaleGrantForExport(scopeTx.tx, ids.dataExportId(body.export_id), now);
 
         // Element 3 — Tier-1 at rest. ⛔ Never an event payload, never an audit context field.
         const attestationCiphertext = await encTier1(
@@ -769,7 +874,10 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
-      let fromState: string;
+      // ⚠ CODE-REVIEW FIX — was `string`, which widened `legality.fromState`'s precise
+      // `MemberLifecycleState` into an unconstrained wire string on
+      // `OffPortalErasureResponse.from_state`.
+      let fromState: memberDomain.MemberLifecycleState;
       try {
         await requireTicketInScope(scopeTx, pariwarId, ticketId);
 

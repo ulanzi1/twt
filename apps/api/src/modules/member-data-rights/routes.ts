@@ -1,4 +1,4 @@
-// Story 10.21 — off-portal DPDPA data-rights fulfilment ROUTES (AC3).
+// Story 10.21 — off-portal DPDPA data-rights fulfilment ROUTES (AC3/AC-R1/AC-R2).
 //
 // ⛔ EVERY route here sits behind the FULL four-hook chain, and each hook is load-bearing:
 //   requireAdminSession   — a staff session (this is an admin surface; the subject has no session)
@@ -8,6 +8,7 @@
 //                           different authorities, which is the whole reason the key was minted.
 //   requireStepUp         — a DISTINCT step-up context, so no other elevation satisfies it and this
 //                           elevation satisfies nothing else.
+// (The MEMBER redemption route is the one deliberate exception — see its own comment below.)
 //
 // ⚠ THE STEP-UP CONTEXT IS AN UNGUARDED STRING. `requireStepUp` compares a bare string by equality and
 // the contract has no allow-list, so distinctness holds by string inequality alone. Both this route AND
@@ -15,10 +16,11 @@
 // here fails closed (tolerable); a typo on the OTP side yields an elevation that can NEVER satisfy this
 // gate, with nothing anywhere naming the cause.
 //
-// ⛔ NO delivery route (AC-R1, Escalation 1), NO correction route (AC-R2, Escalation 2), and NO
-// trustee-authority destination (AC-R3, Escalation 10). All three are RAISED AND UNANSWERED.
+// ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT below. ⛔ NO trustee-authority destination
+// (AC-R3, Escalation 10) — that one alone remains RAISED AND UNANSWERED.
 
 import {
+  ActiveDataRightsExportResponse,
   DATA_RIGHTS_STEP_UP_CONTEXT,
   DeliveryRedeemRequest,
   MemberDirectDeliveryRequest,
@@ -74,6 +76,24 @@ export function registerMemberDataRightsRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, requireDataRights, stepUp],
     },
     h.requestExport,
+  );
+
+  // The member's currently-active export, or `null` — a READ (code-review addition, this story). Lets
+  // the operator surface recover `builtExportId` across a reload instead of relying solely on
+  // in-memory `useMutation` state.
+  r.get(
+    '/api/v1/p/:pariwarId/member-data-rights/export/active',
+    {
+      schema: {
+        params: PariwarParam,
+        querystring: z.object({ member_id: z.string().uuid() }).strict(),
+        response: { 200: ActiveDataRightsExportResponse },
+        tags: [MEMBER_DATA_RIGHTS_TAG],
+      },
+      config: { rateLimit: limits.read },
+      preHandler: [adminSession, scope, requireDataRights, stepUp],
+    },
+    h.getActiveExport,
   );
 
   // EXECUTE erasure off-session. ⛔ IRREVERSIBLE — see the handler's advisory lock and the
@@ -147,8 +167,15 @@ export function registerMemberDataRightsRoutes(app: FastifyInstance, deps: AppDe
   // ── The MEMBER redemption. ⛔ DELIBERATELY UNAUTHENTICATED, and deliberately NOT on the admin
   // chain above: the subject is a terminated member with no session, and issuing one is precisely what
   // Niyamavali §8.4 forecloses. Two secrets are required (the unguessable grant id AND the OTP), every
-  // failure returns the SAME 404 so it is not an existence oracle, and it carries the read rate limit.
-  // ⛔ Do not "fix" this by adding a session guard — that would delete the route's whole purpose.
+  // failure returns the SAME 404 so it is not an existence oracle. ⛔ Do not "fix" this by adding a
+  // session guard — that would delete the route's whole purpose.
+  // ⚠ RATE LIMIT: `limits.write` (code-review correction — this route WAS on `limits.read`, which is
+  // the LOOSER of the two named tiers and backwards for an endpoint that verifies a short OTP code
+  // against an unauthenticated caller and, on a match, returns the member's decrypted PII dossier.
+  // `write` is also the more accurate classification on its own terms: this route mutates state (it
+  // burns the grant via `consumeGrant`). Independent of the tier, `otpService.verifyOtp` already caps
+  // GUESSES per code at `OTP_MAX_ATTEMPTS` (the grant id itself is an unguessable UUID) — this bump is
+  // defense-in-depth against generic per-IP abuse, not the primary brute-force control.
   r.post(
     '/api/v1/member-data-rights/delivery/:grantId/redeem',
     {
@@ -157,7 +184,7 @@ export function registerMemberDataRightsRoutes(app: FastifyInstance, deps: AppDe
         body: DeliveryRedeemRequest,
         tags: [MEMBER_DATA_RIGHTS_TAG],
       },
-      config: { rateLimit: limits.read },
+      config: { rateLimit: limits.write },
     },
     h.redeemDelivery,
   );

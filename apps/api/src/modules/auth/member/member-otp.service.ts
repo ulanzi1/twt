@@ -5,7 +5,9 @@
 // attempt-cap → ATOMIC burn on match, with the concurrent-burn race guard). The two
 // intents are DISTINCT pools (§2.2 line 1379) keyed on the mobile blind index — a
 // concurrent login-OTP and step-up-OTP never share a value/slot. TTLs differ:
-// login 5 min (`loginOtpTtlMs`), step-up 3 min (`stepUpOtpTtlMs`, §2.2 line 1370).
+// login 5 min (`loginOtpTtlMs`), step-up 3 min (`stepUpOtpTtlMs`, §2.2 line 1370),
+// data-export-delivery 60 min (`dataExportDeliveryOtpTtlMs`, Story 10.21, code-review
+// decision — see `member_auth_otps.ts`'s header for why it is NOT the step-up TTL).
 
 import type { schema } from '@twt/domain';
 
@@ -33,7 +35,12 @@ export async function requestOtp(
   await repo.invalidateLiveOtps(deps.pool, mobileBlindIndex, intent, now);
   const code = generateOtp();
   const otpHash = hashOtp(code);
-  const ttlMs = intent === 'login' ? deps.config.loginOtpTtlMs : deps.config.stepUpOtpTtlMs;
+  const ttlMs =
+    intent === 'login'
+      ? deps.config.loginOtpTtlMs
+      : intent === 'data_export_delivery'
+        ? deps.config.dataExportDeliveryOtpTtlMs
+        : deps.config.stepUpOtpTtlMs;
   const expiresAt = new Date(now.getTime() + ttlMs);
   await repo.insertMemberOtp(deps.pool, {
     mobileBlindIndex,

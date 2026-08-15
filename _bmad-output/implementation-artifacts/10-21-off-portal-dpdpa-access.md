@@ -4,7 +4,7 @@ baseline_commit: 19fa6445b065122400d4cd4ee0f3761d78d316c1
 
 # Story 10.21: Off-Portal DPDPA Access `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⛔ **THIS STORY IS A RELEASE GATE, AND THE GATE IS NOT THE FLIP.** Epics: *"must land before the first
 > termination is permitted."* Concretely: the `termination_access_block` feature flag ships **DEFAULT OFF**
@@ -1535,6 +1535,152 @@ this matrix and the task it points to, or the next validation finds the drift
   - [x] `deferred-work.md` section; the Dev Agent Record below; ⚠ the friction-budget diff is **committed**
         history — AC-4 passes vacuously until you commit ([[project_friction_budget_baseline_ratchet]]).
 
+### Review Findings
+
+Adversarial code review at `ebd3599` (diff vs baseline `19fa644`) — three parallel layers (Blind Hunter,
+Edge Case Hunter, Acceptance Auditor), triaged with spot-verification against the actual diff/repo before
+presentation. Two Blind Hunter findings were verified FALSE and dropped (FK `SET NULL`/`RESTRICT`
+asymmetry is explained by the NOT-NULL difference between the two tables; the "decision-log 114 asserts
+AC-R1/R2 unbuilt bundled with their build" claim misattributed text that actually belongs to the
+governance-only `2026-08-14-113` commit, which correctly precedes the implementation commit).
+
+- [x] [Review][Patch] Staff-mediated fallback is structurally unreachable once a member-direct grant
+      goes stale — nothing transitions `data_export_delivery_grants.status` away from `pending` on
+      `expires_at`, so migration 0104's partial unique index (`one_pending_per_export WHERE status =
+      'pending'`) permanently blocks a second grant on the same export, and the real
+      member-direct-then-staff-mediated sequence collides on a misleading 409
+      `delivery_grant_already_live`. The integration test for this path never exercises the real
+      sequence (it hand-inserts an OTP row rather than calling the member-direct route), so it cannot
+      catch the collision. ⭐ **Decision (2026-08-15, this review): fixed via lazy-expire-on-read** — new
+      `dataExport.expireStaleGrantForExport`, called in both delivery-grant handlers immediately before
+      insert; no new scheduled job. **Fixed the masking gap too:** added `'⭐ staff-mediated succeeds on
+      the SAME export once the member-direct grant itself has gone stale (lazy-expire-on-read)'`, which
+      drives the REAL member-direct→staff-mediated sequence via the actual routes (not a hand-inserted
+      OTP row) and asserts the stale grant is transitioned to `expired`, not left `pending`. Required
+      `seedSubject` to seed a real `member_identities` row (previously absent, which meant
+      `grantMemberDirectDelivery` silently never issued a real OTP at all — see the `[Review][Patch]` on
+      the missing blind-index signal below). All 10 tests in the file pass, including 3 new ones.
+      [`packages/domain/src/data-export/delivery.ts`, `apps/api/src/modules/member-data-rights/handlers.ts`, `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts`]
+- [x] [Review][Patch] The delivery OTP inherits the short step-up-length TTL while the grant itself is
+      valid 24h — element 2 of the ratified three-part gate (`primary_delivery_not_completed`, predicate
+      `consumed_at IS NULL AND expires_at < now()`) can go true within minutes of any member-direct
+      attempt, not only when the member has genuinely lost the mobile. ⭐ **Decision (2026-08-15, this
+      review): fixed** — new `dataExportDeliveryOtpTtlMs` config (default 60 min via
+      `DATA_EXPORT_DELIVERY_OTP_TTL_MS`), distinct from both `loginOtpTtlMs` and `stepUpOtpTtlMs`;
+      `requestOtp`'s TTL mapping now branches on `data_export_delivery` explicitly. Comments in
+      `member_auth_otps.ts` and `member-otp.service.ts` updated to state the revised rationale and the
+      tradeoff this does NOT eliminate (still no machine signal distinguishing "lost the mobile" from
+      "hasn't checked it in an hour" — element 3, the staff attestation, remains load-bearing for that
+      distinction by design). [`apps/api/src/config.ts`, `apps/api/src/modules/auth/member/member-otp.service.ts`, `packages/domain/src/schema/member_auth_otps.ts`]
+- [x] [Review][Defer] `member_requested_staff_mediation` is `z.literal(true)` — satisfied by any caller
+      sending the literal, with no captured member-authored fact behind it. `apps/admin`'s
+      `grantStaffMediatedDelivery` client call hardcodes `true` unconditionally, and
+      `HelpdeskDetailShell.tsx`'s fallback panel has no confirmation control analogous to the erasure
+      flow's `erasureConfirmed` checkbox. This is element 1 of Decision `2026-08-14-113`'s three-part
+      gate ("the member's explicit request — machine-enforced, fails closed... author: the member, at
+      intake"), and as built it is staff-authored, not member-authored — the exact collapse Decisions
+      `111`/`112` warned against. — deferred, RAISED as **Escalation 11** (Decision `2026-08-15-115`),
+      then **RULED 2026-08-15 — Decision `2026-08-15-116`, option (c):** a genuinely member-authored
+      artifact, captured at ticket intake and read by the fallback route. ⛔ Not built here — a real
+      feature, owed to a **named successor story, still unnamed** (see "Escalations owed" below and
+      `deferred-work.md`); `z.literal(true)` stays in production unchanged until it lands.
+      [`packages/contracts/src/member-data-rights/member-data-rights.ts:6278`, `apps/admin/src/api/client.ts:3159`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx`]
+- [x] [Review][Patch] No guard on `exportRow.status` before issuing a delivery grant — both
+      `grantMemberDirectDelivery` and `grantStaffMediatedDelivery` only check the export exists
+      (`!exportRow`), never that `status === 'ready'`, so a grant + OTP can be issued against an export
+      still `pending` (build in flight) or already `expired`/`consumed`. **Fixed:** both handlers now
+      throw `member_data_rights.export_not_ready` (409) when `exportRow.status !== 'ready'`. New test
+      `'⛔ delivery is REFUSED when the export is not ready (still building)'` passes.
+      [`apps/api/src/modules/member-data-rights/handlers.ts`, `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts`]
+- [x] [Review][Patch] Admin UI cannot recover a previously-built export id — `HelpdeskDetailPage.tsx`
+      derived `builtExportId` only from in-memory `useMutation` state (no read route existed to look
+      one up), so a reload stranded the operator mid-delivery even though a `ready` export row already
+      existed server-side. ⚠ **Correction during patch application:** the original finding also claimed
+      `useDataRightsDelivery`'s `requireIds()` fails SILENTLY because `messageOf()` only handles
+      `ApiError`. Re-verified against the live file (not just the diff hunk, which was misleading in
+      isolation): `HelpdeskDetailPage.tsx`'s `messageOf()` already falls through to
+      `err instanceof Error` (line 22), so the "Build the export first" message DOES reach the screen
+      today — that half of the finding was FALSE and dropped; only the reload-recovery gap was real.
+      ⚠ **Further correction:** the original finding also claimed `dataExport.findLiveGrant` (the
+      RLS-scoped, grant-**id**-keyed variant) was "the natural building block" for the missing read —
+      wrong function: it looks up a delivery GRANT by id, not a member's EXPORT. It was genuinely dead
+      code (zero callers), unrelated to this fix, and was deleted rather than pressed into a use it
+      doesn't serve. **Fixed:** new `GET .../member-data-rights/export/active?member_id=` route
+      (`ActiveDataRightsExportResponse` contract) built on the PRE-EXISTING `dataExport.findActiveExport`
+      (already used by the build-idempotency guard), wired via `useActiveDataRightsExport` +
+      `HelpdeskDetailPage.tsx` falling back to it when the mutation result is absent, refetched on
+      build success via `useDataRightsFulfilment`'s existing invalidation. [`apps/admin/src/modules/helpdesk/HelpdeskDetailPage.tsx`, `apps/admin/src/api/hooks.ts`, `apps/admin/src/api/client.ts`, `apps/api/src/modules/member-data-rights/{handlers,routes}.ts`, `packages/contracts/src/member-data-rights/member-data-rights.ts`]
+- [x] [Review][Patch] No failure handling when a member has no registered-mobile blind index —
+      `grantMemberDirectDelivery` can report success with a grant row created but no OTP ever issued,
+      which permanently blocks `primary_delivery_not_completed` from ever becoming true for that member
+      with no operator-visible signal. **Fixed:** the no-blind-index branch now calls
+      `deps.stepUpDelivery.onPrimaryDeliveryFailure?.(...)` with a `no_mobile_on_file` marker — the same
+      failure-observability seam an OTP-delivery failure already uses — so it is at least audit-visible
+      rather than silently swallowed. (This gap is also what made D1's real-sequence test require a real
+      `member_identities` fixture — see that finding.) [`apps/api/src/modules/member-data-rights/handlers.ts`]
+- [x] [Review][Patch] No compensation when `otpService.requestOtp` throws after the delivery grant has
+      already committed — operator sees an unhandled 500, and a retry with a fresh idempotency key then
+      hits the "already live" 409, masking the true state. **Fixed:** `requestOtp` is now inside its own
+      try/catch; a throw there is recorded via `onPrimaryDeliveryFailure` (not thrown) — the grant is
+      the artifact that matters and the operator can retry, matching the existing "delivery failure
+      does not roll back the grant" posture one level up. [`apps/api/src/modules/member-data-rights/handlers.ts`]
+- [x] [Review][Patch] Delivery-grant creation has no advisory lock against a concurrent erasure, unlike
+      the precedent `fulfilErasure` already established for AC13 — reopens the same race class on the
+      delivery path. **Fixed:** both `grantMemberDirectDelivery` and `grantStaffMediatedDelivery` now
+      take the SAME `pg_advisory_xact_lock` (`rtbfAdvisoryLockKey`) `fulfilErasure` takes, before any
+      read. [`apps/api/src/modules/member-data-rights/handlers.ts`]
+- [x] [Review][Patch] The unauthenticated OTP-redemption endpoint (`POST
+      /delivery/:grantId/redeem`, returns the member's full decrypted PII dossier on a correct short
+      code) is rate-limited at `limits.read` (120/window, IP-keyed) — looser than even `limits.write`
+      (30/window) — rather than a dedicated brute-force-resistant limiter. Confirmed via
+      `apps/api/src/config.ts` (`READ_RATE_MAX` default 120, `WRITE_RATE_MAX` default 30) and
+      `apps/api/src/plugins/rate-limit/index.ts` (`perSessionKey` falls through to `request.ip` on an
+      unauthenticated route). **Fixed:** switched to `limits.write` (also the more accurate
+      classification — the route mutates state via `consumeGrant`). ⚠ Also discovered during patch
+      application and recorded for completeness: `otpService.verifyOtp` already caps guesses per code
+      at `OTP_MAX_ATTEMPTS`, and the grant id itself is an unguessable UUID — the rate-limit bump is
+      defense-in-depth against generic per-IP abuse, not the primary brute-force control (which already
+      existed and was not itself a gap). [`apps/api/src/modules/member-data-rights/routes.ts`]
+- [x] [Review][Patch] Stale module-header comments in three files still say AC-R1/AC-R2 are "BLOCKED on
+      Escalation 1/2" and "NOTHING HERE SERVES DELIVERY OR CORRECTION... do not add a download/handover
+      DTO" at current HEAD, directly above the fully-implemented delivery/correction routes, handlers,
+      and DTOs — confirmed by reading the live files, not just the diff. The AC-R3/Escalation-10 portion
+      of these headers is still accurate and should stay; only the AC-R1/AC-R2 portion is stale.
+      **Fixed:** headers rewritten in all three files; ⚠ a second sweep during patch application also
+      found two MORE stale "blocked on Escalation 1" references the original finding missed (in
+      `OffPortalExportRequest`'s JSDoc in the contracts file, and in `requestExport`'s own doc comment)
+      — both corrected too. [`apps/api/src/modules/member-data-rights/handlers.ts`, `apps/api/src/modules/member-data-rights/routes.ts`, `packages/contracts/src/member-data-rights/member-data-rights.ts`, `apps/admin/src/api/client.ts`]
+- [x] [Review][Patch] No-op ternary in the lifecycle reducer's `anonymized` arm — `return state ===
+      'anonymized' ? state : 'anonymized'` returns the identical value on both branches (equivalent to
+      `return 'anonymized'`), yet the surrounding "DELIBERATE" comment presents it as the guard that
+      prevents illegitimate transitions out of `anonymized`; the actual legality gate lives entirely in
+      callers (`resolveRtbfLegality`). **Fixed:** simplified to `return 'anonymized'`; comment rewritten
+      to state plainly that this arm is NOT a legality guard. `state.test.ts`'s 24 tests still pass
+      unchanged (behaviorally identical for every real input). [`packages/domain/src/member/state.ts`]
+- [x] [Review][Patch] `redeemDelivery` resolves the grant via `findLiveGrantUnscoped` (service pool,
+      bypasses RLS) before opening the RLS-scoped tx for redemption — a two-step
+      unscoped-read-then-scoped-write pattern the module's own commentary elsewhere flags as a tenancy
+      hazard when trust rests on FK-only referential integrity. No test in this diff proves a grant
+      belonging to one Pariwar can't be manipulated through a scope mismatch. **Fixed — as a test, not a
+      code change:** the route has no caller-supplied tenant parameter to exploit (the redemption tx's
+      pariwar comes from `grant.pariwarId`, a DB-derived value never accepted from the caller), so there
+      was no code defect to patch. What was missing was END-TO-END coverage of the pattern itself —
+      added `'✅ the FULL member-direct → redeem sequence succeeds and returns the decrypted artifact
+      (tenant-scoped)'`, which exercises the real unscoped-read → scoped-tx sequence and would catch a
+      future regression immediately: if the tx were ever scoped to the wrong Pariwar,
+      `decryptExportArtifact` would fail outright (Tier-1 envelopes are KEK-scoped per Pariwar). This
+      test also closed a separate, larger gap discovered while writing it: NO existing test in this file
+      exercised a genuinely successful redemption at all — every other redemption test asserted a 404.
+      [`apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts`]
+- [x] [Review][Patch] `OffPortalErasureResponse.from_state` is typed as an unconstrained `z.string()`
+      rather than an enum of the nine `MemberLifecycleState` labels, unlike this contract file's
+      otherwise-strict literal typing elsewhere (e.g. `channel: z.literal('member_direct')`). **Fixed:**
+      now `MemberLifecycleStateWire` (the existing contracts-side value-aligned re-declaration from
+      `kyc/signup.ts` — contracts cannot import `@twt/domain`), reused rather than a third duplicate
+      declared here. `fulfilErasure`'s local `fromState` variable was also widened to plain `string`
+      (silently discarding `legality.fromState`'s precise `MemberLifecycleState` type); narrowed to
+      match. [`packages/contracts/src/member-data-rights/member-data-rights.ts`, `apps/api/src/modules/member-data-rights/handlers.ts`]
+
 ---
 
 ## Escalations owed (raise them; do not silently absorb)
@@ -1696,6 +1842,30 @@ this matrix and the task it points to, or the next validation finds the drift
     2026-08-14, after `Decision 2026-08-14-106` was committed — so it is **absent from that entry** and is
     raised instead by **`Decision 2026-08-14-107`**, which is additive and edits `106` in no way.
 
+11. ⛔ **`member_requested_staff_mediation` is a staff-set `z.literal(true)`, not a captured member-authored
+    fact — collapses the ratified three-part fallback gate's element 1 into element 3. Blocked nothing
+    already shipped; was an integrity gap in a ratified, PII-disclosure-adjacent gate.**
+    Decision `2026-08-14-111` clause 3 warned, in advance of the build: *"A single staff-authored 'reason'
+    field would silently absorb the member's trigger into a staff assertion, which is exactly the
+    substitution the trigger ruling forecloses."* An adversarial code review of the shipped implementation
+    (2026-08-15) found exactly that: `StaffMediatedDeliveryRequest.member_requested_staff_mediation` is
+    `z.literal(true)`, satisfied by the literal alone; `apps/admin`'s `grantStaffMediatedDelivery` client
+    call hardcodes `true` unconditionally; `HelpdeskDetailShell.tsx`'s fallback panel has no confirmation
+    control analogous to the erasure flow's `erasureConfirmed` checkbox in the same file; and the server
+    stamps `memberRequestRecordedAt: now` at the instant staff clicks submit, not at any member act.
+
+    ⭐ **RULED 2026-08-15 — `Decision 2026-08-15-116` — OPTION (c): a genuinely member-authored artifact.**
+    The member's request must be captured as a **structured field at ticket intake** (AC2), and the
+    staff-mediated route must **read** that captured fact rather than accept a caller-supplied boolean.
+    ⛔ **Ruled as posed; no conditions.** ⛔ **THIS IS A REAL FEATURE, NOT BUILT HERE — owner: a named
+    successor story**, recorded as an owed mint in `deferred-work.md` (the same shape AC5's export-content
+    half used). ⚠ **Until the successor story lands, `z.literal(true)` stays in production unchanged** —
+    this ruling finds element 1's evidentiary strength weak, not the fallback unsafe to operate; nothing
+    pauses it. Raised by `Decision 2026-08-15-115` (additive, edits `111`/`113` in no way); ruled by
+    `Decision 2026-08-15-116` (also additive — does not reopen the delivery MODEL or elements 2/3).
+    *Owner (of the ruling itself):* Trustee Panel — **discharged**. *Owner (of the follow-up build):* a
+    named successor story, **still unnamed**.
+
 ⚠ **Escalations 7, 8 and 9 are BLOCKING and were found by post-authoring validation passes, not by the
 original drafting. Escalation 10 was found later still, by a focused routing trace.** ⛔ The correct dev-agent action is now: ship AC1–AC4, AC7–AC15 **and AC5's
 off-portal-build half** (defined in AC5) **and AC11's `pending`/`ready` arms**, hold **AC5's
@@ -1723,20 +1893,39 @@ completion report must not read the gate as dischargeable while it is open.
 
 ⚠ **The standing Trustee Panel obligation queue stood at NINE after Story 10.20** (`deferred-work.md:168`).
 State the new count by **enumeration**, not by arithmetic on that number, and state it as a count — not as
-progress. ⚠ **Not all ten above are Panel obligations, and the breakdown is stated here so no one does
+progress. ⚠ **Not all eleven above are Panel obligations, and the breakdown is stated here so no one does
 arithmetic on it:**
-· **Panel (or Panel + Counsel):** 1, 2, 3, 5, 8, 9, 10 — **seven** — ⭐ **ALL SEVEN RULED 2026-08-14
-  (Decision `2026-08-14-109`), four of them (3, 5, 8, 9) recorded `un-attested` because counsel is
-  unengaged.** ⚠ They leave the standing queue as *ruled*, not as *withdrawn*; and the counsel
-  re-presentation of those four is a NEW obligation, not a discharged one.
-· **A named successor story, NOT the Panel:** 4, 6 — **two**
+· **Panel (or Panel + Counsel):** 1, 2, 3, 5, 8, 9, 10, **11** — **eight, ALL EIGHT RULED** — ⭐ 1, 2, 3,
+  5, 8, 9, 10 per Decision `2026-08-14-109`; **11 per Decision `2026-08-15-116` (2026-08-15)**. Four of
+  the eight (3, 5, 8, 9) recorded `un-attested` because counsel is unengaged; 11 needed no counsel
+  (trustee-judgment, not DPDPA interpretation — see its own sheet's footnote). ⚠ Ruled entries leave the
+  standing queue as *ruled*, not as *withdrawn*; the counsel re-presentation of 3/5/8/9 is a NEW
+  obligation, not a discharged one; **11's ruling additionally OWES a successor-story mint** (clause 3 of
+  `2026-08-15-116`) — that mint is itself a new, separate open item, not a re-opening of 11.
+· **A named successor story, NOT the Panel:** 4, 6 — **two**, plus **11's follow-up build** (option (c),
+  unnamed) — **three**.
 · **Ambiguous by construction:** 7 — its owner is *"a named successor story **or** this story re-scoped by
   ruling — the Panel/PO decides which"*, so it enters the queue only if the Panel takes it.
 ⛔ An earlier draft ended this note with *"do not add six"* — which was a leftover from the six-escalation
 era and, worse, **six was then the correct Panel count**, so the instruction forbade the right answer.
-⚠ The Panel count is now **seven** (Escalation 10); ⛔ do not read the move from six to seven as progress. ⛔ Do not
-add any of these numbers to the standing NINE: state the new queue by **enumeration**, and state it as a
-count, not as progress.
+⚠ The Panel count is now **eight, zero open**; ⛔ do not read this as the story being closer to `done` —
+Escalation 10 remains open on its own separate sheet, and 11's ruling itself created a new successor-mint
+obligation. ⛔ Do not add any of these numbers to the standing NINE: state the new queue by
+**enumeration**, and state it as a count, not as progress.
+
+⭐ **RAISED AND RULED 2026-08-15 — Escalation 11, from adversarial code review.** Raised by Decision
+`2026-08-15-115`: `member_requested_staff_mediation` is a staff-set `z.literal(true)`, not a captured
+member-authored fact — realizing exactly the collapse Decision `111` clause 3 warned against in advance
+of the build. **Ruled the same day by Decision `2026-08-15-116` — option (c):** a genuinely
+member-authored artifact, captured at ticket intake and read by the fallback route, replacing the
+caller-supplied boolean. ⚠ **Scope, stated precisely:** this did NOT un-ship AC-R1 or reopen Decision
+`113`'s ratification of the member-direct-primary + narrow-staff-mediated-exception MODEL — elements 2
+and 3 of the gate remain separately confirmed correctly built. ⛔ **The ruling is NOT the fix.** Option
+(c) is a real feature (intake contract changes + a new read path), owned by a **named successor story,
+still unnamed** — until it lands, `z.literal(true)` stays in production exactly as built. ⛔ The story's
+completion status is unaffected in kind — it was already `in-progress, not done` before this escalation
+and remains so — but a completion report must now name the successor-story obligation, not Escalation 11
+itself (which is closed), among the open items.
 
 ---
 
@@ -1854,9 +2043,51 @@ claude-opus-5 (2026-08-14).
 - ⚠ **one open, NON-BLOCKING question:** whether element 2 should additionally require `attempts = 0`
   (`113` *Open follow-ups*).
 
-### Debug Log References
+⭐ **STATUS FLIPPED `in-progress` → `review` on 2026-08-15** (dev-story completion pass, `claude-opus-5`).
+⛔ **Read the flip narrowly.** `review` means *"ready for code review"* in this sprint ledger's own STATUS
+DEFINITIONS — it does **not** mean `done`, and it ⛔ **does not discharge the release gate**, which stays
+**OPEN** exactly as this file's opening banner says. The `termination_access_block` flip remains a separate,
+Panel-exclusive act that no dev-story pass may perform.
+
+⚠ **THE ONE UNCHECKED CHECKBOX IS NOT UNBUILT WORK — it is a standing prohibition.** Task 7b carries a
+single `[ ]` box: *"`attempts` is NOT in the predicate, and whether it should be (`attempts = 0`) is an OPEN
+question … ⛔ Do not add it unilaterally."* Re-verified live during this pass: it is still an **unruled Open
+follow-up of Decision `2026-08-14-113`** (`.decision-log.md:317`), never ruled by `115`/`116`. ⛔ **Checking
+that box would assert `attempts = 0` had been added; implementing it would be the exact unilateral act
+`113` forbids.** It is therefore left unchecked **deliberately and permanently for this story** — the
+definition-of-done gate is satisfied *around* it, not *through* it, and this note is the record of why
+([[feedback_closure_language_precision]] — this is *"Resolved via explicit deferral"*, ⛔ not *"Closed by
+[edit]"* and ⛔ not *"Not addressed"*).
+
+⛔ **THREE successor-story mints are owed and ALL THREE ARE STILL UNNAMED** — stated by enumeration, ⛔ not
+as arithmetic and ⛔ not as progress: **(1)** AC5's export-**content** half (`109` cl.9); **(2)** Escalation
+11's option-(c) build — the member-authored intake artifact (`2026-08-15-116` cl.3); **(3)** Escalations 4
+and 6, which were never Panel items and were **not** discharged by `109`. ⚠ An unnamed successor is exactly
+how a deferral expires unowned ([[project_r7_fact_producer_unbuilt]]). ⛔ Naming them is a PO/planning act
+and was **not** performed by this pass.
 
 ### Debug Log References
+
+**2026-08-15 completion pass — two live-DB flakes, each cleared of 10.21 by isolation, not by assumption.**
+⛔ Neither was dismissed as "known flakiness" before it was reproduced or refuted
+([[project_known_livedb_test_failures]] — confirm innocence by running a suspect spec in isolation).
+
+1. `moderation-dwell.spec.ts:209` and `moderation-escalation.spec.ts:170` — a moderation `suspend` returned
+   **500 instead of 200** under the full 116-file `@twt/api` suite. ⚠ **Taken seriously rather than waved
+   off, because 10.21 edits `packages/domain/src/member/state.ts` — the lifecycle reducer these specs run
+   through.** Cleared three ways: `moderation-escalation` alone → **18/18**; all six `member-moderation`
+   specs together → **81/81**; and a re-run of the whole `@twt/api` task failed a **completely different**
+   spec instead. ⭐ The reducer edit is provably incapable of causing it besides: it rewrote
+   `return state === 'anonymized' ? state : 'anonymized'` to `return 'anonymized'` — identical for every
+   input, and on an arm `suspend` never reaches.
+2. `medical-disclose.spec.ts:270` — `expect(ciphertext).not.toContain('ckd')` failed because the base64 of a
+   **randomly generated DEK** happened to contain `ckd`. ⛔ A test-design defect, ⛔ not a leak and ⛔ not
+   10.21's; recorded in `deferred-work.md` with a named re-trigger and ⛔ **left unfixed here** — widening
+   the needle would lower the collision rate without removing it, and the real remedy (decrypt-and-assert)
+   changes a Story 3.x test's PII posture.
+
+⭐ **A third full `@twt/api` pass ran 116/116 / 966 tests / exit 0**, so the suite does reach green — ⛔ but
+this record does **not** claim a one-pass green, because it did not happen on the first pass.
 
 ### Completion Notes List
 
@@ -1884,7 +2115,8 @@ claude-opus-5 (2026-08-14).
 **AC-R1/AC-R2 (delivery + correction)** — **NEW** `domain/migrations/0104_data-rights-delivery-and-correction.sql`; **NEW** `domain/src/schema/{data_export_delivery_grants,member_data_rights_corrections}.ts`; **NEW** `domain/src/data-export/delivery.ts`; **NEW** `domain/src/member-data-rights/{corrections,index}.ts`; `domain/src/schema/member_auth_otps.ts` (new OTP pool); `domain/src/member/anonymize.ts` (+2 Tier-1 surfaces); `contracts/src/member-data-rights/member-data-rights.ts`; `apps/api/src/modules/member-data-rights/{handlers,routes}.ts`; `apps/admin/src/api/{client,hooks}.ts`; `apps/admin/src/modules/helpdesk/{HelpdeskDetailShell.tsx,HelpdeskDetailPage.tsx,i18n-en.ts}`.
 **AC-R1/AC-R2 tests** — **NEW** `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts`; `domain/tests/member/rtbf-anonymize.test.ts` (coverage 9→11 tables / 10→12 statements); `apps/api/tests/integration/login-wall.spec.ts` (the redemption route allowlisted, with its rationale).
 **Corrected en route** — `domain/tests/integration/device-token/device-token.spec.ts` (a global-count assertion that was a date bomb; diagnosed as pre-existing before touching it).
-**Governance** — `.decision-log.md` (`107`, `108`, `109`, `110`, `111`, `112`, `113`, `114`); `docs/knowledge-transfer/trustee-consent-sheet-2026-08-14-story-10-21-escalations.md`; `deferred-work.md`; `sprint-status.yaml`; `docs/legal/niyamavali{,.hi}.md` (untracked).
+**Code review round (2026-08-15, at `ebd3599`)** — the 12 applied patches touch files already listed above, with **two exceptions listed here so the File List is complete**: `apps/api/src/config.ts` (new `dataExportDeliveryOtpTtlMs` / `DATA_EXPORT_DELIVERY_OTP_TTL_MS`, default 60 min) and `apps/api/src/modules/auth/member/member-otp.service.ts` (`requestOtp`'s TTL mapping branches on `data_export_delivery`). ⚠ One **deletion** is also recorded here rather than as a modification: `dataExport.findLiveGrant` was removed from `packages/domain/src/data-export/delivery.ts` as genuinely dead code (zero callers) — ⛔ it was **not** the building block the originating finding mis-cited.
+**Governance** — `.decision-log.md` (`107`, `108`, `109`, `110`, `111`, `112`, `113`, `114`, **`115`**, **`116`**); `docs/knowledge-transfer/trustee-consent-sheet-2026-08-14-story-10-21-escalations.md`; **NEW** `docs/knowledge-transfer/trustee-consent-sheet-2026-08-15-story-10-21-escalation-11.md` (Escalation 11's single-row sheet, Session Resolution filled); `deferred-work.md`; `sprint-status.yaml`; `docs/legal/niyamavali{,.hi}.md` (untracked — `docs/legal/` is gitignored at `.gitignore:68`).
 
 ---
 
@@ -1917,3 +2149,6 @@ claude-opus-5 (2026-08-14).
 | 2026-08-14 | ⭐ **`Decision 2026-08-14-113` — OPTION (i) RATIFIED; AC-R1 UN-BLOCKED IN FULL; the code terminology is MANDATED.** **(1) A THREE-PART GATE on the fallback**, ⛔ all three required and none substituting: **(1)** the member's **explicit request** — machine-enforced, fails closed; **(2)** an **unsuccessful OTP attempt** on the primary route — machine-enforced, fails closed; **(3)** the staff **attestation** that the member no longer controls the registered mobile — recorded in the internal justification, ⛔ **not machine-verifiable and not claimed to be**. ⭐ What element 2 buys is real: the fallback is **unreachable until the primary has genuinely been tried and failed** — exactly *"mechanized only to the extent necessary"* (`112` cl.3). **(2) ⛔ TERMINOLOGY MANDATED — `primary_delivery_not_completed`; ⛔ NEVER `mobile_lost`, ⛔ NEVER `mobile_unreachable`** — binding the predicate, the column/field, the error code AND the audit action. ⚠ **This is not style; it is the control that stops element 2 from becoming a claim it cannot support.** The check observes that an OTP was issued and the route did not complete; it does **not** observe the handset — there is no DLR seam and no mobile-change history. A field named `mobile_lost` would assert to every future reader, reviewer, operator and auditor that the system **established** what it merely **inferred**, and the inference is simply wrong for a member who was asleep, busy, or ignored the message. ⚠ This story has already had to correct **three** artifacts that named a protection they did not deliver (the inert `23505` catch, the inert `ON DELETE CASCADE` comment, the vacuous `pii-scrape` gate) — ⛔ the mandate exists so a fourth is not created **deliberately**. ✅ **MECHANIZED, not left as a convention:** `packages/contracts/tests/delivery-terminology-gate.test.ts` scans `contracts`/`domain`/`api`/`admin`/`jobs` for the banned terms in both snake_case and camelCase and fails the build tree-wide. ⚠ It builds its needles by **concatenation** and **excludes itself** by name — a terminology gate necessarily contains the terms it bans, so an un-excluded scan fails on itself and looks like a real violation. ⛔ **REVERT-SANITY PROVEN:** a planted `mobile_lost` in `domain/src/helpdesk/routing.ts` failed the gate with an actionable message naming the file; reverted; green. **(3) ⚠ THE PREDICATE IS `consumed_at IS NULL AND expires_at < now()`** over `member_auth_otps` — an OTP **issued** for the member-direct grant that **expired unconsumed**. ⛔ **`attempts` is deliberately NOT in it**, and whether it should be is recorded as an OPEN, **non-blocking** question: a **non-zero** attempt count means somebody **received the message and entered a wrong code**, which is evidence the member **DOES** control the mobile and cuts directly **against** element 3. ⛔ Not added, because it narrows eligibility beyond what was ruled and `112` cl.3 forbids inventing mechanism. ⚠ **The asymmetry is stated so whoever answers sees it:** wrong permissively admits a fallback that should have been refused; wrong restrictively **denies a member a statutory route**. **Propagated in the same pass**: AC-R1's heading + blocked banner + eligibility block + terminology/predicate clauses; Task 7b's header, fallback gate, terminology and `attempts` checkboxes; the coverage-matrix AC-R1 row; and the banner / in-scope bullet / AC preamble / escalation trailer, **all four of which said AC-R1's fallback was blocked** and were false the moment this ruling landed. ⛔ **ZERO blocks now — and the story is STILL NOT DONE: AC-R1 and AC-R2 are UNBUILT and the release gate is OPEN.** |
 | 2026-08-14 | ⭐ **AC-R1 + AC-R2 CLOSED OUT — tests, operator surface, §8.4a and the record.** Five gaps I had left open after the build are now closed. **(1) TESTS — the real gap.** The new routes had shipped with **no route-level coverage**: only the login-wall guard and the two source-scan gates referenced them. Added `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts` (7 tests) proving what the DB CHECKs cannot: that the **handler** refuses before reaching the database, so a caller gets a typed 409 rather than a constraint violation as a 500. Covers element 2 failing closed **with no grant row created**; a `member_direct` grant carrying **none** of the gate elements; staff-mediated succeeding **only** once an OTP has expired unconsumed, with all three elements recorded and the attestation **encrypted** (asserted by `/^enc:/` **and** by the plaintext being absent); redemption returning the **identical** 404 for unknown-grant and wrong-code; a **staff_mediated grant being unredeemable** by the member; the correction record with both sides encrypted and the display name snapshotted; and an un-elevated admin refused (revert-sanity on the DISTINCT step-up context). ⛔ **REVERT-SANITY PROVEN:** disabling the element-2 check fails exactly that one test. ⚠ **Fixture correction worth recording:** the ticket was first hand-INSERTed and failed on `audit_log_entries.audit_hash NOT NULL` — the §1.5 hash chain. Rather than forge a chain entry the fixture now drives the **real AC2 intake route**, which is both simpler and a truer fixture; it also caught that the column is `subcategory`, not `sub_category`. **(2) OPERATOR SURFACE.** `apps/admin` had the client/hooks but **no page wiring** — an operator could not issue a delivery grant or record a correction at all. Added both, and the UI **encodes the ruling's shape**: the member-direct button is primary and prominent, while the fallback and the correction form are **collapsed `<details>`** an operator must deliberately open. Copy states the precondition in plain words (*"Send the code to the member first…"*) so a server refusal is not a mystery — ⛔ but the UI does **not** evaluate it; the server observes it. **(3) §8.4a WAS FALSE.** It still read *"Neither is built yet"* about delivery and correction. Re-stated in **both locales** and recorded as **`Decision 2026-08-14-114`** (`docs/legal/` is untracked). ⭐ The row is **deliberately KEPT** in the stated-but-unmechanized list, with the exit condition now explicit: **a row leaves when the Trust has seen its mechanism work — not when the code exists.** The portal-access control is still not enabled, so no member has exercised any of this live. **(4) RECORD.** Completion status rewritten (all ACs built; five things still open, none of them mine); File List extended; **15 tasks / 76 subtasks ticked** — they had drifted badly out of date and were not a reliable signal. ⛔ The one genuinely-open item (`attempts = 0`) is deliberately left **unticked**. **(5)** Gates re-run — see the next entry. |
 | 2026-08-15 | ✅ **GATES RE-RUN AFTER THE CLOSE-OUT — all green.** `pnpm ci:local` **30/30**; single-pass live-DB **@twt/domain 2772 passed / 241 files** and **@twt/api 963 passed / 116 files** (the 7 new AC-R1/AC-R2 route tests included), exit 0; `microcopy:check`, `i18n:check`, `member-state:test/check`, `schema:test`, `friction:test` all green; both source-scan gates (single-literal + delivery terminology) green with revert-sanity intact. ⚠ **TWO FLAKES AND ONE REAL FINDING ALONG THE WAY, all recorded rather than retried into silence.** *Flake 1* — `@twt/admin` timed out at 5000ms across four unrelated pages on one run; 308/308 in isolation. *Flake 2* — `@twt/measured-validation` failed with `[vitest-worker]: Timeout calling "resolveId"` after **366s**; 28/28 in isolation. Both are [[project_ci_local_concurrency_oversubscription]], not this diff. ⭐ **The real finding: the MICROCOPY TONE GATE caught an accuracy defect in my OWN copy.** The fallback hint read *"the code you already sent **did not reach them**"* — which **asserts delivery failure**, precisely the thing this system **cannot** observe (no DLR seam). That is the same overstatement the `2026-08-14-113` terminology mandate exists to prevent, reappearing in operator copy rather than in a column name. Corrected to *"has gone unused"*, which is exactly what the system knows. ⚠ Worth recording that the gate found it on **tone** grounds and the **truthfulness** problem was the more serious one underneath. |
+| 2026-08-15 | ⚠ **ADVERSARIAL CODE REVIEW at `ebd3599` — 13 findings survived triage; 12 patched, 1 escalated.** Three parallel layers (Blind Hunter · Edge Case Hunter · Acceptance Auditor), each finding spot-verified against the live tree before it was accepted — **2 were verified FALSE and dropped**, and **2 more were found half-false during patch application** and only the true half applied. The three decision-needed items: **D1** (the staff-mediated fallback was structurally *unreachable* once a member-direct grant went stale — `one_pending_per_export` permanently blocked reissue) fixed by lazy-expire-on-read (`expireStaleGrantForExport`); **D2** (the delivery OTP inherited the 3-min step-up TTL, so gate element 2 could go true within minutes of any attempt) fixed by a dedicated 60-min `dataExportDeliveryOtpTtlMs`; **D3** (`member_requested_staff_mediation` is a staff-set `z.literal(true)`) ⛔ **NOT fixed unilaterally** — escalated. ⭐ A coverage gap was closed en route that no finding had named: **no test in the delivery spec had ever exercised a genuinely SUCCESSFUL redemption** — every redemption test asserted a 404. |
+| 2026-08-15 | ⛔ **ESCALATION 11 RAISED AND RULED THE SAME DAY.** Raised by `Decision 2026-08-15-115` from code-review D3: element 1 of the ratified three-part fallback gate is staff-authored, collapsing it into element 3 — ⚠ **the exact collapse `Decision 111` clause 3 warned against IN ADVANCE of the build**. Ruled by `Decision 2026-08-15-116`, **option (c)**, as posed and with no conditions: element 1 must be a genuinely **member-authored artifact**, captured as a structured field at ticket intake (AC2) and **read** by the staff-mediated route. ⛔ **The ruling is NOT the fix** — option (c) is a real feature (intake contract change + a new read path) owed to a **named successor story, still UNNAMED**; `z.literal(true)` stays in production unchanged until it lands. ⛔ Does **not** reopen `113`'s delivery-MODEL ratification, and elements 2 and 3 were separately confirmed correctly built. Quorum met (DR + KB); ⚠ the sheet's quorum checkbox and one trustee's initials transcription were corrected in the Session Resolution **with the discrepancy recorded, not silently absorbed**. |
+| 2026-08-15 | ✅ **DEV-STORY COMPLETION PASS — gates re-run from a cold context, File List reconciled, Status → `review`.** **Gates:** `pnpm ci:local` **30/30 green** (exit 0); single-pass live-DB across 8 packages — **@twt/domain 2772 passed / 241 files**, **@twt/api 966 passed / 116 files**, **@twt/validity-service 284**, **@twt/channels 204**, **@twt/niyamavali-engine 144**, **@twt/events 33**, **@twt/queue 3**, **@twt/jobs** green. This story's own specs re-run in isolation: **28/28**, including all **10** `delivery-and-correction` tests. ⚠ **Reported honestly: the api suite did NOT go green on the first pass, and I am not calling it a one-pass green.** Two *different* specs failed on two different runs and each was independently cleared of 10.21: (1) `moderation-dwell` + `moderation-escalation` returned 500 on `suspend` under full-suite contention, then passed **81/81 across all 6 moderation specs together** and 18/18 in isolation; (2) `medical-disclose` failed a **probabilistic** `not.toContain('ckd')` assertion over random base64 — a test-design defect, recorded in `deferred-work.md` and ⛔ **not fixed here**. A third full `@twt/api` pass ran **116/116, exit 0**. **Record:** File List reconciled against the working tree (the review round's `config.ts` + `member-otp.service.ts`, the `findLiveGrant` **deletion**, Decisions `115`/`116`, and the Escalation 11 consent sheet were all missing); a duplicated `### Debug Log References` heading removed. ⛔ **The status flip is NARROW:** `review` ≠ `done`, and it ⛔ **does not discharge the release gate** — the `termination_access_block` flip stays Panel-exclusive and untouched. ⛔ **Three successor-story mints remain UNNAMED** (AC5 export-content · Escalation 11 option (c) · Escalations 4 and 6). ⚠ Task 7b's single `[ ]` box is left unchecked **deliberately** — it is an unruled Open follow-up of `113` (`.decision-log.md:317`) that forbids its own implementation. |

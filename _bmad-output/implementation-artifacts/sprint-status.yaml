@@ -1,4 +1,42 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-15m (10-22-moderation-appeal-mechanism: backlog -> ready-for-dev via
+#   bmad-create-story, off main @ b3e12e1 (clean, fetched, == origin/main). Saved
+#   10-22-moderation-appeal-mechanism.md.
+#   ⭐ THE GOVERNANCE HALF LANDS FIRST, and it is not optional. Niyamavali §8.8 is a RESERVED number
+#   (niyamavali.md:274, hi :272) held expressly for the moderation appeal, and §8.6's *Recorded gap*
+#   clause (:260, hi :258) states that its closure "requires its own amendment (§8.8, reserved)".
+#   AC1 routes TEN questions to the Trustee Panel on a governance/ branch committed ALONE (zero
+#   packages/apps files), AC2 authors §8.8 between §8.7 and §8.9 in BOTH locales -- the 10.18/10.20
+#   precedent ([[feedback_governance_commits_precede_implementation]]).
+#   ⛔ docs/legal/ IS GITIGNORED (.gitignore:68, verified live) => the .decision-log.md entry is the
+#   ONLY durable copy of the §8.8 text, both locales verbatim.
+#   THE GAP, VERIFIED LIVE AT b3e12e1: four sites claim appealability and none is true --
+#   status.ts:17 ("notified, audited and appealable"); handlers.ts:414-419 + presenter.ts:348 +
+#   view-model.ts:86 (all three honestly name 10.22); and moderation.notice.suspended.body
+#   (i18n :339, BOTH locales) promises a suspended member "request a review from your membership
+#   status page". The CTA is a DEAD BUTTON in both apps -- mobile (membership)/index.tsx:124-131 and
+#   admin MemberStatusPanel.tsx:140-150 each render it with NO handler at all.
+#   ⚠ epics.md:4066 cites handlers.ts:228 -- STALE. 10.20 inserted the escalation block; :228 is now
+#   the early-legality fast-fail. The appeal-CTA claim lives at :414-419. Recorded, not "fixed".
+#   ⭐ THE FINDING THAT KILLS THE OBVIOUS DESIGN: trustee_panel holds EXACTLY
+#   [member.moderate, member.restore_terminated] and NO helpdesk capability at all (roles.ts:594-637,
+#   stated as settled at permissions.ts:541), and routed_to_role is advisory + inert
+#   ([[project_helpdesk_routing_is_advisory]]). An appeal filed as a helpdesk ticket routed to the
+#   Panel is INVISIBLE TO IT. The helpdesk is INTAKE; the adjudication surface is this story's.
+#   Second trap: a NEW helpdesk category is guaranteed-unrouted under every per-Pariwar override
+#   ([[project_helpdesk_default_policy_version_trap]]) => existing category + sub_category token.
+#   Third: state_trustee/district_admin can NEVER hold a pariwar-dimension key (rank ordering, not a
+#   missing resolver -- [[project_rbac_geo_scope_containment]]).
+#   THE SHAPE ROUTED (recommendations, not rulings): a RECORD not a state machine -- one
+#   member_moderation_appeals table (migration 0107; the member_data_rights_corrections precedent, NOT
+#   Epic 6's claim appeal), two events on the member's stream spreading auditShape and DELIBERATELY
+#   OMITTING overlayShape (the ground-appended template), keyed to the moderation ACTION not the
+#   member, two intake surfaces / one record (the 10.29 both-routes precedent), a MINTED adjudication
+#   key (catalog 33->34, keys 42->43) because member.moderate cannot distinguish the appellate
+#   authority from the deciding one, and `allowed` DIRECTS a restore -- it never writes the overlay
+#   (member.restore_terminated is already Panel-exclusive).
+#   ⛔ NO CODE CHANGES IN THIS COMMIT and none owed until the Panel rules. This story does NOT flip
+#   termination_access_block -- that remains a separate Panel-exclusive act.)
 # last_updated: 2026-08-15l (10-29-member-authored-staff-mediation-request: review -> done, via
 #   bmad-code-review. 3-layer review (Blind Hunter / Edge Case Hunter / Acceptance Auditor, plus the
 #   load-bearing-invariant checklist as an Acceptance Auditor lens) found 0 decision-needed, 5 patch,
@@ -6756,7 +6794,7 @@ development_status:
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
   10-21-off-portal-dpdpa-access: done
-  10-22-moderation-appeal-mechanism: backlog
+  10-22-moderation-appeal-mechanism: in-progress
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done

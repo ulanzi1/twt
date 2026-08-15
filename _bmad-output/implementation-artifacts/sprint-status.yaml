@@ -1,4 +1,24 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-15l (10-29-member-authored-staff-mediation-request: review -> done, via
+#   bmad-code-review. 3-layer review (Blind Hunter / Edge Case Hunter / Acceptance Auditor, plus the
+#   load-bearing-invariant checklist as an Acceptance Auditor lens) found 0 decision-needed, 5 patch,
+#   2 defer, 5 dismissed. All 7 ACs, D1-D6, and the FIVE TRAPS independently re-verified against the
+#   working tree (not taken on the story's own claim) -- all held.
+#   ⭐ 5 PATCHES APPLIED. (1) A cross-member ticket-authorization gap in `grantStaffMediatedDelivery` --
+#   element 1 was read off ANY ticket in the pariwar via `ticketRow.memberStaffMediationRequestedAt`
+#   with no check that `ticketRow.subjectMemberId` matched the caller's `member_id`, contradicting the
+#   module's own AC4 doctrine ("EVERY read here keys on member_id"); fixed by folding a mismatch into
+#   the existing "not captured" 409, +1 regression test (28 tests green). (2) The admin operator
+#   checkbox didn't clear on a subcategory change, letting a stale `true` ride onto an unrelated
+#   ticket; fixed in `HelpdeskOperatorPage.tsx`. (3) The single-literal gate's `SCAN_ROOTS` omitted
+#   `apps/mobile/tests` -- the exact blind spot its own comment warns against; root added. (4)/(5) D2's
+#   mobile checkbox+reset and D5's admin disabled-button+explainer had ZERO test coverage; both closed
+#   (a source-scan fence for mobile's no-RTL harness, two RTL tests for admin).
+#   ⚠ 2 DEFERRED (pre-existing, not caused by this story): the operator create-ticket route has no
+#   Idempotency-Key protection (unlike the member route); the new nullable column has no index (no
+#   query needs one yet). Both logged in deferred-work.md.
+#   All four affected suites re-run green post-patch: @twt/contracts (891), @twt/admin (310),
+#   @twt/mobile (262), @twt/api member-data-rights integration (28).
 # last_updated: 2026-08-15k (10-29-member-authored-staff-mediation-request: ready-for-dev -> in-progress
 #   -> review, via bmad-dev-story. IMPLEMENTED off the MINT COMMIT 7f5470d (⛔ not main -- origin/main is
 #   4c366f7 and the mint is unmerged) on feature/10-29-member-authored-staff-mediation-request. All 7 ACs
@@ -6761,7 +6781,7 @@ development_status:
   # ⛔ NOT URGENT AND NOT A HOTFIX. Decision 2026-08-15-116 clause 4: the current mechanization stays in
   # production unchanged until this lands. The ruling found element 1's EVIDENTIARY STRENGTH weak, not
   # the fallback unsafe to operate -- nothing about this story pauses staff-mediated delivery.
-  10-29-member-authored-staff-mediation-request: review
+  10-29-member-authored-staff-mediation-request: done
   epic-10-retrospective: optional
 
   # ==========================================================================

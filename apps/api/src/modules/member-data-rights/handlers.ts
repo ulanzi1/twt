@@ -851,7 +851,16 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         // cl.6). ⛔ That does NOT prove the member spoke, and nothing here claims it does — what it
         // buys is a separate act at a separate instant, on a ticket this route cannot create, recorded
         // immutably at genesis.
-        const memberRequestRecordedAt = ticketRow.memberStaffMediationRequestedAt;
+        // ⛔ CODE-REVIEW ADDITION — the ticket must be THIS member's own ticket.
+        // `requireTicketInScope` scopes by (pariwar, ticket id) only — tenant scope, per its own
+        // docstring — and does not confirm `ticketRow.subjectMemberId` matches `body.member_id`.
+        // Element 1 is READ FROM the ticket, so an unchecked mismatch would let any ticket in the
+        // pariwar that carries a captured request satisfy the gate for a DIFFERENT member's export —
+        // exactly the "ticket id widens the subject" shape the module header's AC4 doctrine forbids.
+        // Folded into the SAME 409 refusal as "not captured": from this member's perspective, a ticket
+        // that is not theirs records nothing about them.
+        const memberRequestRecordedAt =
+          ticketRow.subjectMemberId === memberId ? ticketRow.memberStaffMediationRequestedAt : null;
         if (memberRequestRecordedAt === null) {
           // ⛔ 409, matching element 2's sibling refusal (`2026-08-15-120` cl.3): the request is
           // well-formed and a SERVER-OBSERVED precondition is unmet. ⛔ Not 404 — the ticket-scoping

@@ -226,3 +226,38 @@ describe('Story 10.4 — member reply composer (AC3)', () => {
     }
   })
 })
+
+// ── Story 10.29 (D2, code-review addition) — the staff-mediation checkbox resets when its context
+// changes ──────────────────────────────────────────────────────────────────────────────────────────
+// ⛔ WHY THIS EXISTS. This story's own admin-console sibling shipped WITHOUT this reset (a code-review
+// finding on the operator page) — a ticked box silently rode onto an unrelated ticket after a
+// category/subcategory change. The mobile screen already gets this right; this fence proves it stays
+// right, since no @testing-library/react-native mount exists in this harness to interact with the
+// button directly (the `helpdesk-screens-render` precedent above).
+describe('Story 10.29 (D2) — staff-mediation checkbox reset (mobile)', () => {
+  const screen = read('apps/mobile/app/(helpdesk)/new.tsx')
+
+  it('a category change clears the flag — a ticked box must not survive to an unrelated category', () => {
+    // The category picker's onPress body, from the point it sets the new category to the closing of
+    // that arrow function — the same window a category change actually executes in.
+    const onPress = screen.match(/setCategory\(c\.category\)[\s\S]*?\}\}/)?.[0]
+    expect(onPress, 'category onPress block not found — has new.tsx been restructured?').toBeTruthy()
+    expect(onPress).toContain('setStaffMediation(false)')
+    expect(onPress).toContain('staffMediation: false')
+  })
+
+  it('a subcategory change keeps the flag ONLY when the new subcategory is still the DPDPA one', () => {
+    const onPress = screen.match(/setSubCategory\(next\)[\s\S]*?\}\}/)?.[0]
+    expect(onPress, 'subcategory onPress block not found — has new.tsx been restructured?').toBeTruthy()
+    // ⛔ Not an unconditional `setStaffMediation(false)` — the same button that SETS the subcategory to
+    // DPDPA also RE-SELECTS it (toggling `selected` back to `undefined`), so the retention must be
+    // conditioned on equality, never simply preserved or simply cleared.
+    expect(onPress).toContain('next === DPDPA_DATA_RIGHTS_SUBCATEGORY && staffMediation')
+    expect(onPress).toContain('setStaffMediation(keepsStaffMediation)')
+  })
+
+  it('the checkbox renders ONLY under the DPDPA subcategory, and the wire field is boolean-gated (never sent false)', () => {
+    expect(screen).toContain('subCategory === DPDPA_DATA_RIGHTS_SUBCATEGORY &&')
+    expect(screen).toMatch(/if \(staffMediation\) form\.append\('member_requested_staff_mediated_delivery', 'true'\)/)
+  })
+})

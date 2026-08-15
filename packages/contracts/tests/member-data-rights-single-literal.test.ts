@@ -57,6 +57,11 @@ const SCAN_ROOTS = [
   'apps/mobile/app',
   'apps/mobile/lib',
   'apps/mobile/components',
+  // ⛔ CODE-REVIEW ADDITION — omitting this reproduced the exact failure mode the comment above cites
+  // as its own justification: `apps/api/tests` was added after a round-2 review found a re-declared
+  // literal hiding in a TEST FIXTURE, not application code. `apps/mobile/tests` is the identical class
+  // of gap and it already exists (`helpdesk-screens-render.test.ts`, `helpdesk-draft.test.ts`).
+  'apps/mobile/tests',
 ];
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.turbo', 'coverage', '.git']);

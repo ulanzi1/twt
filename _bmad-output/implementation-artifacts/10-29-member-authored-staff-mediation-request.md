@@ -4,7 +4,7 @@ baseline_commit: 7f5470dc936bf0e3113eb0af72771593cd5f9aa3
 
 # Story 10.29: Member-Authored Staff-Mediation Request `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⚠ **THE BASELINE IS NOT ON `main`.** `origin/main` is `4c366f7`; the mint commit `7f5470d`
 > (`governance(10.29)`) lives on the branch `governance/10-29-member-authored-staff-mediation-request` and
@@ -672,6 +672,20 @@ This story adds **zero** packages. Everything it needs is already pinned, and th
   `7f5470d`; the **work** item Task 1 closes.
 - `packages/domain/migrations/0104_data-rights-delivery-and-correction.sql:38,64-72` — the column + the CHECK.
 - `packages/domain/src/helpdesk/registry.ts:51-64` — `DEFAULT_ROUTING_POLICY`, byte-frozen.
+
+### Review Findings
+
+_From the 3-layer adversarial code review (Blind Hunter / Edge Case Hunter / Acceptance Auditor), 2026-08-15. All items independently verified against the working tree before being recorded here — none taken on a subagent's word alone._
+
+- [x] [Review][Patch] Cross-member ticket authorization gap in `grantStaffMediatedDelivery` — element 1 is read off ANY ticket in the pariwar, not the requesting member's own ticket [apps/api/src/modules/member-data-rights/handlers.ts:839,854] — fixed: `memberRequestRecordedAt` now folds a `ticketRow.subjectMemberId !== memberId` mismatch into the same "not captured" 409; regression test added (`delivery-and-correction.spec.ts`, CROSS-MEMBER case), full spec green (28 tests).
+- [x] [Review][Patch] Admin operator checkbox doesn't reset on category/sub-category change, letting a stale `true` ride onto an unrelated ticket [apps/admin/src/modules/helpdesk/HelpdeskOperatorPage.tsx:124-127] — fixed: subcategory-change handler now clears the flag whenever the new subcategory isn't the DPDPA token (also covers category changes, which force a subcategory reset); `@twt/admin` suite green (310 tests).
+- [x] [Review][Patch] `SCAN_ROOTS` in the single-literal gate omits `apps/mobile/tests`, the exact blind spot the gate's own comment warns against [packages/contracts/tests/member-data-rights-single-literal.test.ts:57-58] — fixed: root added; `@twt/contracts` suite green (891 tests).
+- [x] [Review][Patch] D2's mobile checkbox + reset-on-category-change behavior has zero test coverage at any level [apps/mobile/app/(helpdesk)/new.tsx] — fixed: source-scan fence added to `helpdesk-screens-render.test.ts` (matching this harness's pure-Vitest, no-RTL convention), proving both reset paths + the boolean-gated wire send; `@twt/mobile` suite green (262 tests).
+- [x] [Review][Patch] D5's admin responder disabled-fallback-button + explanatory-line behavior has zero test coverage [apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx] — fixed: two RTL tests added to `helpdesk-responder-console.test.tsx` covering both the null and captured states; `@twt/admin` suite green (310 tests).
+- [x] [Review][Defer] Operator create-ticket route (Story 10.3) has no Idempotency-Key protection, unlike the member route — a retried/duplicated create can now diverge on `member_staff_mediation_requested_at` [apps/api/src/modules/helpdesk/handlers.ts:212-303] — deferred, pre-existing (predates this story; baseline at `7f5470d` already lacked it)
+- [x] [Review][Defer] New nullable `member_staff_mediation_requested_at` column has no index; harmless today since every read is a single-row lookup by ticket id, but would matter for a future "outstanding staff-mediation requests" list view [packages/domain/migrations/0106_helpdesk-member-staff-mediation-request.sql] — deferred, pre-existing pattern (no current query needs it)
+
+**Dismissed as noise (5):** `HelpdeskTicketDto` "member-facing scope creep" claim (verified false — `HelpdeskTicketDto` is the operator/create-route response shape; the member-facing DTOs in `packages/contracts/src/helpdesk/member.ts` do not declare the field); audit-digest reshape "hash-chain discontinuity" (no mechanism re-verifies historical digests against current code — it's a write-once fingerprint, not a chain); near-identical wire field names (`member_staff_mediation_requested_at` / `member_requested_staff_mediated_delivery` / the deleted `member_requested_staff_mediation`) flagged as a typo hazard (the distinct name is a deliberate D1 ruling, not an oversight); untested malformed-truthy multipart strings (`'True'`, `'1'`) (already fail-closed by explicit design — anything not the literal string `'true'` is `false`); unconfirmed `finally`/idempotency-release claim on the new 409 path (verified correct by direct read — `handlers.ts:980-982`).
 
 ## Dev Agent Record
 

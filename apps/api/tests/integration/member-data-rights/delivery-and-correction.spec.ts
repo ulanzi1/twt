@@ -597,6 +597,52 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     }
   });
 
+  it('⛔ CODE-REVIEW ADDITION — a captured request on ANOTHER member\'s ticket does not satisfy this member\'s gate (same pariwar)', async () => {
+    // ⛔ `requireTicketInScope` scopes by (pariwar, ticket id) only. Without a subject-member check,
+    // this test would have PASSED with a 200 before the fix: any ticket in the pariwar carrying a
+    // captured request could satisfy ANY member's gate.
+    const p = randomUUID();
+    const a = await authenticate('Operator M3');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    // Member B's OWN ticket carries the captured request...
+    const b = await seedSubject(a.client, p, { memberRequestedStaffMediation: true });
+    // ...but delivery is attempted for a DIFFERENT member, A, whose own ticket carries none. Element 2
+    // is made genuinely true for A, so a refusal here cannot be element 2's refusal wearing element 1's
+    // name.
+    const s = await seedSubject(a.client, p);
+    await primaryTriedAndLapsed(a.client, p, s);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/staff-mediated`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: {
+        export_id: s.exportId,
+        member_id: s.memberId,
+        helpdesk_ticket_id: b.ticketId, // ⛔ ANOTHER member's ticket, same pariwar
+        attestation: 'Caller states the registered handset was lost last week.',
+      },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe(
+      'member_data_rights.member_request_not_captured',
+    );
+
+    // ⛔ AC5 — REFUSED BEFORE ANY ROW EXISTS, for A. B's own gate is untouched by this call.
+    const c = await td.pool.connect();
+    try {
+      const { rowCount } = await c.query(
+        `SELECT 1 FROM data_export_delivery_grants WHERE member_id = $1 AND channel = 'staff_mediated'`,
+        [s.memberId],
+      );
+      expect(rowCount, 'a refused staff-mediated grant must not exist at all').toBe(0);
+    } finally {
+      c.release();
+    }
+  });
+
   it('⭐ AC2 — a ticket filed through the MEMBER app (10.2, multipart) is equally sufficient', async () => {
     // ⛔ WITHOUT THIS, AC2 IS MET ON ONE ROUTE AND UNPROVEN ON THE OTHER — the exact failure the AC
     // names. The two arms above both file through the OPERATOR route, where the field is

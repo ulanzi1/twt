@@ -10,12 +10,13 @@
 // selected member (`subject_actor_id` left null — v1 identifies a MEMBER); the server resolves the
 // routing/scope-context/SLA + the operator_attribution from the session display_name. NO step-up.
 
-import type {
-  CreateTicketRequest,
-  HelpdeskCategory,
-  HelpdeskSubcategory,
-  MemberSearchRequest,
-  MemberSearchResultItem,
+import {
+  DPDPA_DATA_RIGHTS_SUBCATEGORY,
+  type CreateTicketRequest,
+  type HelpdeskCategory,
+  type HelpdeskSubcategory,
+  type MemberSearchRequest,
+  type MemberSearchResultItem,
 } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
@@ -73,6 +74,20 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
     resetIntake();
   };
 
+  /** Story 10.29 (code-review fix) — the checkbox renders only under the DPDPA subcategory, but
+   *  `submit` sends whatever `memberRequestedStaffMediation` currently holds regardless of category —
+   *  it is NOT gated on the subcategory at submit time (D2: the coupling is presentational only). A
+   *  category change already forces the shell to call this with `null`, so clearing here covers BOTH a
+   *  direct subcategory change and a category change, and it is the ONLY path that must clear the flag
+   *  outside a full `resetIntake` — a ticked box left over from a DIFFERENT subcategory would otherwise
+   *  ride, unseen, onto whatever ticket is filed next. */
+  const onSubCategoryChange = (next: string | null): void => {
+    setSubCategory(next);
+    if (next !== DPDPA_DATA_RIGHTS_SUBCATEGORY) {
+      setMemberRequestedStaffMediation(false);
+    }
+  };
+
   const onSearch = (payload: MemberSearchRequest): void => {
     setSelectedId(null);
     resetIntake();
@@ -123,7 +138,7 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
       category={category}
       onCategoryChange={setCategory}
       subCategory={subCategory}
-      onSubCategoryChange={setSubCategory}
+      onSubCategoryChange={onSubCategoryChange}
       memberRequestedStaffMediation={memberRequestedStaffMediation}
       onMemberRequestedStaffMediationChange={setMemberRequestedStaffMediation}
       body={body}

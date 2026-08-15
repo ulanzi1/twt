@@ -4883,3 +4883,20 @@ this story's gate re-run and will keep costing runs until someone owns it
   *Owner:* **Trustee Panel.** *Re-trigger:* **immediate** — a statutory-access gap, due **before the
   `termination_access_block` flip**, ⛔ never at a later epic ([[project_r7_fact_producer_unbuilt]]).
   [`apps/api/src/modules/member-data-rights/handlers.ts` — `grantMemberDirectDelivery`]
+
+## Deferred from: code review of story-10.29 (2026-08-15)
+
+- **Operator create-ticket route has no Idempotency-Key protection.** Unlike the member-app create route
+  (`apps/api/src/modules/helpdesk/member-handlers.ts`, which claims an `Idempotency-Key`-scoped key before
+  writing), the operator/helpline create route
+  (`apps/api/src/modules/helpdesk/handlers.ts:212-303`) has none — pre-existing since Story 10.3, unchanged
+  by Story 10.29's baseline (`7f5470d` already lacked it). Story 10.29 makes the consequence marginally
+  sharper: a retried or duplicated operator create can now produce two tickets that diverge on
+  `member_staff_mediation_requested_at`. *Owner:* none yet. *Re-trigger:* if the operator console's retry
+  behavior is ever hardened, or if a duplicate-ticket incident is observed in the wild.
+
+- **No index on `helpdesk_tickets.member_staff_mediation_requested_at`.** Harmless today — every read of
+  the column is a single-row lookup by ticket id (`getTicketById`), never a filtered list scan. Would
+  matter the moment a "tickets with an outstanding staff-mediation request" view is built.
+  [`packages/domain/migrations/0106_helpdesk-member-staff-mediation-request.sql`] *Owner:* none yet.
+  *Re-trigger:* if such a list view is ever built.

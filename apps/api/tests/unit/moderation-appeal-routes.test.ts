@@ -41,7 +41,6 @@ function captureRoutes(): { app: FastifyInstance; routes: Registered[]; deps: un
   const typed = { post: record('post'), get: record('get') };
   const app = { withTypeProvider: () => typed } as unknown as FastifyInstance;
 
-  const named = (name: string) => Object.defineProperty(() => undefined, 'name', { value: name });
   const deps = {
     config: { writeRateMax: 10 },
     // Each factory returns a distinctly-named function so the chain is readable.

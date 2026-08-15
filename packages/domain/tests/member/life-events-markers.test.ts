@@ -31,7 +31,7 @@ const TO_ACTIVE: MemberEventInput[] = [
 ];
 
 describe('Story 3.9 — event vocabulary wiring', () => {
-  it('extends the vocabulary to 21 types including the two Life Events markers', () => {
+  it('extends the vocabulary to 24 types including the two Life Events markers', () => {
     // 14 (Story 3.1) + 2 (Story 3.9 Life Events markers, this story) + 3 (Story 10.10 moderation)
     // + 1 (Story 10.26 `member.personal_event_asserted`)
     // + 1 (Story 10.23 `member.restoration_discipline.imposed`).
@@ -43,11 +43,19 @@ describe('Story 3.9 — event vocabulary wiring', () => {
     // one event — same identity family, same reason — taking it 20 → 21. Story 10.20's
     // `moderation.ground-appended` is an ACTION-LESS marker on the same overlay (a later finding
     // ATTACHES to a decision; no status moves), so it joins the identity family too: 21 → 22.
-    expect(MEMBER_EVENT_TYPES).toHaveLength(22);
+    // ⭐ Story 10.22's two §8.8 APPEAL events take it 22 → 24. Both are ACTION-LESS on the same
+    // overlay: no status moves on a filing (§8.8 has no suspensive effect), and — the load-bearing
+    // half — none moves on an `allowed` outcome either, because §8.8 makes an allowed appeal DIRECT a
+    // restore rather than perform one. Same identity family, same reason.
+    // ⚠ This is the SECOND of the repo's two count fixtures; the other is in
+    // `personal-event-assertion.test.ts`, and BOTH must move together or the pair itself goes stale.
+    expect(MEMBER_EVENT_TYPES).toHaveLength(24);
     expect(MEMBER_EVENT_TYPES).toContain('member.address_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.posting_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.restoration_discipline.imposed');
     expect(MEMBER_EVENT_TYPES).toContain('member.moderation.ground-appended');
+    expect(MEMBER_EVENT_TYPES).toContain('member.moderation.appeal-filed');
+    expect(MEMBER_EVENT_TYPES).toContain('member.moderation.appeal-decided');
   });
 
   it('binds both new types to a payload schema (exhaustive registry)', () => {

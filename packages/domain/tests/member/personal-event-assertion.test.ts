@@ -67,15 +67,20 @@ describe('AC2/D2 — the event is on the MEMBER stream, NOT in the contribution.
     expect(MEMBER_EVENT_PAYLOAD_SCHEMAS[ASSERTION_EVENT]).toBe(PersonalEventAssertedPayloadSchema);
   });
 
-  it('the vocabulary is now TWENTY-ONE member.* events (20 + Story 10.23\'s imposition)', () => {
+  it('the vocabulary is now TWENTY-FOUR member.* events (22 + Story 10.22\'s two appeal events)', () => {
     // The stale-count class Story 10.25 AC6 catalogued: a doc comment that says 19 while the tuple
     // says 20. Pinned as a number so the comment cannot drift silently.
     // ⚠ Story 10.23 took it 20 → 21 with `member.restoration_discipline.imposed` — the SECOND
     // governance overlay's one event (there is deliberately no `…expired` sibling: expiry is derived
     // at read, AC4). This assertion is the SECOND count fixture in the repo; the other lives in
     // `life-events-markers.test.ts`, and BOTH must move together or the pair itself goes stale.
-    expect(MEMBER_EVENT_TYPES.length).toBe(22);
-    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(22);
+    // ⭐ Story 10.22 took it 22 → 24 with `member.moderation.appeal-filed` and
+    // `member.moderation.appeal-decided` — Niyamavali §8.8. Both are ACTION-LESS markers on the
+    // moderation overlay (no status moves on a filing, and — the load-bearing half — none moves on an
+    // `allowed` outcome either, because §8.8 makes an allowed appeal DIRECT a restore rather than
+    // perform one), so they join the same identity family as the rest.
+    expect(MEMBER_EVENT_TYPES.length).toBe(24);
+    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(24);
   });
 });
 

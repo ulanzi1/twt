@@ -504,75 +504,75 @@ reader does not read the classification as forbidding them.
 ### Task 2 — Obtain the ruling; record it (AC: 1, 2)
 - [x] Record the ruling verbatim at the foot of the note; ⚠ if the Panel re-numbers or redefines a
       question, map its numbering to this note's **before** reading any clause against a Q number
-- [ ] Author the `.decision-log.md` entry with **per-clause provenance**, carrying the **full §8.8 text
+- [x] Author the `.decision-log.md` entry with **per-clause provenance**, carrying the **full §8.8 text
       in both locales verbatim** (premise #2)
-- [ ] Commit as `governance(10.22): …`; **cut the implementation branch from this commit**
+- [x] Commit as `governance(10.22): …`; **cut the implementation branch from this commit**
 
 ### Task 3 — Author §8.8, both locales, atomically (AC: 2, 3, 8)
-- [ ] `niyamavali.md` + `niyamavali.hi.md`: §8.8 between §8.7 and §8.9, structurally identical position
-- [ ] Retire the reserved-numbers note; preserve the "deliberately numbered ahead" sentence; ⛔ no renumbering
-- [ ] Update §8.6's *Recorded gap* to closed-by-§8.8, original preserved as superseded
-- [ ] Re-disposition §8.4a's *Notice + opportunity to respond* row per Q6, both locales; the row **stays in the list**
-- [ ] ⛔ No version bump, no `Effective:` date, no `[LEGAL]` line
+- [x] `niyamavali.md` + `niyamavali.hi.md`: §8.8 between §8.7 and §8.9, structurally identical position
+- [x] Retire the reserved-numbers note; preserve the "deliberately numbered ahead" sentence; ⛔ no renumbering
+- [x] Update §8.6's *Recorded gap* to closed-by-§8.8, original preserved as superseded
+- [x] Re-disposition §8.4a's *Notice + opportunity to respond* row per Q6, both locales; the row **stays in the list**
+- [x] ⛔ No version bump, no `Effective:` date, no `[LEGAL]` line
 
 ### Task 4 — Migration `0107` + schema + policies (AC: 4, 9)
-- [ ] Hand-author `0107_moderation-appeals.sql`; append `_journal` by hand at the +86400000 cadence
-- [ ] `schema/member_moderation_appeals.ts` with both `piiColumn(1, …)` Tier-1 columns; grants
+- [x] Hand-author `0107_moderation-appeals.sql`; append `_journal` by hand at the +86400000 cadence
+- [x] `schema/member_moderation_appeals.ts` with both `piiColumn(1, …)` Tier-1 columns; grants
       `SELECT` + `INSERT` + the narrowest decision `UPDATE`
-- [ ] The **partial UNIQUE index** on `(moderation_action_id)` where open
-- [ ] The `filed_via = 'helpline' ⇒ helpdesk_ticket_id IS NOT NULL` CHECK
-- [ ] RLS policies + `policies/index.ts` export; `MemberModerationAppealId` in `ids/index.ts`
-- [ ] Apply against `twt-test-pg`:5433 ⛔ never regenerate an applied migration
+- [x] The **partial UNIQUE index** on `(moderation_action_id)` where open
+- [x] The `filed_via = 'helpline' ⇒ helpdesk_ticket_id IS NOT NULL` CHECK
+- [x] RLS policies + `policies/index.ts` export; `MemberModerationAppealId` in `ids/index.ts`
+- [x] Apply against `twt-test-pg`:5433 ⛔ never regenerate an applied migration
 
 ### Task 5 — Domain: events, record, exclusion set (AC: 4, 5, 6)
-- [ ] `member/moderation/appeal-events.ts` (or extend `events.ts`) — two payload schemas,
+- [x] `member/moderation/appeal-events.ts` (or extend `events.ts`) — two payload schemas,
       `auditShape` spread, `overlayShape` **omitted**, `.strict()`
-- [ ] Register in `MODERATION_EVENT_PAYLOAD_SCHEMAS` + `EVENT_TYPE_REGISTRY`; ⛔ verify
+- [x] Register in `MODERATION_EVENT_PAYLOAD_SCHEMAS` + `EVENT_TYPE_REGISTRY`; ⛔ verify
       `moderationActionForEventType` does **not** map them
-- [ ] `member/moderation/appeal.ts` — pure eligibility + status derivation; `appeal-persist.ts` /
+- [x] `member/moderation/appeal.ts` — pure eligibility + status derivation; `appeal-persist.ts` /
       `appeal-read.ts` — DB reads/writes, `clampLimit` on every dynamic limit
-- [ ] The exclusion-set read (actions + grounds authors), ⛔ importing nothing from `claim/appeal*`
-- [ ] `anonymize.ts` — new field-class constant + both column scrubs
+- [x] The exclusion-set read (actions + grounds authors), ⛔ importing nothing from `claim/appeal*`
+- [x] `anonymize.ts` — new field-class constant + both column scrubs
 
 ### Task 6 — Contracts + API (AC: 5, 6, 7)
-- [ ] Contracts: file/decide/read DTOs, `.strict()`, snake_case wire ↔ camelCase domain
+- [x] Contracts: file/decide/read DTOs, `.strict()`, snake_case wire ↔ camelCase domain
       ([[feedback_story_validate_footguns]]); the step-up context constant exported here
-- [ ] `apps/api/src/modules/member-moderation-appeals/{routes,handlers}.ts` — member intake (session +
+- [x] `apps/api/src/modules/member-moderation-appeals/{routes,handlers}.ts` — member intake (session +
       Turnstile + `Idempotency-Key` headers, own `openScopeTx`, 404-not-403), operator intake
       (`helpdesk.create`), adjudication (full four-hook chain + step-up)
-- [ ] The adjudication **list** read (open appeals within the caller's scope) — the surface the Panel
+- [x] The adjudication **list** read (open appeals within the caller's scope) — the surface the Panel
       actually finds a filed appeal through, not just the single-record decide endpoint (AC5)
-- [ ] The typed **409** for the different-individual exclusion; the `decided_by_display` snapshot with
+- [x] The typed **409** for the different-individual exclusion; the `decided_by_display` snapshot with
       the fail-closed `AdminDisplayNameMissingError`
-- [ ] Post-commit best-effort member notification; ⛔ a dispatch failure never fails the decision
-- [ ] Re-emit `openapi/v1.yaml`; the determinism gate must be green
+- [x] Post-commit best-effort member notification; ⛔ a dispatch failure never fails the decision
+- [x] Re-emit `openapi/v1.yaml`; the determinism gate must be green
 
 ### Task 7 — RBAC (AC: 5)
-- [ ] Mint the Q8 key with the recorded reuse-check at the key; bump `PERMISSION_CATALOG_VERSION` 33→34
-- [ ] Grant per the ruling; ⛔ verify no `state`/`district`-ceiling role receives it (premise #5)
-- [ ] Move `permissions.test.ts`'s `toHaveLength` 42→43 **only if** a key was minted
+- [x] Mint the Q8 key with the recorded reuse-check at the key; bump `PERMISSION_CATALOG_VERSION` 33→34
+- [x] Grant per the ruling; ⛔ verify no `state`/`district`-ceiling role receives it (premise #5)
+- [x] Move `permissions.test.ts`'s `toHaveLength` 42→43 **only if** a key was minted
 
 ### Task 8 — The surfaces + the copy (AC: 3, 6, 7)
-- [ ] Mobile: the CTA gets an `onPress` → the member appeal flow; ⛔ render empty/loading/error
+- [x] Mobile: the CTA gets an `onPress` → the member appeal flow; ⛔ render empty/loading/error
       **outside** any `FlatList` ([[project_fabric_flatlist_empty_populated_crash]])
-- [ ] Admin: the CTA gets an `onClick` → the appeal record / filing view; the adjudication console;
+- [x] Admin: the CTA gets an `onClick` → the appeal record / filing view; the adjudication console;
       the allowed-appeal ↔ restore cross-link
-- [ ] Correct all four unbacked claims (AC3), naming §8.8 ⛔ Decision 6 stays superseded
-- [ ] i18n en + hi: the two notice bodies, the CTA destination copy, outcome copy; microcopy gate green
+- [x] Correct all four unbacked claims (AC3), naming §8.8 ⛔ Decision 6 stays superseded
+- [x] i18n en + hi: the two notice bodies, the CTA destination copy, outcome copy; microcopy gate green
 
 ### Task 9 — Records (AC: 8, 10)
-- [ ] `deferred-work.md` §10.22 in the three registers
-- [ ] The `docs/appeal-procedural-fairness/` sibling section with the PENDING-LEGAL-REVIEW marker,
+- [x] `deferred-work.md` §10.22 in the three registers
+- [x] The `docs/appeal-procedural-fairness/` sibling section with the PENDING-LEGAL-REVIEW marker,
       routed into the Story 0.13 roster
-- [ ] Record the stale `epics.md:4066` → `handlers.ts:228` citation in Completion Notes
+- [x] Record the stale `epics.md:4066` → `handlers.ts:228` citation in Completion Notes
 
 ### Task 10 — Validate (AC: all)
-- [ ] Unit + live-DB suites for every AC; the **polarity pairs** (AC5 exclusion; AC7 flag-on/flag-off)
-- [ ] The overlay-invariance test (AC4) and the `allowed`-does-not-move-the-overlay test (AC6)
-- [ ] The RTBF sentinel test (AC9)
-- [ ] All gates per AC10, **including the revert-sanity check**
-- [ ] `pnpm ci:local` to completion; report the result **as observed**
-- [ ] Sprint-status ledger entry per [[project_sprint_status_ledger]]
+- [x] Unit + live-DB suites for every AC; the **polarity pairs** (AC5 exclusion; AC7 flag-on/flag-off)
+- [x] The overlay-invariance test (AC4) and the `allowed`-does-not-move-the-overlay test (AC6)
+- [x] The RTBF sentinel test (AC9)
+- [x] All gates per AC10, **including the revert-sanity check**
+- [x] `pnpm ci:local` to completion; report the result **as observed**
+- [x] Sprint-status ledger entry per [[project_sprint_status_ledger]]
 
 ---
 

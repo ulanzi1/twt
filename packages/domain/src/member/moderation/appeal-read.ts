@@ -249,8 +249,11 @@ export async function listAppealableActionIds(
   memberId: MemberId,
   limit?: number,
 ): Promise<readonly ModerationActionId[]> {
-  const clamped = clampLimit(limit, { default: APPEAL_LIST_DEFAULT, cap: APPEAL_LIST_CAP });
-
+  // ⚠ `clampLimit(...)` is INLINED at both call sites below rather than hoisted into a local.
+  // `scripts/domain-accessor-invariants` is a SYNTACTIC gate: it reads the argument at the
+  // `.limit(...)` call site, so `.limit(hoistedVar)` reads as an unclamped dynamic limit and fails —
+  // correctly, since it cannot follow the variable. Inlining keeps the clamp visible where the gate
+  // (and a reviewer) actually looks. ⛔ Do not re-hoist for tidiness.
   const actions = await db
     .select({ id: memberModerationActions.moderationActionId })
     .from(memberModerationActions)
@@ -262,7 +265,7 @@ export async function listAppealableActionIds(
       ),
     )
     .orderBy(desc(memberModerationActions.actedAt))
-    .limit(clamped);
+    .limit(clampLimit(limit, { default: APPEAL_LIST_DEFAULT, cap: APPEAL_LIST_CAP }));
 
   if (actions.length === 0) return [];
 
@@ -279,7 +282,7 @@ export async function listAppealableActionIds(
         ),
       ),
     )
-    .limit(clamped);
+    .limit(clampLimit(limit, { default: APPEAL_LIST_DEFAULT, cap: APPEAL_LIST_CAP }));
 
   const open = new Set(openRows.map((r) => r.id));
   return actions.filter((a) => !open.has(a.id)).map((a) => a.id);

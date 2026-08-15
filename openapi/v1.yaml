@@ -12236,8 +12236,8 @@ paths:
             schema:
               $ref: "#/components/schemas/OffPortalExportRequest"
       responses:
-        "201":
-          description: Export requested
+        "200":
+          description: Export requested (or the existing off-portal one reused)
           content:
             application/json:
               schema:
@@ -12392,7 +12392,7 @@ paths:
             schema:
               $ref: "#/components/schemas/MemberDirectDeliveryRequest"
       responses:
-        "201":
+        "200":
           description: Grant issued
           content:
             application/json:
@@ -12448,7 +12448,7 @@ paths:
             schema:
               $ref: "#/components/schemas/StaffMediatedDeliveryRequest"
       responses:
-        "201":
+        "200":
           description: Exceptional grant recorded
           content:
             application/json:
@@ -12504,7 +12504,7 @@ paths:
             schema:
               $ref: "#/components/schemas/RecordCorrectionRequest"
       responses:
-        "201":
+        "200":
           description: Correction recorded
           content:
             application/json:

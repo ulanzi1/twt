@@ -19,6 +19,7 @@ import { ANONYMIZED_SENTINEL, anonymizeMember } from '../../src/member/anonymize
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../src/ids/index.js';
 import {
   dataExportDeliveryGrants,
+  memberAuthOtps,
   dataExports,
   memberAddresses,
   memberDataRightsCorrections,
@@ -107,7 +108,13 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // ⛔ This assertion was NOT named as collateral by the story spec; it was found by running the
     // suite. It is REWRITTEN to the new truth, never weakened — the count is the completeness check.
     //
-    // ⭐ MOVED UPWARD AGAIN by Story 10.21 AC-R1/AC-R2: ELEVEN tables, TWELVE statements.
+    // ⭐ MOVED UPWARD AGAIN by the Story 10.21 ROUND-2 REVIEW: TWELVE tables, FOURTEEN statements.
+    // The two added statements are the REVOCATION half — `data_export_delivery_grants` is updated a
+    // SECOND time (status `pending` → `expired`) and `member_auth_otps` is burned on the delivery pool.
+    // ⛔ Scrubbing the attestation is not revoking the grant: without these, an erasure left a live
+    // grant and a live OTP in the member's hands, safe only by the INCIDENTAL 404 that `redeemDelivery`
+    // returns on a null artifact.
+    // ⚠ Story 10.21 AC-R1/AC-R2 had already moved it to ELEVEN tables / TWELVE statements:
     // `data_export_delivery_grants` (the staff ATTESTATION) and `member_data_rights_corrections` (the
     // member's requested change + the staff action taken) both carry Tier-1 columns, so both MUST be
     // scrubbed. ⚠ This assertion is the mechanism that forced them in: adding the columns without the
@@ -115,7 +122,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // column raises this number in the same commit — a Tier-1 column outside `anonymizeMember` is how
     // the 10.10 moderation rationale survived an erasure request.
     const { captured } = await run();
-    expect(captured).toHaveLength(12);
+    expect(captured).toHaveLength(14);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -129,12 +136,16 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       dataExports,
       dataExportDeliveryGrants,
       memberDataRightsCorrections,
+      memberAuthOtps,
     ]) {
       expect(tables).toContain(t);
     }
-    // Exactly one statement per table, EXCEPT data_exports which takes the documented two.
+    // Exactly one statement per table, EXCEPT the two that take a documented second:
+    //   · `data_exports`     — zero the artifact, then flip `pending` → `expired` (the build guard);
+    //   · `…delivery_grants` — scrub the attestation, then revoke the live grant.
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(11);
+    expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
+    expect(new Set(tables).size).toBe(12);
   });
 
   it('⭐ Story 10.21 (AC-R1/AC-R2): the staff attestation and the correction record are SCRUBBED but RETAINED', async () => {

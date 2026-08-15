@@ -32,7 +32,7 @@ import {
 } from '../../../src/encryption/index.js';
 import type { KmsKeyRef, KmsProvider } from '../../../src/encryption/kms-provider.js';
 import { clauseVersionId as toClauseVersionId, memberId as toMemberId } from '../../../src/ids/index.js';
-import { anonymizeMember, getMemberStateAt, projectMemberState } from '../../../src/member/index.js';
+import { ANONYMIZED_SENTINEL, anonymizeMember, getMemberStateAt, projectMemberState } from '../../../src/member/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember } from '../_helpers.js';
@@ -479,4 +479,207 @@ describe.skipIf(!hasDatabase)('RTBF anonymization — soft-delete + retain + RLS
       expect(row!.status).toBe('ready');
     });
   });
+
+  // ── Story 10.21 round-2 code review — AC-R1/AC-R2 scrub + REVOCATION, executed against Postgres ──
+  //
+  // ⛔ WHY THESE ARE HERE. The attestation scrub is raw SQL — a `CASE WHEN … IS NULL THEN NULL ELSE
+  // $sentinel END` — and the story's own header calls it *"THE HIGHEST-RISK ITEM OF AC-R1"*. It had
+  // ZERO executed coverage: the DB-free test asserted only `toHaveProperty('attestationCiphertext')`
+  // (never decrypting, unlike its sibling correction assertion), and this live spec seeded no grant or
+  // correction rows at all. A raw-SQL statement nothing ever runs is a statement nobody has tested.
+  describe('Story 10.21 (AC-R1/AC-R2) — the attestation and correction content do not survive', () => {
+    it('⭐ the staff ATTESTATION is replaced by the sentinel — decrypt-and-assert, not shape-only', async () => {
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+
+      const [exp] = await tx
+        .insert(schema.dataExports)
+        .values({
+          memberId: mid as never, pariwarId: PARIWAR_A, status: 'ready',
+          requestedAt: new Date(), artifactCiphertext: 'enc:v1:the-whole-dossier',
+        })
+        .returning();
+      const [grant] = await tx
+        .insert(schema.dataExportDeliveryGrants)
+        .values({
+          exportId: exp!.exportId as never, memberId: mid as never, pariwarId: PARIWAR_A,
+          channel: 'staff_mediated', status: 'pending',
+          expiresAt: new Date(Date.now() + 3_600_000),
+          memberRequestRecordedAt: new Date(),
+          primaryDeliveryNotCompletedAt: new Date(),
+          attestationCiphertext: await enc(PARIWAR_A, 'data_rights_attestation', 'the member rang us'),
+        })
+        .returning();
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.dataExportDeliveryGrants)
+        .where(eq(schema.dataExportDeliveryGrants.grantId, grant!.grantId));
+      // ⛔ DECRYPTED, not merely "changed": a shape assertion would pass on any garbage value.
+      expect(await dec(row!.attestationCiphertext!, PARIWAR_A, 'data_rights_attestation')).toBe(
+        ANONYMIZED_SENTINEL,
+      );
+      // ⚠ SENTINEL, not NULL — the row must keep saying an attestation WAS recorded. That a staff actor
+      // obtained the export is an audit fact the Trust keeps; only the CONTENT is erased.
+      expect(row!.attestationCiphertext).not.toBeNull();
+    });
+
+    it('⛔ a member_direct grant carries NO attestation and the scrub leaves it NULL (the CASE arm)', async () => {
+      // ⚠ THE OTHER ARM OF THE RAW-SQL `CASE`, and the one a naive scrub would break: writing the
+      // sentinel unconditionally would violate `member_direct_clean_check` and fail the whole erasure.
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+
+      const [exp] = await tx
+        .insert(schema.dataExports)
+        .values({
+          memberId: mid as never, pariwarId: PARIWAR_A, status: 'ready',
+          requestedAt: new Date(), artifactCiphertext: 'enc:v1:x',
+        })
+        .returning();
+      const [grant] = await tx
+        .insert(schema.dataExportDeliveryGrants)
+        .values({
+          exportId: exp!.exportId as never, memberId: mid as never, pariwarId: PARIWAR_A,
+          channel: 'member_direct', status: 'pending',
+          expiresAt: new Date(Date.now() + 3_600_000),
+        })
+        .returning();
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.dataExportDeliveryGrants)
+        .where(eq(schema.dataExportDeliveryGrants.grantId, grant!.grantId));
+      expect(row!.attestationCiphertext).toBeNull();
+    });
+
+    it('⭐ BOTH correction columns are replaced by the sentinel, and the ROW is retained', async () => {
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+
+      await client.query('RESET ROLE');
+      await client.query("SET LOCAL app.helpdesk_state_writer = 'on'");
+      const { rows: tk } = await client.query<{ ticket_id: string }>(
+        `INSERT INTO helpdesk_tickets
+           (pariwar_id, subject_member_id, subject_actor_id, category, body, current_state,
+            state_event_version, routed_to_scope_dimension, routed_to_role, routing_policy_version,
+            member_scope_context, assigned_at, sla_first_response_due, sla_resolution_due, audit_id,
+            created_via)
+         VALUES ($1::uuid, $2::uuid, NULL, 'other', 'dpdpa', 'open', 1, 'pariwar',
+                 'helpline_operator', 1, '{}'::jsonb, now(), now(), now(), gen_random_uuid(), 'member_app')
+         RETURNING ticket_id`,
+        [PARIWAR_A, mid],
+      );
+      await enterAppScope(client, PARIWAR_A);
+
+      const [corr] = await tx
+        .insert(schema.memberDataRightsCorrections)
+        .values({
+          memberId: mid as never, pariwarId: PARIWAR_A,
+          helpdeskTicketId: tk[0]!.ticket_id as never,
+          requestedChangeCiphertext: await enc(PARIWAR_A, 'data_rights_correction', 'my name is spelt wrong'),
+          actionTakenCiphertext: await enc(PARIWAR_A, 'data_rights_correction', 'updated the KYC record'),
+          outcome: 'applied',
+          recordedByActorId: randomUUID(),
+          recordedByDisplay: 'Test Operator',
+        })
+        .returning();
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [row] = await tx
+        .select()
+        .from(schema.memberDataRightsCorrections)
+        .where(eq(schema.memberDataRightsCorrections.correctionId, corr!.correctionId));
+      expect(row, 'the row is RETAINED — that a correction was handled is audit history').toBeDefined();
+      expect(await dec(row!.requestedChangeCiphertext, PARIWAR_A, 'data_rights_correction')).toBe(
+        ANONYMIZED_SENTINEL,
+      );
+      expect(await dec(row!.actionTakenCiphertext, PARIWAR_A, 'data_rights_correction')).toBe(
+        ANONYMIZED_SENTINEL,
+      );
+      // Non-PII provenance survives untouched.
+      expect(row!.outcome).toBe('applied');
+      expect(row!.recordedByDisplay).toBe('Test Operator');
+    });
+
+    it('⭐ REVOCATION — a live grant is expired and its delivery OTP burned, in the SAME transaction', async () => {
+      // ⛔ Scrubbing the attestation is not revoking the grant. Before the round-2 fix an erasure left a
+      // `pending` grant `pending` with a live OTP in the member's hands, safe only by the INCIDENTAL
+      // 404 that `redeemDelivery` returns on a null artifact. An incidental guard is not a designed one.
+      const { tx, client } = getTx();
+      const mid = toMemberId(randomUUID());
+      await enterAppScope(client, PARIWAR_A);
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+
+      const [exp] = await tx
+        .insert(schema.dataExports)
+        .values({
+          memberId: mid as never, pariwarId: PARIWAR_A, status: 'ready',
+          requestedAt: new Date(), artifactCiphertext: 'enc:v1:x',
+        })
+        .returning();
+      const [grant] = await tx
+        .insert(schema.dataExportDeliveryGrants)
+        .values({
+          exportId: exp!.exportId as never, memberId: mid as never, pariwarId: PARIWAR_A,
+          channel: 'member_direct', status: 'pending',
+          expiresAt: new Date(Date.now() + 3_600_000),
+        })
+        .returning();
+      const [otp] = await tx
+        .insert(schema.memberAuthOtps)
+        .values({
+          mobileBlindIndex: `bi-${randomUUID()}`,
+          memberId: mid as never,
+          intent: 'data_export_delivery',
+          otpHash: 'hash',
+          expiresAt: new Date(Date.now() + 3_600_000),
+        })
+        .returning();
+      // ⛔ A control OTP on a DIFFERENT pool: burning the member's login codes would be an
+      // authentication side-effect this function has no business having.
+      const [loginOtp] = await tx
+        .insert(schema.memberAuthOtps)
+        .values({
+          mobileBlindIndex: `bi-${randomUUID()}`,
+          memberId: mid as never,
+          intent: 'login',
+          otpHash: 'hash',
+          expiresAt: new Date(Date.now() + 3_600_000),
+        })
+        .returning();
+
+      await anonymizeMember(tx, { kms, kekRef }, { memberId: mid, pariwarId: PARIWAR_A });
+
+      const [grantRow] = await tx
+        .select()
+        .from(schema.dataExportDeliveryGrants)
+        .where(eq(schema.dataExportDeliveryGrants.grantId, grant!.grantId));
+      expect(grantRow!.status).toBe('expired');
+
+      const [otpRow] = await tx
+        .select()
+        .from(schema.memberAuthOtps)
+        .where(eq(schema.memberAuthOtps.id, otp!.id));
+      expect(otpRow!.consumedAt, 'the delivery OTP must be burned').not.toBeNull();
+
+      const [loginRow] = await tx
+        .select()
+        .from(schema.memberAuthOtps)
+        .where(eq(schema.memberAuthOtps.id, loginOtp!.id));
+      expect(loginRow!.consumedAt, 'the LOGIN pool must be untouched').toBeNull();
+    });
+  });
+
 });

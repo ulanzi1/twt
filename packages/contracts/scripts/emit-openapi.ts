@@ -3326,7 +3326,7 @@ registry.registerPath({
     body: { content: jsonOf(OffPortalExportRequestComponent), required: true },
   },
   responses: {
-    201: { description: 'Export requested', content: jsonOf(OffPortalExportResponseComponent) },
+    200: { description: 'Export requested (or the existing off-portal one reused)', content: jsonOf(OffPortalExportResponseComponent) },
     400: errorResponse('Request validation failed'),
     401: errorResponse('Authentication required'),
     403: errorResponse('Missing member.data_rights, or step-up required'),
@@ -3391,7 +3391,7 @@ registry.registerPath({
     body: { content: jsonOf(MemberDirectDeliveryRequestComponent), required: true },
   },
   responses: {
-    201: { description: 'Grant issued', content: jsonOf(MemberDirectDeliveryResponseComponent) },
+    200: { description: 'Grant issued', content: jsonOf(MemberDirectDeliveryResponseComponent) },
     400: errorResponse('Request validation failed'),
     401: errorResponse('Authentication required'),
     403: errorResponse('Missing member.data_rights, or step-up required'),
@@ -3415,7 +3415,7 @@ registry.registerPath({
     body: { content: jsonOf(StaffMediatedDeliveryRequestComponent), required: true },
   },
   responses: {
-    201: { description: 'Exceptional grant recorded', content: jsonOf(StaffMediatedDeliveryResponseComponent) },
+    200: { description: 'Exceptional grant recorded', content: jsonOf(StaffMediatedDeliveryResponseComponent) },
     400: errorResponse('Request validation failed'),
     401: errorResponse('Authentication required'),
     403: errorResponse('Missing member.data_rights, or step-up required'),
@@ -3438,7 +3438,7 @@ registry.registerPath({
     body: { content: jsonOf(RecordCorrectionRequestComponent), required: true },
   },
   responses: {
-    201: { description: 'Correction recorded', content: jsonOf(RecordCorrectionResponseComponent) },
+    200: { description: 'Correction recorded', content: jsonOf(RecordCorrectionResponseComponent) },
     400: errorResponse('Request validation failed'),
     401: errorResponse('Authentication required'),
     403: errorResponse('Missing member.data_rights, or step-up required'),

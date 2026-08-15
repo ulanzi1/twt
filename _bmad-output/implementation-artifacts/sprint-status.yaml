@@ -1,4 +1,61 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-15f (10-21-off-portal-dpdpa-access: REVIEW -> DONE via bmad-code-review round 2.
+#   Three parallel layers over the branch diff (54 files, +5154/-56, code+tests only). 5 decision-needed
+#   RULED, 28 patches APPLIED, 1 DEFERRED, 2 dismissed as unsubstantiated.
+#   ⛔ GOVERNANCE FIRST, as separate commits: `7b2ee06` Decisions 2026-08-15-117 + -118.
+#   `117` = an AUTHOR-COMMITTED CORRECTION, not a supersession, and the distinction is the whole basis
+#   for acting without the Panel: 113 clause 3 is marked [Author-committed] / "no ratified authority"
+#   AND ALREADY SAYS "an OTP was issued FOR THE MEMBER-DIRECT DELIVERY GRANT". The shipped predicate
+#   dropped that scoping, so element 2 was (a) manufacturable by one operator in 60 minutes and (b)
+#   permanently true for every later export once any delivery OTP had lapsed. Narrowing it RESTORES
+#   clause 3; 113 clauses 1-2 (ratified) are untouched. Three implementation constants corrected with
+#   it — the grant/OTP TTL mismatch that closed BOTH delivery routes for ~23h, the one_pending_per_export
+#   index that let an unconsumable staff_mediated grant block the member's own route (migration 0105),
+#   and the missing requested_via gate that exposed a member's self-service export to an operator.
+#   `118` = ESCALATION 12 RAISED AND OPEN: a member with no mobile on file can never satisfy element 2,
+#   so the primary route is impossible AND the fallback is structurally closed — no statutory route by
+#   either path. The reporting half is fixed (typed 409 instead of a 200 + grant_id for a delivery that
+#   never happened); ⛔ that makes the failure HONEST, it does not create a route. Owner Trustee Panel,
+#   re-trigger IMMEDIATE, due before the termination_access_block flip.
+#   Code `93647ad`: idempotency claims released on failure (5 handlers + enqueue + pool-acquisition);
+#   redeemDelivery takes the same advisory lock as the other three paths and is reordered so nothing is
+#   BURNED before everything fallible has run; erasure now revokes live grants and burns their delivery
+#   OTPs in the same tx; the AC2 gate scans the test trees; the terminology gate scans migrations (where
+#   the mandated COLUMN lives — .sql was in SCAN_EXT while no scan root reached a .sql file) and now
+#   ASSERTS the mandated term is present, not merely that the banned ones are absent; the admin panel
+#   gained the step-up flow it never had (requestDataRightsStepUp shipped defined-and-uncalled, so every
+#   action 403'd with no way to elevate — the feature was unusable end-to-end); operator copy corrected
+#   (it said handover was unsettled, 20 lines above the two handover controls); EIGHT source sites that
+#   said Escalations 9/10 were unanswered corrected — 109 cl.6/cl.7 ruled both, and roles.test.ts was the
+#   single site that had it right; migration 0033's in-place edit reverted.
+#   ⛔ openapi/v1.yaml: the task was checked but re-running the emitter was a NO-OP — the contracts had
+#   never been REGISTERED. All 7 routes now published (incl. the unauthenticated redemption route that
+#   returns a decrypted PII dossier); determinism re-verified.
+#   Tests `c5c10f4`: nine checked boxes described tests that did not exist. Now built — migration-level
+#   policy regression for the two tables 0104 CREATED (17 assertions; the API spec's header had claimed
+#   this coverage existed), AC7 erasure end-to-end with actor/trigger/ticket pinned, AC3 fail-closed +
+#   idempotency replay, AC12 on the SECOND caller, AC5 collision, AC4 member-scoping, and the
+#   cross-cutting guards that had none: step-up denial LOOPED over every route (the title said "every
+#   route" while exercising one), permission denial, GENUINE cross-Pariwar denial (the sole compensating
+#   control for 0103's tenancy-blind FK), and missing display_name. The attestation scrub — the story's
+#   self-declared highest-risk item — went from `toHaveProperty` to decrypt-and-assert on both CASE arms.
+#   ⚠ MAKING THE FIXTURES HONEST IMMEDIATELY EXPOSED THREE THINGS: the staff-mediated tests hand-inserted
+#   an OTP with no grant behind it (which is what let a member-scoped element 2 look correct); the
+#   ready-export fixture had no expires_at so it never counted as active; and the two source-scan gates
+#   shared one hardcoded "absent" sentinel and started finding each other's copy the moment the scan
+#   roots widened. Sentinels are now assembled at runtime.
+#   DEFERRED (1): withCompensatingAudit settles when `mutate` RETURNS, but mutate only issues statements
+#   inside a scope tx committed afterwards — a COMMIT failure leaves an audit line for an act that never
+#   landed. Pre-existing property of the shared helper's call convention; recorded in deferred-work with
+#   a named re-trigger. ⛔ The over-claiming COMMENT was new in this story and IS corrected.
+#   DISMISSED (2): the Blind Hunter read the trustee_panel contradiction BACKWARDS (109 cl.7 says the
+#   roles.test.ts assertion "stands"), and its 42P18 claim against the CASE-WHEN scrub does not hold
+#   (the column is text; unknown resolves to text under assignment context) — though the COVERAGE half
+#   of that finding was real and is closed.
+#   ⛔ THE RELEASE GATE IS STILL OPEN and the flip is still unauthorised. This round ADDS an open Panel
+#   escalation rather than closing one. 113's attempts=0 follow-up is untouched.
+#   Gates: domain 242/2794, api 116/980, contracts 55/891, admin 31/308; typecheck + lint clean in all
+#   four; openapi deterministic; revert-sanity proven for the rate-tier and erasure-revocation assertions.)
 # last_updated: 2026-08-15e (10-21-off-portal-dpdpa-access: IN-PROGRESS -> REVIEW via bmad-dev-story
 #   completion pass from a cold context. ⛔ READ THE FLIP NARROWLY: `review` is this file's own STATUS
 #   DEFINITIONS value for "ready for code review" -- it is NOT `done`, and it does NOT discharge the
@@ -6510,7 +6567,7 @@ development_status:
   10-18-constituting-the-trustee-panel-sanctioning-authority: done
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
-  10-21-off-portal-dpdpa-access: review
+  10-21-off-portal-dpdpa-access: done
   10-22-moderation-appeal-mechanism: backlog
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done

@@ -4,7 +4,7 @@ baseline_commit: 19fa6445b065122400d4cd4ee0f3761d78d316c1
 
 # Story 10.21: Off-Portal DPDPA Access `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⛔ **THIS STORY IS A RELEASE GATE, AND THE GATE IS NOT THE FLIP.** Epics: *"must land before the first
 > termination is permitted."* Concretely: the `termination_access_block` feature flag ships **DEFAULT OFF**
@@ -2074,106 +2074,106 @@ mandate) and none of them change. Separately verified: **neither the 24h grant T
 the decision-log entry and the escalation commit **first and separately**, with a `governance(10.21):`
 prefix; the code rides the later `story(10.21):` commit.
 
-- [ ] [Review][Patch] `[from Decision-1]` Scope element 2 to the most recent `member_direct` grant for the
+- [x] [Review][Patch] `[from Decision-1]` Scope element 2 to the most recent `member_direct` grant for the
       export under consideration and lower-bound the OTP search by that grant's `created_at`; absent such a
       grant, element 2 is false and the fallback fails closed [packages/domain/src/data-export/delivery.ts:49]
-- [ ] [Review][Patch] `[from Decision-2]` Align `DELIVERY_GRANT_TTL_MS` to `dataExportDeliveryOtpTtlMs` so
+- [x] [Review][Patch] `[from Decision-2]` Align `DELIVERY_GRANT_TTL_MS` to `dataExportDeliveryOtpTtlMs` so
       the grant and its OTP share one lifetime, closing the 23-hour window in which both routes are dead
       [apps/api/src/modules/member-data-rights/handlers.ts:104]
-- [ ] [Review][Patch] `[from Decision-3]` Migration 0105 — re-scope the partial unique index to
+- [x] [Review][Patch] `[from Decision-3]` Migration 0105 — re-scope the partial unique index to
       `WHERE status = 'pending' AND channel = 'member_direct'` so a staff-mediated grant never blocks the
       member's own route [packages/domain/migrations/0104_data-rights-delivery-and-correction.sql:93]
-- [ ] [Review][Patch] `[from Decisions 1–3]` **Governance, commits FIRST:** a new author-committed
+- [x] [Review][Patch] `[from Decisions 1–3]` **Governance, commits FIRST:** a new author-committed
       `.decision-log.md` entry recording that the implementation diverged from `2026-08-14-113` clause 3's
       stated predicate and is being brought back to it, plus the TTL and index corrections. ⛔ `113` is
       **not** edited in place ([[feedback_supersede_never_reinterpret]]) [.decision-log.md]
-- [ ] [Review][Patch] `[from Decision-4a]` Move the `getMemberMobileBlindIndex` lookup ahead of the grant
+- [x] [Review][Patch] `[from Decision-4a]` Move the `getMemberMobileBlindIndex` lookup ahead of the grant
       insert and refuse with a typed 409 `member_data_rights.no_mobile_on_file` — no grant row and no false
       success for a delivery that cannot happen [apps/api/src/modules/member-data-rights/handlers.ts:508]
-- [ ] [Review][Patch] `[from Decision-4b]` **Governance, commits FIRST:** raise an escalation to the Trustee
+- [x] [Review][Patch] `[from Decision-4b]` **Governance, commits FIRST:** raise an escalation to the Trustee
       Panel — a member with no mobile on file can never satisfy element 2, so the primary route is
       impossible and the fallback is structurally closed, leaving **no statutory route by either path**.
       Record in `deferred-work.md` with an **immediate** re-trigger and a named owner, ⛔ never an epic
       [.decision-log.md]
-- [ ] [Review][Patch] `[from Decision-5]` Gate the active-export read and **both** delivery routes on
+- [x] [Review][Patch] `[from Decision-5]` Gate the active-export read and **both** delivery routes on
       `requested_via = 'off_portal_admin'` so a member's self-service portal export cannot be surfaced or
       routed staff-mediated to an operator [apps/api/src/modules/member-data-rights/handlers.ts:1310]
 
 ⭐ **From the original triage.**
 
-- [ ] [Review][Patch] No UI path exists to satisfy the step-up gate every panel action requires;
+- [x] [Review][Patch] No UI path exists to satisfy the step-up gate every panel action requires;
       `requestDataRightsStepUp` is defined and called from nowhere, while six sibling surfaces wire
       `useRequestStepUp`/`useVerifyStepUp` — the panel is unusable end-to-end [apps/admin/src/api/client.ts:634]
-- [ ] [Review][Patch] `claimIdempotency` never releases the claim on failure — all five call sites discard
+- [x] [Review][Patch] `claimIdempotency` never releases the claim on failure — all five call sites discard
       its return value and `KeyedStore.release()` (documented for exactly this) is never called, so a
       request that failed before doing anything answers 409 `idempotency_replay` for 24h [apps/api/src/modules/member-data-rights/handlers.ts:153-171]
-- [ ] [Review][Patch] `redeemDelivery` burns the OTP outside the grant transaction — `verifyOtp` runs on
+- [x] [Review][Patch] `redeemDelivery` burns the OTP outside the grant transaction — `verifyOtp` runs on
       `deps.pool` before `openScopeTx`, so any rollback inside strands the member with a spent OTP and a
       still-`pending` grant [apps/api/src/modules/member-data-rights/handlers.ts:588-618]
-- [ ] [Review][Patch] `redeemDelivery` takes no advisory lock while both grant paths take
+- [x] [Review][Patch] `redeemDelivery` takes no advisory lock while both grant paths take
       `rtbfAdvisoryLockKey` — under READ COMMITTED a redemption whose snapshot predates an erasure commit
       streams the artifact AC11 guarantees is gone; "a lock on one path only is not serialization" applies
       verbatim to the path left out [apps/api/src/modules/member-data-rights/handlers.ts:599]
-- [ ] [Review][Patch] Erasure revokes neither live delivery grants nor their OTPs — `anonymizeMember`
+- [x] [Review][Patch] Erasure revokes neither live delivery grants nor their OTPs — `anonymizeMember`
       sentinels the attestation but leaves `status = 'pending'` and never calls `invalidateLiveOtps` for
       the delivery pool; safe today only by the incidental `!artifactCiphertext` 404 [packages/domain/src/member/anonymize.ts:296-301]
-- [ ] [Review][Patch] `data_export_delivery_grants.status` has no CHECK although the one-live-grant
+- [x] [Review][Patch] `data_export_delivery_grants.status` has no CHECK although the one-live-grant
       invariant is a partial unique index keyed on its exact spelling — `channel` and `outcome` both got
       CHECKs; a `'Pending'` typo silently exits the predicate and two live grants coexist [packages/domain/migrations/0104_data-rights-delivery-and-correction.sql:93]
-- [ ] [Review][Patch] `[family 5 REAL GAP]` The two tables **created** by 0104 have zero migration-level
+- [x] [Review][Patch] `[family 5 REAL GAP]` The two tables **created** by 0104 have zero migration-level
       policy-regression coverage — RLS + FORCE + tenant policies + four CHECKs (incl. the ratified
       three-part gate) + three FKs + the partial unique index are asserted nowhere, while 25 sibling
       tables carry such a spec and the new API spec's own header claims this coverage exists [packages/domain/tests/integration/rls/data-exports-policy-regression.spec.ts:43]
-- [ ] [Review][Patch] `[families 1/2/3/4/8/10 REAL GAP]` Nine Task checkboxes are `[x]` for work that does
+- [x] [Review][Patch] `[families 1/2/3/4/8/10 REAL GAP]` Nine Task checkboxes are `[x]` for work that does
       not exist: the **erasure** route has no test of any kind (0 hits tree-wide), `requestExport` and
       `getActiveExport` are never injected, AC12's terminal guard is proven on one of two callers, and
       there is no test for cross-Pariwar denial, permission denial, missing `users.display_name`, or
       `Idempotency-Key` replay [_bmad-output/implementation-artifacts/10-21-off-portal-dpdpa-access.md:1461]
-- [ ] [Review][Patch] `openapi/v1.yaml` was never regenerated despite Task 7a being `[x]` — `grep -c
+- [x] [Review][Patch] `openapi/v1.yaml` was never regenerated despite Task 7a being `[x]` — `grep -c
       member-data-rights` returns 0 against 39 for helpdesk, so all six routes are undocumented including
       the **unauthenticated** redemption route that returns a decrypted PII dossier [openapi/v1.yaml]
-- [ ] [Review][Patch] Eight source sites still say Escalations 9 and 10 are "RAISED AND UNANSWERED" after
+- [x] [Review][Patch] Eight source sites still say Escalations 9 and 10 are "RAISED AND UNANSWERED" after
       `2026-08-14-109` cl.6/cl.7 ruled both; `roles.test.ts` is the single correctly-updated site and the
       story's own Round-1 findings defend the stale text as "still accurate" [packages/domain/src/rbac/roles.ts:265]
-- [ ] [Review][Patch] Shipped operator copy says handover *"is not yet settled, so no download is offered
+- [x] [Review][Patch] Shipped operator copy says handover *"is not yet settled, so no download is offered
       here"* and renders ~20 lines above the two shipped handover controls — AC9 is the copy-truth AC of a
       story whose founding grievance is a shipped sentence that was not true [apps/admin/src/modules/helpdesk/i18n-en.ts:48]
-- [ ] [Review][Patch] AC2's single-literal rule is violated at HEAD — `'dpdpa-data-rights'` appears raw in
+- [x] [Review][Patch] AC2's single-literal rule is violated at HEAD — `'dpdpa-data-rights'` appears raw in
       the test file, invisible because `SCAN_ROOTS` covers only `src` trees; separately AC2's "consumed by
       the handler" is unmet (`DPDPA_DATA_RIGHTS_SUBCATEGORY` is imported nowhere in `apps/api/src`) [apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts:196]
-- [ ] [Review][Patch] The MANDATED-terminology gate cannot see the mandated **column** and never asserts
+- [x] [Review][Patch] The MANDATED-terminology gate cannot see the mandated **column** and never asserts
       the term is present — `SCAN_ROOTS` are all `src` trees so no `.sql` file is ever reached even though
       `.sql` is in `SCAN_EXT`, and `MANDATED` is only interpolated into an error string, so drift to any
       third non-banned name passes green ([[feedback_gate_scope_semantic_coverage]]) [packages/contracts/tests/delivery-terminology-gate.test.ts:38]
-- [ ] [Review][Patch] Applied migration 0033 was edited in place — comment-only, and drizzle's
+- [x] [Review][Patch] Applied migration 0033 was edited in place — comment-only, and drizzle's
       node-postgres migrator applies by `folderMillis` not by hash so it will not re-run or error, but the
       hash recorded in `__drizzle_migrations` now diverges from the file on every environment that already
       ran it; the same correction is already duplicated in `schema/data_exports.ts` and `anonymize.ts`, so
       reverting the SQL loses nothing [packages/domain/migrations/0033_data-exports.sql:40]
-- [ ] [Review][Patch] Test cleanup runs `DELETE FROM members` under `session_replication_role = 'replica'`,
+- [x] [Review][Patch] Test cleanup runs `DELETE FROM members` under `session_replication_role = 'replica'`,
       which disables the system triggers that implement `ON DELETE CASCADE` — the exports, grants and
       corrections rows it relies on the cascade to remove are orphaned into the shared `:5433` test DB
       every run [apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts:65]
-- [ ] [Review][Patch] The off-portal build never reuses an existing `ready` export — unlike the member
+- [x] [Review][Patch] The off-portal build never reuses an existing `ready` export — unlike the member
       self-service caller it skips `findActiveExport` and relies solely on the 23505 catch, but
       `data_exports_one_pending_per_member` is `WHERE status = 'pending'`, so a second full Tier-1 dossier
       is assembled and `builtExportId` then points at the new pending row [apps/api/src/modules/member-data-rights/handlers.ts:290]
-- [ ] [Review][Patch] The active-export query fires on every member-linked ticket rather than only DPDPA
+- [x] [Review][Patch] The active-export query fires on every member-linked ticket rather than only DPDPA
       ones — `enabled: memberId !== null` is gated on neither `sub_category` nor `member.data_rights`, so
       it 403s on every ticket-detail mount for operators who will never use the panel, and because
       elevation lasts ~5 min it also fails its own stated purpose (recovering `builtExportId` after a
       reload) [apps/admin/src/api/hooks.ts:876]
-- [ ] [Review][Patch] The step-up test's title asserts *"every route on this surface"* and exercises one of
+- [x] [Review][Patch] The step-up test's title asserts *"every route on this surface"* and exercises one of
       six — dropping `stepUp` from the `/erasure` preHandler chain would leave it green while its name
       claims the opposite; a loop over the six paths is a three-line fix [apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts:610]
-- [ ] [Review][Patch] The attestation scrub — the story's self-declared *"HIGHEST-RISK ITEM OF AC-R1"* —
+- [x] [Review][Patch] The attestation scrub — the story's self-declared *"HIGHEST-RISK ITEM OF AC-R1"* —
       has zero executed coverage: the DB-free test asserts only `toHaveProperty` (the sibling corrections
       assertion decrypts and checks the sentinel) and the live spec seeds no grant or correction rows at
       all [packages/domain/tests/member/rtbf-anonymize.test.ts:148]
-- [ ] [Review][Patch] AC15's *"TWO separate `it()` blocks, (a) and (b) must not share an `it()`"* is not
+- [x] [Review][Patch] AC15's *"TWO separate `it()` blocks, (a) and (b) must not share an `it()`"* is not
       met — both arms live in one block ordered so the 23505 abort lands last; semantic coverage is
       genuinely present, so this is form, but one reordering away from the `25P02` failure the AC named [packages/domain/tests/integration/rls/data-exports-policy-regression.spec.ts:222]
-- [ ] [Review][Patch] The login-wall allowlist entry — the designated place where "this route is
+- [x] [Review][Patch] The login-wall allowlist entry — the designated place where "this route is
       deliberately unauthenticated" is defended — says the route *"carries the named read rate limit"*
       while `routes.ts` puts it on `limits.write`, and no test asserts which tier is configured [apps/api/tests/integration/login-wall.spec.ts]
 
@@ -2183,6 +2183,35 @@ prefix; the code rides the later `story(10.21):` commit.
       on `deps.servicePool` and completes as soon as `mutate` returns, but `mutate` only issues statements
       inside a still-open `scopeTx` that `closeScopeTx` commits afterwards, so a COMMIT failure leaves an
       audit line asserting an act that never landed, with no compensating entry [apps/api/src/modules/member-data-rights/handlers.ts:299] — deferred, pre-existing (the ordering is a property of the shared audit helper and its call convention, not of this story; the *comment* claiming full compensation is new and is corrected as part of the patch set)
+
+##### Round-2 outcome (2026-08-15)
+
+⭐ **All five decisions RULED, all 28 patches APPLIED, one item DEFERRED with its bound stated.**
+Governance committed first and separately (`7b2ee06` — Decisions `2026-08-15-117` + `-118`), then the
+code (`93647ad`), then the tests (`c5c10f4`) — history reads governance → implementation
+([[feedback_governance_commits_precede_implementation]]).
+
+⛔ **What this round does NOT do.** It does not discharge the release gate, and it does not authorise
+the `termination_access_block` flip — both remain exactly where the banner at the top of this file
+leaves them. It **adds** one open Panel escalation rather than closing one: **Escalation 12** (the
+member with no mobile on file, who can satisfy NEITHER route) is RAISED and OPEN, with an **immediate**
+re-trigger, due before the flip. ⚠ The `attempts = 0` follow-up from `2026-08-14-113` clause 3 is
+untouched and still open.
+
+⚠ **Three things the round-2 fixtures exposed once they became honest**, each recorded because the
+green suite before them proved less than its name:
+1. the staff-mediated tests hand-inserted an OTP row with **no member-direct grant behind it** — which
+   is exactly what let a member-scoped element 2 look correct;
+2. the `ready`-export fixture had **no `expires_at`**, so it never satisfied `findActiveExport` and the
+   reuse path could not have been exercised at all;
+3. the two source-scan gates shared one hard-coded "absent" sentinel and began finding **each other's
+   copy** the moment the scan roots widened — the widening's first catch was the gates themselves.
+
+**Gates re-verified after the patches:** `@twt/domain` 242 files / 2794 tests; `@twt/api` 116 / 980;
+`@twt/contracts` 55 / 891; `@twt/admin` 31 / 308. Typecheck and lint clean in all four. `openapi/v1.yaml`
+regenerated and byte-identical across two runs. Revert-sanity proven for the new rate-tier assertion and
+for the erasure-revocation assertions.
+
 ### The one-line summary of why this story is hard
 
 Three of its four rights look like reuse and are not: **erasure** is blocked by a lifecycle guard that

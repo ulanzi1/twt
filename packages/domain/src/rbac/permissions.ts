@@ -453,7 +453,13 @@ export function permissionKey(value: string): PermissionKey {
 // administrative process"). A RETURN TO THE NORMAL SHAPE after 6.17's key-less bump: it mints a key, so
 // `PERMISSION_CATALOG.keys` moves 41 → 42 and `permissions.test.ts`'s length assertion moves with it.
 // ⚠ This is the bump that supersedes 6.17's "stays at 41" scope note above.
-export const PERMISSION_CATALOG_VERSION = 33 as const;
+// ── Bumped 33 → 34 at Story 10.22 (added ONE key) ────────────────────────────────────────────────
+// `member.decide_moderation_appeal` — DECIDING a moderation appeal under Niyamavali §8.8 (Decision
+// `2026-08-15-121` clause 14). Mints a key, so `PERMISSION_CATALOG.keys` moves 42 → 43 and
+// `permissions.test.ts`'s length assertion moves with it.
+// ⚠ Catalog version is NOT a proxy for key count — 10.18 and 6.17 both bumped while minting zero keys.
+// Move the length assertion only when a key is actually minted, as it is here.
+export const PERMISSION_CATALOG_VERSION = 34 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -510,6 +516,37 @@ export const SEED_PERMISSION_KEYS = [
   // `2026-08-10-096` clause 3). Widening this key's check site would silently convert a concurrent
   // authority into an exclusive one across all of Part 8.
   'member.restore_terminated',
+  // Story 10.22 — DECIDING a moderation appeal under Niyamavali §8.8, ratified by Decision
+  // `2026-08-15-121` clause 14 (Q8 option (a): "create a separate permission for deciding moderation
+  // appeals"). ⚠ The Panel ruled THAT a key be minted, not WHICH — this NAME is `[Author-committed]`
+  // (`2026-08-15-121` clause 18).
+  // ⚠ The routing note proposed `member.moderation_appeal.decide`. That name is INVALID under this
+  // catalog's own shape rule: `PERMISSION_KEY_REGEX` (`^[a-z0-9_]+\.[a-z0-9_]+$`) admits exactly ONE
+  // dot, so `permissionKey()` throws on a three-segment key. Corrected to the `<resource>.<verb>_<object>`
+  // shape `member.restore_terminated` already uses. Recorded rather than silently swapped, because the
+  // note's name is quoted in a committed governance artifact.
+  //
+  // ── The reuse-check, recorded because this catalog requires one ────────────────────────────────
+  // `member.moderate` CANNOT express this, and the reason is the whole point of §8.8: it is held by
+  // `pariwar_admin` (roles.ts:262) AND `trustee_panel` (roles.ts:636), so a check on it cannot
+  // distinguish the APPELLATE authority from the authority that DECIDED. That is precisely the
+  // indistinguishability Story 10.18 existed to end, and reusing it here would reopen it at the one
+  // call site where the separation is the entire mechanism.
+  // `verifier` (roles.ts:519) also holds `member.moderate`, but as a documented, deliberately-INERT
+  // grant (`district` ceiling; Decision `2026-08-10-096` clause 7) — it could not satisfy a
+  // `pariwar`-dimension check either, so it is not an alternative.
+  // `member.restore_terminated` is the wrong key in the other direction: it gates PERFORMING a
+  // restore, and §8.8 makes an allowed appeal DIRECT one rather than perform it. Gating the appeal on
+  // it would merge the two acts the ruling separates.
+  // `member.suspend` is DEPRECATED and points at `member.moderate`. ⇒ a new key is the only faithful
+  // expression.
+  //
+  // ⛔ `state_trustee` and `district_admin` CANNOT hold this key, and not by oversight: GEO_RANK
+  // (scope.ts:59-70) makes `pariwar` = 1 broader than `state` = 2, and `scopeWithinCeiling` is a PURE
+  // NUMERIC COMPARE with no resolver parameter, so `1 >= 2` is false. A grant to either would be
+  // INERT ON ARRIVAL — the Story 10.3 lesson. Story 1.18's resolver has landed and does not change
+  // this; the constraint is the ordering, not the absence.
+  'member.decide_moderation_appeal',
   // Story 10.21 — the off-portal DPDPA data-rights FULFILMENT key. Gates the identity-verified
   // administrative process Niyamavali §8.4 requires for a member whose authenticated access has ended:
   // building the access/portability artifact off-session, and executing erasure, on a member with NO

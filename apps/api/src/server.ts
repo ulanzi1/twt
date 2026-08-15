@@ -62,6 +62,7 @@ import { registerMemberDataRightsModule } from './modules/member-data-rights/ind
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
+import { registerModerationAppealRoutes } from './modules/member-moderation-appeals/routes.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
 import { registerCustomFieldsModule } from './modules/custom-fields/index.js';
 import { registerTrusteeLiteModule } from './modules/trustee-lite/index.js';
@@ -325,6 +326,12 @@ export async function buildServer(deps: AppDeps): Promise<FastifyInstance> {
   // by Story 10.17: `is_valid` = COVERAGE, and the separate `is_assignable` = DONOR ROSTER, on which
   // a SUSPENDED member stays TRUE — only termination removes them).
   registerMemberModerationRoutes(app, deps);
+  // Story 10.22 — the Niyamavali §8.8 moderation appeal. A SIBLING module, not an extension of the
+  // moderation routes above: the two have different audiences (a member and an operator file; the
+  // Trustee Panel alone determines) and different gates (`member.moderate` vs the Panel-only
+  // `member.decide_moderation_appeal`). Folding them together would put the appeal behind the key
+  // held by the authority it exists to hold to account.
+  registerModerationAppealRoutes(app, deps);
   // Story 10.11 — the FR-57 Trustee-Lite list + signals surface: ONE read-only GET aggregating six
   // trustee-attention sources (cycle freeze / R9 voting / concealment / appeals / reconciliation /
   // moderation) plus the DETECTION-ONLY R7 violator arm. An AGGREGATOR — it owns no table, no

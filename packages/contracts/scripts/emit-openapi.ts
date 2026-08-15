@@ -3214,6 +3214,174 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 10.22 — the moderation APPEAL (Niyamavali §8.8, Decision `2026-08-15-121`) ────────────
+//
+// Five paths across three audiences. ⛔ NOT Epic 6's claim appeal — Part 9 is claim-scoped, Part 8
+// does not reference it, and §8.8 states expressly that it does not incorporate it. No shared table,
+// no shared id, no shared route.
+//
+// ⚠ THE TIER-1 DISCIPLINE, stated because a consumer cannot infer it from the schemas: the member's
+// GROUNDS and the adjudicator's REASONED OUTCOME appear on exactly ONE response — the single-item
+// `ModerationAppealDetail` read. They are absent from every list shape, from both event payloads, and
+// from every audit line.
+
+const {
+  FileModerationAppealRequest,
+  FileModerationAppealOffPortalRequest,
+  ModerationAppealFiledResponse,
+  DecideModerationAppealRequest,
+  ModerationAppealDecidedResponse,
+  ModerationAppealsListResponse,
+  ModerationAppealDetailResponse,
+} = await import('../src/member-moderation/index.js');
+
+const FileAppealRequestComponent = FileModerationAppealRequest.openapi('FileModerationAppealRequest');
+const FileAppealOffPortalRequestComponent = FileModerationAppealOffPortalRequest.openapi(
+  'FileModerationAppealOffPortalRequest',
+);
+const AppealFiledComponent = ModerationAppealFiledResponse.openapi('ModerationAppealFiled');
+const DecideAppealRequestComponent = DecideModerationAppealRequest.openapi(
+  'DecideModerationAppealRequest',
+);
+const AppealDecidedComponent = ModerationAppealDecidedResponse.openapi('ModerationAppealDecided');
+const AppealsListComponent = ModerationAppealsListResponse.openapi('ModerationAppealsList');
+const AppealDetailComponent = ModerationAppealDetailResponse.openapi('ModerationAppealDetail');
+
+const appealParams = z.object({ pariwarId: z.string().uuid(), appealId: z.string().uuid() });
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member/moderation/appeals',
+  summary: 'File an appeal against a moderation act (member, in-portal)',
+  description:
+    'The MEMBER\'s own act under Niyamavali §8.8. Member-session gated; Turnstile (`x-turnstile-token`) ' +
+    'and `Idempotency-Key` ride HEADERS, not the body. The member is the SESSION — there is no ' +
+    '`member_id` field, deliberately. Appealable from suspension OR termination, with NO deadline ' +
+    '(§8.8: "no time limit runs against a member\'s right to appeal"). Only ONE appeal against a given ' +
+    'moderation act may be open at a time, but the right is NOT exhausted: once an appeal is ' +
+    'determined a further appeal against the same act may be filed. Filing has NO SUSPENSIVE EFFECT — ' +
+    'a suspended member remains suspended and a terminated member\'s access does not return. The ' +
+    'grounds are stored Tier-1 encrypted and never appear on this response, on any event payload, or ' +
+    'on any audit line.',
+  tags: moderationTags,
+  request: {
+    params: moderationPariwarParams,
+    body: { content: jsonOf(FileAppealRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'The filed appeal', content: jsonOf(AppealFiledComponent) },
+    400: errorResponse('Request validation failed; OR the x-turnstile-token / Idempotency-Key header is absent'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Turnstile verification failed'),
+    404: errorResponse('The path Pariwar is not the session member\'s Pariwar (a 404, never a 403 — a 403 would be a tenant-existence oracle)'),
+    409: errorResponse('An appeal against this moderation act is already OPEN (`member_moderation.appeal_already_open`). ⛔ NOT an exhaustion — a further appeal may be filed once the open one is determined.'),
+    422: errorResponse('The member is under no moderation, so there is no act to appeal (`member_moderation.appeal_not_appealable`)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/moderation/appeals/off-portal',
+  summary: 'Record a member\'s appeal taken by helpline (operator, off-portal)',
+  description:
+    'THE ARM THAT SURVIVES THE END OF AUTHENTICATED ACCESS. §8.8: "the right to appeal does not ' +
+    'depend on the access that termination removes." With `termination_access_block` enabled a ' +
+    'terminated member holds no session at all, and this is the only route left to them. Gated on ' +
+    '`helpdesk.create` — ⛔ NOT on `member.data_rights` (filing an appeal is not executing a DPDPA ' +
+    'right) and ⛔ NOT on `member.moderate` (which would let the authority that sanctions a member ' +
+    'also file their appeal). `helpdesk_ticket_id` is REQUIRED here and enforced by a DB CHECK: the ' +
+    'ruling places the off-portal process ON a helpdesk ticket. The operator RECORDS the act; the ' +
+    'event attributes it to the MEMBER, because the appeal is the member\'s own.',
+  tags: moderationTags,
+  request: {
+    params: moderationPariwarParams,
+    body: { content: jsonOf(FileAppealOffPortalRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'The filed appeal', content: jsonOf(AppealFiledComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (helpdesk.create) for this Pariwar'),
+    409: errorResponse('An appeal against this moderation act is already open'),
+    422: errorResponse('The member is under no moderation, so there is no act to appeal'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/moderation/appeals',
+  summary: 'The open moderation-appeal queue (Trustee Panel)',
+  description:
+    'THE SURFACE ON WHICH A FILED APPEAL IS ACTUALLY FOUND. This is not a convenience read: the ' +
+    'Trustee Panel holds NO helpdesk capability at all and helpdesk `routed_to_role` is advisory and ' +
+    'inert, so no operator queue can ever surface an appeal to the Panel. Without this list an appeal ' +
+    'would be reachable only by direct link — a complete record nobody can find. Open appeals in the ' +
+    'caller\'s scope, oldest filing first. ⛔ Carries NO Tier-1 text.',
+  tags: moderationTags,
+  request: {
+    params: moderationPariwarParams,
+    query: z.object({ limit: z.coerce.number().int().positive().max(200).optional() }),
+  },
+  responses: {
+    200: { description: 'Open appeals', content: jsonOf(AppealsListComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (member.decide_moderation_appeal) for this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/moderation/appeals/{appealId}',
+  summary: 'One moderation appeal, with both Tier-1 fields decrypted',
+  description:
+    'The single-item decrypt-on-demand read — the ONLY surface that ever carries the member\'s grounds ' +
+    'or the adjudicator\'s reasoned outcome, behind the same gate as the determination (the ' +
+    '`ModerationRationale` precedent). `grounds` / `reasoned_outcome` are null on a corrupt or rotated ' +
+    'envelope (a per-row fact); a key-service outage answers 503 instead, so an unreachable KMS can ' +
+    'never masquerade as a member who appealed and said nothing.',
+  tags: moderationTags,
+  request: { params: appealParams },
+  responses: {
+    200: { description: 'The appeal', content: jsonOf(AppealDetailComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (member.decide_moderation_appeal) for this Pariwar'),
+    404: errorResponse('No such appeal in this Pariwar'),
+    503: errorResponse('Key service unavailable'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/moderation/appeals/{appealId}/decide',
+  summary: 'Determine a moderation appeal (Trustee Panel)',
+  description:
+    'Records the §8.8 determination: `upheld` or `allowed`, and NOTHING ELSE — there is deliberately ' +
+    'no third "varied" outcome, because a lesser sanction is a FRESH moderation act with its own ' +
+    'ground, its own record and its own right of appeal. A REASONED OUTCOME is mandatory (stored ' +
+    'Tier-1; never on an event payload or an audit line). Gated on `member.decide_moderation_appeal` ' +
+    '— a SEPARATE key from `member.moderate`, because `member.moderate` is held by both pariwar_admin ' +
+    'and the Trustee Panel and so cannot distinguish the appellate authority from the deciding one. ' +
+    'Step-up required (`member_moderation_appeal`). ⭐ HOLDING THE KEY IS NOT SUFFICIENT: §8.8 requires ' +
+    'the appeal be heard by a Panel member who did not take part in the act appealed against, and that ' +
+    'exclusion is enforced server-side before any write as a 409. ⛔ AN `allowed` OUTCOME DOES NOT ' +
+    'RESTORE THE MEMBER. It DIRECTS a restore; the restore is a subsequent, separately-attributed act ' +
+    'through the moderation write path with its own Decision Note and the Panel-exclusive ' +
+    '`member.restore_terminated` check. `directs_restore` on the response is a signal, not a report.',
+  tags: moderationTags,
+  request: {
+    params: appealParams,
+    body: { content: jsonOf(DecideAppealRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'The determination', content: jsonOf(AppealDecidedComponent) },
+    400: errorResponse('Request validation failed (e.g. a missing or too-short reasoned outcome)'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Not authorized (member.decide_moderation_appeal) for this Pariwar; OR step-up required'),
+    404: errorResponse('No such appeal in this Pariwar'),
+    409: errorResponse('The appeal is already determined (`member_moderation.appeal_already_decided`); OR ⭐ the adjudicator TOOK PART in the act under appeal (`member_moderation.appeal_adjudicator_excluded`) — a 409 and NEVER a 403, because the actor holds the key and may determine other appeals; OR the acting admin has no display name on record'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 // ── Story 10.11 — Trustee-Lite list + signals (FR-57) ───────────────────────────────────────────
 //
 // ONE read-only GET aggregating six trustee-attention sources plus the DETECTION-ONLY R7 violator

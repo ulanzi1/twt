@@ -48,3 +48,32 @@ export {
   ReasonCodeMetaDto,
   ReasonCodesListResponse,
 } from './dto.js';
+
+// Story 10.22 — the Niyamavali §8.8 moderation appeal (Decision `2026-08-15-121`).
+// ⚠ The two shared constants are here rather than at their call sites because BOTH have silent
+// failure modes: the step-up context is compared as a bare string with no registry (a typo on the
+// OTP side yields an elevation that can never satisfy the gate), and the helpdesk subcategory has no
+// allow-list (a typo routes just as cleanly to the same desk). ⛔ Never re-declare either.
+export {
+  MODERATION_APPEAL_STEP_UP_CONTEXT,
+  MODERATION_APPEAL_SUBCATEGORY,
+  MODERATION_APPEAL_HELPDESK_CATEGORY,
+  APPEAL_FILED_VIA,
+  AppealFiledVia,
+  APPEAL_STATUSES,
+  AppealStatus,
+  APPEAL_OUTCOMES,
+  AppealOutcome,
+  APPEAL_GROUNDS_MIN_CHARS,
+  APPEAL_GROUNDS_MAX_CHARS,
+  APPEAL_REASONED_OUTCOME_MIN_CHARS,
+  APPEAL_REASONED_OUTCOME_MAX_CHARS,
+  FileModerationAppealRequest,
+  FileModerationAppealOffPortalRequest,
+  ModerationAppealFiledResponse,
+  DecideModerationAppealRequest,
+  ModerationAppealDecidedResponse,
+  ModerationAppealDto,
+  ModerationAppealsListResponse,
+  ModerationAppealDetailResponse,
+} from './appeal.js';

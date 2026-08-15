@@ -126,6 +126,24 @@ export const MEMBER_WITHDRAWAL_FIELD_CLASS = 'member_withdrawal';
 export const MEMBER_MODERATION_FIELD_CLASS = 'member_moderation';
 
 /**
+ * Field-class namespace for the moderation APPEAL's two Tier-1 envelopes (Story 10.22, Niyamavali
+ * §8.8). Matches the `piiColumn(1, 'moderation_appeal')` annotation on both
+ * `member_moderation_appeals.grounds_ciphertext` and `…reasoned_outcome_ciphertext`. A TENANT table —
+ * the encryption context keys on the member's REAL `pariwarId`.
+ *
+ * ⚠ DEDICATED, not shared with `member_moderation` above, and the reason is the whole point of §8.8:
+ * a moderation rationale is written ABOUT the member by the authority sanctioning them; the appeal's
+ * grounds are written BY the member CONTESTING that authority. Sharing a field class would make the
+ * member's own defence decryptable under exactly the key that protects the case against them, and
+ * would foreclose any future differential-retention or rotation policy that treats them differently.
+ *
+ * ⚠ ONE class covers both columns even though one is member-authored and the other adjudicator-
+ * authored, because they are two halves of ONE governance record and are read together on the single
+ * decrypt-on-demand path.
+ */
+export const MODERATION_APPEAL_FIELD_CLASS = 'moderation_appeal';
+
+/**
  * Field-class namespace for the member DATA-EXPORT artifact Tier-1 envelope (Story 3.11). Like the
  * KYC / nominee / medical / address / withdrawal families (and unlike the admin-email / member-mobile
  * families that key on a fixed global sentinel because their lookup runs pre-scope), `data_exports` is

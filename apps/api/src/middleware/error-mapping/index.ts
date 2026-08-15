@@ -33,6 +33,11 @@ import {
   ModerationDwellNotElapsedError,
   ModerationDwellPolicyUnprovisionedError,
   ModerationGroundAlreadySupersededError,
+  ModerationAppealNotAppealableError,
+  ModerationAppealAlreadyOpenError,
+  ModerationAppealAlreadyDecidedError,
+  ModerationAppealAdjudicatorExcludedError,
+  ModerationAppealNotFoundError,
   ModerationGroundNotFoundError,
   ModerationPrimaryGroundImmutableError,
   ModerationEscalationNotApplicableError,
@@ -344,6 +349,50 @@ export function errorMappingHandler(
   }
   if (error instanceof ModerationGroundAlreadySupersededError) {
     void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+
+  // (3b-ii) Story 10.22 — the Niyamavali §8.8 moderation APPEAL. Five typed refusals whose statuses
+  //   differ IN KIND, not in severity; ⛔ do not flatten them.
+  //   ModerationAppealNotAppealableError    → 422 …appeal_not_appealable. The request is not coherent:
+  //                                           an unmoderated member has no act to appeal against.
+  //   ModerationAppealAlreadyOpenError      → 409 …appeal_already_open. A STATE objection, and ⛔ NOT
+  //                                           an exhaustion — §8.8 permits a further appeal against
+  //                                           the same act once the open one is determined. The
+  //                                           partial UNIQUE index is the BACKSTOP; this is the
+  //                                           INTERFACE, and a 23505 must never surface as a 500.
+  //   ModerationAppealAlreadyDecidedError   → 409 …appeal_already_decided. §8.8 gives ONE review; a
+  //                                           recorded determination is immutable.
+  //   ModerationAppealAdjudicatorExcludedError
+  //                                         → ⭐ 409 …appeal_adjudicator_excluded. ⛔ NEVER 403, and
+  //                                           the distinction is load-bearing: the actor HOLDS
+  //                                           `member.decide_moderation_appeal` and may determine any
+  //                                           other appeal. What is refused is their RELATIONSHIP to
+  //                                           this case — they imposed the act, or contributed a
+  //                                           ground it rests on (§8.8's different-individual
+  //                                           requirement; Deed Clause 26 natural justice). A 403
+  //                                           would tell a Panel member they lack a capability they
+  //                                           in fact hold, with nothing naming the real cause.
+  //   ModerationAppealNotFoundError         → 404 …appeal_not_found. ⛔ Not 403 — a 403 on an
+  //                                           ownership read is a tenant-existence oracle.
+  if (error instanceof ModerationAppealNotAppealableError) {
+    void reply.status(422).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationAppealAlreadyOpenError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationAppealAlreadyDecidedError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationAppealAdjudicatorExcludedError) {
+    void reply.status(409).send(error.toErrorResponse(requestId));
+    return;
+  }
+  if (error instanceof ModerationAppealNotFoundError) {
+    void reply.status(404).send(error.toErrorResponse(requestId));
     return;
   }
 

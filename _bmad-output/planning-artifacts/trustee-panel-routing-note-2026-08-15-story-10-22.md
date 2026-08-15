@@ -484,3 +484,239 @@ carry **per-clause provenance** — `[Trustee-ratified]`, `[Author-committed]`, 
 | **Q9** | no publication / publish to ______ | |
 | **Q10** | (a) recorded for counsel, no gate / (b) ride the 6.16 gate | |
 | **F-4** | noted / route as a separate question | The fifth untrue copy site (`terminated.body_access_retained`) |
+
+---
+
+# The ruling as given — 2026-08-15
+
+⚠ **Recorded verbatim and authoritative where it differs from the option text above.** The Panel
+**materially amended Q3D beyond the options offered** — it did not select between (a) and (b), it
+adopted (a) and then replaced it with a **three-tier appeal ladder** the note never put. Per the
+Decision `2026-08-12-099` precedent, that is recorded as an **addition**, not read back into option (a)
+as though it had been one.
+
+## The ruling, as transmitted
+
+| Q | Ruling |
+|---|---|
+| **Q1** | (a) — Single internal appeal. |
+| **Q2A** | (a) — Trustee Panel is the appeal authority. |
+| **Q2B** | (a) — A different Trustee Panel member must hear the appeal if the original decision was made by a Panel member. |
+| **Q3A** | (a) — Both suspension and termination are appealable. |
+| **Q3B** | (a) — No appeal deadline. |
+| **Q3C** | (a) — Appeal is tied to the particular moderation decision, not permanently to the member. |
+| **Q3D** | (a) — One appeal may be open at a time; a new appeal may be filed after the previous appeal is decided. **⚠ THEN AMENDED — see below.** |
+| **Q4A** | (a) — Two outcomes only: `upheld` or `allowed`. |
+| **Q4B** | (a) — An allowed appeal **directs** restoration; the appeal mechanism itself does not perform the restoration. |
+| **Q5** | (a) — Filing an appeal does not suspend the punishment. |
+| **Q6** | (a) — No additional response/waiver prerequisite is required before termination. |
+| **Q7** | (a) — Two intake surfaces, member app/portal and helpline/helpdesk, producing one underlying appeal record. |
+| **Q8** | (a) — Create a separate permission for deciding moderation appeals. |
+| **Q9** | (a) — Appeal and outcome remain private; no public disclosure. |
+| **Q10** | (a) — Counsel review is recorded but does not block filing or deciding an appeal. |
+
+## Q3D — the amendment, verbatim
+
+> **Q3D — Amend the ruling to the following exact appeal progression:**
+> **First appeal:** decided by 1 Trustee.
+> **Second appeal:** decided by 2 Trustees.
+> **Third appeal:** decided by all 3 Trustees and is the final internal appeal.
+> **Decision rule:** Where more than one Trustee participates, the outcome is determined by majority vote.
+> **Two-Trustee tie:** If the second appeal results in a 1–1 split, it automatically proceeds to the
+> third appeal before the full three-member Trustee Panel. No casting vote is used.
+> **Prior participation:** A Trustee who participated in the original moderation decision or an earlier
+> appeal remains eligible to participate in a later appeal. Prior participation does not create a
+> recusal requirement.
+> **Finality:** Once the third appeal is decided by majority vote of the three Trustees, the Trust's
+> internal appeal process is exhausted. No fourth internal appeal is permitted.
+
+## Standing directions given with the ruling, verbatim
+
+> Do not silently fill any missing governance detail. In particular, preserve the distinction between
+> the Panel's ruling and implementation recommendations.
+>
+> **Before implementation:** Create the corresponding Trustee Panel decision-log entry as the
+> governance commit, following the existing governance-first convention. Update the Story 10.22
+> decision/ruling section and sprint ledger with the actual Panel rulings. Ensure the English/Hindi
+> §8.8 text reflects the ratified decisions consistently. Do not modify `packages/` or `apps/` in the
+> governance commit. Reconcile every AC against the ruling before beginning implementation. **If any AC
+> cannot be implemented exactly from these rulings, stop and surface the conflict rather than inventing
+> a rule.** Preserve all recommendations that were not selected as recommendations only; do not
+> represent them as Panel decisions.
+
+## What was NOT ruled
+
+- **F-4** — the fifth untrue copy site (`moderation.notice.terminated.body_access_retained`, en+hi).
+  The ruling template's F-4 row was not completed. ⚠ **Un-ruled.** The author's proposed disposition
+  (fold into AC3, no separate ruling) stands as a **recommendation only**.
+- **Q2.2's exhausted-Panel sub-point** — *"what happens when the exclusion set swallows the Panel?"*
+  Not answered directly. Q3D's no-recusal clause would dissolve the question, but only under one of the
+  readings of **C-2** below.
+- **The key NAME.** Q8(a) ruled that a separate permission be created. It did **not** name it.
+  `member.moderation_appeal.decide` remains an **author recommendation**, `[Author-committed]`.
+
+---
+
+# ⛔ CONFLICTS — surfaced, NOT resolved. §8.8 IS NOT AUTHORED.
+
+**Per the Panel's own standing direction** — *"If any AC cannot be implemented exactly from these
+rulings, stop and surface the conflict rather than inventing a rule"* — the implementation half does
+**not** begin, no `.decision-log.md` entry is authored, and §8.8 is **not** drafted in either locale.
+An entry authored now would have to state a ruling that is not yet internally consistent, and Decision
+`2026-08-09-095`'s per-clause provenance requirement cannot be met while two `[Trustee-ratified]`
+clauses contradict each other.
+
+⚠ Every conflict below is stated with the instrument or file that establishes it, verified live at
+`b3e12e1`. None is an author preference.
+
+## C-1 ⛔ Q1(a) and the Q3D amendment cannot both be authored into §8.8
+
+Q1 option **(a)**, as the Panel had it before it: *"**Single tier** — One review, by an authority who
+did not take the appealed decision."* The Q3D amendment establishes **three successive appeals** with a
+named finality at the third. §8.8 must say one thing.
+
+**Two readings, and the note will not choose between them:**
+- **(i)** Q1(a) means *internal-only — not a mirror of Part 9's geographic stages* — and Q3D supplies
+  the internal structure. §8.8 then states a **three-tier internal ladder**.
+- **(ii)** Q1(a) means literally one review, and Q3D's progression is a later refinement that
+  **supersedes** it. §8.8 then states the ladder and Q1(a)'s "single tier" is recorded as superseded.
+
+Either way, **the phrase "single internal appeal" cannot appear in §8.8 alongside a three-appeal
+progression.** ⚠ Reading (i) is the author's guess. It is not recorded as the ruling.
+
+**Breaks:** AC2 (§8.8's text), AC1's Q1 clause.
+
+## C-2 ⛔ Q2B and Q3D's *Prior participation* clause contradict each other head-on
+
+| Clause | Says |
+|---|---|
+| **Q2B** `[Trustee-ratified]` | *"A **different** Trustee Panel member **must** hear the appeal if the original decision was made by a Panel member."* |
+| **Q3D, Prior participation** `[Trustee-ratified]` | *"A Trustee who participated in the original moderation decision or an earlier appeal **remains eligible** to participate in a later appeal. Prior participation does **not** create a recusal requirement."* |
+
+One mandates exclusion; the other abolishes it. **Three readings, all defensible, none rulable by the
+author:**
+- **(i)** Q2B governs the **first** appeal only; Q3D's no-recusal governs the **second and third**
+  (where, at the third, excluding anyone is arithmetically impossible if the Panel is three).
+- **(ii)** Q3D **supersedes** Q2B entirely — there is no recusal anywhere, and Q2B's "different member"
+  is aspirational.
+- **(iii)** Q2B governs **whenever a non-participating Trustee is available**, and Q3D relieves it only
+  when none is.
+
+**Breaks:** **AC5 in its entirety.** AC5's exclusion set (*every* `member_moderation_actions.actor_id`
+**plus** every `member_moderation_grounds.added_by`), its server-side enforcement, its typed **409**,
+and its mandatory **polarity-pair** test (*"the original actor is refused; a second Panel member is
+accepted"*) all have **no subject** until this resolves. Under reading (ii) the 409 never fires and
+AC5 has nothing to enforce; under (i) it fires at tier 1 only; under (iii) it fires conditionally on
+Panel composition at decision time. ⛔ These are three different systems.
+
+## C-3 ⛔ The Deed puts the Board at THREE-TO-NINE Trustees. Q3D presumes exactly three.
+
+**`docs/legal/trust-deed.md:211`, Clause 18(a), verified live:**
+
+> *"**Number.** The Board shall consist of not fewer than **[[three (3)]]** and not more than
+> **[[nine (9)]]** Trustees."*
+
+Q3D says *"all **3** Trustees"*, *"a **1–1** split"*, *"majority vote of **the three** Trustees"*,
+*"the full **three-member** Trustee Panel"*. **The Trust may lawfully have nine.** And in code,
+`trustee_panel` is a **role with no cardinality** — any number of users may hold it; nothing counts
+them, and nothing could enforce "all three" against a five-holder Panel.
+
+⚠ Note also §8.7 makes the Panel *the Board acting in a moderation capacity*, so "Trustee" and "Trustee
+Panel member" are the same person here — which is what makes the arithmetic binding rather than
+notional.
+
+**The Panel must state whether §8.8 fixes the appellate bench at three, or states the rule relatively**
+(e.g. *"one Trustee; then two; then all Trustees then in office"*). ⛔ The author will not pick.
+
+**Breaks:** AC2 (§8.8's text), AC4 (how many decision rows/votes a tier may hold), AC5 (the bench).
+
+## C-4 ⛔ Deed Clause 19(c) MANDATES a casting vote. Q3D disapplies it. The Deed is the superior instrument.
+
+**`docs/legal/trust-deed.md:229`, Clause 19(c), verified live:**
+
+> *"Save where a higher majority is required by this Deed, questions shall be decided by a majority of
+> Trustees present and voting; **in case of equality, the Chairperson shall have a second or casting
+> vote.**"*
+
+Q3D: *"**No casting vote is used.**"* And §8.7 binds the Panel to Clause 19 expressly (*"whose quorum
+is that of Deed Clause 19"*).
+
+⛔ **A Niyamavali Part 8 amendment cannot disapply a Trust Deed clause.** Clause 19(c) admits variation
+only *"where a higher majority is required by **this Deed**"*. Disapplying the casting vote is in
+substance a **Deed amendment**, which under **Clause 27(b)** requires *"a resolution passed by not less
+than two-thirds of the Trustees then in office"* **and** *"a supplementary registered deed"* — not a
+Part 11 Niyamavali amendment, and certainly not §8.8.
+
+⚠ Additionally: **there is no Chairperson concept anywhere in the codebase** — no role, no key, no
+column. Even the Deed-compliant path has no mechanism today.
+
+**Two lawful routes, for the Panel to choose:**
+- **(i)** §8.8 **conforms** to Clause 19(c): a 1–1 split at the second appeal is broken by the
+  Chairperson's casting vote, and the auto-escalation clause is dropped or re-scoped.
+- **(ii)** The Deed is **amended first** under Clause 27(b), and §8.8 lands after it — a separate
+  governance act, out of Story 10.22's scope entirely.
+
+**Breaks:** AC2, and potentially the whole story's schedule under route (ii).
+
+## C-5 ⛔ AC4's record cannot express a multi-Trustee majority vote
+
+AC4 specifies the decision as **singular**: `outcome` · `decided_by_actor_id` · `decided_by_display` ·
+`decided_at` · `reasoned_outcome_ciphertext`. Q3D requires **1, then 2, then N deciders**, an outcome
+**derived from a majority of votes**, and an **automatic escalation** on a tie.
+
+That is a **votes child table** (the `claim_r9_votes` shape), a **tier/sequence** column, a
+**vote-to-outcome derivation**, and an **auto-escalation transition** — none of which AC4, Task 4 or
+Task 5 contemplate, and none of which the story scopes. It is materially more than a column change.
+
+⚠ It also reopens a question the note never asked: **does each voting Trustee author their own reasoned
+outcome** (N Tier-1 ciphertexts), or does the bench issue one? AC9's RTBF scrub and AC4's *"no outcome
+prose in the payload"* both depend on the answer.
+
+**Breaks:** AC4, AC9, Task 4, Task 5, Task 6.
+
+## C-6 ⛔ AC4's uniqueness rule is superseded, and its replacement is a DIFFERENT constraint
+
+AC4/D4 as written: a **partial UNIQUE index** on `(moderation_action_id) WHERE open`, with re-filing
+after a decision **intentional and uncapped**. D4 warns expressly: ⛔ *"do not 'tighten' AC4's index to
+a non-partial UNIQUE constraint."*
+
+Under Q3D the rule is now: **at most three** appeals per moderation action, **strictly tier-ordered**
+(1 → 2 → 3), with **terminal exhaustion** after the third — *"No fourth internal appeal is permitted."*
+That is not the shipped rule, not D4's rule, and not the naive tightening D4 forbids. It is a **third
+constraint** the story does not specify.
+
+⚠ And the tie-escalation makes tier progression **partly automatic** rather than member-initiated, so
+"a new appeal may be filed after the previous appeal is decided" (Q3D's own first sentence) is true for
+tiers 1→2 but **not** for the 1–1 tie path into tier 3.
+
+**Breaks:** AC4, D4.
+
+## C-7 ⚠ The ladder re-creates a three-tier structure, and §8.8 must still say it is NOT Part 9
+
+AC2 requires §8.8 to state *expressly that it is **not** Part 9 and does **not** incorporate it*. Part 9
+has **three stages**; §1.3 (`niyamavali.md:39`) already glosses *"District Admin / State Trustee /
+Trustee Panel (Core Team) — **the three escalation tiers** of decision authority (Part 9)"*. A
+three-appeal Part 8 ladder now **resembles** it closely, and Q1(a)'s recorded reasoning was that Part
+9's stages *"do not map onto a Part 8 act"*.
+
+⚠ This is **not fatal** — the two differ in bench (one body at escalating size vs. three distinct
+geographic offices) — but §8.8's not-Part-9 sentence must now **distinguish** rather than merely assert,
+and that sentence is governance text the author will not draft unruled.
+
+**Breaks:** AC2's not-Part-9 clause (softly — it needs drafting guidance, not a new ruling).
+
+---
+
+## What is UNAFFECTED and ready to build the moment C-1…C-6 resolve
+
+Recorded so the conflict register is not read as blocking more than it does. These rulings are clean,
+match the ⭐, and break nothing:
+
+**Q2A** (Panel is the authority) · **Q3A** (both statuses) · **Q3B** (no deadline) · **Q3C** (per
+action, not per member) · **Q4A** (two outcomes) · **Q4B** (`allowed` DIRECTS — AC6 stands entire) ·
+**Q5** (no suspensive effect) · **Q6** (no response-or-waiver precondition; the §8.4a row stays in the
+list) · **Q7** (two intake surfaces, one record — AC7 stands entire) · **Q8** (mint a separate key —
+AC5's RBAC half stands; only its exclusion half is blocked by C-2) · **Q9** (no publication) ·
+**Q10** (counsel review recorded, no fail-closed gate — AC8's deferral register stands).
+
+⚠ **Q8's key NAME is still un-ruled** and remains `[Author-committed]`.

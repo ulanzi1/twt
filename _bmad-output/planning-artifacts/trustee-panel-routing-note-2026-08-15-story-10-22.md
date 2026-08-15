@@ -1,9 +1,13 @@
 # Trustee Panel Routing Note — Story 10.22, Moderation Appeal Mechanism
 
-**Status:** ⚠ **RULED 2026-08-15 — all ten questions answered, and Q3D MATERIALLY AMENDED beyond the
-options offered. ⛔ SEVEN CONFLICTS SURFACED AND UNRESOLVED; §8.8 IS NOT AUTHORED and no
-`.decision-log.md` entry exists.** See *"The ruling as given"* and *"⛔ CONFLICTS"* at the foot of this
-note, which are authoritative where they differ from the option text above.
+**Status:** ✅ **RULED 2026-08-15 — all ten questions answered, option (a) throughout.** The Q3D
+three-tier amendment was raised and is **NOT RATIFIED** (see *"The amendment is NOT RATIFIED"* at the
+foot of this note); **Q3D's option (a) stands as the ruling**, and C-1…C-7 are resolved by the
+withdrawal. See *"The ruling as given"*, *"⛔ CONFLICTS"* and the withdrawal, in that order — each is
+retained, and the later is authoritative over the earlier.
+*(Superseded status line, retained: ⚠ RULED 2026-08-15 — all ten questions answered, and Q3D MATERIALLY
+AMENDED beyond the options offered. ⛔ SEVEN CONFLICTS SURFACED AND UNRESOLVED; §8.8 IS NOT AUTHORED and
+no `.decision-log.md` entry exists.)*
 *(Superseded status line, retained: ⏳ Open — ten questions, awaiting ruling. Q1, Q2, Q3, Q4 and Q8 are
 ⛔ BLOCKING; Q5, Q6, Q7, Q9 and Q10 are answerable but each has a stated non-answer consequence.)*
 **Author:** BigDev (Solo Builder)
@@ -724,3 +728,58 @@ AC5's RBAC half stands; only its exclusion half is blocked by C-2) · **Q9** (no
 **Q10** (counsel review recorded, no fail-closed gate — AC8's deferral register stands).
 
 ⚠ **Q8's key NAME is still un-ruled** and remains `[Author-committed]`.
+
+
+---
+
+# The amendment is NOT RATIFIED — 2026-08-15
+
+⛔ **Nothing above is deleted.** The Q3D amendment and the seven conflicts it produced are retained
+exactly as recorded, because the record of what was proposed and why it did not stand **is** the
+governance ([[feedback_supersede_never_reinterpret]]; the Decision `2026-08-15-119` withdrawal
+precedent). This section supersedes them; it does not erase them.
+
+## The Panel's disposition, verbatim
+
+> Q3D's original option (a) was selected, but the subsequent three-tier amendment is **not a ratified
+> decision** because it materially changes the question's mechanics and creates unresolved conflicts
+> with Q1, Q2B, D4, AC4, Article 9, and the Trust Deed.
+
+## What now stands
+
+**Q3D = option (a), as originally ruled and as ⭐ recommended:** *one appeal may be open at a time; a
+new appeal may be filed after the previous appeal is decided.* No tiers, no bench sizing, no majority
+vote, no tie-escalation, no casting-vote question, no recusal waiver, no finality cap.
+
+⇒ **The ruling is now internally consistent, and consistent with the Trust Deed.** All ten questions
+are option (a).
+
+## C-1 … C-7 — every one resolved by the withdrawal
+
+| # | Was | Now |
+|---|---|---|
+| **C-1** | Q1(a) *"single internal appeal"* vs a three-appeal ladder | ✅ **Resolved.** No ladder. §8.8 states a single internal review. |
+| **C-2** | Q2B's *"different member **must** hear it"* vs Q3D's *"prior participation does not create a recusal requirement"* | ✅ **Resolved.** The no-recusal clause falls with the amendment. **Q2B stands unqualified**, and AC5 has its subject back — exclusion set, typed 409, polarity-pair test, all as specified. |
+| **C-3** | Deed Clause 18(a): the Board is **three-to-nine**; Q3D presumed exactly three | ✅ **Resolved.** No bench-size arithmetic remains in the ruling. §8.8 states no Panel cardinality, and `trustee_panel`'s lack of cardinality stops being a defect. |
+| **C-4** | Deed Clause 19(c) **mandates** the Chairperson's casting vote; Q3D disapplied it | ✅ **Resolved.** No voting rule is stated at all, so nothing derogates from Clause 19. §8.7's *"where this document and the Deed differ, the Deed prevails (§1.2)"* is left undisturbed, and **no Clause 27(b) Deed amendment is needed**. |
+| **C-5** | AC4's singular decision record could not hold a majority vote | ✅ **Resolved.** A single adjudicator ⇒ `decided_by_actor_id` / `decided_by_display` / `decided_at` / one `reasoned_outcome_ciphertext` are correct **as AC4 already specifies them**. No votes child table, no tier column, no auto-escalation. |
+| **C-6** | AC4/D4's partial-UNIQUE rule superseded by a capped, tier-ordered, terminally-exhausting constraint | ✅ **Resolved.** **D4 stands exactly as written**: partial UNIQUE on `(moderation_action_id) WHERE open`, re-filing after a determination intentional and uncapped. ⛔ Its standing warning against tightening to a non-partial UNIQUE is back in force. |
+| **C-7** | The ladder resembled Part 9's three stages | ✅ **Resolved.** A single internal review resembles nothing in Part 9's three-stage structure, so AC2's not-Part-9 sentence **asserts** rather than having to distinguish. |
+
+## Still un-ruled, and still recommendations ONLY
+
+Unchanged by the withdrawal. ⛔ None of these is represented as a Panel decision:
+
+| Item | Disposition |
+|---|---|
+| **F-4** — the fifth untrue copy site (`moderation.notice.terminated.body_access_retained`, en+hi) | `[Author-committed]` — folded into AC3 as the same defect under the same AC, and **named** in §8.8's decision entry, the story's Completion Notes and `deferred-work.md`. |
+| **Q2.2** — what happens when the exclusion set leaves no eligible Panel member | `[Author-committed]`, on the disposition this note stated when it raised the question: the appeal **remains filed and open** — never auto-decided, never auto-dismissed — and constituting an eligible bench is a Board matter under Deed Clause 18. |
+| **Q8's key NAME** | `[Author-committed]` — `member.moderation_appeal.decide`. Q8(a) ruled **that** a key be created, not **which**. |
+
+## Disposition
+
+**The governance half proceeds.** §8.8 is authored in both locales in its reserved slot; the
+reserved-numbers note retires; §8.6's *Recorded gap* is recorded as closed by §8.8 with its original
+wording preserved; §8.4a's *Notice + opportunity to respond* row is re-dispositioned per Q6 and
+**stays in the list**; and `.decision-log.md` entry **`2026-08-15-121`** carries all of it verbatim,
+both locales, with per-clause provenance.

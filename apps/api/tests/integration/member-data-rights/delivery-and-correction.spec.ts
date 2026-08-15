@@ -14,6 +14,10 @@
 
 import { randomUUID } from 'node:crypto';
 
+import {
+  DATA_RIGHTS_STEP_UP_CONTEXT,
+  DPDPA_DATA_RIGHTS_SUBCATEGORY,
+} from '@twt/contracts';
 import { encryption } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -61,13 +65,30 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
       }
       if (createdMemberIds.length > 0) {
         // events_log is append-only (AR-8 trigger) — replica role sheds it for a test-only purge.
+        //
+        // ⛔ EVERY CHILD ROW IS DELETED EXPLICITLY, AND THAT IS NOT BELT-AND-BRACES (round-2 review).
+        // `session_replication_role = 'replica'` disables ALL triggers — and PostgreSQL implements
+        // referential actions (`ON DELETE CASCADE`, `RESTRICT`) AS SYSTEM TRIGGERS. So under replica
+        // role the member cascade DOES NOT FIRE: this suite's `data_exports`,
+        // `data_export_delivery_grants` and `member_data_rights_corrections` rows were being orphaned
+        // into the shared test database on every run, accumulating across runs — exactly the residue
+        // class that produced the date-bomb this same change set fixes elsewhere.
+        // ⛔ Order matters: children before parents, deepest first.
         await c.query('BEGIN');
         await c.query("SET LOCAL session_replication_role = 'replica'");
+        await c.query('DELETE FROM member_data_rights_corrections WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
+        await c.query('DELETE FROM data_export_delivery_grants WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
+        await c.query('DELETE FROM data_exports WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
+        await c.query('DELETE FROM member_identities WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
         await c.query('DELETE FROM member_auth_otps WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
         await c.query('DELETE FROM events_log WHERE stream_id = ANY($1::uuid[])', [createdMemberIds]);
         await c.query('DELETE FROM members WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
         await c.query('COMMIT');
       }
+      // ⚠ Helpdesk tickets are created through the REAL intake route (see `seedSubject`) and carry
+      // hash-chained `audit_log_entries`; they are left in place deliberately — deleting them would
+      // mean unpicking the §1.5 chain, and they are tenant-scoped test fixtures that no assertion
+      // counts globally.
     } finally {
       c.release();
     }
@@ -117,7 +138,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     const req = await client.inject({
       method: 'POST',
       url: '/api/v1/auth/step-up/request',
-      payload: { actionContext: 'member_data_rights' },
+      payload: { actionContext: DATA_RIGHTS_STEP_UP_CONTEXT },
     });
     expect(req.statusCode).toBe(200);
     const code = adminStepUp.last?.code as string;
@@ -129,8 +150,11 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
    * Seed a member + a REAL helpdesk ticket, and an export at the given status (default `ready`).
    *
    * ⭐ The ticket is created through the ACTUAL Story 10.1 intake route with
-   * `category: 'other'` + `sub_category: 'dpdpa-data-rights'` — i.e. exactly the AC2 path a real
-   * DPDPA request arrives on. ⛔ Hand-INSERTing it was tried and rejected: `audit_log_entries` carries
+   * `category: 'other'` + `sub_category: DPDPA_DATA_RIGHTS_SUBCATEGORY` — i.e. exactly the AC2 path a
+   * real
+   * DPDPA request arrives on. ⛔ The tokens are IMPORTED, never written as literals — AC2's
+   * single-literal rule now binds the test trees too, and a typo'd fixture would silently stop
+   * exercising the AC2 path while still passing. ⛔ Hand-INSERTing it was tried and rejected: `audit_log_entries` carries
    * a NOT NULL `audit_hash` (the §1.5 hash chain), so a hand-seeded ticket would have required forging
    * a chain entry. Driving the real route is both simpler AND a truer fixture.
    *
@@ -193,7 +217,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
       payload: {
         subject_member_id: memberId,
         category: 'other',
-        sub_category: 'dpdpa-data-rights',
+        sub_category: DPDPA_DATA_RIGHTS_SUBCATEGORY,
         body: 'Member is exercising their data rights.',
         created_via: 'helpline_call',
       },

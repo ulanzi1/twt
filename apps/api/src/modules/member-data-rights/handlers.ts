@@ -11,10 +11,11 @@
 // `2026-08-14-109` through `-113` ruled the model.
 //
 // ⛔ WHAT IS DELIBERATELY STILL ABSENT, AND WHY IT MUST STAY ABSENT ────────────────────────────────
-//   · NO trustee-authority routing or grant. AC-R3, BLOCKED on Escalation 10 (Decision
-//     `2026-08-14-107`). ⛔ Do not grant `member.data_rights` to `trustee_panel`, do not add a routing
-//     rule, and do not make `routed_to_role` authoritative — it is an advisory queue filter that NO
-//     authorization path reads.
+//   · NO trustee-authority routing or grant — ⭐ by RULING, not pending one. `2026-08-14-109` clause 7
+//     ruled Escalation 10 (raised by `2026-08-14-107`): NO DPDPA action inherently requires Trustee
+//     Panel authority, so AC-R3 closed with a recorded disposition and NO code changes. ⛔ Do not grant
+//     `member.data_rights` to `trustee_panel`, do not add a routing rule, and do not make
+//     `routed_to_role` authoritative — it is an advisory queue filter that NO authorization path reads.
 //
 // ── Identity verification (AC2) ────────────────────────────────────────────────────────────────────
 // Identity is anchored the Story 6.3 way, UNCHANGED: the operator's own authority plus a verbal
@@ -100,8 +101,20 @@ const DELIVERY_MEMBER_DIRECT_ACTION = 'member_data_rights.delivery_member_direct
 const DELIVERY_STAFF_MEDIATED_ACTION = 'member_data_rights.delivery_staff_mediated_granted';
 const CORRECTION_ACTION = 'member_data_rights.correction_recorded';
 
-/** How long a delivery grant stays live. Short: it is a one-time hand-off, not a standing download. */
-const DELIVERY_GRANT_TTL_MS = 24 * 60 * 60 * 1000;
+/**
+ * ⛔ THE GRANT'S TTL IS THE OTP'S TTL — they are ONE lifetime (Decision `2026-08-15-117` clause 5).
+ *
+ * ⚠ It was originally a standalone 24h while the OTP lived 60 min, and the mismatch closed BOTH routes
+ * for the 23 hours in between: element 2 went true at OTP expiry, but `expireStaleGrantForExport` keys
+ * on the GRANT's expiry, so the still-live member-direct grant collided with the pending-uniqueness
+ * index and the staff-mediated route returned a 409 whose text — "a delivery grant is already live" —
+ * was true and useless, the live grant being unredeemable. Re-issuing member-direct hit the same index.
+ * ⛔ A grant outliving the code that redeems it is not a longer window; it is a dead row holding a slot.
+ * ⚠ Considered and NOT taken: a resend route re-minting an OTP against a live grant — the better
+ * product answer, but unplanned scope on an unauthenticated surface needing its own rate-limit and
+ * abuse analysis. Recorded in `2026-08-15-117` clause 5 rather than improvised here.
+ */
+const deliveryGrantTtlMs = (deps: AppDeps): number => deps.config.dataExportDeliveryOtpTtlMs;
 
 /** Tier-1 field-class contexts for the two AC-R1/AC-R2 surfaces (mirrors migration 0104). */
 const FIELD_CLASS_ATTESTATION = 'data_rights_attestation';
@@ -166,6 +179,43 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       );
     }
     return idemKey;
+  }
+
+  /**
+   * Release a claim whose work did NOT happen.
+   *
+   * ⛔ WITHOUT THIS, A FAILED REQUEST BURNED ITS KEY FOR 24 HOURS. `claimIdempotency`'s doc promised
+   * "returns the claim key for settlement" and every call site discarded it, so a request that failed
+   * before doing anything — a ticket-scope 404, a terminal-state 409, a transient DB error, a dropped
+   * connection — answered the caller's honest retry with 409 `idempotency_replay`: "already been
+   * accepted", for an act that never occurred. ⛔ On the ERASURE route that told an operator an
+   * irreversible act had happened when it had not. The admin UI mints a fresh UUID per click and so
+   * papered over it; any correct client retrying with the same key (which is what an `Idempotency-Key`
+   * contract MEANS) hit it every time.
+   *
+   * ⚠ BEST-EFFORT BY DESIGN: a failure to release must never replace the caller's real error with a
+   * bookkeeping one. The claim's TTL remains the backstop.
+   */
+  async function releaseIdempotency(idemKey: string): Promise<void> {
+    try {
+      await idempotencyStore.release(idemKey);
+    } catch {
+      // Swallowed deliberately — see above. The TTL still expires the claim.
+    }
+  }
+
+  /**
+   * `openScopeTx`, releasing the idempotency claim if the connection itself cannot be acquired.
+   * ⛔ Exists so the claim/release pairing has NO uncovered path: pool exhaustion before the tx opens
+   * is the one failure that the `finally`-based release below cannot see.
+   */
+  async function openScopeTxClaimed(pariwarIdStr: string, idemKey: string) {
+    try {
+      return await openScopeTx(deps, pariwarIdStr);
+    } catch (err) {
+      await releaseIdempotency(idemKey);
+      throw err;
+    }
   }
 
   /** The acting admin's id, or 401. */
@@ -234,7 +284,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       // Attribution resolves FIRST, before any write — a missing name must fail closed with no row
       // and no audit, not after a partial mutation.
       await requireAttribution(actorId);
-      await claimIdempotency(request, 'export', body.member_id);
+      const idemKey = await claimIdempotency(request, 'export', body.member_id);
 
       // The audit DIGEST — inputs only, NEVER the raw payload. ⛔ The originating ticket id rides the
       // digest so the audit line records WHICH REQUEST caused the build.
@@ -246,7 +296,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }),
       );
 
-      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      const scopeTx = await openScopeTxClaimed(pariwarIdStr, idemKey);
       let ok = false;
       let toEnqueue: string | null = null;
       let response: OffPortalExportResponse;
@@ -272,10 +322,39 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
           );
         }
 
+        // ── ⛔ REUSE AN EXISTING OFF-PORTAL EXPORT (round-2 code review) ─────────────────────────
+        // `data_exports_one_pending_per_member` is predicated on `status = 'pending'`, so a `ready`,
+        // unconsumed export does NOT collide — this route would assemble a SECOND complete Tier-1
+        // dossier for the same member, and `findActiveExport` being newest-first, the operator's
+        // `builtExportId` would then point at the new `pending` row while the older `ready` dossier
+        // lingered under its own TTL. The member self-service caller has always reused; this one did not.
+        // ⛔ ONLY an `off_portal_admin` row is reusable. A `member_portal` row is NOT: reusing it would
+        // misattribute the request in every audit query filtering on `requested_via` — the reason the
+        // catch below refuses rather than reuses.
+        const reusable = await dataExport.findActiveExport(scopeTx.tx, memberId, now);
+        if (reusable && reusable.requestedVia === 'off_portal_admin') {
+          ok = true;
+          return {
+            export_id: reusable.exportId,
+            status: reusable.status,
+            requested_at: reusable.requestedAt.toISOString(),
+            requested_via: 'off_portal_admin',
+          };
+        }
+
         // ⛔ `withCompensatingAudit` (ADR-0030), NOT a bare `writeAuditEntry`: the intent line commits
-        // FIRST, so a mutation that then fails leaves a recorded intent plus a compensating
+        // FIRST, so a mutation that then THROWS leaves a recorded intent plus a compensating
         // rolled-back line — rather than an act with no audit trail at all. This is a staff actor
-        // touching a member's statutory rights; a silent failure here must still be attributable.
+        // touching a member's statutory rights; a silent failure here must still be attributable.        //
+        // ⚠ THE BOUND OF THAT GUARANTEE, STATED HONESTLY (round-2 code review). The audit runs on
+        // `deps.servicePool` — its OWN connection — and settles the moment `mutate` RETURNS, but
+        // `mutate` only issues statements inside the still-open `scopeTx` that `closeScopeTx` commits
+        // afterwards. So the compensation covers a THROW INSIDE `mutate` and nothing else: if the
+        // COMMIT itself fails, the trail records a completed act with no compensating line and no row.
+        // ⛔ Do not read this wrapper as covering partial application generally — it does not.
+        // The ordering is a property of the shared helper and its call convention, not of this surface;
+        // closing it means changing that contract across every consumer, and it is recorded as deferred
+        // work rather than patched here alone.
         const row = await audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
             pariwarId: pariwarIdStr,
@@ -322,6 +401,8 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         throw err;
       } finally {
         await closeScopeTx(scopeTx, ok);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry.
+        if (!ok) await releaseIdempotency(idemKey);
       }
 
       // Enqueue AFTER commit so the worker sees the committed `pending` row (the shipped member-path
@@ -351,6 +432,10 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
             // Correlated failure (queue down AND DB under pressure). Swallow so the retryable error
             // below is ALWAYS what the caller sees.
           }
+          // ⛔ The tx committed (`ok` was true), so the `finally` above did NOT release — but the
+          // export was just marked `enqueue_failed` and the caller is being told to retry. Holding
+          // their key would make that retry impossible for 24 hours.
+          await releaseIdempotency(idemKey);
           throw new ServiceUnavailableError(
             'Export could not be queued; please retry',
             'member_data_rights.enqueue_failed',
@@ -385,6 +470,11 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         const row = await dataExport.findActiveExport(scopeTx.tx, memberId, now);
         ok = true;
         if (!row) return null;
+        // ⛔ OFF-PORTAL EXPORTS ONLY (Decision `2026-08-15-117` clause 7). `findActiveExport` is shared
+        // with the member self-service path and is deliberately unfiltered there; the filter belongs to
+        // THIS consumer. Without it the operator surface would hand back a member's own portal-built
+        // export id, which both delivery buttons would then happily accept.
+        if (row.requestedVia !== 'off_portal_admin') return null;
         return { export_id: row.exportId, status: row.status, requested_at: row.requestedAt.toISOString() };
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -408,15 +498,17 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       const ticketId = ids.helpdeskTicketId(body.helpdesk_ticket_id);
 
       await requireAttribution(actorId);
-      await claimIdempotency(request, 'delivery_member_direct', body.member_id);
+      const idemKey = await claimIdempotency(request, 'delivery_member_direct', body.member_id);
 
       const requestPayloadHash = sha256Hex(
         canonicalJsonStringify({ member_id: body.member_id, export_id: body.export_id, channel: 'member_direct' }),
       );
 
-      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      const scopeTx = await openScopeTxClaimed(pariwarIdStr, idemKey);
       let ok = false;
       let grantedMemberId: string | null = null;
+      // Set inside the tx by the no-mobile precondition below; read by the post-commit OTP block.
+      let mobileBlindIndexForDelivery: string | null = null;
       let response: MemberDirectDeliveryResponse;
       try {
         // ── Serialize against a concurrent erasure BEFORE any read (code-review addition) ─────────
@@ -436,7 +528,17 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         );
         // ⛔ 404, not 403 — an export that is not this member's is indistinguishable from one that does
         // not exist, so the route is not an existence oracle.
-        if (!exportRow) throw new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+        const notFoundExport = new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+        if (!exportRow) throw notFoundExport;
+        // ── ⛔ OFF-PORTAL EXPORTS ONLY (Decision `2026-08-15-117` clause 7) ──────────────────────
+        // Nothing here previously checked `requested_via`, so an ACTIVE member's own self-service
+        // portal export — a `ready`, decryptable Tier-1 dossier they requested for themselves — could
+        // be surfaced to an operator and routed to them. ⛔ A member's portal export is theirs.
+        // ⚠ 404, not 403, matching the guard above: the route must not confirm that an export exists.
+        // ⚠ Deliberately NOT a member-lifecycle gate: FR-95/FR-96 do not limit statutory rights to
+        // terminated members, so gating on lifecycle would deny an active member who genuinely cannot
+        // use the portal — the exact population this story exists to serve.
+        if (exportRow.requestedVia !== 'off_portal_admin') throw notFoundExport;
         // ⛔ CODE-REVIEW ADDITION — a grant must not be issuable against an export that is not yet
         // built (`pending`), or is already `expired`/`consumed`/`failed`: there is nothing (or nothing
         // current) for the member to redeem, and issuing a grant anyway would silently promise a
@@ -447,6 +549,27 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
             'member_data_rights.export_not_ready',
           );
         }
+
+        // ── ⛔ NO MOBILE ON FILE ⇒ REFUSE, BEFORE ANY ROW EXISTS (round-2 code review) ────────────
+        // The route previously created the grant, skipped OTP minting, and returned 200 with a
+        // `grant_id` and an `expires_at` — reporting success for a delivery that never happened. The
+        // member could not redeem, the operator had no signal, and (because no OTP row was ever
+        // written) `primaryDeliveryNotCompletedAt` returned null forever, so the narrow fallback was
+        // ALSO permanently closed for precisely the member who could not use the primary route.
+        // ⛔ THIS MAKES THE FAILURE HONEST; IT DOES NOT GIVE THAT MEMBER A ROUTE. That gap is
+        // ESCALATION 12 (Decision `2026-08-15-118`), OPEN, owned by the Trustee Panel — manufacturing
+        // a route here would be inventing gate mechanism, which `2026-08-14-112` cl.3 forbids.
+        const mobileBlindIndex = await memberAuthRepo.getMemberMobileBlindIndex(
+          deps.servicePool,
+          body.member_id,
+        );
+        if (!mobileBlindIndex) {
+          throw new ConflictError(
+            'This member has no registered mobile on file, so a delivery code cannot be sent',
+            'member_data_rights.no_mobile_on_file',
+          );
+        }
+        mobileBlindIndexForDelivery = mobileBlindIndex;
 
         // ⭐ LAZY-EXPIRE-ON-READ (code-review addition). A stale `pending` grant on this export — one
         // whose `expires_at` has passed with nobody having redeemed it — must not permanently block a
@@ -471,7 +594,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
               pariwarId,
               helpdeskTicketId: ticketId,
               grantedByActorId: actorId,
-              expiresAt: new Date(now.getTime() + DELIVERY_GRANT_TTL_MS),
+              expiresAt: new Date(now.getTime() + deliveryGrantTtlMs(deps)),
             }),
         });
 
@@ -492,6 +615,8 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         throw err;
       } finally {
         await closeScopeTx(scopeTx, ok);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry.
+        if (!ok) await releaseIdempotency(idemKey);
       }
 
       // ── Issue + deliver the OTP AFTER the grant commits ─────────────────────────────────────────
@@ -503,53 +628,42 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       //     seam's own union would mean a new DLT template and channels work this story does not own.
       // ⛔ Delivery failure does NOT roll back the grant: the grant is what the member redeems, and a
       // transient SMS failure must not destroy their route. The operator can re-issue.
-      if (grantedMemberId !== null) {
-        const blindIndex = await memberAuthRepo.getMemberMobileBlindIndex(deps.servicePool, grantedMemberId);
-        if (blindIndex) {
+      if (grantedMemberId !== null && mobileBlindIndexForDelivery !== null) {
+        try {
+          const { code } = await otpService.requestOtp(
+            deps,
+            DATA_EXPORT_DELIVERY_OTP_INTENT,
+            mobileBlindIndexForDelivery,
+            { memberId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT },
+          );
           try {
-            const { code } = await otpService.requestOtp(
-              deps,
-              DATA_EXPORT_DELIVERY_OTP_INTENT,
-              blindIndex,
-              { memberId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT },
-            );
-            try {
-              await deps.stepUpDelivery.deliver({
-                code,
-                actorId: grantedMemberId,
-                actionContext: DELIVERY_OTP_ACTION_CONTEXT,
-                intent: 'step_up',
-                pariwarId: pariwarIdStr,
-              });
-            } catch (err) {
-              // ⚠ Recorded, not thrown. An undelivered OTP is exactly the circumstance that later makes
-              // `primary_delivery_not_completed` true and opens the narrow fallback — so a delivery
-              // failure is a NORMAL, expected step on this path, not an error to surface as a 5xx.
-              deps.stepUpDelivery.onPrimaryDeliveryFailure?.(
-                { code, actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
-                err,
-              );
-            }
+            await deps.stepUpDelivery.deliver({
+              code,
+              actorId: grantedMemberId,
+              actionContext: DELIVERY_OTP_ACTION_CONTEXT,
+              intent: 'step_up',
+              pariwarId: pariwarIdStr,
+            });
           } catch (err) {
-            // ⛔ CODE-REVIEW ADDITION — `requestOtp` itself (OTP MINTING, not delivery) can throw, and
-            // it runs AFTER the grant already committed above. Uncaught, that would surface as an
-            // opaque 500 on a route the caller otherwise experienced as succeeding. Recorded via the
-            // same observability seam as a delivery failure, not thrown — the grant is the artifact
-            // that matters, and the operator can retry.
+            // ⚠ Recorded, not thrown. An undelivered OTP is exactly the circumstance that later makes
+            // `primary_delivery_not_completed` true and opens the narrow fallback — so a delivery
+            // failure is a NORMAL, expected step on this path, not an error to surface as a 5xx.
             deps.stepUpDelivery.onPrimaryDeliveryFailure?.(
-              { code: '', actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
+              { code, actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
               err,
             );
           }
-        } else {
-          // ⛔ CODE-REVIEW ADDITION — no mobile blind index on file at all: an OTP can NEVER be issued
-          // for this member, so `primary_delivery_not_completed` (which requires an OTP row to exist)
-          // can never become true and the narrow fallback can never open. Previously swallowed with no
-          // record anywhere; recorded via the same failure-observability seam so it is at least
-          // audit-visible rather than silent.
+        } catch (err) {
+          // ⛔ CODE-REVIEW ADDITION — `requestOtp` itself (OTP MINTING, not delivery) can throw, and it
+          // runs AFTER the grant already committed above. Uncaught, that would surface as an opaque 500
+          // on a route the caller otherwise experienced as succeeding. Recorded via the same
+          // observability seam as a delivery failure, not thrown — the grant is the artifact that
+          // matters, and the operator can retry.
+          // ⛔ The "no mobile on file" arm that used to live here is GONE: it is a PRECONDITION now,
+          // checked before the grant is created, so this block cannot be reached without one.
           deps.stepUpDelivery.onPrimaryDeliveryFailure?.(
             { code: '', actorId: grantedMemberId, actionContext: DELIVERY_OTP_ACTION_CONTEXT, intent: 'step_up', pariwarId: pariwarIdStr },
-            new Error('member_data_rights.no_mobile_on_file'),
+            err,
           );
         }
       }
@@ -585,25 +699,34 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
 
       const blindIndex = await memberAuthRepo.getMemberMobileBlindIndex(deps.servicePool, grant.memberId);
       if (!blindIndex) throw notFound;
-      const verified = await otpService.verifyOtp(
-        deps,
-        DATA_EXPORT_DELIVERY_OTP_INTENT,
-        blindIndex,
-        body.otp,
-        { expectedMemberId: grant.memberId },
-      );
-      // ⛔ Same 404 on a wrong code as on an unknown grant — a distinct error would let a caller
-      // confirm that a grant id exists.
-      if (!verified.ok) throw notFound;
 
       const scopeTx = await openScopeTx(deps, grant.pariwarId);
       let ok = false;
       try {
-        // ⛔ ONE-TIME, and the guarantee lives in this conditional UPDATE — not in a read-then-write.
-        // A concurrent redemption loses here and gets the same 404.
-        const burned = await dataExport.consumeGrant(scopeTx.tx, grantId, now);
-        if (!burned) throw notFound;
+        // ── Serialize against a concurrent erasure (round-2 code review) ─────────────────────────
+        // ⛔ THE SAME LOCK the two grant paths and `fulfilErasure` (AC13) take. This was the third path
+        // touching the same artifact and it was the one left unserialized — and by the grant paths' own
+        // stated standard, "a lock on one path only is not serialization". Under READ COMMITTED a
+        // redemption whose snapshot predates an erasure's commit would read the pre-erasure
+        // `artifact_ciphertext` and stream the member's full dossier AFTER the erasure committed —
+        // the artifact AC11 exists to guarantee is gone.
+        await scopeTx.client.query('SELECT pg_advisory_xact_lock($1)', [
+          memberDomain.rtbfAdvisoryLockKey(grant.pariwarId, grant.memberId).toString(),
+        ]);
 
+        // ── ⛔ ORDERING IS THE FIX HERE, AND IT IS DELIBERATE (round-2 code review) ───────────────
+        // Everything that can FAIL runs BEFORE anything is BURNED. Previously `verifyOtp` — which is
+        // atomic-burn-on-match and runs on `deps.pool`, OUTSIDE this transaction — fired first, so any
+        // later failure (a lost `consumeGrant` race, a null artifact, a KMS blip on decrypt) rolled the
+        // grant back to `pending` while the member's ONE-TIME OTP stayed irrecoverably spent. The member
+        // was left holding a live grant they could never redeem, given an indistinguishable 404, and —
+        // before the TTL alignment above — unable to be re-issued a code for up to 24 hours.
+        //
+        // ⚠ THE TRADE-OFF, STATED RATHER THAN HIDDEN: the artifact is now decrypted BEFORE the OTP is
+        // checked, so a caller who holds the `grantId` but not the code can cause a KMS decrypt. That is
+        // accepted because the `grantId` is itself an unguessable secret, the route is rate-limited, and
+        // the plaintext NEVER leaves this process unless verification then succeeds. ⛔ Stranding a
+        // member's statutory route is the larger harm, and it was the reachable one.
         const exportRow = await dataExport.getExportForMember(
           scopeTx.tx,
           grant.exportId,
@@ -611,6 +734,25 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         );
         if (!exportRow?.artifactCiphertext) throw notFound;
         const zip = await decryptExportArtifact(exportRow.artifactCiphertext, grant.pariwarId, enc);
+
+        const verified = await otpService.verifyOtp(
+          deps,
+          DATA_EXPORT_DELIVERY_OTP_INTENT,
+          blindIndex,
+          body.otp,
+          { expectedMemberId: grant.memberId },
+        );
+        // ⛔ Same 404 on a wrong code as on an unknown grant — a distinct error would let a caller
+        // confirm that a grant id exists.
+        if (!verified.ok) throw notFound;
+
+        // ⛔ ONE-TIME, and the guarantee lives in this conditional UPDATE — not in a read-then-write.
+        // A concurrent redemption loses here and gets the same 404. ⚠ If it loses, the OTP above IS
+        // already burned — which is correct: the winning redemption delivered the dossier, so there is
+        // nothing left for this caller to redeem.
+        const burned = await dataExport.consumeGrant(scopeTx.tx, grantId, now);
+        if (!burned) throw notFound;
+
         ok = true;
         void reply.header('content-type', 'application/zip');
         void reply.header('content-disposition', 'attachment; filename="my-data-export.zip"');
@@ -639,7 +781,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       const ticketId = ids.helpdeskTicketId(body.helpdesk_ticket_id);
 
       await requireAttribution(actorId);
-      await claimIdempotency(request, 'delivery_staff_mediated', body.member_id);
+      const idemKey = await claimIdempotency(request, 'delivery_staff_mediated', body.member_id);
 
       const requestPayloadHash = sha256Hex(
         canonicalJsonStringify({
@@ -650,7 +792,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }),
       );
 
-      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      const scopeTx = await openScopeTxClaimed(pariwarIdStr, idemKey);
       let ok = false;
       let response: StaffMediatedDeliveryResponse;
       try {
@@ -668,7 +810,17 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
           ids.dataExportId(body.export_id),
           memberId,
         );
-        if (!exportRow) throw new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+        const notFoundExport = new NotFoundError('Export not found', 'member_data_rights.export_not_found');
+        if (!exportRow) throw notFoundExport;
+        // ── ⛔ OFF-PORTAL EXPORTS ONLY (Decision `2026-08-15-117` clause 7) ──────────────────────
+        // Nothing here previously checked `requested_via`, so an ACTIVE member's own self-service
+        // portal export — a `ready`, decryptable Tier-1 dossier they requested for themselves — could
+        // be surfaced to an operator and routed to them. ⛔ A member's portal export is theirs.
+        // ⚠ 404, not 403, matching the guard above: the route must not confirm that an export exists.
+        // ⚠ Deliberately NOT a member-lifecycle gate: FR-95/FR-96 do not limit statutory rights to
+        // terminated members, so gating on lifecycle would deny an active member who genuinely cannot
+        // use the portal — the exact population this story exists to serve.
+        if (exportRow.requestedVia !== 'off_portal_admin') throw notFoundExport;
         // ⛔ CODE-REVIEW ADDITION — see the identical guard in `grantMemberDirectDelivery`: a grant
         // must not be issuable against an export that is not `ready`.
         if (exportRow.status !== 'ready') {
@@ -683,9 +835,15 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         // flag would let the actor assert the very fact this gate exists to check.
         // ⚠ It records that THE PRIMARY ROUTE DID NOT COMPLETE — ⛔ never that the member lost the
         // handset, which this system cannot observe (no DLR seam, no mobile-change history).
+        // ⛔ SCOPED TO THIS EXPORT (Decision `2026-08-15-117` cl.3, restoring `2026-08-14-113` cl.3's
+        // own words — "an OTP was issued FOR THE MEMBER-DIRECT DELIVERY GRANT"). Passing the export is
+        // what stops (a) an operator manufacturing element 2 by issuing a member-direct grant on any
+        // member and waiting out the OTP TTL, and (b) one stale OTP satisfying the gate forever, on
+        // every later export, with no primary attempt on THAT export at all.
         const primaryNotCompletedAt = await dataExport.primaryDeliveryNotCompletedAt(
           scopeTx.tx,
           memberId,
+          ids.dataExportId(body.export_id),
           now,
         );
         if (primaryNotCompletedAt === null) {
@@ -727,7 +885,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
               pariwarId,
               helpdeskTicketId: ticketId,
               grantedByActorId: actorId,
-              expiresAt: new Date(now.getTime() + DELIVERY_GRANT_TTL_MS),
+              expiresAt: new Date(now.getTime() + deliveryGrantTtlMs(deps)),
               // Element 1 — recorded now, on the strength of the member's own request relayed at intake.
               memberRequestRecordedAt: now,
               primaryDeliveryNotCompletedAt: primaryNotCompletedAt,
@@ -752,6 +910,8 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         throw err;
       } finally {
         await closeScopeTx(scopeTx, ok);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry.
+        if (!ok) await releaseIdempotency(idemKey);
       }
       return response!;
     },
@@ -772,7 +932,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       const ticketId = ids.helpdeskTicketId(body.helpdesk_ticket_id);
 
       const recordedByDisplay = await requireAttribution(actorId);
-      await claimIdempotency(request, 'correction', body.member_id);
+      const idemKey = await claimIdempotency(request, 'correction', body.member_id);
 
       const requestPayloadHash = sha256Hex(
         canonicalJsonStringify({
@@ -782,7 +942,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }),
       );
 
-      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      const scopeTx = await openScopeTxClaimed(pariwarIdStr, idemKey);
       let ok = false;
       let response: RecordCorrectionResponse;
       try {
@@ -830,6 +990,8 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         ok = true;
       } finally {
         await closeScopeTx(scopeTx, ok);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry.
+        if (!ok) await releaseIdempotency(idemKey);
       }
       return response!;
     },
@@ -863,7 +1025,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       const ticketId = ids.helpdeskTicketId(body.helpdesk_ticket_id);
 
       await requireAttribution(actorId);
-      await claimIdempotency(request, 'erasure', body.member_id);
+      const idemKey = await claimIdempotency(request, 'erasure', body.member_id);
 
       const requestPayloadHash = sha256Hex(
         canonicalJsonStringify({
@@ -872,7 +1034,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         }),
       );
 
-      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      const scopeTx = await openScopeTxClaimed(pariwarIdStr, idemKey);
       let ok = false;
       // ⚠ CODE-REVIEW FIX — was `string`, which widened `legality.fromState`'s precise
       // `MemberLifecycleState` into an unconstrained wire string on
@@ -913,8 +1075,17 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         fromState = legality.fromState;
 
         // ⛔ `withCompensatingAudit` (ADR-0030) around the IRREVERSIBLE act, not a bare
-        // `writeAuditEntry` after it. An erasure that partially applies and then throws must still
-        // leave an intent line plus a compensating rolled-back line.
+        // `writeAuditEntry` after it. An erasure whose `mutate` THROWS must still leave an intent line
+        // plus a compensating rolled-back line.        //
+        // ⚠ THE BOUND OF THAT GUARANTEE, STATED HONESTLY (round-2 code review). The audit runs on
+        // `deps.servicePool` — its OWN connection — and settles the moment `mutate` RETURNS, but
+        // `mutate` only issues statements inside the still-open `scopeTx` that `closeScopeTx` commits
+        // afterwards. So the compensation covers a THROW INSIDE `mutate` and nothing else: if the
+        // COMMIT itself fails, the trail records a completed act with no compensating line and no row.
+        // ⛔ Do not read this wrapper as covering partial application generally — it does not.
+        // The ordering is a property of the shared helper and its call convention, not of this surface;
+        // closing it means changing that contract across every consumer, and it is recorded as deferred
+        // work rather than patched here alone.
         await audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
             pariwarId: pariwarIdStr,
@@ -944,7 +1115,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
             // `z.enum(['member','system','trustee'])` — there is no finer staff label, so 'trustee' is
             // the only admissible value (the in-family precedent is `moderation/write.ts`).
             // ⚠ 'trustee' here is a COARSE staff label. It does NOT assert that the Trustee Panel
-            // acted — who holds Trustee authority over a statutory right is Escalation 10, unanswered.
+            // acted — and per `2026-08-14-109` cl.7 no DPDPA action requires Panel authority at all.
             actor: 'trustee',
             // The member family's dotted namespace for staff-initiated acts.
             trigger: 'member_data_rights.rtbf_fulfilled',
@@ -967,6 +1138,8 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         throw err;
       } finally {
         await closeScopeTx(scopeTx, ok);
+        // ⛔ The work did not happen — do not hold the caller's key against a retry.
+        if (!ok) await releaseIdempotency(idemKey);
       }
 
       return {

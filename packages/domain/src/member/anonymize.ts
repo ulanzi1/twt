@@ -29,13 +29,15 @@
 // Every write runs under the caller's RLS scope-tx (tenant-isolated). Naming: DB snake_case, TS
 // camelCase. NO HTTP / audit / event emission here — the route orchestrates (mirrors assemble.ts).
 
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import { encryptTier1, serializeEnvelope } from '../encryption/envelope.js';
 import type { KmsKeyRef, KmsProvider } from '../encryption/kms-provider.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
+import { DATA_EXPORT_DELIVERY_OTP_INTENT } from '../data-export/delivery.js';
 import { dataExportDeliveryGrants } from '../schema/data_export_delivery_grants.js';
+import { memberAuthOtps } from '../schema/member_auth_otps.js';
 import { dataExports } from '../schema/data_exports.js';
 import { memberDataRightsCorrections } from '../schema/member_data_rights_corrections.js';
 import { memberAddresses } from '../schema/member_addresses.js';
@@ -273,13 +275,19 @@ export async function anonymizeMember(
   // RESURRECTING the dossier after this erasure commits. ⛔ Do not "optimise" this away as redundant
   // with the zeroing above; they defend different moments.
   //
-  // ⛔ `consumed` IS DELIBERATELY EXCLUDED FROM THE STATUS FLIP — Escalation 9, RAISED AND UNANSWERED
-  // (Decision `2026-08-14-106`). Overwriting a `consumed` row's status destroys the record that the
+  // ⛔ `consumed` IS DELIBERATELY EXCLUDED FROM THE STATUS FLIP — ⭐ RULED, and this behaviour is the
+  // ratified one (Decision `2026-08-14-109` clause 6, answering Escalation 9: *"a `consumed` export
+  // RETAINS its status … the record that a member actually downloaded their export is a
+  // fulfilment/audit fact the Trust keeps; DPDPA erasure does not reach it"*). ⚠ The exclusion was
+  // written while the question was open and turned out to be already-correct; ⛔ its basis is now a
+  // RULING, not a pending escalation. Overwriting a `consumed` row's status destroys the record that the
   // member ACTUALLY DOWNLOADED their export — a completed statutory-access fulfilment, and a fact the
   // retention clause above promises to keep. The ZEROING applies to `consumed` (uncontroversial; the
   // vacuum already does exactly that) and is handled by the unconditional update above; only the STATUS
-  // change is contested. ⛔ Do NOT add 'consumed' to this list without a ratified decision id — that is
-  // a retention question owed to the Trustee Panel, not a coding preference. Story 10.21 AC11 owns it.
+  // change was contested and is now settled. ⛔ Do NOT add 'consumed' to this list: doing so would
+  // contradict `2026-08-14-109` clause 6 and would require SUPERSEDING it first
+  // ([[feedback_supersede_never_reinterpret]]) — it is a retention question owed to the Trustee Panel,
+  // not a coding preference.
   // ── data_export_delivery_grants (Story 10.21, AC-R1) — the staff ATTESTATION ────────────────────
   //
   // ⭐ THE HIGHEST-RISK ITEM OF AC-R1, AND IT IS HANDLED IN THE SAME CHANGE THAT CREATED THE COLUMN.
@@ -299,6 +307,45 @@ export async function anonymizeMember(
       attestationCiphertext: sql`CASE WHEN ${dataExportDeliveryGrants.attestationCiphertext} IS NULL THEN NULL ELSE ${await encSentinel(pariwarId, FIELD_CLASS_DATA_RIGHTS_ATTESTATION, enc)} END`,
     })
     .where(eq(dataExportDeliveryGrants.memberId, memberId));
+
+  // ⭐ REVOKE LIVE GRANTS AND THEIR OTPS — code-review addition (round 2, 2026-08-15).
+  //
+  // ⛔ SCRUBBING THE ATTESTATION IS NOT REVOKING THE GRANT. Before this, an erasure left any `pending`
+  // grant `pending`, with a live OTP in the member's hands, for up to its full TTL. That was safe only
+  // BY ACCIDENT: `redeemDelivery` happens to 404 on `!exportRow?.artifactCiphertext`, which the block
+  // above has just NULLed. An incidental guard is not a designed one — any later change that serves a
+  // partial artifact, or repopulates that column, silently converts this into POST-ERASURE DISCLOSURE
+  // of the very dossier AC11 exists to destroy.
+  //
+  // ⚠ It also had two live consequences even today: the stale `pending` row kept occupying
+  // `one_pending_per_export`, and (before `2026-08-15-117` cl.3 scoped the predicate) an erased member's
+  // orphaned OTP kept satisfying the fallback gate's element 2 forever.
+  //
+  // ⛔ SAME TRANSACTION as the zeroing above — a revocation that can land separately is not a guarantee.
+  await client
+    .update(dataExportDeliveryGrants)
+    .set({ status: 'expired' })
+    .where(
+      and(
+        eq(dataExportDeliveryGrants.memberId, memberId),
+        eq(dataExportDeliveryGrants.status, 'pending'),
+      ),
+    );
+
+  // The delivery OTP itself. ⚠ `member_auth_otps` is the GLOBAL, non-RLS auth table (the login/step-up
+  // carve-out), so this write is deliberately not tenant-scoped — it is keyed by `member_id` + the
+  // delivery pool. ⛔ ONLY the `data_export_delivery` pool: burning the member's `login` or `step_up`
+  // OTPs here would be an authentication side-effect this function has no business having.
+  await client
+    .update(memberAuthOtps)
+    .set({ consumedAt: sql`now()` })
+    .where(
+      and(
+        eq(memberAuthOtps.memberId, memberId),
+        eq(memberAuthOtps.intent, DATA_EXPORT_DELIVERY_OTP_INTENT),
+        isNull(memberAuthOtps.consumedAt),
+      ),
+    );
 
   // ── member_data_rights_corrections (Story 10.21, AC-R2) — both Tier-1 columns ───────────────────
   // The member's requested change and the staff action taken. Both NOT NULL, so both take the sentinel.

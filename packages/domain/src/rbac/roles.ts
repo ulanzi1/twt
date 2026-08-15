@@ -261,9 +261,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       MEMBER_SUSPEND,
       MEMBER_MODERATE,
       // Story 10.21 — off-portal DPDPA fulfilment. `pariwar_admin` is the ONLY seeded holder.
-      // ⚠ Escalation 10 (Decision `2026-08-14-107`) asks whether a Trustee-authority action needs a
-      // different or additional holder; it is RAISED AND UNANSWERED. ⛔ Do not add `trustee_panel` here
-      // pending that ruling (Story 10.21 AC-R3) — see the key's own note in permissions.ts.
+      // ⭐ Escalation 10 is RULED (Decision `2026-08-14-109` clause 7): NO DPDPA action inherently
+      // requires Trustee Panel authority, so AC-R3 closed with a recorded disposition and no code.
+      // ⛔ Do not add `trustee_panel` here — the exclusion is SETTLED ("ruled: not required"), not
+      // provisional; see the key's own note in permissions.ts and the assertion in roles.test.ts.
       MEMBER_DATA_RIGHTS,
       // Story 4.6 — reads the FR-12A Member Validity payload (admin surfaces).
       MEMBER_VIEW_VALIDITY,

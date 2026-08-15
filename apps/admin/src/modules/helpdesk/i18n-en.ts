@@ -42,10 +42,14 @@ const EN: Record<string, string> = {
   'helpdesk.dataRights.noPermission':
     'You can view and route this request, but you do not hold the permission to carry it out. Escalate to a Pariwar Admin.',
   'helpdesk.dataRights.buildExport': 'Build the member’s data export',
-  // ⛔ States the AC-R1 boundary in plain words. Building is settled; DELIVERING is an open governance
-  // question, and an operator must not infer permission to hand the file over from a success message.
+  // ⛔ CORRECTED (round-2 code review). This previously read "how the file may be handed over is not
+  // yet settled, so no download is offered here" — copy written while AC-R1 was blocked, still shipping
+  // ~20 lines above the two handover controls it denies the existence of. Delivery was SETTLED by
+  // `2026-08-14-109` cl.1, `-110`, `-111`, `-112` and `-113`. ⛔ AC9 is the copy-truth AC of a story
+  // whose founding grievance is a shipped sentence that was not true; do not let this one rot again.
+  // ⚠ It still says plainly that BUILDING is not DELIVERING — that distinction is real and load-bearing.
   'helpdesk.dataRights.buildExportNote':
-    'This assembles the member’s record. It does not release it — how the file may be handed over is not yet settled, so no download is offered here.',
+    'This assembles the member’s record. It does not send it — releasing it is a separate step below.',
   'helpdesk.dataRights.erasureConfirm':
     'I have verified the caller’s identity and confirm they asked for their data to be erased.',
   'helpdesk.dataRights.erasure': 'Erase this member’s personal data',
@@ -69,11 +73,20 @@ const EN: Record<string, string> = {
   'helpdesk.dataRights.correctionAction': 'What did you do?',
   'helpdesk.dataRights.correctionOutcome': 'Outcome',
   'helpdesk.dataRights.correctionSubmit': 'Save this record',
-  'helpdesk.dataRights.builtNotice': 'Export built. It has not been released — see the note above.',
+  'helpdesk.dataRights.builtNotice':
+    'Export built. It has not been sent yet — use the delivery options below.',
   'helpdesk.dataRights.erasedNotice':
     'Erasure completed. The member’s personal details have been overwritten.',
   'helpdesk.dataRights.erasureNote':
     'Permanent and cannot be undone. Their personal details are overwritten; the membership record and history remain for audit.',
+  // ── The data-rights step-up (round-2 code review) ────────────────────────────────────────────────
+  // ⛔ Every action on this panel is gated by a DISTINCT step-up context, and the app previously offered
+  // no way to satisfy it: `requestDataRightsStepUp` was defined and called from nowhere, so an operator
+  // clicked any button and got a bare 403 with no affordance to elevate anywhere in the app.
+  'helpdesk.dataRights.stepUpPrompt':
+    'This action needs a one-time code. Enter the code sent to your registered mobile.',
+  'helpdesk.dataRights.stepUpLabel': 'One-time code',
+  'helpdesk.dataRights.stepUpVerify': 'Verify and continue',
   'helpdesk.subcategory.placeholder': 'Select a subcategory…',
   'helpdesk.subcategory.none': 'No subcategories for this category',
   // Body capture

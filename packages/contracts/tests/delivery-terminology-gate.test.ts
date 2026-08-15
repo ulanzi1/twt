@@ -31,10 +31,21 @@ import { describe, expect, it } from 'vitest';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../../..');
 
-/** Source trees the mandate binds. */
+/**
+ * Trees the mandate binds.
+ *
+ * ⛔ `packages/domain/migrations` IS IN SCOPE, and its absence was a hole (round-2 code review).
+ * `2026-08-14-113` clause 2 binds *"the predicate, the column/field, the error code and the audit
+ * action"* — and the COLUMN is declared in `0104_data-rights-delivery-and-correction.sql`, under
+ * `migrations/`, not `src/`. `.sql` was already in `SCAN_EXT`, which made the gate look like it
+ * covered SQL while no scan root could reach a single `.sql` file. A later migration renaming the
+ * column to a handset-flavoured name would have passed green.
+ * ⛔ Do not remove the migrations root.
+ */
 const SCAN_ROOTS = [
   'packages/contracts/src',
   'packages/domain/src',
+  'packages/domain/migrations',
   'apps/api/src',
   'apps/admin/src',
   'apps/jobs/src',
@@ -91,6 +102,15 @@ function filesContaining(needle: string): string[] {
   return hits.sort();
 }
 
+/**
+ * A token guaranteed ABSENT from every scanned file — ⛔ ASSEMBLED AT RUNTIME, never written as a
+ * quoted literal. Writing it out would place it in a scanned file and make the revert-sanity assertion
+ * below find itself. That is not hypothetical: this gate and its sibling both hardcoded the SAME
+ * sentinel, and the moment the scan roots widened to cover the test trees each began finding the
+ * other's copy. ⛔ Do not "simplify" this into a string constant.
+ */
+const ABSENT_SENTINEL = ['no', 'such', 'token', 'in', 'any', 'scanned', 'file'].join('-');
+
 describe('Story 10.21 — delivery terminology is MANDATED (Decision 2026-08-14-113 clause 2)', () => {
   for (const term of FORBIDDEN) {
     it(`⛔ no source file uses '${term}'`, () => {
@@ -109,10 +129,38 @@ describe('Story 10.21 — delivery terminology is MANDATED (Decision 2026-08-14-
     });
   }
 
+  it('⭐ the MANDATED term is actually PRESENT at the four sites the mandate binds', () => {
+    // ⛔ FORBIDDING THE WRONG NAMES IS ONLY HALF THE MANDATE. Before this, `MANDATED` was interpolated
+    // into failure messages and never asserted — so a drift away from the ruled term to some THIRD,
+    // non-banned name (`otp_not_answered`, `delivery_incomplete`, …) passed every assertion above.
+    // ⛔ Clause 2 binds four sites; each is asserted by the tree that owns it.
+    const sites: ReadonlyArray<readonly [string, string]> = [
+      ['the COLUMN', 'packages/domain/migrations'],
+      ['the FIELD', 'packages/domain/src'],
+      ['the ERROR CODE and AUDIT ACTION', 'apps/api/src'],
+    ];
+    for (const [what, root] of sites) {
+      const hits = filesContaining(MANDATED).filter((f) => f.startsWith(root));
+      expect(
+        hits.length,
+        `${what}: the mandated term '${MANDATED}' must appear under ${root}. Decision ` +
+          `2026-08-14-113 clause 2 binds the predicate, the column/field, the error code AND the ` +
+          `audit action — renaming it to a third term that merely avoids the banned words is still a ` +
+          `breach of the mandate.`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
   it('the gate can actually FAIL — the scanner is not vacuous', () => {
     // ⛔ Revert-sanity. A scan that silently matches nothing would pass forever and prove nothing.
     // A token known to exist in the tree must be found, and a token known not to must not be.
     expect(filesContaining('memberId').length).toBeGreaterThan(0);
-    expect(filesContaining('a-token-that-appears-in-no-source-file-anywhere')).toEqual([]);
+    expect(filesContaining(ABSENT_SENTINEL)).toEqual([]);
+    // ⛔ And the migrations root must actually be reachable — otherwise the column assertion above
+    // would pass vacuously on an empty file list, which is the exact failure this root was added for.
+    expect(
+      filesContaining('data_export_delivery_grants').filter((f) => f.endsWith('.sql')).length,
+      'the migrations scan root must reach .sql files',
+    ).toBeGreaterThan(0);
   });
 });

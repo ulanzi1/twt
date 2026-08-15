@@ -3263,6 +3263,218 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+
+// ── Story 10.21 — off-portal DPDPA data rights ─────────────────────────────────────────────────────
+// ⛔ REGISTERED IN THE ROUND-2 CODE REVIEW. The story marked "Regenerate openapi/v1.yaml" as done, but
+// re-running the emitter was a NO-OP: the contracts had never been registered here, so six live routes
+// — INCLUDING the one UNAUTHENTICATED route on the whole surface, which returns a decrypted PII
+// dossier — were absent from the published contract entirely.
+const {
+  OffPortalExportRequest: OffPortalExportRequestSchema,
+  OffPortalExportResponse: OffPortalExportResponseSchema,
+  ActiveDataRightsExportResponse: ActiveDataRightsExportResponseSchema,
+  OffPortalErasureRequest: OffPortalErasureRequestSchema,
+  OffPortalErasureResponse: OffPortalErasureResponseSchema,
+  MemberDirectDeliveryRequest: MemberDirectDeliveryRequestSchema,
+  MemberDirectDeliveryResponse: MemberDirectDeliveryResponseSchema,
+  StaffMediatedDeliveryRequest: StaffMediatedDeliveryRequestSchema,
+  StaffMediatedDeliveryResponse: StaffMediatedDeliveryResponseSchema,
+  DeliveryRedeemRequest: DeliveryRedeemRequestSchema,
+  RecordCorrectionRequest: RecordCorrectionRequestSchema,
+  RecordCorrectionResponse: RecordCorrectionResponseSchema,
+} = await import('../src/member-data-rights/index.js');
+
+const OffPortalExportRequestComponent = OffPortalExportRequestSchema.openapi('OffPortalExportRequest');
+const OffPortalExportResponseComponent = OffPortalExportResponseSchema.openapi('OffPortalExportResponse');
+const ActiveDataRightsExportResponseComponent = ActiveDataRightsExportResponseSchema.openapi(
+  'ActiveDataRightsExportResponse',
+);
+const OffPortalErasureRequestComponent = OffPortalErasureRequestSchema.openapi('OffPortalErasureRequest');
+const OffPortalErasureResponseComponent = OffPortalErasureResponseSchema.openapi('OffPortalErasureResponse');
+const MemberDirectDeliveryRequestComponent =
+  MemberDirectDeliveryRequestSchema.openapi('MemberDirectDeliveryRequest');
+const MemberDirectDeliveryResponseComponent =
+  MemberDirectDeliveryResponseSchema.openapi('MemberDirectDeliveryResponse');
+const StaffMediatedDeliveryRequestComponent =
+  StaffMediatedDeliveryRequestSchema.openapi('StaffMediatedDeliveryRequest');
+const StaffMediatedDeliveryResponseComponent =
+  StaffMediatedDeliveryResponseSchema.openapi('StaffMediatedDeliveryResponse');
+const DeliveryRedeemRequestComponent = DeliveryRedeemRequestSchema.openapi('DeliveryRedeemRequest');
+const RecordCorrectionRequestComponent = RecordCorrectionRequestSchema.openapi('RecordCorrectionRequest');
+const RecordCorrectionResponseComponent =
+  RecordCorrectionResponseSchema.openapi('RecordCorrectionResponse');
+
+const dataRightsPariwarParams = z.object({ pariwarId: z.string().uuid() });
+const DATA_RIGHTS_TAG = 'member-data-rights';
+/** Every admin route on this surface carries the permission key AND a DISTINCT step-up context. */
+const dataRightsAdminNote =
+  'Requires an admin session, the `member.data_rights` permission (pariwar dimension) and a fresh ' +
+  '`member_data_rights` step-up elevation. `Idempotency-Key` is REQUIRED: a replay of the same key is ' +
+  'refused with a typed 409 rather than silently re-executed.';
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member-data-rights/export',
+  summary: "BUILD a member's data export off-portal (AC5)",
+  description:
+    'Assembles the subject member\'s export without a member session, for a member whose portal access ' +
+    'has ended. Refuses a closed membership (409 data_export.member_terminal) and reuses an existing ' +
+    'active off-portal export rather than assembling a second dossier. ' + dataRightsAdminNote,
+  tags: [DATA_RIGHTS_TAG],
+  request: {
+    params: dataRightsPariwarParams,
+    body: { content: jsonOf(OffPortalExportRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'Export requested', content: jsonOf(OffPortalExportResponseComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Missing member.data_rights, or step-up required'),
+    404: errorResponse('Member or helpdesk ticket not found in this Pariwar'),
+    409: errorResponse('Export already pending, membership closed, or Idempotency-Key replay'),
+    503: errorResponse('Export could not be queued; retry'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member-data-rights/export/active',
+  summary: "The member's currently-active OFF-PORTAL export, or null",
+  description:
+    'Lets the operator surface recover the built export across a page reload. ⛔ Returns only exports ' +
+    'built through this off-portal route — a member\'s own self-service portal export is never ' +
+    'surfaced here. ' + dataRightsAdminNote,
+  tags: [DATA_RIGHTS_TAG],
+  request: { params: dataRightsPariwarParams },
+  responses: {
+    200: { description: 'The active export, or null', content: jsonOf(ActiveDataRightsExportResponseComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Missing member.data_rights, or step-up required'),
+    404: errorResponse('Member not found in this Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member-data-rights/erasure',
+  summary: 'EXECUTE erasure for an off-portal subject (AC7)',
+  description:
+    'Irreversible. Requires the originating `helpdesk_ticket_id` and fails closed without it; serializes ' +
+    'against concurrent erasure/delivery via an advisory lock; appends `member.rtbf_anonymized` with ' +
+    'actor `trustee` and trigger `member_data_rights.rtbf_fulfilled`. ' + dataRightsAdminNote,
+  tags: [DATA_RIGHTS_TAG],
+  request: {
+    params: dataRightsPariwarParams,
+    body: { content: jsonOf(OffPortalErasureRequestComponent), required: true },
+  },
+  responses: {
+    200: { description: 'Erasure completed', content: jsonOf(OffPortalErasureResponseComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Missing member.data_rights, or step-up required'),
+    404: errorResponse('Member or helpdesk ticket not found in this Pariwar'),
+    409: errorResponse('Not legally erasable, or Idempotency-Key replay'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member-data-rights/delivery/member-direct',
+  summary: 'PRIMARY delivery — issue a one-time OTP grant to the member (AC-R1)',
+  description:
+    'The ruled primary route (Decision 2026-08-14-109 clause 1): a one-time grant the MEMBER redeems ' +
+    'themselves with a code sent to their registered mobile. No session is ever issued. Refuses when the ' +
+    'member has no registered mobile on file (409 member_data_rights.no_mobile_on_file). ' + dataRightsAdminNote,
+  tags: [DATA_RIGHTS_TAG],
+  request: {
+    params: dataRightsPariwarParams,
+    body: { content: jsonOf(MemberDirectDeliveryRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'Grant issued', content: jsonOf(MemberDirectDeliveryResponseComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Missing member.data_rights, or step-up required'),
+    404: errorResponse('Export, member or ticket not found for this Pariwar'),
+    409: errorResponse('Export not ready, no mobile on file, grant already live, or Idempotency-Key replay'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member-data-rights/delivery/staff-mediated',
+  summary: 'NARROW EXCEPTION — staff-mediated delivery behind the ratified three-part gate (AC-R1)',
+  description:
+    'Decision 2026-08-14-113 clause 1: all three elements are required and none substitutes — (1) the ' +
+    "member's own explicit request, (2) the SERVER-OBSERVED `primary_delivery_not_completed` for THIS " +
+    "export, and (3) the staff attestation (Tier-1, withheld from the member's export). Enforced again " +
+    'as a database CHECK. ' + dataRightsAdminNote,
+  tags: [DATA_RIGHTS_TAG],
+  request: {
+    params: dataRightsPariwarParams,
+    body: { content: jsonOf(StaffMediatedDeliveryRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'Exceptional grant recorded', content: jsonOf(StaffMediatedDeliveryResponseComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Missing member.data_rights, or step-up required'),
+    404: errorResponse('Export, member or ticket not found for this Pariwar'),
+    409: errorResponse('Primary delivery not yet attempted-and-incomplete, export not ready, or replay'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/member-data-rights/correction',
+  summary: 'RECORD a correction request and the action taken (AC-R2)',
+  description:
+    'A RECORD, not a write path (Decision 2026-08-14-109 clause 2): what the member asked to be ' +
+    'corrected and what staff did about it, both Tier-1 at rest. It does not itself mutate member data. ' +
+    dataRightsAdminNote,
+  tags: [DATA_RIGHTS_TAG],
+  request: {
+    params: dataRightsPariwarParams,
+    body: { content: jsonOf(RecordCorrectionRequestComponent), required: true },
+  },
+  responses: {
+    201: { description: 'Correction recorded', content: jsonOf(RecordCorrectionResponseComponent) },
+    400: errorResponse('Request validation failed'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse('Missing member.data_rights, or step-up required'),
+    404: errorResponse('Member or helpdesk ticket not found in this Pariwar'),
+    409: errorResponse('Idempotency-Key replay'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member-data-rights/delivery/{grantId}/redeem',
+  summary: 'MEMBER redeems a delivery grant — UNAUTHENTICATED by necessity (AC-R1)',
+  description:
+    '⛔ The one unauthenticated route on this surface, and deliberately so: the subject is a member whose ' +
+    'portal access has ended, and issuing them a session is precisely what Niyamavali §8.4 forecloses. ' +
+    'It is NOT an open surface — redemption needs TWO secrets (the unguessable grantId in the path AND ' +
+    'the OTP delivered to the registered mobile), the grant is one-time and short-lived, and EVERY ' +
+    'failure mode (unknown / spent / expired / wrong code / staff-mediated channel) returns the SAME ' +
+    '404, so it is not an existence oracle. Carries the named WRITE rate-limit tier. Responds with the ' +
+    'export ZIP on success.',
+  tags: [DATA_RIGHTS_TAG],
+  request: {
+    params: z.object({ grantId: z.string().uuid() }),
+    body: { content: jsonOf(DeliveryRedeemRequestComponent), required: true },
+  },
+  responses: {
+    200: {
+      description: 'The export archive',
+      content: { 'application/zip': { schema: { type: 'string', format: 'binary' } } },
+    },
+    400: errorResponse('Request validation failed'),
+    404: errorResponse('Grant unknown, spent, expired, wrong code, or not member-direct'),
+    429: errorResponse('Rate limit exceeded'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

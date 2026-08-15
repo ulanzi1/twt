@@ -57,7 +57,12 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // `grantId` in the path AND the OTP delivered to the registered mobile — the grant is
   // one-time (burned by a conditional UPDATE) and short-lived, and EVERY failure mode
   // (unknown / spent / expired / wrong code / staff-mediated channel) returns the SAME
-  // 404, so it is not an existence oracle. It carries the named read rate limit.
+  // 404, so it is not an existence oracle. ⛔ It carries the named WRITE rate limit — the TIGHTER of
+  // the two named tiers. (This comment said "read" until the round-2 review: the route had been moved
+  // to `limits.write` by an earlier review finding and the allowlist's justification was not updated
+  // with it. This entry is the designated place where "deliberately unauthenticated" is DEFENDED, so
+  // half a defence being false is the whole problem — and it is now asserted below, not just asserted
+  // about.)
   // ⛔ Do not "fix" this by adding a session guard — that deletes the route's purpose.
   'POST /api/v1/member-data-rights/delivery/:grantId/redeem',
   // Story 3.6a — first-signup member creation is PUBLIC (pre-session): the caller holds a
@@ -158,4 +163,40 @@ describe('Login-wall fails-closed guard (AC-2, hermetic — no DB)', () => {
       await teardown(t);
     }
   });
+
+  it('⭐ the unauthenticated redemption route carries the WRITE rate-limit tier the allowlist claims', async () => {
+    // ⛔ THE ALLOWLIST ENTRY IS A DEFENCE, AND HALF OF IT WAS FALSE. The comment above claimed the
+    // route "carries the named read rate limit" while `routes.ts` had already been moved to
+    // `limits.write` by an earlier review — and NOTHING asserted which tier was configured, so the
+    // drift was invisible. An entry defending "deliberately unauthenticated" must be true in every
+    // clause, or the next reviewer either accepts a wrong fact or re-opens a settled question.
+    const t = await createTestApp();
+    try {
+      const routes = getCollectedRoutes(t.app);
+      // ⚠ COMPARED BY OBJECT IDENTITY, NOT BY `max`. `namedRateLimits(deps)` is called ONCE per
+      // module registration, so every route on the same tier shares the SAME config object — while the
+      // test environment sets every tier's `max` to the same large number, which makes a value
+      // comparison pass vacuously. Identity survives that.
+      const tierOf = (method: string, url: string): unknown => {
+        const r = routes.find((x) => x.method === method && x.url === url);
+        expect(r, `route not found: ${method} ${url}`).toBeDefined();
+        const cfg = r!.config as { rateLimit?: unknown } | undefined;
+        expect(cfg?.rateLimit, `${method} ${url} declares no rateLimit`).toBeDefined();
+        return cfg!.rateLimit;
+      };
+
+      // Reference tiers, read off the SAME live route table rather than re-derived from config.
+      const writeTier = tierOf('POST', '/api/v1/p/:pariwarId/member-data-rights/export');
+      const readTier = tierOf('GET', '/api/v1/p/:pariwarId/member-data-rights/export/active');
+      // Without this the comparison below could pass vacuously if both names resolved to one object.
+      expect(writeTier, 'the two named tiers must be distinct objects for this to have teeth').not.toBe(readTier);
+
+      const redeem = tierOf('POST', '/api/v1/member-data-rights/delivery/:grantId/redeem');
+      expect(redeem, 'the redemption route must be on the WRITE (tighter) tier').toBe(writeTier);
+      expect(redeem, 'the redemption route must NOT be on the looser read tier').not.toBe(readTier);
+    } finally {
+      await teardown(t);
+    }
+  });
+
 });

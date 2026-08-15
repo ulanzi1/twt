@@ -23,7 +23,7 @@
 // CASCADE` never fires. The claim had asserted a protection that did not exist since 3.11 landed.
 // The REAL mechanism is now an explicit block at the end of `anonymizeMember`: it NULLs
 // `artifact_ciphertext` on every row of the member and flips `pending`/`ready` → `expired`, in the
-// erasure's own transaction. (The `consumed` STATUS is deliberately left alone — Escalation 9.)
+// erasure's own transaction. (The `consumed` STATUS is deliberately left alone — RULED, `2026-08-14-109` cl.6.)
 //
 // ── PII discipline (R1) ────────────────────────────────────────────────────────────────────────────
 //   · status / failed_reason  → NON-PII bounded values (contracts `DataExportStatus`; failed_reason is

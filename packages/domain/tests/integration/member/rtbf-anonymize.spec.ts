@@ -418,7 +418,7 @@ describe.skipIf(!hasDatabase)('RTBF anonymization — soft-delete + retain + RLS
       expect(row!.status).toBe('expired');
     });
 
-    it('⛔ a CONSUMED row is ZEROED but KEEPS its status — Escalation 9, unanswered', async () => {
+    it('⛔ a CONSUMED row is ZEROED but KEEPS its status — RULED, 2026-08-14-109 cl.6', async () => {
       // ⚠ The zeroing is uncontroversial (the vacuum already does exactly this). The STATUS CHANGE is
       // contested: overwriting `consumed` would destroy the record that the member ACTUALLY DOWNLOADED
       // their export — a completed statutory-access fulfilment, and a fact AC11 separately promises to

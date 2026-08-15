@@ -311,6 +311,20 @@ export function useRequestStepUp() {
   return useMutation({ mutationFn: (actionContext: string) => api.requestStepUp(actionContext) });
 }
 
+/**
+ * Request the step-up OTP for the DATA-RIGHTS context (Story 10.21).
+ *
+ * ⛔ Goes through `api.requestDataRightsStepUp`, which supplies the context from the ONE imported
+ * constant — never a literal. `requireStepUp` compares a bare string by equality and the contract
+ * carries no allow-list, so a typo'd context elevates the session under something that can never
+ * satisfy the gate: a permanently broken action with nothing anywhere naming the cause.
+ * ⚠ This hook exists because the helper it wraps shipped defined-and-uncalled (round-2 code review) —
+ * the panel it was written for had no elevation flow at all.
+ */
+export function useRequestDataRightsStepUp() {
+  return useMutation({ mutationFn: () => api.requestDataRightsStepUp() });
+}
+
 /** Verify a step-up OTP → the session gains the fresh elevated context the intake route needs. */
 export function useVerifyStepUp() {
   return useMutation({ mutationFn: (otp: string) => api.verifyStepUp(otp) });
@@ -873,11 +887,19 @@ export function activeDataRightsExportKey(pariwarId: string, memberId: string): 
  * `builtExportId` across a reload instead of relying solely on `buildExport`'s in-memory mutation
  * result (code-review addition, this story).
  */
-export function useActiveDataRightsExport(pariwarId: string, memberId: string | null) {
+export function useActiveDataRightsExport(
+  pariwarId: string,
+  memberId: string | null,
+  isDataRightsTicket: boolean,
+) {
   return useQuery({
     queryKey: activeDataRightsExportKey(pariwarId, memberId ?? ''),
     queryFn: () => api.getActiveDataRightsExport(pariwarId, memberId as string),
-    enabled: memberId !== null,
+    // ⛔ GATED ON THE TICKET BEING A DPDPA ONE, not merely on having a subject member (round-2 code
+    // review). The route requires `member.data_rights` AND a fresh data-rights elevation, so keying
+    // only on `memberId !== null` fired a request that 403s on EVERY member-linked ticket-detail mount
+    // — payment queries, address changes — for every operator who will never open this panel.
+    enabled: memberId !== null && isDataRightsTicket,
   });
 }
 

@@ -9,7 +9,7 @@
 // member who was asleep, busy, or simply ignored the message.
 // ⚠ `packages/contracts/tests/delivery-terminology-gate.test.ts` fails the build on the banned terms.
 
-import { and, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, lt, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { DataExportId, HelpdeskTicketId, MemberId, PariwarId } from '../ids/index.js';
@@ -26,31 +26,70 @@ import {
 export const DATA_EXPORT_DELIVERY_OTP_INTENT = 'data_export_delivery' as const;
 
 /**
- * Has the PRIMARY (member-direct) route been tried and failed for this member?
+ * Has the PRIMARY (member-direct) route been tried and failed **FOR THIS EXPORT**?
  *
  * ⭐ THIS IS ELEMENT 2 OF THE THREE-PART GATE, AND IT IS A PROXY — the honest one available.
- * True when an OTP was issued on the delivery pool for this member and **expired without being
- * consumed** (`consumed_at IS NULL AND expires_at < now`).
+ * True when an OTP was issued on the delivery pool **for this export's own member-direct grant** and
+ * **expired without being consumed** (`consumed_at IS NULL AND expires_at < now`).
  *
- * ⛔ WHAT IT PROVES: the primary route did not complete.
+ * ⛔ SCOPED TO THE GRANT, AND THE SCOPING IS LOAD-BEARING (Decision `2026-08-15-117` clause 3,
+ * correcting the implementation to `2026-08-14-113` clause 3's own words — *"an OTP was issued **for
+ * the member-direct delivery grant** and expired without being consumed"*). ⚠ This function was first
+ * shipped MEMBER-scoped, with no export scoping and no lower time bound, and that was BROADER than the
+ * predicate it implements. Two things followed, both defeating what element 2 is documented to buy:
+ *   · a staff actor could MANUFACTURE it — issue a member-direct grant on any member, wait out the OTP
+ *     TTL, and element 2 was server-observed true with no member participation at all;
+ *   · it was PERMANENT — one OTP that expired unconsumed satisfied element 2 for every export that
+ *     member ever had thereafter, and a member who then redeemed every grant never re-closed it.
+ * ⛔ Do NOT reintroduce a member-only predicate here. The question is always about THIS delivery.
+ *
+ * ⛔ FAILS CLOSED WHEN THE PRIMARY WAS NEVER ATTEMPTED. No `member_direct` grant for this export ⇒
+ * `null` ⇒ the staff-mediated route refuses. That is what forecloses reaching the fallback without
+ * trying the primary at all.
+ *
+ * ⛔ WHAT IT PROVES: the primary route did not complete for this export.
  * ⛔ WHAT IT DOES NOT PROVE: that the member no longer controls the registered mobile. It is satisfied
  * identically by a member who was asleep, busy, or ignored the message. That condition is **not
  * machine-verifiable in this system** and is carried as the staff ATTESTATION (element 3) instead.
  * ⛔ Do not "strengthen" this into a claim about the device.
  *
- * ⚠ OPEN, NON-BLOCKING (`2026-08-14-113` *Open follow-ups*): should this additionally require
- * `attempts = 0`? A NON-ZERO attempt count means somebody received the message and entered a wrong
- * code — which is evidence the member **DOES** control the mobile, cutting against element 3. It is
- * deliberately NOT in the predicate, because adding it narrows eligibility beyond what was ruled and
- * `2026-08-14-112` clause 3 forbids inventing mechanism. ⚠ The asymmetry, for whoever answers: wrong
- * permissively admits a fallback that should have been refused; wrong restrictively denies a member a
- * statutory route.
+ * ⚠ WHY NO `grant_id` ON THE OTP ROW. `member_auth_otps` is GLOBAL and pre-scope, shared with the
+ * `login` and `step_up` pools, so threading a correlation id through `requestOtp` would change shared
+ * authentication code. `invalidateLiveOtps` already burns the prior live OTP per `(mobile, intent)` on
+ * re-issue, so the surviving expired-unconsumed row is always the latest — which makes the grant's
+ * `created_at` lower bound sufficient to identify "the OTP issued for this grant".
+ *
+ * ⚠ OPEN, NON-BLOCKING (`2026-08-14-113` *Open follow-ups*, restated unchanged by `2026-08-15-117`):
+ * should this additionally require `attempts = 0`? A NON-ZERO attempt count means somebody received the
+ * message and entered a wrong code — which is evidence the member **DOES** control the mobile, cutting
+ * against element 3. It is deliberately NOT in the predicate, because adding it narrows eligibility
+ * beyond what was ruled and `2026-08-14-112` clause 3 forbids inventing mechanism. ⛔ The grant scoping
+ * above is ORTHOGONAL to this question: it changes WHICH OTP is read, never WHAT is read from it.
+ * ⚠ The asymmetry, for whoever answers: wrong permissively admits a fallback that should have been
+ * refused; wrong restrictively denies a member a statutory route.
  */
 export async function primaryDeliveryNotCompletedAt(
   db: Db,
   memberId: MemberId,
+  exportId: DataExportId,
   now: Date,
 ): Promise<Date | null> {
+  // The most recent member-direct grant for THIS export, at ANY status — an expired or consumed grant
+  // still evidences that the primary route was attempted, which is the fact element 2 turns on.
+  const [grant] = await db
+    .select({ createdAt: dataExportDeliveryGrants.createdAt })
+    .from(dataExportDeliveryGrants)
+    .where(
+      and(
+        eq(dataExportDeliveryGrants.exportId, exportId),
+        eq(dataExportDeliveryGrants.channel, 'member_direct' satisfies DeliveryChannel),
+      ),
+    )
+    .orderBy(sql`${dataExportDeliveryGrants.createdAt} DESC`)
+    .limit(1);
+  // ⛔ FAIL CLOSED: the primary was never attempted for this export.
+  if (!grant) return null;
+
   const rows = await db
     .select({ expiresAt: memberAuthOtps.expiresAt })
     .from(memberAuthOtps)
@@ -60,6 +99,8 @@ export async function primaryDeliveryNotCompletedAt(
         eq(memberAuthOtps.intent, DATA_EXPORT_DELIVERY_OTP_INTENT),
         isNull(memberAuthOtps.consumedAt),
         lt(memberAuthOtps.expiresAt, now),
+        // ⛔ The lower bound is what makes this THIS delivery's OTP and not a stale one from months ago.
+        gte(memberAuthOtps.createdAt, grant.createdAt),
       ),
     )
     .orderBy(sql`${memberAuthOtps.expiresAt} DESC`)

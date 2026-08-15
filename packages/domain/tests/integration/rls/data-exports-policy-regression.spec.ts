@@ -219,16 +219,21 @@ describe.skipIf(!hasDatabase)('data_exports RLS + constraint policy regression',
     expect((err as { constraint?: string }).constraint).toBe('data_exports_helpdesk_ticket_id_fk');
   });
 
-  it('⭐ AC15 — the partial unique index permits many non-pending rows but ONE pending row', async () => {
+  // ⛔ SPLIT INTO TWO `it()` BLOCKS, AND AC15 REQUIRED THAT IN TERMS: *"asserts the index directly, in
+  // TWO separate `it()` blocks … (a) and (b) must not share an `it()`"*. The reason is mechanical: a
+  // 23505 ABORTS the surrounding transaction, so every statement after it in the same block fails with
+  // `25P02 current transaction is aborted`. Sharing a block therefore forces the abort to be ordered
+  // LAST, which is exactly one reordering away from silently disabling the other arm. They shipped
+  // combined; the round-2 review restored the split.
+
+  it('⭐ AC15(b) — the index is PARTIAL: many non-pending rows for one member are permitted', async () => {
     // ⚠ BEHAVIOURALLY LOAD-BEARING for Story 10.21: the off-portal enqueue maps this index's 23505
-    // onto a typed 409 naming the existing pending export. If the index were dropped, or widened to
-    // cover every status, the story's collision rule would silently stop working — the route would
-    // create a second row instead of refusing.
+    // onto a typed 409 naming the existing pending export. If the index were widened to cover every
+    // status, ordinary history would start colliding and the member could never export again.
     const { tx, client } = getTx();
     const aMember = await seedMember(tx, PARIWAR_A);
     await client.query('RESET ROLE');
 
-    // PARTIAL: several non-pending rows for one member are fine.
     for (const status of ['ready', 'consumed', 'expired', 'failed']) {
       await client.query(
         `INSERT INTO data_exports (member_id, pariwar_id, status, requested_at)
@@ -237,13 +242,25 @@ describe.skipIf(!hasDatabase)('data_exports RLS + constraint policy regression',
       );
     }
 
-    // UNIQUE on the pending subset: the first pending row inserts…
+    const { rows } = await client.query(
+      `SELECT count(*)::int AS n FROM data_exports WHERE member_id = $1 AND status <> 'pending'`,
+      [aMember],
+    );
+    expect((rows[0] as { n: number }).n).toBe(4);
+  });
+
+  it('⭐ AC15(a) — the index is UNIQUE on the pending subset: a SECOND pending row is refused', async () => {
+    // ⚠ This block ends in a 23505, which aborts the tx — which is precisely why it may not share an
+    // `it()` with (b) above. ⛔ Do not add assertions after the catch; they would hit 25P02.
+    const { tx, client } = getTx();
+    const aMember = await seedMember(tx, PARIWAR_A);
+    await client.query('RESET ROLE');
+
     await client.query(
       `INSERT INTO data_exports (member_id, pariwar_id, status, requested_at)
        VALUES ($1, $2, 'pending', now())`,
       [aMember, PARIWAR_A],
     );
-    // …and the second is refused.
     const err = await client
       .query(
         `INSERT INTO data_exports (member_id, pariwar_id, status, requested_at, requested_via)

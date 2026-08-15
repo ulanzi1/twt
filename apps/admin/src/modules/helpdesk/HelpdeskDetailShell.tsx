@@ -6,7 +6,7 @@
 // the mutations. The reply/resolve message is local input state (a presentational concern).
 
 import { DPDPA_DATA_RIGHTS_SUBCATEGORY, type HelpdeskAdminTicketDetailResponse } from '@twt/contracts';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useState } from 'react';
 
 import { crossLinkNavs } from './crossLinks.js';
@@ -37,6 +37,17 @@ export interface HelpdeskDetailShellProps {
   dataRightsPending?: { buildExport: boolean; erasure: boolean };
   dataRightsError?: string;
   dataRightsNotice?: string;
+  /**
+   * The step-up elevation slot, rendered inside this panel when the container is collecting a code.
+   *
+   * ⛔ EVERY action on this panel is gated by a DISTINCT step-up context, and before this the app
+   * offered NO WAY to satisfy it — `requestDataRightsStepUp` existed and was called from nowhere, so an
+   * operator clicked any button and received a bare 403 with no affordance to elevate anywhere in the
+   * app. The panel was unusable end-to-end while its integration test proved only that the 403 existed.
+   * ⚠ Stays a `ReactNode` supplied by the container, matching this shell's pure-presentational
+   * contract — the shell never owns elevation state.
+   */
+  dataRightsStepUp?: ReactNode;
 
   // ── AC-R1 delivery + AC-R2 correction ────────────────────────────────────────────────────────────
   onDeliverMemberDirect?: () => void;
@@ -67,6 +78,7 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
     dataRightsPending,
     dataRightsError,
     dataRightsNotice,
+    dataRightsStepUp,
     onDeliverMemberDirect,
     onDeliverStaffMediated,
     deliveryPending,
@@ -171,6 +183,8 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
             <p role="status" className="text-green-800">{dataRightsNotice}</p>
           )}
 
+          {dataRightsStepUp}
+
           {canFulfilDataRights && (
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
@@ -185,9 +199,10 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
                     ? resolveEn('helpdesk.action.pending')
                     : resolveEn('helpdesk.dataRights.buildExport')}
                 </button>
-                {/* ⚠ Says plainly that BUILDING is not DELIVERING. Delivery is undecided governance
-                    (AC-R1 / Escalation 1), and an operator must not infer from a success message that
-                    they may now hand the file over. */}
+                {/* ⚠ Says plainly that BUILDING is not DELIVERING — a real and load-bearing
+                    distinction. ⛔ It no longer says delivery is UNSETTLED: that was copy written while
+                    AC-R1 was blocked, and it shipped directly above the two handover controls it denied
+                    the existence of. Delivery was settled by `2026-08-14-109` cl.1, `-110` … `-113`. */}
                 <p className="text-xs text-gray-600">{resolveEn('helpdesk.dataRights.buildExportNote')}</p>
               </div>
 

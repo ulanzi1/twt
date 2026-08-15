@@ -7,9 +7,12 @@
 // ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT — see the AC-R1/AC-R2 sections below.
 // Decisions `2026-08-14-109` through `-113` ruled the model (member-direct primary + narrow
 // staff-mediated exception, three-part gate, mandated `primary_delivery_not_completed` naming) and it
-// shipped. ⛔ AC-R3 (the trustee-authority recipient) REMAINS BLOCKED on Escalation 10 — do not grant
-// `member.data_rights` to `trustee_panel`, do not add a routing rule, and do not make `routed_to_role`
-// authoritative on the strength of anything in this file.
+// shipped. ⭐ AC-R3 (the trustee-authority recipient) is CLOSED, not blocked: `2026-08-14-109` clause 7 RULED Escalation 10: *"NO DPDPA ACTION INHERENTLY REQUIRES
+// TRUSTEE PANEL AUTHORITY"* — not access, not portability, not correction, and not erasure of a
+// terminated member. ⛔ AC-R3 closed with a recorded disposition and NO code changes, and the exclusion
+// of `trustee_panel` is therefore SETTLED, not pending.
+// ⛔ Do not grant `member.data_rights` to `trustee_panel`, do not add a routing rule, and do not make
+// `routed_to_role` authoritative on the strength of anything in this file.
 
 import { z } from 'zod';
 

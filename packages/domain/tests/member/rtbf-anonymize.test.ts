@@ -101,7 +101,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     //   1. an unconditional NULL of `artifact_ciphertext` on every row of the member; and
     //   2. a status flip to `expired` restricted to `pending`/`ready` rows ONLY.
     // ⛔ The two are NOT collapsible. (2) is scoped and (1) is not, because the `consumed` STATUS is
-    // deliberately left untouched pending Escalation 9 while its ciphertext is still zeroed. And the
+    // deliberately left untouched by RULING (`2026-08-14-109` cl.6) while its ciphertext is still zeroed. And the
     // `pending` flip is the load-bearing guard that stops an in-flight DATA_EXPORT_BUILD resurrecting
     // the dossier after the erasure commits.
     // ⛔ This assertion was NOT named as collateral by the story spec; it was found by running the

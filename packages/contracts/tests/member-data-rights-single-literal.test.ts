@@ -29,8 +29,26 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../../..');
 
-/** Source trees that may legitimately mention the token. */
-const SCAN_ROOTS = ['packages/contracts/src', 'packages/domain/src', 'apps/api/src', 'apps/admin/src'];
+/**
+ * Trees that may legitimately mention the token.
+ *
+ * ⛔ TEST TREES ARE IN SCOPE, and the omission was a real hole (round-2 code review). AC2 requires the
+ * token to be consumed by the handler, the operator UI **and the tests** — but the scan covered only
+ * `src`, so `apps/api/tests` shipped a raw `sub_category` literal in the fixture that drives the whole
+ * AC2 intake path. AC2's own justification applies verbatim to a fixture: the catch-all rule matches
+ * anything, so a typo there routes just as cleanly, the fixture silently stops exercising the AC2 path,
+ * and the suite stays green while proving less than its name.
+ * ⛔ Do not narrow this back to `src`.
+ */
+const SCAN_ROOTS = [
+  'packages/contracts/src',
+  'packages/contracts/tests',
+  'packages/domain/src',
+  'packages/domain/tests',
+  'apps/api/src',
+  'apps/api/tests',
+  'apps/admin/src',
+];
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.turbo', 'coverage', '.git']);
 const SCAN_EXT = new Set(['.ts', '.tsx']);
@@ -79,6 +97,15 @@ function filesContaining(needle: string): string[] {
   return hits.sort();
 }
 
+/**
+ * A token guaranteed ABSENT from every scanned file — ⛔ ASSEMBLED AT RUNTIME, never written as a
+ * quoted literal. Writing it out would place it in a scanned file and make the revert-sanity assertion
+ * below find itself. That is not hypothetical: this gate and its sibling both hardcoded the SAME
+ * sentinel, and the moment the scan roots widened to cover the test trees each began finding the
+ * other's copy. ⛔ Do not "simplify" this into a string constant.
+ */
+const ABSENT_SENTINEL = ['no', 'such', 'token', 'in', 'any', 'scanned', 'file'].join('-');
+
 describe('Story 10.21 AC2 — the DPDPA tokens are declared in exactly ONE module', () => {
   it('the subcategory literal appears in exactly one source module (its own)', () => {
     // ⚠ needle read from the constant, never written here — see the header.
@@ -108,7 +135,7 @@ describe('Story 10.21 AC2 — the DPDPA tokens are declared in exactly ONE modul
     // ⛔ Revert-sanity. A scan that silently matches nothing would pass forever and prove nothing. This
     // asserts the machinery itself works, using a token the scanner WILL find in the owner module.
     expect(filesContaining(DPDPA_DATA_RIGHTS_SUBCATEGORY).length).toBeGreaterThan(0);
-    expect(filesContaining('a-token-that-appears-in-no-source-file-anywhere')).toEqual([]);
+    expect(filesContaining(ABSENT_SENTINEL)).toEqual([]);
     // ⛔ And the quote-delimiting itself must hold: a token that only ever appears as the PREFIX of a
     // longer literal is NOT a declaration of that token, and must not be reported as one.
     expect(filesContaining('member_data_rights.rtbf')).toEqual([]);

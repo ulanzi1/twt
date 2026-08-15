@@ -16,8 +16,9 @@
 // here fails closed (tolerable); a typo on the OTP side yields an elevation that can NEVER satisfy this
 // gate, with nothing anywhere naming the cause.
 //
-// ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT below. ⛔ NO trustee-authority destination
-// (AC-R3, Escalation 10) — that one alone remains RAISED AND UNANSWERED.
+// ⭐ DELIVERY (AC-R1) AND CORRECTION (AC-R2) ARE BUILT below. ⛔ NO trustee-authority destination —
+// AC-R3 is CLOSED BY RULING, not open: `2026-08-14-109` clause 7 ruled that no DPDPA action inherently
+// requires Trustee Panel authority, so AC-R3 closed with a recorded disposition and NO code changes.
 
 import {
   ActiveDataRightsExportResponse,

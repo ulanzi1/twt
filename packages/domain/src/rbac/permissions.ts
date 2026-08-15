@@ -530,11 +530,15 @@ export const SEED_PERMISSION_KEYS = [
   // minting a bundle for an unconstituted body seeds an INERT capability (the Story 10.18 lesson). The
   // DPO is the intended future holder of this key — recorded here as a comment, not as a bundle.
   //
-  // ⚠ OPEN — who holds this key when the requested action requires TRUSTEE authority is Escalation 10,
-  // RAISED AND UNANSWERED (Decision `2026-08-14-107`). The Trustee Panel has governance authority and no
-  // operational queue: `trustee_panel` (roles.ts) holds no helpdesk capability at all. ⛔ Do NOT grant
-  // this key to `trustee_panel` pending that ruling — Story 10.21's AC-R3 owns it, and a pre-emptive
-  // grant would decide by implementation the question the escalation exists to put to the Panel.
+  // ⭐ SETTLED — Decision `2026-08-14-109` clause 7 RULED Escalation 10 (raised by `2026-08-14-107`):
+  // *"NO DPDPA ACTION INHERENTLY REQUIRES TRUSTEE PANEL AUTHORITY"* — not access, not portability, not
+  // correction, and not erasure of a terminated member; its adjacency to the Panel-exclusive
+  // `member.restore_terminated` does not carry Panel exclusivity across. Story 10.21's AC-R3 closed
+  // with a recorded disposition and NO code changes.
+  // ⛔ Do NOT grant this key to `trustee_panel` — the exclusion is now RULED ("ruled: not required"),
+  // not pending a ruling, and reversing it would require SUPERSEDING `109`
+  // ([[feedback_supersede_never_reinterpret]]). The Trustee Panel holds governance authority and no
+  // operational queue: `trustee_panel` (roles.ts) holds no helpdesk capability at all.
   // STEP-UP: gated behind a DISTINCT step-up context (`DATA_RIGHTS_STEP_UP_CONTEXT`), so no other
   // elevation satisfies it and vice-versa.
   'member.data_rights',

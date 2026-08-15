@@ -1,7 +1,11 @@
 # Trustee Panel Routing Note — Story 10.22, Moderation Appeal Mechanism
 
-**Status:** ⏳ **Open — ten questions, awaiting ruling.** **Q1, Q2, Q3, Q4 and Q8 are ⛔ BLOCKING**;
-Q5, Q6, Q7, Q9 and Q10 are answerable but each has a stated non-answer consequence.
+**Status:** ⚠ **RULED 2026-08-15 — all ten questions answered, and Q3D MATERIALLY AMENDED beyond the
+options offered. ⛔ SEVEN CONFLICTS SURFACED AND UNRESOLVED; §8.8 IS NOT AUTHORED and no
+`.decision-log.md` entry exists.** See *"The ruling as given"* and *"⛔ CONFLICTS"* at the foot of this
+note, which are authoritative where they differ from the option text above.
+*(Superseded status line, retained: ⏳ Open — ten questions, awaiting ruling. Q1, Q2, Q3, Q4 and Q8 are
+⛔ BLOCKING; Q5, Q6, Q7, Q9 and Q10 are answerable but each has a stated non-answer consequence.)*
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-15, against
 `_bmad-output/implementation-artifacts/10-22-moderation-appeal-mechanism.md`

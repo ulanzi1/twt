@@ -1,4 +1,57 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-15n (10-22-moderation-appeal-mechanism: ready-for-dev -> in-progress via
+#   bmad-dev-story, off main @ b3e12e1 (clean, fetched, == origin/main). GOVERNANCE HALF ONLY --
+#   the implementation half has NOT begun and §8.8 is NOT authored.
+#   Task 0: all TWELVE premises re-verified live, ALL PASS. Two PATH citations in the story
+#   corrected: migrations live in packages/domain/migrations/ (NOT drizzle/), and the key-count
+#   assertion is packages/domain/tests/rbac/permissions.test.ts:56. Neither changes a premise.
+#   ⭐ Task 0 FINDING -- a FIFTH untrue copy site, absent from the story's four-site inventory:
+#   moderation.notice.terminated.body_access_retained (en+hi :342) makes the same unkeepable
+#   "request a review from your membership status page" promise to a TERMINATED member. Raised as
+#   routing-note F-4; the Panel did NOT rule on it, so the proposed disposition (fold into AC3)
+#   stands as a RECOMMENDATION ONLY.
+#   Task 1 (AC1): trustee-panel-routing-note-2026-08-15-story-10-22.md authored with Q1-Q10 and
+#   committed ALONE (56663ac) -- zero packages/ and zero apps/ paths, verified by git show
+#   --name-only. Story spec + this ledger flip committed AHEAD of it (c0cb7eb) so the governance
+#   commit carries one file.
+#   Task 2: THE PANEL RULED all ten questions -- every one option (a), matching the ⭐ -- and then
+#   MATERIALLY AMENDED Q3D beyond the options offered into a THREE-TIER APPEAL LADDER: 1 Trustee ->
+#   2 Trustees -> all 3 (final), majority vote, automatic escalation on a 1-1 split with NO casting
+#   vote, NO recusal for prior participation, and finality after the third. Recorded VERBATIM at
+#   the foot of the note (41dea31) as an ADDITION, never read back into option (a).
+#   ⛔ STOPPED THERE, at the Panel's OWN standing direction: "if any AC cannot be implemented
+#   exactly from these rulings, stop and surface the conflict rather than inventing a rule."
+#   §8.8 is NOT authored in either locale, NO .decision-log.md entry exists (head is still
+#   2026-08-15-120), and the implementation branch is NOT cut.
+#   SEVEN CONFLICTS (C-1..C-7), each against the instrument or file that establishes it:
+#   C-1 Q1(a) "single internal appeal" vs the three-appeal ladder -- §8.8 must say one thing.
+#   C-2 Q2B ("a DIFFERENT Panel member MUST hear it") vs Q3D ("prior participation does NOT create
+#       a recusal requirement"). HEAD-ON. Breaks AC5 ENTIRELY -- the exclusion set, the typed 409
+#       and the mandatory polarity-pair test have NO SUBJECT until it resolves.
+#   ⛔ C-3 and C-4 are conflicts with the TRUST DEED, the SUPERIOR instrument:
+#   C-3 Deed Clause 18(a) (trust-deed.md:211) puts the Board at THREE-TO-NINE Trustees. Q3D
+#       presumes exactly three. trustee_panel is a role with NO cardinality -- nothing counts
+#       holders and nothing could enforce "all three" against five.
+#   C-4 Deed Clause 19(c) (trust-deed.md:229) MANDATES the Chairperson's casting vote on equality,
+#       and §8.7 binds the Panel to Clause 19 expressly. Q3D disapplies it. A Niyamavali Part 8
+#       amendment CANNOT disapply a Deed clause -- that is a Clause 27(b) Deed amendment
+#       (two-thirds + a supplementary REGISTERED deed), out of this story's scope entirely. There
+#       is also NO Chairperson concept anywhere in the codebase.
+#   C-5 AC4's record is SINGULAR (decided_by_actor_id/_display/_at). A majority vote needs a votes
+#       CHILD TABLE (the claim_r9_votes shape), a tier column, a vote->outcome derivation and an
+#       auto-escalation transition -- none scoped by AC4/Task 4/Task 5. Un-asked: does each voting
+#       Trustee author their OWN reasoned outcome (N Tier-1 ciphertexts)? AC9 depends on it.
+#   C-6 AC4/D4's partial-UNIQUE rule is superseded by a THIRD constraint (<=3 per action,
+#       tier-ordered, terminal exhaustion) -- neither the shipped rule nor the naive tightening D4
+#       EXPRESSLY FORBIDS.
+#   C-7 The ladder resembles Part 9's three stages (§1.3 glosses them as "the three escalation
+#       tiers"), so AC2's not-Part-9 sentence must now DISTINGUISH, not merely assert.
+#   CLEAN and ready the moment C-1..C-6 resolve: Q2A, Q3A, Q3B, Q3C, Q4A, Q4B (AC6 entire), Q5, Q6,
+#   Q7 (AC7 entire), Q8's RBAC half, Q9, Q10 (AC8's deferral register).
+#   UN-RULED, preserved as RECOMMENDATIONS ONLY: F-4; Q2.2's exhausted-Panel sub-point; and the Q8
+#   key NAME -- Q8(a) ruled THAT a key be created, not WHICH.
+#   Standing Panel obligation queue reported as LAST ENUMERATED (NINE, deferred-work.md:283,
+#   2026-08-12) and expressly NOT re-enumerated -- a last-recorded figure, not a verified one.)
 # last_updated: 2026-08-15m (10-22-moderation-appeal-mechanism: backlog -> ready-for-dev via
 #   bmad-create-story, off main @ b3e12e1 (clean, fetched, == origin/main). Saved
 #   10-22-moderation-appeal-mechanism.md.

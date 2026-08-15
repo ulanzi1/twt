@@ -502,7 +502,7 @@ reader does not read the classification as forbidding them.
       `git show --stat` that **no** `packages/` or `apps/` path appears
 
 ### Task 2 — Obtain the ruling; record it (AC: 1, 2)
-- [ ] Record the ruling verbatim at the foot of the note; ⚠ if the Panel re-numbers or redefines a
+- [x] Record the ruling verbatim at the foot of the note; ⚠ if the Panel re-numbers or redefines a
       question, map its numbering to this note's **before** reading any clause against a Q number
 - [ ] Author the `.decision-log.md` entry with **per-clause provenance**, carrying the **full §8.8 text
       in both locales verbatim** (premise #2)
@@ -727,12 +727,44 @@ without a separate ruling, with the Panel invited to route it separately if it p
   early-legality fast-fail (Story 10.20 inserted the escalation-test block ahead of it) and the
   appeal-CTA claim lives at `:414-419`. Recorded here per AC3; ⛔ the epic is **not** silently edited.
 
-⛔ **HALT — Task 2 requires a Trustee Panel ruling on Q1–Q10.** No implementation file may be written
-first: §8.8 is a reserved number whose closure the instrument states *"requires its own amendment"*,
-and D1 makes the governance half half the story. Five questions are blocking and have **no defensible
-default**; Q8 in particular cannot be defaulted, because reusing `member.moderate` is a known-bad
-(`pariwar_admin` and `trustee_panel` both hold it) and minting a key unruled is what
-`[[feedback_governance_commits_precede_implementation]]` forbids.
+*(Superseded: the HALT above was awaiting the ruling. The ruling arrived 2026-08-15 — see below.)*
+
+**Task 2 — the ruling arrived and is RECORDED VERBATIM (`41dea31`). It is NOT YET ACTIONABLE.**
+
+All ten questions were answered — every one of them option (a), matching the ⭐ — and then **Q3D was
+MATERIALLY AMENDED beyond the options offered**: option (a) was adopted and immediately replaced with a
+**three-tier appeal ladder** (1 Trustee → 2 Trustees → all 3, final), majority vote, **automatic
+escalation on a 1–1 split with no casting vote**, **no recusal for prior participation**, and
+**finality after the third**. Recorded as an **addition**, not read back into option (a) as though it
+had been one (the Decision `2026-08-12-099` precedent).
+
+⛔ **STOPPED at the Panel's own standing direction** — *"If any AC cannot be implemented exactly from
+these rulings, stop and surface the conflict rather than inventing a rule."* **§8.8 is NOT authored in
+either locale, no `.decision-log.md` entry exists, and the implementation branch is NOT cut.** An entry
+authored now would have to state a ruling that is not internally consistent, and Decision
+`2026-08-09-095`'s per-clause provenance requirement cannot be met while two `[Trustee-ratified]`
+clauses contradict each other.
+
+**Seven conflicts, each stated against the instrument or file that establishes it, all verified live:**
+
+| # | Conflict | Breaks |
+|---|---|---|
+| **C-1** | Q1(a) *"single internal appeal"* vs the three-appeal ladder. §8.8 must say one thing. | AC2 |
+| **C-2** | Q2B (*"a **different** Panel member **must** hear it"*) vs Q3D (*"prior participation does **not** create a recusal requirement"*). Head-on; three defensible readings. | ⛔ **AC5 entirely** — the exclusion set, the typed 409 and the mandatory polarity-pair test have **no subject** |
+| **C-3** | **Trust Deed Clause 18(a)** (`trust-deed.md:211`) puts the Board at **three-to-nine** Trustees. Q3D presumes exactly three (*"all 3"*, *"1–1 split"*, *"the full three-member Panel"*). `trustee_panel` is a role with **no cardinality**. | AC2, AC4, AC5 |
+| **C-4** | **Trust Deed Clause 19(c)** (`trust-deed.md:229`) **mandates** the Chairperson's casting vote on equality, and §8.7 binds the Panel to Clause 19 expressly. Q3D disapplies it. ⛔ A Part 8 amendment **cannot** disapply a Deed clause — that is a **Clause 27(b)** Deed amendment (two-thirds + a supplementary *registered* deed). There is also **no Chairperson concept anywhere in the codebase**. | AC2, and the story's schedule under the amend-the-Deed-first route |
+| **C-5** | AC4's record is **singular** (`decided_by_actor_id` / `_display` / `_at`). A majority vote needs a **votes child table**, a **tier** column, a vote→outcome derivation and an auto-escalation transition — none scoped. Also un-asked: does each voting Trustee author their **own** reasoned outcome (N Tier-1 ciphertexts)? | AC4, AC9, Tasks 4/5/6 |
+| **C-6** | AC4/D4's partial-UNIQUE rule is superseded by a **third** constraint (≤3 per action, tier-ordered, terminal exhaustion) — neither the shipped rule nor the naive tightening **D4 expressly forbids**. | AC4, D4 |
+| **C-7** | The ladder resembles Part 9's three stages (§1.3 glosses them as *"the three escalation tiers"*), so AC2's not-Part-9 sentence must now **distinguish**, not merely assert. | AC2 (drafting guidance, not a new ruling) |
+
+**Clean and ready the moment C-1…C-6 resolve** — recorded so the register is not read as blocking more
+than it does: **Q2A · Q3A · Q3B · Q3C · Q4A · Q4B (AC6 stands entire) · Q5 · Q6 · Q7 (AC7 stands
+entire) · Q8's RBAC half · Q9 · Q10 (AC8's deferral register stands).**
+
+**Un-ruled, and preserved as recommendations ONLY — never represented as decisions**, per the Panel's
+direction: **F-4** (the fifth untrue copy site); **Q2.2's exhausted-Panel sub-point**; and the **Q8 key
+NAME** (`member.moderation_appeal.decide` is the author's proposal — Q8(a) ruled *that* a key be
+created, not *which*).
 
 ### File List
 
@@ -743,8 +775,8 @@ default**; Q8 in particular cannot be defaulted, because reusing `member.moderat
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `10-22…: ready-for-dev → in-progress`
 - `_bmad-output/implementation-artifacts/10-22-moderation-appeal-mechanism.md` — this record
 
-*(No `packages/`, `apps/`, `docs/` or migration file has been touched. The implementation half has not
-begun.)*
+*(No `packages/`, `apps/`, `docs/` or migration file has been touched. §8.8 is **not** authored, no
+`.decision-log.md` entry exists, and the implementation half has **not** begun.)*
 
 ---
 
@@ -752,6 +784,7 @@ begun.)*
 
 | Date | Change |
 |---|---|
+| 2026-08-15 | **Task 2, partial — the ruling is RECORDED, not actionable.** All ten questions ruled (every one option (a)), and **Q3D materially amended beyond the options offered** into a three-tier appeal ladder with majority voting, tie auto-escalation, no casting vote, no recusal, and finality at the third. Recorded verbatim at the foot of the routing note (`41dea31`) with a numbering map and an addition-not-option flag. ⛔ **SEVEN CONFLICTS SURFACED (C-1…C-7)** — including two against the **Trust Deed** itself (Clause 18(a): the Board is 3–9 Trustees, not 3; Clause 19(c): the Chairperson's casting vote is **mandated** and cannot be disapplied by a Part 8 amendment). **§8.8 NOT authored, no `.decision-log.md` entry, implementation branch NOT cut** — per the Panel's own direction to surface rather than invent. |
 | 2026-08-15 | **Task 0 + Task 1 (AC1).** Twelve premises re-verified live at `b3e12e1` — all PASS; two path citations in the story corrected (`packages/domain/migrations/`, `packages/domain/tests/rbac/permissions.test.ts`). ⭐ Task 0 finding: a **fifth** untrue copy site (`moderation.notice.terminated.body_access_retained`, en+hi) absent from the story's inventory — raised as routing-note **F-4**. Routing note authored with Q1–Q10 and committed **ALONE** (`56663ac`, zero `packages/`/`apps/` paths) on `governance/10-22-moderation-appeal-mechanism`. ⛔ **Story HALTED at Task 2 awaiting the Trustee Panel ruling.** |
 | 2026-08-15 | Story created — status `ready-for-dev`. Baseline `b3e12e1`. |
 | 2026-08-15 | Validated against live tree at `b3e12e1`: corrected a wrong `view-model.ts:86` citation (2 sites), corrected Q8's `roles.ts` line numbers and named `verifier`'s inert `member.moderate` grant, added an AC5 adjudication-list requirement (Panel discoverability), added a Q3 sub-clause + D4 clarification + AC4 clause on re-filing after a decision, and flagged AR-56's citation in AC3 as analogy not direct ratification. All 12 verified premises independently re-confirmed PASS. |

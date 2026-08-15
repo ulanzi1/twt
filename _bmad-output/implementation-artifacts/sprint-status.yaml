@@ -1,4 +1,31 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-15h (10-29-member-authored-staff-mediation-request: MINTED -> backlog.
+#   An OWED MINT discharging `Decision 2026-08-15-116` clause 3 -- Story 10.21's Escalation 11, ruled
+#   option (c): the staff-mediated fallback's element 1 must be a GENUINELY MEMBER-AUTHORED artifact,
+#   captured as a structured field at helpdesk ticket intake and READ by the delivery route, not accepted
+#   as a caller-supplied boolean. ⛔ The ruling explicitly did NOT mint the successor -- mints are
+#   governance acts taken at their owning story, never from inside a sibling -- so it sat recorded as an
+#   OWED mint with owner "still unnamed". This mint names it, which is what stops the deferral expiring
+#   unowned ([[project_r7_fact_producer_unbuilt]]).
+#   Governance-first, touching ZERO files under packages/ or apps/ -- the same shape as `3fa8d03`
+#   (governance(1.18): mint the three Family-B successors). Three artifacts only: epics.md (the section +
+#   7 ACs), this file, and deferred-work.md (the owed item re-pointed at its named owner).
+#   ⭐ WHAT THE 7 ACs PIN, beyond "capture a field": (3) the caller-supplied
+#   `member_requested_staff_mediation: z.literal(true)` is DELETED, not left beside a new read path --
+#   `116` cl.3 names the removal, and a read added alongside the boolean leaves the element-1/element-3
+#   collapse in place; (4) `member_request_recorded_at` must carry the MEMBER's intake instant, not the
+#   `now` the handler stamps when STAFF submits (the defect `2026-08-15-115` cl.3 found); (5) fails closed
+#   at BOTH layers -- the app read FEEDS migration 0104's three_part_gate_check, it does not replace it,
+#   and the existing migration-level assertions must still pass unchanged; (6) the test must prove element
+#   1 is MEMBER-AUTHORED, not merely PRESENT -- a non-null assertion proves nothing that z.literal(true)
+#   did not already satisfy; (2) BOTH intake paths (member app 10.2, operator 10.3) must capture it, or
+#   the ruling is met on one route and silently unmet on the other.
+#   ⛔ TWO THINGS THE MINT FORECLOSES: it does NOT re-open the delivery MODEL or elements 2/3 (`116` cl.2 --
+#   both confirmed correctly built), and it must NOT mint a new helpdesk category. The DPDPA intake path
+#   reuses category 'other' + the DPDPA subcategory with DEFAULT_ROUTING_POLICY byte-identical
+#   (`2026-08-14-106` cl.1); a new category is guaranteed-unrouted under every existing per-Pariwar
+#   override and trips the golden-hash fence ([[project_helpdesk_default_policy_version_trap]]).
+#   ⚠ NO CODE CHANGES IN THIS COMMIT and none owed yet -- 10.29 is backlog, not ready-for-dev.)
 # last_updated: 2026-08-15g (10-21-off-portal-dpdpa-access: stays DONE. ⛔ ESCALATION 12 WITHDRAWN ON
 #   EVIDENCE -- `Decision 2026-08-15-119`, superseding `-118`'s escalation (⛔ 118 NOT edited).
 #   The round-2 review had raised Escalation 12 claiming a member with no mobile on file has NO
@@ -6612,6 +6639,17 @@ development_status:
   # born already-discharged is a contradiction, Story 1.18 DISPOSITIONS this and never builds it --
   # even if it looks cheap after the ancestry work (1.18 AC6 / D6's "falls out cheaply" branch CLOSED).
   10-28-multi-node-report-scope: done
+  # ⭐ MINTED as an OWED MINT discharging Decision 2026-08-15-116 clause 3 (Story 10.21's Escalation 11,
+  # ruled option (c)). The ruling deliberately did NOT mint it -- "no story is minted from inside a
+  # sibling story; mints are governance acts taken at their owning story" -- and recorded it as owed in
+  # deferred-work.md. This entry names the owner so the deferral stops being unowned.
+  # Epic 10 is retrospected (optional); the placement is deliberate -- this corrects Story 10.21's
+  # element 1 on the helpdesk intake substrate, so it belongs to Epic 10. Do NOT "correct" it and do NOT
+  # flip epic-10-retrospective.
+  # ⛔ NOT URGENT AND NOT A HOTFIX. Decision 2026-08-15-116 clause 4: the current mechanization stays in
+  # production unchanged until this lands. The ruling found element 1's EVIDENTIARY STRENGTH weak, not
+  # the fallback unsafe to operate -- nothing about this story pauses staff-mediated delivery.
+  10-29-member-authored-staff-mediation-request: backlog
   epic-10-retrospective: optional
 
   # ==========================================================================

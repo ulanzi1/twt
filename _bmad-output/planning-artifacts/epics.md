@@ -4245,6 +4245,92 @@ were dropped.
 
 ---
 
+### Story 10.29: Member-Authored Staff-Mediation Request `[SURFACE]`
+
+> ⚠ **Minted as an OWED MINT discharging Decision `2026-08-15-116` clause 3 (Escalation 11, option (c)),
+> governance-first.** ⛔ The ruling deliberately did **not** mint it — *"no story is minted from inside a
+> sibling story; mints are governance acts taken at their owning story"*
+> ([[feedback_governance_commits_precede_implementation]]) — and recorded it as owed in
+> `deferred-work.md` instead. This mint names the owner, so the deferral stops being unowned
+> ([[project_r7_fact_producer_unbuilt]] — a deferral naming an epic expires unowned).
+>
+> ⭐ **WHAT WAS RULED, AND WHAT IS THEREFORE NOT OPEN HERE.** Decision `2026-08-14-113` clause 1 ratified a
+> **three-part gate** on staff-mediated delivery: (1) the member's own explicit request, (2) the
+> server-observed `primary_delivery_not_completed`, (3) the staff attestation. Decision `2026-08-14-111`
+> clause 3 had already warned that (1) and (3) are **two separate facts with different authors** and that
+> *"a single staff-authored 'reason' field would silently absorb the member's trigger into a staff
+> assertion"*. Decision `2026-08-15-115` found exactly that had shipped: element 1 is `z.literal(true)`, a
+> caller-supplied constant hardcoded by the admin client, with the server stamping its timestamp at the
+> instant **staff** submits. Decision `2026-08-15-116` ruled **option (c)** — a genuinely member-authored
+> artifact — with **no conditions**.
+>
+> ⛔ **THIS STORY DOES NOT RE-OPEN THE DELIVERY MODEL.** `116` clause 2: member-direct primary plus a narrow
+> staff-mediated exception stands, and **elements 2 and 3 are confirmed correctly built and are out of
+> scope**. A diff touching `primary_delivery_not_completed` or the attestation is out of scope.
+>
+> ⚠ **THE CURRENT MECHANIZATION STAYS IN PRODUCTION UNTIL THIS LANDS** (`116` clause 4). The ruling found
+> element 1's **evidentiary strength** weak, ⛔ **not** the fallback unsafe to operate. Nothing here pauses
+> staff-mediated delivery, and this story must not ship an intermediate state in which the boolean is
+> removed before the read path is complete.
+>
+> ⛔ **DO NOT MINT A NEW HELPDESK CATEGORY FOR THIS.** The DPDPA intake path deliberately reuses
+> `category: 'other'` + `sub_category: DPDPA_DATA_RIGHTS_SUBCATEGORY` with `DEFAULT_ROUTING_POLICY`
+> byte-identical (Decision `2026-08-14-106` clause 1). A new category is **guaranteed-unrouted** under
+> every existing per-Pariwar override and trips the golden-hash fence
+> ([[project_helpdesk_default_policy_version_trap]]). The capture is a **structured field**, not a new
+> routing surface.
+>
+> **Depends on:** Story 10.21 (`done`) — the three-part gate and the delivery routes this corrects;
+> Stories 10.1–10.3 (`done`) — the helpdesk intake substrate the field is captured on.
+
+As a member who has asked staff to hand over my data export because I cannot receive the code myself,
+I want that request recorded as something **I** said at intake,
+So that the exceptional route rests on my own request rather than on an operator asserting I made one.
+
+**Acceptance Criteria:**
+
+1. **The member's request is captured at INTAKE as a STRUCTURED field.** The ticket-intake contract gains
+   an explicit field recording that the member asked for staff-mediated delivery, together with the
+   instant it was recorded. ⛔ **Not the ticket `body`** — free text is never parsed by a gate, and the
+   `body` is exactly where Decision `2026-08-15-115` clause 4 found the "it is implied at intake" defence
+   to be unevidenced. ⛔ Not a new helpdesk category (see the banner).
+
+2. **Both intake paths can capture it.** A DPDPA ticket is filed either by the member (Story 10.2) or by a
+   helpline operator relaying the call (Story 10.3). Every path that can originate a data-rights ticket
+   must be able to record the field, or the ruling is satisfied on one route and silently unmet on the
+   other.
+
+3. **The delivery route READS the captured fact, and the caller-supplied boolean is REMOVED.**
+   `grantStaffMediatedDelivery` resolves element 1 from the originating ticket's captured field.
+   `member_requested_staff_mediation: z.literal(true)` is **deleted** from `StaffMediatedDeliveryRequest`
+   and from the admin client that hardcodes it. ⭐ **The removal is the point** — `116` clause 3 names it
+   explicitly, and a read path added *beside* a still-accepted boolean leaves the collapse in place.
+
+4. **`member_request_recorded_at` carries the MEMBER's instant, not the operator's.** Today the handler
+   writes `now` at the moment the staff-mediated route is called (`2026-08-15-115` clause 3) — a timestamp
+   for the staff action wearing the member's field name. It must carry the instant the member's request
+   was recorded at intake.
+
+5. **Fails closed, at BOTH layers.** A staff-mediated grant whose originating ticket carries no captured
+   member request is refused with a typed error **before any row exists**. ⛔ Migration 0104's
+   `data_export_delivery_grants_three_part_gate_check` continues to require `member_request_recorded_at`
+   NOT NULL on `staff_mediated` — the app-layer read does not replace the DB backstop, it feeds it. The
+   migration-level assertions in
+   `packages/domain/tests/integration/rls/data-rights-delivery-and-correction-policy-regression.spec.ts`
+   must still pass unchanged.
+
+6. **A test proves element 1 is now MEMBER-authored, not merely PRESENT.** ⛔ Asserting the field is
+   non-null proves nothing that `z.literal(true)` did not already satisfy. The test must show a
+   staff-mediated grant **refused** when the member never asked and **permitted** when they did, with the
+   difference being a fact recorded at intake rather than a flag set by the caller.
+
+7. **Elements 2 and 3 are untouched, and the story says so.** Per `116` clause 2. The
+   `primary_delivery_not_completed` scoping (Decision `2026-08-15-117` clause 3 — scoped to the export's
+   own member-direct grant) and the Tier-1 attestation posture are out of scope and must not be edited in
+   passing.
+
+---
+
 ## Epic 11a: Public Trust Identity Shell (parallel to Epic 3)
 
 **Institutional transparency framing (load-bearing for Epic 11a + 11b):** TWT transparency emphasizes **operational and governance visibility** rather than unrestricted public exposure of member identities. Public trust is established through auditability, published rules, contribution transparency, and accountable governance — **NOT** mass exposure of personal data. This framing governs every visibility decision in Epic 11a + 11b.

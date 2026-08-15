@@ -4756,7 +4756,16 @@ creates a NEW open item, recorded below as its replacement, per [[feedback_closu
   weak, not the fallback unsafe to operate. *Owner:* a named successor story — ⛔ **still unnamed**
   ([[project_r7_fact_producer_unbuilt]] — a deferral naming an epic expires unowned; no story is minted
   from inside a sibling story or this file — mints are governance acts taken at their owning story,
-  [[feedback_governance_commits_precede_implementation]]). *Re-trigger:* the next story that touches
+  [[feedback_governance_commits_precede_implementation]]).
+  ⭐ **DISCHARGED 2026-08-15 — the owner is now named: `Story 10.29 — Member-Authored Staff-Mediation
+  Request` `[SURFACE]`**, minted governance-first in `epics.md` with 7 ACs and entered in
+  `sprint-status.yaml` as `backlog`. ⛔ **The MINT is discharged; the WORK is not.** The story is backlog,
+  not `ready-for-dev`, and per Decision `2026-08-15-116` clause 4 the current mechanization stays in
+  production unchanged until it lands — the ruling found element 1's evidentiary strength weak, ⛔ not the
+  fallback unsafe to operate. ⚠ Keep this entry: it is the trail from the escalation to its owner, and
+  deleting it would leave `2026-08-15-116` clause 3's "owed mint" pointing at nothing
+  ([[feedback_closure_language_precision]] — "Closed by [mint]" is not "Not addressed").
+  *Re-trigger:* the next story that touches
   either the helpdesk ticket-intake surface (AC2) or the member-data-rights delivery module, or
   immediately if prioritized on its own.
   [`packages/contracts/src/member-data-rights/member-data-rights.ts` — `StaffMediatedDeliveryRequest.member_requested_staff_mediation`, `apps/api/src/modules/member-data-rights/handlers.ts` — `grantStaffMediatedDelivery`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx` — the fallback panel]

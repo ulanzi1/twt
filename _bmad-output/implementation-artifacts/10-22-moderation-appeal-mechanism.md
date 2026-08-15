@@ -488,17 +488,17 @@ reader does not read the classification as forbidding them.
 ## Tasks / Subtasks
 
 ### Task 0 — Orient (AC: all)
-- [ ] `git fetch origin`; confirm the tree is clean and `main` matches `origin/main`
+- [x] `git fetch origin`; confirm the tree is clean and `main` matches `origin/main`
       ([[feedback_git_fetch_before_remote_reasoning]])
-- [ ] Re-verify **every** premise above against the live tree; a premise that has drifted is a
+- [x] Re-verify **every** premise above against the live tree; a premise that has drifted is a
       finding, not a footnote
-- [ ] Re-read `.decision-log.md`'s newest entries **live** — do not carry any queue count, gate status
+- [x] Re-read `.decision-log.md`'s newest entries **live** — do not carry any queue count, gate status
       or ruling summary from this file without confirming it
 
 ### Task 1 — ⭐ FIRST: the routing note (AC: 1)
-- [ ] Author `trustee-panel-routing-note-<date>-story-10-22.md` with Q1–Q10, options, ⭐ recommendations
+- [x] Author `trustee-panel-routing-note-<date>-story-10-22.md` with Q1–Q10, options, ⭐ recommendations
       and the "Feeds" column
-- [ ] Commit **alone** on `governance/10-22-moderation-appeal-mechanism` — verify with
+- [x] Commit **alone** on `governance/10-22-moderation-appeal-mechanism` — verify with
       `git show --stat` that **no** `packages/` or `apps/` path appears
 
 ### Task 2 — Obtain the ruling; record it (AC: 1, 2)
@@ -668,11 +668,83 @@ reader does not read the classification as forbidding them.
 
 ### Agent Model Used
 
+`claude-opus-5` (Claude Code, bmad-dev-story)
+
 ### Debug Log References
+
+**Task 0 — premise re-verification at `b3e12e1`, all twelve checked live. ALL PASS.**
+
+| # | Claim | Verified |
+|---|---|---|
+| 1 | §8.8 reserved, note at `niyamavali.md:274` / hi `:272`, between §8.7 and §8.9 | ✅ verbatim match, both locales |
+| 2 | `docs/legal/` gitignored | ✅ `git check-ignore -v docs/legal/niyamavali.md` → `.gitignore:68:docs/legal/` |
+| 3 | `trustee_panel` = `[MEMBER_MODERATE, MEMBER_RESTORE_TERMINATED]`, `scopeCeiling: 'pariwar'`, no helpdesk capability | ✅ `roles.ts:594-637`; settled-fact note at `permissions.ts:539-541` |
+| 4 | `DEFAULT_ROUTING_POLICY` v1, nine categories, `complaint` → `pariwar_admin` @ `pariwar` with `sub_category: null` | ✅ `registry.ts:41,51-64` |
+| 5 | `GEO_RANK` `{global:0,pariwar:1,state:2,district:3,block:4}`, pure numeric compare | ✅ `scope.ts:59-70` |
+| 6 | `member.restore_terminated` held by `trustee_panel` alone | ✅ `roles.ts:79,636` — the only `MEMBER_RESTORE_TERMINATED` grant site |
+| 7 | Overlay never writes `members.state`; 3 statuses | ✅ `overlay.ts:1-30`, `status.ts:21` |
+| 8 | `ground-appended` spreads `auditShape`, omits `overlayShape` | ✅ `events.ts:73-79,97,109` |
+| 9 | `events_log.payload` is plaintext `jsonb` | ✅ `schema/events_log.ts:60` |
+| 10 | `member_data_rights_corrections.ts` exists (48 lines) | ✅ |
+| 11 | `PERMISSION_CATALOG_VERSION = 33`; `toHaveLength(42)` | ✅ `permissions.ts:456`; `packages/domain/tests/rbac/permissions.test.ts:56` — ⚠ the story's `permissions.test.ts:56` citation resolves to `packages/domain/tests/rbac/`, **not** a sibling of `permissions.ts` |
+| 12 | Last migration `0106`; journal `when: 1789875600000` | ✅ `packages/domain/migrations/` (⚠ **not** `packages/domain/drizzle/` — that path does not exist). Next: `0107`, `when: 1789962000000` |
+
+**Citation checks on the four named gap sites:** `status.ts:17` ✅, `handlers.ts:414-419` ✅,
+`presenter.ts:346` ✅, i18n `:339` both locales ✅. No `view-model.ts:86` site exists — the story's
+Change Log already records that correction, and it holds.
+
+**`.decision-log.md` read live:** head is `2026-08-15-120` (Story 10.29); **122** numbered entries.
+Next entry for this story: `2026-08-15-121`. Standing Panel obligation queue **last enumerated at
+NINE** (`deferred-work.md:283`, Story 10.20, 2026-08-12); ⛔ **not re-enumerated** by this story and
+no entry since restates it — a last-recorded figure, not a verified current one.
+
+**⭐ Task 0 FINDING — a FIFTH untrue copy site, absent from the story's inventory.**
+`moderation.notice.terminated.body_access_retained` (`packages/i18n/locales/{en,hi}/common.json:342`)
+tells a **terminated** member *"You can sign in as usual and request a review from your membership
+status page."* — the same unkeepable promise as site #4, made to the harsher sanction, in both
+locales. Not drift (the copy has not changed); an **omission in the story's inventory**, and material
+because AC3's requirement is that the shipped notice copy becomes **true**, not that four named
+strings do. Raised as **F-4** in the routing note; proposed disposition is to fold it into AC3
+without a separate ruling, with the Panel invited to route it separately if it prefers.
 
 ### Completion Notes List
 
+**Governance half — Task 0 and Task 1 complete; Task 2 is BLOCKED on the Panel ruling.**
+
+- Task 0: all twelve premises re-verified live (table above). Two **path** corrections to the story's
+  own citations recorded: migrations live in `packages/domain/migrations/`, and the key-count
+  assertion in `packages/domain/tests/rbac/permissions.test.ts:56`. Neither changes a premise.
+- Task 1: `trustee-panel-routing-note-2026-08-15-story-10-22.md` authored with Q1–Q10 (Q1, Q2, Q3, Q4
+  and Q8 marked ⛔ BLOCKING), lettered options, non-binding ⭐ recommendations, the **cost of each
+  option stated plainly**, a **"Feeds"** mapping per question, a *What non-answer would mean* table, a
+  *What a ruling would NOT mean* section, the queue reported as last-enumerated-not-re-verified, and a
+  ruling template. Four findings (F-1…F-4) raised ahead of the ruling.
+- Committed **ALONE** as `56663ac` on `governance/10-22-moderation-appeal-mechanism`; AC1's gate
+  verified by `git show --name-only` → **zero** `packages/` and **zero** `apps/` paths. The story spec
+  and the sprint-status flip were committed separately and **ahead** of it (`c0cb7eb`) precisely so the
+  governance commit carries one file.
+- ⚠ **`epics.md:4066`'s `handlers.ts:228` citation is STALE** — confirmed live: `:228` is now the
+  early-legality fast-fail (Story 10.20 inserted the escalation-test block ahead of it) and the
+  appeal-CTA claim lives at `:414-419`. Recorded here per AC3; ⛔ the epic is **not** silently edited.
+
+⛔ **HALT — Task 2 requires a Trustee Panel ruling on Q1–Q10.** No implementation file may be written
+first: §8.8 is a reserved number whose closure the instrument states *"requires its own amendment"*,
+and D1 makes the governance half half the story. Five questions are blocking and have **no defensible
+default**; Q8 in particular cannot be defaulted, because reusing `member.moderate` is a known-bad
+(`pariwar_admin` and `trustee_panel` both hold it) and minting a key unruled is what
+`[[feedback_governance_commits_precede_implementation]]` forbids.
+
 ### File List
+
+**Added**
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-15-story-10-22.md`
+
+**Modified**
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `10-22…: ready-for-dev → in-progress`
+- `_bmad-output/implementation-artifacts/10-22-moderation-appeal-mechanism.md` — this record
+
+*(No `packages/`, `apps/`, `docs/` or migration file has been touched. The implementation half has not
+begun.)*
 
 ---
 
@@ -680,5 +752,6 @@ reader does not read the classification as forbidding them.
 
 | Date | Change |
 |---|---|
+| 2026-08-15 | **Task 0 + Task 1 (AC1).** Twelve premises re-verified live at `b3e12e1` — all PASS; two path citations in the story corrected (`packages/domain/migrations/`, `packages/domain/tests/rbac/permissions.test.ts`). ⭐ Task 0 finding: a **fifth** untrue copy site (`moderation.notice.terminated.body_access_retained`, en+hi) absent from the story's inventory — raised as routing-note **F-4**. Routing note authored with Q1–Q10 and committed **ALONE** (`56663ac`, zero `packages/`/`apps/` paths) on `governance/10-22-moderation-appeal-mechanism`. ⛔ **Story HALTED at Task 2 awaiting the Trustee Panel ruling.** |
 | 2026-08-15 | Story created — status `ready-for-dev`. Baseline `b3e12e1`. |
 | 2026-08-15 | Validated against live tree at `b3e12e1`: corrected a wrong `view-model.ts:86` citation (2 sites), corrected Q8's `roles.ts` line numbers and named `verifier`'s inert `member.moderate` grant, added an AC5 adjudication-list requirement (Panel discoverability), added a Q3 sub-clause + D4 clarification + AC4 clause on re-filing after a decision, and flagged AR-56's citation in AC3 as analogy not direct ratification. All 12 verified premises independently re-confirmed PASS. |

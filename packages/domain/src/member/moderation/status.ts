@@ -16,6 +16,19 @@
 // harshest, rejoin-locking action can never be a single click — a trustee must first suspend
 // (itself notified, audited and appealable) and only then terminate. Even the harshest ground
 // (R14 forgery) is listed by the PRD as a SUSPENSION reason, so it too enters through suspension.
+//
+// ⭐ "APPEALABLE" IS NOW A STATEMENT OF FACT, and this note records what backs it. From Story 10.10
+// until Story 10.22 the word above was an UNBACKED ASSERTION in a load-bearing comment: no appeal
+// route existed, the CTA in both apps was a handler-less button, and the shipped notice copy promised
+// a suspended member a review they could not request. The mechanism is now Niyamavali **§8.8**
+// (ratified by Decision `2026-08-15-121`) — `member/moderation/appeal*.ts`, the
+// `member_moderation_appeals` record, and two intake surfaces (in-portal and the helpline route,
+// because §8.8 states that "the right to appeal does not depend on the access that termination
+// removes"). BOTH suspension and termination are appealable, there is NO deadline, and the appeal is
+// heard by a Panel member who took no part in the act.
+// ⛔ An appeal is NOT a fourth `ModerationAction` and NOT a fourth `ModerationStatus`: §8.8 makes an
+// allowed appeal DIRECT a restore rather than perform one, so nothing in the appeal path moves this
+// overlay. Adding either arm would silently mis-classify five `TERMINAL_STATES` sets.
 
 /** The derived moderation standing. `none` = not under moderation (the default for every member). */
 export const MODERATION_STATUSES = ['none', 'suspended', 'terminated'] as const;

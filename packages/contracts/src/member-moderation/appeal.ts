@@ -226,3 +226,32 @@ export const ModerationAppealDetailResponse = z
   })
   .strict();
 export type ModerationAppealDetailResponse = z.output<typeof ModerationAppealDetailResponse>;
+
+/**
+ * What the member's in-portal appeal screen needs to render itself honestly, in one read.
+ *
+ * ⚠ WHY THIS EXISTS. The validity payload derives the member's moderation standing from
+ * `specialFlags` and carries NO `moderation_action_id` — so the member surface cannot name the act it
+ * is appealing against, and §8.8 identifies an appeal BY that act's §8.6 record.
+ *
+ * ⛔ The alternative was to make `moderation_action_id` optional on the filing request and let the
+ * server infer the act. That was rejected: an inferred subject on a governance write is exactly the
+ * shape that lets a member appeal something other than what they were shown, and AC4 keys the whole
+ * record — including its uniqueness index — to the act.
+ *
+ * `appealable_action_ids` is already filtered to acts with NO open appeal, so the screen can show the
+ * "one open at a time" state without first earning a 409.
+ */
+export const MemberAppealContextResponse = z
+  .object({
+    /** Moderation acts this member may appeal right now — those with no open appeal against them. */
+    appealable_action_ids: z.array(UuidString),
+    /**
+     * The member's own appeals, newest first. ⛔ Carries no Tier-1 text: a member re-reading their own
+     * grounds is a separate decrypt-on-demand question this story does not answer, and echoing them
+     * on a list shape would break the discipline every other surface here follows.
+     */
+    appeals: z.array(ModerationAppealDto),
+  })
+  .strict();
+export type MemberAppealContextResponse = z.output<typeof MemberAppealContextResponse>;

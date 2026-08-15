@@ -415,8 +415,16 @@ export function createMemberModerationHandlers(deps: AppDeps) {
       //     is SUPERSEDED, not reinterpreted — by Decision `2026-08-10-097` clause 8 and Niyamavali
       //     §8.4, which the Panel ratified on 2026-08-10. The original Decision-6 record stands
       //     unedited ([[feedback_supersede_never_reinterpret]]). Its justification was reaching an
-      //     appeal CTA that does not exist: the CTA still has no moderation destination, which is
-      //     Story 10.22's to build.
+      //     appeal CTA that did not exist.
+      //     ⭐ STORY 10.22 BUILT THE DESTINATION. Niyamavali §8.8 (Decision `2026-08-15-121`)
+      //     establishes the moderation appeal: in-portal at `POST …/member/moderation/appeals`, and —
+      //     for a member whose access termination has removed — off-portal through the helpline arm,
+      //     because §8.8 states that "the right to appeal does not depend on the access that
+      //     termination removes."
+      //     ⛔ DECISION 6 STAYS SUPERSEDED. This does NOT restore the justification for open login
+      //     after termination — the off-portal arm exists precisely so that justification is not
+      //     needed. A future reader must not read "the CTA now works" as "Decision 6 was right after
+      //     all"; it was superseded on 2026-08-10 and remains so.
       //     Coverage enforcement is unchanged and orthogonal: the validity payload's moderation
       //     conjunction — `is_valid` (coverage) since 10.10, plus `is_assignable` (roster) since
       //     Story 10.17.

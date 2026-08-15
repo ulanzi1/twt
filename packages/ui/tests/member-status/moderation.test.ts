@@ -249,6 +249,24 @@ describe('the view-model: prose explanation + the appeal CTA (AC9)', () => {
     ).toBe(true);
   });
 
+  // ── Story 10.22 (AC7) — the §8.8 CTA predicate, and why it is NOT `showAppealCta` ──────────────
+  it('the §8.8 MODERATION-appeal CTA renders from BOTH moderation states', () => {
+    expect(
+      buildMemberStatusViewModel(suspendedPayload(), { variant: 'member' })
+        .showModerationAppealCta,
+    ).toBe(true);
+    expect(
+      buildMemberStatusViewModel(terminatedPayload(), { variant: 'member' })
+        .showModerationAppealCta,
+    ).toBe(true);
+  });
+
+  it('⛔ an UNMODERATED member gets neither CTA — there is no act to appeal', () => {
+    const vm = buildMemberStatusViewModel(basePayload(), { variant: 'member' });
+    expect(vm.showModerationAppealCta).toBe(false);
+    expect(vm.showAppealCta).toBe(false);
+  });
+
   it('an unmoderated member gets NO moderation prose (the detail key is absent, not empty)', () => {
     const vm = buildMemberStatusViewModel(basePayload(), { variant: 'member' });
     const headline = vm.sections.find((s) => s.id === 'headline')!;

@@ -6507,6 +6507,78 @@ components:
       required:
         - items
       additionalProperties: false
+    MemberAppealContext:
+      type: object
+      properties:
+        appealable_action_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        appeals:
+          type: array
+          items:
+            type: object
+            properties:
+              appeal_id:
+                type: string
+                format: uuid
+              member_id:
+                type: string
+                format: uuid
+              moderation_action_id:
+                type: string
+                format: uuid
+              filed_via:
+                type: string
+                enum: &a43
+                  - portal
+                  - helpline
+              helpdesk_ticket_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+              filed_at:
+                type: string
+                format: date-time
+              status:
+                type: string
+                enum: &a44
+                  - open
+                  - decided
+              outcome:
+                type:
+                  - string
+                  - "null"
+                enum: &a45
+                  - upheld
+                  - allowed
+              decided_by_display:
+                type:
+                  - string
+                  - "null"
+              decided_at:
+                type:
+                  - string
+                  - "null"
+                format: date-time
+            required:
+              - appeal_id
+              - member_id
+              - moderation_action_id
+              - filed_via
+              - helpdesk_ticket_id
+              - filed_at
+              - status
+              - outcome
+              - decided_by_display
+              - decided_at
+            additionalProperties: false
+      required:
+        - appealable_action_ids
+        - appeals
+      additionalProperties: false
     ModerationAppealFiled:
       type: object
       properties:
@@ -6518,17 +6590,13 @@ components:
           format: uuid
         filed_via:
           type: string
-          enum: &a43
-            - portal
-            - helpline
+          enum: *a43
         filed_at:
           type: string
           format: date-time
         status:
           type: string
-          enum: &a44
-            - open
-            - decided
+          enum: *a44
       required:
         - appeal_id
         - moderation_action_id
@@ -6607,9 +6675,7 @@ components:
                 type:
                   - string
                   - "null"
-                enum: &a45
-                  - upheld
-                  - allowed
+                enum: *a45
               decided_by_display:
                 type:
                   - string
@@ -12432,6 +12498,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /api/v1/p/{pariwarId}/member/moderation/appeals:
+    get:
+      summary: The member's own appeal context (member, in-portal)
+      description: "What the member's appeal screen needs to render itself honestly, in one read: which moderation acts they may appeal RIGHT NOW (already filtered to acts with no open appeal, so the screen can show the one-open-at-a-time state without first earning a 409), plus their own appeals newest-first. ⚠ This read exists because the validity payload derives moderation standing from `specialFlags` and carries NO moderation-action id, while §8.8 identifies an appeal BY the act's §8.6 record. ⛔ The alternative — letting the server infer the act from the member's current standing — was rejected: an inferred subject on a governance write is the shape that lets a member appeal something other than what they were shown. ⛔ Carries no Tier-1 text."
+      tags: *a68
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      responses:
+        "200":
+          description: The member's appeal context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberAppealContext"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: The path Pariwar is not the session member's Pariwar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       summary: File an appeal against a moderation act (member, in-portal)
       description: "The MEMBER's own act under Niyamavali §8.8. Member-session gated; Turnstile (`x-turnstile-token`) and `Idempotency-Key` ride HEADERS, not the body. The member is the SESSION — there is no `member_id` field, deliberately. Appealable from suspension OR termination, with NO deadline (§8.8: \"no time limit runs against a member's right to appeal\"). Only ONE appeal against a given moderation act may be open at a time, but the right is NOT exhausted: once an appeal is determined a further appeal against the same act may be filed. Filing has NO SUSPENSIVE EFFECT — a suspended member remains suspended and a terminated member's access does not return. The grounds are stored Tier-1 encrypted and never appear on this response, on any event payload, or on any audit line."

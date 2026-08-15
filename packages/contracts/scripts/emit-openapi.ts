@@ -3233,6 +3233,7 @@ const {
   ModerationAppealDecidedResponse,
   ModerationAppealsListResponse,
   ModerationAppealDetailResponse,
+  MemberAppealContextResponse,
 } = await import('../src/member-moderation/index.js');
 
 const FileAppealRequestComponent = FileModerationAppealRequest.openapi('FileModerationAppealRequest');
@@ -3248,6 +3249,30 @@ const AppealsListComponent = ModerationAppealsListResponse.openapi('ModerationAp
 const AppealDetailComponent = ModerationAppealDetailResponse.openapi('ModerationAppealDetail');
 
 const appealParams = z.object({ pariwarId: z.string().uuid(), appealId: z.string().uuid() });
+const MemberAppealContextComponent = MemberAppealContextResponse.openapi('MemberAppealContext');
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/member/moderation/appeals',
+  summary: 'The member\'s own appeal context (member, in-portal)',
+  description:
+    'What the member\'s appeal screen needs to render itself honestly, in one read: which moderation ' +
+    'acts they may appeal RIGHT NOW (already filtered to acts with no open appeal, so the screen can ' +
+    'show the one-open-at-a-time state without first earning a 409), plus their own appeals ' +
+    'newest-first. ⚠ This read exists because the validity payload derives moderation standing from ' +
+    '`specialFlags` and carries NO moderation-action id, while §8.8 identifies an appeal BY the act\'s ' +
+    '§8.6 record. ⛔ The alternative — letting the server infer the act from the member\'s current ' +
+    'standing — was rejected: an inferred subject on a governance write is the shape that lets a ' +
+    'member appeal something other than what they were shown. ⛔ Carries no Tier-1 text.',
+  tags: moderationTags,
+  request: { params: moderationPariwarParams },
+  responses: {
+    200: { description: 'The member\'s appeal context', content: jsonOf(MemberAppealContextComponent) },
+    401: errorResponse('Authentication required'),
+    404: errorResponse('The path Pariwar is not the session member\'s Pariwar'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 
 registry.registerPath({
   method: 'post',

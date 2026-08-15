@@ -38,6 +38,7 @@ import { createHash } from 'node:crypto';
 
 import {
   DecideModerationAppealRequest,
+  type MemberAppealContextResponse,
   FileModerationAppealOffPortalRequest,
   FileModerationAppealRequest,
   type ModerationAppealDecidedResponse,
@@ -288,6 +289,37 @@ export function createModerationAppealHandlers(deps: AppDeps) {
       });
       void reply.status(201);
       return out;
+    },
+
+    /**
+     * GET /api/v1/p/:pariwarId/member/moderation/appeals — what the member's own appeal screen needs.
+     *
+     * ⚠ This read exists because the validity payload derives moderation standing from `specialFlags`
+     * and carries NO moderation-action id — so without it the member surface cannot name the act it is
+     * appealing against, and §8.8 identifies an appeal BY that act's §8.6 record.
+     * ⛔ The alternative — letting the server infer the act from the member's current standing — was
+     * rejected: an inferred subject on a governance write is the shape that lets a member appeal
+     * something other than what they were shown.
+     *
+     * `appealable_action_ids` is pre-filtered to acts with no open appeal, so the screen can render
+     * the "one open at a time" state without first earning a 409.
+     * ⛔ Carries no Tier-1 text.
+     */
+    async memberContext(request: FastifyRequest): Promise<MemberAppealContextResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      // A member route has no scope-resolution hook, so the handler opens its OWN RLS scope tx.
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      try {
+        const pariwarId = ids.pariwarId(pariwarIdStr);
+        const memberId = ids.memberId(memberIdStr);
+        const [actionIds, appeals] = await Promise.all([
+          memberDomain.moderation.listAppealableActionIds(scopeTx.tx, pariwarId, memberId),
+          memberDomain.moderation.listAppealsForMember(scopeTx.tx, pariwarId, memberId),
+        ]);
+        return { appealable_action_ids: [...actionIds], appeals: appeals.map(toDto) };
+      } finally {
+        await closeScopeTx(scopeTx, true);
+      }
     },
 
     /**

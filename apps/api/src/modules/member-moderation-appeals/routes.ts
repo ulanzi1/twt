@@ -29,6 +29,7 @@
 
 import {
   DecideModerationAppealRequest,
+  MemberAppealContextResponse,
   FileModerationAppealOffPortalRequest,
   FileModerationAppealRequest,
   MODERATION_APPEAL_STEP_UP_CONTEXT,
@@ -109,6 +110,21 @@ export function registerModerationAppealRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [memberSession],
     },
     h.fileFromPortal,
+  );
+
+  // The member's own appeal context — the act ids they may appeal, plus their own appeals. See the
+  // handler for why the act id is read rather than inferred server-side.
+  r.get(
+    '/api/v1/p/:pariwarId/member/moderation/appeals',
+    {
+      schema: {
+        params: PariwarParam,
+        response: { 200: MemberAppealContextResponse },
+        tags: [TAG],
+      },
+      preHandler: [memberSession],
+    },
+    h.memberContext,
   );
 
   // ── OPERATOR, off-portal (AC7) ────────────────────────────────────────────────────────────────

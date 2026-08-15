@@ -14,6 +14,9 @@ import {
   MemberTicketDetailResponse,
   MemberTicketListResponse,
   PersonalEventAssertionResponse,
+  FileModerationAppealRequest,
+  ModerationAppealFiledResponse,
+  MemberAppealContextResponse,
   type PersonalEventAssertionRequest,
   MemberBannerListResponse,
   DismissBannerResponse,
@@ -1157,6 +1160,78 @@ export function createPersonalEventClient(opts: MemberAuthClientOptions) {
 }
 
 export type PersonalEventClient = ReturnType<typeof createPersonalEventClient>;
+
+// ── Moderation-APPEAL client, member arm (Story 10.22 — Niyamavali §8.8) ───────────────────────
+
+/**
+ * The member's §8.8 appeal surface — ONE write.
+ *
+ * ⚖ Niyamavali §8.8, ratified by Decision `2026-08-15-121`. A member under suspension or termination
+ * may appeal the act imposed on them; the appeal is heard by a Trustee Panel member who took no part
+ * in it. There is NO deadline, and filing has NO SUSPENSIVE EFFECT — the act stands while the appeal
+ * is pending, which is why the member screen states it before the member commits.
+ *
+ * Only ONE appeal against a given moderation act may be open at a time (a 409), but ⛔ that is NOT an
+ * exhaustion: §8.8 permits a further appeal once the open one is determined.
+ *
+ * Member-session-gated with NO RBAC key: the member JWT is the tenancy authority, and a `pariwarId`
+ * that is not the member's own answers 404 (never 403, which would leak that the tenant exists).
+ *
+ * ⚠ There is deliberately no `decide` here and no adjudication read. Those are the Trustee Panel's,
+ * behind `member.decide_moderation_appeal` + step-up, and belong to the admin surface.
+ */
+export function createMemberModerationAppealClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+
+  return {
+    /**
+     * FILE an appeal against a moderation act (201).
+     *
+     * `idempotencyKey` rides the `Idempotency-Key` HEADER, not the body, so a retried submit from a
+     * flaky connection files once rather than twice.
+     *
+     * ⛔ There is no `member_id` parameter, and the omission is deliberate: the member is the
+     * SESSION. A member-supplied member id on a member route is a cross-member write waiting to
+     * happen.
+     */
+    /**
+     * READ the member's own appeal context: which moderation acts they may appeal right now (already
+     * filtered to those with no open appeal), plus their own appeals newest-first.
+     *
+     * ⚠ Needed because the validity payload carries no moderation-action id, and §8.8 identifies an
+     * appeal BY the act's §8.6 record. ⛔ Carries no Tier-1 text.
+     */
+    getAppealContext(pariwarId: string): Promise<MemberAppealContextResponse> {
+      return call(
+        `/api/v1/p/${encodeURIComponent(pariwarId)}/member/moderation/appeals`,
+        MemberAppealContextResponse,
+        undefined,
+        true,
+        'GET',
+      );
+    },
+
+    fileModerationAppeal(
+      pariwarId: string,
+      input: FileModerationAppealRequest,
+      opts2: { idempotencyKey: string },
+    ): Promise<ModerationAppealFiledResponse> {
+      return call(
+        `/api/v1/p/${encodeURIComponent(pariwarId)}/member/moderation/appeals`,
+        ModerationAppealFiledResponse,
+        input,
+        true,
+        'POST',
+        undefined,
+        { 'idempotency-key': opts2.idempotencyKey },
+      );
+    },
+  };
+}
+
+export type MemberModerationAppealClient = ReturnType<
+  typeof createMemberModerationAppealClient
+>;
 
 // ── Member banner/popup client (Story 10.9) ────────────────────────────────────
 

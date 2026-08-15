@@ -215,6 +215,11 @@ import {
   type SetMemberCustomFieldsRequest as SetMemberCustomFieldsBody,
   ActiveDataRightsExportResponse,
   DATA_RIGHTS_STEP_UP_CONTEXT,
+  MODERATION_APPEAL_STEP_UP_CONTEXT,
+  ModerationAppealsListResponse,
+  ModerationAppealDetailResponse,
+  ModerationAppealDecidedResponse,
+  type DecideModerationAppealRequest,
   MemberDirectDeliveryResponse,
   OffPortalErasureResponse,
   OffPortalExportResponse,
@@ -1857,5 +1862,82 @@ export function setMemberCustomFields(
     `${customFieldsBase(pariwarId)}/members/${encodeURIComponent(memberId)}/values`,
     MemberCustomFieldsResponse,
     { method: 'PUT', headers: { 'idempotency-key': idempotencyKey }, body: JSON.stringify(body) },
+  );
+}
+
+
+// ── Story 10.22 — the Niyamavali §8.8 moderation APPEAL (Decision `2026-08-15-121`) ────────────
+//
+// The Trustee Panel's adjudication surface. Every route below is gated server-side by
+//   [adminSession, scope, requirePermissionHook('member.decide_moderation_appeal', {dimension:'pariwar'})]
+// and the DECIDE route additionally by requireStepUp(MODERATION_APPEAL_STEP_UP_CONTEXT).
+//
+// ⛔ THE OTP SIDE MUST USE THE SAME IMPORTED CONSTANT — `requireStepUp` compares a BARE STRING by
+// equality with no allow-list, so a literal typed here would elevate the session under a context that
+// can NEVER satisfy the gate: a permanently broken action with nothing naming the cause (10.21's
+// recorded footgun). `requestModerationAppealStepUp` exists so no caller is tempted to pass a literal.
+//
+// ⭐ HOLDING THE KEY IS NOT SUFFICIENT. §8.8 requires the appeal be heard by a Panel member who took
+// no part in the act appealed against, and that exclusion is enforced SERVER-SIDE, inside the scope
+// transaction, before any write — as a 409 `member_moderation.appeal_adjudicator_excluded`.
+// ⛔ It is NOT a 403: the actor holds the key and may determine other appeals.
+
+const moderationAppealBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/moderation/appeals`;
+
+/** Request the step-up OTP for the appeal context. ⛔ Always via this helper, never a literal. */
+export function requestModerationAppealStepUp(): Promise<StepUpRequestResult> {
+  return requestStepUp(MODERATION_APPEAL_STEP_UP_CONTEXT);
+}
+
+/**
+ * The OPEN appeal queue for this Pariwar, oldest filing first.
+ *
+ * ⚠ This read is the reason the Panel can find a filed appeal at all: `trustee_panel` holds no
+ * helpdesk capability and helpdesk routing is advisory and inert, so no operator queue ever surfaces
+ * one. ⛔ Carries no Tier-1 text.
+ */
+export function listModerationAppeals(
+  pariwarId: string,
+  limit = 50,
+): Promise<z.output<typeof ModerationAppealsListResponse>> {
+  return apiFetch(`${moderationAppealBase(pariwarId)}?limit=${limit}`, ModerationAppealsListResponse);
+}
+
+/**
+ * ONE appeal with both Tier-1 fields decrypted — the only surface that carries either.
+ * `grounds` / `reasoned_outcome` are null on a corrupt or rotated envelope; a key-service outage
+ * answers 503 instead, so an unreachable KMS never reads as a member who appealed and said nothing.
+ */
+export function getModerationAppeal(
+  pariwarId: string,
+  appealId: string,
+): Promise<z.output<typeof ModerationAppealDetailResponse>> {
+  return apiFetch(
+    `${moderationAppealBase(pariwarId)}/${encodeURIComponent(appealId)}`,
+    ModerationAppealDetailResponse,
+  );
+}
+
+/**
+ * DETERMINE an appeal — `upheld` or `allowed`, and nothing else.
+ *
+ * ⛔ AN `allowed` OUTCOME DOES NOT RESTORE THE MEMBER. §8.8 makes it DIRECT a restore; the restore is
+ * a subsequent, separately-attributed act through the moderation write path, with its own reason
+ * code, its own Decision Note and the Panel-exclusive `member.restore_terminated` check. The
+ * `directs_restore` flag on the response is a prompt for that next step, never a report of it.
+ *
+ * A 403 `auth.step_up_required` is the elevation SIGNAL; a 409
+ * `member_moderation.appeal_adjudicator_excluded` means THIS actor took part in the act under appeal.
+ */
+export function decideModerationAppeal(
+  pariwarId: string,
+  appealId: string,
+  body: DecideModerationAppealRequest,
+): Promise<z.output<typeof ModerationAppealDecidedResponse>> {
+  return apiFetch(
+    `${moderationAppealBase(pariwarId)}/${encodeURIComponent(appealId)}/decide`,
+    ModerationAppealDecidedResponse,
+    { method: 'POST', body: JSON.stringify(body) },
   );
 }

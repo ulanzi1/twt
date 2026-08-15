@@ -76,4 +76,5 @@ export {
   ModerationAppealDto,
   ModerationAppealsListResponse,
   ModerationAppealDetailResponse,
+  MemberAppealContextResponse,
 } from './appeal.js';

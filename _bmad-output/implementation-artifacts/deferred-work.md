@@ -4789,3 +4789,49 @@ this story's gate re-run and will keep costing runs until someone owns it
   ([[project_r7_fact_producer_unbuilt]]). *Re-trigger:* the next story touching medical disclosure or the
   Tier-1 envelope format, or immediately if the flake rate becomes a merge-gate problem.
   [`apps/api/tests/integration/medical/medical-disclose.spec.ts:270-271`]
+
+## Deferred from: code review of 10-21-off-portal-dpdpa-access, round 2 (2026-08-15)
+
+- **`withCompensatingAudit` settles before the scope transaction commits.** Every write handler on the
+  member-data-rights surface wraps its mutation as
+  `audit.withCompensatingAudit(deps.servicePool, { auditIntent, mutate })`, but `mutate` only issues
+  statements inside a `scopeTx` that is still open — the `COMMIT` happens later, in
+  `closeScopeTx(scopeTx, ok)` in the `finally`. The audit runs on its own connection and settles the
+  moment `mutate` **returns**, so the compensation covers a throw *inside* `mutate` and nothing else. If
+  the COMMIT itself fails (connection reset, serialization failure, disk error) the audit trail records a
+  completed `member_data_rights.rtbf_fulfilled` / `…_granted` with **no** compensating line and **no**
+  row — an audit assertion of an act that never landed, on the surface whose whole subject is a staff
+  actor exercising a member's statutory rights.
+  ⚠ **Why deferred rather than patched:** the ordering is a property of the shared `withCompensatingAudit`
+  helper and the scope-tx call convention, not of this story — Story 10.21 uses the helper exactly as its
+  siblings do, and correcting it means changing the helper's contract (settle-on-commit, or accept a tx
+  handle) across every consumer. Patching it here alone would make this surface inconsistent with the
+  rest of the tree without closing the class.
+  ⛔ **What was NOT deferred:** the *comment* on these call sites, which claims the compensation covers
+  partial application generally. That over-claim is new in this story and is corrected in the round-2
+  patch set — a comment asserting a protection that does not exist is the defect class this story polices
+  elsewhere ([[feedback_record_unattested_no_backfill]]).
+  *Owner:* a named successor story — ⛔ **still unnamed**, and ⛔ never an epic
+  ([[project_r7_fact_producer_unbuilt]]). *Re-trigger:* the next story that touches
+  `withCompensatingAudit`'s implementation or adds a consumer that wraps a scope-tx mutation.
+  [`apps/api/src/modules/member-data-rights/handlers.ts:299`]
+
+- **⛔ ESCALATION 12 — the routeless member (no mobile on file). RAISED 2026-08-15, OPEN.** Decision
+  `2026-08-15-118`. A member with no mobile on file can never satisfy element 2 of the ratified
+  three-part gate (`2026-08-14-113` cl.1): no mobile ⇒ no OTP is minted ⇒
+  `primaryDeliveryNotCompletedAt` returns `null` permanently ⇒ the staff-mediated fallback fails closed
+  exactly as ratified. The primary route is simultaneously impossible for the same reason. The two
+  compound: **that member has no route to their statutory data rights by any path this story ships** —
+  the precise outcome Story 10.21 exists to prevent.
+  ⛔ **What was corrected and what was NOT.** The *reporting* defect is fixed in this story's round-2
+  patch set — the route previously returned **200 with a `grant_id`** for a delivery that never happened
+  and now refuses with a typed 409 `member_data_rights.no_mobile_on_file` before any grant row is
+  created. ⛔ That makes the failure **honest**; it does **not** give the member a route, and
+  manufacturing one would be inventing gate mechanism against `2026-08-14-112` clause 3.
+  ⚠ Options are enumerated in `2026-08-15-118`'s *Open follow-ups* — (a) out of scope for the ratified
+  model, served by a recorded alternative mechanism; (b) a distinct, separately-attested fourth ground
+  parallel to element 2; (c) require a recorded mobile before an off-portal export can be built at all;
+  (d) something else the Panel specifies.
+  *Owner:* **Trustee Panel.** *Re-trigger:* **immediate** — a statutory-access gap, due **before the
+  `termination_access_block` flip**, ⛔ never at a later epic ([[project_r7_fact_producer_unbuilt]]).
+  [`apps/api/src/modules/member-data-rights/handlers.ts` — `grantMemberDirectDelivery`]

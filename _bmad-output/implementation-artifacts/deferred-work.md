@@ -4733,3 +4733,59 @@ their owning story ([[feedback_governance_commits_precede_implementation]]).
   per-row conduct gate to reach this endpoint, so this mirrors the existing `district_immutable` sibling's
   own posture rather than introducing a new authorization-boundary leak.
   [`packages/domain/src/claim/ground-inspection-persist.ts`]
+
+---
+
+## Deferred from: code review of 10-21-off-portal-dpdpa-access (2026-08-15) — CLOSED BY RULING 2026-08-15
+
+⛔ **This section's original item is CLOSED, not deleted** — raised as Escalation 11 (Decision
+`2026-08-15-115`) and ruled the same day (Decision `2026-08-15-116`, option (c)). The ruling itself
+creates a NEW open item, recorded below as its replacement, per [[feedback_closure_language_precision]]
+("Closed by ruling" is not "Not addressed").
+
+- ~~`member_requested_staff_mediation` is `z.literal(true)` — a caller-controlled constant, not a
+  captured member-authored fact.~~ **RULED 2026-08-15 — Decision `2026-08-15-116`, option (c).**
+
+- **NEW, owed by this ruling: mint a successor story implementing option (c).** A structured
+  member-request field captured at helpdesk ticket intake (AC2), with the staff-mediated delivery route
+  (`grantStaffMediatedDelivery`) reading that captured fact instead of accepting the caller-supplied
+  `member_requested_staff_mediation: z.literal(true)` boolean it accepts today. Sized as a real feature
+  (intake contract changes + a new read path), not a patch — per Decision `2026-08-15-116` clause 3,
+  explicitly **not built inside the ruling or this deferral entry**. ⚠ **Until it lands, the current
+  mechanization stays in production unchanged** — the ruling found element 1's evidentiary strength
+  weak, not the fallback unsafe to operate. *Owner:* a named successor story — ⛔ **still unnamed**
+  ([[project_r7_fact_producer_unbuilt]] — a deferral naming an epic expires unowned; no story is minted
+  from inside a sibling story or this file — mints are governance acts taken at their owning story,
+  [[feedback_governance_commits_precede_implementation]]). *Re-trigger:* the next story that touches
+  either the helpdesk ticket-intake surface (AC2) or the member-data-rights delivery module, or
+  immediately if prioritized on its own.
+  [`packages/contracts/src/member-data-rights/member-data-rights.ts` — `StaffMediatedDeliveryRequest.member_requested_staff_mediation`, `apps/api/src/modules/member-data-rights/handlers.ts` — `grantStaffMediatedDelivery`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx` — the fallback panel]
+  [`packages/contracts/src/member-data-rights/member-data-rights.ts:6278`, `apps/admin/src/api/client.ts:3159`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx`]
+
+---
+
+## Deferred from: 10-21 dev-story completion pass (2026-08-15) — a TEST-DESIGN defect, observed not inferred
+
+⛔ **Not a 10.21 defect and ⛔ not a product defect** — recorded here because it was *observed live* during
+this story's gate re-run and will keep costing runs until someone owns it
+([[feedback_record_unattested_no_backfill]] — an observation is recorded openly, never smoothed away).
+
+- **`medical-disclose.spec.ts:270-271`'s plaintext-leak assertions are PROBABILISTIC and will fail at
+  random.** The test asserts `expect(disclosed_conditions_ciphertext).not.toContain('ckd')` against a
+  Tier-1 envelope of the form `enc:v1:<base64>`. The base64 payload wraps a **randomly generated DEK**,
+  so the three-character needle `'ckd'` appears in it by chance on a predictable fraction of runs —
+  observed failing on 2026-08-15 with a ciphertext whose body contained the substring. ⚠ **The intent of
+  the assertion is right** (prove the plaintext condition code never lands in the column); ⛔ **the
+  mechanism is wrong** — a substring search over base64 cannot distinguish a leak from a collision, so it
+  is simultaneously **flaky** (false failures) and **weak** (a real leak of a longer code could still
+  slip past a differently-encoded envelope).
+  ⚠ **This is the same family as the DATE-BOMB class** already recorded in this project's test lore: the
+  test fails on **data**, not on a diff, so a baseline comparison can never see it coming and a re-run
+  "fixes" it — which is exactly how it survives.
+  ⛔ **Not fixed here.** The correct remedy is a decrypt-and-assert (or an assertion over the decoded
+  envelope's plaintext slot), which is a change to a Story 3.x test's design and its PII posture — ⛔ not
+  a widening of the needle, which would only lower the collision rate rather than remove it.
+  *Owner:* a named successor story — ⛔ **still unnamed**, and ⛔ never an epic
+  ([[project_r7_fact_producer_unbuilt]]). *Re-trigger:* the next story touching medical disclosure or the
+  Tier-1 envelope format, or immediately if the flake rate becomes a merge-gate problem.
+  [`apps/api/tests/integration/medical/medical-disclose.spec.ts:270-271`]

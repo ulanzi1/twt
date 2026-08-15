@@ -96,6 +96,9 @@ function toAdminDetail(
     routing_policy_version: row.routingPolicyVersion,
     assigned_at: row.assignedAt.toISOString(),
     member_scope_context: row.memberScopeContext,
+    // Story 10.29 — element 1's captured instant, so the responder console can explain a refused
+    // fallback AT the control rather than after a 409 (Decision `2026-08-15-120` cl.5).
+    member_staff_mediation_requested_at: row.memberStaffMediationRequestedAt?.toISOString() ?? null,
   };
 }
 
@@ -136,6 +139,9 @@ function toTicketDto(row: Awaited<ReturnType<typeof helpdesk.getTicketById>>): H
     pool_id: row.poolId,
     module_id: row.moduleId,
     validity_lookup_id: row.validityLookupId,
+    // Story 10.29 — element 1's captured instant (Decision `2026-08-15-120` cl.5). Read-only on the
+    // wire; ⛔ there is no update path, so nothing may ever map it in the other direction.
+    member_staff_mediation_requested_at: row.memberStaffMediationRequestedAt?.toISOString() ?? null,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };
@@ -206,6 +212,21 @@ export function createHelpdeskHandlers(deps: AppDeps) {
       const windows = await cycleCalendar.listHolidayWindowsForTail(scopeTx.tx, pariwarId, createdAt);
       const sla = helpdesk.computeTicketSlaDueDates(createdAt, decision, windows);
 
+      // ── Story 10.29 — ELEMENT 1, CAPTURED AT INTAKE (Decision `2026-08-15-120` cl.1) ─────────────
+      // The MEMBER's own request for staff-mediated delivery of their data export, recorded where it
+      // is authored. `grantStaffMediatedDelivery` READS this instead of accepting a caller-supplied
+      // boolean (`2026-08-15-116` cl.3 — the removal is the point).
+      // ⛔ THE SERVER'S CLOCK, never a client value: the wire carries a BOOLEAN and nothing else. A
+      // client-settable `..._at` would re-create the defect `2026-08-15-115` cl.3 found — a timestamp
+      // for one event wearing another event's field name — with a new author.
+      // ⛔ NOT gated on the DPDPA subcategory here: that coupling is PRESENTATIONAL and lives in the
+      // client (`2026-08-15-120` cl.2). Enforcing it server-side would put a routing token into a
+      // second enforcement site.
+      // ⚠ On `helpline_call` this is OPERATOR-TRANSCRIBED (`2026-08-15-120` cl.6) — it does not prove
+      // the member spoke, and no copy, comment or audit line here claims that it does.
+      const memberStaffMediationRequestedAt =
+        body.member_requested_staff_mediated_delivery === true ? createdAt : null;
+
       // (4) The audit DIGEST — inputs + policy version + outputs (never the raw payload; AC5).
       const requestPayloadHash = sha256Hex(
         canonicalJsonStringify({
@@ -219,6 +240,10 @@ export function createHelpdeskHandlers(deps: AppDeps) {
           target_scope: decision.targetScope,
           sla_first_response_due: sla.slaFirstResponseDue.toISOString(),
           sla_resolution_due: sla.slaResolutionDue.toISOString(),
+          // Story 10.29 — element 1's capture is part of the routing-decision record. ⛔ The INSTANT,
+          // not the request boolean: the digest must pin what was WRITTEN, and the server's clock is
+          // what was written (`2026-08-15-120` cl.1).
+          member_staff_mediation_requested_at: memberStaffMediationRequestedAt?.toISOString() ?? null,
         }),
       );
 
@@ -276,6 +301,7 @@ export function createHelpdeskHandlers(deps: AppDeps) {
               poolId: body.pool_id ? ids.poolId(body.pool_id) : null,
               moduleId: body.module_id ?? null,
               validityLookupId: body.validity_lookup_id ?? null,
+              memberStaffMediationRequestedAt,
             });
           } catch (err) {
             // Typed genesis-write conflicts (a stream race, a reused ticket_id, or a persist-layer

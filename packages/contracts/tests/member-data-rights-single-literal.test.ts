@@ -48,6 +48,20 @@ const SCAN_ROOTS = [
   'apps/api/src',
   'apps/api/tests',
   'apps/admin/src',
+  // ⭐ Story 10.29 (Decision `2026-08-15-120` cl.2) — the MEMBER app now offers the DPDPA subcategory
+  // too, appending the IMPORTED token under the `other` catch-all exactly as the operator console does.
+  // ⛔ Without this root the convention would decay precisely where it is NEWEST: a re-declared or
+  // mistyped token in the mobile screen routes just as cleanly to the same `other` desk, produces no
+  // error, is invisible in the queue — and the scan that exists to catch that would not look there
+  // ([[feedback_gate_scope_semantic_coverage]] — a green scan over the wrong scope proves nothing).
+  'apps/mobile/app',
+  'apps/mobile/lib',
+  'apps/mobile/components',
+  // ⛔ CODE-REVIEW ADDITION — omitting this reproduced the exact failure mode the comment above cites
+  // as its own justification: `apps/api/tests` was added after a round-2 review found a re-declared
+  // literal hiding in a TEST FIXTURE, not application code. `apps/mobile/tests` is the identical class
+  // of gap and it already exists (`helpdesk-screens-render.test.ts`, `helpdesk-draft.test.ts`).
+  'apps/mobile/tests',
 ];
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.turbo', 'coverage', '.git']);

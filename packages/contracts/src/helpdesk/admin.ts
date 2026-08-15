@@ -123,6 +123,16 @@ export const HelpdeskAdminTicketDetailResponse = HelpdeskQueueItem.extend({
   routing_policy_version: z.number().int().positive(),
   assigned_at: Iso8601Datetime,
   member_scope_context: MemberScopeContext,
+  /**
+   * Story 10.29 (Decision `2026-08-15-120` cl.5) — element 1's instant, so the responder console can
+   * explain a refused fallback AT the control instead of after a 409. See the identical field on
+   * `HelpdeskTicketDto`.
+   * ⚠ This response extends `HelpdeskQueueItem`, ⛔ NOT `HelpdeskTicketDto`, so the field is declared
+   * on both deliberately — adding it to the DTO alone would never reach this surface.
+   * ⛔ The MEMBER-facing detail response does NOT gain it (`2026-08-15-120` cl.5): the operator surface
+   * needs it, the member's own view does not, and widening member-facing DTOs is unearned scope.
+   */
+  member_staff_mediation_requested_at: Iso8601Datetime.nullable(),
 }).strict();
 export type HelpdeskAdminTicketDetailResponse = z.output<typeof HelpdeskAdminTicketDetailResponse>;
 

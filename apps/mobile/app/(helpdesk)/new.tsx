@@ -24,7 +24,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { ApiError } from '@twt/api-client'
-import { HELPDESK_ATTACHMENT_MAX_BYTES, HELPDESK_ATTACHMENT_MAX_COUNT, HELPDESK_MEMBER_BODY_MAX, HELPDESK_MEMBER_SUBJECT_MAX } from '@twt/contracts'
+import { DPDPA_DATA_RIGHTS_SUBCATEGORY, HELPDESK_ATTACHMENT_MAX_BYTES, HELPDESK_ATTACHMENT_MAX_COUNT, HELPDESK_MEMBER_BODY_MAX, HELPDESK_MEMBER_SUBJECT_MAX } from '@twt/contracts'
 
 import { helpdeskApi } from '../../lib/helpdesk-api'
 import { useHelpdeskT } from '../../lib/helpdesk-i18n'
@@ -70,19 +70,37 @@ export default function HelpdeskNewScreen(): React.ReactElement {
 
   const [category, setCategory] = useState<string | undefined>(draft.category)
   const [subCategory, setSubCategory] = useState<string | undefined>(draft.subCategory)
+  // Story 10.29 — element 1 of the ratified three-part gate, captured at INTAKE
+  // (Decision `2026-08-15-120` cl.1/cl.2). ⭐ On THIS route the authorship is genuine: the member is
+  // the authenticated actor, so the request is theirs in fact rather than transcribed by an operator.
+  const [staffMediation, setStaffMediation] = useState(draft.staffMediation ?? false)
   const [subject, setSubject] = useState(draft.subject ?? '')
   const [body, setBody] = useState(draft.body ?? '')
   const [files, setFiles] = useState<PickedFile[]>([])
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
-  function persist(patch: Partial<{ category: string; subCategory: string | undefined; subject: string; body: string }>): void {
+  function persist(patch: Partial<{ category: string; subCategory: string | undefined; subject: string; body: string; staffMediation: boolean }>): void {
     if (memberId) saveHelpdeskDraft(memberId, patch)
   }
 
   const categories = categoriesQuery.data?.categories ?? []
   const categoriesEmpty = !categoriesQuery.isLoading && !categoriesQuery.isError && categories.length === 0
-  const subCategories = categories.find((c) => c.category === category)?.sub_categories ?? []
+  const registrySubCategories = categories.find((c) => c.category === category)?.sub_categories ?? []
+  // ── Story 10.29 (D2) — the DPDPA data-rights subcategory, offered under `other` ──────────────────
+  // ⚠ It is NOT in the registry and MUST NOT BE. `DEFAULT_ROUTING_POLICY` is byte-frozen
+  // (`2026-08-14-106` cl.1): a real category would be absent from every per-Pariwar override authored
+  // before today and would SILENTLY mis-route to that Pariwar's generic `other` desk under the wrong
+  // SLA, with no error anywhere. So the CLIENT offers the token under the `other` catch-all, which the
+  // policy validator guarantees exists in every published policy.
+  // ⛔ IMPORTED, never re-declared — a typo would route just as cleanly to the same desk and nothing
+  // would complain (the @twt/contracts source-scan gate enforces the single declaration, and Story
+  // 10.29 extended its SCAN_ROOTS to cover apps/mobile precisely because this is its newest site).
+  // ⛔ This mirrors `HelpdeskOperatorShell.tsx` exactly; it is not a second approach.
+  const subCategories =
+    category === 'other' && !registrySubCategories.includes(DPDPA_DATA_RIGHTS_SUBCATEGORY)
+      ? [...registrySubCategories, DPDPA_DATA_RIGHTS_SUBCATEGORY]
+      : registrySubCategories
   const canSubmit = !!category && subject.trim().length > 0 && body.trim().length > 0 && !busy
 
   async function pickPhoto(): Promise<void> {
@@ -132,6 +150,10 @@ export default function HelpdeskNewScreen(): React.ReactElement {
       if (subCategory) form.append('sub_category', subCategory)
       form.append('subject', subject.trim())
       form.append('body', body.trim())
+      // Story 10.29 — element 1's intake capture. ⛔ Sent only when actually ticked, and ⛔ as a
+      // BOOLEAN string: the SERVER stamps the instant (`2026-08-15-120` cl.1). A client-supplied
+      // `..._at` would re-create the very defect this story removes, with a new author.
+      if (staffMediation) form.append('member_requested_staff_mediated_delivery', 'true')
       for (const file of files) {
         // RN multipart: append the { uri, name, type } descriptor (cast — RN's FormData accepts it).
         form.append('attachment', file as unknown as Blob)
@@ -190,7 +212,11 @@ export default function HelpdeskNewScreen(): React.ReactElement {
                     onPress={() => {
                       setCategory(c.category)
                       setSubCategory(undefined)
-                      persist({ category: c.category, subCategory: undefined })
+                      // ⛔ Story 10.29 — clears with the subcategory: the checkbox only ever means
+                      // something under the DPDPA subcategory, and a ticked box surviving a category
+                      // change would record a request the member never made on this ticket.
+                      setStaffMediation(false)
+                      persist({ category: c.category, subCategory: undefined, staffMediation: false })
                     }}
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
@@ -218,7 +244,9 @@ export default function HelpdeskNewScreen(): React.ReactElement {
                     onPress={() => {
                       const next = selected ? undefined : sc
                       setSubCategory(next)
-                      persist({ subCategory: next })
+                      const keepsStaffMediation = next === DPDPA_DATA_RIGHTS_SUBCATEGORY && staffMediation
+                      setStaffMediation(keepsStaffMediation)
+                      persist({ subCategory: next, staffMediation: keepsStaffMediation })
                     }}
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
@@ -228,6 +256,33 @@ export default function HelpdeskNewScreen(): React.ReactElement {
                 )
               })}
             </XStack>
+          </YStack>
+        )}
+
+        {/* ── Story 10.29 — ELEMENT 1, CAPTURED AT INTAKE (D1/D2) ──────────────────────────────────
+            ⛔ Rendered ONLY under the DPDPA subcategory. An always-visible control would be noise on
+            every payment-failed ticket, and noise invites ticking without context.
+            ⛔ The coupling is PRESENTATIONAL: the server accepts the field on any ticket. */}
+        {subCategory === DPDPA_DATA_RIGHTS_SUBCATEGORY && (
+          <YStack gap="$2" borderWidth={1} borderColor="$borderColor" rounded="$4" p="$3">
+            <Text fontWeight="500">{t('new.staff_mediation_label')}</Text>
+            <Text fontSize="$2" color="$colorPress">
+              {t('new.staff_mediation_help')}
+            </Text>
+            <Button
+              size="$3"
+              theme={staffMediation ? 'accent' : undefined}
+              onPress={() => {
+                const next = !staffMediation
+                setStaffMediation(next)
+                persist({ staffMediation: next })
+              }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: staffMediation }}
+              accessibilityLabel={t('new.staff_mediation_label')}
+            >
+              {staffMediation ? t('new.staff_mediation_on') : t('new.staff_mediation_off')}
+            </Button>
           </YStack>
         )}
 

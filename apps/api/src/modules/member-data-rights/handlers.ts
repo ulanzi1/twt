@@ -243,19 +243,26 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
   }
 
   /**
-   * Resolve the originating helpdesk ticket UNDER THE CALLER'S SCOPE, or 404.
+   * Resolve the originating helpdesk ticket UNDER THE CALLER'S SCOPE, or 404. ⭐ RETURNS THE ROW.
    *
    * ⚠ This is what makes the tenancy-blind FK safe in practice: PostgreSQL referential integrity
    * bypasses RLS, so the FK alone would accept a cross-tenant ticket id. Reading it here, inside the
    * scope tx, is the check that refuses one. ⛔ Do not drop this on the grounds that "the FK covers it".
+   *
+   * ⭐ Story 10.29 — it already loaded the row and threw it away; it now returns it, because
+   * `grantStaffMediatedDelivery` must read the ticket's `member_staff_mediation_requested_at`
+   * (element 1, captured at intake — `2026-08-15-120` cl.1). ⛔ Do NOT add a second `getTicketById`
+   * call for that: a re-read inside the same scope tx would be a second round trip AND a second place
+   * the scope check could drift away from the read it is supposed to guard.
    */
   async function requireTicketInScope(
     scopeTx: Awaited<ReturnType<typeof openScopeTx>>,
     pariwarId: ids.PariwarId,
     ticketId: ids.HelpdeskTicketId,
-  ): Promise<void> {
+  ): Promise<NonNullable<Awaited<ReturnType<typeof helpdesk.getTicketById>>>> {
     const row = await helpdesk.getTicketById(scopeTx.tx, pariwarId, ticketId);
     if (!row) throw new NotFoundError('Ticket not found', 'member_data_rights.ticket_not_found');
+    return row;
   }
 
   return {
@@ -778,11 +785,19 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
      * POST …/member-data-rights/delivery/staff-mediated — the NARROW EXCEPTION (AC-R1).
      *
      * ⛔ THE THREE-PART GATE (`2026-08-14-113` cl.1). All three required; none substitutes:
-     *   (1) the member's OWN explicit request — ⛔ staff may not initiate or unilaterally select this;
+     *   (1) the member's OWN explicit request — ⭐ READ from the originating ticket's
+     *       `member_staff_mediation_requested_at`, captured at INTAKE (Story 10.29). ⛔ NOT a field on
+     *       this request, and ⛔ not to be re-added as one. It shipped as a caller-supplied
+     *       `z.literal(true)` hardcoded by its only caller — a type with no `false`, so element 1 was
+     *       unfalsifiable, staff-authored, and gated nothing (`2026-08-15-115`). `2026-08-15-116` cl.3
+     *       ruled option (c) and named THE REMOVAL: a read added *beside* the boolean would have left
+     *       the element-1/element-3 collapse exactly where it was, with one more field.
      *   (2) `primary_delivery_not_completed` — ⛔ SERVER-OBSERVED, never caller-supplied;
      *   (3) the staff attestation — Tier-1, and WITHHELD from the member export.
      * Migration 0104 additionally enforces all three as a DB CHECK, because this gates the one path on
-     * which a staff actor obtains a member's assembled, DECRYPTED Tier-1 export.
+     * which a staff actor obtains a member's assembled, DECRYPTED Tier-1 export. ⛔ The app-layer read
+     * below FEEDS that CHECK — it does not replace it, and the CHECK must not be relaxed because the
+     * app now refuses earlier: it exists so a caller-side bug cannot create an ungated row.
      */
     async grantStaffMediatedDelivery(request: FastifyRequest): Promise<StaffMediatedDeliveryResponse> {
       const { actorId, pariwarIdStr } = adminCtx(request);
@@ -795,12 +810,17 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
       await requireAttribution(actorId);
       const idemKey = await claimIdempotency(request, 'delivery_staff_mediated', body.member_id);
 
+      // ⚠ The digest is computed BEFORE the scope tx opens, so it cannot name element 1's instant —
+      // that is read from the ticket inside the tx. `helpdesk_ticket_id` is what pins element 1 here:
+      // the instant is a property OF that ticket, and the ticket id is the caller-supplied part.
+      // ⛔ The deleted element-1 boolean is GONE from this digest with the field itself; a digest over
+      // a caller-hardcoded constant `true` recorded nothing about the request in the first place.
       const requestPayloadHash = sha256Hex(
         canonicalJsonStringify({
           member_id: body.member_id,
           export_id: body.export_id,
           channel: 'staff_mediated',
-          member_requested_staff_mediation: body.member_requested_staff_mediation,
+          helpdesk_ticket_id: body.helpdesk_ticket_id,
         }),
       );
 
@@ -816,7 +836,47 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
           memberDomain.rtbfAdvisoryLockKey(pariwarIdStr, body.member_id).toString(),
         ]);
 
-        await requireTicketInScope(scopeTx, pariwarId, ticketId);
+        const ticketRow = await requireTicketInScope(scopeTx, pariwarId, ticketId);
+
+        // ── ELEMENT 1 — READ FROM THE TICKET, WHERE THE MEMBER AUTHORED IT ─────────────────────────
+        // ⭐ THE WHOLE POINT OF STORY 10.29 (`2026-08-15-116` cl.3, option (c); `2026-08-15-120` cl.1).
+        // What this replaced was a caller-supplied `z.literal(true)` on the request body, hardcoded by
+        // its only caller. Three things were independently fatal: it was UNFALSIFIABLE (the type had no
+        // `false`, so there was no state of the world in which element 1 was absent); its AUTHOR was
+        // the caller rather than the member (`2026-08-14-111` cl.3 warned of exactly this collapse in
+        // advance); and its TIMESTAMP was the staff action's (`2026-08-15-115` cl.3).
+        // ⛔ THE CALLER CAN NO LONGER MANUFACTURE ELEMENT 1 AT ALL. The only way to produce it is to
+        // file a ticket, and this route cannot file one.
+        // ⚠ On a `helpline_call` ticket the value is OPERATOR-TRANSCRIBED at intake (`2026-08-15-120`
+        // cl.6). ⛔ That does NOT prove the member spoke, and nothing here claims it does — what it
+        // buys is a separate act at a separate instant, on a ticket this route cannot create, recorded
+        // immutably at genesis.
+        // ⛔ CODE-REVIEW ADDITION — the ticket must be THIS member's own ticket.
+        // `requireTicketInScope` scopes by (pariwar, ticket id) only — tenant scope, per its own
+        // docstring — and does not confirm `ticketRow.subjectMemberId` matches `body.member_id`.
+        // Element 1 is READ FROM the ticket, so an unchecked mismatch would let any ticket in the
+        // pariwar that carries a captured request satisfy the gate for a DIFFERENT member's export —
+        // exactly the "ticket id widens the subject" shape the module header's AC4 doctrine forbids.
+        // Folded into the SAME 409 refusal as "not captured": from this member's perspective, a ticket
+        // that is not theirs records nothing about them.
+        const memberRequestRecordedAt =
+          ticketRow.subjectMemberId === memberId ? ticketRow.memberStaffMediationRequestedAt : null;
+        if (memberRequestRecordedAt === null) {
+          // ⛔ 409, matching element 2's sibling refusal (`2026-08-15-120` cl.3): the request is
+          // well-formed and a SERVER-OBSERVED precondition is unmet. ⛔ Not 404 — the ticket-scoping
+          // 404 above exists so the route does not confirm a ticket's existence, and that reasoning
+          // does not transfer here: this caller has already been shown the ticket, so a 404 would make
+          // a legitimately-refused fallback unexplainable to the operator. ⛔ Not 400 — nothing about
+          // the caller's payload is wrong.
+          // ⛔ THROWN BEFORE ANY WRITE: no grant row is created, and the `finally` below releases the
+          // caller's idempotency key so a legitimate retry — after the member files a ticket that DOES
+          // record the request — is not locked out.
+          throw new ConflictError(
+            'This ticket does not record the member asking for staff-mediated delivery; the request must be captured when the ticket is filed',
+            'member_data_rights.member_request_not_captured',
+          );
+        }
+
         const exportRow = await dataExport.getExportForMember(
           scopeTx.tx,
           ids.dataExportId(body.export_id),
@@ -898,8 +958,15 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
               helpdeskTicketId: ticketId,
               grantedByActorId: actorId,
               expiresAt: new Date(now.getTime() + deliveryGrantTtlMs(deps)),
-              // Element 1 — recorded now, on the strength of the member's own request relayed at intake.
-              memberRequestRecordedAt: now,
+              // ── ELEMENT 1 — THE MEMBER'S INSTANT, NOT THE OPERATOR'S ────────────────────────────
+              // ⛔ NEVER `now`. `now` is the instant STAFF submit this route — a timestamp for the
+              // staff action wearing the member's field name, which is precisely the defect
+              // `2026-08-15-115` cl.3 found and `2026-08-15-120` cl.1 corrects. This is the instant the
+              // member's request was recorded at TICKET INTAKE, copied verbatim from the ticket.
+              // ⭐ Because the ticket necessarily predates this call, this value is strictly earlier
+              // than the grant's own `created_at` — which is what makes the two distinguishable to
+              // every later reader of the column.
+              memberRequestRecordedAt,
               primaryDeliveryNotCompletedAt: primaryNotCompletedAt,
               attestationCiphertext,
             }),

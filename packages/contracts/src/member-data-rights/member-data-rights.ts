@@ -169,19 +169,35 @@ export type MemberDirectDeliveryResponse = z.infer<typeof MemberDirectDeliveryRe
 /**
  * FALLBACK — the staff-mediated exception. ⛔ THREE-PART GATE (`2026-08-14-113` cl.1); all required.
  *
- * ⚠ Only elements (1) and (3) are caller-supplied. Element (2) —
- * `primary_delivery_not_completed` — is ⛔ NEVER accepted from the caller: the server observes it
- * from the OTP record. A client-suppliable "the primary failed" flag would let the caller assert the
- * very fact the gate exists to check.
+ * ⭐ ONLY ELEMENT (3) IS CALLER-SUPPLIED. Elements (1) and (2) are both SERVER-RESOLVED, for the same
+ * reason by two different mechanisms — a caller must not be able to assert the facts the gate exists
+ * to check:
+ *
+ *   (1) The member's own explicit request is ⛔ NO LONGER A FIELD ON THIS REQUEST AT ALL.
+ *       It shipped as `z.literal(true)`, hardcoded by its only caller: a type with no `false`, so
+ *       there was no state of the world in which element 1 was absent and it gated nothing
+ *       (`2026-08-15-115`). `2026-08-15-116` cl.3 ruled option (c) and NAMED THE REMOVAL. The server
+ *       now READS it from the originating ticket's `member_staff_mediation_requested_at`, captured at
+ *       INTAKE — where the member authors it — and refuses with
+ *       `member_data_rights.member_request_not_captured` (409) when it is absent
+ *       (`2026-08-15-120` cl.1/cl.3). ⛔ Do not re-add a field for it: a caller-supplied element 1
+ *       beside the read would restore the element-1/element-3 collapse with one more field.
+ *
+ *   (2) `primary_delivery_not_completed` — is ⛔ NEVER accepted from the caller: the server observes it
+ *       from the OTP record. A client-suppliable "the primary failed" flag would let the caller assert
+ *       the very fact the gate exists to check.
  */
 export const StaffMediatedDeliveryRequest = z
   .object({
     export_id: z.string().uuid(),
     member_id: z.string().uuid(),
+    /**
+     * The originating helpdesk ticket. ⭐ Since Story 10.29 this carries element 1: the server reads
+     * the ticket's `member_staff_mediation_requested_at` and uses it as the grant's
+     * `member_request_recorded_at`, so the recorded instant is the MEMBER's, not the operator's
+     * submit-time `now` (`2026-08-15-115` cl.3 → `2026-08-15-120` cl.1).
+     */
     helpdesk_ticket_id: z.string().uuid(),
-    /** Element 1 — the member's OWN explicit request. ⛔ `z.literal(true)`: staff may not initiate or
-     *  unilaterally select the fallback, so there is no "false" that still proceeds. */
-    member_requested_staff_mediation: z.literal(true),
     /** Element 3 — the staff attestation. Stored Tier-1 and ⛔ WITHHELD from the member export. */
     attestation: z.string().min(1).max(2000),
   })

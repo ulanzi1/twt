@@ -82,6 +82,19 @@ export const HelpdeskTicketDto = z
     pool_id: UuidString.nullable(),
     module_id: UuidString.nullable(),
     validity_lookup_id: UuidString.nullable(),
+    /**
+     * Story 10.29 (Decision `2026-08-15-120` cl.1/cl.5) — ELEMENT 1 of the ratified three-part gate on
+     * staff-mediated data-export delivery: the instant the MEMBER's request was recorded AT INTAKE, or
+     * `null` when they did not ask (the ordinary case for almost every ticket).
+     *
+     * ⭐ SURFACED so a refusal is explainable AT the control. Without it the operator's only signal
+     * would be a 409 arriving AFTER they had typed an attestation into a textarea.
+     * ⛔ THE UI CHECK IS PRESENTATIONAL — the SERVER decides. `grantStaffMediatedDelivery` reads this
+     * same fact from the ticket row and refuses with `member_data_rights.member_request_not_captured`,
+     * and that 409 stays reachable (a stale client, a direct call) and tested.
+     * ⛔ GENESIS-ONLY and read-only on the wire: there is no update path (`2026-08-15-120` cl.4).
+     */
+    member_staff_mediation_requested_at: Iso8601Datetime.nullable(),
     created_at: Iso8601Datetime,
     updated_at: Iso8601Datetime,
   })

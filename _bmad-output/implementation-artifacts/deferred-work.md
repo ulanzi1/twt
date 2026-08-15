@@ -4756,9 +4756,35 @@ creates a NEW open item, recorded below as its replacement, per [[feedback_closu
   weak, not the fallback unsafe to operate. *Owner:* a named successor story — ⛔ **still unnamed**
   ([[project_r7_fact_producer_unbuilt]] — a deferral naming an epic expires unowned; no story is minted
   from inside a sibling story or this file — mints are governance acts taken at their owning story,
-  [[feedback_governance_commits_precede_implementation]]). *Re-trigger:* the next story that touches
-  either the helpdesk ticket-intake surface (AC2) or the member-data-rights delivery module, or
-  immediately if prioritized on its own.
+  [[feedback_governance_commits_precede_implementation]]).
+  ⭐ **DISCHARGED 2026-08-15 — the owner is now named: `Story 10.29 — Member-Authored Staff-Mediation
+  Request` `[SURFACE]`**, minted governance-first in `epics.md` with 7 ACs and entered in
+  `sprint-status.yaml` as `backlog`. ⛔ **The MINT is discharged; the WORK is not.** The story is backlog,
+  not `ready-for-dev`, and per Decision `2026-08-15-116` clause 4 the current mechanization stays in
+  production unchanged until it lands — the ruling found element 1's evidentiary strength weak, ⛔ not the
+  fallback unsafe to operate. ⚠ Keep this entry: it is the trail from the escalation to its owner, and
+  deleting it would leave `2026-08-15-116` clause 3's "owed mint" pointing at nothing
+  ([[feedback_closure_language_precision]] — "Closed by [mint]" is not "Not addressed").
+  ⭐ **CLOSED BY IMPLEMENTATION 2026-08-15 — Story 10.29 (`10-29-member-authored-staff-mediation-request`).**
+  The WORK is now done, not merely owned: the captured fact
+  (`helpdesk_tickets.member_staff_mediation_requested_at`, migration `0106`) is written at genesis on
+  BOTH intake surfaces, `grantStaffMediatedDelivery` READS it, and the caller-supplied
+  `member_requested_staff_mediation: z.literal(true)` is **DELETED** from the contract, the admin client
+  and the audit digest — the removal `2026-08-15-116` clause 3 names, not a read path added beside the
+  boolean. `member_request_recorded_at` now carries the MEMBER's intake instant rather than the `now`
+  stamped when staff submit (`2026-08-15-115` cl.3). The six implementation decisions this required are
+  logged as Decision `2026-08-15-120`. ⛔ **"Closed by [implementation]" — ⛔ NOT "Resolved via deferral"
+  and ⛔ NOT "Not addressed"** ([[feedback_closure_language_precision]]).
+  ⚠ **One limit is CARRIED, not closed** (Decision `2026-08-15-120` clause 6): on
+  `created_via: 'helpline_call'` the field is **operator-transcribed at intake**. It buys a separate act
+  at a separate instant, an immutable genesis record, and the removal of the delivery caller's ability to
+  manufacture element 1 at all — ⛔ but it does **not** prove the member spoke, and nothing in the tree
+  claims it does. The member-app path (Story 10.2) is where authorship is genuine.
+  ⚠ Keep this entry in full: it is the trail from Escalation 11 → its ruling → its mint → its
+  implementation, and deleting any leg would leave `2026-08-15-116` clause 3 pointing at nothing.
+  *Re-trigger:* ⛔ **none — discharged.** Reopen only if a genuinely member-authored HELPLINE artifact
+  (a recorded consent, a call-back confirmation) is ever ratified as a requirement, which would supersede
+  Decision `2026-08-15-120` clause 6 rather than reinterpret it.
   [`packages/contracts/src/member-data-rights/member-data-rights.ts` — `StaffMediatedDeliveryRequest.member_requested_staff_mediation`, `apps/api/src/modules/member-data-rights/handlers.ts` — `grantStaffMediatedDelivery`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx` — the fallback panel]
   [`packages/contracts/src/member-data-rights/member-data-rights.ts:6278`, `apps/admin/src/api/client.ts:3159`, `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx`]
 
@@ -4857,3 +4883,20 @@ this story's gate re-run and will keep costing runs until someone owns it
   *Owner:* **Trustee Panel.** *Re-trigger:* **immediate** — a statutory-access gap, due **before the
   `termination_access_block` flip**, ⛔ never at a later epic ([[project_r7_fact_producer_unbuilt]]).
   [`apps/api/src/modules/member-data-rights/handlers.ts` — `grantMemberDirectDelivery`]
+
+## Deferred from: code review of story-10.29 (2026-08-15)
+
+- **Operator create-ticket route has no Idempotency-Key protection.** Unlike the member-app create route
+  (`apps/api/src/modules/helpdesk/member-handlers.ts`, which claims an `Idempotency-Key`-scoped key before
+  writing), the operator/helpline create route
+  (`apps/api/src/modules/helpdesk/handlers.ts:212-303`) has none — pre-existing since Story 10.3, unchanged
+  by Story 10.29's baseline (`7f5470d` already lacked it). Story 10.29 makes the consequence marginally
+  sharper: a retried or duplicated operator create can now produce two tickets that diverge on
+  `member_staff_mediation_requested_at`. *Owner:* none yet. *Re-trigger:* if the operator console's retry
+  behavior is ever hardened, or if a duplicate-ticket incident is observed in the wild.
+
+- **No index on `helpdesk_tickets.member_staff_mediation_requested_at`.** Harmless today — every read of
+  the column is a single-row lookup by ticket id (`getTicketById`), never a filtered list scan. Would
+  matter the moment a "tickets with an outstanding staff-mediation request" view is built.
+  [`packages/domain/migrations/0106_helpdesk-member-staff-mediation-request.sql`] *Owner:* none yet.
+  *Re-trigger:* if such a list view is ever built.

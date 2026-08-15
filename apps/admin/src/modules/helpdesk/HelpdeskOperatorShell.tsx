@@ -44,6 +44,16 @@ export interface HelpdeskOperatorShellProps {
   onCategoryChange: (c: string | null) => void;
   subCategory: string | null;
   onSubCategoryChange: (s: string | null) => void;
+  /**
+   * Story 10.29 (Decision `2026-08-15-120` cl.2) — element 1 of the ratified three-part gate: the
+   * MEMBER asked for staff-mediated delivery of their data export, captured HERE at intake.
+   * ⛔ PRESENTATIONAL COUPLING ONLY: the control renders only under the DPDPA subcategory, but the
+   * SERVER accepts the boolean on any ticket. Enforcing "subcategory ⇒ field" in the contract would
+   * put a routing token into a second enforcement site.
+   * ⚠ On this (helpline) surface the value is OPERATOR-TRANSCRIBED — see `2026-08-15-120` cl.6.
+   */
+  memberRequestedStaffMediation: boolean;
+  onMemberRequestedStaffMediationChange: (v: boolean) => void;
   // The caller's stated issue.
   body: string;
   onBodyChange: (v: string) => void;
@@ -66,6 +76,8 @@ export function HelpdeskOperatorShell(props: HelpdeskOperatorShellProps): ReactE
     onCategoryChange,
     subCategory,
     onSubCategoryChange,
+    memberRequestedStaffMediation,
+    onMemberRequestedStaffMediationChange,
     body,
     onBodyChange,
     onSubmit,
@@ -203,6 +215,29 @@ export function HelpdeskOperatorShell(props: HelpdeskOperatorShellProps): ReactE
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* ── Story 10.29 — ELEMENT 1, CAPTURED AT INTAKE (Decision `2026-08-15-120` cl.1/cl.2) ──
+                  ⛔ Rendered ONLY under the DPDPA subcategory — a checkbox on every `payment-failed`
+                  ticket would be noise, and noise invites ticking without context. ⛔ The coupling is
+                  PRESENTATIONAL: the server accepts the field on any ticket.
+                  ⚠ The copy states the transcription limit (`2026-08-15-120` cl.6) rather than implying
+                  the operator has verified anything — this records what the CALLER asked for. */}
+              {subCategory === DPDPA_DATA_RIGHTS_SUBCATEGORY && (
+                <div className="flex flex-col gap-1 rounded border border-gray-300 bg-gray-50 p-2">
+                  <label className="flex items-start gap-2 text-sm" htmlFor="helpdesk-staff-mediation">
+                    <input
+                      id="helpdesk-staff-mediation"
+                      type="checkbox"
+                      className="mt-1"
+                      checked={memberRequestedStaffMediation}
+                      onChange={(e) => onMemberRequestedStaffMediationChange(e.target.checked)}
+                      data-testid="helpdesk-staff-mediation"
+                    />
+                    <span>{resolveEn('helpdesk.staffMediation.label')}</span>
+                  </label>
+                  <p className="text-xs text-gray-600">{resolveEn('helpdesk.staffMediation.help')}</p>
                 </div>
               )}
 

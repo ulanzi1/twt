@@ -4342,6 +4342,11 @@ components:
             - string
             - "null"
           format: uuid
+        member_staff_mediation_requested_at:
+          type:
+            - string
+            - "null"
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -4373,6 +4378,7 @@ components:
         - pool_id
         - module_id
         - validity_lookup_id
+        - member_staff_mediation_requested_at
         - created_at
         - updated_at
       additionalProperties: false
@@ -4428,6 +4434,8 @@ components:
         created_via:
           type: string
           enum: *a24
+        member_requested_staff_mediated_delivery:
+          type: boolean
         claim_case_id:
           type: string
           format: uuid
@@ -4601,6 +4609,8 @@ components:
           type: string
           minLength: 1
           maxLength: 4800
+        member_requested_staff_mediated_delivery:
+          type: boolean
       required:
         - category
         - subject
@@ -5098,6 +5108,11 @@ components:
             - block
             - subject_member_id
           additionalProperties: false
+        member_staff_mediation_requested_at:
+          type:
+            - string
+            - "null"
+          format: date-time
       required:
         - ticket_id
         - category
@@ -5122,6 +5137,7 @@ components:
         - routing_policy_version
         - assigned_at
         - member_scope_context
+        - member_staff_mediation_requested_at
       additionalProperties: false
     HelpdeskReplyRequest:
       type: object
@@ -7102,10 +7118,6 @@ components:
         helpdesk_ticket_id:
           type: string
           format: uuid
-        member_requested_staff_mediation:
-          type: boolean
-          enum:
-            - true
         attestation:
           type: string
           minLength: 1
@@ -7114,7 +7126,6 @@ components:
         - export_id
         - member_id
         - helpdesk_ticket_id
-        - member_requested_staff_mediation
         - attestation
       additionalProperties: false
     RecordCorrectionResponse:

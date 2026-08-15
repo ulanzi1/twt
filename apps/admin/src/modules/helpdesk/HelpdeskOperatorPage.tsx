@@ -10,12 +10,13 @@
 // selected member (`subject_actor_id` left null — v1 identifies a MEMBER); the server resolves the
 // routing/scope-context/SLA + the operator_attribution from the session display_name. NO step-up.
 
-import type {
-  CreateTicketRequest,
-  HelpdeskCategory,
-  HelpdeskSubcategory,
-  MemberSearchRequest,
-  MemberSearchResultItem,
+import {
+  DPDPA_DATA_RIGHTS_SUBCATEGORY,
+  type CreateTicketRequest,
+  type HelpdeskCategory,
+  type HelpdeskSubcategory,
+  type MemberSearchRequest,
+  type MemberSearchResultItem,
 } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
@@ -44,6 +45,8 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [subCategory, setSubCategory] = useState<string | null>(null);
+  // Story 10.29 — element 1's intake capture (Decision `2026-08-15-120` cl.1/cl.2).
+  const [memberRequestedStaffMediation, setMemberRequestedStaffMediation] = useState(false);
   const [body, setBody] = useState('');
   const [result, setResult] = useState<HelpdeskFiledResult | null>(null);
 
@@ -58,6 +61,9 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
   const resetIntake = (): void => {
     setCategory(null);
     setSubCategory(null);
+    // ⛔ Story 10.29 — reset with the rest of the intake. A ticked box surviving a member change would
+    // record ONE member's request against ANOTHER member's ticket.
+    setMemberRequestedStaffMediation(false);
     setBody('');
     setResult(null);
     create.reset();
@@ -66,6 +72,20 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
   const selectMember = (id: string | null): void => {
     setSelectedId(id);
     resetIntake();
+  };
+
+  /** Story 10.29 (code-review fix) — the checkbox renders only under the DPDPA subcategory, but
+   *  `submit` sends whatever `memberRequestedStaffMediation` currently holds regardless of category —
+   *  it is NOT gated on the subcategory at submit time (D2: the coupling is presentational only). A
+   *  category change already forces the shell to call this with `null`, so clearing here covers BOTH a
+   *  direct subcategory change and a category change, and it is the ONLY path that must clear the flag
+   *  outside a full `resetIntake` — a ticked box left over from a DIFFERENT subcategory would otherwise
+   *  ride, unseen, onto whatever ticket is filed next. */
+  const onSubCategoryChange = (next: string | null): void => {
+    setSubCategory(next);
+    if (next !== DPDPA_DATA_RIGHTS_SUBCATEGORY) {
+      setMemberRequestedStaffMediation(false);
+    }
   };
 
   const onSearch = (payload: MemberSearchRequest): void => {
@@ -82,6 +102,9 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
       sub_category: subCategory === null ? undefined : (subCategory as HelpdeskSubcategory),
       body: body.trim(),
       created_via: 'helpline_call',
+      // Story 10.29 — element 1, captured at intake. ⛔ Sent only when actually ticked; the SERVER
+      // stamps the instant (`2026-08-15-120` cl.1) — the wire never carries a client timestamp.
+      member_requested_staff_mediated_delivery: memberRequestedStaffMediation ? true : undefined,
     } satisfies CreateTicketRequest;
     create.mutate(payload, {
       onSuccess: (ticket) => {
@@ -115,7 +138,9 @@ export function HelpdeskOperatorPage({ pariwarId }: HelpdeskOperatorPageProps): 
       category={category}
       onCategoryChange={setCategory}
       subCategory={subCategory}
-      onSubCategoryChange={setSubCategory}
+      onSubCategoryChange={onSubCategoryChange}
+      memberRequestedStaffMediation={memberRequestedStaffMediation}
+      onMemberRequestedStaffMediationChange={setMemberRequestedStaffMediation}
       body={body}
       onBodyChange={setBody}
       onSubmit={submit}

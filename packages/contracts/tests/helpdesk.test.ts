@@ -445,6 +445,9 @@ describe('HelpdeskTicketDto — .strict() + superRefine', () => {
       pool_id: null,
       module_id: null,
       validity_lookup_id: null,
+      // Story 10.29 — element 1's captured instant. Present-and-nullable; null = the member did not
+      // ask, which is the ordinary case for almost every ticket.
+      member_staff_mediation_requested_at: null,
       created_at: '2026-08-03T06:00:00.000Z',
       updated_at: '2026-08-03T06:00:00.000Z',
       ...overrides,
@@ -574,6 +577,8 @@ describe('Story 10.4 admin DTOs — queue item / detail / reply request', () => 
       routing_policy_version: 1,
       assigned_at: '2026-08-03T06:00:00.000Z',
       member_scope_context: { pariwar_id: PARIWAR, state: null, district: null, block: null, subject_member_id: MEMBER },
+      // Story 10.29 — element 1's captured instant, surfaced to the responder console (D5).
+      member_staff_mediation_requested_at: null,
     };
     expect(HelpdeskAdminTicketDetailResponse.safeParse(detail).success).toBe(true);
   });

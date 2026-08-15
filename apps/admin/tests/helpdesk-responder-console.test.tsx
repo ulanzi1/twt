@@ -6,7 +6,13 @@
 //   · the detail exposes the state-legal actions only, gates reply/resolve on a message, and fires the
 //     mutation with the typed message (AC2/AC3); a partner-module cross-link renders a disabled seam.
 
-import type { HelpdeskAdminTicketDetailResponse, HelpdeskCrossLinkRefs, HelpdeskQueueItem, HelpdeskSlaTimer } from '@twt/contracts';
+import {
+  DPDPA_DATA_RIGHTS_SUBCATEGORY,
+  type HelpdeskAdminTicketDetailResponse,
+  type HelpdeskCrossLinkRefs,
+  type HelpdeskQueueItem,
+  type HelpdeskSlaTimer,
+} from '@twt/contracts';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -57,6 +63,9 @@ const detail = (over: Partial<HelpdeskAdminTicketDetailResponse> = {}): Helpdesk
   routing_policy_version: 1,
   assigned_at: '2026-08-03T06:00:00.000Z',
   member_scope_context: { pariwar_id: PARIWAR, state: null, district: null, block: null, subject_member_id: '44444444-4444-4444-4444-444444444444' },
+  // Story 10.29 — element 1's captured instant. ⛔ The DEFAULT is null (the member did not ask), which
+  // is the ordinary case; the tests that need the fallback enabled pass it explicitly.
+  member_staff_mediation_requested_at: null,
   ...over,
 });
 
@@ -281,5 +290,64 @@ describe('<HelpdeskDetailShell> (AC2/AC3)', () => {
     );
     const badge = screen.getByText('Partner module');
     expect(badge.tagName).toBe('SPAN'); // a <span>, not an <a> — nav is a documented seam
+  });
+});
+
+// ── Story 10.29 (D5, code-review addition) — the staff-mediated fallback's presentational courtesy ──
+describe('<HelpdeskDetailShell> (D5) — the staff-mediation fallback courtesy', () => {
+  const pending = { pickUp: false, reply: false, resolve: false };
+  const dataRightsDetail = (over: Partial<HelpdeskAdminTicketDetailResponse> = {}) =>
+    detail({ sub_category: DPDPA_DATA_RIGHTS_SUBCATEGORY, ...over });
+
+  it('element 1 NOT captured — the fallback stays disabled even with an attestation typed, and the explaining line renders', () => {
+    render(
+      <HelpdeskDetailShell
+        pariwarId={PARIWAR}
+        detail={dataRightsDetail({ member_staff_mediation_requested_at: null })}
+        loading={false}
+        onPickUp={vi.fn()}
+        onReply={vi.fn()}
+        onResolve={vi.fn()}
+        pending={pending}
+        onDeliverStaffMediated={vi.fn()}
+        deliveryPending={{ memberDirect: false, staffMediated: false }}
+        canFulfilDataRights={true}
+      />,
+    );
+    fireEvent.change(screen.getByTestId('helpdesk-datarights-attestation'), {
+      target: { value: 'Caller states the registered handset was lost.' },
+    });
+    const fallbackBtn = screen.getByTestId('helpdesk-datarights-fallback') as HTMLButtonElement;
+    expect(fallbackBtn.disabled, 'the server will refuse — the button must not invite the attempt').toBe(true);
+    expect(screen.getByTestId('helpdesk-datarights-no-request')).toBeTruthy();
+  });
+
+  it('element 1 CAPTURED — the fallback enables once an attestation is typed, the explaining line is absent, and the typed attestation is fired', () => {
+    const onDeliverStaffMediated = vi.fn();
+    render(
+      <HelpdeskDetailShell
+        pariwarId={PARIWAR}
+        detail={dataRightsDetail({ member_staff_mediation_requested_at: '2026-08-15T04:00:00.000Z' })}
+        loading={false}
+        onPickUp={vi.fn()}
+        onReply={vi.fn()}
+        onResolve={vi.fn()}
+        pending={pending}
+        onDeliverStaffMediated={onDeliverStaffMediated}
+        deliveryPending={{ memberDirect: false, staffMediated: false }}
+        canFulfilDataRights={true}
+      />,
+    );
+    expect(screen.queryByTestId('helpdesk-datarights-no-request')).toBeNull();
+    const fallbackBtn = screen.getByTestId('helpdesk-datarights-fallback') as HTMLButtonElement;
+    expect(fallbackBtn.disabled, 'still gated on a typed attestation').toBe(true);
+    fireEvent.change(screen.getByTestId('helpdesk-datarights-attestation'), {
+      target: { value: 'Caller states the registered handset was lost; identity confirmed by read-back.' },
+    });
+    expect(fallbackBtn.disabled).toBe(false);
+    fireEvent.click(fallbackBtn);
+    expect(onDeliverStaffMediated).toHaveBeenCalledWith(
+      'Caller states the registered handset was lost; identity confirmed by read-back.',
+    );
   });
 });

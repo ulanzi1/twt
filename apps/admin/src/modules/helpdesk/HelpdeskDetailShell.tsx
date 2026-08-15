@@ -269,7 +269,16 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
                   <button
                     type="button"
                     className="w-fit rounded border border-red-700 px-3 py-1 text-red-700 disabled:opacity-50"
-                    disabled={attestation.trim() === '' || deliveryPending?.staffMediated === true}
+                    disabled={
+                      attestation.trim() === '' ||
+                      deliveryPending?.staffMediated === true ||
+                      // ⭐ Story 10.29 (D5) — element 1 was never captured on this ticket, so the server
+                      // will refuse. ⛔ PRESENTATIONAL ONLY: this is a courtesy so the operator is not
+                      // told "no" only after typing an attestation. The SERVER decides, and its 409
+                      // (`member_data_rights.member_request_not_captured`) stays reachable for a stale
+                      // client or a direct call — and is tested on the real route.
+                      detail.member_staff_mediation_requested_at === null
+                    }
                     onClick={() => onDeliverStaffMediated?.(attestation.trim())}
                     data-testid="helpdesk-datarights-fallback"
                   >
@@ -280,6 +289,15 @@ export function HelpdeskDetailShell(props: HelpdeskDetailShellProps): ReactEleme
                   {/* ⚠ States the server-side precondition in plain words so a refusal is not a
                       mystery. ⛔ The UI does NOT evaluate it — the server observes it. */}
                   <p className="text-xs text-gray-500">{resolveEn('helpdesk.dataRights.fallbackBlocked')}</p>
+                  {/* ⭐ Story 10.29 (D5) — element 1's absence, said plainly. ⚠ It names the ONLY
+                      remedy there is: file a new ticket. There is deliberately no "tick it later"
+                      control (`2026-08-15-120` cl.4) — an updatable element 1 would recreate the
+                      collapse this story exists to remove, with one extra hop. */}
+                  {detail.member_staff_mediation_requested_at === null && (
+                    <p className="text-xs text-gray-700" data-testid="helpdesk-datarights-no-request">
+                      {resolveEn('helpdesk.dataRights.fallbackNoRequest')}
+                    </p>
+                  )}
                 </div>
               </details>
 

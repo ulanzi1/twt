@@ -698,9 +698,15 @@ export function grantMemberDirectDelivery(
 
 /**
  * FALLBACK delivery — staff-mediated. ⛔ A NARROW EXCEPTION, not an alternative.
- * ⚠ `member_requested_staff_mediation` is `true` by construction in the contract: the member must have
- * ASKED. ⛔ The "primary did not complete" condition is NOT sent — the server observes it, and a
- * client-suppliable flag would let the caller assert the very fact the gate exists to check.
+ *
+ * ⭐ NEITHER "the member asked" NOR "the primary did not complete" IS SENT. Both are server-resolved,
+ * and a client-suppliable flag for either would let the caller assert the very fact the gate exists to
+ * check. Element 1 used to ride here as a `z.literal(true)` boolean hardcoded on this very line —
+ * which is exactly what made it unfalsifiable and staff-authored (`2026-08-15-115`).
+ * Decision `2026-08-15-116` cl.3 ruled it REMOVED: the server now reads the member's request from the
+ * originating ticket, where the member authored it at intake, and refuses with a 409
+ * (`member_data_rights.member_request_not_captured`) when the ticket carries none.
+ * ⛔ Do not re-add it. The `helpdesk_ticket_id` below is what carries element 1 now.
  */
 export function grantStaffMediatedDelivery(
   pariwarId: string,
@@ -719,7 +725,6 @@ export function grantStaffMediatedDelivery(
       export_id: input.exportId,
       member_id: input.memberId,
       helpdesk_ticket_id: input.helpdeskTicketId,
-      member_requested_staff_mediation: true,
       attestation: input.attestation,
     }),
   });

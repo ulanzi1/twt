@@ -32,6 +32,14 @@ const EN: Record<string, string> = {
   // wording may be precise (UX-DR54/DR55); this label names the statutory route in plain terms so an
   // operator taking the call can recognise it without knowing the token.
   'helpdesk.subcategory.dpdpa': 'Data rights request (access, correction, portability, erasure)',
+  // ── Story 10.29 (D1/D2) — element 1, captured at INTAKE on the helpline surface ─────────────────
+  // ⚠ THE WORDING IS DELIBERATE. It says the caller ASKED; it does NOT say the member's identity or
+  // their request has been verified, because on this route the field is OPERATOR-TRANSCRIBED
+  // (`2026-08-15-120` cl.6). ⛔ Copy that implied verification would overclaim exactly what the
+  // decision forbids claiming.
+  'helpdesk.staffMediation.label': 'The caller asked us to hand their records over to them directly',
+  'helpdesk.staffMediation.help':
+    'Tick this only if the caller said they cannot open a link or code sent to their own phone and asked a staff member to handle it for them. Write down what they said in the box below.',
   // ── Story 10.21 — the DPDPA fulfilment panel on the ticket detail page ────────────────────────────
   // ⚠ Operator-facing copy, so it may be precise (UX-DR54/DR55). It is written to be HONEST about what
   // each action does and does not do — an operator who over-reads a success message here could hand a
@@ -66,6 +74,14 @@ const EN: Record<string, string> = {
   'helpdesk.dataRights.fallback': 'Handle it for the member',
   'helpdesk.dataRights.fallbackBlocked':
     'Send the code to the member first. This option opens only after that code has gone unused.',
+  // ── Story 10.29 (D5) — element 1's surface on the RESPONDER console ─────────────────────────────
+  // ⚠ Today the operator's ONLY signal that element 1 is missing is a 409 arriving AFTER they have
+  // typed an attestation. This line explains the refusal AT the control. ⛔ It is a courtesy: the
+  // SERVER decides, and the 409 stays reachable for a stale client or a direct call.
+  // ⛔ The remedy named here is FILE ANOTHER TICKET — deliberately, because there is no update path
+  // (`2026-08-15-120` cl.4): a "tick it later" control would recreate the collapse with one extra hop.
+  'helpdesk.dataRights.fallbackNoRequest':
+    'This ticket does not record the member asking you to handle it for them. That request is written down when the ticket is filed — if they have asked since, file a new ticket for it.',
   'helpdesk.dataRights.correctionTitle': 'Record a correction',
   'helpdesk.dataRights.correctionNote':
     'Write down what the member asked to be corrected and what you did about it. This is a record of the request — it does not change their details by itself.',

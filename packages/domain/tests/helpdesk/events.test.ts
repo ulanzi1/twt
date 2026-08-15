@@ -48,6 +48,8 @@ function basePayload(overrides: Record<string, unknown> = {}) {
     pool_id: null,
     module_id: null,
     validity_lookup_id: null,
+    // Story 10.29 — element 1, captured at intake. PRESENT-and-nullable (⛔ not optional).
+    member_staff_mediation_requested_at: null,
     ...overrides,
   };
 }
@@ -104,6 +106,67 @@ describe('HelpdeskTicketCreatedPayloadSchema — created_via/operator_attributio
   it('rejects created_via: member_app with a non-null operator_attribution', () => {
     const result = HelpdeskTicketCreatedPayloadSchema.safeParse(basePayload({ operator_attribution: 'should not be here' }));
     expect(result.success).toBe(false);
+  });
+});
+
+// ── Story 10.29 — element 1 of the three-part gate, captured at INTAKE ───────────────────────────
+//
+// Decision `2026-08-15-120` cl.1 (implementing `2026-08-15-116` cl.3, option (c)). The genesis mirrors
+// the ticket's `member_staff_mediation_requested_at`, so the member's request is an IMMUTABLE event
+// record and not a request-time literal the delivery caller can manufacture.
+
+describe('Story 10.29 — member_staff_mediation_requested_at on the genesis payload', () => {
+  it('round-trips an ISO instant with an offset (the member ASKED)', () => {
+    const at = '2026-08-15T09:15:00.000Z';
+    const result = HelpdeskTicketCreatedPayloadSchema.safeParse(
+      basePayload({ member_staff_mediation_requested_at: at }),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.member_staff_mediation_requested_at).toBe(at);
+  });
+
+  it('round-trips null (the member did NOT ask — the ordinary case)', () => {
+    const result = HelpdeskTicketCreatedPayloadSchema.safeParse(
+      basePayload({ member_staff_mediation_requested_at: null }),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.member_staff_mediation_requested_at).toBeNull();
+  });
+
+  it('⛔ REJECTS the field being ABSENT — present-and-nullable, never optional', () => {
+    // ⭐ THE POINT: if the key were `.optional()`, a pre-10.29 genesis and a post-10.29 genesis whose
+    // member did not ask would be INDISTINGUISHABLE — "the field was not captured yet" would read
+    // identically to "the member did not ask". A required-but-nullable key keeps those two apart.
+    const payload = basePayload() as Record<string, unknown>;
+    delete payload['member_staff_mediation_requested_at'];
+    expect(HelpdeskTicketCreatedPayloadSchema.safeParse(payload).success).toBe(false);
+  });
+
+  it('⛔ REJECTS a non-ISO / offset-less string', () => {
+    expect(
+      HelpdeskTicketCreatedPayloadSchema.safeParse(
+        basePayload({ member_staff_mediation_requested_at: '2026-08-15 09:15:00' }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('⛔ REJECTS a boolean — the WIRE carries a boolean, the PAYLOAD carries the server instant', () => {
+    // ⛔ The intake request field `member_requested_staff_mediated_delivery` is a boolean; the server
+    // converts it to its OWN clock instant. A boolean reaching the payload would mean a client value
+    // had been threaded straight through (`2026-08-15-115` cl.3's defect, with a new author).
+    expect(
+      HelpdeskTicketCreatedPayloadSchema.safeParse(
+        basePayload({ member_staff_mediation_requested_at: true }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('⛔ .strict() still rejects an unknown key alongside it', () => {
+    expect(
+      HelpdeskTicketCreatedPayloadSchema.safeParse(
+        basePayload({ member_staff_mediation_requested_at: null, member_asked_for_staff_delivery: true }),
+      ).success,
+    ).toBe(false);
   });
 });
 

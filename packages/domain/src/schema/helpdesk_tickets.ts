@@ -165,6 +165,30 @@ export const helpdeskTickets = pgTable(
     // WHO transcribed a helpline call (NON-PII controlled-staff attribution); null for member_app.
     operatorAttribution: text('operator_attribution'),
 
+    // ── Story 10.29 — ELEMENT 1 of the ratified three-part gate, CAPTURED AT INTAKE ──────────
+    // The instant at which the MEMBER's request for staff-mediated delivery of their data export
+    // was recorded (Decision `2026-08-15-120` cl.1, implementing `2026-08-15-116` cl.3's option (c)).
+    //
+    // ⭐ ONE nullable timestamp, deliberately NOT a boolean + a timestamp: two columns can disagree,
+    // one cannot. `asked ⇔ NOT NULL`, `when ⇔ the value` — the IDENTICAL shape
+    // `data_export_delivery_grants.member_request_recorded_at` uses, which makes the hand-off to
+    // migration 0104's `data_export_delivery_grants_three_part_gate_check` a COPY, not a translation.
+    //
+    // ⛔ WRITTEN ONLY BY THE PROJECTOR AT GENESIS (`helpdesk/project.ts`), from the SERVER's clock.
+    // The wire carries a BOOLEAN (`member_requested_staff_mediated_delivery`) on the two intake
+    // requests; ⛔ a client-supplied `..._at` would re-create the very defect this column corrects
+    // (`2026-08-15-115` cl.3 — a timestamp for one event wearing another event's field name).
+    // ⛔ GENESIS-ONLY, and there is NO update path (`2026-08-15-120` cl.4): an updatable element 1
+    // recreates the element-1/element-3 collapse with one extra hop. The remedy when a member forgot
+    // is to file ANOTHER ticket — a member act, recorded at its own instant.
+    // ⛔ NO BACKFILL. NULL on an existing ticket means "not asked", which is TRUE — not a data gap.
+    // ⚠ On `created_via: 'helpline_call'` this is OPERATOR-TRANSCRIBED at intake, the same posture as
+    // `body` and `operator_attribution` (`2026-08-15-120` cl.6). It does NOT prove the member spoke.
+    memberStaffMediationRequestedAt: timestamp('member_staff_mediation_requested_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+
     // Cross-link seams (nullable now; the navigation that reads them is Story 10.4).
     claimCaseId: uuid('claim_case_id').$type<ClaimId>(),
     poolId: uuid('pool_id').$type<PoolId>(),

@@ -41,6 +41,9 @@ function genesisInput(ticketId: string, pariwarId: string, body: string): Projec
     auditId: randomUUID(),
     createdVia: 'member_app',
     operatorAttribution: null,
+    // Story 10.29 — element 1's intake capture. The ordinary case is `null` (the member did not ask);
+    // ⛔ present-and-nullable on the input, never optional, so a fixture cannot silently omit it.
+    memberStaffMediationRequestedAt: null,
     actor: 'member',
     actorId: memberId,
     claimCaseId: null,

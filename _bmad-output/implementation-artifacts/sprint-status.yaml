@@ -1,4 +1,58 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16g (10-13-fixed-amount-setter-admin-ui: IN-PROGRESS -> REVIEW via
+#   bmad-dev-story. All 9 tasks + all subtasks complete; ACs 1-7 satisfied. Branch
+#   governance/10-13-fixed-amount-setter-admin-ui, 9 commits: 3 governance: then 6 story:, so git log
+#   reads governance -> implementation ([[feedback_governance_commits_precede_implementation]]).
+#   BUILT: assertFixedAmountPanelAuthorized (the AC3 teeth, third instance of the assertPanelAuthorized
+#   shape) + PoolFixedAmountPanelMemberUnauthorizedError -> a stable 403; the eligible-attestor
+#   directory read + a SIBLING GET route gated on the EMERGENCY key (a response FIELD cannot carry a
+#   different permission gate from the response it rides on, so folding it into the view would have
+#   silently widened who can enumerate a Pariwar's emergency trustees); the picker replacing the
+#   raw-UUID textarea; the Scheduled region; the `upcoming` field; the module's FIRST UI tests; and the
+#   trustee_panel grant (catalog 34 -> 35, KEY COUNT STAYS 43).
+#   ⛔ THE ORDERING IS LOAD-BEARING AND THE ROUTE WAS RESTRUCTURED FOR IT: postEmergency now opens the
+#   scope tx FIRST (the check reads role_grants and RLS is transaction-scoped), asserts eligibility,
+#   and only THEN resolves per-member displays. Reversed, an ineligible AND display-less actor reports
+#   409 AdminDisplayNameMissing instead of the 403, and the audit line records the WRONG REASON -- the
+#   one artefact anyone reviewing a refused emergency override actually reads.
+#   ⛔ STORY 7.5's OWN E2E ASSERTED THE DEFECT AS CORRECT. Its emergency test seeded panel members with
+#   NO grants and its comment said so deliberately: "no grant is required ... 7.5 records the panel
+#   composition, it does NOT check panel-member permissions". That was TRUE, and it was the DEFECT --
+#   the test encoded the hole. Corrected, with the comment now saying what changed and what did NOT
+#   (the R9-lifecycle boundary still stands).
+#   ⭐ REVERT-SANITY CONFIRMED AT BOTH LAYERS, run rather than asserted: with the refusal neutered, 6
+#   unit tests fail AND 3 live-DB tests fail, including the CROSS-TENANT one in each. Restored and
+#   re-verified green. A same-tenant-only test would have passed against the broken behaviour too.
+#   ⛔ ci:local FAILED AND IS RECORDED AS OBSERVED, NEVER AS GREEN. Run 1: 29 green / 2 red (test
+#   (unit) + integration-tests, both from the SAME @twt/api#test task; 2 files failed / 115 passed,
+#   998 tests passed). ⚠ THE CAPTURED LOG WAS TRUNCATED TO ITS TAIL, so Run 1's two failing spec names
+#   were NEVER OBSERVED and are NOT reconstructed. Run 2 (integration job re-run with full capture):
+#   red again but a DIFFERENT, LARGER set -- 3 files, all member-moderation (grounds / dwell /
+#   escalation); every other package green under the same concurrency (@twt/domain 245 files,
+#   @twt/channels 17, @twt/validity-service 21, @twt/niyamavali-engine 13, @twt/events 6, @twt/queue 1).
+#   INNOCENCE CHECKS RUN: @twt/api standalone = 117 files / 1000 tests PASS; member-moderation/ in
+#   isolation = 6 files / 81 tests PASS. ⇒ the red set CHANGES BETWEEN RUNS of the same commit and
+#   every NAMED spec passes alone -- the #14 signature compounded by ci:local concurrency
+#   oversubscription; and member-moderation is 10.19/10.20/10.22 territory, not code 10.13 touched
+#   (pool/, rbac/, contracts/pools/, pool-fixed-amount/, admin console). ⚠ Run 1's inference is
+#   recorded as UN-ATTESTED, not reconstructed ([[feedback_record_unattested_no_backfill]]).
+#   SUITES THIS STORY OWNS, ALL RUN DIRECTLY AND GREEN: domain rbac 153, domain pool 202 (11 new
+#   fixed-amount-panel unit tests), pool-fixed-amount.spec 17 (11 new), contracts 21 (9 new), api
+#   fixed-amount.spec 14 (5 new + 1 CORRECTED), admin 321 (11 new). Gates green incl. domain-invariants
+#   (which CAUGHT a named-const .limit() and was fixed, not worked around), pool-support-category,
+#   human-actor, microcopy, friction-budget (16 rows -- one new FORCED row: the trustee must now choose
+#   the panel from the eligible directory, paid to protect the immutable record's authority).
+#   ⚠ WHAT THIS STORY DOES NOT CLAIM, recorded in the ruling entry AND at every marker: F-1 IS NOT
+#   CLOSED -- Q1(a) keeps both keys on pariwar_admin CONCURRENTLY, so the eligible attestor set still
+#   includes the population architecture.md:1324 names as the hostile trustee; clause 1 buys
+#   DISTINGUISHABILITY, not SEPARATION. F-3 IS NOT CLOSED -- an attestor is not an approver;
+#   eligibility proves CAPABILITY, never ASSENT, so FR-15's "multi-trustee approval" stays PARTIAL.
+#   MARKERS CLOSED IN THREE LIVE REGISTERS as "Closed by [edit]" (fixed-amount.ts:75-88 + the constant's
+#   own doc comment carrying Q3's answer; deferred-work.md in place; epics.md's inherited-obligation
+#   block). ⚠ The 1-18 / 10-18 / 7-5 STORY FILES are deliberately left alone -- historical records of
+#   what was true when written, not live trackers.
+#   Only development_status[10-13-fixed-amount-setter-admin-ui] flips. [7-11-...] stays backlog as
+#   minted at 2026-08-16f. NO other story status changed.)
 # last_updated: 2026-08-16f (10-13-fixed-amount-setter-admin-ui: stays IN-PROGRESS. TRUSTEE PANEL
 #   RULED all three BLOCKING questions option (a); Decision `2026-08-16-123` recorded BEFORE any
 #   implementation ([[feedback_governance_commits_precede_implementation]]). Q1(a): trustee_panel gains
@@ -7151,7 +7205,7 @@ development_status:
   10-10-member-moderation-suspend-terminate-restore-reason-codes: done
   10-11-trustee-lite-list-signals: done
   10-12-per-pariwar-custom-fields-jsonb: done
-  10-13-fixed-amount-setter-admin-ui: in-progress
+  10-13-fixed-amount-setter-admin-ui: review
   10-14-permission-delegation: backlog
   10-15-survey-poll: backlog
   10-16-contribution-during-suspension-disclosure: done

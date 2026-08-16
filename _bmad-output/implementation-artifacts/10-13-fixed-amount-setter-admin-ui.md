@@ -4,7 +4,7 @@ baseline_commit: 9fb88c318eed9e22614f16ffd86aa964d65f3ebd
 
 # Story 10.13: Fixed-Amount Setter Admin UI `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 Epic: 10 · Story: 13 · Key: `10-13-fixed-amount-setter-admin-ui`
 Authored: 2026-08-16 · Baseline: `main` @ `9fb88c3` (clean, fetched, `== origin/main`)
@@ -297,42 +297,42 @@ this story. ⚠ Record it as *observed*, not as *deferred by 10.13* — 10.13 ne
   - [x] ⏸ **STOP.** Do not proceed past Task 2 until Q1/Q2/Q3 are ruled.
         ⏸ **IN FORCE 2026-08-16** — commit `6399235`. Awaiting the Panel ruling on Q1/Q2/Q3.
 
-- [ ] **Task 2 — Record the ruling (AC1)**
-  - [ ] One `.decision-log.md` entry, numbered from head `2026-08-16-122`, per-clause provenance
+- [x] **Task 2 — Record the ruling (AC1)**
+  - [x] One `.decision-log.md` entry, numbered from head `2026-08-16-122`, per-clause provenance
         labelled. ⛔ Never edit an existing entry ([[feedback_supersede_never_reinterpret]]).
-  - [ ] If §4.2 is amended: both locales reproduced **verbatim** in that entry (`docs/legal/` is
+  - [x] If §4.2 is amended: both locales reproduced **verbatim** in that entry (`docs/legal/` is
         gitignored — the entry is the only durable copy).
-  - [ ] Commit: `governance(10.13): Decision <id> — …`.
+  - [x] Commit: `governance(10.13): Decision <id> — …`.
 
-- [ ] **Task 3 — RBAC, only if Q1 rules a grant (AC1)**
-  - [ ] Add the key(s) to the `trustee_panel` bundle in `roles.ts` with the Panel-decision rationale
+- [x] **Task 3 — RBAC, only if Q1 rules a grant (AC1)**
+  - [x] Add the key(s) to the `trustee_panel` bundle in `roles.ts` with the Panel-decision rationale
         inline, in the voice of the existing `member.restore_terminated` /
         `member.decide_moderation_appeal` notes (`roles.ts:630-645`).
-  - [ ] Bump `PERMISSION_CATALOG_VERSION` **34 → 35** (`permissions.ts:462`). ⛔ **Key count stays 43**
+  - [x] Bump `PERMISSION_CATALOG_VERSION` **34 → 35** (`permissions.ts:462`). ⛔ **Key count stays 43**
         — an existing role gaining existing keys moves the capability model, not the catalog. This is
         the **third** application of that rule (10.18 minted a role; 6.17 gave an existing role an
         existing key). Update the pin **and** the ledger comment at
         `packages/domain/tests/rbac/permissions.test.ts:54-56`, following its established prose form.
-  - [ ] ⚠ Do **not** grant to `state_trustee` or `district_admin`: their `scopeCeiling` (`state` /
+  - [x] ⚠ Do **not** grant to `state_trustee` or `district_admin`: their `scopeCeiling` (`state` /
         `district`) can never satisfy a `pariwar`-dimension check, so the grant would be **inert on
         arrival** ([[project_rbac_geo_scope_containment]]; `roles.ts:607-618`).
 
-- [ ] **Task 4 — The eligibility predicate (AC3)** — *build this before the picker; the boundary
+- [x] **Task 4 — The eligibility predicate (AC3)** — *build this before the picker; the boundary
       first, the convenience second*
-  - [ ] Add the panel-eligibility assertion beside the other emergency guards in
+  - [x] Add the panel-eligibility assertion beside the other emergency guards in
         `packages/domain/src/pool/fixed-amount.ts` (or a sibling in `pool/`), modelled on
         `r9-voting-persist.ts:320-350`. It takes the raw `pg.PoolClient` — `ScopeTx` exposes **both**
         `client` and `tx` (`scope-tx.ts:44-49`), so no new plumbing is needed.
-  - [ ] Add `PoolFixedAmountPanelMemberUnauthorizedError` to `pool/errors.ts` alongside
+  - [x] Add `PoolFixedAmountPanelMemberUnauthorizedError` to `pool/errors.ts` alongside
         `PoolFixedAmountPanelTooSmallError`; map it in `translateFixedAmountError`
         (`handlers.ts:53-94`) to a stable code.
-  - [ ] Wire it into `postEmergency` **before** the display-resolution loop (`handlers.ts:250-269`);
+  - [x] Wire it into `postEmergency` **before** the display-resolution loop (`handlers.ts:250-269`);
         emit `admin_pool_fixed_amount.rejected` on refusal.
-  - [ ] ⚠ Keep the existing arithmetic guards (non-empty / ≥2 / no-duplicates) exactly where they are —
+  - [x] ⚠ Keep the existing arithmetic guards (non-empty / ≥2 / no-duplicates) exactly where they are —
         eligibility is an **additional** predicate, not a replacement.
 
-- [ ] **Task 5 — The directory read + transport (AC2)**
-  - [ ] Domain accessor in `pool/fixed-amount.ts` (or `pool/` sibling), modelled on
+- [x] **Task 5 — The directory read + transport (AC2)**
+  - [x] Domain accessor in `pool/fixed-amount.ts` (or `pool/` sibling), modelled on
         `resolveShepherdCandidates`'s **query shape** (`shepherd-assign-persist.ts:190-249`):
         `role_grants ⋈ users`, explicit `pariwar_id` (+ RLS), non-blank `display_name`, deterministic
         `ORDER BY`, **integer-literal** `.limit(...)`.
@@ -346,49 +346,49 @@ this story. ⚠ Record it as *observed*, not as *deferred by 10.13* — 10.13 ne
       shape from the precedent; do not copy its shortcut.
     - ⚠ The domain limit-clamp gate clamps every dynamic `.limit()`
       ([[project_domain_limit_clamp_and_savepoint_retry]]) — use a literal or `clampLimit(...)`.
-  - [ ] Contracts: a `.strict()` DTO in `packages/contracts/src/pools/fixed-amount.ts`. ⛔ Contracts
+  - [x] Contracts: a `.strict()` DTO in `packages/contracts/src/pools/fixed-amount.ts`. ⛔ Contracts
         **must not** import `@twt/domain` (`fixed-amount.ts:9-14`; [[project_contracts_domain_bundle_boundary]]).
-  - [ ] Expose it on the existing GET view or a sibling GET; gate on the **emergency** key.
-  - [ ] `apps/admin/src/api/{client,hooks}.ts` — extend the existing
+  - [x] Expose it on the existing GET view or a sibling GET; gate on the **emergency** key.
+  - [x] `apps/admin/src/api/{client,hooks}.ts` — extend the existing
         `// ── Story 7.5 — the fixed-amount schedule surface ──` section (`hooks.ts:731-762`).
 
-- [ ] **Task 6 — The picker + the Scheduled region (AC2, AC4)**
-  - [ ] Replace the panel textarea with a multi-select over the directory; keep the client-side
+- [x] **Task 6 — The picker + the Scheduled region (AC2, AC4)**
+  - [x] Replace the panel textarea with a multi-select over the directory; keep the client-side
         de-dupe (`FixedAmountPage.tsx:79-85`) and the `< 2` guard (`:93`) — the server rejects both
         too, and the client guard is the fast path, not the gate.
-  - [ ] Thread `upcoming` through the GET and render the **Scheduled** region between *Effective now*
+  - [x] Thread `upcoming` through the GET and render the **Scheduled** region between *Effective now*
         and *Standard change*.
-  - [ ] ⚠ Render loading / empty / error states **outside** any list that crosses empty→populated
+  - [x] ⚠ Render loading / empty / error states **outside** any list that crosses empty→populated
         ([[project_fabric_flatlist_empty_populated_crash]] — the admin app is React-DOM, not Fabric, so
         this is discipline rather than a crash here; keep the existing `view.isLoading` / `isError`
         early-return shape at `FixedAmountPage.tsx:141-147`).
 
-- [ ] **Task 7 — i18n + the module's first UI test (AC5)**
-  - [ ] `apps/admin/src/modules/pool-fixed-amount/i18n-en.ts` for new/changed copy only.
-  - [ ] `apps/admin/tests/fixed-amount-page.test.tsx` — model on `apps/admin/tests/banners-page.test.tsx`
+- [x] **Task 7 — i18n + the module's first UI test (AC5)**
+  - [x] `apps/admin/src/modules/pool-fixed-amount/i18n-en.ts` for new/changed copy only.
+  - [x] `apps/admin/tests/fixed-amount-page.test.tsx` — model on `apps/admin/tests/banners-page.test.tsx`
         / `custom-fields-page.test.tsx`; `_helpers.tsx` + `setup.ts` provide the harness.
-  - [ ] ⚠ The copy is **admin chrome**, English-facing — this is not a `packages/i18n` catalog key and
+  - [x] ⚠ The copy is **admin chrome**, English-facing — this is not a `packages/i18n` catalog key and
         not member-facing bilingual content (`banners/i18n-en.ts:3-8`).
 
-- [ ] **Task 8 — Tests with teeth (AC3, AC4)**
-  - [ ] Domain integration (`packages/domain/tests/integration/pool/pool-fixed-amount.spec.ts` —
+- [x] **Task 8 — Tests with teeth (AC3, AC4)**
+  - [x] Domain integration (`packages/domain/tests/integration/pool/pool-fixed-amount.spec.ts` —
         extend, do not fork): eligible panel accepted; ineligible refused; **cross-tenant holder
         refused**; refusal writes **no** schedule row and **no** attestation row.
-  - [ ] API E2E (`apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts` — extend): the
+  - [x] API E2E (`apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts` — extend): the
         refusal's HTTP code + the `admin_pool_fixed_amount.rejected` audit line via the capturing sink;
         the directory GET is gated; the `upcoming` field appears/disappears correctly.
-  - [ ] ⚠ Own-committing seed writes + a fresh random `pariwarId` per test, `role_grants` cleaned in
+  - [x] ⚠ Own-committing seed writes + a fresh random `pariwarId` per test, `role_grants` cleaned in
         `afterAll` — the file's existing posture (`fixed-amount.spec.ts:1-11`); assert **membership**,
         not counts ([[project_live_db_test_gotchas]]).
-  - [ ] ⚠ **Revert-sanity:** confirm the cross-tenant test **fails** with the eligibility check removed.
+  - [x] ⚠ **Revert-sanity:** confirm the cross-tenant test **fails** with the eligibility check removed.
         A test that passes both ways proves nothing.
 
-- [ ] **Task 9 — Records + gates (AC6, AC7)**
-  - [ ] The four marker sites (AC6) + the grep-back.
-  - [ ] `deferred-work.md` entries for AC7(b) and AC7(c), each with a **re-trigger**; AC7(a)'s
+- [x] **Task 9 — Records + gates (AC6, AC7)**
+  - [x] The four marker sites (AC6) + the grep-back.
+  - [x] `deferred-work.md` entries for AC7(b) and AC7(c), each with a **re-trigger**; AC7(a)'s
         disposition recorded in the closure language it actually is.
-  - [ ] `friction-budget.md`, `.decision-log.md` cross-reference, sprint-status ledger entry.
-  - [ ] `pnpm ci:local` (DATABASE_URL on `:5433`). ⚠ Record the result **AS OBSERVED**, never as green
+  - [x] `friction-budget.md`, `.decision-log.md` cross-reference, sprint-status ledger entry.
+  - [x] `pnpm ci:local` (DATABASE_URL on `:5433`). ⚠ Record the result **AS OBSERVED**, never as green
         ([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]],
         [[project_ci_local_double_run_pollution]]). `git push` runs the full `ci:local` via a pre-push
         hook — that is the "hang", not a failure.
@@ -676,20 +676,256 @@ because AC1 fixes the count at five.
 the check onto the scope tx closes the cross-tenant case **by construction** — which is exactly what
 `assertPanelAuthorized` already does at its two shipped call sites.
 
-⏸ **HALTED AT THE STORY'S OWN STOP.** Task 1's final subtask reads *"Do not proceed past Task 2 until
-Q1/Q2/Q3 are ruled"*, and AC1 states it again: *"no implementation commit lands before they are
-ruled"*. Q1/Q2/Q3 are ⛔ BLOCKING and cannot be author-defaulted — the note itself states that a ⭐ is
-*"a suggestion the Panel may reject, never a default taken by silence"*
-([[feedback_record_unattested_no_backfill]]). **Nothing in Tasks 2–9 has been started.** No code, no
-`.decision-log.md` entry, no RBAC change, no test.
+⏸ **HALTED AT THE STORY'S OWN STOP**, then **RESUMED ON THE RULING.** Q1/Q2/Q3 were put to the
+Trustee Panel and ruled **option (a) throughout**; Q4 was ruled **materially beyond the options
+offered**, and Q5 was not ruled and is discharged `[Author-committed]` per the note's own stated
+non-answer consequence. Recorded as Decision **`2026-08-16-123`** **before** any implementation commit
+([[feedback_governance_commits_precede_implementation]]).
+
+**Task 2 (AC1) — the ruling.** One `.decision-log.md` entry, 14 clauses, per-clause provenance
+labelled under Decision `2026-08-09-095`. The routing note's `⏳ Open` status line is **superseded and
+retained**, never overwritten, and the option tables + findings are left unedited — the note records
+what was *asked*, the appended section records what was *answered*.
+
+⚠ **Q4 was amended beyond the options, and four conflicts were put to the Panel BEFORE anything was
+recorded.** The first reading transmitted was *"code should not enforce minimum Notice period or
+minimum Duration"*. Raised against it:
+- **C-1, the decisive one.** The notice floor is the **only** thing the emergency path bypasses.
+  Remove it entirely and `applyEmergencyOverride` differs from `scheduleStandardChange` in exactly
+  `change_type` + the attestation — **this story's whole attesting-panel control would have had nothing
+  left to justify**, mid-build.
+- **C-2** `prd.md:469`, FR-15's *testable* consequence names the floor explicitly.
+- **C-3** `architecture.md:1324` names *"cooling-off period via 12-month notice (FR-15)"* as **the**
+  mitigation for the hostile trustee's *"fixed-amount change"* attack — the same actor F-1 showed can
+  attest their own override.
+- **C-4** scope: it is Story 7.5's write path, across 8 files and 3 test suites, and 10.13's Tasks
+  contain no such change.
+
+**The Panel's answer resolved C-1 and routed the rest**: normal notice becomes **60 days, not 365**;
+twelve months is the **normal/planned** period, not an absolute lock; the **emergency mechanism
+REMAINS** and bypasses the 60-day notice; and ⛔ **none of it lands in 10.13** — a successor owns the
+code, the instrument wording, the PRD and architecture together. 60 days is still a floor, so **this
+story's build stands unchanged**.
+
+⚠ **Recorded so the successor inherits no false premise, and verified against the instrument rather
+than assumed:** Deed Cl. 10(b) and §4.2's *"for stated periods of not less than twelve months"*
+constrains the **period an amount stands** and says **nothing about notice**. The 365-day floor is a
+**product** control from FR-15's prose (`prd.md:465`), **not** a Deed requirement ⇒ shortening notice
+conflicts with the **PRD and architecture, not with the instrument**. The twelve-month-**lock** half
+*does* touch the instrument, which is why the wording change is routed rather than left to code.
+
+**Successor minted, not left un-owned:** `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation`
+(`backlog`), against **Epic 7** — Story 7.5 owns the write path; 10.13 owns only the setter surface.
+It names a story key that exists in `sprint-status.yaml`, because a deferral naming an epic expires
+unowned ([[project_r7_fact_producer_unbuilt]]).
+
+---
+
+**Task 3 (AC1/Q1) — the grant.** `trustee_panel` gains both fixed-amount keys; `pariwar_admin` retains
+both. `PERMISSION_CATALOG_VERSION` 34 → 35 with **zero keys minted**, so `PERMISSION_CATALOG.keys`
+stays at 43 — the **third** application of the rule that catalog version is not a proxy for key count.
+⚠ This is the **first** `trustee_panel` grant that is **not exclusive** to the bundle, so the
+`member.restore_terminated` / `member.decide_moderation_appeal` *"do not grant this key elsewhere"*
+notes are explicitly fenced off at the call site: for those keys exclusivity **is** the ratified
+mechanism, for these it expressly is not. Two new assertions carry the ruling rather than a comment —
+the holder set is pinned for both keys, and a second test pins that every holder of
+`pool.fixed_amount_emergency` also has a ceiling that can satisfy a `pariwar`-dimension check, because
+clause 2 makes that key the eligibility credential and an inert grant would silently shrink the
+directory as well as the write gate.
+
+**Task 4 (AC3) — the teeth.** `packages/domain/src/pool/fixed-amount-panel.ts`:
+`assertFixedAmountPanelAuthorized` is the `assertPanelAuthorized` shape, third instance —
+`role_grants` on the scoped client, folded to `EffectiveGrant[]`, verdict from the pure
+`hasPermission`, fail-closed on the FIRST ineligible member. New
+`PoolFixedAmountPanelMemberUnauthorizedError` → a stable **403**
+`pool.fixed_amount_panel_member_unauthorized`. **403, not 400**: the roster is well-formed and the
+request well-shaped; what fails is authorization of a named actor, and a shape error would tell the
+trustee to fix their input when the answer is *"that person may not attest"*.
+
+⛔ **The ordering is load-bearing and the route was restructured for it.** `postEmergency` now opens
+the scope tx **first** (the check reads `role_grants` and RLS is transaction-scoped), asserts
+eligibility, and only **then** resolves per-member displays. Reversed, an ineligible **and**
+display-less actor would report a 409 `AdminDisplayNameMissing` instead of the 403, and the audit line
+would record the wrong reason — the one artefact anyone reviewing a refused override actually reads.
+One rejection audit line now covers all three refusal families, with `rejectionReason` carrying which.
+The arithmetic guards are untouched: eligibility is an **additional** predicate, and an empty roster
+deliberately falls through to the existing typed error without issuing a query.
+
+⛔ **No submitter-distinctness check** — Q2.1(c) was offered and **not taken**. A **ruled absence**,
+recorded at the call site and in `deferred-work.md` with a re-trigger, so a later reader knows it was
+seen and left rather than missed.
+
+**Task 5 (AC2/AC4) — the directory and the transport.** The directory is a **sibling GET route**, not a
+field on the view, and the reason is authorization rather than taste: the view is gated on
+`pool.fixed_amount_set` and enumerating who may attest must be gated on `pool.fixed_amount_emergency`.
+A response field cannot carry a different permission gate from the response it rides on. Not step-up
+gated — reading the directory is not the privileged act; submitting the override is, and that route
+keeps its step-up. `preHandler` inlined literally (the human-actor gate scans it statically).
+
+The accessor copies `resolveShepherdCandidates`' join/tenant/order **shape** and deliberately **not**
+its role-resolution shortcut: eligibility here is **permission-key-defined**, not single-role-defined,
+so candidate roles are **derived from the seeded bundles** at call time and the verdict is always the
+pure `hasPermission` call — which alone evaluates scope dimension, containment and `scopeCeiling`.
+Pre-filtering is lossless because `hasPermission` can only allow via `bundle.permissions.includes(key)`.
+⚠ `.limit(500)` is an **integer literal**: the clamp gate's static scan reads a named `const`, however
+obviously constant, as a dynamic limit — caught by running the gate, not by inspection.
+
+AC4: `readDbNow` is exported so the view pins **one** DB-authoritative instant across both schedule
+reads — "effective now" and "not yet in force" partition the schedule at `asOf`, so two clock reads
+could show the same entry as both or as neither. `upcoming` is **nullable-and-required**, not optional:
+an optional field lets a handler that forgot to resolve it ship a view that silently omits it, which is
+exactly how the value hid before this story.
+
+**Task 6 (AC2/AC4) — the picker and the Scheduled region.** Set-backed selection (so the de-dupe is
+structural, not a filter), display **name** as the label and actor **id** as the payload. Loading /
+error / empty render outside the list; a 403 gets its own message and the hook does not retry it. The
+zero-eligible and **one**-eligible states are called out separately — the sharpest consequence of
+ruling Q2(a) is that eligibility can leave a Pariwar unable to use the emergency path at all, and the
+surface must say so rather than present a picker that silently cannot be satisfied.
+
+**Q2.2 re-label `[Author-committed]`:** *"State-Trustee panel"* → *"attesting trustee panel"* across the
+page header, both HTTP error messages and both domain error messages. F-2 established that a literal
+`state_trustee` is ineligible **by arithmetic**, so the old wording named a body that could never sit
+on this panel. ⛔ The stored `panel` column and the `panel_actor_ids` wire field are **not** renamed.
+
+**Task 7 (AC5) — the module's first UI tests.** 11 tests; `ApiError` hoisted alongside the mocks so the
+test and the mocked module share **one** class (the page compares by identity; a second copy inside the
+factory would make every `instanceof` silently false). The step-up regression is the one that matters:
+the re-submit path re-reads panel state after verification, so changing that state from a string to a
+Set could have silently broken elevation — the one interaction a trustee hits precisely when an
+emergency is under way.
+
+**Task 8 — tests with teeth, and a 7.5 assertion that documented the defect.**
+⛔ **Story 7.5's emergency E2E seeded panel members with NO grants and its comment asserted that as
+deliberate** — *"no grant is required … 7.5 records the panel composition, it does NOT check
+panel-member permissions"*. That was true, and it was the defect: the test encoded the hole as correct
+behaviour. Corrected, with the comment now saying what changed and what did **not** (the R9-lifecycle
+boundary still stands).
+
+**⭐ REVERT-SANITY CONFIRMED AT BOTH LAYERS**, not asserted: with the refusal neutered, **6** unit tests
+fail and **3** live-DB tests fail — including the cross-tenant one in each. Restored and re-verified
+green. A same-tenant-only test would have passed against the broken behaviour too
+([[feedback_gate_scope_semantic_coverage]]).
+
+**Task 9 (AC6/AC7) — the records.** Four registers, each in the closure language it actually is. ⚠ The
+1.18 / 10.18 / 7.5 **story files** are deliberately left alone — they are historical records of what
+was true when written, not live trackers; only `fixed-amount.ts`, `deferred-work.md` and `epics.md`
+are amended. Every new `deferred-work.md` entry carries a **concrete** re-trigger naming a story key or
+an event, never an epic.
+
+⛔ **The `deferred-work.md` entry Story 7.5's review claims it wrote does not exist** — verified live
+against `7-5-…-override.md:229` and the file. Written here **by 10.13**, and recorded as written by
+10.13, not backfilled as though 7.5 had done it ([[feedback_record_unattested_no_backfill]]). Scoped to
+*write the missing entry*; auditing 7.5's other logging claims was offered to the Panel and not taken.
+
+**What this story does NOT claim, recorded in the ruling entry and at every marker:**
+- **F-1 is not closed.** Because Q1(a) keeps both keys on `pariwar_admin` concurrently, the eligible
+  attestor set still includes the population `architecture.md:1324` names as the hostile trustee — two
+  `pariwar_admin`s can still attest each other. Clause 1 buys **distinguishability**, not
+  **separation**; whether a Pariwar issues its `trustee_panel` grants to different people is an
+  operational fact about grant issuance, and no story can make it a code invariant.
+- **F-3 is not closed.** An attestor is not an approver. Eligibility makes the roster truthful about
+  **capability**, never about **assent** — only the submitting actor is authenticated and step-up
+  gated. FR-15's *"multi-trustee approval"* remains **partially** implemented.
+
+---
+
+### `pnpm ci:local` — RECORDED **AS OBSERVED**, NOT AS GREEN
+
+⛔ **`ci:local` FAILED.** Recorded exactly as it ran ([[feedback_record_unattested_no_backfill]],
+[[project_known_livedb_test_failures]]).
+
+**Run 1** (`DATABASE_URL` on `:5433`, full 31-job suite): **29 green, 2 red** — `test (unit)` and
+`integration-tests`, both red from the **same** `@twt/api#test` task (2 files failed / 115 passed;
+998 tests passed, 1 skipped). ⚠ The captured log was truncated to its tail, so **the two failing spec
+names were not observed** and are not reconstructed here.
+
+**Run 2** (the `integration-tests` job re-run alone with full output captured): red again, but with a
+**different** and **larger** set — 3 files: `member-moderation/moderation-grounds.spec.ts`,
+`member-moderation/moderation-dwell.spec.ts`, `member-moderation/moderation-escalation.spec.ts`
+(3 failed / 114 passed). Every other package green under the same concurrency: `@twt/domain` 245 files,
+`@twt/channels` 17, `@twt/validity-service` 21, `@twt/niyamavali-engine` 13, `@twt/events` 6,
+`@twt/queue` 1.
+
+**Innocence checks, run rather than asserted:**
+- `pnpm --filter @twt/api test` standalone → **117 files / 1000 tests pass**, 1 skipped.
+- `vitest run tests/integration/member-moderation/` → **6 files / 81 tests pass**.
+
+⇒ The red set **changes between runs of the same commit** and every named spec passes in isolation —
+the [[project_known_livedb_test_failures]] **#14** signature (`@twt/api` full-suite runs surface a
+different red spec each run) compounded by [[project_ci_local_concurrency_oversubscription]]. ⚠ None of
+the named specs is in code this story touched: `member-moderation` is Story 10.19/10.20/10.22
+territory, and this story changed `pool/`, `rbac/`, `contracts/pools/`, `pool-fixed-amount/` and the
+admin console.
+
+⚠ **This is an OBSERVATION, not a clearance.** Run 1's two spec names were never captured, so the
+claim *"the same flake class"* covers Run 2 with evidence and Run 1 **by inference only**. Recorded as
+un-attested rather than reconstructed. ⛔ Do not read this section as "ci:local passed".
+
+**Suites this story owns, all run directly and green:**
+
+| Suite | Result |
+|---|---|
+| `packages/domain/tests/rbac/` | 153 passed (4 files) |
+| `packages/domain/tests/pool/` | 202 passed (11 files) — incl. the 11 new `fixed-amount-panel.test.ts` |
+| `packages/domain/tests/integration/pool/pool-fixed-amount.spec.ts` | 17 passed (11 new) |
+| `packages/contracts/tests/pools-fixed-amount.test.ts` | 21 passed (9 new) |
+| `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts` | 14 passed (5 new, 1 corrected) |
+| `apps/admin/tests/` (full) | 321 passed (32 files) — incl. the 11 new `fixed-amount-page.test.tsx` |
+
+**Gates, all green**, including every one this story's changes could plausibly trip:
+`domain-invariants` (caught the named-`const` limit and was fixed, not worked around),
+`pool-support-category-invariant`, `claim-adjudication-human-actor-invariant`, `microcopy`,
+`friction-budget` (16 rows), `governance-boundary`, `access-wrapper-invariants`, `pool-state-invariant`,
+`contracts-determinism`, `lint`, `typecheck`, `build`.
 
 ### File List
 
-- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-13.md` (**new**)
-- `_bmad-output/implementation-artifacts/10-13-fixed-amount-setter-admin-ui.md` (modified — Tasks,
-  Dev Agent Record, File List, Change Log, Status)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — `development_status` flip +
-  ledger entry `2026-08-16e`)
+**New**
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-13.md`
+- `packages/domain/src/pool/fixed-amount-panel.ts` — the eligibility predicate + the directory read
+- `packages/domain/tests/pool/fixed-amount-panel.test.ts` — 11 DB-free unit tests
+- `apps/admin/src/modules/pool-fixed-amount/i18n-en.ts`
+- `apps/admin/tests/fixed-amount-page.test.tsx` — the module's first UI tests
+
+**Modified — domain**
+- `packages/domain/src/pool/fixed-amount.ts` — `readDbNow` exported; the `:75-88` marker closed with
+  Q3's answer; the panel-input doc comment
+- `packages/domain/src/pool/errors.ts` — `PoolFixedAmountPanelMemberUnauthorizedError` + the re-label
+- `packages/domain/src/pool/index.ts` — barrel export
+- `packages/domain/src/rbac/roles.ts` — the `trustee_panel` grant + rationale
+- `packages/domain/src/rbac/permissions.ts` — `PERMISSION_CATALOG_VERSION` 34 → 35 + the ledger note
+- `packages/domain/tests/rbac/permissions.test.ts` — the pin + the ledger prose
+- `packages/domain/tests/rbac/roles.test.ts` — 2 new holder/ceiling assertions
+- `packages/domain/tests/integration/pool/pool-fixed-amount.spec.ts` — 11 new live-DB tests
+
+**Modified — contracts**
+- `packages/contracts/src/pools/fixed-amount.ts` — `PoolFixedAmountUpcomingChange`, `upcoming` on the
+  view, `PoolFixedAmountEligibleAttestor(sResponse)`, the re-label
+- `packages/contracts/tests/pools-fixed-amount.test.ts` — 9 new tests
+
+**Modified — api**
+- `apps/api/src/modules/pool-fixed-amount/handlers.ts` — the eligibility call + the restructured
+  `postEmergency`, `getEligibleAttestors`, `upcoming` on the view, the 403 mapping, the re-label
+- `apps/api/src/modules/pool-fixed-amount/index.ts` — the sibling directory route
+- `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts` — 5 new, **1 corrected**
+
+**Modified — admin**
+- `apps/admin/src/modules/pool-fixed-amount/FixedAmountPage.tsx` — the picker, the Scheduled region
+- `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts` — the directory call + hook
+
+**Modified — records**
+- `.decision-log.md` — Decision `2026-08-16-123` (append-only; nothing edited in place)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-13.md` — the ruling
+  appended; the `⏳ Open` status line superseded and **retained**
+- `_bmad-output/planning-artifacts/epics.md` — the inherited-obligation disposition
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the discharge + 7 entries
+- `friction-budget.md` — one new forced row
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status flips, the `7-11` mint, ledger
+- `_bmad-output/implementation-artifacts/10-13-fixed-amount-setter-admin-ui.md` — this file
+
+⚠ **Deliberately NOT modified:** `1-18-geo-tree-scope-resolver.md`, `10-18-…md`, `7-5-…md`. They are
+historical records of what was true when written, not live trackers.
 
 ---
 
@@ -698,5 +934,6 @@ ruled"*. Q1/Q2/Q3 are ⛔ BLOCKING and cannot be author-defaulted — the note i
 | Date | Change |
 |---|---|
 | 2026-08-16 | Story created via `bmad-create-story` off `main` @ `9fb88c3` (clean, fetched). Status `backlog` → `ready-for-dev`. Authoring pass only — no code written, no gate run, nothing here attested by a test run. |
+| 2026-08-16 | **Tasks 2–9 COMPLETE; status `in-progress` → `review`.** Trustee Panel RULED Q1/Q2/Q3 **option (a)** throughout; Decision `2026-08-16-123` recorded **before** any implementation. Q1: `trustee_panel` gains both fixed-amount keys **concurrently** with `pariwar_admin` (catalog 34→35, key count unchanged at 43 — the third application of that rule). Q2.1: key-as-credential, enforced by `assertFixedAmountPanelAuthorized` inside the scope tx as a typed, audited **403**, wired **before** display resolution because reversing them reports the wrong error and audits the wrong reason. Q2.1(c) submitter-distinctness **offered and not taken** — a ruled absence, recorded with a re-trigger. Q3: the Deed Cl. 19(b) quorum is not checked and the constant's own doc comment now carries why, with the ⌈half-of-key-holders⌉ approximation named as expressly rejected. **⚠ Q4 was ruled MATERIALLY BEYOND the options offered** and recorded as an addition: normal notice becomes **60 days, not 365**, twelve months is normal/planned rather than an absolute lock, the emergency mechanism **remains**, and none of it lands here — **four conflicts were put to the Panel before anything was recorded**, and C-1 (removing the floor would leave this story's attesting panel with nothing to justify) was decisive and is resolved. Successor **minted**: `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` against Epic 7. Q5 not ruled → `[Author-committed]`, and ⛔ the `deferred-work.md` entry Story 7.5's review **claims it wrote and did not** is written here by 10.13, recorded as such rather than backfilled. Built: the eligibility predicate, the directory read + sibling GET (gated on the **emergency** key — a field cannot carry a different gate from its response), the picker, the Scheduled region, the module's **first** UI tests, and the `upcoming` field. **⭐ Revert-sanity confirmed at BOTH layers** (6 unit + 3 live-DB tests fail with the check neutered). ⛔ **`ci:local` FAILED and is recorded AS OBSERVED, never as green**: 29 green / 2 red, red set **changed between runs**, all named specs `member-moderation` and all passing in isolation (117/1000 api standalone; 6/81 moderation) — but Run 1's spec names were never captured, so that inference is recorded as **un-attested**. ⚠ F-1 and F-3 are explicitly **not closed** by this story, in the ruling entry and at every marker. |
 | 2026-08-16 | `bmad-dev-story` opened on branch `governance/10-13-fixed-amount-setter-admin-ui` off `main` @ `9fb88c3` (fetched, `== origin/main`). Status `ready-for-dev` → `in-progress`; `baseline_commit` preserved, not rewritten. **Task 1 (AC1) COMPLETE** — routing note authored (417 lines) and committed `6399235` under a `governance:` prefix, five questions, Q1/Q2/Q3 ⛔ BLOCKING, every ⭐ NON-BINDING. Every clause, line number and count re-read from source at `9fb88c3`; four line-number drifts and one quote mis-attribution caught in my own draft **pre-commit**. Two author findings added that the authoring pass did not have: **F-1** the emergency control's checking population and the hostile-trustee population are the same population, so Q1 buys distinguishability and not separation; **F-3** an attestor is not an approver — eligibility makes the roster truthful about capability, never assent, so FR-15's "multi-trustee approval" stays partial after this story. ⏸ **HALTED at the story's own STOP** — Tasks 2–9 not started, no code, no decision-log entry, no RBAC change. |
 | 2026-08-16 | Checklist validation pass (`bmad-create-story validate`), three parallel forks against live source: epics.md coverage, dependency status, git provenance (all PASS, no gaps); Trust Deed/Niyamavali/`.decision-log.md`/`deferred-work.md`/PRD/architecture/UX citations (2 line-precision drifts fixed: `.decision-log.md` entry count 124→123, `deferred-work.md:4608`→`:4578`); ~30 code file:line citations (5 line-range drifts fixed, all 1–3 lines). One substantive fix: Task 5 told the dev to model the eligible-attestor accessor on `resolveShepherdCandidates`, which itself hardcodes `eq(roleGrants.role, 'district_admin')` — directly contradicting the same bullet's "never hardcode a role name string" instruction. Reconciled: copy the join/tenant/order **shape**, resolve eligibility via `hasPermission` against the seeded bundle, not the precedent's hardcoded-role shortcut. No epic-coverage gaps, no false citations, no scope changes. Status remains `ready-for-dev`. |

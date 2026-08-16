@@ -4,7 +4,7 @@ baseline_commit: b3e12e1000f1ad0fc6d0d4e18b093eae7c120df1
 
 # Story 10.22: Moderation Appeal Mechanism `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⛔ **THIS STORY IS HALF GOVERNANCE, AND THE GOVERNANCE HALF LANDS FIRST.** Niyamavali **§8.8 is a
 > RESERVED NUMBER** (`niyamavali.md:274`, hi `:272`) held expressly for this amendment, and §8.6's
@@ -574,6 +574,26 @@ reader does not read the classification as forbidding them.
 - [x] `pnpm ci:local` to completion; report the result **as observed**
 - [x] Sprint-status ledger entry per [[project_sprint_status_ledger]]
 
+### Review Findings
+
+Code review of the "code" chunk of the branch diff (58 files, domain/API/contracts/admin/mobile/i18n/tests — governance/doc files reviewed separately). Three parallel layers: Blind Hunter (diff-only, no project context), Edge Case Hunter (diff + read access), Acceptance Auditor (diff + this spec).
+
+- [x] [Review][Patch] Mobile appeal screen only ever operates on `ctx.appealable_action_ids[0]`, dropping every other appealable action. Verified NOT a false positive: `listAppealableActionIds` (`packages/domain/src/member/moderation/appeal-read.ts:246-289`) deliberately returns every `suspend`/`terminate` action with no open appeal, ordered by recency, capped at 200 (default 50) — a list, by design, not a single-row lookup. **Fixed:** `apps/mobile/app/(membership)/appeal.tsx` now auto-picks when there's exactly one act, otherwise presents a picker over `appealable_action_ids` before the filing form renders.
+
+- [x] [Review][Patch] CRITICAL: mobile in-portal appeal filing never sends the required `x-turnstile-token` header, so every real member submission 400s — `requireTurnstile` in `apps/api/src/modules/member-moderation-appeals/handlers.ts:858-875` unconditionally requires it, but `packages/api-client/src/index.ts` `fileModerationAppeal` (~:1214-1226) has no `turnstileToken` param and `apps/mobile/app/(membership)/appeal.tsx` `submit()` never calls `getTurnstileToken()` (unlike the sibling `apps/mobile/app/(helpdesk)/new.tsx:31,162` pattern). Breaks AC7's in-portal reachability path. **Fixed:** `turnstileToken` threaded through `fileModerationAppeal` (api-client) and wired in `appeal.tsx` via `getTurnstileToken()`.
+- [x] [Review][Patch] Appeal outcome is never communicated to the member — `decide()` never enqueues a post-commit notification despite the module's own doc-comment claiming to follow the "6.11 attributed-decision template" (step 4) and despite Task 6 requiring it; the dead i18n keys `moderation.appeal.outcome.upheld`/`.allowed` were authored for this and are unreferenced; the mobile screen also has no decided-outcome view on reopen. [`apps/api/src/modules/member-moderation-appeals/handlers.ts` (decide()); `packages/i18n/locales/{en,hi}/common.json`; `apps/mobile/app/(membership)/appeal.tsx`] **Fixed:** widened `ModerationNotifyEnqueuer`/`MEMBER_MODERATION_NOTIFY` to `appeal_upheld`/`appeal_allowed` (new `deriveAppealAlertId`, keyed on the appeal id — never the action id, since re-filing means one action can carry more than one decided appeal); `decide()` now enqueues via `emitAppealDecisionNotice`; the mobile screen shows a "previous determination" panel using the previously-dead i18n keys.
+- [x] [Review][Patch] `Idempotency-Key` is required but non-functional: server never stores/checks it for replay in `fileCore`, and the mobile client regenerates the key with `Date.now()` inside `submit()` on every call. [`packages/domain/src/member/moderation/appeal-persist.ts`; `apps/api/src/modules/member-moderation-appeals/handlers.ts:170-179,265-275`; `apps/mobile/app/(membership)/appeal.tsx`] **Fixed:** `fileFromPortal` now claims/records/releases via the shared `idempotency.createKeyedStore` (the `helpdesk/member-handlers.ts` precedent); mobile mints one key per act in a `useRef` map, reused across retries.
+- [x] [Review][Patch] Concurrent-filing race on `member_moderation_appeals_one_open_per_action` isn't caught — a `23505` leaks as an unmapped 500 instead of the documented typed `ModerationAppealAlreadyOpenError` (409). [`packages/domain/src/member/moderation/appeal-persist.ts:95-128`] **Fixed:** the insert is now wrapped in try/catch; a unique-violation (the `niyamavali/write.ts` `isUniqueViolation` idiom) rethrows the typed 409.
+- [x] [Review][Patch] `fileMemberModerationAppeal` never verifies the caller-supplied `moderationActionId` belongs to `memberId`/`pariwarId` before filing. [`packages/domain/src/member/moderation/appeal-persist.ts:95-127`] **Fixed:** added step (0), the `grounds.ts:appendModerationGround` ownership-check precedent verbatim — 404-not-403 on a mismatched combination.
+- [x] [Review][Patch] Off-portal filing under-validates the linked helpdesk ticket — only an FK-existence check on `helpdesk_ticket_id`; nothing confirms the ticket belongs to `member_id` or matches the `complaint`/`moderation-appeal` category convention. [`apps/api/src/modules/member-moderation-appeals/handlers.ts:340-365`] **Fixed:** `fileOffPortal` now reads the ticket via `helpdesk.getTicketById` and checks both `subjectMemberId` (404 on mismatch) and `category`/`subcategory` (400 on mismatch) before filing.
+- [x] [Review][Patch] Admin `ModerationAppealsPage.tsx` has no fallback error UI for error codes outside the three handled (`needsStepUp`/`excluded`/`alreadyDecided`) — an unrecognized failure leaves the trustee with silent failure. ~~error-shape mismatch~~ verified false positive: `apiFetch` (`apps/admin/src/api/client.ts:266-293`) already unwraps the server envelope into a flat `ApiError(status, code, message)`, so the `{code,status}` cast is correct as written. [`apps/admin/src/modules/moderation-appeals/ModerationAppealsPage.tsx:48-51,156-176`] **Fixed:** added an `unrecognizedError` catch-all alert; left the (correct) error-shape cast untouched.
+- [x] [Review][Patch] Orphaned/misattributed JSDoc block in the API client — the doc comment for `fileModerationAppeal` precedes `getAppealContext` instead, leaving `fileModerationAppeal` undocumented. [`packages/api-client/src/index.ts`] **Fixed:** doc comment moved onto the correct method.
+- [x] [Review][Dismiss] ~~Audit trail hardcodes `actorRole: null` in `emitAuditWith`~~ — verified false positive: `actorRole: null` is the established codebase-wide convention for every admin-action audit line (`apps/api/src/modules/member-moderation/handlers.ts:125,781` and all other admin-action audit sites); the only place `actorRole` is ever populated is auth/login events (`apps/api/src/audit/audit-log-sink.ts:81`). This module matches its sibling exactly. [`apps/api/src/modules/member-moderation-appeals/handlers.ts`]
+- [x] [Review][Patch] Misleading FK comment on `member_id` in the appeals schema claims "RTBF cascades" via `onDelete: 'cascade'`, contradicting this diff's own `anonymize.ts` establishing RTBF as a field-level scrub with the member row retained (never hard-deleted). [`packages/domain/src/schema/member_moderation_appeals.ts`] **Fixed:** comment corrected to the `member_identities.ts` phrasing precedent — the cascade is defensive/inert given the never-delete invariant.
+
+**Verification (2026-08-16):** typecheck + lint clean across `@twt/domain`, `@twt/contracts`, `@twt/api-client`, `@twt/api`, `@twt/i18n`, `apps/mobile`, `apps/admin`, `apps/jobs`. Unit + live-DB integration suites green: `moderation-appeal.test.ts` (27), `moderation-appeal.spec.ts` live-DB (14), `rtbf-anonymize.spec.ts` live-DB (14), `permissions.test.ts`, `rtbf-anonymize.test.ts`, `personal-event-assertion.test.ts`, `life-events-markers.test.ts`, `moderation-appeal-routes.test.ts` (api), `moderation-notify.test.ts` (jobs, 18), `member-status/{moderation,presenter}.test.ts` (ui), `appeal-status.test.ts` (mobile), `appeal-controls.test.tsx` (admin), `member-moderation-appeal.test.ts` (contracts), full `@twt/i18n` suite (en/hi parity).
+- [x] [Review][Defer] Migration 0107 shipped without `GRANT UPDATE (decided_at)` (fixed in-diff by 0108); no automated gate diffs a domain writer's `.set()` keys against granted columns to catch the next occurrence. [`packages/domain/migrations/0107_moderation-appeals.sql`] — deferred, pre-existing systemic gap across the migration-authoring process, not scoped to this story.
+
 ---
 
 ## Dev Notes
@@ -752,7 +772,7 @@ clauses contradict each other.
 | **C-1** | Q1(a) *"single internal appeal"* vs the three-appeal ladder. §8.8 must say one thing. | AC2 |
 | **C-2** | Q2B (*"a **different** Panel member **must** hear it"*) vs Q3D (*"prior participation does **not** create a recusal requirement"*). Head-on; three defensible readings. | ⛔ **AC5 entirely** — the exclusion set, the typed 409 and the mandatory polarity-pair test have **no subject** |
 | **C-3** | **Trust Deed Clause 18(a)** (`trust-deed.md:211`) puts the Board at **three-to-nine** Trustees. Q3D presumes exactly three (*"all 3"*, *"1–1 split"*, *"the full three-member Panel"*). `trustee_panel` is a role with **no cardinality**. | AC2, AC4, AC5 |
-| **C-4** | **Trust Deed Clause 19(c)** (`trust-deed.md:229`) **mandates** the Chairperson's casting vote on equality, and §8.7 binds the Panel to Clause 19 expressly. Q3D disapplies it. ⛔ A Part 8 amendment **cannot** disapply a Deed clause — that is a **Clause 27(b)** Deed amendment (two-thirds + a supplementary *registered* deed). There is also **no Chairperson concept anywhere in the codebase**. | AC2, and the story's schedule under the amend-the-Deed-first route |
+| **C-4** | **Trust Deed Clause 19(c)** (`trust-deed.md:229`) **mandates** the Chairperson's casting vote on equality, and §8.7 binds the Panel to Clause 19 expressly. Q3D disapplies it. ⛔ A Part 8 amendment **cannot** disapply a Deed clause — that is a **Clause 22(b)** Deed amendment (two-thirds + a supplementary *registered* deed; corrected from a mis-citation of "Clause 27(b)" by Decision `2026-08-16-122`). There is also **no Chairperson concept anywhere in the codebase**. | AC2, and the story's schedule under the amend-the-Deed-first route |
 | **C-5** | AC4's record is **singular** (`decided_by_actor_id` / `_display` / `_at`). A majority vote needs a **votes child table**, a **tier** column, a vote→outcome derivation and an auto-escalation transition — none scoped. Also un-asked: does each voting Trustee author their **own** reasoned outcome (N Tier-1 ciphertexts)? | AC4, AC9, Tasks 4/5/6 |
 | **C-6** | AC4/D4's partial-UNIQUE rule is superseded by a **third** constraint (≤3 per action, tier-ordered, terminal exhaustion) — neither the shipped rule nor the naive tightening **D4 expressly forbids**. | AC4, D4 |
 | **C-7** | The ladder resembles Part 9's three stages (§1.3 glosses them as *"the three escalation tiers"*), so AC2's not-Part-9 sentence must now **distinguish**, not merely assert. | AC2 (drafting guidance, not a new ruling) |
@@ -778,7 +798,8 @@ stand *is* the governance ([[feedback_supersede_never_reinterpret]]).
 ⭐ Two of those conflicts were with the **Trust Deed** and are recorded as durable governance facts for
 any future attempt at a tiered moderation appeal: **Clause 18(a)** (the Board is three-to-nine
 Trustees, not three) and **Clause 19(c)** (the Chairperson's casting vote is *mandated*, and a Part 8
-amendment cannot disapply it — that needs a **Clause 27(b)** supplementary *registered* deed).
+amendment cannot disapply it — that needs a **Clause 22(b)** supplementary *registered* deed; corrected
+from a mis-citation of "Clause 27(b)" by Decision `2026-08-16-122`, this same code-review pass).
 
 ### ⭐ FIVE FINDINGS — every one raised, none absorbed
 
@@ -874,7 +895,7 @@ failure this project has named repeatedly. Recorded here so the near-miss is on 
 | Failure | Cause | Fix |
 |---|---|---|
 | `lint` | An unused `named` helper left in the route test I added; my earlier per-package lint predated the file | removed |
-| RTBF completeness count | `member_moderation_appeals` is a 13th table taking TWO statements | 11/12 → **13/16**, rewritten to the new truth |
+| RTBF completeness count | `member_moderation_appeals` is a 13th table taking TWO statements | 12/14 → **13/16**, rewritten to the new truth |
 | **BOTH** `member.*` vocabulary counts | the two appeal events take the tuple 22 → 24 | both moved together, as their own comments require |
 
 ⭐ The RTBF fixture failed **because it works**: it is the completeness check that exists to catch a
@@ -952,6 +973,11 @@ deliberately not written as one.
 **API (modified)**
 - `apps/api/src/context.ts` · `src/server.ts` · `src/middleware/error-mapping/index.ts`
 - `apps/api/src/modules/member-moderation/handlers.ts` *(AC3 site 2)*
+- `apps/api/src/modules/member-moderation/queue.ts` *(code-review round: `appeal_upheld`/`appeal_allowed`
+  widened onto `MEMBER_MODERATION_NOTIFY`, keyed on the appeal id)*
+
+**Jobs (modified — code-review round; apps/jobs was untouched by the original story)**
+- `apps/jobs/src/scheduler/moderation-notify.ts` — the appeal-decision notice consumer
 
 **UI / apps**
 - `packages/ui/src/member-status/{presenter,view-model}.ts` *(AC3 site 3 + the new predicate)*

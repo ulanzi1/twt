@@ -5003,8 +5003,9 @@ attempt at a tiered moderation appeal:
 - **Deed Clause 19(c)** (`trust-deed.md:229`): *"in case of equality, the Chairperson shall have a
   second or casting vote."* §8.7 binds the Panel to Clause 19 expressly, and §8.7 further records that
   *"where this document and the Deed differ, the Deed prevails (§1.2)."* ⇒ **a Niyamavali Part 8
-  amendment cannot disapply a Deed clause.** Doing so needs a **Clause 27(b)** Deed amendment — a
-  two-thirds resolution **and a supplementary registered deed**. ⚠ There is also **no Chairperson
+  amendment cannot disapply a Deed clause.** Doing so needs a **Clause 22(b)** Deed amendment — a
+  two-thirds resolution **and a supplementary registered deed** (corrected from a mis-citation of
+  "Clause 27(b)" by Decision `2026-08-16-122`). ⚠ There is also **no Chairperson
   concept anywhere in the codebase**.
 
 ### 6b. ⚠ OBSERVED, NOT CLOSED — an erased member with an OPEN appeal
@@ -5079,3 +5080,17 @@ review of **§8.8** (§2 above). Stated as a fact, not as a new count — the co
   matter the moment a "tickets with an outstanding staff-mediation request" view is built.
   [`packages/domain/migrations/0106_helpdesk-member-staff-mediation-request.sql`] *Owner:* none yet.
   *Re-trigger:* if such a list view is ever built.
+
+---
+
+## Deferred from: code review of 10-22-moderation-appeal-mechanism (2026-08-16)
+
+- **Migration 0107 shipped without `GRANT UPDATE (decided_at)`.** Self-caught and fixed in-diff by
+  migration 0108 (its own commentary: *"NOTHING IN THE PURE SUITE COULD HAVE CAUGHT THIS"* — only a
+  live-DB test surfaced the `42501 permission denied`). Deferred item is the systemic gap, not the
+  instance: no automated gate diffs a domain writer's `.set()` keys against the table's actually-granted
+  columns, so the identical hand-enumeration mistake can recur on the next new table.
+  [`packages/domain/migrations/0107_moderation-appeals.sql`,
+  `packages/domain/migrations/0108_moderation-appeal-decided-at-grant.sql`] *Owner:* none yet.
+  *Re-trigger:* if a future migration's GRANT set is hand-enumerated again and a column write silently
+  fails until a live-DB test happens to exercise it.

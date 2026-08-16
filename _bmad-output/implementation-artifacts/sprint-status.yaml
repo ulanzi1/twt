@@ -1,4 +1,71 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16c (10-22-moderation-appeal-mechanism: done, follow-up governance/docs pass
+#   via bmad-code-review -- the chunk deferred by 2026-08-16b's checkpoint. 7 files (.decision-log.md,
+#   this story file, deferred-work.md, sprint-status.yaml, the routing note, friction-budget.md,
+#   docs/appeal-procedural-fairness/moderation-appeal.md), +2539/-1, 2611 diff lines. Same 3-layer
+#   review; 14+0+7 = 21 raw findings (Edge Case Hunter: 0 -- everything it checked verified true),
+#   deduped/triaged to 5 real + 1 decision-needed + 8 verified false positives.
+#   ⭐ THE REAL FIND: "Clause 27(b)" is cited 6x across 4 files as the Trust Deed provision requiring a
+#   two-thirds-Trustee resolution + supplementary registered deed. Verified live against
+#   docs/legal/trust-deed.md: Clause 27 is "Severability", no lettered subdivisions at all -- the
+#   quoted mechanism is Clause 22(b), "Amendment of this Deed", verbatim. The RULING is unchanged
+#   (disapplying Deed Clause 19(c) genuinely does need a Clause-22(b) Deed amendment); only which
+#   clause states that mechanism was wrong. Per user decision: .decision-log.md and the routing note
+#   (Trustee-Panel governance-of-record, self-declared durable/unedited) got an APPENDED correction
+#   -- Decision `2026-08-16-122`, modeled on the `2026-08-12-101` precedent (same mechanism, same
+#   review skill, caught the same class of error before) -- never edited in place, per
+#   [[feedback_supersede_never_reinterpret]]. The story file and deferred-work.md (documentation
+#   ABOUT the decision, not the ratified record) were corrected directly.
+#   Also fixed: the RTBF completeness-count baseline was wrong in two files (11 tables/12 statements
+#   -> 13/16; verified against the actual passing test's comment history that the true baseline was
+#   12/14, so 12+1=13 and 14+2=16 reconcile -- 11+1=12 does not); a sentence readable as "erasing a
+#   member with a pending appeal fails in production" reworded -- verified via anonymize.ts:375-394
+#   that the WHERE-NOT-NULL guard prevents this by design, it was describing an avoided near-miss;
+#   the story's own File List was missing apps/jobs (new to this story) and the queue.ts touched by
+#   2026-08-16b's patch round; and this ledger's own "22 raw -> 12" arithmetic (previous entry) was
+#   ambiguous, reworded for self-consistency.
+#   VERIFIED, NOT ACTED ON (8 false positives caught before touching anything): the "uncorrected"
+#   permission-key name (deferred-work.md already explains it -- the name was [Author-committed],
+#   never ratified, so there was nothing to correct); a Deed Clause 26 quotation flagged as a
+#   misleading splice (verified an accurate ellipsis within ONE clause); a decision-date
+#   "inconsistency" (checked real commit timestamps -- 5bb34d6 landed 2026-08-15T23:44 IST, the
+#   2026-08-15-121 label is correct); "Part 8 does not reference Part 9" flagged as self-contradicting
+#   (verified as the standard legal-drafting distinction between operative incorporation and
+#   [warn]-marked explanatory commentary); the English/Hindi upheld/allowed gloss (a legitimate
+#   bilingual translation aid, not a substance gap); the "untraceable" 0107 coherence CHECK (it's
+#   real, in the migration, a normal elaboration of AC4's prose); the grounds min-length claim
+#   (properly defined in packages/contracts, just outside this diff chunk); and the Panel-obligation
+#   queue count (deliberately left unstated -- "NINE is the last recorded figure, not a verified
+#   current one" is an intentional epistemic hedge per [[feedback_record_unattested_no_backfill]],
+#   not an omission -- writing "TEN" would have been the actual regression).
+# last_updated: 2026-08-16b (10-22-moderation-appeal-mechanism: review -> done via bmad-code-review.
+#   Diff chunked (10,031 lines): code (58 files, +5925/-137) reviewed now; governance/docs deferred to
+#   a follow-up pass. Three parallel layers (Blind Hunter diff-only: 12 raw; Edge Case Hunter: 8 raw;
+#   Acceptance Auditor: 2 raw -- 22 raw total) deduped to 12 UNIQUE findings, which triaged to: 10
+#   patch (all applied -- one of the 10 started as decision-needed, resolved to patch after verifying
+#   listAppealableActionIds genuinely returns a LIST capped 200, not a false alarm), 1 defer
+#   (migration-GRANT gate gap, recorded in deferred-work.md), 1 dismiss (actorRole:null is the
+#   codebase-wide admin-audit convention, not a gap -- confirmed by grepping every other admin-action
+#   audit call site). 10 + 1 + 1 = 12.
+#   ⭐ THE ONE THAT MATTERED MOST: the mobile in-portal appeal screen never sent the required
+#   `x-turnstile-token` header -- `requireTurnstile` unconditionally requires it server-side, but
+#   neither the api-client method nor `appeal.tsx` ever supplied one. Every real member submission
+#   through the app would have 400'd; AC7's in-portal reachability arm was silently broken. Fixed by
+#   threading `turnstileToken` through, matching the `(helpdesk)/new.tsx` sibling pattern.
+#   Also fixed: the appeal-outcome member notification was entirely unwired (dead i18n keys, no
+#   enqueue) -- widened `MEMBER_MODERATION_NOTIFY` to `appeal_upheld`/`appeal_allowed`, keyed on the
+#   APPEAL id (never the action id, since re-filing means one action can carry >1 decided appeal);
+#   `Idempotency-Key` was validated-then-discarded server-side AND regenerated per-attempt client-side
+#   (the `usePersonalEventAssertion` lesson, repeated) -- now claimed via the shared keyed store and
+#   minted once per act; the documented 23505 guard-bypass race was never actually caught (would have
+#   leaked a 500); `moderationActionId` and the off-portal `helpdesk_ticket_id` were never verified to
+#   belong to the caller; the mobile screen dropped every appealable act but the newest (the domain's
+#   own `listAppealableActionIds` is explicitly list-shaped, capped at 200 -- now a picker).
+#   Verified (not assumed) false positives before touching anything: `actorRole: null` matches every
+#   sibling admin-audit call site; the admin page's `{code,status}` error cast is correct because
+#   `apiFetch` already unwraps the server envelope. Full typecheck + lint clean across all 8 touched
+#   packages/apps; unit + live-DB integration suites green (moderation-appeal.spec.ts,
+#   rtbf-anonymize.spec.ts, moderation-notify.test.ts, and every directly-touched component/unit test).
 # last_updated: 2026-08-16 (10-22-moderation-appeal-mechanism: in-progress -> review via bmad-dev-story,
 #   off main @ b3e12e1. Niyamavali §8.8 -- THE MODERATION APPEAL -- is AUTHORED AND PANEL-RATIFIED
 #   (Decision 2026-08-15-121), and the appeal the system has claimed for four stories is now real.
@@ -65,10 +132,12 @@
 #   itself failed 3 jobs -- the "partial run reported as green" failure this project has named
 #   repeatedly, caught before it propagated. THREE failures were MINE and are FIXED, all found by
 #   running to completion rather than named by the spec: the lint error (an unused helper in my new
-#   route test), the RTBF completeness count (11 tables/12 statements -> 13/16 --
+#   route test), the RTBF completeness count (12 tables/14 statements -> 13/16 --
 #   member_moderation_appeals takes TWO statements because reasoned_outcome scrubs only WHERE
-#   NON-NULL, or an open appeal trips 0107's coherence CHECK and every erasure of a member with a
-#   pending appeal FAILS), and BOTH member.* vocabulary count fixtures 22 -> 24, moved together as
+#   NON-NULL -- an open appeal's reasoned_outcome_ciphertext is NULL by design, so the guard is a
+#   no-op for it; UNGUARDED, an open appeal would trip 0107's coherence CHECK and the erasure would
+#   fail, which is exactly the failure mode the WHERE-NON-NULL guard exists to prevent), and BOTH
+#   member.* vocabulary count fixtures 22 -> 24, moved together as
 #   their own comments require. ⭐ The RTBF fixture failed BECAUSE IT WORKS -- it is the check that
 #   catches a Tier-1 column landing outside anonymizeMember, which is how the 10.10 rationale once
 #   survived an erasure.
@@ -6930,7 +6999,7 @@ development_status:
   10-19-termination-ends-membership-privileges: done
   10-20-moderation-record-model: done
   10-21-off-portal-dpdpa-access: done
-  10-22-moderation-appeal-mechanism: review
+  10-22-moderation-appeal-mechanism: done
   10-23-restoration-discipline-lock-in: done
   10-24-contribution-fact-producer-projection-r7-cf-activation: done
   10-25-r7a-restoration-accounting: done

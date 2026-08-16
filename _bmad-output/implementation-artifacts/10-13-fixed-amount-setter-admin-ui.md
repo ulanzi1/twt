@@ -284,17 +284,18 @@ this story. ⚠ Record it as *observed*, not as *deferred by 10.13* — 10.13 ne
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — The routing note (AC1)** ⛔ *governance commit, before any code*
-  - [ ] Author `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-13.md`
+- [x] **Task 1 — The routing note (AC1)** ⛔ *governance commit, before any code*
+  - [x] Author `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-13.md`
         on the `trustee-panel-routing-note-2026-08-15-story-10-22.md` template: *Why this note exists* →
         *Story state* → *Disposition on ruling* → the five questions → *What non-answer would mean*.
-  - [ ] Pin every citation **live** at `9fb88c3` before writing it down — Deed `:147` / `:227` / `:237` /
+  - [x] Pin every citation **live** at `9fb88c3` before writing it down — Deed `:147` / `:227` / `:237` /
         `:241`, Niyamavali `:102` / `:266`, `roles.ts:317-325` / `:595-650`, `permissions.ts:462`.
         ⚠ [[feedback_verify_before_committing_governance_claims]] — and the 10.22 note's own
         "Clause 27(b)" mis-citation (corrected by Decision `2026-08-16-122`) is the worked example of
         what happens when a clause number is carried rather than re-read.
-  - [ ] Commit: `governance(10.13): trustee-panel routing note — who may fix, and who may attest`.
-  - [ ] ⏸ **STOP.** Do not proceed past Task 2 until Q1/Q2/Q3 are ruled.
+  - [x] Commit: `governance(10.13): trustee-panel routing note — who may fix, and who may attest`.
+  - [x] ⏸ **STOP.** Do not proceed past Task 2 until Q1/Q2/Q3 are ruled.
+        ⏸ **IN FORCE 2026-08-16** — commit `6399235`. Awaiting the Panel ruling on Q1/Q2/Q3.
 
 - [ ] **Task 2 — Record the ruling (AC1)**
   - [ ] One `.decision-log.md` entry, numbered from head `2026-08-16-122`, per-clause provenance
@@ -597,11 +598,98 @@ introduce a select/combobox library for one field.
 
 ### Agent Model Used
 
+`claude-opus-5` (Claude Code, `bmad-dev-story`).
+
 ### Debug Log References
+
+Branch `governance/10-13-fixed-amount-setter-admin-ui`, cut from `main` @ `9fb88c3` (fetched,
+`== origin/main`). `baseline_commit` was already pinned in the frontmatter at authoring time and was
+**preserved, not rewritten**.
+
+Citation-pinning pass (all read from source at `9fb88c3`, none carried from the story file):
+
+| Claim | Verified |
+|---|---|
+| Deed Cl. 10(b) *"determined by the Board … not less than twelve months"* | `trust-deed.md:147` ✅ |
+| Deed Cl. 19(b) quorum *"one-half … or two, whichever is higher"* | `trust-deed.md:227` ✅ |
+| Deed Cl. 20(a) / 20(c) | `trust-deed.md:237` / `:241` ✅ |
+| Deed *"Board"* definition | `trust-deed.md:75` ✅ |
+| Niyamavali §4.2 *"set by the Board … not less than 12 months"* | `niyamavali.md:102` / hi `:100` ✅ |
+| §8.7 *"moderation capacity"* / *"concurrent, not exclusive"* / *"not the 'State Trustee panel' of Part 9"* | `niyamavali.md:266` / `:268` / `:270` ✅ |
+| `docs/legal/` gitignored | `.gitignore:68`; `git check-ignore -v docs/legal/niyamavali.md` → `docs/legal/` ✅ |
+| `.decision-log.md` head + count | head `2026-08-16-122` (`:37`); **123** numbered entries — `grep -c '^### Decision '` returns 124, of which `:7102` is the `YYYY-MM-DD-NNN` template heading. The story file's corrected figure (123) is right; sprint-status `2026-08-16d`'s "124" was the uncorrected one ✅ |
+| both keys held by `pariwar_admin` alone | `roles.ts:317-325`; `super_admin` derives from the catalog (`roles.ts:244-250`) ✅ |
+| `PERMISSION_CATALOG_VERSION = 34`, keys = 43 | `permissions.ts:462`; `permissions.test.ts:54,56` ✅ |
+| `state_trustee` holds neither key, `scopeCeiling: 'state'` | `roles.ts:374-381` ✅ |
+| key-as-credential precedent | `roles.ts:113-114` (`claim.r9_vote`), `:313-316` (`claim.appeal_vote`) ✅ |
+| `assertPanelAuthorized` shape | `r9-voting-persist.ts:314-350`; `appeal-panel-persist.ts:247-274` ✅ |
+| directory-read shape | `resolveShepherdCandidates`, `shepherd-assign-persist.ts:190-249` ✅ |
+| the hole: unscoped pool + global table | `handlers.ts:250-269` uses `getDisplayName(deps.pool, …)`; `admin-auth.repo.ts:186-193` is a bare `SELECT display_name FROM users WHERE id = $1`; `schema/users.ts:1-15` documents the table GLOBAL ✅ |
+| arithmetic-only domain guards | `fixed-amount.ts:393-401` (`:394` / `:397` / `:400`) ✅ |
+| `role_grants` is RLS-scoped | `policies/role-grants-rls.ts:32`, `:49`; `scope-tx.ts:34-55` ✅ |
+| FR-15 *"multi-trustee approval"* | `prd.md:469` ✅ |
+| hostile-trustee threat row names *"Pariwar Admin / State Trustee"* | `architecture.md:1324` ✅ |
+| **Q5(ii) — 7.5's claim is FALSE** | `7-5-…-override.md:229` says *"Residual scope, logged to deferred-work.md"*; the only 7.5 entry in `deferred-work.md` is the `documented_reason` PII one at `:1150-1152`. **Confirmed not there.** ✅ |
+
+Four line-number drifts found in my own first draft and corrected before commit (`handlers.ts:67/:73`
+→ `:68/:74`; `contracts:113` → `:31`/`:114`; `fixed-amount.ts:349` → `:351`; `roles.ts:110-114` →
+`:113-114`), plus one **quote mis-attribution**: the draft attributed *"it is the floor, not the
+directory"* to `deferred-work.md` as well as `epics.md`; `deferred-work.md:4468-4469` says it in
+different words (*"stays as the mechanical floor; Story 1.18 changes no value"*) and the note now
+quotes each source in its own words. ⚠ Same failure mode as the 10.22 note's "Clause 27(b)" —
+caught pre-commit this time.
 
 ### Completion Notes List
 
+**Task 1 (AC1) — COMPLETE.** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-13.md`
+authored (417 lines) and committed as `6399235` under a `governance:` prefix, status `⏳ Open`.
+Five questions (Q1/Q2/Q3 ⛔ BLOCKING), each with a stated non-answer consequence; every ⭐
+recommendation explicitly marked **NON-BINDING**; a *Ruling template* table the Panel can complete;
+a *What non-answer would mean* table; and a *What this note does NOT ask* section fencing the
+constant, the trustee-directory primitive, the R9 lifecycle and the announcement composer.
+
+**Two author findings the authoring pass did not have**, both recorded in the note and neither
+routed as a sixth question:
+
+- **F-1 — the emergency control does not constrain the population it was designed for.**
+  `architecture.md:1324` names the hostile trustee as *"Pariwar Admin / State Trustee"* attacking via
+  *"fixed-amount change"*, mitigated by *"cooling-off period via 12-month notice (FR-15)"*. The
+  emergency path exists to **bypass** that cooling-off; its substitute control is the attesting panel.
+  But under Q2 option (a) the eligible attestor set today is exactly `{pariwar_admin holders} ∪
+  {super_admin holders}` — so two `pariwar_admin`s can attest each other. The checking population and
+  the threat population are the same population. ⚠ Q1 makes the two capacities **distinguishable**;
+  it does not by itself **separate** them, and the note says so rather than implying otherwise.
+- **F-3 — an attestor is not an approver, and this story does not make one.** Only the *submitting*
+  actor is authenticated + step-up gated (`handlers.ts:115-137`, `index.ts:99`). Nothing proves a
+  listed attestor consented. Eligibility enforcement makes the roster truthful about **capability**,
+  never about **assent**; real multi-party approval is the R9 voting lifecycle, which
+  `fixed-amount.ts:15-19` forbids by name (D3). ⇒ FR-15's *"multi-trustee approval"* remains
+  **partially** implemented after this story, and the ruling entry should say so.
+
+**F-2** records that *"State-Trustee panel"* is a misnomer at every layer — a literal `state_trustee`
+is ineligible **by arithmetic** (`scopeCeiling: 'state'` can never satisfy a `pariwar`-dimension
+check; rank order, not a missing resolver — [[project_rbac_geo_scope_containment]]), holds neither key
+(`roles.ts:374-381`), and §8.7 says the Part 9 State Trustee panel is a *geographic* body the Trustee
+Panel expressly is not. Folded into Q2 as sub-point **Q2.2** rather than minted as a sixth question,
+because AC1 fixes the count at five.
+**F-4** records why the fix is small though the gap is serious: `role_grants` is RLS-scoped, so moving
+the check onto the scope tx closes the cross-tenant case **by construction** — which is exactly what
+`assertPanelAuthorized` already does at its two shipped call sites.
+
+⏸ **HALTED AT THE STORY'S OWN STOP.** Task 1's final subtask reads *"Do not proceed past Task 2 until
+Q1/Q2/Q3 are ruled"*, and AC1 states it again: *"no implementation commit lands before they are
+ruled"*. Q1/Q2/Q3 are ⛔ BLOCKING and cannot be author-defaulted — the note itself states that a ⭐ is
+*"a suggestion the Panel may reject, never a default taken by silence"*
+([[feedback_record_unattested_no_backfill]]). **Nothing in Tasks 2–9 has been started.** No code, no
+`.decision-log.md` entry, no RBAC change, no test.
+
 ### File List
+
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-08-16-story-10-13.md` (**new**)
+- `_bmad-output/implementation-artifacts/10-13-fixed-amount-setter-admin-ui.md` (modified — Tasks,
+  Dev Agent Record, File List, Change Log, Status)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — `development_status` flip +
+  ledger entry `2026-08-16e`)
 
 ---
 
@@ -610,4 +698,5 @@ introduce a select/combobox library for one field.
 | Date | Change |
 |---|---|
 | 2026-08-16 | Story created via `bmad-create-story` off `main` @ `9fb88c3` (clean, fetched). Status `backlog` → `ready-for-dev`. Authoring pass only — no code written, no gate run, nothing here attested by a test run. |
+| 2026-08-16 | `bmad-dev-story` opened on branch `governance/10-13-fixed-amount-setter-admin-ui` off `main` @ `9fb88c3` (fetched, `== origin/main`). Status `ready-for-dev` → `in-progress`; `baseline_commit` preserved, not rewritten. **Task 1 (AC1) COMPLETE** — routing note authored (417 lines) and committed `6399235` under a `governance:` prefix, five questions, Q1/Q2/Q3 ⛔ BLOCKING, every ⭐ NON-BINDING. Every clause, line number and count re-read from source at `9fb88c3`; four line-number drifts and one quote mis-attribution caught in my own draft **pre-commit**. Two author findings added that the authoring pass did not have: **F-1** the emergency control's checking population and the hostile-trustee population are the same population, so Q1 buys distinguishability and not separation; **F-3** an attestor is not an approver — eligibility makes the roster truthful about capability, never assent, so FR-15's "multi-trustee approval" stays partial after this story. ⏸ **HALTED at the story's own STOP** — Tasks 2–9 not started, no code, no decision-log entry, no RBAC change. |
 | 2026-08-16 | Checklist validation pass (`bmad-create-story validate`), three parallel forks against live source: epics.md coverage, dependency status, git provenance (all PASS, no gaps); Trust Deed/Niyamavali/`.decision-log.md`/`deferred-work.md`/PRD/architecture/UX citations (2 line-precision drifts fixed: `.decision-log.md` entry count 124→123, `deferred-work.md:4608`→`:4578`); ~30 code file:line citations (5 line-range drifts fixed, all 1–3 lines). One substantive fix: Task 5 told the dev to model the eligible-attestor accessor on `resolveShepherdCandidates`, which itself hardcodes `eq(roleGrants.role, 'district_admin')` — directly contradicting the same bullet's "never hardcode a role name string" instruction. Reconciled: copy the join/tenant/order **shape**, resolve eligibility via `hasPermission` against the seeded bundle, not the precedent's hardcoded-role shortcut. No epic-coverage gaps, no false citations, no scope changes. Status remains `ready-for-dev`. |

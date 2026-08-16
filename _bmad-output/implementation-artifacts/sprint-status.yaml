@@ -4,6 +4,38 @@
 #   (fetched, == origin/main). Story baseline_commit already pinned at authoring; preserved, not
 #   rewritten. NOTHING BUILT YET -- Task 1 is the routing note and the story's own Task 1 carries an
 #   explicit ⏸ STOP: no implementation commit lands before Q1/Q2/Q3 are RULED by the Trustee Panel.
+#   ✅ TASK 1 (AC1) COMPLETE, commit 6399235 `governance(10.13):` -- the routing note is authored (417
+#   lines), five questions, Q1/Q2/Q3 BLOCKING, every ⭐ marked NON-BINDING, with a Ruling template the
+#   Panel can complete. ⏸ NOW HALTED AT THE STORY'S OWN STOP. Tasks 2-9 NOT started: no code, no
+#   .decision-log.md entry, no RBAC change, no test, no gate run.
+#   ⭐ TWO AUTHOR FINDINGS THE AUTHORING PASS DID NOT HAVE, both recorded in the note, neither routed
+#   as a sixth question (AC1 fixes the count at five). F-1: architecture.md:1324 names the hostile
+#   trustee as "Pariwar Admin / State Trustee" attacking via "fixed-amount change", mitigated by the
+#   FR-15 cooling-off -- which the emergency path exists to BYPASS. Under Q2(a) the eligible attestor
+#   set TODAY is exactly {pariwar_admin holders} u {super_admin holders}, so TWO pariwar_admins CAN
+#   ATTEST EACH OTHER: the checking population and the threat population are the SAME population. Q1
+#   buys DISTINGUISHABILITY, not SEPARATION, and the note says so rather than implying otherwise.
+#   F-3: an attestor is NOT an approver -- only the SUBMITTING actor is authenticated + step-up gated
+#   (handlers.ts:115-137, index.ts:99); nothing proves a listed attestor consented. Eligibility makes
+#   the roster truthful about CAPABILITY, never about ASSENT. Real multi-party approval is the R9
+#   voting lifecycle, which fixed-amount.ts:15-19 forbids BY NAME (D3) ⇒ FR-15's "multi-trustee
+#   approval" stays PARTIALLY implemented after this story, and the ruling entry must say so.
+#   F-2 folded into Q2 as sub-point Q2.2: "State-Trustee panel" is a MISNOMER at every layer (domain
+#   comment, contracts DTO, two HTTP error strings, the page label). A literal state_trustee is
+#   INELIGIBLE BY ARITHMETIC -- scopeCeiling 'state' can never satisfy a pariwar-dimension check (rank
+#   order, NOT a missing resolver) -- holds NEITHER key (roles.ts:374-381), and §8.7 (niyamavali.md:270)
+#   says the Part 9 "State Trustee panel" is a GEOGRAPHIC body the Trustee Panel expressly is not.
+#   F-4: the fix is SMALL though the gap is serious -- role_grants is RLS-scoped, so moving the check
+#   onto the scope tx closes the cross-tenant case BY CONSTRUCTION, which is what assertPanelAuthorized
+#   already does at its two shipped call sites.
+#   ⚠ CITATION DISCIPLINE, RECORDED AS OBSERVED: every clause, line number and count re-read from
+#   SOURCE at 9fb88c3, none carried from the story file. FOUR line-number drifts + ONE QUOTE
+#   MIS-ATTRIBUTION were found in my own draft and corrected PRE-COMMIT (the draft attributed "it is
+#   the floor, not the directory" to deferred-work.md as well as epics.md; deferred-work.md:4468-4469
+#   says it in DIFFERENT words). Same failure mode as the 10.22 note's "Clause 27(b)", caught earlier.
+#   ⛔ CORRECTION TO 2026-08-16d's OWN COUNT: .decision-log.md carries 123 NUMBERED entries, not 124 --
+#   `grep -c '^### Decision '` returns 124 because :7102 is the YYYY-MM-DD-NNN TEMPLATE heading. The
+#   story file's validation pass already corrected this; recording it here so the ledger agrees.
 #   Only development_status[10-13-fixed-amount-setter-admin-ui] flips. NO other story status changed.)
 # last_updated: 2026-08-16d (10-13-fixed-amount-setter-admin-ui: backlog -> ready-for-dev via
 #   bmad-create-story, off main @ 9fb88c3 (clean, fetched, == origin/main). Saved

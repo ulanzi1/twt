@@ -1,4 +1,62 @@
 # generated: 2026-05-29
+# last_updated: 2026-08-16f (10-13-fixed-amount-setter-admin-ui: stays IN-PROGRESS. TRUSTEE PANEL
+#   RULED all three BLOCKING questions option (a); Decision `2026-08-16-123` recorded BEFORE any
+#   implementation ([[feedback_governance_commits_precede_implementation]]). Q1(a): trustee_panel gains
+#   BOTH pool.fixed_amount_set + ..._emergency and pariwar_admin RETAINS both -- the §8.7 "concurrent,
+#   not exclusive" posture, the THIRD grant to the trustee_panel bundle and the FIRST that is NOT
+#   exclusive to it. Catalog 34 -> 35, ⛔ KEY COUNT STAYS 43 (an existing role gaining existing keys
+#   moves the CAPABILITY MODEL, not the key set -- the third application of the 10.18 / 6.17 rule).
+#   Q2.1(a): key-as-credential -- an eligible attestor is an actor holding pool.fixed_amount_emergency
+#   at THIS Pariwar, the claim.r9_vote / claim.appeal_vote precedent made a THIRD instance, not a new
+#   pattern. ⚠ Q2.1(c) submitter-distinctness was OFFERED AND NOT TAKEN ⇒ a submitter may still list
+#   THEMSELVES and count toward the >=2 floor; recorded as an OPEN, UN-OWNED observation with a
+#   re-trigger, not silently absorbed. Q3(a): the Deed Cl. 19(b) quorum is NOT checked and the reason
+#   is recorded at the constant -- "one-half of the Trustees then in office" is UNCOMPUTABLE without
+#   the very directory the epic forbids. The ⌈half-of-key-holders⌉ approximation was put and EXPRESSLY
+#   REJECTED (it would make a governance quorum a function of GRANT ISSUANCE, so revoking a grant would
+#   LOWER the quorum). ⛔ POOL_FIXED_AMOUNT_MIN_PANEL_SIZE DOES NOT MOVE.
+#   ⚠ Q4 WAS RULED MATERIALLY BEYOND THE OPTIONS OFFERED and is recorded as an ADDITION, never read
+#   back into the options as though it had been one (the 2026-08-12-099 / 2026-08-15-121 precedent):
+#   the NORMAL NOTICE PERIOD BECOMES 60 DAYS, NOT 365; twelve months is the normal/planned period and
+#   NOT an absolute lock; the EMERGENCY MECHANISM REMAINS and may bypass the 60-day notice; and ⛔ NONE
+#   of it is implemented inside 10.13.
+#   ⛔ FOUR CONFLICTS WERE PUT TO THE PANEL BEFORE ANYTHING WAS RECORDED, against a first reading of
+#   "code should not enforce minimum Notice period or minimum Duration". C-1 WAS DECISIVE AND IS
+#   RESOLVED: the notice floor is the ONLY thing the emergency path bypasses, so removing it entirely
+#   would leave applyEmergencyOverride differing from scheduleStandardChange in exactly change_type +
+#   the attestation, and 10.13's whole attesting-panel control would have NOTHING LEFT TO JUSTIFY. The
+#   ruling keeps the emergency mechanism EXPRESSLY and keeps a floor -- 60 days is still a floor ⇒
+#   10.13's build stands UNCHANGED. C-2 (prd.md:469, FR-15's testable consequence) and C-3
+#   (architecture.md:1324, "cooling-off period via 12-month notice" as THE hostile-trustee mitigation)
+#   are ROUTED, not ignored -- the successor must reconcile legal text, PRD, architecture AND
+#   implementation. C-4 (scope) resolved in terms.
+#   ⚠ RECORDED SO THE SUCCESSOR DOES NOT INHERIT A FALSE PREMISE: Deed Cl. 10(b) + §4.2's "for stated
+#   periods of not less than twelve months" constrains the PERIOD AN AMOUNT STANDS and says NOTHING
+#   ABOUT NOTICE. The 365-day floor is a PRODUCT control from FR-15's prose (prd.md:465), NOT a Deed
+#   requirement ⇒ shortening NOTICE conflicts with the PRD and architecture, NOT with the instrument.
+#   The twelve-month-LOCK half DOES touch the instrument, which is why the wording change is routed.
+#   ⭐ SUCCESSOR MINTED, NOT LEFT UN-OWNED: development_status[7-11-fixed-amount-notice-period-and-
+#   fixed-period-reconciliation]: backlog. Minted against EPIC 7 (whose Story 7.5 owns the write path),
+#   NOT Epic 10 (whose 10.13 owns only the setter surface). It owns all five: the 60-day rule in code,
+#   the §4.2 both-locales + Deed Cl. 10(b) wording, FR-15 in the PRD, architecture.md:1324's mitigation
+#   row, and Q5.1's emergency-backdating lower bound. A deferral naming an EPIC expires unowned; this
+#   one names a story key that EXISTS in this file.
+#   ⚠ Q5 NOT RULED -- discharged [Author-committed] per the note's own stated non-answer consequence.
+#   Q5.1 routed to 7-11; Q5.2 WRITES the deferred-work.md entry Story 7.5's review CLAIMS IT WROTE AND
+#   DID NOT (verified: 7-5-...-override.md:229 says "logged to deferred-work.md"; the only 7.5 entry
+#   there is the documented_reason PII one at :1150-1152). Scoped to WRITE THE MISSING ENTRY -- the
+#   option to audit 7.5's other logging claims was offered and NOT taken.
+#   ⛔ WHAT THE RULING DOES NOT DO, recorded so the marker closure cannot imply more than was built:
+#   F-1 IS NOT CLOSED -- because Q1(a) keeps both keys on pariwar_admin CONCURRENTLY, the eligible
+#   attestor set still includes the population architecture.md:1324 names as the hostile trustee, so
+#   two pariwar_admins can still attest each other. Clause 1 buys DISTINGUISHABILITY, NOT SEPARATION.
+#   F-3 IS NOT CLOSED -- an attestor is not an approver; only the SUBMITTING actor is authenticated +
+#   step-up gated, so eligibility makes the roster truthful about CAPABILITY, never about ASSENT ⇒
+#   FR-15's "multi-trustee approval" stays PARTIALLY implemented after 10.13.
+#   ⛔ NO INSTRUMENT AMENDED by this entry -- docs/legal/ is untouched; §4.2 stays as ratified and the
+#   wording change belongs to 7-11 with its both-locales reproduction.
+#   development_status[10-13-...] unchanged (in-progress) + [7-11-...] MINTED to backlog. NO other
+#   story status changed.)
 # last_updated: 2026-08-16e (10-13-fixed-amount-setter-admin-ui: ready-for-dev -> IN-PROGRESS via
 #   bmad-dev-story, branch governance/10-13-fixed-amount-setter-admin-ui cut from main @ 9fb88c3
 #   (fetched, == origin/main). Story baseline_commit already pinned at authoring; preserved, not
@@ -7036,6 +7094,7 @@ development_status:
   7-8-under-funded-cycle-close-of-cycle-template-driven-framing: done
   7-9-pool-engine-pre-launch-measured-validation-gate: done
   7-10-pool-engine-onboarding-tutorial: done
+  7-11-fixed-amount-notice-period-and-fixed-period-reconciliation: backlog
   epic-7-retrospective: done
 
   # ==========================================================================

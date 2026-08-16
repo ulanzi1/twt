@@ -1,7 +1,15 @@
 # Trustee Panel Routing Note — Story 10.13, Fixed-Amount Setter Admin UI
 
-**Status:** ⏳ **Open** — five questions, awaiting ruling. **Q1, Q2 and Q3 are ⛔ BLOCKING**; Q4 and Q5
-are answerable but each carries a stated non-answer consequence.
+**Status:** ✅ **RULED 2026-08-16.** Q1 **(a)**, Q2.1 **(a)**, Q3 **(a)** — option (a) throughout on the
+three blocking questions. **Q4 was ruled MATERIALLY BEYOND the options offered** and is recorded as an
+**addition**, not read back into (a)/(b)/(c) as though it had been one (the Decision `2026-08-12-099`
+and `2026-08-15-121` precedent): the normal notice period becomes **60 days, not 365**, the twelve-month
+period is **normal/planned and not an absolute lock**, the **emergency mechanism REMAINS** and bypasses
+the 60-day notice, and a **successor story owns every one of those changes — none of them land in
+10.13**. See *"The ruling as given"* at the foot of this note; it is authoritative where it differs
+from the option text above, which is **retained, not edited**.
+*(Superseded status line, retained: ⏳ Open — five questions, awaiting ruling. **Q1, Q2 and Q3 are ⛔
+BLOCKING**; Q4 and Q5 are answerable but each carries a stated non-answer consequence.)*
 **Author:** BigDev (Solo Builder)
 **Raised:** 2026-08-16, against
 `_bmad-output/implementation-artifacts/10-13-fixed-amount-setter-admin-ui.md`
@@ -416,3 +424,93 @@ under a `governance(10.13):` prefix **before** any implementation commit
 ([[feedback_governance_commits_precede_implementation]]). If the ruling amends §4.2, both locales
 verbatim in that entry. This note's status line is then updated to `✅ RULED <date>` with the
 superseded line retained, never overwritten.
+
+---
+
+# The ruling as given — 2026-08-16
+
+⚠ **Recorded verbatim and authoritative where it differs from the option text above.** The option
+tables, the findings and the recommendations are **retained unedited** — the note is the record of what
+was asked, and this section is the record of what was answered
+([[feedback_supersede_never_reinterpret]]).
+
+## The ruling, as transmitted
+
+| Q | Ruling |
+|---|---|
+| **Q1** ⛔ | **(a)** — grant both `pool.fixed_amount_set` and `pool.fixed_amount_emergency` to `trustee_panel`; **`pariwar_admin` RETAINS both**. |
+| **Q2.1** ⛔ | **(a)** — **key-as-credential**. An eligible attestor is an actor holding `pool.fixed_amount_emergency` at this Pariwar. ⚠ **(c) was offered and NOT taken** — submitter-distinctness is **not** part of the ruling. |
+| **Q2.2** | Not separately ruled. ⭐ The note's non-binding recommendation stands as `[Author-committed]`: re-label the **copy** only; the stored column and wire field are **not** renamed. |
+| **Q3** ⛔ | **(a)** — **no**, the emergency path does not additionally check the Deed Cl. 19(b) quorum, and the reason is recorded at the constant: *"one-half of the Trustees then in office"* is uncomputable without the very trustee directory the epic forbids. ⛔ The constant does not move. |
+| **Q4** | ⚠ **AMENDED BEYOND THE OPTIONS** — see below, verbatim. |
+| **Q5** | Not ruled. `[Author-committed]` per the note's stated non-answer consequence — see *"Q5, taken as an author default"* below. |
+
+## Q4 — the ruling, verbatim
+
+> *"The normal notice period should be 60 days, not 365 days. The emergency mechanism remains necessary
+> and may bypass the 60-day notice requirement. There is no mandatory requirement that the fixed amount
+> remain unchanged for 12 months. Twelve months is the normal/planned period, not an absolute lock.
+> Therefore the successor governance story must address both the 60-day notice rule and the 12-month
+> wording in the governing documents so that the legal text, PRD, architecture, and implementation all
+> agree. Do not remove the emergency mechanism from Story 10.13. It remains meaningful because it
+> bypasses the normal 60-day notice. Do not implement either the 60-day change or the removal of the
+> 12-month lock inside 10.13; create/assign the successor story to own those changes."*
+
+## The four conflicts raised against Q4, and how the ruling resolves them
+
+The first reading transmitted was *"code should not enforce minimum Notice period or minimum Duration"*.
+Four conflicts were put to the Panel before anything was recorded; the ruling above is the Panel's
+response to them and **supersedes that first reading**. Both are recorded — the question asked and the
+answer given.
+
+| # | Conflict as put | Resolved by the ruling |
+|---|---|---|
+| **C-1** ⛔ **the decisive one** | The notice floor is the **only** thing the emergency path bypasses. Remove it and `applyEmergencyOverride` differs from `scheduleStandardChange` in exactly `change_type` + the attestation — **the attesting panel this whole story builds would have nothing left to justify**. | ✅ **RESOLVED.** *"The emergency mechanism remains necessary and may bypass the 60-day notice requirement … Do not remove the emergency mechanism from Story 10.13. It remains meaningful because it bypasses the normal 60-day notice."* A floor of 60 days is still a floor. 10.13's build stands **unchanged**. |
+| **C-2** | `prd.md:469`, FR-15's **testable** consequence: *"A change action requires a future `effective_from` ≥ now + 12 months, except for explicitly-flagged emergency adjustments…"* | ✅ **ROUTED, not ignored.** The successor *"must address … the 12-month wording in the governing documents so that the legal text, **PRD**, architecture, and implementation all agree."* |
+| **C-3** | `architecture.md:1324` names *"cooling-off period via 12-month notice (FR-15)"* as **the** mitigation for the hostile trustee's *"fixed-amount change"* attack — the same actor F-1 shows can attest its own override. | ✅ **ROUTED.** Same clause; **architecture** is named explicitly among the four registers the successor must reconcile. ⚠ The mitigation is **shortened, not removed** — 60 days of cooling-off, not zero. |
+| **C-4** | Scope: the change touches `fixed-amount.ts:63/130-131/331-332`, `errors.ts:214-222`, `handlers.ts:54-57`, the shipped `pool.fixed_amount_notice_too_short` wire code, and three test suites — Story **7.5's** write path, and 10.13's Tasks contain no such change. | ✅ **RESOLVED IN TERMS.** *"Do not implement either the 60-day change or the removal of the 12-month lock inside 10.13; create/assign the successor story to own those changes."* |
+
+⚠ **NOT a conflict, and recorded so the successor does not inherit a false premise.** Deed Cl. 10(b)
+(`trust-deed.md:147`) and §4.2 (`niyamavali.md:102`) say the amount is fixed *"for stated periods of not
+less than twelve months"*. That constrains the **PERIOD an amount stands**, and says **nothing about
+notice**. The 365-day floor is a **product** control originating in FR-15's prose (*"changes announced
+12+ months in advance"*, `prd.md:465`), **not** a Deed requirement. ⇒ Shortening notice to 60 days
+conflicts with the **PRD and architecture**, not with the instrument. The *"twelve-month lock"* half
+**does** touch the instrument, and that is why the ruling routes the **wording in the governing
+documents** to the successor rather than to code alone.
+
+## Q5, taken as an author default `[Author-committed]`
+
+Q5 was not ruled. Per this note's own *"What non-answer would mean"* table, the consequence is that the
+backdating bound stays unstated **and** Story 7.5's false logging claim stays uncorrected. Discharged
+as follows, both labelled `[Author-committed]`, neither claimed as ratified:
+
+- **Q5.1 — the bound.** ⇒ **Routed to the same successor** as Q4. How far back an emergency
+  `effective_from` may reach is a **write-path notice policy** question in the same family as the
+  60-day rule, and it would be incoherent to settle it separately from the notice period it backdates
+  against. **No bound is added by 10.13.**
+- **Q5.2 — the missing record.** ⇒ **Written now.** The `deferred-work.md` entry Story 7.5's review
+  says it wrote (*"Residual scope, logged to deferred-work.md"*, `7-5-…-override.md:229`) does not
+  exist; 10.13 writes it, with a re-trigger, and records that it was **written by 10.13, not by 7.5**.
+  ⛔ Scoped to *write the missing entry*, **not** to audit 7.5's other logging claims — option (c) was
+  offered and not taken.
+
+## What the ruling does NOT do
+
+- ⚠ It does **not** close **F-1**. Q1(a) makes a Panel act **distinguishable** from a `pariwar_admin`
+  act; it does not **separate** the populations, because `pariwar_admin` retains both keys and the
+  eligible attestor set still includes it. Whether a Pariwar issues its `trustee_panel` grants to
+  different people is an operational fact about grant issuance, not a code invariant.
+- ⚠ It does **not** close **F-3**. An attestor is still not an approver: eligibility makes the roster
+  truthful about **capability**, never about **assent**. FR-15's *"multi-trustee approval"* remains
+  **partially** implemented after 10.13.
+- ⚠ Q2(c) was **not** taken, so a submitting actor may still list **themselves** among the attestors
+  and count toward the ≥2 floor. Verified live as reachable. Recorded as an **open, un-owned
+  observation** with a re-trigger — ⛔ not silently absorbed, and ⛔ not built.
+
+## Disposition
+
+Recorded as Decision **`2026-08-16-123`**, per-clause provenance labelled under Decision
+`2026-08-09-095`. ⚠ **Niyamavali §4.2 is NOT amended by this ruling** — the twelve-month wording change
+is routed to the successor, which owns the instrument edit and the both-locales reproduction that goes
+with it. This note's `⏳ Open` status line is superseded above and **retained**, never overwritten.
